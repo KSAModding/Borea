@@ -16,7 +16,7 @@ public interface IModActivationService
     /// creates the symlink into the mods folder. If another version of the
     /// same mod is currently active, it is deactivated first.
     /// </summary>
-    Task ActivateAsync(string modId, ModVersion version, CancellationToken cancellationToken = default);
+    Task ActivateAsync(string modId, Mods.ModVersion version, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Deactivates the given mod: removes its symlink from the mods folder,

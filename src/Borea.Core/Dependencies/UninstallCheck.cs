@@ -8,7 +8,7 @@ namespace Borea.Core.Dependencies;
 public sealed class UninstallCheck
 {
     public string ModId { get; }
-    public ModVersion Version { get; }
+    public Mods.ModVersion Version { get; }
     public IReadOnlyList<string> DependentModIds { get; }
     public bool IsActive { get; }
 
@@ -16,7 +16,7 @@ public sealed class UninstallCheck
 
     public UninstallCheck(
         string modId,
-        ModVersion version,
+        Mods.ModVersion version,
         IReadOnlyList<string> dependentModIds,
         bool isActive)
     {

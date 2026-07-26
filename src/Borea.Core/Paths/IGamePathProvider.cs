@@ -1,44 +1,32 @@
-﻿using Borea.Core.Mods;
-
-namespace Borea.Core.Paths;
+﻿namespace Borea.Core.Paths;
 
 /// <summary>
 /// Resolves filesystem locations relevant to KSA, StarMap, and Borea's own
-/// library, abstracting away OS-specific path resolution (e.g. Documents
-/// folder location differs between Windows and Linux).
+/// library.
 /// </summary>
 public interface IGamePathProvider
 {
     /// <summary>
-    /// The KSA mods folder KSA reads from directly, e.g.
-    /// [Documents]\My Games\Kitten Space Agency\mods
+    /// Root of all Borea instance storage
     /// </summary>
-    string GetModsFolder();
+    string GetInstancesRoot();
 
     /// <summary>
-    /// Path to KSA's Documents manifest.toml tracking active/inactive mod state.
+    /// Root folder for a specific instance, e.g.
     /// </summary>
-    string GetManifestPath();
+    string GetInstanceRoot(Guid instanceId);
 
-    /// <summary>
-    /// Root of Borea's own mod library, e.g.
-    /// [Documents]\My Games\Kitten Space Agency\Borea
-    /// </summary>
-    string GetLibraryRoot();
+    string GetInstanceModsFolder(Guid instanceId);
 
-    /// <summary>
-    /// Full library install path for a specific mod version, e.g.
-    /// [LibraryRoot]\[mod name]\[version]\
-    /// </summary>
-    string GetInstallPath(string modId, ModVersion version);
+    string GetInstanceSavesFolder(Guid instanceId);
 
-    /// <summary>
-    /// The path KSA expects for an active mod inside the mods folder
-    /// (i.e. the symlink/junction target location), e.g.
-    /// [ModsFolder]\[mod name] or [ModsFolder]\[Mod-Name]-[Version]
-    /// depending on how KSA's side-by-side support resolves.
-    /// </summary>
-    string GetActivationLinkPath(string modId, ModVersion version);
+    string GetInstanceVehiclesFolder(Guid instanceId);
+
+    string GetInstanceSettingsPath(Guid instanceId);
+
+    string GetInstanceManifestPath(Guid instanceId);
+
+    string GetInstanceMetadataPath(Guid instanceId);
 
     /// <summary>
     /// Root directory of the KSA game installation itself (not the Documents

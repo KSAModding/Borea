@@ -4,15 +4,14 @@ namespace Borea.Core.Mods;
 
 /// <summary>
 /// A snapshot of a mod's descriptive and release information, as of a
-/// specific version. Immutable once constructed — typically captured at
-/// install time and stored on the owning <see cref="InstalledMod"/>, so it
-/// remains valid even if the source mod is later removed or altered upstream.
+/// specific version.
 /// </summary>
 public sealed class ModMetadata
 {
     public string ModId { get; }
     public string Name { get; }
     public string Author { get; }
+    public ModVersion Version { get; }
     public string Description { get; }
     public string? HomepageUrl { get; }
     public string? ChangeLog { get; }
@@ -25,6 +24,7 @@ public sealed class ModMetadata
         string modId,
         string name,
         string author,
+        ModVersion version,
         string description,
         DateTimeOffset releasedAt,
         long fileSizeBytes,
@@ -51,6 +51,7 @@ public sealed class ModMetadata
         ModId = modId;
         Name = name;
         Author = author;
+        Version = version;
         Description = description;
         ReleasedAt = releasedAt;
         FileSizeBytes = fileSizeBytes;

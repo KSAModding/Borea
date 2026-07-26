@@ -25,6 +25,9 @@ public sealed class InstalledMod
         if (!string.Equals(metadata.ModId, modId, StringComparison.Ordinal))
             throw new ArgumentException($"Metadata ModId '{metadata.ModId}' does not match '{modId}'.", nameof(metadata));
 
+        if (!metadata.Version.Equals(version))
+            throw new ArgumentException($"Metadata version '{metadata.Version}' does not match '{version}'.", nameof(metadata));
+
         ModId = modId;
         Version = version;
         Reason = reason;

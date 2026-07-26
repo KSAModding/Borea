@@ -12,6 +12,7 @@ public sealed class ModPackMetadata
     public string ModPackId { get; }
     public string Name { get; }
     public string Author { get; }
+    public ModVersion Version { get; }
     public string Description { get; }
     public string? HomepageUrl { get; }
     public DateTimeOffset ReleasedAt { get; }
@@ -21,6 +22,7 @@ public sealed class ModPackMetadata
         string modPackId,
         string name,
         string author,
+        ModVersion version,
         string description,
         DateTimeOffset releasedAt,
         IReadOnlyList<ModPackEntry> mods,
@@ -44,6 +46,7 @@ public sealed class ModPackMetadata
         ModPackId = modPackId;
         Name = name;
         Author = author;
+        Version = version;
         Description = description;
         ReleasedAt = releasedAt;
         Mods = new ReadOnlyCollection<ModPackEntry>(mods.ToArray());
@@ -54,4 +57,4 @@ public sealed class ModPackMetadata
 /// <summary>
 /// A single mod+version entry within a mod pack.
 /// </summary>
-public readonly record struct ModPackEntry(string ModId, ModVersion Version);
+public readonly record struct ModPackEntry(string ModId, Mods.ModVersion Version);

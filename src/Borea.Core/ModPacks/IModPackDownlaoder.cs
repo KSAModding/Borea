@@ -13,7 +13,7 @@ public interface IModPackDownloader
 {
     Task<ModPackDownloadResult> DownloadAsync(
         ModPackMetadata modPack,
-        Func<string, ModVersion, string> resolveDestination,
+        Func<string, Mods.ModVersion, string> resolveDestination,
         IProgress<ModPackDownloadProgress>? progress = null,
         CancellationToken cancellationToken = default);
 }
@@ -52,4 +52,4 @@ public sealed class ModPackDownloadResult
 /// <summary>
 /// Records why a specific mod within a pack failed to download.
 /// </summary>
-public readonly record struct ModDownloadFailure(string ModId, ModVersion Version, string Reason);
+public readonly record struct ModDownloadFailure(string ModId, Mods.ModVersion Version, string Reason);

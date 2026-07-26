@@ -31,10 +31,6 @@
             PreRelease = string.IsNullOrWhiteSpace(preRelease) ? null : preRelease;
         }
 
-        /// <summary>
-        /// Parses a version string such as "1.2.3" or "1.2.3-beta.1".
-        /// Throws <see cref="FormatException"/> if the string is not well-formed.
-        /// </summary>
         public static ModVersion Parse(string value)
         {
             if (!TryParse(value, out var result))

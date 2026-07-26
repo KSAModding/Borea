@@ -12,18 +12,18 @@ public interface IModStateRepository
     /// Returns the currently active version of the given mod, or null if
     /// the mod has no active version (not installed, or explicitly inactive).
     /// </summary>
-    Task<ModVersion?> GetActiveVersionAsync(string modId, CancellationToken cancellationToken = default);
+    Task<Mods.ModVersion?> GetActiveVersionAsync(string modId, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Returns all currently active mods as a ModId -> ModVersion mapping.
     /// </summary>
-    Task<IReadOnlyDictionary<string, ModVersion>> GetAllActiveAsync(CancellationToken cancellationToken = default);
+    Task<IReadOnlyDictionary<string, Mods.ModVersion>> GetAllActiveAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Records the given mod version as active, replacing any previously
     /// active version of the same mod.
     /// </summary>
-    Task SetActiveAsync(string modId, ModVersion version, CancellationToken cancellationToken = default);
+    Task SetActiveAsync(string modId, Mods.ModVersion version, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Records the given mod as having no active version.
