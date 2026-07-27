@@ -10,7 +10,6 @@
 
   <ItemGroup>
     <Folder Include="ModPacks\" />
-    <Folder Include="State\" />
   </ItemGroup>
 
   <PropertyGroup>

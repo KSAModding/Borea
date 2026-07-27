@@ -1,34 +1,24 @@
-﻿using System.Collections.Generic;
-using System.Threading;
-using System.Threading.Tasks;
-using System;
-
-namespace Borea.Core.State;
+﻿namespace Borea.Core.State;
 
 /// <summary>
-/// Tracks which version of each mod is currently active within a specific
-/// instance.
+/// Tracks which mods are currently active within a specific instance.
 /// </summary>
 public interface IModStateRepository
 {
     /// <summary>
-    /// Returns the currently active version of the given mod within the
-    /// instance, or null if the mod has no active version (not installed,
-    /// or explicitly inactive).
+    /// Returns true if the given mod is currently active within the instance, else false
     /// </summary>
-    Task<Mods.ModVersion?> GetActiveVersionAsync(Guid instanceId, string modId, CancellationToken cancellationToken = default);
+    Task<bool> IsActiveAsync(Guid instanceId, string modId, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Returns all currently active mods within the instance as a
-    /// ModId -> ModVersion mapping.
+    /// Returns all currently active mods within the instance.
     /// </summary>
-    Task<IReadOnlyDictionary<string, Mods.ModVersion>> GetAllActiveAsync(Guid instanceId, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<string>> GetAllActiveModIdsAsync(Guid instanceId, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Activates the given mod version within the instance, replacing any
-    /// previously active version of the same mod.
+    /// Activates the given mod within the instance. No-op if the mod is already active.
     /// </summary>
-    Task SetActiveAsync(Guid instanceId, string modId, Mods.ModVersion version, CancellationToken cancellationToken = default);
+    Task SetActiveAsync(Guid instanceId, string modId, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Deactivates the given mod within the instance. No-op if the mod is
