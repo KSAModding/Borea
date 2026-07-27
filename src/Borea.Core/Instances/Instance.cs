@@ -28,14 +28,16 @@ public sealed class Instance
 
     public IReadOnlyList<InstalledMod> Mods => new ReadOnlyCollection<InstalledMod>(_mods);
 
+    public bool Favorite { get; private set; }
+
     public Instance(string name, InstanceSource source) : this(Guid.NewGuid(), name, source, DateTimeOffset.UtcNow, Array.Empty<InstalledMod>())
     {
     }
 
-    public static Instance FromExisting(Guid instanceId, string name, InstanceSource source, DateTimeOffset createdAt, IReadOnlyList<InstalledMod> mods)
-        => new(instanceId, name, source, createdAt, mods);
+    public static Instance FromExisting(Guid instanceId, string name, InstanceSource source, DateTimeOffset createdAt, IReadOnlyList<InstalledMod> mods, bool favorite)
+        => new(instanceId, name, source, createdAt, mods, favorite);
 
-    private Instance(Guid instanceId, string name, InstanceSource source, DateTimeOffset createdAt, IReadOnlyList<InstalledMod> mods)
+    private Instance(Guid instanceId, string name, InstanceSource source, DateTimeOffset createdAt, IReadOnlyList<InstalledMod> mods, bool favorite = false)
     {
         if (string.IsNullOrWhiteSpace(name))
             throw new ArgumentException("Instance name cannot be null or whitespace.", nameof(name));
@@ -48,6 +50,7 @@ public sealed class Instance
         Source = source ?? throw new ArgumentNullException(nameof(source));
         CreatedAt = createdAt;
         _mods = mods.ToList();
+        Favorite = favorite;
 
         var duplicateId = _mods
             .GroupBy(m => m.ModId, StringComparer.Ordinal)
@@ -88,4 +91,6 @@ public sealed class Instance
         _mods.Remove(existing);
         return true;
     }
+
+    public void SetFavorite(bool favorite) => Favorite = favorite;
 }

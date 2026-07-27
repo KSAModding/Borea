@@ -25,5 +25,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Borea.Core\Borea.Core.csproj" />
+    <ProjectReference Include="..\Borea.Storage\Borea.Storage.csproj" />
   </ItemGroup>
 </Project>

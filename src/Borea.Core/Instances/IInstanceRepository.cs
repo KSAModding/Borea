@@ -12,6 +12,10 @@ public interface IInstanceRepository
     /// </summary>
     Task<Instance?> GetByIdAsync(Guid instanceId);
 
+    Task<Guid?> GetActiveInstanceIdAsync();
+
+    Task SetActiveInstanceAsync(Guid instanceId);
+
     /// <summary>
     /// Whether <paramref name="name"/> is free to use. Pass
     /// <paramref name="excludingInstanceId"/> when checking availability for
@@ -25,4 +29,6 @@ public interface IInstanceRepository
     Task RenameAsync(Guid instanceId, string newName);
 
     Task DeleteAsync(Guid instanceId);
+
+    Task SaveAsync(Instance instance);
 }

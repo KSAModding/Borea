@@ -3,5 +3,12 @@
     <Project Path="src/Borea.App/Borea.App.csproj" />
     <Project Path="src/Borea.Core/Borea.Core.csproj" />
     <Project Path="src/Borea.Network/Borea.Network.csproj" />
+    <Project Path="src/Borea.Storage/Borea.Storage.csproj" />
+  </Folder>
+  <Folder Name="/src/tests/">
+    <Project Path="src/tests/Borea.Storage.Tests/Borea.Storage.Tests.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Borea.Storage.Tests/Borea.Storage.Tests.csproj" />
   </Folder>
 </Solution>

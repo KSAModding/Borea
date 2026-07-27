@@ -12,6 +12,12 @@ public interface IGamePathProvider
     string GetInstancesRoot();
 
     /// <summary>
+    /// Path to the file tracking which instance is currently selected for
+    /// launch.
+    /// </summary>
+    string GetActiveInstancePointerPath();
+
+    /// <summary>
     /// Root folder for a specific instance, e.g.
     /// </summary>
     string GetInstanceRoot(Guid instanceId);
