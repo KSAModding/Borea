@@ -28,7 +28,7 @@ public sealed class FileInstanceRepositoryTests : IDisposable
         var metadata = new ModMetadata(
             modId: "test-mod",
             name: "Test Mod",
-            author: "Jeremy",
+            author: "MrJeranimo",
             version: ModVersion.Parse("1.2.3"),
             description: "A mod used purely for round-trip testing.",
             releasedAt: DateTimeOffset.UtcNow,
@@ -53,7 +53,7 @@ public sealed class FileInstanceRepositoryTests : IDisposable
 
         Assert.NotNull(reloaded);
         Assert.Equal("My Test Pack", reloaded!.Name);
-        Assert.True(reloaded.Favorite);
+        Assert.True(reloaded.IsFavorite);
         Assert.Single(reloaded.Mods);
 
         var reloadedMod = reloaded.Mods.Single();

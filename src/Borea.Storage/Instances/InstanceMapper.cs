@@ -20,7 +20,7 @@ public static class InstanceMapper
             InstanceId = instance.InstanceId.ToString(),
             Name = instance.Name,
             CreatedAt = instance.CreatedAt,
-            Favorite = instance.Favorite,
+            IsFavorite = instance.IsFavorite,
             SourceType = sourceType,
             SourceModPackId = modPackId,
             SourceModPackVersion = modPackVersion,
@@ -45,6 +45,6 @@ public static class InstanceMapper
 
         var mods = dto.Mods.Select(InstalledModMapper.FromDto).ToList();
 
-        return Instance.FromExisting(instanceId, dto.Name, source, dto.CreatedAt, mods, dto.Favorite);
+        return Instance.FromExisting(instanceId, dto.Name, source, dto.CreatedAt, mods, dto.IsFavorite);
     }
 }
