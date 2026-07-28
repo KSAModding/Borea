@@ -1,4 +1,5 @@
 ﻿using Borea.Core.Mods;
+using Borea.Core.Game;
 
 namespace Borea.Storage.Mods;
 
@@ -10,6 +11,7 @@ public static class ModMetadataMapper
         Name = metadata.Name,
         Author = metadata.Author,
         Version = metadata.Version.ToString(),
+        BuiltForGameVersion = metadata.BuiltForGameVersion.ToString(),
         Description = metadata.Description,
         HomepageUrl = metadata.HomepageUrl,
         ChangeLog = metadata.ChangeLog,
@@ -24,6 +26,7 @@ public static class ModMetadataMapper
         dto.Name,
         dto.Author,
         ModVersion.Parse(dto.Version),
+        GameVersion.Parse(dto.BuiltForGameVersion),
         dto.Description,
         dto.ReleasedAt,
         dto.FileSizeBytes,

@@ -8,10 +8,6 @@
     <PackageReference Include="Tomlyn" Version="2.10.1" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="ModPacks\" />
-  </ItemGroup>
-
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>

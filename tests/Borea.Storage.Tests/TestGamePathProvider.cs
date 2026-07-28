@@ -21,6 +21,8 @@ internal sealed class TestGamePathProvider : IGamePathProvider
     public string GetInstanceManifestPath(Guid instanceId) => Path.Combine(GetInstanceRoot(instanceId), "manifest.toml");
     public string GetInstanceMetadataPath(Guid instanceId) => Path.Combine(GetInstanceRoot(instanceId), "instance.toml");
     public string GetActiveInstancePointerPath() => Path.Combine(_root, "active-instance.toml");
+    public string GetModFavoritesPath() => Path.Combine(_root, "mod-favorites.toml");
+    public string GetModPackFavoritesPath() => Path.Combine(_root, "modpack-favorites.toml");
     public string GetGameDirectoryPath() => Path.Combine(_root, "Game");
     public string GetStarMapDirectoryPath() => Path.Combine(_root, "StarMap");
 }

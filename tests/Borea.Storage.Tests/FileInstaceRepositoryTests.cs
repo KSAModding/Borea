@@ -1,4 +1,5 @@
-﻿using Borea.Core.Instances;
+﻿using Borea.Core.Game;
+using Borea.Core.Instances;
 using Borea.Core.Mods;
 using Borea.Storage.Instances;
 
@@ -30,6 +31,7 @@ public sealed class FileInstanceRepositoryTests : IDisposable
             name: "Test Mod",
             author: "MrJeranimo",
             version: ModVersion.Parse("1.2.3"),
+            builtForGameVersion: GameVersion.Parse("2026.7.4.2131"),
             description: "A mod used purely for round-trip testing.",
             releasedAt: DateTimeOffset.UtcNow,
             fileSizeBytes: 1024,
@@ -59,6 +61,7 @@ public sealed class FileInstanceRepositoryTests : IDisposable
         var reloadedMod = reloaded.Mods.Single();
         Assert.Equal("test-mod", reloadedMod.ModId);
         Assert.Equal(ModVersion.Parse("1.2.3"), reloadedMod.Version);
+        Assert.Equal(GameVersion.Parse("2026.7.4.2131"), reloadedMod.Metadata.BuiltForGameVersion);
         Assert.Equal(InstallReason.Manual, reloadedMod.Reason);
         Assert.Equal("Test Mod", reloadedMod.Metadata.Name);
         Assert.Single(reloadedMod.Metadata.Dependencies);

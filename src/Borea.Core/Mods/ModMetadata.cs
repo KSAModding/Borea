@@ -1,4 +1,5 @@
-﻿using System.Collections.ObjectModel;
+﻿using Borea.Core.Game;
+using System.Collections.ObjectModel;
 
 namespace Borea.Core.Mods;
 
@@ -12,6 +13,7 @@ public sealed class ModMetadata
     public string Name { get; }
     public string Author { get; }
     public ModVersion Version { get; }
+    public GameVersion BuiltForGameVersion { get; }
     public string Description { get; }
     public string? HomepageUrl { get; }
     public string? ChangeLog { get; }
@@ -25,6 +27,7 @@ public sealed class ModMetadata
         string name,
         string author,
         ModVersion version,
+        GameVersion builtForGameVersion,
         string description,
         DateTimeOffset releasedAt,
         long fileSizeBytes,
@@ -52,6 +55,7 @@ public sealed class ModMetadata
         Name = name;
         Author = author;
         Version = version;
+        BuiltForGameVersion = builtForGameVersion;
         Description = description;
         ReleasedAt = releasedAt;
         FileSizeBytes = fileSizeBytes;

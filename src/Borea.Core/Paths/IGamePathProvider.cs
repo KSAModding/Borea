@@ -18,6 +18,16 @@ public interface IGamePathProvider
     string GetActiveInstancePointerPath();
 
     /// <summary>
+    /// Path to the file tracking the user's favorited/bookmarked mods.
+    /// </summary>
+    string GetModFavoritesPath();
+
+    /// <summary>
+    /// Path to the file tracking the user's favorited/bookmarked mod packs.
+    /// </summary>
+    string GetModPackFavoritesPath();
+
+    /// <summary>
     /// Root folder for a specific instance, e.g.
     /// </summary>
     string GetInstanceRoot(Guid instanceId);

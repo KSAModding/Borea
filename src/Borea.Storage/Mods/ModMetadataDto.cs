@@ -9,6 +9,7 @@ public sealed class ModMetadataDto
     public string Name { get; set; } = string.Empty;
     public string Author { get; set; } = string.Empty;
     public string Version { get; set; } = string.Empty;
+    public string BuiltForGameVersion { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
     public string? HomepageUrl { get; set; }
     public string? ChangeLog { get; set; }

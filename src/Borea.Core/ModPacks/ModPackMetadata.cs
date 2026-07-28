@@ -1,4 +1,5 @@
 ﻿using Borea.Core.Mods;
+using Borea.Core.Game;
 using System.Collections.ObjectModel;
 
 namespace Borea.Core.ModPacks;
@@ -13,6 +14,7 @@ public sealed class ModPackMetadata
     public string Name { get; }
     public string Author { get; }
     public ModVersion Version { get; }
+    public GameVersion BuiltForGameVersion { get; }
     public string Description { get; }
     public string? HomepageUrl { get; }
     public DateTimeOffset ReleasedAt { get; }
@@ -23,6 +25,7 @@ public sealed class ModPackMetadata
         string name,
         string author,
         ModVersion version,
+        GameVersion builtForGameVersion,
         string description,
         DateTimeOffset releasedAt,
         IReadOnlyList<ModPackEntry> mods,
@@ -47,6 +50,7 @@ public sealed class ModPackMetadata
         Name = name;
         Author = author;
         Version = version;
+        BuiltForGameVersion = builtForGameVersion;
         Description = description;
         ReleasedAt = releasedAt;
         Mods = new ReadOnlyCollection<ModPackEntry>(mods.ToArray());
