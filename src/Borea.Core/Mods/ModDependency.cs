@@ -7,17 +7,17 @@
 public sealed class ModDependency
 {
     /// <summary>The <see cref="ModMetadata.ModId"/> of the required mod.</summary>
-    public string ModId { get; init; }
+    public string ModId { get; }
 
     /// <summary>The version constraint the installed dependency must satisfy.</summary>
-    public VersionRange RequiredVersion { get; init; }
+    public VersionRange RequiredVersion { get; }
 
     /// <summary>
     /// If true, this dependency is a "soft" requirement — the depending mod integrates
     /// with it when present but will still load without it. Resolution should not
     /// auto-install or block on optional dependencies the way it does for required ones.
     /// </summary>
-    public bool IsOptional { get; init; }
+    public bool IsOptional { get; }
 
     public ModDependency(string modId, VersionRange requiredVersion, bool isOptional = false)
     {

@@ -28,6 +28,11 @@ public interface IGamePathProvider
     string GetModPackFavoritesPath();
 
     /// <summary>
+    /// Path to Borea's own settings.toml (game/StarMap install locations).
+    /// </summary>
+    string GetBoreaSettingsPath();
+
+    /// <summary>
     /// Root folder for a specific instance, e.g.
     /// </summary>
     string GetInstanceRoot(Guid instanceId);
@@ -48,11 +53,19 @@ public interface IGamePathProvider
     /// Root directory of the KSA game installation itself (not the Documents
     /// folder).
     /// </summary>
-    string GetGameDirectoryPath();
+    /// <returns><list type="bullet">
+    /// <item>null if path is unknown.</item>
+    /// <item>string path if known.</item>
+    /// </list></returns>
+    string? GetGameDirectoryPath();
 
     /// <summary>
     /// Root directory of the StarMap installation. Used as the base
     /// path for launching StarMap.
     /// </summary>
-    string GetStarMapDirectoryPath();
+    /// <returns><list type="bullet">
+    /// <item>null if path is unknown.</item>
+    /// <item>string path if known.</item>
+    /// </list></returns>
+    string? GetStarMapDirectoryPath();
 }

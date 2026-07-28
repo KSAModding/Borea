@@ -98,6 +98,60 @@ public sealed class FileInstanceRepositoryTests : IDisposable
         await _repository.DeleteAsync(Guid.NewGuid());
     }
 
+    [Fact]
+    public async Task GetActiveInstanceIdAsync_NoPointerSet_ReturnsNull()
+    {
+        var result = await _repository.GetActiveInstanceIdAsync();
+
+        Assert.Null(result);
+    }
+
+    [Fact]
+    public async Task SetActiveInstanceAsync_ThenGet_RoundTrips()
+    {
+        var instance = await _repository.CreateAsync("Active Test", InstanceSource.Custom.Value);
+
+        await _repository.SetActiveInstanceAsync(instance.InstanceId);
+        var activeId = await _repository.GetActiveInstanceIdAsync();
+
+        Assert.Equal(instance.InstanceId, activeId);
+    }
+
+    [Fact]
+    public async Task SetActiveInstanceAsync_NonexistentInstance_ThrowsInvalidOperationException()
+    {
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => _repository.SetActiveInstanceAsync(Guid.NewGuid()));
+    }
+
+    [Fact]
+    public async Task GetActiveInstanceIdAsync_PersistsAcrossFreshRepository()
+    {
+        var instance = await _repository.CreateAsync("Persisted Active", InstanceSource.Custom.Value);
+        await _repository.SetActiveInstanceAsync(instance.InstanceId);
+
+        var freshRepository = new FileInstanceRepository(_pathProvider);
+        var activeId = await freshRepository.GetActiveInstanceIdAsync();
+
+        Assert.Equal(instance.InstanceId, activeId);
+    }
+
+    [Fact]
+    public async Task GetActiveInstanceIdAsync_MalformedPointerFile_ReturnsNullRatherThanThrowing()
+    {
+        // Confirms the deliberate asymmetry: a corrupted/malformed active-instance
+        // pointer degrades to "nothing selected" rather than surfacing an error,
+        // since "no active instance" is a normal state (first run), unlike a
+        // corrupted Instance itself which is meant to fail loudly.
+        var pointerPath = _pathProvider.GetActiveInstancePointerPath();
+        Directory.CreateDirectory(Path.GetDirectoryName(pointerPath)!);
+        File.WriteAllText(pointerPath, "ActiveInstanceId = \"not-a-valid-guid\"");
+
+        var result = await _repository.GetActiveInstanceIdAsync();
+
+        Assert.Null(result);
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_tempRoot))
