@@ -30,6 +30,7 @@ public sealed class FileInstanceRepositoryTests : IDisposable
         var dependency = new ModDependency("some-other-mod", VersionRange.Parse(">=1.0.0"), isOptional: false);
         var metadata = new ModMetadata(
             modId: "test-mod",
+            source: "TestSource",
             name: "Test Mod",
             author: "MrJeranimo",
             version: ModVersion.Parse("1.2.3"),

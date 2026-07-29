@@ -8,6 +8,7 @@ public static class ModMetadataMapper
     public static ModMetadataDto ToDto(ModMetadata metadata) => new()
     {
         ModId = metadata.ModId,
+        Source = metadata.Source,
         Name = metadata.Name,
         Author = metadata.Author,
         Version = metadata.Version.ToString(),
@@ -23,6 +24,7 @@ public static class ModMetadataMapper
 
     public static ModMetadata FromDto(ModMetadataDto dto) => new(
         dto.ModId,
+        dto.Source,
         dto.Name,
         dto.Author,
         ModVersion.Parse(dto.Version),

@@ -11,6 +11,7 @@ namespace Borea.Core.Mods;
 public sealed class ModMetadata
 {
     public string ModId { get; }
+    public string Source { get; }
     public string Name { get; }
     public string Author { get; }
     public ModVersion Version { get; }
@@ -25,6 +26,7 @@ public sealed class ModMetadata
 
     public ModMetadata(
         string modId,
+        string source,
         string name,
         string author,
         ModVersion version,
@@ -40,6 +42,9 @@ public sealed class ModMetadata
         if (string.IsNullOrWhiteSpace(modId))
             throw new ArgumentException("Mod ID cannot be null or whitespace.", nameof(modId));
 
+        if (string.IsNullOrWhiteSpace(source))
+            throw new ArgumentException("Source cannot be null or whitespace.", nameof(source));
+
         if (string.IsNullOrWhiteSpace(name))
             throw new ArgumentException("Name cannot be null or whitespace.", nameof(name));
 
@@ -53,6 +58,7 @@ public sealed class ModMetadata
             throw new ArgumentOutOfRangeException(nameof(fileSizeBytes), "File size cannot be negative.");
 
         ModId = modId;
+        Source = source;
         Name = name;
         Author = author;
         Version = version;

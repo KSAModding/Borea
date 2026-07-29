@@ -4,13 +4,16 @@ namespace Borea.Core.ModPacks;
 
 /// <summary>
 /// Downloads all mods referenced by a mod pack into Borea's library.
-/// Continues past individual mod failures rather than aborting the whole
-/// operation, so the caller can inspect ModPackDownloadResult and simply
-/// re-run this method to retry only the mods that failed (already-installed
-/// mods are skipped by the implementation, not re-downloaded).
 /// </summary>
 public interface IModPackDownloader
 {
+    /// <summary>
+    /// Downloads all mods referenced by a mod pack into Borea's library.
+    /// Continues past individual mod failures rather than aborting the whole
+    /// operation, so the caller can inspect ModPackDownloadResult and simply
+    /// re-run this method to retry only the mods that failed (already-installed
+    /// mods are skipped by the implementation, not re-downloaded).
+    /// </summary>
     Task<ModPackDownloadResult> DownloadAsync(
         ModPackMetadata modPack,
         Func<string, Mods.ModVersion, string> resolveDestination,

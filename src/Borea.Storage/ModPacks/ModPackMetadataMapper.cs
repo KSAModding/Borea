@@ -1,5 +1,4 @@
-﻿using System.Linq;
-using Borea.Core.Game;
+﻿using Borea.Core.Game;
 using Borea.Core.ModPacks;
 using Borea.Core.Mods;
 
@@ -10,6 +9,7 @@ public static class ModPackMetadataMapper
     public static ModPackMetadataDto ToDto(ModPackMetadata modPack) => new()
     {
         ModPackId = modPack.ModPackId,
+        Source = modPack.Source,
         Name = modPack.Name,
         Author = modPack.Author,
         Version = modPack.Version.ToString(),
@@ -22,6 +22,7 @@ public static class ModPackMetadataMapper
 
     public static ModPackMetadata FromDto(ModPackMetadataDto dto) => new(
         dto.ModPackId,
+        dto.Source,
         dto.Name,
         dto.Author,
         ModVersion.Parse(dto.Version),

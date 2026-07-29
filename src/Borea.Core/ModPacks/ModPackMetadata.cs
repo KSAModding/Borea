@@ -11,6 +11,7 @@ namespace Borea.Core.ModPacks;
 public sealed class ModPackMetadata
 {
     public string ModPackId { get; }
+    public string Source { get; }
     public string Name { get; }
     public string Author { get; }
     public ModVersion Version { get; }
@@ -22,6 +23,7 @@ public sealed class ModPackMetadata
 
     public ModPackMetadata(
         string modPackId,
+        string source,
         string name,
         string author,
         ModVersion version,
@@ -33,6 +35,9 @@ public sealed class ModPackMetadata
     {
         if (string.IsNullOrWhiteSpace(modPackId))
             throw new ArgumentException("Mod pack ID cannot be null or whitespace.", nameof(modPackId));
+
+        if (string.IsNullOrWhiteSpace(source))
+            throw new ArgumentException("Source cannot be null or whitespace.", nameof(source));
 
         if (string.IsNullOrWhiteSpace(name))
             throw new ArgumentException("Name cannot be null or whitespace.", nameof(name));
@@ -47,6 +52,7 @@ public sealed class ModPackMetadata
             throw new ArgumentException("A mod pack must contain at least one mod.", nameof(mods));
 
         ModPackId = modPackId;
+        Source = source;
         Name = name;
         Author = author;
         Version = version;

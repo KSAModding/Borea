@@ -7,11 +7,13 @@ public sealed class ModMetadataTests
 {
     private static ModMetadata Build(
         string modId = "test-mod",
+        string source = "TestSource",
         string name = "Test Mod",
         string author = "Author",
         string? description = "Description") =>
         new(
             modId,
+            source,
             name,
             author,
             ModVersion.Parse("1.0.0"),
@@ -26,6 +28,7 @@ public sealed class ModMetadataTests
         var metadata = Build();
 
         Assert.Equal("test-mod", metadata.ModId);
+        Assert.Equal("TestSource", metadata.Source);
         Assert.Equal(ModVersion.Parse("1.0.0"), metadata.Version);
         Assert.Equal(GameVersion.Parse("2026.7.4.2131"), metadata.BuiltForGameVersion);
         Assert.Empty(metadata.Dependencies);
@@ -39,6 +42,15 @@ public sealed class ModMetadataTests
     public void Constructor_InvalidModId_ThrowsArgumentException(string? modId)
     {
         Assert.Throws<ArgumentException>(() => Build(modId: modId!));
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void Constructor_InvalidSource_ThrowsArgumentException(string? source)
+    {
+        Assert.Throws<ArgumentException>(() => Build(source: source!));
     }
 
     [Theory]
@@ -69,7 +81,7 @@ public sealed class ModMetadataTests
     public void Constructor_NegativeFileSize_ThrowsArgumentOutOfRangeException()
     {
         Assert.Throws<ArgumentOutOfRangeException>(() => new ModMetadata(
-            "test-mod", "Name", "Author", ModVersion.Parse("1.0.0"),
+            "test-mod", "TestSource", "Name", "Author", ModVersion.Parse("1.0.0"),
             GameVersion.Parse("2026.7.4.2131"), "Description",
             DateTimeOffset.UtcNow, fileSizeBytes: -1));
     }

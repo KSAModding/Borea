@@ -18,6 +18,7 @@ internal static class TestFixtures
         IReadOnlyList<ModDependency>? dependencies = null) =>
         new(
             modId,
+            source: "TestSource",
             name: "Test Mod",
             author: "Test Author",
             version: ModVersion.Parse(version),

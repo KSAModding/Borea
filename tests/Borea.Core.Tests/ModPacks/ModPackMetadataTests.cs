@@ -11,11 +11,13 @@ public sealed class ModPackMetadataTests
 
     private static ModPackMetadata Build(
         string modPackId = "test-pack",
+        string source = "TestSource",
         string name = "Test Pack",
         string author = "Author",
         ModPackEntry[]? mods = null) =>
         new(
             modPackId,
+            source,
             name,
             author,
             ModVersion.Parse("1.0.0"),
@@ -30,6 +32,9 @@ public sealed class ModPackMetadataTests
         var pack = Build(mods:OneMod);
 
         Assert.Equal("test-pack", pack.ModPackId);
+        Assert.Equal("TestSource", pack.Source);
+        Assert.Equal("Test Pack", pack.Name);
+        Assert.Equal("Author", pack.Author);
         Assert.Single(pack.Mods);
     }
 
