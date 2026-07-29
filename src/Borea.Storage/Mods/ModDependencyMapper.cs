@@ -1,4 +1,4 @@
-﻿using Borea.Core.Mods;
+﻿using Borea.Core.Dependencies;
 
 namespace Borea.Storage.Mods;
 

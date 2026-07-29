@@ -1,9 +1,11 @@
-﻿using Borea.Core.Game;
+﻿using Borea.Core.Dependencies;
+using Borea.Core.Game;
 using Borea.Core.Instances;
 using Borea.Core.Mods;
 using Borea.Storage.Instances;
+using Borea.Storage.Tests.Paths;
 
-namespace Borea.Storage.Tests;
+namespace Borea.Storage.Tests.Instances;
 
 public sealed class FileInstanceRepositoryTests : IDisposable
 {

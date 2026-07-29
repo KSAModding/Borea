@@ -1,4 +1,6 @@
-﻿namespace Borea.Core.Mods
+﻿using Borea.Core.Dependencies;
+
+namespace Borea.Core.Mods
 {
     /// <summary>
     /// A version constraint used to express what a <see cref="ModDependency"/> requires,

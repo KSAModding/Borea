@@ -2,7 +2,7 @@
 using Borea.Core.Settings;
 using Xunit;
 
-namespace Borea.Core.Tests;
+namespace Borea.Core.Tests.Settings;
 
 public sealed class BoreaSettingsTests
 {

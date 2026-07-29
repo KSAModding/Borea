@@ -1,6 +1,6 @@
 ﻿using Borea.Core.Game;
 
-namespace Borea.Core.Tests;
+namespace Borea.Core.Tests.Game;
 
 public sealed class GameVersionTests
 {

@@ -1,6 +1,6 @@
 ﻿using Borea.Storage.Paths;
 
-namespace Borea.Storage.Tests;
+namespace Borea.Storage.Tests.Paths;
 
 public sealed class GamePathProviderTests
 {

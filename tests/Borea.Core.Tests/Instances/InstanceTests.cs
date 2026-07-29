@@ -1,6 +1,8 @@
-﻿using Borea.Core.Instances;
+﻿using Borea.Core.Mods;
+using Borea.Core.Instances;
+using Borea.Core.Tests.Mods;
 
-namespace Borea.Core.Tests;
+namespace Borea.Core.Tests.Instances;
 
 public sealed class InstanceTests
 {
@@ -140,6 +142,6 @@ public sealed class InstanceTests
         // Mods should expose a read-only view — confirms external code can't
         // bypass AddMod/RemoveMod's invariant checks (e.g. duplicate-ModId
         // rejection) by mutating the returned collection directly.
-        Assert.IsAssignableFrom<System.Collections.Generic.IReadOnlyList<Core.Mods.InstalledMod>>(instance.Mods);
+        Assert.IsAssignableFrom<System.Collections.Generic.IReadOnlyList<InstalledMod>>(instance.Mods);
     }
 }

@@ -1,7 +1,7 @@
 ﻿using Borea.Core.Instances;
 using Borea.Core.Mods;
 
-namespace Borea.Core.Tests;
+namespace Borea.Core.Tests.Instances;
 
 public sealed class InstanceSourceTests
 {

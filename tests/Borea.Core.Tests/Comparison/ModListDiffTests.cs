@@ -2,7 +2,7 @@
 using Borea.Core.ModPacks;
 using Borea.Core.Mods;
 
-namespace Borea.Core.Tests;
+namespace Borea.Core.Tests.Comparison;
 
 public sealed class ModListDiffTests
 {

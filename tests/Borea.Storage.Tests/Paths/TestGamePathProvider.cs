@@ -1,6 +1,6 @@
 ﻿using Borea.Core.Paths;
 
-namespace Borea.Storage.Tests;
+namespace Borea.Storage.Tests.Paths;
 
 /// <summary>
 /// Minimal IGamePathProvider rooted at an arbitrary folder — used to exercise

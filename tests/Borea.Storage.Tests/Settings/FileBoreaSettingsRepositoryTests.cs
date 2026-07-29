@@ -1,7 +1,8 @@
 ﻿using Borea.Core.Settings;
 using Borea.Storage.Settings;
+using Borea.Storage.Tests.Paths;
 
-namespace Borea.Storage.Tests;
+namespace Borea.Storage.Tests.Settings;
 
 public sealed class FileBoreaSettingsRepositoryTests : IDisposable
 {

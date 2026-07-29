@@ -1,6 +1,6 @@
 ﻿using Borea.Storage.Toml;
 
-namespace Borea.Storage.Tests;
+namespace Borea.Storage.Tests.Toml;
 
 public sealed class TomlFileStoreTests : IDisposable
 {

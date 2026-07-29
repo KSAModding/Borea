@@ -1,8 +1,9 @@
 ﻿using Borea.Core.Comparison;
 using Borea.Core.ModPacks;
 using Borea.Core.Mods;
+using Borea.Core.Tests.Mods;
 
-namespace Borea.Core.Tests;
+namespace Borea.Core.Tests.Comparison;
 
 public sealed class ModListComparerTests
 {

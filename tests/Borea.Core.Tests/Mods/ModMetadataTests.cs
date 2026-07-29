@@ -1,7 +1,7 @@
 ﻿using Borea.Core.Game;
 using Borea.Core.Mods;
 
-namespace Borea.Core.Tests;
+namespace Borea.Core.Tests.Mods;
 
 public sealed class ModMetadataTests
 {

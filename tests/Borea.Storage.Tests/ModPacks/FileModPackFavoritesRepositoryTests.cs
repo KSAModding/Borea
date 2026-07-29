@@ -1,6 +1,7 @@
 ﻿using Borea.Storage.ModPacks;
+using Borea.Storage.Tests.Paths;
 
-namespace Borea.Storage.Tests;
+namespace Borea.Storage.Tests.ModPacks;
 
 public sealed class FileModPackFavoritesRepositoryTests : IDisposable
 {

@@ -1,6 +1,7 @@
 ﻿using Borea.Storage.Mods;
+using Borea.Storage.Tests.Paths;
 
-namespace Borea.Storage.Tests;
+namespace Borea.Storage.Tests.Mods;
 
 public sealed class FileModUninstallerTests : IDisposable
 {

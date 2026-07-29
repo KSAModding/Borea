@@ -1,4 +1,6 @@
-﻿namespace Borea.Core.Mods;
+﻿using Borea.Core.Mods;
+
+namespace Borea.Core.Dependencies;
 
 /// <summary>
 /// A single dependency requirement declared by a mod, e.g. "requires CoolLib >=1.2.0".

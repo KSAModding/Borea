@@ -1,4 +1,5 @@
-﻿using Borea.Core.Game;
+﻿using Borea.Core.Dependencies;
+using Borea.Core.Game;
 using System.Collections.ObjectModel;
 
 namespace Borea.Core.Mods;

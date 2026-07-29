@@ -1,6 +1,7 @@
 ﻿using Borea.Storage.State;
+using Borea.Storage.Tests.Paths;
 
-namespace Borea.Storage.Tests;
+namespace Borea.Storage.Tests.State;
 
 public sealed class FileModStateRepositoryTests : IDisposable
 {

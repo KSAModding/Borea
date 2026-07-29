@@ -1,6 +1,7 @@
-﻿using Borea.Core.Mods;
+﻿using Borea.Core.Dependencies;
+using Borea.Core.Mods;
 
-namespace Borea.Core.Tests;
+namespace Borea.Core.Tests.Dependencies;
 
 public sealed class ModDependencyTests
 {

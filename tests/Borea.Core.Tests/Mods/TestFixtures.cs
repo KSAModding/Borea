@@ -1,7 +1,8 @@
-﻿using Borea.Core.Game;
+﻿using Borea.Core.Dependencies;
+using Borea.Core.Game;
 using Borea.Core.Mods;
 
-namespace Borea.Core.Tests;
+namespace Borea.Core.Tests.Mods;
 
 /// <summary>
 /// Shared sample-data builders for Core tests. Centralizes valid default
