@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
-using Borea.Core.Mods;
+﻿using Borea.Core.Mods;
 
 namespace Borea.Network.Sources;
 
@@ -11,8 +6,7 @@ namespace Borea.Network.Sources;
 /// Queries every registered source and merges results, tagging each
 /// ModMetadata with its originating source via ModMetadata.Source. Which
 /// sources are active is entirely determined by what's registered at
-/// construction — e.g. dropping "spacedock" here later stops it from being
-/// queried, with no special retirement handling needed.
+/// construction.
 /// </summary>
 public sealed class CompositeModRepository : IModRepository
 {
@@ -79,7 +73,7 @@ public sealed class CompositeModRepository : IModRepository
     }
 
     private static ModMetadata Tag(ModMetadata original, string source) => new(
-        original.ModId, original.Name, original.Author, original.Version, original.BuiltForGameVersion,
+        original.ModId, source, original.Name, original.Author, original.Version, original.BuiltForGameVersion,
         original.Description, original.ReleasedAt, original.FileSizeBytes, original.Dependencies,
-        original.Tags, original.HomepageUrl, original.ChangeLog, source);
+        original.Tags, original.HomepageUrl, original.ChangeLog);
 }

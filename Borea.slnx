@@ -7,6 +7,7 @@
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Borea.Core.Tests/Borea.Core.Tests.csproj" />
+    <Project Path="tests/Borea.Network.Tests/Borea.Network.Tests.csproj" />
     <Project Path="tests/Borea.Storage.Tests/Borea.Storage.Tests.csproj" />
   </Folder>
 </Solution>

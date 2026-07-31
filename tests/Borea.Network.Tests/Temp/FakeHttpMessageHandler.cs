@@ -1,0 +1,31 @@
+﻿namespace Borea.Network.Tests;
+
+/// <summary>
+/// Routes outgoing HttpClient requests to a caller-supplied responder
+/// instead of hitting the network. Captures the last request for assertion.
+/// </summary>
+internal sealed class FakeHttpMessageHandler : HttpMessageHandler
+{
+    private readonly Func<HttpRequestMessage, HttpResponseMessage> _responder;
+
+    public HttpRequestMessage? LastRequest { get; private set; }
+
+    public FakeHttpMessageHandler(Func<HttpRequestMessage, HttpResponseMessage> responder) => _responder = responder;
+
+    protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+    {
+        LastRequest = request;
+        return Task.FromResult(_responder(request));
+    }
+
+    public static HttpClient BuildClient(Func<HttpRequestMessage, HttpResponseMessage> responder, out FakeHttpMessageHandler handler)
+    {
+        handler = new FakeHttpMessageHandler(responder);
+        return new HttpClient(handler) { BaseAddress = new Uri("https://spacedock.info/") };
+    }
+
+    public static HttpResponseMessage JsonResponse(string json) => new(System.Net.HttpStatusCode.OK)
+    {
+        Content = new StringContent(json, System.Text.Encoding.UTF8, "application/json"),
+    };
+}
