@@ -33,4 +33,17 @@ public sealed class SpaceDockResolver
     /// <param name="spaceDockId">The numeric mod ID used by SpaceDock.</param>
     public bool TryResolve(string modId, out int spaceDockId) =>
         _map.TryGetValue(modId, out spaceDockId);
+
+    /// <summary>
+    /// Combined resolution: a raw integer ModId means "still the browse-time
+    /// placeholder" and is used directly; anything else is looked up as a
+    /// registered true ModId.
+    /// </summary>
+    public bool TryResolveId(string modId, out int spaceDockId)
+    {
+        if (int.TryParse(modId, out spaceDockId))
+            return true;
+
+        return TryResolve(modId, out spaceDockId);
+    }
 }
