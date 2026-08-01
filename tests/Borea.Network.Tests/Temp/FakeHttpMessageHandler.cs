@@ -28,4 +28,9 @@ internal sealed class FakeHttpMessageHandler : HttpMessageHandler
     {
         Content = new StringContent(json, System.Text.Encoding.UTF8, "application/json"),
     };
+
+    public static HttpResponseMessage ByteResponse(byte[] bytes) => new(System.Net.HttpStatusCode.OK)
+    {
+        Content = new ByteArrayContent(bytes),
+    };
 }

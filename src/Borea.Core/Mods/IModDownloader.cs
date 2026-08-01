@@ -19,4 +19,4 @@ public readonly record struct DownloadProgress(long BytesDownloaded, long TotalB
 /// Outcome of a completed download, used by the caller to construct an
 /// InstalledMod once metadata and install reason are also known.
 /// </summary>
-public readonly record struct DownloadResult(long BytesDownloaded, string? Checksum);
+public readonly record struct DownloadResult(string ModId, long BytesDownloaded, string? Checksum);

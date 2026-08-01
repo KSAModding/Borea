@@ -4,6 +4,14 @@
     <ProjectReference Include="..\Borea.Core\Borea.Core.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="Tomlyn" Version="2.10.1" />
+  </ItemGroup>
+
+    <ItemGroup>
+	    <InternalsVisibleTo Include="Borea.Network.Tests" />
+    </ItemGroup>
+
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
