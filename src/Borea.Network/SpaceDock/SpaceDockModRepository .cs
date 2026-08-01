@@ -44,7 +44,7 @@ public sealed class SpaceDockModRepository : IModRepository
 
     public async Task<ModMetadata?> GetLatestAsync(string modId, CancellationToken cancellationToken = default)
     {
-        if (!TryResolveSpaceDockId(modId, out var spaceDockId))
+        if (!_resolver.TryResolveId(modId, out var spaceDockId))
             return null;
 
         var dto = await _httpClient.GetFromJsonAsync<SpaceDockModDto>(
@@ -55,7 +55,7 @@ public sealed class SpaceDockModRepository : IModRepository
 
     public async Task<ModMetadata?> GetVersionAsync(string modId, ModVersion version, CancellationToken cancellationToken = default)
     {
-        if (!TryResolveSpaceDockId(modId, out var spaceDockId))
+        if (!_resolver.TryResolveId(modId, out var spaceDockId))
             return null;
 
         var dto = await _httpClient.GetFromJsonAsync<SpaceDockModDto>(
@@ -65,14 +65,14 @@ public sealed class SpaceDockModRepository : IModRepository
             return null;
 
         var matchingVersion = dto.Versions.FirstOrDefault(v =>
-            TryNormalizeModVersion(v.FriendlyVersion, out var parsed) && parsed.Equals(version));
+            SpaceDockVersionParsing.TryNormalize(v.FriendlyVersion, out var parsed) && parsed.Equals(version));
 
         return matchingVersion is null ? null : TryMapToMetadata(dto, matchingVersion);
     }
 
     public async Task<IReadOnlyList<ModVersion>> GetAvailableVersionsAsync(string modId, CancellationToken cancellationToken = default)
     {
-        if (!TryResolveSpaceDockId(modId, out var spaceDockId))
+        if (!_resolver.TryResolveId(modId, out var spaceDockId))
             return Array.Empty<ModVersion>();
 
         var dto = await _httpClient.GetFromJsonAsync<SpaceDockModDto>(
@@ -82,7 +82,7 @@ public sealed class SpaceDockModRepository : IModRepository
             return Array.Empty<ModVersion>();
 
         return dto.Versions
-            .Select(v => TryNormalizeModVersion(v.FriendlyVersion, out var parsed) ? (ModVersion?)parsed : null)
+            .Select(v => SpaceDockVersionParsing.TryNormalize(v.FriendlyVersion, out var parsed) ? (ModVersion?)parsed : null)
             .Where(v => v.HasValue)
             .Select(v => v!.Value)
             .ToList();
@@ -101,16 +101,6 @@ public sealed class SpaceDockModRepository : IModRepository
             .Where(m => m is not null)
             .Select(m => m!)
             .ToList();
-    }
-
-    private bool TryResolveSpaceDockId(string modId, out int spaceDockId)
-    {
-        // A raw integer means "still the browse-time placeholder" — use directly.
-        if (int.TryParse(modId, out spaceDockId))
-            return true;
-
-        // Otherwise this is the true, mod.toml-confirmed ModId — ask the resolver.
-        return _resolver.TryResolve(modId, out spaceDockId);
     }
 
     /// <summary>
@@ -144,7 +134,7 @@ public sealed class SpaceDockModRepository : IModRepository
 
     private static ModMetadata? TryMapToMetadata(SpaceDockModDto dto, SpaceDockVersionDto version)
     {
-        if (!TryNormalizeModVersion(version.FriendlyVersion, out var modVersion))
+        if (!SpaceDockVersionParsing.TryNormalize(version.FriendlyVersion, out var modVersion))
             return null;
 
         if (!GameVersion.TryParse(version.RawGameVersion, out var gameVersion))
@@ -167,34 +157,6 @@ public sealed class SpaceDockModRepository : IModRepository
             fileSizeBytes: 0, // Still not exposed anywhere in the API.
             homepageUrl: homepageUrl,
             changeLog: version.Changelog);
-    }
-
-    /// <summary>
-    /// Best-effort coercion of SpaceDock's free-text friendly_version into
-    /// ModVersion's strict Major.Minor.Patch shape. Strips a leading 'v',
-    /// pads missing components with 0.
-    /// </summary>
-    private static bool TryNormalizeModVersion(string raw, out ModVersion version)
-    {
-        version = default;
-        if (string.IsNullOrWhiteSpace(raw))
-            return false;
-
-        var trimmed = raw.Trim();
-        if (trimmed.StartsWith("v", StringComparison.OrdinalIgnoreCase))
-            trimmed = trimmed[1..];
-
-        var parts = trimmed.Split('.');
-        if (parts.Length >= 3 && parts.Take(3).All(p => int.TryParse(p, out _)))
-            return ModVersion.TryParse($"{parts[0]}.{parts[1]}.{parts[2]}", out version);
-
-        if (parts.Length == 2 && parts.All(p => int.TryParse(p, out _)))
-            return ModVersion.TryParse($"{parts[0]}.{parts[1]}.0", out version);
-
-        if (parts.Length == 1 && int.TryParse(parts[0], out _))
-            return ModVersion.TryParse($"{parts[0]}.0.0", out version);
-
-        return false;
     }
 }
 
