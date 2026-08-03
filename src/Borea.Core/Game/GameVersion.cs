@@ -1,17 +1,23 @@
-﻿namespace Borea.Core.Game;
+using System.Globalization;
+using System.Text.RegularExpressions;
+
+namespace Borea.Core.Game;
 
 /// <summary>
-/// KSA's own versioning scheme: Year.Month.BuildNumber.LastCommitNumber.
-/// Currently Opaque and only compatability checks are equality checks.
+/// KSA's version scheme: Year.Month.BuildNumber.Revision, plus an optional -suffix and +hash.
+/// Only the revision orders releases; the build number is machine-local and year and month are display only.
+/// Equality compares every component, so versions with equal revisions can still be distinct.
+/// See https://github.com/KSAModding/mod-manager-design/blob/main/rfcs/0017-game-version-ordering-and-compatibility.md
 /// </summary>
-public readonly record struct GameVersion
+public readonly partial record struct GameVersion : IComparable<GameVersion>
 {
     public int Year { get; }
     public int Month { get; }
     public int BuildNumber { get; }
-    public int LastCommitNumber { get; }
+    public int Revision { get; }
+    public string Suffix { get; }
 
-    public GameVersion(int year, int month, int buildNumber, int lastCommitNumber)
+    public GameVersion(int year, int month, int buildNumber, int revision, string suffix = "")
     {
         if (year < 0)
             throw new ArgumentOutOfRangeException(nameof(year), "Year cannot be negative.");
@@ -22,13 +28,16 @@ public readonly record struct GameVersion
         if (buildNumber < 0)
             throw new ArgumentOutOfRangeException(nameof(buildNumber), "Build number cannot be negative.");
 
-        if (lastCommitNumber < 0)
-            throw new ArgumentOutOfRangeException(nameof(lastCommitNumber), "Last commit number cannot be negative.");
+        if (revision < 0)
+            throw new ArgumentOutOfRangeException(nameof(revision), "Revision cannot be negative.");
 
         Year = year;
         Month = month;
         BuildNumber = buildNumber;
-        LastCommitNumber = lastCommitNumber;
+        Revision = revision;
+        Suffix = string.IsNullOrEmpty(suffix) ? string.Empty
+            : suffix.StartsWith('-') ? suffix
+            : "-" + suffix;
     }
 
     public static GameVersion Parse(string value)
@@ -46,22 +55,42 @@ public readonly record struct GameVersion
         if (string.IsNullOrWhiteSpace(value))
             return false;
 
-        var parts = value.Split('.');
-        if (parts.Length != 4)
+        var match = Pattern().Match(value);
+        if (!match.Success)
             return false;
 
-        if (!int.TryParse(parts[0], out var year) ||
-            !int.TryParse(parts[1], out var month) ||
-            !int.TryParse(parts[2], out var build) ||
-            !int.TryParse(parts[3], out var commit))
+        if (!int.TryParse(match.Groups["Year"].Value, NumberStyles.None, CultureInfo.InvariantCulture, out var year) ||
+            !int.TryParse(match.Groups["Month"].Value, NumberStyles.None, CultureInfo.InvariantCulture, out var month) ||
+            !int.TryParse(match.Groups["Build"].Value, NumberStyles.None, CultureInfo.InvariantCulture, out var build) ||
+            !int.TryParse(match.Groups["Revision"].Value, NumberStyles.None, CultureInfo.InvariantCulture, out var revision))
             return false;
 
-        if (year < 0 || month is < 1 or > 12 || build < 0 || commit < 0)
+        if (month is < 1 or > 12)
             return false;
 
-        result = new GameVersion(year, month, build, commit);
+        // The constructor normalizes the leading dash, like VersionInfo.ParseVersion.
+        var suffix = match.Groups["Suffix"].Success ? match.Groups["Suffix"].Value : string.Empty;
+
+        result = new GameVersion(year, month, build, revision, suffix);
         return true;
     }
 
-    public override string ToString() => $"{Year}.{Month}.{BuildNumber}.{LastCommitNumber}";
+    /// <summary>
+    /// Newer means a higher revision, nothing else is compared.
+    /// </summary>
+    public int CompareTo(GameVersion other) => Revision.CompareTo(other.Revision);
+
+    public static bool operator <(GameVersion left, GameVersion right) => left.CompareTo(right) < 0;
+
+    public static bool operator <=(GameVersion left, GameVersion right) => left.CompareTo(right) <= 0;
+
+    public static bool operator >(GameVersion left, GameVersion right) => left.CompareTo(right) > 0;
+
+    public static bool operator >=(GameVersion left, GameVersion right) => left.CompareTo(right) >= 0;
+
+    public override string ToString() => $"{Year}.{Month}.{BuildNumber}.{Revision}{Suffix}";
+
+    // The game's own version pattern (VersionInfo.MyRegex).
+    [GeneratedRegex(@"^v?(?<Year>\d+)\.(?<Month>\d+)\.(?<Build>\d+)\.(?<Revision>\d+)(?:-(?<Suffix>[^+]+))?(?:\+.*)?$")]
+    private static partial Regex Pattern();
 }
