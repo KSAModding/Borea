@@ -7,6 +7,8 @@
         x:Class="Borea.App.Views.MainWindow"
         x:DataType="vm:MainViewModel"
         Icon="/Assets/avalonia-logo.ico"
+        CanResize="False"
+        WindowDecorations="None"
         Title="Borea.App">
 
     <Design.DataContext>
@@ -15,8 +17,21 @@
         <vm:MainViewModel />
     </Design.DataContext>
 
-    <TextBox Text="{Binding Greeting}"
-             HorizontalAlignment="Center"
-             VerticalAlignment="Center" />
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="1*" />
+            <RowDefinition Height="9*" />
+        </Grid.RowDefinitions>
+        <Panel Grid.Row="1" Background="#101316">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="2*" />
+                    <ColumnDefinition Width="8*" />
+                    <ColumnDefinition Width="3*" />
+                </Grid.ColumnDefinitions>
+            </Grid>
+        </Panel>
+    </Grid>
+
 
 </Window>
