@@ -29,7 +29,7 @@ public sealed class ModPackMetadataTests
     [Fact]
     public void Constructor_ValidInput_SetsAllProperties()
     {
-        var pack = Build(mods:OneMod);
+        var pack = Build(mods: OneMod);
 
         Assert.Equal("test-pack", pack.ModPackId);
         Assert.Equal("TestSource", pack.Source);
