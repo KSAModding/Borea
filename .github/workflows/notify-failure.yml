@@ -1,0 +1,24 @@
+name: notify-failure
+
+on:
+  workflow_run:
+    workflows: [build]
+    types: [completed]
+
+permissions: {}
+
+jobs:
+  notify:
+    name: notify
+    if: github.event.workflow_run.conclusion == 'failure'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Post the failure to Discord
+        env:
+          WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          RUN_URL: ${{ github.event.workflow_run.html_url }}
+          TITLE: ${{ github.event.workflow_run.display_title }}
+          BRANCH: ${{ github.event.workflow_run.head_branch }}
+        run: |
+          payload=$(jq -n --arg content "Build failed on ${BRANCH}: ${TITLE} ${RUN_URL}" '{content: $content}')
+          curl -sf -H "Content-Type: application/json" -d "$payload" "$WEBHOOK_URL"
