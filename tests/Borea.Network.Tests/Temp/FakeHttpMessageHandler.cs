@@ -6,19 +6,22 @@
 /// </summary>
 internal sealed class FakeHttpMessageHandler : HttpMessageHandler
 {
-    private readonly Func<HttpRequestMessage, HttpResponseMessage> _responder;
+    private readonly Func<HttpRequestMessage, Task<HttpResponseMessage>> _responder;
 
     public HttpRequestMessage? LastRequest { get; private set; }
 
-    public FakeHttpMessageHandler(Func<HttpRequestMessage, HttpResponseMessage> responder) => _responder = responder;
+    public FakeHttpMessageHandler(Func<HttpRequestMessage, Task<HttpResponseMessage>> responder) => _responder = responder;
 
     protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
         LastRequest = request;
-        return Task.FromResult(_responder(request));
+        return _responder(request);
     }
 
-    public static HttpClient BuildClient(Func<HttpRequestMessage, HttpResponseMessage> responder, out FakeHttpMessageHandler handler)
+    public static HttpClient BuildClient(Func<HttpRequestMessage, HttpResponseMessage> responder, out FakeHttpMessageHandler handler) =>
+        BuildClient(request => Task.FromResult(responder(request)), out handler);
+
+    public static HttpClient BuildClient(Func<HttpRequestMessage, Task<HttpResponseMessage>> responder, out FakeHttpMessageHandler handler)
     {
         handler = new FakeHttpMessageHandler(responder);
         return new HttpClient(handler) { BaseAddress = new Uri("https://spacedock.info/") };
