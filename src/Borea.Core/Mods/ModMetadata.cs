@@ -14,13 +14,13 @@ public sealed class ModMetadata
     public string Source { get; }
     public string Name { get; }
     public string Author { get; }
-    public ModVersion Version { get; }
-    public GameVersion BuiltForGameVersion { get; }
+    public ModVersion? Version { get; }
+    public GameVersion? BuiltForGameVersion { get; }
     public string Description { get; }
     public string? HomepageUrl { get; }
     public string? ChangeLog { get; }
-    public DateTimeOffset ReleasedAt { get; }
-    public long FileSizeBytes { get; }
+    public DateTimeOffset? ReleasedAt { get; }
+    public long? FileSizeBytes { get; }
     public IReadOnlyList<ModDependency> Dependencies { get; }
     public IReadOnlyList<string> Tags { get; }
 
@@ -29,11 +29,11 @@ public sealed class ModMetadata
         string source,
         string name,
         string author,
-        ModVersion version,
-        GameVersion builtForGameVersion,
         string description,
-        DateTimeOffset releasedAt,
-        long fileSizeBytes,
+        ModVersion? version = null,
+        GameVersion? builtForGameVersion = null,
+        DateTimeOffset? releasedAt = null,
+        long? fileSizeBytes = null,
         IReadOnlyList<ModDependency>? dependencies = null,
         IReadOnlyList<string>? tags = null,
         string? homepageUrl = null,
@@ -53,9 +53,6 @@ public sealed class ModMetadata
 
         if (description is null)
             throw new ArgumentNullException(nameof(description));
-
-        if (fileSizeBytes < 0)
-            throw new ArgumentOutOfRangeException(nameof(fileSizeBytes), "File size cannot be negative.");
 
         ModId = modId;
         Source = source;

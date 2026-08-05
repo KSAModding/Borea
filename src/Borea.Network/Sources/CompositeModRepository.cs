@@ -73,7 +73,7 @@ public sealed class CompositeModRepository : IModRepository
     }
 
     private static ModMetadata Tag(ModMetadata original, string source) => new(
-        original.ModId, source, original.Name, original.Author, original.Version, original.BuiltForGameVersion,
-        original.Description, original.ReleasedAt, original.FileSizeBytes, original.Dependencies,
+        original.ModId, source, original.Name, original.Author, original.Description, original.Version,
+        original.BuiltForGameVersion, original.ReleasedAt, original.FileSizeBytes, original.Dependencies,
         original.Tags, original.HomepageUrl, original.ChangeLog);
 }

@@ -16,9 +16,9 @@ public sealed class ModMetadataTests
             source,
             name,
             author,
+            description!,
             ModVersion.Parse("1.0.0"),
             GameVersion.Parse("2026.7.4.2131"),
-            description!,
             DateTimeOffset.UtcNow,
             fileSizeBytes: 100);
 
@@ -75,15 +75,6 @@ public sealed class ModMetadataTests
     public void Constructor_NullDescription_ThrowsArgumentNullException()
     {
         Assert.Throws<ArgumentNullException>(() => Build(description: null));
-    }
-
-    [Fact]
-    public void Constructor_NegativeFileSize_ThrowsArgumentOutOfRangeException()
-    {
-        Assert.Throws<ArgumentOutOfRangeException>(() => new ModMetadata(
-            "test-mod", "TestSource", "Name", "Author", ModVersion.Parse("1.0.0"),
-            GameVersion.Parse("2026.7.4.2131"), "Description",
-            DateTimeOffset.UtcNow, fileSizeBytes: -1));
     }
 
     [Fact]

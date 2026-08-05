@@ -22,7 +22,7 @@ internal sealed class FakeModRepository : IModRepository
         Task.FromResult(_mods.FirstOrDefault(m => m.ModId == modId && m.Version.Equals(version)));
 
     public Task<IReadOnlyList<ModVersion>> GetAvailableVersionsAsync(string modId, CancellationToken cancellationToken = default) =>
-        Task.FromResult<IReadOnlyList<ModVersion>>(_mods.Where(m => m.ModId == modId).Select(m => m.Version).ToList());
+        Task.FromResult<IReadOnlyList<ModVersion>>(_mods.Where(m => m.ModId == modId).Select(m => m.Version!).ToList().Where(v => v != null).Cast<ModVersion>().ToList());
 
     public Task<IReadOnlyList<ModMetadata>> SearchAsync(string query, CancellationToken cancellationToken = default) =>
         Task.FromResult<IReadOnlyList<ModMetadata>>(_mods.Where(m => m.Name.Contains(query, StringComparison.OrdinalIgnoreCase)).ToList());
