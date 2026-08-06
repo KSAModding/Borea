@@ -8,7 +8,7 @@ namespace Borea.Core.Mods
     /// <summary>
     /// The versioned metadata for a mod. Contains information about the specific version of the mod.
     /// </summary>
-    public class ModVersionMetadata
+    public sealed class ModVersionMetadata
     {
         /// <summary>
         /// The version of the metadata specification.

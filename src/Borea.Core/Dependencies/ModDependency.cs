@@ -3,35 +3,60 @@
 namespace Borea.Core.Dependencies;
 
 /// <summary>
-/// A single dependency requirement declared by a mod, e.g. "requires CoolLib >=1.2.0".
-/// A <see cref="ModMetadata"/> holds a list of these for everything it depends on.
+/// A single mod dependency requirement declared by any content.
 /// </summary>
 public sealed class ModDependency
 {
-    /// <summary>The <see cref="ModMetadata.ModId"/> of the required mod.</summary>
+    /// <summary>
+    /// The ID of the required mod.
+    /// </summary>
     public string ModId { get; }
 
-    /// <summary>The version constraint the installed dependency must satisfy.</summary>
-    public VersionRange RequiredVersion { get; }
+    /// <summary>
+    /// The kind of dependency.
+    /// </summary>
+    // This may need a massive overhaul to handle the different kinds of dependencies, but for now, we will just use a simple enum.
+    public ModDependencyKind Kind { get; }
 
     /// <summary>
-    /// If true, this dependency is a "soft" requirement — the depending mod integrates
-    /// with it when present but will still load without it. Resolution should not
-    /// auto-install or block on optional dependencies the way it does for required ones.
+    /// The minimum version of the mod, if any. For required, optional, recommends, and suggests, this will be the minimum version of the mod is compatible.
+    /// For conflict, this will be the minimum version of the mod is incompatible.
     /// </summary>
-    public bool IsOptional { get; }
+    public ModVersion? MinVersion { get; }
 
-    public ModDependency(string modId, VersionRange requiredVersion, bool isOptional = false)
+    /// <summary>
+    /// The maximum version of the mod, if any. For required, optional, recommends, and suggests, this will be the maximum version of the mod is compatible.
+    /// For conflict, this will be the maximum version of the mod is incompatible.
+    /// </summary>
+    public ModVersion? MaxVersion { get; }
+
+    /// <param name="kind">The kind of dependency.</param>
+    /// <param name="minVersion">For required, optional, recommends, and suggests, this will be the minimum version of the mod is compatible.
+    /// For conflict, this will be the minimum version of the mod is incompatible.</param>
+    /// <param name="maxVersion">For required, optional, recommends, and suggests, this will be the maximum version of the mod is compatible.
+    /// For conflict, this will be the maximum version of the mod is incompatible.</param>
+    public ModDependency(string modId, ModDependencyKind kind, ModVersion? minVersion = null, ModVersion? maxVersion = null)
     {
         if (string.IsNullOrWhiteSpace(modId))
         {
             throw new ArgumentException("Dependency mod id cannot be empty.", nameof(modId));
-        }
+        } 
 
         ModId = modId;
-        RequiredVersion = requiredVersion ?? throw new ArgumentNullException(nameof(requiredVersion));
-        IsOptional = isOptional;
+        Kind = kind;
+        MinVersion = minVersion;
+        MaxVersion = maxVersion;
     }
 
-    public override string ToString() => IsOptional ? $"{ModId} {RequiredVersion} (optional)" : $"{ModId} {RequiredVersion}";
+    public override string ToString()
+    {
+        string versionRange = (MinVersion, MaxVersion) switch
+        {
+            (null, null) => "",
+            (var min, null) => $" >= {min}",
+            (null, var max) => $" <= {max}",
+            (var min, var max) => $" >= {min} <= {max}"
+        };
+        return $"{Kind} dependency on mod '{ModId}'{versionRange}";
+    }
 }
