@@ -1,6 +1,5 @@
 ﻿using Borea.Core.Game;
 using System.Collections.ObjectModel;
-using Borea.Core.ModLoaders;
 
 namespace Borea.Core.Mods;
 
@@ -88,7 +87,7 @@ public sealed class ModMetadata
     /// <summary>
     /// The operating systems that the mod is compatible with.
     /// </summary>
-    public string[] OSCompatability { get; }
+    public string[] OScompatibility { get; }
 
     /// <summary>
     /// The mod loader that the mod uses, if any.
@@ -120,7 +119,7 @@ public sealed class ModMetadata
         IReadOnlyList<string> tags,
         string forumURL,
         GameVersion minGameVersion,
-        string[] osCompatability,
+        string[] oscompatibility,
         string status = "active",
         string supersededBy = "",
         string releasesURL = "",
@@ -179,7 +178,7 @@ public sealed class ModMetadata
         Tags = tags is null ? Array.Empty<string>() : new ReadOnlyCollection<string>(tags.ToArray());
         ForumURL = forumURL;
         MinGameVersion = minGameVersion;
-        OSCompatability = osCompatability ?? Array.Empty<string>();
+        OScompatibility = oscompatibility ?? Array.Empty<string>();
         Status = status;
         SupersededBy = supersededBy;
         ReleasesURL = releasesURL;
