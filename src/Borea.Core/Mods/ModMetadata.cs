@@ -93,7 +93,17 @@ public sealed class ModMetadata
     /// <summary>
     /// The mod loader that the mod uses, if any.
     /// </summary>
-    public ModLoader? ModLoader { get; }
+    public string ModLoader { get; }
+
+    /// <summary>
+    /// The minimum version of the mod loader that the mod requires, if any.
+    /// </summary>
+    public string MinLoaderVersion { get; }
+
+    /// <summary>
+    /// The maximum version of the mod loader that the mod supports, if any.
+    /// </summary>
+    public string MaxLoaderVersion { get; }
 
     /// <param name="authors">Must contain at least one author.</param>
     /// <param name="abstractText">Can be "", not null.</param>
@@ -115,7 +125,9 @@ public sealed class ModMetadata
         string supersededBy = "",
         string releasesURL = "",
         GameVersion? maxGameVersion = null,
-        ModLoader? modLoader = null)
+        string modLoader = "",
+        string minLoaderVersion = "",
+        string maxLoaderVersion = "")
     {
         if (specVersion < 1)
             throw new ArgumentOutOfRangeException(nameof(specVersion), "Spec version must be a positive integer.");
@@ -147,6 +159,15 @@ public sealed class ModMetadata
         if (string.IsNullOrWhiteSpace(forumURL))
             throw new ArgumentException("Forum URL cannot be null or whitespace.", nameof(forumURL));
 
+        if (modLoader is null)
+            throw new ArgumentNullException("Mod loader cannot be null.", nameof(modLoader));
+
+        if (minLoaderVersion is null)
+            throw new ArgumentNullException("Minimum loader version cannot be null.", nameof(minLoaderVersion));
+
+        if (maxLoaderVersion is null)
+            throw new ArgumentNullException("Maximum loader version cannot be null.", nameof(maxLoaderVersion));
+
         SpecVersion = specVersion;
         ModId = modId;
         Source = source;
@@ -164,5 +185,7 @@ public sealed class ModMetadata
         ReleasesURL = releasesURL;
         MaxGameVersion = maxGameVersion;
         ModLoader = modLoader;
+        MinLoaderVersion = minLoaderVersion;
+        MaxLoaderVersion = maxLoaderVersion;
     }
 }
