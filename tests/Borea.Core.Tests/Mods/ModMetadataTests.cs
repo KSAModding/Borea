@@ -1,4 +1,4 @@
-﻿using Borea.Core.Game;
+using Borea.Core.ModLoaders;
 using Borea.Core.Mods;
 
 namespace Borea.Core.Tests.Mods;
@@ -9,18 +9,25 @@ public sealed class ModMetadataTests
         string modId = "test-mod",
         string source = "TestSource",
         string name = "Test Mod",
-        string author = "Author",
-        string? description = "Description") =>
+        IReadOnlyList<string>? authors = null,
+        string license = "MIT",
+        IReadOnlyDictionary<string, string>? links = null,
+        ContentType type = ContentType.Mod,
+        LoaderRequirement? loader = null,
+        string? supersededBy = null) =>
         new(
-            modId,
-            source,
-            name,
-            author,
-            ModVersion.Parse("1.0.0"),
-            GameVersion.Parse("2026.7.4.2131"),
-            description!,
-            DateTimeOffset.UtcNow,
-            fileSizeBytes: 100);
+            specVersion: 1,
+            modId: modId,
+            source: source,
+            name: name,
+            authors: authors ?? new[] { "Author" },
+            abstractText: "Abstract.",
+            license: license,
+            links: links ?? TestFixtures.SampleLinks(),
+            gameMin: "2026.7.4.2131",
+            type: type,
+            loader: loader,
+            supersededBy: supersededBy);
 
     [Fact]
     public void Constructor_ValidInput_SetsAllProperties()
@@ -28,9 +35,12 @@ public sealed class ModMetadataTests
         var metadata = Build();
 
         Assert.Equal("test-mod", metadata.ModId);
+        Assert.Equal(ContentType.Mod, metadata.Type);
         Assert.Equal("TestSource", metadata.Source);
-        Assert.Equal(ModVersion.Parse("1.0.0"), metadata.Version);
-        Assert.Equal(GameVersion.Parse("2026.7.4.2131"), metadata.BuiltForGameVersion);
+        Assert.Equal("https://forums.example/thread/1", metadata.ForumUrl);
+        Assert.Null(metadata.Description);
+        Assert.Null(metadata.Releases);
+        Assert.Null(metadata.Loader);
         Assert.Empty(metadata.Dependencies);
         Assert.Empty(metadata.Tags);
     }
@@ -39,59 +49,66 @@ public sealed class ModMetadataTests
     [InlineData(null)]
     [InlineData("")]
     [InlineData("   ")]
+    [InlineData("CON")]
+    [InlineData(".hidden")]
     public void Constructor_InvalidModId_ThrowsArgumentException(string? modId)
     {
         Assert.Throws<ArgumentException>(() => Build(modId: modId!));
     }
 
-    [Theory]
-    [InlineData(null)]
-    [InlineData("")]
-    [InlineData("   ")]
-    public void Constructor_InvalidSource_ThrowsArgumentException(string? source)
+    [Fact]
+    public void Constructor_MissingForumsLink_ThrowsArgumentException()
     {
-        Assert.Throws<ArgumentException>(() => Build(source: source!));
-    }
+        var links = new Dictionary<string, string> { ["repository"] = "https://example.com/repo" };
 
-    [Theory]
-    [InlineData(null)]
-    [InlineData("")]
-    [InlineData("   ")]
-    public void Constructor_InvalidName_ThrowsArgumentException(string? name)
-    {
-        Assert.Throws<ArgumentException>(() => Build(name: name!));
-    }
-
-    [Theory]
-    [InlineData(null)]
-    [InlineData("")]
-    [InlineData("   ")]
-    public void Constructor_InvalidAuthor_ThrowsArgumentException(string? author)
-    {
-        Assert.Throws<ArgumentException>(() => Build(author: author!));
+        Assert.Throws<ArgumentException>(() => Build(links: links));
     }
 
     [Fact]
-    public void Constructor_NullDescription_ThrowsArgumentNullException()
+    public void Constructor_ForumsLinkWithAuthoredCasing_IsAccepted()
     {
-        Assert.Throws<ArgumentNullException>(() => Build(description: null));
+        var links = new Dictionary<string, string> { ["Forums"] = "https://forums.example/thread/2" };
+
+        var metadata = Build(links: links);
+
+        Assert.Equal("https://forums.example/thread/2", metadata.ForumUrl);
     }
 
     [Fact]
-    public void Constructor_NegativeFileSize_ThrowsArgumentOutOfRangeException()
+    public void Constructor_LinkKeysCollidingByCase_ThrowsArgumentException()
     {
-        Assert.Throws<ArgumentOutOfRangeException>(() => new ModMetadata(
-            "test-mod", "TestSource", "Name", "Author", ModVersion.Parse("1.0.0"),
-            GameVersion.Parse("2026.7.4.2131"), "Description",
-            DateTimeOffset.UtcNow, fileSizeBytes: -1));
+        var links = new Dictionary<string, string>
+        {
+            ["forums"] = "https://forums.example/thread/1",
+            ["Forums"] = "https://forums.example/thread/2",
+        };
+
+        Assert.Throws<ArgumentException>(() => Build(links: links));
     }
 
     [Fact]
-    public void Constructor_NullDependenciesAndTags_DefaultToEmptyNotNull()
+    public void Constructor_PackType_ThrowsArgumentException()
     {
-        var metadata = Build();
+        Assert.Throws<ArgumentException>(() => Build(type: ContentType.ModPack));
+    }
 
-        Assert.NotNull(metadata.Dependencies);
-        Assert.NotNull(metadata.Tags);
+    [Fact]
+    public void Constructor_LoaderOnNonModType_ThrowsArgumentException()
+    {
+        var loader = new LoaderRequirement("StarMap", ModVersion.Parse("0.4.5"));
+
+        Assert.Throws<ArgumentException>(() => Build(type: ContentType.ModLoader, loader: loader));
+    }
+
+    [Fact]
+    public void Constructor_EmptyAuthors_ThrowsArgumentException()
+    {
+        Assert.Throws<ArgumentException>(() => Build(authors: Array.Empty<string>()));
+    }
+
+    [Fact]
+    public void Constructor_InvalidSupersededBy_ThrowsArgumentException()
+    {
+        Assert.Throws<ArgumentException>(() => Build(supersededBy: "not a valid id"));
     }
 }
