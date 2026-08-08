@@ -8,17 +8,18 @@ public sealed class InstalledModTests
     [Fact]
     public void Constructor_ValidInput_SetsAllProperties()
     {
-        var metadata = TestFixtures.SampleModMetadata("test-mod");
-        var dependencies = new[] { new ModDependency("cool-lib", ModDependencyKind.Required) };
+        var metadata = TestFixtures.SampleVersionMetadata(
+            "test-mod",
+            dependencies: new[] { new ModDependency("cool-lib", ModDependencyKind.Required) });
 
         var installedMod = new InstalledMod(
-            "test-mod", ModVersion.Parse("1.0.0"), InstallReason.Manual, DateTimeOffset.UtcNow, metadata, dependencies);
+            "test-mod", ModVersion.Parse("1.0.0"), InstallReason.Manual, DateTimeOffset.UtcNow, metadata);
 
         Assert.Equal("test-mod", installedMod.ModId);
         Assert.Equal(ModVersion.Parse("1.0.0"), installedMod.Version);
         Assert.Equal(InstallReason.Manual, installedMod.Reason);
         Assert.Same(metadata, installedMod.Metadata);
-        Assert.Single(installedMod.Dependencies);
+        Assert.Single(installedMod.Metadata.Dependencies);
         Assert.Null(installedMod.Checksum);
     }
 
@@ -28,44 +29,35 @@ public sealed class InstalledModTests
     [InlineData("   ")]
     public void Constructor_InvalidModId_ThrowsArgumentException(string? modId)
     {
-        var metadata = TestFixtures.SampleModMetadata("test-mod");
+        var metadata = TestFixtures.SampleVersionMetadata("test-mod");
 
         Assert.Throws<ArgumentException>(() =>
-            new InstalledMod(modId!, ModVersion.Parse("1.0.0"), InstallReason.Manual, DateTimeOffset.UtcNow, metadata, Array.Empty<ModDependency>()));
+            new InstalledMod(modId!, ModVersion.Parse("1.0.0"), InstallReason.Manual, DateTimeOffset.UtcNow, metadata));
     }
 
     [Fact]
     public void Constructor_NullMetadata_ThrowsArgumentNullException()
     {
         Assert.Throws<ArgumentNullException>(() =>
-            new InstalledMod("test-mod", ModVersion.Parse("1.0.0"), InstallReason.Manual, DateTimeOffset.UtcNow, null!, Array.Empty<ModDependency>()));
-    }
-
-    [Fact]
-    public void Constructor_NullDependencies_ThrowsArgumentNullException()
-    {
-        var metadata = TestFixtures.SampleModMetadata("test-mod");
-
-        Assert.Throws<ArgumentNullException>(() =>
-            new InstalledMod("test-mod", ModVersion.Parse("1.0.0"), InstallReason.Manual, DateTimeOffset.UtcNow, metadata, null!));
+            new InstalledMod("test-mod", ModVersion.Parse("1.0.0"), InstallReason.Manual, DateTimeOffset.UtcNow, null!));
     }
 
     [Fact]
     public void Constructor_MetadataModIdMismatch_ThrowsArgumentException()
     {
-        var metadata = TestFixtures.SampleModMetadata("other-mod");
+        var metadata = TestFixtures.SampleVersionMetadata("other-mod");
 
         Assert.Throws<ArgumentException>(() =>
-            new InstalledMod("test-mod", ModVersion.Parse("1.0.0"), InstallReason.Manual, DateTimeOffset.UtcNow, metadata, Array.Empty<ModDependency>()));
+            new InstalledMod("test-mod", ModVersion.Parse("1.0.0"), InstallReason.Manual, DateTimeOffset.UtcNow, metadata));
     }
 
     [Fact]
     public void Constructor_MetadataModIdDifferingOnlyInCase_IsAccepted()
     {
-        var metadata = TestFixtures.SampleModMetadata("Test-Mod");
+        var metadata = TestFixtures.SampleVersionMetadata("Test-Mod");
 
         var installedMod = new InstalledMod(
-            "test-mod", ModVersion.Parse("1.0.0"), InstallReason.Manual, DateTimeOffset.UtcNow, metadata, Array.Empty<ModDependency>());
+            "test-mod", ModVersion.Parse("1.0.0"), InstallReason.Manual, DateTimeOffset.UtcNow, metadata);
 
         Assert.Same(metadata, installedMod.Metadata);
     }
@@ -73,10 +65,10 @@ public sealed class InstalledModTests
     [Fact]
     public void Constructor_Checksum_IsOptionalAndDefaultsToNull()
     {
-        var metadata = TestFixtures.SampleModMetadata("test-mod");
+        var metadata = TestFixtures.SampleVersionMetadata("test-mod");
 
         var withChecksum = new InstalledMod(
-            "test-mod", ModVersion.Parse("1.0.0"), InstallReason.Manual, DateTimeOffset.UtcNow, metadata, Array.Empty<ModDependency>(), "abc123");
+            "test-mod", ModVersion.Parse("1.0.0"), InstallReason.Manual, DateTimeOffset.UtcNow, metadata, "abc123");
 
         Assert.Equal("abc123", withChecksum.Checksum);
     }
