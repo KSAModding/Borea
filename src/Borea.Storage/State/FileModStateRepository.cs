@@ -1,4 +1,5 @@
-﻿using Borea.Core.Paths;
+﻿using Borea.Core.Mods;
+using Borea.Core.Paths;
 using Borea.Core.State;
 using Borea.Storage.Toml;
 
@@ -20,7 +21,7 @@ public sealed class FileModStateRepository : IModStateRepository
     public async Task<bool> IsActiveAsync(Guid instanceId, string modId, CancellationToken cancellationToken = default)
     {
         var manifest = await ReadManifestAsync(instanceId, cancellationToken).ConfigureAwait(false);
-        return manifest.Mods.FirstOrDefault(m => string.Equals(m.Id, modId, StringComparison.Ordinal))?.Enabled ?? false;
+        return manifest.Mods.FirstOrDefault(m => ModIds.Equals(m.Id, modId))?.Enabled ?? false;
     }
 
     public async Task<IReadOnlyList<string>> GetAllActiveModIdsAsync(Guid instanceId, CancellationToken cancellationToken = default)
@@ -32,7 +33,7 @@ public sealed class FileModStateRepository : IModStateRepository
     public async Task SetActiveAsync(Guid instanceId, string modId, CancellationToken cancellationToken = default)
     {
         var manifest = await ReadManifestAsync(instanceId, cancellationToken).ConfigureAwait(false);
-        var entry = manifest.Mods.FirstOrDefault(m => string.Equals(m.Id, modId, StringComparison.Ordinal));
+        var entry = manifest.Mods.FirstOrDefault(m => ModIds.Equals(m.Id, modId));
 
         if (entry is null)
             manifest.Mods.Add(new ModManifestEntryDto { Id = modId, Enabled = true });
@@ -47,7 +48,7 @@ public sealed class FileModStateRepository : IModStateRepository
     public async Task SetInactiveAsync(Guid instanceId, string modId, CancellationToken cancellationToken = default)
     {
         var manifest = await ReadManifestAsync(instanceId, cancellationToken).ConfigureAwait(false);
-        var entry = manifest.Mods.FirstOrDefault(m => string.Equals(m.Id, modId, StringComparison.Ordinal));
+        var entry = manifest.Mods.FirstOrDefault(m => ModIds.Equals(m.Id, modId));
 
         if (entry is null || !entry.Enabled)
             return;

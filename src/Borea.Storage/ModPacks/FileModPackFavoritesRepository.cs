@@ -22,14 +22,14 @@ public sealed class FileModPackFavoritesRepository : IModPackFavoritesRepository
     public async Task<bool> IsFavoriteAsync(string modPackId, CancellationToken cancellationToken = default)
     {
         var dto = await ReadAsync(cancellationToken).ConfigureAwait(false);
-        return dto.ModPackIds.Contains(modPackId, StringComparer.Ordinal);
+        return dto.ModPackIds.Contains(modPackId, Borea.Core.Mods.ModIds.Comparer);
     }
 
     public async Task AddFavoriteAsync(string modPackId, CancellationToken cancellationToken = default)
     {
         var dto = await ReadAsync(cancellationToken).ConfigureAwait(false);
 
-        if (dto.ModPackIds.Contains(modPackId, StringComparer.Ordinal))
+        if (dto.ModPackIds.Contains(modPackId, Borea.Core.Mods.ModIds.Comparer))
             return;
 
         dto.ModPackIds.Add(modPackId);
@@ -40,7 +40,7 @@ public sealed class FileModPackFavoritesRepository : IModPackFavoritesRepository
     {
         var dto = await ReadAsync(cancellationToken).ConfigureAwait(false);
 
-        if (dto.ModPackIds.RemoveAll(id => string.Equals(id, modPackId, StringComparison.Ordinal)) > 0)
+        if (dto.ModPackIds.RemoveAll(id => Borea.Core.Mods.ModIds.Equals(id, modPackId)) > 0)
             await WriteAsync(dto, cancellationToken).ConfigureAwait(false);
     }
 
