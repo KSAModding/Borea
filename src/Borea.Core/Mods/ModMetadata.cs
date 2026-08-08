@@ -1,11 +1,12 @@
-﻿using Borea.Core.Game;
+﻿using Borea.Core.Dependencies;
+using Borea.Core.ModLoaders;
 using System.Collections.ObjectModel;
 
 namespace Borea.Core.Mods;
 
 /// <summary>
-/// The authored metadata for a mod. Does not contain any information
-/// about the versions of the mod.
+/// The authored metadata for a mod or mod loader (RFC 0031). Carries no version:
+/// versions exist per release.
 /// </summary>
 public sealed class ModMetadata
 {
@@ -15,12 +16,17 @@ public sealed class ModMetadata
     public int SpecVersion { get; }
 
     /// <summary>
-    /// The mod's unique identifier.
+    /// The mod's unique identifier. Ids compare case-insensitively.
     /// </summary>
     public string ModId { get; }
 
     /// <summary>
-    /// Which Source the mod metadata is from.
+    /// The content type of the listing.
+    /// </summary>
+    public ContentType Type { get; }
+
+    /// <summary>
+    /// Which source this metadata came from. Borea-internal, not a format field.
     /// </summary>
     public string Source { get; }
 
@@ -30,19 +36,19 @@ public sealed class ModMetadata
     public string Name { get; }
 
     /// <summary>
-    /// The list of mod authors
+    /// The list of mod authors.
     /// </summary>
-    public string[] Authors { get; }
+    public IReadOnlyList<string> Authors { get; }
 
     /// <summary>
-    /// Short 1-2 sentence(s) summary of the mod.
+    /// Short one-or-two sentence summary for list and search views.
     /// </summary>
     public string Abstract { get; }
 
     /// <summary>
-    /// Full description of the mod.
+    /// Longer CommonMark description on top of the abstract, if any.
     /// </summary>
-    public string Description { get; }
+    public string? Description { get; }
 
     /// <summary>
     /// SPDX license expression such as MIT or CC-BY-4.0.
@@ -55,84 +61,92 @@ public sealed class ModMetadata
     public IReadOnlyList<string> Tags { get; }
 
     /// <summary>
-    /// If the mod is active or deprecated.
+    /// The author's declaration about the listing.
     /// </summary>
-    public string Status { get; }
+    public ModStatus Status { get; }
 
     /// <summary>
-    /// If deprecated which mod supersedes this one. Stores that mod's ID.
+    /// The id of the successor, only meaningful together with a deprecated status.
     /// </summary>
-    public string SupersededBy { get; }
+    public string? SupersededBy { get; }
 
     /// <summary>
-    /// Where the releases come from, if listed.
+    /// All listing links. Keys keep their authored casing and compare case-insensitively; "forums" is required.
     /// </summary>
-    public string ReleasesURL { get; }
+    public IReadOnlyDictionary<string, string> Links { get; }
 
     /// <summary>
-    /// The URL to the mod's KSA forum thread.
+    /// The required KSA forums thread for this listing.
     /// </summary>
-    public string ForumURL { get; }
+    public string ForumUrl => Links["forums"];
 
     /// <summary>
-    /// The minimum game version that the mod is compatible with.
+    /// Where releases appear. Null means releases enter the index by pull request.
     /// </summary>
-    public GameVersion MinGameVersion { get; }
+    public ReleaseSource? Releases { get; }
 
     /// <summary>
-    /// The maximum game version that the mod is compatible with, if any.
+    /// Oldest game version known to work, as authored. May be a month such as "2026.7".
     /// </summary>
-    public GameVersion? MaxGameVersion { get; }
+    public string GameMin { get; }
 
     /// <summary>
-    /// The operating systems that the mod is compatible with.
+    /// Newest tested game version, as authored. Null means no known upper limit.
     /// </summary>
-    public string[] OScompatibility { get; }
+    public string? GameMax { get; }
 
     /// <summary>
-    /// The mod loader that the mod uses, if any.
+    /// The platforms the mod is known to work on. Null means no known restriction.
     /// </summary>
-    public string ModLoader { get; }
+    public IReadOnlyList<string>? Os { get; }
 
     /// <summary>
-    /// The minimum version of the mod loader that the mod requires, if any.
+    /// The loader a code mod needs. Null means the mod runs without a loader.
     /// </summary>
-    public string MinLoaderVersion { get; }
+    public LoaderRequirement? Loader { get; }
 
     /// <summary>
-    /// The maximum version of the mod loader that the mod supports, if any.
+    /// The authored dependency entries.
     /// </summary>
-    public string MaxLoaderVersion { get; }
+    public IReadOnlyList<ModDependency> Dependencies { get; }
 
-    /// <param name="authors">Must contain at least one author.</param>
-    /// <param name="abstractText">Can be "", not null.</param>
-    /// <param name="description">Can be "", not null.</param>
+    /// <summary>
+    /// Authored override of the install root for archives with an unusual layout.
+    /// </summary>
+    public string? InstallRootOverride { get; }
+
     public ModMetadata(
         int specVersion,
         string modId,
         string source,
         string name,
-        string[] authors,
+        IReadOnlyList<string> authors,
         string abstractText,
-        string description,
         string license,
-        IReadOnlyList<string> tags,
-        string forumURL,
-        GameVersion minGameVersion,
-        string[] oscompatibility,
-        string status = "active",
-        string supersededBy = "",
-        string releasesURL = "",
-        GameVersion? maxGameVersion = null,
-        string modLoader = "",
-        string minLoaderVersion = "",
-        string maxLoaderVersion = "")
+        IReadOnlyDictionary<string, string> links,
+        string gameMin,
+        ContentType type = ContentType.Mod,
+        IReadOnlyList<string>? tags = null,
+        string? description = null,
+        ModStatus status = ModStatus.Active,
+        string? supersededBy = null,
+        ReleaseSource? releases = null,
+        string? gameMax = null,
+        IReadOnlyList<string>? os = null,
+        LoaderRequirement? loader = null,
+        IReadOnlyList<ModDependency>? dependencies = null,
+        string? installRootOverride = null)
     {
         if (specVersion < 1)
             throw new ArgumentOutOfRangeException(nameof(specVersion), "Spec version must be a positive integer.");
 
-        if (string.IsNullOrWhiteSpace(modId))
-            throw new ArgumentException("Mod ID cannot be null or whitespace.", nameof(modId));
+        ModIds.Validate(modId, nameof(modId));
+
+        if (type == ContentType.ModPack)
+            throw new ArgumentException("Packs have their own metadata type.", nameof(type));
+
+        if (loader is not null && type != ContentType.Mod)
+            throw new ArgumentException("Only a mod can declare a loader requirement.", nameof(loader));
 
         if (string.IsNullOrWhiteSpace(source))
             throw new ArgumentException("Source cannot be null or whitespace.", nameof(source));
@@ -140,51 +154,47 @@ public sealed class ModMetadata
         if (string.IsNullOrWhiteSpace(name))
             throw new ArgumentException("Name cannot be null or whitespace.", nameof(name));
 
-        if (authors is null || authors.Length == 0)
+        if (authors is null || authors.Count == 0)
             throw new ArgumentException("At least one author is required.", nameof(authors));
 
-        // Allow empty Abstract, but not null
         if (abstractText is null)
-            throw new ArgumentNullException("Abstract cannot be null.", nameof(abstractText));
+            throw new ArgumentNullException(nameof(abstractText));
 
-        // Allow empty Description, but not null
-        if (description is null)
-            throw new ArgumentNullException("Description cannot be null.", nameof(description));
-
-        // Simply check that license exists. Not using SPDX license validation yet
         if (string.IsNullOrWhiteSpace(license))
             throw new ArgumentException("License cannot be null or whitespace.", nameof(license));
 
-        if (string.IsNullOrWhiteSpace(forumURL))
-            throw new ArgumentException("Forum URL cannot be null or whitespace.", nameof(forumURL));
+        if (links is null || !links.Any(p => string.Equals(p.Key, "forums", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrWhiteSpace(p.Value)))
+            throw new ArgumentException("The links must contain a forums entry.", nameof(links));
 
-        if (modLoader is null)
-            throw new ArgumentNullException("Mod loader cannot be null.", nameof(modLoader));
+        var duplicateKey = links.Keys.GroupBy(k => k, StringComparer.OrdinalIgnoreCase).FirstOrDefault(g => g.Count() > 1)?.Key;
+        if (duplicateKey is not null)
+            throw new ArgumentException($"Link key '{duplicateKey}' appears more than once when compared case-insensitively.", nameof(links));
 
-        if (minLoaderVersion is null)
-            throw new ArgumentNullException("Minimum loader version cannot be null.", nameof(minLoaderVersion));
+        if (string.IsNullOrWhiteSpace(gameMin))
+            throw new ArgumentException("The minimum game version is required.", nameof(gameMin));
 
-        if (maxLoaderVersion is null)
-            throw new ArgumentNullException("Maximum loader version cannot be null.", nameof(maxLoaderVersion));
+        if (supersededBy is not null)
+            ModIds.Validate(supersededBy, nameof(supersededBy));
 
         SpecVersion = specVersion;
         ModId = modId;
+        Type = type;
         Source = source;
         Name = name;
-        Authors = authors;
+        Authors = new ReadOnlyCollection<string>(authors.ToArray());
         Abstract = abstractText;
         Description = description;
         License = license;
         Tags = tags is null ? Array.Empty<string>() : new ReadOnlyCollection<string>(tags.ToArray());
-        ForumURL = forumURL;
-        MinGameVersion = minGameVersion;
-        OScompatibility = oscompatibility ?? Array.Empty<string>();
         Status = status;
         SupersededBy = supersededBy;
-        ReleasesURL = releasesURL;
-        MaxGameVersion = maxGameVersion;
-        ModLoader = modLoader;
-        MinLoaderVersion = minLoaderVersion;
-        MaxLoaderVersion = maxLoaderVersion;
+        Links = new Dictionary<string, string>(links, StringComparer.OrdinalIgnoreCase);
+        Releases = releases;
+        GameMin = gameMin;
+        GameMax = gameMax;
+        Os = os is null ? null : new ReadOnlyCollection<string>(os.ToArray());
+        Loader = loader;
+        Dependencies = dependencies is null ? Array.Empty<ModDependency>() : new ReadOnlyCollection<ModDependency>(dependencies.ToArray());
+        InstallRootOverride = installRootOverride;
     }
 }

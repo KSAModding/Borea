@@ -1,122 +1,210 @@
-﻿using Borea.Core.ModLoaders;
-using Borea.Core.Dependencies;
+﻿using Borea.Core.Dependencies;
 using Borea.Core.Game;
-using System.Security.Cryptography;
+using Borea.Core.ModLoaders;
+using System.Collections.ObjectModel;
 
-namespace Borea.Core.Mods
+namespace Borea.Core.Mods;
+
+/// <summary>
+/// One stamped release of a mod or mod loader, mirroring the generated release file of RFC 0031.
+/// </summary>
+public sealed class ModVersionMetadata
 {
     /// <summary>
-    /// The versioned metadata for a mod. Contains information about the specific version of the mod.
+    /// The version of the metadata specification.
     /// </summary>
-    public sealed class ModVersionMetadata
+    public int SpecVersion { get; }
+
+    /// <summary>
+    /// The mod's unique identifier.
+    /// </summary>
+    public string ModId { get; }
+
+    /// <summary>
+    /// The content type of the listing this release belongs to.
+    /// </summary>
+    public ContentType Type { get; }
+
+    /// <summary>
+    /// The release version, normalized to SemVer at stamp time.
+    /// </summary>
+    public ModVersion Version { get; }
+
+    /// <summary>
+    /// The versioning scheme, "semver" in spec version 1.
+    /// </summary>
+    public string VersionScheme { get; }
+
+    /// <summary>
+    /// The maturity of the release.
+    /// </summary>
+    public ReleaseStatus ReleaseStatus { get; }
+
+    /// <summary>
+    /// When the release appeared on its host, UTC.
+    /// </summary>
+    public DateTimeOffset ReleaseDate { get; }
+
+    /// <summary>
+    /// Oldest compatible game version as displayed, such as "2026.8.3.5117".
+    /// </summary>
+    public string GameMin { get; }
+
+    /// <summary>
+    /// The resolved revision of the lower bound.
+    /// </summary>
+    public int GameMinRevision { get; }
+
+    /// <summary>
+    /// Newest tested game version as displayed, if bounded.
+    /// </summary>
+    public string? GameMax { get; }
+
+    /// <summary>
+    /// The resolved revision of the upper bound, if bounded.
+    /// </summary>
+    public int? GameMaxRevision { get; }
+
+    /// <summary>
+    /// The platforms known to work, as stamped. Null means no known restriction.
+    /// </summary>
+    public IReadOnlyList<string>? Os { get; }
+
+    /// <summary>
+    /// Where the archive is and what it hashes to.
+    /// </summary>
+    public DownloadInfo Download { get; }
+
+    /// <summary>
+    /// Unpacked size in bytes. Download and install size differ on purpose.
+    /// </summary>
+    public long InstallSizeBytes { get; }
+
+    /// <summary>
+    /// The install directive. Null for content that installs by its own mechanism.
+    /// </summary>
+    public InstallInfo? Install { get; }
+
+    /// <summary>
+    /// The loader bounds current at stamp time. Null when the mod runs without one.
+    /// </summary>
+    public LoaderRequirement? Loader { get; }
+
+    /// <summary>
+    /// The merged dependency list, each entry marked authored or derived.
+    /// </summary>
+    public IReadOnlyList<ModDependency> Dependencies { get; }
+
+    /// <summary>
+    /// URL or text of the release's changelog, if any.
+    /// </summary>
+    public string? Changelog { get; }
+
+    /// <summary>
+    /// The listing facts as they stood at stamp time, for release-accurate display.
+    /// </summary>
+    public ListingSnapshot? Listing { get; }
+
+    /// <summary>
+    /// True when the author retracted this release. Not offered for installs or updates.
+    /// </summary>
+    public bool Yanked { get; }
+
+    /// <summary>
+    /// Optional free text shown alongside the yank warning.
+    /// </summary>
+    public string? YankedReason { get; }
+
+    public ModVersionMetadata(
+        int specVersion,
+        string modId,
+        ModVersion version,
+        ReleaseStatus releaseStatus,
+        DateTimeOffset releaseDate,
+        string gameMin,
+        int gameMinRevision,
+        DownloadInfo download,
+        long installSizeBytes,
+        IReadOnlyList<ModDependency> dependencies,
+        ContentType type = ContentType.Mod,
+        string versionScheme = "semver",
+        string? gameMax = null,
+        int? gameMaxRevision = null,
+        IReadOnlyList<string>? os = null,
+        InstallInfo? install = null,
+        LoaderRequirement? loader = null,
+        string? changelog = null,
+        ListingSnapshot? listing = null,
+        bool yanked = false,
+        string? yankedReason = null)
     {
-        /// <summary>
-        /// The version of the metadata specification.
-        /// </summary>
-        public int SpecVersion { get; }
+        if (specVersion < 1)
+            throw new ArgumentOutOfRangeException(nameof(specVersion), "Spec version must be a positive integer.");
 
-        /// <summary>
-        /// The mod's unique identifier.
-        /// </summary>
-        public string ModId { get; }
+        ModIds.Validate(modId, nameof(modId));
 
-        /// <summary>
-        /// The version of the mod.
-        /// </summary>
-        public ModVersion Version { get; }
+        if (type == ContentType.ModPack)
+            throw new ArgumentException("Packs have no generated release files.", nameof(type));
 
-        /// <summary>
-        /// The release status of the mod version ("stable", "testing", or "dev").
-        /// </summary>
-        public string ReleaseStatus { get; }
+        if (loader is not null && type != ContentType.Mod)
+            throw new ArgumentException("Only a mod can declare a loader requirement.", nameof(loader));
 
-        /// <summary>
-        /// The release date of the mod version.
-        /// </summary>
-        public DateTime ReleaseDate { get; }
+        if (install is not null && type == ContentType.ModLoader)
+            throw new ArgumentException("A mod loader installs by its own mechanism and carries no install directive.", nameof(install));
 
-        /// <summary>
-        /// The minimum game version required for this mod version.
-        /// </summary>
-        public GameVersion MinGameVersion { get; }
-        /// <summary>
-        /// The maximum game version allowed for this mod version.
-        /// </summary>
-        public GameVersion? MaxGameVersion { get; }
-        /// <summary>
-        /// The operating systems compatible with this mod version.
-        /// </summary>
-        public string[] OScompatibility { get; }
+        if (string.IsNullOrWhiteSpace(versionScheme))
+            throw new ArgumentException("Version scheme cannot be null or whitespace.", nameof(versionScheme));
 
-        /// <summary>
-        /// The SHA256 hash of the mod version file.
-        /// </summary>
-        public SHA256 Hash { get; }
+        if (string.IsNullOrWhiteSpace(gameMin))
+            throw new ArgumentException("The minimum game version is required.", nameof(gameMin));
 
-        /// <summary>
-        /// The size of the mod version file in bytes.
-        /// </summary>
-        public string Size { get; }
+        if (gameMinRevision < 0)
+            throw new ArgumentOutOfRangeException(nameof(gameMinRevision), "The minimum game revision cannot be negative.");
 
-        /// <summary>
-        /// The mod loader required for this mod version, if any.
-        /// </summary>
-        public string ModLoader { get; }
+        if (GameVersion.TryParse(gameMin, out var minParsed) && minParsed.Revision != gameMinRevision)
+            throw new ArgumentException("The displayed minimum game version and its revision disagree.", nameof(gameMinRevision));
 
-        /// <summary>
-        /// The minimum version of the mod loader required for this mod version, if any.
-        /// </summary>
-        public string MinLoaderVersion { get; }
+        if ((gameMax is null) != (gameMaxRevision is null))
+            throw new ArgumentException("The maximum game version and its revision must both be present or both absent.", nameof(gameMaxRevision));
 
-        /// <summary>
-        /// The maximum version of the mod loader allowed for this mod version, if any.
-        /// </summary>
-        public string MaxLoaderVersion { get; }
-
-        /// <summary>
-        /// The dependencies required for this mod version.
-        /// </summary>
-        public IReadOnlyList<ModDependency> Dependencies { get; }
-
-        /// <summary>
-        /// The changelog for this mod version.
-        /// </summary>
-        public string ChangelogURL { get; }
-
-        /// <param name="hash">SHA256 hash of the mod version file</param>
-        /// <param name="size">Size of the mod version file in bytes</param>
-        public ModVersionMetadata(
-            int specVersion,
-            string modId,
-            ModVersion version,
-            string releaseStatus,
-            DateTime releaseDate,
-            GameVersion minGameVersion,
-            GameVersion? maxGameVersion,
-            string[] osCompatibility,
-            SHA256 hash,
-            string size,
-            string modLoader,
-            string minLoaderVersion,
-            IReadOnlyList<ModDependency> dependencies,
-            string changelogURL,
-            string maxLoaderVersion = "")
+        if (gameMaxRevision is { } maxRevision)
         {
-            SpecVersion = specVersion;
-            ModId = modId;
-            Version = version;
-            ReleaseStatus = releaseStatus;
-            ReleaseDate = releaseDate;
-            MinGameVersion = minGameVersion;
-            MaxGameVersion = maxGameVersion;
-            OScompatibility = osCompatibility;
-            Hash = hash;
-            Size = size;
-            ModLoader = modLoader;
-            MinLoaderVersion = minLoaderVersion;
-            MaxLoaderVersion = maxLoaderVersion;
-            Dependencies = dependencies;
-            ChangelogURL = changelogURL;
+            if (maxRevision < gameMinRevision)
+                throw new ArgumentOutOfRangeException(nameof(gameMaxRevision), "The maximum game revision cannot be below the minimum.");
+
+            if (GameVersion.TryParse(gameMax, out var maxParsed) && maxParsed.Revision != maxRevision)
+                throw new ArgumentException("The displayed maximum game version and its revision disagree.", nameof(gameMaxRevision));
         }
+
+        if (download is null)
+            throw new ArgumentNullException(nameof(download));
+
+        if (dependencies is null)
+            throw new ArgumentNullException(nameof(dependencies));
+
+        if (installSizeBytes < 0)
+            throw new ArgumentOutOfRangeException(nameof(installSizeBytes), "Install size cannot be negative.");
+
+        SpecVersion = specVersion;
+        ModId = modId;
+        Type = type;
+        Version = version;
+        VersionScheme = versionScheme;
+        ReleaseStatus = releaseStatus;
+        ReleaseDate = releaseDate;
+        GameMin = gameMin;
+        GameMinRevision = gameMinRevision;
+        GameMax = gameMax;
+        GameMaxRevision = gameMaxRevision;
+        Os = os is null ? null : new ReadOnlyCollection<string>(os.ToArray());
+        Download = download;
+        InstallSizeBytes = installSizeBytes;
+        Install = install;
+        Loader = loader;
+        Dependencies = new ReadOnlyCollection<ModDependency>(dependencies.ToArray());
+        Changelog = changelog;
+        Listing = listing;
+        Yanked = yanked;
+        YankedReason = yankedReason;
     }
 }
