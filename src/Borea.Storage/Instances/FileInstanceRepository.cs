@@ -22,7 +22,9 @@ public sealed class FileInstanceRepository : IInstanceRepository
 
 
     /// <summary>
-    /// Returns all instances that exist on disk.
+    /// Returns all instances that exist on disk. An instance whose file cannot
+    /// be read or mapped is skipped, so one broken file does not take the whole
+    /// list down; loading it directly by id still surfaces the error.
     /// </summary>
     public async Task<IReadOnlyList<Instance>> GetAllAsync()
     {
@@ -37,7 +39,16 @@ public sealed class FileInstanceRepository : IInstanceRepository
             if (!Guid.TryParse(Path.GetFileName(dir), out var instanceId))
                 continue;
 
-            var instance = await GetByIdAsync(instanceId).ConfigureAwait(false);
+            Instance? instance;
+            try
+            {
+                instance = await GetByIdAsync(instanceId).ConfigureAwait(false);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                continue;
+            }
+
             if (instance is not null)
                 instances.Add(instance);
         }
