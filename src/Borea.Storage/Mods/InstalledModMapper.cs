@@ -12,6 +12,7 @@ public static class InstalledModMapper
         InstalledAt = mod.InstalledAt,
         Checksum = mod.Checksum,
         Metadata = ModMetadataMapper.ToDto(mod.Metadata),
+        Dependencies = mod.Dependencies.Select(ModDependencyMapper.ToDto).ToList(),
     };
 
     public static InstalledMod FromDto(InstalledModDto dto) => new(
@@ -20,5 +21,6 @@ public static class InstalledModMapper
         Enum.Parse<InstallReason>(dto.Reason),
         dto.InstalledAt,
         ModMetadataMapper.FromDto(dto.Metadata),
+        dto.Dependencies.Select(ModDependencyMapper.FromDto).ToList(),
         dto.Checksum);
 }
