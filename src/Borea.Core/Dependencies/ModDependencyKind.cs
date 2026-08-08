@@ -1,33 +1,37 @@
-﻿namespace Borea.Core.Dependencies
+﻿namespace Borea.Core.Dependencies;
+
+/// <summary>
+/// The kind of dependency, serialized lowercase in the metadata format.
+/// </summary>
+public enum ModDependencyKind
 {
     /// <summary>
-    /// The kind of dependency a mod can have on another mod.
+    /// The content does not function without it. Installed always.
     /// </summary>
-    public enum ModDependencyKind
-    {
-        /// <summary>
-        /// The mod is required for the mod to function.
-        /// </summary>
-        required = 0,
+    Required = 0,
 
-        /// <summary>
-        /// The mod is optional.
-        /// </summary>
-        optional = 1,
+    /// <summary>
+    /// Used when present, not installed by default.
+    /// </summary>
+    Optional = 1,
 
-        /// <summary>
-        /// The mod is recommended for the mod to function, but not required. Selected by default in mod managers.
-        /// </summary>
-        recommends = 2,
+    /// <summary>
+    /// Selected by default, deselectable by the user.
+    /// </summary>
+    Recommends = 2,
 
-        /// <summary>
-        /// Listed as a suggestion for the mod to function, but not required. Not selected by default in mod managers.
-        /// </summary>
-        suggests = 3,
+    /// <summary>
+    /// Listed, not selected.
+    /// </summary>
+    Suggests = 3,
 
-        /// <summary>
-        /// The mod is incompatible with the mod. The mod manager should prevent both mods from being installed at the same time.
-        /// </summary>
-        conflict = 4,
-    }
+    /// <summary>
+    /// Must not be installed together. Bounds narrow the conflicting range; no bounds means every version conflicts.
+    /// </summary>
+    Conflict = 4,
+
+    /// <summary>
+    /// A value this client version does not know.
+    /// </summary>
+    Unknown = 5,
 }
