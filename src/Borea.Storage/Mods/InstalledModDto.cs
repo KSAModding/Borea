@@ -13,8 +13,7 @@ public sealed class InstalledModDto
 
     public DateTimeOffset InstalledAt { get; set; }
     public string? Checksum { get; set; }
-    public ModMetadataDto Metadata { get; set; } = new();
 
-    /// <summary>The dependency list of the installed release, as its release file stamped it.</summary>
-    public List<ModDependencyDto> Dependencies { get; set; } = new();
+    /// <summary>The release the mod was installed from.</summary>
+    public ModVersionMetadataDto Metadata { get; set; } = new();
 }

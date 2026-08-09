@@ -26,15 +26,14 @@ public sealed class FileInstanceRepositoryTests : IDisposable
         // Create a custom instance.
         var instance = await _repository.CreateAsync("My Test Pack", InstanceSource.Custom.Value);
 
-        // Build a mod with a stamped dependency, attach it, and persist the change.
+        // Build a mod whose release carries a stamped dependency, attach it, and persist the change.
         var stampedDependency = new ModDependency("some-other-mod", ModDependencyKind.Required, ModVersion.Parse("1.0.0"));
         var installedMod = new InstalledMod(
             modId: "test-mod",
             version: ModVersion.Parse("1.2.3"),
             reason: InstallReason.Manual,
             installedAt: DateTimeOffset.UtcNow,
-            metadata: MetadataFixtures.MinimalMetadata("test-mod"),
-            dependencies: new[] { stampedDependency });
+            metadata: MetadataFixtures.MinimalRelease("test-mod", "1.2.3", new[] { stampedDependency }));
 
         instance.AddMod(installedMod);
         instance.SetFavorite(true);
@@ -52,42 +51,49 @@ public sealed class FileInstanceRepositoryTests : IDisposable
         var reloadedMod = reloaded.Mods.Single();
         Assert.Equal("test-mod", reloadedMod.ModId);
         Assert.Equal(ModVersion.Parse("1.2.3"), reloadedMod.Version);
+        Assert.Equal(ModVersion.Parse("1.2.3"), reloadedMod.Metadata.Version);
         Assert.Equal(InstallReason.Manual, reloadedMod.Reason);
-        Assert.Equal("Test Mod", reloadedMod.Metadata.Name);
         Assert.Equal("2026.7", reloadedMod.Metadata.GameMin);
 
-        var reloadedDependency = reloadedMod.Dependencies.Single();
+        var reloadedDependency = reloadedMod.Metadata.Dependencies.Single();
         Assert.Equal("some-other-mod", reloadedDependency.ModId);
         Assert.Equal(ModDependencyKind.Required, reloadedDependency.Kind);
         Assert.Equal(ModVersion.Parse("1.0.0"), reloadedDependency.MinVersion);
 
-        // The authored list and the stamped list stay separate through the file.
-        Assert.Empty(reloadedMod.Metadata.Dependencies);
         Assert.Equal(installedMod.InstalledAt, reloadedMod.InstalledAt);
     }
 
     [Fact]
-    public async Task RoundTrip_FullMetadataAndTwoMods_SurvivesTheNesting()
+    public async Task RoundTrip_FullReleaseAndTwoMods_SurvivesTheNesting()
     {
         var instance = await _repository.CreateAsync("Deep Nesting", InstanceSource.Custom.Value);
 
+        var anyOfDependency = ModDependency.OfAlternatives(ModDependencyKind.Required, new[]
+        {
+            new ModDependencyAlternative("audio-a", ModVersion.Parse("2.0.0")),
+            new ModDependencyAlternative("audio-b"),
+        });
+
         instance.AddMod(new InstalledMod(
-            "test-mod", ModVersion.Parse("1.0.0"), InstallReason.Manual, DateTimeOffset.UtcNow,
-            MetadataFixtures.FullMetadata("test-mod"), Array.Empty<ModDependency>()));
+            "test-mod", ModVersion.Parse("1.2.0-beta.1"), InstallReason.Manual, DateTimeOffset.UtcNow,
+            MetadataFixtures.FullRelease("test-mod")));
         instance.AddMod(new InstalledMod(
             "second-mod", ModVersion.Parse("2.0.0"), InstallReason.Dependency, DateTimeOffset.UtcNow,
-            MetadataFixtures.MinimalMetadata("second-mod"), Array.Empty<ModDependency>()));
+            MetadataFixtures.MinimalRelease("second-mod", "2.0.0", new[] { anyOfDependency })));
         await _repository.SaveAsync(instance);
 
         var reloaded = await new FileInstanceRepository(_pathProvider).GetByIdAsync(instance.InstanceId);
 
         Assert.Equal(2, reloaded!.Mods.Count);
         var fullMod = reloaded.Mods.Single(m => m.ModId == "test-mod");
-        Assert.Equal(3, fullMod.Metadata.Dependencies.Count);
-        var anyOf = fullMod.Metadata.Dependencies.Single(d => d.IsAnyOf);
+        Assert.Equal(2, fullMod.Metadata.Dependencies.Count);
+        Assert.Equal(MetadataSource.Derived, fullMod.Metadata.Dependencies[1].Source);
+        Assert.Equal("https://forums.example/thread/1", fullMod.Metadata.Listing!.Links["forums"]);
+
+        var secondMod = reloaded.Mods.Single(m => m.ModId == "second-mod");
+        var anyOf = secondMod.Metadata.Dependencies.Single(d => d.IsAnyOf);
         Assert.Equal(2, anyOf.AnyOf!.Count);
         Assert.Equal("audio-b", anyOf.AnyOf[1].ModId);
-        Assert.Equal("github", fullMod.Metadata.Releases!.Authority);
     }
 
     [Fact]

@@ -68,10 +68,10 @@ internal static class MetadataFixtures
     public static DownloadInfo SampleDownload() =>
         new("https://example.com/mod.zip", new string('A', 64), 1024, "application/zip", new[] { "https://mirror.example/mod.zip" });
 
-    public static ModVersionMetadata MinimalRelease(string modId = "test-mod") => new(
+    public static ModVersionMetadata MinimalRelease(string modId = "test-mod", string version = "1.0.0", IReadOnlyList<ModDependency>? dependencies = null) => new(
         specVersion: 1,
         modId: modId,
-        version: ModVersion.Parse("1.0.0"),
+        version: ModVersion.Parse(version),
         releaseStatus: ReleaseStatus.Stable,
         releaseDate: SampleTimestamp(),
         gameMin: "2026.7",
@@ -80,7 +80,7 @@ internal static class MetadataFixtures
         // exercised by the round trip.
         download: new DownloadInfo("https://example.com/mod.zip", new string('b', 64), 512, "application/zip"),
         installSizeBytes: 2048,
-        dependencies: Array.Empty<ModDependency>());
+        dependencies: dependencies ?? Array.Empty<ModDependency>());
 
     public static ModVersionMetadata FullRelease(string modId = "test-mod") => new(
         specVersion: 1,
