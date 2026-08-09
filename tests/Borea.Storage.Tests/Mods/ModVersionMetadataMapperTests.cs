@@ -40,6 +40,7 @@ public sealed class ModVersionMetadataMapperTests : IDisposable
         Assert.Equal(original.Changelog, reloaded.Changelog);
         Assert.True(reloaded.Yanked);
         Assert.Equal(original.YankedReason, reloaded.YankedReason);
+        Assert.Equal("TestSource", reloaded.Source);
 
         Assert.Equal(original.Download.Url, reloaded.Download.Url);
         Assert.Equal(original.Download.Sha256, reloaded.Download.Sha256);
@@ -99,6 +100,7 @@ public sealed class ModVersionMetadataMapperTests : IDisposable
         Assert.Null(reloaded.Install);
         Assert.Null(reloaded.Loader);
         Assert.False(reloaded.Yanked);
+        Assert.Null(reloaded.Source);
         Assert.Empty(reloaded.Dependencies);
         Assert.Empty(reloaded.Download.Mirrors);
 
@@ -152,6 +154,33 @@ public sealed class ModVersionMetadataMapperTests : IDisposable
         Assert.Equal(ContentType.ModLoader, reloaded.Type);
         Assert.Null(reloaded.Install);
         Assert.Contains("Type = \"mod-loader\"", tomlText);
+    }
+
+    [Fact]
+    public async Task RoundTrip_UnknownChecksumAndSizes_StayAbsent()
+    {
+        // Facts a source cannot provide persist as absent, never as zero.
+        var original = new ModVersionMetadata(
+            specVersion: 1,
+            modId: "test-mod",
+            version: ModVersion.Parse("1.0.0"),
+            releaseStatus: ReleaseStatus.Stable,
+            releaseDate: MetadataFixtures.SampleTimestamp(),
+            gameMin: "2026.7.4.2131",
+            gameMinRevision: 2131,
+            download: new DownloadInfo("https://example.com/mod.zip", sha256: null, sizeBytes: null, "application/zip"),
+            installSizeBytes: null,
+            dependencies: Array.Empty<ModDependency>());
+
+        var (reloaded, reloadedDto, tomlText) = await RoundTripAsync(original);
+
+        Assert.Null(reloaded.Download.Sha256);
+        Assert.Null(reloaded.Download.SizeBytes);
+        Assert.Null(reloaded.InstallSizeBytes);
+        Assert.False(reloaded.Download.HashMatches(new string('A', 64)));
+        Assert.Null(reloadedDto.Download.Sha256);
+        Assert.DoesNotContain("Sha256", tomlText);
+        Assert.DoesNotContain("SizeBytes", tomlText);
     }
 
     [Fact]

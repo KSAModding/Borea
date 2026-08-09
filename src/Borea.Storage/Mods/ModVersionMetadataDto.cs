@@ -32,7 +32,9 @@ public sealed class ModVersionMetadataDto
     public List<string>? Os { get; set; }
 
     public DownloadInfoDto Download { get; set; } = new();
-    public long InstallSizeBytes { get; set; }
+
+    /// <summary>Null means the source did not expose the unpacked size.</summary>
+    public long? InstallSizeBytes { get; set; }
     public InstallInfoDto? Install { get; set; }
     public LoaderRequirementDto? Loader { get; set; }
     public List<ModDependencyDto> Dependencies { get; set; } = new();
@@ -40,4 +42,7 @@ public sealed class ModVersionMetadataDto
     public ListingSnapshotDto? Listing { get; set; }
     public bool Yanked { get; set; }
     public string? YankedReason { get; set; }
+
+    /// <summary>Borea-internal source tag, not a format field. Null when unknown.</summary>
+    public string? Source { get; set; }
 }

@@ -1,4 +1,6 @@
-﻿namespace Borea.Network.SpaceDock;
+﻿using Borea.Core.Mods;
+
+namespace Borea.Network.SpaceDock;
 
 /// <summary>
 /// Maps a mod's true, permanent ModId (confirmed by reading mod.toml after
@@ -10,7 +12,7 @@
 /// </summary>
 public sealed class SpaceDockResolver
 {
-    private readonly Dictionary<string, int> _map = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, int> _map = new(ModIds.Comparer);
 
     /// <summary>
     /// Maps a mod's true, permanent ModId (confirmed by reading mod.toml) to SpaceDock's own numeric mod ID. No-op if the modId is already registered.
