@@ -422,6 +422,12 @@ public sealed class SpaceDockModRepositoryTests
     [InlineData("1.2.3-rc.1", "1.2.3-rc.1")]
     [InlineData("1.2.3.4-rc1", "1.2.3-rc1")]
     [InlineData("1.2-beta", "1.2.0-beta")]
+    [InlineData("1.2.3-rc.01", "1.2.3-rc.1")] // Leading zero coerced away, not dropped.
+    [InlineData("1.0-beta_2", "1.0.0-beta-2")] // Out-of-charset characters become hyphens.
+    [InlineData("1.4.0-alpha (hotfix)", "1.4.0-alpha--hotfix-")] // Free text survives as a label.
+    [InlineData("1.2.3.4+build-1", "1.2.3")] // The '+' cut precedes the label split, so build metadata is never a pre-release.
+    [InlineData("1.2+build", "1.2.0")]
+    [InlineData("01.2.3", "1.2.3")] // Core leading zeros normalize away in coercion.
     public async Task VersionNormalization_HandlesRealWorldFormats(string friendlyVersion, string expectedNormalized)
     {
         var json = $$"""
