@@ -57,6 +57,5 @@ internal static class TestFixtures
             ModVersion.Parse(version),
             reason,
             DateTimeOffset.UtcNow,
-            SampleModMetadata(modId),
-            dependencies ?? Array.Empty<ModDependency>());
+            SampleVersionMetadata(modId, version, dependencies));
 }

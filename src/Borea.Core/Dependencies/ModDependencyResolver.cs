@@ -41,7 +41,7 @@ public sealed class ModDependencyResolver
 
         var dependents = instance.Mods
             .Where(m => !ModIds.Equals(m.ModId, modId))
-            .Where(m => m.Dependencies.Any(d => WouldBreakOnRemoval(instance, d, modId, version)))
+            .Where(m => m.Metadata.Dependencies.Any(d => WouldBreakOnRemoval(instance, d, modId, version)))
             .Select(m => m.ModId)
             .ToList();
 
