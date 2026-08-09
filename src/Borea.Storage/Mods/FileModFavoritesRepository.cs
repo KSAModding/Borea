@@ -26,14 +26,14 @@ public sealed class FileModFavoritesRepository : IModFavoritesRepository
     public async Task<bool> IsFavoriteAsync(string modId, CancellationToken cancellationToken = default)
     {
         var dto = await ReadAsync(cancellationToken).ConfigureAwait(false);
-        return dto.ModIds.Contains(modId, StringComparer.Ordinal);
+        return dto.ModIds.Contains(modId, ModIds.Comparer);
     }
 
     public async Task AddFavoriteAsync(string modId, CancellationToken cancellationToken = default)
     {
         var dto = await ReadAsync(cancellationToken).ConfigureAwait(false);
 
-        if (dto.ModIds.Contains(modId, StringComparer.Ordinal))
+        if (dto.ModIds.Contains(modId, ModIds.Comparer))
             return;
 
         dto.ModIds.Add(modId);
@@ -44,7 +44,7 @@ public sealed class FileModFavoritesRepository : IModFavoritesRepository
     {
         var dto = await ReadAsync(cancellationToken).ConfigureAwait(false);
 
-        if (dto.ModIds.RemoveAll(id => string.Equals(id, modId, StringComparison.Ordinal)) > 0)
+        if (dto.ModIds.RemoveAll(id => ModIds.Equals(id, modId)) > 0)
             await WriteAsync(dto, cancellationToken).ConfigureAwait(false);
     }
 

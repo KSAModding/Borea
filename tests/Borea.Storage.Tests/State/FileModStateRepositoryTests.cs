@@ -38,6 +38,13 @@ public sealed class FileModStateRepositoryTests : IDisposable
 
         var active = await _repository.GetAllActiveModIdsAsync(_instanceId);
         Assert.Equal(new[] { "Core" }, active);
+
+        // Ids compare case-insensitively, matching the folder-name identity.
+        Assert.True(await _repository.IsActiveAsync(_instanceId, "core"));
+
+        await _repository.SetInactiveAsync(_instanceId, "CORE");
+        Assert.False(await _repository.IsActiveAsync(_instanceId, "Core"));
+        Assert.Empty(await _repository.GetAllActiveModIdsAsync(_instanceId));
     }
 
     [Fact]
