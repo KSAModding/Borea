@@ -1,10 +1,10 @@
-﻿using Borea.Core.Mods;
+using Borea.Core.Mods;
 
 namespace Borea.Network.Sources;
 
 /// <summary>
-/// Queries every registered source and merges results, tagging each
-/// ModMetadata with its originating source via ModMetadata.Source. Which
+/// Queries every registered source and merges results, tagging each listing
+/// and release with its originating source via the Source property. Which
 /// sources are active is entirely determined by what's registered at
 /// construction.
 /// </summary>
@@ -28,24 +28,24 @@ public sealed class CompositeModRepository : IModRepository
         return results;
     }
 
-    public async Task<ModMetadata?> GetLatestAsync(string modId, CancellationToken cancellationToken = default)
+    public async Task<ModVersionMetadata?> GetLatestReleaseAsync(string modId, CancellationToken cancellationToken = default)
     {
         foreach (var (source, repository) in _sources)
         {
-            var result = await repository.GetLatestAsync(modId, cancellationToken).ConfigureAwait(false);
-            if (result is not null)
-                return Tag(result, source);
+            var release = await repository.GetLatestReleaseAsync(modId, cancellationToken).ConfigureAwait(false);
+            if (release is not null)
+                return Tag(release, source);
         }
         return null;
     }
 
-    public async Task<ModMetadata?> GetVersionAsync(string modId, ModVersion version, CancellationToken cancellationToken = default)
+    public async Task<ModVersionMetadata?> GetReleaseAsync(string modId, ModVersion version, CancellationToken cancellationToken = default)
     {
         foreach (var (source, repository) in _sources)
         {
-            var result = await repository.GetVersionAsync(modId, version, cancellationToken).ConfigureAwait(false);
-            if (result is not null)
-                return Tag(result, source);
+            var release = await repository.GetReleaseAsync(modId, version, cancellationToken).ConfigureAwait(false);
+            if (release is not null)
+                return Tag(release, source);
         }
         return null;
     }
@@ -73,7 +73,48 @@ public sealed class CompositeModRepository : IModRepository
     }
 
     private static ModMetadata Tag(ModMetadata original, string source) => new(
-        original.ModId, source, original.Name, original.Author, original.Version, original.BuiltForGameVersion,
-        original.Description, original.ReleasedAt, original.FileSizeBytes, original.Dependencies,
-        original.Tags, original.HomepageUrl, original.ChangeLog);
+        original.SpecVersion,
+        original.ModId,
+        source,
+        original.Name,
+        original.Authors,
+        original.Abstract,
+        original.License,
+        original.Links,
+        original.GameMin,
+        original.Type,
+        original.Tags,
+        original.Description,
+        original.Status,
+        original.SupersededBy,
+        original.Releases,
+        original.GameMax,
+        original.Os,
+        original.Loader,
+        original.Dependencies,
+        original.InstallRootOverride);
+
+    private static ModVersionMetadata Tag(ModVersionMetadata original, string source) => new(
+        original.SpecVersion,
+        original.ModId,
+        original.Version,
+        original.ReleaseStatus,
+        original.ReleaseDate,
+        original.GameMin,
+        original.GameMinRevision,
+        original.Download,
+        original.InstallSizeBytes,
+        original.Dependencies,
+        original.Type,
+        original.VersionScheme,
+        original.GameMax,
+        original.GameMaxRevision,
+        original.Os,
+        original.Install,
+        original.Loader,
+        original.Changelog,
+        original.Listing,
+        original.Yanked,
+        original.YankedReason,
+        source);
 }
