@@ -76,9 +76,14 @@ public sealed class ModVersionMetadata
     public DownloadInfo Download { get; }
 
     /// <summary>
-    /// Unpacked size in bytes. Download and install size differ on purpose.
+    /// Which source this release came from. Borea-internal, not a format field.
     /// </summary>
-    public long InstallSizeBytes { get; }
+    public string? Source { get; }
+
+    /// <summary>
+    /// Unpacked size in bytes. Null when the source does not expose it.
+    /// </summary>
+    public long? InstallSizeBytes { get; }
 
     /// <summary>
     /// The install directive. Null for content that installs by its own mechanism.
@@ -124,7 +129,7 @@ public sealed class ModVersionMetadata
         string gameMin,
         int gameMinRevision,
         DownloadInfo download,
-        long installSizeBytes,
+        long? installSizeBytes,
         IReadOnlyList<ModDependency> dependencies,
         ContentType type = ContentType.Mod,
         string versionScheme = "semver",
@@ -136,7 +141,8 @@ public sealed class ModVersionMetadata
         string? changelog = null,
         ListingSnapshot? listing = null,
         bool yanked = false,
-        string? yankedReason = null)
+        string? yankedReason = null,
+        string? source = null)
     {
         if (specVersion < 1)
             throw new ArgumentOutOfRangeException(nameof(specVersion), "Spec version must be a positive integer.");
@@ -182,7 +188,7 @@ public sealed class ModVersionMetadata
         if (dependencies is null)
             throw new ArgumentNullException(nameof(dependencies));
 
-        if (installSizeBytes < 0)
+        if (installSizeBytes is < 0)
             throw new ArgumentOutOfRangeException(nameof(installSizeBytes), "Install size cannot be negative.");
 
         SpecVersion = specVersion;
@@ -206,5 +212,6 @@ public sealed class ModVersionMetadata
         Listing = listing;
         Yanked = yanked;
         YankedReason = yankedReason;
+        Source = source;
     }
 }

@@ -112,5 +112,6 @@ internal static class MetadataFixtures
             SampleLinks(),
             "Description at stamp time."),
         yanked: true,
-        yankedReason: "Broken above revision 5117.");
+        yankedReason: "Broken above revision 5117.",
+        source: "TestSource");
 }

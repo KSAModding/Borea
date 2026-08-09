@@ -27,6 +27,7 @@ public static class ModVersionMetadataMapper
         Listing = release.Listing is null ? null : ListingSnapshotMapper.ToDto(release.Listing),
         Yanked = release.Yanked,
         YankedReason = release.YankedReason,
+        Source = release.Source,
     };
 
     public static ModVersionMetadata FromDto(ModVersionMetadataDto dto)
@@ -55,6 +56,7 @@ public static class ModVersionMetadataMapper
         changelog: dto.Changelog,
         listing: dto.Listing is null ? null : ListingSnapshotMapper.FromDto(dto.Listing),
         yanked: dto.Yanked,
-        yankedReason: dto.YankedReason);
+        yankedReason: dto.YankedReason,
+        source: dto.Source);
     }
 }
