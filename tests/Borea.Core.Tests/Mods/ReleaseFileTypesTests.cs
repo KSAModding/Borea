@@ -100,7 +100,9 @@ public sealed class InstallInfoTests
     [InlineData("../escape")]
     [InlineData("nested/../../escape")]
     [InlineData("/absolute")]
+    [InlineData("\\absolute")]
     [InlineData("C:\\Windows")]
+    [InlineData("C:relative")]
     public void Constructor_EscapingOrRootedRoot_ThrowsArgumentException(string root)
     {
         Assert.Throws<ArgumentException>(() => new InstallInfo(root, derived: false));

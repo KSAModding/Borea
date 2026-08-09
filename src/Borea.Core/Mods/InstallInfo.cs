@@ -20,7 +20,9 @@ public sealed class InstallInfo
         if (string.IsNullOrWhiteSpace(root))
             throw new ArgumentException("Install root cannot be empty.", nameof(root));
 
-        if (Path.IsPathRooted(root) || root.Split('/', '\\').Any(s => s == ".."))
+        // Platform-independent on purpose: the archive is built and consumed
+        // on different systems, so Windows-rooted forms are rejected everywhere.
+        if (root.StartsWith('/') || root.StartsWith('\\') || root.Contains(':') || root.Split('/', '\\').Any(s => s == ".."))
             throw new ArgumentException("Install root must be a relative path inside the archive.", nameof(root));
 
         Root = root;
