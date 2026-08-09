@@ -22,7 +22,28 @@ jobs:
         with:
           dotnet-version: 10.0.x
       - run: dotnet build Borea.slnx --configuration Release
-      - run: dotnet test Borea.slnx --configuration Release --no-build
+      # Collected on every leg, reported from Linux only so one build is one Coveralls job.
+      - run: dotnet test Borea.slnx --configuration Release --no-build --collect:"XPlat Code Coverage" --results-directory coverage
+
+      # Merge the per-project Cobertura files into one lcov report; lcov keeps the absolute
+      # source paths Coveralls needs, and the filter drops generated code under obj/.
+      - name: Merge coverage reports
+        if: matrix.os == 'ubuntu-latest'
+        uses: danielpalme/ReportGenerator-GitHub-Action@5.5.11
+        with:
+          reports: coverage/**/coverage.cobertura.xml
+          targetdir: coverage/merged
+          reporttypes: lcov
+          filefilters: '-*/obj/*'
+          toolpath: ${{ runner.temp }}/reportgenerator
+
+      - name: Report coverage to Coveralls
+        if: matrix.os == 'ubuntu-latest'
+        uses: coverallsapp/github-action@v2
+        with:
+          file: coverage/merged/lcov.info
+          format: lcov
+          fail-on-error: false
 
   format:
     name: format
