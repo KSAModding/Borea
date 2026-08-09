@@ -7,8 +7,7 @@
         x:Class="Borea.App.Views.MainWindow"
         x:DataType="vm:MainViewModel"
         Icon="/Assets/avalonia-logo.ico"
-        CanResize="False"
-        WindowDecorations="None"
+        CanResize="True"
         Title="Borea.App">
 
     <Design.DataContext>
@@ -18,18 +17,38 @@
     </Design.DataContext>
 
     <Grid>
-        <Grid.RowDefinitions>
-            <RowDefinition Height="1*" />
-            <RowDefinition Height="9*" />
-        </Grid.RowDefinitions>
-        <Panel Grid.Row="1" Background="#101316">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="200" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+
+
+        <Panel Grid.Column="0" Background="{Binding GlobalPanelsColor}"> <!-- Sidebar, used the switch between different views -->
             <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="2*" />
-                    <ColumnDefinition Width="8*" />
-                    <ColumnDefinition Width="3*" />
-                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="100" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+                <Panel Grid.Row="0" Background="{Binding SecondaryColor}">
+                    <TextBlock Text="Logo Goes Here" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                </Panel>
+                <Panel Grid.Row="1" Background="{Binding GlobalPanelsColor}" Margin="20">
+                    <Button Content="Library" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,55,0,55" Command="{Binding SetMainWindowLibrary}" />
+                    <Button Content="Discover" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,5,0,5" Command="{Binding SetMainWindowDiscover}" /> <!--All of these will eventually be replaced with images instead of text-->
+                    <Button Content="Settings" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,5,0,5" Command="{Binding SetMainWindowSettings}" />
+                </Panel>
             </Grid>
+        </Panel>
+
+
+        <Panel Grid.Column="1" Background="{Binding MainColor}" IsEnabled="{Binding CurrentWindowDiscover}"> <!-- Discover  -->
+            <TextBlock Text="Discover" HorizontalAlignment="Center" VerticalAlignment="Center" />
+        </Panel>
+        <Panel Grid.Column="1" Background="{Binding MainColor}" IsEnabled="{Binding CurrentWindowLibrary}"> <!-- Library  -->
+            <TextBlock Text="Library" HorizontalAlignment="Center" VerticalAlignment="Center" />
+        </Panel>
+        <Panel Grid.Column="1" Background="{Binding MainColor}" IsEnabled="{Binding CurrentWindowSettings}"> <!-- Settings  -->
+            <TextBlock Text="Settings" HorizontalAlignment="Center" VerticalAlignment="Center" />
         </Panel>
     </Grid>
 
