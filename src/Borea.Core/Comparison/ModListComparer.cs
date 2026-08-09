@@ -18,8 +18,8 @@ public sealed class ModListComparer
         if (currentMods is null) throw new ArgumentNullException(nameof(currentMods));
         if (targetMods is null) throw new ArgumentNullException(nameof(targetMods));
 
-        var currentById = currentMods.ToDictionary(m => m.ModId, StringComparer.Ordinal);
-        var targetIds = new HashSet<string>(targetMods.Select(m => m.ModId), StringComparer.Ordinal);
+        var currentById = currentMods.ToDictionary(m => m.ModId, ModIds.Comparer);
+        var targetIds = new HashSet<string>(targetMods.Select(m => m.ModId), ModIds.Comparer);
 
         var toAdd = new List<ModPackEntry>();
         var toUpdate = new List<ModVersionChange>();
