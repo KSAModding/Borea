@@ -1,4 +1,5 @@
-﻿using Borea.Core.Mods;
+using Borea.Core.Dependencies;
+using Borea.Core.Mods;
 
 namespace Borea.Core.Tests.Mods;
 
@@ -7,7 +8,9 @@ public sealed class InstalledModTests
     [Fact]
     public void Constructor_ValidInput_SetsAllProperties()
     {
-        var metadata = TestFixtures.SampleModMetadata("test-mod", "1.0.0");
+        var metadata = TestFixtures.SampleVersionMetadata(
+            "test-mod",
+            dependencies: new[] { new ModDependency("cool-lib", ModDependencyKind.Required) });
 
         var installedMod = new InstalledMod(
             "test-mod", ModVersion.Parse("1.0.0"), InstallReason.Manual, DateTimeOffset.UtcNow, metadata);
@@ -16,6 +19,7 @@ public sealed class InstalledModTests
         Assert.Equal(ModVersion.Parse("1.0.0"), installedMod.Version);
         Assert.Equal(InstallReason.Manual, installedMod.Reason);
         Assert.Same(metadata, installedMod.Metadata);
+        Assert.Single(installedMod.Metadata.Dependencies);
         Assert.Null(installedMod.Checksum);
     }
 
@@ -25,7 +29,7 @@ public sealed class InstalledModTests
     [InlineData("   ")]
     public void Constructor_InvalidModId_ThrowsArgumentException(string? modId)
     {
-        var metadata = TestFixtures.SampleModMetadata("test-mod", "1.0.0");
+        var metadata = TestFixtures.SampleVersionMetadata("test-mod");
 
         Assert.Throws<ArgumentException>(() =>
             new InstalledMod(modId!, ModVersion.Parse("1.0.0"), InstallReason.Manual, DateTimeOffset.UtcNow, metadata));
@@ -41,28 +45,27 @@ public sealed class InstalledModTests
     [Fact]
     public void Constructor_MetadataModIdMismatch_ThrowsArgumentException()
     {
-        var metadata = TestFixtures.SampleModMetadata("other-mod", "1.0.0");
+        var metadata = TestFixtures.SampleVersionMetadata("other-mod");
 
         Assert.Throws<ArgumentException>(() =>
             new InstalledMod("test-mod", ModVersion.Parse("1.0.0"), InstallReason.Manual, DateTimeOffset.UtcNow, metadata));
     }
 
     [Fact]
-    public void Constructor_MetadataVersionMismatch_ThrowsArgumentException()
+    public void Constructor_MetadataModIdDifferingOnlyInCase_IsAccepted()
     {
-        // Assumes the Version/Metadata.Version cross-check discussed earlier
-        // in the conversation was added alongside the ModId check. If it
-        // wasn't, this is the one test in this file to remove.
-        var metadata = TestFixtures.SampleModMetadata("test-mod", "1.0.0");
+        var metadata = TestFixtures.SampleVersionMetadata("Test-Mod");
 
-        Assert.Throws<ArgumentException>(() =>
-            new InstalledMod("test-mod", ModVersion.Parse("2.0.0"), InstallReason.Manual, DateTimeOffset.UtcNow, metadata));
+        var installedMod = new InstalledMod(
+            "test-mod", ModVersion.Parse("1.0.0"), InstallReason.Manual, DateTimeOffset.UtcNow, metadata);
+
+        Assert.Same(metadata, installedMod.Metadata);
     }
 
     [Fact]
     public void Constructor_Checksum_IsOptionalAndDefaultsToNull()
     {
-        var metadata = TestFixtures.SampleModMetadata("test-mod", "1.0.0");
+        var metadata = TestFixtures.SampleVersionMetadata("test-mod");
 
         var withChecksum = new InstalledMod(
             "test-mod", ModVersion.Parse("1.0.0"), InstallReason.Manual, DateTimeOffset.UtcNow, metadata, "abc123");
@@ -73,9 +76,7 @@ public sealed class InstalledModTests
     [Fact]
     public void MarkAsManuallyInstalled_SetsReasonToManual()
     {
-        var metadata = TestFixtures.SampleModMetadata("test-mod", "1.0.0");
-        var installedMod = new InstalledMod(
-            "test-mod", ModVersion.Parse("1.0.0"), InstallReason.Dependency, DateTimeOffset.UtcNow, metadata);
+        var installedMod = TestFixtures.SampleInstalledMod("test-mod", reason: InstallReason.Dependency);
 
         installedMod.MarkAsManuallyInstalled();
 

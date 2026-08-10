@@ -1,4 +1,6 @@
-﻿using Tomlyn;
+﻿using System.Globalization;
+using Tomlyn;
+using Tomlyn.Serialization;
 
 namespace Borea.Storage.Toml;
 
@@ -9,6 +11,11 @@ namespace Borea.Storage.Toml;
 /// </summary>
 public static class TomlFileStore
 {
+    private static readonly TomlSerializerOptions Options = new()
+    {
+        Converters = new TomlConverter[] { RoundTripDateTimeOffsetConverter.Instance },
+    };
+
     /// <summary>
     /// Reads and deserializes the TOML file at <paramref name="path"/> into
     /// <typeparamref name="T"/>, or returns null if the file does not exist.
@@ -20,7 +27,7 @@ public static class TomlFileStore
             return null;
 
         var text = await File.ReadAllTextAsync(path, cancellationToken).ConfigureAwait(false);
-        return TomlSerializer.Deserialize<T>(text);
+        return TomlSerializer.Deserialize<T>(text, Options);
     }
 
     /// <summary>
@@ -38,7 +45,7 @@ public static class TomlFileStore
         if (!string.IsNullOrEmpty(directory))
             Directory.CreateDirectory(directory);
 
-        var text = TomlSerializer.Serialize(value);
+        var text = TomlSerializer.Serialize(value, Options);
         await File.WriteAllTextAsync(path, text, cancellationToken).ConfigureAwait(false);
     }
 
@@ -50,5 +57,37 @@ public static class TomlFileStore
     {
         if (File.Exists(path))
             File.Delete(path);
+    }
+
+    /// <summary>
+    /// Persists DateTimeOffset as an ISO 8601 round-trip string, because the
+    /// default TOML datetime form drops the fractional seconds. Reads both the
+    /// string form and a plain TOML datetime.
+    /// </summary>
+    private sealed class RoundTripDateTimeOffsetConverter : TomlConverter<DateTimeOffset>
+    {
+        public static RoundTripDateTimeOffsetConverter Instance { get; } = new();
+
+        public override DateTimeOffset Read(TomlReader reader)
+        {
+            if (reader.TokenType == TomlTokenType.String)
+            {
+                var text = reader.GetString();
+                reader.Read();
+                return DateTimeOffset.Parse(text, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
+            }
+
+            if (reader.TokenType == TomlTokenType.DateTime)
+            {
+                var value = reader.GetTomlDateTime();
+                reader.Read();
+                return value.DateTime;
+            }
+
+            throw reader.CreateException($"Expected a string or datetime token but was {reader.TokenType}.");
+        }
+
+        public override void Write(TomlWriter writer, DateTimeOffset value)
+            => writer.WriteStringValue(value.ToString("O", CultureInfo.InvariantCulture));
     }
 }

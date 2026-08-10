@@ -49,8 +49,12 @@ public sealed class SpaceDockModDownloader : IModDownloader
             $"api/mod/{spaceDockId}", JsonOptions, cancellationToken).ConfigureAwait(false)
             ?? throw new InvalidOperationException($"SpaceDock mod '{spaceDockId}' not found.");
 
-        var matchingVersion = dto.Versions.FirstOrDefault(v =>
-            SpaceDockVersionParsing.TryNormalize(v.FriendlyVersion, out var parsed) && parsed.Equals(version))
+        // Rows can normalize to the same version; the default row wins the
+        // tie, matching how SpaceDockModRepository resolves releases.
+        var matchingVersion = dto.Versions
+            .Where(v => SpaceDockVersionParsing.TryNormalize(v.FriendlyVersion, out var parsed) && parsed.Equals(version))
+            .OrderByDescending(v => v.Id == dto.DefaultVersionId)
+            .FirstOrDefault()
             ?? throw new InvalidOperationException($"Version '{version}' not found for SpaceDock mod '{spaceDockId}'.");
 
         using var response = await _httpClient.GetAsync(

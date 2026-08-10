@@ -11,7 +11,7 @@ public static class InstalledModMapper
         Reason = mod.Reason.ToString(),
         InstalledAt = mod.InstalledAt,
         Checksum = mod.Checksum,
-        Metadata = ModMetadataMapper.ToDto(mod.Metadata),
+        Metadata = ModVersionMetadataMapper.ToDto(mod.Metadata),
     };
 
     public static InstalledMod FromDto(InstalledModDto dto) => new(
@@ -19,6 +19,6 @@ public static class InstalledModMapper
         ModVersion.Parse(dto.Version),
         Enum.Parse<InstallReason>(dto.Reason),
         dto.InstalledAt,
-        ModMetadataMapper.FromDto(dto.Metadata),
+        ModVersionMetadataMapper.FromDto(dto.Metadata),
         dto.Checksum);
 }
