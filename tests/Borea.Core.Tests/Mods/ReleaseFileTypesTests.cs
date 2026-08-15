@@ -96,15 +96,98 @@ public sealed class InstallInfoTests
         Assert.True(install.Derived);
     }
 
+    [Fact]
+    public void Constructor_AbsentTargetAndPath_LeaveTheTypeDefaultInForce()
+    {
+        var install = new InstallInfo("MyMod", derived: true);
+
+        Assert.Null(install.Target);
+        Assert.Null(install.Path);
+    }
+
+    [Fact]
+    public void Constructor_AbsentRoot_MeansTheArchiveRoot()
+    {
+        var install = new InstallInfo(null, derived: true, InstallAnchor.Standalone);
+
+        Assert.Null(install.Root);
+        Assert.Equal(InstallAnchor.Standalone, install.Target);
+    }
+
+    [Fact]
+    public void Constructor_TargetAndPath_AreCarried()
+    {
+        var install = new InstallInfo("build/Mod", derived: false, InstallAnchor.UserData, "Vehicles");
+
+        Assert.Equal("build/Mod", install.Root);
+        Assert.Equal(InstallAnchor.UserData, install.Target);
+        Assert.Equal("Vehicles", install.Path);
+    }
+
+    [Fact]
+    public void Constructor_AnchorThisBuildDoesNotKnow_IsCarriedRatherThanRejected()
+    {
+        // The entry still has to survive; only the guess is forbidden.
+        var install = new InstallInfo("MyMod", derived: true, InstallAnchor.Unknown);
+
+        Assert.Equal(InstallAnchor.Unknown, install.Target);
+    }
+
     [Theory]
     [InlineData("../escape")]
     [InlineData("nested/../../escape")]
     [InlineData("/absolute")]
     [InlineData("\\absolute")]
+    [InlineData("~/home")]
     [InlineData("C:\\Windows")]
     [InlineData("C:relative")]
+    // A separator on Windows, a directory name on Linux, so RFC 0035 rule 2
+    // fixes it to '/'.
+    [InlineData("build\\Mod")]
     public void Constructor_EscapingOrRootedRoot_ThrowsArgumentException(string root)
     {
         Assert.Throws<ArgumentException>(() => new InstallInfo(root, derived: false));
+    }
+
+    [Theory]
+    [InlineData("../escape")]
+    [InlineData("nested/../../escape")]
+    [InlineData("/absolute")]
+    [InlineData("\\absolute")]
+    [InlineData("~/home")]
+    [InlineData("C:\\Windows")]
+    [InlineData("C:relative")]
+    [InlineData("build\\Mod")]
+    public void Constructor_EscapingOrRootedPath_ThrowsArgumentException(string path)
+    {
+        Assert.Throws<ArgumentException>(() =>
+            new InstallInfo("MyMod", derived: false, InstallAnchor.UserData, path));
+    }
+
+    [Fact]
+    public void Constructor_NestedRelativeRoot_IsAccepted()
+    {
+        // The one archive layout RFC 0031 needs an authored root for.
+        var install = new InstallInfo("build/AdvancedFlightComputer", derived: false);
+
+        Assert.Equal("build/AdvancedFlightComputer", install.Root);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void Constructor_EmptyRoot_ThrowsArgumentException(string root)
+    {
+        // Absent means the archive root; empty is a stamp that lost its value.
+        Assert.Throws<ArgumentException>(() => new InstallInfo(root, derived: false));
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void Constructor_EmptyPath_ThrowsArgumentException(string path)
+    {
+        Assert.Throws<ArgumentException>(() =>
+            new InstallInfo("MyMod", derived: false, InstallAnchor.UserData, path));
     }
 }
