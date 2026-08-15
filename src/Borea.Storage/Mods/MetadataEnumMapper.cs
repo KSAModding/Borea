@@ -78,6 +78,24 @@ public static class MetadataEnumMapper
         _ => Core.Dependencies.ModDependencyKind.Unknown,
     };
 
+    public static string ToDto(InstallAnchor anchor) => anchor switch
+    {
+        InstallAnchor.Mods => "mods",
+        InstallAnchor.UserData => "user-data",
+        InstallAnchor.GameRoot => "game-root",
+        InstallAnchor.Standalone => "standalone",
+        _ => "unknown",
+    };
+
+    public static InstallAnchor ParseAnchor(string value) => value.ToLowerInvariant() switch
+    {
+        "mods" => InstallAnchor.Mods,
+        "user-data" => InstallAnchor.UserData,
+        "game-root" => InstallAnchor.GameRoot,
+        "standalone" => InstallAnchor.Standalone,
+        _ => InstallAnchor.Unknown,
+    };
+
     public static string? ToDto(MetadataSource? source) => source switch
     {
         null => null,
