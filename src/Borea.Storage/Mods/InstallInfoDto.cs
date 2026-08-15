@@ -5,6 +5,14 @@
 /// </summary>
 public sealed class InstallInfoDto
 {
-    public string Root { get; set; } = string.Empty;
+    /// <summary>Null means the archive root.</summary>
+    public string? Root { get; set; }
+
     public bool Derived { get; set; }
+
+    /// <summary>The anchor, lowercase. Null means the type default.</summary>
+    public string? Target { get; set; }
+
+    /// <summary>Null means the anchor itself.</summary>
+    public string? Path { get; set; }
 }

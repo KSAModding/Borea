@@ -157,6 +157,72 @@ public sealed class ModVersionMetadataMapperTests : IDisposable
     }
 
     [Fact]
+    public async Task RoundTrip_ModInstallShape_KeepsTheDerivedRootAndNoTarget()
+    {
+        // releases/AdvancedFlightComputer/0.7.2.json, as the index stamps it.
+        var original = new ModVersionMetadata(
+            specVersion: 1,
+            modId: "AdvancedFlightComputer",
+            version: ModVersion.Parse("0.7.2"),
+            releaseStatus: ReleaseStatus.Stable,
+            releaseDate: MetadataFixtures.SampleTimestamp(),
+            gameMin: "2026.8.3.5117",
+            gameMinRevision: 5117,
+            download: MetadataFixtures.SampleDownload(),
+            installSizeBytes: 326889,
+            dependencies: Array.Empty<ModDependency>(),
+            install: new InstallInfo("AdvancedFlightComputer", derived: true));
+
+        var (reloaded, _, tomlText) = await RoundTripAsync(original);
+
+        Assert.Equal("AdvancedFlightComputer", reloaded.Install!.Root);
+        Assert.True(reloaded.Install.Derived);
+        Assert.Null(reloaded.Install.Target);
+        Assert.Null(reloaded.Install.Path);
+        Assert.DoesNotContain("Target", tomlText);
+    }
+
+    [Fact]
+    public async Task RoundTrip_LoaderInstallShape_KeepsTheStandaloneTargetWithoutARoot()
+    {
+        // releases/StarMap/0.4.6.json, as the index stamps it.
+        var original = new ModVersionMetadata(
+            specVersion: 1,
+            modId: "StarMap",
+            version: ModVersion.Parse("0.4.6"),
+            releaseStatus: ReleaseStatus.Stable,
+            releaseDate: MetadataFixtures.SampleTimestamp(),
+            gameMin: "2026.8.3.5117",
+            gameMinRevision: 5117,
+            download: MetadataFixtures.SampleDownload(),
+            installSizeBytes: 2549644,
+            dependencies: Array.Empty<ModDependency>(),
+            type: ContentType.ModLoader,
+            install: new InstallInfo(null, derived: true, InstallAnchor.Standalone));
+
+        var (reloaded, reloadedDto, tomlText) = await RoundTripAsync(original);
+
+        Assert.Equal(ContentType.ModLoader, reloaded.Type);
+        Assert.Null(reloaded.Install!.Root);
+        Assert.True(reloaded.Install.Derived);
+        Assert.Equal(InstallAnchor.Standalone, reloaded.Install.Target);
+        Assert.Null(reloadedDto.Install!.Root);
+        Assert.Contains("Target = \"standalone\"", tomlText);
+        Assert.DoesNotContain("Root", tomlText);
+    }
+
+    [Fact]
+    public void FromDto_AnchorThisBuildDoesNotKnow_ParsesToUnknown()
+    {
+        var dto = ModVersionMetadataMapper.ToDto(MetadataFixtures.FullRelease());
+        dto.Install!.Target = "cache-dir";
+
+        var reloaded = ModVersionMetadataMapper.FromDto(dto);
+
+        Assert.Equal(InstallAnchor.Unknown, reloaded.Install!.Target);
+    }
+
+    [Fact]
     public async Task RoundTrip_UnknownChecksumAndSizes_StayAbsent()
     {
         // Facts a source cannot provide persist as absent, never as zero.

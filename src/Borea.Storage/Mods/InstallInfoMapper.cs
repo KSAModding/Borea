@@ -8,7 +8,13 @@ public static class InstallInfoMapper
     {
         Root = install.Root,
         Derived = install.Derived,
+        Target = install.Target is { } target ? MetadataEnumMapper.ToDto(target) : null,
+        Path = install.Path,
     };
 
-    public static InstallInfo FromDto(InstallInfoDto dto) => new(dto.Root, dto.Derived);
+    public static InstallInfo FromDto(InstallInfoDto dto) => new(
+        dto.Root,
+        dto.Derived,
+        dto.Target is null ? null : MetadataEnumMapper.ParseAnchor(dto.Target),
+        dto.Path);
 }
