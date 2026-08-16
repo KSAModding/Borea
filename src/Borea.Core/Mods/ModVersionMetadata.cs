@@ -86,7 +86,7 @@ public sealed class ModVersionMetadata
     public long? InstallSizeBytes { get; }
 
     /// <summary>
-    /// The install directive. Null for content that installs by its own mechanism.
+    /// The install directive. Null leaves the type default in force.
     /// </summary>
     public InstallInfo? Install { get; }
 
@@ -154,9 +154,6 @@ public sealed class ModVersionMetadata
 
         if (loader is not null && type != ContentType.Mod)
             throw new ArgumentException("Only a mod can declare a loader requirement.", nameof(loader));
-
-        if (install is not null && type == ContentType.ModLoader)
-            throw new ArgumentException("A mod loader installs by its own mechanism and carries no install directive.", nameof(install));
 
         if (string.IsNullOrWhiteSpace(versionScheme))
             throw new ArgumentException("Version scheme cannot be null or whitespace.", nameof(versionScheme));

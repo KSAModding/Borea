@@ -92,9 +92,15 @@ public sealed class ModVersionMetadataTests
     }
 
     [Fact]
-    public void Constructor_InstallOnModLoader_ThrowsArgumentException()
+    public void Constructor_InstallOnModLoader_IsAccepted()
     {
-        Assert.Throws<ArgumentException>(() => Build(type: ContentType.ModLoader, install: new InstallInfo("test-mod", derived: true)));
+        // The shape the index stamps for StarMap.
+        var install = new InstallInfo(null, derived: true, InstallAnchor.Standalone);
+
+        var metadata = Build(type: ContentType.ModLoader, install: install);
+
+        Assert.Null(metadata.Install!.Root);
+        Assert.Equal(InstallAnchor.Standalone, metadata.Install.Target);
     }
 
     [Fact]
