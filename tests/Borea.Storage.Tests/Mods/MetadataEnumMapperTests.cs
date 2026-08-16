@@ -52,6 +52,24 @@ public sealed class MetadataEnumMapperTests
     }
 
     [Theory]
+    [InlineData(InstallAnchor.Mods, "mods")]
+    [InlineData(InstallAnchor.UserData, "user-data")]
+    [InlineData(InstallAnchor.GameRoot, "game-root")]
+    [InlineData(InstallAnchor.Standalone, "standalone")]
+    [InlineData(InstallAnchor.Unknown, "unknown")]
+    public void InstallAnchor_WritesTheFormatSpelling(InstallAnchor anchor, string expected)
+    {
+        Assert.Equal(expected, MetadataEnumMapper.ToDto(anchor));
+        Assert.Equal(anchor, MetadataEnumMapper.ParseAnchor(expected));
+    }
+
+    [Fact]
+    public void InstallAnchor_AnchorAFutureRfcAddsParsesToUnknown()
+    {
+        Assert.Equal(InstallAnchor.Unknown, MetadataEnumMapper.ParseAnchor("cache-dir"));
+    }
+
+    [Theory]
     [InlineData(MetadataSource.Authored, "authored")]
     [InlineData(MetadataSource.Derived, "derived")]
     [InlineData(MetadataSource.Unknown, "unknown")]
