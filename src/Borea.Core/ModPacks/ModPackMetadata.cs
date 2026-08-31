@@ -63,8 +63,3 @@ public sealed class ModPackMetadata
         HomepageUrl = homepageUrl;
     }
 }
-
-/// <summary>
-/// A single mod+version entry within a mod pack.
-/// </summary>
-public readonly record struct ModPackEntry(string ModId, Mods.ModVersion Version);

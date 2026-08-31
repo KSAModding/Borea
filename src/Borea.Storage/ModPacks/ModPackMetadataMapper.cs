@@ -34,11 +34,11 @@ public static class ModPackMetadataMapper
 
     private static ModPackEntryDto ToDto(ModPackEntry entry) => new()
     {
-        ModId = entry.ModId,
+        ContentId = entry.ContentId,
         Version = entry.Version.ToString(),
     };
 
     private static ModPackEntry FromDto(ModPackEntryDto dto) => new(
-        dto.ModId,
+        dto.ContentId,
         ModVersion.Parse(dto.Version));
 }
