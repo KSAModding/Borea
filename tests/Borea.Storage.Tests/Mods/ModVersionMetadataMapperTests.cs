@@ -278,6 +278,27 @@ public sealed class ModVersionMetadataMapperTests : IDisposable
         Assert.Contains("spec version", exception.Message);
     }
 
+    [Fact]
+    public void FromDto_NegativeSpecVersion_IsAMalformedFile()
+    {
+        var dto = ModVersionMetadataMapper.ToDto(MetadataFixtures.MinimalRelease());
+        dto.SpecVersion = -3;
+
+        var exception = Assert.Throws<FormatException>(() => ModVersionMetadataMapper.FromDto(dto));
+        Assert.Contains("spec version", exception.Message);
+    }
+
+    [Fact]
+    public void FromDto_SpecVersionAboveHighest_StillMaps()
+    {
+        var dto = ModVersionMetadataMapper.ToDto(MetadataFixtures.MinimalRelease());
+        dto.SpecVersion = SpecVersions.Highest + 1;
+
+        var mapped = ModVersionMetadataMapper.FromDto(dto);
+
+        Assert.Equal(SpecVersions.Highest + 1, mapped.SpecVersion);
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_tempRoot))

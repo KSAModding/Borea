@@ -30,8 +30,10 @@ public static class ModMetadataMapper
 
     public static ModMetadata FromDto(ModMetadataDto dto)
     {
-        if (dto.SpecVersion == 0)
-            throw new FormatException("The metadata file predates the metadata model (no spec version).");
+        if (dto.SpecVersion < 1)
+            throw new FormatException(dto.SpecVersion == 0
+                ? "The metadata file predates the metadata model (no spec version)."
+                : $"The metadata file carries an invalid spec version ({dto.SpecVersion}).");
 
         return new ModMetadata(
         specVersion: dto.SpecVersion,

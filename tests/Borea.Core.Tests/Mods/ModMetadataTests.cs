@@ -14,9 +14,10 @@ public sealed class ModMetadataTests
         IReadOnlyDictionary<string, string>? links = null,
         ContentType type = ContentType.Mod,
         LoaderRequirement? loader = null,
-        string? supersededBy = null) =>
+        string? supersededBy = null,
+        int specVersion = SpecVersions.Highest) =>
         new(
-            specVersion: 1,
+            specVersion: specVersion,
             modId: modId,
             source: source,
             name: name,
@@ -110,5 +111,21 @@ public sealed class ModMetadataTests
     public void Constructor_InvalidSupersededBy_ThrowsArgumentException()
     {
         Assert.Throws<ArgumentException>(() => Build(supersededBy: "not a valid id"));
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    public void Constructor_SpecVersionBelowOne_ThrowsArgumentOutOfRangeException(int specVersion)
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(() => Build(specVersion: specVersion));
+    }
+
+    [Fact]
+    public void Constructor_SpecVersionAboveHighest_IsAccepted()
+    {
+        var metadata = Build(specVersion: SpecVersions.Highest + 1);
+
+        Assert.True(SpecVersions.IsAboveHighest(metadata.SpecVersion));
     }
 }
