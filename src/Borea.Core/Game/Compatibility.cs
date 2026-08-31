@@ -1,9 +1,9 @@
-﻿using Borea.Core.Mods;
+using Borea.Core.Mods;
 
 namespace Borea.Core.Game;
 
 /// <summary>
-/// Classifies content against the installed game.
+/// Classifies content against the installed game and the target platform.
 /// </summary>
 public static class Compatibility
 {
@@ -34,4 +34,35 @@ public static class Compatibility
 
         return Evaluate(release.GameMinRevision, release.GameMaxRevision, installed);
     }
+
+    /// <summary>
+    /// What the os list says about the target platform.
+    /// </summary>
+    public static OsSupport EvaluateOs(IReadOnlyList<string>? os, OsPlatform target)
+    {
+        if (os is null || os.Count == 0)
+            return new OsSupport(isSupported: true);
+
+        var unrecognized = new List<string>();
+        var supported = false;
+
+        foreach (var entry in os)
+        {
+            var platform = Parse(entry);
+            if (platform is null)
+                unrecognized.Add(entry);
+            else if (platform == target)
+                supported = true;
+        }
+
+        return new OsSupport(supported, unrecognized);
+    }
+
+    private static OsPlatform? Parse(string value) => value.ToLowerInvariant() switch
+    {
+        "windows" => OsPlatform.Windows,
+        "linux" => OsPlatform.Linux,
+        "macos" => OsPlatform.MacOs,
+        _ => null,
+    };
 }

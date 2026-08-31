@@ -13,7 +13,8 @@ public sealed class CompatibilityTests
         string gameMin = "2026.7.4.2131",
         int gameMinRevision = 2131,
         string? gameMax = null,
-        int? gameMaxRevision = null) =>
+        int? gameMaxRevision = null,
+        IReadOnlyList<string>? os = null) =>
         new(
             specVersion: SpecVersions.Highest,
             modId: "test-mod",
@@ -26,7 +27,8 @@ public sealed class CompatibilityTests
             installSizeBytes: 2048,
             dependencies: Array.Empty<ModDependency>(),
             gameMax: gameMax,
-            gameMaxRevision: gameMaxRevision);
+            gameMaxRevision: gameMaxRevision,
+            os: os);
 
     [Fact]
     public void Evaluate_NoLowerBound_IsUnknown()
@@ -115,5 +117,77 @@ public sealed class CompatibilityTests
     public void Evaluate_NullRelease_ThrowsArgumentNullException()
     {
         Assert.Throws<ArgumentNullException>(() => Compatibility.Evaluate(null!, Installed(5117)));
+    }
+
+    [Fact]
+    public void EvaluateOs_AbsentList_SupportsEveryPlatform()
+    {
+        var support = Compatibility.EvaluateOs(null, OsPlatform.Linux);
+
+        Assert.True(support.IsSupported);
+        Assert.Empty(support.Unrecognized);
+    }
+
+    [Fact]
+    public void EvaluateOs_EmptyList_ReadsLikeAnAbsentOne()
+    {
+        var support = Compatibility.EvaluateOs(Array.Empty<string>(), OsPlatform.Linux);
+
+        Assert.True(support.IsSupported);
+        Assert.Empty(support.Unrecognized);
+    }
+
+    [Theory]
+    [InlineData("windows", OsPlatform.Windows)]
+    [InlineData("linux", OsPlatform.Linux)]
+    [InlineData("macos", OsPlatform.MacOs)]
+    public void EvaluateOs_ListNamingTheTarget_IsSupported(string entry, OsPlatform target)
+    {
+        Assert.True(Compatibility.EvaluateOs(new[] { entry }, target).IsSupported);
+    }
+
+    [Theory]
+    [InlineData("Windows")]
+    [InlineData("WINDOWS")]
+    [InlineData("WiNdOwS")]
+    public void EvaluateOs_ComparesCaseInsensitively(string entry)
+    {
+        Assert.True(Compatibility.EvaluateOs(new[] { entry }, OsPlatform.Windows).IsSupported);
+    }
+
+    [Fact]
+    public void EvaluateOs_ListWithoutTheTarget_IsNotSupported()
+    {
+        var support = Compatibility.EvaluateOs(new[] { "windows", "macos" }, OsPlatform.Linux);
+
+        Assert.False(support.IsSupported);
+        Assert.Empty(support.Unrecognized);
+    }
+
+    [Fact]
+    public void EvaluateOs_UnrecognizedEntry_DoesNotStopTheRecognizedOnes()
+    {
+        var support = Compatibility.EvaluateOs(new[] { "freebsd", "linux" }, OsPlatform.Linux);
+
+        Assert.True(support.IsSupported);
+        Assert.Equal(new[] { "freebsd" }, support.Unrecognized);
+    }
+
+    [Fact]
+    public void EvaluateOs_OnlyUnrecognizedEntries_IsNotSupportedAndReportsThem()
+    {
+        var support = Compatibility.EvaluateOs(new[] { "FreeBSD", "haiku" }, OsPlatform.Windows);
+
+        Assert.False(support.IsSupported);
+        Assert.Equal(new[] { "FreeBSD", "haiku" }, support.Unrecognized);
+    }
+
+    [Fact]
+    public void EvaluateOs_TheReleaseList_IsReadTheSameWay()
+    {
+        var release = Release(os: new[] { "windows" });
+
+        Assert.True(Compatibility.EvaluateOs(release.Os, OsPlatform.Windows).IsSupported);
+        Assert.False(Compatibility.EvaluateOs(release.Os, OsPlatform.MacOs).IsSupported);
     }
 }
