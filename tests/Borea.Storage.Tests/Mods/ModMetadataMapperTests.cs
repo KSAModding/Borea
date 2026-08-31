@@ -1,4 +1,5 @@
-﻿using Borea.Core.Mods;
+﻿using Borea.Core.ModLoaders;
+using Borea.Core.Mods;
 using Borea.Storage.Mods;
 using Borea.Storage.Toml;
 
@@ -40,7 +41,11 @@ public sealed class ModMetadataMapperTests : IDisposable
         Assert.Equal(original.GameMin, reloaded.GameMin);
         Assert.Equal(original.GameMax, reloaded.GameMax);
         Assert.Equal(original.Os, reloaded.Os);
-        Assert.Equal(original.InstallRootOverride, reloaded.InstallRootOverride);
+        Assert.Equal(original.Install!.Root, reloaded.Install!.Root);
+        Assert.Equal(original.Install.Manages, reloaded.Install.Manages);
+        Assert.Equal(original.Install.Steps, reloaded.Install.Steps);
+        // Absent is not empty.
+        Assert.Empty(reloaded.Install.Uninstall!);
 
         Assert.NotNull(reloaded.Releases);
         Assert.Equal("github", reloaded.Releases!.Authority);
@@ -65,7 +70,7 @@ public sealed class ModMetadataMapperTests : IDisposable
         Assert.Contains("SupersededBy", tomlText);
         Assert.Contains("GameMax", tomlText);
         Assert.Contains("Os = ", tomlText);
-        Assert.Contains("InstallRootOverride", tomlText);
+        Assert.Contains("[Install]", tomlText);
 
         // The enum vocabulary on disk stays the format's lowercase spelling.
         Assert.Contains("Status = \"deprecated\"", tomlText);
@@ -87,7 +92,8 @@ public sealed class ModMetadataMapperTests : IDisposable
         Assert.Null(reloadedDto.GameMax);
         Assert.Null(reloadedDto.Os);
         Assert.Null(reloadedDto.Loader);
-        Assert.Null(reloadedDto.InstallRootOverride);
+        Assert.Null(reloadedDto.Install);
+        Assert.Null(reloadedDto.Provides);
 
         Assert.Null(reloaded.Description);
         Assert.Null(reloaded.GameMax);
@@ -100,7 +106,7 @@ public sealed class ModMetadataMapperTests : IDisposable
         Assert.DoesNotContain("SupersededBy", tomlText);
         Assert.DoesNotContain("GameMax", tomlText);
         Assert.DoesNotContain("Os = ", tomlText);
-        Assert.DoesNotContain("InstallRootOverride", tomlText);
+        Assert.DoesNotContain("[Install]", tomlText);
     }
 
     [Fact]
@@ -144,6 +150,52 @@ public sealed class ModMetadataMapperTests : IDisposable
 
         Assert.Equal(ModStatus.Unknown, reloaded.Status);
         Assert.Equal(ContentType.Unknown, reloaded.Type);
+    }
+
+    [Fact]
+    public async Task RoundTrip_TheStarMapListing_KeepsInstallAndProvides()
+    {
+        var original = new ModMetadata(
+            specVersion: 1,
+            modId: "StarMap",
+            source: "TestSource",
+            name: "StarMap",
+            authors: new[] { "KlaasWhite" },
+            abstractText: "Mod loader that runs code mods.",
+            license: "MIT",
+            links: MetadataFixtures.SampleLinks(),
+            gameMin: "2026.8.3.5117",
+            type: ContentType.ModLoader,
+            install: new InstallDescriptor(
+                target: InstallAnchor.Standalone,
+                uninstall: new[] { "Delete the StarMap directory." }),
+            provides: new LoaderProvides(
+                launch: "StarMap.exe",
+                contentDir: InstallAnchor.Mods,
+                configure: new LoaderConfigure("StarMapConfig.json", ConfigureFormat.Json, "GameLocation")));
+
+        var (reloaded, _, tomlText) = await RoundTripAsync(original);
+
+        Assert.Equal(InstallAnchor.Standalone, reloaded.Install!.Target);
+        Assert.Single(reloaded.Install.Uninstall!);
+        Assert.Null(reloaded.Install.Steps);
+        Assert.Equal("StarMap.exe", reloaded.Provides!.Launch);
+        Assert.Equal(InstallAnchor.Mods, reloaded.Provides.ContentDir);
+        Assert.Equal(ConfigureFormat.Json, reloaded.Provides.Configure!.Format);
+        Assert.Equal("GameLocation", reloaded.Provides.Configure.GamePath);
+
+        Assert.Contains("Target = \"standalone\"", tomlText);
+        Assert.Contains("ContentDir = \"mods\"", tomlText);
+        Assert.Contains("Format = \"json\"", tomlText);
+    }
+
+    [Fact]
+    public void FromDto_UnknownInstallTarget_ParsesToUnknown()
+    {
+        var dto = ModMetadataMapper.ToDto(MetadataFixtures.FullMetadata());
+        dto.Install!.Target = "somewhere-new";
+
+        Assert.Equal(InstallAnchor.Unknown, ModMetadataMapper.FromDto(dto).Install!.Target);
     }
 
     [Fact]

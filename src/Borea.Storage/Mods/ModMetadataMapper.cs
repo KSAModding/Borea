@@ -25,7 +25,8 @@ public static class ModMetadataMapper
         Os = metadata.Os?.ToList(),
         Loader = metadata.Loader is null ? null : LoaderRequirementMapper.ToDto(metadata.Loader),
         Dependencies = metadata.Dependencies.Select(ModDependencyMapper.ToDto).ToList(),
-        InstallRootOverride = metadata.InstallRootOverride,
+        Install = metadata.Install is null ? null : InstallDescriptorMapper.ToDto(metadata.Install),
+        Provides = metadata.Provides is null ? null : LoaderProvidesMapper.ToDto(metadata.Provides),
     };
 
     public static ModMetadata FromDto(ModMetadataDto dto)
@@ -55,6 +56,7 @@ public static class ModMetadataMapper
         os: dto.Os,
         loader: dto.Loader is null ? null : LoaderRequirementMapper.FromDto(dto.Loader),
         dependencies: dto.Dependencies.Select(ModDependencyMapper.FromDto).ToList(),
-        installRootOverride: dto.InstallRootOverride);
+        install: dto.Install is null ? null : InstallDescriptorMapper.FromDto(dto.Install),
+        provides: dto.Provides is null ? null : LoaderProvidesMapper.FromDto(dto.Provides));
     }
 }

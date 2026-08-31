@@ -96,6 +96,20 @@ public static class MetadataEnumMapper
         _ => InstallAnchor.Unknown,
     };
 
+    public static string ToDto(Core.ModLoaders.ConfigureFormat format) => format switch
+    {
+        Core.ModLoaders.ConfigureFormat.Json => "json",
+        Core.ModLoaders.ConfigureFormat.Toml => "toml",
+        _ => "unknown",
+    };
+
+    public static Core.ModLoaders.ConfigureFormat ParseConfigureFormat(string value) => value.ToLowerInvariant() switch
+    {
+        "json" => Core.ModLoaders.ConfigureFormat.Json,
+        "toml" => Core.ModLoaders.ConfigureFormat.Toml,
+        _ => Core.ModLoaders.ConfigureFormat.Unknown,
+    };
+
     public static string? ToDto(MetadataSource? source) => source switch
     {
         null => null,

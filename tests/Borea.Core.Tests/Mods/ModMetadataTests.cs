@@ -15,7 +15,9 @@ public sealed class ModMetadataTests
         ContentType type = ContentType.Mod,
         LoaderRequirement? loader = null,
         string? supersededBy = null,
-        int specVersion = SpecVersions.Highest) =>
+        int specVersion = SpecVersions.Highest,
+        InstallDescriptor? install = null,
+        LoaderProvides? provides = null) =>
         new(
             specVersion: specVersion,
             modId: modId,
@@ -28,7 +30,9 @@ public sealed class ModMetadataTests
             gameMin: "2026.7.4.2131",
             type: type,
             loader: loader,
-            supersededBy: supersededBy);
+            supersededBy: supersededBy,
+            install: install,
+            provides: provides);
 
     [Fact]
     public void Constructor_ValidInput_SetsAllProperties()
@@ -127,5 +131,61 @@ public sealed class ModMetadataTests
         var metadata = Build(specVersion: SpecVersions.Highest + 1);
 
         Assert.True(SpecVersions.IsAboveHighest(metadata.SpecVersion));
+    }
+
+    [Fact]
+    public void Constructor_ProvidesOnAMod_ThrowsArgumentException()
+    {
+        Assert.Throws<ArgumentException>(() => Build(provides: new LoaderProvides(launch: "Loader.exe")));
+    }
+
+    [Fact]
+    public void Constructor_ModLoaderStatingInstallWithoutATarget_ThrowsArgumentException()
+    {
+        Assert.Throws<ArgumentException>(() =>
+            Build(type: ContentType.ModLoader, install: new InstallDescriptor(root: "StarMap")));
+    }
+
+    [Fact]
+    public void Constructor_ModLoaderWithNoInstallTableAtAll_IsUndescribed()
+    {
+        // the manager installs nothing and shows the links.
+        var metadata = Build(type: ContentType.ModLoader);
+
+        Assert.Null(metadata.Install);
+    }
+
+    [Fact]
+    public void Constructor_ModWithoutAnInstallTarget_IsAccepted()
+    {
+        var metadata = Build(install: new InstallDescriptor(root: "build/Mod"));
+
+        Assert.Null(metadata.Install!.Target);
+    }
+
+    [Fact]
+    public void Constructor_StandaloneWithoutALaunchTarget_ThrowsArgumentException()
+    {
+        // A directory nothing ever runs from is not an install.
+        Assert.Throws<ArgumentException>(() => Build(
+            type: ContentType.ModLoader,
+            install: new InstallDescriptor(target: InstallAnchor.Standalone)));
+    }
+
+    [Fact]
+    public void Constructor_TheStarMapListing_IsAccepted()
+    {
+        var metadata = Build(
+            type: ContentType.ModLoader,
+            install: new InstallDescriptor(
+                target: InstallAnchor.Standalone,
+                uninstall: new[] { "Delete the StarMap directory." }),
+            provides: new LoaderProvides(
+                launch: "StarMap.exe",
+                contentDir: InstallAnchor.Mods,
+                configure: new LoaderConfigure("StarMapConfig.json", ConfigureFormat.Json, "GameLocation")));
+
+        Assert.Equal(InstallAnchor.Standalone, metadata.Install!.Target);
+        Assert.Equal("StarMap.exe", metadata.Provides!.Launch);
     }
 }

@@ -71,7 +71,7 @@ internal static class TestFixtures
                     new ModDependencyAlternative("audio-b"),
                 }),
             },
-            installRootOverride: "UnusualRoot");
+            install: new InstallDescriptor(root: "UnusualRoot"));
 
     /// <summary>
     /// A release with every optional field populated, including yanked.

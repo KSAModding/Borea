@@ -110,10 +110,10 @@ public sealed class ModMetadata
     /// </summary>
     public IReadOnlyList<ModDependency> Dependencies { get; }
 
-    /// <summary>
-    /// Authored override of the install root for archives with an unusual layout.
-    /// </summary>
-    public string? InstallRootOverride { get; }
+    /// <summary>Where the content goes. Null means the type default.</summary>
+    public InstallDescriptor? Install { get; }
+
+    public LoaderProvides? Provides { get; }
 
     public ModMetadata(
         int specVersion,
@@ -135,7 +135,8 @@ public sealed class ModMetadata
         IReadOnlyList<string>? os = null,
         LoaderRequirement? loader = null,
         IReadOnlyList<ModDependency>? dependencies = null,
-        string? installRootOverride = null)
+        InstallDescriptor? install = null,
+        LoaderProvides? provides = null)
     {
         if (specVersion < 1)
             throw new ArgumentOutOfRangeException(nameof(specVersion), "Spec version must be a positive integer.");
@@ -147,6 +148,17 @@ public sealed class ModMetadata
 
         if (loader is not null && type != ContentType.Mod)
             throw new ArgumentException("Only a mod can declare a loader requirement.", nameof(loader));
+
+        if (provides is not null && type != ContentType.ModLoader)
+            throw new ArgumentException("Only a mod loader can declare what it provides.", nameof(provides));
+
+        // A loader has no default to fall back on, so a stated table needs a
+        // target. No table at all is valid and means undescribed.
+        if (install is not null && install.Target is null && type == ContentType.ModLoader)
+            throw new ArgumentException("A mod loader has no default install target, so it must state one.", nameof(install));
+
+        if (install?.Target == InstallAnchor.Standalone && provides?.Launch is null)
+            throw new ArgumentException("A standalone install target needs the launch target that reaches it.", nameof(install));
 
         if (string.IsNullOrWhiteSpace(source))
             throw new ArgumentException("Source cannot be null or whitespace.", nameof(source));
@@ -195,6 +207,7 @@ public sealed class ModMetadata
         Os = os is null ? null : new ReadOnlyCollection<string>(os.ToArray());
         Loader = loader;
         Dependencies = dependencies is null ? Array.Empty<ModDependency>() : new ReadOnlyCollection<ModDependency>(dependencies.ToArray());
-        InstallRootOverride = installRootOverride;
+        Install = install;
+        Provides = provides;
     }
 }

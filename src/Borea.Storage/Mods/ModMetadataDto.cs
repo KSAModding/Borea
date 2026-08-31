@@ -38,5 +38,7 @@ public sealed class ModMetadataDto
 
     public LoaderRequirementDto? Loader { get; set; }
     public List<ModDependencyDto> Dependencies { get; set; } = new();
-    public string? InstallRootOverride { get; set; }
+    public InstallDescriptorDto? Install { get; set; }
+
+    public LoaderProvidesDto? Provides { get; set; }
 }
