@@ -181,7 +181,7 @@ public sealed class SpaceDockModRepository : IModRepository
                 : "unknown");
 
         return new ModMetadata(
-            specVersion: 1,
+            specVersion: SpecVersions.Highest,
             modId: modId,
             source: SourceName,
             name: string.IsNullOrWhiteSpace(dto.Name) ? $"SpaceDock mod {dto.Id}" : dto.Name,
@@ -235,7 +235,7 @@ public sealed class SpaceDockModRepository : IModRepository
             contentType: "application/zip");
 
         release = new ModVersionMetadata(
-            specVersion: 1,
+            specVersion: SpecVersions.Highest,
             modId: dto.Id.ToString(CultureInfo.InvariantCulture),
             version: modVersion,
             releaseStatus: modVersion.PreRelease is null ? ReleaseStatus.Stable : ReleaseStatus.Testing,
