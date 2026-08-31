@@ -4,13 +4,16 @@ namespace Borea.Storage.Tests.Paths;
 
 public sealed class GamePathProviderTests
 {
+    private static Dictionary<string, string> StarMapAt(string path = @"C:\Games\StarMap") =>
+        new() { ["StarMap"] = path };
+
     [Fact]
-    public void Constructor_NullGameAndStarMapPaths_DoesNotThrow()
+    public void Constructor_NoGameAndNoLoaders_DoesNotThrow()
     {
-        var provider = new GamePathProvider(null, null);
+        var provider = new GamePathProvider(null);
 
         Assert.Null(provider.GetGameDirectoryPath());
-        Assert.Null(provider.GetStarMapDirectoryPath());
+        Assert.Null(provider.GetLoaderDirectoryPath("StarMap"));
     }
 
     [Theory]
@@ -18,24 +21,64 @@ public sealed class GamePathProviderTests
     [InlineData("   ")]
     public void Constructor_WhitespaceGamePath_ThrowsArgumentException(string gamePath)
     {
-        Assert.Throws<ArgumentException>(() => new GamePathProvider(gamePath, null));
+        Assert.Throws<ArgumentException>(() => new GamePathProvider(gamePath));
     }
 
     [Theory]
     [InlineData("")]
     [InlineData("   ")]
-    public void Constructor_WhitespaceStarMapPath_ThrowsArgumentException(string starMapPath)
+    public void Constructor_WhitespaceLoaderPath_ThrowsArgumentException(string loaderPath)
     {
-        Assert.Throws<ArgumentException>(() => new GamePathProvider(null, starMapPath));
+        Assert.Throws<ArgumentException>(() => new GamePathProvider(null, StarMapAt(loaderPath)));
     }
 
     [Fact]
     public void Constructor_ValidPaths_ReturnsThemUnchanged()
     {
-        var provider = new GamePathProvider(@"C:\Games\KSA", @"C:\Games\StarMap");
+        var provider = new GamePathProvider(@"C:\Games\KSA", StarMapAt());
 
         Assert.Equal(@"C:\Games\KSA", provider.GetGameDirectoryPath());
-        Assert.Equal(@"C:\Games\StarMap", provider.GetStarMapDirectoryPath());
+        Assert.Equal(@"C:\Games\StarMap", provider.GetLoaderDirectoryPath("StarMap"));
+    }
+
+    [Fact]
+    public void GetLoaderDirectoryPath_ComparesTheIdCaseInsensitively()
+    {
+        var provider = new GamePathProvider(null, StarMapAt());
+
+        Assert.Equal(@"C:\Games\StarMap", provider.GetLoaderDirectoryPath("starmap"));
+    }
+
+    [Fact]
+    public void GetLoaderDirectoryPath_LoaderThatIsNotInstalled_ReturnsNull()
+    {
+        var provider = new GamePathProvider(null, StarMapAt());
+
+        Assert.Null(provider.GetLoaderDirectoryPath("Cheese-Loader"));
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void GetLoaderDirectoryPath_NoIdAtAll_ThrowsArgumentException(string? loaderId)
+    {
+        var provider = new GamePathProvider(null, StarMapAt());
+
+        Assert.Throws<ArgumentException>(() => provider.GetLoaderDirectoryPath(loaderId!));
+    }
+
+    [Fact]
+    public void GetLoaderDirectoryPath_SeveralLoaders_AnswersEachOne()
+    {
+        var provider = new GamePathProvider(null, new Dictionary<string, string>
+        {
+            ["StarMap"] = @"C:\Games\StarMap",
+            ["Cheese-Loader"] = @"C:\Games\Cheese",
+        });
+
+        Assert.Equal(@"C:\Games\StarMap", provider.GetLoaderDirectoryPath("StarMap"));
+        Assert.Equal(@"C:\Games\Cheese", provider.GetLoaderDirectoryPath("Cheese-Loader"));
     }
 
     [Fact]
@@ -52,7 +95,7 @@ public sealed class GamePathProviderTests
     [Fact]
     public void InstancePaths_AreNestedUnderInstanceRoot()
     {
-        var provider = new GamePathProvider(null, null);
+        var provider = new GamePathProvider(null);
         var instanceId = Guid.NewGuid();
 
         var root = provider.GetInstanceRoot(instanceId);
@@ -69,7 +112,7 @@ public sealed class GamePathProviderTests
     [Fact]
     public void InstanceRoot_IncludesInstanceIdInPath()
     {
-        var provider = new GamePathProvider(null, null);
+        var provider = new GamePathProvider(null);
         var instanceId = Guid.NewGuid();
 
         var root = provider.GetInstanceRoot(instanceId);
@@ -80,7 +123,7 @@ public sealed class GamePathProviderTests
     [Fact]
     public void DifferentInstanceIds_ProduceDifferentPaths()
     {
-        var provider = new GamePathProvider(null, null);
+        var provider = new GamePathProvider(null);
 
         var pathA = provider.GetInstanceRoot(Guid.NewGuid());
         var pathB = provider.GetInstanceRoot(Guid.NewGuid());
@@ -93,7 +136,7 @@ public sealed class GamePathProviderTests
     {
         // Regression guard: confirms active-instance pointer, both favorites
         // files, and Borea settings never accidentally collide on one path.
-        var provider = new GamePathProvider(null, null);
+        var provider = new GamePathProvider(null);
 
         var paths = new[]
         {
@@ -110,7 +153,7 @@ public sealed class GamePathProviderTests
     [Fact]
     public void GlobalPaths_AreNotNestedUnderInstancesRoot()
     {
-        var provider = new GamePathProvider(null, null);
+        var provider = new GamePathProvider(null);
 
         Assert.DoesNotContain(provider.GetInstancesRoot(), provider.GetActiveInstancePointerPath());
         Assert.DoesNotContain(provider.GetInstancesRoot(), provider.GetBoreaSettingsPath());
