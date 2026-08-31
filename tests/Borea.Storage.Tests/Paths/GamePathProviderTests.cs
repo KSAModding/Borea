@@ -69,6 +69,30 @@ public sealed class GamePathProviderTests
     }
 
     [Fact]
+    public void Constructor_LoaderIdsCollidingByCase_ThrowsArgumentException()
+    {
+        // Same rule as BoreaSettings
+        var paths = new Dictionary<string, string>
+        {
+            ["StarMap"] = @"C:\Games\StarMap",
+            ["starmap"] = @"C:\Games\Other",
+        };
+
+        Assert.Throws<ArgumentException>(() => new GamePathProvider(null, paths));
+    }
+
+    [Theory]
+    [InlineData("not a valid id")]
+    [InlineData(".hidden")]
+    [InlineData("CON")]
+    public void Constructor_InvalidLoaderId_ThrowsArgumentException(string loaderId)
+    {
+        var paths = new Dictionary<string, string> { [loaderId] = @"C:\Games\Loader" };
+
+        Assert.Throws<ArgumentException>(() => new GamePathProvider(null, paths));
+    }
+
+    [Fact]
     public void GetLoaderDirectoryPath_SeveralLoaders_AnswersEachOne()
     {
         var provider = new GamePathProvider(null, new Dictionary<string, string>

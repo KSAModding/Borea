@@ -18,13 +18,17 @@ public sealed class GamePathProvider : IGamePathProvider
         if (gameDirectory is not null && string.IsNullOrWhiteSpace(gameDirectory))
             throw new ArgumentException("Game directory, if provided, cannot be whitespace.", nameof(gameDirectory));
 
+        // Same rule as BoreaSettings, since this constructor is public too.
         var byId = new Dictionary<string, string>(ModIds.Comparer);
         foreach (var (loaderId, path) in loaderDirectories ?? new Dictionary<string, string>())
         {
+            ModIds.Validate(loaderId, nameof(loaderDirectories));
+
             if (string.IsNullOrWhiteSpace(path))
                 throw new ArgumentException($"The directory for loader '{loaderId}' cannot be whitespace.", nameof(loaderDirectories));
 
-            byId[loaderId] = path;
+            if (!byId.TryAdd(loaderId, path))
+                throw new ArgumentException($"Loader id '{loaderId}' appears more than once when compared case-insensitively.", nameof(loaderDirectories));
         }
 
         _gameDirectory = gameDirectory;
