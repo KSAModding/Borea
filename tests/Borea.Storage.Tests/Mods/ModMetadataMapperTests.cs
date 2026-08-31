@@ -156,6 +156,17 @@ public sealed class ModMetadataMapperTests : IDisposable
         Assert.Contains("spec version", exception.Message);
     }
 
+    [Fact]
+    public void FromDto_SpecVersionAboveHighest_StillMaps()
+    {
+        var dto = ModMetadataMapper.ToDto(MetadataFixtures.MinimalMetadata());
+        dto.SpecVersion = SpecVersions.Highest + 1;
+
+        var mapped = ModMetadataMapper.FromDto(dto);
+
+        Assert.Equal(SpecVersions.Highest + 1, mapped.SpecVersion);
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_tempRoot))
