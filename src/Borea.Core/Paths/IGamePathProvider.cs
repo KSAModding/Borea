@@ -7,6 +7,11 @@
 public interface IGamePathProvider
 {
     /// <summary>
+    /// Path to the cached content index snapshot
+    /// </summary>
+    string GetIndexPath();
+
+    /// <summary>
     /// Root of all Borea instance storage
     /// </summary>
     string GetInstancesRoot();
