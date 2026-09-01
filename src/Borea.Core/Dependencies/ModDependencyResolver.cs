@@ -4,32 +4,33 @@ using Borea.Core.Mods;
 namespace Borea.Core.Dependencies;
 
 /// <summary>
-/// Computes dependency relationships between mods within a specific instance.
-/// Evaluates required entries; the other kinds are carried but not acted on.
+/// Computes dependency relationships between mods within a specific instance,
+/// following the dependency kinds of RFC 0031.
 /// </summary>
 public sealed class ModDependencyResolver
 {
     /// <summary>
-    /// Gets the list of unsatisfied required dependencies for a release within an instance.
+    /// Weighs every entry that bears on installing a release into an instance.
+    /// the ones the release declares, in document order.
     /// </summary>
-    public IReadOnlyList<ModDependency> GetUnsatisfiedDependencies(Instance instance, ModVersionMetadata candidate)
+    public IReadOnlyList<DependencyEvaluation> Evaluate(Instance instance, ModVersionMetadata candidate)
     {
         if (instance is null) throw new ArgumentNullException(nameof(instance));
         if (candidate is null) throw new ArgumentNullException(nameof(candidate));
 
-        var unsatisfied = new List<ModDependency>();
+        var evaluations = new List<DependencyEvaluation>();
 
         foreach (var dependency in candidate.Dependencies)
-        {
-            if (dependency.Kind != ModDependencyKind.Required)
-                continue;
+            evaluations.Add(EvaluateDeclared(instance, dependency));
 
-            if (!IsSatisfied(instance, dependency))
-                unsatisfied.Add(dependency);
-        }
-
-        return unsatisfied;
+        return evaluations;
     }
+
+    public IReadOnlyList<ModDependency> GetUnsatisfiedDependencies(Instance instance, ModVersionMetadata candidate)
+        => Evaluate(instance, candidate)
+            .Where(e => e.Outcome == DependencyOutcome.Install)
+            .Select(e => e.Dependency)
+            .ToList();
 
     /// <summary>
     /// Checks if a mod can be uninstalled from an instance, returning the list of dependent mods that would be affected.
@@ -48,13 +49,44 @@ public sealed class ModDependencyResolver
         return new UninstallCheck(instance.InstanceId, modId, version, dependents, isActive);
     }
 
-    private static bool IsSatisfied(Instance instance, ModDependency dependency)
+    private static DependencyEvaluation EvaluateDeclared(Instance instance, ModDependency dependency)
     {
-        if (dependency.IsAnyOf)
-            return dependency.AnyOf.Any(a => FindInstalled(instance, a.ModId) is { } m && a.BoundsContain(m.Version));
+        if (dependency.Kind == ModDependencyKind.Unknown)
+            return new DependencyEvaluation(dependency, DependencyOutcome.Unknown);
 
-        return FindInstalled(instance, dependency.ModId) is { } installed && dependency.BoundsContain(installed.Version);
+        if (dependency.IsAnyOf)
+        {
+            foreach (var alternative in dependency.AnyOf)
+            {
+                var alternativeMatch = FindInstalled(instance, alternative.ModId);
+                if (alternativeMatch is not null && alternative.BoundsContain(alternativeMatch.Version))
+                    return new DependencyEvaluation(dependency, DependencyOutcome.Satisfied, installedModId: alternativeMatch.ModId);
+            }
+
+            return new DependencyEvaluation(dependency, MissingOutcome(dependency.Kind));
+        }
+
+        var match = FindInstalled(instance, dependency.ModId);
+
+        if (match is null || !dependency.BoundsContain(match.Version))
+        {
+            return dependency.Kind == ModDependencyKind.Conflict
+                ? new DependencyEvaluation(dependency, DependencyOutcome.Satisfied)
+                : new DependencyEvaluation(dependency, MissingOutcome(dependency.Kind));
+        }
+
+        return dependency.Kind == ModDependencyKind.Conflict
+            ? new DependencyEvaluation(dependency, DependencyOutcome.Conflict, installedModId: match.ModId)
+            : new DependencyEvaluation(dependency, DependencyOutcome.Satisfied, installedModId: match.ModId);
     }
+
+    private static DependencyOutcome MissingOutcome(ModDependencyKind kind) => kind switch
+    {
+        ModDependencyKind.Required => DependencyOutcome.Install,
+        ModDependencyKind.Recommends => DependencyOutcome.SelectByDefault,
+        ModDependencyKind.Optional or ModDependencyKind.Suggests => DependencyOutcome.Offer,
+        _ => DependencyOutcome.Unknown,
+    };
 
     private static bool WouldBreakOnRemoval(Instance instance, ModDependency dependency, string removedId, ModVersion removedVersion)
     {
