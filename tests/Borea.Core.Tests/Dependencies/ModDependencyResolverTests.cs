@@ -119,6 +119,17 @@ public sealed class ModDependencyResolverTests
     }
 
     [Fact]
+    public void GetUnsatisfiedDependencies_ConflictAnInstalledModDeclares_IsNotReported()
+    {
+        var instance = new Instance("Test", InstanceSource.Custom.Value);
+        var dependency = new ModDependency("candidate", ModDependencyKind.Conflict);
+        instance.AddMod(TestFixtures.SampleInstalledMod("incumbent", dependencies: new[] { dependency }));
+        var candidate = TestFixtures.SampleVersionMetadata("candidate");
+
+        Assert.Empty(_resolver.GetUnsatisfiedDependencies(instance, candidate));
+    }
+
+    [Fact]
     public void GetUnsatisfiedDependencies_NullArguments_Throw()
     {
         var instance = new Instance("Test", InstanceSource.Custom.Value);

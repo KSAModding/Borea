@@ -11,7 +11,8 @@ public sealed class ModDependencyResolver
 {
     /// <summary>
     /// Weighs every entry that bears on installing a release into an instance.
-    /// the ones the release declares, in document order.
+    /// the ones the release declares, in document order, then the ones installed
+    /// mods declare against it. group by <see cref="DependencyEvaluation.InstalledModId"/>.
     /// </summary>
     public IReadOnlyList<DependencyEvaluation> Evaluate(Instance instance, ModVersionMetadata candidate)
     {
@@ -22,6 +23,8 @@ public sealed class ModDependencyResolver
 
         foreach (var dependency in candidate.Dependencies)
             evaluations.Add(EvaluateDeclared(instance, dependency));
+
+        evaluations.AddRange(DeclaredAgainst(instance, candidate));
 
         return evaluations;
     }
@@ -78,6 +81,38 @@ public sealed class ModDependencyResolver
         return dependency.Kind == ModDependencyKind.Conflict
             ? new DependencyEvaluation(dependency, DependencyOutcome.Conflict, installedModId: match.ModId)
             : new DependencyEvaluation(dependency, DependencyOutcome.Satisfied, installedModId: match.ModId);
+    }
+
+    private static IEnumerable<DependencyEvaluation> DeclaredAgainst(Instance instance, ModVersionMetadata candidate)
+    {
+        foreach (var installed in instance.Mods)
+        {
+            // An update replaces the copy of the same id
+            if (ModIds.Equals(installed.ModId, candidate.ModId))
+                continue;
+
+            foreach (var dependency in installed.Metadata.Dependencies)
+            {
+                // An any_of entry has no single id
+                if (!ModIds.Equals(dependency.ModId, candidate.ModId))
+                    continue;
+
+                if (dependency.Kind == ModDependencyKind.Unknown)
+                {
+                    yield return new DependencyEvaluation(dependency, DependencyOutcome.Unknown, declaredBy: installed.ModId);
+                    continue;
+                }
+
+                if (dependency.Kind != ModDependencyKind.Conflict || !dependency.BoundsContain(candidate.Version))
+                    continue;
+
+                yield return new DependencyEvaluation(
+                    dependency,
+                    DependencyOutcome.Conflict,
+                    declaredBy: installed.ModId,
+                    installedModId: installed.ModId);
+            }
+        }
     }
 
     private static DependencyOutcome MissingOutcome(ModDependencyKind kind) => kind switch

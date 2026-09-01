@@ -148,6 +148,92 @@ public sealed class DependencyEvaluationTests
         Assert.Equal(DependencyOutcome.Conflict, evaluation.Outcome);
     }
 
+    [Fact]
+    public void Conflict_DeclaredByAnInstalledMod_IsReportedAgainstTheCandidate()
+    {
+        var instance = NewInstance();
+        instance.AddMod(TestFixtures.SampleInstalledMod(
+            "incumbent",
+            dependencies: new[] { Entry("candidate", ModDependencyKind.Conflict, "1.0.0") }));
+        var candidate = TestFixtures.SampleVersionMetadata("candidate", "1.2.0");
+
+        var evaluation = Assert.Single(_resolver.Evaluate(instance, candidate));
+
+        Assert.Equal(DependencyOutcome.Conflict, evaluation.Outcome);
+        Assert.Equal("incumbent", evaluation.DeclaredBy);
+        Assert.Equal("incumbent", evaluation.InstalledModId);
+    }
+
+    [Fact]
+    public void Conflict_DeclaredByAnInstalledModAgainstAnotherVersion_IsNotReported()
+    {
+        var instance = NewInstance();
+        instance.AddMod(TestFixtures.SampleInstalledMod(
+            "incumbent",
+            dependencies: new[] { Entry("candidate", ModDependencyKind.Conflict, "1.0.0", "1.1.0") }));
+        var candidate = TestFixtures.SampleVersionMetadata("candidate", "1.2.0");
+
+        Assert.Empty(_resolver.Evaluate(instance, candidate));
+    }
+
+    [Fact]
+    public void Conflict_DeclaredByTheCopyTheCandidateReplaces_IsNotReported()
+    {
+        var instance = NewInstance();
+        instance.AddMod(TestFixtures.SampleInstalledMod(
+            "candidate",
+            "1.0.0",
+            dependencies: new[] { Entry("candidate", ModDependencyKind.Conflict) }));
+        var candidate = TestFixtures.SampleVersionMetadata("candidate", "1.2.0");
+
+        Assert.Empty(_resolver.Evaluate(instance, candidate));
+    }
+
+    [Fact]
+    public void Conflict_DeclaredByAnInstalledMod_ComparesIdsCaseInsensitively()
+    {
+        var instance = NewInstance();
+        instance.AddMod(TestFixtures.SampleInstalledMod(
+            "incumbent",
+            dependencies: new[] { Entry("Candidate", ModDependencyKind.Conflict) }));
+        var candidate = TestFixtures.SampleVersionMetadata("candidate", "1.2.0");
+
+        Assert.Equal(DependencyOutcome.Conflict, Assert.Single(_resolver.Evaluate(instance, candidate)).Outcome);
+    }
+
+    [Fact]
+    public void Conflict_DeclaredByBothSides_IsReportedOncePerDeclaringSide()
+    {
+        var instance = NewInstance();
+        instance.AddMod(TestFixtures.SampleInstalledMod(
+            "rival",
+            dependencies: new[] { Entry("candidate", ModDependencyKind.Conflict) }));
+        var candidate = TestFixtures.SampleVersionMetadata("candidate", dependencies: new[]
+        {
+            Entry("rival", ModDependencyKind.Conflict),
+        });
+
+        var evaluations = _resolver.Evaluate(instance, candidate);
+
+        Assert.Equal(2, evaluations.Count);
+        Assert.All(evaluations, e => Assert.Equal(DependencyOutcome.Conflict, e.Outcome));
+        // Both name the same installed mod, so grouping collapses them.
+        Assert.Single(evaluations.Select(e => e.InstalledModId).Distinct());
+        Assert.Equal(new string?[] { null, "rival" }, evaluations.Select(e => e.DeclaredBy));
+    }
+
+    [Fact]
+    public void Conflict_NonConflictEntriesOfInstalledModsAreNotReadBackwards()
+    {
+        var instance = NewInstance();
+        instance.AddMod(TestFixtures.SampleInstalledMod(
+            "incumbent",
+            dependencies: new[] { Entry("candidate", ModDependencyKind.Required, "1.0.0") }));
+        var candidate = TestFixtures.SampleVersionMetadata("candidate", "1.2.0");
+
+        Assert.Empty(_resolver.Evaluate(instance, candidate));
+    }
+
     #endregion
 
     #region any_of
@@ -217,6 +303,35 @@ public sealed class DependencyEvaluationTests
         Assert.Null(evaluation.InstalledModId);
     }
 
+    [Fact]
+    public void UnknownKind_DeclaredByAnInstalledMod_IsReportedRatherThanDropped()
+    {
+        var instance = NewInstance();
+        instance.AddMod(TestFixtures.SampleInstalledMod(
+            "incumbent",
+            dependencies: new[] { Entry("candidate", ModDependencyKind.Unknown, "1.0.0") }));
+        var candidate = TestFixtures.SampleVersionMetadata("candidate", "1.2.0");
+
+        var evaluation = Assert.Single(_resolver.Evaluate(instance, candidate));
+
+        Assert.Equal(DependencyOutcome.Unknown, evaluation.Outcome);
+        Assert.Equal("incumbent", evaluation.DeclaredBy);
+        Assert.Null(evaluation.InstalledModId);
+    }
+
+    [Fact]
+    public void UnknownKind_DeclaredByAnInstalledMod_IsReportedWhateverItsBoundsSay()
+    {
+        var instance = NewInstance();
+        instance.AddMod(TestFixtures.SampleInstalledMod(
+            "incumbent",
+            dependencies: new[] { Entry("candidate", ModDependencyKind.Unknown, "9.0.0") }));
+        var candidate = TestFixtures.SampleVersionMetadata("candidate", "1.2.0");
+
+        // Bounds of an unreadable kind say nothing, so they go unread.
+        Assert.Equal(DependencyOutcome.Unknown, Assert.Single(_resolver.Evaluate(instance, candidate)).Outcome);
+    }
+
     #endregion
 
     #region The list as a whole
@@ -228,19 +343,24 @@ public sealed class DependencyEvaluationTests
     }
 
     [Fact]
-    public void Evaluate_KeepsDocumentOrder()
+    public void Evaluate_KeepsDocumentOrderAndPutsIncomingConflictsLast()
     {
+        var instance = NewInstance();
+        instance.AddMod(TestFixtures.SampleInstalledMod(
+            "incumbent",
+            dependencies: new[] { Entry("candidate", ModDependencyKind.Conflict) }));
         var candidate = TestFixtures.SampleVersionMetadata("candidate", dependencies: new[]
         {
             Entry("first", ModDependencyKind.Required, "1.0.0"),
             Entry("second", ModDependencyKind.Suggests),
         });
 
-        var evaluations = _resolver.Evaluate(NewInstance(), candidate);
+        var evaluations = _resolver.Evaluate(instance, candidate);
 
-        Assert.Equal(2, evaluations.Count);
+        Assert.Equal(3, evaluations.Count);
         Assert.Equal("first", evaluations[0].Dependency.ModId);
         Assert.Equal("second", evaluations[1].Dependency.ModId);
+        Assert.Equal("incumbent", evaluations[2].DeclaredBy);
     }
 
     [Fact]
