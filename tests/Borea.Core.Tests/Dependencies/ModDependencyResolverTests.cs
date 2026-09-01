@@ -154,13 +154,16 @@ public sealed class ModDependencyResolverTests
         Assert.False(check.CanUninstall);
     }
 
-    [Fact]
-    public void CheckUninstall_OnlyNonRequiredDependents_CanUninstall()
+    [Theory]
+    [InlineData(ModDependencyKind.Optional)]
+    [InlineData(ModDependencyKind.Recommends)]
+    [InlineData(ModDependencyKind.Suggests)]
+    public void CheckUninstall_OnlyNonRequiredDependents_CanUninstall(ModDependencyKind kind)
     {
         var instance = new Instance("Test", InstanceSource.Custom.Value);
         instance.AddMod(TestFixtures.SampleInstalledMod("library-mod"));
-        var dependency = new ModDependency("library-mod", ModDependencyKind.Optional, ModVersion.Parse("1.0.0"));
-        instance.AddMod(TestFixtures.SampleInstalledMod("dependent-mod"));
+        var dependency = new ModDependency("library-mod", kind, ModVersion.Parse("1.0.0"));
+        instance.AddMod(TestFixtures.SampleInstalledMod("dependent-mod", dependencies: new[] { dependency }));
 
         var check = _resolver.CheckUninstall(instance, "library-mod", ModVersion.Parse("1.0.0"), isActive: true);
 
@@ -172,7 +175,8 @@ public sealed class ModDependencyResolverTests
     {
         var instance = new Instance("Test", InstanceSource.Custom.Value);
         instance.AddMod(TestFixtures.SampleInstalledMod("library-mod", "1.0.0"));
-        instance.AddMod(TestFixtures.SampleInstalledMod("dependent-mod"));
+        var dependency = new ModDependency("library-mod", ModDependencyKind.Required, ModVersion.Parse("2.0.0"));
+        instance.AddMod(TestFixtures.SampleInstalledMod("dependent-mod", dependencies: new[] { dependency }));
 
         var check = _resolver.CheckUninstall(instance, "library-mod", ModVersion.Parse("1.0.0"), isActive: true);
 
@@ -207,7 +211,7 @@ public sealed class ModDependencyResolverTests
             new ModDependencyAlternative("lib-a", ModVersion.Parse("2.0.0")),
             new ModDependencyAlternative("lib-b", ModVersion.Parse("1.1.0")),
         });
-        instance.AddMod(TestFixtures.SampleInstalledMod("dependent-mod"));
+        instance.AddMod(TestFixtures.SampleInstalledMod("dependent-mod", dependencies: new[] { dependency }));
 
         var check = _resolver.CheckUninstall(instance, "lib-a", ModVersion.Parse("2.0.0"), isActive: true);
 
