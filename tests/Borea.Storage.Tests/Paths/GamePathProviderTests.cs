@@ -39,6 +39,17 @@ public sealed class GamePathProviderTests
     }
 
     [Fact]
+    public void GetIndexPath_ReturnsIndexJsonUnderRoot()
+    {
+        var provider = new GamePathProvider(null, null);
+
+        var path = provider.GetIndexPath();
+
+        Assert.Equal("index.json", Path.GetFileName(path));
+        Assert.DoesNotContain(provider.GetInstancesRoot(), path);
+    }
+
+    [Fact]
     public void InstancePaths_AreNestedUnderInstanceRoot()
     {
         var provider = new GamePathProvider(null, null);
@@ -90,6 +101,7 @@ public sealed class GamePathProviderTests
             provider.GetModFavoritesPath(),
             provider.GetModPackFavoritesPath(),
             provider.GetBoreaSettingsPath(),
+            provider.GetIndexPath()
         };
 
         Assert.Equal(paths.Length, paths.Distinct().Count());
@@ -102,5 +114,6 @@ public sealed class GamePathProviderTests
 
         Assert.DoesNotContain(provider.GetInstancesRoot(), provider.GetActiveInstancePointerPath());
         Assert.DoesNotContain(provider.GetInstancesRoot(), provider.GetBoreaSettingsPath());
+        Assert.DoesNotContain(provider.GetInstancesRoot(), provider.GetIndexPath());
     }
 }

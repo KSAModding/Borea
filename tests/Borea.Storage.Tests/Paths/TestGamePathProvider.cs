@@ -12,6 +12,7 @@ internal sealed class TestGamePathProvider : IGamePathProvider
 
     public TestGamePathProvider(string root) => _root = root;
 
+    public string GetIndexPath() => Path.Combine(_root, "index.json");
     public string GetInstancesRoot() => Path.Combine(_root, "Instances");
     public string GetInstanceRoot(Guid instanceId) => Path.Combine(GetInstancesRoot(), instanceId.ToString());
     public string GetInstanceModsFolder(Guid instanceId) => Path.Combine(GetInstanceRoot(instanceId), "mods");
