@@ -13,7 +13,7 @@ Borea is a cross-platform complete general content manager for Kitten Space Agen
 | `src\Borea.Storage` | Contains all the code for storing the data from `Borea.Core` to the disk. |
 | `src\Borea.Network` | Contains all the code for retrieving content from mod/content indexers and saves them to the disk. |
 | `src\Borea.Composition` | The composition root. Builds every service from the saved settings, once, for `Borea.App` and later `Borea.Cli`. |
-| `src\Borea.App` | A desktop level application that the user will interact will. Combines `Borea.Core`, `Borea.Storage`, and `Borea.Network` and handles the cross project references to make the full Borea project work smoothly. |
+| `src\Borea.App` | A desktop level application that the user will interact with. Gets its services from `Borea.Composition`. |
 
 # Features
 tba
