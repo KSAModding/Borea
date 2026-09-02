@@ -1,4 +1,5 @@
-﻿using Borea.Network.Index;
+﻿using Borea.Core.Index;
+using Borea.Network.Index;
 using System.Net;
 
 namespace Borea.Network.Tests.Index
@@ -8,6 +9,11 @@ namespace Borea.Network.Tests.Index
         private readonly string _tempDir;
         private readonly string _destinationPath;
         private readonly string _etagPath;
+
+        // Minimal fixture satisfying VerifyIndexBasics: a JSON object with
+        // "snapshot_version" and "sources" present. Nothing else is checked.
+        private const string ValidIndexJson = """{ "snapshot_version": 1, "sources": {} }""";
+        private const string UpdatedIndexJson = """{ "snapshot_version": 2, "sources": {} }""";
 
         public ContentIndexFetcherTests()
         {
@@ -36,14 +42,14 @@ namespace Borea.Network.Tests.Index
         public async Task FetchAsync_NoExistingCache_DownloadsAndWritesSidecar()
         {
             var client = FakeHttpMessageHandler.BuildClient(
-                _ => JsonResponseWithETag("""{ "mods": [] }""", "\"abc123\""),
+                _ => JsonResponseWithETag(ValidIndexJson, "\"abc123\""),
                 out var handler);
 
             var result = await CreateFetcher(client).FetchAsync(_destinationPath);
 
             Assert.Equal(ContentIndexFetchResult.Downloaded, result);
             Assert.Empty(handler.LastRequest!.Headers.IfNoneMatch);
-            Assert.Equal("""{ "mods": [] }""", await File.ReadAllTextAsync(_destinationPath));
+            Assert.Equal(ValidIndexJson, await File.ReadAllTextAsync(_destinationPath));
             Assert.Equal("\"abc123\"", (await File.ReadAllTextAsync(_etagPath)).Trim());
             Assert.False(File.Exists(_destinationPath + ".tmp"));
         }
@@ -51,7 +57,7 @@ namespace Borea.Network.Tests.Index
         [Fact]
         public async Task FetchAsync_ExistingCacheAndSidecar_SendsIfNoneMatch()
         {
-            await File.WriteAllTextAsync(_destinationPath, """{ "mods": [] }""");
+            await File.WriteAllTextAsync(_destinationPath, ValidIndexJson);
             await File.WriteAllTextAsync(_etagPath, "\"abc123\"");
 
             var client = FakeHttpMessageHandler.BuildClient(
@@ -67,7 +73,7 @@ namespace Borea.Network.Tests.Index
         [Fact]
         public async Task FetchAsync_NotModified_LeavesDestinationAndSidecarUntouched()
         {
-            await File.WriteAllTextAsync(_destinationPath, """{ "mods": [] }""");
+            await File.WriteAllTextAsync(_destinationPath, ValidIndexJson);
             await File.WriteAllTextAsync(_etagPath, "\"abc123\"");
             var originalDestinationWrite = File.GetLastWriteTimeUtc(_destinationPath);
             var originalEtagWrite = File.GetLastWriteTimeUtc(_etagPath);
@@ -89,7 +95,7 @@ namespace Borea.Network.Tests.Index
             await File.WriteAllTextAsync(_etagPath, "\"stale-etag\"");
 
             var client = FakeHttpMessageHandler.BuildClient(
-                _ => JsonResponseWithETag("""{ "mods": [] }""", "\"fresh-etag\""),
+                _ => JsonResponseWithETag(ValidIndexJson, "\"fresh-etag\""),
                 out var handler);
 
             var result = await CreateFetcher(client).FetchAsync(_destinationPath);
@@ -103,27 +109,27 @@ namespace Borea.Network.Tests.Index
         public async Task FetchAsync_SidecarMissingButDestinationPresent_ForcesUnconditionalFetch()
         {
             // Simulates deleting only the sidecar, or upgrading from a Borea version that predates it.
-            await File.WriteAllTextAsync(_destinationPath, """{ "mods": [] }""");
+            await File.WriteAllTextAsync(_destinationPath, ValidIndexJson);
 
             var client = FakeHttpMessageHandler.BuildClient(
-                _ => JsonResponseWithETag("""{ "mods": ["new"] }""", "\"new-etag\""),
+                _ => JsonResponseWithETag(UpdatedIndexJson, "\"new-etag\""),
                 out var handler);
 
             var result = await CreateFetcher(client).FetchAsync(_destinationPath);
 
             Assert.Equal(ContentIndexFetchResult.Downloaded, result);
             Assert.Empty(handler.LastRequest!.Headers.IfNoneMatch);
-            Assert.Equal("""{ "mods": ["new"] }""", await File.ReadAllTextAsync(_destinationPath));
+            Assert.Equal(UpdatedIndexJson, await File.ReadAllTextAsync(_destinationPath));
         }
 
         [Fact]
         public async Task FetchAsync_ResponseHasNoETag_DeletesExistingSidecar()
         {
-            await File.WriteAllTextAsync(_destinationPath, """{ "mods": [] }""");
+            await File.WriteAllTextAsync(_destinationPath, ValidIndexJson);
             await File.WriteAllTextAsync(_etagPath, "\"abc123\"");
 
             var client = FakeHttpMessageHandler.BuildClient(
-                _ => FakeHttpMessageHandler.JsonResponse("""{ "mods": ["updated"] }"""),
+                _ => FakeHttpMessageHandler.JsonResponse(UpdatedIndexJson),
                 out _);
 
             var result = await CreateFetcher(client).FetchAsync(_destinationPath);
@@ -135,7 +141,7 @@ namespace Borea.Network.Tests.Index
         [Fact]
         public async Task FetchAsync_NonSuccessStatusCode_ThrowsAndLeavesCacheUntouched()
         {
-            await File.WriteAllTextAsync(_destinationPath, """{ "mods": [] }""");
+            await File.WriteAllTextAsync(_destinationPath, ValidIndexJson);
             await File.WriteAllTextAsync(_etagPath, "\"abc123\"");
 
             var client = FakeHttpMessageHandler.BuildClient(
@@ -144,7 +150,90 @@ namespace Borea.Network.Tests.Index
 
             await Assert.ThrowsAsync<HttpRequestException>(() => CreateFetcher(client).FetchAsync(_destinationPath));
 
-            Assert.Equal("""{ "mods": [] }""", await File.ReadAllTextAsync(_destinationPath));
+            Assert.Equal(ValidIndexJson, await File.ReadAllTextAsync(_destinationPath));
+            Assert.False(File.Exists(_destinationPath + ".tmp"));
+        }
+
+        [Fact]
+        public async Task FetchAsync_MissingSnapshotVersion_ThrowsAndLeavesCacheUntouched()
+        {
+            await File.WriteAllTextAsync(_destinationPath, ValidIndexJson);
+            await File.WriteAllTextAsync(_etagPath, "\"abc123\"");
+
+            var client = FakeHttpMessageHandler.BuildClient(
+                _ => FakeHttpMessageHandler.JsonResponse("""{ "sources": {} }"""),
+                out _);
+
+            await Assert.ThrowsAsync<HttpRequestException>(() => CreateFetcher(client).FetchAsync(_destinationPath));
+
+            Assert.Equal(ValidIndexJson, await File.ReadAllTextAsync(_destinationPath));
+            Assert.False(File.Exists(_destinationPath + ".tmp"));
+        }
+
+        [Fact]
+        public async Task FetchAsync_MissingSources_ThrowsAndLeavesCacheUntouched()
+        {
+            await File.WriteAllTextAsync(_destinationPath, ValidIndexJson);
+            await File.WriteAllTextAsync(_etagPath, "\"abc123\"");
+
+            var client = FakeHttpMessageHandler.BuildClient(
+                _ => FakeHttpMessageHandler.JsonResponse("""{ "snapshot_version": 1 }"""),
+                out _);
+
+            await Assert.ThrowsAsync<HttpRequestException>(() => CreateFetcher(client).FetchAsync(_destinationPath));
+
+            Assert.Equal(ValidIndexJson, await File.ReadAllTextAsync(_destinationPath));
+            Assert.False(File.Exists(_destinationPath + ".tmp"));
+        }
+
+        [Fact]
+        public async Task FetchAsync_MalformedJson_ThrowsAndLeavesCacheUntouched()
+        {
+            await File.WriteAllTextAsync(_destinationPath, ValidIndexJson);
+            await File.WriteAllTextAsync(_etagPath, "\"abc123\"");
+
+            var client = FakeHttpMessageHandler.BuildClient(
+                _ => FakeHttpMessageHandler.JsonResponse("{ not valid json"),
+                out _);
+
+            await Assert.ThrowsAsync<HttpRequestException>(() => CreateFetcher(client).FetchAsync(_destinationPath));
+
+            Assert.Equal(ValidIndexJson, await File.ReadAllTextAsync(_destinationPath));
+            Assert.False(File.Exists(_destinationPath + ".tmp"));
+        }
+
+        [Fact]
+        public async Task FetchAsync_JsonRootIsArray_ThrowsAndLeavesCacheUntouched()
+        {
+            await File.WriteAllTextAsync(_destinationPath, ValidIndexJson);
+            await File.WriteAllTextAsync(_etagPath, "\"abc123\"");
+
+            var client = FakeHttpMessageHandler.BuildClient(
+                _ => FakeHttpMessageHandler.JsonResponse("[]"),
+                out _);
+
+            await Assert.ThrowsAsync<HttpRequestException>(() => CreateFetcher(client).FetchAsync(_destinationPath));
+
+            Assert.Equal(ValidIndexJson, await File.ReadAllTextAsync(_destinationPath));
+            Assert.False(File.Exists(_destinationPath + ".tmp"));
+        }
+
+        [Fact]
+        public async Task FetchAsync_WrongContentType_ThrowsAndLeavesCacheUntouched()
+        {
+            await File.WriteAllTextAsync(_destinationPath, ValidIndexJson);
+            await File.WriteAllTextAsync(_etagPath, "\"abc123\"");
+
+            var client = FakeHttpMessageHandler.BuildClient(
+                _ => new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new StringContent(ValidIndexJson, System.Text.Encoding.UTF8, "text/plain")
+                },
+                out _);
+
+            await Assert.ThrowsAsync<HttpRequestException>(() => CreateFetcher(client).FetchAsync(_destinationPath));
+
+            Assert.Equal(ValidIndexJson, await File.ReadAllTextAsync(_destinationPath));
             Assert.False(File.Exists(_destinationPath + ".tmp"));
         }
     }
