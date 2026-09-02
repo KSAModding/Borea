@@ -5,7 +5,8 @@ using Borea.Core.Paths;
 namespace Borea.Storage.Paths;
 
 /// <summary>
-/// Resolves Borea's own %LocalAppData%-rooted paths directly, and KSA and mod loader paths from the provided settings.
+/// Resolves Borea's own paths under its root, %LocalAppData%\Borea unless another
+/// root is given, and KSA and mod loader paths from the provided settings.
 /// </summary>
 public sealed class GamePathProvider : IGamePathProvider
 {
@@ -13,10 +14,13 @@ public sealed class GamePathProvider : IGamePathProvider
     private readonly string? _gameDirectory;
     private readonly IReadOnlyDictionary<string, string> _loaderDirectories;
 
-    public GamePathProvider(string? gameDirectory, IReadOnlyDictionary<string, string>? loaderDirectories = null)
+    public GamePathProvider(string? gameDirectory, IReadOnlyDictionary<string, string>? loaderDirectories = null, string? boreaRoot = null)
     {
         if (gameDirectory is not null && string.IsNullOrWhiteSpace(gameDirectory))
             throw new ArgumentException("Game directory, if provided, cannot be whitespace.", nameof(gameDirectory));
+
+        if (boreaRoot is not null && string.IsNullOrWhiteSpace(boreaRoot))
+            throw new ArgumentException("Borea root, if provided, cannot be whitespace.", nameof(boreaRoot));
 
         // Same rule as BoreaSettings, since this constructor is public too.
         var byId = new Dictionary<string, string>(ModIds.Comparer);
@@ -33,7 +37,7 @@ public sealed class GamePathProvider : IGamePathProvider
 
         _gameDirectory = gameDirectory;
         _loaderDirectories = byId;
-        _boreaRoot = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Borea");
+        _boreaRoot = boreaRoot ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Borea");
     }
 
     public string GetIndexPath() => Path.Combine(_boreaRoot, "index.json");
