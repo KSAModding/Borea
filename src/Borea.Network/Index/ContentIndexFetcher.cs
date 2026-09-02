@@ -68,7 +68,7 @@ public sealed class ContentIndexFetcher : IContentIndexFetcher
             throw new HttpRequestException($"Expected content type 'application/json' or 'text/plain' but got '{response.Content.Headers.ContentType?.MediaType}'");
         }
 
-        // Read the content as a byte array to verify the JSON structure before writing to disk.
+        // Read the content as a byte array to then write to disk.
         byte[] body = await response.Content.ReadAsByteArrayAsync(ct);
 
         Directory.CreateDirectory(Path.GetDirectoryName(destinationPath)!);
@@ -76,7 +76,7 @@ public sealed class ContentIndexFetcher : IContentIndexFetcher
         try
         {
             // Write the index to disk in a temp file then move to real file.
-            // This is to avoid leaving a corrupted file if the process is interrupted.
+            // This is to avoid leaving a corrupted file if the download is interrupted.
             await File.WriteAllBytesAsync(tempPath, body, ct);
             // Metadata change that only changes the file's name
             File.Move(tempPath, destinationPath, overwrite: true);
