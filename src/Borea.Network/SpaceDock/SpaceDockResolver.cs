@@ -3,19 +3,18 @@
 namespace Borea.Network.SpaceDock;
 
 /// <summary>
-/// Maps a mod's true, permanent ModId (confirmed by reading mod.toml after
-/// download) to SpaceDock's own numeric mod ID. Registration happens once,
-/// after the first successful download of any version of a given mod —
-/// never at browse/search time, since SpaceDock never exposes a mod.toml
-/// -style ID and the true ModId isn't knowable until the files are actually
-/// read.
+/// Maps a mod's true, permanent ModId to SpaceDock's own numeric mod ID.
+/// SpaceDock never exposes a mod.toml-style ID, so its listings carry the
+/// numeric ID as a placeholder and TryResolveId accepts that directly. A true
+/// ModId resolves only after something has registered it, and nothing does so
+/// today.
 /// </summary>
 public sealed class SpaceDockResolver
 {
     private readonly Dictionary<string, int> _map = new(ModIds.Comparer);
 
     /// <summary>
-    /// Maps a mod's true, permanent ModId (confirmed by reading mod.toml) to SpaceDock's own numeric mod ID. No-op if the modId is already registered.
+    /// Maps a mod's true, permanent ModId to SpaceDock's own numeric mod ID. Replaces an existing mapping for the same modId.
     /// </summary>
     /// <param name="modId">The true, permanent ModId of the mod.</param>
     /// <param name="spaceDockId">The numeric mod ID used by SpaceDock.</param>
