@@ -56,22 +56,27 @@ public sealed class ContentIndexFetcher : IContentIndexFetcher
         }
         else if (response.StatusCode == System.Net.HttpStatusCode.NotModified)
         {
-            // I am not sure what to throw here but the caller should know that the response was not what was expected.
+            // This is to prevent a situation where we should've downloaded the index, yet didn't due to a incorrect 304 response.
             throw new HttpRequestException($"ETag does not exist yet request returned 304 Not Modified: {response.ReasonPhrase}");
         }
 
         response.EnsureSuccessStatusCode();
 
+        // Make sure index is JSON or plain text
+        if (response.Content.Headers.ContentType?.MediaType != "application/json" && response.Content.Headers.ContentType?.MediaType != "text/plain")
+        {
+            throw new HttpRequestException($"Expected content type 'application/json' or 'text/plain' but got '{response.Content.Headers.ContentType?.MediaType}'");
+        }
+
         // Read the content as a byte array to verify the JSON structure before writing to disk.
         byte[] body = await response.Content.ReadAsByteArrayAsync(ct);
 
-        VerifyIndexBasics(response.Content, body);
+        Directory.CreateDirectory(Path.GetDirectoryName(destinationPath)!);
 
         try
         {
             // Write the index to disk in a temp file then move to real file.
             // This is to avoid leaving a corrupted file if the process is interrupted.
-            Directory.CreateDirectory(Path.GetDirectoryName(destinationPath)!);
             await File.WriteAllBytesAsync(tempPath, body, ct);
             // Metadata change that only changes the file's name
             File.Move(tempPath, destinationPath, overwrite: true);
@@ -93,49 +98,5 @@ public sealed class ContentIndexFetcher : IContentIndexFetcher
         }
 
         return ContentIndexFetchResult.Downloaded;
-    }
-
-    /// <summary>
-    /// Verifies that the content index has the basic required fields and is valid JSON.
-    /// Only checks that "snapshot_version" and "sources" field exists.
-    /// </summary>
-    /// <returns>No return, only Exceptions</returns>
-    /// <exception cref="HttpRequestException"></exception>
-    private static void VerifyIndexBasics(HttpContent content, byte[] body)
-    {
-        if (content.Headers.ContentType?.MediaType != "application/json")
-        {
-            throw new HttpRequestException($"Expected content type 'application/json' but got '{content.Headers.ContentType?.MediaType}'");
-        }
-
-        JsonDocument document;
-        try
-        {
-            document = JsonDocument.Parse(body);
-        }
-        catch (JsonException ex)
-        {
-            throw new HttpRequestException("Failed to parse JSON content", ex);
-        }
-
-        using (document)
-        {
-            JsonElement root = document.RootElement;
-
-            if (root.ValueKind != JsonValueKind.Object)
-            {
-                throw new HttpRequestException("Expected JSON object as root element");
-            }
-
-            if (!root.TryGetProperty("snapshot_version", out _))
-            {
-                throw new HttpRequestException("Content index is missing required field 'snapshot_version'.");
-            }
-
-            if (!root.TryGetProperty("sources", out _))
-            {
-                throw new HttpRequestException("Content index is missing required field 'sources'.");
-            }
-        }
     }
 }
