@@ -14,9 +14,10 @@ public sealed class ModVersionMetadataTests
         ContentType type = ContentType.Mod,
         InstallInfo? install = null,
         LoaderRequirement? loader = null,
-        IReadOnlyList<ModDependency>? dependencies = null) =>
+        IReadOnlyList<ModDependency>? dependencies = null,
+        int specVersion = SpecVersions.Highest) =>
         new(
-            specVersion: 1,
+            specVersion: specVersion,
             modId: "test-mod",
             version: ModVersion.Parse("1.0.0"),
             releaseStatus: ReleaseStatus.Stable,
@@ -109,5 +110,21 @@ public sealed class ModVersionMetadataTests
         var loader = new LoaderRequirement("StarMap", ModVersion.Parse("0.4.5"));
 
         Assert.Throws<ArgumentException>(() => Build(type: ContentType.ModLoader, loader: loader));
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    public void Constructor_SpecVersionBelowOne_ThrowsArgumentOutOfRangeException(int specVersion)
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(() => Build(specVersion: specVersion));
+    }
+
+    [Fact]
+    public void Constructor_SpecVersionAboveHighest_IsAccepted()
+    {
+        var release = Build(specVersion: SpecVersions.Highest + 1);
+
+        Assert.True(SpecVersions.IsAboveHighest(release.SpecVersion));
     }
 }
