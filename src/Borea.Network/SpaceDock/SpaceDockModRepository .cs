@@ -31,7 +31,11 @@ public sealed class SpaceDockModRepository : IModRepository
     // SpaceDock's internal database ID for KSA.
     private const int KsaGameId = 22409;
 
-    private const string SourceName = "spacedock";
+    /// <summary>
+    /// The source tag on every listing and release from SpaceDock, and the key a
+    /// composite repository registers this source under.
+    /// </summary>
+    public const string SourceName = "spacedock";
     /// <summary>
     /// Every request names the host, so the client needs no base address.
     /// </summary>
