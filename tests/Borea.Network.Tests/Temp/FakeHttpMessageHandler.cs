@@ -24,7 +24,7 @@ internal sealed class FakeHttpMessageHandler : HttpMessageHandler
     public static HttpClient BuildClient(Func<HttpRequestMessage, Task<HttpResponseMessage>> responder, out FakeHttpMessageHandler handler)
     {
         handler = new FakeHttpMessageHandler(responder);
-        return new HttpClient(handler) { BaseAddress = new Uri("https://spacedock.info/") };
+        return new HttpClient(handler);
     }
 
     public static HttpResponseMessage JsonResponse(string json) => new(System.Net.HttpStatusCode.OK)
