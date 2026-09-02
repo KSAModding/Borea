@@ -1,3 +1,4 @@
+using Borea.Core.Dependencies;
 using Borea.Core.Mods;
 using Borea.Core.Settings;
 using Borea.Network.Sources;
@@ -132,8 +133,22 @@ public sealed class BoreaServicesTests : IDisposable
         // probe proves that the service holds the shared client and sends nothing.
         await Assert.ThrowsAsync<ObjectDisposedException>(() => services.LatestVersion.PingAsync());
         await Assert.ThrowsAsync<ObjectDisposedException>(() => services.Mods.GetAvailableModsAsync());
-        await Assert.ThrowsAsync<ObjectDisposedException>(() => services.Downloader.DownloadAsync("1", new ModVersion(1, 0, 0), _tempRoot));
+        await Assert.ThrowsAsync<ObjectDisposedException>(() => services.Downloader.DownloadAsync(Release(), Path.Combine(_tempRoot, "probe.zip")));
     }
+
+    /// <summary>The least a release needs to reach the client, which is all the
+    /// disposal probe above asks of it.</summary>
+    private static ModVersionMetadata Release() => new(
+        specVersion: 1,
+        modId: "ModA",
+        version: ModVersion.Parse("1.0.0"),
+        releaseStatus: ReleaseStatus.Stable,
+        releaseDate: new DateTimeOffset(2026, 8, 1, 12, 0, 0, TimeSpan.Zero),
+        gameMin: "2026.7.4.2131",
+        gameMinRevision: 2131,
+        download: new DownloadInfo("https://example.invalid/ModA.zip", null, null, "application/zip"),
+        installSizeBytes: null,
+        dependencies: Array.Empty<ModDependency>());
 
     private string SettingsPath => new GamePathProvider(gameDirectory: null, boreaRoot: _tempRoot).GetBoreaSettingsPath();
 
