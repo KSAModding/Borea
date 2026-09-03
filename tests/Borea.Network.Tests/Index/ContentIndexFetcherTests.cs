@@ -11,8 +11,14 @@ namespace Borea.Network.Tests.Index
         private readonly string _destinationPath;
         private readonly string _etagPath;
 
-        private const string SampleIndexBody = """{ "snapshot_version": 1, "sources": {} }""";
-        private const string UpdatedIndexBody = """{ "snapshot_version": 2, "sources": {} }""";
+        // Matches BasicIndexFormatCheckAsync's required shape: object root,
+        // integer snapshot_version <= 1, and 'listings'/'packs'/'game_versions'
+        // present (values unchecked). 'sources' is deliberately absent — it's
+        // optional per the class's own doc comment.
+        private const string SampleIndexBody =
+            """{ "snapshot_version": 1, "listings": {}, "packs": {}, "game_versions": {} }""";
+        private const string UpdatedIndexBody =
+            """{ "snapshot_version": 1, "listings": { "example-mod": {} }, "packs": {}, "game_versions": {} }""";
 
         public ContentIndexFetcherTests()
         {
@@ -36,6 +42,8 @@ namespace Borea.Network.Tests.Index
             response.Headers.ETag = new EntityTagHeaderValue(tag, isWeak);
             return response;
         }
+
+        private static HttpResponseMessage JsonResponse(string json) => FakeHttpMessageHandler.JsonResponse(json);
 
         [Fact]
         public async Task FetchAsync_NoExistingCache_DownloadsAndWritesSidecar()
@@ -126,7 +134,7 @@ namespace Borea.Network.Tests.Index
             await File.WriteAllTextAsync(_etagPath, "\"abc123\"");
 
             var client = FakeHttpMessageHandler.BuildClient(
-                _ => FakeHttpMessageHandler.JsonResponse(UpdatedIndexBody),
+                _ => JsonResponse(UpdatedIndexBody),
                 out _);
 
             var result = await CreateFetcher(client).FetchAsync(_destinationPath);
@@ -147,10 +155,8 @@ namespace Borea.Network.Tests.Index
 
             await Assert.ThrowsAsync<HttpRequestException>(() => CreateFetcher(client).FetchAsync(_destinationPath));
 
-            // No .tmp assertion here: EnsureSuccessStatusCode() throws before any
-            // file I/O runs, so a .tmp check would pass regardless of whether
-            // cleanup logic works. See FetchAsync_DownloadInterruptedMidStream_
-            // ThrowsAndLeavesCacheUntouched below for a case that actually exercises it.
+            // No .tmp assertion: EnsureSuccessStatusCode() throws before any file
+            // I/O runs, so it would pass regardless of whether cleanup works.
             Assert.Equal(SampleIndexBody, await File.ReadAllTextAsync(_destinationPath));
         }
 
@@ -188,19 +194,13 @@ namespace Borea.Network.Tests.Index
 
             await Assert.ThrowsAsync<HttpRequestException>(() => CreateFetcher(client).FetchAsync(_destinationPath));
 
-            // Same reasoning as the 500 test above: the content-type check throws
-            // before Directory.CreateDirectory or any write, so a .tmp assertion
-            // here wouldn't exercise anything either.
             Assert.Equal(SampleIndexBody, await File.ReadAllTextAsync(_destinationPath));
         }
 
+        // This test is technically checking if the index format checker can detect a half downloaded index and throw
         [Fact]
-        public async Task FetchAsync_DownloadInterruptedMidStream_ThrowsAndLeavesCacheUntouched()
+        public async Task FetchAsync_HalfDownloadedFileWithInvalidFormat_ThrowsAndLeavesCacheUntouched()
         {
-            // Unlike the 500/rejected-content-type cases above, this failure happens
-            // *during* ReadAsByteArrayAsync — after the content-type check passes,
-            // before Directory.CreateDirectory or the write block run. This is the
-            // scenario that actually proves no partial file gets left behind.
             await File.WriteAllTextAsync(_destinationPath, SampleIndexBody);
             await File.WriteAllTextAsync(_etagPath, "\"abc123\"");
 
@@ -238,8 +238,6 @@ namespace Borea.Network.Tests.Index
         [Fact]
         public async Task FetchAsync_InvalidSidecarETag_IgnoresSidecarAndFetchesUnconditionally()
         {
-            // Unquoted, no W/ prefix — not a well-formed entity-tag per RFC 7232,
-            // so EntityTagHeaderValue.TryParse should reject it.
             await File.WriteAllTextAsync(_destinationPath, SampleIndexBody);
             await File.WriteAllTextAsync(_etagPath, "not-a-valid-etag");
 
@@ -289,6 +287,153 @@ namespace Borea.Network.Tests.Index
 
             await Assert.ThrowsAsync<HttpRequestException>(() => CreateFetcher(client).FetchAsync(_destinationPath));
             Assert.False(File.Exists(_destinationPath));
+        }
+
+        [Fact]
+        public async Task FetchAsync_MissingSnapshotVersion_ThrowsAndLeavesCacheUntouched()
+        {
+            await File.WriteAllTextAsync(_destinationPath, SampleIndexBody);
+            await File.WriteAllTextAsync(_etagPath, "\"abc123\"");
+
+            var client = FakeHttpMessageHandler.BuildClient(
+                _ => JsonResponse("""{ "listings": {}, "packs": {}, "game_versions": {} }"""),
+                out _);
+
+            await Assert.ThrowsAsync<HttpRequestException>(() => CreateFetcher(client).FetchAsync(_destinationPath));
+            Assert.Equal(SampleIndexBody, await File.ReadAllTextAsync(_destinationPath));
+        }
+
+        [Fact]
+        public async Task FetchAsync_NonIntegerSnapshotVersion_ThrowsAndLeavesCacheUntouched()
+        {
+            await File.WriteAllTextAsync(_destinationPath, SampleIndexBody);
+            await File.WriteAllTextAsync(_etagPath, "\"abc123\"");
+
+            var client = FakeHttpMessageHandler.BuildClient(
+                _ => JsonResponse("""{ "snapshot_version": "one", "listings": {}, "packs": {}, "game_versions": {} }"""),
+                out _);
+
+            await Assert.ThrowsAsync<HttpRequestException>(() => CreateFetcher(client).FetchAsync(_destinationPath));
+            Assert.Equal(SampleIndexBody, await File.ReadAllTextAsync(_destinationPath));
+        }
+
+        [Fact]
+        public async Task FetchAsync_SnapshotVersionTooHigh_ThrowsAndLeavesCacheUntouched()
+        {
+            await File.WriteAllTextAsync(_destinationPath, SampleIndexBody);
+            await File.WriteAllTextAsync(_etagPath, "\"abc123\"");
+
+            var client = FakeHttpMessageHandler.BuildClient(
+                _ => JsonResponse("""{ "snapshot_version": 2, "listings": {}, "packs": {}, "game_versions": {} }"""),
+                out _);
+
+            await Assert.ThrowsAsync<HttpRequestException>(() => CreateFetcher(client).FetchAsync(_destinationPath));
+            Assert.Equal(SampleIndexBody, await File.ReadAllTextAsync(_destinationPath));
+        }
+
+        [Fact]
+        public async Task FetchAsync_MissingListings_ThrowsAndLeavesCacheUntouched()
+        {
+            await File.WriteAllTextAsync(_destinationPath, SampleIndexBody);
+            await File.WriteAllTextAsync(_etagPath, "\"abc123\"");
+
+            var client = FakeHttpMessageHandler.BuildClient(
+                _ => JsonResponse("""{ "snapshot_version": 1, "packs": {}, "game_versions": {} }"""),
+                out _);
+
+            await Assert.ThrowsAsync<HttpRequestException>(() => CreateFetcher(client).FetchAsync(_destinationPath));
+            Assert.Equal(SampleIndexBody, await File.ReadAllTextAsync(_destinationPath));
+        }
+
+        [Fact]
+        public async Task FetchAsync_MissingPacks_ThrowsAndLeavesCacheUntouched()
+        {
+            await File.WriteAllTextAsync(_destinationPath, SampleIndexBody);
+            await File.WriteAllTextAsync(_etagPath, "\"abc123\"");
+
+            var client = FakeHttpMessageHandler.BuildClient(
+                _ => JsonResponse("""{ "snapshot_version": 1, "listings": {}, "game_versions": {} }"""),
+                out _);
+
+            await Assert.ThrowsAsync<HttpRequestException>(() => CreateFetcher(client).FetchAsync(_destinationPath));
+            Assert.Equal(SampleIndexBody, await File.ReadAllTextAsync(_destinationPath));
+        }
+
+        [Fact]
+        public async Task FetchAsync_MissingGameVersions_ThrowsAndLeavesCacheUntouched()
+        {
+            await File.WriteAllTextAsync(_destinationPath, SampleIndexBody);
+            await File.WriteAllTextAsync(_etagPath, "\"abc123\"");
+
+            var client = FakeHttpMessageHandler.BuildClient(
+                _ => JsonResponse("""{ "snapshot_version": 1, "listings": {}, "packs": {} }"""),
+                out _);
+
+            await Assert.ThrowsAsync<HttpRequestException>(() => CreateFetcher(client).FetchAsync(_destinationPath));
+            Assert.Equal(SampleIndexBody, await File.ReadAllTextAsync(_destinationPath));
+        }
+
+        [Fact]
+        public async Task FetchAsync_MalformedJson_ThrowsAndLeavesCacheUntouched()
+        {
+            await File.WriteAllTextAsync(_destinationPath, SampleIndexBody);
+            await File.WriteAllTextAsync(_etagPath, "\"abc123\"");
+
+            var client = FakeHttpMessageHandler.BuildClient(
+                _ => JsonResponse("{ not valid json"),
+                out _);
+
+            await Assert.ThrowsAsync<HttpRequestException>(() => CreateFetcher(client).FetchAsync(_destinationPath));
+            Assert.Equal(SampleIndexBody, await File.ReadAllTextAsync(_destinationPath));
+        }
+
+        [Fact]
+        public async Task FetchAsync_JsonRootIsArray_ThrowsAndLeavesCacheUntouched()
+        {
+            await File.WriteAllTextAsync(_destinationPath, SampleIndexBody);
+            await File.WriteAllTextAsync(_etagPath, "\"abc123\"");
+
+            var client = FakeHttpMessageHandler.BuildClient(
+                _ => JsonResponse("[]"),
+                out _);
+
+            await Assert.ThrowsAsync<HttpRequestException>(() => CreateFetcher(client).FetchAsync(_destinationPath));
+            Assert.Equal(SampleIndexBody, await File.ReadAllTextAsync(_destinationPath));
+        }
+
+        [Fact]
+        public async Task FetchAsync_SourcesFieldAbsent_StillDownloads()
+        {
+            // Regression guard for the class's own comment: "Not checking for
+            // 'sources' since it is optional." A future accidental re-add of a
+            // sources check should fail this test, not a validation test above.
+            var client = FakeHttpMessageHandler.BuildClient(
+                _ => JsonResponseWithETag(SampleIndexBody, "\"abc123\""),
+                out _);
+
+            var result = await CreateFetcher(client).FetchAsync(_destinationPath);
+
+            Assert.Equal(ContentIndexFetchResult.Downloaded, result);
+            Assert.DoesNotContain("sources", await File.ReadAllTextAsync(_destinationPath));
+        }
+
+        [Theory]
+        [InlineData("""{ "snapshot_version": 1, "listings": {}, "packs": {} }""")] // missing game_versions
+        [InlineData("<Html>Please Log In</Html>")]
+        [InlineData("{\"error\": \"Could not log you in\"}")]
+        [InlineData("Plain Text")]
+        [InlineData("{}")]
+        [InlineData("")]
+        [InlineData("""{ "snapshot_version": 999, "listings": {}, "packs": {}, "game_versions": []}""")]
+        public async Task FetchAsync_RejectsInvalidIndexes_ThrowsAndLeavesCacheUntouched(string invalidJson)
+        {
+            await File.WriteAllTextAsync(_destinationPath, SampleIndexBody);
+            await File.WriteAllTextAsync(_etagPath, "\"abc123\"");
+            var client = FakeHttpMessageHandler.BuildClient(
+                _ => JsonResponseWithETag(invalidJson, "\"abc123\""),
+                out _);
+            await Assert.ThrowsAsync<HttpRequestException>(() => CreateFetcher(client).FetchAsync(_destinationPath));
+            Assert.Equal(SampleIndexBody, await File.ReadAllTextAsync(_destinationPath));
         }
     }
 }
