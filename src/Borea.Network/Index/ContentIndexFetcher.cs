@@ -64,7 +64,7 @@ public sealed class ContentIndexFetcher : IContentIndexFetcher
         // Read the content as a byte array to then write to disk.
         byte[] body = await response.Content.ReadAsByteArrayAsync(ct);
 
-        await BasicIndexFormatCheckAsync(body, response, ct);
+        BasicIndexFormatCheck(body, response);
 
         Directory.CreateDirectory(Path.GetDirectoryName(destinationPath)!);
 
@@ -97,11 +97,12 @@ public sealed class ContentIndexFetcher : IContentIndexFetcher
 
     /// <summary>
     /// Checks if the index is JSON or plain text, if it can be parsed as JSON, and if it has 4 required properties:
-    /// 'snapshot_version', 'listings', 'packs', and 'game_versions'. The actual values of the properties (excluding 'snapshot_version') are not
-    /// validated, only their existence is checked.
+    /// 'snapshot_version', 'listings', 'packs', and 'game_versions'. Only 'snapshot_version'
+    /// has its value read. For the other three, presence is all this checks. A full
+    /// validation of the document belongs to whatever reads it.
     /// </summary>
     /// <exception cref="HttpRequestException"></exception>
-    private static async Task BasicIndexFormatCheckAsync(byte[] body, HttpResponseMessage response, CancellationToken ct)
+    private static void BasicIndexFormatCheck(byte[] body, HttpResponseMessage response)
     {
         // Make sure index is JSON or plain text
         if (response.Content.Headers.ContentType?.MediaType != "application/json" && response.Content.Headers.ContentType?.MediaType != "text/plain")
@@ -112,7 +113,7 @@ public sealed class ContentIndexFetcher : IContentIndexFetcher
         JsonDocument document;
         try
         {
-            document = await JsonDocument.ParseAsync(new MemoryStream(body), cancellationToken: ct);
+            document = JsonDocument.Parse(body);
         }
         catch (JsonException ex)
         {
@@ -128,49 +129,36 @@ public sealed class ContentIndexFetcher : IContentIndexFetcher
                 throw new HttpRequestException("The index is not a JSON object.");
             }
 
-            if (!root.TryGetProperty("snapshot_version", out var versionElement))
+            if (!root.TryGetProperty("snapshot_version", out var versionElement) ||
+                versionElement.ValueKind != JsonValueKind.Number ||
+                !versionElement.TryGetInt32(out int snapshotVersion) ||
+                snapshotVersion < 1)
             {
                 throw new HttpRequestException("The index has no usable 'snapshot_version'.");
             }
 
-            int snapshotVersion;
-
-            try
+            // A newer envelope is refused whole and the cached copy is kept.
+            if (SnapshotVersions.IsAboveHighest(snapshotVersion))
             {
-                // Uses a unsigned integer to auto-rejct negative values
-                if (!versionElement.TryGetUInt32(out uint SnapshotVersion))
-                {
-                    throw new HttpRequestException("The index has an invalid 'snapshot_version'.");
-                }
-                snapshotVersion = (int)SnapshotVersion;
-            }
-            catch (InvalidOperationException ex)
-            {
-                throw new HttpRequestException("The index has an invalid 'snapshot_version'.", ex);
-            }
-
-            // Change 1 to SnapshotVersions.Highest once implemented
-            if (snapshotVersion > 1)
-            {
-                throw new HttpRequestException(                                     // Same here
-                    $"The index is snapshot version {snapshotVersion} and this build reads {1}.");
+                throw new HttpRequestException(
+                    $"The index is snapshot version {snapshotVersion} and this build reads {SnapshotVersions.Highest}.");
             }
 
             // Not checking for 'sources' since it is optional
             // For these three properties, we don't care about the value since they are arrays or objects.
             // Only checking for their existence for now. Reading the index client side can do a full validation.
             // This can be changed later if a IndexValidator class or similar is implemented to validate the index fully.
-            if (!root.TryGetProperty("listings", out var listingsElement))
+            if (!root.TryGetProperty("listings", out _))
             {
                 throw new HttpRequestException("The index has no usable 'listings'.");
             }
 
-            if (!root.TryGetProperty("packs", out var packsElement))
+            if (!root.TryGetProperty("packs", out _))
             {
                 throw new HttpRequestException("The index has no usable 'packs'.");
             }
 
-            if (!root.TryGetProperty("game_versions", out var gameVersionsElement))
+            if (!root.TryGetProperty("game_versions", out _))
             {
                 throw new HttpRequestException("The index has no usable 'game_versions'.");
             }

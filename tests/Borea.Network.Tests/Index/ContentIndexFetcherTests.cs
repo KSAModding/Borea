@@ -426,6 +426,9 @@ namespace Borea.Network.Tests.Index
         [InlineData("")]
         [InlineData("""{ "snapshot_version": 999, "listings": {}, "packs": {}, "game_versions": []}""")]
         [InlineData("""{ "snapshot_version": -1, "listings": {}, "packs": {}, "game_versions": []}""")]
+        [InlineData("""{ "snapshot_version": 3000000000, "listings": {}, "packs": {}, "game_versions": []}""")]
+        [InlineData("""{ "snapshot_version": 4294967295, "listings": {}, "packs": {}, "game_versions": []}""")]
+        [InlineData("""{ "snapshot_version": 1.5, "listings": {}, "packs": {}, "game_versions": []}""")]
         public async Task FetchAsync_RejectsInvalidIndexes_ThrowsAndLeavesCacheUntouched(string invalidJson)
         {
             await File.WriteAllTextAsync(_destinationPath, SampleIndexBody);
