@@ -24,6 +24,32 @@ public sealed class BoreaSettings
         LoaderDirectoryPaths = Build(loaderDirectoryPaths, nameof(loaderDirectoryPaths));
     }
 
+    /// <summary>
+    /// A copy with the game directory replaced. The loaders stay as they are.
+    /// </summary>
+    public BoreaSettings WithGameDirectory(string? gameDirectoryPath)
+        => new(gameDirectoryPath, LoaderDirectoryPaths);
+
+    /// <summary>
+    /// A copy with one loader's directory set. The id is stored as given here,
+    /// also when the loader was known under another casing.
+    /// </summary>
+    public BoreaSettings WithLoaderDirectory(string loaderId, string directoryPath)
+    {
+        ModIds.Validate(loaderId, nameof(loaderId));
+
+        if (string.IsNullOrWhiteSpace(directoryPath))
+            throw new ArgumentException("Loader directory path cannot be null or whitespace.", nameof(directoryPath));
+
+        // An assignment through the indexer keeps the key that is already
+        // there, so the old casing goes first.
+        var paths = new Dictionary<string, string>(LoaderDirectoryPaths, ModIds.Comparer);
+        paths.Remove(loaderId);
+        paths[loaderId] = directoryPath;
+
+        return new BoreaSettings(GameDirectoryPath, paths);
+    }
+
     private static IReadOnlyDictionary<string, string> Build(IReadOnlyDictionary<string, string>? paths, string paramName)
     {
         var built = new Dictionary<string, string>(ModIds.Comparer);

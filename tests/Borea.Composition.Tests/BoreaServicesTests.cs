@@ -1,6 +1,7 @@
 using Borea.Core.Mods;
 using Borea.Core.Settings;
 using Borea.Network.Sources;
+using Borea.Storage.Game;
 using Borea.Storage.Paths;
 using Borea.Storage.Settings;
 
@@ -108,6 +109,16 @@ public sealed class BoreaServicesTests : IDisposable
         using var services = await BoreaServices.BuildAsync(_tempRoot);
 
         Assert.IsType<CompositeModRepository>(services.Mods);
+    }
+
+    [Fact]
+    public async Task InstalledVersion_ReadsTheGameDirectoryTheSettingsName()
+    {
+        using var services = await BoreaServices.BuildAsync(_tempRoot);
+
+        Assert.IsType<InstalledGameVersionProvider>(services.InstalledVersion);
+        // No game directory is set, so there is nothing to read.
+        Assert.Null(services.InstalledVersion.GetInstalledVersion());
     }
 
     [Fact]

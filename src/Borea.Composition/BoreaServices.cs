@@ -9,6 +9,7 @@ using Borea.Core.State;
 using Borea.Network.MasterServer;
 using Borea.Network.Sources;
 using Borea.Network.SpaceDock;
+using Borea.Storage.Game;
 using Borea.Storage.Instances;
 using Borea.Storage.ModPacks;
 using Borea.Storage.Mods;
@@ -74,6 +75,8 @@ public sealed class BoreaServices : IDisposable
 
     public required ILatestVersionPing LatestVersion { get; init; }
 
+    public required IInstalledGameVersionProvider InstalledVersion { get; init; }
+
     private BoreaServices(HttpClient http)
     {
         _http = http;
@@ -130,6 +133,7 @@ public sealed class BoreaServices : IDisposable
             Mods = new CompositeModRepository(sources),
             Downloader = new SpaceDockModDownloader(http, resolver),
             LatestVersion = new LatestVersionPing(http),
+            InstalledVersion = new InstalledGameVersionProvider(paths),
         };
     }
 

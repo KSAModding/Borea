@@ -1,12 +1,14 @@
 <Solution>
   <Folder Name="/src/">
     <Project Path="src/Borea.App/Borea.App.csproj" />
+    <Project Path="src/Borea.Cli/Borea.Cli.csproj" />
     <Project Path="src/Borea.Composition/Borea.Composition.csproj" />
     <Project Path="src/Borea.Core/Borea.Core.csproj" />
     <Project Path="src/Borea.Network/Borea.Network.csproj" />
     <Project Path="src/Borea.Storage/Borea.Storage.csproj" />
   </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/Borea.Cli.Tests/Borea.Cli.Tests.csproj" />
     <Project Path="tests/Borea.Composition.Tests/Borea.Composition.Tests.csproj" />
     <Project Path="tests/Borea.Core.Tests/Borea.Core.Tests.csproj" />
     <Project Path="tests/Borea.Network.Tests/Borea.Network.Tests.csproj" />
