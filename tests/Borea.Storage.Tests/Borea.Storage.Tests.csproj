@@ -5,6 +5,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
   </PropertyGroup>
 
   <ItemGroup>
@@ -21,6 +22,10 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\Borea.Core\Borea.Core.csproj" />
     <ProjectReference Include="..\..\src\Borea.Storage\Borea.Storage.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Fixtures\UnparseableVersionFixture\" />
   </ItemGroup>
 
 </Project>
