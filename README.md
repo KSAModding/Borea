@@ -25,7 +25,7 @@ The exit code is 0 when the command completed, 1 when the operation failed and t
 | `borea settings show` | Print where the game and the mod loaders are. |
 | `borea settings set game <directory>` | Point Borea at the game installation. |
 | `borea settings set loader <loader-id> <directory>` | Point Borea at an installed mod loader. |
-| `borea game version` | Print the current public build the master server reports. |
+| `borea game version` | Print the installed build and the current public build the master server reports. |
 | `borea instance list` | Print every instance and mark the active one. |
 | `borea instance create <name>` | Create an empty instance. |
 | `borea instance rename <instance> <new-name>` | Give an instance a new name. |

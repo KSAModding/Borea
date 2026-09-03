@@ -18,18 +18,21 @@ public sealed class CliServicesTests : IDisposable
         Assert.Same(graph.Instances, services.Instances);
         Assert.Same(graph.ModState, services.ModState);
         Assert.Same(graph.LatestVersion, services.LatestVersion);
+        Assert.Same(graph.InstalledVersion, services.InstalledVersion);
         Assert.Same(graph, services.Graph);
     }
 
     [Fact]
-    public async Task From_WithAPing_UsesItInsteadOfTheGraphs()
+    public async Task From_WithReplacements_UsesThemInsteadOfTheGraphs()
     {
         using var graph = await BoreaServices.BuildAsync(_tempRoot);
         var ping = new FakeLatestVersionPing();
+        var installed = new FakeInstalledGameVersionProvider();
 
-        var services = CliServices.From(graph, ping);
+        var services = CliServices.From(graph, ping, installed);
 
         Assert.Same(ping, services.LatestVersion);
+        Assert.Same(installed, services.InstalledVersion);
         Assert.Same(graph.Instances, services.Instances);
     }
 
@@ -45,6 +48,7 @@ public sealed class CliServicesTests : IDisposable
             Instances = graph.Instances,
             ModState = graph.ModState,
             LatestVersion = new FakeLatestVersionPing(),
+            InstalledVersion = new FakeInstalledGameVersionProvider(),
             Graph = owner,
         };
 

@@ -7,13 +7,16 @@ namespace Borea.Cli.Tests;
 /// <summary>
 /// Runs command lines against a temporary Borea root the test owns. The
 /// services come from the real composition root under that root, with the
-/// master server replaced by <see cref="LatestVersion"/>.
+/// master server replaced by <see cref="LatestVersion"/> and, when a test
+/// sets it, the installed build by <see cref="InstalledVersion"/>.
 /// </summary>
 internal sealed class CliHost : IDisposable
 {
     public string Root { get; } = Path.Combine(Path.GetTempPath(), "BoreaTest_" + Guid.NewGuid());
 
     public FakeLatestVersionPing LatestVersion { get; } = new();
+
+    public FakeInstalledGameVersionProvider? InstalledVersion { get; set; }
 
     /// <summary>How many times a command built its services.</summary>
     public int Builds { get; private set; }
@@ -33,7 +36,7 @@ internal sealed class CliHost : IDisposable
     private async Task<CliServices> BuildAsync(CancellationToken cancellationToken)
     {
         Builds++;
-        return CliServices.From(await BoreaServices.BuildAsync(Root, cancellationToken), LatestVersion);
+        return CliServices.From(await BoreaServices.BuildAsync(Root, cancellationToken), LatestVersion, InstalledVersion);
     }
 
     public void Dispose()
