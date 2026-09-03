@@ -138,7 +138,7 @@ public sealed class ContentIndexFetcher : IContentIndexFetcher
             try
             {
                 // Uses a unsigned integer to auto-rejct negative values
-                if(!versionElement.TryGetUInt32(out uint SnapshotVersion))
+                if (!versionElement.TryGetUInt32(out uint SnapshotVersion))
                 {
                     throw new HttpRequestException("The index has an invalid 'snapshot_version'.");
                 }
