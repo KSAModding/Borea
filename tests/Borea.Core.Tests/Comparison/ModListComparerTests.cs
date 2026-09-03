@@ -27,7 +27,7 @@ public sealed class ModListComparerTests
         var diff = _comparer.Compare(Array.Empty<InstalledMod>(), new[] { new ModPackEntry("new-mod", ModVersion.Parse("1.0.0")) });
 
         Assert.Single(diff.ToAdd);
-        Assert.Equal("new-mod", diff.ToAdd[0].ModId);
+        Assert.Equal("new-mod", diff.ToAdd[0].ContentId);
     }
 
     [Fact]
