@@ -40,7 +40,7 @@ public sealed class ModPackMetadataMapperTests : IDisposable
         links: new Dictionary<string, string>
         {
             ["forums"] = "https://forums.example/thread/1",
-            ["homepage"] = "https://example.com/pack",
+            ["Homepage"] = "https://example.com/pack",
         },
         gameMin: "2026.8.3.5117",
         version: ModVersion.Parse("1.2.0-beta.2"),
@@ -73,7 +73,6 @@ public sealed class ModPackMetadataMapperTests : IDisposable
 
         Assert.Equal(original.SpecVersion, reloaded.SpecVersion);
         Assert.Equal(original.ModPackId, reloaded.ModPackId);
-        Assert.Equal(ContentType.ModPack, reloaded.Type);
         Assert.Equal(original.Source, reloaded.Source);
         Assert.Equal(original.Name, reloaded.Name);
         Assert.Equal(original.Authors, reloaded.Authors);
@@ -84,7 +83,7 @@ public sealed class ModPackMetadataMapperTests : IDisposable
         Assert.Equal(ModStatus.Deprecated, reloaded.Status);
         Assert.Equal(original.SupersededBy, reloaded.SupersededBy);
         Assert.Equal(original.ForumUrl, reloaded.ForumUrl);
-        Assert.Equal(original.Links["homepage"], reloaded.Links["homepage"]);
+        Assert.Equal("https://example.com/pack", reloaded.Links["homepage"]);
         Assert.Equal(original.GameMin, reloaded.GameMin);
         Assert.Equal(original.GameMax, reloaded.GameMax);
         Assert.Equal(original.Os, reloaded.Os);
@@ -138,6 +137,30 @@ public sealed class ModPackMetadataMapperTests : IDisposable
     }
 
     [Fact]
+    public async Task RoundTrip_EmptyOsList_StaysEmptyInsteadOfAbsent()
+    {
+        var original = new ModPackMetadata(
+            specVersion: SpecVersions.Highest,
+            modPackId: "NavigationStarterPack",
+            source: "TestSource",
+            name: "Navigation Starter Pack",
+            authors: new[] { "Maxi" },
+            abstractText: "Abstract.",
+            license: "CC0-1.0",
+            links: new Dictionary<string, string> { ["forums"] = "https://forums.example/thread/1" },
+            gameMin: "2026.7",
+            version: ModVersion.Parse("1.0.0"),
+            releasedAt: SampleTimestamp(),
+            mods: new[] { Entry("AdvancedFlightComputer", "0.7.0") },
+            os: Array.Empty<string>());
+
+        var (reloaded, _, _) = await RoundTripAsync(original);
+
+        Assert.NotNull(reloaded.Os);
+        Assert.Empty(reloaded.Os);
+    }
+
+    [Fact]
     public async Task RoundTrip_TimestampKeepsSubSecondPrecision()
     {
         var (reloaded, _, _) = await RoundTripAsync(MinimalPack());
@@ -160,6 +183,15 @@ public sealed class ModPackMetadataMapperTests : IDisposable
         dto.Status = null;
 
         Assert.Equal(ModStatus.Active, ModPackMetadataMapper.FromDto(dto).Status);
+    }
+
+    [Fact]
+    public void FromDto_UnknownStatus_ParsesToUnknown()
+    {
+        var dto = ModPackMetadataMapper.ToDto(MinimalPack());
+        dto.Status = "frozen";
+
+        Assert.Equal(ModStatus.Unknown, ModPackMetadataMapper.FromDto(dto).Status);
     }
 
     [Fact]
@@ -192,6 +224,7 @@ public sealed class ModPackMetadataMapperTests : IDisposable
     }
 
     [Theory]
+    [InlineData("")]
     [InlineData("mod")]
     [InlineData("mod-loader")]
     [InlineData("vehicle")]

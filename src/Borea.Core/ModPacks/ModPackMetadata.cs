@@ -4,7 +4,7 @@ using System.Collections.ObjectModel;
 namespace Borea.Core.ModPacks;
 
 /// <summary>
-/// One version of a mod pack: the shared authored core plus the pack extension.
+/// One version of a mod pack (RFC 0031): the shared authored core plus the pack extension.
 /// Pure reference metadata, so no releases, no loader, and no install data.
 /// </summary>
 public sealed class ModPackMetadata
@@ -16,12 +16,16 @@ public sealed class ModPackMetadata
 
     public ContentType Type => ContentType.ModPack;
 
+    /// <summary>Which source this metadata came from. Borea-internal, not a format field.</summary>
     public string Source { get; }
 
+    /// <summary>The display name.</summary>
     public string Name { get; }
 
+    /// <summary>Display names of the authors.</summary>
     public IReadOnlyList<string> Authors { get; }
 
+    /// <summary>One or two sentences for list and search views.</summary>
     public string Abstract { get; }
 
     /// <summary>Longer CommonMark text on top of the abstract.</summary>
@@ -30,8 +34,10 @@ public sealed class ModPackMetadata
     /// <summary>SPDX expression. It covers the pack's own text, never a member's files.</summary>
     public string License { get; }
 
+    /// <summary>Free-form lowercase tags.</summary>
     public IReadOnlyList<string> Tags { get; }
 
+    /// <summary>The author's declaration about the pack.</summary>
     public ModStatus Status { get; }
 
     /// <summary>Only meaningful together with a deprecated status.</summary>
@@ -40,6 +46,7 @@ public sealed class ModPackMetadata
     /// <summary>Keys compare case-insensitively; "forums" is required.</summary>
     public IReadOnlyDictionary<string, string> Links { get; }
 
+    /// <summary>The required KSA forums thread for this pack.</summary>
     public string ForumUrl => Links["forums"];
 
     /// <summary>Oldest game version known to work.</summary>
@@ -56,12 +63,16 @@ public sealed class ModPackMetadata
 
     public DateTimeOffset ReleasedAt { get; }
 
+    /// <summary>URL or free text for this pack version.</summary>
     public string? Changelog { get; }
 
+    /// <summary>The curated mods, each an exact pin. At least one.</summary>
     public IReadOnlyList<ModPackEntry> Mods { get; }
 
+    /// <summary>Pinned vehicles, the same entry shape as the mods. Empty when none.</summary>
     public IReadOnlyList<ModPackEntry> Vehicles { get; }
 
+    /// <summary>Pinned saves, the same entry shape as the mods. Empty when none.</summary>
     public IReadOnlyList<ModPackEntry> Saves { get; }
 
     public ModPackMetadata(
@@ -123,6 +134,11 @@ public sealed class ModPackMetadata
         if (mods is null || mods.Count == 0)
             throw new ArgumentException("A mod pack must contain at least one mod.", nameof(mods));
 
+        RejectRepeatedPins(
+            (mods, nameof(mods)),
+            (vehicles ?? Array.Empty<ModPackEntry>(), nameof(vehicles)),
+            (saves ?? Array.Empty<ModPackEntry>(), nameof(saves)));
+
         SpecVersion = specVersion;
         ModPackId = modPackId;
         Source = source;
@@ -144,31 +160,24 @@ public sealed class ModPackMetadata
         Mods = new ReadOnlyCollection<ModPackEntry>(mods.ToArray());
         Vehicles = vehicles is null ? Array.Empty<ModPackEntry>() : new ReadOnlyCollection<ModPackEntry>(vehicles.ToArray());
         Saves = saves is null ? Array.Empty<ModPackEntry>() : new ReadOnlyCollection<ModPackEntry>(saves.ToArray());
-
-        RejectRepeatedPins();
     }
 
     /// <summary>
     /// One id is pinned once across the whole document, since the namespace is global.
+    /// The exception names the constructor parameter of the section the repeated pin is in.
     /// </summary>
-    private void RejectRepeatedPins()
+    private static void RejectRepeatedPins(params (IReadOnlyList<ModPackEntry> Entries, string ParamName)[] sections)
     {
         var seen = new HashSet<string>(ModIds.Comparer);
-        var sections = new (IReadOnlyList<ModPackEntry> Entries, string Name)[]
-        {
-            (Mods, nameof(Mods)),
-            (Vehicles, nameof(Vehicles)),
-            (Saves, nameof(Saves)),
-        };
 
-        foreach (var (entries, name) in sections)
+        foreach (var (entries, paramName) in sections)
         {
             foreach (var entry in entries)
             {
-                ModIds.Validate(entry.ContentId, name);
+                ModIds.Validate(entry.ContentId, paramName);
 
                 if (!seen.Add(entry.ContentId))
-                    throw new ArgumentException($"'{entry.ContentId}' is pinned more than once.", name);
+                    throw new ArgumentException($"'{entry.ContentId}' is pinned more than once.", paramName);
             }
         }
     }

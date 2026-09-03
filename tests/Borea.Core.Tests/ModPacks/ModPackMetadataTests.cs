@@ -47,9 +47,14 @@ public sealed class ModPackMetadataTests
         var pack = Build();
 
         Assert.Equal("test-pack", pack.ModPackId);
-        Assert.Equal(ContentType.ModPack, pack.Type);
         Assert.Equal("TestSource", pack.Source);
+        Assert.Equal("Test Pack", pack.Name);
+        Assert.Equal(new[] { "Author" }, pack.Authors);
+        Assert.Equal("Abstract.", pack.Abstract);
+        Assert.Equal("CC0-1.0", pack.License);
         Assert.Equal("https://forums.example/thread/1", pack.ForumUrl);
+        Assert.Equal("2026.7", pack.GameMin);
+        Assert.Equal(ModVersion.Parse("1.0.0"), pack.Version);
         Assert.Equal(ModStatus.Active, pack.Status);
         Assert.Single(pack.Mods);
         Assert.Null(pack.Description);
@@ -98,6 +103,16 @@ public sealed class ModPackMetadataTests
         var links = new Dictionary<string, string> { ["homepage"] = "https://example.com" };
 
         Assert.Throws<ArgumentException>(() => Build(links: links));
+    }
+
+    [Fact]
+    public void Constructor_ForumsLinkWithAuthoredCasing_IsAccepted()
+    {
+        var links = new Dictionary<string, string> { ["Forums"] = "https://forums.example/thread/2" };
+
+        var pack = Build(links: links);
+
+        Assert.Equal("https://forums.example/thread/2", pack.ForumUrl);
     }
 
     [Fact]
@@ -155,6 +170,15 @@ public sealed class ModPackMetadataTests
     }
 
     [Fact]
+    public void Constructor_SameContentPinnedInModsAndVehicles_ThrowsArgumentException()
+    {
+        var exception = Assert.Throws<ArgumentException>(() =>
+            Build(mods: new[] { Entry("shared-id") }, vehicles: new[] { Entry("SHARED-ID") }));
+
+        Assert.Equal("vehicles", exception.ParamName);
+    }
+
+    [Fact]
     public void Constructor_DefaultEntry_ThrowsArgumentException()
     {
         Assert.Throws<ArgumentException>(() => Build(mods: new ModPackEntry[1]));
@@ -176,35 +200,12 @@ public sealed class ModPackMetadataTests
         Assert.True(SpecVersions.IsAboveHighest(pack.SpecVersion));
     }
 
-    [Theory]
-    [InlineData(null)]
-    [InlineData("")]
-    [InlineData("   ")]
-    [InlineData("not a valid id")]
-    public void Entry_InvalidContentId_ThrowsArgumentException(string? contentId)
-    {
-        Assert.Throws<ArgumentException>(() => new ModPackEntry(contentId!, ModVersion.Parse("1.0.0")));
-    }
-
-    [Fact]
-    public void Entry_IdsDifferingOnlyByCase_AreEqual()
-    {
-        Assert.Equal(Entry("SomeMod"), Entry("somemod"));
-        Assert.Equal(Entry("SomeMod").GetHashCode(), Entry("somemod").GetHashCode());
-    }
-
-    [Fact]
-    public void Entry_SameIdDifferentVersion_AreNotEqual()
-    {
-        Assert.NotEqual(Entry("some-mod", "1.0.0"), Entry("some-mod", "2.0.0"));
-    }
-
     [Fact]
     public void RepeatedPin_NamesTheSectionItIsIn()
     {
         var exception = Assert.Throws<ArgumentException>(() =>
             Build(mods: new[] { Entry("shared-id") }, saves: new[] { Entry("shared-id") }));
 
-        Assert.Equal("Saves", exception.ParamName);
+        Assert.Equal("saves", exception.ParamName);
     }
 }

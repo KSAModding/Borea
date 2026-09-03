@@ -4,14 +4,18 @@ using Borea.Core.Mods;
 namespace Borea.Core.Comparison;
 
 /// <summary>
-/// Compares a set of currently installed mods against a target mod list.
+/// Compares the mods installed in an instance against the mods a pack pins.
 /// </summary>
 public sealed class ModListComparer
 {
-
     /// <summary>
-    /// Compares a list of InstalledMods against a list of ModPackEntries,
-    /// returning a ModListDiff that describes the differences.
+    /// Compares the installed mods against the pinned mods and returns the
+    /// <see cref="ModListDiff"/> between them.
+    /// <paramref name="targetMods"/> is the mods section of a pack document, so
+    /// <see cref="ModPackMetadata.Mods"/> and never its vehicles or saves. A pin carries
+    /// no content type, the section it sits in does, and an installed mod is the only
+    /// thing this comparison matches a pin against, so an entry from another section
+    /// would come back as a mod to add.
     /// </summary>
     public ModListDiff Compare(IReadOnlyList<InstalledMod> currentMods, IReadOnlyList<ModPackEntry> targetMods)
     {

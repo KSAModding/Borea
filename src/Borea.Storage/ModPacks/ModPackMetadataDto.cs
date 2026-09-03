@@ -1,7 +1,7 @@
 ﻿namespace Borea.Storage.ModPacks;
 
 /// <summary>
-/// TOML form of a pack version document.
+/// TOML-serializable representation of one ModPackMetadata version.
 /// </summary>
 public sealed class ModPackMetadataDto
 {
