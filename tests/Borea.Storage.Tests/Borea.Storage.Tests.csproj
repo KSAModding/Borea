@@ -25,7 +25,28 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Fixtures\UnparseableVersionFixture\" />
+    <!-- Own projects inside this folder, so their sources stay out of these globs. -->
+    <Compile Remove="Fixtures\**" />
+    <None Remove="Fixtures\**" />
   </ItemGroup>
+
+  <ItemGroup>
+    <!-- Built by the solution, never compiled against. -->
+    <VersionFixture Include="Fixtures\GameVersionFixture\GameVersionFixture.csproj" />
+    <VersionFixture Include="Fixtures\UnparseableVersionFixture\UnparseableVersionFixture.csproj" />
+    <ProjectReference Include="@(VersionFixture)" ReferenceOutputAssembly="false" />
+  </ItemGroup>
+
+  <!-- Inside Build, so the copies reach FileWrites and Clean removes them. -->
+  <Target Name="CopyVersionFixtures" AfterTargets="CopyFilesToOutputDirectory">
+    <MSBuild Projects="@(VersionFixture)"
+             Targets="GetTargetPath"
+             Properties="Configuration=$(Configuration);TargetFramework=$(TargetFramework)">
+      <Output TaskParameter="TargetOutputs" ItemName="VersionFixtureAssembly" />
+    </MSBuild>
+    <Copy SourceFiles="@(VersionFixtureAssembly)" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true">
+      <Output TaskParameter="CopiedFiles" ItemName="FileWrites" />
+    </Copy>
+  </Target>
 
 </Project>
