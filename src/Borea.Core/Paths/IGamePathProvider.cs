@@ -65,12 +65,12 @@ public interface IGamePathProvider
     string? GetGameDirectoryPath();
 
     /// <summary>
-    /// Root directory of the StarMap installation. Used as the base
-    /// path for launching StarMap.
+    /// Root directory of one installed mod loader. Ids compare
+    /// case-insensitively, and no id at all throws.
     /// </summary>
     /// <returns><list type="bullet">
-    /// <item>null if path is unknown.</item>
+    /// <item>null if no path is known for that loader.</item>
     /// <item>string path if known.</item>
     /// </list></returns>
-    string? GetStarMapDirectoryPath();
+    string? GetLoaderDirectoryPath(string loaderId);
 }
