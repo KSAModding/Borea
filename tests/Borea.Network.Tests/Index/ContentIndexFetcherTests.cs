@@ -279,5 +279,16 @@ namespace Borea.Network.Tests.Index
             Assert.Equal(ContentIndexFetchResult.NotModified, secondResult);
             Assert.Contains(handler.LastRequest!.Headers.IfNoneMatch, tag => tag.Tag == "\"abc123\"" && tag.IsWeak);
         }
+
+        [Fact]
+        public async Task FetchAsync_ThrowException_WhenNoETagBut304Response()
+        {
+            var client = FakeHttpMessageHandler.BuildClient(
+                _ => new HttpResponseMessage(HttpStatusCode.NotModified),
+                out _);
+
+            await Assert.ThrowsAsync<HttpRequestException>(() => CreateFetcher(client).FetchAsync(_destinationPath));
+            Assert.False(File.Exists(_destinationPath));
+        }
     }
 }
