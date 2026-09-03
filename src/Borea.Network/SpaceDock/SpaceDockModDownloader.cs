@@ -9,7 +9,7 @@ namespace Borea.Network.SpaceDock;
 /// <summary>
 /// IModDownloader implementation against SpaceDock. Downloads the mod's zip
 /// to a temp file, computes a SHA256 checksum, then extracts into
-/// destinationDirectory. Resolves modId via SpaceDockResolver — a raw
+/// destinationDirectory. Resolves modId via SpaceDockResolver: a raw
 /// integer placeholder (pre-mod.toml) or a previously-registered true
 /// ModId (post-mod.toml) both work identically.
 /// </summary>
@@ -46,7 +46,7 @@ public sealed class SpaceDockModDownloader : IModDownloader
             throw new InvalidOperationException($"Could not resolve SpaceDock mod '{modId}' to a numeric SpaceDock ID.");
 
         var dto = await _httpClient.GetFromJsonAsync<SpaceDockModDto>(
-            $"api/mod/{spaceDockId}", JsonOptions, cancellationToken).ConfigureAwait(false)
+            $"{SpaceDockModRepository.BaseUrl}/api/mod/{spaceDockId}", JsonOptions, cancellationToken).ConfigureAwait(false)
             ?? throw new InvalidOperationException($"SpaceDock mod '{spaceDockId}' not found.");
 
         // Rows can normalize to the same version; the default row wins the
@@ -58,7 +58,7 @@ public sealed class SpaceDockModDownloader : IModDownloader
             ?? throw new InvalidOperationException($"Version '{version}' not found for SpaceDock mod '{spaceDockId}'.");
 
         using var response = await _httpClient.GetAsync(
-            matchingVersion.DownloadPath, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
+            $"{SpaceDockModRepository.BaseUrl}{matchingVersion.DownloadPath}", HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
         response.EnsureSuccessStatusCode();
 
         var totalBytes = response.Content.Headers.ContentLength ?? -1;
