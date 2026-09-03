@@ -25,6 +25,7 @@ public sealed class GamePathProvider : IGamePathProvider
         _boreaRoot = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Borea");
     }
 
+    public string GetIndexPath() => Path.Combine(_boreaRoot, "index.json");
     public string GetInstancesRoot() => Path.Combine(_boreaRoot, "Instances");
     public string GetInstanceRoot(Guid instanceId) => Path.Combine(GetInstancesRoot(), instanceId.ToString());
     public string GetInstanceModsFolder(Guid instanceId) => Path.Combine(GetInstanceRoot(instanceId), "mods");
