@@ -4,14 +4,18 @@ using Borea.Core.Mods;
 namespace Borea.Core.Comparison;
 
 /// <summary>
-/// Compares a set of currently installed mods against a target mod list.
+/// Compares the mods installed in an instance against the mods a pack pins.
 /// </summary>
 public sealed class ModListComparer
 {
-
     /// <summary>
-    /// Compares a list of InstalledMods against a list of ModPackEntries,
-    /// returning a ModListDiff that describes the differences.
+    /// Compares the installed mods against the pinned mods and returns the
+    /// <see cref="ModListDiff"/> between them.
+    /// <paramref name="targetMods"/> is the mods section of a pack document, so
+    /// <see cref="ModPackMetadata.Mods"/> and never its vehicles or saves. A pin carries
+    /// no content type, the section it sits in does, and an installed mod is the only
+    /// thing this comparison matches a pin against, so an entry from another section
+    /// would come back as a mod to add.
     /// </summary>
     public ModListDiff Compare(IReadOnlyList<InstalledMod> currentMods, IReadOnlyList<ModPackEntry> targetMods)
     {
@@ -19,7 +23,7 @@ public sealed class ModListComparer
         if (targetMods is null) throw new ArgumentNullException(nameof(targetMods));
 
         var currentById = currentMods.ToDictionary(m => m.ModId, ModIds.Comparer);
-        var targetIds = new HashSet<string>(targetMods.Select(m => m.ModId), ModIds.Comparer);
+        var targetIds = new HashSet<string>(targetMods.Select(m => m.ContentId), ModIds.Comparer);
 
         var toAdd = new List<ModPackEntry>();
         var toUpdate = new List<ModVersionChange>();
@@ -27,12 +31,12 @@ public sealed class ModListComparer
 
         foreach (var target in targetMods)
         {
-            if (currentById.TryGetValue(target.ModId, out var current))
+            if (currentById.TryGetValue(target.ContentId, out var current))
             {
                 if (current.Version.Equals(target.Version))
-                    unchanged.Add(target.ModId);
+                    unchanged.Add(target.ContentId);
                 else
-                    toUpdate.Add(new ModVersionChange(target.ModId, current.Version, target.Version));
+                    toUpdate.Add(new ModVersionChange(target.ContentId, current.Version, target.Version));
             }
             else
             {
