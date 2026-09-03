@@ -26,6 +26,8 @@ internal sealed class CliServices : IDisposable
 
     public required ILatestVersionPing LatestVersion { get; init; }
 
+    public required IInstalledGameVersionProvider InstalledVersion { get; init; }
+
     /// <summary>
     /// The graph the services came from, disposed with this instance. Null when
     /// nothing needs disposing.
@@ -34,9 +36,10 @@ internal sealed class CliServices : IDisposable
 
     /// <summary>
     /// The graph's services. <paramref name="latestVersion"/> replaces the
-    /// graph's master-server ping, which is what a test needs.
+    /// graph's master-server ping and <paramref name="installedVersion"/> its
+    /// reader of the installed build, which is what a test needs.
     /// </summary>
-    public static CliServices From(BoreaServices services, ILatestVersionPing? latestVersion = null)
+    public static CliServices From(BoreaServices services, ILatestVersionPing? latestVersion = null, IInstalledGameVersionProvider? installedVersion = null)
     {
         if (services is null)
             throw new ArgumentNullException(nameof(services));
@@ -48,6 +51,7 @@ internal sealed class CliServices : IDisposable
             Instances = services.Instances,
             ModState = services.ModState,
             LatestVersion = latestVersion ?? services.LatestVersion,
+            InstalledVersion = installedVersion ?? services.InstalledVersion,
             Graph = services,
         };
     }

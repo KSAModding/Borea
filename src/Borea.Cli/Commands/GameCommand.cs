@@ -1,6 +1,7 @@
 using System.CommandLine;
 using Borea.Cli.Output;
 using Borea.Core.Game;
+using Borea.Core.Settings;
 
 namespace Borea.Cli.Commands;
 
@@ -16,33 +17,53 @@ internal static class GameCommand
         return game;
     }
 
+    /// <summary>
+    /// the installed build comes from disk, the latest from the master server.
+    /// </summary>
     private static Command BuildVersion(Func<CancellationToken, Task<CliServices>> services)
     {
         var json = ArgumentRules.Json();
-        var version = new Command("version", "Print the current public build the master server reports.");
+        var version = new Command("version", "Print the installed build and the current public build the master server reports.");
         version.Options.Add(json);
 
-        version.SetAction((parseResult, cancellationToken) => CommandRunner.RunAsync(parseResult, services, cancellationToken, async (cli, output, _, ct) =>
+        version.SetAction((parseResult, cancellationToken) => CommandRunner.RunAsync(parseResult, services, cancellationToken, async (cli, output, error, ct) =>
         {
-            var latest = await cli.LatestVersion.PingAsync(ct).ConfigureAwait(false);
+            var installed = cli.InstalledVersion.GetInstalledVersion();
+            var (latest, latestProblem) = await AskMasterServerAsync(cli.LatestVersion, ct).ConfigureAwait(false);
 
-            if (string.IsNullOrWhiteSpace(latest.RawVersion))
-                throw new InvalidOperationException("The master server gave no version.");
+            if (installed is null && latest is null)
+                throw new InvalidOperationException($"The installed build is unknown: {InstalledUnknownReason(cli.Settings)}. {latestProblem}");
 
-            var view = LatestVersionView.From(latest);
+            if (latestProblem is not null)
+                error.WriteLine($"warning: {latestProblem}");
 
             if (parseResult.GetValue(json))
             {
-                JsonOutput.Write(output, new GameVersionView(view));
+                JsonOutput.Write(output, new GameVersionView(
+                    installed is null ? null : InstalledVersionView.From(installed),
+                    latest is null ? null : LatestVersionView.From(latest)));
                 return ExitCodes.Done;
             }
 
-            output.WriteLine(latest.Version is null
-                ? $"Latest public build: {latest.RawVersion} (this did not parse as a game version)"
-                : $"Latest public build: {latest.Version}");
+            output.WriteLine(installed switch
+            {
+                null => $"Installed build: unknown ({InstalledUnknownReason(cli.Settings)})",
+                { Version: null } => $"Installed build: {installed.RawVersion} (this did not parse as a game version)",
+                _ => $"Installed build: {installed.Version}",
+            });
 
-            if (view.DownloadUrl is not null)
-                output.WriteLine($"Download: {view.DownloadUrl}");
+            if (latest is not null)
+            {
+                output.WriteLine(latest.Version is null
+                    ? $"Latest public build: {latest.RawVersion} (this did not parse as a game version)"
+                    : $"Latest public build: {latest.Version}");
+
+                if (!string.IsNullOrWhiteSpace(latest.DownloadUrl))
+                    output.WriteLine($"Download: {latest.DownloadUrl}");
+            }
+
+            if (installed?.Version is { } have && latest?.Version is { } current)
+                output.WriteLine(have < current ? "A newer build is available." : "The installed build is current.");
 
             return ExitCodes.Done;
         }));
@@ -50,8 +71,43 @@ internal static class GameCommand
         return version;
     }
 
-    /// <summary>The JSON shape of <c>game version</c>.</summary>
-    private sealed record GameVersionView(LatestVersionView Latest);
+    /// <summary>
+    /// The master server's answer.
+    /// </summary>
+    private static async Task<(LatestVersionInfo? Latest, string? Problem)> AskMasterServerAsync(ILatestVersionPing ping, CancellationToken cancellationToken)
+    {
+        LatestVersionInfo answer;
+        try
+        {
+            answer = await ping.PingAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (HttpRequestException exception)
+        {
+            return (null, $"The master server could not be reached. {exception.Message}");
+        }
+        catch (OperationCanceledException exception) when (!cancellationToken.IsCancellationRequested)
+        {
+            return (null, $"The master server did not answer in time. {exception.Message}");
+        }
+
+        return string.IsNullOrWhiteSpace(answer.RawVersion)
+            ? (null, "The master server gave no version.")
+            : (answer, null);
+    }
+
+    private static string InstalledUnknownReason(BoreaSettings settings)
+        => settings.GameDirectoryPath is null
+            ? "no game directory is set, run 'borea settings set game'"
+            : $"no KSA.dll with a version was found in {settings.GameDirectoryPath}";
+
+    /// <summary>The JSON shape of <c>game version</c>. A half that is missing is null.</summary>
+    private sealed record GameVersionView(InstalledVersionView? Installed, LatestVersionView? Latest);
+
+    private sealed record InstalledVersionView(string? Version, int? Revision, string Raw)
+    {
+        public static InstalledVersionView From(InstalledGameVersion installed)
+            => new(installed.Version?.ToString(), installed.Version?.Revision, installed.RawVersion);
+    }
 
     /// <summary>
     /// The master server's answer. An answer without a download page carries
