@@ -32,5 +32,10 @@ internal sealed class TestGamePathProvider : IGamePathProvider
     public string GetModPackFavoritesPath() => Path.Combine(_root, "modpack-favorites.toml");
     public string GetBoreaSettingsPath() => Path.Combine(_root, "borea-settings.toml");
     public string? GetGameDirectoryPath() => _hasGameDirectory ? Path.Combine(_root, "Game") : null;
-    public string GetStarMapDirectoryPath() => Path.Combine(_root, "StarMap");
+    public string? GetLoaderDirectoryPath(string loaderId)
+    {
+        ModIds.Validate(loaderId, nameof(loaderId));
+
+        return ModIds.Equals(loaderId, "StarMap") ? Path.Combine(_root, "StarMap") : null;
+    }
 }
