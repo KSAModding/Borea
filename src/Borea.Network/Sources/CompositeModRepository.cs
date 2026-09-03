@@ -92,7 +92,8 @@ public sealed class CompositeModRepository : IModRepository
         original.Os,
         original.Loader,
         original.Dependencies,
-        original.InstallRootOverride);
+        original.Install,
+        original.Provides);
 
     private static ModVersionMetadata Tag(ModVersionMetadata original, string source) => new(
         original.SpecVersion,

@@ -85,7 +85,7 @@ public sealed class CompositeModRepositoryTests
         Assert.Equal(original.Dependencies.Count, tagged.Dependencies.Count);
         Assert.Equal(original.Dependencies[0].ModId, tagged.Dependencies[0].ModId);
         Assert.True(tagged.Dependencies[1].IsAnyOf);
-        Assert.Equal(original.InstallRootOverride, tagged.InstallRootOverride);
+        Assert.Equal(original.Install!.Root, tagged.Install!.Root);
     }
 
     [Fact]

@@ -63,7 +63,11 @@ internal static class MetadataFixtures
                 new ModDependencyAlternative("audio-b"),
             }),
         },
-        installRootOverride: "UnusualRoot");
+        install: new InstallDescriptor(
+            root: "UnusualRoot",
+            manages: new[] { "config/settings.json" },
+            steps: new[] { "Relaunch the game once to enable it." },
+            uninstall: Array.Empty<string>()));
 
     public static DownloadInfo SampleDownload() =>
         new("https://example.com/mod.zip", new string('A', 64), 1024, "application/zip", new[] { "https://mirror.example/mod.zip" });
