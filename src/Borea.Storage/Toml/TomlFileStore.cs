@@ -19,6 +19,8 @@ public static class TomlFileStore
     /// <summary>
     /// Reads and deserializes the TOML file at <paramref name="path"/> into
     /// <typeparamref name="T"/>, or returns null if the file does not exist.
+    /// A file that is not valid TOML throws <see cref="InvalidOperationException"/>
+    /// naming the path, so a caller can show a user which file to repair.
     /// </summary>
     public static async Task<T?> ReadAsync<T>(string path, CancellationToken cancellationToken = default)
         where T : class
@@ -27,7 +29,15 @@ public static class TomlFileStore
             return null;
 
         var text = await File.ReadAllTextAsync(path, cancellationToken).ConfigureAwait(false);
-        return TomlSerializer.Deserialize<T>(text, Options);
+
+        try
+        {
+            return TomlSerializer.Deserialize<T>(text, Options);
+        }
+        catch (TomlException exception)
+        {
+            throw new InvalidOperationException($"{path} is not valid TOML. {exception.Message}", exception);
+        }
     }
 
     /// <summary>
