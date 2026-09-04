@@ -183,4 +183,16 @@ public sealed class GamePathProviderTests
         Assert.DoesNotContain(provider.GetInstancesRoot(), provider.GetBoreaSettingsPath());
         Assert.DoesNotContain(provider.GetInstancesRoot(), provider.GetIndexPath());
     }
+
+    [Fact]
+    public void GetLoadersRoot_IsBesideTheInstancesRootAndNotInsideIt()
+    {
+        var provider = new GamePathProvider(null);
+
+        var loaders = provider.GetLoadersRoot();
+
+        Assert.Equal("Loaders", Path.GetFileName(loaders));
+        Assert.Equal(Path.GetDirectoryName(provider.GetInstancesRoot()), Path.GetDirectoryName(loaders));
+        Assert.DoesNotContain(provider.GetInstancesRoot(), loaders);
+    }
 }
