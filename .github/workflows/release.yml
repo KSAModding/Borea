@@ -1,0 +1,235 @@
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+  # If Started by hand, the workflow builds and archives everything but stops short of
+  # attesting and publishing. That is how it can be tested without spending a tag.
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  test:
+    name: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+      - run: dotnet test Borea.slnx --configuration Release
+
+  publish:
+    name: publish (${{ matrix.rid }})
+    needs: test
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        rid: [win-x64, linux-x64, osx-x64, osx-arm64]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Name this build
+        id: name
+        env:
+          REF_TYPE: ${{ github.ref_type }}
+          RID: ${{ matrix.rid }}
+        run: |
+          if [ "$REF_TYPE" = tag ]; then
+            version="${GITHUB_REF_NAME#v}"
+          else
+            version=0.0.0-dev
+          fi
+          case "$version" in
+            "" | *[!A-Za-z0-9.+-]* )
+              echo "Tag $GITHUB_REF_NAME is not a version this workflow can publish." >&2
+              exit 1 ;;
+          esac
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "archive=Borea-$version-$RID" >> "$GITHUB_OUTPUT"
+
+      # Self-contained, so nobody needs a .NET runtime.
+      # All four targets build on this one Linux runner.
+      - name: Publish
+        env:
+          VERSION: ${{ steps.name.outputs.version }}
+          ARCHIVE: ${{ steps.name.outputs.archive }}
+          RID: ${{ matrix.rid }}
+        run: >
+          dotnet publish src/Borea.App/Borea.App.csproj
+          --configuration Release
+          --runtime "$RID"
+          --self-contained true
+          -p:Version="$VERSION"
+          --output "publish/$ARCHIVE"
+
+      - name: Add the license
+        env:
+          ARCHIVE: ${{ steps.name.outputs.archive }}
+        run: cp LICENSE "publish/$ARCHIVE/LICENSE"
+
+      - name: Drop the native debug symbols
+        env:
+          ARCHIVE: ${{ steps.name.outputs.archive }}
+        run: find "publish/$ARCHIVE" -name '*.pdb' ! -name 'Borea.*.pdb' -delete
+
+      - name: Make the program executable
+        if: matrix.rid != 'win-x64'
+        env:
+          ARCHIVE: ${{ steps.name.outputs.archive }}
+        run: chmod +x "publish/$ARCHIVE/Borea.App"
+
+      - name: Archive
+        env:
+          ARCHIVE: ${{ steps.name.outputs.archive }}
+          RID: ${{ matrix.rid }}
+        run: |
+          mkdir dist
+          if [ "$RID" = win-x64 ]; then
+            (cd publish && zip -qr "$GITHUB_WORKSPACE/dist/$ARCHIVE.zip" "$ARCHIVE")
+          else
+            tar -czf "dist/$ARCHIVE.tar.gz" -C publish "$ARCHIVE"
+          fi
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: archive-${{ matrix.rid }}
+          path: dist/*
+          if-no-files-found: error
+          # Already compressed.
+          compression-level: 0
+
+  verify-macos:
+    name: verify (macOS)
+    needs: publish
+    runs-on: macos-latest
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: archive-osx-arm64
+          path: dist
+      - name: Report what macOS says about the build
+        run: |
+          tar -xzf dist/*.tar.gz
+          app=$(find . -maxdepth 2 -name Borea.App | head -1)
+          codesign --display --verbose=4 "$app"
+          codesign --verify --strict --verbose=2 "$app"
+          # Mark it the way a browser download would, then ask Gatekeeper.
+          xattr -w com.apple.quarantine '0083;00000000;Safari;' "$app"
+          spctl --assess --type execute --verbose=4 "$app" || true
+
+  release:
+    name: release
+    needs: publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: archive-*
+          merge-multiple: true
+          path: dist
+
+      - name: Compute the checksums
+        working-directory: dist
+        run: sha256sum Borea-* > SHA256SUMS.txt
+
+      # Ties every published file to the workflow run that built it.
+      # `gh attestation verify` reads this.
+      # Skipped for a run started by hand, because an attestation cannot be taken back.
+      - name: Attest the files
+        if: github.event_name == 'push'
+        uses: actions/attest-build-provenance@v4
+        with:
+          subject-path: dist/*
+
+      # The changelog is fetched here instead of with `gh release create --generate-notes`,
+      # so a re-run for the same tag can rewrite the whole body, checksum table included.
+      - name: Write the release body
+        working-directory: dist
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          gh api --method POST "repos/$GITHUB_REPOSITORY/releases/generate-notes" \
+            -f tag_name="$GITHUB_REF_NAME" --jq .body > generated.md || : > generated.md
+
+          cat > body.md <<'EOF'
+          ### Downloads
+
+          | File | SHA-256 |
+          | --- | --- |
+          EOF
+          while read -r sum file; do printf '| %s | `%s` |\n' "$file" "$sum"; done < SHA256SUMS.txt >> body.md
+          cat >> body.md <<'EOF'
+
+          The builds include the .NET runtime and are self-contained, so there is nothing to install first.
+
+          ### First start
+
+          These builds are not code signed, so the first start might take an extra step on Windows and macOS. The README has the long explanation.
+
+          **Windows.** Right-click the zip, open Properties and select Unblock. Then unpack it and start `Borea.App.exe`.
+          Without that step, Windows shows "Windows protected your PC". This is because the file might not be downloaded often and is not signed. Select "More info", then "Run anyway".
+
+          **Linux.** Unpack the archive and start `Borea.App`. It needs the X11, fontconfig, ICU and OpenSSL libraries of your distribution, which most desktop installs already have. See Readme.
+
+          **macOS.** Unpack and start Borea from Terminal, not from Finder: `tar -xzf <file>`, then `./Borea.App` inside the new folder.
+
+          ### Provenance
+
+          To check that a file came from this workflow:
+
+          ```
+          EOF
+          {
+            echo "gh attestation verify <file> --repo $GITHUB_REPOSITORY \\"
+            echo "  --signer-workflow $GITHUB_REPOSITORY/.github/workflows/release.yml"
+          } >> body.md
+          cat >> body.md <<'EOF'
+          ```
+
+          Signing will come in the future and is tracked in https://github.com/KSAModding/Borea/issues/76.
+
+          EOF
+          cat generated.md >> body.md
+
+      # `gh release create` uploads into a draft and publishes at the end, so a cancelled
+      # run leaves a draft behind. That draft must not take the update path below, or the
+      # release stays invisible.
+      - name: Create or update the release
+        if: github.event_name == 'push'
+        working-directory: dist
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          state=$(gh release view "$GITHUB_REF_NAME" --json isDraft --jq .isDraft 2>/dev/null || echo missing)
+          if [ "$state" = true ]; then
+            echo "Removing the draft a cancelled run left for $GITHUB_REF_NAME."
+            gh release delete "$GITHUB_REF_NAME" --yes
+            state=missing
+          fi
+          if [ "$state" = false ]; then
+            echo "$GITHUB_REF_NAME already has a release. Replacing its files and notes."
+            gh release upload "$GITHUB_REF_NAME" Borea-* SHA256SUMS.txt --clobber
+            gh release edit "$GITHUB_REF_NAME" --notes-file body.md
+          else
+            flags=(--verify-tag --notes-file body.md --title "$GITHUB_REF_NAME")
+            # Only a SemVer pre-release carries a hyphen.
+            case "$GITHUB_REF_NAME" in *-*) flags+=(--prerelease) ;; esac
+            gh release create "$GITHUB_REF_NAME" Borea-* SHA256SUMS.txt "${flags[@]}"
+          fi
