@@ -17,6 +17,11 @@ public interface IGamePathProvider
     string GetInstancesRoot();
 
     /// <summary>
+    /// Root for loaders installed standalone (RFC 0035), one folder per loader id.
+    /// </summary>
+    string GetLoadersRoot();
+
+    /// <summary>
     /// Path to the file tracking which instance is currently selected for
     /// launch.
     /// </summary>
