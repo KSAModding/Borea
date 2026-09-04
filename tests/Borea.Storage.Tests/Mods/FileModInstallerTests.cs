@@ -1,4 +1,3 @@
-using System.IO.Compression;
 using System.Security.Cryptography;
 using Borea.Core.Dependencies;
 using Borea.Core.Instances;
@@ -54,21 +53,7 @@ public sealed class FileModInstallerTests : IAsyncLifetime
 
     private static string Sha256Of(byte[] bytes) => Convert.ToHexString(SHA256.HashData(bytes));
 
-    private static byte[] BuildZip(params (string Path, string Content)[] entries)
-    {
-        using var stream = new MemoryStream();
-        using (var archive = new ZipArchive(stream, ZipArchiveMode.Create, leaveOpen: true))
-        {
-            foreach (var (path, content) in entries)
-            {
-                var entry = archive.CreateEntry(path);
-                using var writer = new StreamWriter(entry.Open());
-                writer.Write(content);
-            }
-        }
-
-        return stream.ToArray();
-    }
+    private static byte[] BuildZip(params (string Path, string Content)[] entries) => TestArchives.Build(entries);
 
     private static ModVersionMetadata Release(
         InstallInfo? install = null,
@@ -458,37 +443,6 @@ public sealed class FileModInstallerTests : IAsyncLifetime
     }
 
     #endregion
-
-    /// <summary>Hands out configured bytes as the archive, or fails, and remembers where it was asked to write.</summary>
-    private sealed class FakeModDownloader : IModDownloader
-    {
-        public byte[] Bytes { get; set; } = Array.Empty<byte>();
-
-        public Exception? Failure { get; set; }
-
-        public List<string> ArchivePaths { get; } = new();
-
-        public IProgress<DownloadProgress>? LastProgress { get; private set; }
-
-        public CancellationToken LastToken { get; private set; }
-
-        public async Task<DownloadResult> DownloadAsync(
-            ModVersionMetadata release,
-            string archivePath,
-            IProgress<DownloadProgress>? progress = null,
-            CancellationToken cancellationToken = default)
-        {
-            ArchivePaths.Add(archivePath);
-            LastProgress = progress;
-            LastToken = cancellationToken;
-
-            if (Failure is not null)
-                throw Failure;
-
-            await File.WriteAllBytesAsync(archivePath, Bytes, cancellationToken);
-            return new DownloadResult(release.Download.Url, Bytes.Length, Sha256Of(Bytes));
-        }
-    }
 
     /// <summary>A manifest that cannot be written, to exercise the rollback.</summary>
     private sealed class FailingModStateRepository : IModStateRepository
