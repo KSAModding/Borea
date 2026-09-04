@@ -1,4 +1,5 @@
 ﻿using System.Globalization;
+using Borea.Storage.Files;
 using Tomlyn;
 using Tomlyn.Serialization;
 
@@ -34,7 +35,8 @@ public static class TomlFileStore
     /// Serializes <paramref name="value"/> to TOML and writes it to
     /// <paramref name="path"/>, creating the containing directory if needed.
     /// Replaces any existing file, and leaves it untouched when the write does
-    /// not finish.
+    /// not finish; the game reads manifest.toml in ModLibrary with no error
+    /// handling.
     /// </summary>
     /// <remarks>Not safe against a second writer of the same path.</remarks>
     public static async Task WriteAsync<T>(string path, T value, CancellationToken cancellationToken = default)
@@ -43,45 +45,8 @@ public static class TomlFileStore
         if (value is null)
             throw new ArgumentNullException(nameof(value));
 
-        var directory = Path.GetDirectoryName(path);
-        if (!string.IsNullOrEmpty(directory))
-            Directory.CreateDirectory(directory);
-
         var text = TomlSerializer.Serialize(value, Options);
-
-        // Written beside the file and moved onto it, because writing in place
-        // truncates first and the game parses manifest.toml with no error
-        // handling. Same directory, so the move is atomic. The name is unique per
-        // write, so a second writer cannot delete this one's temporary file.
-        var tempPath = $"{path}.{Guid.NewGuid():N}.tmp";
-        try
-        {
-            await File.WriteAllTextAsync(tempPath, text, cancellationToken).ConfigureAwait(false);
-            File.Move(tempPath, path, overwrite: true);
-        }
-        finally
-        {
-            TryDeleteLeftover(tempPath);
-        }
-    }
-
-    /// <summary>
-    /// Clears the temporary file when the write did not reach the move, without
-    /// replacing the error that caused it.
-    /// </summary>
-    private static void TryDeleteLeftover(string tempPath)
-    {
-        try
-        {
-            if (File.Exists(tempPath))
-                File.Delete(tempPath);
-        }
-        catch (IOException)
-        {
-        }
-        catch (UnauthorizedAccessException)
-        {
-        }
+        await AtomicFile.WriteAllTextAsync(path, text, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
