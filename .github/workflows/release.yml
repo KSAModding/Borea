@@ -18,7 +18,26 @@ jobs:
   test:
     name: test
     runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.name.outputs.version }}
     steps:
+      - name: Name this release
+        id: name
+        env:
+          REF_TYPE: ${{ github.ref_type }}
+        run: |
+          if [ "$REF_TYPE" = tag ]; then
+            version="${GITHUB_REF_NAME#v}"
+          else
+            version=0.0.0-dev
+          fi
+          case "$version" in
+            "" | *[!A-Za-z0-9.+-]* )
+              echo "Tag $GITHUB_REF_NAME is not a version this workflow can publish." >&2
+              exit 1 ;;
+          esac
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
       - uses: actions/checkout@v7
       - uses: actions/setup-dotnet@v6
         with:
@@ -42,27 +61,15 @@ jobs:
       - name: Name this build
         id: name
         env:
-          REF_TYPE: ${{ github.ref_type }}
+          VERSION: ${{ needs.test.outputs.version }}
           RID: ${{ matrix.rid }}
-        run: |
-          if [ "$REF_TYPE" = tag ]; then
-            version="${GITHUB_REF_NAME#v}"
-          else
-            version=0.0.0-dev
-          fi
-          case "$version" in
-            "" | *[!A-Za-z0-9.+-]* )
-              echo "Tag $GITHUB_REF_NAME is not a version this workflow can publish." >&2
-              exit 1 ;;
-          esac
-          echo "version=$version" >> "$GITHUB_OUTPUT"
-          echo "archive=Borea-$version-$RID" >> "$GITHUB_OUTPUT"
+        run: echo "archive=Borea-$VERSION-$RID" >> "$GITHUB_OUTPUT"
 
       # Self-contained, so nobody needs a .NET runtime.
       # All four targets build on this one Linux runner.
       - name: Publish
         env:
-          VERSION: ${{ steps.name.outputs.version }}
+          VERSION: ${{ needs.test.outputs.version }}
           ARCHIVE: ${{ steps.name.outputs.archive }}
           RID: ${{ matrix.rid }}
         run: >
@@ -109,6 +116,61 @@ jobs:
           # Already compressed.
           compression-level: 0
 
+  sbom:
+    name: sbom
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+
+      # Release, like the builds, so the Debug-only packages stay out.
+      - name: Restore the release graph
+        run: dotnet restore src/Borea.App/Borea.App.csproj -p:Configuration=Release
+
+      # The tool version is pinned in .config/dotnet-tools.json, where Dependabot keeps it current.
+      - name: Write the SBOM
+        env:
+          VERSION: ${{ needs.test.outputs.version }}
+        run: |
+          dotnet tool restore
+          dotnet CycloneDX src/Borea.App/Borea.App.csproj \
+            --output dist --filename "Borea-$VERSION.cdx.json" --output-format Json \
+            --set-name Borea --set-version "$VERSION" --set-type Application \
+            --exclude-dev --disable-package-restore
+
+      - name: Check the SBOM
+        env:
+          VERSION: ${{ needs.test.outputs.version }}
+        run: |
+          bom="dist/Borea-$VERSION.cdx.json"
+          names=$(jq -r '.components[].name' "$bom")
+          for p in Avalonia CommunityToolkit.Mvvm Tomlyn SkiaSharp; do
+            if ! grep -qx "$p" <<< "$names"; then
+              echo "The SBOM does not list $p." >&2
+              exit 1
+            fi
+          done
+          for p in xunit Microsoft.NET.Test.Sdk coverlet.collector AvaloniaUI.DiagnosticsSupport; do
+            if grep -qx "$p" <<< "$names"; then
+              echo "The SBOM lists $p, which does not ship." >&2
+              exit 1
+            fi
+          done
+          if ! jq -e '([.components[]["bom-ref"]] - [.dependencies[].ref]) == []' "$bom" > /dev/null; then
+            echo "A package is missing from the dependency graph." >&2
+            exit 1
+          fi
+          echo "$(wc -l <<< "$names") packages."
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: sbom
+          path: dist/*.cdx.json
+          if-no-files-found: error
+
   verify-macos:
     name: verify (macOS)
     needs: publish
@@ -130,7 +192,7 @@ jobs:
 
   release:
     name: release
-    needs: publish
+    needs: [test, publish, sbom]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -141,6 +203,10 @@ jobs:
         with:
           pattern: archive-*
           merge-multiple: true
+          path: dist
+      - uses: actions/download-artifact@v8
+        with:
+          name: sbom
           path: dist
 
       - name: Compute the checksums
@@ -156,6 +222,17 @@ jobs:
         with:
           subject-path: dist/*
 
+      # Binds the release SBOM to each archive, so `gh attestation verify <archive>` with the
+      # CycloneDX predicate type proves that the list belongs to it.
+      - name: Attest the SBOM
+        if: github.event_name == 'push'
+        uses: actions/attest@v4
+        with:
+          subject-path: |
+            dist/*.zip
+            dist/*.tar.gz
+          sbom-path: dist/Borea-${{ needs.test.outputs.version }}.cdx.json
+
       # The changelog is fetched here instead of with `gh release create --generate-notes`,
       # so a re-run for the same tag can rewrite the whole body, checksum table included.
       - name: Write the release body
@@ -163,6 +240,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
+          VERSION: ${{ needs.test.outputs.version }}
         run: |
           gh api --method POST "repos/$GITHUB_REPOSITORY/releases/generate-notes" \
             -f tag_name="$GITHUB_REF_NAME" --jq .body > generated.md || : > generated.md
@@ -198,6 +276,23 @@ jobs:
           {
             echo "gh attestation verify <file> --repo $GITHUB_REPOSITORY \\"
             echo "  --signer-workflow $GITHUB_REPOSITORY/.github/workflows/release.yml"
+          } >> body.md
+          cat >> body.md <<'EOF'
+          ```
+
+          EOF
+          cat >> body.md <<EOF
+          \`Borea-$VERSION.cdx.json\` is the software bill of materials, in CycloneDX JSON. It includes the NuGet packages Borea.App is built from, with version, license and hash.
+          One list covers all four builds, so it holds the native asset packages of every platform.
+          The same list is attested to each archive, and you can use this command to prove that it belongs to one.
+          With \`--format json\`, the output includes the attested list.
+
+          \`\`\`
+          EOF
+          {
+            echo "gh attestation verify <archive> --repo $GITHUB_REPOSITORY \\"
+            echo "  --signer-workflow $GITHUB_REPOSITORY/.github/workflows/release.yml \\"
+            echo "  --predicate-type https://cyclonedx.org/bom"
           } >> body.md
           cat >> body.md <<'EOF'
           ```
