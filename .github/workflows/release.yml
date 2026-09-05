@@ -18,7 +18,26 @@ jobs:
   test:
     name: test
     runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.name.outputs.version }}
     steps:
+      - name: Name this release
+        id: name
+        env:
+          REF_TYPE: ${{ github.ref_type }}
+        run: |
+          if [ "$REF_TYPE" = tag ]; then
+            version="${GITHUB_REF_NAME#v}"
+          else
+            version=0.0.0-dev
+          fi
+          case "$version" in
+            "" | *[!A-Za-z0-9.+-]* )
+              echo "Tag $GITHUB_REF_NAME is not a version this workflow can publish." >&2
+              exit 1 ;;
+          esac
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
       - uses: actions/checkout@v7
       - uses: actions/setup-dotnet@v6
         with:
@@ -42,27 +61,15 @@ jobs:
       - name: Name this build
         id: name
         env:
-          REF_TYPE: ${{ github.ref_type }}
+          VERSION: ${{ needs.test.outputs.version }}
           RID: ${{ matrix.rid }}
-        run: |
-          if [ "$REF_TYPE" = tag ]; then
-            version="${GITHUB_REF_NAME#v}"
-          else
-            version=0.0.0-dev
-          fi
-          case "$version" in
-            "" | *[!A-Za-z0-9.+-]* )
-              echo "Tag $GITHUB_REF_NAME is not a version this workflow can publish." >&2
-              exit 1 ;;
-          esac
-          echo "version=$version" >> "$GITHUB_OUTPUT"
-          echo "archive=Borea-$version-$RID" >> "$GITHUB_OUTPUT"
+        run: echo "archive=Borea-$VERSION-$RID" >> "$GITHUB_OUTPUT"
 
       # Self-contained, so nobody needs a .NET runtime.
       # All four targets build on this one Linux runner.
       - name: Publish
         env:
-          VERSION: ${{ steps.name.outputs.version }}
+          VERSION: ${{ needs.test.outputs.version }}
           ARCHIVE: ${{ steps.name.outputs.archive }}
           RID: ${{ matrix.rid }}
         run: >
