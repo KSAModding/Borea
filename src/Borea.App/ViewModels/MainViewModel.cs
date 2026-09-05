@@ -1,5 +1,8 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using System.Collections.Generic;
+using System.Text.Json;
+using System.IO;
 
 namespace Borea.App.ViewModels;
 
@@ -14,6 +17,10 @@ public partial class MainViewModel : ViewModelBase
     [ObservableProperty]
     private string _globalPanelsColor = "#2029d2";
     [ObservableProperty]
+
+
+
+    //windows
     private bool _currentWindowHome = true;
     [ObservableProperty]
     private bool _currentWindowDiscover = false;
@@ -52,5 +59,41 @@ public partial class MainViewModel : ViewModelBase
         CurrentWindowDiscover = false;
         CurrentWindowLibrary = false;
         CurrentWindowSettings = true;
+        GetThemes(); // get the themes when the settings window is opened
     }
+
+
+
+    //themes
+    [ObservableProperty]
+    private Dictionary<string, string[]> _themes = new Dictionary<string, string[]>();
+    [ObservableProperty]
+    private string _currentTheme = "DefaultBlue";
+    [RelayCommand]
+    public void GetThemes() // used to get the themes from the json files
+    {
+        string themesJson = File.ReadAllText("client/BoreaDefaultThemes.json");
+        var themes = JsonSerializer.Deserialize<Dictionary<string, string[]>>(themesJson);
+        if (themes != null)
+        {
+            Themes = themes;
+        }
+
+        string themesJson2 = File.ReadAllText("client/CustomThemes.json");
+        var themes2 = JsonSerializer.Deserialize<Dictionary<string, string[]>>(themesJson2);
+        if (themes2 != null)
+        {
+            foreach (var kvp in themes2)
+            {
+                Themes.TryAdd(kvp.Key, kvp.Value);
+            }
+        }
+        string settingsJson = File.ReadAllText("client/Settings.json");
+        var settings = JsonSerializer.Deserialize<Dictionary<string, string>>(settingsJson);
+        CurrentTheme = settings != null && settings.ContainsKey("theme") ? settings["theme"] : "Error";
+
+
+
+    }
+
 }
