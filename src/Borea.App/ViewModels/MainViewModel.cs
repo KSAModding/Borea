@@ -14,30 +14,43 @@ public partial class MainViewModel : ViewModelBase
     [ObservableProperty]
     private string _globalPanelsColor = "#2029d2";
     [ObservableProperty]
-    private string _currentWindowDiscover = "True";
+    private bool _currentWindowHome = true;
     [ObservableProperty]
-    private string _currentWindowLibrary = "False";
+    private bool _currentWindowDiscover = false;
     [ObservableProperty]
-    private string _currentWindowSettings = "False";
+    private bool _currentWindowLibrary = false;
+    [ObservableProperty]
+    private bool _currentWindowSettings = false;
     [RelayCommand]
-    public void SetMainWindowDiscover() // Will be used to set whatever is on the main window (discover, library, etc.)
+    public void SetMainWindowHome() // used to set whatever is on the main window (discover, library, etc.)
     {
-        CurrentWindowDiscover = "True";
-        CurrentWindowLibrary = "False";
-        CurrentWindowSettings = "False";
+        CurrentWindowHome = true;
+        CurrentWindowDiscover = false;
+        CurrentWindowLibrary = false;
+        CurrentWindowSettings = false;
     }
     [RelayCommand]
-    public void SetMainWindowLibrary() // Will be used to set whatever is on the main window (discover, library, etc.)
+    public void SetMainWindowDiscover() // used to set whatever is on the main window (discover, library, etc.)
     {
-        CurrentWindowDiscover = "False";
-        CurrentWindowLibrary = "True";
-        CurrentWindowSettings = "False";
+        CurrentWindowHome = false;
+        CurrentWindowDiscover = true;
+        CurrentWindowLibrary = false;
+        CurrentWindowSettings = false;
     }
     [RelayCommand]
-    public void SetMainWindowSettings() // Will be used to set whatever is on the main window (discover, library, etc.)
+    public void SetMainWindowLibrary() // used to set whatever is on the main window (discover, library, etc.)
     {
-        CurrentWindowDiscover = "False";
-        CurrentWindowLibrary = "False";
-        CurrentWindowSettings = "True";
+        CurrentWindowHome = false;
+        CurrentWindowDiscover = false;
+        CurrentWindowLibrary = true;
+        CurrentWindowSettings = false;
+    }
+    [RelayCommand]
+    public void SetMainWindowSettings() // used to set whatever is on the main window (discover, library, etc.)
+    {
+        CurrentWindowHome = false;
+        CurrentWindowDiscover = false;
+        CurrentWindowLibrary = false;
+        CurrentWindowSettings = true;
     }
 }

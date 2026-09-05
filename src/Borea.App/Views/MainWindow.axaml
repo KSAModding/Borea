@@ -33,21 +33,24 @@
                     <TextBlock Text="Logo Goes Here" HorizontalAlignment="Center" VerticalAlignment="Center" />
                 </Panel>
                 <Panel Grid.Row="1" Background="{Binding GlobalPanelsColor}" Margin="20">
+                    <Button Content="Home" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,5,0,5" Command="{Binding SetMainWindowHome}" />
                     <Button Content="Library" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,55,0,55" Command="{Binding SetMainWindowLibrary}" />
-                    <Button Content="Discover" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,5,0,5" Command="{Binding SetMainWindowDiscover}" /> <!--All of these will eventually be replaced with images instead of text-->
+                    <Button Content="Discover" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,105,0,105" Command="{Binding SetMainWindowDiscover}" /> <!--All of these will eventually be replaced with images instead of text-->
                     <Button Content="Settings" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,5,0,5" Command="{Binding SetMainWindowSettings}" />
                 </Panel>
             </Grid>
         </Panel>
 
-
-        <Panel Grid.Column="1" Background="{Binding MainColor}" IsEnabled="{Binding CurrentWindowDiscover}"> <!-- Discover  -->
+        <Panel Grid.Column="1" Background="{Binding MainColor}" IsEnabled="{Binding CurrentWindowHome}" IsVisible="{Binding CurrentWindowHome}"> <!-- Home  -->
+            <TextBlock Text="Home" HorizontalAlignment="Center" VerticalAlignment="Center" />
+        </Panel>
+        <Panel Grid.Column="1" Background="{Binding MainColor}" IsEnabled="{Binding CurrentWindowDiscover}" IsVisible="{Binding CurrentWindowDiscover}"> <!-- Discover  -->
             <TextBlock Text="Discover" HorizontalAlignment="Center" VerticalAlignment="Center" />
         </Panel>
-        <Panel Grid.Column="1" Background="{Binding MainColor}" IsEnabled="{Binding CurrentWindowLibrary}"> <!-- Library  -->
+        <Panel Grid.Column="1" Background="{Binding MainColor}" IsEnabled="{Binding CurrentWindowLibrary}" IsVisible="{Binding CurrentWindowLibrary}"> <!-- Library  -->
             <TextBlock Text="Library" HorizontalAlignment="Center" VerticalAlignment="Center" />
         </Panel>
-        <Panel Grid.Column="1" Background="{Binding MainColor}" IsEnabled="{Binding CurrentWindowSettings}"> <!-- Settings  -->
+        <Panel Grid.Column="1" Background="{Binding MainColor}" IsEnabled="{Binding CurrentWindowSettings}" IsVisible="{Binding CurrentWindowSettings}"> <!-- Settings  -->
             <TextBlock Text="Settings" HorizontalAlignment="Center" VerticalAlignment="Center" />
         </Panel>
     </Grid>
