@@ -1,5 +1,4 @@
 ﻿using Borea.Core.Mods;
-using Borea.Core.Game;
 
 namespace Borea.Storage.Mods;
 
@@ -7,33 +6,57 @@ public static class ModMetadataMapper
 {
     public static ModMetadataDto ToDto(ModMetadata metadata) => new()
     {
+        SpecVersion = metadata.SpecVersion,
         ModId = metadata.ModId,
+        Type = MetadataEnumMapper.ToDto(metadata.Type),
         Source = metadata.Source,
         Name = metadata.Name,
-        Author = metadata.Author,
-        Version = metadata.Version.ToString(),
-        BuiltForGameVersion = metadata.BuiltForGameVersion.ToString(),
+        Authors = metadata.Authors.ToList(),
+        Abstract = metadata.Abstract,
         Description = metadata.Description,
-        HomepageUrl = metadata.HomepageUrl,
-        ChangeLog = metadata.ChangeLog,
-        ReleasedAt = metadata.ReleasedAt,
-        FileSizeBytes = metadata.FileSizeBytes,
-        Dependencies = metadata.Dependencies.Select(ModDependencyMapper.ToDto).ToList(),
+        License = metadata.License,
         Tags = metadata.Tags.ToList(),
+        Status = MetadataEnumMapper.ToDto(metadata.Status),
+        SupersededBy = metadata.SupersededBy,
+        Links = metadata.Links.ToDictionary(p => p.Key, p => p.Value),
+        Releases = metadata.Releases is null ? null : ReleaseSourceMapper.ToDto(metadata.Releases),
+        GameMin = metadata.GameMin,
+        GameMax = metadata.GameMax,
+        Os = metadata.Os?.ToList(),
+        Loader = metadata.Loader is null ? null : LoaderRequirementMapper.ToDto(metadata.Loader),
+        Dependencies = metadata.Dependencies.Select(ModDependencyMapper.ToDto).ToList(),
+        Install = metadata.Install is null ? null : InstallDescriptorMapper.ToDto(metadata.Install),
+        Provides = metadata.Provides is null ? null : LoaderProvidesMapper.ToDto(metadata.Provides),
     };
 
-    public static ModMetadata FromDto(ModMetadataDto dto) => new(
-        dto.ModId,
-        dto.Source,
-        dto.Name,
-        dto.Author,
-        ModVersion.Parse(dto.Version),
-        GameVersion.Parse(dto.BuiltForGameVersion),
-        dto.Description,
-        dto.ReleasedAt,
-        dto.FileSizeBytes,
-        dto.Dependencies.Select(ModDependencyMapper.FromDto).ToList(),
-        dto.Tags,
-        dto.HomepageUrl,
-        dto.ChangeLog);
+    public static ModMetadata FromDto(ModMetadataDto dto)
+    {
+        if (dto.SpecVersion < 1)
+            throw new FormatException(dto.SpecVersion == 0
+                ? "The metadata file predates the metadata model (no spec version)."
+                : $"The metadata file carries an invalid spec version ({dto.SpecVersion}).");
+
+        return new ModMetadata(
+        specVersion: dto.SpecVersion,
+        modId: dto.ModId,
+        source: dto.Source,
+        name: dto.Name,
+        authors: dto.Authors,
+        abstractText: dto.Abstract,
+        license: dto.License,
+        links: dto.Links,
+        gameMin: dto.GameMin,
+        type: MetadataEnumMapper.ParseContentType(dto.Type),
+        tags: dto.Tags,
+        description: dto.Description,
+        status: dto.Status is null ? ModStatus.Active : MetadataEnumMapper.ParseModStatus(dto.Status),
+        supersededBy: dto.SupersededBy,
+        releases: dto.Releases is null ? null : ReleaseSourceMapper.FromDto(dto.Releases),
+        gameMax: dto.GameMax,
+        os: dto.Os,
+        loader: dto.Loader is null ? null : LoaderRequirementMapper.FromDto(dto.Loader),
+        dependencies: dto.Dependencies.Select(ModDependencyMapper.FromDto).ToList(),
+        install: dto.Install is null ? null : InstallDescriptorMapper.FromDto(dto.Install),
+        provides: dto.Provides is null ? null : LoaderProvidesMapper.FromDto(dto.Provides));
+    }
 }

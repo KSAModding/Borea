@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Stands in for a file that is not the game. -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <FileVersion>1.0.0.0</FileVersion>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+</Project>

@@ -43,6 +43,20 @@ public sealed class FileModFavoritesRepositoryTests : IDisposable
     }
 
     [Fact]
+    public async Task Favorites_CompareIdsCaseInsensitively()
+    {
+        await _repository.AddFavoriteAsync("MyMod");
+
+        Assert.True(await _repository.IsFavoriteAsync("mymod"));
+
+        await _repository.AddFavoriteAsync("mymod");
+        Assert.Single(await _repository.GetFavoriteModIdsAsync());
+
+        await _repository.RemoveFavoriteAsync("MYMOD");
+        Assert.False(await _repository.IsFavoriteAsync("MyMod"));
+    }
+
+    [Fact]
     public async Task RemoveFavoriteAsync_RemovesOnlyTheGivenMod()
     {
         await _repository.AddFavoriteAsync("mod-a");

@@ -1,37 +1,115 @@
 ﻿using Borea.Core.Mods;
+using System.Collections.ObjectModel;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Borea.Core.Dependencies;
 
 /// <summary>
-/// A single dependency requirement declared by a mod, e.g. "requires CoolLib >=1.2.0".
-/// A <see cref="ModMetadata"/> holds a list of these for everything it depends on.
+/// One dependency entry: a mod id with optional inclusive bounds, or an any_of set of alternatives.
 /// </summary>
 public sealed class ModDependency
 {
-    /// <summary>The <see cref="ModMetadata.ModId"/> of the required mod.</summary>
-    public string ModId { get; }
-
-    /// <summary>The version constraint the installed dependency must satisfy.</summary>
-    public VersionRange RequiredVersion { get; }
+    /// <summary>
+    /// The ID of the mod this entry refers to. Null when this is an any_of entry.
+    /// </summary>
+    public string? ModId { get; }
 
     /// <summary>
-    /// If true, this dependency is a "soft" requirement — the depending mod integrates
-    /// with it when present but will still load without it. Resolution should not
-    /// auto-install or block on optional dependencies the way it does for required ones.
+    /// The kind of dependency.
     /// </summary>
-    public bool IsOptional { get; }
+    public ModDependencyKind Kind { get; }
 
-    public ModDependency(string modId, VersionRange requiredVersion, bool isOptional = false)
+    /// <summary>
+    /// Minimum version, inclusive. For conflict entries the bounds describe the conflicting range.
+    /// </summary>
+    public ModVersion? MinVersion { get; }
+
+    /// <summary>
+    /// Maximum version, inclusive. Absent means open.
+    /// </summary>
+    public ModVersion? MaxVersion { get; }
+
+    /// <summary>
+    /// Alternatives of an any_of entry, satisfied by any one of them. Null for a single-id entry.
+    /// </summary>
+    public IReadOnlyList<ModDependencyAlternative>? AnyOf { get; }
+
+    /// <summary>
+    /// True for an any_of entry.
+    /// </summary>
+    [MemberNotNullWhen(true, nameof(AnyOf))]
+    [MemberNotNullWhen(false, nameof(ModId))]
+    public bool IsAnyOf => AnyOf is not null;
+
+    /// <summary>
+    /// Where the entry came from in a generated release file, null in authored metadata.
+    /// </summary>
+    public MetadataSource? Source { get; }
+
+    public ModDependency(string modId, ModDependencyKind kind, ModVersion? minVersion = null, ModVersion? maxVersion = null, MetadataSource? source = null)
     {
-        if (string.IsNullOrWhiteSpace(modId))
-        {
-            throw new ArgumentException("Dependency mod id cannot be empty.", nameof(modId));
-        }
+        ModIds.Validate(modId, nameof(modId));
+
+        if (minVersion is { } min && maxVersion is { } max && max.CompareTo(min) < 0)
+            throw new ArgumentOutOfRangeException(nameof(maxVersion), "The maximum version cannot be below the minimum.");
 
         ModId = modId;
-        RequiredVersion = requiredVersion ?? throw new ArgumentNullException(nameof(requiredVersion));
-        IsOptional = isOptional;
+        Kind = kind;
+        MinVersion = minVersion;
+        MaxVersion = maxVersion;
+        Source = source;
     }
 
-    public override string ToString() => IsOptional ? $"{ModId} {RequiredVersion} (optional)" : $"{ModId} {RequiredVersion}";
+    private ModDependency(ModDependencyKind kind, IReadOnlyList<ModDependencyAlternative> alternatives, MetadataSource? source)
+    {
+        Kind = kind;
+        AnyOf = alternatives;
+        Source = source;
+    }
+
+    /// <summary>
+    /// Creates an any_of entry, satisfied by any one of the given alternatives.
+    /// </summary>
+    public static ModDependency OfAlternatives(ModDependencyKind kind, IReadOnlyList<ModDependencyAlternative> alternatives, MetadataSource? source = null)
+    {
+        if (kind is not (ModDependencyKind.Required or ModDependencyKind.Recommends))
+            throw new ArgumentException("An any_of entry is only valid with kind required or recommends.", nameof(kind));
+
+        if (alternatives is null || alternatives.Count == 0)
+            throw new ArgumentException("An any_of entry needs at least one alternative.", nameof(alternatives));
+
+        return new ModDependency(kind, new ReadOnlyCollection<ModDependencyAlternative>(alternatives.ToArray()), source);
+    }
+
+    /// <summary>
+    /// Whether the version lies within the inclusive bounds. Throws for any_of entries.
+    /// </summary>
+    public bool BoundsContain(ModVersion version)
+    {
+        if (IsAnyOf)
+            throw new InvalidOperationException("An any_of entry has no bounds of its own; evaluate its alternatives.");
+
+        if (MinVersion is { } min && version.CompareTo(min) < 0)
+            return false;
+
+        if (MaxVersion is { } max && version.CompareTo(max) > 0)
+            return false;
+
+        return true;
+    }
+
+    public override string ToString()
+    {
+        if (AnyOf is not null)
+            return $"{Kind} dependency on any of [{string.Join(", ", AnyOf.Select(a => a.ModId))}]";
+
+        string versionRange = (MinVersion, MaxVersion) switch
+        {
+            (null, null) => "",
+            (var min, null) => $" >= {min}",
+            (null, var max) => $" <= {max}",
+            (var min, var max) => $" >= {min} <= {max}"
+        };
+        return $"{Kind} dependency on mod '{ModId}'{versionRange}";
+    }
 }

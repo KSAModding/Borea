@@ -26,16 +26,22 @@ public sealed class FileBoreaSettingsRepositoryTests : IDisposable
     }
 
     [Fact]
-    public async Task SaveThenGet_RoundTripsBothPaths()
+    public async Task SaveThenGet_RoundTripsTheGameAndTheLoaders()
     {
-        var settings = new BoreaSettings(@"C:\Games\KSA", @"C:\Games\StarMap");
+        var settings = new BoreaSettings(@"C:\Games\KSA", new Dictionary<string, string>
+        {
+            ["StarMap"] = @"C:\Games\StarMap",
+            ["Cheese-Loader"] = @"C:\Games\Cheese",
+        });
 
         await _repository.SaveAsync(settings);
         var reloaded = await _repository.GetAsync();
 
         Assert.NotNull(reloaded);
         Assert.Equal(@"C:\Games\KSA", reloaded!.GameDirectoryPath);
-        Assert.Equal(@"C:\Games\StarMap", reloaded.StarMapDirectoryPath);
+        Assert.Equal(2, reloaded.LoaderDirectoryPaths.Count);
+        Assert.Equal(@"C:\Games\StarMap", reloaded.LoaderDirectoryPaths["StarMap"]);
+        Assert.Equal(@"C:\Games\Cheese", reloaded.LoaderDirectoryPaths["Cheese-Loader"]);
     }
 
     [Fact]
@@ -43,38 +49,61 @@ public sealed class FileBoreaSettingsRepositoryTests : IDisposable
     {
         // Confirms the "installed one, not the other" scenario this whole
         // nullable design was built for actually persists correctly.
-        var settings = new BoreaSettings(@"C:\Games\KSA", null);
+        var settings = new BoreaSettings(@"C:\Games\KSA");
 
         await _repository.SaveAsync(settings);
         var reloaded = await _repository.GetAsync();
 
         Assert.Equal(@"C:\Games\KSA", reloaded!.GameDirectoryPath);
-        Assert.Null(reloaded.StarMapDirectoryPath);
+        Assert.Empty(reloaded.LoaderDirectoryPaths);
     }
 
     [Fact]
-    public async Task SaveThenGet_RoundTripsPartialSettings_StarMapOnly()
+    public async Task SaveThenGet_RoundTripsPartialSettings_LoaderOnly()
     {
-        var settings = new BoreaSettings(null, @"C:\Games\StarMap");
+        var settings = new BoreaSettings(null, new Dictionary<string, string> { ["StarMap"] = @"C:\Games\StarMap" });
 
         await _repository.SaveAsync(settings);
         var reloaded = await _repository.GetAsync();
 
         Assert.Null(reloaded!.GameDirectoryPath);
-        Assert.Equal(@"C:\Games\StarMap", reloaded.StarMapDirectoryPath);
+        Assert.Equal(@"C:\Games\StarMap", reloaded.LoaderDirectoryPaths["StarMap"]);
     }
 
     [Fact]
-    public async Task SaveThenGet_RoundTripsBothNull()
+    public async Task SaveThenGet_RoundTripsNothingSet()
     {
-        var settings = new BoreaSettings(null, null);
+        var settings = new BoreaSettings(null);
 
         await _repository.SaveAsync(settings);
         var reloaded = await _repository.GetAsync();
 
-        Assert.NotNull(reloaded); // Distinct from "never saved" (null) — a file exists, both fields just happen to be empty.
+        Assert.NotNull(reloaded); // Distinct from "never saved" (null): a file exists, it just carries nothing.
         Assert.Null(reloaded!.GameDirectoryPath);
-        Assert.Null(reloaded.StarMapDirectoryPath);
+        Assert.Empty(reloaded.LoaderDirectoryPaths);
+    }
+
+    [Fact]
+    public async Task SaveAsync_NoLoaders_WritesNoTable()
+    {
+        await _repository.SaveAsync(new BoreaSettings(@"C:\Games\KSA"));
+
+        var text = await File.ReadAllTextAsync(_pathProvider.GetBoreaSettingsPath());
+
+        Assert.DoesNotContain("LoaderDirectoryPaths", text);
+    }
+
+    [Fact]
+    public async Task GetAsync_LoaderIdsDifferingOnlyInCase_IsRejected()
+    {
+        Directory.CreateDirectory(_tempRoot);
+        await File.WriteAllTextAsync(_pathProvider.GetBoreaSettingsPath(), """
+            [LoaderDirectoryPaths]
+            StarMap = 'C:\Games\StarMap'
+            starmap = 'C:\Games\Other'
+            """);
+
+        await Assert.ThrowsAsync<ArgumentException>(() => _repository.GetAsync());
     }
 
     [Fact]

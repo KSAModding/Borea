@@ -93,6 +93,26 @@ public sealed class InstanceTests
     }
 
     [Fact]
+    public void AddMod_DuplicateModIdDifferingOnlyInCase_ThrowsInvalidOperationException()
+    {
+        var instance = new Instance("Test", InstanceSource.Custom.Value);
+        instance.AddMod(TestFixtures.SampleInstalledMod("dup-mod"));
+
+        Assert.Throws<InvalidOperationException>(() =>
+            instance.AddMod(TestFixtures.SampleInstalledMod("Dup-Mod")));
+    }
+
+    [Fact]
+    public void RemoveMod_IdDifferingOnlyInCase_RemovesTheMod()
+    {
+        var instance = new Instance("Test", InstanceSource.Custom.Value);
+        instance.AddMod(TestFixtures.SampleInstalledMod("mod-a"));
+
+        Assert.True(instance.RemoveMod("Mod-A"));
+        Assert.Empty(instance.Mods);
+    }
+
+    [Fact]
     public void AddMod_Null_ThrowsArgumentNullException()
     {
         var instance = new Instance("Test", InstanceSource.Custom.Value);

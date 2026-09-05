@@ -53,6 +53,20 @@ public sealed class SpaceDockResolverTests
     }
 
     [Fact]
+    public void TryResolve_ComparesIdsCaseInsensitively()
+    {
+        // Ids compare case-insensitively everywhere (ModIds.Comparer), so a
+        // lookup must not miss over casing.
+        var resolver = new SpaceDockResolver();
+
+        resolver.Register("MyMod", 42);
+        var success = resolver.TryResolve("mymod", out var spaceDockId);
+
+        Assert.True(success);
+        Assert.Equal(42, spaceDockId);
+    }
+
+    [Fact]
     public void MultipleMods_ResolveIndependently()
     {
         var resolver = new SpaceDockResolver();

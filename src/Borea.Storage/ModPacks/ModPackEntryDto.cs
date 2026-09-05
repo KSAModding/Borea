@@ -2,6 +2,6 @@
 
 public sealed class ModPackEntryDto
 {
-    public string ModId { get; set; } = string.Empty;
+    public string ContentId { get; set; } = string.Empty;
     public string Version { get; set; } = string.Empty;
 }

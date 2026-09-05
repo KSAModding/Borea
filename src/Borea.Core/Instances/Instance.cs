@@ -53,7 +53,7 @@ public sealed class Instance
         IsFavorite = isFavorite;
 
         var duplicateId = _mods
-            .GroupBy(m => m.ModId, StringComparer.Ordinal)
+            .GroupBy(m => m.ModId, ModIds.Comparer)
             .FirstOrDefault(g => g.Count() > 1)?.Key;
 
         if (duplicateId is not null)
@@ -73,7 +73,7 @@ public sealed class Instance
         if (mod is null)
             throw new ArgumentNullException(nameof(mod));
 
-        if (_mods.Any(m => string.Equals(m.ModId, mod.ModId, StringComparison.Ordinal)))
+        if (_mods.Any(m => ModIds.Equals(m.ModId, mod.ModId)))
             throw new InvalidOperationException($"Mod '{mod.ModId}' is already installed in this instance.");
 
         _mods.Add(mod);
@@ -84,7 +84,7 @@ public sealed class Instance
         if (string.IsNullOrWhiteSpace(modId))
             throw new ArgumentException("Mod ID cannot be null or whitespace.", nameof(modId));
 
-        var existing = _mods.FirstOrDefault(m => string.Equals(m.ModId, modId, StringComparison.Ordinal));
+        var existing = _mods.FirstOrDefault(m => ModIds.Equals(m.ModId, modId));
         if (existing is null)
             return false;
 
