@@ -51,7 +51,7 @@
             <TextBlock Text="Library" HorizontalAlignment="Center" VerticalAlignment="Center" />
         </Panel>
         <Panel Grid.Column="1" Background="{Binding MainColor}" IsEnabled="{Binding CurrentWindowSettings}" IsVisible="{Binding CurrentWindowSettings}"> <!-- Settings  -->
-            <TextBlock Text="Settings" HorizontalAlignment="Center" VerticalAlignment="Center" />
+            <TextBlock Text="{Binding CurrentTheme}" HorizontalAlignment="Center" VerticalAlignment="Center" />
         </Panel>
     </Grid>
 
