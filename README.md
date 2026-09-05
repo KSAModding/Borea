@@ -66,6 +66,18 @@ gh attestation verify <file> --repo KSAModding/Borea \
   --signer-workflow KSAModding/Borea/.github/workflows/release.yml
 ```
 
+`Borea-<version>.cdx.json` is the software bill of materials, in CycloneDX JSON.
+It includes the NuGet packages Borea.App is built from, with version, license and hash.
+One list covers all four builds, so it holds the native asset packages of every platform.
+The same list is attested to each archive, and you can use this command to prove that it belongs to one.
+With `--format json`, the output includes the attested list.
+
+```sh
+gh attestation verify <archive> --repo KSAModding/Borea \
+  --signer-workflow KSAModding/Borea/.github/workflows/release.yml \
+  --predicate-type https://cyclonedx.org/bom
+```
+
 # Credits
 - [MrJeranimo](https://github.com/MrJeranimo) - Original Creator and Developer
 
