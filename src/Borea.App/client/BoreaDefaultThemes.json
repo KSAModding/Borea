@@ -3,18 +3,21 @@
         "Defaults - Blue",
         "#248cc0",
         "#26556c",
-        "#2029d2"
+        "#2029d2",
+        "#000000"
     ],
     "DefaultLight": [
         "Defaults - Light",
         "#ffffff",
         "#f0f0f0",
-        "#e0e0e0"
+        "#e0e0e0",
+        "#000000"
     ],
     "DefaultDark": [
         "Defaults - Dark",
         "#000000",
         "#1a1a1a",
-        "#333333"
+        "#333333",
+        "#ffffff"
     ]
 }
