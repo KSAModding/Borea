@@ -78,6 +78,8 @@ public partial class MainViewModel : ViewModelBase
     [RelayCommand]
     public void GetThemes() // used to get the themes from the json files
     {
+        Themes = new Dictionary<string, string[]>();
+        ThemeNames = new string[] { "DefaultBlue", "DefaultLight", "DefaultDark" };
         string themesJson = File.ReadAllText("client/BoreaDefaultThemes.json");
         var themes = JsonSerializer.Deserialize<Dictionary<string, string[]>>(themesJson);
         if (themes != null)
@@ -105,10 +107,10 @@ public partial class MainViewModel : ViewModelBase
         if (Themes.ContainsKey(themeName))
         {
             CurrentTheme = themeName;
-            MainColor = Themes[themeName][1];
-            SecondaryColor = Themes[themeName][2];
-            GlobalPanelsColor = Themes[themeName][3];
-            TextColor = Themes[themeName][4];
+            MainColor = Themes[themeName][0];
+            SecondaryColor = Themes[themeName][1];
+            GlobalPanelsColor = Themes[themeName][2];
+            TextColor = Themes[themeName][3];
             var settings = new Dictionary<string, string>
             {
                 { "theme", themeName }
