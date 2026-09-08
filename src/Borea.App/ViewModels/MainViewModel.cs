@@ -3,6 +3,8 @@ using CommunityToolkit.Mvvm.Input;
 using System.Collections.Generic;
 using System.Text.Json;
 using System.IO;
+using System.Linq;
+using CommunityToolkit.Mvvm;
 
 namespace Borea.App.ViewModels;
 
@@ -68,6 +70,8 @@ public partial class MainViewModel : ViewModelBase
 
     //themes
     [ObservableProperty]
+    private string[] _themeNames = new string[] { "DefaultBlue", "DefaultLight", "DefaultDark" };
+    [ObservableProperty]
     private Dictionary<string, string[]> _themes = new Dictionary<string, string[]>();
     [ObservableProperty]
     private string _currentTheme = "DefaultBlue";
@@ -88,6 +92,7 @@ public partial class MainViewModel : ViewModelBase
             foreach (var kvp in themes2)
             {
                 Themes.Add(kvp.Key, kvp.Value);
+                ThemeNames = ThemeNames.Concat(new string[] { kvp.Key }).ToArray();
             }
         }
         string settingsJson = File.ReadAllText("client/Settings.json");
@@ -111,5 +116,9 @@ public partial class MainViewModel : ViewModelBase
             string settingsJson = JsonSerializer.Serialize(settings);
             File.WriteAllText("client/Settings.json", settingsJson);
         }
+    }
+    partial void OnCurrentThemeChanged(string value)
+    {
+        SetTheme(value);
     }
 }

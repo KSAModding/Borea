@@ -51,6 +51,7 @@
             <TextBlock Text="Library" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{Binding TextColor}" />
         </Panel>
         <Panel Grid.Column="1" Background="{Binding MainColor}" IsEnabled="{Binding CurrentWindowSettings}" IsVisible="{Binding CurrentWindowSettings}"> <!-- Settings  -->
+            <ComboBox ItemsSource="{Binding ThemeNames}" SelectedItem="{Binding CurrentTheme}" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,5,0,5" Foreground="{Binding TextColor}" />
             <TextBlock Text="{Binding CurrentTheme}" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{Binding TextColor}" />
         </Panel>
     </Grid>
