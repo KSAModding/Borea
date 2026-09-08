@@ -17,10 +17,12 @@ public partial class MainViewModel : ViewModelBase
     [ObservableProperty]
     private string _globalPanelsColor = "#2029d2";
     [ObservableProperty]
+    private string _textColor = "#000000";
 
 
 
     //windows
+    [ObservableProperty]
     private bool _currentWindowHome = true;
     [ObservableProperty]
     private bool _currentWindowDiscover = false;
@@ -85,15 +87,29 @@ public partial class MainViewModel : ViewModelBase
         {
             foreach (var kvp in themes2)
             {
-                Themes.TryAdd(kvp.Key, kvp.Value);
+                Themes.Add(kvp.Key, kvp.Value);
             }
         }
         string settingsJson = File.ReadAllText("client/Settings.json");
         var settings = JsonSerializer.Deserialize<Dictionary<string, string>>(settingsJson);
         CurrentTheme = settings != null && settings.ContainsKey("theme") ? settings["theme"] : "Error";
-
-
-
+        SetTheme(CurrentTheme); // set the theme to the current theme
     }
-
+    public void SetTheme(string themeName) // used to set the theme
+    {
+        if (Themes.ContainsKey(themeName))
+        {
+            CurrentTheme = themeName;
+            MainColor = Themes[themeName][1];
+            SecondaryColor = Themes[themeName][2];
+            GlobalPanelsColor = Themes[themeName][3];
+            TextColor = Themes[themeName][4];
+            var settings = new Dictionary<string, string>
+            {
+                { "theme", themeName }
+            };
+            string settingsJson = JsonSerializer.Serialize(settings);
+            File.WriteAllText("client/Settings.json", settingsJson);
+        }
+    }
 }
