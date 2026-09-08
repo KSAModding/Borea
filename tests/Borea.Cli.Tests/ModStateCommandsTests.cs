@@ -11,6 +11,7 @@ public sealed class ModStateCommandsTests : IDisposable
     public async Task Enable_WithInstance_MakesTheModActive()
     {
         var instanceId = await CreateAsync("Alpha");
+        CreateModFolder(instanceId, "SomeMod");
 
         var run = await _host.RunAsync("enable", "SomeMod", "--instance", "Alpha");
 
@@ -24,6 +25,7 @@ public sealed class ModStateCommandsTests : IDisposable
     {
         await CreateAsync("Other");
         var alpha = await CreateAsync("Alpha");
+        CreateModFolder(alpha, "SomeMod");
         await _host.RunAsync("instance", "activate", "Alpha");
 
         var run = await _host.RunAsync("enable", "SomeMod");
@@ -31,6 +33,48 @@ public sealed class ModStateCommandsTests : IDisposable
         Assert.Equal(0, run.ExitCode);
         Assert.Contains("'Alpha'", run.Output);
         Assert.True(await ModState.IsActiveAsync(alpha, "SomeMod"));
+    }
+
+    [Fact]
+    public async Task Enable_ModThatIsNotInstalled_Fails()
+    {
+        await CreateAsync("Alpha");
+
+        var run = await _host.RunAsync("enable", "SomeMod", "--instance", "Alpha");
+
+        Assert.Equal(1, run.ExitCode);
+        Assert.Contains("no mod folder named 'SomeMod'", run.Error);
+    }
+
+    [Fact]
+    public async Task Enable_ModWhoseFolderIsGone_StillFlipsItsEntry()
+    {
+        var instanceId = await CreateAsync("Alpha");
+        var manifest = _host.Paths.GetInstanceManifestPath(instanceId);
+        await File.WriteAllTextAsync(manifest, """
+            [[mods]]
+            id="SomeMod"
+            enabled = false
+            """);
+
+        var run = await _host.RunAsync("enable", "SomeMod", "--instance", "Alpha");
+
+        Assert.Equal(0, run.ExitCode);
+        Assert.True(await ModState.IsActiveAsync(instanceId, "SomeMod"));
+    }
+
+    [Fact]
+    public async Task Enable_AlreadyEnabled_SaysSoAndChangesNothing()
+    {
+        var instanceId = await CreateAsync("Alpha");
+        CreateModFolder(instanceId, "SomeMod");
+        await _host.RunAsync("enable", "SomeMod", "--instance", "Alpha");
+
+        var run = await _host.RunAsync("enable", "SomeMod", "--instance", "Alpha");
+
+        Assert.Equal(0, run.ExitCode);
+        Assert.Contains("Enabled SomeMod in 'Alpha'.", run.Output);
+        Assert.Single(await ModState.GetEntriesAsync(instanceId));
     }
 
     [Fact]
@@ -71,9 +115,11 @@ public sealed class ModStateCommandsTests : IDisposable
     {
         var instanceId = await CreateAsync("Alpha");
         await _host.RunAsync("instance", "activate", "Alpha");
-        await ModState.SetActiveAsync(instanceId, "ModA");
-        await ModState.SetActiveAsync(instanceId, "ModB");
-        await ModState.SetInactiveAsync(instanceId, "ModB");
+        CreateModFolder(instanceId, "ModA");
+        CreateModFolder(instanceId, "ModB");
+        CreateModFolder(instanceId, "ModC");
+        await ModState.AddEntryAsync(instanceId, "ModA", enabled: true);
+        await ModState.AddEntryAsync(instanceId, "ModB", enabled: false);
 
         var run = await _host.RunAsync("enable", "ModC");
 
@@ -87,6 +133,7 @@ public sealed class ModStateCommandsTests : IDisposable
     public async Task Disable_MakesTheModInactive()
     {
         var instanceId = await CreateAsync("Alpha");
+        CreateModFolder(instanceId, "SomeMod");
         await _host.RunAsync("enable", "SomeMod", "--instance", "Alpha");
 
         var run = await _host.RunAsync("disable", "somemod", "--instance", "alpha");
@@ -137,6 +184,13 @@ public sealed class ModStateCommandsTests : IDisposable
 
         Assert.Equal(2, run.ExitCode);
         Assert.Contains("--instance", run.Error);
+    }
+
+    private void CreateModFolder(Guid instanceId, string folderName)
+    {
+        var modFolder = Path.Combine(_host.Paths.GetInstanceModsFolder(instanceId), folderName);
+        Directory.CreateDirectory(modFolder);
+        File.WriteAllText(Path.Combine(modFolder, "mod.toml"), $"name = \"{folderName}\"\n");
     }
 
     private FileModStateRepository ModState => new(_host.Paths);

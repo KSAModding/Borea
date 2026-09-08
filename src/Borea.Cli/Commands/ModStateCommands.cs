@@ -1,12 +1,13 @@
 using System.CommandLine;
+using Borea.Core.Mods;
+using Borea.Core.State;
 
 namespace Borea.Cli.Commands;
 
 /// <summary>
 /// <c>borea enable</c> and <c>borea disable</c>: whether the game loads a mod.
-/// The manifest is the game's file, and the game names a mod by its folder, so
-/// the id is any text and not a content id: a folder the user made by hand is
-/// enabled and disabled like an installed one.
+/// The manifest is the game's file, and the game names a mod by its folder, so a
+/// folder the user made by hand is enabled and disabled like an installed one.
 /// </summary>
 internal static class ModStateCommands
 {
@@ -25,9 +26,21 @@ internal static class ModStateCommands
             var id = parseResult.GetRequiredValue(modId);
             var target = await InstanceLookup.ResolveTargetAsync(cli.Instances, parseResult.GetValue(instance)).ConfigureAwait(false);
 
-            // The repository does not say whether the entry changed, so the
-            // message states the end state.
-            await cli.ModState.SetActiveAsync(target.InstanceId, id, ct).ConfigureAwait(false);
+            var flipped = await cli.ModState.SetActiveAsync(target.InstanceId, id, ct).ConfigureAwait(false);
+
+            // Nothing flipped means the manifest already lists the mod as enabled,
+            // or does not list it at all. The second case writes an entry, and
+            // it is also the only one that needs the files, so a mod whose folder
+            // the user deleted can still be enabled through its entry.
+            if (!flipped && !await cli.ModState.IsActiveAsync(target.InstanceId, id, ct).ConfigureAwait(false))
+            {
+                if (!ModIds.IsValid(id))
+                    throw new InvalidOperationException($"'{id}' cannot name a mod folder, so no entry can be written for it.");
+
+                var added = await cli.ModState.AddEntryAsync(target.InstanceId, id, enabled: true, ct).ConfigureAwait(false);
+                if (added is ModEntryAddResult.NotOnDisk)
+                    throw new InvalidOperationException($"'{target.Name}' has no mod folder named '{id}'.");
+            }
 
             output.WriteLine($"Enabled {id} in '{target.Name}'.");
             return ExitCodes.Done;
