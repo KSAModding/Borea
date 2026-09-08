@@ -28,6 +28,19 @@ public sealed class TomlFileStoreTests : IDisposable
     }
 
     [Fact]
+    public async Task ReadAsync_FileThatIsNotToml_ThrowsNamingThePath()
+    {
+        var path = Path.Combine(_tempRoot, "broken.toml");
+        Directory.CreateDirectory(_tempRoot);
+        await File.WriteAllTextAsync(path, "Name = \n");
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => TomlFileStore.ReadAsync<SampleDto>(path));
+
+        Assert.Contains(path, exception.Message);
+        Assert.NotNull(exception.InnerException);
+    }
+
+    [Fact]
     public async Task WriteAsync_CreatesContainingDirectory()
     {
         var path = Path.Combine(_tempRoot, "nested", "deeper", "file.toml");
