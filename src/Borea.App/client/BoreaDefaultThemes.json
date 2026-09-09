@@ -1,17 +1,17 @@
 {
-    "DefaultBlue": [
+    "Borealis": [
         "#248cc0",
         "#26556c",
         "#2029d2",
         "#ffffff"
     ],
-    "DefaultLight": [
+    "Light": [
         "#ffffff",
         "#f0f0f0",
         "#e0e0e0",
         "#000000"
     ],
-    "DefaultDark": [
+    "Dark": [
         "#000000",
         "#1a1a1a",
         "#333333",
