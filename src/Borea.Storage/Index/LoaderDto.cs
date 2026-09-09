@@ -5,7 +5,7 @@ namespace Borea.Storage.Index;
 public sealed class LoaderDto
 {
     [JsonPropertyName("id")]
-    public required int Id { get; set; }
+    public required string Id { get; set; }
 
     [JsonPropertyName("min")]
     public required string Min { get; set; }

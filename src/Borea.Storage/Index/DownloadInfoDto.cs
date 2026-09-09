@@ -11,8 +11,11 @@ public sealed class DownloadInfoDto
     public required string SHA256 { get; set; }
 
     [JsonPropertyName("size")]
-    public required int Size { get; set; }
+    public required long Size { get; set; }
 
     [JsonPropertyName("content_type")]
     public required string ContentType { get; set; }
+
+    [JsonPropertyName("mirrors")]
+    public List<string>? Mirrors { get; set; }
 }
