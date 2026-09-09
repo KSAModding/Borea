@@ -44,9 +44,9 @@ public sealed class AuthoredDto
     [JsonPropertyName("links")]
     public required LinksDto Links { get; set; }
 
-    // Fails silently as a broken [releases] shouldn't break the whole Authored section
+    // Fails loudly if releases is declared but can't be parsed
     [JsonPropertyName("releases")]
-    public JsonElement? Releases { get; set; }
+    public ReleasesInfoDto? Releases { get; set; }
 
     // Fails loudly if a loader is declared but can't be parsed
     [JsonPropertyName("loader")]
@@ -55,5 +55,11 @@ public sealed class AuthoredDto
     // Fails loudly if dependencies are declared but can't be parsed
     [JsonPropertyName("dependencies")]
     public List<DependencyEntryDto>? Dependencies { get; set; }
+
+    [JsonPropertyName("install")]
+    public InstallInfoDto? Install { get; set; }
+
+    [JsonPropertyName("provides")]
+    public ProvidesDto? Provides { get; set; }
 }
 

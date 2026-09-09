@@ -1,4 +1,5 @@
-﻿using System.Text.Json.Serialization;
+﻿using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace Borea.Storage.Index;
 
@@ -19,14 +20,20 @@ public sealed class ReleasesEntryDto
     [JsonPropertyName("version_scheme")]
     public required string VersionScheme { get; set; }
 
+    [JsonPropertyName("release_status")]
+    public required string ReleaseStatus { get; set; }
+
     [JsonPropertyName("release_date")]
-    public string? ReleaseDate { get; set; }
+    public required string ReleaseDate { get; set; }
 
     [JsonPropertyName("game_min")]
     public required string GameMin { get; set; }
 
     [JsonPropertyName("game_min_revision")]
-    public int? GameMinRevision { get; set; }
+    public required int GameMinRevision { get; set; }
+
+    [JsonPropertyName("os")]
+    public List<string>? Os { get; set; }
 
     [JsonPropertyName("game_max")]
     public string? GameMax { get; set; }
@@ -35,25 +42,27 @@ public sealed class ReleasesEntryDto
     public int? GameMaxRevision { get; set; }
 
     [JsonPropertyName("download")]
-    public DownloadInfoDto? Download { get; set; }
+    public required DownloadInfoDto Download { get; set; }
 
     [JsonPropertyName("install_size")]
-    public int? InstallSize { get; set; }
+    public required long InstallSize { get; set; }
 
     [JsonPropertyName("install")]
     public InstallInfoDto? Install { get; set; }
 
-    [JsonPropertyName("loeader")]
+    [JsonPropertyName("loader")]
     public LoaderDto? Loader { get; set; }
 
     [JsonPropertyName("dependencies")]
-    public List<DependencyEntryDto>? Dependencies { get; set; }
+    public required List<DependencyEntryDto> Dependencies { get; set; }
 
     [JsonPropertyName("changelog")]
     public string? Changelog { get; set; }
 
+    // Fails quietly as an incomplete listing in a release
+    // will cause a fallback to the authored listing
     [JsonPropertyName("listing")]
-    public required ReleaseListingDto Listing { get; set; }
+    public JsonElement? Listing { get; set; }
 
     [JsonPropertyName("yanked")]
     public bool? Yanked { get; set; }

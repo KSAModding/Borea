@@ -8,6 +8,7 @@ public sealed class PackEntryDto
     [JsonPropertyName("id")]
     public required string Id { get; set; }
 
+    // Uses PackVersionDto
     [JsonPropertyName("versions")]
     public List<JsonElement>? Versions { get; set; }
 
