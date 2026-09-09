@@ -1,5 +1,6 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Avalonia.Controls.Primitives;
 using System.Collections.Generic;
 using System.Text.Json;
 using System.IO;
@@ -19,7 +20,7 @@ public partial class MainViewModel : ViewModelBase
     [ObservableProperty]
     private string _globalPanelsColor = "#2029d2";
     [ObservableProperty]
-    private string _textColor = "#000000";
+    private string _textColor = "#ffffff";
 
 
 
@@ -70,16 +71,16 @@ public partial class MainViewModel : ViewModelBase
 
     //themes
     [ObservableProperty]
-    private string[] _themeNames = new string[] { "DefaultBlue", "DefaultLight", "DefaultDark" };
+    private string[] _themeNames = new string[] { "Borealis", "Light", "Dark" };
     [ObservableProperty]
     private Dictionary<string, string[]> _themes = new Dictionary<string, string[]>();
     [ObservableProperty]
-    private string _currentTheme = "DefaultBlue";
+    private string _currentTheme = "Borealis";
     [RelayCommand]
     public void GetThemes() // used to get the themes from the json files
     {
         Themes = new Dictionary<string, string[]>();
-        ThemeNames = new string[] { "DefaultBlue", "DefaultLight", "DefaultDark" };
+        ThemeNames = new string[] { "Borealis", "Light", "Dark" };
         string themesJson = File.ReadAllText("client/BoreaDefaultThemes.json");
         var themes = JsonSerializer.Deserialize<Dictionary<string, string[]>>(themesJson);
         if (themes != null)
