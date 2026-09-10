@@ -14,6 +14,7 @@
     <Project Path="tests/Borea.Network.Tests/Borea.Network.Tests.csproj" />
     <Project Path="tests/Borea.Storage.Tests/Borea.Storage.Tests.csproj" />
     <Project Path="tests/Borea.Storage.Tests/Fixtures/GameVersionFixture/GameVersionFixture.csproj" />
+    <Project Path="tests/Borea.Storage.Tests/Fixtures/LoaderVersionFixture/LoaderVersionFixture.csproj" />
     <Project Path="tests/Borea.Storage.Tests/Fixtures/UnparseableVersionFixture/UnparseableVersionFixture.csproj" />
   </Folder>
 </Solution>
