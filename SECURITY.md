@@ -1,5 +1,8 @@
 # Security policy
 
+This policy covers vulnerabilities in [Borea](https://github.com/KSAModding/Borea) and its release process.
+Mod and index content problems use the separate reporting paths below.
+
 ## Report a vulnerability
 
 Report a vulnerability in Borea or its release process through [GitHub private vulnerability reporting](https://github.com/KSAModding/Borea/security/advisories/new).
@@ -10,9 +13,9 @@ Use the [public issue tracker](https://github.com/KSAModding/Borea/issues) for a
 
 ## Report content problems elsewhere
 
-A problem caused by an installed mod belongs in that mod's issue tracker or support channel.
-If a mod archive might be harmful, or if there is a problem with its index listing or release metadata, use the [content index takedown form](https://github.com/KSAModding/content-index/issues/new?template=takedown.yml).
-The index policy explains what the index can remove and what remains under the control of the release host.
+To report a problem caused by a mod, use that mod's repository or support channel.
+To report a harmful mod archive or a problem with an index listing or release metadata, use the [takedown form in the KSA content index repository](https://github.com/KSAModding/content-index/issues/new?template=takedown.yml).
+The [content index policy](https://github.com/KSAModding/content-index/blob/main/POLICY.md) explains what the index can remove and what remains under the control of the release host.
 
 ## What to expect
 
