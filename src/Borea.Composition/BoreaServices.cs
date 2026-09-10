@@ -9,6 +9,7 @@ using Borea.Core.ModPacks;
 using Borea.Core.Mods;
 using Borea.Core.Paths;
 using Borea.Core.Planning;
+using Borea.Core.Preferences;
 using Borea.Core.Settings;
 using Borea.Core.State;
 using Borea.Network.Downloads;
@@ -25,6 +26,7 @@ using Borea.Storage.ModLoaders;
 using Borea.Storage.ModPacks;
 using Borea.Storage.Mods;
 using Borea.Storage.Paths;
+using Borea.Storage.Preferences;
 using Borea.Storage.Settings;
 using Borea.Storage.State;
 
@@ -70,6 +72,8 @@ public sealed class BoreaServices : IDisposable
     public required IBoreaSettingsRepository SettingsRepository { get; init; }
 
     public required IGameDirectoryChanger GameDirectoryChanger { get; init; }
+
+    public required IAppPreferencesRepository AppPreferences { get; init; }
 
     public required IInstanceRepository Instances { get; init; }
 
@@ -216,6 +220,7 @@ public sealed class BoreaServices : IDisposable
             Paths = paths,
             SettingsRepository = settingsRepository,
             GameDirectoryChanger = new GameDirectoryChanger(settingsRepository, mods, loaderConfiguration),
+            AppPreferences = new FileAppPreferencesRepository(paths),
             Instances = instances,
             ModState = modState,
             ModFavorites = new FileModFavoritesRepository(paths),

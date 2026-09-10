@@ -16,6 +16,7 @@ using Borea.Storage.Index;
 using Borea.Storage.ModLoaders;
 using Borea.Storage.Mods;
 using Borea.Storage.Paths;
+using Borea.Storage.Preferences;
 using Borea.Storage.Settings;
 
 namespace Borea.Composition.Tests;
@@ -76,6 +77,7 @@ public sealed class BoreaServicesTests : IDisposable
         using var services = await BoreaServices.BuildAsync(_tempRoot);
 
         Assert.StartsWith(_tempRoot, services.Paths.GetBoreaSettingsPath());
+        Assert.StartsWith(_tempRoot, services.Paths.GetAppPreferencesPath());
         Assert.StartsWith(_tempRoot, services.Paths.GetInstancesRoot());
     }
 
@@ -326,6 +328,14 @@ public sealed class BoreaServicesTests : IDisposable
             () => services.GameDirectoryChanger.ChangeAsync(newGame));
         Assert.Equal(originalConfiguration, await File.ReadAllTextAsync(configurationPath));
         Assert.Equal(oldGame, (await services.SettingsRepository.GetAsync())!.GameDirectoryPath);
+    }
+
+    [Fact]
+    public async Task AppPreferences_IsTheFileRepository()
+    {
+        using var services = await BoreaServices.BuildAsync(_tempRoot);
+
+        Assert.IsType<FileAppPreferencesRepository>(services.AppPreferences);
     }
 
     [Fact]
