@@ -30,37 +30,42 @@
                     <RowDefinition Height="*" />
                 </Grid.RowDefinitions>
                 <Panel Grid.Row="0" Background="{Binding SecondaryColor}">
-                    <TextBlock Text="Logo Goes Here" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    <TextBlock Text="{Binding Localization.BrandLogoPlaceholder}" HorizontalAlignment="Center" VerticalAlignment="Center" />
                 </Panel>
                 <Panel Grid.Row="1" Background="{Binding GlobalPanelsColor}" Margin="20">
-                    <Button Content="Home" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,5,0,5" Command="{Binding SetMainWindowHome}" Foreground="{Binding TextColor}" />
-                    <Button Content="Library" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,55,0,55" Command="{Binding SetMainWindowLibrary}" Foreground="{Binding TextColor}" />
-                    <Button Content="Discover" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,105,0,105" Command="{Binding SetMainWindowDiscover}" Foreground="{Binding TextColor}"/> <!--All of these will eventually be replaced with images instead of text-->
-                    <Button Content="Settings" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,5,0,5" Command="{Binding SetMainWindowSettings}" Foreground="{Binding TextColor}" />
+                    <Button Content="{Binding Localization.NavigationHome}" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,5,0,5" Command="{Binding SetMainWindowHome}" Foreground="{Binding TextColor}" />
+                    <Button Content="{Binding Localization.NavigationLibrary}" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,55,0,55" Command="{Binding SetMainWindowLibrary}" Foreground="{Binding TextColor}" />
+                    <Button Content="{Binding Localization.NavigationDiscover}" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,105,0,105" Command="{Binding SetMainWindowDiscover}" Foreground="{Binding TextColor}"/> <!--All of these will eventually be replaced with images instead of text-->
+                    <Button Content="{Binding Localization.NavigationSettings}" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,5,0,5" Command="{Binding SetMainWindowSettings}" Foreground="{Binding TextColor}" />
                 </Panel>
             </Grid>
         </Panel>
 
         <Panel Grid.Column="1" Background="{Binding MainColor}" IsEnabled="{Binding CurrentWindowHome}" IsVisible="{Binding CurrentWindowHome}"> <!-- Home  -->
-            <TextBlock Text="Home" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{Binding TextColor}" />
+            <TextBlock Text="{Binding Localization.PageHomeHeading}" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{Binding TextColor}" />
         </Panel>
 
 
 
         <Panel Grid.Column="1" Background="{Binding MainColor}" IsEnabled="{Binding CurrentWindowDiscover}" IsVisible="{Binding CurrentWindowDiscover}"> <!-- Discover  -->
-            <TextBlock Text="Discover" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{Binding TextColor}" />
+            <TextBlock Text="{Binding Localization.PageDiscoverHeading}" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{Binding TextColor}" />
         </Panel>
 
 
 
         <Panel Grid.Column="1" Background="{Binding MainColor}" IsEnabled="{Binding CurrentWindowLibrary}" IsVisible="{Binding CurrentWindowLibrary}"> <!-- Library  -->
-            <TextBlock Text="Library" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{Binding TextColor}" />
+            <TextBlock Text="{Binding Localization.PageLibraryHeading}" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{Binding TextColor}" />
         </Panel>
 
 
 
         <Panel Grid.Column="1" Background="{Binding MainColor}" IsEnabled="{Binding CurrentWindowSettings}" IsVisible="{Binding CurrentWindowSettings}"> <!-- Settings  -->
-            <ComboBox ItemsSource="{Binding ThemeNames}" SelectedItem="{Binding CurrentTheme}" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,5,0,5" Foreground="{Binding TextColor}" />
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,5,0,5" Spacing="5">
+                <TextBlock Text="{Binding Localization.SettingsLanguageLabel}" Foreground="{Binding TextColor}" />
+                <ComboBox ItemsSource="{Binding Localization.SupportedCultures}" SelectedItem="{Binding Localization.SelectedCulture, Mode=TwoWay}" AutomationProperties.Name="{Binding Localization.SettingsLanguageLabel}" />
+                <TextBlock Text="{Binding Localization.SettingsThemeLabel}" Foreground="{Binding TextColor}" Margin="0,10,0,0" />
+                <ComboBox ItemsSource="{Binding ThemeNames}" SelectedItem="{Binding CurrentTheme}" Foreground="{Binding TextColor}" AutomationProperties.Name="{Binding Localization.SettingsThemeLabel}" />
+            </StackPanel>
             <TextBlock Text="{Binding CurrentTheme}" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{Binding TextColor}" />
         </Panel>
     </Grid>
