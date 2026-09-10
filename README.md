@@ -4,6 +4,9 @@ Borea is a cross-platform complete general content manager for Kitten Space Agen
 # Credits
 - [MrJeranimo](https://github.com/MrJeranimo) - Original Creator and Developer
 
+# Contributing translations
+You do not need to write C# to improve an existing translation. See the [localization guide](docs/localization.md) for instructions to correct text or propose a new language.
+
 # Repository Structure
 | Path | Description |
 | --- | --- |
