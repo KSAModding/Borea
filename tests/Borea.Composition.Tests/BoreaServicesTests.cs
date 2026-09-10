@@ -1,4 +1,5 @@
 using Borea.Core.Dependencies;
+using Borea.Core.ModLoaders;
 using Borea.Core.Mods;
 using Borea.Core.Settings;
 using Borea.Network.Index;
@@ -22,7 +23,7 @@ public sealed class BoreaServicesTests : IDisposable
         using var services = await BoreaServices.BuildAsync(_tempRoot);
 
         Assert.Null(services.Settings.GameDirectoryPath);
-        Assert.Empty(services.Settings.LoaderDirectoryPaths);
+        Assert.Empty(services.Settings.LoaderInstallations);
         Assert.Null(services.Paths.GetGameDirectoryPath());
         Assert.Null(services.Paths.GetLoaderDirectoryPath("StarMap"));
     }
@@ -38,7 +39,7 @@ public sealed class BoreaServicesTests : IDisposable
     [Fact]
     public async Task BuildAsync_SettingsNamingNoGame_KnowsTheLoaderOnly()
     {
-        await SaveAsync(new BoreaSettings(null, new Dictionary<string, string> { ["StarMap"] = StarMapPath }));
+        await SaveAsync(new BoreaSettings(null, LoaderAt(StarMapPath)));
 
         using var services = await BoreaServices.BuildAsync(_tempRoot);
 
@@ -49,7 +50,7 @@ public sealed class BoreaServicesTests : IDisposable
     [Fact]
     public async Task BuildAsync_FullSettings_KnowsTheGameAndTheLoader()
     {
-        await SaveAsync(new BoreaSettings(GamePath, new Dictionary<string, string> { ["StarMap"] = StarMapPath }));
+        await SaveAsync(new BoreaSettings(GamePath, LoaderAt(StarMapPath)));
 
         using var services = await BoreaServices.BuildAsync(_tempRoot);
 
@@ -74,9 +75,13 @@ public sealed class BoreaServicesTests : IDisposable
         // build must surface that instead of starting with empty settings.
         Directory.CreateDirectory(_tempRoot);
         await File.WriteAllTextAsync(SettingsPath, """
-            [LoaderDirectoryPaths]
-            StarMap = 'C:\Games\StarMap'
-            starmap = 'C:\Games\Other'
+            [LoaderInstallations.StarMap]
+            DirectoryPath = 'C:\Games\StarMap'
+            IsAdopted = true
+
+            [LoaderInstallations.starmap]
+            DirectoryPath = 'C:\Games\Other'
+            IsAdopted = true
             """);
 
         await Assert.ThrowsAsync<ArgumentException>(() => BoreaServices.BuildAsync(_tempRoot));
@@ -161,6 +166,11 @@ public sealed class BoreaServicesTests : IDisposable
         dependencies: Array.Empty<ModDependency>());
 
     private string SettingsPath => new GamePathProvider(gameDirectory: null, boreaRoot: _tempRoot).GetBoreaSettingsPath();
+
+    private static Dictionary<string, LoaderInstallation> LoaderAt(string path) => new()
+    {
+        ["StarMap"] = new LoaderInstallation(path, ModVersion.Parse("0.4.6"), "0.4.6.0", isAdopted: true),
+    };
 
     private Task SaveAsync(BoreaSettings settings)
         => new FileBoreaSettingsRepository(new GamePathProvider(gameDirectory: null, boreaRoot: _tempRoot)).SaveAsync(settings);

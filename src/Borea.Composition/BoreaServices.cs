@@ -114,7 +114,11 @@ public sealed class BoreaServices : IDisposable
 
         // every other service resolves its paths through the provider
         // built from those settings.
-        var paths = new GamePathProvider(settings.GameDirectoryPath, settings.LoaderDirectoryPaths, boreaRoot);
+        var loaderDirectories = settings.LoaderInstallations.ToDictionary(
+            pair => pair.Key,
+            pair => pair.Value.DirectoryPath,
+            ModIds.Comparer);
+        var paths = new GamePathProvider(settings.GameDirectoryPath, loaderDirectories, boreaRoot);
 
         // Network. Every service that talks to a remote host is built here on the
         // one client. Only the SpaceDock repository takes the resolver, because a

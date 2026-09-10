@@ -118,8 +118,16 @@ public sealed class FileLoaderInstallerTests : IDisposable
             ("StarMap.runtimeconfig.json", "{}"),
         }.Concat(extra).ToArray());
 
-    private Task SaveSettingsAsync(string? gameDirectory, IReadOnlyDictionary<string, string>? loaders = null) =>
+    private Task SaveSettingsAsync(string? gameDirectory, IReadOnlyDictionary<string, LoaderInstallation>? loaders = null) =>
         _settings.SaveAsync(new BoreaSettings(gameDirectory, loaders));
+
+    private static Dictionary<string, LoaderInstallation> LoaderAt(
+        string path,
+        string id = LoaderId,
+        bool isAdopted = false) => new()
+        {
+            [id] = new LoaderInstallation(path, ModVersion.Parse("0.4.6"), rawVersion: null, isAdopted: isAdopted),
+        };
 
     private Task SaveGameDirectoryAsync() => SaveSettingsAsync(_gameDirectory);
 
@@ -129,7 +137,9 @@ public sealed class FileLoaderInstallerTests : IDisposable
     private async Task<string?> RecordedDirectoryAsync()
     {
         var settings = await _settings.GetAsync();
-        return settings is not null && settings.LoaderDirectoryPaths.TryGetValue(LoaderId, out var path) ? path : null;
+        return settings is not null && settings.LoaderInstallations.TryGetValue(LoaderId, out var installation)
+            ? installation.DirectoryPath
+            : null;
     }
 
     private static async Task<JsonObject> ReadConfigAsync(string directory) =>
@@ -163,6 +173,11 @@ public sealed class FileLoaderInstallerTests : IDisposable
         Assert.Equal(StarMapRelease().Download.Url, result.Download.Url);
         Assert.Equal(Convert.ToHexString(SHA256.HashData(_downloader.Bytes)), result.Download.Sha256);
         Assert.Single(_downloader.ArchivePaths);
+
+        var installation = (await _settings.GetAsync())!.LoaderInstallations[LoaderId];
+        Assert.False(installation.IsAdopted);
+        Assert.Equal(ModVersion.Parse("0.4.6"), installation.Version);
+        Assert.Null(installation.RawVersion);
     }
 
     [Fact]
@@ -224,7 +239,9 @@ public sealed class FileLoaderInstallerTests : IDisposable
         Assert.Equal(_gameDirectory, (string?)config["GameLocation"]);
         Assert.Equal(@"C:\Repos", (string?)config["RepositoryLocation"]);
         Assert.Equal("-Verbose", (string?)config["GameArguments"]![0]);
-        Assert.Single((await _settings.GetAsync())!.LoaderDirectoryPaths);
+        var settings = await _settings.GetAsync();
+        Assert.Single(settings!.LoaderInstallations);
+        Assert.Equal(ModVersion.Parse("0.4.7"), settings.LoaderInstallations[LoaderId].Version);
     }
 
     [Fact]
@@ -250,7 +267,7 @@ public sealed class FileLoaderInstallerTests : IDisposable
     public async Task InstallAsync_RecordedUnderTheIdInOtherCase_ReplacesThatRecord()
     {
         var elsewhere = Path.Combine(_tempRoot, "Elsewhere");
-        await SaveSettingsAsync(_gameDirectory, new Dictionary<string, string> { ["starmap"] = elsewhere });
+        await SaveSettingsAsync(_gameDirectory, LoaderAt(elsewhere, id: "starmap"));
         _downloader.Bytes = StarMapZip();
 
         var result = await InstallAsync();
@@ -258,21 +275,21 @@ public sealed class FileLoaderInstallerTests : IDisposable
         Assert.Equal(elsewhere, result.Directory);
         Assert.True(result.Replaced);
         Assert.True(File.Exists(Path.Combine(elsewhere, "StarMap.exe")));
-        Assert.Single((await _settings.GetAsync())!.LoaderDirectoryPaths);
+        Assert.Single((await _settings.GetAsync())!.LoaderInstallations);
     }
 
     [Fact]
     public async Task InstallAsync_KeepsTheOtherLoadersInTheSettings()
     {
-        await SaveSettingsAsync(_gameDirectory, new Dictionary<string, string> { ["Cheese-Loader"] = @"C:\Games\Cheese" });
+        await SaveSettingsAsync(_gameDirectory, LoaderAt(@"C:\Games\Cheese", id: "Cheese-Loader"));
         _downloader.Bytes = StarMapZip();
 
         await InstallAsync();
 
         var settings = await _settings.GetAsync();
         Assert.Equal(_gameDirectory, settings!.GameDirectoryPath);
-        Assert.Equal(@"C:\Games\Cheese", settings.LoaderDirectoryPaths["Cheese-Loader"]);
-        Assert.Equal(DefaultDirectory, settings.LoaderDirectoryPaths[LoaderId]);
+        Assert.Equal(@"C:\Games\Cheese", settings.LoaderInstallations["Cheese-Loader"].DirectoryPath);
+        Assert.Equal(DefaultDirectory, settings.LoaderInstallations[LoaderId].DirectoryPath);
     }
 
     #endregion
@@ -307,7 +324,7 @@ public sealed class FileLoaderInstallerTests : IDisposable
     public async Task InstallAsync_RecordedElsewhere_GivenAnotherDirectory_Refuses()
     {
         var elsewhere = Path.Combine(_tempRoot, "Elsewhere");
-        await SaveSettingsAsync(_gameDirectory, new Dictionary<string, string> { [LoaderId] = elsewhere });
+        await SaveSettingsAsync(_gameDirectory, LoaderAt(elsewhere));
 
         var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => InstallAsync(directory: Path.Combine(_tempRoot, "Other")));
 
@@ -319,7 +336,7 @@ public sealed class FileLoaderInstallerTests : IDisposable
     public async Task InstallAsync_RecordedLoader_GivenItsOwnDirectory_Replaces()
     {
         var elsewhere = Path.Combine(_tempRoot, "Elsewhere");
-        await SaveSettingsAsync(_gameDirectory, new Dictionary<string, string> { [LoaderId] = elsewhere });
+        await SaveSettingsAsync(_gameDirectory, LoaderAt(elsewhere));
         _downloader.Bytes = StarMapZip();
 
         // The same directory, written with a trailing separator.
@@ -356,6 +373,7 @@ public sealed class FileLoaderInstallerTests : IDisposable
         await InstallAsync();
 
         Assert.True(File.Exists(Path.Combine(DefaultDirectory, "StarMap.exe")));
+        Assert.True((await _settings.GetAsync())!.LoaderInstallations[LoaderId].IsAdopted);
     }
 
     [Fact]

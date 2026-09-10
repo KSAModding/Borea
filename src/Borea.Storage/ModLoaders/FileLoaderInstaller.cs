@@ -40,7 +40,8 @@ public sealed class FileLoaderInstaller : ILoaderInstaller
         RequireInstallable(loader, release);
 
         var settings = await _settings.GetAsync(cancellationToken).ConfigureAwait(false) ?? new BoreaSettings(null);
-        var recorded = settings.LoaderDirectoryPaths.TryGetValue(loader.ModId, out var known) ? Path.GetFullPath(known) : null;
+        var recordedInstallation = settings.LoaderInstallations.TryGetValue(loader.ModId, out var known) ? known : null;
+        var recorded = recordedInstallation is null ? null : Path.GetFullPath(recordedInstallation.DirectoryPath);
 
         var (target, path, root) = Describe(loader, release);
         var destination = Resolve(loader, target, path, directory, recorded, settings.GameDirectoryPath);
@@ -84,9 +85,16 @@ public sealed class FileLoaderInstaller : ILoaderInstaller
                 ? null
                 : await _configurator.ConfigureAsync(loader, destination, gameDirectory!, cancellationToken).ConfigureAwait(false);
 
-            var paths = settings.LoaderDirectoryPaths.ToDictionary(p => p.Key, p => p.Value, ModIds.Comparer);
-            paths[loader.ModId] = destination;
-            await _settings.SaveAsync(new BoreaSettings(settings.GameDirectoryPath, paths), cancellationToken).ConfigureAwait(false);
+            var installations = settings.LoaderInstallations.ToDictionary(p => p.Key, p => p.Value, ModIds.Comparer);
+            installations.Remove(loader.ModId);
+            installations[loader.ModId] = new LoaderInstallation(
+                destination,
+                release.Version,
+                rawVersion: null,
+                isAdopted: recordedInstallation?.IsAdopted ?? !created);
+            await _settings.SaveAsync(
+                new BoreaSettings(settings.GameDirectoryPath, loaderInstallations: installations),
+                cancellationToken).ConfigureAwait(false);
 
             return new LoaderInstallResult(loader.ModId, release.Version, destination, download, configurationFile, replacing);
         }

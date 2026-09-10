@@ -1,14 +1,16 @@
-﻿using System;
-using System.Collections.Generic;
+using Borea.Core.ModLoaders;
+using Borea.Core.Mods;
 using Borea.Core.Settings;
-using Xunit;
 
 namespace Borea.Core.Tests.Settings;
 
 public sealed class BoreaSettingsTests
 {
-    private static Dictionary<string, string> StarMapAt(string path = @"C:\Games\StarMap") =>
-        new() { ["StarMap"] = path };
+    private static Dictionary<string, LoaderInstallation> StarMapAt(string path = @"C:\Games\StarMap") =>
+        new()
+        {
+            ["StarMap"] = new LoaderInstallation(path, ModVersion.Parse("0.4.6"), "0.4.6.0", isAdopted: true),
+        };
 
     [Fact]
     public void Constructor_NothingProvided_LeavesGameNullAndNoLoader()
@@ -16,7 +18,7 @@ public sealed class BoreaSettingsTests
         var settings = new BoreaSettings(null);
 
         Assert.Null(settings.GameDirectoryPath);
-        Assert.Empty(settings.LoaderDirectoryPaths);
+        Assert.Empty(settings.LoaderInstallations);
     }
 
     [Fact]
@@ -25,7 +27,7 @@ public sealed class BoreaSettingsTests
         var settings = new BoreaSettings(@"C:\Games\KSA");
 
         Assert.Equal(@"C:\Games\KSA", settings.GameDirectoryPath);
-        Assert.Empty(settings.LoaderDirectoryPaths);
+        Assert.Empty(settings.LoaderInstallations);
     }
 
     [Fact]
@@ -34,20 +36,19 @@ public sealed class BoreaSettingsTests
         var settings = new BoreaSettings(null, StarMapAt());
 
         Assert.Null(settings.GameDirectoryPath);
-        Assert.Equal(@"C:\Games\StarMap", settings.LoaderDirectoryPaths["StarMap"]);
+        Assert.Equal(@"C:\Games\StarMap", settings.LoaderInstallations["StarMap"].DirectoryPath);
     }
 
     [Fact]
     public void Constructor_SeveralLoaders_KeepsEachOne()
     {
-        var settings = new BoreaSettings(@"C:\Games\KSA", new Dictionary<string, string>
-        {
-            ["StarMap"] = @"C:\Games\StarMap",
-            ["Cheese-Loader"] = @"C:\Games\Cheese",
-        });
+        var installations = StarMapAt();
+        installations["Cheese-Loader"] = new LoaderInstallation(@"C:\Games\Cheese", null, null, isAdopted: false);
 
-        Assert.Equal(2, settings.LoaderDirectoryPaths.Count);
-        Assert.Equal(@"C:\Games\Cheese", settings.LoaderDirectoryPaths["Cheese-Loader"]);
+        var settings = new BoreaSettings(@"C:\Games\KSA", installations);
+
+        Assert.Equal(2, settings.LoaderInstallations.Count);
+        Assert.Equal(@"C:\Games\Cheese", settings.LoaderInstallations["Cheese-Loader"].DirectoryPath);
     }
 
     [Fact]
@@ -55,21 +56,20 @@ public sealed class BoreaSettingsTests
     {
         var settings = new BoreaSettings(null, StarMapAt());
 
-        Assert.Equal(@"C:\Games\StarMap", settings.LoaderDirectoryPaths["starmap"]);
-        Assert.Contains("StarMap", settings.LoaderDirectoryPaths.Keys);
+        Assert.Equal(@"C:\Games\StarMap", settings.LoaderInstallations["starmap"].DirectoryPath);
+        Assert.Contains("StarMap", settings.LoaderInstallations.Keys);
     }
 
     [Fact]
     public void Constructor_LoaderIdsCollidingByCase_ThrowsArgumentException()
     {
-        // TOML keys are case-sensitive, ids are not.
-        var paths = new Dictionary<string, string>
+        var installations = new Dictionary<string, LoaderInstallation>
         {
-            ["StarMap"] = @"C:\Games\StarMap",
-            ["starmap"] = @"C:\Games\Other",
+            ["StarMap"] = new LoaderInstallation(@"C:\Games\StarMap", null, null, isAdopted: true),
+            ["starmap"] = new LoaderInstallation(@"C:\Games\Other", null, null, isAdopted: true),
         };
 
-        Assert.Throws<ArgumentException>(() => new BoreaSettings(null, paths));
+        Assert.Throws<ArgumentException>(() => new BoreaSettings(null, installations));
     }
 
     [Theory]
@@ -83,9 +83,9 @@ public sealed class BoreaSettingsTests
     [Theory]
     [InlineData("")]
     [InlineData("   ")]
-    public void Constructor_WhitespaceLoaderPath_ThrowsArgumentException(string loaderPath)
+    public void LoaderInstallation_WhitespaceDirectoryPath_ThrowsArgumentException(string loaderPath)
     {
-        Assert.Throws<ArgumentException>(() => new BoreaSettings(null, StarMapAt(loaderPath)));
+        Assert.Throws<ArgumentException>(() => new LoaderInstallation(loaderPath, null, null, isAdopted: true));
     }
 
     [Theory]
@@ -94,20 +94,23 @@ public sealed class BoreaSettingsTests
     [InlineData("CON")]
     public void Constructor_InvalidLoaderId_ThrowsArgumentException(string loaderId)
     {
-        var paths = new Dictionary<string, string> { [loaderId] = @"C:\Games\Loader" };
+        var installations = new Dictionary<string, LoaderInstallation>
+        {
+            [loaderId] = new LoaderInstallation(@"C:\Games\Loader", null, null, isAdopted: true),
+        };
 
-        Assert.Throws<ArgumentException>(() => new BoreaSettings(null, paths));
+        Assert.Throws<ArgumentException>(() => new BoreaSettings(null, installations));
     }
 
     [Fact]
-    public void LoaderDirectoryPaths_IsACopy_SoLaterEditsDoNotReachIt()
+    public void LoaderInstallations_IsACopy_SoLaterEditsDoNotReachIt()
     {
-        var paths = StarMapAt();
-        var settings = new BoreaSettings(null, paths);
+        var installations = StarMapAt();
+        var settings = new BoreaSettings(null, installations);
 
-        paths["StarMap"] = @"C:\Somewhere\Else";
+        installations["StarMap"] = new LoaderInstallation(@"C:\Somewhere\Else", null, null, isAdopted: true);
 
-        Assert.Equal(@"C:\Games\StarMap", settings.LoaderDirectoryPaths["StarMap"]);
+        Assert.Equal(@"C:\Games\StarMap", settings.LoaderInstallations["StarMap"].DirectoryPath);
     }
 
     [Fact]
@@ -118,50 +121,53 @@ public sealed class BoreaSettingsTests
         var changed = settings.WithGameDirectory(@"D:\KSA");
 
         Assert.Equal(@"D:\KSA", changed.GameDirectoryPath);
-        Assert.Equal(@"C:\Games\StarMap", changed.LoaderDirectoryPaths["StarMap"]);
+        Assert.Equal(@"C:\Games\StarMap", changed.LoaderInstallations["StarMap"].DirectoryPath);
         Assert.Equal(@"C:\Games\KSA", settings.GameDirectoryPath);
     }
 
     [Fact]
-    public void WithLoaderDirectory_AddsALoader_AndKeepsTheRest()
+    public void WithLoaderInstallation_AddsALoader_AndKeepsTheRest()
     {
         var settings = new BoreaSettings(@"C:\Games\KSA", StarMapAt());
+        var installation = new LoaderInstallation(@"C:\Games\Cheese", null, null, isAdopted: true);
 
-        var changed = settings.WithLoaderDirectory("Cheese-Loader", @"C:\Games\Cheese");
+        var changed = settings.WithLoaderInstallation("Cheese-Loader", installation);
 
         Assert.Equal(@"C:\Games\KSA", changed.GameDirectoryPath);
-        Assert.Equal(@"C:\Games\StarMap", changed.LoaderDirectoryPaths["StarMap"]);
-        Assert.Equal(@"C:\Games\Cheese", changed.LoaderDirectoryPaths["Cheese-Loader"]);
-        Assert.Single(settings.LoaderDirectoryPaths);
+        Assert.Equal(@"C:\Games\StarMap", changed.LoaderInstallations["StarMap"].DirectoryPath);
+        Assert.Equal(@"C:\Games\Cheese", changed.LoaderInstallations["Cheese-Loader"].DirectoryPath);
+        Assert.Single(settings.LoaderInstallations);
     }
 
     [Fact]
-    public void WithLoaderDirectory_SameIdInAnotherCase_ReplacesTheEntryAndItsCasing()
+    public void WithLoaderInstallation_SameIdInAnotherCase_ReplacesTheEntryAndItsCasing()
     {
         var settings = new BoreaSettings(null, StarMapAt());
+        var installation = new LoaderInstallation(@"C:\Games\Other", null, null, isAdopted: true);
 
-        var changed = settings.WithLoaderDirectory("starmap", @"C:\Games\Other");
+        var changed = settings.WithLoaderInstallation("starmap", installation);
 
-        var loader = Assert.Single(changed.LoaderDirectoryPaths);
+        var loader = Assert.Single(changed.LoaderInstallations);
         Assert.Equal("starmap", loader.Key);
-        Assert.Equal(@"C:\Games\Other", loader.Value);
+        Assert.Equal(@"C:\Games\Other", loader.Value.DirectoryPath);
     }
 
     [Theory]
     [InlineData("not a valid id")]
     [InlineData("")]
-    public void WithLoaderDirectory_InvalidId_ThrowsArgumentException(string loaderId)
+    public void WithLoaderInstallation_InvalidId_ThrowsArgumentException(string loaderId)
     {
         var settings = new BoreaSettings(null);
+        var installation = new LoaderInstallation(@"C:\Games\Loader", null, null, isAdopted: true);
 
-        Assert.Throws<ArgumentException>(() => settings.WithLoaderDirectory(loaderId, @"C:\Games\Loader"));
+        Assert.Throws<ArgumentException>(() => settings.WithLoaderInstallation(loaderId, installation));
     }
 
     [Fact]
-    public void WithLoaderDirectory_WhitespacePath_ThrowsArgumentException()
+    public void WithLoaderInstallation_NullInstallation_ThrowsArgumentNullException()
     {
         var settings = new BoreaSettings(null);
 
-        Assert.Throws<ArgumentException>(() => settings.WithLoaderDirectory("StarMap", "   "));
+        Assert.Throws<ArgumentNullException>(() => settings.WithLoaderInstallation("StarMap", null!));
     }
 }
