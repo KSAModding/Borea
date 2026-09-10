@@ -5,6 +5,7 @@ using Borea.Core.Settings;
 using Borea.Network.Index;
 using Borea.Network.Sources;
 using Borea.Storage.Game;
+using Borea.Storage.ModLoaders;
 using Borea.Storage.Paths;
 using Borea.Storage.Settings;
 
@@ -116,6 +117,9 @@ public sealed class BoreaServicesTests : IDisposable
         using var services = await BoreaServices.BuildAsync(_tempRoot);
 
         Assert.IsType<CompositeModRepository>(services.Mods);
+        Assert.IsType<FileLoaderInstaller>(services.LoaderInstaller);
+        Assert.IsType<FileLoaderAdopter>(services.LoaderAdopter);
+        Assert.IsType<FileLoaderUninstaller>(services.LoaderUninstaller);
     }
 
     [Fact]
