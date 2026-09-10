@@ -1,5 +1,6 @@
 using Borea.Core.Mods;
 using Borea.Core.Settings;
+using Borea.Network.Index;
 using Borea.Network.Sources;
 using Borea.Storage.Game;
 using Borea.Storage.Paths;
@@ -112,6 +113,14 @@ public sealed class BoreaServicesTests : IDisposable
     }
 
     [Fact]
+    public async Task IndexFetcher_IsTheNetworkFetcher()
+    {
+        using var services = await BoreaServices.BuildAsync(_tempRoot);
+
+        Assert.IsType<ContentIndexFetcher>(services.IndexFetcher);
+    }
+
+    [Fact]
     public async Task InstalledVersion_ReadsTheGameDirectoryTheSettingsName()
     {
         using var services = await BoreaServices.BuildAsync(_tempRoot);
@@ -133,6 +142,7 @@ public sealed class BoreaServicesTests : IDisposable
         await Assert.ThrowsAsync<ObjectDisposedException>(() => services.LatestVersion.PingAsync());
         await Assert.ThrowsAsync<ObjectDisposedException>(() => services.Mods.GetAvailableModsAsync());
         await Assert.ThrowsAsync<ObjectDisposedException>(() => services.Downloader.DownloadAsync("1", new ModVersion(1, 0, 0), _tempRoot));
+        await Assert.ThrowsAsync<ObjectDisposedException>(() => services.IndexFetcher.FetchAsync(services.Paths.GetIndexPath()));
     }
 
     private string SettingsPath => new GamePathProvider(gameDirectory: null, boreaRoot: _tempRoot).GetBoreaSettingsPath();
