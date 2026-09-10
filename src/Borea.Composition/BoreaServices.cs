@@ -7,6 +7,7 @@ using Borea.Core.Mods;
 using Borea.Core.Paths;
 using Borea.Core.Settings;
 using Borea.Core.State;
+using Borea.Network.Downloads;
 using Borea.Network.Index;
 using Borea.Network.MasterServer;
 using Borea.Network.Sources;
@@ -116,9 +117,9 @@ public sealed class BoreaServices : IDisposable
         var paths = new GamePathProvider(settings.GameDirectoryPath, settings.LoaderDirectoryPaths, boreaRoot);
 
         // Network. Every service that talks to a remote host is built here on the
-        // one client. The resolver is shared because the downloader registers the
-        // true mod id that the repository then resolves, and its map lives as long
-        // as this instance.
+        // one client. Only the SpaceDock repository takes the resolver, because a
+        // release carries an absolute download URL and the downloader needs no
+        // host of its own.
         var http = BuildHttpClient();
         var resolver = new SpaceDockResolver();
         var sources = new Dictionary<string, IModRepository>
@@ -137,7 +138,7 @@ public sealed class BoreaServices : IDisposable
             ModPackFavorites = new FileModPackFavoritesRepository(paths),
             Uninstaller = new FileModUninstaller(paths),
             Mods = new CompositeModRepository(sources),
-            Downloader = new SpaceDockModDownloader(http, resolver),
+            Downloader = new HttpModDownloader(http),
             LatestVersion = new LatestVersionPing(http),
             InstalledVersion = new InstalledGameVersionProvider(paths),
             IndexFetcher = new ContentIndexFetcher(http, ContentIndexUri),
