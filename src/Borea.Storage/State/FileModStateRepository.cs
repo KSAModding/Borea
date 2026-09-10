@@ -1,6 +1,7 @@
 using Borea.Core.Mods;
 using Borea.Core.Paths;
 using Borea.Core.State;
+using Borea.Storage.Mods;
 using Borea.Storage.Toml;
 
 namespace Borea.Storage.State;
@@ -13,8 +14,6 @@ namespace Borea.Storage.State;
 /// </summary>
 public sealed class FileModStateRepository : IModStateRepository
 {
-    private const string ModDefinitionFileName = "mod.toml";
-
     private readonly IGamePathProvider _pathProvider;
 
     public FileModStateRepository(IGamePathProvider pathProvider)
@@ -179,22 +178,15 @@ public sealed class FileModStateRepository : IModStateRepository
     /// <summary>
     /// The mod's folder, or null when the mod is not there. The mod.toml decides,
     /// not the folder (ModLibrary.AddMods, ModEntry.Exists). Only the instance's
-    /// mods folder is searched. Resolved by comparison, since ids ignore case and Linux paths
-    /// do not.
+    /// mods folder is searched.
     /// </summary>
     private string? ResolveModFolder(Guid instanceId, string modId)
     {
-        var modsFolder = _pathProvider.GetInstanceModsFolder(instanceId);
-        if (!Directory.Exists(modsFolder))
-            return null;
-
-        var modFolder = Directory.EnumerateDirectories(modsFolder)
-            .FirstOrDefault(d => ModIds.Equals(Path.GetFileName(d), modId));
-
+        var modFolder = ModFolders.Find(_pathProvider.GetInstanceModsFolder(instanceId), modId);
         if (modFolder is null)
             return null;
 
-        return File.Exists(Path.Combine(modFolder, ModDefinitionFileName)) ? modFolder : null;
+        return File.Exists(Path.Combine(modFolder, ModFolders.DefinitionFileName)) ? modFolder : null;
     }
 
     /// <summary>
