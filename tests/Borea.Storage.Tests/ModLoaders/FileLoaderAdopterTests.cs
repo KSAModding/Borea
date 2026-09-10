@@ -127,6 +127,24 @@ public sealed class FileLoaderAdopterTests : IDisposable
     }
 
     [Fact]
+    public async Task AdoptAsync_InvalidConfiguration_WarnsAndRecordsTheLoader()
+    {
+        await _settings.SaveAsync(new BoreaSettings(GameDirectory));
+        PlaceStarMap(GameDirectory);
+        var configPath = Path.Combine(LoaderDirectory, "StarMapConfig.json");
+        await File.WriteAllTextAsync(configPath, "{ invalid");
+        var configBefore = await File.ReadAllBytesAsync(configPath);
+
+        var result = await _adopter.AdoptAsync(StarMap(), new[] { StarMapRelease() }, LoaderDirectory);
+
+        Assert.Null(result.ConfiguredGameDirectory);
+        Assert.Null(result.GameDirectoryMatches);
+        Assert.Contains(result.Warnings, warning => warning.Contains("not valid JSON", StringComparison.Ordinal));
+        Assert.Equal(configBefore, await File.ReadAllBytesAsync(configPath));
+        Assert.True((await _settings.GetAsync())!.LoaderInstallations["StarMap"].IsAdopted);
+    }
+
+    [Fact]
     public async Task AdoptAsync_RecordedAtAnotherDirectory_Refuses()
     {
         PlaceStarMap(GameDirectory);

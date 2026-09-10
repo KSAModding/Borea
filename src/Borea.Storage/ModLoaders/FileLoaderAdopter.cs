@@ -53,12 +53,34 @@ public sealed class FileLoaderAdopter : ILoaderAdopter
 
         var rawVersion = ReadFileVersion(executable);
         var version = MatchVersion(loader, releases, rawVersion);
-        var configuredGameDirectory = await _configuration
-            .ReadConfiguredGamePathAsync(loader, loaderDirectory, cancellationToken)
-            .ConfigureAwait(false);
+        string? configuredGameDirectory = null;
+        string? configurationWarning = null;
+        try
+        {
+            configuredGameDirectory = await _configuration
+                .ReadConfiguredGamePathAsync(loader, loaderDirectory, cancellationToken)
+                .ConfigureAwait(false);
+        }
+        catch (Exception exception) when (exception is IOException
+            or UnauthorizedAccessException
+            or InvalidOperationException
+            or NotSupportedException
+            or ArgumentException)
+        {
+            configurationWarning =
+                $"Borea could not inspect the game directory configured for {loader.Name}. {exception.Message} The configuration was not changed.";
+        }
+
         var gameDirectoryMatches = CompareGameDirectory(settings.GameDirectoryPath, configuredGameDirectory);
 
-        var warnings = Warnings(loader, rawVersion, version, settings.GameDirectoryPath, configuredGameDirectory, gameDirectoryMatches);
+        var warnings = Warnings(
+            loader,
+            rawVersion,
+            version,
+            settings.GameDirectoryPath,
+            configuredGameDirectory,
+            gameDirectoryMatches,
+            configurationWarning);
         var installations = settings.LoaderInstallations.ToDictionary(pair => pair.Key, pair => pair.Value, ModIds.Comparer);
         installations.Remove(loader.ModId);
         installations[loader.ModId] = new LoaderInstallation(loaderDirectory, version, rawVersion, isAdopted: true);
@@ -98,7 +120,8 @@ public sealed class FileLoaderAdopter : ILoaderAdopter
         ModVersion? version,
         string? managedGameDirectory,
         string? configuredGameDirectory,
-        bool? gameDirectoryMatches)
+        bool? gameDirectoryMatches,
+        string? configurationWarning)
     {
         var warnings = new List<string>();
 
@@ -107,7 +130,11 @@ public sealed class FileLoaderAdopter : ILoaderAdopter
         else if (version is null)
             warnings.Add($"The file version '{rawVersion}' does not match an indexed release of {loader.Name}. The loader version is unknown.");
 
-        if (gameDirectoryMatches == false)
+        if (configurationWarning is not null)
+        {
+            warnings.Add(configurationWarning);
+        }
+        else if (gameDirectoryMatches == false)
         {
             warnings.Add(
                 $"{loader.Name} is configured for '{configuredGameDirectory}', not the game directory Borea manages at '{managedGameDirectory}'. The configuration was not changed.");
