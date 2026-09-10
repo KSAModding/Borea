@@ -203,5 +203,49 @@ public sealed class InstanceCommandTests : IDisposable
         Assert.Equal(string.Empty, run.Output);
     }
 
+    [Fact]
+    public async Task Mods_PrintsManifestEntriesInLoadOrder()
+    {
+        await _host.RunAsync("instance", "create", "Alpha");
+        var list = await _host.RunAsync("instance", "list", "--json");
+        var instanceId = Guid.Parse(Assert.Single(list.Json.EnumerateArray()).GetProperty("id").GetString()!);
+        var repository = new Borea.Storage.State.FileModStateRepository(_host.Paths);
+
+        var firstFolder = Directory.CreateDirectory(Path.Combine(_host.Paths.GetInstanceModsFolder(instanceId), "First"));
+        var secondFolder = Directory.CreateDirectory(Path.Combine(_host.Paths.GetInstanceModsFolder(instanceId), "Second"));
+        await File.WriteAllTextAsync(Path.Combine(firstFolder.FullName, "mod.toml"), "name = \"First\"");
+        await File.WriteAllTextAsync(Path.Combine(secondFolder.FullName, "mod.toml"), "name = \"Second\"");
+        Assert.Equal(Borea.Core.State.ModEntryAddResult.Added, await repository.AddEntryAsync(instanceId, "First", enabled: true));
+        Assert.Equal(Borea.Core.State.ModEntryAddResult.Added, await repository.AddEntryAsync(instanceId, "Second", enabled: false));
+
+        var human = await _host.RunAsync("instance", "mods", "Alpha");
+        var json = await _host.RunAsync("instance", "mods", "Alpha", "--json");
+
+        Assert.Equal(0, human.ExitCode);
+        Assert.Equal(new[] { "enabled   First", "disabled  Second" }, human.Output.Trim().Split(Environment.NewLine));
+        Assert.Equal(new[] { "First", "Second" }, json.Json.EnumerateArray().Select(entry => entry.GetProperty("id").GetString()));
+        Assert.Equal(new[] { true, false }, json.Json.EnumerateArray().Select(entry => entry.GetProperty("enabled").GetBoolean()));
+    }
+
+    [Fact]
+    public async Task Mods_NoEntries_SaysSo()
+    {
+        await _host.RunAsync("instance", "create", "Alpha");
+
+        var run = await _host.RunAsync("instance", "mods", "Alpha");
+
+        Assert.Equal(0, run.ExitCode);
+        Assert.Contains("No mods in 'Alpha'.", run.Output);
+    }
+
+    [Fact]
+    public async Task Mods_UnknownInstance_Fails()
+    {
+        var run = await _host.RunAsync("instance", "mods", "Nope");
+
+        Assert.Equal(1, run.ExitCode);
+        Assert.Contains("No instance is named 'Nope'.", run.Error);
+    }
+
     public void Dispose() => _host.Dispose();
 }

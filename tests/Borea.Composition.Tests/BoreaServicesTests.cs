@@ -1,6 +1,7 @@
 using Borea.Core.Dependencies;
 using Borea.Core.Mods;
 using Borea.Core.Settings;
+using Borea.Network.Index;
 using Borea.Network.Sources;
 using Borea.Storage.Game;
 using Borea.Storage.Paths;
@@ -113,6 +114,14 @@ public sealed class BoreaServicesTests : IDisposable
     }
 
     [Fact]
+    public async Task IndexFetcher_IsTheNetworkFetcher()
+    {
+        using var services = await BoreaServices.BuildAsync(_tempRoot);
+
+        Assert.IsType<ContentIndexFetcher>(services.IndexFetcher);
+    }
+
+    [Fact]
     public async Task InstalledVersion_ReadsTheGameDirectoryTheSettingsName()
     {
         using var services = await BoreaServices.BuildAsync(_tempRoot);
@@ -134,6 +143,7 @@ public sealed class BoreaServicesTests : IDisposable
         await Assert.ThrowsAsync<ObjectDisposedException>(() => services.LatestVersion.PingAsync());
         await Assert.ThrowsAsync<ObjectDisposedException>(() => services.Mods.GetAvailableModsAsync());
         await Assert.ThrowsAsync<ObjectDisposedException>(() => services.Downloader.DownloadAsync(Release(), Path.Combine(_tempRoot, "probe.zip")));
+        await Assert.ThrowsAsync<ObjectDisposedException>(() => services.IndexFetcher.FetchAsync(services.Paths.GetIndexPath()));
     }
 
     /// <summary>The least a release needs to reach the client, which is all the

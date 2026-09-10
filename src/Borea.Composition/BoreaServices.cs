@@ -1,5 +1,6 @@
 using System.Net.Http.Headers;
 using Borea.Core.Game;
+using Borea.Core.Index;
 using Borea.Core.Instances;
 using Borea.Core.ModPacks;
 using Borea.Core.Mods;
@@ -7,6 +8,7 @@ using Borea.Core.Paths;
 using Borea.Core.Settings;
 using Borea.Core.State;
 using Borea.Network.Downloads;
+using Borea.Network.Index;
 using Borea.Network.MasterServer;
 using Borea.Network.Sources;
 using Borea.Network.SpaceDock;
@@ -32,6 +34,8 @@ namespace Borea.Composition;
 /// </summary>
 public sealed class BoreaServices : IDisposable
 {
+    private static readonly Uri ContentIndexUri = new("https://ksamodding.github.io/content-index-releases/v1/index.json");
+
     /// <summary>
     /// The client lives as long as the process, so its handler must drop pooled
     /// connections after this time. If it keeps them, the client sends to the old
@@ -77,6 +81,8 @@ public sealed class BoreaServices : IDisposable
     public required ILatestVersionPing LatestVersion { get; init; }
 
     public required IInstalledGameVersionProvider InstalledVersion { get; init; }
+
+    public required IContentIndexFetcher IndexFetcher { get; init; }
 
     private BoreaServices(HttpClient http)
     {
@@ -135,6 +141,7 @@ public sealed class BoreaServices : IDisposable
             Downloader = new HttpModDownloader(http),
             LatestVersion = new LatestVersionPing(http),
             InstalledVersion = new InstalledGameVersionProvider(paths),
+            IndexFetcher = new ContentIndexFetcher(http, ContentIndexUri),
         };
     }
 
