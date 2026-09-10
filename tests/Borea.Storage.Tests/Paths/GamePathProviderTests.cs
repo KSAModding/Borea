@@ -1,4 +1,4 @@
-﻿using Borea.Storage.Paths;
+using Borea.Storage.Paths;
 
 namespace Borea.Storage.Tests.Paths;
 
@@ -31,6 +31,7 @@ public sealed class GamePathProviderTests
         var provider = new GamePathProvider(null, boreaRoot: @"D:\Portable\Borea");
 
         Assert.StartsWith(@"D:\Portable\Borea", provider.GetBoreaSettingsPath());
+        Assert.StartsWith(@"D:\Portable\Borea", provider.GetAppPreferencesPath());
         Assert.StartsWith(@"D:\Portable\Borea", provider.GetInstancesRoot());
         Assert.StartsWith(@"D:\Portable\Borea", provider.GetModFavoritesPath());
     }
@@ -195,6 +196,7 @@ public sealed class GamePathProviderTests
             provider.GetModFavoritesPath(),
             provider.GetModPackFavoritesPath(),
             provider.GetBoreaSettingsPath(),
+            provider.GetAppPreferencesPath(),
             provider.GetIndexPath()
         };
 
@@ -208,6 +210,7 @@ public sealed class GamePathProviderTests
 
         Assert.DoesNotContain(provider.GetInstancesRoot(), provider.GetActiveInstancePointerPath());
         Assert.DoesNotContain(provider.GetInstancesRoot(), provider.GetBoreaSettingsPath());
+        Assert.DoesNotContain(provider.GetInstancesRoot(), provider.GetAppPreferencesPath());
         Assert.DoesNotContain(provider.GetInstancesRoot(), provider.GetIndexPath());
     }
 }

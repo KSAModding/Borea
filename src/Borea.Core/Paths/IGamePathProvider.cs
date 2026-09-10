@@ -1,4 +1,4 @@
-﻿namespace Borea.Core.Paths;
+namespace Borea.Core.Paths;
 
 /// <summary>
 /// Resolves filesystem locations relevant to KSA, StarMap, and Borea's own
@@ -36,6 +36,11 @@ public interface IGamePathProvider
     /// Path to Borea's own settings.toml (game/StarMap install locations).
     /// </summary>
     string GetBoreaSettingsPath();
+
+    /// <summary>
+    /// Path to Borea.App preferences and custom themes.
+    /// </summary>
+    string GetAppPreferencesPath();
 
     /// <summary>
     /// Root folder for a specific instance, e.g.

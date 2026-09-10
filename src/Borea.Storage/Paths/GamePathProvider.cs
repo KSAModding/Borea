@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Borea.Core.Mods;
 using Borea.Core.Paths;
 
@@ -53,6 +53,7 @@ public sealed class GamePathProvider : IGamePathProvider
     public string GetModFavoritesPath() => Path.Combine(_boreaRoot, "mod-favorites.toml");
     public string GetModPackFavoritesPath() => Path.Combine(_boreaRoot, "modpack-favorites.toml");
     public string GetBoreaSettingsPath() => Path.Combine(_boreaRoot, "borea-settings.toml");
+    public string GetAppPreferencesPath() => Path.Combine(_boreaRoot, "app-preferences.json");
     public string? GetGameDirectoryPath() => _gameDirectory;
 
     public string? GetLoaderDirectoryPath(string loaderId)
