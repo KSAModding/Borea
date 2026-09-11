@@ -16,6 +16,33 @@ public sealed class GamePathProviderTests
         Assert.Null(provider.GetLoaderDirectoryPath("StarMap"));
     }
 
+    [Fact]
+    public void Constructor_NoBoreaRoot_RootsBoreaPathsUnderLocalAppData()
+    {
+        var provider = new GamePathProvider(null);
+
+        var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        Assert.StartsWith(Path.Combine(localAppData, "Borea"), provider.GetBoreaSettingsPath());
+    }
+
+    [Fact]
+    public void Constructor_BoreaRoot_RootsBoreaPathsThere()
+    {
+        var provider = new GamePathProvider(null, boreaRoot: @"D:\Portable\Borea");
+
+        Assert.StartsWith(@"D:\Portable\Borea", provider.GetBoreaSettingsPath());
+        Assert.StartsWith(@"D:\Portable\Borea", provider.GetInstancesRoot());
+        Assert.StartsWith(@"D:\Portable\Borea", provider.GetModFavoritesPath());
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void Constructor_WhitespaceBoreaRoot_ThrowsArgumentException(string boreaRoot)
+    {
+        Assert.Throws<ArgumentException>(() => new GamePathProvider(null, boreaRoot: boreaRoot));
+    }
+
     [Theory]
     [InlineData("")]
     [InlineData("   ")]

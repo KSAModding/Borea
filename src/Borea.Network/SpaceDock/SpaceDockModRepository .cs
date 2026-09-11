@@ -15,8 +15,9 @@ namespace Borea.Network.SpaceDock;
 /// RFC 0031 metadata types. SpaceDock cannot provide most authored facts, so
 /// the mapping fills in:
 ///
-/// - The id is a placeholder, SpaceDock's numeric mod id stringified; the
-///   true id is only knowable after a download (SpaceDockResolver).
+/// - The id is a placeholder, SpaceDock's numeric mod id stringified, because
+///   SpaceDock exposes no mod.toml id; nothing resolves it to the true id
+///   today (SpaceDockResolver holds the map).
 /// - An empty dependency list and a null loader mean unknown, not none.
 /// - The forums link is the website when it points at the KSA forums,
 ///   otherwise the SpaceDock page stands in (the model requires one).
@@ -31,8 +32,15 @@ public sealed class SpaceDockModRepository : IModRepository
     // SpaceDock's internal database ID for KSA.
     private const int KsaGameId = 22409;
 
-    private const string SourceName = "spacedock";
-    private const string BaseUrl = "https://spacedock.info";
+    /// <summary>
+    /// The source tag on every listing and release from SpaceDock, and the key a
+    /// composite repository registers this source under.
+    /// </summary>
+    public const string SourceName = "spacedock";
+    /// <summary>
+    /// Every request names the host, so the client needs no base address.
+    /// </summary>
+    internal const string BaseUrl = "https://spacedock.info";
     private const string KsaForumsHost = "forums.ahwoo.com";
 
     private static readonly JsonSerializerOptions JsonOptions = new()
@@ -54,7 +62,7 @@ public sealed class SpaceDockModRepository : IModRepository
         // Single page: /api/browse pages at 500 and IModRepository has no
         // paging concept. Revisit if KSA's catalog outgrows one page.
         var response = await _httpClient.GetFromJsonAsync<SpaceDockBrowseResponseDto>(
-            $"api/browse?game_id={KsaGameId}&count=500", JsonOptions, cancellationToken).ConfigureAwait(false);
+            $"{BaseUrl}/api/browse?game_id={KsaGameId}&count=500", JsonOptions, cancellationToken).ConfigureAwait(false);
 
         return (response?.Result ?? new()).Where(IsKsaMod).Select(MapToListing).ToList();
     }
@@ -109,7 +117,7 @@ public sealed class SpaceDockModRepository : IModRepository
         // Live search results carry game_id per mod (undocumented in api.md,
         // confirmed by real response); IsKsaMod filters on it.
         var results = await _httpClient.GetFromJsonAsync<List<SpaceDockModDto>>(
-            $"api/search/mod?query={Uri.EscapeDataString(query)}", JsonOptions, cancellationToken).ConfigureAwait(false);
+            $"{BaseUrl}/api/search/mod?query={Uri.EscapeDataString(query)}", JsonOptions, cancellationToken).ConfigureAwait(false);
 
         return (results ?? new()).Where(IsKsaMod).Select(MapToListing).ToList();
     }
@@ -122,7 +130,7 @@ public sealed class SpaceDockModRepository : IModRepository
         try
         {
             var dto = await _httpClient.GetFromJsonAsync<SpaceDockModDto>(
-                $"api/mod/{spaceDockId}", JsonOptions, cancellationToken).ConfigureAwait(false);
+                $"{BaseUrl}/api/mod/{spaceDockId}", JsonOptions, cancellationToken).ConfigureAwait(false);
 
             return dto is null || !IsKsaMod(dto) ? null : dto;
         }
