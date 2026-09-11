@@ -2,6 +2,7 @@ using System;
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
+using Borea.App.Localization;
 using Borea.App.ViewModels;
 using Borea.App.Views;
 using Borea.Composition;
@@ -16,13 +17,17 @@ public partial class App : Application
     /// </summary>
     public BoreaServices? Services { get; }
 
+    public LocalizationService Localization { get; }
+
     public App()
     {
+        Localization = new LocalizationService();
     }
 
     public App(BoreaServices services)
     {
         Services = services ?? throw new ArgumentNullException(nameof(services));
+        Localization = new LocalizationService();
     }
 
     public override void Initialize()
@@ -36,7 +41,7 @@ public partial class App : Application
         {
             desktop.MainWindow = new MainWindow
             {
-                DataContext = new MainViewModel(),
+                DataContext = new MainViewModel(Localization),
             };
         }
 

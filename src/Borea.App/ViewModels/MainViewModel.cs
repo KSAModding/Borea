@@ -1,18 +1,18 @@
+using System;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using Avalonia.Controls.Primitives;
 using System.Collections.Generic;
 using System.Text.Json;
 using System.IO;
 using System.Linq;
-using CommunityToolkit.Mvvm;
+using Borea.App.Localization;
 
 namespace Borea.App.ViewModels;
 
 public partial class MainViewModel : ViewModelBase
 {
-    [ObservableProperty]
-    public partial string Greeting { get; set; } = "Welcome to Avalonia!";
+    public LocalizationService Localization { get; }
+
     [ObservableProperty]
     private string _mainColor = "#248cc0";
     [ObservableProperty]
@@ -76,6 +76,17 @@ public partial class MainViewModel : ViewModelBase
     private Dictionary<string, string[]> _themes = new Dictionary<string, string[]>();
     [ObservableProperty]
     private string _currentTheme = "Borealis";
+
+    public MainViewModel()
+        : this(new LocalizationService())
+    {
+    }
+
+    public MainViewModel(LocalizationService localization)
+    {
+        Localization = localization ?? throw new ArgumentNullException(nameof(localization));
+    }
+
     [RelayCommand]
     public void GetThemes() // used to get the themes from the json files
     {
@@ -100,7 +111,7 @@ public partial class MainViewModel : ViewModelBase
         }
         string settingsJson = File.ReadAllText("client/Settings.json");
         var settings = JsonSerializer.Deserialize<Dictionary<string, string>>(settingsJson);
-        CurrentTheme = settings != null && settings.ContainsKey("theme") ? settings["theme"] : "Error";
+        CurrentTheme = settings != null && settings.ContainsKey("theme") ? settings["theme"] : "Borealis";
         SetTheme(CurrentTheme); // set the theme to the current theme
     }
     public void SetTheme(string themeName) // used to set the theme
