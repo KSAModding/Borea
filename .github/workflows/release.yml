@@ -59,7 +59,7 @@ jobs:
           echo "archive=Borea-$version-$RID" >> "$GITHUB_OUTPUT"
 
       # Self-contained, so nobody needs a .NET runtime.
-      # All four targets build on this one Linux runner.
+      # Each target builds on a Linux runner.
       - name: Publish
         env:
           VERSION: ${{ steps.name.outputs.version }}
