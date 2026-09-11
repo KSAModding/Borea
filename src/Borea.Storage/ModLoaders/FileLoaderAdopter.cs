@@ -83,7 +83,11 @@ public sealed class FileLoaderAdopter : ILoaderAdopter
             configurationWarning);
         var installations = settings.LoaderInstallations.ToDictionary(pair => pair.Key, pair => pair.Value, ModIds.Comparer);
         installations.Remove(loader.ModId);
-        installations[loader.ModId] = new LoaderInstallation(loaderDirectory, version, rawVersion, isAdopted: true);
+        installations[loader.ModId] = new LoaderInstallation(
+            loaderDirectory,
+            version,
+            rawVersion,
+            isAdopted: recorded?.IsAdopted ?? true);
 
         await _settings.SaveAsync(
             new BoreaSettings(settings.GameDirectoryPath, loaderInstallations: installations),

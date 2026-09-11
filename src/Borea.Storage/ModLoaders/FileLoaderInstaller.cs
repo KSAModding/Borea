@@ -66,6 +66,10 @@ public sealed class FileLoaderInstaller : ILoaderInstaller
             : Path.GetFullPath(Path.Combine(destination, configure.File.Replace('/', Path.DirectorySeparatorChar)));
         var archivePath = Path.Combine(Path.GetTempPath(), $"borea-download-{Guid.NewGuid():N}.zip");
         var created = !Directory.Exists(destination);
+        var stagingDirectory = replacing ? TransactionPath(destination, "staging") : destination;
+        var backupDirectory = replacing ? TransactionPath(destination, "backup") : null;
+        var replacementActivated = false;
+        var replacementBackedUp = false;
 
         try
         {
@@ -75,15 +79,29 @@ public sealed class FileLoaderInstaller : ILoaderInstaller
                 ? await File.ReadAllBytesAsync(configurationPath, cancellationToken).ConfigureAwait(false)
                 : null;
 
-            Unpack(archivePath, root, destination, release);
+            Unpack(archivePath, root, stagingDirectory, release);
             if (kept is not null)
-                await File.WriteAllBytesAsync(configurationPath!, kept, cancellationToken).ConfigureAwait(false);
+            {
+                var stagedConfigurationPath = Path.GetFullPath(Path.Combine(stagingDirectory, configure!.File.Replace('/', Path.DirectorySeparatorChar)));
+                Directory.CreateDirectory(Path.GetDirectoryName(stagedConfigurationPath)!);
+                await File.WriteAllBytesAsync(stagedConfigurationPath, kept, cancellationToken).ConfigureAwait(false);
+            }
 
-            RequireLaunchTarget(loader, release, destination);
+            RequireLaunchTarget(loader, release, stagingDirectory);
 
-            var configurationFile = configure?.GamePath is null
+            var stagedConfigurationFile = configure?.GamePath is null
                 ? null
-                : await _configurator.ConfigureAsync(loader, destination, gameDirectory!, cancellationToken).ConfigureAwait(false);
+                : await _configurator.ConfigureAsync(loader, stagingDirectory, gameDirectory!, cancellationToken).ConfigureAwait(false);
+
+            var configurationFile = stagedConfigurationFile is null
+                ? null
+                : Path.GetFullPath(Path.Combine(destination, Path.GetRelativePath(stagingDirectory, stagedConfigurationFile)));
+
+            if (replacing)
+            {
+                replacementBackedUp = ActivateReplacement(destination, stagingDirectory, backupDirectory!);
+                replacementActivated = true;
+            }
 
             var installations = settings.LoaderInstallations.ToDictionary(p => p.Key, p => p.Value, ModIds.Comparer);
             installations.Remove(loader.ModId);
@@ -96,12 +114,16 @@ public sealed class FileLoaderInstaller : ILoaderInstaller
                 new BoreaSettings(settings.GameDirectoryPath, loaderInstallations: installations),
                 cancellationToken).ConfigureAwait(false);
 
+            if (replacementBackedUp)
+                TryDeleteDirectory(backupDirectory!);
+
             return new LoaderInstallResult(loader.ModId, release.Version, destination, download, configurationFile, replacing);
         }
-        catch
+        catch (Exception installError)
         {
-            // A first install is taken back; a replacement is left as far as it got.
-            if (created)
+            if (replacementActivated)
+                RestoreReplacement(destination, backupDirectory!, replacementBackedUp, installError);
+            else if (created && !replacing)
                 TryDeleteDirectory(destination);
             else if (!replacing)
                 TryClearDirectory(destination);
@@ -111,6 +133,72 @@ public sealed class FileLoaderInstaller : ILoaderInstaller
         finally
         {
             TryDeleteFile(archivePath);
+            if (replacing)
+                TryDeleteDirectory(stagingDirectory);
+        }
+    }
+
+    private static string TransactionPath(string destination, string purpose)
+    {
+        var parent = Path.GetDirectoryName(destination);
+        var name = Path.GetFileName(destination);
+        if (string.IsNullOrEmpty(parent) || string.IsNullOrEmpty(name))
+            throw new NotSupportedException("A loader installed at a file-system root cannot be replaced safely.");
+
+        return Path.Combine(parent, $".{name}.borea-{purpose}-{Guid.NewGuid():N}");
+    }
+
+    private static bool ActivateReplacement(string destination, string stagingDirectory, string backupDirectory)
+    {
+        var backedUp = Directory.Exists(destination);
+        if (backedUp)
+            Directory.Move(destination, backupDirectory);
+
+        try
+        {
+            Directory.Move(stagingDirectory, destination);
+            return backedUp;
+        }
+        catch (Exception activationError)
+        {
+            if (!backedUp)
+                throw;
+
+            try
+            {
+                Directory.Move(backupDirectory, destination);
+            }
+            catch (Exception rollbackError)
+            {
+                throw new AggregateException(
+                    "The loader replacement could not be activated, and Borea could not restore the previous directory.",
+                    activationError,
+                    rollbackError);
+            }
+
+            throw;
+        }
+    }
+
+    private static void RestoreReplacement(string destination, string backupDirectory, bool backedUp, Exception installError)
+    {
+        var failedDirectory = TransactionPath(destination, "failed");
+        try
+        {
+            if (Directory.Exists(destination))
+                Directory.Move(destination, failedDirectory);
+
+            if (backedUp)
+                Directory.Move(backupDirectory, destination);
+
+            TryDeleteDirectory(failedDirectory);
+        }
+        catch (Exception rollbackError)
+        {
+            throw new AggregateException(
+                "The loader replacement failed, and Borea could not restore the previous directory.",
+                installError,
+                rollbackError);
         }
     }
 

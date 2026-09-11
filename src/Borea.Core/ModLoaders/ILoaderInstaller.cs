@@ -11,9 +11,9 @@ public interface ILoaderInstaller
     /// <summary>
     /// The stamped install decides where the loader goes; the live listing
     /// decides what to launch and what to configure, because RFC 0035 never
-    /// stamps <c>[provides]</c>. A recorded loader is replaced in place and
-    /// keeps its configuration file. A failed first install removes what it
-    /// wrote.
+    /// stamps <c>[provides]</c>. A recorded loader keeps its configuration
+    /// file, and its old directory is restored when replacement fails. A
+    /// failed first install removes what it wrote.
     /// </summary>
     /// <param name="directory">
     /// Where a standalone loader goes. Null means the recorded directory, or

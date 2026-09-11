@@ -158,6 +158,20 @@ public sealed class FileLoaderAdopterTests : IDisposable
     }
 
     [Fact]
+    public async Task AdoptAsync_RecordedManagedLoaderAtTheSameDirectory_PreservesOwnership()
+    {
+        PlaceStarMap(GameDirectory);
+        var recorded = new LoaderInstallation(LoaderDirectory, null, null, isAdopted: false);
+        await _settings.SaveAsync(new BoreaSettings(
+            GameDirectory,
+            loaderInstallations: new Dictionary<string, LoaderInstallation> { ["StarMap"] = recorded }));
+
+        await _adopter.AdoptAsync(StarMap(), new[] { StarMapRelease() }, LoaderDirectory);
+
+        Assert.False((await _settings.GetAsync())!.LoaderInstallations["StarMap"].IsAdopted);
+    }
+
+    [Fact]
     public async Task AdoptAsync_RelativeDirectory_ThrowsArgumentException()
     {
         await Assert.ThrowsAsync<ArgumentException>(
