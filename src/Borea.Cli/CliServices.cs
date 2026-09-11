@@ -1,6 +1,8 @@
 using Borea.Composition;
 using Borea.Core.Game;
+using Borea.Core.Index;
 using Borea.Core.Instances;
+using Borea.Core.Paths;
 using Borea.Core.Settings;
 using Borea.Core.State;
 
@@ -28,6 +30,10 @@ internal sealed class CliServices : IDisposable
 
     public required IInstalledGameVersionProvider InstalledVersion { get; init; }
 
+    public required IContentIndexFetcher IndexFetcher { get; init; }
+
+    public required IGamePathProvider Paths { get; init; }
+
     /// <summary>
     /// The graph the services came from, disposed with this instance. Null when
     /// nothing needs disposing.
@@ -39,7 +45,11 @@ internal sealed class CliServices : IDisposable
     /// graph's master-server ping and <paramref name="installedVersion"/> its
     /// reader of the installed build, which is what a test needs.
     /// </summary>
-    public static CliServices From(BoreaServices services, ILatestVersionPing? latestVersion = null, IInstalledGameVersionProvider? installedVersion = null)
+    public static CliServices From(
+        BoreaServices services,
+        ILatestVersionPing? latestVersion = null,
+        IInstalledGameVersionProvider? installedVersion = null,
+        IContentIndexFetcher? indexFetcher = null)
     {
         if (services is null)
             throw new ArgumentNullException(nameof(services));
@@ -52,6 +62,8 @@ internal sealed class CliServices : IDisposable
             ModState = services.ModState,
             LatestVersion = latestVersion ?? services.LatestVersion,
             InstalledVersion = installedVersion ?? services.InstalledVersion,
+            IndexFetcher = indexFetcher ?? services.IndexFetcher,
+            Paths = services.Paths,
             Graph = services,
         };
     }

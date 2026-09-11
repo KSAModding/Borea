@@ -1,11 +1,14 @@
 using System.Net.Http.Headers;
 using Borea.Core.Game;
+using Borea.Core.Index;
 using Borea.Core.Instances;
 using Borea.Core.ModPacks;
 using Borea.Core.Mods;
 using Borea.Core.Paths;
 using Borea.Core.Settings;
 using Borea.Core.State;
+using Borea.Network.Downloads;
+using Borea.Network.Index;
 using Borea.Network.MasterServer;
 using Borea.Network.Sources;
 using Borea.Network.SpaceDock;
@@ -31,6 +34,8 @@ namespace Borea.Composition;
 /// </summary>
 public sealed class BoreaServices : IDisposable
 {
+    private static readonly Uri ContentIndexUri = new("https://ksamodding.github.io/content-index-releases/v1/index.json");
+
     /// <summary>
     /// The client lives as long as the process, so its handler must drop pooled
     /// connections after this time. If it keeps them, the client sends to the old
@@ -77,6 +82,8 @@ public sealed class BoreaServices : IDisposable
 
     public required IInstalledGameVersionProvider InstalledVersion { get; init; }
 
+    public required IContentIndexFetcher IndexFetcher { get; init; }
+
     private BoreaServices(HttpClient http)
     {
         _http = http;
@@ -110,9 +117,9 @@ public sealed class BoreaServices : IDisposable
         var paths = new GamePathProvider(settings.GameDirectoryPath, settings.LoaderDirectoryPaths, boreaRoot);
 
         // Network. Every service that talks to a remote host is built here on the
-        // one client. The resolver is shared because the downloader registers the
-        // true mod id that the repository then resolves, and its map lives as long
-        // as this instance.
+        // one client. Only the SpaceDock repository takes the resolver, because a
+        // release carries an absolute download URL and the downloader needs no
+        // host of its own.
         var http = BuildHttpClient();
         var resolver = new SpaceDockResolver();
         var sources = new Dictionary<string, IModRepository>
@@ -131,9 +138,10 @@ public sealed class BoreaServices : IDisposable
             ModPackFavorites = new FileModPackFavoritesRepository(paths),
             Uninstaller = new FileModUninstaller(paths),
             Mods = new CompositeModRepository(sources),
-            Downloader = new SpaceDockModDownloader(http, resolver),
+            Downloader = new HttpModDownloader(http),
             LatestVersion = new LatestVersionPing(http),
             InstalledVersion = new InstalledGameVersionProvider(paths),
+            IndexFetcher = new ContentIndexFetcher(http, ContentIndexUri),
         };
     }
 
