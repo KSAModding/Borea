@@ -142,6 +142,28 @@ public sealed class FileLoaderInstallerTests : IDisposable
         Assert.All(_downloader.ArchivePaths, path => Assert.False(File.Exists(path)));
     }
 
+    private async Task InstallOldLoaderAsync()
+    {
+        await SaveGameDirectoryAsync();
+        _downloader.Bytes = StarMapZip("old", ("old-only.txt", "old-only"));
+        await InstallAsync();
+    }
+
+    private async Task AssertOldLoaderRemainsAsync()
+    {
+        Assert.Equal("old", await File.ReadAllTextAsync(Path.Combine(DefaultDirectory, "StarMap.exe")));
+        Assert.Equal("old-only", await File.ReadAllTextAsync(Path.Combine(DefaultDirectory, "old-only.txt")));
+        Assert.Equal(DefaultDirectory, await RecordedDirectoryAsync());
+        AssertNoTransactionDirectories();
+    }
+
+    private void AssertNoTransactionDirectories()
+    {
+        var parent = Path.GetDirectoryName(DefaultDirectory)!;
+        if (Directory.Exists(parent))
+            Assert.Empty(Directory.EnumerateDirectories(parent, $".{LoaderId}.borea-*"));
+    }
+
     #region The real listing
 
     [Fact]
@@ -202,7 +224,7 @@ public sealed class FileLoaderInstallerTests : IDisposable
     public async Task InstallAsync_RecordedLoader_ReplacesInPlaceAndKeepsTheConfiguration()
     {
         await SaveGameDirectoryAsync();
-        _downloader.Bytes = StarMapZip(exe: "old");
+        _downloader.Bytes = StarMapZip("old", ("old-only.txt", "old-only"));
         await InstallAsync();
 
         // The user pointed StarMap at a repository and added an argument by hand.
@@ -220,11 +242,13 @@ public sealed class FileLoaderInstallerTests : IDisposable
         Assert.True(result.Replaced);
         Assert.Equal(DefaultDirectory, result.Directory);
         Assert.Equal("new", await File.ReadAllTextAsync(Path.Combine(DefaultDirectory, "StarMap.exe")));
+        Assert.False(File.Exists(Path.Combine(DefaultDirectory, "old-only.txt")));
         var config = await ReadConfigAsync(DefaultDirectory);
         Assert.Equal(_gameDirectory, (string?)config["GameLocation"]);
         Assert.Equal(@"C:\Repos", (string?)config["RepositoryLocation"]);
         Assert.Equal("-Verbose", (string?)config["GameArguments"]![0]);
         Assert.Single((await _settings.GetAsync())!.LoaderDirectoryPaths);
+        AssertNoTransactionDirectories();
     }
 
     [Fact]
@@ -641,17 +665,54 @@ public sealed class FileLoaderInstallerTests : IDisposable
     }
 
     [Fact]
-    public async Task InstallAsync_ReplacementFails_LeavesTheDirectory()
+    public async Task InstallAsync_ReplacementExtractionFails_RestoresThePreviousDirectory()
     {
-        await SaveGameDirectoryAsync();
-        _downloader.Bytes = StarMapZip();
-        await InstallAsync();
-        _downloader.Bytes = TestArchives.Build();
+        await InstallOldLoaderAsync();
+        _downloader.Bytes = TestArchives.Build(("StarMap.exe", "new"), ("../escaped.txt", "outside"));
 
         await Assert.ThrowsAsync<InvalidOperationException>(() => InstallAsync(release: StarMapRelease("0.4.7")));
 
-        Assert.True(File.Exists(Path.Combine(DefaultDirectory, "StarMap.exe")));
-        Assert.Equal(DefaultDirectory, await RecordedDirectoryAsync());
+        await AssertOldLoaderRemainsAsync();
+    }
+
+    [Fact]
+    public async Task InstallAsync_ReplacementLaunchTargetMissing_RestoresThePreviousDirectory()
+    {
+        await InstallOldLoaderAsync();
+        _downloader.Bytes = TestArchives.Build(("StarMap.dll", "new"));
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => InstallAsync(release: StarMapRelease("0.4.7")));
+
+        await AssertOldLoaderRemainsAsync();
+    }
+
+    [Fact]
+    public async Task InstallAsync_ReplacementConfigurationFails_RestoresThePreviousDirectory()
+    {
+        await InstallOldLoaderAsync();
+        _downloader.Bytes = StarMapZip(exe: "new");
+        var installer = new FileLoaderInstaller(_pathProvider, _downloader, _settings, new FailingLoaderConfigurator());
+
+        await Assert.ThrowsAsync<IOException>(() => installer.InstallAsync(StarMap(), StarMapRelease("0.4.7")));
+
+        await AssertOldLoaderRemainsAsync();
+    }
+
+    [Fact]
+    public async Task InstallAsync_ReplacementSettingsCannotBeSaved_RestoresThePreviousDirectory()
+    {
+        await InstallOldLoaderAsync();
+        _downloader.Bytes = StarMapZip(exe: "new");
+        var current = await _settings.GetAsync();
+        var installer = new FileLoaderInstaller(
+            _pathProvider,
+            _downloader,
+            new FailingSettingsRepository(current),
+            new LoaderConfigurator());
+
+        await Assert.ThrowsAsync<IOException>(() => installer.InstallAsync(StarMap(), StarMapRelease("0.4.7")));
+
+        await AssertOldLoaderRemainsAsync();
     }
 
     #endregion
@@ -751,5 +812,15 @@ public sealed class FileLoaderInstallerTests : IDisposable
 
         public Task SaveAsync(BoreaSettings settings, CancellationToken cancellationToken = default) =>
             throw new IOException("The disk is full.");
+    }
+
+    private sealed class FailingLoaderConfigurator : ILoaderConfigurator
+    {
+        public Task<string?> ConfigureAsync(
+            ModMetadata loader,
+            string loaderDirectory,
+            string gameDirectory,
+            CancellationToken cancellationToken = default) =>
+            throw new IOException("The configuration file cannot be written.");
     }
 }
