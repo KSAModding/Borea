@@ -1,6 +1,8 @@
 # Borea
 Borea is a cross-platform complete general content manager for Kitten Space Agency. It manages mods, mod packs, vehicles, game saves, and more. It is intended to be modifiable by changing out `Borea.Storage`, `Borea.Network`, and `Borea.App` so user can customize Borea. This repository will contain all the offical Borea files and releases.
 
+See [CONTRIBUTING.md](CONTRIBUTING.md) to contribute and [SECURITY.md](SECURITY.md) to report a security problem.
+
 # Downloads
 Each release has one build per platform.
 
@@ -77,7 +79,6 @@ gh attestation verify <archive> --repo KSAModding/Borea \
   --signer-workflow KSAModding/Borea/.github/workflows/release.yml \
   --predicate-type https://cyclonedx.org/bom
 ```
-
 # Credits
 - [MrJeranimo](https://github.com/MrJeranimo) - Original Creator and Developer
 
