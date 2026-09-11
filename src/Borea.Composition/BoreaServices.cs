@@ -1,17 +1,22 @@
 using System.Net.Http.Headers;
 using Borea.Core.Game;
+using Borea.Core.Index;
 using Borea.Core.Instances;
+using Borea.Core.ModLoaders;
 using Borea.Core.ModPacks;
 using Borea.Core.Mods;
 using Borea.Core.Paths;
 using Borea.Core.Preferences;
 using Borea.Core.Settings;
 using Borea.Core.State;
+using Borea.Network.Downloads;
+using Borea.Network.Index;
 using Borea.Network.MasterServer;
 using Borea.Network.Sources;
 using Borea.Network.SpaceDock;
 using Borea.Storage.Game;
 using Borea.Storage.Instances;
+using Borea.Storage.ModLoaders;
 using Borea.Storage.ModPacks;
 using Borea.Storage.Mods;
 using Borea.Storage.Paths;
@@ -33,6 +38,8 @@ namespace Borea.Composition;
 /// </summary>
 public sealed class BoreaServices : IDisposable
 {
+    private static readonly Uri ContentIndexUri = new("https://ksamodding.github.io/content-index-releases/v1/index.json");
+
     /// <summary>
     /// The client lives as long as the process, so its handler must drop pooled
     /// connections after this time. If it keeps them, the client sends to the old
@@ -77,9 +84,17 @@ public sealed class BoreaServices : IDisposable
 
     public required IModDownloader Downloader { get; init; }
 
+    public required ILoaderInstaller LoaderInstaller { get; init; }
+
+    public required ILoaderAdopter LoaderAdopter { get; init; }
+
+    public required ILoaderUninstaller LoaderUninstaller { get; init; }
+
     public required ILatestVersionPing LatestVersion { get; init; }
 
     public required IInstalledGameVersionProvider InstalledVersion { get; init; }
+
+    public required IContentIndexFetcher IndexFetcher { get; init; }
 
     private BoreaServices(HttpClient http)
     {
@@ -111,34 +126,46 @@ public sealed class BoreaServices : IDisposable
 
         // every other service resolves its paths through the provider
         // built from those settings.
-        var paths = new GamePathProvider(settings.GameDirectoryPath, settings.LoaderDirectoryPaths, boreaRoot);
+        var loaderDirectories = settings.LoaderInstallations.ToDictionary(
+            pair => pair.Key,
+            pair => pair.Value.DirectoryPath,
+            ModIds.Comparer);
+        var paths = new GamePathProvider(settings.GameDirectoryPath, loaderDirectories, boreaRoot);
 
         // Network. Every service that talks to a remote host is built here on the
-        // one client. The resolver is shared because the downloader registers the
-        // true mod id that the repository then resolves, and its map lives as long
-        // as this instance.
+        // one client. Only the SpaceDock repository takes the resolver, because a
+        // release carries an absolute download URL and the downloader needs no
+        // host of its own.
         var http = BuildHttpClient();
         var resolver = new SpaceDockResolver();
         var sources = new Dictionary<string, IModRepository>
         {
             [SpaceDockModRepository.SourceName] = new SpaceDockModRepository(http, resolver),
         };
+        var mods = new CompositeModRepository(sources);
+        var downloader = new HttpModDownloader(http);
+        var settingsRepository = new FileBoreaSettingsRepository(paths);
+        var loaderConfiguration = new LoaderConfigurator();
 
         return new BoreaServices(http)
         {
             Settings = settings,
             Paths = paths,
-            SettingsRepository = new FileBoreaSettingsRepository(paths),
+            SettingsRepository = settingsRepository,
             AppPreferences = new FileAppPreferencesRepository(paths),
             Instances = new FileInstanceRepository(paths),
             ModState = new FileModStateRepository(paths),
             ModFavorites = new FileModFavoritesRepository(paths),
             ModPackFavorites = new FileModPackFavoritesRepository(paths),
             Uninstaller = new FileModUninstaller(paths),
-            Mods = new CompositeModRepository(sources),
-            Downloader = new SpaceDockModDownloader(http, resolver),
+            Mods = mods,
+            Downloader = downloader,
+            LoaderInstaller = new FileLoaderInstaller(paths, downloader, settingsRepository, loaderConfiguration),
+            LoaderAdopter = new FileLoaderAdopter(settingsRepository, loaderConfiguration),
+            LoaderUninstaller = new FileLoaderUninstaller(settingsRepository),
             LatestVersion = new LatestVersionPing(http),
             InstalledVersion = new InstalledGameVersionProvider(paths),
+            IndexFetcher = new ContentIndexFetcher(http, ContentIndexUri),
         };
     }
 

@@ -19,6 +19,7 @@ internal static class InstanceCommand
         instance.Subcommands.Add(BuildRename(services));
         instance.Subcommands.Add(BuildDelete(services));
         instance.Subcommands.Add(BuildActivate(services));
+        instance.Subcommands.Add(BuildMods(services));
         return instance;
     }
 
@@ -135,6 +136,40 @@ internal static class InstanceCommand
         return activate;
     }
 
+    private static Command BuildMods(Func<CancellationToken, Task<CliServices>> services)
+    {
+        var instance = ArgumentRules.Text("instance", InstanceArgumentDescription);
+        var json = ArgumentRules.Json();
+        var mods = new Command("mods", "Print the manifest entries in load order.");
+        mods.Arguments.Add(instance);
+        mods.Options.Add(json);
+
+        mods.SetAction((parseResult, cancellationToken) => CommandRunner.RunAsync(parseResult, services, cancellationToken, async (cli, output, _, ct) =>
+        {
+            var target = await InstanceLookup.ResolveAsync(cli.Instances, parseResult.GetRequiredValue(instance)).ConfigureAwait(false);
+            var entries = await cli.ModState.GetEntriesAsync(target.InstanceId, ct).ConfigureAwait(false);
+
+            if (parseResult.GetValue(json))
+            {
+                JsonOutput.Write(output, entries.Select(entry => new ModView(entry.ModId, entry.Enabled)));
+                return ExitCodes.Done;
+            }
+
+            if (entries.Count == 0)
+            {
+                output.WriteLine($"No mods in '{target.Name}'.");
+                return ExitCodes.Done;
+            }
+
+            foreach (var entry in entries)
+                output.WriteLine($"{(entry.Enabled ? "enabled " : "disabled")}  {entry.ModId}");
+
+            return ExitCodes.Done;
+        }));
+
+        return mods;
+    }
+
     private static string Describe(InstanceSource source) => source switch
     {
         InstanceSource.FromModPack pack => $"modpack {pack.ModPackId} {pack.Version}",
@@ -156,4 +191,6 @@ internal static class InstanceCommand
             _ => new("custom", null, null),
         };
     }
+
+    private sealed record ModView(string Id, bool Enabled);
 }

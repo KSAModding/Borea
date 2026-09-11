@@ -19,6 +19,8 @@ public sealed class CliServicesTests : IDisposable
         Assert.Same(graph.ModState, services.ModState);
         Assert.Same(graph.LatestVersion, services.LatestVersion);
         Assert.Same(graph.InstalledVersion, services.InstalledVersion);
+        Assert.Same(graph.IndexFetcher, services.IndexFetcher);
+        Assert.Same(graph.Paths, services.Paths);
         Assert.Same(graph, services.Graph);
     }
 
@@ -28,11 +30,13 @@ public sealed class CliServicesTests : IDisposable
         using var graph = await BoreaServices.BuildAsync(_tempRoot);
         var ping = new FakeLatestVersionPing();
         var installed = new FakeInstalledGameVersionProvider();
+        var indexFetcher = new FakeContentIndexFetcher();
 
-        var services = CliServices.From(graph, ping, installed);
+        var services = CliServices.From(graph, ping, installed, indexFetcher);
 
         Assert.Same(ping, services.LatestVersion);
         Assert.Same(installed, services.InstalledVersion);
+        Assert.Same(indexFetcher, services.IndexFetcher);
         Assert.Same(graph.Instances, services.Instances);
     }
 
@@ -49,6 +53,8 @@ public sealed class CliServicesTests : IDisposable
             ModState = graph.ModState,
             LatestVersion = new FakeLatestVersionPing(),
             InstalledVersion = new FakeInstalledGameVersionProvider(),
+            IndexFetcher = new FakeContentIndexFetcher(),
+            Paths = graph.Paths,
             Graph = owner,
         };
 

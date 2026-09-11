@@ -1,0 +1,875 @@
+{
+  "snapshot_version": 1,
+  "sources": {
+    "authored": {
+      "repository": "KSAModding/content-index",
+      "commit": "e7759e6304d38392eecd89392f3da5139406dcb7"
+    },
+    "generated": {
+      "repository": "KSAModding/content-index-releases",
+      "commit": "83331326cd7471a859fcd0117af0345b99cb5bf5"
+    }
+  },
+  "listings": [
+    {
+      "id": "AdvancedFlightComputer",
+      "authored": {
+        "spec_version": 1,
+        "id": "AdvancedFlightComputer",
+        "type": "mod",
+        "name": "Advanced Flight Computer",
+        "authors": [
+          "Maxi"
+        ],
+        "abstract": "Extra maneuver planning tools for Kitten Space Agency.",
+        "description": "Adds quick-tools to the Transfer Planner, flyby targeting so a Hohmann transfer arrives as a flyby instead of an impact, multi-pass burn splitting for Oberth-efficient departures, RCS-only burn execution, and it lets the planner target interstellar comets on hyperbolic orbits.\n\n### Maneuver Quick-Tools\n\nNew plan types in the stock Transfer Planner dropdown: **Set Periapsis** and **Set Apoapsis**, a single burn at the opposite apse to raise or lower one apse to a target altitude, plus **Match Inclination** and **Set Inclination**, plane-change burns at AN or DN. The reference plane for Set Inclination is selectable between Ecliptic and Equatorial, which differ by the obliquity of the parent body.\n\n### Flyby Targeting\n\nThe stock planner aims every transfer at the target body's center, so a well-timed Hohmann arrives as an impact. Tick **Target flyby periapsis** and the departure burn is aimed at a periapsis you choose instead, entered against a Surface, Center or Atmosphere reference, on a selectable flyby side. Works for moon flybys and for interplanetary targets.\n\n### Multi-Pass Burns\n\nAny of the plan types above, and the stock Hohmann and circularize transfers, can be split across successive orbits. The engine fires in shorter bursts near periapsis on each orbit instead of one long burn that sweeps a large arc, which cuts finite-burn loss.\n\n### RCS Translation Burns\n\nExecute a planned burn with RCS thrusters only. Useful for small corrections, where rotating the whole vehicle for the main engine can cost more than translating, and for vehicles with no active main engine. Two attitude strategies, Hold and Align, with an Auto mode that compares propellant estimates and picks the cheaper one. Execution is closed loop against the game's own delta-V accounting, and the engine autopilot is suppressed for the whole run.\n\n### Hyperbolic Targets\n\nThe stock Transfer Planner filters out bodies with eccentricity of 1 or more. This mod lets it target interstellar comets such as Oumuamua, 2I/Borisov and 3I/ATLAS by patching the planner's time-of-flight and alignment math to handle unbound orbits. It needs KittenExtensions, which applies the XML patch the mod ships for it.\n",
+        "license": "MIT",
+        "tags": [
+          "control"
+        ],
+        "releases": {
+          "github": "Maximilian-Nesslauer/KSA-AdvancedFlightComputer",
+          "spacedock": 4253,
+          "authority": "github"
+        },
+        "links": {
+          "forums": "https://forums.ahwoo.com/threads/advanced-flight-computer.783/",
+          "repository": "https://github.com/Maximilian-Nesslauer/KSA-AdvancedFlightComputer",
+          "spacedock": "https://spacedock.info/mod/4253/AdvancedFlightComputer",
+          "bugtracker": "https://github.com/Maximilian-Nesslauer/KSA-AdvancedFlightComputer/issues",
+          "discussions": "https://github.com/Maximilian-Nesslauer/KSA-AdvancedFlightComputer/discussions"
+        },
+        "compatibility": {
+          "game_min": "2026.9.4.5400"
+        },
+        "loader": {
+          "id": "StarMap",
+          "min": "0.4.5"
+        }
+      },
+      "releases": [
+        {
+          "spec_version": 1,
+          "id": "AdvancedFlightComputer",
+          "type": "mod",
+          "version": "0.7.5",
+          "version_scheme": "semver",
+          "release_status": "stable",
+          "release_date": "2026-09-02T09:48:03Z",
+          "game_min": "2026.9.4.5400",
+          "game_min_revision": 5400,
+          "download": {
+            "url": "https://github.com/Maximilian-Nesslauer/KSA-AdvancedFlightComputer/releases/download/v0.7.5/AdvancedFlightComputer.zip",
+            "sha256": "AD14E4FE8111F4DAE8406D50459B7E5C42D58F1E01F549636946922CF72AE9E6",
+            "size": 129696,
+            "content_type": "application/zip",
+            "mirrors": [
+              "https://spacedock.info/mod/4253/AdvancedFlightComputer/download/0.7.5"
+            ]
+          },
+          "install_size": 327401,
+          "install": {
+            "root": "AdvancedFlightComputer",
+            "derived": true
+          },
+          "loader": {
+            "id": "StarMap",
+            "min": "0.4.5",
+            "source": "authored"
+          },
+          "dependencies": [
+            {
+              "id": "KittenExtensions",
+              "kind": "optional",
+              "source": "derived"
+            }
+          ],
+          "changelog": "https://github.com/Maximilian-Nesslauer/KSA-AdvancedFlightComputer/releases/tag/v0.7.5",
+          "listing": {
+            "name": "Advanced Flight Computer",
+            "authors": [
+              "Maxi"
+            ],
+            "abstract": "Extra maneuver planning tools for Kitten Space Agency.",
+            "description": "Adds quick-tools to the Transfer Planner, flyby targeting so a Hohmann transfer arrives as a flyby instead of an impact, multi-pass burn splitting for Oberth-efficient departures, RCS-only burn execution, and it lets the planner target interstellar comets on hyperbolic orbits.\n\n### Maneuver Quick-Tools\n\nNew plan types in the stock Transfer Planner dropdown: **Set Periapsis** and **Set Apoapsis**, a single burn at the opposite apse to raise or lower one apse to a target altitude, plus **Match Inclination** and **Set Inclination**, plane-change burns at AN or DN. The reference plane for Set Inclination is selectable between Ecliptic and Equatorial, which differ by the obliquity of the parent body.\n\n### Flyby Targeting\n\nThe stock planner aims every transfer at the target body's center, so a well-timed Hohmann arrives as an impact. Tick **Target flyby periapsis** and the departure burn is aimed at a periapsis you choose instead, entered against a Surface, Center or Atmosphere reference, on a selectable flyby side. Works for moon flybys and for interplanetary targets.\n\n### Multi-Pass Burns\n\nAny of the plan types above, and the stock Hohmann and circularize transfers, can be split across successive orbits. The engine fires in shorter bursts near periapsis on each orbit instead of one long burn that sweeps a large arc, which cuts finite-burn loss.\n\n### RCS Translation Burns\n\nExecute a planned burn with RCS thrusters only. Useful for small corrections, where rotating the whole vehicle for the main engine can cost more than translating, and for vehicles with no active main engine. Two attitude strategies, Hold and Align, with an Auto mode that compares propellant estimates and picks the cheaper one. Execution is closed loop against the game's own delta-V accounting, and the engine autopilot is suppressed for the whole run.\n\n### Hyperbolic Targets\n\nThe stock Transfer Planner filters out bodies with eccentricity of 1 or more. This mod lets it target interstellar comets such as Oumuamua, 2I/Borisov and 3I/ATLAS by patching the planner's time-of-flight and alignment math to handle unbound orbits. It needs KittenExtensions, which applies the XML patch the mod ships for it.\n",
+            "license": "MIT",
+            "tags": [
+              "control"
+            ],
+            "links": {
+              "forums": "https://forums.ahwoo.com/threads/advanced-flight-computer.783/",
+              "repository": "https://github.com/Maximilian-Nesslauer/KSA-AdvancedFlightComputer",
+              "spacedock": "https://spacedock.info/mod/4253/AdvancedFlightComputer",
+              "bugtracker": "https://github.com/Maximilian-Nesslauer/KSA-AdvancedFlightComputer/issues",
+              "discussions": "https://github.com/Maximilian-Nesslauer/KSA-AdvancedFlightComputer/discussions"
+            }
+          }
+        },
+        {
+          "spec_version": 1,
+          "id": "AdvancedFlightComputer",
+          "type": "mod",
+          "version": "0.7.4",
+          "version_scheme": "semver",
+          "release_status": "stable",
+          "release_date": "2026-09-02T09:06:43Z",
+          "game_min": "2026.9.4.5400",
+          "game_min_revision": 5400,
+          "download": {
+            "url": "https://github.com/Maximilian-Nesslauer/KSA-AdvancedFlightComputer/releases/download/v0.7.4/AdvancedFlightComputer.zip",
+            "sha256": "D6C8EFC8674A5EDD3665C840771FF27517A465F76361E0F42774300643A98C70",
+            "size": 129702,
+            "content_type": "application/zip",
+            "mirrors": [
+              "https://spacedock.info/mod/4253/AdvancedFlightComputer/download/0.7.4"
+            ]
+          },
+          "install_size": 327401,
+          "install": {
+            "root": "AdvancedFlightComputer",
+            "derived": true
+          },
+          "loader": {
+            "id": "StarMap",
+            "min": "0.4.5",
+            "source": "authored"
+          },
+          "dependencies": [
+            {
+              "id": "KittenExtensions",
+              "kind": "optional",
+              "source": "derived"
+            }
+          ],
+          "changelog": "https://github.com/Maximilian-Nesslauer/KSA-AdvancedFlightComputer/releases/tag/v0.7.4",
+          "listing": {
+            "name": "Advanced Flight Computer",
+            "authors": [
+              "Maxi"
+            ],
+            "abstract": "Extra maneuver planning tools for Kitten Space Agency.",
+            "description": "Adds quick-tools to the Transfer Planner, flyby targeting so a Hohmann transfer arrives as a flyby instead of an impact, multi-pass burn splitting for Oberth-efficient departures, RCS-only burn execution, and it lets the planner target interstellar comets on hyperbolic orbits.\n\n### Maneuver Quick-Tools\n\nNew plan types in the stock Transfer Planner dropdown: **Set Periapsis** and **Set Apoapsis**, a single burn at the opposite apse to raise or lower one apse to a target altitude, plus **Match Inclination** and **Set Inclination**, plane-change burns at AN or DN. The reference plane for Set Inclination is selectable between Ecliptic and Equatorial, which differ by the obliquity of the parent body.\n\n### Flyby Targeting\n\nThe stock planner aims every transfer at the target body's center, so a well-timed Hohmann arrives as an impact. Tick **Target flyby periapsis** and the departure burn is aimed at a periapsis you choose instead, entered against a Surface, Center or Atmosphere reference, on a selectable flyby side. Works for moon flybys and for interplanetary targets.\n\n### Multi-Pass Burns\n\nAny of the plan types above, and the stock Hohmann and circularize transfers, can be split across successive orbits. The engine fires in shorter bursts near periapsis on each orbit instead of one long burn that sweeps a large arc, which cuts finite-burn loss.\n\n### RCS Translation Burns\n\nExecute a planned burn with RCS thrusters only. Useful for small corrections, where rotating the whole vehicle for the main engine can cost more than translating, and for vehicles with no active main engine. Two attitude strategies, Hold and Align, with an Auto mode that compares propellant estimates and picks the cheaper one. Execution is closed loop against the game's own delta-V accounting, and the engine autopilot is suppressed for the whole run.\n\n### Hyperbolic Targets\n\nThe stock Transfer Planner filters out bodies with eccentricity of 1 or more. This mod lets it target interstellar comets such as Oumuamua, 2I/Borisov and 3I/ATLAS by patching the planner's time-of-flight and alignment math to handle unbound orbits. It needs KittenExtensions, which applies the XML patch the mod ships for it.\n",
+            "license": "MIT",
+            "tags": [
+              "control"
+            ],
+            "links": {
+              "forums": "https://forums.ahwoo.com/threads/advanced-flight-computer.783/",
+              "repository": "https://github.com/Maximilian-Nesslauer/KSA-AdvancedFlightComputer",
+              "spacedock": "https://spacedock.info/mod/4253/AdvancedFlightComputer",
+              "bugtracker": "https://github.com/Maximilian-Nesslauer/KSA-AdvancedFlightComputer/issues",
+              "discussions": "https://github.com/Maximilian-Nesslauer/KSA-AdvancedFlightComputer/discussions"
+            }
+          }
+        },
+        {
+          "spec_version": 1,
+          "id": "AdvancedFlightComputer",
+          "type": "mod",
+          "version": "0.7.3",
+          "version_scheme": "semver",
+          "release_status": "stable",
+          "release_date": "2026-08-28T08:20:31Z",
+          "game_min": "2026.8.19.5261",
+          "game_min_revision": 5261,
+          "game_max": "2026.8.22.5348",
+          "game_max_revision": 5348,
+          "download": {
+            "url": "https://github.com/Maximilian-Nesslauer/KSA-AdvancedFlightComputer/releases/download/v0.7.3/AdvancedFlightComputer.zip",
+            "sha256": "B402D01154DD735781A17FD805E03211B61A7B336DA37EFF5D2EC3890B520F21",
+            "size": 129504,
+            "content_type": "application/zip",
+            "mirrors": [
+              "https://spacedock.info/mod/4253/AdvancedFlightComputer/download/0.7.3"
+            ]
+          },
+          "install_size": 327913,
+          "install": {
+            "root": "AdvancedFlightComputer",
+            "derived": true
+          },
+          "loader": {
+            "id": "StarMap",
+            "min": "0.4.5",
+            "source": "authored"
+          },
+          "dependencies": [
+            {
+              "id": "KittenExtensions",
+              "kind": "optional",
+              "source": "derived"
+            }
+          ],
+          "changelog": "https://github.com/Maximilian-Nesslauer/KSA-AdvancedFlightComputer/releases/tag/v0.7.3",
+          "listing": {
+            "name": "Advanced Flight Computer",
+            "authors": [
+              "Maxi"
+            ],
+            "abstract": "Extra maneuver planning tools for Kitten Space Agency.",
+            "description": "Adds quick-tools to the Transfer Planner, flyby targeting so a Hohmann transfer arrives as a flyby instead of an impact, multi-pass burn splitting for Oberth-efficient departures, RCS-only burn execution, and it lets the planner target interstellar comets on hyperbolic orbits.\n\n### Maneuver Quick-Tools\n\nNew plan types in the stock Transfer Planner dropdown: **Set Periapsis** and **Set Apoapsis**, a single burn at the opposite apse to raise or lower one apse to a target altitude, plus **Match Inclination** and **Set Inclination**, plane-change burns at AN or DN. The reference plane for Set Inclination is selectable between Ecliptic and Equatorial, which differ by the obliquity of the parent body.\n\n### Flyby Targeting\n\nThe stock planner aims every transfer at the target body's center, so a well-timed Hohmann arrives as an impact. Tick **Target flyby periapsis** and the departure burn is aimed at a periapsis you choose instead, entered against a Surface, Center or Atmosphere reference, on a selectable flyby side. Works for moon flybys and for interplanetary targets.\n\n### Multi-Pass Burns\n\nAny of the plan types above, and the stock Hohmann and circularize transfers, can be split across successive orbits. The engine fires in shorter bursts near periapsis on each orbit instead of one long burn that sweeps a large arc, which cuts finite-burn loss.\n\n### RCS Translation Burns\n\nExecute a planned burn with RCS thrusters only. Useful for small corrections, where rotating the whole vehicle for the main engine can cost more than translating, and for vehicles with no active main engine. Two attitude strategies, Hold and Align, with an Auto mode that compares propellant estimates and picks the cheaper one. Execution is closed loop against the game's own delta-V accounting, and the engine autopilot is suppressed for the whole run.\n\n### Hyperbolic Targets\n\nThe stock Transfer Planner filters out bodies with eccentricity of 1 or more. This mod lets it target interstellar comets such as Oumuamua, 2I/Borisov and 3I/ATLAS by patching the planner's time-of-flight and alignment math to handle unbound orbits. It needs KittenExtensions, which applies the XML patch the mod ships for it.\n",
+            "license": "MIT",
+            "tags": [
+              "control"
+            ],
+            "links": {
+              "forums": "https://forums.ahwoo.com/threads/advanced-flight-computer.783/",
+              "repository": "https://github.com/Maximilian-Nesslauer/KSA-AdvancedFlightComputer",
+              "spacedock": "https://spacedock.info/mod/4253/AdvancedFlightComputer",
+              "bugtracker": "https://github.com/Maximilian-Nesslauer/KSA-AdvancedFlightComputer/issues",
+              "discussions": "https://github.com/Maximilian-Nesslauer/KSA-AdvancedFlightComputer/discussions"
+            }
+          }
+        },
+        {
+          "spec_version": 1,
+          "id": "AdvancedFlightComputer",
+          "type": "mod",
+          "version": "0.7.2",
+          "version_scheme": "semver",
+          "release_status": "stable",
+          "release_date": "2026-08-11T16:41:04Z",
+          "game_min": "2026.8.19.5261",
+          "game_min_revision": 5261,
+          "game_max": "2026.8.19.5261",
+          "game_max_revision": 5261,
+          "download": {
+            "url": "https://github.com/Maximilian-Nesslauer/KSA-AdvancedFlightComputer/releases/download/v0.7.2/AdvancedFlightComputer.zip",
+            "sha256": "D9106AA572BD2DD6CAF046990B75D3F17F16F4CC178288B7983A4B98AEE924A6",
+            "size": 129463,
+            "content_type": "application/zip",
+            "mirrors": [
+              "https://spacedock.info/mod/4253/AdvancedFlightComputer/download/0.7.2"
+            ]
+          },
+          "install_size": 327913,
+          "install": {
+            "root": "AdvancedFlightComputer",
+            "derived": true
+          },
+          "loader": {
+            "id": "StarMap",
+            "min": "0.4.5",
+            "source": "authored"
+          },
+          "dependencies": [
+            {
+              "id": "KittenExtensions",
+              "kind": "optional",
+              "source": "derived"
+            }
+          ],
+          "changelog": "https://github.com/Maximilian-Nesslauer/KSA-AdvancedFlightComputer/releases/tag/v0.7.2",
+          "listing": {
+            "name": "Advanced Flight Computer",
+            "authors": [
+              "Maxi"
+            ],
+            "abstract": "Extra maneuver planning tools for Kitten Space Agency.",
+            "description": "Adds quick-tools to the Transfer Planner, flyby targeting so a Hohmann transfer arrives as a flyby instead of an impact, multi-pass burn splitting for Oberth-efficient departures, RCS-only burn execution, and it lets the planner target interstellar comets on hyperbolic orbits.\n\n### Maneuver Quick-Tools\n\nNew plan types in the stock Transfer Planner dropdown: **Set Periapsis** and **Set Apoapsis**, a single burn at the opposite apse to raise or lower one apse to a target altitude, plus **Match Inclination** and **Set Inclination**, plane-change burns at AN or DN. The reference plane for Set Inclination is selectable between Ecliptic and Equatorial, which differ by the obliquity of the parent body.\n\n### Flyby Targeting\n\nThe stock planner aims every transfer at the target body's center, so a well-timed Hohmann arrives as an impact. Tick **Target flyby periapsis** and the departure burn is aimed at a periapsis you choose instead, entered against a Surface, Center or Atmosphere reference, on a selectable flyby side. Works for moon flybys and for interplanetary targets.\n\n### Multi-Pass Burns\n\nAny of the plan types above, and the stock Hohmann and circularize transfers, can be split across successive orbits. The engine fires in shorter bursts near periapsis on each orbit instead of one long burn that sweeps a large arc, which cuts finite-burn loss.\n\n### RCS Translation Burns\n\nExecute a planned burn with RCS thrusters only. Useful for small corrections, where rotating the whole vehicle for the main engine can cost more than translating, and for vehicles with no active main engine. Two attitude strategies, Hold and Align, with an Auto mode that compares propellant estimates and picks the cheaper one. Execution is closed loop against the game's own delta-V accounting, and the engine autopilot is suppressed for the whole run.\n\n### Hyperbolic Targets\n\nThe stock Transfer Planner filters out bodies with eccentricity of 1 or more. This mod lets it target interstellar comets such as Oumuamua, 2I/Borisov and 3I/ATLAS by patching the planner's time-of-flight and alignment math to handle unbound orbits. It needs KittenExtensions, which applies the XML patch the mod ships for it.\n",
+            "license": "MIT",
+            "tags": [
+              "control"
+            ],
+            "links": {
+              "forums": "https://forums.ahwoo.com/threads/advanced-flight-computer.783/",
+              "repository": "https://github.com/Maximilian-Nesslauer/KSA-AdvancedFlightComputer",
+              "spacedock": "https://spacedock.info/mod/4253/AdvancedFlightComputer",
+              "bugtracker": "https://github.com/Maximilian-Nesslauer/KSA-AdvancedFlightComputer/issues",
+              "discussions": "https://github.com/Maximilian-Nesslauer/KSA-AdvancedFlightComputer/discussions"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "KSArmory",
+      "authored": {
+        "spec_version": 1,
+        "id": "KSArmory",
+        "type": "mod",
+        "name": "KSArmory",
+        "authors": [
+          "Laurens"
+        ],
+        "abstract": "Weapon systems for Kitten Space Agency: point defence, guided and unguided munitions, targeting sights and a ballistic computer.",
+        "description": "Adds working weapon systems to Kitten Space Agency. Every launcher searches, tracks, decides and shoots on its own, and the rounds are simulated by the mod rather than by the vehicle physics, so guidance runs at sub-frame accuracy and cannot corrupt a save.\n\n### Launchers\n\nA **Pantsir-S1** on an 8x8 chassis: search radar, twelve proportional-navigation interceptors in two pods of six, twin cannon, and a turret that traverses and elevates. A **Mk 15 Phalanx CIWS** that stacks on any 3 m node and carries no missiles at all. Three rails that surface-attach to anything: **LAU-7** with an AIM-9J, **LAU-128** with an AIM-120C, and **LAU-118** with an AGM-88 HARM, which homes on radar emissions and cannot engage an aircraft. A **B61 rack** that neither aims nor fires - it lets a bomb go and the ground does the rest.\n\n### Sights\n\nAn **electro-optical director** on a mast and a **Rafael LITENING pod** whose whole nose rolls about its centreline while the sight nods within it. Both drive the main view, magnify by rewriting the field of view, and work on a craft carrying no weapons at all - a hull with one director on it is an observation post.\n\n### Fire control\n\nThreat classification is by closest point of approach rather than closing speed, so targets passing by are engageable and not only ones flying straight at you. IFF is per installation, so two sites can be on opposite sides. A radar can be told to go silent, which is a trade rather than a free defence: a silent set cannot be homed on and cannot see. Rounds can themselves be shot down.\n\n### Ballistic computer\n\nAim a multiple-warhead ballistic missile at a point on any body and it flies itself: ascent, guided cutoff on velocity-to-be-gained, post-boost trim, and a warhead bus that releases each round along the same line. It picks up from wherever the vehicle already is - on the pad, mid-ascent, or in orbit, where it also decides *when* to leave.\n\n### Effects\n\nDetonations, nuclear fireballs and mushroom clouds standing in the world, motor plumes and smoke trails, tracers, muzzle flashes and spatialised gunfire, all through the engine's own renderers.\n",
+        "license": "MIT",
+        "tags": [
+          "parts",
+          "weapons",
+          "physics"
+        ],
+        "releases": {
+          "github": "LaurensDeV/KSArmory",
+          "spacedock": 4460,
+          "authority": "github"
+        },
+        "links": {
+          "forums": "https://forums.ahwoo.com/forums/kitten-space-agency/mod-releases/kessler-systems-armory-ksarmory.1131/",
+          "homepage": "https://ksarmory.com",
+          "repository": "https://github.com/LaurensDeV/KSArmory",
+          "spacedock": "https://spacedock.info/mod/4460/KSArmory",
+          "bugtracker": "https://github.com/LaurensDeV/KSArmory/issues"
+        },
+        "compatibility": {
+          "game_min": "2026.8.19.5261"
+        },
+        "loader": {
+          "id": "StarMap",
+          "min": "0.4.6"
+        }
+      },
+      "releases": [
+        {
+          "spec_version": 1,
+          "id": "KSArmory",
+          "type": "mod",
+          "version": "0.8.44",
+          "version_scheme": "semver",
+          "release_status": "stable",
+          "release_date": "2026-08-11T08:23:45Z",
+          "game_min": "2026.8.19.5261",
+          "game_min_revision": 5261,
+          "download": {
+            "url": "https://github.com/LaurensDeV/KSArmory/releases/download/v0.8.44/KSArmory-0.8.44.zip",
+            "sha256": "96C287D59FC871EEB3D3481C358E0321B18E8C11A7277FCDA308DB05B594B305",
+            "size": 985743,
+            "content_type": "application/zip",
+            "mirrors": [
+              "https://spacedock.info/mod/4460/KSArmory/download/0.8.44"
+            ]
+          },
+          "install_size": 2223377,
+          "install": {
+            "root": "KSArmory",
+            "derived": true
+          },
+          "loader": {
+            "id": "StarMap",
+            "min": "0.4.6",
+            "source": "authored"
+          },
+          "dependencies": [],
+          "changelog": "https://github.com/LaurensDeV/KSArmory/releases/tag/v0.8.44",
+          "listing": {
+            "name": "KSArmory",
+            "authors": [
+              "Laurens"
+            ],
+            "abstract": "Weapon systems for Kitten Space Agency: point defence, guided and unguided munitions, targeting sights and a ballistic computer.",
+            "description": "Adds working weapon systems to Kitten Space Agency. Every launcher searches, tracks, decides and shoots on its own, and the rounds are simulated by the mod rather than by the vehicle physics, so guidance runs at sub-frame accuracy and cannot corrupt a save.\n\n### Launchers\n\nA **Pantsir-S1** on an 8x8 chassis: search radar, twelve proportional-navigation interceptors in two pods of six, twin cannon, and a turret that traverses and elevates. A **Mk 15 Phalanx CIWS** that stacks on any 3 m node and carries no missiles at all. Three rails that surface-attach to anything: **LAU-7** with an AIM-9J, **LAU-128** with an AIM-120C, and **LAU-118** with an AGM-88 HARM, which homes on radar emissions and cannot engage an aircraft. A **B61 rack** that neither aims nor fires - it lets a bomb go and the ground does the rest.\n\n### Sights\n\nAn **electro-optical director** on a mast and a **Rafael LITENING pod** whose whole nose rolls about its centreline while the sight nods within it. Both drive the main view, magnify by rewriting the field of view, and work on a craft carrying no weapons at all - a hull with one director on it is an observation post.\n\n### Fire control\n\nThreat classification is by closest point of approach rather than closing speed, so targets passing by are engageable and not only ones flying straight at you. IFF is per installation, so two sites can be on opposite sides. A radar can be told to go silent, which is a trade rather than a free defence: a silent set cannot be homed on and cannot see. Rounds can themselves be shot down.\n\n### Ballistic computer\n\nAim a multiple-warhead ballistic missile at a point on any body and it flies itself: ascent, guided cutoff on velocity-to-be-gained, post-boost trim, and a warhead bus that releases each round along the same line. It picks up from wherever the vehicle already is - on the pad, mid-ascent, or in orbit, where it also decides *when* to leave.\n\n### Effects\n\nDetonations, nuclear fireballs and mushroom clouds standing in the world, motor plumes and smoke trails, tracers, muzzle flashes and spatialised gunfire, all through the engine's own renderers.\n",
+            "license": "MIT",
+            "tags": [
+              "parts",
+              "weapons",
+              "physics"
+            ],
+            "links": {
+              "forums": "https://forums.ahwoo.com/forums/kitten-space-agency/mod-releases/kessler-systems-armory-ksarmory.1131/",
+              "homepage": "https://ksarmory.com",
+              "repository": "https://github.com/LaurensDeV/KSArmory",
+              "spacedock": "https://spacedock.info/mod/4460/KSArmory",
+              "bugtracker": "https://github.com/LaurensDeV/KSArmory/issues"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "MeasureTools",
+      "authored": {
+        "spec_version": 1,
+        "id": "MeasureTools",
+        "type": "mod",
+        "name": "MeasureTools",
+        "authors": [
+          "Maxi"
+        ],
+        "abstract": "Click-to-measure ruler and protractor tools for Kitten Space Agency.",
+        "description": "Click-to-measure ruler and protractor tools for Kitten Space Agency.\n\n### Features\n\n- **Ruler**, click two points to measure the straight-line distance. Snaps to bodies, to body surfaces (the edge of a planet's disc), and to points on orbit lines; clicks on empty space place free points.\n- **Protractor**, click three points (arm, apex, arm) to read the true 3D angle plus both arm lengths, for example the phase angle between two planets around their star.\n- **Part-level measuring**, when the camera is close to a vehicle, points snap to individual parts with centimeter precision: attach nodes and part centers first, then mesh vertices (tank rims, panel corners), and everywhere else the exact hull point under the cursor. Anchors stick to their part, so measurements stay correct while the vehicle moves and rotates, including between parts of two vehicles flying side by side. Engine nozzles measure at their neutral position (gimbal deflection is visual only). Anchors follow their part across staging and docking; only destroying the part removes the measurement.\n- **CAD-style snapping**, beyond attach nodes and vertices, points snap to mesh feature edges (slide along a tank rim between its vertices), edge midpoints, fitted rim centers, and the mirror of the previous point across the part's axis for exact antipodal pairs. Same-vehicle ruler measurements additionally report axial and radial components along the stack axis.\n- **Circle**, one click on a circular part edge (tank rim, engine bell exit) reads diameter, radius, and circumference from a fitted circle that tracks the part.\n- **Face angle**, two clicks on part surfaces read the angle between the surface normals (engine cant, fin alignment), live while the vehicle rotates.\n- **Surface**, pin two points to a planet's surface for the great-circle distance, chord, and initial bearing; pins track the body's rotation like ground markers.\n- **Editor measuring**, the ruler and protractor also work inside the vehicle editor, with the same part-level snapping over the craft being built, including parts currently held in the hand. Anchors follow parts as they are dragged, and part measurements carry across the editor boundary in both directions.\n- **Live preview** with snap highlighting, hover-sync between the list and the map, and click-to-copy values.\n- **Color palettes**, every overlay color has a color picker, organized into named palettes: four shipped ones (Red, Green, Blue, Contrast) plus your own, all editable and persisted across sessions.\n\n### Usage\n\nIn the map view or the default flight view, open **View -> Measure**; in the vehicle editor, open **Measure -> Show Window** from the menu bar. Pick a tool and click in the view to place points. Ctrl and left-click places a free point on the ecliptic plane through the reference body, a short right-click cancels the current point or pauses measuring, and clicking a list row copies the measurement to the clipboard.\n\nThe free-fly and IVA cameras steer with the left mouse button, so the tool stays inactive there. While the tool is armed it owns left clicks, so editor part placement is suspended; pause the tool or close the window to build normally. Measurements are not saved to the save file.\n",
+        "license": "MIT",
+        "tags": [
+          "information"
+        ],
+        "releases": {
+          "github": "Maximilian-Nesslauer/KSA-MeasureTools",
+          "spacedock": 4319,
+          "authority": "github"
+        },
+        "links": {
+          "forums": "https://forums.ahwoo.com/threads/measuretools.992/",
+          "repository": "https://github.com/Maximilian-Nesslauer/KSA-MeasureTools",
+          "spacedock": "https://spacedock.info/mod/4319/MeasureTools",
+          "bugtracker": "https://github.com/Maximilian-Nesslauer/KSA-MeasureTools/issues"
+        },
+        "compatibility": {
+          "game_min": "2026.9.4.5400"
+        },
+        "loader": {
+          "id": "StarMap",
+          "min": "0.4.5"
+        }
+      },
+      "releases": [
+        {
+          "spec_version": 1,
+          "id": "MeasureTools",
+          "type": "mod",
+          "version": "1.1.10",
+          "version_scheme": "semver",
+          "release_status": "stable",
+          "release_date": "2026-09-02T09:48:05Z",
+          "game_min": "2026.9.4.5400",
+          "game_min_revision": 5400,
+          "download": {
+            "url": "https://github.com/Maximilian-Nesslauer/KSA-MeasureTools/releases/download/v1.1.10/MeasureTools.zip",
+            "sha256": "8718558358629EFC3753ACFF9052851EFEB142A9343A1794485C177651265F15",
+            "size": 41782,
+            "content_type": "application/zip",
+            "mirrors": [
+              "https://spacedock.info/mod/4319/MeasureTools/download/1.1.10"
+            ]
+          },
+          "install_size": 88128,
+          "install": {
+            "root": "MeasureTools",
+            "derived": true
+          },
+          "loader": {
+            "id": "StarMap",
+            "min": "0.4.5",
+            "source": "authored"
+          },
+          "dependencies": [],
+          "changelog": "https://github.com/Maximilian-Nesslauer/KSA-MeasureTools/releases/tag/v1.1.10",
+          "listing": {
+            "name": "MeasureTools",
+            "authors": [
+              "Maxi"
+            ],
+            "abstract": "Click-to-measure ruler and protractor tools for Kitten Space Agency.",
+            "description": "Click-to-measure ruler and protractor tools for Kitten Space Agency.\n\n### Features\n\n- **Ruler**, click two points to measure the straight-line distance. Snaps to bodies, to body surfaces (the edge of a planet's disc), and to points on orbit lines; clicks on empty space place free points.\n- **Protractor**, click three points (arm, apex, arm) to read the true 3D angle plus both arm lengths, for example the phase angle between two planets around their star.\n- **Part-level measuring**, when the camera is close to a vehicle, points snap to individual parts with centimeter precision: attach nodes and part centers first, then mesh vertices (tank rims, panel corners), and everywhere else the exact hull point under the cursor. Anchors stick to their part, so measurements stay correct while the vehicle moves and rotates, including between parts of two vehicles flying side by side. Engine nozzles measure at their neutral position (gimbal deflection is visual only). Anchors follow their part across staging and docking; only destroying the part removes the measurement.\n- **CAD-style snapping**, beyond attach nodes and vertices, points snap to mesh feature edges (slide along a tank rim between its vertices), edge midpoints, fitted rim centers, and the mirror of the previous point across the part's axis for exact antipodal pairs. Same-vehicle ruler measurements additionally report axial and radial components along the stack axis.\n- **Circle**, one click on a circular part edge (tank rim, engine bell exit) reads diameter, radius, and circumference from a fitted circle that tracks the part.\n- **Face angle**, two clicks on part surfaces read the angle between the surface normals (engine cant, fin alignment), live while the vehicle rotates.\n- **Surface**, pin two points to a planet's surface for the great-circle distance, chord, and initial bearing; pins track the body's rotation like ground markers.\n- **Editor measuring**, the ruler and protractor also work inside the vehicle editor, with the same part-level snapping over the craft being built, including parts currently held in the hand. Anchors follow parts as they are dragged, and part measurements carry across the editor boundary in both directions.\n- **Live preview** with snap highlighting, hover-sync between the list and the map, and click-to-copy values.\n- **Color palettes**, every overlay color has a color picker, organized into named palettes: four shipped ones (Red, Green, Blue, Contrast) plus your own, all editable and persisted across sessions.\n\n### Usage\n\nIn the map view or the default flight view, open **View -> Measure**; in the vehicle editor, open **Measure -> Show Window** from the menu bar. Pick a tool and click in the view to place points. Ctrl and left-click places a free point on the ecliptic plane through the reference body, a short right-click cancels the current point or pauses measuring, and clicking a list row copies the measurement to the clipboard.\n\nThe free-fly and IVA cameras steer with the left mouse button, so the tool stays inactive there. While the tool is armed it owns left clicks, so editor part placement is suspended; pause the tool or close the window to build normally. Measurements are not saved to the save file.\n",
+            "license": "MIT",
+            "tags": [
+              "information"
+            ],
+            "links": {
+              "forums": "https://forums.ahwoo.com/threads/measuretools.992/",
+              "repository": "https://github.com/Maximilian-Nesslauer/KSA-MeasureTools",
+              "spacedock": "https://spacedock.info/mod/4319/MeasureTools",
+              "bugtracker": "https://github.com/Maximilian-Nesslauer/KSA-MeasureTools/issues"
+            }
+          }
+        },
+        {
+          "spec_version": 1,
+          "id": "MeasureTools",
+          "type": "mod",
+          "version": "1.1.9",
+          "version_scheme": "semver",
+          "release_status": "stable",
+          "release_date": "2026-09-02T09:06:58Z",
+          "game_min": "2026.9.4.5400",
+          "game_min_revision": 5400,
+          "download": {
+            "url": "https://github.com/Maximilian-Nesslauer/KSA-MeasureTools/releases/download/v1.1.9/MeasureTools.zip",
+            "sha256": "0367A612BD8D0A3A2225A92AB8A9292F7EF4FF47238E159301D8F514BA87E04C",
+            "size": 41783,
+            "content_type": "application/zip",
+            "mirrors": [
+              "https://spacedock.info/mod/4319/MeasureTools/download/1.1.9"
+            ]
+          },
+          "install_size": 88128,
+          "install": {
+            "root": "MeasureTools",
+            "derived": true
+          },
+          "loader": {
+            "id": "StarMap",
+            "min": "0.4.5",
+            "source": "authored"
+          },
+          "dependencies": [],
+          "changelog": "https://github.com/Maximilian-Nesslauer/KSA-MeasureTools/releases/tag/v1.1.9",
+          "listing": {
+            "name": "MeasureTools",
+            "authors": [
+              "Maxi"
+            ],
+            "abstract": "Click-to-measure ruler and protractor tools for Kitten Space Agency.",
+            "description": "Click-to-measure ruler and protractor tools for Kitten Space Agency.\n\n### Features\n\n- **Ruler**, click two points to measure the straight-line distance. Snaps to bodies, to body surfaces (the edge of a planet's disc), and to points on orbit lines; clicks on empty space place free points.\n- **Protractor**, click three points (arm, apex, arm) to read the true 3D angle plus both arm lengths, for example the phase angle between two planets around their star.\n- **Part-level measuring**, when the camera is close to a vehicle, points snap to individual parts with centimeter precision: attach nodes and part centers first, then mesh vertices (tank rims, panel corners), and everywhere else the exact hull point under the cursor. Anchors stick to their part, so measurements stay correct while the vehicle moves and rotates, including between parts of two vehicles flying side by side. Engine nozzles measure at their neutral position (gimbal deflection is visual only). Anchors follow their part across staging and docking; only destroying the part removes the measurement.\n- **CAD-style snapping**, beyond attach nodes and vertices, points snap to mesh feature edges (slide along a tank rim between its vertices), edge midpoints, fitted rim centers, and the mirror of the previous point across the part's axis for exact antipodal pairs. Same-vehicle ruler measurements additionally report axial and radial components along the stack axis.\n- **Circle**, one click on a circular part edge (tank rim, engine bell exit) reads diameter, radius, and circumference from a fitted circle that tracks the part.\n- **Face angle**, two clicks on part surfaces read the angle between the surface normals (engine cant, fin alignment), live while the vehicle rotates.\n- **Surface**, pin two points to a planet's surface for the great-circle distance, chord, and initial bearing; pins track the body's rotation like ground markers.\n- **Editor measuring**, the ruler and protractor also work inside the vehicle editor, with the same part-level snapping over the craft being built, including parts currently held in the hand. Anchors follow parts as they are dragged, and part measurements carry across the editor boundary in both directions.\n- **Live preview** with snap highlighting, hover-sync between the list and the map, and click-to-copy values.\n- **Color palettes**, every overlay color has a color picker, organized into named palettes: four shipped ones (Red, Green, Blue, Contrast) plus your own, all editable and persisted across sessions.\n\n### Usage\n\nIn the map view or the default flight view, open **View -> Measure**; in the vehicle editor, open **Measure -> Show Window** from the menu bar. Pick a tool and click in the view to place points. Ctrl and left-click places a free point on the ecliptic plane through the reference body, a short right-click cancels the current point or pauses measuring, and clicking a list row copies the measurement to the clipboard.\n\nThe free-fly and IVA cameras steer with the left mouse button, so the tool stays inactive there. While the tool is armed it owns left clicks, so editor part placement is suspended; pause the tool or close the window to build normally. Measurements are not saved to the save file.\n",
+            "license": "MIT",
+            "tags": [
+              "information"
+            ],
+            "links": {
+              "forums": "https://forums.ahwoo.com/threads/measuretools.992/",
+              "repository": "https://github.com/Maximilian-Nesslauer/KSA-MeasureTools",
+              "spacedock": "https://spacedock.info/mod/4319/MeasureTools",
+              "bugtracker": "https://github.com/Maximilian-Nesslauer/KSA-MeasureTools/issues"
+            }
+          }
+        },
+        {
+          "spec_version": 1,
+          "id": "MeasureTools",
+          "type": "mod",
+          "version": "1.1.8",
+          "version_scheme": "semver",
+          "release_status": "stable",
+          "release_date": "2026-08-28T08:23:56Z",
+          "game_min": "2026.8.19.5261",
+          "game_min_revision": 5261,
+          "game_max": "2026.8.22.5348",
+          "game_max_revision": 5348,
+          "download": {
+            "url": "https://github.com/Maximilian-Nesslauer/KSA-MeasureTools/releases/download/v1.1.8/MeasureTools.zip",
+            "sha256": "2F771AEC246B055FF47E539CA849AB075123D5D2D3C67D803932D8AB328E5820",
+            "size": 40458,
+            "content_type": "application/zip",
+            "mirrors": [
+              "https://spacedock.info/mod/4319/MeasureTools/download/1.1.8"
+            ]
+          },
+          "install_size": 85056,
+          "install": {
+            "root": "MeasureTools",
+            "derived": true
+          },
+          "loader": {
+            "id": "StarMap",
+            "min": "0.4.5",
+            "source": "authored"
+          },
+          "dependencies": [],
+          "changelog": "https://github.com/Maximilian-Nesslauer/KSA-MeasureTools/releases/tag/v1.1.8",
+          "listing": {
+            "name": "MeasureTools",
+            "authors": [
+              "Maxi"
+            ],
+            "abstract": "Click-to-measure ruler and protractor tools for Kitten Space Agency.",
+            "description": "Click-to-measure ruler and protractor tools for Kitten Space Agency.\n\n### Features\n\n- **Ruler**, click two points to measure the straight-line distance. Snaps to bodies, to body surfaces (the edge of a planet's disc), and to points on orbit lines; clicks on empty space place free points.\n- **Protractor**, click three points (arm, apex, arm) to read the true 3D angle plus both arm lengths, for example the phase angle between two planets around their star.\n- **Part-level measuring**, when the camera is close to a vehicle, points snap to individual parts with centimeter precision: attach nodes and part centers first, then mesh vertices (tank rims, panel corners), and everywhere else the exact hull point under the cursor. Anchors stick to their part, so measurements stay correct while the vehicle moves and rotates, including between parts of two vehicles flying side by side. Engine nozzles measure at their neutral position (gimbal deflection is visual only). Anchors follow their part across staging and docking; only destroying the part removes the measurement.\n- **CAD-style snapping**, beyond attach nodes and vertices, points snap to mesh feature edges (slide along a tank rim between its vertices), edge midpoints, fitted rim centers, and the mirror of the previous point across the part's axis for exact antipodal pairs. Same-vehicle ruler measurements additionally report axial and radial components along the stack axis.\n- **Circle**, one click on a circular part edge (tank rim, engine bell exit) reads diameter, radius, and circumference from a fitted circle that tracks the part.\n- **Face angle**, two clicks on part surfaces read the angle between the surface normals (engine cant, fin alignment), live while the vehicle rotates.\n- **Surface**, pin two points to a planet's surface for the great-circle distance, chord, and initial bearing; pins track the body's rotation like ground markers.\n- **Editor measuring**, the ruler and protractor also work inside the vehicle editor, with the same part-level snapping over the craft being built, including parts currently held in the hand. Anchors follow parts as they are dragged, and part measurements carry across the editor boundary in both directions.\n- **Live preview** with snap highlighting, hover-sync between the list and the map, and click-to-copy values.\n- **Color palettes**, every overlay color has a color picker, organized into named palettes: four shipped ones (Red, Green, Blue, Contrast) plus your own, all editable and persisted across sessions.\n\n### Usage\n\nIn the map view or the default flight view, open **View -> Measure**; in the vehicle editor, open **Measure -> Show Window** from the menu bar. Pick a tool and click in the view to place points. Ctrl and left-click places a free point on the ecliptic plane through the reference body, a short right-click cancels the current point or pauses measuring, and clicking a list row copies the measurement to the clipboard.\n\nThe free-fly and IVA cameras steer with the left mouse button, so the tool stays inactive there. While the tool is armed it owns left clicks, so editor part placement is suspended; pause the tool or close the window to build normally. Measurements are not saved to the save file.\n",
+            "license": "MIT",
+            "tags": [
+              "information"
+            ],
+            "links": {
+              "forums": "https://forums.ahwoo.com/threads/measuretools.992/",
+              "repository": "https://github.com/Maximilian-Nesslauer/KSA-MeasureTools",
+              "spacedock": "https://spacedock.info/mod/4319/MeasureTools",
+              "bugtracker": "https://github.com/Maximilian-Nesslauer/KSA-MeasureTools/issues"
+            }
+          }
+        },
+        {
+          "spec_version": 1,
+          "id": "MeasureTools",
+          "type": "mod",
+          "version": "1.1.7",
+          "version_scheme": "semver",
+          "release_status": "stable",
+          "release_date": "2026-08-11T16:41:12Z",
+          "game_min": "2026.8.19.5261",
+          "game_min_revision": 5261,
+          "game_max": "2026.8.19.5261",
+          "game_max_revision": 5261,
+          "download": {
+            "url": "https://github.com/Maximilian-Nesslauer/KSA-MeasureTools/releases/download/v1.1.7/MeasureTools.zip",
+            "sha256": "309283AAE796165C044FD2838818DB9D98FF11AF45A1CD7FC9D09980F0512F0C",
+            "size": 40446,
+            "content_type": "application/zip",
+            "mirrors": [
+              "https://spacedock.info/mod/4319/MeasureTools/download/1.1.7"
+            ]
+          },
+          "install_size": 85056,
+          "install": {
+            "root": "MeasureTools",
+            "derived": true
+          },
+          "loader": {
+            "id": "StarMap",
+            "min": "0.4.5",
+            "source": "authored"
+          },
+          "dependencies": [],
+          "changelog": "https://github.com/Maximilian-Nesslauer/KSA-MeasureTools/releases/tag/v1.1.7",
+          "listing": {
+            "name": "MeasureTools",
+            "authors": [
+              "Maxi"
+            ],
+            "abstract": "Click-to-measure ruler and protractor tools for Kitten Space Agency.",
+            "description": "Click-to-measure ruler and protractor tools for Kitten Space Agency.\n\n### Features\n\n- **Ruler**, click two points to measure the straight-line distance. Snaps to bodies, to body surfaces (the edge of a planet's disc), and to points on orbit lines; clicks on empty space place free points.\n- **Protractor**, click three points (arm, apex, arm) to read the true 3D angle plus both arm lengths, for example the phase angle between two planets around their star.\n- **Part-level measuring**, when the camera is close to a vehicle, points snap to individual parts with centimeter precision: attach nodes and part centers first, then mesh vertices (tank rims, panel corners), and everywhere else the exact hull point under the cursor. Anchors stick to their part, so measurements stay correct while the vehicle moves and rotates, including between parts of two vehicles flying side by side. Engine nozzles measure at their neutral position (gimbal deflection is visual only). Anchors follow their part across staging and docking; only destroying the part removes the measurement.\n- **CAD-style snapping**, beyond attach nodes and vertices, points snap to mesh feature edges (slide along a tank rim between its vertices), edge midpoints, fitted rim centers, and the mirror of the previous point across the part's axis for exact antipodal pairs. Same-vehicle ruler measurements additionally report axial and radial components along the stack axis.\n- **Circle**, one click on a circular part edge (tank rim, engine bell exit) reads diameter, radius, and circumference from a fitted circle that tracks the part.\n- **Face angle**, two clicks on part surfaces read the angle between the surface normals (engine cant, fin alignment), live while the vehicle rotates.\n- **Surface**, pin two points to a planet's surface for the great-circle distance, chord, and initial bearing; pins track the body's rotation like ground markers.\n- **Editor measuring**, the ruler and protractor also work inside the vehicle editor, with the same part-level snapping over the craft being built, including parts currently held in the hand. Anchors follow parts as they are dragged, and part measurements carry across the editor boundary in both directions.\n- **Live preview** with snap highlighting, hover-sync between the list and the map, and click-to-copy values.\n- **Color palettes**, every overlay color has a color picker, organized into named palettes: four shipped ones (Red, Green, Blue, Contrast) plus your own, all editable and persisted across sessions.\n\n### Usage\n\nIn the map view or the default flight view, open **View -> Measure**; in the vehicle editor, open **Measure -> Show Window** from the menu bar. Pick a tool and click in the view to place points. Ctrl and left-click places a free point on the ecliptic plane through the reference body, a short right-click cancels the current point or pauses measuring, and clicking a list row copies the measurement to the clipboard.\n\nThe free-fly and IVA cameras steer with the left mouse button, so the tool stays inactive there. While the tool is armed it owns left clicks, so editor part placement is suspended; pause the tool or close the window to build normally. Measurements are not saved to the save file.\n",
+            "license": "MIT",
+            "tags": [
+              "information"
+            ],
+            "links": {
+              "forums": "https://forums.ahwoo.com/threads/measuretools.992/",
+              "repository": "https://github.com/Maximilian-Nesslauer/KSA-MeasureTools",
+              "spacedock": "https://spacedock.info/mod/4319/MeasureTools",
+              "bugtracker": "https://github.com/Maximilian-Nesslauer/KSA-MeasureTools/issues"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "StarMap",
+      "authored": {
+        "spec_version": 1,
+        "id": "StarMap",
+        "type": "mod-loader",
+        "name": "StarMap",
+        "authors": [
+          "KlaasWhite"
+        ],
+        "abstract": "Mod loader that runs code mods for Kitten Space Agency.",
+        "description": "A prototype arbitrary code modloader for Kitten Space Agency.\nIt can run with that functionality in the background, or as a dumb loader that only loads mods.\n\nIt uses Assembly Load Contexts so each mod's dependencies are managed separately, which reduces conflicts.\n\nMods go in `Documents/My Games/Kitten Space Agency/mods/<ModName>/`, which is recommended because it survives game updates, or in `<KSA Installation>/Content/<ModName>/`.\nStarMap uses the game's own manifest system to discover mods in both locations.\n\nYou run `StarMap.exe` rather than the game. The first run fails and writes a `StarMapConfig.json` next to it, where `GameLocation` points at the folder Kitten Space Agency was installed in.\n",
+        "license": "MIT",
+        "tags": [
+          "library"
+        ],
+        "releases": {
+          "github": "StarMapLoader/StarMap"
+        },
+        "links": {
+          "forums": "https://forums.ahwoo.com/threads/starmap-mod-loader.384/",
+          "repository": "https://github.com/StarMapLoader/StarMap",
+          "bugtracker": "https://github.com/StarMapLoader/StarMap/issues"
+        },
+        "compatibility": {
+          "game_min": "2026.8.3.5117"
+        },
+        "install": {
+          "target": "standalone",
+          "uninstall": [
+            "Delete the StarMap directory. The game runs unmodded again with no further cleanup."
+          ]
+        },
+        "provides": {
+          "launch": "StarMap.exe",
+          "content-dir": "mods",
+          "configure": {
+            "file": "StarMapConfig.json",
+            "format": "json",
+            "game-path": "GameLocation"
+          }
+        }
+      },
+      "releases": [
+        {
+          "spec_version": 1,
+          "id": "StarMap",
+          "type": "mod-loader",
+          "version": "0.4.6",
+          "version_scheme": "semver",
+          "release_status": "stable",
+          "release_date": "2026-08-02T16:47:50Z",
+          "game_min": "2026.8.3.5117",
+          "game_min_revision": 5117,
+          "download": {
+            "url": "https://github.com/StarMapLoader/StarMap/releases/download/0.4.6/StarMap-0.4.6.zip",
+            "sha256": "BC9510994DAF56FD826B734EF0F2704C8E4D1B91BCF010C76733E168CC23604A",
+            "size": 891020,
+            "content_type": "application/zip"
+          },
+          "install_size": 2549644,
+          "install": {
+            "derived": true,
+            "target": "standalone"
+          },
+          "dependencies": [],
+          "changelog": "https://github.com/StarMapLoader/StarMap/releases/tag/0.4.6",
+          "listing": {
+            "name": "StarMap",
+            "authors": [
+              "KlaasWhite"
+            ],
+            "abstract": "Mod loader that runs code mods for Kitten Space Agency.",
+            "description": "A prototype arbitrary code modloader for Kitten Space Agency.\nIt can run with that functionality in the background, or as a dumb loader that only loads mods.\n\nIt uses Assembly Load Contexts so each mod's dependencies are managed separately, which reduces conflicts.\n\nMods go in `Documents/My Games/Kitten Space Agency/mods/<ModName>/`, which is recommended because it survives game updates, or in `<KSA Installation>/Content/<ModName>/`.\nStarMap uses the game's own manifest system to discover mods in both locations.\n\nYou run `StarMap.exe` rather than the game. The first run fails and writes a `StarMapConfig.json` next to it, where `GameLocation` points at the folder Kitten Space Agency was installed in.\n",
+            "license": "MIT",
+            "tags": [
+              "library"
+            ],
+            "links": {
+              "forums": "https://forums.ahwoo.com/threads/starmap-mod-loader.384/",
+              "repository": "https://github.com/StarMapLoader/StarMap",
+              "bugtracker": "https://github.com/StarMapLoader/StarMap/issues"
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "packs": [],
+  "game_versions": {
+    "spec_version": 1,
+    "source": "http://ksa-master1.rocketwerkz.com:8082/version",
+    "versions": [
+      "2025.8.33.2091",
+      "2025.8.59.2101",
+      "2025.8.86.2108",
+      "2025.8.100.2112",
+      "2025.8.282.2121",
+      "2025.8.14.2125",
+      "2025.8.19.2133",
+      "2025.8.20.2136",
+      "2025.8.285.2163",
+      "2025.8.21.2167",
+      "2025.8.22.2169",
+      "2025.8.287.2171",
+      "2025.8.288.2181",
+      "2025.8.23.2197",
+      "2025.8.289.2212",
+      "2025.8.292.2234",
+      "2025.8.293.2250",
+      "2025.8.294.2252",
+      "2025.8.24.2263",
+      "2025.9.2.2270",
+      "2025.9.3.2279",
+      "2025.9.4.2290",
+      "2025.9.5.2298",
+      "2025.9.2.2300",
+      "2025.9.6.2317",
+      "2025.9.8.2336",
+      "2025.9.10.2376",
+      "2025.9.2.2383",
+      "2025.9.12.2399",
+      "2025.9.3.2404",
+      "2025.9.13.2415",
+      "2025.9.4.2429",
+      "2025.9.5.2441",
+      "2025.10.5.2476",
+      "2025.10.6.2497",
+      "2025.10.8.2502",
+      "2025.10.10.2530",
+      "2025.10.11.2540",
+      "2025.10.12.2547",
+      "2025.10.13.2554",
+      "2025.10.5.2573",
+      "2025.10.6.2584",
+      "2025.10.10.2613",
+      "2025.11.2.2620",
+      "2025.11.3.2634",
+      "2025.11.4.2742",
+      "2025.11.2.2781",
+      "2025.11.3.2789",
+      "2025.11.4.2791",
+      "2025.11.5.2819",
+      "2025.11.6.2829",
+      "2025.11.7.2844",
+      "2025.11.8.2847",
+      "2025.11.9.2894",
+      "2025.11.5.2897",
+      "2025.11.10.2915",
+      "2025.11.11.2924",
+      "2025.11.6.2939",
+      "2025.11.8.2945",
+      "2025.12.3.2971",
+      "2025.12.5.2976",
+      "2025.12.2.2991",
+      "2025.12.13.2994",
+      "2025.12.14.3000",
+      "2025.12.6.3011",
+      "2025.12.23.3012",
+      "2025.12.24.3014",
+      "2025.12.8.3030",
+      "2025.12.9.3041",
+      "2025.12.25.3047",
+      "2025.12.10.3057",
+      "2025.12.27.3072",
+      "2025.12.11.3082",
+      "2025.12.29.3097",
+      "2025.12.31.3103",
+      "2025.12.33.3123",
+      "2026.1.2.3181",
+      "2026.1.3.3194",
+      "2026.1.2.3232",
+      "2026.1.4.3233",
+      "2026.1.5.3249",
+      "2026.1.7.3270",
+      "2026.1.8.3279",
+      "2026.1.9.3293",
+      "2026.1.4.3299",
+      "2026.1.5.3309",
+      "2026.1.6.3329",
+      "2026.1.3.3335",
+      "2026.1.4.3345",
+      "2026.1.10.3353",
+      "2026.2.2.3384",
+      "2026.2.2.3396",
+      "2026.2.3.3419",
+      "2026.2.4.3423",
+      "2026.2.5.3428",
+      "2026.2.6.3454",
+      "2026.2.7.3473",
+      "2026.2.9.3529",
+      "2026.2.10.3538",
+      "2026.2.3.3549",
+      "2026.2.5.3563",
+      "2026.2.11.3592",
+      "2026.2.18.3622",
+      "2026.2.30.3638",
+      "2026.2.31.3640",
+      "2026.2.32.3646",
+      "2026.2.34.3656",
+      "2026.2.35.3667",
+      "2026.2.36.3695",
+      "2026.2.37.3699",
+      "2026.2.38.3713",
+      "2026.3.2.3736",
+      "2026.3.3.3759",
+      "2026.3.5.3775",
+      "2026.3.6.3818",
+      "2026.3.7.3848",
+      "2026.3.8.3883",
+      "2026.3.9.3904",
+      "2026.3.11.3916",
+      "2026.4.2.3942",
+      "2026.4.3.3957",
+      "2026.4.4.3969",
+      "2026.4.5.3999",
+      "2026.4.6.4036",
+      "2026.4.10.4057",
+      "2026.4.12.4081",
+      "2026.4.13.4082",
+      "2026.4.14.4100",
+      "2026.4.15.4141",
+      "2026.4.16.4170",
+      "2026.4.17.4184",
+      "2026.4.18.4206",
+      "2026.5.3.4264",
+      "2026.5.5.4304",
+      "2026.5.6.4337",
+      "2026.5.7.4397",
+      "2026.5.10.4424",
+      "2026.5.11.4462",
+      "2026.5.12.4510",
+      "2026.6.2.4531",
+      "2026.6.3.4568",
+      "2026.6.5.4600",
+      "2026.6.6.4601",
+      "2026.6.7.4631",
+      "2026.6.8.4680",
+      "2026.6.9.4750",
+      "2026.7.2.4824",
+      "2026.7.3.4826",
+      "2026.7.4.4860",
+      "2026.7.5.4892",
+      "2026.7.6.4939",
+      "2026.7.8.4980",
+      "2026.7.9.5018",
+      "2026.7.10.5056",
+      "2026.8.3.5117",
+      "2026.8.5.5168",
+      "2026.8.19.5261",
+      "2026.8.22.5348",
+      "2026.9.7.5402"
+    ]
+  }
+}

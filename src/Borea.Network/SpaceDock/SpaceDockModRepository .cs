@@ -15,8 +15,9 @@ namespace Borea.Network.SpaceDock;
 /// RFC 0031 metadata types. SpaceDock cannot provide most authored facts, so
 /// the mapping fills in:
 ///
-/// - The id is a placeholder, SpaceDock's numeric mod id stringified; the
-///   true id is only knowable after a download (SpaceDockResolver).
+/// - The id is a placeholder, SpaceDock's numeric mod id stringified, because
+///   SpaceDock exposes no mod.toml id; nothing resolves it to the true id
+///   today (SpaceDockResolver holds the map).
 /// - An empty dependency list and a null loader mean unknown, not none.
 /// - The forums link is the website when it points at the KSA forums,
 ///   otherwise the SpaceDock page stands in (the model requires one).

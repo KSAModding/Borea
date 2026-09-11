@@ -74,6 +74,17 @@ public sealed class LoaderProvidesTests
         Assert.Throws<ArgumentException>(() => new LoaderConfigure("../StarMapConfig.json", ConfigureFormat.Json));
     }
 
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    [InlineData("a..b")]
+    [InlineData("a.")]
+    [InlineData(".a")]
+    public void Configure_GamePathKeyWithAnEmptySegment_ThrowsArgumentException(string gamePath)
+    {
+        Assert.Throws<ArgumentException>(() => new LoaderConfigure("Config.json", ConfigureFormat.Json, gamePath));
+    }
+
     [Fact]
     public void Configure_NestedGamePathKey_IsAccepted()
     {

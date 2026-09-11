@@ -18,6 +18,8 @@ internal sealed class CliHost : IDisposable
 
     public FakeInstalledGameVersionProvider? InstalledVersion { get; set; }
 
+    public FakeContentIndexFetcher IndexFetcher { get; } = new();
+
     /// <summary>How many times a command built its services.</summary>
     public int Builds { get; private set; }
 
@@ -36,7 +38,7 @@ internal sealed class CliHost : IDisposable
     private async Task<CliServices> BuildAsync(CancellationToken cancellationToken)
     {
         Builds++;
-        return CliServices.From(await BoreaServices.BuildAsync(Root, cancellationToken), LatestVersion, InstalledVersion);
+        return CliServices.From(await BoreaServices.BuildAsync(Root, cancellationToken), LatestVersion, InstalledVersion, IndexFetcher);
     }
 
     public void Dispose()

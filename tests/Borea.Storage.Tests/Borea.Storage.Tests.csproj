@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
@@ -27,11 +27,13 @@
     <!-- Own projects inside this folder, so their sources stay out of these globs. -->
     <Compile Remove="Fixtures\**" />
     <None Remove="Fixtures\**" />
+    <None Update="Index\Fixtures\current-snapshot.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>
     <!-- Built by the solution, never compiled against. -->
     <VersionFixture Include="Fixtures\GameVersionFixture\GameVersionFixture.csproj" />
+    <VersionFixture Include="Fixtures\LoaderVersionFixture\LoaderVersionFixture.csproj" />
     <VersionFixture Include="Fixtures\UnparseableVersionFixture\UnparseableVersionFixture.csproj" />
     <ProjectReference Include="@(VersionFixture)" ReferenceOutputAssembly="false" />
   </ItemGroup>
