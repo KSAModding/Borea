@@ -64,7 +64,7 @@ public sealed class ContentIndexFetcher : IContentIndexFetcher
         // Read the content as a byte array to then write to disk.
         byte[] body = await response.Content.ReadAsByteArrayAsync(ct);
 
-        BasicIndexFormatCheck(body, response);
+        ContentIndexRootValidator.ValidateIndexRoot(body, response);
 
         Directory.CreateDirectory(Path.GetDirectoryName(destinationPath)!);
 
