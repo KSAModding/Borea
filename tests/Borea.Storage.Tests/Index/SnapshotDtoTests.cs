@@ -1,4 +1,3 @@
-using System.Runtime.CompilerServices;
 using System.Text.Json;
 using Borea.Storage.Index;
 
@@ -138,6 +137,6 @@ public sealed class SnapshotDtoTests
         Assert.Throws<JsonException>(() => IndexJson.Deserialize<SnapshotDto>(json));
     }
 
-    private static string LoadCurrentSnapshot([CallerFilePath] string sourcePath = "")
-        => File.ReadAllText(Path.Combine(Path.GetDirectoryName(sourcePath)!, "Fixtures", "current-snapshot.json"));
+    private static string LoadCurrentSnapshot()
+        => File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Index", "Fixtures", "current-snapshot.json"));
 }
