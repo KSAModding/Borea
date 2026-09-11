@@ -104,7 +104,14 @@ public static class ContentIndexRootValidator
                 throw new InvalidOperationException($"The index is snapshot version {snapshotVersion} and this build reads {SnapshotVersions.Highest}.");
             }
 
-            // Not checking for 'sources' since it is optional
+            // If sources exist, make sure it is an object
+            if (root.TryGetProperty("sources", out var sourcesElement))
+            {
+                if (sourcesElement.ValueKind != JsonValueKind.Object)
+                {
+                    throw new InvalidOperationException("'sources' is not an object.");
+                }
+            }
 
             if (!root.TryGetProperty("listings", out var listingsElement)
                 || listingsElement.ValueKind != JsonValueKind.Array)
