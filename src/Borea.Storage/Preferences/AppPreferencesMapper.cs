@@ -1,3 +1,4 @@
+using System.Globalization;
 using Borea.Core.Preferences;
 
 namespace Borea.Storage.Preferences;
@@ -8,11 +9,28 @@ internal static class AppPreferencesMapper
     {
         FormatVersion = FileAppPreferencesRepository.CurrentFormatVersion,
         SelectedTheme = preferences.SelectedThemeName,
+        RegionalCulture = preferences.RegionalCultureName,
         CustomThemes = preferences.CustomThemes.Select(theme => (CustomThemePreferenceDto?)ToDto(theme)).ToList(),
     };
 
     public static AppPreferences FromDto(AppPreferencesDocumentDto dto)
-        => new(dto.SelectedTheme, dto.CustomThemes?.Select(FromDto));
+        => new(dto.SelectedTheme, dto.CustomThemes?.Select(FromDto), NormalizeRegionalCulture(dto.RegionalCulture));
+
+    private static string? NormalizeRegionalCulture(string? cultureName)
+    {
+        if (string.IsNullOrWhiteSpace(cultureName))
+            return null;
+
+        try
+        {
+            var culture = CultureInfo.GetCultureInfo(cultureName);
+            return culture.IsNeutralCulture ? null : culture.Name;
+        }
+        catch (CultureNotFoundException)
+        {
+            return null;
+        }
+    }
 
     private static CustomThemePreferenceDto ToDto(CustomThemePreference theme) => new()
     {

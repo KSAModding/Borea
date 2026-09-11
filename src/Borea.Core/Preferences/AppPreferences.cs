@@ -6,16 +6,28 @@ public sealed class AppPreferences
 
     public string? SelectedThemeName { get; }
 
+    public string? RegionalCultureName { get; }
+
     public IReadOnlyList<CustomThemePreference> CustomThemes { get; }
 
-    public AppPreferences(string? selectedThemeName, IEnumerable<CustomThemePreference>? customThemes = null)
+    public AppPreferences(
+        string? selectedThemeName,
+        IEnumerable<CustomThemePreference>? customThemes = null,
+        string? regionalCultureName = null)
     {
         if (selectedThemeName is not null && string.IsNullOrWhiteSpace(selectedThemeName))
             throw new ArgumentException("Selected theme name, if provided, cannot be whitespace.", nameof(selectedThemeName));
 
+        if (regionalCultureName is not null && string.IsNullOrWhiteSpace(regionalCultureName))
+            throw new ArgumentException("Regional culture name, if provided, cannot be whitespace.", nameof(regionalCultureName));
+
         SelectedThemeName = selectedThemeName;
+        RegionalCultureName = regionalCultureName;
         CustomThemes = BuildCustomThemes(customThemes, nameof(customThemes));
     }
+
+    public AppPreferences WithRegionalCultureName(string? regionalCultureName)
+        => new(SelectedThemeName, CustomThemes, regionalCultureName);
 
     public string ResolveSelectedThemeName(IReadOnlyCollection<string> bundledThemeNames, string defaultThemeName)
     {
