@@ -1,0 +1,32 @@
+{
+  "version": 1,
+  "dependencies": {
+    "net10.0": {
+      "Tomlyn": {
+        "type": "Transitive",
+        "resolved": "2.10.1",
+        "contentHash": "ykjOY3IpYmC4SpPcAZRTl/w2jTmhPMDydHq8xcV7tTBAQ22nKBsOkPqauIrZlMjHm03cmKfV23UOPscKp+J4Og=="
+      },
+      "borea.core": {
+        "type": "Project"
+      },
+      "borea.network": {
+        "type": "Project",
+        "dependencies": {
+          "Borea.Core": "[1.0.0, )"
+        }
+      },
+      "borea.storage": {
+        "type": "Project",
+        "dependencies": {
+          "Borea.Core": "[1.0.0, )",
+          "Tomlyn": "[2.10.1, )"
+        }
+      }
+    },
+    "net10.0/linux-x64": {},
+    "net10.0/osx-arm64": {},
+    "net10.0/osx-x64": {},
+    "net10.0/win-x64": {}
+  }
+}
