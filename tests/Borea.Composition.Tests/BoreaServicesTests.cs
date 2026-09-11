@@ -3,6 +3,7 @@ using Borea.Core.Settings;
 using Borea.Network.Sources;
 using Borea.Storage.Game;
 using Borea.Storage.Paths;
+using Borea.Storage.Preferences;
 using Borea.Storage.Settings;
 
 namespace Borea.Composition.Tests;
@@ -62,6 +63,7 @@ public sealed class BoreaServicesTests : IDisposable
         using var services = await BoreaServices.BuildAsync(_tempRoot);
 
         Assert.StartsWith(_tempRoot, services.Paths.GetBoreaSettingsPath());
+        Assert.StartsWith(_tempRoot, services.Paths.GetAppPreferencesPath());
         Assert.StartsWith(_tempRoot, services.Paths.GetInstancesRoot());
     }
 
@@ -109,6 +111,14 @@ public sealed class BoreaServicesTests : IDisposable
         using var services = await BoreaServices.BuildAsync(_tempRoot);
 
         Assert.IsType<CompositeModRepository>(services.Mods);
+    }
+
+    [Fact]
+    public async Task AppPreferences_IsTheFileRepository()
+    {
+        using var services = await BoreaServices.BuildAsync(_tempRoot);
+
+        Assert.IsType<FileAppPreferencesRepository>(services.AppPreferences);
     }
 
     [Fact]
