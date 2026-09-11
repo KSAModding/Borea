@@ -28,7 +28,7 @@ public sealed class SnapshotDtoTests
         Assert.Equal(10, releaseCount);
     }
 
-    [Fact(Skip = "Authored and release install data need separate DTO contracts before the current snapshot can deserialize.")]
+    [Fact]
     public void Deserialize_CurrentSnapshot_DeserializesEveryListingAndRelease()
     {
         var snapshot = IndexJson.Deserialize<SnapshotDto>(LoadCurrentSnapshot());
