@@ -144,9 +144,13 @@ public sealed class SettingsCommandTests : IDisposable
         // Loader ids that collide by case are rejected when the settings load.
         Directory.CreateDirectory(_host.Root);
         await File.WriteAllTextAsync(_host.Paths.GetBoreaSettingsPath(), """
-            [LoaderDirectoryPaths]
-            StarMap = 'C:\Games\StarMap'
-            starmap = 'C:\Games\Other'
+            [LoaderInstallations.StarMap]
+            DirectoryPath = 'C:\Games\StarMap'
+            IsAdopted = true
+
+            [LoaderInstallations.starmap]
+            DirectoryPath = 'C:\Games\Other'
+            IsAdopted = true
             """);
 
         var run = await _host.RunAsync("settings", "show");
