@@ -5,23 +5,23 @@ namespace Borea.Storage.Index;
 public sealed class ReleaseListingDto
 {
     [JsonPropertyName("name")]
-    public required string Name { get; set; }
+    public string? Name { get; set; }
 
     [JsonPropertyName("authors")]
-    public required List<string> Authors { get; set; }
+    public List<string>? Authors { get; set; }
 
     [JsonPropertyName("abstract")]
-    public required string Abstract { get; set; }
+    public string? Abstract { get; set; }
 
     [JsonPropertyName("description")]
     public string? Description { get; set; }
 
     [JsonPropertyName("license")]
-    public required string License { get; set; }
+    public string? License { get; set; }
 
     [JsonPropertyName("tags")]
     public List<string>? Tags { get; set; }
 
     [JsonPropertyName("links")]
-    public required LinksDto Links { get; set; }
+    public LinksDto? Links { get; set; }
 }

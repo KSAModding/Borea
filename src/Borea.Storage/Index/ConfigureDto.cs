@@ -1,4 +1,5 @@
-﻿using System.Text.Json.Serialization;
+﻿using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace Borea.Storage.Index;
 
@@ -12,4 +13,12 @@ public sealed class ConfigureDto
 
     [JsonPropertyName("game-path")]
     public string? GamePath { get; set; }
+
+    /// <summary>
+    /// Fields that this Dto doesn't know. Collects so unknown fields
+    /// reject this mod-loader listing as an unknown field may cause
+    /// the loader to work improperly
+    /// </summary>
+    [JsonExtensionData]
+    public Dictionary<string, JsonElement>? UnknownFields { get; set; }
 }

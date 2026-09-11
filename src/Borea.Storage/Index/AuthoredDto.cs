@@ -57,7 +57,7 @@ public sealed class AuthoredDto
     public List<DependencyEntryDto>? Dependencies { get; set; }
 
     [JsonPropertyName("install")]
-    public InstallInfoDto? Install { get; set; }
+    public InstallDescriptorDto? Install { get; set; }
 
     [JsonPropertyName("provides")]
     public ProvidesDto? Provides { get; set; }
