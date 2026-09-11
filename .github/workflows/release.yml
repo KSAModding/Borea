@@ -17,7 +17,7 @@ concurrency:
 jobs:
   test:
     name: test
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     outputs:
       version: ${{ steps.name.outputs.version }}
     steps:
@@ -38,25 +38,25 @@ jobs:
           esac
           echo "version=$version" >> "$GITHUB_OUTPUT"
 
-      - uses: actions/checkout@v7
-      - uses: actions/setup-dotnet@v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
         with:
-          dotnet-version: 10.0.x
+          global-json-file: global.json
       - run: dotnet test Borea.slnx --configuration Release
 
   publish:
     name: publish (${{ matrix.rid }})
     needs: test
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
         rid: [win-x64, linux-x64, osx-x64, osx-arm64]
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-dotnet@v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
         with:
-          dotnet-version: 10.0.x
+          global-json-file: global.json
 
       - name: Name this build
         id: name
@@ -108,7 +108,7 @@ jobs:
             tar -czf "dist/$ARCHIVE.tar.gz" -C publish "$ARCHIVE"
           fi
 
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: archive-${{ matrix.rid }}
           path: dist/*
@@ -119,23 +119,24 @@ jobs:
   sbom:
     name: sbom
     needs: test
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-dotnet@v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
         with:
-          dotnet-version: 10.0.x
+          global-json-file: global.json
 
       # Release, like the builds, so the Debug-only packages stay out.
       - name: Restore the release graph
         run: dotnet restore src/Borea.App/Borea.App.csproj -p:Configuration=Release
 
       # The tool version is pinned in .config/dotnet-tools.json, where Dependabot keeps it current.
+      # Its package hash is separate because dotnet tool restore has no lock file mode.
       - name: Write the SBOM
         env:
           VERSION: ${{ needs.test.outputs.version }}
         run: |
-          dotnet tool restore
+          bash .github/scripts/verify-dotnet-tool-package.sh
           dotnet CycloneDX src/Borea.App/Borea.App.csproj \
             --output dist --filename "Borea-$VERSION.cdx.json" --output-format Json \
             --set-name Borea --set-version "$VERSION" --set-type Application \
@@ -165,7 +166,7 @@ jobs:
           fi
           echo "$(wc -l <<< "$names") packages."
 
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: sbom
           path: dist/*.cdx.json
@@ -174,9 +175,9 @@ jobs:
   verify-macos:
     name: verify (macOS)
     needs: publish
-    runs-on: macos-latest
+    runs-on: macos-26
     steps:
-      - uses: actions/download-artifact@v8
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
           name: archive-osx-arm64
           path: dist
@@ -193,18 +194,18 @@ jobs:
   release:
     name: release
     needs: [test, publish, sbom]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: write
       id-token: write
       attestations: write
     steps:
-      - uses: actions/download-artifact@v8
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
           pattern: archive-*
           merge-multiple: true
           path: dist
-      - uses: actions/download-artifact@v8
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
           name: sbom
           path: dist
@@ -218,7 +219,7 @@ jobs:
       # Skipped for a run started by hand, because an attestation cannot be taken back.
       - name: Attest the files
         if: github.event_name == 'push'
-        uses: actions/attest-build-provenance@v4
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4
         with:
           subject-path: dist/*
 
@@ -226,7 +227,7 @@ jobs:
       # CycloneDX predicate type proves that the list belongs to it.
       - name: Attest the SBOM
         if: github.event_name == 'push'
-        uses: actions/attest@v4
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
         with:
           subject-path: |
             dist/*.zip
