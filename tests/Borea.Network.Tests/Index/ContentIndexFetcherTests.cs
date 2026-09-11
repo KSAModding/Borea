@@ -16,9 +16,9 @@ namespace Borea.Network.Tests.Index
         // present (values unchecked). 'sources' is deliberately absent — it's
         // optional per the class's own doc comment.
         private const string SampleIndexBody =
-            """{ "snapshot_version": 1, "listings": {}, "packs": {}, "game_versions": {} }""";
+            """{ "snapshot_version": 1, "listings": [], "packs": [], "game_versions": {} }""";
         private const string UpdatedIndexBody =
-            """{ "snapshot_version": 1, "listings": { "example-mod": {} }, "packs": {}, "game_versions": {} }""";
+            """{ "snapshot_version": 1, "listings": [{"example-mod": {}}], "packs": [], "game_versions": {} }""";
 
         public ContentIndexFetcherTests()
         {
