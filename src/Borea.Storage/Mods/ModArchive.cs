@@ -7,6 +7,13 @@ namespace Borea.Storage.Mods;
 /// </summary>
 internal static class ModArchive
 {
+    private static readonly string[] ZipContentTypes = { "application/zip", "application/x-zip-compressed" };
+
+    /// <summary>
+    /// The second media type is what some hosts send for the same bytes.
+    /// </summary>
+    public static bool IsZip(string contentType) => ZipContentTypes.Contains(contentType, StringComparer.OrdinalIgnoreCase);
+
     /// <summary>
     /// The root RFC 0035 rule 9 derives for a mod whose release states none:
     /// the one top-level directory that holds a mod.toml. Any other layout,
@@ -70,7 +77,7 @@ internal static class ModArchive
 
             var target = Path.GetFullPath(Path.Combine(destinationRoot, relative));
             if (!target.StartsWith(inside, StringComparison.Ordinal))
-                throw new InvalidOperationException($"The archive entry '{entry.FullName}' would land outside the mod folder.");
+                throw new InvalidOperationException($"The archive entry '{entry.FullName}' would land outside the install folder.");
 
             if (relative.EndsWith('/'))
             {
