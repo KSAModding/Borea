@@ -12,12 +12,18 @@ namespace Borea.Network.Downloads;
 public sealed class HttpModDownloader : IModDownloader
 {
     private const int BufferSize = 81920;
+    private static readonly TimeSpan DefaultBodyInactivityTimeout = TimeSpan.FromSeconds(30);
 
     private readonly HttpClient _httpClient;
+    private readonly TimeSpan _bodyInactivityTimeout;
 
-    public HttpModDownloader(HttpClient httpClient)
+    public HttpModDownloader(HttpClient httpClient, TimeSpan? bodyInactivityTimeout = null)
     {
         _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
+        _bodyInactivityTimeout = bodyInactivityTimeout ?? DefaultBodyInactivityTimeout;
+
+        if (_bodyInactivityTimeout <= TimeSpan.Zero || _bodyInactivityTimeout.TotalMilliseconds > uint.MaxValue - 1)
+            throw new ArgumentOutOfRangeException(nameof(bodyInactivityTimeout), "Body inactivity timeout must be a positive finite timer interval.");
     }
 
     public async Task<DownloadResult> DownloadAsync(
@@ -85,12 +91,11 @@ public sealed class HttpModDownloader : IModDownloader
 
     /// <summary>
     /// A failure of one source, which says nothing about the next: the host is
-    /// down, answers with an error status, cuts the body short, or stalls until
-    /// HttpClient.Timeout ends the request. A cancellation the caller asked for
-    /// is not one.
+    /// down, answers with an error status, cuts the body short, or stops sending
+    /// body data. A cancellation the caller asked for is not one.
     /// </summary>
     private static bool IsSourceFailure(Exception ex, CancellationToken cancellationToken) =>
-        ex is HttpRequestException or HttpIOException ||
+        ex is HttpRequestException or HttpIOException or TimeoutException ||
         (ex is OperationCanceledException && !cancellationToken.IsCancellationRequested);
 
     private async Task<Fetched> FetchAsync(
@@ -120,7 +125,7 @@ public sealed class HttpModDownloader : IModDownloader
         {
             var buffer = new byte[BufferSize];
             int read;
-            while ((read = await content.ReadAsync(buffer, cancellationToken).ConfigureAwait(false)) > 0)
+            while ((read = await ReadBodyAsync(content, buffer, cancellationToken).ConfigureAwait(false)) > 0)
             {
                 bytesDownloaded += read;
                 if (sizeDecides is { } cap && bytesDownloaded > cap)
@@ -136,6 +141,21 @@ public sealed class HttpModDownloader : IModDownloader
         return Mismatch(download, bytesDownloaded, sha256) is { } mismatch
             ? Fetched.Rejected(mismatch)
             : Fetched.Served(bytesDownloaded, sha256);
+    }
+
+    private async ValueTask<int> ReadBodyAsync(Stream content, Memory<byte> buffer, CancellationToken cancellationToken)
+    {
+        using var inactivityCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        inactivityCancellation.CancelAfter(_bodyInactivityTimeout);
+
+        try
+        {
+            return await content.ReadAsync(buffer, inactivityCancellation.Token).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException ex) when (!cancellationToken.IsCancellationRequested && inactivityCancellation.IsCancellationRequested)
+        {
+            throw new TimeoutException($"The response body transferred no data for {_bodyInactivityTimeout}.", ex);
+        }
     }
 
     /// <summary>
