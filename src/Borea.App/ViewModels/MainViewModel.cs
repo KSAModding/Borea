@@ -1,17 +1,47 @@
 using System;
+using System.ComponentModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using System.Collections.Generic;
 using System.Text.Json;
 using System.IO;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+using Borea.App.Formatting;
 using Borea.App.Localization;
+using Borea.Core.Preferences;
 
 namespace Borea.App.ViewModels;
 
 public partial class MainViewModel : ViewModelBase
 {
+    internal static IReadOnlyCollection<string> BundledThemeNames { get; } = ["Borealis", "Light", "Dark"];
+
+    private readonly IAppPreferencesRepository? _appPreferencesRepository;
+    private readonly SemaphoreSlim _preferenceSaveLock = new(1, 1);
+    private AppPreferences _appPreferences;
+
     public LocalizationService Localization { get; }
+
+    public RegionalFormatService RegionalFormat { get; }
+
+    public RegionalFormatOption SelectedRegionalFormat
+    {
+        get => RegionalFormat.SelectedFormat;
+        set
+        {
+            if (value is null)
+                return;
+
+            RegionalFormat.SelectedFormat = value;
+            OnPropertyChanged();
+            _ = SaveRegionalFormatAsync();
+        }
+    }
+
+    [ObservableProperty]
+    private string? _preferenceSaveError;
 
     [ObservableProperty]
     private string _mainColor = "#248cc0";
@@ -71,7 +101,7 @@ public partial class MainViewModel : ViewModelBase
 
     //themes
     [ObservableProperty]
-    private string[] _themeNames = new string[] { "Borealis", "Light", "Dark" };
+    private string[] _themeNames = BundledThemeNames.ToArray();
     [ObservableProperty]
     private Dictionary<string, string[]> _themes = new Dictionary<string, string[]>();
     [ObservableProperty]
@@ -83,15 +113,68 @@ public partial class MainViewModel : ViewModelBase
     }
 
     public MainViewModel(LocalizationService localization)
+        : this(
+            localization,
+            new RegionalFormatService(localization),
+            appPreferencesRepository: null,
+            AppPreferences.Empty)
+    {
+    }
+
+    public MainViewModel(
+        LocalizationService localization,
+        RegionalFormatService regionalFormat,
+        IAppPreferencesRepository? appPreferencesRepository,
+        AppPreferences appPreferences)
     {
         Localization = localization ?? throw new ArgumentNullException(nameof(localization));
+        RegionalFormat = regionalFormat ?? throw new ArgumentNullException(nameof(regionalFormat));
+        _appPreferencesRepository = appPreferencesRepository;
+        _appPreferences = appPreferences ?? throw new ArgumentNullException(nameof(appPreferences));
+        RegionalFormat.PropertyChanged += OnRegionalFormatChanged;
+    }
+
+    private async Task SaveRegionalFormatAsync()
+    {
+        if (_appPreferencesRepository is null)
+            return;
+
+        await _preferenceSaveLock.WaitAsync();
+        try
+        {
+            var regionalCultureName = RegionalFormat.SelectedCultureName;
+            if (string.Equals(_appPreferences.RegionalCultureName, regionalCultureName, StringComparison.Ordinal))
+            {
+                PreferenceSaveError = null;
+                return;
+            }
+
+            var updatedPreferences = _appPreferences.WithRegionalCultureName(regionalCultureName);
+            await _appPreferencesRepository.SaveAsync(updatedPreferences, BundledThemeNames);
+            _appPreferences = updatedPreferences;
+            PreferenceSaveError = null;
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
+        {
+            PreferenceSaveError = Localization.FormatPreferenceSaveError(exception.Message);
+        }
+        finally
+        {
+            _preferenceSaveLock.Release();
+        }
+    }
+
+    private void OnRegionalFormatChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(RegionalFormatService.SelectedFormat))
+            OnPropertyChanged(nameof(SelectedRegionalFormat));
     }
 
     [RelayCommand]
     public void GetThemes() // used to get the themes from the json files
     {
         Themes = new Dictionary<string, string[]>();
-        ThemeNames = new string[] { "Borealis", "Light", "Dark" };
+        ThemeNames = BundledThemeNames.ToArray();
         string themesJson = File.ReadAllText("client/BoreaDefaultThemes.json");
         var themes = JsonSerializer.Deserialize<Dictionary<string, string[]>>(themesJson);
         if (themes != null)
