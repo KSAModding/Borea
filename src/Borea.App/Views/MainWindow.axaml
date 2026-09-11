@@ -1,5 +1,6 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:formatting="using:Borea.App.Formatting"
         xmlns:vm="using:Borea.App.ViewModels"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -63,6 +64,15 @@
             <StackPanel HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,5,0,5" Spacing="5">
                 <TextBlock Text="{Binding Localization.SettingsLanguageLabel}" Foreground="{Binding TextColor}" />
                 <ComboBox ItemsSource="{Binding Localization.SupportedCultures}" SelectedItem="{Binding Localization.SelectedCulture, Mode=TwoWay}" AutomationProperties.Name="{Binding Localization.SettingsLanguageLabel}" />
+                <TextBlock Text="{Binding Localization.SettingsRegionalFormatLabel}" Foreground="{Binding TextColor}" Margin="0,10,0,0" />
+                <ComboBox ItemsSource="{Binding RegionalFormat.SupportedFormats}" SelectedItem="{Binding SelectedRegionalFormat, Mode=TwoWay}" AutomationProperties.Name="{Binding Localization.SettingsRegionalFormatLabel}" MaxDropDownHeight="300" MinWidth="280">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate x:DataType="formatting:RegionalFormatOption">
+                            <TextBlock Text="{Binding DisplayName}" />
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
+                <TextBlock Text="{Binding PreferenceSaveError}" Foreground="{Binding TextColor}" TextWrapping="Wrap" MaxWidth="360" />
                 <TextBlock Text="{Binding Localization.SettingsThemeLabel}" Foreground="{Binding TextColor}" Margin="0,10,0,0" />
                 <ComboBox ItemsSource="{Binding ThemeNames}" SelectedItem="{Binding CurrentTheme}" Foreground="{Binding TextColor}" AutomationProperties.Name="{Binding Localization.SettingsThemeLabel}" />
             </StackPanel>

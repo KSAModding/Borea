@@ -51,7 +51,11 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string SettingsLanguageLabel => Resources.SettingsLanguageLabel;
 
+    public string SettingsRegionalFormatLabel => Resources.SettingsRegionalFormatLabel;
+
     public string SettingsThemeLabel => Resources.SettingsThemeLabel;
+
+    public string SystemDefaultRegionalFormat => Resources.SystemDefaultRegionalFormat;
 
     public LocalizationService()
         : this(CultureInfo.CurrentUICulture)
@@ -87,6 +91,12 @@ public sealed class LocalizationService : INotifyPropertyChanged
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(viewName);
         return string.Format(CultureInfo.CurrentCulture, Resources.ViewNotFoundFormat, viewName);
+    }
+
+    public string FormatPreferenceSaveError(string error)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(error);
+        return string.Format(CultureInfo.CurrentCulture, Resources.PreferenceSaveErrorFormat, error);
     }
 
     private static SupportedCulture? ResolveSupportedCulture(CultureInfo culture)

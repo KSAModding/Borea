@@ -6,6 +6,8 @@ internal sealed class AppPreferencesDocumentDto
 
     public string? SelectedTheme { get; set; }
 
+    public string? RegionalCulture { get; set; }
+
     public List<CustomThemePreferenceDto?>? CustomThemes { get; set; }
 }
 

@@ -60,6 +60,20 @@ public sealed class FileAppPreferencesRepositoryTests : IDisposable
     }
 
     [Fact]
+    public async Task SaveThenGet_SavedRegionalCulture_RestoresTheSelection()
+    {
+        await _repository.SaveAsync(
+            new AppPreferences("Dark", regionalCultureName: "de-DE"),
+            BundledThemeNames);
+
+        var result = await _repository.GetAsync(BundledThemeNames);
+
+        Assert.Equal(AppPreferencesLoadStatus.Loaded, result.Status);
+        Assert.Equal("de-DE", result.Preferences.RegionalCultureName);
+        Assert.Equal("Dark", result.Preferences.SelectedThemeName);
+    }
+
+    [Fact]
     public async Task GetAsync_InvalidJson_ReturnsInvalidAndTheDefaultThemeSafely()
     {
         await WriteAsync("{ not-json }");
@@ -86,7 +100,33 @@ public sealed class FileAppPreferencesRepositoryTests : IDisposable
 
         Assert.Equal(AppPreferencesLoadStatus.Loaded, result.Status);
         Assert.Equal("Removed Theme", result.Preferences.SelectedThemeName);
+        Assert.Null(result.Preferences.RegionalCultureName);
         Assert.Equal("Borealis", result.Preferences.ResolveSelectedThemeName(BundledThemeNames, "Borealis"));
+    }
+
+    [Theory]
+    [InlineData(" ")]
+    [InlineData("de")]
+    [InlineData("not-a-culture")]
+    public async Task GetAsync_InvalidRegionalCulture_KeepsOtherPreferences(string regionalCulture)
+    {
+        await WriteAsync($$"""
+            {
+              "formatVersion": 1,
+              "selectedTheme": "Mission",
+              "regionalCulture": "{{regionalCulture}}",
+              "customThemes": [
+                { "name": "Mission", "mainColor": "#102030", "secondaryColor": "#405060", "globalPanelsColor": "#708090", "textColor": "#abcdef" }
+              ]
+            }
+            """);
+
+        var result = await _repository.GetAsync(BundledThemeNames);
+
+        Assert.Equal(AppPreferencesLoadStatus.Loaded, result.Status);
+        Assert.Null(result.Preferences.RegionalCultureName);
+        Assert.Equal("Mission", result.Preferences.SelectedThemeName);
+        Assert.Equal("Mission", Assert.Single(result.Preferences.CustomThemes).Name);
     }
 
     [Fact]
@@ -117,12 +157,15 @@ public sealed class FileAppPreferencesRepositoryTests : IDisposable
     public async Task SaveAsync_WritesTheVersionedExplicitFormat()
     {
         var customTheme = new CustomThemePreference("Mission", "#102030", "#405060", "#708090", "#abcdef");
-        await _repository.SaveAsync(new AppPreferences("Mission", [customTheme]), BundledThemeNames);
+        await _repository.SaveAsync(
+            new AppPreferences("Mission", [customTheme], regionalCultureName: "en-GB"),
+            BundledThemeNames);
 
         using var document = JsonDocument.Parse(await File.ReadAllTextAsync(_pathProvider.GetAppPreferencesPath()));
         var root = document.RootElement;
         Assert.Equal(1, root.GetProperty("formatVersion").GetInt32());
         Assert.Equal("Mission", root.GetProperty("selectedTheme").GetString());
+        Assert.Equal("en-GB", root.GetProperty("regionalCulture").GetString());
         var savedTheme = Assert.Single(root.GetProperty("customThemes").EnumerateArray());
         Assert.Equal("Mission", savedTheme.GetProperty("name").GetString());
         Assert.Equal("#102030", savedTheme.GetProperty("mainColor").GetString());

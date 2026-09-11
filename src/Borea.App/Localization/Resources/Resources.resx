@@ -36,11 +36,20 @@
   <data name="PageLibraryHeading" xml:space="preserve">
     <value>Library</value>
   </data>
+  <data name="PreferenceSaveErrorFormat" xml:space="preserve">
+    <value>The preference could not be saved: {0}</value>
+  </data>
   <data name="SettingsLanguageLabel" xml:space="preserve">
     <value>Language</value>
   </data>
+  <data name="SettingsRegionalFormatLabel" xml:space="preserve">
+    <value>Regional format</value>
+  </data>
   <data name="SettingsThemeLabel" xml:space="preserve">
     <value>Theme</value>
+  </data>
+  <data name="SystemDefaultRegionalFormat" xml:space="preserve">
+    <value>System default</value>
   </data>
   <data name="ViewNotFoundFormat" xml:space="preserve">
     <value>View not found: {0}</value>
