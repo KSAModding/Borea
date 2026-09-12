@@ -1,6 +1,7 @@
 using Borea.Core.Index;
 using Borea.Core.ModPacks;
 using Borea.Core.Mods;
+using Borea.Core.Tags;
 
 namespace Borea.Network.Index;
 
@@ -85,7 +86,7 @@ public sealed class ContentIndexModPackRepository : IModPackRepository
     public async Task<IReadOnlyList<ModPackResult>> SearchAsync(string query, CancellationToken cancellationToken = default)
     {
         var packs = await GetAvailableModPacksAsync(cancellationToken).ConfigureAwait(false);
-        return packs.Where(result => Matches(result.Metadata!, query)).ToArray();
+        return packs.Where(result => ContentTagFilter.MatchesSearch(result.Metadata!, query)).ToArray();
     }
 
     private static ContentIndexPack? AvailablePack(ContentIndexSnapshot snapshot, string id) =>
@@ -157,15 +158,4 @@ public sealed class ContentIndexModPackRepository : IModPackRepository
         ModVersion.TryParse(left, out var leftVersion)
         && ModVersion.TryParse(right, out var rightVersion)
         && leftVersion.Equals(rightVersion);
-
-    private static bool Matches(ModPackMetadata pack, string query) =>
-        Contains(pack.ModPackId, query)
-        || Contains(pack.Name, query)
-        || Contains(pack.Abstract, query)
-        || Contains(pack.Description, query)
-        || pack.Authors.Any(author => Contains(author, query))
-        || pack.Tags.Any(tag => Contains(tag, query));
-
-    private static bool Contains(string? value, string query) =>
-        value?.Contains(query, StringComparison.OrdinalIgnoreCase) == true;
 }
