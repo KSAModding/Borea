@@ -6,6 +6,7 @@ using Borea.Core.Launch;
 using Borea.Core.ModLoaders;
 using Borea.Core.Mods;
 using Borea.Core.Paths;
+using Borea.Core.Planning;
 using Borea.Core.Settings;
 using Borea.Core.State;
 
@@ -45,6 +46,16 @@ internal sealed class CliServices : IDisposable
 
     public required IModRepository Mods { get; init; }
 
+    public required IModRepository ReadOnlyMods { get; init; }
+
+    public required IInstallPlanner InstallPlanner { get; init; }
+
+    public required IModInstaller Installer { get; init; }
+
+    public required IModReplacer Replacer { get; init; }
+
+    public required IModUninstaller Uninstaller { get; init; }
+
     public required ILoaderInstaller LoaderInstaller { get; init; }
 
     public required ILoaderAdopter LoaderAdopter { get; init; }
@@ -68,12 +79,18 @@ internal sealed class CliServices : IDisposable
     /// </summary>
     public static CliServices From(
         BoreaServices services,
+        IInstanceRepository? instances = null,
         ILatestVersionPing? latestVersion = null,
         IInstalledGameVersionProvider? installedVersion = null,
         IContentIndexFetcher? indexFetcher = null,
         IContentIndexReader? indexReader = null,
         IContentIndexSnapshotProvider? indexSnapshots = null,
         IModRepository? mods = null,
+        IModRepository? readOnlyMods = null,
+        IInstallPlanner? installPlanner = null,
+        IModInstaller? installer = null,
+        IModReplacer? replacer = null,
+        IModUninstaller? uninstaller = null,
         ILoaderInstaller? loaderInstaller = null,
         ILoaderAdopter? loaderAdopter = null,
         ILoaderUninstaller? loaderUninstaller = null,
@@ -87,7 +104,7 @@ internal sealed class CliServices : IDisposable
             Settings = services.Settings,
             SettingsRepository = services.SettingsRepository,
             GameDirectoryChanger = services.GameDirectoryChanger,
-            Instances = services.Instances,
+            Instances = instances ?? services.Instances,
             ModState = services.ModState,
             LatestVersion = latestVersion ?? services.LatestVersion,
             InstalledVersion = installedVersion ?? services.InstalledVersion,
@@ -96,6 +113,11 @@ internal sealed class CliServices : IDisposable
             IndexSnapshots = indexSnapshots ?? services.IndexSnapshots,
             Paths = services.Paths,
             Mods = mods ?? services.Mods,
+            ReadOnlyMods = readOnlyMods ?? services.ReadOnlyMods,
+            InstallPlanner = installPlanner ?? services.InstallPlanner,
+            Installer = installer ?? services.Installer,
+            Replacer = replacer ?? services.Replacer,
+            Uninstaller = uninstaller ?? services.Uninstaller,
             LoaderInstaller = loaderInstaller ?? services.LoaderInstaller,
             LoaderAdopter = loaderAdopter ?? services.LoaderAdopter,
             LoaderUninstaller = loaderUninstaller ?? services.LoaderUninstaller,

@@ -81,6 +81,8 @@ public sealed class BoreaServices : IDisposable
 
     public required IModUninstaller Uninstaller { get; init; }
 
+    public required IModInstaller Installer { get; init; }
+
     public required IModReplacer Replacer { get; init; }
 
     public required IForeignModAdopter ForeignModAdopter { get; init; }
@@ -89,6 +91,8 @@ public sealed class BoreaServices : IDisposable
     /// Every mod source behind one repository, each listing tagged with its source.
     /// </summary>
     public required IModRepository Mods { get; init; }
+
+    public required IModRepository ReadOnlyMods { get; init; }
 
     public required IModPackRepository ModPacks { get; init; }
 
@@ -180,13 +184,20 @@ public sealed class BoreaServices : IDisposable
         var indexFetcher = new ContentIndexFetcher(http, ContentIndexUri, indexReader);
         var indexSnapshots = new ContentIndexSnapshotProvider(indexFetcher, indexReader, paths);
         var contentIndex = new ContentIndexModRepository(indexSnapshots);
+        var readOnlyContentIndex = new ContentIndexModRepository(new ReaderSnapshotProvider(indexReader));
         var modPacks = new ContentIndexModPackRepository(indexSnapshots);
+        var spaceDock = fallbackRepository ?? new SpaceDockModRepository(http, resolver);
         var sources = new Dictionary<string, IModRepository>
         {
             [ContentIndexModRepository.SourceName] = contentIndex,
-            [SpaceDockModRepository.SourceName] = fallbackRepository ?? new SpaceDockModRepository(http, resolver),
+            [SpaceDockModRepository.SourceName] = spaceDock,
         };
         var mods = new CompositeModRepository(sources);
+        var readOnlyMods = new CompositeModRepository(new Dictionary<string, IModRepository>
+        {
+            [ContentIndexModRepository.SourceName] = readOnlyContentIndex,
+            [SpaceDockModRepository.SourceName] = spaceDock,
+        });
         var downloader = new HttpModDownloader(http);
         var settingsRepository = new FileBoreaSettingsRepository(paths);
         var loaderConfiguration = new LoaderConfigurator();
@@ -205,9 +216,11 @@ public sealed class BoreaServices : IDisposable
             ModFavorites = new FileModFavoritesRepository(paths),
             ModPackFavorites = new FileModPackFavoritesRepository(paths),
             Uninstaller = new FileModUninstaller(paths, instances),
+            Installer = new FileModInstaller(paths, downloader, instances, modState),
             Replacer = new FileModReplacer(paths, downloader, instances, modState),
             ForeignModAdopter = new FileForeignModAdopter(paths, instances, contentIndex),
             Mods = mods,
+            ReadOnlyMods = readOnlyMods,
             ModPacks = modPacks,
             Downloader = downloader,
             InstallPlanner = new RepositoryInstallPlanner(new ModDependencyResolver()),
@@ -241,5 +254,11 @@ public sealed class BoreaServices : IDisposable
             disposable.Dispose();
 
         _http.Dispose();
+    }
+
+    private sealed class ReaderSnapshotProvider(IContentIndexReader reader) : IContentIndexSnapshotProvider
+    {
+        public Task<ContentIndexSnapshot> GetSnapshotAsync(CancellationToken cancellationToken = default) =>
+            reader.ReadAsync(cancellationToken);
     }
 }
