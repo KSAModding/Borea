@@ -15,6 +15,7 @@ public sealed class CliServicesTests : IDisposable
 
         Assert.Same(graph.Settings, services.Settings);
         Assert.Same(graph.SettingsRepository, services.SettingsRepository);
+        Assert.Same(graph.GameDirectoryChanger, services.GameDirectoryChanger);
         Assert.Same(graph.Instances, services.Instances);
         Assert.Same(graph.ModState, services.ModState);
         Assert.Same(graph.LatestVersion, services.LatestVersion);
@@ -52,6 +53,7 @@ public sealed class CliServicesTests : IDisposable
         {
             Settings = graph.Settings,
             SettingsRepository = graph.SettingsRepository,
+            GameDirectoryChanger = graph.GameDirectoryChanger,
             Instances = graph.Instances,
             ModState = graph.ModState,
             LatestVersion = new FakeLatestVersionPing(),
