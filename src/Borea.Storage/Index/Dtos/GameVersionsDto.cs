@@ -1,6 +1,6 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace Borea.Storage.Index;
+namespace Borea.Storage.Index.Dtos;
 
 public sealed class GameVersionsDto
 {
