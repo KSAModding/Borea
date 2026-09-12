@@ -117,7 +117,25 @@ public sealed class BoreaServices : IDisposable
     /// Where Borea keeps its own files. Null means the default root of
     /// <see cref="GamePathProvider"/>, %LocalAppData%\Borea.
     /// </param>
-    public static async Task<BoreaServices> BuildAsync(string? boreaRoot, CancellationToken cancellationToken = default)
+    public static Task<BoreaServices> BuildAsync(string? boreaRoot, CancellationToken cancellationToken = default)
+        => BuildCoreAsync(boreaRoot, httpHandler: null, fallbackRepository: null, cancellationToken);
+
+    internal static Task<BoreaServices> BuildAsync(
+        string? boreaRoot,
+        HttpMessageHandler httpHandler,
+        IModRepository fallbackRepository,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(httpHandler);
+        ArgumentNullException.ThrowIfNull(fallbackRepository);
+        return BuildCoreAsync(boreaRoot, httpHandler, fallbackRepository, cancellationToken);
+    }
+
+    private static async Task<BoreaServices> BuildCoreAsync(
+        string? boreaRoot,
+        HttpMessageHandler? httpHandler,
+        IModRepository? fallbackRepository,
+        CancellationToken cancellationToken)
     {
         // the settings file lives under Borea's own root and needs no
         // game path to be found, so a provider without one reads it.
@@ -137,7 +155,7 @@ public sealed class BoreaServices : IDisposable
         // one client. Only the SpaceDock repository takes the resolver, because a
         // release carries an absolute download URL and the downloader needs no
         // host of its own.
-        var http = BuildHttpClient();
+        var http = BuildHttpClient(httpHandler);
         var resolver = new SpaceDockResolver();
         var indexReader = new ContentIndexReader(paths, ContentIndexModRepository.SourceName);
         var indexFetcher = new ContentIndexFetcher(http, ContentIndexUri, indexReader);
@@ -145,7 +163,7 @@ public sealed class BoreaServices : IDisposable
         var sources = new Dictionary<string, IModRepository>
         {
             [ContentIndexModRepository.SourceName] = contentIndex,
-            [SpaceDockModRepository.SourceName] = new SpaceDockModRepository(http, resolver),
+            [SpaceDockModRepository.SourceName] = fallbackRepository ?? new SpaceDockModRepository(http, resolver),
         };
         var mods = new CompositeModRepository(sources);
         var downloader = new HttpModDownloader(http);
@@ -175,9 +193,9 @@ public sealed class BoreaServices : IDisposable
         };
     }
 
-    private static HttpClient BuildHttpClient()
+    private static HttpClient BuildHttpClient(HttpMessageHandler? handler)
     {
-        var handler = new SocketsHttpHandler { PooledConnectionLifetime = ConnectionLifetime };
+        handler ??= new SocketsHttpHandler { PooledConnectionLifetime = ConnectionLifetime };
         var http = new HttpClient(handler);
 
         var version = typeof(BoreaServices).Assembly.GetName().Version?.ToString(3);
