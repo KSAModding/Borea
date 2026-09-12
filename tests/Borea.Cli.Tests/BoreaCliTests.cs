@@ -16,6 +16,8 @@ public sealed class BoreaCliTests : IDisposable
         Assert.Contains("instance", run.Output);
         Assert.Contains("enable", run.Output);
         Assert.Contains("disable", run.Output);
+        Assert.Contains("loader", run.Output);
+        Assert.Contains("launch", run.Output);
     }
 
     [Fact]

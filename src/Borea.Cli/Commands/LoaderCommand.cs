@@ -9,10 +9,53 @@ internal static class LoaderCommand
     public static Command Build(Func<CancellationToken, Task<CliServices>> services)
     {
         var loader = new Command("loader", "Install, adopt, and uninstall mod loaders.");
+        loader.Subcommands.Add(BuildListInstallableLoaders(services));
         loader.Subcommands.Add(BuildInstall(services));
         loader.Subcommands.Add(BuildAdopt(services));
         loader.Subcommands.Add(BuildUninstall(services));
         return loader;
+    }
+
+    private static Command BuildListInstallableLoaders(Func<CancellationToken, Task<CliServices>> services)
+    {
+        var versionsOption = new Option<bool>("--versions", ["-v"]);
+
+        var list = new Command("list", "List installable mod loaders");
+        list.Options.Add(versionsOption);
+
+        list.SetAction((parseResult, cancellationToken) => CommandRunner.RunAsync(parseResult, services, cancellationToken, async (cli, output, _, ct) =>
+        {
+            var mods = await cli.Mods.GetAvailableModsAsync(ct).ConfigureAwait(false);
+            var modLoaders = mods.Where(c => c.Type == ContentType.ModLoader).ToList();
+
+            if (modLoaders.Count <= 0)
+            {
+                output.WriteLine("No mod loaders available");
+                return ExitCodes.Done;
+            }
+
+            foreach (var modloader in modLoaders)
+            {
+                ct.ThrowIfCancellationRequested();
+                output.WriteLine($"{modloader.ModId}");
+
+                var result = parseResult.GetValue(versionsOption);
+                if (result)
+                {
+                    var releases = await LoaderLookup.GetReleasesAsync(cli.Mods, modloader.ModId, ct);
+                    var versions = releases.Where(v => !v.Yanked).DistinctBy(v => v.Version).OrderByDescending(v => v.Version).ToList();
+
+                    foreach (var version in versions)
+                    {
+                        output.WriteLine($"  {version.Version}");
+                    }
+                }
+            }
+
+            return ExitCodes.Done;
+        }));
+
+        return list;
     }
 
     private static Command BuildInstall(Func<CancellationToken, Task<CliServices>> services)
