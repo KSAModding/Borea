@@ -1,6 +1,5 @@
 using System.CommandLine;
 using Borea.Core.Index;
-using Borea.Storage.Index;
 
 namespace Borea.Cli.Commands;
 
@@ -35,37 +34,24 @@ internal static class IndexCommand
 
         validate.SetAction((parseResult, cancellationToken) => CommandRunner.RunAsync(parseResult, services, cancellationToken, async (cli, output, _, ct) =>
         {
-            var validator = new IndexValidator(cli.Paths);
-            var result = validator.ValidateIndex();
-
-            int validReleases = 0;
-            int unknownReleases = 0;
-            int rejectedReleases = 0;
-            foreach (var listing in result.ValidListings)
-            {
-                validReleases += listing.ValidReleases.Count;
-                unknownReleases += listing.UnknownReleases.Count;
-                rejectedReleases += listing.RejectedReleases.Count;
-            }
-
-            int validVersions = 0;
-            int unknownVersions = 0;
-            int rejectedVersions = 0;
-            foreach (var pack in result.ValidPacks)
-            {
-                validVersions += pack.ValidVersions.Count;
-                unknownVersions += pack.UnknownVersions.Count;
-                rejectedVersions += pack.RejectedVersions.Count;
-            }
+            var result = await cli.IndexReader.ReadAsync(ct).ConfigureAwait(false);
+            var unknownListings = CountDiagnostics(result, ContentIndexDiagnosticScope.Listing, ContentIndexDiagnosticKind.UnsupportedVersion);
+            var malformedListings = CountDiagnostics(result, ContentIndexDiagnosticScope.Listing, ContentIndexDiagnosticKind.Malformed);
+            var unknownReleases = CountDiagnostics(result, ContentIndexDiagnosticScope.Release, ContentIndexDiagnosticKind.UnsupportedVersion);
+            var rejectedReleases = CountDiagnostics(result, ContentIndexDiagnosticScope.Release, ContentIndexDiagnosticKind.Malformed);
+            var unknownPacks = CountDiagnostics(result, ContentIndexDiagnosticScope.Pack, ContentIndexDiagnosticKind.UnsupportedVersion);
+            var malformedPacks = CountDiagnostics(result, ContentIndexDiagnosticScope.Pack, ContentIndexDiagnosticKind.Malformed);
+            var unknownVersions = CountDiagnostics(result, ContentIndexDiagnosticScope.PackVersion, ContentIndexDiagnosticKind.UnsupportedVersion);
+            var rejectedVersions = CountDiagnostics(result, ContentIndexDiagnosticScope.PackVersion, ContentIndexDiagnosticKind.Malformed);
 
             output.WriteLine($"""
                 Index Validated:
                   Spec Version: {result.SnapshotVersion}
-                  {result.ValidListings.Count} valid, {result.UnknownListings.Count} unknown, {result.MalformedListings.Count} malformed Listings
-                    {validReleases} valid, {unknownReleases} unknown, {rejectedReleases} rejected Releases
-                  {result.ValidPacks.Count} valid, {result.UnknownPacks.Count} unknown, {result.MalformedPacks.Count} malformed Mod Packs
-                    {validVersions} valid, {unknownVersions} unknown, {rejectedVersions} rejected Releases
-                  {result.GameVersions.Versions.Count} known Game Versions
+                  {result.Listings.Count} valid, {unknownListings} unknown, {malformedListings} malformed Listings
+                    {result.Listings.Sum(listing => listing.Releases.Count)} valid, {unknownReleases} unknown, {rejectedReleases} rejected Releases
+                  {result.Packs.Count} valid, {unknownPacks} unknown, {malformedPacks} malformed Mod Packs
+                    {result.Packs.Sum(pack => pack.Versions.Count)} valid, {unknownVersions} unknown, {rejectedVersions} rejected Releases
+                  {result.GameVersions?.Versions.Count ?? 0} known Game Versions
                 """);
             return ExitCodes.Done;
         }));
@@ -79,13 +65,17 @@ internal static class IndexCommand
 
         map.SetAction((parseResult, cancellationToken) => CommandRunner.RunAsync(parseResult, services, cancellationToken, async (cli, output, _, ct) =>
         {
-            var validator = new IndexValidator(cli.Paths);
-            var validateResult = validator.ValidateIndex();
-
-            output.WriteLine($"Mapped {validateResult.ValidListings.Count} listings and {validateResult.ValidPacks.Count} packs.");
+            var result = await cli.IndexReader.ReadAsync(ct).ConfigureAwait(false);
+            output.WriteLine($"Mapped {result.Listings.Count} listings and {result.Packs.Count} packs.");
             return ExitCodes.Done;
         }));
 
         return map;
     }
+
+    private static int CountDiagnostics(
+        ContentIndexSnapshot snapshot,
+        ContentIndexDiagnosticScope scope,
+        ContentIndexDiagnosticKind kind) =>
+        snapshot.Diagnostics.Count(diagnostic => diagnostic.Scope == scope && diagnostic.Kind == kind);
 }

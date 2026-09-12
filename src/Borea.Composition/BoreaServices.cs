@@ -15,6 +15,7 @@ using Borea.Network.Sources;
 using Borea.Network.SpaceDock;
 using Borea.Storage.Game;
 using Borea.Storage.Instances;
+using Borea.Storage.Index;
 using Borea.Storage.ModLoaders;
 using Borea.Storage.ModPacks;
 using Borea.Storage.Mods;
@@ -92,6 +93,10 @@ public sealed class BoreaServices : IDisposable
 
     public required IContentIndexFetcher IndexFetcher { get; init; }
 
+    public required IContentIndexReader IndexReader { get; init; }
+
+    public required IContentIndexRepository ContentIndex { get; init; }
+
     private BoreaServices(HttpClient http)
     {
         _http = http;
@@ -134,8 +139,12 @@ public sealed class BoreaServices : IDisposable
         // host of its own.
         var http = BuildHttpClient();
         var resolver = new SpaceDockResolver();
+        var indexReader = new ContentIndexReader(paths, ContentIndexModRepository.SourceName);
+        var indexFetcher = new ContentIndexFetcher(http, ContentIndexUri, indexReader);
+        var contentIndex = new ContentIndexModRepository(indexFetcher, indexReader, paths);
         var sources = new Dictionary<string, IModRepository>
         {
+            [ContentIndexModRepository.SourceName] = contentIndex,
             [SpaceDockModRepository.SourceName] = new SpaceDockModRepository(http, resolver),
         };
         var mods = new CompositeModRepository(sources);
@@ -160,7 +169,9 @@ public sealed class BoreaServices : IDisposable
             LoaderUninstaller = new FileLoaderUninstaller(settingsRepository),
             LatestVersion = new LatestVersionPing(http),
             InstalledVersion = new InstalledGameVersionProvider(paths),
-            IndexFetcher = new ContentIndexFetcher(http, ContentIndexUri),
+            IndexFetcher = indexFetcher,
+            IndexReader = indexReader,
+            ContentIndex = contentIndex,
         };
     }
 

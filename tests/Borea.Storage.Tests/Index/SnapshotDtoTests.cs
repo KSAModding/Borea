@@ -15,7 +15,9 @@ public sealed class SnapshotDtoTests
         Assert.Equal("83331326cd7471a859fcd0117af0345b99cb5bf5", snapshot.Sources.Generated!.Commit);
         Assert.Equal(4, snapshot.Listings.Count);
         Assert.Empty(snapshot.Packs);
-        Assert.Equal("2026.9.7.5402", snapshot.GameVersions.Versions[^1]);
+        Assert.Equal(
+            "2026.9.7.5402",
+            snapshot.GameVersions.GetProperty("versions").EnumerateArray().Last().GetString());
 
         var ids = snapshot.Listings
             .Select(listing => listing.GetProperty("id").GetString())
@@ -104,7 +106,7 @@ public sealed class SnapshotDtoTests
     }
 
     [Fact]
-    public void Deserialize_NullGameVersions_ThrowsJsonException()
+    public void Deserialize_NullGameVersions_KeepsRawValue()
     {
         const string json = """
             {
@@ -115,11 +117,13 @@ public sealed class SnapshotDtoTests
             }
             """;
 
-        Assert.Throws<JsonException>(() => IndexJson.Deserialize<SnapshotDto>(json));
+        var result = IndexJson.Deserialize<SnapshotDto>(json);
+
+        Assert.Equal(JsonValueKind.Null, result.GameVersions.ValueKind);
     }
 
     [Fact]
-    public void Deserialize_InvalidGameVersions_ThrowsJsonException()
+    public void Deserialize_InvalidGameVersions_KeepsRawValue()
     {
         const string json = """
             {
@@ -134,7 +138,9 @@ public sealed class SnapshotDtoTests
             }
             """;
 
-        Assert.Throws<JsonException>(() => IndexJson.Deserialize<SnapshotDto>(json));
+        var result = IndexJson.Deserialize<SnapshotDto>(json);
+
+        Assert.Equal(JsonValueKind.Object, result.GameVersions.ValueKind);
     }
 
     private static string LoadCurrentSnapshot()

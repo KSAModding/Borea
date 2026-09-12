@@ -1,4 +1,4 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 
 namespace Borea.Core.Index;
 
@@ -47,7 +47,7 @@ public static class ContentIndexRootValidator
     }
 
     /// <summary>
-    /// The ValidateIndexRoot overload for IndexValidator that turns a
+    /// The ValidateIndexRoot overload for cached snapshot readers that turns a
     /// <see cref="string"/> into a <see cref="JsonDocument"/> before validation.
     /// <br /><br />
     /// Validates the Root structure of the Content Index.
@@ -55,7 +55,7 @@ public static class ContentIndexRootValidator
     /// non array listing or packs, and a non-object game_versions.
     /// </summary>
     /// <param name="indexFile">The string containing the entire index file</param>
-    /// <param name="indexPath">sthe path to the index file</param>
+    /// <param name="indexPath">The path or source name used in error messages.</param>
     /// <exception cref="InvalidOperationException"></exception>
     public static bool ValidateIndexRoot(string indexFile, string indexPath)
     {

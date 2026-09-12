@@ -1,4 +1,4 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace Borea.Storage.Index.Dtos;
@@ -25,9 +25,7 @@ public sealed class SnapshotDto
     [JsonPropertyName("packs")]
     public required List<JsonElement> Packs { get; set; }
 
-    /// <summary>
-    /// Chose to let the serializer throw if GameVersions is incorrect
-    /// </summary>
+    /// <summary>Stored raw so invalid game version display data does not remove usable content.</summary>
     [JsonPropertyName("game_versions")]
-    public required GameVersionsDto GameVersions { get; set; }
+    public required JsonElement GameVersions { get; set; }
 }

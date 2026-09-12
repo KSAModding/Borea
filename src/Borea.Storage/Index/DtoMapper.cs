@@ -133,11 +133,25 @@ public static class DtoMapper
         _ => IndexStatusState.Unknown,
     };
 
-    private static InstallAnchor MapInstallAnchor(string target) => MetadataEnumMapper.ParseAnchor(target);
+    private static InstallAnchor MapInstallAnchor(string target)
+    {
+        var anchor = MetadataEnumMapper.ParseAnchor(target);
+        if (anchor == InstallAnchor.Unknown)
+            throw new FormatException($"Install anchor '{target}' is not supported.");
+
+        return anchor;
+    }
 
     private static MetadataSource MapMetadataSource(string source) => MetadataEnumMapper.ParseSource(source)!.Value;
 
-    private static ConfigureFormat MapConfigureFormat(string format) => MetadataEnumMapper.ParseConfigureFormat(format);
+    private static ConfigureFormat MapConfigureFormat(string format)
+    {
+        var mapped = MetadataEnumMapper.ParseConfigureFormat(format);
+        if (mapped == ConfigureFormat.Unknown)
+            throw new FormatException($"Configure format '{format}' is not supported.");
+
+        return mapped;
+    }
 
     // Object mappings
 

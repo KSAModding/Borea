@@ -84,6 +84,35 @@ public sealed class SnapshotParserTests
         """;
 
     [Fact]
+    public void Parse_CanceledToken_StopsBeforeEntryParsing()
+    {
+        using var cancellation = new CancellationTokenSource();
+        cancellation.Cancel();
+
+        Assert.Throws<OperationCanceledException>(() =>
+            SnapshotParser.Parse(Snapshot("", ""), cancellationToken: cancellation.Token));
+    }
+
+    [Fact]
+    public async Task Parse_CancellationDuringLargeTraversal_Stops()
+    {
+        var listings = string.Join(",", Enumerable.Range(0, 200_000).Select(index => $$"""{ "id": "mod-{{index}}" }"""));
+        using var cancellation = new CancellationTokenSource();
+        using var started = new ManualResetEventSlim();
+        var parseTask = Task.Run(() =>
+        {
+            started.Set();
+            return SnapshotParser.Parse(Snapshot(listings, ""), cancellationToken: cancellation.Token);
+        });
+
+        started.Wait();
+        await Task.Delay(10);
+        cancellation.Cancel();
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(async () => await parseTask);
+    }
+
+    [Fact]
     public void Parse_NullSource_PropagatesCallerError()
     {
         var exception = Assert.Throws<ArgumentNullException>(() => SnapshotParser.Parse(Snapshot("", ""), null!));
@@ -277,7 +306,7 @@ public sealed class SnapshotParserTests
     {
         var result = SnapshotParser.Parse(Snapshot("", ""));
 
-        Assert.Equal("master-server", result.GameVersions.Source);
+        Assert.Equal("master-server", result.GameVersions!.Source);
         Assert.Equal(new[] { "2026.9.7.5402" }, result.GameVersions.Versions);
     }
 
@@ -594,10 +623,11 @@ public sealed class SnapshotParserTests
 
         var result = SnapshotParser.Parse(Snapshot($"{invalid}, {valid}", ""));
 
-        Assert.Single(result.ValidListings);
-        var rejected = Assert.Single(result.MalformedListings);
-        Assert.Equal("bad-status", rejected.Id);
-        Assert.Contains("UTC timestamp", rejected.Reason);
+        Assert.Equal(2, result.ValidListings.Count);
+        Assert.Empty(result.MalformedListings);
+        var listing = result.ValidListings.Single(item => item.Id == "bad-status");
+        Assert.Null(listing.IndexStatus);
+        Assert.Contains("UTC timestamp", listing.IndexStatusError!.Reason);
     }
 
     [Fact]

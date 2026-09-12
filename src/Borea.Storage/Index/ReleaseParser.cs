@@ -10,8 +10,14 @@ namespace Borea.Storage.Index;
 /// </summary>
 public static class ReleaseParser
 {
-    public static ParseOutcome<ModVersionMetadata> Parse(JsonElement element, string listingId, string source, ModMetadata? authored)
+    public static ParseOutcome<ModVersionMetadata> Parse(
+        JsonElement element,
+        string listingId,
+        string source,
+        ModMetadata? authored,
+        CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         var id = IndexJsonHelpers.TryExtractString(element, "id");
         var version = IndexJsonHelpers.TryExtractString(element, "version");
 
@@ -33,6 +39,7 @@ public static class ReleaseParser
         {
             var release = element.Deserialize<ReleasesEntryDto>(IndexJsonOptions.Value)
                 ?? throw new JsonException("The release deserialized to null.");
+            cancellationToken.ThrowIfCancellationRequested();
 
             if (!ModIds.Equals(listingId, release.Id))
             {

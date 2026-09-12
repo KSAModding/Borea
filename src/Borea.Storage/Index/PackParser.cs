@@ -11,8 +11,12 @@ namespace Borea.Storage.Index;
 /// </summary>
 internal static class PackParser
 {
-    public static ParseOutcome<ParsedPack> Parse(JsonElement element, string source)
+    public static ParseOutcome<ParsedPack> Parse(
+        JsonElement element,
+        string source,
+        CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         var id = IndexJsonHelpers.TryExtractString(element, "id");
 
         if (!ModIds.IsValid(id))
@@ -32,28 +36,30 @@ internal static class PackParser
         if (!ModIds.Equals(id, pack.Id))
             return ParseOutcome<ParsedPack>.NewMalformed(new RejectedIndexEntry(id, "The pack id changed while the entry was read."));
 
+        var (indexStatus, indexStatusError) = IndexStatusParser.Parse(element, pack.Id);
+
         try
         {
-            var indexStatus = pack.IndexStatus is null ? null : DtoMapper.MapIndexStatus(pack.IndexStatus);
             var hasVersions = pack.Versions is { Count: > 0 };
 
             if (!hasVersions)
             {
-                return indexStatus is null
+                return indexStatus is null && indexStatusError is null
                     ? ParseOutcome<ParsedPack>.NewMalformed(new RejectedIndexEntry(pack.Id,
                         "The pack has no versions and no index_status explaining why."))
                     : ParseOutcome<ParsedPack>.Valid(new ParsedPack(
                         pack.Id, Array.Empty<ParsedPackVersion>(), Array.Empty<RejectedIndexEntry>(),
-                        Array.Empty<UnknownIndexVersionEntry>(), indexStatus));
+                        Array.Empty<UnknownIndexVersionEntry>(), indexStatus, indexStatusError));
             }
 
             var validVersions = new List<ParsedPackVersion>();
             var rejectedVersions = new List<RejectedIndexEntry>();
             var unknownVersions = new List<UnknownIndexVersionEntry>();
-            var duplicateVersions = FindDuplicateVersions(pack.Versions);
+            var duplicateVersions = FindDuplicateVersions(pack.Versions, cancellationToken);
 
             foreach (var versionElement in pack.Versions ?? [])
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 var rawVersion = IndexJsonHelpers.TryExtractNestedString(versionElement, "authored", "version");
                 if (ModVersion.TryParse(rawVersion, out var parsedVersion) && duplicateVersions.Contains(parsedVersion))
                 {
@@ -64,7 +70,7 @@ internal static class PackParser
                     continue;
                 }
 
-                var outcome = PackVersionParser.Parse(versionElement, pack.Id, source);
+                var outcome = PackVersionParser.Parse(versionElement, pack.Id, source, cancellationToken);
                 switch (outcome.Kind)
                 {
                     case ParseOutcomeKind.Valid:
@@ -80,7 +86,7 @@ internal static class PackParser
             }
 
             return ParseOutcome<ParsedPack>.Valid(new ParsedPack(
-                pack.Id, validVersions, rejectedVersions, unknownVersions, indexStatus));
+                pack.Id, validVersions, rejectedVersions, unknownVersions, indexStatus, indexStatusError));
         }
         catch (Exception ex) when (IndexJsonHelpers.IsInputFailure(ex))
         {
@@ -88,19 +94,22 @@ internal static class PackParser
         }
     }
 
-    private static HashSet<ModVersion> FindDuplicateVersions(IReadOnlyList<JsonElement>? versions)
+    private static HashSet<ModVersion> FindDuplicateVersions(
+        IReadOnlyList<JsonElement>? versions,
+        CancellationToken cancellationToken)
     {
         if (versions is null)
             return [];
 
-        return versions
-            .Select(version => IndexJsonHelpers.TryExtractNestedString(version, "authored", "version"))
-            .Select(version => ModVersion.TryParse(version, out var parsed) ? (ModVersion?)parsed : null)
-            .Where(version => version is not null)
-            .Select(version => version!.Value)
-            .GroupBy(version => version)
-            .Where(group => group.Count() > 1)
-            .Select(group => group.Key)
-            .ToHashSet();
+        var counts = new Dictionary<ModVersion, int>();
+        foreach (var versionElement in versions)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var rawVersion = IndexJsonHelpers.TryExtractNestedString(versionElement, "authored", "version");
+            if (ModVersion.TryParse(rawVersion, out var version))
+                counts[version] = counts.GetValueOrDefault(version) + 1;
+        }
+
+        return counts.Where(pair => pair.Value > 1).Select(pair => pair.Key).ToHashSet();
     }
 }

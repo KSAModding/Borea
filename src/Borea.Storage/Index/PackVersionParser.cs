@@ -11,8 +11,13 @@ namespace Borea.Storage.Index;
 /// </summary>
 public static class PackVersionParser
 {
-    public static ParseOutcome<ParsedPackVersion> Parse(JsonElement element, string packId, string source)
+    public static ParseOutcome<ParsedPackVersion> Parse(
+        JsonElement element,
+        string packId,
+        string source,
+        CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         var id = IndexJsonHelpers.TryExtractNestedString(element, "authored", "id");
         var version = IndexJsonHelpers.TryExtractNestedString(element, "authored", "version");
 
@@ -34,6 +39,7 @@ public static class PackVersionParser
         {
             var packVersion = element.Deserialize<PackVersionDto>(IndexJsonOptions.Value)
                 ?? throw new JsonException("The pack version deserialized to null.");
+            cancellationToken.ThrowIfCancellationRequested();
 
             if (!ModIds.Equals(packId, packVersion.Authored.Id))
             {
@@ -44,8 +50,8 @@ public static class PackVersionParser
             }
 
             var metadata = DtoMapper.MapPackVersion(packVersion.Authored, source);
-            var indexStatus = packVersion.IndexStatus is null ? null : DtoMapper.MapIndexStatus(packVersion.IndexStatus);
-            return ParseOutcome<ParsedPackVersion>.Valid(new ParsedPackVersion(metadata, indexStatus));
+            var (indexStatus, indexStatusError) = IndexStatusParser.Parse(element, packId, version);
+            return ParseOutcome<ParsedPackVersion>.Valid(new ParsedPackVersion(metadata, indexStatus, indexStatusError));
         }
         catch (Exception ex) when (IndexJsonHelpers.IsInputFailure(ex))
         {

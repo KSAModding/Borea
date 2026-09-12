@@ -35,7 +35,7 @@ public sealed class ListingEntryDtoTests
         Assert.Equal(2, snapshot.Listings.Count);
         var tombstone = IndexJson.Deserialize<ListingEntryDto>(snapshot.Listings[0]);
         Assert.Equal("RemovedMod", tombstone.Id);
-        Assert.Equal("delisted", tombstone.IndexStatus!.State);
+        Assert.Equal("delisted", tombstone.IndexStatus!.Value.GetProperty("state").GetString());
         Assert.Null(tombstone.Authored);
         Assert.Null(tombstone.Releases);
         Assert.Throws<JsonException>(() => IndexJson.Deserialize<ListingEntryDto>(snapshot.Listings[1]));
@@ -71,7 +71,7 @@ public sealed class ListingEntryDtoTests
 
         var listing = IndexJson.Deserialize<ListingEntryDto>(json);
 
-        Assert.Equal("future-warning", listing.IndexStatus!.State);
+        Assert.Equal("future-warning", listing.IndexStatus!.Value.GetProperty("state").GetString());
     }
 
     [Fact]

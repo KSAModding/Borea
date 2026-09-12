@@ -20,6 +20,7 @@ public sealed class CliServicesTests : IDisposable
         Assert.Same(graph.LatestVersion, services.LatestVersion);
         Assert.Same(graph.InstalledVersion, services.InstalledVersion);
         Assert.Same(graph.IndexFetcher, services.IndexFetcher);
+        Assert.Same(graph.IndexReader, services.IndexReader);
         Assert.Same(graph.Paths, services.Paths);
         Assert.Same(graph, services.Graph);
     }
@@ -31,12 +32,14 @@ public sealed class CliServicesTests : IDisposable
         var ping = new FakeLatestVersionPing();
         var installed = new FakeInstalledGameVersionProvider();
         var indexFetcher = new FakeContentIndexFetcher();
+        var indexReader = new FakeContentIndexReader();
 
-        var services = CliServices.From(graph, ping, installed, indexFetcher);
+        var services = CliServices.From(graph, ping, installed, indexFetcher, indexReader);
 
         Assert.Same(ping, services.LatestVersion);
         Assert.Same(installed, services.InstalledVersion);
         Assert.Same(indexFetcher, services.IndexFetcher);
+        Assert.Same(indexReader, services.IndexReader);
         Assert.Same(graph.Instances, services.Instances);
     }
 
@@ -54,6 +57,7 @@ public sealed class CliServicesTests : IDisposable
             LatestVersion = new FakeLatestVersionPing(),
             InstalledVersion = new FakeInstalledGameVersionProvider(),
             IndexFetcher = new FakeContentIndexFetcher(),
+            IndexReader = new FakeContentIndexReader(),
             Paths = graph.Paths,
             Graph = owner,
         };

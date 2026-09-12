@@ -20,12 +20,16 @@ public sealed class ParsedPack
     /// <summary>Present when the pack is deprecated, removed, or otherwise flagged.</summary>
     public IndexStatus? IndexStatus { get; }
 
+    /// <summary>Present when index_status exists but cannot be read safely.</summary>
+    public RejectedIndexEntry? IndexStatusError { get; }
+
     public ParsedPack(
         string id,
         IReadOnlyList<ParsedPackVersion> validVersions,
         IReadOnlyList<RejectedIndexEntry> rejectedVersions,
         IReadOnlyList<UnknownIndexVersionEntry> unknownVersions,
-        IndexStatus? indexStatus)
+        IndexStatus? indexStatus,
+        RejectedIndexEntry? indexStatusError = null)
     {
         ModIds.Validate(id, nameof(id));
 
@@ -34,8 +38,12 @@ public sealed class ParsedPack
         RejectedVersions = rejectedVersions ?? throw new ArgumentNullException(nameof(rejectedVersions));
         UnknownVersions = unknownVersions ?? throw new ArgumentNullException(nameof(unknownVersions));
         IndexStatus = indexStatus;
+        IndexStatusError = indexStatusError;
     }
 }
 
 /// <summary>One mapped pack version and the moderation state attached to that version.</summary>
-public sealed record ParsedPackVersion(ModPackMetadata Metadata, IndexStatus? IndexStatus);
+public sealed record ParsedPackVersion(
+    ModPackMetadata Metadata,
+    IndexStatus? IndexStatus,
+    RejectedIndexEntry? IndexStatusError = null);

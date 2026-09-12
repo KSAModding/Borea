@@ -191,6 +191,27 @@ public sealed class DtoMapperTests
     }
 
     [Fact]
+    public void MapAuthored_ReleaseSource_PreservesUnknownAuthorityHost()
+    {
+        var dto = MinimalAuthoredDto();
+        dto.Releases = new ReleasesInfoDto
+        {
+            Authority = "future-host",
+            Hosts = new Dictionary<string, JsonElement>
+            {
+                ["future-host"] = JsonSerializer.SerializeToElement("publisher/project"),
+                ["github"] = JsonSerializer.SerializeToElement("owner/repo"),
+            },
+        };
+
+        var result = DtoMapper.MapAuthored(dto, "source");
+
+        Assert.Equal("future-host", result.Releases!.Authority);
+        Assert.Equal("publisher/project", result.Releases.AuthorityHost.Reference);
+        Assert.Equal(2, result.Releases.Hosts.Count);
+    }
+
+    [Fact]
     public void MapAuthored_ReleaseSource_ThrowsForNonStringNonNumberHost()
     {
         var dto = MinimalAuthoredDto();
@@ -372,6 +393,18 @@ public sealed class DtoMapperTests
     }
 
     [Fact]
+    public void MapAuthored_UnknownConfigureFormat_Throws()
+    {
+        var dto = MinimalAuthoredDto(type: "mod-loader");
+        dto.Provides = new ProvidesDto
+        {
+            Configure = new ConfigureDto { File = "config.data", Format = "future-format" },
+        };
+
+        Assert.Throws<FormatException>(() => DtoMapper.MapAuthored(dto, "source"));
+    }
+
+    [Fact]
     public void MapAuthored_NullCollectionElements_Throw()
     {
         var dto = MinimalAuthoredDto();
@@ -469,7 +502,6 @@ public sealed class DtoMapperTests
     [InlineData("user-data", InstallAnchor.UserData)]
     [InlineData("game-root", InstallAnchor.GameRoot)]
     [InlineData("standalone", InstallAnchor.Standalone)]
-    [InlineData("something-else", InstallAnchor.Unknown)]
     public void MapRelease_MapsInstallAnchor(string target, InstallAnchor expected)
     {
         var dto = MinimalReleaseDto();
@@ -478,6 +510,15 @@ public sealed class DtoMapperTests
         var result = DtoMapper.MapRelease(dto, null, authored: null);
 
         Assert.Equal(expected, result.Install!.Target);
+    }
+
+    [Fact]
+    public void MapRelease_UnknownInstallAnchor_Throws()
+    {
+        var dto = MinimalReleaseDto();
+        dto.Install = new InstallInfoDto { Derived = false, Target = "something-else" };
+
+        Assert.Throws<FormatException>(() => DtoMapper.MapRelease(dto, null, authored: null));
     }
 
     [Fact]

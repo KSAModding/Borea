@@ -22,13 +22,17 @@ public sealed class ParsedListing
     /// <summary>Present when the listing is deprecated, removed, or otherwise flagged.</summary>
     public IndexStatus? IndexStatus { get; }
 
+    /// <summary>Present when index_status exists but cannot be read safely.</summary>
+    public RejectedIndexEntry? IndexStatusError { get; }
+
     public ParsedListing(
         string id,
         ModMetadata? authored,
         IReadOnlyList<ModVersionMetadata> validReleases,
         IReadOnlyList<RejectedIndexEntry> rejectedReleases,
         IReadOnlyList<UnknownIndexVersionEntry> unknownReleases,
-        IndexStatus? indexStatus)
+        IndexStatus? indexStatus,
+        RejectedIndexEntry? indexStatusError = null)
     {
         ModIds.Validate(id, nameof(id));
 
@@ -38,5 +42,6 @@ public sealed class ParsedListing
         RejectedReleases = rejectedReleases ?? throw new ArgumentNullException(nameof(rejectedReleases));
         UnknownReleases = unknownReleases ?? throw new ArgumentNullException(nameof(unknownReleases));
         IndexStatus = indexStatus;
+        IndexStatusError = indexStatusError;
     }
 }

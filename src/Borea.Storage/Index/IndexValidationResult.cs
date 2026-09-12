@@ -1,4 +1,4 @@
-﻿using Borea.Storage.Index.Dtos;
+using Borea.Storage.Index.Dtos;
 
 namespace Borea.Storage.Index;
 
@@ -17,7 +17,9 @@ public sealed class IndexValidationResult
     public IReadOnlyList<UnknownIndexVersionEntry> UnknownPacks { get; }
     public IReadOnlyList<RejectedIndexEntry> MalformedPacks { get; }
 
-    public GameVersionsDto GameVersions { get; }
+    public GameVersionsDto? GameVersions { get; }
+
+    public RejectedIndexEntry? GameVersionsError { get; }
 
     /// <summary>Null when the index does not carry a sources table.</summary>
     public SourcesDto? Sources { get; }
@@ -30,8 +32,9 @@ public sealed class IndexValidationResult
         IReadOnlyList<ParsedPack> validPacks,
         IReadOnlyList<UnknownIndexVersionEntry> unknownPacks,
         IReadOnlyList<RejectedIndexEntry> malformedPacks,
-        GameVersionsDto gameVersions,
-        SourcesDto? sources)
+        GameVersionsDto? gameVersions,
+        SourcesDto? sources,
+        RejectedIndexEntry? gameVersionsError = null)
     {
         SnapshotVersion = snapshotVersion;
         ValidListings = validListings ?? throw new ArgumentNullException(nameof(validListings));
@@ -40,7 +43,8 @@ public sealed class IndexValidationResult
         ValidPacks = validPacks ?? throw new ArgumentNullException(nameof(validPacks));
         UnknownPacks = unknownPacks ?? throw new ArgumentNullException(nameof(unknownPacks));
         MalformedPacks = malformedPacks ?? throw new ArgumentNullException(nameof(malformedPacks));
-        GameVersions = gameVersions ?? throw new ArgumentNullException(nameof(gameVersions));
+        GameVersions = gameVersions;
         Sources = sources;
+        GameVersionsError = gameVersionsError;
     }
 }

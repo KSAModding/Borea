@@ -1,10 +1,12 @@
 using Borea.Core.Dependencies;
+using Borea.Core.Index;
 using Borea.Core.ModLoaders;
 using Borea.Core.Mods;
 using Borea.Core.Settings;
 using Borea.Network.Index;
 using Borea.Network.Sources;
 using Borea.Storage.Game;
+using Borea.Storage.Index;
 using Borea.Storage.ModLoaders;
 using Borea.Storage.Paths;
 using Borea.Storage.Settings;
@@ -128,6 +130,16 @@ public sealed class BoreaServicesTests : IDisposable
         using var services = await BoreaServices.BuildAsync(_tempRoot);
 
         Assert.IsType<ContentIndexFetcher>(services.IndexFetcher);
+    }
+
+    [Fact]
+    public async Task IndexReader_IsTheStorageReader()
+    {
+        using var services = await BoreaServices.BuildAsync(_tempRoot);
+
+        Assert.IsType<ContentIndexReader>(services.IndexReader);
+        Assert.IsType<ContentIndexModRepository>(services.ContentIndex);
+        Assert.IsAssignableFrom<IContentIndexRepository>(services.ContentIndex);
     }
 
     [Fact]

@@ -1,5 +1,4 @@
-﻿using System.Net.Http.Headers;
-using System.Text.Json;
+using System.Net.Http.Headers;
 using Borea.Core.Index;
 
 namespace Borea.Network.Index;
@@ -8,11 +7,16 @@ public sealed class ContentIndexFetcher : IContentIndexFetcher
 {
     private readonly HttpClient _client;
     private readonly Uri _indexUri;
+    private readonly IContentIndexCandidateValidator _candidateValidator;
 
-    public ContentIndexFetcher(HttpClient client, Uri indexUri)
+    public ContentIndexFetcher(
+        HttpClient client,
+        Uri indexUri,
+        IContentIndexCandidateValidator candidateValidator)
     {
         _client = client ?? throw new ArgumentNullException(nameof(client));
         _indexUri = indexUri ?? throw new ArgumentNullException(nameof(indexUri));
+        _candidateValidator = candidateValidator ?? throw new ArgumentNullException(nameof(candidateValidator));
     }
 
     /// <summary>
@@ -70,9 +74,17 @@ public sealed class ContentIndexFetcher : IContentIndexFetcher
 
         try
         {
-            // Write the index to disk in a temp file then move to real file.
-            // This is to avoid leaving a corrupted file if the download is interrupted.
+            // The reader accepts the complete candidate before one atomic move
+            // replaces the persistent known-good snapshot.
             await File.WriteAllBytesAsync(tempPath, body, ct);
+            try
+            {
+                await _candidateValidator.ValidateAsync(tempPath, ct).ConfigureAwait(false);
+            }
+            catch (InvalidOperationException ex)
+            {
+                throw new HttpRequestException("The downloaded content index was not accepted.", ex);
+            }
             // Metadata change that only changes the file's name
             File.Move(tempPath, destinationPath, overwrite: true);
         }
@@ -95,73 +107,4 @@ public sealed class ContentIndexFetcher : IContentIndexFetcher
         return ContentIndexFetchResult.Downloaded;
     }
 
-    /// <summary>
-    /// Checks if the index is JSON or plain text, if it can be parsed as JSON, and if it has 4 required properties:
-    /// 'snapshot_version', 'listings', 'packs', and 'game_versions'. Only 'snapshot_version'
-    /// has its value read. For the other three, presence is all this checks. A full
-    /// validation of the document belongs to whatever reads it.
-    /// </summary>
-    /// <exception cref="HttpRequestException"></exception>
-    private static void BasicIndexFormatCheck(byte[] body, HttpResponseMessage response)
-    {
-        // Make sure index is JSON or plain text
-        if (response.Content.Headers.ContentType?.MediaType != "application/json" && response.Content.Headers.ContentType?.MediaType != "text/plain")
-        {
-            throw new HttpRequestException($"Expected content type 'application/json' or 'text/plain' but got '{response.Content.Headers.ContentType?.MediaType}'");
-        }
-
-        JsonDocument document;
-        try
-        {
-            document = JsonDocument.Parse(body);
-        }
-        catch (JsonException ex)
-        {
-            throw new HttpRequestException("Failed to parse index as JSON", ex);
-        }
-
-        using (document)
-        {
-            JsonElement root = document.RootElement;
-
-            if (root.ValueKind != JsonValueKind.Object)
-            {
-                throw new HttpRequestException("The index is not a JSON object.");
-            }
-
-            if (!root.TryGetProperty("snapshot_version", out var versionElement) ||
-                versionElement.ValueKind != JsonValueKind.Number ||
-                !versionElement.TryGetInt32(out int snapshotVersion) ||
-                snapshotVersion < 1)
-            {
-                throw new HttpRequestException("The index has no usable 'snapshot_version'.");
-            }
-
-            // A newer envelope is refused whole and the cached copy is kept.
-            if (SnapshotVersions.IsAboveHighest(snapshotVersion))
-            {
-                throw new HttpRequestException(
-                    $"The index is snapshot version {snapshotVersion} and this build reads {SnapshotVersions.Highest}.");
-            }
-
-            // Not checking for 'sources' since it is optional
-            // For these three properties, we don't care about the value since they are arrays or objects.
-            // Only checking for their existence for now. Reading the index client side can do a full validation.
-            // This can be changed later if a IndexValidator class or similar is implemented to validate the index fully.
-            if (!root.TryGetProperty("listings", out _))
-            {
-                throw new HttpRequestException("The index has no usable 'listings'.");
-            }
-
-            if (!root.TryGetProperty("packs", out _))
-            {
-                throw new HttpRequestException("The index has no usable 'packs'.");
-            }
-
-            if (!root.TryGetProperty("game_versions", out _))
-            {
-                throw new HttpRequestException("The index has no usable 'game_versions'.");
-            }
-        }
-    }
 }
