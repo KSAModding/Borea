@@ -55,7 +55,7 @@ internal static class SettingsCommand
         game.SetAction((parseResult, cancellationToken) => CommandRunner.RunAsync(parseResult, services, cancellationToken, async (cli, output, error, ct) =>
         {
             var fullPath = Path.GetFullPath(parseResult.GetRequiredValue(directory));
-            await cli.SettingsRepository.SaveAsync(cli.Settings.WithGameDirectory(fullPath), ct).ConfigureAwait(false);
+            await cli.GameDirectoryChanger.ChangeAsync(fullPath, ct).ConfigureAwait(false);
 
             output.WriteLine($"Game directory: {fullPath}");
             WarnWhenMissing(error, fullPath);

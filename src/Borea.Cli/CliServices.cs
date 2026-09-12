@@ -22,6 +22,8 @@ internal sealed class CliServices : IDisposable
 
     public required IBoreaSettingsRepository SettingsRepository { get; init; }
 
+    public required IGameDirectoryChanger GameDirectoryChanger { get; init; }
+
     public required IInstanceRepository Instances { get; init; }
 
     public required IModStateRepository ModState { get; init; }
@@ -61,6 +63,7 @@ internal sealed class CliServices : IDisposable
         {
             Settings = services.Settings,
             SettingsRepository = services.SettingsRepository,
+            GameDirectoryChanger = services.GameDirectoryChanger,
             Instances = services.Instances,
             ModState = services.ModState,
             LatestVersion = latestVersion ?? services.LatestVersion,

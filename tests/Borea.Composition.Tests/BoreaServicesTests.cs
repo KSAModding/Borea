@@ -1,5 +1,6 @@
 using System.Net;
 using System.Text;
+using System.Text.Json;
 using Borea.Core.Dependencies;
 using Borea.Core.Index;
 using Borea.Core.ModLoaders;
@@ -124,6 +125,7 @@ public sealed class BoreaServicesTests : IDisposable
         Assert.IsType<FileLoaderInstaller>(services.LoaderInstaller);
         Assert.IsType<FileLoaderAdopter>(services.LoaderAdopter);
         Assert.IsType<FileLoaderUninstaller>(services.LoaderUninstaller);
+        Assert.IsType<GameDirectoryChanger>(services.GameDirectoryChanger);
     }
 
     [Fact]
@@ -196,6 +198,59 @@ public sealed class BoreaServicesTests : IDisposable
         Assert.Equal(
             ["https://ksamodding.github.io/content-index-releases/v1/index.json"],
             handler.RequestUris.Select(uri => uri.AbsoluteUri));
+    }
+
+    [Fact]
+    public async Task GameDirectoryChanger_ControlledSnapshot_UpdatesStarMapAndSettings()
+    {
+        var oldGame = Path.Combine(_tempRoot, "OldGame");
+        var newGame = Path.Combine(_tempRoot, "NewGame");
+        var loaderDirectory = Path.Combine(_tempRoot, "StarMap");
+        var configurationPath = Path.Combine(loaderDirectory, "StarMapConfig.json");
+        Directory.CreateDirectory(loaderDirectory);
+        await File.WriteAllTextAsync(configurationPath, """
+            {
+              "GameLocation": "old",
+              "Keep": true
+            }
+            """);
+        await SaveAsync(new BoreaSettings(oldGame, LoaderAt(loaderDirectory)));
+        var snapshot = await File.ReadAllTextAsync(SnapshotFixturePath);
+
+        using var services = await BoreaServices.BuildAsync(
+            _tempRoot,
+            new ControlledHttpMessageHandler(snapshot),
+            new ConflictingStarMapRepository());
+        await services.GameDirectoryChanger.ChangeAsync(newGame);
+
+        using var configuration = JsonDocument.Parse(await File.ReadAllTextAsync(configurationPath));
+        Assert.Equal(newGame, configuration.RootElement.GetProperty("GameLocation").GetString());
+        Assert.True(configuration.RootElement.GetProperty("Keep").GetBoolean());
+        Assert.Equal(newGame, (await services.SettingsRepository.GetAsync())!.GameDirectoryPath);
+    }
+
+    [Fact]
+    public async Task GameDirectoryChanger_InvalidLoaderConfiguration_RestoresFileAndSettings()
+    {
+        var oldGame = Path.Combine(_tempRoot, "OldGame");
+        var newGame = Path.Combine(_tempRoot, "NewGame");
+        var loaderDirectory = Path.Combine(_tempRoot, "StarMap");
+        var configurationPath = Path.Combine(loaderDirectory, "StarMapConfig.json");
+        const string originalConfiguration = "[]";
+        Directory.CreateDirectory(loaderDirectory);
+        await File.WriteAllTextAsync(configurationPath, originalConfiguration);
+        await SaveAsync(new BoreaSettings(oldGame, LoaderAt(loaderDirectory)));
+        var snapshot = await File.ReadAllTextAsync(SnapshotFixturePath);
+
+        using var services = await BoreaServices.BuildAsync(
+            _tempRoot,
+            new ControlledHttpMessageHandler(snapshot),
+            new ConflictingStarMapRepository());
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => services.GameDirectoryChanger.ChangeAsync(newGame));
+        Assert.Equal(originalConfiguration, await File.ReadAllTextAsync(configurationPath));
+        Assert.Equal(oldGame, (await services.SettingsRepository.GetAsync())!.GameDirectoryPath);
     }
 
     [Fact]

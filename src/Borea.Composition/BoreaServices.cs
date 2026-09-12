@@ -64,6 +64,8 @@ public sealed class BoreaServices : IDisposable
 
     public required IBoreaSettingsRepository SettingsRepository { get; init; }
 
+    public required IGameDirectoryChanger GameDirectoryChanger { get; init; }
+
     public required IInstanceRepository Instances { get; init; }
 
     public required IModStateRepository ModState { get; init; }
@@ -175,6 +177,7 @@ public sealed class BoreaServices : IDisposable
             Settings = settings,
             Paths = paths,
             SettingsRepository = settingsRepository,
+            GameDirectoryChanger = new GameDirectoryChanger(settingsRepository, mods, loaderConfiguration),
             Instances = new FileInstanceRepository(paths),
             ModState = new FileModStateRepository(paths),
             ModFavorites = new FileModFavoritesRepository(paths),
