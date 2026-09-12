@@ -1,5 +1,5 @@
 using System.Text.Json;
-using Borea.Storage.Index;
+using Borea.Storage.Index.Dtos;
 
 namespace Borea.Storage.Tests.Index;
 
