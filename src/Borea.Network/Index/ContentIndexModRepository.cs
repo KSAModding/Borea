@@ -9,7 +9,7 @@ namespace Borea.Network.Index;
 /// Successful snapshots are revalidated at most once per index watcher interval,
 /// and overlapping callers share one refresh and parse operation.
 /// </summary>
-public sealed class ContentIndexModRepository : IContentIndexRepository, IModIdClaimSource
+public sealed class ContentIndexModRepository : IContentIndexRepository, IModIdClaimSource, IModArchiveReleaseLookup
 {
     public const string SourceName = "index";
 
@@ -93,6 +93,24 @@ public sealed class ContentIndexModRepository : IContentIndexRepository, IModIdC
     {
         var snapshot = await GetSnapshotAsync(cancellationToken).ConfigureAwait(false);
         return snapshot.Diagnostics;
+    }
+
+    public async Task<ModVersionMetadata?> FindBySha256Async(
+        string modId,
+        string sha256,
+        CancellationToken cancellationToken = default)
+    {
+        var listing = await FindListingAsync(modId, cancellationToken).ConfigureAwait(false);
+        if (listing?.Authored?.Type != ContentType.Mod)
+            return null;
+
+        var matches = listing.Releases
+            .Where(release => release.Type == ContentType.Mod)
+            .Where(release => ModIds.Equals(release.ModId, listing.Id))
+            .Where(release => string.Equals(release.Download.Sha256, sha256, StringComparison.OrdinalIgnoreCase))
+            .Take(2)
+            .ToArray();
+        return matches.Length == 1 ? matches[0] : null;
     }
 
     public async Task<IReadOnlyList<string>> GetClaimedModIdsAsync(
