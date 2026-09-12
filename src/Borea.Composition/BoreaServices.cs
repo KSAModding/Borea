@@ -2,6 +2,7 @@ using System.Net.Http.Headers;
 using Borea.Core.Game;
 using Borea.Core.Index;
 using Borea.Core.Instances;
+using Borea.Core.Launch;
 using Borea.Core.ModLoaders;
 using Borea.Core.ModPacks;
 using Borea.Core.Mods;
@@ -16,6 +17,7 @@ using Borea.Network.SpaceDock;
 using Borea.Storage.Game;
 using Borea.Storage.Instances;
 using Borea.Storage.Index;
+using Borea.Storage.Launch;
 using Borea.Storage.ModLoaders;
 using Borea.Storage.ModPacks;
 using Borea.Storage.Mods;
@@ -88,6 +90,8 @@ public sealed class BoreaServices : IDisposable
     public required ILoaderAdopter LoaderAdopter { get; init; }
 
     public required ILoaderUninstaller LoaderUninstaller { get; init; }
+
+    public required ILauncher Launcher { get; init; }
 
     public required ILatestVersionPing LatestVersion { get; init; }
 
@@ -188,6 +192,7 @@ public sealed class BoreaServices : IDisposable
             LoaderInstaller = new FileLoaderInstaller(paths, downloader, settingsRepository, loaderConfiguration),
             LoaderAdopter = new FileLoaderAdopter(settingsRepository, loaderConfiguration),
             LoaderUninstaller = new FileLoaderUninstaller(settingsRepository),
+            Launcher = new LoaderLauncher(paths, new ProcessStarter()),
             LatestVersion = new LatestVersionPing(http),
             InstalledVersion = new InstalledGameVersionProvider(paths),
             IndexFetcher = indexFetcher,
@@ -207,5 +212,11 @@ public sealed class BoreaServices : IDisposable
         return http;
     }
 
-    public void Dispose() => _http.Dispose();
+    public void Dispose()
+    {
+        if (Launcher is IDisposable disposable)
+            disposable.Dispose();
+
+        _http.Dispose();
+    }
 }

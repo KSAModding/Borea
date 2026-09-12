@@ -2,6 +2,9 @@ using Borea.Composition;
 using Borea.Core.Game;
 using Borea.Core.Index;
 using Borea.Core.Instances;
+using Borea.Core.Launch;
+using Borea.Core.ModLoaders;
+using Borea.Core.Mods;
 using Borea.Core.Paths;
 using Borea.Core.Settings;
 using Borea.Core.State;
@@ -38,11 +41,23 @@ internal sealed class CliServices : IDisposable
 
     public required IGamePathProvider Paths { get; init; }
 
+    public required IModRepository Mods { get; init; }
+
+    public required ILoaderInstaller LoaderInstaller { get; init; }
+
+    public required ILoaderAdopter LoaderAdopter { get; init; }
+
+    public required ILoaderUninstaller LoaderUninstaller { get; init; }
+
+    public required ILauncher Launcher { get; init; }
+
     /// <summary>
     /// The graph the services came from, disposed with this instance. Null when
     /// nothing needs disposing.
     /// </summary>
     public IDisposable? Graph { get; init; }
+
+    public IDisposable? AdditionalDisposable { get; init; }
 
     /// <summary>
     /// The graph's services. <paramref name="latestVersion"/> replaces the
@@ -54,7 +69,12 @@ internal sealed class CliServices : IDisposable
         ILatestVersionPing? latestVersion = null,
         IInstalledGameVersionProvider? installedVersion = null,
         IContentIndexFetcher? indexFetcher = null,
-        IContentIndexReader? indexReader = null)
+        IContentIndexReader? indexReader = null,
+        IModRepository? mods = null,
+        ILoaderInstaller? loaderInstaller = null,
+        ILoaderAdopter? loaderAdopter = null,
+        ILoaderUninstaller? loaderUninstaller = null,
+        ILauncher? launcher = null)
     {
         if (services is null)
             throw new ArgumentNullException(nameof(services));
@@ -71,9 +91,21 @@ internal sealed class CliServices : IDisposable
             IndexFetcher = indexFetcher ?? services.IndexFetcher,
             IndexReader = indexReader ?? services.IndexReader,
             Paths = services.Paths,
+            Mods = mods ?? services.Mods,
+            LoaderInstaller = loaderInstaller ?? services.LoaderInstaller,
+            LoaderAdopter = loaderAdopter ?? services.LoaderAdopter,
+            LoaderUninstaller = loaderUninstaller ?? services.LoaderUninstaller,
+            Launcher = launcher ?? services.Launcher,
             Graph = services,
+            AdditionalDisposable = launcher is IDisposable disposable && !ReferenceEquals(launcher, services.Launcher)
+                ? disposable
+                : null,
         };
     }
 
-    public void Dispose() => Graph?.Dispose();
+    public void Dispose()
+    {
+        AdditionalDisposable?.Dispose();
+        Graph?.Dispose();
+    }
 }

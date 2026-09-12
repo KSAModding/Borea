@@ -23,6 +23,11 @@ public sealed class CliServicesTests : IDisposable
         Assert.Same(graph.IndexFetcher, services.IndexFetcher);
         Assert.Same(graph.IndexReader, services.IndexReader);
         Assert.Same(graph.Paths, services.Paths);
+        Assert.Same(graph.Mods, services.Mods);
+        Assert.Same(graph.LoaderInstaller, services.LoaderInstaller);
+        Assert.Same(graph.LoaderAdopter, services.LoaderAdopter);
+        Assert.Same(graph.LoaderUninstaller, services.LoaderUninstaller);
+        Assert.Same(graph.Launcher, services.Launcher);
         Assert.Same(graph, services.Graph);
     }
 
@@ -61,6 +66,11 @@ public sealed class CliServicesTests : IDisposable
             IndexFetcher = new FakeContentIndexFetcher(),
             IndexReader = new FakeContentIndexReader(),
             Paths = graph.Paths,
+            Mods = graph.Mods,
+            LoaderInstaller = graph.LoaderInstaller,
+            LoaderAdopter = graph.LoaderAdopter,
+            LoaderUninstaller = graph.LoaderUninstaller,
+            Launcher = graph.Launcher,
             Graph = owner,
         };
 

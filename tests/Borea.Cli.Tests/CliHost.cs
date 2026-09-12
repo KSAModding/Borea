@@ -1,5 +1,7 @@
 using System.Text.Json;
 using Borea.Composition;
+using Borea.Core.ModLoaders;
+using Borea.Storage.Launch;
 using Borea.Storage.Paths;
 
 namespace Borea.Cli.Tests;
@@ -22,6 +24,16 @@ internal sealed class CliHost : IDisposable
 
     public FakeContentIndexReader IndexReader { get; } = new();
 
+    public FakeModRepository Mods { get; } = new();
+
+    public FakeProcessStarter ProcessStarter { get; } = new();
+
+    public ILoaderInstaller? LoaderInstaller { get; set; }
+
+    public ILoaderAdopter? LoaderAdopter { get; set; }
+
+    public ILoaderUninstaller? LoaderUninstaller { get; set; }
+
     /// <summary>How many times a command built its services.</summary>
     public int Builds { get; private set; }
 
@@ -43,12 +55,18 @@ internal sealed class CliHost : IDisposable
     private async Task<CliServices> BuildAsync(CancellationToken cancellationToken)
     {
         Builds++;
+        var graph = await BoreaServices.BuildAsync(Root, cancellationToken);
         return CliServices.From(
-            await BoreaServices.BuildAsync(Root, cancellationToken),
-            LatestVersion,
-            InstalledVersion,
-            IndexFetcher,
-            IndexReader);
+            graph,
+            latestVersion: LatestVersion,
+            installedVersion: InstalledVersion,
+            indexFetcher: IndexFetcher,
+            indexReader: IndexReader,
+            mods: Mods,
+            loaderInstaller: LoaderInstaller,
+            loaderAdopter: LoaderAdopter,
+            loaderUninstaller: LoaderUninstaller,
+            launcher: new LoaderLauncher(graph.Paths, ProcessStarter));
     }
 
     public void Dispose()
