@@ -10,6 +10,8 @@ internal sealed class FakeModRepository : IModRepository
 
     public Func<CancellationToken, Task<IReadOnlyList<ModMetadata>>>? AvailableMods { get; set; }
 
+    public Func<string, CancellationToken, Task<IReadOnlyList<ModVersion>>>? AvailableVersions { get; set; }
+
     public Task<IReadOnlyList<ModMetadata>> GetAvailableModsAsync(CancellationToken cancellationToken = default)
         => AvailableMods?.Invoke(cancellationToken) ?? Task.FromResult<IReadOnlyList<ModMetadata>>(Listings);
 
@@ -24,7 +26,7 @@ internal sealed class FakeModRepository : IModRepository
             ModIds.Equals(release.ModId, modId) && release.Version == version));
 
     public Task<IReadOnlyList<ModVersion>> GetAvailableVersionsAsync(string modId, CancellationToken cancellationToken = default)
-        => Task.FromResult<IReadOnlyList<ModVersion>>(Releases
+        => AvailableVersions?.Invoke(modId, cancellationToken) ?? Task.FromResult<IReadOnlyList<ModVersion>>(Releases
             .Where(release => ModIds.Equals(release.ModId, modId))
             .Select(release => release.Version)
             .Distinct()
