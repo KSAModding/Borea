@@ -1,6 +1,7 @@
 using Borea.Core.Index;
 using Borea.Core.Mods;
 using Borea.Core.Paths;
+using Borea.Core.Tags;
 
 namespace Borea.Network.Index;
 
@@ -75,7 +76,7 @@ public sealed class ContentIndexModRepository : IContentIndexRepository, IModIdC
         var snapshot = await GetSnapshotAsync(cancellationToken).ConfigureAwait(false);
         return AvailableListings(snapshot)
             .Select(listing => listing.Authored!)
-            .Where(mod => Matches(mod, query))
+            .Where(mod => ContentTagFilter.MatchesSearch(mod, query))
             .ToArray();
     }
 
@@ -135,13 +136,4 @@ public sealed class ContentIndexModRepository : IContentIndexRepository, IModIdC
             listing.Authored is { Type: ContentType.Mod or ContentType.ModLoader }
             && listing.IndexStatus?.State != IndexStatusState.Delisted);
 
-    private static bool Matches(ModMetadata mod, string query) =>
-        Contains(mod.ModId, query)
-        || Contains(mod.Name, query)
-        || Contains(mod.Abstract, query)
-        || Contains(mod.Description, query)
-        || mod.Tags.Any(tag => Contains(tag, query));
-
-    private static bool Contains(string? value, string query) =>
-        value?.Contains(query, StringComparison.OrdinalIgnoreCase) == true;
 }
