@@ -32,6 +32,24 @@ internal static class AtomicFile
         }
     }
 
+    public static async Task WriteAllBytesAsync(string path, byte[] content, CancellationToken cancellationToken = default)
+    {
+        var directory = Path.GetDirectoryName(path);
+        if (!string.IsNullOrEmpty(directory))
+            Directory.CreateDirectory(directory);
+
+        var tempPath = $"{path}.{Guid.NewGuid():N}.tmp";
+        try
+        {
+            await File.WriteAllBytesAsync(tempPath, content, cancellationToken).ConfigureAwait(false);
+            File.Move(tempPath, path, overwrite: true);
+        }
+        finally
+        {
+            TryDeleteLeftover(tempPath);
+        }
+    }
+
     /// <summary>
     /// Clears the temporary file without replacing the error that caused it.
     /// </summary>
