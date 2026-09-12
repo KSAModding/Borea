@@ -148,8 +148,10 @@ public sealed class BoreaServicesTests : IDisposable
         using var services = await BoreaServices.BuildAsync(_tempRoot);
 
         Assert.IsType<ContentIndexReader>(services.IndexReader);
+        Assert.IsType<ContentIndexSnapshotProvider>(services.IndexSnapshots);
         Assert.IsType<ContentIndexModRepository>(services.ContentIndex);
         Assert.IsAssignableFrom<IContentIndexRepository>(services.ContentIndex);
+        Assert.IsType<ContentIndexModPackRepository>(services.ModPacks);
     }
 
     [Fact]
@@ -184,11 +186,15 @@ public sealed class BoreaServicesTests : IDisposable
         using var services = await BoreaServices.BuildAsync(_tempRoot, handler, new ConflictingStarMapRepository());
 
         var available = await services.Mods.GetAvailableModsAsync();
+        var packs = await services.ModPacks.GetAvailableModPacksAsync();
+        var retainedSnapshot = await services.IndexSnapshots.GetSnapshotAsync();
         var starMap = Assert.Single(available, mod => mod.ModId == "StarMap");
         var versions = await services.Mods.GetAvailableVersionsAsync("StarMap");
         var latest = await services.Mods.GetLatestReleaseAsync("StarMap");
 
         Assert.Equal(ContentIndexModRepository.SourceName, starMap.Source);
+        Assert.Empty(packs);
+        Assert.Equal(4, retainedSnapshot.Listings.Count);
         Assert.Equal(ContentType.ModLoader, starMap.Type);
         Assert.Equal(InstallAnchor.Standalone, starMap.Install!.Target);
         Assert.Equal("StarMap.exe", starMap.Provides!.Launch);

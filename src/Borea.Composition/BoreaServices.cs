@@ -85,6 +85,8 @@ public sealed class BoreaServices : IDisposable
     /// </summary>
     public required IModRepository Mods { get; init; }
 
+    public required IModPackRepository ModPacks { get; init; }
+
     public required IModDownloader Downloader { get; init; }
 
     public required ILoaderInstaller LoaderInstaller { get; init; }
@@ -102,6 +104,8 @@ public sealed class BoreaServices : IDisposable
     public required IContentIndexFetcher IndexFetcher { get; init; }
 
     public required IContentIndexReader IndexReader { get; init; }
+
+    public required IContentIndexSnapshotProvider IndexSnapshots { get; init; }
 
     public required IContentIndexRepository ContentIndex { get; init; }
 
@@ -167,7 +171,9 @@ public sealed class BoreaServices : IDisposable
         var resolver = new SpaceDockResolver();
         var indexReader = new ContentIndexReader(paths, ContentIndexModRepository.SourceName);
         var indexFetcher = new ContentIndexFetcher(http, ContentIndexUri, indexReader);
-        var contentIndex = new ContentIndexModRepository(indexFetcher, indexReader, paths);
+        var indexSnapshots = new ContentIndexSnapshotProvider(indexFetcher, indexReader, paths);
+        var contentIndex = new ContentIndexModRepository(indexSnapshots);
+        var modPacks = new ContentIndexModPackRepository(indexSnapshots);
         var sources = new Dictionary<string, IModRepository>
         {
             [ContentIndexModRepository.SourceName] = contentIndex,
@@ -192,6 +198,7 @@ public sealed class BoreaServices : IDisposable
             Uninstaller = new FileModUninstaller(paths, instances),
             ForeignModAdopter = new FileForeignModAdopter(paths, instances, contentIndex),
             Mods = mods,
+            ModPacks = modPacks,
             Downloader = downloader,
             LoaderInstaller = new FileLoaderInstaller(paths, downloader, settingsRepository, loaderConfiguration),
             LoaderAdopter = new FileLoaderAdopter(settingsRepository, loaderConfiguration),
@@ -201,6 +208,7 @@ public sealed class BoreaServices : IDisposable
             InstalledVersion = new InstalledGameVersionProvider(paths),
             IndexFetcher = indexFetcher,
             IndexReader = indexReader,
+            IndexSnapshots = indexSnapshots,
             ContentIndex = contentIndex,
         };
     }
