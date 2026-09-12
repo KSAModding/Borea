@@ -133,7 +133,7 @@ public sealed class FileModInstaller : IModInstaller
     /// the folder where the game does not look, since ModLibrary.AddMods scans
     /// the top level of the mods folder and nothing below it.
     /// </summary>
-    private static void RequireInstallable(ModVersionMetadata release)
+    internal static void RequireInstallable(ModVersionMetadata release)
     {
         if (release.Type != ContentType.Mod)
             throw new NotSupportedException($"'{release.ModId}' is a {release.Type}, and only a mod installs into the mods folder.");
@@ -158,7 +158,7 @@ public sealed class FileModInstaller : IModInstaller
     /// (ModLibrary.AddMods). The stated root decides where the content starts;
     /// a release that states none gets the root RFC 0035 rule 9 derives.
     /// </summary>
-    private static void Unpack(string archivePath, ModVersionMetadata release, string modFolder)
+    internal static void Unpack(string archivePath, ModVersionMetadata release, string modFolder)
     {
         var root = release.Install?.Root ?? ModArchive.DeriveRoot(archivePath);
         var files = ModArchive.Extract(archivePath, root, modFolder);

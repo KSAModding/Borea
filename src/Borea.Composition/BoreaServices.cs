@@ -81,6 +81,8 @@ public sealed class BoreaServices : IDisposable
 
     public required IModUninstaller Uninstaller { get; init; }
 
+    public required IModReplacer Replacer { get; init; }
+
     public required IForeignModAdopter ForeignModAdopter { get; init; }
 
     /// <summary>
@@ -190,6 +192,8 @@ public sealed class BoreaServices : IDisposable
         var loaderConfiguration = new LoaderConfigurator();
         var instances = new FileInstanceRepository(paths);
 
+        var modState = new FileModStateRepository(paths);
+
         return new BoreaServices(http)
         {
             Settings = settings,
@@ -197,10 +201,11 @@ public sealed class BoreaServices : IDisposable
             SettingsRepository = settingsRepository,
             GameDirectoryChanger = new GameDirectoryChanger(settingsRepository, mods, loaderConfiguration),
             Instances = instances,
-            ModState = new FileModStateRepository(paths),
+            ModState = modState,
             ModFavorites = new FileModFavoritesRepository(paths),
             ModPackFavorites = new FileModPackFavoritesRepository(paths),
             Uninstaller = new FileModUninstaller(paths, instances),
+            Replacer = new FileModReplacer(paths, downloader, instances, modState),
             ForeignModAdopter = new FileForeignModAdopter(paths, instances, contentIndex),
             Mods = mods,
             ModPacks = modPacks,
