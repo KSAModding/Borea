@@ -1,8 +1,10 @@
 using System.Net;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using Borea.Core.Dependencies;
 using Borea.Core.Index;
+using Borea.Core.Instances;
 using Borea.Core.ModLoaders;
 using Borea.Storage.Launch;
 using Borea.Core.Mods;
@@ -12,6 +14,7 @@ using Borea.Network.Sources;
 using Borea.Storage.Game;
 using Borea.Storage.Index;
 using Borea.Storage.ModLoaders;
+using Borea.Storage.Mods;
 using Borea.Storage.Paths;
 using Borea.Storage.Settings;
 
@@ -21,6 +24,7 @@ public sealed class BoreaServicesTests : IDisposable
 {
     private const string GamePath = @"C:\Games\KSA";
     private const string StarMapPath = @"C:\Games\StarMap";
+    private const string FixtureArchiveSha256 = "AD14E4FE8111F4DAE8406D50459B7E5C42D58F1E01F549636946922CF72AE9E6";
 
     private readonly string _tempRoot = Path.Combine(Path.GetTempPath(), "BoreaTest_" + Guid.NewGuid());
 
@@ -203,6 +207,69 @@ public sealed class BoreaServicesTests : IDisposable
     }
 
     [Fact]
+    public async Task ForeignModAdopter_MatchingIdAndArchive_PreservesForeignFolderOwnership()
+    {
+        byte[] archiveBytes = [1, 2, 3, 4];
+        var snapshot = await SnapshotWithArchiveHashAsync(archiveBytes);
+        using var services = await BoreaServices.BuildAsync(
+            _tempRoot,
+            new ControlledHttpMessageHandler(snapshot),
+            new ConflictingStarMapRepository());
+        Assert.IsType<FileForeignModAdopter>(services.ForeignModAdopter);
+        var instance = await services.Instances.CreateAsync("Test", InstanceSource.Custom.Value);
+        var folder = WriteForeignMod(services, instance.InstanceId, "AdvancedFlightComputer");
+        var payload = Path.Combine(folder, "keep.txt");
+        await File.WriteAllTextAsync(payload, "Keep these bytes.");
+        var archive = await WriteArchiveAsync(archiveBytes);
+        await services.ForeignModAdopter.ScanAsync(instance.InstanceId);
+
+        var result = await services.ForeignModAdopter.AdoptArchiveAsync(
+            instance.InstanceId,
+            "advancedflightcomputer",
+            archive);
+        await services.Uninstaller.UninstallAsync(instance.InstanceId, "AdvancedFlightComputer");
+
+        Assert.True(result.Matched);
+        Assert.Equal(ModInstallOwnership.Foreign, result.InstalledMod!.Ownership);
+        Assert.False(result.InstalledMod.CanDeleteFiles);
+        Assert.True(Directory.Exists(folder));
+        Assert.Equal("Keep these bytes.", await File.ReadAllTextAsync(payload));
+        var saved = await services.Instances.GetByIdAsync(instance.InstanceId);
+        Assert.Empty(saved!.ForeignMods);
+        Assert.Equal(ModInstallOwnership.Foreign, Assert.Single(saved.Mods).Ownership);
+    }
+
+    [Theory]
+    [InlineData("OtherMod", true)]
+    [InlineData("AdvancedFlightComputer", false)]
+    public async Task ForeignModAdopter_WrongIdOrUnknownArchive_KeepsUnknownForeignMod(
+        string folderName,
+        bool publishArchiveHash)
+    {
+        byte[] archiveBytes = [5, 6, 7, 8];
+        var publishedBytes = publishArchiveHash ? archiveBytes : new byte[] { 9, 10, 11, 12 };
+        var snapshot = await SnapshotWithArchiveHashAsync(publishedBytes);
+        using var services = await BoreaServices.BuildAsync(
+            _tempRoot,
+            new ControlledHttpMessageHandler(snapshot),
+            new ConflictingStarMapRepository());
+        var instance = await services.Instances.CreateAsync("Test", InstanceSource.Custom.Value);
+        var folder = WriteForeignMod(services, instance.InstanceId, folderName);
+        var archive = await WriteArchiveAsync(archiveBytes);
+        await services.ForeignModAdopter.ScanAsync(instance.InstanceId);
+
+        var result = await services.ForeignModAdopter.AdoptArchiveAsync(instance.InstanceId, folderName, archive);
+
+        Assert.False(result.Matched);
+        Assert.Null(result.InstalledMod);
+        Assert.Equal(folderName, result.ForeignMod!.ModId);
+        Assert.True(Directory.Exists(folder));
+        var saved = await services.Instances.GetByIdAsync(instance.InstanceId);
+        Assert.Empty(saved!.Mods);
+        Assert.Equal(folderName, Assert.Single(saved.ForeignMods).ModId);
+    }
+
+    [Fact]
     public async Task GameDirectoryChanger_ControlledSnapshot_UpdatesStarMapAndSettings()
     {
         var oldGame = Path.Combine(_tempRoot, "OldGame");
@@ -295,6 +362,30 @@ public sealed class BoreaServicesTests : IDisposable
         dependencies: Array.Empty<ModDependency>());
 
     private string SettingsPath => new GamePathProvider(gameDirectory: null, boreaRoot: _tempRoot).GetBoreaSettingsPath();
+
+    private async Task<string> SnapshotWithArchiveHashAsync(byte[] archiveBytes)
+    {
+        var snapshot = await File.ReadAllTextAsync(SnapshotFixturePath);
+        var sha256 = Convert.ToHexString(SHA256.HashData(archiveBytes));
+        Assert.Contains(FixtureArchiveSha256, snapshot, StringComparison.Ordinal);
+        return snapshot.Replace(FixtureArchiveSha256, sha256, StringComparison.Ordinal);
+    }
+
+    private static string WriteForeignMod(BoreaServices services, Guid instanceId, string folderName)
+    {
+        var folder = Path.Combine(services.Paths.GetInstanceModsFolder(instanceId), folderName);
+        Directory.CreateDirectory(folder);
+        File.WriteAllText(Path.Combine(folder, "mod.toml"), "name = \"Local\"");
+        return folder;
+    }
+
+    private async Task<string> WriteArchiveAsync(byte[] bytes)
+    {
+        var path = Path.Combine(_tempRoot, Guid.NewGuid().ToString("N") + ".zip");
+        Directory.CreateDirectory(_tempRoot);
+        await File.WriteAllBytesAsync(path, bytes);
+        return path;
+    }
 
     private static string SnapshotFixturePath =>
         Path.Combine(AppContext.BaseDirectory, "Index", "Fixtures", "current-snapshot.json");

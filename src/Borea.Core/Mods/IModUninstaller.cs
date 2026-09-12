@@ -1,13 +1,14 @@
-﻿namespace Borea.Core.Mods;
+namespace Borea.Core.Mods;
 
 /// <summary>
-/// Removes an installed mod's files from a specific instance.
+/// Removes Borea-owned mod files from a specific instance.
 /// </summary>
 public interface IModUninstaller
 {
     /// <summary>
-    /// Uninstalls a mod from the specified instance by removing its files. Does not check for dependencies.
-    /// No-op if the mod does not exist.
+    /// Removes files only when the installed record says Borea owns them.
+    /// A missing record or a foreign record leaves the folder unchanged. A
+    /// Borea record without a verifiable ownership marker causes an error.
     /// </summary>
     /// <param name="instanceId">The ID of the instance to remove the mod from</param>
     /// <param name="modId">The ID of the mod to uninstall</param>

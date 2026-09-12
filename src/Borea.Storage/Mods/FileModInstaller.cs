@@ -61,17 +61,44 @@ public sealed class FileModInstaller : IModInstaller
 
         var archivePath = Path.Combine(Path.GetTempPath(), $"borea-download-{Guid.NewGuid():N}.zip");
         var modFolder = Path.Combine(modsFolder, release.ModId);
+        var stagingFolder = Path.Combine(_pathProvider.GetInstanceRoot(instanceId), $".borea-staging-{Guid.NewGuid():N}");
         var recorded = false;
+        string? ownershipToken = null;
 
         try
         {
             var download = await _downloader.DownloadAsync(release, archivePath, progress, cancellationToken).ConfigureAwait(false);
 
-            Unpack(archivePath, release, modFolder);
+            Unpack(archivePath, release, stagingFolder);
 
-            var installed = new InstalledMod(release.ModId, release.Version, reason, _timeProvider.GetUtcNow(), release, download.Sha256);
-            instance.AddMod(installed);
-            await _instances.SaveAsync(instance).ConfigureAwait(false);
+            ownershipToken = Guid.NewGuid().ToString("N");
+            await File.WriteAllTextAsync(
+                Path.Combine(stagingFolder, ModFolders.OwnershipFileName),
+                ownershipToken,
+                cancellationToken).ConfigureAwait(false);
+
+            var installed = new InstalledMod(
+                release.ModId,
+                release.Version,
+                reason,
+                _timeProvider.GetUtcNow(),
+                release,
+                download.Sha256,
+                ModInstallOwnership.Borea,
+                ownershipToken);
+            await _instances.UpdateAsync(
+                instanceId,
+                current =>
+                {
+                    if (ModFolders.Find(modsFolder, release.ModId) is not null)
+                        throw new InvalidOperationException($"The instance received a foreign folder for '{release.ModId}' while the archive downloaded.");
+
+                    Directory.CreateDirectory(modsFolder);
+                    Directory.Move(stagingFolder, modFolder);
+                    current.AddMod(installed);
+                    return true;
+                },
+                cancellationToken).ConfigureAwait(false);
             recorded = true;
 
             var entry = await _modState.AddEntryAsync(instanceId, release.ModId, enable, cancellationToken).ConfigureAwait(false);
@@ -80,16 +107,23 @@ public sealed class FileModInstaller : IModInstaller
         }
         catch
         {
-            TryDeleteDirectory(modFolder);
+            TryDeleteDirectory(stagingFolder);
+            if (ownershipToken is not null)
+            {
+                var ownedFolder = ModFolders.FindOwned(modsFolder, release.ModId, ownershipToken);
+                if (ownedFolder is not null)
+                    TryDeleteDirectory(ownedFolder);
+            }
 
             if (recorded)
-                await TryForgetAsync(instance, release.ModId).ConfigureAwait(false);
+                await TryForgetAsync(instanceId, release.ModId).ConfigureAwait(false);
 
             throw;
         }
         finally
         {
             TryDeleteFile(archivePath);
+            TryDeleteDirectory(stagingFolder);
         }
     }
 
@@ -148,12 +182,13 @@ public sealed class FileModInstaller : IModInstaller
     /// failure here is swallowed so the error that caused the rollback is the
     /// one the caller sees.
     /// </summary>
-    private async Task TryForgetAsync(Instance instance, string modId)
+    private async Task TryForgetAsync(Guid instanceId, string modId)
     {
-        instance.RemoveMod(modId);
         try
         {
-            await _instances.SaveAsync(instance).ConfigureAwait(false);
+            await _instances.UpdateAsync(
+                instanceId,
+                instance => instance.RemoveMod(modId)).ConfigureAwait(false);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {

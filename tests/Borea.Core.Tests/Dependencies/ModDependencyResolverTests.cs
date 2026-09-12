@@ -251,4 +251,93 @@ public sealed class ModDependencyResolverTests
         Assert.Equal(instance.InstanceId, check.InstanceId);
         Assert.True(check.IsActive);
     }
+
+    [Fact]
+    public void Evaluate_UnversionedDependencyOnForeignMod_IsSatisfied()
+    {
+        var instance = InstanceWithForeign(new ForeignMod("LocalLibrary"));
+        var candidate = TestFixtures.SampleVersionMetadata(
+            "candidate",
+            dependencies: new[] { Required("locallibrary") });
+
+        var evaluation = Assert.Single(_resolver.Evaluate(instance, candidate));
+
+        Assert.Equal(DependencyOutcome.Satisfied, evaluation.Outcome);
+        Assert.Equal("LocalLibrary", evaluation.InstalledModId);
+    }
+
+    [Fact]
+    public void Evaluate_VersionBoundDependencyOnForeignMod_IsUnknown()
+    {
+        var instance = InstanceWithForeign(new ForeignMod("LocalLibrary"));
+        var candidate = TestFixtures.SampleVersionMetadata(
+            "candidate",
+            dependencies: new[] { Required("LocalLibrary", "1.0.0") });
+
+        var evaluation = Assert.Single(_resolver.Evaluate(instance, candidate));
+
+        Assert.Equal(DependencyOutcome.Unknown, evaluation.Outcome);
+    }
+
+    [Fact]
+    public void Evaluate_ForeignMod_UsesLocalRequiredAndOptionalDependencies()
+    {
+        var foreign = new ForeignMod("LocalMod", new[]
+        {
+            new LocalModDependency("RequiredMod", optional: false),
+            new LocalModDependency("OptionalMod", optional: true),
+        });
+        var instance = InstanceWithForeign(foreign);
+
+        var evaluations = _resolver.EvaluateForeign(instance, foreign);
+
+        Assert.Collection(
+            evaluations,
+            evaluation => Assert.Equal(DependencyOutcome.Install, evaluation.Outcome),
+            evaluation => Assert.Equal(DependencyOutcome.Offer, evaluation.Outcome));
+    }
+
+    [Fact]
+    public void Evaluate_ForeignMod_AcceptsRawStarMapDependencyId()
+    {
+        var foreign = new ForeignMod("LocalMod", new[]
+        {
+            new LocalModDependency("Local Library", optional: false),
+        });
+        var instance = InstanceWithForeign(foreign);
+
+        var evaluation = Assert.Single(_resolver.EvaluateForeign(instance, foreign));
+
+        Assert.Equal("Local Library", evaluation.Dependency.ModId);
+        Assert.Equal(DependencyOutcome.Install, evaluation.Outcome);
+    }
+
+    [Fact]
+    public void CheckUninstall_ForeignRequiredDependent_IsReported()
+    {
+        var installed = TestFixtures.SampleInstalledMod("RequiredMod");
+        var foreign = new ForeignMod("LocalMod", new[] { new LocalModDependency("RequiredMod", optional: false) });
+        var instance = Instance.FromExisting(
+            Guid.NewGuid(),
+            "Test",
+            InstanceSource.Custom.Value,
+            DateTimeOffset.UtcNow,
+            new[] { installed },
+            new[] { foreign },
+            isFavorite: false);
+
+        var check = _resolver.CheckUninstall(instance, installed.ModId, installed.Version, isActive: true);
+
+        Assert.False(check.CanUninstall);
+        Assert.Contains("LocalMod", check.DependentModIds);
+    }
+
+    private static Instance InstanceWithForeign(ForeignMod foreign) => Instance.FromExisting(
+        Guid.NewGuid(),
+        "Test",
+        InstanceSource.Custom.Value,
+        DateTimeOffset.UtcNow,
+        Array.Empty<InstalledMod>(),
+        new[] { foreign },
+        isFavorite: false);
 }

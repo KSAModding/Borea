@@ -253,6 +253,9 @@ public sealed class FileModInstallerTests : IAsyncLifetime
         Assert.Equal(InstallReason.Dependency, installed.Reason);
         Assert.Equal(Now, installed.InstalledAt);
         Assert.Equal(Sha256Of(_downloader.Bytes), installed.Checksum);
+        Assert.Equal(ModInstallOwnership.Borea, installed.Ownership);
+        Assert.False(string.IsNullOrWhiteSpace(installed.OwnershipToken));
+        Assert.Equal(installed.OwnershipToken, File.ReadAllText(Path.Combine(ModFolder, ".borea-owner")));
         Assert.Equal(release.Download.Url, installed.Metadata.Download.Url);
         Assert.Equal(installed.ModId, result.Mod.ModId);
         Assert.Equal(Sha256Of(_downloader.Bytes), result.Download.Sha256);
@@ -344,6 +347,25 @@ public sealed class FileModInstallerTests : IAsyncLifetime
         await AssertNothingInstalledAsync();
     }
 
+    [Fact]
+    public async Task InstallAsync_RollbackAfterOwnedFolderIsReplaced_LeavesReplacementIntact()
+    {
+        var state = new FailingModStateRepository(() =>
+        {
+            Directory.Delete(ModFolder, recursive: true);
+            Directory.CreateDirectory(ModFolder);
+            File.WriteAllText(Path.Combine(ModFolder, "local-file.dat"), "content");
+        });
+        var installer = new FileModInstaller(_pathProvider, _downloader, _instances, state, new FixedTimeProvider(Now));
+        _downloader.Bytes = BuildZip(("mod.toml", "name"));
+
+        await Assert.ThrowsAsync<IOException>(() => installer.InstallAsync(_instanceId, Release(), InstallReason.Manual, enable: true));
+
+        Assert.True(File.Exists(Path.Combine(ModFolder, "local-file.dat")));
+        var instance = await _instances.GetByIdAsync(_instanceId);
+        Assert.Empty(instance!.Mods);
+    }
+
     #endregion
 
     #region Refusals
@@ -372,6 +394,23 @@ public sealed class FileModInstallerTests : IAsyncLifetime
 
         Assert.Empty(_downloader.ArchivePaths);
         Assert.True(Directory.Exists(foreign));
+    }
+
+    [Fact]
+    public async Task InstallAsync_ForeignFolderAppearsDuringDownload_LeavesItIntact()
+    {
+        _downloader.Bytes = BuildZip(("mod.toml", "name"));
+        _downloader.AfterDownload = () =>
+        {
+            Directory.CreateDirectory(ModFolder);
+            File.WriteAllText(Path.Combine(ModFolder, "local-file.dat"), "content");
+        };
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => InstallAsync());
+
+        Assert.True(File.Exists(Path.Combine(ModFolder, "local-file.dat")));
+        var instance = await _instances.GetByIdAsync(_instanceId);
+        Assert.Empty(instance!.Mods);
     }
 
     [Fact]
@@ -445,10 +484,13 @@ public sealed class FileModInstallerTests : IAsyncLifetime
     #endregion
 
     /// <summary>A manifest that cannot be written, to exercise the rollback.</summary>
-    private sealed class FailingModStateRepository : IModStateRepository
+    private sealed class FailingModStateRepository(Action? beforeFailure = null) : IModStateRepository
     {
-        public Task<ModEntryAddResult> AddEntryAsync(Guid instanceId, string modId, bool enabled, CancellationToken cancellationToken = default) =>
+        public Task<ModEntryAddResult> AddEntryAsync(Guid instanceId, string modId, bool enabled, CancellationToken cancellationToken = default)
+        {
+            beforeFailure?.Invoke();
             throw new IOException("The disk is full.");
+        }
 
         public Task<IReadOnlyList<ModManifestEntry>> GetEntriesAsync(Guid instanceId, CancellationToken cancellationToken = default) =>
             throw new NotSupportedException();

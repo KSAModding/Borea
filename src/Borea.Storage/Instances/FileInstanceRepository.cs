@@ -1,4 +1,4 @@
-﻿using Borea.Core.Instances;
+using Borea.Core.Instances;
 using Borea.Core.Paths;
 using Borea.Storage.Toml;
 
@@ -14,6 +14,7 @@ namespace Borea.Storage.Instances;
 public sealed class FileInstanceRepository : IInstanceRepository
 {
     private readonly IGamePathProvider _pathProvider;
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<Guid, SemaphoreSlim> _instanceLocks = new();
 
     public FileInstanceRepository(IGamePathProvider pathProvider)
     {
@@ -60,6 +61,9 @@ public sealed class FileInstanceRepository : IInstanceRepository
     /// Returns the instance with the given ID, or null if it does not exist.
     /// </summary>
     public async Task<Instance?> GetByIdAsync(Guid instanceId)
+        => await GetByIdCoreAsync(instanceId).ConfigureAwait(false);
+
+    private async Task<Instance?> GetByIdCoreAsync(Guid instanceId)
     {
         var path = _pathProvider.GetInstanceMetadataPath(instanceId);
         var dto = await TomlFileStore.ReadAsync<InstanceDto>(path).ConfigureAwait(false);
@@ -96,40 +100,91 @@ public sealed class FileInstanceRepository : IInstanceRepository
     /// </summary>
     public async Task RenameAsync(Guid instanceId, string newName)
     {
-        var instance = await GetByIdAsync(instanceId).ConfigureAwait(false)
-            ?? throw new InvalidOperationException($"No instance with ID '{instanceId}' exists.");
-
         if (!await IsNameAvailableAsync(newName, excludingInstanceId: instanceId).ConfigureAwait(false))
             throw new InvalidOperationException($"Instance name '{newName}' is already in use.");
 
-        instance.Rename(newName);
-        await SaveAsync(instance).ConfigureAwait(false);
+        await UpdateAsync(
+            instanceId,
+            instance =>
+            {
+                instance.Rename(newName);
+                return true;
+            }).ConfigureAwait(false);
     }
 
     /// <summary>
     /// Deletes the instance with the given ID from disk. No-op if the instance does not exist.
     /// </summary>
-    public Task DeleteAsync(Guid instanceId)
+    public async Task DeleteAsync(Guid instanceId)
     {
-        var root = _pathProvider.GetInstanceRoot(instanceId);
-        if (Directory.Exists(root))
-            Directory.Delete(root, recursive: true);
-
-        return Task.CompletedTask;
+        var gate = GetInstanceLock(instanceId);
+        await gate.WaitAsync().ConfigureAwait(false);
+        try
+        {
+            var root = _pathProvider.GetInstanceRoot(instanceId);
+            if (Directory.Exists(root))
+                Directory.Delete(root, recursive: true);
+        }
+        finally
+        {
+            gate.Release();
+        }
     }
 
     /// <summary>
     /// Saves the given instance to disk, overwriting any existing metadata. Throws if the instance is null.
     /// </summary>
-    public Task SaveAsync(Instance instance)
+    public async Task SaveAsync(Instance instance)
     {
         if (instance is null)
             throw new ArgumentNullException(nameof(instance));
 
+        var gate = GetInstanceLock(instance.InstanceId);
+        await gate.WaitAsync().ConfigureAwait(false);
+        try
+        {
+            await SaveCoreAsync(instance).ConfigureAwait(false);
+        }
+        finally
+        {
+            gate.Release();
+        }
+    }
+
+    public async Task<TResult> UpdateAsync<TResult>(
+        Guid instanceId,
+        Func<Instance, TResult> update,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(update);
+
+        var gate = GetInstanceLock(instanceId);
+        await gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            var instance = await GetByIdCoreAsync(instanceId).ConfigureAwait(false)
+                ?? throw new InvalidOperationException($"No instance with ID '{instanceId}' exists.");
+            cancellationToken.ThrowIfCancellationRequested();
+            var result = update(instance);
+            cancellationToken.ThrowIfCancellationRequested();
+            await SaveCoreAsync(instance).ConfigureAwait(false);
+            return result;
+        }
+        finally
+        {
+            gate.Release();
+        }
+    }
+
+    private Task SaveCoreAsync(Instance instance)
+    {
         var dto = InstanceMapper.ToDto(instance);
         var path = _pathProvider.GetInstanceMetadataPath(instance.InstanceId);
         return TomlFileStore.WriteAsync(path, dto);
     }
+
+    private SemaphoreSlim GetInstanceLock(Guid instanceId)
+        => _instanceLocks.GetOrAdd(instanceId, static _ => new SemaphoreSlim(1, 1));
 
     /// <summary>
     /// Returns the ID of the currently active instance, or null if no instance is active.

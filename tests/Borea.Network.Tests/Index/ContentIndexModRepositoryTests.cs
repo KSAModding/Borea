@@ -193,6 +193,42 @@ public sealed class ContentIndexModRepositoryTests
     }
 
     [Fact]
+    public async Task FindBySha256Async_RequiresOneUsableModWithMatchingIdAndHash()
+    {
+        var digest = new string('A', 64);
+        var snapshot = Snapshot(
+            new ContentIndexListing(
+                "target-mod",
+                TestFixtures.SampleModMetadata("target-mod", "index"),
+                [Release("target-mod", "1.0.0")],
+                null),
+            new ContentIndexListing(
+                "other-mod",
+                TestFixtures.SampleModMetadata("other-mod", "index"),
+                [Release("other-mod", "1.0.0")],
+                null),
+            new ContentIndexListing(
+                "hidden-mod",
+                TestFixtures.SampleModMetadata("hidden-mod", "index"),
+                [Release("hidden-mod", "1.0.0")],
+                new IndexStatus(IndexStatusState.Delisted, "delisted")));
+        var repository = new ContentIndexModRepository(
+            new FakeFetcher(ContentIndexFetchResult.Downloaded),
+            new FakeReader(snapshot),
+            new TestPathProvider());
+
+        var match = await repository.FindBySha256Async("TARGET-MOD", digest);
+        var wrongId = await repository.FindBySha256Async("missing-mod", digest);
+        var unknownArchive = await repository.FindBySha256Async("target-mod", new string('B', 64));
+        var delisted = await repository.FindBySha256Async("hidden-mod", digest);
+
+        Assert.Equal("target-mod", match!.ModId);
+        Assert.Null(wrongId);
+        Assert.Null(unknownArchive);
+        Assert.Null(delisted);
+    }
+
+    [Fact]
     public async Task GetDiagnosticsAsync_ExposesUnknownModerationWarning()
     {
         var diagnostic = new ContentIndexDiagnostic(
