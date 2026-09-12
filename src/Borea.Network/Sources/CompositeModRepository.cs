@@ -6,7 +6,7 @@ namespace Borea.Network.Sources;
 /// Queries every registered source and merges results, tagging each listing
 /// and release with its originating source via the Source property. Which
 /// sources are active is entirely determined by what's registered at
-/// construction.
+/// construction. The first registered source wins when sources share an id.
 /// </summary>
 public sealed class CompositeModRepository : IModRepository
 {
@@ -20,10 +20,17 @@ public sealed class CompositeModRepository : IModRepository
     public async Task<IReadOnlyList<ModMetadata>> GetAvailableModsAsync(CancellationToken cancellationToken = default)
     {
         var results = new List<ModMetadata>();
+        var seenIds = new HashSet<string>(ModIds.Comparer);
         foreach (var (source, repository) in _sources)
         {
             var mods = await repository.GetAvailableModsAsync(cancellationToken).ConfigureAwait(false);
-            results.AddRange(mods.Select(m => Tag(m, source)));
+            foreach (var mod in mods)
+            {
+                if (seenIds.Add(mod.ModId))
+                    results.Add(Tag(mod, source));
+            }
+
+            await AddClaimsAsync(repository, seenIds, cancellationToken).ConfigureAwait(false);
         }
         return results;
     }
@@ -35,6 +42,9 @@ public sealed class CompositeModRepository : IModRepository
             var release = await repository.GetLatestReleaseAsync(modId, cancellationToken).ConfigureAwait(false);
             if (release is not null)
                 return Tag(release, source);
+
+            if (await ClaimsAsync(repository, modId, cancellationToken).ConfigureAwait(false))
+                return null;
         }
         return null;
     }
@@ -46,6 +56,9 @@ public sealed class CompositeModRepository : IModRepository
             var release = await repository.GetReleaseAsync(modId, version, cancellationToken).ConfigureAwait(false);
             if (release is not null)
                 return Tag(release, source);
+
+            if (await ClaimsAsync(repository, modId, cancellationToken).ConfigureAwait(false))
+                return null;
         }
         return null;
     }
@@ -57,6 +70,9 @@ public sealed class CompositeModRepository : IModRepository
             var versions = await repository.GetAvailableVersionsAsync(modId, cancellationToken).ConfigureAwait(false);
             if (versions.Count > 0)
                 return versions;
+
+            if (await ClaimsAsync(repository, modId, cancellationToken).ConfigureAwait(false))
+                return Array.Empty<ModVersion>();
         }
         return Array.Empty<ModVersion>();
     }
@@ -64,12 +80,44 @@ public sealed class CompositeModRepository : IModRepository
     public async Task<IReadOnlyList<ModMetadata>> SearchAsync(string query, CancellationToken cancellationToken = default)
     {
         var results = new List<ModMetadata>();
+        var seenIds = new HashSet<string>(ModIds.Comparer);
         foreach (var (source, repository) in _sources)
         {
             var mods = await repository.SearchAsync(query, cancellationToken).ConfigureAwait(false);
-            results.AddRange(mods.Select(m => Tag(m, source)));
+            foreach (var mod in mods)
+            {
+                if (seenIds.Add(mod.ModId))
+                    results.Add(Tag(mod, source));
+            }
+
+            await AddClaimsAsync(repository, seenIds, cancellationToken).ConfigureAwait(false);
         }
         return results;
+    }
+
+    private static async Task AddClaimsAsync(
+        IModRepository repository,
+        ISet<string> seenIds,
+        CancellationToken cancellationToken)
+    {
+        if (repository is not IModIdClaimSource claimSource)
+            return;
+
+        var claims = await claimSource.GetClaimedModIdsAsync(cancellationToken).ConfigureAwait(false);
+        foreach (var claim in claims)
+            seenIds.Add(claim);
+    }
+
+    private static async Task<bool> ClaimsAsync(
+        IModRepository repository,
+        string modId,
+        CancellationToken cancellationToken)
+    {
+        if (repository is not IModIdClaimSource claimSource)
+            return false;
+
+        var claims = await claimSource.GetClaimedModIdsAsync(cancellationToken).ConfigureAwait(false);
+        return claims.Contains(modId, ModIds.Comparer);
     }
 
     private static ModMetadata Tag(ModMetadata original, string source) => new(
