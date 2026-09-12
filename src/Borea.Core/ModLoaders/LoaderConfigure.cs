@@ -22,8 +22,8 @@ public sealed class LoaderConfigure
         if (string.IsNullOrWhiteSpace(file))
             throw new ArgumentException("The configuration file is required.", nameof(file));
 
-        if (gamePath is not null && string.IsNullOrWhiteSpace(gamePath))
-            throw new ArgumentException("The game path key, if provided, cannot be whitespace.", nameof(gamePath));
+        if (gamePath is not null && gamePath.Split('.').Any(string.IsNullOrWhiteSpace))
+            throw new ArgumentException("The game path key, if provided, is dot-separated segments, and none of them can be empty.", nameof(gamePath));
 
         File = RelativePaths.Contained(file, nameof(file))!;
         Format = format;

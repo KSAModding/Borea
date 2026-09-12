@@ -12,8 +12,6 @@ namespace Borea.Storage.Mods;
 /// </summary>
 public sealed class FileModInstaller : IModInstaller
 {
-    private static readonly string[] ZipContentTypes = { "application/zip", "application/x-zip-compressed" };
-
     private readonly IGamePathProvider _pathProvider;
     private readonly IModDownloader _downloader;
     private readonly IInstanceRepository _instances;
@@ -115,7 +113,7 @@ public sealed class FileModInstaller : IModInstaller
                 throw new NotSupportedException($"'{release.ModId}' installs below '{install.Path}', where the game does not look for a mod.");
         }
 
-        if (!ZipContentTypes.Contains(release.Download.ContentType, StringComparer.OrdinalIgnoreCase))
+        if (!ModArchive.IsZip(release.Download.ContentType))
             throw new NotSupportedException($"'{release.ModId}' is served as '{release.Download.ContentType}', and only a zip archive can be unpacked.");
     }
 

@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Net;
 using System.Security.Cryptography;
 using Borea.Core.Dependencies;
@@ -134,6 +135,82 @@ public sealed class HttpModDownloaderTests : IDisposable
         public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
     }
 
+    private sealed class StalledStream : Stream
+    {
+        public override bool CanRead => true;
+
+        public override bool CanSeek => false;
+
+        public override bool CanWrite => false;
+
+        public override long Length => throw new NotSupportedException();
+
+        public override long Position
+        {
+            get => throw new NotSupportedException();
+            set => throw new NotSupportedException();
+        }
+
+        public override void Flush()
+        {
+        }
+
+        public override int Read(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+
+        public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
+        {
+            await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
+            throw new InvalidOperationException("The delay cannot end on its own.");
+        }
+
+        public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
+
+        public override void SetLength(long value) => throw new NotSupportedException();
+
+        public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+    }
+
+    private sealed class ProgressingStream(byte[] body, TimeSpan delay) : Stream
+    {
+        private int _position;
+
+        public override bool CanRead => true;
+
+        public override bool CanSeek => false;
+
+        public override bool CanWrite => false;
+
+        public override long Length => throw new NotSupportedException();
+
+        public override long Position
+        {
+            get => throw new NotSupportedException();
+            set => throw new NotSupportedException();
+        }
+
+        public override void Flush()
+        {
+        }
+
+        public override int Read(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+
+        public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
+        {
+            if (_position == body.Length)
+                return 0;
+
+            await Task.Delay(delay, cancellationToken);
+            buffer.Span[0] = body[_position++];
+            return 1;
+        }
+
+        public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
+
+        public override void SetLength(long value) => throw new NotSupportedException();
+
+        public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+    }
+
     #region Sources
 
     [Theory]
@@ -211,6 +288,41 @@ public sealed class HttpModDownloaderTests : IDisposable
         Assert.Contains(MirrorUrl, ex.Message);
         Assert.IsAssignableFrom<OperationCanceledException>(ex.InnerException);
         Assert.False(File.Exists(_archivePath));
+    }
+
+    [Fact]
+    public async Task DownloadAsync_BodyStopsTransferring_ReportsAFailureWithinTheInactivityLimit()
+    {
+        var downloader = new HttpModDownloader(
+            Client(_ => Body(new LengthlessContent(new StalledStream())), new()),
+            TimeSpan.FromMilliseconds(200));
+        var stopwatch = Stopwatch.StartNew();
+
+        var download = downloader.DownloadAsync(StampedRelease(), _archivePath);
+        var completed = await Task.WhenAny(download, Task.Delay(TimeSpan.FromSeconds(5)));
+
+        Assert.Same(download, completed);
+        var ex = await Assert.ThrowsAsync<DownloadFailedException>(() => download);
+        Assert.True(stopwatch.Elapsed < TimeSpan.FromSeconds(2));
+        Assert.Contains("transferred no data", ex.Message);
+        Assert.IsType<TimeoutException>(ex.InnerException);
+        Assert.False(File.Exists(_archivePath));
+    }
+
+    [Fact]
+    public async Task DownloadAsync_BodyKeepsTransferring_DoesNotApplyTheLimitToTheWholeDownload()
+    {
+        var inactivityTimeout = TimeSpan.FromMilliseconds(500);
+        var downloader = new HttpModDownloader(
+            Client(_ => Body(new LengthlessContent(new ProgressingStream(Archive, TimeSpan.FromMilliseconds(50)))), new()),
+            inactivityTimeout);
+        var stopwatch = Stopwatch.StartNew();
+
+        var result = await downloader.DownloadAsync(StampedRelease(), _archivePath);
+
+        Assert.True(stopwatch.Elapsed > inactivityTimeout);
+        Assert.Equal(Archive.Length, result.BytesDownloaded);
+        Assert.Equal(Archive, await File.ReadAllBytesAsync(_archivePath));
     }
 
     [Fact]
@@ -440,6 +552,17 @@ public sealed class HttpModDownloaderTests : IDisposable
     public void Constructor_NullClient_ThrowsArgumentNullException()
     {
         Assert.Throws<ArgumentNullException>(() => new HttpModDownloader(null!));
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    public void Constructor_NonPositiveBodyInactivityTimeout_ThrowsArgumentOutOfRangeException(int milliseconds)
+    {
+        using var client = new HttpClient();
+
+        Assert.Throws<ArgumentOutOfRangeException>(
+            () => new HttpModDownloader(client, TimeSpan.FromMilliseconds(milliseconds)));
     }
 
     #endregion

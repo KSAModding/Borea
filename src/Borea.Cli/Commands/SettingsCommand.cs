@@ -1,5 +1,6 @@
 using System.CommandLine;
 using Borea.Cli.Output;
+using Borea.Core.ModLoaders;
 using Borea.Core.Mods;
 using Borea.Core.Settings;
 
@@ -76,7 +77,8 @@ internal static class SettingsCommand
         {
             var id = parseResult.GetRequiredValue(loaderId);
             var fullPath = Path.GetFullPath(parseResult.GetRequiredValue(directory));
-            await cli.SettingsRepository.SaveAsync(cli.Settings.WithLoaderDirectory(id, fullPath), ct).ConfigureAwait(false);
+            var installation = new LoaderInstallation(fullPath, version: null, rawVersion: null, isAdopted: true);
+            await cli.SettingsRepository.SaveAsync(cli.Settings.WithLoaderInstallation(id, installation), ct).ConfigureAwait(false);
 
             output.WriteLine($"Loader {id} directory: {fullPath}");
             WarnWhenMissing(error, fullPath);
@@ -100,21 +102,26 @@ internal static class SettingsCommand
     {
         output.WriteLine($"Game directory: {settings.GameDirectoryPath ?? "not set"}");
 
-        if (settings.LoaderDirectoryPaths.Count == 0)
+        if (settings.LoaderInstallations.Count == 0)
         {
             output.WriteLine("Loader directories: none");
             return;
         }
 
         output.WriteLine("Loader directories:");
-        foreach (var (loaderId, path) in settings.LoaderDirectoryPaths.OrderBy(p => p.Key, ModIds.Comparer))
-            output.WriteLine($"  {loaderId}: {path}");
+        foreach (var (loaderId, installation) in settings.LoaderInstallations.OrderBy(p => p.Key, ModIds.Comparer))
+            output.WriteLine($"  {loaderId}: {installation.DirectoryPath}");
     }
 
     /// <summary>The JSON shape of <c>settings show</c>.</summary>
     private sealed record SettingsView(string? GameDirectory, IReadOnlyDictionary<string, string> LoaderDirectories)
     {
         public static SettingsView From(BoreaSettings settings)
-            => new(settings.GameDirectoryPath, settings.LoaderDirectoryPaths);
+            => new(
+                settings.GameDirectoryPath,
+                settings.LoaderInstallations.ToDictionary(
+                    pair => pair.Key,
+                    pair => pair.Value.DirectoryPath,
+                    ModIds.Comparer));
     }
 }

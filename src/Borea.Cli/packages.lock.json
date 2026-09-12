@@ -1,0 +1,42 @@
+{
+  "version": 1,
+  "dependencies": {
+    "net10.0": {
+      "System.CommandLine": {
+        "type": "Direct",
+        "requested": "[2.0.11, )",
+        "resolved": "2.0.11",
+        "contentHash": "Pmg3/T0M37ZS3ovwPHtfBNTCdqNpnxo+tnZMg8JDHVR0qD8KwcPUKlheEiZysb1En8IyH7yDoa9QDq97Ny/vhQ=="
+      },
+      "Tomlyn": {
+        "type": "Transitive",
+        "resolved": "2.10.1",
+        "contentHash": "ykjOY3IpYmC4SpPcAZRTl/w2jTmhPMDydHq8xcV7tTBAQ22nKBsOkPqauIrZlMjHm03cmKfV23UOPscKp+J4Og=="
+      },
+      "borea.composition": {
+        "type": "Project",
+        "dependencies": {
+          "Borea.Core": "[1.0.0, )",
+          "Borea.Network": "[1.0.0, )",
+          "Borea.Storage": "[1.0.0, )"
+        }
+      },
+      "borea.core": {
+        "type": "Project"
+      },
+      "borea.network": {
+        "type": "Project",
+        "dependencies": {
+          "Borea.Core": "[1.0.0, )"
+        }
+      },
+      "borea.storage": {
+        "type": "Project",
+        "dependencies": {
+          "Borea.Core": "[1.0.0, )",
+          "Tomlyn": "[2.10.1, )"
+        }
+      }
+    }
+  }
+}
