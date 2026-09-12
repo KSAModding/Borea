@@ -6,35 +6,26 @@ namespace Borea.Network.Index;
 
 /// <summary>
 /// Serves the community index through <see cref="IModRepository"/>.
-/// Successful snapshots are revalidated at most once per index watcher interval,
-/// and overlapping callers share one refresh and parse operation.
+/// The repository uses the snapshot provider shared with other index content.
 /// </summary>
 public sealed class ContentIndexModRepository : IContentIndexRepository, IModIdClaimSource, IModArchiveReleaseLookup
 {
     public const string SourceName = "index";
 
-    private static readonly TimeSpan RevalidationInterval = TimeSpan.FromMinutes(10);
-
-    private readonly IContentIndexFetcher _fetcher;
-    private readonly IContentIndexReader _reader;
-    private readonly IGamePathProvider _paths;
-    private readonly TimeProvider _timeProvider;
-    private readonly object _gate = new();
-
-    private ContentIndexSnapshot? _snapshot;
-    private DateTimeOffset _lastAttemptAt;
-    private Task<ContentIndexSnapshot>? _inFlight;
+    private readonly IContentIndexSnapshotProvider _snapshots;
 
     public ContentIndexModRepository(
         IContentIndexFetcher fetcher,
         IContentIndexReader reader,
         IGamePathProvider paths,
         TimeProvider? timeProvider = null)
+        : this(new ContentIndexSnapshotProvider(fetcher, reader, paths, timeProvider))
     {
-        _fetcher = fetcher ?? throw new ArgumentNullException(nameof(fetcher));
-        _reader = reader ?? throw new ArgumentNullException(nameof(reader));
-        _paths = paths ?? throw new ArgumentNullException(nameof(paths));
-        _timeProvider = timeProvider ?? TimeProvider.System;
+    }
+
+    public ContentIndexModRepository(IContentIndexSnapshotProvider snapshots)
+    {
+        _snapshots = snapshots ?? throw new ArgumentNullException(nameof(snapshots));
     }
 
     public async Task<IReadOnlyList<ModMetadata>> GetAvailableModsAsync(CancellationToken cancellationToken = default)
@@ -137,60 +128,7 @@ public sealed class ContentIndexModRepository : IContentIndexRepository, IModIdC
     }
 
     private Task<ContentIndexSnapshot> GetSnapshotAsync(CancellationToken cancellationToken)
-    {
-        lock (_gate)
-        {
-            if (_snapshot is not null
-                && _timeProvider.GetUtcNow() - _lastAttemptAt < RevalidationInterval)
-            {
-                return Task.FromResult(_snapshot);
-            }
-
-            if (_inFlight is null || _inFlight.IsCompleted)
-                _inFlight = RefreshAsync();
-
-            return _inFlight.WaitAsync(cancellationToken);
-        }
-    }
-
-    private async Task<ContentIndexSnapshot> RefreshAsync()
-    {
-        ContentIndexSnapshot? current;
-        lock (_gate)
-            current = _snapshot;
-
-        try
-        {
-            var fetchResult = await _fetcher.FetchAsync(_paths.GetIndexPath()).ConfigureAwait(false);
-            if (fetchResult == ContentIndexFetchResult.NotModified && current is not null)
-                return RecordAttempt(current);
-        }
-        catch (Exception ex) when (ex is HttpRequestException or IOException or TaskCanceledException)
-        {
-            if (current is not null)
-                return RecordAttempt(current);
-        }
-
-        try
-        {
-            var loaded = await _reader.ReadAsync().ConfigureAwait(false);
-            return RecordAttempt(loaded);
-        }
-        catch (Exception ex) when (current is not null && ex is (InvalidOperationException or IOException))
-        {
-            return RecordAttempt(current);
-        }
-    }
-
-    private ContentIndexSnapshot RecordAttempt(ContentIndexSnapshot snapshot)
-    {
-        lock (_gate)
-        {
-            _snapshot = snapshot;
-            _lastAttemptAt = _timeProvider.GetUtcNow();
-            return snapshot;
-        }
-    }
+        => _snapshots.GetSnapshotAsync(cancellationToken);
 
     private static IEnumerable<ContentIndexListing> AvailableListings(ContentIndexSnapshot snapshot) =>
         snapshot.Listings.Where(listing =>
