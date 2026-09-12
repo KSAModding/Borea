@@ -32,6 +32,8 @@ internal sealed class CliServices : IDisposable
 
     public required IContentIndexFetcher IndexFetcher { get; init; }
 
+    public required IContentIndexReader IndexReader { get; init; }
+
     public required IGamePathProvider Paths { get; init; }
 
     /// <summary>
@@ -49,7 +51,8 @@ internal sealed class CliServices : IDisposable
         BoreaServices services,
         ILatestVersionPing? latestVersion = null,
         IInstalledGameVersionProvider? installedVersion = null,
-        IContentIndexFetcher? indexFetcher = null)
+        IContentIndexFetcher? indexFetcher = null,
+        IContentIndexReader? indexReader = null)
     {
         if (services is null)
             throw new ArgumentNullException(nameof(services));
@@ -63,6 +66,7 @@ internal sealed class CliServices : IDisposable
             LatestVersion = latestVersion ?? services.LatestVersion,
             InstalledVersion = installedVersion ?? services.InstalledVersion,
             IndexFetcher = indexFetcher ?? services.IndexFetcher,
+            IndexReader = indexReader ?? services.IndexReader,
             Paths = services.Paths,
             Graph = services,
         };

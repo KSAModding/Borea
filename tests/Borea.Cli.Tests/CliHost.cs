@@ -20,17 +20,22 @@ internal sealed class CliHost : IDisposable
 
     public FakeContentIndexFetcher IndexFetcher { get; } = new();
 
+    public FakeContentIndexReader IndexReader { get; } = new();
+
     /// <summary>How many times a command built its services.</summary>
     public int Builds { get; private set; }
 
     public GamePathProvider Paths => new(gameDirectory: null, boreaRoot: Root);
 
     public async Task<CliRun> RunAsync(params string[] args)
+        => await RunAsync(CancellationToken.None, args);
+
+    public async Task<CliRun> RunAsync(CancellationToken cancellationToken, params string[] args)
     {
         var output = new StringWriter();
         var error = new StringWriter();
 
-        var exitCode = await BoreaCli.RunAsync(args, BuildAsync, output, error);
+        var exitCode = await BoreaCli.RunAsync(args, BuildAsync, output, error, cancellationToken);
 
         return new CliRun(exitCode, output.ToString(), error.ToString());
     }
@@ -38,7 +43,12 @@ internal sealed class CliHost : IDisposable
     private async Task<CliServices> BuildAsync(CancellationToken cancellationToken)
     {
         Builds++;
-        return CliServices.From(await BoreaServices.BuildAsync(Root, cancellationToken), LatestVersion, InstalledVersion, IndexFetcher);
+        return CliServices.From(
+            await BoreaServices.BuildAsync(Root, cancellationToken),
+            LatestVersion,
+            InstalledVersion,
+            IndexFetcher,
+            IndexReader);
     }
 
     public void Dispose()

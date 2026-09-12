@@ -1,4 +1,4 @@
-﻿using Borea.Core.Dependencies;
+using Borea.Core.Dependencies;
 using Borea.Core.Index;
 using Borea.Core.ModLoaders;
 using Borea.Core.Mods;
@@ -191,6 +191,27 @@ public sealed class DtoMapperTests
     }
 
     [Fact]
+    public void MapAuthored_ReleaseSource_PreservesUnknownAuthorityHost()
+    {
+        var dto = MinimalAuthoredDto();
+        dto.Releases = new ReleasesInfoDto
+        {
+            Authority = "future-host",
+            Hosts = new Dictionary<string, JsonElement>
+            {
+                ["future-host"] = JsonSerializer.SerializeToElement("publisher/project"),
+                ["github"] = JsonSerializer.SerializeToElement("owner/repo"),
+            },
+        };
+
+        var result = DtoMapper.MapAuthored(dto, "source");
+
+        Assert.Equal("future-host", result.Releases!.Authority);
+        Assert.Equal("publisher/project", result.Releases.AuthorityHost.Reference);
+        Assert.Equal(2, result.Releases.Hosts.Count);
+    }
+
+    [Fact]
     public void MapAuthored_ReleaseSource_ThrowsForNonStringNonNumberHost()
     {
         var dto = MinimalAuthoredDto();
@@ -349,6 +370,58 @@ public sealed class DtoMapperTests
         Assert.Equal("paths.game", result.Provides.Configure.GamePath);
     }
 
+    [Fact]
+    public void MapAuthored_UnknownConfigureMember_Throws()
+    {
+        var dto = MinimalAuthoredDto(type: "mod-loader");
+        dto.Provides = new ProvidesDto
+        {
+            Configure = new ConfigureDto
+            {
+                File = "config.json",
+                Format = "json",
+                UnknownFields = new Dictionary<string, JsonElement>
+                {
+                    ["future-value"] = JsonSerializer.SerializeToElement("value"),
+                },
+            },
+        };
+
+        var exception = Assert.Throws<FormatException>(() => DtoMapper.MapAuthored(dto, "source"));
+
+        Assert.Contains("future-value", exception.Message);
+    }
+
+    [Fact]
+    public void MapAuthored_UnknownConfigureFormat_Throws()
+    {
+        var dto = MinimalAuthoredDto(type: "mod-loader");
+        dto.Provides = new ProvidesDto
+        {
+            Configure = new ConfigureDto { File = "config.data", Format = "future-format" },
+        };
+
+        Assert.Throws<FormatException>(() => DtoMapper.MapAuthored(dto, "source"));
+    }
+
+    [Fact]
+    public void MapAuthored_NullCollectionElements_Throw()
+    {
+        var dto = MinimalAuthoredDto();
+        dto.Authors.Add(null!);
+
+        Assert.Throws<FormatException>(() => DtoMapper.MapAuthored(dto, "source"));
+    }
+
+    [Fact]
+    public void MapAuthored_NullInstallStep_Throws()
+    {
+        var dto = MinimalAuthoredDto();
+        dto.Install = new InstallDescriptorDto { Steps = new List<string> { null! } };
+
+        Assert.Throws<FormatException>(() => DtoMapper.MapAuthored(dto, "source"));
+    }
+
     // ---- MapRelease ----
 
     [Fact]
@@ -362,7 +435,7 @@ public sealed class DtoMapperTests
         Assert.Equal("test-mod", result.ModId);
         Assert.Equal(ModVersion.Parse("1.0.0"), result.Version);
         Assert.Equal(ReleaseStatus.Stable, result.ReleaseStatus);
-        Assert.Equal(DateTimeOffset.Parse("2026-08-08T12:00:00Z"), result.ReleaseDate);
+        Assert.Equal(new DateTimeOffset(2026, 8, 8, 12, 0, 0, TimeSpan.Zero), result.ReleaseDate);
         Assert.Equal("2026.7.4.2131", result.GameMin);
         Assert.Equal(2131, result.GameMinRevision);
         Assert.Equal("https://example.com/mod.zip", result.Download.Url);
@@ -429,7 +502,6 @@ public sealed class DtoMapperTests
     [InlineData("user-data", InstallAnchor.UserData)]
     [InlineData("game-root", InstallAnchor.GameRoot)]
     [InlineData("standalone", InstallAnchor.Standalone)]
-    [InlineData("something-else", InstallAnchor.Unknown)]
     public void MapRelease_MapsInstallAnchor(string target, InstallAnchor expected)
     {
         var dto = MinimalReleaseDto();
@@ -438,6 +510,15 @@ public sealed class DtoMapperTests
         var result = DtoMapper.MapRelease(dto, null, authored: null);
 
         Assert.Equal(expected, result.Install!.Target);
+    }
+
+    [Fact]
+    public void MapRelease_UnknownInstallAnchor_Throws()
+    {
+        var dto = MinimalReleaseDto();
+        dto.Install = new InstallInfoDto { Derived = false, Target = "something-else" };
+
+        Assert.Throws<FormatException>(() => DtoMapper.MapRelease(dto, null, authored: null));
     }
 
     [Fact]
@@ -455,6 +536,28 @@ public sealed class DtoMapperTests
         Assert.Equal(ModDependencyKind.Conflict, dependency.Kind);
         Assert.Null(dependency.MinVersion);
         Assert.Null(dependency.MaxVersion);
+    }
+
+    [Fact]
+    public void MapRelease_NullMirror_Throws()
+    {
+        var dto = MinimalReleaseDto();
+        dto.Download.Mirrors = new List<string> { null! };
+
+        Assert.Throws<FormatException>(() => DtoMapper.MapRelease(dto, null, authored: null));
+    }
+
+    [Fact]
+    public void MapRelease_NullDependencyAlternative_Throws()
+    {
+        var dto = MinimalReleaseDto();
+        dto.Dependencies.Add(new DependencyEntryDto
+        {
+            Kind = "required",
+            AnyOf = new List<AnyOfDependencyDto> { null! },
+        });
+
+        Assert.Throws<FormatException>(() => DtoMapper.MapRelease(dto, null, authored: null));
     }
 
     // ---- MapRelease: listing snapshot merge behavior ----
@@ -519,17 +622,13 @@ public sealed class DtoMapperTests
     }
 
     [Fact]
-    public void MapRelease_EmptyAuthorsArray_FallsBackToAuthored()
+    public void MapRelease_EmptyAuthorsArray_Throws()
     {
-        // Authors falls back on an empty list, not just a missing one
-        // (dto?.Authors is { Count: > 0 } ? dto.Authors : authored.Authors).
         var dto = MinimalReleaseDto();
         dto.Listing = JsonSerializer.SerializeToElement(new { authors = Array.Empty<string>() });
         var authored = DtoMapper.MapAuthored(MinimalAuthoredDto(), "source");
 
-        var result = DtoMapper.MapRelease(dto, null, authored);
-
-        Assert.Equal(authored.Authors, result.Listing!.Authors);
+        Assert.ThrowsAny<ArgumentException>(() => DtoMapper.MapRelease(dto, null, authored));
     }
 
     [Fact]
@@ -550,7 +649,7 @@ public sealed class DtoMapperTests
     }
 
     [Fact]
-    public void MapRelease_MalformedListingJson_FallsBackEntirelyToAuthored()
+    public void MapRelease_MalformedListingJson_Throws()
     {
         var dto = MinimalReleaseDto();
         // "authors" must be an array of strings; a number here fails to
@@ -558,24 +657,16 @@ public sealed class DtoMapperTests
         dto.Listing = JsonSerializer.SerializeToElement(new { authors = 5 });
         var authored = DtoMapper.MapAuthored(MinimalAuthoredDto(), "source");
 
-        var result = DtoMapper.MapRelease(dto, null, authored);
-
-        Assert.NotNull(result.Listing);
-        Assert.Equal(authored.Name, result.Listing!.Name);
-        Assert.Equal(authored.Authors, result.Listing.Authors);
-        Assert.Equal(authored.Abstract, result.Listing.Abstract);
-        Assert.Equal(authored.License, result.Listing.License);
+        Assert.Throws<FormatException>(() => DtoMapper.MapRelease(dto, null, authored));
     }
 
     [Fact]
-    public void MapRelease_ListingPresentButIncomplete_NoAuthoredAvailable_ReturnsNullSnapshot()
+    public void MapRelease_ListingPresentButIncomplete_NoAuthoredAvailable_Throws()
     {
         var dto = MinimalReleaseDto();
         dto.Listing = JsonSerializer.SerializeToElement(new { name = "Only A Name" });
 
-        var result = DtoMapper.MapRelease(dto, null, authored: null);
-
-        Assert.Null(result.Listing);
+        Assert.Throws<FormatException>(() => DtoMapper.MapRelease(dto, null, authored: null));
     }
 
     [Fact]
@@ -617,7 +708,7 @@ public sealed class DtoMapperTests
         Assert.Equal("CC0-1.0", result.License);
         Assert.Equal("2026.7", result.GameMin);
         Assert.Equal(ModVersion.Parse("1.0.0"), result.Version);
-        Assert.Equal(DateTimeOffset.Parse("2026-08-08T12:00:00Z"), result.ReleasedAt);
+        Assert.Equal(new DateTimeOffset(2026, 8, 8, 12, 0, 0, TimeSpan.Zero), result.ReleasedAt);
         var mod = Assert.Single(result.Mods);
         Assert.Equal("some-mod", mod.ContentId);
         Assert.Equal(ModVersion.Parse("1.0.0"), mod.Version);
@@ -662,6 +753,15 @@ public sealed class DtoMapperTests
         Assert.Equal("newer-pack", result.SupersededBy);
     }
 
+    [Fact]
+    public void MapPackVersion_NullMember_Throws()
+    {
+        var dto = MinimalPackAuthoredDto();
+        dto.Mods.Add(null!);
+
+        Assert.Throws<FormatException>(() => DtoMapper.MapPackVersion(dto, "source"));
+    }
+
     // ---- MapIndexStatus ----
 
     [Theory]
@@ -676,6 +776,7 @@ public sealed class DtoMapperTests
         var result = DtoMapper.MapIndexStatus(dto);
 
         Assert.Equal(expected, result.State);
+        Assert.Equal(state, result.RawState);
     }
 
     [Fact]
@@ -685,19 +786,16 @@ public sealed class DtoMapperTests
 
         var result = DtoMapper.MapIndexStatus(dto);
 
-        Assert.NotNull(result.Since);
-        Assert.Equal(DateTime.Parse("2026-08-08T12:00:00Z").ToUniversalTime(), result.Since!.Value.ToUniversalTime());
+        Assert.Equal(new DateTimeOffset(2026, 8, 8, 12, 0, 0, TimeSpan.Zero), result.Since);
         Assert.Equal("DMCA takedown", result.Reason);
     }
 
     [Fact]
-    public void MapIndexStatus_UnparsableSince_LeavesSinceNull()
+    public void MapIndexStatus_UnparsableSince_Throws()
     {
         var dto = new IndexStatusDto { State = "delisted", Since = "not-a-date" };
 
-        var result = DtoMapper.MapIndexStatus(dto);
-
-        Assert.Null(result.Since);
+        Assert.Throws<FormatException>(() => DtoMapper.MapIndexStatus(dto));
     }
 
     [Fact]

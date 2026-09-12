@@ -69,7 +69,7 @@ public sealed class PackEntryDtoTests
         Assert.Equal(2, snapshot.Packs.Count);
         var tombstone = IndexJson.Deserialize<PackEntryDto>(snapshot.Packs[0]);
         Assert.Equal("RemovedPack", tombstone.Id);
-        Assert.Equal("delisted", tombstone.IndexStatus!.State);
+        Assert.Equal("delisted", tombstone.IndexStatus!.Value.GetProperty("state").GetString());
         Assert.Throws<JsonException>(() => IndexJson.Deserialize<PackEntryDto>(snapshot.Packs[1]));
     }
 }

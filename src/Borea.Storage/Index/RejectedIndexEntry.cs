@@ -1,9 +1,13 @@
-﻿namespace Borea.Storage.Index;
+namespace Borea.Storage.Index;
 
 /// <summary>
-/// One index entry (listing, release, pack, or pack version) that could not
-/// be read. <see cref="Id"/> is whatever this build could recover before
-/// giving up, extracted straight from the raw JSON so a bad document still
-/// names itself.
+/// One index entry that could not be read. Identity fields contain what this
+/// build could recover from the raw JSON before it rejected the entry.
 /// </summary>
-public sealed record RejectedIndexEntry(string? Id, string Reason);
+public sealed record RejectedIndexEntry(string? Id, string? Version, string Reason)
+{
+    public RejectedIndexEntry(string? id, string reason)
+        : this(id, null, reason)
+    {
+    }
+}

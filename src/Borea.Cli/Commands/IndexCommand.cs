@@ -1,8 +1,6 @@
 using System.CommandLine;
+using Borea.Cli.Output;
 using Borea.Core.Index;
-using Borea.Core.ModPacks;
-using Borea.Core.Mods;
-using Borea.Storage.Index;
 
 namespace Borea.Cli.Commands;
 
@@ -13,7 +11,6 @@ internal static class IndexCommand
         var index = new Command("index", "Manage the cached content index.");
         index.Subcommands.Add(BuildRefresh(services));
         index.Subcommands.Add(BuildValidate(services));
-        index.Subcommands.Add(BuildMap(services));
         return index;
     }
 
@@ -33,91 +30,122 @@ internal static class IndexCommand
 
     private static Command BuildValidate(Func<CancellationToken, Task<CliServices>> services)
     {
-        var validate = new Command("validate", "Validate the content index and check what content is valid, unknown, or malformed");
+        var json = ArgumentRules.Json();
+        var validate = new Command("validate", "Validate the cached content index.");
+        validate.Options.Add(json);
 
         validate.SetAction((parseResult, cancellationToken) => CommandRunner.RunAsync(parseResult, services, cancellationToken, async (cli, output, _, ct) =>
         {
-            var validator = new IndexValidator(cli.Paths);
-            var result = validator.ValidateIndex();
+            var result = await cli.IndexReader.ReadAsync(ct).ConfigureAwait(false);
+            var view = IndexValidationView.From(result);
 
-            int validReleases = 0;
-            int unknownReleases = 0;
-            int rejectedReleases = 0;
-            foreach (var listing in result.ValidListings)
-            {
-                validReleases += listing.ValidReleases.Count;
-                unknownReleases += listing.UnknownReleases.Count;
-                rejectedReleases += listing.RejectedReleases.Count;
-            }
+            if (parseResult.GetValue(json))
+                JsonOutput.Write(output, view);
+            else
+                WriteHuman(output, view);
 
-            int validVersions = 0;
-            int unknownVersions = 0;
-            int rejectedVersions = 0;
-            foreach (var pack in result.ValidPacks)
-            {
-                validVersions += pack.ValidVersions.Count;
-                unknownVersions += pack.UnknownVersions.Count;
-                rejectedVersions += pack.RejectedVersions.Count;
-            }
-
-            output.WriteLine($"""
-                Index Validated:
-                  Spec Version: {result.SnapshotVersion}
-                  {result.ValidListings.Count} valid, {result.UnknownListings.Count} unknown, {result.MalformedListings.Count} malformed Listings
-                    {validReleases} valid, {unknownReleases} unknown, {rejectedReleases} rejected Releases
-                  {result.ValidPacks.Count} valid, {result.UnknownPacks.Count} unknown, {result.MalformedPacks.Count} malformed Mod Packs
-                    {validVersions} valid, {unknownVersions} unknown, {rejectedVersions} rejected Releases
-                  {result.GameVersions.Versions.Count} known Game Versions
-                """);
-            return ExitCodes.Done;
+            return view.Diagnostics.Malformed > 0 ? ExitCodes.Failed : ExitCodes.Done;
         }));
 
         return validate;
     }
 
-    private static Command BuildMap(Func<CancellationToken, Task<CliServices>> services)
+    private static void WriteHuman(TextWriter output, IndexValidationView view)
     {
-        var map = new Command("map", "Map the validated DTOs to the corresponding Borea.Core objects");
+        output.WriteLine($"Content index validation, snapshot version {view.SnapshotVersion}:");
+        output.WriteLine($"  Listings: {view.Accepted.Listings} accepted, {view.Count(ContentIndexDiagnosticScope.Listing, ContentIndexDiagnosticKind.UnsupportedVersion)} unsupported, {view.Count(ContentIndexDiagnosticScope.Listing, ContentIndexDiagnosticKind.Malformed)} malformed.");
+        output.WriteLine($"  Releases: {view.Accepted.Releases} accepted, {view.Count(ContentIndexDiagnosticScope.Release, ContentIndexDiagnosticKind.UnsupportedVersion)} unsupported, {view.Count(ContentIndexDiagnosticScope.Release, ContentIndexDiagnosticKind.Malformed)} malformed.");
+        output.WriteLine($"  Mod packs: {view.Accepted.Packs} accepted, {view.Count(ContentIndexDiagnosticScope.Pack, ContentIndexDiagnosticKind.UnsupportedVersion)} unsupported, {view.Count(ContentIndexDiagnosticScope.Pack, ContentIndexDiagnosticKind.Malformed)} malformed.");
+        output.WriteLine($"  Pack versions: {view.Accepted.PackVersions} accepted, {view.Count(ContentIndexDiagnosticScope.PackVersion, ContentIndexDiagnosticKind.UnsupportedVersion)} unsupported, {view.Count(ContentIndexDiagnosticScope.PackVersion, ContentIndexDiagnosticKind.Malformed)} malformed.");
+        output.WriteLine($"  Game versions: {view.Accepted.GameVersions} known, {view.Count(ContentIndexDiagnosticScope.GameVersions, ContentIndexDiagnosticKind.Malformed)} malformed.");
+        output.WriteLine($"  Index status: {view.Count(ContentIndexDiagnosticScope.IndexStatus, ContentIndexDiagnosticKind.UnsupportedValue)} unsupported, {view.Count(ContentIndexDiagnosticScope.IndexStatus, ContentIndexDiagnosticKind.Malformed)} malformed.");
 
-        map.SetAction((parseResult, cancellationToken) => CommandRunner.RunAsync(parseResult, services, cancellationToken, async (cli, output, _, ct) =>
+        if (view.Diagnostics.Entries.Count == 0)
+            return;
+
+        output.WriteLine("Diagnostics:");
+        foreach (var diagnostic in view.Diagnostics.Entries)
         {
-            var validator = new IndexValidator(cli.Paths);
-            var validateResult = validator.ValidateIndex();
-
-            foreach (var listing in validateResult.ValidListings)
-            {
-                ModMetadata? authored = null;
-                if (listing.Authored is not null)
-                    authored = DtoMapper.MapAuthored(listing.Authored, "index");
-
-                IndexStatus? indexStatus = null;
-                if (listing.IndexStatus is not null)
-                    indexStatus = DtoMapper.MapIndexStatus(listing.IndexStatus);
-
-                foreach (var release in listing.ValidReleases)
-                {
-                    DtoMapper.MapRelease(release, "index", authored);
-                }
-            }
-
-            foreach (var pack in validateResult.ValidPacks)
-            {
-                foreach (var release in pack.ValidVersions)
-                {
-                    ModPackMetadata? modPack = null;
-                    if (release.Authored is not null)
-                        modPack = DtoMapper.MapPackVersion(release.Authored, "index");
-
-                    IndexStatus? indexStatus = null;
-                    if (release.IndexStatus is not null)
-                        indexStatus = DtoMapper.MapIndexStatus(release.IndexStatus);
-                }
-            }
-
-            output.WriteLine("If you see this, no error was thrown during mapping");
-            return ExitCodes.Done;
-        }));
-
-        return map;
+            var identity = diagnostic.Id is null ? string.Empty : $" {diagnostic.Id}";
+            var version = diagnostic.Version is null ? string.Empty : $" {diagnostic.Version}";
+            var specVersion = diagnostic.SpecVersion is null ? string.Empty : $" (spec version {diagnostic.SpecVersion})";
+            output.WriteLine($"  {diagnostic.Kind} {diagnostic.Scope}{identity}{version}{specVersion}: {diagnostic.Reason}");
+        }
     }
+
+    private sealed record IndexValidationView(
+        int SnapshotVersion,
+        AcceptedContentView Accepted,
+        DiagnosticSummaryView Diagnostics)
+    {
+        public static IndexValidationView From(ContentIndexSnapshot snapshot)
+        {
+            var entries = snapshot.Diagnostics.Select(DiagnosticView.From).ToArray();
+            return new IndexValidationView(
+                snapshot.SnapshotVersion,
+                new AcceptedContentView(
+                    snapshot.Listings.Count,
+                    snapshot.Listings.Sum(listing => listing.Releases.Count),
+                    snapshot.Packs.Count,
+                    snapshot.Packs.Sum(pack => pack.Versions.Count),
+                    snapshot.GameVersions?.Versions.Count ?? 0),
+                new DiagnosticSummaryView(
+                    entries.Count(entry => entry.Kind == "malformed"),
+                    entries.Count(entry => entry.Kind == "unsupported-version"),
+                    entries.Count(entry => entry.Kind == "unsupported-value"),
+                    entries));
+        }
+
+        public int Count(ContentIndexDiagnosticScope scope, ContentIndexDiagnosticKind kind) =>
+            Diagnostics.Entries.Count(entry => entry.Scope == Name(scope) && entry.Kind == Name(kind));
+    }
+
+    private sealed record AcceptedContentView(
+        int Listings,
+        int Releases,
+        int Packs,
+        int PackVersions,
+        int GameVersions);
+
+    private sealed record DiagnosticSummaryView(
+        int Malformed,
+        int UnsupportedVersions,
+        int UnsupportedValues,
+        IReadOnlyList<DiagnosticView> Entries);
+
+    private sealed record DiagnosticView(
+        string Kind,
+        string Scope,
+        string Reason,
+        string? Id,
+        string? Version,
+        int? SpecVersion)
+    {
+        public static DiagnosticView From(ContentIndexDiagnostic diagnostic) => new(
+            Name(diagnostic.Kind),
+            Name(diagnostic.Scope),
+            diagnostic.Reason,
+            diagnostic.Id,
+            diagnostic.Version,
+            diagnostic.SpecVersion);
+    }
+
+    private static string Name(ContentIndexDiagnosticKind kind) => kind switch
+    {
+        ContentIndexDiagnosticKind.Malformed => "malformed",
+        ContentIndexDiagnosticKind.UnsupportedVersion => "unsupported-version",
+        ContentIndexDiagnosticKind.UnsupportedValue => "unsupported-value",
+        _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, null),
+    };
+
+    private static string Name(ContentIndexDiagnosticScope scope) => scope switch
+    {
+        ContentIndexDiagnosticScope.Listing => "listing",
+        ContentIndexDiagnosticScope.Release => "release",
+        ContentIndexDiagnosticScope.Pack => "pack",
+        ContentIndexDiagnosticScope.PackVersion => "pack-version",
+        ContentIndexDiagnosticScope.IndexStatus => "index-status",
+        ContentIndexDiagnosticScope.GameVersions => "game-versions",
+        _ => throw new ArgumentOutOfRangeException(nameof(scope), scope, null),
+    };
 }

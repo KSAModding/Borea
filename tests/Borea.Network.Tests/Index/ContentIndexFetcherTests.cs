@@ -1,4 +1,4 @@
-﻿using Borea.Core.Index;
+using Borea.Core.Index;
 using Borea.Network.Index;
 using System.Net;
 using System.Net.Http.Headers;
@@ -13,7 +13,7 @@ namespace Borea.Network.Tests.Index
 
         // Matches BasicIndexFormatCheckAsync's required shape: object root,
         // integer snapshot_version <= 1, and 'listings'/'packs'/'game_versions'
-        // present (values unchecked). 'sources' is deliberately absent — it's
+        // present (values unchecked). 'sources' is deliberately absent because it is
         // optional per the class's own doc comment.
         private const string SampleIndexBody =
             """{ "snapshot_version": 1, "listings": [], "packs": [], "game_versions": {} }""";
@@ -34,7 +34,13 @@ namespace Borea.Network.Tests.Index
                 Directory.Delete(_tempDir, recursive: true);
         }
 
-        private static ContentIndexFetcher CreateFetcher(HttpClient client) => new(client, new Uri("https://example.test/content-index.json"));
+        private static ContentIndexFetcher CreateFetcher(
+            HttpClient client,
+            IContentIndexCandidateValidator? candidateValidator = null) =>
+            new(
+                client,
+                new Uri("https://example.test/content-index.json"),
+                candidateValidator ?? new CandidateValidator(_ => Task.CompletedTask));
 
         private static HttpResponseMessage JsonResponseWithETag(string json, string tag, bool isWeak = false)
         {
@@ -158,6 +164,31 @@ namespace Borea.Network.Tests.Index
             // No .tmp assertion: EnsureSuccessStatusCode() throws before any file
             // I/O runs, so it would pass regardless of whether cleanup works.
             Assert.Equal(SampleIndexBody, await File.ReadAllTextAsync(_destinationPath));
+        }
+
+        [Fact]
+        public async Task FetchAsync_ReaderRejectsRootValidCandidate_KeepsKnownGoodCache()
+        {
+            const string readerInvalidBody =
+                """{ "snapshot_version": 1, "sources": { "authored": "invalid" }, "listings": [], "packs": [], "game_versions": {} }""";
+            await File.WriteAllTextAsync(_destinationPath, SampleIndexBody);
+            await File.WriteAllTextAsync(_etagPath, "\"known-good\"");
+            var client = FakeHttpMessageHandler.BuildClient(
+                _ => JsonResponseWithETag(readerInvalidBody, "\"rejected\""),
+                out _);
+            var validator = new CandidateValidator(async candidatePath =>
+            {
+                Assert.Equal(readerInvalidBody, await File.ReadAllTextAsync(candidatePath));
+                Assert.Equal(SampleIndexBody, await File.ReadAllTextAsync(_destinationPath));
+                throw new InvalidOperationException("The candidate does not match the typed snapshot shape.");
+            });
+
+            await Assert.ThrowsAsync<HttpRequestException>(() =>
+                CreateFetcher(client, validator).FetchAsync(_destinationPath));
+
+            Assert.Equal(SampleIndexBody, await File.ReadAllTextAsync(_destinationPath));
+            Assert.Equal("\"known-good\"", await File.ReadAllTextAsync(_etagPath));
+            Assert.False(File.Exists(_destinationPath + ".tmp"));
         }
 
         [Fact]
@@ -438,6 +469,19 @@ namespace Borea.Network.Tests.Index
                 out _);
             await Assert.ThrowsAsync<HttpRequestException>(() => CreateFetcher(client).FetchAsync(_destinationPath));
             Assert.Equal(SampleIndexBody, await File.ReadAllTextAsync(_destinationPath));
+        }
+
+        private sealed class CandidateValidator : IContentIndexCandidateValidator
+        {
+            private readonly Func<string, Task> _validate;
+
+            public CandidateValidator(Func<string, Task> validate)
+            {
+                _validate = validate;
+            }
+
+            public Task ValidateAsync(string candidatePath, CancellationToken cancellationToken = default) =>
+                _validate(candidatePath);
         }
     }
 }

@@ -6,20 +6,25 @@ namespace Borea.Network.Tests.Temp;
 /// In-memory IModRepository double for testing CompositeModRepository's
 /// routing/merging behavior without a real network call.
 /// </summary>
-internal sealed class FakeModRepository : IModRepository
+internal sealed class FakeModRepository : IModRepository, IModIdClaimSource
 {
     private readonly List<ModMetadata> _listings;
     private readonly List<ModVersionMetadata> _releases;
+    private readonly IReadOnlyList<string> _claimedIds;
 
     public FakeModRepository(params ModMetadata[] listings)
         : this(listings, Array.Empty<ModVersionMetadata>())
     {
     }
 
-    public FakeModRepository(IReadOnlyList<ModMetadata> listings, IReadOnlyList<ModVersionMetadata> releases)
+    public FakeModRepository(
+        IReadOnlyList<ModMetadata> listings,
+        IReadOnlyList<ModVersionMetadata> releases,
+        IReadOnlyList<string>? claimedIds = null)
     {
         _listings = listings.ToList();
         _releases = releases.ToList();
+        _claimedIds = claimedIds ?? _listings.Select(listing => listing.ModId).ToArray();
     }
 
     public Task<IReadOnlyList<ModMetadata>> GetAvailableModsAsync(CancellationToken cancellationToken = default) =>
@@ -43,4 +48,7 @@ internal sealed class FakeModRepository : IModRepository
 
     public Task<IReadOnlyList<ModMetadata>> SearchAsync(string query, CancellationToken cancellationToken = default) =>
         Task.FromResult<IReadOnlyList<ModMetadata>>(_listings.Where(m => m.Name.Contains(query, StringComparison.OrdinalIgnoreCase)).ToList());
+
+    public Task<IReadOnlyList<string>> GetClaimedModIdsAsync(CancellationToken cancellationToken = default) =>
+        Task.FromResult(_claimedIds);
 }

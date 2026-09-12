@@ -15,6 +15,7 @@ using Borea.Network.Sources;
 using Borea.Network.SpaceDock;
 using Borea.Storage.Game;
 using Borea.Storage.Instances;
+using Borea.Storage.Index;
 using Borea.Storage.ModLoaders;
 using Borea.Storage.ModPacks;
 using Borea.Storage.Mods;
@@ -92,6 +93,10 @@ public sealed class BoreaServices : IDisposable
 
     public required IContentIndexFetcher IndexFetcher { get; init; }
 
+    public required IContentIndexReader IndexReader { get; init; }
+
+    public required IContentIndexRepository ContentIndex { get; init; }
+
     private BoreaServices(HttpClient http)
     {
         _http = http;
@@ -112,7 +117,25 @@ public sealed class BoreaServices : IDisposable
     /// Where Borea keeps its own files. Null means the default root of
     /// <see cref="GamePathProvider"/>, %LocalAppData%\Borea.
     /// </param>
-    public static async Task<BoreaServices> BuildAsync(string? boreaRoot, CancellationToken cancellationToken = default)
+    public static Task<BoreaServices> BuildAsync(string? boreaRoot, CancellationToken cancellationToken = default)
+        => BuildCoreAsync(boreaRoot, httpHandler: null, fallbackRepository: null, cancellationToken);
+
+    internal static Task<BoreaServices> BuildAsync(
+        string? boreaRoot,
+        HttpMessageHandler httpHandler,
+        IModRepository fallbackRepository,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(httpHandler);
+        ArgumentNullException.ThrowIfNull(fallbackRepository);
+        return BuildCoreAsync(boreaRoot, httpHandler, fallbackRepository, cancellationToken);
+    }
+
+    private static async Task<BoreaServices> BuildCoreAsync(
+        string? boreaRoot,
+        HttpMessageHandler? httpHandler,
+        IModRepository? fallbackRepository,
+        CancellationToken cancellationToken)
     {
         // the settings file lives under Borea's own root and needs no
         // game path to be found, so a provider without one reads it.
@@ -132,11 +155,15 @@ public sealed class BoreaServices : IDisposable
         // one client. Only the SpaceDock repository takes the resolver, because a
         // release carries an absolute download URL and the downloader needs no
         // host of its own.
-        var http = BuildHttpClient();
+        var http = BuildHttpClient(httpHandler);
         var resolver = new SpaceDockResolver();
+        var indexReader = new ContentIndexReader(paths, ContentIndexModRepository.SourceName);
+        var indexFetcher = new ContentIndexFetcher(http, ContentIndexUri, indexReader);
+        var contentIndex = new ContentIndexModRepository(indexFetcher, indexReader, paths);
         var sources = new Dictionary<string, IModRepository>
         {
-            [SpaceDockModRepository.SourceName] = new SpaceDockModRepository(http, resolver),
+            [ContentIndexModRepository.SourceName] = contentIndex,
+            [SpaceDockModRepository.SourceName] = fallbackRepository ?? new SpaceDockModRepository(http, resolver),
         };
         var mods = new CompositeModRepository(sources);
         var downloader = new HttpModDownloader(http);
@@ -160,13 +187,15 @@ public sealed class BoreaServices : IDisposable
             LoaderUninstaller = new FileLoaderUninstaller(settingsRepository),
             LatestVersion = new LatestVersionPing(http),
             InstalledVersion = new InstalledGameVersionProvider(paths),
-            IndexFetcher = new ContentIndexFetcher(http, ContentIndexUri),
+            IndexFetcher = indexFetcher,
+            IndexReader = indexReader,
+            ContentIndex = contentIndex,
         };
     }
 
-    private static HttpClient BuildHttpClient()
+    private static HttpClient BuildHttpClient(HttpMessageHandler? handler)
     {
-        var handler = new SocketsHttpHandler { PooledConnectionLifetime = ConnectionLifetime };
+        handler ??= new SocketsHttpHandler { PooledConnectionLifetime = ConnectionLifetime };
         var http = new HttpClient(handler);
 
         var version = typeof(BoreaServices).Assembly.GetName().Version?.ToString(3);

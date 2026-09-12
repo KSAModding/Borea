@@ -1,10 +1,14 @@
+using System.Net;
+using System.Text;
 using Borea.Core.Dependencies;
+using Borea.Core.Index;
 using Borea.Core.ModLoaders;
 using Borea.Core.Mods;
 using Borea.Core.Settings;
 using Borea.Network.Index;
 using Borea.Network.Sources;
 using Borea.Storage.Game;
+using Borea.Storage.Index;
 using Borea.Storage.ModLoaders;
 using Borea.Storage.Paths;
 using Borea.Storage.Settings;
@@ -131,6 +135,70 @@ public sealed class BoreaServicesTests : IDisposable
     }
 
     [Fact]
+    public async Task IndexReader_IsTheStorageReader()
+    {
+        using var services = await BoreaServices.BuildAsync(_tempRoot);
+
+        Assert.IsType<ContentIndexReader>(services.IndexReader);
+        Assert.IsType<ContentIndexModRepository>(services.ContentIndex);
+        Assert.IsAssignableFrom<IContentIndexRepository>(services.ContentIndex);
+    }
+
+    [Fact]
+    public async Task ContentIndex_CurrentSnapshotFixture_IsUsableThroughTheRepository()
+    {
+        using var services = await BoreaServices.BuildAsync(_tempRoot);
+        var indexPath = services.Paths.GetIndexPath();
+        Directory.CreateDirectory(Path.GetDirectoryName(indexPath)!);
+        File.Copy(
+            Path.Combine(AppContext.BaseDirectory, "Index", "Fixtures", "current-snapshot.json"),
+            indexPath);
+        var repository = new ContentIndexModRepository(
+            new CachedIndexFetcher(),
+            services.IndexReader,
+            services.Paths);
+
+        var available = await repository.GetAvailableModsAsync();
+        var latest = await repository.GetLatestReleaseAsync("AdvancedFlightComputer");
+        var diagnostics = await repository.GetDiagnosticsAsync();
+
+        Assert.Equal(4, available.Count);
+        Assert.Contains(available, mod => mod.ModId == "StarMap" && mod.Type == ContentType.ModLoader);
+        Assert.Equal(ModVersion.Parse("0.7.5"), latest!.Version);
+        Assert.Empty(diagnostics);
+    }
+
+    [Fact]
+    public async Task Mods_ControlledSnapshot_ResolvesStarMapThroughTheProductionComposite()
+    {
+        var snapshot = await File.ReadAllTextAsync(SnapshotFixturePath);
+        var handler = new ControlledHttpMessageHandler(snapshot);
+        using var services = await BoreaServices.BuildAsync(_tempRoot, handler, new ConflictingStarMapRepository());
+
+        var available = await services.Mods.GetAvailableModsAsync();
+        var starMap = Assert.Single(available, mod => mod.ModId == "StarMap");
+        var versions = await services.Mods.GetAvailableVersionsAsync("StarMap");
+        var latest = await services.Mods.GetLatestReleaseAsync("StarMap");
+
+        Assert.Equal(ContentIndexModRepository.SourceName, starMap.Source);
+        Assert.Equal(ContentType.ModLoader, starMap.Type);
+        Assert.Equal(InstallAnchor.Standalone, starMap.Install!.Target);
+        Assert.Equal("StarMap.exe", starMap.Provides!.Launch);
+        Assert.Equal(InstallAnchor.Mods, starMap.Provides.ContentDir);
+        Assert.Equal("StarMapConfig.json", starMap.Provides.Configure!.File);
+        Assert.Equal(ConfigureFormat.Json, starMap.Provides.Configure.Format);
+        Assert.Equal("GameLocation", starMap.Provides.Configure.GamePath);
+        Assert.Equal([ModVersion.Parse("0.4.6")], versions);
+        Assert.NotNull(latest);
+        Assert.Equal(ModVersion.Parse("0.4.6"), latest.Version);
+        Assert.Equal(ContentIndexModRepository.SourceName, latest.Source);
+        Assert.Equal(InstallAnchor.Standalone, latest.Install!.Target);
+        Assert.Equal(
+            ["https://ksamodding.github.io/content-index-releases/v1/index.json"],
+            handler.RequestUris.Select(uri => uri.AbsoluteUri));
+    }
+
+    [Fact]
     public async Task InstalledVersion_ReadsTheGameDirectoryTheSettingsName()
     {
         using var services = await BoreaServices.BuildAsync(_tempRoot);
@@ -171,6 +239,9 @@ public sealed class BoreaServicesTests : IDisposable
 
     private string SettingsPath => new GamePathProvider(gameDirectory: null, boreaRoot: _tempRoot).GetBoreaSettingsPath();
 
+    private static string SnapshotFixturePath =>
+        Path.Combine(AppContext.BaseDirectory, "Index", "Fixtures", "current-snapshot.json");
+
     private static Dictionary<string, LoaderInstallation> LoaderAt(string path) => new()
     {
         ["StarMap"] = new LoaderInstallation(path, ModVersion.Parse("0.4.6"), "0.4.6.0", isAdopted: true),
@@ -178,6 +249,100 @@ public sealed class BoreaServicesTests : IDisposable
 
     private Task SaveAsync(BoreaSettings settings)
         => new FileBoreaSettingsRepository(new GamePathProvider(gameDirectory: null, boreaRoot: _tempRoot)).SaveAsync(settings);
+
+    private sealed class CachedIndexFetcher : IContentIndexFetcher
+    {
+        public Task<ContentIndexFetchResult> FetchAsync(
+            string destinationPath,
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult(ContentIndexFetchResult.NotModified);
+    }
+
+    private sealed class ControlledHttpMessageHandler(string snapshot) : HttpMessageHandler
+    {
+        public List<Uri> RequestUris { get; } = [];
+
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken)
+        {
+            ArgumentNullException.ThrowIfNull(request.RequestUri);
+            RequestUris.Add(request.RequestUri);
+
+            if (!request.RequestUri.AbsoluteUri.StartsWith(
+                "https://ksamodding.github.io/content-index-releases/",
+                StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException($"Unexpected request to {request.RequestUri}.");
+            }
+
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(snapshot, Encoding.UTF8, "application/json"),
+            });
+        }
+    }
+
+    private sealed class ConflictingStarMapRepository : IModRepository
+    {
+        private static readonly ModVersion Version = ModVersion.Parse("9.9.9");
+
+        private static readonly ModMetadata Listing = new(
+            specVersion: 1,
+            modId: "StarMap",
+            source: "fallback",
+            name: "Fallback StarMap",
+            authors: ["Fallback"],
+            abstractText: "Fallback listing.",
+            license: "MIT",
+            links: new Dictionary<string, string>
+            {
+                ["forums"] = "https://forums.ahwoo.com/threads/fallback.1/",
+            },
+            gameMin: "2026.1",
+            type: ContentType.ModLoader);
+
+        private static readonly ModVersionMetadata Release = new(
+            specVersion: 1,
+            modId: "StarMap",
+            version: Version,
+            releaseStatus: ReleaseStatus.Stable,
+            releaseDate: new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero),
+            gameMin: "2026.1.1.1",
+            gameMinRevision: 1,
+            download: new DownloadInfo("https://example.invalid/fallback.zip", null, null, "application/zip"),
+            installSizeBytes: null,
+            dependencies: [],
+            type: ContentType.ModLoader,
+            source: "fallback");
+
+        public Task<IReadOnlyList<ModMetadata>> GetAvailableModsAsync(CancellationToken cancellationToken = default) =>
+            Task.FromResult<IReadOnlyList<ModMetadata>>([Listing]);
+
+        public Task<ModVersionMetadata?> GetLatestReleaseAsync(
+            string modId,
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult<ModVersionMetadata?>(ModIds.Equals(modId, Listing.ModId) ? Release : null);
+
+        public Task<ModVersionMetadata?> GetReleaseAsync(
+            string modId,
+            ModVersion version,
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult<ModVersionMetadata?>(
+                ModIds.Equals(modId, Listing.ModId) && version.Equals(Version) ? Release : null);
+
+        public Task<IReadOnlyList<ModVersion>> GetAvailableVersionsAsync(
+            string modId,
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult<IReadOnlyList<ModVersion>>(
+                ModIds.Equals(modId, Listing.ModId) ? [Version] : []);
+
+        public Task<IReadOnlyList<ModMetadata>> SearchAsync(
+            string query,
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult<IReadOnlyList<ModMetadata>>(
+                Listing.Name.Contains(query, StringComparison.OrdinalIgnoreCase) ? [Listing] : []);
+    }
 
     public void Dispose()
     {

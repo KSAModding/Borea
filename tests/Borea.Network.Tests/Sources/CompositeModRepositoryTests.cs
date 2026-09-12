@@ -29,6 +29,21 @@ public sealed class CompositeModRepositoryTests
     }
 
     [Fact]
+    public async Task GetAvailableModsAsync_DuplicateIdUsesFirstRegisteredSource()
+    {
+        var composite = new CompositeModRepository(new Dictionary<string, IModRepository>
+        {
+            ["index"] = new FakeModRepository(TestFixtures.SampleModMetadata("shared-mod", "ignored", "Index Name")),
+            ["spacedock"] = new FakeModRepository(TestFixtures.SampleModMetadata("SHARED-MOD", "ignored", "SpaceDock Name")),
+        });
+
+        var result = Assert.Single(await composite.GetAvailableModsAsync());
+
+        Assert.Equal("Index Name", result.Name);
+        Assert.Equal("index", result.Source);
+    }
+
+    [Fact]
     public async Task GetAvailableModsAsync_TagsEachResultWithItsOwnSource()
     {
         var spaceDock = new FakeModRepository(TestFixtures.SampleModMetadata("mod-a", "original-source-ignored"));
@@ -221,6 +236,75 @@ public sealed class CompositeModRepositoryTests
         var results = await composite.SearchAsync("Flight");
 
         Assert.Equal(2, results.Count);
+    }
+
+    [Fact]
+    public async Task SearchAsync_DuplicateIdUsesFirstRegisteredSource()
+    {
+        var composite = new CompositeModRepository(new Dictionary<string, IModRepository>
+        {
+            ["index"] = new FakeModRepository(TestFixtures.SampleModMetadata("shared-mod", "ignored", "Shared Index")),
+            ["spacedock"] = new FakeModRepository(TestFixtures.SampleModMetadata("SHARED-MOD", "ignored", "Shared SpaceDock")),
+        });
+
+        var result = Assert.Single(await composite.SearchAsync("Shared"));
+
+        Assert.Equal("Shared Index", result.Name);
+        Assert.Equal("index", result.Source);
+    }
+
+    [Fact]
+    public async Task AvailableAndSearch_DelistedIndexClaimBlocksLaterSource()
+    {
+        var index = new FakeModRepository(
+            Array.Empty<ModMetadata>(),
+            Array.Empty<ModVersionMetadata>(),
+            new[] { "blocked-mod" });
+        var later = new FakeModRepository(TestFixtures.SampleModMetadata("BLOCKED-MOD", "ignored", "Blocked Mod"));
+        var composite = new CompositeModRepository(new Dictionary<string, IModRepository>
+        {
+            ["index"] = index,
+            ["spacedock"] = later,
+        });
+
+        Assert.Empty(await composite.GetAvailableModsAsync());
+        Assert.Empty(await composite.SearchAsync("Blocked"));
+    }
+
+    [Fact]
+    public async Task AvailableMods_UnsupportedIndexClaimBlocksLaterSource()
+    {
+        var index = new FakeModRepository(
+            Array.Empty<ModMetadata>(),
+            Array.Empty<ModVersionMetadata>(),
+            new[] { "future-mod" });
+        var later = new FakeModRepository(TestFixtures.SampleModMetadata("future-mod", "ignored"));
+        var composite = new CompositeModRepository(new Dictionary<string, IModRepository>
+        {
+            ["index"] = index,
+            ["spacedock"] = later,
+        });
+
+        Assert.Empty(await composite.GetAvailableModsAsync());
+    }
+
+    [Fact]
+    public async Task ReleaseAccess_IndexListingWithoutReleasesBlocksLaterSource()
+    {
+        var index = new FakeModRepository(TestFixtures.SampleModMetadata("reserved-mod", "ignored"));
+        var laterRelease = TestFixtures.SampleRelease("reserved-mod");
+        var later = new FakeModRepository(
+            new[] { TestFixtures.SampleModMetadata("reserved-mod", "ignored") },
+            new[] { laterRelease });
+        var composite = new CompositeModRepository(new Dictionary<string, IModRepository>
+        {
+            ["index"] = index,
+            ["spacedock"] = later,
+        });
+
+        Assert.Null(await composite.GetLatestReleaseAsync("reserved-mod"));
+        Assert.Null(await composite.GetReleaseAsync("reserved-mod", laterRelease.Version));
+        Assert.Empty(await composite.GetAvailableVersionsAsync("reserved-mod"));
     }
 
     [Fact]

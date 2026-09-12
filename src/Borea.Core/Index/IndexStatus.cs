@@ -1,24 +1,36 @@
-﻿namespace Borea.Core.Index;
+using System.Globalization;
 
-public class IndexStatus
+namespace Borea.Core.Index;
+
+public sealed class IndexStatus
 {
     public IndexStatusState State { get; }
 
-    public DateTime? Since { get; }
+    /// <summary>The state text from the index, including values this build does not know.</summary>
+    public string RawState { get; }
+
+    public DateTimeOffset? Since { get; }
 
     public string? Reason { get; }
 
-    public IndexStatus(IndexStatusState state, string? since = null, string? reason = null)
+    public IndexStatus(IndexStatusState state, string rawState, string? since = null, string? reason = null)
     {
+        if (string.IsNullOrWhiteSpace(rawState))
+            throw new ArgumentException("Index status state cannot be null or whitespace.", nameof(rawState));
+
         State = state;
+        RawState = rawState;
         Reason = reason;
-        if (since is not null && DateTime.TryParse(since, out DateTime dateTime))
-        {
-            Since = dateTime;
-        }
-        else
-        {
-            Since = null;
-        }
+        Since = since is null ? null : ParseSince(since);
+    }
+
+    private static DateTimeOffset ParseSince(string since)
+    {
+        if (!since.Contains('T', StringComparison.Ordinal)
+            || !DateTimeOffset.TryParse(since, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var parsed)
+            || parsed.Offset != TimeSpan.Zero)
+            throw new FormatException($"Index status since value '{since}' must be an ISO 8601 UTC timestamp.");
+
+        return parsed;
     }
 }
