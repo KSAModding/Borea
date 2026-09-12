@@ -1,6 +1,5 @@
 using System.CommandLine;
 using Borea.Cli.Output;
-using Borea.Core.ModLoaders;
 using Borea.Core.Mods;
 using Borea.Core.Settings;
 
@@ -77,12 +76,7 @@ internal static class SettingsCommand
         {
             var id = parseResult.GetRequiredValue(loaderId);
             var fullPath = Path.GetFullPath(parseResult.GetRequiredValue(directory));
-            var installation = new LoaderInstallation(fullPath, version: null, rawVersion: null, isAdopted: true);
-            await cli.SettingsRepository.SaveAsync(cli.Settings.WithLoaderInstallation(id, installation), ct).ConfigureAwait(false);
-
-            output.WriteLine($"Loader {id} directory: {fullPath}");
-            WarnWhenMissing(error, fullPath);
-            return ExitCodes.Done;
+            return await LoaderCommand.AdoptAsync(cli, id, fullPath, output, error, ct).ConfigureAwait(false);
         }));
 
         return loader;

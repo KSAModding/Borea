@@ -67,45 +67,43 @@ public sealed class SettingsCommandTests : IDisposable
     }
 
     [Fact]
-    public async Task SetLoader_AddsTheLoader_AndKeepsTheRest()
+    public async Task SetLoader_AdoptsTheLoader_AndKeepsTheGame()
     {
         var game = Path.Combine(_host.Root, "Game");
-        var starMap = Path.Combine(_host.Root, "StarMap");
-        var other = Path.Combine(_host.Root, "Other");
+        var starMap = LoaderCommandTests.CreateLoaderDirectory("StarMap", "not a program", _host.Root, game);
+        _host.Mods.Listings.Add(LoaderFixtures.Listing());
+        _host.Mods.Releases.Add(LoaderFixtures.Release());
 
         await _host.RunAsync("settings", "set", "game", game);
-        var first = await _host.RunAsync("settings", "set", "loader", "StarMap", starMap);
-        var second = await _host.RunAsync("settings", "set", "loader", "Other-Loader", other);
+        var set = await _host.RunAsync("settings", "set", "loader", "StarMap", starMap);
         var show = await _host.RunAsync("settings", "show", "--json");
 
-        Assert.Equal(0, first.ExitCode);
-        Assert.Equal(0, second.ExitCode);
+        Assert.Equal(0, set.ExitCode);
+        Assert.Contains("Adopted StarMap", set.Output);
         Assert.Equal(game, show.Json.GetProperty("gameDirectory").GetString());
         var loaders = show.Json.GetProperty("loaderDirectories");
         Assert.Equal(starMap, loaders.GetProperty("StarMap").GetString());
-        Assert.Equal(other, loaders.GetProperty("Other-Loader").GetString());
     }
 
     [Fact]
-    public async Task SetLoader_SameIdInAnotherCase_ReplacesTheEntry()
+    public async Task SetLoader_MissingLaunchFile_FailsWithoutWritingARecord()
     {
-        var first = Path.Combine(_host.Root, "First");
-        var second = Path.Combine(_host.Root, "Second");
+        var directory = Directory.CreateDirectory(Path.Combine(_host.Root, "StarMap")).FullName;
+        _host.Mods.Listings.Add(LoaderFixtures.Listing());
 
-        await _host.RunAsync("settings", "set", "loader", "StarMap", first);
-        await _host.RunAsync("settings", "set", "loader", "starmap", second);
+        var set = await _host.RunAsync("settings", "set", "loader", "StarMap", directory);
         var show = await _host.RunAsync("settings", "show", "--json");
 
-        var loaders = show.Json.GetProperty("loaderDirectories").EnumerateObject().ToList();
-        var loader = Assert.Single(loaders);
-        Assert.Equal("starmap", loader.Name);
-        Assert.Equal(second, loader.Value.GetString());
+        Assert.Equal(1, set.ExitCode);
+        Assert.Contains("does not hold the listed launch file", set.Error);
+        Assert.Empty(show.Json.GetProperty("loaderDirectories").EnumerateObject());
     }
 
     [Fact]
     public async Task Show_ListsTheLoaders()
     {
-        var starMap = Path.Combine(_host.Root, "StarMap");
+        var starMap = LoaderCommandTests.CreateLoaderDirectory("StarMap", "not a program", _host.Root);
+        _host.Mods.Listings.Add(LoaderFixtures.Listing());
 
         await _host.RunAsync("settings", "set", "loader", "StarMap", starMap);
         var show = await _host.RunAsync("settings", "show");
