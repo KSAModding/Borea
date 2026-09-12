@@ -78,6 +78,8 @@ public sealed class BoreaServices : IDisposable
 
     public required IModUninstaller Uninstaller { get; init; }
 
+    public required IForeignModAdopter ForeignModAdopter { get; init; }
+
     /// <summary>
     /// Every mod source behind one repository, each listing tagged with its source.
     /// </summary>
@@ -175,6 +177,7 @@ public sealed class BoreaServices : IDisposable
         var downloader = new HttpModDownloader(http);
         var settingsRepository = new FileBoreaSettingsRepository(paths);
         var loaderConfiguration = new LoaderConfigurator();
+        var instances = new FileInstanceRepository(paths);
 
         return new BoreaServices(http)
         {
@@ -182,11 +185,12 @@ public sealed class BoreaServices : IDisposable
             Paths = paths,
             SettingsRepository = settingsRepository,
             GameDirectoryChanger = new GameDirectoryChanger(settingsRepository, mods, loaderConfiguration),
-            Instances = new FileInstanceRepository(paths),
+            Instances = instances,
             ModState = new FileModStateRepository(paths),
             ModFavorites = new FileModFavoritesRepository(paths),
             ModPackFavorites = new FileModPackFavoritesRepository(paths),
-            Uninstaller = new FileModUninstaller(paths),
+            Uninstaller = new FileModUninstaller(paths, instances),
+            ForeignModAdopter = new FileForeignModAdopter(paths, instances, contentIndex),
             Mods = mods,
             Downloader = downloader,
             LoaderInstaller = new FileLoaderInstaller(paths, downloader, settingsRepository, loaderConfiguration),

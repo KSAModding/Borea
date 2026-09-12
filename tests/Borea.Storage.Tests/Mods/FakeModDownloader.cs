@@ -12,6 +12,8 @@ internal sealed class FakeModDownloader : IModDownloader
 
     public Exception? Failure { get; set; }
 
+    public Action? AfterDownload { get; set; }
+
     public List<string> ArchivePaths { get; } = new();
 
     public IProgress<DownloadProgress>? LastProgress { get; private set; }
@@ -32,6 +34,7 @@ internal sealed class FakeModDownloader : IModDownloader
             throw Failure;
 
         await File.WriteAllBytesAsync(archivePath, Bytes, cancellationToken);
+        AfterDownload?.Invoke();
         return new DownloadResult(release.Download.Url, Bytes.Length, Convert.ToHexString(SHA256.HashData(Bytes)));
     }
 }
