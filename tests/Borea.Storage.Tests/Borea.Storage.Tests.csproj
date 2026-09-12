@@ -38,9 +38,7 @@
 
   <!-- Inside Build, so the copies reach FileWrites and Clean removes them. -->
   <Target Name="CopyVersionFixtures" AfterTargets="CopyFilesToOutputDirectory">
-    <MSBuild Projects="@(VersionFixture)"
-             Targets="GetTargetPath"
-             Properties="Configuration=$(Configuration);TargetFramework=$(TargetFramework)">
+    <MSBuild Projects="@(VersionFixture)" Targets="GetTargetPath" Properties="Configuration=$(Configuration);TargetFramework=$(TargetFramework)">
       <Output TaskParameter="TargetOutputs" ItemName="VersionFixtureAssembly" />
     </MSBuild>
     <Copy SourceFiles="@(VersionFixtureAssembly)" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true">

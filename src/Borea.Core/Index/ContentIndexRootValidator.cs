@@ -42,6 +42,7 @@ public static class ContentIndexRootValidator
         {
             throw new HttpRequestException($"{ex}");
         }
+
         return result;
     }
 
@@ -58,6 +59,11 @@ public static class ContentIndexRootValidator
     /// <exception cref="InvalidOperationException"></exception>
     public static bool ValidateIndexRoot(string indexFile, string indexPath)
     {
+        if (string.IsNullOrEmpty(indexFile))
+        {
+            throw new InvalidOperationException($"Index file is empty at {indexPath}");
+        }
+
         JsonDocument indexJson;
         try
         {
