@@ -12,7 +12,7 @@ public class IndexStatus
     {
         State = state;
         Reason = reason;
-        if(since is not null && DateTime.TryParse(since, out DateTime dateTime))
+        if (since is not null && DateTime.TryParse(since, out DateTime dateTime))
         {
             Since = dateTime;
         }
