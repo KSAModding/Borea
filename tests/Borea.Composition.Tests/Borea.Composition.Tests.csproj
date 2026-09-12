@@ -25,4 +25,8 @@
     <ProjectReference Include="..\..\src\Borea.Storage\Borea.Storage.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Include="..\Borea.Storage.Tests\Index\Fixtures\current-snapshot.json" Link="Index\Fixtures\current-snapshot.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>

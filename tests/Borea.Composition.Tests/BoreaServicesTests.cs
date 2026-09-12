@@ -143,6 +143,30 @@ public sealed class BoreaServicesTests : IDisposable
     }
 
     [Fact]
+    public async Task ContentIndex_CurrentSnapshotFixture_IsUsableThroughTheRepository()
+    {
+        using var services = await BoreaServices.BuildAsync(_tempRoot);
+        var indexPath = services.Paths.GetIndexPath();
+        Directory.CreateDirectory(Path.GetDirectoryName(indexPath)!);
+        File.Copy(
+            Path.Combine(AppContext.BaseDirectory, "Index", "Fixtures", "current-snapshot.json"),
+            indexPath);
+        var repository = new ContentIndexModRepository(
+            new CachedIndexFetcher(),
+            services.IndexReader,
+            services.Paths);
+
+        var available = await repository.GetAvailableModsAsync();
+        var latest = await repository.GetLatestReleaseAsync("AdvancedFlightComputer");
+        var diagnostics = await repository.GetDiagnosticsAsync();
+
+        Assert.Equal(4, available.Count);
+        Assert.Contains(available, mod => mod.ModId == "StarMap" && mod.Type == ContentType.ModLoader);
+        Assert.Equal(ModVersion.Parse("0.7.5"), latest!.Version);
+        Assert.Empty(diagnostics);
+    }
+
+    [Fact]
     public async Task InstalledVersion_ReadsTheGameDirectoryTheSettingsName()
     {
         using var services = await BoreaServices.BuildAsync(_tempRoot);
@@ -190,6 +214,14 @@ public sealed class BoreaServicesTests : IDisposable
 
     private Task SaveAsync(BoreaSettings settings)
         => new FileBoreaSettingsRepository(new GamePathProvider(gameDirectory: null, boreaRoot: _tempRoot)).SaveAsync(settings);
+
+    private sealed class CachedIndexFetcher : IContentIndexFetcher
+    {
+        public Task<ContentIndexFetchResult> FetchAsync(
+            string destinationPath,
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult(ContentIndexFetchResult.NotModified);
+    }
 
     public void Dispose()
     {
