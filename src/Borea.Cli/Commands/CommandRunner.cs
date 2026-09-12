@@ -60,5 +60,6 @@ internal static class CommandRunner
             or IOException
             or UnauthorizedAccessException
             or HttpRequestException
+            or NotSupportedException
             or OperationCanceledException;
 }
