@@ -6,16 +6,18 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) to contribute and [SECURITY.md](SECURITY.
 
 ## Downloads
 
-Each release has one build per platform.
+Each release has one desktop App archive and one CLI archive per platform.
 
 The builds include the .NET runtime and are self-contained, so there is nothing you need to install first.
 
-| Platform | File |
-| --- | --- |
-| Windows | `Borea-<version>-win-x64.zip` |
-| Linux | `Borea-<version>-linux-x64.tar.gz` |
-| macOS, Intel | `Borea-<version>-osx-x64.tar.gz` |
-| macOS, Apple silicon | `Borea-<version>-osx-arm64.tar.gz` |
+| Platform | App | CLI |
+| --- | --- | --- |
+| Windows | `Borea-<version>-win-x64.zip` | `Borea-Cli-<version>-win-x64.zip` |
+| Linux | `Borea-<version>-linux-x64.tar.gz` | `Borea-Cli-<version>-linux-x64.tar.gz` |
+| macOS, Intel | `Borea-<version>-osx-x64.tar.gz` | `Borea-Cli-<version>-osx-x64.tar.gz` |
+| macOS, Apple silicon | `Borea-<version>-osx-arm64.tar.gz` | `Borea-Cli-<version>-osx-arm64.tar.gz` |
+
+Use an archive whose name starts with `Borea-Cli-` when you want the `borea` command.
 
 The builds are not code signed, so the first start of each update takes an extra step on Windows and macOS.
 Signing will be added at some point and is tracked in [issue #76](https://github.com/KSAModding/Borea/issues/76).
@@ -24,7 +26,7 @@ Signing will be added at some point and is tracked in [issue #76](https://github
 
 1. Your browser might warn you that the file is not commonly downloaded. Keep it.
 2. Before you unpack it, right-click the zip, open **Properties**, select **Unblock** on the **General** tab and confirm with **OK**.
-3. Unpack the zip and start `Borea.App.exe`.
+3. Unpack the zip and start `Borea.App.exe`, or run `.\borea.exe --help` from the CLI archive in PowerShell.
 4. If you skipped step 2, Windows shows "Windows protected your PC". The reason is that it detects that the App is not commonly downloaded and not signed. Select **More info**, then **Run anyway**.
 5. If Windows says that Smart App Control blocked Borea, there is no "Run anyway". Go back to step 2, unblock the zip, and unpack it again into a new folder.
 
@@ -33,7 +35,7 @@ Borea does not need administrator rights.
 
 ### Linux
 
-Unpack the archive and start `Borea.App`.
+Unpack the App archive and start `Borea.App`, or unpack the CLI archive and run `./borea --help`.
 The build carries the .NET runtime but not the system libraries it sits on.
 All common desktop installation usually have them all. A minimal one needs:
 
@@ -54,6 +56,8 @@ cd Borea-<version>-osx-arm64
 
 On an Intel Mac, use the `osx-x64` archive instead.
 
+For the CLI, use the matching `Borea-Cli-` archive and run `./borea --help` in the extracted directory.
+
 Do not unpack the archive by double-clicking it in Finder, and do not start `Borea.App` from Finder.
 
 If that already happened, remove the download mark and start Borea from Terminal again: `xattr -dr com.apple.quarantine Borea-<version>-osx-arm64`.
@@ -73,10 +77,10 @@ gh attestation verify <file> --repo KSAModding/Borea \
   --signer-workflow KSAModding/Borea/.github/workflows/release.yml
 ```
 
-`Borea-<version>.cdx.json` is the software bill of materials, in CycloneDX JSON.
-It includes the NuGet packages Borea.App is built from, with version, license and hash.
-One list covers all four builds, so it holds the native asset packages of every platform.
-The same list is attested to each archive, and you can use this command to prove that it belongs to one.
+`Borea-<version>.cdx.json` is the App software bill of materials, in CycloneDX JSON.
+`Borea-Cli-<version>.cdx.json` is the CLI software bill of materials.
+Each file includes the NuGet packages for its own project, with version, license and hash.
+Each list is attested only to the archives for the matching product, and you can use this command to prove that it belongs to one.
 With `--format json`, the output includes the attested list.
 
 ```sh
