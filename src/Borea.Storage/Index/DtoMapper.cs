@@ -1,4 +1,4 @@
-﻿using Borea.Core.Dependencies;
+using Borea.Core.Dependencies;
 using Borea.Core.Game;
 using Borea.Core.Index;
 using Borea.Core.ModLoaders;
@@ -6,6 +6,7 @@ using Borea.Core.Mods;
 using Borea.Core.ModPacks;
 using Borea.Storage.Index.Dtos;
 using System.Text.Json;
+using MetadataEnumMapper = Borea.Storage.Mods.MetadataEnumMapper;
 
 namespace Borea.Storage.Index;
 
@@ -20,29 +21,30 @@ public static class DtoMapper
     public static ModMetadata MapAuthored(AuthoredDto dto, string source)
     {
         ArgumentNullException.ThrowIfNull(dto);
+        ArgumentException.ThrowIfNullOrWhiteSpace(source);
 
-        return new ModMetadata(
+        return MapInput(() => new ModMetadata(
             specVersion: dto.SpecVersion,
             modId: dto.Id,
             source: source,
             name: dto.Name,
-            authors: dto.Authors,
+            authors: RequireItems(dto.Authors, "authors")!,
             abstractText: dto.Abstract,
             license: dto.License,
             links: MapLinks(dto.Links),
             gameMin: dto.Compatibility.GameMin,
             type: MapContentType(dto.Type),
-            tags: dto.Tags,
+            tags: RequireItems(dto.Tags, "tags"),
             description: dto.Description,
             status: MapModStatus(dto.Status),
             supersededBy: dto.SupersededBy,
             releases: dto.Releases is null ? null : MapReleaseSource(dto.Releases),
             gameMax: dto.Compatibility.GameMax,
-            os: dto.Compatibility.Os,
+            os: RequireItems(dto.Compatibility.Os, "compatibility.os"),
             loader: dto.Loader is null ? null : MapLoaderRequirement(dto.Loader),
-            dependencies: dto.Dependencies?.Select(MapDependency).ToList(),
+            dependencies: MapItems(dto.Dependencies, MapDependency, "dependencies")!,
             install: dto.Install is null ? null : MapInstallDescriptor(dto.Install),
-            provides: dto.Provides is null ? null : MapProvides(dto.Provides));
+            provides: dto.Provides is null ? null : MapProvides(dto.Provides)));
     }
 
     // Requires the authored ModMetadata to make sure listing has all the correct info
@@ -50,22 +52,22 @@ public static class DtoMapper
     {
         ArgumentNullException.ThrowIfNull(dto);
 
-        return new ModVersionMetadata(
+        return MapInput(() => new ModVersionMetadata(
             specVersion: dto.SpecVersion,
             modId: dto.Id,
             version: ModVersion.Parse(dto.Version),
             releaseStatus: MapReleaseStatus(dto.ReleaseStatus),
-            releaseDate: DateTimeOffset.Parse(dto.ReleaseDate),
+            releaseDate: DateTimeOffset.Parse(dto.ReleaseDate, System.Globalization.CultureInfo.InvariantCulture),
             gameMin: dto.GameMin,
             gameMinRevision: dto.GameMinRevision,
             download: MapDownloadInfo(dto.Download),
             installSizeBytes: dto.InstallSize,
-            dependencies: dto.Dependencies.Select(MapDependency).ToList(),
+            dependencies: MapItems(dto.Dependencies, MapDependency, "dependencies")!,
             type: MapContentType(dto.Type),
             versionScheme: dto.VersionScheme,
             gameMax: dto.GameMax,
             gameMaxRevision: dto.GameMaxRevision,
-            os: dto.Os,
+            os: RequireItems(dto.Os, "os"),
             install: dto.Install is null ? null : MapInstallInfo(dto.Install),
             loader: dto.Loader is null ? null : MapLoaderRequirement(dto.Loader),
             changelog: dto.Changelog,
@@ -74,75 +76,54 @@ public static class DtoMapper
             listing: dto.Listing is { } listingElement ? MapListingSnapshot(listingElement, authored) : null,
             yanked: dto.Yanked ?? false,
             yankedReason: dto.YankedReason,
-            source: source);
+            source: source));
     }
 
     public static ModPackMetadata MapPackVersion(PackAuthoredDto dto, string source)
     {
         ArgumentNullException.ThrowIfNull(dto);
+        ArgumentException.ThrowIfNullOrWhiteSpace(source);
 
-        return new ModPackMetadata(
+        return MapInput(() => new ModPackMetadata(
             specVersion: dto.SpecVersion,
             modPackId: dto.Id,
             source: source,
             name: dto.Name,
-            authors: dto.Authors,
+            authors: RequireItems(dto.Authors, "authors")!,
             abstractText: dto.Abstract,
             license: dto.License,
             links: MapLinks(dto.Links),
             gameMin: dto.Compatibility.GameMin,
             version: ModVersion.Parse(dto.Version),
-            releasedAt: DateTimeOffset.Parse(dto.ReleasedAt),
-            mods: dto.Mods.Select(MapPackEntry).ToList(),
-            tags: dto.Tags,
+            releasedAt: DateTimeOffset.Parse(dto.ReleasedAt, System.Globalization.CultureInfo.InvariantCulture),
+            mods: MapItems(dto.Mods, MapPackEntry, "mods")!,
+            tags: RequireItems(dto.Tags, "tags"),
             description: dto.Description,
             status: MapModStatus(dto.Status),
             supersededBy: dto.SupersededBy,
             gameMax: dto.Compatibility.GameMax,
-            os: dto.Compatibility.Os,
+            os: RequireItems(dto.Compatibility.Os, "compatibility.os"),
             changelog: dto.ChangeLog,
-            vehicles: dto.Vehicles?.Select(MapPackEntry).ToList(),
-            saves: dto.Saves?.Select(MapPackEntry).ToList());
+            vehicles: MapItems(dto.Vehicles, MapPackEntry, "vehicles"),
+            saves: MapItems(dto.Saves, MapPackEntry, "saves")));
     }
 
-    public static IndexStatus MapIndexStatus(IndexStatusDto dto) =>
-        new(MapIndexStatusState(dto.State), dto.Since, dto.Reason);
+    public static IndexStatus MapIndexStatus(IndexStatusDto dto)
+    {
+        ArgumentNullException.ThrowIfNull(dto);
+        return MapInput(() => new IndexStatus(MapIndexStatusState(dto.State), dto.State, dto.Since, dto.Reason));
+    }
 
     // Enum / value mappings
 
-    private static ModStatus MapModStatus(string? status) => status switch
-    {
-        null => ModStatus.Active,
-        "active" => ModStatus.Active,
-        "deprecated" => ModStatus.Deprecated,
-        _ => ModStatus.Unknown,
-    };
+    private static ModStatus MapModStatus(string? status) =>
+        status is null ? ModStatus.Active : MetadataEnumMapper.ParseModStatus(status);
 
-    private static ReleaseStatus MapReleaseStatus(string releaseStatus) => releaseStatus switch
-    {
-        "stable" => ReleaseStatus.Stable,
-        "testing" => ReleaseStatus.Testing,
-        "dev" => ReleaseStatus.Dev,
-        _ => ReleaseStatus.Unknown,
-    };
+    private static ReleaseStatus MapReleaseStatus(string releaseStatus) => MetadataEnumMapper.ParseReleaseStatus(releaseStatus);
 
-    private static ContentType MapContentType(string type) => type switch
-    {
-        "mod" => ContentType.Mod,
-        "modpack" => ContentType.ModPack,
-        "mod-loader" => ContentType.ModLoader,
-        _ => ContentType.Unknown,
-    };
+    private static ContentType MapContentType(string type) => MetadataEnumMapper.ParseContentType(type);
 
-    private static ModDependencyKind MapDependencyKind(string kind) => kind switch
-    {
-        "required" => ModDependencyKind.Required,
-        "optional" => ModDependencyKind.Optional,
-        "recommends" => ModDependencyKind.Recommends,
-        "suggests" => ModDependencyKind.Suggests,
-        "conflict" => ModDependencyKind.Conflict,
-        _ => ModDependencyKind.Unknown,
-    };
+    private static ModDependencyKind MapDependencyKind(string kind) => MetadataEnumMapper.ParseKind(kind);
 
     private static IndexStatusState MapIndexStatusState(string state) => state switch
     {
@@ -152,33 +133,19 @@ public static class DtoMapper
         _ => IndexStatusState.Unknown,
     };
 
-    private static InstallAnchor MapInstallAnchor(string target) => target switch
-    {
-        "mods" => InstallAnchor.Mods,
-        "user-data" => InstallAnchor.UserData,
-        "game-root" => InstallAnchor.GameRoot,
-        "standalone" => InstallAnchor.Standalone,
-        _ => InstallAnchor.Unknown,
-    };
+    private static InstallAnchor MapInstallAnchor(string target) => MetadataEnumMapper.ParseAnchor(target);
 
-    private static MetadataSource MapMetadataSource(string source) => source switch
-    {
-        "authored" => MetadataSource.Authored,
-        "derived" => MetadataSource.Derived,
-        _ => MetadataSource.Unknown,
-    };
+    private static MetadataSource MapMetadataSource(string source) => MetadataEnumMapper.ParseSource(source)!.Value;
 
-    private static ConfigureFormat MapConfigureFormat(string format) => format switch
-    {
-        "json" => ConfigureFormat.Json,
-        "toml" => ConfigureFormat.Toml,
-        _ => ConfigureFormat.Unknown,
-    };
+    private static ConfigureFormat MapConfigureFormat(string format) => MetadataEnumMapper.ParseConfigureFormat(format);
 
     // Object mappings
 
-    private static ModPackEntry MapPackEntry(IndexModPackItemEntryDto dto) =>
-        new(dto.Id, ModVersion.Parse(dto.Version));
+    private static ModPackEntry MapPackEntry(IndexModPackItemEntryDto dto)
+    {
+        ArgumentNullException.ThrowIfNull(dto);
+        return new ModPackEntry(dto.Id, ModVersion.Parse(dto.Version));
+    }
 
     private static IReadOnlyDictionary<string, string> MapLinks(LinksDto dto)
     {
@@ -191,6 +158,9 @@ public static class DtoMapper
         {
             foreach (var (key, value) in dto.OtherLinks)
             {
+                if (string.Equals(key, "forums", StringComparison.OrdinalIgnoreCase))
+                    throw new FormatException($"Link key '{key}' collides with the declared forums link.");
+
                 // Extension-data entries are arbitrary JSON; documented
                 // links are plain URL strings, so anything else is skipped
                 // rather than failing the whole listing over an unrelated field.
@@ -225,17 +195,32 @@ public static class DtoMapper
 
     private static ModDependency MapDependency(DependencyEntryDto dto)
     {
+        ArgumentNullException.ThrowIfNull(dto);
+
         var kind = MapDependencyKind(dto.Kind);
         var source = dto.Source is null ? null : (MetadataSource?)MapMetadataSource(dto.Source);
 
-        if (dto.AnyOf is { Count: > 0 })
+        if (dto.Id is not null && dto.AnyOf is not null)
+            throw new FormatException("A dependency cannot declare both id and any_of.");
+
+        if (dto.Id is null && dto.AnyOf is null)
+            throw new FormatException("A dependency must declare id or any_of.");
+
+        if (dto.AnyOf is not null)
         {
-            var alternatives = dto.AnyOf
-                .Select(a => new ModDependencyAlternative(
-                    a.Id,
-                    a.Min is null ? null : ModVersion.Parse(a.Min),
-                    a.Max is null ? null : ModVersion.Parse(a.Max)))
-                .ToList();
+            if (dto.AnyOf.Count == 0)
+                throw new FormatException("A dependency any_of list cannot be empty.");
+
+            if (dto.Min is not null || dto.Max is not null)
+                throw new FormatException("A dependency with any_of must put version bounds on each alternative.");
+
+            var alternatives = MapItems(
+                dto.AnyOf,
+                alternative => new ModDependencyAlternative(
+                    alternative.Id,
+                    MetadataEnumMapper.ParseVersion(alternative.Min),
+                    MetadataEnumMapper.ParseVersion(alternative.Max)),
+                "dependency.any_of")!;
 
             return ModDependency.OfAlternatives(kind, alternatives, source);
         }
@@ -243,8 +228,8 @@ public static class DtoMapper
         return new ModDependency(
             dto.Id!,
             kind,
-            dto.Min is null ? null : ModVersion.Parse(dto.Min),
-            dto.Max is null ? null : ModVersion.Parse(dto.Max),
+            MetadataEnumMapper.ParseVersion(dto.Min),
+            MetadataEnumMapper.ParseVersion(dto.Max),
             source);
     }
 
@@ -260,9 +245,9 @@ public static class DtoMapper
             root: dto.Root,
             target: dto.Target is null ? null : MapInstallAnchor(dto.Target),
             path: dto.Path,
-            manages: dto.Manages,
-            steps: dto.Steps,
-            uninstall: dto.Uninstall);
+            manages: RequireItems(dto.Manages, "install.manages"),
+            steps: RequireItems(dto.Steps, "install.steps"),
+            uninstall: RequireItems(dto.Uninstall, "install.uninstall"));
 
     private static InstallInfo MapInstallInfo(InstallInfoDto dto) =>
         new(
@@ -278,57 +263,110 @@ public static class DtoMapper
             contentPath: dto.ContentPath,
             configure: dto.Configure is null ? null : MapConfigure(dto.Configure));
 
-    private static LoaderConfigure MapConfigure(ConfigureDto dto) =>
-        new(dto.File, MapConfigureFormat(dto.Format), dto.GamePath);
+    private static LoaderConfigure MapConfigure(ConfigureDto dto)
+    {
+        if (dto.UnknownFields is { Count: > 0 })
+            throw new FormatException($"The loader configure table has unknown member '{dto.UnknownFields.Keys.First()}'.");
+
+        return new LoaderConfigure(dto.File, MapConfigureFormat(dto.Format), dto.GamePath);
+    }
 
     private static DownloadInfo MapDownloadInfo(DownloadInfoDto dto) =>
-        new(dto.URL, dto.SHA256, dto.Size, dto.ContentType, dto.Mirrors);
+        new(dto.URL, dto.SHA256, dto.Size, dto.ContentType, RequireItems(dto.Mirrors, "download.mirrors"));
 
     /// <summary>
     /// Builds the release-time listing snapshot by merging whatever the
     /// release's own "listing" JSON provides with the live authored metadata,
-    /// field by field. A missing or unparseable field in the release's copy
-    /// falls back to the authored value rather than discarding the whole
-    /// snapshot.
+    /// field by field. Only a missing field falls back to the authored value.
     /// </summary>
     private static ListingSnapshot? MapListingSnapshot(JsonElement element, ModMetadata? authored)
     {
-        ReleaseListingDto? dto;
-        try
-        {
-            dto = element.Deserialize<ReleaseListingDto>(IndexJsonOptions.Value);
-        }
-        catch (JsonException)
-        {
-            dto = null;
-        }
+        if (element.ValueKind != JsonValueKind.Object)
+            throw new FormatException("The release listing field must be an object.");
+
+        RequirePropertyKind(element, "name", JsonValueKind.String);
+        RequirePropertyKind(element, "authors", JsonValueKind.Array);
+        RequirePropertyKind(element, "abstract", JsonValueKind.String);
+        RequirePropertyKind(element, "description", JsonValueKind.String);
+        RequirePropertyKind(element, "license", JsonValueKind.String);
+        RequirePropertyKind(element, "tags", JsonValueKind.Array);
+        RequirePropertyKind(element, "links", JsonValueKind.Object);
+
+        var dto = element.Deserialize<ReleaseListingDto>(IndexJsonOptions.Value)
+            ?? throw new JsonException("The release listing deserialized to null.");
 
         if (authored is null)
         {
-            // If required data is missing from both sources, return null
-            if (dto is null || dto.Name is null || dto.Authors is not { Count: > 0 } ||
+            if (dto.Name is null || dto.Authors is null ||
                 dto.Abstract is null || dto.License is null)
             {
-                return null;
+                throw new FormatException("The release listing is incomplete and no authored listing is available for fallback.");
             }
 
             return new ListingSnapshot(
                 dto.Name,
-                dto.Authors,
+                RequireItems(dto.Authors, "listing.authors")!,
                 dto.Abstract,
                 dto.License,
-                dto.Tags,
+                RequireItems(dto.Tags, "listing.tags"),
                 dto.Links is null ? null : MapLinks(dto.Links),
                 dto.Description);
         }
 
         return new ListingSnapshot(
-            dto?.Name ?? authored.Name,
-            dto?.Authors is { Count: > 0 } ? dto.Authors : authored.Authors,
-            dto?.Abstract ?? authored.Abstract,
-            dto?.License ?? authored.License,
-            dto?.Tags ?? authored.Tags,
-            dto?.Links is null ? authored.Links : MapLinks(dto.Links),
-            dto?.Description ?? authored.Description);
+            dto.Name ?? authored.Name,
+            dto.Authors is null ? authored.Authors : RequireItems(dto.Authors, "listing.authors")!,
+            dto.Abstract ?? authored.Abstract,
+            dto.License ?? authored.License,
+            dto.Tags is null ? authored.Tags : RequireItems(dto.Tags, "listing.tags"),
+            dto.Links is null ? authored.Links : MapLinks(dto.Links),
+            dto.Description ?? authored.Description);
+    }
+
+    private static IReadOnlyList<T>? RequireItems<T>(IReadOnlyList<T>? items, string field)
+    {
+        if (items is null)
+            return null;
+
+        for (var index = 0; index < items.Count; index++)
+        {
+            if (items[index] is null)
+                throw new FormatException($"The {field} collection has a null element at index {index}.");
+        }
+
+        return items;
+    }
+
+    private static IReadOnlyList<TResult>? MapItems<TSource, TResult>(
+        IReadOnlyList<TSource>? items,
+        Func<TSource, TResult> map,
+        string field)
+    {
+        if (items is null)
+            return null;
+
+        RequireItems(items, field);
+        return items.Select(map).ToList();
+    }
+
+    private static void RequirePropertyKind(JsonElement element, string propertyName, JsonValueKind expectedKind)
+    {
+        if (element.TryGetProperty(propertyName, out var property) && property.ValueKind != expectedKind)
+        {
+            throw new FormatException(
+                $"The release listing field '{propertyName}' must be {expectedKind}, but was {property.ValueKind}.");
+        }
+    }
+
+    private static TResult MapInput<TResult>(Func<TResult> map)
+    {
+        try
+        {
+            return map();
+        }
+        catch (ArgumentException ex)
+        {
+            throw new IndexInputException(ex.Message, ex);
+        }
     }
 }

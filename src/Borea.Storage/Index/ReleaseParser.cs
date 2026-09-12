@@ -1,4 +1,4 @@
-﻿using Borea.Core.Mods;
+using Borea.Core.Mods;
 using Borea.Storage.Index.Dtos;
 using System.Text.Json;
 
@@ -10,20 +10,23 @@ namespace Borea.Storage.Index;
 /// </summary>
 public static class ReleaseParser
 {
-    public static ParseOutcome<ReleasesEntryDto> Parse(JsonElement element)
+    public static ParseOutcome<ModVersionMetadata> Parse(JsonElement element, string listingId, string source, ModMetadata? authored)
     {
         var id = IndexJsonHelpers.TryExtractString(element, "id");
         var version = IndexJsonHelpers.TryExtractString(element, "version");
-        var label = IndexJsonHelpers.DescribeEntry(id, version);
 
         var specVersion = IndexJsonHelpers.TryExtractInt(element, "spec_version");
         if (specVersion is { } sv)
         {
             if (SpecVersions.IsAboveHighest(sv))
-                return ParseOutcome<ReleasesEntryDto>.NewUnknown(new UnknownIndexVersionEntry(label, sv));
+                return ParseOutcome<ModVersionMetadata>.NewUnknown(new UnknownIndexVersionEntry(
+                    id,
+                    version,
+                    sv,
+                    $"Release '{id}' version '{version}' uses unsupported spec_version {sv}."));
 
             if (sv < 1)
-                return ParseOutcome<ReleasesEntryDto>.NewMalformed(new RejectedIndexEntry(label, $"The release declares spec_version {sv}, which is not valid."));
+                return ParseOutcome<ModVersionMetadata>.NewMalformed(new RejectedIndexEntry(id, version, $"The release declares spec_version {sv}, which is not valid."));
         }
 
         try
@@ -31,11 +34,19 @@ public static class ReleaseParser
             var release = element.Deserialize<ReleasesEntryDto>(IndexJsonOptions.Value)
                 ?? throw new JsonException("The release deserialized to null.");
 
-            return ParseOutcome<ReleasesEntryDto>.Valid(release);
+            if (!ModIds.Equals(listingId, release.Id))
+            {
+                return ParseOutcome<ModVersionMetadata>.NewMalformed(new RejectedIndexEntry(
+                    id,
+                    version,
+                    $"Release id '{release.Id}' does not agree with listing id '{listingId}'."));
+            }
+
+            return ParseOutcome<ModVersionMetadata>.Valid(DtoMapper.MapRelease(release, source, authored));
         }
-        catch (Exception ex) when (ex is JsonException or NotSupportedException)
+        catch (Exception ex) when (IndexJsonHelpers.IsInputFailure(ex))
         {
-            return ParseOutcome<ReleasesEntryDto>.NewMalformed(new RejectedIndexEntry(label, ex.Message));
+            return ParseOutcome<ModVersionMetadata>.NewMalformed(new RejectedIndexEntry(id, version, ex.Message));
         }
     }
 }

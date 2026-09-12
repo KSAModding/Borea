@@ -1,4 +1,4 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 
 namespace Borea.Storage.Index;
 
@@ -58,12 +58,15 @@ internal static class IndexJsonHelpers
         return null;
     }
 
-    /// <summary>A short label for a rejected/unknown entry when only some of its identity is known.</summary>
-    public static string? DescribeEntry(string? id, string? version) => (id, version) switch
+    /// <summary>True for failures caused by index input instead of a Borea programming defect.</summary>
+    public static bool IsInputFailure(Exception exception) =>
+        exception is JsonException or FormatException or IndexInputException;
+}
+
+internal sealed class IndexInputException : ArgumentException
+{
+    public IndexInputException(string message, Exception innerException)
+        : base(message, innerException)
     {
-        (null, null) => null,
-        (var i, null) => i,
-        (null, var v) => $"version {v}",
-        (var i, var v) => $"{i} {v}",
-    };
+    }
 }

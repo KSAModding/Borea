@@ -1,4 +1,5 @@
-﻿using Borea.Core.Index;
+using Borea.Core.Index;
+using Borea.Core.Mods;
 using Borea.Storage.Index.Dtos;
 using System.Text.Json;
 
@@ -10,8 +11,10 @@ namespace Borea.Storage.Index;
 /// </summary>
 public static class SnapshotParser
 {
-    public static IndexValidationResult Parse(string indexJson)
+    public static IndexValidationResult Parse(string indexJson, string source = "index")
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(source);
+
         SnapshotDto snapshot;
         try
         {
@@ -33,10 +36,18 @@ public static class SnapshotParser
         var validListings = new List<ParsedListing>();
         var unknownListings = new List<UnknownIndexVersionEntry>();
         var malformedListings = new List<RejectedIndexEntry>();
+        var duplicateIds = FindDuplicateIds(snapshot.Listings.Concat(snapshot.Packs));
 
         foreach (var listingElement in snapshot.Listings)
         {
-            var outcome = ListingParser.Parse(listingElement);
+            var id = IndexJsonHelpers.TryExtractString(listingElement, "id");
+            if (id is not null && duplicateIds.Contains(id))
+            {
+                malformedListings.Add(new RejectedIndexEntry(id, $"Content id '{id}' appears more than once in the snapshot."));
+                continue;
+            }
+
+            var outcome = ListingParser.Parse(listingElement, source);
             switch (outcome.Kind)
             {
                 case ParseOutcomeKind.Valid:
@@ -57,7 +68,14 @@ public static class SnapshotParser
 
         foreach (var packElement in snapshot.Packs)
         {
-            var outcome = PackParser.Parse(packElement);
+            var id = IndexJsonHelpers.TryExtractString(packElement, "id");
+            if (id is not null && duplicateIds.Contains(id))
+            {
+                malformedPacks.Add(new RejectedIndexEntry(id, $"Content id '{id}' appears more than once in the snapshot."));
+                continue;
+            }
+
+            var outcome = PackParser.Parse(packElement, source);
             switch (outcome.Kind)
             {
                 case ParseOutcomeKind.Valid:
@@ -77,4 +95,14 @@ public static class SnapshotParser
             malformedListings, validPacks, unknownPacks, malformedPacks,
             snapshot.GameVersions, snapshot.Sources);
     }
+
+    private static HashSet<string> FindDuplicateIds(IEnumerable<JsonElement> entries) =>
+        entries
+            .Select(entry => IndexJsonHelpers.TryExtractString(entry, "id"))
+            .Where(ModIds.IsValid)
+            .Select(id => id!)
+            .GroupBy(id => id, ModIds.Comparer)
+            .Where(group => group.Count() > 1)
+            .Select(group => group.Key)
+            .ToHashSet(ModIds.Comparer);
 }

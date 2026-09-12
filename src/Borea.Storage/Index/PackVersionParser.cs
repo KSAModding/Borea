@@ -1,4 +1,5 @@
-﻿using Borea.Core.Mods;
+using Borea.Core.Mods;
+using Borea.Core.ModPacks;
 using Borea.Storage.Index.Dtos;
 using System.Text.Json;
 
@@ -10,20 +11,23 @@ namespace Borea.Storage.Index;
 /// </summary>
 public static class PackVersionParser
 {
-    public static ParseOutcome<PackVersionDto> Parse(JsonElement element)
+    public static ParseOutcome<ParsedPackVersion> Parse(JsonElement element, string packId, string source)
     {
         var id = IndexJsonHelpers.TryExtractNestedString(element, "authored", "id");
         var version = IndexJsonHelpers.TryExtractNestedString(element, "authored", "version");
-        var label = IndexJsonHelpers.DescribeEntry(id, version);
 
         var specVersion = IndexJsonHelpers.TryExtractNestedInt(element, "authored", "spec_version");
         if (specVersion is { } sv)
         {
             if (SpecVersions.IsAboveHighest(sv))
-                return ParseOutcome<PackVersionDto>.NewUnknown(new UnknownIndexVersionEntry(label, sv));
+                return ParseOutcome<ParsedPackVersion>.NewUnknown(new UnknownIndexVersionEntry(
+                    id,
+                    version,
+                    sv,
+                    $"Pack '{id}' version '{version}' uses unsupported spec_version {sv}."));
 
             if (sv < 1)
-                return ParseOutcome<PackVersionDto>.NewMalformed(new RejectedIndexEntry(label, $"The pack version declares spec_version {sv}, which is not valid."));
+                return ParseOutcome<ParsedPackVersion>.NewMalformed(new RejectedIndexEntry(id, version, $"The pack version declares spec_version {sv}, which is not valid."));
         }
 
         try
@@ -31,11 +35,21 @@ public static class PackVersionParser
             var packVersion = element.Deserialize<PackVersionDto>(IndexJsonOptions.Value)
                 ?? throw new JsonException("The pack version deserialized to null.");
 
-            return ParseOutcome<PackVersionDto>.Valid(packVersion);
+            if (!ModIds.Equals(packId, packVersion.Authored.Id))
+            {
+                return ParseOutcome<ParsedPackVersion>.NewMalformed(new RejectedIndexEntry(
+                    id,
+                    version,
+                    $"Pack version id '{packVersion.Authored.Id}' does not agree with pack id '{packId}'."));
+            }
+
+            var metadata = DtoMapper.MapPackVersion(packVersion.Authored, source);
+            var indexStatus = packVersion.IndexStatus is null ? null : DtoMapper.MapIndexStatus(packVersion.IndexStatus);
+            return ParseOutcome<ParsedPackVersion>.Valid(new ParsedPackVersion(metadata, indexStatus));
         }
-        catch (Exception ex) when (ex is JsonException or NotSupportedException)
+        catch (Exception ex) when (IndexJsonHelpers.IsInputFailure(ex))
         {
-            return ParseOutcome<PackVersionDto>.NewMalformed(new RejectedIndexEntry(label, ex.Message));
+            return ParseOutcome<ParsedPackVersion>.NewMalformed(new RejectedIndexEntry(id, version, ex.Message));
         }
     }
 }

@@ -1,7 +1,5 @@
 using System.CommandLine;
 using Borea.Core.Index;
-using Borea.Core.ModPacks;
-using Borea.Core.Mods;
 using Borea.Storage.Index;
 
 namespace Borea.Cli.Commands;
@@ -84,37 +82,7 @@ internal static class IndexCommand
             var validator = new IndexValidator(cli.Paths);
             var validateResult = validator.ValidateIndex();
 
-            foreach (var listing in validateResult.ValidListings)
-            {
-                ModMetadata? authored = null;
-                if (listing.Authored is not null)
-                    authored = DtoMapper.MapAuthored(listing.Authored, "index");
-
-                IndexStatus? indexStatus = null;
-                if (listing.IndexStatus is not null)
-                    indexStatus = DtoMapper.MapIndexStatus(listing.IndexStatus);
-
-                foreach (var release in listing.ValidReleases)
-                {
-                    DtoMapper.MapRelease(release, "index", authored);
-                }
-            }
-
-            foreach (var pack in validateResult.ValidPacks)
-            {
-                foreach (var release in pack.ValidVersions)
-                {
-                    ModPackMetadata? modPack = null;
-                    if (release.Authored is not null)
-                        modPack = DtoMapper.MapPackVersion(release.Authored, "index");
-
-                    IndexStatus? indexStatus = null;
-                    if (release.IndexStatus is not null)
-                        indexStatus = DtoMapper.MapIndexStatus(release.IndexStatus);
-                }
-            }
-
-            output.WriteLine("If you see this, no error was thrown during mapping");
+            output.WriteLine($"Mapped {validateResult.ValidListings.Count} listings and {validateResult.ValidPacks.Count} packs.");
             return ExitCodes.Done;
         }));
 
