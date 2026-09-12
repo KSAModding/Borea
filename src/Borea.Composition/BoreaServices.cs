@@ -96,6 +96,8 @@ public sealed class BoreaServices : IDisposable
 
     public required IModPackRepository ModPacks { get; init; }
 
+    public required IModPackInstaller ModPackInstaller { get; init; }
+
     public required IModDownloader Downloader { get; init; }
 
     public required IInstallPlanner InstallPlanner { get; init; }
@@ -204,6 +206,9 @@ public sealed class BoreaServices : IDisposable
         var instances = new FileInstanceRepository(paths);
 
         var modState = new FileModStateRepository(paths);
+        var modInstaller = new FileModInstaller(paths, downloader, instances, modState);
+        var modReplacer = new FileModReplacer(paths, downloader, instances, modState);
+        var installPlanner = new RepositoryInstallPlanner(new ModDependencyResolver());
 
         return new BoreaServices(http)
         {
@@ -216,14 +221,15 @@ public sealed class BoreaServices : IDisposable
             ModFavorites = new FileModFavoritesRepository(paths),
             ModPackFavorites = new FileModPackFavoritesRepository(paths),
             Uninstaller = new FileModUninstaller(paths, instances),
-            Installer = new FileModInstaller(paths, downloader, instances, modState),
-            Replacer = new FileModReplacer(paths, downloader, instances, modState),
+            Installer = modInstaller,
+            Replacer = modReplacer,
             ForeignModAdopter = new FileForeignModAdopter(paths, instances, contentIndex),
             Mods = mods,
             ReadOnlyMods = readOnlyMods,
             ModPacks = modPacks,
+            ModPackInstaller = new ModPackInstaller(instances, installPlanner, modInstaller, modReplacer),
             Downloader = downloader,
-            InstallPlanner = new RepositoryInstallPlanner(new ModDependencyResolver()),
+            InstallPlanner = installPlanner,
             LoaderInstaller = new FileLoaderInstaller(paths, downloader, settingsRepository, loaderConfiguration),
             LoaderAdopter = new FileLoaderAdopter(settingsRepository, loaderConfiguration),
             LoaderUninstaller = new FileLoaderUninstaller(settingsRepository),
