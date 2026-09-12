@@ -10,6 +10,7 @@ internal static class ModFolders
 {
     /// <summary>The file that makes a folder a mod to the game (ModLibrary.AddMods).</summary>
     public const string DefinitionFileName = "mod.toml";
+    public const string OwnershipFileName = ".borea-owner";
 
     /// <summary>
     /// The folder under <paramref name="modsFolder"/> that carries the id, or
@@ -22,5 +23,41 @@ internal static class ModFolders
 
         return Directory.EnumerateDirectories(modsFolder)
             .FirstOrDefault(d => ModIds.Equals(Path.GetFileName(d), modId));
+    }
+
+    public static string? FindOwned(string modsFolder, string modId, string ownershipToken)
+    {
+        if (!Directory.Exists(modsFolder))
+            return null;
+
+        string? ownedFolder = null;
+        foreach (var directory in Directory.EnumerateDirectories(modsFolder)
+            .Where(path => ModIds.Equals(Path.GetFileName(path), modId)))
+        {
+            try
+            {
+                var markerPath = Path.Combine(directory, OwnershipFileName);
+                if (!File.Exists(markerPath)
+                    || !string.Equals(File.ReadAllText(markerPath), ownershipToken, StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                if (ownedFolder is not null)
+                    return null;
+
+                ownedFolder = directory;
+            }
+            catch (IOException)
+            {
+                return null;
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return null;
+            }
+        }
+
+        return ownedFolder;
     }
 }
