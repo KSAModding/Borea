@@ -42,6 +42,25 @@ public sealed class ContentIndexReaderTests : IDisposable
         }
         """;
 
+    private const string ValidPackVersionJson = """
+        {
+            "spec_version": 1,
+            "id": "test-pack",
+            "type": "modpack",
+            "name": "Test Pack",
+            "authors": ["Test Author"],
+            "abstract": "A pack used for testing.",
+            "license": "CC0-1.0",
+            "version": "1.0.0",
+            "released_at": "2026-09-02T09:48:03Z",
+            "links": { "forums": "https://forums.example/thread/2" },
+            "compatibility": { "game_min": "2026.9.7.5402" },
+            "mods": [{ "id": "test-mod", "version": "1.0.0" }],
+            "vehicles": [{ "id": "test-vehicle", "version": "2.0.0" }],
+            "saves": [{ "id": "test-save", "version": "3.0.0" }]
+        }
+        """;
+
     private readonly string _tempRoot = Path.Combine(Path.GetTempPath(), "BoreaTest_" + Guid.NewGuid());
     private readonly TestGamePathProvider _paths;
     private readonly ContentIndexReader _reader;
@@ -127,7 +146,7 @@ public sealed class ContentIndexReaderTests : IDisposable
     }
 
     [Fact]
-    public async Task ReadAsync_MalformedIndexStatus_KeepsUsableListingAndAddsDiagnostic()
+    public async Task ReadAsync_MalformedIndexStatusTimestamp_KeepsModerationStateAndAddsDiagnostic()
     {
         var listing = Listing(
             "test-mod",
@@ -137,10 +156,38 @@ public sealed class ContentIndexReaderTests : IDisposable
 
         var result = await _reader.ReadAsync();
 
-        Assert.Single(result.Listings);
+        var status = Assert.Single(result.Listings).IndexStatus!;
+        Assert.Equal(IndexStatusState.Disputed, status.State);
+        Assert.Equal("disputed", status.RawState);
+        Assert.Null(status.Since);
         var diagnostic = Assert.Single(result.Diagnostics);
+        Assert.Equal(ContentIndexDiagnosticKind.Malformed, diagnostic.Kind);
         Assert.Equal(ContentIndexDiagnosticScope.IndexStatus, diagnostic.Scope);
         Assert.Equal("test-mod", diagnostic.Id);
+        Assert.Contains("timestamp", diagnostic.Reason);
+    }
+
+    [Fact]
+    public async Task ReadAsync_NonStringIndexStatusTimestamp_KeepsModerationStateAndAddsDiagnostic()
+    {
+        var listing = Listing(
+            "test-mod",
+            ValidAuthoredJson,
+            """, "index_status": { "state": "delisted", "since": 123, "reason": "The entry was removed." }""");
+        await WriteIndexAsync(Snapshot(listing));
+
+        var result = await _reader.ReadAsync();
+
+        var status = Assert.Single(result.Listings).IndexStatus!;
+        Assert.Equal(IndexStatusState.Delisted, status.State);
+        Assert.Equal("delisted", status.RawState);
+        Assert.Null(status.Since);
+        Assert.Equal("The entry was removed.", status.Reason);
+        var diagnostic = Assert.Single(result.Diagnostics);
+        Assert.Equal(ContentIndexDiagnosticKind.Malformed, diagnostic.Kind);
+        Assert.Equal(ContentIndexDiagnosticScope.IndexStatus, diagnostic.Scope);
+        Assert.Equal("test-mod", diagnostic.Id);
+        Assert.Contains("must be a string", diagnostic.Reason);
     }
 
     [Fact]
@@ -184,6 +231,58 @@ public sealed class ContentIndexReaderTests : IDisposable
     }
 
     [Fact]
+    public async Task ReadAsync_CurrentSnapshotFixture_ReturnsMappedCoreContent()
+    {
+        var fixturePath = Path.Combine(AppContext.BaseDirectory, "Index", "Fixtures", "current-snapshot.json");
+        await WriteIndexAsync(await File.ReadAllTextAsync(fixturePath));
+
+        var result = await _reader.ReadAsync();
+
+        Assert.Equal(4, result.Listings.Count);
+        Assert.Equal(10, result.Listings.Sum(listing => listing.Releases.Count));
+        Assert.Empty(result.Packs);
+        Assert.Equal(159, result.GameVersions!.Versions.Count);
+        Assert.Empty(result.Diagnostics);
+        var loader = result.Listings.Single(listing => listing.Id == "StarMap").Authored!;
+        Assert.Equal(Borea.Core.Mods.ContentType.ModLoader, loader.Type);
+        var release = result.Listings.Single(listing => listing.Id == "AdvancedFlightComputer").Releases[0];
+        Assert.Equal(new DateTimeOffset(2026, 9, 2, 9, 48, 3, TimeSpan.Zero), release.ReleaseDate);
+    }
+
+    [Fact]
+    public async Task ReadAsync_PackVersion_ReturnsEveryPackContentCategory()
+    {
+        var pack = $$"""
+            {
+                "id": "test-pack",
+                "versions": [
+                    {
+                        "authored": {{ValidPackVersionJson}},
+                        "index_status": {
+                            "state": "retracted",
+                            "since": "2026-09-03T10:00:00Z",
+                            "reason": "The archive was replaced."
+                        }
+                    }
+                ]
+            }
+            """;
+        await WriteIndexAsync(SnapshotWithPacks(pack));
+
+        var result = await _reader.ReadAsync();
+
+        var version = Assert.Single(Assert.Single(result.Packs).Versions);
+        Assert.Equal("test-pack", version.Metadata.ModPackId);
+        Assert.Equal(new DateTimeOffset(2026, 9, 2, 9, 48, 3, TimeSpan.Zero), version.Metadata.ReleasedAt);
+        Assert.Equal("test-mod", Assert.Single(version.Metadata.Mods).ContentId);
+        Assert.Equal("test-vehicle", Assert.Single(version.Metadata.Vehicles).ContentId);
+        Assert.Equal("test-save", Assert.Single(version.Metadata.Saves).ContentId);
+        Assert.Equal(IndexStatusState.Retracted, version.IndexStatus!.State);
+        Assert.Equal(new DateTimeOffset(2026, 9, 3, 10, 0, 0, TimeSpan.Zero), version.IndexStatus.Since);
+        Assert.Empty(result.Diagnostics);
+    }
+
+    [Fact]
     public async Task ReadAsync_CanceledToken_StopsTheRead()
     {
         await WriteIndexAsync(Snapshot(Listing("test-mod", ValidAuthoredJson)));
@@ -217,6 +316,15 @@ public sealed class ContentIndexReaderTests : IDisposable
             "listings": [{{listings}}],
             "packs": [],
             "game_versions": {{gameVersions}}
+        }
+        """;
+
+    private static string SnapshotWithPacks(string packs) => $$"""
+        {
+            "snapshot_version": 1,
+            "listings": [],
+            "packs": [{{packs}}],
+            "game_versions": { "spec_version": 1, "source": "master-server", "versions": ["2026.9.7.5402"] }
         }
         """;
 

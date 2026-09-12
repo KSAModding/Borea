@@ -435,7 +435,7 @@ public sealed class DtoMapperTests
         Assert.Equal("test-mod", result.ModId);
         Assert.Equal(ModVersion.Parse("1.0.0"), result.Version);
         Assert.Equal(ReleaseStatus.Stable, result.ReleaseStatus);
-        Assert.Equal(DateTimeOffset.Parse("2026-08-08T12:00:00Z"), result.ReleaseDate);
+        Assert.Equal(new DateTimeOffset(2026, 8, 8, 12, 0, 0, TimeSpan.Zero), result.ReleaseDate);
         Assert.Equal("2026.7.4.2131", result.GameMin);
         Assert.Equal(2131, result.GameMinRevision);
         Assert.Equal("https://example.com/mod.zip", result.Download.Url);
@@ -708,7 +708,7 @@ public sealed class DtoMapperTests
         Assert.Equal("CC0-1.0", result.License);
         Assert.Equal("2026.7", result.GameMin);
         Assert.Equal(ModVersion.Parse("1.0.0"), result.Version);
-        Assert.Equal(DateTimeOffset.Parse("2026-08-08T12:00:00Z"), result.ReleasedAt);
+        Assert.Equal(new DateTimeOffset(2026, 8, 8, 12, 0, 0, TimeSpan.Zero), result.ReleasedAt);
         var mod = Assert.Single(result.Mods);
         Assert.Equal("some-mod", mod.ContentId);
         Assert.Equal(ModVersion.Parse("1.0.0"), mod.Version);

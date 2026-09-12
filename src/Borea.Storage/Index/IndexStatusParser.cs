@@ -19,14 +19,64 @@ internal static class IndexStatusParser
             if (element.ValueKind != JsonValueKind.Object)
                 throw new FormatException("The index_status value must be an object.");
 
-            var dto = element.Deserialize<IndexStatusDto>(IndexJsonOptions.Value)
-                ?? throw new JsonException("The index_status value deserialized to null.");
+            var dto = new IndexStatusDto
+            {
+                State = ReadRequiredString(element, "state"),
+                Reason = ReadOptionalString(element, "reason"),
+            };
+            var statusWithoutTimestamp = DtoMapper.MapIndexStatus(dto);
 
-            return (DtoMapper.MapIndexStatus(dto), null);
+            if (!element.TryGetProperty("since", out var sinceElement))
+                return (statusWithoutTimestamp, null);
+
+            if (sinceElement.ValueKind != JsonValueKind.String)
+            {
+                return (
+                    statusWithoutTimestamp,
+                    TimestampError(id, version, $"The since value must be a string, but was {sinceElement.ValueKind}."));
+            }
+
+            dto.Since = sinceElement.GetString();
+
+            try
+            {
+                return (DtoMapper.MapIndexStatus(dto), null);
+            }
+            catch (FormatException ex) when (dto.Since is not null)
+            {
+                return (statusWithoutTimestamp, TimestampError(id, version, ex.Message));
+            }
         }
         catch (Exception ex) when (IndexJsonHelpers.IsInputFailure(ex))
         {
             return (null, new RejectedIndexEntry(id, version, $"The index_status value is unreadable. {ex.Message}"));
         }
     }
+
+    private static string ReadRequiredString(JsonElement element, string propertyName)
+    {
+        if (!element.TryGetProperty(propertyName, out var property))
+            throw new FormatException($"The index_status value must contain {propertyName}.");
+
+        return ReadString(property, propertyName);
+    }
+
+    private static string? ReadOptionalString(JsonElement element, string propertyName)
+    {
+        if (!element.TryGetProperty(propertyName, out var property) || property.ValueKind == JsonValueKind.Null)
+            return null;
+
+        return ReadString(property, propertyName);
+    }
+
+    private static string ReadString(JsonElement property, string propertyName)
+    {
+        if (property.ValueKind != JsonValueKind.String)
+            throw new FormatException($"The index_status {propertyName} value must be a string, but was {property.ValueKind}.");
+
+        return property.GetString()!;
+    }
+
+    private static RejectedIndexEntry TimestampError(string id, string? version, string reason) =>
+        new(id, version, $"The index_status timestamp is unreadable. {reason}");
 }

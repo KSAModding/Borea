@@ -626,7 +626,9 @@ public sealed class SnapshotParserTests
         Assert.Equal(2, result.ValidListings.Count);
         Assert.Empty(result.MalformedListings);
         var listing = result.ValidListings.Single(item => item.Id == "bad-status");
-        Assert.Null(listing.IndexStatus);
+        Assert.Equal(IndexStatusState.Disputed, listing.IndexStatus!.State);
+        Assert.Equal("disputed", listing.IndexStatus.RawState);
+        Assert.Null(listing.IndexStatus.Since);
         Assert.Contains("UTC timestamp", listing.IndexStatusError!.Reason);
     }
 
@@ -640,6 +642,19 @@ public sealed class SnapshotParserTests
         var status = Assert.Single(result.ValidListings).IndexStatus!;
         Assert.Equal(IndexStatusState.Unknown, status.State);
         Assert.Equal("future-state", status.RawState);
+    }
+
+    [Fact]
+    public void Parse_NonStringModerationTimestamp_KeepsStateAndReportsTimestamp()
+    {
+        var listing = $$"""{ "id": "test-mod", "authored": {{ValidAuthoredJson}}, "index_status": { "state": "delisted", "since": 123 } }""";
+
+        var result = SnapshotParser.Parse(Snapshot(listing, ""));
+
+        var parsed = Assert.Single(result.ValidListings);
+        Assert.Equal(IndexStatusState.Delisted, parsed.IndexStatus!.State);
+        Assert.Null(parsed.IndexStatus.Since);
+        Assert.Contains("must be a string", parsed.IndexStatusError!.Reason);
     }
 
     [Fact]
