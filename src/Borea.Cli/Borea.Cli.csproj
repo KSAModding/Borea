@@ -4,6 +4,7 @@
     <OutputType>Exe</OutputType>
     <AssemblyName>borea</AssemblyName>
     <TargetFramework>net10.0</TargetFramework>
+    <RuntimeIdentifiers>win-x64;linux-x64;osx-x64;osx-arm64</RuntimeIdentifiers>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
   </PropertyGroup>
