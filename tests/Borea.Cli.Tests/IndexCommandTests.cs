@@ -112,6 +112,21 @@ public sealed class IndexCommandTests : IDisposable
     }
 
     [Fact]
+    public async Task Validate_TagDiagnostic_ReportsScopeWithoutCrashing()
+    {
+        _host.IndexReader.Snapshot = Snapshot(new ContentIndexDiagnostic(
+            ContentIndexDiagnosticKind.UnsupportedVersion,
+            ContentIndexDiagnosticScope.Tags,
+            "The curated tag vocabulary uses an unsupported version.",
+            SpecVersion: 2));
+
+        var run = await _host.RunAsync("index", "validate");
+
+        Assert.Equal(0, run.ExitCode);
+        Assert.Contains("unsupported-version tags (spec version 2)", run.Output);
+    }
+
+    [Fact]
     public async Task Validate_Cancellation_ReachesReaderAndReportsFailure()
     {
         _host.IndexReader.Read = async cancellationToken =>

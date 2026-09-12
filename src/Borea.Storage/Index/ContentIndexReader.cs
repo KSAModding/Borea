@@ -1,5 +1,6 @@
 using Borea.Core.Index;
 using Borea.Core.Paths;
+using Borea.Core.Tags;
 
 namespace Borea.Storage.Index;
 
@@ -95,7 +96,17 @@ public sealed class ContentIndexReader : IContentIndexReader, IContentIndexCandi
                 result.GameVersions.Source,
                 result.GameVersions.Versions.ToArray());
 
-        return new ContentIndexSnapshot(result.SnapshotVersion, listings, packs, gameVersions, diagnostics);
+        AddMalformed(diagnostics, result.TagsError, ContentIndexDiagnosticScope.Tags);
+        if (result.UnknownTags is not null)
+        {
+            diagnostics.Add(new ContentIndexDiagnostic(
+                ContentIndexDiagnosticKind.UnsupportedVersion,
+                ContentIndexDiagnosticScope.Tags,
+                result.UnknownTags.Reason,
+                SpecVersion: result.UnknownTags.SpecVersion));
+        }
+
+        return new ContentIndexSnapshot(result.SnapshotVersion, listings, packs, gameVersions, diagnostics, result.Tags);
     }
 
     private static void AddUnsupportedStatus(
