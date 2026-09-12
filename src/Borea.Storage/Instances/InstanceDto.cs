@@ -1,4 +1,4 @@
-﻿using Borea.Storage.Mods;
+using Borea.Storage.Mods;
 
 namespace Borea.Storage.Instances;
 
@@ -12,7 +12,7 @@ public sealed class InstanceDto
     public DateTimeOffset CreatedAt { get; set; }
     public bool IsFavorite { get; set; }
 
-    /// <summary>"ModPack" or "Custom" — discriminator for InstanceSource.</summary>
+    /// <summary>"ModPack" or "Custom" discriminator for InstanceSource.</summary>
     public string SourceType { get; set; } = string.Empty;
 
     /// <summary>Only populated when SourceType is "ModPack".</summary>
@@ -22,4 +22,5 @@ public sealed class InstanceDto
     public string? SourceModPackVersion { get; set; }
 
     public List<InstalledModDto> Mods { get; set; } = new();
+    public List<ForeignModDto> ForeignMods { get; set; } = new();
 }

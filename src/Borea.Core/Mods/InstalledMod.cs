@@ -1,4 +1,4 @@
-﻿using Borea.Core.Dependencies;
+using Borea.Core.Dependencies;
 using System.Collections.ObjectModel;
 
 namespace Borea.Core.Mods;
@@ -26,7 +26,21 @@ public sealed class InstalledMod
     /// </summary>
     public string? Checksum { get; }
 
-    public InstalledMod(string modId, ModVersion version, InstallReason reason, DateTimeOffset installedAt, ModVersionMetadata metadata, string? checksum = null)
+    public ModInstallOwnership Ownership { get; }
+
+    public string? OwnershipToken { get; }
+
+    public bool CanDeleteFiles => Ownership == ModInstallOwnership.Borea && !string.IsNullOrWhiteSpace(OwnershipToken);
+
+    public InstalledMod(
+        string modId,
+        ModVersion version,
+        InstallReason reason,
+        DateTimeOffset installedAt,
+        ModVersionMetadata metadata,
+        string? checksum = null,
+        ModInstallOwnership ownership = ModInstallOwnership.Borea,
+        string? ownershipToken = null)
     {
         if (string.IsNullOrWhiteSpace(modId))
             throw new ArgumentException("Mod ID cannot be null or whitespace.", nameof(modId));
@@ -43,6 +57,11 @@ public sealed class InstalledMod
         InstalledAt = installedAt;
         Metadata = metadata;
         Checksum = checksum;
+        Ownership = ownership;
+        OwnershipToken = ownershipToken;
+
+        if (ownership == ModInstallOwnership.Foreign && !string.IsNullOrWhiteSpace(ownershipToken))
+            throw new ArgumentException("A foreign mod cannot have a Borea ownership token.", nameof(ownershipToken));
     }
 
     public void MarkAsManuallyInstalled()

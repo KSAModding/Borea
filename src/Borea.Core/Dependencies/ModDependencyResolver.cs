@@ -1,4 +1,4 @@
-﻿using Borea.Core.Instances;
+using Borea.Core.Instances;
 using Borea.Core.Mods;
 
 namespace Borea.Core.Dependencies;
@@ -35,6 +35,24 @@ public sealed class ModDependencyResolver
             .Select(e => e.Dependency)
             .ToList();
 
+    public IReadOnlyList<LocalDependencyEvaluation> EvaluateForeign(Instance instance, ForeignMod foreignMod)
+    {
+        ArgumentNullException.ThrowIfNull(instance);
+        ArgumentNullException.ThrowIfNull(foreignMod);
+
+        return foreignMod.Dependencies
+            .Select(dependency =>
+            {
+                var installedModId = FindLocalDependency(instance, foreignMod, dependency.ModId);
+                return installedModId is null
+                    ? new LocalDependencyEvaluation(
+                        dependency,
+                        dependency.Optional ? DependencyOutcome.Offer : DependencyOutcome.Install)
+                    : new LocalDependencyEvaluation(dependency, DependencyOutcome.Satisfied, installedModId);
+            })
+            .ToList();
+    }
+
     /// <summary>
     /// Checks if a mod can be uninstalled from an instance, returning the list of dependent mods that would be affected.
     /// </summary>
@@ -49,6 +67,11 @@ public sealed class ModDependencyResolver
             .Select(m => m.ModId)
             .ToList();
 
+        dependents.AddRange(instance.ForeignMods
+            .Where(mod => !ModIds.Equals(mod.ModId, modId))
+            .Where(mod => mod.Dependencies.Any(dependency => !dependency.Optional && ModIds.Equals(dependency.ModId, modId)))
+            .Select(mod => mod.ModId));
+
         return new UninstallCheck(instance.InstanceId, modId, version, dependents, isActive);
     }
 
@@ -59,17 +82,39 @@ public sealed class ModDependencyResolver
 
         if (dependency.IsAnyOf)
         {
+            string? unknownAlternativeId = null;
             foreach (var alternative in dependency.AnyOf)
             {
                 var alternativeMatch = FindInstalled(instance, alternative.ModId);
                 if (alternativeMatch is not null && alternative.BoundsContain(alternativeMatch.Version))
                     return new DependencyEvaluation(dependency, DependencyOutcome.Satisfied, installedModId: alternativeMatch.ModId);
+
+                if (FindForeign(instance, alternative.ModId) is { } foreign)
+                {
+                    if (alternative.MinVersion is null && alternative.MaxVersion is null)
+                        return new DependencyEvaluation(dependency, DependencyOutcome.Satisfied, installedModId: foreign.ModId);
+
+                    unknownAlternativeId = foreign.ModId;
+                }
             }
+
+            if (unknownAlternativeId is not null)
+                return new DependencyEvaluation(dependency, DependencyOutcome.Unknown, installedModId: unknownAlternativeId);
 
             return new DependencyEvaluation(dependency, MissingOutcome(dependency.Kind));
         }
 
         var match = FindInstalled(instance, dependency.ModId);
+
+        if (match is null && FindForeign(instance, dependency.ModId) is { } foreignMatch)
+        {
+            if (dependency.MinVersion is not null || dependency.MaxVersion is not null)
+                return new DependencyEvaluation(dependency, DependencyOutcome.Unknown, installedModId: foreignMatch.ModId);
+
+            return dependency.Kind == ModDependencyKind.Conflict
+                ? new DependencyEvaluation(dependency, DependencyOutcome.Conflict, installedModId: foreignMatch.ModId)
+                : new DependencyEvaluation(dependency, DependencyOutcome.Satisfied, installedModId: foreignMatch.ModId);
+        }
 
         if (match is null || !dependency.BoundsContain(match.Version))
         {
@@ -136,7 +181,7 @@ public sealed class ModDependencyResolver
             if (!removedSatisfies)
                 return false;
 
-            return !dependency.AnyOf.Any(a => !ModIds.Equals(a.ModId, removedId) && FindInstalled(instance, a.ModId) is { } m && a.BoundsContain(m.Version));
+            return !dependency.AnyOf.Any(a => !ModIds.Equals(a.ModId, removedId) && AlternativeIsSatisfied(instance, a));
         }
 
         return ModIds.Equals(dependency.ModId, removedId) && dependency.BoundsContain(removedVersion);
@@ -144,4 +189,29 @@ public sealed class ModDependencyResolver
 
     private static InstalledMod? FindInstalled(Instance instance, string modId)
         => instance.Mods.FirstOrDefault(m => ModIds.Equals(m.ModId, modId));
+
+    private static ForeignMod? FindForeign(Instance instance, string modId)
+        => instance.ForeignMods.FirstOrDefault(m => ModIds.Equals(m.ModId, modId));
+
+    private static string? FindLocalDependency(Instance instance, ForeignMod dependent, string modId)
+    {
+        var installed = FindInstalled(instance, modId);
+        if (installed is not null)
+            return installed.ModId;
+
+        return instance.ForeignMods
+            .Where(mod => !ReferenceEquals(mod, dependent))
+            .FirstOrDefault(mod => ModIds.Equals(mod.ModId, modId))
+            ?.ModId;
+    }
+
+    private static bool AlternativeIsSatisfied(Instance instance, ModDependencyAlternative alternative)
+    {
+        if (FindInstalled(instance, alternative.ModId) is { } installed)
+            return alternative.BoundsContain(installed.Version);
+
+        return alternative.MinVersion is null
+            && alternative.MaxVersion is null
+            && FindForeign(instance, alternative.ModId) is not null;
+    }
 }

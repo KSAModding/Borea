@@ -1,4 +1,4 @@
-﻿namespace Borea.Core.Instances;
+namespace Borea.Core.Instances;
 
 /// <summary>
 /// Owns the identity, naming, and lifecycle of instances.
@@ -31,4 +31,14 @@ public interface IInstanceRepository
     Task DeleteAsync(Guid instanceId);
 
     Task SaveAsync(Instance instance);
+
+    /// <summary>
+    /// Loads, changes, and saves one instance while other changes to that
+    /// instance wait. The change is not saved if <paramref name="update"/>
+    /// throws.
+    /// </summary>
+    Task<TResult> UpdateAsync<TResult>(
+        Guid instanceId,
+        Func<Instance, TResult> update,
+        CancellationToken cancellationToken = default);
 }

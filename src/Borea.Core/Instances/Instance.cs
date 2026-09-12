@@ -1,4 +1,4 @@
-﻿using Borea.Core.Mods;
+using Borea.Core.Mods;
 using System.Collections.ObjectModel;
 
 namespace Borea.Core.Instances;
@@ -10,6 +10,7 @@ namespace Borea.Core.Instances;
 public sealed class Instance
 {
     private readonly List<InstalledMod> _mods;
+    private readonly List<ForeignMod> _foreignMods;
 
     /// <summary>
     /// Immutable identifier assigned at creation. Used as the instance's folder name
@@ -28,16 +29,35 @@ public sealed class Instance
 
     public IReadOnlyList<InstalledMod> Mods => new ReadOnlyCollection<InstalledMod>(_mods);
 
+    public IReadOnlyList<ForeignMod> ForeignMods => new ReadOnlyCollection<ForeignMod>(_foreignMods);
+
     public bool IsFavorite { get; private set; }
 
-    public Instance(string name, InstanceSource source) : this(Guid.NewGuid(), name, source, DateTimeOffset.UtcNow, Array.Empty<InstalledMod>())
+    public Instance(string name, InstanceSource source) : this(Guid.NewGuid(), name, source, DateTimeOffset.UtcNow, Array.Empty<InstalledMod>(), Array.Empty<ForeignMod>())
     {
     }
 
     public static Instance FromExisting(Guid instanceId, string name, InstanceSource source, DateTimeOffset createdAt, IReadOnlyList<InstalledMod> mods, bool isFavorite)
-        => new(instanceId, name, source, createdAt, mods, isFavorite);
+        => new(instanceId, name, source, createdAt, mods, Array.Empty<ForeignMod>(), isFavorite);
 
-    private Instance(Guid instanceId, string name, InstanceSource source, DateTimeOffset createdAt, IReadOnlyList<InstalledMod> mods, bool isFavorite = false)
+    public static Instance FromExisting(
+        Guid instanceId,
+        string name,
+        InstanceSource source,
+        DateTimeOffset createdAt,
+        IReadOnlyList<InstalledMod> mods,
+        IReadOnlyList<ForeignMod> foreignMods,
+        bool isFavorite)
+        => new(instanceId, name, source, createdAt, mods, foreignMods, isFavorite);
+
+    private Instance(
+        Guid instanceId,
+        string name,
+        InstanceSource source,
+        DateTimeOffset createdAt,
+        IReadOnlyList<InstalledMod> mods,
+        IReadOnlyList<ForeignMod> foreignMods,
+        bool isFavorite = false)
     {
         if (string.IsNullOrWhiteSpace(name))
             throw new ArgumentException("Instance name cannot be null or whitespace.", nameof(name));
@@ -45,11 +65,15 @@ public sealed class Instance
         if (mods is null)
             throw new ArgumentNullException(nameof(mods));
 
+        if (foreignMods is null)
+            throw new ArgumentNullException(nameof(foreignMods));
+
         InstanceId = instanceId;
         Name = name;
         Source = source ?? throw new ArgumentNullException(nameof(source));
         CreatedAt = createdAt;
         _mods = mods.ToList();
+        _foreignMods = foreignMods.ToList();
         IsFavorite = isFavorite;
 
         var duplicateId = _mods
@@ -58,6 +82,17 @@ public sealed class Instance
 
         if (duplicateId is not null)
             throw new ArgumentException($"Duplicate mod '{duplicateId}' in initial mod list.", nameof(mods));
+
+        var duplicateForeignFolder = _foreignMods
+            .GroupBy(m => m.FolderName, StringComparer.Ordinal)
+            .FirstOrDefault(g => g.Count() > 1)?.Key;
+
+        if (duplicateForeignFolder is not null)
+            throw new ArgumentException($"Duplicate foreign mod '{duplicateForeignFolder}' in initial mod list.", nameof(foreignMods));
+
+        var trackedForeignFolder = _foreignMods.FirstOrDefault(f => _mods.Any(m => ModIds.Equals(m.ModId, f.ModId)));
+        if (trackedForeignFolder is not null)
+            throw new ArgumentException($"Mod '{trackedForeignFolder.ModId}' cannot be both installed and foreign.", nameof(foreignMods));
     }
 
     public void Rename(string newName)
@@ -76,6 +111,9 @@ public sealed class Instance
         if (_mods.Any(m => ModIds.Equals(m.ModId, mod.ModId)))
             throw new InvalidOperationException($"Mod '{mod.ModId}' is already installed in this instance.");
 
+        if (_foreignMods.Any(m => ModIds.Equals(m.ModId, mod.ModId)))
+            throw new InvalidOperationException($"Mod '{mod.ModId}' is recorded as foreign in this instance.");
+
         _mods.Add(mod);
     }
 
@@ -90,6 +128,38 @@ public sealed class Instance
 
         _mods.Remove(existing);
         return true;
+    }
+
+    public void ReplaceForeignMods(IReadOnlyList<ForeignMod> foreignMods)
+    {
+        ArgumentNullException.ThrowIfNull(foreignMods);
+
+        var duplicateFolder = foreignMods
+            .GroupBy(m => m.FolderName, StringComparer.Ordinal)
+            .FirstOrDefault(g => g.Count() > 1)?.Key;
+        if (duplicateFolder is not null)
+            throw new ArgumentException($"Duplicate foreign mod '{duplicateFolder}'.", nameof(foreignMods));
+
+        var trackedFolder = foreignMods.FirstOrDefault(f => _mods.Any(m => ModIds.Equals(m.ModId, f.ModId)));
+        if (trackedFolder is not null)
+            throw new ArgumentException($"Mod '{trackedFolder.ModId}' is already installed.", nameof(foreignMods));
+
+        _foreignMods.Clear();
+        _foreignMods.AddRange(foreignMods);
+    }
+
+    public void AdoptForeignMod(InstalledMod mod)
+    {
+        ArgumentNullException.ThrowIfNull(mod);
+
+        if (mod.Ownership != ModInstallOwnership.Foreign)
+            throw new ArgumentException("An adopted mod must keep foreign file ownership.", nameof(mod));
+
+        var foreign = _foreignMods.FirstOrDefault(m => ModIds.Equals(m.ModId, mod.ModId))
+            ?? throw new InvalidOperationException($"Mod '{mod.ModId}' is not recorded as foreign in this instance.");
+
+        _foreignMods.Remove(foreign);
+        _mods.Add(mod);
     }
 
     public void SetFavorite(bool isFavorite) => IsFavorite = isFavorite;

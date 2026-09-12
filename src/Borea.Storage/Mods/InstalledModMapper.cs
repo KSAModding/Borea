@@ -1,4 +1,4 @@
-﻿using Borea.Core.Mods;
+using Borea.Core.Mods;
 
 namespace Borea.Storage.Mods;
 
@@ -11,6 +11,8 @@ public static class InstalledModMapper
         Reason = mod.Reason.ToString(),
         InstalledAt = mod.InstalledAt,
         Checksum = mod.Checksum,
+        Ownership = mod.Ownership.ToString(),
+        OwnershipToken = mod.OwnershipToken,
         Metadata = ModVersionMetadataMapper.ToDto(mod.Metadata),
     };
 
@@ -20,5 +22,9 @@ public static class InstalledModMapper
         Enum.Parse<InstallReason>(dto.Reason),
         dto.InstalledAt,
         ModVersionMetadataMapper.FromDto(dto.Metadata),
-        dto.Checksum);
+        dto.Checksum,
+        string.IsNullOrWhiteSpace(dto.Ownership)
+            ? ModInstallOwnership.Borea
+            : Enum.Parse<ModInstallOwnership>(dto.Ownership),
+        dto.OwnershipToken);
 }

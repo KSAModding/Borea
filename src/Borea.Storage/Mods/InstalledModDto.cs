@@ -1,4 +1,4 @@
-﻿namespace Borea.Storage.Mods;
+namespace Borea.Storage.Mods;
 
 /// <summary>
 /// TOML-serializable representation of an InstalledMod.
@@ -13,6 +13,8 @@ public sealed class InstalledModDto
 
     public DateTimeOffset InstalledAt { get; set; }
     public string? Checksum { get; set; }
+    public string? Ownership { get; set; }
+    public string? OwnershipToken { get; set; }
 
     /// <summary>The release the mod was installed from.</summary>
     public ModVersionMetadataDto Metadata { get; set; } = new();

@@ -1,4 +1,4 @@
-﻿using Borea.Core.Instances;
+using Borea.Core.Instances;
 using Borea.Core.Mods;
 using Borea.Storage.Mods;
 
@@ -25,6 +25,7 @@ public static class InstanceMapper
             SourceModPackId = modPackId,
             SourceModPackVersion = modPackVersion,
             Mods = instance.Mods.Select(InstalledModMapper.ToDto).ToList(),
+            ForeignMods = instance.ForeignMods.Select(ForeignModMapper.ToDto).ToList(),
         };
     }
 
@@ -44,7 +45,8 @@ public static class InstanceMapper
         };
 
         var mods = dto.Mods.Select(InstalledModMapper.FromDto).ToList();
+        var foreignMods = dto.ForeignMods.Select(ForeignModMapper.FromDto).ToList();
 
-        return Instance.FromExisting(instanceId, dto.Name, source, dto.CreatedAt, mods, dto.IsFavorite);
+        return Instance.FromExisting(instanceId, dto.Name, source, dto.CreatedAt, mods, foreignMods, dto.IsFavorite);
     }
 }
