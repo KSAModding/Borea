@@ -39,6 +39,8 @@ internal sealed class CliServices : IDisposable
 
     public required IContentIndexReader IndexReader { get; init; }
 
+    public required IContentIndexSnapshotProvider IndexSnapshots { get; init; }
+
     public required IGamePathProvider Paths { get; init; }
 
     public required IModRepository Mods { get; init; }
@@ -70,6 +72,7 @@ internal sealed class CliServices : IDisposable
         IInstalledGameVersionProvider? installedVersion = null,
         IContentIndexFetcher? indexFetcher = null,
         IContentIndexReader? indexReader = null,
+        IContentIndexSnapshotProvider? indexSnapshots = null,
         IModRepository? mods = null,
         ILoaderInstaller? loaderInstaller = null,
         ILoaderAdopter? loaderAdopter = null,
@@ -90,6 +93,7 @@ internal sealed class CliServices : IDisposable
             InstalledVersion = installedVersion ?? services.InstalledVersion,
             IndexFetcher = indexFetcher ?? services.IndexFetcher,
             IndexReader = indexReader ?? services.IndexReader,
+            IndexSnapshots = indexSnapshots ?? services.IndexSnapshots,
             Paths = services.Paths,
             Mods = mods ?? services.Mods,
             LoaderInstaller = loaderInstaller ?? services.LoaderInstaller,

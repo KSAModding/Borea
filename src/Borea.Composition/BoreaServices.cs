@@ -1,4 +1,5 @@
 using System.Net.Http.Headers;
+using Borea.Core.Dependencies;
 using Borea.Core.Game;
 using Borea.Core.Index;
 using Borea.Core.Instances;
@@ -7,11 +8,13 @@ using Borea.Core.ModLoaders;
 using Borea.Core.ModPacks;
 using Borea.Core.Mods;
 using Borea.Core.Paths;
+using Borea.Core.Planning;
 using Borea.Core.Settings;
 using Borea.Core.State;
 using Borea.Network.Downloads;
 using Borea.Network.Index;
 using Borea.Network.MasterServer;
+using Borea.Network.Planning;
 using Borea.Network.Sources;
 using Borea.Network.SpaceDock;
 using Borea.Storage.Game;
@@ -78,6 +81,8 @@ public sealed class BoreaServices : IDisposable
 
     public required IModUninstaller Uninstaller { get; init; }
 
+    public required IModReplacer Replacer { get; init; }
+
     public required IForeignModAdopter ForeignModAdopter { get; init; }
 
     /// <summary>
@@ -88,6 +93,8 @@ public sealed class BoreaServices : IDisposable
     public required IModPackRepository ModPacks { get; init; }
 
     public required IModDownloader Downloader { get; init; }
+
+    public required IInstallPlanner InstallPlanner { get; init; }
 
     public required ILoaderInstaller LoaderInstaller { get; init; }
 
@@ -185,6 +192,8 @@ public sealed class BoreaServices : IDisposable
         var loaderConfiguration = new LoaderConfigurator();
         var instances = new FileInstanceRepository(paths);
 
+        var modState = new FileModStateRepository(paths);
+
         return new BoreaServices(http)
         {
             Settings = settings,
@@ -192,14 +201,16 @@ public sealed class BoreaServices : IDisposable
             SettingsRepository = settingsRepository,
             GameDirectoryChanger = new GameDirectoryChanger(settingsRepository, mods, loaderConfiguration),
             Instances = instances,
-            ModState = new FileModStateRepository(paths),
+            ModState = modState,
             ModFavorites = new FileModFavoritesRepository(paths),
             ModPackFavorites = new FileModPackFavoritesRepository(paths),
             Uninstaller = new FileModUninstaller(paths, instances),
+            Replacer = new FileModReplacer(paths, downloader, instances, modState),
             ForeignModAdopter = new FileForeignModAdopter(paths, instances, contentIndex),
             Mods = mods,
             ModPacks = modPacks,
             Downloader = downloader,
+            InstallPlanner = new RepositoryInstallPlanner(new ModDependencyResolver()),
             LoaderInstaller = new FileLoaderInstaller(paths, downloader, settingsRepository, loaderConfiguration),
             LoaderAdopter = new FileLoaderAdopter(settingsRepository, loaderConfiguration),
             LoaderUninstaller = new FileLoaderUninstaller(settingsRepository),

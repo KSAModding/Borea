@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using Borea.Core.Dependencies;
 using Borea.Core.Instances;
 using Borea.Core.Mods;
+using Borea.Core.Planning;
 using Borea.Core.State;
 using Borea.Storage.Instances;
 using Borea.Storage.Mods;
@@ -59,9 +60,10 @@ public sealed class FileModInstallerTests : IAsyncLifetime
         InstallInfo? install = null,
         ContentType type = ContentType.Mod,
         string contentType = "application/zip",
-        string? sha256 = null) => new(
+        string? sha256 = null,
+        string modId = ModId) => new(
         specVersion: 1,
-        modId: ModId,
+        modId: modId,
         version: ModVersion.Parse("1.2.0"),
         releaseStatus: ReleaseStatus.Stable,
         releaseDate: new DateTimeOffset(2026, 8, 1, 12, 0, 0, TimeSpan.Zero),
@@ -93,6 +95,38 @@ public sealed class FileModInstallerTests : IAsyncLifetime
         Assert.Empty(instance!.Mods);
         Assert.Empty(await _modState.GetEntriesAsync(_instanceId));
         Assert.All(_downloader.ArchivePaths, path => Assert.False(File.Exists(path)));
+    }
+
+    [Fact]
+    public async Task GuardedInstallAsync_ReturnsTheAdvancedPlanningState()
+    {
+        _downloader.Bytes = BuildZip((ModId + "/mod.toml", "name = \"test-mod\""));
+        var expected = InstallPlanningState.Capture((await _instances.GetByIdAsync(_instanceId))!);
+
+        var result = await _installer.InstallGuardedAsync(_instanceId, Release(), InstallReason.Manual, enable: true, expectedState: expected);
+
+        Assert.True(result.State.Matches((await _instances.GetByIdAsync(_instanceId))!));
+        Assert.Equal(ModId, result.Result.Mod.ModId);
+    }
+
+    [Fact]
+    public async Task GuardedInstallAsync_ManagedChangeDuringDownloadWritesNoTarget()
+    {
+        _downloader.Bytes = BuildZip((ModId + "/mod.toml", "name = \"test-mod\""));
+        var expected = InstallPlanningState.Capture((await _instances.GetByIdAsync(_instanceId))!);
+        var otherRelease = Release(modId: "other-mod");
+        _downloader.AfterDownload = () => _instances.UpdateAsync(
+            _instanceId,
+            instance =>
+            {
+                instance.AddMod(new InstalledMod("other-mod", otherRelease.Version, InstallReason.Manual, Now, otherRelease));
+                return true;
+            }).GetAwaiter().GetResult();
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => _installer.InstallGuardedAsync(_instanceId, Release(), InstallReason.Manual, enable: true, expectedState: expected));
+
+        Assert.False(Directory.Exists(ModFolder));
+        Assert.Equal("other-mod", Assert.Single((await _instances.GetByIdAsync(_instanceId))!.Mods).ModId);
     }
 
     #region Unpacking

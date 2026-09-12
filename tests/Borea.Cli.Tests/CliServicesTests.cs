@@ -1,4 +1,5 @@
 using Borea.Composition;
+using Borea.Core.Index;
 
 namespace Borea.Cli.Tests;
 
@@ -22,6 +23,7 @@ public sealed class CliServicesTests : IDisposable
         Assert.Same(graph.InstalledVersion, services.InstalledVersion);
         Assert.Same(graph.IndexFetcher, services.IndexFetcher);
         Assert.Same(graph.IndexReader, services.IndexReader);
+        Assert.Same(graph.IndexSnapshots, services.IndexSnapshots);
         Assert.Same(graph.Paths, services.Paths);
         Assert.Same(graph.Mods, services.Mods);
         Assert.Same(graph.LoaderInstaller, services.LoaderInstaller);
@@ -39,13 +41,15 @@ public sealed class CliServicesTests : IDisposable
         var installed = new FakeInstalledGameVersionProvider();
         var indexFetcher = new FakeContentIndexFetcher();
         var indexReader = new FakeContentIndexReader();
+        var indexSnapshots = new StubContentIndexSnapshotProvider();
 
-        var services = CliServices.From(graph, ping, installed, indexFetcher, indexReader);
+        var services = CliServices.From(graph, ping, installed, indexFetcher, indexReader, indexSnapshots);
 
         Assert.Same(ping, services.LatestVersion);
         Assert.Same(installed, services.InstalledVersion);
         Assert.Same(indexFetcher, services.IndexFetcher);
         Assert.Same(indexReader, services.IndexReader);
+        Assert.Same(indexSnapshots, services.IndexSnapshots);
         Assert.Same(graph.Instances, services.Instances);
     }
 
@@ -65,6 +69,7 @@ public sealed class CliServicesTests : IDisposable
             InstalledVersion = new FakeInstalledGameVersionProvider(),
             IndexFetcher = new FakeContentIndexFetcher(),
             IndexReader = new FakeContentIndexReader(),
+            IndexSnapshots = graph.IndexSnapshots,
             Paths = graph.Paths,
             Mods = graph.Mods,
             LoaderInstaller = graph.LoaderInstaller,
@@ -90,6 +95,12 @@ public sealed class CliServicesTests : IDisposable
         public bool Disposed { get; private set; }
 
         public void Dispose() => Disposed = true;
+    }
+
+    private sealed class StubContentIndexSnapshotProvider : IContentIndexSnapshotProvider
+    {
+        public Task<ContentIndexSnapshot> GetSnapshotAsync(CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
     }
 
     public void Dispose()
