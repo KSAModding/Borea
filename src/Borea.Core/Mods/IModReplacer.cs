@@ -1,3 +1,5 @@
+using Borea.Core.Planning;
+
 namespace Borea.Core.Mods;
 
 public interface IModReplacer
@@ -8,6 +10,14 @@ public interface IModReplacer
         ModVersionMetadata replacement,
         IProgress<DownloadProgress>? progress = null,
         CancellationToken cancellationToken = default);
+
+    Task<GuardedModReplacementResult> ReplaceGuardedAsync(
+        Guid instanceId,
+        InstalledMod expectedCurrent,
+        ModVersionMetadata replacement,
+        InstallPlanningState expectedState,
+        IProgress<DownloadProgress>? progress = null,
+        CancellationToken cancellationToken = default);
 }
 
 public sealed record ModReplacementResult(
@@ -15,6 +25,8 @@ public sealed record ModReplacementResult(
     InstalledMod Replacement,
     DownloadResult Download,
     string? RetainedRecoveryDirectory);
+
+public sealed record GuardedModReplacementResult(ModReplacementResult Result, InstallPlanningState State);
 
 public sealed class ModReplacementRecoveryException : Exception
 {
