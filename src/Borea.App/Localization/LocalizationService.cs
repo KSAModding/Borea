@@ -209,6 +209,10 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string AboutCreditsHint => Resources.AboutCreditsHint;
 
+    public string AboutOpenNotices => Resources.AboutOpenNotices;
+
+    public string AboutNoticesMissing => Resources.AboutNoticesMissing;
+
     public string ContentLoaderHint => Resources.ContentLoaderHint;
 
     public string SourceContentIndex => Resources.SourceContentIndex;

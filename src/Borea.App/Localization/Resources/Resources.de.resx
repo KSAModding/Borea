@@ -436,7 +436,13 @@
     <value>KSA-Modding-Discord</value>
   </data>
   <data name="AboutCreditsHint" xml:space="preserve">
-    <value>Die Software-Stückliste (SBOM) jeder Veröffentlichung nennt alle Pakete und ihre Lizenzen.</value>
+    <value>Jedes Veröffentlichungsarchiv enthält THIRD-PARTY-NOTICES.txt mit den Lizenzen der enthaltenen Software.</value>
+  </data>
+  <data name="AboutOpenNotices" xml:space="preserve">
+    <value>Hinweise zu Drittanbietern öffnen</value>
+  </data>
+  <data name="AboutNoticesMissing" xml:space="preserve">
+    <value>Dieser Build hat keine THIRD-PARTY-NOTICES.txt. Die Veröffentlichungsarchive enthalten sie.</value>
   </data>
   <data name="AboutCannotOpenFormat" xml:space="preserve">
     <value>{0} lässt sich nicht öffnen.</value>

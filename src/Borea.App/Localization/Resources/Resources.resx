@@ -436,7 +436,13 @@
     <value>KSA modding Discord</value>
   </data>
   <data name="AboutCreditsHint" xml:space="preserve">
-    <value>The software bill of materials attached to each release lists every package and its license.</value>
+    <value>Each release archive contains THIRD-PARTY-NOTICES.txt with the licenses of the software in it.</value>
+  </data>
+  <data name="AboutOpenNotices" xml:space="preserve">
+    <value>Open third-party notices</value>
+  </data>
+  <data name="AboutNoticesMissing" xml:space="preserve">
+    <value>This build has no THIRD-PARTY-NOTICES.txt. The release archives contain it.</value>
   </data>
   <data name="AboutCannotOpenFormat" xml:space="preserve">
     <value>{0} cannot be opened.</value>
