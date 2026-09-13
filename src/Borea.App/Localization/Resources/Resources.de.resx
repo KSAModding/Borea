@@ -424,7 +424,7 @@
     <value>KSA-Modding-Discord</value>
   </data>
   <data name="AboutCreditsHint" xml:space="preserve">
-    <value>Die vollständige Liste der Pakete und ihrer Lizenztexte liegt jeder Veröffentlichung bei.</value>
+    <value>Die Software-Stückliste (SBOM) jeder Veröffentlichung nennt alle Pakete und ihre Lizenzen.</value>
   </data>
   <data name="AboutCannotOpenFormat" xml:space="preserve">
     <value>{0} lässt sich nicht öffnen.</value>
