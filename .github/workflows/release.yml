@@ -565,6 +565,7 @@ jobs:
           fi
 
   # Posts the new release to Discord, only from the run that created it.
+  # CONTRIBUTING.md lists the secrets and variables for the webhook and the bot.
   announce:
     name: announce
     needs: [test, release]
@@ -577,18 +578,36 @@ jobs:
       - name: Post the release to Discord
         env:
           WEBHOOK_URL: ${{ secrets.DISCORD_RELEASE_WEBHOOK_URL }}
+          BOT_TOKEN: ${{ secrets.DISCORD_RELEASE_BOT_TOKEN }}
+          CHANNEL_ID: ${{ vars.DISCORD_RELEASE_CHANNEL_ID }}
+          ROLE_ID: ${{ vars.DISCORD_RELEASE_ROLE_ID }}
           VERSION: ${{ needs.test.outputs.version }}
           RELEASE_URL: ${{ github.server_url }}/${{ github.repository }}/releases/tag/${{ github.ref_name }}
           NOTES: ${{ needs.release.outputs.notes }}
         run: |
-          if [ -z "$WEBHOOK_URL" ]; then
-            echo "DISCORD_RELEASE_WEBHOOK_URL is not set, so the release is not posted to Discord."
+          if [ -z "$BOT_TOKEN" ] && [ -z "$WEBHOOK_URL" ]; then
+            echo "Neither DISCORD_RELEASE_BOT_TOKEN nor DISCORD_RELEASE_WEBHOOK_URL is set, so the release is not posted to Discord."
             exit 0
           fi
-          # At most 1900 characters, below Discord's 2000, and no mentions.
+          is_id() { [[ $1 =~ ^[0-9]{1,20}$ ]]; }
+          if [ -n "$BOT_TOKEN" ]; then
+            if ! is_id "$CHANNEL_ID"; then
+              echo "DISCORD_RELEASE_BOT_TOKEN is set, but DISCORD_RELEASE_CHANNEL_ID is not a Discord id." >&2
+              exit 1
+            fi
+            if [ -n "$WEBHOOK_URL" ]; then
+              echo "::warning::DISCORD_RELEASE_BOT_TOKEN and DISCORD_RELEASE_WEBHOOK_URL are both set, so the bot posts and the webhook is not used."
+            fi
+          fi
+          if [ -n "$ROLE_ID" ] && ! is_id "$ROLE_ID"; then
+            echo "DISCORD_RELEASE_ROLE_ID is not a Discord id." >&2
+            exit 1
+          fi
+          # At most 1900 characters, below Discord's 2000. Only the role can be mentioned, and not for a pre-release.
           payload=$(jq -n \
-            --arg version "$VERSION" --arg url "$RELEASE_URL" --arg notes "$NOTES" \
+            --arg version "$VERSION" --arg url "$RELEASE_URL" --arg notes "$NOTES" --arg role "$ROLE_ID" \
             --argjson shown 10 --argjson entry_limit 180 --argjson limit 1900 '
+            def ping: $role != "" and ($version | contains("-") | not);
             def cut($n): if length > $n then .[0:$n - 3] + "..." else . end;
             def changes:
               reduce ($notes | split("\n")[] | rtrimstr("\r")) as $line ({inside: false, items: []};
@@ -599,7 +618,8 @@ jobs:
               | map(sub(" by @[^ ]+ in https://[^ ]+/pull/(?<number>[0-9]+)$"; " (#\(.number))") | cut($entry_limit));
             def message($items; $k):
               ([
-                "**Borea \($version)**" + (if ($version | contains("-")) then " (pre-release)" else "" end),
+                (if ping then "<@&\($role)> " else "" end)
+                  + "**Borea \($version)**" + (if ($version | contains("-")) then " (pre-release)" else "" end),
                 $url,
                 "App with the `borea` command: `Borea-\($version)-<platform>` for Windows, Linux and macOS",
                 "CLI only: `Borea-Cli-\($version)-<platform>` for the same platforms"
@@ -611,7 +631,24 @@ jobs:
               | join("\n");
             changes as $items
             | [range([($items | length), $shown] | min; -1; -1) as $k | message($items; $k) | select(length <= $limit)]
-            | {content: (.[0] // (message([]; 0) | cut($limit))), allowed_mentions: {parse: []}}
+            | {content: (.[0] // (message([]; 0) | cut($limit))),
+               allowed_mentions: ({parse: []} + if ping then {roles: [$role]} else {} end)}
           ')
           # No retry, which could post twice. A failed post fails the run.
-          curl -sSf --max-time 30 -H "Content-Type: application/json" -d "$payload" "$WEBHOOK_URL"
+          response=$(mktemp)
+          post() {
+            if ! curl -sS --fail-with-body -o "$response" --max-time 30 -H "Content-Type: application/json" \
+              -H "User-Agent: DiscordBot ($GITHUB_SERVER_URL/$GITHUB_REPOSITORY, $VERSION)" -d "$payload" "$@"; then
+              # Only the error code and message, never the request.
+              jq -r 'select(type == "object" and .code != null) | "Discord answered \(.code): \(.message)"' "$response" >&2 2> /dev/null || true
+              return 1
+            fi
+          }
+          if [ -n "$BOT_TOKEN" ]; then
+            # Through stdin, so the token is not on the curl command line.
+            printf 'Authorization: Bot %s\n' "$BOT_TOKEN" | post -H @- "https://discord.com/api/v10/channels/$CHANNEL_ID/messages"
+          else
+            # Without wait=true, Discord does not report a message that it did not save.
+            case "$WEBHOOK_URL" in *\?*) separator='&' ;; *) separator='?' ;; esac
+            post "${WEBHOOK_URL}${separator}wait=true"
+          fi
