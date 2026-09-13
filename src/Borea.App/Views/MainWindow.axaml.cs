@@ -1,5 +1,6 @@
 using System.Threading.Tasks;
 using Avalonia.Controls;
+using Avalonia.Input.Platform;
 using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
 using Borea.App.ViewModels;
@@ -26,6 +27,16 @@ public partial class MainWindow : Window
         var folder = await PickFolderAsync();
         if (folder is not null && DataContext is MainViewModel viewModel)
             viewModel.LoaderDirectoryInput = folder;
+    }
+
+    // the clipboard belongs to the window too; the text itself comes from the view model
+    private async void CopyDiagnostics(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MainViewModel viewModel || Clipboard is null)
+            return;
+
+        await Clipboard.SetTextAsync(viewModel.DiagnosticsText);
+        viewModel.ReportDiagnosticsCopied();
     }
 
     private async Task<string?> PickFolderAsync()

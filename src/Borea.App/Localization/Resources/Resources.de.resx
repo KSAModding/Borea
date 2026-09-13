@@ -369,4 +369,58 @@
   <data name="LinkDiscussions" xml:space="preserve">
     <value>Diskussionen</value>
   </data>
+  <data name="SettingsAbout" xml:space="preserve">
+    <value>Über</value>
+  </data>
+  <data name="AboutVersion" xml:space="preserve">
+    <value>Version</value>
+  </data>
+  <data name="AboutRuntime" xml:space="preserve">
+    <value>Laufzeit</value>
+  </data>
+  <data name="AboutSystem" xml:space="preserve">
+    <value>System</value>
+  </data>
+  <data name="AboutGame" xml:space="preserve">
+    <value>Installiertes Spiel</value>
+  </data>
+  <data name="AboutFolders" xml:space="preserve">
+    <value>Ordner</value>
+  </data>
+  <data name="AboutOpenBoreaFolder" xml:space="preserve">
+    <value>Borea-Ordner öffnen</value>
+  </data>
+  <data name="AboutOpenInstancesFolder" xml:space="preserve">
+    <value>Instanzordner öffnen</value>
+  </data>
+  <data name="AboutCopyDiagnostics" xml:space="preserve">
+    <value>Diagnose kopieren</value>
+  </data>
+  <data name="AboutCopied" xml:space="preserve">
+    <value>In die Zwischenablage kopiert.</value>
+  </data>
+  <data name="AboutFolderMissingFormat" xml:space="preserve">
+    <value>{0} existiert noch nicht.</value>
+  </data>
+  <data name="AboutLinks" xml:space="preserve">
+    <value>Links</value>
+  </data>
+  <data name="AboutSourceCode" xml:space="preserve">
+    <value>Quellcode</value>
+  </data>
+  <data name="AboutReportBug" xml:space="preserve">
+    <value>Fehler melden</value>
+  </data>
+  <data name="AboutReleases" xml:space="preserve">
+    <value>Veröffentlichungen</value>
+  </data>
+  <data name="AboutThirdParty" xml:space="preserve">
+    <value>Hinweise zu Drittanbietern</value>
+  </data>
+  <data name="AboutCommunity" xml:space="preserve">
+    <value>KSA-Modding auf GitHub</value>
+  </data>
+  <data name="AboutDiscord" xml:space="preserve">
+    <value>KSA-Modding-Discord</value>
+  </data>
 </root>

@@ -28,11 +28,19 @@ internal sealed class ViewModelHarness : IDisposable
 
     public LocalizationService Localization { get; } = new(CultureInfo.GetCultureInfo("en"));
 
-    public static async Task<ViewModelHarness> CreateAsync()
+    /// <param name="seed">Writes settings the view model should start from; the services are rebuilt after it ran.</param>
+    public static async Task<ViewModelHarness> CreateAsync(Func<BoreaServices, Task>? seed = null)
     {
         var harness = new ViewModelHarness();
         Directory.CreateDirectory(harness.Root);
         harness.Services = await harness.BuildServicesAsync();
+        if (seed is not null)
+        {
+            await seed(harness.Services);
+            harness.Services.Dispose();
+            harness.Services = await harness.BuildServicesAsync();
+        }
+
         var preferences = (await harness.Services.AppPreferences.GetAsync(MainViewModel.BundledThemeNames)).Preferences;
         harness.ViewModel = new MainViewModel(
             harness.Localization,

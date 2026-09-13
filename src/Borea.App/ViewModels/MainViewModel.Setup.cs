@@ -12,6 +12,13 @@ using CommunityToolkit.Mvvm.Input;
 
 namespace Borea.App.ViewModels;
 
+public enum SettingsTab
+{
+    General,
+    Game,
+    About,
+}
+
 /// <summary>
 /// The Game section of the settings modal: where KSA is, and which mod
 /// loader starts it. Saving rebuilds the services, because their paths are
@@ -21,9 +28,15 @@ public partial class MainViewModel
 {
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsGeneralTab))]
-    private bool _isGameTab;
+    [NotifyPropertyChangedFor(nameof(IsGameTab))]
+    [NotifyPropertyChangedFor(nameof(IsAboutTab))]
+    private SettingsTab _settingsTab;
 
-    public bool IsGeneralTab => !IsGameTab;
+    public bool IsGeneralTab => SettingsTab == SettingsTab.General;
+
+    public bool IsGameTab => SettingsTab == SettingsTab.Game;
+
+    public bool IsAboutTab => SettingsTab == SettingsTab.About;
 
     [ObservableProperty]
     private string _gameDirectoryInput = string.Empty;
@@ -75,12 +88,12 @@ public partial class MainViewModel
     private ModVersion? _selectedLoaderLatest;
 
     [RelayCommand]
-    private void ShowGeneralSettings() => IsGameTab = false;
+    private void ShowGeneralSettings() => SettingsTab = SettingsTab.General;
 
     [RelayCommand]
     private async Task ShowGameSettingsAsync()
     {
-        IsGameTab = true;
+        SettingsTab = SettingsTab.Game;
         SetupMessage = null;
         SetupError = null;
         if (_services is null)

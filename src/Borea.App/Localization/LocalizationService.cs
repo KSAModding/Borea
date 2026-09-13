@@ -163,6 +163,40 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string SettingsGeneral => Resources.SettingsGeneral;
 
+    public string SettingsAbout => Resources.SettingsAbout;
+
+    public string AboutVersion => Resources.AboutVersion;
+
+    public string AboutRuntime => Resources.AboutRuntime;
+
+    public string AboutSystem => Resources.AboutSystem;
+
+    public string AboutGame => Resources.AboutGame;
+
+    public string AboutFolders => Resources.AboutFolders;
+
+    public string AboutOpenBoreaFolder => Resources.AboutOpenBoreaFolder;
+
+    public string AboutOpenInstancesFolder => Resources.AboutOpenInstancesFolder;
+
+    public string AboutCopyDiagnostics => Resources.AboutCopyDiagnostics;
+
+    public string AboutCopied => Resources.AboutCopied;
+
+    public string AboutLinks => Resources.AboutLinks;
+
+    public string AboutSourceCode => Resources.AboutSourceCode;
+
+    public string AboutReportBug => Resources.AboutReportBug;
+
+    public string AboutReleases => Resources.AboutReleases;
+
+    public string AboutCommunity => Resources.AboutCommunity;
+
+    public string AboutDiscord => Resources.AboutDiscord;
+
+    public string AboutThirdParty => Resources.AboutThirdParty;
+
     public string ContentLoaderHint => Resources.ContentLoaderHint;
 
     public string SourceContentIndex => Resources.SourceContentIndex;
@@ -297,6 +331,9 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string FormatSetupUpdateLoader(string version)
         => string.Format(CultureInfo.CurrentCulture, Resources.SetupUpdateLoaderFormat, version);
+
+    public string FormatAboutFolderMissing(string folder)
+        => string.Format(CultureInfo.CurrentCulture, Resources.AboutFolderMissingFormat, folder);
 
     public string FormatContentSource(string source)
     {
