@@ -134,6 +134,7 @@ public sealed class BoreaServicesTests : IDisposable
         Assert.IsType<FileLoaderUninstaller>(services.LoaderUninstaller);
         Assert.IsType<GameDirectoryChanger>(services.GameDirectoryChanger);
         Assert.IsType<LoaderLauncher>(services.Launcher);
+        Assert.IsType<SharedProfileLauncher>(services.SharedProfileLauncher);
     }
 
     [Fact]
