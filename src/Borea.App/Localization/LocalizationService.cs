@@ -91,6 +91,152 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string LibraryEmpty => Resources.LibraryEmpty;
 
+    public string InstanceTabContent => Resources.InstanceTabContent;
+
+    public string InstanceTabManualInstalls => Resources.InstanceTabManualInstalls;
+
+    public string InstanceTabGameData => Resources.InstanceTabGameData;
+
+    public string InstanceTabLog => Resources.InstanceTabLog;
+
+    public string InstanceGroupMods => Resources.InstanceGroupMods;
+
+    public string InstanceGroupModLoaders => Resources.InstanceGroupModLoaders;
+
+    public string InstanceGroupOther => Resources.InstanceGroupOther;
+
+    public string InstanceGroupDependencies => Resources.InstanceGroupDependencies;
+
+    public string InstanceEmptyContent => Resources.InstanceEmptyContent;
+
+    public string InstancePlay => Resources.InstancePlay;
+
+    public string ContentRemove => Resources.ContentRemove;
+
+    public string ContentRemoveConfirm => Resources.ContentRemoveConfirm;
+
+    public string DiscoverTabMods => Resources.DiscoverTabMods;
+
+    public string DiscoverTabModpacks => Resources.DiscoverTabModpacks;
+
+    public string DiscoverTabVehicles => Resources.DiscoverTabVehicles;
+
+    public string DiscoverTabSaves => Resources.DiscoverTabSaves;
+
+    public string DiscoverTabLoaders => Resources.DiscoverTabLoaders;
+
+    public string DiscoverSearchPlaceholder => Resources.DiscoverSearchPlaceholder;
+
+    public string DiscoverHideInstalled => Resources.DiscoverHideInstalled;
+
+    public string DiscoverHideIncompatible => Resources.DiscoverHideIncompatible;
+
+    public string DiscoverOperatingSystem => Resources.DiscoverOperatingSystem;
+
+    public string DiscoverLicense => Resources.DiscoverLicense;
+
+    public string DiscoverClearAll => Resources.DiscoverClearAll;
+
+    public string DiscoverAll => Resources.DiscoverAll;
+
+    public string DiscoverEmpty => Resources.DiscoverEmpty;
+
+    public string DiscoverLoading => Resources.DiscoverLoading;
+
+    public string DiscoverAdd => Resources.DiscoverAdd;
+
+    public string DiscoverInstalled => Resources.DiscoverInstalled;
+
+    public string DiscoverNoInstance => Resources.DiscoverNoInstance;
+
+    public string DiscoverNoRelease => Resources.DiscoverNoRelease;
+
+    public string ModalCreateInstanceTitle => Resources.ModalCreateInstanceTitle;
+
+    public string ModalNameLabel => Resources.ModalNameLabel;
+
+    public string ModalClose => Resources.ModalClose;
+
+    public string SettingsGeneral => Resources.SettingsGeneral;
+
+    public string ContentLoaderHint => Resources.ContentLoaderHint;
+
+    public string SourceContentIndex => Resources.SourceContentIndex;
+
+    public string LinkForum => Resources.LinkForum;
+
+    public string LinkRepository => Resources.LinkRepository;
+
+    public string LinkBugTracker => Resources.LinkBugTracker;
+
+    public string LinkDiscussions => Resources.LinkDiscussions;
+
+    public string ContentTabDescription => Resources.ContentTabDescription;
+
+    public string ContentTabVersions => Resources.ContentTabVersions;
+
+    public string ContentCompatibility => Resources.ContentCompatibility;
+
+    public string ContentLinks => Resources.ContentLinks;
+
+    public string ContentTags => Resources.ContentTags;
+
+    public string ContentAuthor => Resources.ContentAuthor;
+
+    public string ContentDetails => Resources.ContentDetails;
+
+    public string ContentAdd => Resources.ContentAdd;
+
+    public string ContentVersionHeader => Resources.ContentVersionHeader;
+
+    public string ContentChannelHeader => Resources.ContentChannelHeader;
+
+    public string ContentGameVersionHeader => Resources.ContentGameVersionHeader;
+
+    public string ContentPublishedHeader => Resources.ContentPublishedHeader;
+
+    public string ContentNoDescription => Resources.ContentNoDescription;
+
+    public string ContentLoadingVersions => Resources.ContentLoadingVersions;
+
+    public string ContentNoVersions => Resources.ContentNoVersions;
+
+    public string ContentTypeModLoader => Resources.ContentTypeModLoader;
+
+    public string ReleaseStable => Resources.ReleaseStable;
+
+    public string ReleaseTesting => Resources.ReleaseTesting;
+
+    public string ReleaseDev => Resources.ReleaseDev;
+
+    public string ReleaseUnknown => Resources.ReleaseUnknown;
+
+    public string SettingsGame => Resources.SettingsGame;
+
+    public string SetupGameDirectory => Resources.SetupGameDirectory;
+
+    public string SetupGameDirectoryHint => Resources.SetupGameDirectoryHint;
+
+    public string SetupBrowse => Resources.SetupBrowse;
+
+    public string SetupSave => Resources.SetupSave;
+
+    public string SetupLoader => Resources.SetupLoader;
+
+    public string SetupLoaderDirectory => Resources.SetupLoaderDirectory;
+
+    public string SetupLoaderDirectoryHint => Resources.SetupLoaderDirectoryHint;
+
+    public string SetupInstallLoader => Resources.SetupInstallLoader;
+
+    public string SetupUseExisting => Resources.SetupUseExisting;
+
+    public string SetupSaved => Resources.SetupSaved;
+
+    public string SetupDirectoryMissing => Resources.SetupDirectoryMissing;
+
+    public string SetupNoLoaderSelected => Resources.SetupNoLoaderSelected;
+
     public LocalizationService()
         : this(CultureInfo.CurrentUICulture)
     {
@@ -125,6 +271,21 @@ public sealed class LocalizationService : INotifyPropertyChanged
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(viewName);
         return string.Format(CultureInfo.CurrentCulture, Resources.ViewNotFoundFormat, viewName);
+    }
+
+    public string FormatSetupLoaderInstalled(string loaderName, string version, string directory)
+        => string.Format(CultureInfo.CurrentCulture, Resources.SetupLoaderInstalledFormat, loaderName, version, directory);
+
+    public string FormatContentSource(string source)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(source);
+        return string.Format(CultureInfo.CurrentCulture, Resources.ContentSourceFormat, source);
+    }
+
+    public string FormatContentByAuthor(string authors)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(authors);
+        return string.Format(CultureInfo.CurrentCulture, Resources.ContentByAuthorFormat, authors);
     }
 
     public string FormatPreferenceSaveError(string error)

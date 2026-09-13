@@ -144,6 +144,21 @@
             <Setter Property="FontWeight" Value="SemiBold" />
             <Setter Property="Foreground" Value="{StaticResource Brush.Accent}" />
         </Style>
+        <Style Selector="TextBlock.heading-lg">
+            <Setter Property="FontSize" Value="24" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+        <Style Selector="TextBlock.body-sm">
+            <Setter Property="FontSize" Value="12" />
+        </Style>
+        <Style Selector="TextBlock.action-lg">
+            <Setter Property="FontSize" Value="16" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Foreground" Value="{StaticResource Brush.SurfaceHeader}" />
+        </Style>
+        <Style Selector="TextBlock.secondary">
+            <Setter Property="Foreground" Value="{StaticResource Brush.TextSecondary}" />
+        </Style>
         <Style Selector="TextBlock.positive">
             <Setter Property="Foreground" Value="{StaticResource Brush.Positive}" />
         </Style>
@@ -242,6 +257,13 @@
             <Setter Property="Foreground" Value="{StaticResource Brush.Positive}" />
         </Style>
 
+        <Style Selector="Border.chip.testing TextBlock">
+            <Setter Property="Foreground" Value="#F2C94C" />
+        </Style>
+        <Style Selector="Border.chip.dev TextBlock">
+            <Setter Property="Foreground" Value="{StaticResource Brush.Danger}" />
+        </Style>
+
         <!-- Buttons -->
         <Style Selector="Button.text">
             <Setter Property="Padding" Value="12,6" />
@@ -274,6 +296,125 @@
             <Setter Property="Foreground" Value="{StaticResource Brush.Danger}" />
             <Setter Property="Opacity" Value="0.85" />
         </Style>
+        <!-- c/button-cta: purple pill, 38px tall -->
+        <Style Selector="Button.cta">
+            <Setter Property="Height" Value="38" />
+            <Setter Property="Padding" Value="20,0,24,0" />
+            <Setter Property="CornerRadius" Value="100" />
+            <Setter Property="Background" Value="{StaticResource Brush.Accent}" />
+            <Setter Property="BorderThickness" Value="0" />
+        </Style>
+        <Style Selector="Button.cta:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="{StaticResource Brush.Accent}" />
+            <Setter Property="Opacity" Value="0.9" />
+        </Style>
+        <!-- c/button-icon-add: black disc with a plus -->
+        <Style Selector="Button.add">
+            <Setter Property="Width" Value="38" />
+            <Setter Property="Height" Value="38" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="CornerRadius" Value="100" />
+            <Setter Property="Background" Value="{StaticResource Brush.SurfaceHeader}" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+        </Style>
+        <Style Selector="Button.add:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="{StaticResource Brush.BorderStrong}" />
+        </Style>
+        <!-- c/inner-nav-action: tabs inside the black pill -->
+        <Style Selector="Button.tab">
+            <Setter Property="Padding" Value="16,8" />
+            <Setter Property="CornerRadius" Value="100" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Foreground" Value="{StaticResource Brush.TextSecondary}" />
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+        <Style Selector="Button.tab:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="{StaticResource Brush.Surface}" />
+            <Setter Property="Foreground" Value="{StaticResource Brush.Text}" />
+        </Style>
+        <Style Selector="Button.tab.active">
+            <Setter Property="Background" Value="{StaticResource Brush.Accent}" />
+            <Setter Property="Foreground" Value="{StaticResource Brush.SurfaceHeader}" />
+        </Style>
+        <Style Selector="Button.tab.active:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="{StaticResource Brush.Accent}" />
+            <Setter Property="Foreground" Value="{StaticResource Brush.SurfaceHeader}" />
+        </Style>
+        <Style Selector="Button.tab:disabled /template/ ContentPresenter">
+            <Setter Property="Opacity" Value="0.4" />
+        </Style>
+        <!-- c/filter-category: plain text rows in the filter panel -->
+        <Style Selector="Button.filter">
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Foreground" Value="{StaticResource Brush.TextSecondary}" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="HorizontalAlignment" Value="Left" />
+        </Style>
+        <Style Selector="Button.filter:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Foreground" Value="{StaticResource Brush.Text}" />
+        </Style>
+        <!-- chip with an X, for active filters -->
+        <Style Selector="Button.chip-button">
+            <Setter Property="Height" Value="24" />
+            <Setter Property="Padding" Value="6,0" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderBrush" Value="{StaticResource Brush.BorderStrong}" />
+            <Setter Property="BorderThickness" Value="1" />
+        </Style>
+        <Style Selector="Button.chip-button:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="{StaticResource Brush.Surface}" />
+        </Style>
+        <!-- an invisible button around text or a thumbnail -->
+        <Style Selector="Button.plain">
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Cursor" Value="Hand" />
+        </Style>
+        <Style Selector="Button.plain:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="Transparent" />
+        </Style>
+        <!-- modal: rounded card over a dimmed page -->
+        <Style Selector="Border.modal">
+            <Setter Property="Background" Value="{StaticResource Brush.Surface}" />
+            <Setter Property="BorderBrush" Value="{StaticResource Brush.Window}" />
+            <Setter Property="BorderThickness" Value="2" />
+            <Setter Property="CornerRadius" Value="16" />
+            <Setter Property="ClipToBounds" Value="True" />
+            <Setter Property="HorizontalAlignment" Value="Center" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+
+        <!-- settings modal menu items -->
+        <Style Selector="Button.menu">
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Foreground" Value="{StaticResource Brush.TextSecondary}" />
+            <Setter Property="FontSize" Value="16" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="HorizontalAlignment" Value="Left" />
+        </Style>
+        <Style Selector="Button.menu:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Foreground" Value="{StaticResource Brush.Text}" />
+        </Style>
+        <Style Selector="Button.menu.active">
+            <Setter Property="Foreground" Value="{StaticResource Brush.Accent}" />
+        </Style>
+        <Style Selector="Button.menu.active:pointerover /template/ ContentPresenter">
+            <Setter Property="Foreground" Value="{StaticResource Brush.Accent}" />
+        </Style>
+
         <!-- c/link-cta: icon + purple text, 32px tall -->
         <Style Selector="Button.link">
             <Setter Property="Height" Value="32" />
@@ -307,6 +448,13 @@
             <Setter Property="BorderBrush" Value="{StaticResource Brush.BorderStrong}" />
             <Setter Property="Foreground" Value="{StaticResource Brush.Text}" />
             <Setter Property="FontSize" Value="14" />
+        </Style>
+
+        <Style Selector="TextBox.field.search">
+            <Setter Property="CornerRadius" Value="16" />
+            <Setter Property="Height" Value="38" />
+            <Setter Property="Background" Value="{StaticResource Brush.Window}" />
+            <Setter Property="BorderBrush" Value="{StaticResource Brush.Surface}" />
         </Style>
 
         <Style Selector="ToggleSwitch.switch">

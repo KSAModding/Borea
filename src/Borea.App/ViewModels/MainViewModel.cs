@@ -8,7 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Borea.App.Formatting;
 using Borea.App.Localization;
-using Borea.Core.Game;
+using Borea.Composition;
 using Borea.Core.Instances;
 using Borea.Core.Preferences;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -26,8 +26,8 @@ public partial class MainViewModel : ViewModelBase
     internal const string DefaultThemeName = "Borealis";
 
     private readonly IAppPreferencesRepository? _appPreferencesRepository;
-    private readonly IInstanceRepository? _instances;
-    private readonly IInstalledGameVersionProvider? _installedVersion;
+    private BoreaServices? _services;
+    private IInstanceRepository? _instances;
     private readonly SemaphoreSlim _preferenceSaveLock = new(1, 1);
     private AppPreferences _appPreferences;
 
@@ -52,34 +52,60 @@ public partial class MainViewModel : ViewModelBase
     [ObservableProperty]
     private string? _preferenceSaveError;
 
+    /// <summary>
+    /// An exception no page expected. Shown at the bottom of the window until
+    /// dismissed, instead of ending the process.
+    /// </summary>
+    [ObservableProperty]
+    private string? _unexpectedError;
+
+    [RelayCommand]
+    private void DismissUnexpectedError() => UnexpectedError = null;
+
     //windows
     [ObservableProperty]
     private bool _currentWindowHome = true;
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsDiscoverSection))]
     private bool _currentWindowDiscover = false;
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsLibrarySection))]
     private bool _currentWindowLibrary = false;
     [ObservableProperty]
-    private bool _currentWindowSettings = false;
-    [ObservableProperty]
     private bool _currentWindowTasks = false;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsLibrarySection))]
+    private bool _currentWindowInstance = false;
+
+    /// <summary>
+    /// The library rail item stays lit on the instance page too.
+    /// </summary>
+    public bool IsLibrarySection => CurrentWindowLibrary || CurrentWindowInstance;
+
+    /// <summary>
+    /// The discover rail item stays lit on a content page too.
+    /// </summary>
+    public bool IsDiscoverSection => CurrentWindowDiscover || CurrentWindowContent;
     [RelayCommand]
     public void SetMainWindowHome() // used to set whatever is on the main window (discover, library, etc.)
     {
         CurrentWindowHome = true;
         CurrentWindowDiscover = false;
         CurrentWindowLibrary = false;
-        CurrentWindowSettings = false;
         CurrentWindowTasks = false;
+        CurrentWindowInstance = false;
+        CurrentWindowContent = false;
     }
     [RelayCommand]
     public void SetMainWindowDiscover() // used to set whatever is on the main window (discover, library, etc.)
     {
+        _ = EnsureDiscoverLoadedAsync();
         CurrentWindowHome = false;
         CurrentWindowDiscover = true;
         CurrentWindowLibrary = false;
-        CurrentWindowSettings = false;
         CurrentWindowTasks = false;
+        CurrentWindowInstance = false;
+        CurrentWindowContent = false;
     }
     [RelayCommand]
     public void SetMainWindowLibrary() // used to set whatever is on the main window (discover, library, etc.)
@@ -87,8 +113,9 @@ public partial class MainViewModel : ViewModelBase
         CurrentWindowHome = false;
         CurrentWindowDiscover = false;
         CurrentWindowLibrary = true;
-        CurrentWindowSettings = false;
         CurrentWindowTasks = false;
+        CurrentWindowInstance = false;
+        CurrentWindowContent = false;
     }
     [RelayCommand]
     public void SetMainWindowTasks()
@@ -96,18 +123,21 @@ public partial class MainViewModel : ViewModelBase
         CurrentWindowHome = false;
         CurrentWindowDiscover = false;
         CurrentWindowLibrary = false;
-        CurrentWindowSettings = false;
         CurrentWindowTasks = true;
+        CurrentWindowInstance = false;
+        CurrentWindowContent = false;
     }
+    /// <summary>
+    /// Settings open as a modal over the current page (modal: settings in #8).
+    /// </summary>
     [RelayCommand]
-    public void SetMainWindowSettings() // used to set whatever is on the main window (discover, library, etc.)
-    {
-        CurrentWindowHome = false;
-        CurrentWindowDiscover = false;
-        CurrentWindowLibrary = false;
-        CurrentWindowSettings = true;
-        CurrentWindowTasks = false;
-    }
+    public void SetMainWindowSettings() => IsSettingsOpen = true;
+
+    [RelayCommand]
+    private void CloseSettings() => IsSettingsOpen = false;
+
+    [ObservableProperty]
+    private bool _isSettingsOpen;
 
     //home
     /// <summary>
@@ -183,24 +213,27 @@ public partial class MainViewModel : ViewModelBase
         RegionalFormatService regionalFormat,
         IAppPreferencesRepository? appPreferencesRepository,
         AppPreferences appPreferences)
-        : this(localization, regionalFormat, appPreferencesRepository, appPreferences, instances: null, installedVersion: null)
+        : this(localization, regionalFormat, appPreferencesRepository, appPreferences, services: null)
     {
     }
 
+    /// <param name="services">
+    /// The composed services, or null in tests and the XAML previewer. Without
+    /// them every page shows its empty state and actions do nothing.
+    /// </param>
     public MainViewModel(
         LocalizationService localization,
         RegionalFormatService regionalFormat,
         IAppPreferencesRepository? appPreferencesRepository,
         AppPreferences appPreferences,
-        IInstanceRepository? instances,
-        IInstalledGameVersionProvider? installedVersion)
+        BoreaServices? services)
     {
         Localization = localization ?? throw new ArgumentNullException(nameof(localization));
         RegionalFormat = regionalFormat ?? throw new ArgumentNullException(nameof(regionalFormat));
         _appPreferencesRepository = appPreferencesRepository;
         _appPreferences = appPreferences ?? throw new ArgumentNullException(nameof(appPreferences));
-        _instances = instances;
-        _installedVersion = installedVersion;
+        _services = services;
+        _instances = services?.Instances;
         _currentTheme = appPreferences.ResolveSelectedThemeName(BundledThemeNames, DefaultThemeName);
         RegionalFormat.PropertyChanged += OnRegionalFormatChanged;
         Localization.PropertyChanged += OnLocalizationChanged;
@@ -212,9 +245,33 @@ public partial class MainViewModel : ViewModelBase
     /// </summary>
     public async Task LoadAsync()
     {
-        InstalledVersionText = _installedVersion?.GetInstalledVersion()?.RawVersion;
+        InstalledVersionText = _services?.InstalledVersion.GetInstalledVersion()?.RawVersion;
         await ReloadInstancesAsync();
+        await RefreshContentIndexAsync();
     }
+
+    /// <summary>
+    /// Downloads the content index when it changed, like <c>borea index refresh</c>.
+    /// A failure keeps the cached snapshot, so it is not shown as an error.
+    /// </summary>
+    private async Task RefreshContentIndexAsync()
+    {
+        if (_services is null || _indexRefreshed)
+            return;
+
+        try
+        {
+            await _services.IndexFetcher.FetchAsync(_services.Paths.GetIndexPath());
+        }
+        catch (Exception exception) when (exception is System.Net.Http.HttpRequestException or IOException or InvalidOperationException or TaskCanceledException)
+        {
+            // offline or a broken snapshot: the cached file stays in use
+        }
+
+        _indexRefreshed = true;
+    }
+
+    private bool _indexRefreshed;
 
     private async Task ReloadInstancesAsync()
     {
@@ -232,6 +289,16 @@ public partial class MainViewModel : ViewModelBase
             Instances.Add(new InstanceItem(this, instance, instance.InstanceId == activeId));
 
         ActiveInstance = Instances.FirstOrDefault(instance => instance.IsActive);
+        RefreshInstalledFlags();
+
+        if (SelectedInstance is not null)
+        {
+            var stillThere = Instances.FirstOrDefault(instance => instance.InstanceId == SelectedInstance.InstanceId);
+            if (stillThere is null)
+                SetMainWindowLibrary();
+            else
+                await OpenInstanceAsync(stillThere);
+        }
     }
 
     internal string? DescribeSource(InstanceSource? source) => source switch
@@ -241,6 +308,9 @@ public partial class MainViewModel : ViewModelBase
         _ => null,
     };
 
+    /// <summary>
+    /// Opens "modal: new instance" from #8.
+    /// </summary>
     [RelayCommand]
     private void BeginCreateInstance()
     {
@@ -340,6 +410,9 @@ public partial class MainViewModel : ViewModelBase
         // translated string on this model needs a refresh too.
         foreach (var instance in Instances)
             instance.RefreshText();
+        foreach (var item in DiscoverItems)
+            item.RefreshText();
+        RefreshContentGroups();
 
         _ = SavePreferencesAsync(preferences => preferences.WithUiCultureName(Localization.SelectedCultureName));
     }
@@ -370,6 +443,8 @@ public sealed partial class InstanceItem : ObservableObject
 
     public int ModCount { get; }
 
+    public IReadOnlyList<string> ModIds { get; }
+
     public bool IsActive { get; }
 
     public string? SourceText => _owner.DescribeSource(_source);
@@ -390,6 +465,7 @@ public sealed partial class InstanceItem : ObservableObject
         InstanceId = instance.InstanceId;
         Name = instance.Name;
         ModCount = instance.Mods.Count;
+        ModIds = instance.Mods.Select(mod => mod.ModId).ToList();
         IsActive = isActive;
         _editName = instance.Name;
     }
@@ -398,6 +474,9 @@ public sealed partial class InstanceItem : ObservableObject
 
     [RelayCommand]
     private Task ActivateAsync() => _owner.ActivateInstanceAsync(InstanceId);
+
+    [RelayCommand]
+    private Task OpenAsync() => _owner.OpenInstanceAsync(this);
 
     [RelayCommand]
     private void BeginRename()

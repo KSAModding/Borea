@@ -4,6 +4,7 @@ using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using Avalonia.Styling;
+using Avalonia.Threading;
 using Borea.App.Formatting;
 using Borea.App.Localization;
 using Borea.App.ViewModels;
@@ -66,14 +67,20 @@ public partial class App : Application
                 RegionalFormat,
                 Services?.AppPreferences,
                 _preferences,
-                Services?.Instances,
-                Services?.InstalledVersion);
+                Services);
 
             ApplyTheme(viewModel.CurrentTheme);
             viewModel.PropertyChanged += OnViewModelPropertyChanged;
 
             desktop.MainWindow = new MainWindow { DataContext = viewModel };
             desktop.MainWindow.Opened += async (_, _) => await viewModel.LoadAsync();
+
+            // a command that throws must not take the window down with it
+            Dispatcher.UIThread.UnhandledException += (_, args) =>
+            {
+                viewModel.UnexpectedError = args.Exception.Message;
+                args.Handled = true;
+            };
         }
 
         base.OnFrameworkInitializationCompleted();

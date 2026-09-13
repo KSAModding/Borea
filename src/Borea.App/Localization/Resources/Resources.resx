@@ -105,4 +105,232 @@
   <data name="NavigationTasks" xml:space="preserve">
     <value>Tasks</value>
   </data>
+  <data name="InstanceTabContent" xml:space="preserve">
+    <value>Content</value>
+  </data>
+  <data name="InstanceTabManualInstalls" xml:space="preserve">
+    <value>Manual installs</value>
+  </data>
+  <data name="InstanceTabGameData" xml:space="preserve">
+    <value>Game data</value>
+  </data>
+  <data name="InstanceTabLog" xml:space="preserve">
+    <value>Log</value>
+  </data>
+  <data name="InstanceGroupMods" xml:space="preserve">
+    <value>Mods</value>
+  </data>
+  <data name="InstanceGroupModLoaders" xml:space="preserve">
+    <value>Mod loaders</value>
+  </data>
+  <data name="InstanceGroupOther" xml:space="preserve">
+    <value>Other</value>
+  </data>
+  <data name="InstanceGroupDependencies" xml:space="preserve">
+    <value>Dependencies</value>
+  </data>
+  <data name="InstanceEmptyContent" xml:space="preserve">
+    <value>Nothing installed yet. Add content from Discover.</value>
+  </data>
+  <data name="InstancePlay" xml:space="preserve">
+    <value>Play</value>
+  </data>
+  <data name="ContentRemove" xml:space="preserve">
+    <value>Remove</value>
+  </data>
+  <data name="ContentRemoveConfirm" xml:space="preserve">
+    <value>Remove this content from the instance?</value>
+  </data>
+  <data name="ContentByAuthorFormat" xml:space="preserve">
+    <value>by {0}</value>
+  </data>
+  <data name="DiscoverTabMods" xml:space="preserve">
+    <value>Mods</value>
+  </data>
+  <data name="DiscoverTabModpacks" xml:space="preserve">
+    <value>Modpacks</value>
+  </data>
+  <data name="DiscoverTabVehicles" xml:space="preserve">
+    <value>Vehicles</value>
+  </data>
+  <data name="DiscoverTabSaves" xml:space="preserve">
+    <value>Saves</value>
+  </data>
+  <data name="DiscoverTabLoaders" xml:space="preserve">
+    <value>Mod loaders</value>
+  </data>
+  <data name="DiscoverSearchPlaceholder" xml:space="preserve">
+    <value>Search mods...</value>
+  </data>
+  <data name="DiscoverHideInstalled" xml:space="preserve">
+    <value>Hide already installed</value>
+  </data>
+  <data name="DiscoverHideIncompatible" xml:space="preserve">
+    <value>Hide incompatible</value>
+  </data>
+  <data name="DiscoverOperatingSystem" xml:space="preserve">
+    <value>Operating system</value>
+  </data>
+  <data name="DiscoverLicense" xml:space="preserve">
+    <value>License</value>
+  </data>
+  <data name="DiscoverClearAll" xml:space="preserve">
+    <value>Clear all</value>
+  </data>
+  <data name="DiscoverAll" xml:space="preserve">
+    <value>All</value>
+  </data>
+  <data name="DiscoverEmpty" xml:space="preserve">
+    <value>No content matches.</value>
+  </data>
+  <data name="DiscoverLoading" xml:space="preserve">
+    <value>Loading content...</value>
+  </data>
+  <data name="DiscoverAdd" xml:space="preserve">
+    <value>Add to the active instance</value>
+  </data>
+  <data name="DiscoverInstalled" xml:space="preserve">
+    <value>Installed</value>
+  </data>
+  <data name="DiscoverNoInstance" xml:space="preserve">
+    <value>Create an instance first to add content.</value>
+  </data>
+  <data name="DiscoverNoRelease" xml:space="preserve">
+    <value>This listing has no release to install.</value>
+  </data>
+  <data name="ModalCreateInstanceTitle" xml:space="preserve">
+    <value>Create instance</value>
+  </data>
+  <data name="ModalNameLabel" xml:space="preserve">
+    <value>Name</value>
+  </data>
+  <data name="ModalClose" xml:space="preserve">
+    <value>Close</value>
+  </data>
+  <data name="SettingsGeneral" xml:space="preserve">
+    <value>General</value>
+  </data>
+  <data name="ContentTabDescription" xml:space="preserve">
+    <value>Description</value>
+  </data>
+  <data name="ContentTabVersions" xml:space="preserve">
+    <value>Versions</value>
+  </data>
+  <data name="ContentCompatibility" xml:space="preserve">
+    <value>Compatibility</value>
+  </data>
+  <data name="ContentLinks" xml:space="preserve">
+    <value>Links</value>
+  </data>
+  <data name="ContentTags" xml:space="preserve">
+    <value>Tags</value>
+  </data>
+  <data name="ContentAuthor" xml:space="preserve">
+    <value>Author</value>
+  </data>
+  <data name="ContentDetails" xml:space="preserve">
+    <value>Details</value>
+  </data>
+  <data name="ContentAdd" xml:space="preserve">
+    <value>Add</value>
+  </data>
+  <data name="ContentVersionHeader" xml:space="preserve">
+    <value>Version</value>
+  </data>
+  <data name="ContentChannelHeader" xml:space="preserve">
+    <value>Channel</value>
+  </data>
+  <data name="ContentGameVersionHeader" xml:space="preserve">
+    <value>Game version</value>
+  </data>
+  <data name="ContentPublishedHeader" xml:space="preserve">
+    <value>Published</value>
+  </data>
+  <data name="ContentNoDescription" xml:space="preserve">
+    <value>No description provided.</value>
+  </data>
+  <data name="ContentLoadingVersions" xml:space="preserve">
+    <value>Loading versions...</value>
+  </data>
+  <data name="ContentNoVersions" xml:space="preserve">
+    <value>No releases yet.</value>
+  </data>
+  <data name="ContentSourceFormat" xml:space="preserve">
+    <value>Listed on {0}</value>
+  </data>
+  <data name="ContentTypeModLoader" xml:space="preserve">
+    <value>Mod loader</value>
+  </data>
+  <data name="ReleaseStable" xml:space="preserve">
+    <value>stable</value>
+  </data>
+  <data name="ReleaseTesting" xml:space="preserve">
+    <value>testing</value>
+  </data>
+  <data name="ReleaseDev" xml:space="preserve">
+    <value>dev</value>
+  </data>
+  <data name="ReleaseUnknown" xml:space="preserve">
+    <value>unknown</value>
+  </data>
+  <data name="SettingsGame" xml:space="preserve">
+    <value>Game</value>
+  </data>
+  <data name="SetupGameDirectory" xml:space="preserve">
+    <value>Game directory</value>
+  </data>
+  <data name="SetupGameDirectoryHint" xml:space="preserve">
+    <value>The folder that holds the game executable.</value>
+  </data>
+  <data name="SetupBrowse" xml:space="preserve">
+    <value>Browse...</value>
+  </data>
+  <data name="SetupSave" xml:space="preserve">
+    <value>Save</value>
+  </data>
+  <data name="SetupLoader" xml:space="preserve">
+    <value>Mod loader</value>
+  </data>
+  <data name="SetupLoaderDirectory" xml:space="preserve">
+    <value>Loader directory</value>
+  </data>
+  <data name="SetupLoaderDirectoryHint" xml:space="preserve">
+    <value>Leave empty to let Borea pick a folder when installing.</value>
+  </data>
+  <data name="SetupInstallLoader" xml:space="preserve">
+    <value>Install</value>
+  </data>
+  <data name="SetupUseExisting" xml:space="preserve">
+    <value>Use existing</value>
+  </data>
+  <data name="SetupSaved" xml:space="preserve">
+    <value>Saved.</value>
+  </data>
+  <data name="SetupDirectoryMissing" xml:space="preserve">
+    <value>Saved, but this folder does not exist yet.</value>
+  </data>
+  <data name="SetupNoLoaderSelected" xml:space="preserve">
+    <value>Pick a mod loader first.</value>
+  </data>
+  <data name="SetupLoaderInstalledFormat" xml:space="preserve">
+    <value>Installed {0} {1} to {2}.</value>
+  </data>
+  <data name="ContentLoaderHint" xml:space="preserve">
+    <value>Mod loaders are set up from the Game settings.</value>
+  </data>
+  <data name="SourceContentIndex" xml:space="preserve">
+    <value>the content index</value>
+  </data>
+  <data name="LinkForum" xml:space="preserve">
+    <value>Forum</value>
+  </data>
+  <data name="LinkRepository" xml:space="preserve">
+    <value>Repository</value>
+  </data>
+  <data name="LinkBugTracker" xml:space="preserve">
+    <value>Bug tracker</value>
+  </data>
+  <data name="LinkDiscussions" xml:space="preserve">
+    <value>Discussions</value>
+  </data>
 </root>

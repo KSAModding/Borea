@@ -67,6 +67,12 @@ public sealed class SpaceDockModRepository : IModRepository
         return (response?.Result ?? new()).Where(IsKsaMod).Select(MapToListing).ToList();
     }
 
+    public async Task<ModMetadata?> GetListingAsync(string modId, CancellationToken cancellationToken = default)
+    {
+        var dto = await GetModAsync(modId, cancellationToken).ConfigureAwait(false);
+        return dto is null ? null : MapToListing(dto);
+    }
+
     public async Task<ModVersionMetadata?> GetLatestReleaseAsync(string modId, CancellationToken cancellationToken = default)
     {
         var dto = await GetModAsync(modId, cancellationToken).ConfigureAwait(false);
