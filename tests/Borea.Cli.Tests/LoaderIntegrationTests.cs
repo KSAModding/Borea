@@ -1,6 +1,7 @@
 using System.Net;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using Borea.Composition;
 using Borea.Core.Mods;
 using Borea.Storage.Launch;
@@ -41,11 +42,11 @@ public sealed class LoaderIntegrationTests : IDisposable
     {
         var output = new StringWriter();
         var error = new StringWriter();
-        var snapshot = await File.ReadAllTextAsync(Path.Combine(
+        var snapshot = WithStarMapInstanceTable(await File.ReadAllTextAsync(Path.Combine(
             AppContext.BaseDirectory,
             "Index",
             "Fixtures",
-            "current-snapshot.json"));
+            "current-snapshot.json")));
 
         async Task<CliServices> BuildAsync(CancellationToken cancellationToken)
         {
@@ -61,6 +62,22 @@ public sealed class LoaderIntegrationTests : IDisposable
 
         var exitCode = await BoreaCli.RunAsync(args, BuildAsync, output, error, CancellationToken.None);
         return new CliRun(exitCode, output.ToString(), error.ToString());
+    }
+
+    // The fixture mirrors a published snapshot whose StarMap listing does not
+    // carry [provides.instance] yet, so the test sets the table RFC 0049 gives
+    // StarMap. Setting it again on a snapshot that already has it changes nothing.
+    private static string WithStarMapInstanceTable(string snapshot)
+    {
+        var root = JsonNode.Parse(snapshot)!;
+        var starMap = root["listings"]!.AsArray().Single(listing => (string?)listing!["id"] == "StarMap")!;
+        starMap["authored"]!["provides"]!["instance"] = new JsonObject
+        {
+            ["flag"] = "-InstancePath",
+            ["variable"] = "STARMAP_INSTANCE_PATH",
+        };
+
+        return root.ToJsonString();
     }
 
     public void Dispose()

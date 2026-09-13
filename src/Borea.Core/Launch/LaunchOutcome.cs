@@ -11,7 +11,7 @@ public enum LaunchOutcome
     /// <summary>The loader's listing does not name what to run.</summary>
     NoLaunchTarget = 2,
 
-    /// <summary>Borea does not know how the loader takes an instance.</summary>
+    /// <summary>The loader's listing does not say how the loader takes an instance.</summary>
     NoInstanceHandover = 3,
 
     /// <summary>No directory is configured for the loader.</summary>

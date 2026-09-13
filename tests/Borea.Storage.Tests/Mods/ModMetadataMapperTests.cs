@@ -1,4 +1,5 @@
-﻿using Borea.Core.ModLoaders;
+﻿using Borea.Core.Launch;
+using Borea.Core.ModLoaders;
 using Borea.Core.Mods;
 using Borea.Storage.Mods;
 using Borea.Storage.Toml;
@@ -172,7 +173,8 @@ public sealed class ModMetadataMapperTests : IDisposable
             provides: new LoaderProvides(
                 launch: "StarMap.exe",
                 contentDir: InstallAnchor.Mods,
-                configure: new LoaderConfigure("StarMapConfig.json", ConfigureFormat.Json, "GameLocation")));
+                configure: new LoaderConfigure("StarMapConfig.json", ConfigureFormat.Json, "GameLocation"),
+                instance: new InstanceHandover("-InstancePath", "STARMAP_INSTANCE_PATH")));
 
         var (reloaded, _, tomlText) = await RoundTripAsync(original);
 
@@ -183,11 +185,53 @@ public sealed class ModMetadataMapperTests : IDisposable
         Assert.Equal(InstallAnchor.Mods, reloaded.Provides.ContentDir);
         Assert.Equal(ConfigureFormat.Json, reloaded.Provides.Configure!.Format);
         Assert.Equal("GameLocation", reloaded.Provides.Configure.GamePath);
+        Assert.Equal("-InstancePath", reloaded.Provides.Instance!.Flag);
+        Assert.Equal("STARMAP_INSTANCE_PATH", reloaded.Provides.Instance.Variable);
 
         Assert.Contains("Target = \"standalone\"", tomlText);
         Assert.Contains("ContentDir = \"mods\"", tomlText);
         Assert.Contains("Format = \"json\"", tomlText);
+        Assert.Contains("Flag = \"-InstancePath\"", tomlText);
+        Assert.Contains("Variable = \"STARMAP_INSTANCE_PATH\"", tomlText);
     }
+
+    [Fact]
+    public async Task RoundTrip_InstanceWithOnlyAFlag_KeepsTheVariableAbsent()
+    {
+        var original = LoaderMetadata(new LoaderProvides(launch: "Loader.exe", instance: new InstanceHandover("-Instance", null)));
+
+        var (reloaded, reloadedDto, tomlText) = await RoundTripAsync(original);
+
+        Assert.Equal("-Instance", reloaded.Provides!.Instance!.Flag);
+        Assert.Null(reloaded.Provides.Instance.Variable);
+        Assert.Null(reloadedDto.Provides!.Instance!.Variable);
+        Assert.DoesNotContain("Variable", tomlText);
+    }
+
+    [Fact]
+    public async Task RoundTrip_ProvidesWithoutInstance_KeepsTheInstanceAbsent()
+    {
+        var original = LoaderMetadata(new LoaderProvides(launch: "Loader.exe"));
+
+        var (reloaded, reloadedDto, tomlText) = await RoundTripAsync(original);
+
+        Assert.Null(reloaded.Provides!.Instance);
+        Assert.Null(reloadedDto.Provides!.Instance);
+        Assert.DoesNotContain("Instance", tomlText);
+    }
+
+    private static ModMetadata LoaderMetadata(LoaderProvides provides) => new(
+        specVersion: 1,
+        modId: "test-loader",
+        source: "TestSource",
+        name: "Test Loader",
+        authors: new[] { "Author" },
+        abstractText: "A loader.",
+        license: "MIT",
+        links: MetadataFixtures.SampleLinks(),
+        gameMin: "2026.8.3.5117",
+        type: ContentType.ModLoader,
+        provides: provides);
 
     [Fact]
     public void FromDto_UnknownInstallTarget_ParsesToUnknown()

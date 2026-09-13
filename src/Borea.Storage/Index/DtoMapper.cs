@@ -1,6 +1,7 @@
 using Borea.Core.Dependencies;
 using Borea.Core.Game;
 using Borea.Core.Index;
+using Borea.Core.Launch;
 using Borea.Core.ModLoaders;
 using Borea.Core.Mods;
 using Borea.Core.ModPacks;
@@ -275,7 +276,8 @@ public static class DtoMapper
             launch: dto.Launch,
             contentDir: dto.ContentDirectory is null ? null : MapInstallAnchor(dto.ContentDirectory),
             contentPath: dto.ContentPath,
-            configure: dto.Configure is null ? null : MapConfigure(dto.Configure));
+            configure: dto.Configure is null ? null : MapConfigure(dto.Configure),
+            instance: dto.Instance is null ? null : MapInstance(dto.Instance));
 
     private static LoaderConfigure MapConfigure(ConfigureDto dto)
     {
@@ -283,6 +285,14 @@ public static class DtoMapper
             throw new FormatException($"The loader configure table has unknown member '{dto.UnknownFields.Keys.First()}'.");
 
         return new LoaderConfigure(dto.File, MapConfigureFormat(dto.Format), dto.GamePath);
+    }
+
+    private static InstanceHandover MapInstance(InstanceDto dto)
+    {
+        if (dto.UnknownFields is { Count: > 0 })
+            throw new FormatException($"The loader instance table has unknown member '{dto.UnknownFields.Keys.First()}'.");
+
+        return new InstanceHandover(dto.Flag, dto.Variable);
     }
 
     private static DownloadInfo MapDownloadInfo(DownloadInfoDto dto) =>

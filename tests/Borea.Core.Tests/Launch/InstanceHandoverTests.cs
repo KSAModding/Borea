@@ -5,34 +5,12 @@ namespace Borea.Core.Tests.Launch;
 public sealed class InstanceHandoverTests
 {
     [Fact]
-    public void Known_StarMap_TakesTheFlagAndTheVariable()
+    public void Constructor_FlagAndVariable_KeepsBoth()
     {
-        var handover = InstanceHandover.Known("StarMap");
+        var handover = new InstanceHandover("-InstancePath", "STARMAP_INSTANCE_PATH");
 
-        Assert.NotNull(handover);
-        Assert.Equal("-InstancePath", handover!.Flag);
+        Assert.Equal("-InstancePath", handover.Flag);
         Assert.Equal("STARMAP_INSTANCE_PATH", handover.Variable);
-    }
-
-    [Fact]
-    public void Known_IdDifferingOnlyInCase_IsTheSameLoader()
-    {
-        Assert.Same(InstanceHandover.Known("StarMap"), InstanceHandover.Known("starmap"));
-    }
-
-    [Fact]
-    public void Known_OtherLoader_IsNull()
-    {
-        Assert.Null(InstanceHandover.Known("OtherLoader"));
-    }
-
-    [Theory]
-    [InlineData(null)]
-    [InlineData("")]
-    [InlineData("not a valid id!")]
-    public void Known_InvalidId_ThrowsArgumentException(string? loaderId)
-    {
-        Assert.Throws<ArgumentException>(() => InstanceHandover.Known(loaderId!));
     }
 
     [Fact]
@@ -62,9 +40,13 @@ public sealed class InstanceHandoverTests
     [Theory]
     [InlineData("", "VAR")]
     [InlineData("   ", "VAR")]
+    [InlineData("-Instance Path", "VAR")]
+    [InlineData("-Instance\tPath", null)]
     [InlineData("-Flag", "")]
     [InlineData("-Flag", "   ")]
-    public void Constructor_Whitespace_ThrowsArgumentException(string flag, string variable)
+    [InlineData(null, "LOADER INSTANCE")]
+    [InlineData(null, "LOADER_INSTANCE\n")]
+    public void Constructor_EmptyOrWhitespace_ThrowsArgumentException(string? flag, string? variable)
     {
         Assert.Throws<ArgumentException>(() => new InstanceHandover(flag, variable));
     }

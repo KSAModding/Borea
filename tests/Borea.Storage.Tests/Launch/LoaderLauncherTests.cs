@@ -49,13 +49,14 @@ public sealed class LoaderLauncherTests : IDisposable
         install: standalone ? new InstallDescriptor(target: InstallAnchor.Standalone) : null,
         provides: provides);
 
-    private static LoaderProvides StarMapProvides(string launch = "StarMap.exe") => new(
+    private static LoaderProvides StarMapProvides(string launch = "StarMap.exe", InstanceHandover? instance = null) => new(
         launch: launch,
         contentDir: InstallAnchor.Mods,
-        configure: new LoaderConfigure("StarMapConfig.json", ConfigureFormat.Json, "GameLocation"));
+        configure: new LoaderConfigure("StarMapConfig.json", ConfigureFormat.Json, "GameLocation"),
+        instance: instance ?? new InstanceHandover("-InstancePath", "STARMAP_INSTANCE_PATH"));
 
     [Fact]
-    public void Launch_KnownLoader_StartsItInItsDirectoryWithTheInstanceRoot()
+    public void Launch_ListingWithFlagAndVariable_StartsItInItsDirectoryWithTheInstanceRoot()
     {
         var executable = PlaceStarMap();
         var instanceRoot = Path.GetFullPath(_paths.GetInstanceRoot(_instance.InstanceId));
@@ -122,13 +123,49 @@ public sealed class LoaderLauncherTests : IDisposable
     }
 
     [Fact]
-    public void Launch_LoaderWhoseHandoverIsUnknown_ReportsInsteadOfGuessing()
+    public void Launch_ListingWithOnlyAFlag_PassesTheFlagAndSetsNoVariable()
     {
-        var result = _launcher.Launch(_instance, LoaderListing(modId: "OtherLoader", provides: StarMapProvides()));
+        PlaceStarMap();
+        var instanceRoot = Path.GetFullPath(_paths.GetInstanceRoot(_instance.InstanceId));
+
+        var result = _launcher.Launch(_instance, LoaderListing(provides: StarMapProvides(instance: new InstanceHandover("-Instance", null))));
+
+        Assert.True(result.Started);
+        Assert.Equal(new[] { "-Instance", instanceRoot }, result.Plan!.Arguments);
+        Assert.Empty(result.Plan.EnvironmentVariables);
+    }
+
+    [Fact]
+    public void Launch_ListingWithOnlyAVariable_SetsTheVariableAndPassesNoArguments()
+    {
+        PlaceStarMap();
+        var instanceRoot = Path.GetFullPath(_paths.GetInstanceRoot(_instance.InstanceId));
+
+        var result = _launcher.Launch(_instance, LoaderListing(provides: StarMapProvides(instance: new InstanceHandover(null, "LOADER_INSTANCE"))));
+
+        Assert.True(result.Started);
+        Assert.Empty(result.Plan!.Arguments);
+        Assert.Equal(instanceRoot, Assert.Single(result.Plan.EnvironmentVariables, pair => pair.Key == "LOADER_INSTANCE").Value);
+        Assert.Single(result.Plan.EnvironmentVariables);
+    }
+
+    [Fact]
+    public void Launch_ListingWithoutInstanceTable_ReportsInsteadOfGuessing()
+    {
+        PlaceStarMap();
+        var provides = new LoaderProvides(
+            launch: "StarMap.exe",
+            contentDir: InstallAnchor.Mods,
+            configure: new LoaderConfigure("StarMapConfig.json", ConfigureFormat.Json, "GameLocation"));
+
+        var result = _launcher.Launch(_instance, LoaderListing(provides: provides));
 
         Assert.Equal(LaunchOutcome.NoInstanceHandover, result.Outcome);
         Assert.Contains("StarMap", result.Message);
+        Assert.Contains("[provides.instance]", result.Message);
+        Assert.Null(result.Plan);
         Assert.Empty(_starter.Plans);
+        Assert.False(_launcher.IsRunning(_instance.InstanceId));
     }
 
     [Fact]

@@ -405,6 +405,76 @@ public sealed class DtoMapperTests
     }
 
     [Fact]
+    public void MapAuthored_ProvidesWithoutInstance_HasNoInstance()
+    {
+        var dto = MinimalAuthoredDto(type: "mod-loader");
+        dto.Provides = new ProvidesDto { Launch = "loader.exe" };
+
+        var result = DtoMapper.MapAuthored(dto, "source");
+
+        Assert.Null(result.Provides!.Instance);
+    }
+
+    [Theory]
+    [InlineData("-InstancePath", "STARMAP_INSTANCE_PATH")]
+    [InlineData("-InstancePath", null)]
+    [InlineData(null, "STARMAP_INSTANCE_PATH")]
+    public void MapAuthored_Instance_MapsTheNamedKeys(string? flag, string? variable)
+    {
+        var dto = MinimalAuthoredDto(type: "mod-loader");
+        dto.Provides = new ProvidesDto
+        {
+            Launch = "loader.exe",
+            Instance = new InstanceDto { Flag = flag, Variable = variable },
+        };
+
+        var result = DtoMapper.MapAuthored(dto, "source");
+
+        Assert.NotNull(result.Provides!.Instance);
+        Assert.Equal(flag, result.Provides.Instance!.Flag);
+        Assert.Equal(variable, result.Provides.Instance.Variable);
+    }
+
+    [Theory]
+    [InlineData(null, null)]
+    [InlineData("", null)]
+    [InlineData("-Instance Path", null)]
+    [InlineData(null, "")]
+    [InlineData(null, "LOADER INSTANCE")]
+    public void MapAuthored_InstanceWithoutAUsableKey_Throws(string? flag, string? variable)
+    {
+        var dto = MinimalAuthoredDto(type: "mod-loader");
+        dto.Provides = new ProvidesDto
+        {
+            Launch = "loader.exe",
+            Instance = new InstanceDto { Flag = flag, Variable = variable },
+        };
+
+        Assert.ThrowsAny<ArgumentException>(() => DtoMapper.MapAuthored(dto, "source"));
+    }
+
+    [Fact]
+    public void MapAuthored_UnknownInstanceMember_Throws()
+    {
+        var dto = MinimalAuthoredDto(type: "mod-loader");
+        dto.Provides = new ProvidesDto
+        {
+            Instance = new InstanceDto
+            {
+                Flag = "-InstancePath",
+                UnknownFields = new Dictionary<string, JsonElement>
+                {
+                    ["future-key"] = JsonSerializer.SerializeToElement("value"),
+                },
+            },
+        };
+
+        var exception = Assert.Throws<FormatException>(() => DtoMapper.MapAuthored(dto, "source"));
+
+        Assert.Contains("future-key", exception.Message);
+    }
+
+    [Fact]
     public void MapAuthored_NullCollectionElements_Throw()
     {
         var dto = MinimalAuthoredDto();

@@ -1,5 +1,6 @@
 using Borea.Core.Dependencies;
 using Borea.Core.Game;
+using Borea.Core.Launch;
 using Borea.Core.ModLoaders;
 using Borea.Core.Mods;
 
@@ -7,7 +8,15 @@ namespace Borea.Cli.Tests;
 
 internal static class LoaderFixtures
 {
-    public static ModMetadata Listing(string id = "StarMap", string launch = "StarMap.exe") => new(
+    /// <summary>A loader listing shaped like StarMap's, with the flag and the variable it takes an instance by.</summary>
+    public static ModMetadata Listing(string id = "StarMap", string launch = "StarMap.exe") =>
+        LoaderListing(id, launch, new InstanceHandover("-InstancePath", "STARMAP_INSTANCE_PATH"));
+
+    /// <summary>A loader listing that does not say how the loader takes an instance.</summary>
+    public static ModMetadata ListingWithoutInstance(string id = "OtherLoader", string launch = "StarMap.exe") =>
+        LoaderListing(id, launch, instance: null);
+
+    private static ModMetadata LoaderListing(string id, string launch, InstanceHandover? instance) => new(
         specVersion: 1,
         modId: id,
         source: "index",
@@ -21,7 +30,8 @@ internal static class LoaderFixtures
         install: new InstallDescriptor(target: InstallAnchor.Standalone),
         provides: new LoaderProvides(
             launch: launch,
-            configure: new LoaderConfigure("StarMapConfig.json", ConfigureFormat.Json, "GameLocation")));
+            configure: new LoaderConfigure("StarMapConfig.json", ConfigureFormat.Json, "GameLocation"),
+            instance: instance));
 
     public static ModVersionMetadata Release(string id = "StarMap", string version = "0.4.6", bool yanked = false) => new(
         specVersion: 1,

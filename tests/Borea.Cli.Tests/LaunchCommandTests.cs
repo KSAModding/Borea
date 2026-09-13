@@ -5,7 +5,7 @@ public sealed class LaunchCommandTests : IDisposable
     private readonly CliHost _host = new();
 
     [Fact]
-    public async Task Launch_StarMapStartsWithItsExistingHandover()
+    public async Task Launch_StarMapStartsWithTheHandoverItsListingNames()
     {
         _host.Mods.Listings.Add(LoaderFixtures.Listing());
         var loaderDirectory = LoaderCommandTests.CreateLoaderDirectory("StarMap", "not a program", _host.Root);
@@ -23,9 +23,9 @@ public sealed class LaunchCommandTests : IDisposable
     }
 
     [Fact]
-    public async Task Launch_LoaderWithoutAnExistingHandover_FailsWithoutStarting()
+    public async Task Launch_LoaderWhoseListingHasNoInstanceTable_FailsWithoutStarting()
     {
-        _host.Mods.Listings.Add(LoaderFixtures.Listing("OtherLoader"));
+        _host.Mods.Listings.Add(LoaderFixtures.ListingWithoutInstance("OtherLoader"));
         var directory = LoaderCommandTests.CreateLoaderDirectory("OtherLoader", "not a program", _host.Root);
         await _host.RunAsync("settings", "set", "loader", "OtherLoader", directory);
         await _host.RunAsync("instance", "create", "Flight Test");
@@ -33,7 +33,8 @@ public sealed class LaunchCommandTests : IDisposable
         var run = await _host.RunAsync("launch", "Flight Test", "OtherLoader");
 
         Assert.Equal(1, run.ExitCode);
-        Assert.Contains("does not know how OtherLoader takes an instance", run.Error);
+        Assert.Contains("The listing of OtherLoader does not say how it takes an instance", run.Error);
+        Assert.Contains("[provides.instance]", run.Error);
         Assert.Empty(_host.ProcessStarter.Plans);
     }
 
