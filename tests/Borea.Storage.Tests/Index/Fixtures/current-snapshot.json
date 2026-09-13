@@ -658,6 +658,10 @@
             "file": "StarMapConfig.json",
             "format": "json",
             "game-path": "GameLocation"
+          },
+          "instance": {
+            "flag": "-InstancePath",
+            "variable": "STARMAP_INSTANCE_PATH"
           }
         }
       },
