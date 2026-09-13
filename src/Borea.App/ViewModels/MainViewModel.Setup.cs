@@ -19,6 +19,13 @@ public enum SettingsTab
     About,
 }
 
+public enum GameSetupState
+{
+    Ready,
+    NotSaved,
+    FolderMissing,
+}
+
 /// <summary>
 /// The Game section of the settings modal: where KSA is, and which mod
 /// loader starts it. Saving rebuilds the services, because their paths are
@@ -40,6 +47,55 @@ public partial class MainViewModel
 
     [ObservableProperty]
     private string _gameDirectoryInput = string.Empty;
+
+    /// <summary>
+    /// Why the game is not usable yet, or null when it is. Drives the banner
+    /// on Home, Discover and Library (#152).
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(NeedsGameSetup))]
+    private GameSetupState _gameSetupState;
+
+    public bool NeedsGameSetup => GameSetupState != GameSetupState.Ready;
+
+    public string? GameSetupBannerText => GameSetupState switch
+    {
+        GameSetupState.NotSaved => Localization.SetupBannerNotSaved,
+        GameSetupState.FolderMissing => Localization.SetupBannerFolderMissing,
+        _ => null,
+    };
+
+    private bool _promptedForGameSetup;
+
+    /// <summary>
+    /// Opens the settings on the Game tab, from the banner.
+    /// </summary>
+    [RelayCommand]
+    private Task OpenGameSetupAsync()
+    {
+        IsSettingsOpen = true;
+        return ShowGameSettingsAsync();
+    }
+
+    /// <summary>
+    /// Reads the saved game directory after a load or a rebuild. The first
+    /// load without one opens the Game tab, so a new user sees where to start;
+    /// after that the banner is the reminder.
+    /// </summary>
+    private async Task RefreshGameSetupAsync()
+    {
+        var directory = _services?.Settings.GameDirectoryPath;
+        GameSetupState = _services is null || directory is not null && Directory.Exists(directory)
+            ? GameSetupState.Ready
+            : directory is null ? GameSetupState.NotSaved : GameSetupState.FolderMissing;
+        OnPropertyChanged(nameof(GameSetupBannerText));
+
+        if (GameSetupState == GameSetupState.NotSaved && !_promptedForGameSetup)
+        {
+            _promptedForGameSetup = true;
+            await OpenGameSetupAsync();
+        }
+    }
 
     [ObservableProperty]
     private string _loaderDirectoryInput = string.Empty;

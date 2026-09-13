@@ -21,6 +21,16 @@
     </Design.DataContext>
 
     <Window.Resources>
+        <!-- the game is not set up: one line and the way to the Game tab (#152) -->
+        <DataTemplate x:Key="GameSetupBanner" x:DataType="vm:MainViewModel">
+            <Border Background="{StaticResource Brush.AccentSoft}" BorderBrush="{StaticResource Brush.Accent}" BorderThickness="1" CornerRadius="12" Padding="16,10" Margin="0,16,0,0">
+                <Grid ColumnDefinitions="Auto,12,*,16,Auto">
+                    <Path Classes="icon-filled size-16" Fill="{StaticResource Brush.Accent}" Data="{StaticResource Icon.Paw}" VerticalAlignment="Center" />
+                    <TextBlock Grid.Column="2" Classes="body-md" Text="{Binding GameSetupBannerText}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                    <Button Grid.Column="4" Classes="text primary" Content="{Binding Localization.SetupBannerAction}" Command="{Binding OpenGameSetupCommand}" VerticalAlignment="Center" />
+                </Grid>
+            </Border>
+        </DataTemplate>
         <!-- c/instance-row: used by the library list and by the Current Install card on Home.
              Rename and delete happen inline; the row swaps its title or its actions for the edit. -->
         <DataTemplate x:Key="InstanceRow" x:DataType="vm:InstanceItem">
@@ -236,6 +246,7 @@
                     <Path Classes="icon" Data="{StaticResource Icon.Home}" />
                     <TextBlock Classes="label-lg" Text="{Binding Localization.PageHomeHeading}" VerticalAlignment="Center" />
                 </StackPanel>
+                <ContentControl Content="{Binding}" ContentTemplate="{StaticResource GameSetupBanner}" IsVisible="{Binding NeedsGameSetup}" />
 
                 <!-- Current install: black container with the header strip, holding the active instance row -->
                 <Border Background="{StaticResource Brush.SurfaceHeader}" CornerRadius="16" Margin="0,23,0,0">
@@ -309,6 +320,7 @@
                         <Path Classes="icon" Data="{StaticResource Icon.Compass}" />
                         <TextBlock Classes="label-lg" Text="{Binding Localization.PageDiscoverHeading}" VerticalAlignment="Center" />
                     </StackPanel>
+                    <ContentControl Content="{Binding}" ContentTemplate="{StaticResource GameSetupBanner}" IsVisible="{Binding NeedsGameSetup}" />
 
                     <!-- c/inner-nav-bar -->
                     <Border Background="{StaticResource Brush.SurfaceHeader}" CornerRadius="100" Padding="6" Margin="0,16,0,0" HorizontalAlignment="Stretch">
@@ -423,6 +435,7 @@
         <!-- Library -->
         <ScrollViewer Grid.Column="1" IsVisible="{Binding CurrentWindowLibrary}">
             <StackPanel MaxWidth="700" Margin="32,42,32,32">
+                <ContentControl Content="{Binding}" ContentTemplate="{StaticResource GameSetupBanner}" IsVisible="{Binding NeedsGameSetup}" Margin="0,0,0,16" />
                 <!-- header: breadcrumb, c/link-cta, bottom border -->
                 <Border BorderBrush="{StaticResource Brush.Surface}" BorderThickness="0,0,0,1" Padding="0,0,8,8">
                     <Grid ColumnDefinitions="*,Auto">

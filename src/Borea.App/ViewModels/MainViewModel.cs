@@ -261,6 +261,7 @@ public partial class MainViewModel : ViewModelBase
         await ReloadInstancesAsync();
         await RefreshContentIndexAsync();
         await LoadRecentItemsAsync();
+        await RefreshGameSetupAsync();
     }
 
     /// <summary>
@@ -495,6 +496,7 @@ public partial class MainViewModel : ViewModelBase
             item.RefreshText();
         RefreshContentGroups();
         RefreshLoaderText();
+        OnPropertyChanged(nameof(GameSetupBannerText));
 
         QueuePreferenceSave(preferences => preferences.WithUiCultureName(Localization.SelectedCultureName));
     }

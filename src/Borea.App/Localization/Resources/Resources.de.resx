@@ -432,4 +432,13 @@
   <data name="AboutCopyPath" xml:space="preserve">
     <value>Pfad kopieren</value>
   </data>
+  <data name="SetupBannerNotSaved" xml:space="preserve">
+    <value>Borea muss wissen, wo Kitten Space Agency installiert ist, bevor es Mods installieren oder das Spiel starten kann.</value>
+  </data>
+  <data name="SetupBannerFolderMissing" xml:space="preserve">
+    <value>Der gespeicherte Spielordner existiert nicht mehr. Wähle den Ordner von Kitten Space Agency erneut.</value>
+  </data>
+  <data name="SetupBannerAction" xml:space="preserve">
+    <value>Spiel einrichten</value>
+  </data>
 </root>

@@ -267,6 +267,12 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string SetupGameDirectoryHint => Resources.SetupGameDirectoryHint;
 
+    public string SetupBannerNotSaved => Resources.SetupBannerNotSaved;
+
+    public string SetupBannerFolderMissing => Resources.SetupBannerFolderMissing;
+
+    public string SetupBannerAction => Resources.SetupBannerAction;
+
     public string SetupBrowse => Resources.SetupBrowse;
 
     public string SetupSave => Resources.SetupSave;
