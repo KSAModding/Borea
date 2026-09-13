@@ -1,0 +1,79 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Borea.App.ViewModels"
+             x:Class="Borea.App.Views.Pages.HomePage"
+             x:DataType="vm:MainViewModel">
+    <!-- Home -->
+    <ScrollViewer>
+        <StackPanel MaxWidth="700" Margin="32,42,32,32">
+            <!-- c/breadcrumb -->
+            <StackPanel Orientation="Horizontal" Spacing="4" Height="24">
+                <Path Classes="icon" Data="{StaticResource Icon.Home}" />
+                <TextBlock Classes="label-lg" Text="{Binding Localization.PageHomeHeading}" VerticalAlignment="Center" />
+            </StackPanel>
+            <ContentControl Content="{Binding}" ContentTemplate="{StaticResource GameSetupBanner}" IsVisible="{Binding NeedsGameSetup}" />
+
+            <!-- Current install: black container with the header strip, holding the active instance row -->
+            <Border Background="{StaticResource Brush.SurfaceHeader}" CornerRadius="16" Margin="0,23,0,0">
+                <StackPanel>
+                    <Grid ColumnDefinitions="Auto,8,*,Auto" Height="44" Margin="12,0">
+                        <Path Grid.Column="0" Classes="icon-filled size-16" Fill="{StaticResource Brush.Positive}" Data="{StaticResource Icon.Paw}" VerticalAlignment="Center" />
+                        <TextBlock Grid.Column="2" Classes="label-md positive" Text="{Binding Localization.HomeCurrentInstall}" VerticalAlignment="Center" />
+                        <Border Grid.Column="3" Classes="chip" VerticalAlignment="Center">
+                            <Panel>
+                                <TextBlock IsVisible="{Binding InstalledVersionText, Converter={x:Static ObjectConverters.IsNotNull}}">
+                                    <Run Text="KSA" /><Run Text=" " /><Run Text="{Binding InstalledVersionText}" />
+                                </TextBlock>
+                                <TextBlock IsVisible="{Binding InstalledVersionText, Converter={x:Static ObjectConverters.IsNull}}" Text="{Binding Localization.HomeNoGameVersion}" />
+                            </Panel>
+                        </Border>
+                    </Grid>
+                    <ContentControl Content="{Binding ActiveInstance}" ContentTemplate="{StaticResource InstanceRow}" IsVisible="{Binding HasActiveInstance}" />
+                    <Border Classes="card" Padding="12" IsVisible="{Binding !HasActiveInstance}">
+                        <Grid ColumnDefinitions="70,16,*" Height="70">
+                            <Border Classes="thumbnail">
+                                <Path Classes="icon size-32" Data="{StaticResource Icon.Box}" />
+                            </Border>
+                            <TextBlock Grid.Column="2" Classes="heading-md muted" Text="{Binding Localization.HomeNoInstance}" VerticalAlignment="Center" />
+                        </Grid>
+                    </Border>
+                </StackPanel>
+            </Border>
+
+            <!-- Recently updated: the index has no download counts yet, so Home shows the newest releases -->
+            <Grid ColumnDefinitions="*,Auto" Margin="3,44,3,0" IsVisible="{Binding HasRecentItems}">
+                <TextBlock Classes="heading-sm heading" Text="{Binding Localization.HomeRecentlyUpdated}" />
+                <Button Grid.Column="1" Classes="link" Padding="0" Height="18" Command="{Binding SetMainWindowDiscover}">
+                    <TextBlock Classes="action-md" Text="{Binding Localization.HomeDiscoverMods}" />
+                </Button>
+            </Grid>
+
+            <ItemsControl ItemsSource="{Binding RecentItems}" Margin="0,16,-5,0" IsVisible="{Binding HasRecentItems}">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <UniformGrid Columns="4" />
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:RecentItem">
+                        <!-- tile: thumbnail with the text over its bottom. The index has no image field yet (#8), so the gradient stands in. -->
+                        <Button Classes="plain" Margin="0,0,5,5" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Command="{Binding OpenCommand}" AutomationProperties.Name="{Binding Name}">
+                            <Border Classes="card" Height="171" Background="{StaticResource Brush.Thumbnail}" Padding="16">
+                                <StackPanel VerticalAlignment="Bottom" Spacing="10">
+                                    <TextBlock Classes="heading-sm" Text="{Binding Name}" TextWrapping="Wrap" />
+                                    <Grid ColumnDefinitions="*,Auto">
+                                        <TextBlock Classes="label-md" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ContentTypeMod}" />
+                                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4">
+                                            <Path Classes="icon size-16" Data="{StaticResource Icon.Clock}" />
+                                            <TextBlock Classes="label-md" Text="{Binding UpdatedText}" VerticalAlignment="Center" />
+                                        </StackPanel>
+                                    </Grid>
+                                </StackPanel>
+                            </Border>
+                        </Button>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

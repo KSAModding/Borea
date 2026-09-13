@@ -1,0 +1,53 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Borea.App.ViewModels"
+             x:Class="Borea.App.Views.Settings.GameSettings"
+             x:DataType="vm:MainViewModel">
+    <!-- Game: where KSA is, and which loader starts it -->
+    <ScrollViewer>
+        <StackPanel Margin="32,32,44,24" Spacing="6" IsEnabled="{Binding !IsSetupBusy}">
+            <TextBlock Classes="heading-md" Text="{Binding Localization.SetupGameDirectory}" />
+            <TextBlock Classes="body-sm secondary" Text="{Binding Localization.SetupGameDirectoryHint}" />
+            <Grid ColumnDefinitions="*,8,Auto,8,Auto" Margin="0,6,0,0">
+                <TextBox Classes="field" Text="{Binding GameDirectoryInput}" AutomationProperties.Name="{Binding Localization.SetupGameDirectory}" />
+                <Button Grid.Column="2" Classes="text" Content="{Binding Localization.SetupBrowse}" Click="BrowseGameDirectory" />
+                <Button Grid.Column="4" Classes="text primary" Content="{Binding Localization.SetupSave}" Command="{Binding SaveGameDirectoryCommand}" />
+            </Grid>
+            <Border Classes="chip" HorizontalAlignment="Left" Margin="0,6,0,0">
+                <Panel>
+                    <TextBlock IsVisible="{Binding InstalledVersionText, Converter={x:Static ObjectConverters.IsNotNull}}">
+                        <Run Text="KSA" /><Run Text=" " /><Run Text="{Binding InstalledVersionText}" />
+                    </TextBlock>
+                    <TextBlock IsVisible="{Binding InstalledVersionText, Converter={x:Static ObjectConverters.IsNull}}" Text="{Binding Localization.HomeNoGameVersion}" />
+                </Panel>
+            </Border>
+
+            <Border Height="1" Background="{StaticResource Brush.BorderStrong}" Margin="0,18,0,12" />
+
+            <TextBlock Classes="heading-md" Text="{Binding Localization.SetupLoader}" />
+            <ComboBox ItemsSource="{Binding Loaders}" SelectedItem="{Binding SelectedLoader}" AutomationProperties.Name="{Binding Localization.SetupLoader}" Width="340" Margin="0,6,0,0">
+                <ComboBox.ItemTemplate>
+                    <DataTemplate x:DataType="vm:DiscoverItem">
+                        <TextBlock Text="{Binding Name}" />
+                    </DataTemplate>
+                </ComboBox.ItemTemplate>
+            </ComboBox>
+            <Border Classes="chip positive" HorizontalAlignment="Left" Margin="0,6,0,0" IsVisible="{Binding InstalledLoaderText, Converter={x:Static ObjectConverters.IsNotNull}}">
+                <TextBlock Text="{Binding InstalledLoaderText}" />
+            </Border>
+            <TextBlock Classes="heading-sm" Text="{Binding Localization.SetupLoaderDirectory}" Margin="0,16,0,0" />
+            <TextBlock Classes="body-sm secondary" Text="{Binding Localization.SetupLoaderDirectoryHint}" />
+            <Grid ColumnDefinitions="*,8,Auto" Margin="0,6,0,0">
+                <TextBox Classes="field" Text="{Binding LoaderDirectoryInput}" AutomationProperties.Name="{Binding Localization.SetupLoaderDirectory}" />
+                <Button Grid.Column="2" Classes="text" Content="{Binding Localization.SetupBrowse}" Click="BrowseLoaderDirectory" />
+            </Grid>
+            <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,8,0,0">
+                <Button Classes="text primary" Content="{Binding LoaderInstallActionText}" Command="{Binding InstallLoaderCommand}" IsVisible="{Binding CanInstallLoader}" />
+                <Button Classes="text" Content="{Binding Localization.SetupUseExisting}" Command="{Binding AdoptLoaderCommand}" />
+            </StackPanel>
+            <ProgressBar Height="6" Margin="0,8,0,0" IsVisible="{Binding IsSetupBusy}" Value="{Binding SetupProgress}" Maximum="100" Foreground="{StaticResource Brush.Accent}" />
+            <TextBlock Classes="body-md secondary" Text="{Binding SetupMessage}" TextWrapping="Wrap" Margin="0,12,0,0" IsVisible="{Binding SetupMessage, Converter={x:Static ObjectConverters.IsNotNull}}" />
+            <TextBlock Classes="body-md danger" Text="{Binding SetupError}" TextWrapping="Wrap" Margin="0,12,0,0" IsVisible="{Binding SetupError, Converter={x:Static ObjectConverters.IsNotNull}}" />
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>
