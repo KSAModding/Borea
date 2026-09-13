@@ -71,7 +71,7 @@ public sealed class InstanceViewModelTests
     {
         using var harness = await ViewModelHarness.CreateAsync();
         var viewModel = harness.ViewModel;
-        var instance = await InstalledContent.AddAsync(harness, "AdvancedFlightComputer", activate: true);
+        var instance = await InstalledContent.AddAsync(harness, "AdvancedFlightComputer", activate: true, ownership: ModInstallOwnership.Borea);
         await viewModel.LoadAsync();
         await viewModel.ActiveInstance!.OpenCommand.ExecuteAsync(null);
         var item = viewModel.ContentGroups.Single().Items.Single();
@@ -84,9 +84,27 @@ public sealed class InstanceViewModelTests
         await item.ConfirmRemoveCommand.ExecuteAsync(null);
 
         Assert.Empty((await harness.Services.Instances.GetByIdAsync(instance.InstanceId))!.Mods);
+        Assert.False(Directory.Exists(Path.Combine(harness.Services.Paths.GetInstanceModsFolder(instance.InstanceId), "AdvancedFlightComputer")));
+        Assert.Null(viewModel.ContentError);
         Assert.False(viewModel.HasContent);
         Assert.Equal(0, viewModel.ActiveInstance?.ModCount);
         Assert.True(viewModel.CurrentWindowInstance);
+    }
+
+    [Fact]
+    public async Task Remove_ModBoreaDidNotInstall_KeepsItAndExplains()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var viewModel = harness.ViewModel;
+        var instance = await InstalledContent.AddAsync(harness, "AdvancedFlightComputer", activate: true);
+        await viewModel.LoadAsync();
+        await viewModel.ActiveInstance!.OpenCommand.ExecuteAsync(null);
+
+        await viewModel.ContentGroups.Single().Items.Single().ConfirmRemoveCommand.ExecuteAsync(null);
+
+        Assert.Equal(harness.Localization.FormatContentRemoveNotOwned("AdvancedFlightComputer"), viewModel.ContentError);
+        Assert.Single((await harness.Services.Instances.GetByIdAsync(instance.InstanceId))!.Mods);
+        Assert.True(Directory.Exists(Path.Combine(harness.Services.Paths.GetInstanceModsFolder(instance.InstanceId), "AdvancedFlightComputer")));
     }
 
     [Fact]

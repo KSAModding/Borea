@@ -141,6 +141,12 @@
   <data name="ContentRemoveConfirm" xml:space="preserve">
     <value>Diesen Inhalt aus der Instanz entfernen?</value>
   </data>
+  <data name="ContentRemoveNotOwnedFormat" xml:space="preserve">
+    <value>Borea hat {0} nicht installiert und entfernt die Dateien daher nicht.</value>
+  </data>
+  <data name="ContentRemoveRequiredFormat" xml:space="preserve">
+    <value>{0} bleibt, weil {1} es braucht.</value>
+  </data>
   <data name="ContentByAuthorFormat" xml:space="preserve">
     <value>von {0}</value>
   </data>

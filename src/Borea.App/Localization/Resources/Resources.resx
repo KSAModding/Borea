@@ -141,6 +141,12 @@
   <data name="ContentRemoveConfirm" xml:space="preserve">
     <value>Remove this content from the instance?</value>
   </data>
+  <data name="ContentRemoveNotOwnedFormat" xml:space="preserve">
+    <value>Borea did not install {0}, so it does not delete its files.</value>
+  </data>
+  <data name="ContentRemoveRequiredFormat" xml:space="preserve">
+    <value>{0} stays because {1} requires it.</value>
+  </data>
   <data name="ContentByAuthorFormat" xml:space="preserve">
     <value>by {0}</value>
   </data>
