@@ -326,4 +326,34 @@ public sealed class CompositeModRepositoryTests
         Assert.NotNull(release);
         Assert.Equal("borea", release!.Source);
     }
+
+    [Fact]
+    public async Task GetListingAsync_FirstSourceThatKnowsTheMod_TagsItsSource()
+    {
+        var composite = new CompositeModRepository(new Dictionary<string, IModRepository>
+        {
+            ["index"] = new FakeModRepository(TestFixtures.SampleModMetadata("mod-a", "ignored", "Index Name")),
+            ["spacedock"] = new FakeModRepository(TestFixtures.SampleModMetadata("mod-b", "ignored", "SpaceDock Name")),
+        });
+
+        var fromSecond = await composite.GetListingAsync("MOD-B");
+        var unknown = await composite.GetListingAsync("mod-c");
+
+        Assert.NotNull(fromSecond);
+        Assert.Equal("SpaceDock Name", fromSecond.Name);
+        Assert.Equal("spacedock", fromSecond.Source);
+        Assert.Null(unknown);
+    }
+
+    [Fact]
+    public async Task GetListingAsync_DefaultImplementation_LooksTheModUpInTheCatalog()
+    {
+        IModRepository repository = new FakeModRepository(TestFixtures.SampleModMetadata("mod-a", "fake", "Catalog Name"));
+
+        var listing = await repository.GetListingAsync("Mod-A");
+
+        Assert.NotNull(listing);
+        Assert.Equal("Catalog Name", listing.Name);
+        Assert.Null(await repository.GetListingAsync("missing"));
+    }
 }

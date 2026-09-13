@@ -451,4 +451,27 @@ public sealed class SpaceDockModRepositoryTests
         Assert.Throws<ArgumentNullException>(() => new SpaceDockModRepository(null!, new SpaceDockResolver()));
         Assert.Throws<ArgumentNullException>(() => new SpaceDockModRepository(client, null!));
     }
+
+    [Fact]
+    public async Task GetListingAsync_ModEndpoint_CarriesTheDescription()
+    {
+        var json = RealMpfxModJson.Replace("\"short_description\"", "\"description\":\"# MPFX\\nPost processing.\",\"short_description\"");
+        var client = FakeHttpMessageHandler.BuildClient(_ => FakeHttpMessageHandler.JsonResponse(json), out _);
+        var repository = new SpaceDockModRepository(client, new SpaceDockResolver());
+
+        var listing = await repository.GetListingAsync("4165");
+
+        Assert.NotNull(listing);
+        Assert.Equal("MPFX", listing.Name);
+        Assert.Equal("# MPFX\nPost processing.", listing.Description);
+    }
+
+    [Fact]
+    public async Task GetListingAsync_UnknownId_ReturnsNull()
+    {
+        var client = FakeHttpMessageHandler.BuildClient(_ => FakeHttpMessageHandler.JsonResponse("{}"), out _);
+        var repository = new SpaceDockModRepository(client, new SpaceDockResolver());
+
+        Assert.Null(await repository.GetListingAsync("not-a-spacedock-id"));
+    }
 }
