@@ -21,6 +21,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\Borea.Core\Borea.Core.csproj" />
     <ProjectReference Include="..\..\src\Borea.Storage\Borea.Storage.csproj" />
+    <ProjectReference Include="Fixtures\LaunchProbeFixture\LaunchProbeFixture.csproj" ReferenceOutputAssembly="false" />
   </ItemGroup>
 
   <ItemGroup>
@@ -31,5 +32,19 @@
   </ItemGroup>
 
   <Import Project="..\VersionFixtures.targets" />
+
+  <!-- The probe runs through the dotnet host, which needs its runtime config next to it. -->
+  <Target Name="CopyLaunchProbeFixture" AfterTargets="CopyFilesToOutputDirectory">
+    <MSBuild Projects="Fixtures\LaunchProbeFixture\LaunchProbeFixture.csproj" Targets="GetTargetPath" Properties="Configuration=$(Configuration);TargetFramework=$(TargetFramework)">
+      <Output TaskParameter="TargetOutputs" ItemName="LaunchProbeAssembly" />
+    </MSBuild>
+    <ItemGroup>
+      <LaunchProbeFile Include="@(LaunchProbeAssembly)" />
+      <LaunchProbeFile Include="@(LaunchProbeAssembly->'%(RootDir)%(Directory)%(Filename).runtimeconfig.json')" />
+    </ItemGroup>
+    <Copy SourceFiles="@(LaunchProbeFile)" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true">
+      <Output TaskParameter="CopiedFiles" ItemName="FileWrites" />
+    </Copy>
+  </Target>
 
 </Project>
