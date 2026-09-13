@@ -302,6 +302,198 @@ public sealed class ShowCommandTests : IDisposable
         Assert.Contains("Listing 'missing-tools' was not found.", run.Error);
     }
 
+    [Fact]
+    public async Task Show_KnownDownloadCounts_PrintsTotalHostsAndEachListedReleaseWithACount()
+    {
+        var listing = ContentCommandFixtures.Listing();
+        var newest = ContentCommandFixtures.Release(version: "2.0.0");
+        var older = ContentCommandFixtures.Release(version: "1.0.0");
+        _host.Mods.Listings.Add(listing);
+        _host.Mods.Releases.AddRange(new[] { newest, older });
+        _host.IndexReader.Snapshot = Snapshot(
+            new ContentIndexListing(listing.ModId, listing, new[] { newest, older }, null, Counts()));
+
+        var run = await _host.RunAsync("show", listing.ModId);
+
+        Assert.Equal(0, run.ExitCode);
+        Assert.Contains("Downloads: 1200 (github 479, spacedock 721)", run.Output);
+        Assert.Contains("    Downloads: 40 (github 17, spacedock 23)", run.Output);
+        Assert.Equal(2, CountOccurrences(run.Output, "Downloads:"));
+        Assert.True(run.Output.IndexOf("40 (github 17", StringComparison.Ordinal) < run.Output.IndexOf("1.0.0", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task Show_Json_CarriesListingAndReleaseDownloadCounts()
+    {
+        var listing = ContentCommandFixtures.Listing();
+        var newest = ContentCommandFixtures.Release(version: "2.0.0");
+        var older = ContentCommandFixtures.Release(version: "1.0.0");
+        _host.Mods.Listings.Add(listing);
+        _host.Mods.Releases.AddRange(new[] { newest, older });
+        _host.IndexReader.Snapshot = Snapshot(
+            new ContentIndexListing(listing.ModId, listing, new[] { newest, older }, null, Counts()));
+
+        var run = await _host.RunAsync("show", listing.ModId, "--json");
+
+        Assert.Equal(0, run.ExitCode);
+        var downloads = run.Json.GetProperty("downloads");
+        Assert.Equal(1200, downloads.GetProperty("total").GetInt64());
+        Assert.Equal(721, downloads.GetProperty("hosts").GetProperty("spacedock").GetInt64());
+        var releases = run.Json.GetProperty("releases");
+        Assert.Equal("2.0.0", releases[0].GetProperty("version").GetString());
+        Assert.Equal(40, releases[0].GetProperty("downloads").GetProperty("total").GetInt64());
+        Assert.Equal(17, releases[0].GetProperty("downloads").GetProperty("hosts").GetProperty("github").GetInt64());
+        Assert.Equal("1.0.0", releases[1].GetProperty("version").GetString());
+        Assert.Equal(System.Text.Json.JsonValueKind.Null, releases[1].GetProperty("downloads").ValueKind);
+    }
+
+    [Fact]
+    public async Task Show_UnknownDownloadCounts_OmitsTheLineAndWritesNullInJson()
+    {
+        var listing = ContentCommandFixtures.Listing();
+        var release = ContentCommandFixtures.Release();
+        _host.Mods.Listings.Add(listing);
+        _host.Mods.Releases.Add(release);
+        _host.IndexReader.Snapshot = Snapshot(new ContentIndexListing(listing.ModId, listing, new[] { release }, null));
+
+        var run = await _host.RunAsync("show", listing.ModId);
+        var json = await _host.RunAsync("show", listing.ModId, "--json");
+
+        Assert.Equal(0, run.ExitCode);
+        Assert.DoesNotContain("Downloads", run.Output);
+        Assert.Equal(System.Text.Json.JsonValueKind.Null, json.Json.GetProperty("downloads").ValueKind);
+        Assert.Equal(System.Text.Json.JsonValueKind.Null, json.Json.GetProperty("releases")[0].GetProperty("downloads").ValueKind);
+    }
+
+    [Fact]
+    public async Task ShowVersion_MalformedDownloads_PrintsTheReleaseAndTheDiagnostic()
+    {
+        var listing = ContentCommandFixtures.Listing();
+        var release = ContentCommandFixtures.Release();
+        _host.Mods.Listings.Add(listing);
+        _host.Mods.Releases.Add(release);
+        _host.IndexReader.Snapshot = Snapshot(
+            new[] { new ContentIndexListing(listing.ModId, listing, new[] { release }, null) },
+            new[]
+            {
+                new ContentIndexDiagnostic(
+                    ContentIndexDiagnosticKind.Malformed,
+                    ContentIndexDiagnosticScope.Downloads,
+                    "The downloads value is unreadable. The downloads value must be an object, but was Array.",
+                    listing.ModId),
+            });
+
+        var run = await _host.RunAsync("show", listing.ModId, "--version", "2.0.0");
+
+        Assert.Equal(0, run.ExitCode);
+        Assert.Contains("2.0.0  unknown  stable", run.Output);
+        Assert.DoesNotContain("Downloads:", run.Output);
+        Assert.Contains("malformed downloads flight-tools: The downloads value is unreadable.", run.Output);
+    }
+
+    [Fact]
+    public async Task Show_YankedRelease_KeepsItsCount()
+    {
+        var listing = ContentCommandFixtures.Listing();
+        var yanked = ContentCommandFixtures.Release(version: "1.0.0", yanked: true, yankedReason: "This release is broken.");
+        var counts = new ListingDownloadCounts(
+            60,
+            new Dictionary<string, long> { ["github"] = 60 },
+            new[] { new ReleaseDownloadCounts(ModVersion.Parse("1.0.0"), 60, new Dictionary<string, long> { ["github"] = 60 }) });
+        _host.Mods.Listings.Add(listing);
+        _host.Mods.Releases.Add(yanked);
+        _host.IndexReader.Snapshot = Snapshot(new ContentIndexListing(listing.ModId, listing, new[] { yanked }, null, counts));
+
+        var run = await _host.RunAsync("show", listing.ModId);
+
+        Assert.Equal(0, run.ExitCode);
+        Assert.Contains("1.0.0  unknown  stable  yanked: This release is broken.", run.Output);
+        Assert.Contains("    Downloads: 60 (github 60)", run.Output);
+    }
+
+    [Fact]
+    public async Task Show_Json_KeepsHostKeysAsTheIndexWritesThem()
+    {
+        var listing = ContentCommandFixtures.Listing();
+        var counts = new ListingDownloadCounts(
+            12,
+            new Dictionary<string, long> { ["SpaceDock"] = 12 },
+            Array.Empty<ReleaseDownloadCounts>());
+        _host.Mods.Listings.Add(listing);
+        _host.IndexReader.Snapshot = Snapshot(
+            new ContentIndexListing(listing.ModId, listing, Array.Empty<ModVersionMetadata>(), null, counts));
+
+        var run = await _host.RunAsync("show", listing.ModId, "--json");
+
+        Assert.Equal(0, run.ExitCode);
+        var hosts = run.Json.GetProperty("downloads").GetProperty("hosts");
+        Assert.Equal(12, hosts.GetProperty("SpaceDock").GetInt64());
+        Assert.False(hosts.TryGetProperty("spaceDock", out _));
+    }
+
+    [Fact]
+    public async Task Show_UnknownReleaseSpecVersion_KeepsItsDownloadCount()
+    {
+        var listing = ContentCommandFixtures.Listing();
+        var known = ContentCommandFixtures.Release(version: "2.0.0");
+        _host.Mods.Listings.Add(listing);
+        _host.Mods.Releases.Add(known);
+        _host.IndexReader.Snapshot = Snapshot(
+            new[] { new ContentIndexListing(listing.ModId, listing, new[] { known }, null, Counts()) },
+            new[]
+            {
+                new ContentIndexDiagnostic(
+                    ContentIndexDiagnosticKind.UnsupportedVersion,
+                    ContentIndexDiagnosticScope.Release,
+                    "Release spec version 2 is newer than this client.",
+                    listing.ModId,
+                    "0.9.0",
+                    2),
+            });
+
+        var run = await _host.RunAsync("show", listing.ModId);
+        var json = await _host.RunAsync("show", listing.ModId, "--json");
+
+        Assert.Equal(0, run.ExitCode);
+        Assert.Contains("    Downloads: 7 (spacedock 7)", run.Output);
+        var releases = json.Json.GetProperty("releases");
+        Assert.Equal("0.9.0", releases[1].GetProperty("version").GetString());
+        Assert.Equal("unknown", releases[1].GetProperty("state").GetString());
+        Assert.Equal(7, releases[1].GetProperty("downloads").GetProperty("total").GetInt64());
+    }
+
+    [Fact]
+    public async Task ShowVersion_ReleaseCountDiagnostic_ShowsOnlyTheRequestedVersion()
+    {
+        var listing = ContentCommandFixtures.Listing();
+        var release = ContentCommandFixtures.Release();
+        _host.Mods.Listings.Add(listing);
+        _host.Mods.Releases.Add(release);
+        _host.IndexReader.Snapshot = Snapshot(
+            new[] { new ContentIndexListing(listing.ModId, listing, new[] { release }, null) },
+            new[]
+            {
+                new ContentIndexDiagnostic(
+                    ContentIndexDiagnosticKind.Malformed,
+                    ContentIndexDiagnosticScope.Downloads,
+                    "The downloads releases item at index 0 is unreadable.",
+                    listing.ModId,
+                    "2.0.0"),
+                new ContentIndexDiagnostic(
+                    ContentIndexDiagnosticKind.Malformed,
+                    ContentIndexDiagnosticScope.Downloads,
+                    "The downloads releases item at index 1 is unreadable.",
+                    listing.ModId,
+                    "1.0.0"),
+            });
+
+        var run = await _host.RunAsync("show", listing.ModId, "--version", "2.0.0");
+
+        Assert.Equal(0, run.ExitCode);
+        Assert.Contains("malformed downloads flight-tools 2.0.0", run.Output);
+        Assert.DoesNotContain("flight-tools 1.0.0", run.Output);
+    }
+
     [Theory]
     [InlineData("not-a-version")]
     [InlineData("")]
@@ -317,6 +509,29 @@ public sealed class ShowCommandTests : IDisposable
     {
         Installed = new InstalledGameVersion(GameVersion.Parse(version), version),
     };
+
+    private static ListingDownloadCounts Counts() => new(
+        1200,
+        new Dictionary<string, long> { ["github"] = 479, ["spacedock"] = 721 },
+        new[]
+        {
+            new ReleaseDownloadCounts(
+                ModVersion.Parse("2.0.0"),
+                40,
+                new Dictionary<string, long> { ["github"] = 17, ["spacedock"] = 23 }),
+            new ReleaseDownloadCounts(
+                ModVersion.Parse("0.9.0"),
+                7,
+                new Dictionary<string, long> { ["spacedock"] = 7 }),
+        });
+
+    private static int CountOccurrences(string text, string value)
+    {
+        var count = 0;
+        for (var index = text.IndexOf(value, StringComparison.Ordinal); index >= 0; index = text.IndexOf(value, index + value.Length, StringComparison.Ordinal))
+            count++;
+        return count;
+    }
 
     private static ContentIndexSnapshot Snapshot(params ContentIndexListing[] listings) =>
         Snapshot(listings, Array.Empty<ContentIndexDiagnostic>());

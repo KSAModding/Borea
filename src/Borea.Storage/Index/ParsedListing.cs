@@ -25,6 +25,12 @@ public sealed class ParsedListing
     /// <summary>Present when index_status exists but cannot be read safely.</summary>
     public RejectedIndexEntry? IndexStatusError { get; }
 
+    /// <summary>Null when the listing carries no downloads value or when that value cannot be read.</summary>
+    public ListingDownloadCounts? Downloads { get; }
+
+    /// <summary>The parts of downloads that cannot be read. The listing stays usable.</summary>
+    public IReadOnlyList<RejectedIndexEntry> DownloadsErrors { get; }
+
     public ParsedListing(
         string id,
         ModMetadata? authored,
@@ -32,7 +38,9 @@ public sealed class ParsedListing
         IReadOnlyList<RejectedIndexEntry> rejectedReleases,
         IReadOnlyList<UnknownIndexVersionEntry> unknownReleases,
         IndexStatus? indexStatus,
-        RejectedIndexEntry? indexStatusError = null)
+        RejectedIndexEntry? indexStatusError = null,
+        ListingDownloadCounts? downloads = null,
+        IReadOnlyList<RejectedIndexEntry>? downloadsErrors = null)
     {
         ModIds.Validate(id, nameof(id));
 
@@ -43,5 +51,7 @@ public sealed class ParsedListing
         UnknownReleases = unknownReleases ?? throw new ArgumentNullException(nameof(unknownReleases));
         IndexStatus = indexStatus;
         IndexStatusError = indexStatusError;
+        Downloads = downloads;
+        DownloadsErrors = downloadsErrors ?? Array.Empty<RejectedIndexEntry>();
     }
 }

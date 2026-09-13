@@ -49,10 +49,12 @@ public sealed class ContentIndexReader : IContentIndexReader, IContentIndexCandi
                 listing.Id,
                 listing.Authored,
                 listing.ValidReleases.ToArray(),
-                listing.IndexStatus));
+                listing.IndexStatus,
+                listing.Downloads));
 
             AddMalformed(diagnostics, listing.IndexStatusError, ContentIndexDiagnosticScope.IndexStatus);
             AddUnsupportedStatus(diagnostics, listing.IndexStatus, listing.Id);
+            AddMalformed(diagnostics, listing.DownloadsErrors, ContentIndexDiagnosticScope.Downloads);
             AddMalformed(diagnostics, listing.RejectedReleases, ContentIndexDiagnosticScope.Release);
             AddUnknown(diagnostics, listing.UnknownReleases, ContentIndexDiagnosticScope.Release);
         }

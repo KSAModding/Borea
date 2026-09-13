@@ -56,11 +56,15 @@ public sealed class ContentIndexListing
 
     public IndexStatus? IndexStatus { get; }
 
+    /// <summary>Null when the index reports no download counts for this listing, which means unknown.</summary>
+    public ListingDownloadCounts? Downloads { get; }
+
     public ContentIndexListing(
         string id,
         ModMetadata? authored,
         IReadOnlyList<ModVersionMetadata> releases,
-        IndexStatus? indexStatus)
+        IndexStatus? indexStatus,
+        ListingDownloadCounts? downloads = null)
     {
         ModIds.Validate(id, nameof(id));
         if (authored is not null && !ModIds.Equals(id, authored.ModId))
@@ -74,6 +78,7 @@ public sealed class ContentIndexListing
         Authored = authored;
         Releases = releaseCopy;
         IndexStatus = indexStatus;
+        Downloads = downloads;
     }
 
     private static IReadOnlyList<T> Copy<T>(IReadOnlyList<T> values, string parameterName)

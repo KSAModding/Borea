@@ -115,6 +115,21 @@ public static class DtoMapper
         return MapInput(() => new IndexStatus(MapIndexStatusState(dto.State), dto.State, dto.Since, dto.Reason));
     }
 
+    public static ListingDownloadCounts MapDownloadCounts(DownloadCountsDto dto, IReadOnlyList<ReleaseDownloadCounts> releases)
+    {
+        ArgumentNullException.ThrowIfNull(dto);
+        return MapInput(() => new ListingDownloadCounts(dto.Total, dto.Hosts, releases));
+    }
+
+    public static ReleaseDownloadCounts MapReleaseDownloadCounts(ReleaseDownloadCountsDto dto)
+    {
+        ArgumentNullException.ThrowIfNull(dto);
+        if (!ModVersion.TryParse(dto.Version, out var version))
+            throw new FormatException($"Version '{dto.Version}' is not a valid semantic version.");
+
+        return MapInput(() => new ReleaseDownloadCounts(version, dto.Total, dto.Hosts));
+    }
+
     // Enum / value mappings
 
     private static ModStatus MapModStatus(string? status) =>

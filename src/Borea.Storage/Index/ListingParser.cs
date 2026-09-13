@@ -74,6 +74,7 @@ public static class ListingParser
             }
 
             var authored = listing.Authored is null ? null : DtoMapper.MapAuthored(listing.Authored, source);
+            var (downloads, downloadsErrors) = DownloadCountsParser.Parse(element, listing.Id);
 
             var validReleases = new List<ModVersionMetadata>();
             var rejectedReleases = new List<RejectedIndexEntry>();
@@ -109,7 +110,8 @@ public static class ListingParser
             }
 
             return ParseOutcome<ParsedListing>.Valid(new ParsedListing(
-                listing.Id, authored, validReleases, rejectedReleases, unknownReleases, indexStatus, indexStatusError));
+                listing.Id, authored, validReleases, rejectedReleases, unknownReleases, indexStatus, indexStatusError,
+                downloads, downloadsErrors));
         }
         catch (Exception ex) when (IndexJsonHelpers.IsInputFailure(ex))
         {

@@ -1,5 +1,7 @@
+using System.Text.Json;
 using Borea.Core.Game;
 using Borea.Core.Index;
+using Borea.Core.Mods;
 using Borea.Network.Index;
 using Borea.Storage.Index;
 
@@ -163,6 +165,80 @@ public sealed class SearchCommandTests : IDisposable
     }
 
     [Fact]
+    public async Task Search_KnownDownloadCounts_PrintsTheListingTotal()
+    {
+        var listing = ContentCommandFixtures.Listing();
+        var release = ContentCommandFixtures.Release();
+        _host.Mods.Listings.Add(listing);
+        _host.Mods.Releases.Add(release);
+        _host.IndexReader.Snapshot = Snapshot(
+            new[] { new ContentIndexListing(listing.ModId, listing, new[] { release }, null, Counts()) },
+            Array.Empty<ContentIndexDiagnostic>());
+        _host.InstalledVersion = Installed("2026.9.7.5402");
+
+        var run = await _host.RunAsync("search", "Flight");
+
+        Assert.Equal(0, run.ExitCode);
+        Assert.Contains("flight-tools  Flight Tools  2.0.0  compatible  1200 downloads", run.Output);
+    }
+
+    [Fact]
+    public async Task Search_UnknownDownloadCounts_PrintsNoCount()
+    {
+        var listing = ContentCommandFixtures.Listing();
+        var release = ContentCommandFixtures.Release();
+        _host.Mods.Listings.Add(listing);
+        _host.Mods.Releases.Add(release);
+        _host.IndexReader.Snapshot = Snapshot(
+            new[] { new ContentIndexListing(listing.ModId, listing, new[] { release }, null) },
+            Array.Empty<ContentIndexDiagnostic>());
+
+        var run = await _host.RunAsync("search", "Flight");
+
+        Assert.Equal(0, run.ExitCode);
+        Assert.Contains("flight-tools  Flight Tools  2.0.0  unknown", run.Output);
+        Assert.DoesNotContain("downloads", run.Output);
+    }
+
+    [Fact]
+    public async Task Search_Json_CarriesDownloadCountsAndKeepsTheIdOrder()
+    {
+        var counted = ContentCommandFixtures.Listing();
+        var uncounted = ContentCommandFixtures.Listing(id: "flight-lite", name: "Flight Lite");
+        _host.Mods.Listings.AddRange(new[] { counted, uncounted });
+        _host.IndexReader.Snapshot = Snapshot(
+            new[]
+            {
+                new ContentIndexListing(counted.ModId, counted, Array.Empty<ModVersionMetadata>(), null, Counts()),
+                new ContentIndexListing(uncounted.ModId, uncounted, Array.Empty<ModVersionMetadata>(), null),
+            },
+            new[]
+            {
+                new ContentIndexDiagnostic(
+                    ContentIndexDiagnosticKind.Malformed,
+                    ContentIndexDiagnosticScope.Downloads,
+                    "The downloads value is unreadable. The downloads value must be an object, but was Array.",
+                    uncounted.ModId),
+            });
+
+        var run = await _host.RunAsync("search", "flight", "--json");
+
+        Assert.Equal(0, run.ExitCode);
+        var results = run.Json.GetProperty("results");
+        Assert.Equal(2, results.GetArrayLength());
+        Assert.Equal("flight-lite", results[0].GetProperty("id").GetString());
+        Assert.Equal(JsonValueKind.Null, results[0].GetProperty("downloads").ValueKind);
+        Assert.Equal("flight-tools", results[1].GetProperty("id").GetString());
+        var downloads = results[1].GetProperty("downloads");
+        Assert.Equal(1200, downloads.GetProperty("total").GetInt64());
+        Assert.Equal(479, downloads.GetProperty("hosts").GetProperty("github").GetInt64());
+        Assert.Equal(721, downloads.GetProperty("hosts").GetProperty("spacedock").GetInt64());
+        var diagnostic = Assert.Single(run.Json.GetProperty("diagnostics").EnumerateArray());
+        Assert.Equal("downloads", diagnostic.GetProperty("scope").GetString());
+        Assert.Equal("flight-lite", diagnostic.GetProperty("id").GetString());
+    }
+
+    [Fact]
     public async Task Search_EmptyText_IsAUsageErrorWithoutBuildingServices()
     {
         var run = await _host.RunAsync("search", " ");
@@ -175,6 +251,11 @@ public sealed class SearchCommandTests : IDisposable
     {
         Installed = new InstalledGameVersion(GameVersion.Parse(version), version),
     };
+
+    private static ListingDownloadCounts Counts() => new(
+        1200,
+        new Dictionary<string, long> { ["github"] = 479, ["spacedock"] = 721 },
+        Array.Empty<ReleaseDownloadCounts>());
 
     private static ContentIndexSnapshot Snapshot(params ContentIndexDiagnostic[] diagnostics) =>
         Snapshot(Array.Empty<ContentIndexListing>(), diagnostics);
