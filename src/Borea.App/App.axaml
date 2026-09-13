@@ -2,14 +2,319 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="Borea.App.App"
              xmlns:local="using:Borea.App"
-             RequestedThemeVariant="Default">
-             <!-- "Default" ThemeVariant follows system theme variant. "Dark" or "Light" are other available options. -->
+             RequestedThemeVariant="Dark">
+             <!-- App.axaml.cs sets the variant from the saved theme. Fluent stays the base so stock controls (ComboBox, ToggleSwitch) follow it. -->
 
     <Application.DataTemplates>
         <local:ViewLocator />
     </Application.DataTemplates>
 
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceInclude Source="avares://Borea.App/Assets/Icons.axaml" />
+            </ResourceDictionary.MergedDictionaries>
+
+            <!-- Palettes. Borealis (dark) holds the tokens of the Figma file from #8 (neutral-900 .. white, green, purple-500); Light mirrors them. -->
+            <ResourceDictionary.ThemeDictionaries>
+                <ResourceDictionary x:Key="{x:Static ThemeVariant.Dark}">
+                    <Color x:Key="Color.Window">#171717</Color>
+                    <Color x:Key="Color.Rail">#262626</Color>
+                    <Color x:Key="Color.Surface">#262626</Color>
+                    <Color x:Key="Color.SurfaceHeader">#000000</Color>
+                    <Color x:Key="Color.SurfaceRaised">#333333</Color>
+                    <Color x:Key="Color.Border">#000000</Color>
+                    <Color x:Key="Color.BorderStrong">#3A3A3A</Color>
+                    <Color x:Key="Color.Text">#FFFFFF</Color>
+                    <Color x:Key="Color.TextHeading">#E1E1E1</Color>
+                    <Color x:Key="Color.TextSecondary">#ABABAB</Color>
+                    <Color x:Key="Color.TextMuted">#777777</Color>
+                    <Color x:Key="Color.Accent">#CABCFF</Color>
+                    <Color x:Key="Color.AccentSoft">#26CABCFF</Color>
+                    <Color x:Key="Color.Positive">#C1FFB5</Color>
+                    <Color x:Key="Color.PositiveSoft">#0DC1FFB5</Color>
+                    <Color x:Key="Color.Danger">#F07178</Color>
+                    <Color x:Key="Color.DangerSoft">#26F07178</Color>
+                    <Color x:Key="Color.ThumbStart">#262626</Color>
+                    <Color x:Key="Color.ThumbEnd">#171717</Color>
+                </ResourceDictionary>
+                <ResourceDictionary x:Key="{x:Static ThemeVariant.Light}">
+                    <Color x:Key="Color.Window">#F4F4F6</Color>
+                    <Color x:Key="Color.Rail">#FFFFFF</Color>
+                    <Color x:Key="Color.Surface">#FFFFFF</Color>
+                    <Color x:Key="Color.SurfaceHeader">#E4E4E9</Color>
+                    <Color x:Key="Color.SurfaceRaised">#E9E9EE</Color>
+                    <Color x:Key="Color.Border">#DDDDE3</Color>
+                    <Color x:Key="Color.BorderStrong">#C6C6CE</Color>
+                    <Color x:Key="Color.Text">#1A1A1E</Color>
+                    <Color x:Key="Color.TextHeading">#2A2A30</Color>
+                    <Color x:Key="Color.TextSecondary">#5C5C66</Color>
+                    <Color x:Key="Color.TextMuted">#8E8E98</Color>
+                    <Color x:Key="Color.Accent">#6A56E0</Color>
+                    <Color x:Key="Color.AccentSoft">#266A56E0</Color>
+                    <Color x:Key="Color.Positive">#3C8A25</Color>
+                    <Color x:Key="Color.PositiveSoft">#1A3C8A25</Color>
+                    <Color x:Key="Color.Danger">#C93A43</Color>
+                    <Color x:Key="Color.DangerSoft">#26C93A43</Color>
+                    <Color x:Key="Color.ThumbStart">#FFFFFF</Color>
+                    <Color x:Key="Color.ThumbEnd">#E4E4E9</Color>
+                </ResourceDictionary>
+            </ResourceDictionary.ThemeDictionaries>
+
+            <!-- Brushes resolve their color per theme, so styles can keep StaticResource on the brush -->
+            <SolidColorBrush x:Key="Brush.Window" Color="{DynamicResource Color.Window}" />
+            <SolidColorBrush x:Key="Brush.Rail" Color="{DynamicResource Color.Rail}" />
+            <SolidColorBrush x:Key="Brush.Surface" Color="{DynamicResource Color.Surface}" />
+            <SolidColorBrush x:Key="Brush.SurfaceHeader" Color="{DynamicResource Color.SurfaceHeader}" />
+            <SolidColorBrush x:Key="Brush.SurfaceRaised" Color="{DynamicResource Color.SurfaceRaised}" />
+            <SolidColorBrush x:Key="Brush.Border" Color="{DynamicResource Color.Border}" />
+            <SolidColorBrush x:Key="Brush.BorderStrong" Color="{DynamicResource Color.BorderStrong}" />
+            <SolidColorBrush x:Key="Brush.Text" Color="{DynamicResource Color.Text}" />
+            <SolidColorBrush x:Key="Brush.TextHeading" Color="{DynamicResource Color.TextHeading}" />
+            <SolidColorBrush x:Key="Brush.TextSecondary" Color="{DynamicResource Color.TextSecondary}" />
+            <SolidColorBrush x:Key="Brush.TextMuted" Color="{DynamicResource Color.TextMuted}" />
+            <SolidColorBrush x:Key="Brush.Accent" Color="{DynamicResource Color.Accent}" />
+            <SolidColorBrush x:Key="Brush.AccentSoft" Color="{DynamicResource Color.AccentSoft}" />
+            <SolidColorBrush x:Key="Brush.Positive" Color="{DynamicResource Color.Positive}" />
+            <SolidColorBrush x:Key="Brush.PositiveSoft" Color="{DynamicResource Color.PositiveSoft}" />
+            <SolidColorBrush x:Key="Brush.Danger" Color="{DynamicResource Color.Danger}" />
+            <SolidColorBrush x:Key="Brush.DangerSoft" Color="{DynamicResource Color.DangerSoft}" />
+            <LinearGradientBrush x:Key="Brush.Thumbnail" StartPoint="0%,0%" EndPoint="100%,100%">
+                <GradientStop Offset="0" Color="{DynamicResource Color.ThumbStart}" />
+                <GradientStop Offset="1" Color="{DynamicResource Color.ThumbEnd}" />
+            </LinearGradientBrush>
+
+            <!-- IBM Plex (SIL OFL 1.1), bundled under Assets/Fonts -->
+            <FontFamily x:Key="Font.Sans">avares://Borea.App/Assets/Fonts#IBM Plex Sans</FontFamily>
+            <FontFamily x:Key="Font.Mono">avares://Borea.App/Assets/Fonts#IBM Plex Mono</FontFamily>
+
+            <!-- Fluent's ToggleSwitch reads these for its on state -->
+            <SolidColorBrush x:Key="ToggleSwitchFillOn" Color="{DynamicResource Color.Accent}" />
+            <SolidColorBrush x:Key="ToggleSwitchFillOnPointerOver" Color="{DynamicResource Color.Accent}" />
+            <SolidColorBrush x:Key="ToggleSwitchFillOnPressed" Color="{DynamicResource Color.Accent}" />
+            <SolidColorBrush x:Key="ToggleSwitchStrokeOn" Color="{DynamicResource Color.Accent}" />
+            <SolidColorBrush x:Key="ToggleSwitchStrokeOnPointerOver" Color="{DynamicResource Color.Accent}" />
+            <SolidColorBrush x:Key="ToggleSwitchStrokeOnPressed" Color="{DynamicResource Color.Accent}" />
+            <SolidColorBrush x:Key="ToggleSwitchKnobFillOn" Color="{DynamicResource Color.SurfaceHeader}" />
+            <SolidColorBrush x:Key="ToggleSwitchKnobFillOnPointerOver" Color="{DynamicResource Color.SurfaceHeader}" />
+            <SolidColorBrush x:Key="ToggleSwitchKnobFillOnPressed" Color="{DynamicResource Color.SurfaceHeader}" />
+        </ResourceDictionary>
+    </Application.Resources>
+
     <Application.Styles>
         <FluentTheme />
+
+        <Style Selector="Window">
+            <Setter Property="Background" Value="{StaticResource Brush.Window}" />
+            <Setter Property="FontFamily" Value="{StaticResource Font.Sans}" />
+        </Style>
+        <Style Selector="TextBlock">
+            <Setter Property="Foreground" Value="{StaticResource Brush.Text}" />
+        </Style>
+
+        <!-- Type scale from the Figma file: label-* are IBM Plex Mono, heading-*/action-* IBM Plex Sans SemiBold -->
+        <Style Selector="TextBlock.label-sm">
+            <Setter Property="FontFamily" Value="{StaticResource Font.Mono}" />
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="Foreground" Value="{StaticResource Brush.TextSecondary}" />
+        </Style>
+        <Style Selector="TextBlock.label-md">
+            <Setter Property="FontFamily" Value="{StaticResource Font.Mono}" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Foreground" Value="{StaticResource Brush.TextSecondary}" />
+        </Style>
+        <Style Selector="TextBlock.label-lg">
+            <Setter Property="FontFamily" Value="{StaticResource Font.Mono}" />
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="Foreground" Value="{StaticResource Brush.TextSecondary}" />
+        </Style>
+        <Style Selector="TextBlock.heading-sm">
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+        <Style Selector="TextBlock.heading-md">
+            <Setter Property="FontSize" Value="16" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+        <Style Selector="TextBlock.body-md">
+            <Setter Property="FontSize" Value="14" />
+        </Style>
+        <Style Selector="TextBlock.action-md">
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Foreground" Value="{StaticResource Brush.Accent}" />
+        </Style>
+        <Style Selector="TextBlock.positive">
+            <Setter Property="Foreground" Value="{StaticResource Brush.Positive}" />
+        </Style>
+        <Style Selector="TextBlock.heading">
+            <Setter Property="Foreground" Value="{StaticResource Brush.TextHeading}" />
+        </Style>
+        <Style Selector="TextBlock.muted">
+            <Setter Property="Foreground" Value="{StaticResource Brush.TextMuted}" />
+        </Style>
+        <Style Selector="TextBlock.danger">
+            <Setter Property="Foreground" Value="{StaticResource Brush.Danger}" />
+        </Style>
+
+        <!-- Icons: Phosphor outlines on a 24 grid with a 1.5 stroke. Width/Height stay 24; the size-* classes scale to Phosphor's other sizes. -->
+        <Style Selector="Path.icon">
+            <Setter Property="Width" Value="24" />
+            <Setter Property="Height" Value="24" />
+            <Setter Property="Stretch" Value="None" />
+            <Setter Property="Fill" Value="Transparent" />
+            <Setter Property="Stroke" Value="{StaticResource Brush.TextSecondary}" />
+            <Setter Property="StrokeThickness" Value="1.5" />
+            <Setter Property="StrokeLineCap" Value="Round" />
+            <Setter Property="StrokeJoin" Value="Round" />
+            <Setter Property="RenderTransformOrigin" Value="50%,50%" />
+        </Style>
+        <Style Selector="Path.icon-filled">
+            <Setter Property="Width" Value="24" />
+            <Setter Property="Height" Value="24" />
+            <Setter Property="Stretch" Value="None" />
+            <Setter Property="Fill" Value="{StaticResource Brush.TextSecondary}" />
+            <Setter Property="RenderTransformOrigin" Value="50%,50%" />
+        </Style>
+        <Style Selector="Path.size-32">
+            <Setter Property="RenderTransform" Value="scale(1.3333)" />
+            <Setter Property="Margin" Value="4" />
+        </Style>
+        <Style Selector="Path.size-18">
+            <Setter Property="RenderTransform" Value="scale(0.75)" />
+            <Setter Property="Margin" Value="-3" />
+        </Style>
+        <Style Selector="Path.size-16">
+            <Setter Property="RenderTransform" Value="scale(0.6667)" />
+            <Setter Property="Margin" Value="-4" />
+        </Style>
+
+        <!-- Navigation rail: 48px actions holding 32px icons; the active one turns purple -->
+        <Style Selector="Button.nav">
+            <Setter Property="Width" Value="48" />
+            <Setter Property="Height" Value="48" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="CornerRadius" Value="12" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+        </Style>
+        <Style Selector="Button.nav:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="{StaticResource Brush.SurfaceRaised}" />
+        </Style>
+        <Style Selector="Button.nav:pressed /template/ ContentPresenter">
+            <Setter Property="Background" Value="{StaticResource Brush.SurfaceRaised}" />
+        </Style>
+        <Style Selector="Button.nav.active Path.icon">
+            <Setter Property="Stroke" Value="{StaticResource Brush.Accent}" />
+        </Style>
+
+        <!-- Cards, chips, thumbnails -->
+        <Style Selector="Border.card">
+            <Setter Property="Background" Value="{StaticResource Brush.Surface}" />
+            <Setter Property="CornerRadius" Value="16" />
+            <Setter Property="ClipToBounds" Value="True" />
+        </Style>
+        <Style Selector="Border.thumbnail">
+            <Setter Property="Background" Value="{StaticResource Brush.Thumbnail}" />
+            <Setter Property="BorderBrush" Value="{StaticResource Brush.BorderStrong}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="8" />
+        </Style>
+        <Style Selector="Border.chip">
+            <Setter Property="BorderBrush" Value="{StaticResource Brush.BorderStrong}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="Height" Value="24" />
+            <Setter Property="Padding" Value="6,0" />
+        </Style>
+        <Style Selector="Border.chip TextBlock">
+            <Setter Property="FontFamily" Value="{StaticResource Font.Mono}" />
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="Foreground" Value="{StaticResource Brush.TextSecondary}" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+        <Style Selector="Border.chip.positive">
+            <Setter Property="Background" Value="{StaticResource Brush.PositiveSoft}" />
+        </Style>
+        <Style Selector="Border.chip.positive TextBlock">
+            <Setter Property="Foreground" Value="{StaticResource Brush.Positive}" />
+        </Style>
+
+        <!-- Buttons -->
+        <Style Selector="Button.text">
+            <Setter Property="Padding" Value="12,6" />
+            <Setter Property="CornerRadius" Value="100" />
+            <Setter Property="Background" Value="{StaticResource Brush.SurfaceRaised}" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Foreground" Value="{StaticResource Brush.Text}" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="FontSize" Value="14" />
+        </Style>
+        <Style Selector="Button.text:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="{StaticResource Brush.BorderStrong}" />
+            <Setter Property="Foreground" Value="{StaticResource Brush.Text}" />
+        </Style>
+        <Style Selector="Button.text.primary">
+            <Setter Property="Background" Value="{StaticResource Brush.Accent}" />
+            <Setter Property="Foreground" Value="{StaticResource Brush.SurfaceHeader}" />
+        </Style>
+        <Style Selector="Button.text.primary:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="{StaticResource Brush.Accent}" />
+            <Setter Property="Foreground" Value="{StaticResource Brush.SurfaceHeader}" />
+            <Setter Property="Opacity" Value="0.9" />
+        </Style>
+        <Style Selector="Button.text.danger">
+            <Setter Property="Background" Value="{StaticResource Brush.DangerSoft}" />
+            <Setter Property="Foreground" Value="{StaticResource Brush.Danger}" />
+        </Style>
+        <Style Selector="Button.text.danger:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="{StaticResource Brush.DangerSoft}" />
+            <Setter Property="Foreground" Value="{StaticResource Brush.Danger}" />
+            <Setter Property="Opacity" Value="0.85" />
+        </Style>
+        <!-- c/link-cta: icon + purple text, 32px tall -->
+        <Style Selector="Button.link">
+            <Setter Property="Height" Value="32" />
+            <Setter Property="Padding" Value="8,0" />
+            <Setter Property="CornerRadius" Value="100" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+        </Style>
+        <Style Selector="Button.link:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="{StaticResource Brush.AccentSoft}" />
+        </Style>
+        <!-- c/button-icon-more: round, 18px dots -->
+        <Style Selector="Button.icon">
+            <Setter Property="Width" Value="32" />
+            <Setter Property="Height" Value="32" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="CornerRadius" Value="100" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+        </Style>
+        <Style Selector="Button.icon:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="{StaticResource Brush.SurfaceRaised}" />
+        </Style>
+
+        <Style Selector="TextBox.field">
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="Padding" Value="12,7" />
+            <Setter Property="Background" Value="{StaticResource Brush.Window}" />
+            <Setter Property="BorderBrush" Value="{StaticResource Brush.BorderStrong}" />
+            <Setter Property="Foreground" Value="{StaticResource Brush.Text}" />
+            <Setter Property="FontSize" Value="14" />
+        </Style>
+
+        <Style Selector="ToggleSwitch.switch">
+            <Setter Property="MinWidth" Value="0" />
+            <Setter Property="Margin" Value="0" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="OnContent" Value="" />
+            <Setter Property="OffContent" Value="" />
+        </Style>
     </Application.Styles>
 </Application>

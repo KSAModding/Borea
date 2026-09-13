@@ -10,11 +10,31 @@ internal static class AppPreferencesMapper
         FormatVersion = FileAppPreferencesRepository.CurrentFormatVersion,
         SelectedTheme = preferences.SelectedThemeName,
         RegionalCulture = preferences.RegionalCultureName,
+        UiCulture = preferences.UiCultureName,
         CustomThemes = preferences.CustomThemes.Select(theme => (CustomThemePreferenceDto?)ToDto(theme)).ToList(),
     };
 
     public static AppPreferences FromDto(AppPreferencesDocumentDto dto)
-        => new(dto.SelectedTheme, dto.CustomThemes?.Select(FromDto), NormalizeRegionalCulture(dto.RegionalCulture));
+        => new(dto.SelectedTheme, dto.CustomThemes?.Select(FromDto), NormalizeRegionalCulture(dto.RegionalCulture), NormalizeUiCulture(dto.UiCulture));
+
+    /// <summary>
+    /// UI languages are neutral cultures ("de"), unlike regional formats, so
+    /// only unknown names are dropped.
+    /// </summary>
+    private static string? NormalizeUiCulture(string? cultureName)
+    {
+        if (string.IsNullOrWhiteSpace(cultureName))
+            return null;
+
+        try
+        {
+            return CultureInfo.GetCultureInfo(cultureName, predefinedOnly: true).Name;
+        }
+        catch (CultureNotFoundException)
+        {
+            return null;
+        }
+    }
 
     private static string? NormalizeRegionalCulture(string? cultureName)
     {

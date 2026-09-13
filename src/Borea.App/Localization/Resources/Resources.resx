@@ -12,9 +12,6 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
-  <data name="BrandLogoPlaceholder" xml:space="preserve">
-    <value>Logo goes here</value>
-  </data>
   <data name="NavigationDiscover" xml:space="preserve">
     <value>Discover</value>
   </data>
@@ -53,5 +50,59 @@
   </data>
   <data name="ViewNotFoundFormat" xml:space="preserve">
     <value>View not found: {0}</value>
+  </data>
+  <data name="HomeCurrentInstall" xml:space="preserve">
+    <value>Current Install</value>
+  </data>
+  <data name="HomeTrending" xml:space="preserve">
+    <value>Trending this week</value>
+  </data>
+  <data name="HomeDiscoverMods" xml:space="preserve">
+    <value>Discover mods</value>
+  </data>
+  <data name="HomeNoGameVersion" xml:space="preserve">
+    <value>Game not set up</value>
+  </data>
+  <data name="HomeNoInstance" xml:space="preserve">
+    <value>No instance yet</value>
+  </data>
+  <data name="HomeInstanceSourceCustom" xml:space="preserve">
+    <value>Custom</value>
+  </data>
+  <data name="ContentTypeMod" xml:space="preserve">
+    <value>Mod</value>
+  </data>
+  <data name="LibraryNewInstancePlaceholder" xml:space="preserve">
+    <value>New instance name</value>
+  </data>
+  <data name="LibraryCreate" xml:space="preserve">
+    <value>Create</value>
+  </data>
+  <data name="LibraryActivate" xml:space="preserve">
+    <value>Activate</value>
+  </data>
+  <data name="LibraryRename" xml:space="preserve">
+    <value>Rename</value>
+  </data>
+  <data name="LibraryDelete" xml:space="preserve">
+    <value>Delete</value>
+  </data>
+  <data name="LibrarySave" xml:space="preserve">
+    <value>Save</value>
+  </data>
+  <data name="LibraryCancel" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="LibraryDeleteConfirm" xml:space="preserve">
+    <value>Delete this instance and its folder?</value>
+  </data>
+  <data name="LibraryEmpty" xml:space="preserve">
+    <value>No instances yet. Create one to get started.</value>
+  </data>
+  <data name="LibraryNewInstance" xml:space="preserve">
+    <value>New instance</value>
+  </data>
+  <data name="NavigationTasks" xml:space="preserve">
+    <value>Tasks</value>
   </data>
 </root>

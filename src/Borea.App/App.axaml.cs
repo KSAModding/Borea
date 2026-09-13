@@ -1,7 +1,9 @@
 using System;
+using System.ComponentModel;
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
+using Avalonia.Styling;
 using Borea.App.Formatting;
 using Borea.App.Localization;
 using Borea.App.ViewModels;
@@ -41,6 +43,9 @@ public partial class App : Application
             .GetAwaiter()
             .GetResult();
         _preferences = loadResult.Preferences;
+        if (_preferences.UiCultureName is not null)
+            Localization.TrySetCulture(_preferences.UiCultureName);
+
         RegionalFormat = new RegionalFormatService(
             Localization,
             System.Globalization.CultureInfo.CurrentCulture,
@@ -56,16 +61,36 @@ public partial class App : Application
     {
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
-            desktop.MainWindow = new MainWindow
-            {
-                DataContext = new MainViewModel(
-                    Localization,
-                    RegionalFormat,
-                    Services?.AppPreferences,
-                    _preferences),
-            };
+            var viewModel = new MainViewModel(
+                Localization,
+                RegionalFormat,
+                Services?.AppPreferences,
+                _preferences,
+                Services?.Instances,
+                Services?.InstalledVersion);
+
+            ApplyTheme(viewModel.CurrentTheme);
+            viewModel.PropertyChanged += OnViewModelPropertyChanged;
+
+            desktop.MainWindow = new MainWindow { DataContext = viewModel };
+            desktop.MainWindow.Opened += async (_, _) => await viewModel.LoadAsync();
         }
 
         base.OnFrameworkInitializationCompleted();
+    }
+
+    private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(MainViewModel.CurrentTheme) && sender is MainViewModel viewModel)
+            ApplyTheme(viewModel.CurrentTheme);
+    }
+
+    /// <summary>
+    /// Every bundled theme is one of Avalonia's variants; App.axaml holds the
+    /// palette for each under its ThemeDictionaries.
+    /// </summary>
+    private void ApplyTheme(string themeName)
+    {
+        RequestedThemeVariant = themeName == "Light" ? ThemeVariant.Light : ThemeVariant.Dark;
     }
 }

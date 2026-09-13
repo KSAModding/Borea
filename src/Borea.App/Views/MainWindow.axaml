@@ -4,12 +4,14 @@
         xmlns:vm="using:Borea.App.ViewModels"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+        mc:Ignorable="d" d:DesignWidth="1280" d:DesignHeight="832"
         x:Class="Borea.App.Views.MainWindow"
         x:DataType="vm:MainViewModel"
         Icon="/Assets/avalonia-logo.ico"
         CanResize="True"
-        Title="Borea.App">
+        Width="1280" Height="832"
+        MinWidth="860" MinHeight="480"
+        Title="Borea">
 
     <Design.DataContext>
         <!-- This only sets the DataContext for the previewer in an IDE,
@@ -17,54 +19,246 @@
         <vm:MainViewModel />
     </Design.DataContext>
 
-    <Grid>
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="200" />
-            <ColumnDefinition Width="*" />
-        </Grid.ColumnDefinitions>
+    <Window.Resources>
+        <!-- c/instance-row: used by the library list and by the Current Install card on Home.
+             Rename and delete happen inline; the row swaps its title or its actions for the edit. -->
+        <DataTemplate x:Key="InstanceRow" x:DataType="vm:InstanceItem">
+            <Border Classes="card" Padding="12">
+                <Grid ColumnDefinitions="70,16,*" RowDefinitions="Auto,*,Auto" Height="70">
+                    <Border Grid.RowSpan="3" Classes="thumbnail">
+                        <Path Classes="icon size-32" Data="{StaticResource Icon.Box}" />
+                    </Border>
 
+                    <!-- Title row: name or the rename field; switch + more, or the edit's buttons -->
+                    <Grid Grid.Column="2" Grid.Row="0" ColumnDefinitions="*,16,Auto">
+                        <Panel VerticalAlignment="Center">
+                            <TextBlock Classes="heading-md" Text="{Binding Name}" IsVisible="{Binding !IsRenaming}" TextTrimming="CharacterEllipsis" />
+                            <TextBox Classes="field" Text="{Binding EditName}" IsVisible="{Binding IsRenaming}" Padding="8,2" MaxWidth="360" HorizontalAlignment="Left" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryRename}">
+                                <TextBox.KeyBindings>
+                                    <KeyBinding Gesture="Enter" Command="{Binding CommitRenameCommand}" />
+                                    <KeyBinding Gesture="Escape" Command="{Binding CancelCommand}" />
+                                </TextBox.KeyBindings>
+                            </TextBox>
+                        </Panel>
+                        <Panel Grid.Column="2" VerticalAlignment="Center">
+                            <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding IsRenaming}">
+                                <Button Classes="text primary" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibrarySave}" Command="{Binding CommitRenameCommand}" />
+                                <Button Classes="text" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryCancel}" Command="{Binding CancelCommand}" />
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding IsConfirmingDelete}">
+                                <Button Classes="text danger" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryDelete}" Command="{Binding ConfirmDeleteCommand}" />
+                                <Button Classes="text" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryCancel}" Command="{Binding CancelCommand}" />
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" Spacing="12">
+                                <StackPanel.IsVisible>
+                                    <MultiBinding Converter="{x:Static BoolConverters.And}">
+                                        <Binding Path="!IsRenaming" />
+                                        <Binding Path="!IsConfirmingDelete" />
+                                    </MultiBinding>
+                                </StackPanel.IsVisible>
+                                <ToggleSwitch Classes="switch" IsChecked="{Binding IsActive, Mode=OneWay}" Command="{Binding ActivateCommand}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryActivate}" VerticalAlignment="Center" />
+                                <Button Classes="icon" AutomationProperties.Name="{Binding Name}">
+                                    <Button.Flyout>
+                                        <MenuFlyout Placement="BottomEdgeAlignedRight">
+                                            <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryRename}" Command="{Binding BeginRenameCommand}" />
+                                            <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryDelete}" Command="{Binding BeginDeleteCommand}" />
+                                        </MenuFlyout>
+                                    </Button.Flyout>
+                                    <Path Classes="icon-filled size-18" Data="{StaticResource Icon.More}" />
+                                </Button>
+                            </StackPanel>
+                        </Panel>
+                    </Grid>
 
-        <Panel Grid.Column="0" Background="{Binding GlobalPanelsColor}"> <!-- Sidebar, used the switch between different views -->
-            <Grid>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="100" />
-                    <RowDefinition Height="*" />
-                </Grid.RowDefinitions>
-                <Panel Grid.Row="0" Background="{Binding SecondaryColor}">
-                    <TextBlock Text="{Binding Localization.BrandLogoPlaceholder}" HorizontalAlignment="Center" VerticalAlignment="Center" />
-                </Panel>
-                <Panel Grid.Row="1" Background="{Binding GlobalPanelsColor}" Margin="20">
-                    <Button Content="{Binding Localization.NavigationHome}" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,5,0,5" Command="{Binding SetMainWindowHome}" Foreground="{Binding TextColor}" />
-                    <Button Content="{Binding Localization.NavigationLibrary}" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,55,0,55" Command="{Binding SetMainWindowLibrary}" Foreground="{Binding TextColor}" />
-                    <Button Content="{Binding Localization.NavigationDiscover}" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,105,0,105" Command="{Binding SetMainWindowDiscover}" Foreground="{Binding TextColor}"/> <!--All of these will eventually be replaced with images instead of text-->
-                    <Button Content="{Binding Localization.NavigationSettings}" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,5,0,5" Command="{Binding SetMainWindowSettings}" Foreground="{Binding TextColor}" />
-                </Panel>
-            </Grid>
-        </Panel>
+                    <!-- Bottom row: chips, and the meta on the right -->
+                    <Grid Grid.Column="2" Grid.Row="2" ColumnDefinitions="*,Auto" Margin="0,0,4,0">
+                        <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                            <Border Classes="chip positive" IsVisible="{Binding SourceText, Converter={x:Static ObjectConverters.IsNotNull}}">
+                                <TextBlock Text="{Binding SourceText}" />
+                            </Border>
+                            <TextBlock Classes="body-md danger" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryDeleteConfirm}" VerticalAlignment="Center" IsVisible="{Binding IsConfirmingDelete}" />
+                        </StackPanel>
+                        <!-- c/meta: CirclesThree + the number of installed mods -->
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                            <Path Classes="icon size-16" Data="{StaticResource Icon.CirclesThree}" />
+                            <TextBlock Classes="label-md" Text="{Binding ModCount}" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Grid>
+                </Grid>
+            </Border>
+        </DataTemplate>
+    </Window.Resources>
 
-        <Panel Grid.Column="1" Background="{Binding MainColor}" IsEnabled="{Binding CurrentWindowHome}" IsVisible="{Binding CurrentWindowHome}"> <!-- Home  -->
-            <TextBlock Text="{Binding Localization.PageHomeHeading}" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{Binding TextColor}" />
-        </Panel>
+    <Grid ColumnDefinitions="80,*">
 
+        <!-- c/nav-bar -->
+        <Border Grid.Column="0" Background="{StaticResource Brush.Rail}" BorderBrush="{StaticResource Brush.Border}" BorderThickness="0,0,1,0">
+            <DockPanel Margin="16,24">
+                <StackPanel DockPanel.Dock="Bottom" Spacing="8">
+                    <Button Classes="nav" Classes.active="{Binding CurrentWindowTasks}" Command="{Binding SetMainWindowTasks}" ToolTip.Tip="{Binding Localization.NavigationTasks}" AutomationProperties.Name="{Binding Localization.NavigationTasks}">
+                        <Path Classes="icon size-32" Data="{StaticResource Icon.Terminal}" />
+                    </Button>
+                    <Border Height="1" Background="{StaticResource Brush.Border}" Margin="0,3" />
+                    <Button Classes="nav" Classes.active="{Binding CurrentWindowSettings}" Command="{Binding SetMainWindowSettings}" ToolTip.Tip="{Binding Localization.NavigationSettings}" AutomationProperties.Name="{Binding Localization.NavigationSettings}">
+                        <Path Classes="icon size-32" Data="{StaticResource Icon.Settings}" />
+                    </Button>
+                </StackPanel>
+                <StackPanel VerticalAlignment="Center" Spacing="16">
+                    <Button Classes="nav" Classes.active="{Binding CurrentWindowHome}" Command="{Binding SetMainWindowHome}" ToolTip.Tip="{Binding Localization.NavigationHome}" AutomationProperties.Name="{Binding Localization.NavigationHome}">
+                        <Path Classes="icon size-32" Data="{StaticResource Icon.Home}" />
+                    </Button>
+                    <Button Classes="nav" Classes.active="{Binding CurrentWindowDiscover}" Command="{Binding SetMainWindowDiscover}" ToolTip.Tip="{Binding Localization.NavigationDiscover}" AutomationProperties.Name="{Binding Localization.NavigationDiscover}">
+                        <Path Classes="icon size-32" Data="{StaticResource Icon.Compass}" />
+                    </Button>
+                    <Button Classes="nav" Classes.active="{Binding CurrentWindowLibrary}" Command="{Binding SetMainWindowLibrary}" ToolTip.Tip="{Binding Localization.NavigationLibrary}" AutomationProperties.Name="{Binding Localization.NavigationLibrary}">
+                        <Path Classes="icon size-32" Data="{StaticResource Icon.Library}" />
+                    </Button>
+                </StackPanel>
+            </DockPanel>
+        </Border>
 
+        <!-- Home -->
+        <ScrollViewer Grid.Column="1" IsVisible="{Binding CurrentWindowHome}">
+            <StackPanel MaxWidth="700" Margin="32,42,32,32">
+                <!-- c/breadcrumb -->
+                <StackPanel Orientation="Horizontal" Spacing="4" Height="24">
+                    <Path Classes="icon" Data="{StaticResource Icon.Home}" />
+                    <TextBlock Classes="label-lg" Text="{Binding Localization.PageHomeHeading}" VerticalAlignment="Center" />
+                </StackPanel>
 
-        <Panel Grid.Column="1" Background="{Binding MainColor}" IsEnabled="{Binding CurrentWindowDiscover}" IsVisible="{Binding CurrentWindowDiscover}"> <!-- Discover  -->
-            <TextBlock Text="{Binding Localization.PageDiscoverHeading}" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{Binding TextColor}" />
-        </Panel>
+                <!-- Current install: black container with the header strip, holding the active instance row -->
+                <Border Background="{StaticResource Brush.SurfaceHeader}" CornerRadius="16" Margin="0,23,0,0">
+                    <StackPanel>
+                        <Grid ColumnDefinitions="Auto,8,*,Auto" Height="44" Margin="12,0">
+                            <Path Grid.Column="0" Classes="icon-filled size-16" Fill="{StaticResource Brush.Positive}" Data="{StaticResource Icon.Paw}" VerticalAlignment="Center" />
+                            <TextBlock Grid.Column="2" Classes="label-md positive" Text="{Binding Localization.HomeCurrentInstall}" VerticalAlignment="Center" />
+                            <Border Grid.Column="3" Classes="chip" VerticalAlignment="Center">
+                                <Panel>
+                                    <TextBlock IsVisible="{Binding InstalledVersionText, Converter={x:Static ObjectConverters.IsNotNull}}">
+                                        <Run Text="KSA" /><Run Text=" " /><Run Text="{Binding InstalledVersionText}" />
+                                    </TextBlock>
+                                    <TextBlock IsVisible="{Binding InstalledVersionText, Converter={x:Static ObjectConverters.IsNull}}" Text="{Binding Localization.HomeNoGameVersion}" />
+                                </Panel>
+                            </Border>
+                        </Grid>
+                        <ContentControl Content="{Binding ActiveInstance}" ContentTemplate="{StaticResource InstanceRow}" IsVisible="{Binding HasActiveInstance}" />
+                        <Border Classes="card" Padding="12" IsVisible="{Binding !HasActiveInstance}">
+                            <Grid ColumnDefinitions="70,16,*" Height="70">
+                                <Border Classes="thumbnail">
+                                    <Path Classes="icon size-32" Data="{StaticResource Icon.Box}" />
+                                </Border>
+                                <TextBlock Grid.Column="2" Classes="heading-md muted" Text="{Binding Localization.HomeNoInstance}" VerticalAlignment="Center" />
+                            </Grid>
+                        </Border>
+                    </StackPanel>
+                </Border>
 
+                <!-- Trending -->
+                <Grid ColumnDefinitions="*,Auto" Margin="3,44,3,0">
+                    <TextBlock Classes="heading-sm heading" Text="{Binding Localization.HomeTrending}" />
+                    <Button Grid.Column="1" Classes="link" Padding="0" Height="18" Command="{Binding SetMainWindowDiscover}">
+                        <TextBlock Classes="action-md" Text="{Binding Localization.HomeDiscoverMods}" />
+                    </Button>
+                </Grid>
 
+                <ItemsControl ItemsSource="{Binding TrendingItems}" Margin="0,16,-5,0">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <UniformGrid Columns="4" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:TrendingItem">
+                            <!-- tile: thumbnail with the text over its bottom. The index has no image field yet (#8), so the gradient stands in. -->
+                            <Border Classes="card" Margin="0,0,5,5" Height="171" Background="{StaticResource Brush.Thumbnail}" Padding="16">
+                                <StackPanel VerticalAlignment="Bottom" Spacing="10">
+                                    <TextBlock Classes="heading-sm" Text="{Binding Name}" TextWrapping="Wrap" />
+                                    <Grid ColumnDefinitions="*,Auto">
+                                        <TextBlock Classes="label-md" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ContentTypeMod}" />
+                                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4">
+                                            <Path Classes="icon size-16" Data="{StaticResource Icon.Download}" />
+                                            <TextBlock Classes="label-md" Text="{Binding Downloads}" VerticalAlignment="Center" />
+                                        </StackPanel>
+                                    </Grid>
+                                </StackPanel>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+        </ScrollViewer>
 
-        <Panel Grid.Column="1" Background="{Binding MainColor}" IsEnabled="{Binding CurrentWindowLibrary}" IsVisible="{Binding CurrentWindowLibrary}"> <!-- Library  -->
-            <TextBlock Text="{Binding Localization.PageLibraryHeading}" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{Binding TextColor}" />
-        </Panel>
+        <!-- Discover -->
+        <StackPanel Grid.Column="1" IsVisible="{Binding CurrentWindowDiscover}" MaxWidth="700" Margin="32,42,32,32">
+            <StackPanel Orientation="Horizontal" Spacing="4" Height="24">
+                <Path Classes="icon" Data="{StaticResource Icon.Compass}" />
+                <TextBlock Classes="label-lg" Text="{Binding Localization.PageDiscoverHeading}" VerticalAlignment="Center" />
+            </StackPanel>
+        </StackPanel>
 
+        <!-- Library -->
+        <ScrollViewer Grid.Column="1" IsVisible="{Binding CurrentWindowLibrary}">
+            <StackPanel MaxWidth="700" Margin="32,42,32,32">
+                <!-- header: breadcrumb, c/link-cta, bottom border -->
+                <Border BorderBrush="{StaticResource Brush.Surface}" BorderThickness="0,0,0,1" Padding="0,0,8,8">
+                    <Grid ColumnDefinitions="*,Auto">
+                        <StackPanel Orientation="Horizontal" Spacing="4" Height="24">
+                            <Path Classes="icon" Data="{StaticResource Icon.Library}" />
+                            <TextBlock Classes="label-lg" Text="{Binding Localization.PageLibraryHeading}" VerticalAlignment="Center" />
+                        </StackPanel>
+                        <Button Grid.Column="1" Classes="link" Command="{Binding BeginCreateInstanceCommand}" IsVisible="{Binding !IsCreatingInstance}">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <Path Classes="icon size-16" Data="{StaticResource Icon.Plus}" Stroke="{StaticResource Brush.Accent}" VerticalAlignment="Center" />
+                                <TextBlock Classes="action-md" Text="{Binding Localization.LibraryNewInstance}" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
+                    </Grid>
+                </Border>
 
+                <!-- Create, shown on demand -->
+                <Grid ColumnDefinitions="*,12,Auto,8,Auto" Margin="0,16,0,0" IsVisible="{Binding IsCreatingInstance}">
+                    <TextBox Classes="field" Text="{Binding NewInstanceName}" PlaceholderText="{Binding Localization.LibraryNewInstancePlaceholder}" AutomationProperties.Name="{Binding Localization.LibraryNewInstancePlaceholder}">
+                        <TextBox.KeyBindings>
+                            <KeyBinding Gesture="Enter" Command="{Binding CreateInstanceCommand}" />
+                            <KeyBinding Gesture="Escape" Command="{Binding CancelCreateInstanceCommand}" />
+                        </TextBox.KeyBindings>
+                    </TextBox>
+                    <Button Grid.Column="2" Classes="text primary" Content="{Binding Localization.LibraryCreate}" Command="{Binding CreateInstanceCommand}" />
+                    <Button Grid.Column="4" Classes="text" Content="{Binding Localization.LibraryCancel}" Command="{Binding CancelCreateInstanceCommand}" />
+                </Grid>
 
-        <Panel Grid.Column="1" Background="{Binding MainColor}" IsEnabled="{Binding CurrentWindowSettings}" IsVisible="{Binding CurrentWindowSettings}"> <!-- Settings  -->
-            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,5,0,5" Spacing="5">
-                <TextBlock Text="{Binding Localization.SettingsLanguageLabel}" Foreground="{Binding TextColor}" />
-                <ComboBox ItemsSource="{Binding Localization.SupportedCultures}" SelectedItem="{Binding Localization.SelectedCulture, Mode=TwoWay}" AutomationProperties.Name="{Binding Localization.SettingsLanguageLabel}" />
-                <TextBlock Text="{Binding Localization.SettingsRegionalFormatLabel}" Foreground="{Binding TextColor}" Margin="0,10,0,0" />
+                <TextBlock Classes="body-md danger" Text="{Binding InstanceError}" TextWrapping="Wrap" Margin="0,16,0,0" IsVisible="{Binding InstanceError, Converter={x:Static ObjectConverters.IsNotNull}}" />
+
+                <TextBlock Classes="body-md muted" Text="{Binding Localization.LibraryEmpty}" Margin="8,24,0,0" IsVisible="{Binding !Instances.Count}" />
+
+                <ItemsControl ItemsSource="{Binding Instances}" ItemTemplate="{StaticResource InstanceRow}" Margin="0,24,0,0">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <StackPanel Spacing="8" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                </ItemsControl>
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- Tasks -->
+        <StackPanel Grid.Column="1" IsVisible="{Binding CurrentWindowTasks}" MaxWidth="700" Margin="32,42,32,32">
+            <StackPanel Orientation="Horizontal" Spacing="4" Height="24">
+                <Path Classes="icon" Data="{StaticResource Icon.Terminal}" />
+                <TextBlock Classes="label-lg" Text="{Binding Localization.NavigationTasks}" VerticalAlignment="Center" />
+            </StackPanel>
+        </StackPanel>
+
+        <!-- Settings -->
+        <StackPanel Grid.Column="1" IsVisible="{Binding CurrentWindowSettings}" MaxWidth="700" Margin="32,42,32,32" Spacing="24">
+            <StackPanel Orientation="Horizontal" Spacing="4" Height="24">
+                <Path Classes="icon" Data="{StaticResource Icon.Settings}" />
+                <TextBlock Classes="label-lg" Text="{Binding Localization.NavigationSettings}" VerticalAlignment="Center" />
+            </StackPanel>
+            <StackPanel Spacing="6" MaxWidth="360" HorizontalAlignment="Left">
+                <TextBlock Classes="label-md" Text="{Binding Localization.SettingsLanguageLabel}" />
+                <ComboBox ItemsSource="{Binding Localization.SupportedCultures}" SelectedItem="{Binding Localization.SelectedCulture, Mode=TwoWay}" AutomationProperties.Name="{Binding Localization.SettingsLanguageLabel}" MinWidth="280" />
+                <TextBlock Classes="label-md" Text="{Binding Localization.SettingsRegionalFormatLabel}" Margin="0,12,0,0" />
                 <ComboBox ItemsSource="{Binding RegionalFormat.SupportedFormats}" SelectedItem="{Binding SelectedRegionalFormat, Mode=TwoWay}" AutomationProperties.Name="{Binding Localization.SettingsRegionalFormatLabel}" MaxDropDownHeight="300" MinWidth="280">
                     <ComboBox.ItemTemplate>
                         <DataTemplate x:DataType="formatting:RegionalFormatOption">
@@ -72,13 +266,10 @@
                         </DataTemplate>
                     </ComboBox.ItemTemplate>
                 </ComboBox>
-                <TextBlock Text="{Binding PreferenceSaveError}" Foreground="{Binding TextColor}" TextWrapping="Wrap" MaxWidth="360" />
-                <TextBlock Text="{Binding Localization.SettingsThemeLabel}" Foreground="{Binding TextColor}" Margin="0,10,0,0" />
-                <ComboBox ItemsSource="{Binding ThemeNames}" SelectedItem="{Binding CurrentTheme}" Foreground="{Binding TextColor}" AutomationProperties.Name="{Binding Localization.SettingsThemeLabel}" />
+                <TextBlock Classes="body-md danger" Text="{Binding PreferenceSaveError}" TextWrapping="Wrap" />
+                <TextBlock Classes="label-md" Text="{Binding Localization.SettingsThemeLabel}" Margin="0,12,0,0" />
+                <ComboBox ItemsSource="{Binding ThemeNames}" SelectedItem="{Binding CurrentTheme}" AutomationProperties.Name="{Binding Localization.SettingsThemeLabel}" MinWidth="280" />
             </StackPanel>
-            <TextBlock Text="{Binding CurrentTheme}" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{Binding TextColor}" />
-        </Panel>
+        </StackPanel>
     </Grid>
-
-
 </Window>

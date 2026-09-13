@@ -42,6 +42,31 @@ public sealed class FileAppPreferencesRepositoryTests : IDisposable
     }
 
     [Fact]
+    public async Task SaveThenGet_SavedUiCulture_RestoresTheSelection()
+    {
+        await _repository.SaveAsync(new AppPreferences("Borealis", uiCultureName: "de"), BundledThemeNames);
+
+        var result = await _repository.GetAsync(BundledThemeNames);
+
+        Assert.Equal(AppPreferencesLoadStatus.Loaded, result.Status);
+        Assert.Equal("de", result.Preferences.UiCultureName);
+    }
+
+    [Fact]
+    public async Task GetAsync_UnknownUiCulture_KeepsOtherPreferences()
+    {
+        await WriteAsync("""
+            { "formatVersion": 1, "selectedTheme": "Light", "uiCulture": "not-a-culture-xx" }
+            """);
+
+        var result = await _repository.GetAsync(BundledThemeNames);
+
+        Assert.Equal(AppPreferencesLoadStatus.Loaded, result.Status);
+        Assert.Equal("Light", result.Preferences.SelectedThemeName);
+        Assert.Null(result.Preferences.UiCultureName);
+    }
+
+    [Fact]
     public async Task SaveThenGet_SavedCustomTheme_RestoresTheThemeAndSelection()
     {
         var customTheme = new CustomThemePreference("Mission", "#102030", "#405060", "#708090", "#abcdef");

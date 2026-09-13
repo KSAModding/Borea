@@ -8,12 +8,19 @@ public sealed class AppPreferences
 
     public string? RegionalCultureName { get; }
 
+    /// <summary>
+    /// The language of the user interface, as a culture name such as "de".
+    /// Null means follow the system.
+    /// </summary>
+    public string? UiCultureName { get; }
+
     public IReadOnlyList<CustomThemePreference> CustomThemes { get; }
 
     public AppPreferences(
         string? selectedThemeName,
         IEnumerable<CustomThemePreference>? customThemes = null,
-        string? regionalCultureName = null)
+        string? regionalCultureName = null,
+        string? uiCultureName = null)
     {
         if (selectedThemeName is not null && string.IsNullOrWhiteSpace(selectedThemeName))
             throw new ArgumentException("Selected theme name, if provided, cannot be whitespace.", nameof(selectedThemeName));
@@ -21,13 +28,23 @@ public sealed class AppPreferences
         if (regionalCultureName is not null && string.IsNullOrWhiteSpace(regionalCultureName))
             throw new ArgumentException("Regional culture name, if provided, cannot be whitespace.", nameof(regionalCultureName));
 
+        if (uiCultureName is not null && string.IsNullOrWhiteSpace(uiCultureName))
+            throw new ArgumentException("UI culture name, if provided, cannot be whitespace.", nameof(uiCultureName));
+
         SelectedThemeName = selectedThemeName;
         RegionalCultureName = regionalCultureName;
+        UiCultureName = uiCultureName;
         CustomThemes = BuildCustomThemes(customThemes, nameof(customThemes));
     }
 
     public AppPreferences WithRegionalCultureName(string? regionalCultureName)
-        => new(SelectedThemeName, CustomThemes, regionalCultureName);
+        => new(SelectedThemeName, CustomThemes, regionalCultureName, UiCultureName);
+
+    public AppPreferences WithUiCultureName(string? uiCultureName)
+        => new(SelectedThemeName, CustomThemes, RegionalCultureName, uiCultureName);
+
+    public AppPreferences WithSelectedThemeName(string? selectedThemeName)
+        => new(selectedThemeName, CustomThemes, RegionalCultureName, UiCultureName);
 
     public string ResolveSelectedThemeName(IReadOnlyCollection<string> bundledThemeNames, string defaultThemeName)
     {

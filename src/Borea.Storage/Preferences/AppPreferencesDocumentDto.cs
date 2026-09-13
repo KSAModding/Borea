@@ -8,6 +8,8 @@ internal sealed class AppPreferencesDocumentDto
 
     public string? RegionalCulture { get; set; }
 
+    public string? UiCulture { get; set; }
+
     public List<CustomThemePreferenceDto?>? CustomThemes { get; set; }
 }
 

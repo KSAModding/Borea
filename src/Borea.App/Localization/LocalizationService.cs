@@ -33,8 +33,6 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string SelectedCultureName => SelectedCulture.Name;
 
-    public string BrandLogoPlaceholder => Resources.BrandLogoPlaceholder;
-
     public string NavigationHome => Resources.NavigationHome;
 
     public string NavigationLibrary => Resources.NavigationLibrary;
@@ -42,6 +40,8 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string NavigationDiscover => Resources.NavigationDiscover;
 
     public string NavigationSettings => Resources.NavigationSettings;
+
+    public string NavigationTasks => Resources.NavigationTasks;
 
     public string PageHomeHeading => Resources.PageHomeHeading;
 
@@ -56,6 +56,40 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string SettingsThemeLabel => Resources.SettingsThemeLabel;
 
     public string SystemDefaultRegionalFormat => Resources.SystemDefaultRegionalFormat;
+
+    public string HomeCurrentInstall => Resources.HomeCurrentInstall;
+
+    public string HomeTrending => Resources.HomeTrending;
+
+    public string HomeDiscoverMods => Resources.HomeDiscoverMods;
+
+    public string HomeNoGameVersion => Resources.HomeNoGameVersion;
+
+    public string HomeNoInstance => Resources.HomeNoInstance;
+
+    public string HomeInstanceSourceCustom => Resources.HomeInstanceSourceCustom;
+
+    public string ContentTypeMod => Resources.ContentTypeMod;
+
+    public string LibraryNewInstancePlaceholder => Resources.LibraryNewInstancePlaceholder;
+
+    public string LibraryCreate => Resources.LibraryCreate;
+
+    public string LibraryNewInstance => Resources.LibraryNewInstance;
+
+    public string LibraryActivate => Resources.LibraryActivate;
+
+    public string LibraryRename => Resources.LibraryRename;
+
+    public string LibraryDelete => Resources.LibraryDelete;
+
+    public string LibrarySave => Resources.LibrarySave;
+
+    public string LibraryCancel => Resources.LibraryCancel;
+
+    public string LibraryDeleteConfirm => Resources.LibraryDeleteConfirm;
+
+    public string LibraryEmpty => Resources.LibraryEmpty;
 
     public LocalizationService()
         : this(CultureInfo.CurrentUICulture)
