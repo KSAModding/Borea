@@ -204,6 +204,12 @@
   <data name="DiscoverNoRelease" xml:space="preserve">
     <value>Dieser Eintrag hat keine installierbare Version.</value>
   </data>
+  <data name="InstallAnyway" xml:space="preserve">
+    <value>Trotzdem installieren</value>
+  </data>
+  <data name="InstallInstanceMissing" xml:space="preserve">
+    <value>Die aktive Instanz existiert nicht mehr.</value>
+  </data>
   <data name="ModalCreateInstanceTitle" xml:space="preserve">
     <value>Instanz erstellen</value>
   </data>

@@ -204,6 +204,12 @@
   <data name="DiscoverNoRelease" xml:space="preserve">
     <value>This listing has no release to install.</value>
   </data>
+  <data name="InstallAnyway" xml:space="preserve">
+    <value>Install anyway</value>
+  </data>
+  <data name="InstallInstanceMissing" xml:space="preserve">
+    <value>The active instance no longer exists.</value>
+  </data>
   <data name="ModalCreateInstanceTitle" xml:space="preserve">
     <value>Create instance</value>
   </data>
