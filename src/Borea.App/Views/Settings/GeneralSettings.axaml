@@ -19,5 +19,10 @@
         <TextBlock Classes="body-md danger" Text="{Binding PreferenceSaveError}" TextWrapping="Wrap" IsVisible="{Binding PreferenceSaveError, Converter={x:Static ObjectConverters.IsNotNull}}" />
         <TextBlock Classes="heading-md" Text="{Binding Localization.SettingsThemeLabel}" Margin="0,18,0,0" />
         <ComboBox ItemsSource="{Binding ThemeNames}" SelectedItem="{Binding CurrentTheme}" AutomationProperties.Name="{Binding Localization.SettingsThemeLabel}" Width="340" Margin="0,4,0,0" />
+        <TextBlock Classes="heading-md" Text="{Binding Localization.SettingsUpdatesLabel}" Margin="0,18,0,0" />
+        <Grid ColumnDefinitions="*,16,Auto" Width="340" HorizontalAlignment="Left" Margin="0,4,0,0">
+            <TextBlock Classes="body-md" Text="{Binding Localization.SettingsCheckForUpdatesAtStart}" TextWrapping="Wrap" VerticalAlignment="Center" />
+            <ToggleSwitch Grid.Column="2" Classes="switch" IsChecked="{Binding CheckForUpdatesAtStart}" AutomationProperties.Name="{Binding Localization.SettingsCheckForUpdatesAtStart}" />
+        </Grid>
     </StackPanel>
 </UserControl>

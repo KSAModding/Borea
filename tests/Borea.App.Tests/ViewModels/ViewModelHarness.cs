@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Globalization;
 using System.Net;
 using System.Text;
@@ -28,10 +29,16 @@ internal sealed class ViewModelHarness : IDisposable
 
     public LocalizationService Localization { get; } = new(CultureInfo.GetCultureInfo("en"));
 
+    /// <summary>Every request the services sent.</summary>
+    public ConcurrentQueue<Uri> Requests { get; } = new();
+
+    private Func<HttpRequestMessage, HttpResponseMessage?>? _respond;
+
     /// <param name="seed">Writes settings the view model should start from; the services are rebuilt after it ran.</param>
-    public static async Task<ViewModelHarness> CreateAsync(Func<BoreaServices, Task>? seed = null)
+    /// <param name="respond">Answers a request outside the content index. Null fails it.</param>
+    public static async Task<ViewModelHarness> CreateAsync(Func<BoreaServices, Task>? seed = null, Func<HttpRequestMessage, HttpResponseMessage?>? respond = null)
     {
-        var harness = new ViewModelHarness();
+        var harness = new ViewModelHarness { _respond = respond };
         Directory.CreateDirectory(harness.Root);
         harness.Services = await harness.BuildServicesAsync();
         if (seed is not null)
@@ -54,12 +61,13 @@ internal sealed class ViewModelHarness : IDisposable
     }
 
     public Task<BoreaServices> BuildServicesAsync() =>
-        BoreaServices.BuildAsync(Root, new IndexOnlyHandler(), new FakeSpaceDock());
+        BoreaServices.BuildAsync(Root, new IndexOnlyHandler(this), new FakeSpaceDock());
 
     public void Dispose()
     {
         // a language or theme change saves in the background; let it finish before the folder goes
         ViewModel?.WhenPreferencesSavedAsync().GetAwaiter().GetResult();
+        ViewModel?.WhenUpdateCheckedAsync().GetAwaiter().GetResult();
         Services.Dispose();
         CultureInfo.CurrentCulture = _originalCulture;
         CultureInfo.CurrentUICulture = _originalUiCulture;
@@ -71,16 +79,16 @@ internal sealed class ViewModelHarness : IDisposable
     private static string SnapshotFixturePath =>
         Path.Combine(AppContext.BaseDirectory, "Index", "Fixtures", "current-snapshot.json");
 
-    /// <summary>
-    /// Serves the index snapshot and fails every other request, the way a
-    /// download from a host the tests cannot reach fails.
-    /// </summary>
-    private sealed class IndexOnlyHandler : HttpMessageHandler
+    /// <summary>Serves the index snapshot, records every request, and answers or fails the others.</summary>
+    private sealed class IndexOnlyHandler(ViewModelHarness owner) : HttpMessageHandler
     {
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
+            if (request.RequestUri is not null)
+                owner.Requests.Enqueue(request.RequestUri);
+
             if (request.RequestUri?.AbsoluteUri.StartsWith("https://ksamodding.github.io/content-index-releases/", StringComparison.Ordinal) != true)
-                throw new HttpRequestException($"No network in tests: {request.RequestUri}");
+                return owner._respond?.Invoke(request) ?? throw new HttpRequestException($"No network in tests: {request.RequestUri}");
 
             var snapshot = await File.ReadAllTextAsync(SnapshotFixturePath, cancellationToken);
             return new HttpResponseMessage(HttpStatusCode.OK)
