@@ -59,7 +59,7 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string HomeCurrentInstall => Resources.HomeCurrentInstall;
 
-    public string HomeTrending => Resources.HomeTrending;
+    public string HomeRecentlyUpdated => Resources.HomeRecentlyUpdated;
 
     public string HomeDiscoverMods => Resources.HomeDiscoverMods;
 

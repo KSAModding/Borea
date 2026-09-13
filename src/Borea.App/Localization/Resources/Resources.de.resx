@@ -54,8 +54,8 @@
   <data name="HomeCurrentInstall" xml:space="preserve">
     <value>Aktuelle Installation</value>
   </data>
-  <data name="HomeTrending" xml:space="preserve">
-    <value>Diese Woche im Trend</value>
+  <data name="HomeRecentlyUpdated" xml:space="preserve">
+    <value>Zuletzt aktualisiert</value>
   </data>
   <data name="HomeDiscoverMods" xml:space="preserve">
     <value>Mods entdecken</value>
