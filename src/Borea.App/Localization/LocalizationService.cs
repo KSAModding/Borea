@@ -348,6 +348,9 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string FormatAboutCannotOpen(string target)
         => string.Format(CultureInfo.CurrentCulture, Resources.AboutCannotOpenFormat, target);
 
+    public string FormatDiscoverInstalledIn(string instance)
+        => string.Format(CultureInfo.CurrentCulture, Resources.DiscoverInstalledInFormat, instance);
+
     public string FormatContentSource(string source)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(source);

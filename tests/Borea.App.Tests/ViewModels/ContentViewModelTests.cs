@@ -77,6 +77,30 @@ public sealed class ContentViewModelTests
     }
 
     [Fact]
+    public async Task LeavingThePage_ForgetsTheLastOutcome()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var viewModel = harness.ViewModel;
+        await viewModel.EnsureDiscoverLoadedAsync();
+        var afc = viewModel.DiscoverItems.Single(item => item.ModId == "AdvancedFlightComputer");
+        await afc.OpenCommand.ExecuteAsync(null);
+        await viewModel.ShowContentVersionsCommand.ExecuteAsync(null);
+        afc.InstallError = "old";
+        afc.IsConfirmingRemove = true;
+        viewModel.ContentVersions[0].InstallError = "old row";
+
+        viewModel.SetMainWindowHome();
+
+        Assert.Null(afc.InstallError);
+        Assert.False(afc.IsConfirmingRemove);
+        Assert.Null(viewModel.ContentVersions[0].InstallError);
+
+        afc.InstallError = "old";
+        await afc.OpenCommand.ExecuteAsync(null);
+        Assert.Null(afc.InstallError);
+    }
+
+    [Fact]
     public async Task InstallVersion_DownloadFails_ShowsTheErrorOnTheRow()
     {
         using var harness = await ViewModelHarness.CreateAsync();

@@ -92,6 +92,7 @@ public partial class MainViewModel : ViewModelBase
     [RelayCommand]
     public void SetMainWindowHome() // used to set whatever is on the main window (discover, library, etc.)
     {
+        LeaveContentPage();
         CurrentWindowHome = true;
         CurrentWindowDiscover = false;
         CurrentWindowLibrary = false;
@@ -102,6 +103,7 @@ public partial class MainViewModel : ViewModelBase
     [RelayCommand]
     public void SetMainWindowDiscover() // used to set whatever is on the main window (discover, library, etc.)
     {
+        LeaveContentPage();
         _ = EnsureDiscoverLoadedAsync();
         CurrentWindowHome = false;
         CurrentWindowDiscover = true;
@@ -113,6 +115,7 @@ public partial class MainViewModel : ViewModelBase
     [RelayCommand]
     public void SetMainWindowLibrary() // used to set whatever is on the main window (discover, library, etc.)
     {
+        LeaveContentPage();
         CurrentWindowHome = false;
         CurrentWindowDiscover = false;
         CurrentWindowLibrary = true;
@@ -123,6 +126,7 @@ public partial class MainViewModel : ViewModelBase
     [RelayCommand]
     public void SetMainWindowTasks()
     {
+        LeaveContentPage();
         CurrentWindowHome = false;
         CurrentWindowDiscover = false;
         CurrentWindowLibrary = false;
@@ -351,11 +355,16 @@ public partial class MainViewModel : ViewModelBase
 
         ActiveInstance = Instances.FirstOrDefault(instance => instance.IsActive);
         RefreshInstalledFlags();
+        OnPropertyChanged(nameof(InstalledInText));
 
+        // the instance page shows fresh rows after a change; any other page
+        // stays where the user is instead of jumping to that instance
         if (SelectedInstance is not null)
         {
             var stillThere = Instances.FirstOrDefault(instance => instance.InstanceId == SelectedInstance.InstanceId);
-            if (stillThere is null)
+            if (!CurrentWindowInstance)
+                SelectedInstance = stillThere;
+            else if (stillThere is null)
                 SetMainWindowLibrary();
             else
                 await OpenInstanceAsync(stillThere);
@@ -497,6 +506,7 @@ public partial class MainViewModel : ViewModelBase
         RefreshContentGroups();
         RefreshLoaderText();
         OnPropertyChanged(nameof(GameSetupBannerText));
+        OnPropertyChanged(nameof(InstalledInText));
 
         QueuePreferenceSave(preferences => preferences.WithUiCultureName(Localization.SelectedCultureName));
     }

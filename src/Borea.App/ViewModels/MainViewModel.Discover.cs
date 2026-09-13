@@ -218,6 +218,44 @@ public partial class MainViewModel
             ? Task.CompletedTask
             : PlanInstallAsync(item, () => services.Mods.GetLatestReleaseAsync(item.ModId), exact: false);
     }
+
+    /// <summary>
+    /// The "Installed" chip names the instance the row acts on, because the
+    /// same mod may sit in another instance too.
+    /// </summary>
+    public string? InstalledInText => ActiveInstance is null ? null : Localization.FormatDiscoverInstalledIn(ActiveInstance.Name);
+
+    /// <summary>
+    /// Removes the mod from the active instance, the same way the instance
+    /// page does (#164). What blocks the removal lands on the row.
+    /// </summary>
+    internal async Task RemoveAsync(DiscoverItem item)
+    {
+        var services = _services;
+        var instance = ActiveInstance;
+        if (services is null || instance is null || item.IsRemoving)
+            return;
+
+        item.IsRemoving = true;
+        item.InstallError = null;
+        string? error;
+        try
+        {
+            error = await TryRemoveContentAsync(services, instance.InstanceId, item.ModId);
+        }
+        catch (Exception exception) when (exception is IOException or InvalidOperationException or UnauthorizedAccessException)
+        {
+            error = exception.Message;
+        }
+        finally
+        {
+            item.IsRemoving = false;
+            item.IsConfirmingRemove = false;
+        }
+
+        await ReloadInstancesAsync();
+        item.InstallError = error;
+    }
 }
 
 /// <summary>
@@ -292,6 +330,7 @@ public sealed partial class DiscoverItem : ObservableObject, IInstallRow
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CanInstall))]
+    [NotifyPropertyChangedFor(nameof(CanRemove))]
     private bool _isInstalled;
 
     [ObservableProperty]
@@ -303,6 +342,14 @@ public sealed partial class DiscoverItem : ObservableObject, IInstallRow
 
     [ObservableProperty]
     private string? _installError;
+
+    /// <summary>True between the Remove menu item and the confirmation.</summary>
+    [ObservableProperty]
+    private bool _isConfirmingRemove;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanRemove))]
+    private bool _isRemoving;
 
     /// <summary>
     /// The planner's warnings while <see cref="PendingPlan"/> waits for a confirmation.
@@ -316,6 +363,8 @@ public sealed partial class DiscoverItem : ObservableObject, IInstallRow
     /// Mods install into an instance; a loader is set up from the settings.
     /// </summary>
     public bool CanInstall => !IsInstalled && !IsInstalling && Type == ContentType.Mod;
+
+    public bool CanRemove => IsInstalled && !IsRemoving;
 
     public DiscoverItem(MainViewModel owner, ModMetadata listing)
     {
@@ -345,6 +394,18 @@ public sealed partial class DiscoverItem : ObservableObject, IInstallRow
         OnPropertyChanged(string.Empty);
     }
 
+    /// <summary>
+    /// Drops what the last install or removal left on the row: the message,
+    /// a pending plan and the confirmation. Called when the user moves on.
+    /// </summary>
+    internal void ClearOutcome()
+    {
+        InstallError = null;
+        InstallWarning = null;
+        PendingPlan = null;
+        IsConfirmingRemove = false;
+    }
+
     internal void RefreshText()
     {
         OnPropertyChanged(nameof(AuthorsText));
@@ -364,4 +425,17 @@ public sealed partial class DiscoverItem : ObservableObject, IInstallRow
 
     [RelayCommand]
     private void CancelInstall() => MainViewModel.CancelInstall(this);
+
+    [RelayCommand]
+    private void BeginRemove()
+    {
+        InstallError = null;
+        IsConfirmingRemove = true;
+    }
+
+    [RelayCommand]
+    private void CancelRemove() => IsConfirmingRemove = false;
+
+    [RelayCommand]
+    private Task ConfirmRemoveAsync() => _owner.RemoveAsync(this);
 }
