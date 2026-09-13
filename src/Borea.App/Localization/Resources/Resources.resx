@@ -414,13 +414,22 @@
   <data name="AboutReleases" xml:space="preserve">
     <value>Releases</value>
   </data>
-  <data name="AboutThirdParty" xml:space="preserve">
-    <value>Third-party notices</value>
+  <data name="AboutCredits" xml:space="preserve">
+    <value>Built with</value>
   </data>
   <data name="AboutCommunity" xml:space="preserve">
     <value>KSA modding on GitHub</value>
   </data>
   <data name="AboutDiscord" xml:space="preserve">
     <value>KSA modding Discord</value>
+  </data>
+  <data name="AboutCreditsHint" xml:space="preserve">
+    <value>The software bill of materials attached to each release lists every package and its license.</value>
+  </data>
+  <data name="AboutCannotOpenFormat" xml:space="preserve">
+    <value>{0} cannot be opened.</value>
+  </data>
+  <data name="AboutCopyPath" xml:space="preserve">
+    <value>Copy path</value>
   </data>
 </root>
