@@ -84,6 +84,26 @@ public sealed class LibraryViewModelTests
     }
 
     [Fact]
+    public async Task ToggleActive_SwitchedOffOnTheActiveRow_LeavesNoInstanceActive()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var viewModel = harness.ViewModel;
+        await harness.Services.Instances.CreateAsync("Alpha", InstanceSource.Custom.Value);
+        await viewModel.LoadAsync();
+
+        await viewModel.Instances.Single().ToggleActiveCommand.ExecuteAsync(null);
+        Assert.True(viewModel.Instances.Single().IsActive);
+
+        await viewModel.Instances.Single().ToggleActiveCommand.ExecuteAsync(null);
+
+        Assert.False(viewModel.Instances.Single().IsActive);
+        Assert.Null(viewModel.ActiveInstance);
+        Assert.False(viewModel.HasActiveInstance);
+        Assert.Null(await harness.Services.Instances.GetActiveInstanceIdAsync());
+        Assert.Null(viewModel.InstanceError);
+    }
+
+    [Fact]
     public async Task Rename_CommitsTheTrimmedName()
     {
         using var harness = await ViewModelHarness.CreateAsync();

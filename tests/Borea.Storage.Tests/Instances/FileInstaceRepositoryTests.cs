@@ -166,6 +166,26 @@ public sealed class FileInstanceRepositoryTests : IDisposable
     }
 
     [Fact]
+    public async Task ClearActiveInstanceAsync_AfterSet_LeavesNoActiveInstance()
+    {
+        var instance = await _repository.CreateAsync("Cleared Active", InstanceSource.Custom.Value);
+        await _repository.SetActiveInstanceAsync(instance.InstanceId);
+
+        await _repository.ClearActiveInstanceAsync();
+
+        Assert.Null(await _repository.GetActiveInstanceIdAsync());
+        Assert.Null(await new FileInstanceRepository(_pathProvider).GetActiveInstanceIdAsync());
+    }
+
+    [Fact]
+    public async Task ClearActiveInstanceAsync_NoPointerSet_DoesNothing()
+    {
+        await _repository.ClearActiveInstanceAsync();
+
+        Assert.Null(await _repository.GetActiveInstanceIdAsync());
+    }
+
+    [Fact]
     public async Task GetActiveInstanceIdAsync_PersistsAcrossFreshRepository()
     {
         var instance = await _repository.CreateAsync("Persisted Active", InstanceSource.Custom.Value);
