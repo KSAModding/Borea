@@ -57,3 +57,12 @@ jobs:
         with:
           global-json-file: global.json
       - run: dotnet format Borea.slnx --verify-no-changes
+
+  # Pull requests do not run the release workflow, so the tests of its scripts run here.
+  release-scripts:
+    name: release scripts
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Test the third-party notices script
+        run: python3 -m unittest discover --start-directory .github/scripts/tests --pattern 'test_*.py' --verbose

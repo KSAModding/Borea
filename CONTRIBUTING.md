@@ -16,6 +16,14 @@ Explain the user-visible change, the tests you ran, and any work that remains ou
 Run the relevant tests and formatting checks before you open a pull request.
 The continuous-integration checks run on Windows, Linux, and macOS.
 
+## Release scripts
+
+The `release scripts` job tests the scripts in `.github/scripts`. Locally they need Python 3:
+
+```sh
+python3 -m unittest discover --start-directory .github/scripts/tests --pattern "test_*.py"
+```
+
 Changes to the content-manager format or snapshot contract must follow the accepted RFCs in [content-manager-design](https://github.com/KSAModding/content-manager-design).
 When an RFC does not answer the question, start a design discussion before implementing a private format extension.
 

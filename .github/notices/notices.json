@@ -1,0 +1,52 @@
+{
+  "about": "Package lists and license inputs of the release archives, read by release.yml and write_third_party_notices.py.",
+  "never_shipped": [
+    "xunit",
+    "Microsoft.NET.Test.Sdk",
+    "coverlet.collector",
+    "AvaloniaUI.DiagnosticsSupport"
+  ],
+  "spdx": {
+    "list": "SPDX License List 3.28.0",
+    "source": "https://github.com/spdx/license-list-data/tree/v3.28.0/text",
+    "texts": {
+      "BSD-2-Clause": {
+        "path": ".github/notices/spdx/BSD-2-Clause.txt",
+        "sha256": "f32fb3b417a194167cfad068223fc975ba96c5960513a10f66a3c28720aec1df"
+      },
+      "MIT": {
+        "path": ".github/notices/spdx/MIT.txt",
+        "sha256": "b05785f9f18e6716bab63424b11454513b9943a222595b70411009202fc592b5"
+      }
+    }
+  },
+  "products": {
+    "App": {
+      "required": ["Avalonia", "CommunityToolkit.Mvvm", "Tomlyn", "SkiaSharp", "System.CommandLine"],
+      "excluded": [],
+      "extras": [
+        {
+          "name": "IBM Plex",
+          "license": "OFL-1.1",
+          "copyright": "Copyright (c) 2017 IBM Corp. with Reserved Font Name \"Plex\"",
+          "link": "https://github.com/IBM/plex",
+          "path": "src/Borea.App/Assets/Fonts/IBMPlex-OFL.txt"
+        },
+        {
+          "name": "Phosphor Icons",
+          "license": "MIT",
+          "copyright": "Copyright (c) 2023 Phosphor Icons",
+          "link": "https://github.com/phosphor-icons/core",
+          "source": "https://github.com/phosphor-icons/core/blob/6cb9423c66c49cb5d3cb420a66837c9e96d5491b/LICENSE",
+          "path": ".github/notices/Phosphor-Icons-LICENSE.txt",
+          "sha256": "b5b1f1da112d18ea2147decfd48ddc1bf2b5aeb6c265381579340e95b15a2bb2"
+        }
+      ]
+    },
+    "Cli": {
+      "required": ["System.CommandLine", "Tomlyn"],
+      "excluded": ["Avalonia"],
+      "extras": []
+    }
+  }
+}
