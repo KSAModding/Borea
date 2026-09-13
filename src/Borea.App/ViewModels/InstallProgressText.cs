@@ -108,9 +108,11 @@ internal sealed class InstallProgressText
             : _localization.FormatInstallMinutesLeft((int)Math.Ceiling(seconds / 60));
     }
 
-    // "12.4 of 38.0 MB": the unit once, after the total
+    // "12.4 of 38.0 MB": the unit once, after the total. Decimal megabytes, so the label is accurate.
+    private const double BytesPerMegabyte = 1_000_000;
+
     private static string Number(long bytes) =>
-        (bytes / 1024d / 1024d).ToString("0.0", CultureInfo.CurrentCulture);
+        (bytes / BytesPerMegabyte).ToString("0.0", CultureInfo.CurrentCulture);
 
     private static string Megabytes(long bytes) => Number(bytes) + " MB";
 }

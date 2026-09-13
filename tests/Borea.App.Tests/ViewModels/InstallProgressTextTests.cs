@@ -7,7 +7,7 @@ namespace Borea.App.Tests.ViewModels;
 
 public sealed class InstallProgressTextTests : IDisposable
 {
-    private const long Megabyte = 1024 * 1024;
+    private const long Megabyte = 1_000_000;
 
     private readonly CultureInfo _originalCulture = CultureInfo.CurrentCulture;
     private readonly CultureInfo _originalUiCulture = CultureInfo.CurrentUICulture;

@@ -187,7 +187,7 @@
                                 <Button Classes="text danger" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ContentRemove}" Command="{Binding ConfirmRemoveCommand}" />
                                 <Button Classes="text" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryCancel}" Command="{Binding CancelRemoveCommand}" />
                             </StackPanel>
-                            <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center" IsVisible="{Binding IsInstalling}">
+                            <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center" IsVisible="{Binding ProgressStatus, Converter={x:Static ObjectConverters.IsNotNull}}">
                                 <TextBlock Classes="body-sm secondary" Text="{Binding ProgressStatus}" ToolTip.Tip="{Binding ProgressStatus}" MaxWidth="260" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
                                 <TextBlock Classes="label-md" Text="{Binding ProgressDetail}" VerticalAlignment="Center" IsVisible="{Binding ProgressDetail, Converter={x:Static ObjectConverters.IsNotNull}}" />
                             </StackPanel>
