@@ -16,11 +16,15 @@ public sealed class AppPreferences
 
     public IReadOnlyList<CustomThemePreference> CustomThemes { get; }
 
+    /// <summary>Whether the App checks for a newer Borea release at start. On by default.</summary>
+    public bool CheckForUpdatesAtStart { get; }
+
     public AppPreferences(
         string? selectedThemeName,
         IEnumerable<CustomThemePreference>? customThemes = null,
         string? regionalCultureName = null,
-        string? uiCultureName = null)
+        string? uiCultureName = null,
+        bool checkForUpdatesAtStart = true)
     {
         if (selectedThemeName is not null && string.IsNullOrWhiteSpace(selectedThemeName))
             throw new ArgumentException("Selected theme name, if provided, cannot be whitespace.", nameof(selectedThemeName));
@@ -34,17 +38,21 @@ public sealed class AppPreferences
         SelectedThemeName = selectedThemeName;
         RegionalCultureName = regionalCultureName;
         UiCultureName = uiCultureName;
+        CheckForUpdatesAtStart = checkForUpdatesAtStart;
         CustomThemes = BuildCustomThemes(customThemes, nameof(customThemes));
     }
 
     public AppPreferences WithRegionalCultureName(string? regionalCultureName)
-        => new(SelectedThemeName, CustomThemes, regionalCultureName, UiCultureName);
+        => new(SelectedThemeName, CustomThemes, regionalCultureName, UiCultureName, CheckForUpdatesAtStart);
 
     public AppPreferences WithUiCultureName(string? uiCultureName)
-        => new(SelectedThemeName, CustomThemes, RegionalCultureName, uiCultureName);
+        => new(SelectedThemeName, CustomThemes, RegionalCultureName, uiCultureName, CheckForUpdatesAtStart);
 
     public AppPreferences WithSelectedThemeName(string? selectedThemeName)
-        => new(selectedThemeName, CustomThemes, RegionalCultureName, UiCultureName);
+        => new(selectedThemeName, CustomThemes, RegionalCultureName, UiCultureName, CheckForUpdatesAtStart);
+
+    public AppPreferences WithCheckForUpdatesAtStart(bool checkForUpdatesAtStart)
+        => new(SelectedThemeName, CustomThemes, RegionalCultureName, UiCultureName, checkForUpdatesAtStart);
 
     public string ResolveSelectedThemeName(IReadOnlyCollection<string> bundledThemeNames, string defaultThemeName)
     {

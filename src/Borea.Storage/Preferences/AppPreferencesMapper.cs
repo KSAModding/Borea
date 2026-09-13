@@ -11,11 +11,12 @@ internal static class AppPreferencesMapper
         SelectedTheme = preferences.SelectedThemeName,
         RegionalCulture = preferences.RegionalCultureName,
         UiCulture = preferences.UiCultureName,
+        CheckForUpdatesAtStart = preferences.CheckForUpdatesAtStart,
         CustomThemes = preferences.CustomThemes.Select(theme => (CustomThemePreferenceDto?)ToDto(theme)).ToList(),
     };
 
     public static AppPreferences FromDto(AppPreferencesDocumentDto dto)
-        => new(dto.SelectedTheme, dto.CustomThemes?.Select(FromDto), NormalizeRegionalCulture(dto.RegionalCulture), NormalizeUiCulture(dto.UiCulture));
+        => new(dto.SelectedTheme, dto.CustomThemes?.Select(FromDto), NormalizeRegionalCulture(dto.RegionalCulture), NormalizeUiCulture(dto.UiCulture), dto.CheckForUpdatesAtStart ?? true);
 
     /// <summary>
     /// UI languages are neutral cultures ("de"), unlike regional formats, so
