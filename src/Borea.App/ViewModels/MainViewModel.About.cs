@@ -64,6 +64,10 @@ public partial class MainViewModel
     [ObservableProperty]
     private string? _aboutError;
 
+    /// <summary>The line under the folder buttons, after the path was copied.</summary>
+    [ObservableProperty]
+    private string? _folderMessage;
+
     /// <summary>
     /// Where Borea keeps its settings, instances and loaders. Null without services.
     /// </summary>
@@ -110,6 +114,7 @@ public partial class MainViewModel
     {
         AboutMessage = null;
         AboutError = null;
+        FolderMessage = null;
         SettingsTab = SettingsTab.About;
     }
 
@@ -123,13 +128,21 @@ public partial class MainViewModel
     private void OpenAboutLink(string? url) => OpenFromAbout(url);
 
     /// <summary>
-    /// Called by the view after it put <see cref="DiagnosticsText"/> or
-    /// <see cref="BoreaFolder"/> on the clipboard.
+    /// Called by the view after it put <see cref="DiagnosticsText"/> on the clipboard.
     /// </summary>
     internal void ReportDiagnosticsCopied()
     {
         AboutError = null;
         AboutMessage = Localization.AboutCopied;
+    }
+
+    /// <summary>
+    /// Called by the view after it put <see cref="BoreaFolder"/> on the clipboard.
+    /// </summary>
+    internal void ReportFolderCopied()
+    {
+        AboutError = null;
+        FolderMessage = Localization.AboutCopied;
     }
 
     /// <summary>
@@ -141,6 +154,7 @@ public partial class MainViewModel
             return;
 
         AboutMessage = null;
+        FolderMessage = null;
         try
         {
             if (Directory.Exists(target) || Uri.IsWellFormedUriString(target, UriKind.Absolute))

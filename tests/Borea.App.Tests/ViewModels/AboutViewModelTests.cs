@@ -82,6 +82,23 @@ public sealed class AboutViewModelTests
 
         viewModel.ReportDiagnosticsCopied();
         Assert.Equal(harness.Localization.AboutCopied, viewModel.AboutMessage);
+        Assert.Null(viewModel.FolderMessage);
+    }
+
+    [Fact]
+    public async Task CopyPath_ReportsUnderTheFolderButtons()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var viewModel = harness.ViewModel;
+        viewModel.ShowAboutSettingsCommand.Execute(null);
+
+        viewModel.ReportFolderCopied();
+
+        Assert.Equal(harness.Localization.AboutCopied, viewModel.FolderMessage);
+        Assert.Null(viewModel.AboutMessage);
+
+        viewModel.ShowAboutSettingsCommand.Execute(null);
+        Assert.Null(viewModel.FolderMessage);
     }
 
     [Fact]

@@ -46,7 +46,7 @@ public partial class MainWindow : Window
             return;
 
         await Clipboard.SetTextAsync(folder);
-        viewModel.ReportDiagnosticsCopied();
+        viewModel.ReportFolderCopied();
     }
 
     private async Task<string?> PickFolderAsync()

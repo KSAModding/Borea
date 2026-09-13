@@ -879,6 +879,7 @@
                                 <Button Classes="text" Content="{Binding Localization.AboutOpenBoreaFolder}" Command="{Binding OpenBoreaFolderCommand}" />
                                 <Button Classes="text" Content="{Binding Localization.AboutOpenInstancesFolder}" Command="{Binding OpenInstancesFolderCommand}" />
                             </StackPanel>
+                            <TextBlock Classes="body-md secondary" Text="{Binding FolderMessage}" TextWrapping="Wrap" IsVisible="{Binding FolderMessage, Converter={x:Static ObjectConverters.IsNotNull}}" />
 
                             <Border Height="1" Background="{StaticResource Brush.BorderStrong}" Margin="0,18,0,12" />
 
