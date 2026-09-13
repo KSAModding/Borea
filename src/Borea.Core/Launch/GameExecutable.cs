@@ -9,13 +9,14 @@ public static class GameExecutable
 {
     /// <summary>
     /// The executable's file name in the game directory, or null when Borea
-    /// does not know it for <paramref name="platform"/>. Only the Windows build
-    /// has a known name, so another platform gets a message instead of a
-    /// guessed file.
+    /// does not know it for <paramref name="platform"/>. The Windows build
+    /// ships KSA.exe and the Linux build ships an app host named KSA. No macOS
+    /// build is known, so macOS gets a message instead of a guessed file.
     /// </summary>
     public static string? FileName(OsPlatform platform) => platform switch
     {
         OsPlatform.Windows => "KSA.exe",
+        OsPlatform.Linux => "KSA",
         _ => null,
     };
 

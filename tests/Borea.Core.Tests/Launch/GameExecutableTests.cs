@@ -13,12 +13,16 @@ public sealed class GameExecutableTests
         Assert.Equal("KSA.exe", GameExecutable.FileName(OsPlatform.Windows));
     }
 
-    [Theory]
-    [InlineData(OsPlatform.Linux)]
-    [InlineData(OsPlatform.MacOs)]
-    public void FileName_PlatformWithoutAKnownName_IsNull(OsPlatform platform)
+    [Fact]
+    public void FileName_Linux_IsKsa()
     {
-        Assert.Null(GameExecutable.FileName(platform));
+        Assert.Equal("KSA", GameExecutable.FileName(OsPlatform.Linux));
+    }
+
+    [Fact]
+    public void FileName_MacOs_IsNull()
+    {
+        Assert.Null(GameExecutable.FileName(OsPlatform.MacOs));
     }
 
     [Fact]

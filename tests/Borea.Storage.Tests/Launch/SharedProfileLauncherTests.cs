@@ -73,8 +73,21 @@ public sealed class SharedProfileLauncherTests : IDisposable
         Assert.Empty(_starter.Plans);
     }
 
+    [Fact]
+    public void Launch_Linux_StartsKsaInTheGameDirectory()
+    {
+        Directory.CreateDirectory(GameDirectory);
+        File.WriteAllBytes(Path.Combine(GameDirectory, "KSA"), Array.Empty<byte>());
+
+        var result = Launcher(OsPlatform.Linux).Launch();
+
+        Assert.True(result.Started);
+        var plan = Assert.Single(_starter.Plans);
+        Assert.Equal(Path.Combine(Path.GetFullPath(GameDirectory), "KSA"), plan.Executable);
+        Assert.Equal(Path.GetFullPath(GameDirectory), plan.WorkingDirectory);
+    }
+
     [Theory]
-    [InlineData(OsPlatform.Linux, "on Linux")]
     [InlineData(OsPlatform.MacOs, "on macOS")]
     [InlineData(null, "on this operating system")]
     public void Launch_PlatformWithoutAKnownExecutable_StartsNothing(OsPlatform? platform, string name)
@@ -92,7 +105,7 @@ public sealed class SharedProfileLauncherTests : IDisposable
     [Fact]
     public void Launch_UnknownExecutableAndNoGameDirectory_ReportsThePlatformFirst()
     {
-        var launcher = new SharedProfileLauncher(new TestGamePathProvider(_tempRoot, hasGameDirectory: false), _starter, OsPlatform.Linux);
+        var launcher = new SharedProfileLauncher(new TestGamePathProvider(_tempRoot, hasGameDirectory: false), _starter, OsPlatform.MacOs);
 
         var result = launcher.Launch();
 
