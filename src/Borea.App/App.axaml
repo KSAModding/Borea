@@ -314,13 +314,17 @@
             <Setter Property="Height" Value="38" />
             <Setter Property="Padding" Value="0" />
             <Setter Property="CornerRadius" Value="100" />
-            <Setter Property="Background" Value="{StaticResource Brush.SurfaceHeader}" />
+            <Setter Property="Background" Value="{StaticResource Brush.SurfaceRaised}" />
             <Setter Property="BorderThickness" Value="0" />
             <Setter Property="HorizontalContentAlignment" Value="Center" />
             <Setter Property="VerticalContentAlignment" Value="Center" />
         </Style>
         <Style Selector="Button.add:pointerover /template/ ContentPresenter">
             <Setter Property="Background" Value="{StaticResource Brush.BorderStrong}" />
+        </Style>
+        <Style Selector="Button.add Path">
+            <Setter Property="Stroke" Value="{StaticResource Brush.Accent}" />
+            <Setter Property="StrokeThickness" Value="2" />
         </Style>
         <!-- c/inner-nav-action: tabs inside the black pill -->
         <Style Selector="Button.tab">
