@@ -26,21 +26,6 @@
     <None Include="..\Borea.Storage.Tests\Index\Fixtures\current-snapshot.json" Link="Index\Fixtures\current-snapshot.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
-  <ItemGroup>
-    <!-- Assemblies with a KSA build number in their version resource, built by the solution and never compiled against. -->
-    <VersionFixture Include="..\Borea.Storage.Tests\Fixtures\GameVersionFixture\GameVersionFixture.csproj" />
-    <VersionFixture Include="..\Borea.Storage.Tests\Fixtures\UnparseableVersionFixture\UnparseableVersionFixture.csproj" />
-    <ProjectReference Include="@(VersionFixture)" ReferenceOutputAssembly="false" />
-  </ItemGroup>
-
-  <!-- Inside Build, so the copies reach FileWrites and Clean removes them. -->
-  <Target Name="CopyVersionFixtures" AfterTargets="CopyFilesToOutputDirectory">
-    <MSBuild Projects="@(VersionFixture)" Targets="GetTargetPath" Properties="Configuration=$(Configuration);TargetFramework=$(TargetFramework)">
-      <Output TaskParameter="TargetOutputs" ItemName="VersionFixtureAssembly" />
-    </MSBuild>
-    <Copy SourceFiles="@(VersionFixtureAssembly)" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true">
-      <Output TaskParameter="CopiedFiles" ItemName="FileWrites" />
-    </Copy>
-  </Target>
+  <Import Project="..\VersionFixtures.targets" />
 
 </Project>
