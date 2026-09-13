@@ -1,0 +1,229 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Borea.App.ViewModels"
+             xmlns:views="using:Borea.App.Views"
+             x:Class="Borea.App.Views.Pages.ContentPage"
+             x:DataType="vm:MainViewModel">
+    <!-- Content (discover-content): one listing, with the detail panel on the right -->
+    <Grid ColumnDefinitions="*,348">
+        <ScrollViewer Grid.ColumnSpan="2">
+            <StackPanel MaxWidth="764" Margin="32,42,348,32">
+                <StackPanel Orientation="Horizontal" Spacing="4" Height="24">
+                    <Path Classes="icon" Data="{StaticResource Icon.Compass}" />
+                    <Button Classes="plain" Command="{Binding SetMainWindowDiscover}">
+                        <TextBlock Classes="label-lg" Text="{Binding Localization.PageDiscoverHeading}" VerticalAlignment="Center" />
+                    </Button>
+                    <TextBlock Classes="label-lg" Text="/" VerticalAlignment="Center" />
+                    <TextBlock Classes="label-lg" Text="{Binding SelectedContent.TypeText}" VerticalAlignment="Center" />
+                </StackPanel>
+
+                <!-- c/content-header -->
+                <Grid ColumnDefinitions="170,32,*" Margin="0,24,0,0">
+                    <Border Classes="thumbnail" Width="170" Height="170">
+                        <Path Classes="icon" Data="{StaticResource Icon.PuzzlePiece}" RenderTransform="scale(2.5)" StrokeThickness="0.8" />
+                    </Border>
+                    <Grid Grid.Column="2" RowDefinitions="Auto,*,Auto">
+                        <Grid ColumnDefinitions="*,24,Auto">
+                            <StackPanel Spacing="4">
+                                <TextBlock Classes="heading-lg" Text="{Binding SelectedContent.Name}" TextWrapping="Wrap" />
+                                <TextBlock Classes="body-md secondary" Text="{Binding SelectedContent.Abstract}" TextWrapping="Wrap" LineHeight="18" />
+                                <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,8,0,0" IsVisible="{Binding SelectedContent.InstallWarning, Converter={x:Static ObjectConverters.IsNotNull}}">
+                                    <TextBlock Classes="body-sm secondary" Text="{Binding SelectedContent.InstallWarning}" TextWrapping="Wrap" MaxWidth="420" VerticalAlignment="Center" />
+                                    <Button Classes="text primary" Content="{Binding Localization.InstallAnyway}" Command="{Binding SelectedContent.ConfirmInstallCommand}" />
+                                    <Button Classes="text" Content="{Binding Localization.LibraryCancel}" Command="{Binding SelectedContent.CancelInstallCommand}" />
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,8,0,0" IsVisible="{Binding SelectedContent.IsConfirmingRemove}">
+                                    <TextBlock Classes="body-sm danger" Text="{Binding Localization.ContentRemoveConfirm}" VerticalAlignment="Center" />
+                                    <Button Classes="text danger" Content="{Binding Localization.ContentRemove}" Command="{Binding SelectedContent.ConfirmRemoveCommand}" />
+                                    <Button Classes="text" Content="{Binding Localization.LibraryCancel}" Command="{Binding SelectedContent.CancelRemoveCommand}" />
+                                </StackPanel>
+                                <TextBlock Classes="body-sm danger" Text="{Binding SelectedContent.InstallError}" TextWrapping="Wrap" Margin="0,8,0,0" IsVisible="{Binding SelectedContent.InstallError, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Top">
+                                <Panel VerticalAlignment="Center">
+                                    <Button Classes="cta" Command="{Binding SelectedContent.InstallCommand}" IsVisible="{Binding SelectedContent.CanInstall}">
+                                        <StackPanel Orientation="Horizontal" Spacing="6">
+                                            <Path Classes="icon size-16" Data="{StaticResource Icon.Plus}" Stroke="{StaticResource Brush.SurfaceHeader}" StrokeThickness="2" VerticalAlignment="Center" />
+                                            <TextBlock Classes="action-lg" Text="{Binding Localization.ContentAdd}" VerticalAlignment="Center" />
+                                        </StackPanel>
+                                    </Button>
+                                    <ProgressBar Width="96" Height="6" VerticalAlignment="Center" IsVisible="{Binding SelectedContent.IsInstalling}" Value="{Binding SelectedContent.Progress}" Maximum="100" Foreground="{StaticResource Brush.Accent}" />
+                                    <ProgressBar Width="96" Height="6" VerticalAlignment="Center" IsVisible="{Binding SelectedContent.IsRemoving}" IsIndeterminate="True" Foreground="{StaticResource Brush.Accent}" />
+                                    <Border Classes="chip positive" VerticalAlignment="Center" IsVisible="{Binding SelectedContent.IsInstalled}" ToolTip.Tip="{Binding InstalledInText}">
+                                        <TextBlock Text="{Binding Localization.DiscoverInstalled}" />
+                                    </Border>
+                                </Panel>
+                                <!-- the header menu of the design; Remove is its only entry so far -->
+                                <Button Classes="icon" VerticalAlignment="Center" IsVisible="{Binding !IsLoaderContent}" AutomationProperties.Name="{Binding SelectedContent.Name}">
+                                    <Button.Flyout>
+                                        <MenuFlyout Placement="BottomEdgeAlignedRight">
+                                            <MenuItem Header="{Binding Localization.ContentRemove}" Command="{Binding SelectedContent.BeginRemoveCommand}" IsEnabled="{Binding SelectedContent.CanRemove}" />
+                                        </MenuFlyout>
+                                    </Button.Flyout>
+                                    <Path Classes="icon-filled size-18" Data="{StaticResource Icon.More}" />
+                                </Button>
+                            </StackPanel>
+                        </Grid>
+                        <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="24" Margin="0,16,0,0">
+                            <ItemsControl ItemsSource="{Binding SelectedContent.Tags}" VerticalAlignment="Center" IsVisible="{Binding HasContentTags}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <StackPanel Orientation="Horizontal" Spacing="4" />
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="x:String">
+                                        <Border Classes="chip">
+                                            <TextBlock Text="{Binding}" />
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                            <StackPanel Orientation="Horizontal" Spacing="16" IsVisible="{Binding LatestVersion, Converter={x:Static ObjectConverters.IsNotNull}}">
+                                <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                                    <Path Classes="icon size-16" Data="{StaticResource Icon.GitCommit}" />
+                                    <TextBlock Classes="label-md" Text="{Binding LatestVersion.Version}" VerticalAlignment="Center" />
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                                    <Path Classes="icon size-16" Data="{StaticResource Icon.Clock}" />
+                                    <TextBlock Classes="label-md" Text="{Binding LatestVersion.PublishedText}" VerticalAlignment="Center" />
+                                </StackPanel>
+                            </StackPanel>
+                        </StackPanel>
+                    </Grid>
+                </Grid>
+
+                <StackPanel Orientation="Horizontal" Spacing="12" Margin="0,16,0,0" IsVisible="{Binding IsLoaderContent}">
+                    <TextBlock Classes="body-md secondary" Text="{Binding Localization.ContentLoaderHint}" VerticalAlignment="Center" />
+                    <Button Classes="link" Command="{Binding SetMainWindowSettings}">
+                        <TextBlock Classes="action-md" Text="{Binding Localization.NavigationSettings}" />
+                    </Button>
+                </StackPanel>
+                <TextBlock Classes="body-md danger" Text="{Binding ContentDetailError}" TextWrapping="Wrap" Margin="0,16,0,0" IsVisible="{Binding ContentDetailError, Converter={x:Static ObjectConverters.IsNotNull}}" />
+
+                <!-- c/inner-nav-bar -->
+                <Border Background="{StaticResource Brush.SurfaceHeader}" CornerRadius="100" Padding="6" Margin="0,32,0,0">
+                    <StackPanel Orientation="Horizontal" Spacing="16">
+                        <Button Classes="tab" Classes.active="{Binding IsDescriptionTab}" Content="{Binding Localization.ContentTabDescription}" Command="{Binding ShowContentDescriptionCommand}" />
+                        <Button Classes="tab" Classes.active="{Binding IsVersionsTab}" Content="{Binding Localization.ContentTabVersions}" Command="{Binding ShowContentVersionsCommand}" />
+                    </StackPanel>
+                </Border>
+
+                <!-- c/block-text: the CommonMark description -->
+                <Border Classes="card" Padding="36,32" Margin="0,16,0,0" IsVisible="{Binding IsDescriptionTab}">
+                    <Panel>
+                        <views:MarkdownView Markdown="{Binding SelectedContent.Description}" IsVisible="{Binding SelectedContent.Description, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                        <TextBlock Classes="body-md muted" Text="{Binding Localization.ContentNoDescription}" IsVisible="{Binding SelectedContent.Description, Converter={x:Static ObjectConverters.IsNull}}" />
+                    </Panel>
+                </Border>
+
+                <!-- c/table-versions -->
+                <StackPanel Margin="0,16,0,0" IsVisible="{Binding IsVersionsTab}">
+                    <TextBlock Classes="body-md muted" Text="{Binding Localization.ContentLoadingVersions}" Margin="8,8,0,8" IsVisible="{Binding IsLoadingVersions}" />
+                    <Border BorderBrush="{StaticResource Brush.BorderStrong}" BorderThickness="1" CornerRadius="16" ClipToBounds="True" IsVisible="{Binding !IsLoadingVersions}">
+                        <StackPanel>
+                            <Border Background="{StaticResource Brush.Surface}" Padding="16,11">
+                                <Grid ColumnDefinitions="150,150,*,120,80">
+                                    <TextBlock Classes="body-md secondary" Text="{Binding Localization.ContentVersionHeader}" />
+                                    <TextBlock Grid.Column="1" Classes="body-md secondary" Text="{Binding Localization.ContentChannelHeader}" />
+                                    <TextBlock Grid.Column="2" Classes="body-md secondary" Text="{Binding Localization.ContentGameVersionHeader}" />
+                                    <TextBlock Grid.Column="3" Classes="body-md secondary" Text="{Binding Localization.ContentPublishedHeader}" />
+                                </Grid>
+                            </Border>
+                            <TextBlock Classes="body-md muted" Text="{Binding Localization.ContentNoVersions}" Margin="16,12" IsVisible="{Binding !ContentVersions.Count}" />
+                            <ItemsControl ItemsSource="{Binding ContentVersions}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:VersionItem">
+                                        <Border BorderBrush="{StaticResource Brush.BorderStrong}" BorderThickness="0,1,0,0" Padding="16,8" MinHeight="40">
+                                            <Grid ColumnDefinitions="150,150,*,120,80" RowDefinitions="Auto,Auto">
+                                                <TextBlock Classes="heading-sm" Text="{Binding Version}" VerticalAlignment="Center" />
+                                                <Border Grid.Column="1" Classes="chip" HorizontalAlignment="Left" VerticalAlignment="Center" Classes.testing="{Binding IsTesting}" Classes.dev="{Binding IsDev}">
+                                                    <TextBlock Text="{Binding ChannelText}" />
+                                                </Border>
+                                                <Border Grid.Column="2" Classes="chip" HorizontalAlignment="Left" VerticalAlignment="Center">
+                                                    <TextBlock Text="{Binding GameVersionText}" />
+                                                </Border>
+                                                <TextBlock Grid.Column="3" Classes="body-md secondary" Text="{Binding PublishedText}" VerticalAlignment="Center" />
+                                                <StackPanel Grid.Column="4" Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right" VerticalAlignment="Center">
+                                                    <Button Classes="icon" Command="{Binding InstallCommand}" IsEnabled="{Binding !IsInstalling}" IsVisible="{Binding CanInstall}" ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.DiscoverAdd}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.DiscoverAdd}">
+                                                        <Path Classes="icon size-16" Data="{StaticResource Icon.Plus}" Stroke="{StaticResource Brush.Accent}" StrokeThickness="2" />
+                                                    </Button>
+                                                </StackPanel>
+                                                <StackPanel Grid.Row="1" Grid.ColumnSpan="5" Orientation="Horizontal" Spacing="8" Margin="0,6,0,0" IsVisible="{Binding InstallWarning, Converter={x:Static ObjectConverters.IsNotNull}}">
+                                                    <TextBlock Classes="body-sm secondary" Text="{Binding InstallWarning}" TextWrapping="Wrap" MaxWidth="480" VerticalAlignment="Center" />
+                                                    <Button Classes="text primary" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.InstallAnyway}" Command="{Binding ConfirmInstallCommand}" />
+                                                    <Button Classes="text" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryCancel}" Command="{Binding CancelInstallCommand}" />
+                                                </StackPanel>
+                                                <TextBlock Grid.Row="1" Grid.ColumnSpan="5" Classes="body-sm danger" Text="{Binding InstallError}" TextWrapping="Wrap" Margin="0,6,0,0" IsVisible="{Binding InstallError, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- detail-panel -->
+        <Border Grid.Column="1" Classes="card" BorderBrush="{StaticResource Brush.Border}" BorderThickness="1" CornerRadius="24" Margin="0,24,24,24" Padding="24" VerticalAlignment="Top">
+            <StackPanel Spacing="16">
+                <StackPanel Spacing="10">
+                    <TextBlock Classes="heading-md" Text="{Binding Localization.ContentCompatibility}" />
+                    <Border Classes="chip" HorizontalAlignment="Left">
+                        <TextBlock Text="{Binding SelectedContent.GameVersionText}" />
+                    </Border>
+                    <Border Classes="chip" HorizontalAlignment="Left" Classes.positive="{Binding SelectedContent.IsCompatible}" Classes.testing="{Binding SelectedContent.IsUntested}" Classes.dev="{Binding SelectedContent.IsIncompatible}">
+                        <TextBlock Text="{Binding SelectedContent.CompatibilityText}" />
+                    </Border>
+                </StackPanel>
+                <Border Height="1" Background="{StaticResource Brush.BorderStrong}" IsVisible="{Binding HasContentLinks}" />
+                <StackPanel Spacing="10" IsVisible="{Binding HasContentLinks}">
+                    <TextBlock Classes="heading-md" Text="{Binding Localization.ContentLinks}" />
+                    <ItemsControl ItemsSource="{Binding ContentLinks}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <StackPanel Spacing="6" />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:ContentLink">
+                                <Button Classes="filter" Content="{Binding Label}" Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).OpenLinkCommand}" CommandParameter="{Binding}" ToolTip.Tip="{Binding Url}" />
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+                <Border Height="1" Background="{StaticResource Brush.BorderStrong}" IsVisible="{Binding HasContentTags}" />
+                <StackPanel Spacing="10" IsVisible="{Binding HasContentTags}">
+                    <TextBlock Classes="heading-md" Text="{Binding Localization.ContentTags}" />
+                    <ItemsControl ItemsSource="{Binding SelectedContent.Tags}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <WrapPanel ItemSpacing="4" LineSpacing="4" />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="x:String">
+                                <Border Classes="chip">
+                                    <TextBlock Text="{Binding}" />
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+                <Border Height="1" Background="{StaticResource Brush.BorderStrong}" />
+                <StackPanel Spacing="10">
+                    <TextBlock Classes="heading-md" Text="{Binding Localization.ContentAuthor}" />
+                    <TextBlock Classes="body-md secondary" Text="{Binding SelectedContent.AuthorNames}" TextWrapping="Wrap" />
+                </StackPanel>
+                <Border Height="1" Background="{StaticResource Brush.BorderStrong}" />
+                <StackPanel Spacing="10">
+                    <TextBlock Classes="heading-md" Text="{Binding Localization.ContentDetails}" />
+                    <TextBlock Classes="body-sm secondary" FontWeight="SemiBold" Text="{Binding SelectedContent.License}" />
+                    <TextBlock Classes="body-sm secondary" FontWeight="SemiBold" Text="{Binding SelectedContent.SourceText}" />
+                </StackPanel>
+            </StackPanel>
+        </Border>
+    </Grid>
+</UserControl>

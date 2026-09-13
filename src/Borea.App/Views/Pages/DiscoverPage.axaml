@@ -1,0 +1,125 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Borea.App.ViewModels"
+             x:Class="Borea.App.Views.Pages.DiscoverPage"
+             x:DataType="vm:MainViewModel">
+    <!-- Discover: list column plus the filter panel on the right -->
+    <Grid ColumnDefinitions="*,348">
+        <ScrollViewer Grid.ColumnSpan="2">
+            <StackPanel MaxWidth="764" Margin="32,42,348,32">
+                <StackPanel Orientation="Horizontal" Spacing="4" Height="24">
+                    <Path Classes="icon" Data="{StaticResource Icon.Compass}" />
+                    <TextBlock Classes="label-lg" Text="{Binding Localization.PageDiscoverHeading}" VerticalAlignment="Center" />
+                </StackPanel>
+                <ContentControl Content="{Binding}" ContentTemplate="{StaticResource GameSetupBanner}" IsVisible="{Binding NeedsGameSetup}" />
+
+                <!-- c/inner-nav-bar -->
+                <Border Background="{StaticResource Brush.SurfaceHeader}" CornerRadius="100" Padding="6" Margin="0,16,0,0" HorizontalAlignment="Stretch">
+                    <StackPanel Orientation="Horizontal" Spacing="16">
+                        <Button Classes="tab" Classes.active="{Binding IsModsTab}" Content="{Binding Localization.DiscoverTabMods}" Command="{Binding ShowDiscoverModsCommand}" />
+                        <Button Classes="tab" Classes.active="{Binding IsLoadersTab}" Content="{Binding Localization.DiscoverTabLoaders}" Command="{Binding ShowDiscoverLoadersCommand}" />
+                        <Button Classes="tab" Content="{Binding Localization.DiscoverTabModpacks}" IsEnabled="False" />
+                        <Button Classes="tab" Content="{Binding Localization.DiscoverTabVehicles}" IsEnabled="False" />
+                        <Button Classes="tab" Content="{Binding Localization.DiscoverTabSaves}" IsEnabled="False" />
+                    </StackPanel>
+                </Border>
+
+                <!-- active filters -->
+                <StackPanel Orientation="Horizontal" Spacing="8" Margin="8,24,8,0" IsVisible="{Binding HasDiscoverFilters}">
+                    <Button Classes="chip-button" Command="{Binding ClearDiscoverFiltersCommand}">
+                        <StackPanel Orientation="Horizontal" Spacing="4">
+                            <Path Classes="icon size-16" Data="{StaticResource Icon.Close}" />
+                            <TextBlock Classes="label-sm" Text="{Binding Localization.DiscoverClearAll}" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Button>
+                    <Button Classes="chip-button" Command="{Binding SelectOsCommand}" IsVisible="{Binding SelectedOs, Converter={x:Static ObjectConverters.IsNotNull}}">
+                        <StackPanel Orientation="Horizontal" Spacing="4">
+                            <Path Classes="icon size-16" Data="{StaticResource Icon.Close}" />
+                            <TextBlock Classes="label-sm" Text="{Binding SelectedOs}" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Button>
+                    <Button Classes="chip-button" Command="{Binding SelectLicenseCommand}" IsVisible="{Binding SelectedLicense, Converter={x:Static ObjectConverters.IsNotNull}}">
+                        <StackPanel Orientation="Horizontal" Spacing="4">
+                            <Path Classes="icon size-16" Data="{StaticResource Icon.Close}" />
+                            <TextBlock Classes="label-sm" Text="{Binding SelectedLicense}" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+
+                <TextBlock Classes="body-md muted" Text="{Binding Localization.DiscoverLoading}" Margin="8,24,0,0" IsVisible="{Binding IsDiscoverLoading}" />
+                <TextBlock Classes="body-md danger" Text="{Binding DiscoverError}" TextWrapping="Wrap" Margin="8,24,0,0" IsVisible="{Binding DiscoverError, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                <TextBlock Classes="body-md muted" Text="{Binding Localization.DiscoverNoInstance}" Margin="8,24,0,0" IsVisible="{Binding !HasActiveInstance}" />
+                <TextBlock Classes="body-md muted" Text="{Binding Localization.DiscoverEmpty}" Margin="8,24,0,0">
+                    <TextBlock.IsVisible>
+                        <MultiBinding Converter="{x:Static BoolConverters.And}">
+                            <Binding Path="!HasDiscoverItems" />
+                            <Binding Path="!IsDiscoverLoading" />
+                            <Binding Path="DiscoverError" Converter="{x:Static ObjectConverters.IsNull}" />
+                        </MultiBinding>
+                    </TextBlock.IsVisible>
+                </TextBlock>
+
+                <ItemsControl ItemsSource="{Binding DiscoverItems}" ItemTemplate="{StaticResource DiscoverRow}" Margin="0,24,0,0">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <StackPanel Spacing="8" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                </ItemsControl>
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- filter-panel -->
+        <Border Grid.Column="1" Classes="card" BorderBrush="{StaticResource Brush.Border}" BorderThickness="1" CornerRadius="24" Margin="0,24,24,24" Padding="24" VerticalAlignment="Top">
+            <StackPanel Spacing="16">
+                <TextBox Classes="field search" Text="{Binding SearchText}" PlaceholderText="{Binding Localization.DiscoverSearchPlaceholder}" AutomationProperties.Name="{Binding Localization.DiscoverSearchPlaceholder}">
+                    <TextBox.InnerLeftContent>
+                        <Path Classes="icon size-16" Data="{StaticResource Icon.Search}" Margin="10,0,0,0" />
+                    </TextBox.InnerLeftContent>
+                </TextBox>
+                <StackPanel Spacing="8">
+                    <Grid ColumnDefinitions="*,16,Auto">
+                        <TextBlock Classes="heading-sm" Text="{Binding Localization.DiscoverHideInstalled}" VerticalAlignment="Center" />
+                        <ToggleSwitch Grid.Column="2" Classes="switch" IsChecked="{Binding HideInstalled}" AutomationProperties.Name="{Binding Localization.DiscoverHideInstalled}" />
+                    </Grid>
+                    <Grid ColumnDefinitions="*,16,Auto">
+                        <TextBlock Classes="heading-sm" Text="{Binding Localization.DiscoverHideIncompatible}" VerticalAlignment="Center" />
+                        <ToggleSwitch Grid.Column="2" Classes="switch" IsChecked="{Binding HideIncompatible}" AutomationProperties.Name="{Binding Localization.DiscoverHideIncompatible}" />
+                    </Grid>
+                </StackPanel>
+                <Border Height="1" Background="{StaticResource Brush.BorderStrong}" IsVisible="{Binding !!OsOptions.Count}" />
+                <StackPanel Spacing="10" IsVisible="{Binding !!OsOptions.Count}">
+                    <TextBlock Classes="heading-md" Text="{Binding Localization.DiscoverOperatingSystem}" />
+                    <ItemsControl ItemsSource="{Binding OsOptions}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <StackPanel Spacing="6" />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="x:String">
+                                <Button Classes="filter" Content="{Binding}" Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).SelectOsCommand}" CommandParameter="{Binding}" />
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+                <Border Height="1" Background="{StaticResource Brush.BorderStrong}" IsVisible="{Binding !!LicenseOptions.Count}" />
+                <StackPanel Spacing="10" IsVisible="{Binding !!LicenseOptions.Count}">
+                    <TextBlock Classes="heading-md" Text="{Binding Localization.DiscoverLicense}" />
+                    <ItemsControl ItemsSource="{Binding LicenseOptions}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <StackPanel Spacing="6" />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="x:String">
+                                <Button Classes="filter" Content="{Binding}" Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).SelectLicenseCommand}" CommandParameter="{Binding}" />
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </StackPanel>
+        </Border>
+    </Grid>
+</UserControl>

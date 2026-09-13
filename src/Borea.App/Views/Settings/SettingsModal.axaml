@@ -1,0 +1,38 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Borea.App.ViewModels"
+             xmlns:settings="using:Borea.App.Views.Settings"
+             x:Class="Borea.App.Views.Settings.SettingsModal"
+             x:DataType="vm:MainViewModel">
+    <!-- modal: settings -->
+    <Panel Background="#99000000">
+        <Border Classes="modal" Width="786" Height="520" Margin="80,0,0,0">
+            <Grid RowDefinitions="Auto,1,*">
+                <Grid ColumnDefinitions="*,Auto" Margin="24,24,24,24">
+                    <TextBlock Classes="heading-lg" Text="{Binding Localization.NavigationSettings}" VerticalAlignment="Center" />
+                    <Button Grid.Column="1" Classes="icon" Command="{Binding CloseSettingsCommand}" AutomationProperties.Name="{Binding Localization.ModalClose}">
+                        <Path Classes="icon" Data="{StaticResource Icon.Close}" />
+                    </Button>
+                </Grid>
+                <Border Grid.Row="1" Background="{StaticResource Brush.Window}" />
+                <Grid Grid.Row="2" ColumnDefinitions="223,1,*">
+                    <StackPanel Margin="36,40,24,0" Spacing="24">
+                        <Button Classes="menu" Classes.active="{Binding IsGeneralTab}" Content="{Binding Localization.SettingsGeneral}" Command="{Binding ShowGeneralSettingsCommand}" />
+                        <Button Classes="menu" Classes.active="{Binding IsGameTab}" Content="{Binding Localization.SettingsGame}" Command="{Binding ShowGameSettingsCommand}" />
+                        <Button Classes="menu" Classes.active="{Binding IsAboutTab}" Content="{Binding Localization.SettingsAbout}" Command="{Binding ShowAboutSettingsCommand}" />
+                    </StackPanel>
+                    <Border Grid.Column="1" Background="{StaticResource Brush.Window}" />
+
+                    <!-- General -->
+                    <settings:GeneralSettings Grid.Column="2" IsVisible="{Binding IsGeneralTab}" />
+
+                    <!-- About: what is installed, where it lives, where to report a problem -->
+                    <settings:AboutSettings Grid.Column="2" IsVisible="{Binding IsAboutTab}" />
+
+                    <!-- Game: where KSA is, and which loader starts it -->
+                    <settings:GameSettings Grid.Column="2" IsVisible="{Binding IsGameTab}" />
+                </Grid>
+            </Grid>
+        </Border>
+    </Panel>
+</UserControl>

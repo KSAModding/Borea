@@ -2,9 +2,9 @@ using Avalonia.Controls;
 
 namespace Borea.App.Views;
 
-public partial class MainWindow : Window
+public partial class NewInstanceModal : UserControl
 {
-    public MainWindow()
+    public NewInstanceModal()
     {
         InitializeComponent();
     }

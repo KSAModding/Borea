@@ -1,0 +1,23 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Borea.App.ViewModels"
+             xmlns:formatting="using:Borea.App.Formatting"
+             x:Class="Borea.App.Views.Settings.GeneralSettings"
+             x:DataType="vm:MainViewModel">
+    <!-- General -->
+    <StackPanel Margin="32,32,44,0" Spacing="6">
+        <TextBlock Classes="heading-md" Text="{Binding Localization.SettingsLanguageLabel}" />
+        <ComboBox ItemsSource="{Binding Localization.SupportedCultures}" SelectedItem="{Binding Localization.SelectedCulture, Mode=TwoWay}" AutomationProperties.Name="{Binding Localization.SettingsLanguageLabel}" Width="340" Margin="0,4,0,0" />
+        <TextBlock Classes="heading-md" Text="{Binding Localization.SettingsRegionalFormatLabel}" Margin="0,18,0,0" />
+        <ComboBox ItemsSource="{Binding RegionalFormat.SupportedFormats}" SelectedItem="{Binding SelectedRegionalFormat, Mode=TwoWay}" AutomationProperties.Name="{Binding Localization.SettingsRegionalFormatLabel}" MaxDropDownHeight="300" Width="340" Margin="0,4,0,0">
+            <ComboBox.ItemTemplate>
+                <DataTemplate x:DataType="formatting:RegionalFormatOption">
+                    <TextBlock Text="{Binding DisplayName}" />
+                </DataTemplate>
+            </ComboBox.ItemTemplate>
+        </ComboBox>
+        <TextBlock Classes="body-md danger" Text="{Binding PreferenceSaveError}" TextWrapping="Wrap" IsVisible="{Binding PreferenceSaveError, Converter={x:Static ObjectConverters.IsNotNull}}" />
+        <TextBlock Classes="heading-md" Text="{Binding Localization.SettingsThemeLabel}" Margin="0,18,0,0" />
+        <ComboBox ItemsSource="{Binding ThemeNames}" SelectedItem="{Binding CurrentTheme}" AutomationProperties.Name="{Binding Localization.SettingsThemeLabel}" Width="340" Margin="0,4,0,0" />
+    </StackPanel>
+</UserControl>

@@ -13,6 +13,7 @@
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
                 <ResourceInclude Source="avares://Borea.App/Assets/Icons.axaml" />
+                <ResourceInclude Source="avares://Borea.App/Views/Templates.axaml" />
             </ResourceDictionary.MergedDictionaries>
 
             <!-- Palettes. Borealis (dark) holds the tokens of the Figma file from #8 (neutral-900 .. white, green, purple-500); Light mirrors them. -->

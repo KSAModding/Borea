@@ -1,0 +1,39 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Borea.App.ViewModels"
+             x:Class="Borea.App.Views.Pages.LibraryPage"
+             x:DataType="vm:MainViewModel">
+    <!-- Library -->
+    <ScrollViewer>
+        <StackPanel MaxWidth="700" Margin="32,42,32,32">
+            <ContentControl Content="{Binding}" ContentTemplate="{StaticResource GameSetupBanner}" IsVisible="{Binding NeedsGameSetup}" Margin="0,0,0,16" />
+            <!-- header: breadcrumb, c/link-cta, bottom border -->
+            <Border BorderBrush="{StaticResource Brush.Surface}" BorderThickness="0,0,0,1" Padding="0,0,8,8">
+                <Grid ColumnDefinitions="*,Auto">
+                    <StackPanel Orientation="Horizontal" Spacing="4" Height="24">
+                        <Path Classes="icon" Data="{StaticResource Icon.Library}" />
+                        <TextBlock Classes="label-lg" Text="{Binding Localization.PageLibraryHeading}" VerticalAlignment="Center" />
+                    </StackPanel>
+                    <Button Grid.Column="1" Classes="link" Command="{Binding BeginCreateInstanceCommand}">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <Path Classes="icon size-16" Data="{StaticResource Icon.Plus}" Stroke="{StaticResource Brush.Accent}" VerticalAlignment="Center" />
+                            <TextBlock Classes="action-md" Text="{Binding Localization.LibraryNewInstance}" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Button>
+                </Grid>
+            </Border>
+
+            <TextBlock Classes="body-md danger" Text="{Binding InstanceError}" TextWrapping="Wrap" Margin="0,16,0,0" IsVisible="{Binding InstanceError, Converter={x:Static ObjectConverters.IsNotNull}}" />
+
+            <TextBlock Classes="body-md muted" Text="{Binding Localization.LibraryEmpty}" Margin="8,24,0,0" IsVisible="{Binding !Instances.Count}" />
+
+            <ItemsControl ItemsSource="{Binding Instances}" ItemTemplate="{StaticResource InstanceRow}" Margin="0,24,0,0">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <StackPanel Spacing="8" />
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+            </ItemsControl>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

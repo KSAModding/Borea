@@ -1,0 +1,105 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Borea.App.ViewModels"
+             x:Class="Borea.App.Views.Pages.InstancePage"
+             x:DataType="vm:MainViewModel">
+    <!-- Instance (library-instance) -->
+    <ScrollViewer>
+        <StackPanel MaxWidth="700" Margin="32,42,32,32">
+            <!-- breadcrumb: Library / name -->
+            <StackPanel Orientation="Horizontal" Spacing="4" Height="24">
+                <Path Classes="icon" Data="{StaticResource Icon.Library}" />
+                <Button Classes="plain" Command="{Binding SetMainWindowLibrary}">
+                    <TextBlock Classes="label-lg" Text="{Binding Localization.PageLibraryHeading}" VerticalAlignment="Center" />
+                </Button>
+                <TextBlock Classes="label-lg" Text="/" VerticalAlignment="Center" />
+                <TextBlock Classes="label-lg" Text="{Binding SelectedInstance.Name}" VerticalAlignment="Center" />
+            </StackPanel>
+
+            <!-- c/content-header -->
+            <Grid ColumnDefinitions="70,24,*" Margin="0,42,0,0">
+                <Border Classes="thumbnail" Width="70" Height="70">
+                    <Path Classes="icon size-32" Data="{StaticResource Icon.Box}" />
+                </Border>
+                <Grid Grid.Column="2" RowDefinitions="Auto,*,Auto" Height="70">
+                    <Grid ColumnDefinitions="*,24,Auto">
+                        <TextBlock Classes="heading-lg" Text="{Binding SelectedInstance.Name}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                        <StackPanel Grid.Column="2" Orientation="Horizontal">
+                            <!-- c/button-cta -->
+                            <Button Classes="cta" Command="{Binding PlayCommand}" IsEnabled="{Binding !IsLaunching}">
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                    <Path Classes="icon-filled size-16" Fill="{StaticResource Brush.SurfaceHeader}" Data="{StaticResource Icon.Play}" VerticalAlignment="Center" />
+                                    <TextBlock Classes="action-lg" Text="{Binding Localization.InstancePlay}" VerticalAlignment="Center" />
+                                </StackPanel>
+                            </Button>
+                            <Button Classes="icon" AutomationProperties.Name="{Binding SelectedInstance.Name}">
+                                <Button.Flyout>
+                                    <MenuFlyout Placement="BottomEdgeAlignedRight">
+                                        <MenuItem Header="{Binding Localization.LibraryRename}" Command="{Binding SelectedInstance.BeginRenameCommand}" />
+                                        <MenuItem Header="{Binding Localization.LibraryDelete}" Command="{Binding SelectedInstance.BeginDeleteCommand}" />
+                                    </MenuFlyout>
+                                </Button.Flyout>
+                                <Path Classes="icon-filled size-18" Data="{StaticResource Icon.More}" />
+                            </Button>
+                        </StackPanel>
+                    </Grid>
+                    <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="24">
+                        <Border Classes="chip positive" IsVisible="{Binding SelectedInstance.SourceText, Converter={x:Static ObjectConverters.IsNotNull}}">
+                            <TextBlock Text="{Binding SelectedInstance.SourceText}" />
+                        </Border>
+                        <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                            <Path Classes="icon size-16" Data="{StaticResource Icon.CirclesThree}" />
+                            <TextBlock Classes="label-md" Text="{Binding SelectedInstance.ModCount}" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </StackPanel>
+                </Grid>
+            </Grid>
+
+            <!-- the rename / delete edits of the selected row, so they work from here too -->
+            <ContentControl Content="{Binding SelectedInstance}" ContentTemplate="{StaticResource InstanceRow}" Margin="0,16,0,0">
+                <ContentControl.IsVisible>
+                    <MultiBinding Converter="{x:Static BoolConverters.Or}">
+                        <Binding Path="SelectedInstance.IsRenaming" />
+                        <Binding Path="SelectedInstance.IsConfirmingDelete" />
+                    </MultiBinding>
+                </ContentControl.IsVisible>
+            </ContentControl>
+
+            <TextBlock Classes="body-md secondary" Text="{Binding LaunchMessage}" TextWrapping="Wrap" Margin="0,16,0,0" IsVisible="{Binding LaunchMessage, Converter={x:Static ObjectConverters.IsNotNull}}" />
+            <TextBlock Classes="body-md danger" Text="{Binding ContentError}" TextWrapping="Wrap" Margin="0,16,0,0" IsVisible="{Binding ContentError, Converter={x:Static ObjectConverters.IsNotNull}}" />
+
+            <!-- c/inner-nav-bar: only Content has data behind it -->
+            <Border Background="{StaticResource Brush.SurfaceHeader}" CornerRadius="100" Padding="6" Margin="0,32,0,0">
+                <StackPanel Orientation="Horizontal" Spacing="16">
+                    <Button Classes="tab active" Content="{Binding Localization.InstanceTabContent}" />
+                    <Button Classes="tab" Content="{Binding Localization.InstanceTabManualInstalls}" IsEnabled="False" />
+                    <Button Classes="tab" Content="{Binding Localization.InstanceTabGameData}" IsEnabled="False" />
+                    <Button Classes="tab" Content="{Binding Localization.InstanceTabLog}" IsEnabled="False" />
+                </StackPanel>
+            </Border>
+
+            <TextBlock Classes="body-md muted" Text="{Binding Localization.InstanceEmptyContent}" Margin="8,32,0,0" IsVisible="{Binding !HasContent}" />
+
+            <!-- c/table-versions per group -->
+            <ItemsControl ItemsSource="{Binding ContentGroups}" Margin="0,32,0,0">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <StackPanel Spacing="16" />
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:ContentGroup">
+                        <Border BorderBrush="{StaticResource Brush.BorderStrong}" BorderThickness="1" CornerRadius="16" ClipToBounds="True" Padding="0,0,0,4">
+                            <StackPanel>
+                                <Border Background="{StaticResource Brush.Surface}" Padding="16,11">
+                                    <TextBlock Classes="body-md secondary" Text="{Binding Title}" />
+                                </Border>
+                                <ItemsControl ItemsSource="{Binding Items}" ItemTemplate="{StaticResource ContentRow}" />
+                            </StackPanel>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>
