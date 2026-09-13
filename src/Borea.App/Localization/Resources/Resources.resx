@@ -45,6 +45,18 @@
   <data name="SettingsThemeLabel" xml:space="preserve">
     <value>Theme</value>
   </data>
+  <data name="SettingsUpdatesLabel" xml:space="preserve">
+    <value>Updates</value>
+  </data>
+  <data name="SettingsCheckForUpdatesAtStart" xml:space="preserve">
+    <value>Check for updates at start</value>
+  </data>
+  <data name="UpdateAvailable" xml:space="preserve">
+    <value>A newer Borea release is available:</value>
+  </data>
+  <data name="UpdateViewRelease" xml:space="preserve">
+    <value>View release</value>
+  </data>
   <data name="SystemDefaultRegionalFormat" xml:space="preserve">
     <value>System default</value>
   </data>

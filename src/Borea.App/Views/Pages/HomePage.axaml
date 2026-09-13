@@ -1,6 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Borea.App.ViewModels"
+             xmlns:views="using:Borea.App.Views"
              x:Class="Borea.App.Views.Pages.HomePage"
              x:DataType="vm:MainViewModel">
     <!-- Home -->
@@ -12,6 +13,7 @@
                 <TextBlock Classes="label-lg" Text="{Binding Localization.PageHomeHeading}" VerticalAlignment="Center" />
             </StackPanel>
             <ContentControl Content="{Binding}" ContentTemplate="{StaticResource GameSetupBanner}" IsVisible="{Binding NeedsGameSetup}" />
+            <views:UpdateNotice Margin="0,16,0,0" IsVisible="{Binding HasAvailableUpdate}" />
 
             <!-- Current install: black container with the header strip, holding the active instance row -->
             <Border Background="{StaticResource Brush.SurfaceHeader}" CornerRadius="16" Margin="0,23,0,0">

@@ -1,0 +1,16 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Borea.App.ViewModels"
+             x:Class="Borea.App.Views.UpdateNotice"
+             x:DataType="vm:MainViewModel">
+    <!-- A newer Borea release, with a link to its page. -->
+    <Border Background="{StaticResource Brush.AccentSoft}" BorderBrush="{StaticResource Brush.Accent}" BorderThickness="1" CornerRadius="12" Padding="16,10">
+        <Grid ColumnDefinitions="Auto,12,*,16,Auto">
+            <Path Classes="icon size-16" Data="{StaticResource Icon.Download}" VerticalAlignment="Center" />
+            <TextBlock Grid.Column="2" Classes="body-md" TextWrapping="Wrap" VerticalAlignment="Center">
+                <Run Text="{Binding Localization.UpdateAvailable}" /><Run Text=" " /><Run Text="{Binding AvailableUpdateVersion}" FontWeight="SemiBold" />
+            </TextBlock>
+            <Button Grid.Column="4" Classes="text primary" Content="{Binding Localization.UpdateViewRelease}" Command="{Binding OpenAboutLinkCommand}" CommandParameter="{Binding AvailableUpdateUrl}" VerticalAlignment="Center" />
+        </Grid>
+    </Border>
+</UserControl>
