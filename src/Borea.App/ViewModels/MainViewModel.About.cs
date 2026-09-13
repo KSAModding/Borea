@@ -74,8 +74,12 @@ public partial class MainViewModel
 
             if (_services is not null)
             {
+                // the matched release is what the Game tab shows; the file version is the fallback for an adopted loader
                 foreach (var (loaderId, installation) in _services.Settings.LoaderInstallations)
-                    text.AppendLine($"{loaderId}: {installation.RawVersion ?? "version unknown"} at {installation.DirectoryPath}");
+                {
+                    var version = installation.Version?.ToString() ?? installation.RawVersion ?? "version unknown";
+                    text.AppendLine($"{loaderId}: {version} at {installation.DirectoryPath}");
+                }
             }
 
             return text.ToString().TrimEnd();

@@ -1,4 +1,6 @@
 using Borea.App.ViewModels;
+using Borea.Core.ModLoaders;
+using Borea.Core.Mods;
 
 namespace Borea.App.Tests.ViewModels;
 
@@ -66,6 +68,16 @@ public sealed class AboutViewModelTests
 
         viewModel.ReportDiagnosticsCopied();
         Assert.Equal(harness.Localization.AboutCopied, viewModel.AboutMessage);
+    }
+
+    [Fact]
+    public async Task Diagnostics_NameTheLoaderReleaseTheGameTabShows()
+    {
+        var loader = Path.Combine(Path.GetTempPath(), "StarMap");
+        using var harness = await ViewModelHarness.CreateAsync(services => services.SettingsRepository.SaveAsync(
+            services.Settings.WithLoaderInstallation("StarMap", new LoaderInstallation(loader, ModVersion.Parse("0.4.6"), rawVersion: null, isAdopted: false))));
+
+        Assert.Contains("StarMap: 0.4.6 at " + loader, harness.ViewModel.DiagnosticsText);
     }
 
     [Fact]
