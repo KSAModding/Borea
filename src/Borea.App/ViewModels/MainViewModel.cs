@@ -46,7 +46,7 @@ public partial class MainViewModel : ViewModelBase
 
             RegionalFormat.SelectedFormat = value;
             OnPropertyChanged();
-            _ = SavePreferencesAsync(preferences => preferences.WithRegionalCultureName(RegionalFormat.SelectedCultureName));
+            QueuePreferenceSave(preferences => preferences.WithRegionalCultureName(RegionalFormat.SelectedCultureName));
         }
     }
 
@@ -381,6 +381,20 @@ public partial class MainViewModel : ViewModelBase
         await ReloadInstancesAsync();
     }
 
+    private Task _preferenceSaves = Task.CompletedTask;
+
+    /// <summary>
+    /// Saves from a property change, which cannot await. The saves run one at a
+    /// time behind <see cref="_preferenceSaveLock"/>.
+    /// </summary>
+    private void QueuePreferenceSave(Func<AppPreferences, AppPreferences> update)
+        => _preferenceSaves = Task.WhenAll(_preferenceSaves, SavePreferencesAsync(update));
+
+    /// <summary>
+    /// Completes when every preference save queued so far has finished.
+    /// </summary>
+    internal Task WhenPreferencesSavedAsync() => _preferenceSaves;
+
     private async Task SavePreferencesAsync(Func<AppPreferences, AppPreferences> update)
     {
         if (_appPreferencesRepository is null)
@@ -431,12 +445,12 @@ public partial class MainViewModel : ViewModelBase
             item.RefreshText();
         RefreshContentGroups();
 
-        _ = SavePreferencesAsync(preferences => preferences.WithUiCultureName(Localization.SelectedCultureName));
+        QueuePreferenceSave(preferences => preferences.WithUiCultureName(Localization.SelectedCultureName));
     }
 
     partial void OnCurrentThemeChanged(string value)
     {
-        _ = SavePreferencesAsync(preferences => preferences.WithSelectedThemeName(value));
+        QueuePreferenceSave(preferences => preferences.WithSelectedThemeName(value));
     }
 }
 

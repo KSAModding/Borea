@@ -105,9 +105,10 @@ public sealed class SettingsViewModelTests
         using var harness = await ViewModelHarness.CreateAsync();
 
         harness.ViewModel.CurrentTheme = "Light";
+        await harness.ViewModel.WhenPreferencesSavedAsync();
 
-        var saved = await WaitForSavedAsync(harness, preferences => preferences.SelectedThemeName == "Light");
-        Assert.Equal("Light", saved.SelectedThemeName);
+        var saved = await harness.Services.AppPreferences.GetAsync(MainViewModel.BundledThemeNames);
+        Assert.Equal("Light", saved.Preferences.SelectedThemeName);
     }
 
     [Fact]
@@ -116,25 +117,9 @@ public sealed class SettingsViewModelTests
         using var harness = await ViewModelHarness.CreateAsync();
 
         harness.Localization.TrySetCulture("de");
+        await harness.ViewModel.WhenPreferencesSavedAsync();
 
-        var saved = await WaitForSavedAsync(harness, preferences => preferences.UiCultureName == "de");
-        Assert.Equal("de", saved.UiCultureName);
-    }
-
-    /// <summary>
-    /// Theme and language are saved without awaiting the property change, so
-    /// the test polls the file for a short while.
-    /// </summary>
-    private static async Task<Borea.Core.Preferences.AppPreferences> WaitForSavedAsync(
-        ViewModelHarness harness,
-        Func<Borea.Core.Preferences.AppPreferences, bool> done)
-    {
-        for (var attempt = 0; ; attempt++)
-        {
-            var saved = (await harness.Services.AppPreferences.GetAsync(MainViewModel.BundledThemeNames)).Preferences;
-            if (done(saved) || attempt == 100)
-                return saved;
-            await Task.Delay(20);
-        }
+        var saved = await harness.Services.AppPreferences.GetAsync(MainViewModel.BundledThemeNames);
+        Assert.Equal("de", saved.Preferences.UiCultureName);
     }
 }

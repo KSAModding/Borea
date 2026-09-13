@@ -50,6 +50,8 @@ internal sealed class ViewModelHarness : IDisposable
 
     public void Dispose()
     {
+        // a language or theme change saves in the background; let it finish before the folder goes
+        ViewModel?.WhenPreferencesSavedAsync().GetAwaiter().GetResult();
         Services.Dispose();
         CultureInfo.CurrentCulture = _originalCulture;
         CultureInfo.CurrentUICulture = _originalUiCulture;

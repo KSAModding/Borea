@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
+using Borea.Composition;
 using Borea.Core.Mods;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -72,15 +73,15 @@ public partial class MainViewModel
         if (_services is null)
             return Task.CompletedTask;
 
-        return _discoverLoad ??= LoadDiscoverAsync();
+        return _discoverLoad ??= LoadDiscoverAsync(_services);
     }
 
-    private async Task LoadDiscoverAsync()
+    private async Task LoadDiscoverAsync(BoreaServices services)
     {
         IsDiscoverLoading = true;
         try
         {
-            var listings = await _services.Mods.GetAvailableModsAsync();
+            var listings = await services.Mods.GetAvailableModsAsync();
             var items = listings.Select(listing => new DiscoverItem(this, listing)).ToList();
 
             // a mod in the content index that also releases on SpaceDock shows once, from the index
