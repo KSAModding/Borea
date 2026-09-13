@@ -18,10 +18,11 @@ The continuous-integration checks run on Windows, Linux, and macOS.
 
 ## Release scripts
 
-The `release scripts` job tests the scripts in `.github/scripts`. Locally they need Python 3:
+The `release scripts` job tests the scripts in `.github/scripts`. Locally they need Python 3, and bash with jq:
 
 ```sh
 python3 -m unittest discover --start-directory .github/scripts/tests --pattern "test_*.py"
+bash .github/scripts/tests/test-release-announcement.sh
 ```
 
 Changes to the content-manager format or snapshot contract must follow the accepted RFCs in [content-manager-design](https://github.com/KSAModding/content-manager-design).

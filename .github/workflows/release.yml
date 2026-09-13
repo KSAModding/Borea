@@ -382,6 +382,10 @@ jobs:
     name: release
     needs: [test, publish, sbom, verify-macos, verify-archives]
     runs-on: ubuntu-24.04
+    outputs:
+      # Only a run that created the release sets this, so only that run posts to Discord.
+      created: ${{ steps.create.outputs.created }}
+      notes: ${{ steps.body.outputs.notes }}
     permissions:
       contents: write
       id-token: write
@@ -449,6 +453,7 @@ jobs:
       # The changelog is fetched here instead of with `gh release create --generate-notes`,
       # so a re-run for the same tag can rewrite the whole body, checksum table included.
       - name: Write the release body
+        id: body
         working-directory: dist
         env:
           GH_TOKEN: ${{ github.token }}
@@ -522,10 +527,19 @@ jobs:
           EOF
           cat generated.md >> body.md
 
+          # The announce job gets the notes as an environment variable, which Linux limits, so they are cut to 100 KB.
+          delimiter="notes_$(openssl rand -hex 16)"
+          {
+            echo "notes<<$delimiter"
+            LC_ALL=C awk '{ size += length($0) + 1; if (size > 100000) exit; print }' generated.md
+            echo "$delimiter"
+          } >> "$GITHUB_OUTPUT"
+
       # `gh release create` uploads into a draft and publishes at the end, so a cancelled
       # run leaves a draft behind. That draft must not take the update path below, or the
       # release stays invisible.
       - name: Create or update the release
+        id: create
         if: github.event_name == 'push'
         working-directory: dist
         env:
@@ -547,4 +561,57 @@ jobs:
             # Only a SemVer pre-release carries a hyphen.
             case "$GITHUB_REF_NAME" in *-*) flags+=(--prerelease) ;; esac
             gh release create "$GITHUB_REF_NAME" Borea-* SHA256SUMS.txt "${flags[@]}"
+            echo "created=true" >> "$GITHUB_OUTPUT"
           fi
+
+  # Posts the new release to Discord, only from the run that created it.
+  announce:
+    name: announce
+    needs: [test, release]
+    if: needs.release.outputs.created == 'true'
+    runs-on: ubuntu-24.04
+    permissions: {}
+    timeout-minutes: 5
+    steps:
+      # Inline, because this job has no checkout. test-release-announcement.sh runs it from here.
+      - name: Post the release to Discord
+        env:
+          WEBHOOK_URL: ${{ secrets.DISCORD_RELEASE_WEBHOOK_URL }}
+          VERSION: ${{ needs.test.outputs.version }}
+          RELEASE_URL: ${{ github.server_url }}/${{ github.repository }}/releases/tag/${{ github.ref_name }}
+          NOTES: ${{ needs.release.outputs.notes }}
+        run: |
+          if [ -z "$WEBHOOK_URL" ]; then
+            echo "DISCORD_RELEASE_WEBHOOK_URL is not set, so the release is not posted to Discord."
+            exit 0
+          fi
+          # At most 1900 characters, below Discord's 2000, and no mentions.
+          payload=$(jq -n \
+            --arg version "$VERSION" --arg url "$RELEASE_URL" --arg notes "$NOTES" \
+            --argjson shown 10 --argjson entry_limit 180 --argjson limit 1900 '
+            def cut($n): if length > $n then .[0:$n - 3] + "..." else . end;
+            def changes:
+              reduce ($notes | split("\n")[] | rtrimstr("\r")) as $line ({inside: false, items: []};
+                if ($line | startswith("## ")) then .inside = ($line | test("^## What.s Changed"))
+                elif .inside and ($line | startswith("* ")) then .items += [$line[2:]]
+                else . end)
+              | .items
+              | map(sub(" by @[^ ]+ in https://[^ ]+/pull/(?<number>[0-9]+)$"; " (#\(.number))") | cut($entry_limit));
+            def message($items; $k):
+              ([
+                "**Borea \($version)**" + (if ($version | contains("-")) then " (pre-release)" else "" end),
+                $url,
+                "App with the `borea` command: `Borea-\($version)-<platform>` for Windows, Linux and macOS",
+                "CLI only: `Borea-Cli-\($version)-<platform>` for the same platforms"
+              ]
+              + (if ($items | length) == 0 then []
+                 else ["", "Changes:"] + ($items[0:$k] | map("- " + .))
+                   + (if ($items | length) > $k then ["and \(($items | length) - $k) more"] else [] end)
+                 end))
+              | join("\n");
+            changes as $items
+            | [range([($items | length), $shown] | min; -1; -1) as $k | message($items; $k) | select(length <= $limit)]
+            | {content: (.[0] // (message([]; 0) | cut($limit))), allowed_mentions: {parse: []}}
+          ')
+          # No retry, which could post twice. A failed post fails the run.
+          curl -sSf --max-time 30 -H "Content-Type: application/json" -d "$payload" "$WEBHOOK_URL"
