@@ -44,23 +44,15 @@ jobs:
           global-json-file: global.json
       - run: dotnet test Borea.slnx --configuration Release
 
+  # One job per platform publishes the App and the CLI, so that both archives get the CLI from the same build.
   publish:
-    name: publish (${{ matrix.product.name }}, ${{ matrix.rid }})
+    name: publish (${{ matrix.rid }})
     needs: test
     runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
         rid: [win-x64, linux-x64, osx-x64, osx-arm64]
-        product:
-          - name: App
-            project: src/Borea.App/Borea.App.csproj
-            executable: Borea.App
-            archive-prefix: Borea
-          - name: Cli
-            project: src/Borea.Cli/Borea.Cli.csproj
-            executable: borea
-            archive-prefix: Borea-Cli
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
@@ -72,60 +64,81 @@ jobs:
         env:
           VERSION: ${{ needs.test.outputs.version }}
           RID: ${{ matrix.rid }}
-          ARCHIVE_PREFIX: ${{ matrix.product['archive-prefix'] }}
-        run: echo "archive=$ARCHIVE_PREFIX-$VERSION-$RID" >> "$GITHUB_OUTPUT"
+        run: |
+          echo "app=Borea-$VERSION-$RID" >> "$GITHUB_OUTPUT"
+          echo "cli=Borea-Cli-$VERSION-$RID" >> "$GITHUB_OUTPUT"
 
       # Self-contained, so nobody needs a .NET runtime.
       # Each target builds on a Linux runner.
+      # The App and the CLI publish into separate folders, so neither can overwrite a file of the other.
       - name: Publish
         env:
           VERSION: ${{ needs.test.outputs.version }}
-          ARCHIVE: ${{ steps.name.outputs.archive }}
           RID: ${{ matrix.rid }}
-          PROJECT: ${{ matrix.product.project }}
-        run: >
-          dotnet publish "$PROJECT"
-          --configuration Release
-          --runtime "$RID"
-          --self-contained true
-          -p:Version="$VERSION"
-          --output "publish/$ARCHIVE"
+          APP: ${{ steps.name.outputs.app }}
+          CLI: ${{ steps.name.outputs.cli }}
+        run: |
+          dotnet publish src/Borea.App/Borea.App.csproj \
+            --configuration Release --runtime "$RID" --self-contained true \
+            -p:Version="$VERSION" --output "publish/$APP"
+          dotnet publish src/Borea.Cli/Borea.Cli.csproj \
+            --configuration Release --runtime "$RID" --self-contained true \
+            -p:Version="$VERSION" --output "publish/$CLI"
+
+      # The App archive also contains borea. The script copies nothing and fails when a file
+      # that both publishes write is not byte-identical.
+      - name: Add the CLI to the App
+        env:
+          APP: ${{ steps.name.outputs.app }}
+          CLI: ${{ steps.name.outputs.cli }}
+        run: bash .github/scripts/combine-publish-outputs.sh "publish/$APP" "publish/$CLI"
 
       - name: Add the license
         env:
-          ARCHIVE: ${{ steps.name.outputs.archive }}
-        run: cp LICENSE "publish/$ARCHIVE/LICENSE"
+          APP: ${{ steps.name.outputs.app }}
+          CLI: ${{ steps.name.outputs.cli }}
+        run: |
+          cp LICENSE "publish/$APP/LICENSE"
+          cp LICENSE "publish/$CLI/LICENSE"
 
       - name: Drop the native debug symbols
-        env:
-          ARCHIVE: ${{ steps.name.outputs.archive }}
-        run: find "publish/$ARCHIVE" -name '*.pdb' ! -name 'Borea.*.pdb' -delete
+        run: find publish -name '*.pdb' ! -name 'Borea.*.pdb' -delete
 
-      - name: Make the program executable
+      - name: Make the programs executable
         if: matrix.rid != 'win-x64'
         env:
-          ARCHIVE: ${{ steps.name.outputs.archive }}
-          EXECUTABLE: ${{ matrix.product.executable }}
-        run: chmod +x "publish/$ARCHIVE/$EXECUTABLE"
+          APP: ${{ steps.name.outputs.app }}
+          CLI: ${{ steps.name.outputs.cli }}
+        run: chmod +x "publish/$APP/Borea.App" "publish/$APP/borea" "publish/$CLI/borea"
 
       - name: Archive
         env:
-          ARCHIVE: ${{ steps.name.outputs.archive }}
+          APP: ${{ steps.name.outputs.app }}
+          CLI: ${{ steps.name.outputs.cli }}
           RID: ${{ matrix.rid }}
         run: |
-          mkdir dist
+          mkdir -p dist/App dist/Cli
           if [ "$RID" = win-x64 ]; then
-            (cd publish && zip -qr "$GITHUB_WORKSPACE/dist/$ARCHIVE.zip" "$ARCHIVE")
+            (cd publish && zip -qr "$GITHUB_WORKSPACE/dist/App/$APP.zip" "$APP")
+            (cd publish && zip -qr "$GITHUB_WORKSPACE/dist/Cli/$CLI.zip" "$CLI")
           else
-            tar -czf "dist/$ARCHIVE.tar.gz" -C publish "$ARCHIVE"
+            tar -czf "dist/App/$APP.tar.gz" -C publish "$APP"
+            tar -czf "dist/Cli/$CLI.tar.gz" -C publish "$CLI"
           fi
 
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
-          name: archive-${{ matrix.product.name }}-${{ matrix.rid }}
-          path: dist/*
+          name: archive-App-${{ matrix.rid }}
+          path: dist/App/*
           if-no-files-found: error
           # Already compressed.
+          compression-level: 0
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: archive-Cli-${{ matrix.rid }}
+          path: dist/Cli/*
+          if-no-files-found: error
           compression-level: 0
 
   sbom:
@@ -136,38 +149,46 @@ jobs:
       fail-fast: false
       matrix:
         product:
+          # The App archives also contain borea, so the App SBOM covers both projects.
           - name: App
-            project: src/Borea.App/Borea.App.csproj
+            projects: src/Borea.App/Borea.App.csproj src/Borea.Cli/Borea.Cli.csproj
             filename-prefix: Borea
-            required-packages: Avalonia CommunityToolkit.Mvvm Tomlyn SkiaSharp
-            excluded-package: System.CommandLine
+            required-packages: Avalonia CommunityToolkit.Mvvm Tomlyn SkiaSharp System.CommandLine
+            excluded-packages: ""
           - name: Cli
-            project: src/Borea.Cli/Borea.Cli.csproj
+            projects: src/Borea.Cli/Borea.Cli.csproj
             filename-prefix: Borea-Cli
             required-packages: System.CommandLine Tomlyn
-            excluded-package: Avalonia
+            excluded-packages: Avalonia
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
         with:
           global-json-file: global.json
 
+      # A solution filter with only the projects in the archives, so that restore and the SBOM
+      # tool read one package graph for all of them.
+      - name: Select the projects
+        env:
+          PROJECTS: ${{ matrix.product.projects }}
+        run: |
+          read -ra projects <<< "$PROJECTS"
+          jq -n '{solution: {path: "Borea.slnx", projects: $ARGS.positional}}' \
+            --args "${projects[@]}" > sbom.slnf
+
       # Release, like the builds, so the Debug-only packages stay out.
       - name: Restore the release graph
-        env:
-          PROJECT: ${{ matrix.product.project }}
-        run: dotnet restore "$PROJECT" -p:Configuration=Release --locked-mode
+        run: dotnet restore sbom.slnf -p:Configuration=Release --locked-mode
 
       # The tool version is pinned in .config/dotnet-tools.json, where Dependabot keeps it current.
       # Its package hash is separate because dotnet tool restore has no lock file mode.
       - name: Write the SBOM
         env:
           VERSION: ${{ needs.test.outputs.version }}
-          PROJECT: ${{ matrix.product.project }}
           FILENAME_PREFIX: ${{ matrix.product['filename-prefix'] }}
         run: |
           bash .github/scripts/verify-dotnet-tool-package.sh
-          dotnet CycloneDX "$PROJECT" \
+          dotnet CycloneDX sbom.slnf \
             --output dist --filename "$FILENAME_PREFIX-$VERSION.cdx.json" --output-format Json \
             --set-name "$FILENAME_PREFIX" --set-version "$VERSION" --set-type Application \
             --exclude-dev --disable-package-restore
@@ -177,7 +198,7 @@ jobs:
           VERSION: ${{ needs.test.outputs.version }}
           FILENAME_PREFIX: ${{ matrix.product['filename-prefix'] }}
           REQUIRED_PACKAGES: ${{ matrix.product['required-packages'] }}
-          EXCLUDED_PACKAGE: ${{ matrix.product['excluded-package'] }}
+          EXCLUDED_PACKAGES: ${{ matrix.product['excluded-packages'] }}
         run: |
           bom="dist/$FILENAME_PREFIX-$VERSION.cdx.json"
           names=$(jq -r '.components[].name' "$bom")
@@ -187,7 +208,7 @@ jobs:
               exit 1
             fi
           done
-          for p in "$EXCLUDED_PACKAGE" xunit Microsoft.NET.Test.Sdk coverlet.collector AvaloniaUI.DiagnosticsSupport; do
+          for p in $EXCLUDED_PACKAGES xunit Microsoft.NET.Test.Sdk coverlet.collector AvaloniaUI.DiagnosticsSupport; do
             if grep -qx "$p" <<< "$names"; then
               echo "The SBOM lists $p, which does not ship." >&2
               exit 1
@@ -224,9 +245,11 @@ jobs:
           xattr -w com.apple.quarantine '0083;00000000;Safari;' "$app"
           spctl --assess --type execute --verbose=4 "$app" || true
 
-  verify-cli:
-    name: verify CLI (${{ matrix.rid }})
-    needs: publish
+  # Both archives of each platform, on a runner that can start its programs.
+  # The App is only checked for presence, because it needs a desktop session.
+  verify-archives:
+    name: verify archives (${{ matrix.rid }})
+    needs: [test, publish]
     strategy:
       fail-fast: false
       matrix:
@@ -243,34 +266,76 @@ jobs:
     steps:
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
+          name: archive-App-${{ matrix.rid }}
+          path: dist/App
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
           name: archive-Cli-${{ matrix.rid }}
-          path: dist
-      - name: Check and run the Windows archive
+          path: dist/Cli
+      - name: Check and run the Windows archives
         if: matrix.rid == 'win-x64'
         shell: pwsh
+        env:
+          VERSION: ${{ needs.test.outputs.version }}
         run: |
-          $archive = Get-ChildItem dist/Borea-Cli-*.zip
-          Expand-Archive $archive -DestinationPath unpacked
-          $program = Get-ChildItem unpacked/borea.exe -Recurse
-          if (-not (Get-ChildItem unpacked/hostfxr.dll -Recurse)) { throw 'The CLI archive does not contain hostfxr.dll.' }
-          & $program.FullName --help
-          if ($LASTEXITCODE -ne 0) { throw "borea --help exited with $LASTEXITCODE." }
-      - name: Check and run the Unix archive
+          Expand-Archive (Get-ChildItem dist/App/*.zip) -DestinationPath unpacked/App
+          Expand-Archive (Get-ChildItem dist/Cli/*.zip) -DestinationPath unpacked/Cli
+          $app = @(Get-ChildItem unpacked/App -Directory)
+          $cli = @(Get-ChildItem unpacked/Cli -Directory)
+          if ($app.Count -ne 1 -or $cli.Count -ne 1) { throw 'Each archive must unpack into one folder.' }
+          $app = $app[0].FullName
+          $cli = $cli[0].FullName
+          if (-not (Test-Path -LiteralPath (Join-Path $app Borea.App.exe) -PathType Leaf)) { throw 'The App archive does not contain Borea.App.exe.' }
+          foreach ($root in $cli, $app) {
+            if (-not (Test-Path -LiteralPath (Join-Path $root hostfxr.dll) -PathType Leaf)) { throw "$root does not contain hostfxr.dll." }
+            $program = Join-Path $root borea.exe
+            & $program --help
+            if ($LASTEXITCODE -ne 0) { throw "borea --help in $root exited with $LASTEXITCODE." }
+            $reported = & $program --version
+            if ($LASTEXITCODE -ne 0 -or ($reported -ne $env:VERSION -and -not "$reported".StartsWith("$env:VERSION+"))) { throw "borea in $root reports version $reported." }
+          }
+          # The CLI in the App archive is the same build as the CLI archive, with the same runtime files.
+          foreach ($file in Get-ChildItem $cli -Recurse -File) {
+            $relative = [IO.Path]::GetRelativePath($cli, $file.FullName)
+            $other = Join-Path $app $relative
+            if (-not (Test-Path -LiteralPath $other -PathType Leaf)) { throw "The App archive does not contain $relative." }
+            if ((Get-FileHash -LiteralPath $file.FullName).Hash -ne (Get-FileHash -LiteralPath $other).Hash) { throw "$relative is different in the App archive." }
+          }
+      - name: Check and run the Unix archives
         if: matrix.rid != 'win-x64'
         shell: bash
+        env:
+          VERSION: ${{ needs.test.outputs.version }}
         run: |
-          archive=$(find dist -name 'Borea-Cli-*.tar.gz' -print -quit)
-          mkdir unpacked
-          tar -xzf "$archive" -C unpacked
-          program=$(find unpacked -type f -name borea -print -quit)
-          test -n "$program"
-          test -x "$program"
-          test -f "$(dirname "$program")/libhostfxr.dylib" || test -f "$(dirname "$program")/libhostfxr.so"
-          "$program" --help
+          mkdir -p unpacked/App unpacked/Cli
+          tar -xzf dist/App/*.tar.gz -C unpacked/App
+          tar -xzf dist/Cli/*.tar.gz -C unpacked/Cli
+          app=$(find unpacked/App -mindepth 1 -maxdepth 1 -type d -print -quit)
+          cli=$(find unpacked/Cli -mindepth 1 -maxdepth 1 -type d -print -quit)
+          test -n "$app"
+          test -n "$cli"
+          test -x "$app/Borea.App"
+          for root in "$cli" "$app"; do
+            test -x "$root/borea"
+            test -f "$root/libhostfxr.dylib" || test -f "$root/libhostfxr.so"
+            "$root/borea" --help
+            reported=$("$root/borea" --version)
+            if [ "$reported" != "$VERSION" ] && [[ "$reported" != "$VERSION+"* ]]; then
+              echo "borea in $root reports version $reported." >&2
+              exit 1
+            fi
+          done
+          # The CLI in the App archive is the same build as the CLI archive, with the same runtime files.
+          while IFS= read -r -d '' file; do
+            if ! cmp -s "$cli/$file" "$app/$file"; then
+              echo "${file#./} is missing or different in the App archive." >&2
+              exit 1
+            fi
+          done < <(cd "$cli" && find . -type f -print0)
 
   release:
     name: release
-    needs: [test, publish, sbom, verify-macos, verify-cli]
+    needs: [test, publish, sbom, verify-macos, verify-archives]
     runs-on: ubuntu-24.04
     permissions:
       contents: write
@@ -288,6 +353,22 @@ jobs:
           merge-multiple: true
           path: dist
 
+      # The App archives contain borea, so the App SBOM must list every package of the CLI SBOM.
+      - name: Check that the App SBOM covers the CLI
+        working-directory: dist
+        env:
+          VERSION: ${{ needs.test.outputs.version }}
+        run: |
+          missing=$(jq -rn \
+            --slurpfile app "Borea-$VERSION.cdx.json" \
+            --slurpfile cli "Borea-Cli-$VERSION.cdx.json" \
+            '[$cli[0].components[]["bom-ref"]] - [$app[0].components[]["bom-ref"]] | .[]')
+          if [ -n "$missing" ]; then
+            echo "The App SBOM does not list these CLI packages:" >&2
+            echo "$missing" >&2
+            exit 1
+          fi
+
       - name: Compute the checksums
         working-directory: dist
         run: sha256sum Borea-* > SHA256SUMS.txt
@@ -301,6 +382,7 @@ jobs:
         with:
           subject-path: dist/*
 
+      # This SBOM covers the App and the CLI, because the App archives contain both.
       - name: Attest the App SBOM
         if: github.event_name == 'push'
         uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
@@ -340,7 +422,8 @@ jobs:
           while read -r sum file; do printf '| %s | `%s` |\n' "$file" "$sum"; done < SHA256SUMS.txt >> body.md
           cat >> body.md <<'EOF'
 
-          Files whose names start with `Borea-Cli-` contain the `borea` command. The other platform archives contain the desktop App.
+          Each platform has two archives. The App archive, for example `Borea-<version>-win-x64.zip`, contains the desktop App and the `borea` command. Most users want this archive.
+          Archives whose names start with `Borea-Cli-` are a smaller download that contains only the `borea` command. The `borea` command in both archives is the same build.
 
           The builds include the .NET runtime and are self-contained, so there is nothing to install first.
 
@@ -348,10 +431,10 @@ jobs:
 
           These builds are not code signed, so the first start might take an extra step on Windows and macOS. The README has the long explanation.
 
-          **Windows.** Right-click the zip, open Properties and select Unblock. Then unpack it and start `Borea.App.exe`, or run `.\borea.exe --help` from the CLI archive in PowerShell.
+          **Windows.** Right-click the zip, open Properties and select Unblock. Then unpack it and start `Borea.App.exe`, or run `.\borea.exe --help` in PowerShell in the unpacked folder of either archive.
           Without that step, Windows shows "Windows protected your PC". This is because the file might not be downloaded often and is not signed. Select "More info", then "Run anyway".
 
-          **Linux.** Unpack the App archive and start `Borea.App`, or unpack the CLI archive and run `./borea --help`. The App needs the X11, fontconfig, ICU and OpenSSL libraries of your distribution, which most desktop installs already have. See Readme.
+          **Linux.** Unpack the App archive and start `Borea.App`, or run `./borea --help` in the unpacked folder of either archive. Both need the ICU and OpenSSL libraries of your distribution, and only the App also needs the X11, ICE, SM and fontconfig libraries. Most desktop installs already have them. See Readme.
 
           **macOS.** Unpack and start Borea from Terminal, not from Finder: `tar -xzf <file>`, then run `./Borea.App` for the App or `./borea --help` for the CLI inside the new folder.
 
@@ -370,10 +453,11 @@ jobs:
 
           EOF
           cat >> body.md <<EOF
-          \`Borea-$VERSION.cdx.json\` is the App software bill of materials, in CycloneDX JSON.
-          \`Borea-Cli-$VERSION.cdx.json\` is the CLI software bill of materials.
-          Each list includes the NuGet packages for its own project, with version, license and hash.
-          Each list is attested only to the archives for the matching product, and you can use this command to prove that it belongs to one.
+          \`Borea-$VERSION.cdx.json\` is the software bill of materials for the App archives, in CycloneDX JSON.
+          The App archives also contain \`borea\`, so this list includes the NuGet packages of the App and of the CLI.
+          \`Borea-Cli-$VERSION.cdx.json\` is the software bill of materials for the CLI archives and includes only the packages of the CLI.
+          Each list includes the version, license and hash of every package.
+          Each list is attested only to the archives that it describes, and you can use this command to prove that it belongs to one.
           With \`--format json\`, the output includes the attested list.
 
           \`\`\`
