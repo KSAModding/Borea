@@ -27,6 +27,7 @@ public partial class MainViewModel : ViewModelBase
 
     private readonly IAppPreferencesRepository? _appPreferencesRepository;
     private BoreaServices? _services;
+    private readonly Func<Task<BoreaServices>> _rebuildServices;
     private IInstanceRepository? _instances;
     private readonly SemaphoreSlim _preferenceSaveLock = new(1, 1);
     private AppPreferences _appPreferences;
@@ -227,7 +228,23 @@ public partial class MainViewModel : ViewModelBase
         IAppPreferencesRepository? appPreferencesRepository,
         AppPreferences appPreferences,
         BoreaServices? services)
+        : this(localization, regionalFormat, appPreferencesRepository, appPreferences, services, rebuildServices: null)
     {
+    }
+
+    /// <param name="rebuildServices">
+    /// Builds a fresh service graph after a settings change. Null builds from
+    /// Borea's default root; tests pass their own root.
+    /// </param>
+    internal MainViewModel(
+        LocalizationService localization,
+        RegionalFormatService regionalFormat,
+        IAppPreferencesRepository? appPreferencesRepository,
+        AppPreferences appPreferences,
+        BoreaServices? services,
+        Func<Task<BoreaServices>>? rebuildServices)
+    {
+        _rebuildServices = rebuildServices ?? (() => BoreaServices.BuildAsync());
         Localization = localization ?? throw new ArgumentNullException(nameof(localization));
         RegionalFormat = regionalFormat ?? throw new ArgumentNullException(nameof(regionalFormat));
         _appPreferencesRepository = appPreferencesRepository;

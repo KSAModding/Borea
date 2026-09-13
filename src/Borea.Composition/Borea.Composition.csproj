@@ -9,6 +9,7 @@
   <ItemGroup>
     <InternalsVisibleTo Include="Borea.Cli.Tests" />
     <InternalsVisibleTo Include="Borea.Composition.Tests" />
+    <InternalsVisibleTo Include="Borea.App.Tests" />
   </ItemGroup>
 
   <PropertyGroup>

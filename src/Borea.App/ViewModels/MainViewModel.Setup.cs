@@ -151,7 +151,7 @@ public partial class MainViewModel
             return;
 
         var previous = _services;
-        _services = await BoreaServices.BuildAsync();
+        _services = await _rebuildServices();
         _instances = _services.Instances;
         previous.Dispose();
         await LoadAsync();

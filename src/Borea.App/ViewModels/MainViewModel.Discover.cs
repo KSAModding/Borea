@@ -18,7 +18,7 @@ namespace Borea.App.ViewModels;
 public partial class MainViewModel
 {
     private IReadOnlyList<DiscoverItem> _listings = [];
-    private bool _discoverLoaded;
+    private Task? _discoverLoad;
 
     public ObservableCollection<DiscoverItem> DiscoverItems { get; } = [];
 
@@ -63,11 +63,20 @@ public partial class MainViewModel
 
     public bool HasDiscoverItems => DiscoverItems.Count > 0;
 
-    private async Task EnsureDiscoverLoadedAsync()
+    /// <summary>
+    /// Loads the listings once. Every caller awaits the same load, so a page
+    /// that opens while it runs sees the result instead of an empty list.
+    /// </summary>
+    internal Task EnsureDiscoverLoadedAsync()
     {
-        if (_discoverLoaded || _services is null || IsDiscoverLoading)
-            return;
+        if (_services is null)
+            return Task.CompletedTask;
 
+        return _discoverLoad ??= LoadDiscoverAsync();
+    }
+
+    private async Task LoadDiscoverAsync()
+    {
         IsDiscoverLoading = true;
         try
         {
@@ -89,12 +98,12 @@ public partial class MainViewModel
             foreach (var license in listings.Select(listing => listing.License).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(license => license))
                 LicenseOptions.Add(license);
 
-            _discoverLoaded = true;
             DiscoverError = null;
         }
         catch (Exception exception) when (exception is HttpRequestException or IOException or InvalidOperationException or TaskCanceledException)
         {
             DiscoverError = exception.Message;
+            _discoverLoad = null; // the next visit tries again
         }
         finally
         {
