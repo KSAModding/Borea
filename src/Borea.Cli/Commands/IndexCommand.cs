@@ -146,6 +146,7 @@ internal static class IndexCommand
         ContentIndexDiagnosticScope.PackVersion => "pack-version",
         ContentIndexDiagnosticScope.IndexStatus => "index-status",
         ContentIndexDiagnosticScope.GameVersions => "game-versions",
+        ContentIndexDiagnosticScope.Tags => "tags",
         _ => throw new ArgumentOutOfRangeException(nameof(scope), scope, null),
     };
 }

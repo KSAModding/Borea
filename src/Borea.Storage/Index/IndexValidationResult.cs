@@ -1,4 +1,5 @@
 using Borea.Storage.Index.Dtos;
+using Borea.Core.Tags;
 
 namespace Borea.Storage.Index;
 
@@ -24,6 +25,12 @@ public sealed class IndexValidationResult
     /// <summary>Null when the index does not carry a sources table.</summary>
     public SourcesDto? Sources { get; }
 
+    public CuratedTagVocabulary Tags { get; }
+
+    public RejectedIndexEntry? TagsError { get; }
+
+    public UnknownIndexVersionEntry? UnknownTags { get; }
+
     public IndexValidationResult(
         int snapshotVersion,
         IReadOnlyList<ParsedListing> validListings,
@@ -34,7 +41,10 @@ public sealed class IndexValidationResult
         IReadOnlyList<RejectedIndexEntry> malformedPacks,
         GameVersionsDto? gameVersions,
         SourcesDto? sources,
-        RejectedIndexEntry? gameVersionsError = null)
+        RejectedIndexEntry? gameVersionsError = null,
+        CuratedTagVocabulary? tags = null,
+        RejectedIndexEntry? tagsError = null,
+        UnknownIndexVersionEntry? unknownTags = null)
     {
         SnapshotVersion = snapshotVersion;
         ValidListings = validListings ?? throw new ArgumentNullException(nameof(validListings));
@@ -46,5 +56,8 @@ public sealed class IndexValidationResult
         GameVersions = gameVersions;
         Sources = sources;
         GameVersionsError = gameVersionsError;
+        Tags = tags ?? CuratedTagVocabulary.Empty;
+        TagsError = tagsError;
+        UnknownTags = unknownTags;
     }
 }

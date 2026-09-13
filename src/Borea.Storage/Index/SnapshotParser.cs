@@ -1,6 +1,7 @@
 using Borea.Core.Index;
 using Borea.Core.Game;
 using Borea.Core.Mods;
+using Borea.Core.Tags;
 using Borea.Storage.Index.Dtos;
 using System.Text.Json;
 
@@ -95,11 +96,42 @@ public static class SnapshotParser
 
         cancellationToken.ThrowIfCancellationRequested();
         var (gameVersions, gameVersionsError) = ParseGameVersions(snapshot.GameVersions, cancellationToken);
+        var (tags, tagsError, unknownTags) = ParseTags(snapshot.Tags, cancellationToken);
 
         return new IndexValidationResult(
             snapshot.SnapshotVersion, validListings, unknownListings,
             malformedListings, validPacks, unknownPacks, malformedPacks,
-            gameVersions, snapshot.Sources, gameVersionsError);
+            gameVersions, snapshot.Sources, gameVersionsError, tags, tagsError, unknownTags);
+    }
+
+    private static (CuratedTagVocabulary Value, RejectedIndexEntry? Error, UnknownIndexVersionEntry? Unknown) ParseTags(
+        JsonElement? element,
+        CancellationToken cancellationToken)
+    {
+        if (element is null || element.Value.ValueKind == JsonValueKind.Null)
+            return (CuratedTagVocabulary.Empty, null, null);
+
+        var specVersion = IndexJsonHelpers.TryExtractInt(element.Value, "spec_version");
+        if (specVersion is not null && specVersion != 1)
+        {
+            return (
+                CuratedTagVocabulary.Empty,
+                null,
+                new UnknownIndexVersionEntry(null, null, specVersion.Value, $"The curated tag vocabulary uses unsupported spec_version {specVersion}."));
+        }
+
+        try
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var dto = element.Value.Deserialize<CuratedTagsDto>(IndexJsonOptions.Value)
+                ?? throw new JsonException("The tags value deserialized to null.");
+            var tags = dto.Mod.Select(item => new CuratedTag(item.Tag, item.Name, item.Meaning, item.ForumPrefix)).ToArray();
+            return (new CuratedTagVocabulary(dto.SpecVersion, tags), null, null);
+        }
+        catch (Exception ex) when (ex is JsonException or ArgumentException or NullReferenceException)
+        {
+            return (CuratedTagVocabulary.Empty, new RejectedIndexEntry(null, $"The curated tag vocabulary is unreadable. {ex.Message}"), null);
+        }
     }
 
     private static (GameVersionsDto? Value, RejectedIndexEntry? Error) ParseGameVersions(

@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using Borea.Core.ModPacks;
 using Borea.Core.Mods;
+using Borea.Core.Tags;
 
 namespace Borea.Core.Index;
 
@@ -17,12 +18,15 @@ public sealed class ContentIndexSnapshot
 
     public IReadOnlyList<ContentIndexDiagnostic> Diagnostics { get; }
 
+    public CuratedTagVocabulary Tags { get; }
+
     public ContentIndexSnapshot(
         int snapshotVersion,
         IReadOnlyList<ContentIndexListing> listings,
         IReadOnlyList<ContentIndexPack> packs,
         ContentIndexGameVersions? gameVersions,
-        IReadOnlyList<ContentIndexDiagnostic> diagnostics)
+        IReadOnlyList<ContentIndexDiagnostic> diagnostics,
+        CuratedTagVocabulary? tags = null)
     {
         if (snapshotVersion < 1)
             throw new ArgumentOutOfRangeException(nameof(snapshotVersion), "Snapshot version must be a positive integer.");
@@ -32,6 +36,7 @@ public sealed class ContentIndexSnapshot
         Packs = Copy(packs, nameof(packs));
         GameVersions = gameVersions;
         Diagnostics = Copy(diagnostics, nameof(diagnostics));
+        Tags = tags ?? CuratedTagVocabulary.Empty;
     }
 
     private static IReadOnlyList<T> Copy<T>(IReadOnlyList<T> values, string parameterName)

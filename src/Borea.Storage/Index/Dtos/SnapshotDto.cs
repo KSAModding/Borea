@@ -11,6 +11,9 @@ public sealed class SnapshotDto
     [JsonPropertyName("sources")]
     public SourcesDto? Sources { get; set; }
 
+    [JsonPropertyName("tags")]
+    public JsonElement? Tags { get; set; }
+
     /// <summary>
     /// Stores <see cref="JsonElement"/> instead of <see cref="ListingEntryDto"/>
     /// because storing <see cref="ListingEntryDto"/> here would cause any unparseable

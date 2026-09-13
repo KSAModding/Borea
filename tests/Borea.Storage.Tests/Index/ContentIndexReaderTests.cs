@@ -115,6 +115,64 @@ public sealed class ContentIndexReaderTests : IDisposable
         Assert.Empty(result.Packs);
         Assert.Equal("master-server", result.GameVersions!.Source);
         Assert.Empty(result.Diagnostics);
+        Assert.Empty(result.Tags.ModTags);
+    }
+
+    [Fact]
+    public async Task ReadAsync_CuratedTags_ReturnsMappedVocabulary()
+    {
+        var tags = """
+            "tags": {
+                "spec_version": 1,
+                "mod": [
+                    { "tag": "parts", "name": "Parts", "meaning": "New parts.", "forum_prefix": "Parts" },
+                    { "tag": "library", "name": "Library", "meaning": "Shared code." }
+                ]
+            },
+            """;
+        await WriteIndexAsync(Snapshot(Listing("test-mod", ValidAuthoredJson), prefix: tags));
+
+        var result = await _reader.ReadAsync();
+
+        Assert.Equal(1, result.Tags.SpecVersion);
+        Assert.Equal(["parts", "library"], result.Tags.ModTags.Select(item => item.Tag));
+        Assert.Equal("Parts", result.Tags.ModTags[0].ForumPrefix);
+        Assert.Null(result.Tags.ModTags[1].ForumPrefix);
+    }
+
+    [Fact]
+    public async Task ReadAsync_UnsupportedCuratedTagsVersion_KeepsListingAndAddsDiagnostic()
+    {
+        var tags = """
+            "tags": { "spec_version": 2, "mod": [] },
+            """;
+        await WriteIndexAsync(Snapshot(Listing("test-mod", ValidAuthoredJson), prefix: tags));
+
+        var result = await _reader.ReadAsync();
+
+        Assert.Single(result.Listings);
+        Assert.Empty(result.Tags.ModTags);
+        var diagnostic = Assert.Single(result.Diagnostics);
+        Assert.Equal(ContentIndexDiagnosticKind.UnsupportedVersion, diagnostic.Kind);
+        Assert.Equal(ContentIndexDiagnosticScope.Tags, diagnostic.Scope);
+        Assert.Equal(2, diagnostic.SpecVersion);
+    }
+
+    [Fact]
+    public async Task ReadAsync_MalformedCuratedTags_KeepsListingAndAddsDiagnostic()
+    {
+        var tags = """
+            "tags": [],
+            """;
+        await WriteIndexAsync(Snapshot(Listing("test-mod", ValidAuthoredJson), prefix: tags));
+
+        var result = await _reader.ReadAsync();
+
+        Assert.Single(result.Listings);
+        Assert.Empty(result.Tags.ModTags);
+        var diagnostic = Assert.Single(result.Diagnostics);
+        Assert.Equal(ContentIndexDiagnosticKind.Malformed, diagnostic.Kind);
+        Assert.Equal(ContentIndexDiagnosticScope.Tags, diagnostic.Scope);
     }
 
     [Fact]
@@ -309,10 +367,12 @@ public sealed class ContentIndexReaderTests : IDisposable
 
     private static string Snapshot(
         string listings,
-        string gameVersions = """{ "spec_version": 1, "source": "master-server", "versions": ["2026.9.7.5402"] }""") =>
+        string gameVersions = """{ "spec_version": 1, "source": "master-server", "versions": ["2026.9.7.5402"] }""",
+        string prefix = "") =>
         $$"""
         {
             "snapshot_version": 1,
+            {{prefix}}
             "listings": [{{listings}}],
             "packs": [],
             "game_versions": {{gameVersions}}
