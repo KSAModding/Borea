@@ -37,10 +37,8 @@ public sealed class FileLoaderUninstaller : ILoaderUninstaller
             directoryRemoved = true;
         }
 
-        var installations = settings.LoaderInstallations.ToDictionary(pair => pair.Key, pair => pair.Value, ModIds.Comparer);
-        installations.Remove(loaderId);
         await _settings.SaveAsync(
-            new BoreaSettings(settings.GameDirectoryPath, loaderInstallations: installations),
+            settings.WithoutLoaderInstallation(loaderId),
             cancellationToken).ConfigureAwait(false);
 
         return new LoaderUninstallResult(loaderId, installation.DirectoryPath, RecordRemoved: true, DirectoryRemoved: directoryRemoved);

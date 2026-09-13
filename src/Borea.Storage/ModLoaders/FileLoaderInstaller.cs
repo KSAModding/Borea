@@ -108,15 +108,13 @@ public sealed class FileLoaderInstaller : ILoaderInstaller
                 replacementActivated = true;
             }
 
-            var installations = settings.LoaderInstallations.ToDictionary(p => p.Key, p => p.Value, ModIds.Comparer);
-            installations.Remove(loader.ModId);
-            installations[loader.ModId] = new LoaderInstallation(
+            var installation = new LoaderInstallation(
                 destination,
                 release.Version,
                 rawVersion: null,
                 isAdopted: recordedInstallation?.IsAdopted ?? !created);
             await _settings.SaveAsync(
-                new BoreaSettings(settings.GameDirectoryPath, loaderInstallations: installations),
+                settings.WithLoaderInstallation(loader.ModId, installation),
                 cancellationToken).ConfigureAwait(false);
 
             if (replacementBackedUp)

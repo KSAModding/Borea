@@ -16,22 +16,34 @@ public sealed class BoreaSettings
     /// </summary>
     public IReadOnlyDictionary<string, LoaderInstallation> LoaderInstallations { get; }
 
+    /// <summary>Which release statuses Borea offers when it picks a release. Stable by default.</summary>
+    public ReleaseChannel ReleaseChannel { get; }
+
     public BoreaSettings(
         string? gameDirectoryPath,
-        IReadOnlyDictionary<string, LoaderInstallation>? loaderInstallations = null)
+        IReadOnlyDictionary<string, LoaderInstallation>? loaderInstallations = null,
+        ReleaseChannel releaseChannel = ReleaseChannel.Stable)
     {
         if (gameDirectoryPath is not null && string.IsNullOrWhiteSpace(gameDirectoryPath))
             throw new ArgumentException("Game directory path, if provided, cannot be whitespace.", nameof(gameDirectoryPath));
 
+        if (!Enum.IsDefined(releaseChannel))
+            throw new ArgumentOutOfRangeException(nameof(releaseChannel), releaseChannel, "The release channel is not defined.");
+
         GameDirectoryPath = gameDirectoryPath;
         LoaderInstallations = Build(loaderInstallations, nameof(loaderInstallations));
+        ReleaseChannel = releaseChannel;
     }
 
     /// <summary>
-    /// A copy with the game directory replaced. The loaders stay as they are.
+    /// A copy with the game directory replaced. The other settings stay as they are.
     /// </summary>
     public BoreaSettings WithGameDirectory(string? gameDirectoryPath)
-        => new(gameDirectoryPath, LoaderInstallations);
+        => new(gameDirectoryPath, LoaderInstallations, ReleaseChannel);
+
+    /// <summary>A copy with the release channel replaced. The other settings stay as they are.</summary>
+    public BoreaSettings WithReleaseChannel(ReleaseChannel releaseChannel)
+        => new(GameDirectoryPath, LoaderInstallations, releaseChannel);
 
     /// <summary>
     /// A copy with one loader installation set. The id is stored as given here,
@@ -48,7 +60,18 @@ public sealed class BoreaSettings
         installations.Remove(loaderId);
         installations[loaderId] = installation;
 
-        return new BoreaSettings(GameDirectoryPath, installations);
+        return new BoreaSettings(GameDirectoryPath, installations, ReleaseChannel);
+    }
+
+    /// <summary>A copy without one loader installation. The other settings stay as they are.</summary>
+    public BoreaSettings WithoutLoaderInstallation(string loaderId)
+    {
+        ModIds.Validate(loaderId, nameof(loaderId));
+
+        var installations = new Dictionary<string, LoaderInstallation>(LoaderInstallations, ModIds.Comparer);
+        installations.Remove(loaderId);
+
+        return new BoreaSettings(GameDirectoryPath, installations, ReleaseChannel);
     }
 
     private static IReadOnlyDictionary<string, LoaderInstallation> Build(

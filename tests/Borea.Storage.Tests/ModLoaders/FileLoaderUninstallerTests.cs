@@ -35,6 +35,20 @@ public sealed class FileLoaderUninstallerTests : IDisposable
     }
 
     [Fact]
+    public async Task UninstallAsync_KeepsTheReleaseChannel()
+    {
+        await RecordAsync(isAdopted: true);
+        var recorded = await _settings.GetAsync();
+        await _settings.SaveAsync(recorded!.WithReleaseChannel(ReleaseChannel.Testing));
+
+        await _uninstaller.UninstallAsync("StarMap");
+
+        var settings = await _settings.GetAsync();
+        Assert.Empty(settings!.LoaderInstallations);
+        Assert.Equal(ReleaseChannel.Testing, settings.ReleaseChannel);
+    }
+
+    [Fact]
     public async Task UninstallAsync_BoreaInstalledLoader_RemovesDirectoryAndRecord()
     {
         var directory = await RecordAsync(isAdopted: false);

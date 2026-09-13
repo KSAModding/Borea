@@ -28,6 +28,67 @@ public sealed class FileBoreaSettingsRepositoryTests : IDisposable
     }
 
     [Fact]
+    public async Task SaveThenGet_RoundTripsTheReleaseChannel()
+    {
+        await _repository.SaveAsync(new BoreaSettings(@"C:\Games\KSA", releaseChannel: ReleaseChannel.Testing));
+
+        var reloaded = await _repository.GetAsync();
+        var text = await File.ReadAllTextAsync(_pathProvider.GetBoreaSettingsPath());
+
+        Assert.Equal(ReleaseChannel.Testing, reloaded!.ReleaseChannel);
+        Assert.Contains("ReleaseChannel", text);
+        Assert.Contains("testing", text);
+    }
+
+    [Fact]
+    public async Task GetAsync_FileWrittenBeforeTheChannelExisted_LoadsStable()
+    {
+        Directory.CreateDirectory(_tempRoot);
+        await File.WriteAllTextAsync(_pathProvider.GetBoreaSettingsPath(), """
+            GameDirectoryPath = 'C:\Games\KSA'
+
+            [LoaderInstallations.StarMap]
+            DirectoryPath = 'C:\Games\StarMap'
+            IsAdopted = true
+            """);
+
+        var reloaded = await _repository.GetAsync();
+
+        Assert.Equal(ReleaseChannel.Stable, reloaded!.ReleaseChannel);
+        Assert.Equal(@"C:\Games\KSA", reloaded.GameDirectoryPath);
+        Assert.Equal(@"C:\Games\StarMap", reloaded.LoaderInstallations["StarMap"].DirectoryPath);
+    }
+
+    [Fact]
+    public async Task GetAsync_ChannelThisVersionDoesNotKnow_LoadsStable()
+    {
+        Directory.CreateDirectory(_tempRoot);
+        await File.WriteAllTextAsync(_pathProvider.GetBoreaSettingsPath(), """
+            GameDirectoryPath = 'C:\Games\KSA'
+            ReleaseChannel = 'nightly'
+            """);
+
+        var reloaded = await _repository.GetAsync();
+
+        Assert.Equal(ReleaseChannel.Stable, reloaded!.ReleaseChannel);
+    }
+
+    /// <summary>An older build must still load a file with a key it does not know.</summary>
+    [Fact]
+    public async Task GetAsync_KeyThisVersionDoesNotKnow_Loads()
+    {
+        Directory.CreateDirectory(_tempRoot);
+        await File.WriteAllTextAsync(_pathProvider.GetBoreaSettingsPath(), """
+            GameDirectoryPath = 'C:\Games\KSA'
+            SettingFromANewerBorea = 'value'
+            """);
+
+        var reloaded = await _repository.GetAsync();
+
+        Assert.Equal(@"C:\Games\KSA", reloaded!.GameDirectoryPath);
+    }
+
+    [Fact]
     public async Task SaveThenGet_RoundTripsTheGameAndTheLoaders()
     {
         var settings = new BoreaSettings(@"C:\Games\KSA", new Dictionary<string, LoaderInstallation>
