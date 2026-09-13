@@ -237,6 +237,10 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string SetupNoLoaderSelected => Resources.SetupNoLoaderSelected;
 
+    public string SetupReinstallLoader => Resources.SetupReinstallLoader;
+
+    public string SetupLoaderInstalledUnknownVersion => Resources.SetupLoaderInstalledUnknownVersion;
+
     public LocalizationService()
         : this(CultureInfo.CurrentUICulture)
     {
@@ -275,6 +279,12 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string FormatSetupLoaderInstalled(string loaderName, string version, string directory)
         => string.Format(CultureInfo.CurrentCulture, Resources.SetupLoaderInstalledFormat, loaderName, version, directory);
+
+    public string FormatSetupLoaderInstalledVersion(string version)
+        => string.Format(CultureInfo.CurrentCulture, Resources.SetupLoaderInstalledVersionFormat, version);
+
+    public string FormatSetupUpdateLoader(string version)
+        => string.Format(CultureInfo.CurrentCulture, Resources.SetupUpdateLoaderFormat, version);
 
     public string FormatContentSource(string source)
     {

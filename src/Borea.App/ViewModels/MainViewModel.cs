@@ -447,6 +447,7 @@ public partial class MainViewModel : ViewModelBase
         foreach (var item in DiscoverItems)
             item.RefreshText();
         RefreshContentGroups();
+        RefreshLoaderText();
 
         QueuePreferenceSave(preferences => preferences.WithUiCultureName(Localization.SelectedCultureName));
     }

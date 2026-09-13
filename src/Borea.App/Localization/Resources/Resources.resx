@@ -315,6 +315,18 @@
   <data name="SetupLoaderInstalledFormat" xml:space="preserve">
     <value>Installed {0} {1} to {2}.</value>
   </data>
+  <data name="SetupLoaderInstalledVersionFormat" xml:space="preserve">
+    <value>Installed {0}</value>
+  </data>
+  <data name="SetupLoaderInstalledUnknownVersion" xml:space="preserve">
+    <value>Installed, version unknown</value>
+  </data>
+  <data name="SetupUpdateLoaderFormat" xml:space="preserve">
+    <value>Update to {0}</value>
+  </data>
+  <data name="SetupReinstallLoader" xml:space="preserve">
+    <value>Reinstall</value>
+  </data>
   <data name="ContentLoaderHint" xml:space="preserve">
     <value>Mod loaders are set up from the Game settings.</value>
   </data>
