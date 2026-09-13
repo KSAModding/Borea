@@ -39,25 +39,25 @@
                     <Color x:Key="Color.ThumbEnd">#171717</Color>
                 </ResourceDictionary>
                 <ResourceDictionary x:Key="{x:Static ThemeVariant.Light}">
-                    <Color x:Key="Color.Window">#F4F4F6</Color>
-                    <Color x:Key="Color.Rail">#FFFFFF</Color>
-                    <Color x:Key="Color.Surface">#FFFFFF</Color>
-                    <Color x:Key="Color.SurfaceHeader">#E4E4E9</Color>
-                    <Color x:Key="Color.SurfaceRaised">#E9E9EE</Color>
-                    <Color x:Key="Color.Border">#DDDDE3</Color>
-                    <Color x:Key="Color.BorderStrong">#C6C6CE</Color>
+                    <Color x:Key="Color.Window">#E4E5E9</Color>
+                    <Color x:Key="Color.Rail">#ECEDF0</Color>
+                    <Color x:Key="Color.Surface">#F1F2F4</Color>
+                    <Color x:Key="Color.SurfaceHeader">#D9DADF</Color>
+                    <Color x:Key="Color.SurfaceRaised">#E6E7EB</Color>
+                    <Color x:Key="Color.Border">#D0D1D7</Color>
+                    <Color x:Key="Color.BorderStrong">#BBBCC4</Color>
                     <Color x:Key="Color.Text">#1A1A1E</Color>
                     <Color x:Key="Color.TextHeading">#2A2A30</Color>
-                    <Color x:Key="Color.TextSecondary">#5C5C66</Color>
-                    <Color x:Key="Color.TextMuted">#8E8E98</Color>
+                    <Color x:Key="Color.TextSecondary">#52525C</Color>
+                    <Color x:Key="Color.TextMuted">#7E7E88</Color>
                     <Color x:Key="Color.Accent">#6A56E0</Color>
                     <Color x:Key="Color.AccentSoft">#266A56E0</Color>
                     <Color x:Key="Color.Positive">#3C8A25</Color>
                     <Color x:Key="Color.PositiveSoft">#1A3C8A25</Color>
                     <Color x:Key="Color.Danger">#C93A43</Color>
                     <Color x:Key="Color.DangerSoft">#26C93A43</Color>
-                    <Color x:Key="Color.ThumbStart">#FFFFFF</Color>
-                    <Color x:Key="Color.ThumbEnd">#E4E4E9</Color>
+                    <Color x:Key="Color.ThumbStart">#F1F2F4</Color>
+                    <Color x:Key="Color.ThumbEnd">#D9DADF</Color>
                 </ResourceDictionary>
             </ResourceDictionary.ThemeDictionaries>
 
