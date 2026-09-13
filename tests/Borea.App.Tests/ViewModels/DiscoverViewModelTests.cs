@@ -191,6 +191,27 @@ public sealed class DiscoverViewModelTests
     }
 
     [Fact]
+    public async Task Remove_FromDiscover_StaysOnDiscover()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var viewModel = harness.ViewModel;
+        await InstalledContent.AddAsync(harness, "AdvancedFlightComputer", activate: true, ownership: ModInstallOwnership.Borea);
+        await viewModel.LoadAsync();
+        // the user visited the instance page earlier, then came to Discover
+        await viewModel.ActiveInstance!.OpenCommand.ExecuteAsync(null);
+        viewModel.SetMainWindowDiscover();
+        await viewModel.EnsureDiscoverLoadedAsync();
+        var afc = viewModel.DiscoverItems.Single(item => item.ModId == "AdvancedFlightComputer");
+
+        afc.BeginRemoveCommand.Execute(null);
+        await afc.ConfirmRemoveCommand.ExecuteAsync(null);
+
+        Assert.True(viewModel.CurrentWindowDiscover);
+        Assert.False(viewModel.CurrentWindowInstance);
+        Assert.False(afc.IsInstalled);
+    }
+
+    [Fact]
     public async Task Remove_ForeignFiles_StaysInstalledAndSaysWhy()
     {
         using var harness = await ViewModelHarness.CreateAsync();

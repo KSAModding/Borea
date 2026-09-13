@@ -357,10 +357,14 @@ public partial class MainViewModel : ViewModelBase
         RefreshInstalledFlags();
         OnPropertyChanged(nameof(InstalledInText));
 
+        // the instance page shows fresh rows after a change; any other page
+        // stays where the user is instead of jumping to that instance
         if (SelectedInstance is not null)
         {
             var stillThere = Instances.FirstOrDefault(instance => instance.InstanceId == SelectedInstance.InstanceId);
-            if (stillThere is null)
+            if (!CurrentWindowInstance)
+                SelectedInstance = stillThere;
+            else if (stillThere is null)
                 SetMainWindowLibrary();
             else
                 await OpenInstanceAsync(stillThere);
