@@ -191,6 +191,10 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string AboutReleases => Resources.AboutReleases;
 
+    public string AboutCommunity => Resources.AboutCommunity;
+
+    public string AboutDiscord => Resources.AboutDiscord;
+
     public string AboutThirdParty => Resources.AboutThirdParty;
 
     public string ContentLoaderHint => Resources.ContentLoaderHint;

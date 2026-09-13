@@ -39,6 +39,16 @@ public sealed class AboutViewModelTests
     }
 
     [Fact]
+    public void Links_AreAbsoluteUrlsUnderTheProjectHosts()
+    {
+        string[] links = [MainViewModel.RepositoryUrl, MainViewModel.ReportBugUrl, MainViewModel.ReleasesUrl, MainViewModel.CommunityUrl, MainViewModel.DiscordUrl];
+
+        Assert.All(links, link => Assert.True(Uri.TryCreate(link, UriKind.Absolute, out var uri) && uri.Scheme == "https", link));
+        Assert.StartsWith("https://github.com/KSAModding", MainViewModel.CommunityUrl);
+        Assert.StartsWith("https://discord.gg/", MainViewModel.DiscordUrl);
+    }
+
+    [Fact]
     public async Task Folders_PointIntoTheBoreaRoot()
     {
         using var harness = await ViewModelHarness.CreateAsync();

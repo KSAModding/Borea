@@ -886,6 +886,8 @@
                                 <Button Classes="filter" Content="{Binding Localization.AboutSourceCode}" Command="{Binding OpenAboutLinkCommand}" CommandParameter="{x:Static vm:MainViewModel.RepositoryUrl}" />
                                 <Button Classes="filter" Content="{Binding Localization.AboutReportBug}" Command="{Binding OpenAboutLinkCommand}" CommandParameter="{x:Static vm:MainViewModel.ReportBugUrl}" />
                                 <Button Classes="filter" Content="{Binding Localization.AboutReleases}" Command="{Binding OpenAboutLinkCommand}" CommandParameter="{x:Static vm:MainViewModel.ReleasesUrl}" />
+                                <Button Classes="filter" Content="{Binding Localization.AboutCommunity}" Command="{Binding OpenAboutLinkCommand}" CommandParameter="{x:Static vm:MainViewModel.CommunityUrl}" />
+                                <Button Classes="filter" Content="{Binding Localization.AboutDiscord}" Command="{Binding OpenAboutLinkCommand}" CommandParameter="{x:Static vm:MainViewModel.DiscordUrl}" />
                             </StackPanel>
 
                             <Border Height="1" Background="{StaticResource Brush.BorderStrong}" Margin="0,18,0,12" />

@@ -417,4 +417,10 @@
   <data name="AboutThirdParty" xml:space="preserve">
     <value>Hinweise zu Drittanbietern</value>
   </data>
+  <data name="AboutCommunity" xml:space="preserve">
+    <value>KSA-Modding auf GitHub</value>
+  </data>
+  <data name="AboutDiscord" xml:space="preserve">
+    <value>KSA-Modding-Discord</value>
+  </data>
 </root>

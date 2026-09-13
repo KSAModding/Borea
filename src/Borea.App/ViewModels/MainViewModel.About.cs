@@ -24,6 +24,10 @@ public partial class MainViewModel
 
     public const string ReleasesUrl = RepositoryUrl + "/releases";
 
+    public const string CommunityUrl = "https://github.com/KSAModding";
+
+    public const string DiscordUrl = "https://discord.gg/nt4fK4QuTz";
+
     /// <summary>
     /// The version the release workflow stamped, without the build metadata
     /// after the "+". A local build reports 1.0.0.
