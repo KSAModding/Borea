@@ -1,4 +1,6 @@
-﻿using Borea.Storage.Toml;
+using Borea.Storage.Toml;
+
+using System.Globalization;
 
 namespace Borea.Storage.Tests.Toml;
 
@@ -15,6 +17,12 @@ public sealed class TomlFileStoreTests : IDisposable
     {
         public string Name { get; set; } = string.Empty;
         public int Count { get; set; }
+    }
+
+    private sealed class MachineValuesDto
+    {
+        public double Ratio { get; set; }
+        public DateTimeOffset Timestamp { get; set; }
     }
 
     [Fact]
@@ -62,6 +70,31 @@ public sealed class TomlFileStoreTests : IDisposable
         Assert.NotNull(reloaded);
         Assert.Equal("hello", reloaded!.Name);
         Assert.Equal(42, reloaded.Count);
+    }
+
+    [Fact]
+    public async Task WriteAsync_DifferentCurrentCulture_KeepsMachineValuesInvariant()
+    {
+        var originalCulture = CultureInfo.CurrentCulture;
+        try
+        {
+            CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo("de-DE");
+            var path = Path.Combine(_tempRoot, "machine-values.toml");
+            var timestamp = new DateTimeOffset(2026, 9, 11, 14, 30, 0, TimeSpan.FromHours(2));
+
+            await TomlFileStore.WriteAsync(path, new MachineValuesDto { Ratio = 1.5, Timestamp = timestamp });
+            var text = await File.ReadAllTextAsync(path);
+            var reloaded = await TomlFileStore.ReadAsync<MachineValuesDto>(path);
+
+            Assert.Contains("Ratio = 1.5", text, StringComparison.Ordinal);
+            Assert.Contains("Timestamp = \"2026-09-11T14:30:00.0000000+02:00\"", text, StringComparison.Ordinal);
+            Assert.Equal(1.5, reloaded!.Ratio);
+            Assert.Equal(timestamp, reloaded.Timestamp);
+        }
+        finally
+        {
+            CultureInfo.CurrentCulture = originalCulture;
+        }
     }
 
     [Fact]

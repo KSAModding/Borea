@@ -1,0 +1,336 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="NavigationDiscover" xml:space="preserve">
+    <value>Entdecken</value>
+  </data>
+  <data name="NavigationHome" xml:space="preserve">
+    <value>Startseite</value>
+  </data>
+  <data name="NavigationLibrary" xml:space="preserve">
+    <value>Bibliothek</value>
+  </data>
+  <data name="NavigationSettings" xml:space="preserve">
+    <value>Einstellungen</value>
+  </data>
+  <data name="PageDiscoverHeading" xml:space="preserve">
+    <value>Entdecken</value>
+  </data>
+  <data name="PageHomeHeading" xml:space="preserve">
+    <value>Startseite</value>
+  </data>
+  <data name="PageLibraryHeading" xml:space="preserve">
+    <value>Bibliothek</value>
+  </data>
+  <data name="PreferenceSaveErrorFormat" xml:space="preserve">
+    <value>Die Einstellung konnte nicht gespeichert werden: {0}</value>
+  </data>
+  <data name="SettingsLanguageLabel" xml:space="preserve">
+    <value>Sprache</value>
+  </data>
+  <data name="SettingsRegionalFormatLabel" xml:space="preserve">
+    <value>Regionales Format</value>
+  </data>
+  <data name="SettingsThemeLabel" xml:space="preserve">
+    <value>Design</value>
+  </data>
+  <data name="SystemDefaultRegionalFormat" xml:space="preserve">
+    <value>Systemstandard</value>
+  </data>
+  <data name="ViewNotFoundFormat" xml:space="preserve">
+    <value>Ansicht nicht gefunden: {0}</value>
+  </data>
+  <data name="HomeCurrentInstall" xml:space="preserve">
+    <value>Aktuelle Installation</value>
+  </data>
+  <data name="HomeTrending" xml:space="preserve">
+    <value>Diese Woche im Trend</value>
+  </data>
+  <data name="HomeDiscoverMods" xml:space="preserve">
+    <value>Mods entdecken</value>
+  </data>
+  <data name="HomeNoGameVersion" xml:space="preserve">
+    <value>Spiel nicht eingerichtet</value>
+  </data>
+  <data name="HomeNoInstance" xml:space="preserve">
+    <value>Noch keine Instanz</value>
+  </data>
+  <data name="HomeInstanceSourceCustom" xml:space="preserve">
+    <value>Eigene</value>
+  </data>
+  <data name="ContentTypeMod" xml:space="preserve">
+    <value>Mod</value>
+  </data>
+  <data name="LibraryNewInstancePlaceholder" xml:space="preserve">
+    <value>Name der neuen Instanz</value>
+  </data>
+  <data name="LibraryCreate" xml:space="preserve">
+    <value>Erstellen</value>
+  </data>
+  <data name="LibraryActivate" xml:space="preserve">
+    <value>Aktivieren</value>
+  </data>
+  <data name="LibraryRename" xml:space="preserve">
+    <value>Umbenennen</value>
+  </data>
+  <data name="LibraryDelete" xml:space="preserve">
+    <value>Löschen</value>
+  </data>
+  <data name="LibrarySave" xml:space="preserve">
+    <value>Speichern</value>
+  </data>
+  <data name="LibraryCancel" xml:space="preserve">
+    <value>Abbrechen</value>
+  </data>
+  <data name="LibraryDeleteConfirm" xml:space="preserve">
+    <value>Diese Instanz und ihren Ordner löschen?</value>
+  </data>
+  <data name="LibraryEmpty" xml:space="preserve">
+    <value>Noch keine Instanzen. Erstelle eine, um loszulegen.</value>
+  </data>
+  <data name="LibraryNewInstance" xml:space="preserve">
+    <value>Neue Instanz</value>
+  </data>
+  <data name="NavigationTasks" xml:space="preserve">
+    <value>Aufgaben</value>
+  </data>
+  <data name="InstanceTabContent" xml:space="preserve">
+    <value>Inhalt</value>
+  </data>
+  <data name="InstanceTabManualInstalls" xml:space="preserve">
+    <value>Manuelle Installationen</value>
+  </data>
+  <data name="InstanceTabGameData" xml:space="preserve">
+    <value>Spieldaten</value>
+  </data>
+  <data name="InstanceTabLog" xml:space="preserve">
+    <value>Protokoll</value>
+  </data>
+  <data name="InstanceGroupMods" xml:space="preserve">
+    <value>Mods</value>
+  </data>
+  <data name="InstanceGroupModLoaders" xml:space="preserve">
+    <value>Mod-Loader</value>
+  </data>
+  <data name="InstanceGroupOther" xml:space="preserve">
+    <value>Sonstiges</value>
+  </data>
+  <data name="InstanceGroupDependencies" xml:space="preserve">
+    <value>Abhängigkeiten</value>
+  </data>
+  <data name="InstanceEmptyContent" xml:space="preserve">
+    <value>Noch nichts installiert. Füge Inhalte über Entdecken hinzu.</value>
+  </data>
+  <data name="InstancePlay" xml:space="preserve">
+    <value>Spielen</value>
+  </data>
+  <data name="ContentRemove" xml:space="preserve">
+    <value>Entfernen</value>
+  </data>
+  <data name="ContentRemoveConfirm" xml:space="preserve">
+    <value>Diesen Inhalt aus der Instanz entfernen?</value>
+  </data>
+  <data name="ContentByAuthorFormat" xml:space="preserve">
+    <value>von {0}</value>
+  </data>
+  <data name="DiscoverTabMods" xml:space="preserve">
+    <value>Mods</value>
+  </data>
+  <data name="DiscoverTabModpacks" xml:space="preserve">
+    <value>Modpacks</value>
+  </data>
+  <data name="DiscoverTabVehicles" xml:space="preserve">
+    <value>Fahrzeuge</value>
+  </data>
+  <data name="DiscoverTabSaves" xml:space="preserve">
+    <value>Spielstände</value>
+  </data>
+  <data name="DiscoverTabLoaders" xml:space="preserve">
+    <value>Mod-Loader</value>
+  </data>
+  <data name="DiscoverSearchPlaceholder" xml:space="preserve">
+    <value>Mods suchen...</value>
+  </data>
+  <data name="DiscoverHideInstalled" xml:space="preserve">
+    <value>Bereits installierte ausblenden</value>
+  </data>
+  <data name="DiscoverHideIncompatible" xml:space="preserve">
+    <value>Inkompatible ausblenden</value>
+  </data>
+  <data name="DiscoverOperatingSystem" xml:space="preserve">
+    <value>Betriebssystem</value>
+  </data>
+  <data name="DiscoverLicense" xml:space="preserve">
+    <value>Lizenz</value>
+  </data>
+  <data name="DiscoverClearAll" xml:space="preserve">
+    <value>Alle zurücksetzen</value>
+  </data>
+  <data name="DiscoverAll" xml:space="preserve">
+    <value>Alle</value>
+  </data>
+  <data name="DiscoverEmpty" xml:space="preserve">
+    <value>Keine passenden Inhalte.</value>
+  </data>
+  <data name="DiscoverLoading" xml:space="preserve">
+    <value>Inhalte werden geladen...</value>
+  </data>
+  <data name="DiscoverAdd" xml:space="preserve">
+    <value>Zur aktiven Instanz hinzufügen</value>
+  </data>
+  <data name="DiscoverInstalled" xml:space="preserve">
+    <value>Installiert</value>
+  </data>
+  <data name="DiscoverNoInstance" xml:space="preserve">
+    <value>Erstelle zuerst eine Instanz, um Inhalte hinzuzufügen.</value>
+  </data>
+  <data name="DiscoverNoRelease" xml:space="preserve">
+    <value>Dieser Eintrag hat keine installierbare Version.</value>
+  </data>
+  <data name="ModalCreateInstanceTitle" xml:space="preserve">
+    <value>Instanz erstellen</value>
+  </data>
+  <data name="ModalNameLabel" xml:space="preserve">
+    <value>Name</value>
+  </data>
+  <data name="ModalClose" xml:space="preserve">
+    <value>Schließen</value>
+  </data>
+  <data name="SettingsGeneral" xml:space="preserve">
+    <value>Allgemein</value>
+  </data>
+  <data name="ContentTabDescription" xml:space="preserve">
+    <value>Beschreibung</value>
+  </data>
+  <data name="ContentTabVersions" xml:space="preserve">
+    <value>Versionen</value>
+  </data>
+  <data name="ContentCompatibility" xml:space="preserve">
+    <value>Kompatibilität</value>
+  </data>
+  <data name="ContentLinks" xml:space="preserve">
+    <value>Links</value>
+  </data>
+  <data name="ContentTags" xml:space="preserve">
+    <value>Tags</value>
+  </data>
+  <data name="ContentAuthor" xml:space="preserve">
+    <value>Autor</value>
+  </data>
+  <data name="ContentDetails" xml:space="preserve">
+    <value>Details</value>
+  </data>
+  <data name="ContentAdd" xml:space="preserve">
+    <value>Hinzufügen</value>
+  </data>
+  <data name="ContentVersionHeader" xml:space="preserve">
+    <value>Version</value>
+  </data>
+  <data name="ContentChannelHeader" xml:space="preserve">
+    <value>Kanal</value>
+  </data>
+  <data name="ContentGameVersionHeader" xml:space="preserve">
+    <value>Spielversion</value>
+  </data>
+  <data name="ContentPublishedHeader" xml:space="preserve">
+    <value>Veröffentlicht</value>
+  </data>
+  <data name="ContentNoDescription" xml:space="preserve">
+    <value>Keine Beschreibung vorhanden.</value>
+  </data>
+  <data name="ContentLoadingVersions" xml:space="preserve">
+    <value>Versionen werden geladen...</value>
+  </data>
+  <data name="ContentNoVersions" xml:space="preserve">
+    <value>Noch keine Veröffentlichungen.</value>
+  </data>
+  <data name="ContentSourceFormat" xml:space="preserve">
+    <value>Gelistet auf {0}</value>
+  </data>
+  <data name="ContentTypeModLoader" xml:space="preserve">
+    <value>Mod-Loader</value>
+  </data>
+  <data name="ReleaseStable" xml:space="preserve">
+    <value>stabil</value>
+  </data>
+  <data name="ReleaseTesting" xml:space="preserve">
+    <value>test</value>
+  </data>
+  <data name="ReleaseDev" xml:space="preserve">
+    <value>dev</value>
+  </data>
+  <data name="ReleaseUnknown" xml:space="preserve">
+    <value>unbekannt</value>
+  </data>
+  <data name="SettingsGame" xml:space="preserve">
+    <value>Spiel</value>
+  </data>
+  <data name="SetupGameDirectory" xml:space="preserve">
+    <value>Spielverzeichnis</value>
+  </data>
+  <data name="SetupGameDirectoryHint" xml:space="preserve">
+    <value>Der Ordner mit der Spiel-Programmdatei.</value>
+  </data>
+  <data name="SetupBrowse" xml:space="preserve">
+    <value>Durchsuchen...</value>
+  </data>
+  <data name="SetupSave" xml:space="preserve">
+    <value>Speichern</value>
+  </data>
+  <data name="SetupLoader" xml:space="preserve">
+    <value>Mod-Loader</value>
+  </data>
+  <data name="SetupLoaderDirectory" xml:space="preserve">
+    <value>Loader-Verzeichnis</value>
+  </data>
+  <data name="SetupLoaderDirectoryHint" xml:space="preserve">
+    <value>Leer lassen, damit Borea beim Installieren einen Ordner wählt.</value>
+  </data>
+  <data name="SetupInstallLoader" xml:space="preserve">
+    <value>Installieren</value>
+  </data>
+  <data name="SetupUseExisting" xml:space="preserve">
+    <value>Vorhandenen verwenden</value>
+  </data>
+  <data name="SetupSaved" xml:space="preserve">
+    <value>Gespeichert.</value>
+  </data>
+  <data name="SetupDirectoryMissing" xml:space="preserve">
+    <value>Gespeichert, aber dieser Ordner existiert noch nicht.</value>
+  </data>
+  <data name="SetupNoLoaderSelected" xml:space="preserve">
+    <value>Wähle zuerst einen Mod-Loader.</value>
+  </data>
+  <data name="SetupLoaderInstalledFormat" xml:space="preserve">
+    <value>{0} {1} nach {2} installiert.</value>
+  </data>
+  <data name="ContentLoaderHint" xml:space="preserve">
+    <value>Mod-Loader werden in den Spieleinstellungen eingerichtet.</value>
+  </data>
+  <data name="SourceContentIndex" xml:space="preserve">
+    <value>dem Inhaltsindex</value>
+  </data>
+  <data name="LinkForum" xml:space="preserve">
+    <value>Forum</value>
+  </data>
+  <data name="LinkRepository" xml:space="preserve">
+    <value>Repository</value>
+  </data>
+  <data name="LinkBugTracker" xml:space="preserve">
+    <value>Fehlertracker</value>
+  </data>
+  <data name="LinkDiscussions" xml:space="preserve">
+    <value>Diskussionen</value>
+  </data>
+</root>

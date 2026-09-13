@@ -35,6 +35,18 @@ public sealed class CompositeModRepository : IModRepository
         return results;
     }
 
+    public async Task<ModMetadata?> GetListingAsync(string modId, CancellationToken cancellationToken = default)
+    {
+        foreach (var (source, repository) in _sources)
+        {
+            var listing = await repository.GetListingAsync(modId, cancellationToken).ConfigureAwait(false);
+            if (listing is not null)
+                return Tag(listing, source);
+        }
+
+        return null;
+    }
+
     public async Task<ModVersionMetadata?> GetLatestReleaseAsync(string modId, CancellationToken cancellationToken = default)
     {
         foreach (var (source, repository) in _sources)

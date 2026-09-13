@@ -220,6 +220,8 @@ public sealed class ContentIndexModPackRepositoryTests
     private sealed class TestPathProvider : IGamePathProvider
     {
         public string GetIndexPath() => "index.json";
+
+        public string GetAppPreferencesPath() => "app-preferences.json";
         public string GetInstancesRoot() => throw new NotSupportedException();
         public string GetLoadersRoot() => throw new NotSupportedException();
         public string GetActiveInstancePointerPath() => throw new NotSupportedException();

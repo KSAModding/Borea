@@ -14,6 +14,18 @@ public interface IModRepository
     Task<IReadOnlyList<ModMetadata>> GetAvailableModsAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Retrieves one listing in full, or null if the mod is unknown. The
+    /// catalog from <see cref="GetAvailableModsAsync"/> may leave out fields a
+    /// source only serves per mod, such as the description; a source like that
+    /// overrides this. The default looks the mod up in the catalog.
+    /// </summary>
+    async Task<ModMetadata?> GetListingAsync(string modId, CancellationToken cancellationToken = default)
+    {
+        var listings = await GetAvailableModsAsync(cancellationToken).ConfigureAwait(false);
+        return listings.FirstOrDefault(listing => ModIds.Equals(listing.ModId, modId));
+    }
+
+    /// <summary>
     /// Retrieves the newest available release of a mod, skipping yanked
     /// releases, or null if the mod has no usable release.
     /// </summary>
