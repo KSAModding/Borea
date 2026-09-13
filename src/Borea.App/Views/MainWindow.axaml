@@ -186,6 +186,9 @@
                                     <Button Classes="text" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryCancel}" Command="{Binding CancelInstallCommand}" />
                                 </StackPanel>
                                 <TextBlock Classes="body-sm danger" Text="{Binding InstallError}" ToolTip.Tip="{Binding InstallError}" IsVisible="{Binding InstallError, Converter={x:Static ObjectConverters.IsNotNull}}" MaxWidth="320" TextTrimming="CharacterEllipsis" />
+                                <Border Classes="chip" Classes.positive="{Binding IsCompatible}" Classes.testing="{Binding IsUntested}" Classes.dev="{Binding IsIncompatible}" VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding CompatibilityText}" />
+                                </Border>
                                 <TextBlock Classes="label-md" Text="{Binding License}" VerticalAlignment="Center" />
                             </StackPanel>
                         </Grid>
@@ -376,9 +379,9 @@
                             <TextBlock Classes="heading-sm" Text="{Binding Localization.DiscoverHideInstalled}" VerticalAlignment="Center" />
                             <ToggleSwitch Grid.Column="2" Classes="switch" IsChecked="{Binding HideInstalled}" AutomationProperties.Name="{Binding Localization.DiscoverHideInstalled}" />
                         </Grid>
-                        <Grid ColumnDefinitions="*,16,Auto" IsEnabled="False" Opacity="0.5">
+                        <Grid ColumnDefinitions="*,16,Auto">
                             <TextBlock Classes="heading-sm" Text="{Binding Localization.DiscoverHideIncompatible}" VerticalAlignment="Center" />
-                            <ToggleSwitch Grid.Column="2" Classes="switch" AutomationProperties.Name="{Binding Localization.DiscoverHideIncompatible}" />
+                            <ToggleSwitch Grid.Column="2" Classes="switch" IsChecked="{Binding HideIncompatible}" AutomationProperties.Name="{Binding Localization.DiscoverHideIncompatible}" />
                         </Grid>
                     </StackPanel>
                     <Border Height="1" Background="{StaticResource Brush.BorderStrong}" IsVisible="{Binding !!OsOptions.Count}" />
@@ -703,6 +706,9 @@
                         <TextBlock Classes="heading-md" Text="{Binding Localization.ContentCompatibility}" />
                         <Border Classes="chip" HorizontalAlignment="Left">
                             <TextBlock Text="{Binding SelectedContent.GameVersionText}" />
+                        </Border>
+                        <Border Classes="chip" HorizontalAlignment="Left" Classes.positive="{Binding SelectedContent.IsCompatible}" Classes.testing="{Binding SelectedContent.IsUntested}" Classes.dev="{Binding SelectedContent.IsIncompatible}">
+                            <TextBlock Text="{Binding SelectedContent.CompatibilityText}" />
                         </Border>
                     </StackPanel>
                     <Border Height="1" Background="{StaticResource Brush.BorderStrong}" IsVisible="{Binding HasContentLinks}" />

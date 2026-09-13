@@ -6,6 +6,7 @@ using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Borea.Composition;
+using Borea.Core.Game;
 using Borea.Core.Mods;
 using Borea.Core.Planning;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -55,6 +56,9 @@ public partial class MainViewModel
     private bool _hideInstalled;
 
     [ObservableProperty]
+    private bool _hideIncompatible;
+
+    [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasDiscoverFilters))]
     private string? _selectedOs;
 
@@ -97,6 +101,8 @@ public partial class MainViewModel
             foreach (var license in listings.Select(listing => listing.License).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(license => license))
                 LicenseOptions.Add(license);
 
+            await RefreshCompatibilityAsync(services.InstalledVersion.GetInstalledVersion()?.Version);
+
             DiscoverError = null;
         }
         catch (Exception exception) when (exception is HttpRequestException or IOException or InvalidOperationException or TaskCanceledException)
@@ -122,6 +128,8 @@ public partial class MainViewModel
             filtered = filtered.Where(item => item.Matches(query));
         if (HideInstalled)
             filtered = filtered.Where(item => !item.IsInstalled);
+        if (HideIncompatible)
+            filtered = filtered.Where(item => item.Compatibility != GameCompatibility.Incompatible);
         if (SelectedOs is not null)
             filtered = filtered.Where(item => item.SupportsOs(SelectedOs));
         if (SelectedLicense is not null)
@@ -148,6 +156,34 @@ public partial class MainViewModel
     partial void OnSearchTextChanged(string value) => ApplyDiscoverFilters();
 
     partial void OnHideInstalledChanged(bool value) => ApplyDiscoverFilters();
+
+    partial void OnHideIncompatibleChanged(bool value) => ApplyDiscoverFilters();
+
+    /// <summary>
+    /// Evaluates every listing against the game the settings point at, for
+    /// example after the game directory changed.
+    /// </summary>
+    internal Task RefreshCompatibilityAsync()
+        => _services is null ? Task.CompletedTask : RefreshCompatibilityAsync(_services.InstalledVersion.GetInstalledVersion()?.Version);
+
+    /// <summary>
+    /// Evaluates the newest release of every index listing against
+    /// <paramref name="installed"/> (RFC 0017). A listing from another source
+    /// stays unknown, because its releases would have to be fetched one by one.
+    /// </summary>
+    internal async Task RefreshCompatibilityAsync(GameVersion? installed)
+    {
+        if (_services is null)
+            return;
+
+        foreach (var item in _listings)
+        {
+            var latest = item.Source == "index" ? await _services.ContentIndex.GetLatestReleaseAsync(item.ModId) : null;
+            item.Compatibility = latest is null ? GameCompatibility.Unknown : Borea.Core.Game.Compatibility.Evaluate(latest, installed);
+        }
+
+        ApplyDiscoverFilters();
+    }
 
     partial void OnSelectedOsChanged(string? value) => ApplyDiscoverFilters();
 
@@ -230,6 +266,30 @@ public sealed partial class DiscoverItem : ObservableObject, IInstallRow
         _ => Source,
     });
 
+    /// <summary>
+    /// How the newest release fits the installed game (RFC 0017).
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CompatibilityText))]
+    [NotifyPropertyChangedFor(nameof(IsCompatible))]
+    [NotifyPropertyChangedFor(nameof(IsUntested))]
+    [NotifyPropertyChangedFor(nameof(IsIncompatible))]
+    private GameCompatibility _compatibility = GameCompatibility.Unknown;
+
+    public string CompatibilityText => Compatibility switch
+    {
+        GameCompatibility.Compatible => _owner.Localization.CompatibilityCompatible,
+        GameCompatibility.Untested => _owner.Localization.CompatibilityUntested,
+        GameCompatibility.Incompatible => _owner.Localization.CompatibilityIncompatible,
+        _ => _owner.Localization.CompatibilityUnknown,
+    };
+
+    public bool IsCompatible => Compatibility == GameCompatibility.Compatible;
+
+    public bool IsUntested => Compatibility == GameCompatibility.Untested;
+
+    public bool IsIncompatible => Compatibility == GameCompatibility.Incompatible;
+
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CanInstall))]
     private bool _isInstalled;
@@ -290,6 +350,7 @@ public sealed partial class DiscoverItem : ObservableObject, IInstallRow
         OnPropertyChanged(nameof(AuthorsText));
         OnPropertyChanged(nameof(SourceText));
         OnPropertyChanged(nameof(TypeText));
+        OnPropertyChanged(nameof(CompatibilityText));
     }
 
     [RelayCommand]

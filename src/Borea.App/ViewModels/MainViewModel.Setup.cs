@@ -242,5 +242,6 @@ public partial class MainViewModel
         _instances = _services.Instances;
         previous.Dispose();
         await LoadAsync();
+        await RefreshCompatibilityAsync();
     }
 }

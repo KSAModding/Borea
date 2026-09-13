@@ -228,6 +228,18 @@
   <data name="ContentTabVersions" xml:space="preserve">
     <value>Versions</value>
   </data>
+  <data name="CompatibilityCompatible" xml:space="preserve">
+    <value>Compatible</value>
+  </data>
+  <data name="CompatibilityUntested" xml:space="preserve">
+    <value>Untested</value>
+  </data>
+  <data name="CompatibilityIncompatible" xml:space="preserve">
+    <value>Incompatible</value>
+  </data>
+  <data name="CompatibilityUnknown" xml:space="preserve">
+    <value>Compatibility unknown</value>
+  </data>
   <data name="ContentCompatibility" xml:space="preserve">
     <value>Compatibility</value>
   </data>
