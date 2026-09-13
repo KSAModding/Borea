@@ -156,7 +156,7 @@
                             <!-- c/button-icon-add -->
                             <Panel Grid.Column="2" VerticalAlignment="Top">
                                 <Button Classes="add" Command="{Binding InstallCommand}" IsVisible="{Binding CanInstall}" ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.DiscoverAdd}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.DiscoverAdd}">
-                                    <Path Classes="icon size-16" Data="{StaticResource Icon.Plus}" Stroke="{StaticResource Brush.Text}" />
+                                    <Path Classes="icon size-16" Data="{StaticResource Icon.Plus}" />
                                 </Button>
                                 <ProgressBar Width="38" Height="6" VerticalAlignment="Center" IsVisible="{Binding IsInstalling}" Value="{Binding Progress}" Maximum="100" Foreground="{StaticResource Brush.Accent}" />
                                 <Border Classes="chip positive" IsVisible="{Binding IsInstalled}" VerticalAlignment="Center">
