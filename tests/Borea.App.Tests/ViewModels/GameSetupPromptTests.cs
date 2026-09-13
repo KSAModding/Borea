@@ -1,0 +1,90 @@
+using Borea.App.ViewModels;
+
+namespace Borea.App.Tests.ViewModels;
+
+public sealed class GameSetupPromptTests
+{
+    [Fact]
+    public async Task FirstLoad_WithoutAGameDirectory_OpensTheGameTabAndShowsTheBanner()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var viewModel = harness.ViewModel;
+
+        Assert.Equal(GameSetupState.NotSaved, viewModel.GameSetupState);
+        Assert.True(viewModel.NeedsGameSetup);
+        Assert.Equal(harness.Localization.SetupBannerNotSaved, viewModel.GameSetupBannerText);
+        Assert.True(viewModel.IsSettingsOpen);
+        Assert.True(viewModel.IsGameTab);
+    }
+
+    [Fact]
+    public async Task LaterLoads_DoNotReopenTheSettings()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var viewModel = harness.ViewModel;
+        viewModel.CloseSettingsCommand.Execute(null);
+
+        await viewModel.LoadAsync();
+
+        Assert.False(viewModel.IsSettingsOpen);
+        Assert.True(viewModel.NeedsGameSetup);
+    }
+
+    [Fact]
+    public async Task SavingTheGameDirectory_ClearsTheBanner()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var viewModel = harness.ViewModel;
+        var game = Directory.CreateDirectory(Path.Combine(harness.Root, "game")).FullName;
+
+        viewModel.GameDirectoryInput = game;
+        await viewModel.SaveGameDirectoryCommand.ExecuteAsync(null);
+
+        Assert.Equal(GameSetupState.Ready, viewModel.GameSetupState);
+        Assert.False(viewModel.NeedsGameSetup);
+        Assert.Null(viewModel.GameSetupBannerText);
+    }
+
+    [Fact]
+    public async Task SavedFolderThatIsGone_ShowsTheMissingBannerWithoutOpeningTheSettings()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var viewModel = harness.ViewModel;
+        viewModel.CloseSettingsCommand.Execute(null);
+
+        viewModel.GameDirectoryInput = Path.Combine(harness.Root, "not-there");
+        await viewModel.SaveGameDirectoryCommand.ExecuteAsync(null);
+        viewModel.CloseSettingsCommand.Execute(null);
+        await viewModel.LoadAsync();
+
+        Assert.Equal(GameSetupState.FolderMissing, viewModel.GameSetupState);
+        Assert.Equal(harness.Localization.SetupBannerFolderMissing, viewModel.GameSetupBannerText);
+        Assert.False(viewModel.IsSettingsOpen);
+    }
+
+    [Fact]
+    public async Task BannerAction_OpensTheGameTab()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var viewModel = harness.ViewModel;
+        viewModel.CloseSettingsCommand.Execute(null);
+        viewModel.ShowGeneralSettingsCommand.Execute(null);
+
+        await viewModel.OpenGameSetupCommand.ExecuteAsync(null);
+
+        Assert.True(viewModel.IsSettingsOpen);
+        Assert.True(viewModel.IsGameTab);
+    }
+
+    [Fact]
+    public async Task LanguageChange_RetranslatesTheBanner()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var viewModel = harness.ViewModel;
+
+        harness.Localization.TrySetCulture("de");
+
+        Assert.Equal(harness.Localization.SetupBannerNotSaved, viewModel.GameSetupBannerText);
+        Assert.Contains("Kitten Space Agency", viewModel.GameSetupBannerText);
+    }
+}
