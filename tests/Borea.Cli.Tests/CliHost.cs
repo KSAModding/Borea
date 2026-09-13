@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Borea.Composition;
+using Borea.Core.Game;
 using Borea.Core.Index;
 using Borea.Core.ModLoaders;
 using Borea.Core.ModPacks;
@@ -99,7 +100,8 @@ internal sealed class CliHost : IDisposable
             loaderUninstaller: LoaderUninstaller,
             launcher: new LoaderLauncher(graph.Paths, ProcessStarter),
             modPacks: ModPacks ?? new ContentIndexModPackRepository(IndexSnapshots ?? new ReaderSnapshotProvider(IndexReader)),
-            modPackInstaller: ModPackInstaller);
+            modPackInstaller: ModPackInstaller,
+            sharedProfileLauncher: new SharedProfileLauncher(graph.Paths, ProcessStarter, OsPlatform.Windows));
     }
 
     public void Dispose()

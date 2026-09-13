@@ -116,6 +116,8 @@ public sealed class BoreaServices : IDisposable
 
     public required ILauncher Launcher { get; init; }
 
+    public required ISharedProfileLauncher SharedProfileLauncher { get; init; }
+
     public required ILatestVersionPing LatestVersion { get; init; }
 
     public required IInstalledGameVersionProvider InstalledVersion { get; init; }
@@ -242,6 +244,7 @@ public sealed class BoreaServices : IDisposable
             LoaderAdopter = new FileLoaderAdopter(settingsRepository, loaderConfiguration),
             LoaderUninstaller = new FileLoaderUninstaller(settingsRepository),
             Launcher = new LoaderLauncher(paths, new ProcessStarter()),
+            SharedProfileLauncher = new SharedProfileLauncher(paths, new ProcessStarter()),
             LatestVersion = new LatestVersionPing(http),
             InstalledVersion = new InstalledGameVersionProvider(paths),
             IndexFetcher = indexFetcher,

@@ -6,15 +6,54 @@ using Borea.Core.Settings;
 namespace Borea.Cli.Commands;
 
 /// <summary>
-/// <c>borea game</c>: facts about the game installation.
+/// <c>borea game</c>: facts about the game installation, and the game started
+/// on its own.
 /// </summary>
 internal static class GameCommand
 {
     public static Command Build(Func<CancellationToken, Task<CliServices>> services)
     {
-        var game = new Command("game", "Read facts about the game installation.");
+        var game = new Command("game", "Read facts about the game installation, or start the game without a mod loader.");
         game.Subcommands.Add(BuildVersion(services));
+        game.Subcommands.Add(BuildLaunch(services));
         return game;
+    }
+
+    /// <summary>
+    /// The game alone, on the shared profile. An instance is started with
+    /// <c>borea launch</c> instead, which always needs a mod loader.
+    /// </summary>
+    private static Command BuildLaunch(Func<CancellationToken, Task<CliServices>> services)
+    {
+        var json = ArgumentRules.Json();
+        var launch = new Command(
+            "launch",
+            "Start the game from the game directory without a mod loader. The game uses the shared profile in My Games/Kitten Space Agency, not a Borea instance. To start an instance, use 'borea launch <instance> <loader-id>'.");
+        launch.Options.Add(json);
+
+        launch.SetAction((parseResult, cancellationToken) => CommandRunner.RunAsync(parseResult, services, cancellationToken, (cli, output, error, ct) =>
+        {
+            ct.ThrowIfCancellationRequested();
+            var result = cli.SharedProfileLauncher.Launch();
+
+            if (!result.Started)
+            {
+                error.WriteLine($"error: {result.Message}");
+                return Task.FromResult(ExitCodes.Failed);
+            }
+
+            if (parseResult.GetValue(json))
+            {
+                JsonOutput.Write(output, new GameLaunchView(result.Plan!.Executable, result.Plan.WorkingDirectory, result.ProcessId!.Value));
+                return Task.FromResult(ExitCodes.Done);
+            }
+
+            output.WriteLine(result.Message);
+            output.WriteLine($"Process id: {result.ProcessId}");
+            return Task.FromResult(ExitCodes.Done);
+        }));
+
+        return launch;
     }
 
     /// <summary>
@@ -99,6 +138,9 @@ internal static class GameCommand
         => settings.GameDirectoryPath is null
             ? "no game directory is set, run 'borea settings set game'"
             : $"no KSA.dll with a version was found in {settings.GameDirectoryPath}";
+
+    /// <summary>The JSON shape of <c>game launch</c>.</summary>
+    private sealed record GameLaunchView(string Executable, string WorkingDirectory, int ProcessId);
 
     /// <summary>The JSON shape of <c>game version</c>. A half that is missing is null.</summary>
     private sealed record GameVersionView(InstalledVersionView? Installed, LatestVersionView? Latest);

@@ -37,6 +37,7 @@ public sealed class CliServicesTests : IDisposable
         Assert.Same(graph.Launcher, services.Launcher);
         Assert.Same(graph.ModPacks, services.ModPacks);
         Assert.Same(graph.ModPackInstaller, services.ModPackInstaller);
+        Assert.Same(graph.SharedProfileLauncher, services.SharedProfileLauncher);
         Assert.Same(graph, services.Graph);
     }
 
@@ -90,6 +91,7 @@ public sealed class CliServicesTests : IDisposable
             Launcher = graph.Launcher,
             ModPacks = graph.ModPacks,
             ModPackInstaller = graph.ModPackInstaller,
+            SharedProfileLauncher = graph.SharedProfileLauncher,
             Graph = owner,
         };
 
