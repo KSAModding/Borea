@@ -9,14 +9,24 @@ public sealed class RepositoryInstallPlanner : IInstallPlanner
 {
     private const int SearchLimit = 100_000;
     private readonly ModDependencyResolver _resolver;
+    private readonly ReleaseChannel _channel;
 
-    public RepositoryInstallPlanner(ModDependencyResolver resolver) => _resolver = resolver ?? throw new ArgumentNullException(nameof(resolver));
+    /// <param name="channel">The release channel of a request that names none.</param>
+    public RepositoryInstallPlanner(ModDependencyResolver resolver, ReleaseChannel channel = ReleaseChannel.Stable)
+    {
+        _resolver = resolver ?? throw new ArgumentNullException(nameof(resolver));
+        if (!Enum.IsDefined(channel))
+            throw new ArgumentOutOfRangeException(nameof(channel), channel, "The release channel is not defined.");
+
+        _channel = channel;
+    }
 
     public async Task<InstallPlan> PlanAsync(InstallPlanningRequest request, CancellationToken cancellationToken = default)
     {
         Validate(request);
+        var channel = request.Channel ?? _channel;
         var roots = BuildRoots(request, out var initialConflicts);
-        var domains = await BuildDomainsAsync(request, roots, cancellationToken).ConfigureAwait(false);
+        var domains = await BuildDomainsAsync(request, roots, channel, initialConflicts, cancellationToken).ConfigureAwait(false);
         var ids = domains.Keys.OrderBy(value => value, ModIds.Comparer).ToList();
         SearchResult? best = null;
         var states = 0;
@@ -28,7 +38,7 @@ public sealed class RepositoryInstallPlanner : IInstallPlanner
             if (++states > SearchLimit) { truncated = true; return; }
             if (index == ids.Count)
             {
-                var result = Evaluate(request, roots, assigned, initialConflicts);
+                var result = Evaluate(request, channel, roots, assigned, initialConflicts);
                 if (best is null || result.Score.CompareTo(best.Score) < 0) best = result;
                 return;
             }
@@ -71,7 +81,11 @@ public sealed class RepositoryInstallPlanner : IInstallPlanner
         return roots;
     }
 
-    private static async Task<Dictionary<string, IReadOnlyList<RequestedMod?>>> BuildDomainsAsync(InstallPlanningRequest request, Dictionary<string, RequestedMod> roots, CancellationToken cancellationToken)
+    /// <summary>
+    /// The candidates of every reachable mod, newest first. An exact request is its own only candidate,
+    /// and every other candidate is inside the channel or already installed.
+    /// </summary>
+    private static async Task<Dictionary<string, IReadOnlyList<RequestedMod?>>> BuildDomainsAsync(InstallPlanningRequest request, Dictionary<string, RequestedMod> roots, ReleaseChannel channel, List<PlanningMessage> conflicts, CancellationToken cancellationToken)
     {
         var releases = new Dictionary<string, List<ModVersionMetadata>>(ModIds.Comparer);
         var pending = new Queue<string>(roots.Keys.OrderBy(value => value, ModIds.Comparer));
@@ -81,6 +95,7 @@ public sealed class RepositoryInstallPlanner : IInstallPlanner
             var id = pending.Dequeue();
             if (!seen.Add(id)) continue;
             var values = new List<ModVersionMetadata>();
+            var outsideChannel = false;
             if (roots.TryGetValue(id, out var root) && root.Exact)
                 values.Add(root.Release);
             else if (!request.Instance.ForeignMods.Any(value => ModIds.Equals(value.ModId, id)))
@@ -89,10 +104,18 @@ public sealed class RepositoryInstallPlanner : IInstallPlanner
                 foreach (var version in (await request.Repository.GetAvailableVersionsAsync(id, cancellationToken).ConfigureAwait(false)).OrderByDescending(value => value))
                 {
                     var release = await request.Repository.GetReleaseAsync(id, version, cancellationToken).ConfigureAwait(false);
-                    if (release is { Yanked: false }) values.Add(release);
+                    if (release is not { Yanked: false }) continue;
+                    if (channel.Includes(release.ReleaseStatus) || IsInstalled(request, release)) values.Add(release);
+                    else outsideChannel = true;
                 }
             }
-            if (roots.TryGetValue(id, out root) && values.All(value => value.Version != root.Release.Version)) values.Add(root.Release);
+            if (roots.TryGetValue(id, out root) && values.All(value => value.Version != root.Release.Version))
+            {
+                if (channel.Includes(root.Release.ReleaseStatus) || IsInstalled(request, root.Release)) values.Add(root.Release);
+                else outsideChannel = true;
+            }
+            if (root is { Exact: false } && values.Count == 0 && outsideChannel)
+                conflicts.Add(Message(id, "outside-channel", $"No release of {id} in the {channel.ToName()} channel is available."));
             releases[id] = values.DistinctBy(value => value.Version).OrderByDescending(value => value.Version).ToList();
             foreach (var dependencyId in releases[id].SelectMany(DependencyIds).Distinct(ModIds.Comparer).OrderBy(value => value, ModIds.Comparer)) pending.Enqueue(dependencyId);
         }
@@ -105,7 +128,7 @@ public sealed class RepositoryInstallPlanner : IInstallPlanner
 
     private static IEnumerable<string> DependencyIds(ModVersionMetadata release) => release.Dependencies.SelectMany(value => value.IsAnyOf ? value.AnyOf.Select(item => item.ModId) : value.ModId is null ? [] : [value.ModId]);
 
-    private SearchResult Evaluate(InstallPlanningRequest request, Dictionary<string, RequestedMod> roots, Dictionary<string, RequestedMod?> assigned, IReadOnlyList<PlanningMessage> initialConflicts)
+    private SearchResult Evaluate(InstallPlanningRequest request, ReleaseChannel channel, Dictionary<string, RequestedMod> roots, Dictionary<string, RequestedMod?> assigned, IReadOnlyList<PlanningMessage> initialConflicts)
     {
         var selected = assigned.Where(value => value.Value is not null).ToDictionary(value => value.Key, value => value.Value!, ModIds.Comparer);
         ExpandInstalledClosure(request, roots, selected);
@@ -117,22 +140,25 @@ public sealed class RepositoryInstallPlanner : IInstallPlanner
 
         foreach (var root in roots.Values)
         {
-            if (!selected.TryGetValue(root.Release.ModId, out var chosen)) conflicts.Add(Message(root.Release.ModId, "missing-request", "No release was selected for the request."));
+            // outside-channel already reported this request
+            if (!selected.TryGetValue(root.Release.ModId, out var chosen)) { if (!initialConflicts.Any(value => value.Code == "outside-channel" && ModIds.Equals(value.ModId, root.Release.ModId))) conflicts.Add(Message(root.Release.ModId, "missing-request", "No release was selected for the request.")); }
             else if (root.Exact && chosen.Release.Version != root.Release.Version) conflicts.Add(Message(root.Release.ModId, "exact-pin", $"Exact version {root.Release.Version} was not selected."));
         }
 
         foreach (var item in selected.Values.OrderBy(value => value.Release.ModId, ModIds.Comparer))
         {
-            EvaluateRelease(request, item.Release, selected, warnings, unresolved, conflicts, choices);
+            EvaluateRelease(request, channel, item.Release, selected, warnings, unresolved, conflicts, choices);
             foreach (var evaluation in _resolver.Evaluate(proposed, item.Release).Where(value => value.Outcome == DependencyOutcome.Conflict)) conflicts.Add(Message(item.Release.ModId, "proposed-conflict", evaluation.Dependency.ToString()));
         }
         EvaluateRetainedInstalled(request, selected, unresolved, conflicts);
         return new SearchResult(selected, Sort(warnings), Sort(unresolved), Sort(conflicts), choices.OrderBy(value => value.Key, StringComparer.Ordinal).ToList());
     }
 
-    private static void EvaluateRelease(InstallPlanningRequest request, ModVersionMetadata release, Dictionary<string, RequestedMod> selected, List<PlanningMessage> warnings, List<PlanningMessage> unresolved, List<PlanningMessage> conflicts, List<PlanningChoice> choices)
+    private static void EvaluateRelease(InstallPlanningRequest request, ReleaseChannel channel, ModVersionMetadata release, Dictionary<string, RequestedMod> selected, List<PlanningMessage> warnings, List<PlanningMessage> unresolved, List<PlanningMessage> conflicts, List<PlanningChoice> choices)
     {
         if (release.Yanked) warnings.Add(Message(release.ModId, "yanked", release.YankedReason ?? "The selected release is yanked."));
+        // only an exact request reaches this
+        if (!channel.Includes(release.ReleaseStatus) && !IsInstalled(request, release)) warnings.Add(Message(release.ModId, "release-channel", $"Release {release.Version} has the release status {StatusName(release.ReleaseStatus)}, which the {channel.ToName()} channel does not offer."));
         var compatibility = Compatibility.Evaluate(release, request.GameVersion);
         if (compatibility == GameCompatibility.Incompatible) conflicts.Add(Message(release.ModId, "incompatible", "The release is incompatible with the target game."));
         else if (compatibility != GameCompatibility.Compatible) warnings.Add(Message(release.ModId, "compatibility", $"Game compatibility is {compatibility}."));
@@ -293,6 +319,7 @@ public sealed class RepositoryInstallPlanner : IInstallPlanner
     private static void Validate(InstallPlanningRequest request) { ArgumentNullException.ThrowIfNull(request); ArgumentNullException.ThrowIfNull(request.Instance); ArgumentNullException.ThrowIfNull(request.Requested); ArgumentNullException.ThrowIfNull(request.Repository); }
     private static bool IsInstalled(InstallPlanningRequest request, ModVersionMetadata release) => request.Instance.Mods.Any(value => ModIds.Equals(value.ModId, release.ModId) && value.Version == release.Version);
     private static string ChoiceKey(string owner, int index, string kind) => $"{owner}:dependency:{index}:{kind}";
+    private static string StatusName(ReleaseStatus status) => status switch { ReleaseStatus.Stable => "stable", ReleaseStatus.Testing => "testing", ReleaseStatus.Dev => "dev", _ => "unknown" };
     private static PlanningMessage Message(string id, string code, string message) => new(id, code, message);
     private static IReadOnlyList<PlanningMessage> Sort(List<PlanningMessage> values) => values.Distinct().OrderBy(value => value.ModId, ModIds.Comparer).ThenBy(value => value.Code, StringComparer.Ordinal).ThenBy(value => value.Message, StringComparer.Ordinal).ToList();
 
