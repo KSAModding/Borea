@@ -205,6 +205,8 @@ public sealed class BoreaServicesTests : IDisposable
         Assert.Equal("StarMapConfig.json", starMap.Provides.Configure!.File);
         Assert.Equal(ConfigureFormat.Json, starMap.Provides.Configure.Format);
         Assert.Equal("GameLocation", starMap.Provides.Configure.GamePath);
+        Assert.Equal("-InstancePath", starMap.Provides.Instance!.Flag);
+        Assert.Equal("STARMAP_INSTANCE_PATH", starMap.Provides.Instance.Variable);
         Assert.Equal([ModVersion.Parse("0.4.6")], versions);
         Assert.NotNull(latest);
         Assert.Equal(ModVersion.Parse("0.4.6"), latest.Version);
