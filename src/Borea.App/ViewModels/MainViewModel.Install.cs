@@ -19,6 +19,12 @@ internal interface IInstallRow
 
     double Progress { get; set; }
 
+    /// <summary>What the install is doing, for example "Downloading MeasureTools 1.1.10 (2 of 3)".</summary>
+    string? ProgressStatus { get; set; }
+
+    /// <summary>Size and time left while downloading, otherwise null.</summary>
+    string? ProgressDetail { get; set; }
+
     string? InstallError { get; set; }
 
     string? InstallWarning { get; set; }
@@ -86,6 +92,8 @@ public partial class MainViewModel
         {
             row.IsInstalling = false;
             row.Progress = 0;
+            row.ProgressStatus = null;
+            row.ProgressDetail = null;
         }
 
         if (executed)
@@ -116,6 +124,8 @@ public partial class MainViewModel
         {
             row.IsInstalling = false;
             row.Progress = 0;
+            row.ProgressStatus = null;
+            row.ProgressDetail = null;
         }
 
         await ReloadInstancesAsync();
@@ -127,8 +137,24 @@ public partial class MainViewModel
         row.InstallWarning = null;
     }
 
-    private static IProgress<InstallProgress> ProgressOf(IInstallRow row)
-        => new Progress<InstallProgress>(value => row.Progress = value.Download?.PercentComplete ?? row.Progress);
+    /// <summary>
+    /// Reports land on the UI thread through <see cref="Progress{T}"/>, and
+    /// each install gets its own text so its download rate starts fresh.
+    /// </summary>
+    private IProgress<InstallProgress> ProgressOf(IInstallRow row)
+    {
+        var text = new InstallProgressText(Localization);
+        return new Progress<InstallProgress>(value =>
+        {
+            if (!row.IsInstalling)
+                return;
+
+            text.Report(value);
+            row.Progress = text.Percent;
+            row.ProgressStatus = text.Status;
+            row.ProgressDetail = text.Detail;
+        });
+    }
 
     private static bool IsInstallFailure(Exception exception)
         => exception is HttpRequestException or IOException or InvalidOperationException or UnauthorizedAccessException

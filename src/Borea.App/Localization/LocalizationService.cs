@@ -351,6 +351,30 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string FormatDiscoverInstalledIn(string instance)
         => string.Format(CultureInfo.CurrentCulture, Resources.DiscoverInstalledInFormat, instance);
 
+    public string FormatInstallDownloading(string content)
+        => string.Format(CultureInfo.CurrentCulture, Resources.InstallDownloadingFormat, content);
+
+    public string FormatInstallExtracting(string content)
+        => string.Format(CultureInfo.CurrentCulture, Resources.InstallExtractingFormat, content);
+
+    public string FormatInstallConfiguring(string content)
+        => string.Format(CultureInfo.CurrentCulture, Resources.InstallConfiguringFormat, content);
+
+    public string FormatInstallFinishing(string content)
+        => string.Format(CultureInfo.CurrentCulture, Resources.InstallFinishingFormat, content);
+
+    public string FormatInstallStep(string status, int step, int stepCount)
+        => string.Format(CultureInfo.CurrentCulture, Resources.InstallStepFormat, status, step, stepCount);
+
+    public string FormatInstallSize(string done, string total)
+        => string.Format(CultureInfo.CurrentCulture, Resources.InstallSizeFormat, done, total);
+
+    public string FormatInstallSecondsLeft(int seconds)
+        => string.Format(CultureInfo.CurrentCulture, Resources.InstallSecondsLeftFormat, seconds);
+
+    public string FormatInstallMinutesLeft(int minutes)
+        => string.Format(CultureInfo.CurrentCulture, Resources.InstallMinutesLeftFormat, minutes);
+
     public string FormatContentSource(string source)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(source);
