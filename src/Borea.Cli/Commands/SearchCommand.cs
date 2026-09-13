@@ -52,12 +52,23 @@ internal static class SearchCommand
                 resultIds.Add(diagnostic.Id!);
             }
 
+            var indexListings = new Dictionary<string, ContentIndexListing>(ModIds.Comparer);
+            foreach (var indexListing in snapshot.Listings)
+                indexListings.TryAdd(indexListing.Id, indexListing);
+
+            for (var index = 0; index < results.Count; index++)
+            {
+                if (indexListings.TryGetValue(results[index].Id, out var indexListing))
+                    results[index] = results[index] with { Downloads = DownloadCountOutput.From(indexListing.Downloads) };
+            }
+
             results.Sort((left, right) => StringComparer.OrdinalIgnoreCase.Compare(left.Id, right.Id));
             var diagnostics = snapshot.Diagnostics
                 .Where(diagnostic => diagnostic.Id is not null && resultIds.Contains(diagnostic.Id))
                 .Where(diagnostic => diagnostic.Scope is ContentIndexDiagnosticScope.Listing
                     or ContentIndexDiagnosticScope.Release
-                    or ContentIndexDiagnosticScope.IndexStatus)
+                    or ContentIndexDiagnosticScope.IndexStatus
+                    or ContentIndexDiagnosticScope.Downloads)
                 .Select(ContentOutput.Diagnostic)
                 .ToArray();
             var view = new SearchView(query, installed?.ToString(), results, diagnostics);
@@ -85,7 +96,10 @@ internal static class SearchCommand
         {
             var name = result.Name ?? "unknown listing";
             var version = result.LatestVersion ?? "no release";
-            output.WriteLine($"{result.Id}  {name}  {version}  {result.Compatibility}");
+            var downloads = result.Downloads is null
+                ? string.Empty
+                : $"  {DownloadCountOutput.Total(result.Downloads)} downloads";
+            output.WriteLine($"{result.Id}  {name}  {version}  {result.Compatibility}{downloads}");
         }
 
         ContentOutput.WriteDiagnostics(output, view.Diagnostics);
@@ -104,7 +118,8 @@ internal static class SearchCommand
         string? Type,
         string? Source,
         string? LatestVersion,
-        string Compatibility)
+        string Compatibility,
+        DownloadCountView? Downloads = null)
     {
         public static SearchResultView From(ModMetadata listing, ModVersionMetadata? latest, GameVersion? installed) => new(
             listing.ModId,
