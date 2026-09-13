@@ -2,8 +2,10 @@ using System.Text.Json;
 using Borea.Composition;
 using Borea.Core.Index;
 using Borea.Core.ModLoaders;
+using Borea.Core.ModPacks;
 using Borea.Core.Mods;
 using Borea.Core.Instances;
+using Borea.Network.Index;
 using Borea.Storage.Launch;
 using Borea.Storage.Paths;
 
@@ -32,6 +34,14 @@ internal sealed class CliHost : IDisposable
     public FakeModRepository Mods { get; } = new();
 
     public IModRepository? ModRepository { get; set; }
+
+    /// <summary>
+    /// The pack repository. The index-backed one over <see cref="IndexReader"/>
+    /// when a test does not set it, so the snapshot a test builds is the one source.
+    /// </summary>
+    public IModPackRepository? ModPacks { get; set; }
+
+    public FakeModPackInstaller ModPackInstaller { get; } = new();
 
     public FakeProcessStarter ProcessStarter { get; } = new();
 
@@ -87,7 +97,9 @@ internal sealed class CliHost : IDisposable
             loaderInstaller: LoaderInstaller,
             loaderAdopter: LoaderAdopter,
             loaderUninstaller: LoaderUninstaller,
-            launcher: new LoaderLauncher(graph.Paths, ProcessStarter));
+            launcher: new LoaderLauncher(graph.Paths, ProcessStarter),
+            modPacks: ModPacks ?? new ContentIndexModPackRepository(IndexSnapshots ?? new ReaderSnapshotProvider(IndexReader)),
+            modPackInstaller: ModPackInstaller);
     }
 
     public void Dispose()

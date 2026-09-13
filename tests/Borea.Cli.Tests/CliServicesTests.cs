@@ -35,6 +35,8 @@ public sealed class CliServicesTests : IDisposable
         Assert.Same(graph.LoaderAdopter, services.LoaderAdopter);
         Assert.Same(graph.LoaderUninstaller, services.LoaderUninstaller);
         Assert.Same(graph.Launcher, services.Launcher);
+        Assert.Same(graph.ModPacks, services.ModPacks);
+        Assert.Same(graph.ModPackInstaller, services.ModPackInstaller);
         Assert.Same(graph, services.Graph);
     }
 
@@ -86,6 +88,8 @@ public sealed class CliServicesTests : IDisposable
             LoaderAdopter = graph.LoaderAdopter,
             LoaderUninstaller = graph.LoaderUninstaller,
             Launcher = graph.Launcher,
+            ModPacks = graph.ModPacks,
+            ModPackInstaller = graph.ModPackInstaller,
             Graph = owner,
         };
 
