@@ -44,8 +44,8 @@ public partial class MainViewModel
     public static string SystemText { get; } = $"{RuntimeInformation.OSDescription} ({RuntimeInformation.OSArchitecture})";
 
     /// <summary>
-    /// The projects Borea is built on, as credits. The full list with every
-    /// license text is the SBOM of a release; this names the ones a user meets.
+    /// The projects Borea is built on, as credits. The SBOM of a release lists
+    /// every package with its license; this names the ones a user meets.
     /// </summary>
     public static IReadOnlyList<Credit> Credits { get; } =
     [
