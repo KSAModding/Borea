@@ -259,6 +259,12 @@ public sealed partial class VersionItem : ObservableObject, IInstallRow
     [ObservableProperty]
     private double _progress;
 
+    [ObservableProperty]
+    private string? _progressStatus;
+
+    [ObservableProperty]
+    private string? _progressDetail;
+
     /// <summary>
     /// The planner's warnings while <see cref="PendingPlan"/> waits for a confirmation.
     /// </summary>

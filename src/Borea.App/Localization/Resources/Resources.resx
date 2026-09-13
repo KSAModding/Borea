@@ -444,4 +444,28 @@
   <data name="DiscoverInstalledInFormat" xml:space="preserve">
     <value>Installed in {0}</value>
   </data>
+  <data name="InstallDownloadingFormat" xml:space="preserve">
+    <value>Downloading {0}</value>
+  </data>
+  <data name="InstallExtractingFormat" xml:space="preserve">
+    <value>Unpacking {0}</value>
+  </data>
+  <data name="InstallConfiguringFormat" xml:space="preserve">
+    <value>Configuring {0}</value>
+  </data>
+  <data name="InstallFinishingFormat" xml:space="preserve">
+    <value>Finishing {0}</value>
+  </data>
+  <data name="InstallStepFormat" xml:space="preserve">
+    <value>{0} ({1} of {2})</value>
+  </data>
+  <data name="InstallSizeFormat" xml:space="preserve">
+    <value>{0} of {1}</value>
+  </data>
+  <data name="InstallSecondsLeftFormat" xml:space="preserve">
+    <value>about {0} s left</value>
+  </data>
+  <data name="InstallMinutesLeftFormat" xml:space="preserve">
+    <value>about {0} min left</value>
+  </data>
 </root>
