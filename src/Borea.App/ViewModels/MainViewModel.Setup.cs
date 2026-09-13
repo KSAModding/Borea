@@ -266,7 +266,7 @@ public partial class MainViewModel
         var release = await services.Mods.GetLatestReleaseAsync(SelectedLoader.ModId)
             ?? throw new InvalidOperationException(Localization.DiscoverNoRelease);
         var directory = LoaderDirectoryInput.Trim();
-        var progress = new Progress<DownloadProgress>(value => SetupProgress = value.PercentComplete);
+        var progress = new Progress<InstallProgress>(value => SetupProgress = value.Download?.PercentComplete ?? SetupProgress);
         var result = await services.LoaderInstaller.InstallAsync(listing, release, directory.Length == 0 ? null : Path.GetFullPath(directory), progress);
         LoaderDirectoryInput = result.Directory;
         return Localization.FormatSetupLoaderInstalled(listing.Name, result.Version.ToString(), result.Directory);

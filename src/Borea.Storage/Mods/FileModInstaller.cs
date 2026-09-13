@@ -38,7 +38,7 @@ public sealed class FileModInstaller : IModInstaller
         ModVersionMetadata release,
         InstallReason reason,
         bool enable,
-        IProgress<DownloadProgress>? progress = null,
+        IProgress<InstallProgress>? progress = null,
         CancellationToken cancellationToken = default)
         => (await InstallCoreAsync(instanceId, release, reason, enable, expectedState: null, progress, cancellationToken).ConfigureAwait(false)).Result;
 
@@ -48,7 +48,7 @@ public sealed class FileModInstaller : IModInstaller
         InstallReason reason,
         bool enable,
         InstallPlanningState expectedState,
-        IProgress<DownloadProgress>? progress = null,
+        IProgress<InstallProgress>? progress = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(expectedState);
@@ -61,7 +61,7 @@ public sealed class FileModInstaller : IModInstaller
         InstallReason reason,
         bool enable,
         InstallPlanningState? expectedState,
-        IProgress<DownloadProgress>? progress,
+        IProgress<InstallProgress>? progress,
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(release);
@@ -92,9 +92,12 @@ public sealed class FileModInstaller : IModInstaller
 
         try
         {
-            var download = await _downloader.DownloadAsync(release, archivePath, progress, cancellationToken).ConfigureAwait(false);
+            var download = await _downloader.DownloadAsync(release, archivePath, progress.ForDownload(release), cancellationToken).ConfigureAwait(false);
 
+            progress.Report(release, InstallPhase.Extracting);
             Unpack(archivePath, release, stagingFolder);
+
+            progress.Report(release, InstallPhase.Finishing);
 
             ownershipToken = Guid.NewGuid().ToString("N");
             await File.WriteAllTextAsync(

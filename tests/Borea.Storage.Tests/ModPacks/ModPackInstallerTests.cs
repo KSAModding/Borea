@@ -254,12 +254,12 @@ public sealed class ModPackInstallerTests
         public string? AddAfterGuardedResultFor { get; init; }
         public Dictionary<string, int> Counts { get; } = new(ModIds.Comparer);
 
-        public async Task<InstallResult> InstallAsync(Guid instanceId, ModVersionMetadata release, InstallReason reason, bool enable, IProgress<DownloadProgress>? progress = null, CancellationToken cancellationToken = default)
+        public async Task<InstallResult> InstallAsync(Guid instanceId, ModVersionMetadata release, InstallReason reason, bool enable, IProgress<InstallProgress>? progress = null, CancellationToken cancellationToken = default)
         {
             return (await InstallCoreAsync(instanceId, release, reason, enable, null, cancellationToken)).Result;
         }
 
-        public async Task<GuardedInstallResult> InstallGuardedAsync(Guid instanceId, ModVersionMetadata release, InstallReason reason, bool enable, InstallPlanningState expectedState, IProgress<DownloadProgress>? progress = null, CancellationToken cancellationToken = default)
+        public async Task<GuardedInstallResult> InstallGuardedAsync(Guid instanceId, ModVersionMetadata release, InstallReason reason, bool enable, InstallPlanningState expectedState, IProgress<InstallProgress>? progress = null, CancellationToken cancellationToken = default)
         {
             return await InstallCoreAsync(instanceId, release, reason, enable, expectedState, cancellationToken);
         }
@@ -293,14 +293,14 @@ public sealed class ModPackInstallerTests
 
     private sealed class FakeReplacer(MemoryInstanceRepository instances) : IModReplacer
     {
-        public async Task<ModReplacementResult> ReplaceAsync(Guid instanceId, InstalledMod expectedCurrent, ModVersionMetadata replacement, IProgress<DownloadProgress>? progress = null, CancellationToken cancellationToken = default)
+        public async Task<ModReplacementResult> ReplaceAsync(Guid instanceId, InstalledMod expectedCurrent, ModVersionMetadata replacement, IProgress<InstallProgress>? progress = null, CancellationToken cancellationToken = default)
         {
             var installed = new InstalledMod(replacement.ModId, replacement.Version, expectedCurrent.Reason, DateTimeOffset.UnixEpoch, replacement);
             await instances.UpdateAsync(instanceId, value => { value.ReplaceMod(installed); return true; }, cancellationToken);
             return new ModReplacementResult(expectedCurrent, installed, new DownloadResult(replacement.Download.Url, 1, replacement.Download.Sha256!), null);
         }
 
-        public async Task<GuardedModReplacementResult> ReplaceGuardedAsync(Guid instanceId, InstalledMod expectedCurrent, ModVersionMetadata replacement, InstallPlanningState expectedState, IProgress<DownloadProgress>? progress = null, CancellationToken cancellationToken = default)
+        public async Task<GuardedModReplacementResult> ReplaceGuardedAsync(Guid instanceId, InstalledMod expectedCurrent, ModVersionMetadata replacement, InstallPlanningState expectedState, IProgress<InstallProgress>? progress = null, CancellationToken cancellationToken = default)
         {
             var result = await instances.UpdateAsync(instanceId, value =>
             {

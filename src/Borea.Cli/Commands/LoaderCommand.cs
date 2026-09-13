@@ -1,4 +1,5 @@
 using System.CommandLine;
+using Borea.Cli.Output;
 using Borea.Core.ModLoaders;
 using Borea.Core.Mods;
 
@@ -77,7 +78,7 @@ internal static class LoaderCommand
         install.Options.Add(version);
         install.Options.Add(directory);
 
-        install.SetAction((parseResult, cancellationToken) => CommandRunner.RunAsync(parseResult, services, cancellationToken, async (cli, output, _, ct) =>
+        install.SetAction((parseResult, cancellationToken) => CommandRunner.RunAsync(parseResult, services, cancellationToken, async (cli, output, error, ct) =>
         {
             var id = parseResult.GetRequiredValue(loaderId);
             var listing = await LoaderLookup.GetListingAsync(cli.Mods, id, ct).ConfigureAwait(false);
@@ -96,7 +97,7 @@ internal static class LoaderCommand
 
             var rawDirectory = parseResult.GetValue(directory);
             var destination = rawDirectory is null ? null : Path.GetFullPath(rawDirectory);
-            var result = await cli.LoaderInstaller.InstallAsync(listing, release, destination, cancellationToken: ct).ConfigureAwait(false);
+            var result = await cli.LoaderInstaller.InstallAsync(listing, release, destination, new InstallProgressOutput(error), ct).ConfigureAwait(false);
 
             output.WriteLine($"Installed {result.LoaderId} {result.Version} in '{result.Directory}'.");
             if (result.ConfigurationFile is not null)

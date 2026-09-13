@@ -34,6 +34,7 @@ internal sealed class FakeModDownloader : IModDownloader
             throw Failure;
 
         await File.WriteAllBytesAsync(archivePath, Bytes, cancellationToken);
+        progress?.Report(new DownloadProgress(Bytes.Length, Bytes.Length));
         AfterDownload?.Invoke();
         return new DownloadResult(release.Download.Url, Bytes.Length, Convert.ToHexString(SHA256.HashData(Bytes)));
     }

@@ -32,7 +32,7 @@ public sealed class FileLoaderInstaller : ILoaderInstaller
         ModMetadata loader,
         ModVersionMetadata release,
         string? directory = null,
-        IProgress<DownloadProgress>? progress = null,
+        IProgress<InstallProgress>? progress = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(loader);
@@ -73,12 +73,13 @@ public sealed class FileLoaderInstaller : ILoaderInstaller
 
         try
         {
-            var download = await _downloader.DownloadAsync(release, archivePath, progress, cancellationToken).ConfigureAwait(false);
+            var download = await _downloader.DownloadAsync(release, archivePath, progress.ForDownload(release), cancellationToken).ConfigureAwait(false);
 
             var kept = replacing && configurationPath is not null && File.Exists(configurationPath)
                 ? await File.ReadAllBytesAsync(configurationPath, cancellationToken).ConfigureAwait(false)
                 : null;
 
+            progress.Report(release, InstallPhase.Extracting);
             Unpack(archivePath, root, stagingDirectory, release);
             if (kept is not null)
             {
@@ -89,6 +90,9 @@ public sealed class FileLoaderInstaller : ILoaderInstaller
 
             RequireLaunchTarget(loader, release, stagingDirectory);
 
+            if (configure?.GamePath is not null)
+                progress.Report(release, InstallPhase.Configuring);
+
             var stagedConfigurationFile = configure?.GamePath is null
                 ? null
                 : await _configurator.ConfigureAsync(loader, stagingDirectory, gameDirectory!, cancellationToken).ConfigureAwait(false);
@@ -97,6 +101,7 @@ public sealed class FileLoaderInstaller : ILoaderInstaller
                 ? null
                 : Path.GetFullPath(Path.Combine(destination, Path.GetRelativePath(stagingDirectory, stagedConfigurationFile)));
 
+            progress.Report(release, InstallPhase.Finishing);
             if (replacing)
             {
                 replacementBackedUp = ActivateReplacement(destination, stagingDirectory, backupDirectory!);
