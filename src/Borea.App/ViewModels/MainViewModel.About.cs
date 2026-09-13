@@ -115,6 +115,8 @@ public partial class MainViewModel
         AboutMessage = null;
         AboutError = null;
         FolderMessage = null;
+        NoticesMessage = null;
+        NoticesError = null;
         SettingsTab = SettingsTab.About;
     }
 

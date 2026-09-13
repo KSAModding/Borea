@@ -45,9 +45,10 @@ jobs:
       - run: dotnet test Borea.slnx --configuration Release
 
   # One job per platform publishes the App and the CLI, so that both archives get the CLI from the same build.
+  # It waits for the SBOMs, which the third-party notices are written from.
   publish:
     name: publish (${{ matrix.rid }})
-    needs: test
+    needs: [test, sbom]
     runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
@@ -92,6 +93,32 @@ jobs:
           APP: ${{ steps.name.outputs.app }}
           CLI: ${{ steps.name.outputs.cli }}
         run: bash .github/scripts/combine-publish-outputs.sh "publish/$APP" "publish/$CLI"
+
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          pattern: sbom-*
+          merge-multiple: true
+          path: sbom
+
+      # Written from the SBOM of each product. The package lists are in .github/notices/notices.json.
+      - name: Write the third-party notices
+        env:
+          VERSION: ${{ needs.test.outputs.version }}
+          APP: ${{ steps.name.outputs.app }}
+          CLI: ${{ steps.name.outputs.cli }}
+        run: |
+          packages=$(dotnet nuget locals global-packages --list --force-english-output)
+          packages=${packages##*global-packages: }
+          python3 .github/scripts/write_third_party_notices.py \
+            --sbom "sbom/Borea-$VERSION.cdx.json" --packages "$packages" \
+            --deps "publish/$APP/Borea.App.deps.json" --deps "publish/$APP/borea.deps.json" \
+            --config .github/notices/notices.json --product App --version "$VERSION" \
+            --output "publish/$APP/THIRD-PARTY-NOTICES.txt"
+          python3 .github/scripts/write_third_party_notices.py \
+            --sbom "sbom/Borea-Cli-$VERSION.cdx.json" --packages "$packages" \
+            --deps "publish/$CLI/borea.deps.json" \
+            --config .github/notices/notices.json --product Cli --version "$VERSION" \
+            --output "publish/$CLI/THIRD-PARTY-NOTICES.txt"
 
       - name: Add the license
         env:
@@ -153,13 +180,9 @@ jobs:
           - name: App
             projects: src/Borea.App/Borea.App.csproj src/Borea.Cli/Borea.Cli.csproj
             filename-prefix: Borea
-            required-packages: Avalonia CommunityToolkit.Mvvm Tomlyn SkiaSharp System.CommandLine
-            excluded-packages: ""
           - name: Cli
             projects: src/Borea.Cli/Borea.Cli.csproj
             filename-prefix: Borea-Cli
-            required-packages: System.CommandLine Tomlyn
-            excluded-packages: Avalonia
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
@@ -197,18 +220,25 @@ jobs:
         env:
           VERSION: ${{ needs.test.outputs.version }}
           FILENAME_PREFIX: ${{ matrix.product['filename-prefix'] }}
-          REQUIRED_PACKAGES: ${{ matrix.product['required-packages'] }}
-          EXCLUDED_PACKAGES: ${{ matrix.product['excluded-packages'] }}
+          PRODUCT: ${{ matrix.product.name }}
         run: |
           bom="dist/$FILENAME_PREFIX-$VERSION.cdx.json"
           names=$(jq -r '.components[].name' "$bom")
-          for p in $REQUIRED_PACKAGES; do
+          # The package lists are in .github/notices/notices.json.
+          lists=.github/notices/notices.json
+          mapfile -t required < <(jq -r --arg product "$PRODUCT" '.products[$product].required[]' "$lists")
+          mapfile -t excluded < <(jq -r --arg product "$PRODUCT" '.never_shipped[], .products[$product].excluded[]' "$lists")
+          if [ "${#required[@]}" -eq 0 ]; then
+            echo "$lists names no required packages for $PRODUCT." >&2
+            exit 1
+          fi
+          for p in "${required[@]}"; do
             if ! grep -qx "$p" <<< "$names"; then
               echo "The SBOM does not list $p." >&2
               exit 1
             fi
           done
-          for p in $EXCLUDED_PACKAGES xunit Microsoft.NET.Test.Sdk coverlet.collector AvaloniaUI.DiagnosticsSupport; do
+          for p in "${excluded[@]}"; do
             if grep -qx "$p" <<< "$names"; then
               echo "The SBOM lists $p, which does not ship." >&2
               exit 1
@@ -288,15 +318,20 @@ jobs:
           if (-not (Test-Path -LiteralPath (Join-Path $app Borea.App.exe) -PathType Leaf)) { throw 'The App archive does not contain Borea.App.exe.' }
           foreach ($root in $cli, $app) {
             if (-not (Test-Path -LiteralPath (Join-Path $root hostfxr.dll) -PathType Leaf)) { throw "$root does not contain hostfxr.dll." }
+            if ((Get-Item -LiteralPath (Join-Path $root THIRD-PARTY-NOTICES.txt) -ErrorAction SilentlyContinue).Length -lt 1) { throw "$root does not contain THIRD-PARTY-NOTICES.txt." }
             $program = Join-Path $root borea.exe
             & $program --help
             if ($LASTEXITCODE -ne 0) { throw "borea --help in $root exited with $LASTEXITCODE." }
             $reported = & $program --version
             if ($LASTEXITCODE -ne 0 -or ($reported -ne $env:VERSION -and -not "$reported".StartsWith("$env:VERSION+"))) { throw "borea in $root reports version $reported." }
           }
+          if (-not (Select-String -LiteralPath (Join-Path $app THIRD-PARTY-NOTICES.txt) -Pattern '^IBM Plex$' -Quiet)) { throw 'The notices in the App archive do not name IBM Plex.' }
+          if (Select-String -LiteralPath (Join-Path $cli THIRD-PARTY-NOTICES.txt) -Pattern '^Avalonia ' -Quiet) { throw 'The notices in the CLI archive name Avalonia.' }
           # The CLI in the App archive is the same build as the CLI archive, with the same runtime files.
+          # Only the notices are different, because the App archive contains more software.
           foreach ($file in Get-ChildItem $cli -Recurse -File) {
             $relative = [IO.Path]::GetRelativePath($cli, $file.FullName)
+            if ($relative -eq 'THIRD-PARTY-NOTICES.txt') { continue }
             $other = Join-Path $app $relative
             if (-not (Test-Path -LiteralPath $other -PathType Leaf)) { throw "The App archive does not contain $relative." }
             if ((Get-FileHash -LiteralPath $file.FullName).Hash -ne (Get-FileHash -LiteralPath $other).Hash) { throw "$relative is different in the App archive." }
@@ -318,6 +353,7 @@ jobs:
           for root in "$cli" "$app"; do
             test -x "$root/borea"
             test -f "$root/libhostfxr.dylib" || test -f "$root/libhostfxr.so"
+            test -s "$root/THIRD-PARTY-NOTICES.txt"
             "$root/borea" --help
             reported=$("$root/borea" --version)
             if [ "$reported" != "$VERSION" ] && [[ "$reported" != "$VERSION+"* ]]; then
@@ -325,8 +361,17 @@ jobs:
               exit 1
             fi
           done
+          grep -qx 'IBM Plex' "$app/THIRD-PARTY-NOTICES.txt"
+          if grep -q '^Avalonia ' "$cli/THIRD-PARTY-NOTICES.txt"; then
+            echo "The notices in the CLI archive name Avalonia." >&2
+            exit 1
+          fi
           # The CLI in the App archive is the same build as the CLI archive, with the same runtime files.
+          # Only the notices are different, because the App archive contains more software.
           while IFS= read -r -d '' file; do
+            if [ "$file" = ./THIRD-PARTY-NOTICES.txt ]; then
+              continue
+            fi
             if ! cmp -s "$cli/$file" "$app/$file"; then
               echo "${file#./} is missing or different in the App archive." >&2
               exit 1
@@ -426,6 +471,8 @@ jobs:
           Archives whose names start with `Borea-Cli-` are a smaller download that contains only the `borea` command. The `borea` command in both archives is the same build.
 
           The builds include the .NET runtime and are self-contained, so there is nothing to install first.
+
+          Each archive contains `LICENSE` and `THIRD-PARTY-NOTICES.txt`.
 
           ### First start
 

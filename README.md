@@ -13,6 +13,8 @@ The `borea` command in both archives is the same build.
 
 The builds include the .NET runtime and are self-contained, so there is nothing you need to install first.
 
+Each archive also contains `LICENSE` and `THIRD-PARTY-NOTICES.txt` with the licenses of the third-party software in it.
+
 | Platform | App and CLI | CLI only |
 | --- | --- | --- |
 | Windows | `Borea-<version>-win-x64.zip` | `Borea-Cli-<version>-win-x64.zip` |
