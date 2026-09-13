@@ -24,24 +24,35 @@ public sealed class FileModUninstaller : IModUninstaller
 
         cancellationToken.ThrowIfCancellationRequested();
         var instance = await _instances.GetByIdAsync(instanceId).ConfigureAwait(false);
-        var installed = instance?.Mods.FirstOrDefault(mod => ModIds.Equals(mod.ModId, modId));
-        if (installed is null || installed.Ownership == ModInstallOwnership.Foreign)
+        if (instance?.Mods.Any(mod => ModIds.Equals(mod.ModId, modId)) != true)
             return;
 
-        if (!installed.CanDeleteFiles)
-        {
-            throw new InvalidOperationException(
-                $"Borea cannot verify ownership of the installed folder for '{installed.ModId}'. Remove it manually or install it again before uninstalling it.");
-        }
+        // The folder and the record change while other changes to the instance
+        // wait, so an install or a replacement never sees one without the other.
+        await _instances.UpdateAsync(
+            instanceId,
+            current =>
+            {
+                var installed = current.Mods.FirstOrDefault(mod => ModIds.Equals(mod.ModId, modId));
+                if (installed is null || installed.Ownership == ModInstallOwnership.Foreign)
+                    return false;
 
-        var modDirectory = ModFolders.FindOwned(
-            _pathProvider.GetInstanceModsFolder(instanceId),
-            installed.ModId,
-            installed.OwnershipToken!);
-        if (modDirectory is not null)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            Directory.Delete(modDirectory, recursive: true);
-        }
+                if (!installed.CanDeleteFiles)
+                {
+                    throw new InvalidOperationException(
+                        $"Borea cannot verify ownership of the installed folder for '{installed.ModId}'. Remove it manually or install it again before uninstalling it.");
+                }
+
+                var modDirectory = ModFolders.FindOwned(
+                    _pathProvider.GetInstanceModsFolder(instanceId),
+                    installed.ModId,
+                    installed.OwnershipToken!);
+                cancellationToken.ThrowIfCancellationRequested();
+                if (modDirectory is not null)
+                    Directory.Delete(modDirectory, recursive: true);
+
+                return current.RemoveMod(installed.ModId);
+            },
+            cancellationToken).ConfigureAwait(false);
     }
 }

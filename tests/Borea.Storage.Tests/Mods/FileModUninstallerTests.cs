@@ -147,6 +147,49 @@ public sealed class FileModUninstallerTests : IAsyncLifetime
         Assert.Throws<ArgumentNullException>(() => new FileModUninstaller(_pathProvider, null!));
     }
 
+    [Fact]
+    public async Task UninstallAsync_BoreaOwnedFolder_RemovesTheRecord()
+    {
+        await AddInstalledModAsync(ModInstallOwnership.Borea);
+
+        await _uninstaller.UninstallAsync(_instanceId, "test-mod");
+
+        Assert.False(Directory.Exists(ModDirectory("test-mod")));
+        Assert.Empty((await _instances.GetByIdAsync(_instanceId))!.Mods);
+    }
+
+    [Fact]
+    public async Task UninstallAsync_OwnedRecordWithoutFolder_RemovesTheRecord()
+    {
+        await AddInstalledModAsync(ModInstallOwnership.Borea);
+        Directory.Delete(ModDirectory("test-mod"), recursive: true);
+
+        await _uninstaller.UninstallAsync(_instanceId, "test-mod");
+
+        Assert.Empty((await _instances.GetByIdAsync(_instanceId))!.Mods);
+    }
+
+    [Fact]
+    public async Task UninstallAsync_ForeignOwnedRecord_KeepsTheRecord()
+    {
+        await AddInstalledModAsync(ModInstallOwnership.Foreign);
+
+        await _uninstaller.UninstallAsync(_instanceId, "test-mod");
+
+        Assert.Single((await _instances.GetByIdAsync(_instanceId))!.Mods);
+    }
+
+    [Fact]
+    public async Task UninstallAsync_LegacyBoreaRecordWithoutToken_KeepsTheRecord()
+    {
+        await AddInstalledModAsync(ModInstallOwnership.Borea, createOwnershipMarker: false);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => _uninstaller.UninstallAsync(_instanceId, "test-mod"));
+
+        Assert.Single((await _instances.GetByIdAsync(_instanceId))!.Mods);
+    }
+
     private string ModDirectory(string modId) => Path.Combine(_pathProvider.GetInstanceModsFolder(_instanceId), modId);
 
     private async Task AddInstalledModAsync(
