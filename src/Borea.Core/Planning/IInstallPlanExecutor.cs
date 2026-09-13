@@ -15,6 +15,10 @@ public interface IInstallPlanExecutor
     /// lock. An operation that fails stops the operations after it.
     /// </summary>
     /// <param name="enable">Whether new manifest entries are written enabled.</param>
+    /// <param name="progress">
+    /// Each operation's reports, with <see cref="InstallProgress.Step"/> and
+    /// <see cref="InstallProgress.StepCount"/> set to its place in the plan.
+    /// </param>
     /// <exception cref="InvalidOperationException">
     /// The plan has unresolved choices or conflicts, the instance no longer
     /// exists, or the instance changed after planning or between operations.
@@ -22,6 +26,6 @@ public interface IInstallPlanExecutor
     Task ExecuteAsync(
         InstallPlan plan,
         bool enable,
-        IProgress<DownloadProgress>? progress = null,
+        IProgress<InstallProgress>? progress = null,
         CancellationToken cancellationToken = default);
 }

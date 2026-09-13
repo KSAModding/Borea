@@ -783,17 +783,21 @@ public sealed class FileLoaderInstallerTests : IDisposable
     }
 
     [Fact]
-    public async Task InstallAsync_HandsProgressAndTheTokenToTheDownloader()
+    public async Task InstallAsync_ReportsEachPhaseAndHandsTheTokenToTheDownloader()
     {
         await SaveGameDirectoryAsync();
         _downloader.Bytes = StarMapZip();
-        var progress = new Progress<DownloadProgress>();
+        var progress = new RecordingProgress<InstallProgress>();
         using var cancellation = new CancellationTokenSource();
 
         await _installer.InstallAsync(StarMap(), StarMapRelease(), null, progress, cancellation.Token);
 
-        Assert.Same(progress, _downloader.LastProgress);
         Assert.Equal(cancellation.Token, _downloader.LastToken);
+        var phases = progress.Reports.Select(report => report.Phase).ToList();
+        Assert.Equal(InstallPhase.Downloading, phases[0]);
+        Assert.Equal(InstallPhase.Finishing, phases[^1]);
+        Assert.Contains(InstallPhase.Extracting, phases);
+        Assert.Equal(phases.OrderBy(phase => phase), phases);
     }
 
     [Fact]

@@ -307,16 +307,31 @@ public sealed class FileModInstallerTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task InstallAsync_HandsProgressAndTheTokenToTheDownloader()
+    public async Task InstallAsync_ReportsEachPhaseAndHandsTheTokenToTheDownloader()
     {
         _downloader.Bytes = BuildZip(("mod.toml", "name"));
-        var progress = new Progress<DownloadProgress>();
+        var progress = new RecordingProgress<InstallProgress>();
         using var cancellation = new CancellationTokenSource();
+        var release = Release();
 
-        await _installer.InstallAsync(_instanceId, Release(), InstallReason.Manual, enable: true, progress, cancellation.Token);
+        await _installer.InstallAsync(_instanceId, release, InstallReason.Manual, enable: true, progress, cancellation.Token);
 
-        Assert.Same(progress, _downloader.LastProgress);
+        Assert.NotNull(_downloader.LastProgress);
         Assert.Equal(cancellation.Token, _downloader.LastToken);
+        Assert.Equal([InstallPhase.Downloading, InstallPhase.Extracting, InstallPhase.Finishing], progress.Reports.Select(report => report.Phase));
+        Assert.All(progress.Reports, report => Assert.Equal((release.ModId, release.Version, 1, 1), (report.ModId, report.Version, report.Step, report.StepCount)));
+        Assert.Equal(new DownloadProgress(_downloader.Bytes.Length, _downloader.Bytes.Length), progress.Reports[0].Download);
+        Assert.Null(progress.Reports[1].Download);
+    }
+
+    [Fact]
+    public async Task InstallAsync_WithoutProgress_HandsNoneToTheDownloader()
+    {
+        _downloader.Bytes = BuildZip(("mod.toml", "name"));
+
+        await _installer.InstallAsync(_instanceId, Release(), InstallReason.Manual, enable: true);
+
+        Assert.Null(_downloader.LastProgress);
     }
 
     [Theory]

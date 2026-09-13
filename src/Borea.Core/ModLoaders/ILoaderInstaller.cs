@@ -37,7 +37,7 @@ public interface ILoaderInstaller
         ModMetadata loader,
         ModVersionMetadata release,
         string? directory = null,
-        IProgress<DownloadProgress>? progress = null,
+        IProgress<InstallProgress>? progress = null,
         CancellationToken cancellationToken = default);
 }
 

@@ -127,8 +127,8 @@ public partial class MainViewModel
         row.InstallWarning = null;
     }
 
-    private static IProgress<DownloadProgress> ProgressOf(IInstallRow row)
-        => new Progress<DownloadProgress>(value => row.Progress = value.PercentComplete);
+    private static IProgress<InstallProgress> ProgressOf(IInstallRow row)
+        => new Progress<InstallProgress>(value => row.Progress = value.Download?.PercentComplete ?? row.Progress);
 
     private static bool IsInstallFailure(Exception exception)
         => exception is HttpRequestException or IOException or InvalidOperationException or UnauthorizedAccessException

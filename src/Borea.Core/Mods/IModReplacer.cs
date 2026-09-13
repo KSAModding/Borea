@@ -8,7 +8,7 @@ public interface IModReplacer
         Guid instanceId,
         InstalledMod expectedCurrent,
         ModVersionMetadata replacement,
-        IProgress<DownloadProgress>? progress = null,
+        IProgress<InstallProgress>? progress = null,
         CancellationToken cancellationToken = default);
 
     Task<GuardedModReplacementResult> ReplaceGuardedAsync(
@@ -16,7 +16,7 @@ public interface IModReplacer
         InstalledMod expectedCurrent,
         ModVersionMetadata replacement,
         InstallPlanningState expectedState,
-        IProgress<DownloadProgress>? progress = null,
+        IProgress<InstallProgress>? progress = null,
         CancellationToken cancellationToken = default);
 }
 

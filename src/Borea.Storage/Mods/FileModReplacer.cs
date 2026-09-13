@@ -45,7 +45,7 @@ public sealed class FileModReplacer : IModReplacer
         Guid instanceId,
         InstalledMod expectedCurrent,
         ModVersionMetadata replacement,
-        IProgress<DownloadProgress>? progress = null,
+        IProgress<InstallProgress>? progress = null,
         CancellationToken cancellationToken = default)
         => (await ReplaceCoreAsync(instanceId, expectedCurrent, replacement, expectedState: null, progress, cancellationToken).ConfigureAwait(false)).Result;
 
@@ -54,7 +54,7 @@ public sealed class FileModReplacer : IModReplacer
         InstalledMod expectedCurrent,
         ModVersionMetadata replacement,
         InstallPlanningState expectedState,
-        IProgress<DownloadProgress>? progress = null,
+        IProgress<InstallProgress>? progress = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(expectedState);
@@ -66,7 +66,7 @@ public sealed class FileModReplacer : IModReplacer
         InstalledMod expectedCurrent,
         ModVersionMetadata replacement,
         InstallPlanningState? expectedState,
-        IProgress<DownloadProgress>? progress,
+        IProgress<InstallProgress>? progress,
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(expectedCurrent);
@@ -101,8 +101,10 @@ public sealed class FileModReplacer : IModReplacer
 
         try
         {
-            download = await _downloader.DownloadAsync(replacement, archivePath, progress, cancellationToken).ConfigureAwait(false);
+            download = await _downloader.DownloadAsync(replacement, archivePath, progress.ForDownload(replacement), cancellationToken).ConfigureAwait(false);
+            progress.Report(replacement, InstallPhase.Extracting);
             FileModInstaller.Unpack(archivePath, replacement, stagingFolder);
+            progress.Report(replacement, InstallPhase.Finishing);
             var ownershipToken = Guid.NewGuid().ToString("N");
             await File.WriteAllTextAsync(Path.Combine(stagingFolder, ModFolders.OwnershipFileName), ownershipToken, cancellationToken).ConfigureAwait(false);
 

@@ -165,7 +165,7 @@ public sealed class LoaderCommandTests : IDisposable
             ModMetadata loader,
             ModVersionMetadata release,
             string? directory = null,
-            IProgress<DownloadProgress>? progress = null,
+            IProgress<InstallProgress>? progress = null,
             CancellationToken cancellationToken = default)
         {
             if (Failure is not null)

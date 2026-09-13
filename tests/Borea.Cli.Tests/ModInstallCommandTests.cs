@@ -42,6 +42,30 @@ public sealed class ModInstallCommandTests : IDisposable
     }
 
     [Fact]
+    public async Task Install_ReportsEachOperationWithItsPlaceInThePlan()
+    {
+        var dependency = new ModDependency("library", ModDependencyKind.Required);
+        _host.Mods.Releases.Add(ContentCommandFixtures.Release(dependencies: [dependency]));
+        _host.Mods.Releases.Add(ContentCommandFixtures.Release(id: "library", version: "1.0.0"));
+        await _host.RunAsync("instance", "create", "Alpha");
+        _host.InstallerFactory = graph => new RecordingInstaller(graph);
+
+        var run = await _host.RunAsync("install", "flight-tools", "--instance", "Alpha");
+
+        Assert.Equal(0, run.ExitCode);
+        var lines = run.Error.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries);
+        Assert.Equal(
+        [
+            "Downloading library 1.0.0 (1 of 2)",
+            "Extracting library 1.0.0 (1 of 2)",
+            "Finishing library 1.0.0 (1 of 2)",
+            "Downloading flight-tools 2.0.0 (2 of 2)",
+            "Extracting flight-tools 2.0.0 (2 of 2)",
+            "Finishing flight-tools 2.0.0 (2 of 2)",
+        ], lines);
+    }
+
+    [Fact]
     public async Task Install_UnknownExactRelease_Fails()
     {
         await _host.RunAsync("instance", "create", "Alpha");
@@ -320,7 +344,7 @@ public sealed class ModInstallCommandTests : IDisposable
     private sealed class RecordingInstaller(BoreaServices graph, Action<ModVersionMetadata>? before = null) : IModInstaller
     {
         public List<ModVersionMetadata> Installed { get; } = new();
-        public async Task<InstallResult> InstallAsync(Guid instanceId, ModVersionMetadata release, InstallReason reason, bool enable, IProgress<DownloadProgress>? progress = null, CancellationToken cancellationToken = default)
+        public async Task<InstallResult> InstallAsync(Guid instanceId, ModVersionMetadata release, InstallReason reason, bool enable, IProgress<InstallProgress>? progress = null, CancellationToken cancellationToken = default)
         {
             before?.Invoke(release);
             Installed.Add(release);
@@ -328,9 +352,14 @@ public sealed class ModInstallCommandTests : IDisposable
             await graph.Instances.UpdateAsync(instanceId, instance => { instance.AddMod(installed); return true; }, cancellationToken);
             return new InstallResult(installed, new DownloadResult(release.Download.Url, release.Download.SizeBytes ?? 0, release.Download.Sha256 ?? string.Empty), Borea.Core.State.ModEntryAddResult.Added);
         }
-        public async Task<GuardedInstallResult> InstallGuardedAsync(Guid instanceId, ModVersionMetadata release, InstallReason reason, bool enable, Borea.Core.Planning.InstallPlanningState expectedState, IProgress<DownloadProgress>? progress = null, CancellationToken cancellationToken = default)
+        public async Task<GuardedInstallResult> InstallGuardedAsync(Guid instanceId, ModVersionMetadata release, InstallReason reason, bool enable, Borea.Core.Planning.InstallPlanningState expectedState, IProgress<InstallProgress>? progress = null, CancellationToken cancellationToken = default)
         {
             before?.Invoke(release);
+            // two byte reports in one phase, so the output shows it collapses them
+            progress?.Report(InstallProgress.Of(release, InstallPhase.Downloading, new DownloadProgress(1, 2)));
+            progress?.Report(InstallProgress.Of(release, InstallPhase.Downloading, new DownloadProgress(2, 2)));
+            progress?.Report(InstallProgress.Of(release, InstallPhase.Extracting));
+            progress?.Report(InstallProgress.Of(release, InstallPhase.Finishing));
             return await graph.Instances.UpdateAsync(instanceId, current =>
             {
                 if (!expectedState.Matches(current))
@@ -358,14 +387,14 @@ public sealed class ModInstallCommandTests : IDisposable
     private sealed class RecordingReplacer(BoreaServices graph) : IModReplacer
     {
         public List<ModVersionMetadata> Replacements { get; } = new();
-        public async Task<ModReplacementResult> ReplaceAsync(Guid instanceId, InstalledMod expectedCurrent, ModVersionMetadata replacement, IProgress<DownloadProgress>? progress = null, CancellationToken cancellationToken = default)
+        public async Task<ModReplacementResult> ReplaceAsync(Guid instanceId, InstalledMod expectedCurrent, ModVersionMetadata replacement, IProgress<InstallProgress>? progress = null, CancellationToken cancellationToken = default)
         {
             Replacements.Add(replacement);
             var installed = ModInstallCommandTests.Installed(replacement, ModInstallOwnership.Borea);
             await graph.Instances.UpdateAsync(instanceId, instance => { instance.ReplaceMod(installed); return true; }, cancellationToken);
             return new ModReplacementResult(expectedCurrent, installed, new DownloadResult(replacement.Download.Url, replacement.Download.SizeBytes ?? 0, replacement.Download.Sha256 ?? string.Empty), null);
         }
-        public async Task<GuardedModReplacementResult> ReplaceGuardedAsync(Guid instanceId, InstalledMod expectedCurrent, ModVersionMetadata replacement, Borea.Core.Planning.InstallPlanningState expectedState, IProgress<DownloadProgress>? progress = null, CancellationToken cancellationToken = default)
+        public async Task<GuardedModReplacementResult> ReplaceGuardedAsync(Guid instanceId, InstalledMod expectedCurrent, ModVersionMetadata replacement, Borea.Core.Planning.InstallPlanningState expectedState, IProgress<InstallProgress>? progress = null, CancellationToken cancellationToken = default)
         {
             return await graph.Instances.UpdateAsync(instanceId, current =>
             {
@@ -382,9 +411,9 @@ public sealed class ModInstallCommandTests : IDisposable
 
     private sealed class FailingInstaller : IModInstaller
     {
-        public Task<InstallResult> InstallAsync(Guid instanceId, ModVersionMetadata release, InstallReason reason, bool enable, IProgress<DownloadProgress>? progress = null, CancellationToken cancellationToken = default) =>
+        public Task<InstallResult> InstallAsync(Guid instanceId, ModVersionMetadata release, InstallReason reason, bool enable, IProgress<InstallProgress>? progress = null, CancellationToken cancellationToken = default) =>
             throw new IOException("The archive hash mismatch stopped the install.");
-        public Task<GuardedInstallResult> InstallGuardedAsync(Guid instanceId, ModVersionMetadata release, InstallReason reason, bool enable, Borea.Core.Planning.InstallPlanningState expectedState, IProgress<DownloadProgress>? progress = null, CancellationToken cancellationToken = default) =>
+        public Task<GuardedInstallResult> InstallGuardedAsync(Guid instanceId, ModVersionMetadata release, InstallReason reason, bool enable, Borea.Core.Planning.InstallPlanningState expectedState, IProgress<InstallProgress>? progress = null, CancellationToken cancellationToken = default) =>
             throw new IOException("The archive hash mismatch stopped the install.");
     }
 

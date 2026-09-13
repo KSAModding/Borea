@@ -41,7 +41,7 @@ public interface IModInstaller
         ModVersionMetadata release,
         InstallReason reason,
         bool enable,
-        IProgress<DownloadProgress>? progress = null,
+        IProgress<InstallProgress>? progress = null,
         CancellationToken cancellationToken = default);
 
     Task<GuardedInstallResult> InstallGuardedAsync(
@@ -50,7 +50,7 @@ public interface IModInstaller
         InstallReason reason,
         bool enable,
         InstallPlanningState expectedState,
-        IProgress<DownloadProgress>? progress = null,
+        IProgress<InstallProgress>? progress = null,
         CancellationToken cancellationToken = default);
 }
 

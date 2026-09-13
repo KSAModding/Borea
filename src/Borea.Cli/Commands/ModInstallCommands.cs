@@ -1,4 +1,5 @@
 using System.CommandLine;
+using Borea.Cli.Output;
 using Borea.Core.Dependencies;
 using Borea.Core.Game;
 using Borea.Core.Instances;
@@ -24,7 +25,7 @@ internal static class ModInstallCommands
         command.Options.Add(recommended);
         command.Options.Add(alternatives);
         command.Options.Add(dryRun);
-        command.SetAction((parse, cancellationToken) => CommandRunner.RunAsync(parse, services, cancellationToken, async (cli, output, _, ct) =>
+        command.SetAction((parse, cancellationToken) => CommandRunner.RunAsync(parse, services, cancellationToken, async (cli, output, error, ct) =>
         {
             var target = await InstanceLookup.ResolveTargetAsync(cli.Instances, parse.GetValue(instance)).ConfigureAwait(false);
             var modId = parse.GetRequiredValue(id);
@@ -47,7 +48,7 @@ internal static class ModInstallCommands
             if (parse.GetValue(dryRun))
                 return plan.IsReady ? ExitCodes.Done : ExitCodes.Failed;
 
-            await ExecuteAsync(cli, plan, ct).ConfigureAwait(false);
+            await ExecuteAsync(cli, plan, error, ct).ConfigureAwait(false);
             return ExitCodes.Done;
         }));
         return command;
@@ -62,7 +63,7 @@ internal static class ModInstallCommands
         command.Arguments.Add(id);
         command.Options.Add(instance);
         command.Options.Add(dryRun);
-        command.SetAction((parse, cancellationToken) => CommandRunner.RunAsync(parse, services, cancellationToken, async (cli, output, _, ct) =>
+        command.SetAction((parse, cancellationToken) => CommandRunner.RunAsync(parse, services, cancellationToken, async (cli, output, error, ct) =>
         {
             var target = await InstanceLookup.ResolveTargetAsync(cli.Instances, parse.GetValue(instance)).ConfigureAwait(false);
             var modId = parse.GetRequiredValue(id);
@@ -97,7 +98,7 @@ internal static class ModInstallCommands
         command.Options.Add(recommended);
         command.Options.Add(alternatives);
         command.Options.Add(dryRun);
-        command.SetAction((parse, cancellationToken) => CommandRunner.RunAsync(parse, services, cancellationToken, async (cli, output, _, ct) =>
+        command.SetAction((parse, cancellationToken) => CommandRunner.RunAsync(parse, services, cancellationToken, async (cli, output, error, ct) =>
         {
             var target = await InstanceLookup.ResolveTargetAsync(cli.Instances, parse.GetValue(instance)).ConfigureAwait(false);
             var selectedId = parse.GetValue(id);
@@ -119,7 +120,7 @@ internal static class ModInstallCommands
             if (parse.GetValue(dryRun))
                 return plan.IsReady ? ExitCodes.Done : ExitCodes.Failed;
 
-            await ExecuteAsync(cli, plan, ct).ConfigureAwait(false);
+            await ExecuteAsync(cli, plan, error, ct).ConfigureAwait(false);
             return ExitCodes.Done;
         }));
         return command;
@@ -147,8 +148,8 @@ internal static class ModInstallCommands
     }
 
     // built from the CLI's own services, so a test that replaces the installer or the replacer replaces them here too
-    private static Task ExecuteAsync(CliServices cli, InstallPlan plan, CancellationToken cancellationToken)
-        => new InstallPlanExecutor(cli.Instances, cli.Installer, cli.Replacer).ExecuteAsync(plan, enable: true, cancellationToken: cancellationToken);
+    private static Task ExecuteAsync(CliServices cli, InstallPlan plan, TextWriter error, CancellationToken cancellationToken)
+        => new InstallPlanExecutor(cli.Instances, cli.Installer, cli.Replacer).ExecuteAsync(plan, enable: true, new InstallProgressOutput(error), cancellationToken);
 
     private static void PrintPlan(TextWriter output, InstallPlan plan)
     {
