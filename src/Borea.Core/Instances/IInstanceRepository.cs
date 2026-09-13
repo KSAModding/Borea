@@ -17,6 +17,11 @@ public interface IInstanceRepository
     Task SetActiveInstanceAsync(Guid instanceId);
 
     /// <summary>
+    /// Leaves no instance active. Does nothing when none is active.
+    /// </summary>
+    Task ClearActiveInstanceAsync();
+
+    /// <summary>
     /// Whether <paramref name="name"/> is free to use. Pass
     /// <paramref name="excludingInstanceId"/> when checking availability for
     /// a rename, so an instance's current name doesn't count as "taken" by

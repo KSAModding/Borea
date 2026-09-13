@@ -212,4 +212,13 @@ public sealed class FileInstanceRepository : IInstanceRepository
         var path = _pathProvider.GetActiveInstancePointerPath();
         await TomlFileStore.WriteAsync(path, dto).ConfigureAwait(false);
     }
+
+    /// <summary>
+    /// Removes the pointer file, so no instance is active. Does nothing when the file does not exist.
+    /// </summary>
+    public Task ClearActiveInstanceAsync()
+    {
+        TomlFileStore.DeleteIfExists(_pathProvider.GetActiveInstancePointerPath());
+        return Task.CompletedTask;
+    }
 }
