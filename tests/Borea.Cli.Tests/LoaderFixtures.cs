@@ -33,11 +33,11 @@ internal static class LoaderFixtures
             configure: new LoaderConfigure("StarMapConfig.json", ConfigureFormat.Json, "GameLocation"),
             instance: instance));
 
-    public static ModVersionMetadata Release(string id = "StarMap", string version = "0.4.6", bool yanked = false) => new(
+    public static ModVersionMetadata Release(string id = "StarMap", string version = "0.4.6", bool yanked = false, ReleaseStatus releaseStatus = ReleaseStatus.Stable) => new(
         specVersion: 1,
         modId: id,
         version: ModVersion.Parse(version),
-        releaseStatus: ReleaseStatus.Stable,
+        releaseStatus: releaseStatus,
         releaseDate: new DateTimeOffset(2026, 9, 1, 12, 0, 0, TimeSpan.Zero),
         gameMin: "2026.9.7.5402",
         gameMinRevision: 5402,

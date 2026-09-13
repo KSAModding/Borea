@@ -6,13 +6,13 @@ using Borea.Core.Settings;
 namespace Borea.Cli.Commands;
 
 /// <summary>
-/// <c>borea settings</c>: where the game and the mod loaders are.
+/// <c>borea settings</c>: where the game and the mod loaders are, and the release channel.
 /// </summary>
 internal static class SettingsCommand
 {
     public static Command Build(Func<CancellationToken, Task<CliServices>> services)
     {
-        var settings = new Command("settings", "Read and write Borea's own settings: where the game and the mod loaders are.");
+        var settings = new Command("settings", "Read and write Borea's own settings: where the game and the mod loaders are, and the release channel.");
         settings.Subcommands.Add(BuildShow(services));
         settings.Subcommands.Add(BuildSet(services));
         return settings;
@@ -42,7 +42,30 @@ internal static class SettingsCommand
         var set = new Command("set", "Change one setting. The other settings stay as they are.");
         set.Subcommands.Add(BuildSetGame(services));
         set.Subcommands.Add(BuildSetLoader(services));
+        set.Subcommands.Add(BuildSetChannel(services));
         return set;
+    }
+
+    private static Command BuildSetChannel(Func<CancellationToken, Task<CliServices>> services)
+    {
+        var name = ArgumentRules.Channel("channel", "stable, testing or dev.");
+        var channel = new Command("channel", "Choose which release statuses install and update offer: stable, testing or dev. An exact version installs from any channel.");
+        channel.Arguments.Add(name);
+
+        channel.SetAction((parseResult, cancellationToken) => CommandRunner.RunAsync(parseResult, services, cancellationToken, async (cli, output, _, ct) =>
+        {
+            var chosen = ArgumentRules.ChannelOrSaved(parseResult.GetRequiredValue(name), ReleaseChannel.Stable);
+
+            // read again, so a change saved since the services were built is kept
+            var current = await cli.SettingsRepository.GetAsync(ct).ConfigureAwait(false)
+                ?? new BoreaSettings(gameDirectoryPath: null);
+            await cli.SettingsRepository.SaveAsync(current.WithReleaseChannel(chosen), ct).ConfigureAwait(false);
+
+            output.WriteLine($"Release channel: {chosen.ToName()}");
+            return ExitCodes.Done;
+        }));
+
+        return channel;
     }
 
     private static Command BuildSetGame(Func<CancellationToken, Task<CliServices>> services)
@@ -95,6 +118,7 @@ internal static class SettingsCommand
     private static void WriteSettings(TextWriter output, BoreaSettings settings)
     {
         output.WriteLine($"Game directory: {settings.GameDirectoryPath ?? "not set"}");
+        output.WriteLine($"Release channel: {settings.ReleaseChannel.ToName()}");
 
         if (settings.LoaderInstallations.Count == 0)
         {
@@ -108,7 +132,7 @@ internal static class SettingsCommand
     }
 
     /// <summary>The JSON shape of <c>settings show</c>.</summary>
-    private sealed record SettingsView(string? GameDirectory, IReadOnlyDictionary<string, string> LoaderDirectories)
+    private sealed record SettingsView(string? GameDirectory, IReadOnlyDictionary<string, string> LoaderDirectories, string ReleaseChannel)
     {
         public static SettingsView From(BoreaSettings settings)
             => new(
@@ -116,6 +140,7 @@ internal static class SettingsCommand
                 settings.LoaderInstallations.ToDictionary(
                     pair => pair.Key,
                     pair => pair.Value.DirectoryPath,
-                    ModIds.Comparer));
+                    ModIds.Comparer),
+                settings.ReleaseChannel.ToName());
     }
 }

@@ -37,11 +37,12 @@ internal static class ContentCommandFixtures
         int? gameMaxRevision = null,
         bool yanked = false,
         string? yankedReason = null,
-        IReadOnlyList<ModDependency>? dependencies = null) => new(
+        IReadOnlyList<ModDependency>? dependencies = null,
+        ReleaseStatus releaseStatus = ReleaseStatus.Stable) => new(
             specVersion: 1,
             modId: id,
             version: ModVersion.Parse(version),
-            releaseStatus: ReleaseStatus.Stable,
+            releaseStatus: releaseStatus,
             releaseDate: new DateTimeOffset(2026, 9, 1, 12, 0, 0, TimeSpan.Zero),
             gameMin: gameMinRevision == 5348 ? "2026.8.22.5348" : $"2026.1.1.{gameMinRevision}",
             gameMinRevision: gameMinRevision,
