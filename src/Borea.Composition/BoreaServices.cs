@@ -106,6 +106,8 @@ public sealed class BoreaServices : IDisposable
 
     public required IInstallPlanner InstallPlanner { get; init; }
 
+    public required IInstallPlanExecutor PlanExecutor { get; init; }
+
     public required ILoaderInstaller LoaderInstaller { get; init; }
 
     public required ILoaderAdopter LoaderAdopter { get; init; }
@@ -235,6 +237,7 @@ public sealed class BoreaServices : IDisposable
             ModPackInstaller = new ModPackInstaller(instances, installPlanner, modInstaller, modReplacer),
             Downloader = downloader,
             InstallPlanner = installPlanner,
+            PlanExecutor = new InstallPlanExecutor(instances, modInstaller, modReplacer),
             LoaderInstaller = new FileLoaderInstaller(paths, downloader, settingsRepository, loaderConfiguration),
             LoaderAdopter = new FileLoaderAdopter(settingsRepository, loaderConfiguration),
             LoaderUninstaller = new FileLoaderUninstaller(settingsRepository),

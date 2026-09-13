@@ -146,37 +146,9 @@ internal static class ModInstallCommands
         }
     }
 
-    private static async Task ExecuteAsync(CliServices cli, InstallPlan plan, CancellationToken cancellationToken)
-    {
-        if (!plan.IsReady)
-            throw new InvalidOperationException("The install plan has unresolved choices or conflicts.");
-
-        var fresh = await cli.Instances.GetByIdAsync(plan.InstanceId).ConfigureAwait(false)
-            ?? throw new InvalidOperationException($"Instance '{plan.InstanceId}' no longer exists.");
-        if (!plan.InstanceState.Matches(fresh))
-            throw new InvalidOperationException("The instance changed after Borea planned the operation. Run the command again.");
-
-        var expectedState = plan.InstanceState;
-        foreach (var operation in plan.Operations)
-        {
-            fresh = await cli.Instances.GetByIdAsync(plan.InstanceId).ConfigureAwait(false)
-                ?? throw new InvalidOperationException($"Instance '{plan.InstanceId}' no longer exists.");
-            if (!expectedState.Matches(fresh))
-                throw new InvalidOperationException("The instance changed while Borea executed the operation. Run the command again.");
-
-            var current = fresh.Mods.FirstOrDefault(mod => ModIds.Equals(mod.ModId, operation.Release.ModId));
-            if (current is null)
-            {
-                var result = await cli.Installer.InstallGuardedAsync(plan.InstanceId, operation.Release, operation.Reason, enable: true, expectedState, cancellationToken: cancellationToken).ConfigureAwait(false);
-                expectedState = result.State;
-            }
-            else
-            {
-                var result = await cli.Replacer.ReplaceGuardedAsync(plan.InstanceId, current, operation.Release, expectedState, cancellationToken: cancellationToken).ConfigureAwait(false);
-                expectedState = result.State;
-            }
-        }
-    }
+    // built from the CLI's own services, so a test that replaces the installer or the replacer replaces them here too
+    private static Task ExecuteAsync(CliServices cli, InstallPlan plan, CancellationToken cancellationToken)
+        => new InstallPlanExecutor(cli.Instances, cli.Installer, cli.Replacer).ExecuteAsync(plan, enable: true, cancellationToken: cancellationToken);
 
     private static void PrintPlan(TextWriter output, InstallPlan plan)
     {
