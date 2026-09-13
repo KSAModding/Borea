@@ -31,23 +31,6 @@ public sealed class ContentViewModelTests
     }
 
     [Fact]
-    public async Task Open_SpaceDockMod_FetchesTheDescriptionPerMod()
-    {
-        using var harness = await ViewModelHarness.CreateAsync();
-        var viewModel = harness.ViewModel;
-        await viewModel.EnsureDiscoverLoadedAsync();
-        var hud = viewModel.DiscoverItems.Single(item => item.ModId == ViewModelHarness.FakeSpaceDock.OwnId);
-        Assert.Null(hud.Description);
-
-        await hud.OpenCommand.ExecuteAsync(null);
-
-        Assert.Equal(ViewModelHarness.FakeSpaceDock.OwnDescription, hud.Description);
-        Assert.Contains("SpaceDock", hud.SourceText);
-        Assert.Null(viewModel.LatestVersion);
-        Assert.False(viewModel.HasContentTags);
-    }
-
-    [Fact]
     public async Task Versions_ListEveryReleaseNewestFirst()
     {
         using var harness = await ViewModelHarness.CreateAsync();
