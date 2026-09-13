@@ -128,13 +128,120 @@ public sealed class BoreaServicesTests : IDisposable
     {
         using var services = await BoreaServices.BuildAsync(_tempRoot);
 
-        Assert.IsType<CompositeModRepository>(services.Mods);
+        var channelled = Assert.IsType<ReleaseChannelModRepository>(services.Mods);
+        Assert.IsType<CompositeModRepository>(channelled.Inner);
+        Assert.Equal(ReleaseChannel.Stable, channelled.Channel);
         Assert.IsType<FileLoaderInstaller>(services.LoaderInstaller);
         Assert.IsType<FileLoaderAdopter>(services.LoaderAdopter);
         Assert.IsType<FileLoaderUninstaller>(services.LoaderUninstaller);
         Assert.IsType<GameDirectoryChanger>(services.GameDirectoryChanger);
         Assert.IsType<LoaderLauncher>(services.Launcher);
         Assert.IsType<SharedProfileLauncher>(services.SharedProfileLauncher);
+    }
+
+    [Fact]
+    public async Task SavedChannel_ReachesTheRepositoriesAndThePlanner()
+    {
+        using (var services = await BoreaServices.BuildAsync(_tempRoot))
+            await services.SettingsRepository.SaveAsync(new BoreaSettings(null, releaseChannel: ReleaseChannel.Testing));
+
+        using var rebuilt = await BoreaServices.BuildAsync(_tempRoot);
+        var available = new[] { ChannelRelease("1.0.0", ReleaseStatus.Stable), ChannelRelease("1.1.0-beta.1", ReleaseStatus.Testing), ChannelRelease("1.2.0-dev.1", ReleaseStatus.Dev) };
+        var request = new Borea.Core.Planning.InstallPlanningRequest(
+            new Instance("Test", InstanceSource.Custom.Value),
+            [new Borea.Core.Planning.RequestedMod(available[2], InstallReason.Manual, Exact: false)],
+            new ReleaseListRepository(available));
+        var plan = await rebuilt.InstallPlanner.PlanAsync(request);
+
+        Assert.Equal(ReleaseChannel.Testing, rebuilt.Settings.ReleaseChannel);
+        Assert.Equal(ReleaseChannel.Testing, Assert.IsType<ReleaseChannelModRepository>(rebuilt.Mods).Channel);
+        Assert.Equal(ReleaseChannel.Testing, Assert.IsType<ReleaseChannelModRepository>(rebuilt.ReadOnlyMods).Channel);
+        Assert.Equal(ModVersion.Parse("1.1.0-beta.1"), Assert.Single(plan.Operations).Release.Version);
+    }
+
+    [Fact]
+    public async Task Mods_LatestReleaseOfAFallbackSource_FollowsTheSavedChannel()
+    {
+        using (var services = await BoreaServices.BuildAsync(_tempRoot))
+            await services.SettingsRepository.SaveAsync(new BoreaSettings(null, releaseChannel: ReleaseChannel.Testing));
+        var snapshot = await File.ReadAllTextAsync(SnapshotFixturePath);
+        var available = new[] { ChannelRelease("1.0.0", ReleaseStatus.Stable), ChannelRelease("1.1.0-beta.1", ReleaseStatus.Testing), ChannelRelease("1.2.0-dev.1", ReleaseStatus.Dev) };
+
+        using var rebuilt = await BoreaServices.BuildAsync(_tempRoot, new ControlledHttpMessageHandler(snapshot), new ReleaseListRepository(available));
+        var latest = await rebuilt.Mods.GetLatestReleaseAsync("A");
+        var versions = await rebuilt.Mods.GetAvailableVersionsAsync("A");
+
+        Assert.Equal(ModVersion.Parse("1.1.0-beta.1"), latest!.Version);
+        Assert.Equal(3, versions.Count);
+    }
+
+    [Fact]
+    public async Task ModPackInstaller_DevPinOnTheSavedStableChannel_InstallsWithTheChannelWarning()
+    {
+        using var services = await BoreaServices.BuildAsync(_tempRoot);
+        var pin = ChannelRelease("1.2.0-dev.1", ReleaseStatus.Dev);
+        var repository = new ReleaseListRepository([ChannelRelease("1.0.0", ReleaseStatus.Stable), pin]);
+        var instance = await services.Instances.CreateAsync("Pack target", InstanceSource.Custom.Value);
+        var installer = new RecordingModInstaller(services.Instances);
+        var packs = new Borea.Storage.ModPacks.ModPackInstaller(services.Instances, services.InstallPlanner, installer, new UnusedModReplacer());
+        var metadata = new Borea.Core.ModPacks.ModPackMetadata(1, "Pack", "test", "Pack", ["Author"], "Pack.", "CC0-1.0", new Dictionary<string, string> { ["forums"] = "https://example.com/pack" }, "2026.7", ModVersion.Parse("1.0.0"), DateTimeOffset.UnixEpoch, [new Borea.Core.ModPacks.ModPackEntry("A", pin.Version)]);
+        var pack = new Borea.Core.ModPacks.ModPackResult("Pack", "1.0.0", metadata, null, null, []);
+
+        var result = await packs.InstallAsync(new Borea.Core.ModPacks.ModPackInstallRequest(instance.InstanceId, pack, repository));
+
+        Assert.True(result.IsComplete);
+        Assert.Equal(pin.Version, Assert.Single(installer.Installed).Version);
+        Assert.Contains(result.Warnings, value => value.ModId == "A" && value.Code == "release-channel");
+    }
+
+    private sealed class RecordingModInstaller(IInstanceRepository instances) : IModInstaller
+    {
+        public List<ModVersionMetadata> Installed { get; } = [];
+
+        public Task<InstallResult> InstallAsync(Guid instanceId, ModVersionMetadata release, InstallReason reason, bool enable, IProgress<InstallProgress>? progress = null, CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public async Task<GuardedInstallResult> InstallGuardedAsync(Guid instanceId, ModVersionMetadata release, InstallReason reason, bool enable, Borea.Core.Planning.InstallPlanningState expectedState, IProgress<InstallProgress>? progress = null, CancellationToken cancellationToken = default)
+        {
+            Installed.Add(release);
+            var installed = new InstalledMod(release.ModId, release.Version, reason, DateTimeOffset.UnixEpoch, release);
+            var state = await instances.UpdateAsync(instanceId, value =>
+            {
+                value.AddMod(installed);
+                return Borea.Core.Planning.InstallPlanningState.Capture(value);
+            }, cancellationToken);
+            return new GuardedInstallResult(new InstallResult(installed, new DownloadResult(release.Download.Url, 1, release.Download.Sha256!), Borea.Core.State.ModEntryAddResult.Added), state);
+        }
+    }
+
+    private sealed class UnusedModReplacer : IModReplacer
+    {
+        public Task<ModReplacementResult> ReplaceAsync(Guid instanceId, InstalledMod expectedCurrent, ModVersionMetadata replacement, IProgress<InstallProgress>? progress = null, CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+
+        public Task<GuardedModReplacementResult> ReplaceGuardedAsync(Guid instanceId, InstalledMod expectedCurrent, ModVersionMetadata replacement, Borea.Core.Planning.InstallPlanningState expectedState, IProgress<InstallProgress>? progress = null, CancellationToken cancellationToken = default)
+            => throw new NotSupportedException();
+    }
+
+    private static ModVersionMetadata ChannelRelease(string version, ReleaseStatus status) => new(
+        1,
+        "A",
+        ModVersion.Parse(version),
+        status,
+        DateTimeOffset.UnixEpoch,
+        "2026.7.4.2131",
+        2131,
+        new DownloadInfo("https://example.com/mod.zip", new string('A', 64), 1, "application/zip"),
+        1,
+        Array.Empty<ModDependency>());
+
+    private sealed class ReleaseListRepository(IReadOnlyList<ModVersionMetadata> releases) : IModRepository
+    {
+        public Task<IReadOnlyList<ModMetadata>> GetAvailableModsAsync(CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<ModMetadata>>([]);
+        public Task<ModVersionMetadata?> GetLatestReleaseAsync(string modId, CancellationToken cancellationToken = default) => Task.FromResult(releases.OrderByDescending(value => value.Version).FirstOrDefault());
+        public Task<ModVersionMetadata?> GetReleaseAsync(string modId, ModVersion version, CancellationToken cancellationToken = default) => Task.FromResult(releases.FirstOrDefault(value => value.Version == version));
+        public Task<IReadOnlyList<ModVersion>> GetAvailableVersionsAsync(string modId, CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<ModVersion>>(releases.Select(value => value.Version).OrderByDescending(value => value).ToList());
+        public Task<IReadOnlyList<ModMetadata>> SearchAsync(string query, CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<ModMetadata>>([]);
     }
 
     [Fact]
