@@ -4,6 +4,7 @@ using Borea.Core.Index;
 using Borea.Core.Instances;
 using Borea.Core.Launch;
 using Borea.Core.ModLoaders;
+using Borea.Core.ModPacks;
 using Borea.Core.Mods;
 using Borea.Core.Paths;
 using Borea.Core.Planning;
@@ -64,6 +65,10 @@ internal sealed class CliServices : IDisposable
 
     public required ILauncher Launcher { get; init; }
 
+    public required IModPackRepository ModPacks { get; init; }
+
+    public required IModPackInstaller ModPackInstaller { get; init; }
+
     /// <summary>
     /// The graph the services came from, disposed with this instance. Null when
     /// nothing needs disposing.
@@ -94,7 +99,9 @@ internal sealed class CliServices : IDisposable
         ILoaderInstaller? loaderInstaller = null,
         ILoaderAdopter? loaderAdopter = null,
         ILoaderUninstaller? loaderUninstaller = null,
-        ILauncher? launcher = null)
+        ILauncher? launcher = null,
+        IModPackRepository? modPacks = null,
+        IModPackInstaller? modPackInstaller = null)
     {
         if (services is null)
             throw new ArgumentNullException(nameof(services));
@@ -122,6 +129,8 @@ internal sealed class CliServices : IDisposable
             LoaderAdopter = loaderAdopter ?? services.LoaderAdopter,
             LoaderUninstaller = loaderUninstaller ?? services.LoaderUninstaller,
             Launcher = launcher ?? services.Launcher,
+            ModPacks = modPacks ?? services.ModPacks,
+            ModPackInstaller = modPackInstaller ?? services.ModPackInstaller,
             Graph = services,
             AdditionalDisposable = launcher is IDisposable disposable && !ReferenceEquals(launcher, services.Launcher)
                 ? disposable
