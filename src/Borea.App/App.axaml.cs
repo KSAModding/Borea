@@ -75,6 +75,9 @@ public partial class App : Application
             desktop.MainWindow = new MainWindow { DataContext = viewModel };
             desktop.MainWindow.Opened += async (_, _) => await viewModel.LoadAsync();
 
+            // players come back to Borea after installing a new KSA release
+            desktop.MainWindow.Activated += async (_, _) => await viewModel.RefreshInstalledGameAsync();
+
             // a command that throws must not take the window down with it
             Dispatcher.UIThread.UnhandledException += (_, args) =>
             {
