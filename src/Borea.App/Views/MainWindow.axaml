@@ -822,6 +822,7 @@
                     <StackPanel Margin="36,40,24,0" Spacing="24">
                         <Button Classes="menu" Classes.active="{Binding IsGeneralTab}" Content="{Binding Localization.SettingsGeneral}" Command="{Binding ShowGeneralSettingsCommand}" />
                         <Button Classes="menu" Classes.active="{Binding IsGameTab}" Content="{Binding Localization.SettingsGame}" Command="{Binding ShowGameSettingsCommand}" />
+                        <Button Classes="menu" Classes.active="{Binding IsAboutTab}" Content="{Binding Localization.SettingsAbout}" Command="{Binding ShowAboutSettingsCommand}" />
                     </StackPanel>
                     <Border Grid.Column="1" Background="{StaticResource Brush.Window}" />
 
@@ -841,6 +842,74 @@
                         <TextBlock Classes="heading-md" Text="{Binding Localization.SettingsThemeLabel}" Margin="0,18,0,0" />
                         <ComboBox ItemsSource="{Binding ThemeNames}" SelectedItem="{Binding CurrentTheme}" AutomationProperties.Name="{Binding Localization.SettingsThemeLabel}" Width="340" Margin="0,4,0,0" />
                     </StackPanel>
+
+                    <!-- About: what is installed, where it lives, where to report a problem -->
+                    <ScrollViewer Grid.Column="2" IsVisible="{Binding IsAboutTab}">
+                        <StackPanel Margin="32,32,44,24" Spacing="6">
+                            <TextBlock Classes="heading-lg" Text="Borea" />
+                            <Grid ColumnDefinitions="Auto,16,*" RowDefinitions="Auto,4,Auto,4,Auto,4,Auto" Margin="0,8,0,0">
+                                <TextBlock Classes="label-md" Text="{Binding Localization.AboutVersion}" VerticalAlignment="Center" />
+                                <SelectableTextBlock Grid.Column="2" Classes="body-md" Text="{Binding BoreaVersion}" />
+                                <TextBlock Grid.Row="2" Classes="label-md" Text="{Binding Localization.AboutRuntime}" VerticalAlignment="Center" />
+                                <SelectableTextBlock Grid.Row="2" Grid.Column="2" Classes="body-md" Text="{Binding RuntimeText}" />
+                                <TextBlock Grid.Row="4" Classes="label-md" Text="{Binding Localization.AboutSystem}" VerticalAlignment="Center" />
+                                <SelectableTextBlock Grid.Row="4" Grid.Column="2" Classes="body-md" Text="{Binding SystemText}" />
+                                <TextBlock Grid.Row="6" Classes="label-md" Text="{Binding Localization.AboutGame}" VerticalAlignment="Center" />
+                                <Border Grid.Row="6" Grid.Column="2" Classes="chip" HorizontalAlignment="Left">
+                                    <Panel>
+                                        <TextBlock IsVisible="{Binding InstalledVersionText, Converter={x:Static ObjectConverters.IsNotNull}}">
+                                            <Run Text="KSA" /><Run Text=" " /><Run Text="{Binding InstalledVersionText}" />
+                                        </TextBlock>
+                                        <TextBlock IsVisible="{Binding InstalledVersionText, Converter={x:Static ObjectConverters.IsNull}}" Text="{Binding Localization.HomeNoGameVersion}" />
+                                    </Panel>
+                                </Border>
+                            </Grid>
+                            <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,12,0,0">
+                                <Button Classes="text" Content="{Binding Localization.AboutCopyDiagnostics}" Click="CopyDiagnostics" />
+                            </StackPanel>
+                            <TextBlock Classes="body-md secondary" Text="{Binding AboutMessage}" TextWrapping="Wrap" IsVisible="{Binding AboutMessage, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                            <TextBlock Classes="body-md danger" Text="{Binding AboutError}" TextWrapping="Wrap" IsVisible="{Binding AboutError, Converter={x:Static ObjectConverters.IsNotNull}}" />
+
+                            <Border Height="1" Background="{StaticResource Brush.BorderStrong}" Margin="0,18,0,12" />
+
+                            <TextBlock Classes="heading-md" Text="{Binding Localization.AboutFolders}" />
+                            <SelectableTextBlock Classes="body-sm secondary" Text="{Binding BoreaFolder}" Margin="0,4,0,0" />
+                            <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,6,0,0">
+                                <Button Classes="text" Content="{Binding Localization.AboutOpenBoreaFolder}" Command="{Binding OpenBoreaFolderCommand}" />
+                                <Button Classes="text" Content="{Binding Localization.AboutOpenInstancesFolder}" Command="{Binding OpenInstancesFolderCommand}" />
+                            </StackPanel>
+
+                            <Border Height="1" Background="{StaticResource Brush.BorderStrong}" Margin="0,18,0,12" />
+
+                            <TextBlock Classes="heading-md" Text="{Binding Localization.AboutLinks}" />
+                            <StackPanel Spacing="6" Margin="0,4,0,0">
+                                <Button Classes="filter" Content="{Binding Localization.AboutSourceCode}" Command="{Binding OpenAboutLinkCommand}" CommandParameter="{x:Static vm:MainViewModel.RepositoryUrl}" />
+                                <Button Classes="filter" Content="{Binding Localization.AboutReportBug}" Command="{Binding OpenAboutLinkCommand}" CommandParameter="{x:Static vm:MainViewModel.ReportBugUrl}" />
+                                <Button Classes="filter" Content="{Binding Localization.AboutReleases}" Command="{Binding OpenAboutLinkCommand}" CommandParameter="{x:Static vm:MainViewModel.ReleasesUrl}" />
+                            </StackPanel>
+
+                            <Border Height="1" Background="{StaticResource Brush.BorderStrong}" Margin="0,18,0,12" />
+
+                            <TextBlock Classes="heading-md" Text="{Binding Localization.AboutThirdParty}" />
+                            <ItemsControl ItemsSource="{Binding ThirdPartyNotices}" Margin="0,4,0,0">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <StackPanel Spacing="6" />
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:ThirdPartyNotice">
+                                        <StackPanel Orientation="Horizontal" Spacing="8">
+                                            <Button Classes="filter" Content="{Binding Name}" Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).OpenAboutLinkCommand}" CommandParameter="{Binding Url}" ToolTip.Tip="{Binding Url}" />
+                                            <Border Classes="chip" VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding License}" />
+                                            </Border>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </ScrollViewer>
 
                     <!-- Game: where KSA is, and which loader starts it -->
                     <ScrollViewer Grid.Column="2" IsVisible="{Binding IsGameTab}">
