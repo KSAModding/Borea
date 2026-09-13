@@ -48,6 +48,32 @@ public partial class MainViewModel
     [ObservableProperty]
     private double _setupProgress;
 
+    /// <summary>
+    /// What the settings record for the selected loader, as the chip under the
+    /// picker shows it. Null when the selected loader is not installed.
+    /// </summary>
+    [ObservableProperty]
+    private string? _installedLoaderText;
+
+    /// <summary>
+    /// The label of the install button. It installs a loader Borea does not
+    /// know, updates one to the newest release, or reinstalls one whose
+    /// version is unknown.
+    /// </summary>
+    [ObservableProperty]
+    private string _loaderInstallActionText = string.Empty;
+
+    /// <summary>
+    /// False when the recorded loader is already the newest release, because
+    /// the button would then only download the same files again.
+    /// </summary>
+    [ObservableProperty]
+    private bool _canInstallLoader = true;
+
+    private LoaderInstallation? _selectedLoaderInstallation;
+
+    private ModVersion? _selectedLoaderLatest;
+
     [RelayCommand]
     private void ShowGeneralSettings() => IsGameTab = false;
 
@@ -69,6 +95,66 @@ public partial class MainViewModel
         foreach (var loader in _listings.Where(item => item.Type == ContentType.ModLoader))
             Loaders.Add(loader);
         SelectedLoader = Loaders.FirstOrDefault(loader => loaderId is not null && ModIds.Equals(loader.ModId, loaderId)) ?? Loaders.FirstOrDefault();
+        await RefreshLoaderStateAsync();
+    }
+
+    partial void OnSelectedLoaderChanged(DiscoverItem? value) => _ = RefreshLoaderStateAsync();
+
+    /// <summary>
+    /// Reads what the settings record for the selected loader and which release
+    /// is the newest, then updates the chip and the install button.
+    /// </summary>
+    internal async Task RefreshLoaderStateAsync()
+    {
+        var loader = SelectedLoader;
+        LoaderInstallation? installation = null;
+        ModVersion? latest = null;
+        if (_services is not null && loader is not null)
+        {
+            installation = _services.Settings.LoaderInstallations
+                .FirstOrDefault(pair => ModIds.Equals(pair.Key, loader.ModId)).Value;
+            try
+            {
+                latest = (await _services.Mods.GetLatestReleaseAsync(loader.ModId))?.Version;
+            }
+            catch (Exception exception) when (exception is HttpRequestException or IOException or InvalidOperationException or TaskCanceledException)
+            {
+                // without a known release there is nothing newer to offer
+            }
+        }
+
+        // a selection that changed while the release was read refreshes itself
+        if (!ReferenceEquals(loader, SelectedLoader))
+            return;
+
+        _selectedLoaderInstallation = installation;
+        _selectedLoaderLatest = latest;
+        RefreshLoaderText();
+    }
+
+    private void RefreshLoaderText()
+    {
+        var installation = _selectedLoaderInstallation;
+        var latest = _selectedLoaderLatest;
+
+        if (installation is null)
+        {
+            InstalledLoaderText = null;
+            LoaderInstallActionText = Localization.SetupInstallLoader;
+            CanInstallLoader = true;
+        }
+        else if (installation.Version is not { } installed)
+        {
+            InstalledLoaderText = Localization.SetupLoaderInstalledUnknownVersion;
+            LoaderInstallActionText = Localization.SetupReinstallLoader;
+            CanInstallLoader = latest is not null;
+        }
+        else
+        {
+            InstalledLoaderText = Localization.FormatSetupLoaderInstalledVersion(installed.ToString());
+            LoaderInstallActionText = latest is { } newest ? Localization.FormatSetupUpdateLoader(newest.ToString()) : Localization.SetupInstallLoader;
+            CanInstallLoader = latest is { } candidate && candidate > installed;
+        }
     }
 
     [RelayCommand]
@@ -129,6 +215,7 @@ public partial class MainViewModel
         {
             SetupMessage = await operation(_services);
             await RebuildServicesAsync();
+            await RefreshLoaderStateAsync();
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or InvalidOperationException or ArgumentException or NotSupportedException or HttpRequestException or DownloadFailedException or TaskCanceledException)
         {

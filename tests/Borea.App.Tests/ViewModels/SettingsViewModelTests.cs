@@ -1,4 +1,9 @@
+using Borea.App.Formatting;
 using Borea.App.ViewModels;
+using Borea.Composition;
+using Borea.Core.ModLoaders;
+using Borea.Core.Mods;
+using Borea.Core.Preferences;
 
 namespace Borea.App.Tests.ViewModels;
 
@@ -97,6 +102,59 @@ public sealed class SettingsViewModelTests
         Assert.False(viewModel.IsSetupBusy);
         Assert.Equal(0, viewModel.SetupProgress);
         Assert.Empty(harness.Services.Settings.LoaderInstallations);
+    }
+
+    [Fact]
+    public async Task GameTab_NoLoaderRecorded_OffersInstall()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var viewModel = harness.ViewModel;
+
+        await viewModel.ShowGameSettingsCommand.ExecuteAsync(null);
+
+        Assert.Null(viewModel.InstalledLoaderText);
+        Assert.Equal(harness.Localization.SetupInstallLoader, viewModel.LoaderInstallActionText);
+        Assert.True(viewModel.CanInstallLoader);
+    }
+
+    [Theory]
+    [InlineData("0.4.6", false)]
+    [InlineData("0.4.5", true)]
+    public async Task GameTab_RecordedLoader_ShowsItsVersionAndOffersOnlyANewerRelease(string recorded, bool canUpdate)
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var installation = new LoaderInstallation(Path.Combine(harness.Root, "StarMap"), ModVersion.Parse(recorded), recorded, isAdopted: false);
+        using var services = await ServicesWithLoaderAsync(harness, installation);
+        var viewModel = new MainViewModel(harness.Localization, new RegionalFormatService(harness.Localization), null, AppPreferences.Empty, services);
+
+        await viewModel.ShowGameSettingsCommand.ExecuteAsync(null);
+
+        Assert.Equal(harness.Localization.FormatSetupLoaderInstalledVersion(recorded), viewModel.InstalledLoaderText);
+        Assert.Equal(harness.Localization.FormatSetupUpdateLoader("0.4.6"), viewModel.LoaderInstallActionText);
+        Assert.Equal(canUpdate, viewModel.CanInstallLoader);
+    }
+
+    [Fact]
+    public async Task UseExistingLoader_WithoutAVersion_OffersReinstall()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var viewModel = harness.ViewModel;
+        var loader = Directory.CreateDirectory(Path.Combine(harness.Root, "StarMap")).FullName;
+        await viewModel.ShowGameSettingsCommand.ExecuteAsync(null);
+
+        viewModel.LoaderDirectoryInput = loader;
+        await viewModel.AdoptLoaderCommand.ExecuteAsync(null);
+
+        Assert.Equal(harness.Localization.SetupLoaderInstalledUnknownVersion, viewModel.InstalledLoaderText);
+        Assert.Equal(harness.Localization.SetupReinstallLoader, viewModel.LoaderInstallActionText);
+        Assert.True(viewModel.CanInstallLoader);
+    }
+
+    private static async Task<BoreaServices> ServicesWithLoaderAsync(ViewModelHarness harness, LoaderInstallation installation)
+    {
+        var settings = harness.Services.Settings.WithLoaderInstallation("StarMap", installation);
+        await harness.Services.SettingsRepository.SaveAsync(settings);
+        return await harness.BuildServicesAsync();
     }
 
     [Fact]
