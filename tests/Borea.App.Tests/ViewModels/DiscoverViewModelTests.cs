@@ -165,12 +165,13 @@ public sealed class DiscoverViewModelTests
 
 /// <summary>
 /// Puts a mod into an instance without downloading it: the release comes from
-/// the index fixture and the files are marked as not Borea's, so removing the
-/// mod leaves the disk alone.
+/// the index fixture. The files are marked as not Borea's unless the caller
+/// says Borea installed them, and then the folder carries the ownership file
+/// an install writes.
 /// </summary>
 internal static class InstalledContent
 {
-    public static async Task<Instance> AddAsync(ViewModelHarness harness, string modId, bool activate, InstallReason reason = InstallReason.Manual)
+    public static async Task<Instance> AddAsync(ViewModelHarness harness, string modId, bool activate, InstallReason reason = InstallReason.Manual, ModInstallOwnership ownership = ModInstallOwnership.Foreign)
     {
         var services = harness.Services;
         var instance = (await services.Instances.GetAllAsync()).FirstOrDefault()
@@ -181,7 +182,10 @@ internal static class InstalledContent
         // the manifest only lists a mod whose folder holds a mod.toml
         var folder = Directory.CreateDirectory(Path.Combine(services.Paths.GetInstanceModsFolder(instance.InstanceId), modId));
         await File.WriteAllTextAsync(Path.Combine(folder.FullName, "mod.toml"), $"name = \"{modId}\"");
-        instance.AddMod(new InstalledMod(modId, release.Version, reason, DateTimeOffset.UtcNow, release, ownership: ModInstallOwnership.Foreign));
+        var token = ownership == ModInstallOwnership.Borea ? Guid.NewGuid().ToString("N") : null;
+        if (token is not null)
+            await File.WriteAllTextAsync(Path.Combine(folder.FullName, ".borea-owner"), token);
+        instance.AddMod(new InstalledMod(modId, release.Version, reason, DateTimeOffset.UtcNow, release, ownership: ownership, ownershipToken: token));
         await services.Instances.SaveAsync(instance);
         await services.ModState.AddEntryAsync(instance.InstanceId, modId, enabled: true);
         if (activate)

@@ -4,6 +4,8 @@ using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using Borea.Composition;
+using Borea.Core.Dependencies;
 using Borea.Core.Instances;
 using Borea.Core.Mods;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -186,30 +188,50 @@ public partial class MainViewModel
     private readonly Dictionary<string, ModMetadata?> _listingCache = new(ModIds.Comparer);
 
     /// <summary>
-    /// Removes the mod the way the installer's rollback does: the folder goes,
-    /// then the instance forgets the mod. The manifest entry may stay; the game
-    /// drops entries that name no folder.
+    /// Removes a mod Borea installed, with its folder and its record. A mod
+    /// that another installed mod requires stays, and so does a mod Borea did
+    /// not install, because its files are not Borea's to delete. The error is
+    /// set after the page reloads, because opening the instance clears it.
     /// </summary>
     internal async Task RemoveContentAsync(Guid instanceId, string modId)
     {
         if (_services is null)
             return;
 
+        string? error;
         try
         {
-            await _services.Uninstaller.UninstallAsync(instanceId, modId);
-            var instance = await _services.Instances.GetByIdAsync(instanceId);
-            if (instance is not null && instance.RemoveMod(modId))
-                await _services.Instances.SaveAsync(instance);
-            await _services.ModState.SetInactiveAsync(instanceId, modId);
-            ContentError = null;
+            error = await TryRemoveContentAsync(_services, instanceId, modId);
         }
         catch (Exception exception) when (exception is IOException or InvalidOperationException or UnauthorizedAccessException)
         {
-            ContentError = exception.Message;
+            error = exception.Message;
         }
 
         await ReloadInstancesAsync();
+        ContentError = error;
+    }
+
+    /// <summary>
+    /// Removes the mod, or returns why it stays.
+    /// </summary>
+    private async Task<string?> TryRemoveContentAsync(BoreaServices services, Guid instanceId, string modId)
+    {
+        var instance = await services.Instances.GetByIdAsync(instanceId);
+        var installed = instance?.Mods.FirstOrDefault(mod => ModIds.Equals(mod.ModId, modId));
+        if (instance is null || installed is null)
+            return null;
+
+        if (installed.Ownership != ModInstallOwnership.Borea)
+            return Localization.FormatContentRemoveNotOwned(installed.ModId);
+
+        var active = await services.ModState.IsActiveAsync(instanceId, installed.ModId);
+        var check = new ModDependencyResolver().CheckUninstall(instance, installed.ModId, installed.Version, active);
+        if (!check.CanUninstall)
+            return Localization.FormatContentRemoveRequired(installed.ModId, string.Join(", ", check.DependentModIds));
+
+        await services.Uninstaller.UninstallAsync(instanceId, installed.ModId);
+        return null;
     }
 }
 

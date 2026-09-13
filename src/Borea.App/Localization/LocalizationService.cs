@@ -282,6 +282,12 @@ public sealed class LocalizationService : INotifyPropertyChanged
         return string.Format(CultureInfo.CurrentCulture, Resources.ContentSourceFormat, source);
     }
 
+    public string FormatContentRemoveNotOwned(string modId)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ContentRemoveNotOwnedFormat, modId);
+
+    public string FormatContentRemoveRequired(string modId, string dependents)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ContentRemoveRequiredFormat, modId, dependents);
+
     public string FormatContentByAuthor(string authors)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(authors);
