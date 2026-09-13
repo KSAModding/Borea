@@ -12,7 +12,9 @@ using Borea.Core.Planning;
 using Borea.Core.Preferences;
 using Borea.Core.Settings;
 using Borea.Core.State;
+using Borea.Core.Updates;
 using Borea.Network.Downloads;
+using Borea.Network.GitHub;
 using Borea.Network.Index;
 using Borea.Network.MasterServer;
 using Borea.Network.Planning;
@@ -120,6 +122,9 @@ public sealed class BoreaServices : IDisposable
     public required ISharedProfileLauncher SharedProfileLauncher { get; init; }
 
     public required ILatestVersionPing LatestVersion { get; init; }
+
+    /// <summary>The newest published Borea release.</summary>
+    public required IBoreaReleaseCheck ReleaseCheck { get; init; }
 
     public required IInstalledGameVersionProvider InstalledVersion { get; init; }
 
@@ -247,6 +252,7 @@ public sealed class BoreaServices : IDisposable
             Launcher = new LoaderLauncher(paths, new ProcessStarter()),
             SharedProfileLauncher = new SharedProfileLauncher(paths, new ProcessStarter()),
             LatestVersion = new LatestVersionPing(http),
+            ReleaseCheck = new BoreaReleaseCheck(http),
             InstalledVersion = new InstalledGameVersionProvider(paths),
             IndexFetcher = indexFetcher,
             IndexReader = indexReader,

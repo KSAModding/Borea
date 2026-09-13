@@ -59,6 +59,7 @@ internal static class IndexCommand
         output.WriteLine($"  Pack versions: {view.Accepted.PackVersions} accepted, {view.Count(ContentIndexDiagnosticScope.PackVersion, ContentIndexDiagnosticKind.UnsupportedVersion)} unsupported, {view.Count(ContentIndexDiagnosticScope.PackVersion, ContentIndexDiagnosticKind.Malformed)} malformed.");
         output.WriteLine($"  Game versions: {view.Accepted.GameVersions} known, {view.Count(ContentIndexDiagnosticScope.GameVersions, ContentIndexDiagnosticKind.Malformed)} malformed.");
         output.WriteLine($"  Index status: {view.Count(ContentIndexDiagnosticScope.IndexStatus, ContentIndexDiagnosticKind.UnsupportedValue)} unsupported, {view.Count(ContentIndexDiagnosticScope.IndexStatus, ContentIndexDiagnosticKind.Malformed)} malformed.");
+        output.WriteLine($"  Download counts: {view.Accepted.DownloadCounts} listings with counts, {view.Count(ContentIndexDiagnosticScope.Downloads, ContentIndexDiagnosticKind.Malformed)} malformed.");
 
         if (view.Diagnostics.Entries.Count == 0)
             return;
@@ -88,7 +89,8 @@ internal static class IndexCommand
                     snapshot.Listings.Sum(listing => listing.Releases.Count),
                     snapshot.Packs.Count,
                     snapshot.Packs.Sum(pack => pack.Versions.Count),
-                    snapshot.GameVersions?.Versions.Count ?? 0),
+                    snapshot.GameVersions?.Versions.Count ?? 0,
+                    snapshot.Listings.Count(listing => listing.Downloads is not null)),
                 new DiagnosticSummaryView(
                     entries.Count(entry => entry.Kind == "malformed"),
                     entries.Count(entry => entry.Kind == "unsupported-version"),
@@ -105,7 +107,8 @@ internal static class IndexCommand
         int Releases,
         int Packs,
         int PackVersions,
-        int GameVersions);
+        int GameVersions,
+        int DownloadCounts);
 
     private sealed record DiagnosticSummaryView(
         int Malformed,
@@ -147,6 +150,7 @@ internal static class IndexCommand
         ContentIndexDiagnosticScope.IndexStatus => "index-status",
         ContentIndexDiagnosticScope.GameVersions => "game-versions",
         ContentIndexDiagnosticScope.Tags => "tags",
+        ContentIndexDiagnosticScope.Downloads => "downloads",
         _ => throw new ArgumentOutOfRangeException(nameof(scope), scope, null),
     };
 }

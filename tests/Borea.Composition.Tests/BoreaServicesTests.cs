@@ -9,6 +9,7 @@ using Borea.Core.ModLoaders;
 using Borea.Storage.Launch;
 using Borea.Core.Mods;
 using Borea.Core.Settings;
+using Borea.Network.GitHub;
 using Borea.Network.Index;
 using Borea.Network.Sources;
 using Borea.Storage.Game;
@@ -449,6 +450,14 @@ public sealed class BoreaServicesTests : IDisposable
     }
 
     [Fact]
+    public async Task ReleaseCheck_IsTheGitHubCheck()
+    {
+        using var services = await BoreaServices.BuildAsync(_tempRoot);
+
+        Assert.IsType<BoreaReleaseCheck>(services.ReleaseCheck);
+    }
+
+    [Fact]
     public async Task InstalledVersion_ReadsTheGameDirectoryTheSettingsName()
     {
         using var services = await BoreaServices.BuildAsync(_tempRoot);
@@ -468,6 +477,7 @@ public sealed class BoreaServicesTests : IDisposable
         // A disposed client refuses a request before it reaches any host, so each
         // probe proves that the service holds the shared client and sends nothing.
         await Assert.ThrowsAsync<ObjectDisposedException>(() => services.LatestVersion.PingAsync());
+        await Assert.ThrowsAsync<ObjectDisposedException>(() => services.ReleaseCheck.GetLatestReleaseAsync());
         await Assert.ThrowsAsync<ObjectDisposedException>(() => services.Mods.GetAvailableModsAsync());
         await Assert.ThrowsAsync<ObjectDisposedException>(() => services.Downloader.DownloadAsync(Release(), Path.Combine(_tempRoot, "probe.zip")));
         await Assert.ThrowsAsync<ObjectDisposedException>(() => services.IndexFetcher.FetchAsync(services.Paths.GetIndexPath()));

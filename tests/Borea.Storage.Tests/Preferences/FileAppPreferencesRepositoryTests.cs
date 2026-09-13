@@ -30,6 +30,61 @@ public sealed class FileAppPreferencesRepositoryTests : IDisposable
     }
 
     [Fact]
+    public async Task GetAsync_NoSavedPreferences_ChecksForUpdatesAtStart()
+    {
+        var result = await _repository.GetAsync(BundledThemeNames);
+
+        Assert.True(result.Preferences.CheckForUpdatesAtStart);
+        Assert.True(AppPreferences.Empty.CheckForUpdatesAtStart);
+    }
+
+    [Fact]
+    public async Task SaveThenGet_UpdateCheckTurnedOff_RestoresTheChoice()
+    {
+        await _repository.SaveAsync(new AppPreferences("Dark", checkForUpdatesAtStart: false), BundledThemeNames);
+
+        var result = await _repository.GetAsync(BundledThemeNames);
+
+        Assert.Equal(AppPreferencesLoadStatus.Loaded, result.Status);
+        Assert.False(result.Preferences.CheckForUpdatesAtStart);
+        using var document = JsonDocument.Parse(await File.ReadAllTextAsync(_pathProvider.GetAppPreferencesPath()));
+        Assert.Equal(1, document.RootElement.GetProperty("formatVersion").GetInt32());
+        Assert.False(document.RootElement.GetProperty("checkForUpdatesAtStart").GetBoolean());
+    }
+
+    [Fact]
+    public async Task GetAsync_FileWrittenBeforeTheUpdateCheckField_LoadsWithTheCheckOn()
+    {
+        await WriteAsync("""
+            {
+              "formatVersion": 1,
+              "selectedTheme": "Light",
+              "regionalCulture": "de-DE",
+              "uiCulture": "de",
+              "customThemes": []
+            }
+            """);
+
+        var result = await _repository.GetAsync(BundledThemeNames);
+
+        Assert.Equal(AppPreferencesLoadStatus.Loaded, result.Status);
+        Assert.Equal("Light", result.Preferences.SelectedThemeName);
+        Assert.True(result.Preferences.CheckForUpdatesAtStart);
+    }
+
+    [Fact]
+    public void With_OtherPreferenceChanges_KeepTheUpdateCheckChoice()
+    {
+        var preferences = new AppPreferences("Dark", checkForUpdatesAtStart: false)
+            .WithSelectedThemeName("Light")
+            .WithRegionalCultureName("de-DE")
+            .WithUiCultureName("de");
+
+        Assert.False(preferences.CheckForUpdatesAtStart);
+        Assert.True(preferences.WithCheckForUpdatesAtStart(true).CheckForUpdatesAtStart);
+    }
+
+    [Fact]
     public async Task SaveThenGet_SavedBundledTheme_RestoresTheSelection()
     {
         await _repository.SaveAsync(new AppPreferences("Dark"), BundledThemeNames);

@@ -65,15 +65,22 @@ internal static class ShowCommand
             }
 
             var installed = cli.InstalledVersion.GetInstalledVersion()?.Version;
+            var downloads = indexListing?.Downloads;
             var releaseViews = releases
-                .Select(release => ReleaseView.From(release, installed, requestedVersion is not null))
+                .Select(release => ReleaseView.From(
+                    release,
+                    installed,
+                    requestedVersion is not null,
+                    DownloadCountOutput.From(downloads?.FindRelease(release.Version))))
                 .Concat(diagnostics
                     .Where(diagnostic => diagnostic.Kind == "unsupported-version")
                     .Where(diagnostic => diagnostic.Scope == "release")
                     .Where(diagnostic => diagnostic.Version is not null)
                     .Where(diagnostic => releases.All(release =>
                         !string.Equals(release.Version.ToString(), diagnostic.Version, StringComparison.OrdinalIgnoreCase)))
-                    .Select(ReleaseView.Unknown))
+                    .Select(diagnostic => ReleaseView.Unknown(
+                        diagnostic,
+                        DownloadCountOutput.From(FindReleaseDownloads(downloads, diagnostic.Version)))))
                 .ToList();
             releaseViews.Sort(CompareReleasesNewestFirst);
             var state = metadata is not null
@@ -88,6 +95,7 @@ internal static class ShowCommand
                 requestedVersion?.ToString(),
                 metadata is null ? null : ListingView.From(metadata),
                 ContentOutput.IndexStatus(indexListing?.IndexStatus),
+                DownloadCountOutput.From(downloads),
                 releaseViews,
                 diagnostics);
 
@@ -139,10 +147,16 @@ internal static class ShowCommand
             .Where(diagnostic => ModIds.Equals(diagnostic.Id, id))
             .Where(diagnostic => version is null
                 || diagnostic.Scope is ContentIndexDiagnosticScope.Listing or ContentIndexDiagnosticScope.IndexStatus
+                || (diagnostic.Scope == ContentIndexDiagnosticScope.Downloads && diagnostic.Version is null)
                 || string.Equals(diagnostic.Version, version, StringComparison.OrdinalIgnoreCase))
             .Select(ContentOutput.Diagnostic)
             .ToArray();
     }
+
+    private static ReleaseDownloadCounts? FindReleaseDownloads(ListingDownloadCounts? downloads, string? version) =>
+        downloads is not null && ModVersion.TryParse(version, out var parsed)
+            ? downloads.FindRelease(parsed)
+            : null;
 
     private static void WriteHuman(TextWriter output, ShowView view)
     {
@@ -177,6 +191,9 @@ internal static class ShowCommand
                 output.WriteLine($"Index reason: {status.Reason}");
         }
 
+        if (view.Downloads is { } downloads)
+            output.WriteLine($"Downloads: {DownloadCountOutput.Describe(downloads)}");
+
         if (view.Releases.Count == 0)
         {
             output.WriteLine(view.RequestedVersion is null
@@ -192,6 +209,7 @@ internal static class ShowCommand
                 {
                     var specVersion = release.SpecVersion is null ? string.Empty : $" (spec version {release.SpecVersion})";
                     output.WriteLine($"  {release.Version}  unknown{specVersion}: {release.Reason}");
+                    WriteReleaseDownloads(output, release);
                     continue;
                 }
 
@@ -200,6 +218,7 @@ internal static class ShowCommand
                     : string.Empty;
                 output.WriteLine($"  {release.Version}  {release.Compatibility}  {release.ReleaseStatus}{yanked}");
                 output.WriteLine($"    Game: {release.GameMin} to {release.GameMax ?? "open"}");
+                WriteReleaseDownloads(output, release);
                 if (release.Dependencies is not null)
                 {
                     output.WriteLine(release.Dependencies.Count == 0 ? "    Dependencies: none" : "    Dependencies:");
@@ -210,6 +229,12 @@ internal static class ShowCommand
         }
 
         ContentOutput.WriteDiagnostics(output, view.Diagnostics);
+    }
+
+    private static void WriteReleaseDownloads(TextWriter output, ReleaseView release)
+    {
+        if (release.Downloads is { } downloads)
+            output.WriteLine($"    Downloads: {DownloadCountOutput.Describe(downloads)}");
     }
 
     private static string Describe(DependencyView dependency)
@@ -256,6 +281,7 @@ internal static class ShowCommand
         string? RequestedVersion,
         ListingView? Listing,
         IndexStatusView? IndexStatus,
+        DownloadCountView? Downloads,
         IReadOnlyList<ReleaseView> Releases,
         IReadOnlyList<DiagnosticView> Diagnostics);
 
@@ -307,9 +333,14 @@ internal static class ShowCommand
         string? YankedReason,
         string? Source,
         IReadOnlyList<DependencyView>? Dependencies,
-        string? Reason)
+        string? Reason,
+        DownloadCountView? Downloads)
     {
-        public static ReleaseView From(ModVersionMetadata release, GameVersion? installed, bool includeDependencies) => new(
+        public static ReleaseView From(
+            ModVersionMetadata release,
+            GameVersion? installed,
+            bool includeDependencies,
+            DownloadCountView? downloads) => new(
             "known",
             release.SpecVersion,
             release.Version.ToString(),
@@ -324,9 +355,10 @@ internal static class ShowCommand
             release.YankedReason,
             release.Source,
             includeDependencies ? release.Dependencies.Select(DependencyView.From).ToArray() : null,
-            null);
+            null,
+            downloads);
 
-        public static ReleaseView Unknown(DiagnosticView diagnostic) => new(
+        public static ReleaseView Unknown(DiagnosticView diagnostic, DownloadCountView? downloads) => new(
             "unknown",
             diagnostic.SpecVersion,
             diagnostic.Version!,
@@ -341,7 +373,8 @@ internal static class ShowCommand
             null,
             null,
             null,
-            diagnostic.Reason);
+            diagnostic.Reason,
+            downloads);
     }
 
     private sealed record DependencyView(

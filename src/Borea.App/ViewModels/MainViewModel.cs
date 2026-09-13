@@ -261,6 +261,7 @@ public partial class MainViewModel : ViewModelBase
     /// </summary>
     public async Task LoadAsync()
     {
+        StartUpdateCheck();
         InstalledVersionText = _services?.InstalledVersion.GetInstalledVersion()?.RawVersion;
         await ReloadInstancesAsync();
         await RefreshContentIndexAsync();
@@ -503,7 +504,8 @@ public partial class MainViewModel : ViewModelBase
     private static bool SamePreferences(AppPreferences left, AppPreferences right)
         => string.Equals(left.SelectedThemeName, right.SelectedThemeName, StringComparison.Ordinal)
             && string.Equals(left.RegionalCultureName, right.RegionalCultureName, StringComparison.Ordinal)
-            && string.Equals(left.UiCultureName, right.UiCultureName, StringComparison.Ordinal);
+            && string.Equals(left.UiCultureName, right.UiCultureName, StringComparison.Ordinal)
+            && left.CheckForUpdatesAtStart == right.CheckForUpdatesAtStart;
 
     private void OnRegionalFormatChanged(object? sender, PropertyChangedEventArgs e)
     {

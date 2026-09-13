@@ -55,6 +55,14 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string SettingsThemeLabel => Resources.SettingsThemeLabel;
 
+    public string SettingsUpdatesLabel => Resources.SettingsUpdatesLabel;
+
+    public string SettingsCheckForUpdatesAtStart => Resources.SettingsCheckForUpdatesAtStart;
+
+    public string UpdateAvailable => Resources.UpdateAvailable;
+
+    public string UpdateViewRelease => Resources.UpdateViewRelease;
+
     public string SystemDefaultRegionalFormat => Resources.SystemDefaultRegionalFormat;
 
     public string HomeCurrentInstall => Resources.HomeCurrentInstall;
