@@ -130,6 +130,17 @@ public sealed class Instance
         return true;
     }
 
+    public void ReplaceMod(InstalledMod replacement)
+    {
+        ArgumentNullException.ThrowIfNull(replacement);
+
+        var index = _mods.FindIndex(mod => ModIds.Equals(mod.ModId, replacement.ModId));
+        if (index < 0)
+            throw new InvalidOperationException($"Mod '{replacement.ModId}' is not installed in this instance.");
+
+        _mods[index] = replacement;
+    }
+
     public void ReplaceForeignMods(IReadOnlyList<ForeignMod> foreignMods)
     {
         ArgumentNullException.ThrowIfNull(foreignMods);

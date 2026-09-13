@@ -1,4 +1,5 @@
 using Borea.Core.State;
+using Borea.Core.Planning;
 
 namespace Borea.Core.Mods;
 
@@ -42,6 +43,15 @@ public interface IModInstaller
         bool enable,
         IProgress<DownloadProgress>? progress = null,
         CancellationToken cancellationToken = default);
+
+    Task<GuardedInstallResult> InstallGuardedAsync(
+        Guid instanceId,
+        ModVersionMetadata release,
+        InstallReason reason,
+        bool enable,
+        InstallPlanningState expectedState,
+        IProgress<DownloadProgress>? progress = null,
+        CancellationToken cancellationToken = default);
 }
 
 /// <summary>
@@ -51,3 +61,5 @@ public interface IModInstaller
 /// <param name="Download">Where the archive came from and what it hashed to.</param>
 /// <param name="ManifestEntry">Whether the manifest entry was written or was already there.</param>
 public sealed record InstallResult(InstalledMod Mod, DownloadResult Download, ModEntryAddResult ManifestEntry);
+
+public sealed record GuardedInstallResult(InstallResult Result, InstallPlanningState State);

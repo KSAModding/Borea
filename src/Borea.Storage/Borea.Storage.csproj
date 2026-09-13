@@ -2,6 +2,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Borea.Core\Borea.Core.csproj" />
+    <InternalsVisibleTo Include="Borea.Storage.Tests" />
   </ItemGroup>
 
   <ItemGroup>

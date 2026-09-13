@@ -1,6 +1,7 @@
 using Borea.Core.Instances;
 using Borea.Core.Mods;
 using Borea.Core.Paths;
+using Borea.Core.Planning;
 using Borea.Core.State;
 
 namespace Borea.Storage.Mods;
@@ -39,6 +40,29 @@ public sealed class FileModInstaller : IModInstaller
         bool enable,
         IProgress<DownloadProgress>? progress = null,
         CancellationToken cancellationToken = default)
+        => (await InstallCoreAsync(instanceId, release, reason, enable, expectedState: null, progress, cancellationToken).ConfigureAwait(false)).Result;
+
+    public async Task<GuardedInstallResult> InstallGuardedAsync(
+        Guid instanceId,
+        ModVersionMetadata release,
+        InstallReason reason,
+        bool enable,
+        InstallPlanningState expectedState,
+        IProgress<DownloadProgress>? progress = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(expectedState);
+        return await InstallCoreAsync(instanceId, release, reason, enable, expectedState, progress, cancellationToken).ConfigureAwait(false);
+    }
+
+    private async Task<GuardedInstallResult> InstallCoreAsync(
+        Guid instanceId,
+        ModVersionMetadata release,
+        InstallReason reason,
+        bool enable,
+        InstallPlanningState? expectedState,
+        IProgress<DownloadProgress>? progress,
+        CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(release);
         RequireInstallable(release);
@@ -64,6 +88,7 @@ public sealed class FileModInstaller : IModInstaller
         var stagingFolder = Path.Combine(_pathProvider.GetInstanceRoot(instanceId), $".borea-staging-{Guid.NewGuid():N}");
         var recorded = false;
         string? ownershipToken = null;
+        InstallPlanningState? resultingState = null;
 
         try
         {
@@ -90,12 +115,16 @@ public sealed class FileModInstaller : IModInstaller
                 instanceId,
                 current =>
                 {
+                    if (expectedState is not null && !expectedState.Matches(current))
+                        throw new InvalidOperationException("The instance changed after the installation was planned.");
+
                     if (ModFolders.Find(modsFolder, release.ModId) is not null)
                         throw new InvalidOperationException($"The instance received a foreign folder for '{release.ModId}' while the archive downloaded.");
 
                     Directory.CreateDirectory(modsFolder);
                     Directory.Move(stagingFolder, modFolder);
                     current.AddMod(installed);
+                    resultingState = InstallPlanningState.Capture(current);
                     return true;
                 },
                 cancellationToken).ConfigureAwait(false);
@@ -103,7 +132,8 @@ public sealed class FileModInstaller : IModInstaller
 
             var entry = await _modState.AddEntryAsync(instanceId, release.ModId, enable, cancellationToken).ConfigureAwait(false);
 
-            return new InstallResult(installed, download, entry);
+            var result = new InstallResult(installed, download, entry);
+            return new GuardedInstallResult(result, resultingState!);
         }
         catch
         {
@@ -133,7 +163,7 @@ public sealed class FileModInstaller : IModInstaller
     /// the folder where the game does not look, since ModLibrary.AddMods scans
     /// the top level of the mods folder and nothing below it.
     /// </summary>
-    private static void RequireInstallable(ModVersionMetadata release)
+    internal static void RequireInstallable(ModVersionMetadata release)
     {
         if (release.Type != ContentType.Mod)
             throw new NotSupportedException($"'{release.ModId}' is a {release.Type}, and only a mod installs into the mods folder.");
@@ -158,7 +188,7 @@ public sealed class FileModInstaller : IModInstaller
     /// (ModLibrary.AddMods). The stated root decides where the content starts;
     /// a release that states none gets the root RFC 0035 rule 9 derives.
     /// </summary>
-    private static void Unpack(string archivePath, ModVersionMetadata release, string modFolder)
+    internal static void Unpack(string archivePath, ModVersionMetadata release, string modFolder)
     {
         var root = release.Install?.Root ?? ModArchive.DeriveRoot(archivePath);
         var files = ModArchive.Extract(archivePath, root, modFolder);

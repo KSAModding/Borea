@@ -1,6 +1,8 @@
 using System.Text.Json;
 using Borea.Composition;
+using Borea.Core.Index;
 using Borea.Core.ModLoaders;
+using Borea.Core.Mods;
 using Borea.Storage.Launch;
 using Borea.Storage.Paths;
 
@@ -24,7 +26,11 @@ internal sealed class CliHost : IDisposable
 
     public FakeContentIndexReader IndexReader { get; } = new();
 
+    public IContentIndexSnapshotProvider? IndexSnapshots { get; set; }
+
     public FakeModRepository Mods { get; } = new();
+
+    public IModRepository? ModRepository { get; set; }
 
     public FakeProcessStarter ProcessStarter { get; } = new();
 
@@ -62,7 +68,8 @@ internal sealed class CliHost : IDisposable
             installedVersion: InstalledVersion,
             indexFetcher: IndexFetcher,
             indexReader: IndexReader,
-            mods: Mods,
+            indexSnapshots: IndexSnapshots ?? new ReaderSnapshotProvider(IndexReader),
+            mods: ModRepository ?? Mods,
             loaderInstaller: LoaderInstaller,
             loaderAdopter: LoaderAdopter,
             loaderUninstaller: LoaderUninstaller,
@@ -73,6 +80,12 @@ internal sealed class CliHost : IDisposable
     {
         if (Directory.Exists(Root))
             Directory.Delete(Root, recursive: true);
+    }
+
+    private sealed class ReaderSnapshotProvider(IContentIndexReader reader) : IContentIndexSnapshotProvider
+    {
+        public Task<ContentIndexSnapshot> GetSnapshotAsync(CancellationToken cancellationToken = default) =>
+            reader.ReadAsync(cancellationToken);
     }
 }
 

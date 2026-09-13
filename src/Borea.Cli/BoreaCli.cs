@@ -22,6 +22,8 @@ internal static class BoreaCli
         root.Subcommands.Add(SettingsCommand.Build(services));
         root.Subcommands.Add(GameCommand.Build(services));
         root.Subcommands.Add(IndexCommand.Build(services));
+        root.Subcommands.Add(SearchCommand.Build(services));
+        root.Subcommands.Add(ShowCommand.Build(services));
         root.Subcommands.Add(InstanceCommand.Build(services));
         root.Subcommands.Add(ModStateCommands.BuildEnable(services));
         root.Subcommands.Add(ModStateCommands.BuildDisable(services));
