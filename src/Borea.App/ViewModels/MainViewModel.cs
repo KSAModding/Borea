@@ -92,6 +92,7 @@ public partial class MainViewModel : ViewModelBase
     [RelayCommand]
     public void SetMainWindowHome() // used to set whatever is on the main window (discover, library, etc.)
     {
+        LeaveContentPage();
         CurrentWindowHome = true;
         CurrentWindowDiscover = false;
         CurrentWindowLibrary = false;
@@ -102,6 +103,7 @@ public partial class MainViewModel : ViewModelBase
     [RelayCommand]
     public void SetMainWindowDiscover() // used to set whatever is on the main window (discover, library, etc.)
     {
+        LeaveContentPage();
         _ = EnsureDiscoverLoadedAsync();
         CurrentWindowHome = false;
         CurrentWindowDiscover = true;
@@ -113,6 +115,7 @@ public partial class MainViewModel : ViewModelBase
     [RelayCommand]
     public void SetMainWindowLibrary() // used to set whatever is on the main window (discover, library, etc.)
     {
+        LeaveContentPage();
         CurrentWindowHome = false;
         CurrentWindowDiscover = false;
         CurrentWindowLibrary = true;
@@ -123,6 +126,7 @@ public partial class MainViewModel : ViewModelBase
     [RelayCommand]
     public void SetMainWindowTasks()
     {
+        LeaveContentPage();
         CurrentWindowHome = false;
         CurrentWindowDiscover = false;
         CurrentWindowLibrary = false;

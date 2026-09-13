@@ -330,6 +330,7 @@ public sealed partial class DiscoverItem : ObservableObject, IInstallRow
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CanInstall))]
+    [NotifyPropertyChangedFor(nameof(CanRemove))]
     private bool _isInstalled;
 
     [ObservableProperty]
@@ -347,6 +348,7 @@ public sealed partial class DiscoverItem : ObservableObject, IInstallRow
     private bool _isConfirmingRemove;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanRemove))]
     private bool _isRemoving;
 
     /// <summary>
@@ -361,6 +363,8 @@ public sealed partial class DiscoverItem : ObservableObject, IInstallRow
     /// Mods install into an instance; a loader is set up from the settings.
     /// </summary>
     public bool CanInstall => !IsInstalled && !IsInstalling && Type == ContentType.Mod;
+
+    public bool CanRemove => IsInstalled && !IsRemoving;
 
     public DiscoverItem(MainViewModel owner, ModMetadata listing)
     {
@@ -388,6 +392,18 @@ public sealed partial class DiscoverItem : ObservableObject, IInstallRow
         _listing = full;
         Tags = full.Tags.Take(3).ToList();
         OnPropertyChanged(string.Empty);
+    }
+
+    /// <summary>
+    /// Drops what the last install or removal left on the row: the message,
+    /// a pending plan and the confirmation. Called when the user moves on.
+    /// </summary>
+    internal void ClearOutcome()
+    {
+        InstallError = null;
+        InstallWarning = null;
+        PendingPlan = null;
+        IsConfirmingRemove = false;
     }
 
     internal void RefreshText()

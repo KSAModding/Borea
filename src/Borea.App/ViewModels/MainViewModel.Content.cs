@@ -69,6 +69,8 @@ public partial class MainViewModel
         if (item is null)
             return;
 
+        SelectedContent?.ClearOutcome();
+        item.ClearOutcome();
         SelectedContent = item;
         IsVersionsTab = false;
         ContentDetailError = null;
@@ -140,6 +142,20 @@ public partial class MainViewModel
 
     [RelayCommand]
     private void ShowContentDescription() => IsVersionsTab = false;
+
+    /// <summary>
+    /// Leaving the content page forgets the outcome of its last action, so
+    /// coming back shows the listing and not an old error.
+    /// </summary>
+    private void LeaveContentPage()
+    {
+        if (!CurrentWindowContent)
+            return;
+
+        SelectedContent?.ClearOutcome();
+        foreach (var version in ContentVersions)
+            version.InstallError = null;
+    }
 
     [RelayCommand]
     private async Task ShowContentVersionsAsync()

@@ -617,29 +617,30 @@
                                     </StackPanel>
                                     <TextBlock Classes="body-sm danger" Text="{Binding SelectedContent.InstallError}" TextWrapping="Wrap" Margin="0,8,0,0" IsVisible="{Binding SelectedContent.InstallError, Converter={x:Static ObjectConverters.IsNotNull}}" />
                                 </StackPanel>
-                                <Panel Grid.Column="2" VerticalAlignment="Top">
-                                    <Button Classes="cta" Command="{Binding SelectedContent.InstallCommand}" IsVisible="{Binding SelectedContent.CanInstall}">
-                                        <StackPanel Orientation="Horizontal" Spacing="6">
-                                            <Path Classes="icon size-16" Data="{StaticResource Icon.Plus}" Stroke="{StaticResource Brush.SurfaceHeader}" StrokeThickness="2" VerticalAlignment="Center" />
-                                            <TextBlock Classes="action-lg" Text="{Binding Localization.ContentAdd}" VerticalAlignment="Center" />
-                                        </StackPanel>
-                                    </Button>
-                                    <ProgressBar Width="96" Height="6" VerticalAlignment="Center" IsVisible="{Binding SelectedContent.IsInstalling}" Value="{Binding SelectedContent.Progress}" Maximum="100" Foreground="{StaticResource Brush.Accent}" />
-                                    <ProgressBar Width="96" Height="6" VerticalAlignment="Center" IsVisible="{Binding SelectedContent.IsRemoving}" IsIndeterminate="True" Foreground="{StaticResource Brush.Accent}" />
-                                    <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center" IsVisible="{Binding SelectedContent.IsInstalled}">
-                                        <Border Classes="chip positive" VerticalAlignment="Center" ToolTip.Tip="{Binding InstalledInText}">
+                                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Top">
+                                    <Panel VerticalAlignment="Center">
+                                        <Button Classes="cta" Command="{Binding SelectedContent.InstallCommand}" IsVisible="{Binding SelectedContent.CanInstall}">
+                                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                                <Path Classes="icon size-16" Data="{StaticResource Icon.Plus}" Stroke="{StaticResource Brush.SurfaceHeader}" StrokeThickness="2" VerticalAlignment="Center" />
+                                                <TextBlock Classes="action-lg" Text="{Binding Localization.ContentAdd}" VerticalAlignment="Center" />
+                                            </StackPanel>
+                                        </Button>
+                                        <ProgressBar Width="96" Height="6" VerticalAlignment="Center" IsVisible="{Binding SelectedContent.IsInstalling}" Value="{Binding SelectedContent.Progress}" Maximum="100" Foreground="{StaticResource Brush.Accent}" />
+                                        <ProgressBar Width="96" Height="6" VerticalAlignment="Center" IsVisible="{Binding SelectedContent.IsRemoving}" IsIndeterminate="True" Foreground="{StaticResource Brush.Accent}" />
+                                        <Border Classes="chip positive" VerticalAlignment="Center" IsVisible="{Binding SelectedContent.IsInstalled}" ToolTip.Tip="{Binding InstalledInText}">
                                             <TextBlock Text="{Binding Localization.DiscoverInstalled}" />
                                         </Border>
-                                        <Button Classes="icon" IsVisible="{Binding !SelectedContent.IsRemoving}" AutomationProperties.Name="{Binding SelectedContent.Name}">
-                                            <Button.Flyout>
-                                                <MenuFlyout Placement="BottomEdgeAlignedRight">
-                                                    <MenuItem Header="{Binding Localization.ContentRemove}" Command="{Binding SelectedContent.BeginRemoveCommand}" />
-                                                </MenuFlyout>
-                                            </Button.Flyout>
-                                            <Path Classes="icon-filled size-18" Data="{StaticResource Icon.More}" />
-                                        </Button>
-                                    </StackPanel>
-                                </Panel>
+                                    </Panel>
+                                    <!-- the header menu of the design; Remove is its only entry so far -->
+                                    <Button Classes="icon" VerticalAlignment="Center" IsVisible="{Binding !IsLoaderContent}" AutomationProperties.Name="{Binding SelectedContent.Name}">
+                                        <Button.Flyout>
+                                            <MenuFlyout Placement="BottomEdgeAlignedRight">
+                                                <MenuItem Header="{Binding Localization.ContentRemove}" Command="{Binding SelectedContent.BeginRemoveCommand}" IsEnabled="{Binding SelectedContent.CanRemove}" />
+                                            </MenuFlyout>
+                                        </Button.Flyout>
+                                        <Path Classes="icon-filled size-18" Data="{StaticResource Icon.More}" />
+                                    </Button>
+                                </StackPanel>
                             </Grid>
                             <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="24" Margin="0,16,0,0">
                                 <ItemsControl ItemsSource="{Binding SelectedContent.Tags}" VerticalAlignment="Center" IsVisible="{Binding HasContentTags}">
@@ -676,7 +677,6 @@
                             <TextBlock Classes="action-md" Text="{Binding Localization.NavigationSettings}" />
                         </Button>
                     </StackPanel>
-                    <TextBlock Classes="body-md danger" Text="{Binding SelectedContent.InstallError}" TextWrapping="Wrap" Margin="0,16,0,0" IsVisible="{Binding SelectedContent.InstallError, Converter={x:Static ObjectConverters.IsNotNull}}" />
                     <TextBlock Classes="body-md danger" Text="{Binding ContentDetailError}" TextWrapping="Wrap" Margin="0,16,0,0" IsVisible="{Binding ContentDetailError, Converter={x:Static ObjectConverters.IsNotNull}}" />
 
                     <!-- c/inner-nav-bar -->
@@ -723,7 +723,6 @@
                                                     </Border>
                                                     <TextBlock Grid.Column="3" Classes="body-md secondary" Text="{Binding PublishedText}" VerticalAlignment="Center" />
                                                     <StackPanel Grid.Column="4" Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right" VerticalAlignment="Center">
-                                                        <TextBlock Classes="body-sm danger" Text="{Binding InstallError}" IsVisible="{Binding InstallError, Converter={x:Static ObjectConverters.IsNotNull}}" MaxWidth="200" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
                                                         <Button Classes="icon" Command="{Binding InstallCommand}" IsEnabled="{Binding !IsInstalling}" IsVisible="{Binding CanInstall}" ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.DiscoverAdd}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.DiscoverAdd}">
                                                             <Path Classes="icon size-16" Data="{StaticResource Icon.Plus}" Stroke="{StaticResource Brush.Accent}" StrokeThickness="2" />
                                                         </Button>
@@ -733,6 +732,7 @@
                                                         <Button Classes="text primary" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.InstallAnyway}" Command="{Binding ConfirmInstallCommand}" />
                                                         <Button Classes="text" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryCancel}" Command="{Binding CancelInstallCommand}" />
                                                     </StackPanel>
+                                                    <TextBlock Grid.Row="1" Grid.ColumnSpan="5" Classes="body-sm danger" Text="{Binding InstallError}" TextWrapping="Wrap" Margin="0,6,0,0" IsVisible="{Binding InstallError, Converter={x:Static ObjectConverters.IsNotNull}}" />
                                                 </Grid>
                                             </Border>
                                         </DataTemplate>
