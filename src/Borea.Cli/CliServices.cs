@@ -68,6 +68,7 @@ internal sealed class CliServices : IDisposable
     public required IModPackRepository ModPacks { get; init; }
 
     public required IModPackInstaller ModPackInstaller { get; init; }
+    public required ISharedProfileLauncher SharedProfileLauncher { get; init; }
 
     /// <summary>
     /// The graph the services came from, disposed with this instance. Null when
@@ -101,7 +102,8 @@ internal sealed class CliServices : IDisposable
         ILoaderUninstaller? loaderUninstaller = null,
         ILauncher? launcher = null,
         IModPackRepository? modPacks = null,
-        IModPackInstaller? modPackInstaller = null)
+        IModPackInstaller? modPackInstaller = null,
+        ISharedProfileLauncher? sharedProfileLauncher = null)
     {
         if (services is null)
             throw new ArgumentNullException(nameof(services));
@@ -131,6 +133,7 @@ internal sealed class CliServices : IDisposable
             Launcher = launcher ?? services.Launcher,
             ModPacks = modPacks ?? services.ModPacks,
             ModPackInstaller = modPackInstaller ?? services.ModPackInstaller,
+            SharedProfileLauncher = sharedProfileLauncher ?? services.SharedProfileLauncher,
             Graph = services,
             AdditionalDisposable = launcher is IDisposable disposable && !ReferenceEquals(launcher, services.Launcher)
                 ? disposable
