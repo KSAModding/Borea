@@ -162,6 +162,67 @@ public sealed class DiscoverViewModelTests
     }
 
     [Fact]
+    public async Task Remove_AfterConfirmation_TakesTheModOutOfTheActiveInstance()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var viewModel = harness.ViewModel;
+        var instance = await InstalledContent.AddAsync(harness, "AdvancedFlightComputer", activate: true, ownership: ModInstallOwnership.Borea);
+        await viewModel.LoadAsync();
+        await viewModel.EnsureDiscoverLoadedAsync();
+        var afc = viewModel.DiscoverItems.Single(item => item.ModId == "AdvancedFlightComputer");
+        Assert.Equal(harness.Localization.FormatDiscoverInstalledIn("Main"), viewModel.InstalledInText);
+
+        afc.BeginRemoveCommand.Execute(null);
+        Assert.True(afc.IsConfirmingRemove);
+        afc.CancelRemoveCommand.Execute(null);
+        Assert.False(afc.IsConfirmingRemove);
+        Assert.True(afc.IsInstalled);
+
+        afc.BeginRemoveCommand.Execute(null);
+        await afc.ConfirmRemoveCommand.ExecuteAsync(null);
+
+        Assert.False(afc.IsConfirmingRemove);
+        Assert.False(afc.IsRemoving);
+        Assert.Null(afc.InstallError);
+        Assert.False(afc.IsInstalled);
+        Assert.True(afc.CanInstall);
+        Assert.Empty((await harness.Services.Instances.GetByIdAsync(instance.InstanceId))!.Mods);
+        Assert.Equal(0, viewModel.ActiveInstance?.ModCount);
+    }
+
+    [Fact]
+    public async Task Remove_ForeignFiles_StaysInstalledAndSaysWhy()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var viewModel = harness.ViewModel;
+        await InstalledContent.AddAsync(harness, "AdvancedFlightComputer", activate: true);
+        await viewModel.LoadAsync();
+        await viewModel.EnsureDiscoverLoadedAsync();
+        var afc = viewModel.DiscoverItems.Single(item => item.ModId == "AdvancedFlightComputer");
+
+        afc.BeginRemoveCommand.Execute(null);
+        await afc.ConfirmRemoveCommand.ExecuteAsync(null);
+
+        Assert.Equal(harness.Localization.FormatContentRemoveNotOwned("AdvancedFlightComputer"), afc.InstallError);
+        Assert.True(afc.IsInstalled);
+        Assert.False(afc.IsConfirmingRemove);
+    }
+
+    [Fact]
+    public async Task Remove_WithoutActiveInstance_DoesNothing()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var viewModel = harness.ViewModel;
+        await viewModel.EnsureDiscoverLoadedAsync();
+        var afc = viewModel.DiscoverItems.Single(item => item.ModId == "AdvancedFlightComputer");
+
+        await afc.ConfirmRemoveCommand.ExecuteAsync(null);
+
+        Assert.Null(afc.InstallError);
+        Assert.Null(viewModel.InstalledInText);
+    }
+
+    [Fact]
     public async Task LanguageChange_RetranslatesRows()
     {
         using var harness = await ViewModelHarness.CreateAsync();

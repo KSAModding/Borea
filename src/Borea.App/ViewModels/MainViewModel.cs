@@ -351,6 +351,7 @@ public partial class MainViewModel : ViewModelBase
 
         ActiveInstance = Instances.FirstOrDefault(instance => instance.IsActive);
         RefreshInstalledFlags();
+        OnPropertyChanged(nameof(InstalledInText));
 
         if (SelectedInstance is not null)
         {
@@ -497,6 +498,7 @@ public partial class MainViewModel : ViewModelBase
         RefreshContentGroups();
         RefreshLoaderText();
         OnPropertyChanged(nameof(GameSetupBannerText));
+        OnPropertyChanged(nameof(InstalledInText));
 
         QueuePreferenceSave(preferences => preferences.WithUiCultureName(Localization.SelectedCultureName));
     }

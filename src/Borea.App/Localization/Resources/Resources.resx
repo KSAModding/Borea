@@ -441,4 +441,7 @@
   <data name="SetupBannerAction" xml:space="preserve">
     <value>Set up game</value>
   </data>
+  <data name="DiscoverInstalledInFormat" xml:space="preserve">
+    <value>Installed in {0}</value>
+  </data>
 </root>
