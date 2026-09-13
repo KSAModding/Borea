@@ -181,6 +181,14 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string ContentCompatibility => Resources.ContentCompatibility;
 
+    public string CompatibilityCompatible => Resources.CompatibilityCompatible;
+
+    public string CompatibilityUntested => Resources.CompatibilityUntested;
+
+    public string CompatibilityIncompatible => Resources.CompatibilityIncompatible;
+
+    public string CompatibilityUnknown => Resources.CompatibilityUnknown;
+
     public string ContentLinks => Resources.ContentLinks;
 
     public string ContentTags => Resources.ContentTags;

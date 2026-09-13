@@ -1,4 +1,5 @@
 using Borea.App.ViewModels;
+using Borea.Core.Game;
 using Borea.Core.Instances;
 using Borea.Core.Mods;
 
@@ -173,6 +174,38 @@ public sealed class DiscoverViewModelTests
 
         Assert.NotEqual(english, item.AuthorsText);
         Assert.Contains("Laurens", item.AuthorsText);
+    }
+
+    [Fact]
+    public async Task Load_WithoutAGame_MarksCompatibilityUnknown()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var viewModel = harness.ViewModel;
+        await viewModel.EnsureDiscoverLoadedAsync();
+
+        var afc = viewModel.DiscoverItems.Single(item => item.ModId == "AdvancedFlightComputer");
+
+        Assert.Equal(GameCompatibility.Unknown, afc.Compatibility);
+        Assert.Equal(harness.Localization.CompatibilityUnknown, afc.CompatibilityText);
+    }
+
+    [Fact]
+    public async Task HideIncompatible_DropsListingsWhoseNewestReleaseNeedsANewerGame()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var viewModel = harness.ViewModel;
+        await viewModel.EnsureDiscoverLoadedAsync();
+        Assert.True(GameVersion.TryParse("2026.8.22.5348", out var installed));
+
+        await viewModel.RefreshCompatibilityAsync(installed);
+
+        Assert.True(viewModel.DiscoverItems.Single(item => item.ModId == "AdvancedFlightComputer").IsIncompatible);
+        Assert.True(viewModel.DiscoverItems.Single(item => item.ModId == "KSArmory").IsCompatible);
+
+        viewModel.HideIncompatible = true;
+
+        Assert.DoesNotContain(viewModel.DiscoverItems, item => item.IsIncompatible);
+        Assert.Contains(viewModel.DiscoverItems, item => item.ModId == "KSArmory");
     }
 }
 
