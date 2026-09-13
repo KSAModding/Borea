@@ -873,8 +873,9 @@
                             <Border Height="1" Background="{StaticResource Brush.BorderStrong}" Margin="0,18,0,12" />
 
                             <TextBlock Classes="heading-md" Text="{Binding Localization.AboutFolders}" />
-                            <SelectableTextBlock Classes="body-sm secondary" Text="{Binding BoreaFolder}" Margin="0,4,0,0" />
+                            <TextBlock Classes="body-sm secondary" Text="{Binding BoreaFolderText}" Margin="0,4,0,0" />
                             <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,6,0,0">
+                                <Button Classes="text" Content="{Binding Localization.AboutCopyPath}" Click="CopyBoreaFolder" />
                                 <Button Classes="text" Content="{Binding Localization.AboutOpenBoreaFolder}" Command="{Binding OpenBoreaFolderCommand}" />
                                 <Button Classes="text" Content="{Binding Localization.AboutOpenInstancesFolder}" Command="{Binding OpenInstancesFolderCommand}" />
                             </StackPanel>
@@ -892,21 +893,17 @@
 
                             <Border Height="1" Background="{StaticResource Brush.BorderStrong}" Margin="0,18,0,12" />
 
-                            <TextBlock Classes="heading-md" Text="{Binding Localization.AboutThirdParty}" />
-                            <ItemsControl ItemsSource="{Binding ThirdPartyNotices}" Margin="0,4,0,0">
+                            <TextBlock Classes="heading-md" Text="{Binding Localization.AboutCredits}" />
+                            <TextBlock Classes="body-sm secondary" Text="{Binding Localization.AboutCreditsHint}" TextWrapping="Wrap" Margin="0,4,0,0" />
+                            <ItemsControl ItemsSource="{Binding Credits}" Margin="0,8,0,0">
                                 <ItemsControl.ItemsPanel>
                                     <ItemsPanelTemplate>
-                                        <StackPanel Spacing="6" />
+                                        <WrapPanel ItemSpacing="16" LineSpacing="6" />
                                     </ItemsPanelTemplate>
                                 </ItemsControl.ItemsPanel>
                                 <ItemsControl.ItemTemplate>
-                                    <DataTemplate x:DataType="vm:ThirdPartyNotice">
-                                        <StackPanel Orientation="Horizontal" Spacing="8">
-                                            <Button Classes="filter" Content="{Binding Name}" Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).OpenAboutLinkCommand}" CommandParameter="{Binding Url}" ToolTip.Tip="{Binding Url}" />
-                                            <Border Classes="chip" VerticalAlignment="Center">
-                                                <TextBlock Text="{Binding License}" />
-                                            </Border>
-                                        </StackPanel>
+                                    <DataTemplate x:DataType="vm:Credit">
+                                        <Button Classes="filter" Content="{Binding Name}" Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).OpenAboutLinkCommand}" CommandParameter="{Binding Url}" ToolTip.Tip="{Binding Url}" />
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>

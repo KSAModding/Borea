@@ -181,6 +181,8 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string AboutCopyDiagnostics => Resources.AboutCopyDiagnostics;
 
+    public string AboutCopyPath => Resources.AboutCopyPath;
+
     public string AboutCopied => Resources.AboutCopied;
 
     public string AboutLinks => Resources.AboutLinks;
@@ -195,7 +197,9 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string AboutDiscord => Resources.AboutDiscord;
 
-    public string AboutThirdParty => Resources.AboutThirdParty;
+    public string AboutCredits => Resources.AboutCredits;
+
+    public string AboutCreditsHint => Resources.AboutCreditsHint;
 
     public string ContentLoaderHint => Resources.ContentLoaderHint;
 
@@ -334,6 +338,9 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string FormatAboutFolderMissing(string folder)
         => string.Format(CultureInfo.CurrentCulture, Resources.AboutFolderMissingFormat, folder);
+
+    public string FormatAboutCannotOpen(string target)
+        => string.Format(CultureInfo.CurrentCulture, Resources.AboutCannotOpenFormat, target);
 
     public string FormatContentSource(string source)
     {

@@ -39,6 +39,16 @@ public partial class MainWindow : Window
         viewModel.ReportDiagnosticsCopied();
     }
 
+    // the page shows the folder with "~"; the clipboard gets the real path
+    private async void CopyBoreaFolder(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MainViewModel { BoreaFolder: { } folder } viewModel || Clipboard is null)
+            return;
+
+        await Clipboard.SetTextAsync(folder);
+        viewModel.ReportDiagnosticsCopied();
+    }
+
     private async Task<string?> PickFolderAsync()
     {
         var folders = await StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions { AllowMultiple = false });

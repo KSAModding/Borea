@@ -414,13 +414,22 @@
   <data name="AboutReleases" xml:space="preserve">
     <value>Veröffentlichungen</value>
   </data>
-  <data name="AboutThirdParty" xml:space="preserve">
-    <value>Hinweise zu Drittanbietern</value>
+  <data name="AboutCredits" xml:space="preserve">
+    <value>Gebaut mit</value>
   </data>
   <data name="AboutCommunity" xml:space="preserve">
     <value>KSA-Modding auf GitHub</value>
   </data>
   <data name="AboutDiscord" xml:space="preserve">
     <value>KSA-Modding-Discord</value>
+  </data>
+  <data name="AboutCreditsHint" xml:space="preserve">
+    <value>Die vollständige Liste der Pakete und ihrer Lizenztexte liegt jeder Veröffentlichung bei.</value>
+  </data>
+  <data name="AboutCannotOpenFormat" xml:space="preserve">
+    <value>{0} lässt sich nicht öffnen.</value>
+  </data>
+  <data name="AboutCopyPath" xml:space="preserve">
+    <value>Pfad kopieren</value>
   </data>
 </root>

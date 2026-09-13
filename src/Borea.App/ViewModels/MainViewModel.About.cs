@@ -29,25 +29,33 @@ public partial class MainViewModel
     public const string DiscordUrl = "https://discord.gg/nt4fK4QuTz";
 
     /// <summary>
-    /// The version the release workflow stamped, without the build metadata
-    /// after the "+". A local build reports 1.0.0.
+    /// The version the release workflow stamped, with the commit after the
+    /// "+". A local build reports 1.0.0 plus the commit it was built from.
     /// </summary>
-    public static string BoreaVersion { get; } = ReadVersion();
+    public static string BoreaInformationalVersion { get; } = ReadVersion();
+
+    /// <summary>
+    /// <see cref="BoreaInformationalVersion"/> without the build metadata, for the page.
+    /// </summary>
+    public static string BoreaVersion { get; } = BoreaInformationalVersion.Split('+')[0];
 
     public static string RuntimeText { get; } = RuntimeInformation.FrameworkDescription;
 
     public static string SystemText { get; } = $"{RuntimeInformation.OSDescription} ({RuntimeInformation.OSArchitecture})";
 
     /// <summary>
-    /// The work of others that ships inside Borea, with the license each one
-    /// requires to be named.
+    /// The projects Borea is built on, as credits. The full list with every
+    /// license text is the SBOM of a release; this names the ones a user meets.
     /// </summary>
-    public static IReadOnlyList<ThirdPartyNotice> ThirdPartyNotices { get; } =
+    public static IReadOnlyList<Credit> Credits { get; } =
     [
-        new("Avalonia", "MIT", "https://github.com/AvaloniaUI/Avalonia"),
-        new("CommunityToolkit.Mvvm", "MIT", "https://github.com/CommunityToolkit/dotnet"),
-        new("IBM Plex", "SIL OFL 1.1", "https://github.com/IBM/plex"),
-        new("Phosphor Icons", "MIT", "https://phosphoricons.com"),
+        new(".NET", "https://dotnet.microsoft.com"),
+        new("Avalonia", "https://avaloniaui.net"),
+        new("SkiaSharp", "https://github.com/mono/SkiaSharp"),
+        new("CommunityToolkit.Mvvm", "https://github.com/CommunityToolkit/dotnet"),
+        new("Tomlyn", "https://github.com/xoofx/Tomlyn"),
+        new("IBM Plex", "https://github.com/IBM/plex"),
+        new("Phosphor Icons", "https://phosphoricons.com"),
     ];
 
     [ObservableProperty]
@@ -64,6 +72,13 @@ public partial class MainViewModel
     public string? InstancesFolder => _services?.Paths.GetInstancesRoot();
 
     /// <summary>
+    /// <see cref="BoreaFolder"/> as the page shows it, with the user profile
+    /// shortened to "~" so a screenshot does not carry the user name. The
+    /// copy button puts the real path on the clipboard.
+    /// </summary>
+    public string? BoreaFolderText => BoreaFolder is null ? null : WithoutUserProfile(BoreaFolder);
+
+    /// <summary>
     /// The lines a bug report needs, ready for the clipboard.
     /// </summary>
     public string DiagnosticsText
@@ -71,7 +86,7 @@ public partial class MainViewModel
         get
         {
             var text = new StringBuilder()
-                .AppendLine($"Borea {BoreaVersion}")
+                .AppendLine($"Borea {BoreaInformationalVersion}")
                 .AppendLine(RuntimeText)
                 .AppendLine(SystemText)
                 .AppendLine($"KSA: {InstalledVersionText ?? "not set up"}");
@@ -82,7 +97,7 @@ public partial class MainViewModel
                 foreach (var (loaderId, installation) in _services.Settings.LoaderInstallations)
                 {
                     var version = installation.Version?.ToString() ?? installation.RawVersion ?? "version unknown";
-                    text.AppendLine($"{loaderId}: {version} at {installation.DirectoryPath}");
+                    text.AppendLine($"{loaderId}: {version} at {WithoutUserProfile(installation.DirectoryPath)}");
                 }
             }
 
@@ -108,7 +123,8 @@ public partial class MainViewModel
     private void OpenAboutLink(string? url) => OpenFromAbout(url);
 
     /// <summary>
-    /// Called by the view after it put <see cref="DiagnosticsText"/> on the clipboard.
+    /// Called by the view after it put <see cref="DiagnosticsText"/> or
+    /// <see cref="BoreaFolder"/> on the clipboard.
     /// </summary>
     internal void ReportDiagnosticsCopied()
     {
@@ -129,8 +145,10 @@ public partial class MainViewModel
         {
             if (Directory.Exists(target) || Uri.IsWellFormedUriString(target, UriKind.Absolute))
                 Process.Start(new ProcessStartInfo(target) { UseShellExecute = true });
-            else
+            else if (Path.IsPathRooted(target))
                 AboutError = Localization.FormatAboutFolderMissing(target);
+            else
+                AboutError = Localization.FormatAboutCannotOpen(target);
         }
         catch (Exception exception) when (exception is Win32Exception or InvalidOperationException or IOException)
         {
@@ -142,10 +160,28 @@ public partial class MainViewModel
     {
         var informational = typeof(MainViewModel).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
         if (!string.IsNullOrWhiteSpace(informational))
-            return informational.Split('+')[0];
+            return informational;
 
         return typeof(MainViewModel).Assembly.GetName().Version?.ToString(3) ?? "0.0.0";
     }
+
+    /// <summary>
+    /// A path with the user profile folder replaced by "~", so a bug report
+    /// does not carry the user name. Other paths are returned as they are.
+    /// </summary>
+    internal static string WithoutUserProfile(string path)
+    {
+        var profile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        if (profile.Length == 0)
+            return path;
+
+        var comparison = OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+        if (path.Equals(profile, comparison))
+            return "~";
+
+        var prefix = profile.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) + Path.DirectorySeparatorChar;
+        return path.StartsWith(prefix, comparison) ? "~" + Path.DirectorySeparatorChar + path[prefix.Length..] : path;
+    }
 }
 
-public sealed record ThirdPartyNotice(string Name, string License, string Url);
+public sealed record Credit(string Name, string Url);
