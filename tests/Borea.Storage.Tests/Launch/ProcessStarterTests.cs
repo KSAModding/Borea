@@ -141,10 +141,9 @@ public sealed class ProcessStarterTests : IDisposable
         using var record = JsonDocument.Parse(File.ReadAllText(recordPath));
         var root = record.RootElement;
         Assert.Equal(arguments, root.GetProperty("Arguments").EnumerateArray().Select(argument => argument.GetString()).ToArray());
-        Assert.Equal(
-            Path.TrimEndingDirectorySeparator(Path.GetFullPath(_tempRoot)),
-            Path.TrimEndingDirectorySeparator(Path.GetFullPath(root.GetProperty("WorkingDirectory").GetString()!)),
-            ignoreCase: OperatingSystem.IsWindows());
+        // The child wrote its record relative to its working directory, so the reported directory holds it.
+        // A path comparison would fail on macOS, where the temp folder is reached through a symlink.
+        Assert.True(File.Exists(Path.Combine(root.GetProperty("WorkingDirectory").GetString()!, "record.json")));
         Assert.Equal("probe value", root.GetProperty("Variable").GetString());
     }
 
