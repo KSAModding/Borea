@@ -353,6 +353,9 @@ public partial class MainViewModel : ViewModelBase
     internal Task ActivateInstanceAsync(Guid instanceId)
         => RunInstanceOperationAsync(instances => instances.SetActiveInstanceAsync(instanceId));
 
+    internal Task DeactivateInstanceAsync()
+        => RunInstanceOperationAsync(instances => instances.ClearActiveInstanceAsync());
+
     internal Task RenameInstanceAsync(Guid instanceId, string newName)
         => RunInstanceOperationAsync(instances => instances.RenameAsync(instanceId, newName.Trim()));
 
@@ -505,6 +508,13 @@ public sealed partial class InstanceItem : ObservableObject
 
     [RelayCommand]
     private Task ActivateAsync() => _owner.ActivateInstanceAsync(InstanceId);
+
+    /// <summary>
+    /// The switch on the row. It activates an inactive instance and leaves no
+    /// instance active when it is switched off on the active one.
+    /// </summary>
+    [RelayCommand]
+    private Task ToggleActiveAsync() => IsActive ? _owner.DeactivateInstanceAsync() : _owner.ActivateInstanceAsync(InstanceId);
 
     [RelayCommand]
     private Task OpenAsync() => _owner.OpenInstanceAsync(this);

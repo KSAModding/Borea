@@ -61,7 +61,7 @@
                                         <Binding Path="!IsConfirmingDelete" />
                                     </MultiBinding>
                                 </StackPanel.IsVisible>
-                                <ToggleSwitch Classes="switch" IsChecked="{Binding IsActive, Mode=OneWay}" Command="{Binding ActivateCommand}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryActivate}" VerticalAlignment="Center" />
+                                <ToggleSwitch Classes="switch" IsChecked="{Binding IsActive, Mode=OneWay}" Command="{Binding ToggleActiveCommand}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryActivate}" VerticalAlignment="Center" />
                                 <Button Classes="icon" AutomationProperties.Name="{Binding Name}">
                                     <Button.Flyout>
                                         <MenuFlyout Placement="BottomEdgeAlignedRight">
