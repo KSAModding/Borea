@@ -256,35 +256,37 @@
                     </StackPanel>
                 </Border>
 
-                <!-- Trending -->
-                <Grid ColumnDefinitions="*,Auto" Margin="3,44,3,0">
-                    <TextBlock Classes="heading-sm heading" Text="{Binding Localization.HomeTrending}" />
+                <!-- Recently updated: the index has no download counts yet, so Home shows the newest releases -->
+                <Grid ColumnDefinitions="*,Auto" Margin="3,44,3,0" IsVisible="{Binding HasRecentItems}">
+                    <TextBlock Classes="heading-sm heading" Text="{Binding Localization.HomeRecentlyUpdated}" />
                     <Button Grid.Column="1" Classes="link" Padding="0" Height="18" Command="{Binding SetMainWindowDiscover}">
                         <TextBlock Classes="action-md" Text="{Binding Localization.HomeDiscoverMods}" />
                     </Button>
                 </Grid>
 
-                <ItemsControl ItemsSource="{Binding TrendingItems}" Margin="0,16,-5,0">
+                <ItemsControl ItemsSource="{Binding RecentItems}" Margin="0,16,-5,0" IsVisible="{Binding HasRecentItems}">
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate>
                             <UniformGrid Columns="4" />
                         </ItemsPanelTemplate>
                     </ItemsControl.ItemsPanel>
                     <ItemsControl.ItemTemplate>
-                        <DataTemplate x:DataType="vm:TrendingItem">
+                        <DataTemplate x:DataType="vm:RecentItem">
                             <!-- tile: thumbnail with the text over its bottom. The index has no image field yet (#8), so the gradient stands in. -->
-                            <Border Classes="card" Margin="0,0,5,5" Height="171" Background="{StaticResource Brush.Thumbnail}" Padding="16">
-                                <StackPanel VerticalAlignment="Bottom" Spacing="10">
-                                    <TextBlock Classes="heading-sm" Text="{Binding Name}" TextWrapping="Wrap" />
-                                    <Grid ColumnDefinitions="*,Auto">
-                                        <TextBlock Classes="label-md" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ContentTypeMod}" />
-                                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4">
-                                            <Path Classes="icon size-16" Data="{StaticResource Icon.Download}" />
-                                            <TextBlock Classes="label-md" Text="{Binding Downloads}" VerticalAlignment="Center" />
-                                        </StackPanel>
-                                    </Grid>
-                                </StackPanel>
-                            </Border>
+                            <Button Classes="plain" Margin="0,0,5,5" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Command="{Binding OpenCommand}" AutomationProperties.Name="{Binding Name}">
+                                <Border Classes="card" Height="171" Background="{StaticResource Brush.Thumbnail}" Padding="16">
+                                    <StackPanel VerticalAlignment="Bottom" Spacing="10">
+                                        <TextBlock Classes="heading-sm" Text="{Binding Name}" TextWrapping="Wrap" />
+                                        <Grid ColumnDefinitions="*,Auto">
+                                            <TextBlock Classes="label-md" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ContentTypeMod}" />
+                                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4">
+                                                <Path Classes="icon size-16" Data="{StaticResource Icon.Clock}" />
+                                                <TextBlock Classes="label-md" Text="{Binding UpdatedText}" VerticalAlignment="Center" />
+                                            </StackPanel>
+                                        </Grid>
+                                    </StackPanel>
+                                </Border>
+                            </Button>
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>

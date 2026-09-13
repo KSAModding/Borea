@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -10,6 +11,7 @@ using Borea.App.Formatting;
 using Borea.App.Localization;
 using Borea.Composition;
 using Borea.Core.Instances;
+using Borea.Core.Mods;
 using Borea.Core.Preferences;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -159,20 +161,13 @@ public partial class MainViewModel : ViewModelBase
     public bool HasActiveInstance => ActiveInstance is not null;
 
     /// <summary>
-    /// Placeholder cards for the trending grid until the content index carries
-    /// download counts and thumbnails (see #8).
+    /// The mods of the content index with the most recent newest release,
+    /// newest first. The index has no download counts yet, so Home shows what
+    /// changed instead of what is popular (#8).
     /// </summary>
-    public IReadOnlyList<TrendingItem> TrendingItems { get; } =
-    [
-        new("Advanced Flight Computer", 123),
-        new("DeltaVMap", 123),
-        new("StageInfo", 123),
-        new("Auto Remove Finished Burns", 123),
-        new("Auto Remove Finished Burns", 123),
-        new("StageInfo", 123),
-        new("DeltaVMap", 123),
-        new("Advanced Flight Computer", 123),
-    ];
+    public ObservableCollection<RecentItem> RecentItems { get; } = [];
+
+    public bool HasRecentItems => RecentItems.Count > 0;
 
     //library
     public ObservableCollection<InstanceItem> Instances { get; } = [];
@@ -265,6 +260,7 @@ public partial class MainViewModel : ViewModelBase
         InstalledVersionText = _services?.InstalledVersion.GetInstalledVersion()?.RawVersion;
         await ReloadInstancesAsync();
         await RefreshContentIndexAsync();
+        await LoadRecentItemsAsync();
     }
 
     /// <summary>
@@ -289,6 +285,53 @@ public partial class MainViewModel : ViewModelBase
     }
 
     private bool _indexRefreshed;
+
+    internal const int RecentItemCount = 8;
+
+    /// <summary>
+    /// Fills the Home grid from the cached content index. A failure leaves the
+    /// grid empty, and Home hides the section.
+    /// </summary>
+    private async Task LoadRecentItemsAsync()
+    {
+        if (_services is null)
+            return;
+
+        var recent = new List<RecentItem>();
+        try
+        {
+            foreach (var listing in await _services.ContentIndex.GetAvailableModsAsync())
+            {
+                if (listing.Type != ContentType.Mod)
+                    continue;
+
+                var release = await _services.ContentIndex.GetLatestReleaseAsync(listing.ModId);
+                if (release is not null)
+                    recent.Add(new RecentItem(this, listing, release.ReleaseDate));
+            }
+        }
+        catch (Exception exception) when (exception is System.Net.Http.HttpRequestException or IOException or InvalidOperationException or TaskCanceledException)
+        {
+            recent.Clear();
+        }
+
+        RecentItems.Clear();
+        foreach (var item in recent.OrderByDescending(item => item.UpdatedAt).Take(RecentItemCount))
+            RecentItems.Add(item);
+        OnPropertyChanged(nameof(HasRecentItems));
+    }
+
+    /// <summary>
+    /// Opens a Home card on the content page. It uses the Discover row of the
+    /// same listing when Discover has one, so both pages show the same row.
+    /// </summary>
+    internal async Task OpenRecentAsync(RecentItem item)
+    {
+        await EnsureDiscoverLoadedAsync();
+        var row = _listings.FirstOrDefault(listing => ModIds.Equals(listing.ModId, item.ModId) && listing.Source == item.Listing.Source)
+            ?? new DiscoverItem(this, item.Listing);
+        await OpenContentAsync(row);
+    }
 
     private async Task ReloadInstancesAsync()
     {
@@ -435,7 +478,11 @@ public partial class MainViewModel : ViewModelBase
     private void OnRegionalFormatChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (e.PropertyName == nameof(RegionalFormatService.SelectedFormat))
+        {
             OnPropertyChanged(nameof(SelectedRegionalFormat));
+            foreach (var item in RecentItems)
+                item.RefreshText();
+        }
     }
 
     private void OnLocalizationChanged(object? sender, PropertyChangedEventArgs e)
@@ -459,9 +506,37 @@ public partial class MainViewModel : ViewModelBase
 }
 
 /// <summary>
-/// One card in the trending grid.
+/// One card in the Home grid: a mod and the date of its newest release.
 /// </summary>
-public sealed record TrendingItem(string Name, int Downloads);
+public sealed partial class RecentItem : ObservableObject
+{
+    private readonly MainViewModel _owner;
+
+    internal ModMetadata Listing { get; }
+
+    public string ModId => Listing.ModId;
+
+    public string Name => Listing.Name;
+
+    public DateTimeOffset UpdatedAt { get; }
+
+    /// <summary>
+    /// The release date in the regional format the user chose.
+    /// </summary>
+    public string UpdatedText => UpdatedAt.ToLocalTime().ToString("d", CultureInfo.CurrentCulture);
+
+    public RecentItem(MainViewModel owner, ModMetadata listing, DateTimeOffset updatedAt)
+    {
+        _owner = owner;
+        Listing = listing;
+        UpdatedAt = updatedAt;
+    }
+
+    internal void RefreshText() => OnPropertyChanged(nameof(UpdatedText));
+
+    [RelayCommand]
+    private Task OpenAsync() => _owner.OpenRecentAsync(this);
+}
 
 /// <summary>
 /// One row of the instance list. Rename and delete happen inline: the row
