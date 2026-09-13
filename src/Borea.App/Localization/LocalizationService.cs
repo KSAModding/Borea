@@ -151,6 +151,10 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string DiscoverNoRelease => Resources.DiscoverNoRelease;
 
+    public string InstallAnyway => Resources.InstallAnyway;
+
+    public string InstallInstanceMissing => Resources.InstallInstanceMissing;
+
     public string ModalCreateInstanceTitle => Resources.ModalCreateInstanceTitle;
 
     public string ModalNameLabel => Resources.ModalNameLabel;

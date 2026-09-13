@@ -90,6 +90,8 @@ public sealed class ContentViewModelTests
         var oldest = viewModel.ContentVersions.Last();
 
         await oldest.InstallCommand.ExecuteAsync(null);
+        Assert.NotNull(oldest.InstallWarning);
+        await oldest.ConfirmInstallCommand.ExecuteAsync(null);
 
         Assert.NotNull(oldest.InstallError);
         Assert.False(oldest.IsInstalling);

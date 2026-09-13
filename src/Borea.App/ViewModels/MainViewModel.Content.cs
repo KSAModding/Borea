@@ -8,6 +8,7 @@ using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Borea.Core.Mods;
+using Borea.Core.Planning;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -110,7 +111,7 @@ public partial class MainViewModel
 
             var release = await _services.Mods.GetLatestReleaseAsync(item.ModId);
             if (ReferenceEquals(SelectedContent, item) && release is not null)
-                LatestVersion = new VersionItem(this, item, release);
+                LatestVersion = new VersionItem(this, release);
         }
         catch (Exception exception) when (exception is HttpRequestException or IOException or InvalidOperationException or TaskCanceledException)
         {
@@ -157,7 +158,7 @@ public partial class MainViewModel
             {
                 var release = await _services.Mods.GetReleaseAsync(item.ModId, version);
                 if (release is not null)
-                    releases.Add(new VersionItem(this, item, release));
+                    releases.Add(new VersionItem(this, release));
             }
 
             if (ReferenceEquals(SelectedContent, item))
@@ -194,30 +195,10 @@ public partial class MainViewModel
     }
 
     /// <summary>
-    /// Installs one specific release into the active instance.
+    /// Plans the install of one specific release into the active instance.
     /// </summary>
-    internal async Task InstallVersionAsync(DiscoverItem item, ModVersionMetadata release, VersionItem row)
-    {
-        if (_services is null || ActiveInstance is null || row.IsInstalling)
-            return;
-
-        row.IsInstalling = true;
-        row.InstallError = null;
-        try
-        {
-            await _services.Installer.InstallAsync(ActiveInstance.InstanceId, release, InstallReason.Manual, enable: true);
-        }
-        catch (Exception exception) when (exception is HttpRequestException or IOException or InvalidOperationException or UnauthorizedAccessException or DownloadFailedException or NotSupportedException or TaskCanceledException)
-        {
-            row.InstallError = exception.Message;
-        }
-        finally
-        {
-            row.IsInstalling = false;
-        }
-
-        await ReloadInstancesAsync();
-    }
+    internal Task InstallVersionAsync(ModVersionMetadata release, VersionItem row)
+        => PlanInstallAsync(row, () => Task.FromResult<ModVersionMetadata?>(release), exact: true);
 }
 
 public sealed record ContentLink(string Label, string Url);
@@ -225,10 +206,9 @@ public sealed record ContentLink(string Label, string Url);
 /// <summary>
 /// One release of a listing (c/table-version-row in #8).
 /// </summary>
-public sealed partial class VersionItem : ObservableObject
+public sealed partial class VersionItem : ObservableObject, IInstallRow
 {
     private readonly MainViewModel _owner;
-    private readonly DiscoverItem _item;
     private readonly ModVersionMetadata _release;
 
     public string Version => _release.Version.ToString();
@@ -260,16 +240,32 @@ public sealed partial class VersionItem : ObservableObject
     [ObservableProperty]
     private string? _installError;
 
+    [ObservableProperty]
+    private double _progress;
+
+    /// <summary>
+    /// The planner's warnings while <see cref="PendingPlan"/> waits for a confirmation.
+    /// </summary>
+    [ObservableProperty]
+    private string? _installWarning;
+
+    public InstallPlan? PendingPlan { get; set; }
+
     /// <summary>Mods install into an instance; a loader is set up from the settings.</summary>
     public bool CanInstall => _release.Type == ContentType.Mod;
 
-    public VersionItem(MainViewModel owner, DiscoverItem item, ModVersionMetadata release)
+    public VersionItem(MainViewModel owner, ModVersionMetadata release)
     {
         _owner = owner;
-        _item = item;
         _release = release;
     }
 
     [RelayCommand]
-    private Task InstallAsync() => _owner.InstallVersionAsync(_item, _release, this);
+    private Task InstallAsync() => _owner.InstallVersionAsync(_release, this);
+
+    [RelayCommand]
+    private Task ConfirmInstallAsync() => _owner.ConfirmInstallAsync(this);
+
+    [RelayCommand]
+    private void CancelInstall() => MainViewModel.CancelInstall(this);
 }

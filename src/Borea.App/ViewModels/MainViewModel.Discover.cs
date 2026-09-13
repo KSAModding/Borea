@@ -7,6 +7,7 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using Borea.Composition;
 using Borea.Core.Mods;
+using Borea.Core.Planning;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -172,41 +173,21 @@ public partial class MainViewModel
     }
 
     /// <summary>
-    /// Installs the latest release into the active instance, the way the CLI
-    /// would. Dependencies are not resolved yet; that needs the resolver from #8.
+    /// Plans the install of the newest release into the active instance.
     /// </summary>
-    internal async Task InstallAsync(DiscoverItem item)
+    internal Task InstallAsync(DiscoverItem item)
     {
-        if (_services is null || ActiveInstance is null || item.IsInstalling)
-            return;
-
-        item.IsInstalling = true;
-        item.InstallError = null;
-        var progress = new Progress<DownloadProgress>(value => item.Progress = value.PercentComplete);
-        try
-        {
-            var release = await _services.Mods.GetLatestReleaseAsync(item.ModId)
-                ?? throw new InvalidOperationException(Localization.DiscoverNoRelease);
-            await _services.Installer.InstallAsync(ActiveInstance.InstanceId, release, InstallReason.Manual, enable: true, progress);
-        }
-        catch (Exception exception) when (exception is HttpRequestException or IOException or InvalidOperationException or UnauthorizedAccessException or DownloadFailedException or NotSupportedException or TaskCanceledException)
-        {
-            item.InstallError = exception.Message;
-        }
-        finally
-        {
-            item.IsInstalling = false;
-            item.Progress = 0;
-        }
-
-        await ReloadInstancesAsync();
+        var services = _services;
+        return services is null
+            ? Task.CompletedTask
+            : PlanInstallAsync(item, () => services.Mods.GetLatestReleaseAsync(item.ModId), exact: false);
     }
 }
 
 /// <summary>
 /// One row of the Discover list (c/content-row in #8).
 /// </summary>
-public sealed partial class DiscoverItem : ObservableObject
+public sealed partial class DiscoverItem : ObservableObject, IInstallRow
 {
     private readonly MainViewModel _owner;
     private ModMetadata _listing;
@@ -264,6 +245,14 @@ public sealed partial class DiscoverItem : ObservableObject
     private string? _installError;
 
     /// <summary>
+    /// The planner's warnings while <see cref="PendingPlan"/> waits for a confirmation.
+    /// </summary>
+    [ObservableProperty]
+    private string? _installWarning;
+
+    public InstallPlan? PendingPlan { get; set; }
+
+    /// <summary>
     /// Mods install into an instance; a loader is set up from the settings.
     /// </summary>
     public bool CanInstall => !IsInstalled && !IsInstalling && Type == ContentType.Mod;
@@ -308,4 +297,10 @@ public sealed partial class DiscoverItem : ObservableObject
 
     [RelayCommand]
     private Task InstallAsync() => _owner.InstallAsync(this);
+
+    [RelayCommand]
+    private Task ConfirmInstallAsync() => _owner.ConfirmInstallAsync(this);
+
+    [RelayCommand]
+    private void CancelInstall() => MainViewModel.CancelInstall(this);
 }

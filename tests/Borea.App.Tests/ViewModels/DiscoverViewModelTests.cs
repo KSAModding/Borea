@@ -124,9 +124,39 @@ public sealed class DiscoverViewModelTests
 
         await item.InstallCommand.ExecuteAsync(null);
 
+        // without a game the compatibility is unknown, so the plan waits for a confirmation
+        Assert.NotNull(item.InstallWarning);
+        Assert.Null(item.InstallError);
+        await item.ConfirmInstallCommand.ExecuteAsync(null);
+
+        Assert.Null(item.InstallWarning);
+        Assert.Null(item.PendingPlan);
         Assert.NotNull(item.InstallError);
         Assert.False(item.IsInstalling);
         Assert.Equal(0, item.Progress);
+        Assert.Empty((await harness.Services.Instances.GetByIdAsync(instance.InstanceId))!.Mods);
+    }
+
+    [Fact]
+    public async Task Install_WarningCancelled_InstallsNothing()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var viewModel = harness.ViewModel;
+        var instance = await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value);
+        await harness.Services.Instances.SetActiveInstanceAsync(instance.InstanceId);
+        await viewModel.LoadAsync();
+        await viewModel.EnsureDiscoverLoadedAsync();
+        var item = viewModel.DiscoverItems.Single(row => row.ModId == "AdvancedFlightComputer");
+
+        await item.InstallCommand.ExecuteAsync(null);
+        Assert.Contains("AdvancedFlightComputer", item.InstallWarning);
+        Assert.NotNull(item.PendingPlan);
+
+        item.CancelInstallCommand.Execute(null);
+
+        Assert.Null(item.InstallWarning);
+        Assert.Null(item.PendingPlan);
+        Assert.Null(item.InstallError);
         Assert.Empty((await harness.Services.Instances.GetByIdAsync(instance.InstanceId))!.Mods);
     }
 
