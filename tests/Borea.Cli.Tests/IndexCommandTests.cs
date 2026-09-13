@@ -127,6 +127,22 @@ public sealed class IndexCommandTests : IDisposable
     }
 
     [Fact]
+    public async Task Validate_MalformedDownloads_ReportsScopeAndFails()
+    {
+        _host.IndexReader.Snapshot = Snapshot(new ContentIndexDiagnostic(
+            ContentIndexDiagnosticKind.Malformed,
+            ContentIndexDiagnosticScope.Downloads,
+            "The downloads value is unreadable. The downloads total 1000 is not the sum 1200 of its host values.",
+            "active-mod"));
+
+        var run = await _host.RunAsync("index", "validate");
+
+        Assert.Equal(1, run.ExitCode);
+        Assert.Contains("  Download counts: 0 listings with counts, 1 malformed.", run.Output);
+        Assert.Contains("malformed downloads active-mod: The downloads value is unreadable.", run.Output);
+    }
+
+    [Fact]
     public async Task Validate_Cancellation_ReachesReaderAndReportsFailure()
     {
         _host.IndexReader.Read = async cancellationToken =>

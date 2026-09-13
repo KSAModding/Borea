@@ -16,6 +16,7 @@ public enum ContentIndexDiagnosticScope
     IndexStatus = 4,
     GameVersions = 5,
     Tags = 6,
+    Downloads = 7,
 }
 
 /// <summary>One part of the snapshot that Borea could not read safely.</summary>
