@@ -453,10 +453,160 @@ public sealed class RepositoryInstallPlannerTests
         Assert.NotEqual(InstallPlanningState.Capture(first), InstallPlanningState.Capture(second));
     }
 
+    [Fact]
+    public async Task PlanAsync_StableChannel_SkipsANewerDevReleaseOfARequestedMod()
+    {
+        var stable = Release("A", "1.0.0");
+        var dev = Release("A", "1.1.0-dev.1", status: ReleaseStatus.Dev);
+        var plan = await PlanInChannelAsync(null, EmptyInstance(), [new RequestedMod(dev, InstallReason.Manual, Exact: false)], [stable, dev]);
+        Assert.True(plan.IsReady);
+        Assert.Equal(ModVersion.Parse("1.0.0"), Assert.Single(plan.Operations).Release.Version);
+        Assert.DoesNotContain(plan.Warnings, value => value.Code == "release-channel");
+    }
+
+    [Fact]
+    public async Task PlanAsync_StableChannel_UpdatesToANewerStableReleaseAndNotToANewerDevRelease()
+    {
+        var installed = Installed("A", "1.0.0");
+        var instance = Instance.FromExisting(Guid.NewGuid(), "Test", InstanceSource.Custom.Value, DateTimeOffset.UtcNow, [installed], false);
+        var available = new[] { Release("A", "1.0.0"), Release("A", "1.1.0"), Release("A", "2.0.0-dev.1", status: ReleaseStatus.Dev) };
+        var plan = await PlanInChannelAsync(null, instance, [new RequestedMod(installed.Metadata, InstallReason.Manual, Exact: false)], available);
+        Assert.True(plan.IsReady);
+        Assert.Equal(ModVersion.Parse("1.1.0"), Assert.Single(plan.Operations).Release.Version);
+    }
+
+    [Fact]
+    public async Task PlanAsync_TestingChannel_OffersATestingReleaseButNotADevRelease()
+    {
+        var available = new[] { Release("A", "1.0.0"), Release("A", "1.1.0-beta.1", status: ReleaseStatus.Testing), Release("A", "1.2.0-dev.1", status: ReleaseStatus.Dev) };
+        var plan = await PlanInChannelAsync(ReleaseChannel.Testing, EmptyInstance(), [new RequestedMod(available[2], InstallReason.Manual, Exact: false)], available);
+        Assert.True(plan.IsReady);
+        Assert.Equal(ModVersion.Parse("1.1.0-beta.1"), Assert.Single(plan.Operations).Release.Version);
+    }
+
+    [Theory]
+    [InlineData(ReleaseChannel.Stable, "1.0.0")]
+    [InlineData(ReleaseChannel.Testing, "1.1.0-beta.1")]
+    [InlineData(ReleaseChannel.Dev, "1.2.0-dev.1")]
+    public async Task PlanAsync_Dependency_ResolvesToTheNewestReleaseInTheChannel(ReleaseChannel channel, string expected)
+    {
+        var a = Release("A", dependencies: [Required("B")]);
+        var available = new[] { a, Release("B", "1.0.0"), Release("B", "1.1.0-beta.1", status: ReleaseStatus.Testing), Release("B", "1.2.0-dev.1", status: ReleaseStatus.Dev) };
+        var plan = await PlanInChannelAsync(channel, EmptyInstance(), [new RequestedMod(a, InstallReason.Manual)], available);
+        Assert.True(plan.IsReady);
+        Assert.Equal(ModVersion.Parse(expected), Assert.Single(plan.Selections, value => value.Release.ModId == "B").Release.Version);
+        Assert.DoesNotContain(plan.Warnings, value => value.Code == "release-channel");
+    }
+
+    [Fact]
+    public async Task PlanAsync_ExactDevReleaseOnStable_IsReadyWithAWarning()
+    {
+        var dev = Release("A", "2.0.0-dev.1", status: ReleaseStatus.Dev);
+        var plan = await PlanInChannelAsync(null, EmptyInstance(), [new RequestedMod(dev, InstallReason.Manual)], [Release("A"), dev]);
+        Assert.True(plan.IsReady);
+        Assert.Equal(ModVersion.Parse("2.0.0-dev.1"), Assert.Single(plan.Operations).Release.Version);
+        var warning = Assert.Single(plan.Warnings, value => value.Code == "release-channel");
+        Assert.Equal("A", warning.ModId);
+        Assert.Contains("dev", warning.Message);
+        Assert.Contains("stable channel", warning.Message);
+    }
+
+    [Fact]
+    public async Task PlanAsync_PackPinWithDevStatus_InstallsWithAWarning()
+    {
+        var pinned = Release("A", "2.0.0-dev.1", status: ReleaseStatus.Dev);
+        var other = Release("B");
+        var plan = await PlanInChannelAsync(null, EmptyInstance(), [new RequestedMod(pinned, InstallReason.ModPack), new RequestedMod(other, InstallReason.ModPack)], [Release("A"), pinned, other]);
+        Assert.True(plan.IsReady);
+        Assert.Contains(plan.Operations, value => value.Release.ModId == "A" && value.Release.Version == ModVersion.Parse("2.0.0-dev.1"));
+        var warning = Assert.Single(plan.Warnings, value => value.Code == "release-channel");
+        Assert.Equal("A", warning.ModId);
+    }
+
+    [Theory]
+    [InlineData(ReleaseChannel.Stable, "1.0.0")]
+    [InlineData(ReleaseChannel.Testing, "1.0.0")]
+    [InlineData(ReleaseChannel.Dev, "2.0.0")]
+    public async Task PlanAsync_UnknownStatus_IsACandidateOnlyOnDev(ReleaseChannel channel, string expected)
+    {
+        var a = Release("A", dependencies: [Required("B")]);
+        var available = new[] { a, Release("B", "1.0.0"), Release("B", "2.0.0", status: ReleaseStatus.Unknown) };
+        var plan = await PlanInChannelAsync(channel, EmptyInstance(), [new RequestedMod(a, InstallReason.Manual)], available);
+        Assert.True(plan.IsReady);
+        Assert.Equal(ModVersion.Parse(expected), Assert.Single(plan.Selections, value => value.Release.ModId == "B").Release.Version);
+    }
+
+    [Fact]
+    public async Task PlanAsync_RequestChannel_OverridesThePlannerChannel()
+    {
+        var dev = Release("A", "2.0.0-dev.1", status: ReleaseStatus.Dev);
+        var repository = new FakeRepository([Release("A"), dev]);
+        var planner = new RepositoryInstallPlanner(new ModDependencyResolver(), ReleaseChannel.Stable);
+        var plan = await planner.PlanAsync(new InstallPlanningRequest(EmptyInstance(), [new RequestedMod(dev, InstallReason.Manual, Exact: false)], repository, Channel: ReleaseChannel.Dev));
+        Assert.True(plan.IsReady);
+        Assert.Equal(ModVersion.Parse("2.0.0-dev.1"), Assert.Single(plan.Operations).Release.Version);
+        Assert.DoesNotContain(plan.Warnings, value => value.Code == "release-channel");
+    }
+
+    [Fact]
+    public async Task PlanAsync_InstalledDevReleaseOnStable_StaysWithoutAWarning()
+    {
+        var installed = Installed("A", "2.0.0-dev.1", status: ReleaseStatus.Dev);
+        var instance = Instance.FromExisting(Guid.NewGuid(), "Test", InstanceSource.Custom.Value, DateTimeOffset.UtcNow, [installed], false);
+        var plan = await PlanInChannelAsync(null, instance, [new RequestedMod(installed.Metadata, InstallReason.Manual, Exact: false)], [Release("A"), installed.Metadata]);
+        Assert.True(plan.IsReady);
+        Assert.Empty(plan.Operations);
+        Assert.DoesNotContain(plan.Warnings, value => value.Code == "release-channel");
+    }
+
+    [Fact]
+    public async Task PlanAsync_InstalledDevDependencyOnStable_IsKeptWithoutAWarning()
+    {
+        var installed = Installed("B", "2.0.0-dev.1", status: ReleaseStatus.Dev);
+        var instance = Instance.FromExisting(Guid.NewGuid(), "Test", InstanceSource.Custom.Value, DateTimeOffset.UtcNow, [installed], false);
+        var a = Release("A", dependencies: [Required("B", "2.0.0-dev.1")]);
+        var plan = await PlanInChannelAsync(null, instance, [new RequestedMod(a, InstallReason.Manual)], [a, Release("B"), installed.Metadata]);
+        Assert.True(plan.IsReady);
+        Assert.Equal("A", Assert.Single(plan.Operations).Release.ModId);
+        Assert.DoesNotContain(plan.Warnings, value => value.Code == "release-channel");
+    }
+
+    [Fact]
+    public async Task PlanAsync_NoReleaseInTheChannel_ReportsTheChannel()
+    {
+        var dev = Release("A", "1.0.0-dev.1", status: ReleaseStatus.Dev);
+        var plan = await PlanInChannelAsync(ReleaseChannel.Testing, EmptyInstance(), [new RequestedMod(dev, InstallReason.Manual, Exact: false)], [dev]);
+        Assert.False(plan.IsReady);
+        Assert.Contains(plan.Conflicts, value => value.Code == "outside-channel" && value.Message.Contains("testing channel"));
+        Assert.DoesNotContain(plan.Conflicts, value => value.Code == "missing-request");
+        Assert.Empty(plan.Operations);
+    }
+
+    [Fact]
+    public async Task PlanAsync_InstallOnStable_KeepsAnInstalledDevReleaseOfTheRequestedMod()
+    {
+        var installed = Installed("A", "2.0.0-dev.1", status: ReleaseStatus.Dev);
+        var instance = Instance.FromExisting(Guid.NewGuid(), "Test", InstanceSource.Custom.Value, DateTimeOffset.UtcNow, [installed], false);
+        var stable = Release("A", "1.0.0");
+        var plan = await PlanInChannelAsync(null, instance, [new RequestedMod(stable, InstallReason.Manual, Exact: false)], [stable, installed.Metadata]);
+        Assert.True(plan.IsReady);
+        Assert.Empty(plan.Operations);
+        Assert.Equal(ModVersion.Parse("2.0.0-dev.1"), Assert.Single(plan.Selections).Release.Version);
+        Assert.DoesNotContain(plan.Warnings, value => value.Code == "release-channel");
+    }
+
+    [Fact]
+    public void Constructor_UndefinedChannel_Throws()
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(() => new RepositoryInstallPlanner(new ModDependencyResolver(), (ReleaseChannel)42));
+    }
+
+    private static Instance EmptyInstance() => new("Test", InstanceSource.Custom.Value);
+    private static Task<InstallPlan> PlanInChannelAsync(ReleaseChannel? plannerChannel, Instance instance, IReadOnlyList<RequestedMod> requested, IReadOnlyList<ModVersionMetadata> available) => (plannerChannel is { } channel ? new RepositoryInstallPlanner(new ModDependencyResolver(), channel) : new RepositoryInstallPlanner(new ModDependencyResolver())).PlanAsync(new InstallPlanningRequest(instance, requested, new FakeRepository(available)));
     private static Task<InstallPlan> PlanAsync(IReadOnlyList<ModVersionMetadata> requested, IReadOnlyList<ModVersionMetadata> available) => new RepositoryInstallPlanner(new ModDependencyResolver()).PlanAsync(new InstallPlanningRequest(new Instance("Test", InstanceSource.Custom.Value), requested.Select(value => new RequestedMod(value, InstallReason.Manual)).ToList(), new FakeRepository(available)));
     private static ModDependency Required(string id, string? min = null, string? max = null) => new(id, ModDependencyKind.Required, min is null ? null : ModVersion.Parse(min), max is null ? null : ModVersion.Parse(max));
-    private static InstalledMod Installed(string id, string version = "1.0.0", IReadOnlyList<ModDependency>? dependencies = null) => new(id, ModVersion.Parse(version), InstallReason.Manual, DateTimeOffset.UtcNow, Release(id, version, dependencies));
-    private static ModVersionMetadata Release(string id, string version = "1.0.0", IReadOnlyList<ModDependency>? dependencies = null, bool yanked = false, int gameMinRevision = 2131, IReadOnlyList<string>? os = null) => new(1, id, ModVersion.Parse(version), ReleaseStatus.Stable, DateTimeOffset.UnixEpoch, gameMinRevision == 2131 ? "2026.7.4.2131" : $"2026.7.4.{gameMinRevision}", gameMinRevision, new DownloadInfo("https://example.com/mod.zip", new string('A', 64), 1, "application/zip"), 1, dependencies ?? [], os: os, yanked: yanked);
+    private static InstalledMod Installed(string id, string version = "1.0.0", IReadOnlyList<ModDependency>? dependencies = null, ReleaseStatus status = ReleaseStatus.Stable) => new(id, ModVersion.Parse(version), InstallReason.Manual, DateTimeOffset.UtcNow, Release(id, version, dependencies, status: status));
+    private static ModVersionMetadata Release(string id, string version = "1.0.0", IReadOnlyList<ModDependency>? dependencies = null, bool yanked = false, int gameMinRevision = 2131, IReadOnlyList<string>? os = null, ReleaseStatus status = ReleaseStatus.Stable) => new(1, id, ModVersion.Parse(version), status, DateTimeOffset.UnixEpoch, gameMinRevision == 2131 ? "2026.7.4.2131" : $"2026.7.4.{gameMinRevision}", gameMinRevision, new DownloadInfo("https://example.com/mod.zip", new string('A', 64), 1, "application/zip"), 1, dependencies ?? [], os: os, yanked: yanked);
 
     private sealed class FakeRepository(IReadOnlyList<ModVersionMetadata> releases) : IModRepository
     {

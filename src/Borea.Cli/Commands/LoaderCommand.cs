@@ -83,17 +83,27 @@ internal static class LoaderCommand
             var id = parseResult.GetRequiredValue(loaderId);
             var listing = await LoaderLookup.GetListingAsync(cli.Mods, id, ct).ConfigureAwait(false);
             var rawVersion = parseResult.GetValue(version);
+            var channel = cli.Settings.ReleaseChannel;
             var release = rawVersion is null
-                ? await cli.Mods.GetLatestReleaseAsync(listing.ModId, ct).ConfigureAwait(false)
+                ? await cli.Mods.GetLatestReleaseInChannelAsync(listing.ModId, channel, ct).ConfigureAwait(false)
                 : await cli.Mods.GetReleaseAsync(listing.ModId, ModVersion.Parse(rawVersion), ct).ConfigureAwait(false);
 
             if (release is null)
                 throw new InvalidOperationException(rawVersion is null
-                    ? $"Mod loader '{listing.ModId}' has no release that Borea can install."
+                    ? $"Mod loader '{listing.ModId}' has no release in the {channel.ToName()} channel that Borea can install."
                     : $"Mod loader '{listing.ModId}' has no release '{rawVersion}'.");
 
             if (release.Yanked)
                 throw new InvalidOperationException($"Release {release.Version} of {listing.ModId} is yanked and cannot be installed.");
+
+            // no silent downgrade from an installed release outside the channel
+            if (rawVersion is null
+                && cli.Settings.LoaderInstallations.TryGetValue(listing.ModId, out var recorded)
+                && recorded.Version is { } installedVersion
+                && installedVersion.CompareTo(release.Version) > 0
+                && await cli.Mods.GetReleaseAsync(listing.ModId, installedVersion, ct).ConfigureAwait(false) is { } installedRelease
+                && !channel.Includes(installedRelease.ReleaseStatus))
+                throw new InvalidOperationException($"{listing.ModId} {installedVersion} is installed, which is newer than {release.Version}, the newest release in the {channel.ToName()} channel. Use --version to install an older release.");
 
             var rawDirectory = parseResult.GetValue(directory);
             var destination = rawDirectory is null ? null : Path.GetFullPath(rawDirectory);
@@ -183,7 +193,7 @@ internal static class LoaderCommand
     {
         var version = new Option<string?>("--version")
         {
-            Description = "The release to install. The newest usable release when absent.",
+            Description = "The release to install. The newest usable release in the saved release channel when absent.",
         };
         version.Validators.Add(result =>
         {

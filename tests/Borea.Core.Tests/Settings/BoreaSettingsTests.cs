@@ -22,6 +22,51 @@ public sealed class BoreaSettingsTests
     }
 
     [Fact]
+    public void Constructor_NoChannel_IsStable()
+    {
+        Assert.Equal(ReleaseChannel.Stable, new BoreaSettings(null).ReleaseChannel);
+    }
+
+    [Fact]
+    public void Constructor_UndefinedChannel_Throws()
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(() => new BoreaSettings(null, releaseChannel: (ReleaseChannel)42));
+    }
+
+    [Fact]
+    public void WithReleaseChannel_KeepsTheGameAndTheLoaders()
+    {
+        var settings = new BoreaSettings(@"C:\Games\KSA", StarMapAt()).WithReleaseChannel(ReleaseChannel.Testing);
+
+        Assert.Equal(ReleaseChannel.Testing, settings.ReleaseChannel);
+        Assert.Equal(@"C:\Games\KSA", settings.GameDirectoryPath);
+        Assert.Equal(@"C:\Games\StarMap", settings.LoaderInstallations["StarMap"].DirectoryPath);
+    }
+
+    [Fact]
+    public void EveryOtherCopy_KeepsTheChannel()
+    {
+        var settings = new BoreaSettings(null, StarMapAt(), ReleaseChannel.Dev);
+        var loader = new LoaderInstallation(@"C:\Games\Cheese", null, null, isAdopted: false);
+
+        Assert.Equal(ReleaseChannel.Dev, settings.WithGameDirectory(@"C:\Games\KSA").ReleaseChannel);
+        Assert.Equal(ReleaseChannel.Dev, settings.WithLoaderInstallation("Cheese-Loader", loader).ReleaseChannel);
+        Assert.Equal(ReleaseChannel.Dev, settings.WithoutLoaderInstallation("StarMap").ReleaseChannel);
+    }
+
+    [Fact]
+    public void WithoutLoaderInstallation_RemovesTheLoaderInAnyCasing_AndKeepsTheOthers()
+    {
+        var installations = StarMapAt();
+        installations["Cheese-Loader"] = new LoaderInstallation(@"C:\Games\Cheese", null, null, isAdopted: false);
+
+        var settings = new BoreaSettings(@"C:\Games\KSA", installations).WithoutLoaderInstallation("starmap");
+
+        Assert.Equal("Cheese-Loader", Assert.Single(settings.LoaderInstallations).Key);
+        Assert.Equal(@"C:\Games\KSA", settings.GameDirectoryPath);
+    }
+
+    [Fact]
     public void Constructor_OnlyGamePathProvided_LeavesNoLoader()
     {
         var settings = new BoreaSettings(@"C:\Games\KSA");

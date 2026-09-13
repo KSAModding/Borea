@@ -18,6 +18,7 @@ internal static class ModInstallCommands
         var recommended = new Option<bool>("--with-recommended") { Description = "Install recommended dependencies." };
         var alternatives = new Option<string[]>("--alternative") { Description = "Select a required alternative as choice-key=mod-id." };
         var dryRun = new Option<bool>("--dry-run") { Description = "Print the plan from the cached index without writing files." };
+        var channel = ArgumentRules.Channel();
         var command = new Command("install", "Install a mod and its required dependencies.");
         command.Arguments.Add(id);
         command.Options.Add(version);
@@ -25,6 +26,7 @@ internal static class ModInstallCommands
         command.Options.Add(recommended);
         command.Options.Add(alternatives);
         command.Options.Add(dryRun);
+        command.Options.Add(channel);
         command.SetAction((parse, cancellationToken) => CommandRunner.RunAsync(parse, services, cancellationToken, async (cli, output, error, ct) =>
         {
             var target = await InstanceLookup.ResolveTargetAsync(cli.Instances, parse.GetValue(instance)).ConfigureAwait(false);
@@ -37,13 +39,14 @@ internal static class ModInstallCommands
             if (isDryRun)
                 await RequireCachedIndexAsync(cli, ct).ConfigureAwait(false);
             var repository = isDryRun ? cli.ReadOnlyMods : cli.Mods;
+            var releaseChannel = ArgumentRules.ChannelOrSaved(parse.GetValue(channel), cli.Settings.ReleaseChannel);
             var release = exactText is null
-                ? await repository.GetLatestReleaseAsync(modId, ct).ConfigureAwait(false)
+                ? await repository.GetLatestReleaseInChannelAsync(modId, releaseChannel, ct).ConfigureAwait(false)
                 : await repository.GetReleaseAsync(modId, ModVersion.Parse(exactText), ct).ConfigureAwait(false);
             if (release is null)
-                throw new InvalidOperationException(exactText is null ? $"No release is available for '{modId}'." : $"Release {exactText} of '{modId}' is not available.");
+                throw new InvalidOperationException(exactText is null ? $"No release of '{modId}' in the {releaseChannel.ToName()} channel is available." : $"Release {exactText} of '{modId}' is not available.");
 
-            var plan = await PlanAsync(cli, target, repository, [new RequestedMod(release, InstallReason.Manual, exactText is not null)], parse.GetValue(recommended), ParseAlternatives(parse.GetValue(alternatives)), ct).ConfigureAwait(false);
+            var plan = await PlanAsync(cli, target, repository, [new RequestedMod(release, InstallReason.Manual, exactText is not null)], releaseChannel, parse.GetValue(recommended), ParseAlternatives(parse.GetValue(alternatives)), ct).ConfigureAwait(false);
             PrintPlan(output, plan);
             if (parse.GetValue(dryRun))
                 return plan.IsReady ? ExitCodes.Done : ExitCodes.Failed;
@@ -92,12 +95,14 @@ internal static class ModInstallCommands
         var recommended = new Option<bool>("--with-recommended") { Description = "Install recommended dependencies." };
         var alternatives = new Option<string[]>("--alternative") { Description = "Select a required alternative as choice-key=mod-id." };
         var dryRun = new Option<bool>("--dry-run") { Description = "Print the plan from the cached index without writing files." };
+        var channel = ArgumentRules.Channel();
         var command = new Command("update", "Update one mod or all managed mods.");
         command.Arguments.Add(id);
         command.Options.Add(instance);
         command.Options.Add(recommended);
         command.Options.Add(alternatives);
         command.Options.Add(dryRun);
+        command.Options.Add(channel);
         command.SetAction((parse, cancellationToken) => CommandRunner.RunAsync(parse, services, cancellationToken, async (cli, output, error, ct) =>
         {
             var target = await InstanceLookup.ResolveTargetAsync(cli.Instances, parse.GetValue(instance)).ConfigureAwait(false);
@@ -115,7 +120,8 @@ internal static class ModInstallCommands
                 await RequireCachedIndexAsync(cli, ct).ConfigureAwait(false);
             var repository = isDryRun ? cli.ReadOnlyMods : cli.Mods;
             var requested = selected.Select(mod => new RequestedMod(mod.Metadata, mod.Reason, Exact: false)).ToList();
-            var plan = await PlanAsync(cli, target, repository, requested, parse.GetValue(recommended), ParseAlternatives(parse.GetValue(alternatives)), ct).ConfigureAwait(false);
+            var releaseChannel = ArgumentRules.ChannelOrSaved(parse.GetValue(channel), cli.Settings.ReleaseChannel);
+            var plan = await PlanAsync(cli, target, repository, requested, releaseChannel, parse.GetValue(recommended), ParseAlternatives(parse.GetValue(alternatives)), ct).ConfigureAwait(false);
             PrintPlan(output, plan);
             if (parse.GetValue(dryRun))
                 return plan.IsReady ? ExitCodes.Done : ExitCodes.Failed;
@@ -126,10 +132,10 @@ internal static class ModInstallCommands
         return command;
     }
 
-    private static async Task<InstallPlan> PlanAsync(CliServices cli, Instance instance, IModRepository repository, IReadOnlyList<RequestedMod> requested, bool withRecommended, IReadOnlyDictionary<string, string> alternatives, CancellationToken cancellationToken)
+    private static async Task<InstallPlan> PlanAsync(CliServices cli, Instance instance, IModRepository repository, IReadOnlyList<RequestedMod> requested, ReleaseChannel channel, bool withRecommended, IReadOnlyDictionary<string, string> alternatives, CancellationToken cancellationToken)
     {
         var gameVersion = cli.InstalledVersion.GetInstalledVersion()?.Version;
-        var request = new InstallPlanningRequest(instance, requested, repository, gameVersion, CurrentPlatform(), Alternatives: alternatives);
+        var request = new InstallPlanningRequest(instance, requested, repository, gameVersion, CurrentPlatform(), Alternatives: alternatives, Channel: channel);
         var plan = await cli.InstallPlanner.PlanAsync(request, cancellationToken).ConfigureAwait(false);
         if (!withRecommended)
             return plan;

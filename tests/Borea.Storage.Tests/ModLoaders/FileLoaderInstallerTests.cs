@@ -118,6 +118,19 @@ public sealed class FileLoaderInstallerTests : IDisposable
             ("StarMap.runtimeconfig.json", "{}"),
         }.Concat(extra).ToArray());
 
+    [Fact]
+    public async Task InstallAsync_KeepsTheReleaseChannel()
+    {
+        await _settings.SaveAsync(new BoreaSettings(_gameDirectory, releaseChannel: ReleaseChannel.Dev));
+        _downloader.Bytes = StarMapZip();
+
+        await InstallAsync();
+
+        var settings = (await _settings.GetAsync())!;
+        Assert.Equal(DefaultDirectory, settings.LoaderInstallations[LoaderId].DirectoryPath);
+        Assert.Equal(ReleaseChannel.Dev, settings.ReleaseChannel);
+    }
+
     private Task SaveSettingsAsync(string? gameDirectory, IReadOnlyDictionary<string, LoaderInstallation>? loaders = null) =>
         _settings.SaveAsync(new BoreaSettings(gameDirectory, loaders));
 

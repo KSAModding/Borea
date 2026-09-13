@@ -27,6 +27,65 @@ public sealed class LoaderCommandTests : IDisposable
     }
 
     [Fact]
+    public async Task Install_WithoutVersion_FollowsTheSavedChannel()
+    {
+        var installer = new FakeLoaderInstaller();
+        _host.LoaderInstaller = installer;
+        _host.Mods.Listings.Add(LoaderFixtures.Listing());
+        _host.Mods.Releases.Add(LoaderFixtures.Release(version: "0.4.6"));
+        _host.Mods.Releases.Add(LoaderFixtures.Release(version: "0.5.0-dev.1", releaseStatus: ReleaseStatus.Dev));
+
+        var stable = await _host.RunAsync("loader", "install", "StarMap");
+        await _host.RunAsync("settings", "set", "channel", "dev");
+        var dev = await _host.RunAsync("loader", "install", "StarMap");
+
+        Assert.Equal(0, stable.ExitCode);
+        Assert.Equal(0, dev.ExitCode);
+        Assert.Equal(["0.4.6", "0.5.0-dev.1"], installer.Calls.Select(call => call.Release.Version.ToString()));
+    }
+
+    [Fact]
+    public async Task Install_WithoutVersion_DoesNotDowngradeAnInstalledReleaseOutsideTheChannel()
+    {
+        var installer = new FakeLoaderInstaller();
+        _host.LoaderInstaller = installer;
+        _host.Mods.Listings.Add(LoaderFixtures.Listing());
+        _host.Mods.Releases.Add(LoaderFixtures.Release(version: "0.4.6"));
+        _host.Mods.Releases.Add(LoaderFixtures.Release(version: "0.5.0-dev.1", releaseStatus: ReleaseStatus.Dev));
+        Directory.CreateDirectory(_host.Root);
+        await File.WriteAllTextAsync(_host.Paths.GetBoreaSettingsPath(), """
+            [LoaderInstallations.StarMap]
+            DirectoryPath = 'C:\Loaders\StarMap'
+            Version = '0.5.0-dev.1'
+            IsAdopted = false
+            """);
+
+        var refused = await _host.RunAsync("loader", "install", "StarMap");
+        var exact = await _host.RunAsync("loader", "install", "StarMap", "--version", "0.4.6");
+
+        Assert.Equal(1, refused.ExitCode);
+        Assert.Contains("StarMap 0.5.0-dev.1 is installed", refused.Error);
+        Assert.Contains("Use --version", refused.Error);
+        Assert.Equal(0, exact.ExitCode);
+        Assert.Equal("0.4.6", Assert.Single(installer.Calls).Release.Version.ToString());
+    }
+
+    [Fact]
+    public async Task Install_WithoutVersion_NoReleaseInTheChannel_FailsNamingTheChannel()
+    {
+        var installer = new FakeLoaderInstaller();
+        _host.LoaderInstaller = installer;
+        _host.Mods.Listings.Add(LoaderFixtures.Listing());
+        _host.Mods.Releases.Add(LoaderFixtures.Release(version: "0.5.0-dev.1", releaseStatus: ReleaseStatus.Dev));
+
+        var run = await _host.RunAsync("loader", "install", "StarMap");
+
+        Assert.Equal(1, run.ExitCode);
+        Assert.Contains("stable channel", run.Error);
+        Assert.Empty(installer.Calls);
+    }
+
+    [Fact]
     public async Task Install_RequestedReleaseThatDoesNotExist_Fails()
     {
         _host.LoaderInstaller = new FakeLoaderInstaller();

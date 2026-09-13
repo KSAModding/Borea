@@ -27,6 +27,171 @@ public sealed class ModInstallCommandTests : IDisposable
     }
 
     [Fact]
+    public async Task InstallDryRun_StableChannel_SkipsANewerDevRelease()
+    {
+        _host.Mods.Releases.Add(ContentCommandFixtures.Release(version: "2.0.0"));
+        _host.Mods.Releases.Add(ContentCommandFixtures.Release(version: "2.1.0-dev.1", releaseStatus: ReleaseStatus.Dev));
+        await _host.RunAsync("instance", "create", "Alpha");
+
+        var run = await _host.RunAsync("install", "flight-tools", "--instance", "Alpha", "--dry-run");
+
+        Assert.Equal(0, run.ExitCode);
+        Assert.Contains("Install flight-tools 2.0.0.", run.Output);
+        Assert.DoesNotContain("2.1.0-dev.1", run.Output);
+        Assert.DoesNotContain("release status", run.Output);
+    }
+
+    [Fact]
+    public async Task InstallDryRun_SavedTestingChannel_OffersTestingButNotDev()
+    {
+        _host.Mods.Releases.Add(ContentCommandFixtures.Release(version: "2.0.0"));
+        _host.Mods.Releases.Add(ContentCommandFixtures.Release(version: "2.1.0-beta.1", releaseStatus: ReleaseStatus.Testing));
+        _host.Mods.Releases.Add(ContentCommandFixtures.Release(version: "2.2.0-dev.1", releaseStatus: ReleaseStatus.Dev));
+        await _host.RunAsync("instance", "create", "Alpha");
+        await _host.RunAsync("settings", "set", "channel", "testing");
+
+        var run = await _host.RunAsync("install", "flight-tools", "--instance", "Alpha", "--dry-run");
+
+        Assert.Equal(0, run.ExitCode);
+        Assert.Contains("Install flight-tools 2.1.0-beta.1.", run.Output);
+    }
+
+    [Fact]
+    public async Task InstallDryRun_ChannelOption_OverridesTheSavedChannelForOneCommand()
+    {
+        _host.Mods.Releases.Add(ContentCommandFixtures.Release(version: "2.0.0"));
+        _host.Mods.Releases.Add(ContentCommandFixtures.Release(version: "2.1.0-dev.1", releaseStatus: ReleaseStatus.Dev));
+        await _host.RunAsync("instance", "create", "Alpha");
+
+        var overridden = await _host.RunAsync("install", "flight-tools", "--instance", "Alpha", "--dry-run", "--channel", "dev");
+        var saved = await _host.RunAsync("install", "flight-tools", "--instance", "Alpha", "--dry-run");
+        var show = await _host.RunAsync("settings", "show", "--json");
+
+        Assert.Equal(0, overridden.ExitCode);
+        Assert.Contains("Install flight-tools 2.1.0-dev.1.", overridden.Output);
+        Assert.DoesNotContain("release status", overridden.Output);
+        Assert.Contains("Install flight-tools 2.0.0.", saved.Output);
+        Assert.Equal("stable", show.Json.GetProperty("releaseChannel").GetString());
+    }
+
+    [Fact]
+    public async Task InstallDryRun_ChannelOption_NarrowerThanTheSavedChannel_IsUsed()
+    {
+        _host.Mods.Releases.Add(ContentCommandFixtures.Release(version: "2.0.0"));
+        _host.Mods.Releases.Add(ContentCommandFixtures.Release(version: "2.1.0-dev.1", releaseStatus: ReleaseStatus.Dev));
+        await _host.RunAsync("instance", "create", "Alpha");
+        await _host.RunAsync("settings", "set", "channel", "dev");
+
+        var run = await _host.RunAsync("install", "flight-tools", "--instance", "Alpha", "--dry-run", "--channel", "stable");
+
+        Assert.Equal(0, run.ExitCode);
+        Assert.Contains("Install flight-tools 2.0.0.", run.Output);
+    }
+
+    [Fact]
+    public async Task Install_ExactDevVersionOnStable_WarnsAndInstalls()
+    {
+        _host.Mods.Releases.Add(ContentCommandFixtures.Release(version: "2.0.0"));
+        _host.Mods.Releases.Add(ContentCommandFixtures.Release(version: "2.1.0-dev.1", releaseStatus: ReleaseStatus.Dev));
+        await _host.RunAsync("instance", "create", "Alpha");
+        RecordingInstaller? installer = null;
+        _host.InstallerFactory = graph => installer = new RecordingInstaller(graph);
+
+        var run = await _host.RunAsync("install", "flight-tools", "--version", "2.1.0-dev.1", "--instance", "Alpha");
+
+        Assert.Equal(0, run.ExitCode);
+        Assert.Contains("warning: Release 2.1.0-dev.1 has the release status dev, which the stable channel does not offer.", run.Output);
+        Assert.Equal("2.1.0-dev.1", Assert.Single(installer!.Installed).Version.ToString());
+    }
+
+    [Fact]
+    public async Task InstallDryRun_NoReleaseInTheChannel_FailsNamingTheChannel()
+    {
+        _host.Mods.Releases.Add(ContentCommandFixtures.Release(version: "2.1.0-dev.1", releaseStatus: ReleaseStatus.Dev));
+        await _host.RunAsync("instance", "create", "Alpha");
+
+        var run = await _host.RunAsync("install", "flight-tools", "--instance", "Alpha", "--dry-run");
+
+        Assert.Equal(1, run.ExitCode);
+        Assert.Contains("No release of 'flight-tools' in the stable channel is available.", run.Error);
+    }
+
+    [Theory]
+    [InlineData("install", "flight-tools")]
+    [InlineData("update", "flight-tools")]
+    public async Task ChannelOption_NameThatIsNoChannel_IsAUsageError(string command, string modId)
+    {
+        var run = await _host.RunAsync(command, modId, "--channel", "nightly");
+
+        Assert.Equal(2, run.ExitCode);
+        Assert.Contains("is not a release channel", run.Error);
+        Assert.Equal(0, _host.Builds);
+    }
+
+    [Fact]
+    public async Task UpdateDryRun_StableChannel_TargetsTheNewestStableRelease()
+    {
+        var installed = ContentCommandFixtures.Release(version: "1.0.0");
+        _host.Mods.Releases.Add(installed);
+        _host.Mods.Releases.Add(ContentCommandFixtures.Release(version: "1.1.0"));
+        _host.Mods.Releases.Add(ContentCommandFixtures.Release(version: "2.0.0-dev.1", releaseStatus: ReleaseStatus.Dev));
+        await SaveInstalledAsync(installed);
+
+        var run = await _host.RunAsync("update", "flight-tools", "--instance", "Alpha", "--dry-run");
+
+        Assert.Equal(0, run.ExitCode);
+        Assert.Contains("flight-tools 1.1.0.", run.Output);
+        Assert.DoesNotContain("2.0.0-dev.1", run.Output);
+    }
+
+    [Fact]
+    public async Task UpdateDryRun_ChannelOption_TargetsANewerTestingReleaseForOneCommand()
+    {
+        var installed = ContentCommandFixtures.Release(version: "1.0.0");
+        _host.Mods.Releases.Add(installed);
+        _host.Mods.Releases.Add(ContentCommandFixtures.Release(version: "1.1.0-beta.1", releaseStatus: ReleaseStatus.Testing));
+        _host.Mods.Releases.Add(ContentCommandFixtures.Release(version: "2.0.0-dev.1", releaseStatus: ReleaseStatus.Dev));
+        await SaveInstalledAsync(installed);
+
+        var testing = await _host.RunAsync("update", "flight-tools", "--instance", "Alpha", "--dry-run", "--channel", "testing");
+        var saved = await _host.RunAsync("update", "flight-tools", "--instance", "Alpha", "--dry-run");
+
+        Assert.Equal(0, testing.ExitCode);
+        Assert.Contains("flight-tools 1.1.0-beta.1.", testing.Output);
+        Assert.Contains("Nothing to do.", saved.Output);
+    }
+
+    [Fact]
+    public async Task InstallDryRun_InstalledDevReleaseOnStable_IsNotReplacedByAnOlderStableRelease()
+    {
+        var installed = ContentCommandFixtures.Release(version: "2.1.0-dev.1", releaseStatus: ReleaseStatus.Dev);
+        _host.Mods.Releases.Add(ContentCommandFixtures.Release(version: "2.0.0"));
+        _host.Mods.Releases.Add(installed);
+        await SaveInstalledAsync(installed);
+
+        var run = await _host.RunAsync("install", "flight-tools", "--instance", "Alpha", "--dry-run");
+
+        Assert.Equal(0, run.ExitCode);
+        Assert.Contains("Nothing to do.", run.Output);
+        Assert.DoesNotContain("Install flight-tools 2.0.0.", run.Output);
+    }
+
+    [Fact]
+    public async Task UpdateDryRun_InstalledDevReleaseOnStable_StaysWithoutAWarning()
+    {
+        var installed = ContentCommandFixtures.Release(version: "2.0.0-dev.1", releaseStatus: ReleaseStatus.Dev);
+        _host.Mods.Releases.Add(ContentCommandFixtures.Release(version: "1.0.0"));
+        _host.Mods.Releases.Add(installed);
+        await SaveInstalledAsync(installed);
+
+        var run = await _host.RunAsync("update", "flight-tools", "--instance", "Alpha", "--dry-run");
+
+        Assert.Equal(0, run.ExitCode);
+        Assert.Contains("Nothing to do.", run.Output);
+        Assert.DoesNotContain("release status", run.Output);
+    }
+
+    [Fact]
     public async Task InstallDryRun_RequiredDependency_PrintsBothOperations()
     {
         var dependency = new Borea.Core.Dependencies.ModDependency("library", Borea.Core.Dependencies.ModDependencyKind.Required);

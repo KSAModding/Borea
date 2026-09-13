@@ -4,6 +4,7 @@ using Borea.Core.Mods;
 
 namespace Borea.Core.Planning;
 
+/// <param name="Channel">The release channel of this plan. Null means the planner's channel.</param>
 public sealed record InstallPlanningRequest(
     Instance Instance,
     IReadOnlyList<RequestedMod> Requested,
@@ -11,4 +12,5 @@ public sealed record InstallPlanningRequest(
     GameVersion? GameVersion = null,
     OsPlatform? TargetPlatform = null,
     IReadOnlySet<string>? Recommended = null,
-    IReadOnlyDictionary<string, string>? Alternatives = null);
+    IReadOnlyDictionary<string, string>? Alternatives = null,
+    ReleaseChannel? Channel = null);

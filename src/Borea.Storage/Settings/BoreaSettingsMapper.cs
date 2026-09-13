@@ -9,6 +9,7 @@ public static class BoreaSettingsMapper
     public static BoreaSettingsDto ToDto(BoreaSettings settings) => new()
     {
         GameDirectoryPath = settings.GameDirectoryPath,
+        ReleaseChannel = settings.ReleaseChannel.ToName(),
         LoaderInstallations = settings.LoaderInstallations.Count == 0
             ? null
             : settings.LoaderInstallations.ToDictionary(
@@ -20,7 +21,12 @@ public static class BoreaSettingsMapper
         dto.GameDirectoryPath,
         dto.LoaderInstallations?.ToDictionary(
             pair => pair.Key,
-            pair => FromDto(pair.Value)));
+            pair => FromDto(pair.Value)),
+        ReadReleaseChannel(dto.ReleaseChannel));
+
+    /// <summary>An absent or unknown name loads as stable, which offers the fewest releases.</summary>
+    private static ReleaseChannel ReadReleaseChannel(string? name)
+        => ReleaseChannels.TryParse(name, out var channel) ? channel : ReleaseChannel.Stable;
 
     private static LoaderInstallationDto ToDto(LoaderInstallation installation) => new()
     {

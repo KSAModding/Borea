@@ -55,4 +55,40 @@ internal static class ArgumentRules
     }
 
     public static Option<bool> Json() => new("--json") { Description = "Print the result as JSON, for scripts." };
+
+    /// <summary>A release channel name: stable, testing or dev.</summary>
+    public static Argument<string> Channel(string name, string description)
+    {
+        var argument = new Argument<string>(name) { Description = description };
+        argument.Validators.Add(result =>
+        {
+            var value = result.GetValueOrDefault<string>();
+            if (!ReleaseChannels.TryParse(value, out _))
+                result.AddError(ChannelError(value));
+        });
+        return argument;
+    }
+
+    /// <summary>The release channel for one command. Absent means the saved channel.</summary>
+    public static Option<string?> Channel()
+    {
+        var option = new Option<string?>("--channel")
+        {
+            Description = "The release channel for this command: stable, testing or dev. The saved channel when absent.",
+        };
+        option.Validators.Add(result =>
+        {
+            var value = result.GetValueOrDefault<string?>();
+            if (!ReleaseChannels.TryParse(value, out _))
+                result.AddError(ChannelError(value));
+        });
+        return option;
+    }
+
+    /// <summary>The channel the option names, or <paramref name="saved"/> when it is absent.</summary>
+    public static ReleaseChannel ChannelOrSaved(string? value, ReleaseChannel saved)
+        => value is not null && ReleaseChannels.TryParse(value, out var channel) ? channel : saved;
+
+    private static string ChannelError(string? value)
+        => $"'{value}' is not a release channel. Use {string.Join(", ", ReleaseChannels.Names)}.";
 }

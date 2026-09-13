@@ -95,6 +95,7 @@ public sealed class BoreaServices : IDisposable
 
     /// <summary>
     /// Every mod source behind one repository, each listing tagged with its source.
+    /// The newest release follows the saved release channel.
     /// </summary>
     public required IModRepository Mods { get; init; }
 
@@ -221,7 +222,7 @@ public sealed class BoreaServices : IDisposable
         var modState = new FileModStateRepository(paths);
         var modInstaller = new FileModInstaller(paths, downloader, instances, modState);
         var modReplacer = new FileModReplacer(paths, downloader, instances, modState);
-        var installPlanner = new RepositoryInstallPlanner(new ModDependencyResolver());
+        var installPlanner = new RepositoryInstallPlanner(new ModDependencyResolver(), settings.ReleaseChannel);
 
         return new BoreaServices(http)
         {
@@ -238,8 +239,8 @@ public sealed class BoreaServices : IDisposable
             Installer = modInstaller,
             Replacer = modReplacer,
             ForeignModAdopter = new FileForeignModAdopter(paths, instances, contentIndex),
-            Mods = mods,
-            ReadOnlyMods = readOnlyMods,
+            Mods = new ReleaseChannelModRepository(mods, settings.ReleaseChannel),
+            ReadOnlyMods = new ReleaseChannelModRepository(readOnlyMods, settings.ReleaseChannel),
             ModPacks = modPacks,
             ModPackInstaller = new ModPackInstaller(instances, installPlanner, modInstaller, modReplacer),
             Downloader = downloader,

@@ -54,6 +54,19 @@ public sealed class FileLoaderAdopterTests : IDisposable
     }
 
     [Fact]
+    public async Task AdoptAsync_KeepsTheReleaseChannel()
+    {
+        await _settings.SaveAsync(new BoreaSettings(GameDirectory, releaseChannel: ReleaseChannel.Testing));
+        PlaceStarMap(GameDirectory);
+
+        await _adopter.AdoptAsync(StarMap(), new[] { StarMapRelease() }, LoaderDirectory);
+
+        var settings = (await _settings.GetAsync())!;
+        Assert.True(settings.LoaderInstallations.ContainsKey("StarMap"));
+        Assert.Equal(ReleaseChannel.Testing, settings.ReleaseChannel);
+    }
+
+    [Fact]
     public async Task AdoptAsync_LaunchExecutableMissing_RefusesWithoutARecord()
     {
         Directory.CreateDirectory(LoaderDirectory);

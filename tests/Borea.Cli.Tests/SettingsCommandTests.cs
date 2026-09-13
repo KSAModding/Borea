@@ -170,5 +170,71 @@ public sealed class SettingsCommandTests : IDisposable
         Assert.DoesNotContain("Unhandled exception", run.Error);
     }
 
+    [Fact]
+    public async Task Show_NoSettingsFile_ReportsTheStableChannel()
+    {
+        var text = await _host.RunAsync("settings", "show");
+        var json = await _host.RunAsync("settings", "show", "--json");
+
+        Assert.Contains("Release channel: stable", text.Output);
+        Assert.Equal("stable", json.Json.GetProperty("releaseChannel").GetString());
+    }
+
+    [Fact]
+    public async Task Show_SettingsFileWrittenBeforeTheChannelExisted_ReportsStable()
+    {
+        Directory.CreateDirectory(_host.Root);
+        await File.WriteAllTextAsync(_host.Paths.GetBoreaSettingsPath(), "GameDirectoryPath = 'C:\\Games\\KSA'\n");
+
+        var run = await _host.RunAsync("settings", "show", "--json");
+
+        Assert.Equal(0, run.ExitCode);
+        Assert.Equal("stable", run.Json.GetProperty("releaseChannel").GetString());
+        Assert.Equal(@"C:\Games\KSA", run.Json.GetProperty("gameDirectory").GetString());
+    }
+
+    [Theory]
+    [InlineData("testing", "testing")]
+    [InlineData("DEV", "dev")]
+    [InlineData("stable", "stable")]
+    public async Task SetChannel_SavesIt_AndShowReadsItBack(string given, string saved)
+    {
+        var set = await _host.RunAsync("settings", "set", "channel", given);
+        var text = await _host.RunAsync("settings", "show");
+        var json = await _host.RunAsync("settings", "show", "--json");
+
+        Assert.Equal(0, set.ExitCode);
+        Assert.Contains($"Release channel: {saved}", set.Output);
+        Assert.Contains($"Release channel: {saved}", text.Output);
+        Assert.Equal(saved, json.Json.GetProperty("releaseChannel").GetString());
+    }
+
+    [Fact]
+    public async Task SetChannel_AndSetGame_KeepEachOther()
+    {
+        var game = Directory.CreateDirectory(Path.Combine(_host.Root, "Game")).FullName;
+
+        await _host.RunAsync("settings", "set", "game", game);
+        await _host.RunAsync("settings", "set", "channel", "testing");
+        await _host.RunAsync("settings", "set", "game", game);
+        var show = await _host.RunAsync("settings", "show", "--json");
+
+        Assert.Equal(game, show.Json.GetProperty("gameDirectory").GetString());
+        Assert.Equal("testing", show.Json.GetProperty("releaseChannel").GetString());
+    }
+
+    [Theory]
+    [InlineData("nightly")]
+    [InlineData("")]
+    [InlineData("unknown")]
+    public async Task SetChannel_NameThatIsNoChannel_IsAUsageError_ThatWritesNothing(string name)
+    {
+        var run = await _host.RunAsync("settings", "set", "channel", name);
+
+        Assert.Equal(2, run.ExitCode);
+        Assert.Contains("is not a release channel", run.Error);
+        Assert.False(File.Exists(_host.Paths.GetBoreaSettingsPath()));
+    }
+
     public void Dispose() => _host.Dispose();
 }
