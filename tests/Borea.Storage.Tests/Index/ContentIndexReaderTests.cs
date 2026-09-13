@@ -341,6 +341,36 @@ public sealed class ContentIndexReaderTests : IDisposable
     }
 
     [Fact]
+    public async Task ReadAsync_EmptyInstanceTable_RejectsOnlyThatListing()
+    {
+        var loaderAuthored = """
+            {
+                "spec_version": 1,
+                "id": "test-loader",
+                "type": "mod-loader",
+                "name": "Test Loader",
+                "authors": ["Test Author"],
+                "abstract": "A loader used for testing.",
+                "license": "MIT",
+                "compatibility": { "game_min": "2026.7.4.2131" },
+                "links": { "forums": "https://forums.example/thread/2" },
+                "install": { "target": "standalone" },
+                "provides": { "launch": "loader.exe", "instance": {} }
+            }
+            """;
+        await WriteIndexAsync(Snapshot($"{Listing("test-loader", loaderAuthored)}, {Listing("test-mod", ValidAuthoredJson)}"));
+
+        var result = await _reader.ReadAsync();
+
+        Assert.Equal("test-mod", Assert.Single(result.Listings).Id);
+        var diagnostic = Assert.Single(result.Diagnostics);
+        Assert.Equal(ContentIndexDiagnosticKind.Malformed, diagnostic.Kind);
+        Assert.Equal(ContentIndexDiagnosticScope.Listing, diagnostic.Scope);
+        Assert.Equal("test-loader", diagnostic.Id);
+        Assert.Contains("flag or a variable", diagnostic.Reason);
+    }
+
+    [Fact]
     public async Task ReadAsync_CanceledToken_StopsTheRead()
     {
         await WriteIndexAsync(Snapshot(Listing("test-mod", ValidAuthoredJson)));

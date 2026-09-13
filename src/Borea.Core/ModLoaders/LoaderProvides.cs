@@ -1,3 +1,4 @@
+using Borea.Core.Launch;
 using Borea.Core.Mods;
 
 namespace Borea.Core.ModLoaders;
@@ -21,11 +22,18 @@ public sealed class LoaderProvides
     /// <summary>The configuration file a manager may write.</summary>
     public LoaderConfigure? Configure { get; }
 
+    /// <summary>
+    /// How the loader is told which instance to run. Null means the loader
+    /// does not run instances, and a manager must not guess a flag or a variable.
+    /// </summary>
+    public InstanceHandover? Instance { get; }
+
     public LoaderProvides(
         string? launch = null,
         InstallAnchor? contentDir = null,
         string? contentPath = null,
-        LoaderConfigure? configure = null)
+        LoaderConfigure? configure = null,
+        InstanceHandover? instance = null)
     {
         if (contentPath is not null && contentDir is null)
             throw new ArgumentException("A content path needs the content directory it sits below.", nameof(contentPath));
@@ -34,5 +42,6 @@ public sealed class LoaderProvides
         ContentDir = contentDir;
         ContentPath = RelativePaths.Contained(contentPath, nameof(contentPath));
         Configure = configure;
+        Instance = instance;
     }
 }

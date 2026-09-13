@@ -13,6 +13,8 @@ public sealed class LoaderProvidesDto
     public string? ContentPath { get; set; }
 
     public LoaderConfigureDto? Configure { get; set; }
+
+    public LoaderInstanceDto? Instance { get; set; }
 }
 
 /// <summary>
@@ -26,4 +28,14 @@ public sealed class LoaderConfigureDto
     public string Format { get; set; } = string.Empty;
 
     public string? GamePath { get; set; }
+}
+
+/// <summary>
+/// TOML-serializable representation of the [provides.instance] table.
+/// </summary>
+public sealed class LoaderInstanceDto
+{
+    public string? Flag { get; set; }
+
+    public string? Variable { get; set; }
 }

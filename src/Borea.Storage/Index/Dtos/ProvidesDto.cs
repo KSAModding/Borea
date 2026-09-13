@@ -21,4 +21,10 @@ public sealed class ProvidesDto
     /// </summary>
     [JsonPropertyName("configure")]
     public ConfigureDto? Configure { get; set; }
+
+    /// <summary>
+    /// How the mod-loader is told which instance to run
+    /// </summary>
+    [JsonPropertyName("instance")]
+    public InstanceDto? Instance { get; set; }
 }

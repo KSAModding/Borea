@@ -1,3 +1,4 @@
+using Borea.Core.Launch;
 using Borea.Core.ModLoaders;
 using Borea.Core.Mods;
 
@@ -27,6 +28,17 @@ public sealed class LoaderProvidesTests
         Assert.Null(provides.Launch);
         Assert.Null(provides.ContentDir);
         Assert.Null(provides.Configure);
+        Assert.Null(provides.Instance);
+    }
+
+    [Fact]
+    public void Constructor_InstanceTable_IsKept()
+    {
+        var instance = new InstanceHandover("-InstancePath", "STARMAP_INSTANCE_PATH");
+
+        var provides = new LoaderProvides(launch: "StarMap.exe", instance: instance);
+
+        Assert.Same(instance, provides.Instance);
     }
 
     [Fact]
