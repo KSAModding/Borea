@@ -26,6 +26,11 @@ public sealed class CliServicesTests : IDisposable
         Assert.Same(graph.IndexSnapshots, services.IndexSnapshots);
         Assert.Same(graph.Paths, services.Paths);
         Assert.Same(graph.Mods, services.Mods);
+        Assert.Same(graph.ReadOnlyMods, services.ReadOnlyMods);
+        Assert.Same(graph.InstallPlanner, services.InstallPlanner);
+        Assert.Same(graph.Installer, services.Installer);
+        Assert.Same(graph.Replacer, services.Replacer);
+        Assert.Same(graph.Uninstaller, services.Uninstaller);
         Assert.Same(graph.LoaderInstaller, services.LoaderInstaller);
         Assert.Same(graph.LoaderAdopter, services.LoaderAdopter);
         Assert.Same(graph.LoaderUninstaller, services.LoaderUninstaller);
@@ -43,7 +48,7 @@ public sealed class CliServicesTests : IDisposable
         var indexReader = new FakeContentIndexReader();
         var indexSnapshots = new StubContentIndexSnapshotProvider();
 
-        var services = CliServices.From(graph, ping, installed, indexFetcher, indexReader, indexSnapshots);
+        var services = CliServices.From(graph, latestVersion: ping, installedVersion: installed, indexFetcher: indexFetcher, indexReader: indexReader, indexSnapshots: indexSnapshots);
 
         Assert.Same(ping, services.LatestVersion);
         Assert.Same(installed, services.InstalledVersion);
@@ -72,6 +77,11 @@ public sealed class CliServicesTests : IDisposable
             IndexSnapshots = graph.IndexSnapshots,
             Paths = graph.Paths,
             Mods = graph.Mods,
+            ReadOnlyMods = graph.ReadOnlyMods,
+            InstallPlanner = graph.InstallPlanner,
+            Installer = graph.Installer,
+            Replacer = graph.Replacer,
+            Uninstaller = graph.Uninstaller,
             LoaderInstaller = graph.LoaderInstaller,
             LoaderAdopter = graph.LoaderAdopter,
             LoaderUninstaller = graph.LoaderUninstaller,

@@ -3,6 +3,7 @@ using Borea.Composition;
 using Borea.Core.Index;
 using Borea.Core.ModLoaders;
 using Borea.Core.Mods;
+using Borea.Core.Instances;
 using Borea.Storage.Launch;
 using Borea.Storage.Paths;
 
@@ -40,6 +41,14 @@ internal sealed class CliHost : IDisposable
 
     public ILoaderUninstaller? LoaderUninstaller { get; set; }
 
+    public Func<BoreaServices, IModInstaller>? InstallerFactory { get; set; }
+
+    public Func<BoreaServices, IModReplacer>? ReplacerFactory { get; set; }
+
+    public Func<BoreaServices, IModUninstaller>? UninstallerFactory { get; set; }
+
+    public Func<BoreaServices, IInstanceRepository>? InstancesFactory { get; set; }
+
     /// <summary>How many times a command built its services.</summary>
     public int Builds { get; private set; }
 
@@ -64,12 +73,17 @@ internal sealed class CliHost : IDisposable
         var graph = await BoreaServices.BuildAsync(Root, cancellationToken);
         return CliServices.From(
             graph,
+            instances: InstancesFactory?.Invoke(graph),
             latestVersion: LatestVersion,
             installedVersion: InstalledVersion,
             indexFetcher: IndexFetcher,
             indexReader: IndexReader,
             indexSnapshots: IndexSnapshots ?? new ReaderSnapshotProvider(IndexReader),
             mods: ModRepository ?? Mods,
+            readOnlyMods: ModRepository ?? Mods,
+            installer: InstallerFactory?.Invoke(graph),
+            replacer: ReplacerFactory?.Invoke(graph),
+            uninstaller: UninstallerFactory?.Invoke(graph),
             loaderInstaller: LoaderInstaller,
             loaderAdopter: LoaderAdopter,
             loaderUninstaller: LoaderUninstaller,
