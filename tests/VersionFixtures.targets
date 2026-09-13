@@ -1,0 +1,25 @@
+<Project>
+
+  <!--
+    Assemblies with a version resource, built by the solution and never compiled against.
+    A test puts one where KSA.dll or a loader's launch target would be, to read a real
+    file version. Imported by every test project that needs them.
+  -->
+  <ItemGroup>
+    <VersionFixture Include="$(MSBuildThisFileDirectory)Borea.Storage.Tests\Fixtures\GameVersionFixture\GameVersionFixture.csproj" />
+    <VersionFixture Include="$(MSBuildThisFileDirectory)Borea.Storage.Tests\Fixtures\LoaderVersionFixture\LoaderVersionFixture.csproj" />
+    <VersionFixture Include="$(MSBuildThisFileDirectory)Borea.Storage.Tests\Fixtures\UnparseableVersionFixture\UnparseableVersionFixture.csproj" />
+    <ProjectReference Include="@(VersionFixture)" ReferenceOutputAssembly="false" />
+  </ItemGroup>
+
+  <!-- Inside Build, so the copies reach FileWrites and Clean removes them. -->
+  <Target Name="CopyVersionFixtures" AfterTargets="CopyFilesToOutputDirectory">
+    <MSBuild Projects="@(VersionFixture)" Targets="GetTargetPath" Properties="Configuration=$(Configuration);TargetFramework=$(TargetFramework)">
+      <Output TaskParameter="TargetOutputs" ItemName="VersionFixtureAssembly" />
+    </MSBuild>
+    <Copy SourceFiles="@(VersionFixtureAssembly)" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true">
+      <Output TaskParameter="CopiedFiles" ItemName="FileWrites" />
+    </Copy>
+  </Target>
+
+</Project>

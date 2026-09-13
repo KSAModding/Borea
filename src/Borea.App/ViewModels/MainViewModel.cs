@@ -269,6 +269,26 @@ public partial class MainViewModel : ViewModelBase
     }
 
     /// <summary>
+    /// Reads the installed game again, for when a new KSA release was put in
+    /// place while Borea stayed open (#169). The window calls it when it is
+    /// activated. An unchanged version leaves every list as it is.
+    /// </summary>
+    internal async Task RefreshInstalledGameAsync()
+    {
+        if (_services is null)
+            return;
+
+        var installed = _services.InstalledVersion.GetInstalledVersion();
+        if (string.Equals(installed?.RawVersion, InstalledVersionText, StringComparison.Ordinal))
+            return;
+
+        InstalledVersionText = installed?.RawVersion;
+
+        // the content page shows the same rows, so its chip follows too
+        await RefreshCompatibilityAsync(installed?.Version);
+    }
+
+    /// <summary>
     /// Downloads the content index when it changed, like <c>borea index refresh</c>.
     /// A failure keeps the cached snapshot, so it is not shown as an error.
     /// </summary>
