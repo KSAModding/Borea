@@ -7,7 +7,7 @@ public sealed class LaunchResultTests
     private static LaunchPlan SamplePlan() => LaunchPlan.ForLoader(
         Path.Combine(Path.GetTempPath(), "BoreaTest", "StarMap"),
         "StarMap.exe",
-        InstanceHandover.Known("StarMap")!,
+        new InstanceHandover("-InstancePath", "STARMAP_INSTANCE_PATH"),
         Path.Combine(Path.GetTempPath(), "BoreaTest", "Instances", "one"));
 
     [Fact]

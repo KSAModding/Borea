@@ -553,6 +553,82 @@ public sealed class SnapshotParserTests
     }
 
     [Fact]
+    public void Parse_InstanceTable_IsReadIntoTheLoaderProvides()
+    {
+        var loader = $$"""{ "id": "test-loader", "authored": {{LoaderAuthoredJson("""{ "flag": "-InstancePath", "variable": "STARMAP_INSTANCE_PATH" }""")}} }""";
+
+        var result = SnapshotParser.Parse(Snapshot(loader, ""));
+
+        var instance = Assert.Single(result.ValidListings).Authored!.Provides!.Instance;
+        Assert.NotNull(instance);
+        Assert.Equal("-InstancePath", instance!.Flag);
+        Assert.Equal("STARMAP_INSTANCE_PATH", instance.Variable);
+    }
+
+    [Fact]
+    public void Parse_NullKeyBesideANamedKey_IsReadAsAbsent()
+    {
+        // TOML has no null, so a published snapshot cannot carry one, and the
+        // reader treats a null key like a key that is not there.
+        var loader = $$"""{ "id": "test-loader", "authored": {{LoaderAuthoredJson("""{ "flag": null, "variable": "LOADER_INSTANCE" }""")}} }""";
+
+        var result = SnapshotParser.Parse(Snapshot(loader, ""));
+
+        var instance = Assert.Single(result.ValidListings).Authored!.Provides!.Instance;
+        Assert.Null(instance!.Flag);
+        Assert.Equal("LOADER_INSTANCE", instance.Variable);
+        Assert.Empty(result.MalformedListings);
+    }
+
+    [Fact]
+    public void Parse_NullInstanceTable_IsReadAsAbsent()
+    {
+        var loader = $$"""{ "id": "test-loader", "authored": {{LoaderAuthoredJson("null")}} }""";
+
+        var result = SnapshotParser.Parse(Snapshot(loader, ""));
+
+        Assert.Null(Assert.Single(result.ValidListings).Authored!.Provides!.Instance);
+        Assert.Empty(result.MalformedListings);
+    }
+
+    [Theory]
+    [InlineData("{}", "flag or a variable")]
+    [InlineData("""{ "flag": null, "variable": null }""", "flag or a variable")]
+    [InlineData("""{ "flag": "" }""", "without whitespace")]
+    [InlineData("""{ "flag": "-Instance Path" }""", "without whitespace")]
+    [InlineData("""{ "variable": "LOADER INSTANCE" }""", "without whitespace")]
+    [InlineData("""{ "flag": "-InstancePath", "future-key": "x" }""", "future-key")]
+    [InlineData("""{ "flag": 42 }""", "flag")]
+    public void Parse_InvalidInstanceTableBesideValidListing_KeepsValidSibling(string instance, string reason)
+    {
+        var invalid = $$"""{ "id": "test-loader", "authored": {{LoaderAuthoredJson(instance)}} }""";
+        var valid = $$"""{ "id": "test-mod", "authored": {{ValidAuthoredJson}} }""";
+
+        var result = SnapshotParser.Parse(Snapshot($"{invalid}, {valid}", ""));
+
+        Assert.Equal("test-mod", Assert.Single(result.ValidListings).Id);
+        var rejected = Assert.Single(result.MalformedListings);
+        Assert.Equal("test-loader", rejected.Id);
+        Assert.Contains(reason, rejected.Reason);
+    }
+
+    private static string LoaderAuthoredJson(string instance) => $$"""
+        {
+            "spec_version": 1,
+            "id": "test-loader",
+            "type": "mod-loader",
+            "name": "Test Loader",
+            "authors": ["Test Author"],
+            "abstract": "A loader used for testing.",
+            "license": "MIT",
+            "compatibility": { "game_min": "2026.7.4.2131" },
+            "links": { "forums": "https://forums.example/thread/2" },
+            "install": { "target": "standalone" },
+            "provides": { "launch": "loader.exe", "instance": {{instance}} }
+        }
+        """;
+
+    [Fact]
     public void Parse_MalformedFrozenFieldBesideValidRelease_KeepsValidSibling()
     {
         var invalidRelease = ValidReleaseJson

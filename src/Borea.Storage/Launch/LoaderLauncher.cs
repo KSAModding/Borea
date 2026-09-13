@@ -58,12 +58,16 @@ public sealed class LoaderLauncher : ILauncher, IDisposable
                     $"The listing of {loader.Name} does not say what to run, so Borea cannot start it.");
             }
 
-            var handover = InstanceHandover.Known(loader.ModId);
+            // The launcher uses the table of the listing its caller passes and
+            // keeps no copy. The caller passes the live listing, because a
+            // release file never carries the table and a stale copy could name
+            // a flag the installed loader no longer reads.
+            var handover = loader.Provides?.Instance;
             if (handover is null)
             {
                 return LaunchResult.Failed(
                     LaunchOutcome.NoInstanceHandover,
-                    $"Borea does not know how {loader.Name} takes an instance, so it cannot start one with it.");
+                    $"The listing of {loader.Name} does not say how it takes an instance, so Borea cannot start one with it. The loader author can add a [provides.instance] table to the listing.");
             }
 
             var loaderDirectory = _pathProvider.GetLoaderDirectoryPath(loader.ModId);
