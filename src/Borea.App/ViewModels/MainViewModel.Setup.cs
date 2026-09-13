@@ -117,6 +117,12 @@ public partial class MainViewModel
     [ObservableProperty]
     private double _setupProgress;
 
+    [ObservableProperty]
+    private string? _setupProgressStatus;
+
+    [ObservableProperty]
+    private string? _setupProgressDetail;
+
     /// <summary>
     /// What the settings record for the selected loader, as the chip under the
     /// picker shows it. Null when the selected loader is not installed.
@@ -266,7 +272,17 @@ public partial class MainViewModel
         var release = await services.Mods.GetLatestReleaseAsync(SelectedLoader.ModId)
             ?? throw new InvalidOperationException(Localization.DiscoverNoRelease);
         var directory = LoaderDirectoryInput.Trim();
-        var progress = new Progress<InstallProgress>(value => SetupProgress = value.Download?.PercentComplete ?? SetupProgress);
+        var text = new InstallProgressText(Localization);
+        var progress = new Progress<InstallProgress>(value =>
+        {
+            if (!IsSetupBusy)
+                return;
+
+            text.Report(value);
+            SetupProgress = text.Percent;
+            SetupProgressStatus = text.Status;
+            SetupProgressDetail = text.Detail;
+        });
         var result = await services.LoaderInstaller.InstallAsync(listing, release, directory.Length == 0 ? null : Path.GetFullPath(directory), progress);
         LoaderDirectoryInput = result.Directory;
         return Localization.FormatSetupLoaderInstalled(listing.Name, result.Version.ToString(), result.Directory);
@@ -294,6 +310,8 @@ public partial class MainViewModel
         {
             IsSetupBusy = false;
             SetupProgress = 0;
+            SetupProgressStatus = null;
+            SetupProgressDetail = null;
         }
     }
 

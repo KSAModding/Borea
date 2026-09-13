@@ -46,6 +46,10 @@
                 <Button Classes="text" Content="{Binding Localization.SetupUseExisting}" Command="{Binding AdoptLoaderCommand}" />
             </StackPanel>
             <ProgressBar Height="6" Margin="0,8,0,0" IsVisible="{Binding IsSetupBusy}" Value="{Binding SetupProgress}" Maximum="100" Foreground="{StaticResource Brush.Accent}" />
+            <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,4,0,0" IsVisible="{Binding SetupProgressStatus, Converter={x:Static ObjectConverters.IsNotNull}}">
+                <TextBlock Classes="body-sm secondary" Text="{Binding SetupProgressStatus}" VerticalAlignment="Center" />
+                <TextBlock Classes="label-md" Text="{Binding SetupProgressDetail}" VerticalAlignment="Center" IsVisible="{Binding SetupProgressDetail, Converter={x:Static ObjectConverters.IsNotNull}}" />
+            </StackPanel>
             <TextBlock Classes="body-md secondary" Text="{Binding SetupMessage}" TextWrapping="Wrap" Margin="0,12,0,0" IsVisible="{Binding SetupMessage, Converter={x:Static ObjectConverters.IsNotNull}}" />
             <TextBlock Classes="body-md danger" Text="{Binding SetupError}" TextWrapping="Wrap" Margin="0,12,0,0" IsVisible="{Binding SetupError, Converter={x:Static ObjectConverters.IsNotNull}}" />
         </StackPanel>
