@@ -13,8 +13,9 @@ using CommunityToolkit.Mvvm.Input;
 namespace Borea.App.ViewModels;
 
 /// <summary>
-/// The Discover page (discover in #8): every listing the mod repository
-/// knows, filtered locally by the panel on the right.
+/// The Discover page (discover in #8): every listing of the content index,
+/// filtered locally by the panel on the right. Other sources such as SpaceDock
+/// are not browsed here, so the page shows exactly what the index lists.
 /// </summary>
 public partial class MainViewModel
 {
@@ -81,13 +82,9 @@ public partial class MainViewModel
         IsDiscoverLoading = true;
         try
         {
-            var listings = await services.Mods.GetAvailableModsAsync();
-            var items = listings.Select(listing => new DiscoverItem(this, listing)).ToList();
-
-            // a mod in the content index that also releases on SpaceDock shows once, from the index
-            var mirrored = new HashSet<string>(items.Where(item => item.Source != "spacedock").SelectMany(item => item.SpaceDockReferences), StringComparer.OrdinalIgnoreCase);
-            _listings = items
-                .Where(item => item.Source != "spacedock" || !mirrored.Contains(item.ModId))
+            var listings = await services.ContentIndex.GetAvailableModsAsync();
+            _listings = listings
+                .Select(listing => new DiscoverItem(this, listing))
                 .OrderBy(item => item.Name, StringComparer.CurrentCultureIgnoreCase)
                 .ToList();
 
@@ -251,13 +248,6 @@ public sealed partial class DiscoverItem : ObservableObject
         "spacedock" => "SpaceDock",
         _ => Source,
     });
-
-    /// <summary>
-    /// The SpaceDock ids this listing also releases under, so the same mod
-    /// from SpaceDock can be hidden next to it.
-    /// </summary>
-    internal IEnumerable<string> SpaceDockReferences
-        => _listing.Releases?.Hosts.Where(host => string.Equals(host.Host, "spacedock", StringComparison.OrdinalIgnoreCase)).Select(host => host.Reference) ?? [];
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CanInstall))]

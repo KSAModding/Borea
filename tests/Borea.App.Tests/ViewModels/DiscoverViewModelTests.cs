@@ -7,7 +7,7 @@ namespace Borea.App.Tests.ViewModels;
 public sealed class DiscoverViewModelTests
 {
     [Fact]
-    public async Task Load_ListsIndexModsAndHidesTheSpaceDockCopyOfAnIndexListing()
+    public async Task Load_ListsOnlyTheContentIndex()
     {
         using var harness = await ViewModelHarness.CreateAsync();
         var viewModel = harness.ViewModel;
@@ -17,13 +17,12 @@ public sealed class DiscoverViewModelTests
 
         Assert.True(viewModel.CurrentWindowDiscover);
         Assert.True(viewModel.IsDiscoverSection);
-        Assert.True(viewModel.HasDiscoverItems);
-        Assert.Contains(viewModel.DiscoverItems, item => item.ModId == "AdvancedFlightComputer");
-        Assert.Contains(viewModel.DiscoverItems, item => item.ModId == ViewModelHarness.FakeSpaceDock.OwnId);
-        Assert.DoesNotContain(viewModel.DiscoverItems, item => item.ModId == ViewModelHarness.FakeSpaceDock.MirroredId);
+        Assert.Equal(["AdvancedFlightComputer", "KSArmory", "MeasureTools"], viewModel.DiscoverItems.Select(item => item.ModId));
+        Assert.All(viewModel.DiscoverItems, item => Assert.Equal("index", item.Source));
         Assert.All(viewModel.DiscoverItems, item => Assert.Equal(ContentType.Mod, item.Type));
-        Assert.Contains("MIT", viewModel.LicenseOptions);
-        Assert.Contains("GPL-3.0", viewModel.LicenseOptions);
+        Assert.DoesNotContain(viewModel.DiscoverItems, item => item.ModId == ViewModelHarness.FakeSpaceDock.OwnId);
+        Assert.DoesNotContain(viewModel.DiscoverItems, item => item.ModId == ViewModelHarness.FakeSpaceDock.MirroredId);
+        Assert.Equal(["MIT"], viewModel.LicenseOptions);
         Assert.Null(viewModel.DiscoverError);
     }
 
@@ -53,11 +52,11 @@ public sealed class DiscoverViewModelTests
         var viewModel = harness.ViewModel;
         await viewModel.EnsureDiscoverLoadedAsync();
 
-        viewModel.SearchText = "aircraft";
-        Assert.Equal([ViewModelHarness.FakeSpaceDock.OwnId], viewModel.DiscoverItems.Select(item => item.ModId));
+        viewModel.SearchText = "advanced flight";
+        Assert.Equal(["AdvancedFlightComputer"], viewModel.DiscoverItems.Select(item => item.ModId));
 
-        viewModel.SearchText = "someone";
-        Assert.Contains(viewModel.DiscoverItems, item => item.ModId == ViewModelHarness.FakeSpaceDock.OwnId);
+        viewModel.SearchText = "laurens";
+        Assert.Contains(viewModel.DiscoverItems, item => item.ModId == "KSArmory");
 
         viewModel.SearchText = "no such mod anywhere";
         Assert.False(viewModel.HasDiscoverItems);
@@ -73,7 +72,7 @@ public sealed class DiscoverViewModelTests
 
         viewModel.SelectLicenseCommand.Execute("GPL-3.0");
         Assert.True(viewModel.HasDiscoverFilters);
-        Assert.All(viewModel.DiscoverItems, item => Assert.Equal("GPL-3.0", item.License));
+        Assert.False(viewModel.HasDiscoverItems);
 
         viewModel.SelectOsCommand.Execute("windows");
         viewModel.ClearDiscoverFiltersCommand.Execute(null);
@@ -132,34 +131,18 @@ public sealed class DiscoverViewModelTests
     }
 
     [Fact]
-    public async Task Install_ListingWithoutRelease_ExplainsWhy()
-    {
-        using var harness = await ViewModelHarness.CreateAsync();
-        var viewModel = harness.ViewModel;
-        var instance = await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value);
-        await harness.Services.Instances.SetActiveInstanceAsync(instance.InstanceId);
-        await viewModel.LoadAsync();
-        await viewModel.EnsureDiscoverLoadedAsync();
-        var item = viewModel.DiscoverItems.Single(row => row.ModId == ViewModelHarness.FakeSpaceDock.OwnId);
-
-        await item.InstallCommand.ExecuteAsync(null);
-
-        Assert.Equal(harness.Localization.DiscoverNoRelease, item.InstallError);
-    }
-
-    [Fact]
     public async Task LanguageChange_RetranslatesRows()
     {
         using var harness = await ViewModelHarness.CreateAsync();
         var viewModel = harness.ViewModel;
         await viewModel.EnsureDiscoverLoadedAsync();
-        var item = viewModel.DiscoverItems.Single(row => row.ModId == ViewModelHarness.FakeSpaceDock.OwnId);
+        var item = viewModel.DiscoverItems.Single(row => row.ModId == "KSArmory");
         var english = item.AuthorsText;
 
         harness.Localization.TrySetCulture("de");
 
         Assert.NotEqual(english, item.AuthorsText);
-        Assert.Contains("Someone", item.AuthorsText);
+        Assert.Contains("Laurens", item.AuthorsText);
     }
 }
 
