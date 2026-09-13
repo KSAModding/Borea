@@ -1,6 +1,7 @@
 using Borea.Core.Dependencies;
 using Borea.Core.Instances;
 using Borea.Core.Mods;
+using Borea.Core.Planning;
 using Borea.Storage.Instances;
 using Borea.Storage.Mods;
 using Borea.Storage.State;
@@ -141,6 +142,43 @@ public sealed class FileModReplacerTests : IAsyncLifetime
         var saved = Assert.Single((await _instances.GetByIdAsync(_instanceId))!.Mods);
         Assert.Equal(ModVersion.Parse("1.0.0"), saved.Version);
         Assert.Equal(InstallReason.Manual, saved.Reason);
+    }
+
+    [Fact]
+    public async Task GuardedReplaceAsync_ReturnsTheAdvancedPlanningState()
+    {
+        var current = await InstallAsync(Release("1.0.0"), "old", enabled: true);
+        var expected = InstallPlanningState.Capture((await _instances.GetByIdAsync(_instanceId))!);
+        _downloader.Bytes = Archive("new");
+        var replacer = new FileModReplacer(_paths, _downloader, _instances, _state);
+
+        var result = await replacer.ReplaceGuardedAsync(_instanceId, current, Release("1.1.0"), expected);
+
+        Assert.True(result.State.Matches((await _instances.GetByIdAsync(_instanceId))!));
+        Assert.Equal(ModVersion.Parse("1.1.0"), result.Result.Replacement.Version);
+    }
+
+    [Fact]
+    public async Task GuardedReplaceAsync_ForeignChangeDuringDownloadKeepsTheWorkingTarget()
+    {
+        var current = await InstallAsync(Release("1.0.0"), "old", enabled: true);
+        var expected = InstallPlanningState.Capture((await _instances.GetByIdAsync(_instanceId))!);
+        _downloader.Bytes = Archive("new");
+        _downloader.AfterDownload = () => _instances.UpdateAsync(
+            _instanceId,
+            instance =>
+            {
+                instance.ReplaceForeignMods([new ForeignMod("foreign-dependency")]);
+                return true;
+            }).GetAwaiter().GetResult();
+        var replacer = new FileModReplacer(_paths, _downloader, _instances, _state);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => replacer.ReplaceGuardedAsync(_instanceId, current, Release("1.1.0"), expected));
+
+        Assert.Equal("old", File.ReadAllText(Path.Combine(ModFolder, "value.txt")));
+        var saved = await _instances.GetByIdAsync(_instanceId);
+        Assert.Equal(ModVersion.Parse("1.0.0"), Assert.Single(saved!.Mods).Version);
+        Assert.Equal("foreign-dependency", Assert.Single(saved.ForeignMods).ModId);
     }
 
     private string ModFolder => Path.Combine(_paths.GetInstanceModsFolder(_instanceId), ModId);

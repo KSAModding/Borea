@@ -1,6 +1,7 @@
 using Borea.Core.Instances;
 using Borea.Core.Mods;
 using Borea.Core.Paths;
+using Borea.Core.Planning;
 using Borea.Core.State;
 
 namespace Borea.Storage.Mods;
@@ -46,6 +47,27 @@ public sealed class FileModReplacer : IModReplacer
         ModVersionMetadata replacement,
         IProgress<DownloadProgress>? progress = null,
         CancellationToken cancellationToken = default)
+        => (await ReplaceCoreAsync(instanceId, expectedCurrent, replacement, expectedState: null, progress, cancellationToken).ConfigureAwait(false)).Result;
+
+    public async Task<GuardedModReplacementResult> ReplaceGuardedAsync(
+        Guid instanceId,
+        InstalledMod expectedCurrent,
+        ModVersionMetadata replacement,
+        InstallPlanningState expectedState,
+        IProgress<DownloadProgress>? progress = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(expectedState);
+        return await ReplaceCoreAsync(instanceId, expectedCurrent, replacement, expectedState, progress, cancellationToken).ConfigureAwait(false);
+    }
+
+    private async Task<GuardedModReplacementResult> ReplaceCoreAsync(
+        Guid instanceId,
+        InstalledMod expectedCurrent,
+        ModVersionMetadata replacement,
+        InstallPlanningState? expectedState,
+        IProgress<DownloadProgress>? progress,
+        CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(expectedCurrent);
         ArgumentNullException.ThrowIfNull(replacement);
@@ -75,6 +97,7 @@ public sealed class FileModReplacer : IModReplacer
         string? installedFolder = null;
         var backupCreated = false;
         var replacementMoved = false;
+        InstallPlanningState? resultingState = null;
 
         try
         {
@@ -97,6 +120,9 @@ public sealed class FileModReplacer : IModReplacer
                 instanceId,
                 current =>
                 {
+                    if (expectedState is not null && !expectedState.Matches(current))
+                        throw new InvalidOperationException("The instance changed after the replacement was planned.");
+
                     RequireExpected(current, expectedCurrent);
                     installedFolder = ModFolders.FindOwned(modsFolder, expectedCurrent.ModId, expectedCurrent.OwnershipToken!)
                         ?? throw new InvalidOperationException($"Borea cannot find its owned folder for '{expectedCurrent.ModId}'.");
@@ -105,6 +131,7 @@ public sealed class FileModReplacer : IModReplacer
                     Directory.Move(stagingFolder, installedFolder);
                     replacementMoved = true;
                     current.ReplaceMod(installed);
+                    resultingState = InstallPlanningState.Capture(current);
                     return true;
                 },
                 cancellationToken).ConfigureAwait(false);
@@ -116,7 +143,8 @@ public sealed class FileModReplacer : IModReplacer
 
             var retainedRecoveryDirectory = _deleteRecoveryDirectory(backupFolder) ? null : backupFolder;
             backupCreated = retainedRecoveryDirectory is not null;
-            return new ModReplacementResult(expectedCurrent, installed, download, retainedRecoveryDirectory);
+            var result = new ModReplacementResult(expectedCurrent, installed, download, retainedRecoveryDirectory);
+            return new GuardedModReplacementResult(result, resultingState!);
         }
         catch (Exception operationError)
         {
