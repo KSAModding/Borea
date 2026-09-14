@@ -13,7 +13,8 @@ using Borea.Core.Planning;
 namespace Borea.App.ViewModels;
 
 /// <summary>
-/// A row that installs a release: a Discover row, or a row of the versions table.
+/// A row that installs a release: a Discover row, a row of the versions table,
+/// or an update on the instance page.
 /// </summary>
 internal interface IInstallRow
 {

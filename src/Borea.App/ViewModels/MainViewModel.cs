@@ -319,6 +319,7 @@ public partial class MainViewModel : ViewModelBase
         }
 
         _indexRefreshed = true;
+        StartContentUpdateCheck();
     }
 
     private bool _indexRefreshed;
