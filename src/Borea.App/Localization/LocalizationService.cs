@@ -133,6 +133,10 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string InstanceEmptyContent => Resources.InstanceEmptyContent;
 
+    public string ContentInsideInstance => Resources.ContentInsideInstance;
+
+    public string ContentViewInstance => Resources.ContentViewInstance;
+
     public string InstanceContentNotInIndex => Resources.InstanceContentNotInIndex;
 
     public string InstanceContentNotOwned => Resources.InstanceContentNotOwned;

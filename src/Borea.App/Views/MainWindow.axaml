@@ -32,7 +32,7 @@
                     <Button Classes="nav" Classes.active="{Binding CurrentWindowTasks}" Command="{Binding SetMainWindowTasks}" ToolTip.Tip="{Binding Localization.NavigationTasks}" AutomationProperties.Name="{Binding Localization.NavigationTasks}">
                         <Path Classes="icon size-32" Data="{StaticResource Icon.Terminal}" />
                     </Button>
-                    <Border Height="1" Background="{StaticResource Brush.Border}" Margin="0,3" />
+                    <Border Height="1" Background="{StaticResource Brush.BorderStrong}" Margin="0,3" />
                     <Button Classes="nav" Classes.active="{Binding IsSettingsOpen}" Command="{Binding SetMainWindowSettings}" ToolTip.Tip="{Binding Localization.NavigationSettings}" AutomationProperties.Name="{Binding Localization.NavigationSettings}">
                         <Path Classes="icon size-32" Data="{StaticResource Icon.Settings}" />
                     </Button>
