@@ -720,4 +720,7 @@
   <data name="ContentViewInstance" xml:space="preserve">
     <value>View instance</value>
   </data>
+  <data name="ContentInactiveInstance" xml:space="preserve">
+    <value>This instance is not active. Make it active to add or remove content from here.</value>
+  </data>
 </root>

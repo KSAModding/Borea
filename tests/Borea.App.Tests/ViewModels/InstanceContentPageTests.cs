@@ -34,6 +34,59 @@ public sealed class InstanceContentPageTests
     }
 
     [Fact]
+    public async Task OpenedFromAnInactiveInstance_OffersNoAddOrRemove()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var viewModel = harness.ViewModel;
+        await InstalledContent.AddAsync(harness, "AdvancedFlightComputer", activate: false, ownership: ModInstallOwnership.Borea);
+        var second = await harness.Services.Instances.CreateAsync("Second", Borea.Core.Instances.InstanceSource.Custom.Value);
+        await harness.Services.Instances.SetActiveInstanceAsync(second.InstanceId);
+        await viewModel.LoadAsync();
+        var main = viewModel.Instances.Single(instance => instance.Name == "Main");
+        Assert.False(main.IsActive);
+        await main.OpenCommand.ExecuteAsync(null);
+
+        await viewModel.ContentGroups.SelectMany(group => group.Items).Single().OpenCommand.ExecuteAsync(null);
+
+        Assert.True(viewModel.IsContentFromInstance);
+        Assert.False(viewModel.CanActOnSelectedContent);
+    }
+
+    [Fact]
+    public async Task OpenedFromTheActiveInstance_OffersAddAndRemove()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var viewModel = harness.ViewModel;
+        await InstalledContent.AddAsync(harness, "AdvancedFlightComputer", activate: true, ownership: ModInstallOwnership.Borea);
+        await viewModel.LoadAsync();
+        await viewModel.ActiveInstance!.OpenCommand.ExecuteAsync(null);
+
+        await viewModel.ContentGroups.SelectMany(group => group.Items).Single().OpenCommand.ExecuteAsync(null);
+
+        Assert.True(viewModel.CanActOnSelectedContent);
+    }
+
+    [Fact]
+    public async Task ReturnAfterAChangeOnThePage_ShowsTheInstanceAsItIsNow()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var viewModel = harness.ViewModel;
+        await InstalledContent.AddAsync(harness, "AdvancedFlightComputer", activate: true, ownership: ModInstallOwnership.Borea);
+        await viewModel.LoadAsync();
+        await viewModel.ActiveInstance!.OpenCommand.ExecuteAsync(null);
+        await viewModel.ContentGroups.SelectMany(group => group.Items).Single().OpenCommand.ExecuteAsync(null);
+        var opened = viewModel.ContentReturnInstance;
+
+        viewModel.SelectedContent!.BeginRemoveCommand.Execute(null);
+        await viewModel.SelectedContent.ConfirmRemoveCommand.ExecuteAsync(null);
+        await viewModel.ReturnToInstanceCommand.ExecuteAsync(null);
+
+        Assert.True(viewModel.CurrentWindowInstance);
+        Assert.NotSame(opened, viewModel.SelectedInstance);
+        Assert.Equal(0, viewModel.SelectedInstance?.ModCount);
+    }
+
+    [Fact]
     public async Task ModNotInstalledByBorea_HasNoLinkAndSaysWhy()
     {
         using var harness = await ViewModelHarness.CreateAsync();
