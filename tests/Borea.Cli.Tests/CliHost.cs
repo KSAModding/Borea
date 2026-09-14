@@ -2,6 +2,7 @@ using System.Text.Json;
 using Borea.Composition;
 using Borea.Core.Game;
 using Borea.Core.Index;
+using Borea.Core.Logging;
 using Borea.Core.ModLoaders;
 using Borea.Core.ModPacks;
 using Borea.Core.Mods;
@@ -81,7 +82,7 @@ internal sealed class CliHost : IDisposable
     private async Task<CliServices> BuildAsync(CancellationToken cancellationToken)
     {
         Builds++;
-        var graph = await BoreaServices.BuildAsync(Root, cancellationToken);
+        var graph = await BoreaServices.BuildAsync(Root, BoreaLogSource.Cli, cancellationToken);
         return CliServices.From(
             graph,
             instances: InstancesFactory?.Invoke(graph),

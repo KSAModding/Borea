@@ -32,21 +32,37 @@ internal static class CommandRunner
 
         using (services)
         {
+            services.Log.Write("Command: borea " + string.Join(" ", parseResult.Tokens.Select(token => token.Value)));
             try
             {
-                return await body(services, output, error, cancellationToken).ConfigureAwait(false);
+                var exitCode = await body(services, output, error, cancellationToken).ConfigureAwait(false);
+                services.Log.Write($"Command finished with exit code {exitCode}.");
+                return exitCode;
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
+                services.Log.Write("Command cancelled.");
                 error.WriteLine("error: The command was cancelled.");
                 return ExitCodes.Failed;
             }
             catch (Exception exception) when (IsOperationFailure(exception))
             {
+                services.Log.Write("Command failed.", exception);
                 error.WriteLine($"error: {exception.Message}");
                 return ExitCodes.Failed;
             }
+            catch (Exception exception) when (LogDefect(services, exception))
+            {
+                // the filter returns false, so the defect keeps its stack trace
+                throw;
+            }
         }
+    }
+
+    private static bool LogDefect(CliServices services, Exception exception)
+    {
+        services.Log.Write("Command stopped on an unexpected error.", exception);
+        return false;
     }
 
     /// <summary>

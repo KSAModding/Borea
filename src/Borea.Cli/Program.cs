@@ -1,5 +1,6 @@
 using System.Text;
 using Borea.Composition;
+using Borea.Core.Logging;
 
 namespace Borea.Cli;
 
@@ -14,7 +15,7 @@ internal static class Program
     }
 
     private static async Task<CliServices> BuildServicesAsync(CancellationToken cancellationToken)
-        => CliServices.From(await BoreaServices.BuildAsync(cancellationToken).ConfigureAwait(false));
+        => CliServices.From(await BoreaServices.BuildAsync(boreaRoot: null, BoreaLogSource.Cli, cancellationToken).ConfigureAwait(false));
 
     private static StreamWriter Utf8Writer(Stream stream)
         => new(stream, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false)) { AutoFlush = true };
