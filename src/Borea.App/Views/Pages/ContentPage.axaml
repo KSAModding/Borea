@@ -192,8 +192,11 @@
                     <Border Classes="chip" HorizontalAlignment="Left">
                         <TextBlock Text="{Binding SelectedContent.GameVersionText}" />
                     </Border>
-                    <Border Classes="chip" HorizontalAlignment="Left" Classes.positive="{Binding SelectedContent.IsCompatible}" Classes.testing="{Binding SelectedContent.IsUntested}" Classes.dev="{Binding SelectedContent.IsIncompatible}">
-                        <TextBlock Text="{Binding SelectedContent.CompatibilityText}" />
+                    <Border Classes="chip" HorizontalAlignment="Left" Classes.compatible="{Binding SelectedContent.IsCompatible}" Classes.untested="{Binding SelectedContent.IsUntested}" Classes.incompatible="{Binding SelectedContent.IsIncompatible}">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <Ellipse />
+                            <TextBlock Text="{Binding SelectedContent.CompatibilityText}" />
+                        </StackPanel>
                     </Border>
                 </StackPanel>
                 <Border Height="1" Background="{StaticResource Brush.BorderStrong}" IsVisible="{Binding HasContentLinks}" />
