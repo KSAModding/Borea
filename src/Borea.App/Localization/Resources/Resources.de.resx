@@ -592,9 +592,9 @@
     <value>noch etwa {0} min</value>
   </data>
   <data name="GameLaunchVanilla" xml:space="preserve">
-    <value>Vanilla KSA Lanceren</value>
+    <value>Vanilla KSA Starten</value>
   </data>
   <data name="LaunchActiveInstance" xml:space="preserve">
-    <value>Actief Exemplaar Starten</value>
+    <value>Aktive Instanz Starten</value>
   </data>
 </root>
