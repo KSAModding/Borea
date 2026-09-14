@@ -228,6 +228,7 @@ public sealed class ContentIndexModPackRepositoryTests
         public string GetModFavoritesPath() => throw new NotSupportedException();
         public string GetModPackFavoritesPath() => throw new NotSupportedException();
         public string GetBoreaSettingsPath() => throw new NotSupportedException();
+        public string GetLogsFolder() => throw new NotSupportedException();
         public string GetInstanceRoot(Guid instanceId) => throw new NotSupportedException();
         public string GetInstanceModsFolder(Guid instanceId) => throw new NotSupportedException();
         public string GetInstanceSavesFolder(Guid instanceId) => throw new NotSupportedException();
@@ -236,6 +237,7 @@ public sealed class ContentIndexModPackRepositoryTests
         public string GetInstanceHudLayoutsFolder(Guid instanceId) => throw new NotSupportedException();
         public string GetInstanceCrashDumpsFolder(Guid instanceId) => throw new NotSupportedException();
         public string GetInstanceExportsFolder(Guid instanceId) => throw new NotSupportedException();
+        public string GetInstanceGameLogPath(Guid instanceId) => throw new NotSupportedException();
         public string GetInstanceManifestPath(Guid instanceId) => throw new NotSupportedException();
         public string GetInstanceMetadataPath(Guid instanceId) => throw new NotSupportedException();
         public string? GetGameDirectoryPath() => throw new NotSupportedException();

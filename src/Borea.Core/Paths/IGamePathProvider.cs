@@ -48,6 +48,11 @@ public interface IGamePathProvider
     string GetAppPreferencesPath();
 
     /// <summary>
+    /// Folder of Borea's daily log files.
+    /// </summary>
+    string GetLogsFolder();
+
+    /// <summary>
     /// Root folder for a specific instance, e.g.
     /// </summary>
     string GetInstanceRoot(Guid instanceId);
@@ -65,6 +70,11 @@ public interface IGamePathProvider
     string GetInstanceCrashDumpsFolder(Guid instanceId);
 
     string GetInstanceExportsFolder(Guid instanceId);
+
+    /// <summary>
+    /// The log the game writes in the instance, Constants.LogsFolderPath below the instance root.
+    /// </summary>
+    string GetInstanceGameLogPath(Guid instanceId);
 
     string GetInstanceManifestPath(Guid instanceId);
 
