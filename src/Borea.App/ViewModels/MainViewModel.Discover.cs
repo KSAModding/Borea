@@ -22,6 +22,7 @@ namespace Borea.App.ViewModels;
 public partial class MainViewModel
 {
     private IReadOnlyList<DiscoverItem> _listings = [];
+    private GameVersion? _compatibilityGame;
     private Task? _discoverLoad;
 
     public ObservableCollection<DiscoverItem> DiscoverItems { get; } = [];
@@ -167,23 +168,36 @@ public partial class MainViewModel
         => _services is null ? Task.CompletedTask : RefreshCompatibilityAsync(_services.InstalledVersion.GetInstalledVersion()?.Version);
 
     /// <summary>
-    /// Evaluates the newest release of every index listing against
-    /// <paramref name="installed"/> (RFC 0017). A listing from another source
-    /// stays unknown, because its releases would have to be fetched one by one.
+    /// Evaluates the newest release of every index listing and every row of
+    /// the Versions table against <paramref name="installed"/> (RFC 0017). A
+    /// listing from another source stays unknown, because its releases would
+    /// have to be fetched one by one.
     /// </summary>
     internal async Task RefreshCompatibilityAsync(GameVersion? installed)
     {
         if (_services is null)
             return;
 
+        _compatibilityGame = installed;
         foreach (var item in _listings)
         {
             var latest = item.Source == "index" ? await _services.ContentIndex.GetLatestReleaseInChannelAsync(item.ModId, _services.Settings.ReleaseChannel) : null;
             item.Compatibility = latest is null ? GameCompatibility.Unknown : Borea.Core.Game.Compatibility.Evaluate(latest, installed);
         }
 
+        foreach (var release in _contentReleases)
+            release.RefreshCompatibility(installed);
+
         ApplyDiscoverFilters();
     }
+
+    internal string CompatibilityText(GameCompatibility compatibility) => compatibility switch
+    {
+        GameCompatibility.Compatible => Localization.CompatibilityCompatible,
+        GameCompatibility.Untested => Localization.CompatibilityUntested,
+        GameCompatibility.Incompatible => Localization.CompatibilityIncompatible,
+        _ => Localization.CompatibilityUnknown,
+    };
 
     partial void OnSelectedOsChanged(string? value) => ApplyDiscoverFilters();
 
@@ -314,13 +328,7 @@ public sealed partial class DiscoverItem : ObservableObject, IInstallRow
     [NotifyPropertyChangedFor(nameof(IsIncompatible))]
     private GameCompatibility _compatibility = GameCompatibility.Unknown;
 
-    public string CompatibilityText => Compatibility switch
-    {
-        GameCompatibility.Compatible => _owner.Localization.CompatibilityCompatible,
-        GameCompatibility.Untested => _owner.Localization.CompatibilityUntested,
-        GameCompatibility.Incompatible => _owner.Localization.CompatibilityIncompatible,
-        _ => _owner.Localization.CompatibilityUnknown,
-    };
+    public string CompatibilityText => _owner.CompatibilityText(Compatibility);
 
     public bool IsCompatible => Compatibility == GameCompatibility.Compatible;
 

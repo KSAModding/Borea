@@ -137,11 +137,12 @@
                     <Border BorderBrush="{StaticResource Brush.BorderStrong}" BorderThickness="1" CornerRadius="16" ClipToBounds="True" IsVisible="{Binding !IsLoadingVersions}">
                         <StackPanel>
                             <Border Background="{StaticResource Brush.Surface}" Padding="16,11">
-                                <Grid ColumnDefinitions="150,150,*,120,80">
+                                <Grid ColumnDefinitions="160,84,*,124,100,32">
                                     <TextBlock Classes="body-md secondary" Text="{Binding Localization.ContentVersionHeader}" />
                                     <TextBlock Grid.Column="1" Classes="body-md secondary" Text="{Binding Localization.ContentChannelHeader}" />
                                     <TextBlock Grid.Column="2" Classes="body-md secondary" Text="{Binding Localization.ContentGameVersionHeader}" />
-                                    <TextBlock Grid.Column="3" Classes="body-md secondary" Text="{Binding Localization.ContentPublishedHeader}" />
+                                    <TextBlock Grid.Column="3" Classes="body-md secondary" Text="{Binding Localization.ContentCompatibility}" />
+                                    <TextBlock Grid.Column="4" Classes="body-md secondary" Text="{Binding Localization.ContentPublishedHeader}" />
                                 </Grid>
                             </Border>
                             <TextBlock Classes="body-md muted" Text="{Binding ContentVersionsEmptyText}" Margin="16,12" IsVisible="{Binding !ContentVersions.Count}" />
@@ -149,7 +150,7 @@
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate x:DataType="vm:VersionItem">
                                         <Border BorderBrush="{StaticResource Brush.BorderStrong}" BorderThickness="0,1,0,0" Padding="16,8" MinHeight="40">
-                                            <Grid ColumnDefinitions="150,150,*,120,80" RowDefinitions="Auto,Auto">
+                                            <Grid ColumnDefinitions="160,84,*,124,100,32" RowDefinitions="Auto,Auto">
                                                 <TextBlock Classes="heading-sm" Text="{Binding Version}" VerticalAlignment="Center" />
                                                 <Border Grid.Column="1" Classes="chip" HorizontalAlignment="Left" VerticalAlignment="Center" Classes.testing="{Binding IsTesting}" Classes.dev="{Binding IsDev}">
                                                     <TextBlock Text="{Binding ChannelText}" />
@@ -157,22 +158,28 @@
                                                 <Border Grid.Column="2" Classes="chip" HorizontalAlignment="Left" VerticalAlignment="Center">
                                                     <TextBlock Text="{Binding GameVersionText}" />
                                                 </Border>
-                                                <TextBlock Grid.Column="3" Classes="body-md secondary" Text="{Binding PublishedText}" VerticalAlignment="Center" />
-                                                <StackPanel Grid.Column="4" Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right" VerticalAlignment="Center">
+                                                <Border Grid.Column="3" Classes="chip" HorizontalAlignment="Left" VerticalAlignment="Center" Classes.compatible="{Binding IsCompatible}" Classes.untested="{Binding IsUntested}" Classes.incompatible="{Binding IsIncompatible}">
+                                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                                        <Ellipse />
+                                                        <TextBlock Text="{Binding CompatibilityText}" />
+                                                    </StackPanel>
+                                                </Border>
+                                                <TextBlock Grid.Column="4" Classes="body-md secondary" Text="{Binding PublishedText}" VerticalAlignment="Center" />
+                                                <StackPanel Grid.Column="5" Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right" VerticalAlignment="Center">
                                                     <Button Classes="icon" Command="{Binding InstallCommand}" IsEnabled="{Binding !IsInstalling}" IsVisible="{Binding CanInstall}" ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.DiscoverAdd}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.DiscoverAdd}">
                                                         <Path Classes="icon size-16" Data="{StaticResource Icon.Plus}" Stroke="{StaticResource Brush.Accent}" StrokeThickness="2" />
                                                     </Button>
                                                 </StackPanel>
-                                                <StackPanel Grid.Row="1" Grid.ColumnSpan="5" Orientation="Horizontal" Spacing="8" Margin="0,6,0,0" IsVisible="{Binding InstallWarning, Converter={x:Static ObjectConverters.IsNotNull}}">
+                                                <StackPanel Grid.Row="1" Grid.ColumnSpan="6" Orientation="Horizontal" Spacing="8" Margin="0,6,0,0" IsVisible="{Binding InstallWarning, Converter={x:Static ObjectConverters.IsNotNull}}">
                                                     <TextBlock Classes="body-sm secondary" Text="{Binding InstallWarning}" TextWrapping="Wrap" MaxWidth="480" VerticalAlignment="Center" />
                                                     <Button Classes="text primary" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.InstallAnyway}" Command="{Binding ConfirmInstallCommand}" />
                                                     <Button Classes="text" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryCancel}" Command="{Binding CancelInstallCommand}" />
                                                 </StackPanel>
-                                                <StackPanel Grid.Row="1" Grid.ColumnSpan="5" Orientation="Horizontal" Spacing="8" Margin="0,6,0,0" IsVisible="{Binding ProgressStatus, Converter={x:Static ObjectConverters.IsNotNull}}">
+                                                <StackPanel Grid.Row="1" Grid.ColumnSpan="6" Orientation="Horizontal" Spacing="8" Margin="0,6,0,0" IsVisible="{Binding ProgressStatus, Converter={x:Static ObjectConverters.IsNotNull}}">
                                                     <TextBlock Classes="body-sm secondary" Text="{Binding ProgressStatus}" VerticalAlignment="Center" />
                                                     <TextBlock Classes="label-md" Text="{Binding ProgressDetail}" VerticalAlignment="Center" IsVisible="{Binding ProgressDetail, Converter={x:Static ObjectConverters.IsNotNull}}" />
                                                 </StackPanel>
-                                                <TextBlock Grid.Row="1" Grid.ColumnSpan="5" Classes="body-sm danger" Text="{Binding InstallError}" TextWrapping="Wrap" Margin="0,6,0,0" IsVisible="{Binding InstallError, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                                                <TextBlock Grid.Row="1" Grid.ColumnSpan="6" Classes="body-sm danger" Text="{Binding InstallError}" TextWrapping="Wrap" Margin="0,6,0,0" IsVisible="{Binding InstallError, Converter={x:Static ObjectConverters.IsNotNull}}" />
                                             </Grid>
                                         </Border>
                                     </DataTemplate>

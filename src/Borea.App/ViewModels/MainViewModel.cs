@@ -525,6 +525,8 @@ public partial class MainViewModel : ViewModelBase
             instance.RefreshText();
         foreach (var item in DiscoverItems)
             item.RefreshText();
+        foreach (var release in _contentReleases)
+            release.RefreshText();
         foreach (var option in ReleaseChannelOptions)
             option.RefreshText();
         RefreshContentGroups();
