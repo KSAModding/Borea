@@ -229,6 +229,41 @@ public sealed class ProcessStarterTests : IDisposable
     }
 
     [Fact]
+    public async Task Start_KeepsWhatTheProcessWritesAndItsExitCode()
+    {
+        LaunchPlan plan;
+        if (OperatingSystem.IsWindows())
+        {
+            var script = Path.Combine(_tempRoot, "crash.cmd");
+            File.WriteAllText(script, "@echo off\r\necho starting\r\necho broken assembly 1>&2\r\nexit /b 3\r\n");
+            plan = new LaunchPlan(Path.Combine(Environment.SystemDirectory, "cmd.exe"), new[] { "/c", script }, _tempRoot, new Dictionary<string, string>());
+        }
+        else
+        {
+            var script = Path.Combine(_tempRoot, "crash.sh");
+            File.WriteAllText(script, "echo starting\necho broken assembly >&2\nexit 3\n");
+            plan = new LaunchPlan("/bin/sh", new[] { script }, _tempRoot, new Dictionary<string, string>());
+        }
+
+        using var process = _starter.Start(plan);
+
+        Assert.True(await process.WaitForExitAsync(Patience));
+        Assert.Equal(3, process.ExitCode);
+        Assert.Contains("starting", process.RecentOutput);
+        Assert.Contains("broken assembly", process.RecentOutput.Select(line => line.Trim()));
+    }
+
+    [Fact]
+    public async Task WaitForExit_RunningProcess_ReturnsFalseAfterTheTimeout()
+    {
+        using var process = _starter.Start(ChildPlan(Array.Empty<string>(), new Dictionary<string, string>()));
+        _probeIds.Add(process.Id);
+
+        Assert.False(await process.WaitForExitAsync(TimeSpan.FromMilliseconds(200)));
+        Assert.Null(process.ExitCode);
+    }
+
+    [Fact]
     public void Start_MissingExecutable_ThrowsWin32Exception()
     {
         var plan = new LaunchPlan(

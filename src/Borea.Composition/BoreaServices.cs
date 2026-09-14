@@ -139,6 +139,8 @@ public sealed class BoreaServices : IDisposable
 
     public required IInstalledGameVersionProvider InstalledVersion { get; init; }
 
+    public required IInstallDetector InstallDetector { get; init; }
+
     public required IContentIndexFetcher IndexFetcher { get; init; }
 
     public required IContentIndexReader IndexReader { get; init; }
@@ -174,17 +176,28 @@ public sealed class BoreaServices : IDisposable
 
     /// <summary>Builds the services like the overload above, with log lines marked by <paramref name="logSource"/>.</summary>
     public static Task<BoreaServices> BuildAsync(string? boreaRoot, BoreaLogSource logSource, CancellationToken cancellationToken = default)
-        => BuildCoreAsync(boreaRoot, logSource, httpHandler: null, fallbackRepository: null, cancellationToken);
+        => BuildCoreAsync(boreaRoot, logSource, httpHandler: null, fallbackRepository: null, installCandidates: null, cancellationToken);
 
     internal static Task<BoreaServices> BuildAsync(
         string? boreaRoot,
         HttpMessageHandler httpHandler,
         IModRepository fallbackRepository,
         CancellationToken cancellationToken = default)
+        => BuildAsync(boreaRoot, httpHandler, fallbackRepository, new NoInstallCandidates(), cancellationToken);
+
+    /// <param name="processStarter">Starts the launchers' processes. Null starts real ones.</param>
+    internal static Task<BoreaServices> BuildAsync(
+        string? boreaRoot,
+        HttpMessageHandler httpHandler,
+        IModRepository fallbackRepository,
+        IInstallCandidateSource installCandidates,
+        CancellationToken cancellationToken = default,
+        IProcessStarter? processStarter = null)
     {
         ArgumentNullException.ThrowIfNull(httpHandler);
         ArgumentNullException.ThrowIfNull(fallbackRepository);
-        return BuildCoreAsync(boreaRoot, BoreaLogSource.App, httpHandler, fallbackRepository, cancellationToken);
+        ArgumentNullException.ThrowIfNull(installCandidates);
+        return BuildCoreAsync(boreaRoot, BoreaLogSource.App, httpHandler, fallbackRepository, installCandidates, cancellationToken, processStarter);
     }
 
     private static async Task<BoreaServices> BuildCoreAsync(
@@ -192,7 +205,9 @@ public sealed class BoreaServices : IDisposable
         BoreaLogSource logSource,
         HttpMessageHandler? httpHandler,
         IModRepository? fallbackRepository,
-        CancellationToken cancellationToken)
+        IInstallCandidateSource? installCandidates,
+        CancellationToken cancellationToken,
+        IProcessStarter? processStarter = null)
     {
         // the settings file lives under Borea's own root and needs no
         // game path to be found, so a provider without one reads it.
@@ -237,6 +252,8 @@ public sealed class BoreaServices : IDisposable
         var settingsRepository = new FileBoreaSettingsRepository(paths);
         var loaderConfiguration = new LoaderConfigurator();
         var instances = new FileInstanceRepository(paths);
+        var loaderAdopter = new FileLoaderAdopter(settingsRepository, loaderConfiguration);
+        installCandidates ??= OperatingSystem.IsWindows() ? new WindowsInstallCandidateSource() : new NoInstallCandidates();
 
         var modState = new FileModStateRepository(paths);
         var modInstaller = new LoggingModInstaller(new FileModInstaller(paths, downloader, instances, modState), log);
@@ -271,13 +288,14 @@ public sealed class BoreaServices : IDisposable
             InstallPlanner = installPlanner,
             PlanExecutor = new InstallPlanExecutor(instances, modInstaller, modReplacer),
             LoaderInstaller = new FileLoaderInstaller(paths, downloader, settingsRepository, loaderConfiguration),
-            LoaderAdopter = new FileLoaderAdopter(settingsRepository, loaderConfiguration),
+            LoaderAdopter = loaderAdopter,
             LoaderUninstaller = new FileLoaderUninstaller(settingsRepository),
-            Launcher = new LoggingLauncher(new LoaderLauncher(paths, new ProcessStarter()), log),
-            SharedProfileLauncher = new SharedProfileLauncher(paths, new ProcessStarter()),
+            Launcher = new LoggingLauncher(new LoaderLauncher(paths, processStarter ?? new ProcessStarter()), log),
+            SharedProfileLauncher = new SharedProfileLauncher(paths, processStarter ?? new ProcessStarter()),
             LatestVersion = new LatestVersionPing(http),
             ReleaseCheck = new BoreaReleaseCheck(http),
             InstalledVersion = new InstalledGameVersionProvider(paths),
+            InstallDetector = new InstallDetector(installCandidates, loaderAdopter, paths.GetLoadersRoot()),
             IndexFetcher = indexFetcher,
             IndexReader = indexReader,
             IndexSnapshots = indexSnapshots,
@@ -309,5 +327,12 @@ public sealed class BoreaServices : IDisposable
     {
         public Task<ContentIndexSnapshot> GetSnapshotAsync(CancellationToken cancellationToken = default) =>
             reader.ReadAsync(cancellationToken);
+    }
+
+    private sealed class NoInstallCandidates : IInstallCandidateSource
+    {
+        public IReadOnlyList<string> GetGameDirectories() => [];
+
+        public IReadOnlyList<string> GetLoaderDirectories() => [];
     }
 }

@@ -1,10 +1,12 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Borea.Composition;
+using Borea.Core.Game;
 using Borea.Core.ModLoaders;
 using Borea.Core.Mods;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -47,6 +49,27 @@ public partial class MainViewModel
 
     [ObservableProperty]
     private string _gameDirectoryInput = string.Empty;
+
+    /// <summary>
+    /// The games Borea found while no usable game directory is saved.
+    /// </summary>
+    public ObservableCollection<DetectedGame> DetectedGames { get; } = [];
+
+    [ObservableProperty]
+    private DetectedGame? _selectedDetectedGame;
+
+    public bool HasSeveralDetectedGames => DetectedGames.Count > 1;
+
+    /// <summary>
+    /// True while the field holds a found folder that is not saved yet.
+    /// </summary>
+    [ObservableProperty]
+    private bool _isGameDirectorySuggested;
+
+    [ObservableProperty]
+    private bool _isLoaderDirectorySuggested;
+
+    private IReadOnlyList<DetectedLoader> _detectedLoaders = [];
 
     /// <summary>
     /// Why the game is not usable yet, or null when it is. Drives the banner
@@ -161,6 +184,8 @@ public partial class MainViewModel
         if (_services is null)
             return;
 
+        ClearDetectedGames();
+        _detectedLoaders = [];
         GameDirectoryInput = _services.Settings.GameDirectoryPath ?? string.Empty;
         var loaderId = _services.Settings.LoaderInstallations.Keys.FirstOrDefault();
         LoaderDirectoryInput = loaderId is null ? string.Empty : _services.Settings.LoaderInstallations[loaderId].DirectoryPath;
@@ -170,10 +195,131 @@ public partial class MainViewModel
         foreach (var loader in _listings.Where(item => item.Type == ContentType.ModLoader))
             Loaders.Add(loader);
         SelectedLoader = Loaders.FirstOrDefault(loader => loaderId is not null && ModIds.Equals(loader.ModId, loaderId)) ?? Loaders.FirstOrDefault();
+        await DetectInstallsAsync(_services);
         await RefreshLoaderStateAsync();
     }
 
-    partial void OnSelectedLoaderChanged(DiscoverItem? value) => _ = RefreshLoaderStateAsync();
+    /// <summary>
+    /// Fills the fields with what Borea found when nothing usable is saved.
+    /// Only a confirmation saves a found folder.
+    /// </summary>
+    private async Task DetectInstallsAsync(BoreaServices services)
+    {
+        var savedGame = services.Settings.GameDirectoryPath;
+        var needsGame = savedGame is null || !Directory.Exists(savedGame);
+        var needsLoader = services.Settings.LoaderInstallations.Count == 0;
+        if (needsGame || needsLoader)
+        {
+            var gameInput = GameDirectoryInput;
+            var loaderInput = LoaderDirectoryInput;
+            var listings = new List<ModMetadata>();
+            foreach (var loader in Loaders)
+            {
+                try
+                {
+                    if (await services.Mods.GetListingAsync(loader.ModId) is { } listing)
+                        listings.Add(listing);
+                }
+                catch (Exception exception) when (exception is HttpRequestException or IOException or InvalidOperationException or TaskCanceledException)
+                {
+                    // a loader without its listing cannot be checked on disk
+                }
+            }
+
+            InstallDetection? detection = null;
+            try
+            {
+                detection = await Task.Run(() => services.InstallDetector.DetectAsync(listings));
+            }
+            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or InvalidOperationException)
+            {
+                // nothing found is the same as nothing to suggest
+            }
+
+            if (!ReferenceEquals(services, _services))
+                return;
+
+            if (detection is not null && needsGame)
+            {
+                foreach (var game in detection.Games)
+                    DetectedGames.Add(game);
+                if (DetectedGames.Count == 1 && GameDirectoryInput == gameInput)
+                    GameDirectoryInput = DetectedGames[0].Directory;
+            }
+
+            if (detection is not null && needsLoader)
+            {
+                _detectedLoaders = detection.Loaders;
+                if (LoaderDirectoryInput == loaderInput && FoundLoaderDirectory(SelectedLoader) is { } found)
+                    LoaderDirectoryInput = found;
+            }
+        }
+
+        OnPropertyChanged(nameof(HasSeveralDetectedGames));
+        RefreshSuggestions();
+    }
+
+    private void ClearDetectedGames()
+    {
+        DetectedGames.Clear();
+        SelectedDetectedGame = null;
+        OnPropertyChanged(nameof(HasSeveralDetectedGames));
+    }
+
+    private string? FoundLoaderDirectory(DiscoverItem? loader) =>
+        loader is null ? null : _detectedLoaders.FirstOrDefault(found => ModIds.Equals(found.LoaderId, loader.ModId))?.Directory;
+
+    partial void OnSelectedDetectedGameChanged(DetectedGame? value)
+    {
+        if (value is not null)
+            GameDirectoryInput = value.Directory;
+    }
+
+    partial void OnGameDirectoryInputChanged(string value) => RefreshSuggestions();
+
+    partial void OnLoaderDirectoryInputChanged(string value) => RefreshSuggestions();
+
+    private void RefreshSuggestions()
+    {
+        var input = GameDirectoryInput.Trim();
+        IsGameDirectorySuggested = input.Length > 0
+            && !SameDirectory(_services?.Settings.GameDirectoryPath, input)
+            && DetectedGames.Any(game => SameDirectory(game.Directory, input));
+
+        var loaderInput = LoaderDirectoryInput.Trim();
+        IsLoaderDirectorySuggested = loaderInput.Length > 0
+            && SelectedLoader is { } selected
+            && _services?.Settings.LoaderInstallations.Keys.Any(id => ModIds.Equals(id, selected.ModId)) != true
+            && _detectedLoaders.Any(found => ModIds.Equals(found.LoaderId, selected.ModId) && SameDirectory(found.Directory, loaderInput));
+    }
+
+    private static bool SameDirectory(string? left, string right)
+    {
+        if (left is null)
+            return false;
+
+        try
+        {
+            return string.Equals(
+                Path.TrimEndingDirectorySeparator(Path.GetFullPath(left)),
+                Path.TrimEndingDirectorySeparator(Path.GetFullPath(right)),
+                OperatingSystem.IsLinux() ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase);
+        }
+        catch (Exception exception) when (exception is ArgumentException or NotSupportedException or PathTooLongException)
+        {
+            return false;
+        }
+    }
+
+    partial void OnSelectedLoaderChanged(DiscoverItem? oldValue, DiscoverItem? newValue)
+    {
+        var input = LoaderDirectoryInput.Trim();
+        if (input.Length == 0 || SameDirectory(FoundLoaderDirectory(oldValue), input))
+            LoaderDirectoryInput = FoundLoaderDirectory(newValue) ?? string.Empty;
+
+        RefreshSuggestions();
+        _ = RefreshLoaderStateAsync();
+    }
 
     /// <summary>
     /// Reads what the settings record for the selected loader and which release
@@ -300,7 +446,13 @@ public partial class MainViewModel
         {
             SetupMessage = await operation(_services);
             await RebuildServicesAsync();
+            if (_services.Settings.GameDirectoryPath is { } game && Directory.Exists(game))
+                ClearDetectedGames();
+            if (_services.Settings.LoaderInstallations.Count > 0)
+                _detectedLoaders = [];
+
             await RefreshLoaderStateAsync();
+            RefreshSuggestions();
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or InvalidOperationException or ArgumentException or NotSupportedException or HttpRequestException or DownloadFailedException or TaskCanceledException)
         {

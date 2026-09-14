@@ -32,9 +32,20 @@ internal static class LaunchCommand
             ct.ThrowIfCancellationRequested();
             var result = cli.Launcher.Launch(target, loader);
 
+            // a loader that stops with an error while the game loads is reported, not left to vanish
+            if (result.Started)
+                result = await cli.Launcher.WatchStartAsync(target, result, ct).ConfigureAwait(false);
+
             if (!result.Started)
             {
                 error.WriteLine($"error: {result.Message}");
+                if (result.Outcome == Borea.Core.Launch.LaunchOutcome.ExitedEarly)
+                {
+                    error.WriteLine($"{loader.Name} wrote:");
+                    foreach (var line in result.Output)
+                        error.WriteLine($"  {line}");
+                }
+
                 return ExitCodes.Failed;
             }
 

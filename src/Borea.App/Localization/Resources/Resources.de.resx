@@ -501,6 +501,15 @@
   <data name="SetupSave" xml:space="preserve">
     <value>Speichern</value>
   </data>
+  <data name="SetupUseThisFolder" xml:space="preserve">
+    <value>Diesen Ordner verwenden</value>
+  </data>
+  <data name="SetupFoundGame" xml:space="preserve">
+    <value>Borea hat KSA in diesem Ordner gefunden. Prüfe den Ordner und verwende ihn dann.</value>
+  </data>
+  <data name="SetupFoundGames" xml:space="preserve">
+    <value>Borea hat KSA in mehreren Ordnern gefunden. Wähle den Ordner, aus dem du spielst.</value>
+  </data>
   <data name="SetupLoader" xml:space="preserve">
     <value>Mod-Loader</value>
   </data>
@@ -515,6 +524,9 @@
   </data>
   <data name="SetupUseExisting" xml:space="preserve">
     <value>Vorhandenen verwenden</value>
+  </data>
+  <data name="SetupFoundLoader" xml:space="preserve">
+    <value>Borea hat diesen Loader gefunden. Prüfe den Ordner und verwende ihn dann.</value>
   </data>
   <data name="SetupSaved" xml:space="preserve">
     <value>Gespeichert.</value>
@@ -710,5 +722,29 @@
   </data>
   <data name="ContentInactiveInstance" xml:space="preserve">
     <value>Diese Instanz ist nicht aktiv. Aktiviere sie, um hier Inhalte hinzuzufügen oder zu entfernen.</value>
+  </data>
+  <data name="LaunchStartingFormat" xml:space="preserve">
+    <value>{0} wird gestartet…</value>
+  </data>
+  <data name="LaunchModBrokeFormat" xml:space="preserve">
+    <value>{0} {1} hat den Start von {2} verhindert. Die Mod funktioniert womöglich nicht mit dieser KSA-Version. Deaktiviere sie und versuche es erneut, oder suche nach einem Update.</value>
+  </data>
+  <data name="LaunchExitedEarlyFormat" xml:space="preserve">
+    <value>{0} wurde direkt nach dem Start beendet (Exit-Code {1}). Die Details zeigen, was ausgegeben wurde.</value>
+  </data>
+  <data name="LaunchDisableModFormat" xml:space="preserve">
+    <value>{0} deaktivieren</value>
+  </data>
+  <data name="LaunchModDisabledFormat" xml:space="preserve">
+    <value>{0} ist deaktiviert. Drücke Spielen, um es erneut zu versuchen.</value>
+  </data>
+  <data name="LaunchShowDetails" xml:space="preserve">
+    <value>Details anzeigen</value>
+  </data>
+  <data name="LaunchOpenLog" xml:space="preserve">
+    <value>Start-Log öffnen</value>
+  </data>
+  <data name="LaunchNoOutput" xml:space="preserve">
+    <value>Der Loader hat vor dem Beenden nichts ausgegeben.</value>
   </data>
 </root>

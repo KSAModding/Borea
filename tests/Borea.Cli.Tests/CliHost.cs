@@ -104,7 +104,8 @@ internal sealed class CliHost : IDisposable
             loaderInstaller: LoaderInstaller,
             loaderAdopter: LoaderAdopter,
             loaderUninstaller: LoaderUninstaller,
-            launcher: new LoaderLauncher(graph.Paths, ProcessStarter),
+            // the fake processes answer at once, so the startup watch needs no real time
+            launcher: new LoaderLauncher(graph.Paths, ProcessStarter, TimeSpan.Zero),
             modPacks: ModPacks ?? new ContentIndexModPackRepository(IndexSnapshots ?? new ReaderSnapshotProvider(IndexReader)),
             modPackInstaller: ModPackInstaller,
             sharedProfileLauncher: new SharedProfileLauncher(graph.Paths, ProcessStarter, OsPlatform.Windows),

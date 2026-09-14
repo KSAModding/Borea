@@ -28,4 +28,7 @@ public enum LaunchOutcome
 
     /// <summary>The loader runs through dotnet on this system, and no dotnet host was found.</summary>
     DotnetMissing = 8,
+
+    /// <summary>The loader started, then stopped with an error before the game came up.</summary>
+    ExitedEarly = 9,
 }

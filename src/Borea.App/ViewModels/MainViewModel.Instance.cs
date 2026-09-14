@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Borea.Composition;
 using Borea.Core.Dependencies;
 using Borea.Core.Instances;
+using Borea.Core.Launch;
 using Borea.Core.Mods;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -60,6 +61,25 @@ public partial class MainViewModel
 
     [ObservableProperty]
     private bool _isLaunching;
+
+    /// <summary>What the loader wrote before it stopped, when the last Play failed that way.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasLaunchOutput))]
+    private string? _launchOutputText;
+
+    public bool HasLaunchOutput => LaunchOutputText is not null;
+
+    [ObservableProperty]
+    private bool _isLaunchOutputShown;
+
+    /// <summary>The mod the loader's error names, offered to disable. Null when none was named.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanDisableBlamedMod))]
+    private string? _launchBlamedModId;
+
+    public bool CanDisableBlamedMod => LaunchBlamedModId is not null;
+
+    public string? DisableBlamedModText => LaunchBlamedModId is null ? null : Localization.FormatLaunchDisableMod(BlamedModName(LaunchBlamedModId));
 
     [ObservableProperty]
     private string? _contentError;
@@ -150,11 +170,23 @@ public partial class MainViewModel
             return;
 
         IsLaunching = true;
+        ClearLaunchFailure();
         try
         {
+            var instance = _selectedInstanceEntity;
             var loader = await FindInstalledLoaderAsync();
-            var result = _services.Launcher.Launch(_selectedInstanceEntity, loader);
-            LaunchMessage = result.Message;
+            var result = _services.Launcher.Launch(instance, loader);
+            if (result.Started && loader is not null)
+            {
+                // the loader can still stop while it loads the mods, so the start is watched before it counts
+                LaunchMessage = Localization.FormatLaunchStarting(loader.Name);
+                result = await _services.Launcher.WatchStartAsync(instance, result);
+            }
+
+            if (result.Outcome == LaunchOutcome.ExitedEarly)
+                ShowLaunchFailure(result, instance, loader);
+            else
+                LaunchMessage = result.Message;
         }
         catch (Exception exception) when (exception is IOException or InvalidOperationException or System.Net.Http.HttpRequestException)
         {
@@ -164,6 +196,55 @@ public partial class MainViewModel
         {
             IsLaunching = false;
         }
+    }
+
+    private void ShowLaunchFailure(LaunchResult result, Instance instance, ModMetadata? loader)
+    {
+        var loaderName = loader?.Name ?? string.Empty;
+        var blamed = result.BlamedModId is null ? null : instance.Mods.FirstOrDefault(mod => ModIds.Equals(mod.ModId, result.BlamedModId));
+        LaunchMessage = blamed is null
+            ? Localization.FormatLaunchExitedEarly(loaderName, result.ExitCode ?? 0)
+            : Localization.FormatLaunchModBroke(BlamedModName(blamed.ModId), blamed.Version.ToString(), loaderName);
+        LaunchOutputText = result.Output.Count == 0 ? Localization.LaunchNoOutput : string.Join(Environment.NewLine, result.Output);
+        LaunchBlamedModId = blamed?.ModId;
+        OnPropertyChanged(nameof(DisableBlamedModText));
+    }
+
+    private void ClearLaunchFailure()
+    {
+        LaunchOutputText = null;
+        IsLaunchOutputShown = false;
+        LaunchBlamedModId = null;
+        OnPropertyChanged(nameof(DisableBlamedModText));
+    }
+
+    private string BlamedModName(string modId) =>
+        _content.FirstOrDefault(item => ModIds.Equals(item.ModId, modId))?.Name ?? modId;
+
+    [RelayCommand]
+    private void ToggleLaunchOutput() => IsLaunchOutputShown = !IsLaunchOutputShown;
+
+    [RelayCommand]
+    private async Task DisableBlamedModAsync()
+    {
+        if (SelectedInstance is not { } instance || LaunchBlamedModId is not { } modId)
+            return;
+
+        var name = BlamedModName(modId);
+        await SetContentEnabledAsync(instance.InstanceId, modId, enabled: false);
+        if (ContentError is not null)
+            return;
+
+        await OpenInstanceAsync(instance);
+        ClearLaunchFailure();
+        LaunchMessage = Localization.FormatLaunchModDisabled(name);
+    }
+
+    [RelayCommand]
+    private void OpenLaunchLog()
+    {
+        if (_services is not null && SelectedInstance is { } instance)
+            ContentError = TryOpenWithSystem(_services.Paths.GetInstanceLaunchLogPath(instance.InstanceId));
     }
 
     /// <summary>

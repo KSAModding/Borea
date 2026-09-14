@@ -54,6 +54,20 @@ public sealed class FileLoaderAdopterTests : IDisposable
     }
 
     [Fact]
+    public async Task InspectAsync_RunsTheChecksWithoutARecord()
+    {
+        PlaceStarMap(GameDirectory);
+
+        var result = await _adopter.InspectAsync(StarMap(), new[] { StarMapRelease() }, LoaderDirectory);
+
+        Assert.Equal(ModVersion.Parse("0.4.6"), result.Version);
+        Assert.Equal(GameDirectory, result.ConfiguredGameDirectory);
+        Assert.Null(await _settings.GetAsync());
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => _adopter.InspectAsync(StarMap(), new[] { StarMapRelease() }, Path.Combine(_tempRoot, "Empty")));
+    }
+
+    [Fact]
     public async Task AdoptAsync_KeepsTheReleaseChannel()
     {
         await _settings.SaveAsync(new BoreaSettings(GameDirectory, releaseChannel: ReleaseChannel.Testing));

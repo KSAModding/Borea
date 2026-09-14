@@ -6,6 +6,7 @@ using Borea.App.Formatting;
 using Borea.App.Localization;
 using Borea.App.ViewModels;
 using Borea.Composition;
+using Borea.Core.Game;
 using Borea.Core.Mods;
 using Borea.Core.Preferences;
 
@@ -36,19 +37,27 @@ internal sealed class ViewModelHarness : IDisposable
 
     private Func<string, string>? _editSnapshot;
 
+    private Borea.Storage.Launch.IProcessStarter? _processStarter;
+
     public const string OfflineMessage = "The content index host is offline.";
 
     /// <summary>Fails every content index request with <see cref="OfflineMessage"/>.</summary>
     public bool IndexOffline { get; set; }
 
+    /// <summary>The folders the install detector checks. Empty unless a test adds some.</summary>
+    public FakeInstallCandidates Candidates { get; } = new();
+
     /// <param name="seed">Writes settings the view model should start from; the services are rebuilt after it ran.</param>
     /// <param name="respond">Answers a request outside the content index. Null fails it.</param>
     /// <param name="editSnapshot">Changes the index snapshot before it is served.</param>
     /// <param name="indexOffline">The first value of <see cref="IndexOffline"/>.</param>
-    public static async Task<ViewModelHarness> CreateAsync(Func<BoreaServices, Task>? seed = null, Func<HttpRequestMessage, HttpResponseMessage?>? respond = null, Func<string, string>? editSnapshot = null, bool indexOffline = false)
+    /// <param name="candidates">Adds the folders the install detector checks, before the first load.</param>
+    /// <param name="processStarter">Starts the launchers' processes. Null starts real ones.</param>
+    public static async Task<ViewModelHarness> CreateAsync(Func<BoreaServices, Task>? seed = null, Func<HttpRequestMessage, HttpResponseMessage?>? respond = null, Func<string, string>? editSnapshot = null, bool indexOffline = false, Action<ViewModelHarness>? candidates = null, Borea.Storage.Launch.IProcessStarter? processStarter = null)
     {
-        var harness = new ViewModelHarness { _respond = respond, _editSnapshot = editSnapshot, IndexOffline = indexOffline };
+        var harness = new ViewModelHarness { _respond = respond, _editSnapshot = editSnapshot, IndexOffline = indexOffline, _processStarter = processStarter };
         Directory.CreateDirectory(harness.Root);
+        candidates?.Invoke(harness);
         harness.Services = await harness.BuildServicesAsync();
         if (seed is not null)
         {
@@ -74,7 +83,7 @@ internal sealed class ViewModelHarness : IDisposable
         json => "{ \"tags\": " + $$"""{ "spec_version": 1, "mod": [{{string.Join(", ", tags.Select(tag => $$"""{ "tag": "{{tag.Tag}}", "name": "{{tag.Name}}", "meaning": "{{tag.Name}} content." }"""))}}] }""" + "," + json.TrimStart()[1..];
 
     public Task<BoreaServices> BuildServicesAsync() =>
-        BoreaServices.BuildAsync(Root, new IndexOnlyHandler(this), new FakeSpaceDock());
+        BoreaServices.BuildAsync(Root, new IndexOnlyHandler(this), new FakeSpaceDock(), Candidates, processStarter: _processStarter);
 
     public void Dispose()
     {
@@ -113,6 +122,24 @@ internal sealed class ViewModelHarness : IDisposable
                 Content = new StringContent(owner._editSnapshot?.Invoke(snapshot) ?? snapshot, Encoding.UTF8, "application/json"),
             };
         }
+    }
+
+    internal sealed class FakeInstallCandidates : IInstallCandidateSource
+    {
+        public List<string> Games { get; } = [];
+
+        public List<string> Loaders { get; } = [];
+
+        /// <summary>Runs while the detector reads the game folders.</summary>
+        public Action? Reading { get; set; }
+
+        public IReadOnlyList<string> GetGameDirectories()
+        {
+            Reading?.Invoke();
+            return Games;
+        }
+
+        public IReadOnlyList<string> GetLoaderDirectories() => Loaders;
     }
 
     /// <summary>
