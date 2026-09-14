@@ -34,11 +34,14 @@ internal sealed class ViewModelHarness : IDisposable
 
     private Func<HttpRequestMessage, HttpResponseMessage?>? _respond;
 
+    private Func<string, string>? _editSnapshot;
+
     /// <param name="seed">Writes settings the view model should start from; the services are rebuilt after it ran.</param>
     /// <param name="respond">Answers a request outside the content index. Null fails it.</param>
-    public static async Task<ViewModelHarness> CreateAsync(Func<BoreaServices, Task>? seed = null, Func<HttpRequestMessage, HttpResponseMessage?>? respond = null)
+    /// <param name="editSnapshot">Changes the index snapshot before it is served.</param>
+    public static async Task<ViewModelHarness> CreateAsync(Func<BoreaServices, Task>? seed = null, Func<HttpRequestMessage, HttpResponseMessage?>? respond = null, Func<string, string>? editSnapshot = null)
     {
-        var harness = new ViewModelHarness { _respond = respond };
+        var harness = new ViewModelHarness { _respond = respond, _editSnapshot = editSnapshot };
         Directory.CreateDirectory(harness.Root);
         harness.Services = await harness.BuildServicesAsync();
         if (seed is not null)
@@ -68,6 +71,7 @@ internal sealed class ViewModelHarness : IDisposable
         // a language or theme change saves in the background; let it finish before the folder goes
         ViewModel?.WhenPreferencesSavedAsync().GetAwaiter().GetResult();
         ViewModel?.WhenUpdateCheckedAsync().GetAwaiter().GetResult();
+        ViewModel?.WhenReleaseChannelSavedAsync().GetAwaiter().GetResult();
         Services.Dispose();
         CultureInfo.CurrentCulture = _originalCulture;
         CultureInfo.CurrentUICulture = _originalUiCulture;
@@ -93,7 +97,7 @@ internal sealed class ViewModelHarness : IDisposable
             var snapshot = await File.ReadAllTextAsync(SnapshotFixturePath, cancellationToken);
             return new HttpResponseMessage(HttpStatusCode.OK)
             {
-                Content = new StringContent(snapshot, Encoding.UTF8, "application/json"),
+                Content = new StringContent(owner._editSnapshot?.Invoke(snapshot) ?? snapshot, Encoding.UTF8, "application/json"),
             };
         }
     }

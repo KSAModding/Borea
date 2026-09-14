@@ -51,6 +51,12 @@
   <data name="SettingsCheckForUpdatesAtStart" xml:space="preserve">
     <value>Beim Start nach Updates suchen</value>
   </data>
+  <data name="SettingsReleaseChannelLabel" xml:space="preserve">
+    <value>Mod-Release-Kanal</value>
+  </data>
+  <data name="SettingsReleaseChannelHint" xml:space="preserve">
+    <value>Welche Versionen Borea installiert, wenn du keine Version wählst.</value>
+  </data>
   <data name="UpdateAvailable" xml:space="preserve">
     <value>Eine neuere Borea-Version ist verfügbar:</value>
   </data>
@@ -219,6 +225,9 @@
   <data name="InstallAnyway" xml:space="preserve">
     <value>Trotzdem installieren</value>
   </data>
+  <data name="InstallReleaseChannelFormat" xml:space="preserve">
+    <value>Version {0} hat den Status {1}, den dein Release-Kanal nicht anbietet.</value>
+  </data>
   <data name="InstallInstanceMissing" xml:space="preserve">
     <value>Die aktive Instanz existiert nicht mehr.</value>
   </data>
@@ -282,6 +291,9 @@
   <data name="ContentPublishedHeader" xml:space="preserve">
     <value>Veröffentlicht</value>
   </data>
+  <data name="ContentShowVersions" xml:space="preserve">
+    <value>Anzeigen</value>
+  </data>
   <data name="ContentNoDescription" xml:space="preserve">
     <value>Keine Beschreibung vorhanden.</value>
   </data>
@@ -290,6 +302,9 @@
   </data>
   <data name="ContentNoVersions" xml:space="preserve">
     <value>Noch keine Veröffentlichungen.</value>
+  </data>
+  <data name="ContentNoVersionsInChannel" xml:space="preserve">
+    <value>Keine Veröffentlichungen in diesem Kanal.</value>
   </data>
   <data name="ContentSourceFormat" xml:space="preserve">
     <value>Gelistet auf {0}</value>
@@ -308,6 +323,15 @@
   </data>
   <data name="ReleaseUnknown" xml:space="preserve">
     <value>unbekannt</value>
+  </data>
+  <data name="ReleaseChannelStable" xml:space="preserve">
+    <value>Stabile Versionen</value>
+  </data>
+  <data name="ReleaseChannelTesting" xml:space="preserve">
+    <value>Stabile und Testversionen</value>
+  </data>
+  <data name="ReleaseChannelDev" xml:space="preserve">
+    <value>Alle Versionen</value>
   </data>
   <data name="SettingsGame" xml:space="preserve">
     <value>Spiel</value>

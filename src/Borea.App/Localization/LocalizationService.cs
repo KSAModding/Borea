@@ -59,6 +59,10 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string SettingsCheckForUpdatesAtStart => Resources.SettingsCheckForUpdatesAtStart;
 
+    public string SettingsReleaseChannelLabel => Resources.SettingsReleaseChannelLabel;
+
+    public string SettingsReleaseChannelHint => Resources.SettingsReleaseChannelHint;
+
     public string UpdateAvailable => Resources.UpdateAvailable;
 
     public string UpdateViewRelease => Resources.UpdateViewRelease;
@@ -257,11 +261,15 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string ContentPublishedHeader => Resources.ContentPublishedHeader;
 
+    public string ContentShowVersions => Resources.ContentShowVersions;
+
     public string ContentNoDescription => Resources.ContentNoDescription;
 
     public string ContentLoadingVersions => Resources.ContentLoadingVersions;
 
     public string ContentNoVersions => Resources.ContentNoVersions;
+
+    public string ContentNoVersionsInChannel => Resources.ContentNoVersionsInChannel;
 
     public string ContentTypeModLoader => Resources.ContentTypeModLoader;
 
@@ -272,6 +280,12 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string ReleaseDev => Resources.ReleaseDev;
 
     public string ReleaseUnknown => Resources.ReleaseUnknown;
+
+    public string ReleaseChannelStable => Resources.ReleaseChannelStable;
+
+    public string ReleaseChannelTesting => Resources.ReleaseChannelTesting;
+
+    public string ReleaseChannelDev => Resources.ReleaseChannelDev;
 
     public string SettingsGame => Resources.SettingsGame;
 
@@ -362,6 +376,9 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string FormatDiscoverInstalledIn(string instance)
         => string.Format(CultureInfo.CurrentCulture, Resources.DiscoverInstalledInFormat, instance);
+
+    public string FormatInstallReleaseChannel(string version, string status)
+        => string.Format(CultureInfo.CurrentCulture, Resources.InstallReleaseChannelFormat, version, status);
 
     public string FormatInstallDownloading(string content)
         => string.Format(CultureInfo.CurrentCulture, Resources.InstallDownloadingFormat, content);

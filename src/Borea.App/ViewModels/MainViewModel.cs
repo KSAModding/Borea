@@ -331,7 +331,7 @@ public partial class MainViewModel : ViewModelBase
                 if (listing.Type != ContentType.Mod)
                     continue;
 
-                var release = await _services.ContentIndex.GetLatestReleaseAsync(listing.ModId);
+                var release = await _services.ContentIndex.GetLatestReleaseInChannelAsync(listing.ModId, _services.Settings.ReleaseChannel);
                 if (release is not null)
                     recent.Add(new RecentItem(this, listing, release.ReleaseDate));
             }
@@ -525,10 +525,13 @@ public partial class MainViewModel : ViewModelBase
             instance.RefreshText();
         foreach (var item in DiscoverItems)
             item.RefreshText();
+        foreach (var option in ReleaseChannelOptions)
+            option.RefreshText();
         RefreshContentGroups();
         RefreshLoaderText();
         OnPropertyChanged(nameof(GameSetupBannerText));
         OnPropertyChanged(nameof(InstalledInText));
+        OnPropertyChanged(nameof(ContentVersionsEmptyText));
 
         QueuePreferenceSave(preferences => preferences.WithUiCultureName(Localization.SelectedCultureName));
     }

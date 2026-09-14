@@ -123,6 +123,16 @@
 
                 <!-- c/table-versions -->
                 <StackPanel Margin="0,16,0,0" IsVisible="{Binding IsVersionsTab}">
+                    <StackPanel Orientation="Horizontal" Spacing="8" Margin="8,0,0,12">
+                        <TextBlock Classes="body-md secondary" Text="{Binding Localization.ContentShowVersions}" VerticalAlignment="Center" />
+                        <ComboBox ItemsSource="{Binding ReleaseChannelOptions}" SelectedItem="{Binding VersionFilter}" AutomationProperties.Name="{Binding Localization.ContentShowVersions}" Width="240">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate x:DataType="vm:ReleaseChannelOption">
+                                    <TextBlock Text="{Binding Text}" />
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+                    </StackPanel>
                     <TextBlock Classes="body-md muted" Text="{Binding Localization.ContentLoadingVersions}" Margin="8,8,0,8" IsVisible="{Binding IsLoadingVersions}" />
                     <Border BorderBrush="{StaticResource Brush.BorderStrong}" BorderThickness="1" CornerRadius="16" ClipToBounds="True" IsVisible="{Binding !IsLoadingVersions}">
                         <StackPanel>
@@ -134,7 +144,7 @@
                                     <TextBlock Grid.Column="3" Classes="body-md secondary" Text="{Binding Localization.ContentPublishedHeader}" />
                                 </Grid>
                             </Border>
-                            <TextBlock Classes="body-md muted" Text="{Binding Localization.ContentNoVersions}" Margin="16,12" IsVisible="{Binding !ContentVersions.Count}" />
+                            <TextBlock Classes="body-md muted" Text="{Binding ContentVersionsEmptyText}" Margin="16,12" IsVisible="{Binding !ContentVersions.Count}" />
                             <ItemsControl ItemsSource="{Binding ContentVersions}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate x:DataType="vm:VersionItem">

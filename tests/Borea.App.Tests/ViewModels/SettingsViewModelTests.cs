@@ -4,6 +4,7 @@ using Borea.Composition;
 using Borea.Core.ModLoaders;
 using Borea.Core.Mods;
 using Borea.Core.Preferences;
+using Borea.Core.Settings;
 
 namespace Borea.App.Tests.ViewModels;
 
@@ -132,6 +133,54 @@ public sealed class SettingsViewModelTests
         Assert.Equal(harness.Localization.FormatSetupLoaderInstalledVersion(recorded), viewModel.InstalledLoaderText);
         Assert.Equal(harness.Localization.FormatSetupUpdateLoader("0.4.6"), viewModel.LoaderInstallActionText);
         Assert.Equal(canUpdate, viewModel.CanInstallLoader);
+    }
+
+    [Fact]
+    public async Task GameTab_RecordedLoaderNewerThanTheChannel_OffersNoOlderRelease()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var installation = new LoaderInstallation(Path.Combine(harness.Root, "StarMap"), ModVersion.Parse("0.5.0-dev.1"), "0.5.0-dev.1", isAdopted: false);
+        using var services = await ServicesWithLoaderAsync(harness, installation);
+        var viewModel = new MainViewModel(harness.Localization, new RegionalFormatService(harness.Localization), null, AppPreferences.Empty, services);
+
+        await viewModel.ShowGameSettingsCommand.ExecuteAsync(null);
+
+        Assert.Equal(harness.Localization.FormatSetupLoaderInstalledVersion("0.5.0-dev.1"), viewModel.InstalledLoaderText);
+        Assert.Equal(harness.Localization.SetupInstallLoader, viewModel.LoaderInstallActionText);
+        Assert.False(viewModel.CanInstallLoader);
+    }
+
+    [Fact]
+    public async Task SaveGameDirectory_KeepsAChannelSavedWhileTheAppIsOpen()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var viewModel = harness.ViewModel;
+        var game = Directory.CreateDirectory(Path.Combine(harness.Root, "game")).FullName;
+        await harness.Services.SettingsRepository.SaveAsync(new BoreaSettings(null, releaseChannel: ReleaseChannel.Testing));
+        await viewModel.ShowGameSettingsCommand.ExecuteAsync(null);
+
+        viewModel.GameDirectoryInput = game;
+        await viewModel.SaveGameDirectoryCommand.ExecuteAsync(null);
+
+        Assert.Equal(game, harness.Services.Settings.GameDirectoryPath);
+        Assert.Equal(ReleaseChannel.Testing, harness.Services.Settings.ReleaseChannel);
+        Assert.Equal(ReleaseChannel.Testing, viewModel.SelectedReleaseChannel.Channel);
+    }
+
+    [Fact]
+    public async Task UseExistingLoader_KeepsAChannelSavedWhileTheAppIsOpen()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var viewModel = harness.ViewModel;
+        var loader = Directory.CreateDirectory(Path.Combine(harness.Root, "StarMap")).FullName;
+        await harness.Services.SettingsRepository.SaveAsync(new BoreaSettings(null, releaseChannel: ReleaseChannel.Testing));
+        await viewModel.ShowGameSettingsCommand.ExecuteAsync(null);
+
+        viewModel.LoaderDirectoryInput = loader;
+        await viewModel.AdoptLoaderCommand.ExecuteAsync(null);
+
+        Assert.Equal(loader, harness.Services.Settings.LoaderInstallations["StarMap"].DirectoryPath);
+        Assert.Equal(ReleaseChannel.Testing, harness.Services.Settings.ReleaseChannel);
     }
 
     [Fact]

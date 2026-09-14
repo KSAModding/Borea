@@ -5,24 +5,35 @@
              x:Class="Borea.App.Views.Settings.GeneralSettings"
              x:DataType="vm:MainViewModel">
     <!-- General -->
-    <StackPanel Margin="32,32,44,0" Spacing="6">
-        <TextBlock Classes="heading-md" Text="{Binding Localization.SettingsLanguageLabel}" />
-        <ComboBox ItemsSource="{Binding Localization.SupportedCultures}" SelectedItem="{Binding Localization.SelectedCulture, Mode=TwoWay}" AutomationProperties.Name="{Binding Localization.SettingsLanguageLabel}" Width="340" Margin="0,4,0,0" />
-        <TextBlock Classes="heading-md" Text="{Binding Localization.SettingsRegionalFormatLabel}" Margin="0,18,0,0" />
-        <ComboBox ItemsSource="{Binding RegionalFormat.SupportedFormats}" SelectedItem="{Binding SelectedRegionalFormat, Mode=TwoWay}" AutomationProperties.Name="{Binding Localization.SettingsRegionalFormatLabel}" MaxDropDownHeight="300" Width="340" Margin="0,4,0,0">
-            <ComboBox.ItemTemplate>
-                <DataTemplate x:DataType="formatting:RegionalFormatOption">
-                    <TextBlock Text="{Binding DisplayName}" />
-                </DataTemplate>
-            </ComboBox.ItemTemplate>
-        </ComboBox>
-        <TextBlock Classes="body-md danger" Text="{Binding PreferenceSaveError}" TextWrapping="Wrap" IsVisible="{Binding PreferenceSaveError, Converter={x:Static ObjectConverters.IsNotNull}}" />
-        <TextBlock Classes="heading-md" Text="{Binding Localization.SettingsThemeLabel}" Margin="0,18,0,0" />
-        <ComboBox ItemsSource="{Binding ThemeNames}" SelectedItem="{Binding CurrentTheme}" AutomationProperties.Name="{Binding Localization.SettingsThemeLabel}" Width="340" Margin="0,4,0,0" />
-        <TextBlock Classes="heading-md" Text="{Binding Localization.SettingsUpdatesLabel}" Margin="0,18,0,0" />
-        <Grid ColumnDefinitions="*,16,Auto" Width="340" HorizontalAlignment="Left" Margin="0,4,0,0">
-            <TextBlock Classes="body-md" Text="{Binding Localization.SettingsCheckForUpdatesAtStart}" TextWrapping="Wrap" VerticalAlignment="Center" />
-            <ToggleSwitch Grid.Column="2" Classes="switch" IsChecked="{Binding CheckForUpdatesAtStart}" AutomationProperties.Name="{Binding Localization.SettingsCheckForUpdatesAtStart}" />
-        </Grid>
-    </StackPanel>
+    <ScrollViewer>
+        <StackPanel Margin="32,32,44,24" Spacing="6">
+            <TextBlock Classes="heading-md" Text="{Binding Localization.SettingsLanguageLabel}" />
+            <ComboBox ItemsSource="{Binding Localization.SupportedCultures}" SelectedItem="{Binding Localization.SelectedCulture, Mode=TwoWay}" AutomationProperties.Name="{Binding Localization.SettingsLanguageLabel}" Width="340" Margin="0,4,0,0" />
+            <TextBlock Classes="heading-md" Text="{Binding Localization.SettingsRegionalFormatLabel}" Margin="0,18,0,0" />
+            <ComboBox ItemsSource="{Binding RegionalFormat.SupportedFormats}" SelectedItem="{Binding SelectedRegionalFormat, Mode=TwoWay}" AutomationProperties.Name="{Binding Localization.SettingsRegionalFormatLabel}" MaxDropDownHeight="300" Width="340" Margin="0,4,0,0">
+                <ComboBox.ItemTemplate>
+                    <DataTemplate x:DataType="formatting:RegionalFormatOption">
+                        <TextBlock Text="{Binding DisplayName}" />
+                    </DataTemplate>
+                </ComboBox.ItemTemplate>
+            </ComboBox>
+            <TextBlock Classes="body-md danger" Text="{Binding PreferenceSaveError}" TextWrapping="Wrap" IsVisible="{Binding PreferenceSaveError, Converter={x:Static ObjectConverters.IsNotNull}}" />
+            <TextBlock Classes="heading-md" Text="{Binding Localization.SettingsThemeLabel}" Margin="0,18,0,0" />
+            <ComboBox ItemsSource="{Binding ThemeNames}" SelectedItem="{Binding CurrentTheme}" AutomationProperties.Name="{Binding Localization.SettingsThemeLabel}" Width="340" Margin="0,4,0,0" />
+            <TextBlock Classes="heading-md" Text="{Binding Localization.SettingsUpdatesLabel}" Margin="0,18,0,0" />
+            <Grid ColumnDefinitions="*,16,Auto" Width="340" HorizontalAlignment="Left" Margin="0,4,0,0">
+                <TextBlock Classes="body-md" Text="{Binding Localization.SettingsCheckForUpdatesAtStart}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                <ToggleSwitch Grid.Column="2" Classes="switch" IsChecked="{Binding CheckForUpdatesAtStart}" AutomationProperties.Name="{Binding Localization.SettingsCheckForUpdatesAtStart}" />
+            </Grid>
+            <TextBlock Classes="heading-md" Text="{Binding Localization.SettingsReleaseChannelLabel}" Margin="0,18,0,0" />
+            <TextBlock Classes="body-sm secondary" Text="{Binding Localization.SettingsReleaseChannelHint}" TextWrapping="Wrap" Width="340" HorizontalAlignment="Left" />
+            <ComboBox ItemsSource="{Binding ReleaseChannelOptions}" SelectedItem="{Binding SelectedReleaseChannel, Mode=TwoWay}" IsEnabled="{Binding !IsSetupBusy}" AutomationProperties.Name="{Binding Localization.SettingsReleaseChannelLabel}" Width="340" Margin="0,4,0,0">
+                <ComboBox.ItemTemplate>
+                    <DataTemplate x:DataType="vm:ReleaseChannelOption">
+                        <TextBlock Text="{Binding Text}" />
+                    </DataTemplate>
+                </ComboBox.ItemTemplate>
+            </ComboBox>
+        </StackPanel>
+    </ScrollViewer>
 </UserControl>

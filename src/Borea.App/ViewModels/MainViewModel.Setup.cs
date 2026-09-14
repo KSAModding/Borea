@@ -227,7 +227,7 @@ public partial class MainViewModel
         else
         {
             InstalledLoaderText = Localization.FormatSetupLoaderInstalledVersion(installed.ToString());
-            LoaderInstallActionText = latest is { } newest ? Localization.FormatSetupUpdateLoader(newest.ToString()) : Localization.SetupInstallLoader;
+            LoaderInstallActionText = latest is { } newest && newest >= installed ? Localization.FormatSetupUpdateLoader(newest.ToString()) : Localization.SetupInstallLoader;
             CanInstallLoader = latest is { } candidate && candidate > installed;
         }
     }
@@ -237,7 +237,7 @@ public partial class MainViewModel
     {
         var path = GameDirectoryInput.Trim();
         var directory = path.Length == 0 ? null : Path.GetFullPath(path);
-        await services.SettingsRepository.SaveAsync(services.Settings.WithGameDirectory(directory));
+        await services.SettingsRepository.SaveAsync((await ReadSavedSettingsAsync(services)).WithGameDirectory(directory));
         return directory is not null && !Directory.Exists(directory) ? Localization.SetupDirectoryMissing : Localization.SetupSaved;
     });
 
@@ -253,7 +253,7 @@ public partial class MainViewModel
 
         var directory = Path.GetFullPath(LoaderDirectoryInput.Trim());
         var installation = new LoaderInstallation(directory, version: null, rawVersion: null, isAdopted: true);
-        await services.SettingsRepository.SaveAsync(services.Settings.WithLoaderInstallation(SelectedLoader.ModId, installation));
+        await services.SettingsRepository.SaveAsync((await ReadSavedSettingsAsync(services)).WithLoaderInstallation(SelectedLoader.ModId, installation));
         return Directory.Exists(directory) ? Localization.SetupSaved : Localization.SetupDirectoryMissing;
     });
 
@@ -328,6 +328,7 @@ public partial class MainViewModel
         _services = await _rebuildServices();
         _instances = _services.Instances;
         previous.Dispose();
+        OnPropertyChanged(nameof(SelectedReleaseChannel));
         await LoadAsync();
         await RefreshCompatibilityAsync();
     }

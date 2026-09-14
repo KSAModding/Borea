@@ -32,7 +32,16 @@ public partial class MainViewModel
 
     public ObservableCollection<ContentLink> ContentLinks { get; } = [];
 
+    private readonly List<VersionItem> _contentReleases = [];
+
+    /// <summary>The releases the Show filter lets through, newest first.</summary>
     public ObservableCollection<VersionItem> ContentVersions { get; } = [];
+
+    /// <summary>The Show filter above the Versions table. It starts at the saved channel.</summary>
+    [ObservableProperty]
+    private ReleaseChannelOption? _versionFilter;
+
+    public string ContentVersionsEmptyText => _contentReleases.Count > 0 ? Localization.ContentNoVersionsInChannel : Localization.ContentNoVersions;
 
     public bool HasContentLinks => ContentLinks.Count > 0;
 
@@ -75,7 +84,9 @@ public partial class MainViewModel
         IsVersionsTab = false;
         ContentDetailError = null;
         LatestVersion = null;
-        ContentVersions.Clear();
+        _contentReleases.Clear();
+        ApplyVersionFilter();
+        VersionFilter = OptionFor(SavedReleaseChannel);
 
         ContentLinks.Clear();
         foreach (var link in item.Links.OrderBy(link => LinkOrder(link.Key)))
@@ -153,15 +164,25 @@ public partial class MainViewModel
             return;
 
         SelectedContent?.ClearOutcome();
-        foreach (var version in ContentVersions)
+        foreach (var version in _contentReleases)
             version.InstallError = null;
+    }
+
+    partial void OnVersionFilterChanged(ReleaseChannelOption? value) => ApplyVersionFilter();
+
+    private void ApplyVersionFilter()
+    {
+        ContentVersions.Clear();
+        foreach (var release in _contentReleases.Where(release => VersionFilter is null || VersionFilter.Channel.Includes(release.Status)))
+            ContentVersions.Add(release);
+        OnPropertyChanged(nameof(ContentVersionsEmptyText));
     }
 
     [RelayCommand]
     private async Task ShowContentVersionsAsync()
     {
         IsVersionsTab = true;
-        if (ContentVersions.Count > 0 || SelectedContent is null || _services is null || IsLoadingVersions)
+        if (_contentReleases.Count > 0 || SelectedContent is null || _services is null || IsLoadingVersions)
             return;
 
         var item = SelectedContent;
@@ -179,8 +200,8 @@ public partial class MainViewModel
 
             if (ReferenceEquals(SelectedContent, item))
             {
-                foreach (var release in releases.OrderByDescending(release => release.ReleaseDate))
-                    ContentVersions.Add(release);
+                _contentReleases.AddRange(releases.OrderByDescending(release => release.ReleaseDate));
+                ApplyVersionFilter();
             }
             ContentDetailError = null;
         }
@@ -231,13 +252,7 @@ public sealed partial class VersionItem : ObservableObject, IInstallRow
 
     public ReleaseStatus Status => _release.ReleaseStatus;
 
-    public string ChannelText => Status switch
-    {
-        ReleaseStatus.Stable => _owner.Localization.ReleaseStable,
-        ReleaseStatus.Testing => _owner.Localization.ReleaseTesting,
-        ReleaseStatus.Dev => _owner.Localization.ReleaseDev,
-        _ => _owner.Localization.ReleaseUnknown,
-    };
+    public string ChannelText => _owner.ReleaseStatusText(Status);
 
     public bool IsTesting => Status == ReleaseStatus.Testing;
 
