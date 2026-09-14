@@ -343,6 +343,8 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string ContentNoVersionsInChannel => Resources.ContentNoVersionsInChannel;
 
+    public string ContentChangelog => Resources.ContentChangelog;
+
     public string ContentTypeModLoader => Resources.ContentTypeModLoader;
 
     public string ContentTypeModPack => Resources.ContentTypeModPack;

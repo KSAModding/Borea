@@ -414,6 +414,9 @@
   <data name="ContentLoadingVersions" xml:space="preserve">
     <value>Loading versions...</value>
   </data>
+  <data name="ContentChangelog" xml:space="preserve">
+    <value>Changelog</value>
+  </data>
   <data name="ContentNoVersions" xml:space="preserve">
     <value>No releases yet.</value>
   </data>
