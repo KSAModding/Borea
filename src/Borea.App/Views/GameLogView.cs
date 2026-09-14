@@ -10,9 +10,8 @@ using Borea.App.ViewModels;
 namespace Borea.App.Views;
 
 /// <summary>
-/// The game log as one selectable text, so a selection can run across lines.
-/// Each line keeps its colored parts as runs; a selection that spans one
-/// <see cref="SelectableTextBlock"/> per line stopped at the end of the line.
+/// The game log as one selectable text, so a selection can span lines. Each
+/// line keeps its colored parts as runs.
 /// </summary>
 public sealed class GameLogView : SelectableTextBlock
 {
@@ -37,14 +36,41 @@ public sealed class GameLogView : SelectableTextBlock
         if (change.Property != LinesProperty)
             return;
 
+        Unobserve();
+        if (VisualRoot is not null)
+            Observe();
+
+        Rebuild();
+    }
+
+    // listen only while shown, so a page that is gone does not keep the view alive through the collection
+    protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        base.OnAttachedToVisualTree(e);
+        Observe();
+        Rebuild();
+    }
+
+    protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        Unobserve();
+        base.OnDetachedFromVisualTree(e);
+    }
+
+    private void Observe()
+    {
+        Unobserve();
+        _observed = Lines as INotifyCollectionChanged;
+        if (_observed is not null)
+            _observed.CollectionChanged += OnLinesChanged;
+    }
+
+    private void Unobserve()
+    {
         if (_observed is not null)
             _observed.CollectionChanged -= OnLinesChanged;
 
-        _observed = change.NewValue as INotifyCollectionChanged;
-        if (_observed is not null)
-            _observed.CollectionChanged += OnLinesChanged;
-
-        Rebuild();
+        _observed = null;
     }
 
     // a load clears the collection and adds every line one by one; the text is built once after that
