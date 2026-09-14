@@ -88,11 +88,19 @@
     <DataTemplate x:Key="ContentRow" x:DataType="vm:ContentItem">
         <Border BorderBrush="{StaticResource Brush.BorderStrong}" BorderThickness="0,1,0,0" Padding="16,8">
             <Grid ColumnDefinitions="48,16,*,24,Auto">
-                <Border Classes="thumbnail" Width="48" Height="48">
+                <Button Classes="plain" Command="{Binding OpenCommand}" IsVisible="{Binding CanOpen}" AutomationProperties.Name="{Binding Name}">
+                    <Border Classes="thumbnail" Width="48" Height="48">
+                        <Path Classes="icon" Data="{StaticResource Icon.PuzzlePiece}" />
+                    </Border>
+                </Button>
+                <Border Classes="thumbnail" Width="48" Height="48" IsVisible="{Binding !CanOpen}" ToolTip.Tip="{Binding NoPageText}">
                     <Path Classes="icon" Data="{StaticResource Icon.PuzzlePiece}" />
                 </Border>
                 <StackPanel Grid.Column="2" VerticalAlignment="Center">
-                    <TextBlock Classes="heading-sm" Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
+                    <Button Classes="plain" Command="{Binding OpenCommand}" IsVisible="{Binding CanOpen}" HorizontalAlignment="Left">
+                        <TextBlock Classes="heading-sm" Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
+                    </Button>
+                    <TextBlock Classes="heading-sm" Text="{Binding Name}" TextTrimming="CharacterEllipsis" IsVisible="{Binding !CanOpen}" ToolTip.Tip="{Binding NoPageText}" />
                     <TextBlock Classes="body-sm secondary" Text="{Binding AuthorsText}" IsVisible="{Binding AuthorsText, Converter={x:Static ObjectConverters.IsNotNull}}" />
                     <TextBlock Classes="body-sm danger" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ContentRemoveConfirm}" IsVisible="{Binding IsConfirmingRemove}" />
                 </StackPanel>

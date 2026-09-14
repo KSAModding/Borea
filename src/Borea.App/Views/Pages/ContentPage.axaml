@@ -8,13 +8,26 @@
     <Grid ColumnDefinitions="*,348">
         <ScrollViewer Grid.ColumnSpan="2">
             <StackPanel MaxWidth="764" Margin="32,42,348,32">
-                <StackPanel Orientation="Horizontal" Spacing="4" Height="24">
+                <StackPanel Orientation="Horizontal" Spacing="4" Height="24" IsVisible="{Binding !IsContentFromInstance}">
                     <Path Classes="icon" Data="{StaticResource Icon.Compass}" />
                     <Button Classes="plain" Command="{Binding SetMainWindowDiscover}">
                         <TextBlock Classes="label-lg" Text="{Binding Localization.PageDiscoverHeading}" VerticalAlignment="Center" />
                     </Button>
                     <TextBlock Classes="label-lg" Text="/" VerticalAlignment="Center" />
                     <TextBlock Classes="label-lg" Text="{Binding SelectedContent.TypeText}" VerticalAlignment="Center" />
+                </StackPanel>
+                <!-- opened from an instance: the way back is that instance -->
+                <StackPanel Orientation="Horizontal" Spacing="4" Height="24" IsVisible="{Binding IsContentFromInstance}">
+                    <Path Classes="icon" Data="{StaticResource Icon.Library}" />
+                    <Button Classes="plain" Command="{Binding SetMainWindowLibrary}">
+                        <TextBlock Classes="label-lg" Text="{Binding Localization.PageLibraryHeading}" VerticalAlignment="Center" />
+                    </Button>
+                    <TextBlock Classes="label-lg" Text="/" VerticalAlignment="Center" />
+                    <Button Classes="plain" Command="{Binding ReturnToInstanceCommand}">
+                        <TextBlock Classes="label-lg" Text="{Binding ContentReturnInstance.Name}" VerticalAlignment="Center" />
+                    </Button>
+                    <TextBlock Classes="label-lg" Text="/" VerticalAlignment="Center" />
+                    <TextBlock Classes="label-lg" Text="{Binding SelectedContent.Name}" VerticalAlignment="Center" />
                 </StackPanel>
 
                 <!-- c/content-header -->
