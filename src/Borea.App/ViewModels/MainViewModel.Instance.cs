@@ -9,6 +9,7 @@ using Borea.Core.Dependencies;
 using Borea.Core.Instances;
 using Borea.Core.Launch;
 using Borea.Core.Mods;
+using Borea.Core.Planning;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -30,8 +31,12 @@ public partial class MainViewModel
 {
     private Instance? _selectedInstanceEntity;
     private IReadOnlyList<ContentItem> _content = [];
+    private readonly Dictionary<Guid, IInstallRow> _runningUpdates = [];
+    private Task _contentUpdateCheck = Task.CompletedTask;
+    private int _contentUpdateCheckGeneration;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanChangeContent))]
     private InstanceItem? _selectedInstance;
 
     [ObservableProperty]
@@ -52,6 +57,19 @@ public partial class MainViewModel
     public ObservableCollection<ContentGroup> ContentGroups { get; } = [];
 
     public bool HasContent => _content.Count > 0;
+
+    /// <summary>
+    /// The "Update all" action of the page header, for the shown instance.
+    /// </summary>
+    [ObservableProperty]
+    private UpdateAllItem? _updateAll;
+
+    public bool HasUpdates => _content.Any(content => content.UpdateVersion is not null);
+
+    /// <summary>
+    /// False while an update of the shown instance plans or runs.
+    /// </summary>
+    public bool CanChangeContent => SelectedInstance is null || !_runningUpdates.ContainsKey(SelectedInstance.InstanceId);
 
     /// <summary>
     /// What the launcher said the last time Play was pressed, success or not.
@@ -98,6 +116,8 @@ public partial class MainViewModel
         SelectedInstance = item;
         LaunchMessage = null;
         ContentError = null;
+        _runningUpdates.TryGetValue(item.InstanceId, out var running);
+        UpdateAll = running as UpdateAllItem ?? new UpdateAllItem(this, item.InstanceId);
         _selectedInstanceEntity = await _services.Instances.GetByIdAsync(item.InstanceId);
 
         var enabled = new HashSet<string>(ModIds.Comparer);
@@ -113,14 +133,22 @@ public partial class MainViewModel
         var content = new List<ContentItem>();
         foreach (var mod in _selectedInstanceEntity?.Mods ?? [])
         {
+            // a running update reports its progress to the row it started on
+            if (running is ContentItem updating && ModIds.Equals(updating.ModId, mod.ModId))
+            {
+                content.Add(updating);
+                continue;
+            }
+
             // a release from SpaceDock carries no listing, so the name comes from the catalog
             var listing = mod.Metadata.Listing is null ? await ResolveListingAsync(mod.ModId) : null;
             var page = mod.Ownership == ModInstallOwnership.Borea ? _listings.FirstOrDefault(entry => ModIds.Equals(entry.ModId, mod.ModId)) : null;
-            content.Add(new ContentItem(this, item.InstanceId, mod, enabled.Contains(mod.ModId), listing, page));
+            content.Add(new ContentItem(this, _selectedInstanceEntity!, mod, enabled.Contains(mod.ModId), listing, page));
         }
 
         _content = content.OrderBy(content => content.Name, StringComparer.CurrentCultureIgnoreCase).ToList();
         RefreshContentGroups();
+        OnPropertyChanged(nameof(HasUpdates));
         if (IsManualInstallsTab)
             await LoadManualInstallsAsync();
         else if (IsGameDataTab)
@@ -135,6 +163,8 @@ public partial class MainViewModel
         CurrentWindowContent = false;
         CurrentWindowPack = false;
         CurrentWindowInstance = true;
+
+        StartContentUpdateCheck();
     }
 
     [RelayCommand]
@@ -162,6 +192,118 @@ public partial class MainViewModel
             if (list.Count > 0)
                 ContentGroups.Add(new ContentGroup(title, list));
         }
+    }
+
+    /// <summary>
+    /// Runs in the background, so the page and its messages do not wait for
+    /// one planner search per mod. A later check stops the earlier one.
+    /// </summary>
+    private void StartContentUpdateCheck()
+    {
+        var previous = _contentUpdateCheck;
+        var check = RefreshContentUpdatesAsync(++_contentUpdateCheckGeneration);
+        _contentUpdateCheck = previous.IsCompleted ? check : Task.WhenAll(previous, check);
+    }
+
+    /// <summary>Completes when the update checks have finished.</summary>
+    internal Task WhenContentUpdatesCheckedAsync() => _contentUpdateCheck;
+
+    /// <summary>
+    /// Plans an update of each mod Borea owns on its own and marks the row when
+    /// the planner picks a newer release than the installed one.
+    /// </summary>
+    private async Task RefreshContentUpdatesAsync(int generation)
+    {
+        var services = _services;
+        var instance = _selectedInstanceEntity;
+        var content = _content;
+        if (services is null || instance is null || !CurrentWindowInstance)
+            return;
+
+        foreach (var item in content.Where(item => item.IsOwned))
+        {
+            var installed = instance.Mods.FirstOrDefault(mod => ModIds.Equals(mod.ModId, item.ModId));
+            if (installed is null)
+                continue;
+
+            ModVersion? newer = null;
+            try
+            {
+                var plan = await services.InstallPlanner.PlanAsync(PlanningRequest(services, instance, UpdateRequests([installed])));
+                newer = plan.Operations
+                    .Select(operation => operation.Release)
+                    .FirstOrDefault(release => ModIds.Equals(release.ModId, installed.ModId) && release.Version > installed.Version)?.Version;
+            }
+            catch (Exception exception) when (exception is System.Net.Http.HttpRequestException or IOException or InvalidOperationException or TaskCanceledException)
+            {
+                // the row shows no update
+            }
+
+            if (generation != _contentUpdateCheckGeneration)
+                return;
+
+            item.UpdateVersion = newer?.ToString();
+        }
+
+        OnPropertyChanged(nameof(HasUpdates));
+    }
+
+    /// <summary>
+    /// Updates one mod Borea owns, with what its new release requires.
+    /// </summary>
+    internal Task UpdateContentAsync(ContentItem item)
+        => RunUpdateAsync(item, item.InstanceId, () => PlanUpdateAsync(item, item.InstanceId, mod => ModIds.Equals(mod.ModId, item.ModId)));
+
+    /// <summary>
+    /// Plans every mod Borea owns in the instance together, so a shared
+    /// dependency is resolved once.
+    /// </summary>
+    internal Task UpdateAllContentAsync(UpdateAllItem item)
+        => RunUpdateAsync(item, item.InstanceId, () => PlanUpdateAsync(item, item.InstanceId, _ => true));
+
+    internal Task ConfirmUpdateAsync(IInstallRow row, Guid instanceId)
+        => RunUpdateAsync(row, instanceId, () => ExecutePendingPlanAsync(row));
+
+    private Task<bool> PlanUpdateAsync(IInstallRow row, Guid instanceId, Func<InstalledMod, bool> select)
+        => PlanAndExecuteAsync(row, instanceId, instance => Task.FromResult(UpdateRequests(instance.Mods.Where(mod => mod.Ownership == ModInstallOwnership.Borea && select(mod)))));
+
+    private static IReadOnlyList<RequestedMod> UpdateRequests(IEnumerable<InstalledMod> mods)
+        => mods.Select(mod => new RequestedMod(mod.Metadata, mod.Reason, Exact: false)).ToList();
+
+    /// <summary>
+    /// Runs one update per instance at a time. The reload builds new rows, so
+    /// an error is set again afterwards, on the row of the same mod.
+    /// </summary>
+    private async Task RunUpdateAsync(IInstallRow row, Guid instanceId, Func<Task<bool>> run)
+    {
+        if (!_runningUpdates.TryAdd(instanceId, row))
+            return;
+
+        OnPropertyChanged(nameof(CanChangeContent));
+        bool executed;
+        try
+        {
+            executed = await run();
+        }
+        finally
+        {
+            _runningUpdates.Remove(instanceId);
+            OnPropertyChanged(nameof(CanChangeContent));
+        }
+
+        if (!executed)
+            return;
+
+        var error = row.InstallError;
+        await ReloadInstancesAsync();
+        if (error is null || SelectedInstance?.InstanceId != instanceId)
+            return;
+
+        IInstallRow? target = row is ContentItem item
+            ? _content.FirstOrDefault(content => ModIds.Equals(content.ModId, item.ModId))
+            : UpdateAll;
+        if (target is not null)
+            target.InstallError = error;
     }
 
     [RelayCommand]
@@ -366,7 +508,7 @@ public partial class MainViewModel
     /// </summary>
     internal async Task RemoveContentAsync(Guid instanceId, string modId)
     {
-        if (_services is null)
+        if (_services is null || _runningUpdates.ContainsKey(instanceId))
             return;
 
         string? error;
@@ -381,6 +523,24 @@ public partial class MainViewModel
 
         await ReloadInstancesAsync();
         ContentError = error;
+    }
+
+    /// <summary>
+    /// Why the button cannot remove <paramref name="mod"/> from
+    /// <paramref name="instance"/>, or null when it can: files Borea did not
+    /// install, or another mod that needs it. The same rules
+    /// <see cref="TryRemoveContentAsync"/> applies when it runs.
+    /// </summary>
+    internal string? RemoveBlockedReason(Instance? instance, InstalledMod? mod)
+    {
+        if (instance is null || mod is null)
+            return null;
+
+        if (mod.Ownership != ModInstallOwnership.Borea)
+            return Localization.FormatContentRemoveNotOwned(mod.ModId);
+
+        var check = new ModDependencyResolver().CheckUninstall(instance, mod.ModId, mod.Version, isActive: false);
+        return check.CanUninstall ? null : Localization.FormatContentRemoveRequired(mod.ModId, string.Join(", ", check.DependentModIds));
     }
 
     /// <summary>
@@ -411,10 +571,11 @@ public sealed record ContentGroup(string Title, IReadOnlyList<ContentItem> Items
 /// <summary>
 /// One row of the instance's content table.
 /// </summary>
-public sealed partial class ContentItem : ObservableObject
+public sealed partial class ContentItem : ObservableObject, IInstallRow
 {
     private readonly MainViewModel _owner;
-    private readonly Guid _instanceId;
+
+    internal Guid InstanceId { get; }
 
     public string ModId { get; }
 
@@ -428,11 +589,23 @@ public sealed partial class ContentItem : ObservableObject
 
     public bool IsDependency { get; }
 
+    /// <summary>Borea installed the files, so it may update them.</summary>
+    public bool IsOwned { get; }
+
     public string? AuthorsText => Authors is null ? null : _owner.Localization.FormatContentByAuthor(Authors);
 
     private readonly DiscoverItem? _page;
 
-    private readonly bool _ownedByBorea;
+    private readonly Instance _instance;
+
+    private readonly InstalledMod _mod;
+
+    /// <summary>Why the remove button is disabled, for its tooltip. Null when the mod can be removed.</summary>
+    public string? RemoveBlockedText => _owner.RemoveBlockedReason(_instance, _mod);
+
+    public bool CanRemove => RemoveBlockedText is null;
+
+    public string RemoveToolTip => RemoveBlockedText ?? _owner.Localization.ContentRemove;
 
     /// <summary>Whether the row links to the mod page: installed by Borea and in the content index.</summary>
     public bool CanOpen => _page is not null;
@@ -440,7 +613,7 @@ public sealed partial class ContentItem : ObservableObject
     /// <summary>Why the row has no link, for its tooltip. Null when it links.</summary>
     public string? NoPageText => CanOpen
         ? null
-        : _ownedByBorea ? _owner.Localization.InstanceContentNotInIndex : _owner.Localization.InstanceContentNotOwned;
+        : IsOwned ? _owner.Localization.InstanceContentNotInIndex : _owner.Localization.InstanceContentNotOwned;
 
     [ObservableProperty]
     private bool _isEnabled;
@@ -448,12 +621,50 @@ public sealed partial class ContentItem : ObservableObject
     [ObservableProperty]
     private bool _isConfirmingRemove;
 
-    public ContentItem(MainViewModel owner, Guid instanceId, InstalledMod mod, bool enabled, ModMetadata? listing, DiscoverItem? page = null)
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasUpdate))]
+    [NotifyPropertyChangedFor(nameof(UpdateText))]
+    private string? _updateVersion;
+
+    /// <summary>A dependency shows no update of its own, "Update all" updates it.</summary>
+    public bool HasUpdate => UpdateVersion is not null && !IsInstalling && !IsDependency;
+
+    public string? UpdateText => UpdateVersion is null ? null : _owner.Localization.FormatContentUpdateTo(UpdateVersion);
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasUpdate))]
+    private bool _isInstalling;
+
+    [ObservableProperty]
+    private double _progress;
+
+    [ObservableProperty]
+    private string? _progressStatus;
+
+    [ObservableProperty]
+    private string? _progressDetail;
+
+    [ObservableProperty]
+    private string? _installError;
+
+    /// <summary>
+    /// The planner's warnings while <see cref="PendingPlan"/> waits for a confirmation.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsConfirmingUpdate))]
+    private string? _installWarning;
+
+    public bool IsConfirmingUpdate => InstallWarning is not null;
+
+    public InstallPlan? PendingPlan { get; set; }
+
+    public ContentItem(MainViewModel owner, Instance instance, InstalledMod mod, bool enabled, ModMetadata? listing, DiscoverItem? page = null)
     {
         _owner = owner;
-        _instanceId = instanceId;
+        _instance = instance;
+        _mod = mod;
+        InstanceId = instance.InstanceId;
         _page = page;
-        _ownedByBorea = mod.Ownership == ModInstallOwnership.Borea;
         ModId = mod.ModId;
         Name = mod.Metadata.Listing?.Name ?? listing?.Name ?? mod.ModId;
         var authors = mod.Metadata.Listing?.Authors ?? listing?.Authors;
@@ -461,11 +672,12 @@ public sealed partial class ContentItem : ObservableObject
         Version = mod.Version.ToString();
         Type = mod.Metadata.Type;
         IsDependency = mod.Reason == InstallReason.Dependency;
+        IsOwned = mod.Ownership == ModInstallOwnership.Borea;
         _isEnabled = enabled;
     }
 
     [RelayCommand]
-    private Task ToggleEnabledAsync() => _owner.SetContentEnabledAsync(_instanceId, ModId, IsEnabled);
+    private Task ToggleEnabledAsync() => _owner.SetContentEnabledAsync(InstanceId, ModId, IsEnabled);
 
     [RelayCommand]
     private Task OpenAsync() => _page is null ? Task.CompletedTask : _owner.OpenContentFromInstanceAsync(_page);
@@ -474,14 +686,76 @@ public sealed partial class ContentItem : ObservableObject
     {
         OnPropertyChanged(nameof(AuthorsText));
         OnPropertyChanged(nameof(NoPageText));
+        OnPropertyChanged(nameof(RemoveBlockedText));
+        OnPropertyChanged(nameof(RemoveToolTip));
+        OnPropertyChanged(nameof(UpdateText));
     }
 
     [RelayCommand]
-    private void BeginRemove() => IsConfirmingRemove = true;
+    private void BeginRemove()
+    {
+        MainViewModel.CancelInstall(this);
+        IsConfirmingRemove = true;
+    }
 
     [RelayCommand]
     private void CancelRemove() => IsConfirmingRemove = false;
 
     [RelayCommand]
-    private Task ConfirmRemoveAsync() => _owner.RemoveContentAsync(_instanceId, ModId);
+    private Task ConfirmRemoveAsync() => _owner.RemoveContentAsync(InstanceId, ModId);
+
+    [RelayCommand]
+    private Task UpdateAsync() => _owner.UpdateContentAsync(this);
+
+    [RelayCommand]
+    private Task ConfirmUpdateAsync() => _owner.ConfirmUpdateAsync(this, InstanceId);
+
+    [RelayCommand]
+    private void CancelUpdate() => MainViewModel.CancelInstall(this);
+}
+
+/// <summary>
+/// "Update all" on the instance page. It holds its plan and its outcome the
+/// way a row does.
+/// </summary>
+public sealed partial class UpdateAllItem : ObservableObject, IInstallRow
+{
+    private readonly MainViewModel _owner;
+
+    internal Guid InstanceId { get; }
+
+    [ObservableProperty]
+    private bool _isInstalling;
+
+    [ObservableProperty]
+    private double _progress;
+
+    [ObservableProperty]
+    private string? _progressStatus;
+
+    [ObservableProperty]
+    private string? _progressDetail;
+
+    [ObservableProperty]
+    private string? _installError;
+
+    [ObservableProperty]
+    private string? _installWarning;
+
+    public InstallPlan? PendingPlan { get; set; }
+
+    public UpdateAllItem(MainViewModel owner, Guid instanceId)
+    {
+        _owner = owner;
+        InstanceId = instanceId;
+    }
+
+    [RelayCommand]
+    private Task UpdateAsync() => _owner.UpdateAllContentAsync(this);
+
+    [RelayCommand]
+    private Task ConfirmUpdateAsync() => _owner.ConfirmUpdateAsync(this, InstanceId);
+
+    [RelayCommand]
+    private void CancelUpdate() => MainViewModel.CancelInstall(this);
 }

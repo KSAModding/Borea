@@ -222,6 +222,9 @@
   <data name="InstancePlay" xml:space="preserve">
     <value>Play</value>
   </data>
+  <data name="InstanceUpdateAll" xml:space="preserve">
+    <value>Update all</value>
+  </data>
   <data name="ContentRemove" xml:space="preserve">
     <value>Remove</value>
   </data>
@@ -233,6 +236,9 @@
   </data>
   <data name="ContentRemoveRequiredFormat" xml:space="preserve">
     <value>{0} stays because {1} requires it.</value>
+  </data>
+  <data name="ContentUpdateToFormat" xml:space="preserve">
+    <value>Update to {0}</value>
   </data>
   <data name="ContentByAuthorFormat" xml:space="preserve">
     <value>by {0}</value>
@@ -332,6 +338,9 @@
   </data>
   <data name="InstallReleaseChannelFormat" xml:space="preserve">
     <value>Release {0} has the status {1}, which your release channel does not offer.</value>
+  </data>
+  <data name="UpdateAnyway" xml:space="preserve">
+    <value>Update anyway</value>
   </data>
   <data name="InstallInstanceMissing" xml:space="preserve">
     <value>The active instance no longer exists.</value>

@@ -30,6 +30,9 @@ internal sealed class ViewModelHarness : IDisposable
 
     public LocalizationService Localization { get; } = new(CultureInfo.GetCultureInfo("en"));
 
+    /// <summary>The SpaceDock stand-in every service graph of this harness reads.</summary>
+    public FakeSpaceDock SpaceDock { get; } = new();
+
     /// <summary>Every request the services sent.</summary>
     public ConcurrentQueue<Uri> Requests { get; } = new();
 
@@ -83,7 +86,7 @@ internal sealed class ViewModelHarness : IDisposable
         json => "{ \"tags\": " + $$"""{ "spec_version": 1, "mod": [{{string.Join(", ", tags.Select(tag => $$"""{ "tag": "{{tag.Tag}}", "name": "{{tag.Name}}", "meaning": "{{tag.Name}} content." }"""))}}] }""" + "," + json.TrimStart()[1..];
 
     public Task<BoreaServices> BuildServicesAsync() =>
-        BoreaServices.BuildAsync(Root, new IndexOnlyHandler(this), new FakeSpaceDock(), Candidates, processStarter: _processStarter);
+        BoreaServices.BuildAsync(Root, new IndexOnlyHandler(this), SpaceDock, Candidates, processStarter: _processStarter);
 
     public void Dispose()
     {
@@ -91,6 +94,7 @@ internal sealed class ViewModelHarness : IDisposable
         ViewModel?.WhenPreferencesSavedAsync().GetAwaiter().GetResult();
         ViewModel?.WhenUpdateCheckedAsync().GetAwaiter().GetResult();
         ViewModel?.WhenReleaseChannelSavedAsync().GetAwaiter().GetResult();
+        ViewModel?.WhenContentUpdatesCheckedAsync().GetAwaiter().GetResult();
         Services.Dispose();
         CultureInfo.CurrentCulture = _originalCulture;
         CultureInfo.CurrentUICulture = _originalUiCulture;
@@ -145,13 +149,16 @@ internal sealed class ViewModelHarness : IDisposable
     /// <summary>
     /// SpaceDock stand-in. 4253 is the SpaceDock copy of AdvancedFlightComputer,
     /// which the index lists too; 5000 is only on SpaceDock and serves its
-    /// description per mod, like the real site.
+    /// description per mod, like the real site. It serves the releases a test
+    /// puts into <see cref="Releases"/>.
     /// </summary>
     internal sealed class FakeSpaceDock : IModRepository
     {
         public const string MirroredId = "4253";
         public const string OwnId = "5000";
         public const string OwnDescription = "## Aircraft HUD\n\nAdds a **HUD**.";
+
+        public List<ModVersionMetadata> Releases { get; } = [];
 
         private static ModMetadata Listing(string id, string name, string? description) => new(
             specVersion: 1,
@@ -165,6 +172,9 @@ internal sealed class ViewModelHarness : IDisposable
             gameMin: "2026.1.1.1",
             description: description);
 
+        private IEnumerable<ModVersionMetadata> ReleasesOf(string modId) =>
+            Releases.Where(release => ModIds.Equals(release.ModId, modId)).OrderByDescending(release => release.Version);
+
         public Task<IReadOnlyList<ModMetadata>> GetAvailableModsAsync(CancellationToken cancellationToken = default) =>
             Task.FromResult<IReadOnlyList<ModMetadata>>(
             [
@@ -176,13 +186,13 @@ internal sealed class ViewModelHarness : IDisposable
             Task.FromResult(modId == OwnId ? Listing(OwnId, "Aircraft HUD", OwnDescription) : null);
 
         public Task<ModVersionMetadata?> GetLatestReleaseAsync(string modId, CancellationToken cancellationToken = default) =>
-            Task.FromResult<ModVersionMetadata?>(null);
+            Task.FromResult(ReleasesOf(modId).FirstOrDefault(release => !release.Yanked));
 
         public Task<ModVersionMetadata?> GetReleaseAsync(string modId, ModVersion version, CancellationToken cancellationToken = default) =>
-            Task.FromResult<ModVersionMetadata?>(null);
+            Task.FromResult(ReleasesOf(modId).FirstOrDefault(release => release.Version == version));
 
         public Task<IReadOnlyList<ModVersion>> GetAvailableVersionsAsync(string modId, CancellationToken cancellationToken = default) =>
-            Task.FromResult<IReadOnlyList<ModVersion>>([]);
+            Task.FromResult<IReadOnlyList<ModVersion>>(ReleasesOf(modId).Select(release => release.Version).ToList());
 
         public Task<IReadOnlyList<ModMetadata>> SearchAsync(string query, CancellationToken cancellationToken = default) =>
             Task.FromResult<IReadOnlyList<ModMetadata>>([]);

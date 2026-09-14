@@ -369,6 +369,10 @@
             <Setter Property="Foreground" Value="{StaticResource Brush.Danger}" />
             <Setter Property="Opacity" Value="0.85" />
         </Style>
+        <Style Selector="Button.text.danger:disabled /template/ ContentPresenter">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Opacity" Value="0.4" />
+        </Style>
         <!-- c/button-cta: purple pill, 38px tall -->
         <Style Selector="Button.cta">
             <Setter Property="Height" Value="38" />
@@ -523,6 +527,10 @@
         </Style>
         <Style Selector="Button.icon:pointerover /template/ ContentPresenter">
             <Setter Property="Background" Value="{StaticResource Brush.SurfaceRaised}" />
+        </Style>
+        <Style Selector="Button.icon:disabled /template/ ContentPresenter">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Opacity" Value="0.4" />
         </Style>
 
         <Style Selector="TextBox.field">

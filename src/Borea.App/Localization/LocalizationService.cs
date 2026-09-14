@@ -177,6 +177,8 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string InstancePlay => Resources.InstancePlay;
 
+    public string InstanceUpdateAll => Resources.InstanceUpdateAll;
+
     public string ContentRemove => Resources.ContentRemove;
 
     public string ContentRemoveConfirm => Resources.ContentRemoveConfirm;
@@ -224,6 +226,8 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string DiscoverNoRelease => Resources.DiscoverNoRelease;
 
     public string InstallAnyway => Resources.InstallAnyway;
+
+    public string UpdateAnyway => Resources.UpdateAnyway;
 
     public string InstallInstanceMissing => Resources.InstallInstanceMissing;
 
@@ -601,6 +605,9 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string FormatManualInstallsReplaceWarning(string folderName)
         => string.Format(CultureInfo.CurrentCulture, Resources.ManualInstallsReplaceWarningFormat, folderName);
+
+    public string FormatContentUpdateTo(string version)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ContentUpdateToFormat, version);
 
     public string FormatContentByAuthor(string authors)
     {

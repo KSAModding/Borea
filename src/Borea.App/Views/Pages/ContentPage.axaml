@@ -77,19 +77,25 @@
                                     </Button>
                                     <ProgressBar Width="96" Height="6" VerticalAlignment="Center" IsVisible="{Binding SelectedContent.IsInstalling}" Value="{Binding SelectedContent.Progress}" Maximum="100" Foreground="{StaticResource Brush.Accent}" />
                                     <ProgressBar Width="96" Height="6" VerticalAlignment="Center" IsVisible="{Binding SelectedContent.IsRemoving}" IsIndeterminate="True" Foreground="{StaticResource Brush.Accent}" />
-                                    <Border Classes="chip positive" VerticalAlignment="Center" IsVisible="{Binding SelectedContent.IsInstalled}" ToolTip.Tip="{Binding InstalledInText}">
-                                        <TextBlock Text="{Binding Localization.DiscoverInstalled}" />
-                                    </Border>
+                                    <!-- an installed mod: the chip names the instance, Remove sits where Add was and is disabled with the reason when the mod has to stay -->
+                                    <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                        <StackPanel.IsVisible>
+                                            <MultiBinding Converter="{x:Static BoolConverters.And}">
+                                                <Binding Path="SelectedContent.IsInstalled" />
+                                                <Binding Path="!SelectedContent.IsRemoving" />
+                                            </MultiBinding>
+                                        </StackPanel.IsVisible>
+                                        <Border Classes="chip positive" VerticalAlignment="Center" ToolTip.Tip="{Binding InstalledInText}">
+                                            <TextBlock Text="{Binding Localization.DiscoverInstalled}" />
+                                        </Border>
+                                        <Button Classes="text danger" Height="38" Padding="16,0,20,0" Command="{Binding SelectedContent.BeginRemoveCommand}" IsEnabled="{Binding SelectedContent.CanRemove}" IsVisible="{Binding !SelectedContent.IsConfirmingRemove}" ToolTip.Tip="{Binding SelectedContent.RemoveToolTip}" ToolTip.ShowOnDisabled="True" AutomationProperties.HelpText="{Binding SelectedContent.RemoveToolTip}">
+                                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                                <Path Classes="icon size-16" Data="{StaticResource Icon.Trash}" Stroke="{StaticResource Brush.Danger}" VerticalAlignment="Center" />
+                                                <TextBlock Text="{Binding Localization.ContentRemove}" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                            </StackPanel>
+                                        </Button>
+                                    </StackPanel>
                                 </Panel>
-                                <!-- the header menu of the design; Remove is its only entry so far -->
-                                <Button Classes="icon" VerticalAlignment="Center" IsVisible="{Binding !IsLoaderContent}" AutomationProperties.Name="{Binding SelectedContent.Name}">
-                                    <Button.Flyout>
-                                        <MenuFlyout Placement="BottomEdgeAlignedRight">
-                                            <MenuItem Header="{Binding Localization.ContentRemove}" Command="{Binding SelectedContent.BeginRemoveCommand}" IsEnabled="{Binding SelectedContent.CanRemove}" />
-                                        </MenuFlyout>
-                                    </Button.Flyout>
-                                    <Path Classes="icon-filled size-18" Data="{StaticResource Icon.More}" />
-                                </Button>
                             </StackPanel>
                         </Grid>
                         <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="24" Margin="0,16,0,0">

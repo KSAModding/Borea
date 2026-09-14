@@ -379,18 +379,18 @@ public sealed class DiscoverViewModelTests
 
 /// <summary>
 /// Puts a mod into an instance without downloading it: the release comes from
-/// the index fixture. The files are marked as not Borea's unless the caller
-/// says Borea installed them, and then the folder carries the ownership file
-/// an install writes.
+/// the index fixture, the newest one unless the caller names a version. The
+/// files are marked as not Borea's unless the caller says Borea installed them,
+/// and then the folder carries the ownership file an install writes.
 /// </summary>
 internal static class InstalledContent
 {
-    public static async Task<Instance> AddAsync(ViewModelHarness harness, string modId, bool activate, InstallReason reason = InstallReason.Manual, ModInstallOwnership ownership = ModInstallOwnership.Foreign)
+    public static async Task<Instance> AddAsync(ViewModelHarness harness, string modId, bool activate, InstallReason reason = InstallReason.Manual, ModInstallOwnership ownership = ModInstallOwnership.Foreign, string? version = null)
     {
         var services = harness.Services;
         var instance = (await services.Instances.GetAllAsync()).FirstOrDefault()
             ?? await services.Instances.CreateAsync("Main", InstanceSource.Custom.Value);
-        var release = await services.Mods.GetLatestReleaseAsync(modId)
+        var release = (version is null ? await services.Mods.GetLatestReleaseAsync(modId) : await services.Mods.GetReleaseAsync(modId, ModVersion.Parse(version)))
             ?? throw new InvalidOperationException($"The fixture has no release of {modId}.");
 
         // the manifest only lists a mod whose folder holds a mod.toml
