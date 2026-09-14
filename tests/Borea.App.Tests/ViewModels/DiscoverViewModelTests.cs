@@ -64,6 +64,92 @@ public sealed class DiscoverViewModelTests
     }
 
     [Fact]
+    public async Task Search_MatchesATag()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var viewModel = harness.ViewModel;
+        await viewModel.EnsureDiscoverLoadedAsync();
+
+        viewModel.SearchText = "weapons";
+
+        Assert.Equal(["KSArmory"], viewModel.DiscoverItems.Select(item => item.ModId));
+    }
+
+    [Fact]
+    public async Task Search_MatchesACuratedTagByItsName()
+    {
+        var tags = ViewModelHarness.CuratedTags(("parts", "Hardware"));
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: tags);
+        var viewModel = harness.ViewModel;
+        await viewModel.EnsureDiscoverLoadedAsync();
+
+        viewModel.SearchText = "hardware";
+
+        Assert.Equal(["KSArmory"], viewModel.DiscoverItems.Select(item => item.ModId));
+    }
+
+    [Fact]
+    public async Task Categories_WithoutCuratedTags_ShowNoRows()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var viewModel = harness.ViewModel;
+        await viewModel.EnsureDiscoverLoadedAsync();
+
+        Assert.Empty(viewModel.CategoryOptions);
+    }
+
+    [Fact]
+    public async Task Categories_ListTheCuratedTagsInUseAndOther()
+    {
+        var tags = ViewModelHarness.CuratedTags(("gameplay", "Gameplay"), ("parts", "Parts"), ("library", "Library"));
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: tags);
+        var viewModel = harness.ViewModel;
+        await viewModel.EnsureDiscoverLoadedAsync();
+
+        Assert.Equal(["Parts", harness.Localization.DiscoverCategoryOther], viewModel.CategoryOptions.Select(category => category.Name));
+        Assert.Equal("parts", viewModel.CategoryOptions[0].Tag);
+        Assert.Equal("Parts content.", viewModel.CategoryOptions[0].Meaning);
+        Assert.True(viewModel.CategoryOptions[1].IsOther);
+
+        var other = viewModel.CategoryOptions[1].Name;
+        harness.Localization.TrySetCulture("de");
+        Assert.NotEqual(other, viewModel.CategoryOptions[1].Name);
+    }
+
+    [Fact]
+    public async Task CategoryFilter_SelectsSeveralAndClearsOnASecondClick()
+    {
+        var tags = ViewModelHarness.CuratedTags(("parts", "Parts"), ("library", "Library"));
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: tags);
+        var viewModel = harness.ViewModel;
+        await viewModel.EnsureDiscoverLoadedAsync();
+        var parts = viewModel.CategoryOptions.Single(category => category.Tag == "parts");
+        var other = viewModel.CategoryOptions.Single(category => category.IsOther);
+
+        viewModel.ToggleCategoryCommand.Execute(parts);
+        Assert.True(parts.IsSelected);
+        Assert.True(viewModel.HasDiscoverFilters);
+        Assert.Equal([parts], viewModel.SelectedCategories);
+        Assert.Equal(["KSArmory"], viewModel.DiscoverItems.Select(item => item.ModId));
+
+        viewModel.ToggleCategoryCommand.Execute(other);
+        Assert.Equal(["AdvancedFlightComputer", "KSArmory", "MeasureTools"], viewModel.DiscoverItems.Select(item => item.ModId));
+
+        viewModel.ToggleCategoryCommand.Execute(parts);
+        Assert.False(parts.IsSelected);
+        Assert.Equal(["AdvancedFlightComputer", "MeasureTools"], viewModel.DiscoverItems.Select(item => item.ModId));
+
+        viewModel.ShowDiscoverLoadersCommand.Execute(null);
+        Assert.Equal("StarMap", Assert.Single(viewModel.DiscoverItems).ModId);
+
+        viewModel.ClearDiscoverFiltersCommand.Execute(null);
+        Assert.False(other.IsSelected);
+        Assert.Empty(viewModel.SelectedCategories);
+        Assert.False(viewModel.HasDiscoverFilters);
+        Assert.Equal("StarMap", Assert.Single(viewModel.DiscoverItems).ModId);
+    }
+
+    [Fact]
     public async Task LicenseFilter_NarrowsTheListUntilCleared()
     {
         using var harness = await ViewModelHarness.CreateAsync();

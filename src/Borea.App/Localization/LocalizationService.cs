@@ -187,6 +187,10 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string DiscoverHideIncompatible => Resources.DiscoverHideIncompatible;
 
+    public string DiscoverCategory => Resources.DiscoverCategory;
+
+    public string DiscoverCategoryOther => Resources.DiscoverCategoryOther;
+
     public string DiscoverOperatingSystem => Resources.DiscoverOperatingSystem;
 
     public string DiscoverLicense => Resources.DiscoverLicense;

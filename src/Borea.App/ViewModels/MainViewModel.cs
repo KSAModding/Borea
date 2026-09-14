@@ -534,6 +534,8 @@ public partial class MainViewModel : ViewModelBase
             option.RefreshText();
         foreach (var option in UpdateChannelOptions)
             option.RefreshText();
+        foreach (var category in CategoryOptions)
+            category.RefreshText();
         RefreshContentGroups();
         foreach (var item in ManualInstallItems)
             item.RefreshText();

@@ -230,7 +230,7 @@
                 <Border Height="1" Background="{StaticResource Brush.BorderStrong}" IsVisible="{Binding HasContentTags}" />
                 <StackPanel Spacing="10" IsVisible="{Binding HasContentTags}">
                     <TextBlock Classes="heading-md" Text="{Binding Localization.ContentTags}" />
-                    <ItemsControl ItemsSource="{Binding SelectedContent.Tags}">
+                    <ItemsControl ItemsSource="{Binding SelectedContent.AllTags}">
                         <ItemsControl.ItemsPanel>
                             <ItemsPanelTemplate>
                                 <WrapPanel ItemSpacing="4" LineSpacing="4" />
