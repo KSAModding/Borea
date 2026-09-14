@@ -36,6 +36,22 @@ internal static class ArgumentRules
         return argument;
     }
 
+    /// <summary>A content id that can be left out, checked like <see cref="ContentId"/> when given.</summary>
+    public static Argument<string?> OptionalContentId(string name, string description)
+    {
+        var argument = new Argument<string?>(name) { Description = description, Arity = ArgumentArity.ZeroOrOne };
+        argument.Validators.Add(result =>
+        {
+            if (result.Tokens.Count == 0)
+                return;
+
+            var value = result.GetValueOrDefault<string?>();
+            if (!ModIds.IsValid(value))
+                result.AddError($"'{value}' is not a valid content id.");
+        });
+        return argument;
+    }
+
     /// <summary>
     /// The instance a command acts on. Absent means the active instance, present
     /// and blank is a usage error, like a blank instance argument.
