@@ -105,6 +105,25 @@ public sealed class ContentViewModelTests
     }
 
     [Fact]
+    public async Task Versions_MarkTheReleaseInTheActiveInstance()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var viewModel = harness.ViewModel;
+        await InstalledContent.AddAsync(harness, "AdvancedFlightComputer", activate: true);
+        await viewModel.LoadAsync();
+        await viewModel.EnsureDiscoverLoadedAsync();
+        await viewModel.DiscoverItems.Single(item => item.ModId == "AdvancedFlightComputer").OpenCommand.ExecuteAsync(null);
+
+        await viewModel.ShowContentVersionsCommand.ExecuteAsync(null);
+
+        Assert.Equal(["0.7.5"], viewModel.ContentVersions.Where(version => version.IsInstalled).Select(version => version.Version));
+
+        await viewModel.DeactivateInstanceAsync();
+
+        Assert.DoesNotContain(viewModel.ContentVersions, version => version.IsInstalled);
+    }
+
+    [Fact]
     public async Task Loader_OffersNoInstallButtons()
     {
         using var harness = await ViewModelHarness.CreateAsync();

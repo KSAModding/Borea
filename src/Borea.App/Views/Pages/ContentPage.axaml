@@ -151,7 +151,12 @@
                                     <DataTemplate x:DataType="vm:VersionItem">
                                         <Border BorderBrush="{StaticResource Brush.BorderStrong}" BorderThickness="0,1,0,0" Padding="16,8" MinHeight="40">
                                             <Grid ColumnDefinitions="160,84,*,124,100,32" RowDefinitions="Auto,Auto">
-                                                <TextBlock Classes="heading-sm" Text="{Binding Version}" VerticalAlignment="Center" />
+                                                <DockPanel HorizontalAlignment="Left" VerticalAlignment="Center" Margin="0,0,8,0">
+                                                    <Border DockPanel.Dock="Right" Classes="chip positive" Margin="8,0,0,0" IsVisible="{Binding IsInstalled}" ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).InstalledInText}">
+                                                        <TextBlock Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.DiscoverInstalled}" />
+                                                    </Border>
+                                                    <TextBlock Classes="heading-sm" Text="{Binding Version}" ToolTip.Tip="{Binding Version}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                                </DockPanel>
                                                 <Border Grid.Column="1" Classes="chip" HorizontalAlignment="Left" VerticalAlignment="Center" Classes.testing="{Binding IsTesting}" Classes.dev="{Binding IsDev}">
                                                     <TextBlock Text="{Binding ChannelText}" />
                                                 </Border>

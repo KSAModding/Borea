@@ -150,6 +150,8 @@ public partial class MainViewModel
         var installed = new HashSet<string>(ActiveInstance?.ModIds ?? [], ModIds.Comparer);
         foreach (var item in _listings)
             item.IsInstalled = installed.Contains(item.ModId);
+        foreach (var release in _contentReleases)
+            release.RefreshInstalled(ActiveInstance);
     }
 
     partial void OnDiscoverTypeChanged(ContentType value) => ApplyDiscoverFilters();

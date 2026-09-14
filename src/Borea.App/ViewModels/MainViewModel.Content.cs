@@ -202,7 +202,10 @@ public partial class MainViewModel
             if (ReferenceEquals(SelectedContent, item))
             {
                 foreach (var release in releases)
+                {
                     release.RefreshCompatibility(_compatibilityGame);
+                    release.RefreshInstalled(ActiveInstance);
+                }
 
                 _contentReleases.AddRange(releases.OrderByDescending(release => release.ReleaseDate));
                 ApplyVersionFilter();
@@ -280,6 +283,9 @@ public sealed partial class VersionItem : ObservableObject, IInstallRow
 
     public bool IsIncompatible => Compatibility == GameCompatibility.Incompatible;
 
+    [ObservableProperty]
+    private bool _isInstalled;
+
     /// <summary>">= min" or "min – max", as the compatibility chip shows it.</summary>
     public string GameVersionText => _release.GameMax is null ? $">= {_release.GameMin}" : $"{_release.GameMin} – {_release.GameMax}";
 
@@ -336,4 +342,7 @@ public sealed partial class VersionItem : ObservableObject, IInstallRow
 
     internal void RefreshCompatibility(GameVersion? installed)
         => Compatibility = Borea.Core.Game.Compatibility.Evaluate(_release, installed);
+
+    internal void RefreshInstalled(InstanceItem? instance)
+        => IsInstalled = instance?.InstalledVersionOf(_release.ModId) == _release.Version;
 }
