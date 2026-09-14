@@ -1,3 +1,4 @@
+using Borea.Core.ModPacks;
 using Borea.Core.Mods;
 
 namespace Borea.Core.Game;
@@ -33,6 +34,33 @@ public static class Compatibility
             throw new ArgumentNullException(nameof(release));
 
         return Evaluate(release.GameMinRevision, release.GameMaxRevision, installed);
+    }
+
+    /// <summary>
+    /// The state the authored bounds of a pack version put the installed game in. A pack
+    /// document is not stamped, so a bound can still be a month such as "2026.7", which
+    /// gives an unknown state. The lower bound is compared on its own, so a month in the
+    /// upper bound does not hide an incompatible game.
+    /// </summary>
+    public static GameCompatibility Evaluate(ModPackMetadata pack, GameVersion? installed)
+    {
+        ArgumentNullException.ThrowIfNull(pack);
+
+        if (installed is not { } game || !GameVersion.TryParse(pack.GameMin, out var min))
+            return GameCompatibility.Unknown;
+
+        if (game.Revision < min.Revision)
+            return GameCompatibility.Incompatible;
+
+        int? maxRevision = null;
+        if (pack.GameMax is not null)
+        {
+            if (!GameVersion.TryParse(pack.GameMax, out var max))
+                return GameCompatibility.Unknown;
+            maxRevision = max.Revision;
+        }
+
+        return Evaluate(min.Revision, maxRevision, game);
     }
 
     /// <summary>

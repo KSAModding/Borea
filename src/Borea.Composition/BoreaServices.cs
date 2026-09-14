@@ -4,6 +4,7 @@ using Borea.Core.Game;
 using Borea.Core.Index;
 using Borea.Core.Instances;
 using Borea.Core.Launch;
+using Borea.Core.Logging;
 using Borea.Core.ModLoaders;
 using Borea.Core.ModPacks;
 using Borea.Core.Mods;
@@ -24,6 +25,7 @@ using Borea.Storage.Game;
 using Borea.Storage.Instances;
 using Borea.Storage.Index;
 using Borea.Storage.Launch;
+using Borea.Storage.Logging;
 using Borea.Storage.ModLoaders;
 using Borea.Storage.ModPacks;
 using Borea.Storage.Mods;
@@ -71,6 +73,9 @@ public sealed class BoreaServices : IDisposable
 
     public required IGamePathProvider Paths { get; init; }
 
+    /// <summary>Borea's daily log. Installs, plans, index fetches and launches write to it.</summary>
+    public required IBoreaLog Log { get; init; }
+
     public required IBoreaSettingsRepository SettingsRepository { get; init; }
 
     public required IGameDirectoryChanger GameDirectoryChanger { get; init; }
@@ -78,6 +83,10 @@ public sealed class BoreaServices : IDisposable
     public required IAppPreferencesRepository AppPreferences { get; init; }
 
     public required IInstanceRepository Instances { get; init; }
+
+    public required IGameDataReader GameData { get; init; }
+
+    public required IGameLogReader GameLog { get; init; }
 
     public required IModStateRepository ModState { get; init; }
 
@@ -92,6 +101,8 @@ public sealed class BoreaServices : IDisposable
     public required IModReplacer Replacer { get; init; }
 
     public required IForeignModAdopter ForeignModAdopter { get; init; }
+
+    public required IForeignModReleaseMatcher ForeignModReleaseMatcher { get; init; }
 
     /// <summary>
     /// Every mod source behind one repository, each listing tagged with its source.
@@ -128,11 +139,15 @@ public sealed class BoreaServices : IDisposable
 
     public required IInstalledGameVersionProvider InstalledVersion { get; init; }
 
+    public required IInstallDetector InstallDetector { get; init; }
+
     public required IContentIndexFetcher IndexFetcher { get; init; }
 
     public required IContentIndexReader IndexReader { get; init; }
 
     public required IContentIndexSnapshotProvider IndexSnapshots { get; init; }
+
+    public required IContentIndexRefresh IndexRefresh { get; init; }
 
     public required IContentIndexRepository ContentIndex { get; init; }
 
@@ -157,24 +172,42 @@ public sealed class BoreaServices : IDisposable
     /// <see cref="GamePathProvider"/>, %LocalAppData%\Borea.
     /// </param>
     public static Task<BoreaServices> BuildAsync(string? boreaRoot, CancellationToken cancellationToken = default)
-        => BuildCoreAsync(boreaRoot, httpHandler: null, fallbackRepository: null, cancellationToken);
+        => BuildAsync(boreaRoot, BoreaLogSource.App, cancellationToken);
+
+    /// <summary>Builds the services like the overload above, with log lines marked by <paramref name="logSource"/>.</summary>
+    public static Task<BoreaServices> BuildAsync(string? boreaRoot, BoreaLogSource logSource, CancellationToken cancellationToken = default)
+        => BuildCoreAsync(boreaRoot, logSource, httpHandler: null, fallbackRepository: null, installCandidates: null, cancellationToken);
 
     internal static Task<BoreaServices> BuildAsync(
         string? boreaRoot,
         HttpMessageHandler httpHandler,
         IModRepository fallbackRepository,
         CancellationToken cancellationToken = default)
+        => BuildAsync(boreaRoot, httpHandler, fallbackRepository, new NoInstallCandidates(), cancellationToken);
+
+    /// <param name="processStarter">Starts the launchers' processes. Null starts real ones.</param>
+    internal static Task<BoreaServices> BuildAsync(
+        string? boreaRoot,
+        HttpMessageHandler httpHandler,
+        IModRepository fallbackRepository,
+        IInstallCandidateSource installCandidates,
+        CancellationToken cancellationToken = default,
+        IProcessStarter? processStarter = null)
     {
         ArgumentNullException.ThrowIfNull(httpHandler);
         ArgumentNullException.ThrowIfNull(fallbackRepository);
-        return BuildCoreAsync(boreaRoot, httpHandler, fallbackRepository, cancellationToken);
+        ArgumentNullException.ThrowIfNull(installCandidates);
+        return BuildCoreAsync(boreaRoot, BoreaLogSource.App, httpHandler, fallbackRepository, installCandidates, cancellationToken, processStarter);
     }
 
     private static async Task<BoreaServices> BuildCoreAsync(
         string? boreaRoot,
+        BoreaLogSource logSource,
         HttpMessageHandler? httpHandler,
         IModRepository? fallbackRepository,
-        CancellationToken cancellationToken)
+        IInstallCandidateSource? installCandidates,
+        CancellationToken cancellationToken,
+        IProcessStarter? processStarter = null)
     {
         // the settings file lives under Borea's own root and needs no
         // game path to be found, so a provider without one reads it.
@@ -189,6 +222,7 @@ public sealed class BoreaServices : IDisposable
             pair => pair.Value.DirectoryPath,
             ModIds.Comparer);
         var paths = new GamePathProvider(settings.GameDirectoryPath, loaderDirectories, boreaRoot);
+        var log = new FileBoreaLog(paths, logSource);
 
         // Network. Every service that talks to a remote host is built here on the
         // one client. Only the SpaceDock repository takes the resolver, because a
@@ -197,7 +231,7 @@ public sealed class BoreaServices : IDisposable
         var http = BuildHttpClient(httpHandler);
         var resolver = new SpaceDockResolver();
         var indexReader = new ContentIndexReader(paths, ContentIndexModRepository.SourceName);
-        var indexFetcher = new ContentIndexFetcher(http, ContentIndexUri, indexReader);
+        var indexFetcher = new LoggingContentIndexFetcher(new ContentIndexFetcher(http, ContentIndexUri, indexReader), log);
         var indexSnapshots = new ContentIndexSnapshotProvider(indexFetcher, indexReader, paths);
         var contentIndex = new ContentIndexModRepository(indexSnapshots);
         var readOnlyContentIndex = new ContentIndexModRepository(new ReaderSnapshotProvider(indexReader));
@@ -218,27 +252,34 @@ public sealed class BoreaServices : IDisposable
         var settingsRepository = new FileBoreaSettingsRepository(paths);
         var loaderConfiguration = new LoaderConfigurator();
         var instances = new FileInstanceRepository(paths);
+        var loaderAdopter = new FileLoaderAdopter(settingsRepository, loaderConfiguration);
+        installCandidates ??= OperatingSystem.IsWindows() ? new WindowsInstallCandidateSource() : new NoInstallCandidates();
 
         var modState = new FileModStateRepository(paths);
-        var modInstaller = new FileModInstaller(paths, downloader, instances, modState);
-        var modReplacer = new FileModReplacer(paths, downloader, instances, modState);
-        var installPlanner = new RepositoryInstallPlanner(new ModDependencyResolver(), settings.ReleaseChannel);
+        var modInstaller = new LoggingModInstaller(new FileModInstaller(paths, downloader, instances, modState), log);
+        var modReplacer = new LoggingModReplacer(new FileModReplacer(paths, downloader, instances, modState), log);
+        var foreignModAdopter = new FileForeignModAdopter(paths, instances, contentIndex);
+        var installPlanner = new LoggingInstallPlanner(new RepositoryInstallPlanner(new ModDependencyResolver(), settings.ReleaseChannel), log);
 
         return new BoreaServices(http)
         {
             Settings = settings,
             Paths = paths,
+            Log = log,
             SettingsRepository = settingsRepository,
             GameDirectoryChanger = new GameDirectoryChanger(settingsRepository, mods, loaderConfiguration),
             AppPreferences = new FileAppPreferencesRepository(paths),
             Instances = instances,
+            GameData = new FileGameDataReader(paths),
+            GameLog = new FileGameLogReader(paths),
             ModState = modState,
             ModFavorites = new FileModFavoritesRepository(paths),
             ModPackFavorites = new FileModPackFavoritesRepository(paths),
-            Uninstaller = new FileModUninstaller(paths, instances),
+            Uninstaller = new LoggingModUninstaller(new FileModUninstaller(paths, instances), log),
             Installer = modInstaller,
             Replacer = modReplacer,
-            ForeignModAdopter = new FileForeignModAdopter(paths, instances, contentIndex),
+            ForeignModAdopter = foreignModAdopter,
+            ForeignModReleaseMatcher = new FileForeignModReleaseMatcher(paths, downloader, foreignModAdopter, indexSnapshots),
             Mods = new ReleaseChannelModRepository(mods, settings.ReleaseChannel),
             ReadOnlyMods = new ReleaseChannelModRepository(readOnlyMods, settings.ReleaseChannel),
             ModPacks = modPacks,
@@ -247,16 +288,18 @@ public sealed class BoreaServices : IDisposable
             InstallPlanner = installPlanner,
             PlanExecutor = new InstallPlanExecutor(instances, modInstaller, modReplacer),
             LoaderInstaller = new FileLoaderInstaller(paths, downloader, settingsRepository, loaderConfiguration),
-            LoaderAdopter = new FileLoaderAdopter(settingsRepository, loaderConfiguration),
+            LoaderAdopter = loaderAdopter,
             LoaderUninstaller = new FileLoaderUninstaller(settingsRepository),
-            Launcher = new LoaderLauncher(paths, new ProcessStarter()),
-            SharedProfileLauncher = new SharedProfileLauncher(paths, new ProcessStarter()),
+            Launcher = new LoggingLauncher(new LoaderLauncher(paths, processStarter ?? new ProcessStarter()), log),
+            SharedProfileLauncher = new SharedProfileLauncher(paths, processStarter ?? new ProcessStarter()),
             LatestVersion = new LatestVersionPing(http),
             ReleaseCheck = new BoreaReleaseCheck(http),
             InstalledVersion = new InstalledGameVersionProvider(paths),
+            InstallDetector = new InstallDetector(installCandidates, loaderAdopter, paths.GetLoadersRoot()),
             IndexFetcher = indexFetcher,
             IndexReader = indexReader,
             IndexSnapshots = indexSnapshots,
+            IndexRefresh = indexSnapshots,
             ContentIndex = contentIndex,
         };
     }
@@ -284,5 +327,12 @@ public sealed class BoreaServices : IDisposable
     {
         public Task<ContentIndexSnapshot> GetSnapshotAsync(CancellationToken cancellationToken = default) =>
             reader.ReadAsync(cancellationToken);
+    }
+
+    private sealed class NoInstallCandidates : IInstallCandidateSource
+    {
+        public IReadOnlyList<string> GetGameDirectories() => [];
+
+        public IReadOnlyList<string> GetLoaderDirectories() => [];
     }
 }

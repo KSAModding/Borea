@@ -21,6 +21,40 @@ public sealed class IndexCommandTests : IDisposable
     }
 
     [Fact]
+    public async Task ReadingCommand_RefreshFailedWithACache_WarnsWithTheCacheDate()
+    {
+        _host.Mods.Listings.Add(ContentCommandFixtures.Listing());
+        _host.Mods.Releases.Add(ContentCommandFixtures.Release());
+        _host.IndexRefresh = new FakeContentIndexRefresh
+        {
+            Status = new ContentIndexRefreshStatus(ContentIndexRefreshOutcome.Failed, new DateTimeOffset(2026, 9, 12, 8, 30, 0, TimeSpan.Zero), "No such host is known."),
+        };
+
+        var run = await _host.RunAsync("search", "Flight");
+
+        Assert.Equal(0, run.ExitCode);
+        Assert.Contains("flight-tools", run.Output);
+        Assert.Equal("warning: using the cached index from 2026-09-12 08:30 UTC, the refresh failed: No such host is known." + Environment.NewLine, run.Error);
+    }
+
+    [Theory]
+    [InlineData(ContentIndexRefreshOutcome.Failed, false)]
+    [InlineData(ContentIndexRefreshOutcome.NotModified, true)]
+    [InlineData(ContentIndexRefreshOutcome.NotAttempted, true)]
+    public async Task ReadingCommand_NoCacheOrNoFailure_PrintsNoWarning(ContentIndexRefreshOutcome outcome, bool hasCache)
+    {
+        _host.Mods.Listings.Add(ContentCommandFixtures.Listing());
+        _host.IndexRefresh = new FakeContentIndexRefresh
+        {
+            Status = new ContentIndexRefreshStatus(outcome, hasCache ? DateTimeOffset.UtcNow : null, outcome == ContentIndexRefreshOutcome.Failed ? "offline" : null),
+        };
+
+        var run = await _host.RunAsync("search", "Flight");
+
+        Assert.DoesNotContain("warning:", run.Error);
+    }
+
+    [Fact]
     public async Task Validate_NoMalformedContent_ReportsCountsAndSucceeds()
     {
         _host.IndexReader.Snapshot = Snapshot(new ContentIndexDiagnostic(
@@ -140,6 +174,28 @@ public sealed class IndexCommandTests : IDisposable
         Assert.Equal(1, run.ExitCode);
         Assert.Contains("  Download counts: 0 listings with counts, 1 malformed.", run.Output);
         Assert.Contains("malformed downloads active-mod: The downloads value is unreadable.", run.Output);
+    }
+
+    [Theory]
+    [InlineData(ContentIndexDiagnosticScope.Images, "The images icon is unreadable.", "  Images: 1 malformed.", "malformed images active-mod: The images icon is unreadable.")]
+    [InlineData(ContentIndexDiagnosticScope.Dates, "The updated_at value is unreadable.", "  Dates: 1 malformed.", "malformed dates active-mod: The updated_at value is unreadable.")]
+    public async Task Validate_MalformedImagesOrDates_ReportsScopeAndFails(
+        ContentIndexDiagnosticScope scope,
+        string reason,
+        string summary,
+        string entry)
+    {
+        _host.IndexReader.Snapshot = Snapshot(new ContentIndexDiagnostic(
+            ContentIndexDiagnosticKind.Malformed,
+            scope,
+            reason,
+            "active-mod"));
+
+        var run = await _host.RunAsync("index", "validate");
+
+        Assert.Equal(1, run.ExitCode);
+        Assert.Contains(summary, run.Output);
+        Assert.Contains(entry, run.Output);
     }
 
     [Fact]

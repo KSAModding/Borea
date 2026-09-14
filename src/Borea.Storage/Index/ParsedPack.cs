@@ -23,13 +23,23 @@ public sealed class ParsedPack
     /// <summary>Present when index_status exists but cannot be read safely.</summary>
     public RejectedIndexEntry? IndexStatusError { get; }
 
+    public DateTimeOffset? PublishedAt { get; }
+
+    public DateTimeOffset? UpdatedAt { get; }
+
+    /// <summary>The dates that cannot be read. The pack stays usable.</summary>
+    public IReadOnlyList<RejectedIndexEntry> DatesErrors { get; }
+
     public ParsedPack(
         string id,
         IReadOnlyList<ParsedPackVersion> validVersions,
         IReadOnlyList<RejectedIndexEntry> rejectedVersions,
         IReadOnlyList<UnknownIndexVersionEntry> unknownVersions,
         IndexStatus? indexStatus,
-        RejectedIndexEntry? indexStatusError = null)
+        RejectedIndexEntry? indexStatusError = null,
+        DateTimeOffset? publishedAt = null,
+        DateTimeOffset? updatedAt = null,
+        IReadOnlyList<RejectedIndexEntry>? datesErrors = null)
     {
         ModIds.Validate(id, nameof(id));
 
@@ -39,11 +49,18 @@ public sealed class ParsedPack
         UnknownVersions = unknownVersions ?? throw new ArgumentNullException(nameof(unknownVersions));
         IndexStatus = indexStatus;
         IndexStatusError = indexStatusError;
+        PublishedAt = publishedAt;
+        UpdatedAt = updatedAt;
+        DatesErrors = datesErrors ?? Array.Empty<RejectedIndexEntry>();
     }
 }
 
-/// <summary>One mapped pack version and the moderation state attached to that version.</summary>
+/// <summary>One mapped pack version, the moderation state attached to that version, and the images of its document.</summary>
 public sealed record ParsedPackVersion(
     ModPackMetadata Metadata,
     IndexStatus? IndexStatus,
-    RejectedIndexEntry? IndexStatusError = null);
+    RejectedIndexEntry? IndexStatusError = null,
+    ContentImages? Images = null)
+{
+    public IReadOnlyList<RejectedIndexEntry> ImagesErrors { get; init; } = Array.Empty<RejectedIndexEntry>();
+}

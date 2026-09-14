@@ -3,6 +3,7 @@ using System.Diagnostics;
 using Borea.Core.ModLoaders;
 using Borea.Core.Mods;
 using Borea.Core.Settings;
+using Borea.Storage.Launch;
 
 namespace Borea.Storage.ModLoaders;
 
@@ -28,6 +29,29 @@ public sealed class FileLoaderAdopter : ILoaderAdopter
         string directory,
         CancellationToken cancellationToken = default)
     {
+        var (result, settings, installation) = await InspectCoreAsync(loader, releases, directory, cancellationToken).ConfigureAwait(false);
+        await _settings.SaveAsync(
+            settings.WithLoaderInstallation(loader.ModId, installation),
+            cancellationToken).ConfigureAwait(false);
+        return result;
+    }
+
+    public async Task<LoaderAdoptionResult> InspectAsync(
+        ModMetadata loader,
+        IReadOnlyList<ModVersionMetadata> releases,
+        string directory,
+        CancellationToken cancellationToken = default)
+    {
+        var (result, _, _) = await InspectCoreAsync(loader, releases, directory, cancellationToken).ConfigureAwait(false);
+        return result;
+    }
+
+    private async Task<(LoaderAdoptionResult Result, BoreaSettings Settings, LoaderInstallation Installation)> InspectCoreAsync(
+        ModMetadata loader,
+        IReadOnlyList<ModVersionMetadata> releases,
+        string directory,
+        CancellationToken cancellationToken)
+    {
         ArgumentNullException.ThrowIfNull(loader);
         ArgumentNullException.ThrowIfNull(releases);
 
@@ -51,7 +75,9 @@ public sealed class FileLoaderAdopter : ILoaderAdopter
                 $"{loader.Name} is already recorded at '{recorded.DirectoryPath}'. Remove that record or adopt that directory instead.");
         }
 
-        var rawVersion = ReadFileVersion(executable);
+        // Outside Windows FileVersionInfo reads only assembly metadata, so a Windows app host shows no version there.
+        var rawVersion = ReadFileVersion(executable)
+            ?? (DotnetHost.AssemblyBeside(executable) is { } assembly ? ReadFileVersion(assembly) : null);
         var version = MatchVersion(loader, releases, rawVersion);
         string? configuredGameDirectory = null;
         string? configurationWarning = null;
@@ -87,11 +113,7 @@ public sealed class FileLoaderAdopter : ILoaderAdopter
             rawVersion,
             isAdopted: recorded?.IsAdopted ?? true);
 
-        await _settings.SaveAsync(
-            settings.WithLoaderInstallation(loader.ModId, installation),
-            cancellationToken).ConfigureAwait(false);
-
-        return new LoaderAdoptionResult(
+        var result = new LoaderAdoptionResult(
             loader.ModId,
             loaderDirectory,
             rawVersion,
@@ -99,6 +121,7 @@ public sealed class FileLoaderAdopter : ILoaderAdopter
             configuredGameDirectory,
             gameDirectoryMatches,
             new ReadOnlyCollection<string>(warnings));
+        return (result, settings, installation);
     }
 
     private static ModVersion? MatchVersion(

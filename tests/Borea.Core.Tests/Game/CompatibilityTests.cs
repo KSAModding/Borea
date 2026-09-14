@@ -1,5 +1,6 @@
 ﻿using Borea.Core.Dependencies;
 using Borea.Core.Game;
+using Borea.Core.ModPacks;
 using Borea.Core.Mods;
 using Borea.Core.Tests.Mods;
 
@@ -29,6 +30,22 @@ public sealed class CompatibilityTests
             gameMax: gameMax,
             gameMaxRevision: gameMaxRevision,
             os: os);
+
+    private static ModPackMetadata Pack(string gameMin, string? gameMax = null) =>
+        new(
+            specVersion: SpecVersions.Highest,
+            modPackId: "test-pack",
+            source: "index",
+            name: "Test pack",
+            authors: ["Maxi"],
+            abstractText: "A pack.",
+            license: "MIT",
+            links: new Dictionary<string, string> { ["forums"] = "https://example.com/test-pack" },
+            gameMin: gameMin,
+            version: ModVersion.Parse("1.0.0"),
+            releasedAt: DateTimeOffset.UtcNow,
+            mods: [new ModPackEntry("test-mod", ModVersion.Parse("1.0.0"))],
+            gameMax: gameMax);
 
     [Fact]
     public void Evaluate_NoLowerBound_IsUnknown()
@@ -116,7 +133,26 @@ public sealed class CompatibilityTests
     [Fact]
     public void Evaluate_NullRelease_ThrowsArgumentNullException()
     {
-        Assert.Throws<ArgumentNullException>(() => Compatibility.Evaluate(null!, Installed(5117)));
+        Assert.Throws<ArgumentNullException>(() => Compatibility.Evaluate((ModVersionMetadata)null!, Installed(5117)));
+    }
+
+    [Fact]
+    public void Evaluate_Pack_ReadsItsAuthoredBounds()
+    {
+        var pack = Pack("2026.7.4.2131", "2026.8.3.5117");
+
+        Assert.Equal(GameCompatibility.Incompatible, Compatibility.Evaluate(pack, Installed(2130)));
+        Assert.Equal(GameCompatibility.Compatible, Compatibility.Evaluate(pack, Installed(2131)));
+        Assert.Equal(GameCompatibility.Untested, Compatibility.Evaluate(pack, Installed(5118)));
+        Assert.Equal(GameCompatibility.Unknown, Compatibility.Evaluate(pack, null));
+    }
+
+    [Fact]
+    public void Evaluate_PackWithAMonthBound_IsUnknownUnlessBelowTheLowerBound()
+    {
+        Assert.Equal(GameCompatibility.Unknown, Compatibility.Evaluate(Pack("2026.7"), Installed(5117)));
+        Assert.Equal(GameCompatibility.Incompatible, Compatibility.Evaluate(Pack("2026.8.3.5117", "2026.9"), Installed(5116)));
+        Assert.Equal(GameCompatibility.Unknown, Compatibility.Evaluate(Pack("2026.8.3.5117", "2026.9"), Installed(5117)));
     }
 
     [Fact]

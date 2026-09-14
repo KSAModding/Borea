@@ -2,6 +2,7 @@ using System.Text.Json;
 using Borea.Composition;
 using Borea.Core.Game;
 using Borea.Core.Index;
+using Borea.Core.Logging;
 using Borea.Core.ModLoaders;
 using Borea.Core.ModPacks;
 using Borea.Core.Mods;
@@ -32,6 +33,8 @@ internal sealed class CliHost : IDisposable
 
     public IContentIndexSnapshotProvider? IndexSnapshots { get; set; }
 
+    public IContentIndexRefresh? IndexRefresh { get; set; }
+
     public FakeModRepository Mods { get; } = new();
 
     public IModRepository? ModRepository { get; set; }
@@ -58,6 +61,8 @@ internal sealed class CliHost : IDisposable
 
     public Func<BoreaServices, IModUninstaller>? UninstallerFactory { get; set; }
 
+    public Func<BoreaServices, IForeignModAdopter>? ForeignModAdopterFactory { get; set; }
+
     public Func<BoreaServices, IInstanceRepository>? InstancesFactory { get; set; }
 
     /// <summary>How many times a command built its services.</summary>
@@ -81,7 +86,7 @@ internal sealed class CliHost : IDisposable
     private async Task<CliServices> BuildAsync(CancellationToken cancellationToken)
     {
         Builds++;
-        var graph = await BoreaServices.BuildAsync(Root, cancellationToken);
+        var graph = await BoreaServices.BuildAsync(Root, BoreaLogSource.Cli, cancellationToken);
         return CliServices.From(
             graph,
             instances: InstancesFactory?.Invoke(graph),
@@ -95,13 +100,16 @@ internal sealed class CliHost : IDisposable
             installer: InstallerFactory?.Invoke(graph),
             replacer: ReplacerFactory?.Invoke(graph),
             uninstaller: UninstallerFactory?.Invoke(graph),
+            foreignModAdopter: ForeignModAdopterFactory?.Invoke(graph),
             loaderInstaller: LoaderInstaller,
             loaderAdopter: LoaderAdopter,
             loaderUninstaller: LoaderUninstaller,
-            launcher: new LoaderLauncher(graph.Paths, ProcessStarter),
+            // the fake processes answer at once, so the startup watch needs no real time
+            launcher: new LoaderLauncher(graph.Paths, ProcessStarter, TimeSpan.Zero),
             modPacks: ModPacks ?? new ContentIndexModPackRepository(IndexSnapshots ?? new ReaderSnapshotProvider(IndexReader)),
             modPackInstaller: ModPackInstaller,
-            sharedProfileLauncher: new SharedProfileLauncher(graph.Paths, ProcessStarter, OsPlatform.Windows));
+            sharedProfileLauncher: new SharedProfileLauncher(graph.Paths, ProcessStarter, OsPlatform.Windows),
+            indexRefresh: IndexRefresh);
     }
 
     public void Dispose()

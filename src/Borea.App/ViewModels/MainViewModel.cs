@@ -81,29 +81,34 @@ public partial class MainViewModel : ViewModelBase
     private bool _currentWindowInstance = false;
 
     /// <summary>
-    /// The library rail item stays lit on the instance page too.
+    /// The library rail item stays lit on the instance page too, and on a
+    /// content page opened from an instance.
     /// </summary>
-    public bool IsLibrarySection => CurrentWindowLibrary || CurrentWindowInstance;
+    public bool IsLibrarySection => CurrentWindowLibrary || CurrentWindowInstance || IsContentFromInstance;
 
     /// <summary>
-    /// The discover rail item stays lit on a content page too.
+    /// The discover rail item stays lit on a content or pack page too.
     /// </summary>
-    public bool IsDiscoverSection => CurrentWindowDiscover || CurrentWindowContent;
+    public bool IsDiscoverSection => CurrentWindowDiscover || (CurrentWindowContent && !IsContentFromInstance) || CurrentWindowPack;
     [RelayCommand]
     public void SetMainWindowHome() // used to set whatever is on the main window (discover, library, etc.)
     {
         LeaveContentPage();
+        LeavePackPage();
         CurrentWindowHome = true;
         CurrentWindowDiscover = false;
         CurrentWindowLibrary = false;
         CurrentWindowTasks = false;
         CurrentWindowInstance = false;
         CurrentWindowContent = false;
+        CurrentWindowPack = false;
     }
     [RelayCommand]
     public void SetMainWindowDiscover() // used to set whatever is on the main window (discover, library, etc.)
     {
         LeaveContentPage();
+        UpdateIndexRefreshStatus();
+        LeavePackPage();
         _ = EnsureDiscoverLoadedAsync();
         CurrentWindowHome = false;
         CurrentWindowDiscover = true;
@@ -111,28 +116,33 @@ public partial class MainViewModel : ViewModelBase
         CurrentWindowTasks = false;
         CurrentWindowInstance = false;
         CurrentWindowContent = false;
+        CurrentWindowPack = false;
     }
     [RelayCommand]
     public void SetMainWindowLibrary() // used to set whatever is on the main window (discover, library, etc.)
     {
         LeaveContentPage();
+        LeavePackPage();
         CurrentWindowHome = false;
         CurrentWindowDiscover = false;
         CurrentWindowLibrary = true;
         CurrentWindowTasks = false;
         CurrentWindowInstance = false;
         CurrentWindowContent = false;
+        CurrentWindowPack = false;
     }
     [RelayCommand]
     public void SetMainWindowTasks()
     {
         LeaveContentPage();
+        LeavePackPage();
         CurrentWindowHome = false;
         CurrentWindowDiscover = false;
         CurrentWindowLibrary = false;
         CurrentWindowTasks = true;
         CurrentWindowInstance = false;
         CurrentWindowContent = false;
+        CurrentWindowPack = false;
     }
     /// <summary>
     /// Settings open as a modal over the current page (modal: settings in #8).
@@ -268,6 +278,7 @@ public partial class MainViewModel : ViewModelBase
         await ReloadInstancesAsync();
         await RefreshContentIndexAsync();
         await LoadRecentItemsAsync();
+        UpdateIndexRefreshStatus();
         await RefreshGameSetupAsync();
     }
 
@@ -292,8 +303,8 @@ public partial class MainViewModel : ViewModelBase
     }
 
     /// <summary>
-    /// Downloads the content index when it changed, like <c>borea index refresh</c>.
-    /// A failure keeps the cached snapshot, so it is not shown as an error.
+    /// Refreshes the content index once per start. A failure keeps the cached
+    /// snapshot in use, and <see cref="IndexRefreshStatus"/> tells the pages.
     /// </summary>
     private async Task RefreshContentIndexAsync()
     {
@@ -302,11 +313,11 @@ public partial class MainViewModel : ViewModelBase
 
         try
         {
-            await _services.IndexFetcher.FetchAsync(_services.Paths.GetIndexPath());
+            await _services.IndexRefresh.RefreshAsync();
         }
         catch (Exception exception) when (exception is System.Net.Http.HttpRequestException or IOException or InvalidOperationException or TaskCanceledException)
         {
-            // offline or a broken snapshot: the cached file stays in use
+            // without a cached file nothing can be read, and the status carries the reason
         }
 
         _indexRefreshed = true;
@@ -333,7 +344,7 @@ public partial class MainViewModel : ViewModelBase
                 if (listing.Type != ContentType.Mod)
                     continue;
 
-                var release = await _services.ContentIndex.GetLatestReleaseAsync(listing.ModId);
+                var release = await _services.ContentIndex.GetLatestReleaseInChannelAsync(listing.ModId, _services.Settings.ReleaseChannel);
                 if (release is not null)
                     recent.Add(new RecentItem(this, listing, release.ReleaseDate));
             }
@@ -377,6 +388,7 @@ public partial class MainViewModel : ViewModelBase
             Instances.Add(new InstanceItem(this, instance, instance.InstanceId == activeId));
 
         ActiveInstance = Instances.FirstOrDefault(instance => instance.IsActive);
+        OnPropertyChanged(nameof(CanActOnSelectedContent));
         RefreshInstalledFlags();
         OnPropertyChanged(nameof(InstalledInText));
 
@@ -507,7 +519,9 @@ public partial class MainViewModel : ViewModelBase
         => string.Equals(left.SelectedThemeName, right.SelectedThemeName, StringComparison.Ordinal)
             && string.Equals(left.RegionalCultureName, right.RegionalCultureName, StringComparison.Ordinal)
             && string.Equals(left.UiCultureName, right.UiCultureName, StringComparison.Ordinal)
-            && left.CheckForUpdatesAtStart == right.CheckForUpdatesAtStart;
+            && left.CheckForUpdatesAtStart == right.CheckForUpdatesAtStart
+            && left.UpdateChannel == right.UpdateChannel
+            && left.ForeignFolderDeletionConfirmed == right.ForeignFolderDeletionConfirmed;
 
     private void OnRegionalFormatChanged(object? sender, PropertyChangedEventArgs e)
     {
@@ -516,6 +530,7 @@ public partial class MainViewModel : ViewModelBase
             OnPropertyChanged(nameof(SelectedRegionalFormat));
             foreach (var item in RecentItems)
                 item.RefreshText();
+            RefreshGameDataItems();
         }
     }
 
@@ -527,10 +542,24 @@ public partial class MainViewModel : ViewModelBase
             instance.RefreshText();
         foreach (var item in DiscoverItems)
             item.RefreshText();
+        foreach (var release in _contentReleases)
+            release.RefreshText();
+        foreach (var option in ReleaseChannelOptions)
+            option.RefreshText();
+        foreach (var option in UpdateChannelOptions)
+            option.RefreshText();
+        foreach (var category in CategoryOptions)
+            category.RefreshText();
+        RefreshPackText();
         RefreshContentGroups();
+        foreach (var item in ManualInstallItems)
+            item.RefreshText();
+        RefreshGameDataItems();
         RefreshLoaderText();
+        RefreshIndexStatusText();
         OnPropertyChanged(nameof(GameSetupBannerText));
         OnPropertyChanged(nameof(InstalledInText));
+        OnPropertyChanged(nameof(ContentVersionsEmptyText));
 
         QueuePreferenceSave(preferences => preferences.WithUiCultureName(Localization.SelectedCultureName));
     }
@@ -582,6 +611,7 @@ public sealed partial class InstanceItem : ObservableObject
 {
     private readonly MainViewModel _owner;
     private readonly InstanceSource _source;
+    private readonly Dictionary<string, ModVersion> _modVersions;
 
     public Guid InstanceId { get; }
 
@@ -590,6 +620,8 @@ public sealed partial class InstanceItem : ObservableObject
     public int ModCount { get; }
 
     public IReadOnlyList<string> ModIds { get; }
+
+    internal IReadOnlyList<InstalledMod> Mods { get; }
 
     public bool IsActive { get; }
 
@@ -611,12 +643,17 @@ public sealed partial class InstanceItem : ObservableObject
         InstanceId = instance.InstanceId;
         Name = instance.Name;
         ModCount = instance.Mods.Count;
-        ModIds = instance.Mods.Select(mod => mod.ModId).ToList();
+        Mods = instance.Mods;
+        ModIds = Mods.Select(mod => mod.ModId).ToList();
+        _modVersions = instance.Mods.ToDictionary(mod => mod.ModId, mod => mod.Version, Borea.Core.Mods.ModIds.Comparer);
         IsActive = isActive;
         _editName = instance.Name;
     }
 
     internal void RefreshText() => OnPropertyChanged(nameof(SourceText));
+
+    internal ModVersion? InstalledVersionOf(string modId)
+        => _modVersions.TryGetValue(modId, out var version) ? version : null;
 
     [RelayCommand]
     private Task ActivateAsync() => _owner.ActivateInstanceAsync(InstanceId);

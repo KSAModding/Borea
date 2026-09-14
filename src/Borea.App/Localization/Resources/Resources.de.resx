@@ -51,8 +51,32 @@
   <data name="SettingsCheckForUpdatesAtStart" xml:space="preserve">
     <value>Beim Start nach Updates suchen</value>
   </data>
+  <data name="SettingsUpdateChannelLabel" xml:space="preserve">
+    <value>Update-Kanal für Borea</value>
+  </data>
+  <data name="SettingsUpdateChannelHint" xml:space="preserve">
+    <value>Über welche Borea-Versionen die Update-Suche dich informiert. Vorabversionen sind weniger getestet. Das ändert nicht, welche Mod-Versionen Borea installiert.</value>
+  </data>
+  <data name="UpdateChannelStable" xml:space="preserve">
+    <value>Stabile Versionen</value>
+  </data>
+  <data name="UpdateChannelTesting" xml:space="preserve">
+    <value>Stabile und Beta-Versionen</value>
+  </data>
+  <data name="UpdateChannelDev" xml:space="preserve">
+    <value>Alle Versionen, auch Dev-Builds</value>
+  </data>
+  <data name="SettingsReleaseChannelLabel" xml:space="preserve">
+    <value>Mod-Release-Kanal</value>
+  </data>
+  <data name="SettingsReleaseChannelHint" xml:space="preserve">
+    <value>Welche Versionen Borea installiert, wenn du keine Version wählst.</value>
+  </data>
   <data name="UpdateAvailable" xml:space="preserve">
     <value>Eine neuere Borea-Version ist verfügbar:</value>
+  </data>
+  <data name="UpdatePreRelease" xml:space="preserve">
+    <value>Vorabversion</value>
   </data>
   <data name="UpdateViewRelease" xml:space="preserve">
     <value>Veröffentlichung ansehen</value>
@@ -127,7 +151,7 @@
     <value>Spieldaten</value>
   </data>
   <data name="InstanceTabLog" xml:space="preserve">
-    <value>Protokoll</value>
+    <value>Log</value>
   </data>
   <data name="InstanceGroupMods" xml:space="preserve">
     <value>Mods</value>
@@ -143,6 +167,57 @@
   </data>
   <data name="InstanceEmptyContent" xml:space="preserve">
     <value>Noch nichts installiert. Füge Inhalte über Entdecken hinzu.</value>
+  </data>
+  <data name="ManualInstallsEmpty" xml:space="preserve">
+    <value>Kein Mod-Ordner in dieser Instanz wurde ohne Borea installiert.</value>
+  </data>
+  <data name="ManualInstallsInIndex" xml:space="preserve">
+    <value>Im Inhaltsindex</value>
+  </data>
+  <data name="ManualInstallsNotInIndex" xml:space="preserve">
+    <value>Nicht im Inhaltsindex</value>
+  </data>
+  <data name="ManualInstallsNoMatch" xml:space="preserve">
+    <value>Im Inhaltsindex, aber die Dateien passen zu keiner Version</value>
+  </data>
+  <data name="ManualInstallsNotRecorded" xml:space="preserve">
+    <value>Im Inhaltsindex, aber Borea kann die passende Version nicht übernehmen</value>
+  </data>
+  <data name="ManualInstallsChecking" xml:space="preserve">
+    <value>Die Dateien werden mit jeder Version verglichen</value>
+  </data>
+  <data name="ManualInstallsManage" xml:space="preserve">
+    <value>Mit Borea verwalten</value>
+  </data>
+  <data name="ManualInstallsReplace" xml:space="preserve">
+    <value>Durch die neueste Version ersetzen</value>
+  </data>
+  <data name="ManualInstallsDeleteAndReplace" xml:space="preserve">
+    <value>Löschen und ersetzen</value>
+  </data>
+  <data name="ManualInstallsReplaceWarningFormat" xml:space="preserve">
+    <value>Borea hat {0} nicht installiert. Zum Ersetzen löscht Borea diesen Ordner mit allen Dateien darin. Borea fragt nur dieses eine Mal.</value>
+  </data>
+  <data name="ManualInstallsInstanceChanged" xml:space="preserve">
+    <value>Die Instanz hat sich geändert. Versuche es erneut.</value>
+  </data>
+  <data name="GameDataOpenFolder" xml:space="preserve">
+    <value>Ordner öffnen</value>
+  </data>
+  <data name="GameDataEmpty" xml:space="preserve">
+    <value>Leer</value>
+  </data>
+  <data name="GameLogOpen" xml:space="preserve">
+    <value>Log öffnen</value>
+  </data>
+  <data name="GameLogMissing" xml:space="preserve">
+    <value>Das Spiel hat für diese Instanz noch kein Log geschrieben.</value>
+  </data>
+  <data name="GameLogReload" xml:space="preserve">
+    <value>Neu laden</value>
+  </data>
+  <data name="GameLogCopy" xml:space="preserve">
+    <value>In die Zwischenablage kopieren</value>
   </data>
   <data name="InstancePlay" xml:space="preserve">
     <value>Spielen</value>
@@ -186,6 +261,12 @@
   <data name="DiscoverHideIncompatible" xml:space="preserve">
     <value>Inkompatible ausblenden</value>
   </data>
+  <data name="DiscoverCategory" xml:space="preserve">
+    <value>Kategorie</value>
+  </data>
+  <data name="DiscoverCategoryOther" xml:space="preserve">
+    <value>Sonstige</value>
+  </data>
   <data name="DiscoverOperatingSystem" xml:space="preserve">
     <value>Betriebssystem</value>
   </data>
@@ -204,6 +285,36 @@
   <data name="DiscoverLoading" xml:space="preserve">
     <value>Inhalte werden geladen...</value>
   </data>
+  <data name="DiscoverIndexStaleFormat" xml:space="preserve">
+    <value>Der Inhaltsindex ist nicht erreichbar. Die angezeigte Liste wurde {0} geladen.</value>
+  </data>
+  <data name="IndexUnreachableFormat" xml:space="preserve">
+    <value>Der Inhaltsindex ist nicht erreichbar: {0}</value>
+  </data>
+  <data name="DiscoverIndexRetry" xml:space="preserve">
+    <value>Erneut versuchen</value>
+  </data>
+  <data name="TimeJustNow" xml:space="preserve">
+    <value>gerade eben</value>
+  </data>
+  <data name="TimeMinuteAgo" xml:space="preserve">
+    <value>vor 1 Minute</value>
+  </data>
+  <data name="TimeMinutesAgoFormat" xml:space="preserve">
+    <value>vor {0} Minuten</value>
+  </data>
+  <data name="TimeHourAgo" xml:space="preserve">
+    <value>vor 1 Stunde</value>
+  </data>
+  <data name="TimeHoursAgoFormat" xml:space="preserve">
+    <value>vor {0} Stunden</value>
+  </data>
+  <data name="TimeDayAgo" xml:space="preserve">
+    <value>vor 1 Tag</value>
+  </data>
+  <data name="TimeDaysAgoFormat" xml:space="preserve">
+    <value>vor {0} Tagen</value>
+  </data>
   <data name="DiscoverAdd" xml:space="preserve">
     <value>Zur aktiven Instanz hinzufügen</value>
   </data>
@@ -218,6 +329,9 @@
   </data>
   <data name="InstallAnyway" xml:space="preserve">
     <value>Trotzdem installieren</value>
+  </data>
+  <data name="InstallReleaseChannelFormat" xml:space="preserve">
+    <value>Version {0} hat den Status {1}, den dein Release-Kanal nicht anbietet.</value>
   </data>
   <data name="InstallInstanceMissing" xml:space="preserve">
     <value>Die aktive Instanz existiert nicht mehr.</value>
@@ -282,6 +396,9 @@
   <data name="ContentPublishedHeader" xml:space="preserve">
     <value>Veröffentlicht</value>
   </data>
+  <data name="ContentShowVersions" xml:space="preserve">
+    <value>Anzeigen</value>
+  </data>
   <data name="ContentNoDescription" xml:space="preserve">
     <value>Keine Beschreibung vorhanden.</value>
   </data>
@@ -291,11 +408,62 @@
   <data name="ContentNoVersions" xml:space="preserve">
     <value>Noch keine Veröffentlichungen.</value>
   </data>
+  <data name="ContentNoVersionsInChannel" xml:space="preserve">
+    <value>Keine Veröffentlichungen in diesem Kanal.</value>
+  </data>
   <data name="ContentSourceFormat" xml:space="preserve">
     <value>Gelistet auf {0}</value>
   </data>
   <data name="ContentTypeModLoader" xml:space="preserve">
     <value>Mod-Loader</value>
+  </data>
+  <data name="ContentTypeModPack" xml:space="preserve">
+    <value>Modpack</value>
+  </data>
+  <data name="PackMods" xml:space="preserve">
+    <value>Mods</value>
+  </data>
+  <data name="PackModHeader" xml:space="preserve">
+    <value>Mod</value>
+  </data>
+  <data name="PackMemberYanked" xml:space="preserve">
+    <value>Zurückgezogen</value>
+  </data>
+  <data name="PackMemberUnlisted" xml:space="preserve">
+    <value>Nicht gelistet</value>
+  </data>
+  <data name="PackResultInstalled" xml:space="preserve">
+    <value>Installiert</value>
+  </data>
+  <data name="PackResultReplaced" xml:space="preserve">
+    <value>Ersetzt</value>
+  </data>
+  <data name="PackResultAlreadyInstalled" xml:space="preserve">
+    <value>Bereits installiert</value>
+  </data>
+  <data name="PackDeprecated" xml:space="preserve">
+    <value>Der Autor pflegt dieses Modpack nicht mehr.</value>
+  </data>
+  <data name="PackStatusUnknown" xml:space="preserve">
+    <value>Dieses Modpack hat einen Autorstatus, den Borea nicht kennt.</value>
+  </data>
+  <data name="PackCompatibilityUnknown" xml:space="preserve">
+    <value>Die Kompatibilität dieses Modpacks mit dem installierten Spiel ist unbekannt.</value>
+  </data>
+  <data name="PackDisputed" xml:space="preserve">
+    <value>Der Inhaltsindex markiert dieses Modpack als umstritten.</value>
+  </data>
+  <data name="PackIndexStatusUnknown" xml:space="preserve">
+    <value>Der Inhaltsindex gibt diesem Modpack einen Status, den Borea nicht kennt.</value>
+  </data>
+  <data name="PackResultUnresolved" xml:space="preserve">
+    <value>Nicht aufgelöst</value>
+  </data>
+  <data name="PackResultFailed" xml:space="preserve">
+    <value>Fehlgeschlagen</value>
+  </data>
+  <data name="PackResultNotAttempted" xml:space="preserve">
+    <value>Nicht versucht</value>
   </data>
   <data name="ReleaseStable" xml:space="preserve">
     <value>stabil</value>
@@ -308,6 +476,15 @@
   </data>
   <data name="ReleaseUnknown" xml:space="preserve">
     <value>unbekannt</value>
+  </data>
+  <data name="ReleaseChannelStable" xml:space="preserve">
+    <value>Stabile Versionen</value>
+  </data>
+  <data name="ReleaseChannelTesting" xml:space="preserve">
+    <value>Stabile und Testversionen</value>
+  </data>
+  <data name="ReleaseChannelDev" xml:space="preserve">
+    <value>Alle Versionen</value>
   </data>
   <data name="SettingsGame" xml:space="preserve">
     <value>Spiel</value>
@@ -324,6 +501,15 @@
   <data name="SetupSave" xml:space="preserve">
     <value>Speichern</value>
   </data>
+  <data name="SetupUseThisFolder" xml:space="preserve">
+    <value>Diesen Ordner verwenden</value>
+  </data>
+  <data name="SetupFoundGame" xml:space="preserve">
+    <value>Borea hat KSA in diesem Ordner gefunden. Prüfe den Ordner und verwende ihn dann.</value>
+  </data>
+  <data name="SetupFoundGames" xml:space="preserve">
+    <value>Borea hat KSA in mehreren Ordnern gefunden. Wähle den Ordner, aus dem du spielst.</value>
+  </data>
   <data name="SetupLoader" xml:space="preserve">
     <value>Mod-Loader</value>
   </data>
@@ -338,6 +524,9 @@
   </data>
   <data name="SetupUseExisting" xml:space="preserve">
     <value>Vorhandenen verwenden</value>
+  </data>
+  <data name="SetupFoundLoader" xml:space="preserve">
+    <value>Borea hat diesen Loader gefunden. Prüfe den Ordner und verwende ihn dann.</value>
   </data>
   <data name="SetupSaved" xml:space="preserve">
     <value>Gespeichert.</value>
@@ -396,6 +585,15 @@
   <data name="AboutGame" xml:space="preserve">
     <value>Installiertes Spiel</value>
   </data>
+  <data name="AboutContentIndex" xml:space="preserve">
+    <value>Inhaltsindex</value>
+  </data>
+  <data name="AboutIndexUpdatedFormat" xml:space="preserve">
+    <value>Aktualisiert {0}</value>
+  </data>
+  <data name="AboutIndexNotDownloaded" xml:space="preserve">
+    <value>Noch nicht heruntergeladen</value>
+  </data>
   <data name="AboutFolders" xml:space="preserve">
     <value>Ordner</value>
   </data>
@@ -404,6 +602,12 @@
   </data>
   <data name="AboutOpenInstancesFolder" xml:space="preserve">
     <value>Instanzordner öffnen</value>
+  </data>
+  <data name="AboutOpenBoreaLog" xml:space="preserve">
+    <value>Borea-Log öffnen</value>
+  </data>
+  <data name="AboutOpenLogFolder" xml:space="preserve">
+    <value>Log-Ordner öffnen</value>
   </data>
   <data name="AboutCopyDiagnostics" xml:space="preserve">
     <value>Diagnose kopieren</value>
@@ -462,6 +666,24 @@
   <data name="DiscoverInstalledInFormat" xml:space="preserve">
     <value>Installiert in {0}</value>
   </data>
+  <data name="PackModCountFormat" xml:space="preserve">
+    <value>Mods: {0}</value>
+  </data>
+  <data name="PackIncompatibleFormat" xml:space="preserve">
+    <value>Dieses Modpack braucht die Spielversion {0} oder neuer.</value>
+  </data>
+  <data name="PackMemberYankedFormat" xml:space="preserve">
+    <value>{0} {1} wurde zurückgezogen.</value>
+  </data>
+  <data name="PackIncompleteFormat" xml:space="preserve">
+    <value>{0} von {1} Mods wurden nicht installiert.</value>
+  </data>
+  <data name="PackUntestedFormat" xml:space="preserve">
+    <value>Dieses Modpack ist nicht mit dem installierten Spiel getestet, das neuer als {0} ist.</value>
+  </data>
+  <data name="PackSupersededFormat" xml:space="preserve">
+    <value>Der Autor pflegt dieses Modpack nicht mehr und empfiehlt {0}.</value>
+  </data>
   <data name="InstallDownloadingFormat" xml:space="preserve">
     <value>{0} wird heruntergeladen</value>
   </data>
@@ -494,5 +716,45 @@
   </data>
   <data name="LaunchWithoutModLoaderToolTip" xml:space="preserve">
     <value>Startet KSA so, als würdest du KSA.exe direkt ausführen. Es nutzt das gemeinsame Profil, das KSA selbst anlegt, und keine Borea-Instanz.</value>
+  </data>
+</root>
+  <data name="InstanceContentNotInIndex" xml:space="preserve">
+    <value>Diese Mod ist nicht im Content-Index und hat deshalb keine Seite.</value>
+  </data>
+  <data name="InstanceContentNotOwned" xml:space="preserve">
+    <value>Borea hat diese Mod nicht installiert, deshalb verweist sie auf keine Seite.</value>
+  </data>
+  <data name="ContentInsideInstance" xml:space="preserve">
+    <value>Du siehst Inhalt aus einer Instanz.</value>
+  </data>
+  <data name="ContentViewInstance" xml:space="preserve">
+    <value>Instanz ansehen</value>
+  </data>
+  <data name="ContentInactiveInstance" xml:space="preserve">
+    <value>Diese Instanz ist nicht aktiv. Aktiviere sie, um hier Inhalte hinzuzufügen oder zu entfernen.</value>
+  </data>
+  <data name="LaunchStartingFormat" xml:space="preserve">
+    <value>{0} wird gestartet…</value>
+  </data>
+  <data name="LaunchModBrokeFormat" xml:space="preserve">
+    <value>{0} {1} hat den Start von {2} verhindert. Die Mod funktioniert womöglich nicht mit dieser KSA-Version. Deaktiviere sie und versuche es erneut, oder suche nach einem Update.</value>
+  </data>
+  <data name="LaunchExitedEarlyFormat" xml:space="preserve">
+    <value>{0} wurde direkt nach dem Start beendet (Exit-Code {1}). Die Details zeigen, was ausgegeben wurde.</value>
+  </data>
+  <data name="LaunchDisableModFormat" xml:space="preserve">
+    <value>{0} deaktivieren</value>
+  </data>
+  <data name="LaunchModDisabledFormat" xml:space="preserve">
+    <value>{0} ist deaktiviert. Drücke Spielen, um es erneut zu versuchen.</value>
+  </data>
+  <data name="LaunchShowDetails" xml:space="preserve">
+    <value>Details anzeigen</value>
+  </data>
+  <data name="LaunchOpenLog" xml:space="preserve">
+    <value>Start-Log öffnen</value>
+  </data>
+  <data name="LaunchNoOutput" xml:space="preserve">
+    <value>Der Loader hat vor dem Beenden nichts ausgegeben.</value>
   </data>
 </root>

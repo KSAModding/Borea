@@ -1,6 +1,10 @@
+using System.Security.Cryptography;
+using System.Text.Json;
+using Borea.Core.Index;
 using Borea.Core.Instances;
 using Borea.Core.Mods;
 using Borea.Storage.Instances;
+using Borea.Storage.Mods;
 
 namespace Borea.Cli.Tests;
 
@@ -245,6 +249,245 @@ public sealed class InstanceCommandTests : IDisposable
 
         Assert.Equal(1, run.ExitCode);
         Assert.Contains("No instance is named 'Nope'.", run.Error);
+    }
+
+    [Fact]
+    public async Task Scan_NoForeignFolders_SaysSo()
+    {
+        await _host.RunAsync("instance", "create", "Alpha");
+
+        var human = await _host.RunAsync("instance", "scan", "Alpha");
+        var json = await _host.RunAsync("instance", "scan", "Alpha", "--json");
+
+        Assert.Equal(0, human.ExitCode);
+        Assert.Contains("No mod folders in 'Alpha' that Borea did not install.", human.Output);
+        Assert.Equal(0, json.ExitCode);
+        Assert.Empty(json.Json.EnumerateArray());
+    }
+
+    [Fact]
+    public async Task Scan_ListsForeignFolders_AndWhetherTheIndexListsThem()
+    {
+        var instanceId = await CreateInstanceAsync("Alpha");
+        WriteMod(instanceId, "flight-tools", """
+            [[StarMap.ModDependencies]]
+            ModId = "HelperMod"
+            Optional = true
+            """);
+        WriteMod(instanceId, "LocalOnly", "name = \"LocalOnly\"");
+        Directory.CreateDirectory(Path.Combine(_host.Paths.GetInstanceModsFolder(instanceId), "NotAMod"));
+        IndexWithListing("flight-tools");
+
+        var human = await _host.RunAsync("instance", "scan", "Alpha");
+        var json = await _host.RunAsync("instance", "scan", "Alpha", "--json");
+
+        Assert.Equal(0, human.ExitCode);
+        Assert.Equal(new[] { "flight-tools  in the content index", "LocalOnly     not in the content index" }, human.Output.Trim().Split(Environment.NewLine));
+        var entries = json.Json.EnumerateArray().ToList();
+        Assert.Equal(new[] { "flight-tools", "LocalOnly" }, entries.Select(entry => entry.GetProperty("folder").GetString()));
+        Assert.Equal(new[] { true, false }, entries.Select(entry => entry.GetProperty("inIndex").GetBoolean()));
+        var dependency = Assert.Single(entries[0].GetProperty("dependencies").EnumerateArray());
+        Assert.Equal("HelperMod", dependency.GetProperty("id").GetString());
+        Assert.True(dependency.GetProperty("optional").GetBoolean());
+        Assert.Equal(JsonValueKind.Null, entries[0].GetProperty("dependencyReadError").ValueKind);
+        var saved = await new FileInstanceRepository(_host.Paths).GetByIdAsync(instanceId);
+        Assert.Equal(new[] { "flight-tools", "LocalOnly" }, saved!.ForeignMods.Select(mod => mod.FolderName));
+    }
+
+    [Fact]
+    public async Task Scan_ModTomlThatDoesNotParse_WarnsAndStillListsTheFolder()
+    {
+        var instanceId = await CreateInstanceAsync("Alpha");
+        WriteMod(instanceId, "Broken", "name = ");
+
+        var human = await _host.RunAsync("instance", "scan", "Alpha");
+        var json = await _host.RunAsync("instance", "scan", "Alpha", "--json");
+
+        Assert.Equal(0, human.ExitCode);
+        Assert.Contains("Broken", human.Output);
+        Assert.Contains("warning: The mod.toml of 'Broken' could not be read.", human.Error);
+        var entry = Assert.Single(json.Json.EnumerateArray());
+        Assert.False(string.IsNullOrEmpty(entry.GetProperty("dependencyReadError").GetString()));
+    }
+
+    [Fact]
+    public async Task Scan_IndexCannotBeRead_StillListsTheFolders()
+    {
+        var instanceId = await CreateInstanceAsync("Alpha");
+        WriteMod(instanceId, "flight-tools", "name = \"Flight Tools\"");
+        _host.IndexReader.Read = _ => throw new IOException("No cached index exists.");
+
+        var human = await _host.RunAsync("instance", "scan", "Alpha");
+        var json = await _host.RunAsync("instance", "scan", "Alpha", "--json");
+
+        Assert.Equal(0, human.ExitCode);
+        Assert.Equal("flight-tools  content index not available", human.Output.Trim());
+        Assert.Contains("warning: The content index could not be read. No cached index exists.", human.Error);
+        Assert.Equal(0, json.ExitCode);
+        var entry = Assert.Single(json.Json.EnumerateArray());
+        Assert.Equal(JsonValueKind.Null, entry.GetProperty("inIndex").ValueKind);
+    }
+
+    [Fact]
+    public async Task Scan_UnknownInstance_Fails()
+    {
+        var run = await _host.RunAsync("instance", "scan", "Nope");
+
+        Assert.Equal(1, run.ExitCode);
+        Assert.Contains("No instance is named 'Nope'.", run.Error);
+    }
+
+    [Fact]
+    public async Task Adopt_ArchiveMatchesARelease_RecordsTheFolderAsThatRelease()
+    {
+        var instanceId = await CreateInstanceAsync("Alpha");
+        var folder = WriteMod(instanceId, "flight-tools", "name = \"Flight Tools\"");
+        var archive = WriteArchive(new byte[] { 1, 2, 3 });
+        var lookup = UseArchiveLookup();
+        lookup.Releases.Add(ReleaseFor("flight-tools", archive));
+
+        var run = await _host.RunAsync("instance", "adopt", "Alpha", "flight-tools", "--archive", archive);
+
+        Assert.Equal(0, run.ExitCode);
+        Assert.Contains("Adopted 'flight-tools' 2.0.0 in 'Alpha'.", run.Output);
+        var saved = await new FileInstanceRepository(_host.Paths).GetByIdAsync(instanceId);
+        var mod = Assert.Single(saved!.Mods);
+        Assert.Equal("flight-tools", mod.ModId);
+        Assert.Equal(ModInstallOwnership.Foreign, mod.Ownership);
+        Assert.Empty(saved.ForeignMods);
+        Assert.True(File.Exists(Path.Combine(folder, "mod.toml")));
+    }
+
+    [Fact]
+    public async Task Adopt_ArchiveMatchesNoRelease_FailsAndKeepsTheFolderForeign()
+    {
+        var instanceId = await CreateInstanceAsync("Alpha");
+        var folder = WriteMod(instanceId, "flight-tools", "name = \"Flight Tools\"");
+        var archive = WriteArchive(new byte[] { 4, 5, 6 });
+        var lookup = UseArchiveLookup();
+        lookup.Releases.Add(ReleaseFor("flight-tools", WriteArchive(new byte[] { 7, 8, 9 })));
+
+        var run = await _host.RunAsync("instance", "adopt", "Alpha", "flight-tools", "--archive", archive);
+
+        Assert.Equal(1, run.ExitCode);
+        Assert.Contains("matches no release of 'flight-tools' in the content index", run.Error);
+        Assert.Equal(string.Empty, run.Output);
+        var saved = await new FileInstanceRepository(_host.Paths).GetByIdAsync(instanceId);
+        Assert.Empty(saved!.Mods);
+        Assert.Equal("flight-tools", Assert.Single(saved.ForeignMods).FolderName);
+        Assert.True(File.Exists(Path.Combine(folder, "mod.toml")));
+    }
+
+    [Fact]
+    public async Task Adopt_FolderAlreadyAdopted_Fails()
+    {
+        var instanceId = await CreateInstanceAsync("Alpha");
+        WriteMod(instanceId, "flight-tools", "name = \"Flight Tools\"");
+        var archive = WriteArchive(new byte[] { 1, 2, 3 });
+        UseArchiveLookup().Releases.Add(ReleaseFor("flight-tools", archive));
+        await _host.RunAsync("instance", "adopt", "Alpha", "flight-tools", "--archive", archive);
+
+        var run = await _host.RunAsync("instance", "adopt", "Alpha", "flight-tools", "--archive", archive);
+
+        Assert.Equal(1, run.ExitCode);
+        Assert.Contains("Mod 'flight-tools' is already installed in this instance.", run.Error);
+        Assert.DoesNotContain("Unhandled exception", run.Error);
+    }
+
+    [Fact]
+    public async Task Adopt_NoSuchFolder_Fails()
+    {
+        await CreateInstanceAsync("Alpha");
+        var archive = WriteArchive(new byte[] { 1 });
+
+        var run = await _host.RunAsync("instance", "adopt", "Alpha", "flight-tools", "--archive", archive);
+
+        Assert.Equal(1, run.ExitCode);
+        Assert.Contains("has no foreign mod folder 'flight-tools'", run.Error);
+    }
+
+    [Fact]
+    public async Task Adopt_ArchiveDoesNotExist_Fails()
+    {
+        var instanceId = await CreateInstanceAsync("Alpha");
+        WriteMod(instanceId, "flight-tools", "name = \"Flight Tools\"");
+
+        var run = await _host.RunAsync("instance", "adopt", "Alpha", "flight-tools", "--archive", Path.Combine(_host.Root, "missing.zip"));
+
+        Assert.Equal(1, run.ExitCode);
+        Assert.Contains("does not exist", run.Error);
+        Assert.DoesNotContain("Unhandled exception", run.Error);
+    }
+
+    [Theory]
+    [InlineData("flight-tools")]
+    [InlineData("flight-tools", "--archive", " ")]
+    [InlineData("..", "--archive", "mod.zip")]
+    [InlineData("mods/flight-tools", "--archive", "mod.zip")]
+    public async Task Adopt_BadArguments_AreUsageErrors(params string[] arguments)
+    {
+        var run = await _host.RunAsync(new[] { "instance", "adopt", "Alpha" }.Concat(arguments).ToArray());
+
+        Assert.Equal(2, run.ExitCode);
+        Assert.Equal(0, _host.Builds);
+    }
+
+    private async Task<Guid> CreateInstanceAsync(string name)
+    {
+        var created = await new FileInstanceRepository(_host.Paths).CreateAsync(name, InstanceSource.Custom.Value);
+        return created.InstanceId;
+    }
+
+    private string WriteMod(Guid instanceId, string folderName, string manifest)
+    {
+        var folder = Path.Combine(_host.Paths.GetInstanceModsFolder(instanceId), folderName);
+        Directory.CreateDirectory(folder);
+        File.WriteAllText(Path.Combine(folder, "mod.toml"), manifest);
+        return folder;
+    }
+
+    private string WriteArchive(byte[] bytes)
+    {
+        Directory.CreateDirectory(_host.Root);
+        var path = Path.Combine(_host.Root, Guid.NewGuid().ToString("N") + ".zip");
+        File.WriteAllBytes(path, bytes);
+        return path;
+    }
+
+    private void IndexWithListing(string id)
+    {
+        var listing = ContentCommandFixtures.Listing(id: id);
+        _host.IndexReader.Snapshot = new ContentIndexSnapshot(
+            1,
+            new[] { new ContentIndexListing(listing.ModId, listing, new[] { ContentCommandFixtures.Release(id: id) }, null) },
+            Array.Empty<ContentIndexPack>(),
+            null,
+            Array.Empty<ContentIndexDiagnostic>());
+    }
+
+    private FakeArchiveReleaseLookup UseArchiveLookup()
+    {
+        var lookup = new FakeArchiveReleaseLookup();
+        _host.ForeignModAdopterFactory = graph => new FileForeignModAdopter(graph.Paths, graph.Instances, lookup);
+        return lookup;
+    }
+
+    private static ModVersionMetadata ReleaseFor(string id, string archive)
+    {
+        var release = ContentCommandFixtures.Release(id: id);
+        var sha256 = Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(archive)));
+        return new ModVersionMetadata(
+            specVersion: 1,
+            modId: id,
+            version: release.Version,
+            releaseStatus: release.ReleaseStatus,
+            releaseDate: release.ReleaseDate,
+            gameMin: release.GameMin,
+            gameMinRevision: release.GameMinRevision,
+            download: new DownloadInfo(release.Download.Url, sha256, release.Download.SizeBytes, release.Download.ContentType),
+            installSizeBytes: release.InstallSizeBytes,
+            dependencies: release.Dependencies,
+            source: "index");
     }
 
     public void Dispose() => _host.Dispose();

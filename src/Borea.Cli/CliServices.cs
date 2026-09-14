@@ -3,6 +3,7 @@ using Borea.Core.Game;
 using Borea.Core.Index;
 using Borea.Core.Instances;
 using Borea.Core.Launch;
+using Borea.Core.Logging;
 using Borea.Core.ModLoaders;
 using Borea.Core.ModPacks;
 using Borea.Core.Mods;
@@ -43,7 +44,11 @@ internal sealed class CliServices : IDisposable
 
     public required IContentIndexSnapshotProvider IndexSnapshots { get; init; }
 
+    public required IContentIndexRefresh IndexRefresh { get; init; }
+
     public required IGamePathProvider Paths { get; init; }
+
+    public required IBoreaLog Log { get; init; }
 
     public required IModRepository Mods { get; init; }
 
@@ -56,6 +61,8 @@ internal sealed class CliServices : IDisposable
     public required IModReplacer Replacer { get; init; }
 
     public required IModUninstaller Uninstaller { get; init; }
+
+    public required IForeignModAdopter ForeignModAdopter { get; init; }
 
     public required ILoaderInstaller LoaderInstaller { get; init; }
 
@@ -97,13 +104,15 @@ internal sealed class CliServices : IDisposable
         IModInstaller? installer = null,
         IModReplacer? replacer = null,
         IModUninstaller? uninstaller = null,
+        IForeignModAdopter? foreignModAdopter = null,
         ILoaderInstaller? loaderInstaller = null,
         ILoaderAdopter? loaderAdopter = null,
         ILoaderUninstaller? loaderUninstaller = null,
         ILauncher? launcher = null,
         IModPackRepository? modPacks = null,
         IModPackInstaller? modPackInstaller = null,
-        ISharedProfileLauncher? sharedProfileLauncher = null)
+        ISharedProfileLauncher? sharedProfileLauncher = null,
+        IContentIndexRefresh? indexRefresh = null)
     {
         if (services is null)
             throw new ArgumentNullException(nameof(services));
@@ -120,13 +129,16 @@ internal sealed class CliServices : IDisposable
             IndexFetcher = indexFetcher ?? services.IndexFetcher,
             IndexReader = indexReader ?? services.IndexReader,
             IndexSnapshots = indexSnapshots ?? services.IndexSnapshots,
+            IndexRefresh = indexRefresh ?? services.IndexRefresh,
             Paths = services.Paths,
+            Log = services.Log,
             Mods = mods ?? services.Mods,
             ReadOnlyMods = readOnlyMods ?? services.ReadOnlyMods,
             InstallPlanner = installPlanner ?? services.InstallPlanner,
             Installer = installer ?? services.Installer,
             Replacer = replacer ?? services.Replacer,
             Uninstaller = uninstaller ?? services.Uninstaller,
+            ForeignModAdopter = foreignModAdopter ?? services.ForeignModAdopter,
             LoaderInstaller = loaderInstaller ?? services.LoaderInstaller,
             LoaderAdopter = loaderAdopter ?? services.LoaderAdopter,
             LoaderUninstaller = loaderUninstaller ?? services.LoaderUninstaller,

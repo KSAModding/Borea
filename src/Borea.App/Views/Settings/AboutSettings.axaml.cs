@@ -18,7 +18,7 @@ public partial class AboutSettings : UserControl
         if (DataContext is not MainViewModel viewModel || TopLevel.GetTopLevel(this)?.Clipboard is not { } clipboard)
             return;
 
-        await clipboard.SetTextAsync(viewModel.DiagnosticsText);
+        await clipboard.SetTextAsync(viewModel.DiagnosticsWithLogText());
         viewModel.ReportDiagnosticsCopied();
     }
 

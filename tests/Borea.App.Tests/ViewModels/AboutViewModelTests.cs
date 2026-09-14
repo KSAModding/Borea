@@ -86,6 +86,69 @@ public sealed class AboutViewModelTests
     }
 
     [Fact]
+    public async Task Diagnostics_NameTodaysLogWithoutTheUserProfile()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var viewModel = harness.ViewModel;
+
+        Assert.EndsWith("Log: " + MainViewModel.WithoutUserProfile(harness.Services.Log.CurrentFilePath), viewModel.DiagnosticsText);
+    }
+
+    [Fact]
+    public async Task DiagnosticsWithLog_AddTheEndOfTodaysLog()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var viewModel = harness.ViewModel;
+        harness.Services.Log.Write("Install of Example 1.0.0 started.");
+
+        var text = viewModel.DiagnosticsWithLogText();
+
+        Assert.StartsWith(viewModel.DiagnosticsText + Environment.NewLine + Environment.NewLine + "End of today's log:", text);
+        Assert.EndsWith("[app] Install of Example 1.0.0 started.", text);
+    }
+
+    [Fact]
+    public async Task DiagnosticsWithLog_NoLog_IsTheDiagnostics()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var viewModel = harness.ViewModel;
+        File.Delete(harness.Services.Log.CurrentFilePath);
+
+        Assert.Equal(viewModel.DiagnosticsText, viewModel.DiagnosticsWithLogText());
+    }
+
+    [Fact]
+    public async Task OpenBoreaLogAndLogFolder_OpenTodaysFileAndItsFolder()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var viewModel = harness.ViewModel;
+        var opened = new List<string>();
+        viewModel.OpenWithSystem = opened.Add;
+        harness.Services.Log.Write("Borea started.");
+
+        viewModel.OpenBoreaLogCommand.Execute(null);
+        viewModel.OpenLogFolderCommand.Execute(null);
+
+        Assert.Equal([viewModel.BoreaLogFile!, viewModel.LogsFolder!], opened);
+        Assert.Equal(Path.GetDirectoryName(viewModel.BoreaLogFile), viewModel.LogsFolder);
+        Assert.StartsWith(Path.GetFullPath(harness.Root), Path.GetFullPath(viewModel.LogsFolder!));
+        Assert.Null(viewModel.AboutError);
+    }
+
+    [Fact]
+    public async Task OpenBoreaLog_NoLineToday_ReportsTheMissingFile()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var viewModel = harness.ViewModel;
+        if (File.Exists(viewModel.BoreaLogFile))
+            File.Delete(viewModel.BoreaLogFile);
+
+        viewModel.OpenBoreaLogCommand.Execute(null);
+
+        Assert.Equal(harness.Localization.FormatAboutFolderMissing(viewModel.BoreaLogFile!), viewModel.AboutError);
+    }
+
+    [Fact]
     public async Task CopyPath_ReportsUnderTheFolderButtons()
     {
         using var harness = await ViewModelHarness.CreateAsync();

@@ -7,11 +7,20 @@ using System.Threading.Tasks;
 using Borea.Composition;
 using Borea.Core.Dependencies;
 using Borea.Core.Instances;
+using Borea.Core.Launch;
 using Borea.Core.Mods;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
 namespace Borea.App.ViewModels;
+
+public enum InstanceTab
+{
+    Content,
+    ManualInstalls,
+    GameData,
+    Log,
+}
 
 /// <summary>
 /// The instance page (library-instance in #8): header with Play, and the
@@ -24,6 +33,21 @@ public partial class MainViewModel
 
     [ObservableProperty]
     private InstanceItem? _selectedInstance;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsContentTab))]
+    [NotifyPropertyChangedFor(nameof(IsManualInstallsTab))]
+    [NotifyPropertyChangedFor(nameof(IsGameDataTab))]
+    [NotifyPropertyChangedFor(nameof(IsLogTab))]
+    private InstanceTab _instanceTab;
+
+    public bool IsContentTab => InstanceTab == InstanceTab.Content;
+
+    public bool IsManualInstallsTab => InstanceTab == InstanceTab.ManualInstalls;
+
+    public bool IsGameDataTab => InstanceTab == InstanceTab.GameData;
+
+    public bool IsLogTab => InstanceTab == InstanceTab.Log;
 
     public ObservableCollection<ContentGroup> ContentGroups { get; } = [];
 
@@ -39,6 +63,25 @@ public partial class MainViewModel
     [NotifyPropertyChangedFor(nameof(EnableActiveInstance))]
     private bool _isLaunching;
 
+    /// <summary>What the loader wrote before it stopped, when the last Play failed that way.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasLaunchOutput))]
+    private string? _launchOutputText;
+
+    public bool HasLaunchOutput => LaunchOutputText is not null;
+
+    [ObservableProperty]
+    private bool _isLaunchOutputShown;
+
+    /// <summary>The mod the loader's error names, offered to disable. Null when none was named.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanDisableBlamedMod))]
+    private string? _launchBlamedModId;
+
+    public bool CanDisableBlamedMod => LaunchBlamedModId is not null;
+
+    public string? DisableBlamedModText => LaunchBlamedModId is null ? null : Localization.FormatLaunchDisableMod(BlamedModName(LaunchBlamedModId));
+
     [ObservableProperty]
     private string? _contentError;
 
@@ -47,6 +90,10 @@ public partial class MainViewModel
     {
         if (_services is null || item is null)
             return;
+
+        // a rename or a removal reloads the same instance and keeps its tab
+        if (SelectedInstance?.InstanceId != item.InstanceId)
+            InstanceTab = InstanceTab.Content;
 
         SelectedInstance = item;
         LaunchMessage = null;
@@ -61,24 +108,37 @@ public partial class MainViewModel
                 enabled.Add(entry.ModId);
         }
 
+        // the rows link to the same pages Discover opens, so its listings are needed
+        await EnsureDiscoverLoadedAsync();
         var content = new List<ContentItem>();
         foreach (var mod in _selectedInstanceEntity?.Mods ?? [])
         {
             // a release from SpaceDock carries no listing, so the name comes from the catalog
             var listing = mod.Metadata.Listing is null ? await ResolveListingAsync(mod.ModId) : null;
-            content.Add(new ContentItem(this, item.InstanceId, mod, enabled.Contains(mod.ModId), listing));
+            var page = mod.Ownership == ModInstallOwnership.Borea ? _listings.FirstOrDefault(entry => ModIds.Equals(entry.ModId, mod.ModId)) : null;
+            content.Add(new ContentItem(this, item.InstanceId, mod, enabled.Contains(mod.ModId), listing, page));
         }
 
         _content = content.OrderBy(content => content.Name, StringComparer.CurrentCultureIgnoreCase).ToList();
         RefreshContentGroups();
+        if (IsManualInstallsTab)
+            await LoadManualInstallsAsync();
+        else if (IsGameDataTab)
+            await LoadGameDataAsync();
+        else if (IsLogTab)
+            await LoadGameLogAsync();
 
         CurrentWindowHome = false;
         CurrentWindowDiscover = false;
         CurrentWindowLibrary = false;
         CurrentWindowTasks = false;
         CurrentWindowContent = false;
+        CurrentWindowPack = false;
         CurrentWindowInstance = true;
     }
+
+    [RelayCommand]
+    private void ShowInstanceContent() => InstanceTab = InstanceTab.Content;
 
     /// <summary>
     /// Groups follow the design: content the user chose, then what came along
@@ -86,6 +146,9 @@ public partial class MainViewModel
     /// </summary>
     private void RefreshContentGroups()
     {
+        foreach (var item in _content)
+            item.RefreshText();
+
         ContentGroups.Clear();
         Add(Localization.InstanceGroupMods, _content.Where(content => content.Type == ContentType.Mod && !content.IsDependency));
         Add(Localization.InstanceGroupModLoaders, _content.Where(content => content.Type == ContentType.ModLoader && !content.IsDependency));
@@ -108,11 +171,23 @@ public partial class MainViewModel
             return;
 
         IsLaunching = true;
+        ClearLaunchFailure();
         try
         {
+            var instance = _selectedInstanceEntity;
             var loader = await FindInstalledLoaderAsync();
-            var result = _services.Launcher.Launch(_selectedInstanceEntity, loader);
-            LaunchMessage = result.Message;
+            var result = _services.Launcher.Launch(instance, loader);
+            if (result.Started && loader is not null)
+            {
+                // the loader can still stop while it loads the mods, so the start is watched before it counts
+                LaunchMessage = Localization.FormatLaunchStarting(loader.Name);
+                result = await _services.Launcher.WatchStartAsync(instance, result);
+            }
+
+            if (result.Outcome == LaunchOutcome.ExitedEarly)
+                ShowLaunchFailure(result, instance, loader);
+            else
+                LaunchMessage = result.Message;
         }
         catch (Exception exception) when (exception is IOException or InvalidOperationException or System.Net.Http.HttpRequestException)
         {
@@ -168,6 +243,55 @@ public partial class MainViewModel
         {
             IsLaunching = false;
         }
+    }
+  
+    private void ShowLaunchFailure(LaunchResult result, Instance instance, ModMetadata? loader)
+    {
+        var loaderName = loader?.Name ?? string.Empty;
+        var blamed = result.BlamedModId is null ? null : instance.Mods.FirstOrDefault(mod => ModIds.Equals(mod.ModId, result.BlamedModId));
+        LaunchMessage = blamed is null
+            ? Localization.FormatLaunchExitedEarly(loaderName, result.ExitCode ?? 0)
+            : Localization.FormatLaunchModBroke(BlamedModName(blamed.ModId), blamed.Version.ToString(), loaderName);
+        LaunchOutputText = result.Output.Count == 0 ? Localization.LaunchNoOutput : string.Join(Environment.NewLine, result.Output);
+        LaunchBlamedModId = blamed?.ModId;
+        OnPropertyChanged(nameof(DisableBlamedModText));
+    }
+
+    private void ClearLaunchFailure()
+    {
+        LaunchOutputText = null;
+        IsLaunchOutputShown = false;
+        LaunchBlamedModId = null;
+        OnPropertyChanged(nameof(DisableBlamedModText));
+    }
+
+    private string BlamedModName(string modId) =>
+        _content.FirstOrDefault(item => ModIds.Equals(item.ModId, modId))?.Name ?? modId;
+
+    [RelayCommand]
+    private void ToggleLaunchOutput() => IsLaunchOutputShown = !IsLaunchOutputShown;
+
+    [RelayCommand]
+    private async Task DisableBlamedModAsync()
+    {
+        if (SelectedInstance is not { } instance || LaunchBlamedModId is not { } modId)
+            return;
+
+        var name = BlamedModName(modId);
+        await SetContentEnabledAsync(instance.InstanceId, modId, enabled: false);
+        if (ContentError is not null)
+            return;
+
+        await OpenInstanceAsync(instance);
+        ClearLaunchFailure();
+        LaunchMessage = Localization.FormatLaunchModDisabled(name);
+    }
+
+    [RelayCommand]
+    private void OpenLaunchLog()
+    {
+        if (_services is not null && SelectedInstance is { } instance)
+            ContentError = TryOpenWithSystem(_services.Paths.GetInstanceLaunchLogPath(instance.InstanceId));
     }
 
     /// <summary>
@@ -306,16 +430,30 @@ public sealed partial class ContentItem : ObservableObject
 
     public string? AuthorsText => Authors is null ? null : _owner.Localization.FormatContentByAuthor(Authors);
 
+    private readonly DiscoverItem? _page;
+
+    private readonly bool _ownedByBorea;
+
+    /// <summary>Whether the row links to the mod page: installed by Borea and in the content index.</summary>
+    public bool CanOpen => _page is not null;
+
+    /// <summary>Why the row has no link, for its tooltip. Null when it links.</summary>
+    public string? NoPageText => CanOpen
+        ? null
+        : _ownedByBorea ? _owner.Localization.InstanceContentNotInIndex : _owner.Localization.InstanceContentNotOwned;
+
     [ObservableProperty]
     private bool _isEnabled;
 
     [ObservableProperty]
     private bool _isConfirmingRemove;
 
-    public ContentItem(MainViewModel owner, Guid instanceId, InstalledMod mod, bool enabled, ModMetadata? listing)
+    public ContentItem(MainViewModel owner, Guid instanceId, InstalledMod mod, bool enabled, ModMetadata? listing, DiscoverItem? page = null)
     {
         _owner = owner;
         _instanceId = instanceId;
+        _page = page;
+        _ownedByBorea = mod.Ownership == ModInstallOwnership.Borea;
         ModId = mod.ModId;
         Name = mod.Metadata.Listing?.Name ?? listing?.Name ?? mod.ModId;
         var authors = mod.Metadata.Listing?.Authors ?? listing?.Authors;
@@ -328,6 +466,15 @@ public sealed partial class ContentItem : ObservableObject
 
     [RelayCommand]
     private Task ToggleEnabledAsync() => _owner.SetContentEnabledAsync(_instanceId, ModId, IsEnabled);
+
+    [RelayCommand]
+    private Task OpenAsync() => _page is null ? Task.CompletedTask : _owner.OpenContentFromInstanceAsync(_page);
+
+    internal void RefreshText()
+    {
+        OnPropertyChanged(nameof(AuthorsText));
+        OnPropertyChanged(nameof(NoPageText));
+    }
 
     [RelayCommand]
     private void BeginRemove() => IsConfirmingRemove = true;

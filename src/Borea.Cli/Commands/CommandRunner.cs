@@ -1,4 +1,6 @@
 using System.CommandLine;
+using System.Globalization;
+using Borea.Core.Index;
 
 namespace Borea.Cli.Commands;
 
@@ -32,21 +34,41 @@ internal static class CommandRunner
 
         using (services)
         {
+            services.Log.Write("Command: borea " + string.Join(" ", parseResult.Tokens.Select(token => token.Value)));
             try
             {
-                return await body(services, output, error, cancellationToken).ConfigureAwait(false);
+                var exitCode = await body(services, output, error, cancellationToken).ConfigureAwait(false);
+                services.Log.Write($"Command finished with exit code {exitCode}.");
+                return exitCode;
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
+                services.Log.Write("Command cancelled.");
                 error.WriteLine("error: The command was cancelled.");
                 return ExitCodes.Failed;
             }
             catch (Exception exception) when (IsOperationFailure(exception))
             {
+                services.Log.Write("Command failed.", exception);
                 error.WriteLine($"error: {exception.Message}");
                 return ExitCodes.Failed;
             }
+            catch (Exception exception) when (LogDefect(services, exception))
+            {
+                // the filter returns false, so the defect keeps its stack trace
+                throw;
+            }
+            finally
+            {
+                WriteStaleIndexWarning(services.IndexRefresh.Status, error);
+            }
         }
+    }
+
+    private static bool LogDefect(CliServices services, Exception exception)
+    {
+        services.Log.Write("Command stopped on an unexpected error.", exception);
+        return false;
     }
 
     /// <summary>
@@ -62,4 +84,14 @@ internal static class CommandRunner
             or HttpRequestException
             or NotSupportedException
             or OperationCanceledException;
+
+    /// <summary>
+    /// Only a command that read the index refreshes it, so <c>index refresh</c>,
+    /// which reports its own error, never gets this line.
+    /// </summary>
+    private static void WriteStaleIndexWarning(ContentIndexRefreshStatus status, TextWriter error)
+    {
+        if (status is { Outcome: ContentIndexRefreshOutcome.Failed, CachedAt: { } cachedAt })
+            error.WriteLine($"warning: using the cached index from {cachedAt.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture)} UTC, the refresh failed: {status.FailureReason}");
+    }
 }

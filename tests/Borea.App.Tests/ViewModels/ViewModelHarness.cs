@@ -6,6 +6,7 @@ using Borea.App.Formatting;
 using Borea.App.Localization;
 using Borea.App.ViewModels;
 using Borea.Composition;
+using Borea.Core.Game;
 using Borea.Core.Mods;
 using Borea.Core.Preferences;
 
@@ -34,12 +35,29 @@ internal sealed class ViewModelHarness : IDisposable
 
     private Func<HttpRequestMessage, HttpResponseMessage?>? _respond;
 
+    private Func<string, string>? _editSnapshot;
+
+    private Borea.Storage.Launch.IProcessStarter? _processStarter;
+
+    public const string OfflineMessage = "The content index host is offline.";
+
+    /// <summary>Fails every content index request with <see cref="OfflineMessage"/>.</summary>
+    public bool IndexOffline { get; set; }
+
+    /// <summary>The folders the install detector checks. Empty unless a test adds some.</summary>
+    public FakeInstallCandidates Candidates { get; } = new();
+
     /// <param name="seed">Writes settings the view model should start from; the services are rebuilt after it ran.</param>
     /// <param name="respond">Answers a request outside the content index. Null fails it.</param>
-    public static async Task<ViewModelHarness> CreateAsync(Func<BoreaServices, Task>? seed = null, Func<HttpRequestMessage, HttpResponseMessage?>? respond = null)
+    /// <param name="editSnapshot">Changes the index snapshot before it is served.</param>
+    /// <param name="indexOffline">The first value of <see cref="IndexOffline"/>.</param>
+    /// <param name="candidates">Adds the folders the install detector checks, before the first load.</param>
+    /// <param name="processStarter">Starts the launchers' processes. Null starts real ones.</param>
+    public static async Task<ViewModelHarness> CreateAsync(Func<BoreaServices, Task>? seed = null, Func<HttpRequestMessage, HttpResponseMessage?>? respond = null, Func<string, string>? editSnapshot = null, bool indexOffline = false, Action<ViewModelHarness>? candidates = null, Borea.Storage.Launch.IProcessStarter? processStarter = null)
     {
-        var harness = new ViewModelHarness { _respond = respond };
+        var harness = new ViewModelHarness { _respond = respond, _editSnapshot = editSnapshot, IndexOffline = indexOffline, _processStarter = processStarter };
         Directory.CreateDirectory(harness.Root);
+        candidates?.Invoke(harness);
         harness.Services = await harness.BuildServicesAsync();
         if (seed is not null)
         {
@@ -60,14 +78,19 @@ internal sealed class ViewModelHarness : IDisposable
         return harness;
     }
 
+    /// <summary>Adds a curated tag vocabulary for mods to the snapshot, in the given order.</summary>
+    public static Func<string, string> CuratedTags(params (string Tag, string Name)[] tags) =>
+        json => "{ \"tags\": " + $$"""{ "spec_version": 1, "mod": [{{string.Join(", ", tags.Select(tag => $$"""{ "tag": "{{tag.Tag}}", "name": "{{tag.Name}}", "meaning": "{{tag.Name}} content." }"""))}}] }""" + "," + json.TrimStart()[1..];
+
     public Task<BoreaServices> BuildServicesAsync() =>
-        BoreaServices.BuildAsync(Root, new IndexOnlyHandler(this), new FakeSpaceDock());
+        BoreaServices.BuildAsync(Root, new IndexOnlyHandler(this), new FakeSpaceDock(), Candidates, processStarter: _processStarter);
 
     public void Dispose()
     {
         // a language or theme change saves in the background; let it finish before the folder goes
         ViewModel?.WhenPreferencesSavedAsync().GetAwaiter().GetResult();
         ViewModel?.WhenUpdateCheckedAsync().GetAwaiter().GetResult();
+        ViewModel?.WhenReleaseChannelSavedAsync().GetAwaiter().GetResult();
         Services.Dispose();
         CultureInfo.CurrentCulture = _originalCulture;
         CultureInfo.CurrentUICulture = _originalUiCulture;
@@ -76,7 +99,7 @@ internal sealed class ViewModelHarness : IDisposable
             Directory.Delete(Root, recursive: true);
     }
 
-    private static string SnapshotFixturePath =>
+    internal static string SnapshotFixturePath =>
         Path.Combine(AppContext.BaseDirectory, "Index", "Fixtures", "current-snapshot.json");
 
     /// <summary>Serves the index snapshot, records every request, and answers or fails the others.</summary>
@@ -90,12 +113,33 @@ internal sealed class ViewModelHarness : IDisposable
             if (request.RequestUri?.AbsoluteUri.StartsWith("https://ksamodding.github.io/content-index-releases/", StringComparison.Ordinal) != true)
                 return owner._respond?.Invoke(request) ?? throw new HttpRequestException($"No network in tests: {request.RequestUri}");
 
+            if (owner.IndexOffline)
+                throw new HttpRequestException(OfflineMessage);
+
             var snapshot = await File.ReadAllTextAsync(SnapshotFixturePath, cancellationToken);
             return new HttpResponseMessage(HttpStatusCode.OK)
             {
-                Content = new StringContent(snapshot, Encoding.UTF8, "application/json"),
+                Content = new StringContent(owner._editSnapshot?.Invoke(snapshot) ?? snapshot, Encoding.UTF8, "application/json"),
             };
         }
+    }
+
+    internal sealed class FakeInstallCandidates : IInstallCandidateSource
+    {
+        public List<string> Games { get; } = [];
+
+        public List<string> Loaders { get; } = [];
+
+        /// <summary>Runs while the detector reads the game folders.</summary>
+        public Action? Reading { get; set; }
+
+        public IReadOnlyList<string> GetGameDirectories()
+        {
+            Reading?.Invoke();
+            return Games;
+        }
+
+        public IReadOnlyList<string> GetLoaderDirectories() => Loaders;
     }
 
     /// <summary>

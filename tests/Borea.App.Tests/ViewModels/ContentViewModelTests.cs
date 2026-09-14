@@ -1,3 +1,4 @@
+using Borea.Core.Game;
 using Borea.Core.Instances;
 using Borea.Core.Mods;
 
@@ -31,6 +32,22 @@ public sealed class ContentViewModelTests
     }
 
     [Fact]
+    public async Task Open_ShowsCuratedTagsFirstInTheVocabularyWords()
+    {
+        var tags = ViewModelHarness.CuratedTags(("parts", "Parts"), ("physics", "Physics"));
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: tags);
+        var viewModel = harness.ViewModel;
+        await viewModel.EnsureDiscoverLoadedAsync();
+        var armory = viewModel.DiscoverItems.Single(item => item.ModId == "KSArmory");
+
+        await armory.OpenCommand.ExecuteAsync(null);
+
+        Assert.True(viewModel.HasContentTags);
+        Assert.Equal(["Parts", "Physics", "weapons"], armory.AllTags);
+        Assert.Equal(armory.AllTags, armory.Tags);
+    }
+
+    [Fact]
     public async Task Versions_ListEveryReleaseNewestFirst()
     {
         using var harness = await ViewModelHarness.CreateAsync();
@@ -59,6 +76,67 @@ public sealed class ContentViewModelTests
 
         viewModel.ShowContentDescriptionCommand.Execute(null);
         Assert.True(viewModel.IsDescriptionTab);
+    }
+
+    [Fact]
+    public async Task Versions_WithoutAGame_AreUnknown()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var viewModel = harness.ViewModel;
+        await viewModel.EnsureDiscoverLoadedAsync();
+        await viewModel.DiscoverItems.Single(item => item.ModId == "AdvancedFlightComputer").OpenCommand.ExecuteAsync(null);
+
+        await viewModel.ShowContentVersionsCommand.ExecuteAsync(null);
+
+        Assert.NotEmpty(viewModel.ContentVersions);
+        Assert.All(viewModel.ContentVersions, version =>
+        {
+            Assert.Equal(GameCompatibility.Unknown, version.Compatibility);
+            Assert.Equal(harness.Localization.CompatibilityUnknown, version.CompatibilityText);
+        });
+    }
+
+    [Fact]
+    public async Task Versions_EachReleaseFollowsTheInstalledGame()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var viewModel = harness.ViewModel;
+        await viewModel.EnsureDiscoverLoadedAsync();
+        Assert.True(GameVersion.TryParse("2026.8.22.5348", out var older));
+        Assert.True(GameVersion.TryParse("2026.9.4.5400", out var newer));
+        await viewModel.RefreshCompatibilityAsync(older);
+        await viewModel.DiscoverItems.Single(item => item.ModId == "AdvancedFlightComputer").OpenCommand.ExecuteAsync(null);
+
+        await viewModel.ShowContentVersionsCommand.ExecuteAsync(null);
+
+        Assert.Equal(
+            new[] { ("0.7.5", GameCompatibility.Incompatible), ("0.7.4", GameCompatibility.Incompatible), ("0.7.3", GameCompatibility.Compatible), ("0.7.2", GameCompatibility.Untested) },
+            viewModel.ContentVersions.Select(version => (version.Version, version.Compatibility)));
+
+        await viewModel.RefreshCompatibilityAsync(newer);
+
+        Assert.Equal(
+            new[] { ("0.7.5", GameCompatibility.Compatible), ("0.7.4", GameCompatibility.Compatible), ("0.7.3", GameCompatibility.Untested), ("0.7.2", GameCompatibility.Untested) },
+            viewModel.ContentVersions.Select(version => (version.Version, version.Compatibility)));
+    }
+
+    [Fact]
+    public async Task Versions_MarkTheReleaseInTheActiveInstance()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var viewModel = harness.ViewModel;
+        await InstalledContent.AddAsync(harness, "AdvancedFlightComputer", activate: true);
+        await viewModel.LoadAsync();
+        await viewModel.EnsureDiscoverLoadedAsync();
+        await viewModel.DiscoverItems.Single(item => item.ModId == "AdvancedFlightComputer").OpenCommand.ExecuteAsync(null);
+
+        await viewModel.ShowContentVersionsCommand.ExecuteAsync(null);
+
+        Assert.Equal(["0.7.5"], viewModel.ContentVersions.Where(version => version.IsInstalled).Select(version => version.Version));
+
+        await viewModel.DeactivateInstanceAsync();
+
+        Assert.DoesNotContain(viewModel.ContentVersions, version => version.IsInstalled);
     }
 
     [Fact]

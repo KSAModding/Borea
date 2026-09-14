@@ -7,8 +7,10 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using Borea.Composition;
 using Borea.Core.Game;
+using Borea.Core.ModPacks;
 using Borea.Core.Mods;
 using Borea.Core.Planning;
+using Borea.Core.Tags;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -21,14 +23,28 @@ namespace Borea.App.ViewModels;
 /// </summary>
 public partial class MainViewModel
 {
+    /// <summary>
+    /// A library does nothing on its own, so it gets no category row, and a
+    /// listing tagged only as a library shows under Other.
+    /// </summary>
+    private const string LibraryTag = "library";
+
     private IReadOnlyList<DiscoverItem> _listings = [];
+    private GameVersion? _compatibilityGame;
     private Task? _discoverLoad;
+    private CuratedTagVocabulary _categoryVocabulary = CuratedTagVocabulary.Empty;
+
+    internal CuratedTagVocabulary TagVocabulary { get; private set; } = CuratedTagVocabulary.Empty;
 
     public ObservableCollection<DiscoverItem> DiscoverItems { get; } = [];
 
     public ObservableCollection<string> OsOptions { get; } = [];
 
     public ObservableCollection<string> LicenseOptions { get; } = [];
+
+    public ObservableCollection<DiscoverCategory> CategoryOptions { get; } = [];
+
+    public ObservableCollection<DiscoverCategory> SelectedCategories { get; } = [];
 
     [ObservableProperty]
     private bool _isDiscoverLoading;
@@ -37,12 +53,13 @@ public partial class MainViewModel
     private string? _discoverError;
 
     /// <summary>
-    /// Which tab of the inner nav bar is selected. Only mods and mod loaders
-    /// have listings today; the other tabs wait for their content types.
+    /// Which tab of the inner nav bar is selected. The vehicle and save tabs
+    /// stay disabled until those content types have listings.
     /// </summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsModsTab))]
     [NotifyPropertyChangedFor(nameof(IsLoadersTab))]
+    [NotifyPropertyChangedFor(nameof(IsModpacksTab))]
     private ContentType _discoverType = ContentType.Mod;
 
     public bool IsModsTab => DiscoverType == ContentType.Mod;
@@ -66,9 +83,9 @@ public partial class MainViewModel
     [NotifyPropertyChangedFor(nameof(HasDiscoverFilters))]
     private string? _selectedLicense;
 
-    public bool HasDiscoverFilters => SelectedOs is not null || SelectedLicense is not null;
+    public bool HasDiscoverFilters => SelectedOs is not null || SelectedLicense is not null || SelectedCategories.Count > 0;
 
-    public bool HasDiscoverItems => DiscoverItems.Count > 0;
+    public bool HasDiscoverItems => DiscoverItems.Count > 0 || DiscoverPacks.Count > 0;
 
     /// <summary>
     /// Loads the listings once. Every caller awaits the same load, so a page
@@ -87,19 +104,30 @@ public partial class MainViewModel
         IsDiscoverLoading = true;
         try
         {
+            TagVocabulary = (await services.IndexSnapshots.GetSnapshotAsync()).Tags;
             var listings = await services.ContentIndex.GetAvailableModsAsync();
             _listings = listings
                 .Select(listing => new DiscoverItem(this, listing))
                 .OrderBy(item => item.Name, StringComparer.CurrentCultureIgnoreCase)
                 .ToList();
+            var packs = (await services.ModPacks.GetAvailableModPacksAsync())
+                .Select(pack => pack.Metadata)
+                .OfType<ModPackMetadata>()
+                .ToList();
+            _packs = packs
+                .Select(pack => new PackItem(this, pack))
+                .OrderBy(item => item.Name, StringComparer.CurrentCultureIgnoreCase)
+                .ToList();
 
             OsOptions.Clear();
-            foreach (var os in listings.SelectMany(listing => listing.Os ?? []).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(os => os))
+            foreach (var os in listings.SelectMany(listing => listing.Os ?? []).Concat(packs.SelectMany(pack => pack.Os ?? [])).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(os => os))
                 OsOptions.Add(os);
 
             LicenseOptions.Clear();
-            foreach (var license in listings.Select(listing => listing.License).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(license => license))
+            foreach (var license in listings.Select(listing => listing.License).Concat(packs.Select(pack => pack.License)).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(license => license))
                 LicenseOptions.Add(license);
+
+            LoadCategoryOptions(listings, packs);
 
             await RefreshCompatibilityAsync(services.InstalledVersion.GetInstalledVersion()?.Version);
 
@@ -115,6 +143,7 @@ public partial class MainViewModel
             IsDiscoverLoading = false;
         }
 
+        UpdateIndexRefreshStatus();
         RefreshInstalledFlags();
         ApplyDiscoverFilters();
     }
@@ -134,12 +163,61 @@ public partial class MainViewModel
             filtered = filtered.Where(item => item.SupportsOs(SelectedOs));
         if (SelectedLicense is not null)
             filtered = filtered.Where(item => string.Equals(item.License, SelectedLicense, StringComparison.OrdinalIgnoreCase));
+        if (SelectedCategories.Count > 0)
+        {
+            var matching = ContentTagFilter.Filter(
+                filtered.Select(item => item.Listing),
+                _categoryVocabulary,
+                DiscoverType,
+                SelectedCategories.Where(category => !category.IsOther).Select(category => category.Tag!),
+                includeOther: SelectedCategories.Any(category => category.IsOther));
+            var matchingSet = new HashSet<ModMetadata>(matching, ReferenceEqualityComparer.Instance);
+            filtered = filtered.Where(item => matchingSet.Contains(item.Listing));
+        }
 
         DiscoverItems.Clear();
         foreach (var item in filtered)
             DiscoverItems.Add(item);
+        ApplyPackFilters(query);
         OnPropertyChanged(nameof(HasDiscoverItems));
     }
+
+    private void LoadCategoryOptions(IReadOnlyList<ModMetadata> listings, IReadOnlyList<ModPackMetadata> packs)
+    {
+        var selectedTags = SelectedCategories.Select(category => category.Tag).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        SelectedCategories.Clear();
+        CategoryOptions.Clear();
+
+        _categoryVocabulary = new CuratedTagVocabulary(
+            TagVocabulary.SpecVersion,
+            TagVocabulary.ModTags.Where(tag => !string.Equals(tag.Tag, LibraryTag, StringComparison.OrdinalIgnoreCase)).ToList());
+
+        var tagged = listings.Select(listing => (listing.Type, listing.Tags))
+            .Concat(packs.Select(pack => (Type: ContentType.ModPack, pack.Tags)))
+            .ToList();
+        var vocabulary = tagged.Select(entry => entry.Type).Distinct()
+            .SelectMany(_categoryVocabulary.GetTags)
+            .DistinctBy(tag => tag.Tag, StringComparer.OrdinalIgnoreCase);
+        foreach (var tag in vocabulary)
+        {
+            if (tagged.Any(entry => entry.Tags.Contains(tag.Tag, StringComparer.OrdinalIgnoreCase)))
+                CategoryOptions.Add(new DiscoverCategory(this, tag));
+        }
+
+        if (CategoryOptions.Count > 0 && tagged.Any(entry => !HasCuratedTag(entry.Type, entry.Tags)))
+            CategoryOptions.Add(new DiscoverCategory(this, tag: null));
+
+        foreach (var category in CategoryOptions.Where(category => selectedTags.Contains(category.Tag)))
+        {
+            category.IsSelected = true;
+            SelectedCategories.Add(category);
+        }
+
+        OnPropertyChanged(nameof(HasDiscoverFilters));
+    }
+
+    private bool HasCuratedTag(ContentType type, IReadOnlyList<string> tags)
+        => _categoryVocabulary.GetTags(type).Any(tag => tags.Contains(tag.Tag, StringComparer.OrdinalIgnoreCase));
 
     /// <summary>
     /// Marks listings that the active instance already holds.
@@ -149,6 +227,9 @@ public partial class MainViewModel
         var installed = new HashSet<string>(ActiveInstance?.ModIds ?? [], ModIds.Comparer);
         foreach (var item in _listings)
             item.IsInstalled = installed.Contains(item.ModId);
+        foreach (var release in _contentReleases)
+            release.RefreshInstalled(ActiveInstance);
+        RefreshPackInstalledFlags();
     }
 
     partial void OnDiscoverTypeChanged(ContentType value) => ApplyDiscoverFilters();
@@ -167,23 +248,40 @@ public partial class MainViewModel
         => _services is null ? Task.CompletedTask : RefreshCompatibilityAsync(_services.InstalledVersion.GetInstalledVersion()?.Version);
 
     /// <summary>
-    /// Evaluates the newest release of every index listing against
-    /// <paramref name="installed"/> (RFC 0017). A listing from another source
-    /// stays unknown, because its releases would have to be fetched one by one.
+    /// Evaluates the newest release of every index listing and every row of
+    /// the Versions table against <paramref name="installed"/> (RFC 0017). A
+    /// listing from another source stays unknown, because its releases would
+    /// have to be fetched one by one. A pack is evaluated by the bounds of its
+    /// newest usable version.
     /// </summary>
     internal async Task RefreshCompatibilityAsync(GameVersion? installed)
     {
         if (_services is null)
             return;
 
+        _compatibilityGame = installed;
         foreach (var item in _listings)
         {
-            var latest = item.Source == "index" ? await _services.ContentIndex.GetLatestReleaseAsync(item.ModId) : null;
+            var latest = item.Source == "index" ? await _services.ContentIndex.GetLatestReleaseInChannelAsync(item.ModId, _services.Settings.ReleaseChannel) : null;
             item.Compatibility = latest is null ? GameCompatibility.Unknown : Borea.Core.Game.Compatibility.Evaluate(latest, installed);
         }
 
+        foreach (var release in _contentReleases)
+            release.RefreshCompatibility(installed);
+
+        foreach (var pack in _packs)
+            pack.Compatibility = Borea.Core.Game.Compatibility.Evaluate(pack.Metadata, installed);
+
         ApplyDiscoverFilters();
     }
+
+    internal string CompatibilityText(GameCompatibility compatibility) => compatibility switch
+    {
+        GameCompatibility.Compatible => Localization.CompatibilityCompatible,
+        GameCompatibility.Untested => Localization.CompatibilityUntested,
+        GameCompatibility.Incompatible => Localization.CompatibilityIncompatible,
+        _ => Localization.CompatibilityUnknown,
+    };
 
     partial void OnSelectedOsChanged(string? value) => ApplyDiscoverFilters();
 
@@ -196,16 +294,40 @@ public partial class MainViewModel
     private void ShowDiscoverLoaders() => DiscoverType = ContentType.ModLoader;
 
     [RelayCommand]
+    private void ShowDiscoverModpacks() => DiscoverType = ContentType.ModPack;
+
+    [RelayCommand]
     private void SelectOs(string? os) => SelectedOs = os;
 
     [RelayCommand]
     private void SelectLicense(string? license) => SelectedLicense = license;
 
     [RelayCommand]
+    private void ToggleCategory(DiscoverCategory? category)
+    {
+        if (category is null)
+            return;
+
+        category.IsSelected = !category.IsSelected;
+        if (category.IsSelected)
+            SelectedCategories.Add(category);
+        else
+            SelectedCategories.Remove(category);
+
+        OnPropertyChanged(nameof(HasDiscoverFilters));
+        ApplyDiscoverFilters();
+    }
+
+    [RelayCommand]
     private void ClearDiscoverFilters()
     {
         SelectedOs = null;
         SelectedLicense = null;
+        foreach (var category in SelectedCategories)
+            category.IsSelected = false;
+        SelectedCategories.Clear();
+        OnPropertyChanged(nameof(HasDiscoverFilters));
+        ApplyDiscoverFilters();
     }
 
     /// <summary>
@@ -278,6 +400,11 @@ public sealed partial class DiscoverItem : ObservableObject, IInstallRow
 
     public IReadOnlyList<string> Tags { get; private set; }
 
+    /// <summary>The curated tags in the words and order of the vocabulary, then the free-form tags.</summary>
+    public IReadOnlyList<string> AllTags { get; private set; }
+
+    internal ModMetadata Listing => _listing;
+
     public string? Description => _listing.Description;
 
     public string Source => _listing.Source;
@@ -314,13 +441,7 @@ public sealed partial class DiscoverItem : ObservableObject, IInstallRow
     [NotifyPropertyChangedFor(nameof(IsIncompatible))]
     private GameCompatibility _compatibility = GameCompatibility.Unknown;
 
-    public string CompatibilityText => Compatibility switch
-    {
-        GameCompatibility.Compatible => _owner.Localization.CompatibilityCompatible,
-        GameCompatibility.Untested => _owner.Localization.CompatibilityUntested,
-        GameCompatibility.Incompatible => _owner.Localization.CompatibilityIncompatible,
-        _ => _owner.Localization.CompatibilityUnknown,
-    };
+    public string CompatibilityText => _owner.CompatibilityText(Compatibility);
 
     public bool IsCompatible => Compatibility == GameCompatibility.Compatible;
 
@@ -376,13 +497,25 @@ public sealed partial class DiscoverItem : ObservableObject, IInstallRow
     {
         _owner = owner;
         _listing = listing;
-        Tags = listing.Tags.Take(3).ToList();
+        AllTags = DisplayTags(owner.TagVocabulary, listing.Type, listing.Tags);
+        Tags = AllTags.Take(3).ToList();
+    }
+
+    internal static List<string> DisplayTags(CuratedTagVocabulary vocabulary, ContentType type, IReadOnlyList<string> tags)
+    {
+        var curated = vocabulary.GetTags(type)
+            .Where(tag => tags.Contains(tag.Tag, StringComparer.OrdinalIgnoreCase))
+            .ToList();
+        return curated.Select(tag => tag.Name)
+            .Concat(tags.Where(value => !curated.Any(tag => string.Equals(tag.Tag, value, StringComparison.OrdinalIgnoreCase))))
+            .ToList();
     }
 
     internal bool Matches(string query)
         => Name.Contains(query, StringComparison.CurrentCultureIgnoreCase)
             || Abstract.Contains(query, StringComparison.CurrentCultureIgnoreCase)
-            || _listing.Authors.Any(author => author.Contains(query, StringComparison.CurrentCultureIgnoreCase));
+            || _listing.Authors.Any(author => author.Contains(query, StringComparison.CurrentCultureIgnoreCase))
+            || _listing.Tags.Concat(AllTags).Any(tag => tag.Contains(query, StringComparison.CurrentCultureIgnoreCase));
 
     /// <summary>
     /// A listing without an OS list runs everywhere.
@@ -396,7 +529,8 @@ public sealed partial class DiscoverItem : ObservableObject, IInstallRow
     internal void Update(ModMetadata full)
     {
         _listing = full;
-        Tags = full.Tags.Take(3).ToList();
+        AllTags = DisplayTags(_owner.TagVocabulary, full.Type, full.Tags);
+        Tags = AllTags.Take(3).ToList();
         OnPropertyChanged(string.Empty);
     }
 
@@ -444,4 +578,32 @@ public sealed partial class DiscoverItem : ObservableObject, IInstallRow
 
     [RelayCommand]
     private Task ConfirmRemoveAsync() => _owner.RemoveAsync(this);
+}
+
+/// <summary>
+/// One row of the Category filter, a curated tag or Other.
+/// </summary>
+public sealed partial class DiscoverCategory : ObservableObject
+{
+    private readonly MainViewModel _owner;
+    private readonly CuratedTag? _tag;
+
+    public string? Tag => _tag?.Tag;
+
+    public bool IsOther => _tag is null;
+
+    public string Name => _tag?.Name ?? _owner.Localization.DiscoverCategoryOther;
+
+    public string? Meaning => _tag?.Meaning;
+
+    [ObservableProperty]
+    private bool _isSelected;
+
+    public DiscoverCategory(MainViewModel owner, CuratedTag? tag)
+    {
+        _owner = owner;
+        _tag = tag;
+    }
+
+    internal void RefreshText() => OnPropertyChanged(nameof(Name));
 }

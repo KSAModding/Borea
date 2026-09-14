@@ -84,7 +84,7 @@ public sealed class SharedProfileLauncher : ISharedProfileLauncher
         }
     }
 
-    private static OsPlatform? CurrentPlatform() =>
+    internal static OsPlatform? CurrentPlatform() =>
         OperatingSystem.IsWindows() ? OsPlatform.Windows
         : OperatingSystem.IsLinux() ? OsPlatform.Linux
         : OperatingSystem.IsMacOS() ? OsPlatform.MacOs

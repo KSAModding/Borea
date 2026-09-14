@@ -19,9 +19,10 @@ public sealed class InstalledGameVersionProvider : IInstalledGameVersionProvider
         _pathProvider = pathProvider ?? throw new ArgumentNullException(nameof(pathProvider));
     }
 
-    public InstalledGameVersion? GetInstalledVersion()
+    public InstalledGameVersion? GetInstalledVersion() => Read(_pathProvider.GetGameDirectoryPath());
+
+    internal static InstalledGameVersion? Read(string? gameDirectory)
     {
-        var gameDirectory = _pathProvider.GetGameDirectoryPath();
         if (string.IsNullOrWhiteSpace(gameDirectory))
             return null;
 

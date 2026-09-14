@@ -1,5 +1,6 @@
 using Borea.Core.Dependencies;
 using Borea.Core.Index;
+using Borea.Core.ModLoaders;
 using Borea.Core.ModPacks;
 using Borea.Core.Mods;
 
@@ -38,7 +39,8 @@ internal static class ContentCommandFixtures
         bool yanked = false,
         string? yankedReason = null,
         IReadOnlyList<ModDependency>? dependencies = null,
-        ReleaseStatus releaseStatus = ReleaseStatus.Stable) => new(
+        ReleaseStatus releaseStatus = ReleaseStatus.Stable,
+        LoaderRequirement? loader = null) => new(
             specVersion: 1,
             modId: id,
             version: ModVersion.Parse(version),
@@ -49,6 +51,7 @@ internal static class ContentCommandFixtures
             download: new DownloadInfo("https://example.com/flight-tools.zip", new string('A', 64), 1024, "application/zip"),
             installSizeBytes: 2048,
             dependencies: dependencies ?? Array.Empty<ModDependency>(),
+            loader: loader,
             gameMax: gameMaxRevision is null ? null : $"2026.1.1.{gameMaxRevision}",
             gameMaxRevision: gameMaxRevision,
             yanked: yanked,

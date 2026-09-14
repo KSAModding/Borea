@@ -5,15 +5,18 @@ using System.Text.Json;
 using Borea.Core.Dependencies;
 using Borea.Core.Index;
 using Borea.Core.Instances;
+using Borea.Core.Logging;
 using Borea.Core.ModLoaders;
 using Borea.Storage.Launch;
 using Borea.Core.Mods;
 using Borea.Core.Settings;
 using Borea.Network.GitHub;
 using Borea.Network.Index;
+using Borea.Network.Planning;
 using Borea.Network.Sources;
 using Borea.Storage.Game;
 using Borea.Storage.Index;
+using Borea.Storage.Instances;
 using Borea.Storage.ModLoaders;
 using Borea.Storage.Mods;
 using Borea.Storage.Paths;
@@ -136,8 +139,14 @@ public sealed class BoreaServicesTests : IDisposable
         Assert.IsType<FileLoaderAdopter>(services.LoaderAdopter);
         Assert.IsType<FileLoaderUninstaller>(services.LoaderUninstaller);
         Assert.IsType<GameDirectoryChanger>(services.GameDirectoryChanger);
-        Assert.IsType<LoaderLauncher>(services.Launcher);
+        Assert.IsType<LoaderLauncher>(Assert.IsType<LoggingLauncher>(services.Launcher).Inner);
+        Assert.IsType<FileModUninstaller>(Assert.IsType<LoggingModUninstaller>(services.Uninstaller).Inner);
+        Assert.IsType<FileModInstaller>(Assert.IsType<LoggingModInstaller>(services.Installer).Inner);
+        Assert.IsType<FileModReplacer>(Assert.IsType<LoggingModReplacer>(services.Replacer).Inner);
+        Assert.IsType<RepositoryInstallPlanner>(Assert.IsType<LoggingInstallPlanner>(services.InstallPlanner).Inner);
+        Assert.IsType<FileGameLogReader>(services.GameLog);
         Assert.IsType<SharedProfileLauncher>(services.SharedProfileLauncher);
+        Assert.IsType<FileGameDataReader>(services.GameData);
     }
 
     [Fact]
@@ -246,11 +255,24 @@ public sealed class BoreaServicesTests : IDisposable
     }
 
     [Fact]
+    public async Task Log_WritesTheDayFileUnderTheRootWithTheSource()
+    {
+        using var services = await BoreaServices.BuildAsync(_tempRoot, BoreaLogSource.Cli);
+        Assert.False(Directory.Exists(_tempRoot));
+
+        services.Log.Write("Install of Example 1.0.0 started.");
+
+        Assert.Equal(Path.Combine(_tempRoot, "Logs"), Path.GetDirectoryName(services.Log.CurrentFilePath));
+        Assert.Matches(@"^borea-\d{4}-\d{2}-\d{2}\.log$", Path.GetFileName(services.Log.CurrentFilePath));
+        Assert.Contains("[cli] Install of Example 1.0.0 started.", File.ReadAllText(services.Log.CurrentFilePath));
+    }
+
+    [Fact]
     public async Task IndexFetcher_IsTheNetworkFetcher()
     {
         using var services = await BoreaServices.BuildAsync(_tempRoot);
 
-        Assert.IsType<ContentIndexFetcher>(services.IndexFetcher);
+        Assert.IsType<ContentIndexFetcher>(Assert.IsType<LoggingContentIndexFetcher>(services.IndexFetcher).Inner);
     }
 
     [Fact]
@@ -260,6 +282,7 @@ public sealed class BoreaServicesTests : IDisposable
 
         Assert.IsType<ContentIndexReader>(services.IndexReader);
         Assert.IsType<ContentIndexSnapshotProvider>(services.IndexSnapshots);
+        Assert.Same(services.IndexSnapshots, services.IndexRefresh);
         Assert.IsType<ContentIndexModRepository>(services.ContentIndex);
         Assert.IsAssignableFrom<IContentIndexRepository>(services.ContentIndex);
         Assert.IsType<ContentIndexModPackRepository>(services.ModPacks);
@@ -335,6 +358,7 @@ public sealed class BoreaServicesTests : IDisposable
             new ControlledHttpMessageHandler(snapshot),
             new ConflictingStarMapRepository());
         Assert.IsType<FileForeignModAdopter>(services.ForeignModAdopter);
+        Assert.IsType<FileForeignModReleaseMatcher>(services.ForeignModReleaseMatcher);
         var instance = await services.Instances.CreateAsync("Test", InstanceSource.Custom.Value);
         var folder = WriteForeignMod(services, instance.InstanceId, "AdvancedFlightComputer");
         var payload = Path.Combine(folder, "keep.txt");

@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using Borea.Core.Game;
 using Borea.Core.Instances;
 using Borea.Core.Launch;
 using Borea.Core.ModLoaders;
@@ -75,6 +76,71 @@ public sealed class LoaderLauncherTests : IDisposable
         Assert.Equal(instanceRoot, plan.EnvironmentVariables["STARMAP_INSTANCE_PATH"]);
         Assert.Equal(Path.GetFullPath(StarMapDirectory), plan.WorkingDirectory);
         Assert.True(_launcher.IsRunning(_instance.InstanceId));
+    }
+
+    [Theory]
+    [InlineData(OsPlatform.Linux)]
+    [InlineData(OsPlatform.MacOs)]
+    public void Launch_AssemblyBesideTheAppHostOutsideWindows_StartsItThroughDotnet(OsPlatform platform)
+    {
+        PlaceStarMap();
+        var assembly = PlaceStarMap("StarMap.dll");
+        var dotnet = Path.Combine(_tempRoot, "dotnet", "dotnet");
+        Directory.CreateDirectory(Path.GetDirectoryName(dotnet)!);
+        File.WriteAllBytes(dotnet, Array.Empty<byte>());
+        var instanceRoot = Path.GetFullPath(_paths.GetInstanceRoot(_instance.InstanceId));
+        using var launcher = new LoaderLauncher(_paths, _starter, platform, () => dotnet);
+
+        var result = launcher.Launch(_instance, LoaderListing(provides: StarMapProvides()));
+
+        Assert.True(result.Started);
+        var plan = Assert.Single(_starter.Plans);
+        Assert.Same(plan, result.Plan);
+        Assert.Equal(dotnet, plan.Executable);
+        Assert.Equal(new[] { assembly, "-InstancePath", instanceRoot }, plan.Arguments);
+        Assert.Equal(instanceRoot, plan.EnvironmentVariables["STARMAP_INSTANCE_PATH"]);
+        Assert.Equal(Path.GetFullPath(StarMapDirectory), plan.WorkingDirectory);
+    }
+
+    [Fact]
+    public void Launch_AssemblyBesideTheAppHostOnWindows_StartsTheAppHost()
+    {
+        var executable = PlaceStarMap();
+        PlaceStarMap("StarMap.dll");
+        using var launcher = new LoaderLauncher(_paths, _starter, OsPlatform.Windows, () => throw new InvalidOperationException("Windows needs no dotnet host."));
+
+        var result = launcher.Launch(_instance, LoaderListing(provides: StarMapProvides()));
+
+        Assert.True(result.Started);
+        Assert.Equal(executable, Assert.Single(_starter.Plans).Executable);
+    }
+
+    [Fact]
+    public void Launch_NoAssemblyBesideTheAppHostOnLinux_StartsTheTarget()
+    {
+        var executable = PlaceStarMap();
+        using var launcher = new LoaderLauncher(_paths, _starter, OsPlatform.Linux, () => throw new InvalidOperationException("Only an assembly needs a dotnet host."));
+
+        var result = launcher.Launch(_instance, LoaderListing(provides: StarMapProvides()));
+
+        Assert.True(result.Started);
+        Assert.Equal(executable, Assert.Single(_starter.Plans).Executable);
+    }
+
+    [Fact]
+    public void Launch_AssemblyBesideTheAppHostWithoutDotnet_ReportsIt()
+    {
+        PlaceStarMap();
+        PlaceStarMap("StarMap.dll");
+        using var launcher = new LoaderLauncher(_paths, _starter, OsPlatform.Linux, () => null);
+
+        var result = launcher.Launch(_instance, LoaderListing(provides: StarMapProvides()));
+
+        Assert.Equal(LaunchOutcome.DotnetMissing, result.Outcome);
+        Assert.Contains("dotnet", result.Message);
+        Assert.Contains("StarMap", result.Message);
+        Assert.Empty(_starter.Plans);
+        Assert.False(launcher.IsRunning(_instance.InstanceId));
     }
 
     [Fact]
@@ -298,6 +364,168 @@ public sealed class LoaderLauncherTests : IDisposable
     {
         Assert.Throws<ArgumentNullException>(() => new LoaderLauncher(null!, _starter));
         Assert.Throws<ArgumentNullException>(() => new LoaderLauncher(_paths, null!));
+        Assert.Throws<ArgumentNullException>(() => new LoaderLauncher(_paths, _starter, OsPlatform.Linux, null!));
+    }
+
+    private static readonly string[] KsArmoryCrash =
+    [
+        "StarMap - Using Instance Path: C:\\Instances\\Main",
+        "Unhandled exception. System.Reflection.ReflectionTypeLoadException: Unable to load one or more of the requested types.",
+        "Method 'DrawAxes' in type 'KSArmory.RoundFollowable' from assembly 'KSArmory, Version=0.8.44.0, Culture=neutral, PublicKeyToken=null' does not have an implementation.",
+        "   at StarMap.Core.ModRepository.ModLoader.PrepareMods()",
+    ];
+
+    private static Instance InstanceWith(params string[] modIds)
+    {
+        var instance = new Instance("Main", InstanceSource.Custom.Value);
+        foreach (var modId in modIds)
+        {
+            var release = MetadataFixtures.MinimalRelease(modId, "0.8.44");
+            instance.AddMod(new InstalledMod(modId, release.Version, InstallReason.Manual, DateTimeOffset.UtcNow, release));
+        }
+
+        return instance;
+    }
+
+    [Fact]
+    public async Task WatchStart_LoaderStopsWithAnErrorNamingAMod_ReportsTheMod()
+    {
+        PlaceStarMap();
+        var instance = InstanceWith("KSArmory");
+        var started = _launcher.Launch(instance, LoaderListing(provides: StarMapProvides()));
+        var process = Assert.Single(_starter.Processes);
+        process.Output.AddRange(KsArmoryCrash);
+        process.HasExited = true;
+        process.ExitCode = -532462766;
+
+        var result = await _launcher.WatchStartAsync(instance, started);
+
+        Assert.Equal(LaunchOutcome.ExitedEarly, result.Outcome);
+        Assert.False(result.Started);
+        Assert.Equal(-532462766, result.ExitCode);
+        Assert.Equal("KSArmory", result.BlamedModId);
+        Assert.Contains("KSArmory 0.8.44 stopped StarMap from starting", result.Message);
+        Assert.Equal(KsArmoryCrash, result.Output);
+        Assert.Same(started.Plan, result.Plan);
+
+        var log = File.ReadAllLines(_paths.GetInstanceLaunchLogPath(instance.InstanceId));
+        Assert.Contains("The loader exited with code -532462766.", log);
+        Assert.Contains(KsArmoryCrash[2], log);
+    }
+
+    [Fact]
+    public async Task WatchStart_AssemblyInAModFolder_BlamesThatModEvenWithAnotherId()
+    {
+        PlaceStarMap();
+        var instance = InstanceWith("kessler-armory");
+        var folder = Directory.CreateDirectory(Path.Combine(_paths.GetInstanceModsFolder(instance.InstanceId), "kessler-armory", "bin"));
+        File.WriteAllBytes(Path.Combine(folder.FullName, "KSArmory.dll"), []);
+        var started = _launcher.Launch(instance, LoaderListing(provides: StarMapProvides()));
+        var process = Assert.Single(_starter.Processes);
+        process.Output.AddRange(KsArmoryCrash);
+        process.HasExited = true;
+        process.ExitCode = 1;
+
+        var result = await _launcher.WatchStartAsync(instance, started);
+
+        Assert.Equal("kessler-armory", result.BlamedModId);
+    }
+
+    [Fact]
+    public async Task WatchStart_ErrorNamingNoInstalledMod_ReportsTheExitCode()
+    {
+        PlaceStarMap();
+        var instance = InstanceWith("MeasureTools");
+        var started = _launcher.Launch(instance, LoaderListing(provides: StarMapProvides()));
+        var process = Assert.Single(_starter.Processes);
+        process.Output.Add("Could not load file or assembly 'Brutal.Core.Common, Version=1.0.0.0'.");
+        process.HasExited = true;
+        process.ExitCode = 3;
+
+        var result = await _launcher.WatchStartAsync(instance, started);
+
+        Assert.Equal(LaunchOutcome.ExitedEarly, result.Outcome);
+        Assert.Null(result.BlamedModId);
+        Assert.Contains("exit code 3", result.Message);
+    }
+
+    [Fact]
+    public async Task WatchStart_LoaderExitsWithZeroAndTheGameComesUp_StaysStarted()
+    {
+        PlaceStarMap();
+        using var launcher = new LoaderLauncher(_paths, _starter, TimeSpan.FromMinutes(5));
+        var started = launcher.Launch(_instance, LoaderListing(provides: StarMapProvides()));
+        var process = Assert.Single(_starter.Processes);
+        process.Output.Add("Restarting.");
+        process.HasExited = true;
+        process.ExitCode = 0;
+        var gameLog = _paths.GetInstanceGameLogPath(_instance.InstanceId);
+        Directory.CreateDirectory(Path.GetDirectoryName(gameLog)!);
+        File.WriteAllText(gameLog, "INFO loaded settings");
+
+        var result = await launcher.WatchStartAsync(_instance, started);
+
+        Assert.True(result.Started);
+        Assert.Equal(["Restarting."], result.Output);
+    }
+
+    [Fact]
+    public async Task WatchStart_LoaderExitsWithZeroWithoutTheGame_ReportsItWithoutBlamingAMod()
+    {
+        PlaceStarMap();
+        var instance = InstanceWith("KSArmory");
+        using var launcher = new LoaderLauncher(_paths, _starter, TimeSpan.FromMilliseconds(100));
+        var started = launcher.Launch(instance, LoaderListing(provides: StarMapProvides()));
+        var process = Assert.Single(_starter.Processes);
+        process.Output.Add("GameLocation is empty in StarMapConfig.json.");
+        process.HasExited = true;
+        process.ExitCode = 0;
+
+        var result = await launcher.WatchStartAsync(instance, started);
+
+        Assert.Equal(LaunchOutcome.ExitedEarly, result.Outcome);
+        Assert.Equal(0, result.ExitCode);
+        Assert.Null(result.BlamedModId);
+        Assert.Contains("stopped without starting the game", result.Message);
+        Assert.Equal(["GameLocation is empty in StarMapConfig.json."], result.Output);
+    }
+
+    [Fact]
+    public async Task WatchStart_LoaderStillRunningAfterTheWindow_StaysStarted()
+    {
+        PlaceStarMap();
+        using var launcher = new LoaderLauncher(_paths, _starter, TimeSpan.FromMilliseconds(50));
+        var started = launcher.Launch(_instance, LoaderListing(provides: StarMapProvides()));
+
+        var result = await launcher.WatchStartAsync(_instance, started);
+
+        Assert.True(result.Started);
+        Assert.True(launcher.IsRunning(_instance.InstanceId));
+        Assert.Contains("still running", File.ReadAllText(_paths.GetInstanceLaunchLogPath(_instance.InstanceId)));
+    }
+
+    [Fact]
+    public async Task WatchStart_GameWritesItsLog_StopsWatchingAndStaysStarted()
+    {
+        PlaceStarMap();
+        using var launcher = new LoaderLauncher(_paths, _starter, TimeSpan.FromMinutes(5));
+        var started = launcher.Launch(_instance, LoaderListing(provides: StarMapProvides()));
+        var gameLog = _paths.GetInstanceGameLogPath(_instance.InstanceId);
+        Directory.CreateDirectory(Path.GetDirectoryName(gameLog)!);
+        File.WriteAllText(gameLog, "INFO loaded system 'Sol'");
+
+        var watch = launcher.WatchStartAsync(_instance, started);
+
+        Assert.True(await Task.WhenAny(watch, Task.Delay(TimeSpan.FromSeconds(10))) == watch, "The watch did not stop when the game wrote its log.");
+        Assert.True((await watch).Started);
+    }
+
+    [Fact]
+    public async Task WatchStart_ResultThatDidNotStart_IsReturnedAsItIs()
+    {
+        var failed = _launcher.Launch(_instance, loader: null);
+
+        Assert.Same(failed, await _launcher.WatchStartAsync(_instance, failed));
     }
 
     public void Dispose()

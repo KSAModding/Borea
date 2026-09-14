@@ -51,8 +51,32 @@
   <data name="SettingsCheckForUpdatesAtStart" xml:space="preserve">
     <value>Check for updates at start</value>
   </data>
+  <data name="SettingsUpdateChannelLabel" xml:space="preserve">
+    <value>Update channel for Borea</value>
+  </data>
+  <data name="SettingsUpdateChannelHint" xml:space="preserve">
+    <value>Which Borea releases the update check tells you about. Pre-releases are tested less. This does not change which mod releases Borea installs.</value>
+  </data>
+  <data name="UpdateChannelStable" xml:space="preserve">
+    <value>Stable releases</value>
+  </data>
+  <data name="UpdateChannelTesting" xml:space="preserve">
+    <value>Stable and beta releases</value>
+  </data>
+  <data name="UpdateChannelDev" xml:space="preserve">
+    <value>All releases, dev builds included</value>
+  </data>
+  <data name="SettingsReleaseChannelLabel" xml:space="preserve">
+    <value>Mod release channel</value>
+  </data>
+  <data name="SettingsReleaseChannelHint" xml:space="preserve">
+    <value>Which releases Borea installs when you do not choose a version.</value>
+  </data>
   <data name="UpdateAvailable" xml:space="preserve">
     <value>A newer Borea release is available:</value>
+  </data>
+  <data name="UpdatePreRelease" xml:space="preserve">
+    <value>Pre-release</value>
   </data>
   <data name="UpdateViewRelease" xml:space="preserve">
     <value>View release</value>
@@ -144,6 +168,57 @@
   <data name="InstanceEmptyContent" xml:space="preserve">
     <value>Nothing installed yet. Add content from Discover.</value>
   </data>
+  <data name="ManualInstallsEmpty" xml:space="preserve">
+    <value>No mod folder in this instance was installed without Borea.</value>
+  </data>
+  <data name="ManualInstallsInIndex" xml:space="preserve">
+    <value>In the content index</value>
+  </data>
+  <data name="ManualInstallsNotInIndex" xml:space="preserve">
+    <value>Not in the content index</value>
+  </data>
+  <data name="ManualInstallsNoMatch" xml:space="preserve">
+    <value>In the content index, but the files match no release</value>
+  </data>
+  <data name="ManualInstallsNotRecorded" xml:space="preserve">
+    <value>In the content index, but Borea cannot record the release that the files match</value>
+  </data>
+  <data name="ManualInstallsChecking" xml:space="preserve">
+    <value>Comparing the files with each release</value>
+  </data>
+  <data name="ManualInstallsManage" xml:space="preserve">
+    <value>Manage with Borea</value>
+  </data>
+  <data name="ManualInstallsReplace" xml:space="preserve">
+    <value>Replace with the latest release</value>
+  </data>
+  <data name="ManualInstallsDeleteAndReplace" xml:space="preserve">
+    <value>Delete and replace</value>
+  </data>
+  <data name="ManualInstallsReplaceWarningFormat" xml:space="preserve">
+    <value>Borea did not install {0}. To replace it, Borea deletes this folder and every file in it. Borea asks only this one time.</value>
+  </data>
+  <data name="ManualInstallsInstanceChanged" xml:space="preserve">
+    <value>The instance changed. Try again.</value>
+  </data>
+  <data name="GameDataOpenFolder" xml:space="preserve">
+    <value>Open folder</value>
+  </data>
+  <data name="GameDataEmpty" xml:space="preserve">
+    <value>Empty</value>
+  </data>
+  <data name="GameLogOpen" xml:space="preserve">
+    <value>Open log</value>
+  </data>
+  <data name="GameLogMissing" xml:space="preserve">
+    <value>The game has not written a log for this instance yet.</value>
+  </data>
+  <data name="GameLogReload" xml:space="preserve">
+    <value>Reload</value>
+  </data>
+  <data name="GameLogCopy" xml:space="preserve">
+    <value>Copy to clipboard</value>
+  </data>
   <data name="InstancePlay" xml:space="preserve">
     <value>Play</value>
   </data>
@@ -186,6 +261,12 @@
   <data name="DiscoverHideIncompatible" xml:space="preserve">
     <value>Hide incompatible</value>
   </data>
+  <data name="DiscoverCategory" xml:space="preserve">
+    <value>Category</value>
+  </data>
+  <data name="DiscoverCategoryOther" xml:space="preserve">
+    <value>Other</value>
+  </data>
   <data name="DiscoverOperatingSystem" xml:space="preserve">
     <value>Operating system</value>
   </data>
@@ -204,6 +285,36 @@
   <data name="DiscoverLoading" xml:space="preserve">
     <value>Loading content...</value>
   </data>
+  <data name="DiscoverIndexStaleFormat" xml:space="preserve">
+    <value>Could not reach the content index. Showing the list from {0}.</value>
+  </data>
+  <data name="IndexUnreachableFormat" xml:space="preserve">
+    <value>Could not reach the content index: {0}</value>
+  </data>
+  <data name="DiscoverIndexRetry" xml:space="preserve">
+    <value>Try again</value>
+  </data>
+  <data name="TimeJustNow" xml:space="preserve">
+    <value>just now</value>
+  </data>
+  <data name="TimeMinuteAgo" xml:space="preserve">
+    <value>1 minute ago</value>
+  </data>
+  <data name="TimeMinutesAgoFormat" xml:space="preserve">
+    <value>{0} minutes ago</value>
+  </data>
+  <data name="TimeHourAgo" xml:space="preserve">
+    <value>1 hour ago</value>
+  </data>
+  <data name="TimeHoursAgoFormat" xml:space="preserve">
+    <value>{0} hours ago</value>
+  </data>
+  <data name="TimeDayAgo" xml:space="preserve">
+    <value>1 day ago</value>
+  </data>
+  <data name="TimeDaysAgoFormat" xml:space="preserve">
+    <value>{0} days ago</value>
+  </data>
   <data name="DiscoverAdd" xml:space="preserve">
     <value>Add to the active instance</value>
   </data>
@@ -218,6 +329,9 @@
   </data>
   <data name="InstallAnyway" xml:space="preserve">
     <value>Install anyway</value>
+  </data>
+  <data name="InstallReleaseChannelFormat" xml:space="preserve">
+    <value>Release {0} has the status {1}, which your release channel does not offer.</value>
   </data>
   <data name="InstallInstanceMissing" xml:space="preserve">
     <value>The active instance no longer exists.</value>
@@ -282,6 +396,9 @@
   <data name="ContentPublishedHeader" xml:space="preserve">
     <value>Published</value>
   </data>
+  <data name="ContentShowVersions" xml:space="preserve">
+    <value>Show</value>
+  </data>
   <data name="ContentNoDescription" xml:space="preserve">
     <value>No description provided.</value>
   </data>
@@ -291,11 +408,62 @@
   <data name="ContentNoVersions" xml:space="preserve">
     <value>No releases yet.</value>
   </data>
+  <data name="ContentNoVersionsInChannel" xml:space="preserve">
+    <value>No releases in this channel.</value>
+  </data>
   <data name="ContentSourceFormat" xml:space="preserve">
     <value>Listed on {0}</value>
   </data>
   <data name="ContentTypeModLoader" xml:space="preserve">
     <value>Mod loader</value>
+  </data>
+  <data name="ContentTypeModPack" xml:space="preserve">
+    <value>Modpack</value>
+  </data>
+  <data name="PackMods" xml:space="preserve">
+    <value>Mods</value>
+  </data>
+  <data name="PackModHeader" xml:space="preserve">
+    <value>Mod</value>
+  </data>
+  <data name="PackMemberYanked" xml:space="preserve">
+    <value>Yanked</value>
+  </data>
+  <data name="PackMemberUnlisted" xml:space="preserve">
+    <value>Not listed</value>
+  </data>
+  <data name="PackResultInstalled" xml:space="preserve">
+    <value>Installed</value>
+  </data>
+  <data name="PackResultReplaced" xml:space="preserve">
+    <value>Replaced</value>
+  </data>
+  <data name="PackResultAlreadyInstalled" xml:space="preserve">
+    <value>Already installed</value>
+  </data>
+  <data name="PackDeprecated" xml:space="preserve">
+    <value>The author no longer maintains this pack.</value>
+  </data>
+  <data name="PackStatusUnknown" xml:space="preserve">
+    <value>This pack has an author status that Borea does not know.</value>
+  </data>
+  <data name="PackCompatibilityUnknown" xml:space="preserve">
+    <value>The compatibility of this pack with the installed game is unknown.</value>
+  </data>
+  <data name="PackDisputed" xml:space="preserve">
+    <value>The content index marks this pack as disputed.</value>
+  </data>
+  <data name="PackIndexStatusUnknown" xml:space="preserve">
+    <value>The content index gives this pack a status that Borea does not know.</value>
+  </data>
+  <data name="PackResultUnresolved" xml:space="preserve">
+    <value>Unresolved</value>
+  </data>
+  <data name="PackResultFailed" xml:space="preserve">
+    <value>Failed</value>
+  </data>
+  <data name="PackResultNotAttempted" xml:space="preserve">
+    <value>Not attempted</value>
   </data>
   <data name="ReleaseStable" xml:space="preserve">
     <value>stable</value>
@@ -308,6 +476,15 @@
   </data>
   <data name="ReleaseUnknown" xml:space="preserve">
     <value>unknown</value>
+  </data>
+  <data name="ReleaseChannelStable" xml:space="preserve">
+    <value>Stable releases</value>
+  </data>
+  <data name="ReleaseChannelTesting" xml:space="preserve">
+    <value>Stable and testing releases</value>
+  </data>
+  <data name="ReleaseChannelDev" xml:space="preserve">
+    <value>All releases</value>
   </data>
   <data name="SettingsGame" xml:space="preserve">
     <value>Game</value>
@@ -324,6 +501,15 @@
   <data name="SetupSave" xml:space="preserve">
     <value>Save</value>
   </data>
+  <data name="SetupUseThisFolder" xml:space="preserve">
+    <value>Use this folder</value>
+  </data>
+  <data name="SetupFoundGame" xml:space="preserve">
+    <value>Borea found KSA in this folder. Check the folder, then use it.</value>
+  </data>
+  <data name="SetupFoundGames" xml:space="preserve">
+    <value>Borea found KSA in more than one folder. Select the folder you play from.</value>
+  </data>
   <data name="SetupLoader" xml:space="preserve">
     <value>Mod loader</value>
   </data>
@@ -338,6 +524,9 @@
   </data>
   <data name="SetupUseExisting" xml:space="preserve">
     <value>Use existing</value>
+  </data>
+  <data name="SetupFoundLoader" xml:space="preserve">
+    <value>Borea found this loader on disk. Check the folder, then use it.</value>
   </data>
   <data name="SetupSaved" xml:space="preserve">
     <value>Saved.</value>
@@ -396,6 +585,15 @@
   <data name="AboutGame" xml:space="preserve">
     <value>Installed game</value>
   </data>
+  <data name="AboutContentIndex" xml:space="preserve">
+    <value>Content index</value>
+  </data>
+  <data name="AboutIndexUpdatedFormat" xml:space="preserve">
+    <value>Updated {0}</value>
+  </data>
+  <data name="AboutIndexNotDownloaded" xml:space="preserve">
+    <value>Not downloaded yet</value>
+  </data>
   <data name="AboutFolders" xml:space="preserve">
     <value>Folders</value>
   </data>
@@ -404,6 +602,12 @@
   </data>
   <data name="AboutOpenInstancesFolder" xml:space="preserve">
     <value>Open instances folder</value>
+  </data>
+  <data name="AboutOpenBoreaLog" xml:space="preserve">
+    <value>Open Borea log</value>
+  </data>
+  <data name="AboutOpenLogFolder" xml:space="preserve">
+    <value>Open log folder</value>
   </data>
   <data name="AboutCopyDiagnostics" xml:space="preserve">
     <value>Copy diagnostics</value>
@@ -462,6 +666,24 @@
   <data name="DiscoverInstalledInFormat" xml:space="preserve">
     <value>Installed in {0}</value>
   </data>
+  <data name="PackModCountFormat" xml:space="preserve">
+    <value>Mods: {0}</value>
+  </data>
+  <data name="PackIncompatibleFormat" xml:space="preserve">
+    <value>This pack needs game {0} or newer.</value>
+  </data>
+  <data name="PackMemberYankedFormat" xml:space="preserve">
+    <value>{0} {1} is yanked.</value>
+  </data>
+  <data name="PackIncompleteFormat" xml:space="preserve">
+    <value>{0} of {1} mods did not install.</value>
+  </data>
+  <data name="PackUntestedFormat" xml:space="preserve">
+    <value>This pack is not tested with the installed game, which is newer than {0}.</value>
+  </data>
+  <data name="PackSupersededFormat" xml:space="preserve">
+    <value>The author no longer maintains this pack and recommends {0}.</value>
+  </data>
   <data name="InstallDownloadingFormat" xml:space="preserve">
     <value>Downloading {0}</value>
   </data>
@@ -494,5 +716,45 @@
   </data>
   <data name="LaunchWithoutModLoaderToolTip" xml:space="preserve">
     <value>Launches KSA the same way as running KSA.exe. It uses the shared profile that KSA creates, not a Borea instance.</value>
+  </data>
+</root>
+  <data name="InstanceContentNotInIndex" xml:space="preserve">
+    <value>This mod is not in the content index, so it has no page.</value>
+  </data>
+  <data name="InstanceContentNotOwned" xml:space="preserve">
+    <value>Borea did not install this mod, so it links to no page.</value>
+  </data>
+  <data name="ContentInsideInstance" xml:space="preserve">
+    <value>You're viewing content inside an instance.</value>
+  </data>
+  <data name="ContentViewInstance" xml:space="preserve">
+    <value>View instance</value>
+  </data>
+  <data name="ContentInactiveInstance" xml:space="preserve">
+    <value>This instance is not active. Make it active to add or remove content from here.</value>
+  </data>
+  <data name="LaunchStartingFormat" xml:space="preserve">
+    <value>Starting {0}…</value>
+  </data>
+  <data name="LaunchModBrokeFormat" xml:space="preserve">
+    <value>{0} {1} stopped {2} from starting. It may not work with this version of KSA. Disable it and try again, or look for an update.</value>
+  </data>
+  <data name="LaunchExitedEarlyFormat" xml:space="preserve">
+    <value>{0} stopped right after starting (exit code {1}). The details show what it wrote.</value>
+  </data>
+  <data name="LaunchDisableModFormat" xml:space="preserve">
+    <value>Disable {0}</value>
+  </data>
+  <data name="LaunchModDisabledFormat" xml:space="preserve">
+    <value>{0} is disabled. Press Play to try again.</value>
+  </data>
+  <data name="LaunchShowDetails" xml:space="preserve">
+    <value>Show details</value>
+  </data>
+  <data name="LaunchOpenLog" xml:space="preserve">
+    <value>Open launch log</value>
+  </data>
+  <data name="LaunchNoOutput" xml:space="preserve">
+    <value>The loader wrote nothing before it stopped.</value>
   </data>
 </root>

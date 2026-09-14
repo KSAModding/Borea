@@ -59,7 +59,23 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string SettingsCheckForUpdatesAtStart => Resources.SettingsCheckForUpdatesAtStart;
 
+    public string SettingsUpdateChannelLabel => Resources.SettingsUpdateChannelLabel;
+
+    public string SettingsUpdateChannelHint => Resources.SettingsUpdateChannelHint;
+
+    public string UpdateChannelStable => Resources.UpdateChannelStable;
+
+    public string UpdateChannelTesting => Resources.UpdateChannelTesting;
+
+    public string UpdateChannelDev => Resources.UpdateChannelDev;
+
+    public string SettingsReleaseChannelLabel => Resources.SettingsReleaseChannelLabel;
+
+    public string SettingsReleaseChannelHint => Resources.SettingsReleaseChannelHint;
+
     public string UpdateAvailable => Resources.UpdateAvailable;
+
+    public string UpdatePreRelease => Resources.UpdatePreRelease;
 
     public string UpdateViewRelease => Resources.UpdateViewRelease;
 
@@ -117,6 +133,48 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string InstanceEmptyContent => Resources.InstanceEmptyContent;
 
+    public string ContentInsideInstance => Resources.ContentInsideInstance;
+
+    public string ContentViewInstance => Resources.ContentViewInstance;
+
+    public string ContentInactiveInstance => Resources.ContentInactiveInstance;
+
+    public string InstanceContentNotInIndex => Resources.InstanceContentNotInIndex;
+
+    public string InstanceContentNotOwned => Resources.InstanceContentNotOwned;
+
+    public string ManualInstallsEmpty => Resources.ManualInstallsEmpty;
+
+    public string ManualInstallsInIndex => Resources.ManualInstallsInIndex;
+
+    public string ManualInstallsNotInIndex => Resources.ManualInstallsNotInIndex;
+
+    public string ManualInstallsNoMatch => Resources.ManualInstallsNoMatch;
+
+    public string ManualInstallsNotRecorded => Resources.ManualInstallsNotRecorded;
+
+    public string ManualInstallsChecking => Resources.ManualInstallsChecking;
+
+    public string ManualInstallsManage => Resources.ManualInstallsManage;
+
+    public string ManualInstallsReplace => Resources.ManualInstallsReplace;
+
+    public string ManualInstallsDeleteAndReplace => Resources.ManualInstallsDeleteAndReplace;
+
+    public string ManualInstallsInstanceChanged => Resources.ManualInstallsInstanceChanged;
+
+    public string GameDataOpenFolder => Resources.GameDataOpenFolder;
+
+    public string GameDataEmpty => Resources.GameDataEmpty;
+
+    public string GameLogOpen => Resources.GameLogOpen;
+
+    public string GameLogMissing => Resources.GameLogMissing;
+
+    public string GameLogReload => Resources.GameLogReload;
+
+    public string GameLogCopy => Resources.GameLogCopy;
+
     public string InstancePlay => Resources.InstancePlay;
 
     public string ContentRemove => Resources.ContentRemove;
@@ -139,6 +197,10 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string DiscoverHideIncompatible => Resources.DiscoverHideIncompatible;
 
+    public string DiscoverCategory => Resources.DiscoverCategory;
+
+    public string DiscoverCategoryOther => Resources.DiscoverCategoryOther;
+
     public string DiscoverOperatingSystem => Resources.DiscoverOperatingSystem;
 
     public string DiscoverLicense => Resources.DiscoverLicense;
@@ -150,6 +212,8 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string DiscoverEmpty => Resources.DiscoverEmpty;
 
     public string DiscoverLoading => Resources.DiscoverLoading;
+
+    public string DiscoverIndexRetry => Resources.DiscoverIndexRetry;
 
     public string DiscoverAdd => Resources.DiscoverAdd;
 
@@ -181,11 +245,19 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string AboutGame => Resources.AboutGame;
 
+    public string AboutContentIndex => Resources.AboutContentIndex;
+
+    public string AboutIndexNotDownloaded => Resources.AboutIndexNotDownloaded;
+
     public string AboutFolders => Resources.AboutFolders;
 
     public string AboutOpenBoreaFolder => Resources.AboutOpenBoreaFolder;
 
     public string AboutOpenInstancesFolder => Resources.AboutOpenInstancesFolder;
+
+    public string AboutOpenBoreaLog => Resources.AboutOpenBoreaLog;
+
+    public string AboutOpenLogFolder => Resources.AboutOpenLogFolder;
 
     public string AboutCopyDiagnostics => Resources.AboutCopyDiagnostics;
 
@@ -257,13 +329,45 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string ContentPublishedHeader => Resources.ContentPublishedHeader;
 
+    public string ContentShowVersions => Resources.ContentShowVersions;
+
     public string ContentNoDescription => Resources.ContentNoDescription;
 
     public string ContentLoadingVersions => Resources.ContentLoadingVersions;
 
     public string ContentNoVersions => Resources.ContentNoVersions;
 
+    public string ContentNoVersionsInChannel => Resources.ContentNoVersionsInChannel;
+
     public string ContentTypeModLoader => Resources.ContentTypeModLoader;
+
+    public string ContentTypeModPack => Resources.ContentTypeModPack;
+
+    public string PackMods => Resources.PackMods;
+
+    public string PackModHeader => Resources.PackModHeader;
+
+    public string PackMemberYanked => Resources.PackMemberYanked;
+
+    public string PackMemberUnlisted => Resources.PackMemberUnlisted;
+
+    public string PackDeprecated => Resources.PackDeprecated;
+
+    public string PackStatusUnknown => Resources.PackStatusUnknown;
+
+    public string PackCompatibilityUnknown => Resources.PackCompatibilityUnknown;
+
+    public string PackResultInstalled => Resources.PackResultInstalled;
+
+    public string PackResultReplaced => Resources.PackResultReplaced;
+
+    public string PackResultAlreadyInstalled => Resources.PackResultAlreadyInstalled;
+
+    public string PackResultUnresolved => Resources.PackResultUnresolved;
+
+    public string PackResultFailed => Resources.PackResultFailed;
+
+    public string PackResultNotAttempted => Resources.PackResultNotAttempted;
 
     public string ReleaseStable => Resources.ReleaseStable;
 
@@ -272,6 +376,12 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string ReleaseDev => Resources.ReleaseDev;
 
     public string ReleaseUnknown => Resources.ReleaseUnknown;
+
+    public string ReleaseChannelStable => Resources.ReleaseChannelStable;
+
+    public string ReleaseChannelTesting => Resources.ReleaseChannelTesting;
+
+    public string ReleaseChannelDev => Resources.ReleaseChannelDev;
 
     public string SettingsGame => Resources.SettingsGame;
 
@@ -289,6 +399,12 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string SetupSave => Resources.SetupSave;
 
+    public string SetupUseThisFolder => Resources.SetupUseThisFolder;
+
+    public string SetupFoundGame => Resources.SetupFoundGame;
+
+    public string SetupFoundGames => Resources.SetupFoundGames;
+
     public string SetupLoader => Resources.SetupLoader;
 
     public string SetupLoaderDirectory => Resources.SetupLoaderDirectory;
@@ -298,6 +414,8 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string SetupInstallLoader => Resources.SetupInstallLoader;
 
     public string SetupUseExisting => Resources.SetupUseExisting;
+
+    public string SetupFoundLoader => Resources.SetupFoundLoader;
 
     public string SetupSaved => Resources.SetupSaved;
 
@@ -369,6 +487,61 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string FormatDiscoverInstalledIn(string instance)
         => string.Format(CultureInfo.CurrentCulture, Resources.DiscoverInstalledInFormat, instance);
 
+    public string FormatInstallReleaseChannel(string version, string status)
+        => string.Format(CultureInfo.CurrentCulture, Resources.InstallReleaseChannelFormat, version, status);
+
+    public string FormatDiscoverIndexStale(string age)
+        => string.Format(CultureInfo.CurrentCulture, Resources.DiscoverIndexStaleFormat, age);
+
+    public string FormatIndexUnreachable(string reason)
+        => string.Format(CultureInfo.CurrentCulture, Resources.IndexUnreachableFormat, reason);
+
+    public string FormatAboutIndexUpdated(string age)
+        => string.Format(CultureInfo.CurrentCulture, Resources.AboutIndexUpdatedFormat, age);
+
+    /// <summary>"just now", "5 minutes ago", "2 days ago", with the count rounded down.</summary>
+    public string FormatTimeAgo(TimeSpan age)
+    {
+        if (age.TotalMinutes < 1)
+            return Resources.TimeJustNow;
+        if (age.TotalHours < 1)
+            return FormatCount((int)age.TotalMinutes, Resources.TimeMinuteAgo, Resources.TimeMinutesAgoFormat);
+        if (age.TotalDays < 1)
+            return FormatCount((int)age.TotalHours, Resources.TimeHourAgo, Resources.TimeHoursAgoFormat);
+
+        return FormatCount((int)age.TotalDays, Resources.TimeDayAgo, Resources.TimeDaysAgoFormat);
+    }
+
+    private static string FormatCount(int count, string one, string format)
+        => count == 1 ? one : string.Format(CultureInfo.CurrentCulture, format, count);
+
+    public string FormatPackModCount(int count)
+        => string.Format(CultureInfo.CurrentCulture, Resources.PackModCountFormat, count);
+
+    public string FormatPackIncompatible(string gameMin)
+        => string.Format(CultureInfo.CurrentCulture, Resources.PackIncompatibleFormat, gameMin);
+
+    public string FormatPackMemberYanked(string modId, string version, string? reason)
+    {
+        var text = string.Format(CultureInfo.CurrentCulture, Resources.PackMemberYankedFormat, modId, version);
+        return string.IsNullOrWhiteSpace(reason) ? text : $"{text} {reason}";
+    }
+
+    public string FormatPackIncomplete(int failed, int total)
+        => string.Format(CultureInfo.CurrentCulture, Resources.PackIncompleteFormat, failed, total);
+
+    public string FormatPackUntested(string gameMax)
+        => string.Format(CultureInfo.CurrentCulture, Resources.PackUntestedFormat, gameMax);
+
+    public string FormatPackSuperseded(string packId)
+        => string.Format(CultureInfo.CurrentCulture, Resources.PackSupersededFormat, packId);
+
+    public string FormatPackDisputed(string? reason)
+        => string.IsNullOrWhiteSpace(reason) ? Resources.PackDisputed : $"{Resources.PackDisputed} {reason}";
+
+    public string FormatPackIndexStatusUnknown(string? reason)
+        => string.IsNullOrWhiteSpace(reason) ? Resources.PackIndexStatusUnknown : $"{Resources.PackIndexStatusUnknown} {reason}";
+
     public string FormatInstallDownloading(string content)
         => string.Format(CultureInfo.CurrentCulture, Resources.InstallDownloadingFormat, content);
 
@@ -393,6 +566,27 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string FormatInstallMinutesLeft(int minutes)
         => string.Format(CultureInfo.CurrentCulture, Resources.InstallMinutesLeftFormat, minutes);
 
+    public string LaunchShowDetails => Resources.LaunchShowDetails;
+
+    public string LaunchOpenLog => Resources.LaunchOpenLog;
+
+    public string LaunchNoOutput => Resources.LaunchNoOutput;
+
+    public string FormatLaunchStarting(string loader)
+        => string.Format(CultureInfo.CurrentCulture, Resources.LaunchStartingFormat, loader);
+
+    public string FormatLaunchModBroke(string mod, string version, string loader)
+        => string.Format(CultureInfo.CurrentCulture, Resources.LaunchModBrokeFormat, mod, version, loader);
+
+    public string FormatLaunchExitedEarly(string loader, int exitCode)
+        => string.Format(CultureInfo.CurrentCulture, Resources.LaunchExitedEarlyFormat, loader, exitCode);
+
+    public string FormatLaunchDisableMod(string mod)
+        => string.Format(CultureInfo.CurrentCulture, Resources.LaunchDisableModFormat, mod);
+
+    public string FormatLaunchModDisabled(string mod)
+        => string.Format(CultureInfo.CurrentCulture, Resources.LaunchModDisabledFormat, mod);
+
     public string FormatContentSource(string source)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(source);
@@ -404,6 +598,9 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string FormatContentRemoveRequired(string modId, string dependents)
         => string.Format(CultureInfo.CurrentCulture, Resources.ContentRemoveRequiredFormat, modId, dependents);
+
+    public string FormatManualInstallsReplaceWarning(string folderName)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ManualInstallsReplaceWarningFormat, folderName);
 
     public string FormatContentByAuthor(string authors)
     {

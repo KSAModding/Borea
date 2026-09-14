@@ -48,6 +48,11 @@ public interface IGamePathProvider
     string GetAppPreferencesPath();
 
     /// <summary>
+    /// Folder of Borea's daily log files.
+    /// </summary>
+    string GetLogsFolder();
+
+    /// <summary>
     /// Root folder for a specific instance, e.g.
     /// </summary>
     string GetInstanceRoot(Guid instanceId);
@@ -59,6 +64,22 @@ public interface IGamePathProvider
     string GetInstanceVehiclesFolder(Guid instanceId);
 
     string GetInstanceSettingsPath(Guid instanceId);
+
+    string GetInstanceHudLayoutsFolder(Guid instanceId);
+
+    string GetInstanceCrashDumpsFolder(Guid instanceId);
+
+    string GetInstanceExportsFolder(Guid instanceId);
+
+    /// <summary>
+    /// The log the game writes in the instance, Constants.LogsFolderPath below the instance root.
+    /// </summary>
+    string GetInstanceGameLogPath(Guid instanceId);
+
+    /// <summary>
+    /// What the mod loader wrote while Borea watched its start, next to the game log.
+    /// </summary>
+    string GetInstanceLaunchLogPath(Guid instanceId);
 
     string GetInstanceManifestPath(Guid instanceId);
 

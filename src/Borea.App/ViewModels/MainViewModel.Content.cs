@@ -7,6 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
+using Borea.Core.Game;
 using Borea.Core.Mods;
 using Borea.Core.Planning;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -22,7 +23,37 @@ public partial class MainViewModel
 {
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsDiscoverSection))]
+    [NotifyPropertyChangedFor(nameof(IsLibrarySection))]
+    [NotifyPropertyChangedFor(nameof(IsContentFromInstance))]
+    [NotifyPropertyChangedFor(nameof(CanActOnSelectedContent))]
     private bool _currentWindowContent;
+
+    /// <summary>
+    /// The instance the content page was opened from, so its breadcrumb leads
+    /// back there (#191). Null when it was opened from Discover.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsDiscoverSection))]
+    [NotifyPropertyChangedFor(nameof(IsLibrarySection))]
+    [NotifyPropertyChangedFor(nameof(IsContentFromInstance))]
+    [NotifyPropertyChangedFor(nameof(CanActOnSelectedContent))]
+    private InstanceItem? _contentReturnInstance;
+
+    public bool IsContentFromInstance => CurrentWindowContent && ContentReturnInstance is not null;
+
+    /// <summary>
+    /// Whether Add and Remove on the content page can be offered. They act on
+    /// the active instance, so a page opened from another instance hides them
+    /// instead of changing an instance it does not name.
+    /// </summary>
+    public bool CanActOnSelectedContent => !IsContentFromInstance || CurrentReturnInstance?.IsActive == true;
+
+    /// <summary>
+    /// The instance the page was opened from, as the list holds it now. The
+    /// list is rebuilt after every change, so the object kept at opening goes stale.
+    /// </summary>
+    private InstanceItem? CurrentReturnInstance =>
+        ContentReturnInstance is { } opened ? Instances.FirstOrDefault(instance => instance.InstanceId == opened.InstanceId) : null;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasContentLinks))]
@@ -32,7 +63,16 @@ public partial class MainViewModel
 
     public ObservableCollection<ContentLink> ContentLinks { get; } = [];
 
+    private readonly List<VersionItem> _contentReleases = [];
+
+    /// <summary>The releases the Show filter lets through, newest first.</summary>
     public ObservableCollection<VersionItem> ContentVersions { get; } = [];
+
+    /// <summary>The Show filter above the Versions table. It starts at the saved channel.</summary>
+    [ObservableProperty]
+    private ReleaseChannelOption? _versionFilter;
+
+    public string ContentVersionsEmptyText => _contentReleases.Count > 0 ? Localization.ContentNoVersionsInChannel : Localization.ContentNoVersions;
 
     public bool HasContentLinks => ContentLinks.Count > 0;
 
@@ -69,13 +109,46 @@ public partial class MainViewModel
         if (item is null)
             return;
 
+        ContentReturnInstance = null;
+        await ShowContentAsync(item);
+    }
+
+    /// <summary>
+    /// Opens the page of an installed mod from the instance page. The
+    /// breadcrumb then names the instance and leads back to it.
+    /// </summary>
+    internal async Task OpenContentFromInstanceAsync(DiscoverItem item)
+    {
+        if (item is null || SelectedInstance is null)
+            return;
+
+        ContentReturnInstance = SelectedInstance;
+        await ShowContentAsync(item);
+    }
+
+    [RelayCommand]
+    private Task ReturnToInstanceAsync()
+    {
+        if (CurrentReturnInstance is { } instance)
+            return OpenInstanceAsync(instance);
+
+        // the instance was deleted while its content page was open
+        SetMainWindowLibrary();
+        return Task.CompletedTask;
+    }
+
+    private async Task ShowContentAsync(DiscoverItem item)
+    {
+        LeavePackPage();
         SelectedContent?.ClearOutcome();
         item.ClearOutcome();
         SelectedContent = item;
         IsVersionsTab = false;
         ContentDetailError = null;
         LatestVersion = null;
-        ContentVersions.Clear();
+        _contentReleases.Clear();
+        ApplyVersionFilter();
+        VersionFilter = OptionFor(SavedReleaseChannel);
 
         ContentLinks.Clear();
         foreach (var link in item.Links.OrderBy(link => LinkOrder(link.Key)))
@@ -87,6 +160,7 @@ public partial class MainViewModel
         CurrentWindowLibrary = false;
         CurrentWindowTasks = false;
         CurrentWindowInstance = false;
+        CurrentWindowPack = false;
         CurrentWindowContent = true;
 
         await LoadLatestVersionAsync(item);
@@ -153,15 +227,25 @@ public partial class MainViewModel
             return;
 
         SelectedContent?.ClearOutcome();
-        foreach (var version in ContentVersions)
+        foreach (var version in _contentReleases)
             version.InstallError = null;
+    }
+
+    partial void OnVersionFilterChanged(ReleaseChannelOption? value) => ApplyVersionFilter();
+
+    private void ApplyVersionFilter()
+    {
+        ContentVersions.Clear();
+        foreach (var release in _contentReleases.Where(release => VersionFilter is null || VersionFilter.Channel.Includes(release.Status)))
+            ContentVersions.Add(release);
+        OnPropertyChanged(nameof(ContentVersionsEmptyText));
     }
 
     [RelayCommand]
     private async Task ShowContentVersionsAsync()
     {
         IsVersionsTab = true;
-        if (ContentVersions.Count > 0 || SelectedContent is null || _services is null || IsLoadingVersions)
+        if (_contentReleases.Count > 0 || SelectedContent is null || _services is null || IsLoadingVersions)
             return;
 
         var item = SelectedContent;
@@ -179,8 +263,14 @@ public partial class MainViewModel
 
             if (ReferenceEquals(SelectedContent, item))
             {
-                foreach (var release in releases.OrderByDescending(release => release.ReleaseDate))
-                    ContentVersions.Add(release);
+                foreach (var release in releases)
+                {
+                    release.RefreshCompatibility(_compatibilityGame);
+                    release.RefreshInstalled(ActiveInstance);
+                }
+
+                _contentReleases.AddRange(releases.OrderByDescending(release => release.ReleaseDate));
+                ApplyVersionFilter();
             }
             ContentDetailError = null;
         }
@@ -197,16 +287,20 @@ public partial class MainViewModel
     [RelayCommand]
     private void OpenLink(ContentLink link)
     {
-        if (link is null)
-            return;
+        if (link is not null && TryOpenUrl(link.Url) is { } error)
+            ContentDetailError = error;
+    }
 
+    private static string? TryOpenUrl(string url)
+    {
         try
         {
-            Process.Start(new ProcessStartInfo(link.Url) { UseShellExecute = true });
+            Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
+            return null;
         }
         catch (Exception exception) when (exception is System.ComponentModel.Win32Exception or InvalidOperationException or IOException)
         {
-            ContentDetailError = exception.Message;
+            return exception.Message;
         }
     }
 
@@ -231,17 +325,32 @@ public sealed partial class VersionItem : ObservableObject, IInstallRow
 
     public ReleaseStatus Status => _release.ReleaseStatus;
 
-    public string ChannelText => Status switch
-    {
-        ReleaseStatus.Stable => _owner.Localization.ReleaseStable,
-        ReleaseStatus.Testing => _owner.Localization.ReleaseTesting,
-        ReleaseStatus.Dev => _owner.Localization.ReleaseDev,
-        _ => _owner.Localization.ReleaseUnknown,
-    };
+    public string ChannelText => _owner.ReleaseStatusText(Status);
 
     public bool IsTesting => Status == ReleaseStatus.Testing;
 
     public bool IsDev => Status == ReleaseStatus.Dev;
+
+    /// <summary>
+    /// How this release fits the installed game (RFC 0017).
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CompatibilityText))]
+    [NotifyPropertyChangedFor(nameof(IsCompatible))]
+    [NotifyPropertyChangedFor(nameof(IsUntested))]
+    [NotifyPropertyChangedFor(nameof(IsIncompatible))]
+    private GameCompatibility _compatibility = GameCompatibility.Unknown;
+
+    public string CompatibilityText => _owner.CompatibilityText(Compatibility);
+
+    public bool IsCompatible => Compatibility == GameCompatibility.Compatible;
+
+    public bool IsUntested => Compatibility == GameCompatibility.Untested;
+
+    public bool IsIncompatible => Compatibility == GameCompatibility.Incompatible;
+
+    [ObservableProperty]
+    private bool _isInstalled;
 
     /// <summary>">= min" or "min – max", as the compatibility chip shows it.</summary>
     public string GameVersionText => _release.GameMax is null ? $">= {_release.GameMin}" : $"{_release.GameMin} – {_release.GameMax}";
@@ -290,4 +399,16 @@ public sealed partial class VersionItem : ObservableObject, IInstallRow
 
     [RelayCommand]
     private void CancelInstall() => MainViewModel.CancelInstall(this);
+
+    internal void RefreshText()
+    {
+        OnPropertyChanged(nameof(ChannelText));
+        OnPropertyChanged(nameof(CompatibilityText));
+    }
+
+    internal void RefreshCompatibility(GameVersion? installed)
+        => Compatibility = Borea.Core.Game.Compatibility.Evaluate(_release, installed);
+
+    internal void RefreshInstalled(InstanceItem? instance)
+        => IsInstalled = instance?.InstalledVersionOf(_release.ModId) == _release.Version;
 }

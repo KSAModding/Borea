@@ -50,11 +50,16 @@ public sealed class ContentIndexReader : IContentIndexReader, IContentIndexCandi
                 listing.Authored,
                 listing.ValidReleases.ToArray(),
                 listing.IndexStatus,
-                listing.Downloads));
+                listing.Downloads,
+                listing.Images,
+                listing.PublishedAt,
+                listing.UpdatedAt));
 
             AddMalformed(diagnostics, listing.IndexStatusError, ContentIndexDiagnosticScope.IndexStatus);
             AddUnsupportedStatus(diagnostics, listing.IndexStatus, listing.Id);
             AddMalformed(diagnostics, listing.DownloadsErrors, ContentIndexDiagnosticScope.Downloads);
+            AddMalformed(diagnostics, listing.ImagesErrors, ContentIndexDiagnosticScope.Images);
+            AddMalformed(diagnostics, listing.DatesErrors, ContentIndexDiagnosticScope.Dates);
             AddMalformed(diagnostics, listing.RejectedReleases, ContentIndexDiagnosticScope.Release);
             AddUnknown(diagnostics, listing.UnknownReleases, ContentIndexDiagnosticScope.Release);
         }
@@ -67,11 +72,12 @@ public sealed class ContentIndexReader : IContentIndexReader, IContentIndexCandi
         {
             cancellationToken.ThrowIfCancellationRequested();
             var versions = pack.ValidVersions
-                .Select(version => new ContentIndexPackVersion(version.Metadata, version.IndexStatus))
+                .Select(version => new ContentIndexPackVersion(version.Metadata, version.IndexStatus, version.Images))
                 .ToArray();
 
-            packs.Add(new ContentIndexPack(pack.Id, versions, pack.IndexStatus));
+            packs.Add(new ContentIndexPack(pack.Id, versions, pack.IndexStatus, pack.PublishedAt, pack.UpdatedAt));
             AddMalformed(diagnostics, pack.IndexStatusError, ContentIndexDiagnosticScope.IndexStatus);
+            AddMalformed(diagnostics, pack.DatesErrors, ContentIndexDiagnosticScope.Dates);
             AddUnsupportedStatus(diagnostics, pack.IndexStatus, pack.Id);
             foreach (var version in pack.ValidVersions)
             {
@@ -82,6 +88,7 @@ public sealed class ContentIndexReader : IContentIndexReader, IContentIndexCandi
                     version.IndexStatus,
                     pack.Id,
                     version.Metadata.Version.ToString());
+                AddMalformed(diagnostics, version.ImagesErrors, ContentIndexDiagnosticScope.Images);
             }
             AddMalformed(diagnostics, pack.RejectedVersions, ContentIndexDiagnosticScope.PackVersion);
             AddUnknown(diagnostics, pack.UnknownVersions, ContentIndexDiagnosticScope.PackVersion);

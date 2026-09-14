@@ -1,6 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Borea.App.ViewModels"
+             xmlns:views="using:Borea.App.Views"
              x:Class="Borea.App.Views.Pages.DiscoverPage"
              x:DataType="vm:MainViewModel">
     <!-- Discover: list column plus the filter panel on the right -->
@@ -18,11 +19,19 @@
                     <StackPanel Orientation="Horizontal" Spacing="16">
                         <Button Classes="tab" Classes.active="{Binding IsModsTab}" Content="{Binding Localization.DiscoverTabMods}" Command="{Binding ShowDiscoverModsCommand}" />
                         <Button Classes="tab" Classes.active="{Binding IsLoadersTab}" Content="{Binding Localization.DiscoverTabLoaders}" Command="{Binding ShowDiscoverLoadersCommand}" />
-                        <Button Classes="tab" Content="{Binding Localization.DiscoverTabModpacks}" IsEnabled="False" />
+                        <Button Classes="tab" Classes.active="{Binding IsModpacksTab}" Content="{Binding Localization.DiscoverTabModpacks}" Command="{Binding ShowDiscoverModpacksCommand}" />
                         <Button Classes="tab" Content="{Binding Localization.DiscoverTabVehicles}" IsEnabled="False" />
                         <Button Classes="tab" Content="{Binding Localization.DiscoverTabSaves}" IsEnabled="False" />
                     </StackPanel>
                 </Border>
+
+                <!-- stale index -->
+                <StackPanel Orientation="Horizontal" Spacing="12" Margin="8,16,8,0" IsVisible="{Binding IsIndexStale}">
+                    <TextBlock Classes="body-md secondary" Text="{Binding IndexStaleText}" VerticalAlignment="Center" />
+                    <Button Classes="link" Command="{Binding RetryContentIndexCommand}">
+                        <TextBlock Classes="action-md" Text="{Binding Localization.DiscoverIndexRetry}" />
+                    </Button>
+                </StackPanel>
 
                 <!-- active filters -->
                 <StackPanel Orientation="Horizontal" Spacing="8" Margin="8,24,8,0" IsVisible="{Binding HasDiscoverFilters}">
@@ -32,6 +41,23 @@
                             <TextBlock Classes="label-sm" Text="{Binding Localization.DiscoverClearAll}" VerticalAlignment="Center" />
                         </StackPanel>
                     </Button>
+                    <ItemsControl ItemsSource="{Binding SelectedCategories}" IsVisible="{Binding !!SelectedCategories.Count}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <StackPanel Orientation="Horizontal" Spacing="8" />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:DiscoverCategory">
+                                <Button Classes="chip-button" Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).ToggleCategoryCommand}" CommandParameter="{Binding}">
+                                    <StackPanel Orientation="Horizontal" Spacing="4">
+                                        <Path Classes="icon size-16" Data="{StaticResource Icon.Close}" />
+                                        <TextBlock Classes="label-sm" Text="{Binding Name}" VerticalAlignment="Center" />
+                                    </StackPanel>
+                                </Button>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
                     <Button Classes="chip-button" Command="{Binding SelectOsCommand}" IsVisible="{Binding SelectedOs, Converter={x:Static ObjectConverters.IsNotNull}}">
                         <StackPanel Orientation="Horizontal" Spacing="4">
                             <Path Classes="icon size-16" Data="{StaticResource Icon.Close}" />
@@ -47,7 +73,20 @@
                 </StackPanel>
 
                 <TextBlock Classes="body-md muted" Text="{Binding Localization.DiscoverLoading}" Margin="8,24,0,0" IsVisible="{Binding IsDiscoverLoading}" />
-                <TextBlock Classes="body-md danger" Text="{Binding DiscoverError}" TextWrapping="Wrap" Margin="8,24,0,0" IsVisible="{Binding DiscoverError, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                <TextBlock Classes="body-md danger" Text="{Binding DiscoverError}" TextWrapping="Wrap" Margin="8,24,0,0">
+                    <TextBlock.IsVisible>
+                        <MultiBinding Converter="{x:Static BoolConverters.And}">
+                            <Binding Path="DiscoverError" Converter="{x:Static ObjectConverters.IsNotNull}" />
+                            <Binding Path="!IsIndexUnreachable" />
+                        </MultiBinding>
+                    </TextBlock.IsVisible>
+                </TextBlock>
+                <StackPanel Spacing="8" Margin="8,24,0,0" IsVisible="{Binding IsIndexUnreachable}">
+                    <TextBlock Classes="body-md danger" Text="{Binding IndexFailureText}" TextWrapping="Wrap" />
+                    <Button Classes="link" Command="{Binding RetryContentIndexCommand}" HorizontalAlignment="Left">
+                        <TextBlock Classes="action-md" Text="{Binding Localization.DiscoverIndexRetry}" />
+                    </Button>
+                </StackPanel>
                 <TextBlock Classes="body-md muted" Text="{Binding Localization.DiscoverNoInstance}" Margin="8,24,0,0" IsVisible="{Binding !HasActiveInstance}" />
                 <TextBlock Classes="body-md muted" Text="{Binding Localization.DiscoverEmpty}" Margin="8,24,0,0">
                     <TextBlock.IsVisible>
@@ -55,11 +94,19 @@
                             <Binding Path="!HasDiscoverItems" />
                             <Binding Path="!IsDiscoverLoading" />
                             <Binding Path="DiscoverError" Converter="{x:Static ObjectConverters.IsNull}" />
+                            <Binding Path="!IsIndexUnreachable" />
                         </MultiBinding>
                     </TextBlock.IsVisible>
                 </TextBlock>
 
-                <ItemsControl ItemsSource="{Binding DiscoverItems}" ItemTemplate="{StaticResource DiscoverRow}" Margin="0,24,0,0">
+                <ItemsControl ItemsSource="{Binding DiscoverItems}" ItemTemplate="{StaticResource DiscoverRow}" Margin="0,24,0,0" IsVisible="{Binding !IsModpacksTab}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <StackPanel Spacing="8" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                </ItemsControl>
+                <ItemsControl ItemsSource="{Binding DiscoverPacks}" ItemTemplate="{StaticResource PackRow}" Margin="0,24,0,0" IsVisible="{Binding IsModpacksTab}">
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate>
                             <StackPanel Spacing="8" />
@@ -86,6 +133,27 @@
                         <TextBlock Classes="heading-sm" Text="{Binding Localization.DiscoverHideIncompatible}" VerticalAlignment="Center" />
                         <ToggleSwitch Grid.Column="2" Classes="switch" IsChecked="{Binding HideIncompatible}" AutomationProperties.Name="{Binding Localization.DiscoverHideIncompatible}" />
                     </Grid>
+                </StackPanel>
+                <Border Height="1" Background="{StaticResource Brush.BorderStrong}" IsVisible="{Binding !!CategoryOptions.Count}" />
+                <StackPanel Spacing="10" IsVisible="{Binding !!CategoryOptions.Count}">
+                    <TextBlock Classes="heading-md" Text="{Binding Localization.DiscoverCategory}" />
+                    <ItemsControl ItemsSource="{Binding CategoryOptions}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <StackPanel Spacing="6" />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:DiscoverCategory">
+                                <Button Classes="filter" Classes.active="{Binding IsSelected}" Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).ToggleCategoryCommand}" CommandParameter="{Binding}" ToolTip.Tip="{Binding Meaning}">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <Path Classes="icon size-16" Data="{Binding Tag, Converter={x:Static views:CategoryIcon.FromTag}}" />
+                                        <TextBlock Text="{Binding Name}" VerticalAlignment="Center" />
+                                    </StackPanel>
+                                </Button>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
                 </StackPanel>
                 <Border Height="1" Background="{StaticResource Brush.BorderStrong}" IsVisible="{Binding !!OsOptions.Count}" />
                 <StackPanel Spacing="10" IsVisible="{Binding !!OsOptions.Count}">

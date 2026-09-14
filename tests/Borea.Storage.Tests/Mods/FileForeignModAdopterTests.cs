@@ -182,7 +182,86 @@ public sealed class FileForeignModAdopterTests : IAsyncLifetime
         Assert.Empty(saved.ForeignMods);
     }
 
+    [Fact]
+    public async Task ReplaceFolderAsync_InstallSucceeds_RemovesTheFolderAndItsRecord()
+    {
+        WriteMod("LocalMod", "name = \"Local\"");
+        WriteMod("OtherMod", "name = \"Other\"");
+        await _adopter.ScanAsync(_instanceId);
+        var folderDuringInstall = true;
+
+        await _adopter.ReplaceFolderAsync(_instanceId, "localmod", _ =>
+        {
+            folderDuringInstall = Directory.Exists(Path.Combine(ModsFolder, "LocalMod"));
+            return Task.CompletedTask;
+        });
+
+        Assert.False(folderDuringInstall);
+        Assert.False(Directory.Exists(Path.Combine(ModsFolder, "LocalMod")));
+        Assert.True(Directory.Exists(Path.Combine(ModsFolder, "OtherMod")));
+        Assert.Empty(RecoveryFolders);
+        var saved = await _instances.GetByIdAsync(_instanceId);
+        Assert.Equal("OtherMod", Assert.Single(saved!.ForeignMods).FolderName);
+    }
+
+    [Fact]
+    public async Task ReplaceFolderAsync_InstallFails_RestoresTheFolderAndItsRecord()
+    {
+        WriteMod("LocalMod", "name = \"Local\"");
+        await _adopter.ScanAsync(_instanceId);
+
+        await Assert.ThrowsAsync<HttpRequestException>(() => _adopter.ReplaceFolderAsync(_instanceId, "LocalMod", _ => throw new HttpRequestException("offline")));
+
+        Assert.Equal("name = \"Local\"", File.ReadAllText(Path.Combine(ModsFolder, "LocalMod", "mod.toml")));
+        Assert.Empty(RecoveryFolders);
+        var saved = await _instances.GetByIdAsync(_instanceId);
+        Assert.Equal("LocalMod", Assert.Single(saved!.ForeignMods).FolderName);
+    }
+
+    [Fact]
+    public async Task ReplaceFolderAsync_FailedInstallLeavesAFolder_KeepsTheRecoveryFolder()
+    {
+        WriteMod("LocalMod", "name = \"Local\"");
+        await _adopter.ScanAsync(_instanceId);
+
+        var error = await Assert.ThrowsAsync<ModReplacementRecoveryException>(() => _adopter.ReplaceFolderAsync(_instanceId, "LocalMod", _ =>
+        {
+            WriteMod("LocalMod", "name = \"Partial\"");
+            throw new IOException("disk full");
+        }));
+
+        Assert.IsType<IOException>(error.OperationError);
+        Assert.Equal(Assert.Single(RecoveryFolders), error.RecoveryDirectory);
+        Assert.Equal("name = \"Local\"", File.ReadAllText(Path.Combine(error.RecoveryDirectory, "mod.toml")));
+    }
+
+    [Fact]
+    public async Task ReplaceFolderAsync_RecordedMod_ThrowsAndKeepsTheFolder()
+    {
+        WriteMod("LocalMod", "name = \"Local\"");
+        var release = Release("LocalMod", new string('A', 64));
+        await _instances.UpdateAsync(
+            _instanceId,
+            instance =>
+            {
+                instance.AddMod(new InstalledMod("LocalMod", release.Version, InstallReason.Manual, DateTimeOffset.UtcNow, release, ownership: ModInstallOwnership.Foreign));
+                return true;
+            });
+        var installed = false;
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => _adopter.ReplaceFolderAsync(_instanceId, "LocalMod", _ =>
+        {
+            installed = true;
+            return Task.CompletedTask;
+        }));
+
+        Assert.False(installed);
+        Assert.True(File.Exists(Path.Combine(ModsFolder, "LocalMod", "mod.toml")));
+    }
+
     private string ModsFolder => _paths.GetInstanceModsFolder(_instanceId);
+
+    private string[] RecoveryFolders => Directory.GetDirectories(_paths.GetInstanceRoot(_instanceId), ".borea-recovery-*");
 
     private void WriteMod(string folderName, string manifest)
     {

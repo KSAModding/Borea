@@ -24,8 +24,13 @@ internal sealed class TestGamePathProvider : IGamePathProvider
     public string GetInstanceRoot(Guid instanceId) => Path.Combine(GetInstancesRoot(), instanceId.ToString());
     public string GetInstanceModsFolder(Guid instanceId) => Path.Combine(GetInstanceRoot(instanceId), "mods");
     public string GetInstanceSavesFolder(Guid instanceId) => Path.Combine(GetInstanceRoot(instanceId), "saves");
-    public string GetInstanceVehiclesFolder(Guid instanceId) => Path.Combine(GetInstanceRoot(instanceId), "vehicles");
+    public string GetInstanceVehiclesFolder(Guid instanceId) => Path.Combine(GetInstanceRoot(instanceId), "Vehicles");
     public string GetInstanceSettingsPath(Guid instanceId) => Path.Combine(GetInstanceRoot(instanceId), "settings.toml");
+    public string GetInstanceHudLayoutsFolder(Guid instanceId) => Path.Combine(GetInstanceRoot(instanceId), "HUDLayouts");
+    public string GetInstanceCrashDumpsFolder(Guid instanceId) => Path.Combine(GetInstanceRoot(instanceId), "crashdumps");
+    public string GetInstanceExportsFolder(Guid instanceId) => Path.Combine(GetInstanceRoot(instanceId), "exports");
+    public string GetInstanceGameLogPath(Guid instanceId) => Path.Combine(GetInstanceRoot(instanceId), "logs", "KittenSpaceAgency.log");
+    public string GetInstanceLaunchLogPath(Guid instanceId) => Path.Combine(GetInstanceRoot(instanceId), "logs", "borea-launch.log");
     public string GetInstanceManifestPath(Guid instanceId) => Path.Combine(GetInstanceRoot(instanceId), "manifest.toml");
     public string GetInstanceMetadataPath(Guid instanceId) => Path.Combine(GetInstanceRoot(instanceId), "instance.toml");
     public string GetActiveInstancePointerPath() => Path.Combine(_root, "active-instance.toml");
@@ -33,6 +38,7 @@ internal sealed class TestGamePathProvider : IGamePathProvider
     public string GetModPackFavoritesPath() => Path.Combine(_root, "modpack-favorites.toml");
     public string GetBoreaSettingsPath() => Path.Combine(_root, "borea-settings.toml");
     public string GetAppPreferencesPath() => Path.Combine(_root, "app-preferences.json");
+    public string GetLogsFolder() => Path.Combine(_root, "Logs");
     public string? GetGameDirectoryPath() => _hasGameDirectory ? Path.Combine(_root, "Game") : null;
     public string? GetLoaderDirectoryPath(string loaderId)
     {
