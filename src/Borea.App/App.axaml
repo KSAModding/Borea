@@ -469,5 +469,14 @@
             <Setter Property="OnContent" Value="" />
             <Setter Property="OffContent" Value="" />
         </Style>
+
+		<!-- c/SplitButton-launch: rounded, blue -->
+		<Style Selector="SplitButton.launch">
+			<Setter Property="Height" Value="26" />
+			<Setter Property="Padding" Value="16,0,20,0" />
+			<Setter Property="CornerRadius" Value="100" />
+			<Setter Property="Background" Value="{StaticResource Brush.Accent}" />
+			<Setter Property="BorderThickness" Value="0" />
+		</Style>
     </Application.Styles>
 </Application>

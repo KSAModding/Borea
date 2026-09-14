@@ -309,6 +309,10 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string SetupLoaderInstalledUnknownVersion => Resources.SetupLoaderInstalledUnknownVersion;
 
+    public string GameLaunchVanilla => Resources.GameLaunchVanilla;
+
+    public string LaunchActiveInstance => Resources.LaunchActiveInstance;
+
     public LocalizationService()
         : this(CultureInfo.CurrentUICulture)
     {
