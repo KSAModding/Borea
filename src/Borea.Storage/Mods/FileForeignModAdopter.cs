@@ -147,6 +147,93 @@ public sealed class FileForeignModAdopter : IForeignModAdopter
         return new ForeignModAdoptionResult(sha256, null, installed);
     }
 
+    public async Task ReplaceFolderAsync(
+        Guid instanceId,
+        string folderName,
+        Func<CancellationToken, Task> install,
+        CancellationToken cancellationToken = default)
+    {
+        _ = new ForeignMod(folderName);
+        ArgumentNullException.ThrowIfNull(install);
+        _ = await GetInstanceAsync(instanceId).ConfigureAwait(false);
+        var modsFolder = _pathProvider.GetInstanceModsFolder(instanceId);
+        var recoveryFolder = Path.Combine(_pathProvider.GetInstanceRoot(instanceId), $".borea-recovery-{Guid.NewGuid():N}");
+        string? folder = null;
+        ForeignMod? record = null;
+
+        try
+        {
+            await _instances.UpdateAsync(
+                instanceId,
+                instance =>
+                {
+                    if (instance.Mods.Any(mod => ModIds.Equals(mod.ModId, folderName)))
+                        throw new InvalidOperationException($"Mod '{folderName}' is recorded in this instance, so it is not a foreign folder.");
+
+                    var folders = Directory.Exists(modsFolder)
+                        ? Directory.EnumerateDirectories(modsFolder)
+                            .Where(path => ModIds.Equals(Path.GetFileName(path), folderName))
+                            .ToList()
+                        : new List<string>();
+                    if (folders.Count == 0)
+                        throw new InvalidOperationException($"The instance has no foreign mod folder '{folderName}'.");
+                    if (folders.Count > 1)
+                        throw new InvalidOperationException($"More than one foreign folder has the ID '{folderName}'.");
+
+                    cancellationToken.ThrowIfCancellationRequested();
+                    record = instance.ForeignMods.FirstOrDefault(mod => ModIds.Equals(mod.ModId, folderName));
+                    Directory.Move(folders[0], recoveryFolder);
+                    folder = folders[0];
+                    instance.ReplaceForeignMods(instance.ForeignMods
+                        .Where(mod => !ModIds.Equals(mod.ModId, folderName))
+                        .ToList());
+                    return true;
+                },
+                cancellationToken).ConfigureAwait(false);
+
+            await install(cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception operationError) when (folder is not null)
+        {
+            try
+            {
+                await RestoreFolderAsync(instanceId, folder, recoveryFolder, record).ConfigureAwait(false);
+            }
+            catch (Exception recoveryError)
+            {
+                throw new ModReplacementRecoveryException(operationError, recoveryError, Directory.Exists(recoveryFolder) ? recoveryFolder : folder);
+            }
+
+            throw;
+        }
+
+        TryDeleteDirectory(recoveryFolder);
+    }
+
+    private async Task RestoreFolderAsync(Guid instanceId, string folder, string recoveryFolder, ForeignMod? record)
+    {
+        await _instances.UpdateAsync(
+            instanceId,
+            instance =>
+            {
+                if (Directory.Exists(folder))
+                    throw new InvalidOperationException($"The folder '{Path.GetFileName(folder)}' exists again, so Borea cannot move the previous files back.");
+
+                Directory.Move(recoveryFolder, folder);
+                if (record is null
+                    || instance.Mods.Any(mod => ModIds.Equals(mod.ModId, record.ModId))
+                    || instance.ForeignMods.Any(mod => ModIds.Equals(mod.ModId, record.ModId)))
+                    return true;
+
+                instance.ReplaceForeignMods(instance.ForeignMods
+                    .Append(record)
+                    .OrderBy(mod => mod.FolderName, ModIds.Comparer)
+                    .ThenBy(mod => mod.FolderName, StringComparer.Ordinal)
+                    .ToList());
+                return true;
+            }).ConfigureAwait(false);
+    }
+
     private async Task<Instance> GetInstanceAsync(Guid instanceId)
         => await _instances.GetByIdAsync(instanceId).ConfigureAwait(false)
             ?? throw new InvalidOperationException($"No instance with ID '{instanceId}' exists.");
@@ -182,6 +269,17 @@ public sealed class FileForeignModAdopter : IForeignModAdopter
     {
         if (!Directory.Exists(folder) || !File.Exists(Path.Combine(folder, ModFolders.DefinitionFileName)))
             throw new InvalidOperationException($"The instance no longer has the foreign mod folder '{folderName}'.");
+    }
+
+    private static void TryDeleteDirectory(string path)
+    {
+        try
+        {
+            if (Directory.Exists(path))
+                Directory.Delete(path, recursive: true);
+        }
+        catch (IOException) { }
+        catch (UnauthorizedAccessException) { }
     }
 
     private static async Task<ForeignMod> ReadForeignModAsync(
