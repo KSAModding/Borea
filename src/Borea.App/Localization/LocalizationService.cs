@@ -257,11 +257,15 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string ContentPublishedHeader => Resources.ContentPublishedHeader;
 
+    public string ContentShowVersions => Resources.ContentShowVersions;
+
     public string ContentNoDescription => Resources.ContentNoDescription;
 
     public string ContentLoadingVersions => Resources.ContentLoadingVersions;
 
     public string ContentNoVersions => Resources.ContentNoVersions;
+
+    public string ContentNoVersionsInChannel => Resources.ContentNoVersionsInChannel;
 
     public string ContentTypeModLoader => Resources.ContentTypeModLoader;
 
@@ -272,6 +276,12 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string ReleaseDev => Resources.ReleaseDev;
 
     public string ReleaseUnknown => Resources.ReleaseUnknown;
+
+    public string ReleaseChannelStable => Resources.ReleaseChannelStable;
+
+    public string ReleaseChannelTesting => Resources.ReleaseChannelTesting;
+
+    public string ReleaseChannelDev => Resources.ReleaseChannelDev;
 
     public string SettingsGame => Resources.SettingsGame;
 

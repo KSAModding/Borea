@@ -525,10 +525,13 @@ public partial class MainViewModel : ViewModelBase
             instance.RefreshText();
         foreach (var item in DiscoverItems)
             item.RefreshText();
+        foreach (var option in ReleaseChannelOptions)
+            option.RefreshText();
         RefreshContentGroups();
         RefreshLoaderText();
         OnPropertyChanged(nameof(GameSetupBannerText));
         OnPropertyChanged(nameof(InstalledInText));
+        OnPropertyChanged(nameof(ContentVersionsEmptyText));
 
         QueuePreferenceSave(preferences => preferences.WithUiCultureName(Localization.SelectedCultureName));
     }

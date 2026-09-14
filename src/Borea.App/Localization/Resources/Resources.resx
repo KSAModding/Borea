@@ -282,6 +282,9 @@
   <data name="ContentPublishedHeader" xml:space="preserve">
     <value>Published</value>
   </data>
+  <data name="ContentShowVersions" xml:space="preserve">
+    <value>Show</value>
+  </data>
   <data name="ContentNoDescription" xml:space="preserve">
     <value>No description provided.</value>
   </data>
@@ -290,6 +293,9 @@
   </data>
   <data name="ContentNoVersions" xml:space="preserve">
     <value>No releases yet.</value>
+  </data>
+  <data name="ContentNoVersionsInChannel" xml:space="preserve">
+    <value>No releases in this channel.</value>
   </data>
   <data name="ContentSourceFormat" xml:space="preserve">
     <value>Listed on {0}</value>
@@ -308,6 +314,15 @@
   </data>
   <data name="ReleaseUnknown" xml:space="preserve">
     <value>unknown</value>
+  </data>
+  <data name="ReleaseChannelStable" xml:space="preserve">
+    <value>Stable releases</value>
+  </data>
+  <data name="ReleaseChannelTesting" xml:space="preserve">
+    <value>Stable and testing releases</value>
+  </data>
+  <data name="ReleaseChannelDev" xml:space="preserve">
+    <value>All releases</value>
   </data>
   <data name="SettingsGame" xml:space="preserve">
     <value>Game</value>
