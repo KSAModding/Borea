@@ -7,6 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
+using Borea.Core.Game;
 using Borea.Core.Mods;
 using Borea.Core.Planning;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -200,6 +201,12 @@ public partial class MainViewModel
 
             if (ReferenceEquals(SelectedContent, item))
             {
+                foreach (var release in releases)
+                {
+                    release.RefreshCompatibility(_compatibilityGame);
+                    release.RefreshInstalled(ActiveInstance);
+                }
+
                 _contentReleases.AddRange(releases.OrderByDescending(release => release.ReleaseDate));
                 ApplyVersionFilter();
             }
@@ -258,6 +265,27 @@ public sealed partial class VersionItem : ObservableObject, IInstallRow
 
     public bool IsDev => Status == ReleaseStatus.Dev;
 
+    /// <summary>
+    /// How this release fits the installed game (RFC 0017).
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CompatibilityText))]
+    [NotifyPropertyChangedFor(nameof(IsCompatible))]
+    [NotifyPropertyChangedFor(nameof(IsUntested))]
+    [NotifyPropertyChangedFor(nameof(IsIncompatible))]
+    private GameCompatibility _compatibility = GameCompatibility.Unknown;
+
+    public string CompatibilityText => _owner.CompatibilityText(Compatibility);
+
+    public bool IsCompatible => Compatibility == GameCompatibility.Compatible;
+
+    public bool IsUntested => Compatibility == GameCompatibility.Untested;
+
+    public bool IsIncompatible => Compatibility == GameCompatibility.Incompatible;
+
+    [ObservableProperty]
+    private bool _isInstalled;
+
     /// <summary>">= min" or "min – max", as the compatibility chip shows it.</summary>
     public string GameVersionText => _release.GameMax is null ? $">= {_release.GameMin}" : $"{_release.GameMin} – {_release.GameMax}";
 
@@ -305,4 +333,16 @@ public sealed partial class VersionItem : ObservableObject, IInstallRow
 
     [RelayCommand]
     private void CancelInstall() => MainViewModel.CancelInstall(this);
+
+    internal void RefreshText()
+    {
+        OnPropertyChanged(nameof(ChannelText));
+        OnPropertyChanged(nameof(CompatibilityText));
+    }
+
+    internal void RefreshCompatibility(GameVersion? installed)
+        => Compatibility = Borea.Core.Game.Compatibility.Evaluate(_release, installed);
+
+    internal void RefreshInstalled(InstanceItem? instance)
+        => IsInstalled = instance?.InstalledVersionOf(_release.ModId) == _release.Version;
 }

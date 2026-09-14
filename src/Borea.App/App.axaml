@@ -36,6 +36,12 @@
                     <Color x:Key="Color.PositiveSoft">#0DC1FFB5</Color>
                     <Color x:Key="Color.Danger">#F07178</Color>
                     <Color x:Key="Color.DangerSoft">#26F07178</Color>
+                    <Color x:Key="Color.Compatible">#C1FFB5</Color>
+                    <Color x:Key="Color.Untested">#F5B35C</Color>
+                    <Color x:Key="Color.Incompatible">#F07178</Color>
+                    <Color x:Key="Color.CompatibilityUnknown">#8A8A8A</Color>
+                    <Color x:Key="Color.ChannelTesting">#7AB6FF</Color>
+                    <Color x:Key="Color.ChannelDev">#D78BFF</Color>
                     <Color x:Key="Color.ThumbStart">#262626</Color>
                     <Color x:Key="Color.ThumbEnd">#171717</Color>
                 </ResourceDictionary>
@@ -57,6 +63,12 @@
                     <Color x:Key="Color.PositiveSoft">#1A3C8A25</Color>
                     <Color x:Key="Color.Danger">#C93A43</Color>
                     <Color x:Key="Color.DangerSoft">#26C93A43</Color>
+                    <Color x:Key="Color.Compatible">#3C8A25</Color>
+                    <Color x:Key="Color.Untested">#A76300</Color>
+                    <Color x:Key="Color.Incompatible">#C93A43</Color>
+                    <Color x:Key="Color.CompatibilityUnknown">#7E7E88</Color>
+                    <Color x:Key="Color.ChannelTesting">#1F6CC9</Color>
+                    <Color x:Key="Color.ChannelDev">#9136C8</Color>
                     <Color x:Key="Color.ThumbStart">#F1F2F4</Color>
                     <Color x:Key="Color.ThumbEnd">#D9DADF</Color>
                 </ResourceDictionary>
@@ -80,6 +92,12 @@
             <SolidColorBrush x:Key="Brush.PositiveSoft" Color="{DynamicResource Color.PositiveSoft}" />
             <SolidColorBrush x:Key="Brush.Danger" Color="{DynamicResource Color.Danger}" />
             <SolidColorBrush x:Key="Brush.DangerSoft" Color="{DynamicResource Color.DangerSoft}" />
+            <SolidColorBrush x:Key="Brush.Compatible" Color="{DynamicResource Color.Compatible}" />
+            <SolidColorBrush x:Key="Brush.Untested" Color="{DynamicResource Color.Untested}" />
+            <SolidColorBrush x:Key="Brush.Incompatible" Color="{DynamicResource Color.Incompatible}" />
+            <SolidColorBrush x:Key="Brush.CompatibilityUnknown" Color="{DynamicResource Color.CompatibilityUnknown}" />
+            <SolidColorBrush x:Key="Brush.ChannelTesting" Color="{DynamicResource Color.ChannelTesting}" />
+            <SolidColorBrush x:Key="Brush.ChannelDev" Color="{DynamicResource Color.ChannelDev}" />
             <LinearGradientBrush x:Key="Brush.Thumbnail" StartPoint="0%,0%" EndPoint="100%,100%">
                 <GradientStop Offset="0" Color="{DynamicResource Color.ThumbStart}" />
                 <GradientStop Offset="1" Color="{DynamicResource Color.ThumbEnd}" />
@@ -258,11 +276,42 @@
             <Setter Property="Foreground" Value="{StaticResource Brush.Positive}" />
         </Style>
 
+        <!-- Compatibility chips show a colored dot, and channel chips color their border instead -->
+        <Style Selector="Border.chip Ellipse">
+            <Setter Property="Width" Value="6" />
+            <Setter Property="Height" Value="6" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Fill" Value="{StaticResource Brush.CompatibilityUnknown}" />
+        </Style>
+        <Style Selector="Border.chip.compatible Ellipse">
+            <Setter Property="Fill" Value="{StaticResource Brush.Compatible}" />
+        </Style>
+        <Style Selector="Border.chip.compatible TextBlock">
+            <Setter Property="Foreground" Value="{StaticResource Brush.Compatible}" />
+        </Style>
+        <Style Selector="Border.chip.untested Ellipse">
+            <Setter Property="Fill" Value="{StaticResource Brush.Untested}" />
+        </Style>
+        <Style Selector="Border.chip.untested TextBlock">
+            <Setter Property="Foreground" Value="{StaticResource Brush.Untested}" />
+        </Style>
+        <Style Selector="Border.chip.incompatible Ellipse">
+            <Setter Property="Fill" Value="{StaticResource Brush.Incompatible}" />
+        </Style>
+        <Style Selector="Border.chip.incompatible TextBlock">
+            <Setter Property="Foreground" Value="{StaticResource Brush.Incompatible}" />
+        </Style>
+        <Style Selector="Border.chip.testing">
+            <Setter Property="BorderBrush" Value="{StaticResource Brush.ChannelTesting}" />
+        </Style>
         <Style Selector="Border.chip.testing TextBlock">
-            <Setter Property="Foreground" Value="#F2C94C" />
+            <Setter Property="Foreground" Value="{StaticResource Brush.ChannelTesting}" />
+        </Style>
+        <Style Selector="Border.chip.dev">
+            <Setter Property="BorderBrush" Value="{StaticResource Brush.ChannelDev}" />
         </Style>
         <Style Selector="Border.chip.dev TextBlock">
-            <Setter Property="Foreground" Value="{StaticResource Brush.Danger}" />
+            <Setter Property="Foreground" Value="{StaticResource Brush.ChannelDev}" />
         </Style>
 
         <!-- Buttons -->

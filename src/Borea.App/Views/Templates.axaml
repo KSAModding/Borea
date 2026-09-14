@@ -197,8 +197,11 @@
                                 <Button Classes="text" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryCancel}" Command="{Binding CancelInstallCommand}" />
                             </StackPanel>
                             <TextBlock Classes="body-sm danger" Text="{Binding InstallError}" ToolTip.Tip="{Binding InstallError}" IsVisible="{Binding InstallError, Converter={x:Static ObjectConverters.IsNotNull}}" MaxWidth="320" TextTrimming="CharacterEllipsis" />
-                            <Border Classes="chip" Classes.positive="{Binding IsCompatible}" Classes.testing="{Binding IsUntested}" Classes.dev="{Binding IsIncompatible}" VerticalAlignment="Center">
-                                <TextBlock Text="{Binding CompatibilityText}" />
+                            <Border Classes="chip" Classes.compatible="{Binding IsCompatible}" Classes.untested="{Binding IsUntested}" Classes.incompatible="{Binding IsIncompatible}" VerticalAlignment="Center">
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                    <Ellipse />
+                                    <TextBlock Text="{Binding CompatibilityText}" />
+                                </StackPanel>
                             </Border>
                             <TextBlock Classes="label-md" Text="{Binding License}" VerticalAlignment="Center" />
                         </StackPanel>

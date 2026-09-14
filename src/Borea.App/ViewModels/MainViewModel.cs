@@ -525,6 +525,8 @@ public partial class MainViewModel : ViewModelBase
             instance.RefreshText();
         foreach (var item in DiscoverItems)
             item.RefreshText();
+        foreach (var release in _contentReleases)
+            release.RefreshText();
         foreach (var option in ReleaseChannelOptions)
             option.RefreshText();
         RefreshContentGroups();
@@ -583,6 +585,7 @@ public sealed partial class InstanceItem : ObservableObject
 {
     private readonly MainViewModel _owner;
     private readonly InstanceSource _source;
+    private readonly Dictionary<string, ModVersion> _modVersions;
 
     public Guid InstanceId { get; }
 
@@ -613,11 +616,15 @@ public sealed partial class InstanceItem : ObservableObject
         Name = instance.Name;
         ModCount = instance.Mods.Count;
         ModIds = instance.Mods.Select(mod => mod.ModId).ToList();
+        _modVersions = instance.Mods.ToDictionary(mod => mod.ModId, mod => mod.Version, Borea.Core.Mods.ModIds.Comparer);
         IsActive = isActive;
         _editName = instance.Name;
     }
 
     internal void RefreshText() => OnPropertyChanged(nameof(SourceText));
+
+    internal ModVersion? InstalledVersionOf(string modId)
+        => _modVersions.TryGetValue(modId, out var version) ? version : null;
 
     [RelayCommand]
     private Task ActivateAsync() => _owner.ActivateInstanceAsync(InstanceId);
