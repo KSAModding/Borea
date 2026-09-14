@@ -234,7 +234,7 @@ internal static class PackCommand
             // Only an incompatible game blocks, like a mod release (RFC 0017). The pack's
             // own bounds are checked here, because the planner evaluates only the members.
             var installed = cli.InstalledVersion.GetInstalledVersion()?.Version;
-            var compatibility = PackCompatibility(metadata, installed);
+            var compatibility = Compatibility.Evaluate(metadata, installed);
             if (compatibility == GameCompatibility.Incompatible)
             {
                 throw new InvalidOperationException(
@@ -287,33 +287,6 @@ internal static class PackCommand
 
     private static ContentIndexPackVersion? Newest(ContentIndexPack? entry) =>
         entry?.Versions.OrderByDescending(candidate => candidate.Metadata.Version).FirstOrDefault();
-
-    /// <summary>
-    /// The state the pack's authored bounds put the installed game in. A pack document
-    /// is not stamped, so a bound can still be a month such as "2026.7". RFC 0017 resolves
-    /// a month to its first or last revision, and the snapshot's game release list has
-    /// that data, but Core has no resolver for it. A month bound therefore gives an unknown
-    /// state, which warns and does not block. The lower bound is compared on its own, so a
-    /// month in the upper bound does not hide an incompatible game.
-    /// </summary>
-    private static GameCompatibility PackCompatibility(ModPackMetadata pack, GameVersion? installed)
-    {
-        if (installed is not { } game || !GameVersion.TryParse(pack.GameMin, out var min))
-            return GameCompatibility.Unknown;
-
-        if (game.Revision < min.Revision)
-            return GameCompatibility.Incompatible;
-
-        int? maxRevision = null;
-        if (pack.GameMax is not null)
-        {
-            if (!GameVersion.TryParse(pack.GameMax, out var max))
-                return GameCompatibility.Unknown;
-            maxRevision = max.Revision;
-        }
-
-        return Compatibility.Evaluate(min.Revision, maxRevision, game);
-    }
 
     /// <summary>
     /// The warnings about the selected pack version itself, none of which blocks: a disputed
@@ -627,7 +600,7 @@ internal static class PackCommand
             pack.Name,
             "known",
             pack.Version.ToString(),
-            ContentOutput.Name(PackCompatibility(pack, installed)));
+            ContentOutput.Name(Borea.Core.Game.Compatibility.Evaluate(pack, installed)));
 
         public static SearchResultView WithoutUsableVersion(ModPackMetadata newest) => new(
             newest.ModPackId,
@@ -711,7 +684,7 @@ internal static class PackCommand
             status?.State == IndexStatusState.Retracted,
             ContentOutput.IndexStatus(status),
             pack.ReleasedAt,
-            ContentOutput.Name(PackCompatibility(pack, installed)),
+            ContentOutput.Name(Borea.Core.Game.Compatibility.Evaluate(pack, installed)),
             pack.GameMin,
             pack.GameMax,
             pack.Os,
