@@ -227,7 +227,7 @@ public partial class MainViewModel
         else
         {
             InstalledLoaderText = Localization.FormatSetupLoaderInstalledVersion(installed.ToString());
-            LoaderInstallActionText = latest is { } newest ? Localization.FormatSetupUpdateLoader(newest.ToString()) : Localization.SetupInstallLoader;
+            LoaderInstallActionText = latest is { } newest && newest >= installed ? Localization.FormatSetupUpdateLoader(newest.ToString()) : Localization.SetupInstallLoader;
             CanInstallLoader = latest is { } candidate && candidate > installed;
         }
     }
