@@ -1,5 +1,7 @@
 using Borea.Core.Index;
 using Borea.Storage.Index;
+using System.Runtime.ExceptionServices;
+using System.Text.Json;
 
 namespace Borea.Storage.Tests.Index;
 
@@ -94,22 +96,35 @@ public sealed class SnapshotParserTests
     }
 
     [Fact]
-    public async Task Parse_CancellationDuringLargeTraversal_Stops()
+    public void Parse_CancellationDuringListingTraversal_Stops()
     {
-        var listings = string.Join(",", Enumerable.Range(0, 200_000).Select(index => $$"""{ "id": "mod-{{index}}" }"""));
+        // The invalid releases value makes the parser catch a JsonException for each listing, and the handler cancels on the first one.
+        const int listingCount = 100;
+        var json = Snapshot(string.Join(",", Enumerable.Range(0, listingCount).Select(index => $$"""{ "id": "mod-{{index}}", "releases": 42 }""")), "");
         using var cancellation = new CancellationTokenSource();
-        using var started = new ManualResetEventSlim();
-        var parseTask = Task.Run(() =>
+        var parseThreadId = Environment.CurrentManagedThreadId;
+        var jsonExceptions = 0;
+
+        void CancelOnJsonException(object? sender, FirstChanceExceptionEventArgs args)
         {
-            started.Set();
-            return SnapshotParser.Parse(Snapshot(listings, ""), cancellationToken: cancellation.Token);
-        });
+            if (Environment.CurrentManagedThreadId != parseThreadId || args.Exception is not JsonException)
+                return;
 
-        started.Wait();
-        await Task.Delay(10);
-        cancellation.Cancel();
+            jsonExceptions++;
+            cancellation.Cancel();
+        }
 
-        await Assert.ThrowsAnyAsync<OperationCanceledException>(async () => await parseTask);
+        AppDomain.CurrentDomain.FirstChanceException += CancelOnJsonException;
+        try
+        {
+            Assert.Throws<OperationCanceledException>(() => SnapshotParser.Parse(json, cancellationToken: cancellation.Token));
+        }
+        finally
+        {
+            AppDomain.CurrentDomain.FirstChanceException -= CancelOnJsonException;
+        }
+
+        Assert.InRange(jsonExceptions, 1, listingCount - 1);
     }
 
     [Fact]
