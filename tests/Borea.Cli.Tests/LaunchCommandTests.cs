@@ -39,6 +39,28 @@ public sealed class LaunchCommandTests : IDisposable
     }
 
     [Fact]
+    public async Task Launch_UnknownInstance_WritesTheCommandAndTheFailureToTheCliLog()
+    {
+        _host.Mods.Listings.Add(LoaderFixtures.Listing());
+
+        await _host.RunAsync("launch", "Missing", "StarMap");
+
+        var logs = Directory.GetFiles(Path.Combine(_host.Root, "Logs"), "borea-*.log");
+        var text = File.ReadAllText(Assert.Single(logs));
+        Assert.Contains("[cli] Command: borea launch Missing StarMap", text);
+        Assert.Contains("[cli] Command failed." + Environment.NewLine + "System.InvalidOperationException: No instance is named 'Missing'.", text);
+    }
+
+    [Fact]
+    public async Task InstanceList_WritesTheExitCodeToTheCliLog()
+    {
+        var run = await _host.RunAsync("instance", "list");
+
+        var text = File.ReadAllText(Assert.Single(Directory.GetFiles(Path.Combine(_host.Root, "Logs"), "borea-*.log")));
+        Assert.Contains($"[cli] Command finished with exit code {run.ExitCode}.", text);
+    }
+
+    [Fact]
     public async Task Launch_UnknownInstance_Fails()
     {
         _host.Mods.Listings.Add(LoaderFixtures.Listing());

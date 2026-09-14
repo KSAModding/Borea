@@ -151,7 +151,7 @@
     <value>Spieldaten</value>
   </data>
   <data name="InstanceTabLog" xml:space="preserve">
-    <value>Protokoll</value>
+    <value>Log</value>
   </data>
   <data name="InstanceGroupMods" xml:space="preserve">
     <value>Mods</value>
@@ -173,6 +173,18 @@
   </data>
   <data name="GameDataEmpty" xml:space="preserve">
     <value>Leer</value>
+  </data>
+  <data name="GameLogOpen" xml:space="preserve">
+    <value>Log öffnen</value>
+  </data>
+  <data name="GameLogMissing" xml:space="preserve">
+    <value>Das Spiel hat für diese Instanz noch kein Log geschrieben.</value>
+  </data>
+  <data name="GameLogReload" xml:space="preserve">
+    <value>Neu laden</value>
+  </data>
+  <data name="GameLogCopy" xml:space="preserve">
+    <value>In die Zwischenablage kopieren</value>
   </data>
   <data name="InstancePlay" xml:space="preserve">
     <value>Spielen</value>
@@ -452,6 +464,12 @@
   </data>
   <data name="AboutOpenInstancesFolder" xml:space="preserve">
     <value>Instanzordner öffnen</value>
+  </data>
+  <data name="AboutOpenBoreaLog" xml:space="preserve">
+    <value>Borea-Log öffnen</value>
+  </data>
+  <data name="AboutOpenLogFolder" xml:space="preserve">
+    <value>Log-Ordner öffnen</value>
   </data>
   <data name="AboutCopyDiagnostics" xml:space="preserve">
     <value>Diagnose kopieren</value>

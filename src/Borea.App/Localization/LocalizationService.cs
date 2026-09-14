@@ -137,6 +137,14 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string GameDataEmpty => Resources.GameDataEmpty;
 
+    public string GameLogOpen => Resources.GameLogOpen;
+
+    public string GameLogMissing => Resources.GameLogMissing;
+
+    public string GameLogReload => Resources.GameLogReload;
+
+    public string GameLogCopy => Resources.GameLogCopy;
+
     public string InstancePlay => Resources.InstancePlay;
 
     public string ContentRemove => Resources.ContentRemove;
@@ -206,6 +214,10 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string AboutOpenBoreaFolder => Resources.AboutOpenBoreaFolder;
 
     public string AboutOpenInstancesFolder => Resources.AboutOpenInstancesFolder;
+
+    public string AboutOpenBoreaLog => Resources.AboutOpenBoreaLog;
+
+    public string AboutOpenLogFolder => Resources.AboutOpenLogFolder;
 
     public string AboutCopyDiagnostics => Resources.AboutCopyDiagnostics;
 

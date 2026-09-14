@@ -3,6 +3,7 @@ using Borea.Core.Game;
 using Borea.Core.Index;
 using Borea.Core.Instances;
 using Borea.Core.Launch;
+using Borea.Core.Logging;
 using Borea.Core.ModLoaders;
 using Borea.Core.ModPacks;
 using Borea.Core.Mods;
@@ -44,6 +45,8 @@ internal sealed class CliServices : IDisposable
     public required IContentIndexSnapshotProvider IndexSnapshots { get; init; }
 
     public required IGamePathProvider Paths { get; init; }
+
+    public required IBoreaLog Log { get; init; }
 
     public required IModRepository Mods { get; init; }
 
@@ -121,6 +124,7 @@ internal sealed class CliServices : IDisposable
             IndexReader = indexReader ?? services.IndexReader,
             IndexSnapshots = indexSnapshots ?? services.IndexSnapshots,
             Paths = services.Paths,
+            Log = services.Log,
             Mods = mods ?? services.Mods,
             ReadOnlyMods = readOnlyMods ?? services.ReadOnlyMods,
             InstallPlanner = installPlanner ?? services.InstallPlanner,

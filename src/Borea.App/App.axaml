@@ -314,6 +314,29 @@
             <Setter Property="Foreground" Value="{StaticResource Brush.ChannelDev}" />
         </Style>
 
+        <!-- Game log lines, colored by the level the game wrote -->
+        <Style Selector="SelectableTextBlock.log-line">
+            <Setter Property="FontFamily" Value="{StaticResource Font.Mono}" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Foreground" Value="{StaticResource Brush.Text}" />
+        </Style>
+        <Style Selector="Run.log-muted">
+            <Setter Property="Foreground" Value="{StaticResource Brush.TextMuted}" />
+        </Style>
+        <Style Selector="Run.log-information">
+            <Setter Property="Foreground" Value="{StaticResource Brush.Accent}" />
+        </Style>
+        <Style Selector="Run.log-warning">
+            <Setter Property="Foreground" Value="{StaticResource Brush.Untested}" />
+        </Style>
+        <Style Selector="Run.log-error">
+            <Setter Property="Foreground" Value="{StaticResource Brush.Danger}" />
+        </Style>
+        <Style Selector="Run.log-tag">
+            <Setter Property="Foreground" Value="{StaticResource Brush.TextHeading}" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+
         <!-- Buttons -->
         <Style Selector="Button.text">
             <Setter Property="Padding" Value="12,6" />

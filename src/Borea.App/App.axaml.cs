@@ -62,6 +62,7 @@ public partial class App : Application
     {
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
+            Services?.Log.Write($"Borea {MainViewModel.BoreaInformationalVersion} started. {MainViewModel.RuntimeText}, {MainViewModel.SystemText}.");
             var viewModel = new MainViewModel(
                 Localization,
                 RegionalFormat,
@@ -81,6 +82,7 @@ public partial class App : Application
             // a command that throws must not take the window down with it
             Dispatcher.UIThread.UnhandledException += (_, args) =>
             {
+                Services?.Log.Write("Unhandled exception on the UI thread.", args.Exception);
                 viewModel.UnexpectedError = args.Exception.Message;
                 args.Handled = true;
             };

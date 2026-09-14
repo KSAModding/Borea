@@ -17,6 +17,7 @@ public enum InstanceTab
 {
     Content,
     GameData,
+    Log,
 }
 
 /// <summary>
@@ -34,11 +35,14 @@ public partial class MainViewModel
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsContentTab))]
     [NotifyPropertyChangedFor(nameof(IsGameDataTab))]
+    [NotifyPropertyChangedFor(nameof(IsLogTab))]
     private InstanceTab _instanceTab;
 
     public bool IsContentTab => InstanceTab == InstanceTab.Content;
 
     public bool IsGameDataTab => InstanceTab == InstanceTab.GameData;
+
+    public bool IsLogTab => InstanceTab == InstanceTab.Log;
 
     public ObservableCollection<ContentGroup> ContentGroups { get; } = [];
 
@@ -91,6 +95,8 @@ public partial class MainViewModel
         RefreshContentGroups();
         if (IsGameDataTab)
             await LoadGameDataAsync();
+        else if (IsLogTab)
+            await LoadGameLogAsync();
 
         CurrentWindowHome = false;
         CurrentWindowDiscover = false;

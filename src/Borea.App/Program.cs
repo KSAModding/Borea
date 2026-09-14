@@ -13,6 +13,11 @@ sealed class Program
     public static int Main(string[] args)
     {
         using var services = BoreaServices.BuildAsync().GetAwaiter().GetResult();
+        AppDomain.CurrentDomain.UnhandledException += (_, e) =>
+        {
+            if (e.ExceptionObject is Exception exception)
+                services.Log.Write("Unhandled exception.", exception);
+        };
 
         return BuildAvaloniaApp(services).StartWithClassicDesktopLifetime(args);
     }

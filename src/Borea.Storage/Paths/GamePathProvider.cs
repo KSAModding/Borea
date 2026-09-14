@@ -51,6 +51,7 @@ public sealed class GamePathProvider : IGamePathProvider
     public string GetInstanceHudLayoutsFolder(Guid instanceId) => Path.Combine(GetInstanceRoot(instanceId), "HUDLayouts");
     public string GetInstanceCrashDumpsFolder(Guid instanceId) => Path.Combine(GetInstanceRoot(instanceId), "crashdumps");
     public string GetInstanceExportsFolder(Guid instanceId) => Path.Combine(GetInstanceRoot(instanceId), "exports");
+    public string GetInstanceGameLogPath(Guid instanceId) => Path.Combine(GetInstanceRoot(instanceId), "logs", "KittenSpaceAgency.log");
     public string GetInstanceManifestPath(Guid instanceId) => Path.Combine(GetInstanceRoot(instanceId), "manifest.toml");
     public string GetInstanceMetadataPath(Guid instanceId) => Path.Combine(GetInstanceRoot(instanceId), "instance.toml");
     public string GetActiveInstancePointerPath() => Path.Combine(_boreaRoot, "active-instance.toml");
@@ -58,6 +59,7 @@ public sealed class GamePathProvider : IGamePathProvider
     public string GetModPackFavoritesPath() => Path.Combine(_boreaRoot, "modpack-favorites.toml");
     public string GetBoreaSettingsPath() => Path.Combine(_boreaRoot, "borea-settings.toml");
     public string GetAppPreferencesPath() => Path.Combine(_boreaRoot, "app-preferences.json");
+    public string GetLogsFolder() => Path.Combine(_boreaRoot, "Logs");
     public string? GetGameDirectoryPath() => _gameDirectory;
 
     public string? GetLoaderDirectoryPath(string loaderId)
