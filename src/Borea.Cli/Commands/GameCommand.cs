@@ -28,7 +28,7 @@ internal static class GameCommand
         var json = ArgumentRules.Json();
         var launch = new Command(
             "launch",
-            "Start the game from the game directory without a mod loader. The game uses the shared profile in My Games/Kitten Space Agency, not a Borea instance. To start an instance, use 'borea launch <instance> <loader-id>'.");
+            "Start the game from the game directory without a mod loader. The game uses the shared profile in My Games/Kitten Space Agency, not a Borea instance. To start an instance, use 'borea launch <instance> [<loader-id>]'.");
         launch.Options.Add(json);
 
         launch.SetAction((parseResult, cancellationToken) => CommandRunner.RunAsync(parseResult, services, cancellationToken, (cli, output, error, ct) =>
