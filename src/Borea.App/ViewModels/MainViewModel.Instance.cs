@@ -87,12 +87,15 @@ public partial class MainViewModel
                 enabled.Add(entry.ModId);
         }
 
+        // the rows link to the same pages Discover opens, so its listings are needed
+        await EnsureDiscoverLoadedAsync();
         var content = new List<ContentItem>();
         foreach (var mod in _selectedInstanceEntity?.Mods ?? [])
         {
             // a release from SpaceDock carries no listing, so the name comes from the catalog
             var listing = mod.Metadata.Listing is null ? await ResolveListingAsync(mod.ModId) : null;
-            content.Add(new ContentItem(this, item.InstanceId, mod, enabled.Contains(mod.ModId), listing));
+            var page = mod.Ownership == ModInstallOwnership.Borea ? _listings.FirstOrDefault(entry => ModIds.Equals(entry.ModId, mod.ModId)) : null;
+            content.Add(new ContentItem(this, item.InstanceId, mod, enabled.Contains(mod.ModId), listing, page));
         }
 
         _content = content.OrderBy(content => content.Name, StringComparer.CurrentCultureIgnoreCase).ToList();
@@ -122,6 +125,9 @@ public partial class MainViewModel
     /// </summary>
     private void RefreshContentGroups()
     {
+        foreach (var item in _content)
+            item.RefreshText();
+
         ContentGroups.Clear();
         Add(Localization.InstanceGroupMods, _content.Where(content => content.Type == ContentType.Mod && !content.IsDependency));
         Add(Localization.InstanceGroupModLoaders, _content.Where(content => content.Type == ContentType.ModLoader && !content.IsDependency));
@@ -296,16 +302,30 @@ public sealed partial class ContentItem : ObservableObject
 
     public string? AuthorsText => Authors is null ? null : _owner.Localization.FormatContentByAuthor(Authors);
 
+    private readonly DiscoverItem? _page;
+
+    private readonly bool _ownedByBorea;
+
+    /// <summary>Whether the row links to the mod page: installed by Borea and in the content index.</summary>
+    public bool CanOpen => _page is not null;
+
+    /// <summary>Why the row has no link, for its tooltip. Null when it links.</summary>
+    public string? NoPageText => CanOpen
+        ? null
+        : _ownedByBorea ? _owner.Localization.InstanceContentNotInIndex : _owner.Localization.InstanceContentNotOwned;
+
     [ObservableProperty]
     private bool _isEnabled;
 
     [ObservableProperty]
     private bool _isConfirmingRemove;
 
-    public ContentItem(MainViewModel owner, Guid instanceId, InstalledMod mod, bool enabled, ModMetadata? listing)
+    public ContentItem(MainViewModel owner, Guid instanceId, InstalledMod mod, bool enabled, ModMetadata? listing, DiscoverItem? page = null)
     {
         _owner = owner;
         _instanceId = instanceId;
+        _page = page;
+        _ownedByBorea = mod.Ownership == ModInstallOwnership.Borea;
         ModId = mod.ModId;
         Name = mod.Metadata.Listing?.Name ?? listing?.Name ?? mod.ModId;
         var authors = mod.Metadata.Listing?.Authors ?? listing?.Authors;
@@ -318,6 +338,15 @@ public sealed partial class ContentItem : ObservableObject
 
     [RelayCommand]
     private Task ToggleEnabledAsync() => _owner.SetContentEnabledAsync(_instanceId, ModId, IsEnabled);
+
+    [RelayCommand]
+    private Task OpenAsync() => _page is null ? Task.CompletedTask : _owner.OpenContentFromInstanceAsync(_page);
+
+    internal void RefreshText()
+    {
+        OnPropertyChanged(nameof(AuthorsText));
+        OnPropertyChanged(nameof(NoPageText));
+    }
 
     [RelayCommand]
     private void BeginRemove() => IsConfirmingRemove = true;

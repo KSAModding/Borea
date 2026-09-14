@@ -696,4 +696,10 @@
   <data name="InstallMinutesLeftFormat" xml:space="preserve">
     <value>noch etwa {0} min</value>
   </data>
+  <data name="InstanceContentNotInIndex" xml:space="preserve">
+    <value>Diese Mod ist nicht im Content-Index und hat deshalb keine Seite.</value>
+  </data>
+  <data name="InstanceContentNotOwned" xml:space="preserve">
+    <value>Borea hat diese Mod nicht installiert, deshalb verweist sie auf keine Seite.</value>
+  </data>
 </root>

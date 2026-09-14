@@ -23,7 +23,21 @@ public partial class MainViewModel
 {
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsDiscoverSection))]
+    [NotifyPropertyChangedFor(nameof(IsLibrarySection))]
+    [NotifyPropertyChangedFor(nameof(IsContentFromInstance))]
     private bool _currentWindowContent;
+
+    /// <summary>
+    /// The instance the content page was opened from, so its breadcrumb leads
+    /// back there (#191). Null when it was opened from Discover.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsDiscoverSection))]
+    [NotifyPropertyChangedFor(nameof(IsLibrarySection))]
+    [NotifyPropertyChangedFor(nameof(IsContentFromInstance))]
+    private InstanceItem? _contentReturnInstance;
+
+    public bool IsContentFromInstance => CurrentWindowContent && ContentReturnInstance is not null;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasContentLinks))]
@@ -79,6 +93,29 @@ public partial class MainViewModel
         if (item is null)
             return;
 
+        ContentReturnInstance = null;
+        await ShowContentAsync(item);
+    }
+
+    /// <summary>
+    /// Opens the page of an installed mod from the instance page. The
+    /// breadcrumb then names the instance and leads back to it.
+    /// </summary>
+    internal async Task OpenContentFromInstanceAsync(DiscoverItem item)
+    {
+        if (item is null || SelectedInstance is null)
+            return;
+
+        ContentReturnInstance = SelectedInstance;
+        await ShowContentAsync(item);
+    }
+
+    [RelayCommand]
+    private Task ReturnToInstanceAsync() =>
+        ContentReturnInstance is { } instance ? OpenInstanceAsync(instance) : Task.CompletedTask;
+
+    private async Task ShowContentAsync(DiscoverItem item)
+    {
         LeavePackPage();
         SelectedContent?.ClearOutcome();
         item.ClearOutcome();
