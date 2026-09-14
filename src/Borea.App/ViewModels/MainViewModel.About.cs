@@ -102,6 +102,8 @@ public partial class MainViewModel
 
             if (_services is not null)
             {
+                text.AppendLine(IndexDiagnosticsLine(_services.IndexRefresh.Status));
+
                 // the matched release is what the Game tab shows; the file version is the fallback for an adopted loader
                 foreach (var (loaderId, installation) in _services.Settings.LoaderInstallations)
                 {
@@ -146,6 +148,7 @@ public partial class MainViewModel
         FolderMessage = null;
         NoticesMessage = null;
         NoticesError = null;
+        UpdateIndexRefreshStatus();
         SettingsTab = SettingsTab.About;
     }
 

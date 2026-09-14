@@ -285,6 +285,36 @@
   <data name="DiscoverLoading" xml:space="preserve">
     <value>Inhalte werden geladen...</value>
   </data>
+  <data name="DiscoverIndexStaleFormat" xml:space="preserve">
+    <value>Der Inhaltsindex ist nicht erreichbar. Die angezeigte Liste wurde {0} geladen.</value>
+  </data>
+  <data name="IndexUnreachableFormat" xml:space="preserve">
+    <value>Der Inhaltsindex ist nicht erreichbar: {0}</value>
+  </data>
+  <data name="DiscoverIndexRetry" xml:space="preserve">
+    <value>Erneut versuchen</value>
+  </data>
+  <data name="TimeJustNow" xml:space="preserve">
+    <value>gerade eben</value>
+  </data>
+  <data name="TimeMinuteAgo" xml:space="preserve">
+    <value>vor 1 Minute</value>
+  </data>
+  <data name="TimeMinutesAgoFormat" xml:space="preserve">
+    <value>vor {0} Minuten</value>
+  </data>
+  <data name="TimeHourAgo" xml:space="preserve">
+    <value>vor 1 Stunde</value>
+  </data>
+  <data name="TimeHoursAgoFormat" xml:space="preserve">
+    <value>vor {0} Stunden</value>
+  </data>
+  <data name="TimeDayAgo" xml:space="preserve">
+    <value>vor 1 Tag</value>
+  </data>
+  <data name="TimeDaysAgoFormat" xml:space="preserve">
+    <value>vor {0} Tagen</value>
+  </data>
   <data name="DiscoverAdd" xml:space="preserve">
     <value>Zur aktiven Instanz hinzufügen</value>
   </data>
@@ -494,6 +524,15 @@
   </data>
   <data name="AboutGame" xml:space="preserve">
     <value>Installiertes Spiel</value>
+  </data>
+  <data name="AboutContentIndex" xml:space="preserve">
+    <value>Inhaltsindex</value>
+  </data>
+  <data name="AboutIndexUpdatedFormat" xml:space="preserve">
+    <value>Aktualisiert {0}</value>
+  </data>
+  <data name="AboutIndexNotDownloaded" xml:space="preserve">
+    <value>Noch nicht heruntergeladen</value>
   </data>
   <data name="AboutFolders" xml:space="preserve">
     <value>Ordner</value>

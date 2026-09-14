@@ -8,7 +8,7 @@
     <ScrollViewer>
         <StackPanel Margin="32,32,44,24" Spacing="6">
             <TextBlock Classes="heading-lg" Text="Borea" />
-            <Grid ColumnDefinitions="Auto,16,*" RowDefinitions="Auto,4,Auto,4,Auto,4,Auto" Margin="0,8,0,0">
+            <Grid ColumnDefinitions="Auto,16,*" RowDefinitions="Auto,4,Auto,4,Auto,4,Auto,4,Auto" Margin="0,8,0,0">
                 <TextBlock Classes="label-md" Text="{Binding Localization.AboutVersion}" VerticalAlignment="Center" />
                 <SelectableTextBlock Grid.Column="2" Classes="body-md" Text="{Binding BoreaVersion}" />
                 <TextBlock Grid.Row="2" Classes="label-md" Text="{Binding Localization.AboutRuntime}" VerticalAlignment="Center" />
@@ -24,6 +24,11 @@
                         <TextBlock IsVisible="{Binding InstalledVersionText, Converter={x:Static ObjectConverters.IsNull}}" Text="{Binding Localization.HomeNoGameVersion}" />
                     </Panel>
                 </Border>
+                <TextBlock Grid.Row="8" Classes="label-md" Text="{Binding Localization.AboutContentIndex}" VerticalAlignment="Top" />
+                <StackPanel Grid.Row="8" Grid.Column="2" Spacing="2">
+                    <SelectableTextBlock Classes="body-md" Text="{Binding IndexUpdatedText}" />
+                    <TextBlock Classes="body-md danger" Text="{Binding IndexFailureText}" TextWrapping="Wrap" IsVisible="{Binding IndexFailureText, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                </StackPanel>
             </Grid>
             <views:UpdateNotice Margin="0,12,0,0" IsVisible="{Binding HasAvailableUpdate}" />
             <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,12,0,0">

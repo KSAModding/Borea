@@ -104,6 +104,7 @@ public partial class MainViewModel : ViewModelBase
     public void SetMainWindowDiscover() // used to set whatever is on the main window (discover, library, etc.)
     {
         LeaveContentPage();
+        UpdateIndexRefreshStatus();
         _ = EnsureDiscoverLoadedAsync();
         CurrentWindowHome = false;
         CurrentWindowDiscover = true;
@@ -266,6 +267,7 @@ public partial class MainViewModel : ViewModelBase
         await ReloadInstancesAsync();
         await RefreshContentIndexAsync();
         await LoadRecentItemsAsync();
+        UpdateIndexRefreshStatus();
         await RefreshGameSetupAsync();
     }
 
@@ -290,8 +292,8 @@ public partial class MainViewModel : ViewModelBase
     }
 
     /// <summary>
-    /// Downloads the content index when it changed, like <c>borea index refresh</c>.
-    /// A failure keeps the cached snapshot, so it is not shown as an error.
+    /// Refreshes the content index once per start. A failure keeps the cached
+    /// snapshot in use, and <see cref="IndexRefreshStatus"/> tells the pages.
     /// </summary>
     private async Task RefreshContentIndexAsync()
     {
@@ -300,11 +302,11 @@ public partial class MainViewModel : ViewModelBase
 
         try
         {
-            await _services.IndexFetcher.FetchAsync(_services.Paths.GetIndexPath());
+            await _services.IndexRefresh.RefreshAsync();
         }
         catch (Exception exception) when (exception is System.Net.Http.HttpRequestException or IOException or InvalidOperationException or TaskCanceledException)
         {
-            // offline or a broken snapshot: the cached file stays in use
+            // without a cached file nothing can be read, and the status carries the reason
         }
 
         _indexRefreshed = true;
@@ -541,6 +543,7 @@ public partial class MainViewModel : ViewModelBase
             item.RefreshText();
         RefreshGameDataItems();
         RefreshLoaderText();
+        RefreshIndexStatusText();
         OnPropertyChanged(nameof(GameSetupBannerText));
         OnPropertyChanged(nameof(InstalledInText));
         OnPropertyChanged(nameof(ContentVersionsEmptyText));

@@ -203,6 +203,8 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string DiscoverLoading => Resources.DiscoverLoading;
 
+    public string DiscoverIndexRetry => Resources.DiscoverIndexRetry;
+
     public string DiscoverAdd => Resources.DiscoverAdd;
 
     public string DiscoverInstalled => Resources.DiscoverInstalled;
@@ -232,6 +234,10 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string AboutSystem => Resources.AboutSystem;
 
     public string AboutGame => Resources.AboutGame;
+
+    public string AboutContentIndex => Resources.AboutContentIndex;
+
+    public string AboutIndexNotDownloaded => Resources.AboutIndexNotDownloaded;
 
     public string AboutFolders => Resources.AboutFolders;
 
@@ -431,6 +437,31 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string FormatInstallReleaseChannel(string version, string status)
         => string.Format(CultureInfo.CurrentCulture, Resources.InstallReleaseChannelFormat, version, status);
+
+    public string FormatDiscoverIndexStale(string age)
+        => string.Format(CultureInfo.CurrentCulture, Resources.DiscoverIndexStaleFormat, age);
+
+    public string FormatIndexUnreachable(string reason)
+        => string.Format(CultureInfo.CurrentCulture, Resources.IndexUnreachableFormat, reason);
+
+    public string FormatAboutIndexUpdated(string age)
+        => string.Format(CultureInfo.CurrentCulture, Resources.AboutIndexUpdatedFormat, age);
+
+    /// <summary>"just now", "5 minutes ago", "2 days ago", with the count rounded down.</summary>
+    public string FormatTimeAgo(TimeSpan age)
+    {
+        if (age.TotalMinutes < 1)
+            return Resources.TimeJustNow;
+        if (age.TotalHours < 1)
+            return FormatCount((int)age.TotalMinutes, Resources.TimeMinuteAgo, Resources.TimeMinutesAgoFormat);
+        if (age.TotalDays < 1)
+            return FormatCount((int)age.TotalHours, Resources.TimeHourAgo, Resources.TimeHoursAgoFormat);
+
+        return FormatCount((int)age.TotalDays, Resources.TimeDayAgo, Resources.TimeDaysAgoFormat);
+    }
+
+    private static string FormatCount(int count, string one, string format)
+        => count == 1 ? one : string.Format(CultureInfo.CurrentCulture, format, count);
 
     public string FormatInstallDownloading(string content)
         => string.Format(CultureInfo.CurrentCulture, Resources.InstallDownloadingFormat, content);
