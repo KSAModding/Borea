@@ -29,6 +29,29 @@ public sealed class FileLoaderAdopter : ILoaderAdopter
         string directory,
         CancellationToken cancellationToken = default)
     {
+        var (result, settings, installation) = await InspectCoreAsync(loader, releases, directory, cancellationToken).ConfigureAwait(false);
+        await _settings.SaveAsync(
+            settings.WithLoaderInstallation(loader.ModId, installation),
+            cancellationToken).ConfigureAwait(false);
+        return result;
+    }
+
+    public async Task<LoaderAdoptionResult> InspectAsync(
+        ModMetadata loader,
+        IReadOnlyList<ModVersionMetadata> releases,
+        string directory,
+        CancellationToken cancellationToken = default)
+    {
+        var (result, _, _) = await InspectCoreAsync(loader, releases, directory, cancellationToken).ConfigureAwait(false);
+        return result;
+    }
+
+    private async Task<(LoaderAdoptionResult Result, BoreaSettings Settings, LoaderInstallation Installation)> InspectCoreAsync(
+        ModMetadata loader,
+        IReadOnlyList<ModVersionMetadata> releases,
+        string directory,
+        CancellationToken cancellationToken)
+    {
         ArgumentNullException.ThrowIfNull(loader);
         ArgumentNullException.ThrowIfNull(releases);
 
@@ -90,11 +113,7 @@ public sealed class FileLoaderAdopter : ILoaderAdopter
             rawVersion,
             isAdopted: recorded?.IsAdopted ?? true);
 
-        await _settings.SaveAsync(
-            settings.WithLoaderInstallation(loader.ModId, installation),
-            cancellationToken).ConfigureAwait(false);
-
-        return new LoaderAdoptionResult(
+        var result = new LoaderAdoptionResult(
             loader.ModId,
             loaderDirectory,
             rawVersion,
@@ -102,6 +121,7 @@ public sealed class FileLoaderAdopter : ILoaderAdopter
             configuredGameDirectory,
             gameDirectoryMatches,
             new ReadOnlyCollection<string>(warnings));
+        return (result, settings, installation);
     }
 
     private static ModVersion? MatchVersion(
