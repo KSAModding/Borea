@@ -74,6 +74,19 @@ public sealed class FileAppPreferencesRepositoryTests : IDisposable
     }
 
     [Fact]
+    public async Task SaveThenGet_ForeignFolderDeletionConfirmed_RestoresTheChoice()
+    {
+        Assert.False(AppPreferences.Empty.ForeignFolderDeletionConfirmed);
+        var preferences = AppPreferences.Empty.WithForeignFolderDeletionConfirmed(true).WithSelectedThemeName("Dark");
+
+        await _repository.SaveAsync(preferences, BundledThemeNames);
+        var result = await _repository.GetAsync(BundledThemeNames);
+
+        Assert.True(result.Preferences.ForeignFolderDeletionConfirmed);
+        Assert.Equal("Dark", result.Preferences.SelectedThemeName);
+    }
+
+    [Fact]
     public void With_OtherPreferenceChanges_KeepTheUpdateCheckChoice()
     {
         var preferences = new AppPreferences("Dark", checkForUpdatesAtStart: false)

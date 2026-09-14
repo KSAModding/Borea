@@ -9,6 +9,12 @@ public interface IForeignModAdopter
         string folderName,
         string archivePath,
         CancellationToken cancellationToken = default);
+
+    Task ReplaceFolderAsync(
+        Guid instanceId,
+        string folderName,
+        Func<CancellationToken, Task> install,
+        CancellationToken cancellationToken = default);
 }
 public sealed record ForeignModAdoptionResult(string Sha256, ForeignMod? ForeignMod, InstalledMod? InstalledMod)
 {

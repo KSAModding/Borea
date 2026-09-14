@@ -72,11 +72,57 @@
             <Border Background="{StaticResource Brush.SurfaceHeader}" CornerRadius="100" Padding="6" Margin="0,32,0,0">
                 <StackPanel Orientation="Horizontal" Spacing="16">
                     <Button Classes="tab" Classes.active="{Binding IsContentTab}" Content="{Binding Localization.InstanceTabContent}" Command="{Binding ShowInstanceContentCommand}" />
-                    <Button Classes="tab" Content="{Binding Localization.InstanceTabManualInstalls}" IsEnabled="False" />
+                    <Button Classes="tab" Classes.active="{Binding IsManualInstallsTab}" Content="{Binding Localization.InstanceTabManualInstalls}" Command="{Binding ShowInstanceManualInstallsCommand}" />
                     <Button Classes="tab" Classes.active="{Binding IsGameDataTab}" Content="{Binding Localization.InstanceTabGameData}" Command="{Binding ShowInstanceGameDataCommand}" />
                     <Button Classes="tab" Classes.active="{Binding IsLogTab}" Content="{Binding Localization.InstanceTabLog}" Command="{Binding ShowInstanceLogCommand}" />
                 </StackPanel>
             </Border>
+
+            <StackPanel IsVisible="{Binding IsManualInstallsTab}" Margin="0,32,0,0">
+                <TextBlock Classes="body-md danger" Text="{Binding ManualInstallsError}" TextWrapping="Wrap" Margin="0,0,0,16" IsVisible="{Binding ManualInstallsError, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                <TextBlock Classes="body-md muted" Text="{Binding Localization.ManualInstallsEmpty}" Margin="8,0,0,0" IsVisible="{Binding !HasManualInstalls}" />
+                <ItemsControl ItemsSource="{Binding ManualInstallItems}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <StackPanel Spacing="8" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:ManualInstallItem">
+                            <Border Classes="card" Padding="16,8">
+                                <Grid ColumnDefinitions="Auto,16,*,24,Auto">
+                                    <Path Classes="icon" Data="{StaticResource Icon.PuzzlePiece}" VerticalAlignment="Center" />
+                                    <StackPanel Grid.Column="2" VerticalAlignment="Center" Spacing="2">
+                                        <TextBlock Classes="heading-sm" Text="{Binding FolderName}" TextTrimming="CharacterEllipsis" />
+                                        <TextBlock Classes="body-sm secondary" Text="{Binding StatusText}" IsVisible="{Binding StatusText, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                                        <TextBlock Classes="body-sm secondary" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ManualInstallsChecking}" IsVisible="{Binding IsChecking}" />
+                                        <TextBlock Classes="body-sm secondary" Text="{Binding ProgressStatus}" TextTrimming="CharacterEllipsis" IsVisible="{Binding ProgressStatus, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                                        <TextBlock Classes="body-sm danger" Text="{Binding ReplaceWarningText}" TextWrapping="Wrap" IsVisible="{Binding IsConfirmingReplace}" />
+                                        <TextBlock Classes="body-sm secondary" Text="{Binding InstallWarning}" TextWrapping="Wrap" IsVisible="{Binding InstallWarning, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                                        <TextBlock Classes="body-sm danger" Text="{Binding InstallError}" TextWrapping="Wrap" IsVisible="{Binding InstallError, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                                    </StackPanel>
+                                    <Panel Grid.Column="4" VerticalAlignment="Center">
+                                        <ProgressBar Width="38" Height="6" VerticalAlignment="Center" IsVisible="{Binding IsChecking}" IsIndeterminate="True" Foreground="{StaticResource Brush.Accent}" />
+                                        <ProgressBar Width="38" Height="6" VerticalAlignment="Center" IsVisible="{Binding IsInstalling}" Value="{Binding Progress}" Maximum="100" Foreground="{StaticResource Brush.Accent}" />
+                                        <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding IsConfirmingReplace}">
+                                            <Button Classes="text danger" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ManualInstallsDeleteAndReplace}" Command="{Binding ConfirmReplaceCommand}" />
+                                            <Button Classes="text" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryCancel}" Command="{Binding CancelReplaceCommand}" />
+                                        </StackPanel>
+                                        <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding InstallWarning, Converter={x:Static ObjectConverters.IsNotNull}}">
+                                            <Button Classes="text primary" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.InstallAnyway}" Command="{Binding ConfirmInstallCommand}" />
+                                            <Button Classes="text" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryCancel}" Command="{Binding CancelInstallCommand}" />
+                                        </StackPanel>
+                                        <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding CanAct}">
+                                            <Button Classes="text primary" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ManualInstallsManage}" Command="{Binding ManageCommand}" IsVisible="{Binding CanManage}" />
+                                            <Button Classes="text" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ManualInstallsReplace}" Command="{Binding BeginReplaceCommand}" />
+                                        </StackPanel>
+                                    </Panel>
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
 
             <StackPanel IsVisible="{Binding IsGameDataTab}" Margin="0,32,0,0">
                 <TextBlock Classes="body-md danger" Text="{Binding GameDataError}" TextWrapping="Wrap" Margin="0,0,0,16" IsVisible="{Binding GameDataError, Converter={x:Static ObjectConverters.IsNotNull}}" />

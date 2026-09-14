@@ -506,7 +506,8 @@ public partial class MainViewModel : ViewModelBase
             && string.Equals(left.RegionalCultureName, right.RegionalCultureName, StringComparison.Ordinal)
             && string.Equals(left.UiCultureName, right.UiCultureName, StringComparison.Ordinal)
             && left.CheckForUpdatesAtStart == right.CheckForUpdatesAtStart
-            && left.UpdateChannel == right.UpdateChannel;
+            && left.UpdateChannel == right.UpdateChannel
+            && left.ForeignFolderDeletionConfirmed == right.ForeignFolderDeletionConfirmed;
 
     private void OnRegionalFormatChanged(object? sender, PropertyChangedEventArgs e)
     {
@@ -534,6 +535,8 @@ public partial class MainViewModel : ViewModelBase
         foreach (var option in UpdateChannelOptions)
             option.RefreshText();
         RefreshContentGroups();
+        foreach (var item in ManualInstallItems)
+            item.RefreshText();
         RefreshGameDataItems();
         RefreshLoaderText();
         OnPropertyChanged(nameof(GameSetupBannerText));

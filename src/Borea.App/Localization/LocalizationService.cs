@@ -133,6 +133,26 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string InstanceEmptyContent => Resources.InstanceEmptyContent;
 
+    public string ManualInstallsEmpty => Resources.ManualInstallsEmpty;
+
+    public string ManualInstallsInIndex => Resources.ManualInstallsInIndex;
+
+    public string ManualInstallsNotInIndex => Resources.ManualInstallsNotInIndex;
+
+    public string ManualInstallsNoMatch => Resources.ManualInstallsNoMatch;
+
+    public string ManualInstallsNotRecorded => Resources.ManualInstallsNotRecorded;
+
+    public string ManualInstallsChecking => Resources.ManualInstallsChecking;
+
+    public string ManualInstallsManage => Resources.ManualInstallsManage;
+
+    public string ManualInstallsReplace => Resources.ManualInstallsReplace;
+
+    public string ManualInstallsDeleteAndReplace => Resources.ManualInstallsDeleteAndReplace;
+
+    public string ManualInstallsInstanceChanged => Resources.ManualInstallsInstanceChanged;
+
     public string GameDataOpenFolder => Resources.GameDataOpenFolder;
 
     public string GameDataEmpty => Resources.GameDataEmpty;
@@ -443,6 +463,9 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string FormatContentRemoveRequired(string modId, string dependents)
         => string.Format(CultureInfo.CurrentCulture, Resources.ContentRemoveRequiredFormat, modId, dependents);
+
+    public string FormatManualInstallsReplaceWarning(string folderName)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ManualInstallsReplaceWarningFormat, folderName);
 
     public string FormatContentByAuthor(string authors)
     {

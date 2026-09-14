@@ -16,6 +16,8 @@ internal sealed class AppPreferencesDocumentDto
     /// <summary>"stable", "testing" or "dev". Null or an unknown name reads as stable.</summary>
     public string? UpdateChannel { get; set; }
 
+    public bool? ForeignFolderDeletionConfirmed { get; set; }
+
     public List<CustomThemePreferenceDto?>? CustomThemes { get; set; }
 }
 
