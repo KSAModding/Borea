@@ -60,6 +60,12 @@ public interface IGamePathProvider
 
     string GetInstanceSettingsPath(Guid instanceId);
 
+    string GetInstanceHudLayoutsFolder(Guid instanceId);
+
+    string GetInstanceCrashDumpsFolder(Guid instanceId);
+
+    string GetInstanceExportsFolder(Guid instanceId);
+
     string GetInstanceManifestPath(Guid instanceId);
 
     string GetInstanceMetadataPath(Guid instanceId);

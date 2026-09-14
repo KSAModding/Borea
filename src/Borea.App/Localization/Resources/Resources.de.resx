@@ -150,6 +150,12 @@
   <data name="InstanceEmptyContent" xml:space="preserve">
     <value>Noch nichts installiert. Füge Inhalte über Entdecken hinzu.</value>
   </data>
+  <data name="GameDataOpenFolder" xml:space="preserve">
+    <value>Ordner öffnen</value>
+  </data>
+  <data name="GameDataEmpty" xml:space="preserve">
+    <value>Leer</value>
+  </data>
   <data name="InstancePlay" xml:space="preserve">
     <value>Spielen</value>
   </data>

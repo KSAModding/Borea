@@ -14,6 +14,7 @@ using Borea.Network.Index;
 using Borea.Network.Sources;
 using Borea.Storage.Game;
 using Borea.Storage.Index;
+using Borea.Storage.Instances;
 using Borea.Storage.ModLoaders;
 using Borea.Storage.Mods;
 using Borea.Storage.Paths;
@@ -138,6 +139,7 @@ public sealed class BoreaServicesTests : IDisposable
         Assert.IsType<GameDirectoryChanger>(services.GameDirectoryChanger);
         Assert.IsType<LoaderLauncher>(services.Launcher);
         Assert.IsType<SharedProfileLauncher>(services.SharedProfileLauncher);
+        Assert.IsType<FileGameDataReader>(services.GameData);
     }
 
     [Fact]
