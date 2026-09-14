@@ -6,7 +6,7 @@
              x:DataType="vm:MainViewModel">
     <!-- modal: settings -->
     <Panel Background="#99000000">
-        <Border Classes="modal" Width="786" Height="520" Margin="80,0,0,0">
+        <Border Classes="modal" MaxWidth="786" MaxHeight="760" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Margin="80,24,0,24">
             <Grid RowDefinitions="Auto,1,*">
                 <Grid ColumnDefinitions="*,Auto" Margin="24,24,24,24">
                     <TextBlock Classes="heading-lg" Text="{Binding Localization.NavigationSettings}" VerticalAlignment="Center" />
