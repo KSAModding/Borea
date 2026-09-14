@@ -63,6 +63,10 @@ internal sealed class ViewModelHarness : IDisposable
         return harness;
     }
 
+    /// <summary>Adds a curated tag vocabulary for mods to the snapshot, in the given order.</summary>
+    public static Func<string, string> CuratedTags(params (string Tag, string Name)[] tags) =>
+        json => "{ \"tags\": " + $$"""{ "spec_version": 1, "mod": [{{string.Join(", ", tags.Select(tag => $$"""{ "tag": "{{tag.Tag}}", "name": "{{tag.Name}}", "meaning": "{{tag.Name}} content." }"""))}}] }""" + "," + json.TrimStart()[1..];
+
     public Task<BoreaServices> BuildServicesAsync() =>
         BoreaServices.BuildAsync(Root, new IndexOnlyHandler(this), new FakeSpaceDock());
 

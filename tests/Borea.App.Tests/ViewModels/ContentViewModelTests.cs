@@ -32,6 +32,22 @@ public sealed class ContentViewModelTests
     }
 
     [Fact]
+    public async Task Open_ShowsCuratedTagsFirstInTheVocabularyWords()
+    {
+        var tags = ViewModelHarness.CuratedTags(("parts", "Parts"), ("physics", "Physics"));
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: tags);
+        var viewModel = harness.ViewModel;
+        await viewModel.EnsureDiscoverLoadedAsync();
+        var armory = viewModel.DiscoverItems.Single(item => item.ModId == "KSArmory");
+
+        await armory.OpenCommand.ExecuteAsync(null);
+
+        Assert.True(viewModel.HasContentTags);
+        Assert.Equal(["Parts", "Physics", "weapons"], armory.AllTags);
+        Assert.Equal(armory.AllTags, armory.Tags);
+    }
+
+    [Fact]
     public async Task Versions_ListEveryReleaseNewestFirst()
     {
         using var harness = await ViewModelHarness.CreateAsync();

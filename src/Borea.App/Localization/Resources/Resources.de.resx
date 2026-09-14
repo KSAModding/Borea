@@ -261,6 +261,12 @@
   <data name="DiscoverHideIncompatible" xml:space="preserve">
     <value>Inkompatible ausblenden</value>
   </data>
+  <data name="DiscoverCategory" xml:space="preserve">
+    <value>Kategorie</value>
+  </data>
+  <data name="DiscoverCategoryOther" xml:space="preserve">
+    <value>Sonstige</value>
+  </data>
   <data name="DiscoverOperatingSystem" xml:space="preserve">
     <value>Betriebssystem</value>
   </data>
