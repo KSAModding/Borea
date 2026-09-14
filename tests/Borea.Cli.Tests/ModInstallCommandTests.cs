@@ -493,7 +493,7 @@ public sealed class ModInstallCommandTests : IDisposable
     }
 
     private Dictionary<string, string> FileHashes() => Directory.Exists(_host.Root)
-        ? Directory.GetFiles(_host.Root, "*", SearchOption.AllDirectories).ToDictionary(path => Path.GetRelativePath(_host.Root, path), path => Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(path))), StringComparer.Ordinal)
+        ? Directory.GetFiles(_host.Root, "*", SearchOption.AllDirectories).Where(path => Path.GetRelativePath(_host.Root, path).Split(Path.DirectorySeparatorChar)[0] != "Logs").ToDictionary(path => Path.GetRelativePath(_host.Root, path), path => Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(path))), StringComparer.Ordinal)
         : new Dictionary<string, string>(StringComparer.Ordinal);
 
     private async Task SaveInstalledAsync(ModVersionMetadata first, ModVersionMetadata? second = null, ModInstallOwnership ownership = ModInstallOwnership.Borea)

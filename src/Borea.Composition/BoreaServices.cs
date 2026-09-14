@@ -4,6 +4,7 @@ using Borea.Core.Game;
 using Borea.Core.Index;
 using Borea.Core.Instances;
 using Borea.Core.Launch;
+using Borea.Core.Logging;
 using Borea.Core.ModLoaders;
 using Borea.Core.ModPacks;
 using Borea.Core.Mods;
@@ -24,6 +25,7 @@ using Borea.Storage.Game;
 using Borea.Storage.Instances;
 using Borea.Storage.Index;
 using Borea.Storage.Launch;
+using Borea.Storage.Logging;
 using Borea.Storage.ModLoaders;
 using Borea.Storage.ModPacks;
 using Borea.Storage.Mods;
@@ -70,6 +72,9 @@ public sealed class BoreaServices : IDisposable
     public required BoreaSettings Settings { get; init; }
 
     public required IGamePathProvider Paths { get; init; }
+
+    /// <summary>Borea's daily log. Installs, plans, index fetches and launches write to it.</summary>
+    public required IBoreaLog Log { get; init; }
 
     public required IBoreaSettingsRepository SettingsRepository { get; init; }
 
@@ -159,7 +164,11 @@ public sealed class BoreaServices : IDisposable
     /// <see cref="GamePathProvider"/>, %LocalAppData%\Borea.
     /// </param>
     public static Task<BoreaServices> BuildAsync(string? boreaRoot, CancellationToken cancellationToken = default)
-        => BuildCoreAsync(boreaRoot, httpHandler: null, fallbackRepository: null, cancellationToken);
+        => BuildAsync(boreaRoot, BoreaLogSource.App, cancellationToken);
+
+    /// <summary>Builds the services like the overload above, with log lines marked by <paramref name="logSource"/>.</summary>
+    public static Task<BoreaServices> BuildAsync(string? boreaRoot, BoreaLogSource logSource, CancellationToken cancellationToken = default)
+        => BuildCoreAsync(boreaRoot, logSource, httpHandler: null, fallbackRepository: null, cancellationToken);
 
     internal static Task<BoreaServices> BuildAsync(
         string? boreaRoot,
@@ -169,11 +178,12 @@ public sealed class BoreaServices : IDisposable
     {
         ArgumentNullException.ThrowIfNull(httpHandler);
         ArgumentNullException.ThrowIfNull(fallbackRepository);
-        return BuildCoreAsync(boreaRoot, httpHandler, fallbackRepository, cancellationToken);
+        return BuildCoreAsync(boreaRoot, BoreaLogSource.App, httpHandler, fallbackRepository, cancellationToken);
     }
 
     private static async Task<BoreaServices> BuildCoreAsync(
         string? boreaRoot,
+        BoreaLogSource logSource,
         HttpMessageHandler? httpHandler,
         IModRepository? fallbackRepository,
         CancellationToken cancellationToken)
@@ -191,6 +201,7 @@ public sealed class BoreaServices : IDisposable
             pair => pair.Value.DirectoryPath,
             ModIds.Comparer);
         var paths = new GamePathProvider(settings.GameDirectoryPath, loaderDirectories, boreaRoot);
+        var log = new FileBoreaLog(paths, logSource);
 
         // Network. Every service that talks to a remote host is built here on the
         // one client. Only the SpaceDock repository takes the resolver, because a
@@ -199,7 +210,7 @@ public sealed class BoreaServices : IDisposable
         var http = BuildHttpClient(httpHandler);
         var resolver = new SpaceDockResolver();
         var indexReader = new ContentIndexReader(paths, ContentIndexModRepository.SourceName);
-        var indexFetcher = new ContentIndexFetcher(http, ContentIndexUri, indexReader);
+        var indexFetcher = new LoggingContentIndexFetcher(new ContentIndexFetcher(http, ContentIndexUri, indexReader), log);
         var indexSnapshots = new ContentIndexSnapshotProvider(indexFetcher, indexReader, paths);
         var contentIndex = new ContentIndexModRepository(indexSnapshots);
         var readOnlyContentIndex = new ContentIndexModRepository(new ReaderSnapshotProvider(indexReader));
@@ -222,14 +233,15 @@ public sealed class BoreaServices : IDisposable
         var instances = new FileInstanceRepository(paths);
 
         var modState = new FileModStateRepository(paths);
-        var modInstaller = new FileModInstaller(paths, downloader, instances, modState);
-        var modReplacer = new FileModReplacer(paths, downloader, instances, modState);
-        var installPlanner = new RepositoryInstallPlanner(new ModDependencyResolver(), settings.ReleaseChannel);
+        var modInstaller = new LoggingModInstaller(new FileModInstaller(paths, downloader, instances, modState), log);
+        var modReplacer = new LoggingModReplacer(new FileModReplacer(paths, downloader, instances, modState), log);
+        var installPlanner = new LoggingInstallPlanner(new RepositoryInstallPlanner(new ModDependencyResolver(), settings.ReleaseChannel), log);
 
         return new BoreaServices(http)
         {
             Settings = settings,
             Paths = paths,
+            Log = log,
             SettingsRepository = settingsRepository,
             GameDirectoryChanger = new GameDirectoryChanger(settingsRepository, mods, loaderConfiguration),
             AppPreferences = new FileAppPreferencesRepository(paths),
@@ -238,7 +250,7 @@ public sealed class BoreaServices : IDisposable
             ModState = modState,
             ModFavorites = new FileModFavoritesRepository(paths),
             ModPackFavorites = new FileModPackFavoritesRepository(paths),
-            Uninstaller = new FileModUninstaller(paths, instances),
+            Uninstaller = new LoggingModUninstaller(new FileModUninstaller(paths, instances), log),
             Installer = modInstaller,
             Replacer = modReplacer,
             ForeignModAdopter = new FileForeignModAdopter(paths, instances, contentIndex),
@@ -252,7 +264,7 @@ public sealed class BoreaServices : IDisposable
             LoaderInstaller = new FileLoaderInstaller(paths, downloader, settingsRepository, loaderConfiguration),
             LoaderAdopter = new FileLoaderAdopter(settingsRepository, loaderConfiguration),
             LoaderUninstaller = new FileLoaderUninstaller(settingsRepository),
-            Launcher = new LoaderLauncher(paths, new ProcessStarter()),
+            Launcher = new LoggingLauncher(new LoaderLauncher(paths, new ProcessStarter()), log),
             SharedProfileLauncher = new SharedProfileLauncher(paths, new ProcessStarter()),
             LatestVersion = new LatestVersionPing(http),
             ReleaseCheck = new BoreaReleaseCheck(http),
