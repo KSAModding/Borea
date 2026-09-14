@@ -109,6 +109,7 @@ public partial class MainViewModel
         CurrentWindowLibrary = false;
         CurrentWindowTasks = false;
         CurrentWindowContent = false;
+        CurrentWindowPack = false;
         CurrentWindowInstance = true;
     }
 

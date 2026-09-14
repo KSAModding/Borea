@@ -417,6 +417,54 @@
   <data name="ContentTypeModLoader" xml:space="preserve">
     <value>Mod-Loader</value>
   </data>
+  <data name="ContentTypeModPack" xml:space="preserve">
+    <value>Modpack</value>
+  </data>
+  <data name="PackMods" xml:space="preserve">
+    <value>Mods</value>
+  </data>
+  <data name="PackModHeader" xml:space="preserve">
+    <value>Mod</value>
+  </data>
+  <data name="PackMemberYanked" xml:space="preserve">
+    <value>Zurückgezogen</value>
+  </data>
+  <data name="PackMemberUnlisted" xml:space="preserve">
+    <value>Nicht gelistet</value>
+  </data>
+  <data name="PackResultInstalled" xml:space="preserve">
+    <value>Installiert</value>
+  </data>
+  <data name="PackResultReplaced" xml:space="preserve">
+    <value>Ersetzt</value>
+  </data>
+  <data name="PackResultAlreadyInstalled" xml:space="preserve">
+    <value>Bereits installiert</value>
+  </data>
+  <data name="PackDeprecated" xml:space="preserve">
+    <value>Der Autor pflegt dieses Modpack nicht mehr.</value>
+  </data>
+  <data name="PackStatusUnknown" xml:space="preserve">
+    <value>Dieses Modpack hat einen Autorstatus, den Borea nicht kennt.</value>
+  </data>
+  <data name="PackCompatibilityUnknown" xml:space="preserve">
+    <value>Die Kompatibilität dieses Modpacks mit dem installierten Spiel ist unbekannt.</value>
+  </data>
+  <data name="PackDisputed" xml:space="preserve">
+    <value>Der Inhaltsindex markiert dieses Modpack als umstritten.</value>
+  </data>
+  <data name="PackIndexStatusUnknown" xml:space="preserve">
+    <value>Der Inhaltsindex gibt diesem Modpack einen Status, den Borea nicht kennt.</value>
+  </data>
+  <data name="PackResultUnresolved" xml:space="preserve">
+    <value>Nicht aufgelöst</value>
+  </data>
+  <data name="PackResultFailed" xml:space="preserve">
+    <value>Fehlgeschlagen</value>
+  </data>
+  <data name="PackResultNotAttempted" xml:space="preserve">
+    <value>Nicht versucht</value>
+  </data>
   <data name="ReleaseStable" xml:space="preserve">
     <value>stabil</value>
   </data>
@@ -605,6 +653,24 @@
   </data>
   <data name="DiscoverInstalledInFormat" xml:space="preserve">
     <value>Installiert in {0}</value>
+  </data>
+  <data name="PackModCountFormat" xml:space="preserve">
+    <value>Mods: {0}</value>
+  </data>
+  <data name="PackIncompatibleFormat" xml:space="preserve">
+    <value>Dieses Modpack braucht die Spielversion {0} oder neuer.</value>
+  </data>
+  <data name="PackMemberYankedFormat" xml:space="preserve">
+    <value>{0} {1} wurde zurückgezogen.</value>
+  </data>
+  <data name="PackIncompleteFormat" xml:space="preserve">
+    <value>{0} von {1} Mods wurden nicht installiert.</value>
+  </data>
+  <data name="PackUntestedFormat" xml:space="preserve">
+    <value>Dieses Modpack ist nicht mit dem installierten Spiel getestet, das neuer als {0} ist.</value>
+  </data>
+  <data name="PackSupersededFormat" xml:space="preserve">
+    <value>Der Autor pflegt dieses Modpack nicht mehr und empfiehlt {0}.</value>
   </data>
   <data name="InstallDownloadingFormat" xml:space="preserve">
     <value>{0} wird heruntergeladen</value>

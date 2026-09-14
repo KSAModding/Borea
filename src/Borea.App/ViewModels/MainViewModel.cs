@@ -86,25 +86,28 @@ public partial class MainViewModel : ViewModelBase
     public bool IsLibrarySection => CurrentWindowLibrary || CurrentWindowInstance;
 
     /// <summary>
-    /// The discover rail item stays lit on a content page too.
+    /// The discover rail item stays lit on a content or pack page too.
     /// </summary>
-    public bool IsDiscoverSection => CurrentWindowDiscover || CurrentWindowContent;
+    public bool IsDiscoverSection => CurrentWindowDiscover || CurrentWindowContent || CurrentWindowPack;
     [RelayCommand]
     public void SetMainWindowHome() // used to set whatever is on the main window (discover, library, etc.)
     {
         LeaveContentPage();
+        LeavePackPage();
         CurrentWindowHome = true;
         CurrentWindowDiscover = false;
         CurrentWindowLibrary = false;
         CurrentWindowTasks = false;
         CurrentWindowInstance = false;
         CurrentWindowContent = false;
+        CurrentWindowPack = false;
     }
     [RelayCommand]
     public void SetMainWindowDiscover() // used to set whatever is on the main window (discover, library, etc.)
     {
         LeaveContentPage();
         UpdateIndexRefreshStatus();
+        LeavePackPage();
         _ = EnsureDiscoverLoadedAsync();
         CurrentWindowHome = false;
         CurrentWindowDiscover = true;
@@ -112,28 +115,33 @@ public partial class MainViewModel : ViewModelBase
         CurrentWindowTasks = false;
         CurrentWindowInstance = false;
         CurrentWindowContent = false;
+        CurrentWindowPack = false;
     }
     [RelayCommand]
     public void SetMainWindowLibrary() // used to set whatever is on the main window (discover, library, etc.)
     {
         LeaveContentPage();
+        LeavePackPage();
         CurrentWindowHome = false;
         CurrentWindowDiscover = false;
         CurrentWindowLibrary = true;
         CurrentWindowTasks = false;
         CurrentWindowInstance = false;
         CurrentWindowContent = false;
+        CurrentWindowPack = false;
     }
     [RelayCommand]
     public void SetMainWindowTasks()
     {
         LeaveContentPage();
+        LeavePackPage();
         CurrentWindowHome = false;
         CurrentWindowDiscover = false;
         CurrentWindowLibrary = false;
         CurrentWindowTasks = true;
         CurrentWindowInstance = false;
         CurrentWindowContent = false;
+        CurrentWindowPack = false;
     }
     /// <summary>
     /// Settings open as a modal over the current page (modal: settings in #8).
@@ -538,6 +546,7 @@ public partial class MainViewModel : ViewModelBase
             option.RefreshText();
         foreach (var category in CategoryOptions)
             category.RefreshText();
+        RefreshPackText();
         RefreshContentGroups();
         foreach (var item in ManualInstallItems)
             item.RefreshText();
@@ -608,6 +617,8 @@ public sealed partial class InstanceItem : ObservableObject
 
     public IReadOnlyList<string> ModIds { get; }
 
+    internal IReadOnlyList<InstalledMod> Mods { get; }
+
     public bool IsActive { get; }
 
     public string? SourceText => _owner.DescribeSource(_source);
@@ -628,7 +639,8 @@ public sealed partial class InstanceItem : ObservableObject
         InstanceId = instance.InstanceId;
         Name = instance.Name;
         ModCount = instance.Mods.Count;
-        ModIds = instance.Mods.Select(mod => mod.ModId).ToList();
+        Mods = instance.Mods;
+        ModIds = Mods.Select(mod => mod.ModId).ToList();
         _modVersions = instance.Mods.ToDictionary(mod => mod.ModId, mod => mod.Version, Borea.Core.Mods.ModIds.Comparer);
         IsActive = isActive;
         _editName = instance.Name;

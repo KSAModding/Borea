@@ -331,6 +331,34 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string ContentTypeModLoader => Resources.ContentTypeModLoader;
 
+    public string ContentTypeModPack => Resources.ContentTypeModPack;
+
+    public string PackMods => Resources.PackMods;
+
+    public string PackModHeader => Resources.PackModHeader;
+
+    public string PackMemberYanked => Resources.PackMemberYanked;
+
+    public string PackMemberUnlisted => Resources.PackMemberUnlisted;
+
+    public string PackDeprecated => Resources.PackDeprecated;
+
+    public string PackStatusUnknown => Resources.PackStatusUnknown;
+
+    public string PackCompatibilityUnknown => Resources.PackCompatibilityUnknown;
+
+    public string PackResultInstalled => Resources.PackResultInstalled;
+
+    public string PackResultReplaced => Resources.PackResultReplaced;
+
+    public string PackResultAlreadyInstalled => Resources.PackResultAlreadyInstalled;
+
+    public string PackResultUnresolved => Resources.PackResultUnresolved;
+
+    public string PackResultFailed => Resources.PackResultFailed;
+
+    public string PackResultNotAttempted => Resources.PackResultNotAttempted;
+
     public string ReleaseStable => Resources.ReleaseStable;
 
     public string ReleaseTesting => Resources.ReleaseTesting;
@@ -462,6 +490,33 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     private static string FormatCount(int count, string one, string format)
         => count == 1 ? one : string.Format(CultureInfo.CurrentCulture, format, count);
+
+    public string FormatPackModCount(int count)
+        => string.Format(CultureInfo.CurrentCulture, Resources.PackModCountFormat, count);
+
+    public string FormatPackIncompatible(string gameMin)
+        => string.Format(CultureInfo.CurrentCulture, Resources.PackIncompatibleFormat, gameMin);
+
+    public string FormatPackMemberYanked(string modId, string version, string? reason)
+    {
+        var text = string.Format(CultureInfo.CurrentCulture, Resources.PackMemberYankedFormat, modId, version);
+        return string.IsNullOrWhiteSpace(reason) ? text : $"{text} {reason}";
+    }
+
+    public string FormatPackIncomplete(int failed, int total)
+        => string.Format(CultureInfo.CurrentCulture, Resources.PackIncompleteFormat, failed, total);
+
+    public string FormatPackUntested(string gameMax)
+        => string.Format(CultureInfo.CurrentCulture, Resources.PackUntestedFormat, gameMax);
+
+    public string FormatPackSuperseded(string packId)
+        => string.Format(CultureInfo.CurrentCulture, Resources.PackSupersededFormat, packId);
+
+    public string FormatPackDisputed(string? reason)
+        => string.IsNullOrWhiteSpace(reason) ? Resources.PackDisputed : $"{Resources.PackDisputed} {reason}";
+
+    public string FormatPackIndexStatusUnknown(string? reason)
+        => string.IsNullOrWhiteSpace(reason) ? Resources.PackIndexStatusUnknown : $"{Resources.PackIndexStatusUnknown} {reason}";
 
     public string FormatInstallDownloading(string content)
         => string.Format(CultureInfo.CurrentCulture, Resources.InstallDownloadingFormat, content);

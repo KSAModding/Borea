@@ -19,7 +19,7 @@
                     <StackPanel Orientation="Horizontal" Spacing="16">
                         <Button Classes="tab" Classes.active="{Binding IsModsTab}" Content="{Binding Localization.DiscoverTabMods}" Command="{Binding ShowDiscoverModsCommand}" />
                         <Button Classes="tab" Classes.active="{Binding IsLoadersTab}" Content="{Binding Localization.DiscoverTabLoaders}" Command="{Binding ShowDiscoverLoadersCommand}" />
-                        <Button Classes="tab" Content="{Binding Localization.DiscoverTabModpacks}" IsEnabled="False" />
+                        <Button Classes="tab" Classes.active="{Binding IsModpacksTab}" Content="{Binding Localization.DiscoverTabModpacks}" Command="{Binding ShowDiscoverModpacksCommand}" />
                         <Button Classes="tab" Content="{Binding Localization.DiscoverTabVehicles}" IsEnabled="False" />
                         <Button Classes="tab" Content="{Binding Localization.DiscoverTabSaves}" IsEnabled="False" />
                     </StackPanel>
@@ -99,7 +99,14 @@
                     </TextBlock.IsVisible>
                 </TextBlock>
 
-                <ItemsControl ItemsSource="{Binding DiscoverItems}" ItemTemplate="{StaticResource DiscoverRow}" Margin="0,24,0,0">
+                <ItemsControl ItemsSource="{Binding DiscoverItems}" ItemTemplate="{StaticResource DiscoverRow}" Margin="0,24,0,0" IsVisible="{Binding !IsModpacksTab}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <StackPanel Spacing="8" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                </ItemsControl>
+                <ItemsControl ItemsSource="{Binding DiscoverPacks}" ItemTemplate="{StaticResource PackRow}" Margin="0,24,0,0" IsVisible="{Binding IsModpacksTab}">
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate>
                             <StackPanel Spacing="8" />

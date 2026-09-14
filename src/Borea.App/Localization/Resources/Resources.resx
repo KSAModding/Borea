@@ -417,6 +417,54 @@
   <data name="ContentTypeModLoader" xml:space="preserve">
     <value>Mod loader</value>
   </data>
+  <data name="ContentTypeModPack" xml:space="preserve">
+    <value>Modpack</value>
+  </data>
+  <data name="PackMods" xml:space="preserve">
+    <value>Mods</value>
+  </data>
+  <data name="PackModHeader" xml:space="preserve">
+    <value>Mod</value>
+  </data>
+  <data name="PackMemberYanked" xml:space="preserve">
+    <value>Yanked</value>
+  </data>
+  <data name="PackMemberUnlisted" xml:space="preserve">
+    <value>Not listed</value>
+  </data>
+  <data name="PackResultInstalled" xml:space="preserve">
+    <value>Installed</value>
+  </data>
+  <data name="PackResultReplaced" xml:space="preserve">
+    <value>Replaced</value>
+  </data>
+  <data name="PackResultAlreadyInstalled" xml:space="preserve">
+    <value>Already installed</value>
+  </data>
+  <data name="PackDeprecated" xml:space="preserve">
+    <value>The author no longer maintains this pack.</value>
+  </data>
+  <data name="PackStatusUnknown" xml:space="preserve">
+    <value>This pack has an author status that Borea does not know.</value>
+  </data>
+  <data name="PackCompatibilityUnknown" xml:space="preserve">
+    <value>The compatibility of this pack with the installed game is unknown.</value>
+  </data>
+  <data name="PackDisputed" xml:space="preserve">
+    <value>The content index marks this pack as disputed.</value>
+  </data>
+  <data name="PackIndexStatusUnknown" xml:space="preserve">
+    <value>The content index gives this pack a status that Borea does not know.</value>
+  </data>
+  <data name="PackResultUnresolved" xml:space="preserve">
+    <value>Unresolved</value>
+  </data>
+  <data name="PackResultFailed" xml:space="preserve">
+    <value>Failed</value>
+  </data>
+  <data name="PackResultNotAttempted" xml:space="preserve">
+    <value>Not attempted</value>
+  </data>
   <data name="ReleaseStable" xml:space="preserve">
     <value>stable</value>
   </data>
@@ -605,6 +653,24 @@
   </data>
   <data name="DiscoverInstalledInFormat" xml:space="preserve">
     <value>Installed in {0}</value>
+  </data>
+  <data name="PackModCountFormat" xml:space="preserve">
+    <value>Mods: {0}</value>
+  </data>
+  <data name="PackIncompatibleFormat" xml:space="preserve">
+    <value>This pack needs game {0} or newer.</value>
+  </data>
+  <data name="PackMemberYankedFormat" xml:space="preserve">
+    <value>{0} {1} is yanked.</value>
+  </data>
+  <data name="PackIncompleteFormat" xml:space="preserve">
+    <value>{0} of {1} mods did not install.</value>
+  </data>
+  <data name="PackUntestedFormat" xml:space="preserve">
+    <value>This pack is not tested with the installed game, which is newer than {0}.</value>
+  </data>
+  <data name="PackSupersededFormat" xml:space="preserve">
+    <value>The author no longer maintains this pack and recommends {0}.</value>
   </data>
   <data name="InstallDownloadingFormat" xml:space="preserve">
     <value>Downloading {0}</value>
