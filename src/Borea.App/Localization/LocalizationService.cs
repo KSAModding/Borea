@@ -377,6 +377,9 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string FormatDiscoverInstalledIn(string instance)
         => string.Format(CultureInfo.CurrentCulture, Resources.DiscoverInstalledInFormat, instance);
 
+    public string FormatInstallReleaseChannel(string version, string status)
+        => string.Format(CultureInfo.CurrentCulture, Resources.InstallReleaseChannelFormat, version, status);
+
     public string FormatInstallDownloading(string content)
         => string.Format(CultureInfo.CurrentCulture, Resources.InstallDownloadingFormat, content);
 

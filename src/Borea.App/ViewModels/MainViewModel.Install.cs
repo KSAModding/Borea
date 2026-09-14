@@ -71,12 +71,12 @@ public partial class MainViewModel
 
             if (!plan.IsReady)
             {
-                row.InstallError = Describe(plan.Conflicts.Concat(plan.UnresolvedChoices));
+                row.InstallError = Describe(plan, plan.Conflicts.Concat(plan.UnresolvedChoices));
             }
             else if (plan.Warnings.Count > 0)
             {
                 row.PendingPlan = plan;
-                row.InstallWarning = Describe(plan.Warnings);
+                row.InstallWarning = Describe(plan, plan.Warnings);
             }
             else
             {
@@ -163,8 +163,23 @@ public partial class MainViewModel
     /// <summary>
     /// The planner's messages on one line, each named by its mod.
     /// </summary>
-    private static string Describe(IEnumerable<PlanningMessage> messages)
-        => string.Join(" ", messages.Select(message => $"{message.ModId}: {message.Message}"));
+    private string Describe(InstallPlan plan, IEnumerable<PlanningMessage> messages)
+        => string.Join(" ", messages.Select(message => $"{message.ModId}: {Translate(plan, message)}"));
+
+    /// <summary>
+    /// The channel warning in the display language. The other messages stay
+    /// as the planner wrote them.
+    /// </summary>
+    private string Translate(InstallPlan plan, PlanningMessage message)
+    {
+        if (message.Code != "release-channel")
+            return message.Message;
+
+        var release = plan.Operations.FirstOrDefault(operation => ModIds.Equals(operation.Release.ModId, message.ModId))?.Release;
+        return release is null
+            ? message.Message
+            : Localization.FormatInstallReleaseChannel(release.Version.ToString(), ReleaseStatusText(release.ReleaseStatus));
+    }
 
     private static OsPlatform CurrentPlatform()
         => OperatingSystem.IsWindows() ? OsPlatform.Windows : OperatingSystem.IsLinux() ? OsPlatform.Linux : OsPlatform.MacOs;

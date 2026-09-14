@@ -143,6 +143,26 @@ public sealed class ReleaseChannelViewModelTests
         Assert.True(viewModel.DiscoverItems.Single(item => item.ModId == "KSArmory").IsIncompatible);
     }
 
+    [Fact]
+    public async Task InstallOutsideTheChannel_WarnsInTheDisplayLanguage()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: SnapshotRelease.Add(new SnapshotRelease("AdvancedFlightComputer", "0.8.0-dev.1", "dev", "2026-09-10T10:00:00Z")));
+        var viewModel = harness.ViewModel;
+        var instance = await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value);
+        await harness.Services.Instances.SetActiveInstanceAsync(instance.InstanceId);
+        await viewModel.LoadAsync();
+        await viewModel.EnsureDiscoverLoadedAsync();
+        await viewModel.DiscoverItems.Single(item => item.ModId == "AdvancedFlightComputer").OpenCommand.ExecuteAsync(null);
+        await viewModel.ShowContentVersionsCommand.ExecuteAsync(null);
+        viewModel.VersionFilter = viewModel.OptionFor(ReleaseChannel.Dev);
+        harness.Localization.TrySetCulture("de");
+
+        var dev = viewModel.ContentVersions.Single(version => version.IsDev);
+        await dev.InstallCommand.ExecuteAsync(null);
+
+        Assert.Contains(harness.Localization.FormatInstallReleaseChannel("0.8.0-dev.1", harness.Localization.ReleaseDev), dev.InstallWarning);
+        Assert.DoesNotContain("channel does not offer", dev.InstallWarning);
+    }
 }
 
 /// <summary>Adds a copy of a listing's first release to the index snapshot, with another version and status.</summary>
