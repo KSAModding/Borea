@@ -438,6 +438,12 @@
             <Setter Property="Background" Value="Transparent" />
             <Setter Property="Foreground" Value="{StaticResource Brush.Text}" />
         </Style>
+        <Style Selector="Button.filter.active /template/ ContentPresenter">
+            <Setter Property="Foreground" Value="{StaticResource Brush.Accent}" />
+        </Style>
+        <Style Selector="Button.filter.active Path.icon">
+            <Setter Property="Stroke" Value="{StaticResource Brush.Accent}" />
+        </Style>
         <!-- chip with an X, for active filters -->
         <Style Selector="Button.chip-button">
             <Setter Property="Height" Value="24" />
