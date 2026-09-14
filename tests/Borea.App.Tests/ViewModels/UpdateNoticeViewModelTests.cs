@@ -147,6 +147,7 @@ public sealed class UpdateNoticeViewModelTests
         Assert.Equal(BoreaUpdateChannel.Testing, viewModel.SelectedUpdateChannel.Channel);
         Assert.True(viewModel.HasAvailableUpdate);
         Assert.Equal("999.0.0-beta.1", viewModel.AvailableUpdateVersion);
+        Assert.True(viewModel.AvailableUpdateIsPreRelease);
         var request = Assert.Single(harness.Requests, uri => uri.Host == ReleaseHost);
         Assert.Equal("/repos/KSAModding/Borea/releases", request.AbsolutePath);
     }

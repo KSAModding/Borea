@@ -75,6 +75,9 @@
   <data name="UpdateAvailable" xml:space="preserve">
     <value>Eine neuere Borea-Version ist verfügbar:</value>
   </data>
+  <data name="UpdatePreRelease" xml:space="preserve">
+    <value>Vorabversion</value>
+  </data>
   <data name="UpdateViewRelease" xml:space="preserve">
     <value>Veröffentlichung ansehen</value>
   </data>

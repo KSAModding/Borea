@@ -75,6 +75,8 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string UpdateAvailable => Resources.UpdateAvailable;
 
+    public string UpdatePreRelease => Resources.UpdatePreRelease;
+
     public string UpdateViewRelease => Resources.UpdateViewRelease;
 
     public string SystemDefaultRegionalFormat => Resources.SystemDefaultRegionalFormat;

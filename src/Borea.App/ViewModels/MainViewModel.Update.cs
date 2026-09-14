@@ -25,6 +25,7 @@ public partial class MainViewModel
     [NotifyPropertyChangedFor(nameof(HasAvailableUpdate))]
     [NotifyPropertyChangedFor(nameof(AvailableUpdateVersion))]
     [NotifyPropertyChangedFor(nameof(AvailableUpdateUrl))]
+    [NotifyPropertyChangedFor(nameof(AvailableUpdateIsPreRelease))]
     private BoreaRelease? _availableUpdate;
 
     public bool HasAvailableUpdate => AvailableUpdate is not null;
@@ -32,6 +33,8 @@ public partial class MainViewModel
     public string? AvailableUpdateVersion => AvailableUpdate?.Version.ToString();
 
     public string? AvailableUpdateUrl => AvailableUpdate?.PageUrl;
+
+    public bool AvailableUpdateIsPreRelease => AvailableUpdate?.Version.PreRelease is not null;
 
     /// <summary>The switch in the General settings. A change takes effect at the next start.</summary>
     public bool CheckForUpdatesAtStart
