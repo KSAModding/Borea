@@ -16,6 +16,15 @@ public interface ILoaderAdopter
         IReadOnlyList<ModVersionMetadata> releases,
         string directory,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Runs the same checks as <see cref="AdoptAsync"/> and records nothing.
+    /// </summary>
+    Task<LoaderAdoptionResult> InspectAsync(
+        ModMetadata loader,
+        IReadOnlyList<ModVersionMetadata> releases,
+        string directory,
+        CancellationToken cancellationToken = default);
 }
 
 public sealed record LoaderAdoptionResult(
