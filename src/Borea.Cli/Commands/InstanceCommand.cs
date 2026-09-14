@@ -1,6 +1,8 @@
 using System.CommandLine;
 using Borea.Cli.Output;
+using Borea.Core.Index;
 using Borea.Core.Instances;
+using Borea.Core.Mods;
 
 namespace Borea.Cli.Commands;
 
@@ -13,13 +15,15 @@ internal static class InstanceCommand
 
     public static Command Build(Func<CancellationToken, Task<CliServices>> services)
     {
-        var instance = new Command("instance", "List, create, rename, delete, and activate instances.");
+        var instance = new Command("instance", "List, create, rename, delete, and activate instances, and adopt mods that Borea did not install.");
         instance.Subcommands.Add(BuildList(services));
         instance.Subcommands.Add(BuildCreate(services));
         instance.Subcommands.Add(BuildRename(services));
         instance.Subcommands.Add(BuildDelete(services));
         instance.Subcommands.Add(BuildActivate(services));
         instance.Subcommands.Add(BuildMods(services));
+        instance.Subcommands.Add(BuildScan(services));
+        instance.Subcommands.Add(BuildAdopt(services));
         return instance;
     }
 
@@ -170,6 +174,114 @@ internal static class InstanceCommand
         return mods;
     }
 
+    private static Command BuildScan(Func<CancellationToken, Task<CliServices>> services)
+    {
+        var instance = ArgumentRules.Text("instance", InstanceArgumentDescription);
+        var json = ArgumentRules.Json();
+        var scan = new Command("scan", "Print the mod folders that Borea did not install, and whether the content index lists them.");
+        scan.Arguments.Add(instance);
+        scan.Options.Add(json);
+
+        scan.SetAction((parseResult, cancellationToken) => CommandRunner.RunAsync(parseResult, services, cancellationToken, async (cli, output, error, ct) =>
+        {
+            var target = await InstanceLookup.ResolveAsync(cli.Instances, parseResult.GetRequiredValue(instance)).ConfigureAwait(false);
+            var foreignMods = await cli.ForeignModAdopter.ScanAsync(target.InstanceId, ct).ConfigureAwait(false);
+            ContentIndexSnapshot? snapshot = null;
+            if (foreignMods.Count > 0)
+            {
+                try
+                {
+                    snapshot = await cli.IndexSnapshots.GetSnapshotAsync(ct).ConfigureAwait(false);
+                }
+                catch (Exception exception) when (exception is IOException or InvalidOperationException or FormatException)
+                {
+                    error.WriteLine($"warning: The content index could not be read. {exception.Message}");
+                }
+            }
+
+            var views = foreignMods.Select(mod => ForeignModView.From(mod, snapshot)).ToList();
+
+            if (parseResult.GetValue(json))
+            {
+                JsonOutput.Write(output, views);
+                return ExitCodes.Done;
+            }
+
+            if (views.Count == 0)
+            {
+                output.WriteLine($"No mod folders in '{target.Name}' that Borea did not install.");
+                return ExitCodes.Done;
+            }
+
+            var folderWidth = views.Max(view => view.Folder.Length);
+            foreach (var view in views)
+            {
+                output.WriteLine($"{view.Folder.PadRight(folderWidth)}  {DescribeIndexState(view.InIndex)}");
+                if (view.DependencyReadError is not null)
+                    error.WriteLine($"warning: The mod.toml of '{view.Folder}' could not be read. {view.DependencyReadError}");
+            }
+
+            return ExitCodes.Done;
+        }));
+
+        return scan;
+    }
+
+    private static Command BuildAdopt(Func<CancellationToken, Task<CliServices>> services)
+    {
+        var instance = ArgumentRules.Text("instance", InstanceArgumentDescription);
+        var folder = ArgumentRules.Text("folder", "The name of the mod folder in the instance.");
+        folder.Validators.Add(result =>
+        {
+            var value = result.GetValueOrDefault<string>();
+            if (value is "." or ".."
+                || value.Contains(Path.DirectorySeparatorChar)
+                || value.Contains(Path.AltDirectorySeparatorChar))
+                result.AddError($"'{value}' is not a folder name.");
+        });
+        var archive = new Option<string>("--archive")
+        {
+            Description = "The archive the folder was installed from. Its SHA-256 must match a release in the content index.",
+            Required = true,
+        };
+        archive.Validators.Add(result =>
+        {
+            if (string.IsNullOrWhiteSpace(result.GetValueOrDefault<string>()))
+                result.AddError("The --archive value cannot be empty.");
+        });
+        var adopt = new Command("adopt", "Record a mod folder that Borea did not install as the index release its archive matches. Borea does not delete or change the folder.");
+        adopt.Arguments.Add(instance);
+        adopt.Arguments.Add(folder);
+        adopt.Options.Add(archive);
+
+        adopt.SetAction((parseResult, cancellationToken) => CommandRunner.RunAsync(parseResult, services, cancellationToken, async (cli, output, error, ct) =>
+        {
+            var target = await InstanceLookup.ResolveAsync(cli.Instances, parseResult.GetRequiredValue(instance)).ConfigureAwait(false);
+            var folderName = parseResult.GetRequiredValue(folder);
+            var result = await cli.ForeignModAdopter
+                .AdoptArchiveAsync(target.InstanceId, folderName, Path.GetFullPath(parseResult.GetRequiredValue(archive)), ct)
+                .ConfigureAwait(false);
+
+            if (result.InstalledMod is not { } adopted)
+            {
+                error.WriteLine($"error: The archive (SHA-256 {result.Sha256}) matches no release of '{folderName}' in the content index. The folder stays as it is.");
+                return ExitCodes.Failed;
+            }
+
+            output.WriteLine($"Adopted '{adopted.ModId}' {adopted.Version} in '{target.Name}'.");
+            return ExitCodes.Done;
+        }));
+
+        return adopt;
+    }
+
+    private static string DescribeIndexState(bool? inIndex) => inIndex switch
+    {
+        true => "in the content index",
+        false => "not in the content index",
+        null => "content index not available",
+    };
+
     private static string Describe(InstanceSource source) => source switch
     {
         InstanceSource.FromModPack pack => $"modpack {pack.ModPackId} {pack.Version}",
@@ -193,4 +305,17 @@ internal static class InstanceCommand
     }
 
     private sealed record ModView(string Id, bool Enabled);
+
+    /// <summary>One entry of <c>instance scan --json</c>.</summary>
+    private sealed record ForeignModView(string Folder, bool? InIndex, IReadOnlyList<DependencyView> Dependencies, string? DependencyReadError)
+    {
+        public static ForeignModView From(ForeignMod mod, ContentIndexSnapshot? snapshot)
+            => new(
+                mod.FolderName,
+                snapshot?.Listings.Any(listing => ModIds.Equals(listing.Id, mod.FolderName) && listing.Authored?.Type == ContentType.Mod),
+                mod.Dependencies.Select(dependency => new DependencyView(dependency.ModId, dependency.Optional)).ToList(),
+                mod.DependencyReadError);
+    }
+
+    private sealed record DependencyView(string Id, bool Optional);
 }

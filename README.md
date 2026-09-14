@@ -137,6 +137,8 @@ The exit code is 0 when the command completed, 1 when the operation failed and t
 | `borea instance rename <instance> <new-name>` | Give an instance a new name. |
 | `borea instance delete <instance>` | Delete an instance and its folder. |
 | `borea instance activate <instance>` | Make an instance the active one. |
+| `borea instance scan <instance>` | Print the mod folders that Borea did not install, and whether the content index lists them. |
+| `borea instance adopt <instance> <folder> --archive <path>` | Record a mod folder that Borea did not install as the index release its archive matches. |
 | `borea enable <mod-id> [--instance <instance>]` | Make the game load a mod. |
 | `borea disable <mod-id> [--instance <instance>]` | Stop the game from loading a mod. |
 

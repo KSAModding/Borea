@@ -61,6 +61,8 @@ internal sealed class CliHost : IDisposable
 
     public Func<BoreaServices, IModUninstaller>? UninstallerFactory { get; set; }
 
+    public Func<BoreaServices, IForeignModAdopter>? ForeignModAdopterFactory { get; set; }
+
     public Func<BoreaServices, IInstanceRepository>? InstancesFactory { get; set; }
 
     /// <summary>How many times a command built its services.</summary>
@@ -98,6 +100,7 @@ internal sealed class CliHost : IDisposable
             installer: InstallerFactory?.Invoke(graph),
             replacer: ReplacerFactory?.Invoke(graph),
             uninstaller: UninstallerFactory?.Invoke(graph),
+            foreignModAdopter: ForeignModAdopterFactory?.Invoke(graph),
             loaderInstaller: LoaderInstaller,
             loaderAdopter: LoaderAdopter,
             loaderUninstaller: LoaderUninstaller,
