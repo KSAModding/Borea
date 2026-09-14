@@ -23,7 +23,7 @@
 						</StackPanel>
 					</Button>
 					<Button Grid.Column="1" Grid.Row="0" Classes="splitButton flyout">
-						<Path Classes="icon-filled size 16" Fill="{StaticResource Brush.SurfaceHeader}" Data="{StaticResource Icon.CaretDown}" VerticalAlignment="Center" />
+						<Path Classes="icon-filled size-16" Fill="{StaticResource Brush.SurfaceHeader}" Data="{StaticResource Icon.CaretDown}" VerticalAlignment="Center" />
 						<Button.Flyout>
 							<MenuFlyout Placement="BottomEdgeAlignedRight">
 								<MenuItem Header="{Binding Localization.LaunchActiveInstance}" Command="{Binding PlayActiveInstanceCommand}" IsEnabled="{Binding EnableActiveInstance}"/>

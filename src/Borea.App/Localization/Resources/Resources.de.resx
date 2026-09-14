@@ -487,12 +487,12 @@
     <value>noch etwa {0} min</value>
   </data>
   <data name="LaunchWithoutModLoader" xml:space="preserve">
-    <value>KSA ohne Mod Loader Starten</value>
+    <value>KSA ohne Mod-Loader starten</value>
   </data>
   <data name="LaunchActiveInstance" xml:space="preserve">
-    <value>Aktive Instanz Starten</value>
+    <value>Aktive Instanz starten</value>
   </data>
   <data name="LaunchWithoutModLoaderToolTip" xml:space="preserve">
-    <value>Dadurch wird KSA so gestartet, als würden Sie normalerweise die KSA.exe ausführen. Es wird keine Borea-Instanz verwendet; stattdessen läuft die gemeinsam genutzte Instanz, die von KSA verwaltet und erstellt wird.</value>
+    <value>Startet KSA so, als würdest du KSA.exe direkt ausführen. Es nutzt das gemeinsame Profil, das KSA selbst anlegt, und keine Borea-Instanz.</value>
   </data>
 </root>

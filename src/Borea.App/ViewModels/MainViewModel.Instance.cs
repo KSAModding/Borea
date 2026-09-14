@@ -36,6 +36,7 @@ public partial class MainViewModel
     private string? _launchMessage;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(EnableActiveInstance))]
     private bool _isLaunching;
 
     [ObservableProperty]

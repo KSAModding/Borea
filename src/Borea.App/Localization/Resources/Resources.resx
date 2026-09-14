@@ -493,6 +493,6 @@
     <value>Launch Active Instance</value>
   </data>
   <data name="LaunchWithoutModLoaderToolTip" xml:space="preserve">
-    <value>This will launch KSA as if you normally ran KSA.exe. It does not use a Borea instance, it runs the shared instance that KSA manages and creates.</value>
+    <value>Launches KSA the same way as running KSA.exe. It uses the shared profile that KSA creates, not a Borea instance.</value>
   </data>
 </root>
