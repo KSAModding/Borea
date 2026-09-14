@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using Borea.Core.Game;
 using Borea.Core.Instances;
 using Borea.Core.Launch;
 using Borea.Core.ModLoaders;
@@ -75,6 +76,71 @@ public sealed class LoaderLauncherTests : IDisposable
         Assert.Equal(instanceRoot, plan.EnvironmentVariables["STARMAP_INSTANCE_PATH"]);
         Assert.Equal(Path.GetFullPath(StarMapDirectory), plan.WorkingDirectory);
         Assert.True(_launcher.IsRunning(_instance.InstanceId));
+    }
+
+    [Theory]
+    [InlineData(OsPlatform.Linux)]
+    [InlineData(OsPlatform.MacOs)]
+    public void Launch_AssemblyBesideTheAppHostOutsideWindows_StartsItThroughDotnet(OsPlatform platform)
+    {
+        PlaceStarMap();
+        var assembly = PlaceStarMap("StarMap.dll");
+        var dotnet = Path.Combine(_tempRoot, "dotnet", "dotnet");
+        Directory.CreateDirectory(Path.GetDirectoryName(dotnet)!);
+        File.WriteAllBytes(dotnet, Array.Empty<byte>());
+        var instanceRoot = Path.GetFullPath(_paths.GetInstanceRoot(_instance.InstanceId));
+        using var launcher = new LoaderLauncher(_paths, _starter, platform, () => dotnet);
+
+        var result = launcher.Launch(_instance, LoaderListing(provides: StarMapProvides()));
+
+        Assert.True(result.Started);
+        var plan = Assert.Single(_starter.Plans);
+        Assert.Same(plan, result.Plan);
+        Assert.Equal(dotnet, plan.Executable);
+        Assert.Equal(new[] { assembly, "-InstancePath", instanceRoot }, plan.Arguments);
+        Assert.Equal(instanceRoot, plan.EnvironmentVariables["STARMAP_INSTANCE_PATH"]);
+        Assert.Equal(Path.GetFullPath(StarMapDirectory), plan.WorkingDirectory);
+    }
+
+    [Fact]
+    public void Launch_AssemblyBesideTheAppHostOnWindows_StartsTheAppHost()
+    {
+        var executable = PlaceStarMap();
+        PlaceStarMap("StarMap.dll");
+        using var launcher = new LoaderLauncher(_paths, _starter, OsPlatform.Windows, () => throw new InvalidOperationException("Windows needs no dotnet host."));
+
+        var result = launcher.Launch(_instance, LoaderListing(provides: StarMapProvides()));
+
+        Assert.True(result.Started);
+        Assert.Equal(executable, Assert.Single(_starter.Plans).Executable);
+    }
+
+    [Fact]
+    public void Launch_NoAssemblyBesideTheAppHostOnLinux_StartsTheTarget()
+    {
+        var executable = PlaceStarMap();
+        using var launcher = new LoaderLauncher(_paths, _starter, OsPlatform.Linux, () => throw new InvalidOperationException("Only an assembly needs a dotnet host."));
+
+        var result = launcher.Launch(_instance, LoaderListing(provides: StarMapProvides()));
+
+        Assert.True(result.Started);
+        Assert.Equal(executable, Assert.Single(_starter.Plans).Executable);
+    }
+
+    [Fact]
+    public void Launch_AssemblyBesideTheAppHostWithoutDotnet_ReportsIt()
+    {
+        PlaceStarMap();
+        PlaceStarMap("StarMap.dll");
+        using var launcher = new LoaderLauncher(_paths, _starter, OsPlatform.Linux, () => null);
+
+        var result = launcher.Launch(_instance, LoaderListing(provides: StarMapProvides()));
+
+        Assert.Equal(LaunchOutcome.DotnetMissing, result.Outcome);
+        Assert.Contains("dotnet", result.Message);
+        Assert.Contains("StarMap", result.Message);
+        Assert.Empty(_starter.Plans);
+        Assert.False(launcher.IsRunning(_instance.InstanceId));
     }
 
     [Fact]
@@ -298,6 +364,7 @@ public sealed class LoaderLauncherTests : IDisposable
     {
         Assert.Throws<ArgumentNullException>(() => new LoaderLauncher(null!, _starter));
         Assert.Throws<ArgumentNullException>(() => new LoaderLauncher(_paths, null!));
+        Assert.Throws<ArgumentNullException>(() => new LoaderLauncher(_paths, _starter, OsPlatform.Linux, null!));
     }
 
     public void Dispose()

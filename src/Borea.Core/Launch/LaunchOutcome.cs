@@ -25,4 +25,7 @@ public enum LaunchOutcome
 
     /// <summary>The operating system refused to start the process.</summary>
     StartFailed = 7,
+
+    /// <summary>The loader runs through dotnet on this system, and no dotnet host was found.</summary>
+    DotnetMissing = 8,
 }

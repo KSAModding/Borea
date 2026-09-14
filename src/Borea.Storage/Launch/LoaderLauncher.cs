@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using Borea.Core.Game;
 using Borea.Core.Instances;
 using Borea.Core.Launch;
 using Borea.Core.Mods;
@@ -15,13 +16,22 @@ public sealed class LoaderLauncher : ILauncher, IDisposable
 {
     private readonly IGamePathProvider _pathProvider;
     private readonly IProcessStarter _starter;
+    private readonly OsPlatform? _platform;
+    private readonly Func<string?> _findDotnet;
     private readonly object _gate = new();
     private readonly Dictionary<Guid, IStartedProcess> _running = new();
 
     public LoaderLauncher(IGamePathProvider pathProvider, IProcessStarter starter)
+        : this(pathProvider, starter, SharedProfileLauncher.CurrentPlatform(), () => DotnetHost.Find(Environment.GetEnvironmentVariable("PATH")))
+    {
+    }
+
+    internal LoaderLauncher(IGamePathProvider pathProvider, IProcessStarter starter, OsPlatform? platform, Func<string?> findDotnet)
     {
         _pathProvider = pathProvider ?? throw new ArgumentNullException(nameof(pathProvider));
         _starter = starter ?? throw new ArgumentNullException(nameof(starter));
+        _platform = platform;
+        _findDotnet = findDotnet ?? throw new ArgumentNullException(nameof(findDotnet));
     }
 
     public LaunchResult Launch(Instance instance, ModMetadata? loader)
@@ -83,6 +93,21 @@ public sealed class LoaderLauncher : ILauncher, IDisposable
                 launch,
                 handover,
                 Path.GetFullPath(_pathProvider.GetInstanceRoot(instance.InstanceId)));
+
+            // StarMap lists only its Windows app host, and its assembly runs through dotnet
+            // on every other system. This goes once the listing says how the loader starts there.
+            if (_platform != OsPlatform.Windows && DotnetHost.AssemblyBeside(plan.Executable) is { } assembly)
+            {
+                var host = _findDotnet();
+                if (host is null)
+                {
+                    return LaunchResult.Failed(
+                        LaunchOutcome.DotnetMissing,
+                        $"{loader.Name} runs through dotnet on this system, and Borea did not find dotnet on the PATH. Install the .NET runtime that {loader.Name} needs and try again.");
+                }
+
+                plan = plan.ThroughHost(host, assembly);
+            }
 
             if (!File.Exists(plan.Executable))
             {
