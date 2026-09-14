@@ -13,6 +13,12 @@ using CommunityToolkit.Mvvm.Input;
 
 namespace Borea.App.ViewModels;
 
+public enum InstanceTab
+{
+    Content,
+    GameData,
+}
+
 /// <summary>
 /// The instance page (library-instance in #8): header with Play, and the
 /// installed content grouped the way the design does.
@@ -24,6 +30,15 @@ public partial class MainViewModel
 
     [ObservableProperty]
     private InstanceItem? _selectedInstance;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsContentTab))]
+    [NotifyPropertyChangedFor(nameof(IsGameDataTab))]
+    private InstanceTab _instanceTab;
+
+    public bool IsContentTab => InstanceTab == InstanceTab.Content;
+
+    public bool IsGameDataTab => InstanceTab == InstanceTab.GameData;
 
     public ObservableCollection<ContentGroup> ContentGroups { get; } = [];
 
@@ -46,6 +61,10 @@ public partial class MainViewModel
     {
         if (_services is null || item is null)
             return;
+
+        // a rename or a removal reloads the same instance and keeps its tab
+        if (SelectedInstance?.InstanceId != item.InstanceId)
+            InstanceTab = InstanceTab.Content;
 
         SelectedInstance = item;
         LaunchMessage = null;
@@ -70,6 +89,8 @@ public partial class MainViewModel
 
         _content = content.OrderBy(content => content.Name, StringComparer.CurrentCultureIgnoreCase).ToList();
         RefreshContentGroups();
+        if (IsGameDataTab)
+            await LoadGameDataAsync();
 
         CurrentWindowHome = false;
         CurrentWindowDiscover = false;
@@ -78,6 +99,9 @@ public partial class MainViewModel
         CurrentWindowContent = false;
         CurrentWindowInstance = true;
     }
+
+    [RelayCommand]
+    private void ShowInstanceContent() => InstanceTab = InstanceTab.Content;
 
     /// <summary>
     /// Groups follow the design: content the user chose, then what came along

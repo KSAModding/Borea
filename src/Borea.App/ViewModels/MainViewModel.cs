@@ -514,6 +514,7 @@ public partial class MainViewModel : ViewModelBase
             OnPropertyChanged(nameof(SelectedRegionalFormat));
             foreach (var item in RecentItems)
                 item.RefreshText();
+            RefreshGameDataItems();
         }
     }
 
@@ -530,6 +531,7 @@ public partial class MainViewModel : ViewModelBase
         foreach (var option in ReleaseChannelOptions)
             option.RefreshText();
         RefreshContentGroups();
+        RefreshGameDataItems();
         RefreshLoaderText();
         OnPropertyChanged(nameof(GameSetupBannerText));
         OnPropertyChanged(nameof(InstalledInText));
