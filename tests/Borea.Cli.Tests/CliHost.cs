@@ -33,6 +33,8 @@ internal sealed class CliHost : IDisposable
 
     public IContentIndexSnapshotProvider? IndexSnapshots { get; set; }
 
+    public IContentIndexRefresh? IndexRefresh { get; set; }
+
     public FakeModRepository Mods { get; } = new();
 
     public IModRepository? ModRepository { get; set; }
@@ -102,7 +104,8 @@ internal sealed class CliHost : IDisposable
             launcher: new LoaderLauncher(graph.Paths, ProcessStarter),
             modPacks: ModPacks ?? new ContentIndexModPackRepository(IndexSnapshots ?? new ReaderSnapshotProvider(IndexReader)),
             modPackInstaller: ModPackInstaller,
-            sharedProfileLauncher: new SharedProfileLauncher(graph.Paths, ProcessStarter, OsPlatform.Windows));
+            sharedProfileLauncher: new SharedProfileLauncher(graph.Paths, ProcessStarter, OsPlatform.Windows),
+            indexRefresh: IndexRefresh);
     }
 
     public void Dispose()

@@ -44,6 +44,8 @@ internal sealed class CliServices : IDisposable
 
     public required IContentIndexSnapshotProvider IndexSnapshots { get; init; }
 
+    public required IContentIndexRefresh IndexRefresh { get; init; }
+
     public required IGamePathProvider Paths { get; init; }
 
     public required IBoreaLog Log { get; init; }
@@ -106,7 +108,8 @@ internal sealed class CliServices : IDisposable
         ILauncher? launcher = null,
         IModPackRepository? modPacks = null,
         IModPackInstaller? modPackInstaller = null,
-        ISharedProfileLauncher? sharedProfileLauncher = null)
+        ISharedProfileLauncher? sharedProfileLauncher = null,
+        IContentIndexRefresh? indexRefresh = null)
     {
         if (services is null)
             throw new ArgumentNullException(nameof(services));
@@ -123,6 +126,7 @@ internal sealed class CliServices : IDisposable
             IndexFetcher = indexFetcher ?? services.IndexFetcher,
             IndexReader = indexReader ?? services.IndexReader,
             IndexSnapshots = indexSnapshots ?? services.IndexSnapshots,
+            IndexRefresh = indexRefresh ?? services.IndexRefresh,
             Paths = services.Paths,
             Log = services.Log,
             Mods = mods ?? services.Mods,
