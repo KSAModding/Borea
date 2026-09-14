@@ -130,6 +130,20 @@ public static class DtoMapper
         return MapInput(() => new ReleaseDownloadCounts(version, dto.Total, dto.Hosts));
     }
 
+    public static IconImage MapIconImage(ImageDto dto)
+    {
+        ArgumentNullException.ThrowIfNull(dto);
+        return MapInput(() => new IconImage(
+            dto.Url, dto.Sha256, dto.Width, dto.Height, dto.Size, dto.License, dto.Attribution, dto.Source));
+    }
+
+    public static DescriptionImage MapDescriptionImage(string id, ImageDto dto)
+    {
+        ArgumentNullException.ThrowIfNull(dto);
+        return MapInput(() => new DescriptionImage(
+            id, dto.Url, dto.Sha256, dto.Width, dto.Height, dto.Size, dto.License, dto.Attribution, dto.Source));
+    }
+
     // Enum / value mappings
 
     private static ModStatus MapModStatus(string? status) =>
