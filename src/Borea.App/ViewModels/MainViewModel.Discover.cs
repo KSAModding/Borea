@@ -226,7 +226,11 @@ public partial class MainViewModel
     {
         var installed = new HashSet<string>(ActiveInstance?.ModIds ?? [], ModIds.Comparer);
         foreach (var item in _listings)
+        {
             item.IsInstalled = installed.Contains(item.ModId);
+            var mod = _activeInstanceEntity?.Mods.FirstOrDefault(entry => ModIds.Equals(entry.ModId, item.ModId));
+            item.RemoveBlockedText = item.IsInstalled ? RemoveBlockedReason(_activeInstanceEntity, mod) : null;
+        }
         foreach (var release in _contentReleases)
             release.RefreshInstalled(ActiveInstance);
         RefreshPackInstalledFlags();
@@ -491,7 +495,15 @@ public sealed partial class DiscoverItem : ObservableObject, IInstallRow
     /// </summary>
     public bool CanInstall => !IsInstalled && !IsInstalling && Type == ContentType.Mod;
 
-    public bool CanRemove => IsInstalled && !IsRemoving;
+    public bool CanRemove => IsInstalled && !IsRemoving && RemoveBlockedText is null;
+
+    /// <summary>Why the remove button is disabled, for its tooltip. Null when the mod can be removed.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanRemove))]
+    [NotifyPropertyChangedFor(nameof(RemoveToolTip))]
+    private string? _removeBlockedText;
+
+    public string RemoveToolTip => RemoveBlockedText ?? _owner.Localization.ContentRemove;
 
     public DiscoverItem(MainViewModel owner, ModMetadata listing)
     {

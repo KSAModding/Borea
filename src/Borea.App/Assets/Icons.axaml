@@ -27,6 +27,8 @@
 
     <StreamGeometry x:Key="Icon.Download">M 12 13.5 V 3 M 20.25 13.5 V 19.5 H 3.75 V 13.5 M 15.75 9.75 L 12 13.5 L 8.25 9.75</StreamGeometry>
 
+    <StreamGeometry x:Key="Icon.Trash">M 20.25 5.25 H 3.75 M 9.75 9.75 V 15.75 M 14.25 9.75 V 15.75 M 18.75 5.25 V 19.5 A 0.75 0.75 0 0 1 18 20.25 H 6 A 0.75 0.75 0 0 1 5.25 19.5 V 5.25 M 15.75 5.25 V 3.75 A 1.5 1.5 0 0 0 14.25 2.25 H 9.75 A 1.5 1.5 0 0 0 8.25 3.75 V 5.25</StreamGeometry>
+
     <StreamGeometry x:Key="Icon.Plus">M 3.75 12 H 20.25 M 12 3.75 V 20.25</StreamGeometry>
 
     <StreamGeometry x:Key="Icon.CaretDown">M 19.5 9 L 12 16.5 L 4.5 9</StreamGeometry>
