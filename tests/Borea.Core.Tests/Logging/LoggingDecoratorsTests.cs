@@ -232,6 +232,8 @@ public sealed class LoggingDecoratorsTests
     {
         public LaunchResult Launch(Instance instance, ModMetadata? loader) => result;
 
+        public Task<LaunchResult> WatchStartAsync(Instance instance, LaunchResult started, CancellationToken cancellationToken = default) => Task.FromResult(started);
+
         public bool IsRunning(Guid instanceId) => false;
     }
 

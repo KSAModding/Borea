@@ -41,6 +41,15 @@ internal sealed class FakeStartedProcess : IStartedProcess
 
     public bool HasExited { get; set; }
 
+    public int? ExitCode { get; set; }
+
+    public List<string> Output { get; } = new();
+
+    public IReadOnlyList<string> RecentOutput => Output;
+
+    /// <summary>Answers at once, so a watch over a fake never waits for real time.</summary>
+    public Task<bool> WaitForExitAsync(TimeSpan timeout, CancellationToken cancellationToken = default) => Task.FromResult(HasExited);
+
     public bool Disposed { get; private set; }
 
     public void Dispose() => Disposed = true;

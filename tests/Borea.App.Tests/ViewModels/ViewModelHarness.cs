@@ -37,6 +37,8 @@ internal sealed class ViewModelHarness : IDisposable
 
     private Func<string, string>? _editSnapshot;
 
+    private Borea.Storage.Launch.IProcessStarter? _processStarter;
+
     public const string OfflineMessage = "The content index host is offline.";
 
     /// <summary>Fails every content index request with <see cref="OfflineMessage"/>.</summary>
@@ -50,9 +52,10 @@ internal sealed class ViewModelHarness : IDisposable
     /// <param name="editSnapshot">Changes the index snapshot before it is served.</param>
     /// <param name="indexOffline">The first value of <see cref="IndexOffline"/>.</param>
     /// <param name="candidates">Adds the folders the install detector checks, before the first load.</param>
-    public static async Task<ViewModelHarness> CreateAsync(Func<BoreaServices, Task>? seed = null, Func<HttpRequestMessage, HttpResponseMessage?>? respond = null, Func<string, string>? editSnapshot = null, bool indexOffline = false, Action<ViewModelHarness>? candidates = null)
+    /// <param name="processStarter">Starts the launchers' processes. Null starts real ones.</param>
+    public static async Task<ViewModelHarness> CreateAsync(Func<BoreaServices, Task>? seed = null, Func<HttpRequestMessage, HttpResponseMessage?>? respond = null, Func<string, string>? editSnapshot = null, bool indexOffline = false, Action<ViewModelHarness>? candidates = null, Borea.Storage.Launch.IProcessStarter? processStarter = null)
     {
-        var harness = new ViewModelHarness { _respond = respond, _editSnapshot = editSnapshot, IndexOffline = indexOffline };
+        var harness = new ViewModelHarness { _respond = respond, _editSnapshot = editSnapshot, IndexOffline = indexOffline, _processStarter = processStarter };
         Directory.CreateDirectory(harness.Root);
         candidates?.Invoke(harness);
         harness.Services = await harness.BuildServicesAsync();
@@ -80,7 +83,7 @@ internal sealed class ViewModelHarness : IDisposable
         json => "{ \"tags\": " + $$"""{ "spec_version": 1, "mod": [{{string.Join(", ", tags.Select(tag => $$"""{ "tag": "{{tag.Tag}}", "name": "{{tag.Name}}", "meaning": "{{tag.Name}} content." }"""))}}] }""" + "," + json.TrimStart()[1..];
 
     public Task<BoreaServices> BuildServicesAsync() =>
-        BoreaServices.BuildAsync(Root, new IndexOnlyHandler(this), new FakeSpaceDock(), Candidates);
+        BoreaServices.BuildAsync(Root, new IndexOnlyHandler(this), new FakeSpaceDock(), Candidates, processStarter: _processStarter);
 
     public void Dispose()
     {

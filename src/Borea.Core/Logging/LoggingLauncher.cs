@@ -39,6 +39,20 @@ public sealed class LoggingLauncher : ILauncher, IDisposable
         return result;
     }
 
+    public async Task<LaunchResult> WatchStartAsync(Instance instance, LaunchResult started, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(instance);
+
+        var result = await Inner.WatchStartAsync(instance, started, cancellationToken).ConfigureAwait(false);
+        if (result.Outcome == LaunchOutcome.ExitedEarly)
+        {
+            var blamed = result.BlamedModId is null ? "no mod named" : $"blames {result.BlamedModId}";
+            _log.Write($"Launch of instance {instance.InstanceId} stopped early with exit code {result.ExitCode}, {blamed}. Last output:{Environment.NewLine}{string.Join(Environment.NewLine, result.Output)}");
+        }
+
+        return result;
+    }
+
     public bool IsRunning(Guid instanceId) => Inner.IsRunning(instanceId);
 
     public void Dispose()

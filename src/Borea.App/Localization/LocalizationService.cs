@@ -560,6 +560,27 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string FormatInstallMinutesLeft(int minutes)
         => string.Format(CultureInfo.CurrentCulture, Resources.InstallMinutesLeftFormat, minutes);
 
+    public string LaunchShowDetails => Resources.LaunchShowDetails;
+
+    public string LaunchOpenLog => Resources.LaunchOpenLog;
+
+    public string LaunchNoOutput => Resources.LaunchNoOutput;
+
+    public string FormatLaunchStarting(string loader)
+        => string.Format(CultureInfo.CurrentCulture, Resources.LaunchStartingFormat, loader);
+
+    public string FormatLaunchModBroke(string mod, string version, string loader)
+        => string.Format(CultureInfo.CurrentCulture, Resources.LaunchModBrokeFormat, mod, version, loader);
+
+    public string FormatLaunchExitedEarly(string loader, int exitCode)
+        => string.Format(CultureInfo.CurrentCulture, Resources.LaunchExitedEarlyFormat, loader, exitCode);
+
+    public string FormatLaunchDisableMod(string mod)
+        => string.Format(CultureInfo.CurrentCulture, Resources.LaunchDisableModFormat, mod);
+
+    public string FormatLaunchModDisabled(string mod)
+        => string.Format(CultureInfo.CurrentCulture, Resources.LaunchModDisabledFormat, mod);
+
     public string FormatContentSource(string source)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(source);
