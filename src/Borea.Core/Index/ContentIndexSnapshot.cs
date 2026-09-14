@@ -59,13 +59,26 @@ public sealed class ContentIndexListing
     /// <summary>Null when the index reports no download counts for this listing, which means unknown.</summary>
     public ListingDownloadCounts? Downloads { get; }
 
+    /// <summary>Null when the authored document has no usable images.</summary>
+    public ContentImages? Images { get; }
+
+    /// <summary>The earliest release date the index reports, yanked releases included.</summary>
+    public DateTimeOffset? PublishedAt { get; }
+
+    /// <summary>The latest release date the index reports for a release that is not yanked.</summary>
+    public DateTimeOffset? UpdatedAt { get; }
+
     public ContentIndexListing(
         string id,
         ModMetadata? authored,
         IReadOnlyList<ModVersionMetadata> releases,
         IndexStatus? indexStatus,
-        ListingDownloadCounts? downloads = null)
+        ListingDownloadCounts? downloads = null,
+        ContentImages? images = null,
+        DateTimeOffset? publishedAt = null,
+        DateTimeOffset? updatedAt = null)
     {
+        ContentIndexDates.Validate(publishedAt, updatedAt);
         ModIds.Validate(id, nameof(id));
         if (authored is not null && !ModIds.Equals(id, authored.ModId))
             throw new ArgumentException("The authored listing id must match the outer id.", nameof(authored));
@@ -79,6 +92,9 @@ public sealed class ContentIndexListing
         Releases = releaseCopy;
         IndexStatus = indexStatus;
         Downloads = downloads;
+        Images = images;
+        PublishedAt = publishedAt;
+        UpdatedAt = updatedAt;
     }
 
     private static IReadOnlyList<T> Copy<T>(IReadOnlyList<T> values, string parameterName)
@@ -96,9 +112,21 @@ public sealed class ContentIndexPack
 
     public IndexStatus? IndexStatus { get; }
 
-    public ContentIndexPack(string id, IReadOnlyList<ContentIndexPackVersion> versions, IndexStatus? indexStatus)
+    /// <summary>The earliest release date the index reports, retracted versions included.</summary>
+    public DateTimeOffset? PublishedAt { get; }
+
+    /// <summary>The latest release date the index reports for a version that is not retracted.</summary>
+    public DateTimeOffset? UpdatedAt { get; }
+
+    public ContentIndexPack(
+        string id,
+        IReadOnlyList<ContentIndexPackVersion> versions,
+        IndexStatus? indexStatus,
+        DateTimeOffset? publishedAt = null,
+        DateTimeOffset? updatedAt = null)
     {
         ModIds.Validate(id, nameof(id));
+        ContentIndexDates.Validate(publishedAt, updatedAt);
         var versionCopy = Copy(versions, nameof(versions));
         if (versionCopy.Any(version => !ModIds.Equals(id, version.Metadata.ModPackId)))
             throw new ArgumentException("Each pack version id must match the outer id.", nameof(versions));
@@ -106,6 +134,8 @@ public sealed class ContentIndexPack
         Id = id;
         Versions = versionCopy;
         IndexStatus = indexStatus;
+        PublishedAt = publishedAt;
+        UpdatedAt = updatedAt;
     }
 
     private static IReadOnlyList<T> Copy<T>(IReadOnlyList<T> values, string parameterName)
@@ -115,7 +145,17 @@ public sealed class ContentIndexPack
     }
 }
 
-public sealed record ContentIndexPackVersion(ModPackMetadata Metadata, IndexStatus? IndexStatus);
+/// <summary>One pack version. <see cref="Images"/> is null when the version document has no usable images.</summary>
+public sealed record ContentIndexPackVersion(ModPackMetadata Metadata, IndexStatus? IndexStatus, ContentImages? Images = null);
+
+internal static class ContentIndexDates
+{
+    public static void Validate(DateTimeOffset? publishedAt, DateTimeOffset? updatedAt)
+    {
+        if (publishedAt is { } published && updatedAt is { } updated && updated < published)
+            throw new ArgumentException($"The updated date {updated:O} cannot be before the published date {published:O}.", nameof(updatedAt));
+    }
+}
 
 public sealed class ContentIndexGameVersions
 {

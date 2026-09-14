@@ -176,6 +176,28 @@ public sealed class IndexCommandTests : IDisposable
         Assert.Contains("malformed downloads active-mod: The downloads value is unreadable.", run.Output);
     }
 
+    [Theory]
+    [InlineData(ContentIndexDiagnosticScope.Images, "The images icon is unreadable.", "  Images: 1 malformed.", "malformed images active-mod: The images icon is unreadable.")]
+    [InlineData(ContentIndexDiagnosticScope.Dates, "The updated_at value is unreadable.", "  Dates: 1 malformed.", "malformed dates active-mod: The updated_at value is unreadable.")]
+    public async Task Validate_MalformedImagesOrDates_ReportsScopeAndFails(
+        ContentIndexDiagnosticScope scope,
+        string reason,
+        string summary,
+        string entry)
+    {
+        _host.IndexReader.Snapshot = Snapshot(new ContentIndexDiagnostic(
+            ContentIndexDiagnosticKind.Malformed,
+            scope,
+            reason,
+            "active-mod"));
+
+        var run = await _host.RunAsync("index", "validate");
+
+        Assert.Equal(1, run.ExitCode);
+        Assert.Contains(summary, run.Output);
+        Assert.Contains(entry, run.Output);
+    }
+
     [Fact]
     public async Task Validate_Cancellation_ReachesReaderAndReportsFailure()
     {

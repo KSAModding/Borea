@@ -31,6 +31,19 @@ public sealed class ParsedListing
     /// <summary>The parts of downloads that cannot be read. The listing stays usable.</summary>
     public IReadOnlyList<RejectedIndexEntry> DownloadsErrors { get; }
 
+    /// <summary>Null when the authored document has no images or none of them can be read.</summary>
+    public ContentImages? Images { get; }
+
+    /// <summary>The parts of images that cannot be read. The listing stays usable.</summary>
+    public IReadOnlyList<RejectedIndexEntry> ImagesErrors { get; }
+
+    public DateTimeOffset? PublishedAt { get; }
+
+    public DateTimeOffset? UpdatedAt { get; }
+
+    /// <summary>The dates that cannot be read. The listing stays usable.</summary>
+    public IReadOnlyList<RejectedIndexEntry> DatesErrors { get; }
+
     public ParsedListing(
         string id,
         ModMetadata? authored,
@@ -40,7 +53,12 @@ public sealed class ParsedListing
         IndexStatus? indexStatus,
         RejectedIndexEntry? indexStatusError = null,
         ListingDownloadCounts? downloads = null,
-        IReadOnlyList<RejectedIndexEntry>? downloadsErrors = null)
+        IReadOnlyList<RejectedIndexEntry>? downloadsErrors = null,
+        ContentImages? images = null,
+        IReadOnlyList<RejectedIndexEntry>? imagesErrors = null,
+        DateTimeOffset? publishedAt = null,
+        DateTimeOffset? updatedAt = null,
+        IReadOnlyList<RejectedIndexEntry>? datesErrors = null)
     {
         ModIds.Validate(id, nameof(id));
 
@@ -53,5 +71,10 @@ public sealed class ParsedListing
         IndexStatusError = indexStatusError;
         Downloads = downloads;
         DownloadsErrors = downloadsErrors ?? Array.Empty<RejectedIndexEntry>();
+        Images = images;
+        ImagesErrors = imagesErrors ?? Array.Empty<RejectedIndexEntry>();
+        PublishedAt = publishedAt;
+        UpdatedAt = updatedAt;
+        DatesErrors = datesErrors ?? Array.Empty<RejectedIndexEntry>();
     }
 }

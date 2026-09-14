@@ -51,7 +51,11 @@ public static class PackVersionParser
 
             var metadata = DtoMapper.MapPackVersion(packVersion.Authored, source);
             var (indexStatus, indexStatusError) = IndexStatusParser.Parse(element, packId, version);
-            return ParseOutcome<ParsedPackVersion>.Valid(new ParsedPackVersion(metadata, indexStatus, indexStatusError));
+            var (images, imagesErrors) = ContentImagesParser.Parse(element.GetProperty("authored"), packId, version);
+            return ParseOutcome<ParsedPackVersion>.Valid(new ParsedPackVersion(metadata, indexStatus, indexStatusError, images)
+            {
+                ImagesErrors = imagesErrors,
+            });
         }
         catch (Exception ex) when (IndexJsonHelpers.IsInputFailure(ex))
         {
