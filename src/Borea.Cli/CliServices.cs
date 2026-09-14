@@ -62,6 +62,8 @@ internal sealed class CliServices : IDisposable
 
     public required IModUninstaller Uninstaller { get; init; }
 
+    public required IForeignModAdopter ForeignModAdopter { get; init; }
+
     public required ILoaderInstaller LoaderInstaller { get; init; }
 
     public required ILoaderAdopter LoaderAdopter { get; init; }
@@ -102,6 +104,7 @@ internal sealed class CliServices : IDisposable
         IModInstaller? installer = null,
         IModReplacer? replacer = null,
         IModUninstaller? uninstaller = null,
+        IForeignModAdopter? foreignModAdopter = null,
         ILoaderInstaller? loaderInstaller = null,
         ILoaderAdopter? loaderAdopter = null,
         ILoaderUninstaller? loaderUninstaller = null,
@@ -135,6 +138,7 @@ internal sealed class CliServices : IDisposable
             Installer = installer ?? services.Installer,
             Replacer = replacer ?? services.Replacer,
             Uninstaller = uninstaller ?? services.Uninstaller,
+            ForeignModAdopter = foreignModAdopter ?? services.ForeignModAdopter,
             LoaderInstaller = loaderInstaller ?? services.LoaderInstaller,
             LoaderAdopter = loaderAdopter ?? services.LoaderAdopter,
             LoaderUninstaller = loaderUninstaller ?? services.LoaderUninstaller,
