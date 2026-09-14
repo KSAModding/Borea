@@ -60,6 +60,8 @@ internal static class IndexCommand
         output.WriteLine($"  Game versions: {view.Accepted.GameVersions} known, {view.Count(ContentIndexDiagnosticScope.GameVersions, ContentIndexDiagnosticKind.Malformed)} malformed.");
         output.WriteLine($"  Index status: {view.Count(ContentIndexDiagnosticScope.IndexStatus, ContentIndexDiagnosticKind.UnsupportedValue)} unsupported, {view.Count(ContentIndexDiagnosticScope.IndexStatus, ContentIndexDiagnosticKind.Malformed)} malformed.");
         output.WriteLine($"  Download counts: {view.Accepted.DownloadCounts} listings with counts, {view.Count(ContentIndexDiagnosticScope.Downloads, ContentIndexDiagnosticKind.Malformed)} malformed.");
+        output.WriteLine($"  Images: {view.Count(ContentIndexDiagnosticScope.Images, ContentIndexDiagnosticKind.Malformed)} malformed.");
+        output.WriteLine($"  Dates: {view.Count(ContentIndexDiagnosticScope.Dates, ContentIndexDiagnosticKind.Malformed)} malformed.");
 
         if (view.Diagnostics.Entries.Count == 0)
             return;
@@ -151,6 +153,8 @@ internal static class IndexCommand
         ContentIndexDiagnosticScope.GameVersions => "game-versions",
         ContentIndexDiagnosticScope.Tags => "tags",
         ContentIndexDiagnosticScope.Downloads => "downloads",
+        ContentIndexDiagnosticScope.Images => "images",
+        ContentIndexDiagnosticScope.Dates => "dates",
         _ => throw new ArgumentOutOfRangeException(nameof(scope), scope, null),
     };
 }

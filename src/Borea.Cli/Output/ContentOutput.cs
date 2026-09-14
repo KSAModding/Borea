@@ -79,6 +79,8 @@ internal static class ContentOutput
             ContentIndexDiagnosticScope.IndexStatus => "index-status",
             ContentIndexDiagnosticScope.GameVersions => "game-versions",
             ContentIndexDiagnosticScope.Downloads => "downloads",
+            ContentIndexDiagnosticScope.Images => "images",
+            ContentIndexDiagnosticScope.Dates => "dates",
             _ => throw new ArgumentOutOfRangeException(nameof(diagnostic), diagnostic.Scope, null),
         },
         diagnostic.Reason,
