@@ -1,4 +1,6 @@
 using System.CommandLine;
+using System.Globalization;
+using Borea.Core.Index;
 
 namespace Borea.Cli.Commands;
 
@@ -56,6 +58,10 @@ internal static class CommandRunner
                 // the filter returns false, so the defect keeps its stack trace
                 throw;
             }
+            finally
+            {
+                WriteStaleIndexWarning(services.IndexRefresh.Status, error);
+            }
         }
     }
 
@@ -78,4 +84,14 @@ internal static class CommandRunner
             or HttpRequestException
             or NotSupportedException
             or OperationCanceledException;
+
+    /// <summary>
+    /// Only a command that read the index refreshes it, so <c>index refresh</c>,
+    /// which reports its own error, never gets this line.
+    /// </summary>
+    private static void WriteStaleIndexWarning(ContentIndexRefreshStatus status, TextWriter error)
+    {
+        if (status is { Outcome: ContentIndexRefreshOutcome.Failed, CachedAt: { } cachedAt })
+            error.WriteLine($"warning: using the cached index from {cachedAt.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture)} UTC, the refresh failed: {status.FailureReason}");
+    }
 }

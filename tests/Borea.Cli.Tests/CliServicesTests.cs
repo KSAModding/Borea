@@ -78,6 +78,7 @@ public sealed class CliServicesTests : IDisposable
             IndexFetcher = new FakeContentIndexFetcher(),
             IndexReader = new FakeContentIndexReader(),
             IndexSnapshots = graph.IndexSnapshots,
+            IndexRefresh = graph.IndexRefresh,
             Paths = graph.Paths,
             Log = graph.Log,
             Mods = graph.Mods,

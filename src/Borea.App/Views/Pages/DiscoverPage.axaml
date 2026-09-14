@@ -25,6 +25,14 @@
                     </StackPanel>
                 </Border>
 
+                <!-- stale index -->
+                <StackPanel Orientation="Horizontal" Spacing="12" Margin="8,16,8,0" IsVisible="{Binding IsIndexStale}">
+                    <TextBlock Classes="body-md secondary" Text="{Binding IndexStaleText}" VerticalAlignment="Center" />
+                    <Button Classes="link" Command="{Binding RetryContentIndexCommand}">
+                        <TextBlock Classes="action-md" Text="{Binding Localization.DiscoverIndexRetry}" />
+                    </Button>
+                </StackPanel>
+
                 <!-- active filters -->
                 <StackPanel Orientation="Horizontal" Spacing="8" Margin="8,24,8,0" IsVisible="{Binding HasDiscoverFilters}">
                     <Button Classes="chip-button" Command="{Binding ClearDiscoverFiltersCommand}">
@@ -65,7 +73,20 @@
                 </StackPanel>
 
                 <TextBlock Classes="body-md muted" Text="{Binding Localization.DiscoverLoading}" Margin="8,24,0,0" IsVisible="{Binding IsDiscoverLoading}" />
-                <TextBlock Classes="body-md danger" Text="{Binding DiscoverError}" TextWrapping="Wrap" Margin="8,24,0,0" IsVisible="{Binding DiscoverError, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                <TextBlock Classes="body-md danger" Text="{Binding DiscoverError}" TextWrapping="Wrap" Margin="8,24,0,0">
+                    <TextBlock.IsVisible>
+                        <MultiBinding Converter="{x:Static BoolConverters.And}">
+                            <Binding Path="DiscoverError" Converter="{x:Static ObjectConverters.IsNotNull}" />
+                            <Binding Path="!IsIndexUnreachable" />
+                        </MultiBinding>
+                    </TextBlock.IsVisible>
+                </TextBlock>
+                <StackPanel Spacing="8" Margin="8,24,0,0" IsVisible="{Binding IsIndexUnreachable}">
+                    <TextBlock Classes="body-md danger" Text="{Binding IndexFailureText}" TextWrapping="Wrap" />
+                    <Button Classes="link" Command="{Binding RetryContentIndexCommand}" HorizontalAlignment="Left">
+                        <TextBlock Classes="action-md" Text="{Binding Localization.DiscoverIndexRetry}" />
+                    </Button>
+                </StackPanel>
                 <TextBlock Classes="body-md muted" Text="{Binding Localization.DiscoverNoInstance}" Margin="8,24,0,0" IsVisible="{Binding !HasActiveInstance}" />
                 <TextBlock Classes="body-md muted" Text="{Binding Localization.DiscoverEmpty}" Margin="8,24,0,0">
                     <TextBlock.IsVisible>
@@ -73,6 +94,7 @@
                             <Binding Path="!HasDiscoverItems" />
                             <Binding Path="!IsDiscoverLoading" />
                             <Binding Path="DiscoverError" Converter="{x:Static ObjectConverters.IsNull}" />
+                            <Binding Path="!IsIndexUnreachable" />
                         </MultiBinding>
                     </TextBlock.IsVisible>
                 </TextBlock>

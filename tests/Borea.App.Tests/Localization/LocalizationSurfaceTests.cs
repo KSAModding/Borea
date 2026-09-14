@@ -30,6 +30,10 @@ public sealed class LocalizationSurfaceTests : IDisposable
         Assert.Equal("by Maxi, Renan", service.FormatContentByAuthor("Maxi, Renan"));
         Assert.Equal("Listed on SpaceDock", service.FormatContentSource("SpaceDock"));
         Assert.Equal("Installed StarMap 0.4.6 to loaders.", service.FormatSetupLoaderInstalled("StarMap", "0.4.6", "loaders"));
+        Assert.Equal("just now", service.FormatTimeAgo(TimeSpan.FromSeconds(-5)));
+        Assert.Equal("1 minute ago", service.FormatTimeAgo(TimeSpan.FromSeconds(90)));
+        Assert.Equal("5 hours ago", service.FormatTimeAgo(TimeSpan.FromHours(5.5)));
+        Assert.Equal("2 days ago", service.FormatTimeAgo(TimeSpan.FromDays(2)));
         Assert.Throws<ArgumentException>(() => service.FormatContentByAuthor(" "));
         Assert.Throws<ArgumentException>(() => service.FormatContentSource(""));
     }

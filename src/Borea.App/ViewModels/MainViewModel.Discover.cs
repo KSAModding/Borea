@@ -133,6 +133,7 @@ public partial class MainViewModel
             IsDiscoverLoading = false;
         }
 
+        UpdateIndexRefreshStatus();
         RefreshInstalledFlags();
         ApplyDiscoverFilters();
     }
@@ -172,6 +173,7 @@ public partial class MainViewModel
 
     private void LoadCategoryOptions(IReadOnlyList<ModMetadata> listings)
     {
+        var selectedTags = SelectedCategories.Select(category => category.Tag).ToHashSet(StringComparer.OrdinalIgnoreCase);
         SelectedCategories.Clear();
         CategoryOptions.Clear();
 
@@ -190,6 +192,12 @@ public partial class MainViewModel
 
         if (CategoryOptions.Count > 0 && listings.Any(listing => !HasCuratedTag(listing)))
             CategoryOptions.Add(new DiscoverCategory(this, tag: null));
+
+        foreach (var category in CategoryOptions.Where(category => selectedTags.Contains(category.Tag)))
+        {
+            category.IsSelected = true;
+            SelectedCategories.Add(category);
+        }
 
         OnPropertyChanged(nameof(HasDiscoverFilters));
     }

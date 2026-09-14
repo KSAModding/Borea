@@ -36,12 +36,18 @@ internal sealed class ViewModelHarness : IDisposable
 
     private Func<string, string>? _editSnapshot;
 
+    public const string OfflineMessage = "The content index host is offline.";
+
+    /// <summary>Fails every content index request with <see cref="OfflineMessage"/>.</summary>
+    public bool IndexOffline { get; set; }
+
     /// <param name="seed">Writes settings the view model should start from; the services are rebuilt after it ran.</param>
     /// <param name="respond">Answers a request outside the content index. Null fails it.</param>
     /// <param name="editSnapshot">Changes the index snapshot before it is served.</param>
-    public static async Task<ViewModelHarness> CreateAsync(Func<BoreaServices, Task>? seed = null, Func<HttpRequestMessage, HttpResponseMessage?>? respond = null, Func<string, string>? editSnapshot = null)
+    /// <param name="indexOffline">The first value of <see cref="IndexOffline"/>.</param>
+    public static async Task<ViewModelHarness> CreateAsync(Func<BoreaServices, Task>? seed = null, Func<HttpRequestMessage, HttpResponseMessage?>? respond = null, Func<string, string>? editSnapshot = null, bool indexOffline = false)
     {
-        var harness = new ViewModelHarness { _respond = respond, _editSnapshot = editSnapshot };
+        var harness = new ViewModelHarness { _respond = respond, _editSnapshot = editSnapshot, IndexOffline = indexOffline };
         Directory.CreateDirectory(harness.Root);
         harness.Services = await harness.BuildServicesAsync();
         if (seed is not null)
@@ -84,7 +90,7 @@ internal sealed class ViewModelHarness : IDisposable
             Directory.Delete(Root, recursive: true);
     }
 
-    private static string SnapshotFixturePath =>
+    internal static string SnapshotFixturePath =>
         Path.Combine(AppContext.BaseDirectory, "Index", "Fixtures", "current-snapshot.json");
 
     /// <summary>Serves the index snapshot, records every request, and answers or fails the others.</summary>
@@ -97,6 +103,9 @@ internal sealed class ViewModelHarness : IDisposable
 
             if (request.RequestUri?.AbsoluteUri.StartsWith("https://ksamodding.github.io/content-index-releases/", StringComparison.Ordinal) != true)
                 return owner._respond?.Invoke(request) ?? throw new HttpRequestException($"No network in tests: {request.RequestUri}");
+
+            if (owner.IndexOffline)
+                throw new HttpRequestException(OfflineMessage);
 
             var snapshot = await File.ReadAllTextAsync(SnapshotFixturePath, cancellationToken);
             return new HttpResponseMessage(HttpStatusCode.OK)
