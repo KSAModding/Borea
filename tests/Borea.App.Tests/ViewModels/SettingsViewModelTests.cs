@@ -4,6 +4,7 @@ using Borea.Composition;
 using Borea.Core.ModLoaders;
 using Borea.Core.Mods;
 using Borea.Core.Preferences;
+using Borea.Core.Settings;
 
 namespace Borea.App.Tests.ViewModels;
 
@@ -132,6 +133,39 @@ public sealed class SettingsViewModelTests
         Assert.Equal(harness.Localization.FormatSetupLoaderInstalledVersion(recorded), viewModel.InstalledLoaderText);
         Assert.Equal(harness.Localization.FormatSetupUpdateLoader("0.4.6"), viewModel.LoaderInstallActionText);
         Assert.Equal(canUpdate, viewModel.CanInstallLoader);
+    }
+
+    [Fact]
+    public async Task SaveGameDirectory_KeepsAChannelSavedWhileTheAppIsOpen()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var viewModel = harness.ViewModel;
+        var game = Directory.CreateDirectory(Path.Combine(harness.Root, "game")).FullName;
+        await harness.Services.SettingsRepository.SaveAsync(new BoreaSettings(null, releaseChannel: ReleaseChannel.Testing));
+        await viewModel.ShowGameSettingsCommand.ExecuteAsync(null);
+
+        viewModel.GameDirectoryInput = game;
+        await viewModel.SaveGameDirectoryCommand.ExecuteAsync(null);
+
+        Assert.Equal(game, harness.Services.Settings.GameDirectoryPath);
+        Assert.Equal(ReleaseChannel.Testing, harness.Services.Settings.ReleaseChannel);
+        Assert.Equal(ReleaseChannel.Testing, viewModel.SelectedReleaseChannel.Channel);
+    }
+
+    [Fact]
+    public async Task UseExistingLoader_KeepsAChannelSavedWhileTheAppIsOpen()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var viewModel = harness.ViewModel;
+        var loader = Directory.CreateDirectory(Path.Combine(harness.Root, "StarMap")).FullName;
+        await harness.Services.SettingsRepository.SaveAsync(new BoreaSettings(null, releaseChannel: ReleaseChannel.Testing));
+        await viewModel.ShowGameSettingsCommand.ExecuteAsync(null);
+
+        viewModel.LoaderDirectoryInput = loader;
+        await viewModel.AdoptLoaderCommand.ExecuteAsync(null);
+
+        Assert.Equal(loader, harness.Services.Settings.LoaderInstallations["StarMap"].DirectoryPath);
+        Assert.Equal(ReleaseChannel.Testing, harness.Services.Settings.ReleaseChannel);
     }
 
     [Fact]

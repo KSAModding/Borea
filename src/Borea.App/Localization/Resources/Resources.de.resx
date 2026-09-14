@@ -51,6 +51,12 @@
   <data name="SettingsCheckForUpdatesAtStart" xml:space="preserve">
     <value>Beim Start nach Updates suchen</value>
   </data>
+  <data name="SettingsReleaseChannelLabel" xml:space="preserve">
+    <value>Release-Kanal</value>
+  </data>
+  <data name="SettingsReleaseChannelHint" xml:space="preserve">
+    <value>Welche Versionen Borea installiert, wenn du keine Version wählst.</value>
+  </data>
   <data name="UpdateAvailable" xml:space="preserve">
     <value>Eine neuere Borea-Version ist verfügbar:</value>
   </data>

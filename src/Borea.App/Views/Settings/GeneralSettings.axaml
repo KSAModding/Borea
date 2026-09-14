@@ -25,6 +25,15 @@
                 <TextBlock Classes="body-md" Text="{Binding Localization.SettingsCheckForUpdatesAtStart}" TextWrapping="Wrap" VerticalAlignment="Center" />
                 <ToggleSwitch Grid.Column="2" Classes="switch" IsChecked="{Binding CheckForUpdatesAtStart}" AutomationProperties.Name="{Binding Localization.SettingsCheckForUpdatesAtStart}" />
             </Grid>
+            <TextBlock Classes="heading-md" Text="{Binding Localization.SettingsReleaseChannelLabel}" Margin="0,18,0,0" />
+            <TextBlock Classes="body-sm secondary" Text="{Binding Localization.SettingsReleaseChannelHint}" TextWrapping="Wrap" Width="340" HorizontalAlignment="Left" />
+            <ComboBox ItemsSource="{Binding ReleaseChannelOptions}" SelectedItem="{Binding SelectedReleaseChannel, Mode=TwoWay}" IsEnabled="{Binding !IsSetupBusy}" AutomationProperties.Name="{Binding Localization.SettingsReleaseChannelLabel}" Width="340" Margin="0,4,0,0">
+                <ComboBox.ItemTemplate>
+                    <DataTemplate x:DataType="vm:ReleaseChannelOption">
+                        <TextBlock Text="{Binding Text}" />
+                    </DataTemplate>
+                </ComboBox.ItemTemplate>
+            </ComboBox>
         </StackPanel>
     </ScrollViewer>
 </UserControl>

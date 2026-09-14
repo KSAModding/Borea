@@ -1,4 +1,6 @@
 using System.Text.Json.Nodes;
+using Borea.App.ViewModels;
+using Borea.Core.Instances;
 using Borea.Core.Mods;
 using Borea.Core.Settings;
 
@@ -6,6 +8,69 @@ namespace Borea.App.Tests.ViewModels;
 
 public sealed class ReleaseChannelViewModelTests
 {
+    [Fact]
+    public async Task ChannelChange_IsSavedAndTheNextInstallUsesIt()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: SnapshotRelease.Add(new SnapshotRelease("AdvancedFlightComputer", "0.8.0-dev.1", "dev", "2026-09-10T10:00:00Z")));
+        var viewModel = harness.ViewModel;
+        var instance = await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value);
+        await harness.Services.Instances.SetActiveInstanceAsync(instance.InstanceId);
+        await viewModel.LoadAsync();
+        await viewModel.EnsureDiscoverLoadedAsync();
+        Assert.Equal(ReleaseChannel.Stable, viewModel.SelectedReleaseChannel.Channel);
+
+        viewModel.SelectedReleaseChannel = viewModel.OptionFor(ReleaseChannel.Dev);
+        await viewModel.WhenReleaseChannelSavedAsync();
+
+        Assert.Equal(ReleaseChannel.Dev, viewModel.SelectedReleaseChannel.Channel);
+        Assert.Equal(ReleaseChannel.Dev, harness.Services.Settings.ReleaseChannel);
+        Assert.Equal(ReleaseChannel.Dev, (await harness.Services.SettingsRepository.GetAsync())!.ReleaseChannel);
+        Assert.Null(viewModel.PreferenceSaveError);
+
+        var afc = viewModel.DiscoverItems.Single(item => item.ModId == "AdvancedFlightComputer");
+        await afc.InstallCommand.ExecuteAsync(null);
+
+        Assert.Equal(ModVersion.Parse("0.8.0-dev.1"), Assert.Single(afc.PendingPlan!.Operations).Release.Version);
+    }
+
+    [Fact]
+    public async Task ChannelChange_FailedSave_ShowsTheErrorAndKeepsTheSavedChannel()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var viewModel = harness.ViewModel;
+        await File.WriteAllTextAsync(harness.Services.Paths.GetBoreaSettingsPath(), "not = [toml");
+
+        viewModel.SelectedReleaseChannel = viewModel.OptionFor(ReleaseChannel.Dev);
+        await viewModel.WhenReleaseChannelSavedAsync();
+
+        Assert.NotNull(viewModel.PreferenceSaveError);
+        Assert.Equal(ReleaseChannel.Stable, viewModel.SelectedReleaseChannel.Channel);
+        Assert.False(viewModel.IsSetupBusy);
+    }
+
+    [Fact]
+    public async Task ChannelChange_WhileSetupOrAnotherSaveRuns_IsRefused()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var viewModel = harness.ViewModel;
+        var raised = 0;
+        viewModel.PropertyChanged += (_, e) => raised += e.PropertyName == nameof(MainViewModel.SelectedReleaseChannel) ? 1 : 0;
+
+        viewModel.IsSetupBusy = true;
+        viewModel.SelectedReleaseChannel = viewModel.OptionFor(ReleaseChannel.Dev);
+        viewModel.IsSetupBusy = false;
+
+        Assert.Equal(1, raised);
+        Assert.Equal(ReleaseChannel.Stable, (await harness.Services.SettingsRepository.GetAsync())?.ReleaseChannel ?? ReleaseChannel.Stable);
+
+        viewModel.SelectedReleaseChannel = viewModel.OptionFor(ReleaseChannel.Dev);
+        viewModel.SelectedReleaseChannel = viewModel.OptionFor(ReleaseChannel.Stable);
+        await viewModel.WhenReleaseChannelSavedAsync();
+
+        Assert.Equal(ReleaseChannel.Dev, harness.Services.Settings.ReleaseChannel);
+        Assert.Equal(ReleaseChannel.Dev, viewModel.SelectedReleaseChannel.Channel);
+    }
+
     [Fact]
     public async Task VersionFilter_HidesEveryRelease_SaysSoInsteadOfNoReleases()
     {
