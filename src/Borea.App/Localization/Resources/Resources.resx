@@ -52,7 +52,7 @@
     <value>Check for updates at start</value>
   </data>
   <data name="SettingsReleaseChannelLabel" xml:space="preserve">
-    <value>Release channel</value>
+    <value>Mod release channel</value>
   </data>
   <data name="SettingsReleaseChannelHint" xml:space="preserve">
     <value>Which releases Borea installs when you do not choose a version.</value>

@@ -52,7 +52,7 @@
     <value>Beim Start nach Updates suchen</value>
   </data>
   <data name="SettingsReleaseChannelLabel" xml:space="preserve">
-    <value>Release-Kanal</value>
+    <value>Mod-Release-Kanal</value>
   </data>
   <data name="SettingsReleaseChannelHint" xml:space="preserve">
     <value>Welche Versionen Borea installiert, wenn du keine Version wählst.</value>
