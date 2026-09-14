@@ -334,6 +334,9 @@ public sealed class ContentIndexModRepositoryTests
         public string GetInstanceSavesFolder(Guid instanceId) => throw new NotSupportedException();
         public string GetInstanceVehiclesFolder(Guid instanceId) => throw new NotSupportedException();
         public string GetInstanceSettingsPath(Guid instanceId) => throw new NotSupportedException();
+        public string GetInstanceHudLayoutsFolder(Guid instanceId) => throw new NotSupportedException();
+        public string GetInstanceCrashDumpsFolder(Guid instanceId) => throw new NotSupportedException();
+        public string GetInstanceExportsFolder(Guid instanceId) => throw new NotSupportedException();
         public string GetInstanceManifestPath(Guid instanceId) => throw new NotSupportedException();
         public string GetInstanceMetadataPath(Guid instanceId) => throw new NotSupportedException();
         public string? GetGameDirectoryPath() => throw new NotSupportedException();

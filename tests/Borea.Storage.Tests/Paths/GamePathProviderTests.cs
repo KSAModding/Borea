@@ -162,6 +162,21 @@ public sealed class GamePathProviderTests
     }
 
     [Fact]
+    public void GameDataPaths_UseTheNamesTheGameWrites()
+    {
+        var provider = new GamePathProvider(null);
+        var instanceId = Guid.NewGuid();
+        var root = provider.GetInstanceRoot(instanceId);
+
+        Assert.Equal(Path.Combine(root, "saves"), provider.GetInstanceSavesFolder(instanceId));
+        Assert.Equal(Path.Combine(root, "Vehicles"), provider.GetInstanceVehiclesFolder(instanceId));
+        Assert.Equal(Path.Combine(root, "settings.toml"), provider.GetInstanceSettingsPath(instanceId));
+        Assert.Equal(Path.Combine(root, "HUDLayouts"), provider.GetInstanceHudLayoutsFolder(instanceId));
+        Assert.Equal(Path.Combine(root, "crashdumps"), provider.GetInstanceCrashDumpsFolder(instanceId));
+        Assert.Equal(Path.Combine(root, "exports"), provider.GetInstanceExportsFolder(instanceId));
+    }
+
+    [Fact]
     public void InstanceRoot_IncludesInstanceIdInPath()
     {
         var provider = new GamePathProvider(null);
