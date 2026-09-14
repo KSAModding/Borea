@@ -7,6 +7,7 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using Borea.Composition;
 using Borea.Core.Game;
+using Borea.Core.ModPacks;
 using Borea.Core.Mods;
 using Borea.Core.Planning;
 using Borea.Core.Tags;
@@ -52,12 +53,13 @@ public partial class MainViewModel
     private string? _discoverError;
 
     /// <summary>
-    /// Which tab of the inner nav bar is selected. Only mods and mod loaders
-    /// have listings today; the other tabs wait for their content types.
+    /// Which tab of the inner nav bar is selected. The vehicle and save tabs
+    /// stay disabled until those content types have listings.
     /// </summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsModsTab))]
     [NotifyPropertyChangedFor(nameof(IsLoadersTab))]
+    [NotifyPropertyChangedFor(nameof(IsModpacksTab))]
     private ContentType _discoverType = ContentType.Mod;
 
     public bool IsModsTab => DiscoverType == ContentType.Mod;
@@ -83,7 +85,7 @@ public partial class MainViewModel
 
     public bool HasDiscoverFilters => SelectedOs is not null || SelectedLicense is not null || SelectedCategories.Count > 0;
 
-    public bool HasDiscoverItems => DiscoverItems.Count > 0;
+    public bool HasDiscoverItems => DiscoverItems.Count > 0 || DiscoverPacks.Count > 0;
 
     /// <summary>
     /// Loads the listings once. Every caller awaits the same load, so a page
@@ -108,16 +110,24 @@ public partial class MainViewModel
                 .Select(listing => new DiscoverItem(this, listing))
                 .OrderBy(item => item.Name, StringComparer.CurrentCultureIgnoreCase)
                 .ToList();
+            var packs = (await services.ModPacks.GetAvailableModPacksAsync())
+                .Select(pack => pack.Metadata)
+                .OfType<ModPackMetadata>()
+                .ToList();
+            _packs = packs
+                .Select(pack => new PackItem(this, pack))
+                .OrderBy(item => item.Name, StringComparer.CurrentCultureIgnoreCase)
+                .ToList();
 
             OsOptions.Clear();
-            foreach (var os in listings.SelectMany(listing => listing.Os ?? []).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(os => os))
+            foreach (var os in listings.SelectMany(listing => listing.Os ?? []).Concat(packs.SelectMany(pack => pack.Os ?? [])).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(os => os))
                 OsOptions.Add(os);
 
             LicenseOptions.Clear();
-            foreach (var license in listings.Select(listing => listing.License).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(license => license))
+            foreach (var license in listings.Select(listing => listing.License).Concat(packs.Select(pack => pack.License)).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(license => license))
                 LicenseOptions.Add(license);
 
-            LoadCategoryOptions(listings);
+            LoadCategoryOptions(listings, packs);
 
             await RefreshCompatibilityAsync(services.InstalledVersion.GetInstalledVersion()?.Version);
 
@@ -168,10 +178,11 @@ public partial class MainViewModel
         DiscoverItems.Clear();
         foreach (var item in filtered)
             DiscoverItems.Add(item);
+        ApplyPackFilters(query);
         OnPropertyChanged(nameof(HasDiscoverItems));
     }
 
-    private void LoadCategoryOptions(IReadOnlyList<ModMetadata> listings)
+    private void LoadCategoryOptions(IReadOnlyList<ModMetadata> listings, IReadOnlyList<ModPackMetadata> packs)
     {
         var selectedTags = SelectedCategories.Select(category => category.Tag).ToHashSet(StringComparer.OrdinalIgnoreCase);
         SelectedCategories.Clear();
@@ -181,16 +192,19 @@ public partial class MainViewModel
             TagVocabulary.SpecVersion,
             TagVocabulary.ModTags.Where(tag => !string.Equals(tag.Tag, LibraryTag, StringComparison.OrdinalIgnoreCase)).ToList());
 
-        var vocabulary = listings.Select(listing => listing.Type).Distinct()
+        var tagged = listings.Select(listing => (listing.Type, listing.Tags))
+            .Concat(packs.Select(pack => (Type: ContentType.ModPack, pack.Tags)))
+            .ToList();
+        var vocabulary = tagged.Select(entry => entry.Type).Distinct()
             .SelectMany(_categoryVocabulary.GetTags)
             .DistinctBy(tag => tag.Tag, StringComparer.OrdinalIgnoreCase);
         foreach (var tag in vocabulary)
         {
-            if (listings.Any(listing => listing.Tags.Contains(tag.Tag, StringComparer.OrdinalIgnoreCase)))
+            if (tagged.Any(entry => entry.Tags.Contains(tag.Tag, StringComparer.OrdinalIgnoreCase)))
                 CategoryOptions.Add(new DiscoverCategory(this, tag));
         }
 
-        if (CategoryOptions.Count > 0 && listings.Any(listing => !HasCuratedTag(listing)))
+        if (CategoryOptions.Count > 0 && tagged.Any(entry => !HasCuratedTag(entry.Type, entry.Tags)))
             CategoryOptions.Add(new DiscoverCategory(this, tag: null));
 
         foreach (var category in CategoryOptions.Where(category => selectedTags.Contains(category.Tag)))
@@ -202,8 +216,8 @@ public partial class MainViewModel
         OnPropertyChanged(nameof(HasDiscoverFilters));
     }
 
-    private bool HasCuratedTag(ModMetadata listing)
-        => _categoryVocabulary.GetTags(listing.Type).Any(tag => listing.Tags.Contains(tag.Tag, StringComparer.OrdinalIgnoreCase));
+    private bool HasCuratedTag(ContentType type, IReadOnlyList<string> tags)
+        => _categoryVocabulary.GetTags(type).Any(tag => tags.Contains(tag.Tag, StringComparer.OrdinalIgnoreCase));
 
     /// <summary>
     /// Marks listings that the active instance already holds.
@@ -215,6 +229,7 @@ public partial class MainViewModel
             item.IsInstalled = installed.Contains(item.ModId);
         foreach (var release in _contentReleases)
             release.RefreshInstalled(ActiveInstance);
+        RefreshPackInstalledFlags();
     }
 
     partial void OnDiscoverTypeChanged(ContentType value) => ApplyDiscoverFilters();
@@ -236,7 +251,8 @@ public partial class MainViewModel
     /// Evaluates the newest release of every index listing and every row of
     /// the Versions table against <paramref name="installed"/> (RFC 0017). A
     /// listing from another source stays unknown, because its releases would
-    /// have to be fetched one by one.
+    /// have to be fetched one by one. A pack is evaluated by the bounds of its
+    /// newest usable version.
     /// </summary>
     internal async Task RefreshCompatibilityAsync(GameVersion? installed)
     {
@@ -252,6 +268,9 @@ public partial class MainViewModel
 
         foreach (var release in _contentReleases)
             release.RefreshCompatibility(installed);
+
+        foreach (var pack in _packs)
+            pack.Compatibility = Borea.Core.Game.Compatibility.Evaluate(pack.Metadata, installed);
 
         ApplyDiscoverFilters();
     }
@@ -273,6 +292,9 @@ public partial class MainViewModel
 
     [RelayCommand]
     private void ShowDiscoverLoaders() => DiscoverType = ContentType.ModLoader;
+
+    [RelayCommand]
+    private void ShowDiscoverModpacks() => DiscoverType = ContentType.ModPack;
 
     [RelayCommand]
     private void SelectOs(string? os) => SelectedOs = os;
@@ -475,17 +497,17 @@ public sealed partial class DiscoverItem : ObservableObject, IInstallRow
     {
         _owner = owner;
         _listing = listing;
-        AllTags = DisplayTags(owner.TagVocabulary, listing);
+        AllTags = DisplayTags(owner.TagVocabulary, listing.Type, listing.Tags);
         Tags = AllTags.Take(3).ToList();
     }
 
-    private static List<string> DisplayTags(CuratedTagVocabulary vocabulary, ModMetadata listing)
+    internal static List<string> DisplayTags(CuratedTagVocabulary vocabulary, ContentType type, IReadOnlyList<string> tags)
     {
-        var curated = vocabulary.GetTags(listing.Type)
-            .Where(tag => listing.Tags.Contains(tag.Tag, StringComparer.OrdinalIgnoreCase))
+        var curated = vocabulary.GetTags(type)
+            .Where(tag => tags.Contains(tag.Tag, StringComparer.OrdinalIgnoreCase))
             .ToList();
         return curated.Select(tag => tag.Name)
-            .Concat(listing.Tags.Where(value => !curated.Any(tag => string.Equals(tag.Tag, value, StringComparison.OrdinalIgnoreCase))))
+            .Concat(tags.Where(value => !curated.Any(tag => string.Equals(tag.Tag, value, StringComparison.OrdinalIgnoreCase))))
             .ToList();
     }
 
@@ -507,7 +529,7 @@ public sealed partial class DiscoverItem : ObservableObject, IInstallRow
     internal void Update(ModMetadata full)
     {
         _listing = full;
-        AllTags = DisplayTags(_owner.TagVocabulary, full);
+        AllTags = DisplayTags(_owner.TagVocabulary, full.Type, full.Tags);
         Tags = AllTags.Take(3).ToList();
         OnPropertyChanged(string.Empty);
     }

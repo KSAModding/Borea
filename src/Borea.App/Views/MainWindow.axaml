@@ -67,6 +67,9 @@
         <!-- Content (discover-content): one listing, with the detail panel on the right -->
         <pages:ContentPage Grid.Column="1" IsVisible="{Binding CurrentWindowContent}" />
 
+        <!-- Pack: one modpack, laid out like the content page -->
+        <pages:PackPage Grid.Column="1" IsVisible="{Binding CurrentWindowPack}" />
+
         <!-- Tasks -->
         <pages:TasksPage Grid.Column="1" IsVisible="{Binding CurrentWindowTasks}" />
     </Grid>

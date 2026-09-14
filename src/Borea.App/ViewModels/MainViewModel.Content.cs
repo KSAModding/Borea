@@ -79,6 +79,7 @@ public partial class MainViewModel
         if (item is null)
             return;
 
+        LeavePackPage();
         SelectedContent?.ClearOutcome();
         item.ClearOutcome();
         SelectedContent = item;
@@ -99,6 +100,7 @@ public partial class MainViewModel
         CurrentWindowLibrary = false;
         CurrentWindowTasks = false;
         CurrentWindowInstance = false;
+        CurrentWindowPack = false;
         CurrentWindowContent = true;
 
         await LoadLatestVersionAsync(item);
@@ -225,16 +227,20 @@ public partial class MainViewModel
     [RelayCommand]
     private void OpenLink(ContentLink link)
     {
-        if (link is null)
-            return;
+        if (link is not null && TryOpenUrl(link.Url) is { } error)
+            ContentDetailError = error;
+    }
 
+    private static string? TryOpenUrl(string url)
+    {
         try
         {
-            Process.Start(new ProcessStartInfo(link.Url) { UseShellExecute = true });
+            Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
+            return null;
         }
         catch (Exception exception) when (exception is System.ComponentModel.Win32Exception or InvalidOperationException or IOException)
         {
-            ContentDetailError = exception.Message;
+            return exception.Message;
         }
     }
 
