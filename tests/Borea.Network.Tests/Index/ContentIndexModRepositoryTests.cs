@@ -6,8 +6,10 @@ using Borea.Network.Tests.Temp;
 
 namespace Borea.Network.Tests.Index;
 
-public sealed class ContentIndexModRepositoryTests
+public sealed class ContentIndexModRepositoryTests : IDisposable
 {
+    private readonly string _tempDir = Path.Combine(Path.GetTempPath(), "borea-snapshot-provider-tests-" + Guid.NewGuid());
+
     [Fact]
     public void Constructor_NullFetcher_ThrowsArgumentNullException()
     {
@@ -250,6 +252,64 @@ public sealed class ContentIndexModRepositoryTests
         Assert.Same(diagnostic, Assert.Single(await repository.GetDiagnosticsAsync()));
     }
 
+    [Fact]
+    public void Status_BeforeAnyRefresh_HasNoOutcomeAndNoCache()
+    {
+        var provider = new ContentIndexSnapshotProvider(
+            new FakeFetcher(ContentIndexFetchResult.Downloaded),
+            new FakeReader(Snapshot()),
+            new TestPathProvider(Path.Combine(_tempDir, "index.json")));
+
+        Assert.Equal(new ContentIndexRefreshStatus(ContentIndexRefreshOutcome.NotAttempted, CachedAt: null), provider.Status);
+    }
+
+    [Fact]
+    public async Task RefreshAsync_FetchFailure_KeepsTheCacheAgeAndReportsTheReason()
+    {
+        var time = new FakeTimeProvider();
+        var writtenAt = time.UtcNow - TimeSpan.FromDays(2);
+        var fetcher = new FakeFetcher(_ => Task.FromException<ContentIndexFetchResult>(new HttpRequestException("offline")));
+        var provider = new ContentIndexSnapshotProvider(fetcher, new FakeReader(Snapshot()), new TestPathProvider(CachedIndex(writtenAt)), time);
+
+        await provider.RefreshAsync();
+
+        Assert.Equal(new ContentIndexRefreshStatus(ContentIndexRefreshOutcome.Failed, writtenAt, "offline"), provider.Status);
+    }
+
+    [Fact]
+    public async Task RefreshAsync_FreshSnapshot_FetchesAgainAndNotModifiedRestartsTheCacheAge()
+    {
+        var time = new FakeTimeProvider();
+        var fetcher = new FakeFetcher(
+            _ => Task.FromException<ContentIndexFetchResult>(new HttpRequestException("offline")),
+            _ => Task.FromResult(ContentIndexFetchResult.NotModified));
+        var reader = new FakeReader(Snapshot());
+        var provider = new ContentIndexSnapshotProvider(fetcher, reader, new TestPathProvider(CachedIndex(time.UtcNow - TimeSpan.FromDays(2))), time);
+
+        await provider.GetSnapshotAsync();
+        time.UtcNow += TimeSpan.FromMinutes(1);
+        await provider.RefreshAsync();
+
+        Assert.Equal(2, fetcher.CallCount);
+        Assert.Equal(1, reader.CallCount);
+        Assert.Equal(new ContentIndexRefreshStatus(ContentIndexRefreshOutcome.NotModified, time.UtcNow), provider.Status);
+    }
+
+    public void Dispose()
+    {
+        if (Directory.Exists(_tempDir))
+            Directory.Delete(_tempDir, recursive: true);
+    }
+
+    private string CachedIndex(DateTimeOffset writtenAt)
+    {
+        Directory.CreateDirectory(_tempDir);
+        var indexPath = Path.Combine(_tempDir, "index.json");
+        File.WriteAllText(indexPath, "{}");
+        File.SetLastWriteTimeUtc(indexPath, writtenAt.UtcDateTime);
+        return indexPath;
+    }
+
     private static ContentIndexSnapshot Snapshot(params ContentIndexListing[] listings) => new(
         1,
         listings,
@@ -318,9 +378,9 @@ public sealed class ContentIndexModRepositoryTests
         }
     }
 
-    private sealed class TestPathProvider : IGamePathProvider
+    private sealed class TestPathProvider(string indexPath = "index.json") : IGamePathProvider
     {
-        public string GetIndexPath() => "index.json";
+        public string GetIndexPath() => indexPath;
 
         public string GetAppPreferencesPath() => "app-preferences.json";
         public string GetInstancesRoot() => throw new NotSupportedException();

@@ -145,6 +145,8 @@ public sealed class BoreaServices : IDisposable
 
     public required IContentIndexSnapshotProvider IndexSnapshots { get; init; }
 
+    public required IContentIndexRefresh IndexRefresh { get; init; }
+
     public required IContentIndexRepository ContentIndex { get; init; }
 
     private BoreaServices(HttpClient http)
@@ -279,6 +281,7 @@ public sealed class BoreaServices : IDisposable
             IndexFetcher = indexFetcher,
             IndexReader = indexReader,
             IndexSnapshots = indexSnapshots,
+            IndexRefresh = indexSnapshots,
             ContentIndex = contentIndex,
         };
     }

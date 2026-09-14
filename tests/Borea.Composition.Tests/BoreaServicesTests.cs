@@ -282,6 +282,7 @@ public sealed class BoreaServicesTests : IDisposable
 
         Assert.IsType<ContentIndexReader>(services.IndexReader);
         Assert.IsType<ContentIndexSnapshotProvider>(services.IndexSnapshots);
+        Assert.Same(services.IndexSnapshots, services.IndexRefresh);
         Assert.IsType<ContentIndexModRepository>(services.ContentIndex);
         Assert.IsAssignableFrom<IContentIndexRepository>(services.ContentIndex);
         Assert.IsType<ContentIndexModPackRepository>(services.ModPacks);
