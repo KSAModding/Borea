@@ -185,17 +185,19 @@ public sealed class BoreaServices : IDisposable
         CancellationToken cancellationToken = default)
         => BuildAsync(boreaRoot, httpHandler, fallbackRepository, new NoInstallCandidates(), cancellationToken);
 
+    /// <param name="processStarter">Starts the launchers' processes. Null starts real ones.</param>
     internal static Task<BoreaServices> BuildAsync(
         string? boreaRoot,
         HttpMessageHandler httpHandler,
         IModRepository fallbackRepository,
         IInstallCandidateSource installCandidates,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        IProcessStarter? processStarter = null)
     {
         ArgumentNullException.ThrowIfNull(httpHandler);
         ArgumentNullException.ThrowIfNull(fallbackRepository);
         ArgumentNullException.ThrowIfNull(installCandidates);
-        return BuildCoreAsync(boreaRoot, BoreaLogSource.App, httpHandler, fallbackRepository, installCandidates, cancellationToken);
+        return BuildCoreAsync(boreaRoot, BoreaLogSource.App, httpHandler, fallbackRepository, installCandidates, cancellationToken, processStarter);
     }
 
     private static async Task<BoreaServices> BuildCoreAsync(
@@ -204,7 +206,8 @@ public sealed class BoreaServices : IDisposable
         HttpMessageHandler? httpHandler,
         IModRepository? fallbackRepository,
         IInstallCandidateSource? installCandidates,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        IProcessStarter? processStarter = null)
     {
         // the settings file lives under Borea's own root and needs no
         // game path to be found, so a provider without one reads it.
@@ -287,8 +290,8 @@ public sealed class BoreaServices : IDisposable
             LoaderInstaller = new FileLoaderInstaller(paths, downloader, settingsRepository, loaderConfiguration),
             LoaderAdopter = loaderAdopter,
             LoaderUninstaller = new FileLoaderUninstaller(settingsRepository),
-            Launcher = new LoggingLauncher(new LoaderLauncher(paths, new ProcessStarter()), log),
-            SharedProfileLauncher = new SharedProfileLauncher(paths, new ProcessStarter()),
+            Launcher = new LoggingLauncher(new LoaderLauncher(paths, processStarter ?? new ProcessStarter()), log),
+            SharedProfileLauncher = new SharedProfileLauncher(paths, processStarter ?? new ProcessStarter()),
             LatestVersion = new LatestVersionPing(http),
             ReleaseCheck = new BoreaReleaseCheck(http),
             InstalledVersion = new InstalledGameVersionProvider(paths),

@@ -450,19 +450,44 @@ public sealed class LoaderLauncherTests : IDisposable
     }
 
     [Fact]
-    public async Task WatchStart_LoaderExitsWithZero_StaysStarted()
+    public async Task WatchStart_LoaderExitsWithZeroAndTheGameComesUp_StaysStarted()
     {
         PlaceStarMap();
-        var started = _launcher.Launch(_instance, LoaderListing(provides: StarMapProvides()));
+        using var launcher = new LoaderLauncher(_paths, _starter, TimeSpan.FromMinutes(5));
+        var started = launcher.Launch(_instance, LoaderListing(provides: StarMapProvides()));
         var process = Assert.Single(_starter.Processes);
         process.Output.Add("Restarting.");
         process.HasExited = true;
         process.ExitCode = 0;
+        var gameLog = _paths.GetInstanceGameLogPath(_instance.InstanceId);
+        Directory.CreateDirectory(Path.GetDirectoryName(gameLog)!);
+        File.WriteAllText(gameLog, "INFO loaded settings");
 
-        var result = await _launcher.WatchStartAsync(_instance, started);
+        var result = await launcher.WatchStartAsync(_instance, started);
 
         Assert.True(result.Started);
         Assert.Equal(["Restarting."], result.Output);
+    }
+
+    [Fact]
+    public async Task WatchStart_LoaderExitsWithZeroWithoutTheGame_ReportsItWithoutBlamingAMod()
+    {
+        PlaceStarMap();
+        var instance = InstanceWith("KSArmory");
+        using var launcher = new LoaderLauncher(_paths, _starter, TimeSpan.FromMilliseconds(100));
+        var started = launcher.Launch(instance, LoaderListing(provides: StarMapProvides()));
+        var process = Assert.Single(_starter.Processes);
+        process.Output.Add("GameLocation is empty in StarMapConfig.json.");
+        process.HasExited = true;
+        process.ExitCode = 0;
+
+        var result = await launcher.WatchStartAsync(instance, started);
+
+        Assert.Equal(LaunchOutcome.ExitedEarly, result.Outcome);
+        Assert.Equal(0, result.ExitCode);
+        Assert.Null(result.BlamedModId);
+        Assert.Contains("stopped without starting the game", result.Message);
+        Assert.Equal(["GameLocation is empty in StarMapConfig.json."], result.Output);
     }
 
     [Fact]

@@ -21,7 +21,7 @@ public sealed class LoaderLauncher : ILauncher, IDisposable
     private readonly Func<string?> _findDotnet;
     private readonly object _gate = new();
     private readonly Dictionary<Guid, IStartedProcess> _running = new();
-    private readonly Dictionary<Guid, (DateTime StartedAtUtc, string LoaderName)> _starts = new();
+    private readonly Dictionary<Guid, (DateTime? GameLogAtLaunch, string LoaderName)> _starts = new();
     private readonly TimeSpan _startupWindow;
 
     /// <summary>How long a launch is watched when the game does not write its log first.</summary>
@@ -154,7 +154,7 @@ public sealed class LoaderLauncher : ILauncher, IDisposable
             }
 
             _running[instance.InstanceId] = process;
-            _starts[instance.InstanceId] = (DateTime.UtcNow, loader.Name);
+            _starts[instance.InstanceId] = (LastWrite(_pathProvider.GetInstanceGameLogPath(instance.InstanceId)), loader.Name);
 
             return LaunchResult.Success(
                 plan,
@@ -171,7 +171,7 @@ public sealed class LoaderLauncher : ILauncher, IDisposable
             return started;
 
         IStartedProcess? process;
-        (DateTime StartedAtUtc, string LoaderName) start;
+        (DateTime? GameLogAtLaunch, string LoaderName) start;
         lock (_gate)
         {
             if (!_running.TryGetValue(instance.InstanceId, out process) || process.Id != started.ProcessId || !_starts.TryGetValue(instance.InstanceId, out start))
@@ -180,24 +180,33 @@ public sealed class LoaderLauncher : ILauncher, IDisposable
 
         var gameLog = _pathProvider.GetInstanceGameLogPath(instance.InstanceId);
         var exited = false;
+        var gameStarted = false;
         try
         {
             var watched = Stopwatch.StartNew();
             while (watched.Elapsed < _startupWindow)
             {
                 var slice = Min(PollInterval, _startupWindow - watched.Elapsed);
-                if (await process.WaitForExitAsync(slice, cancellationToken).ConfigureAwait(false))
+                if (!exited)
+                    exited = await process.WaitForExitAsync(slice, cancellationToken).ConfigureAwait(false);
+                else
+                    await Task.Delay(slice, cancellationToken).ConfigureAwait(false);
+
+                // the game writes its log once it runs, so the loader got past loading the mods
+                if (WrittenSince(gameLog, start.GameLogAtLaunch))
                 {
-                    exited = true;
+                    gameStarted = true;
                     break;
                 }
 
-                // the game writes its log once it runs, so the loader got past loading the mods
-                if (WrittenSince(gameLog, start.StartedAtUtc))
+                // a loader that exits with 0 may have restarted itself, so the log decides;
+                // an error exit needs no more waiting
+                if (exited && process.ExitCode is not 0)
                     break;
             }
 
             exited = exited || process.HasExited;
+            gameStarted = gameStarted || WrittenSince(gameLog, start.GameLogAtLaunch);
         }
         catch (Exception exception) when (exception is ObjectDisposedException or InvalidOperationException)
         {
@@ -209,8 +218,19 @@ public sealed class LoaderLauncher : ILauncher, IDisposable
         var exitCode = exited ? process.ExitCode : null;
         WriteLaunchLog(_pathProvider.GetInstanceLaunchLogPath(instance.InstanceId), started.Plan, output, exitCode);
 
-        if (exitCode is null or 0)
+        if (exitCode is null || (exitCode == 0 && gameStarted))
             return started.WithOutput(output);
+
+        // StarMap also exits with 0 when it cannot start at all, for example without a game path
+        if (exitCode == 0)
+        {
+            return LaunchResult.ExitedEarly(
+                started.Plan,
+                0,
+                output,
+                blamedModId: null,
+                $"{start.LoaderName} stopped without starting the game. The details show what it wrote.");
+        }
 
         var blamed = Blame(instance, output);
         var message = blamed is null
@@ -243,15 +263,23 @@ public sealed class LoaderLauncher : ILauncher, IDisposable
         return null;
     }
 
-    private static bool WrittenSince(string path, DateTime sinceUtc)
+    /// <summary>
+    /// Whether the log appeared or changed after the launch. The file's own
+    /// times are compared, because the file system clock is coarser than
+    /// DateTime.UtcNow and a fresh write can look older than the launch.
+    /// </summary>
+    private static bool WrittenSince(string path, DateTime? atLaunch) =>
+        LastWrite(path) is { } now && (atLaunch is null || now > atLaunch);
+
+    private static DateTime? LastWrite(string path)
     {
         try
         {
-            return File.Exists(path) && File.GetLastWriteTimeUtc(path) >= sinceUtc;
+            return File.Exists(path) ? File.GetLastWriteTimeUtc(path) : null;
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {
-            return false;
+            return null;
         }
     }
 
