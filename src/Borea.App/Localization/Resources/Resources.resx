@@ -591,8 +591,8 @@
   <data name="InstallMinutesLeftFormat" xml:space="preserve">
     <value>about {0} min left</value>
   </data>
-  <data name="GameLaunchVanilla" xml:space="preserve">
-    <value>Launch Vanilla KSA</value>
+  <data name="LaunchWithoutModLoader" xml:space="preserve">
+    <value>Launch KSA without a Mod Loader</value>
   </data>
   <data name="LaunchActiveInstance" xml:space="preserve">
     <value>Launch Active Instance</value>

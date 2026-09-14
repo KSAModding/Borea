@@ -591,8 +591,8 @@
   <data name="InstallMinutesLeftFormat" xml:space="preserve">
     <value>noch etwa {0} min</value>
   </data>
-  <data name="GameLaunchVanilla" xml:space="preserve">
-    <value>Vanilla KSA Starten</value>
+  <data name="LaunchWithoutModLoader" xml:space="preserve">
+    <value>KSA ohne Mod Loader Starten</value>
   </data>
   <data name="LaunchActiveInstance" xml:space="preserve">
     <value>Aktive Instanz Starten</value>

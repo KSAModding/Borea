@@ -14,15 +14,15 @@
 					<TextBlock Classes="label-lg" Text="{Binding Localization.PageHomeHeading}" VerticalAlignment="Center" />
 				</StackPanel>
 
-				<SplitButton Grid.Column="1" Classes="launch" Command="{Binding PlayCommand}" IsEnabled="{Binding !IsLaunching}" IsVisible="{Binding HasActiveInstance}">
+				<SplitButton Grid.Column="1" Classes="launch" Command="{Binding PlayActiveInstanceCommand}" IsEnabled="{Binding !IsLaunching}">
 					<StackPanel Orientation="Horizontal" Spacing="6">
 						<Path Classes="icon-filled size-16" Fill="{StaticResource Brush.SurfaceHeader}" Data="{StaticResource Icon.Play}" VerticalAlignment="Center" />
 						<TextBlock Classes="action-lg" Text="{Binding Localization.LaunchActiveInstance}" VerticalAlignment="Center" />
 					</StackPanel>
 					<SplitButton.Flyout>
 						<MenuFlyout Placement="BottomEdgeAlignedRight">
-							<MenuItem Header="{Binding Localization.LaunchActiveInstance}" Command="{Binding PlayCommand}" />
-							<MenuItem Header="{Binding Localization.GameLaunchVanilla}" Command="{Binding PlayVanillaCommand}" />
+							<MenuItem Header="{Binding Localization.LaunchActiveInstance}" Command="{Binding PlayActiveInstanceCommand}" />
+							<MenuItem Header="{Binding Localization.LaunchWithoutModLoader}" Command="{Binding PlayWithoutModLoaderCommand}" />
 						</MenuFlyout>
 					</SplitButton.Flyout>
 				</SplitButton>

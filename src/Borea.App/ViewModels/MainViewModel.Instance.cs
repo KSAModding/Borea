@@ -124,13 +124,49 @@ public partial class MainViewModel
     }
 
     [RelayCommand]
-    private void PlayVanilla()
+    private async Task PlayActiveInstance()
+    {
+        if (_services is null || ActiveInstance is null || IsLaunching)
+            return;
+
+        IsLaunching = true;
+        try
+        {
+            var loader = await FindInstalledLoaderAsync();
+            var instance = await _services.Instances.GetByIdAsync(ActiveInstance.InstanceId);
+            var result = _services.Launcher.Launch(instance!, loader);
+            LaunchMessage = result.Message;
+        }
+        catch (Exception exception) when (exception is IOException or InvalidOperationException or System.Net.Http.HttpRequestException)
+        {
+            LaunchMessage = exception.Message;
+        }
+        finally
+        {
+            IsLaunching = false;
+        }
+    }
+
+    [RelayCommand]
+    private void PlayWithoutModLoader()
     {
         if (_services is null || IsLaunching)
             return;
 
-        var result = _services.SharedProfileLauncher.Launch();
-        LaunchMessage = result.Message;
+        IsLaunching = true;
+        try
+        {
+            var result = _services.SharedProfileLauncher.Launch();
+            LaunchMessage = result.Message;
+        }
+        catch (Exception exception) when (exception is IOException or InvalidOperationException or System.Net.Http.HttpRequestException)
+        {
+            LaunchMessage = exception.Message;
+        }
+        finally
+        {
+            IsLaunching = false;
+        }
     }
 
     /// <summary>

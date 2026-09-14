@@ -309,7 +309,7 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string SetupLoaderInstalledUnknownVersion => Resources.SetupLoaderInstalledUnknownVersion;
 
-    public string GameLaunchVanilla => Resources.GameLaunchVanilla;
+    public string LaunchWithoutModLoader => Resources.LaunchWithoutModLoader;
 
     public string LaunchActiveInstance => Resources.LaunchActiveInstance;
 
