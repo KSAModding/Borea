@@ -382,6 +382,10 @@ jobs:
     name: release
     needs: [test, publish, sbom, verify-macos, verify-archives]
     runs-on: ubuntu-24.04
+    outputs:
+      # Only a run that created the release sets this, so only that run posts to Discord.
+      created: ${{ steps.create.outputs.created }}
+      notes: ${{ steps.body.outputs.notes }}
     permissions:
       contents: write
       id-token: write
@@ -449,6 +453,7 @@ jobs:
       # The changelog is fetched here instead of with `gh release create --generate-notes`,
       # so a re-run for the same tag can rewrite the whole body, checksum table included.
       - name: Write the release body
+        id: body
         working-directory: dist
         env:
           GH_TOKEN: ${{ github.token }}
@@ -522,10 +527,19 @@ jobs:
           EOF
           cat generated.md >> body.md
 
+          # The announce job gets the notes as an environment variable, which Linux limits, so they are cut to 100 KB.
+          delimiter="notes_$(openssl rand -hex 16)"
+          {
+            echo "notes<<$delimiter"
+            LC_ALL=C awk '{ size += length($0) + 1; if (size > 100000) exit; print }' generated.md
+            echo "$delimiter"
+          } >> "$GITHUB_OUTPUT"
+
       # `gh release create` uploads into a draft and publishes at the end, so a cancelled
       # run leaves a draft behind. That draft must not take the update path below, or the
       # release stays invisible.
       - name: Create or update the release
+        id: create
         if: github.event_name == 'push'
         working-directory: dist
         env:
@@ -547,4 +561,94 @@ jobs:
             # Only a SemVer pre-release carries a hyphen.
             case "$GITHUB_REF_NAME" in *-*) flags+=(--prerelease) ;; esac
             gh release create "$GITHUB_REF_NAME" Borea-* SHA256SUMS.txt "${flags[@]}"
+            echo "created=true" >> "$GITHUB_OUTPUT"
+          fi
+
+  # Posts the new release to Discord, only from the run that created it.
+  # CONTRIBUTING.md lists the secrets and variables for the webhook and the bot.
+  announce:
+    name: announce
+    needs: [test, release]
+    if: needs.release.outputs.created == 'true'
+    runs-on: ubuntu-24.04
+    permissions: {}
+    timeout-minutes: 5
+    steps:
+      # Inline, because this job has no checkout. test-release-announcement.sh runs it from here.
+      - name: Post the release to Discord
+        env:
+          WEBHOOK_URL: ${{ secrets.DISCORD_RELEASE_WEBHOOK_URL }}
+          BOT_TOKEN: ${{ secrets.DISCORD_RELEASE_BOT_TOKEN }}
+          CHANNEL_ID: ${{ vars.DISCORD_RELEASE_CHANNEL_ID }}
+          ROLE_ID: ${{ vars.DISCORD_RELEASE_ROLE_ID }}
+          VERSION: ${{ needs.test.outputs.version }}
+          RELEASE_URL: ${{ github.server_url }}/${{ github.repository }}/releases/tag/${{ github.ref_name }}
+          NOTES: ${{ needs.release.outputs.notes }}
+        run: |
+          if [ -z "$BOT_TOKEN" ] && [ -z "$WEBHOOK_URL" ]; then
+            echo "Neither DISCORD_RELEASE_BOT_TOKEN nor DISCORD_RELEASE_WEBHOOK_URL is set, so the release is not posted to Discord."
+            exit 0
+          fi
+          is_id() { [[ $1 =~ ^[0-9]{1,20}$ ]]; }
+          if [ -n "$BOT_TOKEN" ]; then
+            if ! is_id "$CHANNEL_ID"; then
+              echo "DISCORD_RELEASE_BOT_TOKEN is set, but DISCORD_RELEASE_CHANNEL_ID is not a Discord id." >&2
+              exit 1
+            fi
+            if [ -n "$WEBHOOK_URL" ]; then
+              echo "::warning::DISCORD_RELEASE_BOT_TOKEN and DISCORD_RELEASE_WEBHOOK_URL are both set, so the bot posts and the webhook is not used."
+            fi
+          fi
+          if [ -n "$ROLE_ID" ] && ! is_id "$ROLE_ID"; then
+            echo "DISCORD_RELEASE_ROLE_ID is not a Discord id." >&2
+            exit 1
+          fi
+          # At most 1900 characters, below Discord's 2000. Only the role can be mentioned, and not for a pre-release.
+          payload=$(jq -n \
+            --arg version "$VERSION" --arg url "$RELEASE_URL" --arg notes "$NOTES" --arg role "$ROLE_ID" \
+            --argjson shown 10 --argjson entry_limit 180 --argjson limit 1900 '
+            def ping: $role != "" and ($version | contains("-") | not);
+            def cut($n): if length > $n then .[0:$n - 3] + "..." else . end;
+            def changes:
+              reduce ($notes | split("\n")[] | rtrimstr("\r")) as $line ({inside: false, items: []};
+                if ($line | startswith("## ")) then .inside = ($line | test("^## What.s Changed"))
+                elif .inside and ($line | startswith("* ")) then .items += [$line[2:]]
+                else . end)
+              | .items
+              | map(sub(" by @[^ ]+ in https://[^ ]+/pull/(?<number>[0-9]+)$"; " (#\(.number))") | cut($entry_limit));
+            def message($items; $k):
+              ([
+                (if ping then "<@&\($role)> " else "" end)
+                  + "**Borea \($version)**" + (if ($version | contains("-")) then " (pre-release)" else "" end),
+                $url,
+                "App with the `borea` command: `Borea-\($version)-<platform>` for Windows, Linux and macOS",
+                "CLI only: `Borea-Cli-\($version)-<platform>` for the same platforms"
+              ]
+              + (if ($items | length) == 0 then []
+                 else ["", "Changes:"] + ($items[0:$k] | map("- " + .))
+                   + (if ($items | length) > $k then ["and \(($items | length) - $k) more"] else [] end)
+                 end))
+              | join("\n");
+            changes as $items
+            | [range([($items | length), $shown] | min; -1; -1) as $k | message($items; $k) | select(length <= $limit)]
+            | {content: (.[0] // (message([]; 0) | cut($limit))),
+               allowed_mentions: ({parse: []} + if ping then {roles: [$role]} else {} end)}
+          ')
+          # No retry, which could post twice. A failed post fails the run.
+          response=$(mktemp)
+          post() {
+            if ! curl -sS --fail-with-body -o "$response" --max-time 30 -H "Content-Type: application/json" \
+              -H "User-Agent: DiscordBot ($GITHUB_SERVER_URL/$GITHUB_REPOSITORY, $VERSION)" -d "$payload" "$@"; then
+              # Only the error code and message, never the request.
+              jq -r 'select(type == "object" and .code != null) | "Discord answered \(.code): \(.message)"' "$response" >&2 2> /dev/null || true
+              return 1
+            fi
+          }
+          if [ -n "$BOT_TOKEN" ]; then
+            # Through stdin, so the token is not on the curl command line.
+            printf 'Authorization: Bot %s\n' "$BOT_TOKEN" | post -H @- "https://discord.com/api/v10/channels/$CHANNEL_ID/messages"
+          else
+            # Without wait=true, Discord does not report a message that it did not save.
+            case "$WEBHOOK_URL" in *\?*) separator='&' ;; *) separator='?' ;; esac
+            post "${WEBHOOK_URL}${separator}wait=true"
           fi

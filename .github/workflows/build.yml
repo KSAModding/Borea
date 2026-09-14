@@ -66,3 +66,5 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - name: Test the third-party notices script
         run: python3 -m unittest discover --start-directory .github/scripts/tests --pattern 'test_*.py' --verbose
+      - name: Test the Discord release post
+        run: bash .github/scripts/tests/test-release-announcement.sh
