@@ -117,13 +117,8 @@
                         </StackPanel>
                         <StackPanel Orientation="Horizontal" Spacing="12" IsVisible="{Binding !IsConfirmingRemove}">
                             <ToggleSwitch Classes="switch" IsChecked="{Binding IsEnabled}" Command="{Binding ToggleEnabledCommand}" VerticalAlignment="Center" AutomationProperties.Name="{Binding Name}" />
-                            <Button Classes="icon" AutomationProperties.Name="{Binding Name}">
-                                <Button.Flyout>
-                                    <MenuFlyout Placement="BottomEdgeAlignedRight">
-                                        <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ContentRemove}" Command="{Binding BeginRemoveCommand}" />
-                                    </MenuFlyout>
-                                </Button.Flyout>
-                                <Path Classes="icon-filled size-18" Data="{StaticResource Icon.More}" />
+                            <Button Classes="icon" Command="{Binding BeginRemoveCommand}" IsEnabled="{Binding CanRemove}" ToolTip.Tip="{Binding RemoveToolTip}" ToolTip.ShowOnDisabled="True" AutomationProperties.Name="{Binding Name}" AutomationProperties.HelpText="{Binding RemoveToolTip}">
+                                <Path Classes="icon size-18" Data="{StaticResource Icon.Trash}" />
                             </Button>
                         </StackPanel>
                     </Panel>
@@ -163,13 +158,8 @@
                                 <Border Classes="chip positive" VerticalAlignment="Center" ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).InstalledInText}">
                                     <TextBlock Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.DiscoverInstalled}" />
                                 </Border>
-                                <Button Classes="icon" IsVisible="{Binding !IsRemoving}" AutomationProperties.Name="{Binding Name}">
-                                    <Button.Flyout>
-                                        <MenuFlyout Placement="BottomEdgeAlignedRight">
-                                            <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ContentRemove}" Command="{Binding BeginRemoveCommand}" />
-                                        </MenuFlyout>
-                                    </Button.Flyout>
-                                    <Path Classes="icon-filled size-18" Data="{StaticResource Icon.More}" />
+                                <Button Classes="icon" Command="{Binding BeginRemoveCommand}" IsVisible="{Binding !IsRemoving}" IsEnabled="{Binding CanRemove}" ToolTip.Tip="{Binding RemoveToolTip}" ToolTip.ShowOnDisabled="True" AutomationProperties.Name="{Binding Name}" AutomationProperties.HelpText="{Binding RemoveToolTip}">
+                                    <Path Classes="icon size-18" Data="{StaticResource Icon.Trash}" />
                                 </Button>
                             </StackPanel>
                         </Panel>

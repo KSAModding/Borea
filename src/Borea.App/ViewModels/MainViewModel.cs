@@ -370,6 +370,9 @@ public partial class MainViewModel : ViewModelBase
         await OpenContentAsync(row);
     }
 
+    /// <summary>The active instance as last read, for what the Discover rows can remove.</summary>
+    private Instance? _activeInstanceEntity;
+
     private async Task ReloadInstancesAsync()
     {
         if (_instances is null)
@@ -384,6 +387,7 @@ public partial class MainViewModel : ViewModelBase
         Instances.Clear();
         foreach (var instance in all)
             Instances.Add(new InstanceItem(this, instance, instance.InstanceId == activeId));
+        _activeInstanceEntity = all.FirstOrDefault(instance => instance.InstanceId == activeId);
 
         ActiveInstance = Instances.FirstOrDefault(instance => instance.IsActive);
         OnPropertyChanged(nameof(CanActOnSelectedContent));
@@ -540,6 +544,8 @@ public partial class MainViewModel : ViewModelBase
             instance.RefreshText();
         foreach (var item in DiscoverItems)
             item.RefreshText();
+        // the reasons a mod cannot be removed are translated text
+        RefreshInstalledFlags();
         foreach (var release in _contentReleases)
             release.RefreshText();
         foreach (var option in ReleaseChannelOptions)

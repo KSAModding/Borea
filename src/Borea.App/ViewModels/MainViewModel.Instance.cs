@@ -115,7 +115,7 @@ public partial class MainViewModel
             // a release from SpaceDock carries no listing, so the name comes from the catalog
             var listing = mod.Metadata.Listing is null ? await ResolveListingAsync(mod.ModId) : null;
             var page = mod.Ownership == ModInstallOwnership.Borea ? _listings.FirstOrDefault(entry => ModIds.Equals(entry.ModId, mod.ModId)) : null;
-            content.Add(new ContentItem(this, item.InstanceId, mod, enabled.Contains(mod.ModId), listing, page));
+            content.Add(new ContentItem(this, _selectedInstanceEntity!, mod, enabled.Contains(mod.ModId), listing, page));
         }
 
         _content = content.OrderBy(content => content.Name, StringComparer.CurrentCultureIgnoreCase).ToList();
@@ -337,6 +337,24 @@ public partial class MainViewModel
     }
 
     /// <summary>
+    /// Why the button cannot remove <paramref name="mod"/> from
+    /// <paramref name="instance"/>, or null when it can: files Borea did not
+    /// install, or another mod that needs it. The same rules
+    /// <see cref="TryRemoveContentAsync"/> applies when it runs.
+    /// </summary>
+    internal string? RemoveBlockedReason(Instance? instance, InstalledMod? mod)
+    {
+        if (instance is null || mod is null)
+            return null;
+
+        if (mod.Ownership != ModInstallOwnership.Borea)
+            return Localization.FormatContentRemoveNotOwned(mod.ModId);
+
+        var check = new ModDependencyResolver().CheckUninstall(instance, mod.ModId, mod.Version, isActive: false);
+        return check.CanUninstall ? null : Localization.FormatContentRemoveRequired(mod.ModId, string.Join(", ", check.DependentModIds));
+    }
+
+    /// <summary>
     /// Removes the mod, or returns why it stays.
     /// </summary>
     private async Task<string?> TryRemoveContentAsync(BoreaServices services, Guid instanceId, string modId)
@@ -385,6 +403,17 @@ public sealed partial class ContentItem : ObservableObject
 
     private readonly DiscoverItem? _page;
 
+    private readonly Instance _instance;
+
+    private readonly InstalledMod _mod;
+
+    /// <summary>Why the remove button is disabled, for its tooltip. Null when the mod can be removed.</summary>
+    public string? RemoveBlockedText => _owner.RemoveBlockedReason(_instance, _mod);
+
+    public bool CanRemove => RemoveBlockedText is null;
+
+    public string RemoveToolTip => RemoveBlockedText ?? _owner.Localization.ContentRemove;
+
     private readonly bool _ownedByBorea;
 
     /// <summary>Whether the row links to the mod page: installed by Borea and in the content index.</summary>
@@ -401,10 +430,12 @@ public sealed partial class ContentItem : ObservableObject
     [ObservableProperty]
     private bool _isConfirmingRemove;
 
-    public ContentItem(MainViewModel owner, Guid instanceId, InstalledMod mod, bool enabled, ModMetadata? listing, DiscoverItem? page = null)
+    public ContentItem(MainViewModel owner, Instance instance, InstalledMod mod, bool enabled, ModMetadata? listing, DiscoverItem? page = null)
     {
         _owner = owner;
-        _instanceId = instanceId;
+        _instance = instance;
+        _mod = mod;
+        _instanceId = instance.InstanceId;
         _page = page;
         _ownedByBorea = mod.Ownership == ModInstallOwnership.Borea;
         ModId = mod.ModId;
@@ -427,6 +458,8 @@ public sealed partial class ContentItem : ObservableObject
     {
         OnPropertyChanged(nameof(AuthorsText));
         OnPropertyChanged(nameof(NoPageText));
+        OnPropertyChanged(nameof(RemoveBlockedText));
+        OnPropertyChanged(nameof(RemoveToolTip));
     }
 
     [RelayCommand]
