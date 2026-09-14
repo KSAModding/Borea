@@ -331,7 +331,7 @@ public partial class MainViewModel : ViewModelBase
                 if (listing.Type != ContentType.Mod)
                     continue;
 
-                var release = await _services.ContentIndex.GetLatestReleaseAsync(listing.ModId);
+                var release = await _services.ContentIndex.GetLatestReleaseInChannelAsync(listing.ModId, _services.Settings.ReleaseChannel);
                 if (release is not null)
                     recent.Add(new RecentItem(this, listing, release.ReleaseDate));
             }

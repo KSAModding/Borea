@@ -178,7 +178,7 @@ public partial class MainViewModel
 
         foreach (var item in _listings)
         {
-            var latest = item.Source == "index" ? await _services.ContentIndex.GetLatestReleaseAsync(item.ModId) : null;
+            var latest = item.Source == "index" ? await _services.ContentIndex.GetLatestReleaseInChannelAsync(item.ModId, _services.Settings.ReleaseChannel) : null;
             item.Compatibility = latest is null ? GameCompatibility.Unknown : Borea.Core.Game.Compatibility.Evaluate(latest, installed);
         }
 

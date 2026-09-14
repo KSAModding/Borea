@@ -1,5 +1,6 @@
 using System.Text.Json.Nodes;
 using Borea.App.ViewModels;
+using Borea.Core.Game;
 using Borea.Core.Instances;
 using Borea.Core.Mods;
 using Borea.Core.Settings;
@@ -118,6 +119,28 @@ public sealed class ReleaseChannelViewModelTests
         viewModel.VersionFilter = viewModel.OptionFor(ReleaseChannel.Stable);
         Assert.Equal(4, viewModel.ContentVersions.Count);
         Assert.All(viewModel.ContentVersions, version => Assert.Equal(ReleaseStatus.Stable, version.Status));
+    }
+
+    [Fact]
+    public async Task HomeAndCompatibility_FollowTheChannel()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: SnapshotRelease.Add(
+            new SnapshotRelease("KSArmory", "0.9.0-dev.1", "dev", "2026-09-12T10:00:00Z", GameMin: "2026.9.4.5400", GameMinRevision: 5400)));
+        var viewModel = harness.ViewModel;
+        await viewModel.EnsureDiscoverLoadedAsync();
+        Assert.True(GameVersion.TryParse("2026.8.22.5348", out var installed));
+
+        await viewModel.RefreshCompatibilityAsync(installed);
+
+        Assert.Equal(["MeasureTools", "AdvancedFlightComputer", "KSArmory"], viewModel.RecentItems.Select(item => item.ModId));
+        Assert.True(viewModel.DiscoverItems.Single(item => item.ModId == "KSArmory").IsCompatible);
+
+        viewModel.SelectedReleaseChannel = viewModel.OptionFor(ReleaseChannel.Dev);
+        await viewModel.WhenReleaseChannelSavedAsync();
+        await viewModel.RefreshCompatibilityAsync(installed);
+
+        Assert.Equal("KSArmory", viewModel.RecentItems[0].ModId);
+        Assert.True(viewModel.DiscoverItems.Single(item => item.ModId == "KSArmory").IsIncompatible);
     }
 
 }
