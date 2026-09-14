@@ -28,6 +28,24 @@ public sealed class LaunchCommandTests : IDisposable
     }
 
     [Fact]
+    public async Task Launch_LoaderStopsRightAway_FailsWithWhatItWrote()
+    {
+        _host.Mods.Listings.Add(LoaderFixtures.Listing());
+        var loaderDirectory = LoaderCommandTests.CreateLoaderDirectory("StarMap", "not a program", _host.Root);
+        await _host.RunAsync("settings", "set", "loader", "StarMap", loaderDirectory);
+        await _host.RunAsync("instance", "create", "Flight Test");
+        _host.ProcessStarter.CrashExitCode = -532462766;
+        _host.ProcessStarter.CrashOutput.Add("Unhandled exception. System.TypeLoadException: Method 'DrawAxes' from assembly 'KSArmory, Version=0.8.44.0' does not have an implementation.");
+
+        var run = await _host.RunAsync("launch", "Flight Test", "StarMap");
+
+        Assert.Equal(1, run.ExitCode);
+        Assert.Contains("exit code -532462766", run.Error);
+        Assert.Contains("DrawAxes", run.Error);
+        Assert.DoesNotContain("Process id", run.Output);
+    }
+
+    [Fact]
     public async Task Launch_LoaderWhoseListingHasNoInstanceTable_FailsWithoutStarting()
     {
         _host.Mods.Listings.Add(LoaderFixtures.ListingWithoutInstance("OtherLoader"));

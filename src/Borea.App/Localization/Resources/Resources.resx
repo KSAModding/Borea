@@ -723,4 +723,28 @@
   <data name="ContentInactiveInstance" xml:space="preserve">
     <value>This instance is not active. Make it active to add or remove content from here.</value>
   </data>
+  <data name="LaunchStartingFormat" xml:space="preserve">
+    <value>Starting {0}…</value>
+  </data>
+  <data name="LaunchModBrokeFormat" xml:space="preserve">
+    <value>{0} {1} stopped {2} from starting. It may not work with this version of KSA. Disable it and try again, or look for an update.</value>
+  </data>
+  <data name="LaunchExitedEarlyFormat" xml:space="preserve">
+    <value>{0} stopped right after starting (exit code {1}). The details show what it wrote.</value>
+  </data>
+  <data name="LaunchDisableModFormat" xml:space="preserve">
+    <value>Disable {0}</value>
+  </data>
+  <data name="LaunchModDisabledFormat" xml:space="preserve">
+    <value>{0} is disabled. Press Play to try again.</value>
+  </data>
+  <data name="LaunchShowDetails" xml:space="preserve">
+    <value>Show details</value>
+  </data>
+  <data name="LaunchOpenLog" xml:space="preserve">
+    <value>Open launch log</value>
+  </data>
+  <data name="LaunchNoOutput" xml:space="preserve">
+    <value>The loader wrote nothing before it stopped.</value>
+  </data>
 </root>

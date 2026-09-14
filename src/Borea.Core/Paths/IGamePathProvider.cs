@@ -76,6 +76,11 @@ public interface IGamePathProvider
     /// </summary>
     string GetInstanceGameLogPath(Guid instanceId);
 
+    /// <summary>
+    /// What the mod loader wrote while Borea watched its start, next to the game log.
+    /// </summary>
+    string GetInstanceLaunchLogPath(Guid instanceId);
+
     string GetInstanceManifestPath(Guid instanceId);
 
     string GetInstanceMetadataPath(Guid instanceId);
