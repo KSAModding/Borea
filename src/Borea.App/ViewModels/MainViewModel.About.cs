@@ -147,9 +147,9 @@ public partial class MainViewModel
         FolderMessage = Localization.AboutCopied;
     }
 
-    /// <summary>
-    /// Hands a folder or a URL to the system, the way the links on a content page open.
-    /// </summary>
+    /// <summary>Starts a folder or a URL through the system. Tests replace it.</summary>
+    internal Action<string> OpenWithSystem { get; set; } = target => Process.Start(new ProcessStartInfo(target) { UseShellExecute = true });
+
     private void OpenFromAbout(string? target)
     {
         if (string.IsNullOrWhiteSpace(target))
@@ -157,18 +157,29 @@ public partial class MainViewModel
 
         AboutMessage = null;
         FolderMessage = null;
+        var error = TryOpenWithSystem(target);
+        if (error is not null)
+            AboutError = error;
+    }
+
+    /// <summary>Opens an existing folder or a URL, and returns why it could not, or null.</summary>
+    private string? TryOpenWithSystem(string target)
+    {
         try
         {
             if (Directory.Exists(target) || Uri.IsWellFormedUriString(target, UriKind.Absolute))
-                Process.Start(new ProcessStartInfo(target) { UseShellExecute = true });
-            else if (Path.IsPathRooted(target))
-                AboutError = Localization.FormatAboutFolderMissing(target);
-            else
-                AboutError = Localization.FormatAboutCannotOpen(target);
+            {
+                OpenWithSystem(target);
+                return null;
+            }
+
+            return Path.IsPathRooted(target)
+                ? Localization.FormatAboutFolderMissing(target)
+                : Localization.FormatAboutCannotOpen(target);
         }
         catch (Exception exception) when (exception is Win32Exception or InvalidOperationException or IOException)
         {
-            AboutError = exception.Message;
+            return exception.Message;
         }
     }
 
