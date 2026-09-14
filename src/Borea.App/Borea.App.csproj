@@ -23,7 +23,7 @@
 
   <ItemGroup>
     <EmbeddedResource Update="Localization\Resources\Resources.resx">
-      <Generator>MSBuild:Compile</Generator>
+      <Generator>PublicResXFileCodeGenerator</Generator>
       <Link>Localization\Resources.resx</Link>
       <StronglyTypedFileName>$(IntermediateOutputPath)Resources.Designer.cs</StronglyTypedFileName>
       <StronglyTypedLanguage>CSharp</StronglyTypedLanguage>
