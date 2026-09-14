@@ -59,6 +59,16 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string SettingsCheckForUpdatesAtStart => Resources.SettingsCheckForUpdatesAtStart;
 
+    public string SettingsUpdateChannelLabel => Resources.SettingsUpdateChannelLabel;
+
+    public string SettingsUpdateChannelHint => Resources.SettingsUpdateChannelHint;
+
+    public string UpdateChannelStable => Resources.UpdateChannelStable;
+
+    public string UpdateChannelTesting => Resources.UpdateChannelTesting;
+
+    public string UpdateChannelDev => Resources.UpdateChannelDev;
+
     public string SettingsReleaseChannelLabel => Resources.SettingsReleaseChannelLabel;
 
     public string SettingsReleaseChannelHint => Resources.SettingsReleaseChannelHint;
