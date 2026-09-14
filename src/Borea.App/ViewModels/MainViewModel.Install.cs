@@ -4,14 +4,17 @@ using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
+using Borea.Composition;
 using Borea.Core.Game;
+using Borea.Core.Instances;
 using Borea.Core.Mods;
 using Borea.Core.Planning;
 
 namespace Borea.App.ViewModels;
 
 /// <summary>
-/// A row that installs a release: a Discover row, or a row of the versions table.
+/// A row that installs a release: a Discover row, a row of the versions table,
+/// or an update on the instance page.
 /// </summary>
 internal interface IInstallRow
 {
@@ -46,11 +49,29 @@ public partial class MainViewModel
     /// </summary>
     internal async Task PlanInstallAsync(IInstallRow row, Func<Task<ModVersionMetadata?>> findRelease, bool exact)
     {
-        if (_services is null || ActiveInstance is null || row.IsInstalling)
+        if (_services is null || ActiveInstance is null)
             return;
 
+        var executed = await PlanAndExecuteAsync(row, ActiveInstance.InstanceId, async _ =>
+        {
+            var release = await findRelease() ?? throw new InvalidOperationException(Localization.DiscoverNoRelease);
+            return [new RequestedMod(release, InstallReason.Manual, exact)];
+        });
+
+        if (executed)
+            await ReloadInstancesAsync();
+    }
+
+    /// <summary>
+    /// Plans the requested mods into the instance and runs a ready plan without
+    /// warnings. Returns whether the executor ran, so the caller reloads the instances.
+    /// </summary>
+    private async Task<bool> PlanAndExecuteAsync(IInstallRow row, Guid instanceId, Func<Instance, Task<IReadOnlyList<RequestedMod>>> requestMods)
+    {
+        if (_services is null || row.IsInstalling)
+            return false;
+
         var services = _services;
-        var instanceId = ActiveInstance.InstanceId;
         row.InstallError = null;
         row.InstallWarning = null;
         row.PendingPlan = null;
@@ -58,16 +79,9 @@ public partial class MainViewModel
         var executed = false;
         try
         {
-            var release = await findRelease() ?? throw new InvalidOperationException(Localization.DiscoverNoRelease);
             var instance = await services.Instances.GetByIdAsync(instanceId)
                 ?? throw new InvalidOperationException(Localization.InstallInstanceMissing);
-            var request = new InstallPlanningRequest(
-                instance,
-                [new RequestedMod(release, InstallReason.Manual, exact)],
-                services.Mods,
-                services.InstalledVersion.GetInstalledVersion()?.Version,
-                CurrentPlatform());
-            var plan = await services.InstallPlanner.PlanAsync(request);
+            var plan = await services.InstallPlanner.PlanAsync(PlanningRequest(services, instance, await requestMods(instance)));
 
             if (!plan.IsReady)
             {
@@ -96,9 +110,11 @@ public partial class MainViewModel
             row.ProgressDetail = null;
         }
 
-        if (executed)
-            await ReloadInstancesAsync();
+        return executed;
     }
+
+    private static InstallPlanningRequest PlanningRequest(BoreaServices services, Instance instance, IReadOnlyList<RequestedMod> requested)
+        => new(instance, requested, services.Mods, services.InstalledVersion.GetInstalledVersion()?.Version, CurrentPlatform());
 
     /// <summary>
     /// Runs the plan the row holds after the user accepted its warnings. The
@@ -106,8 +122,14 @@ public partial class MainViewModel
     /// </summary>
     internal async Task ConfirmInstallAsync(IInstallRow row)
     {
+        if (await ExecutePendingPlanAsync(row))
+            await ReloadInstancesAsync();
+    }
+
+    private async Task<bool> ExecutePendingPlanAsync(IInstallRow row)
+    {
         if (_services is null || row.PendingPlan is not { } plan || row.IsInstalling)
-            return;
+            return false;
 
         row.PendingPlan = null;
         row.InstallWarning = null;
@@ -128,7 +150,7 @@ public partial class MainViewModel
             row.ProgressDetail = null;
         }
 
-        await ReloadInstancesAsync();
+        return true;
     }
 
     internal static void CancelInstall(IInstallRow row)

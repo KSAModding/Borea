@@ -222,6 +222,9 @@
   <data name="InstancePlay" xml:space="preserve">
     <value>Spielen</value>
   </data>
+  <data name="InstanceUpdateAll" xml:space="preserve">
+    <value>Alle aktualisieren</value>
+  </data>
   <data name="ContentRemove" xml:space="preserve">
     <value>Entfernen</value>
   </data>
@@ -233,6 +236,9 @@
   </data>
   <data name="ContentRemoveRequiredFormat" xml:space="preserve">
     <value>{0} bleibt, weil {1} es braucht.</value>
+  </data>
+  <data name="ContentUpdateToFormat" xml:space="preserve">
+    <value>Auf {0} aktualisieren</value>
   </data>
   <data name="ContentByAuthorFormat" xml:space="preserve">
     <value>von {0}</value>
@@ -332,6 +338,9 @@
   </data>
   <data name="InstallReleaseChannelFormat" xml:space="preserve">
     <value>Version {0} hat den Status {1}, den dein Release-Kanal nicht anbietet.</value>
+  </data>
+  <data name="UpdateAnyway" xml:space="preserve">
+    <value>Trotzdem aktualisieren</value>
   </data>
   <data name="InstallInstanceMissing" xml:space="preserve">
     <value>Die aktive Instanz existiert nicht mehr.</value>
