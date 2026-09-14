@@ -1,6 +1,7 @@
 <ResourceDictionary xmlns="https://github.com/avaloniaui"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-                    xmlns:vm="using:Borea.App.ViewModels">
+                    xmlns:vm="using:Borea.App.ViewModels"
+                    xmlns:views="using:Borea.App.Views">
     <!-- The row templates the pages use. App.axaml merges this file, so every page can reach them. -->
     <!-- the game is not set up: one line and the way to the Game tab (#152) -->
     <DataTemplate x:Key="GameSetupBanner" x:DataType="vm:MainViewModel">
@@ -84,10 +85,21 @@
         </Border>
     </DataTemplate>
 
+    <!-- the changelog of one release an update passes, as Markdown or as a link -->
+    <DataTemplate x:Key="ChangelogEntry" x:DataType="vm:ReleaseChangelog">
+        <StackPanel Spacing="4">
+            <TextBlock Classes="label-md" Text="{Binding Title}" />
+            <views:MarkdownView Markdown="{Binding Text}" IsVisible="{Binding Text, Converter={x:Static ObjectConverters.IsNotNull}}" />
+            <Button Classes="link" HorizontalAlignment="Left" Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).OpenLinkCommand}" CommandParameter="{Binding Link}" ToolTip.Tip="{Binding Link.Url}" IsVisible="{Binding Link, Converter={x:Static ObjectConverters.IsNotNull}}">
+                <TextBlock Classes="action-md" Text="{Binding Link.Label}" />
+            </Button>
+        </StackPanel>
+    </DataTemplate>
+
     <!-- one row of c/table-versions on the instance page -->
     <DataTemplate x:Key="ContentRow" x:DataType="vm:ContentItem">
         <Border BorderBrush="{StaticResource Brush.BorderStrong}" BorderThickness="0,1,0,0" Padding="16,8">
-            <Grid ColumnDefinitions="48,16,*,24,Auto">
+            <Grid ColumnDefinitions="48,16,*,24,Auto" RowDefinitions="Auto,Auto">
                 <Button Classes="plain" Command="{Binding OpenCommand}" IsVisible="{Binding CanOpen}" AutomationProperties.Name="{Binding Name}">
                     <Border Classes="thumbnail" Width="48" Height="48">
                         <Path Classes="icon" Data="{StaticResource Icon.PuzzlePiece}" />
@@ -126,7 +138,7 @@
                             <Button Classes="text" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryCancel}" Command="{Binding CancelRemoveCommand}" />
                         </StackPanel>
                         <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding IsConfirmingUpdate}">
-                            <Button Classes="text primary" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.UpdateAnyway}" Command="{Binding ConfirmUpdateCommand}" />
+                            <Button Classes="text primary" Content="{Binding ConfirmUpdateText}" Command="{Binding ConfirmUpdateCommand}" />
                             <Button Classes="text" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryCancel}" Command="{Binding CancelUpdateCommand}" />
                         </StackPanel>
                         <StackPanel Orientation="Horizontal" Spacing="12">
@@ -143,6 +155,13 @@
                         </StackPanel>
                     </Panel>
                 </StackPanel>
+                <ItemsControl Grid.Row="1" Grid.Column="2" Grid.ColumnSpan="3" Margin="0,8,0,0" ItemsSource="{Binding Changelogs}" ItemTemplate="{StaticResource ChangelogEntry}" IsVisible="{Binding HasChangelogs}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <StackPanel Spacing="12" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                </ItemsControl>
             </Grid>
         </Border>
     </DataTemplate>

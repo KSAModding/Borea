@@ -237,6 +237,9 @@
   <data name="ContentRemoveRequiredFormat" xml:space="preserve">
     <value>{0} bleibt, weil {1} es braucht.</value>
   </data>
+  <data name="ContentUpdate" xml:space="preserve">
+    <value>Aktualisieren</value>
+  </data>
   <data name="ContentUpdateToFormat" xml:space="preserve">
     <value>Auf {0} aktualisieren</value>
   </data>

@@ -287,7 +287,12 @@ public partial class MainViewModel
     [RelayCommand]
     private void OpenLink(ContentLink link)
     {
-        if (link is not null && TryOpenUrl(link.Url) is { } error)
+        if (link is null || TryOpenUrl(link.Url) is not { } error)
+            return;
+
+        if (CurrentWindowInstance)
+            ContentError = error;
+        else
             ContentDetailError = error;
     }
 
