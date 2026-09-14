@@ -137,6 +137,14 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string GameDataEmpty => Resources.GameDataEmpty;
 
+    public string GameLogOpen => Resources.GameLogOpen;
+
+    public string GameLogMissing => Resources.GameLogMissing;
+
+    public string GameLogReload => Resources.GameLogReload;
+
+    public string GameLogCopy => Resources.GameLogCopy;
+
     public string InstancePlay => Resources.InstancePlay;
 
     public string ContentRemove => Resources.ContentRemove;
