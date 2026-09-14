@@ -168,6 +168,39 @@
   <data name="InstanceEmptyContent" xml:space="preserve">
     <value>Nothing installed yet. Add content from Discover.</value>
   </data>
+  <data name="ManualInstallsEmpty" xml:space="preserve">
+    <value>No mod folder in this instance was installed without Borea.</value>
+  </data>
+  <data name="ManualInstallsInIndex" xml:space="preserve">
+    <value>In the content index</value>
+  </data>
+  <data name="ManualInstallsNotInIndex" xml:space="preserve">
+    <value>Not in the content index</value>
+  </data>
+  <data name="ManualInstallsNoMatch" xml:space="preserve">
+    <value>In the content index, but the files match no release</value>
+  </data>
+  <data name="ManualInstallsNotRecorded" xml:space="preserve">
+    <value>In the content index, but Borea cannot record the release that the files match</value>
+  </data>
+  <data name="ManualInstallsChecking" xml:space="preserve">
+    <value>Comparing the files with each release</value>
+  </data>
+  <data name="ManualInstallsManage" xml:space="preserve">
+    <value>Manage with Borea</value>
+  </data>
+  <data name="ManualInstallsReplace" xml:space="preserve">
+    <value>Replace with the latest release</value>
+  </data>
+  <data name="ManualInstallsDeleteAndReplace" xml:space="preserve">
+    <value>Delete and replace</value>
+  </data>
+  <data name="ManualInstallsReplaceWarningFormat" xml:space="preserve">
+    <value>Borea did not install {0}. To replace it, Borea deletes this folder and every file in it. Borea asks only this one time.</value>
+  </data>
+  <data name="ManualInstallsInstanceChanged" xml:space="preserve">
+    <value>The instance changed. Try again.</value>
+  </data>
   <data name="GameDataOpenFolder" xml:space="preserve">
     <value>Open folder</value>
   </data>

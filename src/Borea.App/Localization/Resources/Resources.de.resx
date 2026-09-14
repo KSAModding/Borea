@@ -168,6 +168,39 @@
   <data name="InstanceEmptyContent" xml:space="preserve">
     <value>Noch nichts installiert. Füge Inhalte über Entdecken hinzu.</value>
   </data>
+  <data name="ManualInstallsEmpty" xml:space="preserve">
+    <value>Kein Mod-Ordner in dieser Instanz wurde ohne Borea installiert.</value>
+  </data>
+  <data name="ManualInstallsInIndex" xml:space="preserve">
+    <value>Im Inhaltsindex</value>
+  </data>
+  <data name="ManualInstallsNotInIndex" xml:space="preserve">
+    <value>Nicht im Inhaltsindex</value>
+  </data>
+  <data name="ManualInstallsNoMatch" xml:space="preserve">
+    <value>Im Inhaltsindex, aber die Dateien passen zu keiner Version</value>
+  </data>
+  <data name="ManualInstallsNotRecorded" xml:space="preserve">
+    <value>Im Inhaltsindex, aber Borea kann die passende Version nicht übernehmen</value>
+  </data>
+  <data name="ManualInstallsChecking" xml:space="preserve">
+    <value>Die Dateien werden mit jeder Version verglichen</value>
+  </data>
+  <data name="ManualInstallsManage" xml:space="preserve">
+    <value>Mit Borea verwalten</value>
+  </data>
+  <data name="ManualInstallsReplace" xml:space="preserve">
+    <value>Durch die neueste Version ersetzen</value>
+  </data>
+  <data name="ManualInstallsDeleteAndReplace" xml:space="preserve">
+    <value>Löschen und ersetzen</value>
+  </data>
+  <data name="ManualInstallsReplaceWarningFormat" xml:space="preserve">
+    <value>Borea hat {0} nicht installiert. Zum Ersetzen löscht Borea diesen Ordner mit allen Dateien darin. Borea fragt nur dieses eine Mal.</value>
+  </data>
+  <data name="ManualInstallsInstanceChanged" xml:space="preserve">
+    <value>Die Instanz hat sich geändert. Versuche es erneut.</value>
+  </data>
   <data name="GameDataOpenFolder" xml:space="preserve">
     <value>Ordner öffnen</value>
   </data>

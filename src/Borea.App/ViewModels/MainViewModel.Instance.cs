@@ -16,6 +16,7 @@ namespace Borea.App.ViewModels;
 public enum InstanceTab
 {
     Content,
+    ManualInstalls,
     GameData,
     Log,
 }
@@ -34,11 +35,14 @@ public partial class MainViewModel
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsContentTab))]
+    [NotifyPropertyChangedFor(nameof(IsManualInstallsTab))]
     [NotifyPropertyChangedFor(nameof(IsGameDataTab))]
     [NotifyPropertyChangedFor(nameof(IsLogTab))]
     private InstanceTab _instanceTab;
 
     public bool IsContentTab => InstanceTab == InstanceTab.Content;
+
+    public bool IsManualInstallsTab => InstanceTab == InstanceTab.ManualInstalls;
 
     public bool IsGameDataTab => InstanceTab == InstanceTab.GameData;
 
@@ -93,7 +97,9 @@ public partial class MainViewModel
 
         _content = content.OrderBy(content => content.Name, StringComparer.CurrentCultureIgnoreCase).ToList();
         RefreshContentGroups();
-        if (IsGameDataTab)
+        if (IsManualInstallsTab)
+            await LoadManualInstallsAsync();
+        else if (IsGameDataTab)
             await LoadGameDataAsync();
         else if (IsLogTab)
             await LoadGameLogAsync();
