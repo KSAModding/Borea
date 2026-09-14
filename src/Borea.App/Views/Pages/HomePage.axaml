@@ -8,10 +8,25 @@
     <ScrollViewer>
         <StackPanel MaxWidth="700" Margin="32,42,32,32">
             <!-- c/breadcrumb -->
-            <StackPanel Orientation="Horizontal" Spacing="4" Height="24">
-                <Path Classes="icon" Data="{StaticResource Icon.Home}" />
-                <TextBlock Classes="label-lg" Text="{Binding Localization.PageHomeHeading}" VerticalAlignment="Center" />
-            </StackPanel>
+			<Grid ColumnDefinitions="*,Auto" Height="24">
+				<StackPanel Orientation="Horizontal" Spacing="4">
+					<Path Classes="icon" Data="{StaticResource Icon.Home}" />
+					<TextBlock Classes="label-lg" Text="{Binding Localization.PageHomeHeading}" VerticalAlignment="Center" />
+				</StackPanel>
+
+				<SplitButton Grid.Column="1" Classes="launch" Command="{Binding PlayCommand}" IsEnabled="{Binding !IsLaunching}" IsVisible="{Binding HasActiveInstance}">
+					<StackPanel Orientation="Horizontal" Spacing="6">
+						<Path Classes="icon-filled size-16" Fill="{StaticResource Brush.SurfaceHeader}" Data="{StaticResource Icon.Play}" VerticalAlignment="Center" />
+						<TextBlock Classes="action-lg" Text="{Binding Localization.LaunchActiveInstance}" VerticalAlignment="Center" />
+					</StackPanel>
+					<SplitButton.Flyout>
+						<MenuFlyout Placement="BottomEdgeAlignedRight">
+							<MenuItem Header="{Binding Localization.LaunchActiveInstance}" Command="{Binding PlayCommand}" />
+							<MenuItem Header="{Binding Localization.GameLaunchVanilla}" Command="{Binding PlayVanillaCommand}" />
+						</MenuFlyout>
+					</SplitButton.Flyout>
+				</SplitButton>
+			</Grid>
             <ContentControl Content="{Binding}" ContentTemplate="{StaticResource GameSetupBanner}" IsVisible="{Binding NeedsGameSetup}" />
             <views:UpdateNotice Margin="0,16,0,0" IsVisible="{Binding HasAvailableUpdate}" />
 

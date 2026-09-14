@@ -123,6 +123,16 @@ public partial class MainViewModel
         }
     }
 
+    [RelayCommand]
+    private void PlayVanilla()
+    {
+        if (_services is null || IsLaunching)
+            return;
+
+        var result = _services.SharedProfileLauncher.Launch();
+        LaunchMessage = result.Message;
+    }
+
     /// <summary>
     /// The listing of the mod loader the settings point at. The launcher needs
     /// its metadata to know what to run; null lets it explain that no loader is set.
