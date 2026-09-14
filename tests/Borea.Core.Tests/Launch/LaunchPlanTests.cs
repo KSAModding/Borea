@@ -90,6 +90,28 @@ public sealed class LaunchPlanTests
     }
 
     [Fact]
+    public void ThroughHost_PassesTheAssemblyBeforeTheHandoverInTheSameDirectory()
+    {
+        var host = Path.Combine(Path.GetTempPath(), "BoreaTest", "dotnet", "dotnet");
+        var assembly = Path.Combine(LoaderDirectory, "StarMap.dll");
+
+        var plan = LaunchPlan.ForLoader(LoaderDirectory, "StarMap.exe", Handover, InstanceRoot).ThroughHost(host, assembly);
+
+        Assert.Equal(host, plan.Executable);
+        Assert.Equal(new[] { assembly, "-InstancePath", InstanceRoot }, plan.Arguments);
+        Assert.Equal(LoaderDirectory, plan.WorkingDirectory);
+        Assert.Equal(InstanceRoot, Assert.Single(plan.EnvironmentVariables).Value);
+    }
+
+    [Fact]
+    public void ThroughHost_RelativeAssembly_ThrowsArgumentException()
+    {
+        var plan = LaunchPlan.ForLoader(LoaderDirectory, "StarMap.exe", Handover, InstanceRoot);
+
+        Assert.Throws<ArgumentException>(() => plan.ThroughHost(Path.Combine(LoaderDirectory, "dotnet"), "StarMap.dll"));
+    }
+
+    [Fact]
     public void Constructor_CopiesTheArgumentsAndVariables()
     {
         var arguments = new List<string> { "-InstancePath", InstanceRoot };

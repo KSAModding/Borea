@@ -3,6 +3,7 @@ using System.Diagnostics;
 using Borea.Core.ModLoaders;
 using Borea.Core.Mods;
 using Borea.Core.Settings;
+using Borea.Storage.Launch;
 
 namespace Borea.Storage.ModLoaders;
 
@@ -51,7 +52,9 @@ public sealed class FileLoaderAdopter : ILoaderAdopter
                 $"{loader.Name} is already recorded at '{recorded.DirectoryPath}'. Remove that record or adopt that directory instead.");
         }
 
-        var rawVersion = ReadFileVersion(executable);
+        // Outside Windows FileVersionInfo reads only assembly metadata, so a Windows app host shows no version there.
+        var rawVersion = ReadFileVersion(executable)
+            ?? (DotnetHost.AssemblyBeside(executable) is { } assembly ? ReadFileVersion(assembly) : null);
         var version = MatchVersion(loader, releases, rawVersion);
         string? configuredGameDirectory = null;
         string? configurationWarning = null;

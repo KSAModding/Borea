@@ -77,6 +77,13 @@ public sealed class LaunchPlan
         return new LaunchPlan(executable, arguments, directory, variables);
     }
 
+    /// <summary>The same start through a host that takes the assembly as its first argument.</summary>
+    public LaunchPlan ThroughHost(string host, string assembly)
+    {
+        var target = Absolute(assembly, nameof(assembly));
+        return new LaunchPlan(host, new[] { target }.Concat(Arguments).ToArray(), WorkingDirectory, EnvironmentVariables);
+    }
+
     private static string Absolute(string path, string paramName)
     {
         if (string.IsNullOrWhiteSpace(path))

@@ -79,6 +79,19 @@ public sealed class FileLoaderAdopterTests : IDisposable
     }
 
     [Fact]
+    public async Task AdoptAsync_AppHostWithoutVersion_ReadsTheAssemblyBesideIt()
+    {
+        PlaceStarMap(GameDirectory);
+        File.WriteAllBytes(Path.Combine(LoaderDirectory, "StarMap.exe"), Array.Empty<byte>());
+        File.Copy(Path.Combine(AppContext.BaseDirectory, LoaderVersionFixture), Path.Combine(LoaderDirectory, "StarMap.dll"), overwrite: true);
+
+        var result = await _adopter.AdoptAsync(StarMap(), new[] { StarMapRelease() }, LoaderDirectory);
+
+        Assert.Equal("0.4.6.0", result.RawVersion);
+        Assert.Equal(ModVersion.Parse("0.4.6"), result.Version);
+    }
+
+    [Fact]
     public async Task AdoptAsync_FileVersionHasNoIndexedRelease_RecordsUnknownWithAWarning()
     {
         PlaceStarMap(GameDirectory);
