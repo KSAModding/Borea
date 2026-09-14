@@ -79,6 +79,8 @@ public sealed class BoreaServices : IDisposable
 
     public required IInstanceRepository Instances { get; init; }
 
+    public required IGameDataReader GameData { get; init; }
+
     public required IModStateRepository ModState { get; init; }
 
     public required IModFavoritesRepository ModFavorites { get; init; }
@@ -232,6 +234,7 @@ public sealed class BoreaServices : IDisposable
             GameDirectoryChanger = new GameDirectoryChanger(settingsRepository, mods, loaderConfiguration),
             AppPreferences = new FileAppPreferencesRepository(paths),
             Instances = instances,
+            GameData = new FileGameDataReader(paths),
             ModState = modState,
             ModFavorites = new FileModFavoritesRepository(paths),
             ModPackFavorites = new FileModPackFavoritesRepository(paths),
