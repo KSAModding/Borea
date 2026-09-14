@@ -1,6 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Borea.App.ViewModels"
+             xmlns:views="using:Borea.App.Views"
              x:Class="Borea.App.Views.Pages.InstancePage"
              x:DataType="vm:MainViewModel">
     <!-- Instance (library-instance) -->
@@ -160,15 +161,8 @@
                 <TextBlock Classes="body-md secondary" Text="{Binding GameLogMessage}" TextWrapping="Wrap" IsVisible="{Binding GameLogMessage, Converter={x:Static ObjectConverters.IsNotNull}}" />
                 <TextBlock Classes="body-md muted" Text="{Binding Localization.GameLogMissing}" TextWrapping="Wrap" IsVisible="{Binding IsGameLogMissing}" />
                 <Border Classes="card" Padding="16" IsVisible="{Binding HasGameLog}">
-                    <ItemsControl ItemsSource="{Binding GameLogLines}">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate x:DataType="vm:GameLogLine">
-                                <SelectableTextBlock Classes="log-line" TextWrapping="Wrap">
-                                    <Run Classes="log-muted" Text="{Binding Time}" /><Run Classes.log-muted="{Binding IsMuted}" Classes.log-information="{Binding IsInformation}" Classes.log-warning="{Binding IsWarning}" Classes.log-error="{Binding IsError}" Text="{Binding Level}" /><Run Classes="log-tag" Text="{Binding Tag}" /><Run Classes.log-muted="{Binding IsMuted}" Classes.log-warning="{Binding IsWarning}" Classes.log-error="{Binding IsError}" Text="{Binding Message}" />
-                                </SelectableTextBlock>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
+                    <!-- one text for every line, so a selection can span lines -->
+                    <views:GameLogView Classes="log-line" TextWrapping="Wrap" Lines="{Binding GameLogLines}" />
                 </Border>
             </StackPanel>
 
