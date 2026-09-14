@@ -96,6 +96,8 @@ internal static class ShowCommand
                 metadata is null ? null : ListingView.From(metadata),
                 ContentOutput.IndexStatus(indexListing?.IndexStatus),
                 DownloadCountOutput.From(downloads),
+                indexListing?.PublishedAt,
+                indexListing?.UpdatedAt,
                 releaseViews,
                 diagnostics);
 
@@ -147,7 +149,8 @@ internal static class ShowCommand
             .Where(diagnostic => ModIds.Equals(diagnostic.Id, id))
             .Where(diagnostic => version is null
                 || diagnostic.Scope is ContentIndexDiagnosticScope.Listing or ContentIndexDiagnosticScope.IndexStatus
-                || (diagnostic.Scope == ContentIndexDiagnosticScope.Downloads && diagnostic.Version is null)
+                || (diagnostic.Scope is ContentIndexDiagnosticScope.Downloads or ContentIndexDiagnosticScope.Images or ContentIndexDiagnosticScope.Dates
+                    && diagnostic.Version is null)
                 || string.Equals(diagnostic.Version, version, StringComparison.OrdinalIgnoreCase))
             .Select(ContentOutput.Diagnostic)
             .ToArray();
@@ -193,6 +196,12 @@ internal static class ShowCommand
 
         if (view.Downloads is { } downloads)
             output.WriteLine($"Downloads: {DownloadCountOutput.Describe(downloads)}");
+
+        if (view.PublishedAt is { } publishedAt)
+            output.WriteLine($"Published: {publishedAt:O}");
+
+        if (view.UpdatedAt is { } updatedAt)
+            output.WriteLine($"Updated: {updatedAt:O}");
 
         if (view.Releases.Count == 0)
         {
@@ -282,6 +291,8 @@ internal static class ShowCommand
         ListingView? Listing,
         IndexStatusView? IndexStatus,
         DownloadCountView? Downloads,
+        DateTimeOffset? PublishedAt,
+        DateTimeOffset? UpdatedAt,
         IReadOnlyList<ReleaseView> Releases,
         IReadOnlyList<DiagnosticView> Diagnostics);
 

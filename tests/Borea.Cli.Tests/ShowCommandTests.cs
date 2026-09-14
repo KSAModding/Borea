@@ -505,6 +505,95 @@ public sealed class ShowCommandTests : IDisposable
         Assert.Equal(0, _host.Builds);
     }
 
+    [Fact]
+    public async Task Show_BothDates_PrintsThemAndWritesThemInJson()
+    {
+        var listing = ContentCommandFixtures.Listing();
+        var release = ContentCommandFixtures.Release();
+        var published = new DateTimeOffset(2026, 8, 2, 13, 18, 41, TimeSpan.Zero);
+        var updated = new DateTimeOffset(2026, 9, 2, 10, 14, 5, TimeSpan.Zero);
+        _host.Mods.Listings.Add(listing);
+        _host.Mods.Releases.Add(release);
+        _host.IndexReader.Snapshot = Snapshot(new ContentIndexListing(
+            listing.ModId, listing, new[] { release }, null, publishedAt: published, updatedAt: updated));
+
+        var run = await _host.RunAsync("show", listing.ModId);
+        var json = await _host.RunAsync("show", listing.ModId, "--json");
+
+        Assert.Equal(0, run.ExitCode);
+        Assert.Contains("Published: 2026-08-02T13:18:41.0000000+00:00", run.Output);
+        Assert.Contains("Updated: 2026-09-02T10:14:05.0000000+00:00", run.Output);
+        Assert.Equal(published, json.Json.GetProperty("publishedAt").GetDateTimeOffset());
+        Assert.Equal(updated, json.Json.GetProperty("updatedAt").GetDateTimeOffset());
+    }
+
+    [Fact]
+    public async Task Show_OnlyPublishedAt_OmitsTheUpdatedLine()
+    {
+        var listing = ContentCommandFixtures.Listing();
+        _host.Mods.Listings.Add(listing);
+        _host.IndexReader.Snapshot = Snapshot(new ContentIndexListing(
+            listing.ModId,
+            listing,
+            Array.Empty<ModVersionMetadata>(),
+            null,
+            publishedAt: new DateTimeOffset(2026, 8, 2, 13, 18, 41, TimeSpan.Zero)));
+
+        var run = await _host.RunAsync("show", listing.ModId);
+        var json = await _host.RunAsync("show", listing.ModId, "--json");
+
+        Assert.Equal(0, run.ExitCode);
+        Assert.Contains("Published: 2026-08-02T13:18:41.0000000+00:00", run.Output);
+        Assert.DoesNotContain("Updated:", run.Output);
+        Assert.Equal(System.Text.Json.JsonValueKind.Null, json.Json.GetProperty("updatedAt").ValueKind);
+    }
+
+    [Fact]
+    public async Task Show_NoDates_OmitsBothLinesAndWritesNullInJson()
+    {
+        var listing = ContentCommandFixtures.Listing();
+        _host.Mods.Listings.Add(listing);
+        _host.IndexReader.Snapshot = Snapshot(new ContentIndexListing(listing.ModId, listing, Array.Empty<ModVersionMetadata>(), null));
+
+        var run = await _host.RunAsync("show", listing.ModId);
+        var json = await _host.RunAsync("show", listing.ModId, "--json");
+
+        Assert.Equal(0, run.ExitCode);
+        Assert.DoesNotContain("Published:", run.Output);
+        Assert.DoesNotContain("Updated:", run.Output);
+        Assert.Equal(System.Text.Json.JsonValueKind.Null, json.Json.GetProperty("publishedAt").ValueKind);
+        Assert.Equal(System.Text.Json.JsonValueKind.Null, json.Json.GetProperty("updatedAt").ValueKind);
+    }
+
+    [Theory]
+    [InlineData(ContentIndexDiagnosticScope.Images, "The images icon is unreadable.", "malformed images flight-tools: The images icon is unreadable.")]
+    [InlineData(ContentIndexDiagnosticScope.Dates, "The updated_at value is unreadable.", "malformed dates flight-tools: The updated_at value is unreadable.")]
+    public async Task ShowVersion_ListingImagesOrDatesDiagnostic_IsPrinted(
+        ContentIndexDiagnosticScope scope,
+        string reason,
+        string expected)
+    {
+        var listing = ContentCommandFixtures.Listing();
+        var release = ContentCommandFixtures.Release();
+        _host.Mods.Listings.Add(listing);
+        _host.Mods.Releases.Add(release);
+        _host.IndexReader.Snapshot = Snapshot(
+            new[] { new ContentIndexListing(listing.ModId, listing, new[] { release }, null) },
+            new[]
+            {
+                new ContentIndexDiagnostic(
+                    ContentIndexDiagnosticKind.Malformed,
+                    scope,
+                    reason,
+                    listing.ModId),
+            });
+
+        var run = await _host.RunAsync("show", listing.ModId, "--version", "2.0.0");
+
+        Assert.Equal(0, run.ExitCode);
+        Assert.Contains(expected, run.Output);
+    }
+
     private static FakeInstalledGameVersionProvider Installed(string version) => new()
     {
         Installed = new InstalledGameVersion(GameVersion.Parse(version), version),
