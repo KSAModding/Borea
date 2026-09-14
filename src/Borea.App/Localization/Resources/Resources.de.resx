@@ -492,4 +492,7 @@
   <data name="LaunchActiveInstance" xml:space="preserve">
     <value>Aktive Instanz Starten</value>
   </data>
+  <data name="LaunchWithoutModLoaderToolTip" xml:space="preserve">
+    <value>Dadurch wird KSA so gestartet, als würden Sie normalerweise die KSA.exe ausführen. Es wird keine Borea-Instanz verwendet; stattdessen läuft die gemeinsam genutzte Instanz, die von KSA verwaltet und erstellt wird.</value>
+  </data>
 </root>

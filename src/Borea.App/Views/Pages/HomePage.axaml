@@ -27,7 +27,7 @@
 						<Button.Flyout>
 							<MenuFlyout Placement="BottomEdgeAlignedRight">
 								<MenuItem Header="{Binding Localization.LaunchActiveInstance}" Command="{Binding PlayActiveInstanceCommand}" IsEnabled="{Binding EnableActiveInstance}"/>
-								<MenuItem Header="{Binding Localization.LaunchWithoutModLoader}" Command="{Binding PlayWithoutModLoaderCommand}" />
+								<MenuItem Header="{Binding Localization.LaunchWithoutModLoader}" Command="{Binding PlayWithoutModLoaderCommand}" ToolTip.Tip="{Binding Localization.LaunchWithoutModLoaderToolTip}" />
 							</MenuFlyout>
 						</Button.Flyout>
 					</Button>
