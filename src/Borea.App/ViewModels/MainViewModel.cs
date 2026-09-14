@@ -81,14 +81,15 @@ public partial class MainViewModel : ViewModelBase
     private bool _currentWindowInstance = false;
 
     /// <summary>
-    /// The library rail item stays lit on the instance page too.
+    /// The library rail item stays lit on the instance page too, and on a
+    /// content page opened from an instance.
     /// </summary>
-    public bool IsLibrarySection => CurrentWindowLibrary || CurrentWindowInstance;
+    public bool IsLibrarySection => CurrentWindowLibrary || CurrentWindowInstance || IsContentFromInstance;
 
     /// <summary>
     /// The discover rail item stays lit on a content or pack page too.
     /// </summary>
-    public bool IsDiscoverSection => CurrentWindowDiscover || CurrentWindowContent || CurrentWindowPack;
+    public bool IsDiscoverSection => CurrentWindowDiscover || (CurrentWindowContent && !IsContentFromInstance) || CurrentWindowPack;
     [RelayCommand]
     public void SetMainWindowHome() // used to set whatever is on the main window (discover, library, etc.)
     {
@@ -385,6 +386,7 @@ public partial class MainViewModel : ViewModelBase
             Instances.Add(new InstanceItem(this, instance, instance.InstanceId == activeId));
 
         ActiveInstance = Instances.FirstOrDefault(instance => instance.IsActive);
+        OnPropertyChanged(nameof(CanActOnSelectedContent));
         RefreshInstalledFlags();
         OnPropertyChanged(nameof(InstalledInText));
 

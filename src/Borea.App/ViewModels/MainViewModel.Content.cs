@@ -23,7 +23,37 @@ public partial class MainViewModel
 {
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsDiscoverSection))]
+    [NotifyPropertyChangedFor(nameof(IsLibrarySection))]
+    [NotifyPropertyChangedFor(nameof(IsContentFromInstance))]
+    [NotifyPropertyChangedFor(nameof(CanActOnSelectedContent))]
     private bool _currentWindowContent;
+
+    /// <summary>
+    /// The instance the content page was opened from, so its breadcrumb leads
+    /// back there (#191). Null when it was opened from Discover.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsDiscoverSection))]
+    [NotifyPropertyChangedFor(nameof(IsLibrarySection))]
+    [NotifyPropertyChangedFor(nameof(IsContentFromInstance))]
+    [NotifyPropertyChangedFor(nameof(CanActOnSelectedContent))]
+    private InstanceItem? _contentReturnInstance;
+
+    public bool IsContentFromInstance => CurrentWindowContent && ContentReturnInstance is not null;
+
+    /// <summary>
+    /// Whether Add and Remove on the content page can be offered. They act on
+    /// the active instance, so a page opened from another instance hides them
+    /// instead of changing an instance it does not name.
+    /// </summary>
+    public bool CanActOnSelectedContent => !IsContentFromInstance || CurrentReturnInstance?.IsActive == true;
+
+    /// <summary>
+    /// The instance the page was opened from, as the list holds it now. The
+    /// list is rebuilt after every change, so the object kept at opening goes stale.
+    /// </summary>
+    private InstanceItem? CurrentReturnInstance =>
+        ContentReturnInstance is { } opened ? Instances.FirstOrDefault(instance => instance.InstanceId == opened.InstanceId) : null;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasContentLinks))]
@@ -79,6 +109,36 @@ public partial class MainViewModel
         if (item is null)
             return;
 
+        ContentReturnInstance = null;
+        await ShowContentAsync(item);
+    }
+
+    /// <summary>
+    /// Opens the page of an installed mod from the instance page. The
+    /// breadcrumb then names the instance and leads back to it.
+    /// </summary>
+    internal async Task OpenContentFromInstanceAsync(DiscoverItem item)
+    {
+        if (item is null || SelectedInstance is null)
+            return;
+
+        ContentReturnInstance = SelectedInstance;
+        await ShowContentAsync(item);
+    }
+
+    [RelayCommand]
+    private Task ReturnToInstanceAsync()
+    {
+        if (CurrentReturnInstance is { } instance)
+            return OpenInstanceAsync(instance);
+
+        // the instance was deleted while its content page was open
+        SetMainWindowLibrary();
+        return Task.CompletedTask;
+    }
+
+    private async Task ShowContentAsync(DiscoverItem item)
+    {
         LeavePackPage();
         SelectedContent?.ClearOutcome();
         item.ClearOutcome();
