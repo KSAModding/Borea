@@ -524,6 +524,10 @@
         <Style Selector="Button.icon:pointerover /template/ ContentPresenter">
             <Setter Property="Background" Value="{StaticResource Brush.SurfaceRaised}" />
         </Style>
+        <Style Selector="Button.icon:disabled /template/ ContentPresenter">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Opacity" Value="0.4" />
+        </Style>
 
         <Style Selector="TextBox.field">
             <Setter Property="CornerRadius" Value="8" />
