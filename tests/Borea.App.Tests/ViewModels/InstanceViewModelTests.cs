@@ -151,4 +151,16 @@ public sealed class InstanceViewModelTests
         Assert.Equal(harness.Localization.InstanceGroupMods, viewModel.ContentGroups.Single().Title);
         Assert.Equal(harness.Localization.HomeInstanceSourceCustom, viewModel.ActiveInstance!.SourceText);
     }
+
+    [Fact]
+    public async Task PlayKSAWithoutModLoader_ShowsErrorMessageIfNoGameDirectorySet()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var viewModel = harness.ViewModel;
+        await viewModel.PlayWithoutModLoaderCommand.ExecuteAsync(null);
+
+        // InstalledVersionText is null when no Game Directory is set
+        Assert.Null(viewModel.InstalledVersionText);
+        Assert.Equal("Borea does not know where the game is installed. Set the game directory in the settings.", viewModel.LaunchMessage);
+    }
 }

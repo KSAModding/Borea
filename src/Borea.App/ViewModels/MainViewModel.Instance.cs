@@ -148,7 +148,7 @@ public partial class MainViewModel
     }
 
     [RelayCommand]
-    private void PlayWithoutModLoader()
+    private async Task PlayWithoutModLoader()
     {
         if (_services is null || IsLaunching)
             return;
