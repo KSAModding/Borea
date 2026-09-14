@@ -24,13 +24,17 @@ public sealed class AppPreferences
     /// <summary>Which Borea releases the update check reports. Stable by default.</summary>
     public BoreaUpdateChannel UpdateChannel { get; }
 
+    /// <summary>Whether the user accepted that Borea deletes a mod folder it did not install. Off by default.</summary>
+    public bool ForeignFolderDeletionConfirmed { get; }
+
     public AppPreferences(
         string? selectedThemeName,
         IEnumerable<CustomThemePreference>? customThemes = null,
         string? regionalCultureName = null,
         string? uiCultureName = null,
         bool checkForUpdatesAtStart = true,
-        BoreaUpdateChannel updateChannel = BoreaUpdateChannel.Stable)
+        BoreaUpdateChannel updateChannel = BoreaUpdateChannel.Stable,
+        bool foreignFolderDeletionConfirmed = false)
     {
         if (selectedThemeName is not null && string.IsNullOrWhiteSpace(selectedThemeName))
             throw new ArgumentException("Selected theme name, if provided, cannot be whitespace.", nameof(selectedThemeName));
@@ -49,23 +53,27 @@ public sealed class AppPreferences
         UiCultureName = uiCultureName;
         CheckForUpdatesAtStart = checkForUpdatesAtStart;
         UpdateChannel = updateChannel;
+        ForeignFolderDeletionConfirmed = foreignFolderDeletionConfirmed;
         CustomThemes = BuildCustomThemes(customThemes, nameof(customThemes));
     }
 
     public AppPreferences WithRegionalCultureName(string? regionalCultureName)
-        => new(SelectedThemeName, CustomThemes, regionalCultureName, UiCultureName, CheckForUpdatesAtStart, UpdateChannel);
+        => new(SelectedThemeName, CustomThemes, regionalCultureName, UiCultureName, CheckForUpdatesAtStart, UpdateChannel, ForeignFolderDeletionConfirmed);
 
     public AppPreferences WithUiCultureName(string? uiCultureName)
-        => new(SelectedThemeName, CustomThemes, RegionalCultureName, uiCultureName, CheckForUpdatesAtStart, UpdateChannel);
+        => new(SelectedThemeName, CustomThemes, RegionalCultureName, uiCultureName, CheckForUpdatesAtStart, UpdateChannel, ForeignFolderDeletionConfirmed);
 
     public AppPreferences WithSelectedThemeName(string? selectedThemeName)
-        => new(selectedThemeName, CustomThemes, RegionalCultureName, UiCultureName, CheckForUpdatesAtStart, UpdateChannel);
+        => new(selectedThemeName, CustomThemes, RegionalCultureName, UiCultureName, CheckForUpdatesAtStart, UpdateChannel, ForeignFolderDeletionConfirmed);
 
     public AppPreferences WithCheckForUpdatesAtStart(bool checkForUpdatesAtStart)
-        => new(SelectedThemeName, CustomThemes, RegionalCultureName, UiCultureName, checkForUpdatesAtStart, UpdateChannel);
+        => new(SelectedThemeName, CustomThemes, RegionalCultureName, UiCultureName, checkForUpdatesAtStart, UpdateChannel, ForeignFolderDeletionConfirmed);
 
     public AppPreferences WithUpdateChannel(BoreaUpdateChannel updateChannel)
-        => new(SelectedThemeName, CustomThemes, RegionalCultureName, UiCultureName, CheckForUpdatesAtStart, updateChannel);
+        => new(SelectedThemeName, CustomThemes, RegionalCultureName, UiCultureName, CheckForUpdatesAtStart, updateChannel, ForeignFolderDeletionConfirmed);
+
+    public AppPreferences WithForeignFolderDeletionConfirmed(bool foreignFolderDeletionConfirmed)
+        => new(SelectedThemeName, CustomThemes, RegionalCultureName, UiCultureName, CheckForUpdatesAtStart, UpdateChannel, foreignFolderDeletionConfirmed);
 
     public string ResolveSelectedThemeName(IReadOnlyCollection<string> bundledThemeNames, string defaultThemeName)
     {

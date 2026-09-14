@@ -25,11 +25,12 @@ internal static class AppPreferencesMapper
             BoreaUpdateChannel.Dev => DevName,
             _ => StableName,
         },
+        ForeignFolderDeletionConfirmed = preferences.ForeignFolderDeletionConfirmed,
         CustomThemes = preferences.CustomThemes.Select(theme => (CustomThemePreferenceDto?)ToDto(theme)).ToList(),
     };
 
     public static AppPreferences FromDto(AppPreferencesDocumentDto dto)
-        => new(dto.SelectedTheme, dto.CustomThemes?.Select(FromDto), NormalizeRegionalCulture(dto.RegionalCulture), NormalizeUiCulture(dto.UiCulture), dto.CheckForUpdatesAtStart ?? true, ReadUpdateChannel(dto.UpdateChannel));
+        => new(dto.SelectedTheme, dto.CustomThemes?.Select(FromDto), NormalizeRegionalCulture(dto.RegionalCulture), NormalizeUiCulture(dto.UiCulture), dto.CheckForUpdatesAtStart ?? true, ReadUpdateChannel(dto.UpdateChannel), dto.ForeignFolderDeletionConfirmed ?? false);
 
     private static BoreaUpdateChannel ReadUpdateChannel(string? name)
         => name?.ToLowerInvariant() switch
