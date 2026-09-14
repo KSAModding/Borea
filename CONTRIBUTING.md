@@ -16,6 +16,12 @@ Explain the user-visible change, the tests you ran, and any work that remains ou
 Run the relevant tests and formatting checks before you open a pull request.
 The continuous-integration checks run on Windows, Linux, and macOS.
 
+## Release tags
+
+A release starts from a tag such as `v0.5.0`, and a tag with a hyphen is published as a GitHub pre-release.
+Name a testing build `-beta.N`, for example `v0.5.0-beta.1`, and a dev build `-dev.N`, because the update channel in the App reads that name.
+The testing channel reports beta releases, and only the dev channel reports other pre-releases.
+
 ## Release scripts
 
 The `release scripts` job tests the scripts in `.github/scripts`. Locally they need Python 3, and bash with jq:

@@ -1,10 +1,17 @@
 using System.Globalization;
 using Borea.Core.Preferences;
+using Borea.Core.Updates;
 
 namespace Borea.Storage.Preferences;
 
 internal static class AppPreferencesMapper
 {
+    private const string StableName = "stable";
+
+    private const string TestingName = "testing";
+
+    private const string DevName = "dev";
+
     public static AppPreferencesDocumentDto ToDto(AppPreferences preferences) => new()
     {
         FormatVersion = FileAppPreferencesRepository.CurrentFormatVersion,
@@ -12,11 +19,25 @@ internal static class AppPreferencesMapper
         RegionalCulture = preferences.RegionalCultureName,
         UiCulture = preferences.UiCultureName,
         CheckForUpdatesAtStart = preferences.CheckForUpdatesAtStart,
+        UpdateChannel = preferences.UpdateChannel switch
+        {
+            BoreaUpdateChannel.Testing => TestingName,
+            BoreaUpdateChannel.Dev => DevName,
+            _ => StableName,
+        },
         CustomThemes = preferences.CustomThemes.Select(theme => (CustomThemePreferenceDto?)ToDto(theme)).ToList(),
     };
 
     public static AppPreferences FromDto(AppPreferencesDocumentDto dto)
-        => new(dto.SelectedTheme, dto.CustomThemes?.Select(FromDto), NormalizeRegionalCulture(dto.RegionalCulture), NormalizeUiCulture(dto.UiCulture), dto.CheckForUpdatesAtStart ?? true);
+        => new(dto.SelectedTheme, dto.CustomThemes?.Select(FromDto), NormalizeRegionalCulture(dto.RegionalCulture), NormalizeUiCulture(dto.UiCulture), dto.CheckForUpdatesAtStart ?? true, ReadUpdateChannel(dto.UpdateChannel));
+
+    private static BoreaUpdateChannel ReadUpdateChannel(string? name)
+        => name?.ToLowerInvariant() switch
+        {
+            TestingName => BoreaUpdateChannel.Testing,
+            DevName => BoreaUpdateChannel.Dev,
+            _ => BoreaUpdateChannel.Stable,
+        };
 
     /// <summary>
     /// UI languages are neutral cultures ("de"), unlike regional formats, so

@@ -505,7 +505,8 @@ public partial class MainViewModel : ViewModelBase
         => string.Equals(left.SelectedThemeName, right.SelectedThemeName, StringComparison.Ordinal)
             && string.Equals(left.RegionalCultureName, right.RegionalCultureName, StringComparison.Ordinal)
             && string.Equals(left.UiCultureName, right.UiCultureName, StringComparison.Ordinal)
-            && left.CheckForUpdatesAtStart == right.CheckForUpdatesAtStart;
+            && left.CheckForUpdatesAtStart == right.CheckForUpdatesAtStart
+            && left.UpdateChannel == right.UpdateChannel;
 
     private void OnRegionalFormatChanged(object? sender, PropertyChangedEventArgs e)
     {
@@ -529,6 +530,8 @@ public partial class MainViewModel : ViewModelBase
         foreach (var release in _contentReleases)
             release.RefreshText();
         foreach (var option in ReleaseChannelOptions)
+            option.RefreshText();
+        foreach (var option in UpdateChannelOptions)
             option.RefreshText();
         RefreshContentGroups();
         RefreshGameDataItems();

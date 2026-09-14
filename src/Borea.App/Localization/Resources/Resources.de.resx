@@ -51,6 +51,21 @@
   <data name="SettingsCheckForUpdatesAtStart" xml:space="preserve">
     <value>Beim Start nach Updates suchen</value>
   </data>
+  <data name="SettingsUpdateChannelLabel" xml:space="preserve">
+    <value>Update-Kanal für Borea</value>
+  </data>
+  <data name="SettingsUpdateChannelHint" xml:space="preserve">
+    <value>Über welche Borea-Versionen die Update-Suche dich informiert. Vorabversionen sind weniger getestet. Das ändert nicht, welche Mod-Versionen Borea installiert.</value>
+  </data>
+  <data name="UpdateChannelStable" xml:space="preserve">
+    <value>Stabile Versionen</value>
+  </data>
+  <data name="UpdateChannelTesting" xml:space="preserve">
+    <value>Stabile und Beta-Versionen</value>
+  </data>
+  <data name="UpdateChannelDev" xml:space="preserve">
+    <value>Alle Versionen, auch Dev-Builds</value>
+  </data>
   <data name="SettingsReleaseChannelLabel" xml:space="preserve">
     <value>Mod-Release-Kanal</value>
   </data>
@@ -59,6 +74,9 @@
   </data>
   <data name="UpdateAvailable" xml:space="preserve">
     <value>Eine neuere Borea-Version ist verfügbar:</value>
+  </data>
+  <data name="UpdatePreRelease" xml:space="preserve">
+    <value>Vorabversion</value>
   </data>
   <data name="UpdateViewRelease" xml:space="preserve">
     <value>Veröffentlichung ansehen</value>

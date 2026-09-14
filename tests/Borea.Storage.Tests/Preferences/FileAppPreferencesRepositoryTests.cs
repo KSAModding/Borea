@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Borea.Core.Preferences;
+using Borea.Core.Updates;
 using Borea.Storage.Preferences;
 using Borea.Storage.Tests.Paths;
 
@@ -82,6 +83,51 @@ public sealed class FileAppPreferencesRepositoryTests : IDisposable
 
         Assert.False(preferences.CheckForUpdatesAtStart);
         Assert.True(preferences.WithCheckForUpdatesAtStart(true).CheckForUpdatesAtStart);
+    }
+
+    [Theory]
+    [InlineData(BoreaUpdateChannel.Testing, "testing")]
+    [InlineData(BoreaUpdateChannel.Dev, "dev")]
+    public async Task SaveThenGet_UpdateChannel_RestoresTheChoice(BoreaUpdateChannel channel, string name)
+    {
+        await _repository.SaveAsync(AppPreferences.Empty.WithUpdateChannel(channel), BundledThemeNames);
+
+        var result = await _repository.GetAsync(BundledThemeNames);
+
+        Assert.Equal(AppPreferencesLoadStatus.Loaded, result.Status);
+        Assert.Equal(channel, result.Preferences.UpdateChannel);
+        using var document = JsonDocument.Parse(await File.ReadAllTextAsync(_pathProvider.GetAppPreferencesPath()));
+        Assert.Equal(name, document.RootElement.GetProperty("updateChannel").GetString());
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData(""", "updateChannel": null""")]
+    [InlineData(""", "updateChannel": "nightly" """)]
+    public async Task GetAsync_NoOrUnknownUpdateChannel_LoadsAsStable(string updateChannel)
+    {
+        await WriteAsync($$"""
+            { "formatVersion": 1, "selectedTheme": "Light"{{updateChannel}} }
+            """);
+
+        var result = await _repository.GetAsync(BundledThemeNames);
+
+        Assert.Equal(AppPreferencesLoadStatus.Loaded, result.Status);
+        Assert.Equal("Light", result.Preferences.SelectedThemeName);
+        Assert.Equal(BoreaUpdateChannel.Stable, result.Preferences.UpdateChannel);
+    }
+
+    [Fact]
+    public void With_OtherPreferenceChanges_KeepTheUpdateChannel()
+    {
+        var preferences = AppPreferences.Empty.WithUpdateChannel(BoreaUpdateChannel.Dev)
+            .WithSelectedThemeName("Light")
+            .WithRegionalCultureName("de-DE")
+            .WithUiCultureName("de")
+            .WithCheckForUpdatesAtStart(false);
+
+        Assert.Equal(BoreaUpdateChannel.Dev, preferences.UpdateChannel);
+        Assert.Equal(BoreaUpdateChannel.Stable, AppPreferences.Empty.UpdateChannel);
     }
 
     [Fact]

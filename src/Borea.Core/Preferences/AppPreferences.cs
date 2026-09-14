@@ -1,3 +1,5 @@
+using Borea.Core.Updates;
+
 namespace Borea.Core.Preferences;
 
 public sealed class AppPreferences
@@ -19,12 +21,16 @@ public sealed class AppPreferences
     /// <summary>Whether the App checks for a newer Borea release at start. On by default.</summary>
     public bool CheckForUpdatesAtStart { get; }
 
+    /// <summary>Which Borea releases the update check reports. Stable by default.</summary>
+    public BoreaUpdateChannel UpdateChannel { get; }
+
     public AppPreferences(
         string? selectedThemeName,
         IEnumerable<CustomThemePreference>? customThemes = null,
         string? regionalCultureName = null,
         string? uiCultureName = null,
-        bool checkForUpdatesAtStart = true)
+        bool checkForUpdatesAtStart = true,
+        BoreaUpdateChannel updateChannel = BoreaUpdateChannel.Stable)
     {
         if (selectedThemeName is not null && string.IsNullOrWhiteSpace(selectedThemeName))
             throw new ArgumentException("Selected theme name, if provided, cannot be whitespace.", nameof(selectedThemeName));
@@ -35,24 +41,31 @@ public sealed class AppPreferences
         if (uiCultureName is not null && string.IsNullOrWhiteSpace(uiCultureName))
             throw new ArgumentException("UI culture name, if provided, cannot be whitespace.", nameof(uiCultureName));
 
+        if (!Enum.IsDefined(updateChannel))
+            throw new ArgumentException("The update channel is not defined.", nameof(updateChannel));
+
         SelectedThemeName = selectedThemeName;
         RegionalCultureName = regionalCultureName;
         UiCultureName = uiCultureName;
         CheckForUpdatesAtStart = checkForUpdatesAtStart;
+        UpdateChannel = updateChannel;
         CustomThemes = BuildCustomThemes(customThemes, nameof(customThemes));
     }
 
     public AppPreferences WithRegionalCultureName(string? regionalCultureName)
-        => new(SelectedThemeName, CustomThemes, regionalCultureName, UiCultureName, CheckForUpdatesAtStart);
+        => new(SelectedThemeName, CustomThemes, regionalCultureName, UiCultureName, CheckForUpdatesAtStart, UpdateChannel);
 
     public AppPreferences WithUiCultureName(string? uiCultureName)
-        => new(SelectedThemeName, CustomThemes, RegionalCultureName, uiCultureName, CheckForUpdatesAtStart);
+        => new(SelectedThemeName, CustomThemes, RegionalCultureName, uiCultureName, CheckForUpdatesAtStart, UpdateChannel);
 
     public AppPreferences WithSelectedThemeName(string? selectedThemeName)
-        => new(selectedThemeName, CustomThemes, RegionalCultureName, UiCultureName, CheckForUpdatesAtStart);
+        => new(selectedThemeName, CustomThemes, RegionalCultureName, UiCultureName, CheckForUpdatesAtStart, UpdateChannel);
 
     public AppPreferences WithCheckForUpdatesAtStart(bool checkForUpdatesAtStart)
-        => new(SelectedThemeName, CustomThemes, RegionalCultureName, UiCultureName, checkForUpdatesAtStart);
+        => new(SelectedThemeName, CustomThemes, RegionalCultureName, UiCultureName, checkForUpdatesAtStart, UpdateChannel);
+
+    public AppPreferences WithUpdateChannel(BoreaUpdateChannel updateChannel)
+        => new(SelectedThemeName, CustomThemes, RegionalCultureName, UiCultureName, CheckForUpdatesAtStart, updateChannel);
 
     public string ResolveSelectedThemeName(IReadOnlyCollection<string> bundledThemeNames, string defaultThemeName)
     {
