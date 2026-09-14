@@ -13,6 +13,9 @@ internal sealed class AppPreferencesDocumentDto
     /// <summary>Null in an older file, which reads as on.</summary>
     public bool? CheckForUpdatesAtStart { get; set; }
 
+    /// <summary>"stable", "testing" or "dev". Null or an unknown name reads as stable.</summary>
+    public string? UpdateChannel { get; set; }
+
     public List<CustomThemePreferenceDto?>? CustomThemes { get; set; }
 }
 
