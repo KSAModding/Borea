@@ -25,6 +25,7 @@ public partial class MainViewModel
     [NotifyPropertyChangedFor(nameof(IsDiscoverSection))]
     [NotifyPropertyChangedFor(nameof(IsLibrarySection))]
     [NotifyPropertyChangedFor(nameof(IsContentFromInstance))]
+    [NotifyPropertyChangedFor(nameof(CanActOnSelectedContent))]
     private bool _currentWindowContent;
 
     /// <summary>
@@ -35,9 +36,24 @@ public partial class MainViewModel
     [NotifyPropertyChangedFor(nameof(IsDiscoverSection))]
     [NotifyPropertyChangedFor(nameof(IsLibrarySection))]
     [NotifyPropertyChangedFor(nameof(IsContentFromInstance))]
+    [NotifyPropertyChangedFor(nameof(CanActOnSelectedContent))]
     private InstanceItem? _contentReturnInstance;
 
     public bool IsContentFromInstance => CurrentWindowContent && ContentReturnInstance is not null;
+
+    /// <summary>
+    /// Whether Add and Remove on the content page can be offered. They act on
+    /// the active instance, so a page opened from another instance hides them
+    /// instead of changing an instance it does not name.
+    /// </summary>
+    public bool CanActOnSelectedContent => !IsContentFromInstance || CurrentReturnInstance?.IsActive == true;
+
+    /// <summary>
+    /// The instance the page was opened from, as the list holds it now. The
+    /// list is rebuilt after every change, so the object kept at opening goes stale.
+    /// </summary>
+    private InstanceItem? CurrentReturnInstance =>
+        ContentReturnInstance is { } opened ? Instances.FirstOrDefault(instance => instance.InstanceId == opened.InstanceId) : null;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasContentLinks))]
@@ -111,8 +127,15 @@ public partial class MainViewModel
     }
 
     [RelayCommand]
-    private Task ReturnToInstanceAsync() =>
-        ContentReturnInstance is { } instance ? OpenInstanceAsync(instance) : Task.CompletedTask;
+    private Task ReturnToInstanceAsync()
+    {
+        if (CurrentReturnInstance is { } instance)
+            return OpenInstanceAsync(instance);
+
+        // the instance was deleted while its content page was open
+        SetMainWindowLibrary();
+        return Task.CompletedTask;
+    }
 
     private async Task ShowContentAsync(DiscoverItem item)
     {

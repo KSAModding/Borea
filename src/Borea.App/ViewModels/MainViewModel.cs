@@ -386,6 +386,7 @@ public partial class MainViewModel : ViewModelBase
             Instances.Add(new InstanceItem(this, instance, instance.InstanceId == activeId));
 
         ActiveInstance = Instances.FirstOrDefault(instance => instance.IsActive);
+        OnPropertyChanged(nameof(CanActOnSelectedContent));
         RefreshInstalledFlags();
         OnPropertyChanged(nameof(InstalledInText));
 
