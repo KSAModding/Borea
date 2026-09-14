@@ -702,4 +702,10 @@
   <data name="InstanceContentNotOwned" xml:space="preserve">
     <value>Borea hat diese Mod nicht installiert, deshalb verweist sie auf keine Seite.</value>
   </data>
+  <data name="ContentInsideInstance" xml:space="preserve">
+    <value>Du siehst Inhalt aus einer Instanz.</value>
+  </data>
+  <data name="ContentViewInstance" xml:space="preserve">
+    <value>Instanz ansehen</value>
+  </data>
 </root>

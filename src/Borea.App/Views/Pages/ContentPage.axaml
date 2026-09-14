@@ -27,8 +27,17 @@
                         <TextBlock Classes="label-lg" Text="{Binding ContentReturnInstance.Name}" VerticalAlignment="Center" />
                     </Button>
                     <TextBlock Classes="label-lg" Text="/" VerticalAlignment="Center" />
-                    <TextBlock Classes="label-lg" Text="{Binding SelectedContent.Name}" VerticalAlignment="Center" />
+                    <TextBlock Classes="label-lg" Text="{Binding SelectedContent.TypeText}" VerticalAlignment="Center" />
                 </StackPanel>
+                <!-- c/instance-banner: the page belongs to an instance, and the way back to it -->
+                <Border Background="{StaticResource Brush.SurfaceHeader}" CornerRadius="100" Padding="16,10" Margin="0,16,0,0" IsVisible="{Binding IsContentFromInstance}">
+                    <StackPanel Orientation="Horizontal" Spacing="12" HorizontalAlignment="Center">
+                        <TextBlock Classes="body-md secondary" Text="{Binding Localization.ContentInsideInstance}" VerticalAlignment="Center" />
+                        <Button Classes="link" Command="{Binding ReturnToInstanceCommand}" VerticalAlignment="Center">
+                            <TextBlock Classes="action-md" Text="{Binding Localization.ContentViewInstance}" />
+                        </Button>
+                    </StackPanel>
+                </Border>
 
                 <!-- c/content-header -->
                 <Grid ColumnDefinitions="170,32,*" Margin="0,24,0,0">

@@ -702,4 +702,10 @@
   <data name="InstanceContentNotOwned" xml:space="preserve">
     <value>Borea did not install this mod, so it links to no page.</value>
   </data>
+  <data name="ContentInsideInstance" xml:space="preserve">
+    <value>You're viewing content inside an instance.</value>
+  </data>
+  <data name="ContentViewInstance" xml:space="preserve">
+    <value>View instance</value>
+  </data>
 </root>
