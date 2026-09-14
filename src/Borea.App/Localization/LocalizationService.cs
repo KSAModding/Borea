@@ -389,6 +389,12 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string SetupSave => Resources.SetupSave;
 
+    public string SetupUseThisFolder => Resources.SetupUseThisFolder;
+
+    public string SetupFoundGame => Resources.SetupFoundGame;
+
+    public string SetupFoundGames => Resources.SetupFoundGames;
+
     public string SetupLoader => Resources.SetupLoader;
 
     public string SetupLoaderDirectory => Resources.SetupLoaderDirectory;
@@ -398,6 +404,8 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string SetupInstallLoader => Resources.SetupInstallLoader;
 
     public string SetupUseExisting => Resources.SetupUseExisting;
+
+    public string SetupFoundLoader => Resources.SetupFoundLoader;
 
     public string SetupSaved => Resources.SetupSaved;
 

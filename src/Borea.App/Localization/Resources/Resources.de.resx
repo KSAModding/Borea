@@ -501,6 +501,15 @@
   <data name="SetupSave" xml:space="preserve">
     <value>Speichern</value>
   </data>
+  <data name="SetupUseThisFolder" xml:space="preserve">
+    <value>Diesen Ordner verwenden</value>
+  </data>
+  <data name="SetupFoundGame" xml:space="preserve">
+    <value>Borea hat KSA in diesem Ordner gefunden. Prüfe den Ordner und verwende ihn dann.</value>
+  </data>
+  <data name="SetupFoundGames" xml:space="preserve">
+    <value>Borea hat KSA in mehreren Ordnern gefunden. Wähle den Ordner, aus dem du spielst.</value>
+  </data>
   <data name="SetupLoader" xml:space="preserve">
     <value>Mod-Loader</value>
   </data>
@@ -515,6 +524,9 @@
   </data>
   <data name="SetupUseExisting" xml:space="preserve">
     <value>Vorhandenen verwenden</value>
+  </data>
+  <data name="SetupFoundLoader" xml:space="preserve">
+    <value>Borea hat diesen Loader gefunden. Prüfe den Ordner und verwende ihn dann.</value>
   </data>
   <data name="SetupSaved" xml:space="preserve">
     <value>Gespeichert.</value>

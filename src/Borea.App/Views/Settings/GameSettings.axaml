@@ -1,6 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Borea.App.ViewModels"
+             xmlns:core="using:Borea.Core.Game"
              x:Class="Borea.App.Views.Settings.GameSettings"
              x:DataType="vm:MainViewModel">
     <!-- Game: where KSA is, and which loader starts it -->
@@ -11,8 +12,25 @@
             <Grid ColumnDefinitions="*,8,Auto,8,Auto" Margin="0,6,0,0">
                 <TextBox Classes="field" Text="{Binding GameDirectoryInput}" AutomationProperties.Name="{Binding Localization.SetupGameDirectory}" />
                 <Button Grid.Column="2" Classes="text" Content="{Binding Localization.SetupBrowse}" Click="BrowseGameDirectory" />
-                <Button Grid.Column="4" Classes="text primary" Content="{Binding Localization.SetupSave}" Command="{Binding SaveGameDirectoryCommand}" />
+                <Panel Grid.Column="4">
+                    <Button Classes="text primary" Content="{Binding Localization.SetupSave}" Command="{Binding SaveGameDirectoryCommand}" IsVisible="{Binding !IsGameDirectorySuggested}" />
+                    <Button Classes="text primary" Content="{Binding Localization.SetupUseThisFolder}" Command="{Binding SaveGameDirectoryCommand}" IsVisible="{Binding IsGameDirectorySuggested}" />
+                </Panel>
             </Grid>
+            <TextBlock Classes="body-sm secondary" Text="{Binding Localization.SetupFoundGames}" TextWrapping="Wrap" Margin="0,6,0,0" IsVisible="{Binding HasSeveralDetectedGames}" />
+            <ListBox ItemsSource="{Binding DetectedGames}" SelectedItem="{Binding SelectedDetectedGame}" AutomationProperties.Name="{Binding Localization.SetupFoundGames}" IsVisible="{Binding HasSeveralDetectedGames}">
+                <ListBox.ItemTemplate>
+                    <DataTemplate x:DataType="core:DetectedGame">
+                        <StackPanel Spacing="2">
+                            <TextBlock Classes="label-md">
+                                <Run Text="KSA" /><Run Text=" " /><Run Text="{Binding Version.RawVersion}" />
+                            </TextBlock>
+                            <TextBlock Classes="body-sm secondary" Text="{Binding Directory}" TextWrapping="Wrap" />
+                        </StackPanel>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+            <TextBlock Classes="body-sm secondary" Text="{Binding Localization.SetupFoundGame}" TextWrapping="Wrap" Margin="0,6,0,0" IsVisible="{Binding IsGameDirectorySuggested}" />
             <Border Classes="chip" HorizontalAlignment="Left" Margin="0,6,0,0">
                 <Panel>
                     <TextBlock IsVisible="{Binding InstalledVersionText, Converter={x:Static ObjectConverters.IsNotNull}}">
@@ -41,6 +59,7 @@
                 <TextBox Classes="field" Text="{Binding LoaderDirectoryInput}" AutomationProperties.Name="{Binding Localization.SetupLoaderDirectory}" />
                 <Button Grid.Column="2" Classes="text" Content="{Binding Localization.SetupBrowse}" Click="BrowseLoaderDirectory" />
             </Grid>
+            <TextBlock Classes="body-sm secondary" Text="{Binding Localization.SetupFoundLoader}" TextWrapping="Wrap" Margin="0,6,0,0" IsVisible="{Binding IsLoaderDirectorySuggested}" />
             <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,8,0,0">
                 <Button Classes="text primary" Content="{Binding LoaderInstallActionText}" Command="{Binding InstallLoaderCommand}" IsVisible="{Binding CanInstallLoader}" />
                 <Button Classes="text" Content="{Binding Localization.SetupUseExisting}" Command="{Binding AdoptLoaderCommand}" />

@@ -501,6 +501,15 @@
   <data name="SetupSave" xml:space="preserve">
     <value>Save</value>
   </data>
+  <data name="SetupUseThisFolder" xml:space="preserve">
+    <value>Use this folder</value>
+  </data>
+  <data name="SetupFoundGame" xml:space="preserve">
+    <value>Borea found KSA in this folder. Check the folder, then use it.</value>
+  </data>
+  <data name="SetupFoundGames" xml:space="preserve">
+    <value>Borea found KSA in more than one folder. Select the folder you play from.</value>
+  </data>
   <data name="SetupLoader" xml:space="preserve">
     <value>Mod loader</value>
   </data>
@@ -515,6 +524,9 @@
   </data>
   <data name="SetupUseExisting" xml:space="preserve">
     <value>Use existing</value>
+  </data>
+  <data name="SetupFoundLoader" xml:space="preserve">
+    <value>Borea found this loader on disk. Check the folder, then use it.</value>
   </data>
   <data name="SetupSaved" xml:space="preserve">
     <value>Saved.</value>
