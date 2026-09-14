@@ -207,6 +207,10 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string AboutOpenInstancesFolder => Resources.AboutOpenInstancesFolder;
 
+    public string AboutOpenBoreaLog => Resources.AboutOpenBoreaLog;
+
+    public string AboutOpenLogFolder => Resources.AboutOpenLogFolder;
+
     public string AboutCopyDiagnostics => Resources.AboutCopyDiagnostics;
 
     public string AboutCopyPath => Resources.AboutCopyPath;

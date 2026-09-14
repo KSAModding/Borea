@@ -453,6 +453,12 @@
   <data name="AboutOpenInstancesFolder" xml:space="preserve">
     <value>Open instances folder</value>
   </data>
+  <data name="AboutOpenBoreaLog" xml:space="preserve">
+    <value>Open Borea log</value>
+  </data>
+  <data name="AboutOpenLogFolder" xml:space="preserve">
+    <value>Open log folder</value>
+  </data>
   <data name="AboutCopyDiagnostics" xml:space="preserve">
     <value>Copy diagnostics</value>
   </data>

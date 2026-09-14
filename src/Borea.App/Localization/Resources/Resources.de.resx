@@ -453,6 +453,12 @@
   <data name="AboutOpenInstancesFolder" xml:space="preserve">
     <value>Instanzordner öffnen</value>
   </data>
+  <data name="AboutOpenBoreaLog" xml:space="preserve">
+    <value>Borea-Protokoll öffnen</value>
+  </data>
+  <data name="AboutOpenLogFolder" xml:space="preserve">
+    <value>Protokollordner öffnen</value>
+  </data>
   <data name="AboutCopyDiagnostics" xml:space="preserve">
     <value>Diagnose kopieren</value>
   </data>

@@ -7,6 +7,7 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
+using Borea.Core.Paths;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -75,6 +76,10 @@ public partial class MainViewModel
 
     public string? InstancesFolder => _services?.Paths.GetInstancesRoot();
 
+    public string? BoreaLogFile => _services?.Log.CurrentFilePath;
+
+    public string? LogsFolder => _services?.Paths.GetLogsFolder();
+
     /// <summary>
     /// <see cref="BoreaFolder"/> as the page shows it, with the user profile
     /// shortened to "~" so a screenshot does not carry the user name. The
@@ -103,10 +108,34 @@ public partial class MainViewModel
                     var version = installation.Version?.ToString() ?? installation.RawVersion ?? "version unknown";
                     text.AppendLine($"{loaderId}: {version} at {WithoutUserProfile(installation.DirectoryPath)}");
                 }
+
+                text.AppendLine($"Log: {WithoutUserProfile(_services.Log.CurrentFilePath)}");
             }
 
             return text.ToString().TrimEnd();
         }
+    }
+
+    public const int DiagnosticsLogLines = 200;
+
+    /// <summary>
+    /// <see cref="DiagnosticsText"/> followed by the end of today's log, for the clipboard.
+    /// </summary>
+    internal string DiagnosticsWithLogText()
+    {
+        if (_services is null)
+            return DiagnosticsText;
+
+        var lines = _services.Log.ReadRecentLines(DiagnosticsLogLines);
+        if (lines.Count == 0)
+            return DiagnosticsText;
+
+        return new StringBuilder(DiagnosticsText)
+            .AppendLine()
+            .AppendLine()
+            .AppendLine("End of today's log:")
+            .AppendJoin(Environment.NewLine, lines)
+            .ToString();
     }
 
     [RelayCommand]
@@ -127,10 +156,16 @@ public partial class MainViewModel
     private void OpenInstancesFolder() => OpenFromAbout(InstancesFolder);
 
     [RelayCommand]
+    private void OpenBoreaLog() => OpenFromAbout(BoreaLogFile);
+
+    [RelayCommand]
+    private void OpenLogFolder() => OpenFromAbout(LogsFolder);
+
+    [RelayCommand]
     private void OpenAboutLink(string? url) => OpenFromAbout(url);
 
     /// <summary>
-    /// Called by the view after it put <see cref="DiagnosticsText"/> on the clipboard.
+    /// Called by the view after it put <see cref="DiagnosticsWithLogText"/> on the clipboard.
     /// </summary>
     internal void ReportDiagnosticsCopied()
     {
@@ -162,12 +197,12 @@ public partial class MainViewModel
             AboutError = error;
     }
 
-    /// <summary>Opens an existing folder or a URL, and returns why it could not, or null.</summary>
+    /// <summary>Opens an existing folder, file or URL, and returns why it could not, or null.</summary>
     private string? TryOpenWithSystem(string target)
     {
         try
         {
-            if (Directory.Exists(target) || Uri.IsWellFormedUriString(target, UriKind.Absolute))
+            if (Directory.Exists(target) || File.Exists(target) || Uri.IsWellFormedUriString(target, UriKind.Absolute))
             {
                 OpenWithSystem(target);
                 return null;
@@ -196,19 +231,7 @@ public partial class MainViewModel
     /// A path with the user profile folder replaced by "~", so a bug report
     /// does not carry the user name. Other paths are returned as they are.
     /// </summary>
-    internal static string WithoutUserProfile(string path)
-    {
-        var profile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-        if (profile.Length == 0)
-            return path;
-
-        var comparison = OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
-        if (path.Equals(profile, comparison))
-            return "~";
-
-        var prefix = profile.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) + Path.DirectorySeparatorChar;
-        return path.StartsWith(prefix, comparison) ? "~" + Path.DirectorySeparatorChar + path[prefix.Length..] : path;
-    }
+    internal static string WithoutUserProfile(string path) => UserProfilePaths.Hide(path);
 }
 
 public sealed record Credit(string Name, string Url);
