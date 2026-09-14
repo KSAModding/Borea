@@ -159,10 +159,12 @@ public partial class MainViewModel : ViewModelBase
     /// actions work from the Current Install card. Null when none is active.
     /// </summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(HasActiveInstance))]
+    [NotifyPropertyChangedFor(nameof(HasActiveInstance), nameof(EnableActiveInstance))]
     private InstanceItem? _activeInstance;
 
     public bool HasActiveInstance => ActiveInstance is not null;
+
+    public bool EnableActiveInstance => ActiveInstance is not null && !IsLaunching;
 
     /// <summary>
     /// The mods of the content index with the most recent newest release,

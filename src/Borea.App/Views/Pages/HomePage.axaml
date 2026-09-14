@@ -14,18 +14,24 @@
 					<TextBlock Classes="label-lg" Text="{Binding Localization.PageHomeHeading}" VerticalAlignment="Center" />
 				</StackPanel>
 
-				<SplitButton Grid.Column="1" Classes="launch" Command="{Binding PlayActiveInstanceCommand}" IsEnabled="{Binding !IsLaunching}">
-					<StackPanel Orientation="Horizontal" Spacing="6">
-						<Path Classes="icon-filled size-16" Fill="{StaticResource Brush.SurfaceHeader}" Data="{StaticResource Icon.Play}" VerticalAlignment="Center" />
-						<TextBlock Classes="action-lg" Text="{Binding Localization.LaunchActiveInstance}" VerticalAlignment="Center" />
-					</StackPanel>
-					<SplitButton.Flyout>
-						<MenuFlyout Placement="BottomEdgeAlignedRight">
-							<MenuItem Header="{Binding Localization.LaunchActiveInstance}" Command="{Binding PlayActiveInstanceCommand}" />
-							<MenuItem Header="{Binding Localization.LaunchWithoutModLoader}" Command="{Binding PlayWithoutModLoaderCommand}" />
-						</MenuFlyout>
-					</SplitButton.Flyout>
-				</SplitButton>
+				<!-- Custom Split Button: Primary is the default command, Flyout is a dropdown menu -->
+				<Grid Grid.Column="1" ColumnDefinitions="*,Auto">
+					<Button Grid.Column="0" Classes="splitButton primary" Command="{Binding PlayActiveInstanceCommand}" IsEnabled="{Binding EnableActiveInstance}">
+						<StackPanel Orientation="Horizontal" Spacing="6">
+							<Path Classes="icon-filled size-16" Fill="{StaticResource Brush.SurfaceHeader}" Data="{StaticResource Icon.Play}" VerticalAlignment="Center" />
+							<TextBlock Classes="action-lg" Text="{Binding Localization.LaunchActiveInstance}" VerticalAlignment="Center" />
+						</StackPanel>
+					</Button>
+					<Button Grid.Column="1" Classes="splitButton flyout">
+						<Path Classes="icon-filled size 16" Fill="{StaticResource Brush.SurfaceHeader}" Data="{StaticResource Icon.CaretDown}" VerticalAlignment="Center" />
+						<Button.Flyout>
+							<MenuFlyout Placement="BottomEdgeAlignedRight">
+								<MenuItem Header="{Binding Localization.LaunchActiveInstance}" Command="{Binding PlayActiveInstanceCommand}" IsEnabled="{Binding EnableActiveInstance}"/>
+								<MenuItem Header="{Binding Localization.LaunchWithoutModLoader}" Command="{Binding PlayWithoutModLoaderCommand}" />
+							</MenuFlyout>
+						</Button.Flyout>
+					</Button>
+				</Grid>
 			</Grid>
             <ContentControl Content="{Binding}" ContentTemplate="{StaticResource GameSetupBanner}" IsVisible="{Binding NeedsGameSetup}" />
             <views:UpdateNotice Margin="0,16,0,0" IsVisible="{Binding HasAvailableUpdate}" />
