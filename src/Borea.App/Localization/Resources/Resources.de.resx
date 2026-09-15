@@ -756,6 +756,9 @@
   <data name="LaunchActiveInstance" xml:space="preserve">
     <value>Aktive Instanz starten</value>
   </data>
+  <data name="LaunchInstanceMissing" xml:space="preserve">
+    <value>Diese Instanz existiert nicht mehr.</value>
+  </data>
   <data name="LaunchWithoutModLoaderToolTip" xml:space="preserve">
     <value>Startet KSA so, als würdest du KSA.exe direkt ausführen. Es nutzt das gemeinsame Profil, das KSA selbst anlegt, und keine Borea-Instanz.</value>
   </data>

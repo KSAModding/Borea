@@ -449,6 +449,8 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string LaunchActiveInstance => Resources.LaunchActiveInstance;
 
+    public string LaunchInstanceMissing => Resources.LaunchInstanceMissing;
+
     public string LaunchWithoutModLoaderToolTip => Resources.LaunchWithoutModLoaderToolTip;
 
     public LocalizationService()

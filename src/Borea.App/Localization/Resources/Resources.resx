@@ -756,6 +756,9 @@
   <data name="LaunchActiveInstance" xml:space="preserve">
     <value>Launch active instance</value>
   </data>
+  <data name="LaunchInstanceMissing" xml:space="preserve">
+    <value>This instance no longer exists.</value>
+  </data>
   <data name="LaunchWithoutModLoaderToolTip" xml:space="preserve">
     <value>Launches KSA the same way as running KSA.exe. It uses the shared profile that KSA creates, not a Borea instance.</value>
   </data>
