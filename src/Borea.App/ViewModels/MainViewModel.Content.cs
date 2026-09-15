@@ -287,7 +287,12 @@ public partial class MainViewModel
     [RelayCommand]
     private void OpenLink(ContentLink link)
     {
-        if (link is not null && TryOpenUrl(link.Url) is { } error)
+        if (link is null || TryOpenUrl(link.Url) is not { } error)
+            return;
+
+        if (CurrentWindowInstance)
+            ContentError = error;
+        else
             ContentDetailError = error;
     }
 
@@ -312,6 +317,21 @@ public partial class MainViewModel
 }
 
 public sealed record ContentLink(string Label, string Url);
+
+/// <summary>Markdown text, or a link when the value is an absolute https URI.</summary>
+public sealed record ReleaseChangelog(string Title, string? Text, ContentLink? Link)
+{
+    public static ReleaseChangelog? From(ModVersionMetadata release, string title, string linkLabel)
+    {
+        if (string.IsNullOrWhiteSpace(release.Changelog))
+            return null;
+
+        var value = release.Changelog.Trim();
+        return !value.Any(char.IsWhiteSpace) && Uri.TryCreate(value, UriKind.Absolute, out var uri) && uri.Scheme == Uri.UriSchemeHttps
+            ? new ReleaseChangelog(title, null, new ContentLink(linkLabel, value))
+            : new ReleaseChangelog(title, release.Changelog, null);
+    }
+}
 
 /// <summary>
 /// One release of a listing (c/table-version-row in #8).
@@ -385,11 +405,20 @@ public sealed partial class VersionItem : ObservableObject, IInstallRow
     /// <summary>Mods install into an instance; a loader is set up from the settings.</summary>
     public bool CanInstall => _release.Type == ContentType.Mod;
 
+    public ReleaseChangelog? Changelog { get; }
+
+    [ObservableProperty]
+    private bool _isChangelogExpanded;
+
     public VersionItem(MainViewModel owner, ModVersionMetadata release)
     {
         _owner = owner;
         _release = release;
+        Changelog = ReleaseChangelog.From(release, Version, owner.Localization.ContentChangelog);
     }
+
+    [RelayCommand]
+    private void ToggleChangelog() => IsChangelogExpanded = !IsChangelogExpanded;
 
     [RelayCommand]
     private Task InstallAsync() => _owner.InstallVersionAsync(_release, this);

@@ -160,6 +160,8 @@ internal sealed class ViewModelHarness : IDisposable
 
         public List<ModVersionMetadata> Releases { get; } = [];
 
+        public Func<ModVersion, Exception?>? ReleaseFailure { get; set; }
+
         private static ModMetadata Listing(string id, string name, string? description) => new(
             specVersion: 1,
             modId: id,
@@ -189,7 +191,9 @@ internal sealed class ViewModelHarness : IDisposable
             Task.FromResult(ReleasesOf(modId).FirstOrDefault(release => !release.Yanked));
 
         public Task<ModVersionMetadata?> GetReleaseAsync(string modId, ModVersion version, CancellationToken cancellationToken = default) =>
-            Task.FromResult(ReleasesOf(modId).FirstOrDefault(release => release.Version == version));
+            ReleaseFailure?.Invoke(version) is { } failure
+                ? Task.FromException<ModVersionMetadata?>(failure)
+                : Task.FromResult(ReleasesOf(modId).FirstOrDefault(release => release.Version == version));
 
         public Task<IReadOnlyList<ModVersion>> GetAvailableVersionsAsync(string modId, CancellationToken cancellationToken = default) =>
             Task.FromResult<IReadOnlyList<ModVersion>>(ReleasesOf(modId).Select(release => release.Version).ToList());

@@ -40,7 +40,8 @@ internal static class ContentCommandFixtures
         string? yankedReason = null,
         IReadOnlyList<ModDependency>? dependencies = null,
         ReleaseStatus releaseStatus = ReleaseStatus.Stable,
-        LoaderRequirement? loader = null) => new(
+        LoaderRequirement? loader = null,
+        string? changelog = null) => new(
             specVersion: 1,
             modId: id,
             version: ModVersion.Parse(version),
@@ -56,7 +57,8 @@ internal static class ContentCommandFixtures
             gameMaxRevision: gameMaxRevision,
             yanked: yanked,
             yankedReason: yankedReason,
-            source: "index");
+            source: "index",
+            changelog: changelog);
 
     public static ModPackMetadata PackVersion(
         string id = "navigation-pack",
