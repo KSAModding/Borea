@@ -378,6 +378,9 @@
   <data name="ModalCreateInstanceTitle" xml:space="preserve">
     <value>Instanz erstellen</value>
   </data>
+  <data name="ModalRenameInstanceTitle" xml:space="preserve">
+    <value>Instanz umbenennen</value>
+  </data>
   <data name="ModalNameLabel" xml:space="preserve">
     <value>Name</value>
   </data>

@@ -1,29 +1,29 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Borea.App.ViewModels"
-             x:Class="Borea.App.Views.NewInstanceModal"
+             x:Class="Borea.App.Views.InstanceNameModal"
              x:DataType="vm:MainViewModel">
-    <!-- modal: new instance -->
+    <!-- modal: new instance, and rename instance -->
     <Panel Background="#99000000">
         <Border Classes="modal" Width="561" Margin="80,0,0,0">
             <StackPanel>
                 <Grid ColumnDefinitions="*,Auto" Margin="24,24,24,0">
-                    <TextBlock Classes="heading-lg" Text="{Binding Localization.ModalCreateInstanceTitle}" VerticalAlignment="Center" />
-                    <Button Grid.Column="1" Classes="icon" Command="{Binding CancelCreateInstanceCommand}" AutomationProperties.Name="{Binding Localization.ModalClose}">
+                    <TextBlock Classes="heading-lg" Text="{Binding NameModalTitle}" VerticalAlignment="Center" />
+                    <Button Grid.Column="1" Classes="icon" Command="{Binding CancelNameModalCommand}" AutomationProperties.Name="{Binding Localization.ModalClose}">
                         <Path Classes="icon" Data="{StaticResource Icon.Close}" />
                     </Button>
                 </Grid>
                 <Border Height="1" Background="{StaticResource Brush.Window}" Margin="0,24,0,0" />
                 <Grid ColumnDefinitions="Auto,12,*,16,Auto" Margin="36,32,24,32">
                     <TextBlock Classes="heading-md heading" Text="{Binding Localization.ModalNameLabel}" VerticalAlignment="Center" />
-                    <TextBox Grid.Column="2" Classes="field" Text="{Binding NewInstanceName}" PlaceholderText="{Binding Localization.LibraryNewInstancePlaceholder}" AutomationProperties.Name="{Binding Localization.ModalNameLabel}" VerticalAlignment="Center">
+                    <TextBox Grid.Column="2" Classes="field" Text="{Binding ModalInstanceName}" PlaceholderText="{Binding Localization.LibraryNewInstancePlaceholder}" AutomationProperties.Name="{Binding Localization.ModalNameLabel}" VerticalAlignment="Center">
                         <TextBox.KeyBindings>
-                            <KeyBinding Gesture="Enter" Command="{Binding CreateInstanceCommand}" />
-                            <KeyBinding Gesture="Escape" Command="{Binding CancelCreateInstanceCommand}" />
+                            <KeyBinding Gesture="Enter" Command="{Binding ConfirmNameModalCommand}" />
+                            <KeyBinding Gesture="Escape" Command="{Binding CancelNameModalCommand}" />
                         </TextBox.KeyBindings>
                     </TextBox>
-                    <Button Grid.Column="4" Classes="cta" Command="{Binding CreateInstanceCommand}">
-                        <TextBlock Classes="action-lg" Text="{Binding Localization.LibraryCreate}" />
+                    <Button Grid.Column="4" Classes="cta" Command="{Binding ConfirmNameModalCommand}">
+                        <TextBlock Classes="action-lg" Text="{Binding NameModalConfirmText}" VerticalAlignment="Center" />
                     </Button>
                 </Grid>
                 <TextBlock Classes="body-md danger" Text="{Binding InstanceError}" TextWrapping="Wrap" Margin="36,0,24,24" IsVisible="{Binding InstanceError, Converter={x:Static ObjectConverters.IsNotNull}}" />

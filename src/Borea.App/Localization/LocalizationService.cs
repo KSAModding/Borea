@@ -243,6 +243,8 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string ModalCreateInstanceTitle => Resources.ModalCreateInstanceTitle;
 
+    public string ModalRenameInstanceTitle => Resources.ModalRenameInstanceTitle;
+
     public string ModalNameLabel => Resources.ModalNameLabel;
 
     public string ModalClose => Resources.ModalClose;

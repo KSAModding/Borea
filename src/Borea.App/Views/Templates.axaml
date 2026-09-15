@@ -29,7 +29,7 @@
         </StackPanel>
     </DataTemplate>
     <!-- c/instance-row: used by the library list and by the Current Install card on Home.
-         Rename and delete happen inline; the row swaps its title or its actions for the edit. -->
+         Delete asks for a confirmation in the row, and rename opens the name modal. -->
     <DataTemplate x:Key="InstanceRow" x:DataType="vm:InstanceItem">
         <Border Classes="card" Padding="12">
             <Grid ColumnDefinitions="70,16,*" RowDefinitions="Auto,*,Auto" Height="70">
@@ -39,35 +39,17 @@
                     </Border>
                 </Button>
 
-                <!-- Title row: name or the rename field; switch + more, or the edit's buttons -->
+                <!-- Title row: the name, and the switch + more or the delete confirmation -->
                 <Grid Grid.Column="2" Grid.Row="0" ColumnDefinitions="*,16,Auto">
-                    <Panel VerticalAlignment="Center">
-                        <Button Classes="plain" Command="{Binding OpenCommand}" IsVisible="{Binding !IsRenaming}" HorizontalAlignment="Left">
-                            <TextBlock Classes="heading-md" Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
-                        </Button>
-                        <TextBox Classes="field" Text="{Binding EditName}" IsVisible="{Binding IsRenaming}" Padding="8,2" MaxWidth="360" HorizontalAlignment="Left" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryRename}">
-                            <TextBox.KeyBindings>
-                                <KeyBinding Gesture="Enter" Command="{Binding CommitRenameCommand}" />
-                                <KeyBinding Gesture="Escape" Command="{Binding CancelCommand}" />
-                            </TextBox.KeyBindings>
-                        </TextBox>
-                    </Panel>
+                    <Button Classes="plain" Command="{Binding OpenCommand}" HorizontalAlignment="Left" VerticalAlignment="Center">
+                        <TextBlock Classes="heading-md" Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
+                    </Button>
                     <Panel Grid.Column="2" VerticalAlignment="Center">
-                        <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding IsRenaming}">
-                            <Button Classes="text primary" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibrarySave}" Command="{Binding CommitRenameCommand}" />
-                            <Button Classes="text" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryCancel}" Command="{Binding CancelCommand}" />
-                        </StackPanel>
                         <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding IsConfirmingDelete}">
                             <Button Classes="text danger" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryDelete}" Command="{Binding ConfirmDeleteCommand}" />
                             <Button Classes="text" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryCancel}" Command="{Binding CancelCommand}" />
                         </StackPanel>
-                        <StackPanel Orientation="Horizontal" Spacing="12">
-                            <StackPanel.IsVisible>
-                                <MultiBinding Converter="{x:Static BoolConverters.And}">
-                                    <Binding Path="!IsRenaming" />
-                                    <Binding Path="!IsConfirmingDelete" />
-                                </MultiBinding>
-                            </StackPanel.IsVisible>
+                        <StackPanel Orientation="Horizontal" Spacing="12" IsVisible="{Binding !IsConfirmingDelete}">
                             <ToggleSwitch Classes="switch" IsChecked="{Binding IsActive, Mode=OneWay}" Command="{Binding ToggleActiveCommand}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryActivate}" VerticalAlignment="Center" />
                             <Button Classes="icon" AutomationProperties.Name="{Binding Name}">
                                 <Button.Flyout>

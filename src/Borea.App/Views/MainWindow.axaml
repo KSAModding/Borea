@@ -84,8 +84,8 @@
         </Grid>
     </Border>
 
-    <!-- modal: new instance -->
-    <views:NewInstanceModal IsVisible="{Binding IsCreatingInstance}" />
+    <!-- modal: new instance, and rename instance -->
+    <views:InstanceNameModal IsVisible="{Binding IsNameModalOpen}" />
 
     <!-- modal: settings -->
     <settings:SettingsModal IsVisible="{Binding IsSettingsOpen}" />
