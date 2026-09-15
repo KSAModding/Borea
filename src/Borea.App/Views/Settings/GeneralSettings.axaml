@@ -43,6 +43,12 @@
                     </DataTemplate>
                 </ComboBox.ItemTemplate>
             </ComboBox>
+            <TextBlock Classes="heading-md" Text="{Binding Localization.SettingsImagesLabel}" Margin="0,18,0,0" />
+            <Grid ColumnDefinitions="*,16,Auto" Width="340" HorizontalAlignment="Left" Margin="0,4,0,0">
+                <TextBlock Classes="body-md" Text="{Binding Localization.SettingsLoadImagesFromAuthorHosts}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                <ToggleSwitch Grid.Column="2" Classes="switch" IsChecked="{Binding LoadImagesFromAuthorHosts}" AutomationProperties.Name="{Binding Localization.SettingsLoadImagesFromAuthorHosts}" />
+            </Grid>
+            <TextBlock Classes="body-sm secondary" Text="{Binding Localization.SettingsLoadImagesFromAuthorHostsHint}" TextWrapping="Wrap" Width="340" HorizontalAlignment="Left" />
         </StackPanel>
     </ScrollViewer>
 </UserControl>

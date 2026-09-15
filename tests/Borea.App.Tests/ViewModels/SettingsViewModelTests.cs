@@ -219,6 +219,19 @@ public sealed class SettingsViewModelTests
     }
 
     [Fact]
+    public async Task LoadImagesFromAuthorHosts_IsSaved()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        Assert.True(harness.ViewModel.LoadImagesFromAuthorHosts);
+
+        harness.ViewModel.LoadImagesFromAuthorHosts = false;
+        await harness.ViewModel.WhenPreferencesSavedAsync();
+
+        var saved = await harness.Services.AppPreferences.GetAsync(MainViewModel.BundledThemeNames);
+        Assert.False(saved.Preferences.LoadImagesFromAuthorHosts);
+    }
+
+    [Fact]
     public async Task Language_IsSaved()
     {
         using var harness = await ViewModelHarness.CreateAsync();
