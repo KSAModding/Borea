@@ -615,6 +615,9 @@
   <data name="LinkBugTracker" xml:space="preserve">
     <value>Bug tracker</value>
   </data>
+  <data name="LinkHomepage" xml:space="preserve">
+    <value>Homepage</value>
+  </data>
   <data name="LinkDiscussions" xml:space="preserve">
     <value>Discussions</value>
   </data>

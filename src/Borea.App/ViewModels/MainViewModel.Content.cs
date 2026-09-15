@@ -191,8 +191,8 @@ public partial class MainViewModel
         }
     }
 
-    // the order and names of the detail panel in #8; unknown keys follow, as written
-    private static readonly string[] KnownLinks = ["forums", "repository", "spacedock", "bugtracker", "discussions"];
+    // the order and names of the detail panel in #8; unknown keys follow with a capital first letter
+    private static readonly string[] KnownLinks = ["forums", "repository", "spacedock", "bugtracker", "homepage", "discussions"];
 
     private static int LinkOrder(string key)
     {
@@ -206,8 +206,9 @@ public partial class MainViewModel
         "repository" => Localization.LinkRepository,
         "spacedock" => "SpaceDock",
         "bugtracker" => Localization.LinkBugTracker,
+        "homepage" => Localization.LinkHomepage,
         "discussions" => Localization.LinkDiscussions,
-        _ => key,
+        _ => key.Length == 0 ? key : char.ToUpperInvariant(key[0]) + key[1..],
     };
 
     /// <summary>Fills the links of a detail panel in the order of #8. Each link keeps its key, which picks its icon.</summary>

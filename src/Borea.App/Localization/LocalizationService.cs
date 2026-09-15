@@ -307,6 +307,8 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string LinkBugTracker => Resources.LinkBugTracker;
 
+    public string LinkHomepage => Resources.LinkHomepage;
+
     public string LinkDiscussions => Resources.LinkDiscussions;
 
     public string ContentTabDescription => Resources.ContentTabDescription;

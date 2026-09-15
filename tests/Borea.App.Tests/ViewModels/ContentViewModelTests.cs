@@ -260,4 +260,23 @@ public sealed class ContentViewModelTests
         installSizeBytes: null,
         dependencies: [],
         changelog: changelog);
+
+    [Fact]
+    public async Task OpenContent_HomepageAndUnknownLinks_GetReadableLabels()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: json =>
+        {
+            var listing = json.IndexOf("\"id\": \"AdvancedFlightComputer\",", StringComparison.Ordinal);
+            var links = json.IndexOf("\"links\": {", listing, StringComparison.Ordinal) + "\"links\": {".Length;
+            return json.Insert(links, " \"homepage\": \"https://example.com/afc\", \"wiki\": \"https://example.com/afc/wiki\",");
+        });
+        var viewModel = harness.ViewModel;
+        await viewModel.EnsureDiscoverLoadedAsync();
+
+        await viewModel.DiscoverItems.Single(item => item.ModId == "AdvancedFlightComputer").OpenCommand.ExecuteAsync(null);
+
+        var labels = viewModel.ContentLinks.Select(link => link.Label).ToList();
+        Assert.Contains(harness.Localization.LinkHomepage, labels);
+        Assert.Contains("Wiki", labels);
+    }
 }
