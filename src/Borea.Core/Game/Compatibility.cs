@@ -25,6 +25,13 @@ public static class Compatibility
     }
 
     /// <summary>
+    /// Whether the bounds support at least one build from <paramref name="fromRevision"/> to <paramref name="toRevision"/>, both included, where an absent bound is open.
+    /// </summary>
+    public static bool SupportsAnyBuild(int minRevision, int? maxRevision, int? fromRevision, int? toRevision)
+        => (toRevision is not { } last || minRevision <= last)
+            && (maxRevision is not { } max || fromRevision is not { } first || first <= max);
+
+    /// <summary>
     /// The state the bounds of a stamped release put the installed game in.
     /// A release always carries a lower bound.
     /// </summary>
@@ -61,6 +68,27 @@ public static class Compatibility
         }
 
         return Evaluate(min.Revision, maxRevision, game);
+    }
+
+    /// <summary>
+    /// The same check for the authored bounds of a pack version, where a month bound such as "2026.7" matches no build.
+    /// </summary>
+    public static bool SupportsAnyBuild(ModPackMetadata pack, int? fromRevision, int? toRevision)
+    {
+        ArgumentNullException.ThrowIfNull(pack);
+
+        if (!GameVersion.TryParse(pack.GameMin, out var min))
+            return false;
+
+        int? maxRevision = null;
+        if (pack.GameMax is not null)
+        {
+            if (!GameVersion.TryParse(pack.GameMax, out var max))
+                return false;
+            maxRevision = max.Revision;
+        }
+
+        return SupportsAnyBuild(min.Revision, maxRevision, fromRevision, toRevision);
     }
 
     /// <summary>
