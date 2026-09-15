@@ -37,12 +37,13 @@ internal static class PackCommand
             var query = parseResult.GetRequiredValue(text);
             var installed = cli.InstalledVersion.GetInstalledVersion()?.Version;
             var matches = await cli.ModPacks.SearchAsync(query, ct).ConfigureAwait(false);
+            var snapshot = await cli.IndexSnapshots.GetSnapshotAsync(ct).ConfigureAwait(false);
+            var releases = GameReleaseList.From(snapshot.GameVersions);
             var results = matches
                 .Where(match => match.Metadata is not null)
-                .Select(match => SearchResultView.Usable(match.Metadata!, installed))
+                .Select(match => SearchResultView.Usable(match.Metadata!, installed, releases))
                 .ToList();
             var resultIds = new HashSet<string>(results.Select(result => result.Id), ModIds.Comparer);
-            var snapshot = await cli.IndexSnapshots.GetSnapshotAsync(ct).ConfigureAwait(false);
 
             // The repository only returns packs with a usable version, so a removed pack,
             // a pack whose every version is retracted, and a pack in a newer format come
@@ -127,6 +128,7 @@ internal static class PackCommand
             // retracted, the newest retracted document still carries the pack's name.
             var metadata = identity?.Metadata ?? Newest(entry)?.Metadata;
             var installed = cli.InstalledVersion.GetInstalledVersion()?.Version;
+            var releases = GameReleaseList.From(snapshot.GameVersions);
             var versions = new List<VersionView>();
 
             if (requested is { } exact)
@@ -141,11 +143,11 @@ internal static class PackCommand
                     throw new InvalidOperationException($"Pack '{packId}' {exact} was not found.");
 
                 if (selected?.Metadata is { } pinned)
-                    versions.Add(await VersionView.WithMembersAsync(pinned, selected.VersionStatus, installed, cli.Mods, ct).ConfigureAwait(false));
+                    versions.Add(await VersionView.WithMembersAsync(pinned, selected.VersionStatus, installed, releases, cli.Mods, ct).ConfigureAwait(false));
             }
             else if (entry is not null)
             {
-                versions.AddRange(entry.Versions.Select(candidate => VersionView.From(candidate.Metadata, candidate.IndexStatus, installed)));
+                versions.AddRange(entry.Versions.Select(candidate => VersionView.From(candidate.Metadata, candidate.IndexStatus, installed, releases)));
             }
 
             versions.AddRange(diagnostics
@@ -223,10 +225,10 @@ internal static class PackCommand
             var selected = requested is { } exact
                 ? await cli.ModPacks.GetVersionAsync(packId, exact, ct).ConfigureAwait(false)
                 : await cli.ModPacks.GetLatestAsync(packId, ct).ConfigureAwait(false);
+            var snapshot = await cli.IndexSnapshots.GetSnapshotAsync(ct).ConfigureAwait(false);
 
             if (selected?.Metadata is not { } metadata)
             {
-                var snapshot = await cli.IndexSnapshots.GetSnapshotAsync(ct).ConfigureAwait(false);
                 var entry = snapshot.Packs.FirstOrDefault(pack => ModIds.Equals(pack.Id, packId));
                 throw new InvalidOperationException(await UnavailableReasonAsync(cli.ModPacks, entry, packId, requested, selected, ct).ConfigureAwait(false));
             }
@@ -234,7 +236,7 @@ internal static class PackCommand
             // Only an incompatible game blocks, like a mod release (RFC 0017). The pack's
             // own bounds are checked here, because the planner evaluates only the members.
             var installed = cli.InstalledVersion.GetInstalledVersion()?.Version;
-            var compatibility = Compatibility.Evaluate(metadata, installed);
+            var compatibility = Compatibility.Evaluate(metadata, installed, GameReleaseList.From(snapshot.GameVersions));
             if (compatibility == GameCompatibility.Incompatible)
             {
                 throw new InvalidOperationException(
@@ -595,12 +597,12 @@ internal static class PackCommand
         string? LatestVersion,
         string Compatibility)
     {
-        public static SearchResultView Usable(ModPackMetadata pack, GameVersion? installed) => new(
+        public static SearchResultView Usable(ModPackMetadata pack, GameVersion? installed, GameReleaseList releases) => new(
             pack.ModPackId,
             pack.Name,
             "known",
             pack.Version.ToString(),
-            ContentOutput.Name(Borea.Core.Game.Compatibility.Evaluate(pack, installed)));
+            ContentOutput.Name(Borea.Core.Game.Compatibility.Evaluate(pack, installed, releases)));
 
         public static SearchResultView WithoutUsableVersion(ModPackMetadata newest) => new(
             newest.ModPackId,
@@ -677,14 +679,14 @@ internal static class PackCommand
         IReadOnlyList<MemberView>? Saves,
         string? Reason)
     {
-        public static VersionView From(ModPackMetadata pack, IndexStatus? status, GameVersion? installed) => new(
+        public static VersionView From(ModPackMetadata pack, IndexStatus? status, GameVersion? installed, GameReleaseList releases) => new(
             "known",
             pack.SpecVersion,
             pack.Version.ToString(),
             status?.State == IndexStatusState.Retracted,
             ContentOutput.IndexStatus(status),
             pack.ReleasedAt,
-            ContentOutput.Name(Borea.Core.Game.Compatibility.Evaluate(pack, installed)),
+            ContentOutput.Name(Borea.Core.Game.Compatibility.Evaluate(pack, installed, releases)),
             pack.GameMin,
             pack.GameMax,
             pack.Os,
@@ -703,6 +705,7 @@ internal static class PackCommand
             ModPackMetadata pack,
             IndexStatus? status,
             GameVersion? installed,
+            GameReleaseList releases,
             IModRepository mods,
             CancellationToken cancellationToken)
         {
@@ -717,7 +720,7 @@ internal static class PackCommand
                     release?.Yanked == true ? release.YankedReason : null));
             }
 
-            return From(pack, status, installed) with
+            return From(pack, status, installed, releases) with
             {
                 Mods = members,
                 Vehicles = pack.Vehicles.Select(MemberView.Pin).ToArray(),

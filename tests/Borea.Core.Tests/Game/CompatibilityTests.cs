@@ -141,18 +141,48 @@ public sealed class CompatibilityTests
     {
         var pack = Pack("2026.7.4.2131", "2026.8.3.5117");
 
-        Assert.Equal(GameCompatibility.Incompatible, Compatibility.Evaluate(pack, Installed(2130)));
-        Assert.Equal(GameCompatibility.Compatible, Compatibility.Evaluate(pack, Installed(2131)));
-        Assert.Equal(GameCompatibility.Untested, Compatibility.Evaluate(pack, Installed(5118)));
-        Assert.Equal(GameCompatibility.Unknown, Compatibility.Evaluate(pack, null));
+        Assert.Equal(GameCompatibility.Incompatible, Compatibility.Evaluate(pack, Installed(2130), GameReleaseList.Empty));
+        Assert.Equal(GameCompatibility.Compatible, Compatibility.Evaluate(pack, Installed(2131), GameReleaseList.Empty));
+        Assert.Equal(GameCompatibility.Untested, Compatibility.Evaluate(pack, Installed(5118), GameReleaseList.Empty));
+        Assert.Equal(GameCompatibility.Unknown, Compatibility.Evaluate(pack, null, GameReleaseList.Empty));
     }
 
     [Fact]
-    public void Evaluate_PackWithAMonthBound_IsUnknownUnlessBelowTheLowerBound()
+    public void Evaluate_PackWithMonthBounds_AcceptsTheWholeMonth()
     {
-        Assert.Equal(GameCompatibility.Unknown, Compatibility.Evaluate(Pack("2026.7"), Installed(5117)));
-        Assert.Equal(GameCompatibility.Incompatible, Compatibility.Evaluate(Pack("2026.8.3.5117", "2026.9"), Installed(5116)));
-        Assert.Equal(GameCompatibility.Unknown, Compatibility.Evaluate(Pack("2026.8.3.5117", "2026.9"), Installed(5117)));
+        var releases = new GameReleaseList(["2026.7.2.4824", "2026.7.10.5056", "2026.8.3.5117"]);
+        var pack = Pack("2026.7", "2026.7");
+
+        Assert.Equal(GameCompatibility.Incompatible, Compatibility.Evaluate(pack, Installed(4823), releases));
+        Assert.Equal(GameCompatibility.Compatible, Compatibility.Evaluate(pack, Installed(4824), releases));
+        Assert.Equal(GameCompatibility.Compatible, Compatibility.Evaluate(pack, Installed(5056), releases));
+        Assert.Equal(GameCompatibility.Untested, Compatibility.Evaluate(pack, Installed(5057), releases));
+    }
+
+    [Fact]
+    public void Evaluate_PackWithAnUpperBoundInTheNewestMonth_IsOpen()
+    {
+        var releases = new GameReleaseList(["2026.7.2.4824", "2026.8.3.5117"]);
+
+        Assert.Equal(GameCompatibility.Compatible, Compatibility.Evaluate(Pack("2026.7", "2026.8"), Installed(9999), releases));
+    }
+
+    [Fact]
+    public void Evaluate_InstalledGameOfALaterMonthThanTheList_ClosesTheUpperMonthBound()
+    {
+        var releases = new GameReleaseList(["2026.8.3.5117"]);
+
+        Assert.Equal(GameCompatibility.Untested, Compatibility.Evaluate(Pack("2026.8", "2026.8"), new GameVersion(2026, 9, 7, 5402), releases));
+    }
+
+    [Fact]
+    public void Evaluate_PackWithAMonthTheListDoesNotKnow_IsUnknownUnlessBelowTheLowerBound()
+    {
+        var releases = new GameReleaseList(["2026.8.3.5117"]);
+
+        Assert.Equal(GameCompatibility.Unknown, Compatibility.Evaluate(Pack("2026.7"), Installed(5117), releases));
+        Assert.Equal(GameCompatibility.Incompatible, Compatibility.Evaluate(Pack("2026.8.3.5117", "2026.9"), Installed(5116), releases));
+        Assert.Equal(GameCompatibility.Unknown, Compatibility.Evaluate(Pack("2026.8.3.5117", "2026.9"), Installed(5117), releases));
     }
 
     [Fact]

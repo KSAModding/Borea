@@ -108,6 +108,7 @@ public partial class MainViewModel
         {
             var snapshot = await services.IndexSnapshots.GetSnapshotAsync();
             TagVocabulary = snapshot.Tags;
+            _gameReleases = GameReleaseList.From(snapshot.GameVersions);
 
             // the download counts and the first release dates sit next to a listing in the snapshot, not inside it
             var listingEntries = new Dictionary<string, ContentIndexListing>(ModIds.Comparer);
@@ -289,7 +290,7 @@ public partial class MainViewModel
             release.RefreshCompatibility(installed);
 
         foreach (var pack in _packs)
-            pack.Compatibility = Borea.Core.Game.Compatibility.Evaluate(pack.Metadata, installed);
+            pack.Compatibility = Borea.Core.Game.Compatibility.Evaluate(pack.Metadata, installed, _gameReleases);
 
         ApplyDiscoverFilters();
     }

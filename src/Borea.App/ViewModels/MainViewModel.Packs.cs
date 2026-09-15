@@ -26,6 +26,8 @@ public partial class MainViewModel
 {
     private IReadOnlyList<PackItem> _packs = [];
 
+    private GameReleaseList _gameReleases = GameReleaseList.Empty;
+
     public ObservableCollection<PackItem> DiscoverPacks { get; } = [];
 
     public bool IsModpacksTab => DiscoverType == ContentType.ModPack;
@@ -222,7 +224,7 @@ public partial class MainViewModel
                 throw new InvalidOperationException(Localization.DiscoverNoRelease);
 
             var installed = services.InstalledVersion.GetInstalledVersion()?.Version;
-            var compatibility = Borea.Core.Game.Compatibility.Evaluate(metadata, installed);
+            var compatibility = Borea.Core.Game.Compatibility.Evaluate(metadata, installed, _gameReleases);
             if (compatibility == GameCompatibility.Incompatible)
                 throw new InvalidOperationException(Localization.FormatPackIncompatible(metadata.GameMin));
 

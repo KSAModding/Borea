@@ -37,30 +37,28 @@ public static class Compatibility
     }
 
     /// <summary>
-    /// The state the authored bounds of a pack version put the installed game in. A pack
-    /// document is not stamped, so a bound can still be a month such as "2026.7", which
-    /// gives an unknown state. The lower bound is compared on its own, so a month in the
-    /// upper bound does not hide an incompatible game.
+    /// The state the authored bounds of a pack version put the installed game in, with a month bound resolved through <paramref name="releases"/> and the installed build.
     /// </summary>
-    public static GameCompatibility Evaluate(ModPackMetadata pack, GameVersion? installed)
+    public static GameCompatibility Evaluate(ModPackMetadata pack, GameVersion? installed, GameReleaseList releases)
     {
         ArgumentNullException.ThrowIfNull(pack);
+        ArgumentNullException.ThrowIfNull(releases);
 
-        if (installed is not { } game || !GameVersion.TryParse(pack.GameMin, out var min))
+        if (installed is not { } game)
             return GameCompatibility.Unknown;
 
-        if (game.Revision < min.Revision)
+        var known = releases.WithBuild(game);
+        if (!known.TryResolveLowerBound(pack.GameMin, out var min))
+            return GameCompatibility.Unknown;
+
+        if (game.Revision < min)
             return GameCompatibility.Incompatible;
 
-        int? maxRevision = null;
-        if (pack.GameMax is not null)
-        {
-            if (!GameVersion.TryParse(pack.GameMax, out var max))
-                return GameCompatibility.Unknown;
-            maxRevision = max.Revision;
-        }
+        int? max = null;
+        if (pack.GameMax is not null && !known.TryResolveUpperBound(pack.GameMax, out max))
+            return GameCompatibility.Unknown;
 
-        return Evaluate(min.Revision, maxRevision, game);
+        return Evaluate(min, max, game);
     }
 
     /// <summary>
