@@ -201,6 +201,22 @@ public sealed class PackViewModelTests
         Assert.Empty(viewModel.DiscoverPacks);
     }
 
+    [Fact]
+    public async Task ModpacksTab_MonthBound_ResolvesThroughTheGameReleaseList()
+    {
+        string MonthPack(string id, string month) => Pack(id, id, Version("1.0.0", Pin("KSArmory", "0.8.44")))
+            .Replace("\"game_min\": \"2026.8.19.5261\"", $"\"game_min\": \"{month}\"", StringComparison.Ordinal);
+        using var harness = await CreateWithGameAsync(WithPacks(MonthPack("august-pack", "2026.8"), MonthPack("september-pack", "2026.9"), MonthPack("future-pack", "2027.1")));
+        var viewModel = harness.ViewModel;
+        await ActivateInstanceAsync(harness);
+
+        viewModel.ShowDiscoverModpacksCommand.Execute(null);
+
+        Assert.Equal(GameCompatibility.Compatible, viewModel.DiscoverPacks.Single(pack => pack.PackId == "august-pack").Compatibility);
+        Assert.Equal(GameCompatibility.Incompatible, viewModel.DiscoverPacks.Single(pack => pack.PackId == "september-pack").Compatibility);
+        Assert.Equal(GameCompatibility.Unknown, viewModel.DiscoverPacks.Single(pack => pack.PackId == "future-pack").Compatibility);
+    }
+
     /// <summary>A harness whose game folder holds a game of version 2026.8.3.5117.</summary>
     private static Task<ViewModelHarness> CreateWithGameAsync(Func<string, string> editSnapshot) =>
         ViewModelHarness.CreateAsync(
