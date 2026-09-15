@@ -16,12 +16,14 @@ using Borea.Core.State;
 using Borea.Core.Updates;
 using Borea.Network.Downloads;
 using Borea.Network.GitHub;
+using Borea.Network.Images;
 using Borea.Network.Index;
 using Borea.Network.MasterServer;
 using Borea.Network.Planning;
 using Borea.Network.Sources;
 using Borea.Network.SpaceDock;
 using Borea.Storage.Game;
+using Borea.Storage.Images;
 using Borea.Storage.Instances;
 using Borea.Storage.Index;
 using Borea.Storage.Launch;
@@ -151,6 +153,9 @@ public sealed class BoreaServices : IDisposable
 
     public required IContentIndexRepository ContentIndex { get; init; }
 
+    /// <summary>Listing images, verified against their records, from the cache or the author hosts.</summary>
+    public required IContentImageSource Images { get; init; }
+
     private BoreaServices(HttpClient http)
     {
         _http = http;
@@ -225,7 +230,8 @@ public sealed class BoreaServices : IDisposable
         var log = new FileBoreaLog(paths, logSource);
 
         // Network. Every service that talks to a remote host is built here on the
-        // one client. Only the SpaceDock repository takes the resolver, because a
+        // one client, except the image source, which needs a handler of its own.
+        // Only the SpaceDock repository takes the resolver, because a
         // release carries an absolute download URL and the downloader needs no
         // host of its own.
         var http = BuildHttpClient(httpHandler);
@@ -301,6 +307,7 @@ public sealed class BoreaServices : IDisposable
             IndexSnapshots = indexSnapshots,
             IndexRefresh = indexSnapshots,
             ContentIndex = contentIndex,
+            Images = new ContentImageSource(new FileContentImageCache(paths)),
         };
     }
 
@@ -319,6 +326,9 @@ public sealed class BoreaServices : IDisposable
     {
         if (Launcher is IDisposable disposable)
             disposable.Dispose();
+
+        if (Images is IDisposable images)
+            images.Dispose();
 
         _http.Dispose();
     }
