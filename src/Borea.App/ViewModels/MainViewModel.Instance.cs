@@ -9,6 +9,7 @@ using Borea.Core.Dependencies;
 using Borea.Core.Instances;
 using Borea.Core.Launch;
 using Borea.Core.Mods;
+using Borea.Core.Preferences;
 using Borea.Core.Planning;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -36,6 +37,7 @@ public partial class MainViewModel
     private int _contentUpdateCheckGeneration;
     private Guid? _launchInstanceId;
     private string? _launchBlamedModName;
+    private HomeLaunchOption? _homeLaunch;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CanChangeContent))]
@@ -92,7 +94,7 @@ public partial class MainViewModel
     private string? _launchMessage;
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(EnableActiveInstance))]
+    [NotifyPropertyChangedFor(nameof(EnableActiveInstance), nameof(EnableHomeLaunch))]
     private bool _isLaunching;
 
     /// <summary>What the loader wrote before it stopped, when the last Play failed that way.</summary>
@@ -418,11 +420,43 @@ public partial class MainViewModel
             target.InstallError = error;
     }
 
+    /// <summary>What the Home launch button starts, which is the option last chosen in its menu.</summary>
+    public HomeLaunchOption HomeLaunch
+    {
+        get => _homeLaunch ?? _appPreferences.HomeLaunch;
+        private set
+        {
+            if (value == HomeLaunch)
+                return;
+
+            _homeLaunch = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(IsHomeLaunchActiveInstance));
+            OnPropertyChanged(nameof(HomeLaunchText));
+            OnPropertyChanged(nameof(EnableHomeLaunch));
+            QueuePreferenceSave(preferences => preferences.WithHomeLaunch(value));
+        }
+    }
+
+    public bool IsHomeLaunchActiveInstance => HomeLaunch == HomeLaunchOption.ActiveInstance;
+
+    public string HomeLaunchText => IsHomeLaunchActiveInstance ? Localization.LaunchActiveInstance : Localization.LaunchWithoutModLoader;
+
+    public bool EnableHomeLaunch => IsHomeLaunchActiveInstance ? EnableActiveInstance : !IsLaunching;
+
     [RelayCommand]
     private Task PlayAsync() => SelectedInstance is { } instance ? LaunchAsync(instance.InstanceId) : Task.CompletedTask;
 
+    /// <summary>Launches the active instance, and makes it what the Home launch button starts.</summary>
     [RelayCommand]
-    private Task PlayActiveInstanceAsync() => ActiveInstance is { } instance ? LaunchAsync(instance.InstanceId) : Task.CompletedTask;
+    private Task PlayActiveInstanceAsync()
+    {
+        HomeLaunch = HomeLaunchOption.ActiveInstance;
+        return ActiveInstance is { } instance ? LaunchAsync(instance.InstanceId) : Task.CompletedTask;
+    }
+
+    [RelayCommand]
+    private Task PlayHomeAsync() => IsHomeLaunchActiveInstance ? PlayActiveInstanceAsync() : PlayWithoutModLoader();
 
     /// <summary>Starts the instance through the loader Borea has recorded and watches the start.</summary>
     private async Task LaunchAsync(Guid instanceId)
@@ -461,9 +495,11 @@ public partial class MainViewModel
         }
     }
 
+    /// <summary>Launches the game without a mod loader, and makes that what the Home launch button starts.</summary>
     [RelayCommand]
     private async Task PlayWithoutModLoader()
     {
+        HomeLaunch = HomeLaunchOption.WithoutModLoader;
         if (_services is null || IsLaunching)
             return;
 

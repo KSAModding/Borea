@@ -115,6 +115,34 @@ public sealed class FileAppPreferencesRepositoryTests : IDisposable
     }
 
     [Fact]
+    public async Task SaveThenGet_HomeLaunchWithoutModLoader_RestoresTheChoice()
+    {
+        Assert.Equal(HomeLaunchOption.ActiveInstance, AppPreferences.Empty.HomeLaunch);
+
+        await _repository.SaveAsync(AppPreferences.Empty.WithHomeLaunch(HomeLaunchOption.WithoutModLoader), BundledThemeNames);
+        var result = await _repository.GetAsync(BundledThemeNames);
+
+        Assert.Equal(HomeLaunchOption.WithoutModLoader, result.Preferences.HomeLaunch);
+        using var document = JsonDocument.Parse(await File.ReadAllTextAsync(_pathProvider.GetAppPreferencesPath()));
+        Assert.Equal("without-mod-loader", document.RootElement.GetProperty("homeLaunch").GetString());
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData(""", "homeLaunch": "somewhere-else" """)]
+    public async Task GetAsync_NoOrUnknownHomeLaunch_LoadsAsTheActiveInstance(string homeLaunch)
+    {
+        await WriteAsync($$"""
+            { "formatVersion": 1, "selectedTheme": "Light"{{homeLaunch}} }
+            """);
+
+        var result = await _repository.GetAsync(BundledThemeNames);
+
+        Assert.Equal(AppPreferencesLoadStatus.Loaded, result.Status);
+        Assert.Equal(HomeLaunchOption.ActiveInstance, result.Preferences.HomeLaunch);
+    }
+
+    [Fact]
     public void With_OtherPreferenceChanges_KeepTheUpdateCheckChoice()
     {
         var preferences = new AppPreferences("Dark", checkForUpdatesAtStart: false)
@@ -183,6 +211,21 @@ public sealed class FileAppPreferencesRepositoryTests : IDisposable
             .WithForeignFolderDeletionConfirmed(true);
 
         Assert.False(preferences.LoadImagesFromAuthorHosts);
+    }
+
+    [Fact]
+    public void With_OtherPreferenceChanges_KeepTheHomeLaunch()
+    {
+        var preferences = AppPreferences.Empty.WithHomeLaunch(HomeLaunchOption.WithoutModLoader)
+            .WithSelectedThemeName("Light")
+            .WithRegionalCultureName("de-DE")
+            .WithUiCultureName("de")
+            .WithCheckForUpdatesAtStart(false)
+            .WithUpdateChannel(BoreaUpdateChannel.Dev)
+            .WithForeignFolderDeletionConfirmed(true)
+            .WithLoadImagesFromAuthorHosts(false);
+
+        Assert.Equal(HomeLaunchOption.WithoutModLoader, preferences.HomeLaunch);
     }
 
     [Fact]

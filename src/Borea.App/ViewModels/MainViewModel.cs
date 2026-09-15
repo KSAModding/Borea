@@ -170,7 +170,7 @@ public partial class MainViewModel : ViewModelBase
     /// actions work from the Current Install card. Null when none is active.
     /// </summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(HasActiveInstance), nameof(EnableActiveInstance))]
+    [NotifyPropertyChangedFor(nameof(HasActiveInstance), nameof(EnableActiveInstance), nameof(EnableHomeLaunch))]
     private InstanceItem? _activeInstance;
 
     public bool HasActiveInstance => ActiveInstance is not null;
@@ -551,7 +551,8 @@ public partial class MainViewModel : ViewModelBase
             && left.CheckForUpdatesAtStart == right.CheckForUpdatesAtStart
             && left.UpdateChannel == right.UpdateChannel
             && left.ForeignFolderDeletionConfirmed == right.ForeignFolderDeletionConfirmed
-            && left.LoadImagesFromAuthorHosts == right.LoadImagesFromAuthorHosts;
+            && left.LoadImagesFromAuthorHosts == right.LoadImagesFromAuthorHosts
+            && left.HomeLaunch == right.HomeLaunch;
 
     private void OnRegionalFormatChanged(object? sender, PropertyChangedEventArgs e)
     {
@@ -604,6 +605,7 @@ public partial class MainViewModel : ViewModelBase
         OnPropertyChanged(nameof(GameSetupBannerText));
         OnPropertyChanged(nameof(InstalledInText));
         OnPropertyChanged(nameof(ActiveInstanceUpdatesText));
+        OnPropertyChanged(nameof(HomeLaunchText));
         OnPropertyChanged(nameof(ContentVersionsEmptyText));
 
         QueuePreferenceSave(preferences => preferences.WithUiCultureName(Localization.SelectedCultureName));
