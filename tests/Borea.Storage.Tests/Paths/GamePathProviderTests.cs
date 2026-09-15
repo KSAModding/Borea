@@ -34,6 +34,7 @@ public sealed class GamePathProviderTests
         Assert.StartsWith(@"D:\Portable\Borea", provider.GetAppPreferencesPath());
         Assert.StartsWith(@"D:\Portable\Borea", provider.GetInstancesRoot());
         Assert.StartsWith(@"D:\Portable\Borea", provider.GetModFavoritesPath());
+        Assert.StartsWith(@"D:\Portable\Borea", provider.GetImageCacheFolder());
     }
 
     [Theory]

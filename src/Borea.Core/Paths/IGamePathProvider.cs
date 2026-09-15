@@ -12,6 +12,11 @@ public interface IGamePathProvider
     string GetIndexPath();
 
     /// <summary>
+    /// Folder of the listing images Borea verified, one file per SHA-256.
+    /// </summary>
+    string GetImageCacheFolder();
+
+    /// <summary>
     /// Root of all Borea instance storage
     /// </summary>
     string GetInstancesRoot();
