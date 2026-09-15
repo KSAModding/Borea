@@ -16,6 +16,21 @@ Explain the user-visible change, the tests you ran, and any work that remains ou
 Run the relevant tests and formatting checks before you open a pull request.
 The continuous-integration checks run on Windows, Linux, and macOS.
 
+## AI tools
+
+You can use AI tools, such as code assistants and chat models, for code, tests and documentation.
+
+- **You are responsible for your pull request.** You understand the code that you submit, you can explain why it is there, and you work through the review.
+- **You can say which tools you used.** It is not required, but one line in the pull request helps the review, for example `AI tools: Claude for the tests, reviewed and tested by me.`
+- **Test what you submit.** Run the tests, and for a change to the App or the CLI, try the change itself.
+- **Agree on large changes first.** A pull request that changes more than about 1,500 lines, not counting lock files and test fixtures, needs an issue that a maintainer agreed to, or a reason for its size in the pull request.
+
+Maintainers close a pull request without a review when its author does not respond to the review within 14 days, when it shows that nobody ran or read it, such as a build that fails or a description that does not match the change, or when it comes from an account that opens automated pull requests across unrelated projects.
+Maintainers can stop reviewing pull requests from an account that does this again.
+
+This section covers contributions to this repository.
+Mods in the content index are judged by what they claim and what they do, not by how they were made, and a problem with a listed mod goes through the [takedown and dispute policy](https://github.com/KSAModding/content-index/blob/main/POLICY.md).
+
 ## Release tags
 
 A release starts from a tag such as `v0.5.0`, and a tag with a hyphen is published as a GitHub pre-release.
