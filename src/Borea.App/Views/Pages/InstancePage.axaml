@@ -87,13 +87,20 @@
             </Border>
             <TextBlock Classes="body-md danger" Text="{Binding ContentError}" TextWrapping="Wrap" Margin="0,16,0,0" IsVisible="{Binding ContentError, Converter={x:Static ObjectConverters.IsNotNull}}" />
             <TextBlock Classes="body-md secondary" Text="{Binding UpdateAll.ProgressStatus}" TextWrapping="Wrap" Margin="0,16,0,0" IsVisible="{Binding UpdateAll.ProgressStatus, Converter={x:Static ObjectConverters.IsNotNull}}" />
-            <Grid ColumnDefinitions="*,Auto" Margin="0,16,0,0" IsVisible="{Binding UpdateAll.InstallWarning, Converter={x:Static ObjectConverters.IsNotNull}}">
+            <Grid ColumnDefinitions="*,Auto" Margin="0,16,0,0" IsVisible="{Binding UpdateAll.IsConfirmingUpdate}">
                 <TextBlock Classes="body-md secondary" Text="{Binding UpdateAll.InstallWarning}" TextWrapping="Wrap" VerticalAlignment="Center" />
                 <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" Margin="16,0,0,0" VerticalAlignment="Center">
-                    <Button Classes="text primary" Content="{Binding Localization.UpdateAnyway}" Command="{Binding UpdateAll.ConfirmUpdateCommand}" IsEnabled="{Binding CanChangeContent}" />
+                    <Button Classes="text primary" Content="{Binding UpdateAll.ConfirmUpdateText}" Command="{Binding UpdateAll.ConfirmUpdateCommand}" IsEnabled="{Binding CanChangeContent}" />
                     <Button Classes="text" Content="{Binding Localization.LibraryCancel}" Command="{Binding UpdateAll.CancelUpdateCommand}" />
                 </StackPanel>
             </Grid>
+            <ItemsControl Margin="0,12,0,0" ItemsSource="{Binding UpdateAll.Changelogs}" ItemTemplate="{StaticResource ChangelogEntry}" IsVisible="{Binding UpdateAll.HasChangelogs}">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <StackPanel Spacing="12" />
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+            </ItemsControl>
             <TextBlock Classes="body-md danger" Text="{Binding UpdateAll.InstallError}" TextWrapping="Wrap" Margin="0,16,0,0" IsVisible="{Binding UpdateAll.InstallError, Converter={x:Static ObjectConverters.IsNotNull}}" />
 
             <!-- c/inner-nav-bar -->

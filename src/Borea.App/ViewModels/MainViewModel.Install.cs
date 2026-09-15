@@ -64,9 +64,10 @@ public partial class MainViewModel
 
     /// <summary>
     /// Plans the requested mods into the instance and runs a ready plan without
-    /// warnings. Returns whether the executor ran, so the caller reloads the instances.
+    /// warnings, unless <paramref name="waitForConfirmation"/> holds it. Returns
+    /// whether the executor ran, so the caller reloads the instances.
     /// </summary>
-    private async Task<bool> PlanAndExecuteAsync(IInstallRow row, Guid instanceId, Func<Instance, Task<IReadOnlyList<RequestedMod>>> requestMods)
+    private async Task<bool> PlanAndExecuteAsync(IInstallRow row, Guid instanceId, Func<Instance, Task<IReadOnlyList<RequestedMod>>> requestMods, Func<Instance, InstallPlan, Task<bool>>? waitForConfirmation = null)
     {
         if (_services is null || row.IsInstalling)
             return false;
@@ -82,15 +83,16 @@ public partial class MainViewModel
             var instance = await services.Instances.GetByIdAsync(instanceId)
                 ?? throw new InvalidOperationException(Localization.InstallInstanceMissing);
             var plan = await services.InstallPlanner.PlanAsync(PlanningRequest(services, instance, await requestMods(instance)));
+            var wait = plan.IsReady && waitForConfirmation is not null && await waitForConfirmation(instance, plan);
 
             if (!plan.IsReady)
             {
                 row.InstallError = Describe(plan, plan.Conflicts.Concat(plan.UnresolvedChoices));
             }
-            else if (plan.Warnings.Count > 0)
+            else if (plan.Warnings.Count > 0 || wait)
             {
                 row.PendingPlan = plan;
-                row.InstallWarning = Describe(plan, plan.Warnings);
+                row.InstallWarning = plan.Warnings.Count > 0 ? Describe(plan, plan.Warnings) : null;
             }
             else
             {

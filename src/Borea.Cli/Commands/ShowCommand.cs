@@ -228,6 +228,7 @@ internal static class ShowCommand
                 output.WriteLine($"  {release.Version}  {release.Compatibility}  {release.ReleaseStatus}{yanked}");
                 output.WriteLine($"    Game: {release.GameMin} to {release.GameMax ?? "open"}");
                 WriteReleaseDownloads(output, release);
+                WriteChangelog(output, release.Changelog);
                 if (release.Dependencies is not null)
                 {
                     output.WriteLine(release.Dependencies.Count == 0 ? "    Dependencies: none" : "    Dependencies:");
@@ -244,6 +245,23 @@ internal static class ShowCommand
     {
         if (release.Downloads is { } downloads)
             output.WriteLine($"    Downloads: {DownloadCountOutput.Describe(downloads)}");
+    }
+
+    private static void WriteChangelog(TextWriter output, string? changelog)
+    {
+        if (string.IsNullOrWhiteSpace(changelog))
+            return;
+
+        var lines = changelog.Trim().ReplaceLineEndings("\n").Split('\n');
+        if (lines.Length == 1)
+        {
+            output.WriteLine($"    Changelog: {lines[0]}");
+            return;
+        }
+
+        output.WriteLine("    Changelog:");
+        foreach (var line in lines)
+            output.WriteLine(line.Length == 0 ? string.Empty : $"      {line}");
     }
 
     private static string Describe(DependencyView dependency)
@@ -343,6 +361,7 @@ internal static class ShowCommand
         bool Yanked,
         string? YankedReason,
         string? Source,
+        string? Changelog,
         IReadOnlyList<DependencyView>? Dependencies,
         string? Reason,
         DownloadCountView? Downloads)
@@ -365,6 +384,7 @@ internal static class ShowCommand
             release.Yanked,
             release.YankedReason,
             release.Source,
+            release.Changelog,
             includeDependencies ? release.Dependencies.Select(DependencyView.From).ToArray() : null,
             null,
             downloads);
@@ -381,6 +401,7 @@ internal static class ShowCommand
             null,
             null,
             false,
+            null,
             null,
             null,
             null,

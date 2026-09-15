@@ -44,6 +44,44 @@ public sealed class ShowCommandTests : IDisposable
     }
 
     [Fact]
+    public async Task Show_PrintsTheChangelogUnderEachReleaseThatHasOne()
+    {
+        var listing = ContentCommandFixtures.Listing();
+        var text = ContentCommandFixtures.Release(version: "2.0.0", changelog: "## Fixes\n\n- Orbit hold stays stable.");
+        var link = ContentCommandFixtures.Release(version: "1.1.0", changelog: "https://example.com/flight-tools/1.1.0");
+        var none = ContentCommandFixtures.Release(version: "1.0.0");
+        _host.Mods.Listings.Add(listing);
+        _host.Mods.Releases.AddRange(new[] { none, link, text });
+        _host.IndexReader.Snapshot = Snapshot(new ContentIndexListing(listing.ModId, listing, new[] { none, link, text }, null));
+
+        var run = await _host.RunAsync("show", listing.ModId);
+
+        Assert.Equal(0, run.ExitCode);
+        var output = run.Output.ReplaceLineEndings("\n");
+        Assert.Contains("    Changelog:\n      ## Fixes\n\n      - Orbit hold stays stable.\n", output);
+        Assert.Contains("    Changelog: https://example.com/flight-tools/1.1.0\n", output);
+        Assert.Equal(2, output.Split("Changelog:").Length - 1);
+    }
+
+    [Fact]
+    public async Task Show_Json_CarriesTheChangelogOfEachRelease()
+    {
+        var listing = ContentCommandFixtures.Listing();
+        var linked = ContentCommandFixtures.Release(version: "2.0.0", changelog: "https://example.com/flight-tools/2.0.0");
+        var none = ContentCommandFixtures.Release(version: "1.0.0");
+        _host.Mods.Listings.Add(listing);
+        _host.Mods.Releases.AddRange(new[] { none, linked });
+        _host.IndexReader.Snapshot = Snapshot(new ContentIndexListing(listing.ModId, listing, new[] { none, linked }, null));
+
+        var run = await _host.RunAsync("show", listing.ModId, "--json");
+
+        Assert.Equal(0, run.ExitCode);
+        var releases = run.Json.GetProperty("releases");
+        Assert.Equal("https://example.com/flight-tools/2.0.0", releases[0].GetProperty("changelog").GetString());
+        Assert.Equal(System.Text.Json.JsonValueKind.Null, releases[1].GetProperty("changelog").ValueKind);
+    }
+
+    [Fact]
     public async Task ShowVersion_PrintsOneReleaseAndItsDependencies()
     {
         var listing = ContentCommandFixtures.Listing();

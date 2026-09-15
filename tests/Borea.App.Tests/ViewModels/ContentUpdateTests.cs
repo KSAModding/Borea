@@ -1,6 +1,7 @@
 using System.IO.Compression;
 using System.Net;
 using System.Text;
+using System.Text.Json;
 using Borea.Core.Dependencies;
 using Borea.Core.Mods;
 using Borea.Core.Settings;
@@ -240,7 +241,96 @@ public sealed class ContentUpdateTests
         Assert.Contains(harness.Requests, uri => uri.Host == ArchiveHost);
     }
 
-    private static ModVersionMetadata Release(string version, ReleaseStatus status = ReleaseStatus.Stable, IReadOnlyList<ModDependency>? dependencies = null) => new(
+    [Fact]
+    public async Task Update_ListsTheChangelogsOfThePassedVersionsNewestFirst()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(respond: ServeArchive);
+        harness.SpaceDock.Releases.AddRange(
+        [
+            Release("1.0.0", changelog: "Installed."),
+            Release("1.1.0", changelog: "- Fixes the HUD."),
+            Release("1.2.0"),
+            Release("1.3.0", changelog: "https://example.com/aircraft-hud/1.3.0"),
+        ]);
+        var viewModel = harness.ViewModel;
+        await InstalledContent.AddAsync(harness, OwnId, activate: true, ownership: ModInstallOwnership.Borea, version: "1.0.0");
+        await viewModel.LoadAsync();
+        await viewModel.ActiveInstance!.OpenCommand.ExecuteAsync(null);
+        var row = viewModel.ContentGroups.Single().Items.Single();
+
+        await row.UpdateCommand.ExecuteAsync(null);
+
+        Assert.True(row.IsConfirmingUpdate);
+        Assert.True(row.HasChangelogs);
+        Assert.Equal([$"{row.Name} 1.3.0", $"{row.Name} 1.1.0"], row.Changelogs.Select(changelog => changelog.Title));
+        Assert.Equal("https://example.com/aircraft-hud/1.3.0", row.Changelogs[0].Link?.Url);
+        Assert.Equal("- Fixes the HUD.", row.Changelogs[1].Text);
+        Assert.Equal(harness.Localization.UpdateAnyway, row.ConfirmUpdateText);
+
+        row.CancelUpdateCommand.Execute(null);
+
+        Assert.Empty(row.Changelogs);
+        Assert.False(row.IsConfirmingUpdate);
+
+        await row.UpdateCommand.ExecuteAsync(null);
+        await row.ConfirmUpdateCommand.ExecuteAsync(null);
+        await viewModel.WhenContentUpdatesCheckedAsync();
+
+        var updated = viewModel.ContentGroups.Single().Items.Single();
+        Assert.Equal("1.3.0", updated.Version);
+        Assert.Empty(updated.Changelogs);
+        Assert.Empty(row.Changelogs);
+    }
+
+    [Fact]
+    public async Task UpdateAll_ListsTheChangelogsOfEveryUpdatedMod()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        harness.SpaceDock.Releases.AddRange([Release("1.0.0"), Release("1.1.0", changelog: "- Fixes the HUD.")]);
+        var viewModel = harness.ViewModel;
+        await InstalledContent.AddAsync(harness, "AdvancedFlightComputer", activate: true, ownership: ModInstallOwnership.Borea, version: "0.7.4");
+        await InstalledContent.AddAsync(harness, OwnId, activate: true, ownership: ModInstallOwnership.Borea, version: "1.0.0");
+        await viewModel.LoadAsync();
+        await viewModel.ActiveInstance!.OpenCommand.ExecuteAsync(null);
+        var updateAll = viewModel.UpdateAll!;
+
+        await updateAll.UpdateCommand.ExecuteAsync(null);
+
+        Assert.True(updateAll.IsConfirmingUpdate);
+        Assert.Contains(updateAll.Changelogs, changelog => changelog.Link?.Url == "https://github.com/Maximilian-Nesslauer/KSA-AdvancedFlightComputer/releases/tag/v0.7.5");
+        Assert.DoesNotContain(updateAll.Changelogs, changelog => changelog.Link?.Url.EndsWith("v0.7.4", StringComparison.Ordinal) == true);
+        Assert.Contains(updateAll.Changelogs, changelog => changelog.Text == "- Fixes the HUD.");
+
+        updateAll.CancelUpdateCommand.Execute(null);
+
+        Assert.Empty(updateAll.Changelogs);
+        Assert.False(updateAll.IsConfirmingUpdate);
+    }
+
+    [Fact]
+    public async Task Update_ChangelogLookupFails_StillHoldsThePlan()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        harness.SpaceDock.Releases.AddRange([Release("1.0.0"), Release("1.1.0", changelog: "- Fixes the HUD."), Release("1.2.0")]);
+        var viewModel = harness.ViewModel;
+        await InstalledContent.AddAsync(harness, OwnId, activate: true, ownership: ModInstallOwnership.Borea, version: "1.0.0");
+        await viewModel.LoadAsync();
+        await viewModel.ActiveInstance!.OpenCommand.ExecuteAsync(null);
+        await viewModel.WhenContentUpdatesCheckedAsync();
+        var row = viewModel.ContentGroups.Single().Items.Single();
+
+        // the planner reads 1.1.0 first, and the changelog lookup reads it second
+        var reads = 0;
+        harness.SpaceDock.ReleaseFailure = version => version == ModVersion.Parse("1.1.0") && ++reads == 2 ? new JsonException("Not JSON.") : null;
+        await row.UpdateCommand.ExecuteAsync(null);
+
+        Assert.Equal(2, reads);
+        Assert.NotNull(row.PendingPlan);
+        Assert.Null(row.InstallError);
+        Assert.Empty(row.Changelogs);
+    }
+
+    private static ModVersionMetadata Release(string version, ReleaseStatus status = ReleaseStatus.Stable, IReadOnlyList<ModDependency>? dependencies = null, string? changelog = null) => new(
         specVersion: 1,
         modId: OwnId,
         version: ModVersion.Parse(version),
@@ -250,7 +340,8 @@ public sealed class ContentUpdateTests
         gameMinRevision: 1,
         download: new DownloadInfo($"https://{ArchiveHost}/{OwnId}/{version}.zip", sha256: null, sizeBytes: null, contentType: "application/zip"),
         installSizeBytes: null,
-        dependencies: dependencies ?? []);
+        dependencies: dependencies ?? [],
+        changelog: changelog);
 
     /// <summary>Serves a zip with a mod.toml at its root for every archive URL.</summary>
     private static HttpResponseMessage? ServeArchive(HttpRequestMessage request)

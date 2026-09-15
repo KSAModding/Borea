@@ -261,11 +261,66 @@ public partial class MainViewModel
     internal Task UpdateAllContentAsync(UpdateAllItem item)
         => RunUpdateAsync(item, item.InstanceId, () => PlanUpdateAsync(item, item.InstanceId, _ => true));
 
-    internal Task ConfirmUpdateAsync(IInstallRow row, Guid instanceId)
-        => RunUpdateAsync(row, instanceId, () => ExecutePendingPlanAsync(row));
+    internal Task ConfirmUpdateAsync(IUpdateRow row, Guid instanceId)
+        => RunUpdateAsync(row, instanceId, () =>
+        {
+            row.Changelogs = [];
+            return ExecutePendingPlanAsync(row);
+        });
 
-    private Task<bool> PlanUpdateAsync(IInstallRow row, Guid instanceId, Func<InstalledMod, bool> select)
-        => PlanAndExecuteAsync(row, instanceId, instance => Task.FromResult(UpdateRequests(instance.Mods.Where(mod => mod.Ownership == ModInstallOwnership.Borea && select(mod)))));
+    internal static void CancelUpdate(IUpdateRow row)
+    {
+        CancelInstall(row);
+        row.Changelogs = [];
+    }
+
+    /// <summary>Waits for a confirmation on planner warnings or passed changelogs.</summary>
+    private Task<bool> PlanUpdateAsync(IUpdateRow row, Guid instanceId, Func<InstalledMod, bool> select)
+    {
+        row.Changelogs = [];
+        return PlanAndExecuteAsync(
+            row,
+            instanceId,
+            instance => Task.FromResult(UpdateRequests(instance.Mods.Where(mod => mod.Ownership == ModInstallOwnership.Borea && select(mod)))),
+            async (instance, plan) =>
+            {
+                row.Changelogs = await PassedChangelogsAsync(instance, plan);
+                return row.Changelogs.Count > 0;
+            });
+    }
+
+    /// <summary>Newest first, from the installed release up to the planned one.</summary>
+    private async Task<IReadOnlyList<ReleaseChangelog>> PassedChangelogsAsync(Instance instance, InstallPlan plan)
+    {
+        var changelogs = new List<ReleaseChangelog>();
+        if (_services is not { } services)
+            return changelogs;
+
+        foreach (var target in plan.Operations.Select(operation => operation.Release))
+        {
+            var installed = instance.Mods.FirstOrDefault(mod => ModIds.Equals(mod.ModId, target.ModId));
+            if (installed is null || target.Version <= installed.Version)
+                continue;
+
+            var name = _content.FirstOrDefault(content => ModIds.Equals(content.ModId, target.ModId))?.Name ?? target.Listing?.Name ?? target.ModId;
+            try
+            {
+                var versions = await services.Mods.GetAvailableVersionsAsync(target.ModId);
+                foreach (var version in versions.Where(version => version > installed.Version && version <= target.Version).OrderByDescending(version => version))
+                {
+                    var release = version == target.Version ? target : await services.Mods.GetReleaseAsync(target.ModId, version);
+                    if (release is not null && ReleaseChangelog.From(release, $"{name} {version}", Localization.ContentChangelog) is { } changelog)
+                        changelogs.Add(changelog);
+                }
+            }
+            catch (Exception exception) when (exception is System.Net.Http.HttpRequestException or IOException or InvalidOperationException or TaskCanceledException or System.Text.Json.JsonException)
+            {
+                // the update does not depend on its changelog
+            }
+        }
+
+        return changelogs;
+    }
 
     private static IReadOnlyList<RequestedMod> UpdateRequests(IEnumerable<InstalledMod> mods)
         => mods.Select(mod => new RequestedMod(mod.Metadata, mod.Reason, Exact: false)).ToList();
@@ -566,12 +621,18 @@ public partial class MainViewModel
     }
 }
 
+/// <summary>An update on the instance page.</summary>
+internal interface IUpdateRow : IInstallRow
+{
+    IReadOnlyList<ReleaseChangelog> Changelogs { get; set; }
+}
+
 public sealed record ContentGroup(string Title, IReadOnlyList<ContentItem> Items);
 
 /// <summary>
 /// One row of the instance's content table.
 /// </summary>
-public sealed partial class ContentItem : ObservableObject, IInstallRow
+public sealed partial class ContentItem : ObservableObject, IUpdateRow
 {
     private readonly MainViewModel _owner;
 
@@ -652,9 +713,19 @@ public sealed partial class ContentItem : ObservableObject, IInstallRow
     /// </summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsConfirmingUpdate))]
+    [NotifyPropertyChangedFor(nameof(ConfirmUpdateText))]
     private string? _installWarning;
 
-    public bool IsConfirmingUpdate => InstallWarning is not null;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsConfirmingUpdate))]
+    [NotifyPropertyChangedFor(nameof(HasChangelogs))]
+    private IReadOnlyList<ReleaseChangelog> _changelogs = [];
+
+    public bool HasChangelogs => Changelogs.Count > 0;
+
+    public bool IsConfirmingUpdate => InstallWarning is not null || HasChangelogs;
+
+    public string ConfirmUpdateText => InstallWarning is null ? _owner.Localization.ContentUpdate : _owner.Localization.UpdateAnyway;
 
     public InstallPlan? PendingPlan { get; set; }
 
@@ -694,7 +765,7 @@ public sealed partial class ContentItem : ObservableObject, IInstallRow
     [RelayCommand]
     private void BeginRemove()
     {
-        MainViewModel.CancelInstall(this);
+        MainViewModel.CancelUpdate(this);
         IsConfirmingRemove = true;
     }
 
@@ -711,14 +782,14 @@ public sealed partial class ContentItem : ObservableObject, IInstallRow
     private Task ConfirmUpdateAsync() => _owner.ConfirmUpdateAsync(this, InstanceId);
 
     [RelayCommand]
-    private void CancelUpdate() => MainViewModel.CancelInstall(this);
+    private void CancelUpdate() => MainViewModel.CancelUpdate(this);
 }
 
 /// <summary>
 /// "Update all" on the instance page. It holds its plan and its outcome the
 /// way a row does.
 /// </summary>
-public sealed partial class UpdateAllItem : ObservableObject, IInstallRow
+public sealed partial class UpdateAllItem : ObservableObject, IUpdateRow
 {
     private readonly MainViewModel _owner;
 
@@ -740,7 +811,20 @@ public sealed partial class UpdateAllItem : ObservableObject, IInstallRow
     private string? _installError;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsConfirmingUpdate))]
+    [NotifyPropertyChangedFor(nameof(ConfirmUpdateText))]
     private string? _installWarning;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsConfirmingUpdate))]
+    [NotifyPropertyChangedFor(nameof(HasChangelogs))]
+    private IReadOnlyList<ReleaseChangelog> _changelogs = [];
+
+    public bool HasChangelogs => Changelogs.Count > 0;
+
+    public bool IsConfirmingUpdate => InstallWarning is not null || HasChangelogs;
+
+    public string ConfirmUpdateText => InstallWarning is null ? _owner.Localization.ContentUpdate : _owner.Localization.UpdateAnyway;
 
     public InstallPlan? PendingPlan { get; set; }
 
@@ -757,5 +841,5 @@ public sealed partial class UpdateAllItem : ObservableObject, IInstallRow
     private Task ConfirmUpdateAsync() => _owner.ConfirmUpdateAsync(this, InstanceId);
 
     [RelayCommand]
-    private void CancelUpdate() => MainViewModel.CancelInstall(this);
+    private void CancelUpdate() => MainViewModel.CancelUpdate(this);
 }

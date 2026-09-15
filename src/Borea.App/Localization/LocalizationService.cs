@@ -229,6 +229,8 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string UpdateAnyway => Resources.UpdateAnyway;
 
+    public string ContentUpdate => Resources.ContentUpdate;
+
     public string InstallInstanceMissing => Resources.InstallInstanceMissing;
 
     public string ModalCreateInstanceTitle => Resources.ModalCreateInstanceTitle;
@@ -342,6 +344,8 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string ContentNoVersions => Resources.ContentNoVersions;
 
     public string ContentNoVersionsInChannel => Resources.ContentNoVersionsInChannel;
+
+    public string ContentChangelog => Resources.ContentChangelog;
 
     public string ContentTypeModLoader => Resources.ContentTypeModLoader;
 
