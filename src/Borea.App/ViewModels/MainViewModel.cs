@@ -535,7 +535,8 @@ public partial class MainViewModel : ViewModelBase
             && string.Equals(left.UiCultureName, right.UiCultureName, StringComparison.Ordinal)
             && left.CheckForUpdatesAtStart == right.CheckForUpdatesAtStart
             && left.UpdateChannel == right.UpdateChannel
-            && left.ForeignFolderDeletionConfirmed == right.ForeignFolderDeletionConfirmed;
+            && left.ForeignFolderDeletionConfirmed == right.ForeignFolderDeletionConfirmed
+            && left.LoadImagesFromAuthorHosts == right.LoadImagesFromAuthorHosts;
 
     private void OnRegionalFormatChanged(object? sender, PropertyChangedEventArgs e)
     {

@@ -381,6 +381,7 @@ public sealed class ContentIndexModRepositoryTests : IDisposable
     private sealed class TestPathProvider(string indexPath = "index.json") : IGamePathProvider
     {
         public string GetIndexPath() => indexPath;
+        public string GetImageCacheFolder() => throw new NotSupportedException();
 
         public string GetAppPreferencesPath() => "app-preferences.json";
         public string GetInstancesRoot() => throw new NotSupportedException();

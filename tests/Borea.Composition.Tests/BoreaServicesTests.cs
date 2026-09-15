@@ -83,6 +83,19 @@ public sealed class BoreaServicesTests : IDisposable
         Assert.StartsWith(_tempRoot, services.Paths.GetBoreaSettingsPath());
         Assert.StartsWith(_tempRoot, services.Paths.GetAppPreferencesPath());
         Assert.StartsWith(_tempRoot, services.Paths.GetInstancesRoot());
+        Assert.StartsWith(_tempRoot, services.Paths.GetImageCacheFolder());
+    }
+
+    [Fact]
+    public async Task Images_LoadingFromAuthorHostsOff_ServesNoUncachedImageAndWritesNothing()
+    {
+        using var services = await BoreaServices.BuildAsync(_tempRoot);
+        var icon = new IconImage("https://images.example/icon.png", new string('A', 64), 512, 512, 1000);
+
+        var result = await services.Images.GetAsync(icon, loadFromAuthorHosts: false);
+
+        Assert.Equal(ContentImageFailure.DisabledByPreference, result.Failure);
+        Assert.False(Directory.Exists(_tempRoot));
     }
 
     [Fact]
