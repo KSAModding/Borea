@@ -170,7 +170,7 @@ public partial class MainViewModel : ViewModelBase
     /// actions work from the Current Install card. Null when none is active.
     /// </summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(HasActiveInstance), nameof(EnableActiveInstance))]
+    [NotifyPropertyChangedFor(nameof(HasActiveInstance), nameof(EnableActiveInstance), nameof(EnableHomeLaunch))]
     private InstanceItem? _activeInstance;
 
     public bool HasActiveInstance => ActiveInstance is not null;
@@ -190,10 +190,23 @@ public partial class MainViewModel : ViewModelBase
     public ObservableCollection<InstanceItem> Instances { get; } = [];
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsNameModalOpen))]
     private bool _isCreatingInstance;
 
+    /// <summary>The row the name modal renames. Null while the modal creates an instance or is closed.</summary>
     [ObservableProperty]
-    private string _newInstanceName = string.Empty;
+    [NotifyPropertyChangedFor(nameof(IsNameModalOpen), nameof(NameModalTitle), nameof(NameModalConfirmText))]
+    private InstanceItem? _renamingInstance;
+
+    /// <summary>The name the modal creates or renames an instance with.</summary>
+    [ObservableProperty]
+    private string _modalInstanceName = string.Empty;
+
+    public bool IsNameModalOpen => IsCreatingInstance || RenamingInstance is not null;
+
+    public string NameModalTitle => RenamingInstance is null ? Localization.ModalCreateInstanceTitle : Localization.ModalRenameInstanceTitle;
+
+    public string NameModalConfirmText => RenamingInstance is null ? Localization.LibraryCreate : Localization.LibrarySave;
 
     /// <summary>
     /// The last instance operation that failed, as the repository reported it.
@@ -408,12 +421,22 @@ public partial class MainViewModel : ViewModelBase
         {
             var stillThere = Instances.FirstOrDefault(instance => instance.InstanceId == SelectedInstance.InstanceId);
             if (!CurrentWindowInstance)
+            {
                 SelectedInstance = stillThere;
+            }
             else if (stillThere is null)
+            {
                 SetMainWindowLibrary();
+            }
             else
+            {
+                // opening the page checks the updates of the active instance too
                 await OpenInstanceAsync(stillThere);
+                return;
+            }
         }
+
+        StartContentUpdateCheck();
     }
 
     internal string? DescribeSource(InstanceSource? source) => source switch
@@ -438,24 +461,59 @@ public partial class MainViewModel : ViewModelBase
     [RelayCommand]
     private void BeginCreateInstance()
     {
-        NewInstanceName = string.Empty;
+        ModalInstanceName = string.Empty;
+        RenamingInstance = null;
         IsCreatingInstance = true;
     }
 
+    /// <summary>Opens the name modal to rename <paramref name="item"/>.</summary>
+    internal void BeginRenameInstance(InstanceItem item)
+    {
+        item.IsConfirmingDelete = false;
+        InstanceError = null;
+        ModalInstanceName = item.Name;
+        IsCreatingInstance = false;
+        RenamingInstance = item;
+    }
+
     [RelayCommand]
-    private void CancelCreateInstance() => IsCreatingInstance = false;
+    private void CancelNameModal()
+    {
+        IsCreatingInstance = false;
+        RenamingInstance = null;
+    }
+
+    [RelayCommand]
+    private Task ConfirmNameModalAsync() => RenamingInstance is { } item ? RenameFromModalAsync(item) : CreateInstanceAsync();
 
     [RelayCommand]
     private Task CreateInstanceAsync() => RunInstanceOperationAsync(async instances =>
     {
-        var name = NewInstanceName.Trim();
+        var name = ModalInstanceName.Trim();
         if (name.Length == 0)
             return;
 
         await instances.CreateAsync(name, InstanceSource.Custom.Value);
-        NewInstanceName = string.Empty;
+        ModalInstanceName = string.Empty;
         IsCreatingInstance = false;
     });
+
+    /// <summary>Keeps the modal open with the error when the repository refuses the name.</summary>
+    private async Task RenameFromModalAsync(InstanceItem item)
+    {
+        var name = ModalInstanceName.Trim();
+        if (name.Length == 0)
+            return;
+
+        if (name != item.Name)
+        {
+            await RenameInstanceAsync(item.InstanceId, name);
+            if (InstanceError is not null)
+                return;
+        }
+
+        RenamingInstance = null;
+    }
 
     internal Task ActivateInstanceAsync(Guid instanceId)
         => RunInstanceOperationAsync(instances => instances.SetActiveInstanceAsync(instanceId));
@@ -468,6 +526,30 @@ public partial class MainViewModel : ViewModelBase
 
     internal Task DeleteInstanceAsync(Guid instanceId)
         => RunInstanceOperationAsync(instances => instances.DeleteAsync(instanceId));
+
+    /// <summary>Opens the folder of the instance, and creates it when it does not exist yet.</summary>
+    internal void OpenInstanceFolder(Guid instanceId)
+    {
+        if (_services is not { } services)
+            return;
+
+        var root = services.Paths.GetInstanceRoot(instanceId);
+        string? error;
+        try
+        {
+            Directory.CreateDirectory(root);
+            error = TryOpenWithSystem(root);
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            error = exception.Message;
+        }
+
+        if (CurrentWindowLibrary)
+            InstanceError = error;
+        else
+            ContentError = error;
+    }
 
     /// <summary>
     /// Runs one repository call, then reloads the list so every row reflects
@@ -541,7 +623,8 @@ public partial class MainViewModel : ViewModelBase
             && left.CheckForUpdatesAtStart == right.CheckForUpdatesAtStart
             && left.UpdateChannel == right.UpdateChannel
             && left.ForeignFolderDeletionConfirmed == right.ForeignFolderDeletionConfirmed
-            && left.LoadImagesFromAuthorHosts == right.LoadImagesFromAuthorHosts;
+            && left.LoadImagesFromAuthorHosts == right.LoadImagesFromAuthorHosts
+            && left.HomeLaunch == right.HomeLaunch;
 
     private void OnRegionalFormatChanged(object? sender, PropertyChangedEventArgs e)
     {
@@ -593,6 +676,10 @@ public partial class MainViewModel : ViewModelBase
         RefreshIndexStatusText();
         OnPropertyChanged(nameof(GameSetupBannerText));
         OnPropertyChanged(nameof(InstalledInText));
+        OnPropertyChanged(nameof(ActiveInstanceUpdatesText));
+        OnPropertyChanged(nameof(HomeLaunchText));
+        OnPropertyChanged(nameof(NameModalTitle));
+        OnPropertyChanged(nameof(NameModalConfirmText));
         OnPropertyChanged(nameof(ContentVersionsEmptyText));
 
         QueuePreferenceSave(preferences => preferences.WithUiCultureName(Localization.SelectedCultureName));
@@ -646,8 +733,8 @@ public sealed partial class RecentItem : ObservableObject
 }
 
 /// <summary>
-/// One row of the instance list. Rename and delete happen inline: the row
-/// switches into an editing or confirming state instead of opening a dialog.
+/// One row of the instance list. Delete asks for a confirmation in the row, and
+/// rename opens the name modal.
 /// </summary>
 public sealed partial class InstanceItem : ObservableObject
 {
@@ -670,13 +757,7 @@ public sealed partial class InstanceItem : ObservableObject
     public string? SourceText => _owner.DescribeSource(_source);
 
     [ObservableProperty]
-    private bool _isRenaming;
-
-    [ObservableProperty]
     private bool _isConfirmingDelete;
-
-    [ObservableProperty]
-    private string _editName;
 
     public InstanceItem(MainViewModel owner, Instance instance, bool isActive)
     {
@@ -689,7 +770,6 @@ public sealed partial class InstanceItem : ObservableObject
         ModIds = Mods.Select(mod => mod.ModId).ToList();
         _modVersions = instance.Mods.ToDictionary(mod => mod.ModId, mod => mod.Version, Borea.Core.Mods.ModIds.Comparer);
         IsActive = isActive;
-        _editName = instance.Name;
     }
 
     internal void RefreshText() => OnPropertyChanged(nameof(SourceText));
@@ -711,36 +791,17 @@ public sealed partial class InstanceItem : ObservableObject
     private Task OpenAsync() => _owner.OpenInstanceAsync(this);
 
     [RelayCommand]
-    private void BeginRename()
-    {
-        EditName = Name;
-        IsConfirmingDelete = false;
-        IsRenaming = true;
-    }
+    private void BeginRename() => _owner.BeginRenameInstance(this);
 
     [RelayCommand]
-    private Task CommitRenameAsync()
-    {
-        IsRenaming = false;
-        return string.IsNullOrWhiteSpace(EditName) || EditName.Trim() == Name
-            ? Task.CompletedTask
-            : _owner.RenameInstanceAsync(InstanceId, EditName);
-    }
+    private void OpenFolder() => _owner.OpenInstanceFolder(InstanceId);
 
     [RelayCommand]
-    private void BeginDelete()
-    {
-        IsRenaming = false;
-        IsConfirmingDelete = true;
-    }
+    private void BeginDelete() => IsConfirmingDelete = true;
 
     [RelayCommand]
     private Task ConfirmDeleteAsync() => _owner.DeleteInstanceAsync(InstanceId);
 
     [RelayCommand]
-    private void Cancel()
-    {
-        IsRenaming = false;
-        IsConfirmingDelete = false;
-    }
+    private void Cancel() => IsConfirmingDelete = false;
 }

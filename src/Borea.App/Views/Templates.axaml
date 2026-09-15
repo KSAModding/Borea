@@ -13,8 +13,23 @@
             </Grid>
         </Border>
     </DataTemplate>
+    <!-- what the last launch said, on Home and on the instance page -->
+    <DataTemplate x:Key="LaunchStatus" x:DataType="vm:MainViewModel">
+        <StackPanel>
+            <TextBlock Classes="body-md secondary" Text="{Binding LaunchMessage}" TextWrapping="Wrap" Margin="0,16,0,0" IsVisible="{Binding LaunchMessage, Converter={x:Static ObjectConverters.IsNotNull}}" Classes.danger="{Binding HasLaunchOutput}" />
+            <!-- the loader stopped while it loaded: the way out, and what it wrote -->
+            <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,8,0,0" IsVisible="{Binding HasLaunchOutput}">
+                <Button Classes="text primary" Content="{Binding DisableBlamedModText}" Command="{Binding DisableBlamedModCommand}" IsVisible="{Binding CanDisableBlamedMod}" />
+                <Button Classes="text" Content="{Binding Localization.LaunchShowDetails}" Command="{Binding ToggleLaunchOutputCommand}" />
+                <Button Classes="text" Content="{Binding Localization.LaunchOpenLog}" Command="{Binding OpenLaunchLogCommand}" />
+            </StackPanel>
+            <Border Classes="card" Padding="16" Margin="0,8,0,0" IsVisible="{Binding IsLaunchOutputShown}">
+                <SelectableTextBlock Classes="log-line" Text="{Binding LaunchOutputText}" TextWrapping="Wrap" />
+            </Border>
+        </StackPanel>
+    </DataTemplate>
     <!-- c/instance-row: used by the library list and by the Current Install card on Home.
-         Rename and delete happen inline; the row swaps its title or its actions for the edit. -->
+         Delete asks for a confirmation in the row, and rename opens the name modal. -->
     <DataTemplate x:Key="InstanceRow" x:DataType="vm:InstanceItem">
         <Border Classes="card" Padding="12">
             <Grid ColumnDefinitions="70,16,*" RowDefinitions="Auto,*,Auto" Height="70">
@@ -24,40 +39,23 @@
                     </Border>
                 </Button>
 
-                <!-- Title row: name or the rename field; switch + more, or the edit's buttons -->
+                <!-- Title row: the name, and the switch + more or the delete confirmation -->
                 <Grid Grid.Column="2" Grid.Row="0" ColumnDefinitions="*,16,Auto">
-                    <Panel VerticalAlignment="Center">
-                        <Button Classes="plain" Command="{Binding OpenCommand}" IsVisible="{Binding !IsRenaming}" HorizontalAlignment="Left">
-                            <TextBlock Classes="heading-md" Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
-                        </Button>
-                        <TextBox Classes="field" Text="{Binding EditName}" IsVisible="{Binding IsRenaming}" Padding="8,2" MaxWidth="360" HorizontalAlignment="Left" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryRename}">
-                            <TextBox.KeyBindings>
-                                <KeyBinding Gesture="Enter" Command="{Binding CommitRenameCommand}" />
-                                <KeyBinding Gesture="Escape" Command="{Binding CancelCommand}" />
-                            </TextBox.KeyBindings>
-                        </TextBox>
-                    </Panel>
+                    <Button Classes="plain" Command="{Binding OpenCommand}" HorizontalAlignment="Left" VerticalAlignment="Center">
+                        <TextBlock Classes="heading-md" Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
+                    </Button>
                     <Panel Grid.Column="2" VerticalAlignment="Center">
-                        <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding IsRenaming}">
-                            <Button Classes="text primary" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibrarySave}" Command="{Binding CommitRenameCommand}" />
-                            <Button Classes="text" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryCancel}" Command="{Binding CancelCommand}" />
-                        </StackPanel>
                         <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding IsConfirmingDelete}">
                             <Button Classes="text danger" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryDelete}" Command="{Binding ConfirmDeleteCommand}" />
                             <Button Classes="text" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryCancel}" Command="{Binding CancelCommand}" />
                         </StackPanel>
-                        <StackPanel Orientation="Horizontal" Spacing="12">
-                            <StackPanel.IsVisible>
-                                <MultiBinding Converter="{x:Static BoolConverters.And}">
-                                    <Binding Path="!IsRenaming" />
-                                    <Binding Path="!IsConfirmingDelete" />
-                                </MultiBinding>
-                            </StackPanel.IsVisible>
+                        <StackPanel Orientation="Horizontal" Spacing="12" IsVisible="{Binding !IsConfirmingDelete}">
                             <ToggleSwitch Classes="switch" IsChecked="{Binding IsActive, Mode=OneWay}" Command="{Binding ToggleActiveCommand}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryActivate}" VerticalAlignment="Center" />
                             <Button Classes="icon" AutomationProperties.Name="{Binding Name}">
                                 <Button.Flyout>
                                     <MenuFlyout Placement="BottomEdgeAlignedRight">
                                         <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryRename}" Command="{Binding BeginRenameCommand}" />
+                                        <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryOpenFolder}" Command="{Binding OpenFolderCommand}" />
                                         <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryDelete}" Command="{Binding BeginDeleteCommand}" />
                                     </MenuFlyout>
                                 </Button.Flyout>
@@ -68,7 +66,7 @@
                 </Grid>
 
                 <!-- Bottom row: chips, and the meta on the right -->
-                <Grid Grid.Column="2" Grid.Row="2" ColumnDefinitions="*,Auto" Margin="0,0,4,0">
+                <Grid Grid.Column="2" Grid.Row="2" ColumnDefinitions="*,Auto,Auto" Margin="0,0,4,0">
                     <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
                         <Border Classes="chip positive" IsVisible="{Binding SourceText, Converter={x:Static ObjectConverters.IsNotNull}}">
                             <TextBlock Text="{Binding SourceText}" />
@@ -80,6 +78,19 @@
                         <Path Classes="icon size-16" Data="{StaticResource Icon.CirclesThree}" />
                         <TextBlock Classes="label-md" Text="{Binding ModCount}" VerticalAlignment="Center" />
                     </StackPanel>
+                    <!-- the update count shows only on the Current Install card of Home -->
+                    <Button Grid.Column="2" Classes="link" Height="24" Padding="6,0" Margin="8,0,0,0" VerticalAlignment="Center" Command="{Binding OpenCommand}">
+                        <Button.IsVisible>
+                            <MultiBinding Converter="{x:Static BoolConverters.And}">
+                                <Binding Path="$parent[Window].((vm:MainViewModel)DataContext).CurrentWindowHome" />
+                                <Binding Path="$parent[Window].((vm:MainViewModel)DataContext).HasActiveInstanceUpdates" />
+                            </MultiBinding>
+                        </Button.IsVisible>
+                        <StackPanel Orientation="Horizontal" Spacing="4">
+                            <Path Classes="icon size-16" Stroke="{StaticResource Brush.Accent}" Data="{StaticResource Icon.ArrowsLeftRight}" />
+                            <TextBlock Classes="label-md" Foreground="{StaticResource Brush.Accent}" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).ActiveInstanceUpdatesText}" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Button>
                 </Grid>
             </Grid>
         </Border>

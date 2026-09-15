@@ -1,5 +1,7 @@
+using Borea.App.ViewModels;
 using Borea.Core.Instances;
 using Borea.Core.Mods;
+using Borea.Core.Preferences;
 
 namespace Borea.App.Tests.ViewModels;
 
@@ -162,5 +164,44 @@ public sealed class InstanceViewModelTests
         // InstalledVersionText is null when no Game Directory is set
         Assert.Null(viewModel.InstalledVersionText);
         Assert.NotNull(viewModel.LaunchMessage);
+    }
+
+    [Fact]
+    public async Task HomeLaunch_ChosenFromTheMenu_BecomesTheButtonAndIsSaved()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var viewModel = harness.ViewModel;
+        Assert.True(viewModel.IsHomeLaunchActiveInstance);
+        Assert.Equal(harness.Localization.LaunchActiveInstance, viewModel.HomeLaunchText);
+        Assert.False(viewModel.EnableHomeLaunch);
+
+        await viewModel.PlayWithoutModLoaderCommand.ExecuteAsync(null);
+        await viewModel.WhenPreferencesSavedAsync();
+
+        Assert.False(viewModel.IsHomeLaunchActiveInstance);
+        Assert.Equal(harness.Localization.LaunchWithoutModLoader, viewModel.HomeLaunchText);
+        Assert.True(viewModel.EnableHomeLaunch);
+        var saved = await harness.Services.AppPreferences.GetAsync(MainViewModel.BundledThemeNames);
+        Assert.Equal(HomeLaunchOption.WithoutModLoader, saved.Preferences.HomeLaunch);
+
+        await viewModel.PlayActiveInstanceCommand.ExecuteAsync(null);
+
+        Assert.True(viewModel.IsHomeLaunchActiveInstance);
+        Assert.Equal(harness.Localization.LaunchActiveInstance, viewModel.HomeLaunchText);
+    }
+
+    [Fact]
+    public async Task HomeLaunch_Button_StartsTheOptionLastChosen()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var viewModel = harness.ViewModel;
+        await viewModel.PlayWithoutModLoaderCommand.ExecuteAsync(null);
+        var withoutLoaderMessage = viewModel.LaunchMessage;
+        viewModel.LaunchMessage = null;
+
+        await viewModel.PlayHomeCommand.ExecuteAsync(null);
+
+        Assert.NotNull(withoutLoaderMessage);
+        Assert.Equal(withoutLoaderMessage, viewModel.LaunchMessage);
     }
 }

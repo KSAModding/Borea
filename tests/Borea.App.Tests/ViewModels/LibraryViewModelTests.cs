@@ -23,14 +23,16 @@ public sealed class LibraryViewModelTests
         var viewModel = harness.ViewModel;
 
         viewModel.BeginCreateInstanceCommand.Execute(null);
-        viewModel.NewInstanceName = "  Career  ";
+        Assert.True(viewModel.IsNameModalOpen);
+        Assert.Equal(harness.Localization.ModalCreateInstanceTitle, viewModel.NameModalTitle);
+        viewModel.ModalInstanceName = "  Career  ";
         await viewModel.CreateInstanceCommand.ExecuteAsync(null);
 
         var row = Assert.Single(viewModel.Instances);
         Assert.Equal("Career", row.Name);
         Assert.Equal(harness.Localization.HomeInstanceSourceCustom, row.SourceText);
         Assert.False(viewModel.IsCreatingInstance);
-        Assert.Equal(string.Empty, viewModel.NewInstanceName);
+        Assert.Equal(string.Empty, viewModel.ModalInstanceName);
         Assert.Null(viewModel.InstanceError);
     }
 
@@ -41,9 +43,9 @@ public sealed class LibraryViewModelTests
         var viewModel = harness.ViewModel;
 
         viewModel.BeginCreateInstanceCommand.Execute(null);
-        viewModel.NewInstanceName = "   ";
+        viewModel.ModalInstanceName = "   ";
         await viewModel.CreateInstanceCommand.ExecuteAsync(null);
-        viewModel.CancelCreateInstanceCommand.Execute(null);
+        viewModel.CancelNameModalCommand.Execute(null);
 
         Assert.Empty(viewModel.Instances);
         Assert.False(viewModel.IsCreatingInstance);
@@ -55,9 +57,9 @@ public sealed class LibraryViewModelTests
         using var harness = await ViewModelHarness.CreateAsync();
         var viewModel = harness.ViewModel;
 
-        viewModel.NewInstanceName = "Career";
+        viewModel.ModalInstanceName = "Career";
         await viewModel.CreateInstanceCommand.ExecuteAsync(null);
-        viewModel.NewInstanceName = "career";
+        viewModel.ModalInstanceName = "career";
         await viewModel.CreateInstanceCommand.ExecuteAsync(null);
 
         Assert.Single(viewModel.Instances);
@@ -104,7 +106,7 @@ public sealed class LibraryViewModelTests
     }
 
     [Fact]
-    public async Task Rename_CommitsTheTrimmedName()
+    public async Task Rename_FromTheModal_SavesTheTrimmedNameAndClosesTheModal()
     {
         using var harness = await ViewModelHarness.CreateAsync();
         var viewModel = harness.ViewModel;
@@ -113,12 +115,17 @@ public sealed class LibraryViewModelTests
         var row = Assert.Single(viewModel.Instances);
 
         row.BeginRenameCommand.Execute(null);
-        Assert.True(row.IsRenaming);
-        Assert.Equal("Alpha", row.EditName);
-        row.EditName = " Gamma ";
-        await row.CommitRenameCommand.ExecuteAsync(null);
+        Assert.True(viewModel.IsNameModalOpen);
+        Assert.Same(row, viewModel.RenamingInstance);
+        Assert.Equal("Alpha", viewModel.ModalInstanceName);
+        Assert.Equal(harness.Localization.ModalRenameInstanceTitle, viewModel.NameModalTitle);
+        Assert.Equal(harness.Localization.LibrarySave, viewModel.NameModalConfirmText);
+        viewModel.ModalInstanceName = " Gamma ";
+        await viewModel.ConfirmNameModalCommand.ExecuteAsync(null);
 
         Assert.Equal("Gamma", Assert.Single(viewModel.Instances).Name);
+        Assert.False(viewModel.IsNameModalOpen);
+        Assert.Null(viewModel.RenamingInstance);
     }
 
     [Fact]
@@ -131,13 +138,51 @@ public sealed class LibraryViewModelTests
         var row = Assert.Single(viewModel.Instances);
 
         row.BeginRenameCommand.Execute(null);
-        await row.CommitRenameCommand.ExecuteAsync(null);
+        await viewModel.ConfirmNameModalCommand.ExecuteAsync(null);
+        Assert.False(viewModel.IsNameModalOpen);
         row.BeginRenameCommand.Execute(null);
-        row.EditName = "Other";
-        row.CancelCommand.Execute(null);
+        viewModel.ModalInstanceName = "Other";
+        viewModel.CancelNameModalCommand.Execute(null);
 
-        Assert.False(row.IsRenaming);
+        Assert.False(viewModel.IsNameModalOpen);
         Assert.Equal("Alpha", (await harness.Services.Instances.GetAllAsync()).Single().Name);
+    }
+
+    [Fact]
+    public async Task Rename_TakenName_KeepsTheModalOpenWithTheError()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var viewModel = harness.ViewModel;
+        await harness.Services.Instances.CreateAsync("Alpha", InstanceSource.Custom.Value);
+        await harness.Services.Instances.CreateAsync("Beta", InstanceSource.Custom.Value);
+        await viewModel.LoadAsync();
+
+        viewModel.Instances.Single(row => row.Name == "Beta").BeginRenameCommand.Execute(null);
+        viewModel.ModalInstanceName = "alpha";
+        await viewModel.ConfirmNameModalCommand.ExecuteAsync(null);
+
+        Assert.True(viewModel.IsNameModalOpen);
+        Assert.NotNull(viewModel.InstanceError);
+        Assert.Equal(["Alpha", "Beta"], (await harness.Services.Instances.GetAllAsync()).Select(instance => instance.Name).Order());
+    }
+
+    [Fact]
+    public async Task OpenFolder_CreatesAndOpensTheInstanceFolder()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var viewModel = harness.ViewModel;
+        var instance = await harness.Services.Instances.CreateAsync("Alpha", InstanceSource.Custom.Value);
+        await viewModel.LoadAsync();
+        viewModel.SetMainWindowLibraryCommand.Execute(null);
+        string? opened = null;
+        viewModel.OpenWithSystem = target => opened = target;
+
+        Assert.Single(viewModel.Instances).OpenFolderCommand.Execute(null);
+
+        var root = harness.Services.Paths.GetInstanceRoot(instance.InstanceId);
+        Assert.Equal(root, opened);
+        Assert.True(Directory.Exists(root));
+        Assert.Null(viewModel.InstanceError);
     }
 
     [Fact]
@@ -149,9 +194,7 @@ public sealed class LibraryViewModelTests
         await viewModel.LoadAsync();
         var row = Assert.Single(viewModel.Instances);
 
-        row.BeginRenameCommand.Execute(null);
         row.BeginDeleteCommand.Execute(null);
-        Assert.False(row.IsRenaming);
         Assert.True(row.IsConfirmingDelete);
         await row.ConfirmDeleteCommand.ExecuteAsync(null);
 

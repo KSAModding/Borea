@@ -114,6 +114,12 @@
   <data name="HomeInstanceSourceCustom" xml:space="preserve">
     <value>Eigene</value>
   </data>
+  <data name="HomeUpdate" xml:space="preserve">
+    <value>1 Update</value>
+  </data>
+  <data name="HomeUpdatesFormat" xml:space="preserve">
+    <value>{0} Updates</value>
+  </data>
   <data name="ContentTypeMod" xml:space="preserve">
     <value>Mod</value>
   </data>
@@ -128,6 +134,9 @@
   </data>
   <data name="LibraryRename" xml:space="preserve">
     <value>Umbenennen</value>
+  </data>
+  <data name="LibraryOpenFolder" xml:space="preserve">
+    <value>Ordner öffnen</value>
   </data>
   <data name="LibraryDelete" xml:space="preserve">
     <value>Löschen</value>
@@ -372,6 +381,9 @@
   <data name="ModalCreateInstanceTitle" xml:space="preserve">
     <value>Instanz erstellen</value>
   </data>
+  <data name="ModalRenameInstanceTitle" xml:space="preserve">
+    <value>Instanz umbenennen</value>
+  </data>
   <data name="ModalNameLabel" xml:space="preserve">
     <value>Name</value>
   </data>
@@ -609,6 +621,9 @@
   <data name="LinkBugTracker" xml:space="preserve">
     <value>Fehlertracker</value>
   </data>
+  <data name="LinkHomepage" xml:space="preserve">
+    <value>Webseite</value>
+  </data>
   <data name="LinkDiscussions" xml:space="preserve">
     <value>Diskussionen</value>
   </data>
@@ -756,6 +771,9 @@
   <data name="LaunchActiveInstance" xml:space="preserve">
     <value>Aktive Instanz starten</value>
   </data>
+  <data name="LaunchInstanceMissing" xml:space="preserve">
+    <value>Diese Instanz existiert nicht mehr.</value>
+  </data>
   <data name="LaunchWithoutModLoaderToolTip" xml:space="preserve">
     <value>Startet KSA so, als würdest du KSA.exe direkt ausführen. Es nutzt das gemeinsame Profil, das KSA selbst anlegt, und keine Borea-Instanz.</value>
   </data>
@@ -787,7 +805,7 @@
     <value>{0} deaktivieren</value>
   </data>
   <data name="LaunchModDisabledFormat" xml:space="preserve">
-    <value>{0} ist deaktiviert. Drücke Spielen, um es erneut zu versuchen.</value>
+    <value>{0} ist deaktiviert. Starte die Instanz erneut.</value>
   </data>
   <data name="LaunchShowDetails" xml:space="preserve">
     <value>Details anzeigen</value>

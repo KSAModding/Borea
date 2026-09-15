@@ -19,6 +19,7 @@ public static class LinkIcon
             "repository" => "Icon.GithubLogo",
             "spacedock" => "Icon.Lightning",
             "bugtracker" => "Icon.Bug",
+            "homepage" => "Icon.Home",
             "discussions" => "Icon.ChatCircle",
             _ => "Icon.LinkSimple",
         };

@@ -48,6 +48,7 @@
                                 <Button.Flyout>
                                     <MenuFlyout Placement="BottomEdgeAlignedRight">
                                         <MenuItem Header="{Binding Localization.LibraryRename}" Command="{Binding SelectedInstance.BeginRenameCommand}" />
+                                        <MenuItem Header="{Binding Localization.LibraryOpenFolder}" Command="{Binding SelectedInstance.OpenFolderCommand}" />
                                         <MenuItem Header="{Binding Localization.LibraryDelete}" Command="{Binding SelectedInstance.BeginDeleteCommand}" />
                                     </MenuFlyout>
                                 </Button.Flyout>
@@ -67,26 +68,10 @@
                 </Grid>
             </Grid>
 
-            <!-- the rename / delete edits of the selected row, so they work from here too -->
-            <ContentControl Content="{Binding SelectedInstance}" ContentTemplate="{StaticResource InstanceRow}" Margin="0,16,0,0">
-                <ContentControl.IsVisible>
-                    <MultiBinding Converter="{x:Static BoolConverters.Or}">
-                        <Binding Path="SelectedInstance.IsRenaming" />
-                        <Binding Path="SelectedInstance.IsConfirmingDelete" />
-                    </MultiBinding>
-                </ContentControl.IsVisible>
-            </ContentControl>
+            <!-- the delete confirmation of the selected row, so it works from here too -->
+            <ContentControl Content="{Binding SelectedInstance}" ContentTemplate="{StaticResource InstanceRow}" Margin="0,16,0,0" IsVisible="{Binding SelectedInstance.IsConfirmingDelete, FallbackValue=False}" />
 
-            <TextBlock Classes="body-md secondary" Text="{Binding LaunchMessage}" TextWrapping="Wrap" Margin="0,16,0,0" IsVisible="{Binding LaunchMessage, Converter={x:Static ObjectConverters.IsNotNull}}" Classes.danger="{Binding HasLaunchOutput}" />
-            <!-- the loader stopped while it loaded: the way out, and what it wrote -->
-            <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,8,0,0" IsVisible="{Binding HasLaunchOutput}">
-                <Button Classes="text primary" Content="{Binding DisableBlamedModText}" Command="{Binding DisableBlamedModCommand}" IsVisible="{Binding CanDisableBlamedMod}" />
-                <Button Classes="text" Content="{Binding Localization.LaunchShowDetails}" Command="{Binding ToggleLaunchOutputCommand}" />
-                <Button Classes="text" Content="{Binding Localization.LaunchOpenLog}" Command="{Binding OpenLaunchLogCommand}" />
-            </StackPanel>
-            <Border Classes="card" Padding="16" Margin="0,8,0,0" IsVisible="{Binding IsLaunchOutputShown}">
-                <SelectableTextBlock Classes="log-line" Text="{Binding LaunchOutputText}" TextWrapping="Wrap" />
-            </Border>
+            <ContentControl Content="{Binding}" ContentTemplate="{StaticResource LaunchStatus}" />
             <TextBlock Classes="body-md danger" Text="{Binding ContentError}" TextWrapping="Wrap" Margin="0,16,0,0" IsVisible="{Binding ContentError, Converter={x:Static ObjectConverters.IsNotNull}}" />
             <TextBlock Classes="body-md secondary" Text="{Binding UpdateAll.ProgressStatus}" TextWrapping="Wrap" Margin="0,16,0,0" IsVisible="{Binding UpdateAll.ProgressStatus, Converter={x:Static ObjectConverters.IsNotNull}}" />
             <Grid ColumnDefinitions="*,Auto" Margin="0,16,0,0" IsVisible="{Binding UpdateAll.IsConfirmingUpdate}">

@@ -21,6 +21,9 @@ internal sealed class AppPreferencesDocumentDto
     /// <summary>Null in an older file, which reads as on.</summary>
     public bool? LoadImagesFromAuthorHosts { get; set; }
 
+    /// <summary>"active-instance" or "without-mod-loader". Null or an unknown name reads as the active instance.</summary>
+    public string? HomeLaunch { get; set; }
+
     public List<CustomThemePreferenceDto?>? CustomThemes { get; set; }
 }
 

@@ -12,6 +12,10 @@ internal static class AppPreferencesMapper
 
     private const string DevName = "dev";
 
+    private const string ActiveInstanceName = "active-instance";
+
+    private const string WithoutModLoaderName = "without-mod-loader";
+
     public static AppPreferencesDocumentDto ToDto(AppPreferences preferences) => new()
     {
         FormatVersion = FileAppPreferencesRepository.CurrentFormatVersion,
@@ -27,11 +31,12 @@ internal static class AppPreferencesMapper
         },
         ForeignFolderDeletionConfirmed = preferences.ForeignFolderDeletionConfirmed,
         LoadImagesFromAuthorHosts = preferences.LoadImagesFromAuthorHosts,
+        HomeLaunch = preferences.HomeLaunch == HomeLaunchOption.WithoutModLoader ? WithoutModLoaderName : ActiveInstanceName,
         CustomThemes = preferences.CustomThemes.Select(theme => (CustomThemePreferenceDto?)ToDto(theme)).ToList(),
     };
 
     public static AppPreferences FromDto(AppPreferencesDocumentDto dto)
-        => new(dto.SelectedTheme, dto.CustomThemes?.Select(FromDto), NormalizeRegionalCulture(dto.RegionalCulture), NormalizeUiCulture(dto.UiCulture), dto.CheckForUpdatesAtStart ?? true, ReadUpdateChannel(dto.UpdateChannel), dto.ForeignFolderDeletionConfirmed ?? false, dto.LoadImagesFromAuthorHosts ?? true);
+        => new(dto.SelectedTheme, dto.CustomThemes?.Select(FromDto), NormalizeRegionalCulture(dto.RegionalCulture), NormalizeUiCulture(dto.UiCulture), dto.CheckForUpdatesAtStart ?? true, ReadUpdateChannel(dto.UpdateChannel), dto.ForeignFolderDeletionConfirmed ?? false, dto.LoadImagesFromAuthorHosts ?? true, ReadHomeLaunch(dto.HomeLaunch));
 
     private static BoreaUpdateChannel ReadUpdateChannel(string? name)
         => name?.ToLowerInvariant() switch
@@ -75,6 +80,9 @@ internal static class AppPreferencesMapper
             return null;
         }
     }
+
+    private static HomeLaunchOption ReadHomeLaunch(string? name)
+        => string.Equals(name, WithoutModLoaderName, StringComparison.OrdinalIgnoreCase) ? HomeLaunchOption.WithoutModLoader : HomeLaunchOption.ActiveInstance;
 
     private static CustomThemePreferenceDto ToDto(CustomThemePreference theme) => new()
     {

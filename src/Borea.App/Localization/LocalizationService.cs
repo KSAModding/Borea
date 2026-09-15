@@ -99,6 +99,8 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string HomeInstanceSourceCustom => Resources.HomeInstanceSourceCustom;
 
+    public string FormatHomeUpdates(int count) => FormatCount(count, Resources.HomeUpdate, Resources.HomeUpdatesFormat);
+
     public string ContentTypeMod => Resources.ContentTypeMod;
 
     public string LibraryNewInstancePlaceholder => Resources.LibraryNewInstancePlaceholder;
@@ -110,6 +112,8 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string LibraryActivate => Resources.LibraryActivate;
 
     public string LibraryRename => Resources.LibraryRename;
+
+    public string LibraryOpenFolder => Resources.LibraryOpenFolder;
 
     public string LibraryDelete => Resources.LibraryDelete;
 
@@ -241,6 +245,8 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string ModalCreateInstanceTitle => Resources.ModalCreateInstanceTitle;
 
+    public string ModalRenameInstanceTitle => Resources.ModalRenameInstanceTitle;
+
     public string ModalNameLabel => Resources.ModalNameLabel;
 
     public string ModalClose => Resources.ModalClose;
@@ -304,6 +310,8 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string LinkRepository => Resources.LinkRepository;
 
     public string LinkBugTracker => Resources.LinkBugTracker;
+
+    public string LinkHomepage => Resources.LinkHomepage;
 
     public string LinkDiscussions => Resources.LinkDiscussions;
 
@@ -448,6 +456,8 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string LaunchWithoutModLoader => Resources.LaunchWithoutModLoader;
 
     public string LaunchActiveInstance => Resources.LaunchActiveInstance;
+
+    public string LaunchInstanceMissing => Resources.LaunchInstanceMissing;
 
     public string LaunchWithoutModLoaderToolTip => Resources.LaunchWithoutModLoaderToolTip;
 

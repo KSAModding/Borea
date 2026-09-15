@@ -114,6 +114,12 @@
   <data name="HomeInstanceSourceCustom" xml:space="preserve">
     <value>Custom</value>
   </data>
+  <data name="HomeUpdate" xml:space="preserve">
+    <value>1 update</value>
+  </data>
+  <data name="HomeUpdatesFormat" xml:space="preserve">
+    <value>{0} updates</value>
+  </data>
   <data name="ContentTypeMod" xml:space="preserve">
     <value>Mod</value>
   </data>
@@ -128,6 +134,9 @@
   </data>
   <data name="LibraryRename" xml:space="preserve">
     <value>Rename</value>
+  </data>
+  <data name="LibraryOpenFolder" xml:space="preserve">
+    <value>Open folder</value>
   </data>
   <data name="LibraryDelete" xml:space="preserve">
     <value>Delete</value>
@@ -372,6 +381,9 @@
   <data name="ModalCreateInstanceTitle" xml:space="preserve">
     <value>Create instance</value>
   </data>
+  <data name="ModalRenameInstanceTitle" xml:space="preserve">
+    <value>Rename instance</value>
+  </data>
   <data name="ModalNameLabel" xml:space="preserve">
     <value>Name</value>
   </data>
@@ -609,6 +621,9 @@
   <data name="LinkBugTracker" xml:space="preserve">
     <value>Bug tracker</value>
   </data>
+  <data name="LinkHomepage" xml:space="preserve">
+    <value>Homepage</value>
+  </data>
   <data name="LinkDiscussions" xml:space="preserve">
     <value>Discussions</value>
   </data>
@@ -756,6 +771,9 @@
   <data name="LaunchActiveInstance" xml:space="preserve">
     <value>Launch active instance</value>
   </data>
+  <data name="LaunchInstanceMissing" xml:space="preserve">
+    <value>This instance no longer exists.</value>
+  </data>
   <data name="LaunchWithoutModLoaderToolTip" xml:space="preserve">
     <value>Launches KSA the same way as running KSA.exe. It uses the shared profile that KSA creates, not a Borea instance.</value>
   </data>
@@ -787,7 +805,7 @@
     <value>Disable {0}</value>
   </data>
   <data name="LaunchModDisabledFormat" xml:space="preserve">
-    <value>{0} is disabled. Press Play to try again.</value>
+    <value>{0} is disabled. Start the instance again.</value>
   </data>
   <data name="LaunchShowDetails" xml:space="preserve">
     <value>Show details</value>

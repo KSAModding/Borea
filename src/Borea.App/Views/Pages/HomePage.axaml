@@ -14,26 +14,26 @@
                     <TextBlock Classes="label-lg" Text="{Binding Localization.PageHomeHeading}" VerticalAlignment="Center" />
                 </StackPanel>
 
-                <!-- the left half starts the active instance, the right half opens the other ways to start the game -->
+                <!-- the left half starts the option last chosen in the menu of the right half -->
                 <StackPanel Grid.Column="1" Orientation="Horizontal">
-                    <Button Classes="splitButton primary" Command="{Binding PlayActiveInstanceCommand}" IsEnabled="{Binding EnableActiveInstance}">
+                    <Button Classes="splitButton primary" Command="{Binding PlayHomeCommand}" IsEnabled="{Binding EnableHomeLaunch}">
                         <StackPanel Orientation="Horizontal" Spacing="6">
                             <Path Classes="icon-filled size-16" Fill="{StaticResource Brush.SurfaceHeader}" Data="{StaticResource Icon.Play}" VerticalAlignment="Center" />
-                            <TextBlock Classes="action-md" Foreground="{StaticResource Brush.SurfaceHeader}" Text="{Binding Localization.LaunchActiveInstance}" VerticalAlignment="Center" />
+                            <TextBlock Classes="action-md" Foreground="{StaticResource Brush.SurfaceHeader}" Text="{Binding HomeLaunchText}" VerticalAlignment="Center" />
                         </StackPanel>
                     </Button>
                     <Button Classes="splitButton flyout">
                         <Path Classes="icon size-16" Stroke="{StaticResource Brush.SurfaceHeader}" StrokeThickness="2.5" Data="{StaticResource Icon.CaretDown}" VerticalAlignment="Center" />
                         <Button.Flyout>
                             <MenuFlyout Placement="BottomEdgeAlignedRight">
-                                <MenuItem Header="{Binding Localization.LaunchActiveInstance}" Command="{Binding PlayActiveInstanceCommand}" IsEnabled="{Binding EnableActiveInstance}" />
-                                <MenuItem Header="{Binding Localization.LaunchWithoutModLoader}" Command="{Binding PlayWithoutModLoaderCommand}" ToolTip.Tip="{Binding Localization.LaunchWithoutModLoaderToolTip}" />
+                                <MenuItem Header="{Binding Localization.LaunchActiveInstance}" Command="{Binding PlayActiveInstanceCommand}" IsEnabled="{Binding EnableActiveInstance}" ToggleType="Radio" GroupName="HomeLaunch" IsChecked="{Binding IsHomeLaunchActiveInstance, Mode=OneWay}" />
+                                <MenuItem Header="{Binding Localization.LaunchWithoutModLoader}" Command="{Binding PlayWithoutModLoaderCommand}" ToolTip.Tip="{Binding Localization.LaunchWithoutModLoaderToolTip}" ToggleType="Radio" GroupName="HomeLaunch" IsChecked="{Binding !IsHomeLaunchActiveInstance, Mode=OneWay}" />
                             </MenuFlyout>
                         </Button.Flyout>
                     </Button>
                 </StackPanel>
             </Grid>
-            <TextBlock Classes="body-md secondary" Text="{Binding LaunchMessage}" TextWrapping="Wrap" Margin="0,16,0,0" IsVisible="{Binding LaunchMessage, Converter={x:Static ObjectConverters.IsNotNull}}" />
+            <ContentControl Content="{Binding}" ContentTemplate="{StaticResource LaunchStatus}" />
             <TextBlock Classes="body-md danger" Text="{Binding ContentError}" TextWrapping="Wrap" Margin="0,16,0,0" IsVisible="{Binding ContentError, Converter={x:Static ObjectConverters.IsNotNull}}" />
             <ContentControl Content="{Binding}" ContentTemplate="{StaticResource GameSetupBanner}" IsVisible="{Binding NeedsGameSetup}" />
             <views:UpdateNotice Margin="0,16,0,0" IsVisible="{Binding HasAvailableUpdate}" />

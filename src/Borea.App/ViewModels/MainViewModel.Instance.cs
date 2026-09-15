@@ -9,6 +9,7 @@ using Borea.Core.Dependencies;
 using Borea.Core.Instances;
 using Borea.Core.Launch;
 using Borea.Core.Mods;
+using Borea.Core.Preferences;
 using Borea.Core.Planning;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -34,6 +35,9 @@ public partial class MainViewModel
     private readonly Dictionary<Guid, IInstallRow> _runningUpdates = [];
     private Task _contentUpdateCheck = Task.CompletedTask;
     private int _contentUpdateCheckGeneration;
+    private Guid? _launchInstanceId;
+    private string? _launchBlamedModName;
+    private HomeLaunchOption? _homeLaunch;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CanChangeContent))]
@@ -66,6 +70,18 @@ public partial class MainViewModel
 
     public bool HasUpdates => _content.Any(content => content.UpdateVersion is not null);
 
+    /// <summary>The number of mods Borea owns in the active instance that have a newer release.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasActiveInstanceUpdates))]
+    [NotifyPropertyChangedFor(nameof(ActiveInstanceUpdatesText))]
+    private int _activeInstanceUpdateCount;
+
+    private Guid? _updateCountInstanceId;
+
+    public bool HasActiveInstanceUpdates => ActiveInstanceUpdateCount > 0;
+
+    public string ActiveInstanceUpdatesText => Localization.FormatHomeUpdates(ActiveInstanceUpdateCount);
+
     /// <summary>
     /// False while an update of the shown instance plans or runs.
     /// </summary>
@@ -78,7 +94,7 @@ public partial class MainViewModel
     private string? _launchMessage;
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(EnableActiveInstance))]
+    [NotifyPropertyChangedFor(nameof(EnableActiveInstance), nameof(EnableHomeLaunch))]
     private bool _isLaunching;
 
     /// <summary>What the loader wrote before it stopped, when the last Play failed that way.</summary>
@@ -98,7 +114,7 @@ public partial class MainViewModel
 
     public bool CanDisableBlamedMod => LaunchBlamedModId is not null;
 
-    public string? DisableBlamedModText => LaunchBlamedModId is null ? null : Localization.FormatLaunchDisableMod(BlamedModName(LaunchBlamedModId));
+    public string? DisableBlamedModText => _launchBlamedModName is null ? null : Localization.FormatLaunchDisableMod(_launchBlamedModName);
 
     [ObservableProperty]
     private string? _contentError;
@@ -114,7 +130,13 @@ public partial class MainViewModel
             InstanceTab = InstanceTab.Content;
 
         SelectedInstance = item;
-        LaunchMessage = null;
+        // a running launch, and the page of the launched instance, keep what the launch said
+        if (!IsLaunching && item.InstanceId != _launchInstanceId)
+        {
+            LaunchMessage = null;
+            ClearLaunchFailure();
+        }
+
         ContentError = null;
         _runningUpdates.TryGetValue(item.InstanceId, out var running);
         UpdateAll = running as UpdateAllItem ?? new UpdateAllItem(this, item.InstanceId);
@@ -210,43 +232,79 @@ public partial class MainViewModel
     internal Task WhenContentUpdatesCheckedAsync() => _contentUpdateCheck;
 
     /// <summary>
-    /// Plans an update of each mod Borea owns on its own and marks the row when
-    /// the planner picks a newer release than the installed one.
+    /// Plans an update of each mod Borea owns on its own. The rows of the shown
+    /// instance get the newer release, and the active instance gets its count.
     /// </summary>
     private async Task RefreshContentUpdatesAsync(int generation)
     {
         var services = _services;
-        var instance = _selectedInstanceEntity;
+        var shown = CurrentWindowInstance ? _selectedInstanceEntity : null;
         var content = _content;
-        if (services is null || instance is null || !CurrentWindowInstance)
+        var active = _activeInstanceEntity;
+        // a check of the same instance keeps the last count until it ends, so the card does not flicker
+        if (active?.InstanceId != _updateCountInstanceId)
+        {
+            ActiveInstanceUpdateCount = 0;
+            _updateCountInstanceId = active?.InstanceId;
+        }
+
+        if (services is null)
             return;
 
-        foreach (var item in content.Where(item => item.IsOwned))
+        // the shown instance is often the active one, so each mod is planned once
+        var found = new Dictionary<(Guid InstanceId, string ModId), ModVersion?>();
+        async Task<ModVersion?> FindAsync(Instance instance, InstalledMod installed)
         {
-            var installed = instance.Mods.FirstOrDefault(mod => ModIds.Equals(mod.ModId, item.ModId));
-            if (installed is null)
-                continue;
+            if (!found.TryGetValue((instance.InstanceId, installed.ModId), out var newer))
+                found[(instance.InstanceId, installed.ModId)] = newer = await FindUpdateAsync(services, instance, installed);
+            return newer;
+        }
 
-            ModVersion? newer = null;
-            try
+        if (shown is not null)
+        {
+            foreach (var item in content.Where(item => item.IsOwned))
             {
-                var plan = await services.InstallPlanner.PlanAsync(PlanningRequest(services, instance, UpdateRequests([installed])));
-                newer = plan.Operations
-                    .Select(operation => operation.Release)
-                    .FirstOrDefault(release => ModIds.Equals(release.ModId, installed.ModId) && release.Version > installed.Version)?.Version;
-            }
-            catch (Exception exception) when (exception is System.Net.Http.HttpRequestException or IOException or InvalidOperationException or TaskCanceledException)
-            {
-                // the row shows no update
+                var installed = shown.Mods.FirstOrDefault(mod => ModIds.Equals(mod.ModId, item.ModId));
+                if (installed is null)
+                    continue;
+
+                var newer = await FindAsync(shown, installed);
+                if (generation != _contentUpdateCheckGeneration)
+                    return;
+
+                item.UpdateVersion = newer?.ToString();
             }
 
+            OnPropertyChanged(nameof(HasUpdates));
+        }
+
+        var count = 0;
+        foreach (var installed in active?.Mods.Where(mod => mod.Ownership == ModInstallOwnership.Borea) ?? [])
+        {
+            var newer = await FindAsync(active!, installed);
             if (generation != _contentUpdateCheckGeneration)
                 return;
 
-            item.UpdateVersion = newer?.ToString();
+            if (newer is not null)
+                count++;
         }
 
-        OnPropertyChanged(nameof(HasUpdates));
+        ActiveInstanceUpdateCount = count;
+    }
+
+    private static async Task<ModVersion?> FindUpdateAsync(BoreaServices services, Instance instance, InstalledMod installed)
+    {
+        try
+        {
+            var plan = await services.InstallPlanner.PlanAsync(PlanningRequest(services, instance, UpdateRequests([installed])));
+            return plan.Operations
+                .Select(operation => operation.Release)
+                .FirstOrDefault(release => ModIds.Equals(release.ModId, installed.ModId) && release.Version > installed.Version)?.Version;
+        }
+        catch (Exception exception) when (exception is System.Net.Http.HttpRequestException or IOException or InvalidOperationException or TaskCanceledException)
+        {
+            return null;
+        }
     }
 
     /// <summary>
@@ -362,28 +420,68 @@ public partial class MainViewModel
             target.InstallError = error;
     }
 
-    [RelayCommand]
-    private async Task PlayAsync()
+    /// <summary>What the Home launch button starts, which is the option last chosen in its menu.</summary>
+    public HomeLaunchOption HomeLaunch
     {
-        if (_services is null || _selectedInstanceEntity is null || IsLaunching)
+        get => _homeLaunch ?? _appPreferences.HomeLaunch;
+        private set
+        {
+            if (value == HomeLaunch)
+                return;
+
+            _homeLaunch = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(IsHomeLaunchActiveInstance));
+            OnPropertyChanged(nameof(HomeLaunchText));
+            OnPropertyChanged(nameof(EnableHomeLaunch));
+            QueuePreferenceSave(preferences => preferences.WithHomeLaunch(value));
+        }
+    }
+
+    public bool IsHomeLaunchActiveInstance => HomeLaunch == HomeLaunchOption.ActiveInstance;
+
+    public string HomeLaunchText => IsHomeLaunchActiveInstance ? Localization.LaunchActiveInstance : Localization.LaunchWithoutModLoader;
+
+    public bool EnableHomeLaunch => IsHomeLaunchActiveInstance ? EnableActiveInstance : !IsLaunching;
+
+    [RelayCommand]
+    private Task PlayAsync() => SelectedInstance is { } instance ? LaunchAsync(instance.InstanceId) : Task.CompletedTask;
+
+    /// <summary>Launches the active instance, and makes it what the Home launch button starts.</summary>
+    [RelayCommand]
+    private Task PlayActiveInstanceAsync()
+    {
+        HomeLaunch = HomeLaunchOption.ActiveInstance;
+        return ActiveInstance is { } instance ? LaunchAsync(instance.InstanceId) : Task.CompletedTask;
+    }
+
+    [RelayCommand]
+    private Task PlayHomeAsync() => IsHomeLaunchActiveInstance ? PlayActiveInstanceAsync() : PlayWithoutModLoader();
+
+    /// <summary>Starts the instance through the loader Borea has recorded and watches the start.</summary>
+    private async Task LaunchAsync(Guid instanceId)
+    {
+        if (_services is not { } services || IsLaunching)
             return;
 
         IsLaunching = true;
+        _launchInstanceId = instanceId;
         ClearLaunchFailure();
         try
         {
-            var instance = _selectedInstanceEntity;
+            var instance = await services.Instances.GetByIdAsync(instanceId)
+                ?? throw new InvalidOperationException(Localization.LaunchInstanceMissing);
             var loader = await FindInstalledLoaderAsync();
-            var result = _services.Launcher.Launch(instance, loader);
+            var result = services.Launcher.Launch(instance, loader);
             if (result.Started && loader is not null)
             {
                 // the loader can still stop while it loads the mods, so the start is watched before it counts
                 LaunchMessage = Localization.FormatLaunchStarting(loader.Name);
-                result = await _services.Launcher.WatchStartAsync(instance, result);
+                result = await services.Launcher.WatchStartAsync(instance, result);
             }
 
             if (result.Outcome == LaunchOutcome.ExitedEarly)
-                ShowLaunchFailure(result, instance, loader);
+                await ShowLaunchFailureAsync(result, instance, loader);
             else
                 LaunchMessage = result.Message;
         }
@@ -397,37 +495,17 @@ public partial class MainViewModel
         }
     }
 
-    [RelayCommand]
-    private async Task PlayActiveInstance()
-    {
-        if (_services is null || ActiveInstance is null || IsLaunching)
-            return;
-
-        IsLaunching = true;
-        try
-        {
-            var loader = await FindInstalledLoaderAsync();
-            var instance = await _services.Instances.GetByIdAsync(ActiveInstance.InstanceId);
-            var result = _services.Launcher.Launch(instance!, loader);
-            LaunchMessage = result.Message;
-        }
-        catch (Exception exception) when (exception is IOException or InvalidOperationException or System.Net.Http.HttpRequestException)
-        {
-            LaunchMessage = exception.Message;
-        }
-        finally
-        {
-            IsLaunching = false;
-        }
-    }
-
+    /// <summary>Launches the game without a mod loader, and makes that what the Home launch button starts.</summary>
     [RelayCommand]
     private async Task PlayWithoutModLoader()
     {
+        HomeLaunch = HomeLaunchOption.WithoutModLoader;
         if (_services is null || IsLaunching)
             return;
 
         IsLaunching = true;
+        _launchInstanceId = null;
+        ClearLaunchFailure();
         try
         {
             var result = _services.SharedProfileLauncher.Launch();
@@ -443,13 +521,21 @@ public partial class MainViewModel
         }
     }
 
-    private void ShowLaunchFailure(LaunchResult result, Instance instance, ModMetadata? loader)
+    private async Task ShowLaunchFailureAsync(LaunchResult result, Instance instance, ModMetadata? loader)
     {
         var loaderName = loader?.Name ?? string.Empty;
         var blamed = result.BlamedModId is null ? null : instance.Mods.FirstOrDefault(mod => ModIds.Equals(mod.ModId, result.BlamedModId));
-        LaunchMessage = blamed is null
-            ? Localization.FormatLaunchExitedEarly(loaderName, result.ExitCode ?? 0)
-            : Localization.FormatLaunchModBroke(BlamedModName(blamed.ModId), blamed.Version.ToString(), loaderName);
+        if (blamed is null)
+        {
+            LaunchMessage = Localization.FormatLaunchExitedEarly(loaderName, result.ExitCode ?? 0);
+        }
+        else
+        {
+            // the same name the content row shows, also when the instance page was never opened
+            _launchBlamedModName = blamed.Metadata.Listing?.Name ?? (await ResolveListingAsync(blamed.ModId))?.Name ?? blamed.ModId;
+            LaunchMessage = Localization.FormatLaunchModBroke(_launchBlamedModName, blamed.Version.ToString(), loaderName);
+        }
+
         LaunchOutputText = result.Output.Count == 0 ? Localization.LaunchNoOutput : string.Join(Environment.NewLine, result.Output);
         LaunchBlamedModId = blamed?.ModId;
         OnPropertyChanged(nameof(DisableBlamedModText));
@@ -460,11 +546,9 @@ public partial class MainViewModel
         LaunchOutputText = null;
         IsLaunchOutputShown = false;
         LaunchBlamedModId = null;
+        _launchBlamedModName = null;
         OnPropertyChanged(nameof(DisableBlamedModText));
     }
-
-    private string BlamedModName(string modId) =>
-        _content.FirstOrDefault(item => ModIds.Equals(item.ModId, modId))?.Name ?? modId;
 
     [RelayCommand]
     private void ToggleLaunchOutput() => IsLaunchOutputShown = !IsLaunchOutputShown;
@@ -472,15 +556,15 @@ public partial class MainViewModel
     [RelayCommand]
     private async Task DisableBlamedModAsync()
     {
-        if (SelectedInstance is not { } instance || LaunchBlamedModId is not { } modId)
+        if (_launchInstanceId is not { } instanceId || LaunchBlamedModId is not { } modId || _launchBlamedModName is not { } name)
             return;
 
-        var name = BlamedModName(modId);
-        await SetContentEnabledAsync(instance.InstanceId, modId, enabled: false);
+        await SetContentEnabledAsync(instanceId, modId, enabled: false);
         if (ContentError is not null)
             return;
 
-        await OpenInstanceAsync(instance);
+        if (CurrentWindowInstance && SelectedInstance is { } shown && shown.InstanceId == instanceId)
+            await OpenInstanceAsync(shown);
         ClearLaunchFailure();
         LaunchMessage = Localization.FormatLaunchModDisabled(name);
     }
@@ -488,8 +572,8 @@ public partial class MainViewModel
     [RelayCommand]
     private void OpenLaunchLog()
     {
-        if (_services is not null && SelectedInstance is { } instance)
-            ContentError = TryOpenWithSystem(_services.Paths.GetInstanceLaunchLogPath(instance.InstanceId));
+        if (_services is not null && _launchInstanceId is { } instanceId)
+            ContentError = TryOpenWithSystem(_services.Paths.GetInstanceLaunchLogPath(instanceId));
     }
 
     /// <summary>
