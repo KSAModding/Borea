@@ -74,6 +74,8 @@ internal sealed class CliServices : IDisposable
 
     public required IModPackRepository ModPacks { get; init; }
 
+    public required IModPackRepository ReadOnlyModPacks { get; init; }
+
     public required IModPackInstaller ModPackInstaller { get; init; }
     public required ISharedProfileLauncher SharedProfileLauncher { get; init; }
 
@@ -110,6 +112,7 @@ internal sealed class CliServices : IDisposable
         ILoaderUninstaller? loaderUninstaller = null,
         ILauncher? launcher = null,
         IModPackRepository? modPacks = null,
+        IModPackRepository? readOnlyModPacks = null,
         IModPackInstaller? modPackInstaller = null,
         ISharedProfileLauncher? sharedProfileLauncher = null,
         IContentIndexRefresh? indexRefresh = null)
@@ -144,6 +147,7 @@ internal sealed class CliServices : IDisposable
             LoaderUninstaller = loaderUninstaller ?? services.LoaderUninstaller,
             Launcher = launcher ?? services.Launcher,
             ModPacks = modPacks ?? services.ModPacks,
+            ReadOnlyModPacks = readOnlyModPacks ?? services.ReadOnlyModPacks,
             ModPackInstaller = modPackInstaller ?? services.ModPackInstaller,
             SharedProfileLauncher = sharedProfileLauncher ?? services.SharedProfileLauncher,
             Graph = services,

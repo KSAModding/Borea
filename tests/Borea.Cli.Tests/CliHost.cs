@@ -47,6 +47,8 @@ internal sealed class CliHost : IDisposable
 
     public FakeModPackInstaller ModPackInstaller { get; } = new();
 
+    public Func<BoreaServices, IModPackInstaller>? ModPackInstallerFactory { get; set; }
+
     public FakeProcessStarter ProcessStarter { get; } = new();
 
     public ILoaderInstaller? LoaderInstaller { get; set; }
@@ -107,7 +109,8 @@ internal sealed class CliHost : IDisposable
             // the fake processes answer at once, so the startup watch needs no real time
             launcher: new LoaderLauncher(graph.Paths, ProcessStarter, TimeSpan.Zero),
             modPacks: ModPacks ?? new ContentIndexModPackRepository(IndexSnapshots ?? new ReaderSnapshotProvider(IndexReader)),
-            modPackInstaller: ModPackInstaller,
+            readOnlyModPacks: ModPacks ?? new ContentIndexModPackRepository(new ReaderSnapshotProvider(IndexReader)),
+            modPackInstaller: ModPackInstallerFactory?.Invoke(graph) ?? ModPackInstaller,
             sharedProfileLauncher: new SharedProfileLauncher(graph.Paths, ProcessStarter, OsPlatform.Windows),
             indexRefresh: IndexRefresh);
     }

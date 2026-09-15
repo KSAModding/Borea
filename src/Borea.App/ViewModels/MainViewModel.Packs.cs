@@ -281,7 +281,7 @@ public partial class MainViewModel
         }
         finally
         {
-            pack.IsInstalling = false;
+            pack.EndInstall();
         }
 
         if (executed)
@@ -330,7 +330,7 @@ public partial class MainViewModel
         }
         finally
         {
-            pack.IsInstalling = false;
+            pack.EndInstall();
         }
 
         await ReloadInstancesAsync();
@@ -338,7 +338,7 @@ public partial class MainViewModel
 
     private async Task ExecutePackInstallAsync(BoreaServices services, PackItem pack, ModPackInstallRequest request)
     {
-        var result = await services.ModPackInstaller.InstallAsync(request);
+        var result = await services.ModPackInstaller.InstallAsync(request, ProgressOf(pack));
         pack.ShowResults(result.Members.Select(member => new PackResultItem(this, member)));
         if (result.IsComplete)
             return;
@@ -360,7 +360,7 @@ public enum PackPageTab
 /// <summary>
 /// One row of the Modpacks tab, and the pack the pack page shows.
 /// </summary>
-public sealed partial class PackItem : ObservableObject
+public sealed partial class PackItem : ObservableObject, IInstallProgressRow
 {
     private readonly MainViewModel _owner;
 
@@ -446,6 +446,15 @@ public sealed partial class PackItem : ObservableObject
     private bool _isInstalling;
 
     [ObservableProperty]
+    private double _progress;
+
+    [ObservableProperty]
+    private string? _progressStatus;
+
+    [ObservableProperty]
+    private string? _progressDetail;
+
+    [ObservableProperty]
     private string? _installError;
 
     /// <summary>
@@ -500,6 +509,14 @@ public sealed partial class PackItem : ObservableObject
         InstallWarning = null;
         PendingInstall = null;
         ShowResults([]);
+    }
+
+    internal void EndInstall()
+    {
+        IsInstalling = false;
+        Progress = 0;
+        ProgressStatus = null;
+        ProgressDetail = null;
     }
 
     internal void RefreshText()

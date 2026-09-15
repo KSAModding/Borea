@@ -12,11 +12,7 @@ using Borea.Core.Planning;
 
 namespace Borea.App.ViewModels;
 
-/// <summary>
-/// A row that installs a release: a Discover row, a row of the versions table,
-/// or an update on the instance page.
-/// </summary>
-internal interface IInstallRow
+internal interface IInstallProgressRow
 {
     bool IsInstalling { get; set; }
 
@@ -27,7 +23,14 @@ internal interface IInstallRow
 
     /// <summary>Size and time left while downloading, otherwise null.</summary>
     string? ProgressDetail { get; set; }
+}
 
+/// <summary>
+/// A row that installs a release: a Discover row, a row of the versions table,
+/// or an update on the instance page.
+/// </summary>
+internal interface IInstallRow : IInstallProgressRow
+{
     string? InstallError { get; set; }
 
     string? InstallWarning { get; set; }
@@ -165,7 +168,7 @@ public partial class MainViewModel
     /// Reports land on the UI thread through <see cref="Progress{T}"/>, and
     /// each install gets its own text so its download rate starts fresh.
     /// </summary>
-    private IProgress<InstallProgress> ProgressOf(IInstallRow row)
+    private IProgress<InstallProgress> ProgressOf(IInstallProgressRow row)
     {
         var text = new InstallProgressText(Localization);
         return new Progress<InstallProgress>(value =>
