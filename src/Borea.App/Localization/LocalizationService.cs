@@ -213,11 +213,23 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string DiscoverCategoryOther => Resources.DiscoverCategoryOther;
 
+    public string DiscoverGameVersionMin => Resources.DiscoverGameVersionMin;
+
+    public string DiscoverGameVersionMax => Resources.DiscoverGameVersionMax;
+
     public string DiscoverOperatingSystem => Resources.DiscoverOperatingSystem;
 
     public string DiscoverLicense => Resources.DiscoverLicense;
 
     public string DiscoverClearAll => Resources.DiscoverClearAll;
+
+    public string DiscoverSortBy => Resources.DiscoverSortBy;
+
+    public string DiscoverSortPopularity => Resources.DiscoverSortPopularity;
+
+    public string DiscoverSortRecentlyUpdated => Resources.DiscoverSortRecentlyUpdated;
+
+    public string DiscoverSortName => Resources.DiscoverSortName;
 
     public string DiscoverAll => Resources.DiscoverAll;
 
