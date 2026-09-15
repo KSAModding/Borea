@@ -252,7 +252,7 @@ internal static class PackCommand
                 CurrentPlatform(),
                 ProceedWithRetractedPack: parseResult.GetValue(proceedWithRetracted),
                 ProceedWithYankedMembers: yanked.Length == 0 ? null : new HashSet<string>(yanked, ModIds.Comparer));
-            var result = await cli.ModPackInstaller.InstallAsync(request, ct).ConfigureAwait(false);
+            var result = await cli.ModPackInstaller.InstallAsync(request, new InstallProgressOutput(error), ct).ConfigureAwait(false);
             var view = InstallView.From(
                 metadata,
                 target.Name,

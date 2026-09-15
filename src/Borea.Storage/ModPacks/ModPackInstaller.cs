@@ -21,16 +21,16 @@ public sealed class ModPackInstaller : IModPackInstaller
         _replacer = replacer ?? throw new ArgumentNullException(nameof(replacer));
     }
 
-    public async Task<ModPackInstallResult> CreateAndInstallAsync(string instanceName, ModPackInstallRequest request, CancellationToken cancellationToken = default)
+    public async Task<ModPackInstallResult> CreateAndInstallAsync(string instanceName, ModPackInstallRequest request, IProgress<InstallProgress>? progress = null, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
         cancellationToken.ThrowIfCancellationRequested();
         var metadata = RequireMetadata(request.Pack);
         var instance = await _instances.CreateAsync(instanceName, new InstanceSource.FromModPack(metadata.ModPackId, metadata.Version)).ConfigureAwait(false);
-        return await InstallAsync(request with { InstanceId = instance.InstanceId }, cancellationToken).ConfigureAwait(false);
+        return await InstallAsync(request with { InstanceId = instance.InstanceId }, progress, cancellationToken).ConfigureAwait(false);
     }
 
-    public async Task<ModPackInstallResult> InstallAsync(ModPackInstallRequest request, CancellationToken cancellationToken = default)
+    public async Task<ModPackInstallResult> InstallAsync(ModPackInstallRequest request, IProgress<InstallProgress>? progress = null, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
         ArgumentNullException.ThrowIfNull(request.Pack);
@@ -104,8 +104,10 @@ public sealed class ModPackInstaller : IModPackInstaller
 
         var expectedState = plan.InstanceState;
         var stopped = false;
+        var step = 0;
         foreach (var operation in plan.Operations)
         {
+            var operationProgress = progress.ForStep(++step, plan.Operations.Count);
             if (stopped)
             {
                 members.Add(Member(operation.Release, operation.Reason, ModPackMemberStatus.NotAttempted, "An earlier operation failed."));
@@ -126,13 +128,13 @@ public sealed class ModPackInstaller : IModPackInstaller
                 var current = fresh.Mods.FirstOrDefault(value => ModIds.Equals(value.ModId, operation.Release.ModId));
                 if (current is null)
                 {
-                    var completed = await _installer.InstallGuardedAsync(instance.InstanceId, operation.Release, operation.Reason, request.Enable, expectedState, cancellationToken: cancellationToken).ConfigureAwait(false);
+                    var completed = await _installer.InstallGuardedAsync(instance.InstanceId, operation.Release, operation.Reason, request.Enable, expectedState, operationProgress, cancellationToken).ConfigureAwait(false);
                     expectedState = completed.State;
                     members.Add(Member(operation.Release, operation.Reason, ModPackMemberStatus.Installed));
                 }
                 else
                 {
-                    var completed = await _replacer.ReplaceGuardedAsync(instance.InstanceId, current, operation.Release, expectedState, cancellationToken: cancellationToken).ConfigureAwait(false);
+                    var completed = await _replacer.ReplaceGuardedAsync(instance.InstanceId, current, operation.Release, expectedState, operationProgress, cancellationToken).ConfigureAwait(false);
                     expectedState = completed.State;
                     members.Add(Member(operation.Release, current.Reason, ModPackMemberStatus.Replaced));
                 }

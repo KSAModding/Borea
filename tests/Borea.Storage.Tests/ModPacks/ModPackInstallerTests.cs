@@ -38,6 +38,32 @@ public sealed class ModPackInstallerTests
     }
 
     [Fact]
+    public async Task Install_ReportsEachOperationWithItsStepAcrossThePack()
+    {
+        var dependency = Release("Dependency");
+        var member = Release("Member", dependencies: [new ModDependency("Dependency", ModDependencyKind.Required)]);
+        var second = Release("Second");
+        var repository = new FakeModRepository([member, dependency, second]);
+        var instances = new MemoryInstanceRepository();
+        var instance = await instances.CreateAsync("Target", InstanceSource.Custom.Value);
+        var reports = new List<InstallProgress>();
+
+        var result = await Services(instances).InstallAsync(Request(instance.InstanceId, Pack(member, second), repository), new SynchronousProgress<InstallProgress>(reports.Add));
+
+        Assert.True(result.IsComplete);
+        Assert.Equal(
+        [
+            ("Member", InstallPhase.Downloading, 1),
+            ("Member", InstallPhase.Finishing, 1),
+            ("Second", InstallPhase.Downloading, 2),
+            ("Second", InstallPhase.Finishing, 2),
+            ("Dependency", InstallPhase.Downloading, 3),
+            ("Dependency", InstallPhase.Finishing, 3),
+        ], reports.Select(report => (report.ModId, report.Phase, report.Step)));
+        Assert.All(reports, report => Assert.Equal(3, report.StepCount));
+    }
+
+    [Fact]
     public async Task Install_UnlistedPin_ReportsAuthorLocationWithoutInstalling()
     {
         var valid = Release("Valid");
@@ -66,7 +92,7 @@ public sealed class ModPackInstallerTests
         using var cancellation = new CancellationTokenSource();
         cancellation.Cancel();
 
-        await Assert.ThrowsAsync<OperationCanceledException>(() => services.CreateAndInstallAsync("Canceled", Request(Guid.Empty, Pack(release), repository), cancellation.Token));
+        await Assert.ThrowsAsync<OperationCanceledException>(() => services.CreateAndInstallAsync("Canceled", Request(Guid.Empty, Pack(release), repository), cancellationToken: cancellation.Token));
 
         Assert.Empty(await instances.GetAllAsync());
     }
@@ -256,17 +282,18 @@ public sealed class ModPackInstallerTests
 
         public async Task<InstallResult> InstallAsync(Guid instanceId, ModVersionMetadata release, InstallReason reason, bool enable, IProgress<InstallProgress>? progress = null, CancellationToken cancellationToken = default)
         {
-            return (await InstallCoreAsync(instanceId, release, reason, enable, null, cancellationToken)).Result;
+            return (await InstallCoreAsync(instanceId, release, reason, enable, null, null, cancellationToken)).Result;
         }
 
         public async Task<GuardedInstallResult> InstallGuardedAsync(Guid instanceId, ModVersionMetadata release, InstallReason reason, bool enable, InstallPlanningState expectedState, IProgress<InstallProgress>? progress = null, CancellationToken cancellationToken = default)
         {
-            return await InstallCoreAsync(instanceId, release, reason, enable, expectedState, cancellationToken);
+            return await InstallCoreAsync(instanceId, release, reason, enable, expectedState, progress, cancellationToken);
         }
 
-        private async Task<GuardedInstallResult> InstallCoreAsync(Guid instanceId, ModVersionMetadata release, InstallReason reason, bool enable, InstallPlanningState? expectedState, CancellationToken cancellationToken)
+        private async Task<GuardedInstallResult> InstallCoreAsync(Guid instanceId, ModVersionMetadata release, InstallReason reason, bool enable, InstallPlanningState? expectedState, IProgress<InstallProgress>? progress, CancellationToken cancellationToken)
         {
             Counts[release.ModId] = Counts.GetValueOrDefault(release.ModId) + 1;
+            progress.Report(release, InstallPhase.Downloading);
             if (ModIds.Equals(FailOnceFor ?? string.Empty, release.ModId) && Counts[release.ModId] == 1) throw new IOException("Injected failure.");
             if (AddConcurrentMod is not null && AddAfterGuardedResultFor is null)
                 await AddExternalAsync(instanceId, AddConcurrentMod, cancellationToken);
@@ -281,6 +308,7 @@ public sealed class ModPackInstallerTests
             var result = new InstallResult(installed, new DownloadResult(release.Download.Url, 1, release.Download.Sha256!), ModEntryAddResult.Added);
             if (AddConcurrentMod is not null && ModIds.Equals(AddAfterGuardedResultFor ?? string.Empty, release.ModId))
                 await AddExternalAsync(instanceId, AddConcurrentMod, cancellationToken);
+            progress.Report(release, InstallPhase.Finishing);
             return new GuardedInstallResult(result, state);
         }
 
