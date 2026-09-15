@@ -1,8 +1,11 @@
+using System.Security.Cryptography;
+using Borea.Core.Dependencies;
 using Borea.Core.Game;
 using Borea.Core.Index;
 using Borea.Core.ModPacks;
 using Borea.Core.Mods;
 using Borea.Storage.Instances;
+using Borea.Storage.ModPacks;
 
 namespace Borea.Cli.Tests;
 
@@ -697,6 +700,26 @@ public sealed class PackCommandTests : IDisposable
         ], run.Error.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries));
     }
 
+    [Fact]
+    public async Task PackInstallDryRun_PrintsThePlanAndWritesNothing()
+    {
+        _host.IndexReader.Snapshot = Snapshot(Pack(ContentCommandFixtures.PackVersion()));
+        _host.Mods.Releases.Add(ContentCommandFixtures.Release(dependencies: [new ModDependency("library", ModDependencyKind.Required)]));
+        _host.Mods.Releases.Add(ContentCommandFixtures.Release(id: "library", version: "1.0.0"));
+        UseThePackInstaller();
+        await _host.RunAsync("instance", "create", "Alpha");
+        var before = FileHashes();
+
+        var run = await _host.RunAsync("pack", "install", "navigation-pack", "--instance", "Alpha", "--dry-run");
+
+        Assert.Equal(0, run.ExitCode);
+        Assert.Contains("Install dependency library 1.0.0.", run.Output);
+        Assert.Contains("Install flight-tools 2.0.0.", run.Output);
+        Assert.DoesNotContain("not-attempted", run.Output);
+        Assert.Equal(string.Empty, run.Error);
+        Assert.Equal(before, FileHashes());
+    }
+
     [Theory]
     [InlineData("--proceed-with-yanked", "not a valid id")]
     [InlineData("--version", "not-a-version")]
@@ -707,6 +730,13 @@ public sealed class PackCommandTests : IDisposable
         Assert.Equal(2, run.ExitCode);
         Assert.Equal(0, _host.Builds);
     }
+
+    private void UseThePackInstaller() =>
+        _host.ModPackInstallerFactory = graph => new ModPackInstaller(graph.Instances, graph.InstallPlanner, graph.Installer, graph.Replacer);
+
+    private Dictionary<string, string> FileHashes() => Directory.GetFiles(_host.Root, "*", SearchOption.AllDirectories)
+        .Where(path => Path.GetRelativePath(_host.Root, path).Split(Path.DirectorySeparatorChar)[0] != "Logs")
+        .ToDictionary(path => Path.GetRelativePath(_host.Root, path), path => Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(path))), StringComparer.Ordinal);
 
     private static FakeInstalledGameVersionProvider Installed(string version) => new()
     {

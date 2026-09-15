@@ -207,6 +207,7 @@ internal static class PackCommand
                     result.AddError($"'{value}' is not a valid content id.");
             }
         });
+        var dryRun = new Option<bool>("--dry-run") { Description = "Print the plan from the cached index without writing files." };
         var json = ArgumentRules.Json();
         var install = new Command("install", "Install the mods one mod pack version pins into an instance.");
         install.Arguments.Add(id);
@@ -214,23 +215,31 @@ internal static class PackCommand
         install.Options.Add(instance);
         install.Options.Add(proceedWithRetracted);
         install.Options.Add(proceedWithYanked);
+        install.Options.Add(dryRun);
         install.Options.Add(json);
 
         install.SetAction((parseResult, cancellationToken) => CommandRunner.RunAsync(parseResult, services, cancellationToken, async (cli, output, error, ct) =>
         {
             var target = await InstanceLookup.ResolveTargetAsync(cli.Instances, parseResult.GetValue(instance)).ConfigureAwait(false);
+            var isDryRun = parseResult.GetValue(dryRun);
+            if (isDryRun)
+                await ModInstallCommands.RequireCachedIndexAsync(cli, ct).ConfigureAwait(false);
+
+            var packs = isDryRun ? cli.ReadOnlyModPacks : cli.ModPacks;
             var packId = parseResult.GetRequiredValue(id);
             var requestedText = parseResult.GetValue(version);
             var requested = requestedText is null ? (ModVersion?)null : ModVersion.Parse(requestedText);
             var selected = requested is { } exact
-                ? await cli.ModPacks.GetVersionAsync(packId, exact, ct).ConfigureAwait(false)
-                : await cli.ModPacks.GetLatestAsync(packId, ct).ConfigureAwait(false);
-            var snapshot = await cli.IndexSnapshots.GetSnapshotAsync(ct).ConfigureAwait(false);
+                ? await packs.GetVersionAsync(packId, exact, ct).ConfigureAwait(false)
+                : await packs.GetLatestAsync(packId, ct).ConfigureAwait(false);
+            var snapshot = isDryRun
+                ? await cli.IndexReader.ReadAsync(ct).ConfigureAwait(false)
+                : await cli.IndexSnapshots.GetSnapshotAsync(ct).ConfigureAwait(false);
 
             if (selected?.Metadata is not { } metadata)
             {
                 var entry = snapshot.Packs.FirstOrDefault(pack => ModIds.Equals(pack.Id, packId));
-                throw new InvalidOperationException(await UnavailableReasonAsync(cli.ModPacks, entry, packId, requested, selected, ct).ConfigureAwait(false));
+                throw new InvalidOperationException(await UnavailableReasonAsync(packs, entry, packId, requested, selected, ct).ConfigureAwait(false));
             }
 
             // Only an incompatible game blocks, like a mod release (RFC 0017). The pack's
@@ -247,15 +256,19 @@ internal static class PackCommand
             var request = new ModPackInstallRequest(
                 target.InstanceId,
                 selected,
-                cli.Mods,
+                isDryRun ? cli.ReadOnlyMods : cli.Mods,
                 installed,
                 CurrentPlatform(),
                 ProceedWithRetractedPack: parseResult.GetValue(proceedWithRetracted),
                 ProceedWithYankedMembers: yanked.Length == 0 ? null : new HashSet<string>(yanked, ModIds.Comparer));
-            var result = await cli.ModPackInstaller.InstallAsync(request, new InstallProgressOutput(error), ct).ConfigureAwait(false);
+
+            var result = isDryRun
+                ? await cli.ModPackInstaller.PlanAsync(request, ct).ConfigureAwait(false)
+                : await cli.ModPackInstaller.InstallAsync(request, new InstallProgressOutput(error), ct).ConfigureAwait(false);
             var view = InstallView.From(
                 metadata,
                 target.Name,
+                isDryRun,
                 SelectionWarnings(selected, metadata, compatibility),
                 result,
                 selected.Diagnostics.Select(ContentOutput.Diagnostic).ToArray());
@@ -265,7 +278,7 @@ internal static class PackCommand
             else
                 WriteHuman(output, view);
 
-            if (result.IsComplete)
+            if (isDryRun ? result.Plan is { IsReady: true } : result.IsComplete)
                 return ExitCodes.Done;
 
             error.WriteLine($"error: {FailureReason(view, request)}");
@@ -401,6 +414,9 @@ internal static class PackCommand
             .ToArray();
         if (yanked.Length > 0)
             return $"The pack pins a yanked release of {string.Join(", ", yanked)}. Pass --proceed-with-yanked with each mod id to install it anyway.";
+
+        if (view.DryRun)
+            return $"The pack cannot be installed as planned, because {unresolved.Count} of {view.Members.Count} members are unresolved.";
 
         var incomplete = view.Members.Count(member => member.Status is not ("installed" or "replaced" or "already-installed"));
         return $"The pack was not installed completely, because {incomplete} of {view.Members.Count} members did not install.";
@@ -565,10 +581,16 @@ internal static class PackCommand
         if (view.Skipped.Count > 0)
         {
             var skipped = string.Join(", ", view.Skipped.Select(entry => $"{entry.Id} {entry.Version}"));
-            output.WriteLine($"warning: Borea does not install pinned vehicles and saves yet, so it skipped {skipped}.");
+            output.WriteLine(view.DryRun
+                ? $"warning: Borea does not install pinned vehicles and saves yet, so it will skip {skipped}."
+                : $"warning: Borea does not install pinned vehicles and saves yet, so it skipped {skipped}.");
         }
 
-        foreach (var member in view.Members)
+        var planned = view.DryRun ? view.Operations : null;
+        foreach (var operation in planned ?? [])
+            output.WriteLine($"{(operation.Reason == "dependency" ? "Install dependency" : "Install")} {operation.Id} {operation.Version}.");
+
+        foreach (var member in view.Members.Where(member => planned is null || member.Status != "not-attempted"))
         {
             var message = member.Message is null ? string.Empty : $": {member.Message}";
             var location = member.Location is null ? string.Empty : $" Author location: {member.Location}";
@@ -580,6 +602,9 @@ internal static class PackCommand
 
         foreach (var conflict in view.Conflicts)
             output.WriteLine($"conflict: {conflict.Message}");
+
+        if (planned is { Count: 0 } && view.UnresolvedChoices.Count == 0 && view.Conflicts.Count == 0)
+            output.WriteLine("Nothing to do.");
 
         ContentOutput.WriteDiagnostics(output, view.Diagnostics);
     }
@@ -756,8 +781,10 @@ internal static class PackCommand
         string Version,
         Guid InstanceId,
         string InstanceName,
+        bool DryRun,
         bool Complete,
         IReadOnlyList<MemberResultView> Members,
+        IReadOnlyList<OperationView>? Operations,
         IReadOnlyList<MessageView> Warnings,
         IReadOnlyList<MessageView> UnresolvedChoices,
         IReadOnlyList<MessageView> Conflicts,
@@ -767,6 +794,7 @@ internal static class PackCommand
         public static InstallView From(
             ModPackMetadata pack,
             string instanceName,
+            bool dryRun,
             IReadOnlyList<MessageView> selectionWarnings,
             ModPackInstallResult result,
             IReadOnlyList<DiagnosticView> diagnostics) => new(
@@ -774,8 +802,10 @@ internal static class PackCommand
             pack.Version.ToString(),
             result.InstanceId,
             instanceName,
+            dryRun,
             result.IsComplete,
             result.Members.Select(MemberResultView.From).ToArray(),
+            result.Plan?.Operations.Select(OperationView.From).ToArray(),
             selectionWarnings.Concat(result.Warnings.Select(MessageView.From)).ToArray(),
             result.Plan?.UnresolvedChoices.Select(MessageView.From).ToArray() ?? [],
             result.Plan?.Conflicts.Select(MessageView.From).ToArray() ?? [],
@@ -794,6 +824,14 @@ internal static class PackCommand
             Name(member.Status),
             member.Message,
             member.Location);
+    }
+
+    private sealed record OperationView(string Id, string Version, string Reason)
+    {
+        public static OperationView From(PlannedInstall operation) => new(
+            operation.Release.ModId,
+            operation.Release.Version.ToString(),
+            Name(operation.Reason));
     }
 
     private sealed record MessageView(string Id, string Code, string Message)

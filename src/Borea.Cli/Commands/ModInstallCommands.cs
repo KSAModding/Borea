@@ -181,7 +181,7 @@ internal static class ModInstallCommands
     private static OsPlatform CurrentPlatform() =>
         OperatingSystem.IsWindows() ? OsPlatform.Windows : OperatingSystem.IsLinux() ? OsPlatform.Linux : OsPlatform.MacOs;
 
-    private static async Task RequireCachedIndexAsync(CliServices cli, CancellationToken cancellationToken)
+    internal static async Task RequireCachedIndexAsync(CliServices cli, CancellationToken cancellationToken)
     {
         try
         {
