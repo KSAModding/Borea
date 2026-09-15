@@ -193,7 +193,7 @@ internal static class ModInstallCommands
         }
     }
 
-    private static IReadOnlyDictionary<string, string> ParseAlternatives(string[]? values)
+    internal static IReadOnlyDictionary<string, string> ParseAlternatives(string[]? values)
     {
         var result = new Dictionary<string, string>(StringComparer.Ordinal);
         foreach (var value in values ?? [])
