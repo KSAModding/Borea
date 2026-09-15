@@ -30,7 +30,13 @@ public sealed class ModPackInstaller : IModPackInstaller
         return await InstallAsync(request with { InstanceId = instance.InstanceId }, progress, cancellationToken).ConfigureAwait(false);
     }
 
-    public async Task<ModPackInstallResult> InstallAsync(ModPackInstallRequest request, IProgress<InstallProgress>? progress = null, CancellationToken cancellationToken = default)
+    public Task<ModPackInstallResult> PlanAsync(ModPackInstallRequest request, CancellationToken cancellationToken = default) =>
+        RunAsync(request, write: false, progress: null, cancellationToken);
+
+    public Task<ModPackInstallResult> InstallAsync(ModPackInstallRequest request, IProgress<InstallProgress>? progress = null, CancellationToken cancellationToken = default) =>
+        RunAsync(request, write: true, progress, cancellationToken);
+
+    private async Task<ModPackInstallResult> RunAsync(ModPackInstallRequest request, bool write, IProgress<InstallProgress>? progress, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
         ArgumentNullException.ThrowIfNull(request.Pack);
@@ -94,6 +100,13 @@ public sealed class ModPackInstaller : IModPackInstaller
             return Result(instance.InstanceId, plan, members, warnings, false);
         }
 
+        if (!write)
+        {
+            members.AddRange(plan.Operations.Select(operation => Member(operation.Release, ExistingReason(instance, operation.Release.ModId, operation.Reason), ModPackMemberStatus.NotAttempted)));
+            members.AddRange(AlreadyInstalled(instance, plan));
+            return Result(instance.InstanceId, plan, Ordered(members), warnings, IsComplete(metadata, members));
+        }
+
         var fresh = await _instances.GetByIdAsync(instance.InstanceId).ConfigureAwait(false)
             ?? throw new InvalidOperationException($"Instance '{instance.InstanceId}' no longer exists.");
         if (!plan.InstanceState.Matches(fresh))
@@ -148,17 +161,26 @@ public sealed class ModPackInstaller : IModPackInstaller
             }
         }
 
-        foreach (var selection in plan.Selections.Where(value => value.IsAlreadyInstalled))
-            members.Add(Member(selection.Release, ExistingReason(instance, selection.Release.ModId, selection.Reason), ModPackMemberStatus.AlreadyInstalled));
-
-        var complete = members.All(value => value.Status is ModPackMemberStatus.Installed or ModPackMemberStatus.Replaced or ModPackMemberStatus.AlreadyInstalled)
-            && metadata.Mods.All(pin => members.Any(value => ModIds.Equals(value.ModId, pin.ContentId) && value.Version == pin.Version && value.Status is ModPackMemberStatus.Installed or ModPackMemberStatus.Replaced or ModPackMemberStatus.AlreadyInstalled));
-        return Result(instance.InstanceId, plan, members.OrderBy(value => value.ModId, ModIds.Comparer).ToList(), warnings, complete);
+        members.AddRange(AlreadyInstalled(instance, plan));
+        return Result(instance.InstanceId, plan, Ordered(members), warnings, IsComplete(metadata, members));
     }
 
     private static ModPackMetadata RequireMetadata(ModPackResult pack) => pack.Metadata ?? throw new InvalidOperationException($"Pack '{pack.Id}' does not have usable metadata.");
 
     private static InstallReason ExistingReason(Instance instance, string modId, InstallReason fallback) => instance.Mods.FirstOrDefault(value => ModIds.Equals(value.ModId, modId))?.Reason ?? fallback;
+
+    private static IEnumerable<ModPackMemberResult> AlreadyInstalled(Instance instance, InstallPlan plan) =>
+        plan.Selections
+            .Where(value => value.IsAlreadyInstalled)
+            .Select(selection => Member(selection.Release, ExistingReason(instance, selection.Release.ModId, selection.Reason), ModPackMemberStatus.AlreadyInstalled));
+
+    private static bool IsDone(ModPackMemberStatus status) => status is ModPackMemberStatus.Installed or ModPackMemberStatus.Replaced or ModPackMemberStatus.AlreadyInstalled;
+
+    private static bool IsComplete(ModPackMetadata metadata, IReadOnlyList<ModPackMemberResult> members) =>
+        members.All(value => IsDone(value.Status))
+        && metadata.Mods.All(pin => members.Any(value => ModIds.Equals(value.ModId, pin.ContentId) && value.Version == pin.Version && IsDone(value.Status)));
+
+    private static List<ModPackMemberResult> Ordered(IEnumerable<ModPackMemberResult> members) => members.OrderBy(value => value.ModId, ModIds.Comparer).ToList();
 
     private static string? AuthorLocation(ModMetadata? listing)
     {
