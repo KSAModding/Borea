@@ -720,6 +720,46 @@ public sealed class PackCommandTests : IDisposable
         Assert.Equal(before, FileHashes());
     }
 
+    [Fact]
+    public async Task PackInstall_WithRecommended_PlansTheRecommendedMods()
+    {
+        _host.IndexReader.Snapshot = Snapshot(Pack(ContentCommandFixtures.PackVersion()));
+        _host.Mods.Releases.Add(ContentCommandFixtures.Release(dependencies: [new ModDependency("first", ModDependencyKind.Recommends)]));
+        _host.Mods.Releases.Add(ContentCommandFixtures.Release(id: "first", version: "1.0.0", dependencies: [new ModDependency("second", ModDependencyKind.Recommends)]));
+        _host.Mods.Releases.Add(ContentCommandFixtures.Release(id: "second", version: "1.0.0"));
+        UseThePackInstaller();
+        await _host.RunAsync("instance", "create", "Alpha");
+
+        var without = await _host.RunAsync("pack", "install", "navigation-pack", "--instance", "Alpha", "--dry-run");
+        var run = await _host.RunAsync("pack", "install", "navigation-pack", "--instance", "Alpha", "--with-recommended", "--dry-run");
+
+        Assert.DoesNotContain("first 1.0.0.", without.Output);
+        Assert.Equal(0, run.ExitCode);
+        Assert.Contains("first 1.0.0.", run.Output);
+        Assert.Contains("second 1.0.0.", run.Output);
+    }
+
+    [Fact]
+    public async Task PackInstall_Alternative_SelectsTheRequiredAlternative()
+    {
+        var alternatives = ModDependency.OfAlternatives(ModDependencyKind.Required, [new ModDependencyAlternative("first"), new ModDependencyAlternative("second")]);
+        _host.IndexReader.Snapshot = Snapshot(Pack(ContentCommandFixtures.PackVersion()));
+        _host.Mods.Releases.Add(ContentCommandFixtures.Release(dependencies: [alternatives]));
+        _host.Mods.Releases.Add(ContentCommandFixtures.Release(id: "first", version: "1.0.0"));
+        _host.Mods.Releases.Add(ContentCommandFixtures.Release(id: "second", version: "1.0.0"));
+        UseThePackInstaller();
+        await _host.RunAsync("instance", "create", "Alpha");
+        var initial = await _host.RunAsync("pack", "install", "navigation-pack", "--instance", "Alpha", "--dry-run");
+        var option = initial.Output.Split(Environment.NewLine).Single(line => line.StartsWith("choice option:", StringComparison.Ordinal));
+        var key = option["choice option: ".Length..option.IndexOf(" = ", StringComparison.Ordinal)];
+
+        var run = await _host.RunAsync("pack", "install", "navigation-pack", "--instance", "Alpha", "--alternative", $"{key}=second", "--dry-run");
+
+        Assert.Equal(0, run.ExitCode);
+        Assert.Contains("second 1.0.0.", run.Output);
+        Assert.DoesNotContain("first 1.0.0.", run.Output);
+    }
+
     [Theory]
     [InlineData("--proceed-with-yanked", "not a valid id")]
     [InlineData("--version", "not-a-version")]

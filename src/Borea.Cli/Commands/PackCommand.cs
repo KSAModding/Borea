@@ -207,6 +207,8 @@ internal static class PackCommand
                     result.AddError($"'{value}' is not a valid content id.");
             }
         });
+        var recommended = new Option<bool>("--with-recommended") { Description = "Install recommended dependencies." };
+        var alternatives = new Option<string[]>("--alternative") { Description = "Select a required alternative as choice-key=mod-id." };
         var dryRun = new Option<bool>("--dry-run") { Description = "Print the plan from the cached index without writing files." };
         var json = ArgumentRules.Json();
         var install = new Command("install", "Install the mods one mod pack version pins into an instance.");
@@ -215,12 +217,15 @@ internal static class PackCommand
         install.Options.Add(instance);
         install.Options.Add(proceedWithRetracted);
         install.Options.Add(proceedWithYanked);
+        install.Options.Add(recommended);
+        install.Options.Add(alternatives);
         install.Options.Add(dryRun);
         install.Options.Add(json);
 
         install.SetAction((parseResult, cancellationToken) => CommandRunner.RunAsync(parseResult, services, cancellationToken, async (cli, output, error, ct) =>
         {
             var target = await InstanceLookup.ResolveTargetAsync(cli.Instances, parseResult.GetValue(instance)).ConfigureAwait(false);
+            var chosenAlternatives = ModInstallCommands.ParseAlternatives(parseResult.GetValue(alternatives));
             var isDryRun = parseResult.GetValue(dryRun);
             if (isDryRun)
                 await ModInstallCommands.RequireCachedIndexAsync(cli, ct).ConfigureAwait(false);
@@ -259,11 +264,16 @@ internal static class PackCommand
                 isDryRun ? cli.ReadOnlyMods : cli.Mods,
                 installed,
                 CurrentPlatform(),
+                Alternatives: chosenAlternatives.Count == 0 ? null : chosenAlternatives,
                 ProceedWithRetractedPack: parseResult.GetValue(proceedWithRetracted),
                 ProceedWithYankedMembers: yanked.Length == 0 ? null : new HashSet<string>(yanked, ModIds.Comparer));
 
+            ModPackInstallResult? planned = null;
+            if (parseResult.GetValue(recommended))
+                (request, planned) = await SelectRecommendedAsync(cli.ModPackInstaller, request, ct).ConfigureAwait(false);
+
             var result = isDryRun
-                ? await cli.ModPackInstaller.PlanAsync(request, ct).ConfigureAwait(false)
+                ? planned ?? await cli.ModPackInstaller.PlanAsync(request, ct).ConfigureAwait(false)
                 : await cli.ModPackInstaller.InstallAsync(request, new InstallProgressOutput(error), ct).ConfigureAwait(false);
             var view = InstallView.From(
                 metadata,
@@ -302,6 +312,26 @@ internal static class PackCommand
 
     private static ContentIndexPackVersion? Newest(ContentIndexPack? entry) =>
         entry?.Versions.OrderByDescending(candidate => candidate.Metadata.Version).FirstOrDefault();
+
+    /// <summary>Plans again until no new recommendation appears, because a recommended mod can recommend more.</summary>
+    private static async Task<(ModPackInstallRequest Request, ModPackInstallResult Plan)> SelectRecommendedAsync(
+        IModPackInstaller installer,
+        ModPackInstallRequest request,
+        CancellationToken cancellationToken)
+    {
+        var selected = new HashSet<string>(StringComparer.Ordinal);
+        while (true)
+        {
+            var plan = await installer.PlanAsync(request, cancellationToken).ConfigureAwait(false);
+            var added = false;
+            foreach (var choice in plan.Plan?.Choices.Where(choice => choice.Kind == "recommendation") ?? [])
+                added |= selected.Add(choice.Key);
+            if (!added)
+                return (request, plan);
+
+            request = request with { Recommended = new HashSet<string>(selected, StringComparer.Ordinal) };
+        }
+    }
 
     /// <summary>
     /// The warnings about the selected pack version itself, none of which blocks: a disputed
@@ -600,6 +630,9 @@ internal static class PackCommand
         foreach (var choice in view.UnresolvedChoices)
             output.WriteLine($"choice: {choice.Message}");
 
+        foreach (var choice in view.Choices.Where(choice => choice.Kind == "alternative" && choice.Selected is null))
+            output.WriteLine($"choice option: {choice.Key} = {string.Join(", ", choice.Options)}");
+
         foreach (var conflict in view.Conflicts)
             output.WriteLine($"conflict: {conflict.Message}");
 
@@ -787,6 +820,7 @@ internal static class PackCommand
         IReadOnlyList<OperationView>? Operations,
         IReadOnlyList<MessageView> Warnings,
         IReadOnlyList<MessageView> UnresolvedChoices,
+        IReadOnlyList<ChoiceView> Choices,
         IReadOnlyList<MessageView> Conflicts,
         IReadOnlyList<SkippedView> Skipped,
         IReadOnlyList<DiagnosticView> Diagnostics)
@@ -808,6 +842,7 @@ internal static class PackCommand
             result.Plan?.Operations.Select(OperationView.From).ToArray(),
             selectionWarnings.Concat(result.Warnings.Select(MessageView.From)).ToArray(),
             result.Plan?.UnresolvedChoices.Select(MessageView.From).ToArray() ?? [],
+            result.Plan?.Choices.Select(ChoiceView.From).ToArray() ?? [],
             result.Plan?.Conflicts.Select(MessageView.From).ToArray() ?? [],
             pack.Vehicles.Select(pin => SkippedView.From("vehicle", pin))
                 .Concat(pack.Saves.Select(pin => SkippedView.From("save", pin)))
@@ -832,6 +867,11 @@ internal static class PackCommand
             operation.Release.ModId,
             operation.Release.Version.ToString(),
             Name(operation.Reason));
+    }
+
+    private sealed record ChoiceView(string Key, string OwnerId, string Kind, IReadOnlyList<string> Options, string? Selected)
+    {
+        public static ChoiceView From(PlanningChoice choice) => new(choice.Key, choice.OwnerModId, choice.Kind, choice.Options, choice.Selected);
     }
 
     private sealed record MessageView(string Id, string Code, string Message)
