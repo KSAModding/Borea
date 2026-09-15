@@ -7,6 +7,12 @@ namespace Borea.Core.ModPacks;
 
 public interface IModPackInstaller
 {
+    /// <summary>
+    /// Plans the install like <see cref="InstallAsync"/> without a write, so a member the plan
+    /// would write is <see cref="ModPackMemberStatus.NotAttempted"/>.
+    /// </summary>
+    Task<ModPackInstallResult> PlanAsync(ModPackInstallRequest request, CancellationToken cancellationToken = default);
+
     /// <param name="progress">The reports of each operation, numbered across every operation of the pack.</param>
     Task<ModPackInstallResult> InstallAsync(ModPackInstallRequest request, IProgress<InstallProgress>? progress = null, CancellationToken cancellationToken = default);
 

@@ -218,6 +218,26 @@ public sealed class ModPackInstallerTests
         Assert.Empty(installer.Counts);
     }
 
+    [Fact]
+    public async Task Plan_ReadyPlan_ReturnsTheOperationsWithoutWriting()
+    {
+        var dependency = Release("Dependency");
+        var member = Release("Member", dependencies: [new ModDependency("Dependency", ModDependencyKind.Required)]);
+        var repository = new FakeModRepository([member, dependency]);
+        var instances = new MemoryInstanceRepository();
+        var instance = await instances.CreateAsync("Target", InstanceSource.Custom.Value);
+        var installer = new FakeInstaller(instances);
+        var service = new ModPackInstaller(instances, new FakePlanner(), installer, new FakeReplacer(instances));
+
+        var result = await service.PlanAsync(Request(instance.InstanceId, Pack(member), repository));
+
+        Assert.False(result.IsComplete);
+        Assert.Equal(["Member", "Dependency"], result.Plan!.Operations.Select(operation => operation.Release.ModId));
+        Assert.All(result.Members, value => Assert.Equal(ModPackMemberStatus.NotAttempted, value.Status));
+        Assert.Empty(installer.Counts);
+        Assert.Empty((await instances.GetByIdAsync(instance.InstanceId))!.Mods);
+    }
+
     private static ModPackInstaller Services(MemoryInstanceRepository instances) => new(instances, new FakePlanner(), new FakeInstaller(instances), new FakeReplacer(instances));
 
     private static ModPackInstallRequest Request(Guid instanceId, ModPackResult pack, IModRepository repository) => new(instanceId, pack, repository);
