@@ -48,6 +48,7 @@
                                 <Button.Flyout>
                                     <MenuFlyout Placement="BottomEdgeAlignedRight">
                                         <MenuItem Header="{Binding Localization.LibraryRename}" Command="{Binding SelectedInstance.BeginRenameCommand}" />
+                                        <MenuItem Header="{Binding Localization.LibraryOpenFolder}" Command="{Binding SelectedInstance.OpenFolderCommand}" />
                                         <MenuItem Header="{Binding Localization.LibraryDelete}" Command="{Binding SelectedInstance.BeginDeleteCommand}" />
                                     </MenuFlyout>
                                 </Button.Flyout>

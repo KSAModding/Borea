@@ -135,6 +135,9 @@
   <data name="LibraryRename" xml:space="preserve">
     <value>Rename</value>
   </data>
+  <data name="LibraryOpenFolder" xml:space="preserve">
+    <value>Open folder</value>
+  </data>
   <data name="LibraryDelete" xml:space="preserve">
     <value>Delete</value>
   </data>

@@ -113,6 +113,8 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string LibraryRename => Resources.LibraryRename;
 
+    public string LibraryOpenFolder => Resources.LibraryOpenFolder;
+
     public string LibraryDelete => Resources.LibraryDelete;
 
     public string LibrarySave => Resources.LibrarySave;

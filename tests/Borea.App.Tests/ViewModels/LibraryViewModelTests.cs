@@ -167,6 +167,25 @@ public sealed class LibraryViewModelTests
     }
 
     [Fact]
+    public async Task OpenFolder_CreatesAndOpensTheInstanceFolder()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var viewModel = harness.ViewModel;
+        var instance = await harness.Services.Instances.CreateAsync("Alpha", InstanceSource.Custom.Value);
+        await viewModel.LoadAsync();
+        viewModel.SetMainWindowLibraryCommand.Execute(null);
+        string? opened = null;
+        viewModel.OpenWithSystem = target => opened = target;
+
+        Assert.Single(viewModel.Instances).OpenFolderCommand.Execute(null);
+
+        var root = harness.Services.Paths.GetInstanceRoot(instance.InstanceId);
+        Assert.Equal(root, opened);
+        Assert.True(Directory.Exists(root));
+        Assert.Null(viewModel.InstanceError);
+    }
+
+    [Fact]
     public async Task Delete_NeedsConfirmationThenRemovesTheInstance()
     {
         using var harness = await ViewModelHarness.CreateAsync();

@@ -527,6 +527,30 @@ public partial class MainViewModel : ViewModelBase
     internal Task DeleteInstanceAsync(Guid instanceId)
         => RunInstanceOperationAsync(instances => instances.DeleteAsync(instanceId));
 
+    /// <summary>Opens the folder of the instance, and creates it when it does not exist yet.</summary>
+    internal void OpenInstanceFolder(Guid instanceId)
+    {
+        if (_services is not { } services)
+            return;
+
+        var root = services.Paths.GetInstanceRoot(instanceId);
+        string? error;
+        try
+        {
+            Directory.CreateDirectory(root);
+            error = TryOpenWithSystem(root);
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            error = exception.Message;
+        }
+
+        if (CurrentWindowLibrary)
+            InstanceError = error;
+        else
+            ContentError = error;
+    }
+
     /// <summary>
     /// Runs one repository call, then reloads the list so every row reflects
     /// the outcome. The repository's message becomes <see cref="InstanceError"/>.
@@ -768,6 +792,9 @@ public sealed partial class InstanceItem : ObservableObject
 
     [RelayCommand]
     private void BeginRename() => _owner.BeginRenameInstance(this);
+
+    [RelayCommand]
+    private void OpenFolder() => _owner.OpenInstanceFolder(InstanceId);
 
     [RelayCommand]
     private void BeginDelete() => IsConfirmingDelete = true;
