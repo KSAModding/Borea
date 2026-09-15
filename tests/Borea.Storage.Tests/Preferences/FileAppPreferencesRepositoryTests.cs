@@ -87,6 +87,34 @@ public sealed class FileAppPreferencesRepositoryTests : IDisposable
     }
 
     [Fact]
+    public async Task SaveThenGet_ImagesFromAuthorHostsTurnedOff_RestoresTheChoice()
+    {
+        Assert.True(AppPreferences.Empty.LoadImagesFromAuthorHosts);
+        var preferences = AppPreferences.Empty.WithLoadImagesFromAuthorHosts(false).WithSelectedThemeName("Dark");
+
+        await _repository.SaveAsync(preferences, BundledThemeNames);
+        var result = await _repository.GetAsync(BundledThemeNames);
+
+        Assert.False(result.Preferences.LoadImagesFromAuthorHosts);
+        Assert.Equal("Dark", result.Preferences.SelectedThemeName);
+        using var document = JsonDocument.Parse(await File.ReadAllTextAsync(_pathProvider.GetAppPreferencesPath()));
+        Assert.False(document.RootElement.GetProperty("loadImagesFromAuthorHosts").GetBoolean());
+    }
+
+    [Fact]
+    public async Task GetAsync_FileWrittenBeforeTheImageField_LoadsWithImagesFromAuthorHostsOn()
+    {
+        await WriteAsync("""
+            { "formatVersion": 1, "selectedTheme": "Light" }
+            """);
+
+        var result = await _repository.GetAsync(BundledThemeNames);
+
+        Assert.Equal(AppPreferencesLoadStatus.Loaded, result.Status);
+        Assert.True(result.Preferences.LoadImagesFromAuthorHosts);
+    }
+
+    [Fact]
     public void With_OtherPreferenceChanges_KeepTheUpdateCheckChoice()
     {
         var preferences = new AppPreferences("Dark", checkForUpdatesAtStart: false)
@@ -141,6 +169,20 @@ public sealed class FileAppPreferencesRepositoryTests : IDisposable
 
         Assert.Equal(BoreaUpdateChannel.Dev, preferences.UpdateChannel);
         Assert.Equal(BoreaUpdateChannel.Stable, AppPreferences.Empty.UpdateChannel);
+    }
+
+    [Fact]
+    public void With_OtherPreferenceChanges_KeepImagesFromAuthorHostsOff()
+    {
+        var preferences = AppPreferences.Empty.WithLoadImagesFromAuthorHosts(false)
+            .WithSelectedThemeName("Light")
+            .WithRegionalCultureName("de-DE")
+            .WithUiCultureName("de")
+            .WithCheckForUpdatesAtStart(false)
+            .WithUpdateChannel(BoreaUpdateChannel.Dev)
+            .WithForeignFolderDeletionConfirmed(true);
+
+        Assert.False(preferences.LoadImagesFromAuthorHosts);
     }
 
     [Fact]

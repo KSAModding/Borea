@@ -18,6 +18,9 @@ internal sealed class AppPreferencesDocumentDto
 
     public bool? ForeignFolderDeletionConfirmed { get; set; }
 
+    /// <summary>Null in an older file, which reads as on.</summary>
+    public bool? LoadImagesFromAuthorHosts { get; set; }
+
     public List<CustomThemePreferenceDto?>? CustomThemes { get; set; }
 }
 
