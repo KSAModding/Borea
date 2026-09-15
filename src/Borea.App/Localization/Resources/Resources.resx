@@ -726,7 +726,6 @@
   <data name="LaunchWithoutModLoaderToolTip" xml:space="preserve">
     <value>Launches KSA the same way as running KSA.exe. It uses the shared profile that KSA creates, not a Borea instance.</value>
   </data>
-</root>
   <data name="InstanceContentNotInIndex" xml:space="preserve">
     <value>This mod is not in the content index, so it has no page.</value>
   </data>

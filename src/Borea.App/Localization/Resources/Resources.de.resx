@@ -726,7 +726,6 @@
   <data name="LaunchWithoutModLoaderToolTip" xml:space="preserve">
     <value>Startet KSA so, als würdest du KSA.exe direkt ausführen. Es nutzt das gemeinsame Profil, das KSA selbst anlegt, und keine Borea-Instanz.</value>
   </data>
-</root>
   <data name="InstanceContentNotInIndex" xml:space="preserve">
     <value>Diese Mod ist nicht im Content-Index und hat deshalb keine Seite.</value>
   </data>
