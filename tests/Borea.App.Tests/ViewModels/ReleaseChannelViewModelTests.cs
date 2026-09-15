@@ -113,10 +113,10 @@ public sealed class ReleaseChannelViewModelTests
         Assert.Equal("0.8.0-beta.1", viewModel.ContentVersions[0].Version);
         Assert.DoesNotContain(viewModel.ContentVersions, version => version.IsDev);
 
-        viewModel.VersionFilter = viewModel.OptionFor(ReleaseChannel.Dev);
+        viewModel.SelectVersionFilterCommand.Execute(ReleaseChannel.Dev);
         Assert.Equal(6, viewModel.ContentVersions.Count);
 
-        viewModel.VersionFilter = viewModel.OptionFor(ReleaseChannel.Stable);
+        viewModel.SelectVersionFilterCommand.Execute(ReleaseChannel.Stable);
         Assert.Equal(4, viewModel.ContentVersions.Count);
         Assert.All(viewModel.ContentVersions, version => Assert.Equal(ReleaseStatus.Stable, version.Status));
     }

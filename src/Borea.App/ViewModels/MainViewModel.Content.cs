@@ -239,6 +239,9 @@ public partial class MainViewModel
 
     partial void OnVersionFilterChanged(ReleaseChannelOption? value) => ApplyVersionFilter();
 
+    [RelayCommand]
+    private void SelectVersionFilter(ReleaseChannel channel) => VersionFilter = OptionFor(channel);
+
     private void ApplyVersionFilter()
     {
         ContentVersions.Clear();
