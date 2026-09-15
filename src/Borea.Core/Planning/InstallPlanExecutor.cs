@@ -39,7 +39,7 @@ public sealed class InstallPlanExecutor : IInstallPlanExecutor
         var step = 0;
         foreach (var operation in plan.Operations)
         {
-            var operationProgress = InPlan(progress, ++step, plan.Operations.Count);
+            var operationProgress = progress.ForStep(++step, plan.Operations.Count);
             fresh = await _instances.GetByIdAsync(plan.InstanceId).ConfigureAwait(false)
                 ?? throw new InvalidOperationException($"Instance '{plan.InstanceId}' no longer exists.");
             if (!expectedState.Matches(fresh))
@@ -58,9 +58,4 @@ public sealed class InstallPlanExecutor : IInstallPlanExecutor
             }
         }
     }
-
-    private static IProgress<InstallProgress>? InPlan(IProgress<InstallProgress>? progress, int step, int stepCount) =>
-        progress is null
-            ? null
-            : new SynchronousProgress<InstallProgress>(value => progress.Report(value with { Step = step, StepCount = stepCount }));
 }
