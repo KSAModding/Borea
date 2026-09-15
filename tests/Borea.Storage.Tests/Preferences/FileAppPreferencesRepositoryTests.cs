@@ -199,6 +199,55 @@ public sealed class FileAppPreferencesRepositoryTests : IDisposable
         Assert.Equal(BoreaUpdateChannel.Stable, AppPreferences.Empty.UpdateChannel);
     }
 
+    [Theory]
+    [InlineData(DiscoverSortOrder.RecentlyUpdated, "recently-updated")]
+    [InlineData(DiscoverSortOrder.Name, "name")]
+    public async Task SaveThenGet_DiscoverSortOrder_RestoresTheChoice(DiscoverSortOrder order, string name)
+    {
+        await _repository.SaveAsync(AppPreferences.Empty.WithDiscoverSortOrder(order), BundledThemeNames);
+
+        var result = await _repository.GetAsync(BundledThemeNames);
+
+        Assert.Equal(AppPreferencesLoadStatus.Loaded, result.Status);
+        Assert.Equal(order, result.Preferences.DiscoverSortOrder);
+        using var document = JsonDocument.Parse(await File.ReadAllTextAsync(_pathProvider.GetAppPreferencesPath()));
+        Assert.Equal(name, document.RootElement.GetProperty("discoverSortOrder").GetString());
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData(""", "discoverSortOrder": null""")]
+    [InlineData(""", "discoverSortOrder": "downloads" """)]
+    public async Task GetAsync_NoOrUnknownDiscoverSortOrder_LoadsAsPopularity(string discoverSortOrder)
+    {
+        await WriteAsync($$"""
+            { "formatVersion": 1, "selectedTheme": "Light"{{discoverSortOrder}} }
+            """);
+
+        var result = await _repository.GetAsync(BundledThemeNames);
+
+        Assert.Equal(AppPreferencesLoadStatus.Loaded, result.Status);
+        Assert.Equal("Light", result.Preferences.SelectedThemeName);
+        Assert.Equal(DiscoverSortOrder.Popularity, result.Preferences.DiscoverSortOrder);
+    }
+
+    [Fact]
+    public void With_OtherPreferenceChanges_KeepTheDiscoverSortOrder()
+    {
+        var preferences = AppPreferences.Empty.WithDiscoverSortOrder(DiscoverSortOrder.Name)
+            .WithSelectedThemeName("Light")
+            .WithRegionalCultureName("de-DE")
+            .WithUiCultureName("de")
+            .WithCheckForUpdatesAtStart(false)
+            .WithUpdateChannel(BoreaUpdateChannel.Dev)
+            .WithForeignFolderDeletionConfirmed(true)
+            .WithLoadImagesFromAuthorHosts(false)
+            .WithHomeLaunch(HomeLaunchOption.WithoutModLoader);
+
+        Assert.Equal(DiscoverSortOrder.Name, preferences.DiscoverSortOrder);
+        Assert.Equal(DiscoverSortOrder.Popularity, AppPreferences.Empty.DiscoverSortOrder);
+    }
+
     [Fact]
     public void With_OtherPreferenceChanges_KeepImagesFromAuthorHostsOff()
     {
@@ -208,7 +257,8 @@ public sealed class FileAppPreferencesRepositoryTests : IDisposable
             .WithUiCultureName("de")
             .WithCheckForUpdatesAtStart(false)
             .WithUpdateChannel(BoreaUpdateChannel.Dev)
-            .WithForeignFolderDeletionConfirmed(true);
+            .WithForeignFolderDeletionConfirmed(true)
+            .WithDiscoverSortOrder(DiscoverSortOrder.Name);
 
         Assert.False(preferences.LoadImagesFromAuthorHosts);
     }
@@ -223,7 +273,8 @@ public sealed class FileAppPreferencesRepositoryTests : IDisposable
             .WithCheckForUpdatesAtStart(false)
             .WithUpdateChannel(BoreaUpdateChannel.Dev)
             .WithForeignFolderDeletionConfirmed(true)
-            .WithLoadImagesFromAuthorHosts(false);
+            .WithLoadImagesFromAuthorHosts(false)
+            .WithDiscoverSortOrder(DiscoverSortOrder.Name);
 
         Assert.Equal(HomeLaunchOption.WithoutModLoader, preferences.HomeLaunch);
     }

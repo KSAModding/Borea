@@ -624,7 +624,8 @@ public partial class MainViewModel : ViewModelBase
             && left.UpdateChannel == right.UpdateChannel
             && left.ForeignFolderDeletionConfirmed == right.ForeignFolderDeletionConfirmed
             && left.LoadImagesFromAuthorHosts == right.LoadImagesFromAuthorHosts
-            && left.HomeLaunch == right.HomeLaunch;
+            && left.HomeLaunch == right.HomeLaunch
+            && left.DiscoverSortOrder == right.DiscoverSortOrder;
 
     private void OnRegionalFormatChanged(object? sender, PropertyChangedEventArgs e)
     {
@@ -681,6 +682,7 @@ public partial class MainViewModel : ViewModelBase
         OnPropertyChanged(nameof(NameModalTitle));
         OnPropertyChanged(nameof(NameModalConfirmText));
         OnPropertyChanged(nameof(ContentVersionsEmptyText));
+        OnPropertyChanged(nameof(DiscoverSortText));
 
         QueuePreferenceSave(preferences => preferences.WithUiCultureName(Localization.SelectedCultureName));
     }

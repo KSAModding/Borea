@@ -33,6 +33,9 @@ public sealed class AppPreferences
     /// <summary>What the Home launch button starts, which is the option last chosen in its menu. The active instance by default.</summary>
     public HomeLaunchOption HomeLaunch { get; }
 
+    /// <summary>How Discover orders its listings. Popularity by default.</summary>
+    public DiscoverSortOrder DiscoverSortOrder { get; }
+
     public AppPreferences(
         string? selectedThemeName,
         IEnumerable<CustomThemePreference>? customThemes = null,
@@ -42,7 +45,8 @@ public sealed class AppPreferences
         BoreaUpdateChannel updateChannel = BoreaUpdateChannel.Stable,
         bool foreignFolderDeletionConfirmed = false,
         bool loadImagesFromAuthorHosts = true,
-        HomeLaunchOption homeLaunch = HomeLaunchOption.ActiveInstance)
+        HomeLaunchOption homeLaunch = HomeLaunchOption.ActiveInstance,
+        DiscoverSortOrder discoverSortOrder = DiscoverSortOrder.Popularity)
     {
         if (selectedThemeName is not null && string.IsNullOrWhiteSpace(selectedThemeName))
             throw new ArgumentException("Selected theme name, if provided, cannot be whitespace.", nameof(selectedThemeName));
@@ -59,6 +63,9 @@ public sealed class AppPreferences
         if (!Enum.IsDefined(homeLaunch))
             throw new ArgumentException("The Home launch option is not defined.", nameof(homeLaunch));
 
+        if (!Enum.IsDefined(discoverSortOrder))
+            throw new ArgumentException("The Discover sort order is not defined.", nameof(discoverSortOrder));
+
         SelectedThemeName = selectedThemeName;
         RegionalCultureName = regionalCultureName;
         UiCultureName = uiCultureName;
@@ -67,32 +74,36 @@ public sealed class AppPreferences
         ForeignFolderDeletionConfirmed = foreignFolderDeletionConfirmed;
         LoadImagesFromAuthorHosts = loadImagesFromAuthorHosts;
         HomeLaunch = homeLaunch;
+        DiscoverSortOrder = discoverSortOrder;
         CustomThemes = BuildCustomThemes(customThemes, nameof(customThemes));
     }
 
     public AppPreferences WithRegionalCultureName(string? regionalCultureName)
-        => new(SelectedThemeName, CustomThemes, regionalCultureName, UiCultureName, CheckForUpdatesAtStart, UpdateChannel, ForeignFolderDeletionConfirmed, LoadImagesFromAuthorHosts, HomeLaunch);
+        => new(SelectedThemeName, CustomThemes, regionalCultureName, UiCultureName, CheckForUpdatesAtStart, UpdateChannel, ForeignFolderDeletionConfirmed, LoadImagesFromAuthorHosts, HomeLaunch, DiscoverSortOrder);
 
     public AppPreferences WithUiCultureName(string? uiCultureName)
-        => new(SelectedThemeName, CustomThemes, RegionalCultureName, uiCultureName, CheckForUpdatesAtStart, UpdateChannel, ForeignFolderDeletionConfirmed, LoadImagesFromAuthorHosts, HomeLaunch);
+        => new(SelectedThemeName, CustomThemes, RegionalCultureName, uiCultureName, CheckForUpdatesAtStart, UpdateChannel, ForeignFolderDeletionConfirmed, LoadImagesFromAuthorHosts, HomeLaunch, DiscoverSortOrder);
 
     public AppPreferences WithSelectedThemeName(string? selectedThemeName)
-        => new(selectedThemeName, CustomThemes, RegionalCultureName, UiCultureName, CheckForUpdatesAtStart, UpdateChannel, ForeignFolderDeletionConfirmed, LoadImagesFromAuthorHosts, HomeLaunch);
+        => new(selectedThemeName, CustomThemes, RegionalCultureName, UiCultureName, CheckForUpdatesAtStart, UpdateChannel, ForeignFolderDeletionConfirmed, LoadImagesFromAuthorHosts, HomeLaunch, DiscoverSortOrder);
 
     public AppPreferences WithCheckForUpdatesAtStart(bool checkForUpdatesAtStart)
-        => new(SelectedThemeName, CustomThemes, RegionalCultureName, UiCultureName, checkForUpdatesAtStart, UpdateChannel, ForeignFolderDeletionConfirmed, LoadImagesFromAuthorHosts, HomeLaunch);
+        => new(SelectedThemeName, CustomThemes, RegionalCultureName, UiCultureName, checkForUpdatesAtStart, UpdateChannel, ForeignFolderDeletionConfirmed, LoadImagesFromAuthorHosts, HomeLaunch, DiscoverSortOrder);
 
     public AppPreferences WithUpdateChannel(BoreaUpdateChannel updateChannel)
-        => new(SelectedThemeName, CustomThemes, RegionalCultureName, UiCultureName, CheckForUpdatesAtStart, updateChannel, ForeignFolderDeletionConfirmed, LoadImagesFromAuthorHosts, HomeLaunch);
+        => new(SelectedThemeName, CustomThemes, RegionalCultureName, UiCultureName, CheckForUpdatesAtStart, updateChannel, ForeignFolderDeletionConfirmed, LoadImagesFromAuthorHosts, HomeLaunch, DiscoverSortOrder);
 
     public AppPreferences WithForeignFolderDeletionConfirmed(bool foreignFolderDeletionConfirmed)
-        => new(SelectedThemeName, CustomThemes, RegionalCultureName, UiCultureName, CheckForUpdatesAtStart, UpdateChannel, foreignFolderDeletionConfirmed, LoadImagesFromAuthorHosts, HomeLaunch);
+        => new(SelectedThemeName, CustomThemes, RegionalCultureName, UiCultureName, CheckForUpdatesAtStart, UpdateChannel, foreignFolderDeletionConfirmed, LoadImagesFromAuthorHosts, HomeLaunch, DiscoverSortOrder);
 
     public AppPreferences WithLoadImagesFromAuthorHosts(bool loadImagesFromAuthorHosts)
-        => new(SelectedThemeName, CustomThemes, RegionalCultureName, UiCultureName, CheckForUpdatesAtStart, UpdateChannel, ForeignFolderDeletionConfirmed, loadImagesFromAuthorHosts, HomeLaunch);
+        => new(SelectedThemeName, CustomThemes, RegionalCultureName, UiCultureName, CheckForUpdatesAtStart, UpdateChannel, ForeignFolderDeletionConfirmed, loadImagesFromAuthorHosts, HomeLaunch, DiscoverSortOrder);
 
     public AppPreferences WithHomeLaunch(HomeLaunchOption homeLaunch)
-        => new(SelectedThemeName, CustomThemes, RegionalCultureName, UiCultureName, CheckForUpdatesAtStart, UpdateChannel, ForeignFolderDeletionConfirmed, LoadImagesFromAuthorHosts, homeLaunch);
+        => new(SelectedThemeName, CustomThemes, RegionalCultureName, UiCultureName, CheckForUpdatesAtStart, UpdateChannel, ForeignFolderDeletionConfirmed, LoadImagesFromAuthorHosts, homeLaunch, DiscoverSortOrder);
+
+    public AppPreferences WithDiscoverSortOrder(DiscoverSortOrder discoverSortOrder)
+        => new(SelectedThemeName, CustomThemes, RegionalCultureName, UiCultureName, CheckForUpdatesAtStart, UpdateChannel, ForeignFolderDeletionConfirmed, LoadImagesFromAuthorHosts, HomeLaunch, discoverSortOrder);
 
     public string ResolveSelectedThemeName(IReadOnlyCollection<string> bundledThemeNames, string defaultThemeName)
     {

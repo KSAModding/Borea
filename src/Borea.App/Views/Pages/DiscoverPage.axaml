@@ -2,6 +2,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Borea.App.ViewModels"
              xmlns:views="using:Borea.App.Views"
+             xmlns:prefs="using:Borea.Core.Preferences"
              x:Class="Borea.App.Views.Pages.DiscoverPage"
              x:DataType="vm:MainViewModel">
     <!-- Discover: the list, with the filter panel along the right edge -->
@@ -35,44 +36,72 @@
                         </Button>
                     </StackPanel>
 
-                    <!-- active filters -->
-                    <StackPanel Orientation="Horizontal" Spacing="8" Margin="8,24,8,0" IsVisible="{Binding HasDiscoverFilters}">
-                        <Button Classes="chip-button" Command="{Binding ClearDiscoverFiltersCommand}">
+                    <!-- active filters, and the sort order of the Mods and Modpacks tabs -->
+                    <DockPanel Margin="8,24,0,0">
+                        <DockPanel.IsVisible>
+                            <MultiBinding Converter="{x:Static BoolConverters.Or}">
+                                <Binding Path="HasDiscoverFilters" />
+                                <Binding Path="!IsLoadersTab" />
+                            </MultiBinding>
+                        </DockPanel.IsVisible>
+                        <Button DockPanel.Dock="Right" Classes="dropdown" Margin="16,0,0,0" IsVisible="{Binding !IsLoadersTab}" AutomationProperties.Name="{Binding Localization.DiscoverSortBy}">
+                            <Button.Flyout>
+                                <MenuFlyout Placement="BottomEdgeAlignedRight">
+                                    <MenuItem Header="{Binding Localization.DiscoverSortPopularity}" Command="{Binding SelectDiscoverSortCommand}" CommandParameter="{x:Static prefs:DiscoverSortOrder.Popularity}" />
+                                    <MenuItem Header="{Binding Localization.DiscoverSortRecentlyUpdated}" Command="{Binding SelectDiscoverSortCommand}" CommandParameter="{x:Static prefs:DiscoverSortOrder.RecentlyUpdated}" />
+                                    <MenuItem Header="{Binding Localization.DiscoverSortName}" Command="{Binding SelectDiscoverSortCommand}" CommandParameter="{x:Static prefs:DiscoverSortOrder.Name}" />
+                                </MenuFlyout>
+                            </Button.Flyout>
                             <StackPanel Orientation="Horizontal" Spacing="4">
-                                <Path Classes="icon size-16" Data="{StaticResource Icon.Close}" />
-                                <TextBlock Classes="label-sm" Text="{Binding Localization.DiscoverClearAll}" VerticalAlignment="Center" />
+                                <TextBlock Classes="body-md secondary" Text="{Binding Localization.DiscoverSortBy, StringFormat='{}{0}:'}" VerticalAlignment="Center" />
+                                <TextBlock Classes="body-md" Text="{Binding DiscoverSortText}" VerticalAlignment="Center" />
+                                <Path Classes="icon size-16" Data="{StaticResource Icon.CaretDown}" VerticalAlignment="Center" />
                             </StackPanel>
                         </Button>
-                        <ItemsControl ItemsSource="{Binding SelectedCategories}" IsVisible="{Binding !!SelectedCategories.Count}">
-                            <ItemsControl.ItemsPanel>
-                                <ItemsPanelTemplate>
-                                    <StackPanel Orientation="Horizontal" Spacing="8" />
-                                </ItemsPanelTemplate>
-                            </ItemsControl.ItemsPanel>
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate x:DataType="vm:DiscoverCategory">
-                                    <Button Classes="chip-button" Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).ToggleCategoryCommand}" CommandParameter="{Binding}">
-                                        <StackPanel Orientation="Horizontal" Spacing="4">
-                                            <Path Classes="icon size-16" Data="{StaticResource Icon.Close}" />
-                                            <TextBlock Classes="label-sm" Text="{Binding Name}" VerticalAlignment="Center" />
-                                        </StackPanel>
-                                    </Button>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                        <Button Classes="chip-button" Command="{Binding SelectOsCommand}" IsVisible="{Binding SelectedOs, Converter={x:Static ObjectConverters.IsNotNull}}">
-                            <StackPanel Orientation="Horizontal" Spacing="4">
-                                <Path Classes="icon size-16" Data="{StaticResource Icon.Close}" />
-                                <TextBlock Classes="label-sm" Text="{Binding SelectedOs}" VerticalAlignment="Center" />
-                            </StackPanel>
-                        </Button>
-                        <Button Classes="chip-button" Command="{Binding SelectLicenseCommand}" IsVisible="{Binding SelectedLicense, Converter={x:Static ObjectConverters.IsNotNull}}">
-                            <StackPanel Orientation="Horizontal" Spacing="4">
-                                <Path Classes="icon size-16" Data="{StaticResource Icon.Close}" />
-                                <TextBlock Classes="label-sm" Text="{Binding SelectedLicense}" VerticalAlignment="Center" />
-                            </StackPanel>
-                        </Button>
-                    </StackPanel>
+                        <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center" ClipToBounds="True" IsVisible="{Binding HasDiscoverFilters}">
+                            <Button Classes="chip-button" Command="{Binding ClearDiscoverFiltersCommand}">
+                                <StackPanel Orientation="Horizontal" Spacing="4">
+                                    <Path Classes="icon size-16" Data="{StaticResource Icon.Close}" />
+                                    <TextBlock Classes="label-sm" Text="{Binding Localization.DiscoverClearAll}" VerticalAlignment="Center" />
+                                </StackPanel>
+                            </Button>
+                            <ItemsControl ItemsSource="{Binding SelectedCategories}" IsVisible="{Binding !!SelectedCategories.Count}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <StackPanel Orientation="Horizontal" Spacing="8" />
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:DiscoverCategory">
+                                        <Button Classes="chip-button" Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).ToggleCategoryCommand}" CommandParameter="{Binding}">
+                                            <StackPanel Orientation="Horizontal" Spacing="4">
+                                                <Path Classes="icon size-16" Data="{StaticResource Icon.Close}" />
+                                                <TextBlock Classes="label-sm" Text="{Binding Name}" VerticalAlignment="Center" />
+                                            </StackPanel>
+                                        </Button>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                            <Button Classes="chip-button" Command="{Binding ClearDiscoverGameVersionRangeCommand}" IsVisible="{Binding DiscoverGameVersionRangeText, Converter={x:Static ObjectConverters.IsNotNull}}">
+                                <StackPanel Orientation="Horizontal" Spacing="4">
+                                    <Path Classes="icon size-16" Data="{StaticResource Icon.Close}" />
+                                    <TextBlock Classes="label-sm" Text="{Binding DiscoverGameVersionRangeText}" VerticalAlignment="Center" />
+                                </StackPanel>
+                            </Button>
+                            <Button Classes="chip-button" Command="{Binding SelectOsCommand}" IsVisible="{Binding SelectedOs, Converter={x:Static ObjectConverters.IsNotNull}}">
+                                <StackPanel Orientation="Horizontal" Spacing="4">
+                                    <Path Classes="icon size-16" Data="{StaticResource Icon.Close}" />
+                                    <TextBlock Classes="label-sm" Text="{Binding SelectedOs}" VerticalAlignment="Center" />
+                                </StackPanel>
+                            </Button>
+                            <Button Classes="chip-button" Command="{Binding SelectLicenseCommand}" IsVisible="{Binding SelectedLicense, Converter={x:Static ObjectConverters.IsNotNull}}">
+                                <StackPanel Orientation="Horizontal" Spacing="4">
+                                    <Path Classes="icon size-16" Data="{StaticResource Icon.Close}" />
+                                    <TextBlock Classes="label-sm" Text="{Binding SelectedLicense}" VerticalAlignment="Center" />
+                                </StackPanel>
+                            </Button>
+                        </StackPanel>
+                    </DockPanel>
 
                     <TextBlock Classes="body-md muted" Text="{Binding Localization.DiscoverLoading}" Margin="8,24,0,0" IsVisible="{Binding IsDiscoverLoading}" />
                     <TextBlock Classes="body-md danger" Text="{Binding DiscoverError}" TextWrapping="Wrap" Margin="8,24,0,0">
@@ -158,6 +187,43 @@
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
+                    </StackPanel>
+                    <Border Height="1" Background="{StaticResource Brush.BorderStrong}" IsVisible="{Binding !!GameVersionOptions.Count}" />
+                    <StackPanel Spacing="10" IsVisible="{Binding !!GameVersionOptions.Count}">
+                        <TextBlock Classes="heading-md" Text="{Binding Localization.ContentGameVersionHeader}" />
+                        <StackPanel Spacing="8">
+                            <!-- a chosen build keeps its "Min:" or "Max:" label, like the inline dropdowns -->
+                            <ComboBox ItemsSource="{Binding GameVersionOptions}" SelectedItem="{Binding DiscoverGameMax}" PlaceholderText="{Binding Localization.DiscoverGameVersionMax}" AutomationProperties.Name="{Binding Localization.DiscoverGameVersionMax}" HorizontalAlignment="Stretch" MaxDropDownHeight="300">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:GameVersionOption">
+                                        <TextBlock Text="{Binding Text}" />
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                                <ComboBox.SelectionBoxItemTemplate>
+                                    <DataTemplate x:DataType="vm:GameVersionOption">
+                                        <StackPanel Orientation="Horizontal" Spacing="4">
+                                            <TextBlock Classes="secondary" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.DiscoverGameVersionMax, StringFormat='{}{0}:'}" />
+                                            <TextBlock Text="{Binding Text}" />
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ComboBox.SelectionBoxItemTemplate>
+                            </ComboBox>
+                            <ComboBox ItemsSource="{Binding GameVersionOptions}" SelectedItem="{Binding DiscoverGameMin}" PlaceholderText="{Binding Localization.DiscoverGameVersionMin}" AutomationProperties.Name="{Binding Localization.DiscoverGameVersionMin}" HorizontalAlignment="Stretch" MaxDropDownHeight="300">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:GameVersionOption">
+                                        <TextBlock Text="{Binding Text}" />
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                                <ComboBox.SelectionBoxItemTemplate>
+                                    <DataTemplate x:DataType="vm:GameVersionOption">
+                                        <StackPanel Orientation="Horizontal" Spacing="4">
+                                            <TextBlock Classes="secondary" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.DiscoverGameVersionMin, StringFormat='{}{0}:'}" />
+                                            <TextBlock Text="{Binding Text}" />
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ComboBox.SelectionBoxItemTemplate>
+                            </ComboBox>
+                        </StackPanel>
                     </StackPanel>
                     <Border Height="1" Background="{StaticResource Brush.BorderStrong}" IsVisible="{Binding !!OsOptions.Count}" />
                     <StackPanel Spacing="10" IsVisible="{Binding !!OsOptions.Count}">
