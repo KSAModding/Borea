@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using Borea.App.Formatting;
 using Borea.App.Localization;
 using Borea.Composition;
+using Borea.Core.Index;
 using Borea.Core.Instances;
 using Borea.Core.Mods;
 using Borea.Core.Preferences;
@@ -340,6 +341,10 @@ public partial class MainViewModel : ViewModelBase
         var recent = new List<RecentItem>();
         try
         {
+            var icons = new Dictionary<string, IconImage?>(ModIds.Comparer);
+            foreach (var entry in (await _services.IndexSnapshots.GetSnapshotAsync()).Listings)
+                icons.TryAdd(entry.Id, entry.Images?.Icon);
+
             foreach (var listing in await _services.ContentIndex.GetAvailableModsAsync())
             {
                 if (listing.Type != ContentType.Mod)
@@ -347,7 +352,7 @@ public partial class MainViewModel : ViewModelBase
 
                 var release = await _services.ContentIndex.GetLatestReleaseInChannelAsync(listing.ModId, _services.Settings.ReleaseChannel);
                 if (release is not null)
-                    recent.Add(new RecentItem(this, listing, release.ReleaseDate));
+                    recent.Add(new RecentItem(this, listing, release.ReleaseDate, IconFor(icons.GetValueOrDefault(listing.ModId))));
             }
         }
         catch (Exception exception) when (exception is System.Net.Http.HttpRequestException or IOException or InvalidOperationException or TaskCanceledException)
@@ -612,6 +617,8 @@ public sealed partial class RecentItem : ObservableObject
 
     public string Name => Listing.Name;
 
+    public ListingImage? Icon { get; }
+
     public DateTimeOffset UpdatedAt { get; }
 
     /// <summary>How long ago the release came out.</summary>
@@ -620,11 +627,12 @@ public sealed partial class RecentItem : ObservableObject
     /// <summary>The release date in the regional format the user chose.</summary>
     public string UpdatedDateText => MainViewModel.DateText(UpdatedAt);
 
-    public RecentItem(MainViewModel owner, ModMetadata listing, DateTimeOffset updatedAt)
+    public RecentItem(MainViewModel owner, ModMetadata listing, DateTimeOffset updatedAt, ListingImage? icon = null)
     {
         _owner = owner;
         Listing = listing;
         UpdatedAt = updatedAt;
+        Icon = icon;
     }
 
     internal void RefreshText()

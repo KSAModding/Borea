@@ -73,6 +73,12 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string SettingsReleaseChannelHint => Resources.SettingsReleaseChannelHint;
 
+    public string SettingsImagesLabel => Resources.SettingsImagesLabel;
+
+    public string SettingsLoadImagesFromAuthorHosts => Resources.SettingsLoadImagesFromAuthorHosts;
+
+    public string SettingsLoadImagesFromAuthorHostsHint => Resources.SettingsLoadImagesFromAuthorHostsHint;
+
     public string UpdateAvailable => Resources.UpdateAvailable;
 
     public string UpdatePreRelease => Resources.UpdatePreRelease;
@@ -322,6 +328,10 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string ContentAuthor => Resources.ContentAuthor;
 
     public string ContentDetails => Resources.ContentDetails;
+
+    public string ContentIconCredit => Resources.ContentIconCredit;
+
+    public string ContentIconSource => Resources.ContentIconSource;
 
     public string ContentAdd => Resources.ContentAdd;
 

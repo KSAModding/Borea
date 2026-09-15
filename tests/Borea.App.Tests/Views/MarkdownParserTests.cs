@@ -107,4 +107,115 @@ public sealed class MarkdownParserTests
         Assert.Equal([new MarkdownSpan(MarkdownSpanKind.Text, "just text")], MarkdownParser.ParseInline("just text"));
         Assert.Empty(MarkdownParser.ParseInline(""));
     }
+
+    [Fact]
+    public void ParseInline_Image_KeepsItsAlternativeTextAndDestination()
+    {
+        var spans = MarkdownParser.ParseInline("""See ![The settings window](ksa-image:settings-window "Settings") and ![Map](<ksa-image:map_view>).""");
+
+        Assert.Equal(
+            [
+                new MarkdownSpan(MarkdownSpanKind.Text, "See "),
+                new MarkdownSpan(MarkdownSpanKind.Image, "The settings window", "ksa-image:settings-window"),
+                new MarkdownSpan(MarkdownSpanKind.Text, " and "),
+                new MarkdownSpan(MarkdownSpanKind.Image, "Map", "ksa-image:map_view"),
+                new MarkdownSpan(MarkdownSpanKind.Text, "."),
+            ],
+            spans);
+    }
+
+    [Fact]
+    public void ParseInline_LinkedImage_IsTheImage()
+    {
+        Assert.Equal(
+            [new MarkdownSpan(MarkdownSpanKind.Image, "Logo", "ksa-image:logo")],
+            MarkdownParser.ParseInline("[![Logo](ksa-image:logo)](https://example.com)"));
+    }
+
+    [Fact]
+    public void ParseInline_LinkToAnImageFile_StaysALink()
+    {
+        Assert.Equal(
+            [new MarkdownSpan(MarkdownSpanKind.Link, "screenshot")],
+            MarkdownParser.ParseInline("[screenshot](https://example.com/shot.png)"));
+    }
+
+    [Fact]
+    public void ParseInline_ImageInRawHtml_BecomesItsAlternativeText()
+    {
+        var spans = MarkdownParser.ParseInline("""<img src="https://example.com/a.png" alt="Tom &amp; Jerry"> and <IMG src=x> **<img alt="Map">**""");
+
+        Assert.Equal(
+            [
+                new MarkdownSpan(MarkdownSpanKind.Text, "Tom & Jerry"),
+                new MarkdownSpan(MarkdownSpanKind.Text, " and "),
+                new MarkdownSpan(MarkdownSpanKind.Text, " "),
+                new MarkdownSpan(MarkdownSpanKind.Bold, "Map"),
+            ],
+            spans);
+    }
+
+    [Fact]
+    public void ParseInline_ImageInsideBold_KeepsTheBoldTextAndTheImage()
+    {
+        Assert.Equal(
+            [
+                new MarkdownSpan(MarkdownSpanKind.Bold, "Screenshot "),
+                new MarkdownSpan(MarkdownSpanKind.Image, "Map", "ksa-image:map"),
+            ],
+            MarkdownParser.ParseInline("**Screenshot ![Map](ksa-image:map)**"));
+    }
+
+    [Fact]
+    public void ParseInline_ImageAloneInsideItalic_IsTheImage()
+    {
+        Assert.Equal([new MarkdownSpan(MarkdownSpanKind.Image, "Map", "ksa-image:map")], MarkdownParser.ParseInline("*![Map](ksa-image:map)*"));
+        Assert.Equal([new MarkdownSpan(MarkdownSpanKind.Image, "Map", "ksa-image:map_view")], MarkdownParser.ParseInline("_![Map](ksa-image:map_view)_"));
+    }
+
+    [Fact]
+    public void ParseInline_ImageInsideALinkLabel_KeepsTheLinkTextAndTheImage()
+    {
+        Assert.Equal(
+            [
+                new MarkdownSpan(MarkdownSpanKind.Link, "see "),
+                new MarkdownSpan(MarkdownSpanKind.Image, "Map", "ksa-image:map"),
+            ],
+            MarkdownParser.ParseInline("[see ![Map](ksa-image:map)](https://example.com)"));
+    }
+
+    [Fact]
+    public void ParseInline_UnderscoresInsideWords_AreNotEmphasis()
+    {
+        var spans = MarkdownParser.ParseInline("Set snake_case in the file_name. ![Map](ksa-image:map_view)");
+
+        Assert.Equal(
+            [
+                new MarkdownSpan(MarkdownSpanKind.Text, "Set snake_case in the file_name. "),
+                new MarkdownSpan(MarkdownSpanKind.Image, "Map", "ksa-image:map_view"),
+            ],
+            spans);
+    }
+
+    [Fact]
+    public void Parse_ReferenceStyleImages_UseTheirDefinitionsAndHideThem()
+    {
+        var blocks = MarkdownParser.Parse("![Map][map] and ![Shot][]\n\n[map]: ksa-image:map-view\n[Shot]: <ksa-image:shot> \"Title\"\n\n```\n[code]: stays\n```");
+
+        Assert.Equal(
+            [
+                new MarkdownBlock(MarkdownBlockKind.Paragraph, "![Map](<ksa-image:map-view>) and ![Shot](<ksa-image:shot>)"),
+                new MarkdownBlock(MarkdownBlockKind.Code, "[code]: stays"),
+            ],
+            blocks);
+    }
+
+    [Fact]
+    public void Parse_ReferenceStyleLinkedImage_ResolvesTheImageAndTheLinkAroundIt()
+    {
+        var block = Assert.Single(MarkdownParser.Parse("[![Logo][logo]][site]\n\n[logo]: ksa-image:logo\n[site]: https://example.com"));
+
+        Assert.Equal("[![Logo](<ksa-image:logo>)](<https://example.com>)", block.Text);
+        Assert.Equal([new MarkdownSpan(MarkdownSpanKind.Image, "Logo", "ksa-image:logo")], MarkdownParser.ParseInline(block.Text));
+    }
 }

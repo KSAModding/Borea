@@ -7,6 +7,7 @@ using Borea.App.Localization;
 using Borea.App.ViewModels;
 using Borea.Composition;
 using Borea.Core.Game;
+using Borea.Core.Index;
 using Borea.Core.Mods;
 using Borea.Core.Preferences;
 
@@ -50,6 +51,9 @@ internal sealed class ViewModelHarness : IDisposable
     /// <summary>The folders the install detector checks. Empty unless a test adds some.</summary>
     public FakeInstallCandidates Candidates { get; } = new();
 
+    /// <summary>The image source every service graph of this harness uses, so no image request leaves the test.</summary>
+    public FakeImageSource Images { get; } = new();
+
     /// <param name="seed">Writes settings the view model should start from; the services are rebuilt after it ran.</param>
     /// <param name="respond">Answers a request outside the content index. Null fails it.</param>
     /// <param name="editSnapshot">Changes the index snapshot before it is served.</param>
@@ -86,7 +90,7 @@ internal sealed class ViewModelHarness : IDisposable
         json => "{ \"tags\": " + $$"""{ "spec_version": 1, "mod": [{{string.Join(", ", tags.Select(tag => $$"""{ "tag": "{{tag.Tag}}", "name": "{{tag.Name}}", "meaning": "{{tag.Name}} content." }"""))}}] }""" + "," + json.TrimStart()[1..];
 
     public Task<BoreaServices> BuildServicesAsync() =>
-        BoreaServices.BuildAsync(Root, new IndexOnlyHandler(this), SpaceDock, Candidates, processStarter: _processStarter);
+        BoreaServices.BuildAsync(Root, new IndexOnlyHandler(this), SpaceDock, Candidates, processStarter: _processStarter, images: Images);
 
     public void Dispose()
     {
@@ -144,6 +148,22 @@ internal sealed class ViewModelHarness : IDisposable
         }
 
         public IReadOnlyList<string> GetLoaderDirectories() => Loaders;
+    }
+
+    internal sealed class FakeImageSource : IContentImageSource
+    {
+        public ConcurrentQueue<(ContentImage Image, bool LoadFromAuthorHosts)> Requests { get; } = new();
+
+        public Func<ContentImage, ContentImageResult> Respond { get; set; } =
+            _ => ContentImageResult.Failed(ContentImageFailure.Unavailable, "No network in tests.");
+
+        public Task<ContentImageResult> GetAsync(ContentImage image, bool loadFromAuthorHosts, CancellationToken cancellationToken = default)
+        {
+            Requests.Enqueue((image, loadFromAuthorHosts));
+            return Task.FromResult(loadFromAuthorHosts
+                ? Respond(image)
+                : ContentImageResult.Failed(ContentImageFailure.DisabledByPreference, "Loading images from author hosts is off."));
+        }
     }
 
     /// <summary>

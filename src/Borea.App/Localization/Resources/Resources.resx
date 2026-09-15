@@ -72,6 +72,15 @@
   <data name="SettingsReleaseChannelHint" xml:space="preserve">
     <value>Which releases Borea installs when you do not choose a version.</value>
   </data>
+  <data name="SettingsImagesLabel" xml:space="preserve">
+    <value>Images</value>
+  </data>
+  <data name="SettingsLoadImagesFromAuthorHosts" xml:space="preserve">
+    <value>Load images from author hosts</value>
+  </data>
+  <data name="SettingsLoadImagesFromAuthorHostsHint" xml:space="preserve">
+    <value>Each image request tells the author's host your IP address.</value>
+  </data>
   <data name="UpdateAvailable" xml:space="preserve">
     <value>A newer Borea release is available:</value>
   </data>
@@ -404,6 +413,12 @@
   </data>
   <data name="ContentDetails" xml:space="preserve">
     <value>Details</value>
+  </data>
+  <data name="ContentIconCredit" xml:space="preserve">
+    <value>Icon credit</value>
+  </data>
+  <data name="ContentIconSource" xml:space="preserve">
+    <value>Icon source</value>
   </data>
   <data name="ContentAdd" xml:space="preserve">
     <value>Add</value>

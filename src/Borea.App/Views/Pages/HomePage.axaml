@@ -81,19 +81,31 @@
                 </ItemsControl.ItemsPanel>
                 <ItemsControl.ItemTemplate>
                     <DataTemplate x:DataType="vm:RecentItem">
-                        <!-- tile: thumbnail with the text over its bottom. The index has no image field yet (#8), so the gradient stands in. -->
+                        <!-- the tile shows the icon with the text over its bottom, and the gradient until the icon loads -->
                         <Button Classes="plain" Margin="0,0,5,5" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Command="{Binding OpenCommand}" AutomationProperties.Name="{Binding Name}">
-                            <Border Classes="card" Height="171" Background="{StaticResource Brush.Thumbnail}" Padding="16">
-                                <StackPanel VerticalAlignment="Bottom" Spacing="10">
-                                    <TextBlock Classes="heading-md" Text="{Binding Name}" TextWrapping="Wrap" MaxLines="3" TextTrimming="CharacterEllipsis" />
-                                    <Grid ColumnDefinitions="*,Auto">
-                                        <TextBlock Classes="label-md" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ContentTypeMod}" />
-                                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" ToolTip.Tip="{Binding UpdatedDateText}">
-                                            <Path Classes="icon size-16" Data="{StaticResource Icon.Clock}" />
-                                            <TextBlock Classes="label-md" Text="{Binding UpdatedText}" VerticalAlignment="Center" />
-                                        </StackPanel>
-                                    </Grid>
-                                </StackPanel>
+                            <Border Classes="card" Height="171" Background="{StaticResource Brush.Thumbnail}">
+                                <Panel>
+                                    <views:ListingImageView Image="{Binding Icon}" Background="{StaticResource Brush.Surface}" />
+                                    <!-- fades the icon out under the text, so the text stays readable -->
+                                    <Border Background="{StaticResource Brush.Surface}" IsVisible="{Binding Icon.IsLoaded, FallbackValue=False}">
+                                        <Border.OpacityMask>
+                                            <LinearGradientBrush StartPoint="0%,40%" EndPoint="0%,100%">
+                                                <GradientStop Offset="0" Color="Transparent" />
+                                                <GradientStop Offset="1" Color="#E6000000" />
+                                            </LinearGradientBrush>
+                                        </Border.OpacityMask>
+                                    </Border>
+                                    <StackPanel VerticalAlignment="Bottom" Spacing="10" Margin="16">
+                                        <TextBlock Classes="heading-md" Text="{Binding Name}" TextWrapping="Wrap" MaxLines="3" TextTrimming="CharacterEllipsis" />
+                                        <Grid ColumnDefinitions="*,Auto">
+                                            <TextBlock Classes="label-md" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ContentTypeMod}" />
+                                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" ToolTip.Tip="{Binding UpdatedDateText}">
+                                                <Path Classes="icon size-16" Data="{StaticResource Icon.Clock}" />
+                                                <TextBlock Classes="label-md" Text="{Binding UpdatedText}" VerticalAlignment="Center" />
+                                            </StackPanel>
+                                        </Grid>
+                                    </StackPanel>
+                                </Panel>
                             </Border>
                         </Button>
                     </DataTemplate>

@@ -191,18 +191,20 @@ public sealed class BoreaServices : IDisposable
         => BuildAsync(boreaRoot, httpHandler, fallbackRepository, new NoInstallCandidates(), cancellationToken);
 
     /// <param name="processStarter">Starts the launchers' processes. Null starts real ones.</param>
+    /// <param name="images">Serves listing images. Null fetches them from the author hosts.</param>
     internal static Task<BoreaServices> BuildAsync(
         string? boreaRoot,
         HttpMessageHandler httpHandler,
         IModRepository fallbackRepository,
         IInstallCandidateSource installCandidates,
         CancellationToken cancellationToken = default,
-        IProcessStarter? processStarter = null)
+        IProcessStarter? processStarter = null,
+        IContentImageSource? images = null)
     {
         ArgumentNullException.ThrowIfNull(httpHandler);
         ArgumentNullException.ThrowIfNull(fallbackRepository);
         ArgumentNullException.ThrowIfNull(installCandidates);
-        return BuildCoreAsync(boreaRoot, BoreaLogSource.App, httpHandler, fallbackRepository, installCandidates, cancellationToken, processStarter);
+        return BuildCoreAsync(boreaRoot, BoreaLogSource.App, httpHandler, fallbackRepository, installCandidates, cancellationToken, processStarter, images);
     }
 
     private static async Task<BoreaServices> BuildCoreAsync(
@@ -212,7 +214,8 @@ public sealed class BoreaServices : IDisposable
         IModRepository? fallbackRepository,
         IInstallCandidateSource? installCandidates,
         CancellationToken cancellationToken,
-        IProcessStarter? processStarter = null)
+        IProcessStarter? processStarter = null,
+        IContentImageSource? images = null)
     {
         // the settings file lives under Borea's own root and needs no
         // game path to be found, so a provider without one reads it.
@@ -307,7 +310,7 @@ public sealed class BoreaServices : IDisposable
             IndexSnapshots = indexSnapshots,
             IndexRefresh = indexSnapshots,
             ContentIndex = contentIndex,
-            Images = new ContentImageSource(new FileContentImageCache(paths)),
+            Images = images ?? new ContentImageSource(new FileContentImageCache(paths)),
         };
     }
 

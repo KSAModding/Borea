@@ -21,8 +21,10 @@
 
                     <!-- c/content-header -->
                     <Grid ColumnDefinitions="170,32,*" Margin="0,24,0,0">
-                        <Border Classes="thumbnail" Width="170" Height="170">
-                            <Path Classes="icon" Data="{StaticResource Icon.Box}" RenderTransform="scale(2.5)" StrokeThickness="0.8" />
+                        <Border Classes="thumbnail" Width="170" Height="170" ClipToBounds="True">
+                            <views:ListingImageView Image="{Binding SelectedPack.Icon}" Background="{StaticResource Brush.Surface}">
+                                <Path Classes="icon" Data="{StaticResource Icon.Box}" RenderTransform="scale(2.5)" StrokeThickness="0.8" />
+                            </views:ListingImageView>
                         </Border>
                         <Grid Grid.Column="2" RowDefinitions="Auto,*,Auto">
                             <Grid ColumnDefinitions="*,24,Auto">
@@ -115,7 +117,7 @@
                     <!-- c/block-text: the CommonMark description -->
                     <Border Classes="card" Padding="36,32" Margin="0,16,0,0" IsVisible="{Binding IsPackDescriptionTab}">
                         <Panel>
-                            <views:MarkdownView Markdown="{Binding SelectedPack.Description}" IsVisible="{Binding SelectedPack.Description, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                            <views:MarkdownView Markdown="{Binding SelectedPack.Description}" Images="{Binding PackDescriptionImages}" IsVisible="{Binding SelectedPack.Description, Converter={x:Static ObjectConverters.IsNotNull}}" />
                             <TextBlock Classes="body-md muted" Text="{Binding Localization.ContentNoDescription}" IsVisible="{Binding SelectedPack.Description, Converter={x:Static ObjectConverters.IsNull}}" />
                         </Panel>
                     </Border>
@@ -266,6 +268,17 @@
                             <Path Classes="icon size-16" Data="{StaticResource Icon.CalendarBlank}" />
                             <TextBlock Classes="body-sm secondary" FontWeight="SemiBold" Text="{Binding SelectedPack.PublishedText}" VerticalAlignment="Center" />
                         </StackPanel>
+                        <!-- the credit the icon's license asks for -->
+                        <Grid ColumnDefinitions="Auto,8,*" ToolTip.Tip="{Binding Localization.ContentIconCredit}" IsVisible="{Binding SelectedPack.IconAttribution, Converter={x:Static ObjectConverters.IsNotNull}}">
+                            <Path Classes="icon size-16" Data="{StaticResource Icon.Image}" VerticalAlignment="Top" />
+                            <TextBlock Grid.Column="2" Classes="body-sm secondary" FontWeight="SemiBold" Text="{Binding SelectedPack.IconAttribution}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                        </Grid>
+                        <Button Classes="filter" Command="{Binding SelectedPack.Icon.OpenSourceCommand}" ToolTip.Tip="{Binding SelectedPack.IconSource}" IsVisible="{Binding SelectedPack.IconSource, Converter={x:Static ObjectConverters.IsNotNull}}">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <Path Classes="icon size-16" Data="{StaticResource Icon.LinkSimple}" />
+                                <TextBlock Text="{Binding Localization.ContentIconSource}" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
                     </StackPanel>
                 </StackPanel>
             </ScrollViewer>
