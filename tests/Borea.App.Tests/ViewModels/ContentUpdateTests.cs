@@ -84,6 +84,105 @@ public sealed class ContentUpdateTests
     }
 
     [Fact]
+    public async Task Home_CountsTheOwnedModsOfTheActiveInstanceWithANewerRelease()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        harness.SpaceDock.Releases.AddRange([Release("1.0.0"), Release("1.1.0")]);
+        var viewModel = harness.ViewModel;
+        await InstalledContent.AddAsync(harness, "AdvancedFlightComputer", activate: true, ownership: ModInstallOwnership.Borea, version: "0.7.4");
+        await InstalledContent.AddAsync(harness, "MeasureTools", activate: true, InstallReason.Dependency, ModInstallOwnership.Borea, version: "1.1.9");
+        await InstalledContent.AddAsync(harness, OwnId, activate: true, version: "1.0.0");
+
+        await viewModel.LoadAsync();
+        await viewModel.WhenContentUpdatesCheckedAsync();
+
+        Assert.True(viewModel.CurrentWindowHome);
+        Assert.Equal(2, viewModel.ActiveInstanceUpdateCount);
+        Assert.True(viewModel.HasActiveInstanceUpdates);
+        Assert.Equal(harness.Localization.FormatHomeUpdates(2), viewModel.ActiveInstanceUpdatesText);
+    }
+
+    [Fact]
+    public async Task Home_UpdateCountClick_OpensTheInstancePageWithTheUpdate()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var viewModel = harness.ViewModel;
+        await InstalledContent.AddAsync(harness, "AdvancedFlightComputer", activate: true, ownership: ModInstallOwnership.Borea, version: "0.7.4");
+        await viewModel.LoadAsync();
+        await viewModel.WhenContentUpdatesCheckedAsync();
+        Assert.Equal(1, viewModel.ActiveInstanceUpdateCount);
+
+        await viewModel.ActiveInstance!.OpenCommand.ExecuteAsync(null);
+        await viewModel.WhenContentUpdatesCheckedAsync();
+
+        Assert.True(viewModel.CurrentWindowInstance);
+        Assert.Equal(viewModel.ActiveInstance.InstanceId, viewModel.SelectedInstance?.InstanceId);
+        Assert.Equal("0.7.5", viewModel.ContentGroups.Single().Items.Single().UpdateVersion);
+        Assert.Equal(1, viewModel.ActiveInstanceUpdateCount);
+    }
+
+    [Fact]
+    public async Task Home_UpdateCount_FollowsTheSavedChannel()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        harness.SpaceDock.Releases.AddRange([Release("1.0.0"), Release("1.1.0", ReleaseStatus.Testing)]);
+        var viewModel = harness.ViewModel;
+        await InstalledContent.AddAsync(harness, OwnId, activate: true, ownership: ModInstallOwnership.Borea, version: "1.0.0");
+        await viewModel.LoadAsync();
+        await viewModel.WhenContentUpdatesCheckedAsync();
+        Assert.Equal(0, viewModel.ActiveInstanceUpdateCount);
+
+        viewModel.SelectedReleaseChannel = viewModel.OptionFor(ReleaseChannel.Testing);
+        await viewModel.WhenReleaseChannelSavedAsync();
+        await viewModel.WhenContentUpdatesCheckedAsync();
+
+        Assert.Equal(1, viewModel.ActiveInstanceUpdateCount);
+    }
+
+    [Fact]
+    public async Task Home_UpdateCount_FollowsTheActiveInstance()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var viewModel = harness.ViewModel;
+        await InstalledContent.AddAsync(harness, "AdvancedFlightComputer", activate: true, ownership: ModInstallOwnership.Borea, version: "0.7.4");
+        await viewModel.LoadAsync();
+        await viewModel.WhenContentUpdatesCheckedAsync();
+
+        await viewModel.ActiveInstance!.ToggleActiveCommand.ExecuteAsync(null);
+        await viewModel.WhenContentUpdatesCheckedAsync();
+
+        Assert.Null(viewModel.ActiveInstance);
+        Assert.Equal(0, viewModel.ActiveInstanceUpdateCount);
+
+        await viewModel.Instances.Single().ActivateCommand.ExecuteAsync(null);
+        await viewModel.WhenContentUpdatesCheckedAsync();
+
+        Assert.Equal(1, viewModel.ActiveInstanceUpdateCount);
+    }
+
+    [Fact]
+    public async Task Home_UpdateCount_ClearsAfterTheUpdate()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(respond: ServeArchive);
+        harness.SpaceDock.Releases.AddRange([Release("1.0.0"), Release("1.1.0")]);
+        var viewModel = harness.ViewModel;
+        await InstalledContent.AddAsync(harness, OwnId, activate: true, ownership: ModInstallOwnership.Borea, version: "1.0.0");
+        await viewModel.LoadAsync();
+        await viewModel.WhenContentUpdatesCheckedAsync();
+        Assert.Equal(1, viewModel.ActiveInstanceUpdateCount);
+        await viewModel.ActiveInstance!.OpenCommand.ExecuteAsync(null);
+        var row = viewModel.ContentGroups.Single().Items.Single();
+
+        await row.UpdateCommand.ExecuteAsync(null);
+        await row.ConfirmUpdateCommand.ExecuteAsync(null);
+        await viewModel.WhenContentUpdatesCheckedAsync();
+        viewModel.SetMainWindowHome();
+
+        Assert.Equal(0, viewModel.ActiveInstanceUpdateCount);
+        Assert.False(viewModel.HasActiveInstanceUpdates);
+    }
+
+    [Fact]
     public async Task Update_ReplacesTheModAndClearsTheUpdate()
     {
         using var harness = await ViewModelHarness.CreateAsync(respond: ServeArchive);

@@ -114,6 +114,12 @@
   <data name="HomeInstanceSourceCustom" xml:space="preserve">
     <value>Custom</value>
   </data>
+  <data name="HomeUpdate" xml:space="preserve">
+    <value>1 update</value>
+  </data>
+  <data name="HomeUpdatesFormat" xml:space="preserve">
+    <value>{0} updates</value>
+  </data>
   <data name="ContentTypeMod" xml:space="preserve">
     <value>Mod</value>
   </data>

@@ -408,12 +408,22 @@ public partial class MainViewModel : ViewModelBase
         {
             var stillThere = Instances.FirstOrDefault(instance => instance.InstanceId == SelectedInstance.InstanceId);
             if (!CurrentWindowInstance)
+            {
                 SelectedInstance = stillThere;
+            }
             else if (stillThere is null)
+            {
                 SetMainWindowLibrary();
+            }
             else
+            {
+                // opening the page checks the updates of the active instance too
                 await OpenInstanceAsync(stillThere);
+                return;
+            }
         }
+
+        StartContentUpdateCheck();
     }
 
     internal string? DescribeSource(InstanceSource? source) => source switch
@@ -593,6 +603,7 @@ public partial class MainViewModel : ViewModelBase
         RefreshIndexStatusText();
         OnPropertyChanged(nameof(GameSetupBannerText));
         OnPropertyChanged(nameof(InstalledInText));
+        OnPropertyChanged(nameof(ActiveInstanceUpdatesText));
         OnPropertyChanged(nameof(ContentVersionsEmptyText));
 
         QueuePreferenceSave(preferences => preferences.WithUiCultureName(Localization.SelectedCultureName));

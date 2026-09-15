@@ -68,6 +68,18 @@ public partial class MainViewModel
 
     public bool HasUpdates => _content.Any(content => content.UpdateVersion is not null);
 
+    /// <summary>The number of mods Borea owns in the active instance that have a newer release.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasActiveInstanceUpdates))]
+    [NotifyPropertyChangedFor(nameof(ActiveInstanceUpdatesText))]
+    private int _activeInstanceUpdateCount;
+
+    private Guid? _updateCountInstanceId;
+
+    public bool HasActiveInstanceUpdates => ActiveInstanceUpdateCount > 0;
+
+    public string ActiveInstanceUpdatesText => Localization.FormatHomeUpdates(ActiveInstanceUpdateCount);
+
     /// <summary>
     /// False while an update of the shown instance plans or runs.
     /// </summary>
@@ -218,43 +230,79 @@ public partial class MainViewModel
     internal Task WhenContentUpdatesCheckedAsync() => _contentUpdateCheck;
 
     /// <summary>
-    /// Plans an update of each mod Borea owns on its own and marks the row when
-    /// the planner picks a newer release than the installed one.
+    /// Plans an update of each mod Borea owns on its own. The rows of the shown
+    /// instance get the newer release, and the active instance gets its count.
     /// </summary>
     private async Task RefreshContentUpdatesAsync(int generation)
     {
         var services = _services;
-        var instance = _selectedInstanceEntity;
+        var shown = CurrentWindowInstance ? _selectedInstanceEntity : null;
         var content = _content;
-        if (services is null || instance is null || !CurrentWindowInstance)
+        var active = _activeInstanceEntity;
+        // a check of the same instance keeps the last count until it ends, so the card does not flicker
+        if (active?.InstanceId != _updateCountInstanceId)
+        {
+            ActiveInstanceUpdateCount = 0;
+            _updateCountInstanceId = active?.InstanceId;
+        }
+
+        if (services is null)
             return;
 
-        foreach (var item in content.Where(item => item.IsOwned))
+        // the shown instance is often the active one, so each mod is planned once
+        var found = new Dictionary<(Guid InstanceId, string ModId), ModVersion?>();
+        async Task<ModVersion?> FindAsync(Instance instance, InstalledMod installed)
         {
-            var installed = instance.Mods.FirstOrDefault(mod => ModIds.Equals(mod.ModId, item.ModId));
-            if (installed is null)
-                continue;
+            if (!found.TryGetValue((instance.InstanceId, installed.ModId), out var newer))
+                found[(instance.InstanceId, installed.ModId)] = newer = await FindUpdateAsync(services, instance, installed);
+            return newer;
+        }
 
-            ModVersion? newer = null;
-            try
+        if (shown is not null)
+        {
+            foreach (var item in content.Where(item => item.IsOwned))
             {
-                var plan = await services.InstallPlanner.PlanAsync(PlanningRequest(services, instance, UpdateRequests([installed])));
-                newer = plan.Operations
-                    .Select(operation => operation.Release)
-                    .FirstOrDefault(release => ModIds.Equals(release.ModId, installed.ModId) && release.Version > installed.Version)?.Version;
-            }
-            catch (Exception exception) when (exception is System.Net.Http.HttpRequestException or IOException or InvalidOperationException or TaskCanceledException)
-            {
-                // the row shows no update
+                var installed = shown.Mods.FirstOrDefault(mod => ModIds.Equals(mod.ModId, item.ModId));
+                if (installed is null)
+                    continue;
+
+                var newer = await FindAsync(shown, installed);
+                if (generation != _contentUpdateCheckGeneration)
+                    return;
+
+                item.UpdateVersion = newer?.ToString();
             }
 
+            OnPropertyChanged(nameof(HasUpdates));
+        }
+
+        var count = 0;
+        foreach (var installed in active?.Mods.Where(mod => mod.Ownership == ModInstallOwnership.Borea) ?? [])
+        {
+            var newer = await FindAsync(active!, installed);
             if (generation != _contentUpdateCheckGeneration)
                 return;
 
-            item.UpdateVersion = newer?.ToString();
+            if (newer is not null)
+                count++;
         }
 
-        OnPropertyChanged(nameof(HasUpdates));
+        ActiveInstanceUpdateCount = count;
+    }
+
+    private static async Task<ModVersion?> FindUpdateAsync(BoreaServices services, Instance instance, InstalledMod installed)
+    {
+        try
+        {
+            var plan = await services.InstallPlanner.PlanAsync(PlanningRequest(services, instance, UpdateRequests([installed])));
+            return plan.Operations
+                .Select(operation => operation.Release)
+                .FirstOrDefault(release => ModIds.Equals(release.ModId, installed.ModId) && release.Version > installed.Version)?.Version;
+        }
+        catch (Exception exception) when (exception is System.Net.Http.HttpRequestException or IOException or InvalidOperationException or TaskCanceledException)
+        {
+            return null;
+        }
     }
 
     /// <summary>

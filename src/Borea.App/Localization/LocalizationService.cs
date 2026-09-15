@@ -99,6 +99,8 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string HomeInstanceSourceCustom => Resources.HomeInstanceSourceCustom;
 
+    public string FormatHomeUpdates(int count) => FormatCount(count, Resources.HomeUpdate, Resources.HomeUpdatesFormat);
+
     public string ContentTypeMod => Resources.ContentTypeMod;
 
     public string LibraryNewInstancePlaceholder => Resources.LibraryNewInstancePlaceholder;
