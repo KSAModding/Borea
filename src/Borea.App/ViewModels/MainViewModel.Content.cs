@@ -142,6 +142,7 @@ public partial class MainViewModel
         SelectedContent?.ClearOutcome();
         item.ClearOutcome();
         SelectedContent = item;
+        ContentDescriptionImages = new DescriptionImages(this, item.Images);
         IsVersionsTab = false;
         ContentDetailError = null;
         LatestVersion = null;
@@ -232,6 +233,7 @@ public partial class MainViewModel
         SelectedContent?.ClearOutcome();
         foreach (var version in _contentReleases)
             version.InstallError = null;
+        ContentDescriptionImages = DescriptionImages.None;
     }
 
     partial void OnVersionFilterChanged(ReleaseChannelOption? value) => ApplyVersionFilter();

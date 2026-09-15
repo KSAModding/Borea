@@ -443,6 +443,15 @@ public sealed partial class DiscoverItem : ObservableObject, IInstallRow
 
     public string AuthorsText => _owner.Localization.FormatContentByAuthor(AuthorNames);
 
+    public ListingImage? Icon { get; }
+
+    public string? IconAttribution => Icon?.Attribution;
+
+    public string? IconSource => Icon?.Source;
+
+    /// <summary>The live images of an index listing, which every description of the listing resolves against.</summary>
+    internal ContentImages? Images { get; }
+
     /// <summary>The download count the content index reports, or null when it reports none.</summary>
     public long? Downloads { get; }
 
@@ -542,6 +551,8 @@ public sealed partial class DiscoverItem : ObservableObject, IInstallRow
         _listing = listing;
         AllTags = DisplayTags(owner.TagVocabulary, listing.Type, listing.Tags);
         Tags = AllTags.Take(3).ToList();
+        Images = indexEntry?.Images;
+        Icon = owner.IconFor(Images?.Icon);
         Downloads = indexEntry?.Downloads?.Total;
         PublishedAt = indexEntry?.PublishedAt;
     }

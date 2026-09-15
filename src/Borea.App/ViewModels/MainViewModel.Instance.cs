@@ -142,8 +142,9 @@ public partial class MainViewModel
 
             // a release from SpaceDock carries no listing, so the name comes from the catalog
             var listing = mod.Metadata.Listing is null ? await ResolveListingAsync(mod.ModId) : null;
-            var page = mod.Ownership == ModInstallOwnership.Borea ? _listings.FirstOrDefault(entry => ModIds.Equals(entry.ModId, mod.ModId)) : null;
-            content.Add(new ContentItem(this, _selectedInstanceEntity!, mod, enabled.Contains(mod.ModId), listing, page));
+            var indexed = _listings.FirstOrDefault(entry => ModIds.Equals(entry.ModId, mod.ModId));
+            var page = mod.Ownership == ModInstallOwnership.Borea ? indexed : null;
+            content.Add(new ContentItem(this, _selectedInstanceEntity!, mod, enabled.Contains(mod.ModId), listing, page, indexed?.Icon));
         }
 
         _content = content.OrderBy(content => content.Name, StringComparer.CurrentCultureIgnoreCase).ToList();
@@ -671,6 +672,9 @@ public sealed partial class ContentItem : ObservableObject, IUpdateRow
     /// <summary>Whether the row links to the mod page: installed by Borea and in the content index.</summary>
     public bool CanOpen => _page is not null;
 
+    /// <summary>The icon of the index listing with the mod's id, also when the row does not link to it.</summary>
+    public ListingImage? Icon { get; }
+
     /// <summary>Why the row has no link, for its tooltip. Null when it links.</summary>
     public string? NoPageText => CanOpen
         ? null
@@ -729,13 +733,14 @@ public sealed partial class ContentItem : ObservableObject, IUpdateRow
 
     public InstallPlan? PendingPlan { get; set; }
 
-    public ContentItem(MainViewModel owner, Instance instance, InstalledMod mod, bool enabled, ModMetadata? listing, DiscoverItem? page = null)
+    public ContentItem(MainViewModel owner, Instance instance, InstalledMod mod, bool enabled, ModMetadata? listing, DiscoverItem? page = null, ListingImage? icon = null)
     {
         _owner = owner;
         _instance = instance;
         _mod = mod;
         InstanceId = instance.InstanceId;
         _page = page;
+        Icon = icon;
         ModId = mod.ModId;
         Name = mod.Metadata.Listing?.Name ?? listing?.Name ?? mod.ModId;
         var authors = mod.Metadata.Listing?.Authors ?? listing?.Authors;

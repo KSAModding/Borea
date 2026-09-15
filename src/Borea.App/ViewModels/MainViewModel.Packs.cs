@@ -124,6 +124,7 @@ public partial class MainViewModel
         SelectedPack?.ClearOutcome();
         pack.ClearOutcome();
         SelectedPack = pack;
+        PackDescriptionImages = new DescriptionImages(this, pack.Images);
         PackTab = PackPageTab.Description;
         PackDetailError = null;
         PackMembers.Clear();
@@ -177,8 +178,11 @@ public partial class MainViewModel
 
     private void LeavePackPage()
     {
-        if (CurrentWindowPack)
-            SelectedPack?.ClearOutcome();
+        if (!CurrentWindowPack)
+            return;
+
+        SelectedPack?.ClearOutcome();
+        PackDescriptionImages = DescriptionImages.None;
     }
 
     [RelayCommand]
@@ -380,6 +384,14 @@ public sealed partial class PackItem : ObservableObject
 
     public int ModCount => Metadata.Mods.Count;
 
+    public ListingImage? Icon { get; }
+
+    public string? IconAttribution => Icon?.Attribution;
+
+    public string? IconSource => Icon?.Source;
+
+    internal ContentImages? Images { get; }
+
     public string ModCountText => _owner.Localization.FormatPackModCount(ModCount);
 
     public string GameVersionText => GameVersion(Metadata);
@@ -448,11 +460,13 @@ public sealed partial class PackItem : ObservableObject
 
     public bool CanInstall => !IsInstalled && !IsInstalling;
 
-    /// <param name="indexEntry">The snapshot entry of the pack, for its dates. Null when the snapshot has none.</param>
+    /// <param name="indexEntry">The snapshot entry of the pack, for its dates and the images of this version. Null when the snapshot has none.</param>
     public PackItem(MainViewModel owner, ModPackMetadata metadata, ContentIndexPack? indexEntry = null)
     {
         _owner = owner;
         Metadata = metadata;
+        Images = MainViewModel.ImagesOf(indexEntry, metadata);
+        Icon = owner.IconFor(Images?.Icon);
         AllTags = DiscoverItem.DisplayTags(owner.TagVocabulary, ContentType.ModPack, metadata.Tags);
         Tags = AllTags.Take(3).ToList();
         PublishedAt = indexEntry?.PublishedAt;
