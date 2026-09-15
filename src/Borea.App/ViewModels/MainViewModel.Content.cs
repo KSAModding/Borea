@@ -379,8 +379,8 @@ public sealed partial class VersionItem : ObservableObject, IInstallRow
     [ObservableProperty]
     private bool _isInstalled;
 
-    /// <summary>">= min" or "min – max", as the compatibility chip shows it.</summary>
-    public string GameVersionText => _release.GameMax is null ? $">= {_release.GameMin}" : $"{_release.GameMin} – {_release.GameMax}";
+    /// <summary>">= min" or "min - max", as the compatibility chip shows it.</summary>
+    public string GameVersionText => _release.GameMax is null ? $">= {_release.GameMin}" : $"{_release.GameMin} - {_release.GameMax}";
 
     public DateTimeOffset ReleaseDate => _release.ReleaseDate;
 

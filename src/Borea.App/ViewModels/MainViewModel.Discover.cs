@@ -430,8 +430,8 @@ public sealed partial class DiscoverItem : ObservableObject, IInstallRow
 
     public IReadOnlyDictionary<string, string> Links => _listing.Links;
 
-    /// <summary>">= min" or "min – max", as the compatibility chip shows it.</summary>
-    public string GameVersionText => _listing.GameMax is null ? $">= {_listing.GameMin}" : $"{_listing.GameMin} – {_listing.GameMax}";
+    /// <summary>">= min" or "min - max", as the compatibility chip shows it.</summary>
+    public string GameVersionText => _listing.GameMax is null ? $">= {_listing.GameMin}" : $"{_listing.GameMin} - {_listing.GameMax}";
 
     public string TypeText => Type switch
     {
