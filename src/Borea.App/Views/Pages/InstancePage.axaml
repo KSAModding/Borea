@@ -77,16 +77,7 @@
                 </ContentControl.IsVisible>
             </ContentControl>
 
-            <TextBlock Classes="body-md secondary" Text="{Binding LaunchMessage}" TextWrapping="Wrap" Margin="0,16,0,0" IsVisible="{Binding LaunchMessage, Converter={x:Static ObjectConverters.IsNotNull}}" Classes.danger="{Binding HasLaunchOutput}" />
-            <!-- the loader stopped while it loaded: the way out, and what it wrote -->
-            <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,8,0,0" IsVisible="{Binding HasLaunchOutput}">
-                <Button Classes="text primary" Content="{Binding DisableBlamedModText}" Command="{Binding DisableBlamedModCommand}" IsVisible="{Binding CanDisableBlamedMod}" />
-                <Button Classes="text" Content="{Binding Localization.LaunchShowDetails}" Command="{Binding ToggleLaunchOutputCommand}" />
-                <Button Classes="text" Content="{Binding Localization.LaunchOpenLog}" Command="{Binding OpenLaunchLogCommand}" />
-            </StackPanel>
-            <Border Classes="card" Padding="16" Margin="0,8,0,0" IsVisible="{Binding IsLaunchOutputShown}">
-                <SelectableTextBlock Classes="log-line" Text="{Binding LaunchOutputText}" TextWrapping="Wrap" />
-            </Border>
+            <ContentControl Content="{Binding}" ContentTemplate="{StaticResource LaunchStatus}" />
             <TextBlock Classes="body-md danger" Text="{Binding ContentError}" TextWrapping="Wrap" Margin="0,16,0,0" IsVisible="{Binding ContentError, Converter={x:Static ObjectConverters.IsNotNull}}" />
             <TextBlock Classes="body-md secondary" Text="{Binding UpdateAll.ProgressStatus}" TextWrapping="Wrap" Margin="0,16,0,0" IsVisible="{Binding UpdateAll.ProgressStatus, Converter={x:Static ObjectConverters.IsNotNull}}" />
             <Grid ColumnDefinitions="*,Auto" Margin="0,16,0,0" IsVisible="{Binding UpdateAll.IsConfirmingUpdate}">

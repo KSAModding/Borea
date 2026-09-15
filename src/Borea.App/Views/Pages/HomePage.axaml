@@ -33,7 +33,7 @@
                     </Button>
                 </StackPanel>
             </Grid>
-            <TextBlock Classes="body-md secondary" Text="{Binding LaunchMessage}" TextWrapping="Wrap" Margin="0,16,0,0" IsVisible="{Binding LaunchMessage, Converter={x:Static ObjectConverters.IsNotNull}}" />
+            <ContentControl Content="{Binding}" ContentTemplate="{StaticResource LaunchStatus}" />
             <TextBlock Classes="body-md danger" Text="{Binding ContentError}" TextWrapping="Wrap" Margin="0,16,0,0" IsVisible="{Binding ContentError, Converter={x:Static ObjectConverters.IsNotNull}}" />
             <ContentControl Content="{Binding}" ContentTemplate="{StaticResource GameSetupBanner}" IsVisible="{Binding NeedsGameSetup}" />
             <views:UpdateNotice Margin="0,16,0,0" IsVisible="{Binding HasAvailableUpdate}" />

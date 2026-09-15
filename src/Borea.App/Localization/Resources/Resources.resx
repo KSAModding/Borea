@@ -790,7 +790,7 @@
     <value>Disable {0}</value>
   </data>
   <data name="LaunchModDisabledFormat" xml:space="preserve">
-    <value>{0} is disabled. Press Play to try again.</value>
+    <value>{0} is disabled. Start the instance again.</value>
   </data>
   <data name="LaunchShowDetails" xml:space="preserve">
     <value>Show details</value>

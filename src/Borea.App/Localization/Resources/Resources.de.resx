@@ -790,7 +790,7 @@
     <value>{0} deaktivieren</value>
   </data>
   <data name="LaunchModDisabledFormat" xml:space="preserve">
-    <value>{0} ist deaktiviert. Drücke Spielen, um es erneut zu versuchen.</value>
+    <value>{0} ist deaktiviert. Starte die Instanz erneut.</value>
   </data>
   <data name="LaunchShowDetails" xml:space="preserve">
     <value>Details anzeigen</value>
