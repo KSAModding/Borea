@@ -723,6 +723,15 @@
   <data name="InstallMinutesLeftFormat" xml:space="preserve">
     <value>noch etwa {0} min</value>
   </data>
+  <data name="LaunchWithoutModLoader" xml:space="preserve">
+    <value>KSA ohne Mod-Loader starten</value>
+  </data>
+  <data name="LaunchActiveInstance" xml:space="preserve">
+    <value>Aktive Instanz starten</value>
+  </data>
+  <data name="LaunchWithoutModLoaderToolTip" xml:space="preserve">
+    <value>Startet KSA so, als würdest du KSA.exe direkt ausführen. Es nutzt das gemeinsame Profil, das KSA selbst anlegt, und keine Borea-Instanz.</value>
+  </data>
   <data name="InstanceContentNotInIndex" xml:space="preserve">
     <value>Diese Mod ist nicht im Content-Index und hat deshalb keine Seite.</value>
   </data>

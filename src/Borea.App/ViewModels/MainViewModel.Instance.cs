@@ -78,6 +78,7 @@ public partial class MainViewModel
     private string? _launchMessage;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(EnableActiveInstance))]
     private bool _isLaunching;
 
     /// <summary>What the loader wrote before it stopped, when the last Play failed that way.</summary>
@@ -384,6 +385,52 @@ public partial class MainViewModel
                 ShowLaunchFailure(result, instance, loader);
             else
                 LaunchMessage = result.Message;
+        }
+        catch (Exception exception) when (exception is IOException or InvalidOperationException or System.Net.Http.HttpRequestException)
+        {
+            LaunchMessage = exception.Message;
+        }
+        finally
+        {
+            IsLaunching = false;
+        }
+    }
+
+    [RelayCommand]
+    private async Task PlayActiveInstance()
+    {
+        if (_services is null || ActiveInstance is null || IsLaunching)
+            return;
+
+        IsLaunching = true;
+        try
+        {
+            var loader = await FindInstalledLoaderAsync();
+            var instance = await _services.Instances.GetByIdAsync(ActiveInstance.InstanceId);
+            var result = _services.Launcher.Launch(instance!, loader);
+            LaunchMessage = result.Message;
+        }
+        catch (Exception exception) when (exception is IOException or InvalidOperationException or System.Net.Http.HttpRequestException)
+        {
+            LaunchMessage = exception.Message;
+        }
+        finally
+        {
+            IsLaunching = false;
+        }
+    }
+
+    [RelayCommand]
+    private async Task PlayWithoutModLoader()
+    {
+        if (_services is null || IsLaunching)
+            return;
+
+        IsLaunching = true;
+        try
+        {
+            var result = _services.SharedProfileLauncher.Launch();
+            LaunchMessage = result.Message;
         }
         catch (Exception exception) when (exception is IOException or InvalidOperationException or System.Net.Http.HttpRequestException)
         {

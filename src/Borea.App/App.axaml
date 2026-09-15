@@ -556,5 +556,20 @@
             <Setter Property="OnContent" Value="" />
             <Setter Property="OffContent" Value="" />
         </Style>
+
+		<!-- c/SplitButton-launch: rounded, blue -->
+		<Style Selector="Button.splitButton.primary">
+			<Setter Property="Height" Value="26" />
+			<Setter Property="Margin" Value="0,0,3,0" />
+			<Setter Property="CornerRadius" Value="100,0,0,100" />
+			<Setter Property="Background" Value="{StaticResource Brush.Accent}" />
+			<Setter Property="BorderThickness" Value="0" />
+		</Style>
+		<Style Selector="Button.splitButton.flyout">
+			<Setter Property="Height" Value="26" />
+			<Setter Property="CornerRadius" Value="0,100,100,0" />
+			<Setter Property="Background" Value="{StaticResource Brush.Accent}" />
+			<Setter Property="BorderThickness" Value="0" />
+		</Style>
     </Application.Styles>
 </Application>

@@ -435,6 +435,12 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string SetupLoaderInstalledUnknownVersion => Resources.SetupLoaderInstalledUnknownVersion;
 
+    public string LaunchWithoutModLoader => Resources.LaunchWithoutModLoader;
+
+    public string LaunchActiveInstance => Resources.LaunchActiveInstance;
+
+    public string LaunchWithoutModLoaderToolTip => Resources.LaunchWithoutModLoaderToolTip;
+
     public LocalizationService()
         : this(CultureInfo.CurrentUICulture)
     {
