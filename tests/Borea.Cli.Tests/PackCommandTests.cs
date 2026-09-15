@@ -661,6 +661,42 @@ public sealed class PackCommandTests : IDisposable
         Assert.Equal("apollo-save", skipped.GetProperty("id").GetString());
     }
 
+    [Fact]
+    public async Task PackInstall_ReportsEachPhaseWithItsStepAcrossThePack()
+    {
+        var flightTools = new ModPackEntry("flight-tools", ModVersion.Parse("2.0.0"));
+        var library = new ModPackEntry("library", ModVersion.Parse("1.0.0"));
+        _host.IndexReader.Snapshot = Snapshot(Pack(ContentCommandFixtures.PackVersion(mods: new[] { flightTools, library })));
+        _host.ModPackInstaller.Result = request =>
+        {
+            var progress = _host.ModPackInstaller.Progress[^1]!;
+            foreach (var (pin, step) in new[] { (library, 1), (flightTools, 2) })
+            {
+                progress.Report(new InstallProgress(pin.ContentId, pin.Version, InstallPhase.Downloading, Step: step, StepCount: 2));
+                progress.Report(new InstallProgress(pin.ContentId, pin.Version, InstallPhase.Finishing, Step: step, StepCount: 2));
+            }
+
+            return new ModPackInstallResult(
+                request.InstanceId,
+                null,
+                new[] { FakeModPackInstaller.Member(flightTools, ModPackMemberStatus.Installed), FakeModPackInstaller.Member(library, ModPackMemberStatus.Installed) },
+                Array.Empty<Borea.Core.Planning.PlanningMessage>(),
+                true);
+        };
+        await _host.RunAsync("instance", "create", "Alpha");
+
+        var run = await _host.RunAsync("pack", "install", "navigation-pack", "--instance", "Alpha");
+
+        Assert.Equal(0, run.ExitCode);
+        Assert.Equal(
+        [
+            "Downloading library 1.0.0 (1 of 2)",
+            "Finishing library 1.0.0 (1 of 2)",
+            "Downloading flight-tools 2.0.0 (2 of 2)",
+            "Finishing flight-tools 2.0.0 (2 of 2)",
+        ], run.Error.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries));
+    }
+
     [Theory]
     [InlineData("--proceed-with-yanked", "not a valid id")]
     [InlineData("--version", "not-a-version")]
