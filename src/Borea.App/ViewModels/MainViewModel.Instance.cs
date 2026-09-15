@@ -386,7 +386,7 @@ public partial class MainViewModel
             IsLaunching = false;
         }
     }
-  
+
     private void ShowLaunchFailure(LaunchResult result, Instance instance, ModMetadata? loader)
     {
         var loaderName = loader?.Name ?? string.Empty;
