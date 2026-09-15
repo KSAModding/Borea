@@ -324,6 +324,18 @@
   <data name="TimeDaysAgoFormat" xml:space="preserve">
     <value>vor {0} Tagen</value>
   </data>
+  <data name="TimeMonthAgo" xml:space="preserve">
+    <value>vor 1 Monat</value>
+  </data>
+  <data name="TimeMonthsAgoFormat" xml:space="preserve">
+    <value>vor {0} Monaten</value>
+  </data>
+  <data name="TimeYearAgo" xml:space="preserve">
+    <value>vor 1 Jahr</value>
+  </data>
+  <data name="TimeYearsAgoFormat" xml:space="preserve">
+    <value>vor {0} Jahren</value>
+  </data>
   <data name="DiscoverAdd" xml:space="preserve">
     <value>Zur aktiven Instanz hinzufügen</value>
   </data>
@@ -408,6 +420,12 @@
   <data name="ContentPublishedHeader" xml:space="preserve">
     <value>Veröffentlicht</value>
   </data>
+  <data name="ContentPublishedFormat" xml:space="preserve">
+    <value>Veröffentlicht {0}</value>
+  </data>
+  <data name="ContentDownloads" xml:space="preserve">
+    <value>Downloads</value>
+  </data>
   <data name="ContentShowVersions" xml:space="preserve">
     <value>Anzeigen</value>
   </data>
@@ -425,9 +443,6 @@
   </data>
   <data name="ContentNoVersionsInChannel" xml:space="preserve">
     <value>Keine Veröffentlichungen in diesem Kanal.</value>
-  </data>
-  <data name="ContentSourceFormat" xml:space="preserve">
-    <value>Gelistet auf {0}</value>
   </data>
   <data name="ContentTypeModLoader" xml:space="preserve">
     <value>Mod-Loader</value>
@@ -569,9 +584,6 @@
   </data>
   <data name="ContentLoaderHint" xml:space="preserve">
     <value>Mod-Loader werden in den Spieleinstellungen eingerichtet.</value>
-  </data>
-  <data name="SourceContentIndex" xml:space="preserve">
-    <value>dem Inhaltsindex</value>
   </data>
   <data name="LinkForum" xml:space="preserve">
     <value>Forum</value>

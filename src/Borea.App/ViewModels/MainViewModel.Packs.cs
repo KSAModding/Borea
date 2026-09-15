@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
@@ -112,6 +111,8 @@ public partial class MainViewModel
     {
         foreach (var pack in _packs)
             pack.RefreshText();
+        foreach (var version in PackVersions)
+            version.RefreshText();
     }
 
     [RelayCommand]
@@ -128,9 +129,7 @@ public partial class MainViewModel
         PackMembers.Clear();
         PackVersions.Clear();
 
-        PackLinks.Clear();
-        foreach (var link in pack.Links.OrderBy(link => LinkOrder(link.Key)))
-            PackLinks.Add(new ContentLink(LinkLabel(link.Key), link.Value));
+        FillLinks(PackLinks, pack.Links);
         OnPropertyChanged(nameof(HasPackLinks));
 
         CurrentWindowHome = false;
@@ -166,7 +165,7 @@ public partial class MainViewModel
             foreach (var member in members)
                 PackMembers.Add(member);
             foreach (var version in versions.Where(version => version.Metadata is not null))
-                PackVersions.Add(new PackVersionItem(version.Metadata!));
+                PackVersions.Add(new PackVersionItem(this, version.Metadata!));
             RefreshInstalledFlags();
         }
         catch (Exception exception) when (exception is HttpRequestException or IOException or InvalidOperationException or TaskCanceledException)
@@ -385,15 +384,23 @@ public sealed partial class PackItem : ObservableObject
 
     public string GameVersionText => GameVersion(Metadata);
 
-    public string PublishedText => Metadata.ReleasedAt.ToLocalTime().ToString("d", CultureInfo.CurrentCulture);
+    /// <summary>How long ago this pack version came out.</summary>
+    public string ReleasedText => _owner.AgeText(Metadata.ReleasedAt);
+
+    public string ReleasedDateText => MainViewModel.DateText(Metadata.ReleasedAt);
+
+    /// <summary>The date of the first pack version the index reports, or null when it reports none.</summary>
+    public DateTimeOffset? PublishedAt { get; }
+
+    public string? PublishedText => PublishedAt is { } at ? _owner.Localization.FormatContentPublished(_owner.AgeText(at)) : null;
+
+    public string? PublishedDateText => PublishedAt is { } at ? MainViewModel.DateText(at) : null;
 
     public string TypeText => _owner.Localization.ContentTypeModPack;
 
     public string AuthorNames => string.Join(", ", Metadata.Authors);
 
     public string AuthorsText => _owner.Localization.FormatContentByAuthor(AuthorNames);
-
-    public string SourceText => _owner.Localization.FormatContentSource(Metadata.Source == "index" ? _owner.Localization.SourceContentIndex : Metadata.Source);
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CompatibilityText))]
@@ -441,12 +448,14 @@ public sealed partial class PackItem : ObservableObject
 
     public bool CanInstall => !IsInstalled && !IsInstalling;
 
-    public PackItem(MainViewModel owner, ModPackMetadata metadata)
+    /// <param name="indexEntry">The snapshot entry of the pack, for its dates. Null when the snapshot has none.</param>
+    public PackItem(MainViewModel owner, ModPackMetadata metadata, ContentIndexPack? indexEntry = null)
     {
         _owner = owner;
         Metadata = metadata;
         AllTags = DiscoverItem.DisplayTags(owner.TagVocabulary, ContentType.ModPack, metadata.Tags);
         Tags = AllTags.Take(3).ToList();
+        PublishedAt = indexEntry?.PublishedAt;
     }
 
     internal static string GameVersion(ModPackMetadata pack)
@@ -480,10 +489,13 @@ public sealed partial class PackItem : ObservableObject
     internal void RefreshText()
     {
         OnPropertyChanged(nameof(AuthorsText));
-        OnPropertyChanged(nameof(SourceText));
         OnPropertyChanged(nameof(TypeText));
         OnPropertyChanged(nameof(CompatibilityText));
         OnPropertyChanged(nameof(ModCountText));
+        OnPropertyChanged(nameof(ReleasedText));
+        OnPropertyChanged(nameof(ReleasedDateText));
+        OnPropertyChanged(nameof(PublishedText));
+        OnPropertyChanged(nameof(PublishedDateText));
         foreach (var result in Results)
             result.RefreshText();
     }
@@ -550,19 +562,33 @@ public sealed partial class PackMemberItem : ObservableObject
 /// <summary>
 /// One usable version of a pack on the Versions tab of the pack page.
 /// </summary>
-public sealed class PackVersionItem
+public sealed class PackVersionItem : ObservableObject
 {
+    private readonly MainViewModel _owner;
     private readonly ModPackMetadata _pack;
 
     public string Version => _pack.Version.ToString();
 
     public string GameVersionText => PackItem.GameVersion(_pack);
 
-    public string PublishedText => _pack.ReleasedAt.ToLocalTime().ToString("d", CultureInfo.CurrentCulture);
+    /// <summary>How long ago this version came out.</summary>
+    public string PublishedText => _owner.AgeText(_pack.ReleasedAt);
+
+    public string PublishedDateText => MainViewModel.DateText(_pack.ReleasedAt);
 
     public int ModCount => _pack.Mods.Count;
 
-    public PackVersionItem(ModPackMetadata pack) => _pack = pack;
+    public PackVersionItem(MainViewModel owner, ModPackMetadata pack)
+    {
+        _owner = owner;
+        _pack = pack;
+    }
+
+    internal void RefreshText()
+    {
+        OnPropertyChanged(nameof(PublishedText));
+        OnPropertyChanged(nameof(PublishedDateText));
+    }
 }
 
 /// <summary>

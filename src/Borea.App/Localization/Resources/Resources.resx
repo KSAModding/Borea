@@ -324,6 +324,18 @@
   <data name="TimeDaysAgoFormat" xml:space="preserve">
     <value>{0} days ago</value>
   </data>
+  <data name="TimeMonthAgo" xml:space="preserve">
+    <value>1 month ago</value>
+  </data>
+  <data name="TimeMonthsAgoFormat" xml:space="preserve">
+    <value>{0} months ago</value>
+  </data>
+  <data name="TimeYearAgo" xml:space="preserve">
+    <value>1 year ago</value>
+  </data>
+  <data name="TimeYearsAgoFormat" xml:space="preserve">
+    <value>{0} years ago</value>
+  </data>
   <data name="DiscoverAdd" xml:space="preserve">
     <value>Add to the active instance</value>
   </data>
@@ -408,6 +420,12 @@
   <data name="ContentPublishedHeader" xml:space="preserve">
     <value>Published</value>
   </data>
+  <data name="ContentPublishedFormat" xml:space="preserve">
+    <value>Published {0}</value>
+  </data>
+  <data name="ContentDownloads" xml:space="preserve">
+    <value>Downloads</value>
+  </data>
   <data name="ContentShowVersions" xml:space="preserve">
     <value>Show</value>
   </data>
@@ -425,9 +443,6 @@
   </data>
   <data name="ContentNoVersionsInChannel" xml:space="preserve">
     <value>No releases in this channel.</value>
-  </data>
-  <data name="ContentSourceFormat" xml:space="preserve">
-    <value>Listed on {0}</value>
   </data>
   <data name="ContentTypeModLoader" xml:space="preserve">
     <value>Mod loader</value>
@@ -569,9 +584,6 @@
   </data>
   <data name="ContentLoaderHint" xml:space="preserve">
     <value>Mod loaders are set up from the Game settings.</value>
-  </data>
-  <data name="SourceContentIndex" xml:space="preserve">
-    <value>the content index</value>
   </data>
   <data name="LinkForum" xml:space="preserve">
     <value>Forum</value>
@@ -724,10 +736,10 @@
     <value>about {0} min left</value>
   </data>
   <data name="LaunchWithoutModLoader" xml:space="preserve">
-    <value>Launch KSA without a Mod Loader</value>
+    <value>Launch KSA without a mod loader</value>
   </data>
   <data name="LaunchActiveInstance" xml:space="preserve">
-    <value>Launch Active Instance</value>
+    <value>Launch active instance</value>
   </data>
   <data name="LaunchWithoutModLoaderToolTip" xml:space="preserve">
     <value>Launches KSA the same way as running KSA.exe. It uses the shared profile that KSA creates, not a Borea instance.</value>

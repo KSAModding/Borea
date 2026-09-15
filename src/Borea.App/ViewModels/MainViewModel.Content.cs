@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
-using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
@@ -150,9 +149,7 @@ public partial class MainViewModel
         ApplyVersionFilter();
         VersionFilter = OptionFor(SavedReleaseChannel);
 
-        ContentLinks.Clear();
-        foreach (var link in item.Links.OrderBy(link => LinkOrder(link.Key)))
-            ContentLinks.Add(new ContentLink(LinkLabel(link.Key), link.Value));
+        FillLinks(ContentLinks, item.Links);
         OnPropertyChanged(nameof(HasContentLinks));
 
         CurrentWindowHome = false;
@@ -178,9 +175,7 @@ public partial class MainViewModel
             if (full is not null)
             {
                 item.Update(full);
-                ContentLinks.Clear();
-                foreach (var link in item.Links.OrderBy(link => LinkOrder(link.Key)))
-                    ContentLinks.Add(new ContentLink(LinkLabel(link.Key), link.Value));
+                FillLinks(ContentLinks, item.Links);
                 OnPropertyChanged(nameof(HasContentLinks));
                 OnPropertyChanged(nameof(HasContentTags));
             }
@@ -213,6 +208,14 @@ public partial class MainViewModel
         "discussions" => Localization.LinkDiscussions,
         _ => key,
     };
+
+    /// <summary>Fills the links of a detail panel in the order of #8. Each link keeps its key, which picks its icon.</summary>
+    private void FillLinks(ObservableCollection<ContentLink> links, IReadOnlyDictionary<string, string> source)
+    {
+        links.Clear();
+        foreach (var link in source.OrderBy(link => LinkOrder(link.Key)))
+            links.Add(new ContentLink(LinkLabel(link.Key), link.Value, link.Key));
+    }
 
     [RelayCommand]
     private void ShowContentDescription() => IsVersionsTab = false;
@@ -316,7 +319,8 @@ public partial class MainViewModel
         => PlanInstallAsync(row, () => Task.FromResult<ModVersionMetadata?>(release), exact: true);
 }
 
-public sealed record ContentLink(string Label, string Url);
+/// <summary>A link of the detail panel. <see cref="Key"/> is the key of the listing, such as "forums", and null for a changelog link.</summary>
+public sealed record ContentLink(string Label, string Url, string? Key = null);
 
 /// <summary>Markdown text, or a link when the value is an absolute https URI.</summary>
 public sealed record ReleaseChangelog(string Title, string? Text, ContentLink? Link)
@@ -377,7 +381,10 @@ public sealed partial class VersionItem : ObservableObject, IInstallRow
 
     public DateTimeOffset ReleaseDate => _release.ReleaseDate;
 
-    public string PublishedText => _release.ReleaseDate.ToLocalTime().ToString("d", CultureInfo.CurrentCulture);
+    /// <summary>How long ago the release came out.</summary>
+    public string PublishedText => _owner.AgeText(_release.ReleaseDate);
+
+    public string PublishedDateText => MainViewModel.DateText(_release.ReleaseDate);
 
     [ObservableProperty]
     private bool _isInstalling;
@@ -433,6 +440,8 @@ public sealed partial class VersionItem : ObservableObject, IInstallRow
     {
         OnPropertyChanged(nameof(ChannelText));
         OnPropertyChanged(nameof(CompatibilityText));
+        OnPropertyChanged(nameof(PublishedText));
+        OnPropertyChanged(nameof(PublishedDateText));
     }
 
     internal void RefreshCompatibility(GameVersion? installed)

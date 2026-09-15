@@ -204,7 +204,7 @@
                         </Panel>
                     </Grid>
                     <Grid Grid.Row="2" ColumnDefinitions="*,Auto" Margin="0,0,4,0">
-                        <ItemsControl ItemsSource="{Binding Tags}" VerticalAlignment="Center">
+                        <ItemsControl ItemsSource="{Binding Tags}" VerticalAlignment="Center" ClipToBounds="True">
                             <ItemsControl.ItemsPanel>
                                 <ItemsPanelTemplate>
                                     <StackPanel Orientation="Horizontal" Spacing="4" />
@@ -234,13 +234,21 @@
                                 <Button Classes="text" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryCancel}" Command="{Binding CancelInstallCommand}" />
                             </StackPanel>
                             <TextBlock Classes="body-sm danger" Text="{Binding InstallError}" ToolTip.Tip="{Binding InstallError}" IsVisible="{Binding InstallError, Converter={x:Static ObjectConverters.IsNotNull}}" MaxWidth="320" TextTrimming="CharacterEllipsis" />
+                            <!-- c/meta: the downloads and the age of the newest release, when the index reports them -->
+                            <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center" IsVisible="{Binding DownloadsText, Converter={x:Static ObjectConverters.IsNotNull}}" ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ContentDownloads}">
+                                <Path Classes="icon size-16" Data="{StaticResource Icon.Download}" />
+                                <TextBlock Classes="label-md" Text="{Binding DownloadsText}" VerticalAlignment="Center" />
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center" IsVisible="{Binding UpdatedText, Converter={x:Static ObjectConverters.IsNotNull}}" ToolTip.Tip="{Binding UpdatedDateText}">
+                                <Path Classes="icon size-16" Data="{StaticResource Icon.Clock}" />
+                                <TextBlock Classes="label-md" Text="{Binding UpdatedText}" VerticalAlignment="Center" />
+                            </StackPanel>
                             <Border Classes="chip" Classes.compatible="{Binding IsCompatible}" Classes.untested="{Binding IsUntested}" Classes.incompatible="{Binding IsIncompatible}" VerticalAlignment="Center">
                                 <StackPanel Orientation="Horizontal" Spacing="6">
                                     <Ellipse />
                                     <TextBlock Text="{Binding CompatibilityText}" />
                                 </StackPanel>
                             </Border>
-                            <TextBlock Classes="label-md" Text="{Binding License}" VerticalAlignment="Center" />
                         </StackPanel>
                     </Grid>
                 </Grid>
@@ -279,7 +287,7 @@
                         </Panel>
                     </Grid>
                     <Grid Grid.Row="2" ColumnDefinitions="*,Auto" Margin="0,0,4,0">
-                        <ItemsControl ItemsSource="{Binding Tags}" VerticalAlignment="Center">
+                        <ItemsControl ItemsSource="{Binding Tags}" VerticalAlignment="Center" ClipToBounds="True">
                             <ItemsControl.ItemsPanel>
                                 <ItemsPanelTemplate>
                                     <StackPanel Orientation="Horizontal" Spacing="4" />
@@ -301,13 +309,16 @@
                             </StackPanel>
                             <TextBlock Classes="body-sm danger" Text="{Binding InstallError}" ToolTip.Tip="{Binding InstallError}" IsVisible="{Binding InstallError, Converter={x:Static ObjectConverters.IsNotNull}}" MaxWidth="320" TextTrimming="CharacterEllipsis" />
                             <TextBlock Classes="label-md" Text="{Binding ModCountText}" VerticalAlignment="Center" />
+                            <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center" ToolTip.Tip="{Binding ReleasedDateText}">
+                                <Path Classes="icon size-16" Data="{StaticResource Icon.Clock}" />
+                                <TextBlock Classes="label-md" Text="{Binding ReleasedText}" VerticalAlignment="Center" />
+                            </StackPanel>
                             <Border Classes="chip" Classes.compatible="{Binding IsCompatible}" Classes.untested="{Binding IsUntested}" Classes.incompatible="{Binding IsIncompatible}" VerticalAlignment="Center">
                                 <StackPanel Orientation="Horizontal" Spacing="6">
                                     <Ellipse />
                                     <TextBlock Text="{Binding CompatibilityText}" />
                                 </StackPanel>
                             </Border>
-                            <TextBlock Classes="label-md" Text="{Binding License}" VerticalAlignment="Center" />
                         </StackPanel>
                     </Grid>
                 </Grid>

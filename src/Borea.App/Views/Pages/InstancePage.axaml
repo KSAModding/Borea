@@ -26,13 +26,15 @@
                     <Grid ColumnDefinitions="*,24,Auto">
                         <TextBlock Classes="heading-lg" Text="{Binding SelectedInstance.Name}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
                         <StackPanel Grid.Column="2" Orientation="Horizontal">
-                            <Button Classes="text primary" Content="{Binding Localization.InstanceUpdateAll}" Command="{Binding UpdateAll.UpdateCommand}" IsEnabled="{Binding CanChangeContent}" VerticalAlignment="Center" Margin="0,0,16,0">
+                            <!-- c/link-cta, so Play stays the one filled button of the header -->
+                            <Button Classes="link" Command="{Binding UpdateAll.UpdateCommand}" IsEnabled="{Binding CanChangeContent}" VerticalAlignment="Center" Margin="0,0,8,0">
                                 <Button.IsVisible>
                                     <MultiBinding Converter="{x:Static BoolConverters.And}">
                                         <Binding Path="HasUpdates" />
                                         <Binding Path="!UpdateAll.IsInstalling" />
                                     </MultiBinding>
                                 </Button.IsVisible>
+                                <TextBlock Classes="action-md" Text="{Binding Localization.InstanceUpdateAll}" />
                             </Button>
                             <ProgressBar Width="96" Height="6" VerticalAlignment="Center" Margin="0,0,16,0" IsVisible="{Binding UpdateAll.IsInstalling}" Value="{Binding UpdateAll.Progress}" Maximum="100" Foreground="{StaticResource Brush.Accent}" />
                             <!-- c/button-cta -->
@@ -106,10 +108,10 @@
             <!-- c/inner-nav-bar -->
             <Border Background="{StaticResource Brush.SurfaceHeader}" CornerRadius="100" Padding="6" Margin="0,32,0,0">
                 <StackPanel Orientation="Horizontal" Spacing="16">
-                    <Button Classes="tab" Classes.active="{Binding IsContentTab}" Content="{Binding Localization.InstanceTabContent}" Command="{Binding ShowInstanceContentCommand}" />
-                    <Button Classes="tab" Classes.active="{Binding IsManualInstallsTab}" Content="{Binding Localization.InstanceTabManualInstalls}" Command="{Binding ShowInstanceManualInstallsCommand}" />
-                    <Button Classes="tab" Classes.active="{Binding IsGameDataTab}" Content="{Binding Localization.InstanceTabGameData}" Command="{Binding ShowInstanceGameDataCommand}" />
-                    <Button Classes="tab" Classes.active="{Binding IsLogTab}" Content="{Binding Localization.InstanceTabLog}" Command="{Binding ShowInstanceLogCommand}" />
+                    <Button Classes="tab quiet" Classes.active="{Binding IsContentTab}" Content="{Binding Localization.InstanceTabContent}" Command="{Binding ShowInstanceContentCommand}" />
+                    <Button Classes="tab quiet" Classes.active="{Binding IsManualInstallsTab}" Content="{Binding Localization.InstanceTabManualInstalls}" Command="{Binding ShowInstanceManualInstallsCommand}" />
+                    <Button Classes="tab quiet" Classes.active="{Binding IsGameDataTab}" Content="{Binding Localization.InstanceTabGameData}" Command="{Binding ShowInstanceGameDataCommand}" />
+                    <Button Classes="tab quiet" Classes.active="{Binding IsLogTab}" Content="{Binding Localization.InstanceTabLog}" Command="{Binding ShowInstanceLogCommand}" />
                 </StackPanel>
             </Border>
 

@@ -18,9 +18,11 @@ public sealed class PackViewModelTests
     [Fact]
     public async Task ModpacksTab_ListsThePacksOfTheSnapshot()
     {
-        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: WithPacks(
+        var packs = WithPacks(
             Pack("starter-pack", "Starter Pack", Version("1.0.0", Pin("MeasureTools", "1.1.9")), Version("1.1.0", Pin("MeasureTools", "1.1.10"), Pin("KSArmory", "0.8.44"))),
-            Pack("armory-pack", "Armory Pack", Version("1.0.0", Pin("KSArmory", "0.8.44")))));
+            Pack("armory-pack", "Armory Pack", Version("1.0.0", Pin("KSArmory", "0.8.44"))));
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: snapshot =>
+            packs(snapshot).Replace("{ \"id\": \"armory-pack\",", "{ \"id\": \"armory-pack\", \"published_at\": \"2026-09-01T12:00:00Z\",", StringComparison.Ordinal));
         var viewModel = harness.ViewModel;
         await viewModel.EnsureDiscoverLoadedAsync();
         Assert.Empty(viewModel.DiscoverPacks);
@@ -38,6 +40,9 @@ public sealed class PackViewModelTests
         Assert.Equal(harness.Localization.FormatPackModCount(2), starter.ModCountText);
         Assert.Equal(["starter"], starter.Tags);
         Assert.Equal(GameCompatibility.Unknown, starter.Compatibility);
+        Assert.False(string.IsNullOrWhiteSpace(starter.ReleasedText));
+        Assert.Null(starter.PublishedText);
+        Assert.StartsWith("Published ", viewModel.DiscoverPacks[0].PublishedText);
 
         viewModel.SearchText = "armory";
         Assert.Equal(["armory-pack"], viewModel.DiscoverPacks.Select(pack => pack.PackId));

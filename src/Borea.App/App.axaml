@@ -385,19 +385,30 @@
             <Setter Property="Background" Value="{StaticResource Brush.Accent}" />
             <Setter Property="Opacity" Value="0.9" />
         </Style>
+        <!-- the purple buttons stay purple while pressed or disabled, instead of turning into the grey Fluent button -->
+        <Style Selector="Button.text.primary:pressed /template/ ContentPresenter, Button.cta:pressed /template/ ContentPresenter">
+            <Setter Property="Background" Value="{StaticResource Brush.Accent}" />
+            <Setter Property="Foreground" Value="{StaticResource Brush.SurfaceHeader}" />
+            <Setter Property="Opacity" Value="0.8" />
+        </Style>
+        <Style Selector="Button.text.primary:disabled /template/ ContentPresenter, Button.cta:disabled /template/ ContentPresenter">
+            <Setter Property="Background" Value="{StaticResource Brush.Accent}" />
+            <Setter Property="Foreground" Value="{StaticResource Brush.SurfaceHeader}" />
+            <Setter Property="Opacity" Value="0.4" />
+        </Style>
         <!-- c/button-icon-add: black disc with a plus -->
         <Style Selector="Button.add">
             <Setter Property="Width" Value="38" />
             <Setter Property="Height" Value="38" />
             <Setter Property="Padding" Value="0" />
             <Setter Property="CornerRadius" Value="100" />
-            <Setter Property="Background" Value="{StaticResource Brush.SurfaceRaised}" />
+            <Setter Property="Background" Value="{StaticResource Brush.SurfaceHeader}" />
             <Setter Property="BorderThickness" Value="0" />
             <Setter Property="HorizontalContentAlignment" Value="Center" />
             <Setter Property="VerticalContentAlignment" Value="Center" />
         </Style>
         <Style Selector="Button.add:pointerover /template/ ContentPresenter">
-            <Setter Property="Background" Value="{StaticResource Brush.BorderStrong}" />
+            <Setter Property="Background" Value="{StaticResource Brush.SurfaceRaised}" />
         </Style>
         <Style Selector="Button.add Path">
             <Setter Property="Stroke" Value="{StaticResource Brush.Accent}" />
@@ -425,7 +436,18 @@
             <Setter Property="Background" Value="{StaticResource Brush.Accent}" />
             <Setter Property="Foreground" Value="{StaticResource Brush.SurfaceHeader}" />
         </Style>
+        <!-- on a detail page the selected tab is purple text without the pill -->
+        <Style Selector="Button.tab.quiet.active">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Foreground" Value="{StaticResource Brush.Accent}" />
+        </Style>
+        <Style Selector="Button.tab.quiet.active:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="{StaticResource Brush.Surface}" />
+            <Setter Property="Foreground" Value="{StaticResource Brush.Accent}" />
+        </Style>
+        <!-- a tab for content without listings yet keeps its plain text, without the grey pill of a disabled Fluent button -->
         <Style Selector="Button.tab:disabled /template/ ContentPresenter">
+            <Setter Property="Background" Value="Transparent" />
             <Setter Property="Opacity" Value="0.4" />
         </Style>
         <!-- c/filter-category: plain text rows in the filter panel -->
@@ -441,6 +463,9 @@
         <Style Selector="Button.filter:pointerover /template/ ContentPresenter">
             <Setter Property="Background" Value="Transparent" />
             <Setter Property="Foreground" Value="{StaticResource Brush.Text}" />
+        </Style>
+        <Style Selector="Button.filter:pointerover Path.icon">
+            <Setter Property="Stroke" Value="{StaticResource Brush.Text}" />
         </Style>
         <Style Selector="Button.filter.active /template/ ContentPresenter">
             <Setter Property="Foreground" Value="{StaticResource Brush.Accent}" />
@@ -557,19 +582,66 @@
             <Setter Property="OffContent" Value="" />
         </Style>
 
-		<!-- c/SplitButton-launch: rounded, blue -->
-		<Style Selector="Button.splitButton.primary">
-			<Setter Property="Height" Value="26" />
-			<Setter Property="Margin" Value="0,0,3,0" />
-			<Setter Property="CornerRadius" Value="100,0,0,100" />
-			<Setter Property="Background" Value="{StaticResource Brush.Accent}" />
-			<Setter Property="BorderThickness" Value="0" />
-		</Style>
-		<Style Selector="Button.splitButton.flyout">
-			<Setter Property="Height" Value="26" />
-			<Setter Property="CornerRadius" Value="0,100,100,0" />
-			<Setter Property="Background" Value="{StaticResource Brush.Accent}" />
-			<Setter Property="BorderThickness" Value="0" />
-		</Style>
+        <!-- c/SplitButton-launch: a purple pill cut in two, 32px tall like c/link-cta, purple in every state -->
+        <Style Selector="Button.splitButton">
+            <Setter Property="Height" Value="32" />
+            <Setter Property="Background" Value="{StaticResource Brush.Accent}" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+        </Style>
+        <Style Selector="Button.splitButton.primary">
+            <Setter Property="Padding" Value="14,0,14,0" />
+            <Setter Property="Margin" Value="0,0,2,0" />
+            <Setter Property="CornerRadius" Value="100,0,0,100" />
+        </Style>
+        <Style Selector="Button.splitButton.flyout">
+            <Setter Property="Padding" Value="8,0,12,0" />
+            <Setter Property="CornerRadius" Value="0,100,100,0" />
+        </Style>
+        <Style Selector="Button.splitButton:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="{StaticResource Brush.Accent}" />
+            <Setter Property="Opacity" Value="0.9" />
+        </Style>
+        <Style Selector="Button.splitButton:pressed /template/ ContentPresenter">
+            <Setter Property="Background" Value="{StaticResource Brush.Accent}" />
+            <Setter Property="Opacity" Value="0.8" />
+        </Style>
+        <Style Selector="Button.splitButton:disabled /template/ ContentPresenter">
+            <Setter Property="Background" Value="{StaticResource Brush.Accent}" />
+            <Setter Property="Opacity" Value="0.4" />
+        </Style>
+
+        <!-- c/link-cta while it cannot act, without the grey pill of a disabled Fluent button -->
+        <Style Selector="Button.link:disabled /template/ ContentPresenter">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Opacity" Value="0.4" />
+        </Style>
+
+        <!-- filter-panel and detail-panel: a card along the right edge of the page, full height, that scrolls on its own -->
+        <Style Selector="Border.side-panel">
+            <Setter Property="Width" Value="300" />
+            <Setter Property="Margin" Value="0,24,24,24" />
+            <Setter Property="HorizontalAlignment" Value="Right" />
+            <Setter Property="Background" Value="{StaticResource Brush.Surface}" />
+            <Setter Property="BorderBrush" Value="{StaticResource Brush.Border}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="24" />
+            <Setter Property="ClipToBounds" Value="True" />
+        </Style>
+
+        <!-- the author placeholder of the detail panel -->
+        <Style Selector="Border.avatar">
+            <Setter Property="Width" Value="32" />
+            <Setter Property="Height" Value="32" />
+            <Setter Property="CornerRadius" Value="16" />
+            <Setter Property="Background" Value="{StaticResource Brush.SurfaceHeader}" />
+            <Setter Property="BorderBrush" Value="{StaticResource Brush.BorderStrong}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+        <Style Selector="Border.avatar Path.icon">
+            <Setter Property="HorizontalAlignment" Value="Center" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
     </Application.Styles>
 </Application>

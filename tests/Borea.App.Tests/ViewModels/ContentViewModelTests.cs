@@ -25,8 +25,8 @@ public sealed class ContentViewModelTests
         Assert.True(viewModel.IsDescriptionTab);
         Assert.NotNull(viewModel.LatestVersion);
         Assert.StartsWith(">= ", afc.GameVersionText);
-        Assert.Contains(harness.Localization.SourceContentIndex, afc.SourceText);
         Assert.Equal(harness.Localization.LinkForum, viewModel.ContentLinks[0].Label);
+        Assert.Equal("forums", viewModel.ContentLinks[0].Key);
         Assert.Contains(viewModel.ContentLinks, link => link.Label == harness.Localization.LinkRepository);
         Assert.Contains(viewModel.ContentLinks, link => link.Label == "SpaceDock");
         Assert.True(viewModel.HasContentLinks);

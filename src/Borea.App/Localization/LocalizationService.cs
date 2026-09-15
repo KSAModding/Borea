@@ -293,8 +293,6 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string ContentLoaderHint => Resources.ContentLoaderHint;
 
-    public string SourceContentIndex => Resources.SourceContentIndex;
-
     public string LinkForum => Resources.LinkForum;
 
     public string LinkRepository => Resources.LinkRepository;
@@ -334,6 +332,8 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string ContentGameVersionHeader => Resources.ContentGameVersionHeader;
 
     public string ContentPublishedHeader => Resources.ContentPublishedHeader;
+
+    public string ContentDownloads => Resources.ContentDownloads;
 
     public string ContentShowVersions => Resources.ContentShowVersions;
 
@@ -507,7 +507,7 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string FormatAboutIndexUpdated(string age)
         => string.Format(CultureInfo.CurrentCulture, Resources.AboutIndexUpdatedFormat, age);
 
-    /// <summary>"just now", "5 minutes ago", "2 days ago", with the count rounded down.</summary>
+    /// <summary>"just now", "5 minutes ago", "2 days ago", "3 months ago", "2 years ago", with the count rounded down.</summary>
     public string FormatTimeAgo(TimeSpan age)
     {
         if (age.TotalMinutes < 1)
@@ -516,9 +516,18 @@ public sealed class LocalizationService : INotifyPropertyChanged
             return FormatCount((int)age.TotalMinutes, Resources.TimeMinuteAgo, Resources.TimeMinutesAgoFormat);
         if (age.TotalDays < 1)
             return FormatCount((int)age.TotalHours, Resources.TimeHourAgo, Resources.TimeHoursAgoFormat);
+        if (age.TotalDays < DaysPerMonth)
+            return FormatCount((int)age.TotalDays, Resources.TimeDayAgo, Resources.TimeDaysAgoFormat);
+        if (age.TotalDays < DaysPerYear)
+            return FormatCount((int)(age.TotalDays / DaysPerMonth), Resources.TimeMonthAgo, Resources.TimeMonthsAgoFormat);
 
-        return FormatCount((int)age.TotalDays, Resources.TimeDayAgo, Resources.TimeDaysAgoFormat);
+        return FormatCount((int)(age.TotalDays / DaysPerYear), Resources.TimeYearAgo, Resources.TimeYearsAgoFormat);
     }
+
+    // a month is a twelfth of a year, so an age just short of a year never reads as twelve months
+    private const double DaysPerYear = 365.25;
+
+    private const double DaysPerMonth = DaysPerYear / 12;
 
     private static string FormatCount(int count, string one, string format)
         => count == 1 ? one : string.Format(CultureInfo.CurrentCulture, format, count);
@@ -595,11 +604,9 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string FormatLaunchModDisabled(string mod)
         => string.Format(CultureInfo.CurrentCulture, Resources.LaunchModDisabledFormat, mod);
 
-    public string FormatContentSource(string source)
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(source);
-        return string.Format(CultureInfo.CurrentCulture, Resources.ContentSourceFormat, source);
-    }
+    /// <summary>"Published 3 days ago", from an age that <see cref="FormatTimeAgo"/> wrote.</summary>
+    public string FormatContentPublished(string age)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ContentPublishedFormat, age);
 
     public string FormatContentRemoveNotOwned(string modId)
         => string.Format(CultureInfo.CurrentCulture, Resources.ContentRemoveNotOwnedFormat, modId);
