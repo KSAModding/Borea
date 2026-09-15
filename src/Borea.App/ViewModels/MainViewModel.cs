@@ -178,8 +178,8 @@ public partial class MainViewModel : ViewModelBase
 
     /// <summary>
     /// The mods of the content index with the most recent newest release,
-    /// newest first. The index has no download counts yet, so Home shows what
-    /// changed instead of what is popular (#8).
+    /// newest first. The index reports download totals but no trend over time,
+    /// so Home shows what changed instead of what is trending (#8).
     /// </summary>
     public ObservableCollection<RecentItem> RecentItems { get; } = [];
 
@@ -419,6 +419,15 @@ public partial class MainViewModel : ViewModelBase
     };
 
     /// <summary>
+    /// How long ago <paramref name="at"/> was, such as "3 days ago". The design
+    /// in #8 shows an age wherever it shows when something was released.
+    /// </summary>
+    internal string AgeText(DateTimeOffset at) => Localization.FormatTimeAgo(DateTimeOffset.UtcNow - at);
+
+    /// <summary>The date in the regional format the user chose, for the tooltip of an age.</summary>
+    internal static string DateText(DateTimeOffset at) => at.ToLocalTime().ToString("d", CultureInfo.CurrentCulture);
+
+    /// <summary>
     /// Opens "modal: new instance" from #8.
     /// </summary>
     [RelayCommand]
@@ -533,10 +542,26 @@ public partial class MainViewModel : ViewModelBase
         if (e.PropertyName == nameof(RegionalFormatService.SelectedFormat))
         {
             OnPropertyChanged(nameof(SelectedRegionalFormat));
-            foreach (var item in RecentItems)
-                item.RefreshText();
+            RefreshRowText();
             RefreshGameDataItems();
         }
+    }
+
+    /// <summary>
+    /// The text of the Home cards, the Discover and pack rows and the versions
+    /// tables. Their ages, dates and download counts follow both the language
+    /// and the regional format.
+    /// </summary>
+    private void RefreshRowText()
+    {
+        foreach (var item in RecentItems)
+            item.RefreshText();
+        foreach (var item in _listings)
+            item.RefreshText();
+        foreach (var release in _contentReleases)
+            release.RefreshText();
+        LatestVersion?.RefreshText();
+        RefreshPackText();
     }
 
     private void OnLocalizationChanged(object? sender, PropertyChangedEventArgs e)
@@ -545,19 +570,15 @@ public partial class MainViewModel : ViewModelBase
         // translated string on this model needs a refresh too.
         foreach (var instance in Instances)
             instance.RefreshText();
-        foreach (var item in DiscoverItems)
-            item.RefreshText();
+        RefreshRowText();
         // the reasons a mod cannot be removed are translated text
         RefreshInstalledFlags();
-        foreach (var release in _contentReleases)
-            release.RefreshText();
         foreach (var option in ReleaseChannelOptions)
             option.RefreshText();
         foreach (var option in UpdateChannelOptions)
             option.RefreshText();
         foreach (var category in CategoryOptions)
             category.RefreshText();
-        RefreshPackText();
         RefreshContentGroups();
         foreach (var item in ManualInstallItems)
             item.RefreshText();
@@ -592,10 +613,11 @@ public sealed partial class RecentItem : ObservableObject
 
     public DateTimeOffset UpdatedAt { get; }
 
-    /// <summary>
-    /// The release date in the regional format the user chose.
-    /// </summary>
-    public string UpdatedText => UpdatedAt.ToLocalTime().ToString("d", CultureInfo.CurrentCulture);
+    /// <summary>How long ago the release came out.</summary>
+    public string UpdatedText => _owner.AgeText(UpdatedAt);
+
+    /// <summary>The release date in the regional format the user chose.</summary>
+    public string UpdatedDateText => MainViewModel.DateText(UpdatedAt);
 
     public RecentItem(MainViewModel owner, ModMetadata listing, DateTimeOffset updatedAt)
     {
@@ -604,7 +626,11 @@ public sealed partial class RecentItem : ObservableObject
         UpdatedAt = updatedAt;
     }
 
-    internal void RefreshText() => OnPropertyChanged(nameof(UpdatedText));
+    internal void RefreshText()
+    {
+        OnPropertyChanged(nameof(UpdatedText));
+        OnPropertyChanged(nameof(UpdatedDateText));
+    }
 
     [RelayCommand]
     private Task OpenAsync() => _owner.OpenRecentAsync(this);

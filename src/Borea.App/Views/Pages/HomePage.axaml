@@ -7,39 +7,39 @@
     <!-- Home -->
     <ScrollViewer>
         <StackPanel MaxWidth="700" Margin="32,42,32,32">
-            <!-- c/breadcrumb -->
-			<Grid ColumnDefinitions="*,Auto" RowDefinitions="*,Auto" Height="24">
-				<StackPanel Grid.Column="0" Grid.Row="0" Grid.RowSpan="2" Orientation="Horizontal" Spacing="4" MinWidth="50">
-					<Path Classes="icon" Data="{StaticResource Icon.Home}" />
-					<TextBlock Classes="label-lg" Text="{Binding Localization.PageHomeHeading}" VerticalAlignment="Center"/>
-				</StackPanel>
+            <!-- c/breadcrumb, and the launch split button on the right -->
+            <Grid ColumnDefinitions="*,Auto">
+                <StackPanel Orientation="Horizontal" Spacing="4" Height="24" VerticalAlignment="Center">
+                    <Path Classes="icon" Data="{StaticResource Icon.Home}" />
+                    <TextBlock Classes="label-lg" Text="{Binding Localization.PageHomeHeading}" VerticalAlignment="Center" />
+                </StackPanel>
 
-				<!-- Custom Split Button: Primary is the default command, Flyout is a dropdown menu -->
-				<Grid Grid.Column="1" ColumnDefinitions="Auto,Auto" >
-					<Button Grid.Column="0" Grid.Row="0" Classes="splitButton primary" Command="{Binding PlayActiveInstanceCommand}" IsEnabled="{Binding EnableActiveInstance}">
-						<StackPanel Orientation="Horizontal" Spacing="6">
-							<Path Classes="icon-filled size-16" Fill="{StaticResource Brush.SurfaceHeader}" Data="{StaticResource Icon.Play}" VerticalAlignment="Center" />
-							<TextBlock Classes="action-lg" Text="{Binding Localization.LaunchActiveInstance}" VerticalAlignment="Center" />
-						</StackPanel>
-					</Button>
-					<Button Grid.Column="1" Grid.Row="0" Classes="splitButton flyout">
-						<Path Classes="icon-filled size-16" Fill="{StaticResource Brush.SurfaceHeader}" Data="{StaticResource Icon.CaretDown}" VerticalAlignment="Center" />
-						<Button.Flyout>
-							<MenuFlyout Placement="BottomEdgeAlignedRight">
-								<MenuItem Header="{Binding Localization.LaunchActiveInstance}" Command="{Binding PlayActiveInstanceCommand}" IsEnabled="{Binding EnableActiveInstance}"/>
-								<MenuItem Header="{Binding Localization.LaunchWithoutModLoader}" Command="{Binding PlayWithoutModLoaderCommand}" ToolTip.Tip="{Binding Localization.LaunchWithoutModLoaderToolTip}" />
-							</MenuFlyout>
-						</Button.Flyout>
-					</Button>
-				</Grid>
-			</Grid>
-			<TextBlock Classes="body-md secondary" Text="{Binding LaunchMessage}" TextWrapping="Wrap" Margin="0,16,0,0" IsVisible="{Binding LaunchMessage, Converter={x:Static ObjectConverters.IsNotNull}}" />
-			<TextBlock Classes="body-md danger" Text="{Binding ContentError}" TextWrapping="Wrap" Margin="0,16,0,0" IsVisible="{Binding ContentError, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                <!-- the left half starts the active instance, the right half opens the other ways to start the game -->
+                <StackPanel Grid.Column="1" Orientation="Horizontal">
+                    <Button Classes="splitButton primary" Command="{Binding PlayActiveInstanceCommand}" IsEnabled="{Binding EnableActiveInstance}">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <Path Classes="icon-filled size-16" Fill="{StaticResource Brush.SurfaceHeader}" Data="{StaticResource Icon.Play}" VerticalAlignment="Center" />
+                            <TextBlock Classes="action-md" Foreground="{StaticResource Brush.SurfaceHeader}" Text="{Binding Localization.LaunchActiveInstance}" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Button>
+                    <Button Classes="splitButton flyout">
+                        <Path Classes="icon size-16" Stroke="{StaticResource Brush.SurfaceHeader}" StrokeThickness="2.5" Data="{StaticResource Icon.CaretDown}" VerticalAlignment="Center" />
+                        <Button.Flyout>
+                            <MenuFlyout Placement="BottomEdgeAlignedRight">
+                                <MenuItem Header="{Binding Localization.LaunchActiveInstance}" Command="{Binding PlayActiveInstanceCommand}" IsEnabled="{Binding EnableActiveInstance}" />
+                                <MenuItem Header="{Binding Localization.LaunchWithoutModLoader}" Command="{Binding PlayWithoutModLoaderCommand}" ToolTip.Tip="{Binding Localization.LaunchWithoutModLoaderToolTip}" />
+                            </MenuFlyout>
+                        </Button.Flyout>
+                    </Button>
+                </StackPanel>
+            </Grid>
+            <TextBlock Classes="body-md secondary" Text="{Binding LaunchMessage}" TextWrapping="Wrap" Margin="0,16,0,0" IsVisible="{Binding LaunchMessage, Converter={x:Static ObjectConverters.IsNotNull}}" />
+            <TextBlock Classes="body-md danger" Text="{Binding ContentError}" TextWrapping="Wrap" Margin="0,16,0,0" IsVisible="{Binding ContentError, Converter={x:Static ObjectConverters.IsNotNull}}" />
             <ContentControl Content="{Binding}" ContentTemplate="{StaticResource GameSetupBanner}" IsVisible="{Binding NeedsGameSetup}" />
             <views:UpdateNotice Margin="0,16,0,0" IsVisible="{Binding HasAvailableUpdate}" />
 
             <!-- Current install: black container with the header strip, holding the active instance row -->
-            <Border Background="{StaticResource Brush.SurfaceHeader}" CornerRadius="16" Margin="0,23,0,0">
+            <Border Background="{StaticResource Brush.SurfaceHeader}" CornerRadius="16" Margin="0,16,0,0">
                 <StackPanel>
                     <Grid ColumnDefinitions="Auto,8,*,Auto" Height="44" Margin="12,0">
                         <Path Grid.Column="0" Classes="icon-filled size-16" Fill="{StaticResource Brush.Positive}" Data="{StaticResource Icon.Paw}" VerticalAlignment="Center" />
@@ -65,7 +65,7 @@
                 </StackPanel>
             </Border>
 
-            <!-- Recently updated: the index has no download counts yet, so Home shows the newest releases -->
+            <!-- Recently updated: the index has no trend over time, so Home shows the newest releases instead of the trending ones of the design -->
             <Grid ColumnDefinitions="*,Auto" Margin="3,44,3,0" IsVisible="{Binding HasRecentItems}">
                 <TextBlock Classes="heading-sm heading" Text="{Binding Localization.HomeRecentlyUpdated}" />
                 <Button Grid.Column="1" Classes="link" Padding="0" Height="18" Command="{Binding SetMainWindowDiscover}">
@@ -85,10 +85,10 @@
                         <Button Classes="plain" Margin="0,0,5,5" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Command="{Binding OpenCommand}" AutomationProperties.Name="{Binding Name}">
                             <Border Classes="card" Height="171" Background="{StaticResource Brush.Thumbnail}" Padding="16">
                                 <StackPanel VerticalAlignment="Bottom" Spacing="10">
-                                    <TextBlock Classes="heading-sm" Text="{Binding Name}" TextWrapping="Wrap" />
+                                    <TextBlock Classes="heading-md" Text="{Binding Name}" TextWrapping="Wrap" MaxLines="3" TextTrimming="CharacterEllipsis" />
                                     <Grid ColumnDefinitions="*,Auto">
                                         <TextBlock Classes="label-md" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ContentTypeMod}" />
-                                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4">
+                                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" ToolTip.Tip="{Binding UpdatedDateText}">
                                             <Path Classes="icon size-16" Data="{StaticResource Icon.Clock}" />
                                             <TextBlock Classes="label-md" Text="{Binding UpdatedText}" VerticalAlignment="Center" />
                                         </StackPanel>

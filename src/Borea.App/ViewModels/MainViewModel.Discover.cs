@@ -1,12 +1,14 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Borea.Composition;
 using Borea.Core.Game;
+using Borea.Core.Index;
 using Borea.Core.ModPacks;
 using Borea.Core.Mods;
 using Borea.Core.Planning;
@@ -104,10 +106,20 @@ public partial class MainViewModel
         IsDiscoverLoading = true;
         try
         {
-            TagVocabulary = (await services.IndexSnapshots.GetSnapshotAsync()).Tags;
+            var snapshot = await services.IndexSnapshots.GetSnapshotAsync();
+            TagVocabulary = snapshot.Tags;
+
+            // the download counts and the first release dates sit next to a listing in the snapshot, not inside it
+            var listingEntries = new Dictionary<string, ContentIndexListing>(ModIds.Comparer);
+            foreach (var entry in snapshot.Listings)
+                listingEntries.TryAdd(entry.Id, entry);
+            var packEntries = new Dictionary<string, ContentIndexPack>(ModIds.Comparer);
+            foreach (var entry in snapshot.Packs)
+                packEntries.TryAdd(entry.Id, entry);
+
             var listings = await services.ContentIndex.GetAvailableModsAsync();
             _listings = listings
-                .Select(listing => new DiscoverItem(this, listing))
+                .Select(listing => new DiscoverItem(this, listing, listing.Source == "index" ? listingEntries.GetValueOrDefault(listing.ModId) : null))
                 .OrderBy(item => item.Name, StringComparer.CurrentCultureIgnoreCase)
                 .ToList();
             var packs = (await services.ModPacks.GetAvailableModPacksAsync())
@@ -115,7 +127,7 @@ public partial class MainViewModel
                 .OfType<ModPackMetadata>()
                 .ToList();
             _packs = packs
-                .Select(pack => new PackItem(this, pack))
+                .Select(pack => new PackItem(this, pack, packEntries.GetValueOrDefault(pack.ModPackId)))
                 .OrderBy(item => item.Name, StringComparer.CurrentCultureIgnoreCase)
                 .ToList();
 
@@ -268,6 +280,9 @@ public partial class MainViewModel
         {
             var latest = item.Source == "index" ? await _services.ContentIndex.GetLatestReleaseInChannelAsync(item.ModId, _services.Settings.ReleaseChannel) : null;
             item.Compatibility = latest is null ? GameCompatibility.Unknown : Borea.Core.Game.Compatibility.Evaluate(latest, installed);
+
+            // the age on the row belongs to the same release as the chip and Add, so a newer release in another channel does not show there
+            item.UpdatedAt = latest?.ReleaseDate;
         }
 
         foreach (var release in _contentReleases)
@@ -428,12 +443,27 @@ public sealed partial class DiscoverItem : ObservableObject, IInstallRow
 
     public string AuthorsText => _owner.Localization.FormatContentByAuthor(AuthorNames);
 
-    public string SourceText => _owner.Localization.FormatContentSource(Source switch
-    {
-        "index" => _owner.Localization.SourceContentIndex,
-        "spacedock" => "SpaceDock",
-        _ => Source,
-    });
+    /// <summary>The download count the content index reports, or null when it reports none.</summary>
+    public long? Downloads { get; }
+
+    public string? DownloadsText => Downloads?.ToString("N0", CultureInfo.CurrentCulture);
+
+    /// <summary>The date of the first release the index reports, or null when it reports none.</summary>
+    public DateTimeOffset? PublishedAt { get; }
+
+    public string? PublishedText => PublishedAt is { } at ? _owner.Localization.FormatContentPublished(_owner.AgeText(at)) : null;
+
+    public string? PublishedDateText => PublishedAt is { } at ? MainViewModel.DateText(at) : null;
+
+    /// <summary>The date of the newest release in the saved release channel, the one Add installs. Null when the channel has none.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(UpdatedText))]
+    [NotifyPropertyChangedFor(nameof(UpdatedDateText))]
+    private DateTimeOffset? _updatedAt;
+
+    public string? UpdatedText => UpdatedAt is { } at ? _owner.AgeText(at) : null;
+
+    public string? UpdatedDateText => UpdatedAt is { } at ? MainViewModel.DateText(at) : null;
 
     /// <summary>
     /// How the newest release fits the installed game (RFC 0017).
@@ -505,12 +535,15 @@ public sealed partial class DiscoverItem : ObservableObject, IInstallRow
 
     public string RemoveToolTip => RemoveBlockedText ?? _owner.Localization.ContentRemove;
 
-    public DiscoverItem(MainViewModel owner, ModMetadata listing)
+    /// <param name="indexEntry">The snapshot entry of an index listing, for its download count and the date of its first release. Null for any other listing.</param>
+    public DiscoverItem(MainViewModel owner, ModMetadata listing, ContentIndexListing? indexEntry = null)
     {
         _owner = owner;
         _listing = listing;
         AllTags = DisplayTags(owner.TagVocabulary, listing.Type, listing.Tags);
         Tags = AllTags.Take(3).ToList();
+        Downloads = indexEntry?.Downloads?.Total;
+        PublishedAt = indexEntry?.PublishedAt;
     }
 
     internal static List<string> DisplayTags(CuratedTagVocabulary vocabulary, ContentType type, IReadOnlyList<string> tags)
@@ -561,9 +594,13 @@ public sealed partial class DiscoverItem : ObservableObject, IInstallRow
     internal void RefreshText()
     {
         OnPropertyChanged(nameof(AuthorsText));
-        OnPropertyChanged(nameof(SourceText));
         OnPropertyChanged(nameof(TypeText));
         OnPropertyChanged(nameof(CompatibilityText));
+        OnPropertyChanged(nameof(DownloadsText));
+        OnPropertyChanged(nameof(PublishedText));
+        OnPropertyChanged(nameof(PublishedDateText));
+        OnPropertyChanged(nameof(UpdatedText));
+        OnPropertyChanged(nameof(UpdatedDateText));
     }
 
     [RelayCommand]

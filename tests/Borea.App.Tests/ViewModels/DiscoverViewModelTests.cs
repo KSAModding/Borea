@@ -1,3 +1,4 @@
+using System.Globalization;
 using Borea.App.ViewModels;
 using Borea.Core.Game;
 using Borea.Core.Instances;
@@ -25,6 +26,66 @@ public sealed class DiscoverViewModelTests
         Assert.DoesNotContain(viewModel.DiscoverItems, item => item.ModId == ViewModelHarness.FakeSpaceDock.MirroredId);
         Assert.Equal(["MIT"], viewModel.LicenseOptions);
         Assert.Null(viewModel.DiscoverError);
+    }
+
+    [Fact]
+    public async Task Load_TakesTheDownloadsFromTheSnapshotAndTheAgeFromTheChannelRelease()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: json => WithDownloadsAndDates(json, "AdvancedFlightComputer"));
+        var viewModel = harness.ViewModel;
+        await viewModel.EnsureDiscoverLoadedAsync();
+        var afc = viewModel.DiscoverItems.Single(item => item.ModId == "AdvancedFlightComputer");
+        var armory = viewModel.DiscoverItems.Single(item => item.ModId == "KSArmory");
+        var release = await harness.Services.ContentIndex.GetLatestReleaseInChannelAsync(afc.ModId, harness.Services.Settings.ReleaseChannel);
+
+        Assert.Equal(1234L, afc.Downloads);
+        Assert.Equal(1234L.ToString("N0", CultureInfo.CurrentCulture), afc.DownloadsText);
+        Assert.StartsWith("Published ", afc.PublishedText);
+        Assert.NotNull(afc.PublishedDateText);
+
+        // the row installs the newest release of the channel, so its age comes from that release and not from updated_at
+        Assert.Equal<DateTimeOffset?>(release!.ReleaseDate, afc.UpdatedAt);
+        Assert.NotEqual<DateTimeOffset?>(SnapshotUpdatedAt, afc.UpdatedAt);
+        Assert.False(string.IsNullOrWhiteSpace(afc.UpdatedText));
+
+        Assert.Null(armory.DownloadsText);
+        Assert.Null(armory.PublishedText);
+        Assert.NotNull(armory.UpdatedText);
+    }
+
+    [Fact]
+    public async Task LanguageChange_TranslatesTheAgesOfRowsAndCards()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: json => WithDownloadsAndDates(json, "AdvancedFlightComputer"));
+        var viewModel = harness.ViewModel;
+        await viewModel.EnsureDiscoverLoadedAsync();
+        var afc = viewModel.DiscoverItems.Single(item => item.ModId == "AdvancedFlightComputer");
+        var card = viewModel.RecentItems.Single(item => item.ModId == "AdvancedFlightComputer");
+        var changed = new List<string?>();
+        afc.PropertyChanged += (_, e) => changed.Add(e.PropertyName);
+        card.PropertyChanged += (_, e) => changed.Add(e.PropertyName);
+        var rowAge = afc.UpdatedText;
+        var published = afc.PublishedText;
+        var cardAge = card.UpdatedText;
+
+        harness.Localization.TrySetCulture("de");
+
+        Assert.Contains(nameof(DiscoverItem.UpdatedText), changed);
+        Assert.Contains(nameof(DiscoverItem.PublishedText), changed);
+        Assert.Contains(nameof(RecentItem.UpdatedText), changed);
+        Assert.NotEqual(rowAge, afc.UpdatedText);
+        Assert.NotEqual(published, afc.PublishedText);
+        Assert.NotEqual(cardAge, card.UpdatedText);
+    }
+
+    private static readonly DateTimeOffset SnapshotUpdatedAt = new(2026, 9, 14, 0, 0, 0, TimeSpan.Zero);
+
+    /// <summary>Adds a download count and both dates to one listing of the snapshot, with <see cref="SnapshotUpdatedAt"/> as its updated date.</summary>
+    private static string WithDownloadsAndDates(string json, string listingId)
+    {
+        var marker = $"\"id\": \"{listingId}\",";
+        var at = json.IndexOf(marker, StringComparison.Ordinal) + marker.Length;
+        return json.Insert(at, """ "downloads": { "total": 1234, "hosts": { "github": 1234 } }, "published_at": "2026-08-01T00:00:00Z", "updated_at": "2026-09-14T00:00:00Z",""");
     }
 
     [Fact]

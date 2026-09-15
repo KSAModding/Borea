@@ -5,248 +5,270 @@
              x:Class="Borea.App.Views.Pages.PackPage"
              x:DataType="vm:MainViewModel">
     <!-- Pack: one modpack, laid out like the content page -->
-    <Grid ColumnDefinitions="*,348">
-        <ScrollViewer Grid.ColumnSpan="2">
-            <StackPanel MaxWidth="764" Margin="32,42,348,32">
-                <StackPanel Orientation="Horizontal" Spacing="4" Height="24">
-                    <Path Classes="icon" Data="{StaticResource Icon.Compass}" />
-                    <Button Classes="plain" Command="{Binding SetMainWindowDiscover}">
-                        <TextBlock Classes="label-lg" Text="{Binding Localization.PageDiscoverHeading}" VerticalAlignment="Center" />
-                    </Button>
-                    <TextBlock Classes="label-lg" Text="/" VerticalAlignment="Center" />
-                    <TextBlock Classes="label-lg" Text="{Binding SelectedPack.TypeText}" VerticalAlignment="Center" />
-                </StackPanel>
-
-                <!-- c/content-header -->
-                <Grid ColumnDefinitions="170,32,*" Margin="0,24,0,0">
-                    <Border Classes="thumbnail" Width="170" Height="170">
-                        <Path Classes="icon" Data="{StaticResource Icon.Box}" RenderTransform="scale(2.5)" StrokeThickness="0.8" />
-                    </Border>
-                    <Grid Grid.Column="2" RowDefinitions="Auto,*,Auto">
-                        <Grid ColumnDefinitions="*,24,Auto">
-                            <StackPanel Spacing="4">
-                                <TextBlock Classes="heading-lg" Text="{Binding SelectedPack.Name}" TextWrapping="Wrap" />
-                                <TextBlock Classes="body-md secondary" Text="{Binding SelectedPack.Abstract}" TextWrapping="Wrap" LineHeight="18" />
-                                <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,8,0,0" IsVisible="{Binding SelectedPack.InstallWarning, Converter={x:Static ObjectConverters.IsNotNull}}">
-                                    <TextBlock Classes="body-sm secondary" Text="{Binding SelectedPack.InstallWarning}" TextWrapping="Wrap" MaxWidth="420" VerticalAlignment="Center" />
-                                    <Button Classes="text primary" Content="{Binding Localization.InstallAnyway}" Command="{Binding SelectedPack.ConfirmInstallCommand}" />
-                                    <Button Classes="text" Content="{Binding Localization.LibraryCancel}" Command="{Binding SelectedPack.CancelInstallCommand}" />
-                                </StackPanel>
-                                <TextBlock Classes="body-sm danger" Text="{Binding SelectedPack.InstallError}" TextWrapping="Wrap" Margin="0,8,0,0" IsVisible="{Binding SelectedPack.InstallError, Converter={x:Static ObjectConverters.IsNotNull}}" />
-                            </StackPanel>
-                            <Panel Grid.Column="2" VerticalAlignment="Top">
-                                <Button Classes="cta" Command="{Binding SelectedPack.InstallCommand}" IsVisible="{Binding SelectedPack.CanInstall}">
-                                    <StackPanel Orientation="Horizontal" Spacing="6">
-                                        <Path Classes="icon size-16" Data="{StaticResource Icon.Plus}" Stroke="{StaticResource Brush.SurfaceHeader}" StrokeThickness="2" VerticalAlignment="Center" />
-                                        <TextBlock Classes="action-lg" Text="{Binding Localization.ContentAdd}" VerticalAlignment="Center" />
-                                    </StackPanel>
-                                </Button>
-                                <ProgressBar Width="96" Height="6" VerticalAlignment="Center" IsVisible="{Binding SelectedPack.IsInstalling}" IsIndeterminate="True" Foreground="{StaticResource Brush.Accent}" />
-                                <Border Classes="chip positive" VerticalAlignment="Center" IsVisible="{Binding SelectedPack.IsInstalled}" ToolTip.Tip="{Binding InstalledInText}">
-                                    <TextBlock Text="{Binding Localization.DiscoverInstalled}" />
-                                </Border>
-                            </Panel>
-                        </Grid>
-                        <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="24" Margin="0,16,0,0">
-                            <ItemsControl ItemsSource="{Binding SelectedPack.Tags}" VerticalAlignment="Center" IsVisible="{Binding HasPackTags}">
-                                <ItemsControl.ItemsPanel>
-                                    <ItemsPanelTemplate>
-                                        <StackPanel Orientation="Horizontal" Spacing="4" />
-                                    </ItemsPanelTemplate>
-                                </ItemsControl.ItemsPanel>
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate x:DataType="x:String">
-                                        <Border Classes="chip">
-                                            <TextBlock Text="{Binding}" />
-                                        </Border>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
-                            <StackPanel Orientation="Horizontal" Spacing="16" IsVisible="{Binding SelectedPack, Converter={x:Static ObjectConverters.IsNotNull}}">
-                                <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
-                                    <Path Classes="icon size-16" Data="{StaticResource Icon.GitCommit}" />
-                                    <TextBlock Classes="label-md" Text="{Binding SelectedPack.Version}" VerticalAlignment="Center" />
-                                </StackPanel>
-                                <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
-                                    <Path Classes="icon size-16" Data="{StaticResource Icon.Clock}" />
-                                    <TextBlock Classes="label-md" Text="{Binding SelectedPack.PublishedText}" VerticalAlignment="Center" />
-                                </StackPanel>
-                            </StackPanel>
-                        </StackPanel>
-                    </Grid>
-                </Grid>
-
-                <!-- the outcome of the last install, one row per mod -->
-                <Border BorderBrush="{StaticResource Brush.BorderStrong}" BorderThickness="1" CornerRadius="16" ClipToBounds="True" Margin="0,16,0,0" IsVisible="{Binding SelectedPack.HasResults}">
-                    <ItemsControl ItemsSource="{Binding SelectedPack.Results}">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate x:DataType="vm:PackResultItem">
-                                <Border Padding="16,8" MinHeight="40">
-                                    <Grid ColumnDefinitions="200,120,*">
-                                        <TextBlock Classes="heading-sm" Text="{Binding ModId}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
-                                        <TextBlock Grid.Column="1" Classes="body-md secondary" Text="{Binding Version}" VerticalAlignment="Center" />
-                                        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                                            <Border Classes="chip" Classes.positive="{Binding IsSuccess}" Classes.incompatible="{Binding !IsSuccess}" VerticalAlignment="Center">
-                                                <TextBlock Text="{Binding StatusText}" />
-                                            </Border>
-                                            <TextBlock Classes="body-sm secondary" Text="{Binding Message}" TextWrapping="Wrap" MaxWidth="260" VerticalAlignment="Center" IsVisible="{Binding Message, Converter={x:Static ObjectConverters.IsNotNull}}" />
-                                        </StackPanel>
-                                    </Grid>
-                                </Border>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                </Border>
-
-                <TextBlock Classes="body-md danger" Text="{Binding PackDetailError}" TextWrapping="Wrap" Margin="0,16,0,0" IsVisible="{Binding PackDetailError, Converter={x:Static ObjectConverters.IsNotNull}}" />
-
-                <!-- c/inner-nav-bar -->
-                <Border Background="{StaticResource Brush.SurfaceHeader}" CornerRadius="100" Padding="6" Margin="0,32,0,0">
-                    <StackPanel Orientation="Horizontal" Spacing="16">
-                        <Button Classes="tab" Classes.active="{Binding IsPackDescriptionTab}" Content="{Binding Localization.ContentTabDescription}" Command="{Binding ShowPackDescriptionCommand}" />
-                        <Button Classes="tab" Classes.active="{Binding IsPackModsTab}" Content="{Binding Localization.PackMods}" Command="{Binding ShowPackModsCommand}" />
-                        <Button Classes="tab" Classes.active="{Binding IsPackVersionsTab}" Content="{Binding Localization.ContentTabVersions}" Command="{Binding ShowPackVersionsCommand}" />
+    <Grid>
+        <ScrollViewer>
+            <!-- laid out like Discover, so the page does not move sideways when a row opens -->
+            <views:PageBodyPanel>
+                <StackPanel Margin="32,42,32,32">
+                    <StackPanel Orientation="Horizontal" Spacing="4" Height="24">
+                        <Path Classes="icon" Data="{StaticResource Icon.Compass}" />
+                        <Button Classes="plain" Command="{Binding SetMainWindowDiscover}">
+                            <TextBlock Classes="label-lg" Text="{Binding Localization.PageDiscoverHeading}" VerticalAlignment="Center" />
+                        </Button>
+                        <TextBlock Classes="label-lg" Text="/" VerticalAlignment="Center" />
+                        <TextBlock Classes="label-lg" Text="{Binding SelectedPack.TypeText}" VerticalAlignment="Center" />
                     </StackPanel>
-                </Border>
 
-                <!-- c/block-text: the CommonMark description -->
-                <Border Classes="card" Padding="36,32" Margin="0,16,0,0" IsVisible="{Binding IsPackDescriptionTab}">
-                    <Panel>
-                        <views:MarkdownView Markdown="{Binding SelectedPack.Description}" IsVisible="{Binding SelectedPack.Description, Converter={x:Static ObjectConverters.IsNotNull}}" />
-                        <TextBlock Classes="body-md muted" Text="{Binding Localization.ContentNoDescription}" IsVisible="{Binding SelectedPack.Description, Converter={x:Static ObjectConverters.IsNull}}" />
-                    </Panel>
-                </Border>
-
-                <!-- the pinned mods -->
-                <Border BorderBrush="{StaticResource Brush.BorderStrong}" BorderThickness="1" CornerRadius="16" ClipToBounds="True" Margin="0,16,0,0" IsVisible="{Binding IsPackModsTab}">
-                    <StackPanel>
-                        <Border Background="{StaticResource Brush.Surface}" Padding="16,11">
-                            <Grid ColumnDefinitions="*,150,200">
-                                <TextBlock Classes="body-md secondary" Text="{Binding Localization.PackModHeader}" />
-                                <TextBlock Grid.Column="1" Classes="body-md secondary" Text="{Binding Localization.ContentVersionHeader}" />
-                            </Grid>
+                    <!-- c/content-header -->
+                    <Grid ColumnDefinitions="170,32,*" Margin="0,24,0,0">
+                        <Border Classes="thumbnail" Width="170" Height="170">
+                            <Path Classes="icon" Data="{StaticResource Icon.Box}" RenderTransform="scale(2.5)" StrokeThickness="0.8" />
                         </Border>
-                        <ItemsControl ItemsSource="{Binding PackMembers}">
+                        <Grid Grid.Column="2" RowDefinitions="Auto,*,Auto">
+                            <Grid ColumnDefinitions="*,24,Auto">
+                                <StackPanel Spacing="4">
+                                    <TextBlock Classes="heading-lg" Text="{Binding SelectedPack.Name}" TextWrapping="Wrap" />
+                                    <TextBlock Classes="body-md secondary" Text="{Binding SelectedPack.Abstract}" TextWrapping="Wrap" LineHeight="18" />
+                                    <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,8,0,0" IsVisible="{Binding SelectedPack.InstallWarning, Converter={x:Static ObjectConverters.IsNotNull}}">
+                                        <TextBlock Classes="body-sm secondary" Text="{Binding SelectedPack.InstallWarning}" TextWrapping="Wrap" MaxWidth="420" VerticalAlignment="Center" />
+                                        <Button Classes="text primary" Content="{Binding Localization.InstallAnyway}" Command="{Binding SelectedPack.ConfirmInstallCommand}" />
+                                        <Button Classes="text" Content="{Binding Localization.LibraryCancel}" Command="{Binding SelectedPack.CancelInstallCommand}" />
+                                    </StackPanel>
+                                    <TextBlock Classes="body-sm danger" Text="{Binding SelectedPack.InstallError}" TextWrapping="Wrap" Margin="0,8,0,0" IsVisible="{Binding SelectedPack.InstallError, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                                </StackPanel>
+                                <Panel Grid.Column="2" VerticalAlignment="Top">
+                                    <Button Classes="cta" Command="{Binding SelectedPack.InstallCommand}" IsVisible="{Binding SelectedPack.CanInstall}">
+                                        <StackPanel Orientation="Horizontal" Spacing="6">
+                                            <Path Classes="icon size-16" Data="{StaticResource Icon.Plus}" Stroke="{StaticResource Brush.SurfaceHeader}" StrokeThickness="2" VerticalAlignment="Center" />
+                                            <TextBlock Classes="action-lg" Text="{Binding Localization.ContentAdd}" VerticalAlignment="Center" />
+                                        </StackPanel>
+                                    </Button>
+                                    <ProgressBar Width="96" Height="6" VerticalAlignment="Center" IsVisible="{Binding SelectedPack.IsInstalling}" IsIndeterminate="True" Foreground="{StaticResource Brush.Accent}" />
+                                    <Border Classes="chip positive" VerticalAlignment="Center" IsVisible="{Binding SelectedPack.IsInstalled}" ToolTip.Tip="{Binding InstalledInText}">
+                                        <TextBlock Text="{Binding Localization.DiscoverInstalled}" />
+                                    </Border>
+                                </Panel>
+                            </Grid>
+                            <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="24" Margin="0,16,0,0">
+                                <ItemsControl ItemsSource="{Binding SelectedPack.Tags}" VerticalAlignment="Center" IsVisible="{Binding HasPackTags}">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <StackPanel Orientation="Horizontal" Spacing="4" />
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate x:DataType="x:String">
+                                            <Border Classes="chip">
+                                                <TextBlock Text="{Binding}" />
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                                <!-- c/meta: the pack version and how long ago it came out -->
+                                <StackPanel Orientation="Horizontal" Spacing="16" IsVisible="{Binding SelectedPack, Converter={x:Static ObjectConverters.IsNotNull}}">
+                                    <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                                        <Path Classes="icon size-16" Data="{StaticResource Icon.GitCommit}" />
+                                        <TextBlock Classes="label-md" Text="{Binding SelectedPack.Version}" VerticalAlignment="Center" />
+                                    </StackPanel>
+                                    <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center" ToolTip.Tip="{Binding SelectedPack.ReleasedDateText}">
+                                        <Path Classes="icon size-16" Data="{StaticResource Icon.Clock}" />
+                                        <TextBlock Classes="label-md" Text="{Binding SelectedPack.ReleasedText}" VerticalAlignment="Center" />
+                                    </StackPanel>
+                                </StackPanel>
+                            </StackPanel>
+                        </Grid>
+                    </Grid>
+
+                    <!-- the outcome of the last install, one row per mod -->
+                    <Border BorderBrush="{StaticResource Brush.BorderStrong}" BorderThickness="1" CornerRadius="16" ClipToBounds="True" Margin="0,16,0,0" IsVisible="{Binding SelectedPack.HasResults}">
+                        <ItemsControl ItemsSource="{Binding SelectedPack.Results}">
                             <ItemsControl.ItemTemplate>
-                                <DataTemplate x:DataType="vm:PackMemberItem">
-                                    <Border BorderBrush="{StaticResource Brush.BorderStrong}" BorderThickness="0,1,0,0" Padding="16,8" MinHeight="40">
-                                        <Grid ColumnDefinitions="*,150,200">
-                                            <Button Classes="plain" Command="{Binding OpenCommand}" IsEnabled="{Binding CanOpen}" HorizontalAlignment="Left" VerticalAlignment="Center">
-                                                <TextBlock Classes="heading-sm" Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
-                                            </Button>
+                                <DataTemplate x:DataType="vm:PackResultItem">
+                                    <Border Padding="16,8" MinHeight="40">
+                                        <Grid ColumnDefinitions="200,120,*">
+                                            <TextBlock Classes="heading-sm" Text="{Binding ModId}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
                                             <TextBlock Grid.Column="1" Classes="body-md secondary" Text="{Binding Version}" VerticalAlignment="Center" />
-                                            <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4" HorizontalAlignment="Right" VerticalAlignment="Center">
-                                                <Border Classes="chip incompatible" IsVisible="{Binding IsYanked}" ToolTip.Tip="{Binding YankedReason}">
-                                                    <TextBlock Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.PackMemberYanked}" />
+                                            <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                                <Border Classes="chip" Classes.positive="{Binding IsSuccess}" Classes.incompatible="{Binding !IsSuccess}" VerticalAlignment="Center">
+                                                    <TextBlock Text="{Binding StatusText}" />
                                                 </Border>
-                                                <Border Classes="chip untested" IsVisible="{Binding IsUnlisted}">
-                                                    <TextBlock Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.PackMemberUnlisted}" />
-                                                </Border>
-                                                <Border Classes="chip positive" IsVisible="{Binding IsInstalled}" ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).InstalledInText}">
-                                                    <TextBlock Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.DiscoverInstalled}" />
-                                                </Border>
+                                                <TextBlock Classes="body-sm secondary" Text="{Binding Message}" TextWrapping="Wrap" MaxWidth="260" VerticalAlignment="Center" IsVisible="{Binding Message, Converter={x:Static ObjectConverters.IsNotNull}}" />
                                             </StackPanel>
                                         </Grid>
                                     </Border>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
-                    </StackPanel>
-                </Border>
+                    </Border>
 
-                <!-- c/table-versions -->
-                <Border BorderBrush="{StaticResource Brush.BorderStrong}" BorderThickness="1" CornerRadius="16" ClipToBounds="True" Margin="0,16,0,0" IsVisible="{Binding IsPackVersionsTab}">
-                    <StackPanel>
-                        <Border Background="{StaticResource Brush.Surface}" Padding="16,11">
-                            <Grid ColumnDefinitions="150,*,120,80">
-                                <TextBlock Classes="body-md secondary" Text="{Binding Localization.ContentVersionHeader}" />
-                                <TextBlock Grid.Column="1" Classes="body-md secondary" Text="{Binding Localization.ContentGameVersionHeader}" />
-                                <TextBlock Grid.Column="2" Classes="body-md secondary" Text="{Binding Localization.ContentPublishedHeader}" />
-                                <TextBlock Grid.Column="3" Classes="body-md secondary" Text="{Binding Localization.PackMods}" />
-                            </Grid>
+                    <TextBlock Classes="body-md danger" Text="{Binding PackDetailError}" TextWrapping="Wrap" Margin="0,16,0,0" IsVisible="{Binding PackDetailError, Converter={x:Static ObjectConverters.IsNotNull}}" />
+
+                    <!-- c/inner-nav-bar -->
+                    <Border Background="{StaticResource Brush.SurfaceHeader}" CornerRadius="100" Padding="6" Margin="0,32,0,0">
+                        <StackPanel Orientation="Horizontal" Spacing="16">
+                            <Button Classes="tab quiet" Classes.active="{Binding IsPackDescriptionTab}" Content="{Binding Localization.ContentTabDescription}" Command="{Binding ShowPackDescriptionCommand}" />
+                            <Button Classes="tab quiet" Classes.active="{Binding IsPackModsTab}" Content="{Binding Localization.PackMods}" Command="{Binding ShowPackModsCommand}" />
+                            <Button Classes="tab quiet" Classes.active="{Binding IsPackVersionsTab}" Content="{Binding Localization.ContentTabVersions}" Command="{Binding ShowPackVersionsCommand}" />
+                        </StackPanel>
+                    </Border>
+
+                    <!-- c/block-text: the CommonMark description -->
+                    <Border Classes="card" Padding="36,32" Margin="0,16,0,0" IsVisible="{Binding IsPackDescriptionTab}">
+                        <Panel>
+                            <views:MarkdownView Markdown="{Binding SelectedPack.Description}" IsVisible="{Binding SelectedPack.Description, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                            <TextBlock Classes="body-md muted" Text="{Binding Localization.ContentNoDescription}" IsVisible="{Binding SelectedPack.Description, Converter={x:Static ObjectConverters.IsNull}}" />
+                        </Panel>
+                    </Border>
+
+                    <!-- the pinned mods -->
+                    <Border BorderBrush="{StaticResource Brush.BorderStrong}" BorderThickness="1" CornerRadius="16" ClipToBounds="True" Margin="0,16,0,0" IsVisible="{Binding IsPackModsTab}">
+                        <StackPanel>
+                            <Border Background="{StaticResource Brush.Surface}" Padding="16,11">
+                                <Grid ColumnDefinitions="*,150,200">
+                                    <TextBlock Classes="body-md secondary" Text="{Binding Localization.PackModHeader}" />
+                                    <TextBlock Grid.Column="1" Classes="body-md secondary" Text="{Binding Localization.ContentVersionHeader}" />
+                                </Grid>
+                            </Border>
+                            <ItemsControl ItemsSource="{Binding PackMembers}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:PackMemberItem">
+                                        <Border BorderBrush="{StaticResource Brush.BorderStrong}" BorderThickness="0,1,0,0" Padding="16,8" MinHeight="40">
+                                            <Grid ColumnDefinitions="*,150,200">
+                                                <Button Classes="plain" Command="{Binding OpenCommand}" IsEnabled="{Binding CanOpen}" HorizontalAlignment="Left" VerticalAlignment="Center">
+                                                    <TextBlock Classes="heading-sm" Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
+                                                </Button>
+                                                <TextBlock Grid.Column="1" Classes="body-md secondary" Text="{Binding Version}" VerticalAlignment="Center" />
+                                                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4" HorizontalAlignment="Right" VerticalAlignment="Center">
+                                                    <Border Classes="chip incompatible" IsVisible="{Binding IsYanked}" ToolTip.Tip="{Binding YankedReason}">
+                                                        <TextBlock Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.PackMemberYanked}" />
+                                                    </Border>
+                                                    <Border Classes="chip untested" IsVisible="{Binding IsUnlisted}">
+                                                        <TextBlock Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.PackMemberUnlisted}" />
+                                                    </Border>
+                                                    <Border Classes="chip positive" IsVisible="{Binding IsInstalled}" ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).InstalledInText}">
+                                                        <TextBlock Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.DiscoverInstalled}" />
+                                                    </Border>
+                                                </StackPanel>
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- c/table-versions -->
+                    <Border BorderBrush="{StaticResource Brush.BorderStrong}" BorderThickness="1" CornerRadius="16" ClipToBounds="True" Margin="0,16,0,0" IsVisible="{Binding IsPackVersionsTab}">
+                        <StackPanel>
+                            <Border Background="{StaticResource Brush.Surface}" Padding="16,11">
+                                <Grid ColumnDefinitions="150,*,120,80">
+                                    <TextBlock Classes="body-md secondary" Text="{Binding Localization.ContentVersionHeader}" />
+                                    <TextBlock Grid.Column="1" Classes="body-md secondary" Text="{Binding Localization.ContentGameVersionHeader}" />
+                                    <TextBlock Grid.Column="2" Classes="body-md secondary" Text="{Binding Localization.ContentPublishedHeader}" />
+                                    <TextBlock Grid.Column="3" Classes="body-md secondary" Text="{Binding Localization.PackMods}" />
+                                </Grid>
+                            </Border>
+                            <ItemsControl ItemsSource="{Binding PackVersions}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:PackVersionItem">
+                                        <Border BorderBrush="{StaticResource Brush.BorderStrong}" BorderThickness="0,1,0,0" Padding="16,8" MinHeight="40">
+                                            <Grid ColumnDefinitions="150,*,120,80">
+                                                <TextBlock Classes="heading-sm" Text="{Binding Version}" VerticalAlignment="Center" />
+                                                <Border Grid.Column="1" Classes="chip" HorizontalAlignment="Left" VerticalAlignment="Center">
+                                                    <TextBlock Text="{Binding GameVersionText}" />
+                                                </Border>
+                                                <TextBlock Grid.Column="2" Classes="body-md secondary" Text="{Binding PublishedText}" ToolTip.Tip="{Binding PublishedDateText}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                                <TextBlock Grid.Column="3" Classes="body-md secondary" Text="{Binding ModCount}" VerticalAlignment="Center" />
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </views:PageBodyPanel>
+        </ScrollViewer>
+
+        <!-- detail-panel -->
+        <Border Classes="side-panel">
+            <ScrollViewer>
+                <StackPanel Spacing="16" Margin="24">
+                    <StackPanel Spacing="10">
+                        <TextBlock Classes="heading-md" Text="{Binding Localization.ContentCompatibility}" />
+                        <Border Classes="chip" HorizontalAlignment="Left">
+                            <TextBlock Text="{Binding SelectedPack.GameVersionText}" />
                         </Border>
-                        <ItemsControl ItemsSource="{Binding PackVersions}">
+                        <Border Classes="chip" HorizontalAlignment="Left" Classes.compatible="{Binding SelectedPack.IsCompatible}" Classes.untested="{Binding SelectedPack.IsUntested}" Classes.incompatible="{Binding SelectedPack.IsIncompatible}">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <Ellipse />
+                                <TextBlock Text="{Binding SelectedPack.CompatibilityText}" />
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                    <Border Height="1" Background="{StaticResource Brush.BorderStrong}" IsVisible="{Binding HasPackLinks}" />
+                    <StackPanel Spacing="10" IsVisible="{Binding HasPackLinks}">
+                        <TextBlock Classes="heading-md" Text="{Binding Localization.ContentLinks}" />
+                        <ItemsControl ItemsSource="{Binding PackLinks}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <StackPanel Spacing="6" />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
                             <ItemsControl.ItemTemplate>
-                                <DataTemplate x:DataType="vm:PackVersionItem">
-                                    <Border BorderBrush="{StaticResource Brush.BorderStrong}" BorderThickness="0,1,0,0" Padding="16,8" MinHeight="40">
-                                        <Grid ColumnDefinitions="150,*,120,80">
-                                            <TextBlock Classes="heading-sm" Text="{Binding Version}" VerticalAlignment="Center" />
-                                            <Border Grid.Column="1" Classes="chip" HorizontalAlignment="Left" VerticalAlignment="Center">
-                                                <TextBlock Text="{Binding GameVersionText}" />
-                                            </Border>
-                                            <TextBlock Grid.Column="2" Classes="body-md secondary" Text="{Binding PublishedText}" VerticalAlignment="Center" />
-                                            <TextBlock Grid.Column="3" Classes="body-md secondary" Text="{Binding ModCount}" VerticalAlignment="Center" />
-                                        </Grid>
+                                <DataTemplate x:DataType="vm:ContentLink">
+                                    <Button Classes="filter" Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).OpenPackLinkCommand}" CommandParameter="{Binding}" ToolTip.Tip="{Binding Url}">
+                                        <StackPanel Orientation="Horizontal" Spacing="8">
+                                            <Path Classes="icon size-16" Data="{Binding Key, Converter={x:Static views:LinkIcon.FromKey}}" />
+                                            <TextBlock Text="{Binding Label}" VerticalAlignment="Center" />
+                                        </StackPanel>
+                                    </Button>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                    <Border Height="1" Background="{StaticResource Brush.BorderStrong}" IsVisible="{Binding HasPackTags}" />
+                    <StackPanel Spacing="10" IsVisible="{Binding HasPackTags}">
+                        <TextBlock Classes="heading-md" Text="{Binding Localization.ContentTags}" />
+                        <ItemsControl ItemsSource="{Binding SelectedPack.AllTags}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <WrapPanel ItemSpacing="4" LineSpacing="4" />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="x:String">
+                                    <Border Classes="chip">
+                                        <TextBlock Text="{Binding}" />
                                     </Border>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
                     </StackPanel>
-                </Border>
-            </StackPanel>
-        </ScrollViewer>
-
-        <!-- detail-panel -->
-        <Border Grid.Column="1" Classes="card" BorderBrush="{StaticResource Brush.Border}" BorderThickness="1" CornerRadius="24" Margin="0,24,24,24" Padding="24" VerticalAlignment="Top">
-            <StackPanel Spacing="16">
-                <StackPanel Spacing="10">
-                    <TextBlock Classes="heading-md" Text="{Binding Localization.ContentCompatibility}" />
-                    <Border Classes="chip" HorizontalAlignment="Left">
-                        <TextBlock Text="{Binding SelectedPack.GameVersionText}" />
-                    </Border>
-                    <Border Classes="chip" HorizontalAlignment="Left" Classes.compatible="{Binding SelectedPack.IsCompatible}" Classes.untested="{Binding SelectedPack.IsUntested}" Classes.incompatible="{Binding SelectedPack.IsIncompatible}">
-                        <StackPanel Orientation="Horizontal" Spacing="6">
-                            <Ellipse />
-                            <TextBlock Text="{Binding SelectedPack.CompatibilityText}" />
+                    <Border Height="1" Background="{StaticResource Brush.BorderStrong}" />
+                    <StackPanel Spacing="10">
+                        <TextBlock Classes="heading-md" Text="{Binding Localization.ContentAuthor}" />
+                        <Grid ColumnDefinitions="Auto,10,*">
+                            <Border Classes="avatar">
+                                <Path Classes="icon size-18" Data="{StaticResource Icon.User}" />
+                            </Border>
+                            <TextBlock Grid.Column="2" Classes="body-sm secondary" FontWeight="SemiBold" Text="{Binding SelectedPack.AuthorNames}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                        </Grid>
+                    </StackPanel>
+                    <Border Height="1" Background="{StaticResource Brush.BorderStrong}" />
+                    <StackPanel Spacing="10">
+                        <TextBlock Classes="heading-md" Text="{Binding Localization.ContentDetails}" />
+                        <StackPanel Orientation="Horizontal" Spacing="8" ToolTip.Tip="{Binding Localization.DiscoverLicense}">
+                            <Path Classes="icon size-16" Data="{StaticResource Icon.Scales}" />
+                            <TextBlock Classes="body-sm secondary" FontWeight="SemiBold" Text="{Binding SelectedPack.License}" VerticalAlignment="Center" />
                         </StackPanel>
-                    </Border>
+                        <StackPanel Orientation="Horizontal" Spacing="8" ToolTip.Tip="{Binding SelectedPack.PublishedDateText}" IsVisible="{Binding SelectedPack.PublishedText, Converter={x:Static ObjectConverters.IsNotNull}}">
+                            <Path Classes="icon size-16" Data="{StaticResource Icon.CalendarBlank}" />
+                            <TextBlock Classes="body-sm secondary" FontWeight="SemiBold" Text="{Binding SelectedPack.PublishedText}" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </StackPanel>
                 </StackPanel>
-                <Border Height="1" Background="{StaticResource Brush.BorderStrong}" IsVisible="{Binding HasPackLinks}" />
-                <StackPanel Spacing="10" IsVisible="{Binding HasPackLinks}">
-                    <TextBlock Classes="heading-md" Text="{Binding Localization.ContentLinks}" />
-                    <ItemsControl ItemsSource="{Binding PackLinks}">
-                        <ItemsControl.ItemsPanel>
-                            <ItemsPanelTemplate>
-                                <StackPanel Spacing="6" />
-                            </ItemsPanelTemplate>
-                        </ItemsControl.ItemsPanel>
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate x:DataType="vm:ContentLink">
-                                <Button Classes="filter" Content="{Binding Label}" Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).OpenPackLinkCommand}" CommandParameter="{Binding}" ToolTip.Tip="{Binding Url}" />
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                </StackPanel>
-                <Border Height="1" Background="{StaticResource Brush.BorderStrong}" IsVisible="{Binding HasPackTags}" />
-                <StackPanel Spacing="10" IsVisible="{Binding HasPackTags}">
-                    <TextBlock Classes="heading-md" Text="{Binding Localization.ContentTags}" />
-                    <ItemsControl ItemsSource="{Binding SelectedPack.AllTags}">
-                        <ItemsControl.ItemsPanel>
-                            <ItemsPanelTemplate>
-                                <WrapPanel ItemSpacing="4" LineSpacing="4" />
-                            </ItemsPanelTemplate>
-                        </ItemsControl.ItemsPanel>
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate x:DataType="x:String">
-                                <Border Classes="chip">
-                                    <TextBlock Text="{Binding}" />
-                                </Border>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                </StackPanel>
-                <Border Height="1" Background="{StaticResource Brush.BorderStrong}" />
-                <StackPanel Spacing="10">
-                    <TextBlock Classes="heading-md" Text="{Binding Localization.ContentAuthor}" />
-                    <TextBlock Classes="body-md secondary" Text="{Binding SelectedPack.AuthorNames}" TextWrapping="Wrap" />
-                </StackPanel>
-                <Border Height="1" Background="{StaticResource Brush.BorderStrong}" />
-                <StackPanel Spacing="10">
-                    <TextBlock Classes="heading-md" Text="{Binding Localization.ContentDetails}" />
-                    <TextBlock Classes="body-sm secondary" FontWeight="SemiBold" Text="{Binding SelectedPack.License}" />
-                    <TextBlock Classes="body-sm secondary" FontWeight="SemiBold" Text="{Binding SelectedPack.SourceText}" />
-                </StackPanel>
-            </StackPanel>
+            </ScrollViewer>
         </Border>
     </Grid>
 </UserControl>
