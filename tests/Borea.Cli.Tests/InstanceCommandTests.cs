@@ -109,6 +109,70 @@ public sealed class InstanceCommandTests : IDisposable
     }
 
     [Fact]
+    public async Task Deactivate_ActiveInstance_LeavesNoInstanceActive()
+    {
+        await _host.RunAsync("instance", "create", "Alpha");
+        await _host.RunAsync("instance", "activate", "Alpha");
+        var id = await new FileInstanceRepository(_host.Paths).GetActiveInstanceIdAsync();
+
+        var run = await _host.RunAsync("instance", "deactivate");
+        var list = await _host.RunAsync("instance", "list");
+
+        Assert.Equal(0, run.ExitCode);
+        Assert.Contains($"No instance is active now. 'Alpha' ({id}) was the active instance.", run.Output);
+        Assert.Null(await new FileInstanceRepository(_host.Paths).GetActiveInstanceIdAsync());
+        Assert.Contains("  Alpha", list.Output);
+        Assert.DoesNotContain("*", list.Output);
+    }
+
+    [Fact]
+    public async Task Deactivate_NoActiveInstance_SaysSo()
+    {
+        await _host.RunAsync("instance", "create", "Alpha");
+
+        var human = await _host.RunAsync("instance", "deactivate");
+        var json = await _host.RunAsync("instance", "deactivate", "--json");
+
+        Assert.Equal(0, human.ExitCode);
+        Assert.Contains("No instance was active.", human.Output);
+        Assert.Equal(0, json.ExitCode);
+        Assert.False(json.Json.GetProperty("deactivated").GetBoolean());
+        Assert.Equal(JsonValueKind.Null, json.Json.GetProperty("id").ValueKind);
+        Assert.Equal(JsonValueKind.Null, json.Json.GetProperty("name").ValueKind);
+    }
+
+    [Fact]
+    public async Task Deactivate_Json_NamesTheInstanceThatWasActive()
+    {
+        await _host.RunAsync("instance", "create", "Alpha");
+        await _host.RunAsync("instance", "activate", "Alpha");
+        var id = await new FileInstanceRepository(_host.Paths).GetActiveInstanceIdAsync();
+
+        var run = await _host.RunAsync("instance", "deactivate", "--json");
+
+        Assert.Equal(0, run.ExitCode);
+        Assert.True(run.Json.GetProperty("deactivated").GetBoolean());
+        Assert.Equal(id, run.Json.GetProperty("id").GetGuid());
+        Assert.Equal("Alpha", run.Json.GetProperty("name").GetString());
+        Assert.Null(await new FileInstanceRepository(_host.Paths).GetActiveInstanceIdAsync());
+    }
+
+    [Fact]
+    public async Task Deactivate_PointerToADeletedInstance_ClearsItAndNamesTheId()
+    {
+        var repository = new FileInstanceRepository(_host.Paths);
+        var instance = await repository.CreateAsync("Alpha", InstanceSource.Custom.Value);
+        await repository.SetActiveInstanceAsync(instance.InstanceId);
+        Directory.Delete(_host.Paths.GetInstanceRoot(instance.InstanceId), recursive: true);
+
+        var run = await _host.RunAsync("instance", "deactivate");
+
+        Assert.Equal(0, run.ExitCode);
+        Assert.Contains($"The active instance was {instance.InstanceId}, which does not exist any more.", run.Output);
+        Assert.Null(await repository.GetActiveInstanceIdAsync());
+    }
+
+    [Fact]
     public async Task Rename_ChangesTheName()
     {
         await _host.RunAsync("instance", "create", "Alpha");

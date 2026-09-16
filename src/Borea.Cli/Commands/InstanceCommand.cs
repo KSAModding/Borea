@@ -15,12 +15,13 @@ internal static class InstanceCommand
 
     public static Command Build(Func<CancellationToken, Task<CliServices>> services)
     {
-        var instance = new Command("instance", "List, create, rename, delete, and activate instances, and adopt mods that Borea did not install.");
+        var instance = new Command("instance", "List, create, rename, delete, activate, and deactivate instances, and adopt mods that Borea did not install.");
         instance.Subcommands.Add(BuildList(services));
         instance.Subcommands.Add(BuildCreate(services));
         instance.Subcommands.Add(BuildRename(services));
         instance.Subcommands.Add(BuildDelete(services));
         instance.Subcommands.Add(BuildActivate(services));
+        instance.Subcommands.Add(BuildDeactivate(services));
         instance.Subcommands.Add(BuildMods(services));
         instance.Subcommands.Add(BuildScan(services));
         instance.Subcommands.Add(BuildAdopt(services));
@@ -138,6 +139,36 @@ internal static class InstanceCommand
         }));
 
         return activate;
+    }
+
+    private static Command BuildDeactivate(Func<CancellationToken, Task<CliServices>> services)
+    {
+        var json = ArgumentRules.Json();
+        var deactivate = new Command("deactivate", "Leave no instance active. Borea deletes nothing, and 'enable' and 'disable' then need --instance.");
+        deactivate.Options.Add(json);
+
+        deactivate.SetAction((parseResult, cancellationToken) => CommandRunner.RunAsync(parseResult, services, cancellationToken, async (cli, output, _, _) =>
+        {
+            var activeId = await cli.Instances.GetActiveInstanceIdAsync().ConfigureAwait(false);
+            var previous = activeId is { } id ? await cli.Instances.GetByIdAsync(id).ConfigureAwait(false) : null;
+            await cli.Instances.ClearActiveInstanceAsync().ConfigureAwait(false);
+
+            if (parseResult.GetValue(json))
+            {
+                JsonOutput.Write(output, new DeactivateView(activeId is not null, activeId, previous?.Name));
+                return ExitCodes.Done;
+            }
+
+            output.WriteLine(activeId switch
+            {
+                null => "No instance was active.",
+                _ when previous is not null => $"No instance is active now. '{previous.Name}' ({activeId}) was the active instance.",
+                _ => $"No instance is active now. The active instance was {activeId}, which does not exist any more.",
+            });
+            return ExitCodes.Done;
+        }));
+
+        return deactivate;
     }
 
     private static Command BuildMods(Func<CancellationToken, Task<CliServices>> services)
@@ -303,6 +334,9 @@ internal static class InstanceCommand
             _ => new("custom", null, null),
         };
     }
+
+    /// <summary>The JSON shape of <c>instance deactivate</c>. The id and name are of the instance that was active, and null when none was.</summary>
+    private sealed record DeactivateView(bool Deactivated, Guid? Id, string? Name);
 
     private sealed record ModView(string Id, bool Enabled);
 
