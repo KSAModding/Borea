@@ -60,6 +60,7 @@ public sealed class ContentIndexReader : IContentIndexReader, IContentIndexCandi
             AddMalformed(diagnostics, listing.DownloadsErrors, ContentIndexDiagnosticScope.Downloads);
             AddMalformed(diagnostics, listing.ImagesErrors, ContentIndexDiagnosticScope.Images);
             AddMalformed(diagnostics, listing.DatesErrors, ContentIndexDiagnosticScope.Dates);
+            AddMalformed(diagnostics, listing.ChangelogTextErrors, ContentIndexDiagnosticScope.ChangelogText);
             AddMalformed(diagnostics, listing.RejectedReleases, ContentIndexDiagnosticScope.Release);
             AddUnknown(diagnostics, listing.UnknownReleases, ContentIndexDiagnosticScope.Release);
         }

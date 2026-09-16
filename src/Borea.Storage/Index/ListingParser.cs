@@ -83,6 +83,7 @@ public static class ListingParser
             var validReleases = new List<ModVersionMetadata>();
             var rejectedReleases = new List<RejectedIndexEntry>();
             var unknownReleases = new List<UnknownIndexVersionEntry>();
+            var changelogTextErrors = new List<RejectedIndexEntry>();
             var duplicateVersions = FindDuplicateVersions(listing.Releases, cancellationToken);
 
             foreach (var releaseElement in listing.Releases ?? [])
@@ -98,11 +99,14 @@ public static class ListingParser
                     continue;
                 }
 
-                var outcome = ReleaseParser.Parse(releaseElement, listing.Id, source, authored, cancellationToken);
+                var (changelogText, changelogTextError) = ChangelogTextParser.Parse(releaseElement, listing.Id, rawVersion);
+                var outcome = ReleaseParser.Parse(releaseElement, listing.Id, source, authored, changelogText, cancellationToken);
                 switch (outcome.Kind)
                 {
                     case ParseOutcomeKind.Valid:
                         validReleases.Add(outcome.Value!);
+                        if (changelogTextError is not null)
+                            changelogTextErrors.Add(changelogTextError);
                         break;
                     case ParseOutcomeKind.Unknown:
                         unknownReleases.Add(outcome.Unknown!);
@@ -115,7 +119,7 @@ public static class ListingParser
 
             return ParseOutcome<ParsedListing>.Valid(new ParsedListing(
                 listing.Id, authored, validReleases, rejectedReleases, unknownReleases, indexStatus, indexStatusError,
-                downloads, downloadsErrors, images, imagesErrors, publishedAt, updatedAt, datesErrors));
+                downloads, downloadsErrors, images, imagesErrors, publishedAt, updatedAt, datesErrors, changelogTextErrors));
         }
         catch (Exception ex) when (IndexJsonHelpers.IsInputFailure(ex))
         {

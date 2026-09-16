@@ -49,7 +49,7 @@ public static class DtoMapper
     }
 
     // Requires the authored ModMetadata to make sure listing has all the correct info
-    public static ModVersionMetadata MapRelease(ReleasesEntryDto dto, string? source, ModMetadata? authored)
+    public static ModVersionMetadata MapRelease(ReleasesEntryDto dto, string? source, ModMetadata? authored, string? changelogText = null)
     {
         ArgumentNullException.ThrowIfNull(dto);
 
@@ -72,6 +72,7 @@ public static class DtoMapper
             install: dto.Install is null ? null : MapInstallInfo(dto.Install),
             loader: dto.Loader is null ? null : MapLoaderRequirement(dto.Loader),
             changelog: dto.Changelog,
+            changelogText: changelogText,
             // Absent "listing" key entirely -> no snapshot to merge, leave null.
             // Present but incomplete -> merge with the live authored data.
             listing: dto.Listing is { } listingElement ? MapListingSnapshot(listingElement, authored) : null,

@@ -15,6 +15,7 @@ public static class ReleaseParser
         string listingId,
         string source,
         ModMetadata? authored,
+        string? changelogText = null,
         CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
@@ -49,7 +50,7 @@ public static class ReleaseParser
                     $"Release id '{release.Id}' does not agree with listing id '{listingId}'."));
             }
 
-            return ParseOutcome<ModVersionMetadata>.Valid(DtoMapper.MapRelease(release, source, authored));
+            return ParseOutcome<ModVersionMetadata>.Valid(DtoMapper.MapRelease(release, source, authored, changelogText));
         }
         catch (Exception ex) when (IndexJsonHelpers.IsInputFailure(ex))
         {

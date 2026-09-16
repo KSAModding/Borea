@@ -44,6 +44,9 @@ public sealed class ParsedListing
     /// <summary>The dates that cannot be read. The listing stays usable.</summary>
     public IReadOnlyList<RejectedIndexEntry> DatesErrors { get; }
 
+    /// <summary>The changelog_text values that cannot be used. Their releases stay usable.</summary>
+    public IReadOnlyList<RejectedIndexEntry> ChangelogTextErrors { get; }
+
     public ParsedListing(
         string id,
         ModMetadata? authored,
@@ -58,7 +61,8 @@ public sealed class ParsedListing
         IReadOnlyList<RejectedIndexEntry>? imagesErrors = null,
         DateTimeOffset? publishedAt = null,
         DateTimeOffset? updatedAt = null,
-        IReadOnlyList<RejectedIndexEntry>? datesErrors = null)
+        IReadOnlyList<RejectedIndexEntry>? datesErrors = null,
+        IReadOnlyList<RejectedIndexEntry>? changelogTextErrors = null)
     {
         ModIds.Validate(id, nameof(id));
 
@@ -76,5 +80,6 @@ public sealed class ParsedListing
         PublishedAt = publishedAt;
         UpdatedAt = updatedAt;
         DatesErrors = datesErrors ?? Array.Empty<RejectedIndexEntry>();
+        ChangelogTextErrors = changelogTextErrors ?? Array.Empty<RejectedIndexEntry>();
     }
 }

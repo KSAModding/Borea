@@ -19,6 +19,7 @@ public enum ContentIndexDiagnosticScope
     Downloads = 7,
     Images = 8,
     Dates = 9,
+    ChangelogText = 10,
 }
 
 /// <summary>One part of the snapshot that Borea could not read safely.</summary>

@@ -632,6 +632,38 @@ public sealed class ShowCommandTests : IDisposable
         Assert.Contains(expected, run.Output);
     }
 
+    [Fact]
+    public async Task ShowVersion_ChangelogTextDiagnostic_ShowsOnlyTheRequestedVersion()
+    {
+        var listing = ContentCommandFixtures.Listing();
+        var release = ContentCommandFixtures.Release();
+        _host.Mods.Listings.Add(listing);
+        _host.Mods.Releases.Add(release);
+        _host.IndexReader.Snapshot = Snapshot(
+            new[] { new ContentIndexListing(listing.ModId, listing, new[] { release }, null) },
+            new[]
+            {
+                new ContentIndexDiagnostic(
+                    ContentIndexDiagnosticKind.Malformed,
+                    ContentIndexDiagnosticScope.ChangelogText,
+                    "The changelog_text value must be a string.",
+                    listing.ModId,
+                    "2.0.0"),
+                new ContentIndexDiagnostic(
+                    ContentIndexDiagnosticKind.Malformed,
+                    ContentIndexDiagnosticScope.ChangelogText,
+                    "The changelog_text value must be a string.",
+                    listing.ModId,
+                    "1.0.0"),
+            });
+
+        var run = await _host.RunAsync("show", listing.ModId, "--version", "2.0.0");
+
+        Assert.Equal(0, run.ExitCode);
+        Assert.Contains("malformed changelog-text flight-tools 2.0.0: The changelog_text value must be a string.", run.Output);
+        Assert.DoesNotContain("flight-tools 1.0.0", run.Output);
+    }
+
     private static FakeInstalledGameVersionProvider Installed(string version) => new()
     {
         Installed = new InstalledGameVersion(GameVersion.Parse(version), version),
