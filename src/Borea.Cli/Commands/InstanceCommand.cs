@@ -1,4 +1,5 @@
 using System.CommandLine;
+using System.Globalization;
 using Borea.Cli.Output;
 using Borea.Core.Index;
 using Borea.Core.Instances;
@@ -15,8 +16,9 @@ internal static class InstanceCommand
 
     public static Command Build(Func<CancellationToken, Task<CliServices>> services)
     {
-        var instance = new Command("instance", "List, create, rename, delete, activate, and deactivate instances, create one from the mods of the shared profile, and adopt mods that Borea did not install.");
+        var instance = new Command("instance", "List, show, create, rename, delete, activate, and deactivate instances, create one from the mods of the shared profile, and adopt mods that Borea did not install.");
         instance.Subcommands.Add(BuildList(services));
+        instance.Subcommands.Add(BuildShow(services));
         instance.Subcommands.Add(BuildCreate(services));
         instance.Subcommands.Add(BuildRename(services));
         instance.Subcommands.Add(BuildDelete(services));
@@ -35,31 +37,35 @@ internal static class InstanceCommand
         var list = new Command("list", "Print every instance and mark the active one.");
         list.Options.Add(json);
 
-        list.SetAction((parseResult, cancellationToken) => CommandRunner.RunAsync(parseResult, services, cancellationToken, async (cli, output, _, _) =>
+        list.SetAction((parseResult, cancellationToken) => CommandRunner.RunAsync(parseResult, services, cancellationToken, async (cli, output, _, ct) =>
         {
             var activeId = await cli.Instances.GetActiveInstanceIdAsync().ConfigureAwait(false);
             var instances = (await cli.Instances.GetAllAsync().ConfigureAwait(false))
                 .OrderBy(instance => instance.Name, StringComparer.OrdinalIgnoreCase)
                 .ThenBy(instance => instance.CreatedAt)
                 .ToList();
+            var views = new List<InstanceView>();
+            foreach (var instance in instances)
+                views.Add(InstanceView.From(instance, instance.InstanceId == activeId, await LastPlayedAsync(cli, instance, ct).ConfigureAwait(false)));
 
             if (parseResult.GetValue(json))
             {
-                JsonOutput.Write(output, instances.Select(instance => InstanceView.From(instance, instance.InstanceId == activeId)));
+                JsonOutput.Write(output, views);
                 return ExitCodes.Done;
             }
 
-            if (instances.Count == 0)
+            if (views.Count == 0)
             {
                 output.WriteLine("No instances.");
                 return ExitCodes.Done;
             }
 
-            var nameWidth = instances.Max(instance => instance.Name.Length);
-            foreach (var instance in instances)
+            var nameWidth = views.Max(view => view.Name.Length);
+            var sourceWidth = instances.Max(instance => Describe(instance.Source).Length);
+            foreach (var (instance, view) in instances.Zip(views))
             {
-                var marker = instance.InstanceId == activeId ? "*" : " ";
-                output.WriteLine($"{marker} {instance.Name.PadRight(nameWidth)}  {instance.InstanceId}  {Describe(instance.Source)}");
+                var marker = view.Active ? "*" : " ";
+                output.WriteLine($"{marker} {view.Name.PadRight(nameWidth)}  {view.Id}  {Describe(instance.Source).PadRight(sourceWidth)}  {DescribeLastPlayed(view.LastPlayedAt)}");
             }
 
             return ExitCodes.Done;
@@ -67,6 +73,47 @@ internal static class InstanceCommand
 
         return list;
     }
+
+    private static Command BuildShow(Func<CancellationToken, Task<CliServices>> services)
+    {
+        var instance = ArgumentRules.Text("instance", InstanceArgumentDescription);
+        var json = ArgumentRules.Json();
+        var show = new Command("show", "Print one instance and when it was last played.");
+        show.Arguments.Add(instance);
+        show.Options.Add(json);
+
+        show.SetAction((parseResult, cancellationToken) => CommandRunner.RunAsync(parseResult, services, cancellationToken, async (cli, output, _, ct) =>
+        {
+            var target = await InstanceLookup.ResolveAsync(cli.Instances, parseResult.GetRequiredValue(instance)).ConfigureAwait(false);
+            var activeId = await cli.Instances.GetActiveInstanceIdAsync().ConfigureAwait(false);
+            var lastPlayedAt = await LastPlayedAsync(cli, target, ct).ConfigureAwait(false);
+            var view = InstanceDetailsView.From(target, target.InstanceId == activeId, lastPlayedAt);
+
+            if (parseResult.GetValue(json))
+            {
+                JsonOutput.Write(output, view);
+                return ExitCodes.Done;
+            }
+
+            output.WriteLine($"{view.Name} ({view.Id})");
+            output.WriteLine($"Active: {(view.Active ? "yes" : "no")}");
+            output.WriteLine($"Source: {Describe(target.Source)}");
+            output.WriteLine($"Created: {Timestamp(view.CreatedAt)}");
+            output.WriteLine($"Mods: {view.ModCount}");
+            output.WriteLine($"Last played: {(view.LastPlayedAt is { } lastPlayed ? Timestamp(lastPlayed) : "never")}");
+            return ExitCodes.Done;
+        }));
+
+        return show;
+    }
+
+    private static async Task<DateTimeOffset?> LastPlayedAsync(CliServices cli, Instance instance, CancellationToken cancellationToken)
+        => instance.LastPlayedWith(await cli.GameLog.GetLastWriteAsync(instance.InstanceId, cancellationToken).ConfigureAwait(false));
+
+    private static string DescribeLastPlayed(DateTimeOffset? lastPlayed)
+        => lastPlayed is { } at ? $"last played {Timestamp(at)}" : "never played";
+
+    private static string Timestamp(DateTimeOffset at) => at.ToLocalTime().ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture);
 
     private static Command BuildCreate(Func<CancellationToken, Task<CliServices>> services)
     {
@@ -400,10 +447,17 @@ internal static class InstanceCommand
     };
 
     /// <summary>One entry of <c>instance list --json</c>.</summary>
-    private sealed record InstanceView(Guid Id, string Name, bool Active, InstanceSourceView Source, DateTimeOffset CreatedAt)
+    private sealed record InstanceView(Guid Id, string Name, bool Active, InstanceSourceView Source, DateTimeOffset CreatedAt, DateTimeOffset? LastPlayedAt)
     {
-        public static InstanceView From(Instance instance, bool active)
-            => new(instance.InstanceId, instance.Name, active, InstanceSourceView.From(instance.Source), instance.CreatedAt);
+        public static InstanceView From(Instance instance, bool active, DateTimeOffset? lastPlayedAt)
+            => new(instance.InstanceId, instance.Name, active, InstanceSourceView.From(instance.Source), instance.CreatedAt, lastPlayedAt);
+    }
+
+    /// <summary><c>instance show --json</c>.</summary>
+    private sealed record InstanceDetailsView(Guid Id, string Name, bool Active, InstanceSourceView Source, DateTimeOffset CreatedAt, int ModCount, DateTimeOffset? LastPlayedAt)
+    {
+        public static InstanceDetailsView From(Instance instance, bool active, DateTimeOffset? lastPlayedAt)
+            => new(instance.InstanceId, instance.Name, active, InstanceSourceView.From(instance.Source), instance.CreatedAt, instance.Mods.Count, lastPlayedAt);
     }
 
     private sealed record InstanceSourceView(string Kind, string? ModPackId, string? Version)

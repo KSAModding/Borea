@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.IO.Compression;
 using System.Security.Cryptography;
 using System.Text.Json;
@@ -56,6 +57,63 @@ public sealed class InstanceCommandTests : IDisposable
         Assert.Equal("SomePack", source.GetProperty("modPackId").GetString());
         Assert.Equal("1.2.0", source.GetProperty("version").GetString());
     }
+
+    [Fact]
+    public async Task List_PrintsWhenEachInstanceWasLastPlayed()
+    {
+        var playedAt = new DateTimeOffset(2026, 9, 15, 9, 24, 0, TimeSpan.Zero);
+        var played = Instance.FromExisting(Guid.NewGuid(), "Played", InstanceSource.Custom.Value, DateTimeOffset.UtcNow, [], [], isFavorite: false, lastPlayedAt: playedAt);
+        await new FileInstanceRepository(_host.Paths).SaveAsync(played);
+        await _host.RunAsync("instance", "create", "Unplayed");
+
+        var human = await _host.RunAsync("instance", "list");
+        var json = await _host.RunAsync("instance", "list", "--json");
+
+        Assert.Contains($"last played {LocalMinute(playedAt)}", human.Output);
+        Assert.Contains("never played", human.Output);
+        var entries = json.Json.EnumerateArray().ToDictionary(entry => entry.GetProperty("name").GetString()!, entry => entry.GetProperty("lastPlayedAt"));
+        Assert.Equal(playedAt, entries["Played"].GetDateTimeOffset());
+        Assert.Equal(JsonValueKind.Null, entries["Unplayed"].ValueKind);
+    }
+
+    [Fact]
+    public async Task Show_PrintsTheInstanceAndTheLastWriteOfItsGameLog()
+    {
+        await _host.RunAsync("instance", "create", "Alpha");
+        await _host.RunAsync("instance", "activate", "Alpha");
+        var list = await _host.RunAsync("instance", "list", "--json");
+        var id = Guid.Parse(Assert.Single(list.Json.EnumerateArray()).GetProperty("id").GetString()!);
+        var log = Path.Combine(_host.Paths.GetInstanceRoot(id), "logs", "KittenSpaceAgency.260915-112433.43720.log");
+        Directory.CreateDirectory(Path.GetDirectoryName(log)!);
+        await File.WriteAllTextAsync(log, "11:24:36.689  INFO loaded settings from settings.toml\n");
+        var writtenAt = new DateTimeOffset(2026, 9, 15, 9, 34, 0, TimeSpan.Zero);
+        File.SetLastWriteTimeUtc(log, writtenAt.UtcDateTime);
+
+        var human = await _host.RunAsync("instance", "show", "alpha");
+        var json = await _host.RunAsync("instance", "show", "Alpha", "--json");
+
+        Assert.Equal(0, human.ExitCode);
+        Assert.Contains($"Alpha ({id})", human.Output);
+        Assert.Contains("Active: yes", human.Output);
+        Assert.Contains("Source: custom", human.Output);
+        Assert.Contains("Mods: 0", human.Output);
+        Assert.Contains($"Last played: {LocalMinute(writtenAt)}", human.Output);
+        Assert.Equal(writtenAt, json.Json.GetProperty("lastPlayedAt").GetDateTimeOffset());
+        Assert.Equal(0, json.Json.GetProperty("modCount").GetInt32());
+    }
+
+    [Fact]
+    public async Task Show_NeverPlayed_SaysSo()
+    {
+        await _host.RunAsync("instance", "create", "Alpha");
+
+        var run = await _host.RunAsync("instance", "show", "Alpha");
+
+        Assert.Equal(0, run.ExitCode);
+        Assert.Contains("Last played: never", run.Output);
+    }
+
+    private static string LocalMinute(DateTimeOffset at) => at.ToLocalTime().ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture);
 
     [Fact]
     public async Task Create_NameTakenInAnotherCase_Fails()
