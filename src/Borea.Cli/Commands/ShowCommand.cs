@@ -228,7 +228,7 @@ internal static class ShowCommand
                 output.WriteLine($"  {release.Version}  {release.Compatibility}  {release.ReleaseStatus}{yanked}");
                 output.WriteLine($"    Game: {release.GameMin} to {release.GameMax ?? "open"}");
                 WriteReleaseDownloads(output, release);
-                WriteChangelog(output, release.Changelog);
+                WriteChangelog(output, string.IsNullOrWhiteSpace(release.ChangelogText) ? release.Changelog : release.ChangelogText);
                 if (release.Dependencies is not null)
                 {
                     output.WriteLine(release.Dependencies.Count == 0 ? "    Dependencies: none" : "    Dependencies:");
@@ -362,6 +362,7 @@ internal static class ShowCommand
         string? YankedReason,
         string? Source,
         string? Changelog,
+        string? ChangelogText,
         IReadOnlyList<DependencyView>? Dependencies,
         string? Reason,
         DownloadCountView? Downloads)
@@ -385,6 +386,7 @@ internal static class ShowCommand
             release.YankedReason,
             release.Source,
             release.Changelog,
+            release.ChangelogText,
             includeDependencies ? release.Dependencies.Select(DependencyView.From).ToArray() : null,
             null,
             downloads);
@@ -401,6 +403,7 @@ internal static class ShowCommand
             null,
             null,
             false,
+            null,
             null,
             null,
             null,

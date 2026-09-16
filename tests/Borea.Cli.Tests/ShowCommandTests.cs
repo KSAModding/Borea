@@ -82,6 +82,44 @@ public sealed class ShowCommandTests : IDisposable
     }
 
     [Fact]
+    public async Task Show_PrintsTheChangelogTextInsteadOfTheLink()
+    {
+        var listing = ContentCommandFixtures.Listing();
+        var release = ContentCommandFixtures.Release(
+            changelog: "https://example.com/flight-tools/2.0.0",
+            changelogText: "## Changes\n- Orbit hold stays stable.");
+        _host.Mods.Listings.Add(listing);
+        _host.Mods.Releases.Add(release);
+        _host.IndexReader.Snapshot = Snapshot(new ContentIndexListing(listing.ModId, listing, new[] { release }, null));
+
+        var run = await _host.RunAsync("show", listing.ModId);
+
+        Assert.Equal(0, run.ExitCode);
+        var output = run.Output.ReplaceLineEndings("\n");
+        Assert.Contains("    Changelog:\n      ## Changes\n      - Orbit hold stays stable.\n", output);
+        Assert.DoesNotContain("https://example.com/flight-tools/2.0.0", output);
+    }
+
+    [Fact]
+    public async Task Show_Json_CarriesTheChangelogTextBesideTheLink()
+    {
+        var listing = ContentCommandFixtures.Listing();
+        var release = ContentCommandFixtures.Release(
+            changelog: "https://example.com/flight-tools/2.0.0",
+            changelogText: "## Changes\n- Orbit hold stays stable.");
+        _host.Mods.Listings.Add(listing);
+        _host.Mods.Releases.Add(release);
+        _host.IndexReader.Snapshot = Snapshot(new ContentIndexListing(listing.ModId, listing, new[] { release }, null));
+
+        var run = await _host.RunAsync("show", listing.ModId, "--json");
+
+        Assert.Equal(0, run.ExitCode);
+        var json = Assert.Single(run.Json.GetProperty("releases").EnumerateArray());
+        Assert.Equal("https://example.com/flight-tools/2.0.0", json.GetProperty("changelog").GetString());
+        Assert.Equal("## Changes\n- Orbit hold stays stable.", json.GetProperty("changelogText").GetString());
+    }
+
+    [Fact]
     public async Task ShowVersion_PrintsOneReleaseAndItsDependencies()
     {
         var listing = ContentCommandFixtures.Listing();
