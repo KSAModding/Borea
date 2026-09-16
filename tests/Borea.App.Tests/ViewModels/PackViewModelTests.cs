@@ -237,6 +237,13 @@ public sealed class PackViewModelTests
         Assert.Equal(GameCompatibility.Compatible, viewModel.DiscoverPacks.Single(pack => pack.PackId == "august-pack").Compatibility);
         Assert.Equal(GameCompatibility.Incompatible, viewModel.DiscoverPacks.Single(pack => pack.PackId == "september-pack").Compatibility);
         Assert.Equal(GameCompatibility.Unknown, viewModel.DiscoverPacks.Single(pack => pack.PackId == "future-pack").Compatibility);
+
+        viewModel.DiscoverGameMin = viewModel.GameVersionOptions.Single(build => build.Revision == 5402);
+        Assert.Equal(["august-pack", "september-pack"], viewModel.DiscoverPacks.Select(pack => pack.PackId));
+
+        viewModel.DiscoverGameMin = null;
+        viewModel.DiscoverGameMax = viewModel.GameVersionOptions.Single(build => build.Revision == 5348);
+        Assert.Equal(["august-pack"], viewModel.DiscoverPacks.Select(pack => pack.PackId));
     }
 
     /// <summary>A harness whose game folder holds a game of version 2026.8.3.5117.</summary>
