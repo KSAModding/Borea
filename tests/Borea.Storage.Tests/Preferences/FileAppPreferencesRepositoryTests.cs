@@ -143,6 +143,19 @@ public sealed class FileAppPreferencesRepositoryTests : IDisposable
     }
 
     [Fact]
+    public async Task SaveThenGet_SharedProfileBannerDismissed_RestoresTheChoice()
+    {
+        Assert.False(AppPreferences.Empty.SharedProfileBannerDismissed);
+        var preferences = AppPreferences.Empty.WithSharedProfileBannerDismissed(true).WithForeignFolderDeletionConfirmed(true);
+
+        await _repository.SaveAsync(preferences, BundledThemeNames);
+        var result = await _repository.GetAsync(BundledThemeNames);
+
+        Assert.True(result.Preferences.SharedProfileBannerDismissed);
+        Assert.True(result.Preferences.ForeignFolderDeletionConfirmed);
+    }
+
+    [Fact]
     public void With_OtherPreferenceChanges_KeepTheUpdateCheckChoice()
     {
         var preferences = new AppPreferences("Dark", checkForUpdatesAtStart: false)

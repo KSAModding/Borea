@@ -625,7 +625,8 @@ public partial class MainViewModel : ViewModelBase
             && left.ForeignFolderDeletionConfirmed == right.ForeignFolderDeletionConfirmed
             && left.LoadImagesFromAuthorHosts == right.LoadImagesFromAuthorHosts
             && left.HomeLaunch == right.HomeLaunch
-            && left.DiscoverSortOrder == right.DiscoverSortOrder;
+            && left.DiscoverSortOrder == right.DiscoverSortOrder
+            && left.SharedProfileBannerDismissed == right.SharedProfileBannerDismissed;
 
     private void OnRegionalFormatChanged(object? sender, PropertyChangedEventArgs e)
     {
