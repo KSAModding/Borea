@@ -135,6 +135,8 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string InstanceTabLog => Resources.InstanceTabLog;
 
+    public string InstanceGroupModpacks => Resources.InstanceGroupModpacks;
+
     public string InstanceGroupMods => Resources.InstanceGroupMods;
 
     public string InstanceGroupModLoaders => Resources.InstanceGroupModLoaders;
@@ -663,6 +665,9 @@ public sealed class LocalizationService : INotifyPropertyChanged
     /// <summary>"Published 3 days ago", from an age that <see cref="FormatTimeAgo"/> wrote.</summary>
     public string FormatContentPublished(string age)
         => string.Format(CultureInfo.CurrentCulture, Resources.ContentPublishedFormat, age);
+
+    public string FormatInstanceGroupModpack(string name, string version)
+        => string.Format(CultureInfo.CurrentCulture, Resources.InstanceGroupModpackFormat, name, version);
 
     public string FormatContentRemoveNotOwned(string modId)
         => string.Format(CultureInfo.CurrentCulture, Resources.ContentRemoveNotOwnedFormat, modId);

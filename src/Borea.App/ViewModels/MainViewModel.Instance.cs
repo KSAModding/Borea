@@ -8,6 +8,7 @@ using Borea.Composition;
 using Borea.Core.Dependencies;
 using Borea.Core.Instances;
 using Borea.Core.Launch;
+using Borea.Core.ModPacks;
 using Borea.Core.Mods;
 using Borea.Core.Preferences;
 using Borea.Core.Planning;
@@ -32,6 +33,7 @@ public partial class MainViewModel
 {
     private Instance? _selectedInstanceEntity;
     private IReadOnlyList<ContentItem> _content = [];
+    private ModPackMetadata? _contentPack;
     private readonly Dictionary<Guid, IInstallRow> _runningUpdates = [];
     private Task _contentUpdateCheck = Task.CompletedTask;
     private int _contentUpdateCheckGeneration;
@@ -170,6 +172,7 @@ public partial class MainViewModel
         }
 
         _content = content.OrderBy(content => content.Name, StringComparer.CurrentCultureIgnoreCase).ToList();
+        _contentPack = await ResolveSourcePackAsync(_selectedInstanceEntity?.Source);
         RefreshContentGroups();
         OnPropertyChanged(nameof(HasUpdates));
         if (IsManualInstallsTab)
@@ -194,8 +197,10 @@ public partial class MainViewModel
     private void ShowInstanceContent() => InstanceTab = InstanceTab.Content;
 
     /// <summary>
-    /// Groups follow the design: content the user chose, then what came along
-    /// as a dependency. Titles are translated, so a language change rebuilds them.
+    /// A pack member goes under its pack only when the instance was created from
+    /// that pack and the index still lists the pack version, because an installed
+    /// mod does not record its pack. Titles are translated, so a language change
+    /// rebuilds them.
     /// </summary>
     private void RefreshContentGroups()
     {
@@ -203,9 +208,19 @@ public partial class MainViewModel
             item.RefreshText();
 
         ContentGroups.Clear();
-        Add(Localization.InstanceGroupMods, _content.Where(content => content.Type == ContentType.Mod && !content.IsDependency));
-        Add(Localization.InstanceGroupModLoaders, _content.Where(content => content.Type == ContentType.ModLoader && !content.IsDependency));
-        Add(Localization.InstanceGroupOther, _content.Where(content => content.Type is not ContentType.Mod and not ContentType.ModLoader && !content.IsDependency));
+        var fromPacks = _content.Where(content => content.Reason == InstallReason.ModPack).ToList();
+        if (_contentPack is { } pack)
+        {
+            var pinned = fromPacks.Where(content => pack.Mods.Any(pin => ModIds.Equals(pin.ContentId, content.ModId))).ToList();
+            Add(Localization.FormatInstanceGroupModpack(pack.Name, pack.Version.ToString()), pinned);
+            fromPacks = fromPacks.Except(pinned).ToList();
+        }
+
+        Add(Localization.InstanceGroupModpacks, fromPacks);
+        var chosen = _content.Where(content => content.Reason is not InstallReason.ModPack and not InstallReason.Dependency).ToList();
+        Add(Localization.InstanceGroupMods, chosen.Where(content => content.Type == ContentType.Mod));
+        Add(Localization.InstanceGroupModLoaders, chosen.Where(content => content.Type == ContentType.ModLoader));
+        Add(Localization.InstanceGroupOther, chosen.Where(content => content.Type is not ContentType.Mod and not ContentType.ModLoader));
         Add(Localization.InstanceGroupDependencies, _content.Where(content => content.IsDependency));
         OnPropertyChanged(nameof(HasContent));
 
@@ -214,6 +229,21 @@ public partial class MainViewModel
             var list = items.ToList();
             if (list.Count > 0)
                 ContentGroups.Add(new ContentGroup(title, list));
+        }
+    }
+
+    private async Task<ModPackMetadata?> ResolveSourcePackAsync(InstanceSource? source)
+    {
+        if (_services is null || source is not InstanceSource.FromModPack pack)
+            return null;
+
+        try
+        {
+            return (await _services.ModPacks.GetVersionAsync(pack.ModPackId, pack.Version))?.Metadata;
+        }
+        catch (Exception exception) when (exception is System.Net.Http.HttpRequestException or IOException or InvalidOperationException or TaskCanceledException)
+        {
+            return null;
         }
     }
 
@@ -729,6 +759,8 @@ public sealed partial class ContentItem : ObservableObject, IUpdateRow
 
     public ContentType Type { get; }
 
+    public InstallReason Reason { get; }
+
     public bool IsDependency { get; }
 
     /// <summary>Borea installed the files, so it may update them.</summary>
@@ -831,6 +863,7 @@ public sealed partial class ContentItem : ObservableObject, IUpdateRow
         Authors = authors is { Count: > 0 } ? string.Join(", ", authors) : null;
         Version = mod.Version.ToString();
         Type = mod.Metadata.Type;
+        Reason = mod.Reason;
         IsDependency = mod.Reason == InstallReason.Dependency;
         IsOwned = mod.Ownership == ModInstallOwnership.Borea;
         _isEnabled = enabled;
