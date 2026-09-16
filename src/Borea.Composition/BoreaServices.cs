@@ -88,6 +88,8 @@ public sealed class BoreaServices : IDisposable
 
     public required IGameDataReader GameData { get; init; }
 
+    public required IGameSaveStore GameSaves { get; init; }
+
     public required IGameLogReader GameLog { get; init; }
 
     public required IModStateRepository ModState { get; init; }
@@ -288,6 +290,7 @@ public sealed class BoreaServices : IDisposable
             AppPreferences = new FileAppPreferencesRepository(paths),
             Instances = instances,
             GameData = new FileGameDataReader(paths),
+            GameSaves = new FileGameSaveStore(paths),
             GameLog = new FileGameLogReader(paths),
             ModState = modState,
             ModFavorites = new FileModFavoritesRepository(paths),
