@@ -185,9 +185,13 @@ public sealed class RepositoryInstallPlanner : IInstallPlanner
             if (dependency.Kind == ModDependencyKind.Recommends)
             {
                 var chosen = request.Recommended?.Contains(key) ?? false;
-                choices.Add(new PlanningChoice(key, release.ModId, PlanningChoiceKind.Recommendation, ["include", "exclude"], chosen ? "include" : "exclude", dependency));
+                if (!chosen && WasOffered(request, release, dependency)) continue;
+                if (chosen || !IsSatisfied(request, selected, dependency))
+                    choices.Add(new PlanningChoice(key, release.ModId, PlanningChoiceKind.Recommendation, ["include", "exclude"], chosen ? "include" : "exclude", dependency));
                 if (!chosen) continue;
             }
+            if (dependency.Kind == ModDependencyKind.Suggests && !WasOffered(request, release, dependency) && !IsSatisfied(request, selected, dependency))
+                choices.Add(new PlanningChoice(ChoiceKey(release.ModId, index, "suggestion"), release.ModId, PlanningChoiceKind.Suggestion, [dependency.ModId!], null, dependency));
             if (dependency.Kind is ModDependencyKind.Optional or ModDependencyKind.Suggests) continue;
             if (dependency.IsAnyOf) EvaluateAlternative(request, release.ModId, ChoiceKey(release.ModId, index, "alternative"), dependency, selected, unresolved, conflicts, choices);
             else EvaluateSingle(request, release.ModId, dependency, selected, unresolved, conflicts);
@@ -255,6 +259,19 @@ public sealed class RepositoryInstallPlanner : IInstallPlanner
     private static ModVersion? FindManagedVersion(InstallPlanningRequest request, Dictionary<string, RequestedMod> selected, string id) => selected.TryGetValue(id, out var item) ? item.Release.Version : request.Instance.Mods.FirstOrDefault(value => ModIds.Equals(value.ModId, id))?.Version;
     private static bool AlternativeSatisfied(InstallPlanningRequest request, Dictionary<string, RequestedMod> selected, ModDependencyAlternative alternative) => FindManagedVersion(request, selected, alternative.ModId) is { } version ? alternative.BoundsContain(version) : request.Instance.ForeignMods.Any(value => ModIds.Equals(value.ModId, alternative.ModId)) && alternative.MinVersion is null && alternative.MaxVersion is null;
     private static bool ExistingAlternativeSatisfied(InstallPlanningRequest request, Dictionary<string, RequestedMod> selected, ModDependencyAlternative alternative) => FindManagedVersion(request, selected, alternative.ModId) is { } version ? alternative.BoundsContain(version) : request.Instance.ForeignMods.Any(value => ModIds.Equals(value.ModId, alternative.ModId)) && alternative.MinVersion is null && alternative.MaxVersion is null;
+    private static bool IsSatisfied(InstallPlanningRequest request, Dictionary<string, RequestedMod> selected, ModDependency dependency) => dependency.IsAnyOf ? dependency.AnyOf.Any(value => AlternativeSatisfied(request, selected, value)) : AlternativeSatisfied(request, selected, new ModDependencyAlternative(dependency.ModId, dependency.MinVersion, dependency.MaxVersion));
+
+    // the installed release already offered this entry, so the user decided on it when that release was installed
+    private static bool WasOffered(InstallPlanningRequest request, ModVersionMetadata release, ModDependency dependency)
+    {
+        var installed = request.Instance.Mods.FirstOrDefault(value => ModIds.Equals(value.ModId, release.ModId));
+        if (installed is null) return false;
+        if (installed.Version == release.Version) return true;
+        var targets = TargetIds(dependency);
+        return installed.Metadata.Dependencies.Any(value => value.Kind == dependency.Kind && TargetIds(value).SetEquals(targets));
+    }
+
+    private static HashSet<string> TargetIds(ModDependency dependency) => (dependency.IsAnyOf ? dependency.AnyOf.Select(value => value.ModId) : [dependency.ModId!]).ToHashSet(ModIds.Comparer);
 
     private static bool ForcedAlternative(InstallPlanningRequest request, Dictionary<string, RequestedMod> selected, string alternativeId)
     {
