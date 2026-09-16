@@ -116,6 +116,8 @@ public sealed class BoreaServices : IDisposable
 
     public required IModPackRepository ModPacks { get; init; }
 
+    public required IModPackRepository ReadOnlyModPacks { get; init; }
+
     public required IModPackInstaller ModPackInstaller { get; init; }
 
     public required IModDownloader Downloader { get; init; }
@@ -292,6 +294,7 @@ public sealed class BoreaServices : IDisposable
             Mods = new ReleaseChannelModRepository(mods, settings.ReleaseChannel),
             ReadOnlyMods = new ReleaseChannelModRepository(readOnlyMods, settings.ReleaseChannel),
             ModPacks = modPacks,
+            ReadOnlyModPacks = new ContentIndexModPackRepository(new ReaderSnapshotProvider(indexReader)),
             ModPackInstaller = new ModPackInstaller(instances, installPlanner, modInstaller, modReplacer),
             Downloader = downloader,
             InstallPlanner = installPlanner,

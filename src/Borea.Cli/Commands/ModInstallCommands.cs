@@ -181,7 +181,7 @@ internal static class ModInstallCommands
     private static OsPlatform CurrentPlatform() =>
         OperatingSystem.IsWindows() ? OsPlatform.Windows : OperatingSystem.IsLinux() ? OsPlatform.Linux : OsPlatform.MacOs;
 
-    private static async Task RequireCachedIndexAsync(CliServices cli, CancellationToken cancellationToken)
+    internal static async Task RequireCachedIndexAsync(CliServices cli, CancellationToken cancellationToken)
     {
         try
         {
@@ -193,7 +193,7 @@ internal static class ModInstallCommands
         }
     }
 
-    private static IReadOnlyDictionary<string, string> ParseAlternatives(string[]? values)
+    internal static IReadOnlyDictionary<string, string> ParseAlternatives(string[]? values)
     {
         var result = new Dictionary<string, string>(StringComparer.Ordinal);
         foreach (var value in values ?? [])

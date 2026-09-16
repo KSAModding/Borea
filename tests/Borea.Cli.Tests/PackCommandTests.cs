@@ -1,8 +1,11 @@
+using System.Security.Cryptography;
+using Borea.Core.Dependencies;
 using Borea.Core.Game;
 using Borea.Core.Index;
 using Borea.Core.ModPacks;
 using Borea.Core.Mods;
 using Borea.Storage.Instances;
+using Borea.Storage.ModPacks;
 
 namespace Borea.Cli.Tests;
 
@@ -661,6 +664,102 @@ public sealed class PackCommandTests : IDisposable
         Assert.Equal("apollo-save", skipped.GetProperty("id").GetString());
     }
 
+    [Fact]
+    public async Task PackInstall_ReportsEachPhaseWithItsStepAcrossThePack()
+    {
+        var flightTools = new ModPackEntry("flight-tools", ModVersion.Parse("2.0.0"));
+        var library = new ModPackEntry("library", ModVersion.Parse("1.0.0"));
+        _host.IndexReader.Snapshot = Snapshot(Pack(ContentCommandFixtures.PackVersion(mods: new[] { flightTools, library })));
+        _host.ModPackInstaller.Result = request =>
+        {
+            var progress = _host.ModPackInstaller.Progress[^1]!;
+            foreach (var (pin, step) in new[] { (library, 1), (flightTools, 2) })
+            {
+                progress.Report(new InstallProgress(pin.ContentId, pin.Version, InstallPhase.Downloading, Step: step, StepCount: 2));
+                progress.Report(new InstallProgress(pin.ContentId, pin.Version, InstallPhase.Finishing, Step: step, StepCount: 2));
+            }
+
+            return new ModPackInstallResult(
+                request.InstanceId,
+                null,
+                new[] { FakeModPackInstaller.Member(flightTools, ModPackMemberStatus.Installed), FakeModPackInstaller.Member(library, ModPackMemberStatus.Installed) },
+                Array.Empty<Borea.Core.Planning.PlanningMessage>(),
+                true);
+        };
+        await _host.RunAsync("instance", "create", "Alpha");
+
+        var run = await _host.RunAsync("pack", "install", "navigation-pack", "--instance", "Alpha");
+
+        Assert.Equal(0, run.ExitCode);
+        Assert.Equal(
+        [
+            "Downloading library 1.0.0 (1 of 2)",
+            "Finishing library 1.0.0 (1 of 2)",
+            "Downloading flight-tools 2.0.0 (2 of 2)",
+            "Finishing flight-tools 2.0.0 (2 of 2)",
+        ], run.Error.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries));
+    }
+
+    [Fact]
+    public async Task PackInstallDryRun_PrintsThePlanAndWritesNothing()
+    {
+        _host.IndexReader.Snapshot = Snapshot(Pack(ContentCommandFixtures.PackVersion()));
+        _host.Mods.Releases.Add(ContentCommandFixtures.Release(dependencies: [new ModDependency("library", ModDependencyKind.Required)]));
+        _host.Mods.Releases.Add(ContentCommandFixtures.Release(id: "library", version: "1.0.0"));
+        UseThePackInstaller();
+        await _host.RunAsync("instance", "create", "Alpha");
+        var before = FileHashes();
+
+        var run = await _host.RunAsync("pack", "install", "navigation-pack", "--instance", "Alpha", "--dry-run");
+
+        Assert.Equal(0, run.ExitCode);
+        Assert.Contains("Install dependency library 1.0.0.", run.Output);
+        Assert.Contains("Install flight-tools 2.0.0.", run.Output);
+        Assert.DoesNotContain("not-attempted", run.Output);
+        Assert.Equal(string.Empty, run.Error);
+        Assert.Equal(before, FileHashes());
+    }
+
+    [Fact]
+    public async Task PackInstall_WithRecommended_PlansTheRecommendedMods()
+    {
+        _host.IndexReader.Snapshot = Snapshot(Pack(ContentCommandFixtures.PackVersion()));
+        _host.Mods.Releases.Add(ContentCommandFixtures.Release(dependencies: [new ModDependency("first", ModDependencyKind.Recommends)]));
+        _host.Mods.Releases.Add(ContentCommandFixtures.Release(id: "first", version: "1.0.0", dependencies: [new ModDependency("second", ModDependencyKind.Recommends)]));
+        _host.Mods.Releases.Add(ContentCommandFixtures.Release(id: "second", version: "1.0.0"));
+        UseThePackInstaller();
+        await _host.RunAsync("instance", "create", "Alpha");
+
+        var without = await _host.RunAsync("pack", "install", "navigation-pack", "--instance", "Alpha", "--dry-run");
+        var run = await _host.RunAsync("pack", "install", "navigation-pack", "--instance", "Alpha", "--with-recommended", "--dry-run");
+
+        Assert.DoesNotContain("first 1.0.0.", without.Output);
+        Assert.Equal(0, run.ExitCode);
+        Assert.Contains("first 1.0.0.", run.Output);
+        Assert.Contains("second 1.0.0.", run.Output);
+    }
+
+    [Fact]
+    public async Task PackInstall_Alternative_SelectsTheRequiredAlternative()
+    {
+        var alternatives = ModDependency.OfAlternatives(ModDependencyKind.Required, [new ModDependencyAlternative("first"), new ModDependencyAlternative("second")]);
+        _host.IndexReader.Snapshot = Snapshot(Pack(ContentCommandFixtures.PackVersion()));
+        _host.Mods.Releases.Add(ContentCommandFixtures.Release(dependencies: [alternatives]));
+        _host.Mods.Releases.Add(ContentCommandFixtures.Release(id: "first", version: "1.0.0"));
+        _host.Mods.Releases.Add(ContentCommandFixtures.Release(id: "second", version: "1.0.0"));
+        UseThePackInstaller();
+        await _host.RunAsync("instance", "create", "Alpha");
+        var initial = await _host.RunAsync("pack", "install", "navigation-pack", "--instance", "Alpha", "--dry-run");
+        var option = initial.Output.Split(Environment.NewLine).Single(line => line.StartsWith("choice option:", StringComparison.Ordinal));
+        var key = option["choice option: ".Length..option.IndexOf(" = ", StringComparison.Ordinal)];
+
+        var run = await _host.RunAsync("pack", "install", "navigation-pack", "--instance", "Alpha", "--alternative", $"{key}=second", "--dry-run");
+
+        Assert.Equal(0, run.ExitCode);
+        Assert.Contains("second 1.0.0.", run.Output);
+        Assert.DoesNotContain("first 1.0.0.", run.Output);
+    }
+
     [Theory]
     [InlineData("--proceed-with-yanked", "not a valid id")]
     [InlineData("--version", "not-a-version")]
@@ -671,6 +770,13 @@ public sealed class PackCommandTests : IDisposable
         Assert.Equal(2, run.ExitCode);
         Assert.Equal(0, _host.Builds);
     }
+
+    private void UseThePackInstaller() =>
+        _host.ModPackInstallerFactory = graph => new ModPackInstaller(graph.Instances, graph.InstallPlanner, graph.Installer, graph.Replacer);
+
+    private Dictionary<string, string> FileHashes() => Directory.GetFiles(_host.Root, "*", SearchOption.AllDirectories)
+        .Where(path => Path.GetRelativePath(_host.Root, path).Split(Path.DirectorySeparatorChar)[0] != "Logs")
+        .ToDictionary(path => Path.GetRelativePath(_host.Root, path), path => Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(path))), StringComparer.Ordinal);
 
     private static FakeInstalledGameVersionProvider Installed(string version) => new()
     {

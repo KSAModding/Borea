@@ -72,6 +72,12 @@ public static class InstallProgressReports
             ? null
             : new SynchronousProgress<DownloadProgress>(bytes => progress.Report(InstallProgress.Of(release, InstallPhase.Downloading, bytes)));
 
+    /// <summary>The reports of one operation, with its step and step count set.</summary>
+    public static IProgress<InstallProgress>? ForStep(this IProgress<InstallProgress>? progress, int step, int stepCount) =>
+        progress is null
+            ? null
+            : new SynchronousProgress<InstallProgress>(value => progress.Report(value with { Step = step, StepCount = stepCount }));
+
     public static void Report(this IProgress<InstallProgress>? progress, ModVersionMetadata release, InstallPhase phase) =>
         progress?.Report(InstallProgress.Of(release, phase));
 }

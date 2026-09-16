@@ -6,8 +6,8 @@ using Borea.Core.Planning;
 namespace Borea.Cli.Tests;
 
 /// <summary>
-/// Records every request and writes nothing. Without <see cref="Result"/> it gives the
-/// results <see cref="Borea.Storage.ModPacks.ModPackInstaller"/> gives before it plans:
+/// Records every install request and its progress, and writes nothing. Without <see cref="Result"/> it
+/// gives the results <see cref="Borea.Storage.ModPacks.ModPackInstaller"/> gives before it plans:
 /// a retracted pack version without the caller's choice leaves every pin unresolved, and
 /// an unlisted pin or a yanked pin without the caller's choice is unresolved while every
 /// other pin is not attempted. When every pin can go ahead, every pin reports installed.
@@ -16,11 +16,14 @@ internal sealed class FakeModPackInstaller : IModPackInstaller
 {
     public List<ModPackInstallRequest> Requests { get; } = new();
 
+    public List<IProgress<InstallProgress>?> Progress { get; } = new();
+
     public Func<ModPackInstallRequest, ModPackInstallResult>? Result { get; set; }
 
-    public async Task<ModPackInstallResult> InstallAsync(ModPackInstallRequest request, CancellationToken cancellationToken = default)
+    public async Task<ModPackInstallResult> InstallAsync(ModPackInstallRequest request, IProgress<InstallProgress>? progress = null, CancellationToken cancellationToken = default)
     {
         Requests.Add(request);
+        Progress.Add(progress);
         if (Result is not null)
             return Result(request);
 
@@ -70,7 +73,10 @@ internal sealed class FakeModPackInstaller : IModPackInstaller
             true);
     }
 
-    public Task<ModPackInstallResult> CreateAndInstallAsync(string instanceName, ModPackInstallRequest request, CancellationToken cancellationToken = default) =>
+    public Task<ModPackInstallResult> PlanAsync(ModPackInstallRequest request, CancellationToken cancellationToken = default) =>
+        throw new NotSupportedException("A test that plans a pack uses the real pack installer.");
+
+    public Task<ModPackInstallResult> CreateAndInstallAsync(string instanceName, ModPackInstallRequest request, IProgress<InstallProgress>? progress = null, CancellationToken cancellationToken = default) =>
         throw new NotSupportedException("The pack commands install into an existing instance.");
 
     public static ModPackMemberResult Member(ModPackEntry pin, ModPackMemberStatus status, string? message = null) =>

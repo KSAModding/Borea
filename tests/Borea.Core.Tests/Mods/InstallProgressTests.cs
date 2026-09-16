@@ -30,10 +30,23 @@ public sealed class InstallProgressTests
     }
 
     [Fact]
+    public void ForStep_SetsThePlaceOfTheOperation()
+    {
+        var reports = new List<InstallProgress>();
+        IProgress<InstallProgress> listener = new SynchronousProgress<InstallProgress>(reports.Add);
+
+        listener.ForStep(2, 3).Report(TestFixtures.SampleVersionMetadata(), InstallPhase.Extracting);
+
+        var report = Assert.Single(reports);
+        Assert.Equal((InstallPhase.Extracting, 2, 3), (report.Phase, report.Step, report.StepCount));
+    }
+
+    [Fact]
     public void WithoutAListener_NothingIsBuiltOrReported()
     {
         IProgress<InstallProgress>? none = null;
 
+        Assert.Null(none.ForStep(1, 2));
         Assert.Null(none.ForDownload(TestFixtures.SampleVersionMetadata()));
         none.Report(TestFixtures.SampleVersionMetadata(), InstallPhase.Extracting);
     }
