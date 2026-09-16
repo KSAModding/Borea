@@ -64,9 +64,25 @@ public sealed class PackCommandTests : IDisposable
     }
 
     [Fact]
-    public async Task PackSearch_MonthBound_PrintsUnknownCompatibility()
+    public async Task PackSearch_MonthBound_ResolvesThroughTheGameReleaseList()
     {
-        _host.IndexReader.Snapshot = Snapshot(Pack(ContentCommandFixtures.PackVersion(gameMin: "2026.8")));
+        _host.IndexReader.Snapshot = WithGameVersions(
+            Snapshot(Pack(ContentCommandFixtures.PackVersion(gameMin: "2026.9"))),
+            "2026.8.22.5348",
+            "2026.9.7.5402");
+        _host.InstalledVersion = Installed("2026.8.22.5348");
+
+        var run = await _host.RunAsync("pack", "search", "Navigation");
+
+        Assert.Contains("navigation-pack  Navigation Pack  1.0.0  incompatible", run.Output);
+    }
+
+    [Fact]
+    public async Task PackSearch_MonthTheListDoesNotKnow_PrintsUnknownCompatibility()
+    {
+        _host.IndexReader.Snapshot = WithGameVersions(
+            Snapshot(Pack(ContentCommandFixtures.PackVersion(gameMin: "2026.10"))),
+            "2026.9.7.5402");
         _host.InstalledVersion = Installed("2026.9.7.5402");
 
         var run = await _host.RunAsync("pack", "search", "Navigation");
@@ -678,6 +694,13 @@ public sealed class PackCommandTests : IDisposable
         packs,
         null,
         diagnostics);
+
+    private static ContentIndexSnapshot WithGameVersions(ContentIndexSnapshot snapshot, params string[] versions) => new(
+        snapshot.SnapshotVersion,
+        snapshot.Listings,
+        snapshot.Packs,
+        new ContentIndexGameVersions(1, "https://example.com/version", versions),
+        snapshot.Diagnostics);
 
     public void Dispose() => _host.Dispose();
 }
