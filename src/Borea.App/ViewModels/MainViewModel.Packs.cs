@@ -11,6 +11,7 @@ using Borea.Core.Index;
 using Borea.Core.ModPacks;
 using Borea.Core.Mods;
 using Borea.Core.Planning;
+using Borea.Core.Preferences;
 using Borea.Core.Tags;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -79,6 +80,8 @@ public partial class MainViewModel
             filtered = filtered.Where(pack => pack.SupportsOs(SelectedOs));
         if (SelectedLicense is not null)
             filtered = filtered.Where(pack => string.Equals(pack.License, SelectedLicense, StringComparison.OrdinalIgnoreCase));
+        if (HasGameVersionRange)
+            filtered = filtered.Where(pack => Borea.Core.Game.Compatibility.SupportsAnyBuild(pack.Metadata, DiscoverGameMin?.Revision, DiscoverGameMax?.Revision));
         if (SelectedCategories.Count > 0)
         {
             var matching = ContentTagFilter.Filter(
@@ -91,9 +94,14 @@ public partial class MainViewModel
         }
 
         DiscoverPacks.Clear();
-        foreach (var pack in filtered)
+        foreach (var pack in SortPacks(filtered))
             DiscoverPacks.Add(pack);
     }
+
+    /// <summary>A pack carries no download counts, so Popularity keeps the name order.</summary>
+    private IEnumerable<PackItem> SortPacks(IEnumerable<PackItem> packs) => DiscoverSort == DiscoverSortOrder.RecentlyUpdated
+        ? packs.OrderByDescending(pack => pack.Metadata.ReleasedAt).ThenBy(pack => pack.Name, StringComparer.CurrentCultureIgnoreCase)
+        : packs.OrderBy(pack => pack.Name, StringComparer.CurrentCultureIgnoreCase);
 
     /// <summary>
     /// A pack counts as installed when the active instance holds every mod it pins, in the pinned version.

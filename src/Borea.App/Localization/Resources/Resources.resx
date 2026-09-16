@@ -294,6 +294,12 @@
   <data name="DiscoverCategoryOther" xml:space="preserve">
     <value>Other</value>
   </data>
+  <data name="DiscoverGameVersionMin" xml:space="preserve">
+    <value>Min</value>
+  </data>
+  <data name="DiscoverGameVersionMax" xml:space="preserve">
+    <value>Max</value>
+  </data>
   <data name="DiscoverOperatingSystem" xml:space="preserve">
     <value>Operating system</value>
   </data>
@@ -302,6 +308,18 @@
   </data>
   <data name="DiscoverClearAll" xml:space="preserve">
     <value>Clear all</value>
+  </data>
+  <data name="DiscoverSortBy" xml:space="preserve">
+    <value>Sort by</value>
+  </data>
+  <data name="DiscoverSortPopularity" xml:space="preserve">
+    <value>Popularity</value>
+  </data>
+  <data name="DiscoverSortRecentlyUpdated" xml:space="preserve">
+    <value>Recently updated</value>
+  </data>
+  <data name="DiscoverSortName" xml:space="preserve">
+    <value>Name</value>
   </data>
   <data name="DiscoverAll" xml:space="preserve">
     <value>All</value>

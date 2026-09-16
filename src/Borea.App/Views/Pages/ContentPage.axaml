@@ -1,6 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Borea.App.ViewModels"
+             xmlns:mods="using:Borea.Core.Mods"
              xmlns:views="using:Borea.App.Views"
              x:Class="Borea.App.Views.Pages.ContentPage"
              x:DataType="vm:MainViewModel">
@@ -162,16 +163,20 @@
 
                     <!-- c/table-versions -->
                     <StackPanel Margin="0,16,0,0" IsVisible="{Binding IsVersionsTab}">
-                        <StackPanel Orientation="Horizontal" Spacing="8" Margin="8,0,0,12">
-                            <TextBlock Classes="body-md secondary" Text="{Binding Localization.ContentShowVersions}" VerticalAlignment="Center" />
-                            <ComboBox ItemsSource="{Binding ReleaseChannelOptions}" SelectedItem="{Binding VersionFilter}" AutomationProperties.Name="{Binding Localization.ContentShowVersions}" Width="240">
-                                <ComboBox.ItemTemplate>
-                                    <DataTemplate x:DataType="vm:ReleaseChannelOption">
-                                        <TextBlock Text="{Binding Text}" />
-                                    </DataTemplate>
-                                </ComboBox.ItemTemplate>
-                            </ComboBox>
-                        </StackPanel>
+                        <Button Classes="dropdown" HorizontalAlignment="Left" Margin="0,0,0,12" AutomationProperties.Name="{Binding Localization.ContentShowVersions}">
+                            <Button.Flyout>
+                                <MenuFlyout Placement="BottomEdgeAlignedLeft">
+                                    <MenuItem Header="{Binding Localization.ReleaseChannelStable}" Command="{Binding SelectVersionFilterCommand}" CommandParameter="{x:Static mods:ReleaseChannel.Stable}" />
+                                    <MenuItem Header="{Binding Localization.ReleaseChannelTesting}" Command="{Binding SelectVersionFilterCommand}" CommandParameter="{x:Static mods:ReleaseChannel.Testing}" />
+                                    <MenuItem Header="{Binding Localization.ReleaseChannelDev}" Command="{Binding SelectVersionFilterCommand}" CommandParameter="{x:Static mods:ReleaseChannel.Dev}" />
+                                </MenuFlyout>
+                            </Button.Flyout>
+                            <StackPanel Orientation="Horizontal" Spacing="4">
+                                <TextBlock Classes="body-md secondary" Text="{Binding Localization.ContentShowVersions, StringFormat='{}{0}:'}" VerticalAlignment="Center" />
+                                <TextBlock Classes="body-md" Text="{Binding VersionFilter.Text}" VerticalAlignment="Center" />
+                                <Path Classes="icon size-16" Data="{StaticResource Icon.CaretDown}" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
                         <TextBlock Classes="body-md muted" Text="{Binding Localization.ContentLoadingVersions}" Margin="8,8,0,8" IsVisible="{Binding IsLoadingVersions}" />
                         <Border BorderBrush="{StaticResource Brush.BorderStrong}" BorderThickness="1" CornerRadius="16" ClipToBounds="True" IsVisible="{Binding !IsLoadingVersions}">
                             <StackPanel>

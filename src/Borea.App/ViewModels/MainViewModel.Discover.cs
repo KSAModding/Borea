@@ -12,6 +12,7 @@ using Borea.Core.Index;
 using Borea.Core.ModPacks;
 using Borea.Core.Mods;
 using Borea.Core.Planning;
+using Borea.Core.Preferences;
 using Borea.Core.Tags;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -35,6 +36,7 @@ public partial class MainViewModel
     private GameVersion? _compatibilityGame;
     private Task? _discoverLoad;
     private CuratedTagVocabulary _categoryVocabulary = CuratedTagVocabulary.Empty;
+    private DiscoverSortOrder? _discoverSort;
 
     internal CuratedTagVocabulary TagVocabulary { get; private set; } = CuratedTagVocabulary.Empty;
 
@@ -85,7 +87,41 @@ public partial class MainViewModel
     [NotifyPropertyChangedFor(nameof(HasDiscoverFilters))]
     private string? _selectedLicense;
 
-    public bool HasDiscoverFilters => SelectedOs is not null || SelectedLicense is not null || SelectedCategories.Count > 0;
+    /// <summary>The public builds of the snapshot, newest first, for the Game version filter.</summary>
+    public ObservableCollection<GameVersionOption> GameVersionOptions { get; } = [];
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasDiscoverFilters))]
+    [NotifyPropertyChangedFor(nameof(DiscoverGameVersionRangeText))]
+    private GameVersionOption? _discoverGameMin;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasDiscoverFilters))]
+    [NotifyPropertyChangedFor(nameof(DiscoverGameVersionRangeText))]
+    private GameVersionOption? _discoverGameMax;
+
+    private bool HasGameVersionRange => DiscoverGameMin is not null || DiscoverGameMax is not null;
+
+    public string? DiscoverGameVersionRangeText => (DiscoverGameMin, DiscoverGameMax) switch
+    {
+        (null, null) => null,
+        ({ } min, null) => $">= {min.Text}",
+        (null, { } max) => $"<= {max.Text}",
+        ({ } min, { } max) when min.Revision == max.Revision => min.Text,
+        ({ } min, { } max) => $"{min.Text} - {max.Text}",
+    };
+
+    public bool HasDiscoverFilters => SelectedOs is not null || SelectedLicense is not null || SelectedCategories.Count > 0 || HasGameVersionRange;
+
+    /// <summary>The saved Sort by choice of the Mods and Modpacks tabs.</summary>
+    public DiscoverSortOrder DiscoverSort => _discoverSort ?? _appPreferences.DiscoverSortOrder;
+
+    public string DiscoverSortText => DiscoverSort switch
+    {
+        DiscoverSortOrder.RecentlyUpdated => Localization.DiscoverSortRecentlyUpdated,
+        DiscoverSortOrder.Name => Localization.DiscoverSortName,
+        _ => Localization.DiscoverSortPopularity,
+    };
 
     public bool HasDiscoverItems => DiscoverItems.Count > 0 || DiscoverPacks.Count > 0;
 
@@ -141,6 +177,7 @@ public partial class MainViewModel
                 LicenseOptions.Add(license);
 
             LoadCategoryOptions(listings, packs);
+            LoadGameVersionOptions(snapshot.GameVersions);
 
             await RefreshCompatibilityAsync(services.InstalledVersion.GetInstalledVersion()?.Version);
 
@@ -176,6 +213,9 @@ public partial class MainViewModel
             filtered = filtered.Where(item => item.SupportsOs(SelectedOs));
         if (SelectedLicense is not null)
             filtered = filtered.Where(item => string.Equals(item.License, SelectedLicense, StringComparison.OrdinalIgnoreCase));
+        if (HasGameVersionRange)
+            filtered = filtered.Where(item => item.LatestInChannel is { } release
+                && Borea.Core.Game.Compatibility.SupportsAnyBuild(release.GameMinRevision, release.GameMaxRevision, DiscoverGameMin?.Revision, DiscoverGameMax?.Revision));
         if (SelectedCategories.Count > 0)
         {
             var matching = ContentTagFilter.Filter(
@@ -189,10 +229,38 @@ public partial class MainViewModel
         }
 
         DiscoverItems.Clear();
-        foreach (var item in filtered)
+        foreach (var item in SortDiscover(filtered))
             DiscoverItems.Add(item);
         ApplyPackFilters(query);
         OnPropertyChanged(nameof(HasDiscoverItems));
+    }
+
+    /// <summary>The Loaders tab has no Sort by dropdown, so it keeps the name order.</summary>
+    private IEnumerable<DiscoverItem> SortDiscover(IEnumerable<DiscoverItem> items) => (IsLoadersTab ? DiscoverSortOrder.Name : DiscoverSort) switch
+    {
+        DiscoverSortOrder.Popularity => items.OrderBy(item => item.Downloads is null).ThenByDescending(item => item.Downloads).ThenBy(item => item.Name, StringComparer.CurrentCultureIgnoreCase),
+        DiscoverSortOrder.RecentlyUpdated => items.OrderBy(item => item.UpdatedAt is null).ThenByDescending(item => item.UpdatedAt).ThenBy(item => item.Name, StringComparer.CurrentCultureIgnoreCase),
+        _ => items.OrderBy(item => item.Name, StringComparer.CurrentCultureIgnoreCase),
+    };
+
+    /// <summary>A reload keeps a chosen bound while its build is still listed.</summary>
+    private void LoadGameVersionOptions(ContentIndexGameVersions? gameVersions)
+    {
+        var options = (gameVersions?.Versions ?? [])
+            .Select(text => GameVersion.TryParse(text, out var version) ? new GameVersionOption(text, version.Revision) : null)
+            .OfType<GameVersionOption>()
+            .OrderByDescending(option => option.Revision)
+            .ToList();
+        if (options.SequenceEqual(GameVersionOptions))
+            return;
+
+        var min = DiscoverGameMin?.Revision;
+        var max = DiscoverGameMax?.Revision;
+        GameVersionOptions.Clear();
+        foreach (var option in options)
+            GameVersionOptions.Add(option);
+        DiscoverGameMin = GameVersionOptions.FirstOrDefault(option => option.Revision == min);
+        DiscoverGameMax = GameVersionOptions.FirstOrDefault(option => option.Revision == max);
     }
 
     private void LoadCategoryOptions(IReadOnlyList<ModMetadata> listings, IReadOnlyList<ModPackMetadata> packs)
@@ -284,6 +352,7 @@ public partial class MainViewModel
 
             // the age on the row belongs to the same release as the chip and Add, so a newer release in another channel does not show there
             item.UpdatedAt = latest?.ReleaseDate;
+            item.LatestInChannel = latest;
         }
 
         foreach (var release in _contentReleases)
@@ -307,6 +376,21 @@ public partial class MainViewModel
 
     partial void OnSelectedLicenseChanged(string? value) => ApplyDiscoverFilters();
 
+    // a range whose Min is above its Max would match nothing, so the other bound follows
+    partial void OnDiscoverGameMinChanged(GameVersionOption? value)
+    {
+        if (value is not null && DiscoverGameMax is { } max && max.Revision < value.Revision)
+            DiscoverGameMax = value;
+        ApplyDiscoverFilters();
+    }
+
+    partial void OnDiscoverGameMaxChanged(GameVersionOption? value)
+    {
+        if (value is not null && DiscoverGameMin is { } min && min.Revision > value.Revision)
+            DiscoverGameMin = value;
+        ApplyDiscoverFilters();
+    }
+
     [RelayCommand]
     private void ShowDiscoverMods() => DiscoverType = ContentType.Mod;
 
@@ -321,6 +405,26 @@ public partial class MainViewModel
 
     [RelayCommand]
     private void SelectLicense(string? license) => SelectedLicense = license;
+
+    [RelayCommand]
+    private void ClearDiscoverGameVersionRange()
+    {
+        DiscoverGameMin = null;
+        DiscoverGameMax = null;
+    }
+
+    [RelayCommand]
+    private void SelectDiscoverSort(DiscoverSortOrder order)
+    {
+        if (order == DiscoverSort)
+            return;
+
+        _discoverSort = order;
+        OnPropertyChanged(nameof(DiscoverSort));
+        OnPropertyChanged(nameof(DiscoverSortText));
+        QueuePreferenceSave(preferences => preferences.WithDiscoverSortOrder(order));
+        ApplyDiscoverFilters();
+    }
 
     [RelayCommand]
     private void ToggleCategory(DiscoverCategory? category)
@@ -343,6 +447,8 @@ public partial class MainViewModel
     {
         SelectedOs = null;
         SelectedLicense = null;
+        DiscoverGameMin = null;
+        DiscoverGameMax = null;
         foreach (var category in SelectedCategories)
             category.IsSelected = false;
         SelectedCategories.Clear();
@@ -424,6 +530,8 @@ public sealed partial class DiscoverItem : ObservableObject, IInstallRow
     public IReadOnlyList<string> AllTags { get; private set; }
 
     internal ModMetadata Listing => _listing;
+
+    internal ModVersionMetadata? LatestInChannel { get; set; }
 
     public string? Description => _listing.Description;
 
@@ -668,3 +776,5 @@ public sealed partial class DiscoverCategory : ObservableObject
 
     internal void RefreshText() => OnPropertyChanged(nameof(Name));
 }
+
+public sealed record GameVersionOption(string Text, int Revision);

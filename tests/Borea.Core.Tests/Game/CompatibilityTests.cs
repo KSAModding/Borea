@@ -185,6 +185,35 @@ public sealed class CompatibilityTests
         Assert.Equal(GameCompatibility.Unknown, Compatibility.Evaluate(Pack("2026.8.3.5117", "2026.9"), Installed(5117), releases));
     }
 
+    [Theory]
+    [InlineData(5261, null, 5117, 5261, true)]
+    [InlineData(5262, null, 5117, 5261, false)]
+    [InlineData(5117, 5261, 5261, 5348, true)]
+    [InlineData(5117, 5260, 5261, 5348, false)]
+    [InlineData(5261, 5261, 5261, 5261, true)]
+    public void SupportsAnyBuild_RangeEndsIncludeTheBounds(int minRevision, int? maxRevision, int? fromRevision, int? toRevision, bool expected)
+    {
+        Assert.Equal(expected, Compatibility.SupportsAnyBuild(minRevision, maxRevision, fromRevision, toRevision));
+    }
+
+    [Theory]
+    [InlineData(5117, 5402, null)]
+    [InlineData(5117, 9000, 9000)]
+    [InlineData(5402, null, null)]
+    public void SupportsAnyBuild_OpenUpperBound_SupportsEveryLaterBuild(int minRevision, int? fromRevision, int? toRevision)
+    {
+        Assert.True(Compatibility.SupportsAnyBuild(minRevision, null, fromRevision, toRevision));
+    }
+
+    [Fact]
+    public void SupportsAnyBuild_Pack_ReadsFullBoundsButNotMonths()
+    {
+        Assert.True(Compatibility.SupportsAnyBuild(Pack("2026.7.4.2131", "2026.8.3.5117"), 5117, null));
+        Assert.False(Compatibility.SupportsAnyBuild(Pack("2026.7.4.2131", "2026.8.3.5117"), 5118, null));
+        Assert.False(Compatibility.SupportsAnyBuild(Pack("2026.7"), null, null));
+        Assert.False(Compatibility.SupportsAnyBuild(Pack("2026.8.3.5117", "2026.9"), 5117, 5117));
+    }
+
     [Fact]
     public void EvaluateOs_AbsentList_SupportsEveryPlatform()
     {

@@ -7,6 +7,7 @@ using Borea.Core.Game;
 using Borea.Core.Instances;
 using Borea.Core.ModPacks;
 using Borea.Core.Mods;
+using Borea.Core.Preferences;
 
 namespace Borea.App.Tests.ViewModels;
 
@@ -49,6 +50,27 @@ public sealed class PackViewModelTests
 
         viewModel.ShowDiscoverModsCommand.Execute(null);
         Assert.Empty(viewModel.DiscoverPacks);
+    }
+
+    [Fact]
+    public async Task ModpacksTab_SortsByReleaseDateAndFiltersByGameVersion()
+    {
+        var armory = Pack("armory-pack", "Armory Pack", Version("1.0.0", Pin("KSArmory", "0.8.44")))
+            .Replace("\"game_min\": \"2026.8.19.5261\" }", "\"game_min\": \"2026.8.19.5261\", \"game_max\": \"2026.8.22.5348\" }", StringComparison.Ordinal);
+        var starter = Pack("starter-pack", "Starter Pack", Version("1.0.0", Pin("MeasureTools", "1.1.10")))
+            .Replace("\"released_at\": \"2026-09-01T12:00:00Z\"", "\"released_at\": \"2026-09-10T12:00:00Z\"", StringComparison.Ordinal)
+            .Replace("\"game_min\": \"2026.8.19.5261\" }", "\"game_min\": \"2026.8.19.5261\", \"game_max\": \"2026.9.7.5402\" }", StringComparison.Ordinal);
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: WithPacks(armory, starter));
+        var viewModel = harness.ViewModel;
+        await viewModel.EnsureDiscoverLoadedAsync();
+        viewModel.ShowDiscoverModpacksCommand.Execute(null);
+        Assert.Equal(["armory-pack", "starter-pack"], viewModel.DiscoverPacks.Select(pack => pack.PackId));
+
+        viewModel.SelectDiscoverSortCommand.Execute(DiscoverSortOrder.RecentlyUpdated);
+        Assert.Equal(["starter-pack", "armory-pack"], viewModel.DiscoverPacks.Select(pack => pack.PackId));
+
+        viewModel.DiscoverGameMin = viewModel.GameVersionOptions.Single(build => build.Revision == 5402);
+        Assert.Equal(["starter-pack"], viewModel.DiscoverPacks.Select(pack => pack.PackId));
     }
 
     [Fact]

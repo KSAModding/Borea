@@ -16,6 +16,12 @@ internal static class AppPreferencesMapper
 
     private const string WithoutModLoaderName = "without-mod-loader";
 
+    private const string PopularitySortName = "popularity";
+
+    private const string RecentlyUpdatedSortName = "recently-updated";
+
+    private const string NameSortName = "name";
+
     public static AppPreferencesDocumentDto ToDto(AppPreferences preferences) => new()
     {
         FormatVersion = FileAppPreferencesRepository.CurrentFormatVersion,
@@ -32,11 +38,17 @@ internal static class AppPreferencesMapper
         ForeignFolderDeletionConfirmed = preferences.ForeignFolderDeletionConfirmed,
         LoadImagesFromAuthorHosts = preferences.LoadImagesFromAuthorHosts,
         HomeLaunch = preferences.HomeLaunch == HomeLaunchOption.WithoutModLoader ? WithoutModLoaderName : ActiveInstanceName,
+        DiscoverSortOrder = preferences.DiscoverSortOrder switch
+        {
+            DiscoverSortOrder.RecentlyUpdated => RecentlyUpdatedSortName,
+            DiscoverSortOrder.Name => NameSortName,
+            _ => PopularitySortName,
+        },
         CustomThemes = preferences.CustomThemes.Select(theme => (CustomThemePreferenceDto?)ToDto(theme)).ToList(),
     };
 
     public static AppPreferences FromDto(AppPreferencesDocumentDto dto)
-        => new(dto.SelectedTheme, dto.CustomThemes?.Select(FromDto), NormalizeRegionalCulture(dto.RegionalCulture), NormalizeUiCulture(dto.UiCulture), dto.CheckForUpdatesAtStart ?? true, ReadUpdateChannel(dto.UpdateChannel), dto.ForeignFolderDeletionConfirmed ?? false, dto.LoadImagesFromAuthorHosts ?? true, ReadHomeLaunch(dto.HomeLaunch));
+        => new(dto.SelectedTheme, dto.CustomThemes?.Select(FromDto), NormalizeRegionalCulture(dto.RegionalCulture), NormalizeUiCulture(dto.UiCulture), dto.CheckForUpdatesAtStart ?? true, ReadUpdateChannel(dto.UpdateChannel), dto.ForeignFolderDeletionConfirmed ?? false, dto.LoadImagesFromAuthorHosts ?? true, ReadHomeLaunch(dto.HomeLaunch), ReadDiscoverSortOrder(dto.DiscoverSortOrder));
 
     private static BoreaUpdateChannel ReadUpdateChannel(string? name)
         => name?.ToLowerInvariant() switch
@@ -44,6 +56,14 @@ internal static class AppPreferencesMapper
             TestingName => BoreaUpdateChannel.Testing,
             DevName => BoreaUpdateChannel.Dev,
             _ => BoreaUpdateChannel.Stable,
+        };
+
+    private static DiscoverSortOrder ReadDiscoverSortOrder(string? name)
+        => name?.ToLowerInvariant() switch
+        {
+            RecentlyUpdatedSortName => DiscoverSortOrder.RecentlyUpdated,
+            NameSortName => DiscoverSortOrder.Name,
+            _ => DiscoverSortOrder.Popularity,
         };
 
     /// <summary>

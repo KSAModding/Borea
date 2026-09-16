@@ -1,8 +1,10 @@
 using System.Globalization;
+using System.Text.Json.Nodes;
 using Borea.App.ViewModels;
 using Borea.Core.Game;
 using Borea.Core.Instances;
 using Borea.Core.Mods;
+using Borea.Core.Preferences;
 
 namespace Borea.App.Tests.ViewModels;
 
@@ -435,6 +437,136 @@ public sealed class DiscoverViewModelTests
 
         Assert.DoesNotContain(viewModel.DiscoverItems, item => item.IsIncompatible);
         Assert.Contains(viewModel.DiscoverItems, item => item.ModId == "KSArmory");
+    }
+
+    [Fact]
+    public async Task GameVersionRange_KeepsListingsWhoseChannelReleaseSupportsABuildInIt()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var viewModel = harness.ViewModel;
+        await viewModel.EnsureDiscoverLoadedAsync();
+        var builds = viewModel.GameVersionOptions;
+        Assert.Equal("2026.9.7.5402", builds[0].Text);
+        Assert.Equal(builds.Select(build => build.Revision).OrderDescending(), builds.Select(build => build.Revision));
+
+        // the newest releases of AdvancedFlightComputer and MeasureTools need 5400, and the one of KSArmory needs 5261 with no upper bound
+        viewModel.DiscoverGameMax = builds.Single(build => build.Revision == 5261);
+        Assert.Equal(["KSArmory"], viewModel.DiscoverItems.Select(item => item.ModId));
+        Assert.True(viewModel.HasDiscoverFilters);
+        Assert.Equal("<= 2026.8.19.5261", viewModel.DiscoverGameVersionRangeText);
+
+        viewModel.DiscoverGameMax = null;
+        viewModel.DiscoverGameMin = builds.Single(build => build.Revision == 5402);
+        Assert.Equal(["AdvancedFlightComputer", "KSArmory", "MeasureTools"], viewModel.DiscoverItems.Select(item => item.ModId));
+        Assert.Equal(">= 2026.9.7.5402", viewModel.DiscoverGameVersionRangeText);
+
+        viewModel.DiscoverGameMax = builds.Single(build => build.Revision == 5402);
+        Assert.Equal(3, viewModel.DiscoverItems.Count);
+        Assert.Equal("2026.9.7.5402", viewModel.DiscoverGameVersionRangeText);
+
+        viewModel.ClearDiscoverFiltersCommand.Execute(null);
+        Assert.Null(viewModel.DiscoverGameMin);
+        Assert.Null(viewModel.DiscoverGameMax);
+        Assert.False(viewModel.HasDiscoverFilters);
+        Assert.Equal(3, viewModel.DiscoverItems.Count);
+    }
+
+    [Fact]
+    public async Task GameVersionRange_BoundPastTheOtherOne_MovesTheOtherBound()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var viewModel = harness.ViewModel;
+        await viewModel.EnsureDiscoverLoadedAsync();
+        var older = viewModel.GameVersionOptions.Single(build => build.Revision == 5261);
+        var newer = viewModel.GameVersionOptions.Single(build => build.Revision == 5402);
+
+        viewModel.DiscoverGameMax = older;
+        viewModel.DiscoverGameMin = newer;
+        Assert.Same(newer, viewModel.DiscoverGameMax);
+
+        viewModel.DiscoverGameMax = older;
+        Assert.Same(older, viewModel.DiscoverGameMin);
+    }
+
+    [Theory]
+    [InlineData(DiscoverSortOrder.Popularity, new[] { "AdvancedFlightComputer", "MeasureTools", "KSArmory" })]
+    [InlineData(DiscoverSortOrder.RecentlyUpdated, new[] { "MeasureTools", "AdvancedFlightComputer", "KSArmory" })]
+    [InlineData(DiscoverSortOrder.Name, new[] { "AdvancedFlightComputer", "KSArmory", "MeasureTools" })]
+    public async Task Sort_OrdersTheModsTab(DiscoverSortOrder order, string[] expected)
+    {
+        // KSArmory has no download count, and its newest release is the oldest of the three
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: json => WithDownloads(WithDownloads(json, "AdvancedFlightComputer", 1234), "MeasureTools", 56));
+        var viewModel = harness.ViewModel;
+        await viewModel.EnsureDiscoverLoadedAsync();
+        Assert.Equal(DiscoverSortOrder.Popularity, viewModel.DiscoverSort);
+
+        viewModel.SelectDiscoverSortCommand.Execute(order);
+
+        Assert.Equal(expected, viewModel.DiscoverItems.Select(item => item.ModId));
+    }
+
+    [Fact]
+    public async Task Sort_LoadersTab_KeepsTheNameOrder()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: json =>
+        {
+            var root = JsonNode.Parse(json)!;
+            var listings = root["listings"]!.AsArray();
+            var copy = listings.Single(node => (string?)node!["id"] == "StarMap")!.DeepClone();
+            copy["id"] = "TestLoader";
+            copy["authored"]!["id"] = "TestLoader";
+            copy["authored"]!["name"] = "Test Loader";
+            foreach (var release in copy["releases"]!.AsArray())
+            {
+                release!["id"] = "TestLoader";
+                release["listing"]!["name"] = "Test Loader";
+            }
+
+            copy["downloads"] = JsonNode.Parse("""{ "total": 1234, "hosts": { "github": 1234 } }""");
+            listings.Add(copy);
+            return root.ToJsonString();
+        });
+        var viewModel = harness.ViewModel;
+        await viewModel.EnsureDiscoverLoadedAsync();
+        Assert.Equal(DiscoverSortOrder.Popularity, viewModel.DiscoverSort);
+
+        viewModel.ShowDiscoverLoadersCommand.Execute(null);
+
+        Assert.Equal(["StarMap", "TestLoader"], viewModel.DiscoverItems.Select(item => item.ModId));
+    }
+
+    [Fact]
+    public async Task SelectSort_SavesTheChoice()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var viewModel = harness.ViewModel;
+
+        viewModel.SelectDiscoverSortCommand.Execute(DiscoverSortOrder.RecentlyUpdated);
+        await viewModel.WhenPreferencesSavedAsync();
+
+        var saved = await harness.Services.AppPreferences.GetAsync(MainViewModel.BundledThemeNames);
+        Assert.Equal(DiscoverSortOrder.RecentlyUpdated, saved.Preferences.DiscoverSortOrder);
+        Assert.Equal(harness.Localization.DiscoverSortRecentlyUpdated, viewModel.DiscoverSortText);
+        Assert.Null(viewModel.PreferenceSaveError);
+    }
+
+    [Fact]
+    public async Task Load_SavedSort_OrdersTheRowsByIt()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(
+            seed: services => services.AppPreferences.SaveAsync(AppPreferences.Empty.WithDiscoverSortOrder(DiscoverSortOrder.RecentlyUpdated), MainViewModel.BundledThemeNames));
+        var viewModel = harness.ViewModel;
+        await viewModel.EnsureDiscoverLoadedAsync();
+
+        Assert.Equal(DiscoverSortOrder.RecentlyUpdated, viewModel.DiscoverSort);
+        Assert.Equal(["MeasureTools", "AdvancedFlightComputer", "KSArmory"], viewModel.DiscoverItems.Select(item => item.ModId));
+    }
+
+    private static string WithDownloads(string json, string listingId, long total)
+    {
+        var marker = $"\"id\": \"{listingId}\",";
+        var at = json.IndexOf(marker, StringComparison.Ordinal) + marker.Length;
+        return json.Insert(at, $$""" "downloads": { "total": {{total}}, "hosts": { "github": {{total}} } },""");
     }
 }
 
