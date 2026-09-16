@@ -34,7 +34,7 @@ internal sealed class FakeModPackInstaller : IModPackInstaller
                 request.InstanceId,
                 null,
                 pack.Mods.Select(pin => Member(pin, ModPackMemberStatus.Unresolved, "Caller confirmation is required for the retracted pack version.")).ToArray(),
-                new[] { new PlanningMessage(pack.ModPackId, "retracted-pack", request.Pack.VersionStatus.Reason ?? "The selected pack version is retracted.") },
+                new[] { new PlanningMessage(pack.ModPackId, PlanningMessageKind.RetractedPack) { Value = request.Pack.VersionStatus.Reason } },
                 false);
         }
 
@@ -46,7 +46,7 @@ internal sealed class FakeModPackInstaller : IModPackInstaller
             if (release is null)
             {
                 members.Add(Member(pin, ModPackMemberStatus.Unresolved, "The exact pinned release is not listed."));
-                warnings.Add(new PlanningMessage(pin.ContentId, "unlisted-pin", "The exact pinned release is not listed and cannot be installed by Borea."));
+                warnings.Add(new PlanningMessage(pin.ContentId, PlanningMessageKind.UnlistedPin));
                 continue;
             }
 
@@ -54,7 +54,7 @@ internal sealed class FakeModPackInstaller : IModPackInstaller
             if (release.Yanked && !proceeds)
             {
                 members.Add(Member(pin, ModPackMemberStatus.Unresolved, "Caller confirmation is required for the yanked release."));
-                warnings.Add(new PlanningMessage(pin.ContentId, "yanked", release.YankedReason ?? "The exact pinned release is yanked."));
+                warnings.Add(new PlanningMessage(pin.ContentId, PlanningMessageKind.YankedPin) { Value = release.YankedReason });
             }
         }
 

@@ -54,12 +54,12 @@ public sealed class RepositoryInstallPlanner : IInstallPlanner
         Search(0);
         if (truncated)
         {
-            var conflict = Message("planning", "search-limit", $"Planning exceeded the deterministic limit of {SearchLimit} candidate states.");
+            var conflict = new PlanningMessage("planning", PlanningMessageKind.SearchLimit) { Limit = SearchLimit };
             return new InstallPlan(request.Instance.InstanceId, InstallPlanningState.Capture(request.Instance), [], [], [], [], [conflict], []);
         }
         if (best is null)
         {
-            var conflict = Message("planning", "search-limit", $"Planning exceeded the deterministic limit of {SearchLimit} candidate states.");
+            var conflict = new PlanningMessage("planning", PlanningMessageKind.SearchLimit) { Limit = SearchLimit };
             return new InstallPlan(request.Instance.InstanceId, InstallPlanningState.Capture(request.Instance), [], [], [], [], [conflict], []);
         }
         return ToPlan(request, best);
@@ -72,9 +72,9 @@ public sealed class RepositoryInstallPlanner : IInstallPlanner
         foreach (var item in request.Requested.OrderBy(value => value.Release.ModId, ModIds.Comparer))
         {
             if (request.Instance.ForeignMods.Any(value => ModIds.Equals(value.ModId, item.Release.ModId)))
-                conflicts.Add(Message(item.Release.ModId, "foreign-owned", "A managed install cannot replace foreign content."));
+                conflicts.Add(Message(item.Release.ModId, PlanningMessageKind.ForeignOwned));
             if (roots.TryGetValue(item.Release.ModId, out var previous) && previous.Exact && item.Exact && previous.Release.Version != item.Release.Version)
-                conflicts.Add(Message(item.Release.ModId, "exact-pin-conflict", $"Exact versions {previous.Release.Version} and {item.Release.Version} were both requested."));
+                conflicts.Add(new PlanningMessage(item.Release.ModId, PlanningMessageKind.ExactPinConflict) { Version = previous.Release.Version, OtherVersion = item.Release.Version });
             else if (!roots.TryGetValue(item.Release.ModId, out previous) || item.Exact || !previous.Exact)
                 roots[item.Release.ModId] = item;
         }
@@ -115,7 +115,7 @@ public sealed class RepositoryInstallPlanner : IInstallPlanner
                 else outsideChannel = true;
             }
             if (root is { Exact: false } && values.Count == 0 && outsideChannel)
-                conflicts.Add(Message(id, "outside-channel", $"No release of {id} in the {channel.ToName()} channel is available."));
+                conflicts.Add(new PlanningMessage(id, PlanningMessageKind.OutsideChannel) { Channel = channel });
             releases[id] = values.DistinctBy(value => value.Version).OrderBy(value => value.Yanked).ThenByDescending(value => value.Version).ToList();
             foreach (var dependencyId in releases[id].SelectMany(DependencyIds).Distinct(ModIds.Comparer).OrderBy(value => value, ModIds.Comparer)) pending.Enqueue(dependencyId);
         }
@@ -141,14 +141,14 @@ public sealed class RepositoryInstallPlanner : IInstallPlanner
         foreach (var root in roots.Values)
         {
             // outside-channel already reported this request
-            if (!selected.TryGetValue(root.Release.ModId, out var chosen)) { if (!initialConflicts.Any(value => value.Code == "outside-channel" && ModIds.Equals(value.ModId, root.Release.ModId))) conflicts.Add(Message(root.Release.ModId, "missing-request", "No release was selected for the request.")); }
-            else if (root.Exact && chosen.Release.Version != root.Release.Version) conflicts.Add(Message(root.Release.ModId, "exact-pin", $"Exact version {root.Release.Version} was not selected."));
+            if (!selected.TryGetValue(root.Release.ModId, out var chosen)) { if (!initialConflicts.Any(value => value.Kind == PlanningMessageKind.OutsideChannel && ModIds.Equals(value.ModId, root.Release.ModId))) conflicts.Add(Message(root.Release.ModId, PlanningMessageKind.MissingRequest)); }
+            else if (root.Exact && chosen.Release.Version != root.Release.Version) conflicts.Add(new PlanningMessage(root.Release.ModId, PlanningMessageKind.ExactPin) { Version = root.Release.Version });
         }
 
         foreach (var item in selected.Values.OrderBy(value => value.Release.ModId, ModIds.Comparer))
         {
             EvaluateRelease(request, channel, item.Release, selected, warnings, unresolved, conflicts, choices);
-            foreach (var evaluation in _resolver.Evaluate(proposed, item.Release).Where(value => value.Outcome == DependencyOutcome.Conflict)) conflicts.Add(Message(item.Release.ModId, "proposed-conflict", evaluation.Dependency.ToString()));
+            foreach (var evaluation in _resolver.Evaluate(proposed, item.Release).Where(value => value.Outcome == DependencyOutcome.Conflict)) conflicts.Add(Message(item.Release.ModId, PlanningMessageKind.ProposedConflict, evaluation.Dependency));
         }
         EvaluateRetainedInstalled(request, selected, unresolved, conflicts);
         var age = roots.Values.Where(root => !root.Exact).Sum(root => CandidateIndex(domains[root.Release.ModId], assigned.GetValueOrDefault(root.Release.ModId)));
@@ -164,28 +164,28 @@ public sealed class RepositoryInstallPlanner : IInstallPlanner
 
     private static void EvaluateRelease(InstallPlanningRequest request, ReleaseChannel channel, ModVersionMetadata release, Dictionary<string, RequestedMod> selected, List<PlanningMessage> warnings, List<PlanningMessage> unresolved, List<PlanningMessage> conflicts, List<PlanningChoice> choices)
     {
-        if (release.Yanked) warnings.Add(Message(release.ModId, "yanked", release.YankedReason ?? "The selected release is yanked."));
+        if (release.Yanked) warnings.Add(new PlanningMessage(release.ModId, PlanningMessageKind.Yanked) { Value = release.YankedReason });
         // only an exact request reaches this
-        if (!channel.Includes(release.ReleaseStatus) && !IsInstalled(request, release)) warnings.Add(Message(release.ModId, "release-channel", $"Release {release.Version} has the release status {StatusName(release.ReleaseStatus)}, which the {channel.ToName()} channel does not offer."));
+        if (!channel.Includes(release.ReleaseStatus) && !IsInstalled(request, release)) warnings.Add(new PlanningMessage(release.ModId, PlanningMessageKind.ReleaseChannel) { Version = release.Version, Status = release.ReleaseStatus, Channel = channel });
         var compatibility = Compatibility.Evaluate(release, request.GameVersion);
-        if (compatibility == GameCompatibility.Incompatible) conflicts.Add(Message(release.ModId, "incompatible", "The release is incompatible with the target game."));
-        else if (compatibility != GameCompatibility.Compatible) warnings.Add(Message(release.ModId, "compatibility", $"Game compatibility is {compatibility}."));
+        if (compatibility == GameCompatibility.Incompatible) conflicts.Add(new PlanningMessage(release.ModId, PlanningMessageKind.Incompatible) { Value = release.GameMin });
+        else if (compatibility != GameCompatibility.Compatible) warnings.Add(new PlanningMessage(release.ModId, PlanningMessageKind.Compatibility) { Compatibility = compatibility });
         if (request.TargetPlatform is { } target)
         {
             var support = Compatibility.EvaluateOs(release.Os, target);
-            if (!support.IsSupported) warnings.Add(Message(release.ModId, "platform", $"The release does not list {target} as a supported platform."));
-            foreach (var value in support.Unrecognized) warnings.Add(Message(release.ModId, "platform-unknown", $"The release contains the unknown platform '{value}'."));
+            if (!support.IsSupported) warnings.Add(new PlanningMessage(release.ModId, PlanningMessageKind.Platform) { Platform = target });
+            foreach (var value in support.Unrecognized) warnings.Add(new PlanningMessage(release.ModId, PlanningMessageKind.PlatformUnknown) { Value = value });
         }
 
         for (var index = 0; index < release.Dependencies.Count; index++)
         {
             var dependency = release.Dependencies[index];
             var key = ChoiceKey(release.ModId, index, "recommendation");
-            if (dependency.Kind == ModDependencyKind.Unknown) { unresolved.Add(Message(release.ModId, "unknown-dependency", dependency.ToString())); continue; }
+            if (dependency.Kind == ModDependencyKind.Unknown) { unresolved.Add(Message(release.ModId, PlanningMessageKind.UnknownDependency, dependency)); continue; }
             if (dependency.Kind == ModDependencyKind.Recommends)
             {
                 var chosen = request.Recommended?.Contains(key) ?? false;
-                choices.Add(new PlanningChoice(key, release.ModId, "recommendation", ["include", "exclude"], chosen ? "include" : "exclude"));
+                choices.Add(new PlanningChoice(key, release.ModId, PlanningChoiceKind.Recommendation, ["include", "exclude"], chosen ? "include" : "exclude", dependency));
                 if (!chosen) continue;
             }
             if (dependency.Kind is ModDependencyKind.Optional or ModDependencyKind.Suggests) continue;
@@ -200,15 +200,15 @@ public sealed class RepositoryInstallPlanner : IInstallPlanner
         var foreign = request.Instance.ForeignMods.Any(value => ModIds.Equals(value.ModId, dependency.ModId));
         if (dependency.Kind == ModDependencyKind.Conflict)
         {
-            if (version is { } found && dependency.BoundsContain(found)) conflicts.Add(Message(owner, "dependency-conflict", dependency.ToString()));
-            else if (foreign && (dependency.MinVersion is not null || dependency.MaxVersion is not null)) unresolved.Add(Message(owner, "foreign-conflict-unknown", dependency.ToString()));
-            else if (foreign) conflicts.Add(Message(owner, "foreign-conflict", dependency.ToString()));
+            if (version is { } found && dependency.BoundsContain(found)) conflicts.Add(Message(owner, PlanningMessageKind.DependencyConflict, dependency));
+            else if (foreign && (dependency.MinVersion is not null || dependency.MaxVersion is not null)) unresolved.Add(Message(owner, PlanningMessageKind.ForeignConflictUnknown, dependency));
+            else if (foreign) conflicts.Add(Message(owner, PlanningMessageKind.ForeignConflict, dependency));
             return;
         }
         if (version is { } installed && dependency.BoundsContain(installed)) return;
         if (foreign && dependency.MinVersion is null && dependency.MaxVersion is null) return;
-        if (foreign) unresolved.Add(Message(owner, "foreign-version-unknown", dependency.ToString()));
-        else conflicts.Add(Message(owner, "unsatisfied-dependency", dependency.ToString()));
+        if (foreign) unresolved.Add(Message(owner, PlanningMessageKind.ForeignVersionUnknown, dependency));
+        else conflicts.Add(Message(owner, PlanningMessageKind.UnsatisfiedDependency, dependency));
     }
 
     private static void EvaluateAlternative(InstallPlanningRequest request, string owner, string key, ModDependency dependency, Dictionary<string, RequestedMod> selected, List<PlanningMessage> unresolved, List<PlanningMessage> conflicts, List<PlanningChoice> choices)
@@ -216,14 +216,14 @@ public sealed class RepositoryInstallPlanner : IInstallPlanner
         var satisfied = dependency.AnyOf!.FirstOrDefault(value => ExistingAlternativeSatisfied(request, selected, value) && ForcedAlternative(request, selected, value.ModId));
         string? requested = null;
         request.Alternatives?.TryGetValue(key, out requested);
-        choices.Add(new PlanningChoice(key, owner, "alternative", dependency.AnyOf!.Select(value => value.ModId).ToList(), requested ?? satisfied?.ModId));
+        choices.Add(new PlanningChoice(key, owner, PlanningChoiceKind.Alternative, dependency.AnyOf!.Select(value => value.ModId).ToList(), requested ?? satisfied?.ModId, dependency));
         if (satisfied is not null && requested is null) return;
-        if (requested is null) { unresolved.Add(Message(owner, "alternative-choice", $"Select one alternative for {dependency}.")); return; }
+        if (requested is null) { unresolved.Add(Message(owner, PlanningMessageKind.AlternativeChoice, dependency)); return; }
         var chosen = dependency.AnyOf!.FirstOrDefault(value => ModIds.Equals(value.ModId, requested));
-        if (chosen is null) { conflicts.Add(Message(owner, "invalid-alternative", $"'{requested}' is not an available alternative.")); return; }
+        if (chosen is null) { conflicts.Add(new PlanningMessage(owner, PlanningMessageKind.InvalidAlternative) { Dependency = dependency, Value = requested }); return; }
         if (AlternativeSatisfied(request, selected, chosen)) return;
-        if (request.Instance.ForeignMods.Any(value => ModIds.Equals(value.ModId, chosen.ModId))) unresolved.Add(Message(owner, "foreign-alternative-unknown", chosen.ModId));
-        else conflicts.Add(Message(owner, "unsatisfied-alternative", chosen.ModId));
+        if (request.Instance.ForeignMods.Any(value => ModIds.Equals(value.ModId, chosen.ModId))) unresolved.Add(new PlanningMessage(owner, PlanningMessageKind.ForeignAlternativeUnknown) { Dependency = dependency, Value = chosen.ModId });
+        else conflicts.Add(new PlanningMessage(owner, PlanningMessageKind.UnsatisfiedAlternative) { Dependency = dependency, Value = chosen.ModId });
     }
 
     private static void EvaluateRetainedInstalled(InstallPlanningRequest request, Dictionary<string, RequestedMod> selected, List<PlanningMessage> unresolved, List<PlanningMessage> conflicts)
@@ -233,21 +233,21 @@ public sealed class RepositoryInstallPlanner : IInstallPlanner
             {
                 if (dependency.Kind == ModDependencyKind.Required && dependency.IsAnyOf && !dependency.AnyOf.Any(value => AlternativeSatisfied(request, selected, value)))
                 {
-                    if (dependency.AnyOf.Any(value => request.Instance.ForeignMods.Any(foreign => ModIds.Equals(foreign.ModId, value.ModId)) && (value.MinVersion is not null || value.MaxVersion is not null))) unresolved.Add(Message(installed.ModId, "foreign-alternative-unknown", dependency.ToString()));
-                    else conflicts.Add(Message(installed.ModId, "retained-alternative", dependency.ToString()));
+                    if (dependency.AnyOf.Any(value => request.Instance.ForeignMods.Any(foreign => ModIds.Equals(foreign.ModId, value.ModId)) && (value.MinVersion is not null || value.MaxVersion is not null))) unresolved.Add(Message(installed.ModId, PlanningMessageKind.ForeignAlternativeUnknown, dependency));
+                    else conflicts.Add(Message(installed.ModId, PlanningMessageKind.RetainedAlternative, dependency));
                 }
                 else if (!dependency.IsAnyOf && selected.TryGetValue(dependency.ModId!, out var planned))
                 {
-                    if (dependency.Kind == ModDependencyKind.Required && !dependency.BoundsContain(planned.Release.Version)) conflicts.Add(Message(installed.ModId, "retained-dependent", dependency.ToString()));
-                    if (dependency.Kind == ModDependencyKind.Conflict && dependency.BoundsContain(planned.Release.Version)) conflicts.Add(Message(installed.ModId, "retained-conflict", dependency.ToString()));
+                    if (dependency.Kind == ModDependencyKind.Required && !dependency.BoundsContain(planned.Release.Version)) conflicts.Add(Message(installed.ModId, PlanningMessageKind.RetainedDependent, dependency));
+                    if (dependency.Kind == ModDependencyKind.Conflict && dependency.BoundsContain(planned.Release.Version)) conflicts.Add(Message(installed.ModId, PlanningMessageKind.RetainedConflict, dependency));
                 }
                 else if (!dependency.IsAnyOf && dependency.Kind == ModDependencyKind.Required)
                 {
                     var local = request.Instance.Mods.FirstOrDefault(value => ModIds.Equals(value.ModId, dependency.ModId));
                     if (local is not null && dependency.BoundsContain(local.Version)) continue;
                     var foreign = request.Instance.ForeignMods.Any(value => ModIds.Equals(value.ModId, dependency.ModId));
-                    if (foreign && (dependency.MinVersion is not null || dependency.MaxVersion is not null)) unresolved.Add(Message(installed.ModId, "foreign-version-unknown", dependency.ToString()));
-                    else if (!foreign) conflicts.Add(Message(installed.ModId, "retained-unsatisfied", dependency.ToString()));
+                    if (foreign && (dependency.MinVersion is not null || dependency.MaxVersion is not null)) unresolved.Add(Message(installed.ModId, PlanningMessageKind.ForeignVersionUnknown, dependency));
+                    else if (!foreign) conflicts.Add(Message(installed.ModId, PlanningMessageKind.RetainedUnsatisfied, dependency));
                 }
             }
     }
@@ -327,14 +327,13 @@ public sealed class RepositoryInstallPlanner : IInstallPlanner
     private static void Validate(InstallPlanningRequest request) { ArgumentNullException.ThrowIfNull(request); ArgumentNullException.ThrowIfNull(request.Instance); ArgumentNullException.ThrowIfNull(request.Requested); ArgumentNullException.ThrowIfNull(request.Repository); }
     private static bool IsInstalled(InstallPlanningRequest request, ModVersionMetadata release) => request.Instance.Mods.Any(value => ModIds.Equals(value.ModId, release.ModId) && value.Version == release.Version);
     private static string ChoiceKey(string owner, int index, string kind) => $"{owner}:dependency:{index}:{kind}";
-    private static string StatusName(ReleaseStatus status) => status switch { ReleaseStatus.Stable => "stable", ReleaseStatus.Testing => "testing", ReleaseStatus.Dev => "dev", _ => "unknown" };
-    private static PlanningMessage Message(string id, string code, string message) => new(id, code, message);
-    private static IReadOnlyList<PlanningMessage> Sort(List<PlanningMessage> values) => values.Distinct().OrderBy(value => value.ModId, ModIds.Comparer).ThenBy(value => value.Code, StringComparer.Ordinal).ThenBy(value => value.Message, StringComparer.Ordinal).ToList();
+    private static PlanningMessage Message(string id, PlanningMessageKind kind, ModDependency? dependency = null) => new(id, kind) { Dependency = dependency };
+    private static IReadOnlyList<PlanningMessage> Sort(List<PlanningMessage> values) => values.DistinctBy(value => (value.ModId, value.Code, value.Message)).OrderBy(value => value.ModId, ModIds.Comparer).ThenBy(value => value.Code, StringComparer.Ordinal).ThenBy(value => value.Message, StringComparer.Ordinal).ToList();
 
     /// <param name="Age">How far the requests that are not exact sit behind their newest candidate.</param>
     private sealed record SearchResult(Dictionary<string, RequestedMod> Selected, int Age, IReadOnlyList<PlanningMessage> Warnings, IReadOnlyList<PlanningMessage> Unresolved, IReadOnlyList<PlanningMessage> Conflicts, IReadOnlyList<PlanningChoice> Choices)
     {
-        public SearchScore Score => new(Conflicts.Count, Conflicts.Count(value => value.Code is "unsatisfied-dependency" or "missing-request" or "retained-unsatisfied"), Age, Unresolved.Count, Warnings.Count, Selected.Count);
+        public SearchScore Score => new(Conflicts.Count, Conflicts.Count(value => value.Kind is PlanningMessageKind.UnsatisfiedDependency or PlanningMessageKind.MissingRequest or PlanningMessageKind.RetainedUnsatisfied), Age, Unresolved.Count, Warnings.Count, Selected.Count);
     }
     // age ranks above open choices, warnings and the number of mods, so a request does not fall back to an older release to avoid the dependencies of the newest one
     private readonly record struct SearchScore(int Conflicts, int Missing, int Age, int Unresolved, int Warnings, int Selected) : IComparable<SearchScore>

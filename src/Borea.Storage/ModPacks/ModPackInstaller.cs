@@ -49,7 +49,7 @@ public sealed class ModPackInstaller : IModPackInstaller
 
         if (request.Pack.VersionStatus?.State == IndexStatusState.Retracted && !request.ProceedWithRetractedPack)
         {
-            warnings.Add(new PlanningMessage(metadata.ModPackId, "retracted-pack", request.Pack.VersionStatus.Reason ?? "The selected pack version is retracted."));
+            warnings.Add(new PlanningMessage(metadata.ModPackId, PlanningMessageKind.RetractedPack) { Value = request.Pack.VersionStatus.Reason });
             return Result(instance.InstanceId, null, metadata.Mods.Select(pin => Member(pin, ModPackMemberStatus.Unresolved, "Caller confirmation is required for the retracted pack version.")).ToList(), warnings, false);
         }
 
@@ -63,14 +63,14 @@ public sealed class ModPackInstaller : IModPackInstaller
             {
                 var listing = listings.FirstOrDefault(value => ModIds.Equals(value.ModId, pin.ContentId));
                 members.Add(Member(pin, ModPackMemberStatus.Unresolved, "The exact pinned release is not listed.", AuthorLocation(listing)));
-                warnings.Add(new PlanningMessage(pin.ContentId, "unlisted-pin", "The exact pinned release is not listed and cannot be installed by Borea."));
+                warnings.Add(new PlanningMessage(pin.ContentId, PlanningMessageKind.UnlistedPin));
                 continue;
             }
 
             if (release.Yanked && !(request.ProceedWithYankedMembers?.Any(value => ModIds.Equals(value, release.ModId)) ?? false))
             {
                 members.Add(Member(pin, ModPackMemberStatus.Unresolved, "Caller confirmation is required for the yanked release.", AuthorLocation(listings.FirstOrDefault(value => ModIds.Equals(value.ModId, pin.ContentId)))));
-                warnings.Add(new PlanningMessage(pin.ContentId, "yanked", release.YankedReason ?? "The exact pinned release is yanked."));
+                warnings.Add(new PlanningMessage(pin.ContentId, PlanningMessageKind.YankedPin) { Value = release.YankedReason });
                 continue;
             }
 

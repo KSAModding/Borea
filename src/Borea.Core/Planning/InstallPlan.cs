@@ -1,3 +1,4 @@
+using Borea.Core.Dependencies;
 using Borea.Core.Game;
 using Borea.Core.Mods;
 
@@ -5,8 +6,17 @@ namespace Borea.Core.Planning;
 
 public sealed record PlannedInstall(ModVersionMetadata Release, InstallReason Reason, GameCompatibility Compatibility, OsSupport? PlatformSupport);
 public sealed record PlannedSelection(ModVersionMetadata Release, InstallReason Reason, bool IsAlreadyInstalled);
-public sealed record PlanningMessage(string ModId, string Code, string Message);
-public sealed record PlanningChoice(string Key, string OwnerModId, string Kind, IReadOnlyList<string> Options, string? Selected);
+
+public enum PlanningChoiceKind
+{
+    Recommendation,
+    Alternative,
+    Suggestion,
+}
+
+/// <param name="Selected">Null for a suggestion, and for an alternative that still needs a choice.</param>
+/// <param name="Dependency">The entry of the owner's release that the choice is about.</param>
+public sealed record PlanningChoice(string Key, string OwnerModId, PlanningChoiceKind Kind, IReadOnlyList<string> Options, string? Selected, ModDependency Dependency);
 
 public sealed class InstallPlan
 {

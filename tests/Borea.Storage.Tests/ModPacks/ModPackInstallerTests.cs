@@ -279,7 +279,7 @@ public sealed class ModPackInstallerTests
                 var item = pending.Dequeue();
                 if (!selected.TryAdd(item.Release.ModId, item)) continue;
                 if (request.Instance.ForeignMods.Any(value => ModIds.Equals(value.ModId, item.Release.ModId)))
-                    conflicts.Add(new PlanningMessage(item.Release.ModId, "foreign-owned", "A managed install cannot replace foreign content."));
+                    conflicts.Add(new PlanningMessage(item.Release.ModId, PlanningMessageKind.ForeignOwned));
                 foreach (var dependency in item.Release.Dependencies.Where(value => value.Kind == ModDependencyKind.Required && !value.IsAnyOf))
                 {
                     var release = await request.Repository.GetReleaseAsync(dependency.ModId!, ModVersion.Parse("1.0.0"), cancellationToken);

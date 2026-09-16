@@ -324,7 +324,7 @@ internal static class PackCommand
         {
             var plan = await installer.PlanAsync(request, cancellationToken).ConfigureAwait(false);
             var added = false;
-            foreach (var choice in plan.Plan?.Choices.Where(choice => choice.Kind == "recommendation") ?? [])
+            foreach (var choice in plan.Plan?.Choices.Where(choice => choice.Kind == PlanningChoiceKind.Recommendation) ?? [])
                 added |= selected.Add(choice.Key);
             if (!added)
                 return (request, plan);
@@ -871,7 +871,7 @@ internal static class PackCommand
 
     private sealed record ChoiceView(string Key, string OwnerId, string Kind, IReadOnlyList<string> Options, string? Selected)
     {
-        public static ChoiceView From(PlanningChoice choice) => new(choice.Key, choice.OwnerModId, choice.Kind, choice.Options, choice.Selected);
+        public static ChoiceView From(PlanningChoice choice) => new(choice.Key, choice.OwnerModId, choice.Kind.ToString().ToLowerInvariant(), choice.Options, choice.Selected);
     }
 
     private sealed record MessageView(string Id, string Code, string Message)

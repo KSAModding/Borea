@@ -144,7 +144,7 @@ internal static class ModInstallCommands
         while (true)
         {
             var added = false;
-            foreach (var choice in plan.Choices.Where(choice => choice.Kind == "recommendation"))
+            foreach (var choice in plan.Choices.Where(choice => choice.Kind == PlanningChoiceKind.Recommendation))
                 added |= selected.Add(choice.Key);
             if (!added)
                 return plan;
@@ -165,7 +165,7 @@ internal static class ModInstallCommands
             output.WriteLine($"{(operation.Reason == InstallReason.Manual ? "Install" : "Install dependency")} {operation.Release.ModId} {operation.Release.Version}.");
         foreach (var choice in plan.UnresolvedChoices)
             output.WriteLine($"choice: {choice.Message}");
-        foreach (var choice in plan.Choices.Where(choice => choice.Selected is null))
+        foreach (var choice in plan.Choices.Where(choice => choice.Kind == PlanningChoiceKind.Alternative && choice.Selected is null))
             output.WriteLine($"choice option: {choice.Key} = {string.Join(", ", choice.Options)}");
         foreach (var conflict in plan.Conflicts)
         {
