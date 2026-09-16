@@ -77,6 +77,7 @@ public sealed class CliServicesTests : IDisposable
             Instances = graph.Instances,
             ModState = graph.ModState,
             GameLog = graph.GameLog,
+            Playtime = graph.Playtime,
             LatestVersion = new FakeLatestVersionPing(),
             InstalledVersion = new FakeInstalledGameVersionProvider(),
             IndexFetcher = new FakeContentIndexFetcher(),

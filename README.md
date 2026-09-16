@@ -133,7 +133,7 @@ The exit code is 0 when the command completed, 1 when the operation failed and t
 | `borea settings set channel <channel>` | Choose which release statuses install and update offer: `stable` (the default), `testing` or `dev`. |
 | `borea game version` | Print the installed build and the current public build the master server reports. |
 | `borea instance list` | Print every instance and mark the active one. |
-| `borea instance show <instance>` | Print one instance and when it was last played. |
+| `borea instance show <instance>` | Print one instance, when it was last played, and how long it was played. |
 | `borea instance create <name>` | Create an empty instance. |
 | `borea instance rename <instance> <new-name>` | Give an instance a new name. |
 | `borea instance delete <instance>` | Delete an instance and its folder. |
