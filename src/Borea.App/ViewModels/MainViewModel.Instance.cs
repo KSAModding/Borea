@@ -194,8 +194,7 @@ public partial class MainViewModel
     private void ShowInstanceContent() => InstanceTab = InstanceTab.Content;
 
     /// <summary>
-    /// Groups follow the design: content the user chose, then what came along
-    /// as a dependency. Titles are translated, so a language change rebuilds them.
+    /// Titles are translated, so a language change rebuilds them.
     /// </summary>
     private void RefreshContentGroups()
     {
@@ -203,9 +202,11 @@ public partial class MainViewModel
             item.RefreshText();
 
         ContentGroups.Clear();
-        Add(Localization.InstanceGroupMods, _content.Where(content => content.Type == ContentType.Mod && !content.IsDependency));
-        Add(Localization.InstanceGroupModLoaders, _content.Where(content => content.Type == ContentType.ModLoader && !content.IsDependency));
-        Add(Localization.InstanceGroupOther, _content.Where(content => content.Type is not ContentType.Mod and not ContentType.ModLoader && !content.IsDependency));
+        Add(Localization.InstanceGroupModpacks, _content.Where(content => content.Reason == InstallReason.ModPack));
+        var chosen = _content.Where(content => content.Reason is not InstallReason.ModPack and not InstallReason.Dependency).ToList();
+        Add(Localization.InstanceGroupMods, chosen.Where(content => content.Type == ContentType.Mod));
+        Add(Localization.InstanceGroupModLoaders, chosen.Where(content => content.Type == ContentType.ModLoader));
+        Add(Localization.InstanceGroupOther, chosen.Where(content => content.Type is not ContentType.Mod and not ContentType.ModLoader));
         Add(Localization.InstanceGroupDependencies, _content.Where(content => content.IsDependency));
         OnPropertyChanged(nameof(HasContent));
 
@@ -729,6 +730,8 @@ public sealed partial class ContentItem : ObservableObject, IUpdateRow
 
     public ContentType Type { get; }
 
+    public InstallReason Reason { get; }
+
     public bool IsDependency { get; }
 
     /// <summary>Borea installed the files, so it may update them.</summary>
@@ -831,6 +834,7 @@ public sealed partial class ContentItem : ObservableObject, IUpdateRow
         Authors = authors is { Count: > 0 } ? string.Join(", ", authors) : null;
         Version = mod.Version.ToString();
         Type = mod.Metadata.Type;
+        Reason = mod.Reason;
         IsDependency = mod.Reason == InstallReason.Dependency;
         IsOwned = mod.Ownership == ModInstallOwnership.Borea;
         _isEnabled = enabled;

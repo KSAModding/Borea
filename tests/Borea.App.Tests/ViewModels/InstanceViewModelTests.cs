@@ -49,6 +49,24 @@ public sealed class InstanceViewModelTests
     }
 
     [Fact]
+    public async Task Open_PackMembersWithoutARecordedPack_ShareOneModpacksGroupBeforeTheMods()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var viewModel = harness.ViewModel;
+        await InstalledContent.AddAsync(harness, "KSArmory", activate: true, InstallReason.ModPack);
+        await InstalledContent.AddAsync(harness, "AdvancedFlightComputer", activate: true);
+        await InstalledContent.AddAsync(harness, "MeasureTools", activate: true, InstallReason.Dependency);
+        await viewModel.LoadAsync();
+
+        await viewModel.ActiveInstance!.OpenCommand.ExecuteAsync(null);
+
+        Assert.Equal(
+            [harness.Localization.InstanceGroupModpacks, harness.Localization.InstanceGroupMods, harness.Localization.InstanceGroupDependencies],
+            viewModel.ContentGroups.Select(group => group.Title));
+        Assert.Equal("KSArmory", Assert.Single(viewModel.ContentGroups[0].Items).ModId);
+    }
+
+    [Fact]
     public async Task ToggleEnabled_WritesTheManifest()
     {
         using var harness = await ViewModelHarness.CreateAsync();

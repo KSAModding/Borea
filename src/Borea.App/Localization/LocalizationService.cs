@@ -135,6 +135,8 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string InstanceTabLog => Resources.InstanceTabLog;
 
+    public string InstanceGroupModpacks => Resources.InstanceGroupModpacks;
+
     public string InstanceGroupMods => Resources.InstanceGroupMods;
 
     public string InstanceGroupModLoaders => Resources.InstanceGroupModLoaders;
