@@ -55,9 +55,10 @@
                                 <StackPanel Spacing="4">
                                     <TextBlock Classes="heading-lg" Text="{Binding SelectedContent.Name}" TextWrapping="Wrap" />
                                     <TextBlock Classes="body-md secondary" Text="{Binding SelectedContent.Abstract}" TextWrapping="Wrap" LineHeight="18" />
-                                    <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,8,0,0" IsVisible="{Binding SelectedContent.InstallWarning, Converter={x:Static ObjectConverters.IsNotNull}}">
+                                    <ContentControl Margin="0,8,0,0" Content="{Binding SelectedContent.Choices}" IsVisible="{Binding SelectedContent.Choices, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                                    <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,8,0,0" IsVisible="{Binding SelectedContent.IsConfirmingInstall}">
                                         <TextBlock Classes="body-sm secondary" Text="{Binding SelectedContent.InstallWarning}" TextWrapping="Wrap" MaxWidth="420" VerticalAlignment="Center" />
-                                        <Button Classes="text primary" Content="{Binding Localization.InstallAnyway}" Command="{Binding SelectedContent.ConfirmInstallCommand}" />
+                                        <Button Classes="text primary" Content="{Binding SelectedContent.ConfirmInstallText}" Command="{Binding SelectedContent.ConfirmInstallCommand}" IsEnabled="{Binding SelectedContent.Choices.IsComplete, FallbackValue={x:True}}" />
                                         <Button Classes="text" Content="{Binding Localization.LibraryCancel}" Command="{Binding SelectedContent.CancelInstallCommand}" />
                                     </StackPanel>
                                     <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,8,0,0" IsVisible="{Binding SelectedContent.IsConfirmingRemove}">
@@ -228,10 +229,13 @@
                                                             <Path Classes="icon size-16" Data="{StaticResource Icon.Plus}" Stroke="{StaticResource Brush.Accent}" StrokeThickness="2" />
                                                         </Button>
                                                     </StackPanel>
-                                                    <StackPanel Grid.Row="1" Grid.ColumnSpan="6" Orientation="Horizontal" Spacing="8" Margin="0,6,0,0" IsVisible="{Binding InstallWarning, Converter={x:Static ObjectConverters.IsNotNull}}">
-                                                        <TextBlock Classes="body-sm secondary" Text="{Binding InstallWarning}" TextWrapping="Wrap" MaxWidth="480" VerticalAlignment="Center" />
-                                                        <Button Classes="text primary" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.InstallAnyway}" Command="{Binding ConfirmInstallCommand}" />
-                                                        <Button Classes="text" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryCancel}" Command="{Binding CancelInstallCommand}" />
+                                                    <StackPanel Grid.Row="1" Grid.ColumnSpan="6" Spacing="6" Margin="0,6,0,0" IsVisible="{Binding IsConfirmingInstall}">
+                                                        <ContentControl Content="{Binding Choices}" IsVisible="{Binding Choices, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                                                        <StackPanel Orientation="Horizontal" Spacing="8">
+                                                            <TextBlock Classes="body-sm secondary" Text="{Binding InstallWarning}" TextWrapping="Wrap" MaxWidth="480" VerticalAlignment="Center" />
+                                                            <Button Classes="text primary" Content="{Binding ConfirmInstallText}" Command="{Binding ConfirmInstallCommand}" IsEnabled="{Binding Choices.IsComplete, FallbackValue={x:True}}" />
+                                                            <Button Classes="text" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryCancel}" Command="{Binding CancelInstallCommand}" />
+                                                        </StackPanel>
                                                     </StackPanel>
                                                     <StackPanel Grid.Row="1" Grid.ColumnSpan="6" Orientation="Horizontal" Spacing="8" Margin="0,6,0,0" IsVisible="{Binding ProgressStatus, Converter={x:Static ObjectConverters.IsNotNull}}">
                                                         <TextBlock Classes="body-sm secondary" Text="{Binding ProgressStatus}" VerticalAlignment="Center" />

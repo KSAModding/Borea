@@ -321,11 +321,7 @@ public partial class MainViewModel
         => RunUpdateAsync(item, item.InstanceId, () => PlanUpdateAsync(item, item.InstanceId, _ => true));
 
     internal Task ConfirmUpdateAsync(IUpdateRow row, Guid instanceId)
-        => RunUpdateAsync(row, instanceId, () =>
-        {
-            row.Changelogs = [];
-            return ExecutePendingPlanAsync(row);
-        });
+        => RunUpdateAsync(row, instanceId, () => ExecutePendingPlanAsync(row, () => row.Changelogs = []));
 
     internal static void CancelUpdate(IUpdateRow row)
     {
@@ -333,7 +329,7 @@ public partial class MainViewModel
         row.Changelogs = [];
     }
 
-    /// <summary>Waits for a confirmation on planner warnings or passed changelogs.</summary>
+    /// <summary>Waits for a confirmation on planner warnings, choices or passed changelogs.</summary>
     private Task<bool> PlanUpdateAsync(IUpdateRow row, Guid instanceId, Func<InstalledMod, bool> select)
     {
         row.Changelogs = [];
@@ -809,9 +805,13 @@ public sealed partial class ContentItem : ObservableObject, IUpdateRow
     [NotifyPropertyChangedFor(nameof(HasChangelogs))]
     private IReadOnlyList<ReleaseChangelog> _changelogs = [];
 
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsConfirmingUpdate))]
+    private InstallChoices? _choices;
+
     public bool HasChangelogs => Changelogs.Count > 0;
 
-    public bool IsConfirmingUpdate => InstallWarning is not null || HasChangelogs;
+    public bool IsConfirmingUpdate => InstallWarning is not null || HasChangelogs || Choices is not null;
 
     public string ConfirmUpdateText => InstallWarning is null ? _owner.Localization.ContentUpdate : _owner.Localization.UpdateAnyway;
 
@@ -909,9 +909,13 @@ public sealed partial class UpdateAllItem : ObservableObject, IUpdateRow
     [NotifyPropertyChangedFor(nameof(HasChangelogs))]
     private IReadOnlyList<ReleaseChangelog> _changelogs = [];
 
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsConfirmingUpdate))]
+    private InstallChoices? _choices;
+
     public bool HasChangelogs => Changelogs.Count > 0;
 
-    public bool IsConfirmingUpdate => InstallWarning is not null || HasChangelogs;
+    public bool IsConfirmingUpdate => InstallWarning is not null || HasChangelogs || Choices is not null;
 
     public string ConfirmUpdateText => InstallWarning is null ? _owner.Localization.ContentUpdate : _owner.Localization.UpdateAnyway;
 

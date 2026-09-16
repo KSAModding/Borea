@@ -37,6 +37,9 @@ internal interface IInstallRow : IInstallProgressRow
     string? InstallWarning { get; set; }
 
     InstallPlan? PendingPlan { get; set; }
+
+    /// <summary>What <see cref="PendingPlan"/> asks the user before it runs, or null.</summary>
+    InstallChoices? Choices { get; set; }
 }
 
 /// <summary>
@@ -48,8 +51,8 @@ public partial class MainViewModel
 {
     /// <summary>
     /// Plans the install of one release into the active instance. A ready plan
-    /// without warnings runs at once. A plan with warnings, such as an untested
-    /// game version, waits on the row until the user confirms or cancels it.
+    /// without warnings or choices runs at once. Any other plan waits on the row
+    /// until the user confirms or cancels it.
     /// </summary>
     internal async Task PlanInstallAsync(IInstallRow row, Func<Task<ModVersionMetadata?>> findRelease, bool exact)
     {
@@ -68,8 +71,8 @@ public partial class MainViewModel
 
     /// <summary>
     /// Plans the requested mods into the instance and runs a ready plan without
-    /// warnings, unless <paramref name="waitForConfirmation"/> holds it. Returns
-    /// whether the executor ran, so the caller reloads the instances.
+    /// warnings or choices, unless <paramref name="waitForConfirmation"/> holds it.
+    /// Returns whether the executor ran, so the caller reloads the instances.
     /// </summary>
     private async Task<bool> PlanAndExecuteAsync(IInstallRow row, Guid instanceId, Func<Instance, Task<IReadOnlyList<RequestedMod>>> requestMods, Func<Instance, InstallPlan, Task<bool>>? waitForConfirmation = null)
     {
@@ -80,23 +83,30 @@ public partial class MainViewModel
         row.InstallError = null;
         row.InstallWarning = null;
         row.PendingPlan = null;
+        row.Choices = null;
         row.IsInstalling = true;
         var executed = false;
         try
         {
             var instance = await services.Instances.GetByIdAsync(instanceId)
                 ?? throw new InvalidOperationException(Localization.InstallInstanceMissing);
-            var plan = await services.InstallPlanner.PlanAsync(PlanningRequest(services, instance, await requestMods(instance)));
-            var wait = plan.IsReady && waitForConfirmation is not null && await waitForConfirmation(instance, plan);
+            var requested = await requestMods(instance);
+            var plan = await PlanWithChoicesAsync(services, PlanningRequest(services, instance, requested), null);
+            var choices = InstallChoices.AreNeeded(plan) ? NewChoices(instanceId, requested, plan) : null;
+            var wait = (plan.IsReady || choices is not null) && waitForConfirmation is not null && await waitForConfirmation(instance, plan);
 
-            if (!plan.IsReady)
+            if (choices is not null)
+            {
+                row.Choices = choices;
+                HoldPlan(row, plan);
+            }
+            else if (!plan.IsReady)
             {
                 row.InstallError = Describe(plan.Conflicts.Concat(plan.UnresolvedChoices));
             }
             else if (plan.Warnings.Count > 0 || wait)
             {
-                row.PendingPlan = plan;
-                row.InstallWarning = plan.Warnings.Count > 0 ? Describe(plan.Warnings) : null;
+                HoldPlan(row, plan);
             }
             else
             {
@@ -123,8 +133,79 @@ public partial class MainViewModel
         => new(instance, requested, services.Mods, services.InstalledVersion.GetInstalledVersion()?.Version, CurrentPlatform());
 
     /// <summary>
-    /// Runs the plan the row holds after the user accepted its warnings. The
-    /// executor refuses it when the instance changed since it was planned.
+    /// Plans with the user's choices and selects every recommendation the user has not seen yet,
+    /// except one that blocks the plan, which starts deselected.
+    /// </summary>
+    private static async Task<InstallPlan> PlanWithChoicesAsync(BoreaServices services, InstallPlanningRequest request, InstallChoices? choices)
+    {
+        var kept = choices?.SelectedRecommendations ?? new HashSet<string>();
+        var deselected = new HashSet<string>(choices?.DeselectedRecommendations ?? new HashSet<string>(), StringComparer.Ordinal);
+        request = request with { Alternatives = choices?.SelectedAlternatives };
+        var plan = await PlanWithRecommendationsAsync(services, request, kept, deselected);
+        if (plan.IsReady)
+            return plan;
+
+        var blocking = plan.Choices
+            .Where(choice => choice.Kind == PlanningChoiceKind.Recommendation && choice.Selected == "include" && !kept.Contains(choice.Key) && plan.Conflicts.Any(conflict => Blocks(conflict, choice)))
+            .Select(choice => choice.Key)
+            .ToList();
+        if (blocking.Count == 0)
+            return plan;
+
+        deselected.UnionWith(blocking);
+        var without = await PlanWithRecommendationsAsync(services, request, kept, deselected);
+        return without.Conflicts.Count < plan.Conflicts.Count ? without : plan;
+    }
+
+    /// <summary>Repeats the plan until it names no recommendation that is neither selected nor deselected.</summary>
+    private static async Task<InstallPlan> PlanWithRecommendationsAsync(BoreaServices services, InstallPlanningRequest request, IReadOnlySet<string> kept, IReadOnlySet<string> deselected)
+    {
+        var recommended = new HashSet<string>(kept, StringComparer.Ordinal);
+        request = request with { Recommended = recommended };
+        while (true)
+        {
+            var plan = await services.InstallPlanner.PlanAsync(request);
+            var added = false;
+            foreach (var choice in plan.Choices.Where(choice => choice.Kind == PlanningChoiceKind.Recommendation && !deselected.Contains(choice.Key)))
+                added |= recommended.Add(choice.Key);
+
+            if (!added)
+                return plan;
+        }
+    }
+
+    private static bool Blocks(PlanningMessage conflict, PlanningChoice recommendation)
+        => ReferenceEquals(conflict.Dependency, recommendation.Dependency)
+            || (recommendation.Dependency.IsAnyOf ? recommendation.Dependency.AnyOf.Select(value => value.ModId) : [recommendation.Dependency.ModId!]).Contains(conflict.ModId, ModIds.Comparer);
+
+    private InstallChoices NewChoices(Guid instanceId, IReadOnlyList<RequestedMod> requested, InstallPlan plan)
+    {
+        var choices = new InstallChoices(instanceId, requested, ContentName);
+        choices.Apply(plan);
+        return choices;
+    }
+
+    private string ContentName(string modId)
+        => _listings.FirstOrDefault(item => ModIds.Equals(item.ModId, modId))?.Name ?? modId;
+
+    private void HoldPlan(IInstallRow row, InstallPlan plan)
+    {
+        row.PendingPlan = plan;
+        row.InstallWarning = plan.Warnings.Count > 0 ? Describe(plan.Warnings) : null;
+        if (row.Choices is { } choices)
+            choices.BlockedText = BlockedText(plan);
+    }
+
+    /// <summary>What stops a plan whose choices are shown, without the open alternatives that the choices already show.</summary>
+    private static string? BlockedText(InstallPlan plan)
+    {
+        var messages = plan.Conflicts.Concat(plan.UnresolvedChoices.Where(message => message.Kind != PlanningMessageKind.AlternativeChoice)).ToList();
+        return messages.Count > 0 ? Describe(messages) : null;
+    }
+
+    /// <summary>
+    /// Runs the plan the row holds after the user confirmed it. The executor
+    /// refuses it when the instance changed since it was planned.
     /// </summary>
     internal async Task ConfirmInstallAsync(IInstallRow row)
     {
@@ -132,21 +213,38 @@ public partial class MainViewModel
             await ReloadInstancesAsync();
     }
 
-    private async Task<bool> ExecutePendingPlanAsync(IInstallRow row)
+    /// <param name="starting">Runs right before the executor starts.</param>
+    private async Task<bool> ExecutePendingPlanAsync(IInstallRow row, Action? starting = null)
     {
-        if (_services is null || row.PendingPlan is not { } plan || row.IsInstalling)
+        if (_services is null || row.IsInstalling || (row.PendingPlan is null && row.Choices is null))
             return false;
 
-        row.PendingPlan = null;
-        row.InstallWarning = null;
+        var services = _services;
+        var plan = row.PendingPlan;
         row.IsInstalling = true;
+        var executed = false;
         try
         {
-            await _services.PlanExecutor.ExecuteAsync(plan, enable: true, ProgressOf(row));
+            if (row.Choices is { } choices)
+            {
+                plan = await ReplanAsync(services, row, choices);
+                if (plan is null)
+                    return false;
+            }
+
+            row.PendingPlan = null;
+            row.InstallWarning = null;
+            row.Choices = null;
+            starting?.Invoke();
+            executed = true;
+            await services.PlanExecutor.ExecuteAsync(plan!, enable: true, ProgressOf(row));
         }
         catch (Exception exception) when (IsInstallFailure(exception))
         {
-            row.InstallError = exception.Message;
+            if (row.Choices is { } choices)
+                choices.BlockedText = exception.Message;
+            else
+                row.InstallError = exception.Message;
         }
         finally
         {
@@ -156,13 +254,28 @@ public partial class MainViewModel
             row.ProgressDetail = null;
         }
 
-        return true;
+        return executed;
+    }
+
+    /// <summary>Plans again with the user's choices, or returns null and keeps the row waiting when that plan asks something new, cannot run, or has a new warning.</summary>
+    private async Task<InstallPlan?> ReplanAsync(BoreaServices services, IInstallRow row, InstallChoices choices)
+    {
+        var shown = row.PendingPlan?.Warnings ?? [];
+        var instance = await services.Instances.GetByIdAsync(choices.InstanceId)
+            ?? throw new InvalidOperationException(Localization.InstallInstanceMissing);
+        var plan = await PlanWithChoicesAsync(services, PlanningRequest(services, instance, choices.Requested), choices);
+        if (!choices.Apply(plan) && plan.IsReady && plan.Warnings.All(shown.Contains))
+            return plan;
+
+        HoldPlan(row, plan);
+        return null;
     }
 
     internal static void CancelInstall(IInstallRow row)
     {
         row.PendingPlan = null;
         row.InstallWarning = null;
+        row.Choices = null;
     }
 
     /// <summary>

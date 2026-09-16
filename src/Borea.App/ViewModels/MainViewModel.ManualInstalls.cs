@@ -302,6 +302,8 @@ public sealed partial class ManualInstallItem : ObservableObject, IInstallRow
     [ObservableProperty]
     private InstallPlan? _pendingPlan;
 
+    public InstallChoices? Choices { get; set; }
+
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CanAct))]
     [NotifyPropertyChangedFor(nameof(CanManage))]
