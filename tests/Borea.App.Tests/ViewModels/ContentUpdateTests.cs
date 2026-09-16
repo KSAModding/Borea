@@ -253,6 +253,30 @@ public sealed class ContentUpdateTests
     }
 
     [Fact]
+    public async Task Update_NewRecommendation_WaitsOnTheRowAndInstallsWithTheUpdate()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(respond: ServeArchive);
+        harness.SpaceDock.Releases.AddRange([Release("1.0.0"), Release("1.1.0", dependencies: [new ModDependency("kept", ModDependencyKind.Recommends)]), Release("1.0.0", modId: "kept")]);
+        var viewModel = harness.ViewModel;
+        var instance = await InstalledContent.AddAsync(harness, OwnId, activate: true, ownership: ModInstallOwnership.Borea, version: "1.0.0");
+        await viewModel.LoadAsync();
+        await viewModel.ActiveInstance!.OpenCommand.ExecuteAsync(null);
+        var row = viewModel.ContentGroups.Single().Items.Single();
+
+        await row.UpdateCommand.ExecuteAsync(null);
+
+        Assert.True(row.IsConfirmingUpdate);
+        Assert.True(Assert.Single(row.Choices!.Recommended).IsSelected);
+        Assert.Equal(ModVersion.Parse("1.0.0"), Assert.Single((await harness.Services.Instances.GetByIdAsync(instance.InstanceId))!.Mods).Version);
+
+        await row.ConfirmUpdateCommand.ExecuteAsync(null);
+
+        var mods = (await harness.Services.Instances.GetByIdAsync(instance.InstanceId))!.Mods;
+        Assert.Equal(ModVersion.Parse("1.1.0"), mods.Single(mod => mod.ModId == OwnId).Version);
+        Assert.Contains(mods, mod => mod.ModId == "kept");
+    }
+
+    [Fact]
     public async Task Update_ReloadWhileItRuns_KeepsTheRowAndBlocksOtherUpdates()
     {
         using var download = new ManualResetEventSlim();
@@ -319,6 +343,24 @@ public sealed class ContentUpdateTests
         Assert.Equal(
             ["0.7.4", "1.1.9", "1.0.0"],
             (await harness.Services.Instances.GetByIdAsync(instance.InstanceId))!.Mods.Select(mod => mod.Version.ToString()));
+    }
+
+    [Fact]
+    public async Task UpdateAll_RecommendationOfAnUnchangedMod_AsksNothing()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        harness.SpaceDock.Releases.AddRange([Release("1.0.0", dependencies: [new ModDependency("declined", ModDependencyKind.Recommends)]), Release("1.0.0", modId: "declined")]);
+        var viewModel = harness.ViewModel;
+        await InstalledContent.AddAsync(harness, "AdvancedFlightComputer", activate: true, ownership: ModInstallOwnership.Borea, version: "0.7.4");
+        await InstalledContent.AddAsync(harness, OwnId, activate: true, ownership: ModInstallOwnership.Borea, version: "1.0.0");
+        await viewModel.LoadAsync();
+        await viewModel.ActiveInstance!.OpenCommand.ExecuteAsync(null);
+        var updateAll = viewModel.UpdateAll!;
+
+        await updateAll.UpdateCommand.ExecuteAsync(null);
+
+        Assert.Null(updateAll.Choices);
+        Assert.Equal(["AdvancedFlightComputer 0.7.5"], updateAll.PendingPlan!.Operations.Select(operation => $"{operation.Release.ModId} {operation.Release.Version}"));
     }
 
     [Fact]
@@ -429,30 +471,31 @@ public sealed class ContentUpdateTests
         Assert.Empty(row.Changelogs);
     }
 
-    private static ModVersionMetadata Release(string version, ReleaseStatus status = ReleaseStatus.Stable, IReadOnlyList<ModDependency>? dependencies = null, string? changelog = null) => new(
+    private static ModVersionMetadata Release(string version, ReleaseStatus status = ReleaseStatus.Stable, IReadOnlyList<ModDependency>? dependencies = null, string? changelog = null, string modId = OwnId) => new(
         specVersion: 1,
-        modId: OwnId,
+        modId: modId,
         version: ModVersion.Parse(version),
         releaseStatus: status,
         releaseDate: DateTimeOffset.UnixEpoch,
         gameMin: "2026.1.1.1",
         gameMinRevision: 1,
-        download: new DownloadInfo($"https://{ArchiveHost}/{OwnId}/{version}.zip", sha256: null, sizeBytes: null, contentType: "application/zip"),
+        download: new DownloadInfo($"https://{ArchiveHost}/{modId}/{version}.zip", sha256: null, sizeBytes: null, contentType: "application/zip"),
         installSizeBytes: null,
         dependencies: dependencies ?? [],
         changelog: changelog);
 
-    /// <summary>Serves a zip with a mod.toml at its root for every archive URL.</summary>
+    /// <summary>Serves a zip with a mod.toml at its root, named for the mod the archive URL names.</summary>
     private static HttpResponseMessage? ServeArchive(HttpRequestMessage request)
     {
         if (request.RequestUri?.Host != ArchiveHost)
             return null;
 
+        var modId = request.RequestUri.Segments[1].TrimEnd('/');
         using var buffer = new MemoryStream();
         using (var archive = new ZipArchive(buffer, ZipArchiveMode.Create, leaveOpen: true))
         {
             using var writer = new StreamWriter(archive.CreateEntry("mod.toml").Open(), Encoding.UTF8);
-            writer.Write($"name = \"{OwnId}\"");
+            writer.Write($"name = \"{modId}\"");
         }
 
         return new HttpResponseMessage(HttpStatusCode.OK) { Content = new ByteArrayContent(buffer.ToArray()) };

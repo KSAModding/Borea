@@ -634,9 +634,19 @@ public sealed partial class DiscoverItem : ObservableObject, IInstallRow
     /// The planner's warnings while <see cref="PendingPlan"/> waits for a confirmation.
     /// </summary>
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsConfirmingInstall))]
+    [NotifyPropertyChangedFor(nameof(ConfirmInstallText))]
     private string? _installWarning;
 
     public InstallPlan? PendingPlan { get; set; }
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsConfirmingInstall))]
+    private InstallChoices? _choices;
+
+    public bool IsConfirmingInstall => InstallWarning is not null || Choices is not null;
+
+    public string ConfirmInstallText => InstallWarning is null ? _owner.Localization.ContentAdd : _owner.Localization.InstallAnyway;
 
     /// <summary>
     /// Mods install into an instance; a loader is set up from the settings.
@@ -708,6 +718,7 @@ public sealed partial class DiscoverItem : ObservableObject, IInstallRow
         InstallError = null;
         InstallWarning = null;
         PendingPlan = null;
+        Choices = null;
         IsConfirmingRemove = false;
     }
 
@@ -721,6 +732,7 @@ public sealed partial class DiscoverItem : ObservableObject, IInstallRow
         OnPropertyChanged(nameof(PublishedDateText));
         OnPropertyChanged(nameof(UpdatedText));
         OnPropertyChanged(nameof(UpdatedDateText));
+        OnPropertyChanged(nameof(ConfirmInstallText));
     }
 
     [RelayCommand]

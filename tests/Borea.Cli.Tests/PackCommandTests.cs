@@ -386,7 +386,7 @@ public sealed class PackCommandTests : IDisposable
                 FakeModPackInstaller.Member(flightTools, ModPackMemberStatus.Failed, "The archive hash did not match."),
                 FakeModPackInstaller.Member(library, ModPackMemberStatus.Installed),
             },
-            new[] { new Borea.Core.Planning.PlanningMessage("library", "yanked", "Broken build.") },
+            new[] { new Borea.Core.Planning.PlanningMessage("library", Borea.Core.Planning.PlanningMessageKind.YankedPin) { Value = "Broken build." } },
             false);
         await _host.RunAsync("instance", "create", "Alpha");
 

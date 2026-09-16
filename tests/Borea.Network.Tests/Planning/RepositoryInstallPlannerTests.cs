@@ -170,6 +170,80 @@ public sealed class RepositoryInstallPlannerTests
     }
 
     [Fact]
+    public async Task PlanAsync_InstalledRecommendationNeedsNoChoice()
+    {
+        var a = Release("A", dependencies: [new ModDependency("B", ModDependencyKind.Recommends)]);
+        var instance = Instance.FromExisting(Guid.NewGuid(), "Test", InstanceSource.Custom.Value, DateTimeOffset.UtcNow, [Installed("B")], false);
+        var plan = await new RepositoryInstallPlanner(new ModDependencyResolver()).PlanAsync(new InstallPlanningRequest(instance, [new RequestedMod(a, InstallReason.Manual)], new FakeRepository([a, Release("B")])));
+        Assert.True(plan.IsReady);
+        Assert.Empty(plan.Choices);
+    }
+
+    [Fact]
+    public async Task PlanAsync_InstalledOwnerAsksAgainAboutNoRecommendationOrSuggestion()
+    {
+        var dependencies = new[] { new ModDependency("B", ModDependencyKind.Recommends), new ModDependency("C", ModDependencyKind.Suggests) };
+        var installed = Installed("A", dependencies: dependencies);
+        var instance = Instance.FromExisting(Guid.NewGuid(), "Test", InstanceSource.Custom.Value, DateTimeOffset.UtcNow, [installed], false);
+        var request = new InstallPlanningRequest(instance, [new RequestedMod(installed.Metadata, InstallReason.Manual, Exact: false)], new FakeRepository([installed.Metadata, Release("B"), Release("C")]));
+        var plan = await new RepositoryInstallPlanner(new ModDependencyResolver()).PlanAsync(request);
+        Assert.True(plan.IsReady);
+        Assert.Empty(plan.Operations);
+        Assert.Empty(plan.Choices);
+    }
+
+    [Fact]
+    public async Task PlanAsync_ReplacingReleaseAsksOnlyAboutItsNewRecommendation()
+    {
+        var installed = Installed("A", dependencies: [new ModDependency("B", ModDependencyKind.Recommends)]);
+        var instance = Instance.FromExisting(Guid.NewGuid(), "Test", InstanceSource.Custom.Value, DateTimeOffset.UtcNow, [installed], false);
+        var update = Release("A", "1.1.0", dependencies: [new ModDependency("B", ModDependencyKind.Recommends), new ModDependency("C", ModDependencyKind.Recommends)]);
+        var request = new InstallPlanningRequest(instance, [new RequestedMod(installed.Metadata, InstallReason.Manual, Exact: false)], new FakeRepository([installed.Metadata, update, Release("B"), Release("C")]));
+        var plan = await new RepositoryInstallPlanner(new ModDependencyResolver()).PlanAsync(request);
+        Assert.Equal("1.1.0", Assert.Single(plan.Operations).Release.Version.ToString());
+        Assert.Equal("A:dependency:1:recommendation", Assert.Single(plan.Choices).Key);
+    }
+
+    [Fact]
+    public async Task PlanAsync_IncludedRecommendationKeepsItsChoice()
+    {
+        var recommendation = new ModDependency("B", ModDependencyKind.Recommends);
+        var a = Release("A", dependencies: [recommendation]);
+        var request = new InstallPlanningRequest(EmptyInstance(), [new RequestedMod(a, InstallReason.Manual)], new FakeRepository([a, Release("B")]), Recommended: new HashSet<string> { "A:dependency:0:recommendation" });
+        var plan = await new RepositoryInstallPlanner(new ModDependencyResolver()).PlanAsync(request);
+        Assert.True(plan.IsReady);
+        Assert.Equal(["B", "A"], plan.Operations.Select(value => value.Release.ModId));
+        var choice = Assert.Single(plan.Choices);
+        Assert.Equal("include", choice.Selected);
+        Assert.Same(recommendation, choice.Dependency);
+    }
+
+    [Fact]
+    public async Task PlanAsync_NewestRequestWithADependency_DoesNotFallBackToAnOlderRelease()
+    {
+        var newest = Release("A", "2.0.0", dependencies: [Required("B")]);
+        var request = new InstallPlanningRequest(EmptyInstance(), [new RequestedMod(newest, InstallReason.Manual, Exact: false)], new FakeRepository([Release("A"), newest, Release("B")]));
+        var plan = await new RepositoryInstallPlanner(new ModDependencyResolver()).PlanAsync(request);
+        Assert.True(plan.IsReady);
+        Assert.Equal(["B 1.0.0", "A 2.0.0"], plan.Operations.Select(value => $"{value.Release.ModId} {value.Release.Version}"));
+    }
+
+    [Fact]
+    public async Task PlanAsync_SuggestionIsListedAndNotInstalled()
+    {
+        var suggestion = new ModDependency("B", ModDependencyKind.Suggests);
+        var a = Release("A", dependencies: [suggestion]);
+        var plan = await PlanAsync([a], [a, Release("B")]);
+        Assert.True(plan.IsReady);
+        Assert.Equal("A", Assert.Single(plan.Operations).Release.ModId);
+        var choice = Assert.Single(plan.Choices);
+        Assert.Equal(PlanningChoiceKind.Suggestion, choice.Kind);
+        Assert.Equal(["B"], choice.Options);
+        Assert.Null(choice.Selected);
+        Assert.Same(suggestion, choice.Dependency);
+    }
+
+    [Fact]
     public async Task PlanAsync_ReplacedInstalledVersionDoesNotCauseStaleConflict()
     {
         var a = Release("A", dependencies: [new ModDependency("B", ModDependencyKind.Conflict, maxVersion: ModVersion.Parse("1.0.0"))]);

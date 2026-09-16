@@ -411,9 +411,19 @@ public sealed partial class VersionItem : ObservableObject, IInstallRow
     /// The planner's warnings while <see cref="PendingPlan"/> waits for a confirmation.
     /// </summary>
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsConfirmingInstall))]
+    [NotifyPropertyChangedFor(nameof(ConfirmInstallText))]
     private string? _installWarning;
 
     public InstallPlan? PendingPlan { get; set; }
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsConfirmingInstall))]
+    private InstallChoices? _choices;
+
+    public bool IsConfirmingInstall => InstallWarning is not null || Choices is not null;
+
+    public string ConfirmInstallText => InstallWarning is null ? _owner.Localization.ContentAdd : _owner.Localization.InstallAnyway;
 
     /// <summary>Mods install into an instance; a loader is set up from the settings.</summary>
     public bool CanInstall => _release.Type == ContentType.Mod;
@@ -448,6 +458,7 @@ public sealed partial class VersionItem : ObservableObject, IInstallRow
         OnPropertyChanged(nameof(CompatibilityText));
         OnPropertyChanged(nameof(PublishedText));
         OnPropertyChanged(nameof(PublishedDateText));
+        OnPropertyChanged(nameof(ConfirmInstallText));
     }
 
     internal void RefreshCompatibility(GameVersion? installed)

@@ -167,12 +167,12 @@ public partial class MainViewModel
 
             if (!planned.IsReady)
             {
-                row.InstallError = Describe(planned, planned.Conflicts.Concat(planned.UnresolvedChoices));
+                row.InstallError = Describe(planned.Conflicts.Concat(planned.UnresolvedChoices));
             }
             else if (planned.Warnings.Count > 0)
             {
                 row.PendingPlan = planned;
-                row.InstallWarning = Describe(planned, planned.Warnings);
+                row.InstallWarning = Describe(planned.Warnings);
             }
             else
             {
@@ -301,6 +301,8 @@ public sealed partial class ManualInstallItem : ObservableObject, IInstallRow
 
     [ObservableProperty]
     private InstallPlan? _pendingPlan;
+
+    public InstallChoices? Choices { get; set; }
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CanAct))]

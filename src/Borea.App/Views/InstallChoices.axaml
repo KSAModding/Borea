@@ -1,0 +1,50 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Borea.App.ViewModels"
+             x:Class="Borea.App.Views.InstallChoices"
+             x:DataType="vm:InstallChoices">
+    <StackPanel Spacing="8">
+        <StackPanel Spacing="2" IsVisible="{Binding HasRecommended}">
+            <TextBlock Classes="label-md" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.InstallChoicesRecommended}" />
+            <ItemsControl ItemsSource="{Binding Recommended}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:RecommendedChoice">
+                        <CheckBox IsChecked="{Binding IsSelected}">
+                            <TextBlock Classes="body-sm" Text="{Binding Text}" TextWrapping="Wrap" />
+                        </CheckBox>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </StackPanel>
+        <ItemsControl ItemsSource="{Binding Alternatives}">
+            <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:AlternativeChoice">
+                    <StackPanel Spacing="2" IsVisible="{Binding IsRequired}">
+                        <TextBlock Classes="label-md" Text="{Binding Text}" TextWrapping="Wrap" />
+                        <!-- the view model keeps one option selected, so the buttons need no group name -->
+                        <ItemsControl ItemsSource="{Binding Options}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:AlternativeOption">
+                                    <RadioButton IsChecked="{Binding IsSelected}">
+                                        <TextBlock Classes="body-sm" Text="{Binding Name}" />
+                                    </RadioButton>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+        <StackPanel Spacing="2" IsVisible="{Binding HasSuggested}">
+            <TextBlock Classes="label-md" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.InstallChoicesSuggested}" />
+            <ItemsControl ItemsSource="{Binding Suggested}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="x:String">
+                        <TextBlock Classes="body-sm secondary" Text="{Binding}" TextWrapping="Wrap" />
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </StackPanel>
+        <TextBlock Classes="body-sm danger" Text="{Binding BlockedText}" TextWrapping="Wrap" IsVisible="{Binding BlockedText, Converter={x:Static ObjectConverters.IsNotNull}}" />
+    </StackPanel>
+</UserControl>

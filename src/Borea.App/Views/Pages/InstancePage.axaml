@@ -77,10 +77,13 @@
             <Grid ColumnDefinitions="*,Auto" Margin="0,16,0,0" IsVisible="{Binding UpdateAll.IsConfirmingUpdate}">
                 <TextBlock Classes="body-md secondary" Text="{Binding UpdateAll.InstallWarning}" TextWrapping="Wrap" VerticalAlignment="Center" />
                 <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" Margin="16,0,0,0" VerticalAlignment="Center">
-                    <Button Classes="text primary" Content="{Binding UpdateAll.ConfirmUpdateText}" Command="{Binding UpdateAll.ConfirmUpdateCommand}" IsEnabled="{Binding CanChangeContent}" />
+                    <Panel IsEnabled="{Binding CanChangeContent}">
+                        <Button Classes="text primary" Content="{Binding UpdateAll.ConfirmUpdateText}" Command="{Binding UpdateAll.ConfirmUpdateCommand}" IsEnabled="{Binding UpdateAll.Choices.IsComplete, FallbackValue={x:True}}" />
+                    </Panel>
                     <Button Classes="text" Content="{Binding Localization.LibraryCancel}" Command="{Binding UpdateAll.CancelUpdateCommand}" />
                 </StackPanel>
             </Grid>
+            <ContentControl Margin="0,12,0,0" Content="{Binding UpdateAll.Choices}" IsVisible="{Binding UpdateAll.Choices, Converter={x:Static ObjectConverters.IsNotNull}}" />
             <ItemsControl Margin="0,12,0,0" ItemsSource="{Binding UpdateAll.Changelogs}" ItemTemplate="{StaticResource ChangelogEntry}" IsVisible="{Binding UpdateAll.HasChangelogs}">
                 <ItemsControl.ItemsPanel>
                     <ItemsPanelTemplate>

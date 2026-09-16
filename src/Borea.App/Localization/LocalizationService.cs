@@ -249,6 +249,10 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string InstallAnyway => Resources.InstallAnyway;
 
+    public string InstallChoicesRecommended => Resources.InstallChoicesRecommended;
+
+    public string InstallChoicesSuggested => Resources.InstallChoicesSuggested;
+
     public string UpdateAnyway => Resources.UpdateAnyway;
 
     public string ContentUpdate => Resources.ContentUpdate;
@@ -526,9 +530,6 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string FormatDiscoverInstalledIn(string instance)
         => string.Format(CultureInfo.CurrentCulture, Resources.DiscoverInstalledInFormat, instance);
-
-    public string FormatInstallReleaseChannel(string version, string status)
-        => string.Format(CultureInfo.CurrentCulture, Resources.InstallReleaseChannelFormat, version, status);
 
     public string FormatDiscoverIndexStale(string age)
         => string.Format(CultureInfo.CurrentCulture, Resources.DiscoverIndexStaleFormat, age);

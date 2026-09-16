@@ -362,6 +362,39 @@ public sealed class ModInstallCommandTests : IDisposable
     }
 
     [Fact]
+    public async Task InstallDryRun_WarningsChoicesAndConflicts_PrintTheirEnglishText()
+    {
+        var alternatives = ModDependency.OfAlternatives(ModDependencyKind.Required, [new ModDependencyAlternative("first"), new ModDependencyAlternative("second")]);
+        var dependencies = new[]
+        {
+            new ModDependency("helper", ModDependencyKind.Recommends),
+            new ModDependency("extra", ModDependencyKind.Suggests),
+            alternatives,
+            new ModDependency("missing-lib", ModDependencyKind.Required, ModVersion.Parse("1.0.0")),
+        };
+        _host.Mods.Releases.Add(ContentCommandFixtures.Release(version: "2.1.0-dev.1", releaseStatus: ReleaseStatus.Dev, dependencies: dependencies));
+        foreach (var id in new[] { "helper", "extra", "first", "second" })
+            _host.Mods.Releases.Add(ContentCommandFixtures.Release(id: id, version: "1.0.0"));
+        await _host.RunAsync("instance", "create", "Alpha");
+
+        var run = await _host.RunAsync("install", "flight-tools", "--version", "2.1.0-dev.1", "--instance", "Alpha", "--dry-run");
+
+        Assert.Equal(1, run.ExitCode);
+        Assert.Equal(
+            string.Join(Environment.NewLine,
+            [
+                "warning: Game compatibility is Unknown.",
+                "warning: Release 2.1.0-dev.1 has the release status dev, which the stable channel does not offer.",
+                "Install flight-tools 2.1.0-dev.1.",
+                "choice: Select one alternative for Required dependency on any of [first, second].",
+                "choice option: flight-tools:dependency:2:alternative = first, second",
+                "conflict: Required dependency on mod 'missing-lib' >= 1.0.0",
+                string.Empty,
+            ]),
+            run.Output);
+    }
+
+    [Fact]
     public async Task Install_ServiceFailure_ReturnsFailedExitCode()
     {
         _host.Mods.Releases.Add(ContentCommandFixtures.Release());
