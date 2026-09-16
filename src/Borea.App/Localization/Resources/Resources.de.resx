@@ -159,6 +159,18 @@
   <data name="LibraryImportFromProfile" xml:space="preserve">
     <value>Aus Spielprofil importieren</value>
   </data>
+  <data name="LibraryNeverPlayed" xml:space="preserve">
+    <value>Nie gespielt</value>
+  </data>
+  <data name="LibraryLastPlayedFormat" xml:space="preserve">
+    <value>Zuletzt gespielt am {0}</value>
+  </data>
+  <data name="LibrarySortName" xml:space="preserve">
+    <value>Name</value>
+  </data>
+  <data name="LibrarySortLastPlayed" xml:space="preserve">
+    <value>Zuletzt gespielt</value>
+  </data>
   <data name="NavigationTasks" xml:space="preserve">
     <value>Aufgaben</value>
   </data>
