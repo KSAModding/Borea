@@ -124,6 +124,24 @@ public sealed class FileInstanceRepositoryTests : IDisposable
     }
 
     [Fact]
+    public async Task RoundTrip_PersistsWhenTheInstanceWasLastPlayed()
+    {
+        var played = await _repository.CreateAsync("Played", InstanceSource.Custom.Value);
+        var never = await _repository.CreateAsync("Never", InstanceSource.Custom.Value);
+        var playedAt = new DateTimeOffset(2026, 9, 15, 11, 24, 36, 123, TimeSpan.Zero);
+
+        await _repository.UpdateAsync(played.InstanceId, instance =>
+        {
+            instance.RecordPlayed(playedAt);
+            return true;
+        });
+
+        var freshRepository = new FileInstanceRepository(_pathProvider);
+        Assert.Equal(playedAt, (await freshRepository.GetByIdAsync(played.InstanceId))?.LastPlayedAt);
+        Assert.Null((await freshRepository.GetByIdAsync(never.InstanceId))?.LastPlayedAt);
+    }
+
+    [Fact]
     public async Task CreateAsync_ThrowsWhenNameAlreadyTaken()
     {
         await _repository.CreateAsync("Duplicate Name", InstanceSource.Custom.Value);
