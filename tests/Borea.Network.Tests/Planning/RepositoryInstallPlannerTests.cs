@@ -170,6 +170,16 @@ public sealed class RepositoryInstallPlannerTests
     }
 
     [Fact]
+    public async Task PlanAsync_NewestRequestWithADependency_DoesNotFallBackToAnOlderRelease()
+    {
+        var newest = Release("A", "2.0.0", dependencies: [Required("B")]);
+        var request = new InstallPlanningRequest(EmptyInstance(), [new RequestedMod(newest, InstallReason.Manual, Exact: false)], new FakeRepository([Release("A"), newest, Release("B")]));
+        var plan = await new RepositoryInstallPlanner(new ModDependencyResolver()).PlanAsync(request);
+        Assert.True(plan.IsReady);
+        Assert.Equal(["B 1.0.0", "A 2.0.0"], plan.Operations.Select(value => $"{value.Release.ModId} {value.Release.Version}"));
+    }
+
+    [Fact]
     public async Task PlanAsync_ReplacedInstalledVersionDoesNotCauseStaleConflict()
     {
         var a = Release("A", dependencies: [new ModDependency("B", ModDependencyKind.Conflict, maxVersion: ModVersion.Parse("1.0.0"))]);

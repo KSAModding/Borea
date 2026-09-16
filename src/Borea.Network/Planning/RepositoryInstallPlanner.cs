@@ -38,7 +38,7 @@ public sealed class RepositoryInstallPlanner : IInstallPlanner
             if (++states > SearchLimit) { truncated = true; return; }
             if (index == ids.Count)
             {
-                var result = Evaluate(request, channel, roots, assigned, initialConflicts);
+                var result = Evaluate(request, channel, roots, domains, assigned, initialConflicts);
                 if (best is null || result.Score.CompareTo(best.Score) < 0) best = result;
                 return;
             }
@@ -82,7 +82,7 @@ public sealed class RepositoryInstallPlanner : IInstallPlanner
     }
 
     /// <summary>
-    /// The candidates of every reachable mod, newest first. An exact request is its own only candidate,
+    /// The candidates of every reachable mod, newest first and yanked releases last. An exact request is its own only candidate,
     /// and every other candidate is inside the channel or already installed.
     /// </summary>
     private static async Task<Dictionary<string, IReadOnlyList<RequestedMod?>>> BuildDomainsAsync(InstallPlanningRequest request, Dictionary<string, RequestedMod> roots, ReleaseChannel channel, List<PlanningMessage> conflicts, CancellationToken cancellationToken)
@@ -116,7 +116,7 @@ public sealed class RepositoryInstallPlanner : IInstallPlanner
             }
             if (root is { Exact: false } && values.Count == 0 && outsideChannel)
                 conflicts.Add(Message(id, "outside-channel", $"No release of {id} in the {channel.ToName()} channel is available."));
-            releases[id] = values.DistinctBy(value => value.Version).OrderByDescending(value => value.Version).ToList();
+            releases[id] = values.DistinctBy(value => value.Version).OrderBy(value => value.Yanked).ThenByDescending(value => value.Version).ToList();
             foreach (var dependencyId in releases[id].SelectMany(DependencyIds).Distinct(ModIds.Comparer).OrderBy(value => value, ModIds.Comparer)) pending.Enqueue(dependencyId);
         }
 
@@ -128,7 +128,7 @@ public sealed class RepositoryInstallPlanner : IInstallPlanner
 
     private static IEnumerable<string> DependencyIds(ModVersionMetadata release) => release.Dependencies.SelectMany(value => value.IsAnyOf ? value.AnyOf.Select(item => item.ModId) : value.ModId is null ? [] : [value.ModId]);
 
-    private SearchResult Evaluate(InstallPlanningRequest request, ReleaseChannel channel, Dictionary<string, RequestedMod> roots, Dictionary<string, RequestedMod?> assigned, IReadOnlyList<PlanningMessage> initialConflicts)
+    private SearchResult Evaluate(InstallPlanningRequest request, ReleaseChannel channel, Dictionary<string, RequestedMod> roots, Dictionary<string, IReadOnlyList<RequestedMod?>> domains, Dictionary<string, RequestedMod?> assigned, IReadOnlyList<PlanningMessage> initialConflicts)
     {
         var selected = assigned.Where(value => value.Value is not null).ToDictionary(value => value.Key, value => value.Value!, ModIds.Comparer);
         ExpandInstalledClosure(request, roots, selected);
@@ -151,7 +151,15 @@ public sealed class RepositoryInstallPlanner : IInstallPlanner
             foreach (var evaluation in _resolver.Evaluate(proposed, item.Release).Where(value => value.Outcome == DependencyOutcome.Conflict)) conflicts.Add(Message(item.Release.ModId, "proposed-conflict", evaluation.Dependency.ToString()));
         }
         EvaluateRetainedInstalled(request, selected, unresolved, conflicts);
-        return new SearchResult(selected, Sort(warnings), Sort(unresolved), Sort(conflicts), choices.OrderBy(value => value.Key, StringComparer.Ordinal).ToList());
+        var age = roots.Values.Where(root => !root.Exact).Sum(root => CandidateIndex(domains[root.Release.ModId], assigned.GetValueOrDefault(root.Release.ModId)));
+        return new SearchResult(selected, age, Sort(warnings), Sort(unresolved), Sort(conflicts), choices.OrderBy(value => value.Key, StringComparer.Ordinal).ToList());
+    }
+
+    private static int CandidateIndex(IReadOnlyList<RequestedMod?> candidates, RequestedMod? chosen)
+    {
+        for (var index = 0; index < candidates.Count; index++)
+            if (Equals(candidates[index], chosen)) return index;
+        return candidates.Count;
     }
 
     private static void EvaluateRelease(InstallPlanningRequest request, ReleaseChannel channel, ModVersionMetadata release, Dictionary<string, RequestedMod> selected, List<PlanningMessage> warnings, List<PlanningMessage> unresolved, List<PlanningMessage> conflicts, List<PlanningChoice> choices)
@@ -323,12 +331,14 @@ public sealed class RepositoryInstallPlanner : IInstallPlanner
     private static PlanningMessage Message(string id, string code, string message) => new(id, code, message);
     private static IReadOnlyList<PlanningMessage> Sort(List<PlanningMessage> values) => values.Distinct().OrderBy(value => value.ModId, ModIds.Comparer).ThenBy(value => value.Code, StringComparer.Ordinal).ThenBy(value => value.Message, StringComparer.Ordinal).ToList();
 
-    private sealed record SearchResult(Dictionary<string, RequestedMod> Selected, IReadOnlyList<PlanningMessage> Warnings, IReadOnlyList<PlanningMessage> Unresolved, IReadOnlyList<PlanningMessage> Conflicts, IReadOnlyList<PlanningChoice> Choices)
+    /// <param name="Age">How far the requests that are not exact sit behind their newest candidate.</param>
+    private sealed record SearchResult(Dictionary<string, RequestedMod> Selected, int Age, IReadOnlyList<PlanningMessage> Warnings, IReadOnlyList<PlanningMessage> Unresolved, IReadOnlyList<PlanningMessage> Conflicts, IReadOnlyList<PlanningChoice> Choices)
     {
-        public SearchScore Score => new(Conflicts.Count, Conflicts.Count(value => value.Code is "unsatisfied-dependency" or "missing-request" or "retained-unsatisfied"), Unresolved.Count, Warnings.Count, Selected.Count);
+        public SearchScore Score => new(Conflicts.Count, Conflicts.Count(value => value.Code is "unsatisfied-dependency" or "missing-request" or "retained-unsatisfied"), Age, Unresolved.Count, Warnings.Count, Selected.Count);
     }
-    private readonly record struct SearchScore(int Conflicts, int Missing, int Unresolved, int Warnings, int Selected) : IComparable<SearchScore>
+    // age ranks above open choices, warnings and the number of mods, so a request does not fall back to an older release to avoid the dependencies of the newest one
+    private readonly record struct SearchScore(int Conflicts, int Missing, int Age, int Unresolved, int Warnings, int Selected) : IComparable<SearchScore>
     {
-        public int CompareTo(SearchScore other) { var value = Conflicts.CompareTo(other.Conflicts); if (value != 0) return value; value = Missing.CompareTo(other.Missing); if (value != 0) return value; value = Unresolved.CompareTo(other.Unresolved); if (value != 0) return value; value = Warnings.CompareTo(other.Warnings); if (value != 0) return value; return Selected.CompareTo(other.Selected); }
+        public int CompareTo(SearchScore other) { var value = Conflicts.CompareTo(other.Conflicts); if (value != 0) return value; value = Missing.CompareTo(other.Missing); if (value != 0) return value; value = Age.CompareTo(other.Age); if (value != 0) return value; value = Unresolved.CompareTo(other.Unresolved); if (value != 0) return value; value = Warnings.CompareTo(other.Warnings); if (value != 0) return value; return Selected.CompareTo(other.Selected); }
     }
 }
