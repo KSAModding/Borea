@@ -116,6 +116,16 @@ public sealed class ImageViewModelTests
     }
 
     [Fact]
+    public void IconFor_RecordsThatDifferOnlyInHeight_AreSeparateImages()
+    {
+        var viewModel = new MainViewModel();
+        var wide = viewModel.IconFor(new IconImage(IconUrl, Digest, 1024, 512, 4096));
+
+        Assert.Same(wide, viewModel.IconFor(new IconImage(IconUrl, Digest, 1024, 512, 4096)));
+        Assert.NotSame(wide, viewModel.IconFor(new IconImage(IconUrl, Digest, 1024, 640, 4096)));
+    }
+
+    [Fact]
     public async Task OpenContent_TakesTheDescriptionImagesOfTheListingWithoutLoadingThem()
     {
         using var harness = await ViewModelHarness.CreateAsync(editSnapshot: WithImages("AdvancedFlightComputer", $$"""{ "description": [{{Description("settings-window")}}] }"""));

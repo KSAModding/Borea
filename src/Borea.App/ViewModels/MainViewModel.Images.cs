@@ -49,7 +49,7 @@ public partial class MainViewModel
         if (record is null)
             return null;
 
-        var key = new IconKey(record.Url, record.Sha256, record.Width, record.SizeBytes, record.License, record.Attribution, record.Source);
+        var key = new IconKey(record.Url, record.Sha256, record.Width, record.Height, record.SizeBytes, record.License, record.Attribution, record.Source);
         if (!_icons.TryGetValue(key, out var icon))
         {
             icon = new ListingImage(this, record);
@@ -95,5 +95,5 @@ public partial class MainViewModel
             ContentDetailError = error;
     }
 
-    private readonly record struct IconKey(string Url, string Sha256, int Side, long SizeBytes, string? License, string? Attribution, string? Source);
+    private readonly record struct IconKey(string Url, string Sha256, int Width, int Height, long SizeBytes, string? License, string? Attribution, string? Source);
 }
