@@ -1,0 +1,51 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Borea.App.ViewModels"
+             x:Class="Borea.App.Views.ModListModal"
+             x:DataType="vm:MainViewModel">
+    <!-- the plan of a duplicate or an import, before the new instance exists -->
+    <Panel Background="#99000000">
+        <Border Classes="modal" Width="561" Margin="80,0,0,0">
+            <StackPanel DataContext="{Binding ModListImport}" x:DataType="vm:ModListImportItem">
+                <Grid ColumnDefinitions="*,Auto" Margin="24,24,24,0">
+                    <TextBlock Classes="heading-lg" Text="{Binding Title}" VerticalAlignment="Center" />
+                    <Button Grid.Column="1" Classes="icon" Command="{Binding CancelCommand}" IsEnabled="{Binding !IsInstalling}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ModalClose}">
+                        <Path Classes="icon" Data="{StaticResource Icon.Close}" />
+                    </Button>
+                </Grid>
+                <Border Height="1" Background="{StaticResource Brush.Window}" Margin="0,24,0,0" />
+                <StackPanel Margin="36,32,24,32" Spacing="16">
+                    <Grid ColumnDefinitions="Auto,12,*,16,Auto">
+                        <TextBlock Classes="heading-md heading" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ModalNameLabel}" VerticalAlignment="Center" />
+                        <TextBox Grid.Column="2" Classes="field" Text="{Binding Name}" IsEnabled="{Binding !IsInstalling}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ModalNameLabel}" VerticalAlignment="Center">
+                            <TextBox.KeyBindings>
+                                <KeyBinding Gesture="Enter" Command="{Binding ConfirmCommand}" />
+                                <KeyBinding Gesture="Escape" Command="{Binding CancelCommand}" />
+                            </TextBox.KeyBindings>
+                        </TextBox>
+                        <Button Grid.Column="4" Classes="cta" Command="{Binding ConfirmCommand}" IsEnabled="{Binding CanConfirm}">
+                            <TextBlock Classes="action-lg" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryCreate}" />
+                        </Button>
+                    </Grid>
+                    <TextBlock Classes="body-md secondary" Text="{Binding SummaryText}" TextWrapping="Wrap" />
+                    <ScrollViewer MaxHeight="200" IsVisible="{Binding HasNotes}">
+                        <ItemsControl ItemsSource="{Binding Notes}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="x:String">
+                                    <TextBlock Classes="body-md" Text="{Binding}" TextWrapping="Wrap" Margin="0,0,0,4" />
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                    <TextBlock Classes="body-md secondary" Text="{Binding InstallWarning}" TextWrapping="Wrap" IsVisible="{Binding InstallWarning, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                    <TextBlock Classes="body-md danger" Text="{Binding PlanError}" TextWrapping="Wrap" IsVisible="{Binding PlanError, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                    <TextBlock Classes="body-md danger" Text="{Binding InstallError}" TextWrapping="Wrap" IsVisible="{Binding InstallError, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                    <StackPanel Spacing="4" IsVisible="{Binding IsInstalling}">
+                        <ProgressBar Height="6" Value="{Binding Progress}" Maximum="100" Foreground="{StaticResource Brush.Accent}" />
+                        <TextBlock Classes="body-sm secondary" Text="{Binding ProgressStatus}" TextTrimming="CharacterEllipsis" />
+                    </StackPanel>
+                </StackPanel>
+            </StackPanel>
+        </Border>
+    </Panel>
+</UserControl>

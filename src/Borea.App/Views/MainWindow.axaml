@@ -87,6 +87,9 @@
     <!-- modal: new instance, and rename instance -->
     <views:InstanceNameModal IsVisible="{Binding IsNameModalOpen}" />
 
+    <!-- modal: the plan of a duplicate or an import -->
+    <views:ModListModal IsVisible="{Binding IsReviewingModList}" />
+
     <!-- modal: settings -->
     <settings:SettingsModal IsVisible="{Binding IsSettingsOpen}" />
     </Panel>

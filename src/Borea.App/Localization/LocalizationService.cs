@@ -136,6 +136,18 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string FormatLibraryLastPlayed(string date)
         => string.Format(CultureInfo.CurrentCulture, Resources.LibraryLastPlayedFormat, date);
 
+    public string LibraryImportModList => Resources.LibraryImportModList;
+
+    public string LibraryDuplicate => Resources.LibraryDuplicate;
+
+    public string LibraryExportModList => Resources.LibraryExportModList;
+
+    public string LibraryCopyModList => Resources.LibraryCopyModList;
+
+    public string ModListDuplicateTitle => Resources.ModListDuplicateTitle;
+
+    public string ModListFileType => Resources.ModListFileType;
+
     public string InstanceTabContent => Resources.InstanceTabContent;
 
     public string InstanceTabManualInstalls => Resources.InstanceTabManualInstalls;
@@ -659,6 +671,33 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string FormatSharedProfileImportNotChecked(IEnumerable<string> folderNames)
         => string.Format(CultureInfo.CurrentCulture, Resources.SharedProfileImportNotCheckedFormat, string.Join(", ", folderNames));
+
+    public string FormatModListCopyName(string instanceName)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ModListCopyNameFormat, instanceName);
+
+    public string FormatModListInstallCount(int count)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ModListInstallCountFormat, count);
+
+    public string FormatModListNotCopied(string folder)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ModListNotCopiedFormat, folder);
+
+    public string FormatModListUnknown(string modId, string version)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ModListUnknownFormat, modId, version);
+
+    public string FormatModListUnreadable(string fileName, string reason)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ModListUnreadableFormat, fileName, reason);
+
+    public string FormatModListNewerFormat(string fileName, int format)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ModListNewerFormatFormat, fileName, format);
+
+    public string FormatModListExported(string instanceName, string fileName)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ModListExportedFormat, instanceName, fileName);
+
+    public string FormatModListCopied(string instanceName)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ModListCopiedFormat, instanceName);
+
+    public string FormatModListNotExported(string folders)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ModListNotExportedFormat, folders);
 
     public string FormatPackModCount(int count)
         => string.Format(CultureInfo.CurrentCulture, Resources.PackModCountFormat, count);
