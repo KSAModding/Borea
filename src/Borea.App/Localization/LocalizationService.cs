@@ -666,6 +666,9 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string FormatContentPublished(string age)
         => string.Format(CultureInfo.CurrentCulture, Resources.ContentPublishedFormat, age);
 
+    public string FormatInstanceGroupModpack(string name, string version)
+        => string.Format(CultureInfo.CurrentCulture, Resources.InstanceGroupModpackFormat, name, version);
+
     public string FormatContentRemoveNotOwned(string modId)
         => string.Format(CultureInfo.CurrentCulture, Resources.ContentRemoveNotOwnedFormat, modId);
 

@@ -49,6 +49,27 @@ public sealed class InstanceViewModelTests
     }
 
     [Fact]
+    public async Task Open_InstanceFromAPack_GroupsThePinnedMembersUnderThePack()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: WithPack("armory-pack", "Armory Pack", "1.0.0", ("KSArmory", "0.8.44")));
+        var viewModel = harness.ViewModel;
+        await harness.Services.Instances.CreateAsync("Armory", new InstanceSource.FromModPack("armory-pack", ModVersion.Parse("1.0.0")));
+        await InstalledContent.AddAsync(harness, "KSArmory", activate: true, InstallReason.ModPack);
+        await InstalledContent.AddAsync(harness, "MeasureTools", activate: true, InstallReason.ModPack);
+        await InstalledContent.AddAsync(harness, "AdvancedFlightComputer", activate: true);
+        await viewModel.LoadAsync();
+
+        await viewModel.ActiveInstance!.OpenCommand.ExecuteAsync(null);
+
+        Assert.Equal(
+            [harness.Localization.FormatInstanceGroupModpack("Armory Pack", "1.0.0"), harness.Localization.InstanceGroupModpacks, harness.Localization.InstanceGroupMods],
+            viewModel.ContentGroups.Select(group => group.Title));
+        Assert.Equal("KSArmory", Assert.Single(viewModel.ContentGroups[0].Items).ModId);
+        Assert.Equal("MeasureTools", Assert.Single(viewModel.ContentGroups[1].Items).ModId);
+        Assert.Equal("AdvancedFlightComputer", Assert.Single(viewModel.ContentGroups[2].Items).ModId);
+    }
+
+    [Fact]
     public async Task Open_PackMembersWithoutARecordedPack_ShareOneModpacksGroupBeforeTheMods()
     {
         using var harness = await ViewModelHarness.CreateAsync();
@@ -65,6 +86,33 @@ public sealed class InstanceViewModelTests
             viewModel.ContentGroups.Select(group => group.Title));
         Assert.Equal("KSArmory", Assert.Single(viewModel.ContentGroups[0].Items).ModId);
     }
+
+    [Fact]
+    public async Task Open_RecordedPackNotInTheIndex_KeepsItsMembersInTheModpacksGroup()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var viewModel = harness.ViewModel;
+        await harness.Services.Instances.CreateAsync("Gone", new InstanceSource.FromModPack("gone-pack", ModVersion.Parse("1.0.0")));
+        await InstalledContent.AddAsync(harness, "KSArmory", activate: true, InstallReason.ModPack);
+        await viewModel.LoadAsync();
+
+        await viewModel.ActiveInstance!.OpenCommand.ExecuteAsync(null);
+
+        var group = Assert.Single(viewModel.ContentGroups);
+        Assert.Equal(harness.Localization.InstanceGroupModpacks, group.Title);
+        Assert.Equal("KSArmory", Assert.Single(group.Items).ModId);
+    }
+
+    private static Func<string, string> WithPack(string id, string name, string version, params (string Id, string Version)[] pins) => snapshot =>
+    {
+        const string empty = "\"packs\": []";
+        if (!snapshot.Contains(empty, StringComparison.Ordinal))
+            throw new InvalidOperationException("The snapshot fixture no longer has an empty packs array.");
+
+        var mods = string.Join(", ", pins.Select(pin => $$"""{ "id": "{{pin.Id}}", "version": "{{pin.Version}}" }"""));
+        var pack = $$"""{ "id": "{{id}}", "versions": [{ "authored": { "spec_version": 1, "id": "{{id}}", "type": "modpack", "name": "{{name}}", "authors": ["Maxi"], "abstract": "{{name}} abstract.", "license": "MIT", "version": "{{version}}", "released_at": "2026-09-01T12:00:00Z", "links": { "forums": "https://forums.example.com/{{id}}" }, "compatibility": { "game_min": "2026.8.19.5261" }, "mods": [{{mods}}] } }] }""";
+        return snapshot.Replace(empty, $"\"packs\": [{pack}]", StringComparison.Ordinal);
+    };
 
     [Fact]
     public async Task ToggleEnabled_WritesTheManifest()

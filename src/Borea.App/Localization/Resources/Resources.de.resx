@@ -177,6 +177,9 @@
   <data name="InstanceGroupModpacks" xml:space="preserve">
     <value>Modpacks</value>
   </data>
+  <data name="InstanceGroupModpackFormat" xml:space="preserve">
+    <value>Modpack: {0} {1}</value>
+  </data>
   <data name="InstanceGroupMods" xml:space="preserve">
     <value>Mods</value>
   </data>
