@@ -255,13 +255,13 @@ public partial class MainViewModel
                 reasons.Add(Localization.FormatPackMemberYanked(pin.ContentId, pin.Version.ToString(), release.YankedReason));
             }
 
+            InstallPlan? plan = null;
+            InstallChoices? choices = null;
             if (requested.Count > 0)
             {
-                var plan = await services.InstallPlanner.PlanAsync(
-                    new InstallPlanningRequest(instance, requested, services.Mods, installed, CurrentPlatform()));
-                var planWarnings = plan.Warnings.Where(warning => warning.Code != "yanked").ToList();
-                if (plan.IsReady && planWarnings.Count > 0)
-                    reasons.Add(Describe(planWarnings));
+                plan = await PlanWithChoicesAsync(services, new InstallPlanningRequest(instance, requested, services.Mods, installed, CurrentPlatform()), null);
+                if (InstallChoices.AreNeeded(plan))
+                    choices = NewChoices(instanceId, requested, plan);
             }
 
             var request = new ModPackInstallRequest(
@@ -272,10 +272,12 @@ public partial class MainViewModel
                 CurrentPlatform(),
                 ProceedWithYankedMembers: yanked.Count == 0 ? null : yanked);
 
-            if (reasons.Count > 0)
+            if (reasons.Count > 0 || choices is not null || (plan is { IsReady: true } && PackPlanWarnings(plan).Count > 0))
             {
                 pack.PendingInstall = request;
-                pack.InstallWarning = string.Join(" ", reasons.Distinct());
+                pack.PendingReasons = reasons;
+                pack.Choices = choices;
+                HoldPack(pack, plan);
             }
             else
             {
@@ -320,28 +322,67 @@ public partial class MainViewModel
         return warnings;
     }
 
+    /// <summary>Shows the pack's own warnings, the warnings of a plan that can run or asks for choices, and what blocks that plan.</summary>
+    private void HoldPack(PackItem pack, InstallPlan? plan)
+    {
+        var reasons = pack.PendingReasons.ToList();
+        if (plan is not null && (plan.IsReady || pack.Choices is not null) && PackPlanWarnings(plan) is { Count: > 0 } warnings)
+            reasons.Add(Describe(warnings));
+
+        pack.PendingPlan = plan;
+        pack.InstallWarning = reasons.Count > 0 ? string.Join(" ", reasons.Distinct()) : null;
+        if (pack.Choices is { } choices && plan is not null)
+            choices.BlockedText = BlockedText(plan);
+    }
+
+    /// <summary>The pack names its yanked members itself.</summary>
+    private static List<PlanningMessage> PackPlanWarnings(InstallPlan plan)
+        => plan.Warnings.Where(warning => warning.Kind != PlanningMessageKind.Yanked).ToList();
+
+    /// <summary>Installs the pack the row holds, unless the plan with its choices asks something new, cannot run, or has a new warning.</summary>
     internal async Task ConfirmPackInstallAsync(PackItem pack)
     {
         if (_services is null || pack.PendingInstall is not { } request || pack.IsInstalling)
             return;
 
-        pack.PendingInstall = null;
-        pack.InstallWarning = null;
+        var services = _services;
         pack.IsInstalling = true;
+        var executed = false;
         try
         {
-            await ExecutePackInstallAsync(_services, pack, request);
+            if (pack.Choices is { } choices)
+            {
+                var shown = pack.PendingPlan?.Warnings ?? [];
+                var instance = await services.Instances.GetByIdAsync(choices.InstanceId)
+                    ?? throw new InvalidOperationException(Localization.InstallInstanceMissing);
+                var plan = await PlanWithChoicesAsync(services, PlanningRequest(services, instance, choices.Requested), choices);
+                if (choices.Apply(plan) || !plan.IsReady || !plan.Warnings.All(shown.Contains))
+                {
+                    HoldPack(pack, plan);
+                    return;
+                }
+
+                request = request with { Recommended = choices.SelectedRecommendations, Alternatives = choices.SelectedAlternatives };
+            }
+
+            pack.CancelInstall();
+            executed = true;
+            await ExecutePackInstallAsync(services, pack, request);
         }
         catch (Exception exception) when (IsInstallFailure(exception))
         {
-            pack.InstallError = exception.Message;
+            if (pack.Choices is { } choices)
+                choices.BlockedText = exception.Message;
+            else
+                pack.InstallError = exception.Message;
         }
         finally
         {
             pack.EndInstall();
         }
 
-        await ReloadInstancesAsync();
+        if (executed)
+            await ReloadInstancesAsync();
     }
 
     private async Task ExecutePackInstallAsync(BoreaServices services, PackItem pack, ModPackInstallRequest request)
@@ -469,9 +510,24 @@ public sealed partial class PackItem : ObservableObject, IInstallProgressRow
     /// The warnings while <see cref="PendingInstall"/> waits for a confirmation.
     /// </summary>
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsConfirmingInstall))]
+    [NotifyPropertyChangedFor(nameof(ConfirmInstallText))]
     private string? _installWarning;
 
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsConfirmingInstall))]
+    private InstallChoices? _choices;
+
+    public bool IsConfirmingInstall => InstallWarning is not null || Choices is not null;
+
+    public string ConfirmInstallText => InstallWarning is null ? _owner.Localization.ContentAdd : _owner.Localization.InstallAnyway;
+
     internal ModPackInstallRequest? PendingInstall { get; set; }
+
+    /// <summary>The warnings about the pack itself, without those of <see cref="PendingPlan"/>.</summary>
+    internal IReadOnlyList<string> PendingReasons { get; set; } = [];
+
+    internal InstallPlan? PendingPlan { get; set; }
 
     public ObservableCollection<PackResultItem> Results { get; } = [];
 
@@ -514,8 +570,7 @@ public sealed partial class PackItem : ObservableObject, IInstallProgressRow
     internal void ClearOutcome()
     {
         InstallError = null;
-        InstallWarning = null;
-        PendingInstall = null;
+        CancelInstall();
         ShowResults([]);
     }
 
@@ -533,6 +588,7 @@ public sealed partial class PackItem : ObservableObject, IInstallProgressRow
         OnPropertyChanged(nameof(TypeText));
         OnPropertyChanged(nameof(CompatibilityText));
         OnPropertyChanged(nameof(ModCountText));
+        OnPropertyChanged(nameof(ConfirmInstallText));
         OnPropertyChanged(nameof(ReleasedText));
         OnPropertyChanged(nameof(ReleasedDateText));
         OnPropertyChanged(nameof(PublishedText));
@@ -551,10 +607,13 @@ public sealed partial class PackItem : ObservableObject, IInstallProgressRow
     private Task ConfirmInstallAsync() => _owner.ConfirmPackInstallAsync(this);
 
     [RelayCommand]
-    private void CancelInstall()
+    internal void CancelInstall()
     {
         PendingInstall = null;
+        PendingReasons = [];
+        PendingPlan = null;
         InstallWarning = null;
+        Choices = null;
     }
 }
 

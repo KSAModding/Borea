@@ -2,6 +2,7 @@ using System.IO.Compression;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Security.Cryptography;
+using System.Text.Json.Nodes;
 using Borea.App.ViewModels;
 using Borea.Core.Game;
 using Borea.Core.Instances;
@@ -179,6 +180,33 @@ public sealed class PackViewModelTests
     }
 
     [Fact]
+    public async Task Install_DeselectedRecommendation_InstallsOnlyThePinnedMod()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: snapshot =>
+            Recommend(WithPacks(Pack("tools-pack", "Tools Pack", Version("1.0.0", Pin("MeasureTools", "1.1.10"))))(snapshot), "MeasureTools", "1.1.10", "AdvancedFlightComputer"));
+        var viewModel = harness.ViewModel;
+        await ActivateInstanceAsync(harness);
+        viewModel.ShowDiscoverModpacksCommand.Execute(null);
+        var pack = Assert.Single(viewModel.DiscoverPacks);
+
+        await pack.InstallCommand.ExecuteAsync(null);
+
+        var recommendation = Assert.Single(pack.Choices!.Recommended);
+        Assert.True(recommendation.IsSelected);
+        Assert.True(pack.IsConfirmingInstall);
+        Assert.Empty(pack.Results);
+
+        recommendation.IsSelected = false;
+        await pack.ConfirmInstallCommand.ExecuteAsync(null);
+
+        // tests have no network, so the pinned mod gets as far as its download
+        Assert.Null(pack.Choices);
+        Assert.Equal(["MeasureTools"], pack.Results.Select(result => result.ModId));
+        Assert.Contains(harness.Requests, uri => uri.AbsoluteUri == MeasureToolsUrl);
+        Assert.DoesNotContain(harness.Requests, uri => uri.AbsoluteUri.Contains("KSA-AdvancedFlightComputer", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public async Task Install_UntestedDeprecatedPack_WaitsForConfirmation()
     {
         var pack = Pack("armory-pack", "Armory Pack", Version("1.0.0", Pin("KSArmory", "0.8.44")))
@@ -280,6 +308,15 @@ public sealed class PackViewModelTests
         if (snapshot.Split(field).Length != 2)
             throw new InvalidOperationException($"The snapshot fixture does not name version {version} exactly once.");
         return snapshot.Replace(field, $"{field} \"yanked\": true, \"yanked_reason\": \"{reason}\",", StringComparison.Ordinal);
+    }
+
+    private static string Recommend(string snapshot, string modId, string version, string recommended)
+    {
+        var root = JsonNode.Parse(snapshot)!;
+        var listing = root["listings"]!.AsArray().Single(node => (string?)node!["id"] == modId)!;
+        var release = listing["releases"]!.AsArray().Single(node => (string?)node!["version"] == version)!;
+        release["dependencies"] = new JsonArray(new JsonObject { ["id"] = recommended, ["kind"] = "recommends", ["source"] = "authored" });
+        return root.ToJsonString();
     }
 
     private static string Pack(string id, string name, params Func<string, string, string>[] versions) =>

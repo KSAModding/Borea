@@ -278,7 +278,7 @@
     <!-- a pack row: the Discover row with the mod count, and no removal -->
     <DataTemplate x:Key="PackRow" x:DataType="vm:PackItem">
         <Border Classes="card" Padding="12">
-            <Grid ColumnDefinitions="100,16,*" Height="100">
+            <Grid ColumnDefinitions="100,16,*" MinHeight="100">
                 <Button Classes="plain" Command="{Binding OpenCommand}" AutomationProperties.Name="{Binding Name}">
                     <Border Classes="thumbnail" Width="100" Height="100" ClipToBounds="True">
                         <views:ListingImageView Image="{Binding Icon}" Background="{StaticResource Brush.Surface}">
@@ -307,6 +307,7 @@
                             </Border>
                         </Panel>
                     </Grid>
+                    <ContentControl Grid.Row="1" Margin="0,8" Content="{Binding Choices}" IsVisible="{Binding Choices, Converter={x:Static ObjectConverters.IsNotNull}}" />
                     <Grid Grid.Row="2" ColumnDefinitions="*,Auto" Margin="0,0,4,0">
                         <ItemsControl ItemsSource="{Binding Tags}" VerticalAlignment="Center" ClipToBounds="True">
                             <ItemsControl.ItemsPanel>
@@ -327,9 +328,9 @@
                                 <TextBlock Classes="body-sm secondary" Text="{Binding ProgressStatus}" ToolTip.Tip="{Binding ProgressStatus}" MaxWidth="260" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
                                 <TextBlock Classes="label-md" Text="{Binding ProgressDetail}" VerticalAlignment="Center" IsVisible="{Binding ProgressDetail, Converter={x:Static ObjectConverters.IsNotNull}}" />
                             </StackPanel>
-                            <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center" IsVisible="{Binding InstallWarning, Converter={x:Static ObjectConverters.IsNotNull}}">
+                            <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center" IsVisible="{Binding IsConfirmingInstall}">
                                 <TextBlock Classes="body-sm secondary" Text="{Binding InstallWarning}" ToolTip.Tip="{Binding InstallWarning}" MaxWidth="260" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
-                                <Button Classes="text primary" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.InstallAnyway}" Command="{Binding ConfirmInstallCommand}" />
+                                <Button Classes="text primary" Content="{Binding ConfirmInstallText}" Command="{Binding ConfirmInstallCommand}" IsEnabled="{Binding Choices.IsComplete, FallbackValue={x:True}}" />
                                 <Button Classes="text" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryCancel}" Command="{Binding CancelInstallCommand}" />
                             </StackPanel>
                             <TextBlock Classes="body-sm danger" Text="{Binding InstallError}" ToolTip.Tip="{Binding InstallError}" IsVisible="{Binding InstallError, Converter={x:Static ObjectConverters.IsNotNull}}" MaxWidth="320" TextTrimming="CharacterEllipsis" />
