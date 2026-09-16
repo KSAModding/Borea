@@ -15,7 +15,7 @@ internal static class InstanceCommand
 
     public static Command Build(Func<CancellationToken, Task<CliServices>> services)
     {
-        var instance = new Command("instance", "List, create, rename, delete, activate, and deactivate instances, and adopt mods that Borea did not install.");
+        var instance = new Command("instance", "List, create, rename, delete, activate, and deactivate instances, create one from the mods of the shared profile, and adopt mods that Borea did not install.");
         instance.Subcommands.Add(BuildList(services));
         instance.Subcommands.Add(BuildCreate(services));
         instance.Subcommands.Add(BuildRename(services));
@@ -25,6 +25,7 @@ internal static class InstanceCommand
         instance.Subcommands.Add(BuildMods(services));
         instance.Subcommands.Add(BuildScan(services));
         instance.Subcommands.Add(BuildAdopt(services));
+        instance.Subcommands.Add(BuildImportProfile(services));
         return instance;
     }
 
@@ -217,19 +218,7 @@ internal static class InstanceCommand
         {
             var target = await InstanceLookup.ResolveAsync(cli.Instances, parseResult.GetRequiredValue(instance)).ConfigureAwait(false);
             var foreignMods = await cli.ForeignModAdopter.ScanAsync(target.InstanceId, ct).ConfigureAwait(false);
-            ContentIndexSnapshot? snapshot = null;
-            if (foreignMods.Count > 0)
-            {
-                try
-                {
-                    snapshot = await cli.IndexSnapshots.GetSnapshotAsync(ct).ConfigureAwait(false);
-                }
-                catch (Exception exception) when (exception is IOException or InvalidOperationException or FormatException)
-                {
-                    error.WriteLine($"warning: The content index could not be read. {exception.Message}");
-                }
-            }
-
+            var snapshot = foreignMods.Count > 0 ? await ReadIndexOrWarnAsync(cli, error, ct).ConfigureAwait(false) : null;
             var views = foreignMods.Select(mod => ForeignModView.From(mod, snapshot)).ToList();
 
             if (parseResult.GetValue(json))
@@ -306,12 +295,103 @@ internal static class InstanceCommand
         return adopt;
     }
 
+    private static Command BuildImportProfile(Func<CancellationToken, Task<CliServices>> services)
+    {
+        var name = ArgumentRules.Text("name", "The display name of the new instance. Names compare case-insensitively.");
+        var dryRun = new Option<bool>("--dry-run") { Description = "Print the mods the import would copy, and change nothing." };
+        var json = ArgumentRules.Json();
+        var import = new Command(
+            "import-profile",
+            "Create an instance from copies of the mods in the shared profile in My Games/Kitten Space Agency, with the same load order and enabled state. A copy whose files match an index release is recorded as that release, and every other copy is a manual install. The shared profile stays as it is.");
+        import.Arguments.Add(name);
+        import.Options.Add(dryRun);
+        import.Options.Add(json);
+
+        import.SetAction((parseResult, cancellationToken) => CommandRunner.RunAsync(parseResult, services, cancellationToken, async (cli, output, error, ct) =>
+        {
+            var instanceName = parseResult.GetRequiredValue(name);
+            if (parseResult.GetValue(dryRun))
+                return await PreviewImportAsync(cli, instanceName, parseResult.GetValue(json), output, error, ct).ConfigureAwait(false);
+
+            var result = await cli.SharedProfileImporter.ImportAsync(instanceName, ct).ConfigureAwait(false);
+            var views = result.Mods.Select(ImportedModView.From).ToList();
+            if (parseResult.GetValue(json))
+            {
+                JsonOutput.Write(output, new ImportView(result.Instance.InstanceId, result.Instance.Name, views));
+            }
+            else
+            {
+                output.WriteLine($"Created instance '{result.Instance.Name}' ({result.Instance.InstanceId}) with {ModCount(views.Count)} from the shared profile.");
+                var folderWidth = views.Max(view => view.Folder.Length);
+                foreach (var view in views)
+                    output.WriteLine($"{(view.Enabled ? "enabled " : "disabled")}  {view.Folder.PadRight(folderWidth)}  {(view.Version is null ? "manual install" : $"release {view.Version}")}");
+            }
+
+            foreach (var mod in result.Mods.Where(mod => !mod.HasManifestEntry))
+                error.WriteLine($"warning: '{mod.FolderName}' is not a valid content id, so Borea wrote no manifest entry for it. The game adds it disabled on its next start.");
+
+            foreach (var failed in result.Mods.Where(mod => mod.MatchError is not null).GroupBy(mod => mod.MatchError))
+            {
+                var folders = failed.Select(mod => $"'{mod.FolderName}'").ToList();
+                var outcome = folders.Count == 1 ? "it stays a manual install" : "they stay manual installs";
+                error.WriteLine($"warning: Borea could not check {string.Join(", ", folders)} against the content index, so {outcome}. {failed.Key}");
+            }
+
+            return ExitCodes.Done;
+        }));
+
+        return import;
+    }
+
+    private static async Task<int> PreviewImportAsync(CliServices cli, string instanceName, bool json, TextWriter output, TextWriter error, CancellationToken cancellationToken)
+    {
+        var mods = await cli.SharedProfileImporter.GetModsAsync(cancellationToken).ConfigureAwait(false);
+        if (mods.Count == 0)
+            throw new InvalidOperationException("The shared profile has no mods to import.");
+
+        if (!await cli.Instances.IsNameAvailableAsync(instanceName).ConfigureAwait(false))
+            throw new InvalidOperationException($"Instance name '{instanceName}' is already in use.");
+
+        var snapshot = await ReadIndexOrWarnAsync(cli, error, cancellationToken).ConfigureAwait(false);
+        var views = mods.Select(mod => new ProfileModView(mod.FolderName, mod.Enabled, IsListedMod(snapshot, mod.FolderName))).ToList();
+        if (json)
+        {
+            JsonOutput.Write(output, new ImportPreviewView(instanceName, views));
+            return ExitCodes.Done;
+        }
+
+        output.WriteLine($"Would create instance '{instanceName}' with {ModCount(views.Count)} from the shared profile. Nothing was changed.");
+        var folderWidth = views.Max(view => view.Folder.Length);
+        foreach (var view in views)
+            output.WriteLine($"{(view.Enabled ? "enabled " : "disabled")}  {view.Folder.PadRight(folderWidth)}  {DescribeIndexState(view.InIndex)}");
+
+        return ExitCodes.Done;
+    }
+
+    private static async Task<ContentIndexSnapshot?> ReadIndexOrWarnAsync(CliServices cli, TextWriter error, CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await cli.IndexSnapshots.GetSnapshotAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception exception) when (exception is IOException or InvalidOperationException or FormatException)
+        {
+            error.WriteLine($"warning: The content index could not be read. {exception.Message}");
+            return null;
+        }
+    }
+
     private static string DescribeIndexState(bool? inIndex) => inIndex switch
     {
         true => "in the content index",
         false => "not in the content index",
         null => "content index not available",
     };
+
+    private static string ModCount(int count) => count == 1 ? "1 mod" : $"{count} mods";
+
+    private static bool? IsListedMod(ContentIndexSnapshot? snapshot, string folderName)
+        => snapshot?.Listings.Any(listing => ModIds.Equals(listing.Id, folderName) && listing.Authored?.Type == ContentType.Mod);
 
     private static string Describe(InstanceSource source) => source switch
     {
@@ -346,10 +426,24 @@ internal static class InstanceCommand
         public static ForeignModView From(ForeignMod mod, ContentIndexSnapshot? snapshot)
             => new(
                 mod.FolderName,
-                snapshot?.Listings.Any(listing => ModIds.Equals(listing.Id, mod.FolderName) && listing.Authored?.Type == ContentType.Mod),
+                IsListedMod(snapshot, mod.FolderName),
                 mod.Dependencies.Select(dependency => new DependencyView(dependency.ModId, dependency.Optional)).ToList(),
                 mod.DependencyReadError);
     }
 
     private sealed record DependencyView(string Id, bool Optional);
+
+    /// <summary>The JSON shape of <c>instance import-profile --dry-run</c>.</summary>
+    private sealed record ImportPreviewView(string Name, IReadOnlyList<ProfileModView> Mods);
+
+    private sealed record ProfileModView(string Folder, bool Enabled, bool? InIndex);
+
+    /// <summary>The JSON shape of <c>instance import-profile</c>. A copy without a version is a manual install.</summary>
+    private sealed record ImportView(Guid Id, string Name, IReadOnlyList<ImportedModView> Mods);
+
+    private sealed record ImportedModView(string Folder, bool Enabled, bool ManifestEntry, string? Version, string? MatchError)
+    {
+        public static ImportedModView From(SharedProfileImportedMod mod)
+            => new(mod.FolderName, mod.Enabled, mod.HasManifestEntry, mod.Release?.Version.ToString(), mod.MatchError);
+    }
 }

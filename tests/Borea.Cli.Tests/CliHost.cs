@@ -8,7 +8,9 @@ using Borea.Core.ModPacks;
 using Borea.Core.Mods;
 using Borea.Core.Instances;
 using Borea.Network.Index;
+using Borea.Storage.Instances;
 using Borea.Storage.Launch;
+using Borea.Storage.Mods;
 using Borea.Storage.Paths;
 
 namespace Borea.Cli.Tests;
@@ -65,12 +67,18 @@ internal sealed class CliHost : IDisposable
 
     public Func<BoreaServices, IForeignModAdopter>? ForeignModAdopterFactory { get; set; }
 
+    /// <summary>The shared profile the importer reads, so no test reads the real one.</summary>
+    public string SharedProfile => Path.Combine(Root, "GameProfile");
+
+    /// <summary>Downloads the releases the importer compares a copy with. The graph's downloader when a test does not set it.</summary>
+    public IModDownloader? Downloader { get; set; }
+
     public Func<BoreaServices, IInstanceRepository>? InstancesFactory { get; set; }
 
     /// <summary>How many times a command built its services.</summary>
     public int Builds { get; private set; }
 
-    public GamePathProvider Paths => new(gameDirectory: null, boreaRoot: Root);
+    public GamePathProvider Paths => new(gameDirectory: null, boreaRoot: Root, sharedProfileRoot: SharedProfile);
 
     public async Task<CliRun> RunAsync(params string[] args)
         => await RunAsync(CancellationToken.None, args);
@@ -112,7 +120,16 @@ internal sealed class CliHost : IDisposable
             readOnlyModPacks: ModPacks ?? new ContentIndexModPackRepository(new ReaderSnapshotProvider(IndexReader)),
             modPackInstaller: ModPackInstallerFactory?.Invoke(graph) ?? ModPackInstaller,
             sharedProfileLauncher: new SharedProfileLauncher(graph.Paths, ProcessStarter, OsPlatform.Windows),
-            indexRefresh: IndexRefresh);
+            indexRefresh: IndexRefresh,
+            sharedProfileImporter: BuildSharedProfileImporter(graph));
+    }
+
+    private FileSharedProfileImporter BuildSharedProfileImporter(BoreaServices graph)
+    {
+        var snapshots = IndexSnapshots ?? new ReaderSnapshotProvider(IndexReader);
+        var adopter = new FileForeignModAdopter(graph.Paths, graph.Instances, new ContentIndexModRepository(snapshots));
+        var matcher = new FileForeignModReleaseMatcher(graph.Paths, Downloader ?? graph.Downloader, adopter, snapshots);
+        return new FileSharedProfileImporter(Paths, graph.Instances, graph.ModState, adopter, matcher);
     }
 
     public void Dispose()
