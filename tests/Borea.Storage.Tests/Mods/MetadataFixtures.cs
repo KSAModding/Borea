@@ -107,6 +107,7 @@ internal static class MetadataFixtures
         install: new InstallInfo(modId, derived: true),
         loader: new LoaderRequirement("StarMap", ModVersion.Parse("0.4.5"), source: MetadataSource.Authored),
         changelog: "https://example.com/changelog",
+        changelogText: "## Changes\n- Fixes the HUD.",
         listing: new ListingSnapshot(
             "Test Mod",
             new[] { "Author" },

@@ -39,6 +39,7 @@ public sealed class ModVersionMetadataDto
     public LoaderRequirementDto? Loader { get; set; }
     public List<ModDependencyDto> Dependencies { get; set; } = new();
     public string? Changelog { get; set; }
+    public string? ChangelogText { get; set; }
     public ListingSnapshotDto? Listing { get; set; }
     public bool Yanked { get; set; }
     public string? YankedReason { get; set; }

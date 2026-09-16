@@ -38,6 +38,7 @@ public sealed class ModVersionMetadataMapperTests : IDisposable
         Assert.Equal(original.Os, reloaded.Os);
         Assert.Equal(original.InstallSizeBytes, reloaded.InstallSizeBytes);
         Assert.Equal(original.Changelog, reloaded.Changelog);
+        Assert.Equal(original.ChangelogText, reloaded.ChangelogText);
         Assert.True(reloaded.Yanked);
         Assert.Equal(original.YankedReason, reloaded.YankedReason);
         Assert.Equal("TestSource", reloaded.Source);
@@ -69,6 +70,7 @@ public sealed class ModVersionMetadataMapperTests : IDisposable
         Assert.Contains("GameMax", tomlText);
         Assert.Contains("Os = ", tomlText);
         Assert.Contains("Changelog", tomlText);
+        Assert.Contains("ChangelogText", tomlText);
         Assert.Contains("Listing", tomlText);
         Assert.Contains("YankedReason", tomlText);
 
@@ -91,6 +93,7 @@ public sealed class ModVersionMetadataMapperTests : IDisposable
         Assert.Null(reloadedDto.Install);
         Assert.Null(reloadedDto.Loader);
         Assert.Null(reloadedDto.Changelog);
+        Assert.Null(reloadedDto.ChangelogText);
         Assert.Null(reloadedDto.Listing);
         Assert.Null(reloadedDto.YankedReason);
 
