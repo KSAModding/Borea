@@ -206,12 +206,32 @@ public sealed class CompatibilityTests
     }
 
     [Fact]
-    public void SupportsAnyBuild_Pack_ReadsFullBoundsButNotMonths()
+    public void SupportsAnyBuild_PackWithFullBounds_ComparesTheRevisions()
     {
-        Assert.True(Compatibility.SupportsAnyBuild(Pack("2026.7.4.2131", "2026.8.3.5117"), 5117, null));
-        Assert.False(Compatibility.SupportsAnyBuild(Pack("2026.7.4.2131", "2026.8.3.5117"), 5118, null));
-        Assert.False(Compatibility.SupportsAnyBuild(Pack("2026.7"), null, null));
-        Assert.False(Compatibility.SupportsAnyBuild(Pack("2026.8.3.5117", "2026.9"), 5117, 5117));
+        Assert.True(Compatibility.SupportsAnyBuild(Pack("2026.7.4.2131", "2026.8.3.5117"), 5117, null, GameReleaseList.Empty));
+        Assert.False(Compatibility.SupportsAnyBuild(Pack("2026.7.4.2131", "2026.8.3.5117"), 5118, null, GameReleaseList.Empty));
+    }
+
+    [Fact]
+    public void SupportsAnyBuild_PackWithMonthBounds_CoversTheWholeMonth()
+    {
+        var releases = new GameReleaseList(["2026.7.2.4824", "2026.7.10.5056", "2026.8.3.5117"]);
+        var july = Pack("2026.7", "2026.7");
+
+        Assert.False(Compatibility.SupportsAnyBuild(july, null, 4823, releases));
+        Assert.True(Compatibility.SupportsAnyBuild(july, 4824, 4824, releases));
+        Assert.True(Compatibility.SupportsAnyBuild(july, 5056, 5056, releases));
+        Assert.False(Compatibility.SupportsAnyBuild(july, 5057, null, releases));
+        Assert.True(Compatibility.SupportsAnyBuild(Pack("2026.7", "2026.8"), 9999, null, releases));
+    }
+
+    [Fact]
+    public void SupportsAnyBuild_PackWithAMonthTheListDoesNotKnow_SupportsNoBuild()
+    {
+        var releases = new GameReleaseList(["2026.8.3.5117"]);
+
+        Assert.False(Compatibility.SupportsAnyBuild(Pack("2026.7"), null, null, releases));
+        Assert.False(Compatibility.SupportsAnyBuild(Pack("2026.8.3.5117", "2026.9"), 5117, 5117, releases));
     }
 
     [Fact]

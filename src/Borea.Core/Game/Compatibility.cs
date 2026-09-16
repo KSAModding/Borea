@@ -69,24 +69,22 @@ public static class Compatibility
     }
 
     /// <summary>
-    /// The same check for the authored bounds of a pack version, where a month bound such as "2026.7" matches no build.
+    /// The same check for the authored bounds of a pack version, with a month bound resolved through <paramref name="releases"/>.
+    /// A bound that does not resolve supports no build.
     /// </summary>
-    public static bool SupportsAnyBuild(ModPackMetadata pack, int? fromRevision, int? toRevision)
+    public static bool SupportsAnyBuild(ModPackMetadata pack, int? fromRevision, int? toRevision, GameReleaseList releases)
     {
         ArgumentNullException.ThrowIfNull(pack);
+        ArgumentNullException.ThrowIfNull(releases);
 
-        if (!GameVersion.TryParse(pack.GameMin, out var min))
+        if (!releases.TryResolveLowerBound(pack.GameMin, out var min))
             return false;
 
-        int? maxRevision = null;
-        if (pack.GameMax is not null)
-        {
-            if (!GameVersion.TryParse(pack.GameMax, out var max))
-                return false;
-            maxRevision = max.Revision;
-        }
+        int? max = null;
+        if (pack.GameMax is not null && !releases.TryResolveUpperBound(pack.GameMax, out max))
+            return false;
 
-        return SupportsAnyBuild(min.Revision, maxRevision, fromRevision, toRevision);
+        return SupportsAnyBuild(min, max, fromRevision, toRevision);
     }
 
     /// <summary>

@@ -81,7 +81,7 @@ public partial class MainViewModel
         if (SelectedLicense is not null)
             filtered = filtered.Where(pack => string.Equals(pack.License, SelectedLicense, StringComparison.OrdinalIgnoreCase));
         if (HasGameVersionRange)
-            filtered = filtered.Where(pack => Borea.Core.Game.Compatibility.SupportsAnyBuild(pack.Metadata, DiscoverGameMin?.Revision, DiscoverGameMax?.Revision));
+            filtered = filtered.Where(pack => Borea.Core.Game.Compatibility.SupportsAnyBuild(pack.Metadata, DiscoverGameMin?.Revision, DiscoverGameMax?.Revision, _gameReleases));
         if (SelectedCategories.Count > 0)
         {
             var matching = ContentTagFilter.Filter(
