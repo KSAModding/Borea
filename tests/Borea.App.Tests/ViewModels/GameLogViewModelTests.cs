@@ -27,6 +27,22 @@ public sealed class GameLogViewModelTests
     }
 
     [Fact]
+    public async Task ShowLog_RunLog_ShowsAndOpensTheRunLog()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var viewModel = harness.ViewModel;
+        var instance = await OpenAsync(harness, "Main");
+        var path = Path.Combine(Path.GetDirectoryName(harness.Services.Paths.GetInstanceGameLogPath(instance.InstanceId))!, "KittenSpaceAgency.260915-112433.43720.log");
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        File.WriteAllText(path, "11:24:36.689  INFO loaded settings\n");
+
+        await viewModel.ShowInstanceLogCommand.ExecuteAsync(null);
+
+        Assert.Equal(MainViewModel.WithoutUserProfile(path), viewModel.GameLogPathText);
+        Assert.True(viewModel.CanOpenGameLog);
+    }
+
+    [Fact]
     public async Task ShowLog_SplitsTheLinesByLevel()
     {
         using var harness = await ViewModelHarness.CreateAsync();

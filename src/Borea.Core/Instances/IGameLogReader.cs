@@ -6,6 +6,9 @@ namespace Borea.Core.Instances;
 public interface IGameLogReader
 {
     Task<GameLogTail> ReadGameLogAsync(Guid instanceId, CancellationToken cancellationToken = default);
+
+    /// <summary>When the game last wrote a session log in the instance, or null when it wrote none.</summary>
+    Task<DateTimeOffset?> GetLastWriteAsync(Guid instanceId, CancellationToken cancellationToken = default);
 }
 
 /// <param name="Path">Where the game writes its log for the instance.</param>

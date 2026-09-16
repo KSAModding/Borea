@@ -20,8 +20,23 @@ public sealed class FileGameLogReader : IGameLogReader
     public Task<GameLogTail> ReadGameLogAsync(Guid instanceId, CancellationToken cancellationToken = default)
     {
         var path = _pathProvider.GetInstanceGameLogPath(instanceId);
-        return Task.Run(() => Read(path), cancellationToken);
+        return Task.Run(() => Read(CurrentLog(path) ?? path), cancellationToken);
     }
+
+    public Task<DateTimeOffset?> GetLastWriteAsync(Guid instanceId, CancellationToken cancellationToken = default)
+    {
+        var path = _pathProvider.GetInstanceGameLogPath(instanceId);
+        return Task.Run(
+            () => GameLogFiles.Find(path)
+                .Select(log => (DateTimeOffset?)new DateTimeOffset(log.File.LastWriteTimeUtc, TimeSpan.Zero))
+                .Max(),
+            cancellationToken);
+    }
+
+    private static string? CurrentLog(string gameLogPath) => GameLogFiles.Find(gameLogPath)
+        .Where(log => log.Kind != GameLogKind.Archive)
+        .MaxBy(log => log.File.LastWriteTimeUtc)?
+        .File.FullName;
 
     private static GameLogTail Read(string path)
     {

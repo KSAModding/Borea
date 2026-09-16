@@ -5,6 +5,7 @@ using Borea.Core.Instances;
 using Borea.Core.Launch;
 using Borea.Core.Mods;
 using Borea.Core.Paths;
+using Borea.Storage.Instances;
 
 namespace Borea.Storage.Launch;
 
@@ -264,24 +265,17 @@ public sealed class LoaderLauncher : ILauncher, IDisposable
     }
 
     /// <summary>
-    /// Whether the log appeared or changed after the launch. The file's own
-    /// times are compared, because the file system clock is coarser than
+    /// Whether a session log appeared or changed after the launch. The files'
+    /// own times are compared, because the file system clock is coarser than
     /// DateTime.UtcNow and a fresh write can look older than the launch.
     /// </summary>
-    private static bool WrittenSince(string path, DateTime? atLaunch) =>
-        LastWrite(path) is { } now && (atLaunch is null || now > atLaunch);
+    private static bool WrittenSince(string gameLogPath, DateTime? atLaunch) =>
+        LastWrite(gameLogPath) is { } now && (atLaunch is null || now > atLaunch);
 
-    private static DateTime? LastWrite(string path)
-    {
-        try
-        {
-            return File.Exists(path) ? File.GetLastWriteTimeUtc(path) : null;
-        }
-        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
-        {
-            return null;
-        }
-    }
+    private static DateTime? LastWrite(string gameLogPath) => GameLogFiles.Find(gameLogPath)
+        .Where(log => log.Kind != GameLogKind.Archive)
+        .Select(log => (DateTime?)log.File.LastWriteTimeUtc)
+        .Max();
 
     /// <summary>
     /// What the loader wrote while it was watched, next to the game's log, so

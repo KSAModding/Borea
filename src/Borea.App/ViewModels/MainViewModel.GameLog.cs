@@ -70,6 +70,9 @@ public partial class MainViewModel
             if (SelectedInstance?.InstanceId != instanceId)
                 return;
 
+            _gameLogPath = log.Path;
+            GameLogPathText = WithoutUserProfile(log.Path);
+
             IsGameLogMissing = !log.Exists;
             if (!log.Exists)
                 return;
