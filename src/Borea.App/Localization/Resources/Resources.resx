@@ -345,6 +345,36 @@
   <data name="InstanceUpdateAll" xml:space="preserve">
     <value>Update all</value>
   </data>
+  <data name="InstancePlayedFormat" xml:space="preserve">
+    <value>{0} played</value>
+  </data>
+  <data name="InstancePlayedRunningFormat" xml:space="preserve">
+    <value>{0} played, including the current session</value>
+  </data>
+  <data name="InstanceSessionOne" xml:space="preserve">
+    <value>1 session</value>
+  </data>
+  <data name="InstanceSessionsFormat" xml:space="preserve">
+    <value>{0} sessions</value>
+  </data>
+  <data name="InstanceNoPlaytime" xml:space="preserve">
+    <value>No playtime yet</value>
+  </data>
+  <data name="InstancePlaytimeUnknown" xml:space="preserve">
+    <value>Playtime unknown</value>
+  </data>
+  <data name="InstancePlaytimeToolTip" xml:space="preserve">
+    <value>Borea counts the playtime from the game logs of this instance. A start that stops in less than one minute does not count.</value>
+  </data>
+  <data name="InstancePlaytimeUnknownToolTip" xml:space="preserve">
+    <value>Borea cannot read the newest game log of this instance, so it cannot count the playtime.</value>
+  </data>
+  <data name="DurationHoursMinutesFormat" xml:space="preserve">
+    <value>{0} h {1} min</value>
+  </data>
+  <data name="DurationMinutesFormat" xml:space="preserve">
+    <value>{0} min</value>
+  </data>
   <data name="ContentRemove" xml:space="preserve">
     <value>Remove</value>
   </data>

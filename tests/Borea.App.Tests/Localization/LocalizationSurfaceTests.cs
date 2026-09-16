@@ -41,6 +41,19 @@ public sealed class LocalizationSurfaceTests : IDisposable
         Assert.Throws<ArgumentException>(() => service.FormatContentByAuthor(" "));
     }
 
+    [Fact]
+    public void PlaytimeFormats_RoundTheMinutesDown()
+    {
+        var service = new LocalizationService(CultureInfo.GetCultureInfo("en"));
+
+        Assert.Equal("0 min", service.FormatDuration(TimeSpan.FromSeconds(59)));
+        Assert.Equal("40 min", service.FormatDuration(TimeSpan.FromMinutes(40.9)));
+        Assert.Equal("12 h 40 min", service.FormatDuration(new TimeSpan(12, 40, 59)));
+        Assert.Equal("1 session", service.FormatInstanceSessions(1));
+        Assert.Equal("23 sessions", service.FormatInstanceSessions(23));
+        Assert.Equal("12 h 40 min played, including the current session", service.FormatInstancePlayedRunning("12 h 40 min"));
+    }
+
     public void Dispose()
     {
         CultureInfo.CurrentCulture = _originalCulture;

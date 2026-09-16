@@ -288,6 +288,39 @@ public sealed class InstanceViewModelTests
         Assert.Equal(harness.Localization.FormatTimeAgo(TimeSpan.Zero), viewModel.ActiveInstance.LastPlayedText);
     }
 
+    [Fact]
+    public async Task Open_InstanceWithGameLogs_ShowsThePlaytimeAndTheSessions()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var viewModel = harness.ViewModel;
+        var instance = await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value);
+        var archives = Directory.CreateDirectory(Path.Combine(Path.GetDirectoryName(harness.Services.Paths.GetInstanceGameLogPath(instance.InstanceId))!, "Archives"));
+        await File.WriteAllLinesAsync(Path.Combine(archives.FullName, "KittenSpaceAgency.260914.0.log"), ["20:00:00.000  INFO loaded settings from settings.toml", "20:40:00.000 DEBUG Shutting down application"]);
+        await viewModel.LoadAsync();
+
+        await Assert.Single(viewModel.Instances).OpenCommand.ExecuteAsync(null);
+        await viewModel.WhenPlaytimeLoadedAsync();
+
+        Assert.Equal(harness.Localization.FormatInstancePlayed(harness.Localization.FormatDuration(TimeSpan.FromMinutes(40))), viewModel.InstancePlaytimeText);
+        Assert.Equal(harness.Localization.FormatInstanceSessions(1), viewModel.InstanceSessionsText);
+        Assert.Equal(harness.Localization.InstancePlaytimeToolTip, viewModel.InstancePlaytimeToolTip);
+    }
+
+    [Fact]
+    public async Task Open_InstanceWithoutGameLogs_SaysThereIsNoPlaytimeYet()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var viewModel = harness.ViewModel;
+        await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value);
+        await viewModel.LoadAsync();
+
+        await Assert.Single(viewModel.Instances).OpenCommand.ExecuteAsync(null);
+        await viewModel.WhenPlaytimeLoadedAsync();
+
+        Assert.Equal(harness.Localization.InstanceNoPlaytime, viewModel.InstancePlaytimeText);
+        Assert.Null(viewModel.InstanceSessionsText);
+    }
+
     private static Task RecordStarMapAsync(Borea.Composition.BoreaServices services)
     {
         var loader = Directory.CreateDirectory(Path.Combine(Path.GetDirectoryName(services.Paths.GetBoreaSettingsPath())!, "Loaders", "StarMap")).FullName;

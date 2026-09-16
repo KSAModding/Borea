@@ -194,6 +194,11 @@
                             <Path Classes="icon size-16" Data="{StaticResource Icon.CirclesThree}" />
                             <TextBlock Classes="label-md" Text="{Binding SelectedInstance.ModCount}" VerticalAlignment="Center" />
                         </StackPanel>
+                        <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center" ToolTip.Tip="{Binding InstancePlaytimeToolTip}" IsVisible="{Binding InstancePlaytimeText, Converter={x:Static ObjectConverters.IsNotNull}}">
+                            <Path Classes="icon size-16" Data="{StaticResource Icon.Clock}" />
+                            <TextBlock Classes="label-md" Text="{Binding InstancePlaytimeText}" VerticalAlignment="Center" />
+                        </StackPanel>
+                        <TextBlock Classes="label-md" Text="{Binding InstanceSessionsText}" VerticalAlignment="Center" IsVisible="{Binding InstanceSessionsText, Converter={x:Static ObjectConverters.IsNotNull}}" />
                     </StackPanel>
                 </Grid>
             </Grid>

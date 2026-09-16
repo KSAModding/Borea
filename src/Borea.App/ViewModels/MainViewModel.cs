@@ -667,6 +667,7 @@ public partial class MainViewModel : ViewModelBase
         // translated string on this model needs a refresh too.
         RefreshRowText();
         RefreshLibraryText();
+        RefreshPlaytimeText();
         // the reasons a mod cannot be removed are translated text
         RefreshInstalledFlags();
         foreach (var option in ReleaseChannelOptions)

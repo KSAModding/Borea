@@ -99,6 +99,7 @@ internal sealed class ViewModelHarness : IDisposable
         ViewModel?.WhenUpdateCheckedAsync().GetAwaiter().GetResult();
         ViewModel?.WhenReleaseChannelSavedAsync().GetAwaiter().GetResult();
         ViewModel?.WhenContentUpdatesCheckedAsync().GetAwaiter().GetResult();
+        ViewModel?.WhenPlaytimeLoadedAsync().GetAwaiter().GetResult();
         Services.Dispose();
         CultureInfo.CurrentCulture = _originalCulture;
         CultureInfo.CurrentUICulture = _originalUiCulture;
