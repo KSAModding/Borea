@@ -328,11 +328,14 @@ public partial class MainViewModel
 /// <summary>A link of the detail panel. <see cref="Key"/> is the key of the listing, such as "forums", and null for a changelog link.</summary>
 public sealed record ContentLink(string Label, string Url, string? Key = null);
 
-/// <summary>Markdown text, or a link when the value is an absolute https URI.</summary>
+/// <summary>The changelog text as Markdown, else the changelog as a link when it is an absolute https URI and as Markdown otherwise.</summary>
 public sealed record ReleaseChangelog(string Title, string? Text, ContentLink? Link)
 {
     public static ReleaseChangelog? From(ModVersionMetadata release, string title, string linkLabel)
     {
+        if (!string.IsNullOrWhiteSpace(release.ChangelogText))
+            return new ReleaseChangelog(title, release.ChangelogText, null);
+
         if (string.IsNullOrWhiteSpace(release.Changelog))
             return null;
 

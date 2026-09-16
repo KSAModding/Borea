@@ -248,7 +248,20 @@ public sealed class ContentViewModelTests
         Assert.Equal(isLink, changelog.Text is null);
     }
 
-    private static ModVersionMetadata Release(string version, string? changelog) => new(
+    [Theory]
+    [InlineData("## Changes\n\n- The HUD keeps its place.", true)]
+    [InlineData(" \n", false)]
+    [InlineData(null, false)]
+    public void Changelog_TextIsPreferredOverTheLink(string? text, bool showsText)
+    {
+        var changelog = ReleaseChangelog.From(Release("1.0.0", "https://example.com/changelog", text), "1.0.0", "Changelog");
+
+        Assert.NotNull(changelog);
+        Assert.Equal(showsText ? text : null, changelog.Text);
+        Assert.Equal(showsText, changelog.Link is null);
+    }
+
+    private static ModVersionMetadata Release(string version, string? changelog, string? changelogText = null) => new(
         specVersion: 1,
         modId: ViewModelHarness.FakeSpaceDock.OwnId,
         version: ModVersion.Parse(version),
@@ -259,7 +272,8 @@ public sealed class ContentViewModelTests
         download: new DownloadInfo($"https://archives.test/{version}.zip", sha256: null, sizeBytes: null, contentType: "application/zip"),
         installSizeBytes: null,
         dependencies: [],
-        changelog: changelog);
+        changelog: changelog,
+        changelogText: changelogText);
 
     [Fact]
     public async Task OpenContent_HomepageAndUnknownLinks_GetReadableLabels()

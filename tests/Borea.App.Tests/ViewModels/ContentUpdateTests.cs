@@ -449,6 +449,26 @@ public sealed class ContentUpdateTests
     }
 
     [Fact]
+    public async Task Update_ChangelogTextFromTheIndex_IsShownInsteadOfTheLink()
+    {
+        const string Link = "\"changelog\": \"https://github.com/Maximilian-Nesslauer/KSA-AdvancedFlightComputer/releases/tag/v0.7.5\",";
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: json => json.Replace(
+            Link,
+            Link + " \"changelog_text\": \"## Changes\\n- Marks the mod as compatible with KSA 2026.9.7.5402.\","));
+        var viewModel = harness.ViewModel;
+        await InstalledContent.AddAsync(harness, "AdvancedFlightComputer", activate: true, ownership: ModInstallOwnership.Borea, version: "0.7.4");
+        await viewModel.LoadAsync();
+        await viewModel.ActiveInstance!.OpenCommand.ExecuteAsync(null);
+        var row = viewModel.ContentGroups.Single().Items.Single();
+
+        await row.UpdateCommand.ExecuteAsync(null);
+
+        var changelog = Assert.Single(row.Changelogs);
+        Assert.Equal("## Changes\n- Marks the mod as compatible with KSA 2026.9.7.5402.", changelog.Text);
+        Assert.Null(changelog.Link);
+    }
+
+    [Fact]
     public async Task Update_ChangelogLookupFails_StillHoldsThePlan()
     {
         using var harness = await ViewModelHarness.CreateAsync();
