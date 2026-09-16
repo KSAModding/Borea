@@ -390,6 +390,105 @@
   <data name="InstallReleaseChannelFormat" xml:space="preserve">
     <value>Version {0} hat den Status {1}, den dein Release-Kanal nicht anbietet.</value>
   </data>
+  <data name="InstallMessageForeignOwned" xml:space="preserve">
+    <value>Borea hat diese Mod nicht installiert und kann sie deshalb nicht ersetzen.</value>
+  </data>
+  <data name="InstallMessageExactPinConflictFormat" xml:space="preserve">
+    <value>Die Versionen {0} und {1} wurden beide angefordert.</value>
+  </data>
+  <data name="InstallMessageOutsideChannel" xml:space="preserve">
+    <value>Dein Release-Kanal bietet keine Version dieser Mod an.</value>
+  </data>
+  <data name="InstallMessageMissingRequest" xml:space="preserve">
+    <value>Borea hat für diese Anfrage keine Version gefunden.</value>
+  </data>
+  <data name="InstallMessageExactPinFormat" xml:space="preserve">
+    <value>Borea kann Version {0} nicht zusammen mit den anderen Inhalten verwenden.</value>
+  </data>
+  <data name="InstallMessageProposedConflictFormat" xml:space="preserve">
+    <value>Ein Konflikteintrag für {0} verhindert diese Änderung.</value>
+  </data>
+  <data name="InstallMessageYanked" xml:space="preserve">
+    <value>Diese Version wurde zurückgezogen.</value>
+  </data>
+  <data name="InstallMessageYankedPin" xml:space="preserve">
+    <value>Das Modpack legt eine zurückgezogene Version fest.</value>
+  </data>
+  <data name="InstallMessageIncompatibleFormat" xml:space="preserve">
+    <value>Diese Version braucht die Spielversion {0} oder neuer.</value>
+  </data>
+  <data name="InstallMessageUntested" xml:space="preserve">
+    <value>Diese Version ist nicht mit dem installierten Spiel getestet.</value>
+  </data>
+  <data name="InstallMessageCompatibilityUnknown" xml:space="preserve">
+    <value>Die Kompatibilität dieser Version mit dem installierten Spiel ist unbekannt.</value>
+  </data>
+  <data name="InstallMessagePlatformFormat" xml:space="preserve">
+    <value>Diese Version nennt {0} nicht als unterstützte Plattform.</value>
+  </data>
+  <data name="InstallMessagePlatformUnknownFormat" xml:space="preserve">
+    <value>Diese Version nennt die Plattform "{0}", die Borea nicht kennt.</value>
+  </data>
+  <data name="InstallMessageUnknownDependencyFormat" xml:space="preserve">
+    <value>Diese Version hat eine Abhängigkeit von {0}, deren Art Borea nicht kennt.</value>
+  </data>
+  <data name="InstallMessageDependencyConflictFormat" xml:space="preserve">
+    <value>Diese Version verträgt sich nicht mit {0}.</value>
+  </data>
+  <data name="InstallMessageForeignConflictUnknownFormat" xml:space="preserve">
+    <value>Diese Version verträgt sich nicht mit {0}. Borea kann die installierte Version nicht lesen.</value>
+  </data>
+  <data name="InstallMessageForeignConflictFormat" xml:space="preserve">
+    <value>Diese Version verträgt sich nicht mit {0}. Borea hat {0} nicht installiert.</value>
+  </data>
+  <data name="InstallMessageForeignVersionUnknownFormat" xml:space="preserve">
+    <value>Diese Mod braucht {0}. Borea kann die installierte Version nicht lesen.</value>
+  </data>
+  <data name="InstallMessageUnsatisfiedDependencyFormat" xml:space="preserve">
+    <value>Diese Version braucht {0}, aber dafür gibt es keine passende Version.</value>
+  </data>
+  <data name="InstallMessageAlternativeChoiceFormat" xml:space="preserve">
+    <value>Wähle eine dieser Mods: {0}.</value>
+  </data>
+  <data name="InstallMessageInvalidAlternativeFormat" xml:space="preserve">
+    <value>{0} ist keine der Alternativen.</value>
+  </data>
+  <data name="InstallMessageRetainedAlternativeFormat" xml:space="preserve">
+    <value>Diese installierte Mod braucht {0}. Nach der Änderung ist keine davon installiert.</value>
+  </data>
+  <data name="InstallMessageRetainedDependentFormat" xml:space="preserve">
+    <value>Diese installierte Mod braucht {0}. Die Änderung installiert eine Version außerhalb dieses Bereichs.</value>
+  </data>
+  <data name="InstallMessageRetainedConflictFormat" xml:space="preserve">
+    <value>Diese installierte Mod verträgt sich nicht mit {0}.</value>
+  </data>
+  <data name="InstallMessageRetainedUnsatisfiedFormat" xml:space="preserve">
+    <value>Diese installierte Mod braucht {0}, aber das ist nicht installiert.</value>
+  </data>
+  <data name="InstallMessageSearchLimitFormat" xml:space="preserve">
+    <value>Borea hat nach {0:N0} Kombinationen aufgehört und keinen Plan gefunden.</value>
+  </data>
+  <data name="InstallMessageRetractedPack" xml:space="preserve">
+    <value>Diese Modpack-Version wurde zurückgezogen.</value>
+  </data>
+  <data name="InstallMessageUnlistedPin" xml:space="preserve">
+    <value>Die festgelegte Version ist nicht gelistet, deshalb kann Borea sie nicht installieren.</value>
+  </data>
+  <data name="InstallDependencyAlternativesFormat" xml:space="preserve">
+    <value>{0} oder {1}</value>
+  </data>
+  <data name="InstallChoicesRecommended" xml:space="preserve">
+    <value>Empfohlen</value>
+  </data>
+  <data name="InstallChoicesSuggested" xml:space="preserve">
+    <value>Vorgeschlagen</value>
+  </data>
+  <data name="InstallChoiceForFormat" xml:space="preserve">
+    <value>{0}, für {1}</value>
+  </data>
+  <data name="InstallChoiceAlternativesFormat" xml:space="preserve">
+    <value>{0} braucht eine dieser Mods:</value>
+  </data>
   <data name="UpdateAnyway" xml:space="preserve">
     <value>Trotzdem aktualisieren</value>
   </data>

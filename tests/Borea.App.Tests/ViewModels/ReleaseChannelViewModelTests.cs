@@ -160,7 +160,7 @@ public sealed class ReleaseChannelViewModelTests
         var dev = viewModel.ContentVersions.Single(version => version.IsDev);
         await dev.InstallCommand.ExecuteAsync(null);
 
-        Assert.Contains(harness.Localization.FormatInstallReleaseChannel("0.8.0-dev.1", harness.Localization.ReleaseDev), dev.InstallWarning);
+        Assert.Contains($"Version 0.8.0-dev.1 hat den Status {harness.Localization.ReleaseDev}, den dein Release-Kanal nicht anbietet.", dev.InstallWarning);
         Assert.DoesNotContain("channel does not offer", dev.InstallWarning);
     }
 }

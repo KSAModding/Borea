@@ -261,7 +261,7 @@ public partial class MainViewModel
                     new InstallPlanningRequest(instance, requested, services.Mods, installed, CurrentPlatform()));
                 var planWarnings = plan.Warnings.Where(warning => warning.Code != "yanked").ToList();
                 if (plan.IsReady && planWarnings.Count > 0)
-                    reasons.Add(Describe(plan, planWarnings));
+                    reasons.Add(Describe(planWarnings));
             }
 
             var request = new ModPackInstallRequest(
@@ -353,7 +353,7 @@ public partial class MainViewModel
 
         var incomplete = result.Members.Count(member => !PackResultItem.IsDone(member.Status));
         var summary = Localization.FormatPackIncomplete(incomplete, result.Members.Count);
-        var details = result.Plan is null ? string.Empty : Describe(result.Plan, result.Plan.Conflicts.Concat(result.Plan.UnresolvedChoices));
+        var details = result.Plan is null ? string.Empty : Describe(result.Plan.Conflicts.Concat(result.Plan.UnresolvedChoices));
         pack.InstallError = details.Length == 0 ? summary : $"{summary} {details}";
     }
 }
