@@ -94,6 +94,17 @@ public sealed class ContentImagesTests
         Assert.Equal((width, height), (icon.Width, icon.Height));
     }
 
+    [Theory]
+    [InlineData(1280, 640, 320, 0, 640)]
+    [InlineData(640, 1280, 0, 320, 640)]
+    [InlineData(512, 512, 0, 0, 512)]
+    [InlineData(511, 256, 127, 0, 256)]
+    [InlineData(256, 511, 0, 127, 256)]
+    public void IconImage_CenterSquare_HasTheShorterSideInTheMiddle(int width, int height, int x, int y, int side)
+    {
+        Assert.Equal(new PixelSquare(x, y, side), new IconImage(Url, Digest, width, height, 1000).CenterSquare);
+    }
+
     [Fact]
     public void IconImage_TooManyBytes_Throws()
     {

@@ -104,7 +104,7 @@ public abstract class ContentImage
         Uri.TryCreate(value, UriKind.Absolute, out var uri) && uri.Scheme == Uri.UriSchemeHttps;
 }
 
-/// <summary>The image that stands for a listing in lists, tiles and headers.</summary>
+/// <summary>The image that stands for a listing in lists, tiles and headers, shown by its <see cref="CenterSquare"/>.</summary>
 public sealed class IconImage : ContentImage
 {
     public const int MinShorterSidePixels = 256;
@@ -137,7 +137,20 @@ public sealed class IconImage : ContentImage
         if (sizeBytes > MaxBytes)
             throw new ArgumentOutOfRangeException(nameof(sizeBytes), sizeBytes, $"The icon can be at most {MaxBytes} bytes.");
     }
+
+    /// <summary>The square in the middle of the icon that a client shows, with the extra pixel of an odd difference on the right or at the bottom (RFC 0065).</summary>
+    public PixelSquare CenterSquare
+    {
+        get
+        {
+            var side = Math.Min(Width, Height);
+            return new PixelSquare((Width - side) / 2, (Height - side) / 2, side);
+        }
+    }
 }
+
+/// <summary>A square of pixels whose top left corner is <see cref="X"/> and <see cref="Y"/> pixels from the top left corner of its image.</summary>
+public readonly record struct PixelSquare(int X, int Y, int Side);
 
 /// <summary>An image that the description of its document references by <see cref="Id"/>.</summary>
 public sealed class DescriptionImage : ContentImage
