@@ -109,6 +109,8 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string LibraryNewInstance => Resources.LibraryNewInstance;
 
+    public string LibraryImportFromProfile => Resources.LibraryImportFromProfile;
+
     public string LibraryActivate => Resources.LibraryActivate;
 
     public string LibraryRename => Resources.LibraryRename;
@@ -437,6 +439,18 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string SetupBannerAction => Resources.SetupBannerAction;
 
+    public string SharedProfileCreateInstance => Resources.SharedProfileCreateInstance;
+
+    public string SharedProfileDismiss => Resources.SharedProfileDismiss;
+
+    public string SharedProfileModalTitle => Resources.SharedProfileModalTitle;
+
+    public string SharedProfileModalHint => Resources.SharedProfileModalHint;
+
+    public string SharedProfileImporting => Resources.SharedProfileImporting;
+
+    public string SharedProfileInstanceName => Resources.SharedProfileInstanceName;
+
     public string SetupBrowse => Resources.SetupBrowse;
 
     public string SetupSave => Resources.SetupSave;
@@ -564,6 +578,15 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     private static string FormatCount(int count, string one, string format)
         => count == 1 ? one : string.Format(CultureInfo.CurrentCulture, format, count);
+
+    public string FormatSharedProfileModCount(int count)
+        => FormatCount(count, Resources.SharedProfileBannerOne, Resources.SharedProfileBannerFormat);
+
+    public string FormatSharedProfileImportDisabled(IEnumerable<string> folderNames)
+        => string.Format(CultureInfo.CurrentCulture, Resources.SharedProfileImportDisabledFormat, string.Join(", ", folderNames));
+
+    public string FormatSharedProfileImportNotChecked(IEnumerable<string> folderNames)
+        => string.Format(CultureInfo.CurrentCulture, Resources.SharedProfileImportNotCheckedFormat, string.Join(", ", folderNames));
 
     public string FormatPackModCount(int count)
         => string.Format(CultureInfo.CurrentCulture, Resources.PackModCountFormat, count);

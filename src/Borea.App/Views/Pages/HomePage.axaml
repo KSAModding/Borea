@@ -36,6 +36,7 @@
             <ContentControl Content="{Binding}" ContentTemplate="{StaticResource LaunchStatus}" />
             <TextBlock Classes="body-md danger" Text="{Binding ContentError}" TextWrapping="Wrap" Margin="0,16,0,0" IsVisible="{Binding ContentError, Converter={x:Static ObjectConverters.IsNotNull}}" />
             <ContentControl Content="{Binding}" ContentTemplate="{StaticResource GameSetupBanner}" IsVisible="{Binding NeedsGameSetup}" />
+            <ContentControl Content="{Binding}" ContentTemplate="{StaticResource SharedProfileBanner}" IsVisible="{Binding ShowSharedProfileBanner}" />
             <views:UpdateNotice Margin="0,16,0,0" IsVisible="{Binding HasAvailableUpdate}" />
 
             <!-- Current install: black container with the header strip, holding the active instance row -->
