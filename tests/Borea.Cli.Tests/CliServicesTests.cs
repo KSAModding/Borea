@@ -18,6 +18,7 @@ public sealed class CliServicesTests : IDisposable
         Assert.Same(graph.SettingsRepository, services.SettingsRepository);
         Assert.Same(graph.GameDirectoryChanger, services.GameDirectoryChanger);
         Assert.Same(graph.Instances, services.Instances);
+        Assert.Same(graph.ModListFormat, services.ModListFormat);
         Assert.Same(graph.ModState, services.ModState);
         Assert.Same(graph.LatestVersion, services.LatestVersion);
         Assert.Same(graph.InstalledVersion, services.InstalledVersion);
@@ -78,6 +79,7 @@ public sealed class CliServicesTests : IDisposable
             ModState = graph.ModState,
             GameLog = graph.GameLog,
             Playtime = graph.Playtime,
+            ModListFormat = graph.ModListFormat,
             LatestVersion = new FakeLatestVersionPing(),
             InstalledVersion = new FakeInstalledGameVersionProvider(),
             IndexFetcher = new FakeContentIndexFetcher(),

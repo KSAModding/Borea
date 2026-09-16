@@ -12,14 +12,17 @@ namespace Borea.Cli.Commands;
 /// </summary>
 internal static class InstanceCommand
 {
-    private const string InstanceArgumentDescription = "The instance's name, or its id when two names differ only in case.";
+    internal const string InstanceArgumentDescription = "The instance's name, or its id when two names differ only in case.";
 
     public static Command Build(Func<CancellationToken, Task<CliServices>> services)
     {
-        var instance = new Command("instance", "List, show, create, rename, delete, activate, and deactivate instances, create one from the mods of the shared profile, and adopt mods that Borea did not install.");
+        var instance = new Command("instance", "List, show, create, duplicate, rename, delete, activate, and deactivate instances, create one from the mods of the shared profile, export and import modlists, and adopt mods that Borea did not install.");
         instance.Subcommands.Add(BuildList(services));
         instance.Subcommands.Add(BuildShow(services));
         instance.Subcommands.Add(BuildCreate(services));
+        instance.Subcommands.Add(ModListCommands.BuildDuplicate(services));
+        instance.Subcommands.Add(ModListCommands.BuildExport(services));
+        instance.Subcommands.Add(ModListCommands.BuildImport(services));
         instance.Subcommands.Add(BuildRename(services));
         instance.Subcommands.Add(BuildDelete(services));
         instance.Subcommands.Add(BuildActivate(services));
