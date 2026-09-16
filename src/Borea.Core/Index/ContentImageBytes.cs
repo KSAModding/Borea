@@ -3,18 +3,24 @@ using System.Security.Cryptography;
 
 namespace Borea.Core.Index;
 
-/// <summary>Checks image bytes against their record by the rules of RFC 0058, without decoding the image.</summary>
+/// <summary>Checks image bytes against their record by the rules of RFC 0058 and RFC 0065, without decoding the image.</summary>
 public static class ContentImageBytes
 {
-    public static long MaxBytes(ContentImage image) => LimitsOf(image).MaxBytes;
+    public static long MaxBytes(ContentImage image) => image switch
+    {
+        IconImage => IconImage.MaxBytes,
+        DescriptionImage => DescriptionImage.MaxBytes,
+        null => throw new ArgumentNullException(nameof(image)),
+        _ => throw new ArgumentException($"The image role {image.GetType().Name} has no limits.", nameof(image)),
+    };
 
     public static ContentImageResult Verify(ContentImage image, byte[] bytes)
     {
         ArgumentNullException.ThrowIfNull(bytes);
 
-        var limits = LimitsOf(image);
-        if (bytes.Length > limits.MaxBytes)
-            return ContentImageResult.Failed(ContentImageFailure.TooLarge, $"The image is {bytes.Length} bytes, above the cap of {limits.MaxBytes}.");
+        var maxBytes = MaxBytes(image);
+        if (bytes.Length > maxBytes)
+            return ContentImageResult.Failed(ContentImageFailure.TooLarge, $"The image is {bytes.Length} bytes, above the cap of {maxBytes}.");
 
         if (Inspect(bytes) is not { } facts)
             return ContentImageResult.Failed(ContentImageFailure.UnsupportedFormat, "The bytes are not a PNG, JPEG or WebP image that can be read.");
@@ -22,8 +28,8 @@ public static class ContentImageBytes
         if (facts.Animated)
             return ContentImageResult.Failed(ContentImageFailure.Animated, $"The {facts.Format} is animated.");
 
-        if (facts.Width < limits.MinPixels || facts.Width > limits.MaxPixels || facts.Height < limits.MinPixels || facts.Height > limits.MaxPixels)
-            return ContentImageResult.Failed(ContentImageFailure.OutsideLimits, $"{facts.Width} by {facts.Height} pixels is outside {limits.MinPixels} to {limits.MaxPixels} per side.");
+        if (PixelRule(image, Math.Min(facts.Width, facts.Height), Math.Max(facts.Width, facts.Height)) is { } rule)
+            return ContentImageResult.Failed(ContentImageFailure.OutsideLimits, $"{rule}, but the image is {facts.Width} by {facts.Height} pixels.");
 
         var differences = new List<string>();
         if (facts.Width != image.Width)
@@ -44,12 +50,14 @@ public static class ContentImageBytes
             : ContentImageResult.Failed(ContentImageFailure.FactsMismatch, string.Join("; ", differences) + ".");
     }
 
-    private static (long MaxBytes, int MinPixels, int MaxPixels) LimitsOf(ContentImage image) => image switch
+    /// <summary>The pixel rule of the role that the sides break, or null when they keep it.</summary>
+    private static string? PixelRule(ContentImage image, int shorter, int longer) => image switch
     {
-        IconImage => (IconImage.MaxBytes, IconImage.MinPixels, IconImage.MaxPixels),
-        DescriptionImage => (DescriptionImage.MaxBytes, 1, DescriptionImage.MaxPixels),
-        null => throw new ArgumentNullException(nameof(image)),
-        _ => throw new ArgumentException($"The image role {image.GetType().Name} has no limits.", nameof(image)),
+        IconImage when shorter is < IconImage.MinShorterSidePixels or > IconImage.MaxShorterSidePixels || longer > IconImage.MaxSideRatio * shorter
+            => $"The shorter side must be {IconImage.MinShorterSidePixels} to {IconImage.MaxShorterSidePixels} pixels and the longer side at most {IconImage.MaxSideRatio} times the shorter side",
+        DescriptionImage when shorter < 1 || longer > DescriptionImage.MaxPixels
+            => $"Each side must be 1 to {DescriptionImage.MaxPixels} pixels",
+        _ => null,
     };
 
     private readonly record struct Facts(string Format, int Width, int Height, bool Animated);

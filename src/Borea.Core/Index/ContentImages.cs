@@ -104,12 +104,15 @@ public abstract class ContentImage
         Uri.TryCreate(value, UriKind.Absolute, out var uri) && uri.Scheme == Uri.UriSchemeHttps;
 }
 
-/// <summary>The square image that stands for a listing in lists, tiles and headers.</summary>
+/// <summary>The image that stands for a listing in lists, tiles and headers.</summary>
 public sealed class IconImage : ContentImage
 {
-    public const int MinPixels = 256;
+    public const int MinShorterSidePixels = 256;
 
-    public const int MaxPixels = 1024;
+    public const int MaxShorterSidePixels = 1024;
+
+    /// <summary>The longer side is at most this many times the shorter side (RFC 0065).</summary>
+    public const int MaxSideRatio = 2;
 
     public const long MaxBytes = 256 * 1024;
 
@@ -124,11 +127,12 @@ public sealed class IconImage : ContentImage
         string? source = null)
         : base(url, sha256, width, height, sizeBytes, license, attribution, source)
     {
-        if (width != height)
-            throw new ArgumentException($"The icon must be square, but is {width} by {height} pixels.", nameof(height));
+        var wide = width > height;
+        if (Math.Min(width, height) is < MinShorterSidePixels or > MaxShorterSidePixels)
+            throw new ArgumentOutOfRangeException(wide ? nameof(height) : nameof(width), $"The shorter side of the icon must be {MinShorterSidePixels} to {MaxShorterSidePixels} pixels, but the icon is {width} by {height} pixels.");
 
-        if (width is < MinPixels or > MaxPixels)
-            throw new ArgumentOutOfRangeException(nameof(width), width, $"The icon side must be {MinPixels} to {MaxPixels} pixels.");
+        if (Math.Max(width, height) > MaxSideRatio * Math.Min(width, height))
+            throw new ArgumentOutOfRangeException(wide ? nameof(width) : nameof(height), $"The longer side of the icon can be at most {MaxSideRatio} times the shorter side, but the icon is {width} by {height} pixels.");
 
         if (sizeBytes > MaxBytes)
             throw new ArgumentOutOfRangeException(nameof(sizeBytes), sizeBytes, $"The icon can be at most {MaxBytes} bytes.");

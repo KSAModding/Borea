@@ -147,7 +147,7 @@ public sealed class ContentImagesParserTests : IDisposable
     }
 
     [Theory]
-    [InlineData("width", "1024", "must be square")]
+    [InlineData("width", "2049", "longer side of the icon can be at most 2 times the shorter side")]
     [InlineData("size", "300000", "at most 262144 bytes")]
     [InlineData("url", "\"http://example.com/icon.png\"", "HTTPS")]
     [InlineData("sha256", null, "must contain a string sha256")]

@@ -71,27 +71,27 @@ public sealed class ContentImagesTests
         Assert.Throws<ArgumentException>(() => new DescriptionImage("shot", Url, Digest, 100, 100, 1000, source: "http://example.com/original"));
     }
 
-    [Fact]
-    public void IconImage_NotSquare_Throws()
+    [Theory]
+    [InlineData(IconImage.MinShorterSidePixels - 1, IconImage.MaxShorterSidePixels)]
+    [InlineData(IconImage.MaxShorterSidePixels, IconImage.MinShorterSidePixels - 1)]
+    [InlineData(IconImage.MaxShorterSidePixels + 1, IconImage.MaxShorterSidePixels + 1)]
+    [InlineData(IconImage.MaxSideRatio * IconImage.MinShorterSidePixels + 1, IconImage.MinShorterSidePixels)]
+    [InlineData(IconImage.MinShorterSidePixels, IconImage.MaxSideRatio * IconImage.MinShorterSidePixels + 1)]
+    public void IconImage_PixelsOutsideTheLimits_Throws(int width, int height)
     {
-        var exception = Assert.Throws<ArgumentException>(() => new IconImage(Url, Digest, 512, 256, 1000));
-
-        Assert.Contains("square", exception.Message);
+        Assert.Throws<ArgumentOutOfRangeException>(() => new IconImage(Url, Digest, width, height, 1000));
     }
 
     [Theory]
-    [InlineData(IconImage.MinPixels - 1)]
-    [InlineData(IconImage.MaxPixels + 1)]
-    public void IconImage_SideOutsideTheLimits_Throws(int side)
+    [InlineData(IconImage.MinShorterSidePixels, IconImage.MinShorterSidePixels)]
+    [InlineData(IconImage.MaxShorterSidePixels, IconImage.MaxShorterSidePixels)]
+    [InlineData(IconImage.MaxSideRatio * IconImage.MinShorterSidePixels, IconImage.MinShorterSidePixels)]
+    [InlineData(IconImage.MaxShorterSidePixels, IconImage.MaxSideRatio * IconImage.MaxShorterSidePixels)]
+    public void IconImage_ValuesAtTheLimits_AreValid(int width, int height)
     {
-        Assert.Throws<ArgumentOutOfRangeException>(() => new IconImage(Url, Digest, side, side, 1000));
-    }
+        var icon = new IconImage(Url, Digest, width, height, IconImage.MaxBytes);
 
-    [Fact]
-    public void IconImage_ValuesAtTheLimits_AreValid()
-    {
-        Assert.Equal(IconImage.MinPixels, new IconImage(Url, Digest, IconImage.MinPixels, IconImage.MinPixels, IconImage.MaxBytes).Width);
-        Assert.Equal(IconImage.MaxPixels, new IconImage(Url, Digest, IconImage.MaxPixels, IconImage.MaxPixels, 1).Width);
+        Assert.Equal((width, height), (icon.Width, icon.Height));
     }
 
     [Fact]
