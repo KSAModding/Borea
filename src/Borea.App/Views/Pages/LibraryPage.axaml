@@ -34,7 +34,21 @@
 
             <TextBlock Classes="body-md muted" Text="{Binding Localization.LibraryEmpty}" Margin="8,24,0,0" IsVisible="{Binding !Instances.Count}" />
 
-            <ItemsControl ItemsSource="{Binding Instances}" ItemTemplate="{StaticResource InstanceRow}" Margin="0,24,0,0">
+            <Button Classes="dropdown" HorizontalAlignment="Right" Margin="0,16,0,0" IsVisible="{Binding !!Instances.Count}" AutomationProperties.Name="{Binding Localization.DiscoverSortBy}">
+                <Button.Flyout>
+                    <MenuFlyout Placement="BottomEdgeAlignedRight">
+                        <MenuItem Header="{Binding Localization.LibrarySortName}" Command="{Binding SelectLibrarySortCommand}" CommandParameter="{x:Static vm:LibrarySort.Name}" />
+                        <MenuItem Header="{Binding Localization.LibrarySortLastPlayed}" Command="{Binding SelectLibrarySortCommand}" CommandParameter="{x:Static vm:LibrarySort.LastPlayed}" />
+                    </MenuFlyout>
+                </Button.Flyout>
+                <StackPanel Orientation="Horizontal" Spacing="4">
+                    <TextBlock Classes="body-md secondary" Text="{Binding Localization.DiscoverSortBy, StringFormat='{}{0}:'}" VerticalAlignment="Center" />
+                    <TextBlock Classes="body-md" Text="{Binding LibrarySortText}" VerticalAlignment="Center" />
+                    <Path Classes="icon size-16" Data="{StaticResource Icon.CaretDown}" VerticalAlignment="Center" />
+                </StackPanel>
+            </Button>
+
+            <ItemsControl ItemsSource="{Binding Instances}" ItemTemplate="{StaticResource InstanceRow}" Margin="0,12,0,0">
                 <ItemsControl.ItemsPanel>
                     <ItemsPanelTemplate>
                         <StackPanel Spacing="8" />

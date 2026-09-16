@@ -34,6 +34,8 @@ internal sealed class CliServices : IDisposable
 
     public required IModStateRepository ModState { get; init; }
 
+    public required IGameLogReader GameLog { get; init; }
+
     public required ILatestVersionPing LatestVersion { get; init; }
 
     public required IInstalledGameVersionProvider InstalledVersion { get; init; }
@@ -130,6 +132,7 @@ internal sealed class CliServices : IDisposable
             GameDirectoryChanger = services.GameDirectoryChanger,
             Instances = instances ?? services.Instances,
             ModState = services.ModState,
+            GameLog = services.GameLog,
             LatestVersion = latestVersion ?? services.LatestVersion,
             InstalledVersion = installedVersion ?? services.InstalledVersion,
             IndexFetcher = indexFetcher ?? services.IndexFetcher,

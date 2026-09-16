@@ -1,3 +1,4 @@
+using Borea.App.ViewModels;
 using Borea.Core.Instances;
 
 namespace Borea.App.Tests.ViewModels;
@@ -201,6 +202,71 @@ public sealed class LibraryViewModelTests
         Assert.Empty(viewModel.Instances);
         Assert.Empty(await harness.Services.Instances.GetAllAsync());
     }
+
+    [Fact]
+    public async Task Load_NeverPlayed_SaysSoWithoutADate()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var viewModel = harness.ViewModel;
+        await harness.Services.Instances.CreateAsync("Alpha", InstanceSource.Custom.Value);
+        await viewModel.LoadAsync();
+
+        var row = Assert.Single(viewModel.Instances);
+
+        Assert.Null(row.LastPlayedAt);
+        Assert.Equal(harness.Localization.LibraryNeverPlayed, row.LastPlayedText);
+        Assert.Null(row.LastPlayedToolTip);
+    }
+
+    [Fact]
+    public async Task Load_GameLogNewerThanTheRecordedLaunch_ShowsTheLogTime()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var viewModel = harness.ViewModel;
+        var instance = await harness.Services.Instances.CreateAsync("Alpha", InstanceSource.Custom.Value);
+        await RecordPlayedAsync(harness, instance.InstanceId, DateTimeOffset.UtcNow.AddDays(-6));
+        var logWrittenAt = DateTimeOffset.UtcNow.AddHours(-2);
+        var log = harness.Services.Paths.GetInstanceGameLogPath(instance.InstanceId);
+        Directory.CreateDirectory(Path.GetDirectoryName(log)!);
+        await File.WriteAllTextAsync(log, "09:34:00.000  INFO loaded settings from settings.toml\n");
+        File.SetLastWriteTimeUtc(log, logWrittenAt.UtcDateTime);
+        await viewModel.LoadAsync();
+
+        var row = Assert.Single(viewModel.Instances);
+
+        Assert.NotNull(row.LastPlayedAt);
+        Assert.Equal(logWrittenAt.UtcDateTime, row.LastPlayedAt.Value.UtcDateTime, TimeSpan.FromSeconds(1));
+        Assert.Equal(harness.Localization.FormatTimeAgo(TimeSpan.FromHours(2)), row.LastPlayedText);
+        Assert.Equal(harness.Localization.FormatLibraryLastPlayed(MainViewModel.DateTimeText(row.LastPlayedAt.Value)), row.LastPlayedToolTip);
+    }
+
+    [Fact]
+    public async Task SortByLastPlayed_PutsTheNewestFirstAndTheNeverPlayedLast()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var viewModel = harness.ViewModel;
+        await harness.Services.Instances.CreateAsync("Alpha", InstanceSource.Custom.Value);
+        var beta = await harness.Services.Instances.CreateAsync("Beta", InstanceSource.Custom.Value);
+        var gamma = await harness.Services.Instances.CreateAsync("Gamma", InstanceSource.Custom.Value);
+        await RecordPlayedAsync(harness, beta.InstanceId, DateTimeOffset.UtcNow.AddDays(-6));
+        await RecordPlayedAsync(harness, gamma.InstanceId, DateTimeOffset.UtcNow.AddHours(-1));
+        await viewModel.LoadAsync();
+        Assert.Equal(["Alpha", "Beta", "Gamma"], viewModel.Instances.Select(row => row.Name));
+
+        viewModel.SelectLibrarySortCommand.Execute(LibrarySort.LastPlayed);
+        Assert.Equal(["Gamma", "Beta", "Alpha"], viewModel.Instances.Select(row => row.Name));
+        Assert.Equal(harness.Localization.LibrarySortLastPlayed, viewModel.LibrarySortText);
+
+        await viewModel.LoadAsync();
+        Assert.Equal(["Gamma", "Beta", "Alpha"], viewModel.Instances.Select(row => row.Name));
+    }
+
+    private static Task RecordPlayedAsync(ViewModelHarness harness, Guid instanceId, DateTimeOffset playedAt) =>
+        harness.Services.Instances.UpdateAsync(instanceId, instance =>
+        {
+            instance.RecordPlayed(playedAt);
+            return true;
+        });
 
     [Fact]
     public async Task Navigation_OnlyOnePageIsVisible()

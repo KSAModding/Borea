@@ -270,4 +270,60 @@ public sealed class InstanceViewModelTests
         Assert.NotNull(withoutLoaderMessage);
         Assert.Equal(withoutLoaderMessage, viewModel.LaunchMessage);
     }
+
+    [Fact]
+    public async Task Play_GameComesUp_ShowsTheInstanceAsPlayedJustNow()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(RecordStarMapAsync, processStarter: new GameStartingStarter());
+        var viewModel = harness.ViewModel;
+        await InstalledContent.AddAsync(harness, "MeasureTools", activate: true, ownership: ModInstallOwnership.Borea);
+        await viewModel.LoadAsync();
+        await viewModel.ActiveInstance!.OpenCommand.ExecuteAsync(null);
+        Assert.Equal(harness.Localization.LibraryNeverPlayed, viewModel.ActiveInstance.LastPlayedText);
+
+        await viewModel.PlayCommand.ExecuteAsync(null);
+
+        Assert.False(viewModel.HasLaunchOutput);
+        Assert.NotNull((await harness.Services.Instances.GetByIdAsync(viewModel.ActiveInstance.InstanceId))?.LastPlayedAt);
+        Assert.Equal(harness.Localization.FormatTimeAgo(TimeSpan.Zero), viewModel.ActiveInstance.LastPlayedText);
+    }
+
+    private static Task RecordStarMapAsync(Borea.Composition.BoreaServices services)
+    {
+        var loader = Directory.CreateDirectory(Path.Combine(Path.GetDirectoryName(services.Paths.GetBoreaSettingsPath())!, "Loaders", "StarMap")).FullName;
+        File.WriteAllBytes(Path.Combine(loader, "StarMap.exe"), []);
+        File.WriteAllBytes(Path.Combine(loader, "StarMap.dll"), []);
+        return services.SettingsRepository.SaveAsync(services.Settings.WithLoaderInstallation(
+            "StarMap",
+            new Borea.Core.ModLoaders.LoaderInstallation(loader, ModVersion.Parse("0.4.6"), rawVersion: null, isAdopted: false)));
+    }
+
+    /// <summary>Hands out a loader that keeps running and whose game writes its log while the start is watched.</summary>
+    private sealed class GameStartingStarter : Borea.Storage.Launch.IProcessStarter
+    {
+        public Borea.Storage.Launch.IStartedProcess Start(Borea.Core.Launch.LaunchPlan plan) => new RunningGame(plan.Arguments[1]);
+
+        private sealed class RunningGame(string instanceRoot) : Borea.Storage.Launch.IStartedProcess
+        {
+            public int Id => 4242;
+
+            public bool HasExited => false;
+
+            public int? ExitCode => null;
+
+            public IReadOnlyList<string> RecentOutput => [];
+
+            public Task<bool> WaitForExitAsync(TimeSpan timeout, CancellationToken cancellationToken = default)
+            {
+                var log = Path.Combine(instanceRoot, "logs", "KittenSpaceAgency.260915-112433.4242.log");
+                Directory.CreateDirectory(Path.GetDirectoryName(log)!);
+                File.AppendAllText(log, "11:24:36.689  INFO loaded settings from settings.toml\n");
+                return Task.FromResult(false);
+            }
+
+            public void Dispose()
+            {
+            }
+        }
+    }
 }

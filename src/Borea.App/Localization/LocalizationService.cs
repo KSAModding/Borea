@@ -127,6 +127,15 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string LibraryEmpty => Resources.LibraryEmpty;
 
+    public string LibraryNeverPlayed => Resources.LibraryNeverPlayed;
+
+    public string LibrarySortName => Resources.LibrarySortName;
+
+    public string LibrarySortLastPlayed => Resources.LibrarySortLastPlayed;
+
+    public string FormatLibraryLastPlayed(string date)
+        => string.Format(CultureInfo.CurrentCulture, Resources.LibraryLastPlayedFormat, date);
+
     public string InstanceTabContent => Resources.InstanceTabContent;
 
     public string InstanceTabManualInstalls => Resources.InstanceTabManualInstalls;

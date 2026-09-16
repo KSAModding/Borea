@@ -73,6 +73,57 @@ public sealed class FileGameLogReaderTests : IDisposable
         Assert.Equal(["running"], log.Lines);
     }
 
+    [Fact]
+    public async Task ReadGameLogAsync_RunLogs_ReadsTheNewestRunAndNoArchive()
+    {
+        var now = DateTime.UtcNow;
+        Touch("KittenSpaceAgency.log", now.AddDays(-1), "older game");
+        Touch("KittenSpaceAgency.260915-092000.1200.log", now.AddHours(-2), "earlier run");
+        Touch("KittenSpaceAgency.260915-112433.43720.log", now.AddMinutes(-1), "current run");
+        Touch(Path.Combine("Archives", "KittenSpaceAgency.260915.0.log"), now, "archived run");
+
+        var log = await _reader.ReadGameLogAsync(_instanceId);
+
+        Assert.Equal(["current run"], log.Lines);
+        Assert.Equal("KittenSpaceAgency.260915-112433.43720.log", Path.GetFileName(log.Path));
+    }
+
+    [Fact]
+    public async Task GetLastWriteAsync_NoLogs_ReturnsNull()
+    {
+        Assert.Null(await _reader.GetLastWriteAsync(_instanceId));
+    }
+
+    [Fact]
+    public async Task GetLastWriteAsync_SeveralSessionLogs_ReturnsTheNewestWrite()
+    {
+        var newest = new DateTime(2026, 9, 15, 9, 34, 0, DateTimeKind.Utc);
+        Touch("KittenSpaceAgency.log", newest.AddDays(-1));
+        Touch(Path.Combine("Archives", "Brutal.260914.3.log"), newest.AddDays(-2));
+        Touch(Path.Combine("Archives", "KittenSpaceAgency.260915.0.log"), newest.AddHours(-2));
+        Touch("KittenSpaceAgency.260915-112433.43720.log", newest);
+
+        Assert.Equal(new DateTimeOffset(newest), await _reader.GetLastWriteAsync(_instanceId));
+    }
+
+    [Fact]
+    public async Task GetLastWriteAsync_CrashTailsAndTheLaunchLog_AreNotSessions()
+    {
+        Touch("KittenSpaceAgency.260915-111840.37972.previous-crash.log", DateTime.UtcNow);
+        Touch("KittenSpaceAgency.260915-111840.37972.abnormal-exit.log", DateTime.UtcNow);
+        Touch("borea-launch.log", DateTime.UtcNow);
+
+        Assert.Null(await _reader.GetLastWriteAsync(_instanceId));
+    }
+
+    private void Touch(string relativePath, DateTime lastWriteUtc, string line = "09:34:00.000  INFO loaded settings from settings.toml")
+    {
+        var path = Path.Combine(Path.GetDirectoryName(_paths.GetInstanceGameLogPath(_instanceId))!, relativePath);
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        File.WriteAllText(path, line + "\n");
+        File.SetLastWriteTimeUtc(path, lastWriteUtc);
+    }
+
     private void Write(string text)
     {
         var path = _paths.GetInstanceGameLogPath(_instanceId);

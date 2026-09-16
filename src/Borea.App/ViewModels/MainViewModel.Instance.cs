@@ -511,6 +511,9 @@ public partial class MainViewModel
                 await ShowLaunchFailureAsync(result, instance, loader);
             else
                 LaunchMessage = result.Message;
+
+            if (result.Started)
+                await RefreshLastPlayedAsync(instance.InstanceId);
         }
         catch (Exception exception) when (exception is IOException or InvalidOperationException or System.Net.Http.HttpRequestException)
         {

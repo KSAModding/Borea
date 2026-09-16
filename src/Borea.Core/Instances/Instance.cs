@@ -33,6 +33,9 @@ public sealed class Instance
 
     public bool IsFavorite { get; private set; }
 
+    /// <summary>When a launch through Borea last started the game, or null when none did.</summary>
+    public DateTimeOffset? LastPlayedAt { get; private set; }
+
     public Instance(string name, InstanceSource source) : this(Guid.NewGuid(), name, source, DateTimeOffset.UtcNow, Array.Empty<InstalledMod>(), Array.Empty<ForeignMod>())
     {
     }
@@ -47,8 +50,9 @@ public sealed class Instance
         DateTimeOffset createdAt,
         IReadOnlyList<InstalledMod> mods,
         IReadOnlyList<ForeignMod> foreignMods,
-        bool isFavorite)
-        => new(instanceId, name, source, createdAt, mods, foreignMods, isFavorite);
+        bool isFavorite,
+        DateTimeOffset? lastPlayedAt = null)
+        => new(instanceId, name, source, createdAt, mods, foreignMods, isFavorite, lastPlayedAt);
 
     private Instance(
         Guid instanceId,
@@ -57,7 +61,8 @@ public sealed class Instance
         DateTimeOffset createdAt,
         IReadOnlyList<InstalledMod> mods,
         IReadOnlyList<ForeignMod> foreignMods,
-        bool isFavorite = false)
+        bool isFavorite = false,
+        DateTimeOffset? lastPlayedAt = null)
     {
         if (string.IsNullOrWhiteSpace(name))
             throw new ArgumentException("Instance name cannot be null or whitespace.", nameof(name));
@@ -75,6 +80,7 @@ public sealed class Instance
         _mods = mods.ToList();
         _foreignMods = foreignMods.ToList();
         IsFavorite = isFavorite;
+        LastPlayedAt = lastPlayedAt;
 
         var duplicateId = _mods
             .GroupBy(m => m.ModId, ModIds.Comparer)
@@ -174,4 +180,12 @@ public sealed class Instance
     }
 
     public void SetFavorite(bool isFavorite) => IsFavorite = isFavorite;
+
+    public void RecordPlayed(DateTimeOffset playedAt) => LastPlayedAt = playedAt;
+
+    /// <summary>The newer of <see cref="LastPlayedAt"/> and the last write of a game log, so a start without Borea counts too.</summary>
+    public DateTimeOffset? LastPlayedWith(DateTimeOffset? gameLogWrittenAt)
+        => LastPlayedAt is { } recorded && (gameLogWrittenAt is null || recorded >= gameLogWrittenAt)
+            ? recorded
+            : gameLogWrittenAt;
 }

@@ -164,4 +164,31 @@ public sealed class InstanceTests
         // rejection) by mutating the returned collection directly.
         Assert.IsAssignableFrom<System.Collections.Generic.IReadOnlyList<InstalledMod>>(instance.Mods);
     }
+
+    [Fact]
+    public void LastPlayedWith_GameLogNewerThanTheRecord_ReturnsTheLogTime()
+    {
+        var instance = new Instance("Test", InstanceSource.Custom.Value);
+        instance.RecordPlayed(new DateTimeOffset(2026, 9, 14, 20, 0, 0, TimeSpan.Zero));
+        var logWrittenAt = new DateTimeOffset(2026, 9, 15, 9, 58, 0, TimeSpan.Zero);
+
+        Assert.Equal(logWrittenAt, instance.LastPlayedWith(logWrittenAt));
+    }
+
+    [Fact]
+    public void LastPlayedWith_RecordNewerOrNoGameLog_ReturnsTheRecord()
+    {
+        var instance = new Instance("Test", InstanceSource.Custom.Value);
+        var playedAt = new DateTimeOffset(2026, 9, 15, 9, 58, 0, TimeSpan.Zero);
+        instance.RecordPlayed(playedAt);
+
+        Assert.Equal(playedAt, instance.LastPlayedWith(playedAt.AddHours(-1)));
+        Assert.Equal(playedAt, instance.LastPlayedWith(null));
+    }
+
+    [Fact]
+    public void LastPlayedWith_NeverPlayedAndNoGameLog_ReturnsNull()
+    {
+        Assert.Null(new Instance("Test", InstanceSource.Custom.Value).LastPlayedWith(null));
+    }
 }

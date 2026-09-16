@@ -46,6 +46,37 @@ public sealed class LaunchCommandTests : IDisposable
     }
 
     [Fact]
+    public async Task Launch_GameStarts_RecordsWhenTheInstanceWasPlayed()
+    {
+        _host.Mods.Listings.Add(LoaderFixtures.Listing());
+        var loaderDirectory = LoaderCommandTests.CreateLoaderDirectory("StarMap", "not a program", _host.Root);
+        await _host.RunAsync("settings", "set", "loader", "StarMap", loaderDirectory);
+        await _host.RunAsync("instance", "create", "Flight Test");
+        var before = DateTimeOffset.UtcNow;
+
+        var run = await _host.RunAsync("launch", "Flight Test", "StarMap");
+
+        Assert.Equal(0, run.ExitCode);
+        var playedAt = Assert.Single(await new FileInstanceRepository(_host.Paths).GetAllAsync()).LastPlayedAt;
+        Assert.NotNull(playedAt);
+        Assert.InRange(playedAt.Value, before, DateTimeOffset.UtcNow);
+    }
+
+    [Fact]
+    public async Task Launch_LoaderStopsRightAway_RecordsNoPlay()
+    {
+        _host.Mods.Listings.Add(LoaderFixtures.Listing());
+        var loaderDirectory = LoaderCommandTests.CreateLoaderDirectory("StarMap", "not a program", _host.Root);
+        await _host.RunAsync("settings", "set", "loader", "StarMap", loaderDirectory);
+        await _host.RunAsync("instance", "create", "Flight Test");
+        _host.ProcessStarter.CrashExitCode = -532462766;
+
+        await _host.RunAsync("launch", "Flight Test", "StarMap");
+
+        Assert.Null(Assert.Single(await new FileInstanceRepository(_host.Paths).GetAllAsync()).LastPlayedAt);
+    }
+
+    [Fact]
     public async Task Launch_LoaderWhoseListingHasNoInstanceTable_FailsWithoutStarting()
     {
         _host.Mods.Listings.Add(LoaderFixtures.ListingWithoutInstance("OtherLoader"));

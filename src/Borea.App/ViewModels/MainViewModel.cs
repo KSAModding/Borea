@@ -401,14 +401,14 @@ public partial class MainViewModel : ViewModelBase
             return;
 
         var activeId = await _instances.GetActiveInstanceIdAsync();
-        var all = (await _instances.GetAllAsync())
-            .OrderBy(instance => instance.Name, StringComparer.OrdinalIgnoreCase)
-            .ThenBy(instance => instance.CreatedAt)
-            .ToList();
+        var all = await _instances.GetAllAsync();
+        var rows = new List<InstanceItem>();
+        foreach (var instance in all)
+            rows.Add(new InstanceItem(this, instance, instance.InstanceId == activeId, await LastPlayedAsync(instance)));
 
         Instances.Clear();
-        foreach (var instance in all)
-            Instances.Add(new InstanceItem(this, instance, instance.InstanceId == activeId));
+        foreach (var row in Sorted(rows))
+            Instances.Add(row);
         _activeInstanceEntity = all.FirstOrDefault(instance => instance.InstanceId == activeId);
 
         ActiveInstance = Instances.FirstOrDefault(instance => instance.IsActive);
@@ -455,6 +455,8 @@ public partial class MainViewModel : ViewModelBase
 
     /// <summary>The date in the regional format the user chose, for the tooltip of an age.</summary>
     internal static string DateText(DateTimeOffset at) => at.ToLocalTime().ToString("d", CultureInfo.CurrentCulture);
+
+    internal static string DateTimeText(DateTimeOffset at) => at.ToLocalTime().ToString("g", CultureInfo.CurrentCulture);
 
     /// <summary>
     /// Opens "modal: new instance" from #8.
@@ -641,12 +643,14 @@ public partial class MainViewModel : ViewModelBase
     }
 
     /// <summary>
-    /// The text of the Home cards, the Discover and pack rows and the versions
-    /// tables. Their ages, dates and download counts follow both the language
-    /// and the regional format.
+    /// The text of the Home cards, the instance, Discover and pack rows and the
+    /// versions tables. Their ages, dates and download counts follow both the
+    /// language and the regional format.
     /// </summary>
     private void RefreshRowText()
     {
+        foreach (var instance in Instances)
+            instance.RefreshText();
         foreach (var item in RecentItems)
             item.RefreshText();
         foreach (var item in _listings)
@@ -661,9 +665,8 @@ public partial class MainViewModel : ViewModelBase
     {
         // the service raises an empty name when the culture changes, so every
         // translated string on this model needs a refresh too.
-        foreach (var instance in Instances)
-            instance.RefreshText();
         RefreshRowText();
+        RefreshLibraryText();
         // the reasons a mod cannot be removed are translated text
         RefreshInstalledFlags();
         foreach (var option in ReleaseChannelOptions)
@@ -764,15 +767,29 @@ public sealed partial class InstanceItem : ObservableObject
 
     public string? SourceText => _owner.DescribeSource(_source);
 
+    internal DateTimeOffset CreatedAt { get; }
+
+    /// <summary>The newer of the launch Borea recorded and the last write of the game's log.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(LastPlayedText))]
+    [NotifyPropertyChangedFor(nameof(LastPlayedToolTip))]
+    private DateTimeOffset? _lastPlayedAt;
+
+    public string LastPlayedText => LastPlayedAt is { } at ? _owner.AgeText(at) : _owner.Localization.LibraryNeverPlayed;
+
+    public string? LastPlayedToolTip => LastPlayedAt is { } at ? _owner.Localization.FormatLibraryLastPlayed(MainViewModel.DateTimeText(at)) : null;
+
     [ObservableProperty]
     private bool _isConfirmingDelete;
 
-    public InstanceItem(MainViewModel owner, Instance instance, bool isActive)
+    public InstanceItem(MainViewModel owner, Instance instance, bool isActive, DateTimeOffset? lastPlayedAt = null)
     {
         _owner = owner;
         _source = instance.Source;
         InstanceId = instance.InstanceId;
         Name = instance.Name;
+        CreatedAt = instance.CreatedAt;
+        _lastPlayedAt = lastPlayedAt;
         ModCount = instance.Mods.Count;
         Mods = instance.Mods;
         ModIds = Mods.Select(mod => mod.ModId).ToList();
@@ -780,7 +797,12 @@ public sealed partial class InstanceItem : ObservableObject
         IsActive = isActive;
     }
 
-    internal void RefreshText() => OnPropertyChanged(nameof(SourceText));
+    internal void RefreshText()
+    {
+        OnPropertyChanged(nameof(SourceText));
+        OnPropertyChanged(nameof(LastPlayedText));
+        OnPropertyChanged(nameof(LastPlayedToolTip));
+    }
 
     internal ModVersion? InstalledVersionOf(string modId)
         => _modVersions.TryGetValue(modId, out var version) ? version : null;

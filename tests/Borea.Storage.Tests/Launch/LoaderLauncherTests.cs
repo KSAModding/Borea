@@ -470,6 +470,25 @@ public sealed class LoaderLauncherTests : IDisposable
     }
 
     [Fact]
+    public async Task WatchStart_LoaderExitsWithZeroAndTheGameWritesARunLog_StaysStarted()
+    {
+        PlaceStarMap();
+        using var launcher = new LoaderLauncher(_paths, _starter, TimeSpan.FromMinutes(5));
+        var started = launcher.Launch(_instance, LoaderListing(provides: StarMapProvides()));
+        var process = Assert.Single(_starter.Processes);
+        process.HasExited = true;
+        process.ExitCode = 0;
+        var runLog = Path.Combine(Path.GetDirectoryName(_paths.GetInstanceGameLogPath(_instance.InstanceId))!, "KittenSpaceAgency.260915-112433.43720.log");
+        Directory.CreateDirectory(Path.GetDirectoryName(runLog)!);
+        File.WriteAllText(runLog, "11:24:36.689  INFO loaded settings from settings.toml");
+
+        var watch = launcher.WatchStartAsync(_instance, started);
+
+        Assert.True(await Task.WhenAny(watch, Task.Delay(TimeSpan.FromSeconds(10))) == watch, "The watch did not stop when the game wrote its run log.");
+        Assert.True((await watch).Started);
+    }
+
+    [Fact]
     public async Task WatchStart_LoaderExitsWithZeroWithoutTheGame_ReportsItWithoutBlamingAMod()
     {
         PlaceStarMap();
