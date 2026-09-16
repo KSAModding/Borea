@@ -104,12 +104,15 @@ public abstract class ContentImage
         Uri.TryCreate(value, UriKind.Absolute, out var uri) && uri.Scheme == Uri.UriSchemeHttps;
 }
 
-/// <summary>The square image that stands for a listing in lists, tiles and headers.</summary>
+/// <summary>The image that stands for a listing in lists, tiles and headers, shown by its <see cref="CenterSquare"/>.</summary>
 public sealed class IconImage : ContentImage
 {
-    public const int MinPixels = 256;
+    public const int MinShorterSidePixels = 256;
 
-    public const int MaxPixels = 1024;
+    public const int MaxShorterSidePixels = 1024;
+
+    /// <summary>The longer side is at most this many times the shorter side (RFC 0065).</summary>
+    public const int MaxSideRatio = 2;
 
     public const long MaxBytes = 256 * 1024;
 
@@ -124,16 +127,30 @@ public sealed class IconImage : ContentImage
         string? source = null)
         : base(url, sha256, width, height, sizeBytes, license, attribution, source)
     {
-        if (width != height)
-            throw new ArgumentException($"The icon must be square, but is {width} by {height} pixels.", nameof(height));
+        var wide = width > height;
+        if (Math.Min(width, height) is < MinShorterSidePixels or > MaxShorterSidePixels)
+            throw new ArgumentOutOfRangeException(wide ? nameof(height) : nameof(width), $"The shorter side of the icon must be {MinShorterSidePixels} to {MaxShorterSidePixels} pixels, but the icon is {width} by {height} pixels.");
 
-        if (width is < MinPixels or > MaxPixels)
-            throw new ArgumentOutOfRangeException(nameof(width), width, $"The icon side must be {MinPixels} to {MaxPixels} pixels.");
+        if (Math.Max(width, height) > MaxSideRatio * Math.Min(width, height))
+            throw new ArgumentOutOfRangeException(wide ? nameof(width) : nameof(height), $"The longer side of the icon can be at most {MaxSideRatio} times the shorter side, but the icon is {width} by {height} pixels.");
 
         if (sizeBytes > MaxBytes)
             throw new ArgumentOutOfRangeException(nameof(sizeBytes), sizeBytes, $"The icon can be at most {MaxBytes} bytes.");
     }
+
+    /// <summary>The square in the middle of the icon that a client shows, with the extra pixel of an odd difference on the right or at the bottom (RFC 0065).</summary>
+    public PixelSquare CenterSquare
+    {
+        get
+        {
+            var side = Math.Min(Width, Height);
+            return new PixelSquare((Width - side) / 2, (Height - side) / 2, side);
+        }
+    }
 }
+
+/// <summary>A square of pixels whose top left corner is <see cref="X"/> and <see cref="Y"/> pixels from the top left corner of its image.</summary>
+public readonly record struct PixelSquare(int X, int Y, int Side);
 
 /// <summary>An image that the description of its document references by <see cref="Id"/>.</summary>
 public sealed class DescriptionImage : ContentImage

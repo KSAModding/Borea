@@ -111,6 +111,31 @@ public sealed class ContentImageBytesTests
         Assert.Equal(ContentImageFailure.OutsideLimits, description.Failure);
     }
 
+    [Theory]
+    [InlineData(IconImage.MinShorterSidePixels, IconImage.MaxSideRatio * IconImage.MinShorterSidePixels)]
+    [InlineData(IconImage.MaxSideRatio * IconImage.MaxShorterSidePixels, IconImage.MaxShorterSidePixels)]
+    public void Verify_IconThatIsNotSquareInsideTheLimits_LoadsTheBytes(int width, int height)
+    {
+        var bytes = Png(width, height);
+
+        var result = ContentImageBytes.Verify(new IconImage(Url, Sha256Of(bytes), width, height, bytes.Length), bytes);
+
+        Assert.True(result.IsLoaded, result.Reason);
+    }
+
+    [Theory]
+    [InlineData(IconImage.MinShorterSidePixels - 1, IconImage.MaxShorterSidePixels)]
+    [InlineData(IconImage.MaxShorterSidePixels + 1, IconImage.MaxShorterSidePixels + 1)]
+    [InlineData(IconImage.MaxSideRatio * IconImage.MinShorterSidePixels + 1, IconImage.MinShorterSidePixels)]
+    public void Verify_IconPixelsOutsideTheLimits_AreOutsideTheLimits(int width, int height)
+    {
+        var bytes = Png(width, height);
+
+        var result = ContentImageBytes.Verify(new IconImage(Url, Sha256Of(bytes), 512, 512, bytes.Length), bytes);
+
+        Assert.Equal(ContentImageFailure.OutsideLimits, result.Failure);
+    }
+
     [Fact]
     public void Verify_MoreBytesThanTheRoleCap_IsTooLarge()
     {

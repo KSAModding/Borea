@@ -12,7 +12,7 @@ using Borea.Core.Index;
 
 namespace Borea.App.Views;
 
-/// <summary>Fits a listing image whole into its slot, and shows the child as the placeholder while no image shows.</summary>
+/// <summary>Fits the shown part of a listing image whole into its slot, and shows the child as the placeholder while no image shows.</summary>
 public sealed class ListingImageView : Decorator
 {
     public static readonly StyledProperty<ListingImage?> ImageProperty =
@@ -55,7 +55,7 @@ public sealed class ListingImageView : Decorator
         set => SetValue(BackgroundProperty, value);
     }
 
-    /// <summary>Sizes the slot from the record's width and height, at most the available width, so the layout does not move when the image loads.</summary>
+    /// <summary>Sizes the slot from the shown part of the record, at most the available width, so the layout does not move when the image loads.</summary>
     public bool LayoutFromRecord
     {
         get => GetValue(LayoutFromRecordProperty);
@@ -72,6 +72,32 @@ public sealed class ListingImageView : Decorator
         var width = image.Width * scale;
         var height = image.Height * scale;
         return new Rect((slot.Width - width) / 2, (slot.Height - height) / 2, width, height);
+    }
+
+    /// <summary>The part of a bitmap of <paramref name="record"/> that a view shows, which is the center square for an icon and the whole bitmap for any other image.</summary>
+    internal static Rect ShownPart(ContentImage record, Size bitmap)
+    {
+        if (record is not IconImage icon)
+            return new Rect(bitmap);
+
+        var square = icon.CenterSquare;
+        var scaleX = bitmap.Width / icon.Width;
+        var scaleY = bitmap.Height / icon.Height;
+        return new Rect(square.X * scaleX, square.Y * scaleY, square.Side * scaleX, square.Side * scaleY);
+    }
+
+    internal static (Rect Source, Rect Destination) Placement(ContentImage record, Size bitmap, Size slot)
+    {
+        var part = ShownPart(record, bitmap);
+        return (part, Fit(part.Size, slot));
+    }
+
+    /// <summary>The width to decode the whole image at, so the shown part gets no more pixels than the slot shows and never more than the image has.</summary>
+    internal static int DecodeWidth(ContentImage record, Size slot, double scaling)
+    {
+        var part = ShownPart(record, new Size(record.Width, record.Height));
+        var shown = slot.Width > 0 && slot.Height > 0 ? Fit(part.Size, slot).Width : part.Width;
+        return Math.Clamp((int)Math.Ceiling(Math.Ceiling(shown * scaling) * record.Width / part.Width), 1, record.Width);
     }
 
     protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
@@ -118,20 +144,21 @@ public sealed class ListingImageView : Decorator
         if (!LayoutFromRecord || Image?.Record is not { } record)
             return measured;
 
-        var width = Math.Min(record.Width, availableSize.Width);
-        return new Size(width, width * record.Height / record.Width);
+        var part = ShownPart(record, new Size(record.Width, record.Height));
+        var width = Math.Min(part.Width, availableSize.Width);
+        return new Size(width, width * part.Height / part.Width);
     }
 
     public override void Render(DrawingContext context)
     {
-        if (_bitmap is null)
+        if (_bitmap is null || Image?.Record is not { } record)
             return;
 
         if (Background is { } background)
             context.FillRectangle(background, new Rect(Bounds.Size));
 
-        var pixels = _bitmap.PixelSize;
-        context.DrawImage(_bitmap, new Rect(_bitmap.Size), Fit(new Size(pixels.Width, pixels.Height), Bounds.Size));
+        var (source, destination) = Placement(record, _bitmap.Size, Bounds.Size);
+        context.DrawImage(_bitmap, source, destination);
     }
 
     private void OnEffectiveViewportChanged(object? sender, EffectiveViewportChangedEventArgs e)
@@ -177,21 +204,13 @@ public sealed class ListingImageView : Decorator
             return;
         }
 
-        var width = DecodeWidth(image.Record);
+        var width = DecodeWidth(image.Record, Bounds.Size, TopLevel.GetTopLevel(this)?.RenderScaling ?? 1);
         if (ReferenceEquals(bytes, _decoding) && width <= _decodingWidth)
             return;
 
         _decoding = bytes;
         _decodingWidth = width;
         _ = DecodeAsync(bytes, width, ++_generation);
-    }
-
-    /// <summary>Decodes no more pixels than the slot shows, and never more than the image has.</summary>
-    private int DecodeWidth(ContentImage record)
-    {
-        var shown = Bounds.Width > 0 && Bounds.Height > 0 ? Fit(new Size(record.Width, record.Height), Bounds.Size).Width : record.Width;
-        var scaling = TopLevel.GetTopLevel(this)?.RenderScaling ?? 1;
-        return Math.Clamp((int)Math.Ceiling(shown * scaling), 1, record.Width);
     }
 
     private async Task DecodeAsync(byte[] bytes, int width, int generation)
