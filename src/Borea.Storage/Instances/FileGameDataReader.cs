@@ -24,8 +24,6 @@ public sealed class FileGameDataReader : IGameDataReader
 
     private IReadOnlyList<GameDataEntry> Read(Guid instanceId, CancellationToken cancellationToken) =>
     [
-        Folder(_pathProvider.GetInstanceSavesFolder(instanceId), cancellationToken),
-        Folder(_pathProvider.GetInstanceVehiclesFolder(instanceId), cancellationToken),
         File(_pathProvider.GetInstanceSettingsPath(instanceId)),
         Folder(_pathProvider.GetInstanceHudLayoutsFolder(instanceId), cancellationToken),
         Folder(_pathProvider.GetInstanceCrashDumpsFolder(instanceId), cancellationToken),
