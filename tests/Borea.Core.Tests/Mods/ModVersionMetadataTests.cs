@@ -15,7 +15,8 @@ public sealed class ModVersionMetadataTests
         InstallInfo? install = null,
         LoaderRequirement? loader = null,
         IReadOnlyList<ModDependency>? dependencies = null,
-        int specVersion = SpecVersions.Highest) =>
+        int specVersion = SpecVersions.Highest,
+        string? changelogText = null) =>
         new(
             specVersion: specVersion,
             modId: "test-mod",
@@ -31,7 +32,8 @@ public sealed class ModVersionMetadataTests
             gameMax: gameMax,
             gameMaxRevision: gameMaxRevision,
             install: install,
-            loader: loader);
+            loader: loader,
+            changelogText: changelogText);
 
     [Fact]
     public void Constructor_ValidInput_SetsAllProperties()
@@ -44,6 +46,20 @@ public sealed class ModVersionMetadataTests
         Assert.Equal(5117, metadata.GameMaxRevision);
         Assert.False(metadata.Yanked);
         Assert.Null(metadata.Listing);
+    }
+
+    [Theory]
+    [InlineData(ModVersionMetadata.MaxChangelogTextBytes, 'a', true)]
+    [InlineData(ModVersionMetadata.MaxChangelogTextBytes + 1, 'a', false)]
+    [InlineData(ModVersionMetadata.MaxChangelogTextBytes / 2 + 1, (char)0xE4, false)]
+    public void Constructor_ChangelogText_IsLimitedInBytesOfUtf8(int length, char character, bool accepted)
+    {
+        var text = new string(character, length);
+
+        if (accepted)
+            Assert.Equal(text, Build(changelogText: text).ChangelogText);
+        else
+            Assert.Throws<ArgumentException>(() => Build(changelogText: text));
     }
 
     [Fact]

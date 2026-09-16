@@ -2,6 +2,7 @@
 using Borea.Core.Game;
 using Borea.Core.ModLoaders;
 using System.Collections.ObjectModel;
+using System.Text;
 
 namespace Borea.Core.Mods;
 
@@ -10,6 +11,8 @@ namespace Borea.Core.Mods;
 /// </summary>
 public sealed class ModVersionMetadata
 {
+    public const int MaxChangelogTextBytes = 16 * 1024;
+
     /// <summary>
     /// The version of the metadata specification.
     /// </summary>
@@ -106,6 +109,11 @@ public sealed class ModVersionMetadata
     public string? Changelog { get; }
 
     /// <summary>
+    /// The release notes as CommonMark, as the index copied them at stamp time.
+    /// </summary>
+    public string? ChangelogText { get; }
+
+    /// <summary>
     /// The listing facts as they stood at stamp time, for release-accurate display.
     /// </summary>
     public ListingSnapshot? Listing { get; }
@@ -139,6 +147,7 @@ public sealed class ModVersionMetadata
         InstallInfo? install = null,
         LoaderRequirement? loader = null,
         string? changelog = null,
+        string? changelogText = null,
         ListingSnapshot? listing = null,
         bool yanked = false,
         string? yankedReason = null,
@@ -188,6 +197,9 @@ public sealed class ModVersionMetadata
         if (installSizeBytes is < 0)
             throw new ArgumentOutOfRangeException(nameof(installSizeBytes), "Install size cannot be negative.");
 
+        if (changelogText is not null && Encoding.UTF8.GetByteCount(changelogText) > MaxChangelogTextBytes)
+            throw new ArgumentException($"The changelog text can have at most {MaxChangelogTextBytes} bytes of UTF-8.", nameof(changelogText));
+
         SpecVersion = specVersion;
         ModId = modId;
         Type = type;
@@ -206,6 +218,7 @@ public sealed class ModVersionMetadata
         Loader = loader;
         Dependencies = new ReadOnlyCollection<ModDependency>(dependencies.ToArray());
         Changelog = changelog;
+        ChangelogText = changelogText;
         Listing = listing;
         Yanked = yanked;
         YankedReason = yankedReason;

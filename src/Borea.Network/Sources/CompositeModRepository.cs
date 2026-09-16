@@ -174,6 +174,7 @@ public sealed class CompositeModRepository : IModRepository
         original.Install,
         original.Loader,
         original.Changelog,
+        original.ChangelogText,
         original.Listing,
         original.Yanked,
         original.YankedReason,
