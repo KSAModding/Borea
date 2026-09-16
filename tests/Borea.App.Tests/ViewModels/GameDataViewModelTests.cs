@@ -14,16 +14,16 @@ public sealed class GameDataViewModelTests
         var viewModel = harness.ViewModel;
         var instance = await OpenAsync(harness, "Main");
         var paths = harness.Services.Paths;
-        Write(Path.Combine(paths.GetInstanceSavesFolder(instance.InstanceId), "Orbit", "save.dat"), 1500);
+        Write(Path.Combine(paths.GetInstanceHudLayoutsFolder(instance.InstanceId), "Default", "layout.toml"), 1500);
         Write(paths.GetInstanceSettingsPath(instance.InstanceId), 12);
 
         await viewModel.ShowInstanceGameDataCommand.ExecuteAsync(null);
 
         Assert.True(viewModel.IsGameDataTab);
         Assert.False(viewModel.IsContentTab);
-        Assert.Equal(["saves", "Vehicles", "settings.toml", "HUDLayouts", "crashdumps", "exports"], viewModel.GameDataItems.Select(item => item.Name));
-        Assert.Equal(1.5.ToString("0.0", CultureInfo.CurrentCulture) + " KB", viewModel.GameDataItems[0].SizeText);
-        Assert.Equal("12 B", viewModel.GameDataItems[2].SizeText);
+        Assert.Equal(["settings.toml", "HUDLayouts", "crashdumps", "exports"], viewModel.GameDataItems.Select(item => item.Name));
+        Assert.Equal("12 B", viewModel.GameDataItems[0].SizeText);
+        Assert.Equal(1.5.ToString("0.0", CultureInfo.CurrentCulture) + " KB", viewModel.GameDataItems[1].SizeText);
         Assert.Null(viewModel.GameDataError);
 
         viewModel.ShowInstanceContentCommand.Execute(null);
@@ -40,9 +40,9 @@ public sealed class GameDataViewModelTests
 
         await viewModel.ShowInstanceGameDataCommand.ExecuteAsync(null);
 
-        var vehicles = viewModel.GameDataItems.Single(item => item.Name == "Vehicles");
-        Assert.False(vehicles.Exists);
-        Assert.Equal(harness.Localization.GameDataEmpty, vehicles.SizeText);
+        var crashDumps = viewModel.GameDataItems.Single(item => item.Name == "crashdumps");
+        Assert.False(crashDumps.Exists);
+        Assert.Equal(harness.Localization.GameDataEmpty, crashDumps.SizeText);
     }
 
     [Fact]
@@ -52,16 +52,16 @@ public sealed class GameDataViewModelTests
         var viewModel = harness.ViewModel;
         var instance = await OpenAsync(harness, "Main");
         var paths = harness.Services.Paths;
-        Directory.CreateDirectory(paths.GetInstanceSavesFolder(instance.InstanceId));
+        Directory.CreateDirectory(paths.GetInstanceHudLayoutsFolder(instance.InstanceId));
         Write(paths.GetInstanceSettingsPath(instance.InstanceId), 12);
         var opened = new List<string>();
         viewModel.OpenWithSystem = opened.Add;
         await viewModel.ShowInstanceGameDataCommand.ExecuteAsync(null);
 
-        viewModel.GameDataItems.Single(item => item.Name == "saves").OpenFolderCommand.Execute(null);
+        viewModel.GameDataItems.Single(item => item.Name == "HUDLayouts").OpenFolderCommand.Execute(null);
         viewModel.GameDataItems.Single(item => item.Name == "settings.toml").OpenFolderCommand.Execute(null);
 
-        Assert.Equal([paths.GetInstanceSavesFolder(instance.InstanceId), paths.GetInstanceRoot(instance.InstanceId)], opened);
+        Assert.Equal([paths.GetInstanceHudLayoutsFolder(instance.InstanceId), paths.GetInstanceRoot(instance.InstanceId)], opened);
         Assert.Null(viewModel.GameDataError);
     }
 
@@ -71,18 +71,18 @@ public sealed class GameDataViewModelTests
         using var harness = await ViewModelHarness.CreateAsync();
         var viewModel = harness.ViewModel;
         var instance = await OpenAsync(harness, "Main");
-        var saves = harness.Services.Paths.GetInstanceSavesFolder(instance.InstanceId);
-        Directory.CreateDirectory(saves);
+        var layouts = harness.Services.Paths.GetInstanceHudLayoutsFolder(instance.InstanceId);
+        Directory.CreateDirectory(layouts);
         await viewModel.ShowInstanceGameDataCommand.ExecuteAsync(null);
-        var item = viewModel.GameDataItems.Single(item => item.Name == "saves");
+        var item = viewModel.GameDataItems.Single(item => item.Name == "HUDLayouts");
 
         viewModel.OpenWithSystem = _ => throw new Win32Exception("No application is associated with the folder.");
         item.OpenFolderCommand.Execute(null);
         Assert.Equal("No application is associated with the folder.", viewModel.GameDataError);
 
-        Directory.Delete(saves);
+        Directory.Delete(layouts);
         item.OpenFolderCommand.Execute(null);
-        Assert.Equal(harness.Localization.FormatAboutFolderMissing(saves), viewModel.GameDataError);
+        Assert.Equal(harness.Localization.FormatAboutFolderMissing(layouts), viewModel.GameDataError);
     }
 
     [Fact]
@@ -99,7 +99,7 @@ public sealed class GameDataViewModelTests
 
         await viewModel.LoadAsync();
         Assert.True(viewModel.IsGameDataTab);
-        Assert.Equal(6, viewModel.GameDataItems.Count);
+        Assert.Equal(4, viewModel.GameDataItems.Count);
 
         await viewModel.Instances.Single(instance => instance.Name == "Second").OpenCommand.ExecuteAsync(null);
         Assert.True(viewModel.IsContentTab);
@@ -123,7 +123,7 @@ public sealed class GameDataViewModelTests
         await loading;
 
         var secondRoot = harness.Services.Paths.GetInstanceRoot(second.InstanceId);
-        Assert.Equal(6, viewModel.GameDataItems.Count);
+        Assert.Equal(4, viewModel.GameDataItems.Count);
         Assert.All(viewModel.GameDataItems, item => Assert.StartsWith(secondRoot, item.FolderPath, StringComparison.Ordinal));
     }
 
@@ -147,14 +147,14 @@ public sealed class GameDataViewModelTests
         using var harness = await ViewModelHarness.CreateAsync();
         var viewModel = harness.ViewModel;
         var instance = await OpenAsync(harness, "Main");
-        Write(Path.Combine(harness.Services.Paths.GetInstanceSavesFolder(instance.InstanceId), "save.dat"), 1500);
+        Write(Path.Combine(harness.Services.Paths.GetInstanceHudLayoutsFolder(instance.InstanceId), "layout.toml"), 1500);
         viewModel.RegionalFormat.TrySetCulture("en-US");
         await viewModel.ShowInstanceGameDataCommand.ExecuteAsync(null);
-        Assert.Equal("1.5 KB", viewModel.GameDataItems[0].SizeText);
+        Assert.Equal("1.5 KB", viewModel.GameDataItems[1].SizeText);
 
         viewModel.RegionalFormat.TrySetCulture("de-DE");
 
-        Assert.Equal("1,5 KB", viewModel.GameDataItems[0].SizeText);
+        Assert.Equal("1,5 KB", viewModel.GameDataItems[1].SizeText);
     }
 
     [Theory]

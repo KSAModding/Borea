@@ -175,6 +175,7 @@ public partial class MainViewModel
         _contentPack = await ResolveSourcePackAsync(_selectedInstanceEntity?.Source);
         RefreshContentGroups();
         OnPropertyChanged(nameof(HasUpdates));
+        await LoadGameSavesAsync();
         if (IsManualInstallsTab)
             await LoadManualInstallsAsync();
         else if (IsGameDataTab)
@@ -221,14 +222,14 @@ public partial class MainViewModel
         Add(Localization.InstanceGroupMods, chosen.Where(content => content.Type == ContentType.Mod));
         Add(Localization.InstanceGroupModLoaders, chosen.Where(content => content.Type == ContentType.ModLoader));
         Add(Localization.InstanceGroupOther, chosen.Where(content => content.Type is not ContentType.Mod and not ContentType.ModLoader));
-        Add(Localization.InstanceGroupDependencies, _content.Where(content => content.IsDependency));
+        Add(Localization.InstanceGroupDependencies, _content.Where(content => content.IsDependency), isDependencies: true);
         OnPropertyChanged(nameof(HasContent));
 
-        void Add(string title, IEnumerable<ContentItem> items)
+        void Add(string title, IEnumerable<ContentItem> items, bool isDependencies = false)
         {
             var list = items.ToList();
             if (list.Count > 0)
-                ContentGroups.Add(new ContentGroup(title, list));
+                ContentGroups.Add(new ContentGroup(title, list, isDependencies));
         }
     }
 
@@ -738,7 +739,8 @@ internal interface IUpdateRow : IInstallRow
     IReadOnlyList<ReleaseChangelog> Changelogs { get; set; }
 }
 
-public sealed record ContentGroup(string Title, IReadOnlyList<ContentItem> Items);
+/// <param name="IsDependencies">The design shows this group last, after the saves and vehicles.</param>
+public sealed record ContentGroup(string Title, IReadOnlyList<ContentItem> Items, bool IsDependencies = false);
 
 /// <summary>
 /// One row of the instance's content table.

@@ -4,6 +4,135 @@
              xmlns:views="using:Borea.App.Views"
              x:Class="Borea.App.Views.Pages.InstancePage"
              x:DataType="vm:MainViewModel">
+    <UserControl.Resources>
+        <!-- c/table-versions of one content group -->
+        <DataTemplate x:Key="ContentGroupTable" x:DataType="vm:ContentGroup">
+            <Border BorderBrush="{StaticResource Brush.BorderStrong}" BorderThickness="1" CornerRadius="16" ClipToBounds="True" Padding="0,0,0,4" Margin="0,0,0,16">
+                <StackPanel>
+                    <Border Background="{StaticResource Brush.Surface}" Padding="16,11">
+                        <TextBlock Classes="body-md secondary" Text="{Binding Title}" />
+                    </Border>
+                    <ItemsControl ItemsSource="{Binding Items}" ItemTemplate="{StaticResource ContentRow}" />
+                </StackPanel>
+            </Border>
+        </DataTemplate>
+
+        <DataTemplate x:Key="GameSaveRow" x:DataType="vm:GameSaveItem">
+            <Border BorderBrush="{StaticResource Brush.BorderStrong}" BorderThickness="0,1,0,0" Padding="16,8">
+                <Grid ColumnDefinitions="48,16,*,24,Auto">
+                    <Border Classes="thumbnail" Width="48" Height="48">
+                        <Panel>
+                            <Path Classes="icon" Data="{StaticResource Icon.Cylinder}" IsVisible="{Binding IsVehicle}" />
+                            <Path Classes="icon" Data="{StaticResource Icon.Planet}" IsVisible="{Binding !IsVehicle}" />
+                        </Panel>
+                    </Border>
+                    <StackPanel Grid.Column="2" VerticalAlignment="Center" Spacing="2">
+                        <TextBlock Classes="heading-sm" Text="{Binding Name}" ToolTip.Tip="{Binding FolderName}" TextTrimming="CharacterEllipsis" />
+                        <TextBlock Classes="body-sm secondary" Text="{Binding UpdatedText}" />
+                        <TextBlock Classes="body-sm danger" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.GameSaveDeleteConfirm}" TextWrapping="Wrap" IsVisible="{Binding IsConfirmingDelete}" />
+                        <StackPanel Spacing="4" Margin="0,4,0,0" IsVisible="{Binding IsChoosingTarget}">
+                            <TextBlock Classes="body-sm secondary" Text="{Binding CopyNoteText}" TextWrapping="Wrap" IsVisible="{Binding CopyNoteText, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                            <ComboBox ItemsSource="{Binding CopyTargets}" SelectedItem="{Binding CopyTarget}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.GameSaveCopyToInstance}" Width="240">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:InstanceItem">
+                                        <TextBlock Text="{Binding Name}" />
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+                        </StackPanel>
+                        <TextBlock Classes="body-sm danger" Text="{Binding ReplaceText}" TextWrapping="Wrap" IsVisible="{Binding IsConfirmingReplace}" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="4" Orientation="Horizontal" Spacing="24" VerticalAlignment="Center">
+                        <Border Classes="chip untested" VerticalAlignment="Center" IsVisible="{Binding IsOlderBuild}" ToolTip.Tip="{Binding OlderBuildText}">
+                            <StackPanel Orientation="Horizontal" Spacing="4">
+                                <Ellipse />
+                                <TextBlock Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.GameSaveOlderBuild}" />
+                            </StackPanel>
+                        </Border>
+                        <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center" IsVisible="{Binding BuildText, Converter={x:Static ObjectConverters.IsNotNull}}">
+                            <Path Classes="icon size-16" Data="{StaticResource Icon.GitCommit}" />
+                            <TextBlock Classes="label-md" Text="{Binding BuildText}" VerticalAlignment="Center" />
+                        </StackPanel>
+                        <TextBlock Classes="label-md" Text="{Binding SizeText}" VerticalAlignment="Center" />
+                        <Panel VerticalAlignment="Center">
+                            <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding IsConfirmingDelete}">
+                                <Button Classes="text danger" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryDelete}" Command="{Binding ConfirmDeleteCommand}" />
+                                <Button Classes="text" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryCancel}" Command="{Binding CancelCommand}" />
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding IsChoosingTarget}">
+                                <Button Classes="text primary" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.GameSaveCopy}" Command="{Binding CopyCommand}" />
+                                <Button Classes="text" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryCancel}" Command="{Binding CancelCommand}" />
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding IsConfirmingReplace}">
+                                <Button Classes="text danger" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.GameSaveReplace}" Command="{Binding ConfirmReplaceCommand}" />
+                                <Button Classes="text" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryCancel}" Command="{Binding CancelCommand}" />
+                            </StackPanel>
+                            <Button Classes="icon" IsVisible="{Binding IsIdle}" AutomationProperties.Name="{Binding Name}">
+                                <Button.Flyout>
+                                    <MenuFlyout Placement="BottomEdgeAlignedRight">
+                                        <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.GameDataOpenFolder}" Command="{Binding OpenFolderCommand}" />
+                                        <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.GameSaveBackUp}" Command="{Binding BackUpCommand}" />
+                                        <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.GameSaveCopyToInstance}" Command="{Binding BeginCopyCommand}" />
+                                        <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryDelete}" Command="{Binding BeginDeleteCommand}" />
+                                    </MenuFlyout>
+                                </Button.Flyout>
+                                <Path Classes="icon-filled size-18" Data="{StaticResource Icon.More}" />
+                            </Button>
+                        </Panel>
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </DataTemplate>
+
+        <DataTemplate x:Key="GameSaveTable" x:DataType="vm:GameSaveSection">
+            <Border BorderBrush="{StaticResource Brush.BorderStrong}" BorderThickness="1" CornerRadius="16" ClipToBounds="True" Padding="0,0,0,4" Margin="0,0,0,16">
+                <StackPanel>
+                    <Border Background="{StaticResource Brush.Surface}" Padding="16,11">
+                        <Grid ColumnDefinitions="*,16,Auto">
+                            <TextBlock Classes="body-md secondary" Text="{Binding Title}" VerticalAlignment="Center" />
+                            <Button Grid.Column="2" Classes="link" Command="{Binding BeginCopyFromProfileCommand}" IsVisible="{Binding !IsChoosingFromProfile}" VerticalAlignment="Center">
+                                <TextBlock Classes="action-md" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.GameSaveCopyFromProfile}" />
+                            </Button>
+                        </Grid>
+                    </Border>
+                    <TextBlock Classes="body-sm secondary" Text="{Binding Message}" TextWrapping="Wrap" Margin="16,8" IsVisible="{Binding Message, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                    <TextBlock Classes="body-sm danger" Text="{Binding Error}" TextWrapping="Wrap" Margin="16,8" IsVisible="{Binding Error, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                    <StackPanel Spacing="8" Margin="16,8" IsVisible="{Binding IsChoosingFromProfile}">
+                        <TextBlock Classes="body-sm secondary" Text="{Binding CopyNoteText}" TextWrapping="Wrap" IsVisible="{Binding CopyNoteText, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                        <TextBlock Classes="body-md muted" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.GameSaveProfileEmpty}" IsVisible="{Binding !HasProfileItems}" />
+                        <ItemsControl ItemsSource="{Binding ProfileItems}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:GameSaveItem">
+                                    <Grid ColumnDefinitions="Auto,8,*,16,Auto,16,Auto" Margin="0,4">
+                                        <CheckBox IsChecked="{Binding IsSelected}" AutomationProperties.Name="{Binding Name}" VerticalAlignment="Center" />
+                                        <StackPanel Grid.Column="2" VerticalAlignment="Center">
+                                            <TextBlock Classes="heading-sm" Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
+                                            <TextBlock Classes="body-sm secondary" Text="{Binding UpdatedText}" />
+                                            <TextBlock Classes="body-sm secondary" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.GameSaveExistsInInstance}" IsVisible="{Binding ExistsInInstance}" />
+                                        </StackPanel>
+                                        <TextBlock Grid.Column="4" Classes="label-md" Text="{Binding BuildText}" VerticalAlignment="Center" />
+                                        <TextBlock Grid.Column="6" Classes="label-md" Text="{Binding SizeText}" VerticalAlignment="Center" />
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                        <TextBlock Classes="body-sm danger" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.GameSaveProfileReplace}" TextWrapping="Wrap" IsVisible="{Binding IsConfirmingProfileReplace}" />
+                        <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+                            <Button Classes="text primary" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.GameSaveCopy}" Command="{Binding CopyFromProfileCommand}" IsVisible="{Binding !IsConfirmingProfileReplace}" IsEnabled="{Binding HasProfileItems}" />
+                            <Button Classes="text danger" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.GameSaveReplace}" Command="{Binding ReplaceFromProfileCommand}" IsVisible="{Binding IsConfirmingProfileReplace}" />
+                            <Button Classes="text" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryCancel}" Command="{Binding CancelCopyFromProfileCommand}" />
+                        </StackPanel>
+                    </StackPanel>
+                    <Grid ColumnDefinitions="*,16,Auto" Margin="16,12" IsVisible="{Binding !HasItems}">
+                        <TextBlock Classes="body-md muted" Text="{Binding EmptyText}" VerticalAlignment="Center" />
+                        <Button Grid.Column="2" Classes="text" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.GameDataOpenFolder}" Command="{Binding OpenFolderCommand}" />
+                    </Grid>
+                    <ItemsControl ItemsSource="{Binding Items}" ItemTemplate="{StaticResource GameSaveRow}" />
+                </StackPanel>
+            </Border>
+        </DataTemplate>
+    </UserControl.Resources>
+
     <!-- Instance (library-instance) -->
     <ScrollViewer>
         <StackPanel MaxWidth="700" Margin="32,42,32,32">
@@ -47,6 +176,7 @@
                             <Button Classes="icon" AutomationProperties.Name="{Binding SelectedInstance.Name}">
                                 <Button.Flyout>
                                     <MenuFlyout Placement="BottomEdgeAlignedRight">
+                                        <MenuItem Header="{Binding Localization.InstanceBackUpAllSaves}" Command="{Binding BackUpAllSavesCommand}" />
                                         <MenuItem Header="{Binding Localization.LibraryRename}" Command="{Binding SelectedInstance.BeginRenameCommand}" />
                                         <MenuItem Header="{Binding Localization.LibraryOpenFolder}" Command="{Binding SelectedInstance.OpenFolderCommand}" />
                                         <MenuItem Header="{Binding Localization.LibraryDelete}" Command="{Binding SelectedInstance.BeginDeleteCommand}" />
@@ -200,26 +330,25 @@
                 </TextBlock.IsVisible>
             </TextBlock>
 
-            <!-- c/table-versions per group -->
-            <ItemsControl ItemsSource="{Binding ContentGroups}" Margin="0,32,0,0" IsVisible="{Binding IsContentTab}">
-                <ItemsControl.ItemsPanel>
-                    <ItemsPanelTemplate>
-                        <StackPanel Spacing="16" />
-                    </ItemsPanelTemplate>
-                </ItemsControl.ItemsPanel>
-                <ItemsControl.ItemTemplate>
-                    <DataTemplate x:DataType="vm:ContentGroup">
-                        <Border BorderBrush="{StaticResource Brush.BorderStrong}" BorderThickness="1" CornerRadius="16" ClipToBounds="True" Padding="0,0,0,4">
-                            <StackPanel>
-                                <Border Background="{StaticResource Brush.Surface}" Padding="16,11">
-                                    <TextBlock Classes="body-md secondary" Text="{Binding Title}" />
-                                </Border>
-                                <ItemsControl ItemsSource="{Binding Items}" ItemTemplate="{StaticResource ContentRow}" />
-                            </StackPanel>
-                        </Border>
-                    </DataTemplate>
-                </ItemsControl.ItemTemplate>
-            </ItemsControl>
+            <!-- the design order: the groups, vehicles, saves, then the dependencies; a hidden group takes no space, margin included -->
+            <StackPanel Margin="0,32,0,0" IsVisible="{Binding IsContentTab}">
+                <ItemsControl ItemsSource="{Binding ContentGroups}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:ContentGroup">
+                            <ContentControl Content="{Binding}" ContentTemplate="{StaticResource ContentGroupTable}" IsVisible="{Binding !IsDependencies}" />
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <ContentControl Content="{Binding VehiclesSection}" ContentTemplate="{StaticResource GameSaveTable}" />
+                <ContentControl Content="{Binding SavesSection}" ContentTemplate="{StaticResource GameSaveTable}" />
+                <ItemsControl ItemsSource="{Binding ContentGroups}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:ContentGroup">
+                            <ContentControl Content="{Binding}" ContentTemplate="{StaticResource ContentGroupTable}" IsVisible="{Binding IsDependencies}" />
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
         </StackPanel>
     </ScrollViewer>
 </UserControl>

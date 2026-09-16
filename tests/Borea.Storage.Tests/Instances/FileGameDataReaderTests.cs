@@ -25,19 +25,18 @@ public sealed class FileGameDataReaderTests : IDisposable
     [Fact]
     public async Task ReadAsync_FixtureInstance_ListsEveryEntryWithItsSize()
     {
-        Write(Path.Combine(_paths.GetInstanceSavesFolder(_instanceId), "Orbit", "save.dat"), 300);
-        Write(Path.Combine(_paths.GetInstanceSavesFolder(_instanceId), "quick.dat"), 200);
-        Write(Path.Combine(_paths.GetInstanceVehiclesFolder(_instanceId), "Rocket.xml"), 50);
         Write(_paths.GetInstanceSettingsPath(_instanceId), 12);
-        Directory.CreateDirectory(_paths.GetInstanceHudLayoutsFolder(_instanceId));
+        Write(Path.Combine(_paths.GetInstanceHudLayoutsFolder(_instanceId), "Default", "layout.toml"), 300);
+        Write(Path.Combine(_paths.GetInstanceHudLayoutsFolder(_instanceId), "meta.toml"), 200);
+        Directory.CreateDirectory(_paths.GetInstanceExportsFolder(_instanceId));
 
         var entries = await _reader.ReadAsync(_instanceId);
 
-        Assert.Equal(["saves", "Vehicles", "settings.toml", "HUDLayouts", "crashdumps", "exports"], entries.Select(entry => entry.Name));
-        Assert.Equal([500L, 50L, 12L, 0L, 0L, 0L], entries.Select(entry => entry.SizeBytes));
-        Assert.Equal([true, true, true, true, false, false], entries.Select(entry => entry.Exists));
-        Assert.Equal([true, true, false, true, true, true], entries.Select(entry => entry.IsFolder));
-        Assert.Equal(_paths.GetInstanceSavesFolder(_instanceId), entries[0].Path);
+        Assert.Equal(["settings.toml", "HUDLayouts", "crashdumps", "exports"], entries.Select(entry => entry.Name));
+        Assert.Equal([12L, 500L, 0L, 0L], entries.Select(entry => entry.SizeBytes));
+        Assert.Equal([true, true, false, true], entries.Select(entry => entry.Exists));
+        Assert.Equal([false, true, true, true], entries.Select(entry => entry.IsFolder));
+        Assert.Equal(_paths.GetInstanceHudLayoutsFolder(_instanceId), entries[1].Path);
     }
 
     [Fact]
@@ -45,7 +44,7 @@ public sealed class FileGameDataReaderTests : IDisposable
     {
         var entries = await _reader.ReadAsync(_instanceId);
 
-        Assert.Equal(6, entries.Count);
+        Assert.Equal(4, entries.Count);
         Assert.All(entries, entry =>
         {
             Assert.False(entry.Exists);

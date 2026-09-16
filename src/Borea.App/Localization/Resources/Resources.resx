@@ -189,6 +189,12 @@
   <data name="InstanceGroupOther" xml:space="preserve">
     <value>Other</value>
   </data>
+  <data name="InstanceGroupVehicles" xml:space="preserve">
+    <value>Vehicles</value>
+  </data>
+  <data name="InstanceGroupSaves" xml:space="preserve">
+    <value>Saves</value>
+  </data>
   <data name="InstanceGroupDependencies" xml:space="preserve">
     <value>Dependencies</value>
   </data>
@@ -233,6 +239,81 @@
   </data>
   <data name="GameDataEmpty" xml:space="preserve">
     <value>Empty</value>
+  </data>
+  <data name="GameSaveNoVehicles" xml:space="preserve">
+    <value>No vehicles in this instance yet</value>
+  </data>
+  <data name="GameSaveNoSaves" xml:space="preserve">
+    <value>No saves in this instance yet</value>
+  </data>
+  <data name="GameSaveUpdatedFormat" xml:space="preserve">
+    <value>Updated {0}</value>
+  </data>
+  <data name="GameSaveOlderBuild" xml:space="preserve">
+    <value>Older build</value>
+  </data>
+  <data name="GameSaveOlderBuildFormat" xml:space="preserve">
+    <value>Made with {0}. The installed build is {1}.</value>
+  </data>
+  <data name="GameSaveBackUp" xml:space="preserve">
+    <value>Back up</value>
+  </data>
+  <data name="GameSaveBackedUpFormat" xml:space="preserve">
+    <value>Backed up {0} to {1}.</value>
+  </data>
+  <data name="GameSaveCopyToInstance" xml:space="preserve">
+    <value>Copy to instance</value>
+  </data>
+  <data name="GameSaveCopy" xml:space="preserve">
+    <value>Copy</value>
+  </data>
+  <data name="GameSaveCopyModsNote" xml:space="preserve">
+    <value>The other instance needs the same mods. Borea cannot check this.</value>
+  </data>
+  <data name="GameSaveNoOtherInstance" xml:space="preserve">
+    <value>There is no other instance to copy to.</value>
+  </data>
+  <data name="GameSaveReplaceFormat" xml:space="preserve">
+    <value>{1} already has {0}. Replace it? Borea moves the old one into the Backups folder.</value>
+  </data>
+  <data name="GameSaveReplace" xml:space="preserve">
+    <value>Replace</value>
+  </data>
+  <data name="GameSaveCopiedFormat" xml:space="preserve">
+    <value>Copied {0} to {1}.</value>
+  </data>
+  <data name="GameSaveDeleteConfirm" xml:space="preserve">
+    <value>Delete it? Borea moves the folder into the Backups folder.</value>
+  </data>
+  <data name="GameSaveDeletedFormat" xml:space="preserve">
+    <value>Moved {0} into the Backups folder.</value>
+  </data>
+  <data name="GameSaveCloseGame" xml:space="preserve">
+    <value>Close the game first.</value>
+  </data>
+  <data name="GameSaveCopyFromProfile" xml:space="preserve">
+    <value>Copy from the game profile</value>
+  </data>
+  <data name="GameSaveProfileEmpty" xml:space="preserve">
+    <value>The game profile has nothing to copy.</value>
+  </data>
+  <data name="GameSaveExistsInInstance" xml:space="preserve">
+    <value>Already in this instance</value>
+  </data>
+  <data name="GameSaveProfileReplace" xml:space="preserve">
+    <value>Some of the chosen items are already in this instance. Replace them? Borea moves the old ones into the Backups folder.</value>
+  </data>
+  <data name="GameSavesCopiedFromProfileFormat" xml:space="preserve">
+    <value>Copied {0} items from the game profile.</value>
+  </data>
+  <data name="GameSavesBackedUpFormat" xml:space="preserve">
+    <value>Backed up {0} saves to {1}.</value>
+  </data>
+  <data name="GameSavesNothingToBackUp" xml:space="preserve">
+    <value>This instance has no saves to back up.</value>
+  </data>
+  <data name="InstanceBackUpAllSaves" xml:space="preserve">
+    <value>Back up all saves</value>
   </data>
   <data name="GameLogOpen" xml:space="preserve">
     <value>Open log</value>

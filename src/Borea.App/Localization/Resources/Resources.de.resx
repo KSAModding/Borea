@@ -189,6 +189,12 @@
   <data name="InstanceGroupOther" xml:space="preserve">
     <value>Sonstiges</value>
   </data>
+  <data name="InstanceGroupVehicles" xml:space="preserve">
+    <value>Fahrzeuge</value>
+  </data>
+  <data name="InstanceGroupSaves" xml:space="preserve">
+    <value>Spielstände</value>
+  </data>
   <data name="InstanceGroupDependencies" xml:space="preserve">
     <value>Abhängigkeiten</value>
   </data>
@@ -233,6 +239,81 @@
   </data>
   <data name="GameDataEmpty" xml:space="preserve">
     <value>Leer</value>
+  </data>
+  <data name="GameSaveNoVehicles" xml:space="preserve">
+    <value>Noch keine Fahrzeuge in dieser Instanz</value>
+  </data>
+  <data name="GameSaveNoSaves" xml:space="preserve">
+    <value>Noch keine Spielstände in dieser Instanz</value>
+  </data>
+  <data name="GameSaveUpdatedFormat" xml:space="preserve">
+    <value>Aktualisiert {0}</value>
+  </data>
+  <data name="GameSaveOlderBuild" xml:space="preserve">
+    <value>Älterer Build</value>
+  </data>
+  <data name="GameSaveOlderBuildFormat" xml:space="preserve">
+    <value>Mit {0} erstellt. Installiert ist {1}.</value>
+  </data>
+  <data name="GameSaveBackUp" xml:space="preserve">
+    <value>Sichern</value>
+  </data>
+  <data name="GameSaveBackedUpFormat" xml:space="preserve">
+    <value>{0} nach {1} gesichert.</value>
+  </data>
+  <data name="GameSaveCopyToInstance" xml:space="preserve">
+    <value>In Instanz kopieren</value>
+  </data>
+  <data name="GameSaveCopy" xml:space="preserve">
+    <value>Kopieren</value>
+  </data>
+  <data name="GameSaveCopyModsNote" xml:space="preserve">
+    <value>Die andere Instanz braucht dieselben Mods. Borea kann das nicht prüfen.</value>
+  </data>
+  <data name="GameSaveNoOtherInstance" xml:space="preserve">
+    <value>Es gibt keine andere Instanz zum Kopieren.</value>
+  </data>
+  <data name="GameSaveReplaceFormat" xml:space="preserve">
+    <value>{1} hat {0} schon. Ersetzen? Borea verschiebt das alte in den Ordner Backups.</value>
+  </data>
+  <data name="GameSaveReplace" xml:space="preserve">
+    <value>Ersetzen</value>
+  </data>
+  <data name="GameSaveCopiedFormat" xml:space="preserve">
+    <value>{0} nach {1} kopiert.</value>
+  </data>
+  <data name="GameSaveDeleteConfirm" xml:space="preserve">
+    <value>Löschen? Borea verschiebt den Ordner in den Ordner Backups.</value>
+  </data>
+  <data name="GameSaveDeletedFormat" xml:space="preserve">
+    <value>{0} in den Ordner Backups verschoben.</value>
+  </data>
+  <data name="GameSaveCloseGame" xml:space="preserve">
+    <value>Schließe zuerst das Spiel.</value>
+  </data>
+  <data name="GameSaveCopyFromProfile" xml:space="preserve">
+    <value>Aus dem Spielprofil kopieren</value>
+  </data>
+  <data name="GameSaveProfileEmpty" xml:space="preserve">
+    <value>Das Spielprofil hat nichts zum Kopieren.</value>
+  </data>
+  <data name="GameSaveExistsInInstance" xml:space="preserve">
+    <value>Schon in dieser Instanz</value>
+  </data>
+  <data name="GameSaveProfileReplace" xml:space="preserve">
+    <value>Einige gewählte Einträge sind schon in dieser Instanz. Ersetzen? Borea verschiebt die alten in den Ordner Backups.</value>
+  </data>
+  <data name="GameSavesCopiedFromProfileFormat" xml:space="preserve">
+    <value>{0} Einträge aus dem Spielprofil kopiert.</value>
+  </data>
+  <data name="GameSavesBackedUpFormat" xml:space="preserve">
+    <value>{0} Spielstände nach {1} gesichert.</value>
+  </data>
+  <data name="GameSavesNothingToBackUp" xml:space="preserve">
+    <value>Diese Instanz hat keine Spielstände zum Sichern.</value>
+  </data>
+  <data name="InstanceBackUpAllSaves" xml:space="preserve">
+    <value>Alle Spielstände sichern</value>
   </data>
   <data name="GameLogOpen" xml:space="preserve">
     <value>Log öffnen</value>

@@ -390,6 +390,7 @@ public sealed class ContentIndexModRepositoryTests : IDisposable
         public string GetModFavoritesPath() => throw new NotSupportedException();
         public string GetModPackFavoritesPath() => throw new NotSupportedException();
         public string GetBoreaSettingsPath() => throw new NotSupportedException();
+        public string GetBackupsRoot() => throw new NotSupportedException();
         public string GetLogsFolder() => throw new NotSupportedException();
         public string GetSharedProfileRoot() => throw new NotSupportedException();
         public string GetInstanceRoot(Guid instanceId) => throw new NotSupportedException();
