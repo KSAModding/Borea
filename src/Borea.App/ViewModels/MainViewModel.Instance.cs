@@ -192,6 +192,7 @@ public partial class MainViewModel
         CurrentWindowInstance = true;
 
         StartContentUpdateCheck();
+        StartPlaytimeLoad(item.InstanceId);
     }
 
     [RelayCommand]

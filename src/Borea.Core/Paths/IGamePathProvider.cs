@@ -91,6 +91,11 @@ public interface IGamePathProvider
     /// </summary>
     string GetInstanceLaunchLogPath(Guid instanceId);
 
+    /// <summary>
+    /// The sessions Borea read from the instance's archived game logs.
+    /// </summary>
+    string GetInstancePlaytimePath(Guid instanceId);
+
     string GetInstanceManifestPath(Guid instanceId);
 
     string GetInstanceMetadataPath(Guid instanceId);

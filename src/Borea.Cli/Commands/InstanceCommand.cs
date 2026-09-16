@@ -78,7 +78,7 @@ internal static class InstanceCommand
     {
         var instance = ArgumentRules.Text("instance", InstanceArgumentDescription);
         var json = ArgumentRules.Json();
-        var show = new Command("show", "Print one instance and when it was last played.");
+        var show = new Command("show", "Print one instance, when it was last played, and how long it was played.");
         show.Arguments.Add(instance);
         show.Options.Add(json);
 
@@ -87,7 +87,8 @@ internal static class InstanceCommand
             var target = await InstanceLookup.ResolveAsync(cli.Instances, parseResult.GetRequiredValue(instance)).ConfigureAwait(false);
             var activeId = await cli.Instances.GetActiveInstanceIdAsync().ConfigureAwait(false);
             var lastPlayedAt = await LastPlayedAsync(cli, target, ct).ConfigureAwait(false);
-            var view = InstanceDetailsView.From(target, target.InstanceId == activeId, lastPlayedAt);
+            var playtime = await cli.Playtime.GetPlaytimeAsync(target.InstanceId, ct).ConfigureAwait(false);
+            var view = InstanceDetailsView.From(target, target.InstanceId == activeId, lastPlayedAt, playtime);
 
             if (parseResult.GetValue(json))
             {
@@ -101,6 +102,8 @@ internal static class InstanceCommand
             output.WriteLine($"Created: {Timestamp(view.CreatedAt)}");
             output.WriteLine($"Mods: {view.ModCount}");
             output.WriteLine($"Last played: {(view.LastPlayedAt is { } lastPlayed ? Timestamp(lastPlayed) : "never")}");
+            output.WriteLine($"Playtime: {DescribePlaytime(playtime)}");
+            output.WriteLine($"Sessions: {playtime.Sessions}");
             return ExitCodes.Done;
         }));
 
@@ -112,6 +115,17 @@ internal static class InstanceCommand
 
     private static string DescribeLastPlayed(DateTimeOffset? lastPlayed)
         => lastPlayed is { } at ? $"last played {Timestamp(at)}" : "never played";
+
+    private static string DescribePlaytime(InstancePlaytime playtime)
+    {
+        if (!playtime.IsKnown)
+            return "unknown, the newest game log could not be read";
+
+        var total = playtime.Total.TotalHours >= 1
+            ? $"{(int)playtime.Total.TotalHours} h {playtime.Total.Minutes} min"
+            : $"{(int)playtime.Total.TotalMinutes} min";
+        return playtime.IncludesRunningSession ? $"{total}, including the current session" : total;
+    }
 
     private static string Timestamp(DateTimeOffset at) => at.ToLocalTime().ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture);
 
@@ -454,10 +468,16 @@ internal static class InstanceCommand
     }
 
     /// <summary><c>instance show --json</c>.</summary>
-    private sealed record InstanceDetailsView(Guid Id, string Name, bool Active, InstanceSourceView Source, DateTimeOffset CreatedAt, int ModCount, DateTimeOffset? LastPlayedAt)
+    private sealed record InstanceDetailsView(Guid Id, string Name, bool Active, InstanceSourceView Source, DateTimeOffset CreatedAt, int ModCount, DateTimeOffset? LastPlayedAt, PlaytimeView Playtime)
     {
-        public static InstanceDetailsView From(Instance instance, bool active, DateTimeOffset? lastPlayedAt)
-            => new(instance.InstanceId, instance.Name, active, InstanceSourceView.From(instance.Source), instance.CreatedAt, instance.Mods.Count, lastPlayedAt);
+        public static InstanceDetailsView From(Instance instance, bool active, DateTimeOffset? lastPlayedAt, InstancePlaytime playtime)
+            => new(instance.InstanceId, instance.Name, active, InstanceSourceView.From(instance.Source), instance.CreatedAt, instance.Mods.Count, lastPlayedAt, PlaytimeView.From(playtime));
+    }
+
+    private sealed record PlaytimeView(long TotalSeconds, int Sessions, bool IncludesRunningSession, int UnreadableLogs, bool Known)
+    {
+        public static PlaytimeView From(InstancePlaytime playtime)
+            => new((long)playtime.Total.TotalSeconds, playtime.Sessions, playtime.IncludesRunningSession, playtime.UnreadableLogs, playtime.IsKnown);
     }
 
     private sealed record InstanceSourceView(string Kind, string? ModPackId, string? Version)

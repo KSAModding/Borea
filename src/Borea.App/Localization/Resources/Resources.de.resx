@@ -345,6 +345,36 @@
   <data name="InstanceUpdateAll" xml:space="preserve">
     <value>Alle aktualisieren</value>
   </data>
+  <data name="InstancePlayedFormat" xml:space="preserve">
+    <value>{0} gespielt</value>
+  </data>
+  <data name="InstancePlayedRunningFormat" xml:space="preserve">
+    <value>{0} gespielt, mit der laufenden Sitzung</value>
+  </data>
+  <data name="InstanceSessionOne" xml:space="preserve">
+    <value>1 Sitzung</value>
+  </data>
+  <data name="InstanceSessionsFormat" xml:space="preserve">
+    <value>{0} Sitzungen</value>
+  </data>
+  <data name="InstanceNoPlaytime" xml:space="preserve">
+    <value>Noch keine Spielzeit</value>
+  </data>
+  <data name="InstancePlaytimeUnknown" xml:space="preserve">
+    <value>Spielzeit unbekannt</value>
+  </data>
+  <data name="InstancePlaytimeToolTip" xml:space="preserve">
+    <value>Borea zählt die Spielzeit aus den Logs dieser Instanz. Ein Start, der nach weniger als einer Minute endet, zählt nicht.</value>
+  </data>
+  <data name="InstancePlaytimeUnknownToolTip" xml:space="preserve">
+    <value>Borea kann das neueste Log dieser Instanz nicht lesen und die Spielzeit deshalb nicht zählen.</value>
+  </data>
+  <data name="DurationHoursMinutesFormat" xml:space="preserve">
+    <value>{0} Std. {1} Min.</value>
+  </data>
+  <data name="DurationMinutesFormat" xml:space="preserve">
+    <value>{0} Min.</value>
+  </data>
   <data name="ContentRemove" xml:space="preserve">
     <value>Entfernen</value>
   </data>

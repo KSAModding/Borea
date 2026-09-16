@@ -113,6 +113,27 @@ public sealed class InstanceCommandTests : IDisposable
         Assert.Contains("Last played: never", run.Output);
     }
 
+    [Fact]
+    public async Task Show_PrintsThePlaytimeAndTheSessionCount()
+    {
+        await _host.RunAsync("instance", "create", "Alpha");
+        var list = await _host.RunAsync("instance", "list", "--json");
+        var id = Guid.Parse(Assert.Single(list.Json.EnumerateArray()).GetProperty("id").GetString()!);
+        var archives = Directory.CreateDirectory(Path.Combine(_host.Paths.GetInstanceRoot(id), "logs", "Archives"));
+        await File.WriteAllLinesAsync(Path.Combine(archives.FullName, "KittenSpaceAgency.260914.0.log"), ["20:00:00.000  INFO loaded settings from settings.toml", "22:40:30.000 DEBUG Shutting down application"]);
+        await File.WriteAllLinesAsync(Path.Combine(archives.FullName, "KittenSpaceAgency.260915.0.log"), ["09:00:00.000  INFO loaded settings from settings.toml", "09:00:05.000 ERROR Unhandled exception System.MissingMethodException"]);
+
+        var human = await _host.RunAsync("instance", "show", "Alpha");
+        var json = await _host.RunAsync("instance", "show", "Alpha", "--json");
+
+        Assert.Contains("Playtime: 2 h 40 min", human.Output);
+        Assert.Contains("Sessions: 1", human.Output);
+        var playtime = json.Json.GetProperty("playtime");
+        Assert.Equal(9630, playtime.GetProperty("totalSeconds").GetInt64());
+        Assert.Equal(1, playtime.GetProperty("sessions").GetInt32());
+        Assert.True(playtime.GetProperty("known").GetBoolean());
+    }
+
     private static string LocalMinute(DateTimeOffset at) => at.ToLocalTime().ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture);
 
     [Fact]

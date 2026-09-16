@@ -240,6 +240,29 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string InstanceUpdateAll => Resources.InstanceUpdateAll;
 
+    public string InstanceNoPlaytime => Resources.InstanceNoPlaytime;
+
+    public string InstancePlaytimeUnknown => Resources.InstancePlaytimeUnknown;
+
+    public string InstancePlaytimeToolTip => Resources.InstancePlaytimeToolTip;
+
+    public string InstancePlaytimeUnknownToolTip => Resources.InstancePlaytimeUnknownToolTip;
+
+    public string FormatInstancePlayed(string duration)
+        => string.Format(CultureInfo.CurrentCulture, Resources.InstancePlayedFormat, duration);
+
+    public string FormatInstancePlayedRunning(string duration)
+        => string.Format(CultureInfo.CurrentCulture, Resources.InstancePlayedRunningFormat, duration);
+
+    public string FormatInstanceSessions(int count)
+        => FormatCount(count, Resources.InstanceSessionOne, Resources.InstanceSessionsFormat);
+
+    /// <summary>"12 h 40 min", or "40 min" under an hour, with the minutes rounded down.</summary>
+    public string FormatDuration(TimeSpan duration)
+        => duration.TotalHours >= 1
+            ? string.Format(CultureInfo.CurrentCulture, Resources.DurationHoursMinutesFormat, (int)duration.TotalHours, duration.Minutes)
+            : string.Format(CultureInfo.CurrentCulture, Resources.DurationMinutesFormat, (int)duration.TotalMinutes);
+
     public string ContentRemove => Resources.ContentRemove;
 
     public string ContentRemoveConfirm => Resources.ContentRemoveConfirm;
