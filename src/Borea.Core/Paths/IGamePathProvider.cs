@@ -101,6 +101,11 @@ public interface IGamePathProvider
     string? GetGameDirectoryPath();
 
     /// <summary>
+    /// The profile the game uses when it starts without a loader, Constants.DocumentsFolderPath.
+    /// </summary>
+    string GetSharedProfileRoot();
+
+    /// <summary>
     /// Root directory of one installed mod loader. Ids compare
     /// case-insensitively, and no id at all throws.
     /// </summary>

@@ -13,14 +13,18 @@ public sealed class GamePathProvider : IGamePathProvider
     private readonly string _boreaRoot;
     private readonly string? _gameDirectory;
     private readonly IReadOnlyDictionary<string, string> _loaderDirectories;
+    private readonly string _sharedProfileRoot;
 
-    public GamePathProvider(string? gameDirectory, IReadOnlyDictionary<string, string>? loaderDirectories = null, string? boreaRoot = null)
+    public GamePathProvider(string? gameDirectory, IReadOnlyDictionary<string, string>? loaderDirectories = null, string? boreaRoot = null, string? sharedProfileRoot = null)
     {
         if (gameDirectory is not null && string.IsNullOrWhiteSpace(gameDirectory))
             throw new ArgumentException("Game directory, if provided, cannot be whitespace.", nameof(gameDirectory));
 
         if (boreaRoot is not null && string.IsNullOrWhiteSpace(boreaRoot))
             throw new ArgumentException("Borea root, if provided, cannot be whitespace.", nameof(boreaRoot));
+
+        if (sharedProfileRoot is not null && string.IsNullOrWhiteSpace(sharedProfileRoot))
+            throw new ArgumentException("Shared profile root, if provided, cannot be whitespace.", nameof(sharedProfileRoot));
 
         // Same rule as BoreaSettings, since this constructor is public too.
         var byId = new Dictionary<string, string>(ModIds.Comparer);
@@ -38,6 +42,7 @@ public sealed class GamePathProvider : IGamePathProvider
         _gameDirectory = gameDirectory;
         _loaderDirectories = byId;
         _boreaRoot = boreaRoot ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Borea");
+        _sharedProfileRoot = sharedProfileRoot ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "My Games", "Kitten Space Agency");
     }
 
     public string GetIndexPath() => Path.Combine(_boreaRoot, "index.json");
@@ -63,6 +68,7 @@ public sealed class GamePathProvider : IGamePathProvider
     public string GetAppPreferencesPath() => Path.Combine(_boreaRoot, "app-preferences.json");
     public string GetLogsFolder() => Path.Combine(_boreaRoot, "Logs");
     public string? GetGameDirectoryPath() => _gameDirectory;
+    public string GetSharedProfileRoot() => _sharedProfileRoot;
 
     public string? GetLoaderDirectoryPath(string loaderId)
     {

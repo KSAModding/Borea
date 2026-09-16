@@ -140,6 +140,7 @@ The exit code is 0 when the command completed, 1 when the operation failed and t
 | `borea instance deactivate` | Leave no instance active. |
 | `borea instance scan <instance>` | Print the mod folders that Borea did not install, and whether the content index lists them. |
 | `borea instance adopt <instance> <folder> --archive <path>` | Record a mod folder that Borea did not install as the index release its archive matches. |
+| `borea instance import-profile <name> [--dry-run]` | Create an instance from copies of the mods in the shared profile, with the same load order and enabled state. The shared profile stays as it is. |
 | `borea enable <mod-id> [--instance <instance>]` | Make the game load a mod. |
 | `borea disable <mod-id> [--instance <instance>]` | Stop the game from loading a mod. |
 

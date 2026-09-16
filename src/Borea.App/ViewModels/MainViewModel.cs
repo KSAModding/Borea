@@ -204,7 +204,7 @@ public partial class MainViewModel : ViewModelBase
 
     public bool IsNameModalOpen => IsCreatingInstance || RenamingInstance is not null;
 
-    public string NameModalTitle => RenamingInstance is null ? Localization.ModalCreateInstanceTitle : Localization.ModalRenameInstanceTitle;
+    public string NameModalTitle => RenamingInstance is not null ? Localization.ModalRenameInstanceTitle : IsImportingSharedProfile ? Localization.SharedProfileModalTitle : Localization.ModalCreateInstanceTitle;
 
     public string NameModalConfirmText => RenamingInstance is null ? Localization.LibraryCreate : Localization.LibrarySave;
 
@@ -294,6 +294,7 @@ public partial class MainViewModel : ViewModelBase
         await LoadRecentItemsAsync();
         UpdateIndexRefreshStatus();
         await RefreshGameSetupAsync();
+        await RefreshSharedProfileAsync();
     }
 
     /// <summary>
@@ -487,7 +488,7 @@ public partial class MainViewModel : ViewModelBase
     private Task ConfirmNameModalAsync() => RenamingInstance is { } item ? RenameFromModalAsync(item) : CreateInstanceAsync();
 
     [RelayCommand]
-    private Task CreateInstanceAsync() => RunInstanceOperationAsync(async instances =>
+    private Task CreateInstanceAsync() => IsImportingSharedProfile ? ImportSharedProfileAsync(ModalInstanceName.Trim()) : RunInstanceOperationAsync(async instances =>
     {
         var name = ModalInstanceName.Trim();
         if (name.Length == 0)
@@ -625,7 +626,8 @@ public partial class MainViewModel : ViewModelBase
             && left.ForeignFolderDeletionConfirmed == right.ForeignFolderDeletionConfirmed
             && left.LoadImagesFromAuthorHosts == right.LoadImagesFromAuthorHosts
             && left.HomeLaunch == right.HomeLaunch
-            && left.DiscoverSortOrder == right.DiscoverSortOrder;
+            && left.DiscoverSortOrder == right.DiscoverSortOrder
+            && left.SharedProfileBannerDismissed == right.SharedProfileBannerDismissed;
 
     private void OnRegionalFormatChanged(object? sender, PropertyChangedEventArgs e)
     {
@@ -676,6 +678,8 @@ public partial class MainViewModel : ViewModelBase
         RefreshLoaderText();
         RefreshIndexStatusText();
         OnPropertyChanged(nameof(GameSetupBannerText));
+        OnPropertyChanged(nameof(SharedProfileBannerText));
+        OnPropertyChanged(nameof(SharedProfileImportNotice));
         OnPropertyChanged(nameof(InstalledInText));
         OnPropertyChanged(nameof(ActiveInstanceUpdatesText));
         OnPropertyChanged(nameof(HomeLaunchText));

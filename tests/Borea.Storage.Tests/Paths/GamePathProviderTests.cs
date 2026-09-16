@@ -62,6 +62,15 @@ public sealed class GamePathProviderTests
     }
 
     [Fact]
+    public void GetSharedProfileRoot_DefaultsToMyGamesInTheDocuments()
+    {
+        var documents = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+
+        Assert.Equal(Path.Combine(documents, "My Games", "Kitten Space Agency"), new GamePathProvider(null).GetSharedProfileRoot());
+        Assert.Equal(@"E:\Profile", new GamePathProvider(null, sharedProfileRoot: @"E:\Profile").GetSharedProfileRoot());
+    }
+
+    [Fact]
     public void Constructor_ValidPaths_ReturnsThemUnchanged()
     {
         var provider = new GamePathProvider(@"C:\Games\KSA", StarMapAt());

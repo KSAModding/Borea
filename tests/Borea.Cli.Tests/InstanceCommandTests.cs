@@ -1,3 +1,4 @@
+using System.IO.Compression;
 using System.Security.Cryptography;
 using System.Text.Json;
 using Borea.Core.Index;
@@ -496,6 +497,175 @@ public sealed class InstanceCommandTests : IDisposable
         Assert.Equal(0, _host.Builds);
     }
 
+    [Fact]
+    public async Task ImportProfile_CopiesTheModsInLoadOrderWithTheirEnabledState()
+    {
+        WriteProfileManifest(("Zeta", true), ("Alpha", false));
+        WriteProfileMod("Alpha");
+        WriteProfileMod("Zeta");
+
+        var run = await _host.RunAsync("instance", "import-profile", "Main");
+        var mods = await _host.RunAsync("instance", "mods", "Main");
+
+        Assert.Equal(0, run.ExitCode);
+        var lines = run.Output.Trim().Split(Environment.NewLine);
+        Assert.StartsWith("Created instance 'Main' (", lines[0]);
+        Assert.EndsWith(") with 2 mods from the shared profile.", lines[0]);
+        Assert.Equal(new[] { "enabled   Zeta   manual install", "disabled  Alpha  manual install" }, lines[1..]);
+        Assert.Equal(new[] { "enabled   Zeta", "disabled  Alpha" }, mods.Output.Trim().Split(Environment.NewLine));
+    }
+
+    [Fact]
+    public async Task ImportProfile_Json_RecordsACopyThatMatchesARelease()
+    {
+        WriteProfileMod("flight-tools", ("Tools.dll", "code"));
+        WriteProfileMod("LocalOnly");
+        var archive = WriteZip(("mod.toml", "name = \"flight-tools\""), ("Tools.dll", "code"));
+        IndexWithReleases(ReleaseFor("flight-tools", archive));
+        _host.Downloader = new ArchiveDownloader(archive);
+
+        var run = await _host.RunAsync("instance", "import-profile", "Main", "--json");
+
+        Assert.Equal(0, run.ExitCode);
+        Assert.Equal("Main", run.Json.GetProperty("name").GetString());
+        var mods = run.Json.GetProperty("mods").EnumerateArray().ToList();
+        Assert.Equal(new[] { "flight-tools", "LocalOnly" }, mods.Select(mod => mod.GetProperty("folder").GetString()));
+        Assert.Equal("2.0.0", mods[0].GetProperty("version").GetString());
+        Assert.Equal(JsonValueKind.Null, mods[1].GetProperty("version").ValueKind);
+        Assert.All(mods, mod => Assert.True(mod.GetProperty("manifestEntry").GetBoolean()));
+        Assert.All(mods, mod => Assert.Equal(JsonValueKind.Null, mod.GetProperty("matchError").ValueKind));
+        var saved = await new FileInstanceRepository(_host.Paths).GetByIdAsync(run.Json.GetProperty("id").GetGuid());
+        Assert.Equal(ModInstallOwnership.Foreign, Assert.Single(saved!.Mods).Ownership);
+        Assert.Equal("LocalOnly", Assert.Single(saved.ForeignMods).FolderName);
+    }
+
+    [Fact]
+    public async Task ImportProfile_IndexCannotBeRead_WarnsOnceAndKeepsTheCopiesAsManualInstalls()
+    {
+        WriteProfileMod("flight-tools");
+        WriteProfileMod("LocalOnly");
+        _host.IndexReader.Read = _ => throw new IOException("No cached index exists.");
+
+        var run = await _host.RunAsync("instance", "import-profile", "Main");
+
+        Assert.Equal(0, run.ExitCode);
+        Assert.Contains("disabled  flight-tools  manual install", run.Output);
+        Assert.Contains("disabled  LocalOnly     manual install", run.Output);
+        var warning = Assert.Single(run.Error.Split(Environment.NewLine), line => line.Contains("could not check"));
+        Assert.Equal("warning: Borea could not check 'flight-tools', 'LocalOnly' against the content index, so they stay manual installs. No cached index exists.", warning);
+    }
+
+    [Fact]
+    public async Task ImportProfile_DryRun_PrintsTheModsAndCreatesNothing()
+    {
+        WriteProfileManifest(("LocalOnly", true));
+        WriteProfileMod("LocalOnly");
+        WriteProfileMod("flight-tools");
+        IndexWithReleases(ContentCommandFixtures.Release(id: "flight-tools"));
+
+        var human = await _host.RunAsync("instance", "import-profile", "Main", "--dry-run");
+        var json = await _host.RunAsync("instance", "import-profile", "Main", "--dry-run", "--json");
+
+        Assert.Equal(0, human.ExitCode);
+        Assert.Equal(
+            new[]
+            {
+                "Would create instance 'Main' with 2 mods from the shared profile. Nothing was changed.",
+                "enabled   LocalOnly     not in the content index",
+                "disabled  flight-tools  in the content index",
+            },
+            human.Output.Trim().Split(Environment.NewLine));
+        Assert.Equal(0, json.ExitCode);
+        Assert.Equal("Main", json.Json.GetProperty("name").GetString());
+        var mods = json.Json.GetProperty("mods").EnumerateArray().ToList();
+        Assert.Equal(new[] { "LocalOnly", "flight-tools" }, mods.Select(mod => mod.GetProperty("folder").GetString()));
+        Assert.Equal(new[] { true, false }, mods.Select(mod => mod.GetProperty("enabled").GetBoolean()));
+        Assert.Equal(new[] { false, true }, mods.Select(mod => mod.GetProperty("inIndex").GetBoolean()));
+        Assert.Empty(await new FileInstanceRepository(_host.Paths).GetAllAsync());
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task ImportProfile_EmptyProfile_FailsAndCreatesNothing(bool dryRun)
+    {
+        Directory.CreateDirectory(Path.Combine(_host.SharedProfile, "mods", "NotAMod"));
+
+        var run = await _host.RunAsync(ImportArguments("Main", dryRun));
+
+        Assert.Equal(1, run.ExitCode);
+        Assert.Contains("The shared profile has no mods to import.", run.Error);
+        Assert.Empty(await new FileInstanceRepository(_host.Paths).GetAllAsync());
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task ImportProfile_NameTaken_FailsAndCreatesNothing(bool dryRun)
+    {
+        await _host.RunAsync("instance", "create", "Main");
+        WriteProfileMod("LocalOnly");
+
+        var run = await _host.RunAsync(ImportArguments("main", dryRun));
+
+        Assert.Equal(1, run.ExitCode);
+        Assert.Contains("Instance name 'main' is already in use.", run.Error);
+        Assert.Single(await new FileInstanceRepository(_host.Paths).GetAllAsync());
+    }
+
+    [Fact]
+    public async Task ImportProfile_BlankName_IsAUsageError()
+    {
+        var run = await _host.RunAsync("instance", "import-profile", " ");
+
+        Assert.Equal(2, run.ExitCode);
+        Assert.Equal(0, _host.Builds);
+    }
+
+    private static string[] ImportArguments(string name, bool dryRun)
+        => dryRun ? ["instance", "import-profile", name, "--dry-run"] : ["instance", "import-profile", name];
+
+    private void WriteProfileManifest(params (string Id, bool Enabled)[] entries)
+    {
+        Directory.CreateDirectory(_host.SharedProfile);
+        File.WriteAllText(
+            Path.Combine(_host.SharedProfile, "manifest.toml"),
+            string.Concat(entries.Select(entry => $"[[mods]]\nid = \"{entry.Id}\"\nenabled = {(entry.Enabled ? "true" : "false")}\n\n")));
+    }
+
+    private void WriteProfileMod(string folderName, params (string Path, string Content)[] files)
+    {
+        var folder = Path.Combine(_host.SharedProfile, "mods", folderName);
+        Directory.CreateDirectory(folder);
+        File.WriteAllText(Path.Combine(folder, "mod.toml"), $"name = \"{folderName}\"");
+        foreach (var (path, content) in files)
+            File.WriteAllText(Path.Combine(folder, path), content);
+    }
+
+    private string WriteZip(params (string Path, string Content)[] entries)
+    {
+        Directory.CreateDirectory(_host.Root);
+        var path = Path.Combine(_host.Root, Guid.NewGuid().ToString("N") + ".zip");
+        using (var archive = ZipFile.Open(path, ZipArchiveMode.Create))
+        {
+            foreach (var (name, content) in entries)
+            {
+                using var writer = new StreamWriter(archive.CreateEntry(name).Open());
+                writer.Write(content);
+            }
+        }
+
+        return path;
+    }
+
+    private void IndexWithReleases(params ModVersionMetadata[] releases)
+        => _host.IndexReader.Snapshot = new ContentIndexSnapshot(
+            1,
+            releases.Select(release => new ContentIndexListing(release.ModId, ContentCommandFixtures.Listing(id: release.ModId), new[] { release }, null)).ToArray(),
+            Array.Empty<ContentIndexPack>(),
+            null,
+            Array.Empty<ContentIndexDiagnostic>());
+
     private async Task<Guid> CreateInstanceAsync(string name)
     {
         var created = await new FileInstanceRepository(_host.Paths).CreateAsync(name, InstanceSource.Custom.Value);
@@ -555,4 +725,19 @@ public sealed class InstanceCommandTests : IDisposable
     }
 
     public void Dispose() => _host.Dispose();
+
+    /// <summary>Serves the one archive for every release.</summary>
+    private sealed class ArchiveDownloader(string archive) : IModDownloader
+    {
+        public async Task<DownloadResult> DownloadAsync(
+            ModVersionMetadata release,
+            string archivePath,
+            IProgress<DownloadProgress>? progress = null,
+            CancellationToken cancellationToken = default)
+        {
+            var bytes = await File.ReadAllBytesAsync(archive, cancellationToken);
+            await File.WriteAllBytesAsync(archivePath, bytes, cancellationToken);
+            return new DownloadResult(release.Download.Url, bytes.Length, Convert.ToHexString(SHA256.HashData(bytes)));
+        }
+    }
 }

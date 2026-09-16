@@ -64,6 +64,8 @@ internal sealed class CliServices : IDisposable
 
     public required IForeignModAdopter ForeignModAdopter { get; init; }
 
+    public required ISharedProfileImporter SharedProfileImporter { get; init; }
+
     public required ILoaderInstaller LoaderInstaller { get; init; }
 
     public required ILoaderAdopter LoaderAdopter { get; init; }
@@ -115,7 +117,8 @@ internal sealed class CliServices : IDisposable
         IModPackRepository? readOnlyModPacks = null,
         IModPackInstaller? modPackInstaller = null,
         ISharedProfileLauncher? sharedProfileLauncher = null,
-        IContentIndexRefresh? indexRefresh = null)
+        IContentIndexRefresh? indexRefresh = null,
+        ISharedProfileImporter? sharedProfileImporter = null)
     {
         if (services is null)
             throw new ArgumentNullException(nameof(services));
@@ -142,6 +145,7 @@ internal sealed class CliServices : IDisposable
             Replacer = replacer ?? services.Replacer,
             Uninstaller = uninstaller ?? services.Uninstaller,
             ForeignModAdopter = foreignModAdopter ?? services.ForeignModAdopter,
+            SharedProfileImporter = sharedProfileImporter ?? services.SharedProfileImporter,
             LoaderInstaller = loaderInstaller ?? services.LoaderInstaller,
             LoaderAdopter = loaderAdopter ?? services.LoaderAdopter,
             LoaderUninstaller = loaderUninstaller ?? services.LoaderUninstaller,

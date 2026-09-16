@@ -27,6 +27,8 @@ internal sealed class AppPreferencesDocumentDto
     /// <summary>"popularity", "recently-updated" or "name". Null or an unknown name reads as popularity.</summary>
     public string? DiscoverSortOrder { get; set; }
 
+    public bool? SharedProfileBannerDismissed { get; set; }
+
     public List<CustomThemePreferenceDto?>? CustomThemes { get; set; }
 }
 

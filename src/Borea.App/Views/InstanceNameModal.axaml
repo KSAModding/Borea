@@ -14,6 +14,7 @@
                     </Button>
                 </Grid>
                 <Border Height="1" Background="{StaticResource Brush.Window}" Margin="0,24,0,0" />
+                <TextBlock Classes="body-md secondary" Text="{Binding Localization.SharedProfileModalHint}" TextWrapping="Wrap" Margin="36,24,24,0" IsVisible="{Binding IsImportingSharedProfile}" />
                 <Grid ColumnDefinitions="Auto,12,*,16,Auto" Margin="36,32,24,32">
                     <TextBlock Classes="heading-md heading" Text="{Binding Localization.ModalNameLabel}" VerticalAlignment="Center" />
                     <TextBox Grid.Column="2" Classes="field" Text="{Binding ModalInstanceName}" PlaceholderText="{Binding Localization.LibraryNewInstancePlaceholder}" AutomationProperties.Name="{Binding Localization.ModalNameLabel}" VerticalAlignment="Center">
@@ -26,6 +27,7 @@
                         <TextBlock Classes="action-lg" Text="{Binding NameModalConfirmText}" VerticalAlignment="Center" />
                     </Button>
                 </Grid>
+                <TextBlock Classes="body-md secondary" Text="{Binding Localization.SharedProfileImporting}" TextWrapping="Wrap" Margin="36,0,24,24" IsVisible="{Binding IsSharedProfileImportRunning}" />
                 <TextBlock Classes="body-md danger" Text="{Binding InstanceError}" TextWrapping="Wrap" Margin="36,0,24,24" IsVisible="{Binding InstanceError, Converter={x:Static ObjectConverters.IsNotNull}}" />
             </StackPanel>
         </Border>

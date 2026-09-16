@@ -106,6 +106,8 @@ public sealed class BoreaServices : IDisposable
 
     public required IForeignModReleaseMatcher ForeignModReleaseMatcher { get; init; }
 
+    public required ISharedProfileImporter SharedProfileImporter { get; init; }
+
     /// <summary>
     /// Every mod source behind one repository, each listing tagged with its source.
     /// The newest release follows the saved release channel.
@@ -194,6 +196,7 @@ public sealed class BoreaServices : IDisposable
 
     /// <param name="processStarter">Starts the launchers' processes. Null starts real ones.</param>
     /// <param name="images">Serves listing images. Null fetches them from the author hosts.</param>
+    /// <param name="sharedProfileRoot">The game's own profile. Null means the one in My Games.</param>
     internal static Task<BoreaServices> BuildAsync(
         string? boreaRoot,
         HttpMessageHandler httpHandler,
@@ -201,12 +204,13 @@ public sealed class BoreaServices : IDisposable
         IInstallCandidateSource installCandidates,
         CancellationToken cancellationToken = default,
         IProcessStarter? processStarter = null,
-        IContentImageSource? images = null)
+        IContentImageSource? images = null,
+        string? sharedProfileRoot = null)
     {
         ArgumentNullException.ThrowIfNull(httpHandler);
         ArgumentNullException.ThrowIfNull(fallbackRepository);
         ArgumentNullException.ThrowIfNull(installCandidates);
-        return BuildCoreAsync(boreaRoot, BoreaLogSource.App, httpHandler, fallbackRepository, installCandidates, cancellationToken, processStarter, images);
+        return BuildCoreAsync(boreaRoot, BoreaLogSource.App, httpHandler, fallbackRepository, installCandidates, cancellationToken, processStarter, images, sharedProfileRoot);
     }
 
     private static async Task<BoreaServices> BuildCoreAsync(
@@ -217,7 +221,8 @@ public sealed class BoreaServices : IDisposable
         IInstallCandidateSource? installCandidates,
         CancellationToken cancellationToken,
         IProcessStarter? processStarter = null,
-        IContentImageSource? images = null)
+        IContentImageSource? images = null,
+        string? sharedProfileRoot = null)
     {
         // the settings file lives under Borea's own root and needs no
         // game path to be found, so a provider without one reads it.
@@ -231,7 +236,7 @@ public sealed class BoreaServices : IDisposable
             pair => pair.Key,
             pair => pair.Value.DirectoryPath,
             ModIds.Comparer);
-        var paths = new GamePathProvider(settings.GameDirectoryPath, loaderDirectories, boreaRoot);
+        var paths = new GamePathProvider(settings.GameDirectoryPath, loaderDirectories, boreaRoot, sharedProfileRoot);
         var log = new FileBoreaLog(paths, logSource);
 
         // Network. Every service that talks to a remote host is built here on the
@@ -270,6 +275,7 @@ public sealed class BoreaServices : IDisposable
         var modInstaller = new LoggingModInstaller(new FileModInstaller(paths, downloader, instances, modState), log);
         var modReplacer = new LoggingModReplacer(new FileModReplacer(paths, downloader, instances, modState), log);
         var foreignModAdopter = new FileForeignModAdopter(paths, instances, contentIndex);
+        var foreignModReleaseMatcher = new FileForeignModReleaseMatcher(paths, downloader, foreignModAdopter, indexSnapshots);
         var installPlanner = new LoggingInstallPlanner(new RepositoryInstallPlanner(new ModDependencyResolver(), settings.ReleaseChannel), log);
 
         return new BoreaServices(http)
@@ -290,7 +296,8 @@ public sealed class BoreaServices : IDisposable
             Installer = modInstaller,
             Replacer = modReplacer,
             ForeignModAdopter = foreignModAdopter,
-            ForeignModReleaseMatcher = new FileForeignModReleaseMatcher(paths, downloader, foreignModAdopter, indexSnapshots),
+            ForeignModReleaseMatcher = foreignModReleaseMatcher,
+            SharedProfileImporter = new FileSharedProfileImporter(paths, instances, modState, foreignModAdopter, foreignModReleaseMatcher),
             Mods = new ReleaseChannelModRepository(mods, settings.ReleaseChannel),
             ReadOnlyMods = new ReleaseChannelModRepository(readOnlyMods, settings.ReleaseChannel),
             ModPacks = modPacks,

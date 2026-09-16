@@ -32,6 +32,7 @@ public sealed class CliServicesTests : IDisposable
         Assert.Same(graph.Replacer, services.Replacer);
         Assert.Same(graph.Uninstaller, services.Uninstaller);
         Assert.Same(graph.ForeignModAdopter, services.ForeignModAdopter);
+        Assert.Same(graph.SharedProfileImporter, services.SharedProfileImporter);
         Assert.Same(graph.LoaderInstaller, services.LoaderInstaller);
         Assert.Same(graph.LoaderAdopter, services.LoaderAdopter);
         Assert.Same(graph.LoaderUninstaller, services.LoaderUninstaller);
@@ -90,6 +91,7 @@ public sealed class CliServicesTests : IDisposable
             Replacer = graph.Replacer,
             Uninstaller = graph.Uninstaller,
             ForeignModAdopter = graph.ForeignModAdopter,
+            SharedProfileImporter = graph.SharedProfileImporter,
             LoaderInstaller = graph.LoaderInstaller,
             LoaderAdopter = graph.LoaderAdopter,
             LoaderUninstaller = graph.LoaderUninstaller,
