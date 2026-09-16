@@ -62,6 +62,7 @@ internal static class IndexCommand
         output.WriteLine($"  Download counts: {view.Accepted.DownloadCounts} listings with counts, {view.Count(ContentIndexDiagnosticScope.Downloads, ContentIndexDiagnosticKind.Malformed)} malformed.");
         output.WriteLine($"  Images: {view.Count(ContentIndexDiagnosticScope.Images, ContentIndexDiagnosticKind.Malformed)} malformed.");
         output.WriteLine($"  Dates: {view.Count(ContentIndexDiagnosticScope.Dates, ContentIndexDiagnosticKind.Malformed)} malformed.");
+        output.WriteLine($"  Changelog text: {view.Count(ContentIndexDiagnosticScope.ChangelogText, ContentIndexDiagnosticKind.Malformed)} malformed.");
 
         if (view.Diagnostics.Entries.Count == 0)
             return;
@@ -155,6 +156,7 @@ internal static class IndexCommand
         ContentIndexDiagnosticScope.Downloads => "downloads",
         ContentIndexDiagnosticScope.Images => "images",
         ContentIndexDiagnosticScope.Dates => "dates",
+        ContentIndexDiagnosticScope.ChangelogText => "changelog-text",
         _ => throw new ArgumentOutOfRangeException(nameof(scope), scope, null),
     };
 }

@@ -81,6 +81,7 @@ internal static class ContentOutput
             ContentIndexDiagnosticScope.Downloads => "downloads",
             ContentIndexDiagnosticScope.Images => "images",
             ContentIndexDiagnosticScope.Dates => "dates",
+            ContentIndexDiagnosticScope.ChangelogText => "changelog-text",
             _ => throw new ArgumentOutOfRangeException(nameof(diagnostic), diagnostic.Scope, null),
         },
         diagnostic.Reason,

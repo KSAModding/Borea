@@ -179,7 +179,8 @@ public sealed class IndexCommandTests : IDisposable
     [Theory]
     [InlineData(ContentIndexDiagnosticScope.Images, "The images icon is unreadable.", "  Images: 1 malformed.", "malformed images active-mod: The images icon is unreadable.")]
     [InlineData(ContentIndexDiagnosticScope.Dates, "The updated_at value is unreadable.", "  Dates: 1 malformed.", "malformed dates active-mod: The updated_at value is unreadable.")]
-    public async Task Validate_MalformedImagesOrDates_ReportsScopeAndFails(
+    [InlineData(ContentIndexDiagnosticScope.ChangelogText, "The changelog_text value must be a string.", "  Changelog text: 1 malformed.", "malformed changelog-text active-mod: The changelog_text value must be a string.")]
+    public async Task Validate_MalformedFieldValue_ReportsScopeAndFails(
         ContentIndexDiagnosticScope scope,
         string reason,
         string summary,

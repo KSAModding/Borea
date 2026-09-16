@@ -145,6 +145,7 @@ public sealed class CompositeModRepositoryTests
         Assert.Equal(original.Dependencies.Count, tagged.Dependencies.Count);
         Assert.Equal(original.Dependencies[0].Source, tagged.Dependencies[0].Source);
         Assert.Equal(original.Changelog, tagged.Changelog);
+        Assert.Equal(original.ChangelogText, tagged.ChangelogText);
         Assert.NotNull(tagged.Listing);
         Assert.Equal(original.Listing!.Name, tagged.Listing!.Name);
         Assert.Equal(original.Listing.Description, tagged.Listing.Description);
