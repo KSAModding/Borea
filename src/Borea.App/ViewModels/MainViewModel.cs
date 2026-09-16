@@ -636,6 +636,7 @@ public partial class MainViewModel : ViewModelBase
             OnPropertyChanged(nameof(SelectedRegionalFormat));
             RefreshRowText();
             RefreshGameDataItems();
+            RefreshGameSaveText();
         }
     }
 
@@ -675,6 +676,7 @@ public partial class MainViewModel : ViewModelBase
         foreach (var item in ManualInstallItems)
             item.RefreshText();
         RefreshGameDataItems();
+        RefreshGameSaveText();
         RefreshLoaderText();
         RefreshIndexStatusText();
         OnPropertyChanged(nameof(GameSetupBannerText));

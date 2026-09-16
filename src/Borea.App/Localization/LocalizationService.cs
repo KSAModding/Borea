@@ -143,6 +143,10 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string InstanceGroupOther => Resources.InstanceGroupOther;
 
+    public string InstanceGroupVehicles => Resources.InstanceGroupVehicles;
+
+    public string InstanceGroupSaves => Resources.InstanceGroupSaves;
+
     public string InstanceGroupDependencies => Resources.InstanceGroupDependencies;
 
     public string InstanceEmptyContent => Resources.InstanceEmptyContent;
@@ -180,6 +184,40 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string GameDataOpenFolder => Resources.GameDataOpenFolder;
 
     public string GameDataEmpty => Resources.GameDataEmpty;
+
+    public string GameSaveNoVehicles => Resources.GameSaveNoVehicles;
+
+    public string GameSaveNoSaves => Resources.GameSaveNoSaves;
+
+    public string GameSaveOlderBuild => Resources.GameSaveOlderBuild;
+
+    public string GameSaveBackUp => Resources.GameSaveBackUp;
+
+    public string GameSaveCopyToInstance => Resources.GameSaveCopyToInstance;
+
+    public string GameSaveCopy => Resources.GameSaveCopy;
+
+    public string GameSaveCopyModsNote => Resources.GameSaveCopyModsNote;
+
+    public string GameSaveNoOtherInstance => Resources.GameSaveNoOtherInstance;
+
+    public string GameSaveReplace => Resources.GameSaveReplace;
+
+    public string GameSaveDeleteConfirm => Resources.GameSaveDeleteConfirm;
+
+    public string GameSaveCloseGame => Resources.GameSaveCloseGame;
+
+    public string GameSaveCopyFromProfile => Resources.GameSaveCopyFromProfile;
+
+    public string GameSaveProfileEmpty => Resources.GameSaveProfileEmpty;
+
+    public string GameSaveExistsInInstance => Resources.GameSaveExistsInInstance;
+
+    public string GameSaveProfileReplace => Resources.GameSaveProfileReplace;
+
+    public string GameSavesNothingToBackUp => Resources.GameSavesNothingToBackUp;
+
+    public string InstanceBackUpAllSaves => Resources.InstanceBackUpAllSaves;
 
     public string GameLogOpen => Resources.GameLogOpen;
 
@@ -668,6 +706,30 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string FormatInstanceGroupModpack(string name, string version)
         => string.Format(CultureInfo.CurrentCulture, Resources.InstanceGroupModpackFormat, name, version);
+
+    public string FormatGameSaveUpdated(string time)
+        => string.Format(CultureInfo.CurrentCulture, Resources.GameSaveUpdatedFormat, time);
+
+    public string FormatGameSaveOlderBuild(string build, string installedBuild)
+        => string.Format(CultureInfo.CurrentCulture, Resources.GameSaveOlderBuildFormat, build, installedBuild);
+
+    public string FormatGameSaveBackedUp(string name, string path)
+        => string.Format(CultureInfo.CurrentCulture, Resources.GameSaveBackedUpFormat, name, path);
+
+    public string FormatGameSaveReplace(string name, string instance)
+        => string.Format(CultureInfo.CurrentCulture, Resources.GameSaveReplaceFormat, name, instance);
+
+    public string FormatGameSaveCopied(string name, string instance)
+        => string.Format(CultureInfo.CurrentCulture, Resources.GameSaveCopiedFormat, name, instance);
+
+    public string FormatGameSaveDeleted(string name)
+        => string.Format(CultureInfo.CurrentCulture, Resources.GameSaveDeletedFormat, name);
+
+    public string FormatGameSavesCopiedFromProfile(int count)
+        => string.Format(CultureInfo.CurrentCulture, Resources.GameSavesCopiedFromProfileFormat, count);
+
+    public string FormatGameSavesBackedUp(int count, string folder)
+        => string.Format(CultureInfo.CurrentCulture, Resources.GameSavesBackedUpFormat, count, folder);
 
     public string FormatContentRemoveNotOwned(string modId)
         => string.Format(CultureInfo.CurrentCulture, Resources.ContentRemoveNotOwnedFormat, modId);
