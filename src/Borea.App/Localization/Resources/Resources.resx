@@ -171,6 +171,51 @@
   <data name="LibrarySortLastPlayed" xml:space="preserve">
     <value>Last played</value>
   </data>
+  <data name="LibraryImportModList" xml:space="preserve">
+    <value>Import modlist</value>
+  </data>
+  <data name="LibraryDuplicate" xml:space="preserve">
+    <value>Duplicate</value>
+  </data>
+  <data name="LibraryExportModList" xml:space="preserve">
+    <value>Export modlist</value>
+  </data>
+  <data name="LibraryCopyModList" xml:space="preserve">
+    <value>Copy modlist</value>
+  </data>
+  <data name="ModListDuplicateTitle" xml:space="preserve">
+    <value>Duplicate instance</value>
+  </data>
+  <data name="ModListFileType" xml:space="preserve">
+    <value>Borea modlist</value>
+  </data>
+  <data name="ModListCopyNameFormat" xml:space="preserve">
+    <value>{0} (copy)</value>
+  </data>
+  <data name="ModListInstallCountFormat" xml:space="preserve">
+    <value>Mods to install: {0}</value>
+  </data>
+  <data name="ModListNotCopiedFormat" xml:space="preserve">
+    <value>{0} is not copied, because Borea did not install this folder.</value>
+  </data>
+  <data name="ModListUnknownFormat" xml:space="preserve">
+    <value>No source has {0} {1}, so Borea does not install it.</value>
+  </data>
+  <data name="ModListUnreadableFormat" xml:space="preserve">
+    <value>{0} is not a modlist that Borea can read. {1}</value>
+  </data>
+  <data name="ModListNewerFormatFormat" xml:space="preserve">
+    <value>{0} uses modlist format {1}. Update Borea to import it.</value>
+  </data>
+  <data name="ModListExportedFormat" xml:space="preserve">
+    <value>Saved the modlist of {0} as {1}.</value>
+  </data>
+  <data name="ModListCopiedFormat" xml:space="preserve">
+    <value>Copied the modlist of {0} to the clipboard.</value>
+  </data>
+  <data name="ModListNotExportedFormat" xml:space="preserve">
+    <value>The modlist does not contain these folders, because Borea did not install them: {0}</value>
+  </data>
   <data name="NavigationTasks" xml:space="preserve">
     <value>Tasks</value>
   </data>

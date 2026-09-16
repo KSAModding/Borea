@@ -157,7 +157,7 @@ internal static class ModInstallCommands
     private static Task ExecuteAsync(CliServices cli, InstallPlan plan, TextWriter error, CancellationToken cancellationToken)
         => new InstallPlanExecutor(cli.Instances, cli.Installer, cli.Replacer).ExecuteAsync(plan, enable: true, new InstallProgressOutput(error), cancellationToken);
 
-    private static void PrintPlan(TextWriter output, InstallPlan plan)
+    internal static void PrintPlan(TextWriter output, InstallPlan plan)
     {
         foreach (var warning in plan.Warnings)
             output.WriteLine($"warning: {warning.Message}");

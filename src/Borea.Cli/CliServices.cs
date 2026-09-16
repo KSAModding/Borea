@@ -38,6 +38,8 @@ internal sealed class CliServices : IDisposable
 
     public required IPlaytimeService Playtime { get; init; }
 
+    public required IModListFormat ModListFormat { get; init; }
+
     public required ILatestVersionPing LatestVersion { get; init; }
 
     public required IInstalledGameVersionProvider InstalledVersion { get; init; }
@@ -136,6 +138,7 @@ internal sealed class CliServices : IDisposable
             ModState = services.ModState,
             GameLog = services.GameLog,
             Playtime = services.Playtime,
+            ModListFormat = services.ModListFormat,
             LatestVersion = latestVersion ?? services.LatestVersion,
             InstalledVersion = installedVersion ?? services.InstalledVersion,
             IndexFetcher = indexFetcher ?? services.IndexFetcher,

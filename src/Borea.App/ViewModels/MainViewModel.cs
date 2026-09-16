@@ -563,6 +563,7 @@ public partial class MainViewModel : ViewModelBase
         if (_instances is null)
             return;
 
+        InstanceNotice = null;
         try
         {
             await operation(_instances);
@@ -677,6 +678,7 @@ public partial class MainViewModel : ViewModelBase
         foreach (var category in CategoryOptions)
             category.RefreshText();
         RefreshContentGroups();
+        RefreshModListText();
         foreach (var item in ManualInstallItems)
             item.RefreshText();
         RefreshGameDataItems();
@@ -826,6 +828,15 @@ public sealed partial class InstanceItem : ObservableObject
 
     [RelayCommand]
     private void OpenFolder() => _owner.OpenInstanceFolder(InstanceId);
+
+    [RelayCommand]
+    private Task DuplicateAsync() => _owner.BeginDuplicateAsync(InstanceId);
+
+    [RelayCommand]
+    private Task ExportModListAsync() => _owner.ExportModListAsync(InstanceId);
+
+    [RelayCommand]
+    private Task CopyModListAsync() => _owner.CopyModListAsync(InstanceId);
 
     [RelayCommand]
     private void BeginDelete() => IsConfirmingDelete = true;

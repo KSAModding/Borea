@@ -171,6 +171,51 @@
   <data name="LibrarySortLastPlayed" xml:space="preserve">
     <value>Zuletzt gespielt</value>
   </data>
+  <data name="LibraryImportModList" xml:space="preserve">
+    <value>Modliste importieren</value>
+  </data>
+  <data name="LibraryDuplicate" xml:space="preserve">
+    <value>Duplizieren</value>
+  </data>
+  <data name="LibraryExportModList" xml:space="preserve">
+    <value>Modliste exportieren</value>
+  </data>
+  <data name="LibraryCopyModList" xml:space="preserve">
+    <value>Modliste kopieren</value>
+  </data>
+  <data name="ModListDuplicateTitle" xml:space="preserve">
+    <value>Instanz duplizieren</value>
+  </data>
+  <data name="ModListFileType" xml:space="preserve">
+    <value>Borea-Modliste</value>
+  </data>
+  <data name="ModListCopyNameFormat" xml:space="preserve">
+    <value>{0} (Kopie)</value>
+  </data>
+  <data name="ModListInstallCountFormat" xml:space="preserve">
+    <value>Zu installierende Mods: {0}</value>
+  </data>
+  <data name="ModListNotCopiedFormat" xml:space="preserve">
+    <value>{0} wird nicht kopiert, weil Borea diesen Ordner nicht installiert hat.</value>
+  </data>
+  <data name="ModListUnknownFormat" xml:space="preserve">
+    <value>Keine Quelle hat {0} {1}, daher installiert Borea die Mod nicht.</value>
+  </data>
+  <data name="ModListUnreadableFormat" xml:space="preserve">
+    <value>{0} ist keine Modliste, die Borea lesen kann. {1}</value>
+  </data>
+  <data name="ModListNewerFormatFormat" xml:space="preserve">
+    <value>{0} nutzt das Modlisten-Format {1}. Aktualisiere Borea, um sie zu importieren.</value>
+  </data>
+  <data name="ModListExportedFormat" xml:space="preserve">
+    <value>Die Modliste von {0} wurde als {1} gespeichert.</value>
+  </data>
+  <data name="ModListCopiedFormat" xml:space="preserve">
+    <value>Die Modliste von {0} wurde in die Zwischenablage kopiert.</value>
+  </data>
+  <data name="ModListNotExportedFormat" xml:space="preserve">
+    <value>Diese Ordner fehlen in der Modliste, weil Borea sie nicht installiert hat: {0}</value>
+  </data>
   <data name="NavigationTasks" xml:space="preserve">
     <value>Aufgaben</value>
   </data>
