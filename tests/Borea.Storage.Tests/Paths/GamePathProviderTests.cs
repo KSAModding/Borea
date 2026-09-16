@@ -37,6 +37,14 @@ public sealed class GamePathProviderTests
         Assert.StartsWith(@"D:\Portable\Borea", provider.GetImageCacheFolder());
     }
 
+    [Fact]
+    public void GetBackupsRoot_IsBelowTheBoreaRoot()
+    {
+        var provider = new GamePathProvider(null, boreaRoot: @"D:\Portable\Borea");
+
+        Assert.Equal(Path.Combine(@"D:\Portable\Borea", "Backups"), provider.GetBackupsRoot());
+    }
+
     [Theory]
     [InlineData("")]
     [InlineData("   ")]

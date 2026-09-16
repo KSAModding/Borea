@@ -58,6 +58,11 @@ public interface IGamePathProvider
     string GetLogsFolder();
 
     /// <summary>
+    /// Root of the backups of saves and vehicles, one folder per instance.
+    /// </summary>
+    string GetBackupsRoot();
+
+    /// <summary>
     /// Root folder for a specific instance, e.g.
     /// </summary>
     string GetInstanceRoot(Guid instanceId);
