@@ -2,6 +2,7 @@ using System.Text.Json;
 using Borea.Composition;
 using Borea.Core.Game;
 using Borea.Core.Index;
+using Borea.Core.Launch;
 using Borea.Core.Logging;
 using Borea.Core.ModLoaders;
 using Borea.Core.ModPacks;
@@ -97,9 +98,10 @@ internal sealed class CliHost : IDisposable
     {
         Builds++;
         var graph = await BoreaServices.BuildAsync(Root, BoreaLogSource.Cli, cancellationToken);
+        var instances = InstancesFactory?.Invoke(graph);
         return CliServices.From(
             graph,
-            instances: InstancesFactory?.Invoke(graph),
+            instances: instances,
             latestVersion: LatestVersion,
             installedVersion: InstalledVersion,
             indexFetcher: IndexFetcher,
@@ -115,7 +117,7 @@ internal sealed class CliHost : IDisposable
             loaderAdopter: LoaderAdopter,
             loaderUninstaller: LoaderUninstaller,
             // the fake processes answer at once, so the startup watch needs no real time
-            launcher: new LoaderLauncher(graph.Paths, ProcessStarter, TimeSpan.Zero),
+            launcher: new LastPlayedLauncher(new LoaderLauncher(graph.Paths, ProcessStarter, TimeSpan.Zero), instances ?? graph.Instances),
             modPacks: ModPacks ?? new ContentIndexModPackRepository(IndexSnapshots ?? new ReaderSnapshotProvider(IndexReader)),
             readOnlyModPacks: ModPacks ?? new ContentIndexModPackRepository(new ReaderSnapshotProvider(IndexReader)),
             modPackInstaller: ModPackInstallerFactory?.Invoke(graph) ?? ModPackInstaller,

@@ -5,6 +5,7 @@ using System.Text.Json;
 using Borea.Core.Dependencies;
 using Borea.Core.Index;
 using Borea.Core.Instances;
+using Borea.Core.Launch;
 using Borea.Core.Logging;
 using Borea.Core.ModLoaders;
 using Borea.Storage.Launch;
@@ -152,7 +153,7 @@ public sealed class BoreaServicesTests : IDisposable
         Assert.IsType<FileLoaderAdopter>(services.LoaderAdopter);
         Assert.IsType<FileLoaderUninstaller>(services.LoaderUninstaller);
         Assert.IsType<GameDirectoryChanger>(services.GameDirectoryChanger);
-        Assert.IsType<LoaderLauncher>(Assert.IsType<LoggingLauncher>(services.Launcher).Inner);
+        Assert.IsType<LoaderLauncher>(Assert.IsType<LastPlayedLauncher>(Assert.IsType<LoggingLauncher>(services.Launcher).Inner).Inner);
         Assert.IsType<FileModUninstaller>(Assert.IsType<LoggingModUninstaller>(services.Uninstaller).Inner);
         Assert.IsType<FileModInstaller>(Assert.IsType<LoggingModInstaller>(services.Installer).Inner);
         Assert.IsType<FileModReplacer>(Assert.IsType<LoggingModReplacer>(services.Replacer).Inner);
