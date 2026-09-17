@@ -179,7 +179,7 @@
                             </StackPanel>
                         </Button>
                         <TextBlock Classes="body-md muted" Text="{Binding Localization.ContentLoadingVersions}" Margin="8,8,0,8" IsVisible="{Binding IsLoadingVersions}" />
-                        <Border BorderBrush="{StaticResource Brush.BorderStrong}" BorderThickness="1" CornerRadius="16" ClipToBounds="True" IsVisible="{Binding !IsLoadingVersions}">
+                        <Border BorderBrush="{StaticResource Brush.BorderStrong}" BorderThickness="1" CornerRadius="16" views:RoundedClip.IsEnabled="True" IsVisible="{Binding !IsLoadingVersions}">
                             <StackPanel>
                                 <Border Background="{StaticResource Brush.Surface}" Padding="16,11">
                                     <Grid ColumnDefinitions="160,76,*,124,104,72">
