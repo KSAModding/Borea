@@ -12,6 +12,7 @@ using Borea.Core.Index;
 
 namespace Borea.App.Tests.Views;
 
+[Collection(HeadlessCollection.Name)]
 public sealed class ListingImageViewTests
 {
     private const string Url = "https://images.example/icon.png";
@@ -68,7 +69,7 @@ public sealed class ListingImageViewTests
     [Fact]
     public async Task Render_ClipsTheBackgroundAndTheImageToTheCornerRadius()
     {
-        await using var session = HeadlessApp.Start();
+        var session = HeadlessApp.Session;
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
 
         var pixels = await session.Dispatch(async () =>
@@ -113,7 +114,7 @@ public sealed class ListingImageViewTests
     [Fact]
     public async Task Render_LoadingImage_PulsesTheSkeletonFromTheBackgroundToThePulseBrush()
     {
-        await using var session = HeadlessApp.Start();
+        var session = HeadlessApp.Session;
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
 
         var first = await session.Dispatch(async () =>
@@ -142,7 +143,7 @@ public sealed class ListingImageViewTests
     [Fact]
     public async Task State_ImageLoads_GoesFromThePulsingSkeletonToTheImage()
     {
-        await using var session = HeadlessApp.Start();
+        var session = HeadlessApp.Session;
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
 
         var states = await session.Dispatch(async () =>
@@ -165,7 +166,7 @@ public sealed class ListingImageViewTests
     [Fact]
     public async Task State_ImageFails_GoesFromThePulsingSkeletonToThePlaceholder()
     {
-        await using var session = HeadlessApp.Start();
+        var session = HeadlessApp.Session;
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
 
         var states = await session.Dispatch(() =>
@@ -186,7 +187,7 @@ public sealed class ListingImageViewTests
     [Fact]
     public async Task State_BytesDoNotDecode_GoesFromThePulsingSkeletonToThePlaceholder()
     {
-        await using var session = HeadlessApp.Start();
+        var session = HeadlessApp.Session;
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
 
         var states = await session.Dispatch(async () =>
@@ -209,7 +210,7 @@ public sealed class ListingImageViewTests
     [Fact]
     public async Task State_ImagesTurnedOff_ShowsThePlaceholderAtOnceAndACachedImageWithoutPulse()
     {
-        await using var session = HeadlessApp.Start();
+        var session = HeadlessApp.Session;
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
 
         var states = await session.Dispatch(async () =>
@@ -234,7 +235,7 @@ public sealed class ListingImageViewTests
     [Fact]
     public async Task IsPulsing_DetachedWhileLoading_StopsAndStartsAgainWhenAttached()
     {
-        await using var session = HeadlessApp.Start();
+        var session = HeadlessApp.Session;
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
 
         var pulsing = await session.Dispatch(() =>
