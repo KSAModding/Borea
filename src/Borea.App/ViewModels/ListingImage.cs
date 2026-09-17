@@ -26,6 +26,8 @@ public sealed partial class ListingImage : ObservableObject
 
     public bool IsLoaded => Bytes is not null;
 
+    internal bool LoadsFromAuthorHosts => _owner.LoadImagesFromAuthorHosts;
+
     [ObservableProperty]
     private ContentImageFailure? _failure;
 

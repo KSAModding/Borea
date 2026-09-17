@@ -257,6 +257,9 @@
             <Setter Property="BorderThickness" Value="1" />
             <Setter Property="CornerRadius" Value="8" />
         </Style>
+        <Style Selector="views|ListingImageView">
+            <Setter Property="PulseBrush" Value="{StaticResource Brush.SurfaceRaised}" />
+        </Style>
         <!-- the thumbnail radius 8 less half its 1 px line, so the image stays inside the line -->
         <Style Selector="Border.thumbnail > views|ListingImageView">
             <Setter Property="CornerRadius" Value="7.5" />

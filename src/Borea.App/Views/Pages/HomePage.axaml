@@ -84,7 +84,7 @@
                 </ItemsControl.ItemsPanel>
                 <ItemsControl.ItemTemplate>
                     <DataTemplate x:DataType="vm:RecentItem">
-                        <!-- the tile shows the icon with the text over its bottom, and the gradient until the icon loads -->
+                        <!-- the tile shows the icon with the text over its bottom, and the gradient when no icon shows -->
                         <Button Classes="plain" Margin="0,0,5,5" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Command="{Binding OpenCommand}" AutomationProperties.Name="{Binding Name}">
                             <Border Classes="card" Height="171" Background="{StaticResource Brush.Thumbnail}">
                                 <Panel>
