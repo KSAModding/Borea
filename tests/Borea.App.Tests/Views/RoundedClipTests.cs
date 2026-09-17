@@ -5,6 +5,7 @@ using Borea.App.Views;
 
 namespace Borea.App.Tests.Views;
 
+[Collection(HeadlessCollection.Name)]
 public sealed class RoundedClipTests
 {
     [Theory]
@@ -28,7 +29,7 @@ public sealed class RoundedClipTests
     [Fact]
     public async Task IsEnabled_ClipsTheChildUntilItIsReplacedOrDisabled()
     {
-        await using var session = HeadlessApp.Start();
+        var session = HeadlessApp.Session;
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
 
         var clips = await session.Dispatch(() =>

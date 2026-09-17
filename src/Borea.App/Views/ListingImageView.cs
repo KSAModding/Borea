@@ -1,25 +1,39 @@
 using System;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
 using Avalonia;
+using Avalonia.Animation;
+using Avalonia.Animation.Easings;
 using Avalonia.Controls;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
+using Avalonia.Rendering.Composition;
+using Avalonia.Rendering.Composition.Animations;
 using Borea.App.ViewModels;
 using Borea.Core.Index;
 
 namespace Borea.App.Views;
 
-/// <summary>Fits the shown part of a listing image whole into its slot, and shows the child as the placeholder while no image shows.</summary>
+/// <summary>Fits the shown part of a listing image whole into its slot, shows a pulsing skeleton while the image loads, and shows the child as the placeholder when no image can show.</summary>
 public sealed class ListingImageView : Decorator
 {
+    private static readonly TimeSpan PulseDelay = TimeSpan.FromMilliseconds(300);
+    private static readonly TimeSpan PulseCycle = TimeSpan.FromMilliseconds(1800);
+    private static readonly TimeSpan PulseLimit = TimeSpan.FromSeconds(30);
+    private static readonly TimeSpan FadeDuration = TimeSpan.FromMilliseconds(200);
+    private static readonly TimeSpan CachedFadeDuration = TimeSpan.FromMilliseconds(100);
+
     public static readonly StyledProperty<ListingImage?> ImageProperty =
         AvaloniaProperty.Register<ListingImageView, ListingImage?>(nameof(Image));
 
     public static readonly StyledProperty<IBrush?> BackgroundProperty =
         Border.BackgroundProperty.AddOwner<ListingImageView>();
+
+    public static readonly StyledProperty<IBrush?> PulseBrushProperty =
+        AvaloniaProperty.Register<ListingImageView, IBrush?>(nameof(PulseBrush));
 
     public static readonly StyledProperty<CornerRadius> CornerRadiusProperty =
         Border.CornerRadiusProperty.AddOwner<ListingImageView>();
@@ -27,16 +41,20 @@ public sealed class ListingImageView : Decorator
     public static readonly StyledProperty<bool> LayoutFromRecordProperty =
         AvaloniaProperty.Register<ListingImageView, bool>(nameof(LayoutFromRecord));
 
+    private readonly Panel _skeleton = new() { IsHitTestVisible = false, Opacity = 0 };
+    private readonly Panel _pulse = new() { Opacity = 0 };
     private ListingImage? _observed;
     private Bitmap? _bitmap;
     private byte[]? _decoding;
     private int _decodingWidth;
     private int _generation;
     private bool _nearViewport;
+    private bool _decodeFailed;
+    private long _pulseStartedAt;
 
     static ListingImageView()
     {
-        AffectsRender<ListingImageView>(BackgroundProperty, CornerRadiusProperty);
+        AffectsRender<ListingImageView>(BackgroundProperty);
         AffectsMeasure<ListingImageView>(ImageProperty, LayoutFromRecordProperty);
     }
 
@@ -44,6 +62,16 @@ public sealed class ListingImageView : Decorator
     {
         RenderOptions.SetBitmapInterpolationMode(this, BitmapInterpolationMode.HighQuality);
         EffectiveViewportChanged += OnEffectiveViewportChanged;
+        _skeleton.Children.Add(_pulse);
+        VisualChildren.Add(_skeleton);
+    }
+
+    /// <summary>What the slot shows. The placeholder shows when there is no image, when it failed, and when the preference holds it back.</summary>
+    internal enum DisplayState
+    {
+        Placeholder,
+        Loading,
+        Loaded,
     }
 
     public ListingImage? Image
@@ -58,6 +86,13 @@ public sealed class ListingImageView : Decorator
         set => SetValue(BackgroundProperty, value);
     }
 
+    /// <summary>The color that the loading skeleton pulses to from <see cref="Background"/>.</summary>
+    public IBrush? PulseBrush
+    {
+        get => GetValue(PulseBrushProperty);
+        set => SetValue(PulseBrushProperty, value);
+    }
+
     public CornerRadius CornerRadius
     {
         get => GetValue(CornerRadiusProperty);
@@ -70,6 +105,10 @@ public sealed class ListingImageView : Decorator
         get => GetValue(LayoutFromRecordProperty);
         set => SetValue(LayoutFromRecordProperty, value);
     }
+
+    internal DisplayState State { get; private set; }
+
+    internal bool IsPulsing => _pulseStartedAt != 0;
 
     /// <summary>The largest rectangle with the image's aspect ratio inside the slot, centered, so the image is neither stretched nor cropped.</summary>
     internal static Rect Fit(Size image, Size slot)
@@ -114,14 +153,34 @@ public sealed class ListingImageView : Decorator
         base.OnPropertyChanged(change);
         if (change.Property == ImageProperty)
         {
+            var wasPulsing = IsPulsing;
             Observe(VisualRoot is null ? null : Image);
             ReleaseBitmap();
             Show();
             RequestLoad();
+            UpdateState();
+            if (wasPulsing && IsPulsing)
+            {
+                // the new image gets its own pulse, so its fade and the pulse limit count from now
+                _pulseStartedAt = 0;
+                UpdatePulse(TimeSpan.Zero);
+            }
         }
         else if (change.Property == ChildProperty)
         {
             UpdatePlaceholder();
+        }
+        else if (change.Property == BackgroundProperty)
+        {
+            _skeleton.Background = Background;
+        }
+        else if (change.Property == PulseBrushProperty)
+        {
+            _pulse.Background = PulseBrush;
+        }
+        else if (change.Property == CornerRadiusProperty)
+        {
+            UpdateClip();
         }
     }
 
@@ -130,6 +189,7 @@ public sealed class ListingImageView : Decorator
         base.OnAttachedToVisualTree(e);
         Observe(Image);
         Show();
+        UpdateState();
     }
 
     // stop listening while detached, so a row that is gone does not stay alive through its image
@@ -138,17 +198,20 @@ public sealed class ListingImageView : Decorator
         Observe(null);
         _nearViewport = false;
         ReleaseBitmap();
+        UpdateState();
         base.OnDetachedFromVisualTree(e);
     }
 
     protected override void OnSizeChanged(SizeChangedEventArgs e)
     {
         base.OnSizeChanged(e);
+        UpdateClip();
         Show();
     }
 
     protected override Size MeasureOverride(Size availableSize)
     {
+        _skeleton.Measure(availableSize);
         var measured = base.MeasureOverride(availableSize);
         if (!LayoutFromRecord || Image?.Record is not { } record)
             return measured;
@@ -158,20 +221,22 @@ public sealed class ListingImageView : Decorator
         return new Size(width, width * part.Height / part.Width);
     }
 
+    protected override Size ArrangeOverride(Size finalSize)
+    {
+        _skeleton.Arrange(new Rect(finalSize));
+        return base.ArrangeOverride(finalSize);
+    }
+
     public override void Render(DrawingContext context)
     {
         if (_bitmap is null || Image?.Record is not { } record)
             return;
 
-        var slot = new Rect(Bounds.Size);
-        using (context.PushClip(new RoundedRect(slot, CornerRadius)))
-        {
-            if (Background is { } background)
-                context.FillRectangle(background, slot);
+        if (Background is { } background)
+            context.FillRectangle(background, new Rect(Bounds.Size));
 
-            var (source, destination) = Placement(record, _bitmap.Size, Bounds.Size);
-            context.DrawImage(_bitmap, source, destination);
-        }
+        var (source, destination) = Placement(record, _bitmap.Size, Bounds.Size);
+        context.DrawImage(_bitmap, source, destination);
     }
 
     private void OnEffectiveViewportChanged(object? sender, EffectiveViewportChangedEventArgs e)
@@ -182,6 +247,7 @@ public sealed class ListingImageView : Decorator
             && Bounds.Height > 0
             && viewport.Inflate(new Thickness(0, viewport.Height)).Intersects(new Rect(Bounds.Size));
         RequestLoad();
+        UpdateState();
     }
 
     private void Observe(ListingImage? image)
@@ -201,6 +267,7 @@ public sealed class ListingImageView : Decorator
 
         Show();
         RequestLoad();
+        UpdateState();
     }
 
     private void RequestLoad()
@@ -218,7 +285,7 @@ public sealed class ListingImageView : Decorator
         }
 
         var width = DecodeWidth(image.Record, Bounds.Size, TopLevel.GetTopLevel(this)?.RenderScaling ?? 1);
-        if (ReferenceEquals(bytes, _decoding) && width <= _decodingWidth)
+        if (ReferenceEquals(bytes, _decoding) && (_decodeFailed || width <= _decodingWidth))
             return;
 
         _decoding = bytes;
@@ -250,7 +317,8 @@ public sealed class ListingImageView : Decorator
 
         _bitmap?.Dispose();
         _bitmap = bitmap;
-        UpdatePlaceholder();
+        _decodeFailed = bitmap is null;
+        UpdateState();
         InvalidateVisual();
     }
 
@@ -262,15 +330,81 @@ public sealed class ListingImageView : Decorator
         _generation++;
         _decoding = null;
         _decodingWidth = 0;
+        _decodeFailed = false;
         _bitmap?.Dispose();
         _bitmap = null;
-        UpdatePlaceholder();
+        UpdateState();
         InvalidateVisual();
+    }
+
+    private void UpdateState()
+    {
+        var image = Image;
+        var state = _bitmap is not null ? DisplayState.Loaded
+            : _decodeFailed || image is not { Failure: null, LoadsFromAuthorHosts: true } ? DisplayState.Placeholder
+            : DisplayState.Loading;
+
+        var fade = TimeSpan.Zero;
+        if (state != State)
+        {
+            if (state == DisplayState.Loaded && image is { LoadsFromAuthorHosts: true })
+                fade = IsPulsing && Stopwatch.GetElapsedTime(_pulseStartedAt) >= PulseDelay ? FadeDuration : CachedFadeDuration;
+
+            State = state;
+            UpdatePlaceholder();
+            _skeleton.Transitions = fade > TimeSpan.Zero ? [new DoubleTransition { Property = OpacityProperty, Duration = fade, Easing = new SineEaseInOut() }] : null;
+            _skeleton.Opacity = state == DisplayState.Loading ? 1 : 0;
+        }
+
+        UpdatePulse(fade);
+    }
+
+    private void UpdatePulse(TimeSpan settle)
+    {
+        var pulse = State == DisplayState.Loading && _nearViewport;
+        if (pulse == IsPulsing)
+            return;
+
+        _pulseStartedAt = 0;
+        if (ElementComposition.GetElementVisual(_pulse) is not { } visual)
+            return;
+
+        var animation = visual.Compositor.CreateScalarKeyFrameAnimation();
+        if (pulse)
+        {
+            animation.InsertKeyFrame(0, 0);
+            animation.InsertKeyFrame(0.5f, 1, new SineEaseInOut());
+            animation.InsertKeyFrame(1, 0, new SineEaseInOut());
+            animation.Duration = PulseCycle;
+            animation.DelayTime = PulseDelay;
+            animation.DelayBehavior = AnimationDelayBehavior.SetInitialValueBeforeDelay;
+
+            // a load that never reports back and a hidden page do not end the pulse, so it ends by itself
+            animation.IterationBehavior = AnimationIterationBehavior.Count;
+            animation.IterationCount = (int)Math.Ceiling(PulseLimit / PulseCycle);
+            _pulseStartedAt = Stopwatch.GetTimestamp();
+        }
+        else
+        {
+            // StopAnimation changes render thread state from the UI thread, so an animation that ends replaces the pulse
+            animation.InsertKeyFrame(1, 0);
+            animation.Duration = settle > TimeSpan.Zero ? settle : TimeSpan.FromMilliseconds(1);
+        }
+
+        // the element writes its own opacity on its first sync, and a changed value there drops the pending animation
+        visual.Opacity = (float)_pulse.Opacity;
+        visual.StartAnimation(nameof(Opacity), animation);
     }
 
     private void UpdatePlaceholder()
     {
         if (Child is { } placeholder)
-            placeholder.IsVisible = _bitmap is null;
+            placeholder.IsVisible = State == DisplayState.Placeholder;
+    }
+
+    private void UpdateClip()
+    {
+        var radius = CornerRadius.TopLeft;
+        Clip = radius > 0 ? new RectangleGeometry(new Rect(Bounds.Size), radius, radius) : null;
     }
 }
