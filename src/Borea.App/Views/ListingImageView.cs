@@ -21,6 +21,9 @@ public sealed class ListingImageView : Decorator
     public static readonly StyledProperty<IBrush?> BackgroundProperty =
         Border.BackgroundProperty.AddOwner<ListingImageView>();
 
+    public static readonly StyledProperty<CornerRadius> CornerRadiusProperty =
+        Border.CornerRadiusProperty.AddOwner<ListingImageView>();
+
     public static readonly StyledProperty<bool> LayoutFromRecordProperty =
         AvaloniaProperty.Register<ListingImageView, bool>(nameof(LayoutFromRecord));
 
@@ -33,7 +36,7 @@ public sealed class ListingImageView : Decorator
 
     static ListingImageView()
     {
-        AffectsRender<ListingImageView>(BackgroundProperty);
+        AffectsRender<ListingImageView>(BackgroundProperty, CornerRadiusProperty);
         AffectsMeasure<ListingImageView>(ImageProperty, LayoutFromRecordProperty);
     }
 
@@ -53,6 +56,12 @@ public sealed class ListingImageView : Decorator
     {
         get => GetValue(BackgroundProperty);
         set => SetValue(BackgroundProperty, value);
+    }
+
+    public CornerRadius CornerRadius
+    {
+        get => GetValue(CornerRadiusProperty);
+        set => SetValue(CornerRadiusProperty, value);
     }
 
     /// <summary>Sizes the slot from the shown part of the record, at most the available width, so the layout does not move when the image loads.</summary>
@@ -154,11 +163,15 @@ public sealed class ListingImageView : Decorator
         if (_bitmap is null || Image?.Record is not { } record)
             return;
 
-        if (Background is { } background)
-            context.FillRectangle(background, new Rect(Bounds.Size));
+        var slot = new Rect(Bounds.Size);
+        using (context.PushClip(new RoundedRect(slot, CornerRadius)))
+        {
+            if (Background is { } background)
+                context.FillRectangle(background, slot);
 
-        var (source, destination) = Placement(record, _bitmap.Size, Bounds.Size);
-        context.DrawImage(_bitmap, source, destination);
+            var (source, destination) = Placement(record, _bitmap.Size, Bounds.Size);
+            context.DrawImage(_bitmap, source, destination);
+        }
     }
 
     private void OnEffectiveViewportChanged(object? sender, EffectiveViewportChangedEventArgs e)

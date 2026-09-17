@@ -21,7 +21,7 @@
 
                     <!-- c/content-header -->
                     <Grid ColumnDefinitions="170,32,*" Margin="0,24,0,0">
-                        <Border Classes="thumbnail" Width="170" Height="170" ClipToBounds="True">
+                        <Border Classes="thumbnail" Width="170" Height="170">
                             <views:ListingImageView Image="{Binding SelectedPack.Icon}" Background="{StaticResource Brush.Surface}">
                                 <Path Classes="icon" Data="{StaticResource Icon.Box}" RenderTransform="scale(2.5)" StrokeThickness="0.8" />
                             </views:ListingImageView>
@@ -87,7 +87,7 @@
                     </Grid>
 
                     <!-- the outcome of the last install, one row per mod -->
-                    <Border BorderBrush="{StaticResource Brush.BorderStrong}" BorderThickness="1" CornerRadius="16" ClipToBounds="True" Margin="0,16,0,0" IsVisible="{Binding SelectedPack.HasResults}">
+                    <Border BorderBrush="{StaticResource Brush.BorderStrong}" BorderThickness="1" CornerRadius="16" views:RoundedClip.IsEnabled="True" Margin="0,16,0,0" IsVisible="{Binding SelectedPack.HasResults}">
                         <ItemsControl ItemsSource="{Binding SelectedPack.Results}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate x:DataType="vm:PackResultItem">
@@ -128,7 +128,7 @@
                     </Border>
 
                     <!-- the pinned mods -->
-                    <Border BorderBrush="{StaticResource Brush.BorderStrong}" BorderThickness="1" CornerRadius="16" ClipToBounds="True" Margin="0,16,0,0" IsVisible="{Binding IsPackModsTab}">
+                    <Border BorderBrush="{StaticResource Brush.BorderStrong}" BorderThickness="1" CornerRadius="16" views:RoundedClip.IsEnabled="True" Margin="0,16,0,0" IsVisible="{Binding IsPackModsTab}">
                         <StackPanel>
                             <Border Background="{StaticResource Brush.Surface}" Padding="16,11">
                                 <Grid ColumnDefinitions="*,150,200">
@@ -165,7 +165,7 @@
                     </Border>
 
                     <!-- c/table-versions -->
-                    <Border BorderBrush="{StaticResource Brush.BorderStrong}" BorderThickness="1" CornerRadius="16" ClipToBounds="True" Margin="0,16,0,0" IsVisible="{Binding IsPackVersionsTab}">
+                    <Border BorderBrush="{StaticResource Brush.BorderStrong}" BorderThickness="1" CornerRadius="16" views:RoundedClip.IsEnabled="True" Margin="0,16,0,0" IsVisible="{Binding IsPackVersionsTab}">
                         <StackPanel>
                             <Border Background="{StaticResource Brush.Surface}" Padding="16,11">
                                 <Grid ColumnDefinitions="150,*,120,80">

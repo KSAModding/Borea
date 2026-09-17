@@ -1,4 +1,12 @@
+using System.Runtime.InteropServices;
 using Avalonia;
+using Avalonia.Controls;
+using Avalonia.Headless;
+using Avalonia.Media;
+using Avalonia.Media.Imaging;
+using Avalonia.Platform;
+using Avalonia.Threading;
+using Borea.App.ViewModels;
 using Borea.App.Views;
 using Borea.Core.Index;
 
@@ -55,6 +63,55 @@ public sealed class ListingImageViewTests
     public void DecodeWidth_Icon_DecodesEnoughPixelsForTheCenterSquare(int width, int height, double slotWidth, double slotHeight, double scaling, int decodeWidth)
     {
         Assert.Equal(decodeWidth, ListingImageView.DecodeWidth(Icon(width, height), new Size(slotWidth, slotHeight), scaling));
+    }
+
+    [Fact]
+    public async Task Render_ClipsTheBackgroundAndTheImageToTheCornerRadius()
+    {
+        await using var session = HeadlessApp.Start();
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+
+        var pixels = await session.Dispatch(async () =>
+        {
+            var placeholder = new Border();
+            var view = new ListingImageView
+            {
+                Image = new ListingImage(new MainViewModel(), Icon(256, 256)) { Bytes = LeftHalfBluePng() },
+                Background = Brushes.Red,
+                CornerRadius = new CornerRadius(12),
+                Child = placeholder,
+            };
+            var window = new Window { Width = 40, Height = 40, Background = Brushes.White, Content = view };
+            window.Show();
+
+            while (placeholder.IsVisible)
+                await Task.Delay(10, timeout.Token);
+
+            Dispatcher.UIThread.RunJobs();
+            AvaloniaHeadlessPlatform.ForceRenderTimerTick();
+            using var frame = window.CaptureRenderedFrame()!;
+            using var buffer = frame.Lock();
+            return (Pixel(buffer, 1, 1), Pixel(buffer, 38, 1), Pixel(buffer, 10, 20), Pixel(buffer, 30, 20));
+        }, timeout.Token);
+
+        Assert.Equal((Colors.White, Colors.White, Colors.Blue, Colors.Red), pixels);
+    }
+
+    private static byte[] LeftHalfBluePng()
+    {
+        using var bitmap = new RenderTargetBitmap(new PixelSize(256, 256));
+        using (var context = bitmap.CreateDrawingContext())
+            context.FillRectangle(Brushes.Blue, new Rect(0, 0, 128, 256));
+
+        using var stream = new MemoryStream();
+        bitmap.Save(stream, PngBitmapEncoderOptions.Default);
+        return stream.ToArray();
+    }
+
+    private static Color Pixel(ILockedFramebuffer buffer, int x, int y)
+    {
+        var offset = y * buffer.RowBytes + x * 4;
+        return Color.FromRgb(Marshal.ReadByte(buffer.Address, offset), Marshal.ReadByte(buffer.Address, offset + 1), Marshal.ReadByte(buffer.Address, offset + 2));
     }
 
     private static IconImage Icon(int width, int height) => new(Url, Digest, width, height, 1000);

@@ -7,7 +7,7 @@
     <UserControl.Resources>
         <!-- c/table-versions of one content group -->
         <DataTemplate x:Key="ContentGroupTable" x:DataType="vm:ContentGroup">
-            <Border BorderBrush="{StaticResource Brush.BorderStrong}" BorderThickness="1" CornerRadius="16" ClipToBounds="True" Padding="0,0,0,4" Margin="0,0,0,16">
+            <Border BorderBrush="{StaticResource Brush.BorderStrong}" BorderThickness="1" CornerRadius="16" views:RoundedClip.IsEnabled="True" Padding="0,0,0,4" Margin="0,0,0,16">
                 <StackPanel>
                     <Border Background="{StaticResource Brush.Surface}" Padding="16,11">
                         <TextBlock Classes="body-md secondary" Text="{Binding Title}" />
@@ -85,7 +85,7 @@
         </DataTemplate>
 
         <DataTemplate x:Key="GameSaveTable" x:DataType="vm:GameSaveSection">
-            <Border BorderBrush="{StaticResource Brush.BorderStrong}" BorderThickness="1" CornerRadius="16" ClipToBounds="True" Padding="0,0,0,4" Margin="0,0,0,16">
+            <Border BorderBrush="{StaticResource Brush.BorderStrong}" BorderThickness="1" CornerRadius="16" views:RoundedClip.IsEnabled="True" Padding="0,0,0,4" Margin="0,0,0,16">
                 <StackPanel>
                     <Border Background="{StaticResource Brush.Surface}" Padding="16,11">
                         <Grid ColumnDefinitions="*,16,Auto">
