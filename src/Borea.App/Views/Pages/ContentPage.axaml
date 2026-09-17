@@ -45,7 +45,7 @@
 
                     <!-- c/content-header -->
                     <Grid ColumnDefinitions="170,32,*" Margin="0,24,0,0">
-                        <Border Classes="thumbnail" Width="170" Height="170" ClipToBounds="True">
+                        <Border Classes="thumbnail" Width="170" Height="170">
                             <views:ListingImageView Image="{Binding SelectedContent.Icon}" Background="{StaticResource Brush.Surface}">
                                 <Path Classes="icon" Data="{StaticResource Icon.PuzzlePiece}" RenderTransform="scale(2.5)" StrokeThickness="0.8" />
                             </views:ListingImageView>

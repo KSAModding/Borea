@@ -183,7 +183,7 @@ public sealed class MarkdownView : StackPanel
         };
         AutomationProperties.SetName(view, part.AlternativeText);
 
-        var frame = new Border { Classes = { "thumbnail" }, ClipToBounds = true, HorizontalAlignment = HorizontalAlignment.Left, Child = view };
+        var frame = new Border { Classes = { "thumbnail" }, HorizontalAlignment = HorizontalAlignment.Left, Child = view };
         if (part.AlternativeText.Length > 0)
             ToolTip.SetTip(frame, part.AlternativeText);
 

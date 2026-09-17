@@ -129,13 +129,13 @@
         <Border BorderBrush="{StaticResource Brush.BorderStrong}" BorderThickness="0,1,0,0" Padding="16,8">
             <Grid ColumnDefinitions="48,16,*,24,Auto" RowDefinitions="Auto,Auto,Auto">
                 <Button Classes="plain" Command="{Binding OpenCommand}" IsVisible="{Binding CanOpen}" AutomationProperties.Name="{Binding Name}">
-                    <Border Classes="thumbnail" Width="48" Height="48" ClipToBounds="True">
+                    <Border Classes="thumbnail" Width="48" Height="48">
                         <views:ListingImageView Image="{Binding Icon}" Background="{StaticResource Brush.Surface}">
                             <Path Classes="icon" Data="{StaticResource Icon.PuzzlePiece}" />
                         </views:ListingImageView>
                     </Border>
                 </Button>
-                <Border Classes="thumbnail" Width="48" Height="48" ClipToBounds="True" IsVisible="{Binding !CanOpen}" ToolTip.Tip="{Binding NoPageText}">
+                <Border Classes="thumbnail" Width="48" Height="48" IsVisible="{Binding !CanOpen}" ToolTip.Tip="{Binding NoPageText}">
                     <views:ListingImageView Image="{Binding Icon}" Background="{StaticResource Brush.Surface}">
                         <Path Classes="icon" Data="{StaticResource Icon.PuzzlePiece}" />
                     </views:ListingImageView>
@@ -204,7 +204,7 @@
         <Border Classes="card" Padding="12">
             <Grid ColumnDefinitions="100,16,*" MinHeight="100">
                 <Button Classes="plain" Command="{Binding OpenCommand}" AutomationProperties.Name="{Binding Name}">
-                    <Border Classes="thumbnail" Width="100" Height="100" ClipToBounds="True">
+                    <Border Classes="thumbnail" Width="100" Height="100">
                         <views:ListingImageView Image="{Binding Icon}" Background="{StaticResource Brush.Surface}">
                             <Path Classes="icon size-32" Data="{StaticResource Icon.PuzzlePiece}" />
                         </views:ListingImageView>
@@ -297,7 +297,7 @@
         <Border Classes="card" Padding="12">
             <Grid ColumnDefinitions="100,16,*" MinHeight="100">
                 <Button Classes="plain" Command="{Binding OpenCommand}" AutomationProperties.Name="{Binding Name}">
-                    <Border Classes="thumbnail" Width="100" Height="100" ClipToBounds="True">
+                    <Border Classes="thumbnail" Width="100" Height="100">
                         <views:ListingImageView Image="{Binding Icon}" Background="{StaticResource Brush.Surface}">
                             <Path Classes="icon size-32" Data="{StaticResource Icon.Box}" />
                         </views:ListingImageView>
