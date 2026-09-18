@@ -228,14 +228,25 @@
                             </Button>
                             <ProgressBar Width="38" Height="6" VerticalAlignment="Center" IsVisible="{Binding IsInstalling}" Value="{Binding Progress}" Maximum="100" Foreground="{StaticResource Brush.Accent}" />
                             <ProgressBar Width="38" Height="6" VerticalAlignment="Center" IsVisible="{Binding IsRemoving}" IsIndeterminate="True" Foreground="{StaticResource Brush.Accent}" />
-                            <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center" IsVisible="{Binding IsInstalled}">
-                                <Border Classes="chip positive" VerticalAlignment="Center" ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).InstalledInText}">
-                                    <TextBlock Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.DiscoverInstalled}" />
-                                </Border>
-                                <Button Classes="icon" Command="{Binding BeginRemoveCommand}" IsVisible="{Binding !IsRemoving}" IsEnabled="{Binding CanRemove}" ToolTip.Tip="{Binding RemoveToolTip}" ToolTip.ShowOnDisabled="True" AutomationProperties.Name="{Binding Name}" AutomationProperties.HelpText="{Binding RemoveToolTip}">
-                                    <Path Classes="icon size-18" Data="{StaticResource Icon.Trash}" />
-                                </Button>
-                            </StackPanel>
+                            <Button Classes="add installed" ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).InstalledInText}" AutomationProperties.Name="{Binding InstalledAutomationName}" AutomationProperties.HelpText="{Binding $parent[Window].((vm:MainViewModel)DataContext).InstalledInText}">
+                                <Button.IsVisible>
+                                    <MultiBinding Converter="{x:Static BoolConverters.And}">
+                                        <Binding Path="IsInstalled" />
+                                        <Binding Path="!IsRemoving" />
+                                    </MultiBinding>
+                                </Button.IsVisible>
+                                <Button.Flyout>
+                                    <MenuFlyout Placement="BottomEdgeAlignedRight">
+                                        <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ContentRemove}" Command="{Binding BeginRemoveCommand}" AutomationProperties.HelpText="{Binding RemoveBlockedText}" />
+                                        <MenuItem IsEnabled="False" IsVisible="{Binding RemoveBlockedText, Converter={x:Static ObjectConverters.IsNotNull}}">
+                                            <MenuItem.Header>
+                                                <TextBlock Classes="body-sm secondary" Text="{Binding RemoveBlockedText}" TextWrapping="Wrap" MaxWidth="260" />
+                                            </MenuItem.Header>
+                                        </MenuItem>
+                                    </MenuFlyout>
+                                </Button.Flyout>
+                                <Path Classes="icon size-16" Data="{StaticResource Icon.Check}" />
+                            </Button>
                         </Panel>
                     </Grid>
                     <ContentControl Grid.Row="1" Margin="0,8" Content="{Binding Choices}" IsVisible="{Binding Choices, Converter={x:Static ObjectConverters.IsNotNull}}" />
