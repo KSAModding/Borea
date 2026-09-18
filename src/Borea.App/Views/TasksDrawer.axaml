@@ -52,7 +52,7 @@
             <ScrollViewer x:Name="Scroller" Focusable="True">
                 <StackPanel VerticalAlignment="Bottom" Margin="24" Spacing="8">
                     <TextBlock Classes="body-md muted" Text="{Binding Localization.TasksEmpty}" TextWrapping="Wrap" IsVisible="{Binding Tasks.IsEmpty}" />
-                    <ItemsControl ItemsSource="{Binding Tasks.History}" ItemTemplate="{StaticResource EndedTaskRow}" IsVisible="{Binding Tasks.HasHistory}">
+                    <ItemsControl x:Name="HistoryList" ItemsSource="{Binding Tasks.History}" ItemTemplate="{StaticResource EndedTaskRow}" IsVisible="{Binding Tasks.HasHistory}">
                         <ItemsControl.ItemsPanel>
                             <ItemsPanelTemplate>
                                 <ReversibleStackPanel ReverseOrder="True" Spacing="8" />

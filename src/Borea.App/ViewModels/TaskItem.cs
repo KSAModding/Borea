@@ -1,8 +1,10 @@
 using System;
+using System.Linq;
 using System.Threading.Tasks;
 using Borea.App.Localization;
 using Borea.Core.History;
 using Borea.Core.Mods;
+using Borea.Core.Planning;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -28,6 +30,15 @@ public sealed partial class TaskItem : ObservableObject
     internal string? Version { get; }
 
     internal DateTimeOffset StartedAt { get; }
+
+    /// <summary>How many mods the plan of a running install or update changes. It is not saved.</summary>
+    internal int ModCount { get; private set; }
+
+    /// <summary>The version an update or a loader install puts in. It is not saved.</summary>
+    internal string? NewVersion { get; set; }
+
+    /// <summary>How many of its mods a stopped install or update changed. It is not saved.</summary>
+    internal (int Completed, int Total) StoppedAfter { get; set; }
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(StateText))]
@@ -135,6 +146,15 @@ public sealed partial class TaskItem : ObservableObject
     {
         if (State == TaskState.Waiting)
             State = TaskState.Running;
+    }
+
+    /// <summary>Keeps how many mods the plan changes, and for an update the version it installs.</summary>
+    internal void MarkRunning(InstallPlan plan)
+    {
+        MarkRunning();
+        ModCount = plan.Operations.Count;
+        if (Kind == TaskKind.Update && plan.Operations.FirstOrDefault(operation => ModIds.Equals(operation.Release.ModId, ContentId)) is { } update)
+            NewVersion = update.Release.Version.ToString();
     }
 
     internal void Report(InstallProgressText text)

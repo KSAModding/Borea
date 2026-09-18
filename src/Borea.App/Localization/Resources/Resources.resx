@@ -261,6 +261,69 @@
   <data name="TaskRetryModMissing" xml:space="preserve">
     <value>This mod is no longer in the instance.</value>
   </data>
+  <data name="ToastOpenInstance" xml:space="preserve">
+    <value>Open instance</value>
+  </data>
+  <data name="ToastAddedFormat" xml:space="preserve">
+    <value>{0} added to {1}</value>
+  </data>
+  <data name="ToastUpdatedFormat" xml:space="preserve">
+    <value>{0} updated to {1} in {2}</value>
+  </data>
+  <data name="ToastUpdatedAllOneFormat" xml:space="preserve">
+    <value>1 mod updated in {0}</value>
+  </data>
+  <data name="ToastUpdatedAllFormat" xml:space="preserve">
+    <value>{0} mods updated in {1}</value>
+  </data>
+  <data name="ToastRemovedFormat" xml:space="preserve">
+    <value>{0} removed from {1}</value>
+  </data>
+  <data name="ToastLoaderInstalledFormat" xml:space="preserve">
+    <value>{0} {1} installed</value>
+  </data>
+  <data name="ToastInstanceCreatedFormat" xml:space="preserve">
+    <value>Instance {0} created</value>
+  </data>
+  <data name="ToastReplacedFormat" xml:space="preserve">
+    <value>{0} replaced in {1}</value>
+  </data>
+  <data name="ToastInstallStoppedFormat" xml:space="preserve">
+    <value>Install of {0} stopped</value>
+  </data>
+  <data name="ToastUpdateStoppedFormat" xml:space="preserve">
+    <value>Update of {0} stopped</value>
+  </data>
+  <data name="ToastUpdateAllStoppedFormat" xml:space="preserve">
+    <value>Update of the mods in {0} stopped</value>
+  </data>
+  <data name="ToastStoppedInstalledFormat" xml:space="preserve">
+    <value>{0} of {1} mods installed</value>
+  </data>
+  <data name="ToastStoppedUpdatedFormat" xml:space="preserve">
+    <value>{0} of {1} mods updated</value>
+  </data>
+  <data name="ToastIndexRefreshFailed" xml:space="preserve">
+    <value>Could not refresh the content index</value>
+  </data>
+  <data name="ToastInstallFailedFormat" xml:space="preserve">
+    <value>Could not install {0}</value>
+  </data>
+  <data name="ToastUpdateFailedFormat" xml:space="preserve">
+    <value>Could not update {0}</value>
+  </data>
+  <data name="ToastUpdateAllFailedFormat" xml:space="preserve">
+    <value>Could not update the mods in {0}</value>
+  </data>
+  <data name="ToastRemoveFailedFormat" xml:space="preserve">
+    <value>Could not remove {0}</value>
+  </data>
+  <data name="ToastCreateInstanceFailedFormat" xml:space="preserve">
+    <value>Could not create instance {0}</value>
+  </data>
+  <data name="ToastReplaceFailedFormat" xml:space="preserve">
+    <value>Could not replace {0}</value>
+  </data>
   <data name="InstanceTabContent" xml:space="preserve">
     <value>Content</value>
   </data>

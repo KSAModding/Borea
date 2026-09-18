@@ -121,7 +121,7 @@ public partial class MainViewModel
 
         item.InstallError = null;
         item.IsInstalling = true;
-        var run = item.Run = StartInstallRun(StartTask(TaskKind.ModListImport, item.Name.Trim()));
+        var run = item.Run = StartInstallRun(StartTask(TaskKind.ModListImport, item.Name.Trim(), item.Plan.InstanceId));
         var completed = false;
         var stopped = false;
         try

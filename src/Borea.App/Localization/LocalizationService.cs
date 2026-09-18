@@ -77,6 +77,66 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string TaskRetryModMissing => Resources.TaskRetryModMissing;
 
+    public string ToastOpenInstance => Resources.ToastOpenInstance;
+
+    public string FormatToastAdded(string content, string instanceName)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ToastAddedFormat, content, instanceName);
+
+    public string FormatToastUpdated(string content, string version, string instanceName)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ToastUpdatedFormat, content, version, instanceName);
+
+    public string FormatToastUpdatedAll(int count, string instanceName)
+        => count == 1
+            ? string.Format(CultureInfo.CurrentCulture, Resources.ToastUpdatedAllOneFormat, instanceName)
+            : string.Format(CultureInfo.CurrentCulture, Resources.ToastUpdatedAllFormat, count, instanceName);
+
+    public string FormatToastRemoved(string content, string instanceName)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ToastRemovedFormat, content, instanceName);
+
+    public string FormatToastLoaderInstalled(string loader, string version)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ToastLoaderInstalledFormat, loader, version);
+
+    public string FormatToastInstanceCreated(string instanceName)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ToastInstanceCreatedFormat, instanceName);
+
+    public string FormatToastReplaced(string folder, string instanceName)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ToastReplacedFormat, folder, instanceName);
+
+    public string FormatToastInstallStopped(string content)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ToastInstallStoppedFormat, content);
+
+    public string FormatToastUpdateStopped(string content)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ToastUpdateStoppedFormat, content);
+
+    public string FormatToastUpdateAllStopped(string instanceName)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ToastUpdateAllStoppedFormat, instanceName);
+
+    public string FormatToastStoppedInstalled(int completed, int total)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ToastStoppedInstalledFormat, completed, total);
+
+    public string FormatToastStoppedUpdated(int completed, int total)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ToastStoppedUpdatedFormat, completed, total);
+
+    public string ToastIndexRefreshFailed => Resources.ToastIndexRefreshFailed;
+
+    public string FormatToastInstallFailed(string content)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ToastInstallFailedFormat, content);
+
+    public string FormatToastUpdateFailed(string content)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ToastUpdateFailedFormat, content);
+
+    public string FormatToastUpdateAllFailed(string instanceName)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ToastUpdateAllFailedFormat, instanceName);
+
+    public string FormatToastRemoveFailed(string content)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ToastRemoveFailedFormat, content);
+
+    public string FormatToastCreateInstanceFailed(string instanceName)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ToastCreateInstanceFailedFormat, instanceName);
+
+    public string FormatToastReplaceFailed(string folder)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ToastReplaceFailedFormat, folder);
+
     public string PageHomeHeading => Resources.PageHomeHeading;
 
     public string PageDiscoverHeading => Resources.PageDiscoverHeading;
