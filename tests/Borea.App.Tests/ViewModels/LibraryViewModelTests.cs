@@ -37,19 +37,68 @@ public sealed class LibraryViewModelTests
         Assert.Null(viewModel.InstanceError);
     }
 
-    [Fact]
-    public async Task CreateInstance_BlankName_DoesNothing()
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public async Task CreateInstance_BlankName_KeepsTheModalOpenWithTheMessage(string name)
     {
         using var harness = await ViewModelHarness.CreateAsync();
         var viewModel = harness.ViewModel;
 
         viewModel.BeginCreateInstanceCommand.Execute(null);
-        viewModel.ModalInstanceName = "   ";
-        await viewModel.CreateInstanceCommand.ExecuteAsync(null);
+        viewModel.ModalInstanceName = name;
+        await viewModel.ConfirmNameModalCommand.ExecuteAsync(null);
+
+        Assert.True(viewModel.IsCreatingInstance);
+        Assert.Equal(harness.Localization.ModalNameRequired, viewModel.InstanceError);
+        Assert.Empty(viewModel.Instances);
+        Assert.Empty(await harness.Services.Instances.GetAllAsync());
+    }
+
+    [Fact]
+    public async Task NameRequiredMessage_NameChanges_GoesAway()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var viewModel = harness.ViewModel;
+
+        viewModel.BeginCreateInstanceCommand.Execute(null);
+        await viewModel.ConfirmNameModalCommand.ExecuteAsync(null);
+        Assert.NotNull(viewModel.InstanceError);
+        viewModel.ModalInstanceName = "C";
+
+        Assert.Null(viewModel.InstanceError);
+        Assert.True(viewModel.IsCreatingInstance);
+    }
+
+    [Fact]
+    public async Task NameRequiredMessage_ModalClosedAndOpenedAgain_GoesAway()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var viewModel = harness.ViewModel;
+
+        viewModel.BeginCreateInstanceCommand.Execute(null);
+        await viewModel.ConfirmNameModalCommand.ExecuteAsync(null);
+        Assert.NotNull(viewModel.InstanceError);
+        viewModel.CancelNameModalCommand.Execute(null);
+        Assert.Null(viewModel.InstanceError);
+        viewModel.BeginCreateInstanceCommand.Execute(null);
+
+        Assert.True(viewModel.IsNameModalOpen);
+        Assert.Null(viewModel.InstanceError);
+    }
+
+    [Fact]
+    public async Task NameRequiredMessage_LanguageChangedWhileShown_StillGoesAway()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var viewModel = harness.ViewModel;
+
+        viewModel.BeginCreateInstanceCommand.Execute(null);
+        await viewModel.ConfirmNameModalCommand.ExecuteAsync(null);
+        harness.Localization.TrySetCulture("de");
         viewModel.CancelNameModalCommand.Execute(null);
 
-        Assert.Empty(viewModel.Instances);
-        Assert.False(viewModel.IsCreatingInstance);
+        Assert.Null(viewModel.InstanceError);
     }
 
     [Fact]
@@ -65,6 +114,25 @@ public sealed class LibraryViewModelTests
 
         Assert.Single(viewModel.Instances);
         Assert.NotNull(viewModel.InstanceError);
+    }
+
+    [Fact]
+    public async Task BeginCreateInstance_AfterARefusedName_OpensWithoutTheError()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var viewModel = harness.ViewModel;
+        await harness.Services.Instances.CreateAsync("Career", InstanceSource.Custom.Value);
+        await viewModel.LoadAsync();
+
+        viewModel.BeginCreateInstanceCommand.Execute(null);
+        viewModel.ModalInstanceName = "career";
+        await viewModel.ConfirmNameModalCommand.ExecuteAsync(null);
+        viewModel.CancelNameModalCommand.Execute(null);
+        Assert.NotNull(viewModel.InstanceError);
+        viewModel.BeginCreateInstanceCommand.Execute(null);
+
+        Assert.True(viewModel.IsNameModalOpen);
+        Assert.Null(viewModel.InstanceError);
     }
 
     [Fact]
@@ -174,6 +242,26 @@ public sealed class LibraryViewModelTests
 
         Assert.False(viewModel.IsNameModalOpen);
         Assert.Equal("Alpha", (await harness.Services.Instances.GetAllAsync()).Single().Name);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public async Task Rename_BlankName_KeepsTheModalOpenWithTheMessage(string name)
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var viewModel = harness.ViewModel;
+        await harness.Services.Instances.CreateAsync("Alpha", InstanceSource.Custom.Value);
+        await viewModel.LoadAsync();
+        var row = Assert.Single(viewModel.Instances);
+
+        row.BeginRenameCommand.Execute(null);
+        viewModel.ModalInstanceName = name;
+        await viewModel.ConfirmNameModalCommand.ExecuteAsync(null);
+
+        Assert.Same(row, viewModel.RenamingInstance);
+        Assert.Equal(harness.Localization.ModalNameRequired, viewModel.InstanceError);
+        Assert.Equal("Alpha", Assert.Single(await harness.Services.Instances.GetAllAsync()).Name);
     }
 
     [Fact]

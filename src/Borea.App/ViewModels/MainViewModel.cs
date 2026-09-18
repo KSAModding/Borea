@@ -476,6 +476,7 @@ public partial class MainViewModel : ViewModelBase
     [RelayCommand]
     private void BeginCreateInstance()
     {
+        InstanceError = null;
         ModalInstanceName = string.Empty;
         RenamingInstance = null;
         IsCreatingInstance = true;
@@ -494,31 +495,55 @@ public partial class MainViewModel : ViewModelBase
     [RelayCommand]
     private void CancelNameModal()
     {
+        ClearNameRequired();
         IsCreatingInstance = false;
         RenamingInstance = null;
+    }
+
+    private string? _nameRequiredError;
+
+    partial void OnModalInstanceNameChanged(string value) => ClearNameRequired();
+
+    private void ShowNameRequired() => InstanceError = _nameRequiredError = Localization.ModalNameRequired;
+
+    private void ClearNameRequired()
+    {
+        if (_nameRequiredError is not null && InstanceError == _nameRequiredError)
+            InstanceError = null;
+
+        _nameRequiredError = null;
     }
 
     [RelayCommand]
     private Task ConfirmNameModalAsync() => RenamingInstance is { } item ? RenameFromModalAsync(item) : CreateInstanceAsync();
 
     [RelayCommand]
-    private Task CreateInstanceAsync() => IsImportingSharedProfile ? ImportSharedProfileAsync(ModalInstanceName.Trim()) : RunInstanceOperationAsync(async instances =>
+    private Task CreateInstanceAsync()
     {
         var name = ModalInstanceName.Trim();
         if (name.Length == 0)
-            return;
+        {
+            ShowNameRequired();
+            return Task.CompletedTask;
+        }
 
-        await instances.CreateAsync(name, InstanceSource.Custom.Value);
-        ModalInstanceName = string.Empty;
-        IsCreatingInstance = false;
-    });
+        return IsImportingSharedProfile ? ImportSharedProfileAsync(name) : RunInstanceOperationAsync(async instances =>
+        {
+            await instances.CreateAsync(name, InstanceSource.Custom.Value);
+            ModalInstanceName = string.Empty;
+            IsCreatingInstance = false;
+        });
+    }
 
-    /// <summary>Keeps the modal open with the error when the repository refuses the name.</summary>
+    /// <summary>Keeps the modal open with the error when the name is empty or the repository refuses it.</summary>
     private async Task RenameFromModalAsync(InstanceItem item)
     {
         var name = ModalInstanceName.Trim();
         if (name.Length == 0)
+        {
+            ShowNameRequired();
             return;
+        }
 
         if (name != item.Name)
         {

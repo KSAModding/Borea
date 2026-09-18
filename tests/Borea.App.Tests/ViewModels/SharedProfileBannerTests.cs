@@ -163,6 +163,31 @@ public sealed class SharedProfileBannerTests
         Assert.Single(viewModel.Instances);
     }
 
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public async Task CreateInstance_FromTheBanner_BlankName_KeepsTheModalOpenWithTheMessage(string name)
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var viewModel = harness.ViewModel;
+        WriteProfileMod(harness, "LocalOnly");
+        await SaveGameDirectoryAsync(harness);
+
+        viewModel.BeginImportSharedProfileCommand.Execute(null);
+        viewModel.ModalInstanceName = name;
+        await viewModel.ConfirmNameModalCommand.ExecuteAsync(null);
+
+        Assert.Equal(harness.Localization.ModalNameRequired, viewModel.InstanceError);
+        Assert.True(viewModel.IsCreatingInstance);
+        Assert.True(viewModel.IsImportingSharedProfile);
+        Assert.True(viewModel.ShowSharedProfileBanner);
+        Assert.Empty(await harness.Services.Instances.GetAllAsync());
+
+        viewModel.ModalInstanceName = "Career";
+
+        Assert.Null(viewModel.InstanceError);
+    }
+
     [Fact]
     public async Task NewInstance_AfterTheImportModalWasClosed_CreatesAnEmptyInstance()
     {

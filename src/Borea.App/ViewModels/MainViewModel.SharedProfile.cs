@@ -117,7 +117,7 @@ public partial class MainViewModel
 
     private async Task ImportSharedProfileAsync(string name)
     {
-        if (_services is null || name.Length == 0)
+        if (_services is null)
             return;
 
         var services = _services;

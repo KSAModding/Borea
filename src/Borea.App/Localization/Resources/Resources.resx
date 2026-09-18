@@ -795,6 +795,9 @@
   <data name="ModalRenameInstanceTitle" xml:space="preserve">
     <value>Rename instance</value>
   </data>
+  <data name="ModalNameRequired" xml:space="preserve">
+    <value>Enter a name for the instance.</value>
+  </data>
   <data name="ModalNameLabel" xml:space="preserve">
     <value>Name</value>
   </data>
