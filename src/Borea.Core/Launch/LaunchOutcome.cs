@@ -34,4 +34,10 @@ public enum LaunchOutcome
 
     /// <summary>The launch arguments contain the flag the loader reads the instance root from.</summary>
     HandoverFlagInArguments = 10,
+
+    /// <summary>The loader's start entry for this platform names a runtime that Borea does not know.</summary>
+    UnknownRuntime = 11,
+
+    /// <summary>The loader's start entry for this platform has a key that Borea does not know.</summary>
+    UnknownPlatformKey = 12,
 }

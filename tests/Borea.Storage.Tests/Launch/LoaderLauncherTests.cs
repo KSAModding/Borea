@@ -50,11 +50,22 @@ public sealed class LoaderLauncherTests : IDisposable
         install: standalone ? new InstallDescriptor(target: InstallAnchor.Standalone) : null,
         provides: provides);
 
-    private static LoaderProvides StarMapProvides(string launch = "StarMap.exe", InstanceHandover? instance = null) => new(
+    private static LoaderProvides StarMapProvides(string launch = "StarMap.exe", InstanceHandover? instance = null, Dictionary<OsPlatform, LoaderPlatformLaunch>? platforms = null) => new(
         launch: launch,
         contentDir: InstallAnchor.Mods,
         configure: new LoaderConfigure("StarMapConfig.json", ConfigureFormat.Json, "GameLocation"),
-        instance: instance ?? new InstanceHandover("-InstancePath", "STARMAP_INSTANCE_PATH"));
+        instance: instance ?? new InstanceHandover("-InstancePath", "STARMAP_INSTANCE_PATH"),
+        platforms: platforms);
+
+    private string PlaceDotnet()
+    {
+        var dotnet = Path.Combine(_tempRoot, "dotnet", "dotnet");
+        Directory.CreateDirectory(Path.GetDirectoryName(dotnet)!);
+        File.WriteAllBytes(dotnet, Array.Empty<byte>());
+        return dotnet;
+    }
+
+    private static string NoDotnetNeeded() => throw new InvalidOperationException("This start needs no dotnet host.");
 
     [Fact]
     public void Launch_ListingWithFlagAndVariable_StartsItInItsDirectoryWithTheInstanceRoot()
@@ -110,69 +121,155 @@ public sealed class LoaderLauncherTests : IDisposable
         Assert.False(_launcher.IsRunning(_instance.InstanceId));
     }
 
+    [Fact]
+    public void Launch_NoEntryForThisPlatform_StartsTheDefaultLaunch()
+    {
+        var executable = PlaceStarMap();
+        PlaceStarMap("StarMap.dll");
+        var platforms = new Dictionary<OsPlatform, LoaderPlatformLaunch> { [OsPlatform.MacOs] = new("StarMap.dll", "dotnet") };
+        using var launcher = new LoaderLauncher(_paths, _starter, OsPlatform.Linux, NoDotnetNeeded);
+
+        var result = launcher.Launch(_instance, LoaderListing(provides: StarMapProvides(platforms: platforms)));
+
+        Assert.True(result.Started);
+        Assert.Equal(executable, Assert.Single(_starter.Plans).Executable);
+    }
+
+    [Fact]
+    public void Launch_EntryWithoutRuntime_StartsItsLaunch()
+    {
+        PlaceStarMap();
+        var executable = PlaceStarMap("linux/StarMap");
+        var instanceRoot = Path.GetFullPath(_paths.GetInstanceRoot(_instance.InstanceId));
+        var platforms = new Dictionary<OsPlatform, LoaderPlatformLaunch> { [OsPlatform.Linux] = new("linux/StarMap") };
+        using var launcher = new LoaderLauncher(_paths, _starter, OsPlatform.Linux, NoDotnetNeeded);
+
+        var result = launcher.Launch(_instance, LoaderListing(provides: StarMapProvides(platforms: platforms)));
+
+        Assert.True(result.Started);
+        var plan = Assert.Single(_starter.Plans);
+        Assert.Equal(executable, plan.Executable);
+        Assert.Equal(new[] { "-InstancePath", instanceRoot }, plan.Arguments);
+        Assert.Equal(Path.GetFullPath(StarMapDirectory), plan.WorkingDirectory);
+    }
+
     [Theory]
     [InlineData(OsPlatform.Linux)]
     [InlineData(OsPlatform.MacOs)]
-    public void Launch_AssemblyBesideTheAppHostOutsideWindows_StartsItThroughDotnet(OsPlatform platform)
+    [InlineData(OsPlatform.Windows)]
+    public void Launch_DotnetEntry_StartsDotnetWithTheEntryFileThenTheHandoverAndTheArguments(OsPlatform platform)
     {
         PlaceStarMap();
         var assembly = PlaceStarMap("StarMap.dll");
-        var dotnet = Path.Combine(_tempRoot, "dotnet", "dotnet");
-        Directory.CreateDirectory(Path.GetDirectoryName(dotnet)!);
-        File.WriteAllBytes(dotnet, Array.Empty<byte>());
+        var dotnet = PlaceDotnet();
         var instanceRoot = Path.GetFullPath(_paths.GetInstanceRoot(_instance.InstanceId));
+        _instance.SetLaunchArguments(["-saved"]);
+        var platforms = new Dictionary<OsPlatform, LoaderPlatformLaunch> { [platform] = new("StarMap.dll", "dotnet") };
         using var launcher = new LoaderLauncher(_paths, _starter, platform, () => dotnet);
 
-        var result = launcher.Launch(_instance, LoaderListing(provides: StarMapProvides()));
+        var result = launcher.Launch(_instance, LoaderListing(provides: StarMapProvides(platforms: platforms)), ["-given"]);
 
         Assert.True(result.Started);
         var plan = Assert.Single(_starter.Plans);
         Assert.Same(plan, result.Plan);
         Assert.Equal(dotnet, plan.Executable);
-        Assert.Equal(new[] { assembly, "-InstancePath", instanceRoot }, plan.Arguments);
+        Assert.Equal(new[] { assembly, "-InstancePath", instanceRoot, "-saved", "-given" }, plan.Arguments);
         Assert.Equal(instanceRoot, plan.EnvironmentVariables["STARMAP_INSTANCE_PATH"]);
         Assert.Equal(Path.GetFullPath(StarMapDirectory), plan.WorkingDirectory);
     }
 
     [Fact]
-    public void Launch_AssemblyBesideTheAppHostOnWindows_StartsTheAppHost()
-    {
-        var executable = PlaceStarMap();
-        PlaceStarMap("StarMap.dll");
-        using var launcher = new LoaderLauncher(_paths, _starter, OsPlatform.Windows, () => throw new InvalidOperationException("Windows needs no dotnet host."));
-
-        var result = launcher.Launch(_instance, LoaderListing(provides: StarMapProvides()));
-
-        Assert.True(result.Started);
-        Assert.Equal(executable, Assert.Single(_starter.Plans).Executable);
-    }
-
-    [Fact]
-    public void Launch_NoAssemblyBesideTheAppHostOnLinux_StartsTheTarget()
-    {
-        var executable = PlaceStarMap();
-        using var launcher = new LoaderLauncher(_paths, _starter, OsPlatform.Linux, () => throw new InvalidOperationException("Only an assembly needs a dotnet host."));
-
-        var result = launcher.Launch(_instance, LoaderListing(provides: StarMapProvides()));
-
-        Assert.True(result.Started);
-        Assert.Equal(executable, Assert.Single(_starter.Plans).Executable);
-    }
-
-    [Fact]
-    public void Launch_AssemblyBesideTheAppHostWithoutDotnet_ReportsIt()
+    public void Launch_DotnetEntryWithoutDotnet_StartsNothing()
     {
         PlaceStarMap();
         PlaceStarMap("StarMap.dll");
+        var platforms = new Dictionary<OsPlatform, LoaderPlatformLaunch> { [OsPlatform.Linux] = new("StarMap.dll", "dotnet") };
         using var launcher = new LoaderLauncher(_paths, _starter, OsPlatform.Linux, () => null);
 
-        var result = launcher.Launch(_instance, LoaderListing(provides: StarMapProvides()));
+        var result = launcher.Launch(_instance, LoaderListing(provides: StarMapProvides(platforms: platforms)));
 
         Assert.Equal(LaunchOutcome.DotnetMissing, result.Outcome);
         Assert.Contains("dotnet", result.Message);
         Assert.Contains("StarMap", result.Message);
         Assert.Empty(_starter.Plans);
         Assert.False(launcher.IsRunning(_instance.InstanceId));
+    }
+
+    [Fact]
+    public void Launch_UnknownRuntimeInTheOwnEntry_StartsNothing()
+    {
+        PlaceStarMap();
+        PlaceStarMap("StarMap.dll");
+        var platforms = new Dictionary<OsPlatform, LoaderPlatformLaunch> { [OsPlatform.Linux] = new("StarMap.dll", "mono") };
+        using var launcher = new LoaderLauncher(_paths, _starter, OsPlatform.Linux, NoDotnetNeeded);
+
+        var result = launcher.Launch(_instance, LoaderListing(provides: StarMapProvides(platforms: platforms)));
+
+        Assert.Equal(LaunchOutcome.UnknownRuntime, result.Outcome);
+        Assert.Equal("mono", result.UnknownName);
+        Assert.Contains("'mono'", result.Message);
+        Assert.Empty(_starter.Plans);
+    }
+
+    [Fact]
+    public void Launch_UnknownKeyInTheOwnEntry_StartsNothing()
+    {
+        PlaceStarMap();
+        PlaceStarMap("StarMap.dll");
+        var platforms = new Dictionary<OsPlatform, LoaderPlatformLaunch> { [OsPlatform.Linux] = new("StarMap.dll", "dotnet", ["arch"]) };
+        using var launcher = new LoaderLauncher(_paths, _starter, OsPlatform.Linux, NoDotnetNeeded);
+
+        var result = launcher.Launch(_instance, LoaderListing(provides: StarMapProvides(platforms: platforms)));
+
+        Assert.Equal(LaunchOutcome.UnknownPlatformKey, result.Outcome);
+        Assert.Equal("arch", result.UnknownName);
+        Assert.Contains("'arch'", result.Message);
+        Assert.Empty(_starter.Plans);
+    }
+
+    [Fact]
+    public void Launch_EntryFileMissing_StartsNothingInsteadOfTheDefault()
+    {
+        PlaceStarMap();
+        var platforms = new Dictionary<OsPlatform, LoaderPlatformLaunch> { [OsPlatform.Linux] = new("StarMap.dll", "dotnet") };
+        using var launcher = new LoaderLauncher(_paths, _starter, OsPlatform.Linux, NoDotnetNeeded);
+
+        var result = launcher.Launch(_instance, LoaderListing(provides: StarMapProvides(platforms: platforms)));
+
+        Assert.Equal(LaunchOutcome.LaunchTargetMissing, result.Outcome);
+        Assert.Equal(Path.Combine(Path.GetFullPath(StarMapDirectory), "StarMap.dll"), result.Plan!.Executable);
+        Assert.Contains("StarMap.dll", result.Message);
+        Assert.Empty(_starter.Plans);
+    }
+
+    [Fact]
+    public void Launch_UnknownRuntimeAndKeyInOtherEntries_ChangeNothing()
+    {
+        var executable = PlaceStarMap();
+        var platforms = new Dictionary<OsPlatform, LoaderPlatformLaunch>
+        {
+            [OsPlatform.Linux] = new("StarMap.dll", "mono"),
+            [OsPlatform.MacOs] = new("StarMap.dll", "dotnet", ["arch"]),
+        };
+        using var launcher = new LoaderLauncher(_paths, _starter, OsPlatform.Windows, NoDotnetNeeded);
+
+        var result = launcher.Launch(_instance, LoaderListing(provides: StarMapProvides(platforms: platforms)));
+
+        Assert.True(result.Started);
+        Assert.Equal(executable, Assert.Single(_starter.Plans).Executable);
+    }
+
+    [Fact]
+    public void Launch_UnknownSystem_StartsTheDefaultLaunch()
+    {
+        var executable = PlaceStarMap();
+        var platforms = new Dictionary<OsPlatform, LoaderPlatformLaunch> { [OsPlatform.Linux] = new("StarMap.dll", "dotnet") };
+        using var launcher = new LoaderLauncher(_paths, _starter, platform: null, NoDotnetNeeded);
+
+        var result = launcher.Launch(_instance, LoaderListing(provides: StarMapProvides(platforms: platforms)));
+
+        Assert.True(result.Started);
+        Assert.Equal(executable, Assert.Single(_starter.Plans).Executable);
     }
 
     [Fact]
