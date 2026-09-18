@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Borea.Core.Settings;
 
 namespace Borea.Cli.Tests;
 
@@ -236,5 +237,124 @@ public sealed class SettingsCommandTests : IDisposable
         Assert.False(File.Exists(_host.Paths.GetBoreaSettingsPath()));
     }
 
+    [Fact]
+    public async Task Show_NoSettingsFile_ReportsTheDefaultLibraryFolder()
+    {
+        var text = await _host.RunAsync("settings", "show");
+        var json = await _host.RunAsync("settings", "show", "--json");
+
+        Assert.Contains($"Library folder: {_host.Root} (default)", text.Output);
+        Assert.Equal(_host.Root, json.Json.GetProperty("libraryFolder").GetString());
+        Assert.True(json.Json.GetProperty("libraryFolderIsDefault").GetBoolean());
+    }
+
+    [Fact]
+    public async Task SetLibrary_MovesTheInstances_AndShowReadsItBack()
+    {
+        await _host.RunAsync("instance", "create", "Alpha");
+        var library = Path.Combine(_host.Root, "..", Path.GetFileName(_host.Root) + "-Library");
+        var fullLibrary = Path.GetFullPath(library);
+
+        try
+        {
+            var set = await _host.RunAsync("settings", "set", "library", library, "--json");
+            var show = await _host.RunAsync("settings", "show", "--json");
+            var list = await _host.RunAsync("instance", "list", "--json");
+
+            Assert.Equal(0, set.ExitCode);
+            Assert.Equal(fullLibrary, set.Json.GetProperty("libraryFolder").GetString());
+            Assert.Equal(_host.Root, set.Json.GetProperty("previousLibraryFolder").GetString());
+            Assert.Equal("moved", set.Json.GetProperty("outcome").GetString());
+            Assert.Equal(fullLibrary, show.Json.GetProperty("libraryFolder").GetString());
+            Assert.False(show.Json.GetProperty("libraryFolderIsDefault").GetBoolean());
+            Assert.Equal("Alpha", Assert.Single(list.Json.EnumerateArray()).GetProperty("name").GetString());
+            Assert.True(Directory.Exists(Path.Combine(fullLibrary, "Instances")));
+            Assert.False(Directory.Exists(Path.Combine(_host.Root, "Instances")));
+        }
+        finally
+        {
+            if (Directory.Exists(fullLibrary))
+                Directory.Delete(fullLibrary, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task SetLibrary_OtherVolume_WritesProgressToStderr_AndDefaultMovesItBack()
+    {
+        _host.LibraryOnSameVolume = (_, _) => false;
+        await _host.RunAsync("instance", "create", "Alpha");
+        var library = Path.GetFullPath(Path.Combine(_host.Root, "..", Path.GetFileName(_host.Root) + "-Library"));
+
+        try
+        {
+            var set = await _host.RunAsync("settings", "set", "library", library);
+            var back = await _host.RunAsync("settings", "set", "library", "--default");
+            var show = await _host.RunAsync("settings", "show", "--json");
+
+            Assert.Equal(0, set.ExitCode);
+            Assert.Contains($"Library folder: {library}", set.Output);
+            Assert.Contains("Copying 1 file (", set.Error);
+            Assert.Contains("Copied 100% (1 of 1 files)", set.Error);
+            Assert.Contains("Deleting the old files", set.Error);
+            Assert.Equal(0, back.ExitCode);
+            Assert.Contains($"Library folder: {_host.Root}", back.Output);
+            Assert.True(show.Json.GetProperty("libraryFolderIsDefault").GetBoolean());
+            Assert.Single(Directory.GetDirectories(Path.Combine(_host.Root, "Instances")));
+        }
+        finally
+        {
+            if (Directory.Exists(library))
+                Directory.Delete(library, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task SetLibrary_OldFilesRemain_WarnsAndSaysSoInTheJson()
+    {
+        var library = Path.GetFullPath(Path.Combine(_host.Root, "..", "Library"));
+        _host.LibraryChanger = new FixedLibraryChanger(new LibraryFolderChangeResult(LibraryFolderChangeOutcome.Moved, library, _host.Root, "Moved.") { OldFilesRemain = true });
+
+        var set = await _host.RunAsync("settings", "set", "library", library, "--json");
+
+        Assert.Equal(0, set.ExitCode);
+        Assert.Contains($"warning: Borea could not delete every old file in {_host.Root}.", set.Error);
+        Assert.True(set.Json.GetProperty("oldFilesRemain").GetBoolean());
+        Assert.Equal("moved", set.Json.GetProperty("outcome").GetString());
+    }
+
+    [Fact]
+    public async Task SetLibrary_FolderInsideTheCurrentLibrary_FailsAndChangesNothing()
+    {
+        await _host.RunAsync("instance", "create", "Alpha");
+        var inside = Path.Combine(_host.Root, "Library");
+
+        var set = await _host.RunAsync("settings", "set", "library", inside, "--json");
+        var show = await _host.RunAsync("settings", "show", "--json");
+
+        Assert.Equal(1, set.ExitCode);
+        Assert.Contains("inside the current library folder", set.Error);
+        Assert.Equal(string.Empty, set.Output);
+        Assert.True(show.Json.GetProperty("libraryFolderIsDefault").GetBoolean());
+        Assert.False(Directory.Exists(inside));
+    }
+
+    [Theory]
+    [InlineData]
+    [InlineData("--default", "somewhere")]
+    [InlineData("  ")]
+    public async Task SetLibrary_NotExactlyOneOfDirectoryAndDefault_IsAUsageError(params string[] arguments)
+    {
+        var run = await _host.RunAsync(["settings", "set", "library", .. arguments]);
+
+        Assert.Equal(2, run.ExitCode);
+        Assert.False(File.Exists(_host.Paths.GetBoreaSettingsPath()));
+    }
+
     public void Dispose() => _host.Dispose();
+
+    private sealed class FixedLibraryChanger(LibraryFolderChangeResult result) : ILibraryFolderChanger
+    {
+        public Task<LibraryFolderChangeResult> ChangeAsync(string? folder, IProgress<LibraryMoveProgress>? progress = null, CancellationToken cancellationToken = default)
+            => Task.FromResult(result);
+    }
 }
