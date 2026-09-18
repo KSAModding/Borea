@@ -76,7 +76,7 @@
                                         <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryDelete}" Command="{Binding BeginDeleteCommand}" />
                                     </MenuFlyout>
                                 </Button.Flyout>
-                                <Path Classes="icon-filled size-18" Data="{StaticResource Icon.More}" />
+                                <Path Classes="icon-filled" Data="{StaticResource Icon.More}" />
                             </Button>
                         </Panel>
                     </StackPanel>
@@ -186,7 +186,7 @@
                                         <MenuItem Header="{Binding Localization.LibraryDelete}" Command="{Binding SelectedInstance.BeginDeleteCommand}" />
                                     </MenuFlyout>
                                 </Button.Flyout>
-                                <Path Classes="icon-filled size-18" Data="{StaticResource Icon.More}" />
+                                <Path Classes="icon-filled" Data="{StaticResource Icon.More}" />
                             </Button>
                         </StackPanel>
                     </Grid>

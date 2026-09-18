@@ -29,7 +29,7 @@
                                 <MenuItem Header="{Binding Localization.LibraryImportModList}" Command="{Binding ImportModListCommand}" />
                             </MenuFlyout>
                         </Button.Flyout>
-                        <Path Classes="icon-filled size-18" Data="{StaticResource Icon.More}" />
+                        <Path Classes="icon-filled" Data="{StaticResource Icon.More}" />
                     </Button>
                 </Grid>
             </Border>
