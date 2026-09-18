@@ -49,11 +49,17 @@ public sealed class InstallChoicesTests
         harness.SpaceDock.Releases.AddRange([release, Release("kept", sizeBytes: 8_000_000)]);
         await ActivateInstanceAsync(harness);
         var row = new VersionItem(harness.ViewModel, release);
+        string? shown = null;
+        row.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(VersionItem.ConfirmInstallText))
+                shown = row.ConfirmInstallText;
+        };
 
         await row.InstallCommand.ExecuteAsync(null);
 
         Assert.True(row.IsConfirmingInstall);
-        Assert.Equal($"{harness.Localization.ContentAdd} ({MainViewModel.SizeText(38_000_000)})", row.ConfirmInstallText);
+        Assert.Equal($"{harness.Localization.ContentAdd} ({MainViewModel.SizeText(38_000_000)})", shown);
     }
 
     [Fact]
