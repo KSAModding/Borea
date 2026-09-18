@@ -134,6 +134,13 @@ public partial class MainViewModel
         if (_services is null || row.IsInstalling)
             return false;
 
+        using var libraryUse = TryUseLibrary();
+        if (libraryUse is null)
+        {
+            row.InstallError = Localization.LibraryFolderBusy;
+            return false;
+        }
+
         var services = _services;
         row.InstallError = null;
         row.InstallWarning = null;
@@ -292,6 +299,16 @@ public partial class MainViewModel
     {
         if (_services is null || row.IsInstalling || (row.PendingPlan is null && row.Choices is null))
             return false;
+
+        using var libraryUse = TryUseLibrary();
+        if (libraryUse is null)
+        {
+            if (row.Choices is { } shown)
+                shown.BlockedText = Localization.LibraryFolderBusy;
+            else
+                row.InstallError = Localization.LibraryFolderBusy;
+            return false;
+        }
 
         var services = _services;
         var plan = row.PendingPlan;

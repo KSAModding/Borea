@@ -20,9 +20,10 @@ public sealed class LoaderLauncher : ILauncher, IDisposable
     private readonly IProcessStarter _starter;
     private readonly OsPlatform? _platform;
     private readonly Func<string?> _findDotnet;
-    private readonly object _gate = new();
-    private readonly Dictionary<Guid, IStartedProcess> _running = new();
-    private readonly Dictionary<Guid, (DateTime? GameLogAtLaunch, string LoaderName)> _starts = new();
+    private readonly object _gate;
+    private readonly Dictionary<Guid, IStartedProcess> _running;
+    private readonly Dictionary<Guid, (DateTime? GameLogAtLaunch, string LoaderName)> _starts;
+    private readonly bool _ownsLaunches;
     private readonly TimeSpan _startupWindow;
 
     /// <summary>How long a launch is watched when the game does not write its log first.</summary>
@@ -41,12 +42,18 @@ public sealed class LoaderLauncher : ILauncher, IDisposable
     {
     }
 
+    /// <param name="launches">The launches this launcher shares with others. Disposing the launcher keeps them.</param>
+    public LoaderLauncher(IGamePathProvider pathProvider, IProcessStarter starter, RunningLaunches launches)
+        : this(pathProvider, starter, SharedProfileLauncher.CurrentPlatform(), () => DotnetHost.Find(Environment.GetEnvironmentVariable("PATH")), DefaultStartupWindow, launches ?? throw new ArgumentNullException(nameof(launches)))
+    {
+    }
+
     internal LoaderLauncher(IGamePathProvider pathProvider, IProcessStarter starter, OsPlatform? platform, Func<string?> findDotnet)
         : this(pathProvider, starter, platform, findDotnet, DefaultStartupWindow)
     {
     }
 
-    internal LoaderLauncher(IGamePathProvider pathProvider, IProcessStarter starter, OsPlatform? platform, Func<string?> findDotnet, TimeSpan startupWindow)
+    internal LoaderLauncher(IGamePathProvider pathProvider, IProcessStarter starter, OsPlatform? platform, Func<string?> findDotnet, TimeSpan startupWindow, RunningLaunches? launches = null)
     {
         _pathProvider = pathProvider ?? throw new ArgumentNullException(nameof(pathProvider));
         _starter = starter ?? throw new ArgumentNullException(nameof(starter));
@@ -56,6 +63,11 @@ public sealed class LoaderLauncher : ILauncher, IDisposable
             throw new ArgumentOutOfRangeException(nameof(startupWindow), "The startup window cannot be negative.");
 
         _startupWindow = startupWindow;
+        _ownsLaunches = launches is null;
+        launches ??= new RunningLaunches();
+        _gate = launches.Gate;
+        _running = launches.Processes;
+        _starts = launches.Starts;
     }
 
     public LaunchResult Launch(Instance instance, ModMetadata? loader, IReadOnlyList<string>? arguments = null)
@@ -321,9 +333,12 @@ public sealed class LoaderLauncher : ILauncher, IDisposable
         }
     }
 
-    /// <summary>Releases the handles. The processes keep running.</summary>
+    /// <summary>Releases the handles, unless the launches are shared. The processes keep running.</summary>
     public void Dispose()
     {
+        if (!_ownsLaunches)
+            return;
+
         lock (_gate)
         {
             Forget(exited: false);

@@ -499,6 +499,13 @@ public partial class MainViewModel
         if (_services is not { } services || IsLaunching)
             return;
 
+        using var libraryUse = TryUseLibrary();
+        if (libraryUse is null)
+        {
+            LaunchMessage = Localization.LibraryFolderBusy;
+            return;
+        }
+
         IsLaunching = true;
         _launchInstanceId = instanceId;
         ClearLaunchFailure();
@@ -642,6 +649,13 @@ public partial class MainViewModel
         if (_services is null)
             return;
 
+        using var libraryUse = TryUseLibrary();
+        if (libraryUse is null)
+        {
+            ContentError = Localization.LibraryFolderBusy;
+            return;
+        }
+
         try
         {
             if (enabled)
@@ -694,6 +708,13 @@ public partial class MainViewModel
     {
         if (_services is null || _runningUpdates.ContainsKey(instanceId))
             return;
+
+        using var libraryUse = TryUseLibrary();
+        if (libraryUse is null)
+        {
+            ContentError = Localization.LibraryFolderBusy;
+            return;
+        }
 
         var name = _content.FirstOrDefault(content => content.InstanceId == instanceId && ModIds.Equals(content.ModId, modId))?.Name ?? modId;
         var task = StartTask(TaskKind.ModRemoval, name, instanceId, modId);

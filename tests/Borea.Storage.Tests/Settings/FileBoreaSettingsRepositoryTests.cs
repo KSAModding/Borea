@@ -60,6 +60,44 @@ public sealed class FileBoreaSettingsRepositoryTests : IDisposable
     }
 
     [Fact]
+    public async Task SaveThenGet_RoundTripsTheLibraryFolder()
+    {
+        var library = Path.Combine(_tempRoot, "Library");
+        await _repository.SaveAsync(new BoreaSettings(null, libraryFolderPath: library));
+
+        var reloaded = await _repository.GetAsync();
+
+        Assert.Equal(library, reloaded!.LibraryFolderPath);
+        Assert.Contains("LibraryFolderPath", await File.ReadAllTextAsync(_pathProvider.GetBoreaSettingsPath()));
+    }
+
+    [Fact]
+    public async Task SaveThenGet_NoLibraryFolder_WritesNoKeyAndLoadsTheDefault()
+    {
+        await _repository.SaveAsync(new BoreaSettings(null, releaseChannel: ReleaseChannel.Dev));
+
+        var reloaded = await _repository.GetAsync();
+
+        Assert.Null(reloaded!.LibraryFolderPath);
+        Assert.DoesNotContain("LibraryFolderPath", await File.ReadAllTextAsync(_pathProvider.GetBoreaSettingsPath()));
+    }
+
+    [Fact]
+    public async Task GetAsync_FileWrittenBeforeTheLibraryFolderExisted_LoadsTheDefault()
+    {
+        Directory.CreateDirectory(_tempRoot);
+        await File.WriteAllTextAsync(_pathProvider.GetBoreaSettingsPath(), """
+            GameDirectoryPath = 'C:\Games\KSA'
+            ReleaseChannel = 'testing'
+            """);
+
+        var reloaded = await _repository.GetAsync();
+
+        Assert.Null(reloaded!.LibraryFolderPath);
+        Assert.Equal(ReleaseChannel.Testing, reloaded.ReleaseChannel);
+    }
+
+    [Fact]
     public async Task GetAsync_ChannelThisVersionDoesNotKnow_LoadsStable()
     {
         Directory.CreateDirectory(_tempRoot);

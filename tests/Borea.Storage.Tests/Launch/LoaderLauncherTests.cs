@@ -392,10 +392,29 @@ public sealed class LoaderLauncherTests : IDisposable
     }
 
     [Fact]
+    public void Dispose_SharedLaunches_KeepsTheLaunchForTheNextLauncher()
+    {
+        PlaceStarMap();
+        var launches = new RunningLaunches();
+        var listing = LoaderListing(provides: StarMapProvides());
+        var first = new LoaderLauncher(_paths, _starter, launches);
+        first.Launch(_instance, listing);
+        var process = Assert.Single(_starter.Processes);
+
+        first.Dispose();
+        using var second = new LoaderLauncher(_paths, _starter, launches);
+
+        Assert.False(process.Disposed);
+        Assert.True(second.IsRunning(_instance.InstanceId));
+        Assert.Equal(LaunchOutcome.AlreadyRunning, second.Launch(_instance, listing).Outcome);
+    }
+
+    [Fact]
     public void Constructor_NullDependency_ThrowsArgumentNullException()
     {
         Assert.Throws<ArgumentNullException>(() => new LoaderLauncher(null!, _starter));
         Assert.Throws<ArgumentNullException>(() => new LoaderLauncher(_paths, null!));
+        Assert.Throws<ArgumentNullException>(() => new LoaderLauncher(_paths, _starter, (RunningLaunches)null!));
         Assert.Throws<ArgumentNullException>(() => new LoaderLauncher(_paths, _starter, OsPlatform.Linux, null!));
     }
 

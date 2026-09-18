@@ -17,6 +17,7 @@ public sealed class CliServicesTests : IDisposable
         Assert.Same(graph.Settings, services.Settings);
         Assert.Same(graph.SettingsRepository, services.SettingsRepository);
         Assert.Same(graph.GameDirectoryChanger, services.GameDirectoryChanger);
+        Assert.Same(graph.LibraryFolderChanger, services.LibraryFolderChanger);
         Assert.Same(graph.Instances, services.Instances);
         Assert.Same(graph.ModListFormat, services.ModListFormat);
         Assert.Same(graph.ModState, services.ModState);
@@ -75,6 +76,7 @@ public sealed class CliServicesTests : IDisposable
             Settings = graph.Settings,
             SettingsRepository = graph.SettingsRepository,
             GameDirectoryChanger = graph.GameDirectoryChanger,
+            LibraryFolderChanger = graph.LibraryFolderChanger,
             Instances = graph.Instances,
             ModState = graph.ModState,
             GameLog = graph.GameLog,

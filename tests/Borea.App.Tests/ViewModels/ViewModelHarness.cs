@@ -93,7 +93,7 @@ internal sealed class ViewModelHarness : IDisposable
         json => "{ \"tags\": " + $$"""{ "spec_version": 1, "mod": [{{string.Join(", ", tags.Select(tag => $$"""{ "tag": "{{tag.Tag}}", "name": "{{tag.Name}}", "meaning": "{{tag.Name}} content." }"""))}}] }""" + "," + json.TrimStart()[1..];
 
     public Task<BoreaServices> BuildServicesAsync() =>
-        BoreaServices.BuildAsync(Root, new IndexOnlyHandler(this), SpaceDock, Candidates, processStarter: _processStarter, images: Images, sharedProfileRoot: Path.Combine(Root, "GameProfile"));
+        BoreaServices.BuildAsync(Root, new IndexOnlyHandler(this), SpaceDock, Candidates, processStarter: _processStarter, images: Images, sharedProfileRoot: Path.Combine(Root, "GameProfile"), isGameProcessRunning: () => false, isOtherBoreaRunning: () => false);
 
     public void Dispose()
     {

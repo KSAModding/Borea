@@ -7,12 +7,14 @@ using Borea.Core.Logging;
 using Borea.Core.ModLoaders;
 using Borea.Core.ModPacks;
 using Borea.Core.Mods;
+using Borea.Core.Settings;
 using Borea.Core.Instances;
 using Borea.Network.Index;
 using Borea.Storage.Instances;
 using Borea.Storage.Launch;
 using Borea.Storage.Mods;
 using Borea.Storage.Paths;
+using Borea.Storage.Settings;
 
 namespace Borea.Cli.Tests;
 
@@ -76,6 +78,12 @@ internal sealed class CliHost : IDisposable
 
     public Func<BoreaServices, IInstanceRepository>? InstancesFactory { get; set; }
 
+    /// <summary>Whether the library folder change sees two folders on one volume. Null compares their mount points.</summary>
+    public Func<string, string, bool>? LibraryOnSameVolume { get; set; }
+
+    /// <summary>Changes the library folder. A changer over the graph when a test does not set it.</summary>
+    public ILibraryFolderChanger? LibraryChanger { get; set; }
+
     /// <summary>How many times a command built its services.</summary>
     public int Builds { get; private set; }
 
@@ -123,7 +131,9 @@ internal sealed class CliHost : IDisposable
             modPackInstaller: ModPackInstallerFactory?.Invoke(graph) ?? ModPackInstaller,
             sharedProfileLauncher: new SharedProfileLauncher(graph.Paths, ProcessStarter, OsPlatform.Windows),
             indexRefresh: IndexRefresh,
-            sharedProfileImporter: BuildSharedProfileImporter(graph));
+            sharedProfileImporter: BuildSharedProfileImporter(graph),
+            // a game or a Borea the developer runs next to the tests must not refuse the move
+            libraryFolderChanger: LibraryChanger ?? new LibraryFolderChanger(graph.SettingsRepository, graph.Paths, Root, graph.Launcher, (FileInstanceRepository)graph.Instances, isGameProcessRunning: () => false, isOtherBoreaRunning: () => false, isSameVolume: LibraryOnSameVolume));
     }
 
     private FileSharedProfileImporter BuildSharedProfileImporter(BoreaServices graph)

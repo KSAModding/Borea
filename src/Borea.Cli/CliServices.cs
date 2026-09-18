@@ -30,6 +30,8 @@ internal sealed class CliServices : IDisposable
 
     public required IGameDirectoryChanger GameDirectoryChanger { get; init; }
 
+    public required ILibraryFolderChanger LibraryFolderChanger { get; init; }
+
     public required IInstanceRepository Instances { get; init; }
 
     public required IModStateRepository ModState { get; init; }
@@ -124,7 +126,8 @@ internal sealed class CliServices : IDisposable
         IModPackInstaller? modPackInstaller = null,
         ISharedProfileLauncher? sharedProfileLauncher = null,
         IContentIndexRefresh? indexRefresh = null,
-        ISharedProfileImporter? sharedProfileImporter = null)
+        ISharedProfileImporter? sharedProfileImporter = null,
+        ILibraryFolderChanger? libraryFolderChanger = null)
     {
         if (services is null)
             throw new ArgumentNullException(nameof(services));
@@ -134,6 +137,7 @@ internal sealed class CliServices : IDisposable
             Settings = services.Settings,
             SettingsRepository = services.SettingsRepository,
             GameDirectoryChanger = services.GameDirectoryChanger,
+            LibraryFolderChanger = libraryFolderChanger ?? services.LibraryFolderChanger,
             Instances = instances ?? services.Instances,
             ModState = services.ModState,
             GameLog = services.GameLog,

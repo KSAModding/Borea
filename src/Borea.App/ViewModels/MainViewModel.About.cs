@@ -70,7 +70,7 @@ public partial class MainViewModel
     private string? _folderMessage;
 
     /// <summary>
-    /// Where Borea keeps its settings, instances and loaders. Null without services.
+    /// Where Borea keeps its settings, caches, logs and loaders. Null without services.
     /// </summary>
     public string? BoreaFolder => _services is null ? null : Path.GetDirectoryName(_services.Paths.GetBoreaSettingsPath());
 
@@ -103,6 +103,7 @@ public partial class MainViewModel
             if (_services is not null)
             {
                 text.AppendLine(IndexDiagnosticsLine(_services.IndexRefresh.Status));
+                text.AppendLine($"Library: {WithoutUserProfile(LibraryFolder!)}");
 
                 // the matched release is what the Game tab shows; the file version is the fallback for an adopted loader
                 foreach (var (loaderId, installation) in _services.Settings.LoaderInstallations)

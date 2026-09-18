@@ -6,7 +6,9 @@ namespace Borea.Storage.Paths;
 
 /// <summary>
 /// Resolves Borea's own paths under its root, %LocalAppData%\Borea unless another
-/// root is given, and KSA and mod loader paths from the provided settings.
+/// root is given, the Instances and Backups folders under the library folder,
+/// which is the root unless another one is given, and KSA and mod loader paths
+/// from the provided settings.
 /// </summary>
 public sealed class GamePathProvider : IGamePathProvider
 {
@@ -14,8 +16,9 @@ public sealed class GamePathProvider : IGamePathProvider
     private readonly string? _gameDirectory;
     private readonly IReadOnlyDictionary<string, string> _loaderDirectories;
     private readonly string _sharedProfileRoot;
+    private readonly string _libraryFolder;
 
-    public GamePathProvider(string? gameDirectory, IReadOnlyDictionary<string, string>? loaderDirectories = null, string? boreaRoot = null, string? sharedProfileRoot = null)
+    public GamePathProvider(string? gameDirectory, IReadOnlyDictionary<string, string>? loaderDirectories = null, string? boreaRoot = null, string? sharedProfileRoot = null, string? libraryFolder = null)
     {
         if (gameDirectory is not null && string.IsNullOrWhiteSpace(gameDirectory))
             throw new ArgumentException("Game directory, if provided, cannot be whitespace.", nameof(gameDirectory));
@@ -25,6 +28,9 @@ public sealed class GamePathProvider : IGamePathProvider
 
         if (sharedProfileRoot is not null && string.IsNullOrWhiteSpace(sharedProfileRoot))
             throw new ArgumentException("Shared profile root, if provided, cannot be whitespace.", nameof(sharedProfileRoot));
+
+        if (libraryFolder is not null && string.IsNullOrWhiteSpace(libraryFolder))
+            throw new ArgumentException("Library folder, if provided, cannot be whitespace.", nameof(libraryFolder));
 
         // Same rule as BoreaSettings, since this constructor is public too.
         var byId = new Dictionary<string, string>(ModIds.Comparer);
@@ -43,11 +49,12 @@ public sealed class GamePathProvider : IGamePathProvider
         _loaderDirectories = byId;
         _boreaRoot = boreaRoot ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Borea");
         _sharedProfileRoot = sharedProfileRoot ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "My Games", "Kitten Space Agency");
+        _libraryFolder = libraryFolder ?? _boreaRoot;
     }
 
     public string GetIndexPath() => Path.Combine(_boreaRoot, "index.json");
     public string GetImageCacheFolder() => Path.Combine(_boreaRoot, "ImageCache");
-    public string GetInstancesRoot() => Path.Combine(_boreaRoot, "Instances");
+    public string GetInstancesRoot() => Path.Combine(_libraryFolder, "Instances");
     public string GetLoadersRoot() => Path.Combine(_boreaRoot, "Loaders");
     public string GetInstanceRoot(Guid instanceId) => Path.Combine(GetInstancesRoot(), instanceId.ToString());
     public string GetInstanceModsFolder(Guid instanceId) => Path.Combine(GetInstanceRoot(instanceId), "mods");
@@ -69,7 +76,7 @@ public sealed class GamePathProvider : IGamePathProvider
     public string GetAppPreferencesPath() => Path.Combine(_boreaRoot, "app-preferences.json");
     public string GetTaskHistoryPath() => Path.Combine(_boreaRoot, "task-history.json");
     public string GetLogsFolder() => Path.Combine(_boreaRoot, "Logs");
-    public string GetBackupsRoot() => Path.Combine(_boreaRoot, "Backups");
+    public string GetBackupsRoot() => Path.Combine(_libraryFolder, "Backups");
     public string? GetGameDirectoryPath() => _gameDirectory;
     public string GetSharedProfileRoot() => _sharedProfileRoot;
 

@@ -485,6 +485,13 @@ public partial class MainViewModel
         if (services is null || instance is null || item.IsRemoving)
             return;
 
+        using var libraryUse = TryUseLibrary();
+        if (libraryUse is null)
+        {
+            item.InstallError = Localization.LibraryFolderBusy;
+            return;
+        }
+
         item.IsRemoving = true;
         item.InstallError = null;
         var task = StartTask(TaskKind.ModRemoval, item.Name, instance.InstanceId, item.ModId);

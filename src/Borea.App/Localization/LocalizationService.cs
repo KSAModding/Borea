@@ -65,6 +65,9 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string FormatTaskReplace(string folder)
         => string.Format(CultureInfo.CurrentCulture, Resources.TaskReplaceFormat, folder);
 
+    public string FormatTaskLibraryFolder(string folder)
+        => string.Format(CultureInfo.CurrentCulture, Resources.TaskLibraryFolderFormat, folder);
+
     public string TaskWaiting => Resources.TaskWaiting;
 
     public string TaskRunning => Resources.TaskRunning;
@@ -102,8 +105,13 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string FormatToastReplaced(string folder, string instanceName)
         => string.Format(CultureInfo.CurrentCulture, Resources.ToastReplacedFormat, folder, instanceName);
 
+    public string FormatToastLibraryFolderChanged(string folder)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ToastLibraryFolderChangedFormat, folder);
+
     public string FormatToastInstallStopped(string content)
         => string.Format(CultureInfo.CurrentCulture, Resources.ToastInstallStoppedFormat, content);
+
+    public string ToastLibraryFolderStopped => Resources.ToastLibraryFolderStopped;
 
     public string FormatToastUpdateStopped(string content)
         => string.Format(CultureInfo.CurrentCulture, Resources.ToastUpdateStoppedFormat, content);
@@ -136,6 +144,9 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string FormatToastReplaceFailed(string folder)
         => string.Format(CultureInfo.CurrentCulture, Resources.ToastReplaceFailedFormat, folder);
+
+    public string FormatToastLibraryFolderFailed(string folder)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ToastLibraryFolderFailedFormat, folder);
 
     public string PageHomeHeading => Resources.PageHomeHeading;
 
@@ -172,6 +183,90 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string SettingsLoadImagesFromAuthorHosts => Resources.SettingsLoadImagesFromAuthorHosts;
 
     public string SettingsLoadImagesFromAuthorHostsHint => Resources.SettingsLoadImagesFromAuthorHostsHint;
+
+    public string SettingsLibraryFolderLabel => Resources.SettingsLibraryFolderLabel;
+
+    public string SettingsLibraryFolderHint => Resources.SettingsLibraryFolderHint;
+
+    public string SettingsLibraryFolderUseDefault => Resources.SettingsLibraryFolderUseDefault;
+
+    public string SettingsLibraryFolderMove => Resources.SettingsLibraryFolderMove;
+
+    public string SettingsLibraryFolderMoveToolTip => Resources.SettingsLibraryFolderMoveToolTip;
+
+    public string SettingsLibraryFolderOpenToolTip => Resources.SettingsLibraryFolderOpenToolTip;
+
+    public string SettingsLibraryFolderPickerTitle => Resources.SettingsLibraryFolderPickerTitle;
+
+    public string LibraryFolderMoving => Resources.LibraryFolderMoving;
+
+    public string FormatLibraryFolderCopying(int files, int totalFiles, string megabytes, string totalMegabytes)
+        => string.Format(CultureInfo.CurrentCulture, Resources.LibraryFolderCopyingFormat, files, totalFiles, megabytes, totalMegabytes);
+
+    public string LibraryFolderRemovingOldFiles => Resources.LibraryFolderRemovingOldFiles;
+
+    public string FormatLibraryFolderMoved(string folder)
+        => string.Format(CultureInfo.CurrentCulture, Resources.LibraryFolderMovedFormat, folder);
+
+    public string FormatLibraryFolderMovedOldFilesRemain(string folder, string previousFolder)
+        => string.Format(CultureInfo.CurrentCulture, Resources.LibraryFolderMovedOldFilesRemainFormat, folder, previousFolder);
+
+    public string FormatLibraryFolderAdopted(string folder)
+        => string.Format(CultureInfo.CurrentCulture, Resources.LibraryFolderAdoptedFormat, folder);
+
+    public string LibraryFolderCancelled => Resources.LibraryFolderCancelled;
+
+    public string FormatLibraryFolderFailed(string reason)
+        => string.Format(CultureInfo.CurrentCulture, Resources.LibraryFolderFailedFormat, reason);
+
+    public string FormatLibraryFolderReloadFailed(string folder, string reason)
+        => string.Format(CultureInfo.CurrentCulture, Resources.LibraryFolderReloadFailedFormat, folder, reason);
+
+    public string FormatLibraryFolderNotAbsolute(string folder)
+        => string.Format(CultureInfo.CurrentCulture, Resources.LibraryFolderNotAbsoluteFormat, folder);
+
+    public string FormatLibraryFolderIsFile(string folder)
+        => string.Format(CultureInfo.CurrentCulture, Resources.LibraryFolderIsFileFormat, folder);
+
+    public string LibraryFolderCurrent => Resources.LibraryFolderCurrent;
+
+    public string FormatLibraryFolderInsideCurrent(string currentFolder)
+        => string.Format(CultureInfo.CurrentCulture, Resources.LibraryFolderInsideCurrentFormat, currentFolder);
+
+    public string FormatLibraryFolderContainsCurrent(string currentFolder)
+        => string.Format(CultureInfo.CurrentCulture, Resources.LibraryFolderContainsCurrentFormat, currentFolder);
+
+    public string FormatLibraryFolderInsideBoreaFolder(string boreaFolder)
+        => string.Format(CultureInfo.CurrentCulture, Resources.LibraryFolderInsideBoreaFolderFormat, boreaFolder);
+
+    public string FormatLibraryFolderContainsBoreaFolder(string boreaFolder)
+        => string.Format(CultureInfo.CurrentCulture, Resources.LibraryFolderContainsBoreaFolderFormat, boreaFolder);
+
+    public string LibraryFolderInsideGame => Resources.LibraryFolderInsideGame;
+
+    public string LibraryFolderInsideProfile => Resources.LibraryFolderInsideProfile;
+
+    public string FormatLibraryFolderNotWritable(string folder)
+        => string.Format(CultureInfo.CurrentCulture, Resources.LibraryFolderNotWritableFormat, folder);
+
+    public string FormatLibraryFolderTargetNotEmpty(string folder)
+        => string.Format(CultureInfo.CurrentCulture, Resources.LibraryFolderTargetNotEmptyFormat, folder);
+
+    public string FormatLibraryFolderBothHaveInstances(string currentFolder, string folder)
+        => string.Format(CultureInfo.CurrentCulture, Resources.LibraryFolderBothHaveInstancesFormat, currentFolder, folder);
+
+    public string LibraryFolderGameRunning => Resources.LibraryFolderGameRunning;
+
+    public string LibraryFolderBoreaRunning => Resources.LibraryFolderBoreaRunning;
+
+    public string LibraryFolderInstanceBusy => Resources.LibraryFolderInstanceBusy;
+
+    public string FormatLibraryFolderFileLocked(string file)
+        => string.Format(CultureInfo.CurrentCulture, Resources.LibraryFolderFileLockedFormat, file);
+
+    public string LibraryFolderWaitForTask => Resources.LibraryFolderWaitForTask;
+
+    public string LibraryFolderBusy => Resources.LibraryFolderBusy;
 
     public string UpdateAvailable => Resources.UpdateAvailable;
 

@@ -119,6 +119,13 @@ public partial class MainViewModel
         if (_services is not { } services || !item.CanConfirm)
             return;
 
+        using var libraryUse = TryUseLibrary();
+        if (libraryUse is null)
+        {
+            item.InstallError = Localization.LibraryFolderBusy;
+            return;
+        }
+
         item.InstallError = null;
         item.IsInstalling = true;
         var run = item.Run = StartInstallRun(StartTask(TaskKind.ModListImport, item.Name.Trim(), item.Plan.InstanceId));

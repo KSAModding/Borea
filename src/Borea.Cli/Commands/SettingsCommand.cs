@@ -1,18 +1,19 @@
 using System.CommandLine;
 using Borea.Cli.Output;
 using Borea.Core.Mods;
+using Borea.Core.Paths;
 using Borea.Core.Settings;
 
 namespace Borea.Cli.Commands;
 
 /// <summary>
-/// <c>borea settings</c>: where the game and the mod loaders are, and the release channel.
+/// <c>borea settings</c>: where the game, the mod loaders and the library are, and the release channel.
 /// </summary>
 internal static class SettingsCommand
 {
     public static Command Build(Func<CancellationToken, Task<CliServices>> services)
     {
-        var settings = new Command("settings", "Read and write Borea's own settings: where the game and the mod loaders are, and the release channel.");
+        var settings = new Command("settings", "Read and write Borea's own settings: where the game, the mod loaders and the library are, and the release channel.");
         settings.Subcommands.Add(BuildShow(services));
         settings.Subcommands.Add(BuildSet(services));
         return settings;
@@ -27,9 +28,9 @@ internal static class SettingsCommand
         show.SetAction((parseResult, cancellationToken) => CommandRunner.RunAsync(parseResult, services, cancellationToken, (cli, output, _, _) =>
         {
             if (parseResult.GetValue(json))
-                JsonOutput.Write(output, SettingsView.From(cli.Settings));
+                JsonOutput.Write(output, SettingsView.From(cli.Settings, cli.Paths));
             else
-                WriteSettings(output, cli.Settings);
+                WriteSettings(output, cli.Settings, cli.Paths);
 
             return Task.FromResult(ExitCodes.Done);
         }));
@@ -43,7 +44,58 @@ internal static class SettingsCommand
         set.Subcommands.Add(BuildSetGame(services));
         set.Subcommands.Add(BuildSetLoader(services));
         set.Subcommands.Add(BuildSetChannel(services));
+        set.Subcommands.Add(BuildSetLibrary(services));
         return set;
+    }
+
+    private static Command BuildSetLibrary(Func<CancellationToken, Task<CliServices>> services)
+    {
+        var directory = new Argument<string?>("directory") { Description = "The folder for the Instances and Backups folders.", Arity = ArgumentArity.ZeroOrOne };
+        var useDefault = new Option<bool>("--default") { Description = "Move the library back to Borea's own folder." };
+        var json = ArgumentRules.Json();
+        var library = new Command("library", "Move the instances and backups to another folder, or use the library a folder already holds.");
+        library.Arguments.Add(directory);
+        library.Options.Add(useDefault);
+        library.Options.Add(json);
+        library.Validators.Add(result =>
+        {
+            var given = result.GetValue(directory);
+            if (result.GetValue(useDefault) == (given is not null))
+                result.AddError("Give either a directory or --default.");
+            else if (given is not null && string.IsNullOrWhiteSpace(given))
+                result.AddError("The directory cannot be empty.");
+        });
+
+        library.SetAction((parseResult, cancellationToken) => CommandRunner.RunAsync(parseResult, services, cancellationToken, async (cli, output, error, ct) =>
+        {
+            var given = parseResult.GetValue(directory);
+            var folder = given is null ? null : Path.GetFullPath(given);
+            var result = await cli.LibraryFolderChanger.ChangeAsync(folder, new LibraryMoveProgressOutput(error), ct).ConfigureAwait(false);
+            if (!result.Changed)
+            {
+                error.WriteLine($"error: {result.Message}");
+                return ExitCodes.Failed;
+            }
+
+            if (result.OldFilesRemain)
+                error.WriteLine($"warning: Borea could not delete every old file in {result.PreviousFolder}.");
+
+            var moved = result.Outcome == LibraryFolderChangeOutcome.Moved;
+            if (parseResult.GetValue(json))
+            {
+                JsonOutput.Write(output, new LibraryChangeView(result.Folder, result.PreviousFolder, moved ? "moved" : "adopted", result.OldFilesRemain));
+            }
+            else
+            {
+                output.WriteLine($"Library folder: {result.Folder}");
+                if (!moved)
+                    output.WriteLine("The folder already held a library, so nothing was moved.");
+            }
+
+            return ExitCodes.Done;
+        }));
+
+        return library;
     }
 
     private static Command BuildSetChannel(Func<CancellationToken, Task<CliServices>> services)
@@ -115,9 +167,10 @@ internal static class SettingsCommand
             error.WriteLine($"warning: {directory} does not exist.");
     }
 
-    private static void WriteSettings(TextWriter output, BoreaSettings settings)
+    private static void WriteSettings(TextWriter output, BoreaSettings settings, IGamePathProvider paths)
     {
         output.WriteLine($"Game directory: {settings.GameDirectoryPath ?? "not set"}");
+        output.WriteLine($"Library folder: {LibraryFolderOf(paths)}{(settings.LibraryFolderPath is null ? " (default)" : string.Empty)}");
         output.WriteLine($"Release channel: {settings.ReleaseChannel.ToName()}");
 
         if (settings.LoaderInstallations.Count == 0)
@@ -131,16 +184,23 @@ internal static class SettingsCommand
             output.WriteLine($"  {loaderId}: {installation.DirectoryPath}");
     }
 
+    private static string LibraryFolderOf(IGamePathProvider paths) => Path.GetDirectoryName(paths.GetInstancesRoot())!;
+
     /// <summary>The JSON shape of <c>settings show</c>.</summary>
-    private sealed record SettingsView(string? GameDirectory, IReadOnlyDictionary<string, string> LoaderDirectories, string ReleaseChannel)
+    private sealed record SettingsView(string? GameDirectory, IReadOnlyDictionary<string, string> LoaderDirectories, string ReleaseChannel, string LibraryFolder, bool LibraryFolderIsDefault)
     {
-        public static SettingsView From(BoreaSettings settings)
+        public static SettingsView From(BoreaSettings settings, IGamePathProvider paths)
             => new(
                 settings.GameDirectoryPath,
                 settings.LoaderInstallations.ToDictionary(
                     pair => pair.Key,
                     pair => pair.Value.DirectoryPath,
                     ModIds.Comparer),
-                settings.ReleaseChannel.ToName());
+                settings.ReleaseChannel.ToName(),
+                LibraryFolderOf(paths),
+                settings.LibraryFolderPath is null);
     }
+
+    /// <summary>The JSON shape of <c>settings set library</c>.</summary>
+    private sealed record LibraryChangeView(string LibraryFolder, string PreviousLibraryFolder, string Outcome, bool OldFilesRemain);
 }

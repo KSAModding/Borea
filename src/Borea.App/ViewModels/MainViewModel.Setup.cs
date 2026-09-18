@@ -458,6 +458,12 @@ public partial class MainViewModel
         if (_services is null || IsSetupBusy)
             return;
 
+        if (IsChangingLibraryFolder)
+        {
+            SetupError = Localization.LibraryFolderBusy;
+            return;
+        }
+
         IsSetupBusy = true;
         SetupError = null;
         SetupMessage = null;
