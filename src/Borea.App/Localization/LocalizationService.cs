@@ -72,6 +72,8 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string TaskRunning => Resources.TaskRunning;
 
+    public string TaskPaused => Resources.TaskPaused;
+
     public string TaskFinished => Resources.TaskFinished;
 
     public string TaskStopped => Resources.TaskStopped;
@@ -1074,6 +1076,9 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string FormatInstallDownloading(string content)
         => string.Format(CultureInfo.CurrentCulture, Resources.InstallDownloadingFormat, content);
 
+    public string FormatInstallPaused(string content)
+        => string.Format(CultureInfo.CurrentCulture, Resources.InstallPausedFormat, content);
+
     public string FormatInstallExtracting(string content)
         => string.Format(CultureInfo.CurrentCulture, Resources.InstallExtractingFormat, content);
 
@@ -1096,6 +1101,10 @@ public sealed class LocalizationService : INotifyPropertyChanged
         => string.Format(CultureInfo.CurrentCulture, Resources.InstallMinutesLeftFormat, minutes);
 
     public string InstallStop => Resources.InstallStop;
+
+    public string InstallPause => Resources.InstallPause;
+
+    public string InstallResume => Resources.InstallResume;
 
     public string InstallStopping => Resources.InstallStopping;
 

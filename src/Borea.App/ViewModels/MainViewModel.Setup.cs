@@ -413,17 +413,23 @@ public partial class MainViewModel
         var run = LoaderInstallRun = StartInstallRun(StartTask(TaskKind.LoaderInstall, listing.Name));
         run.TaskItem.NewVersion = release.Version.ToString();
         var text = new InstallProgressText(Localization);
-        var progress = new Progress<InstallProgress>(value =>
+        InstallProgress? paused = null;
+        void Show(InstallProgress value)
         {
             if (!IsSetupBusy)
                 return;
 
             text.Report(value);
+            paused = text.IsPaused ? value : null;
             SetupProgress = text.Percent;
             SetupProgressStatus = text.Status;
             SetupProgressDetail = text.Detail;
+            run.Report(value.Phase);
             run.TaskItem.Report(text);
-        });
+        }
+
+        run.RepeatPausedReport = () => { if (paused is { } value) Show(value); };
+        var progress = new Progress<InstallProgress>(Show);
         var completed = false;
         var stopped = false;
         string? error = null;

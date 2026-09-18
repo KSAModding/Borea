@@ -452,21 +452,28 @@ public partial class MainViewModel
     private IProgress<InstallProgress> ProgressOf(IInstallProgressRow row)
     {
         var text = new InstallProgressText(Localization);
-        return new Progress<InstallProgress>(value =>
+        InstallProgress? paused = null;
+        void Show(InstallProgress value)
         {
             if (!row.IsInstalling)
                 return;
 
             text.Report(value);
+            paused = text.IsPaused ? value : null;
             row.Progress = text.Percent;
             row.ProgressStatus = text.Status;
             row.ProgressDetail = text.Detail;
             if (row.Run is { } run)
             {
-                run.IsFinishingMod = value.Phase != InstallPhase.Downloading;
+                run.Report(value.Phase);
                 run.TaskItem.Report(text);
             }
-        });
+        }
+
+        if (row.Run is { } started)
+            started.RepeatPausedReport = () => { if (paused is { } value) Show(value); };
+
+        return new Progress<InstallProgress>(Show);
     }
 
     private static bool IsInstallFailure(Exception exception)

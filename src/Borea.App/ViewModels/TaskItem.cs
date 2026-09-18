@@ -111,6 +111,7 @@ public sealed partial class TaskItem : ObservableObject
     {
         TaskState.Waiting => Localization.TaskWaiting,
         TaskState.Running => Localization.TaskRunning,
+        TaskState.Paused => Localization.TaskPaused,
         TaskState.Finished => Localization.TaskFinished,
         TaskState.Stopped => Localization.TaskStopped,
         _ => Localization.TaskFailed,
@@ -160,7 +161,9 @@ public sealed partial class TaskItem : ObservableObject
 
     internal void Report(InstallProgressText text)
     {
-        MarkRunning();
+        if (State is TaskState.Waiting or TaskState.Running or TaskState.Paused)
+            State = text.IsPaused ? TaskState.Paused : TaskState.Running;
+
         Step = text.Status;
         Detail = text.Detail;
         Progress = text.Percent;

@@ -56,6 +56,31 @@ public sealed class InstallProgressTextTests : IDisposable
     }
 
     [Fact]
+    public void Paused_SaysSoWithTheSizeAndStartsTheRateAgainOnResume()
+    {
+        var text = new InstallProgressText(_localization, _clock);
+        text.Report(Downloading(Megabyte, 38 * Megabyte));
+        _clock.Advance(TimeSpan.FromSeconds(1));
+        text.Report(Downloading(2 * Megabyte, 38 * Megabyte, step: 2, stepCount: 3));
+
+        text.Report(Downloading(2 * Megabyte, 38 * Megabyte, step: 2, stepCount: 3) with { Download = new DownloadProgress(2 * Megabyte, 38 * Megabyte, IsPaused: true) });
+
+        Assert.True(text.IsPaused);
+        Assert.Equal("MeasureTools 1.1.10 paused (2 of 3)", text.Status);
+        Assert.Equal("2.0 of 38.0 MB", text.Detail);
+        Assert.Equal(2d / 38 * 100, text.Percent, precision: 6);
+        Assert.True(text.HasPercent);
+
+        _clock.Advance(TimeSpan.FromMinutes(10));
+        text.Report(Downloading(2 * Megabyte, 38 * Megabyte, step: 2, stepCount: 3));
+        _clock.Advance(TimeSpan.FromSeconds(1));
+        text.Report(Downloading(3 * Megabyte, 38 * Megabyte, step: 2, stepCount: 3));
+
+        Assert.False(text.IsPaused);
+        Assert.Equal("3.0 of 38.0 MB, about 35 s left", text.Detail);
+    }
+
+    [Fact]
     public void Detail_LongDownloadsCountInMinutes()
     {
         var text = new InstallProgressText(_localization, _clock);
