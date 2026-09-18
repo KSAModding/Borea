@@ -565,11 +565,12 @@ public sealed partial class PackItem : ObservableObject, IInstallProgressRow
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsConfirmingInstall))]
+    [NotifyPropertyChangedFor(nameof(ConfirmInstallText))]
     private InstallChoices? _choices;
 
     public bool IsConfirmingInstall => InstallWarning is not null || Choices is not null;
 
-    public string ConfirmInstallText => InstallWarning is null ? _owner.Localization.ContentAdd : _owner.Localization.InstallAnyway;
+    public string ConfirmInstallText => _owner.ConfirmInstallText(InstallWarning, PendingPlan);
 
     internal ModPackInstallRequest? PendingInstall { get; set; }
 

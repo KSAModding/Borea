@@ -320,8 +320,12 @@
                                 <Button Classes="text" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryCancel}" Command="{Binding CancelInstallCommand}" />
                             </StackPanel>
                             <TextBlock Classes="body-sm danger" Text="{Binding InstallError}" ToolTip.Tip="{Binding InstallError}" IsVisible="{Binding InstallError, Converter={x:Static ObjectConverters.IsNotNull}}" MaxWidth="320" TextTrimming="CharacterEllipsis" />
-                            <!-- c/meta: the downloads and the age of the newest release, when the index reports them -->
-                            <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center" IsVisible="{Binding DownloadsText, Converter={x:Static ObjectConverters.IsNotNull}}" ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ContentDownloads}">
+                            <!-- c/meta: the size, the downloads and the age of the newest release, when the index reports them -->
+                            <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center" IsVisible="{Binding DownloadSizeText, Converter={x:Static ObjectConverters.IsNotNull}}" ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ContentDownloadSize}">
+                                <Path Classes="icon size-16" Data="{StaticResource Icon.HardDrive}" />
+                                <TextBlock Classes="label-md" Text="{Binding DownloadSizeText}" VerticalAlignment="Center" />
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center" IsVisible="{Binding DownloadsText, Converter={x:Static ObjectConverters.IsNotNull}}" ToolTip.Tip="{Binding DownloadsExactText}">
                                 <Path Classes="icon size-16" Data="{StaticResource Icon.Download}" />
                                 <TextBlock Classes="label-md" Text="{Binding DownloadsText}" VerticalAlignment="Center" />
                             </StackPanel>

@@ -1029,6 +1029,15 @@
   <data name="ContentDownloads" xml:space="preserve">
     <value>Downloads</value>
   </data>
+  <data name="ContentDownloadsExactFormat" xml:space="preserve">
+    <value>{0} downloads</value>
+  </data>
+  <data name="ContentDownloadSize" xml:space="preserve">
+    <value>Download size</value>
+  </data>
+  <data name="ContentSizeHeader" xml:space="preserve">
+    <value>Size</value>
+  </data>
   <data name="ContentShowVersions" xml:space="preserve">
     <value>Show</value>
   </data>

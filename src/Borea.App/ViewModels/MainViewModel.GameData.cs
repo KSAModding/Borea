@@ -5,6 +5,7 @@ using System.Globalization;
 using System.IO;
 using System.Threading.Tasks;
 using Borea.Core.Instances;
+using Borea.Core.Planning;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -65,11 +66,11 @@ public partial class MainViewModel
 
     internal void OpenGameDataFolder(string folder) => GameDataError = TryOpenWithSystem(folder);
 
-    internal string FormatGameDataSize(long bytes)
-    {
-        if (bytes <= 0)
-            return Localization.GameDataEmpty;
+    internal string FormatGameDataSize(long bytes) => bytes <= 0 ? Localization.GameDataEmpty : SizeText(bytes);
 
+    /// <summary>A byte count in decimal units, the way the download progress counts them: "38.0 MB".</summary>
+    internal static string SizeText(long bytes)
+    {
         if (bytes < 1000)
             return bytes.ToString(CultureInfo.CurrentCulture) + " B";
 
@@ -82,6 +83,47 @@ public partial class MainViewModel
         }
 
         return value.ToString("0.0", CultureInfo.CurrentCulture) + " " + SizeUnits[unit];
+    }
+
+    /// <summary>
+    /// A count the way a row shows it: 999, 1.2k, 15k, 1.2M. The exact number
+    /// goes into the tooltip. Values are rounded down, so 1,999 reads 1.9k
+    /// and never rounds up to a figure the mod has not reached.
+    /// </summary>
+    internal static string CompactCount(long count)
+    {
+        if (count < 1000)
+            return count.ToString(CultureInfo.CurrentCulture);
+
+        return count < 1_000_000
+            ? Compact(count / 1000.0, "k")
+            : Compact(count / 1_000_000.0, "M");
+    }
+
+    private static string Compact(double value, string unit)
+    {
+        var rounded = value < 10 ? Math.Floor(value * 10) / 10 : Math.Floor(value);
+        return rounded.ToString(value < 10 ? "0.#" : "0", CultureInfo.CurrentCulture) + unit;
+    }
+
+    /// <summary>What a plan downloads, summed over its operations, or null when no release states a size.</summary>
+    internal static string? PlanSizeText(InstallPlan? plan)
+    {
+        if (plan is null)
+            return null;
+
+        long total = 0;
+        var known = false;
+        foreach (var operation in plan.Operations)
+        {
+            if (operation.Release.Download.SizeBytes is { } size)
+            {
+                total += size;
+                known = true;
+            }
+        }
+
+        return known ? SizeText(total) : null;
     }
 }
 

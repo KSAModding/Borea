@@ -269,6 +269,13 @@ public partial class MainViewModel
     private string ContentName(string modId)
         => _listings.FirstOrDefault(item => ModIds.Equals(item.ModId, modId))?.Name ?? modId;
 
+    /// <summary>"Add" or "Install anyway", with the download size of the plan when the index states one.</summary>
+    internal string ConfirmInstallText(string? warning, InstallPlan? plan)
+    {
+        var text = warning is null ? Localization.ContentAdd : Localization.InstallAnyway;
+        return PlanSizeText(plan) is { } size ? $"{text} ({size})" : text;
+    }
+
     private void HoldPlan(IInstallRow row, InstallPlan plan)
     {
         row.PendingPlan = plan;
