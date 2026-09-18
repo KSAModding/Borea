@@ -1,3 +1,4 @@
+using Borea.Core.Game;
 using Borea.Core.Launch;
 using Borea.Core.ModLoaders;
 using Borea.Core.Mods;
@@ -39,6 +40,44 @@ public sealed class LoaderProvidesTests
         var provides = new LoaderProvides(launch: "StarMap.exe", instance: instance);
 
         Assert.Same(instance, provides.Instance);
+    }
+
+    [Fact]
+    public void Constructor_NoPlatformTable_HasNoPlatformEntries()
+    {
+        Assert.Empty(new LoaderProvides(launch: "StarMap.exe").Platforms);
+    }
+
+    [Fact]
+    public void Constructor_PlatformEntries_AreKept()
+    {
+        var linux = new LoaderPlatformLaunch("StarMap.dll", "dotnet");
+
+        var provides = new LoaderProvides(launch: "StarMap.exe", platforms: new Dictionary<OsPlatform, LoaderPlatformLaunch> { [OsPlatform.Linux] = linux });
+
+        Assert.Same(linux, Assert.Single(provides.Platforms).Value);
+    }
+
+    [Theory]
+    [InlineData(null, null)]
+    [InlineData("dotnet", LoaderRuntime.Dotnet)]
+    [InlineData("Dotnet", LoaderRuntime.Unknown)]
+    [InlineData("mono", LoaderRuntime.Unknown)]
+    public void PlatformLaunch_Runtime_IsReadOrKeptAsUnknown(string? runtime, LoaderRuntime? expected)
+    {
+        var entry = new LoaderPlatformLaunch("StarMap.dll", runtime);
+
+        Assert.Equal(expected, entry.Runtime);
+        Assert.Equal(runtime, entry.RuntimeName);
+    }
+
+    [Theory]
+    [InlineData("/absolute/StarMap.dll")]
+    [InlineData("../StarMap.dll")]
+    [InlineData("")]
+    public void PlatformLaunch_LaunchLeavingItsAnchor_ThrowsArgumentException(string launch)
+    {
+        Assert.Throws<ArgumentException>(() => new LoaderPlatformLaunch(launch));
     }
 
     [Fact]
