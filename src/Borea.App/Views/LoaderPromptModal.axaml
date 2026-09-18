@@ -1,0 +1,45 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Borea.App.ViewModels"
+             x:Class="Borea.App.Views.LoaderPromptModal"
+             x:DataType="vm:MainViewModel">
+    <!-- a launch that needs a mod loader which is not installed -->
+    <Panel Background="#99000000">
+        <Border Classes="modal" Width="561" Margin="80,0,0,0">
+            <StackPanel>
+                <Grid ColumnDefinitions="*,Auto" Margin="24,24,24,0">
+                    <TextBlock Classes="heading-lg" Text="{Binding Localization.SetupLoader}" VerticalAlignment="Center" />
+                    <Button Grid.Column="1" Classes="icon" Command="{Binding CancelLoaderPromptCommand}" IsEnabled="{Binding !IsSetupBusy}" AutomationProperties.Name="{Binding Localization.ModalClose}">
+                        <Path Classes="icon" Data="{StaticResource Icon.Close}" />
+                    </Button>
+                </Grid>
+                <Border Height="1" Background="{StaticResource Brush.Window}" Margin="0,24,0,0" />
+                <StackPanel Margin="36,32,24,32" Spacing="16">
+                    <TextBlock Classes="body-md" Text="{Binding LoaderPromptText}" TextWrapping="Wrap" />
+                    <StackPanel Spacing="4" IsVisible="{Binding IsSetupBusy}">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <ProgressBar Height="6" Value="{Binding SetupProgress}" Maximum="100" Foreground="{StaticResource Brush.Accent}" VerticalAlignment="Center" />
+                            <Button Grid.Column="1" Classes="text" Margin="8,0,0,0" Content="{Binding LoaderInstallRun.StopText}" Command="{Binding LoaderInstallRun.StopCommand}" IsVisible="{Binding LoaderInstallRun, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                        </Grid>
+                        <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding SetupProgressStatus, Converter={x:Static ObjectConverters.IsNotNull}}">
+                            <TextBlock Classes="body-sm secondary" Text="{Binding SetupProgressStatus}" VerticalAlignment="Center" />
+                            <TextBlock Classes="label-md" Text="{Binding SetupProgressDetail}" VerticalAlignment="Center" IsVisible="{Binding SetupProgressDetail, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                        </StackPanel>
+                    </StackPanel>
+                    <!-- a stopped install keeps the modal open, so its line shows here -->
+                    <TextBlock Classes="body-md secondary" Text="{Binding SetupMessage}" TextWrapping="Wrap" IsVisible="{Binding SetupMessage, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                    <TextBlock Classes="body-md danger" Text="{Binding SetupError}" TextWrapping="Wrap" IsVisible="{Binding SetupError, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+                        <Button Classes="text" Content="{Binding Localization.LibraryCancel}" Command="{Binding CancelLoaderPromptCommand}" IsEnabled="{Binding !IsSetupBusy}" VerticalAlignment="Center" />
+                        <Button Classes="cta" Command="{Binding InstallPromptedLoaderCommand}" IsVisible="{Binding !NeedsGameSetup}">
+                            <TextBlock Classes="action-lg" Text="{Binding Localization.SetupInstallLoader}" VerticalAlignment="Center" />
+                        </Button>
+                        <Button Classes="cta" Command="{Binding SetUpGameForLoaderCommand}" IsVisible="{Binding NeedsGameSetup}">
+                            <TextBlock Classes="action-lg" Text="{Binding Localization.SetupBannerAction}" VerticalAlignment="Center" />
+                        </Button>
+                    </StackPanel>
+                </StackPanel>
+            </StackPanel>
+        </Border>
+    </Panel>
+</UserControl>

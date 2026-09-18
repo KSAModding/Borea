@@ -104,10 +104,10 @@ public partial class MainViewModel
 
     /// <summary>
     /// Reads the saved game directory after a load or a rebuild. The first
-    /// load without one opens the Game tab, so a new user sees where to start;
-    /// after that the banner is the reminder.
+    /// load without a usable one looks for the game in the background; after
+    /// that the banner is the reminder.
     /// </summary>
-    private async Task RefreshGameSetupAsync()
+    private void RefreshGameSetup()
     {
         var directory = _services?.Settings.GameDirectoryPath;
         GameSetupState = _services is null || directory is not null && Directory.Exists(directory)
@@ -115,10 +115,11 @@ public partial class MainViewModel
             : directory is null ? GameSetupState.NotSaved : GameSetupState.FolderMissing;
         OnPropertyChanged(nameof(GameSetupBannerText));
 
-        if (GameSetupState == GameSetupState.NotSaved && !_promptedForGameSetup)
+        if (_services is { } services && !_promptedForGameSetup)
         {
             _promptedForGameSetup = true;
-            await OpenGameSetupAsync();
+            if (NeedsGameSetup)
+                _gameDetection = OfferFoundGamesAsync(services);
         }
     }
 
@@ -184,6 +185,7 @@ public partial class MainViewModel
     private async Task ShowGameSettingsAsync()
     {
         SettingsTab = SettingsTab.Game;
+        _gameTabShown = true;
         SetupMessage = null;
         SetupError = null;
         if (_services is null)
@@ -217,30 +219,7 @@ public partial class MainViewModel
         {
             var gameInput = GameDirectoryInput;
             var loaderInput = LoaderDirectoryInput;
-            var listings = new List<ModMetadata>();
-            foreach (var loader in Loaders)
-            {
-                try
-                {
-                    if (await services.Mods.GetListingAsync(loader.ModId) is { } listing)
-                        listings.Add(listing);
-                }
-                catch (Exception exception) when (exception is HttpRequestException or IOException or InvalidOperationException or TaskCanceledException)
-                {
-                    // a loader without its listing cannot be checked on disk
-                }
-            }
-
-            InstallDetection? detection = null;
-            try
-            {
-                detection = await Task.Run(() => services.InstallDetector.DetectAsync(listings));
-            }
-            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or InvalidOperationException)
-            {
-                // nothing found is the same as nothing to suggest
-            }
-
+            var detection = await FindInstallsAsync(services);
             if (!ReferenceEquals(services, _services))
                 return;
 
@@ -384,13 +363,21 @@ public partial class MainViewModel
     }
 
     [RelayCommand]
-    private Task SaveGameDirectoryAsync() => RunSetupAsync(async services =>
+    private Task SaveGameDirectoryAsync() => RunSetupAsync(services => ChangeGameDirectoryAsync(services, GameDirectoryInput.Trim()));
+
+    /// <summary>
+    /// Saves the game directory and writes it into the configuration of each
+    /// recorded loader. An empty path clears it.
+    /// </summary>
+    private async Task<string> ChangeGameDirectoryAsync(BoreaServices services, string path)
     {
-        var path = GameDirectoryInput.Trim();
         var directory = path.Length == 0 ? null : Path.GetFullPath(path);
-        await services.SettingsRepository.SaveAsync((await ReadSavedSettingsAsync(services)).WithGameDirectory(directory));
+        if (directory is null)
+            await services.SettingsRepository.SaveAsync((await ReadSavedSettingsAsync(services)).WithGameDirectory(null));
+        else
+            await services.GameDirectoryChanger.ChangeAsync(directory);
         return directory is not null && !Directory.Exists(directory) ? Localization.SetupDirectoryMissing : Localization.SetupSaved;
-    });
+    }
 
     /// <summary>
     /// Points Borea at a loader that is already on disk, the way
@@ -413,16 +400,16 @@ public partial class MainViewModel
     /// directory lets the installer pick its default.
     /// </summary>
     [RelayCommand]
-    private Task InstallLoaderAsync() => RunSetupAsync(async services =>
-    {
-        if (SelectedLoader is null)
-            return Localization.SetupNoLoaderSelected;
+    private Task InstallLoaderAsync() => RunSetupAsync(services => SelectedLoader is null
+        ? Task.FromResult(Localization.SetupNoLoaderSelected)
+        : InstallNewestLoaderAsync(services, SelectedLoader.ModId, LoaderDirectoryInput.Trim()));
 
-        var listing = await services.Mods.GetListingAsync(SelectedLoader.ModId)
+    private async Task<string> InstallNewestLoaderAsync(BoreaServices services, string loaderId, string directory)
+    {
+        var listing = await services.Mods.GetListingAsync(loaderId)
             ?? throw new InvalidOperationException(Localization.DiscoverNoRelease);
-        var release = await services.Mods.GetLatestReleaseAsync(SelectedLoader.ModId)
+        var release = await services.Mods.GetLatestReleaseAsync(loaderId)
             ?? throw new InvalidOperationException(Localization.DiscoverNoRelease);
-        var directory = LoaderDirectoryInput.Trim();
         var run = LoaderInstallRun = StartInstallRun(StartTask(TaskKind.LoaderInstall, listing.Name));
         run.TaskItem.NewVersion = release.Version.ToString();
         var text = new InstallProgressText(Localization);
@@ -464,7 +451,7 @@ public partial class MainViewModel
             EndInstallRun(run, completed, stopped, error);
             LoaderInstallRun = null;
         }
-    });
+    }
 
     private async Task RunSetupAsync(Func<BoreaServices, Task<string>> operation)
     {
@@ -486,7 +473,7 @@ public partial class MainViewModel
             await RefreshLoaderStateAsync();
             RefreshSuggestions();
         }
-        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or InvalidOperationException or ArgumentException or NotSupportedException or HttpRequestException or DownloadFailedException or TaskCanceledException)
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or InvalidOperationException or ArgumentException or NotSupportedException or HttpRequestException or DownloadFailedException or TaskCanceledException or AggregateException)
         {
             SetupError = exception.Message;
         }

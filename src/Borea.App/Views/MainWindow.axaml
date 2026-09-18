@@ -98,6 +98,12 @@
     <!-- modal: the plan of a duplicate or an import -->
     <views:ModListModal IsVisible="{Binding IsReviewingModList}" />
 
+    <!-- modal: the game Borea found on the first start -->
+    <views:FoundGameModal IsVisible="{Binding IsFoundGameModalOpen}" />
+
+    <!-- modal: the mod loader a launch needs -->
+    <views:LoaderPromptModal IsVisible="{Binding IsLoaderPromptOpen}" />
+
     <!-- modal: settings -->
     <settings:SettingsModal IsVisible="{Binding IsSettingsOpen}" />
 

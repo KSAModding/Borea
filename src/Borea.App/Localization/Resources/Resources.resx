@@ -975,6 +975,18 @@
   <data name="SetupFoundGames" xml:space="preserve">
     <value>Borea found KSA in more than one folder. Select the folder you play from.</value>
   </data>
+  <data name="SetupFoundGameFormat" xml:space="preserve">
+    <value>Borea found KSA {0} in {1}. Use it?</value>
+  </data>
+  <data name="SetupUseFoundGame" xml:space="preserve">
+    <value>Use it</value>
+  </data>
+  <data name="SetupUseSelectedGame" xml:space="preserve">
+    <value>Use selected</value>
+  </data>
+  <data name="SetupLater" xml:space="preserve">
+    <value>Later</value>
+  </data>
   <data name="SetupLoader" xml:space="preserve">
     <value>Mod loader</value>
   </data>
@@ -1244,6 +1256,12 @@
   </data>
   <data name="LaunchNeededLoaderNotInstalledFormat" xml:space="preserve">
     <value>The mods in this instance need the mod loader {0}, and it is not installed. Mod loaders are set up from the Game settings.</value>
+  </data>
+  <data name="LaunchInstallLoaderFormat" xml:space="preserve">
+    <value>This instance needs {0}. Install it now?</value>
+  </data>
+  <data name="LaunchSetUpGameFirstFormat" xml:space="preserve">
+    <value>This instance needs {0}. Set up the game folder first.</value>
   </data>
   <data name="LaunchDifferentLoadersNeededFormat" xml:space="preserve">
     <value>The mods in this instance need different mod loaders: {0}. An instance starts through one loader only. Remove mods until they all need the same loader.</value>

@@ -975,6 +975,18 @@
   <data name="SetupFoundGames" xml:space="preserve">
     <value>Borea hat KSA in mehreren Ordnern gefunden. Wähle den Ordner, aus dem du spielst.</value>
   </data>
+  <data name="SetupFoundGameFormat" xml:space="preserve">
+    <value>Borea hat KSA {0} in {1} gefunden. Möchtest du es verwenden?</value>
+  </data>
+  <data name="SetupUseFoundGame" xml:space="preserve">
+    <value>Verwenden</value>
+  </data>
+  <data name="SetupUseSelectedGame" xml:space="preserve">
+    <value>Auswahl verwenden</value>
+  </data>
+  <data name="SetupLater" xml:space="preserve">
+    <value>Später</value>
+  </data>
   <data name="SetupLoader" xml:space="preserve">
     <value>Mod-Loader</value>
   </data>
@@ -1244,6 +1256,12 @@
   </data>
   <data name="LaunchNeededLoaderNotInstalledFormat" xml:space="preserve">
     <value>Die Mods in dieser Instanz brauchen den Mod-Loader {0}, der nicht installiert ist. Mod-Loader werden in den Spieleinstellungen eingerichtet.</value>
+  </data>
+  <data name="LaunchInstallLoaderFormat" xml:space="preserve">
+    <value>Diese Instanz braucht {0}. Jetzt installieren?</value>
+  </data>
+  <data name="LaunchSetUpGameFirstFormat" xml:space="preserve">
+    <value>Diese Instanz braucht {0}. Richte zuerst den Spielordner ein.</value>
   </data>
   <data name="LaunchDifferentLoadersNeededFormat" xml:space="preserve">
     <value>Die Mods in dieser Instanz brauchen verschiedene Mod-Loader: {0}. Eine Instanz startet nur mit einem Mod-Loader. Entferne Mods, bis alle denselben Mod-Loader brauchen.</value>

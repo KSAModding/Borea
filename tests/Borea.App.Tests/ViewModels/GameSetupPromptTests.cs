@@ -5,7 +5,7 @@ namespace Borea.App.Tests.ViewModels;
 public sealed class GameSetupPromptTests
 {
     [Fact]
-    public async Task FirstLoad_WithoutAGameDirectory_OpensTheGameTabAndShowsTheBanner()
+    public async Task FirstLoad_WithoutAGameDirectoryAndNoGameFound_ShowsTheBannerAndOpensNothing()
     {
         using var harness = await ViewModelHarness.CreateAsync();
         var viewModel = harness.ViewModel;
@@ -13,16 +13,15 @@ public sealed class GameSetupPromptTests
         Assert.Equal(GameSetupState.NotSaved, viewModel.GameSetupState);
         Assert.True(viewModel.NeedsGameSetup);
         Assert.Equal(harness.Localization.SetupBannerNotSaved, viewModel.GameSetupBannerText);
-        Assert.True(viewModel.IsSettingsOpen);
-        Assert.True(viewModel.IsGameTab);
+        Assert.False(viewModel.IsSettingsOpen);
+        Assert.False(viewModel.IsFoundGameModalOpen);
     }
 
     [Fact]
-    public async Task LaterLoads_DoNotReopenTheSettings()
+    public async Task LaterLoads_DoNotOpenTheSettings()
     {
         using var harness = await ViewModelHarness.CreateAsync();
         var viewModel = harness.ViewModel;
-        viewModel.CloseSettingsCommand.Execute(null);
 
         await viewModel.LoadAsync();
 
@@ -50,11 +49,9 @@ public sealed class GameSetupPromptTests
     {
         using var harness = await ViewModelHarness.CreateAsync();
         var viewModel = harness.ViewModel;
-        viewModel.CloseSettingsCommand.Execute(null);
 
         viewModel.GameDirectoryInput = Path.Combine(harness.Root, "not-there");
         await viewModel.SaveGameDirectoryCommand.ExecuteAsync(null);
-        viewModel.CloseSettingsCommand.Execute(null);
         await viewModel.LoadAsync();
 
         Assert.Equal(GameSetupState.FolderMissing, viewModel.GameSetupState);
@@ -67,8 +64,6 @@ public sealed class GameSetupPromptTests
     {
         using var harness = await ViewModelHarness.CreateAsync();
         var viewModel = harness.ViewModel;
-        viewModel.CloseSettingsCommand.Execute(null);
-        viewModel.ShowGeneralSettingsCommand.Execute(null);
 
         await viewModel.OpenGameSetupCommand.ExecuteAsync(null);
 

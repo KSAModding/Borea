@@ -645,6 +645,15 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string SetupFoundGames => Resources.SetupFoundGames;
 
+    public string FormatSetupFoundGame(string version, string directory)
+        => string.Format(CultureInfo.CurrentCulture, Resources.SetupFoundGameFormat, version, directory);
+
+    public string SetupUseFoundGame => Resources.SetupUseFoundGame;
+
+    public string SetupUseSelectedGame => Resources.SetupUseSelectedGame;
+
+    public string SetupLater => Resources.SetupLater;
+
     public string SetupLoader => Resources.SetupLoader;
 
     public string SetupLoaderDirectory => Resources.SetupLoaderDirectory;
@@ -678,6 +687,12 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string FormatLaunchNeededLoaderNotInstalled(string loader)
         => string.Format(CultureInfo.CurrentCulture, Resources.LaunchNeededLoaderNotInstalledFormat, loader);
+
+    public string FormatLaunchInstallLoader(string loader)
+        => string.Format(CultureInfo.CurrentCulture, Resources.LaunchInstallLoaderFormat, loader);
+
+    public string FormatLaunchSetUpGameFirst(string loader)
+        => string.Format(CultureInfo.CurrentCulture, Resources.LaunchSetUpGameFirstFormat, loader);
 
     public string FormatLaunchDifferentLoadersNeeded(string loaders)
         => string.Format(CultureInfo.CurrentCulture, Resources.LaunchDifferentLoadersNeededFormat, loaders);
