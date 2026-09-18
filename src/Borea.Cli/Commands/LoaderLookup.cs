@@ -10,6 +10,11 @@ internal static class LoaderLookup
         CancellationToken cancellationToken)
     {
         var listings = await repository.GetAvailableModsAsync(cancellationToken).ConfigureAwait(false);
+        return GetListing(listings, loaderId);
+    }
+
+    public static ModMetadata GetListing(IReadOnlyList<ModMetadata> listings, string loaderId)
+    {
         var listing = listings.FirstOrDefault(candidate => ModIds.Equals(candidate.ModId, loaderId));
         if (listing is null)
             throw new InvalidOperationException($"Mod loader '{loaderId}' is not available from the configured sources.");

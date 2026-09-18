@@ -1,6 +1,7 @@
 using System.CommandLine;
+using Borea.Cli.Output;
 using Borea.Core.Instances;
-using Borea.Core.Mods;
+using Borea.Core.Launch;
 
 namespace Borea.Cli.Commands;
 
@@ -9,26 +10,38 @@ internal static class LaunchCommand
     public static Command Build(Func<CancellationToken, Task<CliServices>> services)
     {
         var instance = ArgumentRules.Text("instance", "The instance's name, or its id when two names differ only in case.");
-        var loaderId = ArgumentRules.OptionalContentId("loader-id", "The installed mod loader to use. Omit it when the instance's mods need exactly one loader.");
+        var loaderId = ArgumentRules.OptionalContentId("loader-id", "The installed mod loader to use. Omit it to use the loader the mods need, or an installed loader that takes an instance when no mod needs one.");
+        var json = ArgumentRules.Json();
         var launch = new Command("launch", "Start one instance through an installed mod loader.");
         launch.Arguments.Add(instance);
         launch.Arguments.Add(loaderId);
+        launch.Options.Add(json);
 
         launch.SetAction((parseResult, cancellationToken) => CommandRunner.RunAsync(parseResult, services, cancellationToken, async (cli, output, error, ct) =>
         {
             var target = await InstanceLookup
                 .ResolveAsync(cli.Instances, parseResult.GetRequiredValue(instance))
                 .ConfigureAwait(false);
-            var targetLoaderId = parseResult.GetValue(loaderId);
-            if (targetLoaderId is null)
+            var givenLoaderId = parseResult.GetValue(loaderId);
+            var listings = await cli.Mods.GetAvailableModsAsync(ct).ConfigureAwait(false);
+            var choice = LaunchLoaderChoice.Choose(target, cli.Settings.LoaderInstallations, listings, givenLoaderId);
+            if (!choice.Succeeded)
             {
-                targetLoaderId = RequiredLoaderId(target);
-                output.WriteLine($"The mods in '{target.Name}' need {targetLoaderId}.");
+                // an id that names no mod loader gets that answer, not advice to install it
+                if (choice.Failure == LaunchLoaderFailure.GivenLoaderNotInstalled)
+                    _ = LoaderLookup.GetListing(listings, choice.LoaderIds[0]);
+
+                throw new InvalidOperationException(FailureMessage(target, choice));
             }
 
-            var loader = await LoaderLookup
-                .GetListingAsync(cli.Mods, targetLoaderId, ct)
-                .ConfigureAwait(false);
+            var loader = choice.Loader;
+            if (givenLoaderId is null && !parseResult.GetValue(json))
+            {
+                output.WriteLine(choice.RequiredByMods
+                    ? $"The mods in '{target.Name}' need {loader.ModId}."
+                    : $"No mod in '{target.Name}' needs a mod loader. Using {loader.ModId}, which takes an instance.");
+            }
+
             ct.ThrowIfCancellationRequested();
             var result = cli.Launcher.Launch(target, loader);
 
@@ -39,7 +52,7 @@ internal static class LaunchCommand
             if (!result.Started)
             {
                 error.WriteLine($"error: {result.Message}");
-                if (result.Outcome == Borea.Core.Launch.LaunchOutcome.ExitedEarly)
+                if (result.Outcome == LaunchOutcome.ExitedEarly)
                 {
                     error.WriteLine($"{loader.Name} wrote:");
                     foreach (var line in result.Output)
@@ -47,6 +60,12 @@ internal static class LaunchCommand
                 }
 
                 return ExitCodes.Failed;
+            }
+
+            if (parseResult.GetValue(json))
+            {
+                JsonOutput.Write(output, new LaunchView(loader.ModId, choice.RequiredByMods, result.Plan!.Executable, result.Plan.WorkingDirectory, result.ProcessId!.Value));
+                return ExitCodes.Done;
             }
 
             output.WriteLine(result.Message);
@@ -57,22 +76,24 @@ internal static class LaunchCommand
         return launch;
     }
 
-    private static string RequiredLoaderId(Instance instance)
+    private static string FailureMessage(Instance instance, LaunchLoaderChoice choice) => choice.Failure switch
     {
-        var loaderIds = instance.Mods
-            .Select(mod => mod.Metadata.Loader?.LoaderId)
-            .OfType<string>()
-            .Distinct(ModIds.Comparer)
-            .Order(ModIds.Comparer)
-            .ToList();
+        LaunchLoaderFailure.GivenLoaderNotInstalled =>
+            $"Mod loader '{choice.LoaderIds[0]}' is not installed. {InstallHint(choice.LoaderIds[0])}",
+        LaunchLoaderFailure.NeededLoaderNotInstalled =>
+            $"The mods in '{instance.Name}' need {choice.LoaderIds[0]}, and it is not installed. {InstallHint(choice.LoaderIds[0])}",
+        LaunchLoaderFailure.DifferentLoadersNeeded =>
+            $"The mods in '{instance.Name}' need different mod loaders: {string.Join(", ", choice.LoaderIds)}. Name the one to use: 'borea launch <instance> <loader-id>'.",
+        LaunchLoaderFailure.LoaderNotListed =>
+            $"No configured source has a listing for {string.Join(", ", choice.LoaderIds)}. Borea needs the listing of an installed mod loader to know how to start it.",
+        LaunchLoaderFailure.NoLoaderTakesInstance =>
+            $"No mod in '{instance.Name}' needs a mod loader, and no installed mod loader takes an instance. The game reads no instance path on its own. To start the game without a loader, use 'borea game launch', which uses the shared profile and not this instance.",
+        _ => throw new ArgumentOutOfRangeException(nameof(choice), choice.Failure, null),
+    };
 
-        return loaderIds.Count switch
-        {
-            1 => loaderIds[0],
-            0 => throw new InvalidOperationException(
-                $"No mod in '{instance.Name}' needs a mod loader, and the game reads no instance path on its own. To start the game without a loader, use 'borea game launch', which uses the shared profile and not this instance."),
-            _ => throw new InvalidOperationException(
-                $"The mods in '{instance.Name}' need different mod loaders: {string.Join(", ", loaderIds)}. Name the one to use: 'borea launch <instance> <loader-id>'."),
-        };
-    }
+    private static string InstallHint(string loaderId) =>
+        $"Install it with 'borea loader install {loaderId}', or record an existing copy with 'borea loader adopt {loaderId} <directory>'.";
+
+    /// <summary>The JSON shape of <c>launch</c>.</summary>
+    private sealed record LaunchView(string LoaderId, bool RequiredByMods, string Executable, string WorkingDirectory, int ProcessId);
 }
