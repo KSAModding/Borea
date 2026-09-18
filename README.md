@@ -1,5 +1,7 @@
 # Borea
 
+<img src="assets/borea.png" alt="The Borea icon, an aurora over a dark planet" width="128" height="128">
+
 Borea is a cross-platform content manager for Kitten Space Agency.
 
 It is meant to manage mods, mod packs, vehicles, game saves, and more.
@@ -203,7 +205,7 @@ You do not need to write C# to improve a translation. The [localization guide](d
 - [Maximilian-Nesslauer](https://github.com/Maximilian-Nesslauer), the content index and its RFCs, and most of the App and the CLI as they are today.
 - [averageksp](https://github.com/averageksp), App features, testing, and the content index listings.
 - [PlazmaBoltz](https://github.com/PlazmaBoltz), the first interface and the themes.
-- [renancamm](https://github.com/renancamm) (beik), UI/UX work for the App interface.
+- [renancamm](https://github.com/renancamm) (beik), UI/UX work for the App interface and the Borea icon.
 
 And everyone who reported a bug, tested a build or listed a mod.
 

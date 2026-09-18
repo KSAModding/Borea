@@ -1,6 +1,7 @@
 {
   "config": {
     "MD013": false,
+    "MD033": { "allowed_elements": ["img"] },
     "MD060": false
   },
   "ignores": ["node_modules/**"]
