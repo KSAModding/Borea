@@ -219,6 +219,48 @@
   <data name="NavigationTasks" xml:space="preserve">
     <value>Tasks</value>
   </data>
+  <data name="TasksEmpty" xml:space="preserve">
+    <value>No tasks yet.</value>
+  </data>
+  <data name="TaskIndexRefresh" xml:space="preserve">
+    <value>Refresh the content index</value>
+  </data>
+  <data name="TaskInstallFormat" xml:space="preserve">
+    <value>Install {0}</value>
+  </data>
+  <data name="TaskUpdateFormat" xml:space="preserve">
+    <value>Update {0}</value>
+  </data>
+  <data name="TaskUpdateAll" xml:space="preserve">
+    <value>Update all mods</value>
+  </data>
+  <data name="TaskRemoveFormat" xml:space="preserve">
+    <value>Remove {0}</value>
+  </data>
+  <data name="TaskCreateInstanceFormat" xml:space="preserve">
+    <value>Create instance {0}</value>
+  </data>
+  <data name="TaskReplaceFormat" xml:space="preserve">
+    <value>Replace {0}</value>
+  </data>
+  <data name="TaskWaiting" xml:space="preserve">
+    <value>Waiting</value>
+  </data>
+  <data name="TaskRunning" xml:space="preserve">
+    <value>Running</value>
+  </data>
+  <data name="TaskFinished" xml:space="preserve">
+    <value>Done</value>
+  </data>
+  <data name="TaskStopped" xml:space="preserve">
+    <value>Stopped</value>
+  </data>
+  <data name="TaskFailed" xml:space="preserve">
+    <value>Failed</value>
+  </data>
+  <data name="TaskRetryModMissing" xml:space="preserve">
+    <value>This mod is no longer in the instance.</value>
+  </data>
   <data name="InstanceTabContent" xml:space="preserve">
     <value>Content</value>
   </data>

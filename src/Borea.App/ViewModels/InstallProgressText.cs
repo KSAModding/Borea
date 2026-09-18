@@ -38,6 +38,8 @@ internal sealed class InstallProgressText
 
     public double Percent { get; private set; }
 
+    public bool HasPercent { get; private set; }
+
     public void Report(InstallProgress value)
     {
         // a new operation of the plan starts its own rate
@@ -53,10 +55,12 @@ internal sealed class InstallProgressText
         if (value is { Phase: InstallPhase.Downloading, Download: { } bytes })
         {
             Percent = bytes.PercentComplete;
+            HasPercent = bytes.TotalBytes > 0;
             Detail = DetailOf(bytes);
         }
         else
         {
+            HasPercent = false;
             Detail = null;
         }
     }

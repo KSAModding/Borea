@@ -8,6 +8,7 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using Borea.Composition;
 using Borea.Core.Game;
+using Borea.Core.History;
 using Borea.Core.Index;
 using Borea.Core.ModPacks;
 using Borea.Core.Mods;
@@ -464,7 +465,7 @@ public partial class MainViewModel
         var services = _services;
         return services is null
             ? Task.CompletedTask
-            : PlanInstallAsync(item, () => services.Mods.GetLatestReleaseAsync(item.ModId), exact: false);
+            : PlanInstallAsync(item, () => services.Mods.GetLatestReleaseAsync(item.ModId), exactVersion: null);
     }
 
     /// <summary>
@@ -486,10 +487,13 @@ public partial class MainViewModel
 
         item.IsRemoving = true;
         item.InstallError = null;
-        string? error;
+        var task = StartTask(TaskKind.ModRemoval, item.Name, instance.InstanceId, item.ModId);
+        var completed = false;
+        string? error = null;
         try
         {
             error = await TryRemoveContentAsync(services, instance.InstanceId, item.ModId);
+            completed = true;
         }
         catch (Exception exception) when (exception is IOException or InvalidOperationException or UnauthorizedAccessException)
         {
@@ -499,6 +503,7 @@ public partial class MainViewModel
         {
             item.IsRemoving = false;
             item.IsConfirmingRemove = false;
+            EndTask(task, completed, stopped: false, error);
         }
 
         await ReloadInstancesAsync();

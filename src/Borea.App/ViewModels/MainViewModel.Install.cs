@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Borea.App.Localization;
 using Borea.Composition;
 using Borea.Core.Game;
+using Borea.Core.History;
 using Borea.Core.Instances;
 using Borea.Core.Mods;
 using Borea.Core.Planning;
@@ -79,19 +80,20 @@ public partial class MainViewModel
         }
     }
 
-    private InstallRun StartInstallRun()
+    private InstallRun StartInstallRun(TaskItem task)
     {
-        var run = new InstallRun(Localization);
+        var run = task.Run = new InstallRun(Localization, task);
         _installRuns.Add(run);
         if (IsClosing)
             run.Stop();
         return run;
     }
 
-    private void EndInstallRun(InstallRun run)
+    private void EndInstallRun(InstallRun run, bool completed, bool stopped, string? error)
     {
         _installRuns.Remove(run);
         run.End();
+        EndTask(run.TaskItem, completed, stopped, error);
     }
 
     /// <summary>What a stopped install shows where its progress was.</summary>
@@ -104,15 +106,18 @@ public partial class MainViewModel
     /// without warnings or choices runs at once. Any other plan waits on the row
     /// until the user confirms or cancels it.
     /// </summary>
-    internal async Task PlanInstallAsync(IInstallRow row, Func<Task<ModVersionMetadata?>> findRelease, bool exact)
+    /// <param name="exactVersion">The version the request pins. Null plans the newest release.</param>
+    /// <param name="instanceId">The instance a Try again of the Tasks page installs into. Null installs into the active instance.</param>
+    internal async Task PlanInstallAsync(IInstallRow row, Func<Task<ModVersionMetadata?>> findRelease, ModVersion? exactVersion, Guid? instanceId = null)
     {
-        if (_services is null || ActiveInstance is null)
+        if (_services is null || row.IsInstalling || (instanceId ?? ActiveInstance?.InstanceId) is not { } target)
             return;
 
-        var executed = await PlanAndExecuteAsync(row, ActiveInstance.InstanceId, async _ =>
+        RememberRequestedVersion(row, exactVersion);
+        var executed = await PlanAndExecuteAsync(row, target, async _ =>
         {
             var release = await findRelease() ?? throw new InvalidOperationException(Localization.DiscoverNoRelease);
-            return [new RequestedMod(release, InstallReason.Manual, exact)];
+            return [new RequestedMod(release, InstallReason.Manual, exactVersion is not null)];
         });
 
         if (executed)
@@ -136,8 +141,9 @@ public partial class MainViewModel
         row.Choices = null;
         row.ProgressStatus = null;
         row.IsInstalling = true;
-        var run = row.Run = StartInstallRun();
+        var run = row.Run = StartInstallRun(StartInstallTask(row, instanceId));
         var executed = false;
+        var completed = false;
         string? stopped = null;
         try
         {
@@ -170,7 +176,9 @@ public partial class MainViewModel
             else
             {
                 executed = true;
+                run.TaskItem.MarkRunning();
                 await services.PlanExecutor.ExecuteAsync(plan, enable: true, ProgressOf(row), run.InstallStop);
+                completed = true;
             }
         }
         catch (InstallStoppedException exception)
@@ -183,7 +191,7 @@ public partial class MainViewModel
         }
         finally
         {
-            EndInstallRun(run);
+            EndInstallRun(run, completed, stopped is not null, row.InstallError);
             row.IsInstalling = false;
             row.Run = null;
             row.Progress = 0;
@@ -287,9 +295,11 @@ public partial class MainViewModel
         var services = _services;
         var plan = row.PendingPlan;
         row.IsInstalling = true;
-        var run = row.Run = StartInstallRun();
+        var run = row.Run = StartInstallRun(StartInstallTask(row, plan?.InstanceId ?? row.Choices?.InstanceId));
         var executed = false;
+        var completed = false;
         string? stopped = null;
+        string? error = null;
         try
         {
             if (row.Choices is { } choices)
@@ -304,7 +314,9 @@ public partial class MainViewModel
             row.Choices = null;
             starting?.Invoke();
             executed = true;
+            run.TaskItem.MarkRunning();
             await services.PlanExecutor.ExecuteAsync(plan!, enable: true, ProgressOf(row), run.InstallStop);
+            completed = true;
         }
         catch (InstallStoppedException exception)
         {
@@ -312,14 +324,15 @@ public partial class MainViewModel
         }
         catch (Exception exception) when (IsInstallFailure(exception))
         {
+            error = exception.Message;
             if (row.Choices is { } choices)
-                choices.BlockedText = exception.Message;
+                choices.BlockedText = error;
             else
-                row.InstallError = exception.Message;
+                row.InstallError = error;
         }
         finally
         {
-            EndInstallRun(run);
+            EndInstallRun(run, completed, stopped is not null, error);
             row.IsInstalling = false;
             row.Run = null;
             row.Progress = 0;
@@ -368,7 +381,10 @@ public partial class MainViewModel
             row.ProgressStatus = text.Status;
             row.ProgressDetail = text.Detail;
             if (row.Run is { } run)
+            {
                 run.IsFinishingMod = value.Phase != InstallPhase.Downloading;
+                run.TaskItem.Report(text);
+            }
         });
     }
 

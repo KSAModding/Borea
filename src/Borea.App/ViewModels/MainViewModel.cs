@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using Borea.App.Formatting;
 using Borea.App.Localization;
 using Borea.Composition;
+using Borea.Core.History;
 using Borea.Core.Index;
 using Borea.Core.Instances;
 using Borea.Core.Mods;
@@ -275,6 +276,7 @@ public partial class MainViewModel : ViewModelBase
         _appPreferencesRepository = appPreferencesRepository;
         _appPreferences = appPreferences ?? throw new ArgumentNullException(nameof(appPreferences));
         _services = services;
+        Tasks = new TaskRegistry(Localization, () => _services?.TaskHistory, () => _services?.Log, RetryTaskAsync);
         _instances = services?.Instances;
         _currentTheme = appPreferences.ResolveSelectedThemeName(BundledThemeNames, DefaultThemeName);
         RegionalFormat.PropertyChanged += OnRegionalFormatChanged;
@@ -287,6 +289,7 @@ public partial class MainViewModel : ViewModelBase
     /// </summary>
     public async Task LoadAsync()
     {
+        _ = Tasks.LoadAsync();
         StartUpdateCheck();
         InstalledVersionText = _services?.InstalledVersion.GetInstalledVersion()?.RawVersion;
         await ReloadInstancesAsync();
@@ -323,16 +326,26 @@ public partial class MainViewModel : ViewModelBase
     /// </summary>
     private async Task RefreshContentIndexAsync()
     {
-        if (_services is null || _indexRefreshed)
+        if (_services is not { } services || _indexRefreshed)
             return;
 
+        var task = StartTask(TaskKind.IndexRefresh);
+        var completed = false;
+        string? error = null;
         try
         {
-            await _services.IndexRefresh.RefreshAsync();
+            await services.IndexRefresh.RefreshAsync();
+            completed = true;
         }
         catch (Exception exception) when (exception is System.Net.Http.HttpRequestException or IOException or InvalidOperationException or TaskCanceledException)
         {
-            // without a cached file nothing can be read, and the status carries the reason
+            error = exception.Message;
+        }
+        finally
+        {
+            if (services.IndexRefresh.Status is { Outcome: ContentIndexRefreshOutcome.Failed } status)
+                error = status.FailureReason ?? error ?? string.Empty;
+            EndTask(task, completed, stopped: false, error);
         }
 
         _indexRefreshed = true;
@@ -660,6 +673,7 @@ public partial class MainViewModel : ViewModelBase
             release.RefreshText();
         LatestVersion?.RefreshText();
         RefreshPackText();
+        Tasks.RefreshText();
     }
 
     private void OnLocalizationChanged(object? sender, PropertyChangedEventArgs e)

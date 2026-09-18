@@ -219,6 +219,48 @@
   <data name="NavigationTasks" xml:space="preserve">
     <value>Aufgaben</value>
   </data>
+  <data name="TasksEmpty" xml:space="preserve">
+    <value>Noch keine Aufgaben.</value>
+  </data>
+  <data name="TaskIndexRefresh" xml:space="preserve">
+    <value>Inhaltsindex aktualisieren</value>
+  </data>
+  <data name="TaskInstallFormat" xml:space="preserve">
+    <value>{0} installieren</value>
+  </data>
+  <data name="TaskUpdateFormat" xml:space="preserve">
+    <value>{0} aktualisieren</value>
+  </data>
+  <data name="TaskUpdateAll" xml:space="preserve">
+    <value>Alle Mods aktualisieren</value>
+  </data>
+  <data name="TaskRemoveFormat" xml:space="preserve">
+    <value>{0} entfernen</value>
+  </data>
+  <data name="TaskCreateInstanceFormat" xml:space="preserve">
+    <value>Instanz {0} erstellen</value>
+  </data>
+  <data name="TaskReplaceFormat" xml:space="preserve">
+    <value>{0} ersetzen</value>
+  </data>
+  <data name="TaskWaiting" xml:space="preserve">
+    <value>Wartet</value>
+  </data>
+  <data name="TaskRunning" xml:space="preserve">
+    <value>Läuft</value>
+  </data>
+  <data name="TaskFinished" xml:space="preserve">
+    <value>Fertig</value>
+  </data>
+  <data name="TaskStopped" xml:space="preserve">
+    <value>Gestoppt</value>
+  </data>
+  <data name="TaskFailed" xml:space="preserve">
+    <value>Fehlgeschlagen</value>
+  </data>
+  <data name="TaskRetryModMissing" xml:space="preserve">
+    <value>Diese Mod ist nicht mehr in der Instanz.</value>
+  </data>
   <data name="InstanceTabContent" xml:space="preserve">
     <value>Inhalt</value>
   </data>

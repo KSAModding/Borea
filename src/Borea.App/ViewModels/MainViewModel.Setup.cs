@@ -7,6 +7,7 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using Borea.Composition;
 using Borea.Core.Game;
+using Borea.Core.History;
 using Borea.Core.ModLoaders;
 using Borea.Core.Mods;
 using Borea.Core.Planning;
@@ -422,6 +423,7 @@ public partial class MainViewModel
         var release = await services.Mods.GetLatestReleaseAsync(SelectedLoader.ModId)
             ?? throw new InvalidOperationException(Localization.DiscoverNoRelease);
         var directory = LoaderDirectoryInput.Trim();
+        var run = LoaderInstallRun = StartInstallRun(StartTask(TaskKind.LoaderInstall, listing.Name));
         var text = new InstallProgressText(Localization);
         var progress = new Progress<InstallProgress>(value =>
         {
@@ -432,23 +434,33 @@ public partial class MainViewModel
             SetupProgress = text.Percent;
             SetupProgressStatus = text.Status;
             SetupProgressDetail = text.Detail;
+            run.TaskItem.Report(text);
         });
-        var run = LoaderInstallRun = StartInstallRun();
+        var completed = false;
+        var stopped = false;
+        string? error = null;
         try
         {
             var result = await run.InstallStop.RunAsync(
                 (reports, token) => services.LoaderInstaller.InstallAsync(listing, release, directory.Length == 0 ? null : Path.GetFullPath(directory), reports, token),
                 progress);
+            completed = true;
             LoaderDirectoryInput = result.Directory;
             return Localization.FormatSetupLoaderInstalled(listing.Name, result.Version.ToString(), result.Directory);
         }
         catch (InstallStoppedException)
         {
+            stopped = true;
             return Localization.InstallStopped;
+        }
+        catch (Exception exception) when (IsInstallFailure(exception) || exception is ArgumentException)
+        {
+            error = exception.Message;
+            throw;
         }
         finally
         {
-            EndInstallRun(run);
+            EndInstallRun(run, completed, stopped, error);
             LoaderInstallRun = null;
         }
     });
