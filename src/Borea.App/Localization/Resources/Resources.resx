@@ -1396,7 +1396,7 @@
     <value>Stopped. {0} of {1} mods updated.</value>
   </data>
   <data name="InstallClosing" xml:space="preserve">
-    <value>Stopping the running installs. Borea closes when they are done.</value>
+    <value>Borea stops the tasks that still run and closes when they are done.</value>
   </data>
   <data name="LaunchWithoutModLoader" xml:space="preserve">
     <value>Launch KSA without a mod loader</value>

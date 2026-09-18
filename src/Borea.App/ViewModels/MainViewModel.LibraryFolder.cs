@@ -17,6 +17,8 @@ namespace Borea.App.ViewModels;
 public partial class MainViewModel
 {
     private CancellationTokenSource? _libraryFolderCancellation;
+
+    private TaskCompletionSource? _libraryFolderChangeEnded;
     private int _libraryUses;
 
     /// <summary>Null without services.</summary>
@@ -59,7 +61,7 @@ public partial class MainViewModel
     [RelayCommand]
     internal async Task ChangeLibraryFolderAsync(string? folder)
     {
-        if (_services is not { } services || IsChangingLibraryFolder)
+        if (_services is not { } services || IsChangingLibraryFolder || IsClosing)
             return;
 
         LibraryFolderMessage = null;
@@ -72,6 +74,7 @@ public partial class MainViewModel
 
         using var cancellation = new CancellationTokenSource();
         _libraryFolderCancellation = cancellation;
+        _libraryFolderChangeEnded = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         IsChangingLibraryFolder = true;
         LibraryFolderProgressText = Localization.LibraryFolderMoving;
         var progress = new Progress<LibraryMoveProgress>(ShowLibraryMoveProgress);
@@ -119,9 +122,25 @@ public partial class MainViewModel
             LibraryFolderProgressText = null;
             OnPropertyChanged(nameof(LibraryFolder));
             OnPropertyChanged(nameof(IsDefaultLibraryFolder));
+            var ended = _libraryFolderChangeEnded;
+            _libraryFolderChangeEnded = null;
+            ended?.TrySetResult();
         }
     }
 
+    /// <summary>
+    /// Cancels a running library folder change and returns once it ended. The
+    /// changer stops only a copy that Borea has not saved as the new folder yet
+    /// and removes that copy, so a change past that point runs to its end.
+    /// </summary>
+    internal async Task StopLibraryFolderChangeAsync()
+    {
+        while (_libraryFolderChangeEnded is { } ended)
+        {
+            _libraryFolderCancellation?.Cancel();
+            await ended.Task;
+        }
+    }
 
     [RelayCommand]
     private Task UseDefaultLibraryFolderAsync() => ChangeLibraryFolderAsync(null);

@@ -30,15 +30,16 @@ public partial class MainWindow : Window
             _ = CloseAfterTasksAsync(viewModel);
     }
 
-    // the process ends with the window, so the task history is saved first
+    // the process ends with the window, so installs and a library folder change stop and the task history is saved first
     private static bool MustWait(MainViewModel viewModel)
-        => viewModel.HasRunningInstalls || !viewModel.Tasks.WhenSavedAsync().IsCompleted;
+        => viewModel.HasRunningInstalls || viewModel.IsChangingLibraryFolder || !viewModel.Tasks.WhenSavedAsync().IsCompleted;
 
     private async Task CloseAfterTasksAsync(MainViewModel viewModel)
     {
         do
         {
             await viewModel.StopInstallsAsync();
+            await viewModel.StopLibraryFolderChangeAsync();
             await viewModel.Tasks.WhenSavedAsync();
         }
         while (MustWait(viewModel));

@@ -112,6 +112,35 @@ public sealed class LibraryFolderViewModelTests : IDisposable
         Assert.False(Directory.Exists(_library));
     }
 
+    [Fact]
+    public async Task StopLibraryFolderChange_ReturnsWhenTheChangeEnded_WithTheLibraryInOnePlace()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(seed: services => services.Instances.CreateAsync("Alpha", InstanceSource.Custom.Value));
+        var viewModel = harness.ViewModel;
+
+        var change = viewModel.ChangeLibraryFolderCommand.ExecuteAsync(_library);
+        await viewModel.StopLibraryFolderChangeAsync();
+
+        // the stop can come before or after Borea saved the new folder, and either way the library is whole in one place
+        Assert.False(viewModel.IsChangingLibraryFolder);
+        Assert.Equal(viewModel.LibraryFolder == _library, Directory.Exists(Path.Combine(_library, "Instances")));
+        Assert.Equal("Alpha", Assert.Single(viewModel.Instances).Name);
+        await change;
+    }
+
+    [Fact]
+    public async Task ChangeLibraryFolder_WhileBoreaCloses_DoesNothing()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var viewModel = harness.ViewModel;
+        await viewModel.StopInstallsAsync();
+
+        await viewModel.ChangeLibraryFolderCommand.ExecuteAsync(_library);
+
+        Assert.Equal(harness.Root, viewModel.LibraryFolder);
+        Assert.False(Directory.Exists(_library));
+    }
+
     private static async Task<DiscoverItem> AfcRowAsync(ViewModelHarness harness)
     {
         var instance = await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value);
