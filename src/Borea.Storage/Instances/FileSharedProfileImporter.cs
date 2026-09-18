@@ -80,7 +80,7 @@ public sealed class FileSharedProfileImporter : ISharedProfileImporter
         if (mods.Count == 0)
             throw new InvalidOperationException("The shared profile has no mods to import.");
 
-        var created = await _instances.CreateAsync(instanceName, InstanceSource.Custom.Value).ConfigureAwait(false);
+        var created = await _instances.CreateAsync(new Instance(instanceName, InstanceSource.Custom.Value), InstanceOrigin.GameProfileImport).ConfigureAwait(false);
         try
         {
             return await FillAsync(created.Instance.InstanceId, mods, created.Activated, cancellationToken).ConfigureAwait(false);

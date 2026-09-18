@@ -1,11 +1,14 @@
 using System.Security.Cryptography;
 using Borea.Core.Index;
 using Borea.Core.Instances;
+using Borea.Core.Logging;
 using Borea.Core.Mods;
 using Borea.Core.State;
 using Borea.Storage.Instances;
+using Borea.Storage.Logging;
 using Borea.Storage.Mods;
 using Borea.Storage.State;
+using Borea.Storage.Tests.Logging;
 using Borea.Storage.Tests.Mods;
 using Borea.Storage.Tests.Paths;
 
@@ -70,6 +73,21 @@ public sealed class FileSharedProfileImporterTests : IDisposable
         Assert.Equal(new[] { "Zeta", "Alpha", "Unlisted" }, result.Mods.Select(mod => mod.FolderName));
         Assert.All(result.Mods, mod => Assert.True(mod.HasManifestEntry));
         Assert.True(File.Exists(Path.Combine(_paths.GetInstanceModsFolder(result.Instance.InstanceId), "Zeta", "mod.toml")));
+    }
+
+    [Fact]
+    public async Task ImportAsync_LogsTheNewInstanceAsAGameProfileImport()
+    {
+        WriteManifest(("Zeta", true));
+        WriteMod("Zeta");
+        var log = new RecordingLog();
+        var adopter = new FileForeignModAdopter(_paths, _instances, _server);
+        var matcher = new FileForeignModReleaseMatcher(_paths, _server, adopter, _server);
+        var importer = new FileSharedProfileImporter(_paths, new LoggingInstanceRepository(_instances, _paths, log), _modState, adopter, matcher);
+
+        var result = await importer.ImportAsync("Main");
+
+        Assert.Equal($"Instance \"Main\" ({result.Instance.InstanceId}) created from the game profile and made active.", Assert.Single(log.Messages));
     }
 
     [Fact]
