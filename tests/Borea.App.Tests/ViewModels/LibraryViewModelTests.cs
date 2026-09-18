@@ -117,6 +117,25 @@ public sealed class LibraryViewModelTests
     }
 
     [Fact]
+    public async Task BeginCreateInstance_AfterARefusedName_OpensWithoutTheError()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var viewModel = harness.ViewModel;
+        await harness.Services.Instances.CreateAsync("Career", InstanceSource.Custom.Value);
+        await viewModel.LoadAsync();
+
+        viewModel.BeginCreateInstanceCommand.Execute(null);
+        viewModel.ModalInstanceName = "career";
+        await viewModel.ConfirmNameModalCommand.ExecuteAsync(null);
+        viewModel.CancelNameModalCommand.Execute(null);
+        Assert.NotNull(viewModel.InstanceError);
+        viewModel.BeginCreateInstanceCommand.Execute(null);
+
+        Assert.True(viewModel.IsNameModalOpen);
+        Assert.Null(viewModel.InstanceError);
+    }
+
+    [Fact]
     public async Task Activate_MarksTheRowActiveAndFillsTheCurrentInstallCard()
     {
         using var harness = await ViewModelHarness.CreateAsync();

@@ -476,6 +476,7 @@ public partial class MainViewModel : ViewModelBase
     [RelayCommand]
     private void BeginCreateInstance()
     {
+        InstanceError = null;
         ModalInstanceName = string.Empty;
         RenamingInstance = null;
         IsCreatingInstance = true;
