@@ -1,3 +1,4 @@
+using Borea.Core.Game;
 using Borea.Storage.Launch;
 
 namespace Borea.Storage.Tests.Launch;
@@ -52,13 +53,13 @@ public sealed class DotnetHostTests : IDisposable
             Path.GetDirectoryName(first),
             Path.GetDirectoryName(second));
 
-        Assert.Equal(first, DotnetHost.Find(searchPath));
+        Assert.Equal(first, DotnetHost.Find(OsPlatform.Linux, searchPath, null, []));
     }
 
     [Fact]
     public void Find_RelativeDirectory_IsSkipped()
     {
-        Assert.Null(DotnetHost.Find(Path.Combine("relative", "tools")));
+        Assert.Null(DotnetHost.Find(OsPlatform.Linux, Path.Combine("relative", "tools"), null, []));
     }
 
     [Theory]
@@ -66,7 +67,42 @@ public sealed class DotnetHostTests : IDisposable
     [InlineData("")]
     public void Find_NoSearchPath_ReturnsNull(string? searchPath)
     {
-        Assert.Null(DotnetHost.Find(searchPath));
+        Assert.Null(DotnetHost.Find(OsPlatform.Linux, searchPath, null, []));
+    }
+
+    [Fact]
+    public void Find_OnThePathAndInTheRoot_PrefersThePath()
+    {
+        var onPath = PlaceFile("path", "dotnet");
+        var inRoot = PlaceFile("root", "dotnet");
+
+        Assert.Equal(onPath, DotnetHost.Find(OsPlatform.Linux, Path.GetDirectoryName(onPath), Path.GetDirectoryName(inRoot), []));
+    }
+
+    [Fact]
+    public void Find_NotOnThePath_UsesTheDotnetRoot()
+    {
+        var inRoot = PlaceFile("root", "dotnet");
+        var fallback = PlaceFile("default", "dotnet");
+
+        Assert.Equal(inRoot, DotnetHost.Find(OsPlatform.Linux, Path.Combine(_tempRoot, "empty"), Path.GetDirectoryName(inRoot), [Path.GetDirectoryName(fallback)!]));
+    }
+
+    [Fact]
+    public void Find_NeitherOnThePathNorInTheRoot_UsesTheDefaultDirectory()
+    {
+        var fallback = PlaceFile("default", "dotnet");
+
+        Assert.Equal(fallback, DotnetHost.Find(OsPlatform.MacOs, null, Path.Combine(_tempRoot, "root"), [Path.Combine(_tempRoot, "missing"), Path.GetDirectoryName(fallback)!]));
+    }
+
+    [Fact]
+    public void Find_OnWindows_LooksForTheExe()
+    {
+        PlaceFile("tools", "dotnet");
+        var host = PlaceFile("tools", "dotnet.exe");
+
+        Assert.Equal(host, DotnetHost.Find(OsPlatform.Windows, Path.GetDirectoryName(host), null, []));
     }
 
     public void Dispose()

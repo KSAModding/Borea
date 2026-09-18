@@ -3,6 +3,7 @@ using System.Diagnostics;
 using Borea.Core.Game;
 using Borea.Core.Instances;
 using Borea.Core.Launch;
+using Borea.Core.ModLoaders;
 using Borea.Core.Mods;
 using Borea.Core.Paths;
 using Borea.Storage.Instances;
@@ -38,13 +39,13 @@ public sealed class LoaderLauncher : ILauncher, IDisposable
 
     /// <param name="startupWindow">How long <see cref="WatchStartAsync"/> watches at most.</param>
     public LoaderLauncher(IGamePathProvider pathProvider, IProcessStarter starter, TimeSpan startupWindow)
-        : this(pathProvider, starter, SharedProfileLauncher.CurrentPlatform(), () => DotnetHost.Find(Environment.GetEnvironmentVariable("PATH")), startupWindow)
+        : this(pathProvider, starter, SharedProfileLauncher.CurrentPlatform(), () => DotnetHost.Find(SharedProfileLauncher.CurrentPlatform()), startupWindow)
     {
     }
 
     /// <param name="launches">The launches this launcher shares with others. Disposing the launcher keeps them.</param>
     public LoaderLauncher(IGamePathProvider pathProvider, IProcessStarter starter, RunningLaunches launches)
-        : this(pathProvider, starter, SharedProfileLauncher.CurrentPlatform(), () => DotnetHost.Find(Environment.GetEnvironmentVariable("PATH")), DefaultStartupWindow, launches ?? throw new ArgumentNullException(nameof(launches)))
+        : this(pathProvider, starter, SharedProfileLauncher.CurrentPlatform(), () => DotnetHost.Find(SharedProfileLauncher.CurrentPlatform()), DefaultStartupWindow, launches ?? throw new ArgumentNullException(nameof(launches)))
     {
     }
 
@@ -96,7 +97,25 @@ public sealed class LoaderLauncher : ILauncher, IDisposable
                     $"Instance '{instance.Name}' is already running from a launch Borea started. Close the game first.");
             }
 
-            var launch = loader.Provides?.Launch;
+            // An entry for this platform replaces [provides].launch, with no fallback (RFC 0067).
+            var entry = _platform is { } platform ? loader.Provides?.Platforms.GetValueOrDefault(platform) : null;
+            if (entry?.UnknownKeys is [var unknownKey, ..])
+            {
+                return LaunchResult.Failed(
+                    LaunchOutcome.UnknownPlatformKey,
+                    $"The start entry for this system in the listing of {loader.Name} has the key '{unknownKey}', which Borea does not know. Borea starts nothing. Look for a Borea update.",
+                    unknownName: unknownKey);
+            }
+
+            if (entry?.Runtime == LoaderRuntime.Unknown)
+            {
+                return LaunchResult.Failed(
+                    LaunchOutcome.UnknownRuntime,
+                    $"{loader.Name} runs through '{entry.RuntimeName}' on this system, which Borea does not know. Borea starts nothing. Look for a Borea update.",
+                    unknownName: entry.RuntimeName);
+            }
+
+            var launch = entry?.Launch ?? loader.Provides?.Launch;
             if (launch is null)
             {
                 return LaunchResult.Failed(
@@ -139,27 +158,25 @@ public sealed class LoaderLauncher : ILauncher, IDisposable
                 Path.GetFullPath(_pathProvider.GetInstanceRoot(instance.InstanceId)),
                 launchArguments);
 
-            // StarMap lists only its Windows app host, and its assembly runs through dotnet
-            // on every other system. This goes once the listing says how the loader starts there.
-            if (_platform != OsPlatform.Windows && DotnetHost.AssemblyBeside(plan.Executable) is { } assembly)
-            {
-                var host = _findDotnet();
-                if (host is null)
-                {
-                    return LaunchResult.Failed(
-                        LaunchOutcome.DotnetMissing,
-                        $"{loader.Name} runs through dotnet on this system, and Borea did not find dotnet on the PATH. Install the .NET runtime that {loader.Name} needs and try again.");
-                }
-
-                plan = plan.ThroughHost(host, assembly);
-            }
-
             if (!File.Exists(plan.Executable))
             {
                 return LaunchResult.Failed(
                     LaunchOutcome.LaunchTargetMissing,
                     $"'{plan.Executable}' is not there. Reinstall {loader.Name} or correct its directory in the settings.",
                     plan);
+            }
+
+            if (entry?.Runtime == LoaderRuntime.Dotnet)
+            {
+                var host = _findDotnet();
+                if (host is null)
+                {
+                    return LaunchResult.Failed(
+                        LaunchOutcome.DotnetMissing,
+                        $"{loader.Name} runs through dotnet on this system, and Borea did not find dotnet. Install the .NET runtime that {loader.Name} needs and try again.");
+                }
+
+                plan = plan.ThroughHost(host, plan.Executable);
             }
 
             IStartedProcess process;
