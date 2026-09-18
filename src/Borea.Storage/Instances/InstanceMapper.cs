@@ -22,6 +22,7 @@ public static class InstanceMapper
             CreatedAt = instance.CreatedAt,
             IsFavorite = instance.IsFavorite,
             LastPlayedAt = instance.LastPlayedAt,
+            LaunchArguments = instance.LaunchArguments.ToList(),
             SourceType = sourceType,
             SourceModPackId = modPackId,
             SourceModPackVersion = modPackVersion,
@@ -48,6 +49,6 @@ public static class InstanceMapper
         var mods = dto.Mods.Select(InstalledModMapper.FromDto).ToList();
         var foreignMods = dto.ForeignMods.Select(ForeignModMapper.FromDto).ToList();
 
-        return Instance.FromExisting(instanceId, dto.Name, source, dto.CreatedAt, mods, foreignMods, dto.IsFavorite, dto.LastPlayedAt);
+        return Instance.FromExisting(instanceId, dto.Name, source, dto.CreatedAt, mods, foreignMods, dto.IsFavorite, dto.LastPlayedAt, dto.LaunchArguments);
     }
 }

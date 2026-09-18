@@ -142,6 +142,37 @@ public sealed class FileInstanceRepositoryTests : IDisposable
     }
 
     [Fact]
+    public async Task RoundTrip_PersistsTheLaunchArgumentsInOrder()
+    {
+        var instance = await _repository.CreateAsync("Arguments", InstanceSource.Custom.Value);
+        string[] arguments = ["-windowed", "C:\\Program Files\\KSA\\", "say \"hi\"", "", "\u00e4\u00f6\u00fc", "tab\there"];
+
+        await _repository.UpdateAsync(instance.InstanceId, saved =>
+        {
+            saved.SetLaunchArguments(arguments);
+            return true;
+        });
+
+        var reloaded = await new FileInstanceRepository(_pathProvider).GetByIdAsync(instance.InstanceId);
+        Assert.Equal(arguments, reloaded?.LaunchArguments);
+    }
+
+    [Fact]
+    public async Task GetByIdAsync_FileWithoutLaunchArguments_LoadsAnEmptyList()
+    {
+        var instance = await _repository.CreateAsync("Older", InstanceSource.Custom.Value);
+        var path = _pathProvider.GetInstanceMetadataPath(instance.InstanceId);
+        var lines = File.ReadAllLines(path).Where(line => !line.StartsWith("LaunchArguments", StringComparison.Ordinal)).ToArray();
+        Assert.NotEqual(File.ReadAllLines(path).Length, lines.Length);
+        File.WriteAllLines(path, lines);
+
+        var reloaded = await _repository.GetByIdAsync(instance.InstanceId);
+
+        Assert.NotNull(reloaded);
+        Assert.Empty(reloaded.LaunchArguments);
+    }
+
+    [Fact]
     public async Task CreateAsync_ThrowsWhenNameAlreadyTaken()
     {
         await _repository.CreateAsync("Duplicate Name", InstanceSource.Custom.Value);

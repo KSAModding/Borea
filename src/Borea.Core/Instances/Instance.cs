@@ -11,6 +11,7 @@ public sealed class Instance
 {
     private readonly List<InstalledMod> _mods;
     private readonly List<ForeignMod> _foreignMods;
+    private List<string> _launchArguments;
 
     /// <summary>
     /// Immutable identifier assigned at creation. Used as the instance's folder name
@@ -36,6 +37,9 @@ public sealed class Instance
     /// <summary>When a launch through Borea last started the game, or null when none did.</summary>
     public DateTimeOffset? LastPlayedAt { get; private set; }
 
+    /// <summary>The arguments every launch of this instance passes after the instance handover, in order.</summary>
+    public IReadOnlyList<string> LaunchArguments => new ReadOnlyCollection<string>(_launchArguments);
+
     public Instance(string name, InstanceSource source) : this(Guid.NewGuid(), name, source, DateTimeOffset.UtcNow, Array.Empty<InstalledMod>(), Array.Empty<ForeignMod>())
     {
     }
@@ -51,8 +55,9 @@ public sealed class Instance
         IReadOnlyList<InstalledMod> mods,
         IReadOnlyList<ForeignMod> foreignMods,
         bool isFavorite,
-        DateTimeOffset? lastPlayedAt = null)
-        => new(instanceId, name, source, createdAt, mods, foreignMods, isFavorite, lastPlayedAt);
+        DateTimeOffset? lastPlayedAt = null,
+        IReadOnlyList<string>? launchArguments = null)
+        => new(instanceId, name, source, createdAt, mods, foreignMods, isFavorite, lastPlayedAt, launchArguments);
 
     private Instance(
         Guid instanceId,
@@ -62,7 +67,8 @@ public sealed class Instance
         IReadOnlyList<InstalledMod> mods,
         IReadOnlyList<ForeignMod> foreignMods,
         bool isFavorite = false,
-        DateTimeOffset? lastPlayedAt = null)
+        DateTimeOffset? lastPlayedAt = null,
+        IReadOnlyList<string>? launchArguments = null)
     {
         if (string.IsNullOrWhiteSpace(name))
             throw new ArgumentException("Instance name cannot be null or whitespace.", nameof(name));
@@ -81,6 +87,7 @@ public sealed class Instance
         _foreignMods = foreignMods.ToList();
         IsFavorite = isFavorite;
         LastPlayedAt = lastPlayedAt;
+        _launchArguments = CheckedArguments(launchArguments ?? Array.Empty<string>());
 
         var duplicateId = _mods
             .GroupBy(m => m.ModId, ModIds.Comparer)
@@ -182,6 +189,18 @@ public sealed class Instance
     public void SetFavorite(bool isFavorite) => IsFavorite = isFavorite;
 
     public void RecordPlayed(DateTimeOffset playedAt) => LastPlayedAt = playedAt;
+
+    public void SetLaunchArguments(IReadOnlyList<string> arguments) => _launchArguments = CheckedArguments(arguments);
+
+    // a null character would cut the argument short on its way to the process
+    private static List<string> CheckedArguments(IReadOnlyList<string> arguments)
+    {
+        ArgumentNullException.ThrowIfNull(arguments);
+        if (arguments.Any(argument => argument is null || argument.Contains('\0')))
+            throw new ArgumentException("A launch argument cannot be null or contain a null character.", nameof(arguments));
+
+        return arguments.ToList();
+    }
 
     /// <summary>The newer of <see cref="LastPlayedAt"/> and the last write of a game log, so a start without Borea counts too.</summary>
     public DateTimeOffset? LastPlayedWith(DateTimeOffset? gameLogWrittenAt)

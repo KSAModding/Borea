@@ -12,6 +12,7 @@ public sealed class InstanceDto
     public DateTimeOffset CreatedAt { get; set; }
     public bool IsFavorite { get; set; }
     public DateTimeOffset? LastPlayedAt { get; set; }
+    public List<string> LaunchArguments { get; set; } = new();
 
     /// <summary>"ModPack" or "Custom" discriminator for InstanceSource.</summary>
     public string SourceType { get; set; } = string.Empty;
