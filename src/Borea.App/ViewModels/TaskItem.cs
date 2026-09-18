@@ -103,6 +103,7 @@ public sealed partial class TaskItem : ObservableObject
         TaskKind.ModRemoval => Localization.FormatTaskRemove(Subject ?? string.Empty),
         TaskKind.ModListImport => Localization.FormatTaskCreateInstance(Subject ?? string.Empty),
         TaskKind.ManualReplace => Localization.FormatTaskReplace(Subject ?? string.Empty),
+        TaskKind.LibraryFolderChange => Localization.FormatTaskLibraryFolder(Subject ?? string.Empty),
         _ => Localization.FormatTaskInstall(Subject ?? string.Empty),
     };
 
@@ -164,6 +165,16 @@ public sealed partial class TaskItem : ObservableObject
         Detail = text.Detail;
         Progress = text.Percent;
         HasProgress = text.HasPercent;
+    }
+
+    /// <summary>The step of work that is not an install, with how far it is when that is known.</summary>
+    internal void Report(string step, double? percent)
+    {
+        MarkRunning();
+        Step = step;
+        Detail = null;
+        Progress = percent ?? 0;
+        HasProgress = percent is not null;
     }
 
     internal void End(TaskState state, string? failureReason, DateTimeOffset at)

@@ -65,6 +65,9 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string FormatTaskReplace(string folder)
         => string.Format(CultureInfo.CurrentCulture, Resources.TaskReplaceFormat, folder);
 
+    public string FormatTaskLibraryFolder(string folder)
+        => string.Format(CultureInfo.CurrentCulture, Resources.TaskLibraryFolderFormat, folder);
+
     public string TaskWaiting => Resources.TaskWaiting;
 
     public string TaskRunning => Resources.TaskRunning;
@@ -102,8 +105,13 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string FormatToastReplaced(string folder, string instanceName)
         => string.Format(CultureInfo.CurrentCulture, Resources.ToastReplacedFormat, folder, instanceName);
 
+    public string FormatToastLibraryFolderChanged(string folder)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ToastLibraryFolderChangedFormat, folder);
+
     public string FormatToastInstallStopped(string content)
         => string.Format(CultureInfo.CurrentCulture, Resources.ToastInstallStoppedFormat, content);
+
+    public string ToastLibraryFolderStopped => Resources.ToastLibraryFolderStopped;
 
     public string FormatToastUpdateStopped(string content)
         => string.Format(CultureInfo.CurrentCulture, Resources.ToastUpdateStoppedFormat, content);
@@ -136,6 +144,9 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string FormatToastReplaceFailed(string folder)
         => string.Format(CultureInfo.CurrentCulture, Resources.ToastReplaceFailedFormat, folder);
+
+    public string FormatToastLibraryFolderFailed(string folder)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ToastLibraryFolderFailedFormat, folder);
 
     public string PageHomeHeading => Resources.PageHomeHeading;
 

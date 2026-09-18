@@ -3,6 +3,7 @@ using System.IO;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
+using Borea.Core.History;
 using Borea.Core.Settings;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -17,7 +18,6 @@ namespace Borea.App.ViewModels;
 public partial class MainViewModel
 {
     private CancellationTokenSource? _libraryFolderCancellation;
-
     private TaskCompletionSource? _libraryFolderChangeEnded;
     private int _libraryUses;
 
@@ -66,9 +66,13 @@ public partial class MainViewModel
 
         LibraryFolderMessage = null;
         LibraryFolderError = null;
+
+        // every attempt shows in the task history, also one that Borea refuses
+        var task = StartTask(TaskKind.LibraryFolderChange, WithoutUserProfile(folder ?? BoreaFolder ?? string.Empty));
         if (IsSetupBusy || Volatile.Read(ref _libraryUses) > 0)
         {
             LibraryFolderError = Localization.LibraryFolderWaitForTask;
+            Tasks.End(task, TaskState.Failed, LibraryFolderError);
             return;
         }
 
@@ -77,7 +81,9 @@ public partial class MainViewModel
         _libraryFolderChangeEnded = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         IsChangingLibraryFolder = true;
         LibraryFolderProgressText = Localization.LibraryFolderMoving;
-        var progress = new Progress<LibraryMoveProgress>(ShowLibraryMoveProgress);
+        task.Report(LibraryFolderProgressText, null);
+        var progress = new Progress<LibraryMoveProgress>(value => ShowLibraryMoveProgress(value, task));
+        var state = TaskState.Failed;
         try
         {
             LibraryFolderChangeResult result;
@@ -88,6 +94,7 @@ public partial class MainViewModel
             catch (OperationCanceledException)
             {
                 LibraryFolderMessage = Localization.LibraryFolderCancelled;
+                state = TaskState.Stopped;
                 return;
             }
             catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or InvalidOperationException or ArgumentException or NotSupportedException or AggregateException)
@@ -103,6 +110,8 @@ public partial class MainViewModel
                 return;
             }
 
+            // the folder changed, so a failed reload below shows in the settings and not as a failed change
+            state = TaskState.Finished;
             LibraryFolderMessage = LibraryFolderResultText(result);
             try
             {
@@ -115,6 +124,7 @@ public partial class MainViewModel
         }
         finally
         {
+            Tasks.End(task, state, state == TaskState.Failed ? LibraryFolderError : null);
             _libraryFolderCancellation = null;
             IsChangingLibraryFolder = false;
             CanCancelLibraryFolderChange = false;
@@ -158,7 +168,7 @@ public partial class MainViewModel
         LibraryFolderError = TryOpenWithSystem(folder);
     }
 
-    private void ShowLibraryMoveProgress(LibraryMoveProgress value)
+    private void ShowLibraryMoveProgress(LibraryMoveProgress value, TaskItem task)
     {
         if (!IsChangingLibraryFolder)
             return;
@@ -169,6 +179,7 @@ public partial class MainViewModel
         LibraryFolderProgressText = copying
             ? Localization.FormatLibraryFolderCopying(value.Files, value.TotalFiles, InstallProgressText.Number(value.Bytes), InstallProgressText.Number(value.TotalBytes))
             : Localization.LibraryFolderRemovingOldFiles;
+        task.Report(LibraryFolderProgressText, copying ? LibraryFolderProgress : null);
     }
 
     private string LibraryFolderResultText(LibraryFolderChangeResult result) => result.Outcome switch

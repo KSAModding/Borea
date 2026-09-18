@@ -363,6 +363,9 @@
   <data name="TaskReplaceFormat" xml:space="preserve">
     <value>Replace {0}</value>
   </data>
+  <data name="TaskLibraryFolderFormat" xml:space="preserve">
+    <value>Move the library to {0}</value>
+  </data>
   <data name="TaskWaiting" xml:space="preserve">
     <value>Waiting</value>
   </data>
@@ -408,8 +411,14 @@
   <data name="ToastReplacedFormat" xml:space="preserve">
     <value>{0} replaced in {1}</value>
   </data>
+  <data name="ToastLibraryFolderChangedFormat" xml:space="preserve">
+    <value>The library folder is now {0}</value>
+  </data>
   <data name="ToastInstallStoppedFormat" xml:space="preserve">
     <value>Install of {0} stopped</value>
+  </data>
+  <data name="ToastLibraryFolderStopped" xml:space="preserve">
+    <value>Library move stopped</value>
   </data>
   <data name="ToastUpdateStoppedFormat" xml:space="preserve">
     <value>Update of {0} stopped</value>
@@ -443,6 +452,9 @@
   </data>
   <data name="ToastReplaceFailedFormat" xml:space="preserve">
     <value>Could not replace {0}</value>
+  </data>
+  <data name="ToastLibraryFolderFailedFormat" xml:space="preserve">
+    <value>Could not move the library to {0}</value>
   </data>
   <data name="InstanceTabContent" xml:space="preserve">
     <value>Content</value>

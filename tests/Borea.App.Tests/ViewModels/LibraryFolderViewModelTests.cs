@@ -1,4 +1,5 @@
 using Borea.App.ViewModels;
+using Borea.Core.History;
 using Borea.Core.Instances;
 
 namespace Borea.App.Tests.ViewModels;
@@ -40,6 +41,25 @@ public sealed class LibraryFolderViewModelTests : IDisposable
         Assert.Equal(harness.Root, viewModel.LibraryFolder);
         Assert.True(viewModel.IsDefaultLibraryFolder);
         Assert.Equal("Alpha", Assert.Single(viewModel.Instances).Name);
+    }
+
+    [Fact]
+    public async Task ChangeLibraryFolder_ShowsEveryAttemptInTheTaskHistoryAndAsAToast()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var viewModel = harness.ViewModel;
+
+        await viewModel.ChangeLibraryFolderCommand.ExecuteAsync(_library);
+        await viewModel.ChangeLibraryFolderCommand.ExecuteAsync(Path.Combine(_library, "Inner"));
+
+        var changes = viewModel.Tasks.History.Where(task => task.Kind == TaskKind.LibraryFolderChange).ToList();
+        Assert.Equal([TaskState.Failed, TaskState.Finished], changes.Select(task => task.State));
+        var (refused, moved) = (changes[0], changes[1]);
+        Assert.EndsWith(Path.GetFileName(_library), moved.Title);
+        Assert.Equal(viewModel.LibraryFolderError, refused.FailureReason);
+        Assert.DoesNotContain(viewModel.Tasks.Running, task => task.Kind == TaskKind.LibraryFolderChange);
+        Assert.Contains(viewModel.Toasts.Items, toast => toast.Message == harness.Localization.FormatToastLibraryFolderChanged(moved.Subject!));
+        Assert.Contains(viewModel.Toasts.Items, toast => toast.Message == harness.Localization.FormatToastLibraryFolderFailed(refused.Subject!));
     }
 
     [Fact]
@@ -110,6 +130,8 @@ public sealed class LibraryFolderViewModelTests : IDisposable
         Assert.Equal(harness.Localization.LibraryFolderWaitForTask, viewModel.LibraryFolderError);
         Assert.Equal(harness.Root, viewModel.LibraryFolder);
         Assert.False(Directory.Exists(_library));
+        var refused = Assert.Single(viewModel.Tasks.History, task => task.Kind == TaskKind.LibraryFolderChange);
+        Assert.Equal((TaskState.Failed, harness.Localization.LibraryFolderWaitForTask), (refused.State, refused.FailureReason));
     }
 
     [Fact]
