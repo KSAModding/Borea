@@ -66,6 +66,12 @@
   <data name="UpdateChannelDev" xml:space="preserve">
     <value>Nary a bounty unaccounted fer, even swashbuckler builds</value>
   </data>
+  <data name="SettingsNewsLabel" xml:space="preserve">
+    <value>Scuttlebutt</value>
+  </data>
+  <data name="SettingsFetchAnnouncements" xml:space="preserve">
+    <value>Hear the scuttlebutt from the KSAModding crew</value>
+  </data>
   <data name="SettingsReleaseChannelLabel" xml:space="preserve">
     <value>Barrels o' fun bounty board</value>
   </data>
@@ -81,6 +87,108 @@
   <data name="SettingsLoadImagesFromAuthorHostsHint" xml:space="preserve">
     <value>All o' yer image demands blabber yer Inner Port position to the captain's quarters.</value>
   </data>
+  <data name="SettingsLibraryFolderLabel" xml:space="preserve">
+    <value>List o' Loot treasure chest</value>
+  </data>
+  <data name="SettingsLibraryFolderHint" xml:space="preserve">
+    <value>The Borea stows yer seas and salvage here. Haulin' the List o' Loot takes 'em along. Riggin', caches, logbooks and loaders o' barrels o' fun stay in The Borea's own treasure chest.</value>
+  </data>
+  <data name="SettingsLibraryFolderUseDefault" xml:space="preserve">
+    <value>Haul back to the usual treasure chest</value>
+  </data>
+  <data name="SettingsLibraryFolderMove" xml:space="preserve">
+    <value>Haul the List o' Loot...</value>
+  </data>
+  <data name="SettingsLibraryFolderMoveToolTip" xml:space="preserve">
+    <value>Pick a new treasure chest fer yer seas and salvage. The Borea hauls 'em there.</value>
+  </data>
+  <data name="SettingsLibraryFolderOpenToolTip" xml:space="preserve">
+    <value>Shows this treasure chest in yer file manager. Nothin' gets hauled.</value>
+  </data>
+  <data name="SettingsLibraryFolderPickerTitle" xml:space="preserve">
+    <value>Choose the new List o' Loot treasure chest</value>
+  </data>
+  <data name="LibraryFolderMoving" xml:space="preserve">
+    <value>Haulin' the List o' Loot to a new treasure chest...</value>
+  </data>
+  <data name="LibraryFolderCopyingFormat" xml:space="preserve">
+    <value>Parrotin' {0} o' {1} files ({2} o' {3} MB)</value>
+  </data>
+  <data name="LibraryFolderRemovingOldFiles" xml:space="preserve">
+    <value>Tossin' the old files overboard...</value>
+  </data>
+  <data name="LibraryFolderMovedFormat" xml:space="preserve">
+    <value>Hauled the seas and salvage to {0}.</value>
+  </data>
+  <data name="LibraryFolderMovedOldFilesRemainFormat" xml:space="preserve">
+    <value>Hauled the seas and salvage to {0}. The Borea couldn't toss every old file in {1} overboard.</value>
+  </data>
+  <data name="LibraryFolderAdoptedFormat" xml:space="preserve">
+    <value>{0} already held a List o' Loot. The Borea sails with it now.</value>
+  </data>
+  <data name="LibraryFolderCancelled" xml:space="preserve">
+    <value>Belay that! The List o' Loot stays where it was.</value>
+  </data>
+  <data name="LibraryFolderFailedFormat" xml:space="preserve">
+    <value>The List o' Loot treasure chest ain't changed: {0}</value>
+  </data>
+  <data name="LibraryFolderReloadFailedFormat" xml:space="preserve">
+    <value>The List o' Loot be in {0} now, but The Borea couldn't heave it back up: {1} Restart The Borea.</value>
+  </data>
+  <data name="LibraryFolderNotAbsoluteFormat" xml:space="preserve">
+    <value>{0} ain't an absolute path.</value>
+  </data>
+  <data name="LibraryFolderIsFileFormat" xml:space="preserve">
+    <value>{0} be a file, not a treasure chest.</value>
+  </data>
+  <data name="LibraryFolderCurrent" xml:space="preserve">
+    <value>The List o' Loot already be in this treasure chest.</value>
+  </data>
+  <data name="LibraryFolderInsideCurrentFormat" xml:space="preserve">
+    <value>Choose a treasure chest outside the current List o' Loot treasure chest {0}.</value>
+  </data>
+  <data name="LibraryFolderContainsCurrentFormat" xml:space="preserve">
+    <value>Choose a treasure chest that don't hold the current List o' Loot treasure chest {0}.</value>
+  </data>
+  <data name="LibraryFolderInsideBoreaFolderFormat" xml:space="preserve">
+    <value>Choose The Borea's own treasure chest {0} itself or a treasure chest outside it.</value>
+  </data>
+  <data name="LibraryFolderContainsBoreaFolderFormat" xml:space="preserve">
+    <value>Choose a treasure chest that don't hold The Borea's own treasure chest {0}.</value>
+  </data>
+  <data name="LibraryFolderInsideGame" xml:space="preserve">
+    <value>Choose a treasure chest outside the game treasure chest.</value>
+  </data>
+  <data name="LibraryFolderInsideProfile" xml:space="preserve">
+    <value>Choose a treasure chest outside My Games/Kitten Space Agency.</value>
+  </data>
+  <data name="LibraryFolderNotWritableFormat" xml:space="preserve">
+    <value>The Borea ain't able to carve out or scribble in {0}.</value>
+  </data>
+  <data name="LibraryFolderTargetNotEmptyFormat" xml:space="preserve">
+    <value>{0} already has an Instances or Backups treasure chest without a sea The Borea can make heads or tails of. Choose another treasure chest.</value>
+  </data>
+  <data name="LibraryFolderBothHaveInstancesFormat" xml:space="preserve">
+    <value>Both {0} and {1} hold seas. The Borea don't merge Lists o' Loot.</value>
+  </data>
+  <data name="LibraryFolderGameRunning" xml:space="preserve">
+    <value>Ye be sailin' the game. Quit sailin' first, then change the List o' Loot treasure chest.</value>
+  </data>
+  <data name="LibraryFolderBoreaRunning" xml:space="preserve">
+    <value>Another Borea window or command be runnin'. Belay it first, then change the List o' Loot treasure chest.</value>
+  </data>
+  <data name="LibraryFolderInstanceBusy" xml:space="preserve">
+    <value>A sea be changin'. Wait 'til that be done, then give 'er another go.</value>
+  </data>
+  <data name="LibraryFolderFileLockedFormat" xml:space="preserve">
+    <value>{0} be open in another program. Quit sailin' first, then change the List o' Loot treasure chest.</value>
+  </data>
+  <data name="LibraryFolderWaitForTask" xml:space="preserve">
+    <value>Wait 'til The Borea finishes the current chore, then change the List o' Loot treasure chest.</value>
+  </data>
+  <data name="LibraryFolderBusy" xml:space="preserve">
+    <value>The Borea be haulin' the List o' Loot treasure chest. Give 'er another go when the haul be done.</value>
+  </data>
   <data name="UpdateAvailable" xml:space="preserve">
     <value>A fresher bounty fer The Borea awaits ye:</value>
   </data>
@@ -89,6 +197,36 @@
   </data>
   <data name="UpdateViewRelease" xml:space="preserve">
     <value>Have a gander at the bounty</value>
+  </data>
+  <data name="UpdateSeeMore" xml:space="preserve">
+    <value>Have a gander</value>
+  </data>
+  <data name="UpdateDismiss" xml:space="preserve">
+    <value>Shoo</value>
+  </data>
+  <data name="UpdateNotesTitle" xml:space="preserve">
+    <value>Fresh bounties fer The Borea</value>
+  </data>
+  <data name="UpdateInstalled" xml:space="preserve">
+    <value>Onboard</value>
+  </data>
+  <data name="UpdateNoNotes" xml:space="preserve">
+    <value>This bounty came with nary a note.</value>
+  </data>
+  <data name="GameBuildAvailable" xml:space="preserve">
+    <value>A fresher game build awaits ye:</value>
+  </data>
+  <data name="GameBuildDownload" xml:space="preserve">
+    <value>Haul it in</value>
+  </data>
+  <data name="GamePatchNotesTitle" xml:space="preserve">
+    <value>KSA logbook o' changes</value>
+  </data>
+  <data name="GamePatchNotesEmpty" xml:space="preserve">
+    <value>The game treasure chest has nary a logbook o' changes.</value>
+  </data>
+  <data name="AnnouncementOpenLink" xml:space="preserve">
+    <value>Follow the map</value>
   </data>
   <data name="SystemDefaultRegionalFormat" xml:space="preserve">
     <value>Usual cut o' yer jib</value>
@@ -110,6 +248,9 @@
   </data>
   <data name="HomeNoInstance" xml:space="preserve">
     <value>Nary a sea charted</value>
+  </data>
+  <data name="HomeNoActiveInstance" xml:space="preserve">
+    <value>Nary an active sea</value>
   </data>
   <data name="HomeInstanceSourceCustom" xml:space="preserve">
     <value>Use yer imagination</value>
@@ -135,6 +276,9 @@
   <data name="LibraryRename" xml:space="preserve">
     <value>Give a more fearsome name</value>
   </data>
+  <data name="LibraryLaunchArguments" xml:space="preserve">
+    <value>Orders fer settin' sail</value>
+  </data>
   <data name="LibraryOpenFolder" xml:space="preserve">
     <value>Open treasure chest</value>
   </data>
@@ -159,11 +303,17 @@
   <data name="LibraryImportFromProfile" xml:space="preserve">
     <value>Loot from game board</value>
   </data>
+  <data name="LibraryImportFromProfileToolTip" xml:space="preserve">
+    <value>Parrots the barrels o' fun o' yer game board into a new sea.</value>
+  </data>
   <data name="LibraryNeverPlayed" xml:space="preserve">
     <value>Ain't ever sailed</value>
   </data>
   <data name="LibraryLastPlayedFormat" xml:space="preserve">
     <value>Sailed last on {0}</value>
+  </data>
+  <data name="LibraryNowActiveFormat" xml:space="preserve">
+    <value>{0} be the active sea now.</value>
   </data>
   <data name="LibrarySortName" xml:space="preserve">
     <value>What they be called</value>
@@ -171,8 +321,17 @@
   <data name="LibrarySortLastPlayed" xml:space="preserve">
     <value>Sailed last</value>
   </data>
+  <data name="LibraryActiveHeading" xml:space="preserve">
+    <value>Flag hoisted</value>
+  </data>
+  <data name="LibraryOtherInstancesHeading" xml:space="preserve">
+    <value>Seas</value>
+  </data>
   <data name="LibraryImportModList" xml:space="preserve">
     <value>Loot a list o' barrels o' fun</value>
+  </data>
+  <data name="LibraryMoreActions" xml:space="preserve">
+    <value>More orders</value>
   </data>
   <data name="LibraryDuplicate" xml:space="preserve">
     <value>Parrot</value>
@@ -218,6 +377,180 @@
   </data>
   <data name="NavigationTasks" xml:space="preserve">
     <value>Chores</value>
+  </data>
+  <data name="TasksEmpty" xml:space="preserve">
+    <value>Nary a chore yet.</value>
+  </data>
+  <data name="TaskIndexRefresh" xml:space="preserve">
+    <value>Freshen up the bulletin board</value>
+  </data>
+  <data name="TaskInstallFormat" xml:space="preserve">
+    <value>Haul {0} onboard</value>
+  </data>
+  <data name="TaskUpdateFormat" xml:space="preserve">
+    <value>Bring in the tide fer {0}</value>
+  </data>
+  <data name="TaskUpdateAll" xml:space="preserve">
+    <value>Bring in the tide on all barrels o' fun</value>
+  </data>
+  <data name="TaskRemoveFormat" xml:space="preserve">
+    <value>Toss {0} overboard</value>
+  </data>
+  <data name="TaskCreateInstanceFormat" xml:space="preserve">
+    <value>Carve out sea {0}</value>
+  </data>
+  <data name="TaskReplaceFormat" xml:space="preserve">
+    <value>Swab {0}</value>
+  </data>
+  <data name="TaskLibraryFolderFormat" xml:space="preserve">
+    <value>Haul the List o' Loot to {0}</value>
+  </data>
+  <data name="TaskWaiting" xml:space="preserve">
+    <value>Waitin'</value>
+  </data>
+  <data name="TaskRunning" xml:space="preserve">
+    <value>Underway</value>
+  </data>
+  <data name="TaskPaused" xml:space="preserve">
+    <value>Dropped anchor</value>
+  </data>
+  <data name="TaskFinished" xml:space="preserve">
+    <value>Shipshape</value>
+  </data>
+  <data name="TaskStopped" xml:space="preserve">
+    <value>Belayed</value>
+  </data>
+  <data name="TaskFailed" xml:space="preserve">
+    <value>Ran ashore</value>
+  </data>
+  <data name="TaskRetryModMissing" xml:space="preserve">
+    <value>This barrel o' fun ain't in the sea any longer.</value>
+  </data>
+  <data name="ToastOpenInstance" xml:space="preserve">
+    <value>Open sea</value>
+  </data>
+  <data name="ToastAddedFormat" xml:space="preserve">
+    <value>{0} hauled onboard {1}</value>
+  </data>
+  <data name="ToastUpdatedFormat" xml:space="preserve">
+    <value>The tide brought {0} to {1} in {2}</value>
+  </data>
+  <data name="ToastUpdatedAllOneFormat" xml:space="preserve">
+    <value>1 barrel o' fun got a new tide in {0}</value>
+  </data>
+  <data name="ToastUpdatedAllFormat" xml:space="preserve">
+    <value>{0} barrels o' fun got a new tide in {1}</value>
+  </data>
+  <data name="ToastRemovedFormat" xml:space="preserve">
+    <value>{0} tossed overboard from {1}</value>
+  </data>
+  <data name="ToastLoaderInstalledFormat" xml:space="preserve">
+    <value>{0} {1} hauled onboard</value>
+  </data>
+  <data name="ToastInstanceCreatedFormat" xml:space="preserve">
+    <value>Sea {0} carved out</value>
+  </data>
+  <data name="ToastReplacedFormat" xml:space="preserve">
+    <value>{0} swabbed in {1}</value>
+  </data>
+  <data name="ToastLibraryFolderChangedFormat" xml:space="preserve">
+    <value>The List o' Loot treasure chest be {0} now</value>
+  </data>
+  <data name="ToastInstallStoppedFormat" xml:space="preserve">
+    <value>Belayed haulin' {0} onboard</value>
+  </data>
+  <data name="ToastLibraryFolderStopped" xml:space="preserve">
+    <value>Belayed haulin' the List o' Loot</value>
+  </data>
+  <data name="ToastUpdateStoppedFormat" xml:space="preserve">
+    <value>Belayed the new tide fer {0}</value>
+  </data>
+  <data name="ToastUpdateAllStoppedFormat" xml:space="preserve">
+    <value>Belayed the new tide fer the barrels o' fun in {0}</value>
+  </data>
+  <data name="ToastStoppedInstalledFormat" xml:space="preserve">
+    <value>{0} o' {1} barrels o' fun hauled onboard</value>
+  </data>
+  <data name="ToastStoppedUpdatedFormat" xml:space="preserve">
+    <value>{0} o' {1} barrels o' fun brought in on the tide</value>
+  </data>
+  <data name="ToastIndexRefreshFailed" xml:space="preserve">
+    <value>Couldn't freshen up the bulletin board</value>
+  </data>
+  <data name="ToastInstallFailedFormat" xml:space="preserve">
+    <value>Couldn't haul {0} onboard</value>
+  </data>
+  <data name="ToastUpdateFailedFormat" xml:space="preserve">
+    <value>Couldn't bring in the tide fer {0}</value>
+  </data>
+  <data name="ToastUpdateAllFailedFormat" xml:space="preserve">
+    <value>Couldn't bring in the tide fer the barrels o' fun in {0}</value>
+  </data>
+  <data name="ToastRemoveFailedFormat" xml:space="preserve">
+    <value>Couldn't toss {0} overboard</value>
+  </data>
+  <data name="ToastCreateInstanceFailedFormat" xml:space="preserve">
+    <value>Couldn't carve out sea {0}</value>
+  </data>
+  <data name="ToastReplaceFailedFormat" xml:space="preserve">
+    <value>Couldn't swab {0}</value>
+  </data>
+  <data name="ToastLibraryFolderFailedFormat" xml:space="preserve">
+    <value>Couldn't haul the List o' Loot to {0}</value>
+  </data>
+  <data name="ToastActivateFailedFormat" xml:space="preserve">
+    <value>Couldn't hoist the flag on {0}</value>
+  </data>
+  <data name="ToastDeactivateFailedFormat" xml:space="preserve">
+    <value>Couldn't lower the flag on {0}</value>
+  </data>
+  <data name="ToastDeleteFailedFormat" xml:space="preserve">
+    <value>Couldn't toss {0} overboard</value>
+  </data>
+  <data name="ToastDuplicateFailedFormat" xml:space="preserve">
+    <value>Couldn't parrot {0}</value>
+  </data>
+  <data name="ToastCreateFailedFormat" xml:space="preserve">
+    <value>Couldn't chart {0}</value>
+  </data>
+  <data name="ToastRenameFailedFormat" xml:space="preserve">
+    <value>Couldn't give {0} a more fearsome name</value>
+  </data>
+  <data name="ToastLaunchArgumentsFailedFormat" xml:space="preserve">
+    <value>Couldn't stow the orders fer settin' sail o' {0}</value>
+  </data>
+  <data name="ToastEnableFailedFormat" xml:space="preserve">
+    <value>Couldn't bring {0} back from the island</value>
+  </data>
+  <data name="ToastDisableFailedFormat" xml:space="preserve">
+    <value>Couldn't maroon {0}</value>
+  </data>
+  <data name="ToastCheckFailedFormat" xml:space="preserve">
+    <value>Couldn't take a gander at {0}</value>
+  </data>
+  <data name="ToastOpenFailedFormat" xml:space="preserve">
+    <value>Couldn't crack open {0}</value>
+  </data>
+  <data name="ToastImportModListFailed" xml:space="preserve">
+    <value>Couldn't loot the list o' barrels o' fun</value>
+  </data>
+  <data name="ToastExportModListFailedFormat" xml:space="preserve">
+    <value>Couldn't stow the list o' barrels o' fun o' {0}</value>
+  </data>
+  <data name="ToastCopyModListFailedFormat" xml:space="preserve">
+    <value>Couldn't parrot the list o' barrels o' fun o' {0}</value>
+  </data>
+  <data name="ToastBackUpFailedFormat" xml:space="preserve">
+    <value>Couldn't salvage {0}</value>
+  </data>
+  <data name="ToastBackUpAllFailed" xml:space="preserve">
+    <value>Couldn't salvage the tales</value>
+  </data>
+  <data name="ToastCopyFailedFormat" xml:space="preserve">
+    <value>Couldn't parrot {0}</value>
+  </data>
+  <data name="ToastCopyFromProfileFailed" xml:space="preserve">
+    <value>Couldn't parrot from the game board</value>
   </data>
   <data name="InstanceTabContent" xml:space="preserve">
     <value>Booty</value>
@@ -549,6 +882,24 @@
   <data name="TimeYearsAgoFormat" xml:space="preserve">
     <value>{0} years ago</value>
   </data>
+  <data name="TimeMinutesAgoShortFormat" xml:space="preserve">
+    <value>{0}m ago</value>
+  </data>
+  <data name="TimeHoursAgoShortFormat" xml:space="preserve">
+    <value>{0}h ago</value>
+  </data>
+  <data name="TimeDaysAgoShortFormat" xml:space="preserve">
+    <value>{0}d ago</value>
+  </data>
+  <data name="TimeWeeksAgoShortFormat" xml:space="preserve">
+    <value>{0}w ago</value>
+  </data>
+  <data name="TimeMonthsAgoShortFormat" xml:space="preserve">
+    <value>{0}mo ago</value>
+  </data>
+  <data name="TimeYearsAgoShortFormat" xml:space="preserve">
+    <value>{0}y ago</value>
+  </data>
   <data name="DiscoverAdd" xml:space="preserve">
     <value>Add to the active sea</value>
   </data>
@@ -558,11 +909,26 @@
   <data name="DiscoverNoInstance" xml:space="preserve">
     <value>Carve out a sea first to add booty.</value>
   </data>
+  <data name="DiscoverNoActiveInstance" xml:space="preserve">
+    <value>Hoist the flag on a sea to add booty.</value>
+  </data>
+  <data name="DiscoverCreateInstance" xml:space="preserve">
+    <value>Carve out a sea</value>
+  </data>
+  <data name="DiscoverOpenLibrary" xml:space="preserve">
+    <value>Open List o' Loot</value>
+  </data>
   <data name="DiscoverNoRelease" xml:space="preserve">
     <value>This listing has nary a bounty to haul onboard.</value>
   </data>
   <data name="InstallAnyway" xml:space="preserve">
     <value>Haul onboard anyway</value>
+  </data>
+  <data name="InstallAlsoAddsFormat" xml:space="preserve">
+    <value>Also hauls {0} onboard</value>
+  </data>
+  <data name="InstallAlsoAddsMoreFormat" xml:space="preserve">
+    <value>Also hauls {0} and {1} more onboard</value>
   </data>
   <data name="InstallReleaseChannelFormat" xml:space="preserve">
     <value>Bounty {0} has a status o' {1}, which yer bounty deck ain't floatin'.</value>
@@ -678,8 +1044,23 @@
   <data name="ModalRenameInstanceTitle" xml:space="preserve">
     <value>Change name o' the sea</value>
   </data>
+  <data name="ModalNameRequired" xml:space="preserve">
+    <value>Give the sea a name.</value>
+  </data>
   <data name="ModalNameLabel" xml:space="preserve">
     <value>Name</value>
+  </data>
+  <data name="ModalLaunchArgumentsLabel" xml:space="preserve">
+    <value>Orders</value>
+  </data>
+  <data name="ModalLaunchArgumentsHint" xml:space="preserve">
+    <value>Every time this sea sets sail, these orders go to the loader o' barrels o' fun and the game. Put an order with spaces in double quotes.</value>
+  </data>
+  <data name="ModalLaunchArgumentsNone" xml:space="preserve">
+    <value>Nary an order</value>
+  </data>
+  <data name="LaunchArgumentsHandoverFlagFormat" xml:space="preserve">
+    <value>The Borea already hands {1} with the sea's treasure chest to {0}. Toss it overboard, or {0} could use another treasure chest.</value>
   </data>
   <data name="ModalClose" xml:space="preserve">
     <value>Close the hatch</value>
@@ -746,6 +1127,21 @@
   </data>
   <data name="ContentDownloads" xml:space="preserve">
     <value>Booty in the hold</value>
+  </data>
+  <data name="ContentDownloadsExactFormat" xml:space="preserve">
+    <value>{0} hauls into the hold</value>
+  </data>
+  <data name="ContentDownloadSize" xml:space="preserve">
+    <value>Heft o' the haul</value>
+  </data>
+  <data name="ContentSizeHeader" xml:space="preserve">
+    <value>Heft</value>
+  </data>
+  <data name="ContentSizeOnDisk" xml:space="preserve">
+    <value>Heft in the hold</value>
+  </data>
+  <data name="InstanceSizeToolTip" xml:space="preserve">
+    <value>Heft o' the sea's treasure chest in the hold</value>
   </data>
   <data name="ContentShowVersions" xml:space="preserve">
     <value>Show</value>
@@ -860,6 +1256,18 @@
   </data>
   <data name="SetupFoundGames" xml:space="preserve">
     <value>Borea found KSA in more than one folder. Select the folder you play from.</value>
+  </data>
+  <data name="SetupFoundGameFormat" xml:space="preserve">
+    <value>The Borea found KSA {0} in {1}. Sail with it?</value>
+  </data>
+  <data name="SetupUseFoundGame" xml:space="preserve">
+    <value>Sail with it</value>
+  </data>
+  <data name="SetupUseSelectedGame" xml:space="preserve">
+    <value>Sail with this one</value>
+  </data>
+  <data name="SetupLater" xml:space="preserve">
+    <value>Next tide</value>
   </data>
   <data name="SetupLoader" xml:space="preserve">
     <value>Loader o' barrels o' fun</value>
@@ -1015,10 +1423,10 @@
     <value>Setting game riggin'</value>
   </data>
   <data name="SharedProfileBannerOne" xml:space="preserve">
-    <value>1 barrel o' fun in yer game board</value>
+    <value>1 barrel o' fun in yer game board. Carve out a sea from it. Yer game board stays the way it is.</value>
   </data>
   <data name="SharedProfileBannerFormat" xml:space="preserve">
-    <value>{0} barrels o' fun in yer game board</value>
+    <value>{0} barrels o' fun in yer game board. Carve out a sea from 'em. Yer game board stays the way it is.</value>
   </data>
   <data name="SharedProfileCreateInstance" xml:space="preserve">
     <value>Chart new sea</value>
@@ -1029,8 +1437,11 @@
   <data name="SharedProfileModalTitle" xml:space="preserve">
     <value>Carve out a sea from yer game board</value>
   </data>
-  <data name="SharedProfileModalHint" xml:space="preserve">
-    <value>The Borea parrots the barrels o' fun with their order to haul onboard and whether they are enabled. Yer game board stays the way it is.</value>
+  <data name="SharedProfileModalCopies" xml:space="preserve">
+    <value>The Borea parrots the barrels o' fun from My Games/Kitten Space Agency into a new sea, with their order to haul onboard and whether they be on or off.</value>
+  </data>
+  <data name="SharedProfileModalUnchanged" xml:space="preserve">
+    <value>Nary a thing in that treasure chest changes.</value>
   </data>
   <data name="SharedProfileImporting" xml:space="preserve">
     <value>The Borea parrots the barrels o' fun and compares 'em with the bulletin board. Belay this wind'er to have it keel over.</value>
@@ -1046,6 +1457,9 @@
   </data>
   <data name="DiscoverInstalledInFormat" xml:space="preserve">
     <value>Hauled onboard as {0}</value>
+  </data>
+  <data name="DiscoverInstalledModFormat" xml:space="preserve">
+    <value>{0} be hauled onboard</value>
   </data>
   <data name="PackModCountFormat" xml:space="preserve">
     <value>Barrels o' fun: {0}</value>
@@ -1068,6 +1482,9 @@
   <data name="InstallDownloadingFormat" xml:space="preserve">
     <value>Throwin' into the hold {0}</value>
   </data>
+  <data name="InstallPausedFormat" xml:space="preserve">
+    <value>{0} dropped anchor</value>
+  </data>
   <data name="InstallExtractingFormat" xml:space="preserve">
     <value>Unpackin' {0}</value>
   </data>
@@ -1089,6 +1506,36 @@
   <data name="InstallMinutesLeftFormat" xml:space="preserve">
     <value>give 'er take {0} min</value>
   </data>
+  <data name="InstallStop" xml:space="preserve">
+    <value>Belay</value>
+  </data>
+  <data name="InstallPause" xml:space="preserve">
+    <value>Drop anchor</value>
+  </data>
+  <data name="InstallResume" xml:space="preserve">
+    <value>Weigh anchor</value>
+  </data>
+  <data name="InstallStopping" xml:space="preserve">
+    <value>Belayin'</value>
+  </data>
+  <data name="InstallStoppingAfterMod" xml:space="preserve">
+    <value>Belayin' after this barrel o' fun</value>
+  </data>
+  <data name="InstallStopped" xml:space="preserve">
+    <value>Haulin' belayed.</value>
+  </data>
+  <data name="InstallStoppedAfterFormat" xml:space="preserve">
+    <value>Belayed. {0} o' {1} barrels o' fun hauled onboard.</value>
+  </data>
+  <data name="UpdateStopped" xml:space="preserve">
+    <value>New tide belayed.</value>
+  </data>
+  <data name="UpdateStoppedAfterFormat" xml:space="preserve">
+    <value>Belayed. {0} o' {1} barrels o' fun brought in on the tide.</value>
+  </data>
+  <data name="InstallClosing" xml:space="preserve">
+    <value>The Borea belays the chores still underway and drops anchor when they be done.</value>
+  </data>
   <data name="LaunchWithoutModLoader" xml:space="preserve">
     <value>Fire KSA out the cannon without a loader o' barrels o' fun</value>
   </data>
@@ -1097,6 +1544,27 @@
   </data>
   <data name="LaunchInstanceMissing" xml:space="preserve">
     <value>The map o' this sea be lost to time.</value>
+  </data>
+  <data name="LaunchLoaderNotInstalledFormat" xml:space="preserve">
+    <value>The loader o' barrels o' fun {0} ain't hauled onboard. Loaders o' barrels o' fun are set up from the Game settings.</value>
+  </data>
+  <data name="LaunchNeededLoaderNotInstalledFormat" xml:space="preserve">
+    <value>The barrels o' fun in this sea be needin' the loader o' barrels o' fun {0}, and it ain't hauled onboard. Loaders o' barrels o' fun are set up from the Game settings.</value>
+  </data>
+  <data name="LaunchInstallLoaderFormat" xml:space="preserve">
+    <value>This sea be needin' {0}. Haul it onboard now?</value>
+  </data>
+  <data name="LaunchSetUpGameFirstFormat" xml:space="preserve">
+    <value>This sea be needin' {0}. Draw up the game treasure chest first.</value>
+  </data>
+  <data name="LaunchDifferentLoadersNeededFormat" xml:space="preserve">
+    <value>The barrels o' fun in this sea be needin' different loaders: {0}. A sea sets sail through one loader only. Toss barrels o' fun overboard 'til they all be needin' the same loader.</value>
+  </data>
+  <data name="LaunchLoaderNotListedFormat" xml:space="preserve">
+    <value>Nary an X marks the spot fer {0}. The Borea needs the listin' of a loader hauled onboard to know how to set it sailin'.</value>
+  </data>
+  <data name="LaunchNoLoaderTakesInstanceFormat" xml:space="preserve">
+    <value>Nary a barrel o' fun in this sea be needin' a loader, and no loader onboard can set a sea sailin'. To set sail with KSA without a loader, use "{0}" in Port. It be usin' the shared board, not this sea.</value>
   </data>
   <data name="LaunchWithoutModLoaderToolTip" xml:space="preserve">
     <value>Fires KSA out the cannon the same as firing KSA.exe out the cannon. It be usin' the shared board that KSA creates, not a sea o' The Borea.</value>
@@ -1117,13 +1585,16 @@
     <value>This sea ain't be makin' a splash. Have it make a splash to add or remove booty from 'ere.</value>
   </data>
   <data name="LaunchStartingFormat" xml:space="preserve">
-    <value>Takin' off with {0}…</value>
+    <value>Takin' off with {0}...</value>
   </data>
   <data name="LaunchModBrokeFormat" xml:space="preserve">
     <value>{0} {1} made {2} keel over before it could take off. It may not work with this version o' KSA. Maroon it and try again, or look fer an new tide.</value>
   </data>
   <data name="LaunchExitedEarlyFormat" xml:space="preserve">
     <value>{0} keeled over right after takin' off (exit code {1}). The d'tails show what it scribbled down.</value>
+  </data>
+  <data name="LaunchStoppedTitleFormat" xml:space="preserve">
+    <value>{0} keeled over</value>
   </data>
   <data name="LaunchDisableModFormat" xml:space="preserve">
     <value>Maroon {0}</value>
