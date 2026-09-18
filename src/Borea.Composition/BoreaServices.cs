@@ -1,6 +1,7 @@
 using System.Net.Http.Headers;
 using Borea.Core.Dependencies;
 using Borea.Core.Game;
+using Borea.Core.History;
 using Borea.Core.Index;
 using Borea.Core.Instances;
 using Borea.Core.Launch;
@@ -23,6 +24,7 @@ using Borea.Network.Planning;
 using Borea.Network.Sources;
 using Borea.Network.SpaceDock;
 using Borea.Storage.Game;
+using Borea.Storage.History;
 using Borea.Storage.Images;
 using Borea.Storage.Instances;
 using Borea.Storage.Index;
@@ -83,6 +85,8 @@ public sealed class BoreaServices : IDisposable
     public required IGameDirectoryChanger GameDirectoryChanger { get; init; }
 
     public required IAppPreferencesRepository AppPreferences { get; init; }
+
+    public required ITaskHistoryRepository TaskHistory { get; init; }
 
     public required IInstanceRepository Instances { get; init; }
 
@@ -292,6 +296,7 @@ public sealed class BoreaServices : IDisposable
             SettingsRepository = settingsRepository,
             GameDirectoryChanger = new GameDirectoryChanger(settingsRepository, mods, loaderConfiguration),
             AppPreferences = new FileAppPreferencesRepository(paths),
+            TaskHistory = new FileTaskHistoryRepository(paths),
             Instances = instances,
             GameData = new FileGameDataReader(paths),
             GameSaves = new FileGameSaveStore(paths),

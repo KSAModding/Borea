@@ -230,6 +230,7 @@ public sealed class GamePathProviderTests
             provider.GetModPackFavoritesPath(),
             provider.GetBoreaSettingsPath(),
             provider.GetAppPreferencesPath(),
+            provider.GetTaskHistoryPath(),
             provider.GetIndexPath()
         };
 
