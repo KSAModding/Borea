@@ -16,7 +16,10 @@
                         <Border Classes="chip" HorizontalAlignment="Left" VerticalAlignment="Center" IsVisible="{Binding InstanceName, Converter={x:Static ObjectConverters.IsNotNull}}">
                             <TextBlock Text="{Binding InstanceName}" TextTrimming="CharacterEllipsis" />
                         </Border>
-                        <Button Grid.Column="2" Classes="text" Content="{Binding Run.StopText}" Command="{Binding Run.StopCommand}" IsVisible="{Binding CanStop}" VerticalAlignment="Center" />
+                        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center" IsVisible="{Binding CanStop}">
+                            <Button Classes="text" Content="{Binding Run.PauseText}" Command="{Binding Run.TogglePauseCommand}" />
+                            <Button Classes="text" Content="{Binding Run.StopText}" Command="{Binding Run.StopCommand}" />
+                        </StackPanel>
                     </Grid>
                 </StackPanel>
             </Border>
