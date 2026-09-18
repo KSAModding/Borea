@@ -6,7 +6,7 @@
              x:DataType="vm:MainViewModel">
     <!-- Home -->
     <ScrollViewer>
-        <StackPanel MaxWidth="700" Margin="32,42,32,32">
+        <views:PageBodyPanel>
             <!-- c/breadcrumb, and the launch split button on the right -->
             <Grid ColumnDefinitions="*,Auto">
                 <StackPanel Orientation="Horizontal" Spacing="4" Height="24" VerticalAlignment="Center">
@@ -76,16 +76,16 @@
                 </Button>
             </Grid>
 
-            <ItemsControl ItemsSource="{Binding RecentItems}" Margin="0,16,-5,0" IsVisible="{Binding HasRecentItems}">
+            <ItemsControl ItemsSource="{Binding RecentItems}" Margin="0,16,0,0" IsVisible="{Binding HasRecentItems}">
                 <ItemsControl.ItemsPanel>
                     <ItemsPanelTemplate>
-                        <UniformGrid Columns="4" />
+                        <WrapPanel ItemSpacing="5" LineSpacing="5" />
                     </ItemsPanelTemplate>
                 </ItemsControl.ItemsPanel>
                 <ItemsControl.ItemTemplate>
                     <DataTemplate x:DataType="vm:RecentItem">
                         <!-- the tile shows the icon with the text over its bottom, and the gradient when no icon shows -->
-                        <Button Classes="plain" Margin="0,0,5,5" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Command="{Binding OpenCommand}" AutomationProperties.Name="{Binding Name}">
+                        <Button Classes="plain" Width="171" HorizontalContentAlignment="Stretch" Command="{Binding OpenCommand}" AutomationProperties.Name="{Binding Name}">
                             <Border Classes="card" Height="171" Background="{StaticResource Brush.Thumbnail}">
                                 <Panel>
                                     <views:ListingImageView Image="{Binding Icon}" Background="{StaticResource Brush.Surface}" />
@@ -114,6 +114,6 @@
                     </DataTemplate>
                 </ItemsControl.ItemTemplate>
             </ItemsControl>
-        </StackPanel>
+        </views:PageBodyPanel>
     </ScrollViewer>
 </UserControl>

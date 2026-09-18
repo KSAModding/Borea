@@ -8,9 +8,8 @@
     <!-- Discover: the list, with the filter panel along the right edge -->
     <Grid>
         <ScrollViewer>
-            <!-- the list keeps the center line of Home and Library, and moves left only when the panel needs the room -->
-            <views:PageBodyPanel>
-                <StackPanel Margin="32,42,32,32">
+            <views:PageBodyPanel HasSidePanel="True">
+                <StackPanel>
                     <StackPanel Orientation="Horizontal" Spacing="4" Height="24">
                         <Path Classes="icon" Data="{StaticResource Icon.Compass}" />
                         <TextBlock Classes="label-lg" Text="{Binding Localization.PageDiscoverHeading}" VerticalAlignment="Center" />

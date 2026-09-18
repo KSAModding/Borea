@@ -9,8 +9,8 @@
     <Grid>
         <ScrollViewer>
             <!-- laid out like Discover, so the page does not move sideways when a row opens -->
-            <views:PageBodyPanel>
-                <StackPanel Margin="32,42,32,32">
+            <views:PageBodyPanel HasSidePanel="True">
+                <StackPanel Container.Name="page-body" Container.Sizing="Width">
                     <StackPanel Orientation="Horizontal" Spacing="4" Height="24" IsVisible="{Binding !IsContentFromInstance}">
                         <Path Classes="icon" Data="{StaticResource Icon.Compass}" />
                         <Button Classes="plain" Command="{Binding SetMainWindowDiscover}">

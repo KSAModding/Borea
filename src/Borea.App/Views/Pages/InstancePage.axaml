@@ -135,7 +135,7 @@
 
     <!-- Instance (library-instance) -->
     <ScrollViewer>
-        <StackPanel MaxWidth="700" Margin="32,42,32,32">
+        <views:PageBodyPanel>
             <!-- breadcrumb: Library / name -->
             <StackPanel Orientation="Horizontal" Spacing="4" Height="24">
                 <Path Classes="icon" Data="{StaticResource Icon.Library}" />
@@ -357,6 +357,6 @@
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
             </StackPanel>
-        </StackPanel>
+        </views:PageBodyPanel>
     </ScrollViewer>
 </UserControl>
