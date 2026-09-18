@@ -1,0 +1,1143 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="NavigationDiscover" xml:space="preserve">
+    <value>Chart a Course</value>
+  </data>
+  <data name="NavigationHome" xml:space="preserve">
+    <value>Port</value>
+  </data>
+  <data name="NavigationLibrary" xml:space="preserve">
+    <value>List o' Loot</value>
+  </data>
+  <data name="NavigationSettings" xml:space="preserve">
+    <value>Rigging</value>
+  </data>
+  <data name="PageDiscoverHeading" xml:space="preserve">
+    <value>Chart a Course</value>
+  </data>
+  <data name="PageHomeHeading" xml:space="preserve">
+    <value>Port</value>
+  </data>
+  <data name="PageLibraryHeading" xml:space="preserve">
+    <value>List o' Loot</value>
+  </data>
+  <data name="PreferenceSaveErrorFormat" xml:space="preserve">
+    <value>Yer prefarrrence couldn't be bottled up: {0}</value>
+  </data>
+  <data name="SettingsLanguageLabel" xml:space="preserve">
+    <value>Manner o' speech</value>
+  </data>
+  <data name="SettingsRegionalFormatLabel" xml:space="preserve">
+    <value>Format o' the region</value>
+  </data>
+  <data name="SettingsThemeLabel" xml:space="preserve">
+    <value>Manner o' dress</value>
+  </data>
+  <data name="SettingsUpdatesLabel" xml:space="preserve">
+    <value>New tides</value>
+  </data>
+  <data name="SettingsCheckForUpdatesAtStart" xml:space="preserve">
+    <value>Gaze from the crow's nest fer new tides at dawn</value>
+  </data>
+  <data name="SettingsUpdateChannelLabel" xml:space="preserve">
+    <value>Deck o' new tides fer The Borea</value>
+  </data>
+  <data name="SettingsUpdateChannelHint" xml:space="preserve">
+    <value>Which bounties fer The Borea gazing from the crow's nest fer new tides blabbers to ye about. Bounties on the horizon tread troubled waters. This won't do a lick about which barrels o' fun bounties The Borea hauls onboard.</value>
+  </data>
+  <data name="UpdateChannelStable" xml:space="preserve">
+    <value>Seaworthy bounties</value>
+  </data>
+  <data name="UpdateChannelTesting" xml:space="preserve">
+    <value>Seaworthy and landlubbery bounties</value>
+  </data>
+  <data name="UpdateChannelDev" xml:space="preserve">
+    <value>Nary a bounty unaccounted fer, even swashbuckler builds</value>
+  </data>
+  <data name="SettingsReleaseChannelLabel" xml:space="preserve">
+    <value>Barrels o' fun bounty board</value>
+  </data>
+  <data name="SettingsReleaseChannelHint" xml:space="preserve">
+    <value>Which bounties The Borea hauls onboard when ye ain't picking' a version.</value>
+  </data>
+  <data name="SettingsImagesLabel" xml:space="preserve">
+    <value>Images</value>
+  </data>
+  <data name="SettingsLoadImagesFromAuthorHosts" xml:space="preserve">
+    <value>Heave ho images o' captain's reserves</value>
+  </data>
+  <data name="SettingsLoadImagesFromAuthorHostsHint" xml:space="preserve">
+    <value>All o' yer image demands blabber yer Inner Port position to the captain's quarters.</value>
+  </data>
+  <data name="UpdateAvailable" xml:space="preserve">
+    <value>A fresher bounty fer The Borea awaits ye:</value>
+  </data>
+  <data name="UpdatePreRelease" xml:space="preserve">
+    <value>Early bounties</value>
+  </data>
+  <data name="UpdateViewRelease" xml:space="preserve">
+    <value>Have a gander at the bounty</value>
+  </data>
+  <data name="SystemDefaultRegionalFormat" xml:space="preserve">
+    <value>Usual cut o' yer jib</value>
+  </data>
+  <data name="ViewNotFoundFormat" xml:space="preserve">
+    <value>Ain't able to take a gander at: {0}</value>
+  </data>
+  <data name="HomeCurrentInstall" xml:space="preserve">
+    <value>What ye have onboard already</value>
+  </data>
+  <data name="HomeRecentlyUpdated" xml:space="preserve">
+    <value>Tides changed just a lil' bit ago</value>
+  </data>
+  <data name="HomeDiscoverMods" xml:space="preserve">
+    <value>Chart a course fer barrels o' fun</value>
+  </data>
+  <data name="HomeNoGameVersion" xml:space="preserve">
+    <value>Game ain't been drawn up</value>
+  </data>
+  <data name="HomeNoInstance" xml:space="preserve">
+    <value>Nary a sea charted</value>
+  </data>
+  <data name="HomeInstanceSourceCustom" xml:space="preserve">
+    <value>Use yer imagination</value>
+  </data>
+  <data name="HomeUpdate" xml:space="preserve">
+    <value>1 new tide</value>
+  </data>
+  <data name="HomeUpdatesFormat" xml:space="preserve">
+    <value>{0} new tides</value>
+  </data>
+  <data name="ContentTypeMod" xml:space="preserve">
+    <value>Barrel o' fun</value>
+  </data>
+  <data name="LibraryNewInstancePlaceholder" xml:space="preserve">
+    <value>New name o' the sea</value>
+  </data>
+  <data name="LibraryCreate" xml:space="preserve">
+    <value>Carve out</value>
+  </data>
+  <data name="LibraryActivate" xml:space="preserve">
+    <value>Hoist the flag</value>
+  </data>
+  <data name="LibraryRename" xml:space="preserve">
+    <value>Give a more fearsome name</value>
+  </data>
+  <data name="LibraryOpenFolder" xml:space="preserve">
+    <value>Open treasure chest</value>
+  </data>
+  <data name="LibraryDelete" xml:space="preserve">
+    <value>Toss overboard</value>
+  </data>
+  <data name="LibrarySave" xml:space="preserve">
+    <value>Bottle up</value>
+  </data>
+  <data name="LibraryCancel" xml:space="preserve">
+    <value>Belay that</value>
+  </data>
+  <data name="LibraryDeleteConfirm" xml:space="preserve">
+    <value>Send this 'ere instance and its chest to walk the plank?</value>
+  </data>
+  <data name="LibraryEmpty" xml:space="preserve">
+    <value>Nary any seas charted. Carve one out before ye take the wheel.</value>
+  </data>
+  <data name="LibraryNewInstance" xml:space="preserve">
+    <value>Uncharted sea</value>
+  </data>
+  <data name="LibraryImportFromProfile" xml:space="preserve">
+    <value>Loot from game board</value>
+  </data>
+  <data name="LibraryNeverPlayed" xml:space="preserve">
+    <value>Ain't ever sailed</value>
+  </data>
+  <data name="LibraryLastPlayedFormat" xml:space="preserve">
+    <value>Sailed last on {0}</value>
+  </data>
+  <data name="LibrarySortName" xml:space="preserve">
+    <value>What they be called</value>
+  </data>
+  <data name="LibrarySortLastPlayed" xml:space="preserve">
+    <value>Sailed last</value>
+  </data>
+  <data name="LibraryImportModList" xml:space="preserve">
+    <value>Loot a list o' barrels o' fun</value>
+  </data>
+  <data name="LibraryDuplicate" xml:space="preserve">
+    <value>Parrot</value>
+  </data>
+  <data name="LibraryExportModList" xml:space="preserve">
+    <value>Fire list o' barrels o' fun out the cannon</value>
+  </data>
+  <data name="LibraryCopyModList" xml:space="preserve">
+    <value>Parrot list o' barrels o' fun</value>
+  </data>
+  <data name="ModListDuplicateTitle" xml:space="preserve">
+    <value>Parrot sea</value>
+  </data>
+  <data name="ModListFileType" xml:space="preserve">
+    <value>The Borea's list o' barrels o' fun</value>
+  </data>
+  <data name="ModListCopyNameFormat" xml:space="preserve">
+    <value>{0} (parrot)</value>
+  </data>
+  <data name="ModListInstallCountFormat" xml:space="preserve">
+    <value>Barrels o' fun to haul onboard: {0}</value>
+  </data>
+  <data name="ModListNotCopiedFormat" xml:space="preserve">
+    <value>{0} ain't parrot'd, seein' as The Borea ain't haul this treasure chest onboard.</value>
+  </data>
+  <data name="ModListUnknownFormat" xml:space="preserve">
+    <value>Nary an X marks the spot fer {0} {1}, so The Borea ain't be haulin' it onboard.</value>
+  </data>
+  <data name="ModListUnreadableFormat" xml:space="preserve">
+    <value>{0} ain't be a list o' barrels o' fun that The Borea can make heads or tails of. {1}</value>
+  </data>
+  <data name="ModListNewerFormatFormat" xml:space="preserve">
+    <value>{0} makes use o' list o' barrels o' fun forrrmat {1}. Patch up The Borea to haul it onboard.</value>
+  </data>
+  <data name="ModListExportedFormat" xml:space="preserve">
+    <value>Salvaged the list o' barrels o' fun o' {0} as {1}.</value>
+  </data>
+  <data name="ModListCopiedFormat" xml:space="preserve">
+    <value>Parrot'd the list o' barrels o' fun o' {0} to the box o' crackers.</value>
+  </data>
+  <data name="ModListNotExportedFormat" xml:space="preserve">
+    <value>The list o' barrels o' fun ain't filled up with these treasure chests, 'cause The Borea ain't hauled 'em onboard: {0}</value>
+  </data>
+  <data name="NavigationTasks" xml:space="preserve">
+    <value>Chores</value>
+  </data>
+  <data name="InstanceTabContent" xml:space="preserve">
+    <value>Booty</value>
+  </data>
+  <data name="InstanceTabManualInstalls" xml:space="preserve">
+    <value>Stuff on board ye hauled yerself</value>
+  </data>
+  <data name="InstanceTabGameData" xml:space="preserve">
+    <value>Data o' yer game</value>
+  </data>
+  <data name="InstanceTabLog" xml:space="preserve">
+    <value>Logbook</value>
+  </data>
+  <data name="InstanceGroupModpacks" xml:space="preserve">
+    <value>packs o' barrels o' fun</value>
+  </data>
+  <data name="InstanceGroupModpackFormat" xml:space="preserve">
+    <value>pack o' barrels o' fun: {0} {1}</value>
+  </data>
+  <data name="InstanceGroupMods" xml:space="preserve">
+    <value>Barrel o' fun</value>
+  </data>
+  <data name="InstanceGroupModLoaders" xml:space="preserve">
+    <value>Loaders o' barrels o' fun</value>
+  </data>
+  <data name="InstanceGroupOther" xml:space="preserve">
+    <value>Scuttlebutt</value>
+  </data>
+  <data name="InstanceGroupVehicles" xml:space="preserve">
+    <value>Ships</value>
+  </data>
+  <data name="InstanceGroupSaves" xml:space="preserve">
+    <value>Tales</value>
+  </data>
+  <data name="InstanceGroupDependencies" xml:space="preserve">
+    <value>Peg legs</value>
+  </data>
+  <data name="InstanceEmptyContent" xml:space="preserve">
+    <value>Ain't a thing hauled onboard yet. Loot some booty from Chart a Course.</value>
+  </data>
+  <data name="ManualInstallsEmpty" xml:space="preserve">
+    <value>Nary a barrel o' fun treasure chest on this sea was hauled onboard without The Borea.</value>
+  </data>
+  <data name="ManualInstallsInIndex" xml:space="preserve">
+    <value>On the bulletin board</value>
+  </data>
+  <data name="ManualInstallsNotInIndex" xml:space="preserve">
+    <value>Ain't on the bulletin board</value>
+  </data>
+  <data name="ManualInstallsNoMatch" xml:space="preserve">
+    <value>On the bulletin board, but the doubloons ain't match any bounty</value>
+  </data>
+  <data name="ManualInstallsNotRecorded" xml:space="preserve">
+    <value>On the bulletin board, but The Borea ain't able to cash in the bounty that the doubloons match</value>
+  </data>
+  <data name="ManualInstallsChecking" xml:space="preserve">
+    <value>Swapping the doubloons with every bounty</value>
+  </data>
+  <data name="ManualInstallsManage" xml:space="preserve">
+    <value>Steer alongside The Borea</value>
+  </data>
+  <data name="ManualInstallsReplace" xml:space="preserve">
+    <value>Swab with the freshest bounty</value>
+  </data>
+  <data name="ManualInstallsDeleteAndReplace" xml:space="preserve">
+    <value>Toss overboard an' swab</value>
+  </data>
+  <data name="ManualInstallsReplaceWarningFormat" xml:space="preserve">
+    <value>The Borea ain't able to haul {0} onboard. To swab it, The Borea oughta send this chest an' every doubloon in it to walk the plank. Borea only asks ye once!</value>
+  </data>
+  <data name="ManualInstallsInstanceChanged" xml:space="preserve">
+    <value>The sea's shifted. Give 'er another go.</value>
+  </data>
+  <data name="GameDataOpenFolder" xml:space="preserve">
+    <value>Open treasure chest</value>
+  </data>
+  <data name="GameDataEmpty" xml:space="preserve">
+    <value>Nuthin'</value>
+  </data>
+  <data name="GameSaveNoVehicles" xml:space="preserve">
+    <value>Nary any ships in this sea yet</value>
+  </data>
+  <data name="GameSaveNoSaves" xml:space="preserve">
+    <value>Nary any tales from this sea yet</value>
+  </data>
+  <data name="GameSaveUpdatedFormat" xml:space="preserve">
+    <value>Tide changed {0}</value>
+  </data>
+  <data name="GameSaveOlderBuild" xml:space="preserve">
+    <value>Build o' the past</value>
+  </data>
+  <data name="GameSaveOlderBuildFormat" xml:space="preserve">
+    <value>Put t'getter with {0}. The build onboard is {1}.</value>
+  </data>
+  <data name="GameSaveBackUp" xml:space="preserve">
+    <value>Salvage</value>
+  </data>
+  <data name="GameSaveBackedUpFormat" xml:space="preserve">
+    <value>{0} salvaged to {1}.</value>
+  </data>
+  <data name="GameSaveCopyToInstance" xml:space="preserve">
+    <value>Parrot to sea</value>
+  </data>
+  <data name="GameSaveCopy" xml:space="preserve">
+    <value>Parrot</value>
+  </data>
+  <data name="GameSaveCopyModsNote" xml:space="preserve">
+    <value>The other sea be needin' the same barrels o' fun. The Borea ain't able to gaze at this from the crow's nest.</value>
+  </data>
+  <data name="GameSaveNoOtherInstance" xml:space="preserve">
+    <value>Thar be nary a sea to parrot to.</value>
+  </data>
+  <data name="GameSaveReplaceFormat" xml:space="preserve">
+    <value>{1} already be havin' {0}. Swab it? The Borea hauls ye olden one into the Backups treasure chest.</value>
+  </data>
+  <data name="GameSaveReplace" xml:space="preserve">
+    <value>Swab</value>
+  </data>
+  <data name="GameSaveCopiedFormat" xml:space="preserve">
+    <value>Parrot'd {0} to {1}.</value>
+  </data>
+  <data name="GameSaveDeleteConfirm" xml:space="preserve">
+    <value>Send to Davy Jones' locker? The Borea hauls the treasure chest into the Backups treasure chest.</value>
+  </data>
+  <data name="GameSaveDeletedFormat" xml:space="preserve">
+    <value>Hauled {0} into the Backups treasure chest.</value>
+  </data>
+  <data name="GameSaveCloseGame" xml:space="preserve">
+    <value>Quit sailin' before ye do that.</value>
+  </data>
+  <data name="GameSaveCopyFromProfile" xml:space="preserve">
+    <value>Parrot from the game board</value>
+  </data>
+  <data name="GameSaveProfileEmpty" xml:space="preserve">
+    <value>The game board has nary a thing to parrot.</value>
+  </data>
+  <data name="GameSaveExistsInInstance" xml:space="preserve">
+    <value>That tale has already been told in these 'ere seas</value>
+  </data>
+  <data name="GameSaveProfileReplace" xml:space="preserve">
+    <value>Some o' these bits n' pieces already be in this sea. Swab 'em? The Borea hauls ye olden ones into the Backups treasure chest.</value>
+  </data>
+  <data name="GameSavesCopiedFromProfileFormat" xml:space="preserve">
+    <value>Parrot'd {0} bits n' pieces from the game board.</value>
+  </data>
+  <data name="GameSavesBackedUpFormat" xml:space="preserve">
+    <value>Salvaged {0} tales to {1}.</value>
+  </data>
+  <data name="GameSavesNothingToBackUp" xml:space="preserve">
+    <value>This sea has nary a tale to salvage.</value>
+  </data>
+  <data name="InstanceBackUpAllSaves" xml:space="preserve">
+    <value>Salvaged all tales</value>
+  </data>
+  <data name="GameLogOpen" xml:space="preserve">
+    <value>Crack open logbook</value>
+  </data>
+  <data name="GameLogMissing" xml:space="preserve">
+    <value>The game ain't scribbled down a logbook on this sea yet.</value>
+  </data>
+  <data name="GameLogReload" xml:space="preserve">
+    <value>Heave ho</value>
+  </data>
+  <data name="GameLogCopy" xml:space="preserve">
+    <value>Parrot to the box o' crackers</value>
+  </data>
+  <data name="InstancePlay" xml:space="preserve">
+    <value>Set sail</value>
+  </data>
+  <data name="InstanceUpdateAll" xml:space="preserve">
+    <value>Bring in the tide on all shores</value>
+  </data>
+  <data name="InstancePlayedFormat" xml:space="preserve">
+    <value>{0} seas sailed</value>
+  </data>
+  <data name="InstancePlayedRunningFormat" xml:space="preserve">
+    <value>{0} seas sailed, includin' this 'ere current sea</value>
+  </data>
+  <data name="InstanceSessionOne" xml:space="preserve">
+    <value>1 voyage</value>
+  </data>
+  <data name="InstanceSessionsFormat" xml:space="preserve">
+    <value>{0} voyages</value>
+  </data>
+  <data name="InstanceNoPlaytime" xml:space="preserve">
+    <value>Ye haven't gotten yer sea legs yet</value>
+  </data>
+  <data name="InstancePlaytimeUnknown" xml:space="preserve">
+    <value>Avast, can't tell if you've got yer sea legs</value>
+  </data>
+  <data name="InstancePlaytimeToolTip" xml:space="preserve">
+    <value>The Borea 'members the time spent sailin' from the logbook o' this sea. A voyage lastin' less than a moment ain't countin!</value>
+  </data>
+  <data name="InstancePlaytimeUnknownToolTip" xml:space="preserve">
+    <value>The Borea ain't able to make heads or tails o' the freshest logbook o' this sea, so it ain't able to 'member the time spent sailin'.</value>
+  </data>
+  <data name="DurationHoursMinutesFormat" xml:space="preserve">
+    <value>{0} h {1} min</value>
+  </data>
+  <data name="DurationMinutesFormat" xml:space="preserve">
+    <value>{0} min</value>
+  </data>
+  <data name="ContentRemove" xml:space="preserve">
+    <value>Toss overboard</value>
+  </data>
+  <data name="ContentRemoveConfirm" xml:space="preserve">
+    <value>Toss the booty from this sea overboard?</value>
+  </data>
+  <data name="ContentRemoveNotOwnedFormat" xml:space="preserve">
+    <value>The Borea ain't hauled {0} onboard, so it ain't be makin' the doubloons walk the plank.</value>
+  </data>
+  <data name="ContentRemoveRequiredFormat" xml:space="preserve">
+    <value>{0} stows away 'cause {1} be needin' it.</value>
+  </data>
+  <data name="ContentUpdate" xml:space="preserve">
+    <value>Bring in the tide</value>
+  </data>
+  <data name="ContentUpdateToFormat" xml:space="preserve">
+    <value>Bring in the tide to {0}</value>
+  </data>
+  <data name="ContentByAuthorFormat" xml:space="preserve">
+    <value>by {0}</value>
+  </data>
+  <data name="DiscoverTabMods" xml:space="preserve">
+    <value>Barrels o' Fun</value>
+  </data>
+  <data name="DiscoverTabModpacks" xml:space="preserve">
+    <value>packs o' Barrels o' Fun</value>
+  </data>
+  <data name="DiscoverTabVehicles" xml:space="preserve">
+    <value>Ships</value>
+  </data>
+  <data name="DiscoverTabSaves" xml:space="preserve">
+    <value>Tales</value>
+  </data>
+  <data name="DiscoverTabLoaders" xml:space="preserve">
+    <value>Loaders o' Barrels o' Fun</value>
+  </data>
+  <data name="DiscoverSearchPlaceholder" xml:space="preserve">
+    <value>Be on the lookout fer barrels o' fun...</value>
+  </data>
+  <data name="DiscoverHideInstalled" xml:space="preserve">
+    <value>Stow already hauled onboard</value>
+  </data>
+  <data name="DiscoverHideIncompatible" xml:space="preserve">
+    <value>Stow incompatible</value>
+  </data>
+  <data name="DiscoverCategory" xml:space="preserve">
+    <value>Categorrry</value>
+  </data>
+  <data name="DiscoverCategoryOther" xml:space="preserve">
+    <value>Sumthin' else</value>
+  </data>
+  <data name="DiscoverGameVersionMin" xml:space="preserve">
+    <value>Min</value>
+  </data>
+  <data name="DiscoverGameVersionMax" xml:space="preserve">
+    <value>Max</value>
+  </data>
+  <data name="DiscoverOperatingSystem" xml:space="preserve">
+    <value>Computarr's soul</value>
+  </data>
+  <data name="DiscoverLicense" xml:space="preserve">
+    <value>Deed</value>
+  </data>
+  <data name="DiscoverClearAll" xml:space="preserve">
+    <value>Clear all</value>
+  </data>
+  <data name="DiscoverSortBy" xml:space="preserve">
+    <value>Arrange by</value>
+  </data>
+  <data name="DiscoverSortPopularity" xml:space="preserve">
+    <value>Talk o' the tavern</value>
+  </data>
+  <data name="DiscoverSortRecentlyUpdated" xml:space="preserve">
+    <value>Tides changed not too long ago</value>
+  </data>
+  <data name="DiscoverSortName" xml:space="preserve">
+    <value>Name</value>
+  </data>
+  <data name="DiscoverAll" xml:space="preserve">
+    <value>All</value>
+  </data>
+  <data name="DiscoverEmpty" xml:space="preserve">
+    <value>Thar ain't any booty matches.</value>
+  </data>
+  <data name="DiscoverLoading" xml:space="preserve">
+    <value>Bringin' in the tide o' booty</value>
+  </data>
+  <data name="DiscoverIndexStaleFormat" xml:space="preserve">
+    <value>Ain't able to reach the bulletin board. Showin' the list from {0}.</value>
+  </data>
+  <data name="IndexUnreachableFormat" xml:space="preserve">
+    <value>Ain't able to reach the bulletin board: {0}</value>
+  </data>
+  <data name="DiscoverIndexRetry" xml:space="preserve">
+    <value>Have at it again</value>
+  </data>
+  <data name="TimeJustNow" xml:space="preserve">
+    <value>just now</value>
+  </data>
+  <data name="TimeMinuteAgo" xml:space="preserve">
+    <value>1 minute ago</value>
+  </data>
+  <data name="TimeMinutesAgoFormat" xml:space="preserve">
+    <value>{0} minutes ago</value>
+  </data>
+  <data name="TimeHourAgo" xml:space="preserve">
+    <value>1 hour ago</value>
+  </data>
+  <data name="TimeHoursAgoFormat" xml:space="preserve">
+    <value>{0} hours ago</value>
+  </data>
+  <data name="TimeDayAgo" xml:space="preserve">
+    <value>1 day ago</value>
+  </data>
+  <data name="TimeDaysAgoFormat" xml:space="preserve">
+    <value>{0} days ago</value>
+  </data>
+  <data name="TimeMonthAgo" xml:space="preserve">
+    <value>1 month ago</value>
+  </data>
+  <data name="TimeMonthsAgoFormat" xml:space="preserve">
+    <value>{0} months ago</value>
+  </data>
+  <data name="TimeYearAgo" xml:space="preserve">
+    <value>1 year ago</value>
+  </data>
+  <data name="TimeYearsAgoFormat" xml:space="preserve">
+    <value>{0} years ago</value>
+  </data>
+  <data name="DiscoverAdd" xml:space="preserve">
+    <value>Add to the active sea</value>
+  </data>
+  <data name="DiscoverInstalled" xml:space="preserve">
+    <value>Hauled onboard</value>
+  </data>
+  <data name="DiscoverNoInstance" xml:space="preserve">
+    <value>Carve out a sea first to add booty.</value>
+  </data>
+  <data name="DiscoverNoRelease" xml:space="preserve">
+    <value>This listing has nary a bounty to haul onboard.</value>
+  </data>
+  <data name="InstallAnyway" xml:space="preserve">
+    <value>Haul onboard anyway</value>
+  </data>
+  <data name="InstallReleaseChannelFormat" xml:space="preserve">
+    <value>Bounty {0} has a status o' {1}, which yer bounty deck ain't floatin'.</value>
+  </data>
+  <data name="InstallMessageForeignOwned" xml:space="preserve">
+    <value>The Borea ain't haul this barrel o' fun onboard, she can't barter fer it.</value>
+  </data>
+  <data name="InstallMessageExactPinConflictFormat" xml:space="preserve">
+    <value>Versions {0} an' {1} were both request'd.</value>
+  </data>
+  <data name="InstallMessageOutsideChannel" xml:space="preserve">
+    <value>Yer bounty deck makes nary a claim to a bounty o' this barrel o' fun.</value>
+  </data>
+  <data name="InstallMessageMissingRequest" xml:space="preserve">
+    <value>The Borea ain't fished up a bounty fer this request.</value>
+  </data>
+  <data name="InstallMessageExactPinFormat" xml:space="preserve">
+    <value>The Borea ain't fit to sail version {0} alongside the rest o' the crew.</value>
+  </data>
+  <data name="InstallMessageProposedConflictFormat" xml:space="preserve">
+    <value>A conflict entry fer {0} blocks this 'ere change.</value>
+  </data>
+  <data name="InstallMessageYanked" xml:space="preserve">
+    <value>This bounty be torn asunder.</value>
+  </data>
+  <data name="InstallMessageYankedPin" xml:space="preserve">
+    <value>The pack pegs a bounty that be torn asunder.</value>
+  </data>
+  <data name="InstallMessageIncompatibleFormat" xml:space="preserve">
+    <value>This bounty be needin' game {0} or fresher.</value>
+  </data>
+  <data name="InstallMessageUntested" xml:space="preserve">
+    <value>This bounty ain't be tested with the game hauled onboard.</value>
+  </data>
+  <data name="InstallMessageCompatibilityUnknown" xml:space="preserve">
+    <value>The compatibility o' this bounty with the game hauled onboard be a dead man's tale.</value>
+  </data>
+  <data name="InstallMessagePlatformFormat" xml:space="preserve">
+    <value>This bounty ain't list {0} as a platform it be supportin'.</value>
+  </data>
+  <data name="InstallMessagePlatformUnknownFormat" xml:space="preserve">
+    <value>This bounty names the platform "{0}", which be a dead man's tale to The Borea.</value>
+  </data>
+  <data name="InstallMessageUnknownDependencyFormat" xml:space="preserve">
+    <value>This bounty be needin' {0} o' a kind that be a dead man's tale to The Borea.</value>
+  </data>
+  <data name="InstallMessageDependencyConflictFormat" xml:space="preserve">
+    <value>This bounty be conflictin' with {0}.</value>
+  </data>
+  <data name="InstallMessageForeignConflictUnknownFormat" xml:space="preserve">
+    <value>This bounty be conflictin' with {0}. The Borea ain't be able to read the version hauled onboard.</value>
+  </data>
+  <data name="InstallMessageForeignConflictFormat" xml:space="preserve">
+    <value>This bounty be conflictin' with {0}. The Borea ain't hauled {0} onboard.</value>
+  </data>
+  <data name="InstallMessageForeignVersionUnknownFormat" xml:space="preserve">
+    <value>This barrel o' fun be needin' {0}. The Borea ain't be able to read the version hauled onboard.</value>
+  </data>
+  <data name="InstallMessageUnsatisfiedDependencyFormat" xml:space="preserve">
+    <value>This bounty be needin' {0}, but thar ain't be any usable bounty o' it.</value>
+  </data>
+  <data name="InstallMessageAlternativeChoiceFormat" xml:space="preserve">
+    <value>Take yer pick o' one o' these barrels o' fun: {0}.</value>
+  </data>
+  <data name="InstallMessageInvalidAlternativeFormat" xml:space="preserve">
+    <value>{0} ain't be one o' the alternatives.</value>
+  </data>
+  <data name="InstallMessageRetainedAlternativeFormat" xml:space="preserve">
+    <value>This barrel o' fun onboard be needin' {0}. After the change, none o' 'em be onboard.</value>
+  </data>
+  <data name="InstallMessageRetainedDependentFormat" xml:space="preserve">
+    <value>This barrel o' fun onboard be needin' {0}. The change hauls a version onboard that ain't be in this range.</value>
+  </data>
+  <data name="InstallMessageRetainedConflictFormat" xml:space="preserve">
+    <value>This barrel o' fun onboard be conflictin' with {0}.</value>
+  </data>
+  <data name="InstallMessageRetainedUnsatisfiedFormat" xml:space="preserve">
+    <value>This barrel o' fun onboard be needin' {0}, but it ain't be onboard.</value>
+  </data>
+  <data name="InstallMessageSearchLimitFormat" xml:space="preserve">
+    <value>The Borea stopped after {0:N0} combinations and ain't found a plan.</value>
+  </data>
+  <data name="InstallMessageRetractedPack" xml:space="preserve">
+    <value>This pack version is retracted.</value>
+  </data>
+  <data name="InstallMessageUnlistedPin" xml:space="preserve">
+    <value>The pinned bounty ain't be listed, so The Borea ain't able to haul it onboard.</value>
+  </data>
+  <data name="InstallDependencyAlternativesFormat" xml:space="preserve">
+    <value>{0} or {1}</value>
+  </data>
+  <data name="InstallChoicesRecommended" xml:space="preserve">
+    <value>Recommend'd</value>
+  </data>
+  <data name="InstallChoicesSuggested" xml:space="preserve">
+    <value>Suggest'd</value>
+  </data>
+  <data name="InstallChoiceForFormat" xml:space="preserve">
+    <value>{0}, fer {1}</value>
+  </data>
+  <data name="InstallChoiceAlternativesFormat" xml:space="preserve">
+    <value>{0} needs one o' these barrels o' fun:</value>
+  </data>
+  <data name="UpdateAnyway" xml:space="preserve">
+    <value>Bring in tide anyway</value>
+  </data>
+  <data name="InstallInstanceMissing" xml:space="preserve">
+    <value>The active sea ain't exist any longer.</value>
+  </data>
+  <data name="ModalCreateInstanceTitle" xml:space="preserve">
+    <value>Carve out a sea</value>
+  </data>
+  <data name="ModalRenameInstanceTitle" xml:space="preserve">
+    <value>Change name o' the sea</value>
+  </data>
+  <data name="ModalNameLabel" xml:space="preserve">
+    <value>Name</value>
+  </data>
+  <data name="ModalClose" xml:space="preserve">
+    <value>Close the hatch</value>
+  </data>
+  <data name="SettingsGeneral" xml:space="preserve">
+    <value>General</value>
+  </data>
+  <data name="ContentTabDescription" xml:space="preserve">
+    <value>Description</value>
+  </data>
+  <data name="ContentTabVersions" xml:space="preserve">
+    <value>Versions</value>
+  </data>
+  <data name="CompatibilityCompatible" xml:space="preserve">
+    <value>Compatible</value>
+  </data>
+  <data name="CompatibilityUntested" xml:space="preserve">
+    <value>Untest'd</value>
+  </data>
+  <data name="CompatibilityIncompatible" xml:space="preserve">
+    <value>Incompatible</value>
+  </data>
+  <data name="CompatibilityUnknown" xml:space="preserve">
+    <value>Compatibility be a dead man's tale</value>
+  </data>
+  <data name="ContentCompatibility" xml:space="preserve">
+    <value>Compatibility</value>
+  </data>
+  <data name="ContentLinks" xml:space="preserve">
+    <value>Links</value>
+  </data>
+  <data name="ContentTags" xml:space="preserve">
+    <value>Tags</value>
+  </data>
+  <data name="ContentAuthor" xml:space="preserve">
+    <value>Captain</value>
+  </data>
+  <data name="ContentDetails" xml:space="preserve">
+    <value>Details</value>
+  </data>
+  <data name="ContentIconCredit" xml:space="preserve">
+    <value>Icon credit</value>
+  </data>
+  <data name="ContentIconSource" xml:space="preserve">
+    <value>Icon source</value>
+  </data>
+  <data name="ContentAdd" xml:space="preserve">
+    <value>Loot</value>
+  </data>
+  <data name="ContentVersionHeader" xml:space="preserve">
+    <value>Version</value>
+  </data>
+  <data name="ContentChannelHeader" xml:space="preserve">
+    <value>Deck</value>
+  </data>
+  <data name="ContentGameVersionHeader" xml:space="preserve">
+    <value>Game version</value>
+  </data>
+  <data name="ContentPublishedHeader" xml:space="preserve">
+    <value>Published</value>
+  </data>
+  <data name="ContentPublishedFormat" xml:space="preserve">
+    <value>Published {0}</value>
+  </data>
+  <data name="ContentDownloads" xml:space="preserve">
+    <value>Booty in the hold</value>
+  </data>
+  <data name="ContentShowVersions" xml:space="preserve">
+    <value>Show</value>
+  </data>
+  <data name="ContentNoDescription" xml:space="preserve">
+    <value>Nary a description fer ye.</value>
+  </data>
+  <data name="ContentLoadingVersions" xml:space="preserve">
+    <value>Heaving ho versions...</value>
+  </data>
+  <data name="ContentChangelog" xml:space="preserve">
+    <value>Logbook o' changes</value>
+  </data>
+  <data name="ContentNoVersions" xml:space="preserve">
+    <value>Nary a bounty yet.</value>
+  </data>
+  <data name="ContentNoVersionsInChannel" xml:space="preserve">
+    <value>Nary a bounties on this deck.</value>
+  </data>
+  <data name="ContentTypeModLoader" xml:space="preserve">
+    <value>Loader o' barrels o' fun</value>
+  </data>
+  <data name="ContentTypeModPack" xml:space="preserve">
+    <value>Collection o' barrels o' fun</value>
+  </data>
+  <data name="PackMods" xml:space="preserve">
+    <value>Barrels o' fun</value>
+  </data>
+  <data name="PackModHeader" xml:space="preserve">
+    <value>Barrel o' fun</value>
+  </data>
+  <data name="PackMemberYanked" xml:space="preserve">
+    <value>Torn asunder</value>
+  </data>
+  <data name="PackMemberUnlisted" xml:space="preserve">
+    <value>Ain't be listed</value>
+  </data>
+  <data name="PackResultInstalled" xml:space="preserve">
+    <value>Hauled onboard</value>
+  </data>
+  <data name="PackResultReplaced" xml:space="preserve">
+    <value>Swabbed</value>
+  </data>
+  <data name="PackResultAlreadyInstalled" xml:space="preserve">
+    <value>Already hauled onboard</value>
+  </data>
+  <data name="PackDeprecated" xml:space="preserve">
+    <value>The captain ain't be commandin' this pack any longer.</value>
+  </data>
+  <data name="PackStatusUnknown" xml:space="preserve">
+    <value>This pack has a captain's rank that be a dead man's tale to The Borea.</value>
+  </data>
+  <data name="PackCompatibilityUnknown" xml:space="preserve">
+    <value>The compatibility o' this pack with the game onboard ain't be familiar.</value>
+  </data>
+  <data name="PackDisputed" xml:space="preserve">
+    <value>The bulletin board marks this pack as troubled waters.</value>
+  </data>
+  <data name="PackIndexStatusUnknown" xml:space="preserve">
+    <value>The bulletin board gives this pack a status that The Borea ain't be familiar with.</value>
+  </data>
+  <data name="PackResultUnresolved" xml:space="preserve">
+    <value>Unresolv'd</value>
+  </data>
+  <data name="PackResultFailed" xml:space="preserve">
+    <value>Ran ashore</value>
+  </data>
+  <data name="PackResultNotAttempted" xml:space="preserve">
+    <value>Ain't be attempted</value>
+  </data>
+  <data name="ReleaseStable" xml:space="preserve">
+    <value>seaworthy</value>
+  </data>
+  <data name="ReleaseTesting" xml:space="preserve">
+    <value>battenin' down the hatches</value>
+  </data>
+  <data name="ReleaseDev" xml:space="preserve">
+    <value>chartin' course</value>
+  </data>
+  <data name="ReleaseUnknown" xml:space="preserve">
+    <value>strange tides</value>
+  </data>
+  <data name="ReleaseChannelStable" xml:space="preserve">
+    <value>Seaworthy bounties</value>
+  </data>
+  <data name="ReleaseChannelTesting" xml:space="preserve">
+    <value>Seaworthy and battenin' down the hatches bounties</value>
+  </data>
+  <data name="ReleaseChannelDev" xml:space="preserve">
+    <value>All bounties</value>
+  </data>
+  <data name="SettingsGame" xml:space="preserve">
+    <value>Game</value>
+  </data>
+  <data name="SetupGameDirectory" xml:space="preserve">
+    <value>Game treasure chest</value>
+  </data>
+  <data name="SetupGameDirectoryHint" xml:space="preserve">
+    <value>The treasure chest that holds the game executable.</value>
+  </data>
+  <data name="SetupBrowse" xml:space="preserve">
+    <value>Take a gander...</value>
+  </data>
+  <data name="SetupSave" xml:space="preserve">
+    <value>Bottle up</value>
+  </data>
+  <data name="SetupUseThisFolder" xml:space="preserve">
+    <value>Use this folder</value>
+  </data>
+  <data name="SetupFoundGame" xml:space="preserve">
+    <value>Borea found KSA in this folder. Check the folder, then use it.</value>
+  </data>
+  <data name="SetupFoundGames" xml:space="preserve">
+    <value>Borea found KSA in more than one folder. Select the folder you play from.</value>
+  </data>
+  <data name="SetupLoader" xml:space="preserve">
+    <value>Loader o' barrels o' fun</value>
+  </data>
+  <data name="SetupLoaderDirectory" xml:space="preserve">
+    <value>Loader o' the direc'try</value>
+  </data>
+  <data name="SetupLoaderDirectoryHint" xml:space="preserve">
+    <value>Leave empty to let Borea pick a folder when installing.</value>
+  </data>
+  <data name="SetupInstallLoader" xml:space="preserve">
+    <value>Install</value>
+  </data>
+  <data name="SetupUseExisting" xml:space="preserve">
+    <value>Use existing</value>
+  </data>
+  <data name="SetupFoundLoader" xml:space="preserve">
+    <value>The Borea found this loader in the hold. Gaze at the treasure chest from the crow's nest the folder, then make use o' it.</value>
+  </data>
+  <data name="SetupSaved" xml:space="preserve">
+    <value>Bottled up.</value>
+  </data>
+  <data name="SetupDirectoryMissing" xml:space="preserve">
+    <value>Bottled up, but this treasure chest ain't exist yet.</value>
+  </data>
+  <data name="SetupNoLoaderSelected" xml:space="preserve">
+    <value>Make yer choice o' loader o' barrels o' fun first.</value>
+  </data>
+  <data name="SetupLoaderInstalledFormat" xml:space="preserve">
+    <value>Hauled {0} {1} aboard {2}.</value>
+  </data>
+  <data name="SetupLoaderInstalledVersionFormat" xml:space="preserve">
+    <value>Hauled aboard {0}</value>
+  </data>
+  <data name="SetupLoaderInstalledUnknownVersion" xml:space="preserve">
+    <value>Hauled aboard, version a dead man's tale</value>
+  </data>
+  <data name="SetupUpdateLoaderFormat" xml:space="preserve">
+    <value>Update to {0}</value>
+  </data>
+  <data name="SetupReinstallLoader" xml:space="preserve">
+    <value>Haul onboard all o'er again</value>
+  </data>
+  <data name="ContentLoaderHint" xml:space="preserve">
+    <value>Loaders o' barrels o' fun are set up from the Game settings.</value>
+  </data>
+  <data name="LinkForum" xml:space="preserve">
+    <value>Tavern</value>
+  </data>
+  <data name="LinkRepository" xml:space="preserve">
+    <value>Repository</value>
+  </data>
+  <data name="LinkBugTracker" xml:space="preserve">
+    <value>Bug tracker</value>
+  </data>
+  <data name="LinkHomepage" xml:space="preserve">
+    <value>Homepage</value>
+  </data>
+  <data name="LinkDiscussions" xml:space="preserve">
+    <value>Discussions</value>
+  </data>
+  <data name="SettingsAbout" xml:space="preserve">
+    <value>About</value>
+  </data>
+  <data name="AboutVersion" xml:space="preserve">
+    <value>Version</value>
+  </data>
+  <data name="AboutRuntime" xml:space="preserve">
+    <value>Runtime</value>
+  </data>
+  <data name="AboutSystem" xml:space="preserve">
+    <value>System</value>
+  </data>
+  <data name="AboutGame" xml:space="preserve">
+    <value>Installed game</value>
+  </data>
+  <data name="AboutContentIndex" xml:space="preserve">
+    <value>Content index</value>
+  </data>
+  <data name="AboutIndexUpdatedFormat" xml:space="preserve">
+    <value>Updated {0}</value>
+  </data>
+  <data name="AboutIndexNotDownloaded" xml:space="preserve">
+    <value>Ain't in the hold yet</value>
+  </data>
+  <data name="AboutFolders" xml:space="preserve">
+    <value>Folders</value>
+  </data>
+  <data name="AboutOpenBoreaFolder" xml:space="preserve">
+    <value>Open Borea folder</value>
+  </data>
+  <data name="AboutOpenInstancesFolder" xml:space="preserve">
+    <value>Open instances folder</value>
+  </data>
+  <data name="AboutOpenBoreaLog" xml:space="preserve">
+    <value>Reveal the Borea's manifest</value>
+  </data>
+  <data name="AboutOpenLogFolder" xml:space="preserve">
+    <value>Reveal the ship's manifest</value>
+  </data>
+  <data name="AboutCopyDiagnostics" xml:space="preserve">
+    <value>Parrot fancy schmancy talk</value>
+  </data>
+  <data name="AboutCopied" xml:space="preserve">
+    <value>Parrot'd onto hard tack.</value>
+  </data>
+  <data name="AboutFolderMissingFormat" xml:space="preserve">
+    <value>{0} ain't ever been heard o'!</value>
+  </data>
+  <data name="AboutLinks" xml:space="preserve">
+    <value>Links</value>
+  </data>
+  <data name="AboutSourceCode" xml:space="preserve">
+    <value>Source code</value>
+  </data>
+  <data name="AboutReportBug" xml:space="preserve">
+    <value>Report a scallywag</value>
+  </data>
+  <data name="AboutReleases" xml:space="preserve">
+    <value>Bounties</value>
+  </data>
+  <data name="AboutCredits" xml:space="preserve">
+    <value>Put togett'er with</value>
+  </data>
+  <data name="AboutCommunity" xml:space="preserve">
+    <value>KSA modding on GitHub</value>
+  </data>
+  <data name="AboutDiscord" xml:space="preserve">
+    <value>KSA modding Discord</value>
+  </data>
+  <data name="AboutCreditsHint" xml:space="preserve">
+    <value>Each bounty archive be containin' THIRD-PARTY-NOTICES.txt with the licenses o' the software in it.</value>
+  </data>
+  <data name="AboutOpenNotices" xml:space="preserve">
+    <value>Open third-party notices</value>
+  </data>
+  <data name="AboutNoticesMissing" xml:space="preserve">
+    <value>This build ain't be havin' a THIRD-PARTY-NOTICES.txt. The bounty archives be containin' it.</value>
+  </data>
+  <data name="AboutCannotOpenFormat" xml:space="preserve">
+    <value>{0} cannot be cracked open.</value>
+  </data>
+  <data name="AboutCopyPath" xml:space="preserve">
+    <value>Copy path</value>
+  </data>
+  <data name="SetupBannerNotSaved" xml:space="preserve">
+    <value>The Borea needs X to mark the spot o' Kitten Space Agency before it can haul barrels o' fun onboard or set sail.</value>
+  </data>
+  <data name="SetupBannerFolderMissing" xml:space="preserve">
+    <value>The bottled up game treasure chest ain't be anymore. Navigate the Borea towards Kitten Space Agency once more.</value>
+  </data>
+  <data name="SetupBannerAction" xml:space="preserve">
+    <value>Setting game riggin'</value>
+  </data>
+  <data name="SharedProfileBannerOne" xml:space="preserve">
+    <value>1 barrel o' fun in yer game board</value>
+  </data>
+  <data name="SharedProfileBannerFormat" xml:space="preserve">
+    <value>{0} barrels o' fun in yer game board</value>
+  </data>
+  <data name="SharedProfileCreateInstance" xml:space="preserve">
+    <value>Chart new sea</value>
+  </data>
+  <data name="SharedProfileDismiss" xml:space="preserve">
+    <value>Belay that</value>
+  </data>
+  <data name="SharedProfileModalTitle" xml:space="preserve">
+    <value>Carve out a sea from yer game board</value>
+  </data>
+  <data name="SharedProfileModalHint" xml:space="preserve">
+    <value>The Borea parrots the barrels o' fun with their order to haul onboard and whether they are enabled. Yer game board stays the way it is.</value>
+  </data>
+  <data name="SharedProfileImporting" xml:space="preserve">
+    <value>The Borea parrots the barrels o' fun and compares 'em with the bulletin board. Belay this wind'er to have it keel over.</value>
+  </data>
+  <data name="SharedProfileImportDisabledFormat" xml:space="preserve">
+    <value>The Borea ain't able to enable these barrels o' fun, seein' as their treasure chest names ain't be valid booty ids: {0}</value>
+  </data>
+  <data name="SharedProfileImportNotCheckedFormat" xml:space="preserve">
+    <value>The Borea ain't able to compare these barrels o' fun with the bulletin board, so they be stayin' hauled onboard yerself: {0}</value>
+  </data>
+  <data name="SharedProfileInstanceName" xml:space="preserve">
+    <value>Game board</value>
+  </data>
+  <data name="DiscoverInstalledInFormat" xml:space="preserve">
+    <value>Hauled onboard as {0}</value>
+  </data>
+  <data name="PackModCountFormat" xml:space="preserve">
+    <value>Barrels o' fun: {0}</value>
+  </data>
+  <data name="PackIncompatibleFormat" xml:space="preserve">
+    <value>This pack be needin' game {0} or fresher.</value>
+  </data>
+  <data name="PackMemberYankedFormat" xml:space="preserve">
+    <value>{0} {1} is torn asunder.</value>
+  </data>
+  <data name="PackIncompleteFormat" xml:space="preserve">
+    <value>{0} o' {1} barrels o' fun ain't been hauled onboard.</value>
+  </data>
+  <data name="PackUntestedFormat" xml:space="preserve">
+    <value>This pack ain't be tested with the game onboard, which be fresher than {0}.</value>
+  </data>
+  <data name="PackSupersededFormat" xml:space="preserve">
+    <value>The captain no longer commands this pack and suggests ye' charter {0}.</value>
+  </data>
+  <data name="InstallDownloadingFormat" xml:space="preserve">
+    <value>Throwin' into the hold {0}</value>
+  </data>
+  <data name="InstallExtractingFormat" xml:space="preserve">
+    <value>Unpackin' {0}</value>
+  </data>
+  <data name="InstallConfiguringFormat" xml:space="preserve">
+    <value>Configurin' {0}</value>
+  </data>
+  <data name="InstallFinishingFormat" xml:space="preserve">
+    <value>Finishin' {0}</value>
+  </data>
+  <data name="InstallStepFormat" xml:space="preserve">
+    <value>{0} ({1} o' {2})</value>
+  </data>
+  <data name="InstallSizeFormat" xml:space="preserve">
+    <value>{0} o' {1}</value>
+  </data>
+  <data name="InstallSecondsLeftFormat" xml:space="preserve">
+    <value>give 'er take {0} s</value>
+  </data>
+  <data name="InstallMinutesLeftFormat" xml:space="preserve">
+    <value>give 'er take {0} min</value>
+  </data>
+  <data name="LaunchWithoutModLoader" xml:space="preserve">
+    <value>Fire KSA out the cannon without a loader o' barrels o' fun</value>
+  </data>
+  <data name="LaunchActiveInstance" xml:space="preserve">
+    <value>Fire the active sea out the cannon</value>
+  </data>
+  <data name="LaunchInstanceMissing" xml:space="preserve">
+    <value>The map o' this sea be lost to time.</value>
+  </data>
+  <data name="LaunchWithoutModLoaderToolTip" xml:space="preserve">
+    <value>Fires KSA out the cannon the same as firing KSA.exe out the cannon. It be usin' the shared board that KSA creates, not a sea o' The Borea.</value>
+  </data>
+  <data name="InstanceContentNotInIndex" xml:space="preserve">
+    <value>This barrel o' fun ain't on the bulletin board, so it has no parchment.</value>
+  </data>
+  <data name="InstanceContentNotOwned" xml:space="preserve">
+    <value>The Borea ain't haul this barrel o' fun onboard, so she ain't steer to any parchment.</value>
+  </data>
+  <data name="ContentInsideInstance" xml:space="preserve">
+    <value>Yer takin' a gander at treasure found in the sea.</value>
+  </data>
+  <data name="ContentViewInstance" xml:space="preserve">
+    <value>Take a gander at the sea</value>
+  </data>
+  <data name="ContentInactiveInstance" xml:space="preserve">
+    <value>This sea ain't be makin' a splash. Have it make a splash to add or remove booty from 'ere.</value>
+  </data>
+  <data name="LaunchStartingFormat" xml:space="preserve">
+    <value>Takin' off with {0}…</value>
+  </data>
+  <data name="LaunchModBrokeFormat" xml:space="preserve">
+    <value>{0} {1} made {2} keel over before it could take off. It may not work with this version o' KSA. Maroon it and try again, or look fer an new tide.</value>
+  </data>
+  <data name="LaunchExitedEarlyFormat" xml:space="preserve">
+    <value>{0} keeled over right after takin' off (exit code {1}). The d'tails show what it scribbled down.</value>
+  </data>
+  <data name="LaunchDisableModFormat" xml:space="preserve">
+    <value>Maroon {0}</value>
+  </data>
+  <data name="LaunchModDisabledFormat" xml:space="preserve">
+    <value>{0} is marooned. Take off on the sea again.</value>
+  </data>
+  <data name="LaunchShowDetails" xml:space="preserve">
+    <value>Show more d'tail</value>
+  </data>
+  <data name="LaunchOpenLog" xml:space="preserve">
+    <value>Crack open launch logbook</value>
+  </data>
+  <data name="LaunchNoOutput" xml:space="preserve">
+    <value>The loader did squat before keeling over.</value>
+  </data>
+</root>
