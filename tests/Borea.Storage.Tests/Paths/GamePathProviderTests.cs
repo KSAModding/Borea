@@ -45,6 +45,31 @@ public sealed class GamePathProviderTests
         Assert.Equal(Path.Combine(@"D:\Portable\Borea", "Backups"), provider.GetBackupsRoot());
     }
 
+    [Fact]
+    public void Constructor_LibraryFolder_RootsOnlyInstancesAndBackupsThere()
+    {
+        var provider = new GamePathProvider(null, boreaRoot: @"D:\Portable\Borea", libraryFolder: @"E:\Library");
+        var instanceId = Guid.NewGuid();
+
+        Assert.Equal(Path.Combine(@"E:\Library", "Instances"), provider.GetInstancesRoot());
+        Assert.Equal(Path.Combine(@"E:\Library", "Backups"), provider.GetBackupsRoot());
+        Assert.StartsWith(@"E:\Library", provider.GetInstanceMetadataPath(instanceId));
+        Assert.StartsWith(@"D:\Portable\Borea", provider.GetBoreaSettingsPath());
+        Assert.StartsWith(@"D:\Portable\Borea", provider.GetActiveInstancePointerPath());
+        Assert.StartsWith(@"D:\Portable\Borea", provider.GetLoadersRoot());
+        Assert.StartsWith(@"D:\Portable\Borea", provider.GetLogsFolder());
+        Assert.StartsWith(@"D:\Portable\Borea", provider.GetImageCacheFolder());
+        Assert.StartsWith(@"D:\Portable\Borea", provider.GetIndexPath());
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void Constructor_WhitespaceLibraryFolder_ThrowsArgumentException(string libraryFolder)
+    {
+        Assert.Throws<ArgumentException>(() => new GamePathProvider(null, libraryFolder: libraryFolder));
+    }
+
     [Theory]
     [InlineData("")]
     [InlineData("   ")]

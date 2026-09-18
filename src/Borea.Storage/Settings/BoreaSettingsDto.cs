@@ -7,6 +7,9 @@ public sealed class BoreaSettingsDto
     /// <summary>The release channel name. An older file without it loads as stable.</summary>
     public string? ReleaseChannel { get; set; }
 
+    /// <summary>The folder of Instances and Backups. An older file without it loads as Borea's own folder.</summary>
+    public string? LibraryFolderPath { get; set; }
+
     /// <summary>
     /// Loader id to installation record. Absent when none, so no empty table is
     /// written. Keep last because TOML puts each later key below this table.
