@@ -34,9 +34,12 @@
                 </StackPanel>
             </Grid>
             <ContentControl Content="{Binding}" ContentTemplate="{StaticResource LaunchStatus}" />
-            <ContentControl Content="{Binding}" ContentTemplate="{StaticResource GameSetupBanner}" IsVisible="{Binding NeedsGameSetup}" />
-            <ContentControl Content="{Binding}" ContentTemplate="{StaticResource SharedProfileBanner}" IsVisible="{Binding ShowSharedProfileBanner}" />
-            <views:UpdateNotice Margin="0,16,0,0" IsVisible="{Binding HasAvailableUpdate}" />
+            <!-- the Home banners in their order, each with its own top margin; a new banner goes at the end -->
+            <StackPanel>
+                <ContentControl Content="{Binding}" ContentTemplate="{StaticResource GameSetupBanner}" IsVisible="{Binding NeedsGameSetup}" />
+                <ContentControl Content="{Binding}" ContentTemplate="{StaticResource SharedProfileBanner}" IsVisible="{Binding ShowSharedProfileBanner}" />
+                <views:Banner Margin="0,16,0,0" Message="{Binding AvailableUpdateText}" ActionText="{Binding Localization.UpdateSeeMore}" ActionCommand="{Binding OpenReleaseNotesCommand}" DismissCommand="{Binding DismissReleaseBannerCommand}" DismissText="{Binding Localization.UpdateDismiss}" IsVisible="{Binding ShowReleaseBanner}" />
+            </StackPanel>
 
             <!-- Current install: black container with the header strip, holding the active instance row -->
             <Border Background="{StaticResource Brush.SurfaceHeader}" CornerRadius="16" Margin="0,16,0,0">

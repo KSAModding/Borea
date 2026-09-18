@@ -6,14 +6,12 @@ using Borea.Core.Updates;
 namespace Borea.Network.GitHub;
 
 /// <summary>
-/// IBoreaReleaseCheck against the GitHub releases endpoints, which allow 60 unauthenticated
+/// IBoreaReleaseCheck against the GitHub releases list, which allows 60 unauthenticated
 /// requests an hour, so callers ask once. Each check sends one request.
 /// </summary>
 public sealed class BoreaReleaseCheck : IBoreaReleaseCheck
 {
-    internal const string LatestReleaseUrl = "https://api.github.com/repos/KSAModding/Borea/releases/latest";
-
-    internal const string ReleasesUrl = "https://api.github.com/repos/KSAModding/Borea/releases?per_page=30";
+    internal const string ReleasesUrl = "https://api.github.com/repos/KSAModding/Borea/releases?per_page=100";
 
     internal const string ApiVersion = "2026-03-10";
 
@@ -26,19 +24,19 @@ public sealed class BoreaReleaseCheck : IBoreaReleaseCheck
         _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
     }
 
-    public async Task<BoreaRelease?> GetLatestReleaseAsync(BoreaUpdateChannel channel = BoreaUpdateChannel.Stable, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<BoreaRelease>> GetReleasesAsync(BoreaUpdateChannel channel = BoreaUpdateChannel.Stable, CancellationToken cancellationToken = default)
     {
-        if (channel != BoreaUpdateChannel.Stable)
-        {
-            var releases = await GetAsync<List<ReleaseDto?>>(ReleasesUrl, cancellationToken).ConfigureAwait(false);
-            return releases?
-                .Select(dto => ToRelease(dto, allowPreRelease: true))
-                .OfType<BoreaRelease>()
-                .Where(release => channel.Includes(release.Version))
-                .MaxBy(release => release.Version);
-        }
+        var releases = await GetAsync<List<ReleaseDto?>>(ReleasesUrl, cancellationToken).ConfigureAwait(false);
+        if (releases is null)
+            return [];
 
-        return ToRelease(await GetAsync<ReleaseDto>(LatestReleaseUrl, cancellationToken).ConfigureAwait(false), allowPreRelease: false);
+        return releases
+            .Select(dto => ToRelease(dto, allowPreRelease: channel != BoreaUpdateChannel.Stable))
+            .OfType<BoreaRelease>()
+            .Where(release => channel.Includes(release.Version))
+            .DistinctBy(release => release.Version)
+            .OrderByDescending(release => release.Version)
+            .ToList();
     }
 
     private async Task<T?> GetAsync<T>(string url, CancellationToken cancellationToken)
@@ -52,7 +50,7 @@ public sealed class BoreaReleaseCheck : IBoreaReleaseCheck
         {
             using var response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
 
-            // 404 means no release yet, 403 or 429 a rate limit.
+            // 403 or 429 is a rate limit, 404 a missing repository.
             if (!response.IsSuccessStatusCode)
                 return null;
 
@@ -95,7 +93,7 @@ public sealed class BoreaReleaseCheck : IBoreaReleaseCheck
             return null;
         }
 
-        return new BoreaRelease(version, dto.TagName!, page.AbsoluteUri);
+        return new BoreaRelease(version, dto.TagName!, page.AbsoluteUri, string.IsNullOrWhiteSpace(dto.Body) ? null : dto.Body, dto.PublishedAt);
     }
 }
 
@@ -112,4 +110,10 @@ internal sealed class ReleaseDto
 
     [JsonPropertyName("prerelease")]
     public bool Prerelease { get; set; }
+
+    [JsonPropertyName("body")]
+    public string? Body { get; set; }
+
+    [JsonPropertyName("published_at")]
+    public DateTimeOffset? PublishedAt { get; set; }
 }

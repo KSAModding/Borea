@@ -30,7 +30,7 @@
                     <TextBlock Classes="body-md danger" Text="{Binding IndexFailureText}" TextWrapping="Wrap" IsVisible="{Binding IndexFailureText, Converter={x:Static ObjectConverters.IsNotNull}}" />
                 </StackPanel>
             </Grid>
-            <views:UpdateNotice Margin="0,12,0,0" IsVisible="{Binding HasAvailableUpdate}" />
+            <views:Banner Margin="0,12,0,0" Message="{Binding AvailableUpdateText}" ActionText="{Binding Localization.UpdateViewRelease}" ActionCommand="{Binding OpenAboutLinkCommand}" ActionCommandParameter="{Binding AvailableUpdateUrl}" IsVisible="{Binding HasAvailableUpdate}" />
             <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,12,0,0">
                 <Button Classes="text" Content="{Binding Localization.AboutCopyDiagnostics}" Click="CopyDiagnostics" />
             </StackPanel>

@@ -192,6 +192,21 @@
   <data name="UpdateViewRelease" xml:space="preserve">
     <value>View release</value>
   </data>
+  <data name="UpdateSeeMore" xml:space="preserve">
+    <value>See more</value>
+  </data>
+  <data name="UpdateDismiss" xml:space="preserve">
+    <value>Dismiss</value>
+  </data>
+  <data name="UpdateNotesTitle" xml:space="preserve">
+    <value>New Borea releases</value>
+  </data>
+  <data name="UpdateInstalled" xml:space="preserve">
+    <value>Installed</value>
+  </data>
+  <data name="UpdateNoNotes" xml:space="preserve">
+    <value>This release has no notes.</value>
+  </data>
   <data name="SystemDefaultRegionalFormat" xml:space="preserve">
     <value>System default</value>
   </data>

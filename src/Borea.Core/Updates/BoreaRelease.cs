@@ -2,8 +2,8 @@ using Borea.Core.Mods;
 
 namespace Borea.Core.Updates;
 
-/// <summary>One published Borea release.</summary>
-public sealed record BoreaRelease(ModVersion Version, string Tag, string PageUrl)
+/// <summary>One published Borea release. <paramref name="Notes"/> is the Markdown release body.</summary>
+public sealed record BoreaRelease(ModVersion Version, string Tag, string PageUrl, string? Notes = null, DateTimeOffset? PublishedAt = null)
 {
     /// <summary>
     /// True when this release is newer than <paramref name="runningVersion"/>, ignoring build metadata.

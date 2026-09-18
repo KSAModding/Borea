@@ -751,6 +751,8 @@ public partial class MainViewModel : ViewModelBase
         foreach (var release in _contentReleases)
             release.RefreshText();
         LatestVersion?.RefreshText();
+        foreach (var item in ReleaseNotes)
+            item.RefreshText();
         RefreshPackText();
         Tasks.RefreshText();
     }
@@ -786,6 +788,7 @@ public partial class MainViewModel : ViewModelBase
         OnPropertyChanged(nameof(FoundGameText));
         OnPropertyChanged(nameof(LoaderPromptText));
         OnPropertyChanged(nameof(SharedProfileBannerText));
+        OnPropertyChanged(nameof(AvailableUpdateText));
         OnPropertyChanged(nameof(SharedProfileImportNotice));
         OnPropertyChanged(nameof(InstalledInText));
         OnPropertyChanged(nameof(ActiveInstanceUpdatesText));

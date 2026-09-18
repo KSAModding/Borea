@@ -2,9 +2,9 @@ using Avalonia.Controls;
 
 namespace Borea.App.Views;
 
-public partial class UpdateNotice : UserControl
+public partial class ReleaseNotesModal : UserControl
 {
-    public UpdateNotice()
+    public ReleaseNotesModal()
     {
         InitializeComponent();
     }
