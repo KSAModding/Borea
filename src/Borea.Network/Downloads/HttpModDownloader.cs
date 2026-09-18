@@ -151,9 +151,10 @@ public sealed class HttpModDownloader : IModDownloader
         if (!part.CanResume)
             part.Restart();
 
-        progress?.Report(new DownloadProgress(part.Bytes, part.Total));
-
         var resuming = part.Bytes > 0;
+        if (resuming)
+            progress?.Report(new DownloadProgress(part.Bytes, part.Total));
+
         using var request = new HttpRequestMessage(HttpMethod.Get, url);
         if (resuming)
         {
