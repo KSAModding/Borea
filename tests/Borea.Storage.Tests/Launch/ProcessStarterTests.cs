@@ -9,7 +9,7 @@ namespace Borea.Storage.Tests.Launch;
 
 public sealed class ProcessStarterTests : IDisposable
 {
-    private static readonly TimeSpan Patience = TimeSpan.FromSeconds(30);
+    private static readonly TimeSpan Patience = TimeSpan.FromMinutes(2);
 
     private readonly string _tempRoot = Path.Combine(Path.GetTempPath(), "BoreaTest " + Guid.NewGuid());
     private readonly ProcessStarter _starter = new();
@@ -85,18 +85,7 @@ public sealed class ProcessStarterTests : IDisposable
         return condition();
     }
 
-    private int ProgressLines()
-    {
-        var path = Path.Combine(_tempRoot, "progress.txt");
-        try
-        {
-            return File.Exists(path) && int.TryParse(File.ReadAllText(path), out var lines) ? lines : 0;
-        }
-        catch (IOException)
-        {
-            return 0;
-        }
-    }
+    private bool ChildWrote() => File.Exists(Path.Combine(_tempRoot, "wrote"));
 
     private static bool IsAlive(int processId)
     {
@@ -136,7 +125,8 @@ public sealed class ProcessStarterTests : IDisposable
         _probeIds.Add(process.Id);
 
         var recordPath = Path.Combine(_tempRoot, "record.json");
-        Assert.True(WaitFor(() => File.Exists(recordPath)), "The child wrote no record.");
+        Assert.True(WaitFor(() => File.Exists(recordPath) || process.HasExited), "The child neither wrote a record nor ended.");
+        Assert.True(File.Exists(recordPath), $"The child ended with exit code {process.ExitCode} and wrote no record.");
 
         using var record = JsonDocument.Parse(File.ReadAllText(recordPath));
         var root = record.RootElement;
@@ -153,8 +143,8 @@ public sealed class ProcessStarterTests : IDisposable
         using var process = _starter.Start(ChildPlan(Array.Empty<string>(), new Dictionary<string, string>()));
         _probeIds.Add(process.Id);
 
-        Assert.True(WaitFor(() => ProgressLines() >= 50), "The child stopped writing.");
-        Assert.False(process.HasExited, "The child ended after it wrote to its output.");
+        Assert.True(WaitFor(() => ChildWrote() || process.HasExited), "The child is stuck on its output.");
+        Assert.False(process.HasExited, $"The child ended with exit code {process.ExitCode} after it wrote to its output.");
     }
 
     [UnixFact("Windows has no SIGPIPE.")]
@@ -201,7 +191,7 @@ public sealed class ProcessStarterTests : IDisposable
             Assert.Equal(0, host.ExitCode);
             Assert.Equal(childId, ChildIdFrom(await output));
 
-            Assert.True(WaitFor(() => ProgressLines() >= 10), "The child did not start writing.");
+            Assert.True(WaitFor(() => ChildWrote() || !IsAlive(childId.Value)), "The child is stuck on its output.");
             Assert.True(IsAlive(childId.Value), "The child was not running when the caller's output closed.");
         }
         finally

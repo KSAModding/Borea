@@ -3,7 +3,8 @@ using Borea.Core.Launch;
 using Borea.Storage.Launch;
 
 // "host <directory>" starts a child through ProcessStarter and prints its id.
-// "child <arguments>" records what it received and writes to its output until a stop file appears.
+// "child <arguments>" records what it received, writes more than a pipe holds to both streams,
+// then creates a "wrote" file and runs until a stop file appears.
 return args switch
 {
     ["host", var directory] => Host(directory),
@@ -29,21 +30,21 @@ static int Child(string[] arguments)
     var record = new ChildRecord(arguments, Environment.CurrentDirectory, Environment.GetEnvironmentVariable("BOREA_PROBE"), Environment.ProcessId);
     WriteAtomically("record.json", JsonSerializer.Serialize(record));
 
-    var deadline = DateTime.UtcNow + TimeSpan.FromSeconds(60);
-    var lines = 0;
-    while (!File.Exists("stop") && DateTime.UtcNow < deadline)
+    var line = new string('x', 100);
+    for (var i = 0; i < 2000; i++)
     {
-        Console.Out.WriteLine($"line {lines}");
-        Console.Out.Flush();
-        Console.Error.WriteLine($"line {lines}");
-        Console.Error.Flush();
-        lines++;
-
-        if (lines % 10 == 0)
-            WriteAtomically("progress.txt", lines.ToString(System.Globalization.CultureInfo.InvariantCulture));
-
-        Thread.Sleep(20);
+        Console.Out.WriteLine(line);
+        Console.Error.WriteLine(line);
     }
+
+    Console.Out.Flush();
+    Console.Error.Flush();
+    File.WriteAllText("wrote", string.Empty);
+
+    // A guard for a test run that ended without writing the stop file, as long as the tests' Patience.
+    var deadline = DateTime.UtcNow + TimeSpan.FromMinutes(2);
+    while (!File.Exists("stop") && DateTime.UtcNow < deadline)
+        Thread.Sleep(50);
 
     return 0;
 }
