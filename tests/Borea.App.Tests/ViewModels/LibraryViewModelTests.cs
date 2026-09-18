@@ -107,6 +107,33 @@ public sealed class LibraryViewModelTests
     }
 
     [Fact]
+    public async Task ToggleActive_MovesTheRowsAboveAndBelowTheActiveHeadingAtOnce()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var viewModel = harness.ViewModel;
+        await harness.Services.Instances.CreateAsync("Alpha", InstanceSource.Custom.Value);
+        await harness.Services.Instances.CreateAsync("Beta", InstanceSource.Custom.Value);
+        await harness.Services.Instances.CreateAsync("Gamma", InstanceSource.Custom.Value);
+        await viewModel.LoadAsync();
+        Assert.Equal(["Alpha", "Beta", "Gamma"], viewModel.OtherInstances.Select(row => row.Name));
+
+        await viewModel.OtherInstances.Single(row => row.Name == "Gamma").ToggleActiveCommand.ExecuteAsync(null);
+
+        Assert.Equal("Gamma", viewModel.ActiveInstance?.Name);
+        Assert.Equal(["Alpha", "Beta"], viewModel.OtherInstances.Select(row => row.Name));
+
+        await viewModel.OtherInstances.Single(row => row.Name == "Beta").ToggleActiveCommand.ExecuteAsync(null);
+
+        Assert.Equal("Beta", viewModel.ActiveInstance?.Name);
+        Assert.Equal(["Alpha", "Gamma"], viewModel.OtherInstances.Select(row => row.Name));
+
+        await viewModel.ActiveInstance!.ToggleActiveCommand.ExecuteAsync(null);
+
+        Assert.Null(viewModel.ActiveInstance);
+        Assert.Equal(["Alpha", "Beta", "Gamma"], viewModel.OtherInstances.Select(row => row.Name));
+    }
+
+    [Fact]
     public async Task Rename_FromTheModal_SavesTheTrimmedNameAndClosesTheModal()
     {
         using var harness = await ViewModelHarness.CreateAsync();
@@ -259,6 +286,32 @@ public sealed class LibraryViewModelTests
 
         await viewModel.LoadAsync();
         Assert.Equal(["Gamma", "Beta", "Alpha"], viewModel.Instances.Select(row => row.Name));
+    }
+
+    [Fact]
+    public async Task Sort_KeepsTheActiveInstanceFirstAndTheOthersInOrder()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var viewModel = harness.ViewModel;
+        await harness.Services.Instances.CreateAsync("Alpha", InstanceSource.Custom.Value);
+        var beta = await harness.Services.Instances.CreateAsync("Beta", InstanceSource.Custom.Value);
+        var gamma = await harness.Services.Instances.CreateAsync("Gamma", InstanceSource.Custom.Value);
+        await RecordPlayedAsync(harness, beta.InstanceId, DateTimeOffset.UtcNow.AddDays(-6));
+        await RecordPlayedAsync(harness, gamma.InstanceId, DateTimeOffset.UtcNow.AddHours(-1));
+        await harness.Services.Instances.SetActiveInstanceAsync(beta.InstanceId);
+        await viewModel.LoadAsync();
+        Assert.Equal("Beta", viewModel.ActiveInstance?.Name);
+        Assert.Equal(["Alpha", "Gamma"], viewModel.OtherInstances.Select(row => row.Name));
+
+        viewModel.SelectLibrarySortCommand.Execute(LibrarySort.LastPlayed);
+        Assert.Equal(["Gamma", "Alpha"], viewModel.OtherInstances.Select(row => row.Name));
+
+        await viewModel.LoadAsync();
+        Assert.Equal("Beta", viewModel.ActiveInstance?.Name);
+        Assert.Equal(["Gamma", "Alpha"], viewModel.OtherInstances.Select(row => row.Name));
+
+        viewModel.SelectLibrarySortCommand.Execute(LibrarySort.Name);
+        Assert.Equal(["Alpha", "Gamma"], viewModel.OtherInstances.Select(row => row.Name));
     }
 
     private static Task RecordPlayedAsync(ViewModelHarness harness, Guid instanceId, DateTimeOffset playedAt) =>

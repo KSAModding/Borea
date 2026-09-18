@@ -148,6 +148,49 @@ public sealed class LaunchFailureTests
     }
 
     [Fact]
+    public async Task PlayOnTheActiveLibraryRow_LoaderCrashesOnAMod_OffersTheWayOutInTheLibrary()
+    {
+        using var harness = await CreateAsync();
+        var viewModel = harness.ViewModel;
+        await InstalledContent.AddAsync(harness, "KSArmory", activate: true);
+        await viewModel.LoadAsync();
+        viewModel.SetMainWindowLibraryCommand.Execute(null);
+
+        await viewModel.ActiveInstance!.PlayCommand.ExecuteAsync(null);
+
+        Assert.Equal(harness.Localization.FormatLaunchModBroke("KSArmory", "0.8.44", "StarMap"), viewModel.LaunchMessage);
+        Assert.True(viewModel.HasLaunchOutput);
+        Assert.True(viewModel.CanDisableBlamedMod);
+        Assert.True(viewModel.CurrentWindowLibrary);
+    }
+
+    [Fact]
+    public async Task PlayOnALibraryRow_StartsOnlyTheActiveInstance()
+    {
+        var starter = new RunningStarter();
+        using var harness = await CreateAsync(starter);
+        var viewModel = harness.ViewModel;
+        var active = await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value);
+        var other = await harness.Services.Instances.CreateAsync("Other", InstanceSource.Custom.Value);
+        await harness.Services.Instances.SetActiveInstanceAsync(active.InstanceId);
+        starter.GameLog = harness.Services.Paths.GetInstanceGameLogPath(active.InstanceId);
+        await viewModel.LoadAsync();
+        viewModel.SetMainWindowLibraryCommand.Execute(null);
+
+        await viewModel.OtherInstances.Single().PlayCommand.ExecuteAsync(null);
+
+        Assert.Null(viewModel.LaunchMessage);
+        Assert.False(harness.Services.Launcher.IsRunning(other.InstanceId));
+
+        await viewModel.ActiveInstance!.PlayCommand.ExecuteAsync(null);
+
+        Assert.True(harness.Services.Launcher.IsRunning(active.InstanceId));
+        Assert.False(harness.Services.Launcher.IsRunning(other.InstanceId));
+        Assert.NotNull(viewModel.LaunchMessage);
+        Assert.False(viewModel.IsLaunching);
+    }
+
+    [Fact]
     public async Task PlayActiveInstance_InstanceDeletedAfterLoad_SaysItIsGone()
     {
         using var harness = await CreateAsync();

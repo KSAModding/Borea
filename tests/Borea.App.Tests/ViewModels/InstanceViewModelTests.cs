@@ -272,6 +272,23 @@ public sealed class InstanceViewModelTests
     }
 
     [Fact]
+    public async Task HomeLaunch_PlayOnTheActiveLibraryRow_KeepsTheOptionLastChosen()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var viewModel = harness.ViewModel;
+        var instance = await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value);
+        await harness.Services.Instances.SetActiveInstanceAsync(instance.InstanceId);
+        await viewModel.LoadAsync();
+        await viewModel.PlayWithoutModLoaderCommand.ExecuteAsync(null);
+        viewModel.LaunchMessage = null;
+
+        await viewModel.ActiveInstance!.PlayCommand.ExecuteAsync(null);
+
+        Assert.NotNull(viewModel.LaunchMessage);
+        Assert.Equal(HomeLaunchOption.WithoutModLoader, viewModel.HomeLaunch);
+    }
+
+    [Fact]
     public async Task Play_GameComesUp_ShowsTheInstanceAsPlayedJustNow()
     {
         using var harness = await ViewModelHarness.CreateAsync(RecordStarMapAsync, processStarter: new GameStartingStarter());

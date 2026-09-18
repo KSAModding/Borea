@@ -420,6 +420,7 @@ public partial class MainViewModel : ViewModelBase
         Instances.Clear();
         foreach (var row in Sorted(rows))
             Instances.Add(row);
+        RefreshOtherInstances();
         _activeInstanceEntity = all.FirstOrDefault(instance => instance.InstanceId == activeId);
 
         ActiveInstance = Instances.FirstOrDefault(instance => instance.IsActive);
@@ -837,6 +838,10 @@ public sealed partial class InstanceItem : ObservableObject
 
     [RelayCommand]
     private Task OpenAsync() => _owner.OpenInstanceAsync(this);
+
+    /// <summary>Play on the active row of the Library, which starts the same watched launch as Home.</summary>
+    [RelayCommand]
+    private Task PlayAsync() => IsActive ? _owner.LaunchActiveInstanceAsync() : Task.CompletedTask;
 
     [RelayCommand]
     private void BeginRename() => _owner.BeginRenameInstance(this);
