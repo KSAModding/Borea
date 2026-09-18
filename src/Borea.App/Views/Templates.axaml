@@ -5,13 +5,7 @@
     <!-- The row templates the pages use. App.axaml merges this file, so every page can reach them. -->
     <!-- the game is not set up: one line and the way to the Game tab (#152) -->
     <DataTemplate x:Key="GameSetupBanner" x:DataType="vm:MainViewModel">
-        <Border Background="{StaticResource Brush.AccentSoft}" BorderBrush="{StaticResource Brush.Accent}" BorderThickness="1" CornerRadius="12" Padding="16,10" Margin="0,16,0,0">
-            <Grid ColumnDefinitions="Auto,12,*,16,Auto">
-                <Path Classes="icon-filled size-16" Fill="{StaticResource Brush.Accent}" Data="{StaticResource Icon.Paw}" VerticalAlignment="Center" />
-                <TextBlock Grid.Column="2" Classes="body-md" Text="{Binding GameSetupBannerText}" TextWrapping="Wrap" VerticalAlignment="Center" />
-                <Button Grid.Column="4" Classes="text primary" Content="{Binding Localization.SetupBannerAction}" Command="{Binding OpenGameSetupCommand}" VerticalAlignment="Center" />
-            </Grid>
-        </Border>
+        <views:Banner Kind="Accent" Margin="0,16,0,0" Message="{Binding GameSetupBannerText}" ActionText="{Binding Localization.SetupBannerAction}" ActionCommand="{Binding OpenGameSetupCommand}" />
     </DataTemplate>
     <!-- what the last launch said, on Home, in the Library and on the instance page -->
     <DataTemplate x:Key="LaunchStatus" x:DataType="vm:MainViewModel">
@@ -24,14 +18,7 @@
         </Grid>
     </DataTemplate>
     <DataTemplate x:Key="SharedProfileBanner" x:DataType="vm:MainViewModel">
-        <Border Background="{StaticResource Brush.AccentSoft}" BorderBrush="{StaticResource Brush.Accent}" BorderThickness="1" CornerRadius="12" Padding="16,10" Margin="0,16,0,0">
-            <Grid ColumnDefinitions="Auto,12,*,16,Auto,8,Auto">
-                <Path Classes="icon-filled size-16" Fill="{StaticResource Brush.Accent}" Data="{StaticResource Icon.Paw}" VerticalAlignment="Center" />
-                <TextBlock Grid.Column="2" Classes="body-md" Text="{Binding SharedProfileBannerText}" TextWrapping="Wrap" VerticalAlignment="Center" />
-                <Button Grid.Column="4" Classes="text" Content="{Binding Localization.SharedProfileDismiss}" Command="{Binding DismissSharedProfileBannerCommand}" VerticalAlignment="Center" />
-                <Button Grid.Column="6" Classes="text primary" Content="{Binding Localization.SharedProfileCreateInstance}" Command="{Binding BeginImportSharedProfileCommand}" VerticalAlignment="Center" />
-            </Grid>
-        </Border>
+        <views:Banner Kind="Outline" Margin="0,16,0,0" Message="{Binding SharedProfileBannerText}" ActionText="{Binding Localization.SharedProfileCreateInstance}" ActionCommand="{Binding BeginImportSharedProfileCommand}" DismissCommand="{Binding DismissSharedProfileBannerCommand}" DismissText="{Binding Localization.SharedProfileDismiss}" />
     </DataTemplate>
     <DataTemplate x:Key="InstanceHint" x:DataType="vm:MainViewModel">
         <WrapPanel ItemSpacing="12" LineSpacing="4">
