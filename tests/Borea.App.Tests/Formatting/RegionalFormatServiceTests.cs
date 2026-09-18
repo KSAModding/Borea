@@ -121,6 +121,24 @@ public sealed class RegionalFormatServiceTests : IDisposable
         Assert.Equal("fr-FR", CultureInfo.CurrentCulture.Name);
     }
 
+    [Fact]
+    public void PirateLanguage_IsNotARegionalFormat()
+    {
+        var localization = new LocalizationService(CultureInfo.GetCultureInfo("en"));
+        var service = new RegionalFormatService(
+            localization,
+            CultureInfo.GetCultureInfo("fr-FR"),
+            selectedCultureName: null);
+
+        localization.TrySetCulture("en-QP");
+
+        Assert.DoesNotContain(service.SupportedFormats, format =>
+            string.Equals(format.CultureName, "en-QP", StringComparison.OrdinalIgnoreCase));
+        Assert.False(service.TrySetCulture("en-QP"));
+        Assert.Null(service.SelectedCultureName);
+        Assert.Equal("fr-FR", CultureInfo.CurrentCulture.Name);
+    }
+
     public void Dispose()
     {
         CultureInfo.CurrentCulture = _originalCulture;

@@ -5,6 +5,8 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
+    <!-- Copies the satellite assembly of the custom en-QP culture from Borea.App. -->
+    <EnableCustomCulture>true</EnableCustomCulture>
   </PropertyGroup>
 
   <ItemGroup>
