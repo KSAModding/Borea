@@ -1176,8 +1176,11 @@
   <data name="SharedProfileModalTitle" xml:space="preserve">
     <value>Instanz aus deinem Spielprofil erstellen</value>
   </data>
-  <data name="SharedProfileModalHint" xml:space="preserve">
-    <value>Borea kopiert die Mods mit ihrer Ladereihenfolge und ob sie aktiviert sind. Dein Spielprofil bleibt unverändert.</value>
+  <data name="SharedProfileModalCopies" xml:space="preserve">
+    <value>Borea kopiert die Mods aus My Games/Kitten Space Agency in eine neue Instanz, mit Ladereihenfolge und An/Aus-Zustand.</value>
+  </data>
+  <data name="SharedProfileModalUnchanged" xml:space="preserve">
+    <value>In diesem Ordner ändert sich nichts.</value>
   </data>
   <data name="SharedProfileImporting" xml:space="preserve">
     <value>Borea kopiert die Mods und vergleicht sie mit dem Inhaltsindex. Schließe dieses Fenster, um abzubrechen.</value>

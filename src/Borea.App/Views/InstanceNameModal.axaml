@@ -14,7 +14,10 @@
                     </Button>
                 </Grid>
                 <Border Height="1" Background="{StaticResource Brush.Window}" Margin="0,24,0,0" />
-                <TextBlock Classes="body-md secondary" Text="{Binding Localization.SharedProfileModalHint}" TextWrapping="Wrap" Margin="36,24,24,0" IsVisible="{Binding IsImportingSharedProfile}" />
+                <StackPanel Spacing="4" Margin="36,24,24,0" IsVisible="{Binding IsImportingSharedProfile}">
+                    <TextBlock Classes="body-md secondary" Text="{Binding Localization.SharedProfileModalCopies}" TextWrapping="Wrap" />
+                    <TextBlock Classes="body-md secondary" Text="{Binding Localization.SharedProfileModalUnchanged}" TextWrapping="Wrap" />
+                </StackPanel>
                 <Grid ColumnDefinitions="Auto,12,*,16,Auto" Margin="36,32,24,32">
                     <TextBlock Classes="heading-md heading" Text="{Binding Localization.ModalNameLabel}" VerticalAlignment="Center" />
                     <TextBox Grid.Column="2" Classes="field" Text="{Binding ModalInstanceName}" PlaceholderText="{Binding Localization.LibraryNewInstancePlaceholder}" AutomationProperties.Name="{Binding Localization.ModalNameLabel}" VerticalAlignment="Center">

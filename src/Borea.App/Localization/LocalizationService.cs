@@ -641,7 +641,9 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string SharedProfileModalTitle => Resources.SharedProfileModalTitle;
 
-    public string SharedProfileModalHint => Resources.SharedProfileModalHint;
+    public string SharedProfileModalCopies => Resources.SharedProfileModalCopies;
+
+    public string SharedProfileModalUnchanged => Resources.SharedProfileModalUnchanged;
 
     public string SharedProfileImporting => Resources.SharedProfileImporting;
 

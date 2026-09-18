@@ -1176,8 +1176,11 @@
   <data name="SharedProfileModalTitle" xml:space="preserve">
     <value>Create an instance from your game profile</value>
   </data>
-  <data name="SharedProfileModalHint" xml:space="preserve">
-    <value>Borea copies the mods with their load order and whether they are enabled. Your game profile stays as it is.</value>
+  <data name="SharedProfileModalCopies" xml:space="preserve">
+    <value>Borea copies the mods from My Games/Kitten Space Agency into a new instance, with their load order and on or off state.</value>
+  </data>
+  <data name="SharedProfileModalUnchanged" xml:space="preserve">
+    <value>Nothing in that folder changes.</value>
   </data>
   <data name="SharedProfileImporting" xml:space="preserve">
     <value>Borea copies the mods and compares them with the content index. Close this window to stop.</value>
