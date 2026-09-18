@@ -162,6 +162,9 @@
   <data name="LibraryImportFromProfile" xml:space="preserve">
     <value>Aus Spielprofil importieren</value>
   </data>
+  <data name="LibraryImportFromProfileToolTip" xml:space="preserve">
+    <value>Kopiert die Mods deines Spielprofils in eine neue Instanz.</value>
+  </data>
   <data name="LibraryNeverPlayed" xml:space="preserve">
     <value>Nie gespielt</value>
   </data>

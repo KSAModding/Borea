@@ -205,6 +205,8 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string LibraryImportFromProfile => Resources.LibraryImportFromProfile;
 
+    public string LibraryImportFromProfileToolTip => Resources.LibraryImportFromProfileToolTip;
+
     public string LibraryActivate => Resources.LibraryActivate;
 
     public string LibraryRename => Resources.LibraryRename;
