@@ -42,6 +42,7 @@ public sealed class RemoveButtonTests
         var afc = viewModel.DiscoverItems.Single(item => item.ModId == "AdvancedFlightComputer");
         var expected = harness.Localization.FormatContentRemoveNotOwned("AdvancedFlightComputer");
         Assert.False(afc.CanRemove);
+        Assert.False(afc.BeginRemoveCommand.CanExecute(null));
         Assert.Equal(expected, afc.RemoveBlockedText);
         Assert.Equal(expected, afc.RemoveToolTip);
 
@@ -66,6 +67,8 @@ public sealed class RemoveButtonTests
         var afc = viewModel.DiscoverItems.Single(item => item.ModId == "AdvancedFlightComputer");
         var expected = harness.Localization.FormatContentRemoveRequired("AdvancedFlightComputer", "FlightPlanner");
         Assert.False(afc.CanRemove);
+        Assert.False(afc.BeginRemoveCommand.CanExecute(null));
+        Assert.Equal(expected, afc.RemoveBlockedText);
         Assert.Equal(expected, afc.RemoveToolTip);
 
         await viewModel.ActiveInstance!.OpenCommand.ExecuteAsync(null);

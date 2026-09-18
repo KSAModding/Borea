@@ -629,6 +629,9 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string FormatDiscoverInstalledIn(string instance)
         => string.Format(CultureInfo.CurrentCulture, Resources.DiscoverInstalledInFormat, instance);
 
+    public string FormatDiscoverInstalledMod(string name)
+        => string.Format(CultureInfo.CurrentCulture, Resources.DiscoverInstalledModFormat, name);
+
     public string FormatDiscoverIndexStale(string age)
         => string.Format(CultureInfo.CurrentCulture, Resources.DiscoverIndexStaleFormat, age);
 

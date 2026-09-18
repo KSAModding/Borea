@@ -228,19 +228,36 @@
                             </Button>
                             <ProgressBar Width="38" Height="6" VerticalAlignment="Center" IsVisible="{Binding IsInstalling}" Value="{Binding Progress}" Maximum="100" Foreground="{StaticResource Brush.Accent}" />
                             <ProgressBar Width="38" Height="6" VerticalAlignment="Center" IsVisible="{Binding IsRemoving}" IsIndeterminate="True" Foreground="{StaticResource Brush.Accent}" />
-                            <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center" IsVisible="{Binding IsInstalled}">
-                                <Border Classes="chip positive" VerticalAlignment="Center" ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).InstalledInText}">
-                                    <TextBlock Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.DiscoverInstalled}" />
-                                </Border>
-                                <Button Classes="icon" Command="{Binding BeginRemoveCommand}" IsVisible="{Binding !IsRemoving}" IsEnabled="{Binding CanRemove}" ToolTip.Tip="{Binding RemoveToolTip}" ToolTip.ShowOnDisabled="True" AutomationProperties.Name="{Binding Name}" AutomationProperties.HelpText="{Binding RemoveToolTip}">
-                                    <Path Classes="icon size-18" Data="{StaticResource Icon.Trash}" />
-                                </Button>
-                            </StackPanel>
+                            <Button Classes="add installed" ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).InstalledInText}" AutomationProperties.Name="{Binding InstalledAutomationName}" AutomationProperties.HelpText="{Binding $parent[Window].((vm:MainViewModel)DataContext).InstalledInText}">
+                                <Button.IsVisible>
+                                    <MultiBinding Converter="{x:Static BoolConverters.And}">
+                                        <Binding Path="IsInstalled" />
+                                        <Binding Path="!IsRemoving" />
+                                    </MultiBinding>
+                                </Button.IsVisible>
+                                <Button.Flyout>
+                                    <MenuFlyout Placement="BottomEdgeAlignedRight">
+                                        <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ContentRemove}" Command="{Binding BeginRemoveCommand}" AutomationProperties.HelpText="{Binding RemoveBlockedText}" />
+                                        <MenuItem IsEnabled="False" IsVisible="{Binding RemoveBlockedText, Converter={x:Static ObjectConverters.IsNotNull}}">
+                                            <MenuItem.Header>
+                                                <TextBlock Classes="body-sm secondary" Text="{Binding RemoveBlockedText}" TextWrapping="Wrap" MaxWidth="260" />
+                                            </MenuItem.Header>
+                                        </MenuItem>
+                                    </MenuFlyout>
+                                </Button.Flyout>
+                                <Path Classes="icon size-16" Data="{StaticResource Icon.Check}" />
+                            </Button>
                         </Panel>
                     </Grid>
                     <ContentControl Grid.Row="1" Margin="0,8" Content="{Binding Choices}" IsVisible="{Binding Choices, Converter={x:Static ObjectConverters.IsNotNull}}" />
-                    <Grid Grid.Row="2" ColumnDefinitions="*,Auto" Margin="0,0,4,0">
-                        <ItemsControl ItemsSource="{Binding Tags}" VerticalAlignment="Center" ClipToBounds="True">
+                    <Grid Grid.Row="2" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8" Margin="0,0,4,0">
+                        <Border Classes="chip" Classes.compatible="{Binding IsCompatible}" Classes.untested="{Binding IsUntested}" Classes.incompatible="{Binding IsIncompatible}" VerticalAlignment="Center">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <Ellipse />
+                                <TextBlock Text="{Binding CompatibilityText}" />
+                            </StackPanel>
+                        </Border>
+                        <ItemsControl Grid.Column="1" ItemsSource="{Binding Tags}" VerticalAlignment="Center" ClipToBounds="True">
                             <ItemsControl.ItemsPanel>
                                 <ItemsPanelTemplate>
                                     <StackPanel Orientation="Horizontal" Spacing="4" />
@@ -254,7 +271,7 @@
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
-                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="16" VerticalAlignment="Center">
+                        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="16" VerticalAlignment="Center">
                             <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center" IsVisible="{Binding IsConfirmingRemove}">
                                 <TextBlock Classes="body-sm danger" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ContentRemoveConfirm}" VerticalAlignment="Center" />
                                 <Button Classes="text danger" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ContentRemove}" Command="{Binding ConfirmRemoveCommand}" />
@@ -279,12 +296,6 @@
                                 <Path Classes="icon size-16" Data="{StaticResource Icon.Clock}" />
                                 <TextBlock Classes="label-md" Text="{Binding UpdatedText}" VerticalAlignment="Center" />
                             </StackPanel>
-                            <Border Classes="chip" Classes.compatible="{Binding IsCompatible}" Classes.untested="{Binding IsUntested}" Classes.incompatible="{Binding IsIncompatible}" VerticalAlignment="Center">
-                                <StackPanel Orientation="Horizontal" Spacing="6">
-                                    <Ellipse />
-                                    <TextBlock Text="{Binding CompatibilityText}" />
-                                </StackPanel>
-                            </Border>
                         </StackPanel>
                     </Grid>
                 </Grid>
@@ -325,8 +336,14 @@
                         </Panel>
                     </Grid>
                     <ContentControl Grid.Row="1" Margin="0,8" Content="{Binding Choices}" IsVisible="{Binding Choices, Converter={x:Static ObjectConverters.IsNotNull}}" />
-                    <Grid Grid.Row="2" ColumnDefinitions="*,Auto" Margin="0,0,4,0">
-                        <ItemsControl ItemsSource="{Binding Tags}" VerticalAlignment="Center" ClipToBounds="True">
+                    <Grid Grid.Row="2" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8" Margin="0,0,4,0">
+                        <Border Classes="chip" Classes.compatible="{Binding IsCompatible}" Classes.untested="{Binding IsUntested}" Classes.incompatible="{Binding IsIncompatible}" VerticalAlignment="Center">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <Ellipse />
+                                <TextBlock Text="{Binding CompatibilityText}" />
+                            </StackPanel>
+                        </Border>
+                        <ItemsControl Grid.Column="1" ItemsSource="{Binding Tags}" VerticalAlignment="Center" ClipToBounds="True">
                             <ItemsControl.ItemsPanel>
                                 <ItemsPanelTemplate>
                                     <StackPanel Orientation="Horizontal" Spacing="4" />
@@ -340,7 +357,7 @@
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
-                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="16" VerticalAlignment="Center">
+                        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="16" VerticalAlignment="Center">
                             <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center" IsVisible="{Binding ProgressStatus, Converter={x:Static ObjectConverters.IsNotNull}}">
                                 <TextBlock Classes="body-sm secondary" Text="{Binding ProgressStatus}" ToolTip.Tip="{Binding ProgressStatus}" MaxWidth="260" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
                                 <TextBlock Classes="label-md" Text="{Binding ProgressDetail}" VerticalAlignment="Center" IsVisible="{Binding ProgressDetail, Converter={x:Static ObjectConverters.IsNotNull}}" />
@@ -356,12 +373,6 @@
                                 <Path Classes="icon size-16" Data="{StaticResource Icon.Clock}" />
                                 <TextBlock Classes="label-md" Text="{Binding ReleasedText}" VerticalAlignment="Center" />
                             </StackPanel>
-                            <Border Classes="chip" Classes.compatible="{Binding IsCompatible}" Classes.untested="{Binding IsUntested}" Classes.incompatible="{Binding IsIncompatible}" VerticalAlignment="Center">
-                                <StackPanel Orientation="Horizontal" Spacing="6">
-                                    <Ellipse />
-                                    <TextBlock Text="{Binding CompatibilityText}" />
-                                </StackPanel>
-                            </Border>
                         </StackPanel>
                     </Grid>
                 </Grid>

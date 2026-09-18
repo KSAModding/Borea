@@ -320,6 +320,8 @@ public sealed class DiscoverViewModelTests
         await viewModel.EnsureDiscoverLoadedAsync();
         var afc = viewModel.DiscoverItems.Single(item => item.ModId == "AdvancedFlightComputer");
         Assert.Equal(harness.Localization.FormatDiscoverInstalledIn("Main"), viewModel.InstalledInText);
+        Assert.Contains(afc.Name, afc.InstalledAutomationName);
+        Assert.True(afc.BeginRemoveCommand.CanExecute(null));
 
         afc.BeginRemoveCommand.Execute(null);
         Assert.True(afc.IsConfirmingRemove);
@@ -328,8 +330,12 @@ public sealed class DiscoverViewModelTests
         Assert.True(afc.IsInstalled);
 
         afc.BeginRemoveCommand.Execute(null);
+        var canRemoveChanged = 0;
+        afc.BeginRemoveCommand.CanExecuteChanged += (_, _) => canRemoveChanged++;
         await afc.ConfirmRemoveCommand.ExecuteAsync(null);
 
+        Assert.True(canRemoveChanged > 0);
+        Assert.False(afc.BeginRemoveCommand.CanExecute(null));
         Assert.False(afc.IsConfirmingRemove);
         Assert.False(afc.IsRemoving);
         Assert.Null(afc.InstallError);

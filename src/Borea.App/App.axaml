@@ -422,6 +422,9 @@
             <Setter Property="Stroke" Value="{StaticResource Brush.Accent}" />
             <Setter Property="StrokeThickness" Value="2" />
         </Style>
+        <Style Selector="Button.add.installed Path">
+            <Setter Property="Stroke" Value="{StaticResource Brush.Compatible}" />
+        </Style>
         <!-- c/inner-nav-action: tabs inside the black pill -->
         <Style Selector="Button.tab">
             <Setter Property="Padding" Value="16,8" />
