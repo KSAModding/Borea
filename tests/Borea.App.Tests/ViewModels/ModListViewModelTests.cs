@@ -41,6 +41,8 @@ public sealed class ModListViewModelTests
         Assert.Equal(await EntriesAsync(harness, source.InstanceId), await EntriesAsync(harness, copy.InstanceId));
         Assert.Empty(copy.ForeignMods);
         Assert.Contains(viewModel.Instances, row => row.Name == "Main (copy)");
+        Assert.Null(viewModel.InstanceNotice);
+        Assert.Equal("Main", viewModel.ActiveInstance?.Name);
     }
 
     [Fact]
@@ -111,6 +113,21 @@ public sealed class ModListViewModelTests
 
         var imported = Assert.Single(await harness.Services.Instances.GetAllAsync());
         Assert.Equal("HudCore", Assert.Single(imported.Mods).ModId);
+    }
+
+    [Fact]
+    public async Task Import_NoActiveInstance_SaysTheNewInstanceIsActive()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(respond: ServeArchive);
+        AddReleases(harness);
+        var viewModel = harness.ViewModel;
+        var text = harness.Services.ModListFormat.Write(new ModList("Shared", [Entry("HudCore", "1.0.0")]));
+
+        await viewModel.BeginImportAsync("shared.toml", text);
+        await viewModel.ModListImport!.ConfirmCommand.ExecuteAsync(null);
+
+        Assert.Equal(harness.Localization.FormatLibraryNowActive("Shared"), viewModel.InstanceNotice);
+        Assert.Equal("Shared", viewModel.ActiveInstance?.Name);
     }
 
     [Fact]

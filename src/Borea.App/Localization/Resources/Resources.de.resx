@@ -276,6 +276,9 @@
   <data name="LibraryLastPlayedFormat" xml:space="preserve">
     <value>Zuletzt gespielt am {0}</value>
   </data>
+  <data name="LibraryNowActiveFormat" xml:space="preserve">
+    <value>{0} ist jetzt die aktive Instanz.</value>
+  </data>
   <data name="LibrarySortName" xml:space="preserve">
     <value>Name</value>
   </data>

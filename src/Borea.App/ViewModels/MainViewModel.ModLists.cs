@@ -27,7 +27,7 @@ public partial class MainViewModel
 
     public bool IsReviewingModList => ModListImport is not null;
 
-    /// <summary>What the last export or copy of a modlist did.</summary>
+    /// <summary>What the last export, copy, duplicate or import of a modlist did.</summary>
     [ObservableProperty]
     private string? _instanceNotice;
 
@@ -133,10 +133,12 @@ public partial class MainViewModel
         var stopped = false;
         try
         {
-            await InstallerFor(services).InstallAsync(item.Plan, item.Name.Trim(), ProgressOf(item), run.InstallStop);
+            var created = await InstallerFor(services).InstallAsync(item.Plan, item.Name.Trim(), ProgressOf(item), run.InstallStop);
             completed = true;
             if (ReferenceEquals(ModListImport, item))
                 ModListImport = null;
+            if (created.Activated)
+                InstanceNotice = Localization.FormatLibraryNowActive(created.Instance.Name);
         }
         catch (InstallStoppedException)
         {

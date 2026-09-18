@@ -335,6 +335,9 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string FormatLibraryLastPlayed(string date)
         => string.Format(CultureInfo.CurrentCulture, Resources.LibraryLastPlayedFormat, date);
 
+    public string FormatLibraryNowActive(string instanceName)
+        => string.Format(CultureInfo.CurrentCulture, Resources.LibraryNowActiveFormat, instanceName);
+
     public string LibraryImportModList => Resources.LibraryImportModList;
 
     public string LibraryMoreActions => Resources.LibraryMoreActions;
