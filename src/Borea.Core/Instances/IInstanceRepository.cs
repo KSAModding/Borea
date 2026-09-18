@@ -29,10 +29,21 @@ public interface IInstanceRepository
     /// </summary>
     Task<bool> IsNameAvailableAsync(string name, Guid? excludingInstanceId = null);
 
-    Task<Instance> CreateAsync(string name, InstanceSource source);
+    /// <summary>
+    /// Saves a new instance, and makes it active when no existing instance is active.
+    /// </summary>
+    Task<InstanceCreateResult> CreateAsync(string name, InstanceSource source);
+
+    /// <summary>
+    /// Saves <paramref name="instance"/> as a new instance under its own id, with the same rule.
+    /// </summary>
+    Task<InstanceCreateResult> CreateAsync(Instance instance);
 
     Task RenameAsync(Guid instanceId, string newName);
 
+    /// <summary>
+    /// Deletes the instance, and leaves no instance active when it was the active one.
+    /// </summary>
     Task DeleteAsync(Guid instanceId);
 
     Task SaveAsync(Instance instance);

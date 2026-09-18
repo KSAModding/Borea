@@ -43,7 +43,7 @@ public sealed class ModPackInstallerTests
         var first = Release("First");
         var second = Release("Second");
         var instances = new MemoryInstanceRepository();
-        var instance = await instances.CreateAsync("Target", InstanceSource.Custom.Value);
+        var instance = (await instances.CreateAsync("Target", InstanceSource.Custom.Value)).Instance;
         var stop = new InstallStop();
         var installer = new FakeInstaller(instances)
         {
@@ -72,7 +72,7 @@ public sealed class ModPackInstallerTests
     {
         var member = Release("Member");
         var instances = new MemoryInstanceRepository();
-        var instance = await instances.CreateAsync("Target", InstanceSource.Custom.Value);
+        var instance = (await instances.CreateAsync("Target", InstanceSource.Custom.Value)).Instance;
         var stop = new InstallStop();
         var installer = new FakeInstaller(instances);
         var services = new ModPackInstaller(instances, new StoppingPlanner(stop), installer, new FakeReplacer(instances));
@@ -93,7 +93,7 @@ public sealed class ModPackInstallerTests
         var second = Release("Second");
         var repository = new FakeModRepository([member, dependency, second]);
         var instances = new MemoryInstanceRepository();
-        var instance = await instances.CreateAsync("Target", InstanceSource.Custom.Value);
+        var instance = (await instances.CreateAsync("Target", InstanceSource.Custom.Value)).Instance;
         var reports = new List<InstallProgress>();
 
         var result = await Services(instances).InstallAsync(Request(instance.InstanceId, Pack(member, second), repository), new SynchronousProgress<InstallProgress>(reports.Add));
@@ -117,7 +117,7 @@ public sealed class ModPackInstallerTests
         var valid = Release("Valid");
         var repository = new FakeModRepository([valid], [Listing("Missing")]);
         var instances = new MemoryInstanceRepository();
-        var instance = await instances.CreateAsync("Target", InstanceSource.Custom.Value);
+        var instance = (await instances.CreateAsync("Target", InstanceSource.Custom.Value)).Instance;
         var services = Services(instances);
 
         var result = await services.InstallAsync(Request(instance.InstanceId, Pack(valid, Release("Missing")), repository));
@@ -151,7 +151,7 @@ public sealed class ModPackInstallerTests
         var yanked = Release("Member", yanked: true);
         var repository = new FakeModRepository([yanked]);
         var instances = new MemoryInstanceRepository();
-        var instance = await instances.CreateAsync("Target", InstanceSource.Custom.Value);
+        var instance = (await instances.CreateAsync("Target", InstanceSource.Custom.Value)).Instance;
         var services = Services(instances);
         var status = new IndexStatus(IndexStatusState.Retracted, "retracted", reason: "Broken pack.");
         var pack = Pack(yanked, status);
@@ -172,7 +172,7 @@ public sealed class ModPackInstallerTests
         var second = Release("Second");
         var repository = new FakeModRepository([first, second]);
         var instances = new MemoryInstanceRepository();
-        var instance = await instances.CreateAsync("Target", InstanceSource.Custom.Value);
+        var instance = (await instances.CreateAsync("Target", InstanceSource.Custom.Value)).Instance;
         var installer = new FakeInstaller(instances) { FailOnceFor = "Second" };
         var service = new ModPackInstaller(instances, new FakePlanner(), installer, new FakeReplacer(instances));
         var request = Request(instance.InstanceId, Pack(first, second), repository);
@@ -192,7 +192,7 @@ public sealed class ModPackInstallerTests
         var member = Release("Member");
         var repository = new FakeModRepository([member]);
         var instances = new MemoryInstanceRepository();
-        var instance = await instances.CreateAsync("Target", InstanceSource.Custom.Value);
+        var instance = (await instances.CreateAsync("Target", InstanceSource.Custom.Value)).Instance;
         var installer = new FakeInstaller(instances) { AddConcurrentMod = Release("Concurrent") };
         var service = new ModPackInstaller(instances, new FakePlanner(), installer, new FakeReplacer(instances));
 
@@ -212,7 +212,7 @@ public sealed class ModPackInstallerTests
         var second = Release("Second");
         var repository = new FakeModRepository([first, second]);
         var instances = new MemoryInstanceRepository();
-        var instance = await instances.CreateAsync("Target", InstanceSource.Custom.Value);
+        var instance = (await instances.CreateAsync("Target", InstanceSource.Custom.Value)).Instance;
         var installer = new FakeInstaller(instances) { AddAfterGuardedResultFor = "First", AddConcurrentMod = Release("Concurrent") };
         var service = new ModPackInstaller(instances, new FakePlanner(), installer, new FakeReplacer(instances));
 
@@ -273,7 +273,7 @@ public sealed class ModPackInstallerTests
         var member = Release("Member", dependencies: [new ModDependency("Dependency", ModDependencyKind.Required)]);
         var repository = new FakeModRepository([member, dependency]);
         var instances = new MemoryInstanceRepository();
-        var instance = await instances.CreateAsync("Target", InstanceSource.Custom.Value);
+        var instance = (await instances.CreateAsync("Target", InstanceSource.Custom.Value)).Instance;
         var installer = new FakeInstaller(instances);
         var service = new ModPackInstaller(instances, new FakePlanner(), installer, new FakeReplacer(instances));
 
@@ -434,7 +434,8 @@ public sealed class ModPackInstallerTests
         public Task SetActiveInstanceAsync(Guid instanceId) => Task.CompletedTask;
         public Task ClearActiveInstanceAsync() => Task.CompletedTask;
         public Task<bool> IsNameAvailableAsync(string name, Guid? excludingInstanceId = null) => Task.FromResult(true);
-        public Task<Instance> CreateAsync(string name, InstanceSource source) { var value = new Instance(name, source); _values[value.InstanceId] = value; return Task.FromResult(value); }
+        public Task<InstanceCreateResult> CreateAsync(string name, InstanceSource source) => CreateAsync(new Instance(name, source));
+        public Task<InstanceCreateResult> CreateAsync(Instance instance) { _values[instance.InstanceId] = instance; return Task.FromResult(new InstanceCreateResult(instance, Activated: false)); }
         public Task RenameAsync(Guid instanceId, string newName) { _values[instanceId].Rename(newName); return Task.CompletedTask; }
         public Task DeleteAsync(Guid instanceId) { _values.Remove(instanceId); return Task.CompletedTask; }
         public Task SaveAsync(Instance instance) { _values[instance.InstanceId] = instance; return Task.CompletedTask; }

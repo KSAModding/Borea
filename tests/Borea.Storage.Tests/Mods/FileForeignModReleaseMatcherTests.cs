@@ -21,7 +21,7 @@ public sealed class FileForeignModReleaseMatcherTests : IAsyncLifetime
     {
         _paths = new TestGamePathProvider(_tempRoot);
         _instances = new FileInstanceRepository(_paths);
-        _instanceId = (await _instances.CreateAsync("Test", InstanceSource.Custom.Value)).InstanceId;
+        _instanceId = (await _instances.CreateAsync("Test", InstanceSource.Custom.Value)).Instance.InstanceId;
         var adopter = new FileForeignModAdopter(_paths, _instances, _downloader);
         _matcher = new FileForeignModReleaseMatcher(_paths, _downloader, adopter, new ReleaseSnapshots(_downloader));
     }

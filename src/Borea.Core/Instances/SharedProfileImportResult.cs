@@ -2,8 +2,8 @@ using Borea.Core.Mods;
 
 namespace Borea.Core.Instances;
 
-/// <summary>The created instance, and every copied mod folder in load order.</summary>
-public sealed record SharedProfileImportResult(Instance Instance, IReadOnlyList<SharedProfileImportedMod> Mods);
+/// <summary>The created instance, every copied mod folder in load order, and whether the instance became the active one.</summary>
+public sealed record SharedProfileImportResult(Instance Instance, IReadOnlyList<SharedProfileImportedMod> Mods, bool Activated);
 
 /// <param name="HasManifestEntry">
 /// False when the folder name is not a valid content id, so Borea wrote no

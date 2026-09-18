@@ -36,7 +36,7 @@ public sealed class InstallStopTests : IAsyncLifetime
 
     public async Task InitializeAsync()
     {
-        var instance = await _instances.CreateAsync("Test", InstanceSource.Custom.Value);
+        var instance = (await _instances.CreateAsync("Test", InstanceSource.Custom.Value)).Instance;
         _instanceId = instance.InstanceId;
     }
 

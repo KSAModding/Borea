@@ -37,6 +37,38 @@ public sealed class LibraryViewModelTests
         Assert.Null(viewModel.InstanceError);
     }
 
+    [Fact]
+    public async Task CreateInstance_NoActiveInstance_ShowsTheNewInstanceAsActive()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var viewModel = harness.ViewModel;
+
+        viewModel.BeginCreateInstanceCommand.Execute(null);
+        viewModel.ModalInstanceName = "Career";
+        await viewModel.CreateInstanceCommand.ExecuteAsync(null);
+
+        var row = Assert.Single(viewModel.Instances);
+        Assert.True(row.IsActive);
+        Assert.Same(row, viewModel.ActiveInstance);
+        Assert.True(viewModel.HasActiveInstance);
+    }
+
+    [Fact]
+    public async Task CreateInstance_AnotherInstanceIsActive_KeepsItActive()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var viewModel = harness.ViewModel;
+        await harness.Services.Instances.CreateAsync("Alpha", InstanceSource.Custom.Value);
+        await viewModel.LoadAsync();
+
+        viewModel.BeginCreateInstanceCommand.Execute(null);
+        viewModel.ModalInstanceName = "Beta";
+        await viewModel.CreateInstanceCommand.ExecuteAsync(null);
+
+        Assert.False(viewModel.Instances.Single(row => row.Name == "Beta").IsActive);
+        Assert.Equal("Alpha", viewModel.ActiveInstance?.Name);
+    }
+
     [Theory]
     [InlineData("")]
     [InlineData("   ")]
@@ -162,7 +194,6 @@ public sealed class LibraryViewModelTests
         await harness.Services.Instances.CreateAsync("Alpha", InstanceSource.Custom.Value);
         await viewModel.LoadAsync();
 
-        await viewModel.Instances.Single().ToggleActiveCommand.ExecuteAsync(null);
         Assert.True(viewModel.Instances.Single().IsActive);
 
         await viewModel.Instances.Single().ToggleActiveCommand.ExecuteAsync(null);
@@ -182,6 +213,8 @@ public sealed class LibraryViewModelTests
         await harness.Services.Instances.CreateAsync("Alpha", InstanceSource.Custom.Value);
         await harness.Services.Instances.CreateAsync("Beta", InstanceSource.Custom.Value);
         await harness.Services.Instances.CreateAsync("Gamma", InstanceSource.Custom.Value);
+        // the first new instance became active, and this test starts without one
+        await harness.Services.Instances.ClearActiveInstanceAsync();
         await viewModel.LoadAsync();
         Assert.Equal(["Alpha", "Beta", "Gamma"], viewModel.OtherInstances.Select(row => row.Name));
 
@@ -287,7 +320,7 @@ public sealed class LibraryViewModelTests
     {
         using var harness = await ViewModelHarness.CreateAsync();
         var viewModel = harness.ViewModel;
-        var instance = await harness.Services.Instances.CreateAsync("Alpha", InstanceSource.Custom.Value);
+        var instance = (await harness.Services.Instances.CreateAsync("Alpha", InstanceSource.Custom.Value)).Instance;
         await viewModel.LoadAsync();
         viewModel.SetMainWindowLibraryCommand.Execute(null);
         string? opened = null;
@@ -338,7 +371,7 @@ public sealed class LibraryViewModelTests
     {
         using var harness = await ViewModelHarness.CreateAsync();
         var viewModel = harness.ViewModel;
-        var instance = await harness.Services.Instances.CreateAsync("Alpha", InstanceSource.Custom.Value);
+        var instance = (await harness.Services.Instances.CreateAsync("Alpha", InstanceSource.Custom.Value)).Instance;
         await RecordPlayedAsync(harness, instance.InstanceId, DateTimeOffset.UtcNow.AddDays(-6));
         var logWrittenAt = DateTimeOffset.UtcNow.AddHours(-2);
         var log = harness.Services.Paths.GetInstanceGameLogPath(instance.InstanceId);
@@ -361,8 +394,8 @@ public sealed class LibraryViewModelTests
         using var harness = await ViewModelHarness.CreateAsync();
         var viewModel = harness.ViewModel;
         await harness.Services.Instances.CreateAsync("Alpha", InstanceSource.Custom.Value);
-        var beta = await harness.Services.Instances.CreateAsync("Beta", InstanceSource.Custom.Value);
-        var gamma = await harness.Services.Instances.CreateAsync("Gamma", InstanceSource.Custom.Value);
+        var beta = (await harness.Services.Instances.CreateAsync("Beta", InstanceSource.Custom.Value)).Instance;
+        var gamma = (await harness.Services.Instances.CreateAsync("Gamma", InstanceSource.Custom.Value)).Instance;
         await RecordPlayedAsync(harness, beta.InstanceId, DateTimeOffset.UtcNow.AddDays(-6));
         await RecordPlayedAsync(harness, gamma.InstanceId, DateTimeOffset.UtcNow.AddHours(-1));
         await viewModel.LoadAsync();
@@ -382,8 +415,8 @@ public sealed class LibraryViewModelTests
         using var harness = await ViewModelHarness.CreateAsync();
         var viewModel = harness.ViewModel;
         await harness.Services.Instances.CreateAsync("Alpha", InstanceSource.Custom.Value);
-        var beta = await harness.Services.Instances.CreateAsync("Beta", InstanceSource.Custom.Value);
-        var gamma = await harness.Services.Instances.CreateAsync("Gamma", InstanceSource.Custom.Value);
+        var beta = (await harness.Services.Instances.CreateAsync("Beta", InstanceSource.Custom.Value)).Instance;
+        var gamma = (await harness.Services.Instances.CreateAsync("Gamma", InstanceSource.Custom.Value)).Instance;
         await RecordPlayedAsync(harness, beta.InstanceId, DateTimeOffset.UtcNow.AddDays(-6));
         await RecordPlayedAsync(harness, gamma.InstanceId, DateTimeOffset.UtcNow.AddHours(-1));
         await harness.Services.Instances.SetActiveInstanceAsync(beta.InstanceId);

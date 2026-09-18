@@ -24,7 +24,7 @@ public sealed class FileModReplacerTests : IAsyncLifetime
         _paths = new TestGamePathProvider(_root);
         _instances = new FileInstanceRepository(_paths);
         _state = new FileModStateRepository(_paths);
-        _instanceId = (await _instances.CreateAsync("Test", InstanceSource.Custom.Value)).InstanceId;
+        _instanceId = (await _instances.CreateAsync("Test", InstanceSource.Custom.Value)).Instance.InstanceId;
     }
 
     public Task DisposeAsync()
@@ -216,7 +216,8 @@ public sealed class FileModReplacerTests : IAsyncLifetime
         public Task SetActiveInstanceAsync(Guid instanceId) => inner.SetActiveInstanceAsync(instanceId);
         public Task ClearActiveInstanceAsync() => inner.ClearActiveInstanceAsync();
         public Task<bool> IsNameAvailableAsync(string name, Guid? excludingInstanceId = null) => inner.IsNameAvailableAsync(name, excludingInstanceId);
-        public Task<Instance> CreateAsync(string name, InstanceSource source) => inner.CreateAsync(name, source);
+        public Task<InstanceCreateResult> CreateAsync(string name, InstanceSource source) => inner.CreateAsync(name, source);
+        public Task<InstanceCreateResult> CreateAsync(Instance instance) => inner.CreateAsync(instance);
         public Task RenameAsync(Guid instanceId, string newName) => inner.RenameAsync(instanceId, newName);
         public Task DeleteAsync(Guid instanceId) => inner.DeleteAsync(instanceId);
         public Task SaveAsync(Instance instance) => inner.SaveAsync(instance);
@@ -244,7 +245,8 @@ public sealed class FileModReplacerTests : IAsyncLifetime
         public Task SetActiveInstanceAsync(Guid instanceId) => inner.SetActiveInstanceAsync(instanceId);
         public Task ClearActiveInstanceAsync() => inner.ClearActiveInstanceAsync();
         public Task<bool> IsNameAvailableAsync(string name, Guid? excludingInstanceId = null) => inner.IsNameAvailableAsync(name, excludingInstanceId);
-        public Task<Instance> CreateAsync(string name, InstanceSource source) => inner.CreateAsync(name, source);
+        public Task<InstanceCreateResult> CreateAsync(string name, InstanceSource source) => inner.CreateAsync(name, source);
+        public Task<InstanceCreateResult> CreateAsync(Instance instance) => inner.CreateAsync(instance);
         public Task RenameAsync(Guid instanceId, string newName) => inner.RenameAsync(instanceId, newName);
         public Task DeleteAsync(Guid instanceId) => inner.DeleteAsync(instanceId);
         public Task SaveAsync(Instance instance) => inner.SaveAsync(instance);

@@ -38,7 +38,7 @@ public sealed class LaunchArgumentsViewModelTests
     {
         using var harness = await ViewModelHarness.CreateAsync();
         var viewModel = harness.ViewModel;
-        var instance = await harness.Services.Instances.CreateAsync("Alpha", InstanceSource.Custom.Value);
+        var instance = (await harness.Services.Instances.CreateAsync("Alpha", InstanceSource.Custom.Value)).Instance;
         await harness.Services.Instances.UpdateAsync(instance.InstanceId, saved =>
         {
             saved.SetLaunchArguments(["-windowed"]);

@@ -122,7 +122,7 @@ public sealed class TasksViewModelTests
     {
         using var harness = await ViewModelHarness.CreateAsync();
         var viewModel = harness.ViewModel;
-        var instance = await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value);
+        var instance = (await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value)).Instance;
         await harness.Services.Instances.SetActiveInstanceAsync(instance.InstanceId);
         await viewModel.LoadAsync();
         await viewModel.EnsureDiscoverLoadedAsync();
@@ -158,7 +158,7 @@ public sealed class TasksViewModelTests
         var (instance, item) = await ConfirmingInstallAsync(harness);
         await item.ConfirmInstallCommand.ExecuteAsync(null);
         var failed = viewModel.Tasks.History[0];
-        var second = await harness.Services.Instances.CreateAsync("Second", InstanceSource.Custom.Value);
+        var second = (await harness.Services.Instances.CreateAsync("Second", InstanceSource.Custom.Value)).Instance;
         await viewModel.ActivateInstanceAsync(second.InstanceId);
 
         await failed.RetryCommand.ExecuteAsync(null);
@@ -326,7 +326,7 @@ public sealed class TasksViewModelTests
     private static async Task<(Instance Instance, DiscoverItem Item)> ConfirmingInstallAsync(ViewModelHarness harness)
     {
         var viewModel = harness.ViewModel;
-        var instance = await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value);
+        var instance = (await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value)).Instance;
         await harness.Services.Instances.SetActiveInstanceAsync(instance.InstanceId);
         await viewModel.LoadAsync();
         await viewModel.EnsureDiscoverLoadedAsync();

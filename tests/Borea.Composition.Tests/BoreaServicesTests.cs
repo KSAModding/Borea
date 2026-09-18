@@ -224,7 +224,7 @@ public sealed class BoreaServicesTests : IDisposable
         using var services = await BoreaServices.BuildAsync(_tempRoot);
         var pin = ChannelRelease("1.2.0-dev.1", ReleaseStatus.Dev);
         var repository = new ReleaseListRepository([ChannelRelease("1.0.0", ReleaseStatus.Stable), pin]);
-        var instance = await services.Instances.CreateAsync("Pack target", InstanceSource.Custom.Value);
+        var instance = (await services.Instances.CreateAsync("Pack target", InstanceSource.Custom.Value)).Instance;
         var installer = new RecordingModInstaller(services.Instances);
         var packs = new Borea.Storage.ModPacks.ModPackInstaller(services.Instances, services.InstallPlanner, installer, new UnusedModReplacer());
         var metadata = new Borea.Core.ModPacks.ModPackMetadata(1, "Pack", "test", "Pack", ["Author"], "Pack.", "CC0-1.0", new Dictionary<string, string> { ["forums"] = "https://example.com/pack" }, "2026.7", ModVersion.Parse("1.0.0"), DateTimeOffset.UnixEpoch, [new Borea.Core.ModPacks.ModPackEntry("A", pin.Version)]);
@@ -394,7 +394,7 @@ public sealed class BoreaServicesTests : IDisposable
             new ConflictingStarMapRepository());
         Assert.IsType<FileForeignModAdopter>(services.ForeignModAdopter);
         Assert.IsType<FileForeignModReleaseMatcher>(services.ForeignModReleaseMatcher);
-        var instance = await services.Instances.CreateAsync("Test", InstanceSource.Custom.Value);
+        var instance = (await services.Instances.CreateAsync("Test", InstanceSource.Custom.Value)).Instance;
         var folder = WriteForeignMod(services, instance.InstanceId, "AdvancedFlightComputer");
         var payload = Path.Combine(folder, "keep.txt");
         await File.WriteAllTextAsync(payload, "Keep these bytes.");
@@ -431,7 +431,7 @@ public sealed class BoreaServicesTests : IDisposable
             _tempRoot,
             new ControlledHttpMessageHandler(snapshot),
             new ConflictingStarMapRepository());
-        var instance = await services.Instances.CreateAsync("Test", InstanceSource.Custom.Value);
+        var instance = (await services.Instances.CreateAsync("Test", InstanceSource.Custom.Value)).Instance;
         var folder = WriteForeignMod(services, instance.InstanceId, folderName);
         var archive = await WriteArchiveAsync(archiveBytes);
         await services.ForeignModAdopter.ScanAsync(instance.InstanceId);

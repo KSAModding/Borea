@@ -163,14 +163,14 @@ internal static class ModListCommands
         if (!context.Json)
             WriteHuman(context.Output, plan, name, notCopied);
 
-        Instance? created = null;
+        InstanceCreateResult? created = null;
         if (plan.Plan.IsReady && unknown.Count == 0 && yanked.Count == 0 && !context.DryRun)
             created = await installer.InstallAsync(plan, name, new InstallProgressOutput(context.Error), cancellationToken: cancellationToken).ConfigureAwait(false);
 
         if (context.Json)
             JsonOutput.Write(context.Output, PlanView.From(plan, name, created, notCopied));
         else if (created is not null)
-            context.Output.WriteLine($"Created instance '{created.Name}' ({created.InstanceId}).");
+            context.Output.WriteLine(InstanceCommand.DescribeCreated(created));
 
         if (unknown.Count > 0)
             context.Error.WriteLine($"error: No source lists {Describe(unknown)}. Pass --skip-unknown to create the instance without them.");
@@ -305,6 +305,7 @@ internal static class ModListCommands
         Guid? InstanceId,
         string Name,
         bool Created,
+        bool Activated,
         IReadOnlyList<ItemView> Mods,
         IReadOnlyList<string> NotCopied,
         IReadOnlyList<OperationView> Operations,
@@ -312,10 +313,11 @@ internal static class ModListCommands
         IReadOnlyList<MessageView> UnresolvedChoices,
         IReadOnlyList<MessageView> Conflicts)
     {
-        public static PlanView From(ModListPlan plan, string name, Instance? created, IReadOnlyList<string> notCopied) => new(
-            created?.InstanceId,
+        public static PlanView From(ModListPlan plan, string name, InstanceCreateResult? created, IReadOnlyList<string> notCopied) => new(
+            created?.Instance.InstanceId,
             name,
             created is not null,
+            created?.Activated ?? false,
             plan.Items.Select(ItemView.From).ToList(),
             notCopied,
             plan.Plan.Operations.Select(operation => new OperationView(operation.Release.ModId, operation.Release.Version.ToString(), ReasonName(operation.Reason))).ToList(),

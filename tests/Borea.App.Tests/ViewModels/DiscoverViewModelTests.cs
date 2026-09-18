@@ -266,7 +266,7 @@ public sealed class DiscoverViewModelTests
     {
         using var harness = await ViewModelHarness.CreateAsync();
         var viewModel = harness.ViewModel;
-        var instance = await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value);
+        var instance = (await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value)).Instance;
         await harness.Services.Instances.SetActiveInstanceAsync(instance.InstanceId);
         await viewModel.LoadAsync();
         await viewModel.EnsureDiscoverLoadedAsync();
@@ -292,7 +292,7 @@ public sealed class DiscoverViewModelTests
     {
         using var harness = await ViewModelHarness.CreateAsync();
         var viewModel = harness.ViewModel;
-        var instance = await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value);
+        var instance = (await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value)).Instance;
         await harness.Services.Instances.SetActiveInstanceAsync(instance.InstanceId);
         await viewModel.LoadAsync();
         await viewModel.EnsureDiscoverLoadedAsync();
@@ -588,7 +588,7 @@ internal static class InstalledContent
     {
         var services = harness.Services;
         var instance = (await services.Instances.GetAllAsync()).FirstOrDefault()
-            ?? await services.Instances.CreateAsync("Main", InstanceSource.Custom.Value);
+            ?? (await services.Instances.CreateAsync("Main", InstanceSource.Custom.Value)).Instance;
         var release = (version is null ? await services.Mods.GetLatestReleaseAsync(modId) : await services.Mods.GetReleaseAsync(modId, ModVersion.Parse(version)))
             ?? throw new InvalidOperationException($"The fixture has no release of {modId}.");
 

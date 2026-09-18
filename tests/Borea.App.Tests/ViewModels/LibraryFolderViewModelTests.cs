@@ -80,7 +80,7 @@ public sealed class LibraryFolderViewModelTests : IDisposable
     {
         using var harness = await ViewModelHarness.CreateAsync(seed: async services =>
         {
-            var instance = await services.Instances.CreateAsync("Alpha", InstanceSource.Custom.Value);
+            var instance = (await services.Instances.CreateAsync("Alpha", InstanceSource.Custom.Value)).Instance;
             await services.Instances.SetActiveInstanceAsync(instance.InstanceId);
         });
         var viewModel = harness.ViewModel;
@@ -165,7 +165,7 @@ public sealed class LibraryFolderViewModelTests : IDisposable
 
     private static async Task<DiscoverItem> AfcRowAsync(ViewModelHarness harness)
     {
-        var instance = await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value);
+        var instance = (await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value)).Instance;
         await harness.Services.Instances.SetActiveInstanceAsync(instance.InstanceId);
         await harness.ViewModel.LoadAsync();
         await harness.ViewModel.EnsureDiscoverLoadedAsync();

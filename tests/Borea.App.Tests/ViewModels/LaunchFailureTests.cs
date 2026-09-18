@@ -123,7 +123,7 @@ public sealed class LaunchFailureTests
         var starter = new RunningStarter();
         using var harness = await CreateAsync(starter);
         var viewModel = harness.ViewModel;
-        var instance = await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value);
+        var instance = (await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value)).Instance;
         await harness.Services.Instances.SetActiveInstanceAsync(instance.InstanceId);
         starter.GameLog = harness.Services.Paths.GetInstanceGameLogPath(instance.InstanceId);
         await viewModel.LoadAsync();
@@ -145,7 +145,7 @@ public sealed class LaunchFailureTests
         var starter = new RunningStarter();
         using var harness = await CreateAsync(starter);
         var viewModel = harness.ViewModel;
-        var instance = await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value);
+        var instance = (await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value)).Instance;
         await harness.Services.Instances.SetActiveInstanceAsync(instance.InstanceId);
         await harness.Services.Instances.UpdateAsync(instance.InstanceId, saved =>
         {
@@ -175,7 +175,7 @@ public sealed class LaunchFailureTests
             },
             processStarter: starter);
         var viewModel = harness.ViewModel;
-        var instance = await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value);
+        var instance = (await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value)).Instance;
         await harness.Services.Instances.SetActiveInstanceAsync(instance.InstanceId);
         await harness.Services.Instances.UpdateAsync(instance.InstanceId, saved =>
         {
@@ -197,8 +197,8 @@ public sealed class LaunchFailureTests
         var starter = new RunningStarter();
         using var harness = await CreateAsync(starter);
         var viewModel = harness.ViewModel;
-        var active = await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value);
-        var other = await harness.Services.Instances.CreateAsync("Other", InstanceSource.Custom.Value);
+        var active = (await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value)).Instance;
+        var other = (await harness.Services.Instances.CreateAsync("Other", InstanceSource.Custom.Value)).Instance;
         await harness.Services.Instances.SetActiveInstanceAsync(active.InstanceId);
         starter.GameLog = harness.Services.Paths.GetInstanceGameLogPath(active.InstanceId);
         await viewModel.LoadAsync();
@@ -259,8 +259,8 @@ public sealed class LaunchFailureTests
         var starter = new RunningStarter();
         using var harness = await CreateAsync(starter);
         var viewModel = harness.ViewModel;
-        var active = await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value);
-        var other = await harness.Services.Instances.CreateAsync("Other", InstanceSource.Custom.Value);
+        var active = (await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value)).Instance;
+        var other = (await harness.Services.Instances.CreateAsync("Other", InstanceSource.Custom.Value)).Instance;
         await harness.Services.Instances.SetActiveInstanceAsync(active.InstanceId);
         starter.GameLog = harness.Services.Paths.GetInstanceGameLogPath(active.InstanceId);
         await viewModel.LoadAsync();
@@ -284,7 +284,7 @@ public sealed class LaunchFailureTests
     {
         using var harness = await CreateAsync();
         var viewModel = harness.ViewModel;
-        var instance = await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value);
+        var instance = (await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value)).Instance;
         await harness.Services.Instances.SetActiveInstanceAsync(instance.InstanceId);
         await viewModel.LoadAsync();
         await harness.Services.Instances.DeleteAsync(instance.InstanceId);
@@ -302,8 +302,8 @@ public sealed class LaunchFailureTests
         var starter = new RunningStarter { Gate = gate };
         using var harness = await CreateAsync(starter);
         var viewModel = harness.ViewModel;
-        var active = await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value);
-        var other = await harness.Services.Instances.CreateAsync("Other", InstanceSource.Custom.Value);
+        var active = (await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value)).Instance;
+        var other = (await harness.Services.Instances.CreateAsync("Other", InstanceSource.Custom.Value)).Instance;
         await harness.Services.Instances.SetActiveInstanceAsync(active.InstanceId);
         starter.GameLog = harness.Services.Paths.GetInstanceGameLogPath(active.InstanceId);
         await viewModel.LoadAsync();
@@ -343,7 +343,7 @@ public sealed class LaunchFailureTests
         using var harness = await CreateAsync();
         var viewModel = harness.ViewModel;
         await InstalledContent.AddAsync(harness, "KSArmory", activate: true);
-        var other = await harness.Services.Instances.CreateAsync("Other", InstanceSource.Custom.Value);
+        var other = (await harness.Services.Instances.CreateAsync("Other", InstanceSource.Custom.Value)).Instance;
         await viewModel.LoadAsync();
         await viewModel.PlayActiveInstanceCommand.ExecuteAsync(null);
 

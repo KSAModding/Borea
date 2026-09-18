@@ -143,19 +143,32 @@ internal static class InstanceCommand
     private static Command BuildCreate(Func<CancellationToken, Task<CliServices>> services)
     {
         var name = ArgumentRules.Text("name", "The display name. Names compare case-insensitively.");
+        var json = ArgumentRules.Json();
         var create = new Command("create", "Create an empty instance.");
         create.Arguments.Add(name);
+        create.Options.Add(json);
 
         create.SetAction((parseResult, cancellationToken) => CommandRunner.RunAsync(parseResult, services, cancellationToken, async (cli, output, _, _) =>
         {
             var created = await cli.Instances.CreateAsync(parseResult.GetRequiredValue(name), InstanceSource.Custom.Value).ConfigureAwait(false);
 
-            output.WriteLine($"Created instance '{created.Name}' ({created.InstanceId}).");
+            if (parseResult.GetValue(json))
+            {
+                JsonOutput.Write(output, new CreateView(created.Instance.InstanceId, created.Instance.Name, created.Activated));
+                return ExitCodes.Done;
+            }
+
+            output.WriteLine(DescribeCreated(created));
             return ExitCodes.Done;
         }));
 
         return create;
     }
+
+    internal static string DescribeCreated(InstanceCreateResult created)
+        => $"Created instance '{created.Instance.Name}' ({created.Instance.InstanceId}).{NowActive(created.Activated)}";
+
+    private static string NowActive(bool activated) => activated ? " It is now the active instance." : string.Empty;
 
     private static Command BuildRename(Func<CancellationToken, Task<CliServices>> services)
     {
@@ -502,11 +515,11 @@ internal static class InstanceCommand
             var views = result.Mods.Select(ImportedModView.From).ToList();
             if (parseResult.GetValue(json))
             {
-                JsonOutput.Write(output, new ImportView(result.Instance.InstanceId, result.Instance.Name, views));
+                JsonOutput.Write(output, new ImportView(result.Instance.InstanceId, result.Instance.Name, result.Activated, views));
             }
             else
             {
-                output.WriteLine($"Created instance '{result.Instance.Name}' ({result.Instance.InstanceId}) with {ModCount(views.Count)} from the shared profile.");
+                output.WriteLine($"Created instance '{result.Instance.Name}' ({result.Instance.InstanceId}) with {ModCount(views.Count)} from the shared profile.{NowActive(result.Activated)}");
                 var folderWidth = views.Max(view => view.Folder.Length);
                 foreach (var view in views)
                     output.WriteLine($"{(view.Enabled ? "enabled " : "disabled")}  {view.Folder.PadRight(folderWidth)}  {(view.Version is null ? "manual install" : $"release {view.Version}")}");
@@ -619,6 +632,8 @@ internal static class InstanceCommand
         };
     }
 
+    private sealed record CreateView(Guid Id, string Name, bool Activated);
+
     /// <summary>The JSON shape of <c>instance deactivate</c>. The id and name are of the instance that was active, and null when none was.</summary>
     private sealed record DeactivateView(bool Deactivated, Guid? Id, string? Name);
 
@@ -643,7 +658,7 @@ internal static class InstanceCommand
     private sealed record ProfileModView(string Folder, bool Enabled, bool? InIndex);
 
     /// <summary>The JSON shape of <c>instance import-profile</c>. A copy without a version is a manual install.</summary>
-    private sealed record ImportView(Guid Id, string Name, IReadOnlyList<ImportedModView> Mods);
+    private sealed record ImportView(Guid Id, string Name, bool Activated, IReadOnlyList<ImportedModView> Mods);
 
     private sealed record ImportedModView(string Folder, bool Enabled, bool ManifestEntry, string? Version, string? MatchError)
     {

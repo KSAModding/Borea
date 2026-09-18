@@ -39,7 +39,7 @@ public sealed class InstanceContentPageTests
         using var harness = await ViewModelHarness.CreateAsync();
         var viewModel = harness.ViewModel;
         await InstalledContent.AddAsync(harness, "AdvancedFlightComputer", activate: false, ownership: ModInstallOwnership.Borea);
-        var second = await harness.Services.Instances.CreateAsync("Second", Borea.Core.Instances.InstanceSource.Custom.Value);
+        var second = (await harness.Services.Instances.CreateAsync("Second", Borea.Core.Instances.InstanceSource.Custom.Value)).Instance;
         await harness.Services.Instances.SetActiveInstanceAsync(second.InstanceId);
         await viewModel.LoadAsync();
         var main = viewModel.Instances.Single(instance => instance.Name == "Main");

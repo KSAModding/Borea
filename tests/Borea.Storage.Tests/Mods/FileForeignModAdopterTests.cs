@@ -21,7 +21,7 @@ public sealed class FileForeignModAdopterTests : IAsyncLifetime
     {
         _paths = new TestGamePathProvider(_tempRoot);
         _instances = new FileInstanceRepository(_paths);
-        _instanceId = (await _instances.CreateAsync("Test", InstanceSource.Custom.Value)).InstanceId;
+        _instanceId = (await _instances.CreateAsync("Test", InstanceSource.Custom.Value)).Instance.InstanceId;
         _adopter = new FileForeignModAdopter(_paths, _instances, _lookup);
     }
 

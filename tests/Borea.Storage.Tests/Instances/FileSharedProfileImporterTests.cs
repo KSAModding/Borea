@@ -133,7 +133,7 @@ public sealed class FileSharedProfileImporterTests : IDisposable
     [Fact]
     public async Task ImportAsync_NameTaken_ThrowsAndCopiesNothing()
     {
-        var existing = await _instances.CreateAsync("Main", InstanceSource.Custom.Value);
+        var existing = (await _instances.CreateAsync("Main", InstanceSource.Custom.Value)).Instance;
         WriteMod("LocalOnly");
 
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => _importer.ImportAsync("main"));
@@ -159,7 +159,7 @@ public sealed class FileSharedProfileImporterTests : IDisposable
     }
 
     [Fact]
-    public async Task ImportAsync_CancelledWhileCheckingReleases_LeavesNoInstance()
+    public async Task ImportAsync_CancelledWhileCheckingReleases_LeavesNoInstanceAndNoActiveInstance()
     {
         using var cancellation = new CancellationTokenSource();
         _server.Add("Listed", "1.0.0", ("mod.toml", "name = \"Listed\""));
@@ -170,6 +170,7 @@ public sealed class FileSharedProfileImporterTests : IDisposable
 
         Assert.Empty(await _instances.GetAllAsync());
         Assert.Empty(Directory.EnumerateDirectories(_paths.GetInstancesRoot()));
+        Assert.False(File.Exists(_paths.GetActiveInstancePointerPath()));
     }
 
     [Fact]

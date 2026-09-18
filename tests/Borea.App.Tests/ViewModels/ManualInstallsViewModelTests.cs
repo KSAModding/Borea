@@ -12,7 +12,7 @@ public sealed class ManualInstallsViewModelTests
     {
         using var harness = await ViewModelHarness.CreateAsync();
         var viewModel = harness.ViewModel;
-        var instance = await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value);
+        var instance = (await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value)).Instance;
         WriteForeignMod(harness, instance, "AdvancedFlightComputer");
         WriteForeignMod(harness, instance, "LocalOnly");
         Directory.CreateDirectory(Path.Combine(harness.Services.Paths.GetInstanceModsFolder(instance.InstanceId), "NotAMod"));
@@ -58,7 +58,7 @@ public sealed class ManualInstallsViewModelTests
     {
         using var harness = await ViewModelHarness.CreateAsync();
         var viewModel = harness.ViewModel;
-        var instance = await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value);
+        var instance = (await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value)).Instance;
         var folder = WriteForeignMod(harness, instance, "KSArmory");
         await OpenAsync(harness, "Main");
         await viewModel.ShowInstanceManualInstallsCommand.ExecuteAsync(null);
@@ -79,7 +79,7 @@ public sealed class ManualInstallsViewModelTests
     {
         using var harness = await ViewModelHarness.CreateAsync();
         var viewModel = harness.ViewModel;
-        var instance = await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value);
+        var instance = (await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value)).Instance;
         var folder = WriteForeignMod(harness, instance, "KSArmory");
         await OpenAsync(harness, "Main");
         await viewModel.ShowInstanceManualInstallsCommand.ExecuteAsync(null);
@@ -105,7 +105,7 @@ public sealed class ManualInstallsViewModelTests
     {
         using var harness = await ViewModelHarness.CreateAsync();
         var viewModel = harness.ViewModel;
-        var instance = await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value);
+        var instance = (await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value)).Instance;
         var folder = WriteForeignMod(harness, instance, "KSArmory");
         WriteForeignMod(harness, instance, "MeasureTools");
         await OpenAsync(harness, "Main");
@@ -141,7 +141,7 @@ public sealed class ManualInstallsViewModelTests
     {
         using var harness = await ViewModelHarness.CreateAsync();
         var viewModel = harness.ViewModel;
-        var instance = await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value);
+        var instance = (await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value)).Instance;
         var folder = WriteForeignMod(harness, instance, "KSArmory");
         var rival = new ModVersionMetadata(
             specVersion: 1,
@@ -174,7 +174,7 @@ public sealed class ManualInstallsViewModelTests
     {
         using var harness = await ViewModelHarness.CreateAsync();
         var viewModel = harness.ViewModel;
-        var instance = await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value);
+        var instance = (await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value)).Instance;
         var folder = WriteForeignMod(harness, instance, "KSArmory");
         await OpenAsync(harness, "Main");
         await viewModel.ShowInstanceManualInstallsCommand.ExecuteAsync(null);
