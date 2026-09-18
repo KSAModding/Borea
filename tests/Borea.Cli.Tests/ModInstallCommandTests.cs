@@ -651,6 +651,7 @@ public sealed class ModInstallCommandTests : IDisposable
         public Task<bool> IsNameAvailableAsync(string name, Guid? excludingInstanceId = null) => inner.IsNameAvailableAsync(name, excludingInstanceId);
         public Task<InstanceCreateResult> CreateAsync(string name, InstanceSource source) => inner.CreateAsync(name, source);
         public Task<InstanceCreateResult> CreateAsync(Instance instance) => inner.CreateAsync(instance);
+        public Task<InstanceCreateResult> CreateAsync(Instance instance, InstanceOrigin origin) => inner.CreateAsync(instance, origin);
         public Task RenameAsync(Guid instanceId, string newName) => inner.RenameAsync(instanceId, newName);
         public Task DeleteAsync(Guid instanceId) => inner.DeleteAsync(instanceId);
         public Task SaveAsync(Instance instance) => inner.SaveAsync(instance);
