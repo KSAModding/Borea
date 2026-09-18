@@ -54,8 +54,7 @@ Each archive also contains `LICENSE` and `THIRD-PARTY-NOTICES.txt` with the lice
 | --- | --- | --- |
 | Windows | `Borea-<version>-win-x64.zip` | `Borea-Cli-<version>-win-x64.zip` |
 | Linux | `Borea-<version>-linux-x64.tar.gz` | `Borea-Cli-<version>-linux-x64.tar.gz` |
-| macOS, Intel | `Borea-<version>-osx-x64.tar.gz` | `Borea-Cli-<version>-osx-x64.tar.gz` |
-| macOS, Apple silicon | `Borea-<version>-osx-arm64.tar.gz` | `Borea-Cli-<version>-osx-arm64.tar.gz` |
+| macOS, Apple silicon | `Borea-<version>-macos-arm64.tar.gz` | `Borea-Cli-<version>-macos-arm64.tar.gz` |
 
 The builds are not code signed, so the first start of each update takes an extra step on Windows and macOS.
 Signing will be added at some point and is tracked in [issue #76](https://github.com/KSAModding/Borea/issues/76).
@@ -93,22 +92,22 @@ The build needs glibc, so musl-based distributions such as Alpine are not suppor
 
 ### macOS
 
+Intel Macs are not supported.
+
 Unpack the archive and start Borea from Terminal:
 
 ```sh
-tar -xzf Borea-<version>-osx-arm64.tar.gz
-cd Borea-<version>-osx-arm64
+tar -xzf Borea-<version>-macos-arm64.tar.gz
+cd Borea-<version>-macos-arm64
 ./borea
 ```
-
-On an Intel Mac, use the `osx-x64` archive instead.
 
 For the command line, run `./borea --help` in the same directory.
 The matching `Borea-Cli-` archive contains only the command line.
 
 Do not unpack the archive by double-clicking it in Finder, and do not start `borea` from Finder.
 
-If that already happened, remove the download mark and start Borea from Terminal again: `xattr -dr com.apple.quarantine Borea-<version>-osx-arm64`.
+If that already happened, remove the download mark and start Borea from Terminal again: `xattr -dr com.apple.quarantine Borea-<version>-macos-arm64`.
 
 Once it runs, Borea behaves like any other Mac program.
 
