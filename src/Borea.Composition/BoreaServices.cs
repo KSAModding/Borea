@@ -310,7 +310,7 @@ public sealed class BoreaServices : IDisposable
             Log = log,
             SettingsRepository = settingsRepository,
             GameDirectoryChanger = new GameDirectoryChanger(settingsRepository, mods, loaderConfiguration),
-            LibraryFolderChanger = new LibraryFolderChanger(settingsRepository, paths, defaultLibraryFolder, launcher, instances, isGameProcessRunning, isOtherBoreaRunning),
+            LibraryFolderChanger = new LoggingLibraryFolderChanger(new LibraryFolderChanger(settingsRepository, paths, defaultLibraryFolder, launcher, instances, isGameProcessRunning, isOtherBoreaRunning), log),
             AppPreferences = new FileAppPreferencesRepository(paths),
             TaskHistory = new FileTaskHistoryRepository(paths),
             Instances = instances,

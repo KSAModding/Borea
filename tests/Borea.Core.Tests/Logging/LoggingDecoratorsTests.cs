@@ -4,6 +4,7 @@ using Borea.Core.Launch;
 using Borea.Core.Logging;
 using Borea.Core.Mods;
 using Borea.Core.Planning;
+using Borea.Core.Settings;
 using Borea.Core.Tests.Mods;
 
 namespace Borea.Core.Tests.Logging;
@@ -192,6 +193,48 @@ public sealed class LoggingDecoratorsTests
             _log.Messages);
     }
 
+    [Fact]
+    public async Task LibraryFolderChange_WritesTheStartAndTheOutcome()
+    {
+        var moved = new LoggingLibraryFolderChanger(new FixedLibraryFolderChanger(
+            new LibraryFolderChangeResult(LibraryFolderChangeOutcome.Moved, "D:\\Library", "C:\\Borea", "Moved.") { OldFilesRemain = true }), _log);
+        var refused = new LoggingLibraryFolderChanger(new FixedLibraryFolderChanger(
+            new LibraryFolderChangeResult(LibraryFolderChangeOutcome.GameRunning, "C:\\Borea", "D:\\Library", "Close the game first.")), _log);
+
+        await moved.ChangeAsync("D:\\Library");
+        await refused.ChangeAsync(null);
+
+        Assert.Equal(
+            [
+                "Library folder change to D:\\Library started.",
+                "Library folder change to D:\\Library finished, Moved, old files remain in C:\\Borea.",
+                "Library folder change to the default folder started.",
+                "Library folder change to the default folder refused, GameRunning: Close the game first.",
+            ],
+            _log.Messages);
+    }
+
+    [Fact]
+    public async Task LibraryFolderChange_CancelledOrFailed_WritesItAndRethrows()
+    {
+        var cancelled = new LoggingLibraryFolderChanger(new FixedLibraryFolderChanger(null, new OperationCanceledException()), _log);
+        var failed = new LoggingLibraryFolderChanger(new FixedLibraryFolderChanger(null, new IOException("The disk is full.")), _log);
+
+        await Assert.ThrowsAsync<OperationCanceledException>(() => cancelled.ChangeAsync("D:\\Library"));
+        await Assert.ThrowsAsync<IOException>(() => failed.ChangeAsync("D:\\Library"));
+
+        Assert.Equal(
+            [
+                "Library folder change to D:\\Library started.",
+                "Library folder change to D:\\Library was cancelled.",
+                "Library folder change to D:\\Library started.",
+                "Library folder change to D:\\Library failed.",
+            ],
+            _log.Messages);
+        Assert.Null(_log.Exceptions[1]);
+        Assert.IsType<IOException>(_log.Exceptions[3]);
+    }
+
     private sealed class RecordingLog : IBoreaLog
     {
         public List<string> Messages { get; } = [];
@@ -278,6 +321,12 @@ public sealed class LoggingDecoratorsTests
         public Task<LaunchResult> WatchStartAsync(Instance instance, LaunchResult started, CancellationToken cancellationToken = default) => Task.FromResult(started);
 
         public bool IsRunning(Guid instanceId) => false;
+    }
+
+    private sealed class FixedLibraryFolderChanger(LibraryFolderChangeResult? result, Exception? failure = null) : ILibraryFolderChanger
+    {
+        public Task<LibraryFolderChangeResult> ChangeAsync(string? folder, IProgress<LibraryMoveProgress>? progress = null, CancellationToken cancellationToken = default)
+            => failure is null ? Task.FromResult(result!) : Task.FromException<LibraryFolderChangeResult>(failure);
     }
 
     private sealed class FixedSharedProfileLauncher(SharedProfileLaunchResult result) : ISharedProfileLauncher

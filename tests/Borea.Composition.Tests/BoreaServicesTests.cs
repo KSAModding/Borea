@@ -168,7 +168,7 @@ public sealed class BoreaServicesTests : IDisposable
         Assert.IsType<FileLoaderAdopter>(services.LoaderAdopter);
         Assert.IsType<FileLoaderUninstaller>(services.LoaderUninstaller);
         Assert.IsType<GameDirectoryChanger>(services.GameDirectoryChanger);
-        Assert.IsType<LibraryFolderChanger>(services.LibraryFolderChanger);
+        Assert.IsType<LibraryFolderChanger>(Assert.IsType<LoggingLibraryFolderChanger>(services.LibraryFolderChanger).Inner);
         Assert.IsType<LoaderLauncher>(Assert.IsType<LastPlayedLauncher>(Assert.IsType<LoggingLauncher>(services.Launcher).Inner).Inner);
         Assert.IsType<FileModUninstaller>(Assert.IsType<LoggingModUninstaller>(services.Uninstaller).Inner);
         Assert.IsType<FileModInstaller>(Assert.IsType<LoggingModInstaller>(services.Installer).Inner);
