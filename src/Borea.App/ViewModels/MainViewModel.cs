@@ -721,7 +721,8 @@ public partial class MainViewModel : ViewModelBase
             && left.LoadImagesFromAuthorHosts == right.LoadImagesFromAuthorHosts
             && left.HomeLaunch == right.HomeLaunch
             && left.DiscoverSortOrder == right.DiscoverSortOrder
-            && left.SharedProfileBannerDismissed == right.SharedProfileBannerDismissed;
+            && left.SharedProfileBannerDismissed == right.SharedProfileBannerDismissed
+            && left.DismissedBoreaRelease == right.DismissedBoreaRelease;
 
     private void OnRegionalFormatChanged(object? sender, PropertyChangedEventArgs e)
     {

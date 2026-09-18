@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Borea.Core.Mods;
 using Borea.Core.Preferences;
 using Borea.Core.Updates;
 using Borea.Storage.Preferences;
@@ -153,6 +154,54 @@ public sealed class FileAppPreferencesRepositoryTests : IDisposable
 
         Assert.True(result.Preferences.SharedProfileBannerDismissed);
         Assert.True(result.Preferences.ForeignFolderDeletionConfirmed);
+    }
+
+    [Fact]
+    public async Task SaveThenGet_DismissedBoreaRelease_RestoresTheVersion()
+    {
+        Assert.Null(AppPreferences.Empty.DismissedBoreaRelease);
+
+        await _repository.SaveAsync(AppPreferences.Empty.WithDismissedBoreaRelease(ModVersion.Parse("0.5.0-beta.2")), BundledThemeNames);
+        var result = await _repository.GetAsync(BundledThemeNames);
+
+        Assert.Equal(ModVersion.Parse("0.5.0-beta.2"), result.Preferences.DismissedBoreaRelease);
+        using var document = JsonDocument.Parse(await File.ReadAllTextAsync(_pathProvider.GetAppPreferencesPath()));
+        Assert.Equal("0.5.0-beta.2", document.RootElement.GetProperty("dismissedBoreaRelease").GetString());
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData(""", "dismissedBoreaRelease": null""")]
+    [InlineData(""", "dismissedBoreaRelease": "latest" """)]
+    public async Task GetAsync_NoOrUnparseableDismissedBoreaRelease_LoadsAsNone(string dismissed)
+    {
+        await WriteAsync($$"""
+            { "formatVersion": 1, "selectedTheme": "Light"{{dismissed}} }
+            """);
+
+        var result = await _repository.GetAsync(BundledThemeNames);
+
+        Assert.Equal(AppPreferencesLoadStatus.Loaded, result.Status);
+        Assert.Equal("Light", result.Preferences.SelectedThemeName);
+        Assert.Null(result.Preferences.DismissedBoreaRelease);
+    }
+
+    [Fact]
+    public void With_OtherPreferenceChanges_KeepTheDismissedBoreaRelease()
+    {
+        var preferences = AppPreferences.Empty.WithDismissedBoreaRelease(ModVersion.Parse("0.5.0"))
+            .WithSelectedThemeName("Light")
+            .WithRegionalCultureName("de-DE")
+            .WithUiCultureName("de")
+            .WithCheckForUpdatesAtStart(false)
+            .WithUpdateChannel(BoreaUpdateChannel.Dev)
+            .WithForeignFolderDeletionConfirmed(true)
+            .WithLoadImagesFromAuthorHosts(false)
+            .WithHomeLaunch(HomeLaunchOption.WithoutModLoader)
+            .WithDiscoverSortOrder(DiscoverSortOrder.Name)
+            .WithSharedProfileBannerDismissed(true);
+
+        Assert.Equal(ModVersion.Parse("0.5.0"), preferences.DismissedBoreaRelease);
     }
 
     [Fact]
