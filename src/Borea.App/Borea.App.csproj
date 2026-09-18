@@ -1,14 +1,21 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <OutputType>WinExe</OutputType>
+    <OutputType>Exe</OutputType>
     <TargetFramework>net10.0</TargetFramework>
     <RuntimeIdentifiers>win-x64;linux-x64;osx-x64;osx-arm64</RuntimeIdentifiers>
     <Nullable>enable</Nullable>
     <ApplicationManifest>app.manifest</ApplicationManifest>
 
+    <PublishSingleFile>true</PublishSingleFile>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+    <SatelliteResourceLanguages>en;de</SatelliteResourceLanguages>
+    <!-- The analyzer adds an ILLink package whose version follows the SDK, which would tie the lock files to one SDK patch. -->
+    <EnableSingleFileAnalyzer>false</EnableSingleFileAnalyzer>
+
     <Company>KSAModding</Company>
     <Product>Borea</Product>
-    <AssemblyTitle>Borea content manager for Kitten Space Agency</AssemblyTitle>
+    <AssemblyTitle>Borea</AssemblyTitle>
     <Copyright>Copyright (c) KSAModding contributors</Copyright>
   </PropertyGroup>
 
@@ -48,7 +55,21 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Borea.Cli\Borea.Cli.csproj" />
     <ProjectReference Include="..\Borea.Composition\Borea.Composition.csproj" />
     <ProjectReference Include="..\Borea.Core\Borea.Core.csproj" />
   </ItemGroup>
+
+  <!-- The App runs the command line itself, so the host files of the referenced borea program stay out.
+       The native debug symbols of the Skia and HarfBuzz packages cannot go into the single file and do not ship. -->
+  <Target Name="RemoveUnshippedPublishFiles" AfterTargets="ComputeResolvedFilesToPublishList">
+    <ItemGroup>
+      <ResolvedFileToPublish Remove="@(ResolvedFileToPublish)" Condition="'%(ResolvedFileToPublish.RelativePath)' == 'borea' or '%(ResolvedFileToPublish.RelativePath)' == 'borea.exe' or '%(ResolvedFileToPublish.RelativePath)' == 'borea.deps.json' or '%(ResolvedFileToPublish.RelativePath)' == 'borea.runtimeconfig.json' or '%(ResolvedFileToPublish.Extension)' == '.pdb'" />
+    </ItemGroup>
+  </Target>
+
+  <!-- The assembly name stays Borea.App for the avares:// resource paths, and the published program is called borea, with the extension that the SDK gives it. -->
+  <Target Name="NamePublishedProgram" AfterTargets="GenerateSingleFileBundle" Condition="'$(PublishSingleFile)' == 'true'">
+    <Move SourceFiles="$(PublishedSingleFilePath)" DestinationFiles="$(PublishDir)borea$(PublishedSingleFileName.Substring($(AssemblyName.Length)))" />
+  </Target>
 </Project>
