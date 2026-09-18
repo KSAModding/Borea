@@ -36,13 +36,7 @@
                     </StackPanel>
 
                     <!-- active filters, and the sort order of the Mods and Modpacks tabs -->
-                    <DockPanel Margin="8,24,0,0">
-                        <DockPanel.IsVisible>
-                            <MultiBinding Converter="{x:Static BoolConverters.Or}">
-                                <Binding Path="HasDiscoverFilters" />
-                                <Binding Path="!IsLoadersTab" />
-                            </MultiBinding>
-                        </DockPanel.IsVisible>
+                    <DockPanel MinHeight="32" Margin="8,24,0,0">
                         <Button DockPanel.Dock="Right" Classes="dropdown" Margin="16,0,0,0" IsVisible="{Binding !IsLoadersTab}" AutomationProperties.Name="{Binding Localization.DiscoverSortBy}">
                             <Button.Flyout>
                                 <MenuFlyout Placement="BottomEdgeAlignedRight">
@@ -129,14 +123,25 @@
                         </TextBlock.IsVisible>
                     </TextBlock>
 
-                    <ItemsControl ItemsSource="{Binding DiscoverItems}" ItemTemplate="{StaticResource DiscoverRow}" Margin="0,24,0,0" IsVisible="{Binding !IsModpacksTab}">
+                    <!-- a message above the list stays 24 above it, while the list starts 4 below the filter row -->
+                    <Border Height="20">
+                        <Border.IsVisible>
+                            <MultiBinding Converter="{x:Static BoolConverters.Or}">
+                                <Binding Path="IsDiscoverLoading" />
+                                <Binding Path="DiscoverError" Converter="{x:Static ObjectConverters.IsNotNull}" />
+                                <Binding Path="IsIndexUnreachable" />
+                                <Binding Path="!HasActiveInstance" />
+                            </MultiBinding>
+                        </Border.IsVisible>
+                    </Border>
+                    <ItemsControl ItemsSource="{Binding DiscoverItems}" ItemTemplate="{StaticResource DiscoverRow}" Margin="0,4,0,0" IsVisible="{Binding !IsModpacksTab}">
                         <ItemsControl.ItemsPanel>
                             <ItemsPanelTemplate>
                                 <StackPanel Spacing="8" />
                             </ItemsPanelTemplate>
                         </ItemsControl.ItemsPanel>
                     </ItemsControl>
-                    <ItemsControl ItemsSource="{Binding DiscoverPacks}" ItemTemplate="{StaticResource PackRow}" Margin="0,24,0,0" IsVisible="{Binding IsModpacksTab}">
+                    <ItemsControl ItemsSource="{Binding DiscoverPacks}" ItemTemplate="{StaticResource PackRow}" Margin="0,4,0,0" IsVisible="{Binding IsModpacksTab}">
                         <ItemsControl.ItemsPanel>
                             <ItemsPanelTemplate>
                                 <StackPanel Spacing="8" />
