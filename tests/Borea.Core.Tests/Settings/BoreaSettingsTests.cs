@@ -55,6 +55,30 @@ public sealed class BoreaSettingsTests
     }
 
     [Fact]
+    public void EveryOtherCopy_KeepsTheLibraryFolder()
+    {
+        var library = Path.Combine(Path.GetTempPath(), "Library");
+        var settings = new BoreaSettings(null, StarMapAt(), libraryFolderPath: library);
+        var loader = new LoaderInstallation(@"C:\Games\Cheese", null, null, isAdopted: false);
+
+        Assert.Equal(library, settings.WithGameDirectory(@"C:\Games\KSA").LibraryFolderPath);
+        Assert.Equal(library, settings.WithReleaseChannel(ReleaseChannel.Dev).LibraryFolderPath);
+        Assert.Equal(library, settings.WithLoaderInstallation("Cheese-Loader", loader).LibraryFolderPath);
+        Assert.Equal(library, settings.WithoutLoaderInstallation("StarMap").LibraryFolderPath);
+        Assert.Null(settings.WithLibraryFolder(null).LibraryFolderPath);
+        Assert.Equal(ReleaseChannel.Stable, settings.WithLibraryFolder(null).ReleaseChannel);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    [InlineData("Library")]
+    public void Constructor_LibraryFolderThatIsNotAbsolute_Throws(string library)
+    {
+        Assert.Throws<ArgumentException>(() => new BoreaSettings(null, libraryFolderPath: library));
+    }
+
+    [Fact]
     public void WithoutLoaderInstallation_RemovesTheLoaderInAnyCasing_AndKeepsTheOthers()
     {
         var installations = StarMapAt();

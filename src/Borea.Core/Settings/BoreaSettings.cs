@@ -19,13 +19,20 @@ public sealed class BoreaSettings
     /// <summary>Which release statuses Borea offers when it picks a release. Stable by default.</summary>
     public ReleaseChannel ReleaseChannel { get; }
 
+    /// <summary>The absolute folder that holds the Instances and Backups folders. Null means Borea's own folder.</summary>
+    public string? LibraryFolderPath { get; }
+
     public BoreaSettings(
         string? gameDirectoryPath,
         IReadOnlyDictionary<string, LoaderInstallation>? loaderInstallations = null,
-        ReleaseChannel releaseChannel = ReleaseChannel.Stable)
+        ReleaseChannel releaseChannel = ReleaseChannel.Stable,
+        string? libraryFolderPath = null)
     {
         if (gameDirectoryPath is not null && string.IsNullOrWhiteSpace(gameDirectoryPath))
             throw new ArgumentException("Game directory path, if provided, cannot be whitespace.", nameof(gameDirectoryPath));
+
+        if (libraryFolderPath is not null && !Path.IsPathFullyQualified(libraryFolderPath))
+            throw new ArgumentException("The library folder, if provided, must be an absolute path.", nameof(libraryFolderPath));
 
         if (!Enum.IsDefined(releaseChannel))
             throw new ArgumentOutOfRangeException(nameof(releaseChannel), releaseChannel, "The release channel is not defined.");
@@ -33,17 +40,22 @@ public sealed class BoreaSettings
         GameDirectoryPath = gameDirectoryPath;
         LoaderInstallations = Build(loaderInstallations, nameof(loaderInstallations));
         ReleaseChannel = releaseChannel;
+        LibraryFolderPath = libraryFolderPath;
     }
 
     /// <summary>
     /// A copy with the game directory replaced. The other settings stay as they are.
     /// </summary>
     public BoreaSettings WithGameDirectory(string? gameDirectoryPath)
-        => new(gameDirectoryPath, LoaderInstallations, ReleaseChannel);
+        => new(gameDirectoryPath, LoaderInstallations, ReleaseChannel, LibraryFolderPath);
 
     /// <summary>A copy with the release channel replaced. The other settings stay as they are.</summary>
     public BoreaSettings WithReleaseChannel(ReleaseChannel releaseChannel)
-        => new(GameDirectoryPath, LoaderInstallations, releaseChannel);
+        => new(GameDirectoryPath, LoaderInstallations, releaseChannel, LibraryFolderPath);
+
+    /// <summary>A copy with the library folder replaced. The other settings stay as they are.</summary>
+    public BoreaSettings WithLibraryFolder(string? libraryFolderPath)
+        => new(GameDirectoryPath, LoaderInstallations, ReleaseChannel, libraryFolderPath);
 
     /// <summary>
     /// A copy with one loader installation set. The id is stored as given here,
@@ -60,7 +72,7 @@ public sealed class BoreaSettings
         installations.Remove(loaderId);
         installations[loaderId] = installation;
 
-        return new BoreaSettings(GameDirectoryPath, installations, ReleaseChannel);
+        return new BoreaSettings(GameDirectoryPath, installations, ReleaseChannel, LibraryFolderPath);
     }
 
     /// <summary>A copy without one loader installation. The other settings stay as they are.</summary>
@@ -71,7 +83,7 @@ public sealed class BoreaSettings
         var installations = new Dictionary<string, LoaderInstallation>(LoaderInstallations, ModIds.Comparer);
         installations.Remove(loaderId);
 
-        return new BoreaSettings(GameDirectoryPath, installations, ReleaseChannel);
+        return new BoreaSettings(GameDirectoryPath, installations, ReleaseChannel, LibraryFolderPath);
     }
 
     private static IReadOnlyDictionary<string, LoaderInstallation> Build(
