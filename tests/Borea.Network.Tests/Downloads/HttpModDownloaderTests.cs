@@ -1,8 +1,10 @@
 using System.Diagnostics;
 using System.Net;
+using System.Net.Http.Headers;
 using System.Security.Cryptography;
 using Borea.Core.Dependencies;
 using Borea.Core.Mods;
+using Borea.Core.Planning;
 using Borea.Network.Downloads;
 
 namespace Borea.Network.Tests.Downloads;
@@ -202,6 +204,51 @@ public sealed class HttpModDownloaderTests : IDisposable
             await Task.Delay(delay, cancellationToken);
             buffer.Span[0] = body[_position++];
             return 1;
+        }
+
+        public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
+
+        public override void SetLength(long value) => throw new NotSupportedException();
+
+        public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+    }
+
+    /// <summary>A body that hands out one chunk and then sends nothing until its read is canceled.</summary>
+    private sealed class FirstChunkThenStallStream(byte[] firstChunk) : Stream
+    {
+        private bool _handedOut;
+
+        public override bool CanRead => true;
+
+        public override bool CanSeek => false;
+
+        public override bool CanWrite => false;
+
+        public override long Length => throw new NotSupportedException();
+
+        public override long Position
+        {
+            get => throw new NotSupportedException();
+            set => throw new NotSupportedException();
+        }
+
+        public override void Flush()
+        {
+        }
+
+        public override int Read(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+
+        public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
+        {
+            if (!_handedOut)
+            {
+                _handedOut = true;
+                firstChunk.CopyTo(buffer);
+                return firstChunk.Length;
+            }
+
+            await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
+            throw new InvalidOperationException("The delay cannot end on its own.");
         }
 
         public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
@@ -523,6 +570,232 @@ public sealed class HttpModDownloaderTests : IDisposable
 
         Assert.Equal(new[] { GitHubUrl }, requested);
         Assert.False(File.Exists(_archivePath));
+    }
+
+    #endregion
+
+    #region Pause and resume
+
+    private const int PartLength = 5;
+
+    private static readonly TimeSpan WaitLimit = TimeSpan.FromSeconds(30);
+
+    /// <summary>The first answer: the whole file announced, the first bytes sent, then silence until the pause.</summary>
+    private static HttpResponseMessage FirstPart(byte[] file, EntityTagHeaderValue? etag = null, DateTimeOffset? lastModified = null)
+    {
+        var response = new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StreamContent(new FirstChunkThenStallStream(file[..PartLength])),
+        };
+        response.Content.Headers.ContentLength = file.Length;
+        response.Content.Headers.LastModified = lastModified;
+        response.Headers.ETag = etag;
+        return response;
+    }
+
+    private static HttpResponseMessage Rest(byte[] file, long from, long? length = null)
+    {
+        var total = length ?? file.Length;
+        var response = new HttpResponseMessage(HttpStatusCode.PartialContent) { Content = new ByteArrayContent(file[(int)from..]) };
+        response.Content.Headers.ContentRange = new ContentRangeHeaderValue(from, total - 1, total);
+        return response;
+    }
+
+    private static EntityTagHeaderValue ETag(string tag) => new($"\"{tag}\"");
+
+    private sealed record SentRequest(string Url, RangeHeaderValue? Range, RangeConditionHeaderValue? IfRange);
+
+    /// <summary>A client that answers each request in turn and keeps a copy of its range headers.</summary>
+    private static HttpClient Answering(List<SentRequest> requests, params Func<HttpRequestMessage, HttpResponseMessage>[] answers) =>
+        FakeHttpMessageHandler.BuildClient(request =>
+        {
+            requests.Add(new SentRequest(request.RequestUri!.ToString(), request.Headers.Range, request.Headers.IfRange));
+            return answers[Math.Min(requests.Count, answers.Length) - 1](request);
+        }, out _);
+
+    /// <summary>
+    /// Runs the download under an <see cref="InstallStop"/>, pauses it when the
+    /// first bytes arrive, and resumes it once it reported the pause.
+    /// </summary>
+    private async Task<DownloadResult> DownloadWithPauseAsync(HttpModDownloader downloader, ModVersionMetadata release, InstallStop stop, List<DownloadProgress>? reports = null, TimeSpan? pausedFor = null)
+    {
+        var accepted = false;
+        var paused = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var progress = new SynchronousProgress<DownloadProgress>(report =>
+        {
+            reports?.Add(report);
+            if (report.IsPaused)
+                paused.TrySetResult();
+            else if (report.BytesDownloaded > 0 && !accepted)
+                accepted = stop.Pause();
+        });
+
+        var download = stop.RunAsync((_, token) => downloader.DownloadAsync(release, _archivePath, progress, token));
+        await paused.Task.WaitAsync(WaitLimit);
+        Assert.True(accepted);
+        if (pausedFor is { } wait)
+            await Task.Delay(wait);
+
+        stop.Resume();
+        return await download.WaitAsync(WaitLimit);
+    }
+
+    [Fact]
+    public async Task Pause_ThenResume_AsksForTheRestWithTheETagAndPassesTheDigest()
+    {
+        var requests = new List<SentRequest>();
+        var downloader = new HttpModDownloader(Answering(requests, _ => FirstPart(Archive, ETag("v1")), _ => Rest(Archive, PartLength)));
+        var reports = new List<DownloadProgress>();
+
+        var result = await DownloadWithPauseAsync(downloader, StampedRelease(), new InstallStop(), reports);
+
+        Assert.Equal(2, requests.Count);
+        Assert.Null(requests[0].Range);
+        var range = Assert.Single(requests[1].Range!.Ranges);
+        Assert.Equal((PartLength, (long?)null), (range.From, range.To));
+        Assert.Equal(ETag("v1"), requests[1].IfRange!.EntityTag);
+        Assert.Contains(new DownloadProgress(PartLength, Archive.Length, IsPaused: true), reports);
+        Assert.Equal(new DownloadProgress(Archive.Length, Archive.Length), reports[^1]);
+        Assert.Equal(Archive, await File.ReadAllBytesAsync(_archivePath));
+        Assert.Equal((Archive.Length, Sha256Of(Archive)), (result.BytesDownloaded, result.Sha256));
+    }
+
+    [Fact]
+    public async Task Pause_WithoutAStrongETag_SendsTheLastModifiedDate()
+    {
+        var modified = new DateTimeOffset(2026, 9, 1, 12, 0, 0, TimeSpan.Zero);
+        var requests = new List<SentRequest>();
+        var downloader = new HttpModDownloader(Answering(requests, _ => FirstPart(Archive, new EntityTagHeaderValue("\"v1\"", isWeak: true), modified), _ => Rest(Archive, PartLength)));
+
+        await DownloadWithPauseAsync(downloader, StampedRelease(), new InstallStop());
+
+        Assert.Null(requests[1].IfRange!.EntityTag);
+        Assert.Equal(modified, requests[1].IfRange!.Date);
+        Assert.Equal(Archive, await File.ReadAllBytesAsync(_archivePath));
+    }
+
+    [Fact]
+    public async Task Pause_HostAnswersWithTheWholeFile_StartsAgainFromZero()
+    {
+        var requests = new List<SentRequest>();
+        var downloader = new HttpModDownloader(Answering(requests, _ => FirstPart(Archive, ETag("v1")), _ => FakeHttpMessageHandler.ByteResponse(Archive)));
+
+        var result = await DownloadWithPauseAsync(downloader, StampedRelease(), new InstallStop());
+
+        Assert.Equal(2, requests.Count);
+        Assert.NotNull(requests[1].Range);
+        Assert.Equal(Archive, await File.ReadAllBytesAsync(_archivePath));
+        Assert.Equal(Archive.Length, result.BytesDownloaded);
+    }
+
+    [Fact]
+    public async Task Pause_FileChangedOnTheHost_StartsAgainAndNeverMixesTheBytes()
+    {
+        var requests = new List<SentRequest>();
+        var downloader = new HttpModDownloader(Answering(
+            requests,
+            _ => FirstPart(OtherBytes, ETag("old")),
+            request => Equals(request.Headers.IfRange?.EntityTag, ETag("new")) ? Rest(Archive, PartLength) : FakeHttpMessageHandler.ByteResponse(Archive)));
+
+        var result = await DownloadWithPauseAsync(downloader, StampedRelease(), new InstallStop());
+
+        Assert.Equal(ETag("old"), requests[1].IfRange!.EntityTag);
+        Assert.Equal(Archive, await File.ReadAllBytesAsync(_archivePath));
+        Assert.Equal(Sha256Of(Archive), result.Sha256);
+    }
+
+    [Theory]
+    [InlineData(HttpStatusCode.RequestedRangeNotSatisfiable)]
+    [InlineData(HttpStatusCode.PartialContent)]
+    public async Task Pause_HostAnswersWithoutTheRest_AsksForTheWholeFileAgain(HttpStatusCode status)
+    {
+        var requests = new List<SentRequest>();
+        var downloader = new HttpModDownloader(Answering(
+            requests,
+            _ => FirstPart(OtherBytes, ETag("v1")),
+            _ => status == HttpStatusCode.PartialContent ? Rest(Archive, PartLength, Archive.Length + 1) : new HttpResponseMessage(status),
+            _ => FakeHttpMessageHandler.ByteResponse(Archive)));
+
+        await DownloadWithPauseAsync(downloader, StampedRelease(), new InstallStop());
+
+        Assert.Equal(3, requests.Count);
+        Assert.NotNull(requests[1].Range);
+        Assert.Null(requests[2].Range);
+        Assert.Equal(Archive, await File.ReadAllBytesAsync(_archivePath));
+    }
+
+    [Fact]
+    public async Task Pause_FirstAnswerWithoutValidator_StartsAgainFromZero()
+    {
+        var requests = new List<SentRequest>();
+        var downloader = new HttpModDownloader(Answering(requests, _ => FirstPart(Archive), _ => FakeHttpMessageHandler.ByteResponse(Archive)));
+
+        await DownloadWithPauseAsync(downloader, StampedRelease(), new InstallStop());
+
+        Assert.Equal(2, requests.Count);
+        Assert.Null(requests[1].Range);
+        Assert.Null(requests[1].IfRange);
+        Assert.Equal(Archive, await File.ReadAllBytesAsync(_archivePath));
+    }
+
+    [Fact]
+    public async Task Pause_SourceFailsAfterTheResume_NextSourceStartsFromZero()
+    {
+        var requests = new List<SentRequest>();
+        var downloader = new HttpModDownloader(Answering(
+            requests,
+            _ => FirstPart(Archive, ETag("v1")),
+            _ => Status(HttpStatusCode.ServiceUnavailable),
+            _ => FakeHttpMessageHandler.ByteResponse(Archive)));
+
+        var result = await DownloadWithPauseAsync(downloader, StampedRelease(GitHubUrl, MirrorUrl), new InstallStop());
+
+        Assert.Equal([GitHubUrl, GitHubUrl, MirrorUrl], requests.Select(request => request.Url));
+        Assert.NotNull(requests[1].Range);
+        Assert.Null(requests[2].Range);
+        Assert.Equal(MirrorUrl, result.Url);
+        Assert.Equal(Archive, await File.ReadAllBytesAsync(_archivePath));
+    }
+
+    [Fact]
+    public async Task Pause_LongerThanTheInactivityLimit_ResumesFromTheSameSource()
+    {
+        var requests = new List<SentRequest>();
+        var downloader = new HttpModDownloader(Answering(requests, _ => FirstPart(Archive, ETag("v1")), _ => Rest(Archive, PartLength)), TimeSpan.FromSeconds(1));
+
+        var result = await DownloadWithPauseAsync(downloader, StampedRelease(GitHubUrl, MirrorUrl), new InstallStop(), pausedFor: TimeSpan.FromSeconds(2));
+
+        Assert.Equal([GitHubUrl, GitHubUrl], requests.Select(request => request.Url));
+        Assert.Equal(GitHubUrl, result.Url);
+        Assert.Equal(Archive, await File.ReadAllBytesAsync(_archivePath));
+    }
+
+    [Fact]
+    public async Task Stop_WhilePaused_DeletesThePart()
+    {
+        var stop = new InstallStop();
+        var requests = new List<SentRequest>();
+        var downloader = new HttpModDownloader(Answering(requests, _ => FirstPart(Archive, ETag("v1"))));
+        var received = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var paused = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var progress = new SynchronousProgress<DownloadProgress>(report =>
+        {
+            if (report.IsPaused)
+                paused.TrySetResult();
+            else if (report.BytesDownloaded > 0)
+                received.TrySetResult();
+        });
+
+        var download = stop.RunAsync((_, token) => downloader.DownloadAsync(StampedRelease(), _archivePath, progress, token));
+        await received.Task.WaitAsync(WaitLimit);
+        Assert.True(stop.Pause());
+        await paused.Task.WaitAsync(WaitLimit);
+        Assert.True(File.Exists(_archivePath));
+        stop.Request();
+
+        await Assert.ThrowsAsync<InstallStoppedException>(() => download.WaitAsync(WaitLimit));
+        Assert.False(File.Exists(_archivePath));
+        Assert.Single(requests);
     }
 
     #endregion
