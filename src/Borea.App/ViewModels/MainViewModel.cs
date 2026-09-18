@@ -274,6 +274,7 @@ public partial class MainViewModel : ViewModelBase
         _appPreferences = appPreferences ?? throw new ArgumentNullException(nameof(appPreferences));
         _services = services;
         Tasks = new TaskRegistry(Localization, () => _services?.TaskHistory, () => _services?.Log, RetryTaskAsync);
+        Toasts = new ToastService(this);
         _instances = services?.Instances;
         _currentTheme = appPreferences.ResolveSelectedThemeName(BundledThemeNames, DefaultThemeName);
         RegionalFormat.PropertyChanged += OnRegionalFormatChanged;
@@ -694,6 +695,7 @@ public partial class MainViewModel : ViewModelBase
             item.RefreshText();
         foreach (var run in _installRuns)
             run.RefreshText();
+        Toasts.RefreshText();
         RefreshGameDataItems();
         RefreshGameSaveText();
         RefreshLoaderText();

@@ -50,6 +50,9 @@ public sealed class InstallStopTests
         Assert.Null(item.InstallError);
         Assert.Equal(harness.Localization.InstallStopped, item.ProgressStatus);
         Assert.Empty((await harness.Services.Instances.GetByIdAsync(instance.InstanceId))!.Mods);
+        var toast = Assert.Single(harness.ViewModel.Toasts.Items);
+        Assert.Equal(harness.Localization.FormatToastInstallStopped(item.Name), toast.Message);
+        Assert.False(toast.HasDetail);
     }
 
     [Fact]
@@ -110,6 +113,9 @@ public sealed class InstallStopTests
         Assert.Null(pack.InstallError);
         Assert.Equal(harness.Localization.FormatInstallStoppedAfter(1, 2), pack.ProgressStatus);
         Assert.Equal("AdvancedFlightComputer", Assert.Single((await harness.Services.Instances.GetByIdAsync(instance.InstanceId))!.Mods).ModId);
+        var toast = Assert.Single(viewModel.Toasts.Items);
+        Assert.Equal(harness.Localization.FormatToastInstallStopped(pack.Name), toast.Message);
+        Assert.Equal(harness.Localization.FormatToastStoppedInstalled(1, 2), toast.Detail);
     }
 
     [Fact]
