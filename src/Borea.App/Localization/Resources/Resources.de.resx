@@ -1162,10 +1162,10 @@
     <value>Spiel einrichten</value>
   </data>
   <data name="SharedProfileBannerOne" xml:space="preserve">
-    <value>1 Mod in deinem Spielprofil</value>
+    <value>1 Mod in deinem Spielprofil. Erstelle daraus eine Instanz. Dein Spielprofil bleibt unverändert.</value>
   </data>
   <data name="SharedProfileBannerFormat" xml:space="preserve">
-    <value>{0} Mods in deinem Spielprofil</value>
+    <value>{0} Mods in deinem Spielprofil. Erstelle daraus eine Instanz. Dein Spielprofil bleibt unverändert.</value>
   </data>
   <data name="SharedProfileCreateInstance" xml:space="preserve">
     <value>Instanz erstellen</value>

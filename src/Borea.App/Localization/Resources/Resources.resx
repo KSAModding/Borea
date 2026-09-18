@@ -1162,10 +1162,10 @@
     <value>Set up game</value>
   </data>
   <data name="SharedProfileBannerOne" xml:space="preserve">
-    <value>1 mod in your game profile</value>
+    <value>1 mod in your game profile. Create an instance from it. Your game profile stays as it is.</value>
   </data>
   <data name="SharedProfileBannerFormat" xml:space="preserve">
-    <value>{0} mods in your game profile</value>
+    <value>{0} mods in your game profile. Create an instance from them. Your game profile stays as it is.</value>
   </data>
   <data name="SharedProfileCreateInstance" xml:space="preserve">
     <value>Create instance</value>
