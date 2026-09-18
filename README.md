@@ -7,9 +7,12 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) to contribute and [SECURITY.md](SECURITY.
 ## Downloads
 
 Each release has two archives per platform.
-The App archive contains the desktop App and the `borea` command. Most users want this archive.
-The CLI archive contains only the `borea` command. It is a smaller download for scripts and for computers without a desktop.
-The `borea` command in both archives is the same build.
+The App archive contains one program, `borea` (`borea.exe` on Windows).
+Started without arguments, it opens the desktop App.
+Started with arguments, it runs a command, for example `borea --help`.
+Most users want this archive.
+The CLI archive contains only the command line.
+It is a smaller download for scripts and for computers without a desktop.
 
 The builds include the .NET runtime and are self-contained, so there is nothing you need to install first.
 
@@ -29,16 +32,20 @@ Signing will be added at some point and is tracked in [issue #76](https://github
 
 1. Your browser might warn you that the file is not commonly downloaded. Keep it.
 2. Before you unpack it, right-click the zip, open **Properties**, select **Unblock** on the **General** tab and confirm with **OK**.
-3. Unpack the zip and start `Borea.App.exe`. For the command line, run `.\borea.exe --help` in PowerShell in the unpacked folder of either archive.
+3. Unpack the zip and start `borea.exe`. For the command line, run `.\borea.exe --help` in PowerShell in the unpacked folder of either archive.
 4. If you skipped step 2, Windows shows "Windows protected your PC". The reason is that it detects that the App is not commonly downloaded and not signed. Select **More info**, then **Run anyway**.
 5. If Windows says that Smart App Control blocked Borea, there is no "Run anyway". Go back to step 2, unblock the zip, and unpack it again into a new folder.
 
 The warning comes back with every new version.
 Borea does not need administrator rights.
 
+On Windows 11 24H2 and later, the App opens without a console window.
+On older Windows, a console window opens for a moment and closes when the App starts.
+If you start `borea.exe` from the CLI archive by a double-click, it tells you to use a terminal and waits for Enter.
+
 ### Linux
 
-Unpack the App archive and start `Borea.App`.
+Unpack the App archive and start `borea`, for example with `./borea` in a terminal in the unpacked folder.
 For the command line, run `./borea --help` in the unpacked folder of either archive.
 The build carries the .NET runtime but not the system libraries it sits on.
 The App and the CLI both need the ICU and OpenSSL libraries.
@@ -59,15 +66,15 @@ Unpack the archive and start Borea from Terminal:
 ```sh
 tar -xzf Borea-<version>-osx-arm64.tar.gz
 cd Borea-<version>-osx-arm64
-./Borea.App
+./borea
 ```
 
 On an Intel Mac, use the `osx-x64` archive instead.
 
 For the command line, run `./borea --help` in the same directory.
-The matching `Borea-Cli-` archive contains only this command.
+The matching `Borea-Cli-` archive contains only the command line.
 
-Do not unpack the archive by double-clicking it in Finder, and do not start `Borea.App` from Finder.
+Do not unpack the archive by double-clicking it in Finder, and do not start `borea` from Finder.
 
 If that already happened, remove the download mark and start Borea from Terminal again: `xattr -dr com.apple.quarantine Borea-<version>-osx-arm64`.
 
@@ -87,7 +94,7 @@ gh attestation verify <file> --repo KSAModding/Borea \
 ```
 
 `Borea-<version>.cdx.json` is the software bill of materials for the App archives, in CycloneDX JSON.
-The App archives also contain `borea`, so this file lists the NuGet packages of the App and of the CLI.
+The App contains the command line, so this file lists the NuGet packages of the App and of the CLI.
 `Borea-Cli-<version>.cdx.json` is the software bill of materials for the CLI archives and lists only the packages of the CLI.
 Each file includes the version, license and hash of every package.
 Each list is attested only to the archives that it describes, and you can use this command to prove that it belongs to one.
