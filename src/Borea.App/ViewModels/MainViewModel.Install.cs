@@ -10,6 +10,7 @@ using Borea.Core.Game;
 using Borea.Core.Instances;
 using Borea.Core.Mods;
 using Borea.Core.Planning;
+using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace Borea.App.ViewModels;
 
@@ -19,11 +20,16 @@ internal interface IInstallProgressRow
 
     double Progress { get; set; }
 
-    /// <summary>What the install is doing, for example "Downloading MeasureTools 1.1.10 (2 of 3)".</summary>
+    /// <summary>
+    /// What the install is doing, for example "Downloading MeasureTools 1.1.10 (2 of 3)",
+    /// and after a stop how far it got.
+    /// </summary>
     string? ProgressStatus { get; set; }
 
     /// <summary>Size and time left while downloading, otherwise null.</summary>
     string? ProgressDetail { get; set; }
+
+    InstallRun? Run { get; set; }
 }
 
 /// <summary>
@@ -49,6 +55,50 @@ internal interface IInstallRow : IInstallProgressRow
 /// </summary>
 public partial class MainViewModel
 {
+    private readonly List<InstallRun> _installRuns = [];
+
+    /// <summary>True once the window asked the running installs to stop so that it can close.</summary>
+    [ObservableProperty]
+    private bool _isClosing;
+
+    internal bool HasRunningInstalls => _installRuns.Count > 0;
+
+    /// <summary>
+    /// Stops every running install at its safe point and returns once all of
+    /// them ended. An install that starts meanwhile stops at once.
+    /// </summary>
+    internal async Task StopInstallsAsync()
+    {
+        IsClosing = true;
+        while (_installRuns.Count > 0)
+        {
+            var runs = _installRuns.ToList();
+            foreach (var run in runs)
+                run.Stop();
+            await Task.WhenAll(runs.Select(run => run.Ended));
+        }
+    }
+
+    private InstallRun StartInstallRun()
+    {
+        var run = new InstallRun(Localization);
+        _installRuns.Add(run);
+        if (IsClosing)
+            run.Stop();
+        return run;
+    }
+
+    private void EndInstallRun(InstallRun run)
+    {
+        _installRuns.Remove(run);
+        run.End();
+    }
+
+    /// <summary>What a stopped install shows where its progress was.</summary>
+    private string StoppedText(IInstallProgressRow row, int completed = 0, int total = 0) => row is IUpdateRow
+        ? completed == 0 ? Localization.UpdateStopped : Localization.FormatUpdateStoppedAfter(completed, total)
+        : completed == 0 ? Localization.InstallStopped : Localization.FormatInstallStoppedAfter(completed, total);
+
     /// <summary>
     /// Plans the install of one release into the active instance. A ready plan
     /// without warnings or choices runs at once. Any other plan waits on the row
@@ -84,8 +134,11 @@ public partial class MainViewModel
         row.InstallWarning = null;
         row.PendingPlan = null;
         row.Choices = null;
+        row.ProgressStatus = null;
         row.IsInstalling = true;
+        var run = row.Run = StartInstallRun();
         var executed = false;
+        string? stopped = null;
         try
         {
             var instance = await services.Instances.GetByIdAsync(instanceId)
@@ -95,7 +148,13 @@ public partial class MainViewModel
             var choices = InstallChoices.AreNeeded(plan) ? NewChoices(instanceId, requested, plan) : null;
             var wait = (plan.IsReady || choices is not null) && waitForConfirmation is not null && await waitForConfirmation(instance, plan);
 
-            if (choices is not null)
+            if (run.InstallStop.IsRequested)
+            {
+                if (row is IUpdateRow update)
+                    update.Changelogs = [];
+                stopped = StoppedText(row);
+            }
+            else if (choices is not null)
             {
                 row.Choices = choices;
                 HoldPlan(row, plan);
@@ -111,8 +170,12 @@ public partial class MainViewModel
             else
             {
                 executed = true;
-                await services.PlanExecutor.ExecuteAsync(plan, enable: true, ProgressOf(row));
+                await services.PlanExecutor.ExecuteAsync(plan, enable: true, ProgressOf(row), run.InstallStop);
             }
+        }
+        catch (InstallStoppedException exception)
+        {
+            stopped = StoppedText(row, exception.Completed, exception.Total);
         }
         catch (Exception exception) when (IsInstallFailure(exception))
         {
@@ -120,9 +183,11 @@ public partial class MainViewModel
         }
         finally
         {
+            EndInstallRun(run);
             row.IsInstalling = false;
+            row.Run = null;
             row.Progress = 0;
-            row.ProgressStatus = null;
+            row.ProgressStatus = stopped;
             row.ProgressDetail = null;
         }
 
@@ -222,7 +287,9 @@ public partial class MainViewModel
         var services = _services;
         var plan = row.PendingPlan;
         row.IsInstalling = true;
+        var run = row.Run = StartInstallRun();
         var executed = false;
+        string? stopped = null;
         try
         {
             if (row.Choices is { } choices)
@@ -237,7 +304,11 @@ public partial class MainViewModel
             row.Choices = null;
             starting?.Invoke();
             executed = true;
-            await services.PlanExecutor.ExecuteAsync(plan!, enable: true, ProgressOf(row));
+            await services.PlanExecutor.ExecuteAsync(plan!, enable: true, ProgressOf(row), run.InstallStop);
+        }
+        catch (InstallStoppedException exception)
+        {
+            stopped = StoppedText(row, exception.Completed, exception.Total);
         }
         catch (Exception exception) when (IsInstallFailure(exception))
         {
@@ -248,9 +319,11 @@ public partial class MainViewModel
         }
         finally
         {
+            EndInstallRun(run);
             row.IsInstalling = false;
+            row.Run = null;
             row.Progress = 0;
-            row.ProgressStatus = null;
+            row.ProgressStatus = stopped;
             row.ProgressDetail = null;
         }
 
@@ -294,6 +367,8 @@ public partial class MainViewModel
             row.Progress = text.Percent;
             row.ProgressStatus = text.Status;
             row.ProgressDetail = text.Detail;
+            if (row.Run is { } run)
+                run.IsFinishingMod = value.Phase != InstallPhase.Downloading;
         });
     }
 

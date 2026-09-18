@@ -621,6 +621,9 @@ public sealed partial class DiscoverItem : ObservableObject, IInstallRow
     private string? _progressDetail;
 
     [ObservableProperty]
+    private InstallRun? _run;
+
+    [ObservableProperty]
     private string? _installError;
 
     /// <summary>True between the Remove menu item and the confirmation.</summary>

@@ -9,6 +9,7 @@ using Borea.Composition;
 using Borea.Core.Game;
 using Borea.Core.ModLoaders;
 using Borea.Core.Mods;
+using Borea.Core.Planning;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -145,6 +146,9 @@ public partial class MainViewModel
 
     [ObservableProperty]
     private string? _setupProgressDetail;
+
+    [ObservableProperty]
+    private InstallRun? _loaderInstallRun;
 
     /// <summary>
     /// What the settings record for the selected loader, as the chip under the
@@ -429,9 +433,24 @@ public partial class MainViewModel
             SetupProgressStatus = text.Status;
             SetupProgressDetail = text.Detail;
         });
-        var result = await services.LoaderInstaller.InstallAsync(listing, release, directory.Length == 0 ? null : Path.GetFullPath(directory), progress);
-        LoaderDirectoryInput = result.Directory;
-        return Localization.FormatSetupLoaderInstalled(listing.Name, result.Version.ToString(), result.Directory);
+        var run = LoaderInstallRun = StartInstallRun();
+        try
+        {
+            var result = await run.InstallStop.RunAsync(
+                (reports, token) => services.LoaderInstaller.InstallAsync(listing, release, directory.Length == 0 ? null : Path.GetFullPath(directory), reports, token),
+                progress);
+            LoaderDirectoryInput = result.Directory;
+            return Localization.FormatSetupLoaderInstalled(listing.Name, result.Version.ToString(), result.Directory);
+        }
+        catch (InstallStoppedException)
+        {
+            return Localization.InstallStopped;
+        }
+        finally
+        {
+            EndInstallRun(run);
+            LoaderInstallRun = null;
+        }
     });
 
     private async Task RunSetupAsync(Func<BoreaServices, Task<string>> operation)

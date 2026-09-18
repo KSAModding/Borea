@@ -414,7 +414,7 @@ public partial class MainViewModel
 
     /// <summary>
     /// Runs one update per instance at a time. The reload builds new rows, so
-    /// an error is set again afterwards, on the row of the same mod.
+    /// an error or a stop is shown again afterwards, on the row of the same mod.
     /// </summary>
     private async Task RunUpdateAsync(IInstallRow row, Guid instanceId, Func<Task<bool>> run)
     {
@@ -437,15 +437,19 @@ public partial class MainViewModel
             return;
 
         var error = row.InstallError;
+        var stopped = row.ProgressStatus;
         await ReloadInstancesAsync();
-        if (error is null || SelectedInstance?.InstanceId != instanceId)
+        if ((error is null && stopped is null) || SelectedInstance?.InstanceId != instanceId)
             return;
 
         IInstallRow? target = row is ContentItem item
             ? _content.FirstOrDefault(content => ModIds.Equals(content.ModId, item.ModId))
             : UpdateAll;
         if (target is not null)
+        {
             target.InstallError = error;
+            target.ProgressStatus = stopped;
+        }
     }
 
     /// <summary>What the Home launch button starts, which is the option last chosen in its menu.</summary>
@@ -828,6 +832,9 @@ public sealed partial class ContentItem : ObservableObject, IUpdateRow
     private string? _progressDetail;
 
     [ObservableProperty]
+    private InstallRun? _run;
+
+    [ObservableProperty]
     private string? _installError;
 
     /// <summary>
@@ -934,6 +941,9 @@ public sealed partial class UpdateAllItem : ObservableObject, IUpdateRow
 
     [ObservableProperty]
     private string? _progressDetail;
+
+    [ObservableProperty]
+    private InstallRun? _run;
 
     [ObservableProperty]
     private string? _installError;

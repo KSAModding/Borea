@@ -120,11 +120,16 @@ public partial class MainViewModel
 
         item.InstallError = null;
         item.IsInstalling = true;
+        var run = item.Run = StartInstallRun();
         try
         {
-            await InstallerFor(services).InstallAsync(item.Plan, item.Name.Trim(), ProgressOf(item));
+            await InstallerFor(services).InstallAsync(item.Plan, item.Name.Trim(), ProgressOf(item), run.InstallStop);
             if (ReferenceEquals(ModListImport, item))
                 ModListImport = null;
+        }
+        catch (InstallStoppedException)
+        {
+            // only a closing window stops an import, and the installer removed the new instance again
         }
         catch (Exception exception) when (IsInstallFailure(exception))
         {
@@ -132,7 +137,9 @@ public partial class MainViewModel
         }
         finally
         {
+            EndInstallRun(run);
             item.IsInstalling = false;
+            item.Run = null;
             item.Progress = 0;
             item.ProgressStatus = null;
             item.ProgressDetail = null;
@@ -280,6 +287,9 @@ public sealed partial class ModListImportItem : ObservableObject, IInstallProgre
 
     [ObservableProperty]
     private string? _progressDetail;
+
+    [ObservableProperty]
+    private InstallRun? _run;
 
     [ObservableProperty]
     private string? _installError;
