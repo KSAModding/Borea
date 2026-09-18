@@ -232,6 +232,8 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string LibraryImportModList => Resources.LibraryImportModList;
 
+    public string LibraryMoreActions => Resources.LibraryMoreActions;
+
     public string LibraryDuplicate => Resources.LibraryDuplicate;
 
     public string LibraryExportModList => Resources.LibraryExportModList;
