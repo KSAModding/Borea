@@ -29,6 +29,7 @@
     <Compile Remove="Fixtures\**" />
     <None Remove="Fixtures\**" />
     <None Update="Index\Fixtures\current-snapshot.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\announcements.toml" Link="Announcements\announcements.toml" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <Import Project="..\VersionFixtures.targets" />
