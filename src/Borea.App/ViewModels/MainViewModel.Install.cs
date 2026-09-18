@@ -176,13 +176,14 @@ public partial class MainViewModel
             else
             {
                 executed = true;
-                run.TaskItem.MarkRunning();
+                run.TaskItem.MarkRunning(plan);
                 await services.PlanExecutor.ExecuteAsync(plan, enable: true, ProgressOf(row), run.InstallStop);
                 completed = true;
             }
         }
         catch (InstallStoppedException exception)
         {
+            run.TaskItem.StoppedAfter = (exception.Completed, exception.Total);
             stopped = StoppedText(row, exception.Completed, exception.Total);
         }
         catch (Exception exception) when (IsInstallFailure(exception))
@@ -314,12 +315,13 @@ public partial class MainViewModel
             row.Choices = null;
             starting?.Invoke();
             executed = true;
-            run.TaskItem.MarkRunning();
+            run.TaskItem.MarkRunning(plan!);
             await services.PlanExecutor.ExecuteAsync(plan!, enable: true, ProgressOf(row), run.InstallStop);
             completed = true;
         }
         catch (InstallStoppedException exception)
         {
+            run.TaskItem.StoppedAfter = (exception.Completed, exception.Total);
             stopped = StoppedText(row, exception.Completed, exception.Total);
         }
         catch (Exception exception) when (IsInstallFailure(exception))

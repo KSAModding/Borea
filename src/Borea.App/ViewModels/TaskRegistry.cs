@@ -34,6 +34,9 @@ public sealed partial class TaskRegistry : ObservableObject
 
     internal LocalizationService Localization { get; }
 
+    /// <summary>Raised once for each task that ends, after it moved to the history.</summary>
+    internal event Action<TaskItem>? Ended;
+
     /// <summary>The running and waiting tasks, in the order they started.</summary>
     public ObservableCollection<TaskItem> Running { get; } = [];
 
@@ -72,6 +75,7 @@ public sealed partial class TaskRegistry : ObservableObject
 
         OnHistoryChanged();
         _saves = SaveAfterAsync(_saves, _isLoadStarted && _loading.IsCompleted ? Entries() : null);
+        Ended?.Invoke(task);
     }
 
     /// <summary>Drops a task that ended without doing anything, such as a plan that waits for a confirmation.</summary>

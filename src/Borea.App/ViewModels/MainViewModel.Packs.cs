@@ -410,7 +410,12 @@ public partial class MainViewModel
         var result = await services.ModPackInstaller.InstallAsync(request, ProgressOf(pack), run.InstallStop);
         pack.ShowResults(result.Members.Select(member => new PackResultItem(this, member)));
         if (result.IsStopped)
-            return StoppedText(pack, result.Members.Count(member => member.Status is ModPackMemberStatus.Installed or ModPackMemberStatus.Replaced), result.Plan?.Operations.Count ?? 0);
+        {
+            var installed = result.Members.Count(member => member.Status is ModPackMemberStatus.Installed or ModPackMemberStatus.Replaced);
+            var total = result.Plan?.Operations.Count ?? 0;
+            run.TaskItem.StoppedAfter = (installed, total);
+            return StoppedText(pack, installed, total);
+        }
 
         if (result.IsComplete)
             return null;

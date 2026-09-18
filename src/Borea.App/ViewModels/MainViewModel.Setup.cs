@@ -424,6 +424,7 @@ public partial class MainViewModel
             ?? throw new InvalidOperationException(Localization.DiscoverNoRelease);
         var directory = LoaderDirectoryInput.Trim();
         var run = LoaderInstallRun = StartInstallRun(StartTask(TaskKind.LoaderInstall, listing.Name));
+        run.TaskItem.NewVersion = release.Version.ToString();
         var text = new InstallProgressText(Localization);
         var progress = new Progress<InstallProgress>(value =>
         {
