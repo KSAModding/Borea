@@ -16,9 +16,9 @@ public sealed class SharedProfileBannerTests
 
         Assert.True(harness.ViewModel.ShowSharedProfileBanner);
         Assert.True(harness.ViewModel.HasSharedProfileMods);
-        Assert.Equal("2 mods in your game profile", harness.ViewModel.SharedProfileBannerText);
+        Assert.Equal("2 mods in your game profile. Create an instance from them. Your game profile stays as it is.", harness.ViewModel.SharedProfileBannerText);
         harness.Localization.TrySetCulture("de");
-        Assert.Equal("2 Mods in deinem Spielprofil", harness.ViewModel.SharedProfileBannerText);
+        Assert.Equal("2 Mods in deinem Spielprofil. Erstelle daraus eine Instanz. Dein Spielprofil bleibt unver\u00e4ndert.", harness.ViewModel.SharedProfileBannerText);
     }
 
     [Fact]
@@ -31,7 +31,7 @@ public sealed class SharedProfileBannerTests
 
         Assert.False(harness.ViewModel.ShowSharedProfileBanner);
         Assert.True(harness.ViewModel.HasSharedProfileMods);
-        Assert.Equal("1 mod in your game profile", harness.ViewModel.SharedProfileBannerText);
+        Assert.Equal("1 mod in your game profile. Create an instance from it. Your game profile stays as it is.", harness.ViewModel.SharedProfileBannerText);
     }
 
     [Fact]

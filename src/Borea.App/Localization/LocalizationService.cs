@@ -205,6 +205,8 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string LibraryImportFromProfile => Resources.LibraryImportFromProfile;
 
+    public string LibraryImportFromProfileToolTip => Resources.LibraryImportFromProfileToolTip;
+
     public string LibraryActivate => Resources.LibraryActivate;
 
     public string LibraryRename => Resources.LibraryRename;
@@ -639,7 +641,9 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string SharedProfileModalTitle => Resources.SharedProfileModalTitle;
 
-    public string SharedProfileModalHint => Resources.SharedProfileModalHint;
+    public string SharedProfileModalCopies => Resources.SharedProfileModalCopies;
+
+    public string SharedProfileModalUnchanged => Resources.SharedProfileModalUnchanged;
 
     public string SharedProfileImporting => Resources.SharedProfileImporting;
 

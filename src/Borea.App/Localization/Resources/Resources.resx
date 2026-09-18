@@ -162,6 +162,9 @@
   <data name="LibraryImportFromProfile" xml:space="preserve">
     <value>Import from game profile</value>
   </data>
+  <data name="LibraryImportFromProfileToolTip" xml:space="preserve">
+    <value>Copies the mods of your game profile into a new instance.</value>
+  </data>
   <data name="LibraryNeverPlayed" xml:space="preserve">
     <value>Never played</value>
   </data>
@@ -1159,10 +1162,10 @@
     <value>Set up game</value>
   </data>
   <data name="SharedProfileBannerOne" xml:space="preserve">
-    <value>1 mod in your game profile</value>
+    <value>1 mod in your game profile. Create an instance from it. Your game profile stays as it is.</value>
   </data>
   <data name="SharedProfileBannerFormat" xml:space="preserve">
-    <value>{0} mods in your game profile</value>
+    <value>{0} mods in your game profile. Create an instance from them. Your game profile stays as it is.</value>
   </data>
   <data name="SharedProfileCreateInstance" xml:space="preserve">
     <value>Create instance</value>
@@ -1173,8 +1176,11 @@
   <data name="SharedProfileModalTitle" xml:space="preserve">
     <value>Create an instance from your game profile</value>
   </data>
-  <data name="SharedProfileModalHint" xml:space="preserve">
-    <value>Borea copies the mods with their load order and whether they are enabled. Your game profile stays as it is.</value>
+  <data name="SharedProfileModalCopies" xml:space="preserve">
+    <value>Borea copies the mods from My Games/Kitten Space Agency into a new instance, with their load order and on or off state.</value>
+  </data>
+  <data name="SharedProfileModalUnchanged" xml:space="preserve">
+    <value>Nothing in that folder changes.</value>
   </data>
   <data name="SharedProfileImporting" xml:space="preserve">
     <value>Borea copies the mods and compares them with the content index. Close this window to stop.</value>
