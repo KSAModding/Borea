@@ -1239,6 +1239,21 @@
   <data name="LaunchInstanceMissing" xml:space="preserve">
     <value>Diese Instanz existiert nicht mehr.</value>
   </data>
+  <data name="LaunchLoaderNotInstalledFormat" xml:space="preserve">
+    <value>Der Mod-Loader {0} ist nicht installiert. Mod-Loader werden in den Spieleinstellungen eingerichtet.</value>
+  </data>
+  <data name="LaunchNeededLoaderNotInstalledFormat" xml:space="preserve">
+    <value>Die Mods in dieser Instanz brauchen den Mod-Loader {0}, der nicht installiert ist. Mod-Loader werden in den Spieleinstellungen eingerichtet.</value>
+  </data>
+  <data name="LaunchDifferentLoadersNeededFormat" xml:space="preserve">
+    <value>Die Mods in dieser Instanz brauchen verschiedene Mod-Loader: {0}. Eine Instanz startet nur mit einem Mod-Loader. Entferne Mods, bis alle denselben Mod-Loader brauchen.</value>
+  </data>
+  <data name="LaunchLoaderNotListedFormat" xml:space="preserve">
+    <value>Keine Quelle hat einen Eintrag für {0}. Borea braucht den Eintrag eines installierten Mod-Loaders, um ihn starten zu können.</value>
+  </data>
+  <data name="LaunchNoLoaderTakesInstanceFormat" xml:space="preserve">
+    <value>Keine Mod in dieser Instanz braucht einen Mod-Loader, und kein installierter Mod-Loader kann eine Instanz starten. Um KSA ohne Mod-Loader zu starten, nutze "{0}" auf der Startseite. Das startet mit dem gemeinsamen Profil, nicht mit dieser Instanz.</value>
+  </data>
   <data name="LaunchWithoutModLoaderToolTip" xml:space="preserve">
     <value>Startet KSA so, als würdest du KSA.exe direkt ausführen. Es nutzt das gemeinsame Profil, das KSA selbst anlegt, und keine Borea-Instanz.</value>
   </data>

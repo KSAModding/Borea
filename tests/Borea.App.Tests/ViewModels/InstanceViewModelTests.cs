@@ -191,7 +191,7 @@ public sealed class InstanceViewModelTests
     }
 
     [Fact]
-    public async Task Play_WithoutALoader_ShowsTheLauncherMessage()
+    public async Task Play_NoModNeedsALoaderAndNoLoaderIsInstalled_PointsToTheLaunchWithoutAModLoader()
     {
         using var harness = await ViewModelHarness.CreateAsync();
         var viewModel = harness.ViewModel;
@@ -201,8 +201,9 @@ public sealed class InstanceViewModelTests
 
         await viewModel.PlayCommand.ExecuteAsync(null);
 
-        Assert.False(string.IsNullOrWhiteSpace(viewModel.LaunchMessage));
+        Assert.Equal(harness.Localization.LaunchNoLoaderTakesInstance, viewModel.LaunchMessage);
         Assert.False(viewModel.IsLaunching);
+        Assert.Contains(harness.Services.Log.ReadRecentLines(20), line => line.EndsWith("did not start, NoLoaderTakesInstance.", StringComparison.Ordinal));
     }
 
     [Fact]

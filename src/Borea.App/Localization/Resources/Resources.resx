@@ -1239,6 +1239,21 @@
   <data name="LaunchInstanceMissing" xml:space="preserve">
     <value>This instance no longer exists.</value>
   </data>
+  <data name="LaunchLoaderNotInstalledFormat" xml:space="preserve">
+    <value>The mod loader {0} is not installed. Mod loaders are set up from the Game settings.</value>
+  </data>
+  <data name="LaunchNeededLoaderNotInstalledFormat" xml:space="preserve">
+    <value>The mods in this instance need the mod loader {0}, and it is not installed. Mod loaders are set up from the Game settings.</value>
+  </data>
+  <data name="LaunchDifferentLoadersNeededFormat" xml:space="preserve">
+    <value>The mods in this instance need different mod loaders: {0}. An instance starts through one loader only. Remove mods until they all need the same loader.</value>
+  </data>
+  <data name="LaunchLoaderNotListedFormat" xml:space="preserve">
+    <value>No source has a listing for {0}. Borea needs the listing of an installed mod loader to know how to start it.</value>
+  </data>
+  <data name="LaunchNoLoaderTakesInstanceFormat" xml:space="preserve">
+    <value>No mod in this instance needs a mod loader, and no installed mod loader can start an instance. To start KSA without a loader, use "{0}" on Home. It uses the shared profile, not this instance.</value>
+  </data>
   <data name="LaunchWithoutModLoaderToolTip" xml:space="preserve">
     <value>Launches KSA the same way as running KSA.exe. It uses the shared profile that KSA creates, not a Borea instance.</value>
   </data>

@@ -1,3 +1,5 @@
+using System.Text.Json.Nodes;
+using Borea.Composition;
 using Borea.Core.Instances;
 using Borea.Core.Launch;
 using Borea.Core.ModLoaders;
@@ -22,17 +24,17 @@ public sealed class LaunchFailureTests
     /// <summary>A harness with StarMap recorded that starts its processes through <paramref name="starter"/>.</summary>
     private static Task<ViewModelHarness> CreateAsync(IProcessStarter starter) =>
         ViewModelHarness.CreateAsync(
-            services =>
-            {
-                var loader = Directory.CreateDirectory(Path.Combine(Path.GetDirectoryName(services.Paths.GetBoreaSettingsPath())!, "Loaders", "StarMap")).FullName;
-                // both launch targets, so the plan is found on Windows and through dotnet elsewhere
-                File.WriteAllBytes(Path.Combine(loader, "StarMap.exe"), []);
-                File.WriteAllBytes(Path.Combine(loader, "StarMap.dll"), []);
-                return services.SettingsRepository.SaveAsync(services.Settings.WithLoaderInstallation(
-                    "StarMap",
-                    new LoaderInstallation(loader, ModVersion.Parse("0.4.6"), rawVersion: null, isAdopted: false)));
-            },
+            services => services.SettingsRepository.SaveAsync(services.Settings.WithLoaderInstallation("StarMap", CreateLoader(services, "StarMap"))),
             processStarter: starter);
+
+    /// <summary>A loader directory with both launch targets, so the plan is found on Windows and through dotnet elsewhere.</summary>
+    private static LoaderInstallation CreateLoader(BoreaServices services, string loaderId)
+    {
+        var loader = Directory.CreateDirectory(Path.Combine(Path.GetDirectoryName(services.Paths.GetBoreaSettingsPath())!, "Loaders", loaderId)).FullName;
+        File.WriteAllBytes(Path.Combine(loader, "StarMap.exe"), []);
+        File.WriteAllBytes(Path.Combine(loader, "StarMap.dll"), []);
+        return new LoaderInstallation(loader, ModVersion.Parse("0.4.6"), rawVersion: null, isAdopted: false);
+    }
 
     [Fact]
     public async Task Play_LoaderCrashesOnAMod_NamesItAndOffersToDisableIt()
@@ -78,6 +80,41 @@ public sealed class LaunchFailureTests
         Assert.Equal(harness.Localization.FormatLaunchExitedEarly("StarMap", 3), viewModel.LaunchMessage);
         Assert.True(viewModel.HasLaunchOutput);
         Assert.False(viewModel.CanDisableBlamedMod);
+    }
+
+    [Fact]
+    public async Task Play_TwoLoadersRecorded_StartsTheOneTheModsNeed()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(
+            services => services.SettingsRepository.SaveAsync(services.Settings
+                .WithLoaderInstallation("AlphaLoader", CreateLoader(services, "AlphaLoader"))
+                .WithLoaderInstallation("StarMap", CreateLoader(services, "StarMap"))),
+            editSnapshot: json =>
+            {
+                var root = JsonNode.Parse(json)!;
+                var listings = root["listings"]!.AsArray();
+                var copy = listings.Single(node => (string?)node!["id"] == "StarMap")!.DeepClone();
+                copy["id"] = "AlphaLoader";
+                copy["authored"]!["id"] = "AlphaLoader";
+                copy["authored"]!["name"] = "Alpha Loader";
+                foreach (var release in copy["releases"]!.AsArray())
+                {
+                    release!["id"] = "AlphaLoader";
+                    release["listing"]!["name"] = "Alpha Loader";
+                }
+
+                listings.Add(copy);
+                return root.ToJsonString();
+            },
+            processStarter: new CrashingStarter(UnhandledException, KsArmoryCrash));
+        var viewModel = harness.ViewModel;
+        await InstalledContent.AddAsync(harness, "KSArmory", activate: true);
+        await viewModel.LoadAsync();
+        await viewModel.ActiveInstance!.OpenCommand.ExecuteAsync(null);
+
+        await viewModel.PlayCommand.ExecuteAsync(null);
+
+        Assert.Equal(harness.Localization.FormatLaunchModBroke("KSArmory", "0.8.44", "StarMap"), viewModel.LaunchMessage);
     }
 
     [Fact]

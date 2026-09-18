@@ -165,15 +165,15 @@ public sealed class LaunchCommandTests : IDisposable
     }
 
     [Fact]
-    public async Task Launch_WithoutLoaderId_NeededLoaderNotAvailable_NamesTheNeededLoader()
+    public async Task Launch_WithoutLoaderId_NeededLoaderNotInstalled_NamesTheNeededLoader()
     {
+        _host.Mods.Listings.Add(LoaderFixtures.Listing());
         await SaveInstanceAsync(NeedsLoader("flight-tools", "StarMap"));
 
         var run = await _host.RunAsync("launch", "Flight Test");
 
         Assert.Equal(1, run.ExitCode);
-        Assert.Contains("The mods in 'Flight Test' need StarMap.", run.Output);
-        Assert.Contains("Mod loader 'StarMap' is not available", run.Error);
+        Assert.Contains("The mods in 'Flight Test' need StarMap, and it is not installed.", run.Error);
         Assert.Empty(_host.ProcessStarter.Plans);
     }
 
@@ -195,16 +195,121 @@ public sealed class LaunchCommandTests : IDisposable
     }
 
     [Fact]
-    public async Task Launch_WithoutLoaderId_ModsNeedNoLoader_PointsToGameLaunch()
+    public async Task Launch_WithoutLoaderId_ModsNeedNoLoaderAndNoInstalledLoaderTakesAnInstance_PointsToGameLaunch()
     {
         _host.Mods.Listings.Add(LoaderFixtures.Listing());
+        _host.Mods.Listings.Add(LoaderFixtures.ListingWithoutInstance("OtherLoader"));
+        var directory = LoaderCommandTests.CreateLoaderDirectory("OtherLoader", "not a program", _host.Root);
+        await _host.RunAsync("settings", "set", "loader", "OtherLoader", directory);
         await SaveInstanceAsync(ContentCommandFixtures.Release("parts-pack"));
 
         var run = await _host.RunAsync("launch", "Flight Test");
 
         Assert.Equal(1, run.ExitCode);
-        Assert.Contains("No mod in 'Flight Test' needs a mod loader", run.Error);
+        Assert.Contains("No mod in 'Flight Test' needs a mod loader, and no installed mod loader takes an instance.", run.Error);
         Assert.Contains("'borea game launch'", run.Error);
+        Assert.Empty(_host.ProcessStarter.Plans);
+    }
+
+    [Fact]
+    public async Task Launch_WithoutLoaderId_ModsNeedNoLoader_UsesAndNamesTheInstalledLoaderThatTakesAnInstance()
+    {
+        _host.Mods.Listings.Add(LoaderFixtures.Listing());
+        var loaderDirectory = LoaderCommandTests.CreateLoaderDirectory("StarMap", "not a program", _host.Root);
+        await _host.RunAsync("settings", "set", "loader", "StarMap", loaderDirectory);
+        await SaveInstanceAsync(ContentCommandFixtures.Release("parts-pack"));
+
+        var run = await _host.RunAsync("launch", "Flight Test");
+
+        Assert.Equal(0, run.ExitCode);
+        Assert.Contains("No mod in 'Flight Test' needs a mod loader. Using StarMap, which takes an instance.", run.Output);
+        Assert.Equal("-InstancePath", Assert.Single(_host.ProcessStarter.Plans).Arguments[0]);
+    }
+
+    [Fact]
+    public async Task Launch_Json_CarriesTheLoaderAndWhetherTheModsNeedIt()
+    {
+        _host.Mods.Listings.Add(LoaderFixtures.Listing());
+        var loaderDirectory = LoaderCommandTests.CreateLoaderDirectory("StarMap", "not a program", _host.Root);
+        await _host.RunAsync("settings", "set", "loader", "StarMap", loaderDirectory);
+        await SaveInstanceAsync(ContentCommandFixtures.Release("parts-pack"));
+
+        var run = await _host.RunAsync("launch", "Flight Test", "--json");
+
+        Assert.Equal(0, run.ExitCode);
+        Assert.Equal("StarMap", run.Json.GetProperty("loaderId").GetString());
+        Assert.False(run.Json.GetProperty("requiredByMods").GetBoolean());
+        Assert.Equal(42, run.Json.GetProperty("processId").GetInt32());
+    }
+
+    [Fact]
+    public async Task Launch_Json_ModsNeedTheLoader_SaysTheModsRequireIt()
+    {
+        _host.Mods.Listings.Add(LoaderFixtures.Listing());
+        var loaderDirectory = LoaderCommandTests.CreateLoaderDirectory("StarMap", "not a program", _host.Root);
+        await _host.RunAsync("settings", "set", "loader", "StarMap", loaderDirectory);
+        await SaveInstanceAsync(NeedsLoader("flight-tools", "StarMap"));
+
+        var run = await _host.RunAsync("launch", "Flight Test", "--json");
+
+        Assert.Equal(0, run.ExitCode);
+        Assert.Equal("StarMap", run.Json.GetProperty("loaderId").GetString());
+        Assert.True(run.Json.GetProperty("requiredByMods").GetBoolean());
+    }
+
+    [Fact]
+    public async Task Launch_GivenLoaderIdNotInstalled_NamesIt()
+    {
+        _host.Mods.Listings.Add(LoaderFixtures.Listing());
+        await _host.RunAsync("instance", "create", "Flight Test");
+
+        var run = await _host.RunAsync("launch", "Flight Test", "StarMap");
+
+        Assert.Equal(1, run.ExitCode);
+        Assert.Contains("Mod loader 'StarMap' is not installed.", run.Error);
+        Assert.Contains("'borea loader install StarMap'", run.Error);
+        Assert.Empty(_host.ProcessStarter.Plans);
+    }
+
+    [Fact]
+    public async Task Launch_GivenIdOfAMod_SaysItIsNoModLoader()
+    {
+        _host.Mods.Listings.Add(ContentCommandFixtures.Listing("parts-pack"));
+        await _host.RunAsync("instance", "create", "Flight Test");
+
+        var run = await _host.RunAsync("launch", "Flight Test", "parts-pack");
+
+        Assert.Equal(1, run.ExitCode);
+        Assert.Contains("'parts-pack' is a Mod, not a mod loader.", run.Error);
+        Assert.DoesNotContain("borea loader install", run.Error);
+    }
+
+    [Fact]
+    public async Task Launch_GivenLoaderIdNoSourceLists_SaysItIsNotAvailable()
+    {
+        await _host.RunAsync("instance", "create", "Flight Test");
+
+        var run = await _host.RunAsync("launch", "Flight Test", "StarMapp");
+
+        Assert.Equal(1, run.ExitCode);
+        Assert.Contains("Mod loader 'StarMapp' is not available from the configured sources.", run.Error);
+        Assert.DoesNotContain("borea loader install", run.Error);
+    }
+
+    [Fact]
+    public async Task Launch_WithoutLoaderId_InstalledLoaderNoSourceLists_NamesIt()
+    {
+        _host.Mods.Listings.Add(LoaderFixtures.Listing());
+        var loaderDirectory = LoaderCommandTests.CreateLoaderDirectory("StarMap", "not a program", _host.Root);
+        await _host.RunAsync("settings", "set", "loader", "StarMap", loaderDirectory);
+        _host.Mods.Listings.Clear();
+        await SaveInstanceAsync(ContentCommandFixtures.Release("parts-pack"));
+
+        var run = await _host.RunAsync("launch", "Flight Test");
+
+        Assert.Equal(1, run.ExitCode);
+        Assert.Contains("No configured source has a listing for StarMap.", run.Error);
+        Assert.DoesNotContain("'borea game launch'", run.Error);
         Assert.Empty(_host.ProcessStarter.Plans);
     }
 
