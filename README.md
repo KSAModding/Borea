@@ -1,8 +1,38 @@
 # Borea
 
-Borea is a cross-platform complete general content manager for Kitten Space Agency. It manages mods, mod packs, vehicles, game saves, and more. It is intended to be modifiable by changing out `Borea.Storage`, `Borea.Network`, and `Borea.App` so user can customize Borea. This repository will contain all the offical Borea files and releases.
+Borea is a cross-platform content manager for Kitten Space Agency.
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) to contribute and [SECURITY.md](SECURITY.md) to report a security problem.
+It is meant to manage mods, mod packs, vehicles, game saves, and more.
+Mods and mod packs work today, and vehicles and game saves will follow later.
+Borea installs them from the community content index, keeps them in separate instances, and starts the game with the instance you choose.
+It runs on Windows, Linux and macOS, as a desktop App and as a command line.
+
+Borea is a community project by the [KSA Modding](https://github.com/KSAModding) team.
+It is not made by RocketWerkz and is not affiliated with or endorsed by them.
+Kitten Space Agency is their game and their trademark.
+
+![The Discover page of Borea](docs/images/discover.png)
+
+## Help
+
+- Questions and help: the [KSA Modding Society Discord](https://discord.gg/nt4fK4QuTz).
+- Bugs: the [issue tracker](https://github.com/KSAModding/Borea/issues).
+- See [CONTRIBUTING.md](CONTRIBUTING.md) to contribute and [SECURITY.md](SECURITY.md) to report a security problem.
+
+## What it does
+
+- Browse the [content index](https://github.com/KSAModding/content-index) and install mods with one click. Dependencies are resolved, recommendations are offered, and the mod loader is installed when a launch needs it.
+- Keep several instances of the game, each with its own mods, saves and vehicles, and switch between them. Your game's own profile stays untouched.
+- Update mods when a new release appears.
+- Install mod packs, and export or import a mod list to share a setup.
+- Start the game through the mod loader with the right instance, and see why a launch failed, with the mod that broke it and a button to disable it.
+- Import the mods you installed by hand into an instance.
+- Play time and last played per instance, the game log in the App, and a Tasks page that shows what Borea did.
+- English and German, and a dark and a light theme.
+
+Everything Borea knows about a mod comes from the content index, which the [content-manager-design](https://github.com/KSAModding/content-manager-design) RFCs define.
+The index has two repositories: [content-index](https://github.com/KSAModding/content-index) holds the listings that mod authors write, and [content-index-releases](https://github.com/KSAModding/content-index-releases) holds the release files that are generated for each new release.
+Listing a mod is a pull request with one TOML file in content-index.
 
 ## Downloads
 
@@ -50,7 +80,7 @@ For the command line, run `./borea --help` in the unpacked folder of either arch
 The build carries the .NET runtime but not the system libraries it sits on.
 The App and the CLI both need the ICU and OpenSSL libraries.
 Only the App also needs the X11, ICE, SM and fontconfig libraries.
-All common desktop installation usually have them all. A minimal one needs these packages for the App:
+Common desktop installations usually have all of them. A minimal one needs these packages for the App:
 
 - Debian and Ubuntu: `sudo apt install libx11-6 libice6 libsm6 libfontconfig1 libssl3` plus the `libicu` package of your release, for example `libicu76`.
 - Fedora: `sudo dnf install libX11 libICE libSM fontconfig libicu openssl-libs`.
@@ -106,30 +136,10 @@ gh attestation verify <archive> --repo KSAModding/Borea \
   --predicate-type https://cyclonedx.org/bom
 ```
 
-## Credits
-
-- [MrJeranimo](https://github.com/MrJeranimo) - Original Creator and Developer
-
-## Contributing translations
-
-You do not need to write C# to improve an existing translation. See the [localization guide](docs/localization.md) for instructions to correct text or propose a new language.
-
-## Repository Structure
-
-| Path | Description |
-| --- | --- |
-| `src` | Holds the source files for Borea |
-| `test`| Holds the test files for Borea |
-| `src\Borea.Core` | Contains all the core information about Borea's mods, mod packs, path providers, and more. Also contains the required interfaces to make a project compatible with Borea. |
-| `src\Borea.Storage` | Contains all the code for storing the data from `Borea.Core` to the disk. |
-| `src\Borea.Network` | Contains all the code for retrieving content from mod/content indexers and saves them to the disk. |
-| `src\Borea.Composition` | The composition root. Builds every service from the saved settings, once, for `Borea.App` and `Borea.Cli`. |
-| `src\Borea.App` | A desktop level application that the user will interact with. Gets its services from `Borea.Composition`. |
-| `src\Borea.Cli` | The command line interface, `borea`. A thin wrapper over the same services, for scripts and for machines without a desktop. |
-
 ## Command line
 
 `borea` runs Borea's operations from a script. Every read command takes `--json`.
+The table shows the commands for settings and instances. `borea --help` lists them all, including search, show, install, update, remove, launch, loader and pack.
 The exit code is 0 when the command completed, 1 when the operation failed and the reason is on stderr, and 2 when the command line did not parse.
 
 | Command | Does |
@@ -158,22 +168,45 @@ The exit code is 0 when the command completed, 1 when the operation failed and t
 | `borea enable <mod-id> [--instance <instance>]` | Make the game load a mod. |
 | `borea disable <mod-id> [--instance <instance>]` | Stop the game from loading a mod. |
 
-## Features
+## Repository structure
 
-tba
+| Path | Description |
+| --- | --- |
+| `src/Borea.Core` | The domain model: mods, packs, instances, planning, the interfaces the other projects implement. No I/O. |
+| `src/Borea.Storage` | Everything on disk: settings, instances, backups, TOML, the index cache. |
+| `src/Borea.Network` | Everything over the network: the content index, SpaceDock, downloads, images. |
+| `src/Borea.Composition` | The composition root. Builds every service from the saved settings, once, for the App and the CLI. |
+| `src/Borea.App` | The desktop App, built with Avalonia. |
+| `src/Borea.Cli` | The command line, `borea`. A thin wrapper over the same services. |
+| `tests` | One test project per source project. |
 
-## Roadmap
+## Building
 
-### Borea Pre-Release
+Borea targets .NET 10. With the SDK installed:
 
-- Mod Downloads
-- Mod Packs
+```sh
+dotnet build
+dotnet test
+dotnet run --project src/Borea.App
+```
 
-### Borea 1.0
+## Contributing
 
-- Saves
-- Vehicles
+Read [CONTRIBUTING.md](CONTRIBUTING.md) first. Bugs go to the issue tracker, larger ideas to the [content-manager-design discussions](https://github.com/KSAModding/content-manager-design/discussions).
 
-### Once KSA supports it
+You do not need to write C# to improve a translation. The [localization guide](docs/localization.md) explains how to correct text or propose a new language from the GitHub website.
 
-- Multiplayer server setup
+## Credits
+
+- [MrJeranimo](https://github.com/MrJeranimo), creator and a maintainer of Borea, its architecture and direction.
+- [Maximilian-Nesslauer](https://github.com/Maximilian-Nesslauer), the content index and its RFCs, and most of the App and the CLI as they are today.
+- [averageksp](https://github.com/averageksp), App features, testing, and the content index listings.
+- [PlazmaBoltz](https://github.com/PlazmaBoltz), the first interface and the themes.
+- [renancamm](https://github.com/renancamm) (beik), UI/UX work for the App interface.
+
+And everyone who reported a bug, tested a build or listed a mod.
+
+## License
+
+Borea is under the [MIT license](LICENSE).
+`THIRD-PARTY-NOTICES.txt` in each release lists the licenses of the software it ships with.
