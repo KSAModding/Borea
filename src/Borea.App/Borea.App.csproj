@@ -27,6 +27,7 @@
   <ItemGroup>
     <Folder Include="Models\" />
     <AvaloniaResource Include="Assets\**" />
+    <AvaloniaResource Include="..\..\assets\borea.ico" Link="Assets\borea.ico" />
   </ItemGroup>
 
   <ItemGroup>

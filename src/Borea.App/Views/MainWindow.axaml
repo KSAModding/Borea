@@ -9,7 +9,7 @@
         mc:Ignorable="d" d:DesignWidth="1280" d:DesignHeight="832"
         x:Class="Borea.App.Views.MainWindow"
         x:DataType="vm:MainViewModel"
-        Icon="/Assets/avalonia-logo.ico"
+        Icon="/Assets/borea.ico"
         CanResize="True"
         Width="1280" Height="832"
         MinWidth="860" MinHeight="480"
