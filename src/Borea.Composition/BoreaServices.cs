@@ -1,4 +1,5 @@
 using System.Net.Http.Headers;
+using Borea.Core.Announcements;
 using Borea.Core.Dependencies;
 using Borea.Core.Game;
 using Borea.Core.History;
@@ -15,6 +16,7 @@ using Borea.Core.Preferences;
 using Borea.Core.Settings;
 using Borea.Core.State;
 using Borea.Core.Updates;
+using Borea.Network.Announcements;
 using Borea.Network.Downloads;
 using Borea.Network.GitHub;
 using Borea.Network.Images;
@@ -23,6 +25,7 @@ using Borea.Network.MasterServer;
 using Borea.Network.Planning;
 using Borea.Network.Sources;
 using Borea.Network.SpaceDock;
+using Borea.Storage.Announcements;
 using Borea.Storage.Game;
 using Borea.Storage.History;
 using Borea.Storage.Images;
@@ -157,6 +160,9 @@ public sealed class BoreaServices : IDisposable
 
     /// <summary>The newest published Borea release.</summary>
     public required IBoreaReleaseCheck ReleaseCheck { get; init; }
+
+    /// <summary>The posts of the KSAModding team, fetched from the Borea repository and cached.</summary>
+    public required IAnnouncementFeed Announcements { get; init; }
 
     public required IInstalledGameVersionProvider InstalledVersion { get; init; }
 
@@ -309,6 +315,7 @@ public sealed class BoreaServices : IDisposable
         var installPlanner = new LoggingInstallPlanner(new RepositoryInstallPlanner(new ModDependencyResolver(), settings.ReleaseChannel), log);
         var launcher = new LoggingLauncher(new LastPlayedLauncher(new LoaderLauncher(paths, processStarter ?? new ProcessStarter(), launches), instances), log);
         var defaultLibraryFolder = Path.GetDirectoryName(bootstrapPaths.GetInstancesRoot())!;
+        var announcementReader = new AnnouncementReader();
 
         return new BoreaServices(http)
         {
@@ -351,6 +358,7 @@ public sealed class BoreaServices : IDisposable
             SharedProfileLauncher = new LoggingSharedProfileLauncher(new SharedProfileLauncher(paths, processStarter ?? new ProcessStarter()), log),
             LatestVersion = new LatestVersionPing(http),
             ReleaseCheck = new BoreaReleaseCheck(http),
+            Announcements = new AnnouncementFeed(new AnnouncementFetcher(http, AnnouncementFetcher.DefaultUri, announcementReader), announcementReader, paths, log),
             InstalledVersion = new InstalledGameVersionProvider(paths),
             GamePatchNotes = new FileGamePatchNotesReader(paths),
             GamePatchNotesFetcher = new GamePatchNotesFetcher(http, new FileGamePatchNotesCache(paths)),

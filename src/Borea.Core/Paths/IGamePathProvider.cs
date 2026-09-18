@@ -12,6 +12,11 @@ public interface IGamePathProvider
     string GetIndexPath();
 
     /// <summary>
+    /// Path to the cached announcements of the KSAModding team.
+    /// </summary>
+    string GetAnnouncementsPath();
+
+    /// <summary>
     /// Folder of the listing images Borea verified, one file per SHA-256.
     /// </summary>
     string GetImageCacheFolder();

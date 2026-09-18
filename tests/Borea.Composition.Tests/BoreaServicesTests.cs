@@ -549,6 +549,7 @@ public sealed class BoreaServicesTests : IDisposable
         // probe proves that the service holds the shared client and sends nothing.
         await Assert.ThrowsAsync<ObjectDisposedException>(() => services.LatestVersion.PingAsync());
         await Assert.ThrowsAsync<ObjectDisposedException>(() => services.ReleaseCheck.GetReleasesAsync());
+        await Assert.ThrowsAsync<ObjectDisposedException>(() => services.Announcements.GetPostsAsync());
         await Assert.ThrowsAsync<ObjectDisposedException>(() => services.Mods.GetAvailableModsAsync());
         await Assert.ThrowsAsync<ObjectDisposedException>(() => services.Downloader.DownloadAsync(Release(), Path.Combine(_tempRoot, "probe.zip")));
         await Assert.ThrowsAsync<ObjectDisposedException>(() => services.IndexFetcher.FetchAsync(services.Paths.GetIndexPath()));

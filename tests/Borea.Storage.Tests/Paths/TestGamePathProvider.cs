@@ -19,6 +19,7 @@ internal sealed class TestGamePathProvider : IGamePathProvider
     }
 
     public string GetIndexPath() => Path.Combine(_root, "index.json");
+    public string GetAnnouncementsPath() => Path.Combine(_root, "announcements.toml");
     public string GetImageCacheFolder() => Path.Combine(_root, "ImageCache");
     public string GetGamePatchNotesFolder() => Path.Combine(_root, "GamePatchNotes");
     public string GetInstancesRoot() => Path.Combine(_root, "Instances");

@@ -220,6 +220,7 @@ public sealed class ContentIndexModPackRepositoryTests
     private sealed class TestPathProvider : IGamePathProvider
     {
         public string GetIndexPath() => "index.json";
+        public string GetAnnouncementsPath() => throw new NotSupportedException();
         public string GetImageCacheFolder() => throw new NotSupportedException();
         public string GetGamePatchNotesFolder() => throw new NotSupportedException();
 
