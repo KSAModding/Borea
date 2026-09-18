@@ -279,19 +279,22 @@ public sealed class LibraryViewModelTests
         Assert.True(viewModel.IsLibrarySection);
         Assert.False(viewModel.CurrentWindowHome);
 
-        viewModel.SetMainWindowTasksCommand.Execute(null);
-        Assert.True(viewModel.CurrentWindowTasks);
-        Assert.False(viewModel.IsLibrarySection);
+        viewModel.ToggleTasksCommand.Execute(null);
+        Assert.True(viewModel.IsTasksOpen);
+        Assert.True(viewModel.CurrentWindowLibrary);
+        Assert.True(viewModel.IsLibrarySection);
 
         viewModel.SetMainWindowSettingsCommand.Execute(null);
         Assert.True(viewModel.IsSettingsOpen);
-        Assert.True(viewModel.CurrentWindowTasks);
+        Assert.False(viewModel.IsTasksOpen);
         viewModel.CloseSettingsCommand.Execute(null);
         Assert.False(viewModel.IsSettingsOpen);
+        Assert.True(viewModel.CurrentWindowLibrary);
 
+        viewModel.ToggleTasksCommand.Execute(null);
         viewModel.SetMainWindowHomeCommand.Execute(null);
         Assert.True(viewModel.CurrentWindowHome);
-        Assert.False(viewModel.CurrentWindowTasks);
+        Assert.False(viewModel.IsTasksOpen);
     }
 
     [Fact]

@@ -22,17 +22,27 @@ public partial class MainWindow : Window
     protected override void OnClosing(WindowClosingEventArgs e)
     {
         base.OnClosing(e);
-        if (e.Cancel || DataContext is not MainViewModel viewModel || !viewModel.HasRunningInstalls)
+        if (e.Cancel || DataContext is not MainViewModel viewModel || !MustWait(viewModel))
             return;
 
         e.Cancel = true;
         if (!viewModel.IsClosing)
-            _ = CloseAfterInstallsAsync(viewModel);
+            _ = CloseAfterTasksAsync(viewModel);
     }
 
-    private async Task CloseAfterInstallsAsync(MainViewModel viewModel)
+    // the process ends with the window, so the task history is saved first
+    private static bool MustWait(MainViewModel viewModel)
+        => viewModel.HasRunningInstalls || !viewModel.Tasks.WhenSavedAsync().IsCompleted;
+
+    private async Task CloseAfterTasksAsync(MainViewModel viewModel)
     {
-        await viewModel.StopInstallsAsync();
+        do
+        {
+            await viewModel.StopInstallsAsync();
+            await viewModel.Tasks.WhenSavedAsync();
+        }
+        while (MustWait(viewModel));
+
         Close();
     }
 }

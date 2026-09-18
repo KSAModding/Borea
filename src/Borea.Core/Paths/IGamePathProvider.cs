@@ -53,6 +53,11 @@ public interface IGamePathProvider
     string GetAppPreferencesPath();
 
     /// <summary>
+    /// Path to the history of the tasks Borea.App ran.
+    /// </summary>
+    string GetTaskHistoryPath();
+
+    /// <summary>
     /// Folder of Borea's daily log files.
     /// </summary>
     string GetLogsFolder();

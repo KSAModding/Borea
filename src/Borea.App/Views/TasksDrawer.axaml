@@ -1,0 +1,73 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Borea.App.ViewModels"
+             x:Class="Borea.App.Views.TasksDrawer"
+             x:DataType="vm:MainViewModel"
+             AutomationProperties.Name="{Binding Localization.NavigationTasks}">
+    <UserControl.Resources>
+        <DataTemplate x:Key="RunningTaskRow" x:DataType="vm:TaskItem">
+            <Border Classes="card" Background="{StaticResource Brush.Window}" Padding="12">
+                <StackPanel Spacing="6">
+                    <TextBlock Classes="heading-sm" Text="{Binding Title}" ToolTip.Tip="{Binding Title}" TextTrimming="CharacterEllipsis" />
+                    <TextBlock Classes="body-sm secondary" Text="{Binding StepText}" ToolTip.Tip="{Binding StepText}" TextTrimming="CharacterEllipsis" />
+                    <TextBlock Classes="label-md" Text="{Binding Detail}" TextTrimming="CharacterEllipsis" IsVisible="{Binding Detail, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                    <ProgressBar Height="6" Value="{Binding Progress}" Maximum="100" IsIndeterminate="{Binding !HasProgress}" Foreground="{StaticResource Brush.Accent}" />
+                    <Grid ColumnDefinitions="*,8,Auto">
+                        <Border Classes="chip" HorizontalAlignment="Left" VerticalAlignment="Center" IsVisible="{Binding InstanceName, Converter={x:Static ObjectConverters.IsNotNull}}">
+                            <TextBlock Text="{Binding InstanceName}" TextTrimming="CharacterEllipsis" />
+                        </Border>
+                        <Button Grid.Column="2" Classes="text" Content="{Binding Run.StopText}" Command="{Binding Run.StopCommand}" IsVisible="{Binding CanStop}" VerticalAlignment="Center" />
+                    </Grid>
+                </StackPanel>
+            </Border>
+        </DataTemplate>
+
+        <DataTemplate x:Key="EndedTaskRow" x:DataType="vm:TaskItem">
+            <Border Classes="card" Background="{StaticResource Brush.Window}" Padding="12">
+                <StackPanel Spacing="4">
+                    <Grid ColumnDefinitions="*,8,Auto">
+                        <TextBlock Classes="heading-sm" Text="{Binding Title}" ToolTip.Tip="{Binding Title}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                        <TextBlock Grid.Column="2" Classes="label-md" Text="{Binding TimeText}" VerticalAlignment="Center" />
+                    </Grid>
+                    <Grid ColumnDefinitions="*,8,Auto">
+                        <TextBlock Classes="body-sm secondary" Text="{Binding StateText}" Classes.danger="{Binding IsFailed}" VerticalAlignment="Center" />
+                        <Border Grid.Column="2" Classes="chip" VerticalAlignment="Center" IsVisible="{Binding InstanceName, Converter={x:Static ObjectConverters.IsNotNull}}">
+                            <TextBlock Text="{Binding InstanceName}" MaxWidth="120" TextTrimming="CharacterEllipsis" />
+                        </Border>
+                    </Grid>
+                    <StackPanel Spacing="4" IsVisible="{Binding IsFailed}">
+                        <TextBlock Classes="body-sm danger" Text="{Binding FailureReason}" TextWrapping="Wrap" />
+                        <Button Classes="text primary" HorizontalAlignment="Left" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.DiscoverIndexRetry}" Command="{Binding RetryCommand}" IsVisible="{Binding HasRetry}" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </DataTemplate>
+    </UserControl.Resources>
+
+    <!-- the drawer opens next to the rail over the page, and a click on the dimmed page closes it like the backdrop of a modal -->
+    <Panel>
+        <Border x:Name="Scrim" Background="#99000000" />
+        <Border Width="300" HorizontalAlignment="Left" Background="{StaticResource Brush.Rail}" BorderBrush="{StaticResource Brush.Border}" BorderThickness="0,0,1,0">
+            <!-- the newest task sits at the bottom, next to the rail item that opens the drawer, so the list grows upward -->
+            <ScrollViewer x:Name="Scroller" Focusable="True">
+                <StackPanel VerticalAlignment="Bottom" Margin="24" Spacing="8">
+                    <TextBlock Classes="body-md muted" Text="{Binding Localization.TasksEmpty}" TextWrapping="Wrap" IsVisible="{Binding Tasks.IsEmpty}" />
+                    <ItemsControl ItemsSource="{Binding Tasks.History}" ItemTemplate="{StaticResource EndedTaskRow}" IsVisible="{Binding Tasks.HasHistory}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <ReversibleStackPanel ReverseOrder="True" Spacing="8" />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                    </ItemsControl>
+                    <ItemsControl ItemsSource="{Binding Tasks.Running}" ItemTemplate="{StaticResource RunningTaskRow}" IsVisible="{Binding Tasks.IsBusy}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <StackPanel Spacing="8" />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                    </ItemsControl>
+                </StackPanel>
+            </ScrollViewer>
+        </Border>
+    </Panel>
+</UserControl>

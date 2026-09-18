@@ -156,7 +156,7 @@ public partial class MainViewModel
         CurrentWindowHome = false;
         CurrentWindowDiscover = false;
         CurrentWindowLibrary = false;
-        CurrentWindowTasks = false;
+        IsTasksOpen = false;
         CurrentWindowInstance = false;
         CurrentWindowPack = false;
         CurrentWindowContent = true;
@@ -322,7 +322,7 @@ public partial class MainViewModel
     /// Plans the install of one specific release into the active instance.
     /// </summary>
     internal Task InstallVersionAsync(ModVersionMetadata release, VersionItem row)
-        => PlanInstallAsync(row, () => Task.FromResult<ModVersionMetadata?>(release), exact: true);
+        => PlanInstallAsync(row, () => Task.FromResult<ModVersionMetadata?>(release), release.Version);
 }
 
 /// <summary>A link of the detail panel. <see cref="Key"/> is the key of the listing, such as "forums", and null for a changelog link.</summary>
@@ -353,6 +353,8 @@ public sealed partial class VersionItem : ObservableObject, IInstallRow
 {
     private readonly MainViewModel _owner;
     private readonly ModVersionMetadata _release;
+
+    internal string ModId => _release.ModId;
 
     public string Version => _release.Version.ToString();
 

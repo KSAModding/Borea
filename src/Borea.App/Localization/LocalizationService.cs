@@ -43,6 +43,40 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string NavigationTasks => Resources.NavigationTasks;
 
+    public string TasksEmpty => Resources.TasksEmpty;
+
+
+    public string TaskIndexRefresh => Resources.TaskIndexRefresh;
+
+    public string FormatTaskInstall(string content)
+        => string.Format(CultureInfo.CurrentCulture, Resources.TaskInstallFormat, content);
+
+    public string FormatTaskUpdate(string content)
+        => string.Format(CultureInfo.CurrentCulture, Resources.TaskUpdateFormat, content);
+
+    public string TaskUpdateAll => Resources.TaskUpdateAll;
+
+    public string FormatTaskRemove(string content)
+        => string.Format(CultureInfo.CurrentCulture, Resources.TaskRemoveFormat, content);
+
+    public string FormatTaskCreateInstance(string instanceName)
+        => string.Format(CultureInfo.CurrentCulture, Resources.TaskCreateInstanceFormat, instanceName);
+
+    public string FormatTaskReplace(string folder)
+        => string.Format(CultureInfo.CurrentCulture, Resources.TaskReplaceFormat, folder);
+
+    public string TaskWaiting => Resources.TaskWaiting;
+
+    public string TaskRunning => Resources.TaskRunning;
+
+    public string TaskFinished => Resources.TaskFinished;
+
+    public string TaskStopped => Resources.TaskStopped;
+
+    public string TaskFailed => Resources.TaskFailed;
+
+    public string TaskRetryModMissing => Resources.TaskRetryModMissing;
+
     public string PageHomeHeading => Resources.PageHomeHeading;
 
     public string PageDiscoverHeading => Resources.PageDiscoverHeading;

@@ -29,9 +29,12 @@
         <Border Grid.Column="0" Background="{StaticResource Brush.Rail}" BorderBrush="{StaticResource Brush.Border}" BorderThickness="0,0,1,0">
             <DockPanel Margin="16,24">
                 <StackPanel DockPanel.Dock="Bottom" Spacing="8">
-                    <Button Classes="nav" Classes.active="{Binding CurrentWindowTasks}" Command="{Binding SetMainWindowTasks}" ToolTip.Tip="{Binding Localization.NavigationTasks}" AutomationProperties.Name="{Binding Localization.NavigationTasks}">
-                        <Path Classes="icon size-32" Data="{StaticResource Icon.Terminal}" />
-                    </Button>
+                    <Panel>
+                        <Button x:Name="TasksButton" Classes="nav" Classes.active="{Binding IsTasksOpen}" Command="{Binding ToggleTasksCommand}" ToolTip.Tip="{Binding Localization.NavigationTasks}" AutomationProperties.Name="{Binding Localization.NavigationTasks}">
+                            <Path Classes="icon size-32" Data="{StaticResource Icon.Terminal}" />
+                        </Button>
+                        <ProgressBar Width="32" MinWidth="0" Height="4" MinHeight="0" Margin="0,0,0,2" HorizontalAlignment="Center" VerticalAlignment="Bottom" IsHitTestVisible="False" IsVisible="{Binding Tasks.IsBusy}" IsIndeterminate="{Binding !Tasks.HasProgress}" Value="{Binding Tasks.Progress}" Maximum="100" Foreground="{StaticResource Brush.Accent}" />
+                    </Panel>
                     <Border Height="1" Background="{StaticResource Brush.BorderStrong}" Margin="0,3" />
                     <Button Classes="nav" Classes.active="{Binding IsSettingsOpen}" Command="{Binding SetMainWindowSettings}" ToolTip.Tip="{Binding Localization.NavigationSettings}" AutomationProperties.Name="{Binding Localization.NavigationSettings}">
                         <Path Classes="icon size-32" Data="{StaticResource Icon.Settings}" />
@@ -70,8 +73,8 @@
         <!-- Pack: one modpack, laid out like the content page -->
         <pages:PackPage Grid.Column="1" IsVisible="{Binding CurrentWindowPack}" />
 
-        <!-- Tasks -->
-        <pages:TasksPage Grid.Column="1" IsVisible="{Binding CurrentWindowTasks}" />
+        <!-- Tasks: a drawer over the current page, which stays open behind it -->
+        <views:TasksDrawer Grid.Column="1" IsVisible="{Binding IsTasksOpen}" />
     </Grid>
 
     <!-- last-resort error bar -->

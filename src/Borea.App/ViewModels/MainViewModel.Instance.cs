@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Borea.Composition;
 using Borea.Core.Dependencies;
+using Borea.Core.History;
 using Borea.Core.Instances;
 using Borea.Core.Launch;
 using Borea.Core.ModPacks;
@@ -186,7 +187,7 @@ public partial class MainViewModel
         CurrentWindowHome = false;
         CurrentWindowDiscover = false;
         CurrentWindowLibrary = false;
-        CurrentWindowTasks = false;
+        IsTasksOpen = false;
         CurrentWindowContent = false;
         CurrentWindowPack = false;
         CurrentWindowInstance = true;
@@ -686,14 +687,22 @@ public partial class MainViewModel
         if (_services is null || _runningUpdates.ContainsKey(instanceId))
             return;
 
-        string? error;
+        var name = _content.FirstOrDefault(content => content.InstanceId == instanceId && ModIds.Equals(content.ModId, modId))?.Name ?? modId;
+        var task = StartTask(TaskKind.ModRemoval, name, instanceId, modId);
+        var completed = false;
+        string? error = null;
         try
         {
             error = await TryRemoveContentAsync(_services, instanceId, modId);
+            completed = true;
         }
         catch (Exception exception) when (exception is IOException or InvalidOperationException or UnauthorizedAccessException)
         {
             error = exception.Message;
+        }
+        finally
+        {
+            EndTask(task, completed, stopped: false, error);
         }
 
         await ReloadInstancesAsync();

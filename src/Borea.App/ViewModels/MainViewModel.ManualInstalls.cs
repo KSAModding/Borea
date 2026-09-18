@@ -6,6 +6,7 @@ using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Borea.Composition;
+using Borea.Core.History;
 using Borea.Core.Instances;
 using Borea.Core.Mods;
 using Borea.Core.Planning;
@@ -210,7 +211,9 @@ public partial class MainViewModel
     private async Task ExecuteManualReplaceAsync(BoreaServices services, ManualInstallItem row, InstallPlan plan)
     {
         string? error = null;
-        var run = row.Run = StartInstallRun();
+        var run = row.Run = StartInstallRun(StartTask(TaskKind.ManualReplace, row.FolderName, row.InstanceId));
+        var completed = false;
+        var stopped = false;
         try
         {
             var instance = await services.Instances.GetByIdAsync(row.InstanceId)
@@ -222,10 +225,12 @@ public partial class MainViewModel
                 row.InstanceId,
                 row.FolderName,
                 cancellationToken => services.PlanExecutor.ExecuteAsync(plan, enable: true, ProgressOf(row), run.InstallStop, cancellationToken));
+            completed = true;
         }
         catch (InstallStoppedException)
         {
             // only a closing window stops a replace, and the adopter moved the folder back
+            stopped = true;
         }
         catch (Exception exception) when (IsInstallFailure(exception))
         {
@@ -233,7 +238,7 @@ public partial class MainViewModel
         }
         finally
         {
-            EndInstallRun(run);
+            EndInstallRun(run, completed, stopped, error);
             row.IsInstalling = false;
             row.Run = null;
             row.Progress = 0;

@@ -5,6 +5,7 @@ using System.Net.Http.Headers;
 using System.Security.Cryptography;
 using Borea.App.Localization;
 using Borea.App.ViewModels;
+using Borea.Core.History;
 using Borea.Core.Instances;
 using Borea.Core.Mods;
 
@@ -20,7 +21,8 @@ public sealed class InstallStopTests
     public void StopText_AfterTheDownload_SaysThatTheModFinishesFirst()
     {
         var localization = new LocalizationService(CultureInfo.GetCultureInfo("en"));
-        var run = new InstallRun(localization);
+        var task = new TaskRegistry(localization, () => null, () => null, _ => Task.CompletedTask).Start(TaskKind.ModInstall, null, null, null, null, null, TaskState.Running);
+        var run = new InstallRun(localization, task);
         Assert.Equal(localization.InstallStop, run.StopText);
 
         run.StopCommand.Execute(null);

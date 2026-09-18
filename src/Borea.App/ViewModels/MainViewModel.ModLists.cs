@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Borea.Composition;
+using Borea.Core.History;
 using Borea.Core.Instances;
 using Borea.Core.Mods;
 using Borea.Core.Planning;
@@ -120,16 +121,20 @@ public partial class MainViewModel
 
         item.InstallError = null;
         item.IsInstalling = true;
-        var run = item.Run = StartInstallRun();
+        var run = item.Run = StartInstallRun(StartTask(TaskKind.ModListImport, item.Name.Trim()));
+        var completed = false;
+        var stopped = false;
         try
         {
             await InstallerFor(services).InstallAsync(item.Plan, item.Name.Trim(), ProgressOf(item), run.InstallStop);
+            completed = true;
             if (ReferenceEquals(ModListImport, item))
                 ModListImport = null;
         }
         catch (InstallStoppedException)
         {
             // only a closing window stops an import, and the installer removed the new instance again
+            stopped = true;
         }
         catch (Exception exception) when (IsInstallFailure(exception))
         {
@@ -137,7 +142,7 @@ public partial class MainViewModel
         }
         finally
         {
-            EndInstallRun(run);
+            EndInstallRun(run, completed, stopped, item.InstallError);
             item.IsInstalling = false;
             item.Run = null;
             item.Progress = 0;

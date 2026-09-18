@@ -7,6 +7,7 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using Borea.Composition;
 using Borea.Core.Game;
+using Borea.Core.History;
 using Borea.Core.Index;
 using Borea.Core.ModPacks;
 using Borea.Core.Mods;
@@ -146,7 +147,7 @@ public partial class MainViewModel
         CurrentWindowHome = false;
         CurrentWindowDiscover = false;
         CurrentWindowLibrary = false;
-        CurrentWindowTasks = false;
+        IsTasksOpen = false;
         CurrentWindowInstance = false;
         CurrentWindowContent = false;
         CurrentWindowPack = true;
@@ -215,17 +216,18 @@ public partial class MainViewModel
     /// Installs the newest usable version of the pack into the active instance.
     /// Any warning about the pack or its pinned releases waits on the row until the user confirms.
     /// </summary>
-    internal async Task InstallPackAsync(PackItem pack)
+    /// <param name="targetInstanceId">The instance a Try again of the Tasks page installs into. Null installs into the active instance.</param>
+    internal async Task InstallPackAsync(PackItem pack, Guid? targetInstanceId = null)
     {
-        if (_services is null || ActiveInstance is null || pack.IsInstalling)
+        if (_services is null || (targetInstanceId ?? ActiveInstance?.InstanceId) is not { } instanceId || pack.IsInstalling)
             return;
 
         var services = _services;
-        var instanceId = ActiveInstance.InstanceId;
         pack.ClearOutcome();
         pack.IsInstalling = true;
-        var run = pack.Run = StartInstallRun();
+        var run = pack.Run = StartInstallRun(StartTask(TaskKind.PackInstall, pack.Name, instanceId, pack.PackId, state: TaskState.Waiting));
         var executed = false;
+        var completed = false;
         string? stopped = null;
         try
         {
@@ -289,6 +291,7 @@ public partial class MainViewModel
             {
                 executed = true;
                 stopped = await ExecutePackInstallAsync(services, pack, request, run);
+                completed = true;
             }
         }
         catch (Exception exception) when (IsInstallFailure(exception))
@@ -297,7 +300,7 @@ public partial class MainViewModel
         }
         finally
         {
-            EndInstallRun(run);
+            EndInstallRun(run, completed, stopped is not null, pack.InstallError);
             pack.EndInstall(stopped);
         }
 
@@ -354,9 +357,11 @@ public partial class MainViewModel
 
         var services = _services;
         pack.IsInstalling = true;
-        var run = pack.Run = StartInstallRun();
+        var run = pack.Run = StartInstallRun(StartTask(TaskKind.PackInstall, pack.Name, request.InstanceId, pack.PackId, state: TaskState.Waiting));
         var executed = false;
+        var completed = false;
         string? stopped = null;
+        string? error = null;
         try
         {
             if (pack.Choices is { } choices)
@@ -377,17 +382,20 @@ public partial class MainViewModel
             pack.CancelInstall();
             executed = true;
             stopped = await ExecutePackInstallAsync(services, pack, request, run);
+            error = pack.InstallError;
+            completed = true;
         }
         catch (Exception exception) when (IsInstallFailure(exception))
         {
+            error = exception.Message;
             if (pack.Choices is { } choices)
-                choices.BlockedText = exception.Message;
+                choices.BlockedText = error;
             else
-                pack.InstallError = exception.Message;
+                pack.InstallError = error;
         }
         finally
         {
-            EndInstallRun(run);
+            EndInstallRun(run, completed, stopped is not null, error);
             pack.EndInstall(stopped);
         }
 
@@ -398,6 +406,7 @@ public partial class MainViewModel
     /// <summary>Returns what the row shows after a stop, or null when nothing stopped the pack.</summary>
     private async Task<string?> ExecutePackInstallAsync(BoreaServices services, PackItem pack, ModPackInstallRequest request, InstallRun run)
     {
+        run.TaskItem.MarkRunning();
         var result = await services.ModPackInstaller.InstallAsync(request, ProgressOf(pack), run.InstallStop);
         pack.ShowResults(result.Members.Select(member => new PackResultItem(this, member)));
         if (result.IsStopped)

@@ -25,12 +25,15 @@ public sealed partial class InstallRun : ObservableObject
     [NotifyPropertyChangedFor(nameof(StopText))]
     private bool _isFinishingMod;
 
-    internal InstallRun(LocalizationService localization)
+    internal InstallRun(LocalizationService localization, TaskItem taskItem)
     {
         _localization = localization;
+        TaskItem = taskItem;
     }
 
     internal InstallStop InstallStop { get; } = new();
+
+    internal TaskItem TaskItem { get; }
 
     internal Task Ended => _ended.Task;
 
