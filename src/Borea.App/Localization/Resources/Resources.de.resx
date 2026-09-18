@@ -111,6 +111,9 @@
   <data name="HomeNoInstance" xml:space="preserve">
     <value>Noch keine Instanz</value>
   </data>
+  <data name="HomeNoActiveInstance" xml:space="preserve">
+    <value>Keine aktive Instanz</value>
+  </data>
   <data name="HomeInstanceSourceCustom" xml:space="preserve">
     <value>Eigene</value>
   </data>
@@ -677,6 +680,15 @@
   </data>
   <data name="DiscoverNoInstance" xml:space="preserve">
     <value>Erstelle zuerst eine Instanz, um Inhalte hinzuzufügen.</value>
+  </data>
+  <data name="DiscoverNoActiveInstance" xml:space="preserve">
+    <value>Aktiviere eine Instanz, um Inhalte hinzuzufügen.</value>
+  </data>
+  <data name="DiscoverCreateInstance" xml:space="preserve">
+    <value>Instanz erstellen</value>
+  </data>
+  <data name="DiscoverOpenLibrary" xml:space="preserve">
+    <value>Bibliothek öffnen</value>
   </data>
   <data name="DiscoverNoRelease" xml:space="preserve">
     <value>Dieser Eintrag hat keine installierbare Version.</value>

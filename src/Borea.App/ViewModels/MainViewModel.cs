@@ -424,6 +424,7 @@ public partial class MainViewModel : ViewModelBase
         _activeInstanceEntity = all.FirstOrDefault(instance => instance.InstanceId == activeId);
 
         ActiveInstance = Instances.FirstOrDefault(instance => instance.IsActive);
+        RefreshInstanceHint();
         OnPropertyChanged(nameof(CanActOnSelectedContent));
         RefreshInstalledFlags();
         OnPropertyChanged(nameof(InstalledInText));
@@ -734,6 +735,7 @@ public partial class MainViewModel : ViewModelBase
         OnPropertyChanged(nameof(InstalledInText));
         OnPropertyChanged(nameof(ActiveInstanceUpdatesText));
         OnPropertyChanged(nameof(HomeLaunchText));
+        RefreshInstanceHint();
         OnPropertyChanged(nameof(NameModalTitle));
         OnPropertyChanged(nameof(NameModalConfirmText));
         OnPropertyChanged(nameof(ContentVersionsEmptyText));

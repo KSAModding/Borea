@@ -191,6 +191,8 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string HomeNoInstance => Resources.HomeNoInstance;
 
+    public string HomeNoActiveInstance => Resources.HomeNoActiveInstance;
+
     public string HomeInstanceSourceCustom => Resources.HomeInstanceSourceCustom;
 
     public string FormatHomeUpdates(int count) => FormatCount(count, Resources.HomeUpdate, Resources.HomeUpdatesFormat);
@@ -434,6 +436,12 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string DiscoverInstalled => Resources.DiscoverInstalled;
 
     public string DiscoverNoInstance => Resources.DiscoverNoInstance;
+
+    public string DiscoverNoActiveInstance => Resources.DiscoverNoActiveInstance;
+
+    public string DiscoverCreateInstance => Resources.DiscoverCreateInstance;
+
+    public string DiscoverOpenLibrary => Resources.DiscoverOpenLibrary;
 
     public string DiscoverNoRelease => Resources.DiscoverNoRelease;
 

@@ -111,6 +111,9 @@
   <data name="HomeNoInstance" xml:space="preserve">
     <value>No instance yet</value>
   </data>
+  <data name="HomeNoActiveInstance" xml:space="preserve">
+    <value>No active instance</value>
+  </data>
   <data name="HomeInstanceSourceCustom" xml:space="preserve">
     <value>Custom</value>
   </data>
@@ -677,6 +680,15 @@
   </data>
   <data name="DiscoverNoInstance" xml:space="preserve">
     <value>Create an instance first to add content.</value>
+  </data>
+  <data name="DiscoverNoActiveInstance" xml:space="preserve">
+    <value>Activate an instance to add content.</value>
+  </data>
+  <data name="DiscoverCreateInstance" xml:space="preserve">
+    <value>Create an instance</value>
+  </data>
+  <data name="DiscoverOpenLibrary" xml:space="preserve">
+    <value>Open Library</value>
   </data>
   <data name="DiscoverNoRelease" xml:space="preserve">
     <value>This listing has no release to install.</value>

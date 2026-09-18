@@ -55,14 +55,16 @@
                         </Border>
                     </Grid>
                     <ContentControl Content="{Binding ActiveInstance}" ContentTemplate="{StaticResource InstanceRow}" IsVisible="{Binding HasActiveInstance}" />
-                    <Border Classes="card" Padding="12" IsVisible="{Binding !HasActiveInstance}">
-                        <Grid ColumnDefinitions="70,16,*" Height="70">
-                            <Border Classes="thumbnail">
-                                <Path Classes="icon size-32" Data="{StaticResource Icon.Box}" />
-                            </Border>
-                            <TextBlock Grid.Column="2" Classes="heading-md muted" Text="{Binding Localization.HomeNoInstance}" VerticalAlignment="Center" />
-                        </Grid>
-                    </Border>
+                    <Button Classes="plain card-button" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Command="{Binding FollowInstanceHintCommand}" IsVisible="{Binding !HasActiveInstance}" AutomationProperties.Name="{Binding HomeInstanceHintText}" AutomationProperties.HelpText="{Binding InstanceHintActionText}">
+                        <Border Classes="card" Padding="12">
+                            <Grid ColumnDefinitions="70,16,*" Height="70">
+                                <Border Classes="thumbnail">
+                                    <Path Classes="icon size-32" Data="{StaticResource Icon.Box}" />
+                                </Border>
+                                <TextBlock Grid.Column="2" Classes="heading-md muted" Text="{Binding HomeInstanceHintText}" VerticalAlignment="Center" />
+                            </Grid>
+                        </Border>
+                    </Button>
                 </StackPanel>
             </Border>
             <TextBlock Classes="body-md danger" Text="{Binding InstanceError}" TextWrapping="Wrap" Margin="0,16,0,0" IsVisible="{Binding InstanceError, Converter={x:Static ObjectConverters.IsNotNull}}" />
