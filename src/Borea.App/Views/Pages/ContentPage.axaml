@@ -81,7 +81,10 @@
                                                 <TextBlock Classes="action-lg" Text="{Binding Localization.ContentAdd}" VerticalAlignment="Center" />
                                             </StackPanel>
                                         </Button>
-                                        <ProgressBar Width="96" Height="6" VerticalAlignment="Center" IsVisible="{Binding SelectedContent.IsInstalling}" Value="{Binding SelectedContent.Progress}" Maximum="100" Foreground="{StaticResource Brush.Accent}" />
+                                        <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center" IsVisible="{Binding SelectedContent.IsInstalling}">
+                                            <ProgressBar Width="96" Height="6" VerticalAlignment="Center" Value="{Binding SelectedContent.Progress}" Maximum="100" Foreground="{StaticResource Brush.Accent}" />
+                                            <Button Classes="text" Content="{Binding SelectedContent.Run.StopText}" Command="{Binding SelectedContent.Run.StopCommand}" />
+                                        </StackPanel>
                                         <ProgressBar Width="96" Height="6" VerticalAlignment="Center" IsVisible="{Binding SelectedContent.IsRemoving}" IsIndeterminate="True" Foreground="{StaticResource Brush.Accent}" />
                                         <!-- an installed mod: the chip names the instance, Remove sits where Add was and is disabled with the reason when the mod has to stay -->
                                         <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
@@ -237,9 +240,16 @@
                                                             <Button Classes="text" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryCancel}" Command="{Binding CancelInstallCommand}" />
                                                         </StackPanel>
                                                     </StackPanel>
-                                                    <StackPanel Grid.Row="1" Grid.ColumnSpan="6" Orientation="Horizontal" Spacing="8" Margin="0,6,0,0" IsVisible="{Binding ProgressStatus, Converter={x:Static ObjectConverters.IsNotNull}}">
-                                                        <TextBlock Classes="body-sm secondary" Text="{Binding ProgressStatus}" VerticalAlignment="Center" />
+                                                    <StackPanel Grid.Row="1" Grid.ColumnSpan="6" Orientation="Horizontal" Spacing="8" Margin="0,6,0,0">
+                                                        <StackPanel.IsVisible>
+                                                            <MultiBinding Converter="{x:Static BoolConverters.Or}">
+                                                                <Binding Path="IsInstalling" />
+                                                                <Binding Path="ProgressStatus" Converter="{x:Static ObjectConverters.IsNotNull}" />
+                                                            </MultiBinding>
+                                                        </StackPanel.IsVisible>
+                                                        <TextBlock Classes="body-sm secondary" Text="{Binding ProgressStatus}" VerticalAlignment="Center" IsVisible="{Binding ProgressStatus, Converter={x:Static ObjectConverters.IsNotNull}}" />
                                                         <TextBlock Classes="label-md" Text="{Binding ProgressDetail}" VerticalAlignment="Center" IsVisible="{Binding ProgressDetail, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                                                        <Button Classes="text" Content="{Binding Run.StopText}" Command="{Binding Run.StopCommand}" IsVisible="{Binding IsInstalling}" />
                                                     </StackPanel>
                                                     <TextBlock Grid.Row="1" Grid.ColumnSpan="6" Classes="body-sm danger" Text="{Binding InstallError}" TextWrapping="Wrap" Margin="0,6,0,0" IsVisible="{Binding InstallError, Converter={x:Static ObjectConverters.IsNotNull}}" />
                                                     <StackPanel Grid.Row="2" Grid.ColumnSpan="6" Margin="0,8,0,4" IsVisible="{Binding IsChangelogExpanded}">
