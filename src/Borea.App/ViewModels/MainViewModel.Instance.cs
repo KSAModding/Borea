@@ -506,12 +506,16 @@ public partial class MainViewModel
         {
             var instance = await services.Instances.GetByIdAsync(instanceId)
                 ?? throw new InvalidOperationException(Localization.LaunchInstanceMissing);
-            var choice = LaunchLoaderChoice.Choose(instance, services.Settings.LoaderInstallations, await services.Mods.GetAvailableModsAsync());
+            var listings = await services.Mods.GetAvailableModsAsync();
+            var choice = LaunchLoaderChoice.Choose(instance, services.Settings.LoaderInstallations, listings);
             if (!choice.Succeeded)
             {
                 var loaderIds = choice.LoaderIds.Count == 0 ? "" : ": " + string.Join(", ", choice.LoaderIds);
                 services.Log.Write($"Launch of instance {instance.InstanceId} did not start, {choice.Failure}{loaderIds}.");
-                LaunchMessage = LaunchLoaderFailureText(choice);
+                if (LoaderToInstall(choice, listings) is { } missing)
+                    OpenLoaderPrompt(instanceId, missing);
+                else
+                    LaunchMessage = LaunchLoaderFailureText(choice);
                 return;
             }
 

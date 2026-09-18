@@ -1257,6 +1257,12 @@
   <data name="LaunchNeededLoaderNotInstalledFormat" xml:space="preserve">
     <value>The mods in this instance need the mod loader {0}, and it is not installed. Mod loaders are set up from the Game settings.</value>
   </data>
+  <data name="LaunchInstallLoaderFormat" xml:space="preserve">
+    <value>This instance needs {0}. Install it now?</value>
+  </data>
+  <data name="LaunchSetUpGameFirstFormat" xml:space="preserve">
+    <value>This instance needs {0}. Set up the game folder first.</value>
+  </data>
   <data name="LaunchDifferentLoadersNeededFormat" xml:space="preserve">
     <value>The mods in this instance need different mod loaders: {0}. An instance starts through one loader only. Remove mods until they all need the same loader.</value>
   </data>

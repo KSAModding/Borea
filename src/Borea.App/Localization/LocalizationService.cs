@@ -688,6 +688,12 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string FormatLaunchNeededLoaderNotInstalled(string loader)
         => string.Format(CultureInfo.CurrentCulture, Resources.LaunchNeededLoaderNotInstalledFormat, loader);
 
+    public string FormatLaunchInstallLoader(string loader)
+        => string.Format(CultureInfo.CurrentCulture, Resources.LaunchInstallLoaderFormat, loader);
+
+    public string FormatLaunchSetUpGameFirst(string loader)
+        => string.Format(CultureInfo.CurrentCulture, Resources.LaunchSetUpGameFirstFormat, loader);
+
     public string FormatLaunchDifferentLoadersNeeded(string loaders)
         => string.Format(CultureInfo.CurrentCulture, Resources.LaunchDifferentLoadersNeededFormat, loaders);
 

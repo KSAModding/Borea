@@ -400,16 +400,16 @@ public partial class MainViewModel
     /// directory lets the installer pick its default.
     /// </summary>
     [RelayCommand]
-    private Task InstallLoaderAsync() => RunSetupAsync(async services =>
-    {
-        if (SelectedLoader is null)
-            return Localization.SetupNoLoaderSelected;
+    private Task InstallLoaderAsync() => RunSetupAsync(services => SelectedLoader is null
+        ? Task.FromResult(Localization.SetupNoLoaderSelected)
+        : InstallNewestLoaderAsync(services, SelectedLoader.ModId, LoaderDirectoryInput.Trim()));
 
-        var listing = await services.Mods.GetListingAsync(SelectedLoader.ModId)
+    private async Task<string> InstallNewestLoaderAsync(BoreaServices services, string loaderId, string directory)
+    {
+        var listing = await services.Mods.GetListingAsync(loaderId)
             ?? throw new InvalidOperationException(Localization.DiscoverNoRelease);
-        var release = await services.Mods.GetLatestReleaseAsync(SelectedLoader.ModId)
+        var release = await services.Mods.GetLatestReleaseAsync(loaderId)
             ?? throw new InvalidOperationException(Localization.DiscoverNoRelease);
-        var directory = LoaderDirectoryInput.Trim();
         var run = LoaderInstallRun = StartInstallRun(StartTask(TaskKind.LoaderInstall, listing.Name));
         run.TaskItem.NewVersion = release.Version.ToString();
         var text = new InstallProgressText(Localization);
@@ -451,7 +451,7 @@ public partial class MainViewModel
             EndInstallRun(run, completed, stopped, error);
             LoaderInstallRun = null;
         }
-    });
+    }
 
     private async Task RunSetupAsync(Func<BoreaServices, Task<string>> operation)
     {

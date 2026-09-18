@@ -703,6 +703,7 @@ public partial class MainViewModel : ViewModelBase
         RefreshIndexStatusText();
         OnPropertyChanged(nameof(GameSetupBannerText));
         OnPropertyChanged(nameof(FoundGameText));
+        OnPropertyChanged(nameof(LoaderPromptText));
         OnPropertyChanged(nameof(SharedProfileBannerText));
         OnPropertyChanged(nameof(SharedProfileImportNotice));
         OnPropertyChanged(nameof(InstalledInText));

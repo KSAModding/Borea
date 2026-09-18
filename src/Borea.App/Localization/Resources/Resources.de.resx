@@ -1257,6 +1257,12 @@
   <data name="LaunchNeededLoaderNotInstalledFormat" xml:space="preserve">
     <value>Die Mods in dieser Instanz brauchen den Mod-Loader {0}, der nicht installiert ist. Mod-Loader werden in den Spieleinstellungen eingerichtet.</value>
   </data>
+  <data name="LaunchInstallLoaderFormat" xml:space="preserve">
+    <value>Diese Instanz braucht {0}. Jetzt installieren?</value>
+  </data>
+  <data name="LaunchSetUpGameFirstFormat" xml:space="preserve">
+    <value>Diese Instanz braucht {0}. Richte zuerst den Spielordner ein.</value>
+  </data>
   <data name="LaunchDifferentLoadersNeededFormat" xml:space="preserve">
     <value>Die Mods in dieser Instanz brauchen verschiedene Mod-Loader: {0}. Eine Instanz startet nur mit einem Mod-Loader. Entferne Mods, bis alle denselben Mod-Loader brauchen.</value>
   </data>

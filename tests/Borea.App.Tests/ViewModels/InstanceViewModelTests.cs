@@ -1,3 +1,4 @@
+using System.Text.Json.Nodes;
 using Borea.App.ViewModels;
 using Borea.Core.Instances;
 using Borea.Core.Mods;
@@ -191,9 +192,14 @@ public sealed class InstanceViewModelTests
     }
 
     [Fact]
-    public async Task Play_NoModNeedsALoaderAndNoLoaderIsInstalled_PointsToTheLaunchWithoutAModLoader()
+    public async Task Play_NoModNeedsALoaderAndNoListedLoaderTakesAnInstance_PointsToTheLaunchWithoutAModLoader()
     {
-        using var harness = await ViewModelHarness.CreateAsync();
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: json =>
+        {
+            var root = JsonNode.Parse(json)!;
+            root["listings"]!.AsArray().Single(node => (string?)node!["id"] == "StarMap")!["authored"]!["provides"]!.AsObject().Remove("instance");
+            return root.ToJsonString();
+        });
         var viewModel = harness.ViewModel;
         await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value);
         await viewModel.LoadAsync();
@@ -285,7 +291,8 @@ public sealed class InstanceViewModelTests
 
         await viewModel.ActiveInstance!.PlayCommand.ExecuteAsync(null);
 
-        Assert.NotNull(viewModel.LaunchMessage);
+        // no installed loader takes an instance, so Play offers the one the index lists
+        Assert.True(viewModel.IsLoaderPromptOpen);
         Assert.Equal(HomeLaunchOption.WithoutModLoader, viewModel.HomeLaunch);
     }
 
