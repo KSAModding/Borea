@@ -1,6 +1,7 @@
 using System.IO.Compression;
 using System.Net;
 using System.Text;
+using System.Text.Json.Nodes;
 using Borea.App.ViewModels;
 using Borea.Core.Dependencies;
 using Borea.Core.Instances;
@@ -148,6 +149,201 @@ public sealed class InstallChoicesTests
         Assert.Contains("missing", row.InstallError);
     }
 
+    [Fact]
+    public async Task Install_PlanAddsADependency_WaitsNamesItAndShowsTheTotalSize()
+    {
+        using var harness = await CreateWithGameAsync();
+        var release = Release(OwnId, dependencies: [Requires("library")], sizeBytes: 30_000_000);
+        harness.SpaceDock.Releases.AddRange([release, Release("library", "1.3.2", sizeBytes: 8_000_000)]);
+        var instance = await ActivateInstanceAsync(harness);
+        var row = new VersionItem(harness.ViewModel, release);
+
+        await row.InstallCommand.ExecuteAsync(null);
+
+        Assert.True(row.IsConfirmingInstall);
+        Assert.Null(row.Choices);
+        Assert.Null(row.InstallWarning);
+        Assert.Equal(harness.Localization.FormatInstallAlsoAdds("library 1.3.2"), row.AddedModsText);
+        Assert.Equal($"{harness.Localization.ContentAdd} ({MainViewModel.SizeText(38_000_000)})", row.ConfirmInstallText);
+        Assert.Empty(await ModIdsAsync(harness, instance));
+        Assert.DoesNotContain(harness.Requests, uri => uri.Host == ArchiveHost);
+    }
+
+    [Fact]
+    public async Task Install_AddedModsConfirmed_InstallsEveryMod()
+    {
+        using var harness = await CreateWithGameAsync();
+        var release = Release(OwnId, dependencies: [Requires("library")]);
+        harness.SpaceDock.Releases.AddRange([release, Release("library")]);
+        var instance = await ActivateInstanceAsync(harness);
+        var row = new VersionItem(harness.ViewModel, release);
+        await row.InstallCommand.ExecuteAsync(null);
+        Assert.Equal(harness.Localization.ContentAdd, row.ConfirmInstallText);
+
+        await row.ConfirmInstallCommand.ExecuteAsync(null);
+
+        Assert.False(row.IsConfirmingInstall);
+        Assert.Null(row.AddedModsText);
+        Assert.Null(row.InstallError);
+        Assert.Equal([OwnId, "library"], await ModIdsAsync(harness, instance));
+    }
+
+    [Fact]
+    public async Task Install_PlanWithOnlyTheRequestedMod_InstallsAtOnce()
+    {
+        using var harness = await CreateWithGameAsync();
+        var release = Release(OwnId);
+        harness.SpaceDock.Releases.Add(release);
+        var instance = await ActivateInstanceAsync(harness);
+        var row = new VersionItem(harness.ViewModel, release);
+
+        await row.InstallCommand.ExecuteAsync(null);
+
+        Assert.False(row.IsConfirmingInstall);
+        Assert.Null(row.InstallError);
+        Assert.Equal([OwnId], await ModIdsAsync(harness, instance));
+    }
+
+    [Fact]
+    public async Task Install_AddedModsCancelled_InstallsNothing()
+    {
+        using var harness = await CreateWithGameAsync();
+        var release = Release(OwnId, dependencies: [Requires("library")]);
+        harness.SpaceDock.Releases.AddRange([release, Release("library")]);
+        var instance = await ActivateInstanceAsync(harness);
+        var row = new VersionItem(harness.ViewModel, release);
+        await row.InstallCommand.ExecuteAsync(null);
+        Assert.NotNull(row.AddedModsText);
+
+        row.CancelInstallCommand.Execute(null);
+
+        Assert.False(row.IsConfirmingInstall);
+        Assert.Null(row.AddedModsText);
+        Assert.Null(row.PendingPlan);
+        Assert.Null(row.InstallError);
+        Assert.Empty(await ModIdsAsync(harness, instance));
+        Assert.DoesNotContain(harness.Requests, uri => uri.Host == ArchiveHost);
+    }
+
+    [Fact]
+    public async Task Install_WarningAndAddedMods_AskOnce()
+    {
+        // without a game the compatibility is unknown, so the plan also has a warning
+        using var harness = await ViewModelHarness.CreateAsync(respond: ServeArchive);
+        var release = Release(OwnId, dependencies: [Requires("library")]);
+        harness.SpaceDock.Releases.AddRange([release, Release("library")]);
+        var instance = await ActivateInstanceAsync(harness);
+        var row = new VersionItem(harness.ViewModel, release);
+
+        await row.InstallCommand.ExecuteAsync(null);
+
+        Assert.NotNull(row.InstallWarning);
+        Assert.Equal(harness.Localization.FormatInstallAlsoAdds("library 1.0.0"), row.AddedModsText);
+        Assert.Equal(harness.Localization.InstallAnyway, row.ConfirmInstallText);
+
+        await row.ConfirmInstallCommand.ExecuteAsync(null);
+
+        Assert.False(row.IsConfirmingInstall);
+        Assert.Null(row.InstallError);
+        Assert.Equal([OwnId, "library"], await ModIdsAsync(harness, instance));
+    }
+
+    [Fact]
+    public async Task Install_ManyAddedMods_NamesTheFirstAndListsAllInTheToolTip()
+    {
+        using var harness = await CreateWithGameAsync();
+        var release = Release(OwnId, dependencies: [Requires("a"), Requires("b"), Requires("c"), Requires("d")]);
+        harness.SpaceDock.Releases.AddRange([release, Release("a"), Release("b"), Release("c"), Release("d")]);
+        await ActivateInstanceAsync(harness);
+        var row = new VersionItem(harness.ViewModel, release);
+
+        await row.InstallCommand.ExecuteAsync(null);
+
+        Assert.Equal(harness.Localization.FormatInstallAlsoAddsMore("a 1.0.0, b 1.0.0", 2), row.AddedModsText);
+        Assert.Equal(harness.Localization.FormatInstallAlsoAdds("a 1.0.0, b 1.0.0, c 1.0.0, d 1.0.0"), row.AddedModsToolTip);
+    }
+
+    [Fact]
+    public async Task Install_ChosenAlternativeBringsAnUnnamedMod_AsksAgain()
+    {
+        using var harness = await CreateWithGameAsync();
+        var release = Release(OwnId, dependencies: [ModDependency.OfAlternatives(ModDependencyKind.Required, [new ModDependencyAlternative("first"), new ModDependencyAlternative("second")])]);
+        harness.SpaceDock.Releases.AddRange([release, Release("first"), Release("second", dependencies: [Requires("library")]), Release("library")]);
+        var instance = await ActivateInstanceAsync(harness);
+        var row = new VersionItem(harness.ViewModel, release);
+        await row.InstallCommand.ExecuteAsync(null);
+
+        row.Choices!.Alternatives[0].Options[1].IsSelected = true;
+        await row.ConfirmInstallCommand.ExecuteAsync(null);
+
+        Assert.True(row.IsConfirmingInstall);
+        Assert.Contains("library", row.AddedModsText);
+        Assert.Empty(await ModIdsAsync(harness, instance));
+
+        await row.ConfirmInstallCommand.ExecuteAsync(null);
+
+        Assert.Null(row.Choices);
+        Assert.Equal([OwnId, "library", "second"], await ModIdsAsync(harness, instance));
+    }
+
+    [Fact]
+    public async Task Install_RecommendationAndDependency_NamesOnlyTheDependency()
+    {
+        using var harness = await CreateWithGameAsync();
+        var release = Release(OwnId, dependencies: [Requires("library"), Recommends("kept")]);
+        harness.SpaceDock.Releases.AddRange([release, Release("library"), Release("kept")]);
+        var instance = await ActivateInstanceAsync(harness);
+        var row = new VersionItem(harness.ViewModel, release);
+
+        await row.InstallCommand.ExecuteAsync(null);
+
+        Assert.Equal(harness.Localization.FormatInstallAlsoAdds("library 1.0.0"), row.AddedModsText);
+
+        row.Choices!.Recommended.Single().IsSelected = false;
+        await row.ConfirmInstallCommand.ExecuteAsync(null);
+
+        Assert.Null(row.Choices);
+        Assert.Equal([OwnId, "library"], await ModIdsAsync(harness, instance));
+    }
+
+    [Fact]
+    public async Task Install_DiscoverRowPlanAddsADependency_WaitsAndNamesIt()
+    {
+        using var harness = await CreateWithGameAsync(json =>
+        {
+            var root = JsonNode.Parse(json)!;
+            foreach (var listing in root["listings"]!.AsArray().Where(node => (string?)node!["id"] is "MeasureTools" or "KSArmory"))
+            {
+                var newest = listing!["releases"]![0]!;
+                newest["game_min"] = "2026.1.1.1";
+                newest["game_min_revision"] = 1;
+                if ((string?)listing["id"] == "MeasureTools")
+                    newest["dependencies"] = JsonNode.Parse("""[{ "id": "KSArmory", "kind": "required", "source": "authored" }]""");
+            }
+
+            return root.ToJsonString();
+        });
+        await ActivateInstanceAsync(harness);
+        var item = harness.ViewModel.DiscoverItems.Single(row => row.ModId == "MeasureTools");
+
+        await item.InstallCommand.ExecuteAsync(null);
+
+        Assert.True(item.IsConfirmingInstall);
+        Assert.Null(item.InstallWarning);
+        Assert.Equal(harness.Localization.FormatInstallAlsoAdds("KSArmory 0.8.44"), item.AddedModsText);
+        Assert.Equal($"{harness.Localization.ContentAdd} ({MainViewModel.SizeText(41_782 + 985_743)})", item.ConfirmInstallText);
+        Assert.DoesNotContain(harness.Requests, uri => uri.Host is "github.com" or "spacedock.info");
+
+        var raised = false;
+        item.PropertyChanged += (_, e) => raised |= e.PropertyName == nameof(DiscoverItem.AddedModsText);
+        harness.Localization.TrySetCulture("de");
+
+        Assert.True(raised);
+        Assert.Equal(harness.Localization.FormatInstallAlsoAdds("KSArmory 0.8.44"), item.AddedModsText);
+    }
+
+    private static ModDependency Requires(string id) => new(id, ModDependencyKind.Required);
+
     private static ModDependency Recommends(string id) => new(id, ModDependencyKind.Recommends);
 
     private static ModVersionMetadata Release(string id, string version = "1.0.0", IReadOnlyList<ModDependency>? dependencies = null, long? sizeBytes = null) => new(
@@ -175,7 +371,7 @@ public sealed class InstallChoicesTests
     }
 
     /// <summary>A harness whose game is compatible with every release of these tests, so a plan without choices has no warning.</summary>
-    private static Task<ViewModelHarness> CreateWithGameAsync() =>
+    private static Task<ViewModelHarness> CreateWithGameAsync(Func<string, string>? editSnapshot = null) =>
         ViewModelHarness.CreateAsync(
             services =>
             {
@@ -183,7 +379,8 @@ public sealed class InstallChoicesTests
                 File.Copy(Path.Combine(AppContext.BaseDirectory, "GameVersionFixture.dll"), Path.Combine(game, "KSA.dll"));
                 return services.SettingsRepository.SaveAsync(services.Settings.WithGameDirectory(game));
             },
-            respond: ServeArchive);
+            respond: ServeArchive,
+            editSnapshot: editSnapshot);
 
     /// <summary>Serves a zip with a mod.toml at its root, named for the mod the archive URL names.</summary>
     private static HttpResponseMessage? ServeArchive(HttpRequestMessage request)

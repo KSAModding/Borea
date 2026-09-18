@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using Borea.App.Localization;
+using Borea.Core.Dependencies;
 using Borea.Core.Mods;
 using Borea.Core.Planning;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -14,6 +15,7 @@ public sealed partial class InstallChoices : ViewModelBase
 {
     private readonly Func<string, string> _name;
     private readonly HashSet<string> _keys = new(StringComparer.Ordinal);
+    private readonly HashSet<string> _namedModIds = new(ModIds.Comparer);
 
     /// <param name="name">The display name of a mod id.</param>
     internal InstallChoices(Guid instanceId, IReadOnlyList<RequestedMod> requested, Func<string, string> name)
@@ -47,6 +49,9 @@ public sealed partial class InstallChoices : ViewModelBase
     internal IReadOnlySet<string> SelectedRecommendations => Recommended.Where(choice => choice.IsSelected).Select(choice => choice.Key).ToHashSet(StringComparer.Ordinal);
 
     internal IReadOnlySet<string> DeselectedRecommendations => Recommended.Where(choice => !choice.IsSelected).Select(choice => choice.Key).ToHashSet(StringComparer.Ordinal);
+
+    /// <summary>The mods that the recommendations and the alternatives name.</summary>
+    internal IReadOnlySet<string> NamedModIds => _namedModIds;
 
     internal IReadOnlyDictionary<string, string> SelectedAlternatives => Alternatives
         .Where(group => group.IsRequired && group.Selected is not null)
@@ -90,6 +95,8 @@ public sealed partial class InstallChoices : ViewModelBase
         Replace(Suggested, shown.Where(choice => choice.Kind == PlanningChoiceKind.Suggestion).Select(Describe).ToList());
         _keys.Clear();
         _keys.UnionWith(shown.Select(choice => choice.Key));
+        _namedModIds.Clear();
+        _namedModIds.UnionWith(shown.Where(choice => choice.Kind != PlanningChoiceKind.Suggestion).SelectMany(choice => ModIdsOf(choice.Dependency)));
         OnPropertyChanged(nameof(HasRecommended));
         OnPropertyChanged(nameof(HasSuggested));
         Refresh();
@@ -109,6 +116,9 @@ public sealed partial class InstallChoices : ViewModelBase
         var names = dependency.IsAnyOf ? dependency.AnyOf.Select(value => _name(value.ModId)).ToList() : [_name(dependency.ModId)];
         return PlanningText.RecommendedFor(PlanningText.OneOf(names), _name(choice.OwnerModId));
     }
+
+    private static IEnumerable<string> ModIdsOf(ModDependency dependency)
+        => dependency.IsAnyOf ? dependency.AnyOf.Select(value => value.ModId) : [dependency.ModId!];
 
     private static void Replace<T>(ObservableCollection<T> target, IReadOnlyList<T> values)
     {

@@ -673,7 +673,10 @@ public sealed partial class DiscoverItem : ObservableObject, IInstallRow
     private string? _installWarning;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsConfirmingInstall))]
     [NotifyPropertyChangedFor(nameof(ConfirmInstallText))]
+    [NotifyPropertyChangedFor(nameof(AddedModsText))]
+    [NotifyPropertyChangedFor(nameof(AddedModsToolTip))]
     private InstallPlan? _pendingPlan;
 
     [ObservableProperty]
@@ -681,10 +684,14 @@ public sealed partial class DiscoverItem : ObservableObject, IInstallRow
     [NotifyPropertyChangedFor(nameof(ConfirmInstallText))]
     private InstallChoices? _choices;
 
-    public bool IsConfirmingInstall => InstallWarning is not null || Choices is not null;
+    public bool IsConfirmingInstall => PendingPlan is not null || Choices is not null;
 
     /// <summary>The button of the confirmation, with what the plan downloads: "Add (38.0 MB)".</summary>
     public string ConfirmInstallText => _owner.ConfirmInstallText(InstallWarning, PendingPlan);
+
+    public string? AddedModsText => _owner.AddedModsText(PendingPlan, Choices);
+
+    public string? AddedModsToolTip => _owner.AddedModsText(PendingPlan, Choices, all: true);
 
     /// <summary>
     /// Mods install into an instance; a loader is set up from the settings.
@@ -775,6 +782,8 @@ public sealed partial class DiscoverItem : ObservableObject, IInstallRow
         OnPropertyChanged(nameof(UpdatedText));
         OnPropertyChanged(nameof(UpdatedDateText));
         OnPropertyChanged(nameof(ConfirmInstallText));
+        OnPropertyChanged(nameof(AddedModsText));
+        OnPropertyChanged(nameof(AddedModsToolTip));
         OnPropertyChanged(nameof(InstalledAutomationName));
     }
 

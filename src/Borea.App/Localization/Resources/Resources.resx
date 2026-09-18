@@ -831,6 +831,12 @@
   <data name="InstallAnyway" xml:space="preserve">
     <value>Install anyway</value>
   </data>
+  <data name="InstallAlsoAddsFormat" xml:space="preserve">
+    <value>Also adds {0}</value>
+  </data>
+  <data name="InstallAlsoAddsMoreFormat" xml:space="preserve">
+    <value>Also adds {0} and {1} more</value>
+  </data>
   <data name="InstallReleaseChannelFormat" xml:space="preserve">
     <value>Release {0} has the status {1}, which your release channel does not offer.</value>
   </data>
