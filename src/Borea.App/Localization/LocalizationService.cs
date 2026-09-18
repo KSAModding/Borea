@@ -337,6 +337,14 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string UpdateNoNotes => Resources.UpdateNoNotes;
 
+    public string GameBuildAvailable => Resources.GameBuildAvailable;
+
+    public string GameBuildDownload => Resources.GameBuildDownload;
+
+    public string GamePatchNotesTitle => Resources.GamePatchNotesTitle;
+
+    public string GamePatchNotesEmpty => Resources.GamePatchNotesEmpty;
+
     public string SystemDefaultRegionalFormat => Resources.SystemDefaultRegionalFormat;
 
     public string HomeCurrentInstall => Resources.HomeCurrentInstall;

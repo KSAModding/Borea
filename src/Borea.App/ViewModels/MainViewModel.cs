@@ -290,6 +290,7 @@ public partial class MainViewModel : ViewModelBase
         _ = Tasks.LoadAsync();
         StartUpdateCheck();
         InstalledVersionText = _services?.InstalledVersion.GetInstalledVersion()?.RawVersion;
+        StartGameBuildCheck();
         await ReloadInstancesAsync();
         await RefreshContentIndexAsync();
         await LoadRecentItemsAsync();
@@ -722,7 +723,8 @@ public partial class MainViewModel : ViewModelBase
             && left.HomeLaunch == right.HomeLaunch
             && left.DiscoverSortOrder == right.DiscoverSortOrder
             && left.SharedProfileBannerDismissed == right.SharedProfileBannerDismissed
-            && left.DismissedBoreaRelease == right.DismissedBoreaRelease;
+            && left.DismissedBoreaRelease == right.DismissedBoreaRelease
+            && left.DismissedGameRevision == right.DismissedGameRevision;
 
     private void OnRegionalFormatChanged(object? sender, PropertyChangedEventArgs e)
     {
@@ -752,6 +754,8 @@ public partial class MainViewModel : ViewModelBase
             release.RefreshText();
         LatestVersion?.RefreshText();
         foreach (var item in ReleaseNotes)
+            item.RefreshText();
+        foreach (var item in GamePatchNotes)
             item.RefreshText();
         RefreshPackText();
         Tasks.RefreshText();
@@ -789,6 +793,7 @@ public partial class MainViewModel : ViewModelBase
         OnPropertyChanged(nameof(LoaderPromptText));
         OnPropertyChanged(nameof(SharedProfileBannerText));
         OnPropertyChanged(nameof(AvailableUpdateText));
+        OnPropertyChanged(nameof(GameBuildBannerText));
         OnPropertyChanged(nameof(SharedProfileImportNotice));
         OnPropertyChanged(nameof(InstalledInText));
         OnPropertyChanged(nameof(ActiveInstanceUpdatesText));
