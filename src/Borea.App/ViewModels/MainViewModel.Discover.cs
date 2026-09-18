@@ -543,7 +543,21 @@ public sealed partial class DiscoverItem : ObservableObject, IInstallRow
 
     internal ModMetadata Listing => _listing;
 
-    internal ModVersionMetadata? LatestInChannel { get; set; }
+    private ModVersionMetadata? _latestInChannel;
+
+    /// <summary>The release Add installs, which the size and the age on the row belong to.</summary>
+    internal ModVersionMetadata? LatestInChannel
+    {
+        get => _latestInChannel;
+        set
+        {
+            _latestInChannel = value;
+            OnPropertyChanged(nameof(DownloadSizeText));
+        }
+    }
+
+    /// <summary>The archive size of <see cref="LatestInChannel"/>, or null when the index states none.</summary>
+    public string? DownloadSizeText => LatestInChannel?.Download.SizeBytes is { } size ? MainViewModel.SizeText(size) : null;
 
     public string? Description => _listing.Description;
 
@@ -576,7 +590,10 @@ public sealed partial class DiscoverItem : ObservableObject, IInstallRow
     /// <summary>The download count the content index reports, or null when it reports none.</summary>
     public long? Downloads { get; }
 
-    public string? DownloadsText => Downloads?.ToString("N0", CultureInfo.CurrentCulture);
+    /// <summary>The count as the row shows it, "1.2k". The exact number is <see cref="DownloadsExactText"/>.</summary>
+    public string? DownloadsText => Downloads is { } count ? MainViewModel.CompactCount(count) : null;
+
+    public string? DownloadsExactText => Downloads is { } count ? _owner.Localization.FormatContentDownloadsExact(count.ToString("N0", CultureInfo.CurrentCulture)) : null;
 
     /// <summary>The date of the first release the index reports, or null when it reports none.</summary>
     public DateTimeOffset? PublishedAt { get; }
@@ -655,15 +672,19 @@ public sealed partial class DiscoverItem : ObservableObject, IInstallRow
     [NotifyPropertyChangedFor(nameof(ConfirmInstallText))]
     private string? _installWarning;
 
-    public InstallPlan? PendingPlan { get; set; }
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ConfirmInstallText))]
+    private InstallPlan? _pendingPlan;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsConfirmingInstall))]
+    [NotifyPropertyChangedFor(nameof(ConfirmInstallText))]
     private InstallChoices? _choices;
 
     public bool IsConfirmingInstall => InstallWarning is not null || Choices is not null;
 
-    public string ConfirmInstallText => InstallWarning is null ? _owner.Localization.ContentAdd : _owner.Localization.InstallAnyway;
+    /// <summary>The button of the confirmation, with what the plan downloads: "Add (38.0 MB)".</summary>
+    public string ConfirmInstallText => _owner.ConfirmInstallText(InstallWarning, PendingPlan);
 
     /// <summary>
     /// Mods install into an instance; a loader is set up from the settings.
@@ -748,6 +769,7 @@ public sealed partial class DiscoverItem : ObservableObject, IInstallRow
         OnPropertyChanged(nameof(TypeText));
         OnPropertyChanged(nameof(CompatibilityText));
         OnPropertyChanged(nameof(DownloadsText));
+        OnPropertyChanged(nameof(DownloadsExactText));
         OnPropertyChanged(nameof(PublishedText));
         OnPropertyChanged(nameof(PublishedDateText));
         OnPropertyChanged(nameof(UpdatedText));

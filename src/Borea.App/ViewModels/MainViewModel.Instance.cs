@@ -194,6 +194,7 @@ public partial class MainViewModel
 
         StartContentUpdateCheck();
         StartPlaytimeLoad(item.InstanceId);
+        StartInstanceSizeLoad(item.InstanceId);
     }
 
     [RelayCommand]
@@ -842,6 +843,10 @@ public sealed partial class ContentItem : ObservableObject, IUpdateRow
 
     [ObservableProperty]
     private bool _isEnabled;
+
+    /// <summary>What the mod's folder takes on disk, or null until it is measured or when the folder is gone.</summary>
+    [ObservableProperty]
+    private string? _sizeText;
 
     [ObservableProperty]
     private bool _isConfirmingRemove;

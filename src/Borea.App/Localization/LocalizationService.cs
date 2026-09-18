@@ -673,6 +673,14 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string ContentDownloads => Resources.ContentDownloads;
 
+    public string ContentDownloadSize => Resources.ContentDownloadSize;
+
+    public string ContentSizeHeader => Resources.ContentSizeHeader;
+
+    public string ContentSizeOnDisk => Resources.ContentSizeOnDisk;
+
+    public string InstanceSizeToolTip => Resources.InstanceSizeToolTip;
+
     public string ContentShowVersions => Resources.ContentShowVersions;
 
     public string ContentNoDescription => Resources.ContentNoDescription;
@@ -869,6 +877,9 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string FormatSetupUpdateLoader(string version)
         => string.Format(CultureInfo.CurrentCulture, Resources.SetupUpdateLoaderFormat, version);
+
+    public string FormatContentDownloadsExact(string count)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ContentDownloadsExactFormat, count);
 
     public string FormatAboutFolderMissing(string folder)
         => string.Format(CultureInfo.CurrentCulture, Resources.AboutFolderMissingFormat, folder);

@@ -65,11 +65,11 @@ public partial class MainViewModel
 
     internal void OpenGameDataFolder(string folder) => GameDataError = TryOpenWithSystem(folder);
 
-    internal string FormatGameDataSize(long bytes)
-    {
-        if (bytes <= 0)
-            return Localization.GameDataEmpty;
+    internal string FormatGameDataSize(long bytes) => bytes <= 0 ? Localization.GameDataEmpty : SizeText(bytes);
 
+    /// <summary>A byte count in decimal units, the way the download progress counts them: "38.0 MB".</summary>
+    internal static string SizeText(long bytes)
+    {
         if (bytes < 1000)
             return bytes.ToString(CultureInfo.CurrentCulture) + " B";
 
@@ -82,6 +82,27 @@ public partial class MainViewModel
         }
 
         return value.ToString("0.0", CultureInfo.CurrentCulture) + " " + SizeUnits[unit];
+    }
+
+    /// <summary>
+    /// A count the way a row shows it: 999, 1.2k, 15k, 1.2M. The exact number
+    /// goes into the tooltip. Values are rounded down, so 1,999 reads 1.9k
+    /// and never rounds up to a figure the mod has not reached.
+    /// </summary>
+    internal static string CompactCount(long count)
+    {
+        if (count < 1000)
+            return count.ToString(CultureInfo.CurrentCulture);
+
+        return count < 1_000_000
+            ? Compact(count / 1000.0, "k")
+            : Compact(count / 1_000_000.0, "M");
+    }
+
+    private static string Compact(double value, string unit)
+    {
+        var rounded = value < 10 ? Math.Floor(value * 10) / 10 : Math.Floor(value);
+        return rounded.ToString(value < 10 ? "0.#" : "0", CultureInfo.CurrentCulture) + unit;
     }
 }
 

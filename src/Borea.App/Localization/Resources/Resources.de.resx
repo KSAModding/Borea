@@ -1029,6 +1029,21 @@
   <data name="ContentDownloads" xml:space="preserve">
     <value>Downloads</value>
   </data>
+  <data name="ContentDownloadsExactFormat" xml:space="preserve">
+    <value>{0} Downloads</value>
+  </data>
+  <data name="ContentDownloadSize" xml:space="preserve">
+    <value>Downloadgröße</value>
+  </data>
+  <data name="ContentSizeHeader" xml:space="preserve">
+    <value>Größe</value>
+  </data>
+  <data name="ContentSizeOnDisk" xml:space="preserve">
+    <value>Größe auf der Festplatte</value>
+  </data>
+  <data name="InstanceSizeToolTip" xml:space="preserve">
+    <value>Größe des Instanzordners auf der Festplatte</value>
+  </data>
   <data name="ContentShowVersions" xml:space="preserve">
     <value>Anzeigen</value>
   </data>

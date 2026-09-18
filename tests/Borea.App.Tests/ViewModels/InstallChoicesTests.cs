@@ -41,6 +41,28 @@ public sealed class InstallChoicesTests
     }
 
     [Fact]
+    public async Task Install_ChoicesShown_TheButtonCarriesTheDownloadSizeOfThePlan()
+    {
+        // the choices are set before the plan, so the button has to read the plan again once it is there
+        using var harness = await CreateWithGameAsync();
+        var release = Release(OwnId, dependencies: [Recommends("kept")], sizeBytes: 30_000_000);
+        harness.SpaceDock.Releases.AddRange([release, Release("kept", sizeBytes: 8_000_000)]);
+        await ActivateInstanceAsync(harness);
+        var row = new VersionItem(harness.ViewModel, release);
+        string? shown = null;
+        row.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(VersionItem.ConfirmInstallText))
+                shown = row.ConfirmInstallText;
+        };
+
+        await row.InstallCommand.ExecuteAsync(null);
+
+        Assert.True(row.IsConfirmingInstall);
+        Assert.Equal($"{harness.Localization.ContentAdd} ({MainViewModel.SizeText(38_000_000)})", shown);
+    }
+
+    [Fact]
     public async Task Install_RecommendationWithoutARelease_StartsDeselected()
     {
         using var harness = await CreateWithGameAsync();
@@ -128,7 +150,7 @@ public sealed class InstallChoicesTests
 
     private static ModDependency Recommends(string id) => new(id, ModDependencyKind.Recommends);
 
-    private static ModVersionMetadata Release(string id, string version = "1.0.0", IReadOnlyList<ModDependency>? dependencies = null) => new(
+    private static ModVersionMetadata Release(string id, string version = "1.0.0", IReadOnlyList<ModDependency>? dependencies = null, long? sizeBytes = null) => new(
         specVersion: 1,
         modId: id,
         version: ModVersion.Parse(version),
@@ -136,7 +158,7 @@ public sealed class InstallChoicesTests
         releaseDate: DateTimeOffset.UnixEpoch,
         gameMin: "2026.1.1.1",
         gameMinRevision: 1,
-        download: new DownloadInfo($"https://{ArchiveHost}/{id}/{version}.zip", sha256: null, sizeBytes: null, contentType: "application/zip"),
+        download: new DownloadInfo($"https://{ArchiveHost}/{id}/{version}.zip", sha256: null, sizeBytes: sizeBytes, contentType: "application/zip"),
         installSizeBytes: null,
         dependencies: dependencies ?? []);
 

@@ -103,6 +103,7 @@ internal sealed class ViewModelHarness : IDisposable
         ViewModel?.WhenReleaseChannelSavedAsync().GetAwaiter().GetResult();
         ViewModel?.WhenContentUpdatesCheckedAsync().GetAwaiter().GetResult();
         ViewModel?.WhenPlaytimeLoadedAsync().GetAwaiter().GetResult();
+        ViewModel?.WhenInstanceSizesLoadedAsync().GetAwaiter().GetResult();
         ViewModel?.WhenGameDetectedAsync().GetAwaiter().GetResult();
         ViewModel?.Tasks.WhenSavedAsync().GetAwaiter().GetResult();
         Services.Dispose();

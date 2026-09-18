@@ -41,7 +41,8 @@ public sealed class DiscoverViewModelTests
         var release = await harness.Services.ContentIndex.GetLatestReleaseInChannelAsync(afc.ModId, harness.Services.Settings.ReleaseChannel);
 
         Assert.Equal(1234L, afc.Downloads);
-        Assert.Equal(1234L.ToString("N0", CultureInfo.CurrentCulture), afc.DownloadsText);
+        Assert.Equal(MainViewModel.CompactCount(1234), afc.DownloadsText);
+        Assert.Equal(harness.Localization.FormatContentDownloadsExact(1234L.ToString("N0", CultureInfo.CurrentCulture)), afc.DownloadsExactText);
         Assert.StartsWith("Published ", afc.PublishedText);
         Assert.NotNull(afc.PublishedDateText);
 

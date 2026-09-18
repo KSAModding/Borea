@@ -269,6 +269,33 @@ public partial class MainViewModel
     private string ContentName(string modId)
         => _listings.FirstOrDefault(item => ModIds.Equals(item.ModId, modId))?.Name ?? modId;
 
+    /// <summary>"Add" or "Install anyway", with the download size of the plan when the index states one.</summary>
+    internal string ConfirmInstallText(string? warning, InstallPlan? plan)
+    {
+        var text = warning is null ? Localization.ContentAdd : Localization.InstallAnyway;
+        return PlanSizeText(plan) is { } size ? $"{text} ({size})" : text;
+    }
+
+    /// <summary>What a plan downloads, summed over its operations, or null when no release states a size.</summary>
+    internal static string? PlanSizeText(InstallPlan? plan)
+    {
+        if (plan is null)
+            return null;
+
+        long total = 0;
+        var known = false;
+        foreach (var operation in plan.Operations)
+        {
+            if (operation.Release.Download.SizeBytes is { } size)
+            {
+                total += size;
+                known = true;
+            }
+        }
+
+        return known ? SizeText(total) : null;
+    }
+
     private void HoldPlan(IInstallRow row, InstallPlan plan)
     {
         row.PendingPlan = plan;

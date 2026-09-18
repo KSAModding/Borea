@@ -122,13 +122,17 @@
                                         </DataTemplate>
                                     </ItemsControl.ItemTemplate>
                                 </ItemsControl>
-                                <!-- c/meta: the newest version, the downloads and how long ago the version came out -->
+                                <!-- c/meta: the newest version, its size, the downloads and how long ago the version came out -->
                                 <WrapPanel ItemSpacing="16" LineSpacing="8" VerticalAlignment="Center">
                                     <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center" IsVisible="{Binding LatestVersion, Converter={x:Static ObjectConverters.IsNotNull}}">
                                         <Path Classes="icon size-16" Data="{StaticResource Icon.GitCommit}" />
                                         <TextBlock Classes="label-md" Text="{Binding LatestVersion.Version}" VerticalAlignment="Center" />
                                     </StackPanel>
-                                    <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center" IsVisible="{Binding SelectedContent.DownloadsText, Converter={x:Static ObjectConverters.IsNotNull}}" ToolTip.Tip="{Binding Localization.ContentDownloads}">
+                                    <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center" IsVisible="{Binding LatestVersion.DownloadSizeText, Converter={x:Static ObjectConverters.IsNotNull}, FallbackValue=False}" ToolTip.Tip="{Binding Localization.ContentDownloadSize}">
+                                        <Path Classes="icon size-16" Data="{StaticResource Icon.HardDrive}" />
+                                        <TextBlock Classes="label-md" Text="{Binding LatestVersion.DownloadSizeText}" VerticalAlignment="Center" />
+                                    </StackPanel>
+                                    <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center" IsVisible="{Binding SelectedContent.DownloadsText, Converter={x:Static ObjectConverters.IsNotNull}}" ToolTip.Tip="{Binding SelectedContent.DownloadsExactText}">
                                         <Path Classes="icon size-16" Data="{StaticResource Icon.Download}" />
                                         <TextBlock Classes="label-md" Text="{Binding SelectedContent.DownloadsText}" VerticalAlignment="Center" />
                                     </StackPanel>
@@ -194,12 +198,13 @@
                         <Border BorderBrush="{StaticResource Brush.BorderStrong}" BorderThickness="1" CornerRadius="16" views:RoundedClip.IsEnabled="True" IsVisible="{Binding !IsLoadingVersions}">
                             <StackPanel>
                                 <Border Background="{StaticResource Brush.Surface}" Padding="16,11">
-                                    <Grid ColumnDefinitions="160,Auto,*,124,Auto,72">
+                                    <Grid ColumnDefinitions="160,Auto,*,124,Auto,Auto,72">
                                         <TextBlock Classes="body-md secondary" Text="{Binding Localization.ContentVersionHeader}" />
                                         <TextBlock Grid.Column="1" Classes="body-md secondary hide-narrow" Width="76" Text="{Binding Localization.ContentChannelHeader}" />
                                         <TextBlock Grid.Column="2" Classes="body-md secondary hide-small" Text="{Binding Localization.ContentGameVersionHeader}" />
                                         <TextBlock Grid.Column="3" Classes="body-md secondary" Text="{Binding Localization.ContentCompatibility}" />
-                                        <TextBlock Grid.Column="4" Classes="body-md secondary hide-narrow" Width="104" Text="{Binding Localization.ContentPublishedHeader}" />
+                                        <TextBlock Grid.Column="4" Classes="body-md secondary hide-narrow" Width="84" Text="{Binding Localization.ContentSizeHeader}" />
+                                        <TextBlock Grid.Column="5" Classes="body-md secondary hide-narrow" Width="104" Text="{Binding Localization.ContentPublishedHeader}" />
                                     </Grid>
                                 </Border>
                                 <TextBlock Classes="body-md muted" Text="{Binding ContentVersionsEmptyText}" Margin="16,12" IsVisible="{Binding !ContentVersions.Count}" />
@@ -207,7 +212,7 @@
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate x:DataType="vm:VersionItem">
                                             <Border BorderBrush="{StaticResource Brush.BorderStrong}" BorderThickness="0,1,0,0" Padding="16,8" MinHeight="40">
-                                                <Grid ColumnDefinitions="160,Auto,*,124,Auto,72" RowDefinitions="Auto,Auto,Auto">
+                                                <Grid ColumnDefinitions="160,Auto,*,124,Auto,Auto,72" RowDefinitions="Auto,Auto,Auto">
                                                     <DockPanel HorizontalAlignment="Left" VerticalAlignment="Center" Margin="0,0,8,0">
                                                         <Border DockPanel.Dock="Right" Classes="chip positive" Margin="8,0,0,0" IsVisible="{Binding IsInstalled}" ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).InstalledInText}">
                                                             <TextBlock Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.DiscoverInstalled}" />
@@ -228,8 +233,9 @@
                                                             <TextBlock Text="{Binding CompatibilityText}" TextTrimming="CharacterEllipsis" />
                                                         </DockPanel>
                                                     </Border>
-                                                    <TextBlock Grid.Column="4" Classes="body-md secondary hide-narrow" Width="104" Text="{Binding PublishedText}" ToolTip.Tip="{Binding PublishedDateText}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
-                                                    <StackPanel Grid.Column="5" Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right" VerticalAlignment="Center">
+                                                    <TextBlock Grid.Column="4" Classes="body-md secondary hide-narrow" Width="84" Text="{Binding DownloadSizeText}" ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ContentDownloadSize}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                                    <TextBlock Grid.Column="5" Classes="body-md secondary hide-narrow" Width="104" Text="{Binding PublishedText}" ToolTip.Tip="{Binding PublishedDateText}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                                    <StackPanel Grid.Column="6" Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right" VerticalAlignment="Center">
                                                         <Button Classes="icon" Command="{Binding ToggleChangelogCommand}" IsVisible="{Binding Changelog, Converter={x:Static ObjectConverters.IsNotNull}}" ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ContentChangelog}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ContentChangelog}">
                                                             <Path Classes="icon size-16" Data="{StaticResource Icon.CaretDown}" />
                                                         </Button>
@@ -243,7 +249,7 @@
                                                             <Path Classes="icon size-16" Data="{StaticResource Icon.Plus}" Stroke="{StaticResource Brush.Accent}" StrokeThickness="2" />
                                                         </Button>
                                                     </StackPanel>
-                                                    <StackPanel Grid.Row="1" Grid.ColumnSpan="6" Spacing="6" Margin="0,6,0,0" IsVisible="{Binding IsConfirmingInstall}">
+                                                    <StackPanel Grid.Row="1" Grid.ColumnSpan="7" Spacing="6" Margin="0,6,0,0" IsVisible="{Binding IsConfirmingInstall}">
                                                         <ContentControl Content="{Binding Choices}" IsVisible="{Binding Choices, Converter={x:Static ObjectConverters.IsNotNull}}" />
                                                         <WrapPanel ItemSpacing="8" LineSpacing="8">
                                                             <TextBlock Classes="body-sm secondary" Text="{Binding InstallWarning}" TextWrapping="Wrap" VerticalAlignment="Center" />
@@ -251,7 +257,7 @@
                                                             <Button Classes="text" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryCancel}" Command="{Binding CancelInstallCommand}" />
                                                         </WrapPanel>
                                                     </StackPanel>
-                                                    <WrapPanel Grid.Row="1" Grid.ColumnSpan="6" ItemSpacing="8" LineSpacing="4" Margin="0,6,0,0">
+                                                    <WrapPanel Grid.Row="1" Grid.ColumnSpan="7" ItemSpacing="8" LineSpacing="4" Margin="0,6,0,0">
                                                         <WrapPanel.IsVisible>
                                                             <MultiBinding Converter="{x:Static BoolConverters.Or}">
                                                                 <Binding Path="IsInstalling" />
@@ -262,8 +268,8 @@
                                                         <TextBlock Classes="label-md" Text="{Binding ProgressDetail}" VerticalAlignment="Center" IsVisible="{Binding ProgressDetail, Converter={x:Static ObjectConverters.IsNotNull}}" />
                                                         <Button Classes="text" Content="{Binding Run.StopText}" Command="{Binding Run.StopCommand}" IsVisible="{Binding IsInstalling}" />
                                                     </WrapPanel>
-                                                    <TextBlock Grid.Row="1" Grid.ColumnSpan="6" Classes="body-sm danger" Text="{Binding InstallError}" TextWrapping="Wrap" Margin="0,6,0,0" IsVisible="{Binding InstallError, Converter={x:Static ObjectConverters.IsNotNull}}" />
-                                                    <StackPanel Grid.Row="2" Grid.ColumnSpan="6" Margin="0,8,0,4" IsVisible="{Binding IsChangelogExpanded}">
+                                                    <TextBlock Grid.Row="1" Grid.ColumnSpan="7" Classes="body-sm danger" Text="{Binding InstallError}" TextWrapping="Wrap" Margin="0,6,0,0" IsVisible="{Binding InstallError, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                                                    <StackPanel Grid.Row="2" Grid.ColumnSpan="7" Margin="0,8,0,4" IsVisible="{Binding IsChangelogExpanded}">
                                                         <views:MarkdownView Markdown="{Binding Changelog.Text}" IsVisible="{Binding Changelog.Text, Converter={x:Static ObjectConverters.IsNotNull}}" />
                                                         <Button Classes="link" HorizontalAlignment="Left" Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).OpenLinkCommand}" CommandParameter="{Binding Changelog.Link}" ToolTip.Tip="{Binding Changelog.Link.Url}" IsVisible="{Binding Changelog.Link, Converter={x:Static ObjectConverters.IsNotNull}}">
                                                             <TextBlock Classes="action-md" Text="{Binding Changelog.Link.Label}" />

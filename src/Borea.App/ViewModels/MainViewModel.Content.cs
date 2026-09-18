@@ -395,6 +395,9 @@ public sealed partial class VersionItem : ObservableObject, IInstallRow
     /// <summary>How long ago the release came out.</summary>
     public string PublishedText => _owner.ShortAgeText(_release.ReleaseDate);
 
+    /// <summary>The archive size, or null when the index states none.</summary>
+    public string? DownloadSizeText => _release.Download.SizeBytes is { } size ? MainViewModel.SizeText(size) : null;
+
     public string PublishedDateText => MainViewModel.DateText(_release.ReleaseDate);
 
     [ObservableProperty]
@@ -423,15 +426,18 @@ public sealed partial class VersionItem : ObservableObject, IInstallRow
     [NotifyPropertyChangedFor(nameof(ConfirmInstallText))]
     private string? _installWarning;
 
-    public InstallPlan? PendingPlan { get; set; }
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ConfirmInstallText))]
+    private InstallPlan? _pendingPlan;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsConfirmingInstall))]
+    [NotifyPropertyChangedFor(nameof(ConfirmInstallText))]
     private InstallChoices? _choices;
 
     public bool IsConfirmingInstall => InstallWarning is not null || Choices is not null;
 
-    public string ConfirmInstallText => InstallWarning is null ? _owner.Localization.ContentAdd : _owner.Localization.InstallAnyway;
+    public string ConfirmInstallText => _owner.ConfirmInstallText(InstallWarning, PendingPlan);
 
     /// <summary>Mods install into an instance; a loader is set up from the settings.</summary>
     public bool CanInstall => _release.Type == ContentType.Mod;
