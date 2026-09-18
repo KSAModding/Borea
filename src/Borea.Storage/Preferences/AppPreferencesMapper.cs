@@ -77,8 +77,8 @@ internal static class AppPreferencesMapper
         };
 
     /// <summary>
-    /// UI languages are neutral cultures ("de"), unlike regional formats, so
-    /// only unknown names are dropped.
+    /// A UI language can be a custom culture such as "en-QP", so a name is kept
+    /// when .NET creates a culture of that exact name.
     /// </summary>
     private static string? NormalizeUiCulture(string? cultureName)
     {
@@ -87,7 +87,8 @@ internal static class AppPreferencesMapper
 
         try
         {
-            return CultureInfo.GetCultureInfo(cultureName, predefinedOnly: true).Name;
+            var culture = CultureInfo.GetCultureInfo(cultureName);
+            return string.Equals(culture.Name, cultureName, StringComparison.OrdinalIgnoreCase) ? culture.Name : null;
         }
         catch (CultureNotFoundException)
         {
