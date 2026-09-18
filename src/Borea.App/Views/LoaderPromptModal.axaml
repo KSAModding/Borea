@@ -19,7 +19,10 @@
                     <StackPanel Spacing="4" IsVisible="{Binding IsSetupBusy}">
                         <Grid ColumnDefinitions="*,Auto">
                             <ProgressBar Height="6" Value="{Binding SetupProgress}" Maximum="100" Foreground="{StaticResource Brush.Accent}" VerticalAlignment="Center" />
-                            <Button Grid.Column="1" Classes="text" Margin="8,0,0,0" Content="{Binding LoaderInstallRun.StopText}" Command="{Binding LoaderInstallRun.StopCommand}" IsVisible="{Binding LoaderInstallRun, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" Margin="8,0,0,0" IsVisible="{Binding LoaderInstallRun, Converter={x:Static ObjectConverters.IsNotNull}}">
+                                <Button Classes="text" Content="{Binding LoaderInstallRun.PauseText}" Command="{Binding LoaderInstallRun.TogglePauseCommand}" />
+                                <Button Classes="text" Content="{Binding LoaderInstallRun.StopText}" Command="{Binding LoaderInstallRun.StopCommand}" />
+                            </StackPanel>
                         </Grid>
                         <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding SetupProgressStatus, Converter={x:Static ObjectConverters.IsNotNull}}">
                             <TextBlock Classes="body-sm secondary" Text="{Binding SetupProgressStatus}" VerticalAlignment="Center" />

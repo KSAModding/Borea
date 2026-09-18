@@ -184,6 +184,12 @@
                         </Button>
                         <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center" IsVisible="{Binding IsInstalling}">
                             <ProgressBar Width="38" Height="6" VerticalAlignment="Center" Value="{Binding Progress}" Maximum="100" Foreground="{StaticResource Brush.Accent}" />
+                            <Button Classes="icon" Command="{Binding Run.TogglePauseCommand}" IsVisible="{Binding !Run.IsStopping, FallbackValue={x:True}}" ToolTip.Tip="{Binding Run.PauseText}" AutomationProperties.Name="{Binding Run.PauseText}">
+                                <Panel>
+                                    <Path Classes="icon size-16" Data="{StaticResource Icon.Pause}" IsVisible="{Binding !Run.IsPaused, FallbackValue={x:True}}" />
+                                    <Path Classes="icon-filled size-16" Data="{StaticResource Icon.Play}" IsVisible="{Binding Run.IsPaused, FallbackValue={x:False}}" />
+                                </Panel>
+                            </Button>
                             <Button Classes="icon" Command="{Binding Run.StopCommand}" IsVisible="{Binding !Run.IsStopping, FallbackValue={x:True}}" ToolTip.Tip="{Binding Run.StopText}" AutomationProperties.Name="{Binding Run.StopText}">
                                 <Path Classes="icon size-16" Data="{StaticResource Icon.Close}" />
                             </Button>
@@ -254,6 +260,12 @@
                             </Button>
                             <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center" IsVisible="{Binding IsInstalling}">
                                 <ProgressBar Width="38" Height="6" VerticalAlignment="Center" Value="{Binding Progress}" Maximum="100" Foreground="{StaticResource Brush.Accent}" />
+                                <Button Classes="icon" Command="{Binding Run.TogglePauseCommand}" IsVisible="{Binding !Run.IsStopping, FallbackValue={x:True}}" ToolTip.Tip="{Binding Run.PauseText}" AutomationProperties.Name="{Binding Run.PauseText}">
+                                    <Panel>
+                                        <Path Classes="icon size-16" Data="{StaticResource Icon.Pause}" IsVisible="{Binding !Run.IsPaused, FallbackValue={x:True}}" />
+                                        <Path Classes="icon-filled size-16" Data="{StaticResource Icon.Play}" IsVisible="{Binding Run.IsPaused, FallbackValue={x:False}}" />
+                                    </Panel>
+                                </Button>
                                 <Button Classes="icon" Command="{Binding Run.StopCommand}" IsVisible="{Binding !Run.IsStopping, FallbackValue={x:True}}" ToolTip.Tip="{Binding Run.StopText}" AutomationProperties.Name="{Binding Run.StopText}">
                                     <Path Classes="icon size-16" Data="{StaticResource Icon.Close}" />
                                 </Button>
@@ -377,6 +389,12 @@
                             </Button>
                             <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center" IsVisible="{Binding IsInstalling}">
                                 <ProgressBar Width="38" Height="6" VerticalAlignment="Center" Value="{Binding Progress}" Maximum="100" Foreground="{StaticResource Brush.Accent}" />
+                                <Button Classes="icon" Command="{Binding Run.TogglePauseCommand}" IsVisible="{Binding !Run.IsStopping, FallbackValue={x:True}}" ToolTip.Tip="{Binding Run.PauseText}" AutomationProperties.Name="{Binding Run.PauseText}">
+                                    <Panel>
+                                        <Path Classes="icon size-16" Data="{StaticResource Icon.Pause}" IsVisible="{Binding !Run.IsPaused, FallbackValue={x:True}}" />
+                                        <Path Classes="icon-filled size-16" Data="{StaticResource Icon.Play}" IsVisible="{Binding Run.IsPaused, FallbackValue={x:False}}" />
+                                    </Panel>
+                                </Button>
                                 <Button Classes="icon" Command="{Binding Run.StopCommand}" IsVisible="{Binding !Run.IsStopping, FallbackValue={x:True}}" ToolTip.Tip="{Binding Run.StopText}" AutomationProperties.Name="{Binding Run.StopText}">
                                     <Path Classes="icon size-16" Data="{StaticResource Icon.Close}" />
                                 </Button>
