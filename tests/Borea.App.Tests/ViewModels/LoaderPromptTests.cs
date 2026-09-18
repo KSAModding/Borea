@@ -166,7 +166,7 @@ public sealed class LoaderPromptTests
             ? new HttpResponseMessage(HttpStatusCode.OK) { Content = new ByteArrayContent(StarMapArchive) }
             : null;
 
-    /// <summary>Both launch targets, so the plan is found on Windows and through dotnet elsewhere.</summary>
+    /// <summary>The app host and the assembly of a StarMap release.</summary>
     private static byte[] CreateStarMapArchive()
     {
         using var buffer = new MemoryStream();

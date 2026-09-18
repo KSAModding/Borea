@@ -1140,6 +1140,18 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string FormatLaunchStoppedTitle(string loader)
         => string.Format(CultureInfo.CurrentCulture, Resources.LaunchStoppedTitleFormat, loader);
 
+    public string FormatLaunchUnknownPlatformKey(string loader, string key)
+        => string.Format(CultureInfo.CurrentCulture, Resources.LaunchUnknownPlatformKeyFormat, loader, key);
+
+    public string FormatLaunchUnknownRuntime(string loader, string runtime)
+        => string.Format(CultureInfo.CurrentCulture, Resources.LaunchUnknownRuntimeFormat, loader, runtime);
+
+    public string FormatLaunchDotnetMissing(string loader)
+        => string.Format(CultureInfo.CurrentCulture, Resources.LaunchDotnetMissingFormat, loader);
+
+    public string FormatLaunchTargetMissing(string file, string loader)
+        => string.Format(CultureInfo.CurrentCulture, Resources.LaunchTargetMissingFormat, file, loader);
+
     public string FormatLaunchDisableMod(string mod)
         => string.Format(CultureInfo.CurrentCulture, Resources.LaunchDisableModFormat, mod);
 
