@@ -11,7 +11,7 @@ namespace Borea.Storage.Instances;
 /// Instance existence is derived by enumerating directories under
 /// GetInstancesRoot(), since InstanceId is also the folder name.
 /// </summary>
-public sealed class FileInstanceRepository : IInstanceRepository
+public sealed class FileInstanceRepository : IInstanceRepository, IInstanceLocks
 {
     private readonly IGamePathProvider _pathProvider;
     private readonly System.Collections.Concurrent.ConcurrentDictionary<Guid, SemaphoreSlim> _instanceLocks = new();
@@ -185,6 +185,42 @@ public sealed class FileInstanceRepository : IInstanceRepository
 
     private SemaphoreSlim GetInstanceLock(Guid instanceId)
         => _instanceLocks.GetOrAdd(instanceId, static _ => new SemaphoreSlim(1, 1));
+
+    public IDisposable? TryHold(IEnumerable<Guid> instanceIds)
+    {
+        ArgumentNullException.ThrowIfNull(instanceIds);
+
+        var held = new List<SemaphoreSlim>();
+        foreach (var instanceId in instanceIds.Distinct())
+        {
+            var gate = GetInstanceLock(instanceId);
+            if (!gate.Wait(0))
+            {
+                ReleaseAll(held);
+                return null;
+            }
+
+            held.Add(gate);
+        }
+
+        return new HeldLocks(held);
+    }
+
+    private static void ReleaseAll(List<SemaphoreSlim> gates)
+    {
+        foreach (var gate in gates)
+            gate.Release();
+        gates.Clear();
+    }
+
+    private sealed class HeldLocks(List<SemaphoreSlim> gates) : IDisposable
+    {
+        public void Dispose()
+        {
+            lock (gates)
+                ReleaseAll(gates);
+        }
+    }
 
     /// <summary>
     /// Returns the ID of the currently active instance, or null if no instance is active.
