@@ -22,6 +22,30 @@ public sealed class TasksViewModelTests
     private readonly TaskCompletionSource _gate = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
     [Fact]
+    public async Task TasksDrawer_OpensOverThePage_AndClosesOnToggleCloseAndNavigation()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var viewModel = harness.ViewModel;
+        viewModel.SetMainWindowLibraryCommand.Execute(null);
+
+        viewModel.ToggleTasksCommand.Execute(null);
+        Assert.True(viewModel.IsTasksOpen);
+        Assert.True(viewModel.CurrentWindowLibrary);
+
+        viewModel.ToggleTasksCommand.Execute(null);
+        Assert.False(viewModel.IsTasksOpen);
+
+        viewModel.ToggleTasksCommand.Execute(null);
+        viewModel.CloseTasksCommand.Execute(null);
+        Assert.False(viewModel.IsTasksOpen);
+
+        viewModel.ToggleTasksCommand.Execute(null);
+        viewModel.SetMainWindowDiscoverCommand.Execute(null);
+        Assert.False(viewModel.IsTasksOpen);
+        Assert.True(viewModel.CurrentWindowDiscover);
+    }
+
+    [Fact]
     public async Task RunningInstall_ShowsItsProgress_AndMovesToTheHistoryWhenItEnds()
     {
         using var harness = await CreateAsync();
@@ -83,9 +107,10 @@ public sealed class TasksViewModelTests
         Assert.Equal(item.InstallError, failed.FailureReason);
         Assert.True(failed.CanRetry);
 
-        viewModel.SetMainWindowTasksCommand.Execute(null);
+        viewModel.ToggleTasksCommand.Execute(null);
         await failed.RetryCommand.ExecuteAsync(null);
 
+        Assert.False(viewModel.IsTasksOpen);
         Assert.True(viewModel.CurrentWindowContent);
         Assert.Same(item, viewModel.SelectedContent);
         Assert.True(item.IsConfirmingInstall);
@@ -156,11 +181,11 @@ public sealed class TasksViewModelTests
         var failed = viewModel.Tasks.History[0];
         await harness.Services.Instances.DeleteAsync(instance.InstanceId);
         await viewModel.LoadAsync();
-        viewModel.SetMainWindowTasksCommand.Execute(null);
+        viewModel.ToggleTasksCommand.Execute(null);
 
         await failed.RetryCommand.ExecuteAsync(null);
 
-        Assert.True(viewModel.CurrentWindowTasks);
+        Assert.True(viewModel.IsTasksOpen);
         Assert.False(item.IsConfirmingInstall);
         var again = viewModel.Tasks.History[0];
         Assert.Equal(TaskState.Failed, again.State);
@@ -187,9 +212,10 @@ public sealed class TasksViewModelTests
         Assert.Equal(viewModel.ContentGroups.Single().Items.Single().InstallError, failed.FailureReason);
         Assert.True(failed.CanRetry);
 
-        viewModel.SetMainWindowTasksCommand.Execute(null);
+        viewModel.ToggleTasksCommand.Execute(null);
         await failed.RetryCommand.ExecuteAsync(null);
 
+        Assert.False(viewModel.IsTasksOpen);
         Assert.True(viewModel.CurrentWindowInstance);
         Assert.True(viewModel.ContentGroups.Single().Items.Single().IsConfirmingUpdate);
         Assert.Empty(viewModel.Tasks.Running);

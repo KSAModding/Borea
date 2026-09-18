@@ -76,8 +76,9 @@ public partial class MainViewModel : ViewModelBase
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsLibrarySection))]
     private bool _currentWindowLibrary = false;
+    /// <summary>The task drawer opens over the current page, which stays as it is.</summary>
     [ObservableProperty]
-    private bool _currentWindowTasks = false;
+    private bool _isTasksOpen;
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsLibrarySection))]
     private bool _currentWindowInstance = false;
@@ -100,7 +101,7 @@ public partial class MainViewModel : ViewModelBase
         CurrentWindowHome = true;
         CurrentWindowDiscover = false;
         CurrentWindowLibrary = false;
-        CurrentWindowTasks = false;
+        IsTasksOpen = false;
         CurrentWindowInstance = false;
         CurrentWindowContent = false;
         CurrentWindowPack = false;
@@ -115,7 +116,7 @@ public partial class MainViewModel : ViewModelBase
         CurrentWindowHome = false;
         CurrentWindowDiscover = true;
         CurrentWindowLibrary = false;
-        CurrentWindowTasks = false;
+        IsTasksOpen = false;
         CurrentWindowInstance = false;
         CurrentWindowContent = false;
         CurrentWindowPack = false;
@@ -128,29 +129,25 @@ public partial class MainViewModel : ViewModelBase
         CurrentWindowHome = false;
         CurrentWindowDiscover = false;
         CurrentWindowLibrary = true;
-        CurrentWindowTasks = false;
+        IsTasksOpen = false;
         CurrentWindowInstance = false;
         CurrentWindowContent = false;
         CurrentWindowPack = false;
     }
     [RelayCommand]
-    public void SetMainWindowTasks()
-    {
-        LeaveContentPage();
-        LeavePackPage();
-        CurrentWindowHome = false;
-        CurrentWindowDiscover = false;
-        CurrentWindowLibrary = false;
-        CurrentWindowTasks = true;
-        CurrentWindowInstance = false;
-        CurrentWindowContent = false;
-        CurrentWindowPack = false;
-    }
+    private void ToggleTasks() => IsTasksOpen = !IsTasksOpen;
+
+    [RelayCommand]
+    private void CloseTasks() => IsTasksOpen = false;
     /// <summary>
     /// Settings open as a modal over the current page (modal: settings in #8).
     /// </summary>
     [RelayCommand]
-    public void SetMainWindowSettings() => IsSettingsOpen = true;
+    public void SetMainWindowSettings()
+    {
+        IsTasksOpen = false;
+        IsSettingsOpen = true;
+    }
 
     [RelayCommand]
     private void CloseSettings() => IsSettingsOpen = false;

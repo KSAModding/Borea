@@ -147,7 +147,7 @@ public partial class MainViewModel
         CurrentWindowHome = false;
         CurrentWindowDiscover = false;
         CurrentWindowLibrary = false;
-        CurrentWindowTasks = false;
+        IsTasksOpen = false;
         CurrentWindowInstance = false;
         CurrentWindowContent = false;
         CurrentWindowPack = true;
