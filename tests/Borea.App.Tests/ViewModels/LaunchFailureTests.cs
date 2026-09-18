@@ -19,7 +19,7 @@ public sealed class LaunchFailureTests
     ];
 
     /// <summary>A harness with StarMap recorded and a loader process that has already crashed with <see cref="KsArmoryCrash"/>.</summary>
-    private static Task<ViewModelHarness> CreateAsync(int exitCode = UnhandledException) => CreateAsync(new CrashingStarter(exitCode, KsArmoryCrash));
+    internal static Task<ViewModelHarness> CreateAsync(int exitCode = UnhandledException) => CreateAsync(new CrashingStarter(exitCode, KsArmoryCrash));
 
     /// <summary>A harness with StarMap recorded that starts its processes through <paramref name="starter"/>.</summary>
     private static Task<ViewModelHarness> CreateAsync(IProcessStarter starter) =>
@@ -37,7 +37,7 @@ public sealed class LaunchFailureTests
     }
 
     [Fact]
-    public async Task Play_LoaderCrashesOnAMod_NamesItAndOffersToDisableIt()
+    public async Task Play_LoaderCrashesOnAMod_OpensTheModalThatNamesItAndOffersToDisableIt()
     {
         using var harness = await CreateAsync();
         var viewModel = harness.ViewModel;
@@ -47,6 +47,8 @@ public sealed class LaunchFailureTests
 
         await viewModel.PlayCommand.ExecuteAsync(null);
 
+        Assert.True(viewModel.IsLaunchFailureOpen);
+        Assert.Equal(harness.Localization.FormatLaunchStoppedTitle("StarMap"), viewModel.LaunchFailureTitle);
         Assert.Equal(harness.Localization.FormatLaunchModBroke("KSArmory", "0.8.44", "StarMap"), viewModel.LaunchMessage);
         Assert.True(viewModel.HasLaunchOutput);
         Assert.Contains("DrawAxes", viewModel.LaunchOutputText);
@@ -60,10 +62,50 @@ public sealed class LaunchFailureTests
         await viewModel.DisableBlamedModCommand.ExecuteAsync(null);
 
         Assert.False(await harness.Services.ModState.IsActiveAsync(instance.InstanceId, "KSArmory"));
+        Assert.False(viewModel.IsLaunchFailureOpen);
         Assert.Equal(harness.Localization.FormatLaunchModDisabled("KSArmory"), viewModel.LaunchMessage);
         Assert.False(viewModel.HasLaunchOutput);
         Assert.False(viewModel.CanDisableBlamedMod);
         Assert.False(viewModel.ContentGroups.SelectMany(group => group.Items).Single().IsEnabled);
+    }
+
+    [Fact]
+    public async Task LaunchModal_Closed_KeepsTheStatusLineThatOpensItAgain()
+    {
+        using var harness = await CreateAsync();
+        var viewModel = harness.ViewModel;
+        await InstalledContent.AddAsync(harness, "KSArmory", activate: true, ownership: ModInstallOwnership.Borea);
+        await viewModel.LoadAsync();
+        await viewModel.ActiveInstance!.OpenCommand.ExecuteAsync(null);
+        await viewModel.PlayCommand.ExecuteAsync(null);
+
+        viewModel.CloseLaunchFailureCommand.Execute(null);
+
+        Assert.False(viewModel.IsLaunchFailureOpen);
+        Assert.Equal(harness.Localization.FormatLaunchModBroke("KSArmory", "0.8.44", "StarMap"), viewModel.LaunchMessage);
+        Assert.True(viewModel.CanDisableBlamedMod);
+
+        viewModel.ShowLaunchFailureCommand.Execute(null);
+
+        Assert.True(viewModel.IsLaunchFailureOpen);
+    }
+
+    [Fact]
+    public async Task LaunchModal_OpenLaunchLogFails_ShowsTheErrorInTheModal()
+    {
+        using var harness = await CreateAsync();
+        var viewModel = harness.ViewModel;
+        await InstalledContent.AddAsync(harness, "KSArmory", activate: true, ownership: ModInstallOwnership.Borea);
+        await viewModel.LoadAsync();
+        await viewModel.ActiveInstance!.OpenCommand.ExecuteAsync(null);
+        await viewModel.PlayCommand.ExecuteAsync(null);
+        viewModel.OpenWithSystem = _ => throw new InvalidOperationException("No application is associated with the file.");
+
+        viewModel.OpenLaunchLogCommand.Execute(null);
+
+        Assert.True(viewModel.IsLaunchFailureOpen);
+        Assert.Equal("No application is associated with the file.", viewModel.LaunchFailureError);
+        Assert.Empty(viewModel.Toasts.Items);
     }
 
     [Fact]
@@ -222,6 +264,7 @@ public sealed class LaunchFailureTests
 
         await viewModel.PlayActiveInstanceCommand.ExecuteAsync(null);
 
+        Assert.True(viewModel.IsLaunchFailureOpen);
         Assert.Equal(harness.Localization.FormatLaunchModBroke("KSArmory", "0.8.44", "StarMap"), viewModel.LaunchMessage);
         Assert.True(viewModel.HasLaunchOutput);
         Assert.True(viewModel.CanDisableBlamedMod);
@@ -232,7 +275,7 @@ public sealed class LaunchFailureTests
         Assert.False(await harness.Services.ModState.IsActiveAsync(instance.InstanceId, "KSArmory"));
         Assert.Equal(harness.Localization.FormatLaunchModDisabled("KSArmory"), viewModel.LaunchMessage);
         Assert.False(viewModel.HasLaunchOutput);
-        Assert.Null(viewModel.ContentError);
+        Assert.False(viewModel.IsLaunchFailureOpen);
         Assert.True(viewModel.CurrentWindowHome);
     }
 

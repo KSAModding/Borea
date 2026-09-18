@@ -130,7 +130,7 @@ public partial class MainViewModel
         IsSharedProfileImportRunning = true;
         try
         {
-            await RunInstanceOperationAsync(async _ =>
+            await RunModalInstanceOperationAsync(async _ =>
             {
                 try
                 {
@@ -139,7 +139,7 @@ public partial class MainViewModel
                 catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
                 {
                 }
-            });
+            }, () => IsCreatingInstance, () => Localization.FormatToastCreateFailed(name));
         }
         finally
         {

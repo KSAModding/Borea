@@ -1,0 +1,39 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Borea.App.ViewModels"
+             x:Class="Borea.App.Views.LaunchFailureModal"
+             x:DataType="vm:MainViewModel">
+    <!-- the loader stopped right after Play: why, the way out, and what it wrote -->
+    <Panel Background="#99000000">
+        <Border Classes="modal" Width="561" Margin="80,0,0,0">
+            <StackPanel>
+                <Grid ColumnDefinitions="*,Auto" Margin="24,24,24,0">
+                    <TextBlock Classes="heading-lg" Text="{Binding LaunchFailureTitle}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                    <Button Grid.Column="1" Classes="icon" Command="{Binding CloseLaunchFailureCommand}" AutomationProperties.Name="{Binding Localization.ModalClose}">
+                        <Path Classes="icon" Data="{StaticResource Icon.Close}" />
+                    </Button>
+                </Grid>
+                <Border Height="1" Background="{StaticResource Brush.Window}" Margin="0,24,0,0" />
+                <StackPanel Margin="36,32,24,32" Spacing="16">
+                    <TextBlock Classes="body-md" Text="{Binding LaunchMessage}" TextWrapping="Wrap" />
+                    <Border Classes="card" Padding="16" IsVisible="{Binding IsLaunchOutputShown}">
+                        <ScrollViewer MaxHeight="240">
+                            <SelectableTextBlock Classes="log-line" Text="{Binding LaunchOutputText}" TextWrapping="Wrap" />
+                        </ScrollViewer>
+                    </Border>
+                    <TextBlock Classes="body-md danger" Text="{Binding LaunchFailureError}" TextWrapping="Wrap" IsVisible="{Binding LaunchFailureError, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                    <Grid ColumnDefinitions="Auto,*,Auto">
+                        <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                            <Button Classes="text" Content="{Binding Localization.LaunchShowDetails}" Command="{Binding ToggleLaunchOutputCommand}" />
+                            <Button Classes="text" Content="{Binding Localization.LaunchOpenLog}" Command="{Binding OpenLaunchLogCommand}" />
+                        </StackPanel>
+                        <Button Grid.Column="2" Classes="cta" Command="{Binding DisableBlamedModCommand}" IsVisible="{Binding CanDisableBlamedMod}">
+                            <TextBlock Classes="action-lg" Text="{Binding DisableBlamedModText}" VerticalAlignment="Center" />
+                        </Button>
+                        <Button Grid.Column="2" Classes="text" Content="{Binding Localization.ModalClose}" Command="{Binding CloseLaunchFailureCommand}" IsVisible="{Binding !CanDisableBlamedMod}" VerticalAlignment="Center" />
+                    </Grid>
+                </StackPanel>
+            </StackPanel>
+        </Border>
+    </Panel>
+</UserControl>

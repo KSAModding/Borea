@@ -54,36 +54,42 @@ public partial class MainViewModel
         }
     }
 
-    internal void OpenGameSaveFolder(GameSaveSection section, string folder) => section.Error = TryOpenWithSystem(folder);
+    internal void OpenGameSaveFolder(string folder) => ShowOpenError(() => PathName(folder), TryOpenWithSystem(folder));
 
     internal void OpenGameSaveSectionFolder(GameSaveSection section)
     {
         if (_services is null || SelectedInstance is null)
             return;
 
+        string? error;
         try
         {
             // GameSaves and VehicleSaves create the folder in OnApplicationStart too, so creating it first changes nothing for the game
             var folder = _services.GameSaves.GetFolder(SelectedInstance.InstanceId, section.Kind);
             Directory.CreateDirectory(folder);
-            section.Error = TryOpenWithSystem(folder);
+            error = TryOpenWithSystem(folder);
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {
-            section.Error = exception.Message;
+            error = exception.Message;
         }
+
+        ShowOpenError(() => section.Title, error);
     }
 
-    internal Task BackUpGameSaveAsync(GameSaveItem item) => RunGameSaveActionAsync(item.Section, [item.InstanceId], async services =>
-        Localization.FormatGameSaveBackedUp(item.Name, await services.GameSaves.BackUpAsync(item.InstanceId, item.Entry)));
+    internal Task BackUpGameSaveAsync(GameSaveItem item) => RunGameSaveActionAsync([item.InstanceId], () => Localization.FormatToastBackUpFailed(item.Name), async services =>
+        {
+            var zip = await services.GameSaves.BackUpAsync(item.InstanceId, item.Entry);
+            return () => Localization.FormatGameSaveBackedUp(item.Name, zip);
+        });
 
     internal async Task DeleteGameSaveAsync(GameSaveItem item)
     {
         item.CloseEdits();
-        var deleted = await RunGameSaveActionAsync(item.Section, [item.InstanceId], async services =>
+        var deleted = await RunGameSaveActionAsync([item.InstanceId], () => Localization.FormatToastDeleteFailed(item.Name), async services =>
         {
             await services.GameSaves.DeleteAsync(item.InstanceId, item.Entry);
-            return Localization.FormatGameSaveDeleted(item.Name);
+            return () => Localization.FormatGameSaveDeleted(item.Name);
         });
 
         if (deleted)
@@ -96,7 +102,7 @@ public partial class MainViewModel
         var targets = Instances.Where(instance => instance.InstanceId != item.InstanceId).ToList();
         if (targets.Count == 0)
         {
-            item.Section.Error = Localization.GameSaveNoOtherInstance;
+            ShowErrorToast(() => Localization.FormatToastCopyFailed(item.Name), Localization.GameSaveNoOtherInstance);
             return;
         }
 
@@ -110,12 +116,12 @@ public partial class MainViewModel
         if (item.CopyTarget is not { } target)
             return Task.CompletedTask;
 
-        return RunGameSaveActionAsync(item.Section, [item.InstanceId, target.InstanceId], async services =>
+        return RunGameSaveActionAsync([item.InstanceId, target.InstanceId], () => Localization.FormatToastCopyFailed(item.Name), async services =>
         {
             var outcome = await services.GameSaves.CopyAsync(item.Entry, target.InstanceId, replace);
             item.CloseEdits();
             if (outcome == GameSaveCopyOutcome.Copied)
-                return Localization.FormatGameSaveCopied(item.Name, target.Name);
+                return () => Localization.FormatGameSaveCopied(item.Name, target.Name);
 
             item.IsConfirmingReplace = true;
             return null;
@@ -127,8 +133,6 @@ public partial class MainViewModel
         if (_services is not { } services)
             return;
 
-        section.Message = null;
-        section.Error = null;
         try
         {
             var entries = await services.GameSaves.ListSharedProfileAsync(section.Kind);
@@ -140,7 +144,7 @@ public partial class MainViewModel
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {
-            section.Error = exception.Message;
+            ShowErrorToast(() => Localization.ToastCopyFromProfileFailed, exception.Message);
         }
     }
 
@@ -160,7 +164,7 @@ public partial class MainViewModel
         }
 
         var copied = 0;
-        var done = await RunGameSaveActionAsync(section, [instance.InstanceId], async services =>
+        var done = await RunGameSaveActionAsync([instance.InstanceId], () => Localization.ToastCopyFromProfileFailed, async services =>
         {
             foreach (var item in chosen)
             {
@@ -168,7 +172,7 @@ public partial class MainViewModel
                     copied++;
             }
 
-            return Localization.FormatGameSavesCopiedFromProfile(copied);
+            return () => Localization.FormatGameSavesCopiedFromProfile(copied);
         });
 
         section.IsConfirmingProfileReplace = false;
@@ -184,53 +188,51 @@ public partial class MainViewModel
             return;
 
         InstanceTab = InstanceTab.Content;
-        await RunGameSaveActionAsync(SavesSection, [instance.InstanceId], async services =>
+        await RunGameSaveActionAsync([instance.InstanceId], () => Localization.ToastBackUpAllFailed, async services =>
         {
             var zips = await services.GameSaves.BackUpAllAsync(instance.InstanceId, GameSaveKind.Save);
-            return zips.Count == 0
+            return () => zips.Count == 0
                 ? Localization.GameSavesNothingToBackUp
                 : Localization.FormatGameSavesBackedUp(zips.Count, Path.GetDirectoryName(zips[0])!);
         });
     }
 
     /// <summary>
-    /// Shows the outcome on the section, and "Close the game first" when Borea
+    /// Shows the outcome as a toast, and "Close the game first" when Borea
     /// runs one of the instances or the game holds a file of the folder.
     /// </summary>
-    private async Task<bool> RunGameSaveActionAsync(GameSaveSection section, IReadOnlyCollection<Guid> instanceIds, Func<BoreaServices, Task<string?>> action)
+    private async Task<bool> RunGameSaveActionAsync(IReadOnlyCollection<Guid> instanceIds, Func<string> failed, Func<BoreaServices, Task<Func<string>?>> action)
     {
         if (_services is not { } services)
             return false;
 
-        section.Message = null;
-        section.Error = null;
-
         using var libraryUse = TryUseLibrary();
         if (libraryUse is null)
         {
-            section.Error = Localization.LibraryFolderBusy;
+            ShowErrorToast(failed, Localization.LibraryFolderBusy);
             return false;
         }
 
         // the game holds a save file open only while it writes it, so the file check alone misses a running game
         if (instanceIds.Any(services.Launcher.IsRunning))
         {
-            section.Error = Localization.GameSaveCloseGame;
+            ShowErrorToast(failed, Localization.GameSaveCloseGame);
             return false;
         }
 
         try
         {
-            section.Message = await action(services);
+            if (await action(services) is { } result)
+                ShowSuccessToast(result);
             return true;
         }
         catch (GameSaveInUseException)
         {
-            section.Error = Localization.GameSaveCloseGame;
+            ShowErrorToast(failed, Localization.GameSaveCloseGame);
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or InvalidOperationException or ArgumentException)
         {
-            section.Error = exception.Message;
+            ShowErrorToast(failed, exception.Message);
         }
 
         return false;
@@ -274,9 +276,7 @@ public sealed partial class GameSaveSection : ObservableObject
 
     public bool HasProfileItems => ProfileItems.Count > 0;
 
-    [ObservableProperty]
-    private string? _message;
-
+    /// <summary>Why the section could not be read.</summary>
     [ObservableProperty]
     private string? _error;
 
@@ -288,7 +288,6 @@ public sealed partial class GameSaveSection : ObservableObject
 
     internal void Reset()
     {
-        Message = null;
         Error = null;
         HideProfile();
         SetItems([]);
@@ -434,7 +433,7 @@ public sealed partial class GameSaveItem : ObservableObject
     }
 
     [RelayCommand]
-    private void OpenFolder() => _owner.OpenGameSaveFolder(Section, Entry.Path);
+    private void OpenFolder() => _owner.OpenGameSaveFolder(Entry.Path);
 
     [RelayCommand]
     private Task BackUpAsync() => _owner.BackUpGameSaveAsync(this);

@@ -30,9 +30,6 @@ public partial class MainViewModel
     [ObservableProperty]
     private string? _gameLogError;
 
-    [ObservableProperty]
-    private string? _gameLogMessage;
-
     public ObservableCollection<GameLogLine> GameLogLines { get; } = [];
 
     public bool HasGameLog => GameLogText is not null;
@@ -52,7 +49,6 @@ public partial class MainViewModel
     private async Task LoadGameLogAsync()
     {
         GameLogError = null;
-        GameLogMessage = null;
         GameLogText = null;
         GameLogLines.Clear();
         GameLogPathText = null;
@@ -91,13 +87,9 @@ public partial class MainViewModel
     [RelayCommand]
     private void OpenGameLog()
     {
-        if (_gameLogPath is not null)
-            GameLogError = TryOpenWithSystem(_gameLogPath);
+        if (_gameLogPath is { } path)
+            ShowOpenError(() => PathName(path), TryOpenWithSystem(path));
     }
 
-    internal void ReportGameLogCopied()
-    {
-        GameLogError = null;
-        GameLogMessage = Localization.AboutCopied;
-    }
+    internal void ReportGameLogCopied() => ShowSuccessToast(() => Localization.AboutCopied);
 }

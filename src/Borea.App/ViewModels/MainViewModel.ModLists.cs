@@ -27,16 +27,11 @@ public partial class MainViewModel
 
     public bool IsReviewingModList => ModListImport is not null;
 
-    /// <summary>What the last export, copy, duplicate or import of a modlist did.</summary>
-    [ObservableProperty]
-    private string? _instanceNotice;
-
     internal async Task BeginDuplicateAsync(Guid instanceId)
     {
         if (_services is not { } services || ModListImport is not null)
             return;
 
-        ClearInstanceMessages();
         try
         {
             var instance = await services.Instances.GetByIdAsync(instanceId);
@@ -55,7 +50,8 @@ public partial class MainViewModel
         }
         catch (Exception exception) when (IsInstallFailure(exception))
         {
-            InstanceError = exception.Message;
+            var instanceName = InstanceName(instanceId);
+            ShowErrorToast(() => Localization.FormatToastDuplicateFailed(instanceName), exception.Message);
         }
     }
 
@@ -65,7 +61,6 @@ public partial class MainViewModel
         if (WindowServices is not { } window || ModListImport is not null)
             return;
 
-        ClearInstanceMessages();
         try
         {
             if (await window.OpenTextFileAsync(Localization.LibraryImportModList, Localization.ModListFileType) is { } file)
@@ -73,17 +68,16 @@ public partial class MainViewModel
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {
-            InstanceError = exception.Message;
+            ShowImportError(exception.Message);
         }
     }
 
-    /// <summary>A file Borea cannot read sets <see cref="InstanceError"/>.</summary>
+    /// <summary>A file Borea cannot read shows an error toast.</summary>
     internal async Task BeginImportAsync(string fileName, string text)
     {
         if (_services is not { } services || ModListImport is not null)
             return;
 
-        ClearInstanceMessages();
         ModList modList;
         try
         {
@@ -91,12 +85,12 @@ public partial class MainViewModel
         }
         catch (UnsupportedModListFormatException exception)
         {
-            InstanceError = Localization.FormatModListNewerFormat(fileName, exception.Format);
+            ShowImportError(Localization.FormatModListNewerFormat(fileName, exception.Format));
             return;
         }
         catch (FormatException exception)
         {
-            InstanceError = Localization.FormatModListUnreadable(fileName, exception.Message);
+            ShowImportError(Localization.FormatModListUnreadable(fileName, exception.Message));
             return;
         }
 
@@ -110,9 +104,11 @@ public partial class MainViewModel
         }
         catch (Exception exception) when (IsInstallFailure(exception))
         {
-            InstanceError = exception.Message;
+            ShowImportError(exception.Message);
         }
     }
+
+    private void ShowImportError(string reason) => ShowErrorToast(() => Localization.ToastImportModListFailed, reason);
 
     internal async Task ConfirmModListAsync(ModListImportItem item)
     {
@@ -138,7 +134,7 @@ public partial class MainViewModel
             if (ReferenceEquals(ModListImport, item))
                 ModListImport = null;
             if (created.Activated)
-                InstanceNotice = Localization.FormatLibraryNowActive(created.Instance.Name);
+                ShowSuccessToast(() => Localization.FormatLibraryNowActive(created.Instance.Name));
         }
         catch (InstallStoppedException)
         {
@@ -173,7 +169,6 @@ public partial class MainViewModel
         if (_services is not { } services || WindowServices is not { } window)
             return;
 
-        ClearInstanceMessages();
         try
         {
             if (await ModListOfAsync(services, instanceId) is not { } export)
@@ -182,11 +177,12 @@ public partial class MainViewModel
             var text = services.ModListFormat.Write(export.ModList);
             var fileName = await window.SaveTextFileAsync(Localization.LibraryExportModList, FileNameFor(export.Instance.Name), Localization.ModListFileType, text);
             if (fileName is not null)
-                InstanceNotice = WithForeignFolders(Localization.FormatModListExported(export.Instance.Name, fileName), export.Instance);
+                ShowSuccessToast(() => Localization.FormatModListExported(export.Instance.Name, fileName), ForeignFoldersNote(export.Instance));
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or InvalidOperationException)
         {
-            InstanceError = exception.Message;
+            var instanceName = InstanceName(instanceId);
+            ShowErrorToast(() => Localization.FormatToastExportModListFailed(instanceName), exception.Message);
         }
     }
 
@@ -195,25 +191,25 @@ public partial class MainViewModel
         if (_services is not { } services || WindowServices is not { } window)
             return;
 
-        ClearInstanceMessages();
         try
         {
             if (await ModListOfAsync(services, instanceId) is not { } export)
                 return;
 
             await window.CopyTextAsync(services.ModListFormat.Write(export.ModList));
-            InstanceNotice = WithForeignFolders(Localization.FormatModListCopied(export.Instance.Name), export.Instance);
+            ShowSuccessToast(() => Localization.FormatModListCopied(export.Instance.Name), ForeignFoldersNote(export.Instance));
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or InvalidOperationException)
         {
-            InstanceError = exception.Message;
+            var instanceName = InstanceName(instanceId);
+            ShowErrorToast(() => Localization.FormatToastCopyModListFailed(instanceName), exception.Message);
         }
     }
 
-    private string WithForeignFolders(string notice, Instance instance)
+    private string? ForeignFoldersNote(Instance instance)
         => instance.ForeignMods.Count == 0
-            ? notice
-            : $"{notice} {Localization.FormatModListNotExported(string.Join(", ", instance.ForeignMods.Select(mod => mod.FolderName)))}";
+            ? null
+            : Localization.FormatModListNotExported(string.Join(", ", instance.ForeignMods.Select(mod => mod.FolderName)));
 
     private static async Task<(Instance Instance, ModList ModList)?> ModListOfAsync(BoreaServices services, Guid instanceId)
     {
@@ -249,12 +245,6 @@ public partial class MainViewModel
             notes,
             warnings.Count == 0 ? null : Describe(warnings),
             plan.IsReady ? null : Describe(plan.Conflicts.Concat(plan.UnresolvedChoices)));
-    }
-
-    private void ClearInstanceMessages()
-    {
-        InstanceError = null;
-        InstanceNotice = null;
     }
 
     private static ModListInstaller InstallerFor(BoreaServices services)

@@ -459,6 +459,60 @@
   <data name="ToastLibraryFolderFailedFormat" xml:space="preserve">
     <value>Could not move the library to {0}</value>
   </data>
+  <data name="ToastActivateFailedFormat" xml:space="preserve">
+    <value>Could not activate {0}</value>
+  </data>
+  <data name="ToastDeactivateFailedFormat" xml:space="preserve">
+    <value>Could not deactivate {0}</value>
+  </data>
+  <data name="ToastDeleteFailedFormat" xml:space="preserve">
+    <value>Could not delete {0}</value>
+  </data>
+  <data name="ToastDuplicateFailedFormat" xml:space="preserve">
+    <value>Could not duplicate {0}</value>
+  </data>
+  <data name="ToastCreateFailedFormat" xml:space="preserve">
+    <value>Could not create {0}</value>
+  </data>
+  <data name="ToastRenameFailedFormat" xml:space="preserve">
+    <value>Could not rename {0}</value>
+  </data>
+  <data name="ToastLaunchArgumentsFailedFormat" xml:space="preserve">
+    <value>Could not save the launch arguments of {0}</value>
+  </data>
+  <data name="ToastEnableFailedFormat" xml:space="preserve">
+    <value>Could not enable {0}</value>
+  </data>
+  <data name="ToastDisableFailedFormat" xml:space="preserve">
+    <value>Could not disable {0}</value>
+  </data>
+  <data name="ToastCheckFailedFormat" xml:space="preserve">
+    <value>Could not check {0}</value>
+  </data>
+  <data name="ToastOpenFailedFormat" xml:space="preserve">
+    <value>Could not open {0}</value>
+  </data>
+  <data name="ToastImportModListFailed" xml:space="preserve">
+    <value>Could not import the modlist</value>
+  </data>
+  <data name="ToastExportModListFailedFormat" xml:space="preserve">
+    <value>Could not save the modlist of {0}</value>
+  </data>
+  <data name="ToastCopyModListFailedFormat" xml:space="preserve">
+    <value>Could not copy the modlist of {0}</value>
+  </data>
+  <data name="ToastBackUpFailedFormat" xml:space="preserve">
+    <value>Could not back up {0}</value>
+  </data>
+  <data name="ToastBackUpAllFailed" xml:space="preserve">
+    <value>Could not back up the saves</value>
+  </data>
+  <data name="ToastCopyFailedFormat" xml:space="preserve">
+    <value>Could not copy {0}</value>
+  </data>
+  <data name="ToastCopyFromProfileFailed" xml:space="preserve">
+    <value>Could not copy from the game profile</value>
+  </data>
   <data name="InstanceTabContent" xml:space="preserve">
     <value>Content</value>
   </data>
@@ -1490,6 +1544,9 @@
   </data>
   <data name="LaunchExitedEarlyFormat" xml:space="preserve">
     <value>{0} stopped right after starting (exit code {1}). The details show what it wrote.</value>
+  </data>
+  <data name="LaunchStoppedTitleFormat" xml:space="preserve">
+    <value>{0} stopped</value>
   </data>
   <data name="LaunchDisableModFormat" xml:space="preserve">
     <value>Disable {0}</value>

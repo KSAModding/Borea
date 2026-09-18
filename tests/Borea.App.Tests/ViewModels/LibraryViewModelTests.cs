@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using Borea.App.ViewModels;
 using Borea.Core.Instances;
 
@@ -139,13 +140,35 @@ public sealed class LibraryViewModelTests
         using var harness = await ViewModelHarness.CreateAsync();
         var viewModel = harness.ViewModel;
 
+        viewModel.BeginCreateInstanceCommand.Execute(null);
         viewModel.ModalInstanceName = "Career";
         await viewModel.CreateInstanceCommand.ExecuteAsync(null);
+        viewModel.BeginCreateInstanceCommand.Execute(null);
         viewModel.ModalInstanceName = "career";
         await viewModel.CreateInstanceCommand.ExecuteAsync(null);
 
         Assert.Single(viewModel.Instances);
+        Assert.True(viewModel.IsNameModalOpen);
         Assert.NotNull(viewModel.InstanceError);
+        Assert.Empty(viewModel.Toasts.Items);
+    }
+
+    [Fact]
+    public async Task Rename_ModalClosedBeforeTheResult_ShowsTheErrorAsAToast()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var viewModel = harness.ViewModel;
+        await harness.Services.Instances.CreateAsync("Alpha", InstanceSource.Custom.Value);
+        await harness.Services.Instances.CreateAsync("Beta", InstanceSource.Custom.Value);
+        await viewModel.LoadAsync();
+
+        await viewModel.RenameInstanceAsync(viewModel.Instances.Single(item => item.Name == "Alpha"), "beta");
+
+        var toast = Assert.Single(viewModel.Toasts.Items);
+        Assert.True(toast.IsFailed);
+        Assert.Equal(harness.Localization.FormatToastRenameFailed("Alpha"), toast.Message);
+        Assert.NotNull(toast.Detail);
+        Assert.Null(viewModel.InstanceError);
     }
 
     [Fact]
@@ -331,7 +354,24 @@ public sealed class LibraryViewModelTests
         var root = harness.Services.Paths.GetInstanceRoot(instance.InstanceId);
         Assert.Equal(root, opened);
         Assert.True(Directory.Exists(root));
-        Assert.Null(viewModel.InstanceError);
+        Assert.Empty(viewModel.Toasts.Items);
+    }
+
+    [Fact]
+    public async Task OpenFolder_SystemRefuses_NamesTheInstanceInAnErrorToast()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var viewModel = harness.ViewModel;
+        await harness.Services.Instances.CreateAsync("Alpha", InstanceSource.Custom.Value);
+        await viewModel.LoadAsync();
+        viewModel.OpenWithSystem = _ => throw new Win32Exception("No application is associated with the folder.");
+
+        Assert.Single(viewModel.Instances).OpenFolderCommand.Execute(null);
+
+        var toast = Assert.Single(viewModel.Toasts.Items);
+        Assert.True(toast.IsFailed);
+        Assert.Equal(harness.Localization.FormatToastOpenFailed("Alpha"), toast.Message);
+        Assert.Equal("No application is associated with the folder.", toast.Detail);
     }
 
     [Fact]

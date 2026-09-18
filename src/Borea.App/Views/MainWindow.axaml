@@ -107,6 +107,9 @@
     <!-- modal: the mod loader a launch needs -->
     <views:LoaderPromptModal IsVisible="{Binding IsLoaderPromptOpen}" />
 
+    <!-- modal: the loader stopped right after Play -->
+    <views:LaunchFailureModal IsVisible="{Binding IsLaunchFailureOpen}" />
+
     <!-- modal: the whole text of an error toast -->
     <views:ToastDetailsModal IsVisible="{Binding IsToastDetailsOpen}" />
 

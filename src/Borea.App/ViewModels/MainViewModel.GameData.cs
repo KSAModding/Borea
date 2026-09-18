@@ -63,7 +63,7 @@ public partial class MainViewModel
             GameDataItems.Add(new GameDataItem(this, entry));
     }
 
-    internal void OpenGameDataFolder(string folder) => GameDataError = TryOpenWithSystem(folder);
+    internal void OpenGameDataFolder(string folder) => ShowOpenError(() => PathName(folder), TryOpenWithSystem(folder));
 
     internal string FormatGameDataSize(long bytes) => bytes <= 0 ? Localization.GameDataEmpty : SizeText(bytes);
 

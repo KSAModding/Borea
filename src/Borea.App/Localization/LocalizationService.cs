@@ -148,6 +148,57 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string FormatToastLibraryFolderFailed(string folder)
         => string.Format(CultureInfo.CurrentCulture, Resources.ToastLibraryFolderFailedFormat, folder);
 
+    public string FormatToastActivateFailed(string instanceName)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ToastActivateFailedFormat, instanceName);
+
+    public string FormatToastDeactivateFailed(string instanceName)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ToastDeactivateFailedFormat, instanceName);
+
+    public string FormatToastDeleteFailed(string name)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ToastDeleteFailedFormat, name);
+
+    public string FormatToastDuplicateFailed(string instanceName)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ToastDuplicateFailedFormat, instanceName);
+
+    public string FormatToastCreateFailed(string instanceName)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ToastCreateFailedFormat, instanceName);
+
+    public string FormatToastRenameFailed(string instanceName)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ToastRenameFailedFormat, instanceName);
+
+    public string FormatToastLaunchArgumentsFailed(string instanceName)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ToastLaunchArgumentsFailedFormat, instanceName);
+
+    public string FormatToastEnableFailed(string content)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ToastEnableFailedFormat, content);
+
+    public string FormatToastDisableFailed(string content)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ToastDisableFailedFormat, content);
+
+    public string FormatToastCheckFailed(string folder)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ToastCheckFailedFormat, folder);
+
+    public string FormatToastOpenFailed(string target)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ToastOpenFailedFormat, target);
+
+    public string ToastImportModListFailed => Resources.ToastImportModListFailed;
+
+    public string FormatToastExportModListFailed(string instanceName)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ToastExportModListFailedFormat, instanceName);
+
+    public string FormatToastCopyModListFailed(string instanceName)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ToastCopyModListFailedFormat, instanceName);
+
+    public string FormatToastBackUpFailed(string name)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ToastBackUpFailedFormat, name);
+
+    public string ToastBackUpAllFailed => Resources.ToastBackUpAllFailed;
+
+    public string FormatToastCopyFailed(string name)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ToastCopyFailedFormat, name);
+
+    public string ToastCopyFromProfileFailed => Resources.ToastCopyFromProfileFailed;
+
     public string PageHomeHeading => Resources.PageHomeHeading;
 
     public string PageDiscoverHeading => Resources.PageDiscoverHeading;
@@ -1076,6 +1127,9 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string FormatLaunchExitedEarly(string loader, int exitCode)
         => string.Format(CultureInfo.CurrentCulture, Resources.LaunchExitedEarlyFormat, loader, exitCode);
+
+    public string FormatLaunchStoppedTitle(string loader)
+        => string.Format(CultureInfo.CurrentCulture, Resources.LaunchStoppedTitleFormat, loader);
 
     public string FormatLaunchDisableMod(string mod)
         => string.Format(CultureInfo.CurrentCulture, Resources.LaunchDisableModFormat, mod);
