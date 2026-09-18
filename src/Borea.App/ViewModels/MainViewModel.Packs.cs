@@ -222,6 +222,13 @@ public partial class MainViewModel
         if (_services is null || (targetInstanceId ?? ActiveInstance?.InstanceId) is not { } instanceId || pack.IsInstalling)
             return;
 
+        using var libraryUse = TryUseLibrary();
+        if (libraryUse is null)
+        {
+            pack.InstallError = Localization.LibraryFolderBusy;
+            return;
+        }
+
         var services = _services;
         pack.ClearOutcome();
         pack.IsInstalling = true;
@@ -354,6 +361,16 @@ public partial class MainViewModel
     {
         if (_services is null || pack.PendingInstall is not { } request || pack.IsInstalling)
             return;
+
+        using var libraryUse = TryUseLibrary();
+        if (libraryUse is null)
+        {
+            if (pack.Choices is { } shown)
+                shown.BlockedText = Localization.LibraryFolderBusy;
+            else
+                pack.InstallError = Localization.LibraryFolderBusy;
+            return;
+        }
 
         var services = _services;
         pack.IsInstalling = true;

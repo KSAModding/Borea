@@ -27,15 +27,16 @@ public partial class MainViewModel
     private ReleaseChannel SavedReleaseChannel => _services?.Settings.ReleaseChannel ?? ReleaseChannel.Stable;
 
     /// <summary>
-    /// A choice while the services are rebuilt or a loader is installed is
-    /// refused, because the rebuild disposes the services that work uses.
+    /// A choice while the services are rebuilt, a loader is installed or the
+    /// library folder changes is refused, because the rebuild disposes the
+    /// services that work uses.
     /// </summary>
     public ReleaseChannelOption SelectedReleaseChannel
     {
         get => OptionFor(SavedReleaseChannel);
         set
         {
-            if (value is null || _services is null || IsSetupBusy)
+            if (value is null || _services is null || IsSetupBusy || IsChangingLibraryFolder)
             {
                 OnPropertyChanged(nameof(SelectedReleaseChannel));
                 return;

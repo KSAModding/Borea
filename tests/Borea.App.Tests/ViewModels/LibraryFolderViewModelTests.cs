@@ -1,3 +1,4 @@
+using Borea.App.ViewModels;
 using Borea.Core.Instances;
 
 namespace Borea.App.Tests.ViewModels;
@@ -53,6 +54,74 @@ public sealed class LibraryFolderViewModelTests : IDisposable
         Assert.Null(viewModel.LibraryFolderMessage);
         Assert.Equal(harness.Root, viewModel.LibraryFolder);
     }
+
+    [Fact]
+    public async Task LaunchWhileTheLibraryFolderChanges_IsRefused()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(seed: async services =>
+        {
+            var instance = await services.Instances.CreateAsync("Alpha", InstanceSource.Custom.Value);
+            await services.Instances.SetActiveInstanceAsync(instance.InstanceId);
+        });
+        var viewModel = harness.ViewModel;
+        viewModel.IsChangingLibraryFolder = true;
+
+        await viewModel.PlayActiveInstanceCommand.ExecuteAsync(null);
+
+        Assert.Equal(harness.Localization.LibraryFolderBusy, viewModel.LaunchMessage);
+        Assert.False(viewModel.IsLaunching);
+    }
+
+    [Fact]
+    public async Task InstallWhileTheLibraryFolderChanges_IsRefused()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var item = await AfcRowAsync(harness);
+        harness.ViewModel.IsChangingLibraryFolder = true;
+
+        await item.InstallCommand.ExecuteAsync(null);
+
+        Assert.Equal(harness.Localization.LibraryFolderBusy, item.InstallError);
+        Assert.False(item.IsInstalling);
+        Assert.Null(item.PendingPlan);
+    }
+
+    [Fact]
+    public async Task ChangeLibraryFolder_WhileAnInstallRuns_IsRefused()
+    {
+        using var download = new ManualResetEventSlim();
+        using var harness = await ViewModelHarness.CreateAsync(respond: request =>
+        {
+            if (IsAfcDownload(request.RequestUri!))
+                download.Wait(TimeSpan.FromSeconds(30));
+            return null;
+        });
+        var viewModel = harness.ViewModel;
+        var item = await AfcRowAsync(harness);
+        await item.InstallCommand.ExecuteAsync(null);
+
+        var install = item.ConfirmInstallCommand.ExecuteAsync(null);
+        for (var wait = 0; wait < 300 && !harness.Requests.Any(IsAfcDownload); wait++)
+            await Task.Delay(100);
+        await viewModel.ChangeLibraryFolderCommand.ExecuteAsync(_library);
+        download.Set();
+        await install;
+
+        Assert.Equal(harness.Localization.LibraryFolderWaitForTask, viewModel.LibraryFolderError);
+        Assert.Equal(harness.Root, viewModel.LibraryFolder);
+        Assert.False(Directory.Exists(_library));
+    }
+
+    private static async Task<DiscoverItem> AfcRowAsync(ViewModelHarness harness)
+    {
+        var instance = await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value);
+        await harness.Services.Instances.SetActiveInstanceAsync(instance.InstanceId);
+        await harness.ViewModel.LoadAsync();
+        await harness.ViewModel.EnsureDiscoverLoadedAsync();
+        return harness.ViewModel.DiscoverItems.Single(row => row.ModId == "AdvancedFlightComputer");
+    }
+
+    private static bool IsAfcDownload(Uri uri) => uri.AbsolutePath.EndsWith("/AdvancedFlightComputer.zip", StringComparison.Ordinal);
 
     public void Dispose()
     {

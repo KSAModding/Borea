@@ -88,6 +88,13 @@ public partial class MainViewModel
         if (_services is null || row.IsBusy)
             return;
 
+        using var libraryUse = TryUseLibrary();
+        if (libraryUse is null)
+        {
+            row.InstallError = Localization.LibraryFolderBusy;
+            return;
+        }
+
         var services = _services;
         row.InstallError = null;
         row.IsChecking = true;
@@ -146,6 +153,13 @@ public partial class MainViewModel
         if (_services is null || row.IsBusy)
             return;
 
+        using var libraryUse = TryUseLibrary();
+        if (libraryUse is null)
+        {
+            row.InstallError = Localization.LibraryFolderBusy;
+            return;
+        }
+
         var services = _services;
         row.InstallError = null;
         row.InstallWarning = null;
@@ -198,6 +212,13 @@ public partial class MainViewModel
     {
         if (_services is null || row.PendingPlan is not { } plan || row.IsBusy)
             return;
+
+        using var libraryUse = TryUseLibrary();
+        if (libraryUse is null)
+        {
+            row.InstallError = Localization.LibraryFolderBusy;
+            return;
+        }
 
         row.PendingPlan = null;
         row.InstallWarning = null;

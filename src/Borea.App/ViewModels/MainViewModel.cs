@@ -604,6 +604,13 @@ public partial class MainViewModel : ViewModelBase
         if (_instances is null)
             return;
 
+        using var libraryUse = TryUseLibrary();
+        if (libraryUse is null)
+        {
+            InstanceError = Localization.LibraryFolderBusy;
+            return;
+        }
+
         InstanceNotice = null;
         try
         {

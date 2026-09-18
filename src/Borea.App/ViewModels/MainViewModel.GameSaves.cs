@@ -205,6 +205,13 @@ public partial class MainViewModel
         section.Message = null;
         section.Error = null;
 
+        using var libraryUse = TryUseLibrary();
+        if (libraryUse is null)
+        {
+            section.Error = Localization.LibraryFolderBusy;
+            return false;
+        }
+
         // the game holds a save file open only while it writes it, so the file check alone misses a running game
         if (instanceIds.Any(services.Launcher.IsRunning))
         {
