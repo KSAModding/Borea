@@ -35,6 +35,99 @@ public sealed class InstallStopTests
     }
 
     [Fact]
+    public void PauseButton_WorksOnlyWhileTheModDownloads()
+    {
+        var localization = new LocalizationService(CultureInfo.GetCultureInfo("en"));
+        var task = new TaskRegistry(localization, () => null, () => null, _ => Task.CompletedTask).Start(TaskKind.ModInstall, null, null, null, null, null, TaskState.Running);
+        var run = new InstallRun(localization, task);
+        Assert.False(run.TogglePauseCommand.CanExecute(null));
+
+        run.Report(InstallPhase.Downloading);
+        Assert.True(run.TogglePauseCommand.CanExecute(null));
+        Assert.Equal(localization.InstallPause, run.PauseText);
+
+        run.Report(InstallPhase.Extracting);
+        Assert.False(run.TogglePauseCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public async Task Pause_DuringTheDownload_ShowsThePausedTaskAndResumeFinishesTheInstall()
+    {
+        var archive = Archive("AdvancedFlightComputer");
+        var half = archive.Length / 2;
+        var ranges = new List<RangeHeaderValue?>();
+        using var harness = await ViewModelHarness.CreateAsync(
+            respond: request =>
+            {
+                if (request.RequestUri?.AbsolutePath.EndsWith("/AdvancedFlightComputer.zip", StringComparison.Ordinal) != true)
+                    return null;
+
+                ranges.Add(request.Headers.Range);
+                return request.Headers.Range is null ? FirstHalf(archive) : SecondHalf(archive);
+            },
+            editSnapshot: snapshot => snapshot
+                .Replace("AD14E4FE8111F4DAE8406D50459B7E5C42D58F1E01F549636946922CF72AE9E6", Convert.ToHexString(SHA256.HashData(archive)), StringComparison.Ordinal)
+                .Replace("\"size\": 129696", $"\"size\": {archive.Length}", StringComparison.Ordinal));
+        var viewModel = harness.ViewModel;
+        var (instance, item) = await ConfirmingInstallAsync(harness);
+
+        var install = item.ConfirmInstallCommand.ExecuteAsync(null);
+        await _downloading.Task.WaitAsync(Timeout);
+        var run = item.Run!;
+        var task = Assert.Single(viewModel.Tasks.Running);
+        await WaitUntilAsync(() => run.IsDownloading && task.Progress > 0);
+        run.TogglePauseCommand.Execute(null);
+
+        Assert.True(run.IsPaused);
+        Assert.Equal(harness.Localization.InstallResume, run.PauseText);
+        await WaitUntilAsync(() => task.State == TaskState.Paused);
+        Assert.Equal(harness.Localization.TaskPaused, task.StateText);
+        Assert.Equal(harness.Localization.FormatInstallPaused("AdvancedFlightComputer 0.7.5"), item.ProgressStatus);
+        Assert.Equal(item.ProgressStatus, task.Step);
+        Assert.Equal(harness.Localization.FormatInstallSize(InstallProgressText.Number(half), InstallProgressText.Number(archive.Length) + " MB"), item.ProgressDetail);
+        Assert.True(viewModel.Tasks.HasProgress);
+        Assert.Equal(100.0 * half / archive.Length, viewModel.Tasks.Progress, 3);
+        Assert.Empty(viewModel.Toasts.Items);
+
+        harness.Localization.TrySetCulture("de");
+        Assert.Equal(harness.Localization.FormatInstallPaused("AdvancedFlightComputer 0.7.5"), item.ProgressStatus);
+        Assert.Equal(item.ProgressStatus, task.Step);
+
+        run.TogglePauseCommand.Execute(null);
+        await install;
+
+        Assert.Equal(2, ranges.Count);
+        Assert.Equal(half, Assert.Single(ranges[1]!.Ranges).From);
+        Assert.Null(item.InstallError);
+        Assert.Equal("AdvancedFlightComputer", Assert.Single((await harness.Services.Instances.GetByIdAsync(instance.InstanceId))!.Mods).ModId);
+        Assert.Equal(TaskState.Finished, task.State);
+        Assert.Single(viewModel.Toasts.Items);
+    }
+
+    [Fact]
+    public async Task Stop_WhilePaused_StopsTheInstall()
+    {
+        var archive = Archive("AdvancedFlightComputer");
+        using var harness = await ViewModelHarness.CreateAsync(
+            respond: request => request.RequestUri?.AbsolutePath.EndsWith("/AdvancedFlightComputer.zip", StringComparison.Ordinal) == true ? FirstHalf(archive) : null);
+        var (instance, item) = await ConfirmingInstallAsync(harness);
+
+        var install = item.ConfirmInstallCommand.ExecuteAsync(null);
+        await _downloading.Task.WaitAsync(Timeout);
+        var run = item.Run!;
+        await WaitUntilAsync(() => run.IsDownloading);
+        run.TogglePauseCommand.Execute(null);
+        Assert.True(run.IsPaused);
+        run.StopCommand.Execute(null);
+        await install;
+
+        Assert.False(run.IsPaused);
+        Assert.Equal(harness.Localization.InstallStopped, item.ProgressStatus);
+        Assert.Empty((await harness.Services.Instances.GetByIdAsync(instance.InstanceId))!.Mods);
+        Assert.Equal(TaskState.Stopped, harness.ViewModel.Tasks.History[0].State);
+    }
+
+    [Fact]
     public async Task Stop_DuringTheDownload_SaysSoAndInstallsNothing()
     {
         using var harness = await ViewModelHarness.CreateAsync(respond: StallArchive);
@@ -180,10 +273,84 @@ public sealed class InstallStopTests
         return stream.ToArray();
     }
 
+    /// <summary>The first answer, which announces the whole archive and sends its first half.</summary>
+    private HttpResponseMessage FirstHalf(byte[] archive)
+    {
+        var response = new HttpResponseMessage(HttpStatusCode.OK) { Content = new StreamContent(new HalfThenStalledBody(archive, _downloading)) };
+        response.Content.Headers.ContentLength = archive.Length;
+        response.Headers.ETag = new EntityTagHeaderValue("\"v1\"");
+        return response;
+    }
+
+    private static HttpResponseMessage SecondHalf(byte[] archive)
+    {
+        var half = archive.Length / 2;
+        var response = new HttpResponseMessage(HttpStatusCode.PartialContent) { Content = new ByteArrayContent(archive[half..]) };
+        response.Content.Headers.ContentRange = new ContentRangeHeaderValue(half, archive.Length - 1, archive.Length);
+        return response;
+    }
+
+    private static async Task WaitUntilAsync(Func<bool> condition)
+    {
+        using var timeout = new CancellationTokenSource(Timeout);
+        while (!condition())
+            await Task.Delay(10, timeout.Token);
+    }
+
     private HttpResponseMessage? StallArchive(HttpRequestMessage request)
         => request.RequestUri?.AbsolutePath.EndsWith("/AdvancedFlightComputer.zip", StringComparison.Ordinal) == true
             ? new HttpResponseMessage(HttpStatusCode.OK) { Content = new StreamContent(new StalledBody(_downloading)) }
             : null;
+
+    /// <summary>A response body that sends the first half and then nothing until its read is canceled.</summary>
+    private sealed class HalfThenStalledBody(byte[] content, TaskCompletionSource halfway) : Stream
+    {
+        private bool _sent;
+
+        public override bool CanRead => true;
+
+        public override bool CanSeek => false;
+
+        public override bool CanWrite => false;
+
+        public override long Length => throw new NotSupportedException();
+
+        public override long Position
+        {
+            get => throw new NotSupportedException();
+            set => throw new NotSupportedException();
+        }
+
+        public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
+        {
+            if (!_sent)
+            {
+                _sent = true;
+                var half = content.Length / 2;
+                content.AsMemory(0, half).CopyTo(buffer);
+                return half;
+            }
+
+            halfway.TrySetResult();
+            await Task.Delay(System.Threading.Timeout.Infinite, cancellationToken);
+            return 0;
+        }
+
+        public override Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+            => ReadAsync(buffer.AsMemory(offset, count), cancellationToken).AsTask();
+
+        public override int Read(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+
+        public override void Flush()
+        {
+        }
+
+        public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
+
+        public override void SetLength(long value) => throw new NotSupportedException();
+
+        public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+    }
 
     /// <summary>A response body that sends nothing until its read is cancelled.</summary>
     private sealed class StalledBody(TaskCompletionSource reading) : Stream

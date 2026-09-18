@@ -375,6 +375,9 @@
   <data name="TaskRunning" xml:space="preserve">
     <value>Läuft</value>
   </data>
+  <data name="TaskPaused" xml:space="preserve">
+    <value>Pausiert</value>
+  </data>
   <data name="TaskFinished" xml:space="preserve">
     <value>Fertig</value>
   </data>
@@ -1443,6 +1446,9 @@
   <data name="InstallDownloadingFormat" xml:space="preserve">
     <value>{0} wird heruntergeladen</value>
   </data>
+  <data name="InstallPausedFormat" xml:space="preserve">
+    <value>{0} pausiert</value>
+  </data>
   <data name="InstallExtractingFormat" xml:space="preserve">
     <value>{0} wird entpackt</value>
   </data>
@@ -1466,6 +1472,12 @@
   </data>
   <data name="InstallStop" xml:space="preserve">
     <value>Stoppen</value>
+  </data>
+  <data name="InstallPause" xml:space="preserve">
+    <value>Pausieren</value>
+  </data>
+  <data name="InstallResume" xml:space="preserve">
+    <value>Fortsetzen</value>
   </data>
   <data name="InstallStopping" xml:space="preserve">
     <value>Wird gestoppt</value>

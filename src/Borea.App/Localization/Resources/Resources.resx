@@ -375,6 +375,9 @@
   <data name="TaskRunning" xml:space="preserve">
     <value>Running</value>
   </data>
+  <data name="TaskPaused" xml:space="preserve">
+    <value>Paused</value>
+  </data>
   <data name="TaskFinished" xml:space="preserve">
     <value>Done</value>
   </data>
@@ -1443,6 +1446,9 @@
   <data name="InstallDownloadingFormat" xml:space="preserve">
     <value>Downloading {0}</value>
   </data>
+  <data name="InstallPausedFormat" xml:space="preserve">
+    <value>{0} paused</value>
+  </data>
   <data name="InstallExtractingFormat" xml:space="preserve">
     <value>Unpacking {0}</value>
   </data>
@@ -1466,6 +1472,12 @@
   </data>
   <data name="InstallStop" xml:space="preserve">
     <value>Stop</value>
+  </data>
+  <data name="InstallPause" xml:space="preserve">
+    <value>Pause</value>
+  </data>
+  <data name="InstallResume" xml:space="preserve">
+    <value>Resume</value>
   </data>
   <data name="InstallStopping" xml:space="preserve">
     <value>Stopping</value>
