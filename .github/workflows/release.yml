@@ -53,7 +53,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        rid: [win-x64, linux-x64, osx-x64, osx-arm64]
+        rid: [win-x64, linux-x64, osx-arm64]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
@@ -289,8 +289,6 @@ jobs:
             os: windows-2025
           - rid: osx-arm64
             os: macos-26
-          - rid: osx-x64
-            os: macos-26-intel
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
@@ -513,6 +511,7 @@ jobs:
           Both need the ICU and OpenSSL libraries of your distribution, and only the App also needs the X11, ICE, SM and fontconfig libraries. Most desktop installs already have them. See Readme.
 
           **macOS.** Unpack and start Borea from Terminal, not from Finder: `tar -xzf <file>`, then run `./borea` inside the new folder of the App archive for the App, or `./borea --help` inside the new folder of either archive.
+          The macOS builds are for Apple silicon. Intel Macs are not supported.
 
           ### Provenance
 
