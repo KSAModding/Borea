@@ -9,7 +9,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 namespace Borea.App.ViewModels;
 
 /// <summary>
-/// Shows a toast for the tasks of the <see cref="TaskRegistry"/> that end.
+/// Shows a toast for the tasks of the <see cref="TaskRegistry"/> that end, and for short results.
 /// </summary>
 public sealed partial class ToastService : ObservableObject
 {
@@ -54,10 +54,20 @@ public sealed partial class ToastService : ObservableObject
 
     private void Show(TaskItem task)
     {
-        if (!HasToast(task))
-            return;
+        if (HasToast(task))
+            Show(new ToastItem(this, task));
+    }
 
-        var toast = new ToastItem(this, task);
+    /// <summary>Shows a short result that belongs to no task.</summary>
+    internal ToastItem ShowMessage(ToastKind kind, Func<string> message, string? detail = null)
+    {
+        var toast = new ToastItem(this, kind, message, detail);
+        Show(toast);
+        return toast;
+    }
+
+    private void Show(ToastItem toast)
+    {
         Items.Add(toast);
         while (Items.Count > MaxShown)
             Close(Items[0]);
@@ -88,13 +98,16 @@ public sealed partial class ToastService : ObservableObject
     internal Task OpenInstanceAsync(ToastItem toast)
     {
         Close(toast);
-        return toast.TaskItem.InstanceId is { } instanceId ? _owner.OpenInstanceByIdAsync(instanceId) : Task.CompletedTask;
+        return toast.TaskItem?.InstanceId is { } instanceId ? _owner.OpenInstanceByIdAsync(instanceId) : Task.CompletedTask;
     }
 
     internal void ShowDetails(ToastItem toast)
     {
         Close(toast);
-        _owner.ShowTaskDetails(toast.TaskItem);
+        if (toast.TaskItem is { } task)
+            _owner.ShowTaskDetails(task);
+        else
+            _owner.ShowToastDetails(toast);
     }
 
     internal void RefreshText()

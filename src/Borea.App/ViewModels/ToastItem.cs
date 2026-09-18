@@ -8,13 +8,22 @@ using CommunityToolkit.Mvvm.Input;
 
 namespace Borea.App.ViewModels;
 
+public enum ToastKind
+{
+    Success,
+    Error,
+}
+
 /// <summary>
-/// One toast about a task that ended. It closes by itself after its time,
-/// which starts again once neither the pointer nor the keyboard focus is on it.
+/// One toast about a task that ended or about a short result. It closes by itself
+/// after its time, which starts again once neither the pointer nor the keyboard focus is on it.
 /// </summary>
 public sealed partial class ToastItem : ObservableObject
 {
     private readonly ToastService _owner;
+    private readonly Func<string>? _message;
+    private readonly string? _detail;
+    private readonly TaskState _messageState;
     private CancellationTokenSource? _timer;
     private bool _isPointerOver;
     private bool _hasFocusWithin;
@@ -30,32 +39,43 @@ public sealed partial class ToastItem : ObservableObject
         _canOpenInstance = owner.HasInstance(taskItem.InstanceId);
     }
 
-    internal TaskItem TaskItem { get; }
+    internal ToastItem(ToastService owner, ToastKind kind, Func<string> message, string? detail)
+    {
+        _owner = owner;
+        _message = message;
+        _detail = detail;
+        _messageState = kind == ToastKind.Error ? TaskState.Failed : TaskState.Finished;
+    }
+
+    /// <summary>The task the toast is about. Null for a toast about a short result.</summary>
+    internal TaskItem? TaskItem { get; }
 
     private LocalizationService Localization => _owner.Localization;
 
-    private string Subject => TaskItem.Subject ?? string.Empty;
+    private TaskState State => TaskItem?.State ?? _messageState;
 
-    private string InstanceName => TaskItem.InstanceName ?? string.Empty;
+    private string Subject => TaskItem?.Subject ?? string.Empty;
 
-    public bool IsFinished => TaskItem.State == TaskState.Finished;
+    private string InstanceName => TaskItem?.InstanceName ?? string.Empty;
 
-    public bool IsStopped => TaskItem.State == TaskState.Stopped;
+    public bool IsFinished => State == TaskState.Finished;
 
-    public bool IsFailed => TaskItem.State == TaskState.Failed;
+    public bool IsStopped => State == TaskState.Stopped;
 
-    public string Message => TaskItem.State switch
+    public bool IsFailed => State == TaskState.Failed;
+
+    public string Message => TaskItem is not { } task ? _message!() : task.State switch
     {
-        TaskState.Finished => FinishedText(),
-        TaskState.Stopped => StoppedText(),
-        _ => FailedText(),
+        TaskState.Finished => FinishedText(task),
+        TaskState.Stopped => StoppedText(task),
+        _ => FailedText(task),
     };
 
     /// <summary>The reason of a failure, or how far a stopped install got.</summary>
-    public string? Detail => TaskItem.State switch
+    public string? Detail => TaskItem is not { } task ? _detail : task.State switch
     {
-        TaskState.Failed => TaskItem.FailureReason,
-        TaskState.Stopped when TaskItem.StoppedAfter is { Completed: > 0 } after => TaskItem.Kind is TaskKind.Update or TaskKind.UpdateAll
+        TaskState.Failed => task.FailureReason,
+        TaskState.Stopped when task.StoppedAfter is { Completed: > 0 } after => task.Kind is TaskKind.Update or TaskKind.UpdateAll
             ? Localization.FormatToastStoppedUpdated(after.Completed, after.Total)
             : Localization.FormatToastStoppedInstalled(after.Completed, after.Total),
         _ => null,
@@ -130,19 +150,19 @@ public sealed partial class ToastItem : ObservableObject
             _owner.Close(this);
     }
 
-    private string FinishedText() => TaskItem.Kind switch
+    private string FinishedText(TaskItem task) => task.Kind switch
     {
-        TaskKind.Update when TaskItem.NewVersion is { } version => Localization.FormatToastUpdated(Subject, version, InstanceName),
-        TaskKind.Update or TaskKind.UpdateAll => Localization.FormatToastUpdatedAll(TaskItem.ModCount, InstanceName),
+        TaskKind.Update when task.NewVersion is { } version => Localization.FormatToastUpdated(Subject, version, InstanceName),
+        TaskKind.Update or TaskKind.UpdateAll => Localization.FormatToastUpdatedAll(task.ModCount, InstanceName),
         TaskKind.ModRemoval => Localization.FormatToastRemoved(Subject, InstanceName),
-        TaskKind.LoaderInstall => Localization.FormatToastLoaderInstalled(Subject, TaskItem.NewVersion ?? string.Empty),
+        TaskKind.LoaderInstall => Localization.FormatToastLoaderInstalled(Subject, task.NewVersion ?? string.Empty),
         TaskKind.ModListImport => Localization.FormatToastInstanceCreated(Subject),
         TaskKind.ManualReplace => Localization.FormatToastReplaced(Subject, InstanceName),
         TaskKind.LibraryFolderChange => Localization.FormatToastLibraryFolderChanged(Subject),
         _ => Localization.FormatToastAdded(Subject, InstanceName),
     };
 
-    private string StoppedText() => TaskItem.Kind switch
+    private string StoppedText(TaskItem task) => task.Kind switch
     {
         TaskKind.Update => Localization.FormatToastUpdateStopped(Subject),
         TaskKind.UpdateAll => Localization.FormatToastUpdateAllStopped(InstanceName),
@@ -150,7 +170,7 @@ public sealed partial class ToastItem : ObservableObject
         _ => Localization.FormatToastInstallStopped(Subject),
     };
 
-    private string FailedText() => TaskItem.Kind switch
+    private string FailedText(TaskItem task) => task.Kind switch
     {
         TaskKind.IndexRefresh => Localization.ToastIndexRefreshFailed,
         TaskKind.Update => Localization.FormatToastUpdateFailed(Subject),
@@ -162,7 +182,7 @@ public sealed partial class ToastItem : ObservableObject
         _ => Localization.FormatToastInstallFailed(Subject),
     };
 
-    internal void RefreshCanOpenInstance() => CanOpenInstance = _owner.HasInstance(TaskItem.InstanceId);
+    internal void RefreshCanOpenInstance() => CanOpenInstance = _owner.HasInstance(TaskItem?.InstanceId);
 
     internal void RefreshText()
     {

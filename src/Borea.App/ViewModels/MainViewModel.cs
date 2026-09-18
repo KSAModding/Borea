@@ -733,6 +733,7 @@ public partial class MainViewModel : ViewModelBase
         foreach (var run in _installRuns)
             run.RefreshText();
         Toasts.RefreshText();
+        ToastInDetails?.RefreshText();
         RefreshGameDataItems();
         RefreshGameSaveText();
         RefreshLoaderText();

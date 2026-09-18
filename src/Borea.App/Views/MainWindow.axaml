@@ -78,7 +78,7 @@
     </Grid>
 
     <StackPanel VerticalAlignment="Bottom">
-    <!-- toasts of the tasks that ended, above the error bar -->
+    <!-- toasts, above the error bar -->
     <views:ToastHost Margin="96,0,24,16" HorizontalAlignment="Right" />
 
     <!-- last-resort error bar -->
@@ -106,6 +106,9 @@
 
     <!-- modal: the mod loader a launch needs -->
     <views:LoaderPromptModal IsVisible="{Binding IsLoaderPromptOpen}" />
+
+    <!-- modal: the whole text of an error toast -->
+    <views:ToastDetailsModal IsVisible="{Binding IsToastDetailsOpen}" />
 
     <!-- modal: settings -->
     <settings:SettingsModal IsVisible="{Binding IsSettingsOpen}" />
