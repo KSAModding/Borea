@@ -124,6 +124,42 @@ public sealed class InstallStopTests : IAsyncLifetime
         Assert.Equal("first-mod", Assert.Single(await _modState.GetEntriesAsync(_instanceId)).ModId);
     }
 
+    [Fact]
+    public async Task Pause_AfterTheDownload_IsRefused()
+    {
+        bool? paused = null;
+        var progress = new SynchronousProgress<InstallProgress>(report =>
+        {
+            if (report.Phase == InstallPhase.Extracting)
+                paused ??= _stop.Pause();
+        });
+
+        await _executor.ExecuteAsync(await PlanAsync("first-mod"), enable: true, progress, _stop);
+
+        Assert.False(paused);
+        Assert.Equal("first-mod", Assert.Single((await _instances.GetByIdAsync(_instanceId))!.Mods).ModId);
+    }
+
+    [Fact]
+    public async Task Pause_AsTheDownloadEnds_ReachesTheDownloaderAndEndsWithTheDownload()
+    {
+        var pauses = new List<DownloadPause?>();
+        _downloader.Downloading = (_, _) =>
+        {
+            Assert.True(_stop.Pause());
+            pauses.Add(DownloadPause.Current);
+            return Task.CompletedTask;
+        };
+
+        await _executor.ExecuteAsync(await PlanAsync("first-mod", "second-mod"), enable: true, stop: _stop);
+
+        Assert.Equal(2, pauses.Count);
+        Assert.All(pauses, pause => Assert.False(Assert.IsType<DownloadPause>(pause).IsPaused));
+        Assert.NotSame(pauses[0], pauses[1]);
+        Assert.Null(DownloadPause.Current);
+        Assert.Equal(2, (await _instances.GetByIdAsync(_instanceId))!.Mods.Count);
+    }
+
     private Task<InstallPlan> PlanAsync(params string[] modIds) => PlanAsync(modIds.Select(modId => Release(modId)).ToArray());
 
     private async Task<InstallPlan> PlanAsync(params ModVersionMetadata[] releases)
