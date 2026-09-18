@@ -485,8 +485,10 @@ public partial class MainViewModel
     private Task PlayActiveInstanceAsync()
     {
         HomeLaunch = HomeLaunchOption.ActiveInstance;
-        return ActiveInstance is { } instance ? LaunchAsync(instance.InstanceId) : Task.CompletedTask;
+        return LaunchActiveInstanceAsync();
     }
+
+    internal Task LaunchActiveInstanceAsync() => ActiveInstance is { } instance ? LaunchAsync(instance.InstanceId) : Task.CompletedTask;
 
     [RelayCommand]
     private Task PlayHomeAsync() => IsHomeLaunchActiveInstance ? PlayActiveInstanceAsync() : PlayWithoutModLoader();

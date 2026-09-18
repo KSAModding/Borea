@@ -227,6 +227,10 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string LibrarySortLastPlayed => Resources.LibrarySortLastPlayed;
 
+    public string LibraryActiveHeading => Resources.LibraryActiveHeading;
+
+    public string LibraryOtherInstancesHeading => Resources.LibraryOtherInstancesHeading;
+
     public string FormatLibraryLastPlayed(string date)
         => string.Format(CultureInfo.CurrentCulture, Resources.LibraryLastPlayedFormat, date);
 

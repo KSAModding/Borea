@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
 using Borea.Core.Instances;
@@ -19,6 +20,9 @@ public enum LibrarySort
 public partial class MainViewModel
 {
     private LibrarySort _librarySort;
+
+    /// <summary>The Library rows below the active instance, in the chosen order. Every row when no instance is active.</summary>
+    public ObservableCollection<InstanceItem> OtherInstances { get; } = [];
 
     public LibrarySort LibrarySort => _librarySort;
 
@@ -50,12 +54,27 @@ public partial class MainViewModel
     /// <summary>Moves the rows in place, so a row that is being renamed keeps its state.</summary>
     private void SortInstances()
     {
-        var sorted = Sorted(Instances).ToList();
-        for (var index = 0; index < sorted.Count; index++)
+        Arrange(Instances, Sorted(Instances).ToList());
+        RefreshOtherInstances();
+    }
+
+    private void RefreshOtherInstances() => Arrange(OtherInstances, Instances.Where(item => !item.IsActive).ToList());
+
+    private static void Arrange(ObservableCollection<InstanceItem> rows, List<InstanceItem> order)
+    {
+        for (var index = rows.Count - 1; index >= 0; index--)
         {
-            var current = Instances.IndexOf(sorted[index]);
-            if (current != index)
-                Instances.Move(current, index);
+            if (!order.Contains(rows[index]))
+                rows.RemoveAt(index);
+        }
+
+        for (var index = 0; index < order.Count; index++)
+        {
+            var current = rows.IndexOf(order[index]);
+            if (current < 0)
+                rows.Insert(index, order[index]);
+            else if (current != index)
+                rows.Move(current, index);
         }
     }
 
