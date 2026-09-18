@@ -1,16 +1,21 @@
 # Borea
 
-Borea is a content manager for Kitten Space Agency.
-It installs mods and mod packs from the community content index, keeps them in separate instances, and starts the game with the instance you choose.
+Borea is a cross-platform content manager for Kitten Space Agency.
+
+It is meant to manage mods, mod packs, vehicles, game saves, and more.
+Mods and mod packs work today, and vehicles and game saves will follow later.
+Borea installs them from the community content index, keeps them in separate instances, and starts the game with the instance you choose.
 It runs on Windows, Linux and macOS, as a desktop App and as a command line.
 
 Borea is a community project by the [KSA Modding](https://github.com/KSAModding) team.
 It is not made by RocketWerkz and is not affiliated with or endorsed by them.
 Kitten Space Agency is their game and their trademark.
 
+![The Discover page of Borea](docs/images/discover.png)
+
 ## Help
 
-- Questions and help: the [KSA modding Discord](https://discord.gg/nt4fK4QuTz).
+- Questions and help: the [KSA Modding Society Discord](https://discord.gg/nt4fK4QuTz).
 - Bugs: the [issue tracker](https://github.com/KSAModding/Borea/issues).
 - See [CONTRIBUTING.md](CONTRIBUTING.md) to contribute and [SECURITY.md](SECURITY.md) to report a security problem.
 
@@ -26,7 +31,8 @@ Kitten Space Agency is their game and their trademark.
 - English and German, and a dark and a light theme.
 
 Everything Borea knows about a mod comes from the content index, which the [content-manager-design](https://github.com/KSAModding/content-manager-design) RFCs define.
-Listing a mod there is a pull request with one TOML file.
+The index has two repositories: [content-index](https://github.com/KSAModding/content-index) holds the listings that mod authors write, and [content-index-releases](https://github.com/KSAModding/content-index-releases) holds the release files that are generated for each new release.
+Listing a mod is a pull request with one TOML file in content-index.
 
 ## Downloads
 
@@ -74,7 +80,7 @@ For the command line, run `./borea --help` in the unpacked folder of either arch
 The build carries the .NET runtime but not the system libraries it sits on.
 The App and the CLI both need the ICU and OpenSSL libraries.
 Only the App also needs the X11, ICE, SM and fontconfig libraries.
-All common desktop installation usually have them all. A minimal one needs these packages for the App:
+Common desktop installations usually have all of them. A minimal one needs these packages for the App:
 
 - Debian and Ubuntu: `sudo apt install libx11-6 libice6 libsm6 libfontconfig1 libssl3` plus the `libicu` package of your release, for example `libicu76`.
 - Fedora: `sudo dnf install libX11 libICE libSM fontconfig libicu openssl-libs`.
@@ -174,8 +180,6 @@ The exit code is 0 when the command completed, 1 when the operation failed and t
 | `src/Borea.Cli` | The command line, `borea`. A thin wrapper over the same services. |
 | `tests` | One test project per source project. |
 
-`Borea.Storage`, `Borea.Network` and `Borea.App` can be swapped out behind the interfaces in `Borea.Core`, which is how a different index, a different store or a different interface would plug in.
-
 ## Building
 
 Borea targets .NET 10. With the SDK installed:
@@ -194,11 +198,11 @@ You do not need to write C# to improve a translation. The [localization guide](d
 
 ## Credits
 
-- [MrJeranimo](https://github.com/MrJeranimo), original creator and developer of Borea.
+- [MrJeranimo](https://github.com/MrJeranimo), creator and a maintainer of Borea, its architecture and direction.
 - [Maximilian-Nesslauer](https://github.com/Maximilian-Nesslauer), the content index and its RFCs, and most of the App and the CLI as they are today.
 - [averageksp](https://github.com/averageksp), App features, testing, and the content index listings.
 - [PlazmaBoltz](https://github.com/PlazmaBoltz), the first interface and the themes.
-- [renancamm](https://github.com/renancamm), beik on Discord, the interface design in Figma.
+- [renancamm](https://github.com/renancamm) (beik), UI/UX work for the App interface.
 
 And everyone who reported a bug, tested a build or listed a mod.
 
