@@ -227,6 +227,10 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string UpdateChannelDev => Resources.UpdateChannelDev;
 
+    public string SettingsNewsLabel => Resources.SettingsNewsLabel;
+
+    public string SettingsFetchAnnouncements => Resources.SettingsFetchAnnouncements;
+
     public string SettingsReleaseChannelLabel => Resources.SettingsReleaseChannelLabel;
 
     public string SettingsReleaseChannelHint => Resources.SettingsReleaseChannelHint;
@@ -353,6 +357,8 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string FormatGamePatchNotesCapped(int count)
         => string.Format(CultureInfo.CurrentCulture, Resources.GamePatchNotesCappedFormat, count);
+
+    public string AnnouncementOpenLink => Resources.AnnouncementOpenLink;
 
     public string SystemDefaultRegionalFormat => Resources.SystemDefaultRegionalFormat;
 

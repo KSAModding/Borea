@@ -74,14 +74,17 @@ internal sealed class ViewModelHarness : IDisposable
             harness.Services = await harness.BuildServicesAsync();
         }
 
-        var preferences = (await harness.Services.AppPreferences.GetAsync(MainViewModel.BundledThemeNames)).Preferences;
+        var preferences = await harness.Services.AppPreferences.GetAsync(MainViewModel.BundledThemeNames);
         harness.ViewModel = new MainViewModel(
             harness.Localization,
             new RegionalFormatService(harness.Localization),
             harness.Services.AppPreferences,
-            preferences,
+            preferences.Preferences,
             harness.Services,
-            async () => harness.Services = await harness.BuildServicesAsync());
+            async () => harness.Services = await harness.BuildServicesAsync())
+        {
+            PreferencesLoadStatus = preferences.Status,
+        };
         await harness.ViewModel.LoadAsync();
         if (waitForDetection)
             await harness.ViewModel.WhenGameDetectedAsync();
@@ -102,6 +105,7 @@ internal sealed class ViewModelHarness : IDisposable
         ViewModel?.WhenUpdateCheckedAsync().GetAwaiter().GetResult();
         ViewModel?.WhenGameBuildCheckedAsync().GetAwaiter().GetResult();
         ViewModel?.WhenNewerGamePatchNotesLoadedAsync().GetAwaiter().GetResult();
+        ViewModel?.WhenAnnouncementsCheckedAsync().GetAwaiter().GetResult();
         ViewModel?.WhenReleaseChannelSavedAsync().GetAwaiter().GetResult();
         ViewModel?.WhenContentUpdatesCheckedAsync().GetAwaiter().GetResult();
         ViewModel?.WhenPlaytimeLoadedAsync().GetAwaiter().GetResult();
