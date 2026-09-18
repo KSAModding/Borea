@@ -88,6 +88,21 @@ public sealed class BoreaServicesTests : IDisposable
     }
 
     [Fact]
+    public async Task BuildAsync_SavedLibraryFolder_RootsOnlyInstancesAndBackupsThere()
+    {
+        var library = Path.Combine(_tempRoot, "Library");
+        await SaveAsync(new BoreaSettings(gameDirectoryPath: null, libraryFolderPath: library));
+
+        using var services = await BoreaServices.BuildAsync(_tempRoot);
+
+        Assert.Equal(Path.Combine(library, "Instances"), services.Paths.GetInstancesRoot());
+        Assert.Equal(Path.Combine(library, "Backups"), services.Paths.GetBackupsRoot());
+        Assert.Equal(Path.Combine(_tempRoot, "borea-settings.toml"), services.Paths.GetBoreaSettingsPath());
+        Assert.Equal(Path.Combine(_tempRoot, "active-instance.toml"), services.Paths.GetActiveInstancePointerPath());
+        Assert.StartsWith(_tempRoot + Path.DirectorySeparatorChar + "Loaders", services.Paths.GetLoadersRoot());
+    }
+
+    [Fact]
     public async Task Images_LoadingFromAuthorHostsOff_ServesNoUncachedImageAndWritesNothing()
     {
         using var services = await BoreaServices.BuildAsync(_tempRoot);
@@ -153,6 +168,7 @@ public sealed class BoreaServicesTests : IDisposable
         Assert.IsType<FileLoaderAdopter>(services.LoaderAdopter);
         Assert.IsType<FileLoaderUninstaller>(services.LoaderUninstaller);
         Assert.IsType<GameDirectoryChanger>(services.GameDirectoryChanger);
+        Assert.IsType<LibraryFolderChanger>(services.LibraryFolderChanger);
         Assert.IsType<LoaderLauncher>(Assert.IsType<LastPlayedLauncher>(Assert.IsType<LoggingLauncher>(services.Launcher).Inner).Inner);
         Assert.IsType<FileModUninstaller>(Assert.IsType<LoggingModUninstaller>(services.Uninstaller).Inner);
         Assert.IsType<FileModInstaller>(Assert.IsType<LoggingModInstaller>(services.Installer).Inner);

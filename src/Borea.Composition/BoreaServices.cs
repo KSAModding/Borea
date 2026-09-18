@@ -84,6 +84,9 @@ public sealed class BoreaServices : IDisposable
 
     public required IGameDirectoryChanger GameDirectoryChanger { get; init; }
 
+    /// <summary>Moves the Instances and Backups folders. Build the services again after a change.</summary>
+    public required ILibraryFolderChanger LibraryFolderChanger { get; init; }
+
     public required IAppPreferencesRepository AppPreferences { get; init; }
 
     public required ITaskHistoryRepository TaskHistory { get; init; }
@@ -170,6 +173,9 @@ public sealed class BoreaServices : IDisposable
     /// <summary>Listing images, verified against their records, from the cache or the author hosts.</summary>
     public required IContentImageSource Images { get; init; }
 
+    /// <summary>The games this process started, which every graph built by a public overload shares.</summary>
+    private static readonly RunningLaunches ProcessLaunches = new();
+
     private BoreaServices(HttpClient http)
     {
         _http = http;
@@ -195,7 +201,7 @@ public sealed class BoreaServices : IDisposable
 
     /// <summary>Builds the services like the overload above, with log lines marked by <paramref name="logSource"/>.</summary>
     public static Task<BoreaServices> BuildAsync(string? boreaRoot, BoreaLogSource logSource, CancellationToken cancellationToken = default)
-        => BuildCoreAsync(boreaRoot, logSource, httpHandler: null, fallbackRepository: null, installCandidates: null, cancellationToken);
+        => BuildCoreAsync(boreaRoot, logSource, httpHandler: null, fallbackRepository: null, installCandidates: null, ProcessLaunches, cancellationToken);
 
     internal static Task<BoreaServices> BuildAsync(
         string? boreaRoot,
@@ -207,6 +213,8 @@ public sealed class BoreaServices : IDisposable
     /// <param name="processStarter">Starts the launchers' processes. Null starts real ones.</param>
     /// <param name="images">Serves listing images. Null fetches them from the author hosts.</param>
     /// <param name="sharedProfileRoot">The game's own profile. Null means the one in My Games.</param>
+    /// <param name="isGameProcessRunning">Whether a KSA or StarMap process runs. Null looks for one.</param>
+    /// <param name="isOtherBoreaRunning">Whether another Borea App or command runs. Null looks for one.</param>
     internal static Task<BoreaServices> BuildAsync(
         string? boreaRoot,
         HttpMessageHandler httpHandler,
@@ -215,12 +223,14 @@ public sealed class BoreaServices : IDisposable
         CancellationToken cancellationToken = default,
         IProcessStarter? processStarter = null,
         IContentImageSource? images = null,
-        string? sharedProfileRoot = null)
+        string? sharedProfileRoot = null,
+        Func<bool>? isGameProcessRunning = null,
+        Func<bool>? isOtherBoreaRunning = null)
     {
         ArgumentNullException.ThrowIfNull(httpHandler);
         ArgumentNullException.ThrowIfNull(fallbackRepository);
         ArgumentNullException.ThrowIfNull(installCandidates);
-        return BuildCoreAsync(boreaRoot, BoreaLogSource.App, httpHandler, fallbackRepository, installCandidates, cancellationToken, processStarter, images, sharedProfileRoot);
+        return BuildCoreAsync(boreaRoot, BoreaLogSource.App, httpHandler, fallbackRepository, installCandidates, new RunningLaunches(), cancellationToken, processStarter, images, sharedProfileRoot, isGameProcessRunning, isOtherBoreaRunning);
     }
 
     private static async Task<BoreaServices> BuildCoreAsync(
@@ -229,10 +239,13 @@ public sealed class BoreaServices : IDisposable
         HttpMessageHandler? httpHandler,
         IModRepository? fallbackRepository,
         IInstallCandidateSource? installCandidates,
+        RunningLaunches launches,
         CancellationToken cancellationToken,
         IProcessStarter? processStarter = null,
         IContentImageSource? images = null,
-        string? sharedProfileRoot = null)
+        string? sharedProfileRoot = null,
+        Func<bool>? isGameProcessRunning = null,
+        Func<bool>? isOtherBoreaRunning = null)
     {
         // the settings file lives under Borea's own root and needs no
         // game path to be found, so a provider without one reads it.
@@ -246,7 +259,7 @@ public sealed class BoreaServices : IDisposable
             pair => pair.Key,
             pair => pair.Value.DirectoryPath,
             ModIds.Comparer);
-        var paths = new GamePathProvider(settings.GameDirectoryPath, loaderDirectories, boreaRoot, sharedProfileRoot);
+        var paths = new GamePathProvider(settings.GameDirectoryPath, loaderDirectories, boreaRoot, sharedProfileRoot, settings.LibraryFolderPath);
         var log = new FileBoreaLog(paths, logSource);
 
         // Network. Every service that talks to a remote host is built here on the
@@ -287,6 +300,8 @@ public sealed class BoreaServices : IDisposable
         var foreignModAdopter = new FileForeignModAdopter(paths, instances, contentIndex);
         var foreignModReleaseMatcher = new FileForeignModReleaseMatcher(paths, downloader, foreignModAdopter, indexSnapshots);
         var installPlanner = new LoggingInstallPlanner(new RepositoryInstallPlanner(new ModDependencyResolver(), settings.ReleaseChannel), log);
+        var launcher = new LoggingLauncher(new LastPlayedLauncher(new LoaderLauncher(paths, processStarter ?? new ProcessStarter(), launches), instances), log);
+        var defaultLibraryFolder = Path.GetDirectoryName(bootstrapPaths.GetInstancesRoot())!;
 
         return new BoreaServices(http)
         {
@@ -295,6 +310,7 @@ public sealed class BoreaServices : IDisposable
             Log = log,
             SettingsRepository = settingsRepository,
             GameDirectoryChanger = new GameDirectoryChanger(settingsRepository, mods, loaderConfiguration),
+            LibraryFolderChanger = new LibraryFolderChanger(settingsRepository, paths, defaultLibraryFolder, launcher, instances, isGameProcessRunning, isOtherBoreaRunning),
             AppPreferences = new FileAppPreferencesRepository(paths),
             TaskHistory = new FileTaskHistoryRepository(paths),
             Instances = instances,
@@ -323,7 +339,7 @@ public sealed class BoreaServices : IDisposable
             LoaderInstaller = new FileLoaderInstaller(paths, downloader, settingsRepository, loaderConfiguration),
             LoaderAdopter = loaderAdopter,
             LoaderUninstaller = new FileLoaderUninstaller(settingsRepository),
-            Launcher = new LoggingLauncher(new LastPlayedLauncher(new LoaderLauncher(paths, processStarter ?? new ProcessStarter()), instances), log),
+            Launcher = launcher,
             SharedProfileLauncher = new LoggingSharedProfileLauncher(new SharedProfileLauncher(paths, processStarter ?? new ProcessStarter()), log),
             LatestVersion = new LatestVersionPing(http),
             ReleaseCheck = new BoreaReleaseCheck(http),
