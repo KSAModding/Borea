@@ -116,16 +116,28 @@
             <FontFamily x:Key="Font.Sans">avares://Borea.App/Assets/Fonts#IBM Plex Sans</FontFamily>
             <FontFamily x:Key="Font.Mono">avares://Borea.App/Assets/Fonts#IBM Plex Mono</FontFamily>
 
-            <!-- Fluent's ToggleSwitch reads these for its on state -->
+            <!-- Fluent's ToggleSwitch and ComboBox read these for their fills and borders -->
+            <SolidColorBrush x:Key="ToggleSwitchFillOff" Color="{DynamicResource Color.Window}" />
+            <SolidColorBrush x:Key="ToggleSwitchFillOffPointerOver" Color="{DynamicResource Color.Window}" />
+            <SolidColorBrush x:Key="ToggleSwitchFillOffPressed" Color="{DynamicResource Color.Window}" />
+            <SolidColorBrush x:Key="ToggleSwitchStrokeOff" Color="{DynamicResource Color.Window}" />
+            <SolidColorBrush x:Key="ToggleSwitchStrokeOffPointerOver" Color="{DynamicResource Color.BorderStrong}" />
+            <SolidColorBrush x:Key="ToggleSwitchStrokeOffPressed" Color="{DynamicResource Color.BorderStrong}" />
+            <SolidColorBrush x:Key="ToggleSwitchStrokeOffDisabled" Color="{DynamicResource Color.Window}" />
             <SolidColorBrush x:Key="ToggleSwitchFillOn" Color="{DynamicResource Color.Accent}" />
             <SolidColorBrush x:Key="ToggleSwitchFillOnPointerOver" Color="{DynamicResource Color.Accent}" />
             <SolidColorBrush x:Key="ToggleSwitchFillOnPressed" Color="{DynamicResource Color.Accent}" />
             <SolidColorBrush x:Key="ToggleSwitchStrokeOn" Color="{DynamicResource Color.Accent}" />
             <SolidColorBrush x:Key="ToggleSwitchStrokeOnPointerOver" Color="{DynamicResource Color.Accent}" />
             <SolidColorBrush x:Key="ToggleSwitchStrokeOnPressed" Color="{DynamicResource Color.Accent}" />
+            <SolidColorBrush x:Key="ToggleSwitchStrokeOnDisabled" Color="{DynamicResource Color.Window}" />
             <SolidColorBrush x:Key="ToggleSwitchKnobFillOn" Color="{DynamicResource Color.SurfaceHeader}" />
             <SolidColorBrush x:Key="ToggleSwitchKnobFillOnPointerOver" Color="{DynamicResource Color.SurfaceHeader}" />
             <SolidColorBrush x:Key="ToggleSwitchKnobFillOnPressed" Color="{DynamicResource Color.SurfaceHeader}" />
+            <SolidColorBrush x:Key="ComboBoxBorderBrush" Color="{DynamicResource Color.Window}" />
+            <SolidColorBrush x:Key="ComboBoxBorderBrushPointerOver" Color="{DynamicResource Color.BorderStrong}" />
+            <SolidColorBrush x:Key="ComboBoxBorderBrushPressed" Color="{DynamicResource Color.BorderStrong}" />
+            <SolidColorBrush x:Key="ComboBoxBorderBrushDisabled" Color="{DynamicResource Color.Window}" />
         </ResourceDictionary>
     </Application.Resources>
 
