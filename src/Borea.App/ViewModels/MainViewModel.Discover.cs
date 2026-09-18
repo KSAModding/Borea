@@ -468,8 +468,8 @@ public partial class MainViewModel
     }
 
     /// <summary>
-    /// The "Installed" chip names the instance the row acts on, because the
-    /// same mod may sit in another instance too.
+    /// The Installed chip and the Discover checkmark name the instance the row
+    /// acts on, because the same mod may sit in another instance too.
     /// </summary>
     public string? InstalledInText => ActiveInstance is null ? null : Localization.FormatDiscoverInstalledIn(ActiveInstance.Name);
 
@@ -604,6 +604,7 @@ public sealed partial class DiscoverItem : ObservableObject, IInstallRow
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CanInstall))]
     [NotifyPropertyChangedFor(nameof(CanRemove))]
+    [NotifyCanExecuteChangedFor(nameof(BeginRemoveCommand))]
     private bool _isInstalled;
 
     [ObservableProperty]
@@ -628,6 +629,7 @@ public sealed partial class DiscoverItem : ObservableObject, IInstallRow
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CanRemove))]
+    [NotifyCanExecuteChangedFor(nameof(BeginRemoveCommand))]
     private bool _isRemoving;
 
     /// <summary>
@@ -655,13 +657,16 @@ public sealed partial class DiscoverItem : ObservableObject, IInstallRow
 
     public bool CanRemove => IsInstalled && !IsRemoving && RemoveBlockedText is null;
 
-    /// <summary>Why the remove button is disabled, for its tooltip. Null when the mod can be removed.</summary>
+    /// <summary>Why Remove is disabled, shown next to it. Null when the mod can be removed.</summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CanRemove))]
     [NotifyPropertyChangedFor(nameof(RemoveToolTip))]
+    [NotifyCanExecuteChangedFor(nameof(BeginRemoveCommand))]
     private string? _removeBlockedText;
 
     public string RemoveToolTip => RemoveBlockedText ?? _owner.Localization.ContentRemove;
+
+    public string InstalledAutomationName => _owner.Localization.FormatDiscoverInstalledMod(Name);
 
     /// <param name="indexEntry">The snapshot entry of an index listing, for its download count and the date of its first release. Null for any other listing.</param>
     public DiscoverItem(MainViewModel owner, ModMetadata listing, ContentIndexListing? indexEntry = null)
@@ -733,6 +738,7 @@ public sealed partial class DiscoverItem : ObservableObject, IInstallRow
         OnPropertyChanged(nameof(UpdatedText));
         OnPropertyChanged(nameof(UpdatedDateText));
         OnPropertyChanged(nameof(ConfirmInstallText));
+        OnPropertyChanged(nameof(InstalledAutomationName));
     }
 
     [RelayCommand]
@@ -747,7 +753,7 @@ public sealed partial class DiscoverItem : ObservableObject, IInstallRow
     [RelayCommand]
     private void CancelInstall() => MainViewModel.CancelInstall(this);
 
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(CanRemove))]
     private void BeginRemove()
     {
         InstallError = null;

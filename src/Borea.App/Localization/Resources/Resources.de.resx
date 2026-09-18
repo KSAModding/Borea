@@ -1047,6 +1047,9 @@
   <data name="DiscoverInstalledInFormat" xml:space="preserve">
     <value>Installiert in {0}</value>
   </data>
+  <data name="DiscoverInstalledModFormat" xml:space="preserve">
+    <value>{0} ist installiert</value>
+  </data>
   <data name="PackModCountFormat" xml:space="preserve">
     <value>Mods: {0}</value>
   </data>
