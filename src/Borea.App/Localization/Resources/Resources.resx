@@ -81,6 +81,108 @@
   <data name="SettingsLoadImagesFromAuthorHostsHint" xml:space="preserve">
     <value>Each image request tells the author's host your IP address.</value>
   </data>
+  <data name="SettingsLibraryFolderLabel" xml:space="preserve">
+    <value>Library folder</value>
+  </data>
+  <data name="SettingsLibraryFolderHint" xml:space="preserve">
+    <value>Borea keeps your instances and backups here. Moving the library takes them along. Settings, caches, logs and mod loaders stay in Borea's own folder.</value>
+  </data>
+  <data name="SettingsLibraryFolderUseDefault" xml:space="preserve">
+    <value>Move back to the default folder</value>
+  </data>
+  <data name="SettingsLibraryFolderMove" xml:space="preserve">
+    <value>Move library...</value>
+  </data>
+  <data name="SettingsLibraryFolderMoveToolTip" xml:space="preserve">
+    <value>Pick a new folder for your instances and backups. Borea moves them there.</value>
+  </data>
+  <data name="SettingsLibraryFolderOpenToolTip" xml:space="preserve">
+    <value>Shows this folder in your file manager. Nothing moves.</value>
+  </data>
+  <data name="SettingsLibraryFolderPickerTitle" xml:space="preserve">
+    <value>Choose the new library folder</value>
+  </data>
+  <data name="LibraryFolderMoving" xml:space="preserve">
+    <value>Changing the library folder...</value>
+  </data>
+  <data name="LibraryFolderCopyingFormat" xml:space="preserve">
+    <value>Copying {0} of {1} files ({2} of {3} MB)</value>
+  </data>
+  <data name="LibraryFolderRemovingOldFiles" xml:space="preserve">
+    <value>Deleting the old files...</value>
+  </data>
+  <data name="LibraryFolderMovedFormat" xml:space="preserve">
+    <value>Moved the instances and backups to {0}.</value>
+  </data>
+  <data name="LibraryFolderMovedOldFilesRemainFormat" xml:space="preserve">
+    <value>Moved the instances and backups to {0}. Borea could not delete every old file in {1}.</value>
+  </data>
+  <data name="LibraryFolderAdoptedFormat" xml:space="preserve">
+    <value>{0} already held a library. Borea uses it now.</value>
+  </data>
+  <data name="LibraryFolderCancelled" xml:space="preserve">
+    <value>The move was cancelled. The library stays where it was.</value>
+  </data>
+  <data name="LibraryFolderFailedFormat" xml:space="preserve">
+    <value>The library folder did not change: {0}</value>
+  </data>
+  <data name="LibraryFolderReloadFailedFormat" xml:space="preserve">
+    <value>The library is now in {0}, but Borea could not reload it: {1} Restart Borea.</value>
+  </data>
+  <data name="LibraryFolderNotAbsoluteFormat" xml:space="preserve">
+    <value>{0} is not an absolute path.</value>
+  </data>
+  <data name="LibraryFolderIsFileFormat" xml:space="preserve">
+    <value>{0} is a file, not a folder.</value>
+  </data>
+  <data name="LibraryFolderCurrent" xml:space="preserve">
+    <value>The library is already in this folder.</value>
+  </data>
+  <data name="LibraryFolderInsideCurrentFormat" xml:space="preserve">
+    <value>Choose a folder outside the current library folder {0}.</value>
+  </data>
+  <data name="LibraryFolderContainsCurrentFormat" xml:space="preserve">
+    <value>Choose a folder that does not contain the current library folder {0}.</value>
+  </data>
+  <data name="LibraryFolderInsideBoreaFolderFormat" xml:space="preserve">
+    <value>Choose Borea's own folder {0} itself or a folder outside it.</value>
+  </data>
+  <data name="LibraryFolderContainsBoreaFolderFormat" xml:space="preserve">
+    <value>Choose a folder that does not contain Borea's own folder {0}.</value>
+  </data>
+  <data name="LibraryFolderInsideGame" xml:space="preserve">
+    <value>Choose a folder outside the game folder.</value>
+  </data>
+  <data name="LibraryFolderInsideProfile" xml:space="preserve">
+    <value>Choose a folder outside My Games/Kitten Space Agency.</value>
+  </data>
+  <data name="LibraryFolderNotWritableFormat" xml:space="preserve">
+    <value>Borea cannot create or write to {0}.</value>
+  </data>
+  <data name="LibraryFolderTargetNotEmptyFormat" xml:space="preserve">
+    <value>{0} already has an Instances or Backups folder without an instance Borea can read. Choose another folder.</value>
+  </data>
+  <data name="LibraryFolderBothHaveInstancesFormat" xml:space="preserve">
+    <value>Both {0} and {1} hold instances. Borea does not merge libraries.</value>
+  </data>
+  <data name="LibraryFolderGameRunning" xml:space="preserve">
+    <value>The game is running. Close the game first, then change the library folder.</value>
+  </data>
+  <data name="LibraryFolderBoreaRunning" xml:space="preserve">
+    <value>Another Borea window or command is running. Close it first, then change the library folder.</value>
+  </data>
+  <data name="LibraryFolderInstanceBusy" xml:space="preserve">
+    <value>An instance is being changed. Wait until that finishes, then try again.</value>
+  </data>
+  <data name="LibraryFolderFileLockedFormat" xml:space="preserve">
+    <value>{0} is open in another program. Close the game first, then change the library folder.</value>
+  </data>
+  <data name="LibraryFolderWaitForTask" xml:space="preserve">
+    <value>Wait until Borea finishes the current task, then change the library folder.</value>
+  </data>
+  <data name="LibraryFolderBusy" xml:space="preserve">
+    <value>Borea is moving the library folder. Try again when the move is done.</value>
+  </data>
   <data name="UpdateAvailable" xml:space="preserve">
     <value>A newer Borea release is available:</value>
   </data>

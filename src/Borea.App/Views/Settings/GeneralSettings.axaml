@@ -49,6 +49,23 @@
                 <ToggleSwitch Grid.Column="2" Classes="switch" IsChecked="{Binding LoadImagesFromAuthorHosts}" AutomationProperties.Name="{Binding Localization.SettingsLoadImagesFromAuthorHosts}" />
             </Grid>
             <TextBlock Classes="body-sm secondary" Text="{Binding Localization.SettingsLoadImagesFromAuthorHostsHint}" TextWrapping="Wrap" Width="340" HorizontalAlignment="Left" />
+            <TextBlock Classes="heading-md" Text="{Binding Localization.SettingsLibraryFolderLabel}" Margin="0,18,0,0" />
+            <TextBlock Classes="body-sm secondary" Text="{Binding Localization.SettingsLibraryFolderHint}" TextWrapping="Wrap" Width="340" HorizontalAlignment="Left" />
+            <SelectableTextBlock Classes="body-md" Text="{Binding LibraryFolder}" TextWrapping="Wrap" Margin="0,4,0,0" />
+            <WrapPanel ItemSpacing="8" LineSpacing="4" Margin="0,6,0,0" IsEnabled="{Binding !IsChangingLibraryFolder}">
+                <Button Classes="text" Content="{Binding Localization.SettingsLibraryFolderMove}" Click="BrowseLibraryFolder" ToolTip.Tip="{Binding Localization.SettingsLibraryFolderMoveToolTip}" AutomationProperties.HelpText="{Binding Localization.SettingsLibraryFolderMoveToolTip}" />
+                <Button Classes="text" Content="{Binding Localization.LibraryOpenFolder}" Command="{Binding OpenLibraryFolderCommand}" ToolTip.Tip="{Binding Localization.SettingsLibraryFolderOpenToolTip}" AutomationProperties.HelpText="{Binding Localization.SettingsLibraryFolderOpenToolTip}" />
+                <Button Classes="text" Content="{Binding Localization.SettingsLibraryFolderUseDefault}" Command="{Binding UseDefaultLibraryFolderCommand}" IsVisible="{Binding !IsDefaultLibraryFolder}" />
+            </WrapPanel>
+            <StackPanel Spacing="4" Margin="0,8,0,0" IsVisible="{Binding IsChangingLibraryFolder}">
+                <ProgressBar Height="6" Value="{Binding LibraryFolderProgress}" Maximum="100" Foreground="{StaticResource Brush.Accent}" />
+                <Grid ColumnDefinitions="*,8,Auto">
+                    <TextBlock Classes="body-sm secondary" Text="{Binding LibraryFolderProgressText}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                    <Button Grid.Column="2" Classes="text" Content="{Binding Localization.LibraryCancel}" Command="{Binding CancelLibraryFolderChangeCommand}" IsVisible="{Binding CanCancelLibraryFolderChange}" />
+                </Grid>
+            </StackPanel>
+            <TextBlock Classes="body-md secondary" Text="{Binding LibraryFolderMessage}" TextWrapping="Wrap" IsVisible="{Binding LibraryFolderMessage, Converter={x:Static ObjectConverters.IsNotNull}}" />
+            <TextBlock Classes="body-md danger" Text="{Binding LibraryFolderError}" TextWrapping="Wrap" IsVisible="{Binding LibraryFolderError, Converter={x:Static ObjectConverters.IsNotNull}}" />
         </StackPanel>
     </ScrollViewer>
 </UserControl>

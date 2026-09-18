@@ -81,6 +81,108 @@
   <data name="SettingsLoadImagesFromAuthorHostsHint" xml:space="preserve">
     <value>Jede Bildanfrage teilt dem Server des Autors deine IP-Adresse mit.</value>
   </data>
+  <data name="SettingsLibraryFolderLabel" xml:space="preserve">
+    <value>Bibliotheksordner</value>
+  </data>
+  <data name="SettingsLibraryFolderHint" xml:space="preserve">
+    <value>Hier speichert Borea deine Instanzen und Sicherungen. Beim Verschieben der Bibliothek nimmt Borea sie mit. Einstellungen, Caches, Logs und Mod-Loader bleiben in Boreas eigenem Ordner.</value>
+  </data>
+  <data name="SettingsLibraryFolderUseDefault" xml:space="preserve">
+    <value>Zurück in den Standardordner verschieben</value>
+  </data>
+  <data name="SettingsLibraryFolderMove" xml:space="preserve">
+    <value>Bibliothek verschieben...</value>
+  </data>
+  <data name="SettingsLibraryFolderMoveToolTip" xml:space="preserve">
+    <value>Wähle einen neuen Ordner für deine Instanzen und Sicherungen. Borea verschiebt sie dorthin.</value>
+  </data>
+  <data name="SettingsLibraryFolderOpenToolTip" xml:space="preserve">
+    <value>Zeigt diesen Ordner in deinem Dateimanager. Nichts wird verschoben.</value>
+  </data>
+  <data name="SettingsLibraryFolderPickerTitle" xml:space="preserve">
+    <value>Neuen Bibliotheksordner wählen</value>
+  </data>
+  <data name="LibraryFolderMoving" xml:space="preserve">
+    <value>Bibliotheksordner wird geändert...</value>
+  </data>
+  <data name="LibraryFolderCopyingFormat" xml:space="preserve">
+    <value>{0} von {1} Dateien kopiert ({2} von {3} MB)</value>
+  </data>
+  <data name="LibraryFolderRemovingOldFiles" xml:space="preserve">
+    <value>Alte Dateien werden gelöscht...</value>
+  </data>
+  <data name="LibraryFolderMovedFormat" xml:space="preserve">
+    <value>Instanzen und Sicherungen nach {0} verschoben.</value>
+  </data>
+  <data name="LibraryFolderMovedOldFilesRemainFormat" xml:space="preserve">
+    <value>Instanzen und Sicherungen nach {0} verschoben. Borea konnte nicht alle alten Dateien in {1} löschen.</value>
+  </data>
+  <data name="LibraryFolderAdoptedFormat" xml:space="preserve">
+    <value>{0} enthielt schon eine Bibliothek. Borea verwendet sie jetzt.</value>
+  </data>
+  <data name="LibraryFolderCancelled" xml:space="preserve">
+    <value>Das Verschieben wurde abgebrochen. Die Bibliothek bleibt, wo sie war.</value>
+  </data>
+  <data name="LibraryFolderFailedFormat" xml:space="preserve">
+    <value>Der Bibliotheksordner wurde nicht geändert: {0}</value>
+  </data>
+  <data name="LibraryFolderReloadFailedFormat" xml:space="preserve">
+    <value>Die Bibliothek ist jetzt in {0}, aber Borea konnte sie nicht neu laden: {1} Starte Borea neu.</value>
+  </data>
+  <data name="LibraryFolderNotAbsoluteFormat" xml:space="preserve">
+    <value>{0} ist kein absoluter Pfad.</value>
+  </data>
+  <data name="LibraryFolderIsFileFormat" xml:space="preserve">
+    <value>{0} ist eine Datei, kein Ordner.</value>
+  </data>
+  <data name="LibraryFolderCurrent" xml:space="preserve">
+    <value>Die Bibliothek ist schon in diesem Ordner.</value>
+  </data>
+  <data name="LibraryFolderInsideCurrentFormat" xml:space="preserve">
+    <value>Wähle einen Ordner außerhalb des aktuellen Bibliotheksordners {0}.</value>
+  </data>
+  <data name="LibraryFolderContainsCurrentFormat" xml:space="preserve">
+    <value>Wähle einen Ordner, der den aktuellen Bibliotheksordner {0} nicht enthält.</value>
+  </data>
+  <data name="LibraryFolderInsideBoreaFolderFormat" xml:space="preserve">
+    <value>Wähle Boreas eigenen Ordner {0} selbst oder einen Ordner außerhalb davon.</value>
+  </data>
+  <data name="LibraryFolderContainsBoreaFolderFormat" xml:space="preserve">
+    <value>Wähle einen Ordner, der Boreas eigenen Ordner {0} nicht enthält.</value>
+  </data>
+  <data name="LibraryFolderInsideGame" xml:space="preserve">
+    <value>Wähle einen Ordner außerhalb des Spielordners.</value>
+  </data>
+  <data name="LibraryFolderInsideProfile" xml:space="preserve">
+    <value>Wähle einen Ordner außerhalb von My Games/Kitten Space Agency.</value>
+  </data>
+  <data name="LibraryFolderNotWritableFormat" xml:space="preserve">
+    <value>Borea kann {0} nicht erstellen oder nicht darin schreiben.</value>
+  </data>
+  <data name="LibraryFolderTargetNotEmptyFormat" xml:space="preserve">
+    <value>{0} hat schon einen Ordner Instances oder Backups ohne eine Instanz, die Borea lesen kann. Wähle einen anderen Ordner.</value>
+  </data>
+  <data name="LibraryFolderBothHaveInstancesFormat" xml:space="preserve">
+    <value>{0} und {1} enthalten beide Instanzen. Borea führt keine Bibliotheken zusammen.</value>
+  </data>
+  <data name="LibraryFolderGameRunning" xml:space="preserve">
+    <value>Das Spiel läuft. Schließe zuerst das Spiel und ändere dann den Bibliotheksordner.</value>
+  </data>
+  <data name="LibraryFolderBoreaRunning" xml:space="preserve">
+    <value>Ein anderes Borea-Fenster oder ein Borea-Befehl läuft noch. Schließe es zuerst und ändere dann den Bibliotheksordner.</value>
+  </data>
+  <data name="LibraryFolderInstanceBusy" xml:space="preserve">
+    <value>Eine Instanz wird gerade geändert. Warte, bis das fertig ist, und versuche es dann erneut.</value>
+  </data>
+  <data name="LibraryFolderFileLockedFormat" xml:space="preserve">
+    <value>{0} ist in einem anderen Programm geöffnet. Schließe zuerst das Spiel und ändere dann den Bibliotheksordner.</value>
+  </data>
+  <data name="LibraryFolderWaitForTask" xml:space="preserve">
+    <value>Warte, bis Borea die aktuelle Aufgabe beendet hat, und ändere dann den Bibliotheksordner.</value>
+  </data>
+  <data name="LibraryFolderBusy" xml:space="preserve">
+    <value>Borea verschiebt gerade den Bibliotheksordner. Versuche es erneut, wenn das fertig ist.</value>
+  </data>
   <data name="UpdateAvailable" xml:space="preserve">
     <value>Eine neuere Borea-Version ist verfügbar:</value>
   </data>
