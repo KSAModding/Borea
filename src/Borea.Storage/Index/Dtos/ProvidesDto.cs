@@ -1,4 +1,5 @@
-﻿using System.Text.Json.Serialization;
+﻿using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace Borea.Storage.Index.Dtos;
 
@@ -27,4 +28,11 @@ public sealed class ProvidesDto
     /// </summary>
     [JsonPropertyName("instance")]
     public InstanceDto? Instance { get; set; }
+
+    /// <summary>
+    /// What the mod-loader starts per platform. Values stay raw, so a platform
+    /// name Borea does not know is never read.
+    /// </summary>
+    [JsonPropertyName("platform")]
+    public Dictionary<string, JsonElement>? Platform { get; set; }
 }

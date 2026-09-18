@@ -1,4 +1,6 @@
+using Borea.Core.Game;
 using Borea.Core.Index;
+using Borea.Core.ModLoaders;
 using Borea.Storage.Index;
 using System.Runtime.ExceptionServices;
 using System.Text.Json;
@@ -627,7 +629,7 @@ public sealed class SnapshotParserTests
         Assert.Contains(reason, rejected.Reason);
     }
 
-    private static string LoaderAuthoredJson(string instance) => $$"""
+    private static string LoaderAuthoredJson(string instance, string platform = "null") => $$"""
         {
             "spec_version": 1,
             "id": "test-loader",
@@ -639,9 +641,74 @@ public sealed class SnapshotParserTests
             "compatibility": { "game_min": "2026.7.4.2131" },
             "links": { "forums": "https://forums.example/thread/2" },
             "install": { "target": "standalone" },
-            "provides": { "launch": "loader.exe", "instance": {{instance}} }
+            "provides": { "launch": "loader.exe", "instance": {{instance}}, "platform": {{platform}} }
         }
         """;
+
+    private static string PlatformLoader(string platform) =>
+        $$"""{ "id": "test-loader", "authored": {{LoaderAuthoredJson("""{ "flag": "-InstancePath" }""", platform)}} }""";
+
+    [Fact]
+    public void Parse_PlatformTable_IsReadIntoTheLoaderProvides()
+    {
+        var loader = PlatformLoader("""{ "linux": { "runtime": "dotnet", "launch": "bin/loader.dll" }, "macos": { "launch": "loader-mac" } }""");
+
+        var result = SnapshotParser.Parse(Snapshot(loader, ""));
+
+        var platforms = Assert.Single(result.ValidListings).Authored!.Provides!.Platforms;
+        Assert.Equal(2, platforms.Count);
+        Assert.Equal("bin/loader.dll", platforms[OsPlatform.Linux].Launch);
+        Assert.Equal(LoaderRuntime.Dotnet, platforms[OsPlatform.Linux].Runtime);
+        Assert.Equal("loader-mac", platforms[OsPlatform.MacOs].Launch);
+        Assert.Null(platforms[OsPlatform.MacOs].Runtime);
+        Assert.Empty(platforms[OsPlatform.MacOs].UnknownKeys);
+    }
+
+    [Fact]
+    public void Parse_UnknownNamesInThePlatformTable_KeepTheListing()
+    {
+        var loader = PlatformLoader("""{ "linux": { "launch": "loader.dll", "runtime": "mono", "arch": "arm64" }, "freebsd": 42, "Windows": { "launch": 1 } }""");
+
+        var result = SnapshotParser.Parse(Snapshot(loader, ""));
+
+        Assert.Empty(result.MalformedListings);
+        var entry = Assert.Single(Assert.Single(result.ValidListings).Authored!.Provides!.Platforms);
+        Assert.Equal(OsPlatform.Linux, entry.Key);
+        Assert.Equal(LoaderRuntime.Unknown, entry.Value.Runtime);
+        Assert.Equal("mono", entry.Value.RuntimeName);
+        Assert.Equal("arch", Assert.Single(entry.Value.UnknownKeys));
+    }
+
+    [Theory]
+    [InlineData("null")]
+    [InlineData("""{ "linux": null }""")]
+    public void Parse_NullPlatformTableOrEntry_IsReadAsAbsent(string platform)
+    {
+        var result = SnapshotParser.Parse(Snapshot(PlatformLoader(platform), ""));
+
+        Assert.Empty(result.MalformedListings);
+        Assert.Empty(Assert.Single(result.ValidListings).Authored!.Provides!.Platforms);
+    }
+
+    [Theory]
+    [InlineData("\"linux\"", "platform")]
+    [InlineData("""{ "linux": "loader.dll" }""", "linux")]
+    [InlineData("""{ "linux": {} }""", "linux")]
+    [InlineData("""{ "linux": { "runtime": "dotnet" } }""", "linux")]
+    [InlineData("""{ "linux": { "launch": 42 } }""", "linux")]
+    [InlineData("""{ "linux": { "launch": "loader.dll", "runtime": 1 } }""", "linux")]
+    [InlineData("""{ "linux": { "launch": "../loader.dll" } }""", "anchor")]
+    public void Parse_InvalidPlatformTableBesideValidListing_KeepsValidSibling(string platform, string reason)
+    {
+        var valid = $$"""{ "id": "test-mod", "authored": {{ValidAuthoredJson}} }""";
+
+        var result = SnapshotParser.Parse(Snapshot($"{PlatformLoader(platform)}, {valid}", ""));
+
+        Assert.Equal("test-mod", Assert.Single(result.ValidListings).Id);
+        var rejected = Assert.Single(result.MalformedListings);
+        Assert.Equal("test-loader", rejected.Id);
+        Assert.Contains(reason, rejected.Reason);
+    }
 
     [Fact]
     public void Parse_MalformedFrozenFieldBesideValidRelease_KeepsValidSibling()

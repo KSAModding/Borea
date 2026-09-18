@@ -307,7 +307,8 @@ public static class DtoMapper
             contentDir: dto.ContentDirectory is null ? null : MapInstallAnchor(dto.ContentDirectory),
             contentPath: dto.ContentPath,
             configure: dto.Configure is null ? null : MapConfigure(dto.Configure),
-            instance: dto.Instance is null ? null : MapInstance(dto.Instance));
+            instance: dto.Instance is null ? null : MapInstance(dto.Instance),
+            platforms: dto.Platform is null ? null : MapPlatforms(dto.Platform));
 
     private static LoaderConfigure MapConfigure(ConfigureDto dto)
     {
@@ -323,6 +324,37 @@ public static class DtoMapper
             throw new FormatException($"The loader instance table has unknown member '{dto.UnknownFields.Keys.First()}'.");
 
         return new InstanceHandover(dto.Flag, dto.Variable);
+    }
+
+    private static Dictionary<OsPlatform, LoaderPlatformLaunch> MapPlatforms(Dictionary<string, JsonElement> platforms)
+    {
+        var mapped = new Dictionary<OsPlatform, LoaderPlatformLaunch>();
+        foreach (var (name, element) in platforms)
+        {
+            OsPlatform? platform = name switch
+            {
+                "windows" => OsPlatform.Windows,
+                "linux" => OsPlatform.Linux,
+                "macos" => OsPlatform.MacOs,
+                _ => null,
+            };
+            if (platform is null || element.ValueKind == JsonValueKind.Null)
+                continue;
+
+            PlatformLaunchDto dto;
+            try
+            {
+                dto = element.Deserialize<PlatformLaunchDto>(IndexJsonOptions.Value)!;
+            }
+            catch (JsonException ex)
+            {
+                throw new FormatException($"The loader platform entry '{name}' is not valid. {ex.Message}", ex);
+            }
+
+            mapped[platform.Value] = new LoaderPlatformLaunch(dto.Launch, dto.Runtime, dto.UnknownFields?.Keys.ToList());
+        }
+
+        return mapped;
     }
 
     private static DownloadInfo MapDownloadInfo(DownloadInfoDto dto) =>
