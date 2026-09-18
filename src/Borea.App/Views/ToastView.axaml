@@ -1,0 +1,26 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Borea.App.ViewModels"
+             x:Class="Borea.App.Views.ToastView"
+             x:DataType="vm:ToastItem">
+    <Border Classes="card" Background="{StaticResource Brush.SurfaceRaised}" BorderBrush="{StaticResource Brush.BorderStrong}" BorderThickness="1" Padding="16,12,8,12">
+        <Grid ColumnDefinitions="Auto,12,*,8,Auto" RowDefinitions="Auto,Auto">
+            <Panel VerticalAlignment="Top">
+                <Path Classes="icon" Data="{StaticResource Icon.CheckCircle}" Stroke="{StaticResource Brush.Compatible}" IsVisible="{Binding IsFinished}" />
+                <Path Classes="icon" Data="{StaticResource Icon.StopCircle}" Stroke="{StaticResource Brush.Untested}" IsVisible="{Binding IsStopped}" />
+                <Path Classes="icon" Data="{StaticResource Icon.XCircle}" Stroke="{StaticResource Brush.Incompatible}" IsVisible="{Binding IsFailed}" />
+            </Panel>
+            <StackPanel Grid.Column="2" Spacing="4" Margin="0,3,0,0">
+                <TextBlock Classes="heading-sm" Text="{Binding Message}" TextWrapping="Wrap" />
+                <TextBlock Classes="body-sm secondary" Text="{Binding Detail}" TextWrapping="Wrap" MaxLines="3" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Detail}" IsVisible="{Binding HasDetail}" />
+            </StackPanel>
+            <Button Grid.Column="4" Classes="icon" Margin="0,-4,0,0" VerticalAlignment="Top" Command="{Binding CloseCommand}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ModalClose}">
+                <Path Classes="icon size-16" Data="{StaticResource Icon.Close}" />
+            </Button>
+            <StackPanel Grid.Row="1" Grid.Column="2" Grid.ColumnSpan="3" Orientation="Horizontal" Spacing="8" Margin="0,12,0,0" IsVisible="{Binding HasActions}">
+                <Button Classes="text" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LaunchShowDetails}" Command="{Binding ShowDetailsCommand}" IsVisible="{Binding CanShowDetails}" />
+                <Button Classes="text" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ToastOpenInstance}" Command="{Binding OpenInstanceCommand}" IsVisible="{Binding CanOpenInstance}" />
+            </StackPanel>
+        </Grid>
+    </Border>
+</UserControl>

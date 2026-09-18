@@ -77,6 +77,10 @@
         <views:TasksDrawer Grid.Column="1" IsVisible="{Binding IsTasksOpen}" />
     </Grid>
 
+    <StackPanel VerticalAlignment="Bottom">
+    <!-- toasts of the tasks that ended, above the error bar -->
+    <views:ToastHost Margin="96,0,24,16" HorizontalAlignment="Right" />
+
     <!-- last-resort error bar -->
     <Border Background="{StaticResource Brush.DangerSoft}" BorderBrush="{StaticResource Brush.Danger}" BorderThickness="1" CornerRadius="12" Padding="16,10" Margin="96,0,24,16" VerticalAlignment="Bottom" IsVisible="{Binding UnexpectedError, Converter={x:Static ObjectConverters.IsNotNull}}">
         <Grid ColumnDefinitions="*,12,Auto">
@@ -86,6 +90,7 @@
             </Button>
         </Grid>
     </Border>
+    </StackPanel>
 
     <!-- modal: new instance, and rename instance -->
     <views:InstanceNameModal IsVisible="{Binding IsNameModalOpen}" />

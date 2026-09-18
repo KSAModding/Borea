@@ -1,3 +1,5 @@
+using System;
+using System.ComponentModel;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
@@ -8,6 +10,8 @@ namespace Borea.App.Views;
 
 public partial class TasksDrawer : UserControl
 {
+    private MainViewModel? _viewModel;
+
     public TasksDrawer()
     {
         InitializeComponent();
@@ -28,6 +32,24 @@ public partial class TasksDrawer : UserControl
                 Scroller.Focus();
             }, DispatcherPriority.Loaded);
         }
+    }
+
+    protected override void OnDataContextChanged(EventArgs e)
+    {
+        base.OnDataContextChanged(e);
+        if (_viewModel is not null)
+            _viewModel.PropertyChanged -= OnViewModelChanged;
+
+        _viewModel = DataContext as MainViewModel;
+        if (_viewModel is not null)
+            _viewModel.PropertyChanged += OnViewModelChanged;
+    }
+
+    private void OnViewModelChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        // a drawer that just opened has no row in place before the next layout pass
+        if (e.PropertyName == nameof(MainViewModel.TaskInView) && _viewModel?.TaskInView is { } task)
+            Dispatcher.UIThread.Post(() => HistoryList.ContainerFromItem(task)?.BringIntoView(), DispatcherPriority.Loaded);
     }
 
     private void OnKeyDown(object? sender, KeyEventArgs e)
