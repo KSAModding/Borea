@@ -8,9 +8,8 @@
     <!-- Discover: the list, with the filter panel along the right edge -->
     <Grid>
         <ScrollViewer>
-            <!-- the list keeps the center line of Home and Library, and moves left only when the panel needs the room -->
-            <views:PageBodyPanel>
-                <StackPanel Margin="32,42,32,32">
+            <views:PageBodyPanel HasSidePanel="True">
+                <StackPanel>
                     <StackPanel Orientation="Horizontal" Spacing="4" Height="24">
                         <Path Classes="icon" Data="{StaticResource Icon.Compass}" />
                         <TextBlock Classes="label-lg" Text="{Binding Localization.PageDiscoverHeading}" VerticalAlignment="Center" />
@@ -18,14 +17,14 @@
                     <ContentControl Content="{Binding}" ContentTemplate="{StaticResource GameSetupBanner}" IsVisible="{Binding NeedsGameSetup}" />
 
                     <!-- c/inner-nav-bar -->
-                    <Border Background="{StaticResource Brush.SurfaceHeader}" CornerRadius="100" Padding="6" Margin="0,16,0,0" HorizontalAlignment="Stretch">
-                        <StackPanel Orientation="Horizontal" Spacing="16">
+                    <Border Background="{StaticResource Brush.SurfaceHeader}" CornerRadius="24" Padding="6" Margin="0,16,0,0" HorizontalAlignment="Stretch">
+                        <WrapPanel ItemSpacing="16" LineSpacing="6">
                             <Button Classes="tab" Classes.active="{Binding IsModsTab}" Content="{Binding Localization.DiscoverTabMods}" Command="{Binding ShowDiscoverModsCommand}" />
                             <Button Classes="tab" Classes.active="{Binding IsLoadersTab}" Content="{Binding Localization.DiscoverTabLoaders}" Command="{Binding ShowDiscoverLoadersCommand}" />
                             <Button Classes="tab" Classes.active="{Binding IsModpacksTab}" Content="{Binding Localization.DiscoverTabModpacks}" Command="{Binding ShowDiscoverModpacksCommand}" />
                             <Button Classes="tab" Content="{Binding Localization.DiscoverTabVehicles}" IsEnabled="False" />
                             <Button Classes="tab" Content="{Binding Localization.DiscoverTabSaves}" IsEnabled="False" />
-                        </StackPanel>
+                        </WrapPanel>
                     </Border>
 
                     <!-- stale index -->
@@ -159,11 +158,11 @@
                     </TextBox>
                     <StackPanel Spacing="8">
                         <Grid ColumnDefinitions="*,16,Auto">
-                            <TextBlock Classes="heading-sm" Text="{Binding Localization.DiscoverHideInstalled}" VerticalAlignment="Center" />
+                            <TextBlock Classes="heading-sm" Text="{Binding Localization.DiscoverHideInstalled}" TextWrapping="Wrap" VerticalAlignment="Center" />
                             <ToggleSwitch Grid.Column="2" Classes="switch" IsChecked="{Binding HideInstalled}" AutomationProperties.Name="{Binding Localization.DiscoverHideInstalled}" />
                         </Grid>
                         <Grid ColumnDefinitions="*,16,Auto">
-                            <TextBlock Classes="heading-sm" Text="{Binding Localization.DiscoverHideIncompatible}" VerticalAlignment="Center" />
+                            <TextBlock Classes="heading-sm" Text="{Binding Localization.DiscoverHideIncompatible}" TextWrapping="Wrap" VerticalAlignment="Center" />
                             <ToggleSwitch Grid.Column="2" Classes="switch" IsChecked="{Binding HideIncompatible}" AutomationProperties.Name="{Binding Localization.DiscoverHideIncompatible}" />
                         </Grid>
                     </StackPanel>

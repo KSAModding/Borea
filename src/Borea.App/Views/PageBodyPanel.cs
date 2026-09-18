@@ -5,32 +5,64 @@ using Avalonia.Controls;
 namespace Borea.App.Views;
 
 /// <summary>
-/// Lays out the body of a page that has the filter or detail panel along its
-/// right edge. While the window is wide enough, the body keeps the center line
-/// that Home and Library use. When it is not, the body moves left only as far
-/// as it has to, so it never runs under the panel. On a narrow window the gap
-/// to the panel closes first, and only then does the body get narrower.
+/// Stacks the sections of a page body with the responsive side margin. The
+/// margin grows in steps with the page width, and the body stops growing at the
+/// width of the large step, with the extra space on both sides. With the side
+/// panel, the body fills the area left of the panel the same way.
 /// </summary>
 public sealed class PageBodyPanel : Panel
 {
-    /// <summary>The 700 of the design in #8, plus the side margins of the body.</summary>
-    public const double BodyWidth = 764;
+    public static readonly StyledProperty<bool> HasSidePanelProperty =
+        AvaloniaProperty.Register<PageBodyPanel, bool>(nameof(HasSidePanel));
 
-    /// <summary>The panel, 300 wide, with its margin to the window edge.</summary>
-    public const double PanelWidth = 324;
+    public const double NavigationRailWidth = 80;
 
-    /// <summary>The widest extra gap between the body and the panel, which gives the layout of the design at 1280.</summary>
-    public const double Gap = 56;
+    public const double SmallMargin = 24;
+
+    public const double RegularMargin = 64;
+
+    public const double LargeMargin = 128;
+
+    public const double RegularFromWidth = 1280 - NavigationRailWidth;
+
+    public const double LargeFromWidth = 1600 - NavigationRailWidth;
+
+    public const double MaxBodyWidth = LargeFromWidth - 2 * LargeMargin;
+
+    public const double PageTopMargin = 42;
+
+    public const double PageBottomMargin = 32;
+
+    public const double SidePanelWidth = 300;
+
+    /// <summary>The space between the side panel and the edges of the page.</summary>
+    public const double SidePanelInset = 24;
+
+    public const double MaxSidePanelBodyWidth = MaxBodyWidth - SidePanelWidth - SidePanelInset;
+
+    public static Thickness SidePanelMargin { get; } = new(0, SidePanelInset, SidePanelInset, SidePanelInset);
+
+    static PageBodyPanel()
+    {
+        AffectsMeasure<PageBodyPanel>(HasSidePanelProperty);
+    }
+
+    /// <summary>Keeps the body left of the side panel that the page shows along its right edge.</summary>
+    public bool HasSidePanel
+    {
+        get => GetValue(HasSidePanelProperty);
+        set => SetValue(HasSidePanelProperty, value);
+    }
 
     protected override Size MeasureOverride(Size availableSize)
     {
-        var available = double.IsInfinity(availableSize.Width) ? BodyWidth + Gap + PanelWidth : availableSize.Width;
-        var (_, width) = Place(available);
-        var height = 0.0;
+        var available = double.IsInfinity(availableSize.Width) ? MaxBodyWidth + 2 * LargeMargin : availableSize.Width;
+        var (_, width) = Place(available, HasSidePanel);
+        var height = PageTopMargin + PageBottomMargin;
         foreach (var child in Children)
         {
-            child.Measure(new Size(width, availableSize.Height));
-            height = Math.Max(height, child.DesiredSize.Height);
+            child.Measure(new Size(width, double.PositiveInfinity));
+            height += child.DesiredSize.Height;
         }
 
         return new Size(available, height);
@@ -38,19 +70,29 @@ public sealed class PageBodyPanel : Panel
 
     protected override Size ArrangeOverride(Size finalSize)
     {
-        var (left, width) = Place(finalSize.Width);
+        var (left, width) = Place(finalSize.Width, HasSidePanel);
+        var top = PageTopMargin;
         foreach (var child in Children)
-            child.Arrange(new Rect(left, 0, width, finalSize.Height));
+        {
+            child.Arrange(new Rect(left, top, width, child.DesiredSize.Height));
+            top += child.DesiredSize.Height;
+        }
 
         return finalSize;
     }
 
+    /// <summary>The side margin of a page that is <paramref name="available"/> wide.</summary>
+    internal static double SideMargin(double available) =>
+        available >= LargeFromWidth ? LargeMargin
+        : available >= RegularFromWidth ? RegularMargin
+        : SmallMargin;
+
     /// <summary>Where the body goes on a page that is <paramref name="available"/> wide.</summary>
-    internal static (double Left, double Width) Place(double available)
+    internal static (double Left, double Width) Place(double available, bool hasSidePanel)
     {
-        var width = Math.Clamp(available - PanelWidth, 0, BodyWidth);
-        var gap = Math.Clamp(available - PanelWidth - width, 0, Gap);
-        var left = Math.Min((available - width) / 2, available - PanelWidth - gap - width);
-        return (Math.Max(0, left), width);
+        var margin = SideMargin(available);
+        var area = hasSidePanel ? available - SidePanelWidth - SidePanelInset : available;
+        var width = Math.Clamp(area - 2 * margin, 0, hasSidePanel ? MaxSidePanelBodyWidth : MaxBodyWidth);
+        return (Math.Max(0, (area - width) / 2), width);
     }
 }

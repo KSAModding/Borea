@@ -219,12 +219,12 @@
                 <Grid Grid.Column="2" RowDefinitions="Auto,*,Auto">
                     <Grid ColumnDefinitions="*,16,Auto">
                         <StackPanel Spacing="4">
-                            <StackPanel Orientation="Horizontal" Spacing="8">
-                                <Button Classes="plain" Command="{Binding OpenCommand}">
-                                    <TextBlock Classes="heading-md" Text="{Binding Name}" />
+                            <DockPanel>
+                                <Button DockPanel.Dock="Left" Classes="plain" Command="{Binding OpenCommand}">
+                                    <TextBlock Classes="heading-md" Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
                                 </Button>
-                                <TextBlock Classes="body-sm secondary" Text="{Binding AuthorsText}" VerticalAlignment="Center" />
-                            </StackPanel>
+                                <TextBlock Classes="body-sm secondary" Text="{Binding AuthorsText}" TextTrimming="CharacterEllipsis" Margin="8,0,0,0" VerticalAlignment="Center" />
+                            </DockPanel>
                             <TextBlock Classes="body-md secondary" Text="{Binding Abstract}" TextWrapping="Wrap" TextTrimming="CharacterEllipsis" MaxLines="2" LineHeight="18" />
                         </StackPanel>
                         <!-- c/button-icon-add -->
@@ -329,12 +329,12 @@
                 <Grid Grid.Column="2" RowDefinitions="Auto,*,Auto">
                     <Grid ColumnDefinitions="*,16,Auto">
                         <StackPanel Spacing="4">
-                            <StackPanel Orientation="Horizontal" Spacing="8">
-                                <Button Classes="plain" Command="{Binding OpenCommand}">
-                                    <TextBlock Classes="heading-md" Text="{Binding Name}" />
+                            <DockPanel>
+                                <Button DockPanel.Dock="Left" Classes="plain" Command="{Binding OpenCommand}">
+                                    <TextBlock Classes="heading-md" Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
                                 </Button>
-                                <TextBlock Classes="body-sm secondary" Text="{Binding AuthorsText}" VerticalAlignment="Center" />
-                            </StackPanel>
+                                <TextBlock Classes="body-sm secondary" Text="{Binding AuthorsText}" TextTrimming="CharacterEllipsis" Margin="8,0,0,0" VerticalAlignment="Center" />
+                            </DockPanel>
                             <TextBlock Classes="body-md secondary" Text="{Binding Abstract}" TextWrapping="Wrap" TextTrimming="CharacterEllipsis" MaxLines="2" LineHeight="18" />
                         </StackPanel>
                         <Panel Grid.Column="2" VerticalAlignment="Top">

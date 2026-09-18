@@ -174,6 +174,9 @@
   <data name="LibraryImportModList" xml:space="preserve">
     <value>Import modlist</value>
   </data>
+  <data name="LibraryMoreActions" xml:space="preserve">
+    <value>More actions</value>
+  </data>
   <data name="LibraryDuplicate" xml:space="preserve">
     <value>Duplicate</value>
   </data>
