@@ -261,6 +261,69 @@
   <data name="TaskRetryModMissing" xml:space="preserve">
     <value>Diese Mod ist nicht mehr in der Instanz.</value>
   </data>
+  <data name="ToastOpenInstance" xml:space="preserve">
+    <value>Instanz öffnen</value>
+  </data>
+  <data name="ToastAddedFormat" xml:space="preserve">
+    <value>{0} zu {1} hinzugefügt</value>
+  </data>
+  <data name="ToastUpdatedFormat" xml:space="preserve">
+    <value>{0} in {2} auf {1} aktualisiert</value>
+  </data>
+  <data name="ToastUpdatedAllOneFormat" xml:space="preserve">
+    <value>1 Mod in {0} aktualisiert</value>
+  </data>
+  <data name="ToastUpdatedAllFormat" xml:space="preserve">
+    <value>{0} Mods in {1} aktualisiert</value>
+  </data>
+  <data name="ToastRemovedFormat" xml:space="preserve">
+    <value>{0} aus {1} entfernt</value>
+  </data>
+  <data name="ToastLoaderInstalledFormat" xml:space="preserve">
+    <value>{0} {1} installiert</value>
+  </data>
+  <data name="ToastInstanceCreatedFormat" xml:space="preserve">
+    <value>Instanz {0} erstellt</value>
+  </data>
+  <data name="ToastReplacedFormat" xml:space="preserve">
+    <value>{0} in {1} ersetzt</value>
+  </data>
+  <data name="ToastInstallStoppedFormat" xml:space="preserve">
+    <value>Installation von {0} gestoppt</value>
+  </data>
+  <data name="ToastUpdateStoppedFormat" xml:space="preserve">
+    <value>Aktualisierung von {0} gestoppt</value>
+  </data>
+  <data name="ToastUpdateAllStoppedFormat" xml:space="preserve">
+    <value>Aktualisierung der Mods in {0} gestoppt</value>
+  </data>
+  <data name="ToastStoppedInstalledFormat" xml:space="preserve">
+    <value>{0} von {1} Mods installiert</value>
+  </data>
+  <data name="ToastStoppedUpdatedFormat" xml:space="preserve">
+    <value>{0} von {1} Mods aktualisiert</value>
+  </data>
+  <data name="ToastIndexRefreshFailed" xml:space="preserve">
+    <value>Der Inhaltsindex konnte nicht aktualisiert werden</value>
+  </data>
+  <data name="ToastInstallFailedFormat" xml:space="preserve">
+    <value>{0} konnte nicht installiert werden</value>
+  </data>
+  <data name="ToastUpdateFailedFormat" xml:space="preserve">
+    <value>{0} konnte nicht aktualisiert werden</value>
+  </data>
+  <data name="ToastUpdateAllFailedFormat" xml:space="preserve">
+    <value>Die Mods in {0} konnten nicht aktualisiert werden</value>
+  </data>
+  <data name="ToastRemoveFailedFormat" xml:space="preserve">
+    <value>{0} konnte nicht entfernt werden</value>
+  </data>
+  <data name="ToastCreateInstanceFailedFormat" xml:space="preserve">
+    <value>Instanz {0} konnte nicht erstellt werden</value>
+  </data>
+  <data name="ToastReplaceFailedFormat" xml:space="preserve">
+    <value>{0} konnte nicht ersetzt werden</value>
+  </data>
   <data name="InstanceTabContent" xml:space="preserve">
     <value>Inhalt</value>
   </data>
