@@ -1038,6 +1038,12 @@
   <data name="ContentSizeHeader" xml:space="preserve">
     <value>Size</value>
   </data>
+  <data name="ContentSizeOnDisk" xml:space="preserve">
+    <value>Size on disk</value>
+  </data>
+  <data name="InstanceSizeToolTip" xml:space="preserve">
+    <value>Size of the instance folder on disk</value>
+  </data>
   <data name="ContentShowVersions" xml:space="preserve">
     <value>Show</value>
   </data>

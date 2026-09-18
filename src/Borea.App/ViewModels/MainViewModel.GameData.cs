@@ -5,7 +5,6 @@ using System.Globalization;
 using System.IO;
 using System.Threading.Tasks;
 using Borea.Core.Instances;
-using Borea.Core.Planning;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -104,26 +103,6 @@ public partial class MainViewModel
     {
         var rounded = value < 10 ? Math.Floor(value * 10) / 10 : Math.Floor(value);
         return rounded.ToString(value < 10 ? "0.#" : "0", CultureInfo.CurrentCulture) + unit;
-    }
-
-    /// <summary>What a plan downloads, summed over its operations, or null when no release states a size.</summary>
-    internal static string? PlanSizeText(InstallPlan? plan)
-    {
-        if (plan is null)
-            return null;
-
-        long total = 0;
-        var known = false;
-        foreach (var operation in plan.Operations)
-        {
-            if (operation.Release.Download.SizeBytes is { } size)
-            {
-                total += size;
-                known = true;
-            }
-        }
-
-        return known ? SizeText(total) : null;
     }
 }
 

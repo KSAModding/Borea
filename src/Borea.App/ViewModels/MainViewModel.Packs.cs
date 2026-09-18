@@ -577,7 +577,9 @@ public sealed partial class PackItem : ObservableObject, IInstallProgressRow
     /// <summary>The warnings about the pack itself, without those of <see cref="PendingPlan"/>.</summary>
     internal IReadOnlyList<string> PendingReasons { get; set; } = [];
 
-    internal InstallPlan? PendingPlan { get; set; }
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ConfirmInstallText))]
+    private InstallPlan? _pendingPlan;
 
     public ObservableCollection<PackResultItem> Results { get; } = [];
 

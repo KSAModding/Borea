@@ -1038,6 +1038,12 @@
   <data name="ContentSizeHeader" xml:space="preserve">
     <value>Größe</value>
   </data>
+  <data name="ContentSizeOnDisk" xml:space="preserve">
+    <value>Größe auf der Festplatte</value>
+  </data>
+  <data name="InstanceSizeToolTip" xml:space="preserve">
+    <value>Größe des Instanzordners auf der Festplatte</value>
+  </data>
   <data name="ContentShowVersions" xml:space="preserve">
     <value>Anzeigen</value>
   </data>

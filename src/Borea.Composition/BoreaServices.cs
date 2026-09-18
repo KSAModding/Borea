@@ -101,6 +101,8 @@ public sealed class BoreaServices : IDisposable
 
     public required IPlaytimeService Playtime { get; init; }
 
+    public required IInstanceSizeReader InstanceSizes { get; init; }
+
     public required IModListFormat ModListFormat { get; init; }
 
     public required IModStateRepository ModState { get; init; }
@@ -318,6 +320,7 @@ public sealed class BoreaServices : IDisposable
             GameSaves = new FileGameSaveStore(paths),
             GameLog = new FileGameLogReader(paths),
             Playtime = new FilePlaytimeService(paths),
+            InstanceSizes = new FileInstanceSizeReader(paths),
             ModListFormat = new TomlModListFormat(),
             ModState = modState,
             ModFavorites = new FileModFavoritesRepository(paths),

@@ -426,7 +426,9 @@ public sealed partial class VersionItem : ObservableObject, IInstallRow
     [NotifyPropertyChangedFor(nameof(ConfirmInstallText))]
     private string? _installWarning;
 
-    public InstallPlan? PendingPlan { get; set; }
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ConfirmInstallText))]
+    private InstallPlan? _pendingPlan;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsConfirmingInstall))]

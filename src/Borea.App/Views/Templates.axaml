@@ -173,6 +173,10 @@
                     <TextBlock Classes="body-sm danger" Text="{Binding InstallError}" ToolTip.Tip="{Binding InstallError}" TextTrimming="CharacterEllipsis" IsVisible="{Binding InstallError, Converter={x:Static ObjectConverters.IsNotNull}}" />
                 </StackPanel>
                 <StackPanel Grid.Column="4" Orientation="Horizontal" Spacing="24" VerticalAlignment="Center">
+                    <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center" IsVisible="{Binding SizeText, Converter={x:Static ObjectConverters.IsNotNull}}" ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ContentSizeOnDisk}">
+                        <Path Classes="icon size-16" Data="{StaticResource Icon.HardDrive}" />
+                        <TextBlock Classes="label-md" Text="{Binding SizeText}" VerticalAlignment="Center" />
+                    </StackPanel>
                     <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
                         <Path Classes="icon size-16" Data="{StaticResource Icon.GitCommit}" />
                         <TextBlock Classes="label-md" Text="{Binding Version}" VerticalAlignment="Center" />

@@ -677,6 +677,10 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string ContentSizeHeader => Resources.ContentSizeHeader;
 
+    public string ContentSizeOnDisk => Resources.ContentSizeOnDisk;
+
+    public string InstanceSizeToolTip => Resources.InstanceSizeToolTip;
+
     public string ContentShowVersions => Resources.ContentShowVersions;
 
     public string ContentNoDescription => Resources.ContentNoDescription;

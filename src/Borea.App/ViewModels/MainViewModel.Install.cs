@@ -276,6 +276,26 @@ public partial class MainViewModel
         return PlanSizeText(plan) is { } size ? $"{text} ({size})" : text;
     }
 
+    /// <summary>What a plan downloads, summed over its operations, or null when no release states a size.</summary>
+    internal static string? PlanSizeText(InstallPlan? plan)
+    {
+        if (plan is null)
+            return null;
+
+        long total = 0;
+        var known = false;
+        foreach (var operation in plan.Operations)
+        {
+            if (operation.Release.Download.SizeBytes is { } size)
+            {
+                total += size;
+                known = true;
+            }
+        }
+
+        return known ? SizeText(total) : null;
+    }
+
     private void HoldPlan(IInstallRow row, InstallPlan plan)
     {
         row.PendingPlan = plan;
