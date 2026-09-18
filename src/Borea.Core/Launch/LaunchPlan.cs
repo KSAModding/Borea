@@ -56,9 +56,10 @@ public sealed class LaunchPlan
     /// <summary>
     /// The launch target under the loader directory with the separator
     /// translated (RFC 0035 rule 2), started in that directory (rule 5), with
-    /// the instance root handed over the way the loader takes it.
+    /// the instance root handed over the way the loader takes it, and then
+    /// <paramref name="arguments"/>.
     /// </summary>
-    public static LaunchPlan ForLoader(string loaderDirectory, string launch, InstanceHandover handover, string instanceRoot)
+    public static LaunchPlan ForLoader(string loaderDirectory, string launch, InstanceHandover handover, string instanceRoot, IReadOnlyList<string>? arguments = null)
     {
         if (handover is null)
             throw new ArgumentNullException(nameof(handover));
@@ -68,13 +69,17 @@ public sealed class LaunchPlan
         var target = RelativePaths.Contained(launch, nameof(launch))
             ?? throw new ArgumentException("The launch target is required.", nameof(launch));
 
+        var extra = arguments ?? Array.Empty<string>();
+        if (handover.FlagIn(extra) is { } flag)
+            throw new ArgumentException($"The argument '{flag}' would hand over a second instance root.", nameof(arguments));
+
         var executable = Path.Combine(directory, target.Replace('/', Path.DirectorySeparatorChar));
-        var arguments = handover.Flag is null ? Array.Empty<string>() : new[] { handover.Flag, root };
+        var handoverArguments = handover.Flag is null ? Array.Empty<string>() : new[] { handover.Flag, root };
         var variables = new Dictionary<string, string>();
         if (handover.Variable is not null)
             variables[handover.Variable] = root;
 
-        return new LaunchPlan(executable, arguments, directory, variables);
+        return new LaunchPlan(executable, handoverArguments.Concat(extra).ToArray(), directory, variables);
     }
 
     /// <summary>The same start through a host that takes the assembly as its first argument.</summary>

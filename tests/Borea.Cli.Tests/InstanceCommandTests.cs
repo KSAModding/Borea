@@ -111,6 +111,106 @@ public sealed class InstanceCommandTests : IDisposable
 
         Assert.Equal(0, run.ExitCode);
         Assert.Contains("Last played: never", run.Output);
+        Assert.Contains("Launch arguments: none", run.Output);
+    }
+
+    [Fact]
+    public async Task SetArguments_SavesTheArgumentsAfterTheSeparator_WhichShowAndArgumentsPrint()
+    {
+        await _host.RunAsync("instance", "create", "Alpha");
+
+        var set = await _host.RunAsync("instance", "set-arguments", "alpha", "--json", "--", "-windowed", "say \"hi\"", "--json");
+        var human = await _host.RunAsync("instance", "arguments", "Alpha");
+        var json = await _host.RunAsync("instance", "arguments", "Alpha", "--json");
+        var show = await _host.RunAsync("instance", "show", "Alpha");
+        var showJson = await _host.RunAsync("instance", "show", "Alpha", "--json");
+
+        Assert.Equal(0, set.ExitCode);
+        Assert.Equal("Alpha", set.Json.GetProperty("name").GetString());
+        string[] expected = ["-windowed", "say \"hi\"", "--json"];
+        Assert.Equal(expected, set.Json.GetProperty("arguments").EnumerateArray().Select(argument => argument.GetString()));
+        Assert.Equal("-windowed \"say \\\"hi\\\"\" --json", human.Output.Trim());
+        Assert.Equal(expected, json.Json.GetProperty("arguments").EnumerateArray().Select(argument => argument.GetString()));
+        Assert.Contains("Launch arguments: -windowed \"say \\\"hi\\\"\" --json", show.Output);
+        Assert.Equal(expected, showJson.Json.GetProperty("launchArguments").EnumerateArray().Select(argument => argument.GetString()));
+        Assert.Equal(expected, Assert.Single(await new FileInstanceRepository(_host.Paths).GetAllAsync()).LaunchArguments);
+    }
+
+    [Fact]
+    public async Task ClearArguments_RemovesTheSavedArguments()
+    {
+        await _host.RunAsync("instance", "create", "Alpha");
+        await _host.RunAsync("instance", "set-arguments", "Alpha", "--", "-windowed");
+
+        var clear = await _host.RunAsync("instance", "clear-arguments", "Alpha");
+        var json = await _host.RunAsync("instance", "clear-arguments", "Alpha", "--json");
+        var human = await _host.RunAsync("instance", "arguments", "Alpha");
+
+        Assert.Equal(0, clear.ExitCode);
+        Assert.Contains("Removed the launch arguments of 'Alpha'.", clear.Output);
+        Assert.Empty(json.Json.GetProperty("arguments").EnumerateArray());
+        Assert.Contains("No launch arguments for 'Alpha'.", human.Output);
+        Assert.Empty(Assert.Single(await new FileInstanceRepository(_host.Paths).GetAllAsync()).LaunchArguments);
+    }
+
+    [Theory]
+    [InlineData]
+    [InlineData("--")]
+    public async Task SetArguments_NothingAfterTheSeparator_IsAUsageErrorThatPointsToClear(params string[] tail)
+    {
+        await _host.RunAsync("instance", "create", "Alpha");
+
+        var run = await _host.RunAsync(["instance", "set-arguments", "Alpha", .. tail]);
+
+        Assert.Equal(2, run.ExitCode);
+        Assert.Contains("clear-arguments", run.Error);
+    }
+
+    [Fact]
+    public async Task SetArguments_HandoverFlagOfAConfiguredLoader_SavesNothing()
+    {
+        await RecordStarMapAsync();
+        await _host.RunAsync("instance", "create", "Alpha");
+
+        var run = await _host.RunAsync("instance", "set-arguments", "Alpha", "--", "-windowed", "-instancepath", "D:/Other");
+
+        Assert.Equal(1, run.ExitCode);
+        Assert.Contains("'-instancepath'", run.Error);
+        Assert.Empty(Assert.Single(await new FileInstanceRepository(_host.Paths).GetAllAsync()).LaunchArguments);
+    }
+
+    [Fact]
+    public async Task SetArguments_ListingOfALoaderTimesOut_WarnsAndSaves()
+    {
+        await RecordStarMapAsync();
+        await _host.RunAsync("instance", "create", "Alpha");
+        _host.Mods.AvailableMods = _ => throw new TaskCanceledException("The request timed out.");
+
+        var run = await _host.RunAsync("instance", "set-arguments", "Alpha", "--", "-instancepath", "D:/Other");
+
+        Assert.Equal(0, run.ExitCode);
+        Assert.Contains("warning: The listing of StarMap could not be read, so Borea checks the arguments when the instance launches. The request timed out.", run.Error);
+        Assert.Equal(["-instancepath", "D:/Other"], Assert.Single(await new FileInstanceRepository(_host.Paths).GetAllAsync()).LaunchArguments);
+    }
+
+    [Fact]
+    public async Task SetArguments_WritesTheArgumentsToTheCliLog()
+    {
+        await _host.RunAsync("instance", "create", "Alpha");
+
+        await _host.RunAsync("instance", "set-arguments", "Alpha", "--", "-windowed", "a b");
+
+        var text = File.ReadAllText(Assert.Single(Directory.GetFiles(Path.Combine(_host.Root, "Logs"), "borea-*.log")));
+        Assert.Contains("[cli] Command: borea instance set-arguments Alpha -- -windowed \"a b\"", text);
+    }
+
+    [Fact]
+    public async Task Create_CommandWithoutArgumentsAfterTheSeparator_ParsesItAsBefore()
+    {
+        var run = await _host.RunAsync("instance", "create", "--", "-Name");
+
+        Assert.Equal(0, run.ExitCode);
+        Assert.Equal("-Name", Assert.Single(await new FileInstanceRepository(_host.Paths).GetAllAsync()).Name);
     }
 
     [Fact]
@@ -744,6 +844,13 @@ public sealed class InstanceCommandTests : IDisposable
             Array.Empty<ContentIndexPack>(),
             null,
             Array.Empty<ContentIndexDiagnostic>());
+
+    private async Task RecordStarMapAsync()
+    {
+        _host.Mods.Listings.Add(LoaderFixtures.Listing());
+        var loaderDirectory = LoaderCommandTests.CreateLoaderDirectory("StarMap", "not a program", _host.Root);
+        await _host.RunAsync("settings", "set", "loader", "StarMap", loaderDirectory);
+    }
 
     private async Task<Guid> CreateInstanceAsync(string name)
     {

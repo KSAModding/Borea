@@ -13,14 +13,14 @@ internal static class BoreaCli
     /// <summary>
     /// Builds the command tree. The services are built by <paramref name="services"/>.
     /// </summary>
-    public static RootCommand Build(Func<CancellationToken, Task<CliServices>> services)
+    private static RootCommand Build(Func<CancellationToken, Task<CliServices>> services, PassThroughArguments passThrough)
     {
         if (services is null)
             throw new ArgumentNullException(nameof(services));
 
         var root = new RootCommand("Borea, the content manager for Kitten Space Agency.");
         root.Subcommands.Add(SettingsCommand.Build(services));
-        root.Subcommands.Add(GameCommand.Build(services));
+        root.Subcommands.Add(GameCommand.Build(services, passThrough));
         root.Subcommands.Add(IndexCommand.Build(services));
         root.Subcommands.Add(SearchCommand.Build(services));
         root.Subcommands.Add(ShowCommand.Build(services));
@@ -28,11 +28,11 @@ internal static class BoreaCli
         root.Subcommands.Add(ModInstallCommands.BuildInstall(services));
         root.Subcommands.Add(ModInstallCommands.BuildRemove(services));
         root.Subcommands.Add(ModInstallCommands.BuildUpdate(services));
-        root.Subcommands.Add(InstanceCommand.Build(services));
+        root.Subcommands.Add(InstanceCommand.Build(services, passThrough));
         root.Subcommands.Add(ModStateCommands.BuildEnable(services));
         root.Subcommands.Add(ModStateCommands.BuildDisable(services));
         root.Subcommands.Add(LoaderCommand.Build(services));
-        root.Subcommands.Add(LaunchCommand.Build(services));
+        root.Subcommands.Add(LaunchCommand.Build(services, passThrough));
         return root;
     }
 
@@ -56,7 +56,8 @@ internal static class BoreaCli
         if (error is null)
             throw new ArgumentNullException(nameof(error));
 
-        var parseResult = Build(services).Parse(args);
+        var passThrough = new PassThroughArguments();
+        var parseResult = passThrough.Parse(Build(services, passThrough), args);
         // after Ctrl+C an install finishes the mod it extracts, which can take longer than the default of two seconds
         var configuration = new InvocationConfiguration { Output = output, Error = error, ProcessTerminationTimeout = TimeSpan.FromMinutes(1) };
         var exitCode = await parseResult.InvokeAsync(configuration, cancellationToken).ConfigureAwait(false);

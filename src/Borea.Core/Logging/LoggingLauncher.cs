@@ -16,7 +16,7 @@ public sealed class LoggingLauncher : ILauncher, IDisposable
         _log = log ?? throw new ArgumentNullException(nameof(log));
     }
 
-    public LaunchResult Launch(Instance instance, ModMetadata? loader)
+    public LaunchResult Launch(Instance instance, ModMetadata? loader, IReadOnlyList<string>? arguments = null)
     {
         ArgumentNullException.ThrowIfNull(instance);
 
@@ -24,7 +24,7 @@ public sealed class LoggingLauncher : ILauncher, IDisposable
         LaunchResult result;
         try
         {
-            result = Inner.Launch(instance, loader);
+            result = Inner.Launch(instance, loader, arguments);
         }
         catch (Exception exception)
         {
@@ -32,7 +32,7 @@ public sealed class LoggingLauncher : ILauncher, IDisposable
             throw;
         }
 
-        var plan = result.Plan is null ? "" : " " + Describe(result.Plan);
+        var plan = result.Plan is not null ? " " + Describe(result.Plan) : DescribeArguments(instance.LaunchArguments.Concat(arguments ?? []).ToList());
         _log.Write(result.Started
             ? $"Launch of {target} started process {result.ProcessId}.{plan}"
             : $"Launch of {target} did not start, {result.Outcome}: {result.Message}{plan}");
@@ -61,10 +61,13 @@ public sealed class LoggingLauncher : ILauncher, IDisposable
             disposable.Dispose();
     }
 
-    private static string Describe(LaunchPlan plan)
+    internal static string Describe(LaunchPlan plan)
     {
-        var arguments = plan.Arguments.Count == 0 ? "none" : string.Join(" ", plan.Arguments.Select(argument => $"\"{argument}\""));
+        var arguments = plan.Arguments.Count == 0 ? "none" : ArgumentLine.Join(plan.Arguments);
         var variables = plan.EnvironmentVariables.Count == 0 ? "none" : string.Join(" ", plan.EnvironmentVariables.Select(pair => $"{pair.Key}=\"{pair.Value}\""));
         return $"Executable: \"{plan.Executable}\". Arguments: {arguments}. Environment: {variables}. Working directory: \"{plan.WorkingDirectory}\".";
     }
+
+    private static string DescribeArguments(IReadOnlyList<string> arguments)
+        => arguments.Count == 0 ? "" : $" Arguments: {ArgumentLine.Join(arguments)}.";
 }

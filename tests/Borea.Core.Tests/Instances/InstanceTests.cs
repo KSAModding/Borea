@@ -15,6 +15,30 @@ public sealed class InstanceTests
         Assert.Equal("My Instance", instance.Name);
         Assert.False(instance.IsFavorite);
         Assert.Empty(instance.Mods);
+        Assert.Empty(instance.LaunchArguments);
+    }
+
+    [Fact]
+    public void SetLaunchArguments_KeepsACopyInOrder()
+    {
+        var instance = new Instance("My Instance", InstanceSource.Custom.Value);
+        var arguments = new List<string> { "-windowed", "a b", "" };
+
+        instance.SetLaunchArguments(arguments);
+        arguments.Add("-later");
+
+        Assert.Equal(["-windowed", "a b", ""], instance.LaunchArguments);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("a\0b")]
+    public void SetLaunchArguments_NullOrNullCharacter_ThrowsArgumentException(string? argument)
+    {
+        var instance = new Instance("My Instance", InstanceSource.Custom.Value);
+
+        Assert.Throws<ArgumentException>(() => instance.SetLaunchArguments(["-windowed", argument!]));
+        Assert.Empty(instance.LaunchArguments);
     }
 
     [Theory]

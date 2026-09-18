@@ -77,6 +77,7 @@
                                 <Button.Flyout>
                                     <MenuFlyout Placement="BottomEdgeAlignedRight">
                                         <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryRename}" Command="{Binding BeginRenameCommand}" />
+                                        <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryLaunchArguments}" Command="{Binding BeginEditLaunchArgumentsCommand}" />
                                         <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryOpenFolder}" Command="{Binding OpenFolderCommand}" />
                                         <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryDuplicate}" Command="{Binding DuplicateCommand}" />
                                         <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryExportModList}" Command="{Binding ExportModListCommand}" />

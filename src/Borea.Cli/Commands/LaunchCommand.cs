@@ -7,17 +7,18 @@ namespace Borea.Cli.Commands;
 
 internal static class LaunchCommand
 {
-    public static Command Build(Func<CancellationToken, Task<CliServices>> services)
+    public static Command Build(Func<CancellationToken, Task<CliServices>> services, PassThroughArguments passThrough)
     {
         var instance = ArgumentRules.Text("instance", "The instance's name, or its id when two names differ only in case.");
         var loaderId = ArgumentRules.OptionalContentId("loader-id", "The installed mod loader to use. Omit it to use the loader the mods need, or an installed loader that takes an instance when no mod needs one.");
         var json = ArgumentRules.Json();
-        var launch = new Command("launch", "Start one instance through an installed mod loader.");
+        var launch = new Command("launch", "Start one instance through an installed mod loader. Arguments after -- go to the loader and the game for this launch, after the saved launch arguments of the instance.");
         launch.Arguments.Add(instance);
         launch.Arguments.Add(loaderId);
         launch.Options.Add(json);
+        passThrough.Accept(launch);
 
-        launch.SetAction((parseResult, cancellationToken) => CommandRunner.RunAsync(parseResult, services, cancellationToken, async (cli, output, error, ct) =>
+        launch.SetAction((parseResult, cancellationToken) => CommandRunner.RunAsync(parseResult, passThrough, services, cancellationToken, async (cli, output, error, ct) =>
         {
             var target = await InstanceLookup
                 .ResolveAsync(cli.Instances, parseResult.GetRequiredValue(instance))
@@ -43,7 +44,7 @@ internal static class LaunchCommand
             }
 
             ct.ThrowIfCancellationRequested();
-            var result = cli.Launcher.Launch(target, loader);
+            var result = cli.Launcher.Launch(target, loader, passThrough.Values);
 
             // a loader that stops with an error while the game loads is reported, not left to vanish
             if (result.Started)
@@ -64,7 +65,7 @@ internal static class LaunchCommand
 
             if (parseResult.GetValue(json))
             {
-                JsonOutput.Write(output, new LaunchView(loader.ModId, choice.RequiredByMods, result.Plan!.Executable, result.Plan.WorkingDirectory, result.ProcessId!.Value));
+                JsonOutput.Write(output, new LaunchView(loader.ModId, choice.RequiredByMods, result.Plan!.Executable, result.Plan.Arguments, result.Plan.WorkingDirectory, result.ProcessId!.Value));
                 return ExitCodes.Done;
             }
 
@@ -95,5 +96,5 @@ internal static class LaunchCommand
         $"Install it with 'borea loader install {loaderId}', or record an existing copy with 'borea loader adopt {loaderId} <directory>'.";
 
     /// <summary>The JSON shape of <c>launch</c>.</summary>
-    private sealed record LaunchView(string LoaderId, bool RequiredByMods, string Executable, string WorkingDirectory, int ProcessId);
+    private sealed record LaunchView(string LoaderId, bool RequiredByMods, string Executable, IReadOnlyList<string> Arguments, string WorkingDirectory, int ProcessId);
 }

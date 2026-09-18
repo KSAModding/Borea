@@ -138,19 +138,56 @@ public sealed class LoggingDecoratorsTests
     {
         var root = Path.GetFullPath(Path.Combine(Path.GetTempPath(), "Instances", "one"));
         var loader = Path.GetFullPath(Path.Combine(Path.GetTempPath(), "StarMap"));
-        var plan = new LaunchPlan(Path.Combine(loader, "StarMap.exe"), ["-InstancePath", root], loader, new Dictionary<string, string> { ["STARMAP_INSTANCE_PATH"] = root });
+        var plan = new LaunchPlan(Path.Combine(loader, "StarMap.exe"), ["-InstancePath", root, "-name", "say \"hi\""], loader, new Dictionary<string, string> { ["STARMAP_INSTANCE_PATH"] = root });
         var instance = new Instance("Main", InstanceSource.Custom.Value);
-        var started = new LoggingLauncher(new FixedLauncher(LaunchResult.Success(plan, 42, "Started.")), _log);
+        var inner = new FixedLauncher(LaunchResult.Success(plan, 42, "Started."));
+        var started = new LoggingLauncher(inner, _log);
         var failed = new LoggingLauncher(new FixedLauncher(LaunchResult.Failed(LaunchOutcome.LaunchTargetMissing, "StarMap.exe is not there.", plan)), _log);
 
-        started.Launch(instance, loader: null);
+        started.Launch(instance, loader: null, ["-name", "say \"hi\""]);
         failed.Launch(instance, loader: null);
 
-        var details = $"Executable: \"{plan.Executable}\". Arguments: \"-InstancePath\" \"{root}\". Environment: STARMAP_INSTANCE_PATH=\"{root}\". Working directory: \"{loader}\".";
+        Assert.Equal(["-name", "say \"hi\""], inner.Arguments);
+        var details = $"Executable: \"{plan.Executable}\". Arguments: -InstancePath {ArgumentLine.Join([root])} -name \"say \\\"hi\\\"\". Environment: STARMAP_INSTANCE_PATH=\"{root}\". Working directory: \"{loader}\".";
         Assert.Equal(
             [
                 $"Launch of instance {instance.InstanceId} with no loader started process 42. {details}",
                 $"Launch of instance {instance.InstanceId} with no loader did not start, LaunchTargetMissing: StarMap.exe is not there. {details}",
+            ],
+            _log.Messages);
+    }
+
+    [Fact]
+    public void Launch_RefusedWithoutAPlan_WritesTheSavedAndGivenArguments()
+    {
+        var instance = new Instance("Main", InstanceSource.Custom.Value);
+        instance.SetLaunchArguments(["-saved"]);
+        var refused = new LoggingLauncher(new FixedLauncher(LaunchResult.Failed(LaunchOutcome.HandoverFlagInArguments, "Refused.")), _log);
+
+        refused.Launch(instance, loader: null, ["-instancepath", "D:/Other dir"]);
+
+        Assert.Equal(
+            [$"Launch of instance {instance.InstanceId} with no loader did not start, HandoverFlagInArguments: Refused. Arguments: -saved -instancepath \"D:/Other dir\"."],
+            _log.Messages);
+    }
+
+    [Fact]
+    public void SharedProfileLaunch_WritesTheOutcomeAndThePlanWithTheArguments()
+    {
+        var game = Path.GetFullPath(Path.Combine(Path.GetTempPath(), "Game"));
+        var plan = GameExecutable.Plan(game, "KSA.exe", ["-windowed"]);
+        var inner = new FixedSharedProfileLauncher(SharedProfileLaunchResult.Success(plan, 7, "Started."));
+        var started = new LoggingSharedProfileLauncher(inner, _log);
+        var failed = new LoggingSharedProfileLauncher(new FixedSharedProfileLauncher(SharedProfileLaunchResult.Failed(SharedProfileLaunchOutcome.NoGameDirectory, "No game directory.")), _log);
+
+        started.Launch(["-windowed"]);
+        failed.Launch();
+
+        Assert.Equal(["-windowed"], inner.Arguments);
+        Assert.Equal(
+            [
+                $"Launch without a mod loader started process 7. Executable: \"{plan.Executable}\". Arguments: -windowed. Environment: none. Working directory: \"{game}\".",
+                "Launch without a mod loader did not start, NoGameDirectory: No game directory.",
             ],
             _log.Messages);
     }
@@ -230,11 +267,28 @@ public sealed class LoggingDecoratorsTests
 
     private sealed class FixedLauncher(LaunchResult result) : ILauncher
     {
-        public LaunchResult Launch(Instance instance, ModMetadata? loader) => result;
+        public IReadOnlyList<string>? Arguments { get; private set; }
+
+        public LaunchResult Launch(Instance instance, ModMetadata? loader, IReadOnlyList<string>? arguments = null)
+        {
+            Arguments = arguments;
+            return result;
+        }
 
         public Task<LaunchResult> WatchStartAsync(Instance instance, LaunchResult started, CancellationToken cancellationToken = default) => Task.FromResult(started);
 
         public bool IsRunning(Guid instanceId) => false;
+    }
+
+    private sealed class FixedSharedProfileLauncher(SharedProfileLaunchResult result) : ISharedProfileLauncher
+    {
+        public IReadOnlyList<string>? Arguments { get; private set; }
+
+        public SharedProfileLaunchResult Launch(IReadOnlyList<string>? arguments = null)
+        {
+            Arguments = arguments;
+            return result;
+        }
     }
 
     private sealed class EmptyRepository : IModRepository

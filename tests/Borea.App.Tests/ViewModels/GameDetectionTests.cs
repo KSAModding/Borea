@@ -109,6 +109,23 @@ public sealed class GameDetectionTests
     }
 
     [Fact]
+    public async Task FirstStart_LaunchArgumentsModalOpenWhenDetectionEnds_OpensNothing()
+    {
+        using var release = new ManualResetEventSlim();
+        using var harness = await CreateWithHeldDetectionAsync(release);
+        var viewModel = harness.ViewModel;
+        await harness.Services.Instances.CreateAsync("Main", Borea.Core.Instances.InstanceSource.Custom.Value);
+        await viewModel.LoadAsync();
+
+        viewModel.Instances.Single().BeginEditLaunchArgumentsCommand.Execute(null);
+        Assert.True(viewModel.IsLaunchArgumentsModalOpen);
+        release.Set();
+        await viewModel.WhenGameDetectedAsync();
+
+        Assert.False(viewModel.IsFoundGameModalOpen);
+    }
+
+    [Fact]
     public async Task FirstStart_SavedFolderMissing_AsksToUseTheFoundGame()
     {
         string root = null!;

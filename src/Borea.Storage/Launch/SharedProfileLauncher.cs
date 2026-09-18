@@ -33,7 +33,7 @@ public sealed class SharedProfileLauncher : ISharedProfileLauncher
         _platform = platform;
     }
 
-    public SharedProfileLaunchResult Launch()
+    public SharedProfileLaunchResult Launch(IReadOnlyList<string>? arguments = null)
     {
         // The platform comes first, because no directory setting can fix an unknown executable.
         var fileName = _platform is { } platform ? GameExecutable.FileName(platform) : null;
@@ -52,7 +52,7 @@ public sealed class SharedProfileLauncher : ISharedProfileLauncher
                 "Borea does not know where the game is installed. Set the game directory in the settings.");
         }
 
-        var plan = GameExecutable.Plan(Path.GetFullPath(gameDirectory), fileName);
+        var plan = GameExecutable.Plan(Path.GetFullPath(gameDirectory), fileName, arguments);
 
         if (!File.Exists(plan.Executable))
         {

@@ -78,6 +78,38 @@ public sealed class LoaderLauncherTests : IDisposable
         Assert.True(_launcher.IsRunning(_instance.InstanceId));
     }
 
+    [Fact]
+    public void Launch_SavedAndGivenArguments_FollowTheHandoverInThatOrder()
+    {
+        PlaceStarMap();
+        var instanceRoot = Path.GetFullPath(_paths.GetInstanceRoot(_instance.InstanceId));
+        _instance.SetLaunchArguments(["-saved", "a saved value"]);
+
+        var result = _launcher.Launch(_instance, LoaderListing(provides: StarMapProvides()), ["-given", "a given value"]);
+
+        Assert.True(result.Started);
+        Assert.Equal(new[] { "-InstancePath", instanceRoot, "-saved", "a saved value", "-given", "a given value" }, Assert.Single(_starter.Plans).Arguments);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void Launch_HandoverFlagInTheArguments_StartsNothing(bool saved)
+    {
+        PlaceStarMap();
+        string[] arguments = ["-instancepath", "D:/Other"];
+        if (saved)
+            _instance.SetLaunchArguments(arguments);
+
+        var result = _launcher.Launch(_instance, LoaderListing(provides: StarMapProvides()), saved ? null : arguments);
+
+        Assert.False(result.Started);
+        Assert.Equal(LaunchOutcome.HandoverFlagInArguments, result.Outcome);
+        Assert.Contains("'-instancepath'", result.Message);
+        Assert.Empty(_starter.Plans);
+        Assert.False(_launcher.IsRunning(_instance.InstanceId));
+    }
+
     [Theory]
     [InlineData(OsPlatform.Linux)]
     [InlineData(OsPlatform.MacOs)]

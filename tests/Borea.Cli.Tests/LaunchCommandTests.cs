@@ -165,6 +165,63 @@ public sealed class LaunchCommandTests : IDisposable
     }
 
     [Fact]
+    public async Task Launch_WithoutLoaderId_ArgumentsAfterTheSeparator_GoToTheLoaderNotTheLoaderId()
+    {
+        _host.Mods.Listings.Add(LoaderFixtures.Listing());
+        var loaderDirectory = LoaderCommandTests.CreateLoaderDirectory("StarMap", "not a program", _host.Root);
+        await _host.RunAsync("settings", "set", "loader", "StarMap", loaderDirectory);
+        await SaveInstanceAsync(NeedsLoader("flight-tools", "StarMap"));
+
+        var run = await _host.RunAsync("launch", "Flight Test", "--", "-windowed", "a b");
+
+        Assert.Equal(0, run.ExitCode);
+        Assert.Equal(["-windowed", "a b"], Assert.Single(_host.ProcessStarter.Plans).Arguments.Skip(2));
+    }
+
+    [Fact]
+    public async Task Launch_SavedAndGivenArguments_FollowTheHandoverAsSeparateArguments()
+    {
+        _host.Mods.Listings.Add(LoaderFixtures.Listing());
+        var loaderDirectory = LoaderCommandTests.CreateLoaderDirectory("StarMap", "not a program", _host.Root);
+        await _host.RunAsync("settings", "set", "loader", "StarMap", loaderDirectory);
+        await _host.RunAsync("instance", "create", "Flight Test");
+        await _host.RunAsync("instance", "set-arguments", "Flight Test", "--", "-saved", "saved value");
+
+        var run = await _host.RunAsync("launch", "Flight Test", "StarMap", "--", "-given", "given value", "--json");
+
+        Assert.Equal(0, run.ExitCode);
+        var plan = Assert.Single(_host.ProcessStarter.Plans);
+        Assert.Equal("-InstancePath", plan.Arguments[0]);
+        Assert.Equal(["-saved", "saved value", "-given", "given value", "--json"], plan.Arguments.Skip(2));
+    }
+
+    [Fact]
+    public async Task Launch_HandoverFlagAfterTheSeparator_FailsWithoutStarting()
+    {
+        _host.Mods.Listings.Add(LoaderFixtures.Listing());
+        var loaderDirectory = LoaderCommandTests.CreateLoaderDirectory("StarMap", "not a program", _host.Root);
+        await _host.RunAsync("settings", "set", "loader", "StarMap", loaderDirectory);
+        await _host.RunAsync("instance", "create", "Flight Test");
+
+        var run = await _host.RunAsync("launch", "Flight Test", "StarMap", "--", "-INSTANCEPATH", "D:/Other");
+
+        Assert.Equal(1, run.ExitCode);
+        Assert.Contains("'-INSTANCEPATH'", run.Error);
+        Assert.Empty(_host.ProcessStarter.Plans);
+    }
+
+    [Fact]
+    public async Task Launch_ExtraArgumentWithoutTheSeparator_IsBadUsage()
+    {
+        await _host.RunAsync("instance", "create", "Flight Test");
+
+        var run = await _host.RunAsync("launch", "Flight Test", "StarMap", "-windowed");
+
+        Assert.Equal(2, run.ExitCode);
+        Assert.Empty(_host.ProcessStarter.Plans);
+    }
+
+    [Fact]
     public async Task Launch_WithoutLoaderId_NeededLoaderNotInstalled_NamesTheNeededLoader()
     {
         _host.Mods.Listings.Add(LoaderFixtures.Listing());
@@ -255,6 +312,23 @@ public sealed class LaunchCommandTests : IDisposable
         Assert.Equal(0, run.ExitCode);
         Assert.Equal("StarMap", run.Json.GetProperty("loaderId").GetString());
         Assert.True(run.Json.GetProperty("requiredByMods").GetBoolean());
+    }
+
+    [Fact]
+    public async Task Launch_Json_CarriesTheArgumentsOfTheStartedProcess()
+    {
+        _host.Mods.Listings.Add(LoaderFixtures.Listing());
+        var loaderDirectory = LoaderCommandTests.CreateLoaderDirectory("StarMap", "not a program", _host.Root);
+        await _host.RunAsync("settings", "set", "loader", "StarMap", loaderDirectory);
+        await _host.RunAsync("instance", "create", "Flight Test");
+        await _host.RunAsync("instance", "set-arguments", "Flight Test", "--", "-saved");
+
+        var run = await _host.RunAsync("launch", "Flight Test", "StarMap", "--json", "--", "-given");
+
+        Assert.Equal(0, run.ExitCode);
+        var arguments = run.Json.GetProperty("arguments").EnumerateArray().Select(argument => argument.GetString()).ToList();
+        Assert.Equal("-InstancePath", arguments[0]);
+        Assert.Equal(["-saved", "-given"], arguments.Skip(2));
     }
 
     [Fact]
