@@ -2,6 +2,7 @@
 using Borea.Core.Instances;
 using Borea.Core.Mods;
 using Borea.Storage.Instances;
+using Borea.Storage.Tests.Launch;
 using Borea.Storage.Tests.Mods;
 using Borea.Storage.Tests.Paths;
 
@@ -24,7 +25,7 @@ public sealed class FileInstanceRepositoryTests : IDisposable
     public async Task RoundTrip_PersistsInstanceWithModAndDependency()
     {
         // Create a custom instance.
-        var instance = await _repository.CreateAsync("My Test Pack", InstanceSource.Custom.Value);
+        var instance = (await _repository.CreateAsync("My Test Pack", InstanceSource.Custom.Value)).Instance;
 
         // Build a mod whose release carries a stamped dependency, attach it, and persist the change.
         var stampedDependency = new ModDependency("some-other-mod", ModDependencyKind.Required, ModVersion.Parse("1.0.0"));
@@ -66,7 +67,7 @@ public sealed class FileInstanceRepositoryTests : IDisposable
     [Fact]
     public async Task RoundTrip_FullReleaseAndTwoMods_SurvivesTheNesting()
     {
-        var instance = await _repository.CreateAsync("Deep Nesting", InstanceSource.Custom.Value);
+        var instance = (await _repository.CreateAsync("Deep Nesting", InstanceSource.Custom.Value)).Instance;
 
         var anyOfDependency = ModDependency.OfAlternatives(ModDependencyKind.Required, new[]
         {
@@ -99,7 +100,7 @@ public sealed class FileInstanceRepositoryTests : IDisposable
     [Fact]
     public async Task GetAllAsync_SkipsAnUnreadableInstanceInsteadOfFailing()
     {
-        var healthy = await _repository.CreateAsync("Healthy", InstanceSource.Custom.Value);
+        var healthy = (await _repository.CreateAsync("Healthy", InstanceSource.Custom.Value)).Instance;
 
         var brokenId = Guid.NewGuid();
         var brokenPath = _pathProvider.GetInstanceMetadataPath(brokenId);
@@ -115,7 +116,7 @@ public sealed class FileInstanceRepositoryTests : IDisposable
     [Fact]
     public async Task RenameAsync_PersistsNewName()
     {
-        var instance = await _repository.CreateAsync("Original Name", InstanceSource.Custom.Value);
+        var instance = (await _repository.CreateAsync("Original Name", InstanceSource.Custom.Value)).Instance;
 
         await _repository.RenameAsync(instance.InstanceId, "Renamed Pack");
 
@@ -126,8 +127,8 @@ public sealed class FileInstanceRepositoryTests : IDisposable
     [Fact]
     public async Task RoundTrip_PersistsWhenTheInstanceWasLastPlayed()
     {
-        var played = await _repository.CreateAsync("Played", InstanceSource.Custom.Value);
-        var never = await _repository.CreateAsync("Never", InstanceSource.Custom.Value);
+        var played = (await _repository.CreateAsync("Played", InstanceSource.Custom.Value)).Instance;
+        var never = (await _repository.CreateAsync("Never", InstanceSource.Custom.Value)).Instance;
         var playedAt = new DateTimeOffset(2026, 9, 15, 11, 24, 36, 123, TimeSpan.Zero);
 
         await _repository.UpdateAsync(played.InstanceId, instance =>
@@ -144,7 +145,7 @@ public sealed class FileInstanceRepositoryTests : IDisposable
     [Fact]
     public async Task RoundTrip_PersistsTheLaunchArgumentsInOrder()
     {
-        var instance = await _repository.CreateAsync("Arguments", InstanceSource.Custom.Value);
+        var instance = (await _repository.CreateAsync("Arguments", InstanceSource.Custom.Value)).Instance;
         string[] arguments = ["-windowed", "C:\\Program Files\\KSA\\", "say \"hi\"", "", "\u00e4\u00f6\u00fc", "tab\there"];
 
         await _repository.UpdateAsync(instance.InstanceId, saved =>
@@ -160,7 +161,7 @@ public sealed class FileInstanceRepositoryTests : IDisposable
     [Fact]
     public async Task GetByIdAsync_FileWithoutLaunchArguments_LoadsAnEmptyList()
     {
-        var instance = await _repository.CreateAsync("Older", InstanceSource.Custom.Value);
+        var instance = (await _repository.CreateAsync("Older", InstanceSource.Custom.Value)).Instance;
         var path = _pathProvider.GetInstanceMetadataPath(instance.InstanceId);
         var lines = File.ReadAllLines(path).Where(line => !line.StartsWith("LaunchArguments", StringComparison.Ordinal)).ToArray();
         Assert.NotEqual(File.ReadAllLines(path).Length, lines.Length);
@@ -182,10 +183,87 @@ public sealed class FileInstanceRepositoryTests : IDisposable
     }
 
     [Fact]
+    public async Task CreateAsync_NoActiveInstance_MakesTheNewInstanceActive()
+    {
+        var created = await _repository.CreateAsync("First", InstanceSource.Custom.Value);
+
+        Assert.True(created.Activated);
+        Assert.Equal(created.Instance.InstanceId, await new FileInstanceRepository(_pathProvider).GetActiveInstanceIdAsync());
+    }
+
+    [Fact]
+    public async Task CreateAsync_AnotherInstanceIsActive_LeavesItActive()
+    {
+        var first = await _repository.CreateAsync("First", InstanceSource.Custom.Value);
+
+        var second = await _repository.CreateAsync("Second", InstanceSource.Custom.Value);
+
+        Assert.False(second.Activated);
+        Assert.Equal(first.Instance.InstanceId, await _repository.GetActiveInstanceIdAsync());
+    }
+
+    [Fact]
+    public async Task CreateAsync_PointerToADeletedInstance_MakesTheNewInstanceActive()
+    {
+        var deleted = await _repository.CreateAsync("Deleted", InstanceSource.Custom.Value);
+        Directory.Delete(_pathProvider.GetInstanceRoot(deleted.Instance.InstanceId), recursive: true);
+
+        var created = await _repository.CreateAsync("Created", InstanceSource.Custom.Value);
+
+        Assert.True(created.Activated);
+        Assert.Equal(created.Instance.InstanceId, await _repository.GetActiveInstanceIdAsync());
+    }
+
+    [Fact]
+    public async Task CreateAsync_IdInUse_ThrowsAndKeepsTheExistingInstance()
+    {
+        var existing = (await _repository.CreateAsync("Existing", InstanceSource.Custom.Value)).Instance;
+        var sameId = Instance.FromExisting(existing.InstanceId, "Other", InstanceSource.Custom.Value, DateTimeOffset.UtcNow, [], isFavorite: false);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => _repository.CreateAsync(sameId));
+
+        Assert.Equal("Existing", (await _repository.GetByIdAsync(existing.InstanceId))?.Name);
+    }
+
+    [Fact]
     public async Task DeleteAsync_IsIdempotent()
     {
         // Deleting a nonexistent instance should not throw.
         await _repository.DeleteAsync(Guid.NewGuid());
+    }
+
+    [Fact]
+    public async Task DeleteAsync_ActiveInstance_LeavesNoInstanceActive()
+    {
+        var active = await _repository.CreateAsync("Active", InstanceSource.Custom.Value);
+
+        await _repository.DeleteAsync(active.Instance.InstanceId);
+
+        Assert.False(File.Exists(_pathProvider.GetActiveInstancePointerPath()));
+    }
+
+    [WindowsFact("Only Windows refuses to delete a file that is open.")]
+    public async Task DeleteAsync_FailsAfterRemovingTheMetadata_LeavesNoInstanceActive()
+    {
+        var active = (await _repository.CreateAsync("Active", InstanceSource.Custom.Value)).Instance;
+        var modsFolder = Directory.CreateDirectory(_pathProvider.GetInstanceModsFolder(active.InstanceId));
+
+        using (new FileStream(Path.Combine(modsFolder.FullName, "locked.dll"), FileMode.Create, FileAccess.Write, FileShare.None))
+            await Assert.ThrowsAsync<IOException>(() => _repository.DeleteAsync(active.InstanceId));
+
+        Assert.False(File.Exists(_pathProvider.GetInstanceMetadataPath(active.InstanceId)));
+        Assert.False(File.Exists(_pathProvider.GetActiveInstancePointerPath()));
+    }
+
+    [Fact]
+    public async Task DeleteAsync_AnotherInstance_KeepsTheActiveInstance()
+    {
+        var active = await _repository.CreateAsync("Active", InstanceSource.Custom.Value);
+        var other = await _repository.CreateAsync("Other", InstanceSource.Custom.Value);
+
+        await _repository.DeleteAsync(other.Instance.InstanceId);
+
+        Assert.Equal(active.Instance.InstanceId, await _repository.GetActiveInstanceIdAsync());
     }
 
     [Fact]
@@ -199,7 +277,7 @@ public sealed class FileInstanceRepositoryTests : IDisposable
     [Fact]
     public async Task SetActiveInstanceAsync_ThenGet_RoundTrips()
     {
-        var instance = await _repository.CreateAsync("Active Test", InstanceSource.Custom.Value);
+        var instance = (await _repository.CreateAsync("Active Test", InstanceSource.Custom.Value)).Instance;
 
         await _repository.SetActiveInstanceAsync(instance.InstanceId);
         var activeId = await _repository.GetActiveInstanceIdAsync();
@@ -217,7 +295,7 @@ public sealed class FileInstanceRepositoryTests : IDisposable
     [Fact]
     public async Task ClearActiveInstanceAsync_AfterSet_LeavesNoActiveInstance()
     {
-        var instance = await _repository.CreateAsync("Cleared Active", InstanceSource.Custom.Value);
+        var instance = (await _repository.CreateAsync("Cleared Active", InstanceSource.Custom.Value)).Instance;
         await _repository.SetActiveInstanceAsync(instance.InstanceId);
 
         await _repository.ClearActiveInstanceAsync();
@@ -237,7 +315,7 @@ public sealed class FileInstanceRepositoryTests : IDisposable
     [Fact]
     public async Task GetActiveInstanceIdAsync_PersistsAcrossFreshRepository()
     {
-        var instance = await _repository.CreateAsync("Persisted Active", InstanceSource.Custom.Value);
+        var instance = (await _repository.CreateAsync("Persisted Active", InstanceSource.Custom.Value)).Instance;
         await _repository.SetActiveInstanceAsync(instance.InstanceId);
 
         var freshRepository = new FileInstanceRepository(_pathProvider);

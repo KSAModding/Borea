@@ -110,8 +110,8 @@ public sealed class GameDataViewModelTests
     {
         using var harness = await ViewModelHarness.CreateAsync();
         var viewModel = harness.ViewModel;
-        var first = await harness.Services.Instances.CreateAsync("First", InstanceSource.Custom.Value);
-        var second = await harness.Services.Instances.CreateAsync("Second", InstanceSource.Custom.Value);
+        var first = (await harness.Services.Instances.CreateAsync("First", InstanceSource.Custom.Value)).Instance;
+        var second = (await harness.Services.Instances.CreateAsync("Second", InstanceSource.Custom.Value)).Instance;
         await viewModel.LoadAsync();
         await viewModel.Instances.Single(instance => instance.Name == "First").OpenCommand.ExecuteAsync(null);
         await viewModel.ShowInstanceGameDataCommand.ExecuteAsync(null);
@@ -173,7 +173,7 @@ public sealed class GameDataViewModelTests
 
     private static async Task<Instance> OpenAsync(ViewModelHarness harness, string name)
     {
-        var instance = await harness.Services.Instances.CreateAsync(name, InstanceSource.Custom.Value);
+        var instance = (await harness.Services.Instances.CreateAsync(name, InstanceSource.Custom.Value)).Instance;
         await harness.ViewModel.LoadAsync();
         await harness.ViewModel.Instances.Single().OpenCommand.ExecuteAsync(null);
         return instance;

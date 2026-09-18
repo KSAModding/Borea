@@ -85,11 +85,29 @@ public sealed class SharedProfileBannerTests
         Assert.False(viewModel.IsSharedProfileImportRunning);
         Assert.False(viewModel.ShowSharedProfileBanner);
         Assert.True(viewModel.CurrentWindowInstance);
-        Assert.Null(viewModel.SharedProfileImportNotice);
+        Assert.Equal(harness.Localization.FormatLibraryNowActive(harness.Localization.SharedProfileInstanceName), viewModel.SharedProfileImportNotice);
         Assert.Equal(harness.Localization.SharedProfileInstanceName, viewModel.SelectedInstance?.Name);
+        Assert.Same(viewModel.SelectedInstance, viewModel.ActiveInstance);
         var instance = Assert.Single(await harness.Services.Instances.GetAllAsync());
         Assert.Equal("LocalOnly", Assert.Single(instance.ForeignMods).FolderName);
         Assert.True(File.Exists(Path.Combine(ProfileFolder(harness), "mods", "LocalOnly", "mod.toml")));
+    }
+
+    [Fact]
+    public async Task CreateInstance_FromTheBanner_ThenDeactivated_NoLongerSaysItIsActive()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var viewModel = harness.ViewModel;
+        WriteProfileMod(harness, "LocalOnly");
+        await SaveGameDirectoryAsync(harness);
+        viewModel.BeginImportSharedProfileCommand.Execute(null);
+        await viewModel.CreateInstanceCommand.ExecuteAsync(null);
+
+        await viewModel.Instances.Single().ToggleActiveCommand.ExecuteAsync(null);
+
+        Assert.True(viewModel.CurrentWindowInstance);
+        Assert.Null(viewModel.ActiveInstance);
+        Assert.Null(viewModel.SharedProfileImportNotice);
     }
 
     [Fact]
@@ -101,6 +119,7 @@ public sealed class SharedProfileBannerTests
         WriteProfileMod(harness, "My Mod");
         WriteProfileMod(harness, "MeasureTools");
         await SaveGameDirectoryAsync(harness);
+        await harness.Services.Instances.CreateAsync("Career", InstanceSource.Custom.Value);
 
         viewModel.BeginImportSharedProfileCommand.Execute(null);
         await viewModel.CreateInstanceCommand.ExecuteAsync(null);

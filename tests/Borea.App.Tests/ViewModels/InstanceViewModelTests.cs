@@ -283,7 +283,7 @@ public sealed class InstanceViewModelTests
     {
         using var harness = await ViewModelHarness.CreateAsync();
         var viewModel = harness.ViewModel;
-        var instance = await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value);
+        var instance = (await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value)).Instance;
         await harness.Services.Instances.SetActiveInstanceAsync(instance.InstanceId);
         await viewModel.LoadAsync();
         await viewModel.PlayWithoutModLoaderCommand.ExecuteAsync(null);
@@ -318,7 +318,7 @@ public sealed class InstanceViewModelTests
     {
         using var harness = await ViewModelHarness.CreateAsync();
         var viewModel = harness.ViewModel;
-        var instance = await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value);
+        var instance = (await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value)).Instance;
         var archives = Directory.CreateDirectory(Path.Combine(Path.GetDirectoryName(harness.Services.Paths.GetInstanceGameLogPath(instance.InstanceId))!, "Archives"));
         await File.WriteAllLinesAsync(Path.Combine(archives.FullName, "KittenSpaceAgency.260914.0.log"), ["20:00:00.000  INFO loaded settings from settings.toml", "20:40:00.000 DEBUG Shutting down application"]);
         await viewModel.LoadAsync();

@@ -74,18 +74,16 @@ public sealed class ModListInstaller
     }
 
     /// <summary>A failed or stopped install removes the new instance again.</summary>
-    public async Task<Instance> InstallAsync(ModListPlan plan, string name, IProgress<InstallProgress>? progress = null, InstallStop? stop = null, CancellationToken cancellationToken = default)
+    public async Task<InstanceCreateResult> InstallAsync(ModListPlan plan, string name, IProgress<InstallProgress>? progress = null, InstallStop? stop = null, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(plan);
         if (!plan.Plan.IsReady)
             throw new InvalidOperationException("The install plan has unresolved choices or conflicts.");
         if (await _instances.GetByIdAsync(plan.InstanceId).ConfigureAwait(false) is not null)
             throw new InvalidOperationException("The instance of this plan exists already.");
-        if (!await _instances.IsNameAvailableAsync(name).ConfigureAwait(false))
-            throw new InvalidOperationException($"Instance name '{name}' is already in use.");
 
-        var instance = Instance.FromExisting(plan.InstanceId, name, plan.Request.Source, DateTimeOffset.UtcNow, [], [], isFavorite: false);
-        await _instances.SaveAsync(instance).ConfigureAwait(false);
+        var created = await _instances.CreateAsync(Instance.FromExisting(plan.InstanceId, name, plan.Request.Source, DateTimeOffset.UtcNow, [], [], isFavorite: false)).ConfigureAwait(false);
+        var instance = created.Instance;
         try
         {
             await _executor.ExecuteAsync(plan.Plan, enable: true, progress, stop, cancellationToken).ConfigureAwait(false);
@@ -99,7 +97,7 @@ public sealed class ModListInstaller
             throw;
         }
 
-        return await _instances.GetByIdAsync(instance.InstanceId).ConfigureAwait(false) ?? instance;
+        return created with { Instance = await _instances.GetByIdAsync(instance.InstanceId).ConfigureAwait(false) ?? instance };
     }
 
     /// <summary>

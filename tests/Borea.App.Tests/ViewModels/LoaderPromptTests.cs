@@ -123,7 +123,7 @@ public sealed class LoaderPromptTests
         var starter = new RunningStarter();
         using var harness = await CreateAsync(starter, ServeStarMap);
         var viewModel = harness.ViewModel;
-        var instance = await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value);
+        var instance = (await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value)).Instance;
         await harness.Services.Instances.SetActiveInstanceAsync(instance.InstanceId);
         starter.GameLog = harness.Services.Paths.GetInstanceGameLogPath(instance.InstanceId);
         await viewModel.LoadAsync();

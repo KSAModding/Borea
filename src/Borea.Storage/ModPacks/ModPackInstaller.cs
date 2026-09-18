@@ -28,8 +28,8 @@ public sealed class ModPackInstaller : IModPackInstaller
         ArgumentNullException.ThrowIfNull(request);
         cancellationToken.ThrowIfCancellationRequested();
         var metadata = RequireMetadata(request.Pack);
-        var instance = await _instances.CreateAsync(instanceName, new InstanceSource.FromModPack(metadata.ModPackId, metadata.Version)).ConfigureAwait(false);
-        return await InstallAsync(request with { InstanceId = instance.InstanceId }, progress, stop, cancellationToken).ConfigureAwait(false);
+        var created = await _instances.CreateAsync(instanceName, new InstanceSource.FromModPack(metadata.ModPackId, metadata.Version)).ConfigureAwait(false);
+        return await InstallAsync(request with { InstanceId = created.Instance.InstanceId }, progress, stop, cancellationToken).ConfigureAwait(false);
     }
 
     public Task<ModPackInstallResult> PlanAsync(ModPackInstallRequest request, CancellationToken cancellationToken = default) =>

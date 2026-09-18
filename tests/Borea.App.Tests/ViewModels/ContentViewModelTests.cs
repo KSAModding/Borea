@@ -184,7 +184,7 @@ public sealed class ContentViewModelTests
     {
         using var harness = await ViewModelHarness.CreateAsync();
         var viewModel = harness.ViewModel;
-        var instance = await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value);
+        var instance = (await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value)).Instance;
         await harness.Services.Instances.SetActiveInstanceAsync(instance.InstanceId);
         await viewModel.LoadAsync();
         await viewModel.EnsureDiscoverLoadedAsync();

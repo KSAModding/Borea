@@ -314,7 +314,7 @@ public sealed class ToastViewModelTests
         using var harness = await ViewModelHarness.CreateAsync();
         var viewModel = harness.ViewModel;
         viewModel.Toasts.Clock = _time;
-        var instance = await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value);
+        var instance = (await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value)).Instance;
         await harness.Services.Instances.SetActiveInstanceAsync(instance.InstanceId);
         await viewModel.LoadAsync();
         await viewModel.EnsureDiscoverLoadedAsync();

@@ -15,6 +15,7 @@ public sealed class FileInstanceRepository : IInstanceRepository, IInstanceLocks
 {
     private readonly IGamePathProvider _pathProvider;
     private readonly System.Collections.Concurrent.ConcurrentDictionary<Guid, SemaphoreSlim> _instanceLocks = new();
+    private readonly SemaphoreSlim _activeInstanceLock = new(1, 1);
 
     public FileInstanceRepository(IGamePathProvider pathProvider)
     {
@@ -85,14 +86,45 @@ public sealed class FileInstanceRepository : IInstanceRepository, IInstanceLocks
     /// <summary>
     /// Creates a new instance with the given name and source, and saves it to disk. Throws if the name is already in use.
     /// </summary>
-    public async Task<Instance> CreateAsync(string name, InstanceSource source)
-    {
-        if (!await IsNameAvailableAsync(name).ConfigureAwait(false))
-            throw new InvalidOperationException($"Instance name '{name}' is already in use.");
+    public async Task<InstanceCreateResult> CreateAsync(string name, InstanceSource source)
+        => await CreateAsync(new Instance(name, source)).ConfigureAwait(false);
 
-        var instance = new Instance(name, source);
-        await SaveAsync(instance).ConfigureAwait(false);
-        return instance;
+    /// <summary>
+    /// Saves the given instance to disk as a new instance. Throws if its name is already in use or an instance with its ID exists.
+    /// </summary>
+    public async Task<InstanceCreateResult> CreateAsync(Instance instance)
+    {
+        ArgumentNullException.ThrowIfNull(instance);
+        if (!await IsNameAvailableAsync(instance.Name).ConfigureAwait(false))
+            throw new InvalidOperationException($"Instance name '{instance.Name}' is already in use.");
+
+        var gate = GetInstanceLock(instance.InstanceId);
+        await gate.WaitAsync().ConfigureAwait(false);
+        try
+        {
+            if (File.Exists(_pathProvider.GetInstanceMetadataPath(instance.InstanceId)))
+                throw new InvalidOperationException($"An instance with ID '{instance.InstanceId}' exists already.");
+
+            await _activeInstanceLock.WaitAsync().ConfigureAwait(false);
+            try
+            {
+                var activate = await GetActiveInstanceIdAsync().ConfigureAwait(false) is not { } activeId
+                    || !File.Exists(_pathProvider.GetInstanceMetadataPath(activeId));
+                await SaveCoreAsync(instance).ConfigureAwait(false);
+                if (activate)
+                    await WriteActiveInstanceAsync(instance.InstanceId).ConfigureAwait(false);
+
+                return new InstanceCreateResult(instance, activate);
+            }
+            finally
+            {
+                _activeInstanceLock.Release();
+            }
+        }
+        finally
+        {
+            gate.Release();
+        }
     }
 
     /// <summary>
@@ -113,7 +145,7 @@ public sealed class FileInstanceRepository : IInstanceRepository, IInstanceLocks
     }
 
     /// <summary>
-    /// Deletes the instance with the given ID from disk. No-op if the instance does not exist.
+    /// Deletes the instance with the given ID from disk, and removes the pointer file when it names that instance. No-op if the instance does not exist.
     /// </summary>
     public async Task DeleteAsync(Guid instanceId)
     {
@@ -122,12 +154,35 @@ public sealed class FileInstanceRepository : IInstanceRepository, IInstanceLocks
         try
         {
             var root = _pathProvider.GetInstanceRoot(instanceId);
-            if (Directory.Exists(root))
-                Directory.Delete(root, recursive: true);
+            try
+            {
+                if (Directory.Exists(root))
+                    Directory.Delete(root, recursive: true);
+            }
+            finally
+            {
+                await ClearActiveInstanceIfDeletedAsync(instanceId).ConfigureAwait(false);
+            }
         }
         finally
         {
             gate.Release();
+        }
+    }
+
+    // a recursive delete that fails part way can already have removed the metadata file
+    private async Task ClearActiveInstanceIfDeletedAsync(Guid instanceId)
+    {
+        await _activeInstanceLock.WaitAsync().ConfigureAwait(false);
+        try
+        {
+            if (await GetActiveInstanceIdAsync().ConfigureAwait(false) == instanceId
+                && !File.Exists(_pathProvider.GetInstanceMetadataPath(instanceId)))
+                TomlFileStore.DeleteIfExists(_pathProvider.GetActiveInstancePointerPath());
+        }
+        finally
+        {
+            _activeInstanceLock.Release();
         }
     }
 
@@ -241,12 +296,18 @@ public sealed class FileInstanceRepository : IInstanceRepository, IInstanceLocks
     /// </summary>
     public async Task SetActiveInstanceAsync(Guid instanceId)
     {
-        var exists = await GetByIdAsync(instanceId).ConfigureAwait(false)
-            ?? throw new InvalidOperationException($"No instance with ID '{instanceId}' exists.");
+        await _activeInstanceLock.WaitAsync().ConfigureAwait(false);
+        try
+        {
+            var exists = await GetByIdAsync(instanceId).ConfigureAwait(false)
+                ?? throw new InvalidOperationException($"No instance with ID '{instanceId}' exists.");
 
-        var dto = new ActiveInstancePointerDto { ActiveInstanceId = instanceId.ToString() };
-        var path = _pathProvider.GetActiveInstancePointerPath();
-        await TomlFileStore.WriteAsync(path, dto).ConfigureAwait(false);
+            await WriteActiveInstanceAsync(instanceId).ConfigureAwait(false);
+        }
+        finally
+        {
+            _activeInstanceLock.Release();
+        }
     }
 
     /// <summary>
@@ -256,5 +317,11 @@ public sealed class FileInstanceRepository : IInstanceRepository, IInstanceLocks
     {
         TomlFileStore.DeleteIfExists(_pathProvider.GetActiveInstancePointerPath());
         return Task.CompletedTask;
+    }
+
+    private Task WriteActiveInstanceAsync(Guid instanceId)
+    {
+        var dto = new ActiveInstancePointerDto { ActiveInstanceId = instanceId.ToString() };
+        return TomlFileStore.WriteAsync(_pathProvider.GetActiveInstancePointerPath(), dto);
     }
 }

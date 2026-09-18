@@ -169,7 +169,7 @@ public sealed class GameLogViewModelTests
 
     private static async Task<Instance> OpenAsync(ViewModelHarness harness, string name)
     {
-        var instance = await harness.Services.Instances.CreateAsync(name, InstanceSource.Custom.Value);
+        var instance = (await harness.Services.Instances.CreateAsync(name, InstanceSource.Custom.Value)).Instance;
         await harness.ViewModel.LoadAsync();
         await harness.ViewModel.Instances.Single().OpenCommand.ExecuteAsync(null);
         return instance;

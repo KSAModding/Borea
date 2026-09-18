@@ -427,7 +427,7 @@ public sealed class LibraryFolderChangerTests : IDisposable
     /// <summary>An instance with a mod file and a save backup, three files in all.</summary>
     private async Task<Instance> SeedLibraryAsync(string folder)
     {
-        var instance = await new FileInstanceRepository(Paths(folder)).CreateAsync("Career " + Guid.NewGuid().ToString("N")[..8], InstanceSource.Custom.Value);
+        var instance = (await new FileInstanceRepository(Paths(folder)).CreateAsync("Career " + Guid.NewGuid().ToString("N")[..8], InstanceSource.Custom.Value)).Instance;
 
         var mod = ModFile(folder, instance);
         Directory.CreateDirectory(Path.GetDirectoryName(mod)!);

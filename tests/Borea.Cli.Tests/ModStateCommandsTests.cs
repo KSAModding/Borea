@@ -81,6 +81,7 @@ public sealed class ModStateCommandsTests : IDisposable
     public async Task Enable_NoActiveInstance_Fails()
     {
         await CreateAsync("Alpha");
+        await _host.RunAsync("instance", "deactivate");
 
         var run = await _host.RunAsync("enable", "SomeMod");
 
@@ -91,9 +92,8 @@ public sealed class ModStateCommandsTests : IDisposable
     [Fact]
     public async Task Enable_ActiveInstanceDeleted_Fails()
     {
-        await CreateAsync("Alpha");
-        await _host.RunAsync("instance", "activate", "Alpha");
-        await _host.RunAsync("instance", "delete", "Alpha");
+        var instanceId = await CreateAsync("Alpha");
+        Directory.Delete(_host.Paths.GetInstanceRoot(instanceId), recursive: true);
 
         var run = await _host.RunAsync("enable", "SomeMod");
 

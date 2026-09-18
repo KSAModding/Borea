@@ -27,7 +27,7 @@ public sealed class InstanceCommandTests : IDisposable
     }
 
     [Fact]
-    public async Task Create_ThenList_ShowsItInactive()
+    public async Task Create_ThenList_ShowsItActive()
     {
         var create = await _host.RunAsync("instance", "create", "Alpha");
         var list = await _host.RunAsync("instance", "list", "--json");
@@ -36,9 +36,32 @@ public sealed class InstanceCommandTests : IDisposable
         Assert.Contains("Alpha", create.Output);
         var entry = Assert.Single(list.Json.EnumerateArray());
         Assert.Equal("Alpha", entry.GetProperty("name").GetString());
-        Assert.False(entry.GetProperty("active").GetBoolean());
+        Assert.True(entry.GetProperty("active").GetBoolean());
         Assert.Equal("custom", entry.GetProperty("source").GetProperty("kind").GetString());
         Assert.True(Guid.TryParse(entry.GetProperty("id").GetString(), out _));
+    }
+
+    [Fact]
+    public async Task Create_NoActiveInstance_SaysTheNewInstanceIsActive()
+    {
+        var first = await _host.RunAsync("instance", "create", "Alpha");
+        var second = await _host.RunAsync("instance", "create", "Beta");
+
+        Assert.EndsWith(". It is now the active instance.", first.Output.Trim());
+        Assert.DoesNotContain("active", second.Output);
+    }
+
+    [Fact]
+    public async Task Create_Json_SaysWhetherTheInstanceBecameActive()
+    {
+        var first = await _host.RunAsync("instance", "create", "Alpha", "--json");
+        var second = await _host.RunAsync("instance", "create", "Beta", "--json");
+
+        Assert.Equal(0, first.ExitCode);
+        Assert.Equal("Alpha", first.Json.GetProperty("name").GetString());
+        Assert.True(first.Json.GetProperty("activated").GetBoolean());
+        Assert.False(second.Json.GetProperty("activated").GetBoolean());
+        Assert.Equal(first.Json.GetProperty("id").GetGuid(), await new FileInstanceRepository(_host.Paths).GetActiveInstanceIdAsync());
     }
 
     [Fact]
@@ -309,6 +332,7 @@ public sealed class InstanceCommandTests : IDisposable
     public async Task Deactivate_NoActiveInstance_SaysSo()
     {
         await _host.RunAsync("instance", "create", "Alpha");
+        await _host.RunAsync("instance", "deactivate");
 
         var human = await _host.RunAsync("instance", "deactivate");
         var json = await _host.RunAsync("instance", "deactivate", "--json");
@@ -341,7 +365,7 @@ public sealed class InstanceCommandTests : IDisposable
     public async Task Deactivate_PointerToADeletedInstance_ClearsItAndNamesTheId()
     {
         var repository = new FileInstanceRepository(_host.Paths);
-        var instance = await repository.CreateAsync("Alpha", InstanceSource.Custom.Value);
+        var instance = (await repository.CreateAsync("Alpha", InstanceSource.Custom.Value)).Instance;
         await repository.SetActiveInstanceAsync(instance.InstanceId);
         Directory.Delete(_host.Paths.GetInstanceRoot(instance.InstanceId), recursive: true);
 
@@ -689,7 +713,7 @@ public sealed class InstanceCommandTests : IDisposable
         Assert.Equal(0, run.ExitCode);
         var lines = run.Output.Trim().Split(Environment.NewLine);
         Assert.StartsWith("Created instance 'Main' (", lines[0]);
-        Assert.EndsWith(") with 2 mods from the shared profile.", lines[0]);
+        Assert.EndsWith(") with 2 mods from the shared profile. It is now the active instance.", lines[0]);
         Assert.Equal(new[] { "enabled   Zeta   manual install", "disabled  Alpha  manual install" }, lines[1..]);
         Assert.Equal(new[] { "enabled   Zeta", "disabled  Alpha" }, mods.Output.Trim().Split(Environment.NewLine));
     }
@@ -707,6 +731,7 @@ public sealed class InstanceCommandTests : IDisposable
 
         Assert.Equal(0, run.ExitCode);
         Assert.Equal("Main", run.Json.GetProperty("name").GetString());
+        Assert.True(run.Json.GetProperty("activated").GetBoolean());
         var mods = run.Json.GetProperty("mods").EnumerateArray().ToList();
         Assert.Equal(new[] { "flight-tools", "LocalOnly" }, mods.Select(mod => mod.GetProperty("folder").GetString()));
         Assert.Equal("2.0.0", mods[0].GetProperty("version").GetString());
@@ -855,7 +880,7 @@ public sealed class InstanceCommandTests : IDisposable
     private async Task<Guid> CreateInstanceAsync(string name)
     {
         var created = await new FileInstanceRepository(_host.Paths).CreateAsync(name, InstanceSource.Custom.Value);
-        return created.InstanceId;
+        return created.Instance.InstanceId;
     }
 
     private string WriteMod(Guid instanceId, string folderName, string manifest)

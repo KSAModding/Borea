@@ -24,7 +24,7 @@ public sealed class FileModUninstallerTests : IAsyncLifetime
 
     public async Task InitializeAsync()
     {
-        _instanceId = (await _instances.CreateAsync("Test", InstanceSource.Custom.Value)).InstanceId;
+        _instanceId = (await _instances.CreateAsync("Test", InstanceSource.Custom.Value)).Instance.InstanceId;
     }
 
     public Task DisposeAsync()

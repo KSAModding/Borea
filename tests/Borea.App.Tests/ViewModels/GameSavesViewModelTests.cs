@@ -15,7 +15,7 @@ public sealed class GameSavesViewModelTests
     {
         using var harness = await ViewModelHarness.CreateAsync();
         var viewModel = harness.ViewModel;
-        var instance = await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value);
+        var instance = (await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value)).Instance;
         var root = harness.Services.Paths.GetInstanceRoot(instance.InstanceId);
         WriteItem(Path.Combine(root, "saves"), "Earth Launch 1", "2026-08-01T14:34:32.4054896", "v2026.8.3.5117", 1500);
         WriteItem(Path.Combine(root, "vehicles"), "Rocket", "2026-08-10T06:44:36.6429982", "v2026.8.1.5240-DEBUG--dev-baker", 10, "vehicle.xml");
@@ -43,7 +43,7 @@ public sealed class GameSavesViewModelTests
             File.Copy(Path.Combine(AppContext.BaseDirectory, "GameVersionFixture.dll"), Path.Combine(game, "KSA.dll"));
             return services.SettingsRepository.SaveAsync(services.Settings.WithGameDirectory(game));
         });
-        var instance = await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value);
+        var instance = (await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value)).Instance;
         var saves = harness.Services.Paths.GetInstanceSavesFolder(instance.InstanceId);
         WriteItem(saves, "Old", "2026-07-03T12:00:00.0000000", "v2026.7.3.4826", 10);
         WriteItem(saves, "Current", "2026-08-03T12:00:00.0000000", "v2026.8.3.5117", 10);
@@ -61,7 +61,7 @@ public sealed class GameSavesViewModelTests
     {
         using var harness = await ViewModelHarness.CreateAsync();
         var viewModel = harness.ViewModel;
-        var instance = await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value);
+        var instance = (await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value)).Instance;
         await OpenAsync(harness, "Main");
         var opened = new List<string>();
         viewModel.OpenWithSystem = opened.Add;
@@ -79,7 +79,7 @@ public sealed class GameSavesViewModelTests
     public async Task BackUp_WritesAZipIntoTheBackups()
     {
         using var harness = await ViewModelHarness.CreateAsync();
-        var instance = await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value);
+        var instance = (await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value)).Instance;
         WriteItem(harness.Services.Paths.GetInstanceSavesFolder(instance.InstanceId), "Orbit", "2026-08-01T14:34:32.4054896", "v2026.8.3.5117", 10);
         await OpenAsync(harness, "Main");
         var section = harness.ViewModel.SavesSection;
@@ -95,7 +95,7 @@ public sealed class GameSavesViewModelTests
     public async Task BackUpAllSaves_ZipsEverySaveOfTheInstance()
     {
         using var harness = await ViewModelHarness.CreateAsync();
-        var instance = await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value);
+        var instance = (await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value)).Instance;
         var saves = harness.Services.Paths.GetInstanceSavesFolder(instance.InstanceId);
         WriteItem(saves, "Orbit", "2026-08-01T14:34:32.4054896", "v2026.8.3.5117", 10);
         WriteItem(saves, "Moon", "2026-08-02T14:34:32.4054896", "v2026.8.3.5117", 10);
@@ -115,8 +115,8 @@ public sealed class GameSavesViewModelTests
     {
         using var harness = await ViewModelHarness.CreateAsync();
         var paths = harness.Services.Paths;
-        var first = await harness.Services.Instances.CreateAsync("First", InstanceSource.Custom.Value);
-        var second = await harness.Services.Instances.CreateAsync("Second", InstanceSource.Custom.Value);
+        var first = (await harness.Services.Instances.CreateAsync("First", InstanceSource.Custom.Value)).Instance;
+        var second = (await harness.Services.Instances.CreateAsync("Second", InstanceSource.Custom.Value)).Instance;
         WriteItem(paths.GetInstanceSavesFolder(first.InstanceId), "Orbit", "2026-08-01T14:34:32.4054896", "v2026.8.3.5117", 300);
         WriteItem(paths.GetInstanceSavesFolder(second.InstanceId), "Orbit", "2026-08-01T14:34:32.4054896", "v2026.8.3.5117", 20);
         await OpenAsync(harness, "First");
@@ -144,7 +144,7 @@ public sealed class GameSavesViewModelTests
     {
         using var harness = await ViewModelHarness.CreateAsync();
         var paths = harness.Services.Paths;
-        var instance = await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value);
+        var instance = (await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value)).Instance;
         var profileSaves = Path.Combine(paths.GetSharedProfileRoot(), "saves");
         WriteItem(profileSaves, "Orbit", "2026-08-01T14:34:32.4054896", "v2026.8.3.5117", 10);
         WriteItem(profileSaves, "Moon", "2026-08-02T14:34:32.4054896", "v2026.8.3.5117", 300);
@@ -179,7 +179,7 @@ public sealed class GameSavesViewModelTests
     public async Task Delete_AfterConfirmation_MovesTheFolderIntoTheBackups()
     {
         using var harness = await ViewModelHarness.CreateAsync();
-        var instance = await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value);
+        var instance = (await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value)).Instance;
         var vehicles = harness.Services.Paths.GetInstanceVehiclesFolder(instance.InstanceId);
         WriteItem(vehicles, "Rocket", "2026-08-10T06:44:36.6429982", "v2026.8.3.5117", 10, "vehicle.xml");
         await OpenAsync(harness, "Main");
@@ -202,8 +202,8 @@ public sealed class GameSavesViewModelTests
     {
         using var harness = await ViewModelHarness.CreateAsync();
         var paths = harness.Services.Paths;
-        var first = await harness.Services.Instances.CreateAsync("First", InstanceSource.Custom.Value);
-        var second = await harness.Services.Instances.CreateAsync("Second", InstanceSource.Custom.Value);
+        var first = (await harness.Services.Instances.CreateAsync("First", InstanceSource.Custom.Value)).Instance;
+        var second = (await harness.Services.Instances.CreateAsync("Second", InstanceSource.Custom.Value)).Instance;
         var saves = paths.GetInstanceSavesFolder(first.InstanceId);
         WriteItem(saves, "Orbit", "2026-08-01T14:34:32.4054896", "v2026.8.3.5117", 10);
         await OpenAsync(harness, "First");
@@ -231,7 +231,7 @@ public sealed class GameSavesViewModelTests
         var starter = new RunningGameStarter();
         using var harness = await ViewModelHarness.CreateAsync(WithStarMap, processStarter: starter);
         var viewModel = harness.ViewModel;
-        var instance = await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value);
+        var instance = (await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value)).Instance;
         var saves = harness.Services.Paths.GetInstanceSavesFolder(instance.InstanceId);
         WriteItem(saves, "Orbit", "2026-08-01T14:34:32.4054896", "v2026.8.3.5117", 10);
         starter.GameLogPath = harness.Services.Paths.GetInstanceGameLogPath(instance.InstanceId);

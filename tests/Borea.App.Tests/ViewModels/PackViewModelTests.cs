@@ -287,7 +287,7 @@ public sealed class PackViewModelTests
 
     private static async Task<Instance> ActivateInstanceAsync(ViewModelHarness harness)
     {
-        var instance = await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value);
+        var instance = (await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value)).Instance;
         await harness.Services.Instances.SetActiveInstanceAsync(instance.InstanceId);
         await harness.ViewModel.LoadAsync();
         await harness.ViewModel.EnsureDiscoverLoadedAsync();

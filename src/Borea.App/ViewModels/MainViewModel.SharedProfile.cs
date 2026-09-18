@@ -49,6 +49,9 @@ public partial class MainViewModel
                 return null;
 
             var lines = new List<string>();
+            if (result.Activated && ActiveInstance?.InstanceId == result.Instance.InstanceId)
+                lines.Add(Localization.FormatLibraryNowActive(SelectedInstance.Name));
+
             var disabled = result.Mods.Where(mod => mod.Enabled && !mod.HasManifestEntry).Select(mod => mod.FolderName).ToList();
             if (disabled.Count > 0)
                 lines.Add(Localization.FormatSharedProfileImportDisabled(disabled));

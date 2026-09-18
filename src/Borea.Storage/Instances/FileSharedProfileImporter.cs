@@ -83,16 +83,16 @@ public sealed class FileSharedProfileImporter : ISharedProfileImporter
         var created = await _instances.CreateAsync(instanceName, InstanceSource.Custom.Value).ConfigureAwait(false);
         try
         {
-            return await FillAsync(created.InstanceId, mods, cancellationToken).ConfigureAwait(false);
+            return await FillAsync(created.Instance.InstanceId, mods, created.Activated, cancellationToken).ConfigureAwait(false);
         }
         catch
         {
-            await TryDeleteInstanceAsync(created.InstanceId).ConfigureAwait(false);
+            await TryDeleteInstanceAsync(created.Instance.InstanceId).ConfigureAwait(false);
             throw;
         }
     }
 
-    private async Task<SharedProfileImportResult> FillAsync(Guid instanceId, IReadOnlyList<SharedProfileMod> mods, CancellationToken cancellationToken)
+    private async Task<SharedProfileImportResult> FillAsync(Guid instanceId, IReadOnlyList<SharedProfileMod> mods, bool activated, CancellationToken cancellationToken)
     {
         var staging = Path.Combine(_pathProvider.GetInstanceRoot(instanceId), $".borea-staging-{Guid.NewGuid():N}");
         var modsFolder = _pathProvider.GetInstanceModsFolder(instanceId);
@@ -135,7 +135,7 @@ public sealed class FileSharedProfileImporter : ISharedProfileImporter
 
         var instance = await _instances.GetByIdAsync(instanceId).ConfigureAwait(false)
             ?? throw new InvalidOperationException($"No instance with ID '{instanceId}' exists.");
-        return new SharedProfileImportResult(instance, imported);
+        return new SharedProfileImportResult(instance, imported, activated);
     }
 
     /// <summary>

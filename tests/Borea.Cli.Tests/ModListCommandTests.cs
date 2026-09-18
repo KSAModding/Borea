@@ -90,6 +90,7 @@ public sealed class ModListCommandTests : IDisposable
         Assert.Equal(0, run.ExitCode);
         var json = run.Json;
         Assert.True(json.GetProperty("created").GetBoolean());
+        Assert.True(json.GetProperty("activated").GetBoolean());
         Assert.Equal("Shared", json.GetProperty("name").GetString());
         Assert.Equal(["available", "available", "unknown"], json.GetProperty("mods").EnumerateArray().Select(mod => mod.GetProperty("state").GetString()));
         var imported = await InstanceNamedAsync("Shared");
@@ -115,6 +116,20 @@ public sealed class ModListCommandTests : IDisposable
         Assert.Equal(0, accepted.ExitCode);
         Assert.Equal(["available", "yanked"], accepted.Json.GetProperty("mods").EnumerateArray().Select(mod => mod.GetProperty("state").GetString()));
         Assert.Equal(["helper-lib 1.0.0 Manual", "map-tools 1.0.0 Manual"], Describe(await InstanceNamedAsync("Shared")));
+    }
+
+    [Fact]
+    public async Task Import_InstallFails_RemovesTheNewInstanceAndLeavesNoInstanceActive()
+    {
+        var file = await WriteModListAsync(("flight-tools", "2.0.0"), ("helper-lib", "1.0.0"));
+        _host.InstallerFactory = graph => new FolderInstaller(graph, failOn: "flight-tools");
+
+        var run = await _host.RunAsync("instance", "import", file);
+
+        Assert.Equal(1, run.ExitCode);
+        Assert.Contains("The disk is full.", run.Error);
+        Assert.Empty(await new FileInstanceRepository(_host.Paths).GetAllAsync());
+        Assert.False(File.Exists(_host.Paths.GetActiveInstancePointerPath()));
     }
 
     [Fact]
@@ -156,6 +171,7 @@ public sealed class ModListCommandTests : IDisposable
 
         Assert.Equal(0, run.ExitCode);
         Assert.Equal("Alpha (copy)", run.Json.GetProperty("name").GetString());
+        Assert.False(run.Json.GetProperty("activated").GetBoolean());
         Assert.Equal(["LocalOnly"], run.Json.GetProperty("notCopied").EnumerateArray().Select(folder => folder.GetString()));
         var copy = await InstanceNamedAsync("Alpha (copy)");
         Assert.Equal(["flight-tools 2.0.0 Manual", "helper-lib 1.0.0 Dependency"], Describe(copy));
