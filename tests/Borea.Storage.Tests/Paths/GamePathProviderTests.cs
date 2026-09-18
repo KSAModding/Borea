@@ -1,4 +1,5 @@
 using Borea.Storage.Paths;
+using Borea.Storage.Tests.Launch;
 
 namespace Borea.Storage.Tests.Paths;
 
@@ -21,8 +22,24 @@ public sealed class GamePathProviderTests
     {
         var provider = new GamePathProvider(null);
 
-        var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData, Environment.SpecialFolderOption.DoNotVerify);
         Assert.StartsWith(Path.Combine(localAppData, "Borea"), provider.GetBoreaSettingsPath());
+    }
+
+    [UnixFact("XDG_DATA_HOME is read on Linux.")]
+    public void Constructor_NoBoreaRoot_StaysAbsoluteWhenTheDataFolderDoesNotExistYet()
+    {
+        var missing = Path.Combine(Path.GetTempPath(), "borea-xdg-" + Guid.NewGuid().ToString("N"));
+        var previous = Environment.GetEnvironmentVariable("XDG_DATA_HOME");
+        Environment.SetEnvironmentVariable("XDG_DATA_HOME", missing);
+        try
+        {
+            Assert.True(Path.IsPathFullyQualified(new GamePathProvider(null).GetBoreaSettingsPath()));
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("XDG_DATA_HOME", previous);
+        }
     }
 
     [Fact]
@@ -97,7 +114,7 @@ public sealed class GamePathProviderTests
     [Fact]
     public void GetSharedProfileRoot_DefaultsToMyGamesInTheDocuments()
     {
-        var documents = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+        var documents = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments, Environment.SpecialFolderOption.DoNotVerify);
 
         Assert.Equal(Path.Combine(documents, "My Games", "Kitten Space Agency"), new GamePathProvider(null).GetSharedProfileRoot());
         Assert.Equal(@"E:\Profile", new GamePathProvider(null, sharedProfileRoot: @"E:\Profile").GetSharedProfileRoot());

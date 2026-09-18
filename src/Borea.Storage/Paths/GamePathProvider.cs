@@ -47,8 +47,8 @@ public sealed class GamePathProvider : IGamePathProvider
 
         _gameDirectory = gameDirectory;
         _loaderDirectories = byId;
-        _boreaRoot = boreaRoot ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Borea");
-        _sharedProfileRoot = sharedProfileRoot ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "My Games", "Kitten Space Agency");
+        _boreaRoot = boreaRoot ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData, Environment.SpecialFolderOption.DoNotVerify), "Borea");
+        _sharedProfileRoot = sharedProfileRoot ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments, Environment.SpecialFolderOption.DoNotVerify), "My Games", "Kitten Space Agency");
         _libraryFolder = libraryFolder ?? _boreaRoot;
     }
 
