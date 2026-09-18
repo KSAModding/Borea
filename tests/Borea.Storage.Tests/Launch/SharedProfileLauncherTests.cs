@@ -51,6 +51,16 @@ public sealed class SharedProfileLauncherTests : IDisposable
     }
 
     [Fact]
+    public void Launch_WithArguments_PassesEachAsItIs()
+    {
+        PlaceGame();
+
+        Launcher().Launch(["-windowed", "a b"]);
+
+        Assert.Equal(new[] { "-windowed", "a b" }, Assert.Single(_starter.Plans).Arguments);
+    }
+
+    [Fact]
     public void Launch_Started_ReleasesTheHandleAtOnce()
     {
         PlaceGame();

@@ -21,12 +21,13 @@ public static class GameExecutable
     };
 
     /// <summary>
-    /// The executable in the game directory, started there with no arguments
-    /// and no added environment variables. The game sets its working directory
-    /// to its own folder when it starts, so the game directory is the same
-    /// value the game uses and does not depend on that.
+    /// The executable in the game directory, started there with
+    /// <paramref name="arguments"/> and no added environment variables. The
+    /// game sets its working directory to its own folder when it starts, so
+    /// the game directory is the same value the game uses and does not depend
+    /// on that.
     /// </summary>
-    public static LaunchPlan Plan(string gameDirectory, string fileName)
+    public static LaunchPlan Plan(string gameDirectory, string fileName, IReadOnlyList<string>? arguments = null)
     {
         if (string.IsNullOrWhiteSpace(fileName) || Path.GetFileName(fileName) != fileName)
             throw new ArgumentException("The executable must be a plain file name.", nameof(fileName));
@@ -36,7 +37,7 @@ public static class GameExecutable
 
         return new LaunchPlan(
             Path.Combine(gameDirectory, fileName),
-            Array.Empty<string>(),
+            arguments ?? Array.Empty<string>(),
             gameDirectory,
             new Dictionary<string, string>());
     }

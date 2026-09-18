@@ -324,7 +324,7 @@ public sealed class BoreaServices : IDisposable
             LoaderAdopter = loaderAdopter,
             LoaderUninstaller = new FileLoaderUninstaller(settingsRepository),
             Launcher = new LoggingLauncher(new LastPlayedLauncher(new LoaderLauncher(paths, processStarter ?? new ProcessStarter()), instances), log),
-            SharedProfileLauncher = new SharedProfileLauncher(paths, processStarter ?? new ProcessStarter()),
+            SharedProfileLauncher = new LoggingSharedProfileLauncher(new SharedProfileLauncher(paths, processStarter ?? new ProcessStarter()), log),
             LatestVersion = new LatestVersionPing(http),
             ReleaseCheck = new BoreaReleaseCheck(http),
             InstalledVersion = new InstalledGameVersionProvider(paths),

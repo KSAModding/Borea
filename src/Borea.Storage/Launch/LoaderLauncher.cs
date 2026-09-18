@@ -58,7 +58,7 @@ public sealed class LoaderLauncher : ILauncher, IDisposable
         _startupWindow = startupWindow;
     }
 
-    public LaunchResult Launch(Instance instance, ModMetadata? loader)
+    public LaunchResult Launch(Instance instance, ModMetadata? loader, IReadOnlyList<string>? arguments = null)
     {
         if (instance is null)
             throw new ArgumentNullException(nameof(instance));
@@ -104,6 +104,14 @@ public sealed class LoaderLauncher : ILauncher, IDisposable
                     $"The listing of {loader.Name} does not say how it takes an instance, so Borea cannot start one with it. The loader author can add a [provides.instance] table to the listing.");
             }
 
+            var launchArguments = instance.LaunchArguments.Concat(arguments ?? Array.Empty<string>()).ToList();
+            if (handover.FlagIn(launchArguments) is { } flag)
+            {
+                return LaunchResult.Failed(
+                    LaunchOutcome.HandoverFlagInArguments,
+                    $"{loader.Name} takes the instance folder after '{flag}', and Borea passes that on every launch. A second one could make {loader.Name} use another folder, so remove '{flag}' from the launch arguments.");
+            }
+
             var loaderDirectory = _pathProvider.GetLoaderDirectoryPath(loader.ModId);
             if (loaderDirectory is null)
             {
@@ -116,7 +124,8 @@ public sealed class LoaderLauncher : ILauncher, IDisposable
                 Path.GetFullPath(loaderDirectory),
                 launch,
                 handover,
-                Path.GetFullPath(_pathProvider.GetInstanceRoot(instance.InstanceId)));
+                Path.GetFullPath(_pathProvider.GetInstanceRoot(instance.InstanceId)),
+                launchArguments);
 
             // StarMap lists only its Windows app host, and its assembly runs through dotnet
             // on every other system. This goes once the listing says how the loader starts there.

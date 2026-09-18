@@ -36,6 +36,14 @@ public sealed class GameExecutableTests
         Assert.Empty(plan.EnvironmentVariables);
     }
 
+    [Fact]
+    public void Plan_WithArguments_PassesEachAsItIs()
+    {
+        var plan = GameExecutable.Plan(GameDirectory, "KSA.exe", ["-windowed", "a b"]);
+
+        Assert.Equal(new[] { "-windowed", "a b" }, plan.Arguments);
+    }
+
     [Theory]
     [InlineData("")]
     [InlineData("bin/KSA.exe")]

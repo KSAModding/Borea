@@ -31,4 +31,7 @@ public enum LaunchOutcome
 
     /// <summary>The loader started, then stopped with an error before the game came up.</summary>
     ExitedEarly = 9,
+
+    /// <summary>The launch arguments contain the flag the loader reads the instance root from.</summary>
+    HandoverFlagInArguments = 10,
 }

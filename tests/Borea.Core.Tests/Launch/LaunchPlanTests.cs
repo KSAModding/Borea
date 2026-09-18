@@ -20,6 +20,28 @@ public sealed class LaunchPlanTests
     }
 
     [Fact]
+    public void ForLoader_PassesTheArgumentsAfterTheHandover_OneEntryEach()
+    {
+        var plan = LaunchPlan.ForLoader(LoaderDirectory, "StarMap.exe", Handover, InstanceRoot, ["-windowed", "a folder with spaces", ""]);
+
+        Assert.Equal(new[] { "-InstancePath", InstanceRoot, "-windowed", "a folder with spaces", "" }, plan.Arguments);
+    }
+
+    [Fact]
+    public void ForLoader_VariableOnlyHandover_PassesOnlyTheArguments()
+    {
+        var plan = LaunchPlan.ForLoader(LoaderDirectory, "StarMap.exe", new InstanceHandover(null, "LOADER_INSTANCE"), InstanceRoot, ["-InstancePath"]);
+
+        Assert.Equal(new[] { "-InstancePath" }, plan.Arguments);
+    }
+
+    [Fact]
+    public void ForLoader_HandoverFlagInTheArguments_ThrowsArgumentException()
+    {
+        Assert.Throws<ArgumentException>(() => LaunchPlan.ForLoader(LoaderDirectory, "StarMap.exe", Handover, InstanceRoot, ["-INSTANCEPATH", "D:/Other"]));
+    }
+
+    [Fact]
     public void ForLoader_StartsTheProcessInTheLoaderDirectory()
     {
         var plan = LaunchPlan.ForLoader(LoaderDirectory, "StarMap.exe", Handover, InstanceRoot);
@@ -95,10 +117,10 @@ public sealed class LaunchPlanTests
         var host = Path.Combine(Path.GetTempPath(), "BoreaTest", "dotnet", "dotnet");
         var assembly = Path.Combine(LoaderDirectory, "StarMap.dll");
 
-        var plan = LaunchPlan.ForLoader(LoaderDirectory, "StarMap.exe", Handover, InstanceRoot).ThroughHost(host, assembly);
+        var plan = LaunchPlan.ForLoader(LoaderDirectory, "StarMap.exe", Handover, InstanceRoot, ["-windowed"]).ThroughHost(host, assembly);
 
         Assert.Equal(host, plan.Executable);
-        Assert.Equal(new[] { assembly, "-InstancePath", InstanceRoot }, plan.Arguments);
+        Assert.Equal(new[] { assembly, "-InstancePath", InstanceRoot, "-windowed" }, plan.Arguments);
         Assert.Equal(LoaderDirectory, plan.WorkingDirectory);
         Assert.Equal(InstanceRoot, Assert.Single(plan.EnvironmentVariables).Value);
     }

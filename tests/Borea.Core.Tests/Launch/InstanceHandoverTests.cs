@@ -50,4 +50,19 @@ public sealed class InstanceHandoverTests
     {
         Assert.Throws<ArgumentException>(() => new InstanceHandover(flag, variable));
     }
+
+    [Fact]
+    public void FlagIn_IgnoresCaseLikeStarMap()
+    {
+        var handover = new InstanceHandover("-InstancePath", "STARMAP_INSTANCE_PATH");
+
+        Assert.Equal("-instancepath", handover.FlagIn(["-windowed", "-instancepath", "D:/Other"]));
+        Assert.Null(handover.FlagIn(["-windowed", "-InstancePathX", "InstancePath"]));
+    }
+
+    [Fact]
+    public void FlagIn_VariableOnlyHandover_FindsNothing()
+    {
+        Assert.Null(new InstanceHandover(null, "LOADER_INSTANCE").FlagIn(["-InstancePath"]));
+    }
 }

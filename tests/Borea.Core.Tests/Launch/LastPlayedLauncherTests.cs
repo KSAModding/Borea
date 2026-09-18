@@ -65,7 +65,7 @@ public sealed class LastPlayedLauncherTests
 
     private sealed class WatchedLauncher(LaunchResult watched) : ILauncher
     {
-        public LaunchResult Launch(Instance instance, ModMetadata? loader) => throw new NotSupportedException();
+        public LaunchResult Launch(Instance instance, ModMetadata? loader, IReadOnlyList<string>? arguments = null) => throw new NotSupportedException();
 
         public Task<LaunchResult> WatchStartAsync(Instance instance, LaunchResult started, CancellationToken cancellationToken = default) => Task.FromResult(watched);
 

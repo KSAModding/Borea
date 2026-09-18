@@ -22,6 +22,17 @@ public sealed class InstanceHandover
         Variable = Token(variable, "variable", nameof(variable));
     }
 
+    /// <summary>
+    /// The first of <paramref name="arguments"/> that the loader reads as
+    /// <see cref="Flag"/>, or null. Case is ignored, the way StarMap reads its
+    /// flag in DocumentsPathPatches.TryGetOverride.
+    /// </summary>
+    public string? FlagIn(IEnumerable<string> arguments)
+    {
+        ArgumentNullException.ThrowIfNull(arguments);
+        return Flag is null ? null : arguments.FirstOrDefault(argument => string.Equals(argument, Flag, StringComparison.OrdinalIgnoreCase));
+    }
+
     // Each key is one token, because a manager passes the flag as one argument
     // and sets the variable by its exact name.
     private static string? Token(string? value, string key, string paramName)

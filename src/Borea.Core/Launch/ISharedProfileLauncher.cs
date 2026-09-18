@@ -10,8 +10,9 @@ namespace Borea.Core.Launch;
 public interface ISharedProfileLauncher
 {
     /// <summary>
-    /// Starts the game's executable from the game directory. Borea writes
-    /// nothing to the shared profile and keeps no record of the process.
+    /// Starts the game's executable from the game directory with
+    /// <paramref name="arguments"/>. Borea writes nothing to the shared profile
+    /// and keeps no record of the process.
     /// </summary>
-    SharedProfileLaunchResult Launch();
+    SharedProfileLaunchResult Launch(IReadOnlyList<string>? arguments = null);
 }

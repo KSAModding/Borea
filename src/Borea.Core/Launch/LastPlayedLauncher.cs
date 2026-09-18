@@ -20,7 +20,7 @@ public sealed class LastPlayedLauncher : ILauncher, IDisposable
         _time = time ?? TimeProvider.System;
     }
 
-    public LaunchResult Launch(Instance instance, ModMetadata? loader) => Inner.Launch(instance, loader);
+    public LaunchResult Launch(Instance instance, ModMetadata? loader, IReadOnlyList<string>? arguments = null) => Inner.Launch(instance, loader, arguments);
 
     public async Task<LaunchResult> WatchStartAsync(Instance instance, LaunchResult started, CancellationToken cancellationToken = default)
     {

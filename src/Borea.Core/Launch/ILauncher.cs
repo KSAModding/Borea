@@ -8,7 +8,12 @@ namespace Borea.Core.Launch;
 /// </summary>
 public interface ILauncher
 {
-    LaunchResult Launch(Instance instance, ModMetadata? loader);
+    /// <summary>
+    /// Starts the loader with the instance handover, then the saved
+    /// <see cref="Instance.LaunchArguments"/>, then <paramref name="arguments"/>
+    /// for this launch only.
+    /// </summary>
+    LaunchResult Launch(Instance instance, ModMetadata? loader, IReadOnlyList<string>? arguments = null);
 
     /// <summary>
     /// Watches a launch that <see cref="Launch"/> just started until the game
