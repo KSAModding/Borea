@@ -15,6 +15,7 @@
             <ResourceDictionary.MergedDictionaries>
                 <ResourceInclude Source="avares://Borea.App/Assets/Icons.axaml" />
                 <ResourceInclude Source="avares://Borea.App/Views/Templates.axaml" />
+                <ResourceInclude Source="avares://Borea.App/Views/Banner.axaml" />
             </ResourceDictionary.MergedDictionaries>
 
             <!-- Palettes. Borealis (dark) holds the tokens of the Figma file from #8 (neutral-900 .. white, green, purple-500); Light mirrors them. -->
@@ -33,6 +34,7 @@
                     <Color x:Key="Color.TextMuted">#777777</Color>
                     <Color x:Key="Color.Accent">#CABCFF</Color>
                     <Color x:Key="Color.AccentSoft">#26CABCFF</Color>
+                    <Color x:Key="Color.OnAccent">#000000</Color>
                     <Color x:Key="Color.Positive">#C1FFB5</Color>
                     <Color x:Key="Color.PositiveSoft">#0DC1FFB5</Color>
                     <Color x:Key="Color.Danger">#F07178</Color>
@@ -62,10 +64,11 @@
                     <Color x:Key="Color.TextMuted">#7E7E88</Color>
                     <Color x:Key="Color.Accent">#6A56E0</Color>
                     <Color x:Key="Color.AccentSoft">#266A56E0</Color>
-                    <Color x:Key="Color.Positive">#3C8A25</Color>
-                    <Color x:Key="Color.PositiveSoft">#1A3C8A25</Color>
-                    <Color x:Key="Color.Danger">#C93A43</Color>
-                    <Color x:Key="Color.DangerSoft">#26C93A43</Color>
+                    <Color x:Key="Color.OnAccent">#FFFFFF</Color>
+                    <Color x:Key="Color.Positive">#2B6A1A</Color>
+                    <Color x:Key="Color.PositiveSoft">#1A2B6A1A</Color>
+                    <Color x:Key="Color.Danger">#A3262F</Color>
+                    <Color x:Key="Color.DangerSoft">#26A3262F</Color>
                     <Color x:Key="Color.Compatible">#3C8A25</Color>
                     <Color x:Key="Color.Untested">#A76300</Color>
                     <Color x:Key="Color.Incompatible">#C93A43</Color>
@@ -93,6 +96,7 @@
             <SolidColorBrush x:Key="Brush.TextMuted" Color="{DynamicResource Color.TextMuted}" />
             <SolidColorBrush x:Key="Brush.Accent" Color="{DynamicResource Color.Accent}" />
             <SolidColorBrush x:Key="Brush.AccentSoft" Color="{DynamicResource Color.AccentSoft}" />
+            <SolidColorBrush x:Key="Brush.OnAccent" Color="{DynamicResource Color.OnAccent}" />
             <SolidColorBrush x:Key="Brush.Positive" Color="{DynamicResource Color.Positive}" />
             <SolidColorBrush x:Key="Brush.PositiveSoft" Color="{DynamicResource Color.PositiveSoft}" />
             <SolidColorBrush x:Key="Brush.Danger" Color="{DynamicResource Color.Danger}" />
