@@ -209,6 +209,8 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string LibraryRename => Resources.LibraryRename;
 
+    public string LibraryLaunchArguments => Resources.LibraryLaunchArguments;
+
     public string LibraryOpenFolder => Resources.LibraryOpenFolder;
 
     public string LibraryDelete => Resources.LibraryDelete;
@@ -450,6 +452,12 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string ModalRenameInstanceTitle => Resources.ModalRenameInstanceTitle;
 
     public string ModalNameLabel => Resources.ModalNameLabel;
+
+    public string ModalLaunchArgumentsLabel => Resources.ModalLaunchArgumentsLabel;
+
+    public string ModalLaunchArgumentsHint => Resources.ModalLaunchArgumentsHint;
+
+    public string ModalLaunchArgumentsNone => Resources.ModalLaunchArgumentsNone;
 
     public string ModalClose => Resources.ModalClose;
 
@@ -921,6 +929,9 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string FormatLaunchModDisabled(string mod)
         => string.Format(CultureInfo.CurrentCulture, Resources.LaunchModDisabledFormat, mod);
+
+    public string FormatLaunchArgumentsHandoverFlag(string loader, string flag)
+        => string.Format(CultureInfo.CurrentCulture, Resources.LaunchArgumentsHandoverFlagFormat, loader, flag);
 
     /// <summary>"Published 3 days ago", from an age that <see cref="FormatTimeAgo"/> wrote.</summary>
     public string FormatContentPublished(string age)

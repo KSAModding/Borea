@@ -181,6 +181,7 @@
                                     <MenuFlyout Placement="BottomEdgeAlignedRight">
                                         <MenuItem Header="{Binding Localization.InstanceBackUpAllSaves}" Command="{Binding BackUpAllSavesCommand}" />
                                         <MenuItem Header="{Binding Localization.LibraryRename}" Command="{Binding SelectedInstance.BeginRenameCommand}" />
+                                        <MenuItem Header="{Binding Localization.LibraryLaunchArguments}" Command="{Binding SelectedInstance.BeginEditLaunchArgumentsCommand}" />
                                         <MenuItem Header="{Binding Localization.LibraryOpenFolder}" Command="{Binding SelectedInstance.OpenFolderCommand}" />
                                         <MenuItem Header="{Binding Localization.LibraryDelete}" Command="{Binding SelectedInstance.BeginDeleteCommand}" />
                                     </MenuFlyout>

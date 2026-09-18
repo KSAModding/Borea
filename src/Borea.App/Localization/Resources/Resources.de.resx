@@ -135,6 +135,9 @@
   <data name="LibraryRename" xml:space="preserve">
     <value>Umbenennen</value>
   </data>
+  <data name="LibraryLaunchArguments" xml:space="preserve">
+    <value>Startargumente</value>
+  </data>
   <data name="LibraryOpenFolder" xml:space="preserve">
     <value>Ordner öffnen</value>
   </data>
@@ -794,6 +797,18 @@
   </data>
   <data name="ModalNameLabel" xml:space="preserve">
     <value>Name</value>
+  </data>
+  <data name="ModalLaunchArgumentsLabel" xml:space="preserve">
+    <value>Argumente</value>
+  </data>
+  <data name="ModalLaunchArgumentsHint" xml:space="preserve">
+    <value>Jeder Start dieser Instanz übergibt diese Argumente an den Mod-Loader und das Spiel. Setze ein Argument mit Leerzeichen in doppelte Anführungszeichen.</value>
+  </data>
+  <data name="ModalLaunchArgumentsNone" xml:space="preserve">
+    <value>Keine Argumente</value>
+  </data>
+  <data name="LaunchArgumentsHandoverFlagFormat" xml:space="preserve">
+    <value>Borea übergibt {1} schon mit dem Instanzordner an {0}. Entferne es, sonst könnte {0} einen anderen Ordner verwenden.</value>
   </data>
   <data name="ModalClose" xml:space="preserve">
     <value>Schließen</value>

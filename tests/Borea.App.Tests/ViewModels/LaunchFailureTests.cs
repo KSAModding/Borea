@@ -140,6 +140,58 @@ public sealed class LaunchFailureTests
     }
 
     [Fact]
+    public async Task PlayActiveInstance_PassesTheSavedLaunchArgumentsAfterTheHandover()
+    {
+        var starter = new RunningStarter();
+        using var harness = await CreateAsync(starter);
+        var viewModel = harness.ViewModel;
+        var instance = await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value);
+        await harness.Services.Instances.SetActiveInstanceAsync(instance.InstanceId);
+        await harness.Services.Instances.UpdateAsync(instance.InstanceId, saved =>
+        {
+            saved.SetLaunchArguments(["-windowed", "a b"]);
+            return true;
+        });
+        starter.GameLog = harness.Services.Paths.GetInstanceGameLogPath(instance.InstanceId);
+        await viewModel.LoadAsync();
+
+        await viewModel.PlayActiveInstanceCommand.ExecuteAsync(null);
+
+        var root = Path.GetFullPath(harness.Services.Paths.GetInstanceRoot(instance.InstanceId));
+        Assert.Equal(["-InstancePath", root, "-windowed", "a b"], Assert.Single(starter.Plans).Arguments.TakeLast(4));
+    }
+
+    [Fact]
+    public async Task PlayWithoutModLoader_PassesNoSavedLaunchArguments()
+    {
+        var starter = new RunningStarter();
+        using var harness = await ViewModelHarness.CreateAsync(
+            services =>
+            {
+                var game = Directory.CreateDirectory(Path.Combine(Path.GetDirectoryName(services.Paths.GetBoreaSettingsPath())!, "Game")).FullName;
+                File.WriteAllBytes(Path.Combine(game, "KSA.exe"), []);
+                File.WriteAllBytes(Path.Combine(game, "KSA"), []);
+                return services.SettingsRepository.SaveAsync(services.Settings.WithGameDirectory(game));
+            },
+            processStarter: starter);
+        var viewModel = harness.ViewModel;
+        var instance = await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value);
+        await harness.Services.Instances.SetActiveInstanceAsync(instance.InstanceId);
+        await harness.Services.Instances.UpdateAsync(instance.InstanceId, saved =>
+        {
+            saved.SetLaunchArguments(["-windowed"]);
+            return true;
+        });
+        await viewModel.LoadAsync();
+
+        await viewModel.PlayWithoutModLoaderCommand.ExecuteAsync(null);
+
+        // Borea knows no game executable on macOS, so nothing starts there
+        Assert.Equal(OperatingSystem.IsMacOS() ? 0 : 1, starter.Plans.Count);
+        Assert.All(starter.Plans, plan => Assert.Empty(plan.Arguments));
+    }
+
+    [Fact]
     public async Task PlayActiveInstance_AfterAnotherInstancePage_StartsTheActiveInstance()
     {
         var starter = new RunningStarter();
@@ -316,7 +368,13 @@ public sealed class LaunchFailureTests
 
         public TaskCompletionSource Watched { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        public IStartedProcess Start(LaunchPlan plan) => new RunningProcess(this);
+        public List<LaunchPlan> Plans { get; } = [];
+
+        public IStartedProcess Start(LaunchPlan plan)
+        {
+            Plans.Add(plan);
+            return new RunningProcess(this);
+        }
 
         private sealed class RunningProcess(RunningStarter owner) : IStartedProcess
         {

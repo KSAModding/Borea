@@ -784,6 +784,8 @@ public sealed partial class InstanceItem : ObservableObject
 
     internal IReadOnlyList<InstalledMod> Mods { get; }
 
+    internal IReadOnlyList<string> LaunchArguments { get; }
+
     public bool IsActive { get; }
 
     public string? SourceText => _owner.DescribeSource(_source);
@@ -815,6 +817,7 @@ public sealed partial class InstanceItem : ObservableObject
         Mods = instance.Mods;
         ModIds = Mods.Select(mod => mod.ModId).ToList();
         _modVersions = instance.Mods.ToDictionary(mod => mod.ModId, mod => mod.Version, Borea.Core.Mods.ModIds.Comparer);
+        LaunchArguments = instance.LaunchArguments;
         IsActive = isActive;
     }
 
@@ -847,6 +850,9 @@ public sealed partial class InstanceItem : ObservableObject
 
     [RelayCommand]
     private void BeginRename() => _owner.BeginRenameInstance(this);
+
+    [RelayCommand]
+    private void BeginEditLaunchArguments() => _owner.BeginEditLaunchArguments(this);
 
     [RelayCommand]
     private void OpenFolder() => _owner.OpenInstanceFolder(InstanceId);

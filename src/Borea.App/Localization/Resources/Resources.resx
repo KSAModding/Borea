@@ -135,6 +135,9 @@
   <data name="LibraryRename" xml:space="preserve">
     <value>Rename</value>
   </data>
+  <data name="LibraryLaunchArguments" xml:space="preserve">
+    <value>Launch arguments</value>
+  </data>
   <data name="LibraryOpenFolder" xml:space="preserve">
     <value>Open folder</value>
   </data>
@@ -794,6 +797,18 @@
   </data>
   <data name="ModalNameLabel" xml:space="preserve">
     <value>Name</value>
+  </data>
+  <data name="ModalLaunchArgumentsLabel" xml:space="preserve">
+    <value>Arguments</value>
+  </data>
+  <data name="ModalLaunchArgumentsHint" xml:space="preserve">
+    <value>Every launch of this instance passes these arguments to the mod loader and the game. Put an argument with spaces in double quotes.</value>
+  </data>
+  <data name="ModalLaunchArgumentsNone" xml:space="preserve">
+    <value>No arguments</value>
+  </data>
+  <data name="LaunchArgumentsHandoverFlagFormat" xml:space="preserve">
+    <value>Borea already passes {1} with the instance folder to {0}. Remove it, or {0} could use another folder.</value>
   </data>
   <data name="ModalClose" xml:space="preserve">
     <value>Close</value>

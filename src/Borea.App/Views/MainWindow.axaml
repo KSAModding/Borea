@@ -95,6 +95,9 @@
     <!-- modal: new instance, and rename instance -->
     <views:InstanceNameModal IsVisible="{Binding IsNameModalOpen}" />
 
+    <!-- modal: launch arguments of an instance -->
+    <views:LaunchArgumentsModal IsVisible="{Binding IsLaunchArgumentsModalOpen}" />
+
     <!-- modal: the plan of a duplicate or an import -->
     <views:ModListModal IsVisible="{Binding IsReviewingModList}" />
 

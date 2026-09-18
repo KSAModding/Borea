@@ -1,0 +1,49 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Borea.App.ViewModels"
+             x:Class="Borea.App.Views.LaunchArgumentsModal"
+             x:DataType="vm:MainViewModel">
+    <!-- modal: launch arguments of an instance -->
+    <Panel Background="#99000000">
+        <Border Classes="modal" Width="561" Margin="80,0,0,0">
+            <StackPanel>
+                <Grid ColumnDefinitions="*,Auto" Margin="24,24,24,0">
+                    <TextBlock Classes="heading-lg" Text="{Binding Localization.LibraryLaunchArguments}" VerticalAlignment="Center" />
+                    <Button Grid.Column="1" Classes="icon" Command="{Binding CancelLaunchArgumentsModalCommand}" AutomationProperties.Name="{Binding Localization.ModalClose}">
+                        <Path Classes="icon" Data="{StaticResource Icon.Close}" />
+                    </Button>
+                </Grid>
+                <Border Height="1" Background="{StaticResource Brush.Window}" Margin="0,24,0,0" />
+                <TextBlock Classes="body-md secondary" Text="{Binding Localization.ModalLaunchArgumentsHint}" TextWrapping="Wrap" Margin="36,24,24,0" />
+                <Grid ColumnDefinitions="Auto,12,*,16,Auto" Margin="36,24,24,16">
+                    <TextBlock Classes="heading-md heading" Text="{Binding Localization.ModalLaunchArgumentsLabel}" VerticalAlignment="Center" />
+                    <TextBox Grid.Column="2" Classes="field" Text="{Binding ModalLaunchArguments}" AutomationProperties.Name="{Binding Localization.ModalLaunchArgumentsLabel}" VerticalAlignment="Center">
+                        <TextBox.KeyBindings>
+                            <KeyBinding Gesture="Enter" Command="{Binding SaveLaunchArgumentsCommand}" />
+                            <KeyBinding Gesture="Escape" Command="{Binding CancelLaunchArgumentsModalCommand}" />
+                        </TextBox.KeyBindings>
+                    </TextBox>
+                    <Button Grid.Column="4" Classes="cta" Command="{Binding SaveLaunchArgumentsCommand}">
+                        <TextBlock Classes="action-lg" Text="{Binding Localization.LibrarySave}" VerticalAlignment="Center" />
+                    </Button>
+                </Grid>
+                <TextBlock Classes="body-md muted" Text="{Binding Localization.ModalLaunchArgumentsNone}" Margin="36,0,24,32" IsVisible="{Binding !HasModalLaunchArguments}" />
+                <ItemsControl ItemsSource="{Binding ModalLaunchArgumentItems}" Margin="36,0,24,32" IsVisible="{Binding HasModalLaunchArguments}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <WrapPanel ItemSpacing="4" LineSpacing="4" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="x:String">
+                            <Border Classes="chip">
+                                <TextBlock Text="{Binding}" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding}" />
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <TextBlock Classes="body-md danger" Text="{Binding InstanceError}" TextWrapping="Wrap" Margin="36,0,24,24" IsVisible="{Binding InstanceError, Converter={x:Static ObjectConverters.IsNotNull}}" />
+            </StackPanel>
+        </Border>
+    </Panel>
+</UserControl>
