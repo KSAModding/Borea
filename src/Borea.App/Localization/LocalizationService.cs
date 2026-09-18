@@ -673,6 +673,21 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string LaunchInstanceMissing => Resources.LaunchInstanceMissing;
 
+    public string FormatLaunchLoaderNotInstalled(string loader)
+        => string.Format(CultureInfo.CurrentCulture, Resources.LaunchLoaderNotInstalledFormat, loader);
+
+    public string FormatLaunchNeededLoaderNotInstalled(string loader)
+        => string.Format(CultureInfo.CurrentCulture, Resources.LaunchNeededLoaderNotInstalledFormat, loader);
+
+    public string FormatLaunchDifferentLoadersNeeded(string loaders)
+        => string.Format(CultureInfo.CurrentCulture, Resources.LaunchDifferentLoadersNeededFormat, loaders);
+
+    public string FormatLaunchLoaderNotListed(string loaders)
+        => string.Format(CultureInfo.CurrentCulture, Resources.LaunchLoaderNotListedFormat, loaders);
+
+    public string LaunchNoLoaderTakesInstance
+        => string.Format(CultureInfo.CurrentCulture, Resources.LaunchNoLoaderTakesInstanceFormat, Resources.LaunchWithoutModLoader);
+
     public string LaunchWithoutModLoaderToolTip => Resources.LaunchWithoutModLoaderToolTip;
 
     public LocalizationService()

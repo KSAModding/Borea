@@ -493,7 +493,7 @@ public partial class MainViewModel
     [RelayCommand]
     private Task PlayHomeAsync() => IsHomeLaunchActiveInstance ? PlayActiveInstanceAsync() : PlayWithoutModLoader();
 
-    /// <summary>Starts the instance through the loader Borea has recorded and watches the start.</summary>
+    /// <summary>Starts the instance through the loader that <see cref="LaunchLoaderChoice"/> picks and watches the start.</summary>
     private async Task LaunchAsync(Guid instanceId)
     {
         if (_services is not { } services || IsLaunching)
@@ -506,9 +506,18 @@ public partial class MainViewModel
         {
             var instance = await services.Instances.GetByIdAsync(instanceId)
                 ?? throw new InvalidOperationException(Localization.LaunchInstanceMissing);
-            var loader = await FindInstalledLoaderAsync();
+            var choice = LaunchLoaderChoice.Choose(instance, services.Settings.LoaderInstallations, await services.Mods.GetAvailableModsAsync());
+            if (!choice.Succeeded)
+            {
+                var loaderIds = choice.LoaderIds.Count == 0 ? "" : ": " + string.Join(", ", choice.LoaderIds);
+                services.Log.Write($"Launch of instance {instance.InstanceId} did not start, {choice.Failure}{loaderIds}.");
+                LaunchMessage = LaunchLoaderFailureText(choice);
+                return;
+            }
+
+            var loader = choice.Loader;
             var result = services.Launcher.Launch(instance, loader);
-            if (result.Started && loader is not null)
+            if (result.Started)
             {
                 // the loader can still stop while it loads the mods, so the start is watched before it counts
                 LaunchMessage = Localization.FormatLaunchStarting(loader.Name);
@@ -614,22 +623,15 @@ public partial class MainViewModel
             ContentError = TryOpenWithSystem(_services.Paths.GetInstanceLaunchLogPath(instanceId));
     }
 
-    /// <summary>
-    /// The listing of the mod loader the settings point at. The launcher needs
-    /// its metadata to know what to run; null lets it explain that no loader is set.
-    /// </summary>
-    private async Task<ModMetadata?> FindInstalledLoaderAsync()
+    private string LaunchLoaderFailureText(LaunchLoaderChoice choice) => choice.Failure switch
     {
-        if (_services is null)
-            return null;
-
-        var loaderId = _services.Settings.LoaderInstallations.Keys.FirstOrDefault();
-        if (loaderId is null)
-            return null;
-
-        var listings = await _services.Mods.GetAvailableModsAsync();
-        return listings.FirstOrDefault(listing => listing.Type == ContentType.ModLoader && ModIds.Equals(listing.ModId, loaderId));
-    }
+        LaunchLoaderFailure.GivenLoaderNotInstalled => Localization.FormatLaunchLoaderNotInstalled(choice.LoaderIds[0]),
+        LaunchLoaderFailure.NeededLoaderNotInstalled => Localization.FormatLaunchNeededLoaderNotInstalled(choice.LoaderIds[0]),
+        LaunchLoaderFailure.DifferentLoadersNeeded => Localization.FormatLaunchDifferentLoadersNeeded(string.Join(", ", choice.LoaderIds)),
+        LaunchLoaderFailure.LoaderNotListed => Localization.FormatLaunchLoaderNotListed(string.Join(", ", choice.LoaderIds)),
+        LaunchLoaderFailure.NoLoaderTakesInstance => Localization.LaunchNoLoaderTakesInstance,
+        _ => throw new ArgumentOutOfRangeException(nameof(choice), choice.Failure, null),
+    };
 
     internal async Task SetContentEnabledAsync(Guid instanceId, string modId, bool enabled)
     {
