@@ -38,6 +38,14 @@
             </Grid>
         </Border>
     </DataTemplate>
+    <DataTemplate x:Key="InstanceHint" x:DataType="vm:MainViewModel">
+        <WrapPanel ItemSpacing="12" LineSpacing="4">
+            <TextBlock Classes="body-md secondary" Text="{Binding InstanceHintText}" TextWrapping="Wrap" VerticalAlignment="Center" />
+            <Button Classes="link" Command="{Binding FollowInstanceHintCommand}" VerticalAlignment="Center" AutomationProperties.Name="{Binding InstanceHintActionText}">
+                <TextBlock Classes="action-md" Text="{Binding InstanceHintActionText}" />
+            </Button>
+        </WrapPanel>
+    </DataTemplate>
     <!-- c/instance-row: used by the library list and by the Current Install card on Home.
          Delete asks for a confirmation in the row, and rename opens the name modal. -->
     <DataTemplate x:Key="InstanceRow" x:DataType="vm:InstanceItem">
