@@ -57,7 +57,8 @@
                                     <TextBlock Classes="body-md secondary" Text="{Binding SelectedContent.Abstract}" TextWrapping="Wrap" LineHeight="18" />
                                     <ContentControl Margin="0,8,0,0" Content="{Binding SelectedContent.Choices}" IsVisible="{Binding SelectedContent.Choices, Converter={x:Static ObjectConverters.IsNotNull}}" />
                                     <WrapPanel ItemSpacing="8" LineSpacing="8" Margin="0,8,0,0" IsVisible="{Binding SelectedContent.IsConfirmingInstall}">
-                                        <TextBlock Classes="body-sm secondary" Text="{Binding SelectedContent.InstallWarning}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                                        <TextBlock Classes="body-sm secondary" Text="{Binding SelectedContent.AddedModsText}" ToolTip.Tip="{Binding SelectedContent.AddedModsToolTip}" IsVisible="{Binding SelectedContent.AddedModsText, Converter={x:Static ObjectConverters.IsNotNull}}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                                        <TextBlock Classes="body-sm secondary" Text="{Binding SelectedContent.InstallWarning}" IsVisible="{Binding SelectedContent.InstallWarning, Converter={x:Static ObjectConverters.IsNotNull}}" TextWrapping="Wrap" VerticalAlignment="Center" />
                                         <Button Classes="text primary" Content="{Binding SelectedContent.ConfirmInstallText}" Command="{Binding SelectedContent.ConfirmInstallCommand}" IsEnabled="{Binding SelectedContent.Choices.IsComplete, FallbackValue={x:True}}" />
                                         <Button Classes="text" Content="{Binding Localization.LibraryCancel}" Command="{Binding SelectedContent.CancelInstallCommand}" />
                                     </WrapPanel>
@@ -252,7 +253,8 @@
                                                     <StackPanel Grid.Row="1" Grid.ColumnSpan="7" Spacing="6" Margin="0,6,0,0" IsVisible="{Binding IsConfirmingInstall}">
                                                         <ContentControl Content="{Binding Choices}" IsVisible="{Binding Choices, Converter={x:Static ObjectConverters.IsNotNull}}" />
                                                         <WrapPanel ItemSpacing="8" LineSpacing="8">
-                                                            <TextBlock Classes="body-sm secondary" Text="{Binding InstallWarning}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                                                            <TextBlock Classes="body-sm secondary" Text="{Binding AddedModsText}" ToolTip.Tip="{Binding AddedModsToolTip}" IsVisible="{Binding AddedModsText, Converter={x:Static ObjectConverters.IsNotNull}}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                                                            <TextBlock Classes="body-sm secondary" Text="{Binding InstallWarning}" IsVisible="{Binding InstallWarning, Converter={x:Static ObjectConverters.IsNotNull}}" TextWrapping="Wrap" VerticalAlignment="Center" />
                                                             <Button Classes="text primary" Content="{Binding ConfirmInstallText}" Command="{Binding ConfirmInstallCommand}" IsEnabled="{Binding Choices.IsComplete, FallbackValue={x:True}}" />
                                                             <Button Classes="text" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryCancel}" Command="{Binding CancelInstallCommand}" />
                                                         </WrapPanel>
