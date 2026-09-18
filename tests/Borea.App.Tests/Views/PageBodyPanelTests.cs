@@ -1,3 +1,4 @@
+using System.Globalization;
 using Avalonia;
 using Avalonia.Controls;
 using Borea.App.Views;
@@ -65,5 +66,29 @@ public sealed class PageBodyPanelTests
         Assert.Equal(PageBodyPanel.PageTopMargin + 20 + PageBodyPanel.PageBottomMargin, panel.DesiredSize.Height);
         Assert.Equal(new Rect(64, PageBodyPanel.PageTopMargin, 1072, 10), first.Bounds);
         Assert.Equal(new Rect(64, PageBodyPanel.PageTopMargin + 10, 1072, 10), last.Bounds);
+    }
+
+    [Theory]
+    [InlineData(true, false, PageBodyPanel.PageTopMargin, 0)]
+    [InlineData(false, true, 0, PageBodyPanel.PageBottomMargin)]
+    public void Layout_FixedHeaderAndScrollingPart_KeepOnlyTheirOuterMargin(bool hasTopMargin, bool hasBottomMargin, double top, double bottom)
+    {
+        var child = new Border { Height = 10 };
+        var panel = new PageBodyPanel { HasTopMargin = hasTopMargin, HasBottomMargin = hasBottomMargin, Children = { child } };
+
+        panel.Measure(new Size(1200, double.PositiveInfinity));
+        panel.Arrange(new Rect(panel.DesiredSize));
+
+        Assert.Equal(top + 10 + bottom, panel.DesiredSize.Height);
+        Assert.Equal(new Rect(64, top, 1072, 10), child.Bounds);
+    }
+
+    [Theory]
+    [InlineData(480, 120)]
+    [InlineData(800, 200)]
+    [InlineData(1440, 200)]
+    public void HeaderMessagesMaxHeight_LeavesALowPageRoomToScroll(double page, double maxHeight)
+    {
+        Assert.Equal(maxHeight, (double)PageBodyPanel.HeaderMessagesMaxHeight.Convert(page, typeof(double), null, CultureInfo.InvariantCulture)!);
     }
 }

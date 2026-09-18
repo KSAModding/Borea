@@ -5,8 +5,8 @@
              x:Class="Borea.App.Views.Pages.LibraryPage"
              x:DataType="vm:MainViewModel">
     <!-- Library -->
-    <ScrollViewer>
-        <views:PageBodyPanel>
+    <Grid RowDefinitions="Auto,*">
+        <views:PageBodyPanel HasBottomMargin="False">
             <ContentControl Content="{Binding}" ContentTemplate="{StaticResource GameSetupBanner}" IsVisible="{Binding NeedsGameSetup}" Margin="0,0,0,16" />
             <ContentControl Content="{Binding}" ContentTemplate="{StaticResource SharedProfileBanner}" IsVisible="{Binding ShowSharedProfileBanner}" Margin="0,0,0,16" />
             <!-- header: breadcrumb, c/link-cta, the menu, bottom border -->
@@ -37,8 +37,6 @@
             <TextBlock Classes="body-md danger" Text="{Binding InstanceError}" TextWrapping="Wrap" Margin="0,16,0,0" IsVisible="{Binding InstanceError, Converter={x:Static ObjectConverters.IsNotNull}}" />
             <TextBlock Classes="body-md secondary" Text="{Binding InstanceNotice}" TextWrapping="Wrap" Margin="0,16,0,0" IsVisible="{Binding InstanceNotice, Converter={x:Static ObjectConverters.IsNotNull}}" />
 
-            <TextBlock Classes="body-md muted" Text="{Binding Localization.LibraryEmpty}" Margin="8,24,0,0" IsVisible="{Binding !Instances.Count}" />
-
             <Button Classes="dropdown" HorizontalAlignment="Left" Margin="0,24,0,0" IsVisible="{Binding !!Instances.Count}" AutomationProperties.Name="{Binding Localization.DiscoverSortBy}">
                 <Button.Flyout>
                     <MenuFlyout Placement="BottomEdgeAlignedLeft">
@@ -52,14 +50,20 @@
                     <Path Classes="icon size-16" Data="{StaticResource Icon.CaretDown}" VerticalAlignment="Center" />
                 </StackPanel>
             </Button>
-
-            <ItemsControl ItemsSource="{Binding Instances}" ItemTemplate="{StaticResource InstanceRow}" Margin="0,8,0,0">
-                <ItemsControl.ItemsPanel>
-                    <ItemsPanelTemplate>
-                        <StackPanel Spacing="8" />
-                    </ItemsPanelTemplate>
-                </ItemsControl.ItemsPanel>
-            </ItemsControl>
         </views:PageBodyPanel>
-    </ScrollViewer>
+
+        <ScrollViewer Grid.Row="1">
+            <views:PageBodyPanel HasTopMargin="False">
+                <TextBlock Classes="body-md muted" Text="{Binding Localization.LibraryEmpty}" Margin="8,24,0,0" IsVisible="{Binding !Instances.Count}" />
+
+                <ItemsControl ItemsSource="{Binding Instances}" ItemTemplate="{StaticResource InstanceRow}" Margin="0,8,0,0">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <StackPanel Spacing="8" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                </ItemsControl>
+            </views:PageBodyPanel>
+        </ScrollViewer>
+    </Grid>
 </UserControl>
