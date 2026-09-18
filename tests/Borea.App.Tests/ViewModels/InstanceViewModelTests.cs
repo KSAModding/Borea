@@ -310,7 +310,7 @@ public sealed class InstanceViewModelTests
 
         Assert.False(viewModel.HasLaunchOutput);
         Assert.NotNull((await harness.Services.Instances.GetByIdAsync(viewModel.ActiveInstance.InstanceId))?.LastPlayedAt);
-        Assert.Equal(harness.Localization.FormatTimeAgo(TimeSpan.Zero), viewModel.ActiveInstance.LastPlayedText);
+        Assert.Equal(harness.Localization.FormatTimeAgoShort(TimeSpan.Zero), viewModel.ActiveInstance.LastPlayedText);
     }
 
     [Fact]

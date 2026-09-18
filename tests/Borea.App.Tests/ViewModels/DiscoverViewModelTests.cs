@@ -48,7 +48,7 @@ public sealed class DiscoverViewModelTests
         // the row installs the newest release of the channel, so its age comes from that release and not from updated_at
         Assert.Equal<DateTimeOffset?>(release!.ReleaseDate, afc.UpdatedAt);
         Assert.NotEqual<DateTimeOffset?>(SnapshotUpdatedAt, afc.UpdatedAt);
-        Assert.False(string.IsNullOrWhiteSpace(afc.UpdatedText));
+        Assert.Equal(harness.Localization.FormatTimeAgoShort(DateTimeOffset.UtcNow - afc.UpdatedAt!.Value), afc.UpdatedText);
 
         Assert.Null(armory.DownloadsText);
         Assert.Null(armory.PublishedText);

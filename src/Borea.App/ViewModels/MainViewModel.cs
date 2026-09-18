@@ -466,6 +466,9 @@ public partial class MainViewModel : ViewModelBase
     /// </summary>
     internal string AgeText(DateTimeOffset at) => Localization.FormatTimeAgo(DateTimeOffset.UtcNow - at);
 
+    /// <summary>The short form of <see cref="AgeText"/>, such as "3d ago", for an age that is not part of a sentence.</summary>
+    internal string ShortAgeText(DateTimeOffset at) => Localization.FormatTimeAgoShort(DateTimeOffset.UtcNow - at);
+
     /// <summary>The date in the regional format the user chose, for the tooltip of an age.</summary>
     internal static string DateText(DateTimeOffset at) => at.ToLocalTime().ToString("d", CultureInfo.CurrentCulture);
 
@@ -768,7 +771,7 @@ public sealed partial class RecentItem : ObservableObject
     public DateTimeOffset UpdatedAt { get; }
 
     /// <summary>How long ago the release came out.</summary>
-    public string UpdatedText => _owner.AgeText(UpdatedAt);
+    public string UpdatedText => _owner.ShortAgeText(UpdatedAt);
 
     /// <summary>The release date in the regional format the user chose.</summary>
     public string UpdatedDateText => MainViewModel.DateText(UpdatedAt);
@@ -825,7 +828,7 @@ public sealed partial class InstanceItem : ObservableObject
     [NotifyPropertyChangedFor(nameof(LastPlayedToolTip))]
     private DateTimeOffset? _lastPlayedAt;
 
-    public string LastPlayedText => LastPlayedAt is { } at ? _owner.AgeText(at) : _owner.Localization.LibraryNeverPlayed;
+    public string LastPlayedText => LastPlayedAt is { } at ? _owner.ShortAgeText(at) : _owner.Localization.LibraryNeverPlayed;
 
     public string? LastPlayedToolTip => LastPlayedAt is { } at ? _owner.Localization.FormatLibraryLastPlayed(MainViewModel.DateTimeText(at)) : null;
 

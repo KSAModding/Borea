@@ -672,6 +672,24 @@
   <data name="TimeYearsAgoFormat" xml:space="preserve">
     <value>{0} years ago</value>
   </data>
+  <data name="TimeMinutesAgoShortFormat" xml:space="preserve">
+    <value>{0}m ago</value>
+  </data>
+  <data name="TimeHoursAgoShortFormat" xml:space="preserve">
+    <value>{0}h ago</value>
+  </data>
+  <data name="TimeDaysAgoShortFormat" xml:space="preserve">
+    <value>{0}d ago</value>
+  </data>
+  <data name="TimeWeeksAgoShortFormat" xml:space="preserve">
+    <value>{0}w ago</value>
+  </data>
+  <data name="TimeMonthsAgoShortFormat" xml:space="preserve">
+    <value>{0}mo ago</value>
+  </data>
+  <data name="TimeYearsAgoShortFormat" xml:space="preserve">
+    <value>{0}y ago</value>
+  </data>
   <data name="DiscoverAdd" xml:space="preserve">
     <value>Add to the active instance</value>
   </data>

@@ -393,7 +393,7 @@ public sealed partial class VersionItem : ObservableObject, IInstallRow
     public DateTimeOffset ReleaseDate => _release.ReleaseDate;
 
     /// <summary>How long ago the release came out.</summary>
-    public string PublishedText => _owner.AgeText(_release.ReleaseDate);
+    public string PublishedText => _owner.ShortAgeText(_release.ReleaseDate);
 
     public string PublishedDateText => MainViewModel.DateText(_release.ReleaseDate);
 

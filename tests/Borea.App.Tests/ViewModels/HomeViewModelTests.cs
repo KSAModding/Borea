@@ -11,7 +11,7 @@ public sealed class HomeViewModelTests
         Assert.True(viewModel.HasRecentItems);
         Assert.Equal(["MeasureTools", "AdvancedFlightComputer", "KSArmory"], viewModel.RecentItems.Select(item => item.ModId));
         Assert.DoesNotContain(viewModel.RecentItems, item => item.ModId == "StarMap");
-        Assert.False(string.IsNullOrWhiteSpace(viewModel.RecentItems[0].UpdatedText));
+        Assert.Equal(harness.Localization.FormatTimeAgoShort(DateTimeOffset.UtcNow - viewModel.RecentItems[0].UpdatedAt), viewModel.RecentItems[0].UpdatedText);
     }
 
     [Fact]
