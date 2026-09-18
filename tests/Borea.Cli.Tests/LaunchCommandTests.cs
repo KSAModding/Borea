@@ -93,6 +93,21 @@ public sealed class LaunchCommandTests : IDisposable
     }
 
     [Fact]
+    public async Task Launch_LoaderThatRunsThroughAnUnknownRuntime_FailsWithoutStarting()
+    {
+        _host.Mods.Listings.Add(LoaderFixtures.ListingWithRuntime("mono"));
+        var directory = LoaderCommandTests.CreateLoaderDirectory("StarMap", "not a program", _host.Root);
+        await _host.RunAsync("settings", "set", "loader", "StarMap", directory);
+        await _host.RunAsync("instance", "create", "Flight Test");
+
+        var run = await _host.RunAsync("launch", "Flight Test", "StarMap");
+
+        Assert.Equal(1, run.ExitCode);
+        Assert.Contains("StarMap runs through 'mono'", run.Error);
+        Assert.Empty(_host.ProcessStarter.Plans);
+    }
+
+    [Fact]
     public async Task Launch_UnknownInstance_WritesTheCommandAndTheFailureToTheCliLog()
     {
         _host.Mods.Listings.Add(LoaderFixtures.Listing());
