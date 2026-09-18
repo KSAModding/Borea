@@ -155,7 +155,7 @@ internal static class ModInstallCommands
 
     // built from the CLI's own services, so a test that replaces the installer or the replacer replaces them here too
     private static Task ExecuteAsync(CliServices cli, InstallPlan plan, TextWriter error, CancellationToken cancellationToken)
-        => new InstallPlanExecutor(cli.Instances, cli.Installer, cli.Replacer).ExecuteAsync(plan, enable: true, new InstallProgressOutput(error), cancellationToken);
+        => new InstallPlanExecutor(cli.Instances, cli.Installer, cli.Replacer).ExecuteAsync(plan, enable: true, new InstallProgressOutput(error), cancellationToken: cancellationToken);
 
     internal static void PrintPlan(TextWriter output, InstallPlan plan)
     {

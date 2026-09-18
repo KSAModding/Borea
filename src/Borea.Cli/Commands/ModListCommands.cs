@@ -165,7 +165,7 @@ internal static class ModListCommands
 
         Instance? created = null;
         if (plan.Plan.IsReady && unknown.Count == 0 && yanked.Count == 0 && !context.DryRun)
-            created = await installer.InstallAsync(plan, name, new InstallProgressOutput(context.Error), cancellationToken).ConfigureAwait(false);
+            created = await installer.InstallAsync(plan, name, new InstallProgressOutput(context.Error), cancellationToken: cancellationToken).ConfigureAwait(false);
 
         if (context.Json)
             JsonOutput.Write(context.Output, PlanView.From(plan, name, created, notCopied));

@@ -19,13 +19,16 @@ public interface IInstallPlanExecutor
     /// Each operation's reports, with <see cref="InstallProgress.Step"/> and
     /// <see cref="InstallProgress.StepCount"/> set to its place in the plan.
     /// </param>
+    /// <param name="stop">Stops the operations at a safe point, under the rule of <see cref="InstallStop"/>.</param>
     /// <exception cref="InvalidOperationException">
     /// The plan has unresolved choices or conflicts, the instance no longer
     /// exists, or the instance changed after planning or between operations.
     /// </exception>
+    /// <exception cref="InstallStoppedException">The stop ended the plan before its last operation finished.</exception>
     Task ExecuteAsync(
         InstallPlan plan,
         bool enable,
         IProgress<InstallProgress>? progress = null,
+        InstallStop? stop = null,
         CancellationToken cancellationToken = default);
 }

@@ -220,7 +220,7 @@ public partial class MainViewModel
             await services.ForeignModAdopter.ReplaceFolderAsync(
                 row.InstanceId,
                 row.FolderName,
-                cancellationToken => services.PlanExecutor.ExecuteAsync(plan, enable: true, ProgressOf(row), cancellationToken));
+                cancellationToken => services.PlanExecutor.ExecuteAsync(plan, enable: true, ProgressOf(row), cancellationToken: cancellationToken));
         }
         catch (Exception exception) when (IsInstallFailure(exception))
         {

@@ -274,7 +274,7 @@ internal static class PackCommand
 
             var result = isDryRun
                 ? planned ?? await cli.ModPackInstaller.PlanAsync(request, ct).ConfigureAwait(false)
-                : await cli.ModPackInstaller.InstallAsync(request, new InstallProgressOutput(error), ct).ConfigureAwait(false);
+                : await cli.ModPackInstaller.InstallAsync(request, new InstallProgressOutput(error), cancellationToken: ct).ConfigureAwait(false);
             var view = InstallView.From(
                 metadata,
                 target.Name,
