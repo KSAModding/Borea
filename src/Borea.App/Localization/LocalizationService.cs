@@ -645,6 +645,15 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string SetupFoundGames => Resources.SetupFoundGames;
 
+    public string FormatSetupFoundGame(string version, string directory)
+        => string.Format(CultureInfo.CurrentCulture, Resources.SetupFoundGameFormat, version, directory);
+
+    public string SetupUseFoundGame => Resources.SetupUseFoundGame;
+
+    public string SetupUseSelectedGame => Resources.SetupUseSelectedGame;
+
+    public string SetupLater => Resources.SetupLater;
+
     public string SetupLoader => Resources.SetupLoader;
 
     public string SetupLoaderDirectory => Resources.SetupLoaderDirectory;

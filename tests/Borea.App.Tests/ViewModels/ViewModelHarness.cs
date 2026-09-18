@@ -60,7 +60,8 @@ internal sealed class ViewModelHarness : IDisposable
     /// <param name="indexOffline">The first value of <see cref="IndexOffline"/>.</param>
     /// <param name="candidates">Adds the folders the install detector checks, before the first load.</param>
     /// <param name="processStarter">Starts the launchers' processes. Null starts real ones.</param>
-    public static async Task<ViewModelHarness> CreateAsync(Func<BoreaServices, Task>? seed = null, Func<HttpRequestMessage, HttpResponseMessage?>? respond = null, Func<string, string>? editSnapshot = null, bool indexOffline = false, Action<ViewModelHarness>? candidates = null, Borea.Storage.Launch.IProcessStarter? processStarter = null)
+    /// <param name="waitForDetection">False returns while the game detection of the first load may still run.</param>
+    public static async Task<ViewModelHarness> CreateAsync(Func<BoreaServices, Task>? seed = null, Func<HttpRequestMessage, HttpResponseMessage?>? respond = null, Func<string, string>? editSnapshot = null, bool indexOffline = false, Action<ViewModelHarness>? candidates = null, Borea.Storage.Launch.IProcessStarter? processStarter = null, bool waitForDetection = true)
     {
         var harness = new ViewModelHarness { _respond = respond, _editSnapshot = editSnapshot, IndexOffline = indexOffline, _processStarter = processStarter };
         Directory.CreateDirectory(harness.Root);
@@ -82,6 +83,8 @@ internal sealed class ViewModelHarness : IDisposable
             harness.Services,
             async () => harness.Services = await harness.BuildServicesAsync());
         await harness.ViewModel.LoadAsync();
+        if (waitForDetection)
+            await harness.ViewModel.WhenGameDetectedAsync();
         return harness;
     }
 
@@ -100,6 +103,7 @@ internal sealed class ViewModelHarness : IDisposable
         ViewModel?.WhenReleaseChannelSavedAsync().GetAwaiter().GetResult();
         ViewModel?.WhenContentUpdatesCheckedAsync().GetAwaiter().GetResult();
         ViewModel?.WhenPlaytimeLoadedAsync().GetAwaiter().GetResult();
+        ViewModel?.WhenGameDetectedAsync().GetAwaiter().GetResult();
         ViewModel?.Tasks.WhenSavedAsync().GetAwaiter().GetResult();
         Services.Dispose();
         CultureInfo.CurrentCulture = _originalCulture;

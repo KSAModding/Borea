@@ -975,6 +975,18 @@
   <data name="SetupFoundGames" xml:space="preserve">
     <value>Borea found KSA in more than one folder. Select the folder you play from.</value>
   </data>
+  <data name="SetupFoundGameFormat" xml:space="preserve">
+    <value>Borea found KSA {0} in {1}. Use it?</value>
+  </data>
+  <data name="SetupUseFoundGame" xml:space="preserve">
+    <value>Use it</value>
+  </data>
+  <data name="SetupUseSelectedGame" xml:space="preserve">
+    <value>Use selected</value>
+  </data>
+  <data name="SetupLater" xml:space="preserve">
+    <value>Later</value>
+  </data>
   <data name="SetupLoader" xml:space="preserve">
     <value>Mod loader</value>
   </data>

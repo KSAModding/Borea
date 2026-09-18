@@ -294,7 +294,7 @@ public partial class MainViewModel : ViewModelBase
         await RefreshContentIndexAsync();
         await LoadRecentItemsAsync();
         UpdateIndexRefreshStatus();
-        await RefreshGameSetupAsync();
+        RefreshGameSetup();
         await RefreshSharedProfileAsync();
     }
 
@@ -702,6 +702,7 @@ public partial class MainViewModel : ViewModelBase
         RefreshLoaderText();
         RefreshIndexStatusText();
         OnPropertyChanged(nameof(GameSetupBannerText));
+        OnPropertyChanged(nameof(FoundGameText));
         OnPropertyChanged(nameof(SharedProfileBannerText));
         OnPropertyChanged(nameof(SharedProfileImportNotice));
         OnPropertyChanged(nameof(InstalledInText));
