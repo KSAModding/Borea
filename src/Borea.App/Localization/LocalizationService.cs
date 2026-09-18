@@ -545,6 +545,12 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string InstallAnyway => Resources.InstallAnyway;
 
+    public string FormatInstallAlsoAdds(string mods)
+        => string.Format(CultureInfo.CurrentCulture, Resources.InstallAlsoAddsFormat, mods);
+
+    public string FormatInstallAlsoAddsMore(string mods, int more)
+        => string.Format(CultureInfo.CurrentCulture, Resources.InstallAlsoAddsMoreFormat, mods, more);
+
     public string InstallChoicesRecommended => Resources.InstallChoicesRecommended;
 
     public string InstallChoicesSuggested => Resources.InstallChoicesSuggested;

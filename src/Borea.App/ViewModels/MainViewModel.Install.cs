@@ -56,6 +56,8 @@ internal interface IInstallRow : IInstallProgressRow
 /// </summary>
 public partial class MainViewModel
 {
+    private const int AddedModsShown = 3;
+
     private readonly List<InstallRun> _installRuns = [];
 
     /// <summary>True once the window asked the running installs to stop so that it can close.</summary>
@@ -103,8 +105,8 @@ public partial class MainViewModel
 
     /// <summary>
     /// Plans the install of one release into the active instance. A ready plan
-    /// without warnings or choices runs at once. Any other plan waits on the row
-    /// until the user confirms or cancels it.
+    /// that installs only that release and has no warnings or choices runs at
+    /// once. Any other plan waits on the row until the user confirms or cancels it.
     /// </summary>
     /// <param name="exactVersion">The version the request pins. Null plans the newest release.</param>
     /// <param name="instanceId">The instance a Try again of the Tasks page installs into. Null installs into the active instance.</param>
@@ -114,11 +116,15 @@ public partial class MainViewModel
             return;
 
         RememberRequestedVersion(row, exactVersion);
-        var executed = await PlanAndExecuteAsync(row, target, async _ =>
-        {
-            var release = await findRelease() ?? throw new InvalidOperationException(Localization.DiscoverNoRelease);
-            return [new RequestedMod(release, InstallReason.Manual, exactVersion is not null)];
-        });
+        var executed = await PlanAndExecuteAsync(
+            row,
+            target,
+            async _ =>
+            {
+                var release = await findRelease() ?? throw new InvalidOperationException(Localization.DiscoverNoRelease);
+                return [new RequestedMod(release, InstallReason.Manual, exactVersion is not null)];
+            },
+            (_, plan) => Task.FromResult(AddedMods(plan, null).Any()));
 
         if (executed)
             await ReloadInstancesAsync();
@@ -296,6 +302,27 @@ public partial class MainViewModel
         return known ? SizeText(total) : null;
     }
 
+    /// <summary>
+    /// "Also adds KSP-Redux 1.3.2" for what the plan installs besides the requested mods,
+    /// without the mods that the choices show, or null when it installs nothing else.
+    /// </summary>
+    /// <param name="all">Names every mod. Otherwise a long list ends in "and 2 more".</param>
+    internal string? AddedModsText(InstallPlan? plan, InstallChoices? choices, bool all = false)
+    {
+        var names = AddedMods(plan, choices).Select(release => $"{ContentName(release.ModId)} {release.Version}").ToList();
+        if (names.Count == 0)
+            return null;
+
+        return all || names.Count <= AddedModsShown
+            ? Localization.FormatInstallAlsoAdds(string.Join(", ", names))
+            : Localization.FormatInstallAlsoAddsMore(string.Join(", ", names.Take(AddedModsShown - 1)), names.Count - AddedModsShown + 1);
+    }
+
+    private static IEnumerable<ModVersionMetadata> AddedMods(InstallPlan? plan, InstallChoices? choices)
+        => plan?.Operations
+            .Where(operation => operation.Reason != InstallReason.Manual && choices?.NamedModIds.Contains(operation.Release.ModId) != true)
+            .Select(operation => operation.Release) ?? [];
+
     private void HoldPlan(IInstallRow row, InstallPlan plan)
     {
         row.PendingPlan = plan;
@@ -389,14 +416,22 @@ public partial class MainViewModel
         return executed;
     }
 
-    /// <summary>Plans again with the user's choices, or returns null and keeps the row waiting when that plan asks something new, cannot run, or has a new warning.</summary>
+    /// <summary>
+    /// Plans again with the user's choices, or returns null and keeps the row waiting when that plan asks something new,
+    /// cannot run, has a new warning, or installs a mod that neither the row nor the choices named.
+    /// </summary>
     private async Task<InstallPlan?> ReplanAsync(BoreaServices services, IInstallRow row, InstallChoices choices)
     {
         var shown = row.PendingPlan?.Warnings ?? [];
+        var named = (row.PendingPlan?.Operations.Select(operation => operation.Release.ModId) ?? [])
+            .Concat(choices.Requested.Select(mod => mod.Release.ModId))
+            .Concat(choices.NamedModIds)
+            .ToHashSet(ModIds.Comparer);
         var instance = await services.Instances.GetByIdAsync(choices.InstanceId)
             ?? throw new InvalidOperationException(Localization.InstallInstanceMissing);
         var plan = await PlanWithChoicesAsync(services, PlanningRequest(services, instance, choices.Requested), choices);
-        if (!choices.Apply(plan) && plan.IsReady && plan.Warnings.All(shown.Contains))
+        if (!choices.Apply(plan) && plan.IsReady && plan.Warnings.All(shown.Contains)
+            && (row is IUpdateRow || plan.Operations.All(operation => named.Contains(operation.Release.ModId))))
             return plan;
 
         HoldPlan(row, plan);
