@@ -141,6 +141,15 @@
                         </Grid>
                     </Grid>
 
+                    <ContentControl Content="{Binding}" ContentTemplate="{StaticResource InstanceHint}" Margin="0,16,0,0">
+                        <ContentControl.IsVisible>
+                            <MultiBinding Converter="{x:Static BoolConverters.And}">
+                                <Binding Path="!HasActiveInstance" />
+                                <Binding Path="!IsContentFromInstance" />
+                                <Binding Path="SelectedContent.CanInstall" />
+                            </MultiBinding>
+                        </ContentControl.IsVisible>
+                    </ContentControl>
                     <WrapPanel ItemSpacing="12" LineSpacing="4" Margin="0,16,0,0" IsVisible="{Binding IsLoaderContent}">
                         <TextBlock Classes="body-md secondary" Text="{Binding Localization.ContentLoaderHint}" TextWrapping="Wrap" VerticalAlignment="Center" />
                         <Button Classes="link" Command="{Binding SetMainWindowSettings}">

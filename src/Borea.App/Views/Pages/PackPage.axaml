@@ -89,6 +89,7 @@
                         </Grid>
                     </Grid>
 
+                    <ContentControl Content="{Binding}" ContentTemplate="{StaticResource InstanceHint}" Margin="0,16,0,0" IsVisible="{Binding !HasActiveInstance}" />
                     <!-- the outcome of the last install, one row per mod -->
                     <Border BorderBrush="{StaticResource Brush.BorderStrong}" BorderThickness="1" CornerRadius="16" views:RoundedClip.IsEnabled="True" Margin="0,16,0,0" IsVisible="{Binding SelectedPack.HasResults}">
                         <ItemsControl ItemsSource="{Binding SelectedPack.Results}">
