@@ -205,6 +205,55 @@ public sealed class FileAppPreferencesRepositoryTests : IDisposable
     }
 
     [Fact]
+    public async Task SaveThenGet_DismissedGameRevision_RestoresTheRevision()
+    {
+        Assert.Null(AppPreferences.Empty.DismissedGameRevision);
+
+        await _repository.SaveAsync(AppPreferences.Empty.WithDismissedGameRevision(5438), BundledThemeNames);
+        var result = await _repository.GetAsync(BundledThemeNames);
+
+        Assert.Equal(5438, result.Preferences.DismissedGameRevision);
+        using var document = JsonDocument.Parse(await File.ReadAllTextAsync(_pathProvider.GetAppPreferencesPath()));
+        Assert.Equal(5438, document.RootElement.GetProperty("dismissedGameRevision").GetInt32());
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData(""", "dismissedGameRevision": null""")]
+    [InlineData(""", "dismissedGameRevision": -1""")]
+    public async Task GetAsync_NoOrNegativeDismissedGameRevision_LoadsAsNone(string dismissed)
+    {
+        await WriteAsync($$"""
+            { "formatVersion": 1, "selectedTheme": "Light"{{dismissed}} }
+            """);
+
+        var result = await _repository.GetAsync(BundledThemeNames);
+
+        Assert.Equal(AppPreferencesLoadStatus.Loaded, result.Status);
+        Assert.Null(result.Preferences.DismissedGameRevision);
+    }
+
+    [Fact]
+    public void With_OtherPreferenceChanges_KeepTheDismissedGameRevision()
+    {
+        var preferences = AppPreferences.Empty.WithDismissedGameRevision(5438)
+            .WithSelectedThemeName("Light")
+            .WithRegionalCultureName("de-DE")
+            .WithUiCultureName("de")
+            .WithCheckForUpdatesAtStart(false)
+            .WithUpdateChannel(BoreaUpdateChannel.Dev)
+            .WithForeignFolderDeletionConfirmed(true)
+            .WithLoadImagesFromAuthorHosts(false)
+            .WithHomeLaunch(HomeLaunchOption.WithoutModLoader)
+            .WithDiscoverSortOrder(DiscoverSortOrder.Name)
+            .WithSharedProfileBannerDismissed(true)
+            .WithDismissedBoreaRelease(ModVersion.Parse("0.5.0"));
+
+        Assert.Equal(5438, preferences.DismissedGameRevision);
+        Assert.Equal(ModVersion.Parse("0.5.0"), preferences.WithDismissedGameRevision(5500).DismissedBoreaRelease);
+    }
+
+    [Fact]
     public void With_OtherPreferenceChanges_KeepTheUpdateCheckChoice()
     {
         var preferences = new AppPreferences("Dark", checkForUpdatesAtStart: false)

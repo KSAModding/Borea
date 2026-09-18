@@ -47,11 +47,12 @@ internal static class AppPreferencesMapper
         },
         SharedProfileBannerDismissed = preferences.SharedProfileBannerDismissed,
         DismissedBoreaRelease = preferences.DismissedBoreaRelease?.ToString(),
+        DismissedGameRevision = preferences.DismissedGameRevision,
         CustomThemes = preferences.CustomThemes.Select(theme => (CustomThemePreferenceDto?)ToDto(theme)).ToList(),
     };
 
     public static AppPreferences FromDto(AppPreferencesDocumentDto dto)
-        => new(dto.SelectedTheme, dto.CustomThemes?.Select(FromDto), NormalizeRegionalCulture(dto.RegionalCulture), NormalizeUiCulture(dto.UiCulture), dto.CheckForUpdatesAtStart ?? true, ReadUpdateChannel(dto.UpdateChannel), dto.ForeignFolderDeletionConfirmed ?? false, dto.LoadImagesFromAuthorHosts ?? true, ReadHomeLaunch(dto.HomeLaunch), ReadDiscoverSortOrder(dto.DiscoverSortOrder), dto.SharedProfileBannerDismissed ?? false, ModVersion.TryParse(dto.DismissedBoreaRelease, out var dismissed) ? dismissed : null);
+        => new(dto.SelectedTheme, dto.CustomThemes?.Select(FromDto), NormalizeRegionalCulture(dto.RegionalCulture), NormalizeUiCulture(dto.UiCulture), dto.CheckForUpdatesAtStart ?? true, ReadUpdateChannel(dto.UpdateChannel), dto.ForeignFolderDeletionConfirmed ?? false, dto.LoadImagesFromAuthorHosts ?? true, ReadHomeLaunch(dto.HomeLaunch), ReadDiscoverSortOrder(dto.DiscoverSortOrder), dto.SharedProfileBannerDismissed ?? false, ModVersion.TryParse(dto.DismissedBoreaRelease, out var dismissed) ? dismissed : null, dto.DismissedGameRevision is >= 0 ? dto.DismissedGameRevision : null);
 
     private static BoreaUpdateChannel ReadUpdateChannel(string? name)
         => name?.ToLowerInvariant() switch
