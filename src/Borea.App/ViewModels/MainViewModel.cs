@@ -681,6 +681,8 @@ public partial class MainViewModel : ViewModelBase
         RefreshModListText();
         foreach (var item in ManualInstallItems)
             item.RefreshText();
+        foreach (var run in _installRuns)
+            run.RefreshText();
         RefreshGameDataItems();
         RefreshGameSaveText();
         RefreshLoaderText();

@@ -57,7 +57,8 @@ internal static class BoreaCli
             throw new ArgumentNullException(nameof(error));
 
         var parseResult = Build(services).Parse(args);
-        var configuration = new InvocationConfiguration { Output = output, Error = error };
+        // after Ctrl+C an install finishes the mod it extracts, which can take longer than the default of two seconds
+        var configuration = new InvocationConfiguration { Output = output, Error = error, ProcessTerminationTimeout = TimeSpan.FromMinutes(1) };
         var exitCode = await parseResult.InvokeAsync(configuration, cancellationToken).ConfigureAwait(false);
 
         return parseResult.Errors.Count > 0 ? ExitCodes.Usage : exitCode;

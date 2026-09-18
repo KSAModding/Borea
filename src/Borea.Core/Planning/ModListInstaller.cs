@@ -73,8 +73,8 @@ public sealed class ModListInstaller
         return new ModListPlan(request, items, plan);
     }
 
-    /// <summary>A failed install removes the new instance again.</summary>
-    public async Task<Instance> InstallAsync(ModListPlan plan, string name, IProgress<InstallProgress>? progress = null, CancellationToken cancellationToken = default)
+    /// <summary>A failed or stopped install removes the new instance again.</summary>
+    public async Task<Instance> InstallAsync(ModListPlan plan, string name, IProgress<InstallProgress>? progress = null, InstallStop? stop = null, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(plan);
         if (!plan.Plan.IsReady)
@@ -88,7 +88,7 @@ public sealed class ModListInstaller
         await _instances.SaveAsync(instance).ConfigureAwait(false);
         try
         {
-            await _executor.ExecuteAsync(plan.Plan, enable: true, progress, cancellationToken).ConfigureAwait(false);
+            await _executor.ExecuteAsync(plan.Plan, enable: true, progress, stop, cancellationToken).ConfigureAwait(false);
             foreach (var item in plan.Items.Where(item => item.Release is not null && !item.Entry.Enabled))
                 await _modState.SetInactiveAsync(instance.InstanceId, item.Entry.ModId, cancellationToken).ConfigureAwait(false);
             await ApplyLoadOrderAsync(instance.InstanceId, plan.Request.ModList, cancellationToken).ConfigureAwait(false);

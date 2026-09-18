@@ -753,6 +753,24 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string FormatInstallMinutesLeft(int minutes)
         => string.Format(CultureInfo.CurrentCulture, Resources.InstallMinutesLeftFormat, minutes);
 
+    public string InstallStop => Resources.InstallStop;
+
+    public string InstallStopping => Resources.InstallStopping;
+
+    public string InstallStoppingAfterMod => Resources.InstallStoppingAfterMod;
+
+    public string InstallStopped => Resources.InstallStopped;
+
+    public string FormatInstallStoppedAfter(int completed, int total)
+        => string.Format(CultureInfo.CurrentCulture, Resources.InstallStoppedAfterFormat, completed, total);
+
+    public string UpdateStopped => Resources.UpdateStopped;
+
+    public string FormatUpdateStoppedAfter(int completed, int total)
+        => string.Format(CultureInfo.CurrentCulture, Resources.UpdateStoppedAfterFormat, completed, total);
+
+    public string InstallClosing => Resources.InstallClosing;
+
     public string LaunchShowDetails => Resources.LaunchShowDetails;
 
     public string LaunchOpenLog => Resources.LaunchOpenLog;

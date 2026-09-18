@@ -256,6 +256,24 @@ public sealed class ModInstallCommandTests : IDisposable
     }
 
     [Fact]
+    public async Task Install_CancelledWhileAModUnpacks_FinishesThatModAndStops()
+    {
+        _host.Mods.Releases.Add(ContentCommandFixtures.Release(dependencies: [new ModDependency("library", ModDependencyKind.Required)]));
+        _host.Mods.Releases.Add(ContentCommandFixtures.Release(id: "library", version: "1.0.0"));
+        await _host.RunAsync("instance", "create", "Alpha");
+        using var cancellation = new CancellationTokenSource();
+        RecordingInstaller? installer = null;
+        _host.InstallerFactory = graph => installer = new RecordingInstaller(graph, extracting: _ => cancellation.Cancel());
+
+        var run = await _host.RunAsync(cancellation.Token, "install", "flight-tools", "--instance", "Alpha");
+
+        Assert.Equal(1, run.ExitCode);
+        Assert.Contains("Stopped. 1 of 2 mods installed.", run.Error);
+        Assert.Contains("The command was cancelled.", run.Error);
+        Assert.Single(installer!.Installed);
+    }
+
+    [Fact]
     public async Task Install_Conflict_FailsWithoutExecuting()
     {
         var conflict = new ModDependency("blocker", ModDependencyKind.Conflict);
@@ -539,7 +557,7 @@ public sealed class ModInstallCommandTests : IDisposable
     private static InstalledMod Installed(ModVersionMetadata release, ModInstallOwnership ownership) =>
         new(release.ModId, release.Version, InstallReason.Manual, DateTimeOffset.UtcNow, release, new string('A', 64), ownership, ownership == ModInstallOwnership.Borea ? Guid.NewGuid().ToString("N") : null);
 
-    private sealed class RecordingInstaller(BoreaServices graph, Action<ModVersionMetadata>? before = null) : IModInstaller
+    private sealed class RecordingInstaller(BoreaServices graph, Action<ModVersionMetadata>? before = null, Action<ModVersionMetadata>? extracting = null) : IModInstaller
     {
         public List<ModVersionMetadata> Installed { get; } = new();
         public async Task<InstallResult> InstallAsync(Guid instanceId, ModVersionMetadata release, InstallReason reason, bool enable, IProgress<InstallProgress>? progress = null, CancellationToken cancellationToken = default)
@@ -557,6 +575,7 @@ public sealed class ModInstallCommandTests : IDisposable
             progress?.Report(InstallProgress.Of(release, InstallPhase.Downloading, new DownloadProgress(1, 2)));
             progress?.Report(InstallProgress.Of(release, InstallPhase.Downloading, new DownloadProgress(2, 2)));
             progress?.Report(InstallProgress.Of(release, InstallPhase.Extracting));
+            extracting?.Invoke(release);
             progress?.Report(InstallProgress.Of(release, InstallPhase.Finishing));
             return await graph.Instances.UpdateAsync(instanceId, current =>
             {

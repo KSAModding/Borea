@@ -8,6 +8,8 @@ namespace Borea.Storage.ModPacks;
 
 public sealed class ModPackInstaller : IModPackInstaller
 {
+    private const string StoppedMessage = "The install was stopped.";
+
     private readonly IInstanceRepository _instances;
     private readonly IInstallPlanner _planner;
     private readonly IModInstaller _installer;
@@ -21,22 +23,22 @@ public sealed class ModPackInstaller : IModPackInstaller
         _replacer = replacer ?? throw new ArgumentNullException(nameof(replacer));
     }
 
-    public async Task<ModPackInstallResult> CreateAndInstallAsync(string instanceName, ModPackInstallRequest request, IProgress<InstallProgress>? progress = null, CancellationToken cancellationToken = default)
+    public async Task<ModPackInstallResult> CreateAndInstallAsync(string instanceName, ModPackInstallRequest request, IProgress<InstallProgress>? progress = null, InstallStop? stop = null, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
         cancellationToken.ThrowIfCancellationRequested();
         var metadata = RequireMetadata(request.Pack);
         var instance = await _instances.CreateAsync(instanceName, new InstanceSource.FromModPack(metadata.ModPackId, metadata.Version)).ConfigureAwait(false);
-        return await InstallAsync(request with { InstanceId = instance.InstanceId }, progress, cancellationToken).ConfigureAwait(false);
+        return await InstallAsync(request with { InstanceId = instance.InstanceId }, progress, stop, cancellationToken).ConfigureAwait(false);
     }
 
     public Task<ModPackInstallResult> PlanAsync(ModPackInstallRequest request, CancellationToken cancellationToken = default) =>
-        RunAsync(request, write: false, progress: null, cancellationToken);
+        RunAsync(request, write: false, progress: null, stop: null, cancellationToken);
 
-    public Task<ModPackInstallResult> InstallAsync(ModPackInstallRequest request, IProgress<InstallProgress>? progress = null, CancellationToken cancellationToken = default) =>
-        RunAsync(request, write: true, progress, cancellationToken);
+    public Task<ModPackInstallResult> InstallAsync(ModPackInstallRequest request, IProgress<InstallProgress>? progress = null, InstallStop? stop = null, CancellationToken cancellationToken = default) =>
+        RunAsync(request, write: true, progress, stop, cancellationToken);
 
-    private async Task<ModPackInstallResult> RunAsync(ModPackInstallRequest request, bool write, IProgress<InstallProgress>? progress, CancellationToken cancellationToken)
+    private async Task<ModPackInstallResult> RunAsync(ModPackInstallRequest request, bool write, IProgress<InstallProgress>? progress, InstallStop? stop, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
         ArgumentNullException.ThrowIfNull(request.Pack);
@@ -53,40 +55,52 @@ public sealed class ModPackInstaller : IModPackInstaller
             return Result(instance.InstanceId, null, metadata.Mods.Select(pin => Member(pin, ModPackMemberStatus.Unresolved, "Caller confirmation is required for the retracted pack version.")).ToList(), warnings, false);
         }
 
-        var listings = await request.Repository.GetAvailableModsAsync(cancellationToken).ConfigureAwait(false);
         var releases = new List<RequestedMod>();
         var members = new List<ModPackMemberResult>();
-        foreach (var pin in metadata.Mods)
+        InstallPlan plan;
+        using (var planning = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, stop?.Token ?? CancellationToken.None))
         {
-            var release = await request.Repository.GetReleaseAsync(pin.ContentId, pin.Version, cancellationToken).ConfigureAwait(false);
-            if (release is null)
+            try
             {
-                var listing = listings.FirstOrDefault(value => ModIds.Equals(value.ModId, pin.ContentId));
-                members.Add(Member(pin, ModPackMemberStatus.Unresolved, "The exact pinned release is not listed.", AuthorLocation(listing)));
-                warnings.Add(new PlanningMessage(pin.ContentId, PlanningMessageKind.UnlistedPin));
-                continue;
-            }
+                var listings = await request.Repository.GetAvailableModsAsync(planning.Token).ConfigureAwait(false);
+                foreach (var pin in metadata.Mods)
+                {
+                    var release = await request.Repository.GetReleaseAsync(pin.ContentId, pin.Version, planning.Token).ConfigureAwait(false);
+                    if (release is null)
+                    {
+                        var listing = listings.FirstOrDefault(value => ModIds.Equals(value.ModId, pin.ContentId));
+                        members.Add(Member(pin, ModPackMemberStatus.Unresolved, "The exact pinned release is not listed.", AuthorLocation(listing)));
+                        warnings.Add(new PlanningMessage(pin.ContentId, PlanningMessageKind.UnlistedPin));
+                        continue;
+                    }
 
-            if (release.Yanked && !(request.ProceedWithYankedMembers?.Any(value => ModIds.Equals(value, release.ModId)) ?? false))
+                    if (release.Yanked && !(request.ProceedWithYankedMembers?.Any(value => ModIds.Equals(value, release.ModId)) ?? false))
+                    {
+                        members.Add(Member(pin, ModPackMemberStatus.Unresolved, "Caller confirmation is required for the yanked release.", AuthorLocation(listings.FirstOrDefault(value => ModIds.Equals(value.ModId, pin.ContentId)))));
+                        warnings.Add(new PlanningMessage(pin.ContentId, PlanningMessageKind.YankedPin) { Value = release.YankedReason });
+                        continue;
+                    }
+
+                    releases.Add(new RequestedMod(release, InstallReason.ModPack, Exact: true));
+                }
+
+                if (members.Count > 0)
+                {
+                    foreach (var pin in metadata.Mods.Where(pin => members.All(value => !ModIds.Equals(value.ModId, pin.ContentId))))
+                        members.Add(Member(pin, ModPackMemberStatus.NotAttempted, "Another pack member needs caller action."));
+                    return Result(instance.InstanceId, null, members, warnings, false);
+                }
+
+                plan = await _planner.PlanAsync(
+                    new InstallPlanningRequest(instance, releases, request.Repository, request.GameVersion, request.TargetPlatform, request.Recommended, request.Alternatives),
+                    planning.Token).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException) when (stop is { IsRequested: true } && !cancellationToken.IsCancellationRequested)
             {
-                members.Add(Member(pin, ModPackMemberStatus.Unresolved, "Caller confirmation is required for the yanked release.", AuthorLocation(listings.FirstOrDefault(value => ModIds.Equals(value.ModId, pin.ContentId)))));
-                warnings.Add(new PlanningMessage(pin.ContentId, PlanningMessageKind.YankedPin) { Value = release.YankedReason });
-                continue;
+                return Result(instance.InstanceId, null, metadata.Mods.Select(pin => Member(pin, ModPackMemberStatus.NotAttempted, StoppedMessage)).ToList(), warnings, false, stopped: true);
             }
-
-            releases.Add(new RequestedMod(release, InstallReason.ModPack, Exact: true));
         }
 
-        if (members.Count > 0)
-        {
-            foreach (var pin in metadata.Mods.Where(pin => members.All(value => !ModIds.Equals(value.ModId, pin.ContentId))))
-                members.Add(Member(pin, ModPackMemberStatus.NotAttempted, "Another pack member needs caller action."));
-            return Result(instance.InstanceId, null, members, warnings, false);
-        }
-
-        var plan = await _planner.PlanAsync(
-            new InstallPlanningRequest(instance, releases, request.Repository, request.GameVersion, request.TargetPlatform, request.Recommended, request.Alternatives),
-            cancellationToken).ConfigureAwait(false);
         warnings.AddRange(plan.Warnings);
         if (!plan.IsReady)
         {
@@ -117,6 +131,7 @@ public sealed class ModPackInstaller : IModPackInstaller
 
         var expectedState = plan.InstanceState;
         var stopped = false;
+        var stoppedOnRequest = false;
         var step = 0;
         foreach (var operation in plan.Operations)
         {
@@ -124,6 +139,13 @@ public sealed class ModPackInstaller : IModPackInstaller
             if (stopped)
             {
                 members.Add(Member(operation.Release, operation.Reason, ModPackMemberStatus.NotAttempted, "An earlier operation failed."));
+                continue;
+            }
+
+            if (stop is { IsRequested: true })
+            {
+                members.Add(Member(operation.Release, operation.Reason, ModPackMemberStatus.NotAttempted, StoppedMessage));
+                stoppedOnRequest = true;
                 continue;
             }
 
@@ -141,16 +163,21 @@ public sealed class ModPackInstaller : IModPackInstaller
                 var current = fresh.Mods.FirstOrDefault(value => ModIds.Equals(value.ModId, operation.Release.ModId));
                 if (current is null)
                 {
-                    var completed = await _installer.InstallGuardedAsync(instance.InstanceId, operation.Release, operation.Reason, request.Enable, expectedState, operationProgress, cancellationToken).ConfigureAwait(false);
+                    var completed = await stop.RunAsync((reports, token) => _installer.InstallGuardedAsync(instance.InstanceId, operation.Release, operation.Reason, request.Enable, expectedState, reports, token), operationProgress, cancellationToken).ConfigureAwait(false);
                     expectedState = completed.State;
                     members.Add(Member(operation.Release, operation.Reason, ModPackMemberStatus.Installed));
                 }
                 else
                 {
-                    var completed = await _replacer.ReplaceGuardedAsync(instance.InstanceId, current, operation.Release, expectedState, operationProgress, cancellationToken).ConfigureAwait(false);
+                    var completed = await stop.RunAsync((reports, token) => _replacer.ReplaceGuardedAsync(instance.InstanceId, current, operation.Release, expectedState, reports, token), operationProgress, cancellationToken).ConfigureAwait(false);
                     expectedState = completed.State;
                     members.Add(Member(operation.Release, current.Reason, ModPackMemberStatus.Replaced));
                 }
+            }
+            catch (InstallStoppedException)
+            {
+                members.Add(Member(operation.Release, operation.Reason, ModPackMemberStatus.NotAttempted, StoppedMessage));
+                stoppedOnRequest = true;
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
@@ -162,7 +189,7 @@ public sealed class ModPackInstaller : IModPackInstaller
         }
 
         members.AddRange(AlreadyInstalled(instance, plan));
-        return Result(instance.InstanceId, plan, Ordered(members), warnings, IsComplete(metadata, members));
+        return Result(instance.InstanceId, plan, Ordered(members), warnings, IsComplete(metadata, members), stoppedOnRequest);
     }
 
     private static ModPackMetadata RequireMetadata(ModPackResult pack) => pack.Metadata ?? throw new InvalidOperationException($"Pack '{pack.Id}' does not have usable metadata.");
@@ -194,5 +221,5 @@ public sealed class ModPackInstaller : IModPackInstaller
 
     private static ModPackMemberResult Member(ModVersionMetadata release, InstallReason reason, ModPackMemberStatus status, string? message = null) => new(release.ModId, release.Version, reason, status, message);
 
-    private static ModPackInstallResult Result(Guid instanceId, InstallPlan? plan, IReadOnlyList<ModPackMemberResult> members, IReadOnlyList<PlanningMessage> warnings, bool complete) => new(instanceId, plan, members, warnings, complete);
+    private static ModPackInstallResult Result(Guid instanceId, InstallPlan? plan, IReadOnlyList<ModPackMemberResult> members, IReadOnlyList<PlanningMessage> warnings, bool complete, bool stopped = false) => new(instanceId, plan, members, warnings, complete, stopped);
 }

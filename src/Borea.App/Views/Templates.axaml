@@ -162,7 +162,13 @@
                         <Button Classes="icon" Command="{Binding UpdateCommand}" IsVisible="{Binding HasUpdate}" IsEnabled="{Binding $parent[Window].((vm:MainViewModel)DataContext).CanChangeContent}" ToolTip.Tip="{Binding UpdateText}" AutomationProperties.Name="{Binding UpdateText}">
                             <Path Classes="icon" Data="{StaticResource Icon.ArrowsLeftRight}" />
                         </Button>
-                        <ProgressBar Width="38" Height="6" VerticalAlignment="Center" IsVisible="{Binding IsInstalling}" Value="{Binding Progress}" Maximum="100" Foreground="{StaticResource Brush.Accent}" />
+                        <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center" IsVisible="{Binding IsInstalling}">
+                            <ProgressBar Width="38" Height="6" VerticalAlignment="Center" Value="{Binding Progress}" Maximum="100" Foreground="{StaticResource Brush.Accent}" />
+                            <Button Classes="icon" Command="{Binding Run.StopCommand}" IsVisible="{Binding !Run.IsStopping, FallbackValue={x:True}}" ToolTip.Tip="{Binding Run.StopText}" AutomationProperties.Name="{Binding Run.StopText}">
+                                <Path Classes="icon size-16" Data="{StaticResource Icon.Close}" />
+                            </Button>
+                            <TextBlock Classes="body-sm secondary" Text="{Binding Run.StopText}" VerticalAlignment="Center" IsVisible="{Binding Run.IsStopping, FallbackValue={x:False}}" />
+                        </StackPanel>
                     </Panel>
                     <Panel IsEnabled="{Binding $parent[Window].((vm:MainViewModel)DataContext).CanChangeContent}">
                         <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding IsConfirmingRemove}">
@@ -226,7 +232,13 @@
                             <Button Classes="add" Command="{Binding InstallCommand}" IsVisible="{Binding CanInstall}" ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.DiscoverAdd}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.DiscoverAdd}">
                                 <Path Classes="icon size-16" Data="{StaticResource Icon.Plus}" />
                             </Button>
-                            <ProgressBar Width="38" Height="6" VerticalAlignment="Center" IsVisible="{Binding IsInstalling}" Value="{Binding Progress}" Maximum="100" Foreground="{StaticResource Brush.Accent}" />
+                            <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center" IsVisible="{Binding IsInstalling}">
+                                <ProgressBar Width="38" Height="6" VerticalAlignment="Center" Value="{Binding Progress}" Maximum="100" Foreground="{StaticResource Brush.Accent}" />
+                                <Button Classes="icon" Command="{Binding Run.StopCommand}" IsVisible="{Binding !Run.IsStopping, FallbackValue={x:True}}" ToolTip.Tip="{Binding Run.StopText}" AutomationProperties.Name="{Binding Run.StopText}">
+                                    <Path Classes="icon size-16" Data="{StaticResource Icon.Close}" />
+                                </Button>
+                                <TextBlock Classes="body-sm secondary" Text="{Binding Run.StopText}" VerticalAlignment="Center" IsVisible="{Binding Run.IsStopping, FallbackValue={x:False}}" />
+                            </StackPanel>
                             <ProgressBar Width="38" Height="6" VerticalAlignment="Center" IsVisible="{Binding IsRemoving}" IsIndeterminate="True" Foreground="{StaticResource Brush.Accent}" />
                             <Button Classes="add installed" ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).InstalledInText}" AutomationProperties.Name="{Binding InstalledAutomationName}" AutomationProperties.HelpText="{Binding $parent[Window].((vm:MainViewModel)DataContext).InstalledInText}">
                                 <Button.IsVisible>
@@ -329,7 +341,13 @@
                             <Button Classes="add" Command="{Binding InstallCommand}" IsVisible="{Binding CanInstall}" ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.DiscoverAdd}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.DiscoverAdd}">
                                 <Path Classes="icon size-16" Data="{StaticResource Icon.Plus}" />
                             </Button>
-                            <ProgressBar Width="38" Height="6" VerticalAlignment="Center" IsVisible="{Binding IsInstalling}" Value="{Binding Progress}" Maximum="100" Foreground="{StaticResource Brush.Accent}" />
+                            <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center" IsVisible="{Binding IsInstalling}">
+                                <ProgressBar Width="38" Height="6" VerticalAlignment="Center" Value="{Binding Progress}" Maximum="100" Foreground="{StaticResource Brush.Accent}" />
+                                <Button Classes="icon" Command="{Binding Run.StopCommand}" IsVisible="{Binding !Run.IsStopping, FallbackValue={x:True}}" ToolTip.Tip="{Binding Run.StopText}" AutomationProperties.Name="{Binding Run.StopText}">
+                                    <Path Classes="icon size-16" Data="{StaticResource Icon.Close}" />
+                                </Button>
+                                <TextBlock Classes="body-sm secondary" Text="{Binding Run.StopText}" VerticalAlignment="Center" IsVisible="{Binding Run.IsStopping, FallbackValue={x:False}}" />
+                            </StackPanel>
                             <Border Classes="chip positive" VerticalAlignment="Center" IsVisible="{Binding IsInstalled}" ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).InstalledInText}">
                                 <TextBlock Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.DiscoverInstalled}" />
                             </Border>

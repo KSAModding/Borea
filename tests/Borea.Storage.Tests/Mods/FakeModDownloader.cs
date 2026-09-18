@@ -14,6 +14,9 @@ internal sealed class FakeModDownloader : IModDownloader
 
     public Action? AfterDownload { get; set; }
 
+    /// <summary>Runs after the bytes are written and before the download returns.</summary>
+    public Func<ModVersionMetadata, CancellationToken, Task>? Downloading { get; set; }
+
     public List<string> ArchivePaths { get; } = new();
 
     public IProgress<DownloadProgress>? LastProgress { get; private set; }
@@ -34,6 +37,9 @@ internal sealed class FakeModDownloader : IModDownloader
             throw Failure;
 
         await File.WriteAllBytesAsync(archivePath, Bytes, cancellationToken);
+        if (Downloading is not null)
+            await Downloading(release, cancellationToken);
+
         progress?.Report(new DownloadProgress(Bytes.Length, Bytes.Length));
         AfterDownload?.Invoke();
         return new DownloadResult(release.Download.Url, Bytes.Length, Convert.ToHexString(SHA256.HashData(Bytes)));

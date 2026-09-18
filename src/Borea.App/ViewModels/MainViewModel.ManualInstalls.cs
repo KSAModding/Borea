@@ -210,6 +210,7 @@ public partial class MainViewModel
     private async Task ExecuteManualReplaceAsync(BoreaServices services, ManualInstallItem row, InstallPlan plan)
     {
         string? error = null;
+        var run = row.Run = StartInstallRun();
         try
         {
             var instance = await services.Instances.GetByIdAsync(row.InstanceId)
@@ -220,7 +221,11 @@ public partial class MainViewModel
             await services.ForeignModAdopter.ReplaceFolderAsync(
                 row.InstanceId,
                 row.FolderName,
-                cancellationToken => services.PlanExecutor.ExecuteAsync(plan, enable: true, ProgressOf(row), cancellationToken));
+                cancellationToken => services.PlanExecutor.ExecuteAsync(plan, enable: true, ProgressOf(row), run.InstallStop, cancellationToken));
+        }
+        catch (InstallStoppedException)
+        {
+            // only a closing window stops a replace, and the adopter moved the folder back
         }
         catch (Exception exception) when (IsInstallFailure(exception))
         {
@@ -228,7 +233,9 @@ public partial class MainViewModel
         }
         finally
         {
+            EndInstallRun(run);
             row.IsInstalling = false;
+            row.Run = null;
             row.Progress = 0;
             row.ProgressStatus = null;
             row.ProgressDetail = null;
@@ -290,6 +297,9 @@ public sealed partial class ManualInstallItem : ObservableObject, IInstallRow
 
     [ObservableProperty]
     private string? _progressDetail;
+
+    [ObservableProperty]
+    private InstallRun? _run;
 
     [ObservableProperty]
     private string? _installError;

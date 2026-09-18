@@ -1092,6 +1092,30 @@
   <data name="InstallMinutesLeftFormat" xml:space="preserve">
     <value>about {0} min left</value>
   </data>
+  <data name="InstallStop" xml:space="preserve">
+    <value>Stop</value>
+  </data>
+  <data name="InstallStopping" xml:space="preserve">
+    <value>Stopping</value>
+  </data>
+  <data name="InstallStoppingAfterMod" xml:space="preserve">
+    <value>Stopping after this mod</value>
+  </data>
+  <data name="InstallStopped" xml:space="preserve">
+    <value>Install stopped.</value>
+  </data>
+  <data name="InstallStoppedAfterFormat" xml:space="preserve">
+    <value>Stopped. {0} of {1} mods installed.</value>
+  </data>
+  <data name="UpdateStopped" xml:space="preserve">
+    <value>Update stopped.</value>
+  </data>
+  <data name="UpdateStoppedAfterFormat" xml:space="preserve">
+    <value>Stopped. {0} of {1} mods updated.</value>
+  </data>
+  <data name="InstallClosing" xml:space="preserve">
+    <value>Stopping the running installs. Borea closes when they are done.</value>
+  </data>
   <data name="LaunchWithoutModLoader" xml:space="preserve">
     <value>Launch KSA without a mod loader</value>
   </data>

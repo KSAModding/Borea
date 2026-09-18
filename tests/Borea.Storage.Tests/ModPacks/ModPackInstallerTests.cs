@@ -38,6 +38,54 @@ public sealed class ModPackInstallerTests
     }
 
     [Fact]
+    public async Task Install_StopDuringTheSecondMember_KeepsTheFirstAndReturnsAStoppedResult()
+    {
+        var first = Release("First");
+        var second = Release("Second");
+        var instances = new MemoryInstanceRepository();
+        var instance = await instances.CreateAsync("Target", InstanceSource.Custom.Value);
+        var stop = new InstallStop();
+        var installer = new FakeInstaller(instances)
+        {
+            Downloading = async (release, token) =>
+            {
+                if (release.ModId != "Second")
+                    return;
+
+                stop.Request();
+                await Task.Delay(Timeout.Infinite, token);
+            },
+        };
+        var services = new ModPackInstaller(instances, new FakePlanner(), installer, new FakeReplacer(instances));
+
+        var result = await services.InstallAsync(Request(instance.InstanceId, Pack(first, second), new FakeModRepository([first, second])), stop: stop);
+
+        Assert.True(result.IsStopped);
+        Assert.False(result.IsComplete);
+        Assert.Equal(ModPackMemberStatus.Installed, result.Members.Single(member => member.ModId == "First").Status);
+        Assert.Equal(ModPackMemberStatus.NotAttempted, result.Members.Single(member => member.ModId == "Second").Status);
+        Assert.Equal("First", Assert.Single((await instances.GetByIdAsync(instance.InstanceId))!.Mods).ModId);
+    }
+
+    [Fact]
+    public async Task Install_StopWhilePlanning_ReturnsAStoppedResultAtOnce()
+    {
+        var member = Release("Member");
+        var instances = new MemoryInstanceRepository();
+        var instance = await instances.CreateAsync("Target", InstanceSource.Custom.Value);
+        var stop = new InstallStop();
+        var installer = new FakeInstaller(instances);
+        var services = new ModPackInstaller(instances, new StoppingPlanner(stop), installer, new FakeReplacer(instances));
+
+        var result = await services.InstallAsync(Request(instance.InstanceId, Pack(member), new FakeModRepository([member])), stop: stop).WaitAsync(TimeSpan.FromSeconds(30));
+
+        Assert.True(result.IsStopped);
+        Assert.Equal(ModPackMemberStatus.NotAttempted, Assert.Single(result.Members).Status);
+        Assert.Empty(installer.Counts);
+        Assert.Empty((await instances.GetByIdAsync(instance.InstanceId))!.Mods);
+    }
+
+    [Fact]
     public async Task Install_ReportsEachOperationWithItsStepAcrossThePack()
     {
         var dependency = Release("Dependency");
@@ -293,11 +341,22 @@ public sealed class ModPackInstallerTests
         }
     }
 
+    private sealed class StoppingPlanner(InstallStop stop) : IInstallPlanner
+    {
+        public async Task<InstallPlan> PlanAsync(InstallPlanningRequest request, CancellationToken cancellationToken = default)
+        {
+            stop.Request();
+            await Task.Delay(Timeout.Infinite, cancellationToken);
+            throw new InvalidOperationException("The stop did not reach the planner.");
+        }
+    }
+
     private sealed class FakeInstaller(MemoryInstanceRepository instances) : IModInstaller
     {
         public string? FailOnceFor { get; init; }
         public ModVersionMetadata? AddConcurrentMod { get; init; }
         public string? AddAfterGuardedResultFor { get; init; }
+        public Func<ModVersionMetadata, CancellationToken, Task>? Downloading { get; init; }
         public Dictionary<string, int> Counts { get; } = new(ModIds.Comparer);
 
         public async Task<InstallResult> InstallAsync(Guid instanceId, ModVersionMetadata release, InstallReason reason, bool enable, IProgress<InstallProgress>? progress = null, CancellationToken cancellationToken = default)
@@ -314,6 +373,8 @@ public sealed class ModPackInstallerTests
         {
             Counts[release.ModId] = Counts.GetValueOrDefault(release.ModId) + 1;
             progress.Report(release, InstallPhase.Downloading);
+            if (Downloading is not null)
+                await Downloading(release, cancellationToken);
             if (ModIds.Equals(FailOnceFor ?? string.Empty, release.ModId) && Counts[release.ModId] == 1) throw new IOException("Injected failure.");
             if (AddConcurrentMod is not null && AddAfterGuardedResultFor is null)
                 await AddExternalAsync(instanceId, AddConcurrentMod, cancellationToken);

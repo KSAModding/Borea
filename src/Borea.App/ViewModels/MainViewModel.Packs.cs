@@ -224,7 +224,9 @@ public partial class MainViewModel
         var instanceId = ActiveInstance.InstanceId;
         pack.ClearOutcome();
         pack.IsInstalling = true;
+        var run = pack.Run = StartInstallRun();
         var executed = false;
+        string? stopped = null;
         try
         {
             var selected = await services.ModPacks.GetLatestAsync(pack.PackId);
@@ -272,7 +274,11 @@ public partial class MainViewModel
                 CurrentPlatform(),
                 ProceedWithYankedMembers: yanked.Count == 0 ? null : yanked);
 
-            if (reasons.Count > 0 || choices is not null || (plan is { IsReady: true } && PackPlanWarnings(plan).Count > 0))
+            if (run.InstallStop.IsRequested)
+            {
+                stopped = StoppedText(pack);
+            }
+            else if (reasons.Count > 0 || choices is not null || (plan is { IsReady: true } && PackPlanWarnings(plan).Count > 0))
             {
                 pack.PendingInstall = request;
                 pack.PendingReasons = reasons;
@@ -282,7 +288,7 @@ public partial class MainViewModel
             else
             {
                 executed = true;
-                await ExecutePackInstallAsync(services, pack, request);
+                stopped = await ExecutePackInstallAsync(services, pack, request, run);
             }
         }
         catch (Exception exception) when (IsInstallFailure(exception))
@@ -291,7 +297,8 @@ public partial class MainViewModel
         }
         finally
         {
-            pack.EndInstall();
+            EndInstallRun(run);
+            pack.EndInstall(stopped);
         }
 
         if (executed)
@@ -347,7 +354,9 @@ public partial class MainViewModel
 
         var services = _services;
         pack.IsInstalling = true;
+        var run = pack.Run = StartInstallRun();
         var executed = false;
+        string? stopped = null;
         try
         {
             if (pack.Choices is { } choices)
@@ -367,7 +376,7 @@ public partial class MainViewModel
 
             pack.CancelInstall();
             executed = true;
-            await ExecutePackInstallAsync(services, pack, request);
+            stopped = await ExecutePackInstallAsync(services, pack, request, run);
         }
         catch (Exception exception) when (IsInstallFailure(exception))
         {
@@ -378,24 +387,30 @@ public partial class MainViewModel
         }
         finally
         {
-            pack.EndInstall();
+            EndInstallRun(run);
+            pack.EndInstall(stopped);
         }
 
         if (executed)
             await ReloadInstancesAsync();
     }
 
-    private async Task ExecutePackInstallAsync(BoreaServices services, PackItem pack, ModPackInstallRequest request)
+    /// <summary>Returns what the row shows after a stop, or null when nothing stopped the pack.</summary>
+    private async Task<string?> ExecutePackInstallAsync(BoreaServices services, PackItem pack, ModPackInstallRequest request, InstallRun run)
     {
-        var result = await services.ModPackInstaller.InstallAsync(request, ProgressOf(pack));
+        var result = await services.ModPackInstaller.InstallAsync(request, ProgressOf(pack), run.InstallStop);
         pack.ShowResults(result.Members.Select(member => new PackResultItem(this, member)));
+        if (result.IsStopped)
+            return StoppedText(pack, result.Members.Count(member => member.Status is ModPackMemberStatus.Installed or ModPackMemberStatus.Replaced), result.Plan?.Operations.Count ?? 0);
+
         if (result.IsComplete)
-            return;
+            return null;
 
         var incomplete = result.Members.Count(member => !PackResultItem.IsDone(member.Status));
         var summary = Localization.FormatPackIncomplete(incomplete, result.Members.Count);
         var details = result.Plan is null ? string.Empty : Describe(result.Plan.Conflicts.Concat(result.Plan.UnresolvedChoices));
         pack.InstallError = details.Length == 0 ? summary : $"{summary} {details}";
+        return null;
     }
 }
 
@@ -504,6 +519,9 @@ public sealed partial class PackItem : ObservableObject, IInstallProgressRow
     private string? _progressDetail;
 
     [ObservableProperty]
+    private InstallRun? _run;
+
+    [ObservableProperty]
     private string? _installError;
 
     /// <summary>
@@ -570,15 +588,18 @@ public sealed partial class PackItem : ObservableObject, IInstallProgressRow
     internal void ClearOutcome()
     {
         InstallError = null;
+        ProgressStatus = null;
         CancelInstall();
         ShowResults([]);
     }
 
-    internal void EndInstall()
+    /// <param name="stopped">What the row shows after a stop, or null.</param>
+    internal void EndInstall(string? stopped = null)
     {
         IsInstalling = false;
+        Run = null;
         Progress = 0;
-        ProgressStatus = null;
+        ProgressStatus = stopped;
         ProgressDetail = null;
     }
 

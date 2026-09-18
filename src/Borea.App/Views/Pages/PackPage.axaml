@@ -50,7 +50,10 @@
                                             <TextBlock Classes="action-lg" Text="{Binding Localization.ContentAdd}" VerticalAlignment="Center" />
                                         </StackPanel>
                                     </Button>
-                                    <ProgressBar Width="96" Height="6" VerticalAlignment="Center" IsVisible="{Binding SelectedPack.IsInstalling}" Value="{Binding SelectedPack.Progress}" Maximum="100" Foreground="{StaticResource Brush.Accent}" />
+                                    <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center" IsVisible="{Binding SelectedPack.IsInstalling}">
+                                        <ProgressBar Width="96" Height="6" VerticalAlignment="Center" Value="{Binding SelectedPack.Progress}" Maximum="100" Foreground="{StaticResource Brush.Accent}" />
+                                        <Button Classes="text" Content="{Binding SelectedPack.Run.StopText}" Command="{Binding SelectedPack.Run.StopCommand}" />
+                                    </StackPanel>
                                     <Border Classes="chip positive" VerticalAlignment="Center" IsVisible="{Binding SelectedPack.IsInstalled}" ToolTip.Tip="{Binding InstalledInText}">
                                         <TextBlock Text="{Binding Localization.DiscoverInstalled}" />
                                     </Border>

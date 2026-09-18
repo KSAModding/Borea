@@ -92,5 +92,13 @@
 
     <!-- modal: settings -->
     <settings:SettingsModal IsVisible="{Binding IsSettingsOpen}" />
+
+    <!-- the window stays open until the running installs reached a safe point -->
+    <Border Background="{StaticResource Brush.SurfaceRaised}" BorderBrush="{StaticResource Brush.BorderStrong}" BorderThickness="1" CornerRadius="12" Padding="16,10" Margin="96,0,24,16" VerticalAlignment="Bottom" IsVisible="{Binding IsClosing}">
+        <Grid ColumnDefinitions="Auto,12,*">
+            <ProgressBar Width="38" Height="6" VerticalAlignment="Center" IsIndeterminate="True" Foreground="{StaticResource Brush.Accent}" />
+            <TextBlock Grid.Column="2" Classes="body-md" Text="{Binding Localization.InstallClosing}" TextWrapping="Wrap" VerticalAlignment="Center" />
+        </Grid>
+    </Border>
     </Panel>
 </Window>

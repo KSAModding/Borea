@@ -24,6 +24,7 @@ public sealed class InstallPlanExecutor : IInstallPlanExecutor
         InstallPlan plan,
         bool enable,
         IProgress<InstallProgress>? progress = null,
+        InstallStop? stop = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(plan);
@@ -39,6 +40,9 @@ public sealed class InstallPlanExecutor : IInstallPlanExecutor
         var step = 0;
         foreach (var operation in plan.Operations)
         {
+            if (stop is { IsRequested: true })
+                throw new InstallStoppedException(step, plan.Operations.Count);
+
             var operationProgress = progress.ForStep(++step, plan.Operations.Count);
             fresh = await _instances.GetByIdAsync(plan.InstanceId).ConfigureAwait(false)
                 ?? throw new InvalidOperationException($"Instance '{plan.InstanceId}' no longer exists.");
@@ -46,15 +50,22 @@ public sealed class InstallPlanExecutor : IInstallPlanExecutor
                 throw new InvalidOperationException("The instance changed while Borea executed the operation.");
 
             var current = fresh.Mods.FirstOrDefault(mod => ModIds.Equals(mod.ModId, operation.Release.ModId));
-            if (current is null)
+            try
             {
-                var result = await _installer.InstallGuardedAsync(plan.InstanceId, operation.Release, operation.Reason, enable, expectedState, operationProgress, cancellationToken).ConfigureAwait(false);
-                expectedState = result.State;
+                if (current is null)
+                {
+                    var result = await stop.RunAsync((reports, token) => _installer.InstallGuardedAsync(plan.InstanceId, operation.Release, operation.Reason, enable, expectedState, reports, token), operationProgress, cancellationToken).ConfigureAwait(false);
+                    expectedState = result.State;
+                }
+                else
+                {
+                    var result = await stop.RunAsync((reports, token) => _replacer.ReplaceGuardedAsync(plan.InstanceId, current, operation.Release, expectedState, reports, token), operationProgress, cancellationToken).ConfigureAwait(false);
+                    expectedState = result.State;
+                }
             }
-            else
+            catch (InstallStoppedException exception)
             {
-                var result = await _replacer.ReplaceGuardedAsync(plan.InstanceId, current, operation.Release, expectedState, operationProgress, cancellationToken).ConfigureAwait(false);
-                expectedState = result.State;
+                throw new InstallStoppedException(step - 1, plan.Operations.Count, exception);
             }
         }
     }

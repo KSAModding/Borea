@@ -165,7 +165,10 @@
                                 </Button.IsVisible>
                                 <TextBlock Classes="action-md" Text="{Binding Localization.InstanceUpdateAll}" />
                             </Button>
-                            <ProgressBar Width="96" Height="6" VerticalAlignment="Center" Margin="0,0,16,0" IsVisible="{Binding UpdateAll.IsInstalling}" Value="{Binding UpdateAll.Progress}" Maximum="100" Foreground="{StaticResource Brush.Accent}" />
+                            <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center" Margin="0,0,16,0" IsVisible="{Binding UpdateAll.IsInstalling}">
+                                <ProgressBar Width="96" Height="6" VerticalAlignment="Center" Value="{Binding UpdateAll.Progress}" Maximum="100" Foreground="{StaticResource Brush.Accent}" />
+                                <Button Classes="text" Content="{Binding UpdateAll.Run.StopText}" Command="{Binding UpdateAll.Run.StopCommand}" />
+                            </StackPanel>
                             <!-- c/button-cta -->
                             <Button Classes="cta" Command="{Binding PlayCommand}" IsEnabled="{Binding !IsLaunching}">
                                 <StackPanel Orientation="Horizontal" Spacing="6">

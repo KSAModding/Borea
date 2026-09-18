@@ -272,9 +272,18 @@ internal static class PackCommand
             if (parseResult.GetValue(recommended))
                 (request, planned) = await SelectRecommendedAsync(cli.ModPackInstaller, request, ct).ConfigureAwait(false);
 
-            var result = isDryRun
-                ? planned ?? await cli.ModPackInstaller.PlanAsync(request, ct).ConfigureAwait(false)
-                : await cli.ModPackInstaller.InstallAsync(request, new InstallProgressOutput(error), ct).ConfigureAwait(false);
+            ModPackInstallResult result;
+            if (isDryRun)
+            {
+                result = planned ?? await cli.ModPackInstaller.PlanAsync(request, ct).ConfigureAwait(false);
+            }
+            else
+            {
+                var stop = new InstallStop();
+                using var registration = ct.Register(stop.Request);
+                result = await cli.ModPackInstaller.InstallAsync(request, new InstallProgressOutput(error), stop).ConfigureAwait(false);
+            }
+
             var view = InstallView.From(
                 metadata,
                 target.Name,
@@ -287,6 +296,9 @@ internal static class PackCommand
                 JsonOutput.Write(output, view);
             else
                 WriteHuman(output, view);
+
+            if (result.IsStopped)
+                throw new OperationCanceledException(ct);
 
             if (isDryRun ? result.Plan is { IsReady: true } : result.IsComplete)
                 return ExitCodes.Done;
