@@ -44,7 +44,7 @@ jobs:
           global-json-file: global.json
       - run: dotnet test Borea.slnx --configuration Release
 
-  # One job per platform publishes the App and the CLI, so that both archives get the CLI from the same build.
+  # One job per platform publishes the App and the CLI.
   # It waits for the SBOMs, which the third-party notices are written from.
   publish:
     name: publish (${{ matrix.rid }})
@@ -70,8 +70,8 @@ jobs:
           echo "cli=Borea-Cli-$VERSION-$RID" >> "$GITHUB_OUTPUT"
 
       # Self-contained, so nobody needs a .NET runtime.
-      # Each target builds on a Linux runner.
-      # The App and the CLI publish into separate folders, so neither can overwrite a file of the other.
+      # Each target builds on a Linux runner, and the SDK signs the macOS single files ad hoc there too.
+      # The project files make each publish one single file, and the App project names its file borea.
       - name: Publish
         env:
           VERSION: ${{ needs.test.outputs.version }}
@@ -86,14 +86,6 @@ jobs:
             --configuration Release --runtime "$RID" --self-contained true \
             -p:Version="$VERSION" --output "publish/$CLI"
 
-      # The App archive also contains borea. The script copies nothing and fails when a file
-      # that both publishes write is not byte-identical.
-      - name: Add the CLI to the App
-        env:
-          APP: ${{ steps.name.outputs.app }}
-          CLI: ${{ steps.name.outputs.cli }}
-        run: bash .github/scripts/combine-publish-outputs.sh "publish/$APP" "publish/$CLI"
-
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
           pattern: sbom-*
@@ -101,22 +93,31 @@ jobs:
           path: sbom
 
       # Written from the SBOM of each product. The package lists are in .github/notices/notices.json.
+      # A single file embeds its deps.json, and the publish leaves the same file in the intermediate output folder of the project.
       - name: Write the third-party notices
         env:
           VERSION: ${{ needs.test.outputs.version }}
+          RID: ${{ matrix.rid }}
           APP: ${{ steps.name.outputs.app }}
           CLI: ${{ steps.name.outputs.cli }}
         run: |
+          intermediate() {
+            local dir
+            dir=$(dotnet msbuild "$1" -getProperty:IntermediateOutputPath -p:Configuration=Release -p:RuntimeIdentifier="$RID")
+            printf '%s/%s' "$(dirname "$1")" "${dir//\\//}"
+          }
+          app_obj=$(intermediate src/Borea.App/Borea.App.csproj)
+          cli_obj=$(intermediate src/Borea.Cli/Borea.Cli.csproj)
           packages=$(dotnet nuget locals global-packages --list --force-english-output)
           packages=${packages##*global-packages: }
           python3 .github/scripts/write_third_party_notices.py \
             --sbom "sbom/Borea-$VERSION.cdx.json" --packages "$packages" \
-            --deps "publish/$APP/Borea.App.deps.json" --deps "publish/$APP/borea.deps.json" \
+            --deps "${app_obj}Borea.App.deps.json" \
             --config .github/notices/notices.json --product App --version "$VERSION" \
             --output "publish/$APP/THIRD-PARTY-NOTICES.txt"
           python3 .github/scripts/write_third_party_notices.py \
             --sbom "sbom/Borea-Cli-$VERSION.cdx.json" --packages "$packages" \
-            --deps "publish/$CLI/borea.deps.json" \
+            --deps "${cli_obj}borea.deps.json" \
             --config .github/notices/notices.json --product Cli --version "$VERSION" \
             --output "publish/$CLI/THIRD-PARTY-NOTICES.txt"
 
@@ -128,15 +129,12 @@ jobs:
           cp LICENSE "publish/$APP/LICENSE"
           cp LICENSE "publish/$CLI/LICENSE"
 
-      - name: Drop the native debug symbols
-        run: find publish -name '*.pdb' ! -name 'Borea.*.pdb' -delete
-
       - name: Make the programs executable
         if: matrix.rid != 'win-x64'
         env:
           APP: ${{ steps.name.outputs.app }}
           CLI: ${{ steps.name.outputs.cli }}
-        run: chmod +x "publish/$APP/Borea.App" "publish/$APP/borea" "publish/$CLI/borea"
+        run: chmod +x "publish/$APP/borea" "publish/$CLI/borea"
 
       - name: Archive
         env:
@@ -176,7 +174,7 @@ jobs:
       fail-fast: false
       matrix:
         product:
-          # The App archives also contain borea, so the App SBOM covers both projects.
+          # The App contains the CLI, so the App SBOM covers both projects.
           - name: App
             projects: src/Borea.App/Borea.App.csproj src/Borea.Cli/Borea.Cli.csproj
             filename-prefix: Borea
@@ -268,15 +266,16 @@ jobs:
       - name: Report what macOS says about the build
         run: |
           tar -xzf dist/*.tar.gz
-          app=$(find . -maxdepth 2 -name Borea.App | head -1)
+          app=$(find . -mindepth 2 -maxdepth 2 -type f -name borea | head -1)
           codesign --display --verbose=4 "$app"
           codesign --verify --strict --verbose=2 "$app"
           # Mark it the way a browser download would, then ask Gatekeeper.
           xattr -w com.apple.quarantine '0083;00000000;Safari;' "$app"
           spctl --assess --type execute --verbose=4 "$app" || true
 
-  # Both archives of each platform, on a runner that can start its programs.
-  # The App is only checked for presence, because it needs a desktop session.
+  # Both archives of each platform, on a runner that can start their programs.
+  # No App window opens, because that needs a desktop session.
+  # The borea of the App archive must run the command line without one, like the borea of the CLI archive.
   verify-archives:
     name: verify archives (${{ matrix.rid }})
     needs: [test, publish]
@@ -308,56 +307,74 @@ jobs:
         env:
           VERSION: ${{ needs.test.outputs.version }}
         run: |
-          Expand-Archive (Get-ChildItem dist/App/*.zip) -DestinationPath unpacked/App
-          Expand-Archive (Get-ChildItem dist/Cli/*.zip) -DestinationPath unpacked/Cli
-          $app = @(Get-ChildItem unpacked/App -Directory)
-          $cli = @(Get-ChildItem unpacked/Cli -Directory)
-          if ($app.Count -ne 1 -or $cli.Count -ne 1) { throw 'Each archive must unpack into one folder.' }
-          $app = $app[0].FullName
-          $cli = $cli[0].FullName
-          if (-not (Test-Path -LiteralPath (Join-Path $app Borea.App.exe) -PathType Leaf)) { throw 'The App archive does not contain Borea.App.exe.' }
-          foreach ($root in $cli, $app) {
-            if (-not (Test-Path -LiteralPath (Join-Path $root hostfxr.dll) -PathType Leaf)) { throw "$root does not contain hostfxr.dll." }
-            if ((Get-Item -LiteralPath (Join-Path $root THIRD-PARTY-NOTICES.txt) -ErrorAction SilentlyContinue).Length -lt 1) { throw "$root does not contain THIRD-PARTY-NOTICES.txt." }
-            $program = Join-Path $root borea.exe
-            & $program --help
-            if ($LASTEXITCODE -ne 0) { throw "borea --help in $root exited with $LASTEXITCODE." }
+          $expected = 'LICENSE', 'THIRD-PARTY-NOTICES.txt', 'borea.exe'
+          $roots = @{}
+          foreach ($kind in 'App', 'Cli') {
+            Expand-Archive (Get-ChildItem "dist/$kind/*.zip") -DestinationPath "unpacked/$kind"
+            $top = @(Get-ChildItem "unpacked/$kind" -Force)
+            if ($top.Count -ne 1 -or -not $top[0].PSIsContainer) { throw "The $kind archive must unpack into one folder." }
+            $root = $top[0].FullName
+            $found = @(Get-ChildItem -LiteralPath $root -Recurse -Force | ForEach-Object { [IO.Path]::GetRelativePath($root, $_.FullName) })
+            if (Compare-Object $expected $found -CaseSensitive) { throw "The $kind archive holds $($found -join ', ') instead of $($expected -join ', ')." }
+            if ((Get-Item -LiteralPath (Join-Path $root THIRD-PARTY-NOTICES.txt)).Length -lt 1) { throw "THIRD-PARTY-NOTICES.txt in the $kind archive is empty." }
+            $roots[$kind] = $root
+          }
+          if (-not (Select-String -LiteralPath (Join-Path $roots.App THIRD-PARTY-NOTICES.txt) -Pattern '^IBM Plex$' -Quiet)) { throw 'The notices in the App archive do not name IBM Plex.' }
+          if (Select-String -LiteralPath (Join-Path $roots.Cli THIRD-PARTY-NOTICES.txt) -Pattern '^Avalonia ' -Quiet) { throw 'The notices in the CLI archive name Avalonia.' }
+          $help = @{}
+          $settings = @{}
+          foreach ($kind in 'Cli', 'App') {
+            $program = Join-Path $roots[$kind] borea.exe
+            $help[$kind] = & $program --help | Out-String
+            if ($LASTEXITCODE -ne 0) { throw "borea --help from the $kind archive exited with $LASTEXITCODE." }
             $reported = & $program --version
-            if ($LASTEXITCODE -ne 0 -or ($reported -ne $env:VERSION -and -not "$reported".StartsWith("$env:VERSION+"))) { throw "borea in $root reports version $reported." }
+            if ($LASTEXITCODE -ne 0 -or ($reported -ne $env:VERSION -and -not "$reported".StartsWith("$env:VERSION+"))) { throw "borea from the $kind archive reports version $reported." }
+            & $program no-such-command
+            if ($LASTEXITCODE -ne 2) { throw "borea no-such-command from the $kind archive exited with $LASTEXITCODE instead of 2." }
+            $settings[$kind] = & $program settings show --json | Out-String
+            if ($LASTEXITCODE -ne 0) { throw "borea settings show from the $kind archive exited with $LASTEXITCODE." }
           }
-          if (-not (Select-String -LiteralPath (Join-Path $app THIRD-PARTY-NOTICES.txt) -Pattern '^IBM Plex$' -Quiet)) { throw 'The notices in the App archive do not name IBM Plex.' }
-          if (Select-String -LiteralPath (Join-Path $cli THIRD-PARTY-NOTICES.txt) -Pattern '^Avalonia ' -Quiet) { throw 'The notices in the CLI archive name Avalonia.' }
-          # The CLI in the App archive is the same build as the CLI archive, with the same runtime files.
-          # Only the notices are different, because the App archive contains more software.
-          foreach ($file in Get-ChildItem $cli -Recurse -File) {
-            $relative = [IO.Path]::GetRelativePath($cli, $file.FullName)
-            if ($relative -eq 'THIRD-PARTY-NOTICES.txt') { continue }
-            $other = Join-Path $app $relative
-            if (-not (Test-Path -LiteralPath $other -PathType Leaf)) { throw "The App archive does not contain $relative." }
-            if ((Get-FileHash -LiteralPath $file.FullName).Hash -ne (Get-FileHash -LiteralPath $other).Hash) { throw "$relative is different in the App archive." }
-          }
+          $help.App
+          $settings.App
+          if ($help.App -cne $help.Cli) { throw 'borea --help prints different text from the two archives.' }
+          if ($settings.App -cne $settings.Cli) { throw 'borea settings show prints different text from the two archives.' }
       - name: Check and run the Unix archives
         if: matrix.rid != 'win-x64'
         shell: bash
         env:
           VERSION: ${{ needs.test.outputs.version }}
         run: |
-          mkdir -p unpacked/App unpacked/Cli
-          tar -xzf dist/App/*.tar.gz -C unpacked/App
-          tar -xzf dist/Cli/*.tar.gz -C unpacked/Cli
+          expected=$(printf '%s\n' LICENSE THIRD-PARTY-NOTICES.txt borea | LC_ALL=C sort)
+          for kind in App Cli; do
+            mkdir -p "unpacked/$kind"
+            tar -xzf "dist/$kind/"*.tar.gz -C "unpacked/$kind"
+            if [ "$(find "unpacked/$kind" -mindepth 1 -maxdepth 1 | wc -l | tr -d ' ')" != 1 ]; then
+              echo "The $kind archive must unpack into one folder." >&2
+              exit 1
+            fi
+          done
           app=$(find unpacked/App -mindepth 1 -maxdepth 1 -type d -print -quit)
           cli=$(find unpacked/Cli -mindepth 1 -maxdepth 1 -type d -print -quit)
           test -n "$app"
           test -n "$cli"
-          test -x "$app/Borea.App"
           for root in "$cli" "$app"; do
+            found=$(cd "$root" && find . -mindepth 1 | sed 's|^\./||' | LC_ALL=C sort)
+            if [ "$found" != "$expected" ]; then
+              echo "$root holds these files instead of borea, LICENSE and THIRD-PARTY-NOTICES.txt:" >&2
+              echo "$found" >&2
+              exit 1
+            fi
             test -x "$root/borea"
-            test -f "$root/libhostfxr.dylib" || test -f "$root/libhostfxr.so"
             test -s "$root/THIRD-PARTY-NOTICES.txt"
-            "$root/borea" --help
             reported=$("$root/borea" --version)
             if [ "$reported" != "$VERSION" ] && [[ "$reported" != "$VERSION+"* ]]; then
               echo "borea in $root reports version $reported." >&2
+              exit 1
+            fi
+            status=0
+            "$root/borea" no-such-command || status=$?
+            if [ "$status" -ne 2 ]; then
+              echo "borea no-such-command in $root exited with $status instead of 2." >&2
               exit 1
             fi
           done
@@ -366,17 +383,19 @@ jobs:
             echo "The notices in the CLI archive name Avalonia." >&2
             exit 1
           fi
-          # The CLI in the App archive is the same build as the CLI archive, with the same runtime files.
-          # Only the notices are different, because the App archive contains more software.
-          while IFS= read -r -d '' file; do
-            if [ "$file" = ./THIRD-PARTY-NOTICES.txt ]; then
-              continue
-            fi
-            if ! cmp -s "$cli/$file" "$app/$file"; then
-              echo "${file#./} is missing or different in the App archive." >&2
-              exit 1
-            fi
-          done < <(cd "$cli" && find . -type f -print0)
+          cli_help=$("$cli/borea" --help)
+          app_help=$("$app/borea" --help)
+          cli_settings=$("$cli/borea" settings show --json)
+          app_settings=$("$app/borea" settings show --json)
+          printf '%s\n%s\n' "$app_help" "$app_settings"
+          if [ "$app_help" != "$cli_help" ]; then
+            echo "borea --help prints different text from the two archives." >&2
+            exit 1
+          fi
+          if [ "$app_settings" != "$cli_settings" ]; then
+            echo "borea settings show prints different text from the two archives." >&2
+            exit 1
+          fi
 
   release:
     name: release
@@ -402,7 +421,7 @@ jobs:
           merge-multiple: true
           path: dist
 
-      # The App archives contain borea, so the App SBOM must list every package of the CLI SBOM.
+      # The App contains the CLI, so the App SBOM must list every package of the CLI SBOM.
       - name: Check that the App SBOM covers the CLI
         working-directory: dist
         env:
@@ -472,23 +491,28 @@ jobs:
           while read -r sum file; do printf '| %s | `%s` |\n' "$file" "$sum"; done < SHA256SUMS.txt >> body.md
           cat >> body.md <<'EOF'
 
-          Each platform has two archives. The App archive, for example `Borea-<version>-win-x64.zip`, contains the desktop App and the `borea` command. Most users want this archive.
-          Archives whose names start with `Borea-Cli-` are a smaller download that contains only the `borea` command. The `borea` command in both archives is the same build.
+          Each platform has two archives.
+          The App archive, for example `Borea-<version>-win-x64.zip`, contains the program `borea`.
+          Without arguments, `borea` opens the desktop App, and with arguments, it runs a command.
+          Most users want this archive.
+          Archives whose names start with `Borea-Cli-` are a smaller download that contains only the command line.
 
           The builds include the .NET runtime and are self-contained, so there is nothing to install first.
 
-          Each archive contains `LICENSE` and `THIRD-PARTY-NOTICES.txt`.
+          Each archive contains `borea` (`borea.exe` on Windows), `LICENSE` and `THIRD-PARTY-NOTICES.txt`.
 
           ### First start
 
           These builds are not code signed, so the first start might take an extra step on Windows and macOS. The README has the long explanation.
 
-          **Windows.** Right-click the zip, open Properties and select Unblock. Then unpack it and start `Borea.App.exe`, or run `.\borea.exe --help` in PowerShell in the unpacked folder of either archive.
+          **Windows.** Right-click the zip, open Properties and select Unblock.
+          Then unpack the App archive and start `borea.exe`, or run `.\borea.exe --help` in PowerShell in the unpacked folder of either archive.
           Without that step, Windows shows "Windows protected your PC". This is because the file might not be downloaded often and is not signed. Select "More info", then "Run anyway".
 
-          **Linux.** Unpack the App archive and start `Borea.App`, or run `./borea --help` in the unpacked folder of either archive. Both need the ICU and OpenSSL libraries of your distribution, and only the App also needs the X11, ICE, SM and fontconfig libraries. Most desktop installs already have them. See Readme.
+          **Linux.** Unpack the App archive and run `./borea` for the App, or run `./borea --help` in the unpacked folder of either archive.
+          Both need the ICU and OpenSSL libraries of your distribution, and only the App also needs the X11, ICE, SM and fontconfig libraries. Most desktop installs already have them. See Readme.
 
-          **macOS.** Unpack and start Borea from Terminal, not from Finder: `tar -xzf <file>`, then run `./Borea.App` for the App or `./borea --help` for the CLI inside the new folder.
+          **macOS.** Unpack and start Borea from Terminal, not from Finder: `tar -xzf <file>`, then run `./borea` inside the new folder of the App archive for the App, or `./borea --help` inside the new folder of either archive.
 
           ### Provenance
 
@@ -506,7 +530,7 @@ jobs:
           EOF
           cat >> body.md <<EOF
           \`Borea-$VERSION.cdx.json\` is the software bill of materials for the App archives, in CycloneDX JSON.
-          The App archives also contain \`borea\`, so this list includes the NuGet packages of the App and of the CLI.
+          The App contains the command line, so this list includes the NuGet packages of the App and of the CLI.
           \`Borea-Cli-$VERSION.cdx.json\` is the software bill of materials for the CLI archives and includes only the packages of the CLI.
           Each list includes the version, license and hash of every package.
           Each list is attested only to the archives that it describes, and you can use this command to prove that it belongs to one.
