@@ -652,6 +652,32 @@
             <Setter Property="views:RoundedClip.IsEnabled" Value="True" />
         </Style>
 
+        <!-- c/content-header: the actions right of the title -->
+        <Style Selector=":is(Control).content-actions">
+            <Setter Property="Grid.Column" Value="2" />
+        </Style>
+        <!-- a page body narrower than the design: the actions go below the text, and tables hide the columns they can do without -->
+        <ContainerQuery Name="page-body" Query="max-width:720">
+            <Style Selector=":is(Control).content-text">
+                <Setter Property="Grid.ColumnSpan" Value="3" />
+            </Style>
+            <Style Selector=":is(Control).content-actions">
+                <Setter Property="Grid.Row" Value="1" />
+                <Setter Property="Grid.Column" Value="0" />
+                <Setter Property="Grid.ColumnSpan" Value="3" />
+                <Setter Property="HorizontalAlignment" Value="Left" />
+                <Setter Property="Margin" Value="0,16,0,0" />
+            </Style>
+            <Style Selector=":is(Control).hide-narrow">
+                <Setter Property="IsVisible" Value="False" />
+            </Style>
+        </ContainerQuery>
+        <ContainerQuery Name="page-body" Query="max-width:520">
+            <Style Selector=":is(Control).hide-small">
+                <Setter Property="IsVisible" Value="False" />
+            </Style>
+        </ContainerQuery>
+
         <!-- the author placeholder of the detail panel -->
         <Style Selector="Border.avatar">
             <Setter Property="Width" Value="32" />
