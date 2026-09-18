@@ -16,7 +16,15 @@ internal static class LoaderFixtures
     public static ModMetadata ListingWithoutInstance(string id = "OtherLoader", string launch = "StarMap.exe") =>
         LoaderListing(id, launch, instance: null);
 
-    private static ModMetadata LoaderListing(string id, string launch, InstanceHandover? instance) => new(
+    /// <summary>A StarMap-shaped listing that runs through <paramref name="runtime"/> on every platform.</summary>
+    public static ModMetadata ListingWithRuntime(string runtime, string id = "StarMap") =>
+        LoaderListing(
+            id,
+            "StarMap.exe",
+            new InstanceHandover("-InstancePath", "STARMAP_INSTANCE_PATH"),
+            Enum.GetValues<OsPlatform>().ToDictionary(platform => platform, _ => new LoaderPlatformLaunch("StarMap.dll", runtime)));
+
+    private static ModMetadata LoaderListing(string id, string launch, InstanceHandover? instance, Dictionary<OsPlatform, LoaderPlatformLaunch>? platforms = null) => new(
         specVersion: 1,
         modId: id,
         source: "index",
@@ -31,7 +39,8 @@ internal static class LoaderFixtures
         provides: new LoaderProvides(
             launch: launch,
             configure: new LoaderConfigure("StarMapConfig.json", ConfigureFormat.Json, "GameLocation"),
-            instance: instance));
+            instance: instance,
+            platforms: platforms));
 
     public static ModVersionMetadata Release(string id = "StarMap", string version = "0.4.6", bool yanked = false, ReleaseStatus releaseStatus = ReleaseStatus.Stable) => new(
         specVersion: 1,
