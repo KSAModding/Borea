@@ -228,6 +228,22 @@ public sealed class InstanceCommandTests : IDisposable
     }
 
     [Fact]
+    public async Task CreateRenameAndDelete_WriteTheInstanceLinesToTheCliLog()
+    {
+        await _host.RunAsync("instance", "create", "Alpha");
+        var id = Assert.Single(await new FileInstanceRepository(_host.Paths).GetAllAsync()).InstanceId;
+
+        await _host.RunAsync("instance", "rename", "Alpha", "Beta");
+        await _host.RunAsync("instance", "delete", "Beta");
+
+        var text = File.ReadAllText(Assert.Single(Directory.GetFiles(Path.Combine(_host.Root, "Logs"), "borea-*.log")));
+        Assert.Contains($"[cli] Instance \"Alpha\" ({id}) created as a new instance and made active.", text);
+        Assert.Contains($"[cli] Instance \"Alpha\" ({id}) renamed to \"Beta\".", text);
+        Assert.Contains($"[cli] Deletion of instance \"Beta\" ({id}) in ", text);
+        Assert.Contains($"[cli] Instance \"Beta\" ({id}) deleted, no instance is active now.", text);
+    }
+
+    [Fact]
     public async Task Create_CommandWithoutArgumentsAfterTheSeparator_ParsesItAsBefore()
     {
         var run = await _host.RunAsync("instance", "create", "--", "-Name");

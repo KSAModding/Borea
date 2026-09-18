@@ -18,6 +18,7 @@ using Borea.Network.Sources;
 using Borea.Storage.Game;
 using Borea.Storage.Index;
 using Borea.Storage.Instances;
+using Borea.Storage.Logging;
 using Borea.Storage.ModLoaders;
 using Borea.Storage.Mods;
 using Borea.Storage.Paths;
@@ -169,6 +170,7 @@ public sealed class BoreaServicesTests : IDisposable
         Assert.IsType<FileLoaderUninstaller>(services.LoaderUninstaller);
         Assert.IsType<GameDirectoryChanger>(services.GameDirectoryChanger);
         Assert.IsType<LibraryFolderChanger>(Assert.IsType<LoggingLibraryFolderChanger>(services.LibraryFolderChanger).Inner);
+        Assert.IsType<FileInstanceRepository>(Assert.IsType<LoggingInstanceRepository>(services.Instances).Inner);
         Assert.IsType<LoaderLauncher>(Assert.IsType<LastPlayedLauncher>(Assert.IsType<LoggingLauncher>(services.Launcher).Inner).Inner);
         Assert.IsType<FileModUninstaller>(Assert.IsType<LoggingModUninstaller>(services.Uninstaller).Inner);
         Assert.IsType<FileModInstaller>(Assert.IsType<LoggingModInstaller>(services.Installer).Inner);
