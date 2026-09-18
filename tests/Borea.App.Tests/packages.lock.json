@@ -283,6 +283,11 @@
         "resolved": "3.119.4",
         "contentHash": "XOpbx/4CReO2wYsq2s6rbvdauc6dntG4Zv499sHGTJ87bwZaFXszFkwql3+FIZMc8kUPeaj3Mx2ezIJmo8a1Kg=="
       },
+      "System.CommandLine": {
+        "type": "Transitive",
+        "resolved": "2.0.11",
+        "contentHash": "Pmg3/T0M37ZS3ovwPHtfBNTCdqNpnxo+tnZMg8JDHVR0qD8KwcPUKlheEiZysb1En8IyH7yDoa9QDq97Ny/vhQ=="
+      },
       "Tmds.DBus.Protocol": {
         "type": "Transitive",
         "resolved": "0.94.1",
@@ -333,6 +338,14 @@
           "xunit.extensibility.core": "[2.9.3]"
         }
       },
+      "borea": {
+        "type": "Project",
+        "dependencies": {
+          "Borea.Composition": "[1.0.0, )",
+          "Borea.Core": "[1.0.0, )",
+          "System.CommandLine": "[2.0.11, )"
+        }
+      },
       "borea.app": {
         "type": "Project",
         "dependencies": {
@@ -342,7 +355,8 @@
           "AvaloniaUI.DiagnosticsSupport": "[2.2.3, )",
           "Borea.Composition": "[1.0.0, )",
           "Borea.Core": "[1.0.0, )",
-          "CommunityToolkit.Mvvm": "[8.4.2, )"
+          "CommunityToolkit.Mvvm": "[8.4.2, )",
+          "borea": "[1.0.0, )"
         }
       },
       "borea.composition": {

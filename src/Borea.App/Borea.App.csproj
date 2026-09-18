@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <OutputType>WinExe</OutputType>
+    <OutputType>Exe</OutputType>
     <TargetFramework>net10.0</TargetFramework>
     <RuntimeIdentifiers>win-x64;linux-x64;osx-x64;osx-arm64</RuntimeIdentifiers>
     <Nullable>enable</Nullable>
@@ -55,6 +55,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Borea.Cli\Borea.Cli.csproj" />
     <ProjectReference Include="..\Borea.Composition\Borea.Composition.csproj" />
     <ProjectReference Include="..\Borea.Core\Borea.Core.csproj" />
   </ItemGroup>

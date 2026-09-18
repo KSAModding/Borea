@@ -15,4 +15,12 @@
       <supportedOS Id="{8e0f7a12-bfb3-4fe8-b9a5-48fd50a15a9a}" />
     </application>
   </compatibility>
+
+  <!-- Borea is a console program, and this policy gives it no console window when Explorer starts it.
+       Windows 11 24H2 and later read it: https://learn.microsoft.com/en-us/windows/console/console-allocation-policy -->
+  <application>
+    <windowsSettings>
+      <consoleAllocationPolicy xmlns="http://schemas.microsoft.com/SMI/2024/WindowsSettings">detached</consoleAllocationPolicy>
+    </windowsSettings>
+  </application>
 </assembly>
