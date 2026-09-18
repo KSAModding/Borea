@@ -477,7 +477,7 @@ public sealed partial class PackItem : ObservableObject, IInstallProgressRow
     public string GameVersionText => GameVersion(Metadata);
 
     /// <summary>How long ago this pack version came out.</summary>
-    public string ReleasedText => _owner.AgeText(Metadata.ReleasedAt);
+    public string ReleasedText => _owner.ShortAgeText(Metadata.ReleasedAt);
 
     public string ReleasedDateText => MainViewModel.DateText(Metadata.ReleasedAt);
 
@@ -707,7 +707,7 @@ public sealed class PackVersionItem : ObservableObject
     public string GameVersionText => PackItem.GameVersion(_pack);
 
     /// <summary>How long ago this version came out.</summary>
-    public string PublishedText => _owner.AgeText(_pack.ReleasedAt);
+    public string PublishedText => _owner.ShortAgeText(_pack.ReleasedAt);
 
     public string PublishedDateText => MainViewModel.DateText(_pack.ReleasedAt);
 

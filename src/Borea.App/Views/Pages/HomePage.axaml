@@ -81,25 +81,17 @@
             <ItemsControl ItemsSource="{Binding RecentItems}" Margin="0,16,0,0" IsVisible="{Binding HasRecentItems}">
                 <ItemsControl.ItemsPanel>
                     <ItemsPanelTemplate>
-                        <WrapPanel ItemSpacing="5" LineSpacing="5" />
+                        <views:TileRowPanel MinTileSize="171" Spacing="5" />
                     </ItemsPanelTemplate>
                 </ItemsControl.ItemsPanel>
                 <ItemsControl.ItemTemplate>
                     <DataTemplate x:DataType="vm:RecentItem">
-                        <!-- the tile shows the icon with the text over its bottom, and the gradient when no icon shows -->
-                        <Button Classes="plain" Width="171" HorizontalContentAlignment="Stretch" Command="{Binding OpenCommand}" AutomationProperties.Name="{Binding Name}">
-                            <Border Classes="card" Height="171" Background="{StaticResource Brush.Thumbnail}">
+                        <!-- the tile shows the icon with the text over its bottom, and the gradient when no icon shows; the panel sizes it -->
+                        <Button Classes="plain" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" Command="{Binding OpenCommand}" AutomationProperties.Name="{Binding Name}">
+                            <Border Classes="card" Background="{StaticResource Brush.Thumbnail}">
                                 <Panel>
                                     <views:ListingImageView Image="{Binding Icon}" Background="{StaticResource Brush.Surface}" />
-                                    <!-- fades the icon out under the text, so the text stays readable -->
-                                    <Border Background="{StaticResource Brush.Surface}" IsVisible="{Binding Icon.IsLoaded, FallbackValue=False}">
-                                        <Border.OpacityMask>
-                                            <LinearGradientBrush StartPoint="0%,40%" EndPoint="0%,100%">
-                                                <GradientStop Offset="0" Color="Transparent" />
-                                                <GradientStop Offset="1" Color="#E6000000" />
-                                            </LinearGradientBrush>
-                                        </Border.OpacityMask>
-                                    </Border>
+                                    <Border Background="{StaticResource Brush.Scrim}" IsVisible="{Binding Icon.IsLoaded, FallbackValue=False}" />
                                     <StackPanel VerticalAlignment="Bottom" Spacing="10" Margin="16">
                                         <TextBlock Classes="heading-md" Text="{Binding Name}" TextWrapping="Wrap" MaxLines="3" TextTrimming="CharacterEllipsis" />
                                         <Grid ColumnDefinitions="*,Auto">

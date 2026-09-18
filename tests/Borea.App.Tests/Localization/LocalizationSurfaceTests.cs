@@ -38,6 +38,16 @@ public sealed class LocalizationSurfaceTests : IDisposable
         Assert.Equal("1 month ago", service.FormatTimeAgo(TimeSpan.FromDays(45)));
         Assert.Equal("11 months ago", service.FormatTimeAgo(TimeSpan.FromDays(364)));
         Assert.Equal("2 years ago", service.FormatTimeAgo(TimeSpan.FromDays(800)));
+        Assert.Equal("just now", service.FormatTimeAgoShort(TimeSpan.FromSeconds(-5)));
+        Assert.Equal("1m ago", service.FormatTimeAgoShort(TimeSpan.FromSeconds(90)));
+        Assert.Equal("5h ago", service.FormatTimeAgoShort(TimeSpan.FromHours(5.5)));
+        Assert.Equal("2d ago", service.FormatTimeAgoShort(TimeSpan.FromDays(2)));
+        Assert.Equal("6d ago", service.FormatTimeAgoShort(TimeSpan.FromDays(6.9)));
+        Assert.Equal("2w ago", service.FormatTimeAgoShort(TimeSpan.FromDays(14)));
+        Assert.Equal("4w ago", service.FormatTimeAgoShort(TimeSpan.FromDays(30)));
+        Assert.Equal("1mo ago", service.FormatTimeAgoShort(TimeSpan.FromDays(45)));
+        Assert.Equal("11mo ago", service.FormatTimeAgoShort(TimeSpan.FromDays(364)));
+        Assert.Equal("2y ago", service.FormatTimeAgoShort(TimeSpan.FromDays(800)));
         Assert.Throws<ArgumentException>(() => service.FormatContentByAuthor(" "));
     }
 

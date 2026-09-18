@@ -45,6 +45,8 @@
                     <Color x:Key="Color.ChannelDev">#D78BFF</Color>
                     <Color x:Key="Color.ThumbStart">#262626</Color>
                     <Color x:Key="Color.ThumbEnd">#171717</Color>
+                    <Color x:Key="Color.ScrimStart">#33000000</Color>
+                    <Color x:Key="Color.ScrimEnd">#CC000000</Color>
                 </ResourceDictionary>
                 <ResourceDictionary x:Key="{x:Static ThemeVariant.Light}">
                     <Color x:Key="Color.Window">#E4E5E9</Color>
@@ -72,6 +74,8 @@
                     <Color x:Key="Color.ChannelDev">#9136C8</Color>
                     <Color x:Key="Color.ThumbStart">#F1F2F4</Color>
                     <Color x:Key="Color.ThumbEnd">#D9DADF</Color>
+                    <Color x:Key="Color.ScrimStart">#33F1F2F4</Color>
+                    <Color x:Key="Color.ScrimEnd">#CCF1F2F4</Color>
                 </ResourceDictionary>
             </ResourceDictionary.ThemeDictionaries>
 
@@ -103,21 +107,37 @@
                 <GradientStop Offset="0" Color="{DynamicResource Color.ThumbStart}" />
                 <GradientStop Offset="1" Color="{DynamicResource Color.ThumbEnd}" />
             </LinearGradientBrush>
+            <LinearGradientBrush x:Key="Brush.Scrim" StartPoint="0%,0%" EndPoint="0%,100%">
+                <GradientStop Offset="0.2" Color="{DynamicResource Color.ScrimStart}" />
+                <GradientStop Offset="0.75" Color="{DynamicResource Color.ScrimEnd}" />
+            </LinearGradientBrush>
 
             <!-- IBM Plex (SIL OFL 1.1), bundled under Assets/Fonts -->
             <FontFamily x:Key="Font.Sans">avares://Borea.App/Assets/Fonts#IBM Plex Sans</FontFamily>
             <FontFamily x:Key="Font.Mono">avares://Borea.App/Assets/Fonts#IBM Plex Mono</FontFamily>
 
-            <!-- Fluent's ToggleSwitch reads these for its on state -->
+            <!-- Fluent's ToggleSwitch and ComboBox read these for their fills and borders -->
+            <SolidColorBrush x:Key="ToggleSwitchFillOff" Color="{DynamicResource Color.Window}" />
+            <SolidColorBrush x:Key="ToggleSwitchFillOffPointerOver" Color="{DynamicResource Color.Window}" />
+            <SolidColorBrush x:Key="ToggleSwitchFillOffPressed" Color="{DynamicResource Color.Window}" />
+            <SolidColorBrush x:Key="ToggleSwitchStrokeOff" Color="{DynamicResource Color.Window}" />
+            <SolidColorBrush x:Key="ToggleSwitchStrokeOffPointerOver" Color="{DynamicResource Color.BorderStrong}" />
+            <SolidColorBrush x:Key="ToggleSwitchStrokeOffPressed" Color="{DynamicResource Color.BorderStrong}" />
+            <SolidColorBrush x:Key="ToggleSwitchStrokeOffDisabled" Color="{DynamicResource Color.Window}" />
             <SolidColorBrush x:Key="ToggleSwitchFillOn" Color="{DynamicResource Color.Accent}" />
             <SolidColorBrush x:Key="ToggleSwitchFillOnPointerOver" Color="{DynamicResource Color.Accent}" />
             <SolidColorBrush x:Key="ToggleSwitchFillOnPressed" Color="{DynamicResource Color.Accent}" />
             <SolidColorBrush x:Key="ToggleSwitchStrokeOn" Color="{DynamicResource Color.Accent}" />
             <SolidColorBrush x:Key="ToggleSwitchStrokeOnPointerOver" Color="{DynamicResource Color.Accent}" />
             <SolidColorBrush x:Key="ToggleSwitchStrokeOnPressed" Color="{DynamicResource Color.Accent}" />
+            <SolidColorBrush x:Key="ToggleSwitchStrokeOnDisabled" Color="{DynamicResource Color.Window}" />
             <SolidColorBrush x:Key="ToggleSwitchKnobFillOn" Color="{DynamicResource Color.SurfaceHeader}" />
             <SolidColorBrush x:Key="ToggleSwitchKnobFillOnPointerOver" Color="{DynamicResource Color.SurfaceHeader}" />
             <SolidColorBrush x:Key="ToggleSwitchKnobFillOnPressed" Color="{DynamicResource Color.SurfaceHeader}" />
+            <SolidColorBrush x:Key="ComboBoxBorderBrush" Color="{DynamicResource Color.Window}" />
+            <SolidColorBrush x:Key="ComboBoxBorderBrushPointerOver" Color="{DynamicResource Color.BorderStrong}" />
+            <SolidColorBrush x:Key="ComboBoxBorderBrushPressed" Color="{DynamicResource Color.BorderStrong}" />
+            <SolidColorBrush x:Key="ComboBoxBorderBrushDisabled" Color="{DynamicResource Color.Window}" />
         </ResourceDictionary>
     </Application.Resources>
 
@@ -565,7 +585,7 @@
         <Style Selector="Button.dropdown:pointerover /template/ ContentPresenter, Button.dropdown:pressed /template/ ContentPresenter">
             <Setter Property="Background" Value="{StaticResource Brush.Surface}" />
         </Style>
-        <!-- c/button-icon-more: round, 18px dots -->
+        <!-- c/button-icon-more: round, 24px dots -->
         <Style Selector="Button.icon">
             <Setter Property="Width" Value="32" />
             <Setter Property="Height" Value="32" />

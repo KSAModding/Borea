@@ -351,7 +351,7 @@ public sealed class LibraryViewModelTests
 
         Assert.NotNull(row.LastPlayedAt);
         Assert.Equal(logWrittenAt.UtcDateTime, row.LastPlayedAt.Value.UtcDateTime, TimeSpan.FromSeconds(1));
-        Assert.Equal(harness.Localization.FormatTimeAgo(TimeSpan.FromHours(2)), row.LastPlayedText);
+        Assert.Equal(harness.Localization.FormatTimeAgoShort(TimeSpan.FromHours(2)), row.LastPlayedText);
         Assert.Equal(harness.Localization.FormatLibraryLastPlayed(MainViewModel.DateTimeText(row.LastPlayedAt.Value)), row.LastPlayedToolTip);
     }
 

@@ -75,7 +75,7 @@
                                     </ItemsControl.ItemTemplate>
                                 </ItemsControl>
                                 <!-- c/meta: the pack version and how long ago it came out -->
-                                <WrapPanel ItemSpacing="16" LineSpacing="8" IsVisible="{Binding SelectedPack, Converter={x:Static ObjectConverters.IsNotNull}}">
+                                <WrapPanel ItemSpacing="16" LineSpacing="8" VerticalAlignment="Center" IsVisible="{Binding SelectedPack, Converter={x:Static ObjectConverters.IsNotNull}}">
                                     <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
                                         <Path Classes="icon size-16" Data="{StaticResource Icon.GitCommit}" />
                                         <TextBlock Classes="label-md" Text="{Binding SelectedPack.Version}" VerticalAlignment="Center" />

@@ -672,6 +672,24 @@
   <data name="TimeYearsAgoFormat" xml:space="preserve">
     <value>vor {0} Jahren</value>
   </data>
+  <data name="TimeMinutesAgoShortFormat" xml:space="preserve">
+    <value>vor {0} Min.</value>
+  </data>
+  <data name="TimeHoursAgoShortFormat" xml:space="preserve">
+    <value>vor {0} Std.</value>
+  </data>
+  <data name="TimeDaysAgoShortFormat" xml:space="preserve">
+    <value>vor {0} Tg.</value>
+  </data>
+  <data name="TimeWeeksAgoShortFormat" xml:space="preserve">
+    <value>vor {0} Wo.</value>
+  </data>
+  <data name="TimeMonthsAgoShortFormat" xml:space="preserve">
+    <value>vor {0} Mon.</value>
+  </data>
+  <data name="TimeYearsAgoShortFormat" xml:space="preserve">
+    <value>vor {0} J.</value>
+  </data>
   <data name="DiscoverAdd" xml:space="preserve">
     <value>Zur aktiven Instanz hinzufügen</value>
   </data>

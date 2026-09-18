@@ -123,7 +123,7 @@
                                     </ItemsControl.ItemTemplate>
                                 </ItemsControl>
                                 <!-- c/meta: the newest version, the downloads and how long ago the version came out -->
-                                <WrapPanel ItemSpacing="16" LineSpacing="8">
+                                <WrapPanel ItemSpacing="16" LineSpacing="8" VerticalAlignment="Center">
                                     <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center" IsVisible="{Binding LatestVersion, Converter={x:Static ObjectConverters.IsNotNull}}">
                                         <Path Classes="icon size-16" Data="{StaticResource Icon.GitCommit}" />
                                         <TextBlock Classes="label-md" Text="{Binding LatestVersion.Version}" VerticalAlignment="Center" />

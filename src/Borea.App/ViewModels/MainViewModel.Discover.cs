@@ -584,7 +584,7 @@ public sealed partial class DiscoverItem : ObservableObject, IInstallRow
     [NotifyPropertyChangedFor(nameof(UpdatedDateText))]
     private DateTimeOffset? _updatedAt;
 
-    public string? UpdatedText => UpdatedAt is { } at ? _owner.AgeText(at) : null;
+    public string? UpdatedText => UpdatedAt is { } at ? _owner.ShortAgeText(at) : null;
 
     public string? UpdatedDateText => UpdatedAt is { } at ? MainViewModel.DateText(at) : null;
 

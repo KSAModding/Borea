@@ -810,13 +810,37 @@ public sealed class LocalizationService : INotifyPropertyChanged
         return FormatCount((int)(age.TotalDays / DaysPerYear), Resources.TimeYearAgo, Resources.TimeYearsAgoFormat);
     }
 
+    /// <summary>"just now", "5m ago", "2d ago", "2w ago", "3mo ago", "2y ago", with the count rounded down.</summary>
+    public string FormatTimeAgoShort(TimeSpan age)
+    {
+        if (age.TotalMinutes < 1)
+            return Resources.TimeJustNow;
+        if (age.TotalHours < 1)
+            return FormatShortAge((int)age.TotalMinutes, Resources.TimeMinutesAgoShortFormat);
+        if (age.TotalDays < 1)
+            return FormatShortAge((int)age.TotalHours, Resources.TimeHoursAgoShortFormat);
+        if (age.TotalDays < DaysPerWeek)
+            return FormatShortAge((int)age.TotalDays, Resources.TimeDaysAgoShortFormat);
+        if (age.TotalDays < DaysPerMonth)
+            return FormatShortAge((int)(age.TotalDays / DaysPerWeek), Resources.TimeWeeksAgoShortFormat);
+        if (age.TotalDays < DaysPerYear)
+            return FormatShortAge((int)(age.TotalDays / DaysPerMonth), Resources.TimeMonthsAgoShortFormat);
+
+        return FormatShortAge((int)(age.TotalDays / DaysPerYear), Resources.TimeYearsAgoShortFormat);
+    }
+
     // a month is a twelfth of a year, so an age just short of a year never reads as twelve months
     private const double DaysPerYear = 365.25;
 
     private const double DaysPerMonth = DaysPerYear / 12;
 
+    private const double DaysPerWeek = 7;
+
     private static string FormatCount(int count, string one, string format)
         => count == 1 ? one : string.Format(CultureInfo.CurrentCulture, format, count);
+
+    private static string FormatShortAge(int count, string format)
+        => string.Format(CultureInfo.CurrentCulture, format, count);
 
     public string FormatSharedProfileModCount(int count)
         => FormatCount(count, Resources.SharedProfileBannerOne, Resources.SharedProfileBannerFormat);
