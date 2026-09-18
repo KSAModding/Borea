@@ -91,15 +91,7 @@
                             <Border Classes="card" Height="171" Background="{StaticResource Brush.Thumbnail}">
                                 <Panel>
                                     <views:ListingImageView Image="{Binding Icon}" Background="{StaticResource Brush.Surface}" />
-                                    <!-- fades the icon out under the text, so the text stays readable -->
-                                    <Border Background="{StaticResource Brush.Surface}" IsVisible="{Binding Icon.IsLoaded, FallbackValue=False}">
-                                        <Border.OpacityMask>
-                                            <LinearGradientBrush StartPoint="0%,40%" EndPoint="0%,100%">
-                                                <GradientStop Offset="0" Color="Transparent" />
-                                                <GradientStop Offset="1" Color="#E6000000" />
-                                            </LinearGradientBrush>
-                                        </Border.OpacityMask>
-                                    </Border>
+                                    <Border Background="{StaticResource Brush.Scrim}" IsVisible="{Binding Icon.IsLoaded, FallbackValue=False}" />
                                     <StackPanel VerticalAlignment="Bottom" Spacing="10" Margin="16">
                                         <TextBlock Classes="heading-md" Text="{Binding Name}" TextWrapping="Wrap" MaxLines="3" TextTrimming="CharacterEllipsis" />
                                         <Grid ColumnDefinitions="*,Auto">

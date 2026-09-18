@@ -45,6 +45,8 @@
                     <Color x:Key="Color.ChannelDev">#D78BFF</Color>
                     <Color x:Key="Color.ThumbStart">#262626</Color>
                     <Color x:Key="Color.ThumbEnd">#171717</Color>
+                    <Color x:Key="Color.ScrimStart">#33000000</Color>
+                    <Color x:Key="Color.ScrimEnd">#CC000000</Color>
                 </ResourceDictionary>
                 <ResourceDictionary x:Key="{x:Static ThemeVariant.Light}">
                     <Color x:Key="Color.Window">#E4E5E9</Color>
@@ -72,6 +74,8 @@
                     <Color x:Key="Color.ChannelDev">#9136C8</Color>
                     <Color x:Key="Color.ThumbStart">#F1F2F4</Color>
                     <Color x:Key="Color.ThumbEnd">#D9DADF</Color>
+                    <Color x:Key="Color.ScrimStart">#33F1F2F4</Color>
+                    <Color x:Key="Color.ScrimEnd">#CCF1F2F4</Color>
                 </ResourceDictionary>
             </ResourceDictionary.ThemeDictionaries>
 
@@ -102,6 +106,10 @@
             <LinearGradientBrush x:Key="Brush.Thumbnail" StartPoint="0%,0%" EndPoint="100%,100%">
                 <GradientStop Offset="0" Color="{DynamicResource Color.ThumbStart}" />
                 <GradientStop Offset="1" Color="{DynamicResource Color.ThumbEnd}" />
+            </LinearGradientBrush>
+            <LinearGradientBrush x:Key="Brush.Scrim" StartPoint="0%,0%" EndPoint="0%,100%">
+                <GradientStop Offset="0.2" Color="{DynamicResource Color.ScrimStart}" />
+                <GradientStop Offset="0.75" Color="{DynamicResource Color.ScrimEnd}" />
             </LinearGradientBrush>
 
             <!-- IBM Plex (SIL OFL 1.1), bundled under Assets/Fonts -->
