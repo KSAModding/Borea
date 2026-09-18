@@ -9,7 +9,8 @@ namespace Borea.App.Views;
 /// Stacks the sections of a page body with the responsive side margin. The
 /// margin grows in steps with the page width, and the body stops growing at the
 /// width of the large step, with the extra space on both sides. With the side
-/// panel, the body fills the area left of the panel the same way.
+/// panel, the body keeps the same place and width, so it does not jump between
+/// pages, and gives up only the room on its right that the panel needs.
 /// </summary>
 public sealed class PageBodyPanel : Panel
 {
@@ -49,8 +50,6 @@ public sealed class PageBodyPanel : Panel
 
     /// <summary>The space between the side panel and the edges of the page.</summary>
     public const double SidePanelInset = 24;
-
-    public const double MaxSidePanelBodyWidth = MaxBodyWidth - SidePanelWidth - SidePanelInset;
 
     public static Thickness SidePanelMargin { get; } = new(0, SidePanelInset, SidePanelInset, SidePanelInset);
 
@@ -117,12 +116,20 @@ public sealed class PageBodyPanel : Panel
         : available >= RegularFromWidth ? RegularMargin
         : SmallMargin;
 
+    /// <summary>The least space between the body and the side panel: the side margin, but at most the regular one, so a wide window holds the full body next to the panel.</summary>
+    internal static double SidePanelGap(double available) => Math.Min(SideMargin(available), RegularMargin);
+
     /// <summary>Where the body goes on a page that is <paramref name="available"/> wide.</summary>
     internal static (double Left, double Width) Place(double available, bool hasSidePanel)
     {
         var margin = SideMargin(available);
-        var area = hasSidePanel ? available - SidePanelWidth - SidePanelInset : available;
-        var width = Math.Clamp(area - 2 * margin, 0, hasSidePanel ? MaxSidePanelBodyWidth : MaxBodyWidth);
-        return (Math.Max(0, (area - width) / 2), width);
+        var width = Math.Clamp(available - 2 * margin, 0, MaxBodyWidth);
+        var left = Math.Max(0, (available - width) / 2);
+        if (!hasSidePanel)
+            return (left, width);
+
+        var panelLeft = available - SidePanelWidth - SidePanelInset;
+        var right = Math.Min(left + width, panelLeft - SidePanelGap(available));
+        return (left, Math.Max(0, right - left));
     }
 }
