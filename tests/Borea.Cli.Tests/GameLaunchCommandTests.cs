@@ -53,6 +53,18 @@ public sealed class GameLaunchCommandTests : IDisposable
     }
 
     [Fact]
+    public async Task Launch_ArgumentsAfterTheSeparator_GoToTheGameAndOptionsBeforeItStillWork()
+    {
+        await SetGameDirectoryAsync();
+
+        var run = await _host.RunAsync("game", "launch", "--json", "--", "-windowed", "a b", "--json");
+
+        Assert.Equal(0, run.ExitCode);
+        Assert.Equal(["-windowed", "a b", "--json"], Assert.Single(_host.ProcessStarter.Plans).Arguments);
+        Assert.Equal(["-windowed", "a b", "--json"], run.Json.GetProperty("arguments").EnumerateArray().Select(argument => argument.GetString()));
+    }
+
+    [Fact]
     public async Task Launch_NoGameDirectory_FailsWithoutStarting()
     {
         var run = await _host.RunAsync("game", "launch");

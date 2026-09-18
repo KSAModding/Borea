@@ -1,6 +1,7 @@
 using System.CommandLine;
 using System.Globalization;
 using Borea.Core.Index;
+using Borea.Core.Launch;
 
 namespace Borea.Cli.Commands;
 
@@ -10,8 +11,17 @@ namespace Borea.Cli.Commands;
 /// </summary>
 internal static class CommandRunner
 {
+    public static Task<int> RunAsync(
+        ParseResult parseResult,
+        Func<CancellationToken, Task<CliServices>> buildServices,
+        CancellationToken cancellationToken,
+        Func<CliServices, TextWriter, TextWriter, CancellationToken, Task<int>> body)
+        => RunAsync(parseResult, passThrough: null, buildServices, cancellationToken, body);
+
+    /// <summary>Runs like the overload above, and logs the arguments after "--" with the command.</summary>
     public static async Task<int> RunAsync(
         ParseResult parseResult,
+        PassThroughArguments? passThrough,
         Func<CancellationToken, Task<CliServices>> buildServices,
         CancellationToken cancellationToken,
         Func<CliServices, TextWriter, TextWriter, CancellationToken, Task<int>> body)
@@ -34,7 +44,8 @@ internal static class CommandRunner
 
         using (services)
         {
-            services.Log.Write("Command: borea " + string.Join(" ", parseResult.Tokens.Select(token => token.Value)));
+            var passedThrough = passThrough is { Values.Count: > 0 } ? " -- " + ArgumentLine.Join(passThrough.Values) : "";
+            services.Log.Write("Command: borea " + string.Join(" ", parseResult.Tokens.Select(token => token.Value)) + passedThrough);
             try
             {
                 var exitCode = await body(services, output, error, cancellationToken).ConfigureAwait(false);

@@ -57,9 +57,9 @@ public sealed class BoreaCliTests : IDisposable
     }
 
     [Fact]
-    public void Build_NullFactory_Throws()
+    public async Task Run_NullFactory_Throws()
     {
-        Assert.Throws<ArgumentNullException>(() => BoreaCli.Build(null!));
+        await Assert.ThrowsAsync<ArgumentNullException>(() => BoreaCli.RunAsync(["settings", "show"], null!, TextWriter.Null, TextWriter.Null));
     }
 
     public void Dispose() => _host.Dispose();

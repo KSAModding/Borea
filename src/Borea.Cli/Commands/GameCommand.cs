@@ -11,11 +11,11 @@ namespace Borea.Cli.Commands;
 /// </summary>
 internal static class GameCommand
 {
-    public static Command Build(Func<CancellationToken, Task<CliServices>> services)
+    public static Command Build(Func<CancellationToken, Task<CliServices>> services, PassThroughArguments passThrough)
     {
         var game = new Command("game", "Read facts about the game installation, or start the game without a mod loader.");
         game.Subcommands.Add(BuildVersion(services));
-        game.Subcommands.Add(BuildLaunch(services));
+        game.Subcommands.Add(BuildLaunch(services, passThrough));
         return game;
     }
 
@@ -23,18 +23,19 @@ internal static class GameCommand
     /// The game alone, on the shared profile. An instance is started with
     /// <c>borea launch</c> instead, which always needs a mod loader.
     /// </summary>
-    private static Command BuildLaunch(Func<CancellationToken, Task<CliServices>> services)
+    private static Command BuildLaunch(Func<CancellationToken, Task<CliServices>> services, PassThroughArguments passThrough)
     {
         var json = ArgumentRules.Json();
         var launch = new Command(
             "launch",
-            "Start the game from the game directory without a mod loader. The game uses the shared profile in My Games/Kitten Space Agency, not a Borea instance. To start an instance, use 'borea launch <instance> [<loader-id>]'.");
+            "Start the game from the game directory without a mod loader. The game uses the shared profile in My Games/Kitten Space Agency, not a Borea instance. Arguments after -- go to the game. To start an instance, use 'borea launch <instance> [<loader-id>]'.");
         launch.Options.Add(json);
+        passThrough.Accept(launch);
 
-        launch.SetAction((parseResult, cancellationToken) => CommandRunner.RunAsync(parseResult, services, cancellationToken, (cli, output, error, ct) =>
+        launch.SetAction((parseResult, cancellationToken) => CommandRunner.RunAsync(parseResult, passThrough, services, cancellationToken, (cli, output, error, ct) =>
         {
             ct.ThrowIfCancellationRequested();
-            var result = cli.SharedProfileLauncher.Launch();
+            var result = cli.SharedProfileLauncher.Launch(passThrough.Values);
 
             if (!result.Started)
             {
@@ -44,7 +45,7 @@ internal static class GameCommand
 
             if (parseResult.GetValue(json))
             {
-                JsonOutput.Write(output, new GameLaunchView(result.Plan!.Executable, result.Plan.WorkingDirectory, result.ProcessId!.Value));
+                JsonOutput.Write(output, new GameLaunchView(result.Plan!.Executable, result.Plan.Arguments, result.Plan.WorkingDirectory, result.ProcessId!.Value));
                 return Task.FromResult(ExitCodes.Done);
             }
 
@@ -140,7 +141,7 @@ internal static class GameCommand
             : $"no KSA.dll with a version was found in {settings.GameDirectoryPath}";
 
     /// <summary>The JSON shape of <c>game launch</c>.</summary>
-    private sealed record GameLaunchView(string Executable, string WorkingDirectory, int ProcessId);
+    private sealed record GameLaunchView(string Executable, IReadOnlyList<string> Arguments, string WorkingDirectory, int ProcessId);
 
     /// <summary>The JSON shape of <c>game version</c>. A half that is missing is null.</summary>
     private sealed record GameVersionView(InstalledVersionView? Installed, LatestVersionView? Latest);

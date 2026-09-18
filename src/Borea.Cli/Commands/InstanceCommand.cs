@@ -3,6 +3,7 @@ using System.Globalization;
 using Borea.Cli.Output;
 using Borea.Core.Index;
 using Borea.Core.Instances;
+using Borea.Core.Launch;
 using Borea.Core.Mods;
 
 namespace Borea.Cli.Commands;
@@ -14,9 +15,9 @@ internal static class InstanceCommand
 {
     internal const string InstanceArgumentDescription = "The instance's name, or its id when two names differ only in case.";
 
-    public static Command Build(Func<CancellationToken, Task<CliServices>> services)
+    public static Command Build(Func<CancellationToken, Task<CliServices>> services, PassThroughArguments passThrough)
     {
-        var instance = new Command("instance", "List, show, create, duplicate, rename, delete, activate, and deactivate instances, create one from the mods of the shared profile, export and import modlists, and adopt mods that Borea did not install.");
+        var instance = new Command("instance", "List, show, create, duplicate, rename, delete, activate, and deactivate instances, set their launch arguments, create one from the mods of the shared profile, export and import modlists, and adopt mods that Borea did not install.");
         instance.Subcommands.Add(BuildList(services));
         instance.Subcommands.Add(BuildShow(services));
         instance.Subcommands.Add(BuildCreate(services));
@@ -24,6 +25,9 @@ internal static class InstanceCommand
         instance.Subcommands.Add(ModListCommands.BuildExport(services));
         instance.Subcommands.Add(ModListCommands.BuildImport(services));
         instance.Subcommands.Add(BuildRename(services));
+        instance.Subcommands.Add(BuildArguments(services));
+        instance.Subcommands.Add(BuildSetArguments(services, passThrough));
+        instance.Subcommands.Add(BuildClearArguments(services));
         instance.Subcommands.Add(BuildDelete(services));
         instance.Subcommands.Add(BuildActivate(services));
         instance.Subcommands.Add(BuildDeactivate(services));
@@ -104,6 +108,7 @@ internal static class InstanceCommand
             output.WriteLine($"Source: {Describe(target.Source)}");
             output.WriteLine($"Created: {Timestamp(view.CreatedAt)}");
             output.WriteLine($"Mods: {view.ModCount}");
+            output.WriteLine($"Launch arguments: {DescribeLaunchArguments(target)}");
             output.WriteLine($"Last played: {(view.LastPlayedAt is { } lastPlayed ? Timestamp(lastPlayed) : "never")}");
             output.WriteLine($"Playtime: {DescribePlaytime(playtime)}");
             output.WriteLine($"Sessions: {playtime.Sessions}");
@@ -131,6 +136,9 @@ internal static class InstanceCommand
     }
 
     private static string Timestamp(DateTimeOffset at) => at.ToLocalTime().ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture);
+
+    private static string DescribeLaunchArguments(Instance instance)
+        => instance.LaunchArguments.Count == 0 ? "none" : ArgumentLine.Join(instance.LaunchArguments);
 
     private static Command BuildCreate(Func<CancellationToken, Task<CliServices>> services)
     {
@@ -168,6 +176,119 @@ internal static class InstanceCommand
         }));
 
         return rename;
+    }
+
+    private static Command BuildArguments(Func<CancellationToken, Task<CliServices>> services)
+    {
+        var instance = ArgumentRules.Text("instance", InstanceArgumentDescription);
+        var json = ArgumentRules.Json();
+        var arguments = new Command("arguments", "Print the launch arguments that every launch of an instance passes to the loader and the game.");
+        arguments.Arguments.Add(instance);
+        arguments.Options.Add(json);
+
+        arguments.SetAction((parseResult, cancellationToken) => CommandRunner.RunAsync(parseResult, services, cancellationToken, async (cli, output, _, _) =>
+        {
+            var target = await InstanceLookup.ResolveAsync(cli.Instances, parseResult.GetRequiredValue(instance)).ConfigureAwait(false);
+            if (parseResult.GetValue(json))
+                JsonOutput.Write(output, LaunchArgumentsView.From(target));
+            else
+                output.WriteLine(target.LaunchArguments.Count == 0 ? $"No launch arguments for '{target.Name}'." : ArgumentLine.Join(target.LaunchArguments));
+
+            return ExitCodes.Done;
+        }));
+
+        return arguments;
+    }
+
+    private static Command BuildSetArguments(Func<CancellationToken, Task<CliServices>> services, PassThroughArguments passThrough)
+    {
+        var instance = ArgumentRules.Text("instance", InstanceArgumentDescription);
+        var json = ArgumentRules.Json();
+        var set = new Command("set-arguments", "Save the arguments after -- as the launch arguments of an instance, in place of the saved ones.");
+        set.Arguments.Add(instance);
+        set.Options.Add(json);
+        passThrough.Accept(set);
+
+        set.SetAction((parseResult, cancellationToken) =>
+        {
+            if (passThrough.Values.Count == 0)
+            {
+                parseResult.InvocationConfiguration.Error.WriteLine("Put the launch arguments after --, for example 'borea instance set-arguments <instance> -- -Name value'. To remove them, use 'borea instance clear-arguments <instance>'.");
+                return Task.FromResult(ExitCodes.Usage);
+            }
+
+            return CommandRunner.RunAsync(parseResult, passThrough, services, cancellationToken, async (cli, output, error, ct) =>
+            {
+                var target = await InstanceLookup.ResolveAsync(cli.Instances, parseResult.GetRequiredValue(instance)).ConfigureAwait(false);
+                await RefuseHandoverFlagAsync(cli, passThrough.Values, error, ct).ConfigureAwait(false);
+                var saved = await SaveLaunchArgumentsAsync(cli, target, passThrough.Values, ct).ConfigureAwait(false);
+
+                if (parseResult.GetValue(json))
+                    JsonOutput.Write(output, LaunchArgumentsView.From(saved));
+                else
+                    output.WriteLine($"Saved the launch arguments of '{saved.Name}': {ArgumentLine.Join(saved.LaunchArguments)}");
+
+                return ExitCodes.Done;
+            });
+        });
+
+        return set;
+    }
+
+    private static Command BuildClearArguments(Func<CancellationToken, Task<CliServices>> services)
+    {
+        var instance = ArgumentRules.Text("instance", InstanceArgumentDescription);
+        var json = ArgumentRules.Json();
+        var clear = new Command("clear-arguments", "Remove the launch arguments of an instance.");
+        clear.Arguments.Add(instance);
+        clear.Options.Add(json);
+
+        clear.SetAction((parseResult, cancellationToken) => CommandRunner.RunAsync(parseResult, services, cancellationToken, async (cli, output, _, ct) =>
+        {
+            var target = await InstanceLookup.ResolveAsync(cli.Instances, parseResult.GetRequiredValue(instance)).ConfigureAwait(false);
+            var saved = await SaveLaunchArgumentsAsync(cli, target, [], ct).ConfigureAwait(false);
+
+            if (parseResult.GetValue(json))
+                JsonOutput.Write(output, LaunchArgumentsView.From(saved));
+            else
+                output.WriteLine($"Removed the launch arguments of '{saved.Name}'.");
+
+            return ExitCodes.Done;
+        }));
+
+        return clear;
+    }
+
+    private static Task<Instance> SaveLaunchArgumentsAsync(CliServices cli, Instance target, IReadOnlyList<string> arguments, CancellationToken cancellationToken)
+        => cli.Instances.UpdateAsync(target.InstanceId, saved =>
+        {
+            saved.SetLaunchArguments(arguments);
+            return saved;
+        }, cancellationToken);
+
+    /// <summary>
+    /// Refuses an argument that the listing of a configured mod loader reads as
+    /// its instance flag, from the cached index. The launch checks the listing
+    /// it uses again, so a listing that cannot be read now only gives a warning.
+    /// </summary>
+    private static async Task RefuseHandoverFlagAsync(CliServices cli, IReadOnlyList<string> arguments, TextWriter error, CancellationToken cancellationToken)
+    {
+        foreach (var loaderId in cli.Settings.LoaderInstallations.Keys)
+        {
+            ModMetadata? listing;
+            try
+            {
+                listing = await cli.ReadOnlyMods.GetListingAsync(loaderId, cancellationToken).ConfigureAwait(false);
+            }
+            catch (Exception exception) when (exception is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
+            {
+                error.WriteLine($"warning: The listing of {loaderId} could not be read, so Borea checks the arguments when the instance launches. {exception.Message}");
+                continue;
+            }
+
+            if (listing is { Type: ContentType.ModLoader, Provides.Instance: { } handover } && handover.FlagIn(arguments) is { } flag)
+                throw new InvalidOperationException($"{listing.Name} takes the instance folder after '{flag}', and Borea passes that on every launch. A second one could make {listing.Name} use another folder, so the launch arguments were not saved.");
+        }
     }
 
     private static Command BuildDelete(Func<CancellationToken, Task<CliServices>> services)
@@ -471,10 +592,16 @@ internal static class InstanceCommand
     }
 
     /// <summary><c>instance show --json</c>.</summary>
-    private sealed record InstanceDetailsView(Guid Id, string Name, bool Active, InstanceSourceView Source, DateTimeOffset CreatedAt, int ModCount, DateTimeOffset? LastPlayedAt, PlaytimeView Playtime)
+    private sealed record InstanceDetailsView(Guid Id, string Name, bool Active, InstanceSourceView Source, DateTimeOffset CreatedAt, int ModCount, IReadOnlyList<string> LaunchArguments, DateTimeOffset? LastPlayedAt, PlaytimeView Playtime)
     {
         public static InstanceDetailsView From(Instance instance, bool active, DateTimeOffset? lastPlayedAt, InstancePlaytime playtime)
-            => new(instance.InstanceId, instance.Name, active, InstanceSourceView.From(instance.Source), instance.CreatedAt, instance.Mods.Count, lastPlayedAt, PlaytimeView.From(playtime));
+            => new(instance.InstanceId, instance.Name, active, InstanceSourceView.From(instance.Source), instance.CreatedAt, instance.Mods.Count, instance.LaunchArguments, lastPlayedAt, PlaytimeView.From(playtime));
+    }
+
+    /// <summary>The JSON shape of <c>instance arguments</c>, <c>set-arguments</c> and <c>clear-arguments</c>.</summary>
+    private sealed record LaunchArgumentsView(Guid Id, string Name, IReadOnlyList<string> Arguments)
+    {
+        public static LaunchArgumentsView From(Instance instance) => new(instance.InstanceId, instance.Name, instance.LaunchArguments);
     }
 
     private sealed record PlaytimeView(long TotalSeconds, int Sessions, bool IncludesRunningSession, int UnreadableLogs, bool Known)

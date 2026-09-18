@@ -133,12 +133,15 @@ The exit code is 0 when the command completed, 1 when the operation failed and t
 | `borea settings set channel <channel>` | Choose which release statuses install and update offer: `stable` (the default), `testing` or `dev`. |
 | `borea game version` | Print the installed build and the current public build the master server reports. |
 | `borea instance list` | Print every instance and mark the active one. |
-| `borea instance show <instance>` | Print one instance, when it was last played, and how long it was played. |
+| `borea instance show <instance>` | Print one instance, its launch arguments, when it was last played, and how long it was played. |
 | `borea instance create <name>` | Create an empty instance. |
 | `borea instance duplicate <instance> [--name <name>]` | Create an instance with the same mods, versions, and enabled flags. |
 | `borea instance export <instance> [file]` | Write the mods of an instance, with their versions and enabled flags, as a modlist. |
 | `borea instance import <file> [--name <name>]` | Create an instance from a modlist. |
 | `borea instance rename <instance> <new-name>` | Give an instance a new name. |
+| `borea instance arguments <instance>` | Print the launch arguments that every launch of an instance passes to the mod loader and the game. |
+| `borea instance set-arguments <instance> -- <arguments>` | Save the arguments after `--` as the launch arguments of an instance, in place of the saved ones. |
+| `borea instance clear-arguments <instance>` | Remove the launch arguments of an instance. |
 | `borea instance delete <instance>` | Delete an instance and its folder. |
 | `borea instance activate <instance>` | Make an instance the active one. |
 | `borea instance deactivate` | Leave no instance active. |
