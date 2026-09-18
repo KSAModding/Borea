@@ -34,8 +34,14 @@
                 </Grid>
             </Border>
 
-            <TextBlock Classes="body-md danger" Text="{Binding InstanceError}" TextWrapping="Wrap" Margin="0,16,0,0" IsVisible="{Binding InstanceError, Converter={x:Static ObjectConverters.IsNotNull}}" />
-            <TextBlock Classes="body-md secondary" Text="{Binding InstanceNotice}" TextWrapping="Wrap" Margin="0,16,0,0" IsVisible="{Binding InstanceNotice, Converter={x:Static ObjectConverters.IsNotNull}}" />
+            <ScrollViewer MaxHeight="{Binding $parent[UserControl].Bounds.Height, Converter={x:Static views:PageBodyPanel.HeaderMessagesMaxHeight}}">
+                <StackPanel>
+                    <TextBlock Classes="body-md danger" Text="{Binding InstanceError}" TextWrapping="Wrap" Margin="0,16,0,0" IsVisible="{Binding InstanceError, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                    <TextBlock Classes="body-md secondary" Text="{Binding InstanceNotice}" TextWrapping="Wrap" Margin="0,16,0,0" IsVisible="{Binding InstanceNotice, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                    <ContentControl Content="{Binding}" ContentTemplate="{StaticResource LaunchStatus}" />
+                    <TextBlock Classes="body-md danger" Text="{Binding ContentError}" TextWrapping="Wrap" Margin="0,16,0,0" IsVisible="{Binding ContentError, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                </StackPanel>
+            </ScrollViewer>
 
             <Button Classes="dropdown" HorizontalAlignment="Left" Margin="0,24,0,0" IsVisible="{Binding !!Instances.Count}" AutomationProperties.Name="{Binding Localization.DiscoverSortBy}">
                 <Button.Flyout>
@@ -56,7 +62,18 @@
             <views:PageBodyPanel HasTopMargin="False">
                 <TextBlock Classes="body-md muted" Text="{Binding Localization.LibraryEmpty}" Margin="8,24,0,0" IsVisible="{Binding !Instances.Count}" />
 
-                <ItemsControl ItemsSource="{Binding Instances}" ItemTemplate="{StaticResource InstanceRow}" Margin="0,8,0,0">
+                <TextBlock Classes="heading-sm heading" Text="{Binding Localization.LibraryActiveHeading}" Margin="8,16,0,0" IsVisible="{Binding HasActiveInstance}" />
+                <ContentControl Content="{Binding ActiveInstance}" ContentTemplate="{StaticResource InstanceRow}" Margin="0,8,0,0" IsVisible="{Binding HasActiveInstance}" />
+                <TextBlock Classes="heading-sm heading" Text="{Binding Localization.LibraryOtherInstancesHeading}" Margin="8,24,0,0">
+                    <TextBlock.IsVisible>
+                        <MultiBinding Converter="{x:Static BoolConverters.And}">
+                            <Binding Path="HasActiveInstance" />
+                            <Binding Path="!!OtherInstances.Count" />
+                        </MultiBinding>
+                    </TextBlock.IsVisible>
+                </TextBlock>
+
+                <ItemsControl ItemsSource="{Binding OtherInstances}" ItemTemplate="{StaticResource InstanceRow}" Margin="0,8,0,0">
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate>
                             <StackPanel Spacing="8" />

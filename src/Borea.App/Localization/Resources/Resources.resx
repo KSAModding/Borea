@@ -171,6 +171,12 @@
   <data name="LibrarySortLastPlayed" xml:space="preserve">
     <value>Last played</value>
   </data>
+  <data name="LibraryActiveHeading" xml:space="preserve">
+    <value>Active</value>
+  </data>
+  <data name="LibraryOtherInstancesHeading" xml:space="preserve">
+    <value>Instances</value>
+  </data>
   <data name="LibraryImportModList" xml:space="preserve">
     <value>Import modlist</value>
   </data>

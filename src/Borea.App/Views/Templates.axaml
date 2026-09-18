@@ -13,7 +13,7 @@
             </Grid>
         </Border>
     </DataTemplate>
-    <!-- what the last launch said, on Home and on the instance page -->
+    <!-- what the last launch said, on Home, in the Library and on the instance page -->
     <DataTemplate x:Key="LaunchStatus" x:DataType="vm:MainViewModel">
         <StackPanel>
             <TextBlock Classes="body-md secondary" Text="{Binding LaunchMessage}" TextWrapping="Wrap" Margin="0,16,0,0" IsVisible="{Binding LaunchMessage, Converter={x:Static ObjectConverters.IsNotNull}}" Classes.danger="{Binding HasLaunchOutput}" />
@@ -49,7 +49,7 @@
                     </Border>
                 </Button>
 
-                <!-- Title row: the name, and the switch + more or the delete confirmation -->
+                <!-- Title row: the name, and Play on the active row of the Library, the switch + more, or the delete confirmation -->
                 <Grid Grid.Column="2" Grid.Row="0" ColumnDefinitions="*,16,Auto">
                     <Button Classes="plain" Command="{Binding OpenCommand}" HorizontalAlignment="Left" VerticalAlignment="Center">
                         <TextBlock Classes="heading-md" Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
@@ -60,6 +60,18 @@
                             <Button Classes="text" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryCancel}" Command="{Binding CancelCommand}" />
                         </StackPanel>
                         <StackPanel Orientation="Horizontal" Spacing="12" IsVisible="{Binding !IsConfirmingDelete}">
+                            <Button Classes="cta" Command="{Binding PlayCommand}" IsEnabled="{Binding $parent[Window].((vm:MainViewModel)DataContext).EnableActiveInstance}" VerticalAlignment="Center">
+                                <Button.IsVisible>
+                                    <MultiBinding Converter="{x:Static BoolConverters.And}">
+                                        <Binding Path="IsActive" />
+                                        <Binding Path="$parent[Window].((vm:MainViewModel)DataContext).CurrentWindowLibrary" />
+                                    </MultiBinding>
+                                </Button.IsVisible>
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                    <Path Classes="icon-filled size-16" Fill="{StaticResource Brush.SurfaceHeader}" Data="{StaticResource Icon.Play}" VerticalAlignment="Center" />
+                                    <TextBlock Classes="action-lg" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.InstancePlay}" VerticalAlignment="Center" />
+                                </StackPanel>
+                            </Button>
                             <ToggleSwitch Classes="switch" IsChecked="{Binding IsActive, Mode=OneWay}" Command="{Binding ToggleActiveCommand}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryActivate}" VerticalAlignment="Center" />
                             <Button Classes="icon" AutomationProperties.Name="{Binding Name}">
                                 <Button.Flyout>
