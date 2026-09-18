@@ -1560,6 +1560,18 @@
   <data name="LaunchStoppedTitleFormat" xml:space="preserve">
     <value>{0} wurde beendet</value>
   </data>
+  <data name="LaunchUnknownPlatformKeyFormat" xml:space="preserve">
+    <value>Der Eintrag von {0} für dieses System hat den Schlüssel '{1}', den Borea nicht kennt. Suche nach einem Update für Borea.</value>
+  </data>
+  <data name="LaunchUnknownRuntimeFormat" xml:space="preserve">
+    <value>{0} läuft auf diesem System über '{1}', das Borea nicht kennt. Suche nach einem Update für Borea.</value>
+  </data>
+  <data name="LaunchDotnetMissingFormat" xml:space="preserve">
+    <value>{0} läuft auf diesem System über dotnet, und Borea hat dotnet nicht gefunden. Installiere die .NET-Laufzeit, die {0} braucht.</value>
+  </data>
+  <data name="LaunchTargetMissingFormat" xml:space="preserve">
+    <value>'{0}' fehlt. Installiere {1} neu oder korrigiere seinen Ordner in den Einstellungen.</value>
+  </data>
   <data name="LaunchDisableModFormat" xml:space="preserve">
     <value>{0} deaktivieren</value>
   </data>

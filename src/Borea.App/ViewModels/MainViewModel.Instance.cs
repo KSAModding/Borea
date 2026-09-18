@@ -546,7 +546,7 @@ public partial class MainViewModel
             if (result.Outcome == LaunchOutcome.ExitedEarly)
                 await ShowLaunchFailureAsync(result, instance, loader);
             else
-                LaunchMessage = result.Message;
+                LaunchMessage = LaunchResultText(result, loader);
 
             if (result.Started)
                 await RefreshLastPlayedAsync(instance.InstanceId);
@@ -661,6 +661,15 @@ public partial class MainViewModel
         if (_services is not null && _launchInstanceId is { } instanceId)
             LaunchFailureError = TryOpenWithSystem(_services.Paths.GetInstanceLaunchLogPath(instanceId));
     }
+
+    private string LaunchResultText(LaunchResult result, ModMetadata loader) => result.Outcome switch
+    {
+        LaunchOutcome.UnknownPlatformKey => Localization.FormatLaunchUnknownPlatformKey(loader.Name, result.UnknownName!),
+        LaunchOutcome.UnknownRuntime => Localization.FormatLaunchUnknownRuntime(loader.Name, result.UnknownName!),
+        LaunchOutcome.DotnetMissing => Localization.FormatLaunchDotnetMissing(loader.Name),
+        LaunchOutcome.LaunchTargetMissing when result.Plan is { } plan => Localization.FormatLaunchTargetMissing(plan.Executable, loader.Name),
+        _ => result.Message,
+    };
 
     private string LaunchLoaderFailureText(LaunchLoaderChoice choice) => choice.Failure switch
     {

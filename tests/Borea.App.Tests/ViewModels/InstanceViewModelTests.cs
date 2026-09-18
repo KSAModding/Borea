@@ -392,7 +392,6 @@ public sealed class InstanceViewModelTests
     {
         var loader = Directory.CreateDirectory(Path.Combine(Path.GetDirectoryName(services.Paths.GetBoreaSettingsPath())!, "Loaders", "StarMap")).FullName;
         File.WriteAllBytes(Path.Combine(loader, "StarMap.exe"), []);
-        File.WriteAllBytes(Path.Combine(loader, "StarMap.dll"), []);
         return services.SettingsRepository.SaveAsync(services.Settings.WithLoaderInstallation(
             "StarMap",
             new Borea.Core.ModLoaders.LoaderInstallation(loader, ModVersion.Parse("0.4.6"), rawVersion: null, isAdopted: false)));
