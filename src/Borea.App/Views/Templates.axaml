@@ -319,7 +319,10 @@
                                 <TextBlock Classes="label-md" Text="{Binding ProgressDetail}" VerticalAlignment="Center" IsVisible="{Binding ProgressDetail, Converter={x:Static ObjectConverters.IsNotNull}}" />
                             </StackPanel>
                             <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center" IsVisible="{Binding IsConfirmingInstall}">
-                                <TextBlock Classes="body-sm secondary" Text="{Binding InstallWarning}" ToolTip.Tip="{Binding InstallWarning}" MaxWidth="260" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                <StackPanel MaxWidth="260" VerticalAlignment="Center">
+                                    <TextBlock Classes="body-sm secondary" Text="{Binding AddedModsText}" ToolTip.Tip="{Binding AddedModsToolTip}" IsVisible="{Binding AddedModsText, Converter={x:Static ObjectConverters.IsNotNull}}" TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Classes="body-sm secondary" Text="{Binding InstallWarning}" ToolTip.Tip="{Binding InstallWarning}" IsVisible="{Binding InstallWarning, Converter={x:Static ObjectConverters.IsNotNull}}" TextTrimming="CharacterEllipsis" />
+                                </StackPanel>
                                 <Button Classes="text primary" Content="{Binding ConfirmInstallText}" Command="{Binding ConfirmInstallCommand}" IsEnabled="{Binding Choices.IsComplete, FallbackValue={x:True}}" />
                                 <Button Classes="text" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryCancel}" Command="{Binding CancelInstallCommand}" />
                             </StackPanel>
