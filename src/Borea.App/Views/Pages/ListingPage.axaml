@@ -1,0 +1,441 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Borea.App.ViewModels"
+             xmlns:views="using:Borea.App.Views"
+             xmlns:listings="using:Borea.Core.Listings"
+             x:Class="Borea.App.Views.Pages.ListingPage"
+             x:DataType="vm:MainViewModel">
+    <UserControl.Styles>
+        <Style Selector="Button.step">
+            <Setter Property="Padding" Value="8,6" />
+            <Setter Property="Margin" Value="-8,0" />
+            <Setter Property="CornerRadius" Value="8" />
+        </Style>
+        <Style Selector="Button.step:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="{StaticResource Brush.SurfaceRaised}" />
+        </Style>
+        <Style Selector="Border.step-mark">
+            <Setter Property="Width" Value="20" />
+            <Setter Property="Height" Value="20" />
+            <Setter Property="CornerRadius" Value="10" />
+            <Setter Property="BorderThickness" Value="1.5" />
+            <Setter Property="BorderBrush" Value="{StaticResource Brush.BorderStrong}" />
+        </Style>
+        <Style Selector="Border.step-mark.done">
+            <Setter Property="BorderBrush" Value="{StaticResource Brush.Positive}" />
+        </Style>
+        <Style Selector="Border.step-mark.done Path">
+            <Setter Property="Stroke" Value="{StaticResource Brush.Positive}" />
+        </Style>
+        <Style Selector="Border.step-mark.fix">
+            <Setter Property="BorderBrush" Value="{StaticResource Brush.Danger}" />
+            <Setter Property="Background" Value="{StaticResource Brush.DangerSoft}" />
+        </Style>
+        <Style Selector="Border.step-mark.fix TextBlock">
+            <Setter Property="Foreground" Value="{StaticResource Brush.Danger}" />
+        </Style>
+    </UserControl.Styles>
+    <UserControl.Resources>
+        <!-- the icon or one description image -->
+        <DataTemplate x:Key="ListingImageTemplate" x:DataType="vm:ListingImageRow">
+            <Border Background="{StaticResource Brush.Window}" CornerRadius="12" Padding="16">
+                <StackPanel Spacing="6">
+                    <Grid ColumnDefinitions="*,8,Auto">
+                        <TextBlock Classes="label-md" Text="{Binding FactsText}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                        <Button Grid.Column="2" Classes="icon" Command="{Binding RemoveCommand}" ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ListingRemove}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ListingRemove}">
+                            <Path Classes="icon size-16" Data="{StaticResource Icon.Trash}" />
+                        </Button>
+                    </Grid>
+                    <StackPanel Spacing="6" IsVisible="{Binding IsDescriptionImage}">
+                        <TextBlock Classes="heading-sm" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ListingId}" />
+                        <TextBox Classes="field" Text="{Binding Id}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ListingId}" />
+                    </StackPanel>
+                    <TextBlock Classes="heading-sm" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ListingImageUrl}" />
+                    <TextBlock Classes="body-sm secondary" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ListingImageUrlHint}" TextWrapping="Wrap" />
+                    <TextBox Classes="field" Text="{Binding Url}" PlaceholderText="https://" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ListingImageUrl}" />
+                    <WrapPanel ItemSpacing="8" LineSpacing="8">
+                        <Button Classes="text" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ListingChooseFile}" Command="{Binding ChooseFileCommand}" />
+                        <Button Classes="text" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ListingMeasure}" Command="{Binding MeasureCommand}" />
+                    </WrapPanel>
+                    <TextBlock Classes="body-sm danger" Text="{Binding Problem}" TextWrapping="Wrap" IsVisible="{Binding Problem, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                    <TextBlock Classes="heading-sm" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ListingImageLicense}" Margin="0,6,0,0" />
+                    <TextBox Classes="field" Text="{Binding License}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ListingImageLicense}" />
+                    <TextBlock Classes="heading-sm" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ListingImageAttribution}" />
+                    <TextBox Classes="field" Text="{Binding Attribution}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ListingImageAttribution}" />
+                    <TextBlock Classes="heading-sm" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ListingImageSource}" />
+                    <TextBox Classes="field" Text="{Binding Source}" PlaceholderText="https://" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ListingImageSource}" />
+                </StackPanel>
+            </Border>
+        </DataTemplate>
+    </UserControl.Resources>
+
+    <!-- List your mod: the form, with the checks along the right edge -->
+    <Grid>
+        <ScrollViewer>
+            <views:PageBodyPanel HasSidePanel="True">
+                <StackPanel Container.Name="page-body" Container.Sizing="Width">
+                    <StackPanel Orientation="Horizontal" Spacing="4" Height="24">
+                        <Path Classes="icon" Data="{StaticResource Icon.Compass}" />
+                        <Button Classes="plain" Command="{Binding SetMainWindowDiscover}">
+                            <TextBlock Classes="label-lg" Text="{Binding Localization.PageDiscoverHeading}" VerticalAlignment="Center" />
+                        </Button>
+                        <TextBlock Classes="label-lg" Text="/" VerticalAlignment="Center" />
+                        <TextBlock Classes="label-lg" Text="{Binding Localization.DiscoverListYourMod}" VerticalAlignment="Center" />
+                    </StackPanel>
+                    <TextBlock Classes="body-md secondary" Text="{Binding Localization.ListingIntro}" TextWrapping="Wrap" Margin="0,24,0,0" />
+
+                    <!-- start: a new listing from its release host, or a listed one to change -->
+                    <StackPanel Spacing="16" Margin="0,24,0,0" IsVisible="{Binding ListingEditor.IsStartStep}">
+                        <Border Classes="card" Padding="24">
+                            <StackPanel Spacing="8">
+                                <TextBlock Classes="heading-md" Text="{Binding Localization.ListingNewTitle}" />
+                                <TextBlock Classes="body-sm secondary" Text="{Binding Localization.ListingNewHint}" TextWrapping="Wrap" />
+                                <Grid ColumnDefinitions="*,8,Auto" Margin="0,4,0,0" IsEnabled="{Binding !ListingEditor.IsBusy}">
+                                    <TextBox Classes="field" Text="{Binding ListingEditor.SourceText}" PlaceholderText="{Binding Localization.ListingSourcePlaceholder}" AutomationProperties.Name="{Binding Localization.ListingNewTitle}" />
+                                    <Button Grid.Column="2" Classes="text primary" Content="{Binding Localization.ListingReadSource}" Command="{Binding ListingEditor.ReadSourceCommand}" />
+                                </Grid>
+                                <Grid ColumnDefinitions="*,8,Auto" IsVisible="{Binding ListingEditor.IsReadingSource}">
+                                    <TextBlock Classes="body-sm secondary" Text="{Binding ListingEditor.SourceProgress}" VerticalAlignment="Center" />
+                                    <Button Grid.Column="2" Classes="text" Content="{Binding Localization.LibraryCancel}" Command="{Binding ListingEditor.CancelCommand}" />
+                                </Grid>
+                                <TextBlock Classes="body-sm danger" Text="{Binding ListingEditor.SourceError}" TextWrapping="Wrap" IsVisible="{Binding ListingEditor.SourceError, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                                <Button Classes="link" Command="{Binding ListingEditor.StartEmptyCommand}" HorizontalAlignment="Left" IsEnabled="{Binding !ListingEditor.IsBusy}">
+                                    <TextBlock Classes="action-md" Text="{Binding Localization.ListingStartEmpty}" />
+                                </Button>
+                            </StackPanel>
+                        </Border>
+                        <Border Classes="card" Padding="24">
+                            <StackPanel Spacing="8">
+                                <TextBlock Classes="heading-md" Text="{Binding Localization.ListingChangeTitle}" />
+                                <TextBlock Classes="body-sm secondary" Text="{Binding Localization.ListingChangeHint}" TextWrapping="Wrap" />
+                                <Grid ColumnDefinitions="*,8,Auto" Margin="0,4,0,0" IsEnabled="{Binding !ListingEditor.IsBusy}">
+                                    <ComboBox ItemsSource="{Binding ListingEditor.ListedIds}" SelectedItem="{Binding ListingEditor.SelectedListedId}" PlaceholderText="{Binding Localization.ListingId}" AutomationProperties.Name="{Binding Localization.ListingChangeTitle}" HorizontalAlignment="Stretch" MaxDropDownHeight="300" />
+                                    <Button Grid.Column="2" Classes="text" Content="{Binding Localization.ListingLoad}" Command="{Binding ListingEditor.LoadListedCommand}" />
+                                </Grid>
+                                <TextBlock Classes="body-sm danger" Text="{Binding ListingEditor.ListedError}" TextWrapping="Wrap" IsVisible="{Binding ListingEditor.ListedError, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+
+                    <!-- form -->
+                    <StackPanel Spacing="16" Margin="0,24,0,0" IsVisible="{Binding ListingEditor.IsFormStep}">
+                        <Grid ColumnDefinitions="*,16,Auto">
+                            <Panel VerticalAlignment="Center">
+                                <TextBlock Classes="heading-lg" Text="{Binding Localization.ListingNewTitle}" IsVisible="{Binding ListingEditor.IsNew}" />
+                                <TextBlock Classes="heading-lg" Text="{Binding ListingEditor.Id}" TextTrimming="CharacterEllipsis" IsVisible="{Binding ListingEditor.IsEdit}" />
+                            </Panel>
+                            <Button Grid.Column="2" Classes="text" Content="{Binding Localization.ListingStartOver}" Command="{Binding ListingEditor.StartOverCommand}" />
+                        </Grid>
+                        <TextBlock Classes="body-sm secondary" Text="{Binding ListingEditor.ArchiveText}" TextWrapping="Wrap" IsVisible="{Binding ListingEditor.ArchiveText, Converter={x:Static ObjectConverters.IsNotNull}}" />
+
+                        <Border Classes="card" Padding="24" Tag="about">
+                            <StackPanel Spacing="6">
+                                <TextBlock Classes="heading-md" Text="{Binding Localization.ListingAbout}" Margin="0,0,0,6" />
+                                <TextBlock Classes="heading-sm" Text="{Binding Localization.ListingId}" />
+                                <TextBlock Classes="body-sm secondary" Text="{Binding Localization.ListingIdHint}" TextWrapping="Wrap" />
+                                <TextBox Classes="field" Text="{Binding ListingEditor.Id}" IsReadOnly="{Binding ListingEditor.IsEdit}" AutomationProperties.Name="{Binding Localization.ListingId}" />
+                                <TextBlock Classes="heading-sm" Text="{Binding Localization.ListingName}" Margin="0,10,0,0" />
+                                <TextBox Classes="field" Text="{Binding ListingEditor.Name}" AutomationProperties.Name="{Binding Localization.ListingName}" />
+                                <TextBlock Classes="heading-sm" Text="{Binding Localization.ListingAuthors}" Margin="0,10,0,0" />
+                                <TextBlock Classes="body-sm secondary" Text="{Binding Localization.ListingAuthorsHint}" TextWrapping="Wrap" />
+                                <TextBox Classes="field" Text="{Binding ListingEditor.Authors}" AutomationProperties.Name="{Binding Localization.ListingAuthors}" />
+                                <TextBlock Classes="heading-sm" Text="{Binding Localization.ListingAbstract}" Margin="0,10,0,0" />
+                                <TextBlock Classes="body-sm secondary" Text="{Binding Localization.ListingAbstractHint}" TextWrapping="Wrap" />
+                                <TextBox Classes="field" Text="{Binding ListingEditor.Abstract}" TextWrapping="Wrap" AutomationProperties.Name="{Binding Localization.ListingAbstract}" />
+                                <TextBlock Classes="heading-sm" Text="{Binding Localization.ListingDescription}" Margin="0,10,0,0" />
+                                <TextBlock Classes="body-sm secondary" Text="{Binding Localization.ListingDescriptionHint}" TextWrapping="Wrap" />
+                                <TextBox Classes="field" Text="{Binding ListingEditor.Description}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="160" MaxHeight="480" AutomationProperties.Name="{Binding Localization.ListingDescription}" />
+                                <TextBlock Classes="heading-sm" Text="{Binding Localization.ListingLicense}" Margin="0,10,0,0" />
+                                <TextBlock Classes="body-sm secondary" Text="{Binding Localization.ListingLicenseHint}" TextWrapping="Wrap" />
+                                <TextBox Classes="field" Text="{Binding ListingEditor.License}" AutomationProperties.Name="{Binding Localization.ListingLicense}" />
+                            </StackPanel>
+                        </Border>
+
+                        <Border Classes="card" Padding="24" Tag="links">
+                            <StackPanel Spacing="6">
+                                <TextBlock Classes="heading-md" Text="{Binding Localization.ListingLinks}" Margin="0,0,0,6" />
+                                <TextBlock Classes="heading-sm" Text="{Binding Localization.LinkForum}" />
+                                <TextBlock Classes="body-sm secondary" Text="{Binding Localization.ListingForumsHint}" TextWrapping="Wrap" />
+                                <TextBox Classes="field" Text="{Binding ListingEditor.Forums}" PlaceholderText="https://forums.ahwoo.com/threads/" AutomationProperties.Name="{Binding Localization.LinkForum}" />
+                                <TextBlock Classes="heading-sm" Text="{Binding Localization.LinkHomepage}" Margin="0,10,0,0" />
+                                <TextBox Classes="field" Text="{Binding ListingEditor.Homepage}" AutomationProperties.Name="{Binding Localization.LinkHomepage}" />
+                                <TextBlock Classes="heading-sm" Text="{Binding Localization.LinkRepository}" Margin="0,10,0,0" />
+                                <TextBox Classes="field" Text="{Binding ListingEditor.Repository}" AutomationProperties.Name="{Binding Localization.LinkRepository}" />
+                                <TextBlock Classes="heading-sm" Text="SpaceDock" Margin="0,10,0,0" />
+                                <TextBox Classes="field" Text="{Binding ListingEditor.SpaceDockPage}" AutomationProperties.Name="SpaceDock" />
+                                <TextBlock Classes="heading-sm" Text="{Binding Localization.LinkBugTracker}" Margin="0,10,0,0" />
+                                <TextBox Classes="field" Text="{Binding ListingEditor.BugTracker}" AutomationProperties.Name="{Binding Localization.LinkBugTracker}" />
+                                <TextBlock Classes="heading-sm" Text="{Binding Localization.LinkDiscussions}" Margin="0,10,0,0" />
+                                <TextBox Classes="field" Text="{Binding ListingEditor.Discussions}" AutomationProperties.Name="{Binding Localization.LinkDiscussions}" />
+                            </StackPanel>
+                        </Border>
+
+                        <Border Classes="card" Padding="24" Tag="releases">
+                            <StackPanel Spacing="6">
+                                <TextBlock Classes="heading-md" Text="{Binding Localization.ListingReleases}" />
+                                <TextBlock Classes="body-sm secondary" Text="{Binding Localization.ListingReleasesHint}" TextWrapping="Wrap" Margin="0,0,0,6" />
+                                <TextBlock Classes="heading-sm" Text="{Binding Localization.ListingReleasesGitHub}" />
+                                <TextBox Classes="field" Text="{Binding ListingEditor.ReleasesGitHub}" PlaceholderText="owner/repository" AutomationProperties.Name="{Binding Localization.ListingReleasesGitHub}" />
+                                <TextBlock Classes="heading-sm" Text="{Binding Localization.ListingReleasesSpaceDock}" Margin="0,10,0,0" />
+                                <TextBox Classes="field" Text="{Binding ListingEditor.ReleasesSpaceDock}" AutomationProperties.Name="{Binding Localization.ListingReleasesSpaceDock}" />
+                                <StackPanel Spacing="6" Margin="0,10,0,0" IsVisible="{Binding ListingEditor.NeedsAuthority}">
+                                    <TextBlock Classes="heading-sm" Text="{Binding Localization.ListingReleasesAuthority}" />
+                                    <ComboBox ItemsSource="{x:Static vm:ListingEditor.Authorities}" SelectedItem="{Binding ListingEditor.ReleasesAuthority}" AutomationProperties.Name="{Binding Localization.ListingReleasesAuthority}" MinWidth="200" />
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+
+                        <Border Classes="card" Padding="24" Tag="compatibility">
+                            <StackPanel Spacing="6">
+                                <TextBlock Classes="heading-md" Text="{Binding Localization.ListingCompatibility}" />
+                                <TextBlock Classes="body-sm secondary" Text="{Binding Localization.ListingGameHint}" TextWrapping="Wrap" Margin="0,0,0,6" />
+                                <TextBlock Classes="heading-sm" Text="{Binding Localization.ListingGameMin}" />
+                                <TextBox Classes="field" Text="{Binding ListingEditor.GameMin}" AutomationProperties.Name="{Binding Localization.ListingGameMin}" />
+                                <TextBlock Classes="heading-sm" Text="{Binding Localization.ListingGameMax}" Margin="0,10,0,0" />
+                                <TextBox Classes="field" Text="{Binding ListingEditor.GameMax}" AutomationProperties.Name="{Binding Localization.ListingGameMax}" />
+                                <StackPanel Spacing="6" Margin="0,16,0,0" IsVisible="{Binding ListingEditor.CanUseLoader}">
+                                    <Grid ColumnDefinitions="*,16,Auto">
+                                        <TextBlock Classes="heading-sm" Text="{Binding Localization.ListingUsesLoader}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                                        <ToggleSwitch Grid.Column="2" Classes="switch" IsChecked="{Binding ListingEditor.UsesLoader}" AutomationProperties.Name="{Binding Localization.ListingUsesLoader}" />
+                                    </Grid>
+                                    <StackPanel Spacing="6" IsVisible="{Binding ListingEditor.UsesLoader}">
+                                        <TextBlock Classes="heading-sm" Text="{Binding Localization.ListingLoaderId}" Margin="0,6,0,0" />
+                                        <TextBox Classes="field" Text="{Binding ListingEditor.LoaderId}" AutomationProperties.Name="{Binding Localization.ListingLoaderId}" />
+                                        <TextBlock Classes="heading-sm" Text="{Binding Localization.ListingLoaderMin}" Margin="0,10,0,0" />
+                                        <TextBox Classes="field" Text="{Binding ListingEditor.LoaderMin}" AutomationProperties.Name="{Binding Localization.ListingLoaderMin}" />
+                                        <TextBlock Classes="heading-sm" Text="{Binding Localization.ListingLoaderMax}" Margin="0,10,0,0" />
+                                        <TextBox Classes="field" Text="{Binding ListingEditor.LoaderMax}" AutomationProperties.Name="{Binding Localization.ListingLoaderMax}" />
+                                    </StackPanel>
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+
+                        <Border Classes="card" Padding="24" Tag="dependencies">
+                            <StackPanel Spacing="8">
+                                <TextBlock Classes="heading-md" Text="{Binding Localization.ListingDependencies}" />
+                                <TextBlock Classes="body-sm secondary" Text="{Binding Localization.ListingDependenciesHint}" TextWrapping="Wrap" />
+                                <ItemsControl ItemsSource="{Binding ListingEditor.Dependencies}">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <StackPanel Spacing="8" />
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate x:DataType="vm:ListingDependencyRow">
+                                            <Grid ColumnDefinitions="*,8,Auto">
+                                                <TextBlock Classes="body-md secondary" Text="{Binding PreservedText}" TextWrapping="Wrap" VerticalAlignment="Center" IsVisible="{Binding IsPreserved}" />
+                                                <WrapPanel ItemSpacing="8" LineSpacing="8" IsVisible="{Binding IsEditable}">
+                                                    <TextBox Classes="field" Width="200" Text="{Binding Id}" PlaceholderText="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ListingId}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ListingId}" />
+                                                    <ComboBox Width="150" ItemsSource="{x:Static vm:ListingEditor.DependencyKinds}" SelectedItem="{Binding Kind}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ListingDependencyKind}" />
+                                                    <TextBox Classes="field" Width="120" Text="{Binding Min}" PlaceholderText="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ListingDependencyMin}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ListingDependencyMin}" />
+                                                    <TextBox Classes="field" Width="120" Text="{Binding Max}" PlaceholderText="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ListingDependencyMax}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ListingDependencyMax}" />
+                                                </WrapPanel>
+                                                <Button Grid.Column="2" Classes="icon" Command="{Binding RemoveCommand}" VerticalAlignment="Top" ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ListingRemove}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ListingRemove}">
+                                                    <Path Classes="icon size-16" Data="{StaticResource Icon.Trash}" />
+                                                </Button>
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                                <Button Classes="link" Command="{Binding ListingEditor.AddDependencyCommand}" HorizontalAlignment="Left">
+                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                        <Path Classes="icon size-16" Data="{StaticResource Icon.Plus}" />
+                                        <TextBlock Classes="action-md" Text="{Binding Localization.ListingAddDependency}" VerticalAlignment="Center" />
+                                    </StackPanel>
+                                </Button>
+                            </StackPanel>
+                        </Border>
+
+                        <Border Classes="card" Padding="24" Tag="tags">
+                            <StackPanel Spacing="8">
+                                <TextBlock Classes="heading-md" Text="{Binding Localization.ListingTags}" />
+                                <ItemsControl ItemsSource="{Binding ListingEditor.CuratedTags}">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <WrapPanel ItemSpacing="6" LineSpacing="6" />
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate x:DataType="vm:ListingTagChip">
+                                            <Button Classes="filter" Classes.active="{Binding IsSelected}" Command="{Binding ToggleCommand}" ToolTip.Tip="{Binding Meaning}">
+                                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                                    <Path Classes="icon size-16" Data="{Binding Tag, Converter={x:Static views:CategoryIcon.FromTag}}" />
+                                                    <TextBlock Text="{Binding Name}" VerticalAlignment="Center" />
+                                                </StackPanel>
+                                            </Button>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                                <TextBlock Classes="heading-sm" Text="{Binding Localization.ListingMoreTags}" Margin="0,8,0,0" />
+                                <TextBlock Classes="body-sm secondary" Text="{Binding Localization.ListingMoreTagsHint}" TextWrapping="Wrap" />
+                                <TextBox Classes="field" Text="{Binding ListingEditor.FreeTags}" AutomationProperties.Name="{Binding Localization.ListingMoreTags}" />
+                            </StackPanel>
+                        </Border>
+
+                        <Border Classes="card" Padding="24" Tag="images">
+                            <StackPanel Spacing="8">
+                                <TextBlock Classes="heading-md" Text="{Binding Localization.ListingImages}" />
+                                <TextBlock Classes="heading-sm" Text="{Binding Localization.ListingIcon}" Margin="0,6,0,0" />
+                                <TextBlock Classes="body-sm secondary" Text="{Binding Localization.ListingIconHint}" TextWrapping="Wrap" />
+                                <ContentControl Content="{Binding ListingEditor.Icon}" ContentTemplate="{StaticResource ListingImageTemplate}" IsVisible="{Binding ListingEditor.HasIcon}" />
+                                <Button Classes="link" Command="{Binding ListingEditor.AddIconCommand}" HorizontalAlignment="Left" IsVisible="{Binding ListingEditor.CanAddIcon}">
+                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                        <Path Classes="icon size-16" Data="{StaticResource Icon.Plus}" />
+                                        <TextBlock Classes="action-md" Text="{Binding Localization.ListingAddIcon}" VerticalAlignment="Center" />
+                                    </StackPanel>
+                                </Button>
+                                <TextBlock Classes="heading-sm" Text="{Binding Localization.ListingDescriptionImages}" Margin="0,10,0,0" />
+                                <ItemsControl ItemsSource="{Binding ListingEditor.DescriptionImages}" ItemTemplate="{StaticResource ListingImageTemplate}">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <StackPanel Spacing="8" />
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                </ItemsControl>
+                                <Button Classes="link" Command="{Binding ListingEditor.AddDescriptionImageCommand}" HorizontalAlignment="Left" IsEnabled="{Binding ListingEditor.CanAddDescriptionImage}">
+                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                        <Path Classes="icon size-16" Data="{StaticResource Icon.Plus}" />
+                                        <TextBlock Classes="action-md" Text="{Binding Localization.ListingAddImage}" VerticalAlignment="Center" />
+                                    </StackPanel>
+                                </Button>
+                            </StackPanel>
+                        </Border>
+
+                        <Border Classes="card" Padding="24" Tag="status" IsVisible="{Binding ListingEditor.IsEdit}">
+                            <StackPanel Spacing="6">
+                                <TextBlock Classes="heading-md" Text="{Binding Localization.ListingStatus}" Margin="0,0,0,6" />
+                                <Grid ColumnDefinitions="*,16,Auto">
+                                    <TextBlock Classes="heading-sm" Text="{Binding Localization.ListingDeprecated}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                                    <ToggleSwitch Grid.Column="2" Classes="switch" IsChecked="{Binding ListingEditor.IsDeprecated}" AutomationProperties.Name="{Binding Localization.ListingDeprecated}" />
+                                </Grid>
+                                <StackPanel Spacing="6" IsVisible="{Binding ListingEditor.IsDeprecated}">
+                                    <TextBlock Classes="heading-sm" Text="{Binding Localization.ListingSupersededBy}" Margin="0,10,0,0" />
+                                    <TextBox Classes="field" Text="{Binding ListingEditor.SupersededBy}" AutomationProperties.Name="{Binding Localization.ListingSupersededBy}" />
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- the listing file, and what happens with it -->
+                        <Border Classes="card" Padding="24">
+                            <StackPanel Spacing="12">
+                                <TextBlock Classes="heading-md" Text="{Binding Localization.ListingFile}" />
+                                <Border Background="{StaticResource Brush.Window}" CornerRadius="8" Padding="12">
+                                    <SelectableTextBlock FontFamily="{StaticResource Font.Mono}" FontSize="12" Text="{Binding ListingEditor.DocumentText}" TextWrapping="Wrap" />
+                                </Border>
+                                <WrapPanel ItemSpacing="8" LineSpacing="8">
+                                    <Button Classes="text" Content="{Binding Localization.ListingCopy}" Command="{Binding ListingEditor.CopyCommand}" />
+                                    <Button Classes="text" Content="{Binding Localization.ListingSaveAs}" Command="{Binding ListingEditor.SaveCommand}" />
+                                </WrapPanel>
+                                <TextBlock Classes="body-sm secondary" Text="{Binding Localization.ListingNewPullRequestText}" TextWrapping="Wrap" IsVisible="{Binding ListingEditor.IsNew}" />
+                                <TextBlock Classes="body-sm secondary" Text="{Binding Localization.ListingEditPullRequestText}" TextWrapping="Wrap" IsVisible="{Binding ListingEditor.IsEdit}" />
+                                <Button Classes="cta" Command="{Binding ListingEditor.OpenPullRequestCommand}" IsEnabled="{Binding ListingEditor.CanOpenPullRequest}" HorizontalAlignment="Left">
+                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                        <Path Classes="icon size-16" Data="{StaticResource Icon.GithubLogo}" Stroke="{StaticResource Brush.SurfaceHeader}" VerticalAlignment="Center" />
+                                        <TextBlock Classes="action-lg" Text="{Binding Localization.ListingOpenPullRequest}" VerticalAlignment="Center" />
+                                    </StackPanel>
+                                </Button>
+                                <TextBlock Classes="body-sm danger" Text="{Binding Localization.ListingFixErrors}" TextWrapping="Wrap" IsVisible="{Binding ListingEditor.HasErrors}" />
+                                <TextBlock Classes="body-sm" Text="{Binding ListingEditor.OutputMessage}" TextWrapping="Wrap" IsVisible="{Binding ListingEditor.OutputMessage, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </StackPanel>
+            </views:PageBodyPanel>
+        </ScrollViewer>
+
+        <!-- the preview, the steps and the problems, while the author types -->
+        <Border Classes="side-panel" IsVisible="{Binding ListingEditor.IsFormStep}">
+            <ScrollViewer>
+                <StackPanel Spacing="16" Margin="24">
+                    <TextBlock Classes="heading-md" Text="{Binding Localization.ListingPreview}" />
+                    <Border Background="{StaticResource Brush.Window}" CornerRadius="12" Padding="12">
+                        <Grid ColumnDefinitions="56,12,*">
+                            <Border Classes="thumbnail" Width="56" Height="56" VerticalAlignment="Top">
+                                <Path Classes="icon" Data="{StaticResource Icon.PuzzlePiece}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            </Border>
+                            <StackPanel Grid.Column="2" Spacing="4">
+                                <TextBlock Classes="heading-sm" Text="{Binding ListingEditor.PreviewName}" TextTrimming="CharacterEllipsis" />
+                                <TextBlock Classes="body-sm secondary" Text="{Binding ListingEditor.PreviewAuthors}" TextTrimming="CharacterEllipsis" IsVisible="{Binding ListingEditor.PreviewAuthors, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                                <TextBlock Classes="body-sm secondary" Text="{Binding ListingEditor.PreviewAbstract}" TextWrapping="Wrap" TextTrimming="CharacterEllipsis" MaxLines="3" />
+                                <ItemsControl ItemsSource="{Binding ListingEditor.PreviewTags}" Margin="0,4,0,0">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <WrapPanel ItemSpacing="4" LineSpacing="4" />
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate x:DataType="x:String">
+                                            <Border Classes="chip">
+                                                <TextBlock Text="{Binding}" />
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+                    <Border Height="1" Background="{StaticResource Brush.BorderStrong}" />
+                    <StackPanel Spacing="6">
+                        <TextBlock Classes="heading-md" Text="{Binding Localization.ListingSteps}" />
+                        <TextBlock Classes="body-sm secondary" Text="{Binding ListingEditor.SchemaText}" TextWrapping="Wrap" />
+                    </StackPanel>
+                    <ItemsControl ItemsSource="{Binding ListingEditor.Steps}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <StackPanel Spacing="2" />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:ListingStepItem">
+                                <Button Classes="plain step" Tag="{Binding Key}" Click="OnStepClick" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" AutomationProperties.Name="{Binding Name}">
+                                    <Grid ColumnDefinitions="20,10,*,8,Auto">
+                                        <Border Classes="step-mark" Classes.done="{Binding IsDone}" Classes.fix="{Binding IsFix}">
+                                            <Panel>
+                                                <Path Classes="icon" Data="{StaticResource Icon.Check}" Width="12" Height="12" Stretch="Uniform" IsVisible="{Binding IsDone}" />
+                                                <TextBlock Classes="label-sm" Text="!" HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="{Binding IsFix}" />
+                                            </Panel>
+                                        </Border>
+                                        <TextBlock Grid.Column="2" Classes="body-md" Classes.secondary="{Binding IsOpen}" Text="{Binding Name}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                        <TextBlock Grid.Column="4" Classes="label-sm secondary" Classes.danger="{Binding IsFix}" Text="{Binding Detail}" VerticalAlignment="Center" />
+                                    </Grid>
+                                </Button>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <TextBlock Classes="body-sm" Text="{Binding ListingEditor.MissingText}" TextWrapping="Wrap" IsVisible="{Binding ListingEditor.MissingText, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                    <TextBlock Classes="body-md positive" Text="{Binding Localization.ListingNoIssues}" TextWrapping="Wrap" IsVisible="{Binding ListingEditor.IsComplete}" />
+                    <StackPanel Spacing="8" IsVisible="{Binding ListingEditor.HasVisibleErrors}">
+                        <TextBlock Classes="heading-sm" Text="{Binding Localization.ListingErrorsHeading}" />
+                        <ItemsControl ItemsSource="{Binding ListingEditor.VisibleErrors}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <StackPanel Spacing="8" />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="x:String">
+                                    <TextBlock Classes="body-sm danger" Text="{Binding}" TextWrapping="Wrap" />
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                    <StackPanel Spacing="8" IsVisible="{Binding ListingEditor.HasVisibleNotes}">
+                        <TextBlock Classes="heading-sm" Text="{Binding Localization.ListingNotesHeading}" />
+                        <ItemsControl ItemsSource="{Binding ListingEditor.VisibleNotes}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <StackPanel Spacing="8" />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="x:String">
+                                    <TextBlock Classes="body-sm secondary" Text="{Binding}" TextWrapping="Wrap" />
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </StackPanel>
+            </ScrollViewer>
+        </Border>
+    </Grid>
+</UserControl>

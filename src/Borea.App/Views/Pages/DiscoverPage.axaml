@@ -264,6 +264,14 @@
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
                     </StackPanel>
+                    <Border Height="1" Background="{StaticResource Brush.BorderStrong}" />
+                    <StackPanel Spacing="10">
+                        <TextBlock Classes="heading-md" Text="{Binding Localization.DiscoverForModAuthors}" />
+                        <TextBlock Classes="body-sm secondary" TextWrapping="Wrap" Text="{Binding Localization.DiscoverForModAuthorsText}" />
+                        <Button Classes="link" HorizontalAlignment="Left" Padding="0" Command="{Binding OpenListingCommand}">
+                            <TextBlock Classes="action-md" Text="{Binding Localization.DiscoverListYourMod}" />
+                        </Button>
+                    </StackPanel>
                 </StackPanel>
             </ScrollViewer>
         </Border>

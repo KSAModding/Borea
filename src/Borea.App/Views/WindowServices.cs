@@ -47,6 +47,26 @@ internal sealed class WindowServices(TopLevel topLevel) : IWindowServices
         return new PickedTextFile(files[0].Name, await reader.ReadToEndAsync());
     }
 
+    public async Task<PickedBinaryFile?> OpenImageFileAsync(string title, string fileTypeName, long maxBytes)
+    {
+        var files = await topLevel.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+        {
+            Title = title,
+            AllowMultiple = false,
+            FileTypeFilter = [new FilePickerFileType(fileTypeName) { Patterns = ["*.png", "*.jpg", "*.jpeg", "*.webp"] }, FilePickerFileTypes.All],
+        });
+        if (files.Count == 0)
+            return null;
+
+        await using var stream = await files[0].OpenReadAsync();
+        using var bytes = new MemoryStream();
+        var buffer = new byte[64 * 1024];
+        int read;
+        while (bytes.Length <= maxBytes && (read = await stream.ReadAsync(buffer)) > 0)
+            bytes.Write(buffer, 0, read);
+        return new PickedBinaryFile(files[0].Name, bytes.ToArray());
+    }
+
     public async Task CopyTextAsync(string text)
     {
         if (topLevel.Clipboard is { } clipboard)

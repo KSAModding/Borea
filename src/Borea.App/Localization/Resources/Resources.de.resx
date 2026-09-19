@@ -1041,6 +1041,345 @@
   <data name="LinkVersionYankedFormat" xml:space="preserve">
     <value>Version {0} wurde zurückgezogen, daher bietet Borea stattdessen die neueste Version an.</value>
   </data>
+  <data name="DiscoverListYourMod" xml:space="preserve">
+    <value>Mod eintragen</value>
+  </data>
+  <data name="DiscoverForModAuthors" xml:space="preserve">
+    <value>Für Mod-Autoren</value>
+  </data>
+  <data name="DiscoverForModAuthorsText" xml:space="preserve">
+    <value>Borea schreibt und prüft die Datei, die deine Mod im Inhaltsindex einträgt.</value>
+  </data>
+  <data name="ListingIntro" xml:space="preserve">
+    <value>Borea schreibt die Datei, die deine Mod im Inhaltsindex einträgt, und prüft sie, bevor du den Pull Request öffnest.</value>
+  </data>
+  <data name="ListingNewTitle" xml:space="preserve">
+    <value>Neuer Eintrag</value>
+  </data>
+  <data name="ListingNewHint" xml:space="preserve">
+    <value>Gib das GitHub-Repository oder die SpaceDock-Mod an, aus der deine Releases kommen.</value>
+  </data>
+  <data name="ListingSourcePlaceholder" xml:space="preserve">
+    <value>besitzer/repository, oder eine SpaceDock-Mod-ID oder ein Link</value>
+  </data>
+  <data name="ListingReadSource" xml:space="preserve">
+    <value>Neuestes Release lesen</value>
+  </data>
+  <data name="ListingStartEmpty" xml:space="preserve">
+    <value>Ohne Quelle beginnen</value>
+  </data>
+  <data name="ListingChangeTitle" xml:space="preserve">
+    <value>Eingetragene Mod ändern</value>
+  </data>
+  <data name="ListingChangeHint" xml:space="preserve">
+    <value>Lade einen Eintrag des Inhaltsindex, zum Beispiel um ein Icon hinzuzufügen.</value>
+  </data>
+  <data name="ListingLoad" xml:space="preserve">
+    <value>Laden</value>
+  </data>
+  <data name="ListingSourceInvalid" xml:space="preserve">
+    <value>Das ist kein GitHub-Repository und keine SpaceDock-Mod.</value>
+  </data>
+  <data name="ListingReading" xml:space="preserve">
+    <value>Neuestes Release wird gelesen</value>
+  </data>
+  <data name="ListingDownloadingFormat" xml:space="preserve">
+    <value>Neuestes Release wird heruntergeladen: {0}</value>
+  </data>
+  <data name="ListingReadFailedFormat" xml:space="preserve">
+    <value>Borea konnte den Release-Host nicht lesen: {0}</value>
+  </data>
+  <data name="ListingLoadFailedFormat" xml:space="preserve">
+    <value>Borea konnte den Eintrag nicht laden: {0}</value>
+  </data>
+  <data name="ListingStartOver" xml:space="preserve">
+    <value>Neu beginnen</value>
+  </data>
+  <data name="ListingArchiveRootFormat" xml:space="preserve">
+    <value>Neuestes Release {0}: der Ordner {1}.</value>
+  </data>
+  <data name="ListingArchiveCodeModFormat" xml:space="preserve">
+    <value>Es enthält {0}.dll und läuft daher mit StarMap.</value>
+  </data>
+  <data name="ListingArchiveNoRootFormat" xml:space="preserve">
+    <value>Neuestes Release {0}: Borea hat oben im Archiv keinen einzelnen Ordner gefunden.</value>
+  </data>
+  <data name="ListingArchiveProblemFormat" xml:space="preserve">
+    <value>Borea konnte das neueste Release nicht lesen: {0}</value>
+  </data>
+  <data name="ListingNoRelease" xml:space="preserve">
+    <value>Der Release-Host hat noch kein Release.</value>
+  </data>
+  <data name="ListingAbout" xml:space="preserve">
+    <value>Allgemein</value>
+  </data>
+  <data name="ListingLinks" xml:space="preserve">
+    <value>Links</value>
+  </data>
+  <data name="ListingReleases" xml:space="preserve">
+    <value>Releases</value>
+  </data>
+  <data name="ListingCompatibility" xml:space="preserve">
+    <value>Kompatibilität</value>
+  </data>
+  <data name="ListingDependencies" xml:space="preserve">
+    <value>Abhängigkeiten</value>
+  </data>
+  <data name="ListingTags" xml:space="preserve">
+    <value>Tags</value>
+  </data>
+  <data name="ListingImages" xml:space="preserve">
+    <value>Bilder</value>
+  </data>
+  <data name="ListingStatus" xml:space="preserve">
+    <value>Status</value>
+  </data>
+  <data name="ListingId" xml:space="preserve">
+    <value>ID</value>
+  </data>
+  <data name="ListingIdHint" xml:space="preserve">
+    <value>Der Ordnername, unter dem deine Mod installiert wird. Er lässt sich später nicht ändern.</value>
+  </data>
+  <data name="ListingName" xml:space="preserve">
+    <value>Name</value>
+  </data>
+  <data name="ListingAuthors" xml:space="preserve">
+    <value>Autoren</value>
+  </data>
+  <data name="ListingAuthorsHint" xml:space="preserve">
+    <value>Trenne mehrere Namen mit Kommas.</value>
+  </data>
+  <data name="ListingAbstract" xml:space="preserve">
+    <value>Kurzbeschreibung</value>
+  </data>
+  <data name="ListingAbstractHint" xml:space="preserve">
+    <value>Ein oder zwei Sätze für Listen.</value>
+  </data>
+  <data name="ListingDescription" xml:space="preserve">
+    <value>Beschreibung</value>
+  </data>
+  <data name="ListingDescriptionHint" xml:space="preserve">
+    <value>Markdown. Ein Beschreibungsbild zeigst du mit ![Text](ksa-image:id).</value>
+  </data>
+  <data name="ListingLicense" xml:space="preserve">
+    <value>Lizenz</value>
+  </data>
+  <data name="ListingLicenseHint" xml:space="preserve">
+    <value>Ein SPDX-Lizenzausdruck, zum Beispiel MIT oder GPL-2.0-only AND CC-BY-SA-4.0.</value>
+  </data>
+  <data name="ListingForumsHint" xml:space="preserve">
+    <value>Pflicht: der Thread deiner Mod auf forums.ahwoo.com.</value>
+  </data>
+  <data name="ListingReleasesGitHub" xml:space="preserve">
+    <value>GitHub-Repository</value>
+  </data>
+  <data name="ListingReleasesSpaceDock" xml:space="preserve">
+    <value>SpaceDock-Mod-ID</value>
+  </data>
+  <data name="ListingReleasesAuthority" xml:space="preserve">
+    <value>Entscheidet, welche Releases es gibt</value>
+  </data>
+  <data name="ListingReleasesHint" xml:space="preserve">
+    <value>Neue Releases werden von hier aus automatisch eingetragen.</value>
+  </data>
+  <data name="ListingGameMin" xml:space="preserve">
+    <value>Älteste Spielversion</value>
+  </data>
+  <data name="ListingGameMax" xml:space="preserve">
+    <value>Neueste getestete Spielversion</value>
+  </data>
+  <data name="ListingGameHint" xml:space="preserve">
+    <value>So, wie das Spiel sie anzeigt, zum Beispiel 2026.9.10.5438, oder ein Monat wie 2026.9. Lass die neueste leer, außer ein neueres Spiel macht die Mod kaputt.</value>
+  </data>
+  <data name="ListingUsesLoader" xml:space="preserve">
+    <value>Braucht einen Mod-Loader</value>
+  </data>
+  <data name="ListingLoaderId" xml:space="preserve">
+    <value>Loader</value>
+  </data>
+  <data name="ListingLoaderMin" xml:space="preserve">
+    <value>Älteste Loader-Version</value>
+  </data>
+  <data name="ListingLoaderMax" xml:space="preserve">
+    <value>Neueste Loader-Version</value>
+  </data>
+  <data name="ListingDependenciesHint" xml:space="preserve">
+    <value>Nur, was die mod.toml deines Archivs nicht sagen kann, zum Beispiel Versionsgrenzen oder einen Konflikt.</value>
+  </data>
+  <data name="ListingAddDependency" xml:space="preserve">
+    <value>Abhängigkeit hinzufügen</value>
+  </data>
+  <data name="ListingDependencyKind" xml:space="preserve">
+    <value>Art</value>
+  </data>
+  <data name="ListingDependencyMin" xml:space="preserve">
+    <value>Älteste Version</value>
+  </data>
+  <data name="ListingDependencyMax" xml:space="preserve">
+    <value>Neueste Version</value>
+  </data>
+  <data name="ListingDependencyPreservedFormat" xml:space="preserve">
+    <value>Bleibt unverändert: {0}</value>
+  </data>
+  <data name="ListingRemove" xml:space="preserve">
+    <value>Entfernen</value>
+  </data>
+  <data name="ListingMoreTags" xml:space="preserve">
+    <value>Weitere Tags</value>
+  </data>
+  <data name="ListingMoreTagsHint" xml:space="preserve">
+    <value>Kleingeschriebene Wörter, mit - verbunden und durch Kommas getrennt.</value>
+  </data>
+  <data name="ListingIcon" xml:space="preserve">
+    <value>Icon</value>
+  </data>
+  <data name="ListingIconHint" xml:space="preserve">
+    <value>Quadratisch, 512 mal 512 Pixel oder mehr, und höchstens 256 KB.</value>
+  </data>
+  <data name="ListingAddIcon" xml:space="preserve">
+    <value>Icon hinzufügen</value>
+  </data>
+  <data name="ListingDescriptionImages" xml:space="preserve">
+    <value>Beschreibungsbilder</value>
+  </data>
+  <data name="ListingAddImage" xml:space="preserve">
+    <value>Bild hinzufügen</value>
+  </data>
+  <data name="ListingImageUrl" xml:space="preserve">
+    <value>HTTPS-Adresse</value>
+  </data>
+  <data name="ListingImageUrlHint" xml:space="preserve">
+    <value>Gib für eine lokale Datei die HTTPS-Adresse an, unter der sie liegt oder liegen wird.</value>
+  </data>
+  <data name="ListingChooseFile" xml:space="preserve">
+    <value>Datei wählen</value>
+  </data>
+  <data name="ListingMeasure" xml:space="preserve">
+    <value>Adresse messen</value>
+  </data>
+  <data name="ListingImageFileType" xml:space="preserve">
+    <value>Bilder</value>
+  </data>
+  <data name="ListingImageLicense" xml:space="preserve">
+    <value>Lizenz, falls nicht die der Mod</value>
+  </data>
+  <data name="ListingImageAttribution" xml:space="preserve">
+    <value>Urheberangabe</value>
+  </data>
+  <data name="ListingImageSource" xml:space="preserve">
+    <value>Original</value>
+  </data>
+  <data name="ListingImageFactsFormat" xml:space="preserve">
+    <value>{0} x {1} px, {2} Bytes</value>
+  </data>
+  <data name="ListingImageNotMeasured" xml:space="preserve">
+    <value>Noch nicht gemessen.</value>
+  </data>
+  <data name="ListingDeprecated" xml:space="preserve">
+    <value>Wird nicht mehr gepflegt</value>
+  </data>
+  <data name="ListingSupersededBy" xml:space="preserve">
+    <value>ID des Nachfolgers</value>
+  </data>
+  <data name="ListingPreview" xml:space="preserve">
+    <value>Vorschau</value>
+  </data>
+  <data name="ListingPreviewName" xml:space="preserve">
+    <value>Deine Mod</value>
+  </data>
+  <data name="ListingPreviewAbstract" xml:space="preserve">
+    <value>Hier steht die Kurzbeschreibung, in Listen und in der Suche.</value>
+  </data>
+  <data name="ListingSteps" xml:space="preserve">
+    <value>Schritte</value>
+  </data>
+  <data name="ListingStepDone" xml:space="preserve">
+    <value>Fertig</value>
+  </data>
+  <data name="ListingStepToDo" xml:space="preserve">
+    <value>Offen</value>
+  </data>
+  <data name="ListingStepFixFormat" xml:space="preserve">
+    <value>{0} zu beheben</value>
+  </data>
+  <data name="ListingStepOptional" xml:space="preserve">
+    <value>Optional</value>
+  </data>
+  <data name="ListingStepRecommended" xml:space="preserve">
+    <value>Empfohlen</value>
+  </data>
+  <data name="ListingStillMissingFormat" xml:space="preserve">
+    <value>Es fehlt noch: {0}.</value>
+  </data>
+  <data name="ListingDependencyNumberFormat" xml:space="preserve">
+    <value>Abhängigkeit {0}</value>
+  </data>
+  <data name="ListingDescriptionImageNumberFormat" xml:space="preserve">
+    <value>Beschreibungsbild {0}</value>
+  </data>
+  <data name="ListingErrorsHeading" xml:space="preserve">
+    <value>Muss behoben werden</value>
+  </data>
+  <data name="ListingNotesHeading" xml:space="preserve">
+    <value>Hinweise</value>
+  </data>
+  <data name="ListingNoIssues" xml:space="preserve">
+    <value>Keine Probleme gefunden.</value>
+  </data>
+  <data name="ListingSchemaDownloaded" xml:space="preserve">
+    <value>Mit den aktuellen Regeln des Inhaltsindex geprüft.</value>
+  </data>
+  <data name="ListingSchemaCached" xml:space="preserve">
+    <value>Mit Regeln des Inhaltsindex aus einem früheren Download geprüft.</value>
+  </data>
+  <data name="ListingSchemaEmbedded" xml:space="preserve">
+    <value>Mit den Regeln geprüft, die Borea mitbringt.</value>
+  </data>
+  <data name="ListingSpaceDockNotNumberFormat" xml:space="preserve">
+    <value>'{0}' ist keine Zahl.</value>
+  </data>
+  <data name="ListingFile" xml:space="preserve">
+    <value>Eintragsdatei</value>
+  </data>
+  <data name="ListingCopy" xml:space="preserve">
+    <value>Kopieren</value>
+  </data>
+  <data name="ListingSaveAs" xml:space="preserve">
+    <value>Speichern unter</value>
+  </data>
+  <data name="ListingFileType" xml:space="preserve">
+    <value>TOML-Datei</value>
+  </data>
+  <data name="ListingOpenPullRequest" xml:space="preserve">
+    <value>Pull Request auf GitHub öffnen</value>
+  </data>
+  <data name="ListingNewPullRequestText" xml:space="preserve">
+    <value>GitHub öffnet eine neue Datei in deiner eigenen Kopie von content-index mit diesem Text und danach das Formular für den Pull Request. Der Pull Request wird von selbst gemergt, wenn du den Release-Host kontrollierst: Das Repository gehört dir, hat das Topic ksa-index-&lt;dein GitHub-Name&gt; oder enthält .github/ksa-content-index.toml. Eine SpaceDock-Mod beweist das über das GitHub-Repository in ihrem Quellcode-Link.</value>
+  </data>
+  <data name="ListingEditPullRequestText" xml:space="preserve">
+    <value>GitHub öffnet die eingetragene Datei zum Bearbeiten, und Borea kopiert den neuen Text. Füge ihn über dem alten Text ein und öffne den Pull Request. Die Prüfungen beweisen, dass du den Release-Host kontrollierst, den der Eintrag jetzt nennt.</value>
+  </data>
+  <data name="ListingFixErrors" xml:space="preserve">
+    <value>Behebe zuerst die Fehler.</value>
+  </data>
+  <data name="ListingCopied" xml:space="preserve">
+    <value>Eintragsdatei kopiert.</value>
+  </data>
+  <data name="ListingSavedFormat" xml:space="preserve">
+    <value>{0} gespeichert.</value>
+  </data>
+  <data name="ListingSaveFailed" xml:space="preserve">
+    <value>Die Eintragsdatei konnte nicht gespeichert werden.</value>
+  </data>
+  <data name="ListingOpenedWithText" xml:space="preserve">
+    <value>GitHub wurde mit der ausgefüllten Datei geöffnet.</value>
+  </data>
+  <data name="ListingOpenedPaste" xml:space="preserve">
+    <value>Borea hat die Datei kopiert. Füge sie in die Seite ein, die GitHub geöffnet hat.</value>
+  </data>
+  <data name="ListingOpenFailedFormat" xml:space="preserve">
+    <value>GitHub konnte nicht geöffnet werden: {0}</value>
+  </data>
   <data name="InstallAnyway" xml:space="preserve">
     <value>Trotzdem installieren</value>
   </data>
