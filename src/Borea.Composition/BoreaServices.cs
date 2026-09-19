@@ -149,6 +149,8 @@ public sealed class BoreaServices : IDisposable
 
     public required IModPackInstaller ModPackInstaller { get; init; }
 
+    public required IModPackUpdater ModPackUpdater { get; init; }
+
     public required IModDownloader Downloader { get; init; }
 
     public required IInstallPlanner InstallPlanner { get; init; }
@@ -396,6 +398,7 @@ public sealed class BoreaServices : IDisposable
             ModPacks = modPacks,
             ReadOnlyModPacks = new ContentIndexModPackRepository(new ReaderSnapshotProvider(indexReader)),
             ModPackInstaller = new ModPackInstaller(instances, installPlanner, modInstaller, modReplacer),
+            ModPackUpdater = new ModPackUpdater(instances, installPlanner, new InstallPlanExecutor(instances, modInstaller, modReplacer), new LoggingModUninstaller(new FileModUninstaller(paths, instances), log)),
             Downloader = downloader,
             InstallPlanner = installPlanner,
             PlanExecutor = new InstallPlanExecutor(instances, modInstaller, modReplacer),
