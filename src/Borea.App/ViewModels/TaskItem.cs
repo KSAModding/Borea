@@ -104,6 +104,8 @@ public sealed partial class TaskItem : ObservableObject
         TaskKind.ModListImport => Localization.FormatTaskCreateInstance(Subject ?? string.Empty),
         TaskKind.ManualReplace => Localization.FormatTaskReplace(Subject ?? string.Empty),
         TaskKind.LibraryFolderChange => Localization.FormatTaskLibraryFolder(Subject ?? string.Empty),
+        TaskKind.BackupRestore => Localization.FormatTaskBackupRestore(Subject ?? string.Empty),
+        TaskKind.BackupDelete => Localization.FormatTaskBackupDelete(Subject ?? string.Empty),
         _ => Localization.FormatTaskInstall(Subject ?? string.Empty),
     };
 

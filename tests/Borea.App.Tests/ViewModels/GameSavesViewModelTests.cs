@@ -353,7 +353,7 @@ public sealed class GameSavesViewModelTests
         File.WriteAllBytes(Path.Combine(folder, dataFile), new byte[dataBytes]);
     }
 
-    private static Task WithStarMap(BoreaServices services)
+    internal static Task WithStarMap(BoreaServices services)
     {
         var loader = Directory.CreateDirectory(Path.Combine(Path.GetDirectoryName(services.Paths.GetBoreaSettingsPath())!, "Loaders", "StarMap")).FullName;
         File.WriteAllBytes(Path.Combine(loader, "StarMap.exe"), []);
@@ -363,7 +363,7 @@ public sealed class GameSavesViewModelTests
     }
 
     /// <summary>Hands out a loader process that keeps running and whose game writes its log at once, so the launch watch ends early.</summary>
-    private sealed class RunningGameStarter : IProcessStarter
+    internal sealed class RunningGameStarter : IProcessStarter
     {
         public string? GameLogPath { get; set; }
 

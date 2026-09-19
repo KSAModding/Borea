@@ -113,6 +113,7 @@ internal sealed class ViewModelHarness : IDisposable
         // a language or theme change saves in the background; let it finish before the folder goes
         ViewModel?.WhenPreferencesSavedAsync().GetAwaiter().GetResult();
         ViewModel?.WhenUpdateCheckedAsync().GetAwaiter().GetResult();
+        ViewModel?.WhenBackupsCleanedAsync().GetAwaiter().GetResult();
         ViewModel?.WhenGameBuildCheckedAsync().GetAwaiter().GetResult();
         ViewModel?.WhenNewerGamePatchNotesLoadedAsync().GetAwaiter().GetResult();
         ViewModel?.WhenAnnouncementsCheckedAsync().GetAwaiter().GetResult();
