@@ -27,6 +27,9 @@ public sealed class LaunchResult
     /// </summary>
     public string? BlamedModId { get; private init; }
 
+    /// <summary>The runtime or key of the loader's start entry that Borea does not know, when that stopped the launch.</summary>
+    public string? UnknownName { get; private init; }
+
     private LaunchResult(LaunchOutcome outcome, string message, LaunchPlan? plan, int? processId)
     {
         if (string.IsNullOrWhiteSpace(message))
@@ -72,11 +75,11 @@ public sealed class LaunchResult
         };
     }
 
-    public static LaunchResult Failed(LaunchOutcome outcome, string message, LaunchPlan? plan = null)
+    public static LaunchResult Failed(LaunchOutcome outcome, string message, LaunchPlan? plan = null, string? unknownName = null)
     {
         if (outcome == LaunchOutcome.Started)
             throw new ArgumentException("A started launch is a success, not a failure.", nameof(outcome));
 
-        return new LaunchResult(outcome, message, plan, processId: null);
+        return new LaunchResult(outcome, message, plan, processId: null) { UnknownName = unknownName };
     }
 }

@@ -1,3 +1,4 @@
+using Borea.Core.Game;
 using Borea.Core.Launch;
 using Borea.Core.Mods;
 
@@ -28,12 +29,16 @@ public sealed class LoaderProvides
     /// </summary>
     public InstanceHandover? Instance { get; }
 
+    /// <summary>What starts on a platform instead of <see cref="Launch"/>. Empty when every platform starts it.</summary>
+    public IReadOnlyDictionary<OsPlatform, LoaderPlatformLaunch> Platforms { get; }
+
     public LoaderProvides(
         string? launch = null,
         InstallAnchor? contentDir = null,
         string? contentPath = null,
         LoaderConfigure? configure = null,
-        InstanceHandover? instance = null)
+        InstanceHandover? instance = null,
+        IReadOnlyDictionary<OsPlatform, LoaderPlatformLaunch>? platforms = null)
     {
         if (contentPath is not null && contentDir is null)
             throw new ArgumentException("A content path needs the content directory it sits below.", nameof(contentPath));
@@ -43,5 +48,6 @@ public sealed class LoaderProvides
         ContentPath = RelativePaths.Contained(contentPath, nameof(contentPath));
         Configure = configure;
         Instance = instance;
+        Platforms = platforms is null ? new Dictionary<OsPlatform, LoaderPlatformLaunch>() : new Dictionary<OsPlatform, LoaderPlatformLaunch>(platforms);
     }
 }

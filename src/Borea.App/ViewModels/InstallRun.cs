@@ -1,5 +1,7 @@
+using System;
 using System.Threading.Tasks;
 using Borea.App.Localization;
+using Borea.Core.Mods;
 using Borea.Core.Planning;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -8,7 +10,7 @@ namespace Borea.App.ViewModels;
 
 /// <summary>
 /// One running install. Its Stop button and a closing window request the same
-/// <see cref="InstallStop"/>.
+/// <see cref="InstallStop"/>, and its Pause button pauses the download there.
 /// </summary>
 public sealed partial class InstallRun : ObservableObject
 {
@@ -18,12 +20,22 @@ public sealed partial class InstallRun : ObservableObject
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(StopText))]
     [NotifyCanExecuteChangedFor(nameof(StopCommand))]
+    [NotifyCanExecuteChangedFor(nameof(TogglePauseCommand))]
     private bool _isStopping;
 
     /// <summary>True while the running mod is past its download, so a stop waits until that mod is finished.</summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(StopText))]
     private bool _isFinishingMod;
+
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(TogglePauseCommand))]
+    private bool _isDownloading;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(PauseText))]
+    [NotifyCanExecuteChangedFor(nameof(TogglePauseCommand))]
+    private bool _isPaused;
 
     internal InstallRun(LocalizationService localization, TaskItem taskItem)
     {
@@ -37,20 +49,55 @@ public sealed partial class InstallRun : ObservableObject
 
     internal Task Ended => _ended.Task;
 
+    /// <summary>Shows the last paused report again, because a paused download sends no new text after a language change.</summary>
+    internal Action? RepeatPausedReport { get; set; }
+
     public string StopText => !IsStopping ? _localization.InstallStop
         : IsFinishingMod ? _localization.InstallStoppingAfterMod
         : _localization.InstallStopping;
+
+    public string PauseText => IsPaused ? _localization.InstallResume : _localization.InstallPause;
 
     [RelayCommand(CanExecute = nameof(CanStop))]
     internal void Stop()
     {
         IsStopping = true;
+        IsPaused = false;
         InstallStop.Request();
     }
 
     private bool CanStop() => !IsStopping;
 
-    internal void RefreshText() => OnPropertyChanged(nameof(StopText));
+    [RelayCommand(CanExecute = nameof(CanTogglePause))]
+    internal void TogglePause()
+    {
+        if (IsPaused)
+        {
+            InstallStop.Resume();
+            IsPaused = false;
+        }
+        else
+        {
+            IsPaused = InstallStop.Pause();
+        }
+    }
+
+    private bool CanTogglePause() => !IsStopping && (IsPaused || IsDownloading);
+
+    internal void Report(InstallPhase phase)
+    {
+        IsDownloading = phase == InstallPhase.Downloading;
+        IsFinishingMod = !IsDownloading;
+        if (!IsDownloading)
+            IsPaused = false;
+    }
+
+    internal void RefreshText()
+    {
+        OnPropertyChanged(nameof(StopText));
+        OnPropertyChanged(nameof(PauseText));
+        RepeatPausedReport?.Invoke();
+    }
 
     internal void End() => _ended.TrySetResult();
 }

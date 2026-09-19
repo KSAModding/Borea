@@ -1,3 +1,5 @@
+using System.Net;
+using System.Net.Http.Headers;
 using System.Security.Cryptography;
 using Borea.Core.Mods;
 
@@ -7,7 +9,8 @@ namespace Borea.Network.Downloads;
 /// <see cref="IModDownloader"/> over plain HTTP. The release file already holds
 /// everything host-specific, so this asks no host API for anything: it streams
 /// the archive from the URL into the file, hashes it on the way, and moves on
-/// to the next mirror when a source fails or serves other bytes.
+/// to the next mirror when a source fails or serves other bytes. After a pause
+/// it asks the same source for the rest of the file.
 /// </summary>
 public sealed class HttpModDownloader : IModDownloader
 {
@@ -41,6 +44,7 @@ public sealed class HttpModDownloader : IModDownloader
         var sources = new List<string>(1 + download.Mirrors.Count) { download.Url };
         sources.AddRange(download.Mirrors);
 
+        var pause = DownloadPause.Current;
         var failures = new List<string>();
         Exception? lastTransportError = null;
 
@@ -61,7 +65,7 @@ public sealed class HttpModDownloader : IModDownloader
                 Fetched fetched;
                 try
                 {
-                    fetched = await FetchAsync(url, archivePath, download, progress, cancellationToken).ConfigureAwait(false);
+                    fetched = await FetchAsync(url, archivePath, download, progress, pause, cancellationToken).ConfigureAwait(false);
                 }
                 catch (Exception ex) when (IsSourceFailure(ex, cancellationToken))
                 {
@@ -103,44 +107,102 @@ public sealed class HttpModDownloader : IModDownloader
         string archivePath,
         DownloadInfo download,
         IProgress<DownloadProgress>? progress,
+        DownloadPause? pause,
         CancellationToken cancellationToken)
     {
-        using var response = await _httpClient.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
+        await using var file = new FileStream(archivePath, FileMode.Create, FileAccess.Write, FileShare.None, BufferSize, useAsync: true);
+        using var part = new Part(file, download.SizeBytes ?? -1);
+        while (true)
+        {
+            if (pause is { IsPaused: true })
+            {
+                progress?.Report(new DownloadProgress(part.Bytes, part.Total, IsPaused: true));
+                await pause.WaitForResumeAsync(cancellationToken).ConfigureAwait(false);
+            }
+
+            var paused = pause?.Token ?? CancellationToken.None;
+            using var transfer = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, paused);
+            try
+            {
+                if (await TransferAsync(url, part, download, progress, transfer.Token, cancellationToken).ConfigureAwait(false) is { } fetched)
+                    return fetched;
+            }
+            catch (Exception ex) when (ex is OperationCanceledException or HttpRequestException or HttpIOException
+                && paused.IsCancellationRequested && !cancellationToken.IsCancellationRequested)
+            {
+            }
+        }
+    }
+
+    /// <summary>
+    /// Asks for the rest of the part, or for the whole file when the part is
+    /// empty or cannot resume. Null when the answer does not continue the part,
+    /// which is then empty for the next request.
+    /// </summary>
+    /// <param name="transferToken">Also canceled by a pause, which keeps the part.</param>
+    private async Task<Fetched?> TransferAsync(
+        Uri url,
+        Part part,
+        DownloadInfo download,
+        IProgress<DownloadProgress>? progress,
+        CancellationToken transferToken,
+        CancellationToken cancellationToken)
+    {
+        if (!part.CanResume)
+            part.Restart();
+
+        var resuming = part.Bytes > 0;
+        if (resuming)
+            progress?.Report(new DownloadProgress(part.Bytes, part.Total));
+
+        using var request = new HttpRequestMessage(HttpMethod.Get, url);
+        if (resuming)
+        {
+            request.Headers.Range = new RangeHeaderValue(part.Bytes, null);
+            request.Headers.IfRange = part.Validator;
+        }
+
+        using var response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, transferToken).ConfigureAwait(false);
+        var continues = resuming && part.IsContinuedBy(response);
+        if (resuming && !continues)
+        {
+            part.Restart();
+            if (response.StatusCode is HttpStatusCode.PartialContent or HttpStatusCode.RequestedRangeNotSatisfiable)
+                return null;
+        }
+
         response.EnsureSuccessStatusCode();
 
         // Without a hash the stated size is the only check there is, so it is
         // applied before and during the transfer and not only after it.
         var sizeDecides = download.Sha256 is null ? download.SizeBytes : null;
-        var announced = response.Content.Headers.ContentLength;
-        if (sizeDecides is { } stated && announced is { } length && length != stated)
-            return Fetched.Rejected($"announces {length} bytes where the release states {stated}");
+        if (!continues)
+        {
+            var announced = response.Content.Headers.ContentLength;
+            if (sizeDecides is { } stated && announced is { } length && length != stated)
+                return Fetched.Rejected($"announces {length} bytes where the release states {stated}");
 
-        var totalBytes = announced ?? download.SizeBytes ?? -1;
+            part.Begin(response, announced ?? download.SizeBytes ?? -1);
+        }
 
-        using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
-        long bytesDownloaded = 0;
-
-        await using (var content = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false))
-        await using (var file = new FileStream(archivePath, FileMode.Create, FileAccess.Write, FileShare.None, BufferSize, useAsync: true))
+        await using (var content = await response.Content.ReadAsStreamAsync(transferToken).ConfigureAwait(false))
         {
             var buffer = new byte[BufferSize];
             int read;
-            while ((read = await ReadBodyAsync(content, buffer, cancellationToken).ConfigureAwait(false)) > 0)
+            while ((read = await ReadBodyAsync(content, buffer, transferToken).ConfigureAwait(false)) > 0)
             {
-                bytesDownloaded += read;
-                if (sizeDecides is { } cap && bytesDownloaded > cap)
+                if (sizeDecides is { } cap && part.Bytes + read > cap)
                     return Fetched.Rejected($"sends more than the {cap} bytes the release states");
 
-                await file.WriteAsync(buffer.AsMemory(0, read), cancellationToken).ConfigureAwait(false);
-                hash.AppendData(buffer, 0, read);
-                progress?.Report(new DownloadProgress(bytesDownloaded, totalBytes));
+                await part.AppendAsync(buffer.AsMemory(0, read), cancellationToken).ConfigureAwait(false);
+                progress?.Report(new DownloadProgress(part.Bytes, part.Total));
             }
         }
 
-        var sha256 = Convert.ToHexString(hash.GetHashAndReset());
-        return Mismatch(download, bytesDownloaded, sha256) is { } mismatch
+        var sha256 = part.Sha256();
+        return Mismatch(download, part.Bytes, sha256) is { } mismatch
             ? Fetched.Rejected(mismatch)
-            : Fetched.Served(bytesDownloaded, sha256);
+            : Fetched.Served(part.Bytes, sha256);
     }
 
     private async ValueTask<int> ReadBodyAsync(Stream content, Memory<byte> buffer, CancellationToken cancellationToken)
@@ -173,6 +235,68 @@ public sealed class HttpModDownloader : IModDownloader
             return $"received {bytes} bytes where the release states {size}";
 
         return null;
+    }
+
+    /// <summary>
+    /// The bytes one source served so far, with their running hash and what the
+    /// first answer said about the file, so that a resume can ask for the rest.
+    /// </summary>
+    private sealed class Part(FileStream file, long statedSize) : IDisposable
+    {
+        private readonly IncrementalHash _hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
+        private long? _length;
+
+        public long Bytes { get; private set; }
+
+        /// <summary>The total size for progress reports, -1 when it is unknown.</summary>
+        public long Total { get; private set; } = statedSize;
+
+        /// <summary>The strong ETag of the first answer, or its Last-Modified date when it has no strong ETag.</summary>
+        public RangeConditionHeaderValue? Validator { get; private set; }
+
+        public bool CanResume => Bytes > 0 && Validator is not null && _length is not null;
+
+        public void Begin(HttpResponseMessage response, long total)
+        {
+            Total = total;
+            _length = response.Content.Headers.ContentLength;
+            Validator = response.Headers.ETag is { IsWeak: false } etag ? new RangeConditionHeaderValue(etag)
+                : response.Content.Headers.LastModified is { } modified ? new RangeConditionHeaderValue(modified)
+                : null;
+        }
+
+        /// <summary>Whether the answer to a range request holds exactly the rest of the same file.</summary>
+        public bool IsContinuedBy(HttpResponseMessage response) =>
+            response.StatusCode == HttpStatusCode.PartialContent
+            && response.Content.Headers.ContentRange is { HasRange: true, HasLength: true } range
+            && range.From == Bytes
+            && range.Length == _length
+            && range.To == _length - 1;
+
+        public async Task AppendAsync(ReadOnlyMemory<byte> data, CancellationToken cancellationToken)
+        {
+            await file.WriteAsync(data, cancellationToken).ConfigureAwait(false);
+            _hash.AppendData(data.Span);
+            Bytes += data.Length;
+        }
+
+        public void Restart()
+        {
+            if (Bytes > 0)
+            {
+                file.SetLength(0);
+                file.Position = 0;
+                _hash.GetHashAndReset();
+                Bytes = 0;
+            }
+
+            _length = null;
+            Validator = null;
+        }
+
+        public string Sha256() => Convert.ToHexString(_hash.GetHashAndReset());
+
+        public void Dispose() => _hash.Dispose();
     }
 
     /// <summary>What one source produced: the archive, or the reason its bytes were refused.</summary>

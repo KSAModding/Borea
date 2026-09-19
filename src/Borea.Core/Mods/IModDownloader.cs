@@ -15,7 +15,8 @@ public interface IModDownloader
     /// so a returned result always names bytes that passed. A release without a
     /// hash is accepted as received; the caller knows from the null hash that
     /// nothing verified it. Nothing is left at <paramref name="archivePath"/>
-    /// when every source failed.
+    /// when every source failed. Under a <see cref="DownloadPause"/> the download
+    /// can pause and resume.
     /// </summary>
     /// <exception cref="DownloadFailedException">Every source failed or served other bytes.</exception>
     Task<DownloadResult> DownloadAsync(
@@ -25,7 +26,7 @@ public interface IModDownloader
         CancellationToken cancellationToken = default);
 }
 
-public readonly record struct DownloadProgress(long BytesDownloaded, long TotalBytes)
+public readonly record struct DownloadProgress(long BytesDownloaded, long TotalBytes, bool IsPaused = false)
 {
     public double PercentComplete => TotalBytes > 0 ? (double)BytesDownloaded / TotalBytes * 100 : 0;
 }

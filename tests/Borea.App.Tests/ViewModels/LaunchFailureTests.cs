@@ -27,12 +27,11 @@ public sealed class LaunchFailureTests
             services => services.SettingsRepository.SaveAsync(services.Settings.WithLoaderInstallation("StarMap", CreateLoader(services, "StarMap"))),
             processStarter: starter);
 
-    /// <summary>A loader directory with both launch targets, so the plan is found on Windows and through dotnet elsewhere.</summary>
+    /// <summary>A loader directory with the launch target of the listing.</summary>
     private static LoaderInstallation CreateLoader(BoreaServices services, string loaderId)
     {
         var loader = Directory.CreateDirectory(Path.Combine(Path.GetDirectoryName(services.Paths.GetBoreaSettingsPath())!, "Loaders", loaderId)).FullName;
         File.WriteAllBytes(Path.Combine(loader, "StarMap.exe"), []);
-        File.WriteAllBytes(Path.Combine(loader, "StarMap.dll"), []);
         return new LoaderInstallation(loader, ModVersion.Parse("0.4.6"), rawVersion: null, isAdopted: false);
     }
 
@@ -201,6 +200,67 @@ public sealed class LaunchFailureTests
 
         var root = Path.GetFullPath(harness.Services.Paths.GetInstanceRoot(instance.InstanceId));
         Assert.Equal(["-InstancePath", root, "-windowed", "a b"], Assert.Single(starter.Plans).Arguments.TakeLast(4));
+    }
+
+    /// <summary>A harness whose StarMap listing has <paramref name="entry"/> for every platform.</summary>
+    private static Task<ViewModelHarness> CreateWithPlatformEntryAsync(IProcessStarter starter, JsonObject entry) =>
+        ViewModelHarness.CreateAsync(
+            services => services.SettingsRepository.SaveAsync(services.Settings.WithLoaderInstallation("StarMap", CreateLoader(services, "StarMap"))),
+            editSnapshot: json =>
+            {
+                var root = JsonNode.Parse(json)!;
+                var platforms = new JsonObject();
+                foreach (var platform in new[] { "windows", "linux", "macos" })
+                    platforms[platform] = entry.DeepClone();
+                root["listings"]!.AsArray().Single(node => (string?)node!["id"] == "StarMap")!["authored"]!["provides"]!["platform"] = platforms;
+                return root.ToJsonString();
+            },
+            processStarter: starter);
+
+    private static async Task PlayActiveInstanceAsync(ViewModelHarness harness)
+    {
+        var instance = (await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value)).Instance;
+        await harness.Services.Instances.SetActiveInstanceAsync(instance.InstanceId);
+        await harness.ViewModel.LoadAsync();
+
+        await harness.ViewModel.PlayActiveInstanceCommand.ExecuteAsync(null);
+    }
+
+    [Fact]
+    public async Task PlayActiveInstance_UnknownRuntimeForThisSystem_StartsNothingAndSaysWhy()
+    {
+        var starter = new RunningStarter();
+        using var harness = await CreateWithPlatformEntryAsync(starter, new JsonObject { ["launch"] = "StarMap.exe", ["runtime"] = "mono" });
+
+        await PlayActiveInstanceAsync(harness);
+
+        Assert.Equal(harness.Localization.FormatLaunchUnknownRuntime("StarMap", "mono"), harness.ViewModel.LaunchMessage);
+        Assert.Empty(starter.Plans);
+    }
+
+    [Fact]
+    public async Task PlayActiveInstance_UnknownKeyForThisSystem_StartsNothingAndSaysWhy()
+    {
+        var starter = new RunningStarter();
+        using var harness = await CreateWithPlatformEntryAsync(starter, new JsonObject { ["launch"] = "StarMap.exe", ["arch"] = "x64" });
+
+        await PlayActiveInstanceAsync(harness);
+
+        Assert.Equal(harness.Localization.FormatLaunchUnknownPlatformKey("StarMap", "arch"), harness.ViewModel.LaunchMessage);
+        Assert.Empty(starter.Plans);
+    }
+
+    [Fact]
+    public async Task PlayActiveInstance_EntryFileForThisSystemMissing_StartsNothingAndNamesTheFile()
+    {
+        var starter = new RunningStarter();
+        using var harness = await CreateWithPlatformEntryAsync(starter, new JsonObject { ["launch"] = "StarMap.dll", ["runtime"] = "dotnet" });
+
+        await PlayActiveInstanceAsync(harness);
+
+        var entryFile = Path.Combine(Path.GetDirectoryName(harness.Services.Paths.GetBoreaSettingsPath())!, "Loaders", "StarMap", "StarMap.dll");
+        Assert.Equal(harness.Localization.FormatLaunchTargetMissing(entryFile, "StarMap"), harness.ViewModel.LaunchMessage);
+        Assert.Empty(starter.Plans);
     }
 
     [Fact]

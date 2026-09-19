@@ -375,6 +375,9 @@
   <data name="TaskRunning" xml:space="preserve">
     <value>Läuft</value>
   </data>
+  <data name="TaskPaused" xml:space="preserve">
+    <value>Pausiert</value>
+  </data>
   <data name="TaskFinished" xml:space="preserve">
     <value>Fertig</value>
   </data>
@@ -1443,6 +1446,9 @@
   <data name="InstallDownloadingFormat" xml:space="preserve">
     <value>{0} wird heruntergeladen</value>
   </data>
+  <data name="InstallPausedFormat" xml:space="preserve">
+    <value>{0} pausiert</value>
+  </data>
   <data name="InstallExtractingFormat" xml:space="preserve">
     <value>{0} wird entpackt</value>
   </data>
@@ -1466,6 +1472,12 @@
   </data>
   <data name="InstallStop" xml:space="preserve">
     <value>Stoppen</value>
+  </data>
+  <data name="InstallPause" xml:space="preserve">
+    <value>Pausieren</value>
+  </data>
+  <data name="InstallResume" xml:space="preserve">
+    <value>Fortsetzen</value>
   </data>
   <data name="InstallStopping" xml:space="preserve">
     <value>Wird gestoppt</value>
@@ -1547,6 +1559,18 @@
   </data>
   <data name="LaunchStoppedTitleFormat" xml:space="preserve">
     <value>{0} wurde beendet</value>
+  </data>
+  <data name="LaunchUnknownPlatformKeyFormat" xml:space="preserve">
+    <value>Der Eintrag von {0} für dieses System hat den Schlüssel '{1}', den Borea nicht kennt. Suche nach einem Update für Borea.</value>
+  </data>
+  <data name="LaunchUnknownRuntimeFormat" xml:space="preserve">
+    <value>{0} läuft auf diesem System über '{1}', das Borea nicht kennt. Suche nach einem Update für Borea.</value>
+  </data>
+  <data name="LaunchDotnetMissingFormat" xml:space="preserve">
+    <value>{0} läuft auf diesem System über dotnet, und Borea hat dotnet nicht gefunden. Installiere die .NET-Laufzeit, die {0} braucht.</value>
+  </data>
+  <data name="LaunchTargetMissingFormat" xml:space="preserve">
+    <value>'{0}' fehlt. Installiere {1} neu oder korrigiere seinen Ordner in den Einstellungen.</value>
   </data>
   <data name="LaunchDisableModFormat" xml:space="preserve">
     <value>{0} deaktivieren</value>

@@ -375,6 +375,9 @@
   <data name="TaskRunning" xml:space="preserve">
     <value>Running</value>
   </data>
+  <data name="TaskPaused" xml:space="preserve">
+    <value>Paused</value>
+  </data>
   <data name="TaskFinished" xml:space="preserve">
     <value>Done</value>
   </data>
@@ -1443,6 +1446,9 @@
   <data name="InstallDownloadingFormat" xml:space="preserve">
     <value>Downloading {0}</value>
   </data>
+  <data name="InstallPausedFormat" xml:space="preserve">
+    <value>{0} paused</value>
+  </data>
   <data name="InstallExtractingFormat" xml:space="preserve">
     <value>Unpacking {0}</value>
   </data>
@@ -1466,6 +1472,12 @@
   </data>
   <data name="InstallStop" xml:space="preserve">
     <value>Stop</value>
+  </data>
+  <data name="InstallPause" xml:space="preserve">
+    <value>Pause</value>
+  </data>
+  <data name="InstallResume" xml:space="preserve">
+    <value>Resume</value>
   </data>
   <data name="InstallStopping" xml:space="preserve">
     <value>Stopping</value>
@@ -1547,6 +1559,18 @@
   </data>
   <data name="LaunchStoppedTitleFormat" xml:space="preserve">
     <value>{0} stopped</value>
+  </data>
+  <data name="LaunchUnknownPlatformKeyFormat" xml:space="preserve">
+    <value>The entry of {0} for this system has the key '{1}', which Borea does not know. Look for a Borea update.</value>
+  </data>
+  <data name="LaunchUnknownRuntimeFormat" xml:space="preserve">
+    <value>{0} runs through '{1}' on this system, which Borea does not know. Look for a Borea update.</value>
+  </data>
+  <data name="LaunchDotnetMissingFormat" xml:space="preserve">
+    <value>{0} runs through dotnet on this system, and Borea did not find dotnet. Install the .NET runtime that {0} needs.</value>
+  </data>
+  <data name="LaunchTargetMissingFormat" xml:space="preserve">
+    <value>'{0}' is not there. Reinstall {1} or correct its directory in the settings.</value>
   </data>
   <data name="LaunchDisableModFormat" xml:space="preserve">
     <value>Disable {0}</value>

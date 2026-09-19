@@ -40,6 +40,8 @@ internal sealed class InstallProgressText
 
     public bool HasPercent { get; private set; }
 
+    public bool IsPaused { get; private set; }
+
     public void Report(InstallProgress value)
     {
         // a new operation of the plan starts its own rate
@@ -50,6 +52,7 @@ internal sealed class InstallProgressText
             Percent = 0;
         }
 
+        IsPaused = value.Download is { IsPaused: true };
         Status = StatusOf(value);
 
         if (value is { Phase: InstallPhase.Downloading, Download: { } bytes })
@@ -70,6 +73,7 @@ internal sealed class InstallProgressText
         var name = $"{value.ModId} {value.Version}";
         var text = value.Phase switch
         {
+            InstallPhase.Downloading when IsPaused => _localization.FormatInstallPaused(name),
             InstallPhase.Downloading => _localization.FormatInstallDownloading(name),
             InstallPhase.Extracting => _localization.FormatInstallExtracting(name),
             InstallPhase.Configuring => _localization.FormatInstallConfiguring(name),
@@ -81,16 +85,21 @@ internal sealed class InstallProgressText
 
     private string? DetailOf(DownloadProgress bytes)
     {
+        var size = bytes.TotalBytes <= 0
+            ? Megabytes(bytes.BytesDownloaded)
+            : _localization.FormatInstallSize(Number(bytes.BytesDownloaded), Megabytes(bytes.TotalBytes));
+        if (bytes.IsPaused)
+        {
+            _samples.Clear();
+            return size;
+        }
+
         var now = _time.GetElapsedTime(_started);
         _samples.Enqueue((now, bytes.BytesDownloaded));
         while (_samples.Count > 2 && now - _samples.Peek().At > RateWindow)
             _samples.Dequeue();
 
-        if (bytes.TotalBytes <= 0)
-            return Megabytes(bytes.BytesDownloaded);
-
-        var size = _localization.FormatInstallSize(Number(bytes.BytesDownloaded), Megabytes(bytes.TotalBytes));
-        var left = TimeLeft(now, bytes);
+        var left = bytes.TotalBytes > 0 ? TimeLeft(now, bytes) : null;
         return left is null ? size : $"{size}, {left}";
     }
 
