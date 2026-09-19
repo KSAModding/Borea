@@ -55,6 +55,29 @@ public sealed class PackViewModelTests
     }
 
     [Fact]
+    public async Task ModpacksTab_HidesTheCommonCompatibilityOnItsOwn()
+    {
+        var packs = Enumerable.Range(1, 9).Select(number => Pack($"pack-{number}", $"Pack {number}", Version("1.0.0", Pin("KSArmory", "0.8.44"))))
+            .Append(Pack("new-pack", "New Pack", Version("1.0.0", Pin("KSArmory", "0.8.44"))).Replace("\"game_min\": \"2026.8.19.5261\"", "\"game_min\": \"2026.9.7.5402\"", StringComparison.Ordinal));
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: WithPacks([.. packs]));
+        var viewModel = harness.ViewModel;
+        await viewModel.EnsureDiscoverLoadedAsync();
+        Assert.True(GameVersion.TryParse("2026.8.22.5348", out var installed));
+        await viewModel.RefreshCompatibilityAsync(installed);
+
+        // three mods, one of them compatible, show every chip
+        Assert.All(viewModel.DiscoverItems, item => Assert.True(item.ShowsCompatibility));
+
+        viewModel.ShowDiscoverModpacksCommand.Execute(null);
+
+        Assert.Equal(10, viewModel.DiscoverPacks.Count);
+        var shown = Assert.Single(viewModel.DiscoverPacks, pack => pack.ShowsCompatibility);
+        Assert.Equal("new-pack", shown.PackId);
+        Assert.True(shown.IsIncompatible);
+        Assert.All(viewModel.DiscoverPacks.Where(pack => !pack.ShowsCompatibility), pack => Assert.True(pack.IsCompatible));
+    }
+
+    [Fact]
     public async Task ModpacksTab_SortsByReleaseDateAndFiltersByGameVersion()
     {
         var armory = Pack("armory-pack", "Armory Pack", Version("1.0.0", Pin("KSArmory", "0.8.44")))

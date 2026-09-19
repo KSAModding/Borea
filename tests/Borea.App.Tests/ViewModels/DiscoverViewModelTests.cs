@@ -449,6 +449,81 @@ public sealed class DiscoverViewModelTests
     }
 
     [Fact]
+    public async Task CompatibilityChip_NinetyPercentCompatible_HidesOnlyTheirChips()
+    {
+        // with this game, AdvancedFlightComputer and MeasureTools are incompatible and the eighteen KSArmory rows are compatible
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: json => WithCopies(json, "KSArmory", 17));
+        var viewModel = harness.ViewModel;
+        await viewModel.EnsureDiscoverLoadedAsync();
+        Assert.True(GameVersion.TryParse("2026.8.22.5348", out var installed));
+
+        await viewModel.RefreshCompatibilityAsync(installed);
+
+        Assert.Equal(20, viewModel.DiscoverItems.Count);
+        Assert.All(viewModel.DiscoverItems, item => Assert.Equal(!item.IsCompatible, item.ShowsCompatibility));
+        Assert.Equal(["AdvancedFlightComputer", "MeasureTools"], viewModel.DiscoverItems.Where(item => item.ShowsCompatibility).Select(item => item.ModId).Order());
+
+        harness.Localization.TrySetCulture("de");
+
+        Assert.All(viewModel.DiscoverItems, item => Assert.Equal(!item.IsCompatible, item.ShowsCompatibility));
+    }
+
+    [Fact]
+    public async Task CompatibilityChip_BelowTheShare_ShowsEveryChip()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: json => WithCopies(json, "KSArmory", 16));
+        var viewModel = harness.ViewModel;
+        await viewModel.EnsureDiscoverLoadedAsync();
+        Assert.True(GameVersion.TryParse("2026.8.22.5348", out var installed));
+
+        await viewModel.RefreshCompatibilityAsync(installed);
+
+        Assert.Equal(19, viewModel.DiscoverItems.Count);
+        Assert.Equal(17, viewModel.DiscoverItems.Count(item => item.IsCompatible));
+        Assert.All(viewModel.DiscoverItems, item => Assert.True(item.ShowsCompatibility));
+    }
+
+    [Fact]
+    public async Task CompatibilityChip_FewerThanFiveRows_ShowsEveryChip()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var viewModel = harness.ViewModel;
+        await viewModel.EnsureDiscoverLoadedAsync();
+        Assert.True(GameVersion.TryParse("2026.9.7.5402", out var installed));
+
+        await viewModel.RefreshCompatibilityAsync(installed);
+
+        Assert.Equal(3, viewModel.DiscoverItems.Count);
+        Assert.All(viewModel.DiscoverItems, item => Assert.True(item.IsCompatible));
+        Assert.All(viewModel.DiscoverItems, item => Assert.True(item.ShowsCompatibility));
+    }
+
+    [Fact]
+    public async Task CompatibilityChip_FollowsTheFiltersAndTheGame()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: json => WithCopies(json, "KSArmory", 6));
+        var viewModel = harness.ViewModel;
+        await viewModel.EnsureDiscoverLoadedAsync();
+        Assert.True(GameVersion.TryParse("2026.8.22.5348", out var installed));
+        await viewModel.RefreshCompatibilityAsync(installed);
+        Assert.All(viewModel.DiscoverItems, item => Assert.True(item.ShowsCompatibility));
+
+        viewModel.HideIncompatible = true;
+
+        Assert.Equal(7, viewModel.DiscoverItems.Count);
+        Assert.All(viewModel.DiscoverItems, item => Assert.False(item.ShowsCompatibility));
+
+        viewModel.HideIncompatible = false;
+
+        Assert.All(viewModel.DiscoverItems, item => Assert.True(item.ShowsCompatibility));
+
+        await viewModel.RefreshCompatibilityAsync(null);
+
+        Assert.All(viewModel.DiscoverItems, item => Assert.Equal(GameCompatibility.Unknown, item.Compatibility));
+        Assert.All(viewModel.DiscoverItems, item => Assert.False(item.ShowsCompatibility));
+    }
+
+    [Fact]
     public async Task GameVersionRange_KeepsListingsWhoseChannelReleaseSupportsABuildInIt()
     {
         using var harness = await ViewModelHarness.CreateAsync();
@@ -601,6 +676,30 @@ public sealed class DiscoverViewModelTests
 
         Assert.Equal(DiscoverSortOrder.RecentlyUpdated, viewModel.DiscoverSort);
         Assert.Equal(["MeasureTools", "AdvancedFlightComputer", "KSArmory"], viewModel.DiscoverItems.Select(item => item.ModId));
+    }
+
+    private static string WithCopies(string json, string listingId, int count)
+    {
+        var root = JsonNode.Parse(json)!;
+        var listings = root["listings"]!.AsArray();
+        var original = listings.Single(node => (string?)node!["id"] == listingId)!;
+        for (var number = 1; number <= count; number++)
+        {
+            var id = $"{listingId}{number}";
+            var copy = original.DeepClone();
+            copy["id"] = id;
+            copy["authored"]!["id"] = id;
+            copy["authored"]!["name"] = id;
+            foreach (var release in copy["releases"]!.AsArray())
+            {
+                release!["id"] = id;
+                release["listing"]!["name"] = id;
+            }
+
+            listings.Add(copy);
+        }
+
+        return root.ToJsonString();
     }
 
     private static string WithDownloads(string json, string listingId, long total)
