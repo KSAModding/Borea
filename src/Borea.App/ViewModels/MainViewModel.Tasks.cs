@@ -47,7 +47,7 @@ public partial class MainViewModel
         return StartTask(TaskKind.ModInstall, version is null ? name : $"{name} {version}", instanceId, modId, version, TaskState.Waiting);
     }
 
-    private TaskItem StartPackInstallTask(PackItem pack, Guid instanceId)
+    private TaskItem StartPackInstallTask(PackItem pack, Guid? instanceId)
     {
         var version = pack.RequestedVersion?.ToString();
         return StartTask(TaskKind.PackInstall, version is null ? pack.Name : $"{pack.Name} {version}", instanceId, pack.PackId, version, TaskState.Waiting);

@@ -1164,6 +1164,11 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string PackMods => Resources.PackMods;
 
+    public string PackNewInstance => Resources.PackNewInstance;
+
+    public string FormatPackCreatesInstance(string instanceName)
+        => string.Format(CultureInfo.CurrentCulture, Resources.PackCreatesInstanceFormat, instanceName);
+
     public string PackModHeader => Resources.PackModHeader;
 
     public string PackMemberYanked => Resources.PackMemberYanked;

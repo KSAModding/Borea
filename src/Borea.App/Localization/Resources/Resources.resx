@@ -1776,6 +1776,12 @@
   <data name="PackMods" xml:space="preserve">
     <value>Mods</value>
   </data>
+  <data name="PackNewInstance" xml:space="preserve">
+    <value>New instance from this pack</value>
+  </data>
+  <data name="PackCreatesInstanceFormat" xml:space="preserve">
+    <value>Creates the instance {0}.</value>
+  </data>
   <data name="PackModHeader" xml:space="preserve">
     <value>Mod</value>
   </data>

@@ -47,7 +47,7 @@
                                     </WrapPanel>
                                     <TextBlock Classes="body-sm danger" Text="{Binding SelectedPack.InstallError}" TextWrapping="Wrap" Margin="0,8,0,0" IsVisible="{Binding SelectedPack.InstallError, Converter={x:Static ObjectConverters.IsNotNull}}" />
                                 </StackPanel>
-                                <Panel Classes="content-actions" VerticalAlignment="Top">
+                                <StackPanel Classes="content-actions" Orientation="Horizontal" Spacing="8" VerticalAlignment="Top">
                                     <Button Classes="cta" Command="{Binding SelectedPack.InstallCommand}" IsVisible="{Binding SelectedPack.CanInstall}" ToolTip.Tip="{Binding AddToText}" AutomationProperties.Name="{Binding AddToText}">
                                         <StackPanel Orientation="Horizontal" Spacing="6">
                                             <Path Classes="icon size-16" Data="{StaticResource Icon.Plus}" Stroke="{StaticResource Brush.SurfaceHeader}" StrokeThickness="2" VerticalAlignment="Center" />
@@ -62,7 +62,8 @@
                                     <Border Classes="chip positive" VerticalAlignment="Center" IsVisible="{Binding SelectedPack.IsInstalled}" ToolTip.Tip="{Binding InstalledInText}">
                                         <TextBlock Text="{Binding Localization.DiscoverInstalled}" />
                                     </Border>
-                                </Panel>
+                                    <Button Classes="text" Content="{Binding Localization.PackNewInstance}" Command="{Binding SelectedPack.NewInstanceCommand}" IsVisible="{Binding !SelectedPack.IsInstalling, FallbackValue={x:False}}" VerticalAlignment="Center" />
+                                </StackPanel>
                             </Grid>
                             <WrapPanel Grid.Row="2" ItemSpacing="24" LineSpacing="8" Margin="0,16,0,0">
                                 <ItemsControl ItemsSource="{Binding SelectedPack.Tags}" VerticalAlignment="Center" IsVisible="{Binding HasPackTags}">

@@ -21,9 +21,9 @@ public sealed partial class TaskItem : ObservableObject
 
     internal string? Subject { get; }
 
-    internal Guid? InstanceId { get; }
+    internal Guid? InstanceId { get; private set; }
 
-    public string? InstanceName { get; }
+    public string? InstanceName { get; private set; }
 
     internal string? ContentId { get; }
 
@@ -145,6 +145,14 @@ public sealed partial class TaskItem : ObservableObject
     internal bool DoesSameWorkAs(TaskItem other) => Kind is TaskKind.Update or TaskKind.UpdateAll
         ? other.Kind is TaskKind.Update or TaskKind.UpdateAll && other.InstanceId == InstanceId
         : other.Kind == Kind && ModIds.Equals(other.ContentId, ContentId);
+
+    /// <summary>Names the instance that the task created.</summary>
+    internal void SetInstance(Guid instanceId, string instanceName)
+    {
+        InstanceId = instanceId;
+        InstanceName = instanceName;
+        OnPropertyChanged(nameof(InstanceName));
+    }
 
     internal void MarkRunning()
     {
