@@ -713,4 +713,41 @@ public sealed class FileAppPreferencesRepositoryTests : IDisposable
         Assert.False(preferences.FetchAnnouncements);
         Assert.Equal(["a"], preferences.DismissedAnnouncements);
     }
+
+    [Fact]
+    public async Task SaveThenGet_OpenBoreaLinksOff_RestoresIt()
+    {
+        await _repository.SaveAsync(AppPreferences.Empty.WithOpenBoreaLinks(false), BundledThemeNames);
+
+        var result = await _repository.GetAsync(BundledThemeNames);
+
+        Assert.False(result.Preferences.OpenBoreaLinks);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData(""", "openBoreaLinks": null""")]
+    public async Task GetAsync_NoOpenBoreaLinks_ReadsAsOn(string fields)
+    {
+        await WriteAsync($$"""
+            { "formatVersion": 1, "selectedTheme": "Light"{{fields}} }
+            """);
+
+        var result = await _repository.GetAsync(BundledThemeNames);
+
+        Assert.True(result.Preferences.OpenBoreaLinks);
+    }
+
+    [Fact]
+    public void With_OtherPreferenceChanges_KeepOpenBoreaLinks()
+    {
+        var preferences = AppPreferences.Empty.WithOpenBoreaLinks(false)
+            .WithSelectedThemeName("Light")
+            .WithFetchAnnouncements(false)
+            .WithDismissedAnnouncements(["a"])
+            .WithFirstStartedAt(DateTimeOffset.UnixEpoch);
+
+        Assert.False(preferences.OpenBoreaLinks);
+        Assert.True(AppPreferences.Empty.OpenBoreaLinks);
+    }
 }
