@@ -65,6 +65,7 @@ public sealed class ModListCommandTests : IDisposable
         Assert.Equal(InstanceSource.Custom.Value, imported.Source);
         Assert.Equal(["flight-tools 2.0.0 Manual", "helper-lib 1.0.0 Dependency"], Describe(imported));
         Assert.Equal(await EntriesAsync("Alpha"), await EntriesAsync("Alpha (2)"));
+        Assert.Contains($"[cli] Instance \"Alpha (2)\" ({imported.InstanceId}) created from a modlist.", LogText());
     }
 
     [Fact]
@@ -130,6 +131,7 @@ public sealed class ModListCommandTests : IDisposable
         Assert.Contains("The disk is full.", run.Error);
         Assert.Empty(await new FileInstanceRepository(_host.Paths).GetAllAsync());
         Assert.False(File.Exists(_host.Paths.GetActiveInstancePointerPath()));
+        Assert.Matches(@"\[cli\] Instance ""Shared"" \(.+\) deleted, no instance is active now\.", LogText());
     }
 
     [Fact]
@@ -178,6 +180,7 @@ public sealed class ModListCommandTests : IDisposable
         Assert.Equal(await EntriesAsync("Alpha"), await EntriesAsync("Alpha (copy)"));
         Assert.Empty(copy.ForeignMods);
         Assert.False(Directory.Exists(Path.Combine(_host.Paths.GetInstanceModsFolder(copy.InstanceId), "LocalOnly")));
+        Assert.Contains($"[cli] Instance \"Alpha (copy)\" ({copy.InstanceId}) created as a duplicate.", LogText());
     }
 
     [Fact]
@@ -233,6 +236,9 @@ public sealed class ModListCommandTests : IDisposable
         await File.WriteAllTextAsync(path, new TomlModListFormat().Write(modList));
         return path;
     }
+
+    private string LogText() =>
+        File.ReadAllText(Assert.Single(Directory.GetFiles(Path.Combine(_host.Root, "Logs"), "borea-*.log")));
 
     private string ModListPath(string fileName)
     {

@@ -13,7 +13,8 @@ public sealed record ModListRequest(
     IModRepository Repository,
     GameVersion? GameVersion = null,
     OsPlatform? TargetPlatform = null,
-    IReadOnlyDictionary<string, InstallReason>? Reasons = null);
+    IReadOnlyDictionary<string, InstallReason>? Reasons = null,
+    InstanceOrigin Origin = InstanceOrigin.ModListImport);
 
 public sealed record ModListItem(ModListEntry Entry, ModVersionMetadata? Release)
 {
@@ -82,7 +83,7 @@ public sealed class ModListInstaller
         if (await _instances.GetByIdAsync(plan.InstanceId).ConfigureAwait(false) is not null)
             throw new InvalidOperationException("The instance of this plan exists already.");
 
-        var created = await _instances.CreateAsync(Instance.FromExisting(plan.InstanceId, name, plan.Request.Source, DateTimeOffset.UtcNow, [], [], isFavorite: false)).ConfigureAwait(false);
+        var created = await _instances.CreateAsync(Instance.FromExisting(plan.InstanceId, name, plan.Request.Source, DateTimeOffset.UtcNow, [], [], isFavorite: false), plan.Request.Origin).ConfigureAwait(false);
         var instance = created.Instance;
         try
         {

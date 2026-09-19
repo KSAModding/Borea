@@ -104,6 +104,8 @@ public sealed class LastPlayedLauncherTests
 
         public Task<InstanceCreateResult> CreateAsync(Instance instance) => throw new NotSupportedException();
 
+        public Task<InstanceCreateResult> CreateAsync(Instance instance, InstanceOrigin origin) => throw new NotSupportedException();
+
         public Task RenameAsync(Guid instanceId, string newName) => throw new NotSupportedException();
 
         public Task DeleteAsync(Guid instanceId) => throw new NotSupportedException();

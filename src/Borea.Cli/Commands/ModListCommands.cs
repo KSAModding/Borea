@@ -37,7 +37,7 @@ internal static class ModListCommands
             var reasons = source.Mods.ToDictionary(mod => mod.ModId, mod => mod.Reason, ModIds.Comparer);
             var context = RunContext.From(parseResult, skipUnknown, proceedWithYanked, dryRun, json, output, error);
 
-            var request = new ModListRequest(ModList.FromInstance(source, manifest), source.Source, Repository(cli, context), GameVersion(cli), CurrentPlatform(), reasons);
+            var request = new ModListRequest(ModList.FromInstance(source, manifest), source.Source, Repository(cli, context), GameVersion(cli), CurrentPlatform(), reasons, InstanceOrigin.Duplicate);
 
             return await PlanAndInstallAsync(cli, installer, request, newName, source.ForeignMods.Select(mod => mod.FolderName).ToList(), context, ct).ConfigureAwait(false);
         }));

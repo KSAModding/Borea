@@ -12,6 +12,7 @@ using Borea.Core.Instances;
 using Borea.Network.Index;
 using Borea.Storage.Instances;
 using Borea.Storage.Launch;
+using Borea.Storage.Logging;
 using Borea.Storage.Mods;
 using Borea.Storage.Paths;
 using Borea.Storage.Settings;
@@ -133,7 +134,7 @@ internal sealed class CliHost : IDisposable
             indexRefresh: IndexRefresh,
             sharedProfileImporter: BuildSharedProfileImporter(graph),
             // a game or a Borea the developer runs next to the tests must not refuse the move
-            libraryFolderChanger: LibraryChanger ?? new LibraryFolderChanger(graph.SettingsRepository, graph.Paths, Root, graph.Launcher, (FileInstanceRepository)graph.Instances, isGameProcessRunning: () => false, isOtherBoreaRunning: () => false, isSameVolume: LibraryOnSameVolume));
+            libraryFolderChanger: LibraryChanger ?? new LibraryFolderChanger(graph.SettingsRepository, graph.Paths, Root, graph.Launcher, (FileInstanceRepository)((LoggingInstanceRepository)graph.Instances).Inner, isGameProcessRunning: () => false, isOtherBoreaRunning: () => false, isSameVolume: LibraryOnSameVolume));
     }
 
     private FileSharedProfileImporter BuildSharedProfileImporter(BoreaServices graph)

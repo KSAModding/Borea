@@ -436,6 +436,7 @@ public sealed class ModPackInstallerTests
         public Task<bool> IsNameAvailableAsync(string name, Guid? excludingInstanceId = null) => Task.FromResult(true);
         public Task<InstanceCreateResult> CreateAsync(string name, InstanceSource source) => CreateAsync(new Instance(name, source));
         public Task<InstanceCreateResult> CreateAsync(Instance instance) { _values[instance.InstanceId] = instance; return Task.FromResult(new InstanceCreateResult(instance, Activated: false)); }
+        public Task<InstanceCreateResult> CreateAsync(Instance instance, InstanceOrigin origin) => CreateAsync(instance);
         public Task RenameAsync(Guid instanceId, string newName) { _values[instanceId].Rename(newName); return Task.CompletedTask; }
         public Task DeleteAsync(Guid instanceId) { _values.Remove(instanceId); return Task.CompletedTask; }
         public Task SaveAsync(Instance instance) { _values[instance.InstanceId] = instance; return Task.CompletedTask; }

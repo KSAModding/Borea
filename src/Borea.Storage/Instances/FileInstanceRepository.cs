@@ -127,6 +127,8 @@ public sealed class FileInstanceRepository : IInstanceRepository, IInstanceLocks
         }
     }
 
+    public Task<InstanceCreateResult> CreateAsync(Instance instance, InstanceOrigin origin) => CreateAsync(instance);
+
     /// <summary>
     /// Renames the instance with the given ID to the new name, and saves it to disk. Throws if the instance does not exist or if the new name is already in use.
     /// </summary>

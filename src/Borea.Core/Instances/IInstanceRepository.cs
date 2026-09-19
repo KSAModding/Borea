@@ -39,6 +39,11 @@ public interface IInstanceRepository
     /// </summary>
     Task<InstanceCreateResult> CreateAsync(Instance instance);
 
+    /// <summary>
+    /// Saves <paramref name="instance"/> like <see cref="CreateAsync(Instance)"/>, and tells the log how it came to be.
+    /// </summary>
+    Task<InstanceCreateResult> CreateAsync(Instance instance, InstanceOrigin origin);
+
     Task RenameAsync(Guid instanceId, string newName);
 
     /// <summary>

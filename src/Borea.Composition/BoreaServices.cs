@@ -77,7 +77,7 @@ public sealed class BoreaServices : IDisposable
 
     public required IGamePathProvider Paths { get; init; }
 
-    /// <summary>Borea's daily log. Installs, plans, index fetches and launches write to it.</summary>
+    /// <summary>Borea's daily log. Installs, plans, index fetches, launches and instance changes write to it.</summary>
     public required IBoreaLog Log { get; init; }
 
     public required IBoreaSettingsRepository SettingsRepository { get; init; }
@@ -292,7 +292,8 @@ public sealed class BoreaServices : IDisposable
         var downloader = new HttpModDownloader(http);
         var settingsRepository = new FileBoreaSettingsRepository(paths);
         var loaderConfiguration = new LoaderConfigurator();
-        var instances = new FileInstanceRepository(paths);
+        var fileInstances = new FileInstanceRepository(paths);
+        var instances = new LoggingInstanceRepository(fileInstances, paths, log);
         var loaderAdopter = new FileLoaderAdopter(settingsRepository, loaderConfiguration);
         installCandidates ??= OperatingSystem.IsWindows() ? new WindowsInstallCandidateSource() : new NoInstallCandidates();
 
@@ -312,7 +313,7 @@ public sealed class BoreaServices : IDisposable
             Log = log,
             SettingsRepository = settingsRepository,
             GameDirectoryChanger = new GameDirectoryChanger(settingsRepository, mods, loaderConfiguration),
-            LibraryFolderChanger = new LoggingLibraryFolderChanger(new LibraryFolderChanger(settingsRepository, paths, defaultLibraryFolder, launcher, instances, isGameProcessRunning, isOtherBoreaRunning), log),
+            LibraryFolderChanger = new LoggingLibraryFolderChanger(new LibraryFolderChanger(settingsRepository, paths, defaultLibraryFolder, launcher, fileInstances, isGameProcessRunning, isOtherBoreaRunning), log),
             AppPreferences = new FileAppPreferencesRepository(paths),
             TaskHistory = new FileTaskHistoryRepository(paths),
             Instances = instances,
