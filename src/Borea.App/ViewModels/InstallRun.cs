@@ -1,4 +1,5 @@
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 using Borea.App.Localization;
 using Borea.Core.Mods;
@@ -16,6 +17,8 @@ public sealed partial class InstallRun : ObservableObject
 {
     private readonly LocalizationService _localization;
     private readonly TaskCompletionSource _ended = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    private readonly Lock _reportGate = new();
+    private bool _hasEnded;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(StopText))]
@@ -99,5 +102,24 @@ public sealed partial class InstallRun : ObservableObject
         RepeatPausedReport?.Invoke();
     }
 
-    internal void End() => _ended.TrySetResult();
+    /// <summary>
+    /// Shows a progress report unless the run has ended. Without a UI thread,
+    /// <see cref="Progress{T}"/> can deliver a report while the run ends, so
+    /// the report and <see cref="End"/> never interleave.
+    /// </summary>
+    internal void ShowReport(Action show)
+    {
+        lock (_reportGate)
+        {
+            if (!_hasEnded)
+                show();
+        }
+    }
+
+    internal void End()
+    {
+        lock (_reportGate)
+            _hasEnded = true;
+        _ended.TrySetResult();
+    }
 }
