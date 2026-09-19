@@ -134,6 +134,9 @@ public sealed class BoreaServices : IDisposable
 
     public required IModRepository ReadOnlyMods { get; init; }
 
+    /// <summary>The mods of the content index that Borea holds, read without a request to any host.</summary>
+    public required IModRepository OfflineMods { get; init; }
+
     public required IModPackRepository ModPacks { get; init; }
 
     public required IModPackRepository ReadOnlyModPacks { get; init; }
@@ -299,6 +302,11 @@ public sealed class BoreaServices : IDisposable
             [ContentIndexModRepository.SourceName] = readOnlyContentIndex,
             [SpaceDockModRepository.SourceName] = spaceDock,
         });
+        var offlineMods = new CompositeModRepository(new Dictionary<string, IModRepository>
+        {
+            [ContentIndexModRepository.SourceName] = new ContentIndexModRepository(indexSnapshots.CachedOnly),
+            [SpaceDockModRepository.SourceName] = new OfflineSpaceDockModRepository(resolver),
+        });
         var downloader = new HttpModDownloader(http);
         var settingsRepository = new FileBoreaSettingsRepository(paths);
         var loaderConfiguration = new LoaderConfigurator();
@@ -345,6 +353,7 @@ public sealed class BoreaServices : IDisposable
             SharedProfileImporter = new FileSharedProfileImporter(paths, instances, modState, foreignModAdopter, foreignModReleaseMatcher),
             Mods = new ReleaseChannelModRepository(mods, settings.ReleaseChannel),
             ReadOnlyMods = new ReleaseChannelModRepository(readOnlyMods, settings.ReleaseChannel),
+            OfflineMods = new ReleaseChannelModRepository(offlineMods, settings.ReleaseChannel),
             ModPacks = modPacks,
             ReadOnlyModPacks = new ContentIndexModPackRepository(new ReaderSnapshotProvider(indexReader)),
             ModPackInstaller = new ModPackInstaller(instances, installPlanner, modInstaller, modReplacer),

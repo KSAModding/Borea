@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Threading.Tasks;
 using Borea.App.Localization;
 using Borea.Core.Dependencies;
 using Borea.Core.Mods;
@@ -45,6 +46,18 @@ public sealed partial class InstallChoices : ViewModelBase
     /// <summary>Why the plan with these choices cannot run, or null.</summary>
     [ObservableProperty]
     private string? _blockedText;
+
+    /// <summary>Plans again with the current choices. The row that shows them sets it.</summary>
+    internal Action? Replan { get; set; }
+
+    /// <summary>Counts the changes, so that a plan made before the last change is dropped.</summary>
+    internal int Revision { get; private set; }
+
+    /// <summary>The plan that runs after a change, until it ends.</summary>
+    internal Task Planning { get; set; } = Task.CompletedTask;
+
+    /// <summary>The plan the row showed before the change that is being planned.</summary>
+    internal InstallPlan? ShownPlan { get; set; }
 
     internal IReadOnlySet<string> SelectedRecommendations => Recommended.Where(choice => choice.IsSelected).Select(choice => choice.Key).ToHashSet(StringComparer.Ordinal);
 
@@ -110,6 +123,13 @@ public sealed partial class InstallChoices : ViewModelBase
         OnPropertyChanged(nameof(IsComplete));
     }
 
+    internal void OnChoiceChanged()
+    {
+        Refresh();
+        Revision++;
+        Replan?.Invoke();
+    }
+
     private string Describe(PlanningChoice choice)
     {
         var dependency = choice.Dependency;
@@ -150,7 +170,7 @@ public sealed partial class RecommendedChoice : ObservableObject
     [ObservableProperty]
     private bool _isSelected;
 
-    partial void OnIsSelectedChanged(bool value) => _owner.Refresh();
+    partial void OnIsSelectedChanged(bool value) => _owner.OnChoiceChanged();
 }
 
 /// <summary>
@@ -159,6 +179,7 @@ public sealed partial class RecommendedChoice : ObservableObject
 public sealed class AlternativeChoice : ObservableObject
 {
     private readonly InstallChoices _owner;
+    private bool _selecting;
 
     internal AlternativeChoice(InstallChoices owner, PlanningChoice choice, Func<string, string> name)
     {
@@ -183,14 +204,19 @@ public sealed class AlternativeChoice : ObservableObject
 
     internal void OnOptionChanged(AlternativeOption option)
     {
+        if (_selecting)
+            return;
+
         if (option.IsSelected)
         {
+            _selecting = true;
             foreach (var other in Options.Where(other => !ReferenceEquals(other, option)))
                 other.IsSelected = false;
+            _selecting = false;
         }
 
         OnPropertyChanged(nameof(Selected));
-        _owner.Refresh();
+        _owner.OnChoiceChanged();
     }
 
     internal void Refresh() => OnPropertyChanged(nameof(IsRequired));

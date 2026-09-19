@@ -33,20 +33,24 @@ internal interface IInstallProgressRow
     InstallRun? Run { get; set; }
 }
 
-/// <summary>
-/// A row that installs a release: a Discover row, a row of the versions table,
-/// or an update on the instance page.
-/// </summary>
-internal interface IInstallRow : IInstallProgressRow
+/// <summary>A row that holds a plan until the user confirms it.</summary>
+internal interface IPlanRow : IInstallProgressRow
 {
-    string? InstallError { get; set; }
-
-    string? InstallWarning { get; set; }
-
     InstallPlan? PendingPlan { get; set; }
 
     /// <summary>What <see cref="PendingPlan"/> asks the user before it runs, or null.</summary>
     InstallChoices? Choices { get; set; }
+}
+
+/// <summary>
+/// A row that installs a release: a Discover row, a row of the versions table,
+/// or an update on the instance page.
+/// </summary>
+internal interface IInstallRow : IPlanRow
+{
+    string? InstallError { get; set; }
+
+    string? InstallWarning { get; set; }
 }
 
 /// <summary>
@@ -178,6 +182,8 @@ public partial class MainViewModel
             {
                 row.Choices = choices;
                 HoldPlan(row, plan);
+                if (row is not IUpdateRow)
+                    ReplanOnChange(row, choices, replanned => HoldPlan(row, replanned));
             }
             else if (!plan.IsReady)
             {
@@ -339,6 +345,77 @@ public partial class MainViewModel
         return messages.Count > 0 ? Describe(messages) : null;
     }
 
+    /// <summary>Where a plan after a change of the choices finds its releases.</summary>
+    internal Func<BoreaServices, IModRepository> ChoicePlanMods { get; set; } = services => services.OfflineMods;
+
+    /// <summary>Plans again after each change of the choices, so that the confirm button shows the size of the plan that Confirm runs.</summary>
+    private void ReplanOnChange(IPlanRow row, InstallChoices choices, Action<InstallPlan> hold)
+    {
+        choices.Replan = () =>
+        {
+            choices.ShownPlan = row.PendingPlan ?? choices.ShownPlan;
+            row.PendingPlan = null;
+            choices.BlockedText = null;
+            if (choices.Planning.IsCompleted)
+                choices.Planning = ReplanChoicesAsync(row, choices, hold);
+        };
+    }
+
+    /// <summary>Plans one change at a time and drops a plan that a later change made outdated. A plan that fails or cannot run is left to Confirm.</summary>
+    private async Task ReplanChoicesAsync(IPlanRow row, InstallChoices choices, Action<InstallPlan> hold)
+    {
+        try
+        {
+            while (IsShown())
+            {
+                var revision = choices.Revision;
+                var plan = await TryPlanAsync(choices);
+                if (revision != choices.Revision)
+                    continue;
+
+                if (plan is { IsReady: true } && IsShown())
+                    hold(plan);
+                return;
+            }
+        }
+        catch (Exception exception)
+        {
+            _services?.Log.Write("The plan after a change of the install choices failed.", exception);
+        }
+
+        bool IsShown() => ReferenceEquals(row.Choices, choices) && !row.IsInstalling;
+    }
+
+    /// <summary>Lets the plan of an earlier change end before Confirm plans, so that no plan outlives the install.</summary>
+    private static async Task WhenPlanningEndedAsync(InstallChoices choices)
+        => await choices.Planning.ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
+
+    /// <summary>Plans again after Confirm when the user changed a choice while Confirm planned.</summary>
+    private static void ReplanIfChanged(IPlanRow row, int? revision)
+    {
+        if (row.Choices is { } choices && choices.Revision != revision)
+            choices.Replan?.Invoke();
+    }
+
+    /// <summary>Plans from the index that Borea holds, or returns null when that fails.</summary>
+    private async Task<InstallPlan?> TryPlanAsync(InstallChoices choices)
+    {
+        if (_services is not { } services)
+            return null;
+
+        try
+        {
+            var instance = await services.Instances.GetByIdAsync(choices.InstanceId);
+            return instance is null
+                ? null
+                : await PlanWithChoicesAsync(services, PlanningRequest(services, instance, choices.Requested) with { Repository = ChoicePlanMods(services) }, choices);
+        }
+        catch (Exception exception) when (IsInstallFailure(exception))
+        {
+            return null;
+        }
+    }
+
     /// <summary>
     /// Runs the plan the row holds after the user confirmed it. The executor
     /// refuses it when the instance changed since it was planned.
@@ -373,11 +450,14 @@ public partial class MainViewModel
         var completed = false;
         string? stopped = null;
         string? error = null;
+        int? revision = null;
         try
         {
             if (row.Choices is { } choices)
             {
-                plan = await ReplanAsync(services, row, choices);
+                await WhenPlanningEndedAsync(choices);
+                revision = choices.Revision;
+                plan = await ReplanAsync(services, row, choices, revision.Value);
                 if (plan is null)
                     return false;
             }
@@ -412,25 +492,31 @@ public partial class MainViewModel
             row.Progress = 0;
             row.ProgressStatus = stopped;
             row.ProgressDetail = null;
+            if (error is null)
+                ReplanIfChanged(row, revision);
         }
 
         return executed;
     }
 
     /// <summary>
-    /// Plans again with the user's choices, or returns null and keeps the row waiting when that plan asks something new,
-    /// cannot run, has a new warning, or installs a mod that neither the row nor the choices named.
+    /// Plans again with the user's choices, or returns null and keeps the row waiting when a choice changed meanwhile,
+    /// or when that plan asks something new, cannot run, has a new warning, or installs a mod that neither the row nor the choices named.
     /// </summary>
-    private async Task<InstallPlan?> ReplanAsync(BoreaServices services, IInstallRow row, InstallChoices choices)
+    private async Task<InstallPlan?> ReplanAsync(BoreaServices services, IInstallRow row, InstallChoices choices, int revision)
     {
-        var shown = row.PendingPlan?.Warnings ?? [];
-        var named = (row.PendingPlan?.Operations.Select(operation => operation.Release.ModId) ?? [])
+        var seen = row.PendingPlan ?? choices.ShownPlan;
+        var shown = seen?.Warnings ?? [];
+        var named = (seen?.Operations.Select(operation => operation.Release.ModId) ?? [])
             .Concat(choices.Requested.Select(mod => mod.Release.ModId))
             .Concat(choices.NamedModIds)
             .ToHashSet(ModIds.Comparer);
         var instance = await services.Instances.GetByIdAsync(choices.InstanceId)
             ?? throw new InvalidOperationException(Localization.InstallInstanceMissing);
         var plan = await PlanWithChoicesAsync(services, PlanningRequest(services, instance, choices.Requested), choices);
+        if (revision != choices.Revision)
+            return null;
+
         if (!choices.Apply(plan) && plan.IsReady && plan.Warnings.All(shown.Contains)
             && (row is IUpdateRow || plan.Operations.All(operation => named.Contains(operation.Release.ModId))))
             return plan;

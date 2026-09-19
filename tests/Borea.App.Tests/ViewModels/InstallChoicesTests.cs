@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.IO.Compression;
 using System.Net;
 using System.Text;
@@ -13,6 +14,10 @@ public sealed class InstallChoicesTests
 {
     private const string OwnId = ViewModelHarness.FakeSpaceDock.OwnId;
     private const string ArchiveHost = "archives.test";
+    private const long MeasureToolsSize = 41_782;
+    private const long ArmorySize = 985_743;
+    private const long FlightComputerSize = 129_696;
+    private const string ArmoryOrFlightComputer = """[{ "kind": "required", "any_of": [{ "id": "KSArmory" }, { "id": "AdvancedFlightComputer" }], "source": "authored" }]""";
 
     [Fact]
     public async Task Install_Recommendations_InstallTheKeptOneAndSkipTheDeselectedOne()
@@ -61,6 +66,205 @@ public sealed class InstallChoicesTests
 
         Assert.True(row.IsConfirmingInstall);
         Assert.Equal($"{harness.Localization.ContentAdd} ({MainViewModel.SizeText(38_000_000)})", shown);
+    }
+
+    [Fact]
+    public async Task Install_RecommendationCleared_TheButtonShowsTheSmallerSizeWithoutARequest()
+    {
+        using var harness = await CreateWithGameAsync(MeasureToolsDepends("""[{ "id": "AdvancedFlightComputer", "kind": "required", "source": "authored" }, { "id": "KSArmory", "kind": "recommends", "source": "authored" }]"""));
+        var item = await InstallMeasureToolsAsync(harness);
+        Assert.Equal(SizedText(harness, MeasureToolsSize + FlightComputerSize + ArmorySize), item.ConfirmInstallText);
+        var lookups = 0;
+        harness.SpaceDock.VersionLookup = _ =>
+        {
+            Interlocked.Increment(ref lookups);
+            return Task.CompletedTask;
+        };
+        var requests = harness.Requests.Count;
+
+        item.Choices!.Recommended.Single().IsSelected = false;
+        await ViewModelHarness.WaitUntilAsync(() => item.PendingPlan is not null);
+
+        Assert.Equal(SizedText(harness, MeasureToolsSize + FlightComputerSize), item.ConfirmInstallText);
+        Assert.Equal(0, lookups);
+        Assert.Equal(requests, harness.Requests.Count);
+    }
+
+    [Fact]
+    public async Task Install_OtherAlternativeSelected_TheButtonShowsItsSize()
+    {
+        using var harness = await CreateWithGameAsync(MeasureToolsDepends(ArmoryOrFlightComputer));
+        var item = await InstallMeasureToolsAsync(harness);
+        var choices = item.Choices!;
+        var group = Assert.Single(choices.Alternatives);
+        var revision = choices.Revision;
+
+        group.Options[0].IsSelected = true;
+        await ViewModelHarness.WaitUntilAsync(() => item.PendingPlan is not null);
+
+        Assert.Equal(revision + 1, choices.Revision);
+        Assert.Equal(SizedText(harness, MeasureToolsSize + ArmorySize), item.ConfirmInstallText);
+
+        group.Options[1].IsSelected = true;
+        await ViewModelHarness.WaitUntilAsync(() => item.PendingPlan is not null);
+
+        Assert.Equal(revision + 2, choices.Revision);
+        Assert.Equal(SizedText(harness, MeasureToolsSize + FlightComputerSize), item.ConfirmInstallText);
+    }
+
+    [Fact]
+    public async Task Install_ChoiceChanged_TheButtonShowsNoSizeWhilePlanning()
+    {
+        using var harness = await CreateWithGameAsync(MeasureToolsDepends("""[{ "id": "AdvancedFlightComputer", "kind": "required", "source": "authored" }, { "id": "KSArmory", "kind": "recommends", "source": "authored" }]"""));
+        var item = await InstallMeasureToolsAsync(harness);
+        var planning = new TaskCompletionSource();
+        harness.ViewModel.ChoicePlanMods = services => new ViewModelHarness.HeldModRepository(services.OfflineMods, _ => planning.Task);
+
+        item.Choices!.Recommended.Single().IsSelected = false;
+
+        Assert.Equal(harness.Localization.ContentAdd, item.ConfirmInstallText);
+        Assert.Null(item.AddedModsText);
+
+        planning.SetResult();
+        await ViewModelHarness.WaitUntilAsync(() => item.PendingPlan is not null);
+
+        Assert.Equal(SizedText(harness, MeasureToolsSize + FlightComputerSize), item.ConfirmInstallText);
+    }
+
+    [Fact]
+    public async Task Install_ChoiceChangedWhilePlanning_DropsTheOlderPlan()
+    {
+        using var harness = await CreateWithGameAsync(MeasureToolsDepends("""[{ "id": "KSArmory", "kind": "recommends", "source": "authored" }, { "id": "AdvancedFlightComputer", "kind": "recommends", "source": "authored" }]"""));
+        var item = await InstallMeasureToolsAsync(harness);
+        var armory = item.Choices!.Recommended.Single(choice => choice.Text.Contains("KSArmory", StringComparison.Ordinal));
+        var flightComputer = item.Choices.Recommended.Single(choice => choice.Text.Contains("Advanced Flight Computer", StringComparison.Ordinal));
+        var planning = new TaskCompletionSource();
+        var plans = 0;
+        harness.ViewModel.ChoicePlanMods = services => new ViewModelHarness.HeldModRepository(services.OfflineMods, modId =>
+        {
+            if (modId != "MeasureTools")
+                return Task.CompletedTask;
+
+            Interlocked.Increment(ref plans);
+            return planning.Task;
+        });
+        var shown = new ConcurrentQueue<string>();
+        item.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(DiscoverItem.ConfirmInstallText))
+                shown.Enqueue(item.ConfirmInstallText);
+        };
+
+        armory.IsSelected = false;
+        await ViewModelHarness.WaitUntilAsync(() => Volatile.Read(ref plans) == 1);
+        flightComputer.IsSelected = false;
+        armory.IsSelected = true;
+        planning.SetResult();
+        await ViewModelHarness.WaitUntilAsync(() => item.PendingPlan is not null);
+
+        Assert.Equal(2, plans);
+        Assert.Equal(SizedText(harness, MeasureToolsSize + ArmorySize), item.ConfirmInstallText);
+        Assert.DoesNotContain(SizedText(harness, MeasureToolsSize + FlightComputerSize), shown);
+    }
+
+    [Fact]
+    public async Task Install_ConfirmedWhilePlanning_WaitsForThePlanAndRunsWhatTheButtonShowed()
+    {
+        using var harness = await CreateWithGameAsync(MeasureToolsDepends("""[{ "id": "AdvancedFlightComputer", "kind": "required", "source": "authored" }, { "id": "KSArmory", "kind": "recommends", "source": "authored" }]"""));
+        var item = await InstallMeasureToolsAsync(harness);
+        var planning = new TaskCompletionSource();
+        harness.ViewModel.ChoicePlanMods = services => new ViewModelHarness.HeldModRepository(services.OfflineMods, _ => planning.Task);
+        item.Choices!.Recommended.Single().IsSelected = false;
+
+        var confirm = item.ConfirmInstallCommand.ExecuteAsync(null);
+        await Task.WhenAny(confirm, Task.Delay(TimeSpan.FromSeconds(1)));
+
+        Assert.False(confirm.IsCompleted);
+
+        planning.SetResult();
+        await confirm;
+
+        Assert.Null(item.Choices);
+        Assert.Null(item.PendingPlan);
+        Assert.Contains(harness.Requests, uri => uri.AbsoluteUri.EndsWith("/AdvancedFlightComputer.zip", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task Install_ChoiceChangedWhileConfirmPlans_RunsNothingAndShowsTheNewSize()
+    {
+        using var harness = await CreateWithGameAsync(MeasureToolsDepends("""[{ "id": "AdvancedFlightComputer", "kind": "required", "source": "authored" }, { "id": "KSArmory", "kind": "recommends", "source": "authored" }]"""));
+        var item = await InstallMeasureToolsAsync(harness);
+        var planning = new TaskCompletionSource();
+        var lookups = 0;
+        harness.SpaceDock.VersionLookup = _ =>
+        {
+            Interlocked.Increment(ref lookups);
+            return planning.Task;
+        };
+
+        var confirm = item.ConfirmInstallCommand.ExecuteAsync(null);
+        await ViewModelHarness.WaitUntilAsync(() => Volatile.Read(ref lookups) > 0);
+        item.Choices!.Recommended.Single().IsSelected = false;
+        planning.SetResult();
+        await confirm;
+        await ViewModelHarness.WaitUntilAsync(() => item.PendingPlan is not null);
+
+        Assert.NotNull(item.Choices);
+        Assert.Equal(SizedText(harness, MeasureToolsSize + FlightComputerSize), item.ConfirmInstallText);
+        Assert.DoesNotContain(harness.Requests, uri => uri.AbsoluteUri.EndsWith(".zip", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task Install_ChangeGivesABlockedPlan_TheButtonShowsNoSizeAndConfirmPlansAgain()
+    {
+        using var harness = await CreateWithGameAsync(json => WithDependencies(
+            WithDependencies(json, "AdvancedFlightComputer", """[{ "id": "missing", "kind": "required", "source": "authored" }]"""),
+            "MeasureTools",
+            """[{ "id": "AdvancedFlightComputer", "kind": "recommends", "source": "authored" }]"""));
+        var instance = await ActivateInstanceAsync(harness);
+        var item = harness.ViewModel.DiscoverItems.Single(row => row.ModId == "MeasureTools");
+        await item.InstallCommand.ExecuteAsync(null);
+        var choices = item.Choices!;
+        var recommendation = Assert.Single(choices.Recommended);
+        Assert.False(recommendation.IsSelected);
+        Assert.Equal(SizedText(harness, MeasureToolsSize), item.ConfirmInstallText);
+
+        recommendation.IsSelected = true;
+        await choices.Planning;
+
+        Assert.Null(item.PendingPlan);
+        Assert.Null(choices.BlockedText);
+        Assert.Equal(harness.Localization.ContentAdd, item.ConfirmInstallText);
+
+        await item.ConfirmInstallCommand.ExecuteAsync(null);
+
+        Assert.Same(choices, item.Choices);
+        Assert.StartsWith("AdvancedFlightComputer: ", choices.BlockedText, StringComparison.Ordinal);
+        Assert.Empty(await ModIdsAsync(harness, instance));
+    }
+
+    [Fact]
+    public async Task Install_ChoiceNeedsSpaceDock_HoldsNoPlanAndConfirmPlansAgain()
+    {
+        const string SpaceDockOnly = "4999";
+        using var harness = await CreateWithGameAsync();
+        var release = Release(OwnId, dependencies: [Recommends(SpaceDockOnly)]);
+        harness.SpaceDock.Releases.AddRange([release, Release(SpaceDockOnly)]);
+        var instance = await ActivateInstanceAsync(harness);
+        var row = new VersionItem(harness.ViewModel, release);
+        await row.InstallCommand.ExecuteAsync(null);
+        var choices = row.Choices!;
+        Assert.NotNull(row.PendingPlan);
+
+        choices.Recommended.Single().IsSelected = false;
+        await choices.Planning;
+
+        Assert.Null(row.PendingPlan);
+
+        await row.ConfirmInstallCommand.ExecuteAsync(null);
+
+        Assert.Null(row.Choices);
+        Assert.Equal([OwnId], await ModIdsAsync(harness, instance));
     }
 
     [Fact]
@@ -340,6 +544,34 @@ public sealed class InstallChoicesTests
 
         Assert.True(raised);
         Assert.Equal(harness.Localization.FormatInstallAlsoAdds("KSArmory 0.8.44"), item.AddedModsText);
+    }
+
+    private static string SizedText(ViewModelHarness harness, long sizeBytes) => $"{harness.Localization.ContentAdd} ({MainViewModel.SizeText(sizeBytes)})";
+
+    private static async Task<DiscoverItem> InstallMeasureToolsAsync(ViewModelHarness harness)
+    {
+        await ActivateInstanceAsync(harness);
+        var item = harness.ViewModel.DiscoverItems.Single(row => row.ModId == "MeasureTools");
+        await item.InstallCommand.ExecuteAsync(null);
+        return item;
+    }
+
+    private static Func<string, string> MeasureToolsDepends(string dependencies) => json => WithDependencies(json, "MeasureTools", dependencies);
+
+    /// <summary>Makes the newest release of every listing compatible with the test game and gives the one of <paramref name="modId"/> these dependencies.</summary>
+    private static string WithDependencies(string json, string modId, string dependencies)
+    {
+        var root = JsonNode.Parse(json)!;
+        foreach (var listing in root["listings"]!.AsArray())
+        {
+            var newest = listing!["releases"]![0]!;
+            newest["game_min"] = "2026.1.1.1";
+            newest["game_min_revision"] = 1;
+            if ((string?)listing["id"] == modId)
+                newest["dependencies"] = JsonNode.Parse(dependencies);
+        }
+
+        return root.ToJsonString();
     }
 
     private static ModDependency Requires(string id) => new(id, ModDependencyKind.Required);
