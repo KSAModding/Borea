@@ -1,3 +1,5 @@
+using System.Net;
+using Borea.Core.GitHub;
 using Borea.Core.Index;
 using Borea.Core.Instances;
 using Borea.Core.Launch;
@@ -255,6 +257,41 @@ public sealed class LoggingDecoratorsTests
         Assert.IsType<IOException>(_log.Exceptions[3]);
     }
 
+    [Fact]
+    public async Task GitHub_SignInAndSignOut_WriteTheLogin()
+    {
+        var session = new LoggingGitHubSession(new FakeGitHubSession(), _log);
+
+        await session.SignInAsync();
+        session.SignOut();
+        session.SignOut();
+
+        Assert.Equal(["Signed in to GitHub as octocat.", "Signed out of GitHub."], _log.Messages);
+    }
+
+    [Fact]
+    public async Task GitHub_FailedSignIn_WritesTheOutcome()
+    {
+        var session = new LoggingGitHubSession(new FakeGitHubSession { Outcome = GitHubSignInOutcome.Expired }, _log);
+
+        await session.SignInAsync();
+
+        Assert.Equal(["GitHub sign-in failed, Expired."], _log.Messages);
+    }
+
+    [Fact]
+    public async Task GitHub_RefusedToken_WritesTheSignOut()
+    {
+        var inner = new FakeGitHubSession();
+        var session = new LoggingGitHubSession(inner, _log);
+        await session.SignInAsync();
+        inner.Answer = HttpStatusCode.Unauthorized;
+
+        using var response = await session.SendAsync(new HttpRequestMessage(HttpMethod.Get, "https://api.github.com/user"));
+
+        Assert.Equal("Signed out of GitHub, because GitHub refused the token.", _log.Messages[^1]);
+    }
+
     private sealed class RecordingLog : IBoreaLog
     {
         public List<string> Messages { get; } = [];
@@ -357,6 +394,43 @@ public sealed class LoggingDecoratorsTests
         {
             Arguments = arguments;
             return result;
+        }
+    }
+
+    private sealed class FakeGitHubSession : IGitHubSession
+    {
+        public GitHubSignInOutcome Outcome { get; init; } = GitHubSignInOutcome.SignedIn;
+
+        public HttpStatusCode Answer { get; set; } = HttpStatusCode.OK;
+
+        public bool IsAvailable => true;
+
+        public string ManageAccessUrl => "https://github.com/settings/apps/authorizations";
+
+        public string InstallUrl => "https://github.com/apps/borea/installations/new";
+
+        public GitHubSessionState State { get; private set; } = GitHubSessionState.SignedOut;
+
+        public event EventHandler? StateChanged;
+
+        public Task<GitHubSignInResult> SignInAsync(IProgress<GitHubDeviceCode>? progress = null, CancellationToken cancellationToken = default)
+        {
+            if (Outcome != GitHubSignInOutcome.SignedIn)
+                return Task.FromResult(new GitHubSignInResult(Outcome));
+
+            State = GitHubSessionState.SignedInAs("octocat");
+            StateChanged?.Invoke(this, EventArgs.Empty);
+            return Task.FromResult(new GitHubSignInResult(Outcome, "octocat"));
+        }
+
+        public void SignOut() => State = GitHubSessionState.SignedOut;
+
+        public Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken = default)
+        {
+            if (Answer == HttpStatusCode.Unauthorized)
+                SignOut();
+
+            return Task.FromResult(new HttpResponseMessage(Answer));
         }
     }
 
