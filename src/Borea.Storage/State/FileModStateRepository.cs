@@ -135,6 +135,48 @@ public sealed class FileModStateRepository : IModStateRepository
         return true;
     }
 
+    public async Task<bool> PutGameContentFirstAsync(Guid instanceId, string gameDirectory, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(gameDirectory);
+
+        var gameManifestPath = Path.Combine(gameDirectory, "Content", "manifest.toml");
+        ManifestDto? gameManifest;
+        try
+        {
+            gameManifest = await TomlFileStore.ReadAsync<ManifestDto>(gameManifestPath, cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or InvalidOperationException)
+        {
+            return false;
+        }
+
+        var contentIds = gameManifest?.Mods
+            .Where(m => !string.IsNullOrWhiteSpace(m.Id))
+            .DistinctBy(m => m.Id, StringComparer.Ordinal)
+            .ToList() ?? [];
+        if (contentIds.Count == 0)
+            return false;
+
+        var manifest = await ReadManifestAsync(instanceId, cancellationToken).ConfigureAwait(false);
+
+        // ModLibrary.PrepareManifest compares ids ordinally when it looks for a missing content entry.
+        var ordered = new List<ModManifestEntryDto>(manifest.Mods.Count + contentIds.Count);
+        foreach (var content in contentIds)
+        {
+            var present = manifest.Mods.Where(m => string.Equals(m.Id, content.Id, StringComparison.Ordinal)).ToList();
+            ordered.AddRange(present.Count > 0 ? present : [new ModManifestEntryDto { Id = content.Id, Enabled = content.Enabled }]);
+        }
+
+        ordered.AddRange(manifest.Mods.Where(m => !ordered.Contains(m)));
+
+        if (ordered.SequenceEqual(manifest.Mods, ReferenceEqualityComparer.Instance))
+            return false;
+
+        manifest.Mods = ordered;
+        await WriteManifestAsync(instanceId, manifest, cancellationToken).ConfigureAwait(false);
+        return true;
+    }
+
     private async Task<bool> SetEnabledAsync(Guid instanceId, string modId, bool enabled, CancellationToken cancellationToken)
     {
         RequireLookupId(modId);
