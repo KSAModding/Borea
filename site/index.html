@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Borea: a mod manager for Kitten Space Agency</title>
+  <meta name="description" content="Borea finds, installs and updates Kitten Space Agency mods and game content for you. Open source, for Windows, Linux and macOS.">
+  <meta name="theme-color" content="#171717">
+  <meta property="og:title" content="Borea">
+  <meta property="og:description" content="A mod manager for Kitten Space Agency.">
+  <meta property="og:image" content="https://ksamodding.github.io/Borea/img/icon.png">
+  <meta property="og:type" content="website">
+  <meta name="twitter:card" content="summary">
+  <link rel="icon" href="favicon.ico">
+  <link rel="preload" href="fonts/IBMPlexSans-SemiBold.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="styles.css">
+  <script src="main.js" defer></script>
+</head>
+<body>
+  <main>
+    <div class="hero">
+      <picture class="icon">
+        <source srcset="img/icon.webp" type="image/webp">
+        <img src="img/icon.png" width="128" height="128" alt="">
+      </picture>
+      <h1>Borea</h1>
+      <p class="tagline">A mod manager for Kitten Space Agency.</p>
+      <a class="button" id="download" href="https://github.com/KSAModding/Borea/releases/latest">
+        <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 13.5V3M20.25 13.5v6H3.75v-6M15.75 9.75 12 13.5 8.25 9.75"/></svg>
+        <span id="download-label">Download</span>
+      </a>
+      <p class="meta" id="available" hidden>Available for Windows, Linux and macOS</p>
+      <p class="meta row">
+        <a id="notes" href="https://github.com/KSAModding/Borea/releases/latest">Release notes</a> &middot; <a href="https://github.com/KSAModding/Borea/releases/latest">Other platforms</a>
+      </p>
+    </div>
+
+    <picture class="shot">
+      <source type="image/webp" srcset="img/discover-760.webp 760w, img/discover.webp 1455w" sizes="(max-width: 928px) calc(100vw - 48px), 880px">
+      <img src="img/discover.png" width="1455" height="892" loading="lazy" alt="The Discover page of Borea, listing mods from the content index">
+    </picture>
+
+    <div class="column">
+      <section>
+        <h2>About</h2>
+        <p>Borea finds, installs and updates KSA mods and game content for you, so you don't have to move folders around by hand.</p>
+      </section>
+
+      <section>
+        <h2>For mod authors</h2>
+        <p>Everything in the app comes from the community <a href="https://github.com/KSAModding/content-index">content index</a>. Mods added to the index appear in Borea.</p>
+        <p class="action"><a href="https://github.com/KSAModding/content-index/blob/main/CONTRIBUTING.md">List your mod &rarr;</a></p>
+      </section>
+
+      <section>
+        <h2>Get involved</h2>
+        <p>The project is open source and run by volunteers. Help with code, testing and docs is welcome. Come say hi!</p>
+        <p class="meta row"><a href="https://discord.gg/nt4fK4QuTz">Discord</a> &middot; <a href="https://github.com/KSAModding/Borea">GitHub</a></p>
+      </section>
+    </div>
+  </main>
+
+  <footer class="column">
+    <p class="meta"><a href="https://github.com/KSAModding/Borea/blob/main/LICENSE">MIT licensed</a> &middot; Community project, not affiliated with RocketWerkz.</p>
+  </footer>
+</body>
+</html>
