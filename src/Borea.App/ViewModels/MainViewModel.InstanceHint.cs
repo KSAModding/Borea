@@ -4,7 +4,8 @@ namespace Borea.App.ViewModels;
 
 /// <summary>
 /// The hint the pages show while no instance is active. Without any instance it
-/// leads to the New instance modal, otherwise to the Library.
+/// leads to the New instance modal, otherwise to the Library. With an active
+/// instance, the pages and the add buttons name it instead.
 /// </summary>
 public partial class MainViewModel
 {
@@ -15,6 +16,14 @@ public partial class MainViewModel
     public string InstanceHintText => HasInstances ? Localization.DiscoverNoActiveInstance : Localization.DiscoverNoInstance;
 
     public string InstanceHintActionText => HasInstances ? Localization.DiscoverOpenLibrary : Localization.DiscoverCreateInstance;
+
+    public string? AddingToText => ActiveInstance is { } active ? Localization.FormatDiscoverAddingTo(active.Name) : null;
+
+    public string AddingToBefore => Localization.SplitDiscoverAddingTo().Before;
+
+    public string AddingToAfter => Localization.SplitDiscoverAddingTo().After;
+
+    public string AddToText => ActiveInstance is { } active ? Localization.FormatDiscoverAddTo(active.Name) : Localization.DiscoverAdd;
 
     [RelayCommand]
     private void FollowInstanceHint()
@@ -30,5 +39,9 @@ public partial class MainViewModel
         OnPropertyChanged(nameof(HomeInstanceHintText));
         OnPropertyChanged(nameof(InstanceHintText));
         OnPropertyChanged(nameof(InstanceHintActionText));
+        OnPropertyChanged(nameof(AddingToText));
+        OnPropertyChanged(nameof(AddingToBefore));
+        OnPropertyChanged(nameof(AddingToAfter));
+        OnPropertyChanged(nameof(AddToText));
     }
 }

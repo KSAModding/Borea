@@ -28,6 +28,16 @@
             </Button>
         </WrapPanel>
     </DataTemplate>
+    <!-- the page header names the instance that Add goes into, and leads to the Library to change it -->
+    <DataTemplate x:Key="AddingTo" x:DataType="vm:MainViewModel">
+        <Button Classes="plain" HorizontalAlignment="Right" Margin="16,0,0,0" Command="{Binding SetMainWindowLibraryCommand}" IsVisible="{Binding HasActiveInstance}" ToolTip.Tip="{Binding AddingToText}" AutomationProperties.Name="{Binding AddingToText}" AutomationProperties.HelpText="{Binding Localization.DiscoverOpenLibrary}">
+            <Grid ColumnDefinitions="Auto,*,Auto">
+                <TextBlock Classes="label-lg" Text="{Binding AddingToBefore}" VerticalAlignment="Center" />
+                <TextBlock Grid.Column="1" Classes="label-lg" Text="{Binding ActiveInstance.Name}" Foreground="{StaticResource Brush.Text}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                <TextBlock Grid.Column="2" Classes="label-lg" Text="{Binding AddingToAfter}" VerticalAlignment="Center" />
+            </Grid>
+        </Button>
+    </DataTemplate>
     <!-- c/instance-row: used by the library list and by the Current Install card on Home.
          Delete asks for a confirmation in the row, and rename opens the name modal. -->
     <DataTemplate x:Key="InstanceRow" x:DataType="vm:InstanceItem">
@@ -242,7 +252,7 @@
                         </StackPanel>
                         <!-- c/button-icon-add -->
                         <Panel Grid.Column="2" VerticalAlignment="Top">
-                            <Button Classes="add" Command="{Binding InstallCommand}" IsVisible="{Binding CanInstall}" ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.DiscoverAdd}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.DiscoverAdd}">
+                            <Button Classes="add" Command="{Binding InstallCommand}" IsVisible="{Binding CanInstall}" ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).AddToText}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).AddToText}">
                                 <Path Classes="icon size-16" Data="{StaticResource Icon.Plus}" />
                             </Button>
                             <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center" IsVisible="{Binding IsInstalling}">
@@ -371,7 +381,7 @@
                             <TextBlock Classes="body-md secondary" Text="{Binding Abstract}" TextWrapping="Wrap" TextTrimming="CharacterEllipsis" MaxLines="2" LineHeight="18" />
                         </StackPanel>
                         <Panel Grid.Column="2" VerticalAlignment="Top">
-                            <Button Classes="add" Command="{Binding InstallCommand}" IsVisible="{Binding CanInstall}" ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.DiscoverAdd}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.DiscoverAdd}">
+                            <Button Classes="add" Command="{Binding InstallCommand}" IsVisible="{Binding CanInstall}" ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).AddToText}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).AddToText}">
                                 <Path Classes="icon size-16" Data="{StaticResource Icon.Plus}" />
                             </Button>
                             <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center" IsVisible="{Binding IsInstalling}">

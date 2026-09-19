@@ -927,6 +927,12 @@
   <data name="DiscoverAdd" xml:space="preserve">
     <value>Add to the active instance</value>
   </data>
+  <data name="DiscoverAddToFormat" xml:space="preserve">
+    <value>Add to {0}</value>
+  </data>
+  <data name="DiscoverAddingToFormat" xml:space="preserve">
+    <value>Adding to {0}</value>
+  </data>
   <data name="DiscoverInstalled" xml:space="preserve">
     <value>Installed</value>
   </data>
