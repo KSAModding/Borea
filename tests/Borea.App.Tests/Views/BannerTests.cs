@@ -131,4 +131,24 @@ public sealed class BannerTests
 
         Assert.Equal(expected, actual);
     }
+
+    [Theory]
+    [InlineData(BannerKind.Neutral, "Brush.TextSecondary")]
+    [InlineData(BannerKind.Outline, "Brush.TextSecondary")]
+    [InlineData(BannerKind.Accent, "Brush.OnAccent")]
+    [InlineData(BannerKind.Error, "Brush.Text")]
+    [InlineData(BannerKind.Success, "Brush.Text")]
+    public async Task CloseIcon_UsesTheBrushOfItsKind(BannerKind kind, string brushKey)
+    {
+        var (actual, expected) = await RenderAsync(
+            () => new Banner { Kind = kind, Message = "A short message.", DismissCommand = new RelayCommand(() => { }) },
+            banner =>
+            {
+                var icon = banner.GetVisualDescendants().OfType<Avalonia.Controls.Shapes.Path>().Single(path => path.Name == "PART_DismissIcon");
+                banner.TryFindResource(brushKey, banner.ActualThemeVariant, out var brush);
+                return (((ISolidColorBrush)icon.Stroke!).Color, ((ISolidColorBrush)brush!).Color);
+            });
+
+        Assert.Equal(expected, actual);
+    }
 }

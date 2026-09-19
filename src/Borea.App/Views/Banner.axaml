@@ -11,6 +11,7 @@
         <Setter Property="Foreground" Value="{DynamicResource Brush.TextSecondary}" />
         <Setter Property="TitleForeground" Value="{DynamicResource Brush.Text}" />
         <Setter Property="ActionForeground" Value="{DynamicResource Brush.Accent}" />
+        <Setter Property="DismissForeground" Value="{DynamicResource Brush.TextSecondary}" />
         <Setter Property="Template">
             <ControlTemplate>
                 <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="{TemplateBinding CornerRadius}" Padding="{TemplateBinding Padding}">
@@ -23,7 +24,7 @@
                             <TextBlock Name="PART_ActionText" FontSize="14" FontWeight="SemiBold" Text="{TemplateBinding ActionText}" Foreground="{TemplateBinding ActionForeground}" VerticalAlignment="Center" />
                         </Button>
                         <Button Name="PART_Dismiss" Grid.Column="2" Classes="plain" Width="16" Height="16" Margin="16,2,0,0" VerticalAlignment="Top" Command="{TemplateBinding DismissCommand}" ToolTip.Tip="{TemplateBinding DismissText}" AutomationProperties.Name="{TemplateBinding DismissText}" IsVisible="{TemplateBinding DismissCommand, Converter={x:Static ObjectConverters.IsNotNull}}">
-                            <Path Name="PART_DismissIcon" Width="24" Height="24" Margin="-4" Stretch="None" Fill="Transparent" StrokeThickness="1.5" StrokeLineCap="Round" StrokeJoin="Round" RenderTransformOrigin="50%,50%" RenderTransform="scale(0.6667)" Data="{DynamicResource Icon.Close}" Stroke="{TemplateBinding Foreground}" />
+                            <Path Name="PART_DismissIcon" Width="24" Height="24" Margin="-4" Stretch="None" Fill="Transparent" StrokeThickness="1.5" StrokeLineCap="Round" StrokeJoin="Round" RenderTransformOrigin="50%,50%" RenderTransform="scale(0.6667)" Data="{DynamicResource Icon.Close}" Stroke="{TemplateBinding DismissForeground}" />
                         </Button>
                     </Grid>
                 </Border>
@@ -41,6 +42,7 @@
             <Setter Property="Foreground" Value="{DynamicResource Brush.OnAccent}" />
             <Setter Property="TitleForeground" Value="{DynamicResource Brush.OnAccent}" />
             <Setter Property="ActionForeground" Value="{DynamicResource Brush.OnAccent}" />
+            <Setter Property="DismissForeground" Value="{DynamicResource Brush.OnAccent}" />
         </Style>
         <Style Selector="^:error">
             <Setter Property="Background" Value="{DynamicResource Brush.DangerSoft}" />
@@ -48,6 +50,7 @@
             <Setter Property="Foreground" Value="{DynamicResource Brush.Danger}" />
             <Setter Property="TitleForeground" Value="{DynamicResource Brush.Danger}" />
             <Setter Property="ActionForeground" Value="{DynamicResource Brush.Text}" />
+            <Setter Property="DismissForeground" Value="{DynamicResource Brush.Text}" />
         </Style>
         <Style Selector="^:success">
             <Setter Property="Background" Value="{DynamicResource Brush.PositiveSoft}" />
@@ -55,6 +58,7 @@
             <Setter Property="Foreground" Value="{DynamicResource Brush.Positive}" />
             <Setter Property="TitleForeground" Value="{DynamicResource Brush.Positive}" />
             <Setter Property="ActionForeground" Value="{DynamicResource Brush.Text}" />
+            <Setter Property="DismissForeground" Value="{DynamicResource Brush.Text}" />
         </Style>
     </ControlTheme>
 </ResourceDictionary>

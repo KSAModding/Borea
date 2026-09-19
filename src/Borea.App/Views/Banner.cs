@@ -53,6 +53,9 @@ public sealed class Banner : TemplatedControl
     public static readonly StyledProperty<IBrush?> ActionForegroundProperty =
         AvaloniaProperty.Register<Banner, IBrush?>(nameof(ActionForeground));
 
+    public static readonly StyledProperty<IBrush?> DismissForegroundProperty =
+        AvaloniaProperty.Register<Banner, IBrush?>(nameof(DismissForeground));
+
     public BannerKind Kind
     {
         get => GetValue(KindProperty);
@@ -111,6 +114,12 @@ public sealed class Banner : TemplatedControl
     {
         get => GetValue(ActionForegroundProperty);
         set => SetValue(ActionForegroundProperty, value);
+    }
+
+    public IBrush? DismissForeground
+    {
+        get => GetValue(DismissForegroundProperty);
+        set => SetValue(DismissForegroundProperty, value);
     }
 
     protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
