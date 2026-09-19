@@ -42,6 +42,8 @@ A release starts from a tag such as `v0.5.0`, and a tag with a hyphen is publish
 Name a testing build `-beta.N`, for example `v0.5.0-beta.1`, and a dev build `-dev.N`, because the update channel in the App reads that name.
 The testing channel reports beta releases, and only the dev channel reports other pre-releases.
 
+To put a text of your own at the top of the release notes, add `.github/release-notes/<version>.md`, for example `.github/release-notes/0.5.0.md`, in the commit that you tag.
+
 ## Release scripts
 
 The `release scripts` job tests the scripts in `.github/scripts`. Locally they need Python 3, and bash with jq:

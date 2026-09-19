@@ -476,6 +476,7 @@ jobs:
 
       # The changelog is fetched here instead of with `gh release create --generate-notes`,
       # so a re-run for the same tag can rewrite the whole body, checksum table included.
+      # .github/release-notes/<version>.md in the tagged commit, when it exists, goes first.
       - name: Write the release body
         id: body
         working-directory: dist
@@ -487,7 +488,17 @@ jobs:
           gh api --method POST "repos/$GITHUB_REPOSITORY/releases/generate-notes" \
             -f tag_name="$GITHUB_REF_NAME" --jq .body > generated.md || : > generated.md
 
-          cat > body.md <<'EOF'
+          if ! gh api -H "Accept: application/vnd.github.raw+json" \
+            "repos/$GITHUB_REPOSITORY/contents/.github/release-notes/$VERSION.md?ref=$GITHUB_SHA" > intro.md 2> /dev/null; then
+            : > intro.md
+          fi
+
+          if [ -s intro.md ]; then
+            { cat intro.md; echo; } > body.md
+          else
+            : > body.md
+          fi
+          cat >> body.md <<'EOF'
           ### Downloads
 
           | File | SHA-256 |
