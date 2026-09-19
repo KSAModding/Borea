@@ -24,7 +24,16 @@ public sealed partial class GameReleaseList
     public static GameReleaseList From(ContentIndexGameVersions? gameVersions) =>
         gameVersions is null ? Empty : new GameReleaseList(gameVersions.Versions);
 
+    public bool IsEmpty => _versions.Length == 0;
+
     public GameReleaseList WithBuild(GameVersion build) => new([.. _versions, build]);
+
+    /// <summary>The builds above <paramref name="revision"/>, one per revision, newest first.</summary>
+    public IReadOnlyList<GameVersion> NewerThan(int revision) => _versions
+        .Where(version => version.Revision > revision)
+        .DistinctBy(version => version.Revision)
+        .OrderByDescending(version => version.Revision)
+        .ToList();
 
     /// <summary>A month gives the first revision of that month.</summary>
     public bool TryResolveLowerBound(string? bound, out int revision)

@@ -116,6 +116,9 @@
     <!-- modal: the notes of the newer Borea releases -->
     <views:ReleaseNotesModal IsVisible="{Binding IsReleaseNotesOpen}" />
 
+    <!-- modal: the patch notes of the installed game builds -->
+    <views:GamePatchNotesModal IsVisible="{Binding IsGamePatchNotesOpen}" />
+
     <!-- modal: settings -->
     <settings:SettingsModal IsVisible="{Binding IsSettingsOpen}" />
 

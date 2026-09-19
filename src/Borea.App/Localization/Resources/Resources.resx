@@ -207,6 +207,30 @@
   <data name="UpdateNoNotes" xml:space="preserve">
     <value>This release has no notes.</value>
   </data>
+  <data name="GameBuildAvailable" xml:space="preserve">
+    <value>A newer KSA build is available:</value>
+  </data>
+  <data name="GameBuildDownload" xml:space="preserve">
+    <value>Download</value>
+  </data>
+  <data name="GamePatchNotesTitle" xml:space="preserve">
+    <value>KSA patch notes</value>
+  </data>
+  <data name="GamePatchNotesEmpty" xml:space="preserve">
+    <value>The game folder has no patch notes.</value>
+  </data>
+  <data name="GamePatchNotesNotInstalled" xml:space="preserve">
+    <value>Not installed</value>
+  </data>
+  <data name="GamePatchNotesLoading" xml:space="preserve">
+    <value>Loading the notes of the newer builds...</value>
+  </data>
+  <data name="GamePatchNotesLoadFailed" xml:space="preserve">
+    <value>The notes of the newer builds could not be loaded.</value>
+  </data>
+  <data name="GamePatchNotesCappedFormat" xml:space="preserve">
+    <value>Only the {0} newest builds are shown.</value>
+  </data>
   <data name="SystemDefaultRegionalFormat" xml:space="preserve">
     <value>System default</value>
   </data>

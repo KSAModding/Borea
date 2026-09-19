@@ -39,6 +39,7 @@
                 <ContentControl Content="{Binding}" ContentTemplate="{StaticResource GameSetupBanner}" IsVisible="{Binding NeedsGameSetup}" />
                 <ContentControl Content="{Binding}" ContentTemplate="{StaticResource SharedProfileBanner}" IsVisible="{Binding ShowSharedProfileBanner}" />
                 <views:Banner Margin="0,16,0,0" Message="{Binding AvailableUpdateText}" ActionText="{Binding Localization.UpdateSeeMore}" ActionCommand="{Binding OpenReleaseNotesCommand}" DismissCommand="{Binding DismissReleaseBannerCommand}" DismissText="{Binding Localization.UpdateDismiss}" IsVisible="{Binding ShowReleaseBanner}" />
+                <views:Banner Margin="0,16,0,0" Message="{Binding GameBuildBannerText}" ActionText="{Binding Localization.UpdateSeeMore}" ActionCommand="{Binding OpenGamePatchNotesCommand}" DismissCommand="{Binding DismissGameBuildBannerCommand}" DismissText="{Binding Localization.UpdateDismiss}" IsVisible="{Binding ShowGameBuildBanner}" />
             </StackPanel>
 
             <!-- Current install: black container with the header strip, holding the active instance row -->

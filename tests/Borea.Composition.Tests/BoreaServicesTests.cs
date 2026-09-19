@@ -529,6 +529,16 @@ public sealed class BoreaServicesTests : IDisposable
     }
 
     [Fact]
+    public async Task GamePatchNotes_NoGameDirectory_ReadsNothing()
+    {
+        using var services = await BoreaServices.BuildAsync(_tempRoot);
+
+        Assert.IsType<FileGamePatchNotesReader>(services.GamePatchNotes);
+        Assert.Empty(await services.GamePatchNotes.ReadAsync());
+        Assert.IsType<GamePatchNotesFetcher>(services.GamePatchNotesFetcher);
+    }
+
+    [Fact]
     public async Task Dispose_ClosesTheOneClientEveryNetworkServiceUses()
     {
         var services = await BoreaServices.BuildAsync(_tempRoot);

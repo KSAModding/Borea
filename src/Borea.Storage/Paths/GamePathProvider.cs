@@ -54,6 +54,7 @@ public sealed class GamePathProvider : IGamePathProvider
 
     public string GetIndexPath() => Path.Combine(_boreaRoot, "index.json");
     public string GetImageCacheFolder() => Path.Combine(_boreaRoot, "ImageCache");
+    public string GetGamePatchNotesFolder() => Path.Combine(_boreaRoot, "GamePatchNotes");
     public string GetInstancesRoot() => Path.Combine(_libraryFolder, "Instances");
     public string GetLoadersRoot() => Path.Combine(_boreaRoot, "Loaders");
     public string GetInstanceRoot(Guid instanceId) => Path.Combine(GetInstancesRoot(), instanceId.ToString());

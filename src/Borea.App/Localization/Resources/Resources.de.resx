@@ -207,6 +207,30 @@
   <data name="UpdateNoNotes" xml:space="preserve">
     <value>Diese Version hat keine Hinweise.</value>
   </data>
+  <data name="GameBuildAvailable" xml:space="preserve">
+    <value>Ein neuerer KSA-Build ist verfügbar:</value>
+  </data>
+  <data name="GameBuildDownload" xml:space="preserve">
+    <value>Herunterladen</value>
+  </data>
+  <data name="GamePatchNotesTitle" xml:space="preserve">
+    <value>KSA-Patchnotes</value>
+  </data>
+  <data name="GamePatchNotesEmpty" xml:space="preserve">
+    <value>Der Spielordner enthält keine Patchnotes.</value>
+  </data>
+  <data name="GamePatchNotesNotInstalled" xml:space="preserve">
+    <value>Nicht installiert</value>
+  </data>
+  <data name="GamePatchNotesLoading" xml:space="preserve">
+    <value>Die Patchnotes der neueren Builds werden geladen...</value>
+  </data>
+  <data name="GamePatchNotesLoadFailed" xml:space="preserve">
+    <value>Die Patchnotes der neueren Builds konnten nicht geladen werden.</value>
+  </data>
+  <data name="GamePatchNotesCappedFormat" xml:space="preserve">
+    <value>Nur die {0} neuesten Builds werden angezeigt.</value>
+  </data>
   <data name="SystemDefaultRegionalFormat" xml:space="preserve">
     <value>Systemstandard</value>
   </data>
