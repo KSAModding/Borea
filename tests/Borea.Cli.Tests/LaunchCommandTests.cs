@@ -2,6 +2,7 @@ using Borea.Core.Instances;
 using Borea.Core.ModLoaders;
 using Borea.Core.Mods;
 using Borea.Storage.Instances;
+using Borea.Storage.State;
 
 namespace Borea.Cli.Tests;
 
@@ -25,6 +26,27 @@ public sealed class LaunchCommandTests : IDisposable
         Assert.True(Path.IsPathFullyQualified(plan.Arguments[1]));
         Assert.Equal(plan.Arguments[1], plan.EnvironmentVariables["STARMAP_INSTANCE_PATH"]);
         Assert.Contains("Process id: 42", run.Output);
+    }
+
+    [Fact]
+    public async Task Launch_ManifestWithoutCore_PutsCoreBeforeTheModsFirst()
+    {
+        _host.Mods.Listings.Add(LoaderFixtures.Listing());
+        var loaderDirectory = LoaderCommandTests.CreateLoaderDirectory("StarMap", "not a program", _host.Root);
+        var game = Path.Combine(_host.Root, "Game");
+        Directory.CreateDirectory(Path.Combine(game, "Content"));
+        await File.WriteAllTextAsync(Path.Combine(game, "Content", "manifest.toml"), "[[mods]]\nid = \"Core\"\nenabled = true\n");
+        await _host.RunAsync("settings", "set", "game", game);
+        await _host.RunAsync("settings", "set", "loader", "StarMap", loaderDirectory);
+        await _host.RunAsync("instance", "create", "Flight Test");
+        var instance = Assert.Single(await new FileInstanceRepository(_host.Paths).GetAllAsync());
+        await File.WriteAllTextAsync(_host.Paths.GetInstanceManifestPath(instance.InstanceId), "[[mods]]\nid = \"KSArmory\"\nenabled = true\n");
+
+        var run = await _host.RunAsync("launch", "Flight Test", "StarMap");
+
+        Assert.Equal(0, run.ExitCode);
+        var entries = await new FileModStateRepository(_host.Paths).GetEntriesAsync(instance.InstanceId);
+        Assert.Equal(new[] { "Core", "KSArmory" }, entries.Select(entry => entry.ModId));
     }
 
     [Fact]

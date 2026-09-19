@@ -356,6 +356,31 @@ public sealed class InstanceViewModelTests
     }
 
     [Fact]
+    public async Task Play_ManifestWithoutCore_PutsCoreBeforeTheModsBeforeTheStart()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(services =>
+        {
+            var root = Path.GetDirectoryName(services.Paths.GetBoreaSettingsPath())!;
+            var loader = Directory.CreateDirectory(Path.Combine(root, "Loaders", "StarMap")).FullName;
+            File.WriteAllBytes(Path.Combine(loader, "StarMap.exe"), []);
+            var game = Directory.CreateDirectory(Path.Combine(root, "Game", "Content")).Parent!.FullName;
+            File.WriteAllText(Path.Combine(game, "Content", "manifest.toml"), "[[mods]]\nid = \"Core\"\nenabled = true\n");
+            return services.SettingsRepository.SaveAsync(services.Settings
+                .WithLoaderInstallation("StarMap", new Borea.Core.ModLoaders.LoaderInstallation(loader, ModVersion.Parse("0.4.6"), rawVersion: null, isAdopted: false))
+                .WithGameDirectory(game));
+        }, processStarter: new GameStartingStarter());
+        var viewModel = harness.ViewModel;
+        await InstalledContent.AddAsync(harness, "MeasureTools", activate: true, ownership: ModInstallOwnership.Borea);
+        await viewModel.LoadAsync();
+        await viewModel.ActiveInstance!.OpenCommand.ExecuteAsync(null);
+
+        await viewModel.PlayCommand.ExecuteAsync(null);
+
+        var entries = await harness.Services.ModState.GetEntriesAsync(viewModel.ActiveInstance.InstanceId);
+        Assert.Equal(new[] { "Core", "MeasureTools" }, entries.Select(entry => entry.ModId));
+    }
+
+    [Fact]
     public async Task Open_InstanceWithGameLogs_ShowsThePlaytimeAndTheSessions()
     {
         using var harness = await ViewModelHarness.CreateAsync();
