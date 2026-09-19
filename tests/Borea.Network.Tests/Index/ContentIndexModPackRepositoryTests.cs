@@ -221,6 +221,7 @@ public sealed class ContentIndexModPackRepositoryTests
     {
         public string GetIndexPath() => "index.json";
         public string GetAnnouncementsPath() => throw new NotSupportedException();
+        public string GetListingSchemaPath() => throw new NotSupportedException();
         public string GetImageCacheFolder() => throw new NotSupportedException();
         public string GetGamePatchNotesFolder() => throw new NotSupportedException();
 

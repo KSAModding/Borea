@@ -1,0 +1,681 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/KSAModding/content-index/main/schemas/authored.schema.json",
+  "title": "KSA content index: authored document",
+  "description": "One authored TOML document per listing or pack version, per RFC 0031, RFC 0035, RFC 0049, RFC 0058 and RFC 0067. Validate the parsed document.",
+  "type": "object",
+  "additionalProperties": false,
+
+  "properties": {
+    "spec_version": {
+      "description": "The version of the metadata format. This schema defines version 1.",
+      "const": 1
+    },
+    "id": {
+      "description": "The content id. For a mod this is the folder name the game installs it as.",
+      "$ref": "#/$defs/contentId"
+    },
+    "type": {
+      "description": "The content type. New types arrive by RFC and extend this enum.",
+      "enum": ["mod", "mod-loader", "modpack"]
+    },
+    "name": {
+      "description": "The display name. Free choice of characters and length.",
+      "type": "string",
+      "minLength": 1
+    },
+    "authors": {
+      "description": "Display names of the authors.",
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "abstract": {
+      "description": "One or two sentences for list and search views.",
+      "type": "string",
+      "minLength": 1
+    },
+    "description": {
+      "description": "Longer free text on top of the abstract, written as CommonMark Markdown.",
+      "type": "string"
+    },
+    "license": {
+      "description": "An SPDX license expression. This schema checks the expression shape; resolving the identifiers against the SPDX list is the validation workflow's job.",
+      "$ref": "#/$defs/spdxExpression"
+    },
+    "tags": {
+      "description": "Free-form lowercase tags. A curated vocabulary warns rather than rejects, so it is not enforced here.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/tag" }
+    },
+    "status": {
+      "description": "The author's declaration about their own content.",
+      "enum": ["active", "deprecated"],
+      "default": "active"
+    },
+    "superseded_by": {
+      "description": "The id of the successor. Only meaningful together with a deprecated status.",
+      "$ref": "#/$defs/contentId"
+    },
+
+    "links": {
+      "description": "Listing links. The forums thread is required: it ties the listing to an Ahwoo account, is the tiebreaker in id disputes, and is the takedown tripwire.",
+      "type": "object",
+      "required": ["forums"],
+      "properties": {
+        "forums": { "$ref": "#/$defs/forumsUrl" }
+      },
+      "additionalProperties": { "$ref": "#/$defs/url" }
+    },
+
+    "images": {
+      "description": "The images a client shows for the listing, per RFC 0058. Each image stays on the author's host, and the checks fetch it and compare it with its record.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "icon": {
+          "description": "The image that stands for the listing in lists, tiles and headers. A client shows its center square.",
+          "$ref": "#/$defs/imageRecord",
+          "properties": {
+            "id": { "not": {} },
+            "width": { "minimum": 256, "maximum": 2048 },
+            "height": { "minimum": 256, "maximum": 2048 },
+            "size": { "maximum": 262144 }
+          }
+        },
+        "description": {
+          "description": "The images the description references as ksa-image:<id>.",
+          "type": "array",
+          "maxItems": 16,
+          "items": {
+            "$ref": "#/$defs/imageRecord",
+            "required": ["id"],
+            "properties": {
+              "width": { "maximum": 2048 },
+              "height": { "maximum": 2048 },
+              "size": { "maximum": 1048576 }
+            }
+          }
+        }
+      }
+    },
+
+    "compatibility": {
+      "description": "Game compatibility bounds, per RFC 0017. Ordering is by revision alone.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["game_min"],
+      "properties": {
+        "game_min": {
+          "description": "Oldest game version known to work, written as the game displays it, or as a month such as 2026.7.",
+          "$ref": "#/$defs/gameVersionBound"
+        },
+        "game_max": {
+          "description": "Newest tested game version. Absent means no known upper limit, which is the recommended default.",
+          "$ref": "#/$defs/gameVersionBound"
+        },
+        "os": {
+          "description": "The platforms known to work. Absent means no known restriction.",
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/platformName" }
+        }
+      }
+    },
+
+    "releases": {
+      "description": "Where releases appear. Absent means releases enter the index by pull request.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "github": {
+          "description": "The GitHub repository releases are published on, as owner/repo.",
+          "$ref": "#/$defs/githubRepo"
+        },
+        "spacedock": {
+          "description": "The numeric SpaceDock mod id.",
+          "type": "integer",
+          "minimum": 1
+        },
+        "authority": {
+          "description": "Which host defines which releases exist. Required when more than one host is named.",
+          "enum": ["github", "spacedock"]
+        }
+      },
+      "anyOf": [
+        { "required": ["github"] },
+        { "required": ["spacedock"] }
+      ],
+      "allOf": [
+        {
+          "if": { "required": ["github", "spacedock"] },
+          "then": { "required": ["authority"] }
+        },
+        {
+          "if": {
+            "required": ["authority"],
+            "properties": { "authority": { "const": "github" } }
+          },
+          "then": { "required": ["github"] }
+        },
+        {
+          "if": {
+            "required": ["authority"],
+            "properties": { "authority": { "const": "spacedock" } }
+          },
+          "then": { "required": ["spacedock"] }
+        }
+      ]
+    },
+
+    "loader": {
+      "description": "The loader a code mod needs. Absent means the content runs without a loader. Only a mod carries this.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "min"],
+      "properties": {
+        "id": {
+          "description": "The loader's id. Must reference content of type mod-loader.",
+          "$ref": "#/$defs/contentId"
+        },
+        "min": {
+          "description": "Oldest loader version known to work, inclusive.",
+          "$ref": "#/$defs/semver"
+        },
+        "max": {
+          "description": "Newest known-working loader version, inclusive. Absent means open, which is the recommended default.",
+          "$ref": "#/$defs/semver"
+        }
+      }
+    },
+
+    "dependencies": {
+      "description": "Authored dependency entries. Code dependencies are derived per release from the archive's own mod.toml; these are the bounds and kinds a watcher cannot know.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/dependency" }
+    },
+
+    "install": {
+      "description": "Where the content is written and what a person still has to do by hand, per RFC 0035.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "root": {
+          "description": "Directory inside the archive whose contents become the installed content. Absent means derived.",
+          "$ref": "#/$defs/relativePath"
+        },
+        "target": {
+          "description": "The anchor the content is written to.",
+          "$ref": "#/$defs/anchor"
+        },
+        "path": {
+          "description": "Path below the anchor. Absent means the anchor itself.",
+          "$ref": "#/$defs/relativePath"
+        },
+        "manages": {
+          "description": "Paths, relative to the install location, that this content owns and rewrites. A manager must not edit them.",
+          "type": "array",
+          "items": { "$ref": "#/$defs/relativePath" }
+        },
+        "steps": {
+          "description": "Ordered actions a person must take that a manager cannot perform. Prose, never parsed for actions. An absent list and an empty list say different things.",
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "uninstall": {
+          "description": "Ordered actions to remove the content cleanly. Prose, same rules as steps.",
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+
+    "provides": {
+      "description": "What a loader offers the content installed under it. Only a mod-loader carries this.",
+      "type": "object",
+      "additionalProperties": false,
+      "dependentRequired": { "content-path": ["content-dir"], "platform": ["launch"] },
+      "properties": {
+        "launch": {
+          "description": "The executable the player runs after installing, relative to the loader's install location. Absent means installing this loader does not change what you launch.",
+          "$ref": "#/$defs/relativePath"
+        },
+        "content-dir": {
+          "description": "The anchor this loader reads content from. Absent means the loader reads no content directory and a manager must not invent one.",
+          "$ref": "#/$defs/anchor"
+        },
+        "content-path": {
+          "description": "Path below content-dir. Absent means the anchor itself.",
+          "$ref": "#/$defs/relativePath"
+        },
+        "configure": {
+          "description": "The loader's own configuration file, and which well-known value a manager writes where. A closed table: an unrecognised key means a loader that starts misconfigured.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["file", "format"],
+          "properties": {
+            "file": {
+              "description": "Path to the configuration file, relative to the loader's install location.",
+              "$ref": "#/$defs/relativePath"
+            },
+            "format": {
+              "description": "The file format, so a manager can write it without a parser it does not have.",
+              "enum": ["json", "toml"]
+            },
+            "game-path": {
+              "description": "The key that receives the absolute path of the game directory, addressed by dot-separated path from the document root.",
+              "$ref": "#/$defs/configKeyPath"
+            }
+          }
+        },
+        "instance": {
+          "description": "How a manager tells the loader which instance to run, per RFC 0049. A closed table with at least one key: absent means the loader does not run instances, and a manager must not guess.",
+          "type": "object",
+          "additionalProperties": false,
+          "minProperties": 1,
+          "properties": {
+            "flag": {
+              "description": "The command line argument that precedes the absolute instance root. A manager passes the two as separate arguments.",
+              "$ref": "#/$defs/singleToken"
+            },
+            "variable": {
+              "description": "The environment variable that carries the absolute instance root.",
+              "$ref": "#/$defs/singleToken"
+            }
+          }
+        },
+        "platform": {
+          "description": "What a manager starts on one platform instead of launch, per RFC 0067. A platform without an entry starts launch.",
+          "type": "object",
+          "minProperties": 1,
+          "propertyNames": { "$ref": "#/$defs/platformName" },
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["launch"],
+            "properties": {
+              "launch": {
+                "description": "The file a manager starts on this platform, relative to the loader's install location: the executable, or with runtime the entry file the runtime runs.",
+                "$ref": "#/$defs/relativePath"
+              },
+              "runtime": {
+                "description": "The runtime that runs launch. dotnet starts the dotnet command with the entry file as its first argument.",
+                "enum": ["dotnet"]
+              }
+            }
+          }
+        }
+      }
+    },
+
+    "version": {
+      "description": "The pack's own version. A pack document is its own release, so it carries a version where a mod listing does not.",
+      "$ref": "#/$defs/semver"
+    },
+    "released_at": {
+      "description": "When this pack version was published, ISO 8601 UTC.",
+      "$ref": "#/$defs/utcTimestamp"
+    },
+    "changelog": {
+      "description": "URL or free text for this pack version.",
+      "type": "string",
+      "minLength": 1
+    },
+    "mods": {
+      "description": "The curated set of mods, pinned to exact versions.",
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/packEntry" }
+    },
+    "vehicles": {
+      "description": "Pinned vehicles. Defined now even though the vehicle type is not, because the entry shape is shared.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/packEntry" }
+    },
+    "saves": {
+      "description": "Pinned saves. Defined now even though the save type is not, because the entry shape is shared.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/packEntry" }
+    }
+  },
+
+  "required": [
+    "spec_version",
+    "id",
+    "type",
+    "name",
+    "authors",
+    "abstract",
+    "license",
+    "links",
+    "compatibility"
+  ],
+
+  "allOf": [
+    {
+      "$comment": "A mod: the game decides where it goes, so target is pinned and path is not the author's to set.",
+      "if": { "required": ["type"], "properties": { "type": { "const": "mod" } } },
+      "then": {
+        "properties": {
+          "provides": { "not": {} },
+          "version": { "not": {} },
+          "released_at": { "not": {} },
+          "changelog": { "not": {} },
+          "mods": { "not": {} },
+          "vehicles": { "not": {} },
+          "saves": { "not": {} },
+          "install": {
+            "properties": {
+              "target": { "const": "mods" },
+              "path": { "not": {} }
+            }
+          }
+        }
+      }
+    },
+    {
+      "$comment": "A mod-loader: no convention to fall back on, so a stated install section must say where.",
+      "if": { "required": ["type"], "properties": { "type": { "const": "mod-loader" } } },
+      "then": {
+        "properties": {
+          "loader": { "not": {} },
+          "version": { "not": {} },
+          "released_at": { "not": {} },
+          "changelog": { "not": {} },
+          "mods": { "not": {} },
+          "vehicles": { "not": {} },
+          "saves": { "not": {} },
+          "install": { "required": ["target"] }
+        }
+      }
+    },
+    {
+      "$comment": "A pack: pure reference metadata, so it has no release host, no loader, and installs nothing of its own.",
+      "if": { "required": ["type"], "properties": { "type": { "const": "modpack" } } },
+      "then": {
+        "required": ["version", "released_at", "mods"],
+        "properties": {
+          "releases": { "not": {} },
+          "loader": { "not": {} },
+          "dependencies": { "not": {} },
+          "install": { "not": {} },
+          "provides": { "not": {} }
+        }
+      }
+    },
+    {
+      "$comment": "A successor pointer without a deprecation is data no client acts on.",
+      "if": { "required": ["superseded_by"] },
+      "then": {
+        "required": ["status"],
+        "properties": { "status": { "const": "deprecated" } }
+      }
+    },
+    {
+      "$comment": "RFC 0035 rule 4: a directory nothing runs from and nothing reads is not an install.",
+      "if": {
+        "required": ["install"],
+        "properties": {
+          "install": {
+            "type": "object",
+            "required": ["target"],
+            "properties": { "target": { "const": "standalone" } }
+          }
+        }
+      },
+      "then": {
+        "required": ["provides"],
+        "properties": { "provides": { "required": ["launch"] } }
+      }
+    },
+    {
+      "$comment": "RFC 0035 rule 6: ModManifest.Save regenerates manifest.toml from the game's own list, so no descriptor may claim it.",
+      "if": {
+        "required": ["install"],
+        "properties": {
+          "install": {
+            "type": "object",
+            "required": ["target"],
+            "properties": { "target": { "const": "user-data" } },
+            "not": { "required": ["path"] }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "install": {
+            "properties": {
+              "manages": {
+                "items": {
+                  "not": {
+                    "title": "the game's own manifest, which no descriptor may claim",
+                    "$comment": "Trailing dots and spaces are matched too: Windows strips them, so 'manifest.toml ' opens the same file.",
+                    "pattern": "^[Mm][Aa][Nn][Ii][Ff][Ee][Ss][Tt][.][Tt][Oo][Mm][Ll][ .]*(?![\\s\\S])"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  ],
+
+  "$defs": {
+    "contentId": {
+      "$comment": "The trailing lookahead is a true end-of-input anchor. A bare $ would also match before a trailing newline, which would let an id carry one into a folder name.",
+      "type": "string",
+      "pattern": "^[A-Za-z0-9](?:[A-Za-z0-9._-]{0,62}[A-Za-z0-9])?(?![\\s\\S])",
+      "not": {
+        "title": "a reserved name, compared up to the first dot",
+        "$comment": "Case-insensitive, because Windows treats CON.mod as a device too. Core is the game's own (Content/Core, exempted in ModLibrary.PrepareManifest).",
+        "pattern": "^(?:[Cc][Oo][Rr][Ee]|[Cc][Oo][Nn]|[Pp][Rr][Nn]|[Aa][Uu][Xx]|[Nn][Uu][Ll]|[Cc][Oo][Mm][1-9]|[Ll][Pp][Tt][1-9])(?:[.]|(?![\\s\\S]))"
+      }
+    },
+
+    "semver": {
+      "$comment": "SemVer 2.0.0. No leading v: these are authored versions, not release tags, and only a tag gets its v stripped at stamp time.",
+      "type": "string",
+      "pattern": "^(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)(?:-(?:0|[1-9][0-9]*|[0-9]*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9][0-9]*|[0-9]*[a-zA-Z-][0-9a-zA-Z-]*))*)?(?:\\+[0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*)?(?![\\s\\S])"
+    },
+
+    "gameVersionBound": {
+      "$comment": "The full form the game displays, or a whole month. Year.Month.Build as a prefix is deliberately not offered (RFC 0017), and a build carrying a suffix is out of scope for compatibility.",
+      "type": "string",
+      "pattern": "^[0-9]{4}\\.(?:1[0-2]|[1-9])(?:\\.(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*))?(?![\\s\\S])"
+    },
+
+    "relativePath": {
+      "$comment": "RFC 0035 rule 1 and 2: relative, / separated, and containment is a validity rule because a manager executes this with write access to a game directory. Forbidding .. as a whole segment is what makes the normalised form unable to leave its anchor.",
+      "title": "a relative path with / separators",
+      "type": "string",
+      "pattern": "^(?!~)(?![A-Za-z]:)[^/\\\\\\u0000-\\u001f]+(?:/[^/\\\\\\u0000-\\u001f]+)*(?![\\s\\S])",
+      "allOf": [
+        {
+          "not": {
+            "title": "a path that leaves its anchor",
+            "pattern": "(?:^|/)[.]{1,2}(?:/|(?![\\s\\S]))"
+          }
+        },
+        {
+          "not": {
+            "title": "a path through a reserved Windows device name",
+            "$comment": "A segment naming a device swallows every write on Windows, so a manager would report success and change nothing. Everything after the first dot is ignored when Windows resolves the device, and trailing dots and spaces are stripped, so all of those spellings are matched. Core is absent here: it is reserved as an id, not as a path.",
+            "pattern": "(?:^|/)(?:[Cc][Oo][Nn]|[Pp][Rr][Nn]|[Aa][Uu][Xx]|[Nn][Uu][Ll]|[Cc][Oo][Mm][1-9]|[Ll][Pp][Tt][1-9])(?:[.][^/]*)?[ .]*(?:/|(?![\\s\\S]))"
+          }
+        }
+      ]
+    },
+
+    "anchor": {
+      "$comment": "Unrecognised rather than ignored: a future value means a layout this manager cannot perform, and guessing would write files somewhere the author did not choose.",
+      "enum": ["mods", "user-data", "game-root", "standalone"]
+    },
+
+    "url": {
+      "type": "string",
+      "pattern": "^https?://[A-Za-z0-9](?:[A-Za-z0-9.-]*[A-Za-z0-9])?(?::[0-9]{1,5})?(?:[/?#][^\\s\\u0000-\\u001f]*)?(?![\\s\\S])"
+    },
+
+    "httpsUrl": {
+      "title": "an https URL",
+      "type": "string",
+      "pattern": "^https://[A-Za-z0-9](?:[A-Za-z0-9.-]*[A-Za-z0-9])?(?::[0-9]{1,5})?(?:[/?#][^\\s\\u0000-\\u001f]*)?(?![\\s\\S])"
+    },
+
+    "imageRecord": {
+      "$comment": "The facts the checks verify against the fetched bytes. Each role narrows the pixel and byte limits where it references this.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["url", "sha256", "width", "height", "size"],
+      "properties": {
+        "url": {
+          "description": "The image on the author's host.",
+          "$ref": "#/$defs/httpsUrl"
+        },
+        "sha256": {
+          "description": "Hex SHA-256 of the image bytes, compared case-insensitively.",
+          "title": "a hex SHA-256 digest of 64 characters",
+          "type": "string",
+          "pattern": "^[0-9A-Fa-f]{64}(?![\\s\\S])"
+        },
+        "width": { "description": "Width in pixels.", "type": "integer", "minimum": 1 },
+        "height": { "description": "Height in pixels.", "type": "integer", "minimum": 1 },
+        "size": { "description": "Length of the image in bytes.", "type": "integer", "minimum": 1 },
+        "license": {
+          "description": "The image's own license. Absent means the document's license.",
+          "$ref": "#/$defs/spdxExpression"
+        },
+        "attribution": {
+          "description": "Credit text a client shows with the image.",
+          "type": "string",
+          "minLength": 1
+        },
+        "source": {
+          "description": "The original work, which a client links with the image.",
+          "$ref": "#/$defs/httpsUrl"
+        },
+        "id": {
+          "description": "The name the description references. Only a description image carries it.",
+          "title": "1 to 64 ASCII letters, digits, - and _, starting and ending with a letter or digit",
+          "type": "string",
+          "pattern": "^[A-Za-z0-9](?:[A-Za-z0-9_-]{0,62}[A-Za-z0-9])?(?![\\s\\S])"
+        }
+      }
+    },
+
+    "forumsUrl": {
+      "$comment": "The host is pinned because the field exists to tie a listing to an Ahwoo account. A thread id is required.",
+      "title": "an https link to a thread on forums.ahwoo.com, such as https://forums.ahwoo.com/threads/my-mod.783/",
+      "type": "string",
+      "pattern": "^https://forums\\.ahwoo\\.com/(?:index\\.php\\?)?(?:threads/|forums/(?:[^\\s/?#\\u0000-\\u001f]+/)+)(?:[^\\s/?#\\u0000-\\u001f]*\\.)?[0-9]+(?:[/?#][^\\s\\u0000-\\u001f]*)?(?![\\s\\S])"
+    },
+
+    "spdxExpression": {
+      "$comment": "Expression shape only. Whether every identifier exists in the SPDX list is versioned data that must not be frozen into a schema, and parenthesis balancing is not expressible here; both are checked by tools/check_schema.py.",
+      "title": "an SPDX license expression, such as MIT, or GPL-2.0-only AND CC-BY-SA-4.0 for several licenses",
+      "type": "string",
+      "pattern": "^[A-Za-z0-9.:+()-]+(?: (?:AND|OR|WITH) [A-Za-z0-9.:+()-]+)*(?![\\s\\S])"
+    },
+
+    "tag": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*(?![\\s\\S])"
+    },
+
+    "utcTimestamp": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(?:\\.[0-9]+)?Z(?![\\s\\S])"
+    },
+
+    "configKeyPath": {
+      "$comment": "Dot-separated from the document root. A configuration key whose own name contains a dot cannot be addressed in spec_version 1.",
+      "type": "string",
+      "pattern": "^[^.\\u0000-\\u001f]+(?:\\.[^.\\u0000-\\u001f]+)*(?![\\s\\S])"
+    },
+
+    "platformName": {
+      "enum": ["windows", "linux", "macos"]
+    },
+
+    "singleToken": {
+      "$comment": "RFC 0049: one token without whitespace, and not empty. A manager passes it to a process start as an argument or a variable name, so every Unicode control character (U+0000 to U+001F and U+007F to U+009F) is excluded too.",
+      "title": "a single token without whitespace or control characters",
+      "type": "string",
+      "pattern": "^[^\\s\\u0000-\\u001f\\u007f-\\u009f]+(?![\\s\\S])"
+    },
+
+    "githubRepo": {
+      "type": "string",
+      "examples": ["owner/repository"],
+      "pattern": "^[A-Za-z0-9](?:[A-Za-z0-9._-]*[A-Za-z0-9])?/[A-Za-z0-9](?:[A-Za-z0-9._-]*[A-Za-z0-9])?(?![\\s\\S])"
+    },
+
+    "dependency": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind"],
+      "properties": {
+        "id": {
+          "description": "The dependency's id. Must reference content of type mod.",
+          "$ref": "#/$defs/contentId"
+        },
+        "kind": {
+          "description": "How a resolver acts on the entry.",
+          "enum": ["required", "optional", "recommends", "suggests", "conflict"]
+        },
+        "min": {
+          "description": "Inclusive lower bound. For a conflict entry the bounds narrow the conflicting range.",
+          "$ref": "#/$defs/semver"
+        },
+        "max": {
+          "description": "Inclusive upper bound. Absent means open.",
+          "$ref": "#/$defs/semver"
+        },
+        "any_of": {
+          "description": "Alternatives, satisfied by any one of them. Replaces id.",
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id"],
+            "properties": {
+              "id": { "$ref": "#/$defs/contentId" },
+              "min": { "$ref": "#/$defs/semver" },
+              "max": { "$ref": "#/$defs/semver" }
+            }
+          }
+        }
+      },
+      "oneOf": [
+        { "required": ["id"] },
+        { "required": ["any_of"] }
+      ],
+      "allOf": [
+        {
+          "$comment": "An alternative set claims a choice, and a choice the loader does not offer at runtime is not one. The bounds live per alternative.",
+          "if": { "required": ["any_of"] },
+          "then": {
+            "properties": {
+              "kind": { "enum": ["required", "recommends"] },
+              "min": { "not": {} },
+              "max": { "not": {} }
+            }
+          }
+        }
+      ]
+    },
+
+    "packEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "version"],
+      "properties": {
+        "id": { "$ref": "#/$defs/contentId" },
+        "version": { "$ref": "#/$defs/semver" }
+      }
+    }
+  }
+}

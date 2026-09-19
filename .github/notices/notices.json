@@ -40,13 +40,32 @@
           "source": "https://github.com/phosphor-icons/core/blob/6cb9423c66c49cb5d3cb420a66837c9e96d5491b/LICENSE",
           "path": ".github/notices/Phosphor-Icons-LICENSE.txt",
           "sha256": "b5b1f1da112d18ea2147decfd48ddc1bf2b5aeb6c265381579340e95b15a2bb2"
+        },
+        {
+          "name": "json-everything",
+          "license": "MIT",
+          "copyright": "Copyright (c) .NET Foundation and Contributors",
+          "link": "https://github.com/json-everything/json-everything",
+          "source": "https://github.com/json-everything/json-everything/blob/399f198431f65cf6896fe6038f833ef6d0b27a39/LICENSE",
+          "path": ".github/notices/json-everything-LICENSE.txt",
+          "sha256": "baebca0309090f4eca1b7a82c836cc91e48b2b92139c2280fb0ff69af922c2ae"
         }
       ]
     },
     "Cli": {
       "required": ["System.CommandLine", "Tomlyn"],
       "excluded": ["Avalonia"],
-      "extras": []
+      "extras": [
+        {
+          "name": "json-everything",
+          "license": "MIT",
+          "copyright": "Copyright (c) .NET Foundation and Contributors",
+          "link": "https://github.com/json-everything/json-everything",
+          "source": "https://github.com/json-everything/json-everything/blob/399f198431f65cf6896fe6038f833ef6d0b27a39/LICENSE",
+          "path": ".github/notices/json-everything-LICENSE.txt",
+          "sha256": "baebca0309090f4eca1b7a82c836cc91e48b2b92139c2280fb0ff69af922c2ae"
+        }
+      ]
     }
   }
 }
