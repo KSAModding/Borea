@@ -19,8 +19,8 @@ public interface ILauncher
     /// Watches a launch that <see cref="Launch"/> just started until the game
     /// comes up, the loader stops, or the startup window ends. A loader that
     /// stops with a non-zero exit code in that time turns the result into
-    /// <see cref="LaunchOutcome.ExitedEarly"/>, with its output and the mod its
-    /// error names. Any other result is returned as it is.
+    /// <see cref="LaunchOutcome.ExitedEarly"/>, with its output and the mod it
+    /// likely stopped on. Any other result is returned as it is.
     /// </summary>
     Task<LaunchResult> WatchStartAsync(Instance instance, LaunchResult started, CancellationToken cancellationToken = default);
 

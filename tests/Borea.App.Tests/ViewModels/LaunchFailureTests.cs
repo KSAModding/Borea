@@ -123,6 +123,52 @@ public sealed class LaunchFailureTests
         Assert.False(viewModel.CanDisableBlamedMod);
     }
 
+    private const int AccessViolation = -1073741819;
+
+    private static readonly string[] ModLoadingCrash =
+    [
+        "StarMap - Using Instance Path: Main",
+        "Fatal error.",
+        "Internal CLR error. (0x80131506)",
+        "   at System.Reflection.RuntimeModule.GetTypes()",
+        "   at StarMap.Core.ModRepository.RuntimeMod.InitializeMod(StarMap.Core.ModRepository.ModRegistry)",
+        "   at StarMap.Core.ModRepository.ModLoader.PrepareMods()",
+    ];
+
+    [Fact]
+    public async Task Play_LoaderStopsWhileLoadingAMod_NamesItAsTheLikelyCauseAndOffersToDisableIt()
+    {
+        using var harness = await CreateAsync(new CrashingStarter(AccessViolation, ModLoadingCrash));
+        var viewModel = harness.ViewModel;
+        var instance = await InstalledContent.AddAsync(harness, "KSArmory", activate: true, ownership: ModInstallOwnership.Borea);
+        File.WriteAllBytes(Path.Combine(harness.Services.Paths.GetInstanceModsFolder(instance.InstanceId), "KSArmory", "KSArmory.dll"), []);
+        await viewModel.LoadAsync();
+
+        await viewModel.PlayActiveInstanceCommand.ExecuteAsync(null);
+
+        Assert.True(viewModel.IsLaunchFailureOpen);
+        Assert.Equal(harness.Localization.FormatLaunchModLikelyBroke("KSArmory", "0.8.44", "StarMap"), viewModel.LaunchMessage);
+        Assert.True(viewModel.CanDisableBlamedMod);
+        Assert.Equal(harness.Localization.FormatLaunchDisableMod("KSArmory"), viewModel.DisableBlamedModText);
+        Assert.StartsWith(harness.Localization.FormatLaunchExitCode(LoaderExitCode.Describe(AccessViolation, OperatingSystem.IsWindows())), viewModel.LaunchOutputText);
+        Assert.Contains("RuntimeMod.InitializeMod", viewModel.LaunchOutputText);
+    }
+
+    [Fact]
+    public async Task Play_LoaderStopsWhileLoadingModsWithoutAModFound_SaysItStoppedWhileLoadingMods()
+    {
+        using var harness = await CreateAsync(new CrashingStarter(AccessViolation, ModLoadingCrash));
+        var viewModel = harness.ViewModel;
+        await InstalledContent.AddAsync(harness, "MeasureTools", activate: true, ownership: ModInstallOwnership.Borea);
+        await viewModel.LoadAsync();
+
+        await viewModel.PlayActiveInstanceCommand.ExecuteAsync(null);
+
+        Assert.True(viewModel.IsLaunchFailureOpen);
+        Assert.Equal(harness.Localization.FormatLaunchStoppedLoadingMods("StarMap", AccessViolation), viewModel.LaunchMessage);
+        Assert.False(viewModel.CanDisableBlamedMod);
+    }
+
     [Fact]
     public async Task Play_TwoLoadersRecorded_StartsTheOneTheModsNeed()
     {
