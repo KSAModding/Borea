@@ -123,6 +123,13 @@ internal sealed class ViewModelHarness : IDisposable
             Directory.Delete(Root, recursive: true);
     }
 
+    public static async Task WaitUntilAsync(Func<bool> condition)
+    {
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        while (!condition())
+            await Task.Delay(10, timeout.Token);
+    }
+
     internal static string SnapshotFixturePath =>
         Path.Combine(AppContext.BaseDirectory, "Index", "Fixtures", "current-snapshot.json");
 
@@ -182,6 +189,31 @@ internal sealed class ViewModelHarness : IDisposable
         }
     }
 
+    /// <summary>A repository whose version lookups wait for <paramref name="lookup"/> of the mod id.</summary>
+    internal sealed class HeldModRepository(IModRepository inner, Func<string, Task> lookup) : IModRepository
+    {
+        public Task<IReadOnlyList<ModMetadata>> GetAvailableModsAsync(CancellationToken cancellationToken = default) =>
+            inner.GetAvailableModsAsync(cancellationToken);
+
+        public Task<ModMetadata?> GetListingAsync(string modId, CancellationToken cancellationToken = default) =>
+            inner.GetListingAsync(modId, cancellationToken);
+
+        public Task<ModVersionMetadata?> GetLatestReleaseAsync(string modId, CancellationToken cancellationToken = default) =>
+            inner.GetLatestReleaseAsync(modId, cancellationToken);
+
+        public Task<ModVersionMetadata?> GetReleaseAsync(string modId, ModVersion version, CancellationToken cancellationToken = default) =>
+            inner.GetReleaseAsync(modId, version, cancellationToken);
+
+        public async Task<IReadOnlyList<ModVersion>> GetAvailableVersionsAsync(string modId, CancellationToken cancellationToken = default)
+        {
+            await lookup(modId);
+            return await inner.GetAvailableVersionsAsync(modId, cancellationToken);
+        }
+
+        public Task<IReadOnlyList<ModMetadata>> SearchAsync(string query, CancellationToken cancellationToken = default) =>
+            inner.SearchAsync(query, cancellationToken);
+    }
+
     /// <summary>
     /// SpaceDock stand-in. 4253 is the SpaceDock copy of AdvancedFlightComputer,
     /// which the index lists too; 5000 is only on SpaceDock and serves its
@@ -197,6 +229,8 @@ internal sealed class ViewModelHarness : IDisposable
         public List<ModVersionMetadata> Releases { get; } = [];
 
         public Func<ModVersion, Exception?>? ReleaseFailure { get; set; }
+
+        public Func<string, Task>? VersionLookup { get; set; }
 
         private static ModMetadata Listing(string id, string name, string? description) => new(
             specVersion: 1,
@@ -231,8 +265,12 @@ internal sealed class ViewModelHarness : IDisposable
                 ? Task.FromException<ModVersionMetadata?>(failure)
                 : Task.FromResult(ReleasesOf(modId).FirstOrDefault(release => release.Version == version));
 
-        public Task<IReadOnlyList<ModVersion>> GetAvailableVersionsAsync(string modId, CancellationToken cancellationToken = default) =>
-            Task.FromResult<IReadOnlyList<ModVersion>>(ReleasesOf(modId).Select(release => release.Version).ToList());
+        public async Task<IReadOnlyList<ModVersion>> GetAvailableVersionsAsync(string modId, CancellationToken cancellationToken = default)
+        {
+            if (VersionLookup is { } lookup)
+                await lookup(modId);
+            return ReleasesOf(modId).Select(release => release.Version).ToList();
+        }
 
         public Task<IReadOnlyList<ModMetadata>> SearchAsync(string query, CancellationToken cancellationToken = default) =>
             Task.FromResult<IReadOnlyList<ModMetadata>>([]);

@@ -301,6 +301,8 @@ public partial class MainViewModel
                 pack.PendingReasons = reasons;
                 pack.Choices = choices;
                 HoldPack(pack, plan);
+                if (choices is not null)
+                    ReplanOnChange(pack, choices, replanned => HoldPack(pack, replanned));
             }
             else
             {
@@ -387,14 +389,20 @@ public partial class MainViewModel
         var completed = false;
         string? stopped = null;
         string? error = null;
+        int? revision = null;
         try
         {
             if (pack.Choices is { } choices)
             {
-                var shown = pack.PendingPlan?.Warnings ?? [];
+                await WhenPlanningEndedAsync(choices);
+                revision = choices.Revision;
+                var shown = (pack.PendingPlan ?? choices.ShownPlan)?.Warnings ?? [];
                 var instance = await services.Instances.GetByIdAsync(choices.InstanceId)
                     ?? throw new InvalidOperationException(Localization.InstallInstanceMissing);
                 var plan = await PlanWithChoicesAsync(services, PlanningRequest(services, instance, choices.Requested), choices);
+                if (revision != choices.Revision)
+                    return;
+
                 if (choices.Apply(plan) || !plan.IsReady || !plan.Warnings.All(shown.Contains))
                 {
                     HoldPack(pack, plan);
@@ -422,6 +430,8 @@ public partial class MainViewModel
         {
             EndInstallRun(run, completed, stopped is not null, error);
             pack.EndInstall(stopped);
+            if (error is null)
+                ReplanIfChanged(pack, revision);
         }
 
         if (executed)
@@ -463,7 +473,7 @@ public enum PackPageTab
 /// <summary>
 /// One row of the Modpacks tab, and the pack the pack page shows.
 /// </summary>
-public sealed partial class PackItem : ObservableObject, IInstallProgressRow
+public sealed partial class PackItem : ObservableObject, IPlanRow
 {
     private readonly MainViewModel _owner;
 

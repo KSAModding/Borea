@@ -230,6 +230,56 @@ public sealed class PackViewModelTests
     }
 
     [Fact]
+    public async Task Install_RecommendationCleared_TheButtonShowsTheSmallerSize()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: snapshot =>
+            Recommend(WithPacks(Pack("tools-pack", "Tools Pack", Version("1.0.0", Pin("MeasureTools", "1.1.10"))))(snapshot), "MeasureTools", "1.1.10", "AdvancedFlightComputer"));
+        var viewModel = harness.ViewModel;
+        await ActivateInstanceAsync(harness);
+        viewModel.ShowDiscoverModpacksCommand.Execute(null);
+        var pack = Assert.Single(viewModel.DiscoverPacks);
+        await pack.InstallCommand.ExecuteAsync(null);
+        var measureToolsOnly = $"{harness.Localization.InstallAnyway} ({MainViewModel.SizeText(41_782)})";
+        Assert.StartsWith($"{harness.Localization.InstallAnyway} (", pack.ConfirmInstallText, StringComparison.Ordinal);
+        Assert.NotEqual(measureToolsOnly, pack.ConfirmInstallText);
+
+        pack.Choices!.Recommended.Single().IsSelected = false;
+        await ViewModelHarness.WaitUntilAsync(() => pack.PendingPlan is not null);
+
+        Assert.Equal(measureToolsOnly, pack.ConfirmInstallText);
+    }
+
+    [Fact]
+    public async Task Install_ChoiceChangedWhileConfirmPlans_RunsNothingAndShowsTheNewSize()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: snapshot =>
+            Recommend(WithPacks(Pack("tools-pack", "Tools Pack", Version("1.0.0", Pin("MeasureTools", "1.1.10"))))(snapshot), "MeasureTools", "1.1.10", "AdvancedFlightComputer"));
+        var viewModel = harness.ViewModel;
+        await ActivateInstanceAsync(harness);
+        viewModel.ShowDiscoverModpacksCommand.Execute(null);
+        var pack = Assert.Single(viewModel.DiscoverPacks);
+        await pack.InstallCommand.ExecuteAsync(null);
+        var planning = new TaskCompletionSource();
+        var lookups = 0;
+        harness.SpaceDock.VersionLookup = _ =>
+        {
+            Interlocked.Increment(ref lookups);
+            return planning.Task;
+        };
+
+        var confirm = pack.ConfirmInstallCommand.ExecuteAsync(null);
+        await ViewModelHarness.WaitUntilAsync(() => Volatile.Read(ref lookups) > 0);
+        pack.Choices!.Recommended.Single().IsSelected = false;
+        planning.SetResult();
+        await confirm;
+        await ViewModelHarness.WaitUntilAsync(() => pack.PendingPlan is not null);
+
+        Assert.NotNull(pack.Choices);
+        Assert.Equal($"{harness.Localization.InstallAnyway} ({MainViewModel.SizeText(41_782)})", pack.ConfirmInstallText);
+        Assert.DoesNotContain(harness.Requests, uri => uri.AbsoluteUri.EndsWith(".zip", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public async Task Install_UntestedDeprecatedPack_WaitsForConfirmation()
     {
         var pack = Pack("armory-pack", "Armory Pack", Version("1.0.0", Pin("KSArmory", "0.8.44")))
