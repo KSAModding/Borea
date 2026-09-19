@@ -1,3 +1,4 @@
+using System.Collections.Specialized;
 using System.IO.Compression;
 using System.Net;
 using System.Net.Http.Headers;
@@ -72,6 +73,28 @@ public sealed class PackViewModelTests
 
         viewModel.DiscoverGameMin = viewModel.GameVersionOptions.Single(build => build.Revision == 5402);
         Assert.Equal(["starter-pack"], viewModel.DiscoverPacks.Select(pack => pack.PackId));
+    }
+
+    [Fact]
+    public async Task ModpacksTab_FiltersThatKeepThePacks_LeaveTheRowsAlone()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: WithPacks(
+            Pack("starter-pack", "Starter Pack", Version("1.0.0", Pin("MeasureTools", "1.1.10"))),
+            Pack("armory-pack", "Armory Pack", Version("1.0.0", Pin("KSArmory", "0.8.44")))));
+        var viewModel = harness.ViewModel;
+        await viewModel.EnsureDiscoverLoadedAsync();
+        viewModel.ShowDiscoverModpacksCommand.Execute(null);
+        var rows = viewModel.DiscoverPacks.ToList();
+        var changes = new List<NotifyCollectionChangedAction>();
+        viewModel.DiscoverPacks.CollectionChanged += (_, e) => changes.Add(e.Action);
+
+        viewModel.HideInstalled = true;
+        viewModel.HideIncompatible = true;
+        viewModel.SearchText = "armory";
+        viewModel.SearchText = string.Empty;
+
+        Assert.Equal(rows, viewModel.DiscoverPacks);
+        Assert.Equal([NotifyCollectionChangedAction.Remove, NotifyCollectionChangedAction.Add], changes);
     }
 
     [Fact]

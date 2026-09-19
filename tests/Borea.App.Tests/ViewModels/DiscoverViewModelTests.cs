@@ -1,3 +1,5 @@
+using System.Collections.ObjectModel;
+using System.Collections.Specialized;
 using System.Globalization;
 using System.Text.Json.Nodes;
 using Borea.App.ViewModels;
@@ -510,6 +512,38 @@ public sealed class DiscoverViewModelTests
         viewModel.SelectDiscoverSortCommand.Execute(order);
 
         Assert.Equal(expected, viewModel.DiscoverItems.Select(item => item.ModId));
+    }
+
+    [Fact]
+    public async Task Sort_Change_MovesTheSameRows()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: json => WithDownloads(json, "MeasureTools", 56));
+        var viewModel = harness.ViewModel;
+        await viewModel.EnsureDiscoverLoadedAsync();
+        var rows = viewModel.DiscoverItems.ToDictionary(item => item.ModId);
+        var changes = new List<NotifyCollectionChangedAction>();
+        viewModel.DiscoverItems.CollectionChanged += (_, e) => changes.Add(e.Action);
+
+        viewModel.SelectDiscoverSortCommand.Execute(DiscoverSortOrder.Name);
+
+        Assert.Equal(["AdvancedFlightComputer", "KSArmory", "MeasureTools"], viewModel.DiscoverItems.Select(item => item.ModId));
+        Assert.All(viewModel.DiscoverItems, item => Assert.Same(rows[item.ModId], item));
+        Assert.All(changes, change => Assert.Equal(NotifyCollectionChangedAction.Move, change));
+    }
+
+    [Fact]
+    public void Arrange_KeepsTheRowsThatStayAndFollowsTheNewOrder()
+    {
+        var rows = new ObservableCollection<string> { "a", "b", "c", "d", "e" };
+        var changes = new List<NotifyCollectionChangedAction>();
+        rows.CollectionChanged += (_, e) => changes.Add(e.Action);
+
+        MainViewModel.Arrange(rows, ["e", "c", "x", "a"]);
+
+        Assert.Equal(["e", "c", "x", "a"], rows);
+        Assert.DoesNotContain(NotifyCollectionChangedAction.Reset, changes);
+        Assert.Equal(2, changes.Count(change => change == NotifyCollectionChangedAction.Remove));
+        Assert.Equal(1, changes.Count(change => change == NotifyCollectionChangedAction.Add));
     }
 
     [Fact]

@@ -1,3 +1,4 @@
+using System.Collections.Specialized;
 using Borea.App.ViewModels;
 using Borea.Core.Index;
 using Borea.Core.Mods;
@@ -113,6 +114,49 @@ public sealed class ImageViewModelTests
         Assert.True(icon.IsLoaded);
         Assert.Null(icon.Failure);
         Assert.Equal([false, true], harness.Images.Requests.Select(request => request.LoadFromAuthorHosts));
+    }
+
+    [Fact]
+    public async Task DiscoverFilters_ThatKeepTheRows_LeaveTheRowsAndTheirLoadedIconsAlone()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: WithImages("AdvancedFlightComputer", $$"""{ "icon": {{Icon(IconUrl)}} }"""));
+        harness.Images.Respond = _ => ContentImageResult.Loaded(IconBytes);
+        var viewModel = harness.ViewModel;
+        var icon = await DiscoverIconAsync(harness);
+        await icon.LoadAsync();
+        var rows = viewModel.DiscoverItems.ToList();
+        var changes = new List<NotifyCollectionChangedAction>();
+        viewModel.DiscoverItems.CollectionChanged += (_, e) => changes.Add(e.Action);
+
+        viewModel.HideInstalled = true;
+        viewModel.HideIncompatible = true;
+
+        Assert.Empty(changes);
+        Assert.Equal(rows, viewModel.DiscoverItems);
+        Assert.True(icon.IsLoaded);
+        Assert.Single(harness.Images.Requests);
+    }
+
+    [Fact]
+    public async Task DiscoverFilter_RowThatComesBack_IsTheSameRowWithItsLoadedIcon()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: WithImages("AdvancedFlightComputer", $$"""{ "icon": {{Icon(IconUrl)}} }"""));
+        harness.Images.Respond = _ => ContentImageResult.Loaded(IconBytes);
+        var viewModel = harness.ViewModel;
+        var icon = await DiscoverIconAsync(harness);
+        await icon.LoadAsync();
+        var rows = viewModel.DiscoverItems.ToList();
+        var changes = new List<NotifyCollectionChangedAction>();
+        viewModel.DiscoverItems.CollectionChanged += (_, e) => changes.Add(e.Action);
+
+        viewModel.SearchText = "armory";
+        viewModel.SearchText = string.Empty;
+
+        Assert.Equal(rows, viewModel.DiscoverItems);
+        Assert.DoesNotContain(NotifyCollectionChangedAction.Reset, changes);
+        Assert.Same(icon, viewModel.DiscoverItems.Single(item => item.ModId == "AdvancedFlightComputer").Icon);
+        Assert.True(icon.IsLoaded);
+        Assert.Single(harness.Images.Requests);
     }
 
     [Fact]

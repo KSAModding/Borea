@@ -94,9 +94,7 @@ public partial class MainViewModel
             filtered = filtered.Where(pack => matchingSet.Contains(pack.Metadata));
         }
 
-        DiscoverPacks.Clear();
-        foreach (var pack in SortPacks(filtered))
-            DiscoverPacks.Add(pack);
+        Arrange(DiscoverPacks, SortPacks(filtered).ToList());
     }
 
     /// <summary>A pack carries no download counts, so Popularity keeps the name order.</summary>

@@ -25,6 +25,7 @@ public sealed class ListingImageView : Decorator
     private static readonly TimeSpan PulseLimit = TimeSpan.FromSeconds(30);
     private static readonly TimeSpan FadeDuration = TimeSpan.FromMilliseconds(200);
     private static readonly TimeSpan CachedFadeDuration = TimeSpan.FromMilliseconds(100);
+    private static readonly BitmapShelf Shelf = new(32 * 1024 * 1024);
 
     public static readonly StyledProperty<ListingImage?> ImageProperty =
         AvaloniaProperty.Register<ListingImageView, ListingImage?>(nameof(Image));
@@ -45,6 +46,8 @@ public sealed class ListingImageView : Decorator
     private readonly Panel _pulse = new() { Opacity = 0 };
     private ListingImage? _observed;
     private Bitmap? _bitmap;
+    private ListingImage? _bitmapImage;
+    private byte[]? _bitmapBytes;
     private byte[]? _decoding;
     private int _decodingWidth;
     private int _generation;
@@ -109,6 +112,8 @@ public sealed class ListingImageView : Decorator
     internal DisplayState State { get; private set; }
 
     internal bool IsPulsing => _pulseStartedAt != 0;
+
+    internal int? BitmapWidth => _bitmap?.PixelSize.Width;
 
     /// <summary>The largest rectangle with the image's aspect ratio inside the slot, centered, so the image is neither stretched nor cropped.</summary>
     internal static Rect Fit(Size image, Size slot)
@@ -284,16 +289,32 @@ public sealed class ListingImageView : Decorator
             return;
         }
 
+        if (_bitmap is null && Shelf.Take(bytes) is { } shelved)
+        {
+            _generation++;
+            _decoding = bytes;
+            _decodingWidth = shelved.PixelSize.Width;
+            _bitmap = shelved;
+            _bitmapImage = image;
+            _bitmapBytes = bytes;
+            UpdateState(fadeIn: false);
+            InvalidateVisual();
+        }
+
+        // before the first layout the slot size is unknown, so the decode waits for it
+        if (Bounds.Width <= 0 || Bounds.Height <= 0)
+            return;
+
         var width = DecodeWidth(image.Record, Bounds.Size, TopLevel.GetTopLevel(this)?.RenderScaling ?? 1);
         if (ReferenceEquals(bytes, _decoding) && (_decodeFailed || width <= _decodingWidth))
             return;
 
         _decoding = bytes;
         _decodingWidth = width;
-        _ = DecodeAsync(bytes, width, ++_generation);
+        _ = DecodeAsync(image, bytes, width, ++_generation);
     }
 
-    private async Task DecodeAsync(byte[] bytes, int width, int generation)
+    private async Task DecodeAsync(ListingImage image, byte[] bytes, int width, int generation)
     {
         Bitmap? bitmap = null;
         try
@@ -317,6 +338,8 @@ public sealed class ListingImageView : Decorator
 
         _bitmap?.Dispose();
         _bitmap = bitmap;
+        _bitmapImage = bitmap is null ? null : image;
+        _bitmapBytes = bitmap is null ? null : bytes;
         _decodeFailed = bitmap is null;
         UpdateState();
         InvalidateVisual();
@@ -331,13 +354,19 @@ public sealed class ListingImageView : Decorator
         _decoding = null;
         _decodingWidth = 0;
         _decodeFailed = false;
-        _bitmap?.Dispose();
+        // only an icon can come back, because its image is shared and keeps its bytes
+        if (_bitmapImage is { Record: IconImage, Bytes: { } bytes } && ReferenceEquals(bytes, _bitmapBytes))
+            Shelf.Put(bytes, _bitmap!);
+        else
+            _bitmap?.Dispose();
         _bitmap = null;
+        _bitmapImage = null;
+        _bitmapBytes = null;
         UpdateState();
         InvalidateVisual();
     }
 
-    private void UpdateState()
+    private void UpdateState(bool fadeIn = true)
     {
         var image = Image;
         var state = _bitmap is not null ? DisplayState.Loaded
@@ -347,7 +376,7 @@ public sealed class ListingImageView : Decorator
         var fade = TimeSpan.Zero;
         if (state != State)
         {
-            if (state == DisplayState.Loaded && image is { LoadsFromAuthorHosts: true })
+            if (fadeIn && state == DisplayState.Loaded && image is { LoadsFromAuthorHosts: true })
                 fade = IsPulsing && Stopwatch.GetElapsedTime(_pulseStartedAt) >= PulseDelay ? FadeDuration : CachedFadeDuration;
 
             State = state;

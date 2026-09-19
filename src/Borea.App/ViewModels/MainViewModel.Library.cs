@@ -60,24 +60,6 @@ public partial class MainViewModel
 
     private void RefreshOtherInstances() => Arrange(OtherInstances, Instances.Where(item => !item.IsActive).ToList());
 
-    private static void Arrange(ObservableCollection<InstanceItem> rows, List<InstanceItem> order)
-    {
-        for (var index = rows.Count - 1; index >= 0; index--)
-        {
-            if (!order.Contains(rows[index]))
-                rows.RemoveAt(index);
-        }
-
-        for (var index = 0; index < order.Count; index++)
-        {
-            var current = rows.IndexOf(order[index]);
-            if (current < 0)
-                rows.Insert(index, order[index]);
-            else if (current != index)
-                rows.Move(current, index);
-        }
-    }
-
     private async Task<DateTimeOffset?> LastPlayedAsync(Instance instance)
         => _services is null
             ? instance.LastPlayedAt

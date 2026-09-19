@@ -477,6 +477,26 @@ public partial class MainViewModel : ViewModelBase
 
     internal static string DateTimeText(DateTimeOffset at) => at.ToLocalTime().ToString("g", CultureInfo.CurrentCulture);
 
+    /// <summary>Brings the rows into the given order in place, so a row that stays keeps its view and what the view shows.</summary>
+    internal static void Arrange<T>(ObservableCollection<T> rows, IReadOnlyList<T> order)
+    {
+        var kept = order.ToHashSet();
+        for (var index = rows.Count - 1; index >= 0; index--)
+        {
+            if (!kept.Contains(rows[index]))
+                rows.RemoveAt(index);
+        }
+
+        for (var index = 0; index < order.Count; index++)
+        {
+            var current = rows.IndexOf(order[index]);
+            if (current < 0)
+                rows.Insert(index, order[index]);
+            else if (current != index)
+                rows.Move(current, index);
+        }
+    }
+
     /// <summary>
     /// Opens "modal: new instance" from #8.
     /// </summary>

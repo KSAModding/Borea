@@ -1,11 +1,14 @@
+using System.Collections.ObjectModel;
 using System.Runtime.InteropServices;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.Templates;
 using Avalonia.Headless;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
 using Avalonia.Threading;
+using Avalonia.VisualTree;
 using Borea.App.ViewModels;
 using Borea.App.Views;
 using Borea.Core.Index;
@@ -255,6 +258,112 @@ public sealed class ListingImageViewTests
         }, timeout.Token);
 
         Assert.Equal((true, false, true), pulsing);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task ListRow_ComesBackOrMoves_ShowsItsImageInTheFirstFrame(bool move)
+    {
+        var session = HeadlessApp.Session;
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+
+        var shown = await session.Dispatch(async () =>
+        {
+            var owner = new MainViewModel();
+            var first = new ListingImage(owner, Icon(256, 256)) { Bytes = LeftHalfBluePng() };
+            var second = new ListingImage(owner, Icon(256, 256)) { Bytes = LeftHalfBluePng() };
+            var rows = new ObservableCollection<ListingImage> { first, second };
+            var list = new ItemsControl
+            {
+                ItemsSource = rows,
+                ItemTemplate = new FuncDataTemplate<ListingImage>((image, _) => new ListingImageView { Image = image, Background = Brushes.Red, Width = 40, Height = 40, Child = new Border() }),
+            };
+            var window = new Window { Width = 40, Height = 80, Content = list };
+            window.Show();
+            ListingImageView ViewOf(ListingImage image) => list.GetVisualDescendants().OfType<ListingImageView>().Single(view => view.Image == image);
+            while (ViewOf(first).State != ListingImageView.DisplayState.Loaded || ViewOf(second).State != ListingImageView.DisplayState.Loaded)
+                await Task.Delay(10, timeout.Token);
+            var before = ViewOf(second);
+
+            if (move)
+            {
+                rows.Move(1, 0);
+            }
+            else
+            {
+                rows.Remove(second);
+                window.UpdateLayout();
+                rows.Add(second);
+            }
+
+            window.UpdateLayout();
+            var after = ViewOf(second);
+            var at = after.TranslatePoint(new Point(10, 20), window)!.Value;
+            Dispatcher.UIThread.RunJobs();
+            AvaloniaHeadlessPlatform.ForceRenderTimerTick();
+            using var frame = window.CaptureRenderedFrame()!;
+            using var buffer = frame.Lock();
+            return (NewView: !ReferenceEquals(before, after), after.State, Pixel(buffer, (int)at.X, (int)at.Y));
+        }, timeout.Token);
+
+        Assert.Equal((true, ListingImageView.DisplayState.Loaded, Colors.Blue), shown);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task State_ImageShownAgainInANewView_TakesOnlyAnIconFromTheShelf(bool icon)
+    {
+        var session = HeadlessApp.Session;
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+
+        var state = await session.Dispatch(async () =>
+        {
+            ContentImage record = icon ? Icon(256, 256) : new DescriptionImage("shot", Url, Digest, 256, 256, 1000);
+            var image = new ListingImage(new MainViewModel(), record) { Bytes = LeftHalfBluePng() };
+            var first = Show(image);
+            while (first.State != ListingImageView.DisplayState.Loaded)
+                await Task.Delay(10, timeout.Token);
+
+            var window = (Window)TopLevel.GetTopLevel(first)!;
+            window.Content = null;
+            window.Content = new ListingImageView { Image = image, Child = new Border() };
+            window.UpdateLayout();
+
+            return ((ListingImageView)window.Content).State;
+        }, timeout.Token);
+
+        Assert.Equal(icon ? ListingImageView.DisplayState.Loaded : ListingImageView.DisplayState.Loading, state);
+    }
+
+    [Fact]
+    public async Task Show_BeforeTheFirstLayout_WaitsAndDecodesAtTheSlotWidth()
+    {
+        var session = HeadlessApp.Session;
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+
+        var decoded = await session.Dispatch(async () =>
+        {
+            var image = new ListingImage(new MainViewModel(), Icon(256, 256)) { Bytes = LeftHalfBluePng() };
+            var view = new ListingImageView { Image = image, Child = new Border() };
+            var slot = new Border { Width = 0, Height = 40, Child = view };
+            var window = new Window { Width = 80, Height = 40, Content = slot };
+            window.Show();
+            Dispatcher.UIThread.RunJobs();
+            var unsized = (view.State, view.BitmapWidth);
+
+            slot.Width = 40;
+            window.UpdateLayout();
+            while (view.State != ListingImageView.DisplayState.Loaded)
+                await Task.Delay(10, timeout.Token);
+
+            return (Unsized: unsized, view.BitmapWidth, Expected: ListingImageView.DecodeWidth(image.Record, view.Bounds.Size, window.RenderScaling));
+        }, timeout.Token);
+
+        Assert.Equal((ListingImageView.DisplayState.Loading, (int?)null), decoded.Unsized);
+        Assert.Equal(decoded.Expected, decoded.BitmapWidth);
+        Assert.True(decoded.BitmapWidth < 256);
     }
 
     private static ListingImageView Show(ListingImage image)
