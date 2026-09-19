@@ -17,6 +17,8 @@ public sealed class InstallStopTests
 
     private readonly TaskCompletionSource _downloading = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
+    private readonly TaskCompletionSource _hang = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
     [Fact]
     public void StopText_AfterTheDownload_SaysThatTheModFinishesFirst()
     {
@@ -292,6 +294,121 @@ public sealed class InstallStopTests
         Assert.Equal(harness.Localization.InstallStopped, item.ProgressStatus);
     }
 
+    [Fact]
+    public async Task Close_WhileAnInstallDoesNotStop_WaitsAndTheSecondRequestOpensTheModal()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(respond: HangArchive);
+        var viewModel = harness.ViewModel;
+        var (task, install) = await HangingInstallAsync(harness);
+        var closed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        Assert.False(viewModel.RequestClose(closed.SetResult));
+        Assert.True(viewModel.IsClosing);
+        Assert.False(viewModel.IsCloseNowOpen);
+
+        Assert.False(viewModel.RequestClose(closed.SetResult));
+        Assert.True(viewModel.IsCloseNowOpen);
+        Assert.Same(task, Assert.Single(viewModel.CloseWaitsFor));
+        Assert.True(viewModel.CloseStopsInstall);
+        Assert.False(viewModel.IsCloseWaitingForHistory);
+        Assert.False(closed.Task.IsCompleted);
+
+        _hang.SetResult();
+        await install;
+        await closed.Task.WaitAsync(Timeout);
+    }
+
+    [Fact]
+    public async Task KeepWaiting_ClosesTheModalAndTheWindowClosesOnceTheInstallEnds()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(respond: HangArchive);
+        var viewModel = harness.ViewModel;
+        var (_, install) = await HangingInstallAsync(harness);
+        var closed = 0;
+        var endedApp = false;
+        viewModel.EndApp = () => endedApp = true;
+        viewModel.RequestClose(() => closed++);
+        viewModel.RequestClose(() => closed++);
+
+        viewModel.KeepWaitingCommand.Execute(null);
+
+        Assert.False(viewModel.IsCloseNowOpen);
+        Assert.True(viewModel.HasRunningInstalls);
+        _hang.SetResult();
+        await install;
+        await WaitUntilAsync(() => closed > 0);
+        Assert.Equal(1, closed);
+        Assert.False(endedApp);
+    }
+
+    [Fact]
+    public async Task CloseNow_LogsTheUnfinishedInstallAndEndsTheApp()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(respond: HangArchive);
+        var viewModel = harness.ViewModel;
+        var (task, install) = await HangingInstallAsync(harness);
+        var closed = false;
+        var endedApp = 0;
+        viewModel.EndApp = () => endedApp++;
+        viewModel.RequestClose(() => closed = true);
+        viewModel.RequestClose(() => closed = true);
+
+        viewModel.CloseNowCommand.Execute(null);
+
+        Assert.Equal(1, endedApp);
+        Assert.False(viewModel.IsCloseNowOpen);
+        Assert.True(viewModel.RequestClose(() => closed = true));
+        Assert.False(closed);
+        Assert.EndsWith($"Closed at once before these tasks ended: ModInstall {task.Subject}.", harness.Services.Log.ReadRecentLines(5)[^1], StringComparison.Ordinal);
+
+        _hang.SetResult();
+        await install;
+    }
+
+    [Fact]
+    public async Task Close_WhenTheInstallEndsWhileTheModalIsOpen_ClosesTheWindowAndTheModal()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(respond: HangArchive);
+        var viewModel = harness.ViewModel;
+        var (_, install) = await HangingInstallAsync(harness);
+        var closed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var endedApp = false;
+        viewModel.EndApp = () => endedApp = true;
+        viewModel.RequestClose(closed.SetResult);
+        viewModel.RequestClose(closed.SetResult);
+        Assert.True(viewModel.IsCloseNowOpen);
+
+        _hang.SetResult();
+        await install;
+        await closed.Task.WaitAsync(Timeout);
+
+        Assert.False(viewModel.IsCloseNowOpen);
+        Assert.Empty(viewModel.CloseWaitsFor);
+        Assert.False(endedApp);
+        await viewModel.Tasks.WhenSavedAsync();
+        Assert.True(viewModel.RequestClose(() => { }));
+    }
+
+    [Fact]
+    public async Task Close_WithNothingRunning_ClosesAtOnce()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        await harness.ViewModel.LoadAsync();
+        await harness.ViewModel.Tasks.WhenSavedAsync();
+
+        Assert.True(harness.ViewModel.RequestClose(() => { }));
+        Assert.False(harness.ViewModel.IsClosing);
+    }
+
+    /// <summary>An install of AdvancedFlightComputer whose download ignores the stop until the test releases it.</summary>
+    private async Task<(TaskItem Task, Task Install)> HangingInstallAsync(ViewModelHarness harness)
+    {
+        var (_, item) = await ConfirmingInstallAsync(harness);
+        var install = item.ConfirmInstallCommand.ExecuteAsync(null);
+        await _downloading.Task.WaitAsync(Timeout);
+        return (Assert.Single(harness.ViewModel.Tasks.Running), install);
+    }
+
     /// <summary>The Discover row of AdvancedFlightComputer, waiting for the confirmation of an unknown compatibility.</summary>
     private static async Task<(Instance Instance, DiscoverItem Item)> ConfirmingInstallAsync(ViewModelHarness harness)
     {
@@ -349,6 +466,11 @@ public sealed class InstallStopTests
             ? new HttpResponseMessage(HttpStatusCode.OK) { Content = new StreamContent(new StalledBody(_downloading)) }
             : null;
 
+    private HttpResponseMessage? HangArchive(HttpRequestMessage request)
+        => request.RequestUri?.AbsolutePath.EndsWith("/AdvancedFlightComputer.zip", StringComparison.Ordinal) == true
+            ? new HttpResponseMessage(HttpStatusCode.OK) { Content = new StreamContent(new StalledBody(_downloading, _hang.Task)) }
+            : null;
+
     /// <summary>A response body that sends the first half and then nothing until its read is canceled.</summary>
     private sealed class HalfThenStalledBody(byte[] content, TaskCompletionSource halfway) : Stream
     {
@@ -399,8 +521,8 @@ public sealed class InstallStopTests
         public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
     }
 
-    /// <summary>A response body that sends nothing until its read is cancelled.</summary>
-    private sealed class StalledBody(TaskCompletionSource reading) : Stream
+    /// <summary>A response body that sends nothing until its read is cancelled, or with <paramref name="hang"/> until that completes.</summary>
+    private sealed class StalledBody(TaskCompletionSource reading, Task? hang = null) : Stream
     {
         public override bool CanRead => true;
 
@@ -419,7 +541,7 @@ public sealed class InstallStopTests
         public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
         {
             reading.TrySetResult();
-            await Task.Delay(System.Threading.Timeout.Infinite, cancellationToken);
+            await (hang ?? Task.Delay(System.Threading.Timeout.Infinite, cancellationToken));
             return 0;
         }
 

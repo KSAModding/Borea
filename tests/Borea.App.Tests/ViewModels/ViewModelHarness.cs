@@ -59,6 +59,9 @@ internal sealed class ViewModelHarness : IDisposable
     /// <summary>The image source every service graph of this harness uses, so no image request leaves the test.</summary>
     public FakeImageSource Images { get; } = new();
 
+    /// <summary>What the library folder changer asks before it moves the library.</summary>
+    public Func<bool> IsOtherBoreaRunning { get; set; } = () => false;
+
     /// <param name="seed">Writes settings the view model should start from; the services are rebuilt after it ran.</param>
     /// <param name="respond">Answers a request outside the content index. Null fails it.</param>
     /// <param name="editSnapshot">Changes the index snapshot before it is served.</param>
@@ -103,7 +106,7 @@ internal sealed class ViewModelHarness : IDisposable
         json => "{ \"tags\": " + $$"""{ "spec_version": 1, "mod": [{{string.Join(", ", tags.Select(tag => $$"""{ "tag": "{{tag.Tag}}", "name": "{{tag.Name}}", "meaning": "{{tag.Name}} content." }"""))}}] }""" + "," + json.TrimStart()[1..];
 
     public Task<BoreaServices> BuildServicesAsync() =>
-        BoreaServices.BuildAsync(Root, new IndexOnlyHandler(this), SpaceDock, Candidates, processStarter: _processStarter, images: Images, sharedProfileRoot: _sharedProfileRoot ?? Path.Combine(Root, "GameProfile"), isGameProcessRunning: () => false, isOtherBoreaRunning: () => false, gitHub: _gitHub);
+        BoreaServices.BuildAsync(Root, new IndexOnlyHandler(this), SpaceDock, Candidates, processStarter: _processStarter, images: Images, sharedProfileRoot: _sharedProfileRoot ?? Path.Combine(Root, "GameProfile"), isGameProcessRunning: () => false, isOtherBoreaRunning: () => IsOtherBoreaRunning(), gitHub: _gitHub);
 
     public void Dispose()
     {
