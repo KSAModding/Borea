@@ -6,6 +6,11 @@ on:
     paths:
       - 'site/**'
       - '.github/workflows/pages.yml'
+      - '.github/scripts/build_share_pages.py'
+      - '.github/scripts/listing_icons.py'
+  # The share pages follow the content index, so the site is rebuilt every hour.
+  schedule:
+    - cron: '23 * * * *'
   workflow_dispatch:
 
 permissions:
@@ -18,16 +23,57 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  build:
+    runs-on: ubuntu-24.04
+    outputs:
+      changed: ${{ steps.compare.outputs.changed }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Test the share page scripts
+        run: python3 -m unittest discover --start-directory .github/scripts/tests --pattern 'test_*.py'
+      # Verified icons from the last build, so an unchanged icon is not fetched from its author host again.
+      - id: icons
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        with:
+          path: ${{ runner.temp }}/icon-cache
+          key: share-page-icons
+          restore-keys: share-page-icons-
+      # A snapshot that cannot be read fails this step, so the last deployment stays.
+      - name: Build the site
+        run: python3 .github/scripts/build_share_pages.py --site site --out "$RUNNER_TEMP/site" --icon-cache "$RUNNER_TEMP/icon-cache"
+      # A scheduled run deploys only when the site differs from the one that is live.
+      - id: compare
+        name: Compare with the deployed site
+        run: |
+          mkdir -p "$RUNNER_TEMP/icon-cache"
+          echo "icons=share-page-icons-$(ls "$RUNNER_TEMP/icon-cache" | LC_ALL=C sort | sha256sum | cut -c1-64)" >> "$GITHUB_OUTPUT"
+          built=$(cd "$RUNNER_TEMP/site" && find . -type f -print0 | LC_ALL=C sort -z | xargs -0 sha256sum | sha256sum | cut -c1-64)
+          deployed=$(curl -fsS --max-time 30 https://ksamodding.github.io/Borea/build.sha256 || true)
+          echo "$built" > "$RUNNER_TEMP/site/build.sha256"
+          if [ "$GITHUB_EVENT_NAME" = schedule ] && [ "$built" = "$deployed" ]; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+      - if: steps.icons.outputs.cache-matched-key != steps.compare.outputs.icons
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        with:
+          path: ${{ runner.temp }}/icon-cache
+          key: ${{ steps.compare.outputs.icons }}
+      - if: steps.compare.outputs.changed == 'true'
+        uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6
+      - if: steps.compare.outputs.changed == 'true'
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5
+        with:
+          path: ${{ runner.temp }}/site
+
   deploy:
+    needs: build
+    if: needs.build.outputs.changed == 'true'
     runs-on: ubuntu-24.04
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-      - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6
-      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5
-        with:
-          path: site
       - id: deployment
         uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5
