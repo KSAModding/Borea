@@ -215,7 +215,9 @@ public partial class MainViewModel
     /// Any warning about the pack or its pinned releases waits on the row until the user confirms.
     /// </summary>
     /// <param name="targetInstanceId">The instance a Try again of the Tasks page installs into. Null installs into the active instance.</param>
-    internal async Task InstallPackAsync(PackItem pack, Guid? targetInstanceId = null)
+    /// <param name="version">A usable version to install instead of the newest one.</param>
+    /// <param name="confirm">Waits for the confirmation even without a warning, for an install that a borea:// link asked for.</param>
+    internal async Task InstallPackAsync(PackItem pack, Guid? targetInstanceId = null, ModVersion? version = null, bool confirm = false)
     {
         if (_services is null || (targetInstanceId ?? ActiveInstance?.InstanceId) is not { } instanceId || pack.IsInstalling)
             return;
@@ -230,13 +232,14 @@ public partial class MainViewModel
         var services = _services;
         pack.ClearOutcome();
         pack.IsInstalling = true;
-        var run = pack.Run = StartInstallRun(StartTask(TaskKind.PackInstall, pack.Name, instanceId, pack.PackId, state: TaskState.Waiting));
+        pack.RequestedVersion = version;
+        var run = pack.Run = StartInstallRun(StartPackInstallTask(pack, instanceId));
         var executed = false;
         var completed = false;
         string? stopped = null;
         try
         {
-            var selected = await services.ModPacks.GetLatestAsync(pack.PackId);
+            var selected = version is { } exact ? await services.ModPacks.GetVersionAsync(pack.PackId, exact) : await services.ModPacks.GetLatestAsync(pack.PackId);
             if (selected?.Metadata is not { } metadata)
                 throw new InvalidOperationException(Localization.DiscoverNoRelease);
 
@@ -285,7 +288,7 @@ public partial class MainViewModel
             {
                 stopped = StoppedText(pack);
             }
-            else if (reasons.Count > 0 || choices is not null || (plan is { IsReady: true } && PackPlanWarnings(plan).Count > 0))
+            else if (confirm || reasons.Count > 0 || choices is not null || (plan is { IsReady: true } && PackPlanWarnings(plan).Count > 0))
             {
                 pack.PendingInstall = request;
                 pack.PendingReasons = reasons;
@@ -372,7 +375,7 @@ public partial class MainViewModel
 
         var services = _services;
         pack.IsInstalling = true;
-        var run = pack.Run = StartInstallRun(StartTask(TaskKind.PackInstall, pack.Name, request.InstanceId, pack.PackId, state: TaskState.Waiting));
+        var run = pack.Run = StartInstallRun(StartPackInstallTask(pack, request.InstanceId));
         var executed = false;
         var completed = false;
         string? stopped = null;
@@ -571,6 +574,9 @@ public sealed partial class PackItem : ObservableObject, IInstallProgressRow
     public string ConfirmInstallText => _owner.ConfirmInstallText(InstallWarning, PendingPlan);
 
     internal ModPackInstallRequest? PendingInstall { get; set; }
+
+    /// <summary>The version a borea:// link pinned for the last install, so Try again keeps it. Null for the newest.</summary>
+    internal ModVersion? RequestedVersion { get; set; }
 
     /// <summary>The warnings about the pack itself, without those of <see cref="PendingPlan"/>.</summary>
     internal IReadOnlyList<string> PendingReasons { get; set; } = [];
