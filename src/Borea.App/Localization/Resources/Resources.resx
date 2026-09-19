@@ -72,6 +72,15 @@
   <data name="SettingsFetchAnnouncements" xml:space="preserve">
     <value>Show news from the KSAModding team</value>
   </data>
+  <data name="SettingsLinksLabel" xml:space="preserve">
+    <value>Links</value>
+  </data>
+  <data name="SettingsOpenBoreaLinks" xml:space="preserve">
+    <value>Open borea:// links with this Borea</value>
+  </data>
+  <data name="SettingsOpenBoreaLinksHint" xml:space="preserve">
+    <value>Mod pages can link straight into Borea. A link never installs anything without your click.</value>
+  </data>
   <data name="SettingsReleaseChannelLabel" xml:space="preserve">
     <value>Mod release channel</value>
   </data>
@@ -935,6 +944,24 @@
   </data>
   <data name="DiscoverNoRelease" xml:space="preserve">
     <value>This listing has no release to install.</value>
+  </data>
+  <data name="LinkRefused" xml:space="preserve">
+    <value>Borea cannot open this link.</value>
+  </data>
+  <data name="LinkNotInIndexFormat" xml:space="preserve">
+    <value>{0} is not in the content index.</value>
+  </data>
+  <data name="LinkAlreadyInstalledFormat" xml:space="preserve">
+    <value>{0} is already in {1}.</value>
+  </data>
+  <data name="LinkInstallFormat" xml:space="preserve">
+    <value>The link asks to add {0} to {1}.</value>
+  </data>
+  <data name="LinkVersionMissingFormat" xml:space="preserve">
+    <value>Version {0} is not in the content index, so Borea offers the newest release instead.</value>
+  </data>
+  <data name="LinkVersionYankedFormat" xml:space="preserve">
+    <value>Version {0} is yanked, so Borea offers the newest release instead.</value>
   </data>
   <data name="InstallAnyway" xml:space="preserve">
     <value>Install anyway</value>

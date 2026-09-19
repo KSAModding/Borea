@@ -43,6 +43,7 @@ The App archive contains one program, `borea` (`borea.exe` on Windows).
 Started without arguments, it opens the desktop App.
 Only one App runs for each user, so a second start brings the open window to the front.
 Started with arguments, it runs a command, for example `borea --help`.
+Started with one `borea://` link, such as `borea://mod/<id>`, it opens that page in the App, and on Windows and Linux the App registers itself for these links.
 Most users want this archive.
 The CLI archive contains only the command line.
 It is a smaller download for scripts and for computers without a desktop.

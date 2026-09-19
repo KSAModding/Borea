@@ -7,11 +7,13 @@ using Avalonia.Markup.Xaml;
 using Avalonia.Styling;
 using Avalonia.Threading;
 using Borea.App.Formatting;
+using Borea.App.Links;
 using Borea.App.Localization;
 using Borea.App.SingleInstance;
 using Borea.App.ViewModels;
 using Borea.App.Views;
 using Borea.Composition;
+using Borea.Core.Links;
 using Borea.Core.Preferences;
 
 namespace Borea.App;
@@ -37,6 +39,8 @@ public partial class App : Application
     private readonly PrimaryInstance? _primary;
 
     private WindowFront? _windowFront;
+
+    private MainViewModel? _viewModel;
 
     public App()
     {
@@ -89,7 +93,9 @@ public partial class App : Application
                 Services)
             {
                 PreferencesLoadStatus = _preferencesLoadStatus,
+                LinkHandler = Services is null ? null : LinkHandler.ForThisProcess(),
             };
+            _viewModel = viewModel;
 
             ApplyTheme(viewModel.CurrentTheme);
             viewModel.PropertyChanged += OnViewModelPropertyChanged;
@@ -134,6 +140,9 @@ public partial class App : Application
     {
         if (start.Forwarded)
             _windowFront?.BringToFront();
+
+        if (start.Arguments is [var first, ..] && BoreaLink.HasScheme(first) && _viewModel is { } viewModel)
+            Dispatcher.UIThread.Post(async () => await viewModel.OpenStartLinkAsync(start.Arguments));
     }
 
     private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)

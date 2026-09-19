@@ -33,6 +33,7 @@
                                     <TextBlock Classes="body-md secondary" Text="{Binding SelectedPack.Abstract}" TextWrapping="Wrap" LineHeight="18" />
                                     <ContentControl Margin="0,8,0,0" Content="{Binding SelectedPack.Choices}" IsVisible="{Binding SelectedPack.Choices, Converter={x:Static ObjectConverters.IsNotNull}}" />
                                     <WrapPanel ItemSpacing="8" LineSpacing="8" Margin="0,8,0,0" IsVisible="{Binding SelectedPack.IsConfirmingInstall}">
+                                        <TextBlock Classes="body-sm" Text="{Binding SelectedPack.LinkRequestText}" IsVisible="{Binding SelectedPack.LinkRequestText, Converter={x:Static ObjectConverters.IsNotNull}}" TextWrapping="Wrap" VerticalAlignment="Center" />
                                         <TextBlock Classes="body-sm secondary" Text="{Binding SelectedPack.InstallWarning}" TextWrapping="Wrap" VerticalAlignment="Center" />
                                         <Button Classes="text primary" Content="{Binding SelectedPack.ConfirmInstallText}" Command="{Binding SelectedPack.ConfirmInstallCommand}" IsEnabled="{Binding SelectedPack.Choices.IsComplete, FallbackValue={x:True}}" />
                                         <Button Classes="text" Content="{Binding Localization.LibraryCancel}" Command="{Binding SelectedPack.CancelInstallCommand}" />

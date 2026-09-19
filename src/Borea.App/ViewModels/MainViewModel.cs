@@ -285,9 +285,12 @@ public partial class MainViewModel : ViewModelBase
     /// Fills the Current Install card and the instance list. Safe to call
     /// without services; the views then show their empty states.
     /// </summary>
-    public async Task LoadAsync()
+    public Task LoadAsync() => _startLoad = LoadStartAsync();
+
+    private async Task LoadStartAsync()
     {
         _ = Tasks.LoadAsync();
+        StartLinkRegistration();
         StartUpdateCheck();
         RecordFirstStart();
         StartAnnouncementCheck();
@@ -749,6 +752,7 @@ public partial class MainViewModel : ViewModelBase
             && left.DismissedGameRevision == right.DismissedGameRevision
             && left.FirstStartedAt == right.FirstStartedAt
             && left.FetchAnnouncements == right.FetchAnnouncements
+            && left.OpenBoreaLinks == right.OpenBoreaLinks
             && left.DismissedAnnouncements.SequenceEqual(right.DismissedAnnouncements, StringComparer.Ordinal);
 
     private void OnRegionalFormatChanged(object? sender, PropertyChangedEventArgs e)
