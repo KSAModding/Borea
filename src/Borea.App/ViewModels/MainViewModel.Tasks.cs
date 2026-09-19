@@ -96,6 +96,9 @@ public partial class MainViewModel
             case TaskKind.Update or TaskKind.UpdateAll when instance is not null:
                 await RetryUpdateAsync(task, instance);
                 break;
+            case TaskKind.PackUpdate when instance is not null:
+                await RetryPackUpdateAsync(task, instance);
+                break;
         }
     }
 
@@ -146,6 +149,15 @@ public partial class MainViewModel
         {
             FailRetry(task, Localization.TaskRetryModMissing);
         }
+    }
+
+    private async Task RetryPackUpdateAsync(TaskItem task, InstanceItem instance)
+    {
+        await OpenInstanceAsync(instance);
+        if (PackUpdate is { } update)
+            await UpdatePackAsync(update);
+        else
+            FailRetry(task, Localization.PackUpdateNotNewer);
     }
 
     private void FailRetry(TaskItem task, string reason)

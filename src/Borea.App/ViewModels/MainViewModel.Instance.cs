@@ -150,6 +150,8 @@ public partial class MainViewModel
 
         _runningUpdates.TryGetValue(item.InstanceId, out var running);
         UpdateAll = running as UpdateAllItem ?? new UpdateAllItem(this, item.InstanceId);
+        if (running is PackUpdateItem || PackUpdate?.InstanceId != item.InstanceId)
+            PackUpdate = running as PackUpdateItem;
         _selectedInstanceEntity = await _services.Instances.GetByIdAsync(item.InstanceId);
 
         var enabled = new HashSet<string>(ModIds.Comparer);
@@ -181,6 +183,7 @@ public partial class MainViewModel
 
         _content = content.OrderBy(content => content.Name, StringComparer.CurrentCultureIgnoreCase).ToList();
         _contentPack = await ResolveSourcePackAsync(_selectedInstanceEntity?.Source);
+        ShowPackUpdate(item.InstanceId, await FindPackUpdateAsync(_selectedInstanceEntity));
         RefreshContentGroups();
         OnPropertyChanged(nameof(HasUpdates));
         await LoadGameSavesAsync();
@@ -303,6 +306,11 @@ public partial class MainViewModel
 
         if (shown is not null)
         {
+            var packUpdate = await FindPackUpdateAsync(shown);
+            if (generation != _contentUpdateCheckGeneration)
+                return;
+
+            ShowPackUpdate(shown.InstanceId, packUpdate, keepSameVersion: true);
             foreach (var item in content.Where(item => item.IsOwned))
             {
                 var installed = shown.Mods.FirstOrDefault(mod => ModIds.Equals(mod.ModId, item.ModId));
@@ -451,9 +459,12 @@ public partial class MainViewModel
         if ((error is null && stopped is null) || SelectedInstance?.InstanceId != instanceId)
             return;
 
-        IInstallRow? target = row is ContentItem item
-            ? _content.FirstOrDefault(content => ModIds.Equals(content.ModId, item.ModId))
-            : UpdateAll;
+        IInstallRow? target = row switch
+        {
+            ContentItem item => _content.FirstOrDefault(content => ModIds.Equals(content.ModId, item.ModId)),
+            PackUpdateItem => PackUpdate,
+            _ => UpdateAll,
+        };
         if (target is not null)
         {
             target.InstallError = error;

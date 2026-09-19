@@ -1782,6 +1782,33 @@
   <data name="PackCreatesInstanceFormat" xml:space="preserve">
     <value>Creates the instance {0}.</value>
   </data>
+  <data name="PackUpdate" xml:space="preserve">
+    <value>Update pack</value>
+  </data>
+  <data name="PackUpdateAvailableFormat" xml:space="preserve">
+    <value>A new version of {0} is available: {1}.</value>
+  </data>
+  <data name="PackUpdateNotNewer" xml:space="preserve">
+    <value>This instance has the newest version of its pack.</value>
+  </data>
+  <data name="PackUpdateAddFormat" xml:space="preserve">
+    <value>Adds {0} {1}</value>
+  </data>
+  <data name="PackUpdateChangeFormat" xml:space="preserve">
+    <value>Changes {0} from {1} to {2}</value>
+  </data>
+  <data name="PackUpdateRemoveFormat" xml:space="preserve">
+    <value>Removes {0} {1}</value>
+  </data>
+  <data name="PackUpdateKeepFormat" xml:space="preserve">
+    <value>Keeps {0} {1} as a mod of the instance</value>
+  </data>
+  <data name="PackUpdateKeepChangeFormat" xml:space="preserve">
+    <value>Keeps {0} as a mod of the instance and changes it from {1} to {2}</value>
+  </data>
+  <data name="PackUpdateNoModChanges" xml:space="preserve">
+    <value>No mod changes</value>
+  </data>
   <data name="PackModHeader" xml:space="preserve">
     <value>Mod</value>
   </data>

@@ -1782,6 +1782,33 @@
   <data name="PackCreatesInstanceFormat" xml:space="preserve">
     <value>Erstellt die Instanz {0}.</value>
   </data>
+  <data name="PackUpdate" xml:space="preserve">
+    <value>Modpack aktualisieren</value>
+  </data>
+  <data name="PackUpdateAvailableFormat" xml:space="preserve">
+    <value>Eine neue Version von {0} ist verfügbar: {1}.</value>
+  </data>
+  <data name="PackUpdateNotNewer" xml:space="preserve">
+    <value>Diese Instanz hat die neueste Version ihres Modpacks.</value>
+  </data>
+  <data name="PackUpdateAddFormat" xml:space="preserve">
+    <value>Fügt {0} {1} hinzu</value>
+  </data>
+  <data name="PackUpdateChangeFormat" xml:space="preserve">
+    <value>Ändert {0} von {1} auf {2}</value>
+  </data>
+  <data name="PackUpdateRemoveFormat" xml:space="preserve">
+    <value>Entfernt {0} {1}</value>
+  </data>
+  <data name="PackUpdateKeepFormat" xml:space="preserve">
+    <value>Behält {0} {1} als Mod der Instanz</value>
+  </data>
+  <data name="PackUpdateKeepChangeFormat" xml:space="preserve">
+    <value>Behält {0} als Mod der Instanz und ändert es von {1} auf {2}</value>
+  </data>
+  <data name="PackUpdateNoModChanges" xml:space="preserve">
+    <value>Keine Änderungen an Mods</value>
+  </data>
   <data name="PackModHeader" xml:space="preserve">
     <value>Mod</value>
   </data>

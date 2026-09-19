@@ -14,4 +14,5 @@ public enum TaskKind
     LibraryFolderChange,
     BackupRestore,
     BackupDelete,
+    PackUpdate,
 }

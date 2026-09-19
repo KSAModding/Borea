@@ -133,6 +133,7 @@ public partial class MainViewModel
             pack.RefreshText();
         foreach (var version in PackVersions)
             version.RefreshText();
+        PackUpdate?.RefreshText();
     }
 
     [RelayCommand]

@@ -75,7 +75,7 @@ public sealed partial class ToastItem : ObservableObject
     public string? Detail => TaskItem is not { } task ? _detail : task.State switch
     {
         TaskState.Failed => task.FailureReason,
-        TaskState.Stopped when task.StoppedAfter is { Completed: > 0 } after => task.Kind is TaskKind.Update or TaskKind.UpdateAll
+        TaskState.Stopped when task.StoppedAfter is { Completed: > 0 } after => task.Kind is TaskKind.Update or TaskKind.UpdateAll or TaskKind.PackUpdate
             ? Localization.FormatToastStoppedUpdated(after.Completed, after.Total)
             : Localization.FormatToastStoppedInstalled(after.Completed, after.Total),
         _ => null,
@@ -152,7 +152,7 @@ public sealed partial class ToastItem : ObservableObject
 
     private string FinishedText(TaskItem task) => task.Kind switch
     {
-        TaskKind.Update when task.NewVersion is { } version => Localization.FormatToastUpdated(Subject, version, InstanceName),
+        TaskKind.Update or TaskKind.PackUpdate when task.NewVersion is { } version => Localization.FormatToastUpdated(Subject, version, InstanceName),
         TaskKind.Update or TaskKind.UpdateAll => Localization.FormatToastUpdatedAll(task.ModCount, InstanceName),
         TaskKind.ModRemoval => Localization.FormatToastRemoved(Subject, InstanceName),
         TaskKind.LoaderInstall => Localization.FormatToastLoaderInstalled(Subject, task.NewVersion ?? string.Empty),
@@ -166,7 +166,7 @@ public sealed partial class ToastItem : ObservableObject
 
     private string StoppedText(TaskItem task) => task.Kind switch
     {
-        TaskKind.Update => Localization.FormatToastUpdateStopped(Subject),
+        TaskKind.Update or TaskKind.PackUpdate => Localization.FormatToastUpdateStopped(Subject),
         TaskKind.UpdateAll => Localization.FormatToastUpdateAllStopped(InstanceName),
         TaskKind.LibraryFolderChange => Localization.ToastLibraryFolderStopped,
         _ => Localization.FormatToastInstallStopped(Subject),
@@ -175,7 +175,7 @@ public sealed partial class ToastItem : ObservableObject
     private string FailedText(TaskItem task) => task.Kind switch
     {
         TaskKind.IndexRefresh => Localization.ToastIndexRefreshFailed,
-        TaskKind.Update => Localization.FormatToastUpdateFailed(Subject),
+        TaskKind.Update or TaskKind.PackUpdate => Localization.FormatToastUpdateFailed(Subject),
         TaskKind.UpdateAll => Localization.FormatToastUpdateAllFailed(InstanceName),
         TaskKind.ModRemoval => Localization.FormatToastRemoveFailed(Subject),
         TaskKind.ModListImport => Localization.FormatToastCreateInstanceFailed(Subject),
