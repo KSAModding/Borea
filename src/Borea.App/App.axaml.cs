@@ -106,6 +106,8 @@ public partial class App : Application
             window.Opened += OnMainWindowOpened;
             window.Opened += async (_, _) => await viewModel.LoadAsync();
             window.Closing += OnMainWindowClosing;
+            if (Services is { } services)
+                window.Opened += (_, _) => ExtractionFolderCleanup.StartForThisProcess(services.Log);
 
             // players come back to Borea after installing a new KSA release
             desktop.MainWindow.Activated += async (_, _) => await viewModel.RefreshInstalledGameAsync();
