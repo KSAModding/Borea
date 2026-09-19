@@ -161,6 +161,10 @@ public sealed partial class TaskItem : ObservableObject
 
     internal void Report(InstallProgressText text)
     {
+        // IProgress delivers a report later, so the last one can arrive after End
+        if (EndedAt is not null)
+            return;
+
         if (State is TaskState.Waiting or TaskState.Running or TaskState.Paused)
             State = text.IsPaused ? TaskState.Paused : TaskState.Running;
 
@@ -173,6 +177,9 @@ public sealed partial class TaskItem : ObservableObject
     /// <summary>The step of work that is not an install, with how far it is when that is known.</summary>
     internal void Report(string step, double? percent)
     {
+        if (EndedAt is not null)
+            return;
+
         MarkRunning();
         Step = step;
         Detail = null;
