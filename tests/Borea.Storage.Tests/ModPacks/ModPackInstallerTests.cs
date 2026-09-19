@@ -286,6 +286,35 @@ public sealed class ModPackInstallerTests
         Assert.Empty((await instances.GetByIdAsync(instance.InstanceId))!.Mods);
     }
 
+    [Fact]
+    public async Task PlanNew_ReadyPlan_ReturnsTheOperationsAndCreatesNothing()
+    {
+        var dependency = Release("Dependency");
+        var member = Release("Member", dependencies: [new ModDependency("Dependency", ModDependencyKind.Required)]);
+        var instances = new MemoryInstanceRepository();
+
+        var result = await Services(instances).PlanNewAsync("New", Request(Guid.NewGuid(), Pack(member), new FakeModRepository([member, dependency])));
+
+        Assert.Equal(Guid.Empty, result.InstanceId);
+        Assert.True(result.Plan!.IsReady);
+        Assert.Equal(["Member", "Dependency"], result.Plan.Operations.Select(operation => operation.Release.ModId));
+        Assert.Empty(await instances.GetAllAsync());
+    }
+
+    [Fact]
+    public async Task CreateAndInstall_PlanThatCannotRun_CreatesNothing()
+    {
+        var valid = Release("Valid");
+        var instances = new MemoryInstanceRepository();
+
+        var result = await Services(instances).CreateAndInstallAsync("New", Request(Guid.Empty, Pack(valid, Release("Missing")), new FakeModRepository([valid])));
+
+        Assert.Equal(Guid.Empty, result.InstanceId);
+        Assert.False(result.IsComplete);
+        Assert.Equal(ModPackMemberStatus.Unresolved, Assert.Single(result.Members, value => value.ModId == "Missing").Status);
+        Assert.Empty(await instances.GetAllAsync());
+    }
+
     private static ModPackInstaller Services(MemoryInstanceRepository instances) => new(instances, new FakePlanner(), new FakeInstaller(instances), new FakeReplacer(instances));
 
     private static ModPackInstallRequest Request(Guid instanceId, ModPackResult pack, IModRepository repository) => new(instanceId, pack, repository);
