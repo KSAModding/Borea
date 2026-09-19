@@ -35,6 +35,53 @@ public sealed class InstallStopTests
     }
 
     [Fact]
+    public void ShowReport_AfterTheRunEnded_DoesNothing()
+    {
+        var run = NewRun();
+        run.End();
+
+        var shown = false;
+        run.ShowReport(() => shown = true);
+
+        Assert.False(shown);
+    }
+
+    [Fact]
+    public async Task End_WhileAReportRuns_WaitsUntilTheReportIsDone()
+    {
+        var run = NewRun();
+        using var reporting = new ManualResetEventSlim();
+        using var release = new ManualResetEventSlim();
+        var status = "Downloading";
+        var report = Task.Run(() => run.ShowReport(() =>
+        {
+            reporting.Set();
+            release.Wait(Timeout);
+            status = "Downloading AdvancedFlightComputer 0.7.5";
+        }));
+        Assert.True(reporting.Wait(Timeout));
+
+        var end = Task.Run(() =>
+        {
+            run.End();
+            status = "Install stopped.";
+        });
+        await Task.WhenAny(end, Task.Delay(TimeSpan.FromMilliseconds(200)));
+        Assert.False(end.IsCompleted);
+
+        release.Set();
+        await Task.WhenAll(report, end).WaitAsync(Timeout);
+        Assert.Equal("Install stopped.", status);
+    }
+
+    private static InstallRun NewRun()
+    {
+        var localization = new LocalizationService(CultureInfo.GetCultureInfo("en"));
+        var task = new TaskRegistry(localization, () => null, () => null, _ => Task.CompletedTask).Start(TaskKind.ModInstall, null, null, null, null, null, TaskState.Running);
+        return new InstallRun(localization, task);
+    }
+
+    [Fact]
     public void PauseButton_WorksOnlyWhileTheModDownloads()
     {
         var localization = new LocalizationService(CultureInfo.GetCultureInfo("en"));

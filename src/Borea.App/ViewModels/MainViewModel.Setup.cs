@@ -428,8 +428,8 @@ public partial class MainViewModel
             run.TaskItem.Report(text);
         }
 
-        run.RepeatPausedReport = () => { if (paused is { } value) Show(value); };
-        var progress = new Progress<InstallProgress>(Show);
+        run.RepeatPausedReport = () => { if (paused is { } value) run.ShowReport(() => Show(value)); };
+        var progress = new Progress<InstallProgress>(value => run.ShowReport(() => Show(value)));
         var completed = false;
         var stopped = false;
         string? error = null;

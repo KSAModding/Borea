@@ -470,10 +470,11 @@ public partial class MainViewModel
             }
         }
 
-        if (row.Run is { } started)
-            started.RepeatPausedReport = () => { if (paused is { } value) Show(value); };
+        if (row.Run is not { } started)
+            return new Progress<InstallProgress>(Show);
 
-        return new Progress<InstallProgress>(Show);
+        started.RepeatPausedReport = () => { if (paused is { } value) started.ShowReport(() => Show(value)); };
+        return new Progress<InstallProgress>(value => started.ShowReport(() => Show(value)));
     }
 
     private static bool IsInstallFailure(Exception exception)
