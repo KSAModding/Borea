@@ -43,6 +43,7 @@ Name a testing build `-beta.N`, for example `v0.5.0-beta.1`, and a dev build `-d
 The testing channel reports beta releases, and only the dev channel reports other pre-releases.
 
 To put a text of your own at the top of the release notes, add `.github/release-notes/<version>.md`, for example `.github/release-notes/0.5.0.md`, in the commit that you tag.
+The list of changes of a stable release starts at the previous stable release, so it also covers the dev and beta builds in between.
 
 ## Release scripts
 

@@ -477,6 +477,8 @@ jobs:
       # The changelog is fetched here instead of with `gh release create --generate-notes`,
       # so a re-run for the same tag can rewrite the whole body, checksum table included.
       # .github/release-notes/<version>.md in the tagged commit, when it exists, goes first.
+      # GitHub starts the change list at the previous release of any kind, so a stable release
+      # names the previous stable release, and dev and beta builds in between do not shorten it.
       - name: Write the release body
         id: body
         working-directory: dist
@@ -485,8 +487,16 @@ jobs:
           GH_REPO: ${{ github.repository }}
           VERSION: ${{ needs.test.outputs.version }}
         run: |
+          previous=()
+          case "$GITHUB_REF_NAME" in
+            *-*) ;;
+            *)
+              stable=$(gh release list --exclude-pre-releases --exclude-drafts --limit 20 \
+                --json tagName --jq "map(.tagName | select(. != \"$GITHUB_REF_NAME\")) | .[0] // empty") || stable=
+              if [ -n "$stable" ]; then previous=(-f previous_tag_name="$stable"); fi ;;
+          esac
           gh api --method POST "repos/$GITHUB_REPOSITORY/releases/generate-notes" \
-            -f tag_name="$GITHUB_REF_NAME" --jq .body > generated.md || : > generated.md
+            -f tag_name="$GITHUB_REF_NAME" "${previous[@]}" --jq .body > generated.md || : > generated.md
 
           if ! gh api -H "Accept: application/vnd.github.raw+json" \
             "repos/$GITHUB_REPOSITORY/contents/.github/release-notes/$VERSION.md?ref=$GITHUB_SHA" > intro.md 2> /dev/null; then
