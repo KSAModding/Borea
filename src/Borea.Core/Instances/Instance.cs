@@ -24,7 +24,7 @@ public sealed class Instance
     /// </summary>
     public string Name { get; private set; }
 
-    public InstanceSource Source { get; }
+    public InstanceSource Source { get; private set; }
 
     public DateTimeOffset CreatedAt { get; }
 
@@ -114,6 +114,11 @@ public sealed class Instance
             throw new ArgumentException("Instance name cannot be null or whitespace.", nameof(newName));
 
         Name = newName;
+    }
+
+    public void ChangeSource(InstanceSource source)
+    {
+        Source = source ?? throw new ArgumentNullException(nameof(source));
     }
 
     public void AddMod(InstalledMod mod)

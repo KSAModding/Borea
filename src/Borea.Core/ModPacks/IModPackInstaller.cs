@@ -53,6 +53,7 @@ public enum ModPackMemberStatus
     Unresolved,
     Failed,
     NotAttempted,
+    Removed,
 }
 
 public sealed record ModPackMemberResult(
