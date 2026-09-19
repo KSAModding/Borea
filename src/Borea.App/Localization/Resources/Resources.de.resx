@@ -1092,6 +1092,9 @@
   <data name="ModalRenameInstanceTitle" xml:space="preserve">
     <value>Instanz umbenennen</value>
   </data>
+  <data name="ModalInstanceExplanation" xml:space="preserve">
+    <value>Instanzen sind Pakete aus Mods und Spielinhalten, die Borea zusätzlich zu deiner vorhandenen Spielinstallation verwaltet. Du kannst mehrere Instanzen erstellen und für verschiedene Spielerlebnisse jeweils eine davon aktivieren.</value>
+  </data>
   <data name="ModalNameRequired" xml:space="preserve">
     <value>Gib einen Namen für die Instanz ein.</value>
   </data>

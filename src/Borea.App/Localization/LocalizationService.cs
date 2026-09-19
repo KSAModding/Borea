@@ -677,6 +677,8 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string ModalRenameInstanceTitle => Resources.ModalRenameInstanceTitle;
 
+    public string ModalInstanceExplanation => Resources.ModalInstanceExplanation;
+
     public string ModalNameRequired => Resources.ModalNameRequired;
 
     public string ModalNameLabel => Resources.ModalNameLabel;
