@@ -28,6 +28,8 @@ public partial class App : Application
 
     private readonly AppPreferences _preferences;
 
+    private readonly AppPreferencesLoadStatus _preferencesLoadStatus = AppPreferencesLoadStatus.Loaded;
+
     public App()
     {
         Localization = new LocalizationService();
@@ -44,6 +46,7 @@ public partial class App : Application
             .GetAwaiter()
             .GetResult();
         _preferences = loadResult.Preferences;
+        _preferencesLoadStatus = loadResult.Status;
         if (_preferences.UiCultureName is not null)
             Localization.TrySetCulture(_preferences.UiCultureName);
 
@@ -68,7 +71,10 @@ public partial class App : Application
                 RegionalFormat,
                 Services?.AppPreferences,
                 _preferences,
-                Services);
+                Services)
+            {
+                PreferencesLoadStatus = _preferencesLoadStatus,
+            };
 
             ApplyTheme(viewModel.CurrentTheme);
             viewModel.PropertyChanged += OnViewModelPropertyChanged;

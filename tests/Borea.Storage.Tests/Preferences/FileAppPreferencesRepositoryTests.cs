@@ -636,4 +636,69 @@ public sealed class FileAppPreferencesRepositoryTests : IDisposable
         if (Directory.Exists(_tempRoot))
             Directory.Delete(_tempRoot, recursive: true);
     }
+
+    [Fact]
+    public async Task SaveThenGet_AnnouncementPreferences_RestoresThem()
+    {
+        var firstStart = new DateTimeOffset(2026, 9, 18, 10, 30, 0, TimeSpan.FromHours(2));
+
+        await _repository.SaveAsync(AppPreferences.Empty.WithFirstStartedAt(firstStart).WithFetchAnnouncements(false).WithDismissedAnnouncements(["old-post", "new-post"]), BundledThemeNames);
+        var result = await _repository.GetAsync(BundledThemeNames);
+
+        Assert.Equal(firstStart, result.Preferences.FirstStartedAt);
+        Assert.False(result.Preferences.FetchAnnouncements);
+        Assert.Equal(["old-post", "new-post"], result.Preferences.DismissedAnnouncements);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData(""", "firstStartedAt": "soon", "fetchAnnouncements": null, "dismissedAnnouncements": null""")]
+    [InlineData(""", "dismissedAnnouncements": [null, " "]""")]
+    public async Task GetAsync_NoOrUnreadableAnnouncementPreferences_LoadsTheDefaults(string fields)
+    {
+        await WriteAsync($$"""
+            { "formatVersion": 1, "selectedTheme": "Light"{{fields}} }
+            """);
+
+        var result = await _repository.GetAsync(BundledThemeNames);
+
+        Assert.Equal(AppPreferencesLoadStatus.Loaded, result.Status);
+        Assert.Null(result.Preferences.FirstStartedAt);
+        Assert.True(result.Preferences.FetchAnnouncements);
+        Assert.Empty(result.Preferences.DismissedAnnouncements);
+    }
+
+    [Fact]
+    public void WithDismissedAnnouncements_OverTheCap_KeepsTheLastIdsOnce()
+    {
+        var ids = Enumerable.Range(1, 60).Select(number => "post-" + number).Append("POST-60");
+
+        var dismissed = AppPreferences.Empty.WithDismissedAnnouncements(ids).DismissedAnnouncements;
+
+        Assert.Equal(AppPreferences.MaxDismissedAnnouncements, dismissed.Count);
+        Assert.Equal("post-11", dismissed[0]);
+        Assert.Equal("POST-60", dismissed[^1]);
+    }
+
+    [Fact]
+    public void With_OtherPreferenceChanges_KeepTheAnnouncementPreferences()
+    {
+        var firstStart = new DateTimeOffset(2026, 9, 18, 0, 0, 0, TimeSpan.Zero);
+        var preferences = AppPreferences.Empty.WithFirstStartedAt(firstStart).WithFetchAnnouncements(false).WithDismissedAnnouncements(["a"])
+            .WithSelectedThemeName("Light")
+            .WithRegionalCultureName("de-DE")
+            .WithUiCultureName("de")
+            .WithCheckForUpdatesAtStart(false)
+            .WithUpdateChannel(BoreaUpdateChannel.Dev)
+            .WithForeignFolderDeletionConfirmed(true)
+            .WithLoadImagesFromAuthorHosts(false)
+            .WithHomeLaunch(HomeLaunchOption.WithoutModLoader)
+            .WithDiscoverSortOrder(DiscoverSortOrder.Name)
+            .WithSharedProfileBannerDismissed(true)
+            .WithDismissedBoreaRelease(ModVersion.Parse("0.5.0"));
+
+        Assert.Equal(firstStart, preferences.FirstStartedAt);
+        Assert.False(preferences.FetchAnnouncements);
+        Assert.Equal(["a"], preferences.DismissedAnnouncements);
+    }
 }

@@ -119,6 +119,9 @@
     <!-- modal: the patch notes of the installed game builds -->
     <views:GamePatchNotesModal IsVisible="{Binding IsGamePatchNotesOpen}" />
 
+    <!-- modal: one announcement of the KSAModding team -->
+    <views:AnnouncementModal IsVisible="{Binding IsAnnouncementOpen}" />
+
     <!-- modal: settings -->
     <settings:SettingsModal IsVisible="{Binding IsSettingsOpen}" />
 

@@ -66,6 +66,12 @@
   <data name="UpdateChannelDev" xml:space="preserve">
     <value>Alle Versionen, auch Dev-Builds</value>
   </data>
+  <data name="SettingsNewsLabel" xml:space="preserve">
+    <value>Neuigkeiten</value>
+  </data>
+  <data name="SettingsFetchAnnouncements" xml:space="preserve">
+    <value>Neuigkeiten vom KSAModding-Team anzeigen</value>
+  </data>
   <data name="SettingsReleaseChannelLabel" xml:space="preserve">
     <value>Mod-Release-Kanal</value>
   </data>
@@ -230,6 +236,9 @@
   </data>
   <data name="GamePatchNotesCappedFormat" xml:space="preserve">
     <value>Nur die {0} neuesten Builds werden angezeigt.</value>
+  </data>
+  <data name="AnnouncementOpenLink" xml:space="preserve">
+    <value>Link öffnen</value>
   </data>
   <data name="SystemDefaultRegionalFormat" xml:space="preserve">
     <value>Systemstandard</value>

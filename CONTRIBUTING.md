@@ -78,6 +78,31 @@ Before you re-run `announce`, make sure that the message is not already in the c
 Changes to the content-manager format or snapshot contract must follow the accepted RFCs in [content-manager-design](https://github.com/KSAModding/content-manager-design).
 When an RFC does not answer the question, start a design discussion before implementing a private format extension.
 
+## Announcements
+
+Home shows short posts of the KSAModding team from [`announcements.toml`](announcements.toml) on `main`.
+To add a post, open a pull request that adds one `[[posts]]` entry.
+Borea fetches the file at start, so the post shows after the merge.
+
+```toml
+[[posts]]
+id = "index-100-mods"
+title = "100 mods in the index"
+date = 2026-10-01
+body = """
+The content index now lists **100 mods**.
+"""
+link = "https://github.com/KSAModding/content-index"
+```
+
+- `id` follows the rules of a listing id and never changes, because Borea remembers a closed post by its id.
+- `date` is a TOML date or an offset date-time. Borea shows only posts dated after its first start, and only the newest post that the player did not close.
+  A date with no time counts as 00:00 UTC of that day, so an offset date-time is the safer choice when the exact time matters.
+- `body` is Markdown. The banner shows the start of the first paragraph, and "See more" shows the whole body.
+- `link` is optional and must be an HTTPS URL.
+
+Borea skips a post that breaks one of these rules, and it keeps its last good copy when the file is not valid TOML or `spec_version` is not 1.
+
 ## Licensing your contribution
 
 By opening a pull request, you contribute your code and documentation under the repository's [MIT License](LICENSE).

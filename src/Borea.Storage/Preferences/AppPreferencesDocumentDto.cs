@@ -34,6 +34,14 @@ internal sealed class AppPreferencesDocumentDto
 
     public int? DismissedGameRevision { get; set; }
 
+    /// <summary>An ISO 8601 time such as "2026-09-18T12:00:00+00:00". Null or a time that does not parse reads as not recorded.</summary>
+    public string? FirstStartedAt { get; set; }
+
+    /// <summary>Null in an older file, which reads as on.</summary>
+    public bool? FetchAnnouncements { get; set; }
+
+    public List<string?>? DismissedAnnouncements { get; set; }
+
     public List<CustomThemePreferenceDto?>? CustomThemes { get; set; }
 }
 

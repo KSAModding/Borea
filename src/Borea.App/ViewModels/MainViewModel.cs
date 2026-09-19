@@ -289,6 +289,8 @@ public partial class MainViewModel : ViewModelBase
     {
         _ = Tasks.LoadAsync();
         StartUpdateCheck();
+        RecordFirstStart();
+        StartAnnouncementCheck();
         InstalledVersionText = _services?.InstalledVersion.GetInstalledVersion()?.RawVersion;
         StartGameBuildCheck();
         await ReloadInstancesAsync();
@@ -724,7 +726,10 @@ public partial class MainViewModel : ViewModelBase
             && left.DiscoverSortOrder == right.DiscoverSortOrder
             && left.SharedProfileBannerDismissed == right.SharedProfileBannerDismissed
             && left.DismissedBoreaRelease == right.DismissedBoreaRelease
-            && left.DismissedGameRevision == right.DismissedGameRevision;
+            && left.DismissedGameRevision == right.DismissedGameRevision
+            && left.FirstStartedAt == right.FirstStartedAt
+            && left.FetchAnnouncements == right.FetchAnnouncements
+            && left.DismissedAnnouncements.SequenceEqual(right.DismissedAnnouncements, StringComparer.Ordinal);
 
     private void OnRegionalFormatChanged(object? sender, PropertyChangedEventArgs e)
     {
@@ -757,6 +762,7 @@ public partial class MainViewModel : ViewModelBase
             item.RefreshText();
         foreach (var item in GamePatchNotes)
             item.RefreshText();
+        OnPropertyChanged(nameof(AnnouncementDateText));
         RefreshPackText();
         Tasks.RefreshText();
     }
