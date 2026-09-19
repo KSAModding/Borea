@@ -46,7 +46,14 @@ public sealed class FileGameSaveStore : IGameSaveStore
         => Task.Run(() => List(GetFolder(instanceId, kind), kind, cancellationToken), cancellationToken);
 
     public Task<IReadOnlyList<GameSaveEntry>> ListSharedProfileAsync(GameSaveKind kind, CancellationToken cancellationToken = default)
-        => Task.Run(() => List(FindFolder(Path.Combine(_paths.GetSharedProfileRoot(), FolderName(kind))), kind, cancellationToken), cancellationToken);
+        => Task.Run(() => List(GetSharedProfileFolder(kind), kind, cancellationToken), cancellationToken);
+
+    public Task<bool> HasSharedProfileItemsAsync(GameSaveKind kind, CancellationToken cancellationToken = default)
+        => Task.Run(() =>
+        {
+            var directory = new DirectoryInfo(GetSharedProfileFolder(kind));
+            return directory.Exists && directory.EnumerateDirectories().Any();
+        }, cancellationToken);
 
     public Task<string> BackUpAsync(Guid instanceId, GameSaveEntry entry, CancellationToken cancellationToken = default)
         => Task.Run(() => BackUp(instanceId, RequireInInstance(instanceId, entry), Stamp(), cancellationToken), cancellationToken);
@@ -72,6 +79,8 @@ public sealed class FileGameSaveStore : IGameSaveStore
             EnsureNotInUse(entry.Path);
             return MoveToBackups(instanceId, entry.Kind, entry.Path);
         }, cancellationToken);
+
+    private string GetSharedProfileFolder(GameSaveKind kind) => FindFolder(Path.Combine(_paths.GetSharedProfileRoot(), FolderName(kind)));
 
     // GameSaves.SaveFolderPath and VehicleSaves.SaveFolderPath below Constants.DocumentsFolderPath
     private static string FolderName(GameSaveKind kind) => kind == GameSaveKind.Save ? "saves" : "Vehicles";

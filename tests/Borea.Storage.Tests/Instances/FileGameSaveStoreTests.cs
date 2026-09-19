@@ -96,6 +96,17 @@ public sealed class FileGameSaveStoreTests : IDisposable
     }
 
     [Fact]
+    public async Task HasSharedProfileItemsAsync_TrueOnlyForAKindWithAFolder()
+    {
+        Assert.False(await _store.HasSharedProfileItemsAsync(GameSaveKind.Save));
+
+        WriteItem(Path.Combine(_paths.GetSharedProfileRoot(), "vehicles"), "Hover 1", "Hover 1", "2026-09-14T14:38:55.7142787", "v2026.9.7.5402", 40, "vehicle.xml");
+
+        Assert.True(await _store.HasSharedProfileItemsAsync(GameSaveKind.Vehicle));
+        Assert.False(await _store.HasSharedProfileItemsAsync(GameSaveKind.Save));
+    }
+
+    [Fact]
     public async Task BackUpAsync_ZipsTheFolderAndKeepsAnEarlierZip()
     {
         var entry = await AddSaveAsync(_instanceId, "Orbit");

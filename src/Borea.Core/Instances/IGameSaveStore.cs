@@ -14,6 +14,9 @@ public interface IGameSaveStore
     /// <summary>Newest first.</summary>
     Task<IReadOnlyList<GameSaveEntry>> ListSharedProfileAsync(GameSaveKind kind, CancellationToken cancellationToken = default);
 
+    /// <summary>True when the game profile holds a folder of this kind. Reads no metadata.</summary>
+    Task<bool> HasSharedProfileItemsAsync(GameSaveKind kind, CancellationToken cancellationToken = default);
+
     /// <summary>Returns the path of the zip.</summary>
     Task<string> BackUpAsync(Guid instanceId, GameSaveEntry entry, CancellationToken cancellationToken = default);
 
