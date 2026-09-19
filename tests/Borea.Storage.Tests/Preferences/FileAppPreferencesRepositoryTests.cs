@@ -414,10 +414,22 @@ public sealed class FileAppPreferencesRepositoryTests : IDisposable
     }
 
     [Fact]
-    public async Task GetAsync_UnknownUiCulture_KeepsOtherPreferences()
+    public async Task SaveThenGet_SavedPirateUiCulture_RestoresTheSelection()
     {
-        await WriteAsync("""
-            { "formatVersion": 1, "selectedTheme": "Light", "uiCulture": "not-a-culture-xx" }
+        await _repository.SaveAsync(new AppPreferences("Borealis", uiCultureName: "en-QP"), BundledThemeNames);
+
+        var result = await _repository.GetAsync(BundledThemeNames);
+
+        Assert.Equal("en-QP", result.Preferences.UiCultureName);
+    }
+
+    [Theory]
+    [InlineData("not-a-culture-xx")]
+    [InlineData("en-x-pirate")]
+    public async Task GetAsync_UnknownUiCulture_KeepsOtherPreferences(string uiCulture)
+    {
+        await WriteAsync($$"""
+            { "formatVersion": 1, "selectedTheme": "Light", "uiCulture": "{{uiCulture}}" }
             """);
 
         var result = await _repository.GetAsync(BundledThemeNames);

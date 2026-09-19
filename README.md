@@ -30,7 +30,7 @@ Kitten Space Agency is their game and their trademark.
 - Start the game through the mod loader with the right instance, and see why a launch failed, with the mod that broke it and a button to disable it.
 - Import the mods you installed by hand into an instance.
 - Play time and last played per instance, the game log in the App, and a Tasks page that shows what Borea did.
-- English and German, and a dark and a light theme.
+- English, German and pirate speak, and a dark and a light theme.
 
 Everything Borea knows about a mod comes from the content index, which the [content-manager-design](https://github.com/KSAModding/content-manager-design) RFCs define.
 The index has two repositories: [content-index](https://github.com/KSAModding/content-index) holds the listings that mod authors write, and [content-index-releases](https://github.com/KSAModding/content-index-releases) holds the release files that are generated for each new release.

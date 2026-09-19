@@ -16,6 +16,11 @@ Explain the user-visible change, the tests you ran, and any work that remains ou
 Run the relevant tests and formatting checks before you open a pull request.
 The continuous-integration checks run on Windows, Linux, and macOS.
 
+## Translations
+
+A new text in `Resources.resx` needs a German text in `Resources.de.resx`, because the parity test fails when the German file misses a key.
+Other translations, such as pirate speak in `Resources.en-QP.resx`, can miss a text, and Borea then shows it in English. See [Help translate Borea](docs/localization.md).
+
 ## AI tools
 
 You can use AI tools, such as code assistants and chat models, for code, tests and documentation.

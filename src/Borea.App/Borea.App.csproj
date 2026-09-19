@@ -10,7 +10,7 @@
     <PublishSingleFile>true</PublishSingleFile>
     <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
     <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
-    <SatelliteResourceLanguages>en;de</SatelliteResourceLanguages>
+    <SatelliteResourceLanguages>en;de;en-QP</SatelliteResourceLanguages>
     <!-- The analyzer adds an ILLink package whose version follows the SDK, which would tie the lock files to one SDK patch. -->
     <EnableSingleFileAnalyzer>false</EnableSingleFileAnalyzer>
 
@@ -42,6 +42,12 @@
     </EmbeddedResource>
     <EmbeddedResource Update="Localization\Resources\Resources.de.resx">
       <Link>Localization\Resources.de.resx</Link>
+    </EmbeddedResource>
+    <!-- MSBuild finds no culture in the name en-QP, so this file names its culture and its resource itself. -->
+    <EmbeddedResource Update="Localization\Resources\Resources.en-QP.resx">
+      <Link>Localization\Resources.en-QP.resx</Link>
+      <Culture>en-QP</Culture>
+      <LogicalName>Borea.App.Localization.Resources.en-QP.resources</LogicalName>
     </EmbeddedResource>
   </ItemGroup>
 

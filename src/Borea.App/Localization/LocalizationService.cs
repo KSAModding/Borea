@@ -11,7 +11,8 @@ public sealed class LocalizationService : INotifyPropertyChanged
 {
     private static readonly SupportedCulture English = new("en", "English");
     private static readonly SupportedCulture German = new("de", "Deutsch");
-    private static readonly IReadOnlyList<SupportedCulture> Cultures = [English, German];
+    private static readonly SupportedCulture Pirate = new("en-QP", "Pirate speak");
+    private static readonly IReadOnlyList<SupportedCulture> Cultures = [English, German, Pirate];
 
     private SupportedCulture _selectedCulture = English;
 

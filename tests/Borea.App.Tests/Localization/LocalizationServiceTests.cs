@@ -70,14 +70,39 @@ public sealed class LocalizationServiceTests : IDisposable
     }
 
     [Fact]
-    public void SupportedCultures_ListsEnglishAndGerman()
+    public void SupportedCultures_ListsEnglishGermanAndPirate()
     {
         var service = new LocalizationService(CultureInfo.GetCultureInfo("en"));
 
         Assert.Collection(
             service.SupportedCultures,
             culture => Assert.Equal("en", culture.Name),
-            culture => Assert.Equal("de", culture.Name));
+            culture => Assert.Equal("de", culture.Name),
+            culture => Assert.Equal(("en-QP", "Pirate speak"), (culture.Name, culture.DisplayName)));
+    }
+
+    [Fact]
+    public void TrySetCulture_Pirate_UsesPirateResourcesAndKeepsTheRegionalCulture()
+    {
+        CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo("fr-FR");
+        var service = new LocalizationService(CultureInfo.GetCultureInfo("en"));
+
+        var changed = service.TrySetCulture("en-QP");
+
+        Assert.True(changed);
+        Assert.Equal("en-QP", service.SelectedCultureName);
+        Assert.Equal("en-QP", CultureInfo.CurrentUICulture.Name);
+        Assert.Equal("fr-FR", CultureInfo.CurrentCulture.Name);
+        Assert.Equal("Port", service.NavigationHome);
+        Assert.Equal("Ain't able to take a gander at: Borea.App.Views.UnknownView", service.FormatViewNotFound("Borea.App.Views.UnknownView"));
+    }
+
+    [Fact]
+    public void Constructor_EnglishSystemCulture_DoesNotChoosePirate()
+    {
+        var service = new LocalizationService(CultureInfo.GetCultureInfo("en-GB"));
+
+        Assert.Equal("en", service.SelectedCultureName);
     }
 
     [Fact]

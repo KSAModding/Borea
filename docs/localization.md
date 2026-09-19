@@ -8,6 +8,7 @@ Borea keeps user-interface text in [`src/Borea.App/Localization/Resources`](../s
 
 - [`Resources.resx`](../src/Borea.App/Localization/Resources/Resources.resx) is the neutral English source.
 - [`Resources.de.resx`](../src/Borea.App/Localization/Resources/Resources.de.resx) is the German translation.
+- [`Resources.en-QP.resx`](../src/Borea.App/Localization/Resources/Resources.en-QP.resx) is pirate speak. `QP` is a private-use region code, because .NET has no culture for pirate speak.
 - A translated file uses the name `Resources.<language>.resx`. For example, French uses `Resources.fr.resx`.
 
 The language part of the file name is a .NET culture name. Microsoft documents these names through [`CultureInfo.Name`](https://learn.microsoft.com/en-us/dotnet/api/system.globalization.cultureinfo.name).
@@ -47,7 +48,7 @@ For example:
 </data>
 ```
 
-The translated value must still contain `{0}`.
+The translated value must still contain `{0}`. A test fails when a translation does not have the same placeholders as the English text.
 
 ## Propose a new language
 
@@ -60,7 +61,7 @@ Adding a new language needs a complete resource file and one small code change t
 5. Submit one pull request for the new language.
 6. Ask a fluent speaker to review the translation when possible.
 
-A maintainer will add the language to [`LocalizationService`](../src/Borea.App/Localization/LocalizationService.cs). The resource parity test checks that the new file has the same keys as the English source.
+A maintainer will add the language to [`LocalizationService`](../src/Borea.App/Localization/LocalizationService.cs) and to `SatelliteResourceLanguages` in [`Borea.App.csproj`](../src/Borea.App/Borea.App.csproj). A culture name that .NET does not know, such as `en-QP`, also needs `Culture` and `LogicalName` metadata on its file in that project. The resource parity tests check that the new file has no key that the English source does not have, and that its texts have the placeholders of the English ones. A text that the file does not have shows in English.
 
 ## Translation guidance
 
@@ -80,7 +81,7 @@ If you already have the .NET SDK, you can run the focused tests locally:
 dotnet test tests/Borea.App.Tests/Borea.App.Tests.csproj --no-restore
 ```
 
-The parity test reports a failure when a translation file has a missing or additional resource key.
+The parity tests report a failure when the German file misses a resource key, when any translation file has a key that the English source does not have, or when a translation does not have the placeholders of the English text.
 
 ## Technical references
 
