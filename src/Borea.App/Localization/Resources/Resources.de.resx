@@ -1656,8 +1656,17 @@
   <data name="LaunchModBrokeFormat" xml:space="preserve">
     <value>{0} {1} hat den Start von {2} verhindert. Die Mod funktioniert womöglich nicht mit dieser KSA-Version. Deaktiviere sie und versuche es erneut, oder suche nach einem Update.</value>
   </data>
+  <data name="LaunchModLikelyBrokeFormat" xml:space="preserve">
+    <value>{2} wurde beim Laden von {0} {1} beendet. Wahrscheinlich ist diese Mod die Ursache. Deaktiviere sie und versuche es erneut, oder suche nach einem Update.</value>
+  </data>
   <data name="LaunchExitedEarlyFormat" xml:space="preserve">
     <value>{0} wurde direkt nach dem Start beendet (Exit-Code {1}). Die Details zeigen, was ausgegeben wurde.</value>
+  </data>
+  <data name="LaunchStoppedLoadingModsFormat" xml:space="preserve">
+    <value>{0} wurde beim Laden der Mods beendet (Exit-Code {1}). Wahrscheinlich ist eine Mod dieser Instanz die Ursache. Die Details zeigen, was ausgegeben wurde.</value>
+  </data>
+  <data name="LaunchExitCodeFormat" xml:space="preserve">
+    <value>Exit-Code {0}</value>
   </data>
   <data name="LaunchStoppedTitleFormat" xml:space="preserve">
     <value>{0} wurde beendet</value>

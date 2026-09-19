@@ -111,7 +111,7 @@ public partial class MainViewModel
     [ObservableProperty]
     private bool _isLaunchOutputShown;
 
-    /// <summary>The mod the loader's error names, offered to disable. Null when none was named.</summary>
+    /// <summary>The mod the loader likely stopped on, offered to disable. Null when Borea found none.</summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CanDisableBlamedMod))]
     private string? _launchBlamedModId;
@@ -597,18 +597,26 @@ public partial class MainViewModel
     {
         var loaderName = _launchLoaderName = loader?.Name ?? string.Empty;
         var blamed = result.BlamedModId is null ? null : instance.Mods.FirstOrDefault(mod => ModIds.Equals(mod.ModId, result.BlamedModId));
+        var loadingMods = result.CrashCause == LoaderCrashCause.ModLoading;
         if (blamed is null)
         {
-            LaunchMessage = Localization.FormatLaunchExitedEarly(loaderName, result.ExitCode ?? 0);
+            LaunchMessage = loadingMods
+                ? Localization.FormatLaunchStoppedLoadingMods(loaderName, result.ExitCode ?? 0)
+                : Localization.FormatLaunchExitedEarly(loaderName, result.ExitCode ?? 0);
         }
         else
         {
             // the same name the content row shows, also when the instance page was never opened
             _launchBlamedModName = blamed.Metadata.Listing?.Name ?? (await ResolveListingAsync(blamed.ModId))?.Name ?? blamed.ModId;
-            LaunchMessage = Localization.FormatLaunchModBroke(_launchBlamedModName, blamed.Version.ToString(), loaderName);
+            LaunchMessage = loadingMods
+                ? Localization.FormatLaunchModLikelyBroke(_launchBlamedModName, blamed.Version.ToString(), loaderName)
+                : Localization.FormatLaunchModBroke(_launchBlamedModName, blamed.Version.ToString(), loaderName);
         }
 
-        LaunchOutputText = result.Output.Count == 0 ? Localization.LaunchNoOutput : string.Join(Environment.NewLine, result.Output);
+        IReadOnlyList<string> output = result.Output.Count == 0 ? [Localization.LaunchNoOutput] : result.Output;
+        LaunchOutputText = result.ExitCode is { } exitCode
+            ? string.Join(Environment.NewLine, [Localization.FormatLaunchExitCode(LoaderExitCode.Describe(exitCode, OperatingSystem.IsWindows())), string.Empty, .. output])
+            : string.Join(Environment.NewLine, output);
         LaunchBlamedModId = blamed?.ModId;
         OnPropertyChanged(nameof(DisableBlamedModText));
         OnPropertyChanged(nameof(LaunchFailureTitle));

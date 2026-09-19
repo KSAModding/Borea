@@ -1220,8 +1220,17 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string FormatLaunchModBroke(string mod, string version, string loader)
         => string.Format(CultureInfo.CurrentCulture, Resources.LaunchModBrokeFormat, mod, version, loader);
 
+    public string FormatLaunchModLikelyBroke(string mod, string version, string loader)
+        => string.Format(CultureInfo.CurrentCulture, Resources.LaunchModLikelyBrokeFormat, mod, version, loader);
+
     public string FormatLaunchExitedEarly(string loader, int exitCode)
         => string.Format(CultureInfo.CurrentCulture, Resources.LaunchExitedEarlyFormat, loader, exitCode);
+
+    public string FormatLaunchStoppedLoadingMods(string loader, int exitCode)
+        => string.Format(CultureInfo.CurrentCulture, Resources.LaunchStoppedLoadingModsFormat, loader, exitCode);
+
+    public string FormatLaunchExitCode(string exitCode)
+        => string.Format(CultureInfo.CurrentCulture, Resources.LaunchExitCodeFormat, exitCode);
 
     public string FormatLaunchStoppedTitle(string loader)
         => string.Format(CultureInfo.CurrentCulture, Resources.LaunchStoppedTitleFormat, loader);
