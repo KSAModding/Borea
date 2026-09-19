@@ -104,6 +104,8 @@ public sealed class BoreaServices : IDisposable
 
     public required IGameSaveStore GameSaves { get; init; }
 
+    public required IGameSaveBackupStore GameSaveBackups { get; init; }
+
     public required IGameLogReader GameLog { get; init; }
 
     public required IPlaytimeService Playtime { get; init; }
@@ -374,6 +376,7 @@ public sealed class BoreaServices : IDisposable
             Instances = instances,
             GameData = new FileGameDataReader(paths),
             GameSaves = new FileGameSaveStore(paths),
+            GameSaveBackups = new FileGameSaveBackupStore(paths),
             GameLog = new FileGameLogReader(paths),
             Playtime = new FilePlaytimeService(paths),
             InstanceSizes = new FileInstanceSizeReader(paths),

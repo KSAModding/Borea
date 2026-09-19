@@ -234,6 +234,33 @@ public sealed class FileAppPreferencesRepositoryTests : IDisposable
     }
 
     [Fact]
+    public async Task SaveThenGet_BackupRetention_RestoresTheDays()
+    {
+        Assert.Null(AppPreferences.Empty.BackupRetentionDays);
+
+        await _repository.SaveAsync(AppPreferences.Empty.WithBackupRetentionDays(90), BundledThemeNames);
+        var result = await _repository.GetAsync(BundledThemeNames);
+
+        Assert.Equal(90, result.Preferences.BackupRetentionDays);
+        Assert.Null(result.Preferences.WithSelectedThemeName("Light").WithBackupRetentionDays(null).BackupRetentionDays);
+    }
+
+    [Theory]
+    [InlineData(""", "backupRetentionDays": 0""")]
+    [InlineData(""", "backupRetentionDays": -5""")]
+    public async Task GetAsync_BackupRetentionBelowOneDay_LoadsAsOff(string retention)
+    {
+        await WriteAsync($$"""
+            { "formatVersion": 1, "selectedTheme": "Light"{{retention}} }
+            """);
+
+        var result = await _repository.GetAsync(BundledThemeNames);
+
+        Assert.Equal(AppPreferencesLoadStatus.Loaded, result.Status);
+        Assert.Null(result.Preferences.BackupRetentionDays);
+    }
+
+    [Fact]
     public void With_OtherPreferenceChanges_KeepTheDismissedGameRevision()
     {
         var preferences = AppPreferences.Empty.WithDismissedGameRevision(5438)
