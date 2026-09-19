@@ -98,7 +98,11 @@ public partial class MainViewModel
             filtered = filtered.Where(pack => matchingSet.Contains(pack.Metadata));
         }
 
-        Arrange(DiscoverPacks, SortPacks(filtered).ToList());
+        var rows = SortPacks(filtered).ToList();
+        var common = CommonCompatibility(rows.Select(pack => pack.Compatibility).ToList());
+        foreach (var pack in rows)
+            pack.ShowsCompatibility = pack.Compatibility != common;
+        Arrange(DiscoverPacks, rows);
     }
 
     /// <summary>A pack carries no download counts, so Popularity keeps the name order.</summary>
@@ -549,6 +553,10 @@ public sealed partial class PackItem : ObservableObject, IPlanRow
     public bool IsUntested => Compatibility == GameCompatibility.Untested;
 
     public bool IsIncompatible => Compatibility == GameCompatibility.Incompatible;
+
+    /// <summary>False when most rows of the Modpacks tab share this state, so the row leaves the chip out.</summary>
+    [ObservableProperty]
+    private bool _showsCompatibility = true;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CanInstall))]
