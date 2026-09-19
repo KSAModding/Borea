@@ -1251,6 +1251,18 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string InstallClosing => Resources.InstallClosing;
 
+    public string CloseNowTitle => Resources.CloseNowTitle;
+
+    public string CloseNowText => Resources.CloseNowText;
+
+    public string CloseNowSavingHistory => Resources.CloseNowSavingHistory;
+
+    public string CloseNowInstallWarning => Resources.CloseNowInstallWarning;
+
+    public string CloseNowKeepWaiting => Resources.CloseNowKeepWaiting;
+
+    public string CloseNowConfirm => Resources.CloseNowConfirm;
+
     public string LaunchShowDetails => Resources.LaunchShowDetails;
 
     public string LaunchOpenLog => Resources.LaunchOpenLog;

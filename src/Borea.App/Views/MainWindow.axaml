@@ -135,5 +135,8 @@
             <TextBlock Grid.Column="2" Classes="body-md" Text="{Binding Localization.InstallClosing}" TextWrapping="Wrap" VerticalAlignment="Center" />
         </Grid>
     </Border>
+
+    <!-- modal: a second close request while Borea still waits -->
+    <views:CloseNowModal IsVisible="{Binding IsCloseNowOpen}" />
     </Panel>
 </Window>
