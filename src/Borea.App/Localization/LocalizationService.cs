@@ -529,6 +529,13 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string GameSaveCopyFromProfile => Resources.GameSaveCopyFromProfile;
 
+    public string MoreInformation => Resources.MoreInformation;
+
+    public string FormatGameSaveProfileInfo(string folder)
+        => string.Format(CultureInfo.CurrentCulture, Resources.GameSaveProfileInfoFormat, folder);
+
+    public string GameSaveInstanceStartsEmpty => Resources.GameSaveInstanceStartsEmpty;
+
     public string GameSaveProfileEmpty => Resources.GameSaveProfileEmpty;
 
     public string GameSaveExistsInInstance => Resources.GameSaveExistsInInstance;

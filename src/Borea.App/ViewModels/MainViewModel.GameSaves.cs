@@ -20,17 +20,60 @@ public partial class MainViewModel
 {
     private GameSaveSection? _vehiclesSection;
     private GameSaveSection? _savesSection;
+    private IReadOnlyList<GameSaveSection> _sectionsWithProfileItems = [];
 
     public GameSaveSection VehiclesSection => _vehiclesSection ??= new GameSaveSection(this, GameSaveKind.Vehicle);
 
     public GameSaveSection SavesSection => _savesSection ??= new GameSaveSection(this, GameSaveKind.Save);
 
+    public string? GameProfileInfoText => _services is null ? null : Localization.FormatGameSaveProfileInfo(WithoutUserProfile(_services.Paths.GetSharedProfileRoot()));
+
+    public bool ShowInstanceStartsEmpty => _sectionsWithProfileItems.Count > 0;
+
     private async Task LoadGameSavesAsync()
     {
         VehiclesSection.Reset();
         SavesSection.Reset();
+        _sectionsWithProfileItems = [];
+        OnPropertyChanged(nameof(ShowInstanceStartsEmpty));
+        OnPropertyChanged(nameof(GameProfileInfoText));
         await LoadGameSavesAsync(VehiclesSection);
         await LoadGameSavesAsync(SavesSection);
+        await RefreshInstanceStartsEmptyAsync();
+    }
+
+    private async Task RefreshInstanceStartsEmptyAsync()
+    {
+        var sections = new List<GameSaveSection>();
+        if (_services is { } services && SelectedInstance is { } instance && !VehiclesSection.HasItems && !SavesSection.HasItems
+            && VehiclesSection.Error is null && SavesSection.Error is null)
+        {
+            try
+            {
+                foreach (var section in new[] { SavesSection, VehiclesSection })
+                {
+                    if (await services.GameSaves.HasSharedProfileItemsAsync(section.Kind))
+                        sections.Add(section);
+                }
+            }
+            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+            {
+                sections.Clear();
+            }
+
+            if (SelectedInstance?.InstanceId != instance.InstanceId)
+                return;
+        }
+
+        _sectionsWithProfileItems = sections;
+        OnPropertyChanged(nameof(ShowInstanceStartsEmpty));
+    }
+
+    [RelayCommand]
+    private async Task CopyAllFromProfileAsync()
+    {
+        foreach (var section in _sectionsWithProfileItems)
+            await BeginCopyFromProfileAsync(section);
     }
 
     private async Task LoadGameSavesAsync(GameSaveSection section)
@@ -93,7 +136,10 @@ public partial class MainViewModel
         });
 
         if (deleted)
+        {
             await LoadGameSavesAsync(item.Section);
+            await RefreshInstanceStartsEmptyAsync();
+        }
     }
 
     internal void BeginCopyGameSave(GameSaveItem item)
@@ -179,6 +225,7 @@ public partial class MainViewModel
         if (done)
             section.HideProfile();
         await LoadGameSavesAsync(section);
+        await RefreshInstanceStartsEmptyAsync();
     }
 
     [RelayCommand]
@@ -240,6 +287,7 @@ public partial class MainViewModel
 
     private void RefreshGameSaveText()
     {
+        OnPropertyChanged(nameof(GameProfileInfoText));
         VehiclesSection.RefreshText();
         SavesSection.RefreshText();
     }
