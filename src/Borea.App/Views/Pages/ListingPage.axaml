@@ -326,16 +326,80 @@
                                     <Button Classes="text" Content="{Binding Localization.ListingCopy}" Command="{Binding ListingEditor.CopyCommand}" />
                                     <Button Classes="text" Content="{Binding Localization.ListingSaveAs}" Command="{Binding ListingEditor.SaveCommand}" />
                                 </WrapPanel>
-                                <TextBlock Classes="body-sm secondary" Text="{Binding Localization.ListingNewPullRequestText}" TextWrapping="Wrap" IsVisible="{Binding ListingEditor.IsNew}" />
-                                <TextBlock Classes="body-sm secondary" Text="{Binding Localization.ListingEditPullRequestText}" TextWrapping="Wrap" IsVisible="{Binding ListingEditor.IsEdit}" />
-                                <Button Classes="cta" Command="{Binding ListingEditor.OpenPullRequestCommand}" IsEnabled="{Binding ListingEditor.CanOpenPullRequest}" HorizontalAlignment="Left">
-                                    <StackPanel Orientation="Horizontal" Spacing="6">
-                                        <Path Classes="icon size-16" Data="{StaticResource Icon.GithubLogo}" Stroke="{StaticResource Brush.SurfaceHeader}" VerticalAlignment="Center" />
-                                        <TextBlock Classes="action-lg" Text="{Binding Localization.ListingOpenPullRequest}" VerticalAlignment="Center" />
+                                <!-- this build has no GitHub sign-in, so the browser opens the pull request -->
+                                <StackPanel Spacing="12" IsVisible="{Binding ListingEditor.UsesBrowserOnly}">
+                                    <TextBlock Classes="body-sm secondary" Text="{Binding Localization.ListingNewPullRequestText}" TextWrapping="Wrap" IsVisible="{Binding ListingEditor.IsNew}" />
+                                    <TextBlock Classes="body-sm secondary" Text="{Binding Localization.ListingEditPullRequestText}" TextWrapping="Wrap" IsVisible="{Binding ListingEditor.IsEdit}" />
+                                    <Button Classes="cta" Command="{Binding ListingEditor.OpenPullRequestCommand}" IsEnabled="{Binding ListingEditor.CanOpenPullRequest}" HorizontalAlignment="Left">
+                                        <StackPanel Orientation="Horizontal" Spacing="6">
+                                            <Path Classes="icon size-16" Data="{StaticResource Icon.GithubLogo}" Stroke="{StaticResource Brush.SurfaceHeader}" VerticalAlignment="Center" />
+                                            <TextBlock Classes="action-lg" Text="{Binding Localization.ListingOpenPullRequest}" VerticalAlignment="Center" />
+                                        </StackPanel>
+                                    </Button>
+                                </StackPanel>
+
+                                <StackPanel Spacing="12" IsVisible="{Binding ListingEditor.CanSignIn}">
+                                    <TextBlock Classes="body-sm secondary" Text="{Binding ListingEditor.PublishText}" TextWrapping="Wrap" />
+                                    <TextBlock Classes="body-sm secondary" Text="{Binding Localization.ListingOwnershipChecking}" TextWrapping="Wrap" IsVisible="{Binding ListingEditor.IsCheckingOwnership}" />
+                                    <StackPanel Spacing="4" IsVisible="{Binding ListingEditor.HasOwnership}">
+                                        <TextBlock Classes="body-md" Classes.positive="{Binding ListingEditor.IsOwnershipVerified}" Text="{Binding ListingEditor.OwnershipText}" TextWrapping="Wrap" />
+                                        <TextBlock Classes="body-sm secondary" Text="{Binding ListingEditor.OwnershipDetail}" TextWrapping="Wrap" IsVisible="{Binding ListingEditor.OwnershipDetail, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                                        <WrapPanel ItemSpacing="16" LineSpacing="4">
+                                            <Button Classes="link" Command="{Binding ListingEditor.OpenOwnershipFixCommand}" IsVisible="{Binding ListingEditor.OwnershipFixUrl, Converter={x:Static ObjectConverters.IsNotNull}}">
+                                                <TextBlock Classes="action-md" Text="{Binding ListingEditor.OwnershipFixLabel}" />
+                                            </Button>
+                                            <Button Classes="link" Command="{Binding ListingEditor.CheckOwnershipAgainCommand}" IsVisible="{Binding ListingEditor.CanCheckOwnershipAgain}">
+                                                <TextBlock Classes="action-md" Text="{Binding Localization.ListingCheckAgain}" />
+                                            </Button>
+                                        </WrapPanel>
                                     </StackPanel>
+                                    <StackPanel Spacing="4" IsVisible="{Binding ListingEditor.HasForkStep}">
+                                        <TextBlock Classes="body-md" Text="{Binding ListingEditor.ForkStepText}" TextWrapping="Wrap" />
+                                        <WrapPanel ItemSpacing="16" LineSpacing="4">
+                                            <Button Classes="link" Command="{Binding ListingEditor.OpenForkStepCommand}">
+                                                <TextBlock Classes="action-md" Text="{Binding ListingEditor.ForkStepLabel}" />
+                                            </Button>
+                                            <Button Classes="link" Command="{Binding ListingEditor.PublishCommand}" IsEnabled="{Binding ListingEditor.CanPublish}">
+                                                <TextBlock Classes="action-md" Text="{Binding Localization.ListingCheckAgain}" />
+                                            </Button>
+                                        </WrapPanel>
+                                    </StackPanel>
+                                    <WrapPanel ItemSpacing="8" LineSpacing="8">
+                                        <Button Classes="cta" Command="{Binding ListingEditor.PublishCommand}" IsEnabled="{Binding ListingEditor.CanPublish}">
+                                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                                <Path Classes="icon size-16" Data="{StaticResource Icon.GithubLogo}" Stroke="{StaticResource Brush.SurfaceHeader}" VerticalAlignment="Center" />
+                                                <TextBlock Classes="action-lg" Text="{Binding ListingEditor.PublishLabel}" VerticalAlignment="Center" />
+                                            </StackPanel>
+                                        </Button>
+                                        <Button Classes="text" Content="{Binding Localization.LibraryCancel}" Command="{Binding ListingEditor.CancelPublishCommand}" IsVisible="{Binding ListingEditor.IsPublishing}" />
+                                    </WrapPanel>
+                                    <TextBlock Classes="body-sm secondary" Text="{Binding ListingEditor.PublishProgress}" TextWrapping="Wrap" IsVisible="{Binding ListingEditor.IsPublishing}" />
+                                </StackPanel>
+
+                                <Button Classes="link" Command="{Binding ListingEditor.OpenPullRequestCommand}" IsEnabled="{Binding ListingEditor.CanOpenPullRequest}" HorizontalAlignment="Left" IsVisible="{Binding ListingEditor.CanSignIn}">
+                                    <TextBlock Classes="action-md" Text="{Binding Localization.ListingOpenInBrowser}" />
                                 </Button>
                                 <TextBlock Classes="body-sm danger" Text="{Binding Localization.ListingFixErrors}" TextWrapping="Wrap" IsVisible="{Binding ListingEditor.HasErrors}" />
+                                <TextBlock Classes="body-sm danger" Text="{Binding ListingEditor.PublishError}" TextWrapping="Wrap" IsVisible="{Binding ListingEditor.PublishError, Converter={x:Static ObjectConverters.IsNotNull}}" />
                                 <TextBlock Classes="body-sm" Text="{Binding ListingEditor.OutputMessage}" TextWrapping="Wrap" IsVisible="{Binding ListingEditor.OutputMessage, Converter={x:Static ObjectConverters.IsNotNull}}" />
+
+                                <!-- the opened pull request, followed while the page is open -->
+                                <Border Background="{StaticResource Brush.Window}" CornerRadius="8" Padding="16" IsVisible="{Binding ListingEditor.HasPullRequest}">
+                                    <StackPanel Spacing="8">
+                                        <Grid ColumnDefinitions="*,8,Auto">
+                                            <Button Classes="link" Command="{Binding ListingEditor.OpenFollowedPullRequestCommand}" HorizontalAlignment="Left" VerticalAlignment="Center">
+                                                <TextBlock Classes="action-md" Text="{Binding ListingEditor.PullRequestTitle}" />
+                                            </Button>
+                                            <Button Grid.Column="2" Classes="text" Content="{Binding Localization.ListingRefresh}" Command="{Binding ListingEditor.RefreshStatusCommand}" IsEnabled="{Binding !ListingEditor.IsRefreshingStatus}" IsVisible="{Binding ListingEditor.HasOpenPullRequest}" />
+                                        </Grid>
+                                        <TextBlock Classes="body-md" Classes.positive="{Binding ListingEditor.IsPullRequestGood}" Classes.danger="{Binding ListingEditor.IsPullRequestBad}" Text="{Binding ListingEditor.PullRequestStateText}" TextWrapping="Wrap" IsVisible="{Binding ListingEditor.PullRequestStateText, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                                        <views:MarkdownView Markdown="{Binding ListingEditor.PullRequestVerdict}" IsVisible="{Binding ListingEditor.PullRequestVerdict, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                                        <TextBlock Classes="body-sm danger" Text="{Binding ListingEditor.StatusError}" TextWrapping="Wrap" IsVisible="{Binding ListingEditor.StatusError, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                                        <Button Classes="link" Command="{Binding SignInToGitHubCommand}" HorizontalAlignment="Left" IsVisible="{Binding ListingEditor.NeedsSignInToFollow}">
+                                            <TextBlock Classes="action-md" Text="{Binding Localization.ListingSignIn}" />
+                                        </Button>
+                                    </StackPanel>
+                                </Border>
                             </StackPanel>
                         </Border>
                     </StackPanel>
