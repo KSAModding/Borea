@@ -86,7 +86,7 @@ public sealed class GameSavesViewModelTests
 
         await Assert.Single(section.Items).BackUpCommand.ExecuteAsync(null);
 
-        var zip = Assert.Single(Directory.GetFiles(Path.Combine(harness.Services.Paths.GetBackupsRoot(), instance.InstanceId.ToString(), "saves")));
+        var zip = Assert.Single(Directory.GetFiles(Path.Combine(harness.Services.Paths.GetBackupsRoot(), instance.InstanceId.ToString(), "saves"), "*.zip"));
         Assert.Equal(harness.Localization.FormatGameSaveBackedUp("Orbit", zip), harness.ViewModel.Toasts.Items[^1].Message);
         Assert.Null(section.Error);
     }
