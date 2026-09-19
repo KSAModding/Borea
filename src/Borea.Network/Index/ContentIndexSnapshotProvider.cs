@@ -24,7 +24,11 @@ public sealed class ContentIndexSnapshotProvider : IContentIndexSnapshotProvider
         _reader = reader ?? throw new ArgumentNullException(nameof(reader));
         _paths = paths ?? throw new ArgumentNullException(nameof(paths));
         _timeProvider = timeProvider ?? TimeProvider.System;
+        CachedOnly = new CachedOnlyProvider(this);
     }
+
+    /// <summary>Serves the snapshot in memory, or reads the cached file when there is none, and never fetches.</summary>
+    public IContentIndexSnapshotProvider CachedOnly { get; }
 
     /// <summary>The cache age is the last write time of the cached file, which a successful fetch sets.</summary>
     public ContentIndexRefreshStatus Status
@@ -62,6 +66,17 @@ public sealed class ContentIndexSnapshotProvider : IContentIndexSnapshotProvider
     {
         lock (_gate)
             return StartRefresh().WaitAsync(cancellationToken);
+    }
+
+    private Task<ContentIndexSnapshot> GetCachedSnapshotAsync(CancellationToken cancellationToken)
+    {
+        lock (_gate)
+        {
+            if (_snapshot is not null)
+                return Task.FromResult(_snapshot);
+        }
+
+        return _reader.ReadAsync(cancellationToken);
     }
 
     private Task<ContentIndexSnapshot> StartRefresh()
@@ -138,5 +153,11 @@ public sealed class ContentIndexSnapshotProvider : IContentIndexSnapshotProvider
             _lastAttemptAt = _timeProvider.GetUtcNow();
             return snapshot;
         }
+    }
+
+    private sealed class CachedOnlyProvider(ContentIndexSnapshotProvider owner) : IContentIndexSnapshotProvider
+    {
+        public Task<ContentIndexSnapshot> GetSnapshotAsync(CancellationToken cancellationToken = default) =>
+            owner.GetCachedSnapshotAsync(cancellationToken);
     }
 }

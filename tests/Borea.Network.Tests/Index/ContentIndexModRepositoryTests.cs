@@ -295,6 +295,24 @@ public sealed class ContentIndexModRepositoryTests : IDisposable
         Assert.Equal(new ContentIndexRefreshStatus(ContentIndexRefreshOutcome.NotModified, time.UtcNow), provider.Status);
     }
 
+    [Fact]
+    public async Task CachedOnly_ServesTheSnapshotInMemoryAndReadsTheFileOnlyWithoutOne()
+    {
+        var time = new FakeTimeProvider();
+        var fetcher = new FakeFetcher(ContentIndexFetchResult.Downloaded);
+        var reader = new FakeReader(Snapshot());
+        var provider = new ContentIndexSnapshotProvider(fetcher, reader, new TestPathProvider(), time);
+
+        await provider.CachedOnly.GetSnapshotAsync();
+        var loaded = await provider.GetSnapshotAsync();
+        time.UtcNow += TimeSpan.FromDays(1);
+        var cached = await provider.CachedOnly.GetSnapshotAsync();
+
+        Assert.Same(loaded, cached);
+        Assert.Equal(1, fetcher.CallCount);
+        Assert.Equal(2, reader.CallCount);
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_tempDir))
