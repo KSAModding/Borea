@@ -101,6 +101,7 @@ internal sealed class ViewModelHarness : IDisposable
         ViewModel?.WhenPreferencesSavedAsync().GetAwaiter().GetResult();
         ViewModel?.WhenUpdateCheckedAsync().GetAwaiter().GetResult();
         ViewModel?.WhenGameBuildCheckedAsync().GetAwaiter().GetResult();
+        ViewModel?.WhenNewerGamePatchNotesLoadedAsync().GetAwaiter().GetResult();
         ViewModel?.WhenReleaseChannelSavedAsync().GetAwaiter().GetResult();
         ViewModel?.WhenContentUpdatesCheckedAsync().GetAwaiter().GetResult();
         ViewModel?.WhenPlaytimeLoadedAsync().GetAwaiter().GetResult();

@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Net.Http;
+using System.Threading;
 using System.Threading.Tasks;
 using Borea.Composition;
 using Borea.Core.Game;
@@ -11,9 +13,15 @@ using CommunityToolkit.Mvvm.Input;
 
 namespace Borea.App.ViewModels;
 
-/// <summary>The Home banner for a newer public game build, and the patch notes the installed game ships.</summary>
+/// <summary>The Home banner for a newer public game build, and the patch notes of the installed and the newer builds.</summary>
 public partial class MainViewModel
 {
+    internal const int MaxNewerGamePatchNotes = 20;
+
+    private CancellationTokenSource? _newerGamePatchNotesLoad;
+
+    private Task? _newerGamePatchNotesTask;
+
     private Task? _gameBuildCheck;
 
     private BoreaServices? _gameBuildCheckServices;
@@ -53,12 +61,24 @@ public partial class MainViewModel
     [ObservableProperty]
     private string? _gamePatchNotesError;
 
-    /// <summary>The builds in Content/Versions of the game folder, newest first.</summary>
+    /// <summary>The newer builds that are not installed, then the builds in Content/Versions of the game folder, each newest first.</summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasNoGamePatchNotes))]
     private IReadOnlyList<GamePatchNotesItem> _gamePatchNotes = [];
 
     public bool HasNoGamePatchNotes => GamePatchNotes.Count == 0;
+
+    [ObservableProperty]
+    private bool _isLoadingNewerGamePatchNotes;
+
+    [ObservableProperty]
+    private bool _newerGamePatchNotesFailed;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(NewerGamePatchNotesCappedText))]
+    private bool _newerGamePatchNotesCapped;
+
+    public string? NewerGamePatchNotesCappedText => NewerGamePatchNotesCapped ? Localization.FormatGamePatchNotesCapped(MaxNewerGamePatchNotes) : null;
 
     partial void OnInstalledVersionTextChanged(string? value)
     {
@@ -104,9 +124,95 @@ public partial class MainViewModel
             return;
 
         var notes = await services.GamePatchNotes.ReadAsync();
-        GamePatchNotes = notes.Select(entry => new GamePatchNotesItem(entry)).ToList();
+        CancelNewerGamePatchNotes();
+        GamePatchNotes = notes.Select(entry => new GamePatchNotesItem(entry, isInstalled: true)).ToList();
         GamePatchNotesError = null;
+        NewerGamePatchNotesFailed = false;
+        NewerGamePatchNotesCapped = false;
         IsGamePatchNotesOpen = true;
+
+        var load = new CancellationTokenSource();
+        _newerGamePatchNotesLoad = load;
+        _newerGamePatchNotesTask = LoadNewerGamePatchNotesAsync(services, load.Token);
+    }
+
+    /// <summary>Completes when the notes of the newer builds have loaded, failed or were cancelled.</summary>
+    internal Task WhenNewerGamePatchNotesLoadedAsync() => _newerGamePatchNotesTask ?? Task.CompletedTask;
+
+    private async Task LoadNewerGamePatchNotesAsync(BoreaServices services, CancellationToken cancellationToken)
+    {
+        try
+        {
+            if (!GameVersion.TryParse(InstalledVersionText, out var installed))
+                return;
+
+            var builds = (await GameReleasesAsync(services, cancellationToken)).NewerThan(installed.Revision);
+            cancellationToken.ThrowIfCancellationRequested();
+            if (builds.Count == 0)
+                return;
+
+            IsLoadingNewerGamePatchNotes = true;
+            var fetch = await services.GamePatchNotesFetcher.FetchAsync(builds, installed.Revision, MaxNewerGamePatchNotes, cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var local = GamePatchNotes.Select(item => item.Revision).ToHashSet();
+            GamePatchNotes =
+            [
+                .. fetch.Notes.Where(entry => !local.Contains(entry.Revision)).Select(entry => new GamePatchNotesItem(entry, isInstalled: false)),
+                .. GamePatchNotes,
+            ];
+            NewerGamePatchNotesFailed = !fetch.Complete;
+            NewerGamePatchNotesCapped = fetch.Capped;
+        }
+        catch (Exception) when (cancellationToken.IsCancellationRequested)
+        {
+        }
+        catch (Exception exception)
+        {
+            services.Log.Write("The patch notes of the newer game builds did not load.", exception);
+            NewerGamePatchNotesFailed = true;
+        }
+        finally
+        {
+            if (!cancellationToken.IsCancellationRequested)
+                IsLoadingNewerGamePatchNotes = false;
+        }
+    }
+
+    /// <summary>game_versions of the index snapshot and the master server's build (RFC 0017). The snapshot is read from disk when Discover has not loaded it.</summary>
+    private async Task<GameReleaseList> GameReleasesAsync(BoreaServices services, CancellationToken cancellationToken)
+    {
+        var releases = _gameReleases;
+        if (releases.IsEmpty)
+        {
+            try
+            {
+                releases = GameReleaseList.From((await services.IndexReader.ReadAsync(cancellationToken)).GameVersions);
+            }
+            catch (Exception exception) when (exception is InvalidOperationException or IOException or UnauthorizedAccessException)
+            {
+            }
+        }
+
+        return LatestGameBuild?.Version is { } latest ? releases.WithBuild(latest) : releases;
+    }
+
+    private void CancelNewerGamePatchNotes()
+    {
+        if (_newerGamePatchNotesLoad is { } load)
+        {
+            load.Cancel();
+            load.Dispose();
+            _newerGamePatchNotesLoad = null;
+        }
+
+        IsLoadingNewerGamePatchNotes = false;
+    }
+
+    partial void OnIsGamePatchNotesOpenChanged(bool value)
+    {
+        if (!value)
+            CancelNewerGamePatchNotes();
     }
 
     [RelayCommand]
@@ -131,20 +237,26 @@ public partial class MainViewModel
     }
 }
 
-/// <summary>The patch notes of one installed game build.</summary>
+/// <summary>The patch notes of one game build.</summary>
 public sealed class GamePatchNotesItem : ObservableObject
 {
     private readonly DateOnly? _date;
 
     public string Build { get; }
 
+    public int Revision { get; }
+
+    public bool IsInstalled { get; }
+
     public IReadOnlyList<string> Lines { get; }
 
     public string? DateText => _date?.ToString("d", CultureInfo.CurrentCulture);
 
-    public GamePatchNotesItem(GamePatchNotes notes)
+    public GamePatchNotesItem(GamePatchNotes notes, bool isInstalled)
     {
         Build = notes.Build;
+        Revision = notes.Revision;
+        IsInstalled = isInstalled;
         Lines = notes.Lines;
         _date = notes.Date;
     }

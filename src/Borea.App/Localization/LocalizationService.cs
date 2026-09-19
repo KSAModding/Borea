@@ -345,6 +345,15 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string GamePatchNotesEmpty => Resources.GamePatchNotesEmpty;
 
+    public string GamePatchNotesNotInstalled => Resources.GamePatchNotesNotInstalled;
+
+    public string GamePatchNotesLoading => Resources.GamePatchNotesLoading;
+
+    public string GamePatchNotesLoadFailed => Resources.GamePatchNotesLoadFailed;
+
+    public string FormatGamePatchNotesCapped(int count)
+        => string.Format(CultureInfo.CurrentCulture, Resources.GamePatchNotesCappedFormat, count);
+
     public string SystemDefaultRegionalFormat => Resources.SystemDefaultRegionalFormat;
 
     public string HomeCurrentInstall => Resources.HomeCurrentInstall;

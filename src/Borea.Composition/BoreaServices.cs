@@ -162,6 +162,8 @@ public sealed class BoreaServices : IDisposable
 
     public required IGamePatchNotesReader GamePatchNotes { get; init; }
 
+    public required IGamePatchNotesFetcher GamePatchNotesFetcher { get; init; }
+
     public required IInstallDetector InstallDetector { get; init; }
 
     public required IContentIndexFetcher IndexFetcher { get; init; }
@@ -351,6 +353,7 @@ public sealed class BoreaServices : IDisposable
             ReleaseCheck = new BoreaReleaseCheck(http),
             InstalledVersion = new InstalledGameVersionProvider(paths),
             GamePatchNotes = new FileGamePatchNotesReader(paths),
+            GamePatchNotesFetcher = new GamePatchNotesFetcher(http, new FileGamePatchNotesCache(paths)),
             InstallDetector = new InstallDetector(installCandidates, loaderAdopter, paths.GetLoadersRoot()),
             IndexFetcher = indexFetcher,
             IndexReader = indexReader,

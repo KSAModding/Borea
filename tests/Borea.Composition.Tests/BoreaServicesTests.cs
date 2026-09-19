@@ -535,6 +535,7 @@ public sealed class BoreaServicesTests : IDisposable
 
         Assert.IsType<FileGamePatchNotesReader>(services.GamePatchNotes);
         Assert.Empty(await services.GamePatchNotes.ReadAsync());
+        Assert.IsType<GamePatchNotesFetcher>(services.GamePatchNotesFetcher);
     }
 
     [Fact]

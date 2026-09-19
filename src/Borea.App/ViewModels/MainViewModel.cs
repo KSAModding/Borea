@@ -794,6 +794,7 @@ public partial class MainViewModel : ViewModelBase
         OnPropertyChanged(nameof(SharedProfileBannerText));
         OnPropertyChanged(nameof(AvailableUpdateText));
         OnPropertyChanged(nameof(GameBuildBannerText));
+        OnPropertyChanged(nameof(NewerGamePatchNotesCappedText));
         OnPropertyChanged(nameof(SharedProfileImportNotice));
         OnPropertyChanged(nameof(InstalledInText));
         OnPropertyChanged(nameof(ActiveInstanceUpdatesText));

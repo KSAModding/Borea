@@ -17,6 +17,9 @@
                 </Grid>
                 <Border DockPanel.Dock="Top" Height="1" Background="{StaticResource Brush.Window}" Margin="0,24,0,0" />
                 <TextBlock DockPanel.Dock="Top" Classes="body-md danger" Margin="36,24,24,0" Text="{Binding GamePatchNotesError}" TextWrapping="Wrap" IsVisible="{Binding GamePatchNotesError, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                <TextBlock DockPanel.Dock="Top" Classes="body-md muted" Margin="36,24,24,0" Text="{Binding Localization.GamePatchNotesLoading}" TextWrapping="Wrap" IsVisible="{Binding IsLoadingNewerGamePatchNotes}" />
+                <TextBlock DockPanel.Dock="Top" Classes="body-md muted" Margin="36,24,24,0" Text="{Binding Localization.GamePatchNotesLoadFailed}" TextWrapping="Wrap" IsVisible="{Binding NewerGamePatchNotesFailed}" />
+                <TextBlock DockPanel.Dock="Top" Classes="body-md muted" Margin="36,24,24,0" Text="{Binding NewerGamePatchNotesCappedText}" TextWrapping="Wrap" IsVisible="{Binding NewerGamePatchNotesCapped}" />
                 <TextBlock DockPanel.Dock="Top" Classes="body-md muted" Margin="36,24,24,32" Text="{Binding Localization.GamePatchNotesEmpty}" IsVisible="{Binding HasNoGamePatchNotes}" />
                 <!-- the full history has thousands of lines, so only the builds in view are created -->
                 <ScrollViewer>
@@ -31,6 +34,9 @@
                                 <StackPanel Spacing="8" Margin="0,0,0,24">
                                     <WrapPanel ItemSpacing="8" LineSpacing="4">
                                         <TextBlock Classes="heading-md" Text="{Binding Build}" VerticalAlignment="Center" />
+                                        <Border Classes="chip" VerticalAlignment="Center" IsVisible="{Binding !IsInstalled}">
+                                            <TextBlock Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.GamePatchNotesNotInstalled}" />
+                                        </Border>
                                         <TextBlock Classes="label-md" Text="{Binding DateText}" VerticalAlignment="Center" IsVisible="{Binding DateText, Converter={x:Static ObjectConverters.IsNotNull}}" />
                                     </WrapPanel>
                                     <ItemsControl ItemsSource="{Binding Lines}">
