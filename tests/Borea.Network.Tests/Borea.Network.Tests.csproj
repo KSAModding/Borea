@@ -23,4 +23,8 @@
     <ProjectReference Include="..\..\src\Borea.Network\Borea.Network.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="Listings\Fixtures\forum-thread.html" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>
