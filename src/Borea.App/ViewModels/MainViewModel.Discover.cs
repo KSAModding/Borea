@@ -229,9 +229,7 @@ public partial class MainViewModel
             filtered = filtered.Where(item => matchingSet.Contains(item.Listing));
         }
 
-        DiscoverItems.Clear();
-        foreach (var item in SortDiscover(filtered))
-            DiscoverItems.Add(item);
+        Arrange(DiscoverItems, SortDiscover(filtered).ToList());
         ApplyPackFilters(query);
         OnPropertyChanged(nameof(HasDiscoverItems));
     }
