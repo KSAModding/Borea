@@ -12,16 +12,18 @@ namespace Borea.Cli.Commands;
 
 /// <summary>
 /// The pack command group. Search and show read mod packs from the content index,
-/// and install gives one exact pack version to <see cref="IModPackInstaller"/>.
+/// install gives one exact pack version to <see cref="IModPackInstaller"/>, and update moves
+/// an instance to the newest version of its pack through <see cref="IModPackUpdater"/>.
 /// </summary>
 internal static class PackCommand
 {
     public static Command Build(Func<CancellationToken, Task<CliServices>> services)
     {
-        var pack = new Command("pack", "Find, inspect, and install mod packs.");
+        var pack = new Command("pack", "Find, inspect, install, and update mod packs.");
         pack.Subcommands.Add(BuildSearch(services));
         pack.Subcommands.Add(BuildShow(services));
         pack.Subcommands.Add(BuildInstall(services));
+        pack.Subcommands.Add(BuildUpdate(services));
         return pack;
     }
 
@@ -205,18 +207,7 @@ internal static class PackCommand
         {
             Description = "Install the selected pack version even though the index retracted it.",
         };
-        var proceedWithYanked = new Option<string[]>("--proceed-with-yanked")
-        {
-            Description = "Install the yanked release this pack pins for this mod id. Repeat it for each yanked member.",
-        };
-        proceedWithYanked.Validators.Add(result =>
-        {
-            foreach (var value in result.GetValueOrDefault<string[]>() ?? [])
-            {
-                if (!ModIds.IsValid(value))
-                    result.AddError($"'{value}' is not a valid content id.");
-            }
-        });
+        var proceedWithYanked = ProceedWithYankedOption();
         var recommended = new Option<bool>("--with-recommended") { Description = "Install recommended dependencies." };
         var alternatives = new Option<string[]>("--alternative") { Description = "Select a required alternative as choice-key=mod-id." };
         var dryRun = new Option<bool>("--dry-run") { Description = "Print the plan from the cached index without writing files." };
@@ -347,6 +338,122 @@ internal static class PackCommand
         return install;
     }
 
+    private static Command BuildUpdate(Func<CancellationToken, Task<CliServices>> services)
+    {
+        var instance = ArgumentRules.Text("instance", "The instance to update, by name or id.");
+        var proceedWithYanked = ProceedWithYankedOption();
+        var recommended = new Option<bool>("--with-recommended") { Description = "Install recommended dependencies." };
+        var alternatives = new Option<string[]>("--alternative") { Description = "Select a required alternative as choice-key=mod-id." };
+        var dryRun = new Option<bool>("--dry-run") { Description = "Print the changes from the cached index without writing files." };
+        var json = ArgumentRules.Json();
+        var update = new Command("update", "Update an instance to the newest version of the mod pack it was created from.");
+        update.Arguments.Add(instance);
+        update.Options.Add(proceedWithYanked);
+        update.Options.Add(recommended);
+        update.Options.Add(alternatives);
+        update.Options.Add(dryRun);
+        update.Options.Add(json);
+
+        update.SetAction((parseResult, cancellationToken) => CommandRunner.RunAsync(parseResult, services, cancellationToken, async (cli, output, error, ct) =>
+        {
+            var target = await InstanceLookup.ResolveAsync(cli.Instances, parseResult.GetRequiredValue(instance)).ConfigureAwait(false);
+            if (target.Source is not InstanceSource.FromModPack source)
+                throw new InvalidOperationException($"Instance '{target.Name}' was not created from a mod pack.");
+
+            var isDryRun = parseResult.GetValue(dryRun);
+            if (isDryRun)
+                await ModInstallCommands.RequireCachedIndexAsync(cli, ct).ConfigureAwait(false);
+
+            var newer = await ModPackUpdates.FindNewerAsync(isDryRun ? cli.ReadOnlyModPacks : cli.ModPacks, source, ct).ConfigureAwait(false);
+            if (newer?.Metadata is not { } metadata)
+            {
+                if (parseResult.GetValue(json))
+                    JsonOutput.Write(output, UpdateView.Current(target, source, isDryRun));
+                else
+                    output.WriteLine($"Instance '{target.Name}' has the newest version of pack {source.ModPackId}, {source.Version}.");
+                return ExitCodes.Done;
+            }
+
+            var snapshot = isDryRun
+                ? await cli.IndexReader.ReadAsync(ct).ConfigureAwait(false)
+                : await cli.IndexSnapshots.GetSnapshotAsync(ct).ConfigureAwait(false);
+            var installed = cli.InstalledVersion.GetInstalledVersion()?.Version;
+            var compatibility = Compatibility.Evaluate(metadata, installed, GameReleaseList.From(snapshot.GameVersions));
+            if (compatibility == GameCompatibility.Incompatible)
+            {
+                throw new InvalidOperationException(
+                    $"Pack '{metadata.ModPackId}' {metadata.Version} is incompatible with the installed game {installed}, because it needs game {metadata.GameMin} or newer.");
+            }
+
+            var chosenAlternatives = ModInstallCommands.ParseAlternatives(parseResult.GetValue(alternatives));
+            var yanked = parseResult.GetValue(proceedWithYanked) ?? [];
+            var request = new ModPackUpdateRequest(
+                target.InstanceId,
+                newer,
+                isDryRun ? cli.ReadOnlyMods : cli.Mods,
+                installed,
+                CurrentPlatform(),
+                Alternatives: chosenAlternatives.Count == 0 ? null : chosenAlternatives,
+                ProceedWithYankedMembers: yanked.Length == 0 ? null : new HashSet<string>(yanked, ModIds.Comparer));
+
+            ModPackUpdateResult? planned = null;
+            if (parseResult.GetValue(recommended))
+                (request, planned) = await SelectRecommendedAsync(cli.ModPackUpdater, request, ct).ConfigureAwait(false);
+
+            ModPackUpdateResult result;
+            if (isDryRun)
+            {
+                result = planned ?? await cli.ModPackUpdater.PlanAsync(request, ct).ConfigureAwait(false);
+            }
+            else
+            {
+                var stop = new InstallStop();
+                using var registration = ct.Register(stop.Request);
+                result = await cli.ModPackUpdater.UpdateAsync(request, new InstallProgressOutput(error), stop).ConfigureAwait(false);
+            }
+
+            var view = UpdateView.From(
+                target,
+                isDryRun,
+                SelectionWarnings(newer, metadata, compatibility),
+                result,
+                newer.Diagnostics.Select(ContentOutput.Diagnostic).ToArray());
+
+            if (parseResult.GetValue(json))
+                JsonOutput.Write(output, view);
+            else
+                WriteHuman(output, view);
+
+            if (result.IsStopped)
+                throw new OperationCanceledException(ct);
+
+            if (isDryRun ? result.CanRun : result.IsComplete)
+                return ExitCodes.Done;
+
+            error.WriteLine($"error: {UpdateFailureReason(view, request)}");
+            return ExitCodes.Failed;
+        }));
+
+        return update;
+    }
+
+    private static Option<string[]> ProceedWithYankedOption()
+    {
+        var option = new Option<string[]>("--proceed-with-yanked")
+        {
+            Description = "Install the yanked release this pack pins for this mod id. Repeat it for each yanked member.",
+        };
+        option.Validators.Add(result =>
+        {
+            foreach (var value in result.GetValueOrDefault<string[]>() ?? [])
+            {
+                if (!ModIds.IsValid(value))
+                    result.AddError($"'{value}' is not a valid content id.");
+            }
+        });
+        return option;
+    }
+
     private static Option<string?> VersionOption(string description)
     {
         var version = new Option<string?>("--version") { Description = description };
@@ -372,6 +479,25 @@ internal static class PackCommand
         while (true)
         {
             var plan = await planAsync(request, cancellationToken).ConfigureAwait(false);
+            var added = false;
+            foreach (var choice in plan.Plan?.Choices.Where(choice => choice.Kind == PlanningChoiceKind.Recommendation) ?? [])
+                added |= selected.Add(choice.Key);
+            if (!added)
+                return (request, plan);
+
+            request = request with { Recommended = new HashSet<string>(selected, StringComparer.Ordinal) };
+        }
+    }
+
+    private static async Task<(ModPackUpdateRequest Request, ModPackUpdateResult Plan)> SelectRecommendedAsync(
+        IModPackUpdater updater,
+        ModPackUpdateRequest request,
+        CancellationToken cancellationToken)
+    {
+        var selected = new HashSet<string>(StringComparer.Ordinal);
+        while (true)
+        {
+            var plan = await updater.PlanAsync(request, cancellationToken).ConfigureAwait(false);
             var added = false;
             foreach (var choice in plan.Plan?.Choices.Where(choice => choice.Kind == PlanningChoiceKind.Recommendation) ?? [])
                 added |= selected.Add(choice.Key);
@@ -501,6 +627,31 @@ internal static class PackCommand
         return $"The pack was not installed completely, because {incomplete} of {view.Members.Count} members did not install.";
     }
 
+    private static string UpdateFailureReason(UpdateView view, ModPackUpdateRequest request)
+    {
+        var unresolved = new HashSet<string>(
+            view.Members.Where(member => member.Status == "unresolved").Select(member => member.Id),
+            ModIds.Comparer);
+        var yanked = view.Warnings
+            .Where(warning => warning.Code == "yanked" && unresolved.Contains(warning.Id))
+            .Where(warning => request.ProceedWithYankedMembers?.Any(id => ModIds.Equals(id, warning.Id)) != true)
+            .Select(warning => warning.Id)
+            .Distinct(ModIds.Comparer)
+            .ToArray();
+        if (yanked.Length > 0)
+            return $"The pack pins a yanked release of {string.Join(", ", yanked)}. Pass --proceed-with-yanked with each mod id to update anyway.";
+
+        if (view.DryRun)
+        {
+            return unresolved.Count > 0
+                ? $"The pack cannot be updated as planned, because {unresolved.Count} of {view.Members.Count} members are unresolved."
+                : "The pack cannot be updated as planned, because the plan has conflicts or open choices.";
+        }
+
+        var incomplete = view.Members.Count(member => member.Status is not ("installed" or "replaced" or "already-installed" or "removed"));
+        return $"The pack was not updated completely, because {incomplete} of {view.Members.Count} steps did not finish. The instance still names pack version {view.CurrentVersion}.";
+    }
+
     private static OsPlatform CurrentPlatform() =>
         OperatingSystem.IsWindows() ? OsPlatform.Windows : OperatingSystem.IsLinux() ? OsPlatform.Linux : OsPlatform.MacOs;
 
@@ -530,6 +681,7 @@ internal static class PackCommand
         ModPackMemberStatus.Unresolved => "unresolved",
         ModPackMemberStatus.Failed => "failed",
         ModPackMemberStatus.NotAttempted => "not-attempted",
+        ModPackMemberStatus.Removed => "removed",
         _ => throw new ArgumentOutOfRangeException(nameof(status), status, null),
     };
 
@@ -689,6 +841,58 @@ internal static class PackCommand
 
         if (planned is { Count: 0 } && view.UnresolvedChoices.Count == 0 && view.Conflicts.Count == 0)
             output.WriteLine("Nothing to do.");
+
+        ContentOutput.WriteDiagnostics(output, view.Diagnostics);
+    }
+
+    private static void WriteHuman(TextWriter output, UpdateView view)
+    {
+        output.WriteLine($"Pack {view.PackId} {view.CurrentVersion} to {view.NewVersion} in '{view.InstanceName}':");
+        foreach (var warning in view.Warnings)
+        {
+            output.WriteLine(warning.Code switch
+            {
+                "yanked" => $"warning: The selected release of {warning.Id} is yanked. {warning.Message}",
+                _ when warning.Code.StartsWith("pack-", StringComparison.Ordinal) => $"warning: {warning.Message}",
+                _ => $"warning: {warning.Id}: {warning.Message}",
+            });
+        }
+
+        if (view.Skipped.Count > 0)
+            output.WriteLine($"warning: Borea does not install pinned vehicles and saves yet, so it skips {string.Join(", ", view.Skipped.Select(entry => $"{entry.Id} {entry.Version}"))}.");
+
+        foreach (var change in view.Changes)
+        {
+            output.WriteLine(change.Change switch
+            {
+                "add" => $"Add {change.Id} {change.To}.",
+                "change" => $"Change {change.Id} from {change.From} to {change.To}.",
+                "remove" => $"Remove {change.Id} {change.From}.",
+                _ when change.To != change.From => $"Keep {change.Id} as a mod of the instance and change it from {change.From} to {change.To}, because the pack no longer pins it.",
+                _ => $"Keep {change.Id} {change.From} as a mod of the instance, because the pack no longer pins it.",
+            });
+        }
+
+        if (!view.DryRun)
+        {
+            foreach (var member in view.Members)
+            {
+                var message = member.Message is null ? string.Empty : $": {member.Message}";
+                output.WriteLine($"  {member.Status}  {member.Id} {member.Version}  {member.Reason}{message}");
+            }
+        }
+
+        foreach (var choice in view.UnresolvedChoices)
+            output.WriteLine($"choice: {choice.Message}");
+
+        foreach (var choice in view.Choices.Where(choice => choice.Kind == "alternative" && choice.Selected is null))
+            output.WriteLine($"choice option: {choice.Key} = {string.Join(", ", choice.Options)}");
+
+        foreach (var conflict in view.Conflicts)
+            output.WriteLine($"conflict: {conflict.Message}");
+
+        if (view.Changes.Count == 0 && view.UnresolvedChoices.Count == 0 && view.Conflicts.Count == 0)
+            output.WriteLine("No mods change.");
 
         ContentOutput.WriteDiagnostics(output, view.Diagnostics);
     }
@@ -907,6 +1111,75 @@ internal static class PackCommand
                 .Concat(pack.Saves.Select(pin => SkippedView.From("save", pin)))
                 .ToArray(),
             diagnostics);
+    }
+
+    private sealed record UpdateView(
+        string PackId,
+        Guid InstanceId,
+        string InstanceName,
+        string CurrentVersion,
+        string? NewVersion,
+        bool DryRun,
+        bool Complete,
+        IReadOnlyList<ChangeView> Changes,
+        IReadOnlyList<MemberResultView> Members,
+        IReadOnlyList<MessageView> Warnings,
+        IReadOnlyList<MessageView> UnresolvedChoices,
+        IReadOnlyList<ChoiceView> Choices,
+        IReadOnlyList<MessageView> Conflicts,
+        IReadOnlyList<SkippedView> Skipped,
+        IReadOnlyList<DiagnosticView> Diagnostics)
+    {
+        /// <summary>An instance whose pack has no newer usable version.</summary>
+        public static UpdateView Current(Instance instance, InstanceSource.FromModPack source, bool dryRun) => new(
+            source.ModPackId,
+            instance.InstanceId,
+            instance.Name,
+            source.Version.ToString(),
+            null,
+            dryRun,
+            true,
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            []);
+
+        public static UpdateView From(
+            Instance instance,
+            bool dryRun,
+            IReadOnlyList<MessageView> selectionWarnings,
+            ModPackUpdateResult result,
+            IReadOnlyList<DiagnosticView> diagnostics) => new(
+            result.Target.ModPackId,
+            instance.InstanceId,
+            instance.Name,
+            result.CurrentVersion.ToString(),
+            result.Target.Version.ToString(),
+            dryRun,
+            result.IsComplete,
+            result.Changes.Select(ChangeView.Of).ToArray(),
+            result.Members.Select(MemberResultView.From).ToArray(),
+            selectionWarnings.Concat(result.Warnings.Select(MessageView.From)).ToArray(),
+            result.Plan?.UnresolvedChoices.Select(MessageView.From).ToArray() ?? [],
+            result.Plan?.Choices.Select(ChoiceView.From).ToArray() ?? [],
+            result.Plan?.Conflicts.Select(MessageView.From).ToArray() ?? [],
+            result.Target.Vehicles.Select(pin => SkippedView.From("vehicle", pin))
+                .Concat(result.Target.Saves.Select(pin => SkippedView.From("save", pin)))
+                .ToArray(),
+            diagnostics);
+    }
+
+    private sealed record ChangeView(string Id, string Change, string? From, string? To)
+    {
+        public static ChangeView Of(ModPackChange change) => new(
+            change.ModId,
+            change.Kind.ToString().ToLowerInvariant(),
+            change.From?.ToString(),
+            change.To?.ToString());
     }
 
     private sealed record MemberResultView(string Id, string Version, string Reason, string Status, string? Message, string? Location)
