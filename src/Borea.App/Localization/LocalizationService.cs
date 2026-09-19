@@ -1012,6 +1012,20 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string FormatDiscoverInstalledIn(string instance)
         => string.Format(CultureInfo.CurrentCulture, Resources.DiscoverInstalledInFormat, instance);
 
+    public string FormatDiscoverAddTo(string instance)
+        => string.Format(CultureInfo.CurrentCulture, Resources.DiscoverAddToFormat, instance);
+
+    public string FormatDiscoverAddingTo(string instance)
+        => string.Format(CultureInfo.CurrentCulture, Resources.DiscoverAddingToFormat, instance);
+
+    /// <summary>The text before and after the instance name of <see cref="FormatDiscoverAddingTo"/>, so a page can style the name.</summary>
+    public (string Before, string After) SplitDiscoverAddingTo()
+    {
+        var format = Resources.DiscoverAddingToFormat;
+        var parts = format.Split("{0}");
+        return parts.Length == 2 ? (parts[0], parts[1]) : (format, "");
+    }
+
     public string FormatDiscoverInstalledMod(string name)
         => string.Format(CultureInfo.CurrentCulture, Resources.DiscoverInstalledModFormat, name);
 

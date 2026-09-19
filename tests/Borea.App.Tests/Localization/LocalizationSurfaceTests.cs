@@ -22,6 +22,17 @@ public sealed class LocalizationSurfaceTests : IDisposable
             Assert.False(string.IsNullOrWhiteSpace((string?)property.GetValue(service)), property.Name));
     }
 
+    [Theory]
+    [MemberData(nameof(Cultures))]
+    public void SplitDiscoverAddingTo_PutsTheNameWhereTheFormatHasIt(string culture)
+    {
+        var service = new LocalizationService(CultureInfo.GetCultureInfo(culture));
+
+        var (before, after) = service.SplitDiscoverAddingTo();
+
+        Assert.Equal(service.FormatDiscoverAddingTo("Alpha"), before + "Alpha" + after);
+    }
+
     [Fact]
     public void FormatMethods_FillTheirPlaceholders()
     {
