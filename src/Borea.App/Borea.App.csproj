@@ -28,6 +28,8 @@
     <Folder Include="Models\" />
     <AvaloniaResource Include="Assets\**" />
     <AvaloniaResource Include="..\..\assets\borea.ico" Link="Assets\borea.ico" />
+    <!-- The Linux link handler writes this icon next to its desktop entry. -->
+    <EmbeddedResource Include="..\..\assets\borea.png" LogicalName="Borea.App.borea.png" />
   </ItemGroup>
 
   <ItemGroup>
