@@ -47,6 +47,12 @@ public partial class MainViewModel
         return StartTask(TaskKind.ModInstall, version is null ? name : $"{name} {version}", instanceId, modId, version, TaskState.Waiting);
     }
 
+    private TaskItem StartPackInstallTask(PackItem pack, Guid instanceId)
+    {
+        var version = pack.RequestedVersion?.ToString();
+        return StartTask(TaskKind.PackInstall, version is null ? pack.Name : $"{pack.Name} {version}", instanceId, pack.PackId, version, TaskState.Waiting);
+    }
+
     /// <summary>A task that neither completed, failed nor stopped only planned, so it leaves no history.</summary>
     private void EndTask(TaskItem task, bool completed, bool stopped, string? error)
     {
@@ -112,14 +118,16 @@ public partial class MainViewModel
     private async Task RetryPackInstallAsync(TaskItem task, InstanceItem instance)
     {
         await EnsureDiscoverLoadedAsync();
-        if (_packs.FirstOrDefault(pack => ModIds.Equals(pack.PackId, task.ContentId)) is not { } pack)
+        ModVersion? version = ModVersion.TryParse(task.Version, out var exact) ? exact : null;
+        if ((task.Version is not null && version is null)
+            || _packs.FirstOrDefault(pack => ModIds.Equals(pack.PackId, task.ContentId)) is not { } pack)
         {
             FailRetry(task, Localization.DiscoverNoRelease);
             return;
         }
 
         await OpenPackAsync(pack);
-        await InstallPackAsync(pack, instance.InstanceId);
+        await InstallPackAsync(pack, instance.InstanceId, version);
     }
 
     private async Task RetryUpdateAsync(TaskItem task, InstanceItem instance)

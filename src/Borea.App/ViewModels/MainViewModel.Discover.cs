@@ -691,6 +691,11 @@ public sealed partial class DiscoverItem : ObservableObject, IInstallRow
 
     public string? AddedModsToolTip => _owner.AddedModsText(PendingPlan, Choices, all: true);
 
+    private Func<string>? _linkRequest;
+
+    /// <summary>What a borea:// link asked for while its confirmation waits, naming the instance. Null otherwise.</summary>
+    public string? LinkRequestText => _linkRequest?.Invoke();
+
     /// <summary>
     /// Mods install into an instance; a loader is set up from the settings.
     /// </summary>
@@ -783,6 +788,23 @@ public sealed partial class DiscoverItem : ObservableObject, IInstallRow
         OnPropertyChanged(nameof(AddedModsText));
         OnPropertyChanged(nameof(AddedModsToolTip));
         OnPropertyChanged(nameof(InstalledAutomationName));
+        OnPropertyChanged(nameof(LinkRequestText));
+    }
+
+    internal void ShowLinkRequest(Func<string>? request)
+    {
+        _linkRequest = request;
+        OnPropertyChanged(nameof(LinkRequestText));
+    }
+
+    partial void OnPendingPlanChanged(InstallPlan? value) => ForgetLinkRequestWhenDone();
+
+    partial void OnChoicesChanged(InstallChoices? value) => ForgetLinkRequestWhenDone();
+
+    private void ForgetLinkRequestWhenDone()
+    {
+        if (PendingPlan is null && Choices is null && _linkRequest is not null)
+            ShowLinkRequest(null);
     }
 
     [RelayCommand]
