@@ -5,6 +5,34 @@
              xmlns:views="using:Borea.App.Views"
              x:Class="Borea.App.Views.Pages.ContentPage"
              x:DataType="vm:MainViewModel">
+    <UserControl.Resources>
+        <!-- one mod of a dependency entry: its index name and icon, its bounds and its state in the active instance -->
+        <DataTemplate x:Key="DependencyMemberRow" x:DataType="vm:DependencyMember">
+            <Grid ColumnDefinitions="32,12,*,Auto">
+                <Button Classes="plain" Command="{Binding OpenCommand}" IsEnabled="{Binding IsListed}" AutomationProperties.Name="{Binding Name}">
+                    <Border Classes="thumbnail" Width="32" Height="32">
+                        <views:ListingImageView Image="{Binding Icon}" Background="{StaticResource Brush.Surface}">
+                            <Path Classes="icon size-16" Data="{StaticResource Icon.PuzzlePiece}" />
+                        </views:ListingImageView>
+                    </Border>
+                </Button>
+                <StackPanel Grid.Column="2" VerticalAlignment="Center">
+                    <Button Classes="plain" Command="{Binding OpenCommand}" IsEnabled="{Binding IsListed}" HorizontalAlignment="Left">
+                        <TextBlock Classes="heading-sm" Text="{Binding Title}" TextTrimming="CharacterEllipsis" />
+                    </Button>
+                    <TextBlock Classes="body-sm secondary" Text="{Binding BoundsText}" IsVisible="{Binding BoundsText, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                </StackPanel>
+                <WrapPanel Grid.Column="3" ItemSpacing="4" LineSpacing="4" VerticalAlignment="Center" Margin="8,0,0,0">
+                    <Border Classes="chip untested" IsVisible="{Binding !IsListed}">
+                        <TextBlock Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ContentDependencyNotInIndex}" />
+                    </Border>
+                    <Border Classes="chip" Classes.positive="{Binding IsInstalledWithoutConflict}" Classes.incompatible="{Binding IsConflicting}" ToolTip.Tip="{Binding StateTip}" IsVisible="{Binding StateText, Converter={x:Static ObjectConverters.IsNotNull}}">
+                        <TextBlock Text="{Binding StateText}" />
+                    </Border>
+                </WrapPanel>
+            </Grid>
+        </DataTemplate>
+    </UserControl.Resources>
     <!-- Content (discover-content): one listing, with the detail panel along the right edge -->
     <Grid>
         <ScrollViewer>
@@ -172,6 +200,7 @@
                     <Border Background="{StaticResource Brush.SurfaceHeader}" CornerRadius="100" Padding="6" Margin="0,32,0,0">
                         <StackPanel Orientation="Horizontal" Spacing="16">
                             <Button Classes="tab quiet" Classes.active="{Binding IsDescriptionTab}" Content="{Binding Localization.ContentTabDescription}" Command="{Binding ShowContentDescriptionCommand}" />
+                            <Button Classes="tab quiet" Classes.active="{Binding IsDependenciesTab}" Content="{Binding Localization.ContentTabDependencies}" Command="{Binding ShowContentDependenciesCommand}" IsVisible="{Binding HasContentDependenciesTab}" />
                             <Button Classes="tab quiet" Classes.active="{Binding IsVersionsTab}" Content="{Binding Localization.ContentTabVersions}" Command="{Binding ShowContentVersionsCommand}" />
                         </StackPanel>
                     </Border>
@@ -183,6 +212,54 @@
                             <TextBlock Classes="body-md muted" Text="{Binding Localization.ContentNoDescription}" IsVisible="{Binding SelectedContent.Description, Converter={x:Static ObjectConverters.IsNull}}" />
                         </Panel>
                     </Border>
+
+                    <!-- the dependencies of the release in the header, grouped by kind -->
+                    <StackPanel Spacing="16" Margin="0,16,0,0" IsVisible="{Binding IsDependenciesTab}">
+                        <TextBlock Classes="body-md secondary" Text="{Binding ContentDependenciesHeading}" IsVisible="{Binding ContentDependenciesHeading, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                        <Border BorderBrush="{StaticResource Brush.BorderStrong}" BorderThickness="1" CornerRadius="16" Padding="16,8" IsVisible="{Binding ContentLoaderDependency, Converter={x:Static ObjectConverters.IsNotNull}}">
+                            <ContentControl Content="{Binding ContentLoaderDependency}" ContentTemplate="{StaticResource DependencyMemberRow}" />
+                        </Border>
+                        <TextBlock Classes="body-md muted" Text="{Binding ContentDependenciesEmptyText}" TextWrapping="Wrap" IsVisible="{Binding ContentDependenciesEmptyText, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                        <ItemsControl ItemsSource="{Binding ContentDependencyGroups}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <StackPanel Spacing="16" />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:DependencyGroup">
+                                    <Border BorderBrush="{StaticResource Brush.BorderStrong}" BorderThickness="1" CornerRadius="16" views:RoundedClip.IsEnabled="True">
+                                        <StackPanel>
+                                            <Border Background="{StaticResource Brush.Surface}" Padding="16,11">
+                                                <StackPanel Spacing="2">
+                                                    <TextBlock Classes="heading-sm" Text="{Binding Heading}" />
+                                                    <TextBlock Classes="body-sm secondary" Text="{Binding Hint}" TextWrapping="Wrap" />
+                                                </StackPanel>
+                                            </Border>
+                                            <ItemsControl ItemsSource="{Binding Entries}">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate x:DataType="vm:DependencyEntry">
+                                                        <Border BorderBrush="{StaticResource Brush.BorderStrong}" BorderThickness="0,1,0,0" Padding="16,8">
+                                                            <StackPanel Spacing="8">
+                                                                <TextBlock Classes="body-sm secondary" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ContentDependencyOneOf}" IsVisible="{Binding ShowsOneOf}" />
+                                                                <ItemsControl ItemsSource="{Binding Members}" ItemTemplate="{StaticResource DependencyMemberRow}">
+                                                                    <ItemsControl.ItemsPanel>
+                                                                        <ItemsPanelTemplate>
+                                                                            <StackPanel Spacing="8" />
+                                                                        </ItemsPanelTemplate>
+                                                                    </ItemsControl.ItemsPanel>
+                                                                </ItemsControl>
+                                                            </StackPanel>
+                                                        </Border>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </StackPanel>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
 
                     <!-- c/table-versions -->
                     <StackPanel Margin="0,16,0,0" IsVisible="{Binding IsVersionsTab}">
