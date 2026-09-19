@@ -424,10 +424,11 @@ public sealed class GameDetectionTests
             candidates: h =>
             {
                 h.Candidates.Games.Add(PlaceGame(h, "KSA"));
+                // a slow runner must not let the detection finish before the test acts
                 h.Candidates.Reading = () =>
                 {
-                    if (Interlocked.Increment(ref reads) == 1)
-                        release.Wait(TimeSpan.FromSeconds(5));
+                    if (Interlocked.Increment(ref reads) == 1 && !release.Wait(TimeSpan.FromSeconds(30)))
+                        throw new TimeoutException("The test did not release the held game detection.");
                 };
             },
             waitForDetection: false);
