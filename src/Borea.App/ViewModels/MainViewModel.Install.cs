@@ -110,7 +110,8 @@ public partial class MainViewModel
     /// </summary>
     /// <param name="exactVersion">The version the request pins. Null plans the newest release.</param>
     /// <param name="instanceId">The instance a Try again of the Tasks page installs into. Null installs into the active instance.</param>
-    internal async Task PlanInstallAsync(IInstallRow row, Func<Task<ModVersionMetadata?>> findRelease, ModVersion? exactVersion, Guid? instanceId = null)
+    /// <param name="confirm">Holds even a plan without warnings or choices, for an install that a borea:// link asked for.</param>
+    internal async Task PlanInstallAsync(IInstallRow row, Func<Task<ModVersionMetadata?>> findRelease, ModVersion? exactVersion, Guid? instanceId = null, bool confirm = false)
     {
         if (_services is null || row.IsInstalling || (instanceId ?? ActiveInstance?.InstanceId) is not { } target)
             return;
@@ -124,7 +125,7 @@ public partial class MainViewModel
                 var release = await findRelease() ?? throw new InvalidOperationException(Localization.DiscoverNoRelease);
                 return [new RequestedMod(release, InstallReason.Manual, exactVersion is not null)];
             },
-            (_, plan) => Task.FromResult(AddedMods(plan, null).Any()));
+            (_, plan) => Task.FromResult(confirm || AddedMods(plan, null).Any()));
 
         if (executed)
             await ReloadInstancesAsync();

@@ -39,6 +39,14 @@
                 <TextBlock Classes="body-md" Text="{Binding Localization.SettingsFetchAnnouncements}" TextWrapping="Wrap" VerticalAlignment="Center" />
                 <ToggleSwitch Grid.Column="2" Classes="switch" IsChecked="{Binding FetchAnnouncements}" AutomationProperties.Name="{Binding Localization.SettingsFetchAnnouncements}" />
             </Grid>
+            <StackPanel Spacing="6" IsVisible="{Binding CanRegisterLinks}">
+                <TextBlock Classes="heading-md" Text="{Binding Localization.SettingsLinksLabel}" Margin="0,18,0,0" />
+                <Grid ColumnDefinitions="*,16,Auto" Width="340" HorizontalAlignment="Left" Margin="0,4,0,0">
+                    <TextBlock Classes="body-md" Text="{Binding Localization.SettingsOpenBoreaLinks}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                    <ToggleSwitch Grid.Column="2" Classes="switch" IsChecked="{Binding OpenBoreaLinks}" AutomationProperties.Name="{Binding Localization.SettingsOpenBoreaLinks}" />
+                </Grid>
+                <TextBlock Classes="body-sm secondary" Text="{Binding Localization.SettingsOpenBoreaLinksHint}" TextWrapping="Wrap" Width="340" HorizontalAlignment="Left" />
+            </StackPanel>
             <TextBlock Classes="heading-md" Text="{Binding Localization.SettingsReleaseChannelLabel}" Margin="0,18,0,0" />
             <TextBlock Classes="body-sm secondary" Text="{Binding Localization.SettingsReleaseChannelHint}" TextWrapping="Wrap" Width="340" HorizontalAlignment="Left" />
             <ComboBox ItemsSource="{Binding ReleaseChannelOptions}" SelectedItem="{Binding SelectedReleaseChannel, Mode=TwoWay}" IsEnabled="{Binding !IsSetupBusy}" AutomationProperties.Name="{Binding Localization.SettingsReleaseChannelLabel}" Width="340" Margin="0,4,0,0">

@@ -4,6 +4,7 @@ using Borea.App.SingleInstance;
 using Borea.App.ViewModels;
 using Borea.Cli;
 using Borea.Composition;
+using Borea.Core.Links;
 using System;
 
 namespace Borea.App;
@@ -29,13 +30,13 @@ sealed class Program
     }
 
     /// <summary>
-    /// Any argument runs the command line. Without one the App opens, and first closes a console
-    /// that Windows created only for it. A double-click leaves such a console on Windows versions
-    /// that ignore the console allocation policy in app.manifest.
+    /// Any argument runs the command line, unless the first one is a borea: link, which the App checks.
+    /// Otherwise the App opens, and first closes a console that Windows created only for it. A double-click
+    /// leaves such a console on Windows versions that ignore the console allocation policy in app.manifest.
     /// </summary>
     internal static StartMode ChooseStartMode(string[] args, bool consoleOwnedAlone)
     {
-        if (args.Length > 0)
+        if (args.Length > 0 && !BoreaLink.HasScheme(args[0]))
             return StartMode.Cli;
 
         return consoleOwnedAlone ? StartMode.AppWithoutConsole : StartMode.App;
