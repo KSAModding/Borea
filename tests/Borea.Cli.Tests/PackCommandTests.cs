@@ -1,7 +1,9 @@
 using System.Security.Cryptography;
+using System.Text.Json;
 using Borea.Core.Dependencies;
 using Borea.Core.Game;
 using Borea.Core.Index;
+using Borea.Core.Instances;
 using Borea.Core.ModPacks;
 using Borea.Core.Mods;
 using Borea.Storage.Instances;
@@ -718,6 +720,83 @@ public sealed class PackCommandTests : IDisposable
         Assert.DoesNotContain("not-attempted", run.Output);
         Assert.Equal(string.Empty, run.Error);
         Assert.Equal(before, FileHashes());
+    }
+
+    [Fact]
+    public async Task PackInstall_NewInstance_CreatesTheActiveInstanceWithThePackSourceAndMembers()
+    {
+        _host.IndexReader.Snapshot = Snapshot(Pack(ContentCommandFixtures.PackVersion()));
+        _host.Mods.Releases.Add(ContentCommandFixtures.Release());
+        _host.ModPackInstallerFactory = graph => new ModPackInstaller(graph.Instances, graph.InstallPlanner, new FolderInstaller(graph), graph.Replacer);
+
+        var run = await _host.RunAsync("pack", "install", "navigation-pack", "--new-instance", "Navigation");
+
+        Assert.Equal(0, run.ExitCode);
+        Assert.Contains("Pack navigation-pack 1.0.0 into the new instance 'Navigation':", run.Output);
+        Assert.Contains("  installed  flight-tools 2.0.0  modpack", run.Output);
+        var instance = Assert.Single(await new FileInstanceRepository(_host.Paths).GetAllAsync());
+        Assert.Contains($"Created instance 'Navigation' ({instance.InstanceId}). It is now the active instance.", run.Output);
+        Assert.Equal(new InstanceSource.FromModPack("navigation-pack", ModVersion.Parse("1.0.0")), instance.Source);
+        var mod = Assert.Single(instance.Mods);
+        Assert.Equal("flight-tools", mod.ModId);
+        Assert.Equal(InstallReason.ModPack, mod.Reason);
+    }
+
+    [Fact]
+    public async Task PackInstall_NewInstanceDryRun_PrintsThePlanAndCreatesNothing()
+    {
+        _host.IndexReader.Snapshot = Snapshot(Pack(ContentCommandFixtures.PackVersion()));
+        _host.Mods.Releases.Add(ContentCommandFixtures.Release());
+        UseThePackInstaller();
+        Directory.CreateDirectory(_host.Root);
+        var before = FileHashes();
+
+        var run = await _host.RunAsync("pack", "install", "navigation-pack", "--new-instance", "Navigation", "--dry-run", "--json");
+
+        Assert.Equal(0, run.ExitCode);
+        Assert.Equal(JsonValueKind.Null, run.Json.GetProperty("instanceId").ValueKind);
+        Assert.Equal("Navigation", run.Json.GetProperty("instanceName").GetString());
+        Assert.True(run.Json.GetProperty("newInstance").GetBoolean());
+        Assert.False(run.Json.GetProperty("created").GetBoolean());
+        Assert.Equal("flight-tools", Assert.Single(run.Json.GetProperty("operations").EnumerateArray()).GetProperty("id").GetString());
+        Assert.Empty(await new FileInstanceRepository(_host.Paths).GetAllAsync());
+        Assert.Equal(before, FileHashes());
+    }
+
+    [Fact]
+    public async Task PackInstall_NewInstanceThatCannotInstall_CreatesNothing()
+    {
+        _host.IndexReader.Snapshot = Snapshot(Pack(ContentCommandFixtures.PackVersion()));
+        UseThePackInstaller();
+
+        var run = await _host.RunAsync("pack", "install", "navigation-pack", "--new-instance", "Navigation");
+
+        Assert.Equal(1, run.ExitCode);
+        Assert.Contains("  unresolved  flight-tools 2.0.0", run.Output);
+        Assert.Contains("Borea did not create the instance 'Navigation'.", run.Error);
+        Assert.Empty(await new FileInstanceRepository(_host.Paths).GetAllAsync());
+    }
+
+    [Fact]
+    public async Task PackInstall_NewInstanceWithATakenName_Fails()
+    {
+        _host.IndexReader.Snapshot = Snapshot(Pack(ContentCommandFixtures.PackVersion()));
+        await _host.RunAsync("instance", "create", "Navigation");
+
+        var run = await _host.RunAsync("pack", "install", "navigation-pack", "--new-instance", "navigation");
+
+        Assert.Equal(1, run.ExitCode);
+        Assert.Contains("already in use", run.Error);
+        Assert.Single(await new FileInstanceRepository(_host.Paths).GetAllAsync());
+    }
+
+    [Fact]
+    public async Task PackInstall_InstanceAndNewInstance_IsAUsageErrorWithoutBuildingServices()
+    {
+        var run = await _host.RunAsync("pack", "install", "navigation-pack", "--instance", "Alpha", "--new-instance", "Beta");
+
+        Assert.Equal(2, run.ExitCode);
+        Assert.Equal(0, _host.Builds);
     }
 
     [Fact]
