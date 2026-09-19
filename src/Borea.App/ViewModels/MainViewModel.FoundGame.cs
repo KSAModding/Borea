@@ -45,7 +45,7 @@ public partial class MainViewModel
         var detection = await FindInstallsAsync(services);
 
         // a player who saved a folder, looked at the Game tab or is in another modal keeps the banner as the reminder
-        if (detection is not { Games.Count: > 0 } || !NeedsGameSetup || _gameTabShown || IsSettingsOpen || IsNameModalOpen || IsReviewingModList || IsLoaderPromptOpen || IsLaunchArgumentsModalOpen || IsLaunchFailureOpen || IsToastDetailsOpen)
+        if (detection is not { Games.Count: > 0 } || !NeedsGameSetup || _gameTabShown || IsSettingsOpen || IsNameModalOpen || IsReviewingModList || IsLoaderPromptOpen || IsLaunchArgumentsModalOpen || IsLaunchFailureOpen || IsToastDetailsOpen || IsReleaseNotesOpen)
             return;
 
         FoundGames.Clear();

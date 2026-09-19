@@ -327,6 +327,16 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string UpdateViewRelease => Resources.UpdateViewRelease;
 
+    public string UpdateSeeMore => Resources.UpdateSeeMore;
+
+    public string UpdateDismiss => Resources.UpdateDismiss;
+
+    public string UpdateNotesTitle => Resources.UpdateNotesTitle;
+
+    public string UpdateInstalled => Resources.UpdateInstalled;
+
+    public string UpdateNoNotes => Resources.UpdateNoNotes;
+
     public string SystemDefaultRegionalFormat => Resources.SystemDefaultRegionalFormat;
 
     public string HomeCurrentInstall => Resources.HomeCurrentInstall;

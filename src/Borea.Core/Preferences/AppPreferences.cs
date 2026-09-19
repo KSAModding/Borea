@@ -1,3 +1,4 @@
+using Borea.Core.Mods;
 using Borea.Core.Updates;
 
 namespace Borea.Core.Preferences;
@@ -39,6 +40,9 @@ public sealed class AppPreferences
     /// <summary>Whether the user dismissed the offer to create an instance from the mods of the game profile. Off by default.</summary>
     public bool SharedProfileBannerDismissed { get; }
 
+    /// <summary>The newest Borea release whose Home banner the user closed, or null. A newer release shows the banner again.</summary>
+    public ModVersion? DismissedBoreaRelease { get; }
+
     public AppPreferences(
         string? selectedThemeName,
         IEnumerable<CustomThemePreference>? customThemes = null,
@@ -50,7 +54,8 @@ public sealed class AppPreferences
         bool loadImagesFromAuthorHosts = true,
         HomeLaunchOption homeLaunch = HomeLaunchOption.ActiveInstance,
         DiscoverSortOrder discoverSortOrder = DiscoverSortOrder.Popularity,
-        bool sharedProfileBannerDismissed = false)
+        bool sharedProfileBannerDismissed = false,
+        ModVersion? dismissedBoreaRelease = null)
     {
         if (selectedThemeName is not null && string.IsNullOrWhiteSpace(selectedThemeName))
             throw new ArgumentException("Selected theme name, if provided, cannot be whitespace.", nameof(selectedThemeName));
@@ -80,38 +85,42 @@ public sealed class AppPreferences
         HomeLaunch = homeLaunch;
         DiscoverSortOrder = discoverSortOrder;
         SharedProfileBannerDismissed = sharedProfileBannerDismissed;
+        DismissedBoreaRelease = dismissedBoreaRelease;
         CustomThemes = BuildCustomThemes(customThemes, nameof(customThemes));
     }
 
     public AppPreferences WithRegionalCultureName(string? regionalCultureName)
-        => new(SelectedThemeName, CustomThemes, regionalCultureName, UiCultureName, CheckForUpdatesAtStart, UpdateChannel, ForeignFolderDeletionConfirmed, LoadImagesFromAuthorHosts, HomeLaunch, DiscoverSortOrder, SharedProfileBannerDismissed);
+        => new(SelectedThemeName, CustomThemes, regionalCultureName, UiCultureName, CheckForUpdatesAtStart, UpdateChannel, ForeignFolderDeletionConfirmed, LoadImagesFromAuthorHosts, HomeLaunch, DiscoverSortOrder, SharedProfileBannerDismissed, DismissedBoreaRelease);
 
     public AppPreferences WithUiCultureName(string? uiCultureName)
-        => new(SelectedThemeName, CustomThemes, RegionalCultureName, uiCultureName, CheckForUpdatesAtStart, UpdateChannel, ForeignFolderDeletionConfirmed, LoadImagesFromAuthorHosts, HomeLaunch, DiscoverSortOrder, SharedProfileBannerDismissed);
+        => new(SelectedThemeName, CustomThemes, RegionalCultureName, uiCultureName, CheckForUpdatesAtStart, UpdateChannel, ForeignFolderDeletionConfirmed, LoadImagesFromAuthorHosts, HomeLaunch, DiscoverSortOrder, SharedProfileBannerDismissed, DismissedBoreaRelease);
 
     public AppPreferences WithSelectedThemeName(string? selectedThemeName)
-        => new(selectedThemeName, CustomThemes, RegionalCultureName, UiCultureName, CheckForUpdatesAtStart, UpdateChannel, ForeignFolderDeletionConfirmed, LoadImagesFromAuthorHosts, HomeLaunch, DiscoverSortOrder, SharedProfileBannerDismissed);
+        => new(selectedThemeName, CustomThemes, RegionalCultureName, UiCultureName, CheckForUpdatesAtStart, UpdateChannel, ForeignFolderDeletionConfirmed, LoadImagesFromAuthorHosts, HomeLaunch, DiscoverSortOrder, SharedProfileBannerDismissed, DismissedBoreaRelease);
 
     public AppPreferences WithCheckForUpdatesAtStart(bool checkForUpdatesAtStart)
-        => new(SelectedThemeName, CustomThemes, RegionalCultureName, UiCultureName, checkForUpdatesAtStart, UpdateChannel, ForeignFolderDeletionConfirmed, LoadImagesFromAuthorHosts, HomeLaunch, DiscoverSortOrder, SharedProfileBannerDismissed);
+        => new(SelectedThemeName, CustomThemes, RegionalCultureName, UiCultureName, checkForUpdatesAtStart, UpdateChannel, ForeignFolderDeletionConfirmed, LoadImagesFromAuthorHosts, HomeLaunch, DiscoverSortOrder, SharedProfileBannerDismissed, DismissedBoreaRelease);
 
     public AppPreferences WithUpdateChannel(BoreaUpdateChannel updateChannel)
-        => new(SelectedThemeName, CustomThemes, RegionalCultureName, UiCultureName, CheckForUpdatesAtStart, updateChannel, ForeignFolderDeletionConfirmed, LoadImagesFromAuthorHosts, HomeLaunch, DiscoverSortOrder, SharedProfileBannerDismissed);
+        => new(SelectedThemeName, CustomThemes, RegionalCultureName, UiCultureName, CheckForUpdatesAtStart, updateChannel, ForeignFolderDeletionConfirmed, LoadImagesFromAuthorHosts, HomeLaunch, DiscoverSortOrder, SharedProfileBannerDismissed, DismissedBoreaRelease);
 
     public AppPreferences WithForeignFolderDeletionConfirmed(bool foreignFolderDeletionConfirmed)
-        => new(SelectedThemeName, CustomThemes, RegionalCultureName, UiCultureName, CheckForUpdatesAtStart, UpdateChannel, foreignFolderDeletionConfirmed, LoadImagesFromAuthorHosts, HomeLaunch, DiscoverSortOrder, SharedProfileBannerDismissed);
+        => new(SelectedThemeName, CustomThemes, RegionalCultureName, UiCultureName, CheckForUpdatesAtStart, UpdateChannel, foreignFolderDeletionConfirmed, LoadImagesFromAuthorHosts, HomeLaunch, DiscoverSortOrder, SharedProfileBannerDismissed, DismissedBoreaRelease);
 
     public AppPreferences WithLoadImagesFromAuthorHosts(bool loadImagesFromAuthorHosts)
-        => new(SelectedThemeName, CustomThemes, RegionalCultureName, UiCultureName, CheckForUpdatesAtStart, UpdateChannel, ForeignFolderDeletionConfirmed, loadImagesFromAuthorHosts, HomeLaunch, DiscoverSortOrder, SharedProfileBannerDismissed);
+        => new(SelectedThemeName, CustomThemes, RegionalCultureName, UiCultureName, CheckForUpdatesAtStart, UpdateChannel, ForeignFolderDeletionConfirmed, loadImagesFromAuthorHosts, HomeLaunch, DiscoverSortOrder, SharedProfileBannerDismissed, DismissedBoreaRelease);
 
     public AppPreferences WithHomeLaunch(HomeLaunchOption homeLaunch)
-        => new(SelectedThemeName, CustomThemes, RegionalCultureName, UiCultureName, CheckForUpdatesAtStart, UpdateChannel, ForeignFolderDeletionConfirmed, LoadImagesFromAuthorHosts, homeLaunch, DiscoverSortOrder, SharedProfileBannerDismissed);
+        => new(SelectedThemeName, CustomThemes, RegionalCultureName, UiCultureName, CheckForUpdatesAtStart, UpdateChannel, ForeignFolderDeletionConfirmed, LoadImagesFromAuthorHosts, homeLaunch, DiscoverSortOrder, SharedProfileBannerDismissed, DismissedBoreaRelease);
 
     public AppPreferences WithDiscoverSortOrder(DiscoverSortOrder discoverSortOrder)
-        => new(SelectedThemeName, CustomThemes, RegionalCultureName, UiCultureName, CheckForUpdatesAtStart, UpdateChannel, ForeignFolderDeletionConfirmed, LoadImagesFromAuthorHosts, HomeLaunch, discoverSortOrder, SharedProfileBannerDismissed);
+        => new(SelectedThemeName, CustomThemes, RegionalCultureName, UiCultureName, CheckForUpdatesAtStart, UpdateChannel, ForeignFolderDeletionConfirmed, LoadImagesFromAuthorHosts, HomeLaunch, discoverSortOrder, SharedProfileBannerDismissed, DismissedBoreaRelease);
 
     public AppPreferences WithSharedProfileBannerDismissed(bool sharedProfileBannerDismissed)
-        => new(SelectedThemeName, CustomThemes, RegionalCultureName, UiCultureName, CheckForUpdatesAtStart, UpdateChannel, ForeignFolderDeletionConfirmed, LoadImagesFromAuthorHosts, HomeLaunch, DiscoverSortOrder, sharedProfileBannerDismissed);
+        => new(SelectedThemeName, CustomThemes, RegionalCultureName, UiCultureName, CheckForUpdatesAtStart, UpdateChannel, ForeignFolderDeletionConfirmed, LoadImagesFromAuthorHosts, HomeLaunch, DiscoverSortOrder, sharedProfileBannerDismissed, DismissedBoreaRelease);
+
+    public AppPreferences WithDismissedBoreaRelease(ModVersion? dismissedBoreaRelease)
+        => new(SelectedThemeName, CustomThemes, RegionalCultureName, UiCultureName, CheckForUpdatesAtStart, UpdateChannel, ForeignFolderDeletionConfirmed, LoadImagesFromAuthorHosts, HomeLaunch, DiscoverSortOrder, SharedProfileBannerDismissed, dismissedBoreaRelease);
 
     public string ResolveSelectedThemeName(IReadOnlyCollection<string> bundledThemeNames, string defaultThemeName)
     {

@@ -113,6 +113,9 @@
     <!-- modal: the whole text of an error toast -->
     <views:ToastDetailsModal IsVisible="{Binding IsToastDetailsOpen}" />
 
+    <!-- modal: the notes of the newer Borea releases -->
+    <views:ReleaseNotesModal IsVisible="{Binding IsReleaseNotesOpen}" />
+
     <!-- modal: settings -->
     <settings:SettingsModal IsVisible="{Binding IsSettingsOpen}" />
 

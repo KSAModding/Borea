@@ -4,12 +4,14 @@ using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Borea.App.Localization;
+using Borea.Core.Mods;
 using Borea.Core.Updates;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 
 namespace Borea.App.ViewModels;
 
-/// <summary>The notice that a newer Borea release exists, checked once per start.</summary>
+/// <summary>The notice that a newer Borea release exists, checked once per start, and its release notes.</summary>
 public partial class MainViewModel
 {
     private Task? _updateCheck;
@@ -20,21 +22,37 @@ public partial class MainViewModel
 
     private IReadOnlyList<BoreaUpdateChannelOption>? _updateChannelOptions;
 
+    private IReadOnlyList<BoreaRelease> _releases = [];
+
+    private ModVersion? _dismissedBoreaRelease;
+
     /// <summary>The newer release, or null.</summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasAvailableUpdate))]
     [NotifyPropertyChangedFor(nameof(AvailableUpdateVersion))]
+    [NotifyPropertyChangedFor(nameof(AvailableUpdateText))]
     [NotifyPropertyChangedFor(nameof(AvailableUpdateUrl))]
-    [NotifyPropertyChangedFor(nameof(AvailableUpdateIsPreRelease))]
+    [NotifyPropertyChangedFor(nameof(ShowReleaseBanner))]
     private BoreaRelease? _availableUpdate;
 
     public bool HasAvailableUpdate => AvailableUpdate is not null;
 
     public string? AvailableUpdateVersion => AvailableUpdate?.Version.ToString();
 
+    public string? AvailableUpdateText => AvailableUpdate is null ? null : $"{Localization.UpdateAvailable} {AvailableUpdateVersion}";
+
     public string? AvailableUpdateUrl => AvailableUpdate?.PageUrl;
 
-    public bool AvailableUpdateIsPreRelease => AvailableUpdate?.Version.PreRelease is not null;
+    /// <summary>The Home banner shows until the player closes it for this release or a newer one.</summary>
+    public bool ShowReleaseBanner => AvailableUpdate is { } release
+        && !((_dismissedBoreaRelease ?? _appPreferences.DismissedBoreaRelease) >= release.Version);
+
+    [ObservableProperty]
+    private bool _isReleaseNotesOpen;
+
+    /// <summary>The newer releases, newest first, and the installed one last.</summary>
+    [ObservableProperty]
+    private IReadOnlyList<BoreaReleaseNotesItem> _releaseNotes = [];
 
     /// <summary>The switch in the General settings. A change takes effect at the next start.</summary>
     public bool CheckForUpdatesAtStart
@@ -82,14 +100,45 @@ public partial class MainViewModel
 
         try
         {
-            var release = await _services.ReleaseCheck.GetLatestReleaseAsync(_appPreferences.UpdateChannel);
-            if (release is not null && release.IsNewerThan(BoreaInformationalVersion))
-                AvailableUpdate = release;
+            _releases = await _services.ReleaseCheck.GetReleasesAsync(_appPreferences.UpdateChannel);
+            if (_releases.FirstOrDefault() is { } newest && newest.IsNewerThan(BoreaInformationalVersion))
+                AvailableUpdate = newest;
         }
         catch (Exception exception) when (exception is HttpRequestException or OperationCanceledException or ObjectDisposedException)
         {
             // a failed check shows nothing
         }
+    }
+
+    [RelayCommand]
+    private void OpenReleaseNotes()
+    {
+        var notes = _releases
+            .Where(release => release.IsNewerThan(BoreaInformationalVersion))
+            .Select(release => new BoreaReleaseNotesItem(release.Version, release, isInstalled: false))
+            .ToList();
+        if (ModVersion.TryParse(BoreaInformationalVersion, out var running))
+        {
+            var installed = _releases.FirstOrDefault(release => release.Version.CompareTo(running) == 0);
+            notes.Add(new BoreaReleaseNotesItem(running, installed, isInstalled: true));
+        }
+
+        ReleaseNotes = notes;
+        IsReleaseNotesOpen = true;
+    }
+
+    [RelayCommand]
+    private void CloseReleaseNotes() => IsReleaseNotesOpen = false;
+
+    [RelayCommand]
+    private void DismissReleaseBanner()
+    {
+        if (AvailableUpdate is not { } release)
+            return;
+
+        _dismissedBoreaRelease = release.Version;
+        OnPropertyChanged(nameof(ShowReleaseBanner));
+        QueuePreferenceSave(preferences => preferences.WithDismissedBoreaRelease(release.Version));
     }
 }
 
@@ -114,4 +163,34 @@ public sealed class BoreaUpdateChannelOption : ObservableObject
     }
 
     internal void RefreshText() => OnPropertyChanged(nameof(Text));
+}
+
+/// <summary>One Borea release in the release notes. The installed version shows even when the check did not return it.</summary>
+public sealed class BoreaReleaseNotesItem : ObservableObject
+{
+    private readonly BoreaRelease? _release;
+
+    public string Version { get; }
+
+    public bool IsInstalled { get; }
+
+    public bool IsPreRelease { get; }
+
+    public string? Notes => _release?.Notes;
+
+    public bool HasNoNotes => _release is not null && _release.Notes is null;
+
+    public string? PageUrl => IsInstalled ? null : _release?.PageUrl;
+
+    public string? DateText => _release?.PublishedAt is { } at ? MainViewModel.DateText(at) : null;
+
+    public BoreaReleaseNotesItem(ModVersion version, BoreaRelease? release, bool isInstalled)
+    {
+        _release = release;
+        Version = version.ToString();
+        IsInstalled = isInstalled;
+        IsPreRelease = version.PreRelease is not null;
+    }
+
+    internal void RefreshText() => OnPropertyChanged(nameof(DateText));
 }

@@ -192,6 +192,21 @@
   <data name="UpdateViewRelease" xml:space="preserve">
     <value>Veröffentlichung ansehen</value>
   </data>
+  <data name="UpdateSeeMore" xml:space="preserve">
+    <value>Mehr anzeigen</value>
+  </data>
+  <data name="UpdateDismiss" xml:space="preserve">
+    <value>Ausblenden</value>
+  </data>
+  <data name="UpdateNotesTitle" xml:space="preserve">
+    <value>Neue Borea-Versionen</value>
+  </data>
+  <data name="UpdateInstalled" xml:space="preserve">
+    <value>Installiert</value>
+  </data>
+  <data name="UpdateNoNotes" xml:space="preserve">
+    <value>Diese Version hat keine Hinweise.</value>
+  </data>
   <data name="SystemDefaultRegionalFormat" xml:space="preserve">
     <value>Systemstandard</value>
   </data>

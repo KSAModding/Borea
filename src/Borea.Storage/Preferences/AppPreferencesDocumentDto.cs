@@ -29,6 +29,9 @@ internal sealed class AppPreferencesDocumentDto
 
     public bool? SharedProfileBannerDismissed { get; set; }
 
+    /// <summary>A release version such as "0.5.0". Null or a version that does not parse reads as none.</summary>
+    public string? DismissedBoreaRelease { get; set; }
+
     public List<CustomThemePreferenceDto?>? CustomThemes { get; set; }
 }
 

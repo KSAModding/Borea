@@ -1,0 +1,51 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Borea.App.ViewModels"
+             xmlns:views="using:Borea.App.Views"
+             x:Class="Borea.App.Views.ReleaseNotesModal"
+             x:DataType="vm:MainViewModel">
+    <!-- the release notes of the newer Borea releases, newest first, and the installed one -->
+    <Panel Background="#99000000">
+        <Border Classes="modal" Width="640" Margin="80,32,0,32">
+            <DockPanel>
+                <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="24,24,24,0">
+                    <TextBlock Classes="heading-lg" Text="{Binding Localization.UpdateNotesTitle}" VerticalAlignment="Center" />
+                    <Button Grid.Column="1" Classes="icon" Command="{Binding CloseReleaseNotesCommand}" AutomationProperties.Name="{Binding Localization.ModalClose}">
+                        <Path Classes="icon" Data="{StaticResource Icon.Close}" />
+                    </Button>
+                </Grid>
+                <Border DockPanel.Dock="Top" Height="1" Background="{StaticResource Brush.Window}" Margin="0,24,0,0" />
+                <ScrollViewer>
+                    <ItemsControl ItemsSource="{Binding ReleaseNotes}" Margin="36,24,24,32">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <StackPanel Spacing="24" />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:BoreaReleaseNotesItem">
+                                <StackPanel Spacing="8">
+                                    <WrapPanel ItemSpacing="8" LineSpacing="4">
+                                        <TextBlock Classes="heading-md" Text="{Binding Version}" VerticalAlignment="Center" />
+                                        <Border Classes="chip positive" VerticalAlignment="Center" IsVisible="{Binding IsInstalled}">
+                                            <TextBlock Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.UpdateInstalled}" />
+                                        </Border>
+                                        <Border Classes="chip testing" VerticalAlignment="Center" IsVisible="{Binding IsPreRelease}">
+                                            <TextBlock Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.UpdatePreRelease}" />
+                                        </Border>
+                                        <TextBlock Classes="label-md" Text="{Binding DateText}" VerticalAlignment="Center" IsVisible="{Binding DateText, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                                    </WrapPanel>
+                                    <views:MarkdownView Markdown="{Binding Notes}" IsVisible="{Binding Notes, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                                    <TextBlock Classes="body-md muted" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.UpdateNoNotes}" IsVisible="{Binding HasNoNotes}" />
+                                    <Button Classes="link" HorizontalAlignment="Left" Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).OpenAboutLinkCommand}" CommandParameter="{Binding PageUrl}" ToolTip.Tip="{Binding PageUrl}" IsVisible="{Binding PageUrl, Converter={x:Static ObjectConverters.IsNotNull}}">
+                                        <TextBlock Classes="action-md" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.UpdateViewRelease}" />
+                                    </Button>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </DockPanel>
+        </Border>
+    </Panel>
+</UserControl>
