@@ -132,7 +132,29 @@ public sealed class InstanceViewModelTests
         item.IsEnabled = true;
         await item.ToggleEnabledCommand.ExecuteAsync(null);
         Assert.True(await harness.Services.ModState.IsActiveAsync(instance.InstanceId, "AdvancedFlightComputer"));
-        Assert.Null(viewModel.ContentError);
+        Assert.Empty(viewModel.Toasts.Items);
+    }
+
+    [Fact]
+    public async Task ToggleEnabled_LibraryBusy_ShowsAnErrorToast()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var viewModel = harness.ViewModel;
+        var instance = await InstalledContent.AddAsync(harness, "AdvancedFlightComputer", activate: true);
+        await viewModel.LoadAsync();
+        await viewModel.ActiveInstance!.OpenCommand.ExecuteAsync(null);
+        var item = viewModel.ContentGroups.Single().Items.Single();
+        viewModel.IsChangingLibraryFolder = true;
+
+        item.IsEnabled = false;
+        await item.ToggleEnabledCommand.ExecuteAsync(null);
+
+        var toast = Assert.Single(viewModel.Toasts.Items);
+        Assert.True(toast.IsFailed);
+        Assert.Equal(harness.Localization.FormatToastDisableFailed(item.Name), toast.Message);
+        Assert.Equal(harness.Localization.LibraryFolderBusy, toast.Detail);
+        Assert.Null(viewModel.InstanceError);
+        Assert.True(await harness.Services.ModState.IsActiveAsync(instance.InstanceId, "AdvancedFlightComputer"));
     }
 
     [Fact]
@@ -154,14 +176,13 @@ public sealed class InstanceViewModelTests
 
         Assert.Empty((await harness.Services.Instances.GetByIdAsync(instance.InstanceId))!.Mods);
         Assert.False(Directory.Exists(Path.Combine(harness.Services.Paths.GetInstanceModsFolder(instance.InstanceId), "AdvancedFlightComputer")));
-        Assert.Null(viewModel.ContentError);
         Assert.False(viewModel.HasContent);
         Assert.Equal(0, viewModel.ActiveInstance?.ModCount);
         Assert.True(viewModel.CurrentWindowInstance);
     }
 
     [Fact]
-    public async Task Remove_ModBoreaDidNotInstall_KeepsItAndExplains()
+    public async Task Remove_ModBoreaDidNotInstall_KeepsItAndExplainsInAToast()
     {
         using var harness = await ViewModelHarness.CreateAsync();
         var viewModel = harness.ViewModel;
@@ -171,7 +192,9 @@ public sealed class InstanceViewModelTests
 
         await viewModel.ContentGroups.Single().Items.Single().ConfirmRemoveCommand.ExecuteAsync(null);
 
-        Assert.Equal(harness.Localization.FormatContentRemoveNotOwned("AdvancedFlightComputer"), viewModel.ContentError);
+        var toast = Assert.Single(viewModel.Toasts.Items);
+        Assert.True(toast.IsFailed);
+        Assert.Equal(harness.Localization.FormatContentRemoveNotOwned("AdvancedFlightComputer"), toast.Detail);
         Assert.Single((await harness.Services.Instances.GetByIdAsync(instance.InstanceId))!.Mods);
         Assert.True(Directory.Exists(Path.Combine(harness.Services.Paths.GetInstanceModsFolder(instance.InstanceId), "AdvancedFlightComputer")));
     }
@@ -189,6 +212,25 @@ public sealed class InstanceViewModelTests
 
         Assert.True(viewModel.CurrentWindowLibrary);
         Assert.False(viewModel.CurrentWindowInstance);
+    }
+
+    [Fact]
+    public async Task Delete_LibraryBusy_KeepsTheInstanceAndShowsAnErrorToast()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var viewModel = harness.ViewModel;
+        await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value);
+        await viewModel.LoadAsync();
+        viewModel.IsChangingLibraryFolder = true;
+
+        await viewModel.Instances.Single().ConfirmDeleteCommand.ExecuteAsync(null);
+
+        var toast = Assert.Single(viewModel.Toasts.Items);
+        Assert.True(toast.IsFailed);
+        Assert.Equal(harness.Localization.FormatToastDeleteFailed("Main"), toast.Message);
+        Assert.Equal(harness.Localization.LibraryFolderBusy, toast.Detail);
+        Assert.Null(viewModel.InstanceError);
+        Assert.Single(viewModel.Instances);
     }
 
     [Fact]

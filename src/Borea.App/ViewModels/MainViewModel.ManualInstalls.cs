@@ -91,12 +91,11 @@ public partial class MainViewModel
         using var libraryUse = TryUseLibrary();
         if (libraryUse is null)
         {
-            row.InstallError = Localization.LibraryFolderBusy;
+            ShowErrorToast(() => Localization.FormatToastCheckFailed(row.FolderName), Localization.LibraryFolderBusy);
             return;
         }
 
         var services = _services;
-        row.InstallError = null;
         row.IsChecking = true;
         var adopted = false;
         try
@@ -112,7 +111,7 @@ public partial class MainViewModel
         }
         catch (Exception exception) when (IsInstallFailure(exception))
         {
-            row.InstallError = exception.Message;
+            ShowErrorToast(() => Localization.FormatToastCheckFailed(row.FolderName), exception.Message);
         }
         finally
         {
@@ -156,7 +155,7 @@ public partial class MainViewModel
         using var libraryUse = TryUseLibrary();
         if (libraryUse is null)
         {
-            row.InstallError = Localization.LibraryFolderBusy;
+            ShowErrorToast(() => Localization.FormatToastReplaceFailed(row.FolderName), Localization.LibraryFolderBusy);
             return;
         }
 
@@ -216,7 +215,7 @@ public partial class MainViewModel
         using var libraryUse = TryUseLibrary();
         if (libraryUse is null)
         {
-            row.InstallError = Localization.LibraryFolderBusy;
+            ShowErrorToast(() => Localization.FormatToastReplaceFailed(row.FolderName), Localization.LibraryFolderBusy);
             return;
         }
 
@@ -227,7 +226,7 @@ public partial class MainViewModel
     }
 
     /// <summary>
-    /// The rows are read again after the change, so an error goes to the tab and not to the row.
+    /// The rows are read again after the change, so the toast of the task says why it failed.
     /// </summary>
     private async Task ExecuteManualReplaceAsync(BoreaServices services, ManualInstallItem row, InstallPlan plan)
     {
@@ -268,8 +267,6 @@ public partial class MainViewModel
         }
 
         await ReloadInstancesAsync();
-        if (error is not null)
-            ManualInstallsError = error;
     }
 
     private static Instance WithoutForeignFolder(Instance instance, string folderName)

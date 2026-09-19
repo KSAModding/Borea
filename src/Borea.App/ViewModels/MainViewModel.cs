@@ -207,7 +207,7 @@ public partial class MainViewModel : ViewModelBase
     public string NameModalConfirmText => RenamingInstance is null ? Localization.LibraryCreate : Localization.LibrarySave;
 
     /// <summary>
-    /// The last instance operation that failed, as the repository reported it.
+    /// Why the name modal or the launch arguments modal cannot save, as the repository reported it.
     /// </summary>
     [ObservableProperty]
     private string? _instanceError;
@@ -531,12 +531,12 @@ public partial class MainViewModel : ViewModelBase
             return Task.CompletedTask;
         }
 
-        return IsImportingSharedProfile ? ImportSharedProfileAsync(name) : RunInstanceOperationAsync(async instances =>
+        return IsImportingSharedProfile ? ImportSharedProfileAsync(name) : RunModalInstanceOperationAsync(async instances =>
         {
             await instances.CreateAsync(name, InstanceSource.Custom.Value);
             ModalInstanceName = string.Empty;
             IsCreatingInstance = false;
-        });
+        }, () => IsCreatingInstance, () => Localization.FormatToastCreateFailed(name));
     }
 
     /// <summary>Keeps the modal open with the error when the name is empty or the repository refuses it.</summary>
@@ -551,7 +551,7 @@ public partial class MainViewModel : ViewModelBase
 
         if (name != item.Name)
         {
-            await RenameInstanceAsync(item.InstanceId, name);
+            await RenameInstanceAsync(item, name);
             if (InstanceError is not null)
                 return;
         }
@@ -560,16 +560,32 @@ public partial class MainViewModel : ViewModelBase
     }
 
     internal Task ActivateInstanceAsync(Guid instanceId)
-        => RunInstanceOperationAsync(instances => instances.SetActiveInstanceAsync(instanceId));
+    {
+        var name = InstanceName(instanceId);
+        return RunInstanceOperationAsync(instances => instances.SetActiveInstanceAsync(instanceId), () => Localization.FormatToastActivateFailed(name));
+    }
 
     internal Task DeactivateInstanceAsync()
-        => RunInstanceOperationAsync(instances => instances.ClearActiveInstanceAsync());
+    {
+        if (ActiveInstance is not { } active)
+            return Task.CompletedTask;
 
-    internal Task RenameInstanceAsync(Guid instanceId, string newName)
-        => RunInstanceOperationAsync(instances => instances.RenameAsync(instanceId, newName.Trim()));
+        return RunInstanceOperationAsync(instances => instances.ClearActiveInstanceAsync(), () => Localization.FormatToastDeactivateFailed(active.Name));
+    }
+
+    internal Task RenameInstanceAsync(InstanceItem item, string newName)
+        => RunModalInstanceOperationAsync(
+            instances => instances.RenameAsync(item.InstanceId, newName.Trim()),
+            () => RenamingInstance == item,
+            () => Localization.FormatToastRenameFailed(item.Name));
 
     internal Task DeleteInstanceAsync(Guid instanceId)
-        => RunInstanceOperationAsync(instances => instances.DeleteAsync(instanceId));
+    {
+        var name = InstanceName(instanceId);
+        return RunInstanceOperationAsync(instances => instances.DeleteAsync(instanceId), () => Localization.FormatToastDeleteFailed(name));
+    }
+
+    private string InstanceName(Guid instanceId) => Instances.FirstOrDefault(instance => instance.InstanceId == instanceId)?.Name ?? instanceId.ToString();
 
     /// <summary>Opens the folder of the instance, and creates it when it does not exist yet.</summary>
     internal void OpenInstanceFolder(Guid instanceId)
@@ -589,40 +605,67 @@ public partial class MainViewModel : ViewModelBase
             error = exception.Message;
         }
 
-        if (CurrentWindowLibrary)
+        var name = InstanceName(instanceId);
+        ShowOpenError(() => name, error);
+    }
+
+    /// <summary>Shows an error toast when a folder, file or link could not be opened.</summary>
+    private void ShowOpenError(Func<string> name, string? error)
+    {
+        if (error is not null)
+            ShowErrorToast(() => Localization.FormatToastOpenFailed(name()), error);
+    }
+
+    private static string PathName(string path)
+    {
+        var name = Path.GetFileName(path.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
+        return name.Length == 0 ? path : name;
+    }
+
+    /// <summary>
+    /// Keeps the repository's message as <see cref="InstanceError"/> next to the field
+    /// while the modal is open, and shows it as a toast when the modal was closed meanwhile.
+    /// </summary>
+    private async Task RunModalInstanceOperationAsync(Func<IInstanceRepository, Task> operation, Func<bool> isModalOpen, Func<string> failed)
+    {
+        var error = await TryInstanceOperationAsync(operation);
+        if (error is null || isModalOpen())
             InstanceError = error;
         else
-            ContentError = error;
+            ShowErrorToast(failed, error);
+    }
+
+    private async Task RunInstanceOperationAsync(Func<IInstanceRepository, Task> operation, Func<string> failed)
+    {
+        if (await TryInstanceOperationAsync(operation) is { } error)
+            ShowErrorToast(failed, error);
     }
 
     /// <summary>
     /// Runs one repository call, then reloads the list so every row reflects
-    /// the outcome. The repository's message becomes <see cref="InstanceError"/>.
+    /// the outcome. Returns the repository's message when the call failed.
     /// </summary>
-    private async Task RunInstanceOperationAsync(Func<IInstanceRepository, Task> operation)
+    private async Task<string?> TryInstanceOperationAsync(Func<IInstanceRepository, Task> operation)
     {
         if (_instances is null)
-            return;
+            return null;
 
         using var libraryUse = TryUseLibrary();
         if (libraryUse is null)
-        {
-            InstanceError = Localization.LibraryFolderBusy;
-            return;
-        }
+            return Localization.LibraryFolderBusy;
 
-        InstanceNotice = null;
+        string? error = null;
         try
         {
             await operation(_instances);
-            InstanceError = null;
         }
         catch (Exception exception) when (exception is InvalidOperationException or ArgumentException or IOException or UnauthorizedAccessException)
         {
-            InstanceError = exception.Message;
+            error = exception.Message;
         }
 
         await ReloadInstancesAsync();
+        return error;
     }
 
     private Task _preferenceSaves = Task.CompletedTask;
@@ -733,6 +776,7 @@ public partial class MainViewModel : ViewModelBase
         foreach (var run in _installRuns)
             run.RefreshText();
         Toasts.RefreshText();
+        ToastInDetails?.RefreshText();
         RefreshGameDataItems();
         RefreshGameSaveText();
         RefreshLoaderText();

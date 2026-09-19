@@ -34,7 +34,6 @@
                 </StackPanel>
             </Grid>
             <ContentControl Content="{Binding}" ContentTemplate="{StaticResource LaunchStatus}" />
-            <TextBlock Classes="body-md danger" Text="{Binding ContentError}" TextWrapping="Wrap" Margin="0,16,0,0" IsVisible="{Binding ContentError, Converter={x:Static ObjectConverters.IsNotNull}}" />
             <ContentControl Content="{Binding}" ContentTemplate="{StaticResource GameSetupBanner}" IsVisible="{Binding NeedsGameSetup}" />
             <ContentControl Content="{Binding}" ContentTemplate="{StaticResource SharedProfileBanner}" IsVisible="{Binding ShowSharedProfileBanner}" />
             <views:UpdateNotice Margin="0,16,0,0" IsVisible="{Binding HasAvailableUpdate}" />
@@ -67,8 +66,6 @@
                     </Button>
                 </StackPanel>
             </Border>
-            <TextBlock Classes="body-md danger" Text="{Binding InstanceError}" TextWrapping="Wrap" Margin="0,16,0,0" IsVisible="{Binding InstanceError, Converter={x:Static ObjectConverters.IsNotNull}}" />
-            <TextBlock Classes="body-md secondary" Text="{Binding InstanceNotice}" TextWrapping="Wrap" Margin="0,16,0,0" IsVisible="{Binding InstanceNotice, Converter={x:Static ObjectConverters.IsNotNull}}" />
 
             <!-- Recently updated: the index has no trend over time, so Home shows the newest releases instead of the trending ones of the design -->
             <Grid ColumnDefinitions="*,Auto" Margin="3,44,3,0" IsVisible="{Binding HasRecentItems}">

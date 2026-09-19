@@ -54,7 +54,7 @@ public sealed class ManualInstallsViewModelTests
     }
 
     [Fact]
-    public async Task Manage_DownloadFails_ShowsTheErrorAndKeepsTheFolderForeign()
+    public async Task Manage_DownloadFails_ShowsAnErrorToastAndKeepsTheFolderForeign()
     {
         using var harness = await ViewModelHarness.CreateAsync();
         var viewModel = harness.ViewModel;
@@ -66,7 +66,10 @@ public sealed class ManualInstallsViewModelTests
 
         await row.ManageCommand.ExecuteAsync(null);
 
-        Assert.NotNull(row.InstallError);
+        var toast = Assert.Single(viewModel.Toasts.Items);
+        Assert.Equal(harness.Localization.FormatToastCheckFailed("KSArmory"), toast.Message);
+        Assert.True(toast.HasDetail);
+        Assert.Null(row.InstallError);
         Assert.False(row.IsChecking);
         Assert.True(Directory.Exists(folder));
         var saved = await harness.Services.Instances.GetByIdAsync(instance.InstanceId);
@@ -124,7 +127,8 @@ public sealed class ManualInstallsViewModelTests
 
         Assert.True(File.Exists(Path.Combine(folder, "mod.toml")));
         Assert.Empty(RecoveryFolders(harness, instance));
-        Assert.NotNull(viewModel.ManualInstallsError);
+        Assert.True(viewModel.Toasts.Items[^1].IsFailed);
+        Assert.Null(viewModel.ManualInstallsError);
         Assert.Equal(["KSArmory", "MeasureTools"], viewModel.ManualInstallItems.Select(item => item.FolderName));
         await viewModel.WhenPreferencesSavedAsync();
         Assert.True((await harness.Services.AppPreferences.GetAsync(MainViewModel.BundledThemeNames)).Preferences.ForeignFolderDeletionConfirmed);
@@ -186,7 +190,8 @@ public sealed class ManualInstallsViewModelTests
         await InstalledContent.AddAsync(harness, "MeasureTools", activate: false);
         await row.ConfirmInstallCommand.ExecuteAsync(null);
 
-        Assert.Equal(harness.Localization.ManualInstallsInstanceChanged, viewModel.ManualInstallsError);
+        Assert.Equal(harness.Localization.ManualInstallsInstanceChanged, viewModel.Toasts.Items[^1].Detail);
+        Assert.Null(viewModel.ManualInstallsError);
         Assert.True(File.Exists(Path.Combine(folder, "mod.toml")));
         Assert.Empty(RecoveryFolders(harness, instance));
     }

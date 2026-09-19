@@ -66,7 +66,7 @@ public sealed class GameDataViewModelTests
     }
 
     [Fact]
-    public async Task OpenFolder_FolderGoneOrSystemFails_ReportsOnTheTab()
+    public async Task OpenFolder_FolderGoneOrSystemFails_ShowsAnErrorToastAndNoTextOnTheTab()
     {
         using var harness = await ViewModelHarness.CreateAsync();
         var viewModel = harness.ViewModel;
@@ -78,11 +78,17 @@ public sealed class GameDataViewModelTests
 
         viewModel.OpenWithSystem = _ => throw new Win32Exception("No application is associated with the folder.");
         item.OpenFolderCommand.Execute(null);
-        Assert.Equal("No application is associated with the folder.", viewModel.GameDataError);
+
+        var toast = Assert.Single(viewModel.Toasts.Items);
+        Assert.True(toast.IsFailed);
+        Assert.Equal(harness.Localization.FormatToastOpenFailed("HUDLayouts"), toast.Message);
+        Assert.Equal("No application is associated with the folder.", toast.Detail);
+        Assert.Null(viewModel.GameDataError);
 
         Directory.Delete(layouts);
         item.OpenFolderCommand.Execute(null);
-        Assert.Equal(harness.Localization.FormatAboutFolderMissing(layouts), viewModel.GameDataError);
+        Assert.Equal(harness.Localization.FormatAboutFolderMissing(layouts), viewModel.Toasts.Items[^1].Detail);
+        Assert.Null(viewModel.GameDataError);
     }
 
     [Fact]

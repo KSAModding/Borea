@@ -87,7 +87,7 @@ public sealed class GameSavesViewModelTests
         await Assert.Single(section.Items).BackUpCommand.ExecuteAsync(null);
 
         var zip = Assert.Single(Directory.GetFiles(Path.Combine(harness.Services.Paths.GetBackupsRoot(), instance.InstanceId.ToString(), "saves")));
-        Assert.Equal(harness.Localization.FormatGameSaveBackedUp("Orbit", zip), section.Message);
+        Assert.Equal(harness.Localization.FormatGameSaveBackedUp("Orbit", zip), harness.ViewModel.Toasts.Items[^1].Message);
         Assert.Null(section.Error);
     }
 
@@ -106,7 +106,7 @@ public sealed class GameSavesViewModelTests
 
         var backups = Path.Combine(harness.Services.Paths.GetBackupsRoot(), instance.InstanceId.ToString(), "saves");
         Assert.Equal(2, Directory.GetFiles(backups, "*.zip").Length);
-        Assert.Equal(harness.Localization.FormatGameSavesBackedUp(2, backups), harness.ViewModel.SavesSection.Message);
+        Assert.Equal(harness.Localization.FormatGameSavesBackedUp(2, backups), harness.ViewModel.Toasts.Items[^1].Message);
         Assert.True(harness.ViewModel.IsContentTab);
     }
 
@@ -136,7 +136,7 @@ public sealed class GameSavesViewModelTests
 
         Assert.Equal(300, new FileInfo(target).Length);
         Assert.False(row.IsConfirmingReplace);
-        Assert.Equal(harness.Localization.FormatGameSaveCopied("Orbit", "Second"), harness.ViewModel.SavesSection.Message);
+        Assert.Equal(harness.Localization.FormatGameSaveCopied("Orbit", "Second"), harness.ViewModel.Toasts.Items[^1].Message);
     }
 
     [Fact]
@@ -160,7 +160,7 @@ public sealed class GameSavesViewModelTests
 
         Assert.False(section.IsChoosingFromProfile);
         Assert.Equal(["Moon", "Orbit"], section.Items.Select(item => item.Name).Order(StringComparer.Ordinal));
-        Assert.Equal(harness.Localization.FormatGameSavesCopiedFromProfile(1), section.Message);
+        Assert.Equal(harness.Localization.FormatGameSavesCopiedFromProfile(1), harness.ViewModel.Toasts.Items[^1].Message);
 
         await section.BeginCopyFromProfileCommand.ExecuteAsync(null);
         section.ProfileItems.Single(item => item.Name == "Moon").IsSelected = true;
@@ -194,7 +194,7 @@ public sealed class GameSavesViewModelTests
         Assert.False(Directory.Exists(Path.Combine(vehicles, "Rocket")));
         Assert.Empty(section.Items);
         Assert.Single(Directory.GetDirectories(Path.Combine(harness.Services.Paths.GetBackupsRoot(), instance.InstanceId.ToString(), "Vehicles")));
-        Assert.Equal(harness.Localization.FormatGameSaveDeleted("Rocket"), section.Message);
+        Assert.Equal(harness.Localization.FormatGameSaveDeleted("Rocket"), harness.ViewModel.Toasts.Items[^1].Message);
     }
 
     [Fact]
@@ -214,13 +214,17 @@ public sealed class GameSavesViewModelTests
         row.BeginCopyCommand.Execute(null);
         await row.CopyCommand.ExecuteAsync(null);
 
-        Assert.Equal(harness.Localization.GameSaveCloseGame, section.Error);
+        var toast = harness.ViewModel.Toasts.Items[^1];
+        Assert.Equal(harness.Localization.FormatToastCopyFailed("Orbit"), toast.Message);
+        Assert.Equal(harness.Localization.GameSaveCloseGame, toast.Detail);
+        Assert.Null(section.Error);
         Assert.False(Directory.Exists(Path.Combine(paths.GetInstanceSavesFolder(second.InstanceId), "Orbit")));
 
         row.BeginDeleteCommand.Execute(null);
         await row.ConfirmDeleteCommand.ExecuteAsync(null);
 
-        Assert.Equal(harness.Localization.GameSaveCloseGame, section.Error);
+        Assert.Equal(harness.Localization.FormatToastDeleteFailed("Orbit"), harness.ViewModel.Toasts.Items[^1].Message);
+        Assert.Equal(harness.Localization.GameSaveCloseGame, harness.ViewModel.Toasts.Items[^1].Detail);
         Assert.True(Directory.Exists(Path.Combine(saves, "Orbit")));
         Assert.Single(section.Items);
     }
@@ -243,7 +247,7 @@ public sealed class GameSavesViewModelTests
         row.BeginDeleteCommand.Execute(null);
         await row.ConfirmDeleteCommand.ExecuteAsync(null);
 
-        Assert.Equal(harness.Localization.GameSaveCloseGame, viewModel.SavesSection.Error);
+        Assert.Equal(harness.Localization.GameSaveCloseGame, viewModel.Toasts.Items[^1].Detail);
         Assert.True(Directory.Exists(Path.Combine(saves, "Orbit")));
         Assert.False(Directory.Exists(harness.Services.Paths.GetBackupsRoot()));
     }

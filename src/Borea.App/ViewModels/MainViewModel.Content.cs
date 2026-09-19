@@ -300,7 +300,7 @@ public partial class MainViewModel
             return;
 
         if (CurrentWindowInstance)
-            ContentError = error;
+            ShowOpenError(() => link.Url, error);
         else
             ContentDetailError = error;
     }

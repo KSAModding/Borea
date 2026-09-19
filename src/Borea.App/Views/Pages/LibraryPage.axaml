@@ -36,10 +36,7 @@
 
             <ScrollViewer MaxHeight="{Binding $parent[UserControl].Bounds.Height, Converter={x:Static views:PageBodyPanel.HeaderMessagesMaxHeight}}">
                 <StackPanel>
-                    <TextBlock Classes="body-md danger" Text="{Binding InstanceError}" TextWrapping="Wrap" Margin="0,16,0,0" IsVisible="{Binding InstanceError, Converter={x:Static ObjectConverters.IsNotNull}}" />
-                    <TextBlock Classes="body-md secondary" Text="{Binding InstanceNotice}" TextWrapping="Wrap" Margin="0,16,0,0" IsVisible="{Binding InstanceNotice, Converter={x:Static ObjectConverters.IsNotNull}}" />
                     <ContentControl Content="{Binding}" ContentTemplate="{StaticResource LaunchStatus}" />
-                    <TextBlock Classes="body-md danger" Text="{Binding ContentError}" TextWrapping="Wrap" Margin="0,16,0,0" IsVisible="{Binding ContentError, Converter={x:Static ObjectConverters.IsNotNull}}" />
                 </StackPanel>
             </ScrollViewer>
 

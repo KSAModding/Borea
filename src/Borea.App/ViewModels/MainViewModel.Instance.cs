@@ -40,6 +40,7 @@ public partial class MainViewModel
     private int _contentUpdateCheckGeneration;
     private Guid? _launchInstanceId;
     private string? _launchBlamedModName;
+    private string? _launchLoaderName;
     private HomeLaunchOption? _homeLaunch;
 
     [ObservableProperty]
@@ -119,8 +120,15 @@ public partial class MainViewModel
 
     public string? DisableBlamedModText => _launchBlamedModName is null ? null : Localization.FormatLaunchDisableMod(_launchBlamedModName);
 
+    /// <summary>The modal that shows why the loader stopped, with the way out.</summary>
     [ObservableProperty]
-    private string? _contentError;
+    private bool _isLaunchFailureOpen;
+
+    public string? LaunchFailureTitle => _launchLoaderName is null ? null : Localization.FormatLaunchStoppedTitle(_launchLoaderName);
+
+    /// <summary>Why an action of the launch modal failed, shown in the modal because it covers the toasts.</summary>
+    [ObservableProperty]
+    private string? _launchFailureError;
 
     [RelayCommand]
     internal async Task OpenInstanceAsync(InstanceItem item)
@@ -140,7 +148,6 @@ public partial class MainViewModel
             ClearLaunchFailure();
         }
 
-        ContentError = null;
         _runningUpdates.TryGetValue(item.InstanceId, out var running);
         UpdateAll = running as UpdateAllItem ?? new UpdateAllItem(this, item.InstanceId);
         _selectedInstanceEntity = await _services.Instances.GetByIdAsync(item.InstanceId);
@@ -582,7 +589,7 @@ public partial class MainViewModel
 
     private async Task ShowLaunchFailureAsync(LaunchResult result, Instance instance, ModMetadata? loader)
     {
-        var loaderName = loader?.Name ?? string.Empty;
+        var loaderName = _launchLoaderName = loader?.Name ?? string.Empty;
         var blamed = result.BlamedModId is null ? null : instance.Mods.FirstOrDefault(mod => ModIds.Equals(mod.ModId, result.BlamedModId));
         if (blamed is null)
         {
@@ -598,16 +605,36 @@ public partial class MainViewModel
         LaunchOutputText = result.Output.Count == 0 ? Localization.LaunchNoOutput : string.Join(Environment.NewLine, result.Output);
         LaunchBlamedModId = blamed?.ModId;
         OnPropertyChanged(nameof(DisableBlamedModText));
+        OnPropertyChanged(nameof(LaunchFailureTitle));
+        LaunchFailureError = null;
+        IsLaunchFailureOpen = true;
     }
 
     private void ClearLaunchFailure()
     {
+        IsLaunchFailureOpen = false;
+        LaunchFailureError = null;
         LaunchOutputText = null;
         IsLaunchOutputShown = false;
         LaunchBlamedModId = null;
         _launchBlamedModName = null;
+        _launchLoaderName = null;
         OnPropertyChanged(nameof(DisableBlamedModText));
+        OnPropertyChanged(nameof(LaunchFailureTitle));
     }
+
+    [RelayCommand]
+    private void ShowLaunchFailure()
+    {
+        if (!HasLaunchOutput)
+            return;
+
+        LaunchFailureError = null;
+        IsLaunchFailureOpen = true;
+    }
+
+    [RelayCommand]
+    private void CloseLaunchFailure() => IsLaunchFailureOpen = false;
 
     [RelayCommand]
     private void ToggleLaunchOutput() => IsLaunchOutputShown = !IsLaunchOutputShown;
@@ -618,8 +645,8 @@ public partial class MainViewModel
         if (_launchInstanceId is not { } instanceId || LaunchBlamedModId is not { } modId || _launchBlamedModName is not { } name)
             return;
 
-        await SetContentEnabledAsync(instanceId, modId, enabled: false);
-        if (ContentError is not null)
+        LaunchFailureError = await TrySetContentEnabledAsync(instanceId, modId, enabled: false);
+        if (LaunchFailureError is not null)
             return;
 
         if (CurrentWindowInstance && SelectedInstance is { } shown && shown.InstanceId == instanceId)
@@ -632,7 +659,7 @@ public partial class MainViewModel
     private void OpenLaunchLog()
     {
         if (_services is not null && _launchInstanceId is { } instanceId)
-            ContentError = TryOpenWithSystem(_services.Paths.GetInstanceLaunchLogPath(instanceId));
+            LaunchFailureError = TryOpenWithSystem(_services.Paths.GetInstanceLaunchLogPath(instanceId));
     }
 
     private string LaunchLoaderFailureText(LaunchLoaderChoice choice) => choice.Failure switch
@@ -645,17 +672,21 @@ public partial class MainViewModel
         _ => throw new ArgumentOutOfRangeException(nameof(choice), choice.Failure, null),
     };
 
-    internal async Task SetContentEnabledAsync(Guid instanceId, string modId, bool enabled)
+    internal async Task SetContentEnabledAsync(Guid instanceId, string modId, string name, bool enabled)
+    {
+        if (await TrySetContentEnabledAsync(instanceId, modId, enabled) is { } error)
+            ShowErrorToast(() => enabled ? Localization.FormatToastEnableFailed(name) : Localization.FormatToastDisableFailed(name), error);
+    }
+
+    /// <summary>Enables or disables the mod, or returns why it could not.</summary>
+    private async Task<string?> TrySetContentEnabledAsync(Guid instanceId, string modId, bool enabled)
     {
         if (_services is null)
-            return;
+            return null;
 
         using var libraryUse = TryUseLibrary();
         if (libraryUse is null)
-        {
-            ContentError = Localization.LibraryFolderBusy;
-            return;
-        }
+            return Localization.LibraryFolderBusy;
 
         try
         {
@@ -663,11 +694,11 @@ public partial class MainViewModel
                 await _services.ModState.SetActiveAsync(instanceId, modId);
             else
                 await _services.ModState.SetInactiveAsync(instanceId, modId);
-            ContentError = null;
+            return null;
         }
         catch (Exception exception) when (exception is IOException or InvalidOperationException or UnauthorizedAccessException)
         {
-            ContentError = exception.Message;
+            return exception.Message;
         }
     }
 
@@ -702,22 +733,22 @@ public partial class MainViewModel
     /// <summary>
     /// Removes a mod Borea installed, with its folder and its record. A mod
     /// that another installed mod requires stays, and so does a mod Borea did
-    /// not install, because its files are not Borea's to delete. The error is
-    /// set after the page reloads, because opening the instance clears it.
+    /// not install, because its files are not Borea's to delete. The toast of
+    /// the task says why a mod stays.
     /// </summary>
     internal async Task RemoveContentAsync(Guid instanceId, string modId)
     {
         if (_services is null || _runningUpdates.ContainsKey(instanceId))
             return;
 
+        var name = _content.FirstOrDefault(content => content.InstanceId == instanceId && ModIds.Equals(content.ModId, modId))?.Name ?? modId;
         using var libraryUse = TryUseLibrary();
         if (libraryUse is null)
         {
-            ContentError = Localization.LibraryFolderBusy;
+            ShowErrorToast(() => Localization.FormatToastRemoveFailed(name), Localization.LibraryFolderBusy);
             return;
         }
 
-        var name = _content.FirstOrDefault(content => content.InstanceId == instanceId && ModIds.Equals(content.ModId, modId))?.Name ?? modId;
         var task = StartTask(TaskKind.ModRemoval, name, instanceId, modId);
         var completed = false;
         string? error = null;
@@ -736,7 +767,6 @@ public partial class MainViewModel
         }
 
         await ReloadInstancesAsync();
-        ContentError = error;
     }
 
     /// <summary>
@@ -926,7 +956,7 @@ public sealed partial class ContentItem : ObservableObject, IUpdateRow
     }
 
     [RelayCommand]
-    private Task ToggleEnabledAsync() => _owner.SetContentEnabledAsync(InstanceId, ModId, IsEnabled);
+    private Task ToggleEnabledAsync() => _owner.SetContentEnabledAsync(InstanceId, ModId, Name, IsEnabled);
 
     [RelayCommand]
     private Task OpenAsync() => _page is null ? Task.CompletedTask : _owner.OpenContentFromInstanceAsync(_page);

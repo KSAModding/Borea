@@ -143,6 +143,66 @@ public sealed class ToastViewModelTests
     }
 
     [Theory]
+    [InlineData(ToastKind.Success, 5)]
+    [InlineData(ToastKind.Error, 10)]
+    public async Task MessageToast_ClosesAfterItsTime(ToastKind kind, int seconds)
+    {
+        var viewModel = ViewModel();
+        var toast = viewModel.Toasts.ShowMessage(kind, () => "Copied to the clipboard.");
+
+        _time.Advance(TimeSpan.FromSeconds(seconds) - TimeSpan.FromMilliseconds(1));
+        Assert.Contains(toast, viewModel.Toasts.Items);
+
+        _time.Advance(TimeSpan.FromMilliseconds(1));
+        await WaitUntilAsync(() => !viewModel.Toasts.Items.Contains(toast));
+    }
+
+    [Fact]
+    public void SuccessMessageToast_HasNoActions()
+    {
+        var viewModel = ViewModel();
+
+        var toast = viewModel.Toasts.ShowMessage(ToastKind.Success, () => "Copied to the clipboard.", "Second line");
+
+        Assert.True(toast.IsFinished);
+        Assert.Equal("Copied to the clipboard.", toast.Message);
+        Assert.Equal("Second line", toast.Detail);
+        Assert.False(toast.HasActions);
+        Assert.Null(toast.TaskItem);
+    }
+
+    [Fact]
+    public async Task ErrorToast_WritesTheLog_AndShowDetailsOpensTheModalWithTheText()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var viewModel = harness.ViewModel;
+        viewModel.Toasts.Clock = _time;
+        string? opened = null;
+        viewModel.OpenWithSystem = target => opened = target;
+
+        viewModel.ShowErrorToast(() => "Could not delete Main", "The folder is in use.");
+
+        var toast = Assert.Single(viewModel.Toasts.Items);
+        Assert.True(toast.IsFailed);
+        Assert.True(toast.CanShowDetails);
+        Assert.Contains("Could not delete Main: The folder is in use.", harness.Services.Log.ReadRecentLines(5)[^1]);
+
+        toast.ShowDetailsCommand.Execute(null);
+
+        Assert.Empty(viewModel.Toasts.Items);
+        Assert.False(viewModel.IsTasksOpen);
+        Assert.True(viewModel.IsToastDetailsOpen);
+        Assert.Equal("The folder is in use.", viewModel.ToastInDetails?.Detail);
+
+        viewModel.OpenBoreaLogFromToastCommand.Execute(null);
+        Assert.Equal(harness.Services.Log.CurrentFilePath, opened);
+        Assert.Null(viewModel.ToastDetailsError);
+
+        viewModel.CloseToastDetailsCommand.Execute(null);
+        Assert.False(viewModel.IsToastDetailsOpen);
+    }
+
+    [Theory]
     [InlineData(false)]
     [InlineData(true)]
     public async Task Toast_WhilePointedAtOrFocused_StaysAndStartsItsTimeAgainWhenLeft(bool byFocus)

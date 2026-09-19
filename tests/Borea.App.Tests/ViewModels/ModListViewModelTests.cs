@@ -41,7 +41,7 @@ public sealed class ModListViewModelTests
         Assert.Equal(await EntriesAsync(harness, source.InstanceId), await EntriesAsync(harness, copy.InstanceId));
         Assert.Empty(copy.ForeignMods);
         Assert.Contains(viewModel.Instances, row => row.Name == "Main (copy)");
-        Assert.Null(viewModel.InstanceNotice);
+        Assert.DoesNotContain(viewModel.Toasts.Items, toast => toast.Message == harness.Localization.FormatLibraryNowActive("Main (copy)"));
         Assert.Equal("Main", viewModel.ActiveInstance?.Name);
     }
 
@@ -76,7 +76,7 @@ public sealed class ModListViewModelTests
         await viewModel.Instances.Single().ExportModListCommand.ExecuteAsync(null);
 
         Assert.Equal("Main.toml", window.SavedFileName);
-        Assert.Equal(harness.Localization.FormatModListExported("Main", "Main.toml"), viewModel.InstanceNotice);
+        Assert.Equal(harness.Localization.FormatModListExported("Main", "Main.toml"), viewModel.Toasts.Items[^1].Message);
 
         window.FileToOpen = new PickedTextFile("Main.toml", window.SavedText!);
         await viewModel.ImportModListCommand.ExecuteAsync(null);
@@ -126,7 +126,7 @@ public sealed class ModListViewModelTests
         await viewModel.BeginImportAsync("shared.toml", text);
         await viewModel.ModListImport!.ConfirmCommand.ExecuteAsync(null);
 
-        Assert.Equal(harness.Localization.FormatLibraryNowActive("Shared"), viewModel.InstanceNotice);
+        Assert.Contains(viewModel.Toasts.Items, toast => toast.IsFinished && toast.Message == harness.Localization.FormatLibraryNowActive("Shared"));
         Assert.Equal("Shared", viewModel.ActiveInstance?.Name);
     }
 
@@ -193,7 +193,10 @@ public sealed class ModListViewModelTests
         await viewModel.BeginImportAsync("future.toml", "format = 2\n");
 
         Assert.Null(viewModel.ModListImport);
-        Assert.Equal(harness.Localization.FormatModListNewerFormat("future.toml", 2), viewModel.InstanceError);
+        var toast = Assert.Single(viewModel.Toasts.Items);
+        Assert.Equal(harness.Localization.ToastImportModListFailed, toast.Message);
+        Assert.Equal(harness.Localization.FormatModListNewerFormat("future.toml", 2), toast.Detail);
+        Assert.Null(viewModel.InstanceError);
     }
 
     [Fact]
@@ -214,9 +217,9 @@ public sealed class ModListViewModelTests
 
         var copied = harness.Services.ModListFormat.Read(window.CopiedText!);
         Assert.Equal(Entry("HudCore", "1.0.0"), Assert.Single(copied.Mods));
-        Assert.Equal(
-            $"{harness.Localization.FormatModListCopied("Main")} {harness.Localization.FormatModListNotExported("LocalOnly")}",
-            viewModel.InstanceNotice);
+        var toast = viewModel.Toasts.Items[^1];
+        Assert.Equal(harness.Localization.FormatModListCopied("Main"), toast.Message);
+        Assert.Equal(harness.Localization.FormatModListNotExported("LocalOnly"), toast.Detail);
     }
 
     /// <summary>An instance "Main" with HudCore as a dependency and HudExtras, which the game does not load.</summary>

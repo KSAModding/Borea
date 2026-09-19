@@ -1,0 +1,30 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Borea.App.ViewModels"
+             x:Class="Borea.App.Views.ToastDetailsModal"
+             x:DataType="vm:MainViewModel">
+    <!-- the whole text of an error toast -->
+    <Panel Background="#99000000">
+        <Border Classes="modal" Width="561" Margin="80,0,0,0">
+            <StackPanel>
+                <Grid ColumnDefinitions="*,Auto" Margin="24,24,24,0">
+                    <TextBlock Classes="heading-lg" Text="{Binding ToastInDetails.Message}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                    <Button Grid.Column="1" Classes="icon" Command="{Binding CloseToastDetailsCommand}" AutomationProperties.Name="{Binding Localization.ModalClose}">
+                        <Path Classes="icon" Data="{StaticResource Icon.Close}" />
+                    </Button>
+                </Grid>
+                <Border Height="1" Background="{StaticResource Brush.Window}" Margin="0,24,0,0" />
+                <StackPanel Margin="36,32,24,32" Spacing="16">
+                    <ScrollViewer MaxHeight="240" IsVisible="{Binding ToastInDetails.HasDetail, FallbackValue=False}">
+                        <SelectableTextBlock Classes="body-md" Text="{Binding ToastInDetails.Detail}" TextWrapping="Wrap" />
+                    </ScrollViewer>
+                    <TextBlock Classes="body-md danger" Text="{Binding ToastDetailsError}" TextWrapping="Wrap" IsVisible="{Binding ToastDetailsError, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+                        <Button Classes="text" Content="{Binding Localization.AboutOpenBoreaLog}" Command="{Binding OpenBoreaLogFromToastCommand}" />
+                        <Button Classes="text" Content="{Binding Localization.ModalClose}" Command="{Binding CloseToastDetailsCommand}" />
+                    </StackPanel>
+                </StackPanel>
+            </StackPanel>
+        </Border>
+    </Panel>
+</UserControl>

@@ -71,11 +71,11 @@ public partial class MainViewModel
             return;
         }
 
-        await RunInstanceOperationAsync(instances => instances.UpdateAsync(item.InstanceId, instance =>
+        await RunModalInstanceOperationAsync(instances => instances.UpdateAsync(item.InstanceId, instance =>
         {
             instance.SetLaunchArguments(arguments);
             return true;
-        }));
+        }), () => EditingLaunchArguments == item, () => Localization.FormatToastLaunchArgumentsFailed(item.Name));
 
         if (InstanceError is null && EditingLaunchArguments == item)
             EditingLaunchArguments = null;

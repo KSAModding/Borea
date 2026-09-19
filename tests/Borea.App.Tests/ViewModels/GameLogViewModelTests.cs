@@ -76,7 +76,7 @@ public sealed class GameLogViewModelTests
     }
 
     [Fact]
-    public async Task ReportCopied_ShowsTheNoticeUntilTheNextRead()
+    public async Task ReportCopied_ShowsASuccessToast()
     {
         using var harness = await ViewModelHarness.CreateAsync();
         var viewModel = harness.ViewModel;
@@ -87,10 +87,10 @@ public sealed class GameLogViewModelTests
         await viewModel.ShowInstanceLogCommand.ExecuteAsync(null);
 
         viewModel.ReportGameLogCopied();
-        Assert.Equal(viewModel.Localization.AboutCopied, viewModel.GameLogMessage);
 
-        await viewModel.ReloadGameLogCommand.ExecuteAsync(null);
-        Assert.Null(viewModel.GameLogMessage);
+        var toast = Assert.Single(viewModel.Toasts.Items);
+        Assert.Equal(viewModel.Localization.AboutCopied, toast.Message);
+        Assert.True(toast.IsFinished);
     }
 
     [Fact]
@@ -111,7 +111,8 @@ public sealed class GameLogViewModelTests
         Assert.Null(viewModel.GameLogText);
         Assert.NotNull(viewModel.GameLogPathText);
         Assert.Empty(opened);
-        Assert.NotNull(viewModel.GameLogError);
+        Assert.Null(viewModel.GameLogError);
+        Assert.True(Assert.Single(viewModel.Toasts.Items).IsFailed);
     }
 
     [Fact]
