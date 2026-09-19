@@ -117,6 +117,69 @@
   <data name="SettingsLibraryFolderPickerTitle" xml:space="preserve">
     <value>Neuen Bibliotheksordner wählen</value>
   </data>
+  <data name="SettingsGitHubLabel" xml:space="preserve">
+    <value>GitHub-Konto</value>
+  </data>
+  <data name="SettingsGitHubHint" xml:space="preserve">
+    <value>Melde dich an, damit Borea Listing-Pull-Requests in deinem Namen öffnen kann.</value>
+  </data>
+  <data name="SettingsGitHubSignIn" xml:space="preserve">
+    <value>Anmelden</value>
+  </data>
+  <data name="SettingsGitHubSignedInAsFormat" xml:space="preserve">
+    <value>Angemeldet als {0}</value>
+  </data>
+  <data name="SettingsGitHubSignOutHint" xml:space="preserve">
+    <value>Beim Abmelden vergisst Borea den Zugriff. Widerrufen kannst du ihn auf GitHub.</value>
+  </data>
+  <data name="SettingsGitHubSignOut" xml:space="preserve">
+    <value>Abmelden</value>
+  </data>
+  <data name="SettingsGitHubManageAccess" xml:space="preserve">
+    <value>Zugriff auf GitHub verwalten</value>
+  </data>
+  <data name="GitHubSignInTitle" xml:space="preserve">
+    <value>Bei GitHub anmelden</value>
+  </data>
+  <data name="GitHubSignInHint" xml:space="preserve">
+    <value>Gib diesen Code auf GitHub ein. Borea kann dann in deinen Fork des Inhaltsindex schreiben und Pull Requests an den Inhaltsindex öffnen, sonst nichts. Der Zugriff läuft nach 8 Stunden ab.</value>
+  </data>
+  <data name="GitHubSignInCodeWarning" xml:space="preserve">
+    <value>Borea fragt nur in diesem Fenster nach diesem Code, nirgendwo sonst.</value>
+  </data>
+  <data name="GitHubSignInGettingCode" xml:space="preserve">
+    <value>Code wird von GitHub geholt...</value>
+  </data>
+  <data name="GitHubSignInCopyAndOpen" xml:space="preserve">
+    <value>Code kopieren und GitHub öffnen</value>
+  </data>
+  <data name="GitHubSignInWaiting" xml:space="preserve">
+    <value>Warte auf deine Bestätigung auf GitHub...</value>
+  </data>
+  <data name="GitHubSignInExpired" xml:space="preserve">
+    <value>Der Code ist abgelaufen. Versuche es erneut, um einen neuen zu bekommen.</value>
+  </data>
+  <data name="GitHubSignInDenied" xml:space="preserve">
+    <value>Die Anmeldung wurde auf GitHub abgelehnt.</value>
+  </data>
+  <data name="GitHubSignInClientRejected" xml:space="preserve">
+    <value>GitHub akzeptiert diese Borea-Version nicht. Aktualisiere Borea oder melde das Problem.</value>
+  </data>
+  <data name="GitHubSignInCodeRejected" xml:space="preserve">
+    <value>GitHub kennt diesen Code nicht. Versuche es erneut, um einen neuen zu bekommen.</value>
+  </data>
+  <data name="GitHubSignInRequestRejected" xml:space="preserve">
+    <value>GitHub hat die Anmeldeanfrage abgelehnt. Melde das Problem.</value>
+  </data>
+  <data name="GitHubSignInDeviceFlowDisabled" xml:space="preserve">
+    <value>Die Anmeldung mit Code ist für Borea auf GitHub ausgeschaltet. Melde das Problem.</value>
+  </data>
+  <data name="GitHubSignInNetworkError" xml:space="preserve">
+    <value>GitHub ist nicht erreichbar. Prüfe deine Verbindung und versuche es erneut.</value>
+  </data>
+  <data name="GitHubSignInUnexpected" xml:space="preserve">
+    <value>GitHub hat eine Antwort geschickt, die Borea nicht versteht. Versuche es später erneut.</value>
+  </data>
   <data name="LibraryFolderMoving" xml:space="preserve">
     <value>Bibliotheksordner wird geändert...</value>
   </data>

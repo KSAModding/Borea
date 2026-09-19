@@ -262,6 +262,49 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string SettingsLibraryFolderPickerTitle => Resources.SettingsLibraryFolderPickerTitle;
 
+    public string SettingsGitHubLabel => Resources.SettingsGitHubLabel;
+
+    public string SettingsGitHubHint => Resources.SettingsGitHubHint;
+
+    public string SettingsGitHubSignIn => Resources.SettingsGitHubSignIn;
+
+    public string FormatSettingsGitHubSignedInAs(string login)
+        => string.Format(CultureInfo.CurrentCulture, Resources.SettingsGitHubSignedInAsFormat, login);
+
+    public string SettingsGitHubSignOutHint => Resources.SettingsGitHubSignOutHint;
+
+    public string SettingsGitHubSignOut => Resources.SettingsGitHubSignOut;
+
+    public string SettingsGitHubManageAccess => Resources.SettingsGitHubManageAccess;
+
+    public string GitHubSignInTitle => Resources.GitHubSignInTitle;
+
+    public string GitHubSignInHint => Resources.GitHubSignInHint;
+
+    public string GitHubSignInCodeWarning => Resources.GitHubSignInCodeWarning;
+
+    public string GitHubSignInGettingCode => Resources.GitHubSignInGettingCode;
+
+    public string GitHubSignInCopyAndOpen => Resources.GitHubSignInCopyAndOpen;
+
+    public string GitHubSignInWaiting => Resources.GitHubSignInWaiting;
+
+    public string GitHubSignInExpired => Resources.GitHubSignInExpired;
+
+    public string GitHubSignInDenied => Resources.GitHubSignInDenied;
+
+    public string GitHubSignInClientRejected => Resources.GitHubSignInClientRejected;
+
+    public string GitHubSignInCodeRejected => Resources.GitHubSignInCodeRejected;
+
+    public string GitHubSignInRequestRejected => Resources.GitHubSignInRequestRejected;
+
+    public string GitHubSignInDeviceFlowDisabled => Resources.GitHubSignInDeviceFlowDisabled;
+
+    public string GitHubSignInNetworkError => Resources.GitHubSignInNetworkError;
+
+    public string GitHubSignInUnexpected => Resources.GitHubSignInUnexpected;
+
     public string LibraryFolderMoving => Resources.LibraryFolderMoving;
 
     public string FormatLibraryFolderCopying(int files, int totalFiles, string megabytes, string totalMegabytes)

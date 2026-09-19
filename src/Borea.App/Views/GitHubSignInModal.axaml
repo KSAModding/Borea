@@ -1,0 +1,45 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Borea.App.ViewModels"
+             x:Class="Borea.App.Views.GitHubSignInModal"
+             x:DataType="vm:MainViewModel">
+    <!-- modal: the device code of a GitHub sign-in -->
+    <Panel Background="#99000000">
+        <Border Classes="modal" Width="561" Margin="80,0,0,0">
+            <StackPanel>
+                <Grid ColumnDefinitions="*,Auto" Margin="24,24,24,0">
+                    <TextBlock Classes="heading-lg" Text="{Binding Localization.GitHubSignInTitle}" VerticalAlignment="Center" />
+                    <Button Grid.Column="1" Classes="icon" Command="{Binding CancelGitHubSignInCommand}" AutomationProperties.Name="{Binding Localization.ModalClose}">
+                        <Path Classes="icon" Data="{StaticResource Icon.Close}" />
+                    </Button>
+                </Grid>
+                <Border Height="1" Background="{StaticResource Brush.Window}" Margin="0,24,0,0" />
+                <StackPanel Margin="36,32,24,32" Spacing="16">
+                    <TextBlock Classes="body-md secondary" Text="{Binding Localization.GitHubSignInHint}" TextWrapping="Wrap" />
+                    <TextBlock Classes="body-md" Text="{Binding Localization.GitHubSignInCodeWarning}" TextWrapping="Wrap" />
+                    <StackPanel Orientation="Horizontal" Spacing="12" IsVisible="{Binding IsGettingGitHubCode}">
+                        <ProgressBar Width="38" Height="6" VerticalAlignment="Center" IsIndeterminate="True" Foreground="{StaticResource Brush.Accent}" />
+                        <TextBlock Classes="body-md" Text="{Binding Localization.GitHubSignInGettingCode}" VerticalAlignment="Center" />
+                    </StackPanel>
+                    <StackPanel Spacing="16" IsVisible="{Binding HasGitHubCode}">
+                        <SelectableTextBlock Text="{Binding GitHubUserCode}" FontFamily="{StaticResource Font.Mono}" FontSize="36" HorizontalAlignment="Center" />
+                        <Button Classes="cta" HorizontalAlignment="Center" Command="{Binding CopyGitHubCodeAndOpenCommand}">
+                            <TextBlock Classes="action-lg" Text="{Binding Localization.GitHubSignInCopyAndOpen}" VerticalAlignment="Center" />
+                        </Button>
+                        <StackPanel Orientation="Horizontal" Spacing="12" HorizontalAlignment="Center">
+                            <ProgressBar Width="38" Height="6" VerticalAlignment="Center" IsIndeterminate="True" Foreground="{StaticResource Brush.Accent}" />
+                            <TextBlock Classes="body-md secondary" Text="{Binding Localization.GitHubSignInWaiting}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </StackPanel>
+                    <TextBlock Classes="body-md danger" Text="{Binding GitHubSignInError}" TextWrapping="Wrap" IsVisible="{Binding GitHubSignInError, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+                        <Button Classes="text" Content="{Binding Localization.LibraryCancel}" Command="{Binding CancelGitHubSignInCommand}" VerticalAlignment="Center" />
+                        <Button Classes="cta" Command="{Binding SignInToGitHubCommand}" IsVisible="{Binding CanRetryGitHubSignIn}">
+                            <TextBlock Classes="action-lg" Text="{Binding Localization.DiscoverIndexRetry}" VerticalAlignment="Center" />
+                        </Button>
+                    </StackPanel>
+                </StackPanel>
+            </StackPanel>
+        </Border>
+    </Panel>
+</UserControl>
