@@ -135,7 +135,7 @@ public sealed class LibraryViewModelTests
     }
 
     [Fact]
-    public async Task CreateInstance_TakenName_ReportsTheRepositoryError()
+    public async Task CreateInstance_TakenName_KeepsTheModalOpenWithTheError()
     {
         using var harness = await ViewModelHarness.CreateAsync();
         var viewModel = harness.ViewModel;
@@ -149,7 +149,7 @@ public sealed class LibraryViewModelTests
 
         Assert.Single(viewModel.Instances);
         Assert.True(viewModel.IsNameModalOpen);
-        Assert.NotNull(viewModel.InstanceError);
+        Assert.Equal(harness.Localization.ModalNameTaken, viewModel.InstanceError);
         Assert.Empty(viewModel.Toasts.Items);
     }
 

@@ -1566,6 +1566,9 @@
   <data name="ModalNameRequired" xml:space="preserve">
     <value>Enter a name for the instance.</value>
   </data>
+  <data name="ModalNameTaken" xml:space="preserve">
+    <value>An instance with this name exists already.</value>
+  </data>
   <data name="ModalNameLabel" xml:space="preserve">
     <value>Name</value>
   </data>

@@ -962,6 +962,8 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string ModalNameRequired => Resources.ModalNameRequired;
 
+    public string ModalNameTaken => Resources.ModalNameTaken;
+
     public string ModalNameLabel => Resources.ModalNameLabel;
 
     public string ModalLaunchArgumentsLabel => Resources.ModalLaunchArgumentsLabel;
