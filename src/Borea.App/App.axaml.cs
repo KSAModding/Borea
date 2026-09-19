@@ -1,12 +1,14 @@
 using System;
 using System.ComponentModel;
 using Avalonia;
+using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using Avalonia.Styling;
 using Avalonia.Threading;
 using Borea.App.Formatting;
 using Borea.App.Localization;
+using Borea.App.SingleInstance;
 using Borea.App.ViewModels;
 using Borea.App.Views;
 using Borea.Composition;
@@ -29,6 +31,12 @@ public partial class App : Application
     private readonly AppPreferences _preferences;
 
     private readonly AppPreferencesLoadStatus _preferencesLoadStatus = AppPreferencesLoadStatus.Loaded;
+
+    private readonly StartArgumentsInbox? _startArguments;
+
+    private readonly PrimaryInstance? _primary;
+
+    private WindowFront? _windowFront;
 
     public App()
     {
@@ -56,6 +64,13 @@ public partial class App : Application
             _preferences.RegionalCultureName);
     }
 
+    internal App(BoreaServices services, StartArgumentsInbox startArguments, PrimaryInstance primary)
+        : this(services)
+    {
+        _startArguments = startArguments ?? throw new ArgumentNullException(nameof(startArguments));
+        _primary = primary ?? throw new ArgumentNullException(nameof(primary));
+    }
+
     public override void Initialize()
     {
         AvaloniaXamlLoader.Load(this);
@@ -79,8 +94,12 @@ public partial class App : Application
             ApplyTheme(viewModel.CurrentTheme);
             viewModel.PropertyChanged += OnViewModelPropertyChanged;
 
-            desktop.MainWindow = new MainWindow { DataContext = viewModel };
-            desktop.MainWindow.Opened += async (_, _) => await viewModel.LoadAsync();
+            var window = new MainWindow { DataContext = viewModel };
+            desktop.MainWindow = window;
+            _windowFront = new WindowFront(window);
+            window.Opened += OnMainWindowOpened;
+            window.Opened += async (_, _) => await viewModel.LoadAsync();
+            window.Closing += OnMainWindowClosing;
 
             // players come back to Borea after installing a new KSA release
             desktop.MainWindow.Activated += async (_, _) => await viewModel.RefreshInstalledGameAsync();
@@ -95,6 +114,26 @@ public partial class App : Application
         }
 
         base.OnFrameworkInitializationCompleted();
+    }
+
+    private void OnMainWindowOpened(object? sender, EventArgs e)
+    {
+        ((Window)sender!).Opened -= OnMainWindowOpened;
+        _startArguments?.Open(start => Dispatcher.UIThread.Post(() => ReceiveStartArguments(start)));
+    }
+
+    // MainWindow cancels a close only to close later, so an uncancelled Closing means the window goes away.
+    private void OnMainWindowClosing(object? sender, WindowClosingEventArgs e)
+    {
+        if (!e.Cancel)
+            _ = _primary?.StopTakingStartsAsync();
+    }
+
+    /// <summary>Every start arrives here on the UI thread once the main window is open, the own start first.</summary>
+    private void ReceiveStartArguments(StartArguments start)
+    {
+        if (start.Forwarded)
+            _windowFront?.BringToFront();
     }
 
     private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)

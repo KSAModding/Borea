@@ -363,6 +363,8 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string SystemDefaultRegionalFormat => Resources.SystemDefaultRegionalFormat;
 
+    public string HandoverFailed => Resources.HandoverFailed;
+
     public string HomeCurrentInstall => Resources.HomeCurrentInstall;
 
     public string HomeRecentlyUpdated => Resources.HomeRecentlyUpdated;
