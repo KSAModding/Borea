@@ -557,7 +557,7 @@ public sealed class LoaderLauncherTests : IDisposable
         Assert.Same(started.Plan, result.Plan);
 
         var log = File.ReadAllLines(_paths.GetInstanceLaunchLogPath(instance.InstanceId));
-        Assert.Contains("The loader exited with code -532462766.", log);
+        Assert.Contains($"The loader exited with code {LoaderExitCode.Describe(-532462766, OperatingSystem.IsWindows())}.", log);
         Assert.Contains(KsArmoryCrash[2], log);
     }
 
@@ -595,6 +595,163 @@ public sealed class LoaderLauncherTests : IDisposable
         Assert.Equal(LaunchOutcome.ExitedEarly, result.Outcome);
         Assert.Null(result.BlamedModId);
         Assert.Contains("exit code 3", result.Message);
+    }
+
+    private static readonly string[] ClrCrash =
+    [
+        "Fatal error.",
+        "Internal CLR error. (0x80131506)",
+        "   at System.Reflection.RuntimeModule.GetTypes()",
+        "   at StarMap.Core.ModRepository.RuntimeMod.InitializeMod(StarMap.Core.ModRepository.ModRegistry)",
+        "   at StarMap.Core.ModRepository.ModLoader.PrepareMods()",
+    ];
+
+    private void WriteManifest(Instance instance, string toml)
+    {
+        var path = _paths.GetInstanceManifestPath(instance.InstanceId);
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        File.WriteAllText(path, toml);
+    }
+
+    private void PlaceMod(Instance instance, string modId, string modToml, params string[] assemblies)
+    {
+        var folder = Directory.CreateDirectory(Path.Combine(_paths.GetInstanceModsFolder(instance.InstanceId), modId)).FullName;
+        File.WriteAllText(Path.Combine(folder, "mod.toml"), modToml);
+        foreach (var assembly in assemblies)
+            File.WriteAllBytes(Path.Combine(folder, assembly + ".dll"), []);
+    }
+
+    private async Task<LaunchResult> CrashAsync(Instance instance, int exitCode, params string[] output)
+    {
+        var started = _launcher.Launch(instance, LoaderListing(provides: StarMapProvides()));
+        var process = Assert.Single(_starter.Processes);
+        process.Output.AddRange(output);
+        process.HasExited = true;
+        process.ExitCode = exitCode;
+        return await _launcher.WatchStartAsync(instance, started);
+    }
+
+    [Fact]
+    public async Task WatchStart_CrashWhileLoadingMods_BlamesTheFirstCodeModStarMapDidNotReport()
+    {
+        PlaceStarMap();
+        var instance = InstanceWith("ModMenu", "Broken", "Textures", "KSArmory");
+        PlaceMod(instance, "ModMenu", "name = \"ModMenu\"", "ModMenu");
+        PlaceMod(instance, "OldTools", "name = \"OldTools\"", "OldTools");
+        PlaceMod(instance, "Broken", "name = \"Broken", "Broken");
+        PlaceMod(instance, "Textures", "name = \"Textures\"");
+        PlaceMod(instance, "KSArmory", "name = \"KSArmory\"\n[StarMap]\nEntryAssembly = \"KSArmory.Core\"", "KSArmory.Core");
+        WriteManifest(instance, """
+            [[mods]]
+            id = "Core"
+            enabled = true
+
+            [[mods]]
+            id = "ModMenu"
+            enabled = true
+
+            [[mods]]
+            id = "OldTools"
+            enabled = false
+
+            [[mods]]
+            id = "Broken"
+            enabled = true
+
+            [[mods]]
+            id = "Textures"
+            enabled = true
+
+            [[mods]]
+            id = "ksarmory"
+            enabled = true
+            """);
+
+        var result = await CrashAsync(instance, -1073741819, ["StarMap - Using Instance Path: Main", "StarMap - Loaded mod: ModMenu from manifest", "StarMap - Not loading mod: OldTools because it is disabled in manifest", .. ClrCrash]);
+
+        Assert.Equal("KSArmory", result.BlamedModId);
+        Assert.Equal(LoaderCrashCause.ModLoading, result.CrashCause);
+        Assert.Contains("StarMap stopped while it loaded KSArmory 0.8.44, so that mod is the likely cause.", result.Message);
+    }
+
+    [Fact]
+    public async Task WatchStart_CrashInTryCreateModAfterAnInvalidModToml_BlamesThatMod()
+    {
+        PlaceStarMap();
+        var instance = InstanceWith("ModMenu", "Broken", "KSArmory");
+        PlaceMod(instance, "ModMenu", "name = \"ModMenu\"", "ModMenu");
+        PlaceMod(instance, "Broken", "name = \"Broken");
+        PlaceMod(instance, "KSArmory", "name = \"KSArmory\"", "KSArmory");
+        WriteManifest(instance, "[[mods]]\nid = \"ModMenu\"\n\n[[mods]]\nid = \"Broken\"\n\n[[mods]]\nid = \"KSArmory\"\n");
+
+        var result = await CrashAsync(instance, -532462766, ["StarMap - Using Instance Path: Main", "StarMap - Loaded mod: ModMenu from manifest", "Unhandled exception. Tomlet.Exceptions.TomlException: The mod.toml is not valid TOML.", "   at StarMap.Core.ModRepository.RuntimeMod.TryCreateMod(KSA.ModEntry, System.Runtime.Loader.AssemblyLoadContext, StarMap.Core.ModRepository.RuntimeMod ByRef)"]);
+
+        Assert.Equal("Broken", result.BlamedModId);
+        Assert.Equal(LoaderCrashCause.ModLoading, result.CrashCause);
+    }
+
+    [Fact]
+    public async Task WatchStart_CrashAfterAllModsWereReported_BlamesTheWaitingModWithOnlyOptionalDependenciesMissing()
+    {
+        PlaceStarMap();
+        var instance = InstanceWith("ModMenu", "KSArmory");
+        PlaceMod(instance, "ModMenu", "name = \"ModMenu\"", "ModMenu");
+        PlaceMod(instance, "KSArmory", "name = \"KSArmory\"\n\n[StarMap]\nEntryAssembly = \"KSArmory\"\n\n[[StarMap.ModDependencies]]\nModId = \"Extras\"\nOptional = true\n", "KSArmory");
+        WriteManifest(instance, "[[mods]]\nid = \"KSArmory\"\n\n[[mods]]\nid = \"ModMenu\"\n");
+
+        var result = await CrashAsync(instance, -1073741819, ["StarMap - Using Instance Path: Main", "StarMap - Delaying load of mod: KSArmory due to missing dependencies: Extras", "StarMap - Loaded mod: ModMenu from manifest", .. ClrCrash]);
+
+        Assert.Equal("KSArmory", result.BlamedModId);
+    }
+
+    [Fact]
+    public async Task WatchStart_CrashWhileLoadingModsWithoutAModLeft_SaysSoWithoutBlamingAMod()
+    {
+        PlaceStarMap();
+        var instance = InstanceWith("ModMenu");
+        PlaceMod(instance, "ModMenu", "name = \"ModMenu\"", "ModMenu");
+        WriteManifest(instance, "[[mods]]\nid = \"ModMenu\"\n");
+
+        var result = await CrashAsync(instance, -1073741819, ["StarMap - Using Instance Path: Main", "StarMap - Loaded mod: ModMenu from manifest", .. ClrCrash]);
+
+        Assert.Null(result.BlamedModId);
+        Assert.Equal(LoaderCrashCause.ModLoading, result.CrashCause);
+        Assert.Contains("exit code -1073741819", result.Message);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("[[mods]\nid = ")]
+    [InlineData("mods = \"KSArmory\"")]
+    [InlineData("[[mods]]\nid = 5\nenabled = \"yes\"")]
+    public async Task WatchStart_CrashWhileLoadingModsWithoutAReadableManifest_BlamesNoMod(string? manifest)
+    {
+        PlaceStarMap();
+        var instance = InstanceWith("KSArmory");
+        PlaceMod(instance, "KSArmory", "name = \"KSArmory\"", "KSArmory");
+        if (manifest is not null)
+            WriteManifest(instance, manifest);
+
+        var result = await CrashAsync(instance, -1073741819, ["StarMap - Using Instance Path: Main", .. ClrCrash]);
+
+        Assert.Equal(LaunchOutcome.ExitedEarly, result.Outcome);
+        Assert.Null(result.BlamedModId);
+        Assert.Equal(LoaderCrashCause.ModLoading, result.CrashCause);
+    }
+
+    [Fact]
+    public async Task WatchStart_AssemblyNamedWhileLoadingMods_BlamesTheModOfTheAssembly()
+    {
+        PlaceStarMap();
+        var instance = InstanceWith("ModMenu", "KSArmory");
+        PlaceMod(instance, "ModMenu", "name = \"ModMenu\"", "ModMenu");
+        PlaceMod(instance, "KSArmory", "name = \"KSArmory\"", "KSArmory");
+        WriteManifest(instance, "[[mods]]\nid = \"ModMenu\"\n\n[[mods]]\nid = \"KSArmory\"\n");
+
+        var result = await CrashAsync(instance, -532462766, ["StarMap - Using Instance Path: Main", "StarMap - Loaded mod: ModMenu from manifest", "Could not load file or assembly 'ModMenu, Version=1.0.0.0'.", "   at StarMap.Core.ModRepository.RuntimeMod.InitializeMod(StarMap.Core.ModRepository.ModRegistry)"]);
+
+        Assert.Equal("ModMenu", result.BlamedModId);
+        Assert.Equal(LoaderCrashCause.ModAssembly, result.CrashCause);
     }
 
     [Fact]

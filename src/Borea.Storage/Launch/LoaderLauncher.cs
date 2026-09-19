@@ -255,7 +255,7 @@ public sealed class LoaderLauncher : ILauncher, IDisposable
 
         var output = process.RecentOutput;
         var exitCode = exited ? process.ExitCode : null;
-        WriteLaunchLog(_pathProvider.GetInstanceLaunchLogPath(instance.InstanceId), started.Plan, output, exitCode);
+        WriteLaunchLog(_pathProvider.GetInstanceLaunchLogPath(instance.InstanceId), started.Plan, output, exitCode, _platform == OsPlatform.Windows);
 
         if (exitCode is null || (exitCode == 0 && gameStarted))
             return started.WithOutput(output);
@@ -272,10 +272,22 @@ public sealed class LoaderLauncher : ILauncher, IDisposable
         }
 
         var blamed = Blame(instance, output);
-        var message = blamed is null
-            ? $"{start.LoaderName} stopped right after starting (exit code {exitCode}). The details show what it wrote."
-            : $"{blamed.Metadata.Listing?.Name ?? blamed.ModId} {blamed.Version} stopped {start.LoaderName} from starting. It may not work with this version of KSA. Disable it and try again, or look for an update.";
-        return LaunchResult.ExitedEarly(started.Plan, exitCode.Value, output, blamed?.ModId, message);
+        var cause = blamed is null ? LoaderCrashCause.Unknown : LoaderCrashCause.ModAssembly;
+        if (blamed is null && LoaderCrashReport.StoppedWhileLoadingMods(output))
+        {
+            cause = LoaderCrashCause.ModLoading;
+            var loadOrder = await LoadOrderReader.ReadAsync(_pathProvider, instance.InstanceId, cancellationToken).ConfigureAwait(false);
+            var likely = LoaderCrashReport.LikelyLoadingMod(output, loadOrder);
+            blamed = likely is null ? null : instance.Mods.FirstOrDefault(mod => ModIds.Equals(mod.ModId, likely));
+        }
+
+        var message = (blamed, cause) switch
+        {
+            (null, _) => $"{start.LoaderName} stopped right after starting (exit code {exitCode}). The details show what it wrote.",
+            (_, LoaderCrashCause.ModLoading) => $"{start.LoaderName} stopped while it loaded {blamed.Metadata.Listing?.Name ?? blamed.ModId} {blamed.Version}, so that mod is the likely cause. Disable it and try again, or look for an update.",
+            _ => $"{blamed.Metadata.Listing?.Name ?? blamed.ModId} {blamed.Version} stopped {start.LoaderName} from starting. It may not work with this version of KSA. Disable it and try again, or look for an update.",
+        };
+        return LaunchResult.ExitedEarly(started.Plan, exitCode.Value, output, blamed?.ModId, message, cause);
     }
 
     /// <summary>
@@ -319,7 +331,7 @@ public sealed class LoaderLauncher : ILauncher, IDisposable
     /// What the loader wrote while it was watched, next to the game's log, so
     /// the player can open it later. Each launch replaces the file.
     /// </summary>
-    private static void WriteLaunchLog(string path, LaunchPlan plan, IReadOnlyList<string> output, int? exitCode)
+    private static void WriteLaunchLog(string path, LaunchPlan plan, IReadOnlyList<string> output, int? exitCode, bool windows)
     {
         try
         {
@@ -328,7 +340,7 @@ public sealed class LoaderLauncher : ILauncher, IDisposable
             {
                 $"Launch at {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss} UTC",
                 $"Executable: {plan.Executable}",
-                exitCode is null ? "The loader was still running when Borea stopped watching." : $"The loader exited with code {exitCode}.",
+                exitCode is { } code ? $"The loader exited with code {LoaderExitCode.Describe(code, windows)}." : "The loader was still running when Borea stopped watching.",
                 string.Empty,
             };
             File.WriteAllLines(path, header.Concat(output));
