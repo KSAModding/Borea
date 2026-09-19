@@ -33,6 +33,12 @@ public partial class MainViewModel
     /// </summary>
     private const string LibraryTag = "library";
 
+    /// <summary>A list with fewer rows shows every compatibility chip.</summary>
+    private const int CommonCompatibilityMinimumRows = 5;
+
+    /// <summary>The share of rows, in percent, at which a compatibility state counts as the common one.</summary>
+    private const int CommonCompatibilityPercent = 90;
+
     private IReadOnlyList<DiscoverItem> _listings = [];
     private GameVersion? _compatibilityGame;
     private Task? _discoverLoad;
@@ -229,9 +235,23 @@ public partial class MainViewModel
             filtered = filtered.Where(item => matchingSet.Contains(item.Listing));
         }
 
-        Arrange(DiscoverItems, SortDiscover(filtered).ToList());
+        var rows = SortDiscover(filtered).ToList();
+        var common = CommonCompatibility(rows.Select(item => item.Compatibility).ToList());
+        foreach (var item in rows)
+            item.ShowsCompatibility = item.Compatibility != common;
+        Arrange(DiscoverItems, rows);
         ApplyPackFilters(query);
         OnPropertyChanged(nameof(HasDiscoverItems));
+    }
+
+    /// <summary>The state whose chip a row of the list leaves out, or null when every row shows its chip.</summary>
+    private static GameCompatibility? CommonCompatibility(IReadOnlyCollection<GameCompatibility> states)
+    {
+        if (states.Count < CommonCompatibilityMinimumRows)
+            return null;
+
+        var largest = states.GroupBy(state => state).MaxBy(group => group.Count())!;
+        return largest.Count() * 100 >= states.Count * CommonCompatibilityPercent ? largest.Key : null;
     }
 
     /// <summary>The Loaders tab has no Sort by dropdown, so it keeps the name order.</summary>
@@ -627,6 +647,10 @@ public sealed partial class DiscoverItem : ObservableObject, IInstallRow
     public bool IsUntested => Compatibility == GameCompatibility.Untested;
 
     public bool IsIncompatible => Compatibility == GameCompatibility.Incompatible;
+
+    /// <summary>False when most rows of the Discover list share this state, so the row leaves the chip out.</summary>
+    [ObservableProperty]
+    private bool _showsCompatibility = true;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CanInstall))]
