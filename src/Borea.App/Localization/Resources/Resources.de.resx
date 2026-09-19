@@ -708,6 +708,15 @@
   <data name="GameSaveCopyFromProfile" xml:space="preserve">
     <value>Aus dem Spielprofil kopieren</value>
   </data>
+  <data name="MoreInformation" xml:space="preserve">
+    <value>Mehr Informationen</value>
+  </data>
+  <data name="GameSaveProfileInfoFormat" xml:space="preserve">
+    <value>Das Spielprofil ist der Ordner {0}, den KSA nutzt, wenn du ohne Borea spielst. Beim Kopieren landet eine Kopie in dieser Instanz, die Originale bleiben, wo sie sind.</value>
+  </data>
+  <data name="GameSaveInstanceStartsEmpty" xml:space="preserve">
+    <value>Diese Instanz startet leer. Die Spielstände und Fahrzeuge, die du ohne Borea angelegt hast, liegen im Spielprofil.</value>
+  </data>
   <data name="GameSaveProfileEmpty" xml:space="preserve">
     <value>Das Spielprofil hat nichts zum Kopieren.</value>
   </data>
@@ -1091,6 +1100,9 @@
   </data>
   <data name="ModalRenameInstanceTitle" xml:space="preserve">
     <value>Instanz umbenennen</value>
+  </data>
+  <data name="ModalInstanceExplanation" xml:space="preserve">
+    <value>Instanzen sind Pakete aus Mods und Spielinhalten, die Borea zusätzlich zu deiner vorhandenen Spielinstallation verwaltet. Du kannst mehrere Instanzen erstellen und für verschiedene Spielerlebnisse jeweils eine davon aktivieren.</value>
   </data>
   <data name="ModalNameRequired" xml:space="preserve">
     <value>Gib einen Namen für die Instanz ein.</value>

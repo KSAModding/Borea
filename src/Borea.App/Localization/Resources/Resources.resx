@@ -708,6 +708,15 @@
   <data name="GameSaveCopyFromProfile" xml:space="preserve">
     <value>Copy from the game profile</value>
   </data>
+  <data name="MoreInformation" xml:space="preserve">
+    <value>More information</value>
+  </data>
+  <data name="GameSaveProfileInfoFormat" xml:space="preserve">
+    <value>The game profile is the folder {0}, which KSA uses when you play without Borea. Copying puts a copy into this instance and leaves the originals where they are.</value>
+  </data>
+  <data name="GameSaveInstanceStartsEmpty" xml:space="preserve">
+    <value>This instance starts empty. Your saves and vehicles from playing without Borea are in the game profile.</value>
+  </data>
   <data name="GameSaveProfileEmpty" xml:space="preserve">
     <value>The game profile has nothing to copy.</value>
   </data>
@@ -1091,6 +1100,9 @@
   </data>
   <data name="ModalRenameInstanceTitle" xml:space="preserve">
     <value>Rename instance</value>
+  </data>
+  <data name="ModalInstanceExplanation" xml:space="preserve">
+    <value>Instances are packages of mods and game content that Borea manages on top of your existing game install. You can create multiple instances and activate one at a time for different play experiences.</value>
   </data>
   <data name="ModalNameRequired" xml:space="preserve">
     <value>Enter a name for the instance.</value>

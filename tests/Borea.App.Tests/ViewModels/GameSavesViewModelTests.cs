@@ -176,6 +176,72 @@ public sealed class GameSavesViewModelTests
     }
 
     [Fact]
+    public async Task EmptyInstance_ProfileHasSaves_SaysSoUntilASaveIsCopied()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var viewModel = harness.ViewModel;
+        await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value);
+        WriteItem(Path.Combine(harness.Services.Paths.GetSharedProfileRoot(), "saves"), "Orbit", "2026-08-01T14:34:32.4054896", "v2026.8.3.5117", 10);
+        await OpenAsync(harness, "Main");
+
+        Assert.True(viewModel.ShowInstanceStartsEmpty);
+
+        await viewModel.CopyAllFromProfileCommand.ExecuteAsync(null);
+        Assert.True(viewModel.SavesSection.IsChoosingFromProfile);
+        Assert.False(viewModel.VehiclesSection.IsChoosingFromProfile);
+        Assert.Single(viewModel.SavesSection.ProfileItems).IsSelected = true;
+        await viewModel.SavesSection.CopyFromProfileCommand.ExecuteAsync(null);
+
+        Assert.Single(viewModel.SavesSection.Items);
+        Assert.False(viewModel.ShowInstanceStartsEmpty);
+    }
+
+    [Fact]
+    public async Task InstanceStartsEmpty_HiddenWhenTheProfileIsEmptyOrTheInstanceIsNot()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var viewModel = harness.ViewModel;
+        await harness.Services.Instances.CreateAsync("Empty", InstanceSource.Custom.Value);
+        var played = (await harness.Services.Instances.CreateAsync("Played", InstanceSource.Custom.Value)).Instance;
+        WriteItem(harness.Services.Paths.GetInstanceVehiclesFolder(played.InstanceId), "Rocket", "2026-08-10T06:44:36.6429982", "v2026.8.3.5117", 10, "vehicle.xml");
+
+        await OpenAsync(harness, "Empty");
+        Assert.False(viewModel.ShowInstanceStartsEmpty);
+
+        WriteItem(Path.Combine(harness.Services.Paths.GetSharedProfileRoot(), "saves"), "Orbit", "2026-08-01T14:34:32.4054896", "v2026.8.3.5117", 10);
+        await OpenAsync(harness, "Played");
+        Assert.False(viewModel.ShowInstanceStartsEmpty);
+
+        await OpenAsync(harness, "Empty");
+        Assert.True(viewModel.ShowInstanceStartsEmpty);
+    }
+
+    [Fact]
+    public async Task GameProfileInfoText_NamesTheFolderWithTheUserFolderShortened()
+    {
+        var folder = "BoreaAppTest_" + Guid.NewGuid();
+        var root = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), folder);
+        string expected;
+        string? text;
+        bool created;
+        try
+        {
+            using var harness = await ViewModelHarness.CreateAsync(sharedProfileRoot: Path.Combine(root, "GameProfile"));
+            expected = harness.Localization.FormatGameSaveProfileInfo(Path.Combine("~", folder, "GameProfile"));
+            text = harness.ViewModel.GameProfileInfoText;
+            created = Directory.Exists(root);
+        }
+        finally
+        {
+            if (Directory.Exists(root))
+                Directory.Delete(root, recursive: true);
+        }
+
+        Assert.Equal(expected, text);
+        Assert.False(created);
+    }
+
+    [Fact]
     public async Task Delete_AfterConfirmation_MovesTheFolderIntoTheBackups()
     {
         using var harness = await ViewModelHarness.CreateAsync();

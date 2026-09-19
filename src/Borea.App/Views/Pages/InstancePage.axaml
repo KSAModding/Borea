@@ -88,11 +88,12 @@
             <Border BorderBrush="{StaticResource Brush.BorderStrong}" BorderThickness="1" CornerRadius="16" views:RoundedClip.IsEnabled="True" Padding="0,0,0,4" Margin="0,0,0,16">
                 <StackPanel>
                     <Border Background="{StaticResource Brush.Surface}" Padding="16,11">
-                        <Grid ColumnDefinitions="*,16,Auto">
+                        <Grid ColumnDefinitions="*,16,Auto,4,Auto">
                             <TextBlock Classes="body-md secondary" Text="{Binding Title}" VerticalAlignment="Center" />
                             <Button Grid.Column="2" Classes="link" Command="{Binding BeginCopyFromProfileCommand}" IsVisible="{Binding !IsChoosingFromProfile}" VerticalAlignment="Center">
                                 <TextBlock Classes="action-md" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.GameSaveCopyFromProfile}" />
                             </Button>
+                            <views:InfoButton Grid.Column="4" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).GameProfileInfoText}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.MoreInformation}" IsVisible="{Binding !IsChoosingFromProfile}" />
                         </Grid>
                     </Border>
                     <TextBlock Classes="body-sm danger" Text="{Binding Error}" TextWrapping="Wrap" Margin="16,8" IsVisible="{Binding Error, Converter={x:Static ObjectConverters.IsNotNull}}" />
@@ -357,6 +358,15 @@
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
+                    <WrapPanel ItemSpacing="12" LineSpacing="4" Margin="8,0,0,12" IsVisible="{Binding ShowInstanceStartsEmpty}">
+                        <TextBlock Classes="body-md secondary" Text="{Binding Localization.GameSaveInstanceStartsEmpty}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                        <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                            <Button Classes="link" Command="{Binding CopyAllFromProfileCommand}" VerticalAlignment="Center">
+                                <TextBlock Classes="action-md" Text="{Binding Localization.GameSaveCopyFromProfile}" />
+                            </Button>
+                            <views:InfoButton Text="{Binding GameProfileInfoText}" AutomationProperties.Name="{Binding Localization.MoreInformation}" />
+                        </StackPanel>
+                    </WrapPanel>
                     <ContentControl Content="{Binding VehiclesSection}" ContentTemplate="{StaticResource GameSaveTable}" />
                     <ContentControl Content="{Binding SavesSection}" ContentTemplate="{StaticResource GameSaveTable}" />
                     <ItemsControl ItemsSource="{Binding ContentGroups}">
