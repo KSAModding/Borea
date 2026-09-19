@@ -2,6 +2,7 @@ using System.Globalization;
 using Borea.App.Localization;
 using Borea.App.ViewModels;
 using Borea.Core.History;
+using Borea.Core.Mods;
 
 namespace Borea.App.Tests.ViewModels;
 
@@ -85,6 +86,35 @@ public sealed class TaskRegistryTests
 
         registry.Start(TaskKind.Update, "MeasureTools", main, "Main", "MeasureTools", null, TaskState.Running);
         Assert.False(failed.CanRetry);
+    }
+
+    [Fact]
+    public void Report_AfterTheEnd_KeepsTheEndedTask()
+    {
+        var registry = Registry(null);
+        var task = Run(registry, TaskKind.IndexRefresh);
+        registry.End(task, TaskState.Finished);
+
+        task.Report("Refreshing the content index", 50);
+
+        Assert.Equal(TaskState.Finished, task.State);
+        Assert.Null(task.Step);
+        Assert.False(task.HasProgress);
+    }
+
+    [Fact]
+    public void InstallReport_AfterTheEnd_KeepsTheEndedTask()
+    {
+        var registry = Registry(null);
+        var task = Run(registry, TaskKind.ModInstall);
+        var text = new InstallProgressText(_localization);
+        text.Report(new InstallProgress("MeasureTools", ModVersion.Parse("1.1.10"), InstallPhase.Finishing, null, 1, 1));
+        registry.End(task, TaskState.Finished);
+
+        task.Report(text);
+
+        Assert.Equal(TaskState.Finished, task.State);
+        Assert.Null(task.Step);
     }
 
     private TaskRegistry Registry(FakeRepository? repository)
