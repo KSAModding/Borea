@@ -276,7 +276,6 @@ public sealed class TasksViewModelTests
 
         var install = item.ConfirmInstallCommand.ExecuteAsync(null);
         Assert.True(tasks.IsBusy);
-        Assert.False(tasks.HasProgress);
 
         await _halfway.Task.WaitAsync(Timeout);
         await WaitUntilAsync(() => tasks.HasProgress);
@@ -284,6 +283,23 @@ public sealed class TasksViewModelTests
 
         _gate.SetResult();
         await install;
+
+        Assert.False(tasks.IsBusy);
+        Assert.False(tasks.HasProgress);
+    }
+
+    [Fact]
+    public async Task NavigationProgress_TaskWithoutAFraction_ShowsNoProgress()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var tasks = harness.ViewModel.Tasks;
+
+        var task = tasks.Start(TaskKind.IndexRefresh, null, null, null, null, null, TaskState.Running);
+
+        Assert.True(tasks.IsBusy);
+        Assert.False(tasks.HasProgress);
+
+        tasks.End(task, TaskState.Finished);
 
         Assert.False(tasks.IsBusy);
         Assert.False(tasks.HasProgress);
