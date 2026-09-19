@@ -80,6 +80,7 @@ public sealed class CliServicesTests : IDisposable
             Instances = graph.Instances,
             ModState = graph.ModState,
             GameLog = graph.GameLog,
+            GameSaveBackups = graph.GameSaveBackups,
             Playtime = graph.Playtime,
             ModListFormat = graph.ModListFormat,
             LatestVersion = new FakeLatestVersionPing(),
