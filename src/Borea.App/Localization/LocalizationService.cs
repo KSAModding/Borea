@@ -705,6 +705,200 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string FormatLinkVersionYanked(string version)
         => string.Format(CultureInfo.CurrentCulture, Resources.LinkVersionYankedFormat, version);
 
+    public string DiscoverListYourMod => Resources.DiscoverListYourMod;
+
+    public string DiscoverForModAuthors => Resources.DiscoverForModAuthors;
+
+    public string DiscoverForModAuthorsText => Resources.DiscoverForModAuthorsText;
+
+    public string ListingIntro => Resources.ListingIntro;
+
+    public string ListingNewTitle => Resources.ListingNewTitle;
+
+    public string ListingNewHint => Resources.ListingNewHint;
+
+    public string ListingSourcePlaceholder => Resources.ListingSourcePlaceholder;
+
+    public string ListingReadSource => Resources.ListingReadSource;
+
+    public string ListingStartEmpty => Resources.ListingStartEmpty;
+
+    public string ListingChangeTitle => Resources.ListingChangeTitle;
+
+    public string ListingChangeHint => Resources.ListingChangeHint;
+
+    public string ListingLoad => Resources.ListingLoad;
+
+    public string ListingSourceInvalid => Resources.ListingSourceInvalid;
+
+    public string ListingReading => Resources.ListingReading;
+
+    public string ListingStartOver => Resources.ListingStartOver;
+
+    public string ListingNoRelease => Resources.ListingNoRelease;
+
+    public string ListingAbout => Resources.ListingAbout;
+
+    public string ListingLinks => Resources.ListingLinks;
+
+    public string ListingReleases => Resources.ListingReleases;
+
+    public string ListingCompatibility => Resources.ListingCompatibility;
+
+    public string ListingDependencies => Resources.ListingDependencies;
+
+    public string ListingTags => Resources.ListingTags;
+
+    public string ListingImages => Resources.ListingImages;
+
+    public string ListingStatus => Resources.ListingStatus;
+
+    public string ListingId => Resources.ListingId;
+
+    public string ListingIdHint => Resources.ListingIdHint;
+
+    public string ListingName => Resources.ListingName;
+
+    public string ListingAuthors => Resources.ListingAuthors;
+
+    public string ListingAuthorsHint => Resources.ListingAuthorsHint;
+
+    public string ListingAbstract => Resources.ListingAbstract;
+
+    public string ListingAbstractHint => Resources.ListingAbstractHint;
+
+    public string ListingDescription => Resources.ListingDescription;
+
+    public string ListingDescriptionHint => Resources.ListingDescriptionHint;
+
+    public string ListingLicense => Resources.ListingLicense;
+
+    public string ListingLicenseHint => Resources.ListingLicenseHint;
+
+    public string ListingForumsHint => Resources.ListingForumsHint;
+
+    public string ListingReleasesGitHub => Resources.ListingReleasesGitHub;
+
+    public string ListingReleasesSpaceDock => Resources.ListingReleasesSpaceDock;
+
+    public string ListingReleasesAuthority => Resources.ListingReleasesAuthority;
+
+    public string ListingReleasesHint => Resources.ListingReleasesHint;
+
+    public string ListingGameMin => Resources.ListingGameMin;
+
+    public string ListingGameMax => Resources.ListingGameMax;
+
+    public string ListingGameHint => Resources.ListingGameHint;
+
+    public string ListingUsesLoader => Resources.ListingUsesLoader;
+
+    public string ListingLoaderId => Resources.ListingLoaderId;
+
+    public string ListingLoaderMin => Resources.ListingLoaderMin;
+
+    public string ListingLoaderMax => Resources.ListingLoaderMax;
+
+    public string ListingDependenciesHint => Resources.ListingDependenciesHint;
+
+    public string ListingAddDependency => Resources.ListingAddDependency;
+
+    public string ListingDependencyKind => Resources.ListingDependencyKind;
+
+    public string ListingDependencyMin => Resources.ListingDependencyMin;
+
+    public string ListingDependencyMax => Resources.ListingDependencyMax;
+
+    public string ListingRemove => Resources.ListingRemove;
+
+    public string ListingMoreTags => Resources.ListingMoreTags;
+
+    public string ListingMoreTagsHint => Resources.ListingMoreTagsHint;
+
+    public string ListingIcon => Resources.ListingIcon;
+
+    public string ListingIconHint => Resources.ListingIconHint;
+
+    public string ListingAddIcon => Resources.ListingAddIcon;
+
+    public string ListingDescriptionImages => Resources.ListingDescriptionImages;
+
+    public string ListingAddImage => Resources.ListingAddImage;
+
+    public string ListingImageUrl => Resources.ListingImageUrl;
+
+    public string ListingImageUrlHint => Resources.ListingImageUrlHint;
+
+    public string ListingChooseFile => Resources.ListingChooseFile;
+
+    public string ListingMeasure => Resources.ListingMeasure;
+
+    public string ListingImageFileType => Resources.ListingImageFileType;
+
+    public string ListingImageLicense => Resources.ListingImageLicense;
+
+    public string ListingImageAttribution => Resources.ListingImageAttribution;
+
+    public string ListingImageSource => Resources.ListingImageSource;
+
+    public string ListingImageNotMeasured => Resources.ListingImageNotMeasured;
+
+    public string ListingDeprecated => Resources.ListingDeprecated;
+
+    public string ListingSupersededBy => Resources.ListingSupersededBy;
+
+    public string ListingPreview => Resources.ListingPreview;
+
+    public string ListingPreviewName => Resources.ListingPreviewName;
+
+    public string ListingPreviewAbstract => Resources.ListingPreviewAbstract;
+
+    public string ListingSteps => Resources.ListingSteps;
+
+    public string ListingStepDone => Resources.ListingStepDone;
+
+    public string ListingStepToDo => Resources.ListingStepToDo;
+
+    public string ListingStepOptional => Resources.ListingStepOptional;
+
+    public string ListingStepRecommended => Resources.ListingStepRecommended;
+
+    public string ListingErrorsHeading => Resources.ListingErrorsHeading;
+
+    public string ListingNotesHeading => Resources.ListingNotesHeading;
+
+    public string ListingNoIssues => Resources.ListingNoIssues;
+
+    public string ListingSchemaDownloaded => Resources.ListingSchemaDownloaded;
+
+    public string ListingSchemaCached => Resources.ListingSchemaCached;
+
+    public string ListingSchemaEmbedded => Resources.ListingSchemaEmbedded;
+
+    public string ListingFile => Resources.ListingFile;
+
+    public string ListingCopy => Resources.ListingCopy;
+
+    public string ListingSaveAs => Resources.ListingSaveAs;
+
+    public string ListingFileType => Resources.ListingFileType;
+
+    public string ListingOpenPullRequest => Resources.ListingOpenPullRequest;
+
+    public string ListingNewPullRequestText => Resources.ListingNewPullRequestText;
+
+    public string ListingEditPullRequestText => Resources.ListingEditPullRequestText;
+
+    public string ListingFixErrors => Resources.ListingFixErrors;
+
+    public string ListingCopied => Resources.ListingCopied;
+
+    public string ListingSaveFailed => Resources.ListingSaveFailed;
+
+    public string ListingOpenedWithText => Resources.ListingOpenedWithText;
+
+    public string ListingOpenedPaste => Resources.ListingOpenedPaste;
+
     public string InstallAnyway => Resources.InstallAnyway;
 
     public string FormatInstallAlsoAdds(string mods)
@@ -1084,6 +1278,42 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string FormatDiscoverIndexStale(string age)
         => string.Format(CultureInfo.CurrentCulture, Resources.DiscoverIndexStaleFormat, age);
 
+    public string FormatListingDownloading(string size)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ListingDownloadingFormat, size);
+
+    public string FormatListingReadFailed(string reason)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ListingReadFailedFormat, reason);
+
+    public string FormatListingLoadFailed(string reason)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ListingLoadFailedFormat, reason);
+
+    public string FormatListingArchiveRoot(string release, string folder)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ListingArchiveRootFormat, release, folder);
+
+    public string FormatListingArchiveCodeMod(string assembly)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ListingArchiveCodeModFormat, assembly);
+
+    public string FormatListingArchiveNoRoot(string release)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ListingArchiveNoRootFormat, release);
+
+    public string FormatListingArchiveProblem(string reason)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ListingArchiveProblemFormat, reason);
+
+    public string FormatListingDependencyPreserved(string ids)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ListingDependencyPreservedFormat, ids);
+
+    public string FormatListingImageFacts(string width, string height, string size)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ListingImageFactsFormat, width, height, size);
+
+    public string FormatListingSpaceDockNotNumber(string value)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ListingSpaceDockNotNumberFormat, value);
+
+    public string FormatListingSaved(string fileName)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ListingSavedFormat, fileName);
+
+    public string FormatListingOpenFailed(string reason)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ListingOpenFailedFormat, reason);
+
     public string FormatIndexUnreachable(string reason)
         => string.Format(CultureInfo.CurrentCulture, Resources.IndexUnreachableFormat, reason);
 
@@ -1353,6 +1583,18 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string FormatContentUpdateTo(string version)
         => string.Format(CultureInfo.CurrentCulture, Resources.ContentUpdateToFormat, version);
+
+    public string FormatListingStepFix(int count)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ListingStepFixFormat, count);
+
+    public string FormatListingStillMissing(string names)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ListingStillMissingFormat, names);
+
+    public string FormatListingDependencyNumber(int number)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ListingDependencyNumberFormat, number);
+
+    public string FormatListingDescriptionImageNumber(int number)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ListingDescriptionImageNumberFormat, number);
 
     public string FormatContentByAuthor(string authors)
     {

@@ -17,6 +17,11 @@ public interface IGamePathProvider
     string GetAnnouncementsPath();
 
     /// <summary>
+    /// Path to the cached authored schema of content-index, which the listing checks use.
+    /// </summary>
+    string GetListingSchemaPath();
+
+    /// <summary>
     /// Folder of the listing images Borea verified, one file per SHA-256.
     /// </summary>
     string GetImageCacheFolder();

@@ -44,16 +44,21 @@ internal sealed class ContentImageFetcher : IDisposable
         ConnectCallback = PublicNetworkTarget.ConnectAsync,
     };
 
-    public async Task<ContentImageResult> FetchAsync(ContentImage image, CancellationToken cancellationToken)
+    public Task<ContentImageResult> FetchAsync(ContentImage image, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(image);
+        return FetchAsync(image.Url, ContentImageBytes.MaxBytes(image), bytes => ContentImageBytes.Verify(image, bytes), cancellationToken);
+    }
 
+    /// <summary>Fetches at most <paramref name="cap"/> bytes from <paramref name="imageUrl"/> and hands them to <paramref name="verify"/>.</summary>
+    public async Task<ContentImageResult> FetchAsync(string imageUrl, long cap, Func<byte[], ContentImageResult> verify, CancellationToken cancellationToken)
+    {
         using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         deadline.CancelAfter(_timeout);
 
         try
         {
-            var url = new Uri(image.Url);
+            var url = new Uri(imageUrl);
             for (var redirects = 0; ; redirects++)
             {
                 if (url.Scheme != Uri.UriSchemeHttps || url.UserInfo.Length > 0)
@@ -74,10 +79,10 @@ internal sealed class ContentImageFetcher : IDisposable
 
                 using var response = await _client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, deadline.Token).ConfigureAwait(false);
                 if ((int)response.StatusCode is not (301 or 302 or 303 or 307 or 308))
-                    return await ReadAsync(image, url, response, deadline.Token).ConfigureAwait(false);
+                    return await ReadAsync(url, response, cap, verify, deadline.Token).ConfigureAwait(false);
 
                 if (redirects == MaxRedirects)
-                    return ContentImageResult.Failed(ContentImageFailure.RedirectNotAllowed, $"{image.Url} is reached through more than {MaxRedirects} redirects.");
+                    return ContentImageResult.Failed(ContentImageFailure.RedirectNotAllowed, $"{imageUrl} is reached through more than {MaxRedirects} redirects.");
 
                 if (response.Headers.Location is not { } location)
                     return ContentImageResult.Failed(ContentImageFailure.RedirectNotAllowed, $"{url} answered HTTP {(int)response.StatusCode} with no Location.");
@@ -87,7 +92,7 @@ internal sealed class ContentImageFetcher : IDisposable
         }
         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
         {
-            return ContentImageResult.Failed(ContentImageFailure.Unavailable, $"{image.Url} did not load within {_timeout.TotalSeconds} seconds.");
+            return ContentImageResult.Failed(ContentImageFailure.Unavailable, $"{imageUrl} did not load within {_timeout.TotalSeconds} seconds.");
         }
         catch (Exception exception) when (FindBlockedTarget(exception) is { } blocked)
         {
@@ -95,11 +100,11 @@ internal sealed class ContentImageFetcher : IDisposable
         }
         catch (Exception exception) when (exception is HttpRequestException or IOException)
         {
-            return ContentImageResult.Failed(ContentImageFailure.Unavailable, $"{image.Url} did not answer: {exception.Message}");
+            return ContentImageResult.Failed(ContentImageFailure.Unavailable, $"{imageUrl} did not answer: {exception.Message}");
         }
     }
 
-    private static async Task<ContentImageResult> ReadAsync(ContentImage image, Uri url, HttpResponseMessage response, CancellationToken cancellationToken)
+    private static async Task<ContentImageResult> ReadAsync(Uri url, HttpResponseMessage response, long cap, Func<byte[], ContentImageResult> verify, CancellationToken cancellationToken)
     {
         var status = (int)response.StatusCode;
         if (status is 404 or 410)
@@ -115,7 +120,6 @@ internal sealed class ContentImageFetcher : IDisposable
         if (encodings.Any(encoding => !string.Equals(encoding, "identity", StringComparison.OrdinalIgnoreCase)))
             return ContentImageResult.Failed(ContentImageFailure.UnsupportedFormat, $"{url} is served with Content-Encoding {string.Join(", ", encodings)}, not as the image bytes.");
 
-        var cap = ContentImageBytes.MaxBytes(image);
         if (response.Content.Headers.ContentLength is { } announced && announced > cap)
             return ContentImageResult.Failed(ContentImageFailure.TooLarge, $"{url} announces {announced} bytes, above the cap of {cap}.");
 
@@ -130,7 +134,7 @@ internal sealed class ContentImageFetcher : IDisposable
                 return ContentImageResult.Failed(ContentImageFailure.TooLarge, $"{url} sends more than the cap of {cap} bytes.");
         }
 
-        return ContentImageBytes.Verify(image, received.ToArray());
+        return verify(received.ToArray());
     }
 
     private static BlockedNetworkTargetException? FindBlockedTarget(Exception exception)

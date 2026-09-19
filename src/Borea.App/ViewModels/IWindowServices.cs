@@ -13,7 +13,12 @@ public interface IWindowServices
     /// <summary>Null when the user cancelled.</summary>
     Task<PickedTextFile?> OpenTextFileAsync(string title, string fileTypeName);
 
+    /// <summary>Null when the user cancelled. Reads at most <paramref name="maxBytes"/> plus one byte, so a larger file shows as too large.</summary>
+    Task<PickedBinaryFile?> OpenImageFileAsync(string title, string fileTypeName, long maxBytes);
+
     Task CopyTextAsync(string text);
 }
 
 public sealed record PickedTextFile(string Name, string Text);
+
+public sealed record PickedBinaryFile(string Name, byte[] Bytes);

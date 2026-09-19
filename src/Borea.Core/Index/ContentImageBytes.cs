@@ -60,9 +60,8 @@ public static class ContentImageBytes
         _ => null,
     };
 
-    private readonly record struct Facts(string Format, int Width, int Height, bool Animated);
-
-    private static Facts? Inspect(ReadOnlySpan<byte> bytes)
+    /// <summary>The format, pixel size and animation the bytes show, or null when they are not a PNG, JPEG or WebP image that can be read.</summary>
+    public static ContentImageFacts? Inspect(ReadOnlySpan<byte> bytes)
     {
         if (bytes.StartsWith((ReadOnlySpan<byte>)[0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]))
             return InspectPng(bytes);
@@ -76,7 +75,7 @@ public static class ContentImageBytes
         return null;
     }
 
-    private static Facts? InspectPng(ReadOnlySpan<byte> bytes)
+    private static ContentImageFacts? InspectPng(ReadOnlySpan<byte> bytes)
     {
         var position = 8L;
         (int Width, int Height)? size = null;
@@ -113,7 +112,7 @@ public static class ContentImageBytes
             }
             else if (kind.SequenceEqual("IEND"u8))
             {
-                return pixels ? new Facts("PNG", size.Value.Width, size.Value.Height, animated) : null;
+                return pixels ? new ContentImageFacts("PNG", size.Value.Width, size.Value.Height, animated) : null;
             }
 
             position += 12 + length;
@@ -122,7 +121,7 @@ public static class ContentImageBytes
         return null;
     }
 
-    private static Facts? InspectJpeg(ReadOnlySpan<byte> bytes)
+    private static ContentImageFacts? InspectJpeg(ReadOnlySpan<byte> bytes)
     {
         var position = 2;
         while (position < bytes.Length)
@@ -154,7 +153,7 @@ public static class ContentImageBytes
 
                 var height = BinaryPrimitives.ReadUInt16BigEndian(bytes[(position + 3)..]);
                 var width = BinaryPrimitives.ReadUInt16BigEndian(bytes[(position + 5)..]);
-                return new Facts("JPEG", width, height, false);
+                return new ContentImageFacts("JPEG", width, height, false);
             }
 
             position += length;
@@ -163,7 +162,7 @@ public static class ContentImageBytes
         return null;
     }
 
-    private static Facts? InspectWebP(ReadOnlySpan<byte> bytes)
+    private static ContentImageFacts? InspectWebP(ReadOnlySpan<byte> bytes)
     {
         var end = 8L + BinaryPrimitives.ReadUInt32LittleEndian(bytes[4..]);
         if (end > bytes.Length)
@@ -217,8 +216,10 @@ public static class ContentImageBytes
             return null;
 
         var (frameWidth, frameHeight) = canvas ?? frame ?? (0, 0);
-        return new Facts("WebP", frameWidth, frameHeight, animated);
+        return new ContentImageFacts("WebP", frameWidth, frameHeight, animated);
     }
 
     private static int ReadUInt24LittleEndian(ReadOnlySpan<byte> bytes) => bytes[0] | (bytes[1] << 8) | (bytes[2] << 16);
 }
+
+public readonly record struct ContentImageFacts(string Format, int Width, int Height, bool Animated);

@@ -299,6 +299,8 @@ public sealed class ModListViewModelTests
 
         public Task<PickedTextFile?> OpenTextFileAsync(string title, string fileTypeName) => Task.FromResult(FileToOpen);
 
+        public Task<PickedBinaryFile?> OpenImageFileAsync(string title, string fileTypeName, long maxBytes) => Task.FromResult<PickedBinaryFile?>(null);
+
         public Task CopyTextAsync(string text)
         {
             CopiedText = text;

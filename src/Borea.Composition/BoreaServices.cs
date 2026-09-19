@@ -7,6 +7,7 @@ using Borea.Core.History;
 using Borea.Core.Index;
 using Borea.Core.Instances;
 using Borea.Core.Launch;
+using Borea.Core.Listings;
 using Borea.Core.Logging;
 using Borea.Core.ModLoaders;
 using Borea.Core.ModPacks;
@@ -22,6 +23,7 @@ using Borea.Network.Downloads;
 using Borea.Network.GitHub;
 using Borea.Network.Images;
 using Borea.Network.Index;
+using Borea.Network.Listings;
 using Borea.Network.MasterServer;
 using Borea.Network.Planning;
 using Borea.Network.Sources;
@@ -33,6 +35,7 @@ using Borea.Storage.Images;
 using Borea.Storage.Instances;
 using Borea.Storage.Index;
 using Borea.Storage.Launch;
+using Borea.Storage.Listings;
 using Borea.Storage.Logging;
 using Borea.Storage.ModLoaders;
 using Borea.Storage.ModPacks;
@@ -192,6 +195,19 @@ public sealed class BoreaServices : IDisposable
     /// <summary>The user's GitHub sign-in, which every graph built by a public overload shares.</summary>
     public required IGitHubSession GitHub { get; init; }
 
+    /// <summary>Reads a release host and its latest archive for a new listing.</summary>
+    public required IListingSourceReader ListingSources { get; init; }
+
+    public required IForumThreadReader ForumThreads { get; init; }
+
+    public required IListingImageMeasurer ListingImages { get; init; }
+
+    public required IListedDocumentSource ListedDocuments { get; init; }
+
+    public required IListingFormat ListingFormat { get; init; }
+
+    public required IListingValidator ListingValidator { get; init; }
+
     /// <summary>The games this process started, which every graph built by a public overload shares.</summary>
     private static readonly RunningLaunches ProcessLaunches = new();
 
@@ -343,6 +359,7 @@ public sealed class BoreaServices : IDisposable
         var launcher = new LoggingLauncher(new LastPlayedLauncher(new LoaderLauncher(paths, processStarter ?? new ProcessStarter(), launches), instances), log);
         var defaultLibraryFolder = Path.GetDirectoryName(bootstrapPaths.GetInstancesRoot())!;
         var announcementReader = new AnnouncementReader();
+        var listedDocuments = new ListedDocumentFetcher(http);
 
         return new BoreaServices(http)
         {
@@ -398,6 +415,12 @@ public sealed class BoreaServices : IDisposable
             ContentIndex = contentIndex,
             Images = images ?? new ContentImageSource(new FileContentImageCache(paths)),
             GitHub = new LoggingGitHubSession(gitHub ?? new GitHubSession(http, BoreaGitHubApp.ClientId, BoreaGitHubApp.Slug), log),
+            ListingSources = new ListingSourceReader(new ListingHostClient(http), downloader),
+            ForumThreads = new ForumThreadReader(http),
+            ListingImages = new ListingImageMeasurer(),
+            ListedDocuments = listedDocuments,
+            ListingFormat = new TomlListingFormat(),
+            ListingValidator = new ListingValidator(new ListingSchemaStore(listedDocuments, paths)),
         };
     }
 
@@ -419,6 +442,9 @@ public sealed class BoreaServices : IDisposable
 
         if (Images is IDisposable images)
             images.Dispose();
+
+        if (ListingImages is IDisposable listingImages)
+            listingImages.Dispose();
 
         _http.Dispose();
     }

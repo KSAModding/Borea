@@ -90,9 +90,9 @@ public partial class MainViewModel : ViewModelBase
     public bool IsLibrarySection => CurrentWindowLibrary || CurrentWindowInstance || IsContentFromInstance;
 
     /// <summary>
-    /// The discover rail item stays lit on a content or pack page too.
+    /// The discover rail item stays lit on a content, pack or listing page too.
     /// </summary>
-    public bool IsDiscoverSection => CurrentWindowDiscover || (CurrentWindowContent && !IsContentFromInstance) || CurrentWindowPack;
+    public bool IsDiscoverSection => CurrentWindowDiscover || (CurrentWindowContent && !IsContentFromInstance) || CurrentWindowPack || CurrentWindowListing;
     [RelayCommand]
     public void SetMainWindowHome() // used to set whatever is on the main window (discover, library, etc.)
     {

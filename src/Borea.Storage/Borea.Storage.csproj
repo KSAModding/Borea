@@ -6,7 +6,13 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="JsonSchema.Net" Version="9.4.0" />
     <PackageReference Include="Tomlyn" Version="2.10.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Listings\authored.schema.json" LogicalName="Borea.Storage.Listings.authored.schema.json" />
+    <EmbeddedResource Include="Listings\spdx-licenses.json" LogicalName="Borea.Storage.Listings.spdx-licenses.json" />
   </ItemGroup>
 
   <PropertyGroup>
