@@ -22,10 +22,13 @@ public sealed class LaunchResult
     public IReadOnlyList<string> Output { get; private init; } = [];
 
     /// <summary>
-    /// The installed mod whose assembly the loader's error names, when it stopped
-    /// early. Null when the output names none.
+    /// The installed mod the loader likely stopped on, when it stopped early.
+    /// Null when the output points to none.
     /// </summary>
     public string? BlamedModId { get; private init; }
+
+    /// <summary>What the output of a loader that stopped early shows about the cause.</summary>
+    public LoaderCrashCause CrashCause { get; private init; }
 
     /// <summary>The runtime or key of the loader's start entry that Borea does not know, when that stopped the launch.</summary>
     public string? UnknownName { get; private init; }
@@ -50,7 +53,7 @@ public sealed class LaunchResult
     }
 
     /// <summary>A loader that stopped with an error before the game came up.</summary>
-    public static LaunchResult ExitedEarly(LaunchPlan plan, int exitCode, IReadOnlyList<string> output, string? blamedModId, string message)
+    public static LaunchResult ExitedEarly(LaunchPlan plan, int exitCode, IReadOnlyList<string> output, string? blamedModId, string message, LoaderCrashCause crashCause = LoaderCrashCause.Unknown)
     {
         ArgumentNullException.ThrowIfNull(plan);
         ArgumentNullException.ThrowIfNull(output);
@@ -60,6 +63,7 @@ public sealed class LaunchResult
             ExitCode = exitCode,
             Output = output.ToArray(),
             BlamedModId = blamedModId,
+            CrashCause = crashCause,
         };
     }
 
@@ -72,6 +76,7 @@ public sealed class LaunchResult
             ExitCode = ExitCode,
             Output = output.ToArray(),
             BlamedModId = BlamedModId,
+            CrashCause = CrashCause,
         };
     }
 
