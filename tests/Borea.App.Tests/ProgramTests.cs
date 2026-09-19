@@ -25,6 +25,24 @@ public sealed class ProgramTests
         Assert.Equal(StartMode.Cli, Program.ChooseStartMode([""], consoleOwnedAlone));
     }
 
+    [Theory]
+    [InlineData("borea://mod/MeasureTools")]
+    [InlineData("BOREA://install/MeasureTools?version=1.1.10")]
+    [InlineData("Borea:not-even-valid")]
+    public void ChooseStartMode_BoreaLinkFirst_OpensTheApp(string link)
+    {
+        Assert.Equal(StartMode.App, Program.ChooseStartMode([link], consoleOwnedAlone: false));
+        Assert.Equal(StartMode.AppWithoutConsole, Program.ChooseStartMode([link], consoleOwnedAlone: true));
+        Assert.Equal(StartMode.App, Program.ChooseStartMode([link, "--help"], consoleOwnedAlone: false));
+    }
+
+    [Fact]
+    public void ChooseStartMode_BoreaLinkNotFirst_RunsTheCommandLine()
+    {
+        Assert.Equal(StartMode.Cli, Program.ChooseStartMode(["install", "borea://mod/MeasureTools"], consoleOwnedAlone: false));
+        Assert.Equal(StartMode.Cli, Program.ChooseStartMode(["boreas://mod/MeasureTools"], consoleOwnedAlone: false));
+    }
+
     [Fact]
     public void ExitCodeWithoutApp_HandedOver_EndsWithZero()
     {
