@@ -72,6 +72,15 @@
   <data name="SettingsFetchAnnouncements" xml:space="preserve">
     <value>Neuigkeiten vom KSAModding-Team anzeigen</value>
   </data>
+  <data name="SettingsLinksLabel" xml:space="preserve">
+    <value>Links</value>
+  </data>
+  <data name="SettingsOpenBoreaLinks" xml:space="preserve">
+    <value>borea://-Links mit diesem Borea öffnen</value>
+  </data>
+  <data name="SettingsOpenBoreaLinksHint" xml:space="preserve">
+    <value>Mod-Seiten können direkt in Borea verlinken. Ein Link installiert nie etwas ohne deinen Klick.</value>
+  </data>
   <data name="SettingsReleaseChannelLabel" xml:space="preserve">
     <value>Mod-Release-Kanal</value>
   </data>
@@ -935,6 +944,24 @@
   </data>
   <data name="DiscoverNoRelease" xml:space="preserve">
     <value>Dieser Eintrag hat keine installierbare Version.</value>
+  </data>
+  <data name="LinkRefused" xml:space="preserve">
+    <value>Borea kann diesen Link nicht öffnen.</value>
+  </data>
+  <data name="LinkNotInIndexFormat" xml:space="preserve">
+    <value>{0} ist nicht im Inhaltsindex.</value>
+  </data>
+  <data name="LinkAlreadyInstalledFormat" xml:space="preserve">
+    <value>{0} ist bereits in {1}.</value>
+  </data>
+  <data name="LinkInstallFormat" xml:space="preserve">
+    <value>Der Link möchte {0} zu {1} hinzufügen.</value>
+  </data>
+  <data name="LinkVersionMissingFormat" xml:space="preserve">
+    <value>Version {0} ist nicht im Inhaltsindex, daher bietet Borea stattdessen die neueste Version an.</value>
+  </data>
+  <data name="LinkVersionYankedFormat" xml:space="preserve">
+    <value>Version {0} wurde zurückgezogen, daher bietet Borea stattdessen die neueste Version an.</value>
   </data>
   <data name="InstallAnyway" xml:space="preserve">
     <value>Trotzdem installieren</value>

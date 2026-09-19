@@ -232,6 +232,12 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string SettingsFetchAnnouncements => Resources.SettingsFetchAnnouncements;
 
+    public string SettingsLinksLabel => Resources.SettingsLinksLabel;
+
+    public string SettingsOpenBoreaLinks => Resources.SettingsOpenBoreaLinks;
+
+    public string SettingsOpenBoreaLinksHint => Resources.SettingsOpenBoreaLinksHint;
+
     public string SettingsReleaseChannelLabel => Resources.SettingsReleaseChannelLabel;
 
     public string SettingsReleaseChannelHint => Resources.SettingsReleaseChannelHint;
@@ -631,6 +637,23 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string DiscoverOpenLibrary => Resources.DiscoverOpenLibrary;
 
     public string DiscoverNoRelease => Resources.DiscoverNoRelease;
+
+    public string LinkRefused => Resources.LinkRefused;
+
+    public string FormatLinkNotInIndex(string id)
+        => string.Format(CultureInfo.CurrentCulture, Resources.LinkNotInIndexFormat, id);
+
+    public string FormatLinkAlreadyInstalled(string content, string instance)
+        => string.Format(CultureInfo.CurrentCulture, Resources.LinkAlreadyInstalledFormat, content, instance);
+
+    public string FormatLinkInstall(string content, string instance)
+        => string.Format(CultureInfo.CurrentCulture, Resources.LinkInstallFormat, content, instance);
+
+    public string FormatLinkVersionMissing(string version)
+        => string.Format(CultureInfo.CurrentCulture, Resources.LinkVersionMissingFormat, version);
+
+    public string FormatLinkVersionYanked(string version)
+        => string.Format(CultureInfo.CurrentCulture, Resources.LinkVersionYankedFormat, version);
 
     public string InstallAnyway => Resources.InstallAnyway;
 

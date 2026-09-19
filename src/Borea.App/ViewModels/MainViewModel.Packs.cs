@@ -576,9 +576,14 @@ public sealed partial class PackItem : ObservableObject, IInstallProgressRow
     [NotifyPropertyChangedFor(nameof(ConfirmInstallText))]
     private InstallChoices? _choices;
 
-    public bool IsConfirmingInstall => InstallWarning is not null || Choices is not null;
+    public bool IsConfirmingInstall => InstallWarning is not null || Choices is not null || _linkRequest is not null;
 
     public string ConfirmInstallText => _owner.ConfirmInstallText(InstallWarning, PendingPlan);
+
+    private Func<string>? _linkRequest;
+
+    /// <summary>What a borea:// link asked for while its confirmation waits, naming the instance. Null otherwise.</summary>
+    public string? LinkRequestText => _linkRequest?.Invoke();
 
     internal ModPackInstallRequest? PendingInstall { get; set; }
 
@@ -659,8 +664,16 @@ public sealed partial class PackItem : ObservableObject, IInstallProgressRow
         OnPropertyChanged(nameof(ReleasedDateText));
         OnPropertyChanged(nameof(PublishedText));
         OnPropertyChanged(nameof(PublishedDateText));
+        OnPropertyChanged(nameof(LinkRequestText));
         foreach (var result in Results)
             result.RefreshText();
+    }
+
+    internal void ShowLinkRequest(Func<string>? request)
+    {
+        _linkRequest = request;
+        OnPropertyChanged(nameof(LinkRequestText));
+        OnPropertyChanged(nameof(IsConfirmingInstall));
     }
 
     [RelayCommand]
@@ -680,6 +693,7 @@ public sealed partial class PackItem : ObservableObject, IInstallProgressRow
         PendingPlan = null;
         InstallWarning = null;
         Choices = null;
+        ShowLinkRequest(null);
     }
 }
 
