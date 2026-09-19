@@ -334,6 +334,7 @@ public partial class MainViewModel
         foreach (var release in _contentReleases)
             release.RefreshInstalled(ActiveInstance);
         RefreshPackInstalledFlags();
+        RefreshContentDependencies();
     }
 
     partial void OnDiscoverTypeChanged(ContentType value) => ApplyDiscoverFilters();

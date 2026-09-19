@@ -1533,8 +1533,86 @@
   <data name="ContentTabDescription" xml:space="preserve">
     <value>Description</value>
   </data>
+  <data name="ContentTabDependencies" xml:space="preserve">
+    <value>Dependencies</value>
+  </data>
   <data name="ContentTabVersions" xml:space="preserve">
     <value>Versions</value>
+  </data>
+  <data name="ContentDependenciesOfFormat" xml:space="preserve">
+    <value>Dependencies of {0}</value>
+  </data>
+  <data name="ContentDependenciesNoRelease" xml:space="preserve">
+    <value>There is no release to show.</value>
+  </data>
+  <data name="ContentNoDependencies" xml:space="preserve">
+    <value>This release needs no other mods.</value>
+  </data>
+  <data name="ContentDependencyLoaderFormat" xml:space="preserve">
+    <value>Needs {0} {1}</value>
+  </data>
+  <data name="ContentDependencyRequired" xml:space="preserve">
+    <value>Required</value>
+  </data>
+  <data name="ContentDependencyRequiredHint" xml:space="preserve">
+    <value>Installed with this mod</value>
+  </data>
+  <data name="ContentDependencyAnyOf" xml:space="preserve">
+    <value>Any of</value>
+  </data>
+  <data name="ContentDependencyAnyOfHint" xml:space="preserve">
+    <value>One of each set is installed with this mod</value>
+  </data>
+  <data name="ContentDependencyConflicts" xml:space="preserve">
+    <value>Conflicts</value>
+  </data>
+  <data name="ContentDependencyConflictsHint" xml:space="preserve">
+    <value>Not installed together</value>
+  </data>
+  <data name="ContentDependencyRecommended" xml:space="preserve">
+    <value>Recommended</value>
+  </data>
+  <data name="ContentDependencyRecommendedHint" xml:space="preserve">
+    <value>Selected when you add this mod</value>
+  </data>
+  <data name="ContentDependencySuggested" xml:space="preserve">
+    <value>Suggested</value>
+  </data>
+  <data name="ContentDependencySuggestedHint" xml:space="preserve">
+    <value>Worth a look, not selected</value>
+  </data>
+  <data name="ContentDependencyOptional" xml:space="preserve">
+    <value>Optional</value>
+  </data>
+  <data name="ContentDependencyOptionalHint" xml:space="preserve">
+    <value>Used when installed, not added with this mod</value>
+  </data>
+  <data name="ContentDependencyOther" xml:space="preserve">
+    <value>Other</value>
+  </data>
+  <data name="ContentDependencyOtherHint" xml:space="preserve">
+    <value>A kind this version of Borea does not know</value>
+  </data>
+  <data name="ContentDependencyOneOf" xml:space="preserve">
+    <value>One of:</value>
+  </data>
+  <data name="ContentDependencyMinFormat" xml:space="preserve">
+    <value>{0} or newer</value>
+  </data>
+  <data name="ContentDependencyMaxFormat" xml:space="preserve">
+    <value>up to {0}</value>
+  </data>
+  <data name="ContentDependencyRangeFormat" xml:space="preserve">
+    <value>{0} to {1}</value>
+  </data>
+  <data name="ContentDependencyInstalledFormat" xml:space="preserve">
+    <value>Installed {0}</value>
+  </data>
+  <data name="ContentDependencyNotInstalled" xml:space="preserve">
+    <value>Not installed</value>
+  </data>
+  <data name="ContentDependencyNotInIndex" xml:space="preserve">
+    <value>Not in the index</value>
   </data>
   <data name="CompatibilityCompatible" xml:space="preserve">
     <value>Compatible</value>
