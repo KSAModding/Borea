@@ -173,6 +173,26 @@ public sealed class LoggingDecoratorsTests
     }
 
     [Fact]
+    public async Task WatchStart_StoppedWhileLoadingMods_WritesTheLikelyModAndTheExitCode()
+    {
+        var loader = Path.GetFullPath(Path.Combine(Path.GetTempPath(), "StarMap"));
+        var plan = new LaunchPlan(Path.Combine(loader, "StarMap.exe"), [], loader, new Dictionary<string, string>());
+        var instance = new Instance("Main", InstanceSource.Custom.Value);
+        var launcher = new LoggingLauncher(new FixedLauncher(LaunchResult.Success(plan, 42, "Started.")), _log);
+
+        await launcher.WatchStartAsync(instance, LaunchResult.ExitedEarly(plan, -1073741819, ["Fatal error."], "KSArmory", "Stopped.", LoaderCrashCause.ModLoading));
+        await launcher.WatchStartAsync(instance, LaunchResult.ExitedEarly(plan, -1073741819, ["Fatal error."], null, "Stopped.", LoaderCrashCause.ModLoading));
+
+        var exitCode = LoaderExitCode.Describe(-1073741819, OperatingSystem.IsWindows());
+        Assert.Equal(
+            [
+                $"Launch of instance {instance.InstanceId} stopped early with exit code {exitCode}, stopped while loading mods, likely KSArmory. Last output:{Environment.NewLine}Fatal error.",
+                $"Launch of instance {instance.InstanceId} stopped early with exit code {exitCode}, stopped while loading mods, no mod found. Last output:{Environment.NewLine}Fatal error.",
+            ],
+            _log.Messages);
+    }
+
+    [Fact]
     public void SharedProfileLaunch_WritesTheOutcomeAndThePlanWithTheArguments()
     {
         var game = Path.GetFullPath(Path.Combine(Path.GetTempPath(), "Game"));
