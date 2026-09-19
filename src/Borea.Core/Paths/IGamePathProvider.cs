@@ -17,6 +17,11 @@ public interface IGamePathProvider
     string GetImageCacheFolder();
 
     /// <summary>
+    /// Folder of the game patch notes files Borea downloaded, under their published names.
+    /// </summary>
+    string GetGamePatchNotesFolder();
+
+    /// <summary>
     /// Root of all Borea instance storage
     /// </summary>
     string GetInstancesRoot();

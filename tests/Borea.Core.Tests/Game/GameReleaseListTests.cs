@@ -65,6 +65,23 @@ public sealed class GameReleaseListTests
         Assert.Equal(5402, upper);
     }
 
+    [Fact]
+    public void NewerThan_ListsEachHigherRevisionOnceNewestFirst()
+    {
+        var releases = Releases.WithBuild(GameVersion.Parse("2026.9.10.5438")).WithBuild(GameVersion.Parse("2026.8.9.5168"));
+
+        Assert.Equal(["2026.9.10.5438", "2026.8.5.5168", "2026.8.3.5117"], releases.NewerThan(5056).Select(build => build.ToString()));
+        Assert.Empty(releases.NewerThan(5438));
+    }
+
+    [Fact]
+    public void IsEmpty_OnlyWithoutBuilds()
+    {
+        Assert.True(GameReleaseList.Empty.IsEmpty);
+        Assert.True(new GameReleaseList(["not a build"]).IsEmpty);
+        Assert.False(Releases.IsEmpty);
+    }
+
     [Theory]
     [InlineData("2026.7.2")]
     [InlineData("v2026.7")]

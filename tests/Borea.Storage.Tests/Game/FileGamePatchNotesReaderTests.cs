@@ -39,6 +39,7 @@ public sealed class FileGamePatchNotesReaderTests : IDisposable
 
         Assert.Equal(["2026.9.10.5438", "2026.9.7.5402", "2026.8.3.5348"], notes.Select(entry => entry.Build));
         Assert.Equal([5438, 5402, 5348], notes.Select(entry => entry.Revision));
+        Assert.Equal([5402, 5400, 5261], notes.Select(entry => entry.FromRevision));
         Assert.Equal(new DateOnly(2026, 9, 15), notes[0].Date);
         Assert.Equal(["Fixed the Milky Way."], notes[0].Lines);
         Assert.Equal(["Newer change.", "Second line.", "Older change."], notes[1].Lines);
