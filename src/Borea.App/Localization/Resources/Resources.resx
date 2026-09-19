@@ -246,6 +246,9 @@
   <data name="ViewNotFoundFormat" xml:space="preserve">
     <value>View not found: {0}</value>
   </data>
+  <data name="HandoverFailed" xml:space="preserve">
+    <value>Borea is already open, but the open window did not take this start. This can happen when only one of the two was started as administrator. Close Borea and start it again.</value>
+  </data>
   <data name="HomeCurrentInstall" xml:space="preserve">
     <value>Current Install</value>
   </data>

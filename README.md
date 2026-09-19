@@ -41,6 +41,7 @@ Listing a mod is a pull request with one TOML file in content-index.
 Each release has two archives per platform.
 The App archive contains one program, `borea` (`borea.exe` on Windows).
 Started without arguments, it opens the desktop App.
+Only one App runs for each user, so a second start brings the open window to the front.
 Started with arguments, it runs a command, for example `borea --help`.
 Most users want this archive.
 The CLI archive contains only the command line.

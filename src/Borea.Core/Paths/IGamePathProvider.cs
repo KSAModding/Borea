@@ -68,6 +68,11 @@ public interface IGamePathProvider
     string GetTaskHistoryPath();
 
     /// <summary>
+    /// Lock file that the running Borea.App holds open, so that only one App runs for each Borea root.
+    /// </summary>
+    string GetAppLockPath();
+
+    /// <summary>
     /// Folder of Borea's daily log files.
     /// </summary>
     string GetLogsFolder();
