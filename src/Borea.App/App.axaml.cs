@@ -94,6 +94,7 @@ public partial class App : Application
             {
                 PreferencesLoadStatus = _preferencesLoadStatus,
                 LinkHandler = Services is null ? null : LinkHandler.ForThisProcess(),
+                EndApp = () => desktop.Shutdown(),
             };
             _viewModel = viewModel;
 

@@ -163,6 +163,38 @@ public sealed class LibraryFolderViewModelTests : IDisposable
         Assert.False(Directory.Exists(_library));
     }
 
+    [Fact]
+    public async Task CloseNow_WhileTheLibraryFolderChanges_ListsAndLogsTheChange()
+    {
+        using var release = new ManualResetEventSlim();
+        var checking = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        using var harness = await ViewModelHarness.CreateAsync();
+        harness.IsOtherBoreaRunning = () =>
+        {
+            checking.TrySetResult();
+            release.Wait(TimeSpan.FromSeconds(30));
+            return true;
+        };
+        var viewModel = harness.ViewModel;
+        var endedApp = 0;
+        viewModel.EndApp = () => endedApp++;
+        var change = viewModel.ChangeLibraryFolderCommand.ExecuteAsync(_library);
+        await checking.Task.WaitAsync(TimeSpan.FromSeconds(30));
+
+        Assert.False(viewModel.RequestClose(() => { }));
+        Assert.False(viewModel.RequestClose(() => { }));
+        var task = Assert.Single(viewModel.CloseWaitsFor);
+        Assert.Equal(TaskKind.LibraryFolderChange, task.Kind);
+        Assert.False(viewModel.CloseStopsInstall);
+
+        viewModel.CloseNowCommand.Execute(null);
+
+        Assert.Equal(1, endedApp);
+        Assert.EndsWith($"Closed at once before these tasks ended: LibraryFolderChange {task.Subject}.", harness.Services.Log.ReadRecentLines(5)[^1], StringComparison.Ordinal);
+        release.Set();
+        await change;
+    }
+
     private static async Task<DiscoverItem> AfcRowAsync(ViewModelHarness harness)
     {
         var instance = (await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value)).Instance;

@@ -91,7 +91,11 @@ public partial class MainViewModel
         var run = task.Run = new InstallRun(Localization, task);
         _installRuns.Add(run);
         if (IsClosing)
+        {
             run.Stop();
+            RefreshCloseWaitsFor();
+        }
+
         return run;
     }
 

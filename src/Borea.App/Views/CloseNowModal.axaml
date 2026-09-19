@@ -1,0 +1,39 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Borea.App.ViewModels"
+             x:Class="Borea.App.Views.CloseNowModal"
+             x:DataType="vm:MainViewModel">
+    <Panel Background="#99000000">
+        <Border Classes="modal" Width="561" Margin="80,0,0,0">
+            <StackPanel>
+                <Grid ColumnDefinitions="*,Auto" Margin="24,24,24,0">
+                    <TextBlock Classes="heading-lg" Text="{Binding Localization.CloseNowTitle}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                    <Button Grid.Column="1" Classes="icon" Command="{Binding KeepWaitingCommand}" AutomationProperties.Name="{Binding Localization.CloseNowKeepWaiting}">
+                        <Path Classes="icon" Data="{StaticResource Icon.Close}" />
+                    </Button>
+                </Grid>
+                <Border Height="1" Background="{StaticResource Brush.Window}" Margin="0,24,0,0" />
+                <StackPanel Margin="36,32,24,32" Spacing="16">
+                    <TextBlock Classes="body-md" Text="{Binding Localization.CloseNowText}" TextWrapping="Wrap" />
+                    <StackPanel Spacing="4">
+                        <ItemsControl ItemsSource="{Binding CloseWaitsFor}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:TaskItem">
+                                    <TextBlock Classes="body-md" Text="{Binding Title}" TextWrapping="Wrap" />
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                        <TextBlock Classes="body-md" Text="{Binding Localization.CloseNowSavingHistory}" TextWrapping="Wrap" IsVisible="{Binding IsCloseWaitingForHistory}" />
+                    </StackPanel>
+                    <TextBlock Classes="body-md secondary" Text="{Binding Localization.CloseNowInstallWarning}" TextWrapping="Wrap" IsVisible="{Binding CloseStopsInstall}" />
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+                        <Button Classes="text danger" Content="{Binding Localization.CloseNowConfirm}" Command="{Binding CloseNowCommand}" VerticalAlignment="Center" />
+                        <Button Classes="cta" Command="{Binding KeepWaitingCommand}">
+                            <TextBlock Classes="action-lg" Text="{Binding Localization.CloseNowKeepWaiting}" VerticalAlignment="Center" />
+                        </Button>
+                    </StackPanel>
+                </StackPanel>
+            </StackPanel>
+        </Border>
+    </Panel>
+</UserControl>

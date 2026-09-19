@@ -1665,6 +1665,24 @@
   <data name="InstallClosing" xml:space="preserve">
     <value>Borea stops the tasks that still run and closes when they are done.</value>
   </data>
+  <data name="CloseNowTitle" xml:space="preserve">
+    <value>Borea is still finishing</value>
+  </data>
+  <data name="CloseNowText" xml:space="preserve">
+    <value>Borea closes when these tasks are done:</value>
+  </data>
+  <data name="CloseNowSavingHistory" xml:space="preserve">
+    <value>Saving the task history</value>
+  </data>
+  <data name="CloseNowInstallWarning" xml:space="preserve">
+    <value>If you close now, a mod that Borea is installing may be incomplete, and you can install it again.</value>
+  </data>
+  <data name="CloseNowKeepWaiting" xml:space="preserve">
+    <value>Keep waiting</value>
+  </data>
+  <data name="CloseNowConfirm" xml:space="preserve">
+    <value>Close now</value>
+  </data>
   <data name="LaunchWithoutModLoader" xml:space="preserve">
     <value>Launch KSA without a mod loader</value>
   </data>
