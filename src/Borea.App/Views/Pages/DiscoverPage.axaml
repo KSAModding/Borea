@@ -10,10 +10,13 @@
         <ScrollViewer>
             <views:PageBodyPanel HasSidePanel="True">
                 <StackPanel>
-                    <StackPanel Orientation="Horizontal" Spacing="4" Height="24">
-                        <Path Classes="icon" Data="{StaticResource Icon.Compass}" />
-                        <TextBlock Classes="label-lg" Text="{Binding Localization.PageDiscoverHeading}" VerticalAlignment="Center" />
-                    </StackPanel>
+                    <DockPanel Height="24">
+                        <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" Spacing="4">
+                            <Path Classes="icon" Data="{StaticResource Icon.Compass}" />
+                            <TextBlock Classes="label-lg" Text="{Binding Localization.PageDiscoverHeading}" VerticalAlignment="Center" />
+                        </StackPanel>
+                        <ContentControl Content="{Binding}" ContentTemplate="{StaticResource AddingTo}" />
+                    </DockPanel>
                     <ContentControl Content="{Binding}" ContentTemplate="{StaticResource GameSetupBanner}" IsVisible="{Binding NeedsGameSetup}" />
 
                     <!-- c/inner-nav-bar -->

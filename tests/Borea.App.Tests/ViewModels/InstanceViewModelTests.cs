@@ -104,7 +104,7 @@ public sealed class InstanceViewModelTests
         Assert.Equal("KSArmory", Assert.Single(group.Items).ModId);
     }
 
-    private static Func<string, string> WithPack(string id, string name, string version, params (string Id, string Version)[] pins) => snapshot =>
+    internal static Func<string, string> WithPack(string id, string name, string version, params (string Id, string Version)[] pins) => snapshot =>
     {
         const string empty = "\"packs\": []";
         if (!snapshot.Contains(empty, StringComparison.Ordinal))

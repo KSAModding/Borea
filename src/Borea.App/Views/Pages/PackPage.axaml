@@ -10,14 +10,17 @@
             <!-- laid out like Discover, so the page does not move sideways when a row opens -->
             <views:PageBodyPanel HasSidePanel="True">
                 <StackPanel Container.Name="page-body" Container.Sizing="Width">
-                    <StackPanel Orientation="Horizontal" Spacing="4" Height="24">
-                        <Path Classes="icon" Data="{StaticResource Icon.Compass}" />
-                        <Button Classes="plain" Command="{Binding SetMainWindowDiscover}">
-                            <TextBlock Classes="label-lg" Text="{Binding Localization.PageDiscoverHeading}" VerticalAlignment="Center" />
-                        </Button>
-                        <TextBlock Classes="label-lg" Text="/" VerticalAlignment="Center" />
-                        <TextBlock Classes="label-lg" Text="{Binding SelectedPack.TypeText}" VerticalAlignment="Center" />
-                    </StackPanel>
+                    <DockPanel Height="24">
+                        <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" Spacing="4">
+                            <Path Classes="icon" Data="{StaticResource Icon.Compass}" />
+                            <Button Classes="plain" Command="{Binding SetMainWindowDiscover}">
+                                <TextBlock Classes="label-lg" Text="{Binding Localization.PageDiscoverHeading}" VerticalAlignment="Center" />
+                            </Button>
+                            <TextBlock Classes="label-lg" Text="/" VerticalAlignment="Center" />
+                            <TextBlock Classes="label-lg" Text="{Binding SelectedPack.TypeText}" VerticalAlignment="Center" />
+                        </StackPanel>
+                        <ContentControl Content="{Binding}" ContentTemplate="{StaticResource AddingTo}" />
+                    </DockPanel>
 
                     <!-- c/content-header -->
                     <Grid ColumnDefinitions="170,32,*" Margin="0,24,0,0">
@@ -45,7 +48,7 @@
                                     <TextBlock Classes="body-sm danger" Text="{Binding SelectedPack.InstallError}" TextWrapping="Wrap" Margin="0,8,0,0" IsVisible="{Binding SelectedPack.InstallError, Converter={x:Static ObjectConverters.IsNotNull}}" />
                                 </StackPanel>
                                 <Panel Classes="content-actions" VerticalAlignment="Top">
-                                    <Button Classes="cta" Command="{Binding SelectedPack.InstallCommand}" IsVisible="{Binding SelectedPack.CanInstall}">
+                                    <Button Classes="cta" Command="{Binding SelectedPack.InstallCommand}" IsVisible="{Binding SelectedPack.CanInstall}" ToolTip.Tip="{Binding AddToText}" AutomationProperties.Name="{Binding AddToText}">
                                         <StackPanel Orientation="Horizontal" Spacing="6">
                                             <Path Classes="icon size-16" Data="{StaticResource Icon.Plus}" Stroke="{StaticResource Brush.SurfaceHeader}" StrokeThickness="2" VerticalAlignment="Center" />
                                             <TextBlock Classes="action-lg" Text="{Binding Localization.ContentAdd}" VerticalAlignment="Center" />

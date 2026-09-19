@@ -11,14 +11,17 @@
             <!-- laid out like Discover, so the page does not move sideways when a row opens -->
             <views:PageBodyPanel HasSidePanel="True">
                 <StackPanel Container.Name="page-body" Container.Sizing="Width">
-                    <StackPanel Orientation="Horizontal" Spacing="4" Height="24" IsVisible="{Binding !IsContentFromInstance}">
-                        <Path Classes="icon" Data="{StaticResource Icon.Compass}" />
-                        <Button Classes="plain" Command="{Binding SetMainWindowDiscover}">
-                            <TextBlock Classes="label-lg" Text="{Binding Localization.PageDiscoverHeading}" VerticalAlignment="Center" />
-                        </Button>
-                        <TextBlock Classes="label-lg" Text="/" VerticalAlignment="Center" />
-                        <TextBlock Classes="label-lg" Text="{Binding SelectedContent.TypeText}" VerticalAlignment="Center" />
-                    </StackPanel>
+                    <DockPanel Height="24" IsVisible="{Binding !IsContentFromInstance}">
+                        <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" Spacing="4">
+                            <Path Classes="icon" Data="{StaticResource Icon.Compass}" />
+                            <Button Classes="plain" Command="{Binding SetMainWindowDiscover}">
+                                <TextBlock Classes="label-lg" Text="{Binding Localization.PageDiscoverHeading}" VerticalAlignment="Center" />
+                            </Button>
+                            <TextBlock Classes="label-lg" Text="/" VerticalAlignment="Center" />
+                            <TextBlock Classes="label-lg" Text="{Binding SelectedContent.TypeText}" VerticalAlignment="Center" />
+                        </StackPanel>
+                        <ContentControl Content="{Binding}" ContentTemplate="{StaticResource AddingTo}" />
+                    </DockPanel>
                     <!-- opened from an instance: the way back is that instance -->
                     <StackPanel Orientation="Horizontal" Spacing="4" Height="24" IsVisible="{Binding IsContentFromInstance}">
                         <Path Classes="icon" Data="{StaticResource Icon.Library}" />
@@ -77,7 +80,7 @@
                                 <!-- Add and Remove act on the active instance, so a page from another instance does not offer them -->
                                 <Panel Classes="content-actions" VerticalAlignment="Top" IsVisible="{Binding CanActOnSelectedContent}">
                                     <Panel VerticalAlignment="Center">
-                                        <Button Classes="cta" Command="{Binding SelectedContent.InstallCommand}" IsVisible="{Binding SelectedContent.CanInstall}">
+                                        <Button Classes="cta" Command="{Binding SelectedContent.InstallCommand}" IsVisible="{Binding SelectedContent.CanInstall}" ToolTip.Tip="{Binding AddToText}" AutomationProperties.Name="{Binding AddToText}">
                                             <StackPanel Orientation="Horizontal" Spacing="6">
                                                 <Path Classes="icon size-16" Data="{StaticResource Icon.Plus}" Stroke="{StaticResource Brush.SurfaceHeader}" StrokeThickness="2" VerticalAlignment="Center" />
                                                 <TextBlock Classes="action-lg" Text="{Binding Localization.ContentAdd}" VerticalAlignment="Center" />
@@ -242,7 +245,7 @@
                                                         <Button Classes="icon" Command="{Binding ToggleChangelogCommand}" IsVisible="{Binding Changelog, Converter={x:Static ObjectConverters.IsNotNull}}" ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ContentChangelog}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ContentChangelog}">
                                                             <Path Classes="icon size-16" Data="{StaticResource Icon.CaretDown}" />
                                                         </Button>
-                                                        <Button Classes="icon" Command="{Binding InstallCommand}" IsEnabled="{Binding !IsInstalling}" ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.DiscoverAdd}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.DiscoverAdd}">
+                                                        <Button Classes="icon" Command="{Binding InstallCommand}" IsEnabled="{Binding !IsInstalling}" ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).AddToText}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).AddToText}">
                                                             <Button.IsVisible>
                                                                 <MultiBinding Converter="{x:Static BoolConverters.And}">
                                                                     <Binding Path="CanInstall" />
