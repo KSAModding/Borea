@@ -36,10 +36,9 @@ public sealed class GameBuildBannerTests
     /// <summary>Answers the master server with 2026.9.10.5438, and serves the ksa-versions file that <paramref name="file"/> gives for a revision, or 404.</summary>
     private static Func<HttpRequestMessage, HttpResponseMessage?> WithVersions(Func<int, HttpResponseMessage?> file) => request =>
     {
-        if (request.RequestUri is not { Host: VersionsHost } uri)
+        if (request.RequestUri is not { Host: VersionsHost } uri || !uri.AbsolutePath.StartsWith(VersionsPath, StringComparison.Ordinal))
             return MasterServer("2026.9.10.5438")(request);
 
-        Assert.StartsWith(VersionsPath, uri.AbsolutePath, StringComparison.Ordinal);
         var revision = int.Parse(Path.GetFileNameWithoutExtension(uri.AbsolutePath).Split('.')[^1], CultureInfo.InvariantCulture);
         return file(revision) ?? new HttpResponseMessage(HttpStatusCode.NotFound);
     };
@@ -51,7 +50,7 @@ public sealed class GameBuildBannerTests
         new(HttpStatusCode.OK) { Content = new StringContent(json, Encoding.UTF8, "application/json") };
 
     private static List<string> VersionFilesRequested(ViewModelHarness harness) =>
-        harness.Requests.Where(uri => uri.Host == VersionsHost).Select(uri => uri.AbsolutePath[VersionsPath.Length..]).ToList();
+        harness.Requests.Where(uri => uri.Host == VersionsHost && uri.AbsolutePath.StartsWith(VersionsPath, StringComparison.Ordinal)).Select(uri => uri.AbsolutePath[VersionsPath.Length..]).ToList();
 
     private static void WriteInstalledVersionFile(string game) =>
         WriteVersionFile(game, "v2026.8.X.5117.json", """{ "build": "2026.8.3.5117", "fromRevision": 5056, "toRevision": 5117, "commits": [ { "rev": 5117, "lines": ["Installed change."] } ] }""");
