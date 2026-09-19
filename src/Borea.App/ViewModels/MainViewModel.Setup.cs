@@ -510,6 +510,7 @@ public partial class MainViewModel
         var previous = _services;
         _services = await _rebuildServices();
         _instances = _services.Instances;
+        AttachGitHubSession(previous, _services);
         previous.Dispose();
         OnPropertyChanged(nameof(SelectedReleaseChannel));
         await LoadAsync();

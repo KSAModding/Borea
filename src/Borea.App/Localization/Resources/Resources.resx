@@ -117,6 +117,69 @@
   <data name="SettingsLibraryFolderPickerTitle" xml:space="preserve">
     <value>Choose the new library folder</value>
   </data>
+  <data name="SettingsGitHubLabel" xml:space="preserve">
+    <value>GitHub account</value>
+  </data>
+  <data name="SettingsGitHubHint" xml:space="preserve">
+    <value>Sign in to open listing pull requests from Borea as you.</value>
+  </data>
+  <data name="SettingsGitHubSignIn" xml:space="preserve">
+    <value>Sign in</value>
+  </data>
+  <data name="SettingsGitHubSignedInAsFormat" xml:space="preserve">
+    <value>Signed in as {0}</value>
+  </data>
+  <data name="SettingsGitHubSignOutHint" xml:space="preserve">
+    <value>Sign out makes Borea forget the access. To revoke it, go to GitHub.</value>
+  </data>
+  <data name="SettingsGitHubSignOut" xml:space="preserve">
+    <value>Sign out</value>
+  </data>
+  <data name="SettingsGitHubManageAccess" xml:space="preserve">
+    <value>Manage access on GitHub</value>
+  </data>
+  <data name="GitHubSignInTitle" xml:space="preserve">
+    <value>Sign in to GitHub</value>
+  </data>
+  <data name="GitHubSignInHint" xml:space="preserve">
+    <value>Enter this code on GitHub. Borea can then write to your fork of the content index and open pull requests to the content index, nothing else. The access expires after 8 hours.</value>
+  </data>
+  <data name="GitHubSignInCodeWarning" xml:space="preserve">
+    <value>Borea asks for this code only in this window, never anywhere else.</value>
+  </data>
+  <data name="GitHubSignInGettingCode" xml:space="preserve">
+    <value>Getting a code from GitHub...</value>
+  </data>
+  <data name="GitHubSignInCopyAndOpen" xml:space="preserve">
+    <value>Copy code and open GitHub</value>
+  </data>
+  <data name="GitHubSignInWaiting" xml:space="preserve">
+    <value>Waiting for you to confirm on GitHub...</value>
+  </data>
+  <data name="GitHubSignInExpired" xml:space="preserve">
+    <value>The code expired. Try again for a new one.</value>
+  </data>
+  <data name="GitHubSignInDenied" xml:space="preserve">
+    <value>The sign-in was refused on GitHub.</value>
+  </data>
+  <data name="GitHubSignInClientRejected" xml:space="preserve">
+    <value>GitHub does not accept this Borea build. Update Borea or report the problem.</value>
+  </data>
+  <data name="GitHubSignInCodeRejected" xml:space="preserve">
+    <value>GitHub does not know this code. Try again for a new one.</value>
+  </data>
+  <data name="GitHubSignInRequestRejected" xml:space="preserve">
+    <value>GitHub refused the sign-in request. Report the problem.</value>
+  </data>
+  <data name="GitHubSignInDeviceFlowDisabled" xml:space="preserve">
+    <value>Sign-in with a code is turned off for Borea on GitHub. Report the problem.</value>
+  </data>
+  <data name="GitHubSignInNetworkError" xml:space="preserve">
+    <value>Cannot reach GitHub. Check your connection and try again.</value>
+  </data>
+  <data name="GitHubSignInUnexpected" xml:space="preserve">
+    <value>GitHub sent an answer Borea does not understand. Try again later.</value>
+  </data>
   <data name="LibraryFolderMoving" xml:space="preserve">
     <value>Changing the library folder...</value>
   </data>

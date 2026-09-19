@@ -276,6 +276,7 @@ public partial class MainViewModel : ViewModelBase
         Tasks = new TaskRegistry(Localization, () => _services?.TaskHistory, () => _services?.Log, RetryTaskAsync);
         Toasts = new ToastService(this);
         _instances = services?.Instances;
+        AttachGitHubSession(previous: null, services);
         _currentTheme = appPreferences.ResolveSelectedThemeName(BundledThemeNames, DefaultThemeName);
         RegionalFormat.PropertyChanged += OnRegionalFormatChanged;
         Localization.PropertyChanged += OnLocalizationChanged;
@@ -817,6 +818,7 @@ public partial class MainViewModel : ViewModelBase
         RefreshGameDataItems();
         RefreshGameSaveText();
         RefreshLoaderText();
+        RefreshGitHubAccount();
         RefreshIndexStatusText();
         OnPropertyChanged(nameof(GameSetupBannerText));
         OnPropertyChanged(nameof(FoundGameText));

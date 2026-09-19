@@ -79,6 +79,24 @@
             </StackPanel>
             <TextBlock Classes="body-md secondary" Text="{Binding LibraryFolderMessage}" TextWrapping="Wrap" IsVisible="{Binding LibraryFolderMessage, Converter={x:Static ObjectConverters.IsNotNull}}" />
             <TextBlock Classes="body-md danger" Text="{Binding LibraryFolderError}" TextWrapping="Wrap" IsVisible="{Binding LibraryFolderError, Converter={x:Static ObjectConverters.IsNotNull}}" />
+            <StackPanel Spacing="6" Margin="0,18,0,0" IsVisible="{Binding IsGitHubAccountAvailable}">
+                <TextBlock Classes="heading-md" Text="{Binding Localization.SettingsGitHubLabel}" />
+                <StackPanel Spacing="6" IsVisible="{Binding !IsGitHubSignedIn}">
+                    <TextBlock Classes="body-sm secondary" Text="{Binding Localization.SettingsGitHubHint}" TextWrapping="Wrap" Width="340" HorizontalAlignment="Left" />
+                    <Button Classes="text" Content="{Binding Localization.SettingsGitHubSignIn}" Command="{Binding SignInToGitHubCommand}" IsEnabled="{Binding !IsGitHubSignInRunning}" />
+                </StackPanel>
+                <StackPanel Spacing="6" IsVisible="{Binding IsGitHubSignedIn}">
+                    <TextBlock Classes="body-md" Text="{Binding GitHubSignedInText}" TextWrapping="Wrap" />
+                    <TextBlock Classes="body-sm secondary" Text="{Binding Localization.SettingsGitHubSignOutHint}" TextWrapping="Wrap" Width="340" HorizontalAlignment="Left" />
+                    <WrapPanel ItemSpacing="8" LineSpacing="4">
+                        <Button Classes="text" Content="{Binding Localization.SettingsGitHubSignOut}" Command="{Binding SignOutOfGitHubCommand}" />
+                        <Button Classes="link" Command="{Binding OpenGitHubAccessCommand}" ToolTip.Tip="{Binding GitHubManageAccessUrl}">
+                            <TextBlock Classes="action-md" Text="{Binding Localization.SettingsGitHubManageAccess}" />
+                        </Button>
+                    </WrapPanel>
+                </StackPanel>
+                <TextBlock Classes="body-md danger" Text="{Binding GitHubAccountError}" TextWrapping="Wrap" IsVisible="{Binding GitHubAccountError, Converter={x:Static ObjectConverters.IsNotNull}}" />
+            </StackPanel>
         </StackPanel>
     </ScrollViewer>
 </UserControl>

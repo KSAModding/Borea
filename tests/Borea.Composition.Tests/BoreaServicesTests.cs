@@ -89,6 +89,18 @@ public sealed class BoreaServicesTests : IDisposable
     }
 
     [Fact]
+    public async Task BuildAsync_RebuiltGraph_KeepsTheGitHubSession()
+    {
+        using var first = await BoreaServices.BuildAsync(_tempRoot);
+        using var second = await BoreaServices.BuildAsync(_tempRoot);
+
+        var firstSession = Assert.IsType<LoggingGitHubSession>(first.GitHub).Inner;
+        Assert.IsType<GitHubSession>(firstSession);
+        Assert.Same(firstSession, Assert.IsType<LoggingGitHubSession>(second.GitHub).Inner);
+        Assert.Equal(BoreaGitHubApp.ClientId.Length > 0 && BoreaGitHubApp.Slug.Length > 0, first.GitHub.IsAvailable);
+    }
+
+    [Fact]
     public async Task BuildAsync_SavedLibraryFolder_RootsOnlyInstancesAndBackupsThere()
     {
         var library = Path.Combine(_tempRoot, "Library");
