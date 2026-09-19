@@ -8,7 +8,8 @@ public sealed class LinkHandlerTests
     [Theory]
     [InlineData(@"C:\Games\Borea\borea.exe", true, @"C:\Games\Borea\borea.exe")]
     [InlineData("/opt/Borea/borea", true, "/opt/Borea/borea")]
-    [InlineData(@"C:\Program Files\dotnet\dotnet.exe", true, null)]
+    // With forward slashes every OS finds the file name, as a real ProcessPath uses its own separator.
+    [InlineData("C:/Program Files/dotnet/dotnet.exe", true, null)]
     [InlineData("/usr/share/dotnet/dotnet", true, null)]
     [InlineData(@"C:\src\Borea\bin\Release\net10.0\Borea.App.exe", false, null)]
     [InlineData(null, true, null)]
