@@ -93,6 +93,8 @@
 
     <StreamGeometry x:Key="Icon.LinkSimple">M 9 15 L 15 9 M 10.5 7.135 l 2.818 -2.812 a 4.5 4.5 0 0 1 6.364 6.364 L 16.864 13.5 M 7.135 10.5 l -2.812 2.818 a 4.5 4.5 0 0 0 6.364 6.364 L 13.5 16.864</StreamGeometry>
 
+    <StreamGeometry x:Key="Icon.Copy">M 15.75 15.75 H 20.25 V 3.75 H 8.25 V 8.25 M 3.75 8.25 H 15.75 V 20.25 H 3.75 Z</StreamGeometry>
+
     <StreamGeometry x:Key="Icon.User">M 6 9 A 6 6 0 1 0 18 9 A 6 6 0 1 0 6 9 Z M 3 20.25 c 1.816 -3.138 5.114 -5.25 9 -5.25 s 7.184 2.112 9 5.25</StreamGeometry>
 
     <StreamGeometry x:Key="Icon.Scales">M 12 3.75 L 12 20.25 M 9.75 20.25 L 14.25 20.25 M 5.25 8.25 L 18.75 5.25 M 2.25 15.75 c 0 1.657 1.875 2.25 3 2.25 s 3 -0.593 3 -2.25 L 5.25 8.25 Z M 15.75 12.75 c 0 1.657 1.875 2.25 3 2.25 s 3 -0.593 3 -2.25 L 18.75 5.25 Z</StreamGeometry>

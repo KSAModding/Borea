@@ -746,6 +746,10 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string ContentLinks => Resources.ContentLinks;
 
+    public string ContentCopyLink => Resources.ContentCopyLink;
+
+    public string ContentLinkCopied => Resources.ContentLinkCopied;
+
     public string ContentTags => Resources.ContentTags;
 
     public string ContentAuthor => Resources.ContentAuthor;

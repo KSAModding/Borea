@@ -218,8 +218,21 @@
                             </StackPanel>
                         </Border>
                     </StackPanel>
-                    <Border Height="1" Background="{StaticResource Brush.BorderStrong}" IsVisible="{Binding HasPackLinks}" />
-                    <StackPanel Spacing="10" IsVisible="{Binding HasPackLinks}">
+                    <Border Height="1" Background="{StaticResource Brush.BorderStrong}">
+                        <Border.IsVisible>
+                            <MultiBinding Converter="{x:Static BoolConverters.Or}">
+                                <Binding Path="HasPackLinks" />
+                                <Binding Path="PackShareUrl" Converter="{x:Static ObjectConverters.IsNotNull}" />
+                            </MultiBinding>
+                        </Border.IsVisible>
+                    </Border>
+                    <StackPanel Spacing="10">
+                        <StackPanel.IsVisible>
+                            <MultiBinding Converter="{x:Static BoolConverters.Or}">
+                                <Binding Path="HasPackLinks" />
+                                <Binding Path="PackShareUrl" Converter="{x:Static ObjectConverters.IsNotNull}" />
+                            </MultiBinding>
+                        </StackPanel.IsVisible>
                         <TextBlock Classes="heading-md" Text="{Binding Localization.ContentLinks}" />
                         <ItemsControl ItemsSource="{Binding PackLinks}">
                             <ItemsControl.ItemsPanel>
@@ -238,6 +251,12 @@
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
+                        <Button Classes="filter" Command="{Binding CopyPackShareLinkCommand}" ToolTip.Tip="{Binding PackShareUrl}" IsVisible="{Binding PackShareUrl, Converter={x:Static ObjectConverters.IsNotNull}}">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <Path Classes="icon size-16" Data="{StaticResource Icon.Copy}" />
+                                <TextBlock Text="{Binding Localization.ContentCopyLink}" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
                     </StackPanel>
                     <Border Height="1" Background="{StaticResource Brush.BorderStrong}" IsVisible="{Binding HasPackTags}" />
                     <StackPanel Spacing="10" IsVisible="{Binding HasPackTags}">

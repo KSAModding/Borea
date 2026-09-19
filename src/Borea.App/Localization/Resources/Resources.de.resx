@@ -1107,6 +1107,12 @@
   <data name="ContentLinks" xml:space="preserve">
     <value>Links</value>
   </data>
+  <data name="ContentCopyLink" xml:space="preserve">
+    <value>Link kopieren</value>
+  </data>
+  <data name="ContentLinkCopied" xml:space="preserve">
+    <value>Der Link wurde in die Zwischenablage kopiert.</value>
+  </data>
   <data name="ContentTags" xml:space="preserve">
     <value>Tags</value>
   </data>
