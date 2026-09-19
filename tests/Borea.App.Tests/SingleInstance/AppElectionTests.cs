@@ -20,6 +20,9 @@ public sealed class AppElectionTests : IDisposable
 
     private string LockPath => Path.Combine(_root, "app.lock");
 
+    // On Linux the socket sits next to the lock, and a socket cannot be created in a missing folder.
+    public AppElectionTests() => Directory.CreateDirectory(_root);
+
     public void Dispose()
     {
         if (Directory.Exists(_root))
