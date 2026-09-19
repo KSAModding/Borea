@@ -2,6 +2,7 @@ using System.Net.Http.Headers;
 using Borea.Core.Announcements;
 using Borea.Core.Dependencies;
 using Borea.Core.Game;
+using Borea.Core.GitHub;
 using Borea.Core.History;
 using Borea.Core.Index;
 using Borea.Core.Instances;
@@ -66,9 +67,9 @@ public sealed class BoreaServices : IDisposable
 
     /// <summary>
     /// The one HttpClient every network service shares. It names Borea in its
-    /// User-Agent and its handler recycles pooled connections, so nothing creates
-    /// a second one. LatestVersionPing caches per instance, so the single instance
-    /// built here is the one to use.
+    /// User-Agent and its handler recycles pooled connections, so only the process
+    /// GitHub session creates a second one. LatestVersionPing caches per instance,
+    /// so the single instance built here is the one to use.
     /// </summary>
     private readonly HttpClient _http;
 
@@ -188,8 +189,22 @@ public sealed class BoreaServices : IDisposable
     /// <summary>Listing images, verified against their records, from the cache or the author hosts.</summary>
     public required IContentImageSource Images { get; init; }
 
+    /// <summary>The user's GitHub sign-in, which every graph built by a public overload shares.</summary>
+    public required IGitHubSession GitHub { get; init; }
+
     /// <summary>The games this process started, which every graph built by a public overload shares.</summary>
     private static readonly RunningLaunches ProcessLaunches = new();
+
+    /// <summary>
+    /// The GitHub session of this process, on a client of its own, so a graph rebuilt
+    /// after a settings change keeps the user signed in. The client does not follow
+    /// redirects, because a followed redirect drops the token, so a moved repository
+    /// comes back as its 3xx answer.
+    /// </summary>
+    private static readonly Lazy<GitHubSession> ProcessGitHub = new(() => new GitHubSession(
+        BuildHttpClient(new SocketsHttpHandler { PooledConnectionLifetime = ConnectionLifetime, AllowAutoRedirect = false }),
+        BoreaGitHubApp.ClientId,
+        BoreaGitHubApp.Slug));
 
     private BoreaServices(HttpClient http)
     {
@@ -216,7 +231,7 @@ public sealed class BoreaServices : IDisposable
 
     /// <summary>Builds the services like the overload above, with log lines marked by <paramref name="logSource"/>.</summary>
     public static Task<BoreaServices> BuildAsync(string? boreaRoot, BoreaLogSource logSource, CancellationToken cancellationToken = default)
-        => BuildCoreAsync(boreaRoot, logSource, httpHandler: null, fallbackRepository: null, installCandidates: null, ProcessLaunches, cancellationToken);
+        => BuildCoreAsync(boreaRoot, logSource, httpHandler: null, fallbackRepository: null, installCandidates: null, ProcessLaunches, cancellationToken, gitHub: ProcessGitHub.Value);
 
     internal static Task<BoreaServices> BuildAsync(
         string? boreaRoot,
@@ -230,6 +245,7 @@ public sealed class BoreaServices : IDisposable
     /// <param name="sharedProfileRoot">The game's own profile. Null means the one in My Games.</param>
     /// <param name="isGameProcessRunning">Whether a KSA or StarMap process runs. Null looks for one.</param>
     /// <param name="isOtherBoreaRunning">Whether another Borea App or command runs. Null looks for one.</param>
+    /// <param name="gitHub">The GitHub session. Null builds one on this graph's client for <see cref="BoreaGitHubApp"/>.</param>
     internal static Task<BoreaServices> BuildAsync(
         string? boreaRoot,
         HttpMessageHandler httpHandler,
@@ -240,12 +256,13 @@ public sealed class BoreaServices : IDisposable
         IContentImageSource? images = null,
         string? sharedProfileRoot = null,
         Func<bool>? isGameProcessRunning = null,
-        Func<bool>? isOtherBoreaRunning = null)
+        Func<bool>? isOtherBoreaRunning = null,
+        IGitHubSession? gitHub = null)
     {
         ArgumentNullException.ThrowIfNull(httpHandler);
         ArgumentNullException.ThrowIfNull(fallbackRepository);
         ArgumentNullException.ThrowIfNull(installCandidates);
-        return BuildCoreAsync(boreaRoot, BoreaLogSource.App, httpHandler, fallbackRepository, installCandidates, new RunningLaunches(), cancellationToken, processStarter, images, sharedProfileRoot, isGameProcessRunning, isOtherBoreaRunning);
+        return BuildCoreAsync(boreaRoot, BoreaLogSource.App, httpHandler, fallbackRepository, installCandidates, new RunningLaunches(), cancellationToken, processStarter, images, sharedProfileRoot, isGameProcessRunning, isOtherBoreaRunning, gitHub);
     }
 
     private static async Task<BoreaServices> BuildCoreAsync(
@@ -260,7 +277,8 @@ public sealed class BoreaServices : IDisposable
         IContentImageSource? images = null,
         string? sharedProfileRoot = null,
         Func<bool>? isGameProcessRunning = null,
-        Func<bool>? isOtherBoreaRunning = null)
+        Func<bool>? isOtherBoreaRunning = null,
+        IGitHubSession? gitHub = null)
     {
         // the settings file lives under Borea's own root and needs no
         // game path to be found, so a provider without one reads it.
@@ -278,7 +296,8 @@ public sealed class BoreaServices : IDisposable
         var log = new FileBoreaLog(paths, logSource);
 
         // Network. Every service that talks to a remote host is built here on the
-        // one client, except the image source, which needs a handler of its own.
+        // one client, except the image source, which needs a handler of its own,
+        // and the GitHub session, which outlives the graph.
         // Only the SpaceDock repository takes the resolver, because a
         // release carries an absolute download URL and the downloader needs no
         // host of its own.
@@ -378,6 +397,7 @@ public sealed class BoreaServices : IDisposable
             IndexRefresh = indexSnapshots,
             ContentIndex = contentIndex,
             Images = images ?? new ContentImageSource(new FileContentImageCache(paths)),
+            GitHub = new LoggingGitHubSession(gitHub ?? new GitHubSession(http, BoreaGitHubApp.ClientId, BoreaGitHubApp.Slug), log),
         };
     }
 
