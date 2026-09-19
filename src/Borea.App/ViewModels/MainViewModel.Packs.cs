@@ -40,6 +40,7 @@ public partial class MainViewModel
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasPackTags))]
+    [NotifyPropertyChangedFor(nameof(PackShareUrl))]
     private PackItem? _selectedPack;
 
     public ObservableCollection<ContentLink> PackLinks { get; } = [];
@@ -51,6 +52,9 @@ public partial class MainViewModel
     public bool HasPackLinks => PackLinks.Count > 0;
 
     public bool HasPackTags => SelectedPack is { Tags.Count: > 0 };
+
+    /// <summary>The share page of the pack on the landing site, or null when it has none.</summary>
+    public string? PackShareUrl => SelectedPack is { } pack ? ShareLinks.For(pack.Metadata) : null;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsPackDescriptionTab))]
@@ -202,6 +206,9 @@ public partial class MainViewModel
 
     [RelayCommand]
     private void ShowPackVersions() => PackTab = PackPageTab.Versions;
+
+    [RelayCommand]
+    private Task CopyPackShareLinkAsync() => CopyShareLinkAsync(PackShareUrl);
 
     [RelayCommand]
     private void OpenPackLink(ContentLink link)

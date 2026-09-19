@@ -1,0 +1,223 @@
+{
+  "snapshot_version": 1,
+  "listings": [
+    {
+      "id": "../escape",
+      "authored": { "spec_version": 1, "id": "../escape", "type": "mod", "name": "Escape" },
+      "releases": []
+    },
+    {
+      "id": "AdvancedFlightComputer",
+      "published_at": "2026-08-11T16:41:04Z",
+      "updated_at": "2026-09-10T08:00:00Z",
+      "downloads": { "total": 1183 },
+      "authored": {
+        "spec_version": 1,
+        "id": "AdvancedFlightComputer",
+        "type": "mod",
+        "name": "Advanced Flight Computer",
+        "authors": ["Maxi", "cairn5"],
+        "abstract": "Maneuver planning, burn execution and closed-loop guidance for Kitten Space Agency.",
+        "license": "MIT",
+        "links": {
+          "wiki": "https://example.org/afc/wiki",
+          "repository": "https://github.com/Maximilian-Nesslauer/KSA-AdvancedFlightComputer",
+          "forums": "https://forums.ahwoo.com/threads/advanced-flight-computer.783/",
+          "homepage": "javascript:alert(1)",
+          "bugtracker": "data:text/html,<b>x</b>"
+        },
+        "compatibility": { "game_min": "2026.9.10.5438" },
+        "images": {
+          "icon": {
+            "url": "https://example.org/afc/icon.png",
+            "sha256": "EDA52096DF4E16FEDB674DD8B90BACD8B1C1077CC1EBA673A2F16D8471290BBD",
+            "width": 256,
+            "height": 256,
+            "size": 2329
+          }
+        }
+      },
+      "releases": [
+        {
+          "id": "AdvancedFlightComputer",
+          "version": "0.8.0-dev.1",
+          "release_status": "dev",
+          "release_date": "2026-09-10T08:00:00Z",
+          "game_min": "2026.9.10.5438",
+          "game_min_revision": 5438
+        },
+        {
+          "id": "AdvancedFlightComputer",
+          "version": "0.7.6",
+          "release_status": "stable",
+          "release_date": "2026-09-05T10:00:00Z",
+          "yanked": true,
+          "game_min": "2026.9.4.5400",
+          "game_min_revision": 5400
+        },
+        {
+          "id": "AdvancedFlightComputer",
+          "version": "0.7.5",
+          "release_status": "stable",
+          "release_date": "2026-09-02T09:48:03Z",
+          "game_min": "2026.9",
+          "game_min_revision": 5400,
+          "game_max": "2026.9.7.5402",
+          "game_max_revision": 5402
+        }
+      ]
+    },
+    {
+      "id": "EvilMod",
+      "index_status": { "state": "disputed", "since": "2026-09-01T00:00:00Z", "reason": "Ownership is <b>unclear</b>." },
+      "authored": {
+        "spec_version": 1,
+        "id": "EvilMod",
+        "type": "mod",
+        "name": "Evil </script><script>alert(1)</script> \"Mod\"",
+        "authors": ["O'Brien \"x\" <img src=x onerror=alert(1)>"],
+        "abstract": "Breaks <out> & \" onmouseover=\"alert(1) '",
+        "license": "MIT",
+        "links": {
+          "repository": "https://example.org/a\"onmouseover=\"alert(1)",
+          "forums": " https://example.org/space"
+        },
+        "images": {
+          "icon": {
+            "url": "https://example.org/evil/icon.png",
+            "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+            "width": 256,
+            "height": 256,
+            "size": 2329
+          }
+        }
+      },
+      "releases": [
+        {
+          "id": "EvilMod",
+          "version": "1.0.0",
+          "release_status": "stable",
+          "release_date": "2026-09-01T00:00:00Z",
+          "game_min": "2026.8.3.5117",
+          "game_min_revision": 5117
+        }
+      ]
+    },
+    {
+      "id": "GoneMod",
+      "index_status": { "state": "delisted", "since": "2026-08-10T00:00:00Z" }
+    },
+    {
+      "id": "NoRelease",
+      "authored": {
+        "spec_version": 1,
+        "id": "NoRelease",
+        "type": "mod",
+        "name": "No Release",
+        "authors": ["Someone"],
+        "abstract": "Listed before its first release.",
+        "license": "MIT",
+        "compatibility": { "game_min": "2026.8" }
+      },
+      "releases": []
+    },
+    {
+      "id": "OldMod",
+      "authored": {
+        "spec_version": 1,
+        "id": "OldMod",
+        "type": "mod",
+        "name": "Old Mod",
+        "authors": ["Someone"],
+        "abstract": "The old version.",
+        "license": "MIT",
+        "status": "deprecated",
+        "superseded_by": "advancedflightcomputer"
+      },
+      "releases": [
+        {
+          "id": "OldMod",
+          "version": "1.0.0",
+          "release_status": "testing",
+          "release_date": "2026-08-01T00:00:00Z",
+          "game_min": "2026.8.3.5117",
+          "game_min_revision": 5117
+        }
+      ]
+    },
+    {
+      "id": "StarMap",
+      "authored": {
+        "spec_version": 1,
+        "id": "StarMap",
+        "type": "mod-loader",
+        "name": "StarMap",
+        "authors": ["KlaasWhite"],
+        "abstract": "Mod loader that runs code mods for Kitten Space Agency.",
+        "license": "MIT",
+        "links": { "repository": "https://github.com/StarMapLoader/StarMap" }
+      },
+      "releases": [
+        {
+          "id": "StarMap",
+          "version": "0.4.7",
+          "release_status": "stable",
+          "release_date": "2026-08-20T12:00:00Z",
+          "game_min": "2026.8.3.5117",
+          "game_min_revision": 5117
+        }
+      ]
+    },
+    {
+      "id": "starmap",
+      "authored": { "spec_version": 1, "id": "starmap", "type": "mod", "name": "Impostor" },
+      "releases": []
+    }
+  ],
+  "packs": [
+    {
+      "id": "GonePack",
+      "index_status": { "state": "delisted" }
+    },
+    {
+      "id": "NavigationStarterPack",
+      "versions": [
+        {
+          "authored": {
+            "spec_version": 1,
+            "id": "NavigationStarterPack",
+            "type": "modpack",
+            "name": "Navigation Starter Pack (broken)",
+            "version": "1.1.0",
+            "released_at": "2026-09-01T12:00:00Z",
+            "mods": [{ "id": "AdvancedFlightComputer", "version": "0.7.6" }]
+          },
+          "index_status": { "state": "retracted" }
+        },
+        {
+          "authored": {
+            "spec_version": 1,
+            "id": "NavigationStarterPack",
+            "type": "modpack",
+            "name": "Navigation Starter Pack",
+            "authors": ["Maxi"],
+            "abstract": "Everything you need for maneuver planning, tested together.",
+            "license": "CC0-1.0",
+            "version": "1.0.0",
+            "released_at": "2026-08-05T12:00:00Z",
+            "links": { "forums": "https://forums.ahwoo.com/threads/navigation-starter-pack.999/" },
+            "compatibility": { "game_min": "2026.8.3.5117" },
+            "mods": [
+              { "id": "AdvancedFlightComputer", "version": "0.7.5" },
+              { "id": "StarMap", "version": "0.4.7" }
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "game_versions": {
+    "spec_version": 1,
+    "versions": ["2026.8.3.5117", "2026.9.4.5400", "2026.9.7.5402", "2026.9.10.5438"]
+  }
+}
