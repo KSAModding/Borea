@@ -76,6 +76,7 @@ public sealed class GamePathProviderTests
         Assert.StartsWith(@"D:\Portable\Borea", provider.GetActiveInstancePointerPath());
         Assert.StartsWith(@"D:\Portable\Borea", provider.GetLoadersRoot());
         Assert.StartsWith(@"D:\Portable\Borea", provider.GetLogsFolder());
+        Assert.StartsWith(@"D:\Portable\Borea", provider.GetAppLockPath());
         Assert.StartsWith(@"D:\Portable\Borea", provider.GetImageCacheFolder());
         Assert.StartsWith(@"D:\Portable\Borea", provider.GetIndexPath());
     }
@@ -274,6 +275,7 @@ public sealed class GamePathProviderTests
             provider.GetBoreaSettingsPath(),
             provider.GetAppPreferencesPath(),
             provider.GetTaskHistoryPath(),
+            provider.GetAppLockPath(),
             provider.GetIndexPath(),
             provider.GetAnnouncementsPath()
         };

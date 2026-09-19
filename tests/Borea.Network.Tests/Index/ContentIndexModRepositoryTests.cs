@@ -387,6 +387,7 @@ public sealed class ContentIndexModRepositoryTests : IDisposable
 
         public string GetAppPreferencesPath() => "app-preferences.json";
         public string GetTaskHistoryPath() => throw new NotSupportedException();
+        public string GetAppLockPath() => throw new NotSupportedException();
         public string GetInstancesRoot() => throw new NotSupportedException();
         public string GetLoadersRoot() => throw new NotSupportedException();
         public string GetActiveInstancePointerPath() => throw new NotSupportedException();
