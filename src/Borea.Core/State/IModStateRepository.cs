@@ -37,7 +37,7 @@ public interface IModStateRepository
 
     /// <summary>
     /// Puts the entries in the given order, returning whether the order changed.
-    /// The only operation that moves an entry.
+    /// Apart from <see cref="PutGameContentFirstAsync"/>, the only operation that moves an entry.
     /// </summary>
     /// <param name="modIds">Every entry naming a mod, once each, in the wanted order.</param>
     /// <exception cref="ArgumentException">
@@ -45,4 +45,14 @@ public interface IModStateRepository
     /// changed since <see cref="GetEntriesAsync"/>; read it again.
     /// </exception>
     Task<bool> ReorderAsync(Guid instanceId, IReadOnlyList<string> modIds, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Puts the entries of the game's own Content/manifest.toml, such as Core,
+    /// first and in their order, and adds the missing ones, returning whether
+    /// that changed anything. ModLibrary.PrepareManifest appends a missing one
+    /// after the mods, so a mod that needs Core would load before it. Changes
+    /// nothing when the game's file cannot be read.
+    /// </summary>
+    /// <param name="gameDirectory">The folder that holds the game's Content folder.</param>
+    Task<bool> PutGameContentFirstAsync(Guid instanceId, string gameDirectory, CancellationToken cancellationToken = default);
 }

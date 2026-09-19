@@ -535,6 +535,12 @@ public partial class MainViewModel
             }
 
             var loader = choice.Loader;
+            if (services.Settings.GameDirectoryPath is { } gameDirectory
+                && await services.ModState.PutGameContentFirstAsync(instance.InstanceId, gameDirectory))
+            {
+                services.Log.Write($"Instance {instance.InstanceId}: the game's own content now loads before the mods.");
+            }
+
             var result = services.Launcher.Launch(instance, loader);
             if (result.Started)
             {

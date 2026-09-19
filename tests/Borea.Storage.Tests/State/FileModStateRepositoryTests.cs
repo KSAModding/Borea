@@ -637,6 +637,137 @@ public sealed class FileModStateRepositoryTests : IDisposable
 
     #endregion
 
+    #region Game content first
+
+    [Fact]
+    public async Task PutGameContentFirst_ManifestWithoutCore_AddsCoreBeforeTheMods()
+    {
+        WriteGameManifest(("Core", true));
+        WriteManifest("""
+            [[mods]]
+            id = "ModMenu"
+            enabled = true
+
+            [[mods]]
+            id = "KSArmory"
+            enabled = true
+            """);
+
+        Assert.True(await _repository.PutGameContentFirstAsync(_instanceId, GameDirectory));
+
+        Assert.Equal(
+            new[] { ("Core", true), ("ModMenu", true), ("KSArmory", true) },
+            (await _repository.GetEntriesAsync(_instanceId)).Select(e => (e.ModId, e.Enabled)));
+    }
+
+    [Fact]
+    public async Task PutGameContentFirst_CoreAfterTheMods_MovesItFirstAndKeepsTheRest()
+    {
+        WriteGameManifest(("Core", true));
+        WriteManifest("""
+            [[mods]]
+            id = "ModMenu"
+            enabled = true
+
+            [[mods]]
+            id = "KSArmory"
+            enabled = false
+
+            [[mods]]
+            id = "Core"
+            enabled = false
+            """);
+
+        Assert.True(await _repository.PutGameContentFirstAsync(_instanceId, GameDirectory));
+
+        Assert.Equal(
+            new[] { ("Core", false), ("ModMenu", true), ("KSArmory", false) },
+            (await _repository.GetEntriesAsync(_instanceId)).Select(e => (e.ModId, e.Enabled)));
+    }
+
+    [Fact]
+    public async Task PutGameContentFirst_FollowsTheOrderOfTheGamesFile()
+    {
+        WriteGameManifest(("Core", true), ("Extra", false));
+        WriteManifest("""
+            [[mods]]
+            id = "Extra"
+            enabled = true
+
+            [[mods]]
+            id = "ModMenu"
+            enabled = true
+            """);
+
+        Assert.True(await _repository.PutGameContentFirstAsync(_instanceId, GameDirectory));
+
+        Assert.Equal(
+            new[] { ("Core", true), ("Extra", true), ("ModMenu", true) },
+            (await _repository.GetEntriesAsync(_instanceId)).Select(e => (e.ModId, e.Enabled)));
+    }
+
+    [Fact]
+    public async Task PutGameContentFirst_CoreAlreadyFirst_WritesNothing()
+    {
+        WriteGameManifest(("Core", true));
+        const string manifest = """
+            [[mods]]
+            id="Core"
+            enabled = true
+
+            [[mods]]
+            id="ModMenu"
+            enabled = true
+            """;
+        WriteManifest(manifest);
+
+        Assert.False(await _repository.PutGameContentFirstAsync(_instanceId, GameDirectory));
+
+        Assert.Equal(manifest, File.ReadAllText(ManifestPath));
+    }
+
+    [Fact]
+    public async Task PutGameContentFirst_NoInstanceManifest_CreatesOneWithCore()
+    {
+        WriteGameManifest(("Core", true));
+
+        Assert.True(await _repository.PutGameContentFirstAsync(_instanceId, GameDirectory));
+
+        Assert.Equal(new[] { ("Core", true) }, (await _repository.GetEntriesAsync(_instanceId)).Select(e => (e.ModId, e.Enabled)));
+    }
+
+    [Fact]
+    public async Task PutGameContentFirst_GameFileMissingOrBroken_ChangesNothing()
+    {
+        WriteManifest("""
+            [[mods]]
+            id = "ModMenu"
+            enabled = true
+            """);
+        var before = File.ReadAllText(ManifestPath);
+
+        Assert.False(await _repository.PutGameContentFirstAsync(_instanceId, GameDirectory));
+
+        Directory.CreateDirectory(Path.Combine(GameDirectory, "Content"));
+        File.WriteAllText(Path.Combine(GameDirectory, "Content", "manifest.toml"), "[[mods]\nid = ");
+
+        Assert.False(await _repository.PutGameContentFirstAsync(_instanceId, GameDirectory));
+        Assert.Equal(before, File.ReadAllText(ManifestPath));
+    }
+
+    #endregion
+
+    private string GameDirectory => Path.Combine(_tempRoot, "Game");
+
+    private void WriteGameManifest(params (string Id, bool Enabled)[] entries)
+    {
+        var content = Path.Combine(GameDirectory, "Content");
+        Directory.CreateDirectory(content);
+        File.WriteAllText(
+            Path.Combine(content, "manifest.toml"),
+            string.Join("\n", entries.Select(e => $"[[mods]]\nid = \"{e.Id}\"\nenabled = {TomlBool(e.Enabled)}\n")));
+    }
+
     private string ManifestPath => _pathProvider.GetInstanceManifestPath(_instanceId);
 
     private static string TomlBool(bool value) => value ? "true" : "false";

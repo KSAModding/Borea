@@ -43,6 +43,12 @@ internal static class LaunchCommand
                     : $"No mod in '{target.Name}' needs a mod loader. Using {loader.ModId}, which takes an instance.");
             }
 
+            if (cli.Settings.GameDirectoryPath is { } gameDirectory
+                && await cli.ModState.PutGameContentFirstAsync(target.InstanceId, gameDirectory, ct).ConfigureAwait(false))
+            {
+                cli.Log.Write($"Instance {target.InstanceId}: the game's own content now loads before the mods.");
+            }
+
             ct.ThrowIfCancellationRequested();
             var result = cli.Launcher.Launch(target, loader, passThrough.Values);
 
