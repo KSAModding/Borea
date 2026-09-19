@@ -58,6 +58,7 @@ public partial class MainViewModel
     [NotifyPropertyChangedFor(nameof(HasContentLinks))]
     [NotifyPropertyChangedFor(nameof(HasContentTags))]
     [NotifyPropertyChangedFor(nameof(IsLoaderContent))]
+    [NotifyPropertyChangedFor(nameof(ContentShareUrl))]
     private DiscoverItem? _selectedContent;
 
     public ObservableCollection<ContentLink> ContentLinks { get; } = [];
@@ -74,6 +75,9 @@ public partial class MainViewModel
     public string ContentVersionsEmptyText => _contentReleases.Count > 0 ? Localization.ContentNoVersionsInChannel : Localization.ContentNoVersions;
 
     public bool HasContentLinks => ContentLinks.Count > 0;
+
+    /// <summary>The share page of the listing on the landing site, or null when it has none.</summary>
+    public string? ContentShareUrl => SelectedContent is { } item ? ShareLinks.For(item.Listing) : null;
 
     public bool HasContentTags => SelectedContent is { Tags.Count: > 0 };
 
@@ -303,6 +307,25 @@ public partial class MainViewModel
             ShowOpenError(() => link.Url, error);
         else
             ContentDetailError = error;
+    }
+
+    [RelayCommand]
+    private Task CopyContentShareLinkAsync() => CopyShareLinkAsync(ContentShareUrl);
+
+    private async Task CopyShareLinkAsync(string? url)
+    {
+        if (url is null || WindowServices is not { } window)
+            return;
+
+        try
+        {
+            await window.CopyTextAsync(url);
+            ShowSuccessToast(() => Localization.ContentLinkCopied);
+        }
+        catch (Exception exception) when (exception is InvalidOperationException or IOException or UnauthorizedAccessException)
+        {
+            ShowErrorToast(() => Localization.FormatToastCopyFailed(url), exception.Message);
+        }
     }
 
     private static string? TryOpenUrl(string url)
