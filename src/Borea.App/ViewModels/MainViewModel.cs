@@ -936,6 +936,8 @@ public sealed partial class InstanceItem : ObservableObject
     [ObservableProperty]
     private bool _isConfirmingDelete;
 
+    private bool _isOpening;
+
     public InstanceItem(MainViewModel owner, Instance instance, bool isActive, DateTimeOffset? lastPlayedAt = null)
     {
         _owner = owner;
@@ -972,8 +974,27 @@ public sealed partial class InstanceItem : ObservableObject
     [RelayCommand]
     private Task ToggleActiveAsync() => IsActive ? _owner.DeactivateInstanceAsync() : _owner.ActivateInstanceAsync(InstanceId);
 
-    [RelayCommand]
-    private Task OpenAsync() => _owner.OpenInstanceAsync(this);
+    /// <summary>
+    /// The whole card is this command, so it stays executable while the page loads,
+    /// because a command that cannot execute greys out every control on the card.
+    /// The flag takes over the job of dropping a second click on the same row.
+    /// </summary>
+    [RelayCommand(AllowConcurrentExecutions = true)]
+    private async Task OpenAsync()
+    {
+        if (_isOpening)
+            return;
+
+        _isOpening = true;
+        try
+        {
+            await _owner.OpenInstanceAsync(this);
+        }
+        finally
+        {
+            _isOpening = false;
+        }
+    }
 
     /// <summary>Play on the active row of the Library, which starts the same watched launch as Home.</summary>
     [RelayCommand]
