@@ -18,8 +18,8 @@ The continuous-integration checks run on Windows, Linux, and macOS.
 
 ## Translations
 
-A new text in `Resources.resx` needs a German text in `Resources.de.resx`, because the parity test fails when the German file misses a key.
-Other translations, such as pirate speak in `Resources.en-QP.resx`, can miss a text, and Borea then shows it in English. See [Help translate Borea](docs/localization.md).
+Only the neutral English `Resources.resx` must be complete. When you add an English text, a German text in `Resources.de.resx` is welcome, but it is not required.
+Every translation, such as German or pirate speak in `Resources.en-QP.resx`, can miss a text, and Borea then shows it in English. See [Help translate Borea](docs/localization.md).
 
 ## AI tools
 

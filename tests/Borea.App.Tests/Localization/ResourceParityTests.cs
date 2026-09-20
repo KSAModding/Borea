@@ -1,10 +1,14 @@
+using System.Globalization;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
+using Borea.App.Localization;
 
 namespace Borea.App.Tests.Localization;
 
-public sealed partial class ResourceParityTests
+public sealed partial class ResourceParityTests : IDisposable
 {
+    private readonly CultureInfo _originalUiCulture = CultureInfo.CurrentUICulture;
+
     private static readonly string LocalizationDirectory = Path.GetFullPath(
         Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "Borea.App", "Localization", "Resources"));
 
@@ -19,16 +23,7 @@ public sealed partial class ResourceParityTests
         }
     }
 
-    [Fact]
-    public void GermanResources_HaveTheSameKeysAsNeutralResources()
-    {
-        var neutral = ReadValues("Resources.resx");
-        var german = ReadValues("Resources.de.resx");
-
-        Assert.Equal(neutral.Keys.Order(StringComparer.Ordinal), german.Keys.Order(StringComparer.Ordinal));
-    }
-
-    // Other translations may miss a key, which then shows in English.
+    // A translation may miss a key, which then shows in English.
     [Theory]
     [MemberData(nameof(Translations))]
     public void Translation_HasNoKeyThatNeutralResourcesLack(string fileName)
@@ -51,6 +46,27 @@ public sealed partial class ResourceParityTests
                 Placeholders(neutral[key]).SequenceEqual(Placeholders(translation[key]))
                     && Braces(neutral[key]) == Braces(translation[key]),
                 $"{key}: \"{translation[key]}\" does not have the placeholders of \"{neutral[key]}\""));
+    }
+
+    // A key the file has shows its own text, and a key it misses shows the English one,
+    // which is what lets a translation stay incomplete.
+    [Fact]
+    public void Translation_ShowsItsOwnTextOrTheNeutralEnglishOne()
+    {
+        var neutral = ReadValues("Resources.resx");
+        var pirate = ReadValues("Resources.en-QP.resx");
+
+        _ = new LocalizationService(CultureInfo.GetCultureInfo("en-QP"));
+
+        Assert.All(neutral.Keys, key => Assert.Equal(
+            pirate.TryGetValue(key, out var translated) ? translated : neutral[key],
+            Resources.ResourceManager.GetString(key, CultureInfo.CurrentUICulture)));
+    }
+
+    public void Dispose()
+    {
+        CultureInfo.CurrentUICulture = _originalUiCulture;
+        Resources.Culture = _originalUiCulture;
     }
 
     private static Dictionary<string, string> ReadValues(string fileName)

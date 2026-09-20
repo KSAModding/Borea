@@ -52,14 +52,15 @@ The translated value must still contain `{0}`. A test fails when a translation d
 
 ## Propose a new language
 
-Adding a new language needs a complete resource file and one small code change that registers the language in the selector. A translator can provide the resource file, and a maintainer can make the code change.
+Adding a new language needs a resource file and one small code change that registers the language in the selector. A translator can provide the resource file, and a maintainer can make the code change. A complete file is best, but Borea shows a text in English while its translation is missing, so you can start with the text that matters most.
 
 1. Open an issue and state the language, its culture name, and whether you can translate it.
 2. Copy the neutral [`Resources.resx`](../src/Borea.App/Localization/Resources/Resources.resx) file to `Resources.<language>.resx`.
-3. Translate every `<value>` element and keep every `name` attribute unchanged.
-4. Keep product names, identifiers, paths, and placeholders unchanged unless their surrounding text needs a different word order.
-5. Submit one pull request for the new language.
-6. Ask a fluent speaker to review the translation when possible.
+3. Translate the `<value>` elements that you can, and keep every `name` attribute unchanged.
+4. Delete the `data` elements that you do not translate, because Borea then shows their English text and keeps that text correct when the English text changes.
+5. Keep product names, identifiers, paths, and placeholders unchanged unless their surrounding text needs a different word order.
+6. Submit one pull request for the new language.
+7. Ask a fluent speaker to review the translation when possible.
 
 A maintainer will add the language to [`LocalizationService`](../src/Borea.App/Localization/LocalizationService.cs) and to `SatelliteResourceLanguages` in [`Borea.App.csproj`](../src/Borea.App/Borea.App.csproj). A culture name that .NET does not know, such as `en-QP`, also needs `Culture` and `LogicalName` metadata on its file in that project. The resource parity tests check that the new file has no key that the English source does not have, and that its texts have the placeholders of the English ones. A text that the file does not have shows in English.
 
@@ -81,7 +82,7 @@ If you already have the .NET SDK, you can run the focused tests locally:
 dotnet test tests/Borea.App.Tests/Borea.App.Tests.csproj --no-restore
 ```
 
-The parity tests report a failure when the German file misses a resource key, when any translation file has a key that the English source does not have, or when a translation does not have the placeholders of the English text.
+The parity tests report a failure when a translation file has a key that the English source does not have, or when a translation does not have the placeholders of the English text. A key that a translation file misses is not a failure, because Borea then shows the English text.
 
 ## Technical references
 
