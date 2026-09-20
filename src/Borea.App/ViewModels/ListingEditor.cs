@@ -604,7 +604,7 @@ public sealed partial class ListingEditor : ObservableObject
         var chosen = CuratedTags.Where(chip => chip.IsSelected).Select(chip => chip.Tag).Concat(selected).ToHashSet(StringComparer.Ordinal);
         CuratedTags.Clear();
         foreach (var tag in vocabulary)
-            CuratedTags.Add(new ListingTagChip(this, tag.Tag, tag.Name, tag.Meaning, chosen.Contains(tag.Tag)));
+            CuratedTags.Add(new ListingTagChip(this, tag.Tag, _owner.CategoryName(tag.Tag, tag.Name), tag.Meaning, chosen.Contains(tag.Tag)));
     }
 
     /// <summary>Builds the draft from the fields, writes the file and runs the checks.</summary>
@@ -657,6 +657,9 @@ public sealed partial class ListingEditor : ObservableObject
         Icon?.RefreshText();
         foreach (var image in DescriptionImages)
             image.RefreshText();
+        // a chip keeps the name it was built with, so the tags are built again in the new language
+        if (CuratedTags.Count > 0)
+            FillCuratedTags([]);
         OnPropertyChanged(nameof(PullRequestText));
         RefreshPullRequestText();
         Refresh();
