@@ -1,0 +1,28 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Borea.App.ViewModels"
+             x:Class="Borea.App.Views.Settings.HelpSettings"
+             x:DataType="vm:MainViewModel">
+    <!-- Help: whom to ask when something goes wrong, and the facts they will ask for -->
+    <ScrollViewer>
+        <StackPanel Margin="32,32,44,24" Spacing="6">
+            <TextBlock Classes="heading-md" Text="{Binding Localization.HelpAsk}" />
+            <StackPanel Spacing="6" Margin="0,4,0,0">
+                <Button Classes="filter" Content="{Binding Localization.AboutDiscord}" Command="{Binding OpenAboutLinkCommand}" CommandParameter="{x:Static vm:MainViewModel.DiscordUrl}" />
+                <Button Classes="filter" Content="{Binding Localization.HelpForums}" Command="{Binding OpenAboutLinkCommand}" CommandParameter="{x:Static vm:MainViewModel.ForumsUrl}" />
+                <Button Classes="filter" Content="{Binding Localization.AboutReportBug}" Command="{Binding OpenAboutLinkCommand}" CommandParameter="{x:Static vm:MainViewModel.ReportBugUrl}" />
+            </StackPanel>
+
+            <Border Height="1" Background="{StaticResource Brush.BorderStrong}" Margin="0,18,0,12" />
+
+            <TextBlock Classes="heading-md" Text="{Binding Localization.HelpFacts}" />
+            <TextBlock Classes="body-sm secondary" Text="{Binding Localization.HelpReportHint}" TextWrapping="Wrap" Margin="0,4,0,0" />
+            <WrapPanel ItemSpacing="8" LineSpacing="8" Margin="0,8,0,0">
+                <Button Classes="text" Content="{Binding Localization.AboutCopyDiagnostics}" Click="CopyDiagnostics" />
+                <Button Classes="text" Content="{Binding Localization.AboutOpenBoreaLog}" Command="{Binding OpenBoreaLogCommand}" />
+            </WrapPanel>
+            <TextBlock Classes="body-md secondary" Text="{Binding AboutMessage}" TextWrapping="Wrap" IsVisible="{Binding AboutMessage, Converter={x:Static ObjectConverters.IsNotNull}}" />
+            <TextBlock Classes="body-md danger" Text="{Binding AboutError}" TextWrapping="Wrap" IsVisible="{Binding AboutError, Converter={x:Static ObjectConverters.IsNotNull}}" />
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

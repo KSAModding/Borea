@@ -1062,6 +1062,8 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string SettingsAbout => Resources.SettingsAbout;
 
+    public string SettingsHelp => Resources.SettingsHelp;
+
     public string AboutVersion => Resources.AboutVersion;
 
     public string AboutRuntime => Resources.AboutRuntime;
@@ -1074,12 +1076,6 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string AboutIndexNotDownloaded => Resources.AboutIndexNotDownloaded;
 
-    public string AboutFolders => Resources.AboutFolders;
-
-    public string AboutOpenBoreaFolder => Resources.AboutOpenBoreaFolder;
-
-    public string AboutOpenInstancesFolder => Resources.AboutOpenInstancesFolder;
-
     public string AboutOpenBoreaLog => Resources.AboutOpenBoreaLog;
 
     public string AboutOpenLogFolder => Resources.AboutOpenLogFolder;
@@ -1087,6 +1083,12 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string AboutCopyDiagnostics => Resources.AboutCopyDiagnostics;
 
     public string AboutCopyPath => Resources.AboutCopyPath;
+
+    public string AboutFolders => Resources.AboutFolders;
+
+    public string AboutOpenBoreaFolder => Resources.AboutOpenBoreaFolder;
+
+    public string AboutOpenInstancesFolder => Resources.AboutOpenInstancesFolder;
 
     public string AboutCopied => Resources.AboutCopied;
 
@@ -1109,6 +1111,15 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string AboutOpenNotices => Resources.AboutOpenNotices;
 
     public string AboutNoticesMissing => Resources.AboutNoticesMissing;
+
+    public string HelpAsk => Resources.HelpAsk;
+
+    public string HelpReportHint => Resources.HelpReportHint;
+
+    public string HelpForums => Resources.HelpForums;
+
+    public string HelpFacts => Resources.HelpFacts;
+
 
     public string ContentLoaderHint => Resources.ContentLoaderHint;
 
