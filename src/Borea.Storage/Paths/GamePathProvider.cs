@@ -60,6 +60,8 @@ public sealed class GamePathProvider : IGamePathProvider
     public string GetInstancesRoot() => Path.Combine(_libraryFolder, "Instances");
     public string GetStaticModFilesRoot() => Path.Combine(_libraryFolder, "Static Mod Files");
     public string GetLoadersRoot() => Path.Combine(_boreaRoot, "Loaders");
+    public string GetPresetsRoot() => Path.Combine(_boreaRoot, "Presets");
+    public string GetGameSettingsPresetsRoot() => Path.Combine(GetPresetsRoot(), "GameSettings");
     public string GetInstanceRoot(Guid instanceId) => Path.Combine(GetInstancesRoot(), instanceId.ToString());
     public string GetInstanceModsFolder(Guid instanceId) => Path.Combine(GetInstanceRoot(instanceId), "mods");
     public string GetInstanceSavesFolder(Guid instanceId) => Path.Combine(GetInstanceRoot(instanceId), "saves");

@@ -47,6 +47,16 @@ public interface IGamePathProvider
     string GetLoadersRoot();
 
     /// <summary>
+    /// Root for all presets in Borea.
+    /// </summary>
+    string GetPresetsRoot();
+
+    /// <summary>
+    /// Root directory for the KSA game settings presets.
+    /// </summary>
+    string GetGameSettingsPresetsRoot();
+
+    /// <summary>
     /// Path to the file tracking which instance is currently selected for
     /// launch.
     /// </summary>
