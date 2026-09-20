@@ -76,8 +76,11 @@ internal sealed class FakeModPackInstaller : IModPackInstaller
     public Task<ModPackInstallResult> PlanAsync(ModPackInstallRequest request, CancellationToken cancellationToken = default) =>
         throw new NotSupportedException("A test that plans a pack uses the real pack installer.");
 
+    public Task<ModPackInstallResult> PlanNewAsync(string instanceName, ModPackInstallRequest request, CancellationToken cancellationToken = default) =>
+        throw new NotSupportedException("A test that plans a pack uses the real pack installer.");
+
     public Task<ModPackInstallResult> CreateAndInstallAsync(string instanceName, ModPackInstallRequest request, IProgress<InstallProgress>? progress = null, InstallStop? stop = null, CancellationToken cancellationToken = default) =>
-        throw new NotSupportedException("The pack commands install into an existing instance.");
+        throw new NotSupportedException("A test that creates an instance from a pack uses the real pack installer.");
 
     public static ModPackMemberResult Member(ModPackEntry pin, ModPackMemberStatus status, string? message = null) =>
         new(pin.ContentId, pin.Version, InstallReason.ModPack, status, message);

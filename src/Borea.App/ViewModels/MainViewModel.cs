@@ -559,8 +559,14 @@ public partial class MainViewModel : ViewModelBase
             return Task.CompletedTask;
         }
 
+        if (_newInstancePack is { } pack)
+            return CreatePackInstanceAsync(pack, name);
+
         return IsImportingSharedProfile ? ImportSharedProfileAsync(name) : RunModalInstanceOperationAsync(async instances =>
         {
+            if (!await instances.IsNameAvailableAsync(name))
+                throw new InvalidOperationException(Localization.ModalNameTaken);
+
             await instances.CreateAsync(name, InstanceSource.Custom.Value);
             ModalInstanceName = string.Empty;
             IsCreatingInstance = false;

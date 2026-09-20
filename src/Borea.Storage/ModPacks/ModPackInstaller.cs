@@ -25,12 +25,20 @@ public sealed class ModPackInstaller : IModPackInstaller
 
     public async Task<ModPackInstallResult> CreateAndInstallAsync(string instanceName, ModPackInstallRequest request, IProgress<InstallProgress>? progress = null, InstallStop? stop = null, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(request);
-        cancellationToken.ThrowIfCancellationRequested();
+        var planned = await PlanDraftAsync(instanceName, request, stop, cancellationToken).ConfigureAwait(false);
+        if (planned.Plan is not { IsReady: true })
+            return planned;
+
         var metadata = RequireMetadata(request.Pack);
-        var created = await _instances.CreateAsync(instanceName, new InstanceSource.FromModPack(metadata.ModPackId, metadata.Version)).ConfigureAwait(false);
+        if (stop is { IsRequested: true })
+            return Result(Guid.Empty, null, metadata.Mods.Select(pin => Member(pin, ModPackMemberStatus.NotAttempted, StoppedMessage)).ToList(), planned.Warnings, false, stopped: true);
+
+        var created = await _instances.CreateAsync(instanceName, Source(metadata)).ConfigureAwait(false);
         return await InstallAsync(request with { InstanceId = created.Instance.InstanceId }, progress, stop, cancellationToken).ConfigureAwait(false);
     }
+
+    public Task<ModPackInstallResult> PlanNewAsync(string instanceName, ModPackInstallRequest request, CancellationToken cancellationToken = default) =>
+        PlanDraftAsync(instanceName, request, stop: null, cancellationToken);
 
     public Task<ModPackInstallResult> PlanAsync(ModPackInstallRequest request, CancellationToken cancellationToken = default) =>
         RunAsync(request, write: false, progress: null, stop: null, cancellationToken);
@@ -38,13 +46,23 @@ public sealed class ModPackInstaller : IModPackInstaller
     public Task<ModPackInstallResult> InstallAsync(ModPackInstallRequest request, IProgress<InstallProgress>? progress = null, InstallStop? stop = null, CancellationToken cancellationToken = default) =>
         RunAsync(request, write: true, progress, stop, cancellationToken);
 
-    private async Task<ModPackInstallResult> RunAsync(ModPackInstallRequest request, bool write, IProgress<InstallProgress>? progress, InstallStop? stop, CancellationToken cancellationToken)
+    private async Task<ModPackInstallResult> PlanDraftAsync(string instanceName, ModPackInstallRequest request, InstallStop? stop, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        ArgumentNullException.ThrowIfNull(request.Pack);
+        cancellationToken.ThrowIfCancellationRequested();
+        var draft = new Instance(instanceName, Source(RequireMetadata(request.Pack)));
+        var planned = await RunAsync(request, write: false, progress: null, stop, cancellationToken, draft).ConfigureAwait(false);
+        return Result(Guid.Empty, planned.Plan, planned.Members, planned.Warnings, planned.IsComplete, planned.IsStopped);
+    }
+
+    private async Task<ModPackInstallResult> RunAsync(ModPackInstallRequest request, bool write, IProgress<InstallProgress>? progress, InstallStop? stop, CancellationToken cancellationToken, Instance? draft = null)
     {
         ArgumentNullException.ThrowIfNull(request);
         ArgumentNullException.ThrowIfNull(request.Pack);
         ArgumentNullException.ThrowIfNull(request.Repository);
 
-        var instance = await _instances.GetByIdAsync(request.InstanceId).ConfigureAwait(false)
+        var instance = draft ?? await _instances.GetByIdAsync(request.InstanceId).ConfigureAwait(false)
             ?? throw new InvalidOperationException($"Instance '{request.InstanceId}' does not exist.");
         var metadata = RequireMetadata(request.Pack);
         var warnings = new List<PlanningMessage>();
@@ -193,6 +211,8 @@ public sealed class ModPackInstaller : IModPackInstaller
     }
 
     private static ModPackMetadata RequireMetadata(ModPackResult pack) => pack.Metadata ?? throw new InvalidOperationException($"Pack '{pack.Id}' does not have usable metadata.");
+
+    private static InstanceSource Source(ModPackMetadata metadata) => new InstanceSource.FromModPack(metadata.ModPackId, metadata.Version);
 
     private static InstallReason ExistingReason(Instance instance, string modId, InstallReason fallback) => instance.Mods.FirstOrDefault(value => ModIds.Equals(value.ModId, modId))?.Reason ?? fallback;
 

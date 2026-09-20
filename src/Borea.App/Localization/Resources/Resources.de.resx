@@ -1566,6 +1566,9 @@
   <data name="ModalNameRequired" xml:space="preserve">
     <value>Gib einen Namen für die Instanz ein.</value>
   </data>
+  <data name="ModalNameTaken" xml:space="preserve">
+    <value>Es gibt schon eine Instanz mit diesem Namen.</value>
+  </data>
   <data name="ModalNameLabel" xml:space="preserve">
     <value>Name</value>
   </data>
@@ -1772,6 +1775,12 @@
   </data>
   <data name="PackMods" xml:space="preserve">
     <value>Mods</value>
+  </data>
+  <data name="PackNewInstance" xml:space="preserve">
+    <value>Neue Instanz aus diesem Modpack</value>
+  </data>
+  <data name="PackCreatesInstanceFormat" xml:space="preserve">
+    <value>Erstellt die Instanz {0}.</value>
   </data>
   <data name="PackModHeader" xml:space="preserve">
     <value>Mod</value>

@@ -2,6 +2,7 @@ using System.CommandLine;
 using Borea.Cli.Output;
 using Borea.Core.Game;
 using Borea.Core.Index;
+using Borea.Core.Instances;
 using Borea.Core.ModPacks;
 using Borea.Core.Mods;
 using Borea.Core.Planning;
@@ -191,6 +192,15 @@ internal static class PackCommand
         var id = ArgumentRules.ContentId("id", "The pack id to install.");
         var version = VersionOption("Install this exact pack version. The newest usable version when absent.");
         var instance = ArgumentRules.Instance();
+        var newInstance = new Option<string?>("--new-instance")
+        {
+            Description = "Create an instance with this name from the pack, instead of installing into an existing one.",
+        };
+        newInstance.Validators.Add(result =>
+        {
+            if (string.IsNullOrWhiteSpace(result.GetValueOrDefault<string?>()))
+                result.AddError("The --new-instance value cannot be empty.");
+        });
         var proceedWithRetracted = new Option<bool>("--proceed-with-retracted")
         {
             Description = "Install the selected pack version even though the index retracted it.",
@@ -215,16 +225,26 @@ internal static class PackCommand
         install.Arguments.Add(id);
         install.Options.Add(version);
         install.Options.Add(instance);
+        install.Options.Add(newInstance);
         install.Options.Add(proceedWithRetracted);
         install.Options.Add(proceedWithYanked);
         install.Options.Add(recommended);
         install.Options.Add(alternatives);
         install.Options.Add(dryRun);
         install.Options.Add(json);
+        install.Validators.Add(result =>
+        {
+            if (result.GetResult(instance) is not null && result.GetResult(newInstance) is not null)
+                result.AddError("Pass --instance or --new-instance, not both.");
+        });
 
         install.SetAction((parseResult, cancellationToken) => CommandRunner.RunAsync(parseResult, services, cancellationToken, async (cli, output, error, ct) =>
         {
-            var target = await InstanceLookup.ResolveTargetAsync(cli.Instances, parseResult.GetValue(instance)).ConfigureAwait(false);
+            var newInstanceName = parseResult.GetValue(newInstance)?.Trim();
+            var target = newInstanceName is null ? await InstanceLookup.ResolveTargetAsync(cli.Instances, parseResult.GetValue(instance)).ConfigureAwait(false) : null;
+            if (newInstanceName is not null && !await cli.Instances.IsNameAvailableAsync(newInstanceName).ConfigureAwait(false))
+                throw new InvalidOperationException($"Instance name '{newInstanceName}' is already in use.");
+
             var chosenAlternatives = ModInstallCommands.ParseAlternatives(parseResult.GetValue(alternatives));
             var isDryRun = parseResult.GetValue(dryRun);
             if (isDryRun)
@@ -259,7 +279,7 @@ internal static class PackCommand
 
             var yanked = parseResult.GetValue(proceedWithYanked) ?? [];
             var request = new ModPackInstallRequest(
-                target.InstanceId,
+                target?.InstanceId ?? Guid.Empty,
                 selected,
                 isDryRun ? cli.ReadOnlyMods : cli.Mods,
                 installed,
@@ -268,34 +288,50 @@ internal static class PackCommand
                 ProceedWithRetractedPack: parseResult.GetValue(proceedWithRetracted),
                 ProceedWithYankedMembers: yanked.Length == 0 ? null : new HashSet<string>(yanked, ModIds.Comparer));
 
+            Func<ModPackInstallRequest, CancellationToken, Task<ModPackInstallResult>> plan = newInstanceName is null
+                ? cli.ModPackInstaller.PlanAsync
+                : (value, token) => cli.ModPackInstaller.PlanNewAsync(newInstanceName, value, token);
             ModPackInstallResult? planned = null;
             if (parseResult.GetValue(recommended))
-                (request, planned) = await SelectRecommendedAsync(cli.ModPackInstaller, request, ct).ConfigureAwait(false);
+                (request, planned) = await SelectRecommendedAsync(plan, request, ct).ConfigureAwait(false);
 
             ModPackInstallResult result;
+            InstanceCreateResult? created = null;
             if (isDryRun)
             {
-                result = planned ?? await cli.ModPackInstaller.PlanAsync(request, ct).ConfigureAwait(false);
+                result = planned ?? await plan(request, ct).ConfigureAwait(false);
             }
             else
             {
                 var stop = new InstallStop();
                 using var registration = ct.Register(stop.Request);
-                result = await cli.ModPackInstaller.InstallAsync(request, new InstallProgressOutput(error), stop).ConfigureAwait(false);
+                result = newInstanceName is null
+                    ? await cli.ModPackInstaller.InstallAsync(request, new InstallProgressOutput(error), stop).ConfigureAwait(false)
+                    : await cli.ModPackInstaller.CreateAndInstallAsync(newInstanceName, request, new InstallProgressOutput(error), stop).ConfigureAwait(false);
+                if (newInstanceName is not null && result.InstanceId != Guid.Empty && await cli.Instances.GetByIdAsync(result.InstanceId).ConfigureAwait(false) is { } instanceCreated)
+                    created = new InstanceCreateResult(instanceCreated, await cli.Instances.GetActiveInstanceIdAsync().ConfigureAwait(false) == instanceCreated.InstanceId);
             }
 
             var view = InstallView.From(
                 metadata,
-                target.Name,
+                target?.Name ?? newInstanceName!,
+                newInstanceName is not null,
+                created,
                 isDryRun,
                 SelectionWarnings(selected, metadata, compatibility),
                 result,
                 selected.Diagnostics.Select(ContentOutput.Diagnostic).ToArray());
 
             if (parseResult.GetValue(json))
+            {
                 JsonOutput.Write(output, view);
+            }
             else
+            {
                 WriteHuman(output, view);
+                if (created is not null)
+                    output.WriteLine(InstanceCommand.DescribeCreated(created));
+            }
 
             if (result.IsStopped)
                 throw new OperationCanceledException(ct);
@@ -303,7 +339,8 @@ internal static class PackCommand
             if (isDryRun ? result.Plan is { IsReady: true } : result.IsComplete)
                 return ExitCodes.Done;
 
-            error.WriteLine($"error: {FailureReason(view, request)}");
+            var notCreated = newInstanceName is not null && !isDryRun && created is null ? $" Borea did not create the instance '{newInstanceName}'." : string.Empty;
+            error.WriteLine($"error: {FailureReason(view, request)}{notCreated}");
             return ExitCodes.Failed;
         }));
 
@@ -327,14 +364,14 @@ internal static class PackCommand
 
     /// <summary>Plans again until no new recommendation appears, because a recommended mod can recommend more.</summary>
     private static async Task<(ModPackInstallRequest Request, ModPackInstallResult Plan)> SelectRecommendedAsync(
-        IModPackInstaller installer,
+        Func<ModPackInstallRequest, CancellationToken, Task<ModPackInstallResult>> planAsync,
         ModPackInstallRequest request,
         CancellationToken cancellationToken)
     {
         var selected = new HashSet<string>(StringComparer.Ordinal);
         while (true)
         {
-            var plan = await installer.PlanAsync(request, cancellationToken).ConfigureAwait(false);
+            var plan = await planAsync(request, cancellationToken).ConfigureAwait(false);
             var added = false;
             foreach (var choice in plan.Plan?.Choices.Where(choice => choice.Kind == PlanningChoiceKind.Recommendation) ?? [])
                 added |= selected.Add(choice.Key);
@@ -607,7 +644,9 @@ internal static class PackCommand
 
     private static void WriteHuman(TextWriter output, InstallView view)
     {
-        output.WriteLine($"Pack {view.PackId} {view.Version} into '{view.InstanceName}':");
+        output.WriteLine(view.NewInstance
+            ? $"Pack {view.PackId} {view.Version} into the new instance '{view.InstanceName}':"
+            : $"Pack {view.PackId} {view.Version} into '{view.InstanceName}':");
 
         foreach (var warning in view.Warnings)
         {
@@ -824,8 +863,11 @@ internal static class PackCommand
     private sealed record InstallView(
         string PackId,
         string Version,
-        Guid InstanceId,
+        Guid? InstanceId,
         string InstanceName,
+        bool NewInstance,
+        bool Created,
+        bool Activated,
         bool DryRun,
         bool Complete,
         IReadOnlyList<MemberResultView> Members,
@@ -840,14 +882,19 @@ internal static class PackCommand
         public static InstallView From(
             ModPackMetadata pack,
             string instanceName,
+            bool newInstance,
+            InstanceCreateResult? created,
             bool dryRun,
             IReadOnlyList<MessageView> selectionWarnings,
             ModPackInstallResult result,
             IReadOnlyList<DiagnosticView> diagnostics) => new(
             pack.ModPackId,
             pack.Version.ToString(),
-            result.InstanceId,
+            result.InstanceId == Guid.Empty ? null : result.InstanceId,
             instanceName,
+            newInstance,
+            created is not null,
+            created?.Activated ?? false,
             dryRun,
             result.IsComplete,
             result.Members.Select(MemberResultView.From).ToArray(),

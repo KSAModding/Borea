@@ -6,6 +6,7 @@ using System.Security.Cryptography;
 using System.Text.Json.Nodes;
 using Borea.App.ViewModels;
 using Borea.Core.Game;
+using Borea.Core.History;
 using Borea.Core.Instances;
 using Borea.Core.ModPacks;
 using Borea.Core.Mods;
@@ -223,6 +224,150 @@ public sealed class PackViewModelTests
 
         viewModel.HideInstalled = true;
         Assert.Equal(["old-tools-pack"], viewModel.DiscoverPacks.Select(item => item.PackId));
+    }
+
+    [Fact]
+    public async Task NewInstance_CreatesTheActiveInstanceWithThePackSourceAndThePinnedMods()
+    {
+        var archive = Archive(("MeasureTools/mod.toml", "name = \"MeasureTools\""));
+        using var harness = await ViewModelHarness.CreateAsync(
+            respond: request => request.RequestUri?.AbsoluteUri == MeasureToolsUrl ? ArchiveResponse(archive) : null,
+            editSnapshot: snapshot => WithPacks(Pack("tools-pack", "Tools Pack", Version("1.0.0", Pin("MeasureTools", "1.1.10"))))(
+                snapshot.Replace(MeasureToolsSha256, Convert.ToHexString(SHA256.HashData(archive)), StringComparison.Ordinal)
+                    .Replace("\"size\": 41782", $"\"size\": {archive.Length}", StringComparison.Ordinal)));
+        var viewModel = harness.ViewModel;
+        await viewModel.LoadAsync();
+        await viewModel.EnsureDiscoverLoadedAsync();
+        viewModel.ShowDiscoverModpacksCommand.Execute(null);
+        var pack = Assert.Single(viewModel.DiscoverPacks);
+
+        pack.NewInstanceCommand.Execute(null);
+
+        Assert.True(viewModel.IsNameModalOpen);
+        Assert.Equal("Tools Pack", viewModel.ModalInstanceName);
+
+        await viewModel.ConfirmNameModalCommand.ExecuteAsync(null);
+
+        Assert.False(viewModel.IsNameModalOpen);
+        Assert.StartsWith(harness.Localization.FormatPackCreatesInstance("Tools Pack"), pack.InstallWarning);
+        Assert.Contains(harness.Localization.PackCompatibilityUnknown, pack.InstallWarning);
+        Assert.Empty(await harness.Services.Instances.GetAllAsync());
+
+        await pack.ConfirmInstallCommand.ExecuteAsync(null);
+
+        Assert.Null(pack.InstallError);
+        Assert.Equal(ModPackMemberStatus.Installed, Assert.Single(pack.Results).Status);
+        var instance = Assert.Single(await harness.Services.Instances.GetAllAsync());
+        Assert.Equal("Tools Pack", instance.Name);
+        Assert.Equal(new InstanceSource.FromModPack("tools-pack", ModVersion.Parse("1.0.0")), instance.Source);
+        var mod = Assert.Single(instance.Mods);
+        Assert.Equal("MeasureTools", mod.ModId);
+        Assert.Equal(InstallReason.ModPack, mod.Reason);
+        Assert.Equal(instance.InstanceId, viewModel.ActiveInstance?.InstanceId);
+        Assert.True(pack.IsInstalled);
+        Assert.Equal("Tools Pack", viewModel.Tasks.History[0].InstanceName);
+        Assert.Contains(viewModel.Toasts.Items, toast => toast.Message == harness.Localization.FormatLibraryNowActive("Tools Pack"));
+
+        await viewModel.ActiveInstance!.OpenCommand.ExecuteAsync(null);
+
+        Assert.Equal(harness.Localization.FormatInstanceGroupModpack("Tools Pack", "1.0.0"), viewModel.ContentGroups[0].Title);
+    }
+
+    [Fact]
+    public async Task NewInstance_AnotherInstanceIsActive_KeepsItActive()
+    {
+        var archive = Archive(("MeasureTools/mod.toml", "name = \"MeasureTools\""));
+        using var harness = await ViewModelHarness.CreateAsync(
+            respond: request => request.RequestUri?.AbsoluteUri == MeasureToolsUrl ? ArchiveResponse(archive) : null,
+            editSnapshot: snapshot => WithPacks(Pack("tools-pack", "Tools Pack", Version("1.0.0", Pin("MeasureTools", "1.1.10"))))(
+                snapshot.Replace(MeasureToolsSha256, Convert.ToHexString(SHA256.HashData(archive)), StringComparison.Ordinal)
+                    .Replace("\"size\": 41782", $"\"size\": {archive.Length}", StringComparison.Ordinal)));
+        var viewModel = harness.ViewModel;
+        var career = await harness.Services.Instances.CreateAsync("Career", InstanceSource.Custom.Value);
+        await viewModel.LoadAsync();
+        await viewModel.EnsureDiscoverLoadedAsync();
+        viewModel.ShowDiscoverModpacksCommand.Execute(null);
+        var pack = Assert.Single(viewModel.DiscoverPacks);
+
+        pack.NewInstanceCommand.Execute(null);
+        await viewModel.ConfirmNameModalCommand.ExecuteAsync(null);
+        await pack.ConfirmInstallCommand.ExecuteAsync(null);
+
+        Assert.Null(pack.InstallError);
+        Assert.Contains(await harness.Services.Instances.GetAllAsync(), instance => instance.Name == "Tools Pack" && instance.Mods.Count == 1);
+        Assert.Equal(career.Instance.InstanceId, viewModel.ActiveInstance?.InstanceId);
+        Assert.DoesNotContain(viewModel.Toasts.Items, toast => toast.Message == harness.Localization.FormatLibraryNowActive("Tools Pack"));
+    }
+
+    [Fact]
+    public async Task NewInstance_NameTakenWhileTheRowWaits_ShowsTheErrorAndCreatesNothing()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: WithPacks(Pack("tools-pack", "Tools Pack", Version("1.0.0", Pin("MeasureTools", "1.1.10")))));
+        var viewModel = harness.ViewModel;
+        await viewModel.LoadAsync();
+        await viewModel.EnsureDiscoverLoadedAsync();
+        viewModel.ShowDiscoverModpacksCommand.Execute(null);
+        var pack = Assert.Single(viewModel.DiscoverPacks);
+        pack.NewInstanceCommand.Execute(null);
+        await viewModel.ConfirmNameModalCommand.ExecuteAsync(null);
+        Assert.True(pack.IsConfirmingInstall);
+        await harness.Services.Instances.CreateAsync("Tools Pack", InstanceSource.Custom.Value);
+
+        await pack.ConfirmInstallCommand.ExecuteAsync(null);
+
+        Assert.Equal(harness.Localization.ModalNameTaken, pack.InstallError);
+        var instance = Assert.Single(await harness.Services.Instances.GetAllAsync());
+        Assert.IsType<InstanceSource.Custom>(instance.Source);
+        Assert.Empty(instance.Mods);
+    }
+
+    [Fact]
+    public async Task NewInstance_TakenOrEmptyName_ShowsTheErrorInTheModal()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: WithPacks(Pack("tools-pack", "Tools Pack", Version("1.0.0", Pin("MeasureTools", "1.1.10")))));
+        var viewModel = harness.ViewModel;
+        await harness.Services.Instances.CreateAsync("tools pack", InstanceSource.Custom.Value);
+        await viewModel.LoadAsync();
+        await viewModel.EnsureDiscoverLoadedAsync();
+        viewModel.ShowDiscoverModpacksCommand.Execute(null);
+        var pack = Assert.Single(viewModel.DiscoverPacks);
+        pack.NewInstanceCommand.Execute(null);
+
+        await viewModel.ConfirmNameModalCommand.ExecuteAsync(null);
+
+        Assert.True(viewModel.IsNameModalOpen);
+        Assert.Equal(harness.Localization.ModalNameTaken, viewModel.InstanceError);
+        Assert.Null(pack.InstallWarning);
+        Assert.DoesNotContain(viewModel.Tasks.History, task => task.Kind == TaskKind.PackInstall);
+
+        viewModel.ModalInstanceName = " ";
+        await viewModel.ConfirmNameModalCommand.ExecuteAsync(null);
+
+        Assert.True(viewModel.IsNameModalOpen);
+        Assert.Equal(harness.Localization.ModalNameRequired, viewModel.InstanceError);
+        Assert.Single(await harness.Services.Instances.GetAllAsync());
+    }
+
+    [Fact]
+    public async Task NewInstance_RecommendationCleared_TheButtonShowsTheSmallerSize()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: snapshot =>
+            Recommend(WithPacks(Pack("tools-pack", "Tools Pack", Version("1.0.0", Pin("MeasureTools", "1.1.10"))))(snapshot), "MeasureTools", "1.1.10", "AdvancedFlightComputer"));
+        var viewModel = harness.ViewModel;
+        await viewModel.LoadAsync();
+        await viewModel.EnsureDiscoverLoadedAsync();
+        viewModel.ShowDiscoverModpacksCommand.Execute(null);
+        var pack = Assert.Single(viewModel.DiscoverPacks);
+        pack.NewInstanceCommand.Execute(null);
+        await viewModel.ConfirmNameModalCommand.ExecuteAsync(null);
+        var measureToolsOnly = $"{harness.Localization.InstallAnyway} ({MainViewModel.SizeText(41_782)})";
+        Assert.NotEqual(measureToolsOnly, pack.ConfirmInstallText);
+
+        pack.Choices!.Recommended.Single().IsSelected = false;
+        await ViewModelHarness.WaitUntilAsync(() => pack.PendingPlan is not null);
+
+        Assert.Equal(measureToolsOnly, pack.ConfirmInstallText);
+        Assert.Empty(await harness.Services.Instances.GetAllAsync());
     }
 
     [Fact]

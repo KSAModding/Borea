@@ -409,7 +409,7 @@ public partial class MainViewModel
 
         try
         {
-            var instance = await services.Instances.GetByIdAsync(choices.InstanceId);
+            var instance = choices.NewInstance ?? await services.Instances.GetByIdAsync(choices.InstanceId);
             return instance is null
                 ? null
                 : await PlanWithChoicesAsync(services, PlanningRequest(services, instance, choices.Requested) with { Repository = ChoicePlanMods(services) }, choices);

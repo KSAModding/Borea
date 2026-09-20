@@ -380,7 +380,10 @@
                             </DockPanel>
                             <TextBlock Classes="body-md secondary" Text="{Binding Abstract}" TextWrapping="Wrap" TextTrimming="CharacterEllipsis" MaxLines="2" LineHeight="18" />
                         </StackPanel>
-                        <Panel Grid.Column="2" VerticalAlignment="Top">
+                        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Top">
+                            <Button Classes="add" Command="{Binding NewInstanceCommand}" IsVisible="{Binding !IsInstalling}" ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.PackNewInstance}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.PackNewInstance}">
+                                <Path Classes="icon size-16" Data="{StaticResource Icon.Library}" />
+                            </Button>
                             <Button Classes="add" Command="{Binding InstallCommand}" IsVisible="{Binding CanInstall}" ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).AddToText}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).AddToText}">
                                 <Path Classes="icon size-16" Data="{StaticResource Icon.Plus}" />
                             </Button>
@@ -400,7 +403,7 @@
                             <Border Classes="chip positive" VerticalAlignment="Center" IsVisible="{Binding IsInstalled}" ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).InstalledInText}">
                                 <TextBlock Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.DiscoverInstalled}" />
                             </Border>
-                        </Panel>
+                        </StackPanel>
                     </Grid>
                     <ContentControl Grid.Row="1" Margin="0,8" Content="{Binding Choices}" IsVisible="{Binding Choices, Converter={x:Static ObjectConverters.IsNotNull}}" />
                     <StackPanel Grid.Row="2">
