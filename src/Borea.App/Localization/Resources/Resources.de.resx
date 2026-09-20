@@ -1533,8 +1533,86 @@
   <data name="ContentTabDescription" xml:space="preserve">
     <value>Beschreibung</value>
   </data>
+  <data name="ContentTabDependencies" xml:space="preserve">
+    <value>Abhängigkeiten</value>
+  </data>
   <data name="ContentTabVersions" xml:space="preserve">
     <value>Versionen</value>
+  </data>
+  <data name="ContentDependenciesOfFormat" xml:space="preserve">
+    <value>Abhängigkeiten von {0}</value>
+  </data>
+  <data name="ContentDependenciesNoRelease" xml:space="preserve">
+    <value>Es gibt keine Version zum Anzeigen.</value>
+  </data>
+  <data name="ContentNoDependencies" xml:space="preserve">
+    <value>Diese Version braucht keine anderen Mods.</value>
+  </data>
+  <data name="ContentDependencyLoaderFormat" xml:space="preserve">
+    <value>Braucht {0} {1}</value>
+  </data>
+  <data name="ContentDependencyRequired" xml:space="preserve">
+    <value>Erforderlich</value>
+  </data>
+  <data name="ContentDependencyRequiredHint" xml:space="preserve">
+    <value>Wird mit dieser Mod installiert</value>
+  </data>
+  <data name="ContentDependencyAnyOf" xml:space="preserve">
+    <value>Alternativen</value>
+  </data>
+  <data name="ContentDependencyAnyOfHint" xml:space="preserve">
+    <value>Aus jeder Gruppe wird eine mit dieser Mod installiert</value>
+  </data>
+  <data name="ContentDependencyConflicts" xml:space="preserve">
+    <value>Konflikte</value>
+  </data>
+  <data name="ContentDependencyConflictsHint" xml:space="preserve">
+    <value>Nicht zusammen installiert</value>
+  </data>
+  <data name="ContentDependencyRecommended" xml:space="preserve">
+    <value>Empfohlen</value>
+  </data>
+  <data name="ContentDependencyRecommendedHint" xml:space="preserve">
+    <value>Beim Hinzufügen ausgewählt</value>
+  </data>
+  <data name="ContentDependencySuggested" xml:space="preserve">
+    <value>Vorgeschlagen</value>
+  </data>
+  <data name="ContentDependencySuggestedHint" xml:space="preserve">
+    <value>Einen Blick wert, nicht ausgewählt</value>
+  </data>
+  <data name="ContentDependencyOptional" xml:space="preserve">
+    <value>Optional</value>
+  </data>
+  <data name="ContentDependencyOptionalHint" xml:space="preserve">
+    <value>Wird genutzt, wenn vorhanden, aber nicht mitinstalliert</value>
+  </data>
+  <data name="ContentDependencyOther" xml:space="preserve">
+    <value>Sonstige</value>
+  </data>
+  <data name="ContentDependencyOtherHint" xml:space="preserve">
+    <value>Eine Art, die diese Borea-Version nicht kennt</value>
+  </data>
+  <data name="ContentDependencyOneOf" xml:space="preserve">
+    <value>Eine davon:</value>
+  </data>
+  <data name="ContentDependencyMinFormat" xml:space="preserve">
+    <value>{0} oder neuer</value>
+  </data>
+  <data name="ContentDependencyMaxFormat" xml:space="preserve">
+    <value>bis {0}</value>
+  </data>
+  <data name="ContentDependencyRangeFormat" xml:space="preserve">
+    <value>{0} bis {1}</value>
+  </data>
+  <data name="ContentDependencyInstalledFormat" xml:space="preserve">
+    <value>Installiert {0}</value>
+  </data>
+  <data name="ContentDependencyNotInstalled" xml:space="preserve">
+    <value>Nicht installiert</value>
+  </data>
+  <data name="ContentDependencyNotInIndex" xml:space="preserve">
+    <value>Nicht im Index</value>
   </data>
   <data name="CompatibilityCompatible" xml:space="preserve">
     <value>Kompatibel</value>

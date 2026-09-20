@@ -58,6 +58,7 @@ public partial class MainViewModel
     [NotifyPropertyChangedFor(nameof(HasContentLinks))]
     [NotifyPropertyChangedFor(nameof(HasContentTags))]
     [NotifyPropertyChangedFor(nameof(IsLoaderContent))]
+    [NotifyPropertyChangedFor(nameof(HasContentDependenciesTab))]
     [NotifyPropertyChangedFor(nameof(ContentShareUrl))]
     private DiscoverItem? _selectedContent;
 
@@ -86,9 +87,15 @@ public partial class MainViewModel
     /// </summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsDescriptionTab))]
-    private bool _isVersionsTab;
+    [NotifyPropertyChangedFor(nameof(IsDependenciesTab))]
+    [NotifyPropertyChangedFor(nameof(IsVersionsTab))]
+    private ContentPageTab _contentTab;
 
-    public bool IsDescriptionTab => !IsVersionsTab;
+    public bool IsDescriptionTab => ContentTab == ContentPageTab.Description;
+
+    public bool IsDependenciesTab => ContentTab == ContentPageTab.Dependencies;
+
+    public bool IsVersionsTab => ContentTab == ContentPageTab.Versions;
 
     /// <summary>True for a loader, whose setup lives in the settings modal.</summary>
     public bool IsLoaderContent => SelectedContent?.Type == ContentType.ModLoader;
@@ -105,6 +112,8 @@ public partial class MainViewModel
     /// </summary>
     [ObservableProperty]
     private VersionItem? _latestVersion;
+
+    partial void OnLatestVersionChanged(VersionItem? value) => RefreshContentDependencies();
 
     [RelayCommand]
     internal async Task OpenContentAsync(DiscoverItem item)
@@ -147,7 +156,7 @@ public partial class MainViewModel
         item.ClearOutcome();
         SelectedContent = item;
         ContentDescriptionImages = new DescriptionImages(this, item.Images);
-        IsVersionsTab = false;
+        ContentTab = ContentPageTab.Description;
         ContentDetailError = null;
         LatestVersion = null;
         _contentReleases.Clear();
@@ -186,8 +195,8 @@ public partial class MainViewModel
             }
 
             var release = await _services.Mods.GetLatestReleaseAsync(item.ModId);
-            if (ReferenceEquals(SelectedContent, item) && release is not null)
-                LatestVersion = new VersionItem(this, release);
+            if (ReferenceEquals(SelectedContent, item))
+                LatestVersion = release is null ? null : new VersionItem(this, release);
         }
         catch (Exception exception) when (exception is HttpRequestException or IOException or InvalidOperationException or TaskCanceledException)
         {
@@ -224,7 +233,7 @@ public partial class MainViewModel
     }
 
     [RelayCommand]
-    private void ShowContentDescription() => IsVersionsTab = false;
+    private void ShowContentDescription() => ContentTab = ContentPageTab.Description;
 
     /// <summary>
     /// Leaving the content page forgets the outcome of its last action, so
@@ -257,7 +266,7 @@ public partial class MainViewModel
     [RelayCommand]
     private async Task ShowContentVersionsAsync()
     {
-        IsVersionsTab = true;
+        ContentTab = ContentPageTab.Versions;
         if (_contentReleases.Count > 0 || SelectedContent is null || _services is null || IsLoadingVersions)
             return;
 
@@ -348,6 +357,13 @@ public partial class MainViewModel
         => PlanInstallAsync(row, () => Task.FromResult<ModVersionMetadata?>(release), release.Version);
 }
 
+public enum ContentPageTab
+{
+    Description,
+    Dependencies,
+    Versions,
+}
+
 /// <summary>A link of the detail panel. <see cref="Key"/> is the key of the listing, such as "forums", and null for a changelog link.</summary>
 public sealed record ContentLink(string Label, string Url, string? Key = null);
 
@@ -378,6 +394,8 @@ public sealed partial class VersionItem : ObservableObject, IInstallRow
     private readonly ModVersionMetadata _release;
 
     internal string ModId => _release.ModId;
+
+    internal ModVersionMetadata Release => _release;
 
     public string Version => _release.Version.ToString();
 

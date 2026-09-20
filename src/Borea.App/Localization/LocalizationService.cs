@@ -1001,7 +1001,65 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string ContentTabDescription => Resources.ContentTabDescription;
 
+    public string ContentTabDependencies => Resources.ContentTabDependencies;
+
     public string ContentTabVersions => Resources.ContentTabVersions;
+
+    public string FormatContentDependenciesOf(string version)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ContentDependenciesOfFormat, version);
+
+    public string ContentDependenciesNoRelease => Resources.ContentDependenciesNoRelease;
+
+    public string ContentNoDependencies => Resources.ContentNoDependencies;
+
+    public string FormatContentDependencyLoader(string loader, string bounds)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ContentDependencyLoaderFormat, loader, bounds);
+
+    public string ContentDependencyRequired => Resources.ContentDependencyRequired;
+
+    public string ContentDependencyRequiredHint => Resources.ContentDependencyRequiredHint;
+
+    public string ContentDependencyAnyOf => Resources.ContentDependencyAnyOf;
+
+    public string ContentDependencyAnyOfHint => Resources.ContentDependencyAnyOfHint;
+
+    public string ContentDependencyConflicts => Resources.ContentDependencyConflicts;
+
+    public string ContentDependencyConflictsHint => Resources.ContentDependencyConflictsHint;
+
+    public string ContentDependencyRecommended => Resources.ContentDependencyRecommended;
+
+    public string ContentDependencyRecommendedHint => Resources.ContentDependencyRecommendedHint;
+
+    public string ContentDependencySuggested => Resources.ContentDependencySuggested;
+
+    public string ContentDependencySuggestedHint => Resources.ContentDependencySuggestedHint;
+
+    public string ContentDependencyOptional => Resources.ContentDependencyOptional;
+
+    public string ContentDependencyOptionalHint => Resources.ContentDependencyOptionalHint;
+
+    public string ContentDependencyOther => Resources.ContentDependencyOther;
+
+    public string ContentDependencyOtherHint => Resources.ContentDependencyOtherHint;
+
+    public string ContentDependencyOneOf => Resources.ContentDependencyOneOf;
+
+    public string FormatContentDependencyMin(string low)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ContentDependencyMinFormat, low);
+
+    public string FormatContentDependencyMax(string high)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ContentDependencyMaxFormat, high);
+
+    public string FormatContentDependencyRange(string low, string high)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ContentDependencyRangeFormat, low, high);
+
+    public string FormatContentDependencyInstalled(string version)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ContentDependencyInstalledFormat, version);
+
+    public string ContentDependencyNotInstalled => Resources.ContentDependencyNotInstalled;
+
+    public string ContentDependencyNotInIndex => Resources.ContentDependencyNotInIndex;
 
     public string ContentCompatibility => Resources.ContentCompatibility;
 
