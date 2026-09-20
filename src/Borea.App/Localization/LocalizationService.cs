@@ -683,6 +683,22 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string DiscoverCategory => Resources.DiscoverCategory;
 
+    public string DiscoverCategoryParts => Resources.DiscoverCategoryParts;
+
+    public string DiscoverCategoryCelestial => Resources.DiscoverCategoryCelestial;
+
+    public string DiscoverCategoryGameplay => Resources.DiscoverCategoryGameplay;
+
+    public string DiscoverCategoryUserInterface => Resources.DiscoverCategoryUserInterface;
+
+    public string DiscoverCategoryVisual => Resources.DiscoverCategoryVisual;
+
+    public string DiscoverCategoryAudio => Resources.DiscoverCategoryAudio;
+
+    public string DiscoverCategoryTools => Resources.DiscoverCategoryTools;
+
+    public string DiscoverCategoryLibrary => Resources.DiscoverCategoryLibrary;
+
     public string DiscoverCategoryOther => Resources.DiscoverCategoryOther;
 
     public string DiscoverGameVersionMin => Resources.DiscoverGameVersionMin;

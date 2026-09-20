@@ -954,6 +954,30 @@
   <data name="DiscoverCategory" xml:space="preserve">
     <value>Kategorie</value>
   </data>
+  <data name="DiscoverCategoryParts" xml:space="preserve">
+    <value>Bauteile</value>
+  </data>
+  <data name="DiscoverCategoryCelestial" xml:space="preserve">
+    <value>Himmelskörper</value>
+  </data>
+  <data name="DiscoverCategoryGameplay" xml:space="preserve">
+    <value>Spielmechanik</value>
+  </data>
+  <data name="DiscoverCategoryUserInterface" xml:space="preserve">
+    <value>Benutzeroberfläche</value>
+  </data>
+  <data name="DiscoverCategoryVisual" xml:space="preserve">
+    <value>Optik</value>
+  </data>
+  <data name="DiscoverCategoryAudio" xml:space="preserve">
+    <value>Audio</value>
+  </data>
+  <data name="DiscoverCategoryTools" xml:space="preserve">
+    <value>Werkzeuge</value>
+  </data>
+  <data name="DiscoverCategoryLibrary" xml:space="preserve">
+    <value>Bibliothek</value>
+  </data>
   <data name="DiscoverCategoryOther" xml:space="preserve">
     <value>Sonstige</value>
   </data>
