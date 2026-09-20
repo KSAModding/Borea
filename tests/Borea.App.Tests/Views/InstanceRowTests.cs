@@ -124,11 +124,14 @@ public sealed class InstanceRowTests
 
         var row = viewModel.Instances.Single();
 
-        var (opened, selected) = await OnLibraryAsync(viewModel, (window, page) =>
+        var (opened, selected) = await OnLibraryAsync(viewModel, async (window, page) =>
         {
             var toggle = Card(page).GetVisualDescendants().OfType<ToggleSwitch>().Single();
             Click(window, toggle, new Point(toggle.Bounds.Width / 2, toggle.Bounds.Height / 2));
-            return Task.FromResult((row.OpenCommand.ExecutionTask, viewModel.SelectedInstance));
+            var toggling = row.ToggleActiveCommand.ExecutionTask;
+            if (toggling is not null)
+                await toggling;
+            return (row.OpenCommand.ExecutionTask, viewModel.SelectedInstance);
         });
 
         // the switch turned the instance off, which is the proof that the click reached it
