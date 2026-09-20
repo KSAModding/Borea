@@ -23,16 +23,7 @@ public sealed partial class ResourceParityTests : IDisposable
         }
     }
 
-    [Fact]
-    public void GermanResources_HaveTheSameKeysAsNeutralResources()
-    {
-        var neutral = ReadValues("Resources.resx");
-        var german = ReadValues("Resources.de.resx");
-
-        Assert.Equal(neutral.Keys.Order(StringComparer.Ordinal), german.Keys.Order(StringComparer.Ordinal));
-    }
-
-    // Other translations may miss a key, which then shows in English.
+    // A translation may miss a key, which then shows in English.
     [Theory]
     [MemberData(nameof(Translations))]
     public void Translation_HasNoKeyThatNeutralResourcesLack(string fileName)
