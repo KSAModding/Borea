@@ -9,7 +9,9 @@
 
     <PublishSingleFile>true</PublishSingleFile>
     <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
-    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+    <!-- osx-arm64 excluded: EnableCompressionInSingleFile triggers a known .NET host
+     AccessViolationException on Apple Silicon (dotnet/runtime#123324), fixed for .NET 11. -->
+    <EnableCompressionInSingleFile Condition="'$(RuntimeIdentifier)' != 'osx-arm64'">true</EnableCompressionInSingleFile>
     <SatelliteResourceLanguages>en;de;en-QP</SatelliteResourceLanguages>
     <!-- The analyzer adds an ILLink package whose version follows the SDK, which would tie the lock files to one SDK patch. -->
     <EnableSingleFileAnalyzer>false</EnableSingleFileAnalyzer>
