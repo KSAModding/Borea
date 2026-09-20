@@ -159,6 +159,8 @@ public sealed partial class ToastItem : ObservableObject
         TaskKind.ModListImport => Localization.FormatToastInstanceCreated(Subject),
         TaskKind.ManualReplace => Localization.FormatToastReplaced(Subject, InstanceName),
         TaskKind.LibraryFolderChange => Localization.FormatToastLibraryFolderChanged(Subject),
+        TaskKind.BackupRestore => Localization.FormatToastBackupRestored(Subject, InstanceName),
+        TaskKind.BackupDelete => Localization.FormatToastBackupDeleted(Subject),
         _ => Localization.FormatToastAdded(Subject, InstanceName),
     };
 
@@ -179,6 +181,8 @@ public sealed partial class ToastItem : ObservableObject
         TaskKind.ModListImport => Localization.FormatToastCreateInstanceFailed(Subject),
         TaskKind.ManualReplace => Localization.FormatToastReplaceFailed(Subject),
         TaskKind.LibraryFolderChange => Localization.FormatToastLibraryFolderFailed(Subject),
+        TaskKind.BackupRestore => Localization.FormatToastBackupRestoreFailed(Subject),
+        TaskKind.BackupDelete => Localization.FormatToastBackupDeleteFailed(Subject),
         _ => Localization.FormatToastInstallFailed(Subject),
     };
 

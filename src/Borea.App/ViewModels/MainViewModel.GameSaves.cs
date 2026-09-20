@@ -290,6 +290,7 @@ public partial class MainViewModel
         OnPropertyChanged(nameof(GameProfileInfoText));
         VehiclesSection.RefreshText();
         SavesSection.RefreshText();
+        RefreshBackupText();
     }
 }
 

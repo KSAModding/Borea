@@ -194,6 +194,7 @@ public sealed class BoreaServicesTests : IDisposable
         Assert.IsType<FileSharedProfileImporter>(services.SharedProfileImporter);
         Assert.IsType<FileGameDataReader>(services.GameData);
         Assert.IsType<FileGameSaveStore>(services.GameSaves);
+        Assert.IsType<FileGameSaveBackupStore>(services.GameSaveBackups);
     }
 
     [Fact]

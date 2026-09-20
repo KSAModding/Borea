@@ -117,6 +117,18 @@
   <data name="SettingsLibraryFolderPickerTitle" xml:space="preserve">
     <value>Neuen Bibliotheksordner wählen</value>
   </data>
+  <data name="SettingsBackupRetentionLabel" xml:space="preserve">
+    <value>Backups löschen, die älter sind als</value>
+  </data>
+  <data name="SettingsBackupRetentionHint" xml:space="preserve">
+    <value>Die Backups von Spielständen und Fahrzeugen in jeder Instanz. Borea prüft bei jedem Start.</value>
+  </data>
+  <data name="BackupRetentionOff" xml:space="preserve">
+    <value>Aus</value>
+  </data>
+  <data name="BackupRetentionDaysFormat" xml:space="preserve">
+    <value>{0} Tage</value>
+  </data>
   <data name="SettingsGitHubLabel" xml:space="preserve">
     <value>GitHub-Konto</value>
   </data>
@@ -492,6 +504,12 @@
   <data name="TaskLibraryFolderFormat" xml:space="preserve">
     <value>Bibliothek nach {0} verschieben</value>
   </data>
+  <data name="TaskBackupRestoreFormat" xml:space="preserve">
+    <value>{0} wiederherstellen</value>
+  </data>
+  <data name="TaskBackupDeleteFormat" xml:space="preserve">
+    <value>Backup {0} löschen</value>
+  </data>
   <data name="TaskWaiting" xml:space="preserve">
     <value>Wartet</value>
   </data>
@@ -543,6 +561,12 @@
   <data name="ToastLibraryFolderChangedFormat" xml:space="preserve">
     <value>Der Bibliotheksordner ist jetzt {0}</value>
   </data>
+  <data name="ToastBackupRestoredFormat" xml:space="preserve">
+    <value>{0} in {1} wiederhergestellt</value>
+  </data>
+  <data name="ToastBackupDeletedFormat" xml:space="preserve">
+    <value>Backup {0} gelöscht</value>
+  </data>
   <data name="ToastInstallStoppedFormat" xml:space="preserve">
     <value>Installation von {0} gestoppt</value>
   </data>
@@ -584,6 +608,12 @@
   </data>
   <data name="ToastLibraryFolderFailedFormat" xml:space="preserve">
     <value>Die Bibliothek konnte nicht nach {0} verschoben werden</value>
+  </data>
+  <data name="ToastBackupRestoreFailedFormat" xml:space="preserve">
+    <value>{0} konnte nicht wiederhergestellt werden</value>
+  </data>
+  <data name="ToastBackupDeleteFailedFormat" xml:space="preserve">
+    <value>Backup {0} konnte nicht gelöscht werden</value>
   </data>
   <data name="ToastActivateFailedFormat" xml:space="preserve">
     <value>{0} konnte nicht aktiviert werden</value>
@@ -800,6 +830,33 @@
   </data>
   <data name="InstanceBackUpAllSaves" xml:space="preserve">
     <value>Alle Spielstände sichern</value>
+  </data>
+  <data name="BackupsTitle" xml:space="preserve">
+    <value>Backups</value>
+  </data>
+  <data name="BackupsEmpty" xml:space="preserve">
+    <value>Noch keine Backups dieser Instanz</value>
+  </data>
+  <data name="BackupRestore" xml:space="preserve">
+    <value>Wiederherstellen</value>
+  </data>
+  <data name="BackupBackedUpFormat" xml:space="preserve">
+    <value>Gesichert {0}</value>
+  </data>
+  <data name="BackupDeletedFormat" xml:space="preserve">
+    <value>Gelöscht {0}</value>
+  </data>
+  <data name="BackupReplacedFormat" xml:space="preserve">
+    <value>Ersetzt {0}</value>
+  </data>
+  <data name="BackupMovedFormat" xml:space="preserve">
+    <value>In die Backups verschoben {0}</value>
+  </data>
+  <data name="BackupUnknownOrigin" xml:space="preserve">
+    <value>Borea weiß nicht, woher das stammt, daher kann es nur gelöscht werden.</value>
+  </data>
+  <data name="BackupDeleteConfirm" xml:space="preserve">
+    <value>Dieses Backup endgültig löschen?</value>
   </data>
   <data name="GameLogOpen" xml:space="preserve">
     <value>Log öffnen</value>

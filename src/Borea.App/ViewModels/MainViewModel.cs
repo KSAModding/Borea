@@ -293,6 +293,7 @@ public partial class MainViewModel : ViewModelBase
         _ = Tasks.LoadAsync();
         StartLinkRegistration();
         StartUpdateCheck();
+        StartBackupCleanup();
         RecordFirstStart();
         StartAnnouncementCheck();
         InstalledVersionText = _services?.InstalledVersion.GetInstalledVersion()?.RawVersion;
@@ -754,6 +755,7 @@ public partial class MainViewModel : ViewModelBase
             && left.FirstStartedAt == right.FirstStartedAt
             && left.FetchAnnouncements == right.FetchAnnouncements
             && left.OpenBoreaLinks == right.OpenBoreaLinks
+            && left.BackupRetentionDays == right.BackupRetentionDays
             && left.DismissedAnnouncements.SequenceEqual(right.DismissedAnnouncements, StringComparer.Ordinal);
 
     private void OnRegionalFormatChanged(object? sender, PropertyChangedEventArgs e)

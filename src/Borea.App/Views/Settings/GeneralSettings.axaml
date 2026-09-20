@@ -79,6 +79,15 @@
             </StackPanel>
             <TextBlock Classes="body-md secondary" Text="{Binding LibraryFolderMessage}" TextWrapping="Wrap" IsVisible="{Binding LibraryFolderMessage, Converter={x:Static ObjectConverters.IsNotNull}}" />
             <TextBlock Classes="body-md danger" Text="{Binding LibraryFolderError}" TextWrapping="Wrap" IsVisible="{Binding LibraryFolderError, Converter={x:Static ObjectConverters.IsNotNull}}" />
+            <TextBlock Classes="body-md" Text="{Binding Localization.SettingsBackupRetentionLabel}" Margin="0,12,0,0" />
+            <TextBlock Classes="body-sm secondary" Text="{Binding Localization.SettingsBackupRetentionHint}" TextWrapping="Wrap" Width="340" HorizontalAlignment="Left" />
+            <ComboBox ItemsSource="{Binding BackupRetentionOptions}" SelectedItem="{Binding SelectedBackupRetention, Mode=TwoWay}" AutomationProperties.Name="{Binding Localization.SettingsBackupRetentionLabel}" Width="340" Margin="0,4,0,0">
+                <ComboBox.ItemTemplate>
+                    <DataTemplate x:DataType="vm:BackupRetentionOption">
+                        <TextBlock Text="{Binding Text}" />
+                    </DataTemplate>
+                </ComboBox.ItemTemplate>
+            </ComboBox>
             <StackPanel Spacing="6" Margin="0,18,0,0" IsVisible="{Binding IsGitHubAccountAvailable}">
                 <TextBlock Classes="heading-md" Text="{Binding Localization.SettingsGitHubLabel}" />
                 <StackPanel Spacing="6" IsVisible="{Binding !IsGitHubSignedIn}">

@@ -45,6 +45,9 @@ internal sealed class AppPreferencesDocumentDto
     /// <summary>Null in an older file, which reads as on.</summary>
     public bool? OpenBoreaLinks { get; set; }
 
+    /// <summary>Null keeps every backup. A value below one day reads as null.</summary>
+    public int? BackupRetentionDays { get; set; }
+
     public List<CustomThemePreferenceDto?>? CustomThemes { get; set; }
 }
 

@@ -69,6 +69,12 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string FormatTaskLibraryFolder(string folder)
         => string.Format(CultureInfo.CurrentCulture, Resources.TaskLibraryFolderFormat, folder);
 
+    public string FormatTaskBackupRestore(string name)
+        => string.Format(CultureInfo.CurrentCulture, Resources.TaskBackupRestoreFormat, name);
+
+    public string FormatTaskBackupDelete(string name)
+        => string.Format(CultureInfo.CurrentCulture, Resources.TaskBackupDeleteFormat, name);
+
     public string TaskWaiting => Resources.TaskWaiting;
 
     public string TaskRunning => Resources.TaskRunning;
@@ -111,6 +117,12 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string FormatToastLibraryFolderChanged(string folder)
         => string.Format(CultureInfo.CurrentCulture, Resources.ToastLibraryFolderChangedFormat, folder);
 
+    public string FormatToastBackupRestored(string name, string instanceName)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ToastBackupRestoredFormat, name, instanceName);
+
+    public string FormatToastBackupDeleted(string name)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ToastBackupDeletedFormat, name);
+
     public string FormatToastInstallStopped(string content)
         => string.Format(CultureInfo.CurrentCulture, Resources.ToastInstallStoppedFormat, content);
 
@@ -150,6 +162,12 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string FormatToastLibraryFolderFailed(string folder)
         => string.Format(CultureInfo.CurrentCulture, Resources.ToastLibraryFolderFailedFormat, folder);
+
+    public string FormatToastBackupRestoreFailed(string name)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ToastBackupRestoreFailedFormat, name);
+
+    public string FormatToastBackupDeleteFailed(string name)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ToastBackupDeleteFailedFormat, name);
 
     public string FormatToastActivateFailed(string instanceName)
         => string.Format(CultureInfo.CurrentCulture, Resources.ToastActivateFailedFormat, instanceName);
@@ -261,6 +279,15 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string SettingsLibraryFolderOpenToolTip => Resources.SettingsLibraryFolderOpenToolTip;
 
     public string SettingsLibraryFolderPickerTitle => Resources.SettingsLibraryFolderPickerTitle;
+
+    public string SettingsBackupRetentionLabel => Resources.SettingsBackupRetentionLabel;
+
+    public string SettingsBackupRetentionHint => Resources.SettingsBackupRetentionHint;
+
+    public string BackupRetentionOff => Resources.BackupRetentionOff;
+
+    public string FormatBackupRetentionDays(int days)
+        => string.Format(CultureInfo.CurrentCulture, Resources.BackupRetentionDaysFormat, days);
 
     public string SettingsGitHubLabel => Resources.SettingsGitHubLabel;
 
@@ -588,6 +615,16 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string GameSavesNothingToBackUp => Resources.GameSavesNothingToBackUp;
 
     public string InstanceBackUpAllSaves => Resources.InstanceBackUpAllSaves;
+
+    public string BackupsTitle => Resources.BackupsTitle;
+
+    public string BackupsEmpty => Resources.BackupsEmpty;
+
+    public string BackupRestore => Resources.BackupRestore;
+
+    public string BackupUnknownOrigin => Resources.BackupUnknownOrigin;
+
+    public string BackupDeleteConfirm => Resources.BackupDeleteConfirm;
 
     public string GameLogOpen => Resources.GameLogOpen;
 
@@ -1629,6 +1666,18 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string FormatGameSavesBackedUp(int count, string folder)
         => string.Format(CultureInfo.CurrentCulture, Resources.GameSavesBackedUpFormat, count, folder);
+
+    public string FormatBackupBackedUp(string time)
+        => string.Format(CultureInfo.CurrentCulture, Resources.BackupBackedUpFormat, time);
+
+    public string FormatBackupDeleted(string time)
+        => string.Format(CultureInfo.CurrentCulture, Resources.BackupDeletedFormat, time);
+
+    public string FormatBackupReplaced(string time)
+        => string.Format(CultureInfo.CurrentCulture, Resources.BackupReplacedFormat, time);
+
+    public string FormatBackupMoved(string time)
+        => string.Format(CultureInfo.CurrentCulture, Resources.BackupMovedFormat, time);
 
     public string FormatContentRemoveNotOwned(string modId)
         => string.Format(CultureInfo.CurrentCulture, Resources.ContentRemoveNotOwnedFormat, modId);

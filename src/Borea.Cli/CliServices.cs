@@ -38,6 +38,8 @@ internal sealed class CliServices : IDisposable
 
     public required IGameLogReader GameLog { get; init; }
 
+    public required IGameSaveBackupStore GameSaveBackups { get; init; }
+
     public required IPlaytimeService Playtime { get; init; }
 
     public required IModListFormat ModListFormat { get; init; }
@@ -141,6 +143,7 @@ internal sealed class CliServices : IDisposable
             Instances = instances ?? services.Instances,
             ModState = services.ModState,
             GameLog = services.GameLog,
+            GameSaveBackups = services.GameSaveBackups,
             Playtime = services.Playtime,
             ModListFormat = services.ModListFormat,
             LatestVersion = latestVersion ?? services.LatestVersion,

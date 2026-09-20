@@ -1,4 +1,3 @@
-using System.Globalization;
 using System.IO.Compression;
 using Borea.Core.Instances;
 using Borea.Core.Paths;
@@ -31,12 +30,12 @@ public sealed class FileGameSaveStore : IGameSaveStore
     private static readonly StringComparer PathComparer = OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
 
     private readonly IGamePathProvider _paths;
-    private readonly TimeProvider _time;
+    private readonly GameSaveBackupFolder _backups;
 
     public FileGameSaveStore(IGamePathProvider paths, TimeProvider? time = null)
     {
         _paths = paths ?? throw new ArgumentNullException(nameof(paths));
-        _time = time ?? TimeProvider.System;
+        _backups = new GameSaveBackupFolder(paths, time ?? TimeProvider.System);
     }
 
     public string GetFolder(Guid instanceId, GameSaveKind kind)
@@ -56,40 +55,42 @@ public sealed class FileGameSaveStore : IGameSaveStore
         }, cancellationToken);
 
     public Task<string> BackUpAsync(Guid instanceId, GameSaveEntry entry, CancellationToken cancellationToken = default)
-        => Task.Run(() => BackUp(instanceId, RequireInInstance(instanceId, entry), Stamp(), cancellationToken), cancellationToken);
+        => Task.Run(() => BackUpCoreAsync(instanceId, RequireInInstance(instanceId, entry), _backups.Now(), cancellationToken), cancellationToken);
 
     public Task<IReadOnlyList<string>> BackUpAllAsync(Guid instanceId, GameSaveKind kind, CancellationToken cancellationToken = default)
-        => Task.Run<IReadOnlyList<string>>(() =>
+        => Task.Run<IReadOnlyList<string>>(async () =>
         {
             var entries = List(GetFolder(instanceId, kind), kind, cancellationToken);
             foreach (var entry in entries)
                 EnsureNotInUse(entry.Path);
 
-            var stamp = Stamp();
-            return entries.Select(entry => BackUp(instanceId, entry, stamp, cancellationToken)).ToList();
+            var now = _backups.Now();
+            var zips = new List<string>();
+            foreach (var entry in entries)
+                zips.Add(await BackUpCoreAsync(instanceId, entry, now, cancellationToken).ConfigureAwait(false));
+            return zips;
         }, cancellationToken);
 
     public Task<GameSaveCopyOutcome> CopyAsync(GameSaveEntry entry, Guid targetInstanceId, bool replace, CancellationToken cancellationToken = default)
-        => Task.Run(() => Copy(entry, targetInstanceId, replace, cancellationToken), cancellationToken);
+        => Task.Run(() => CopyCoreAsync(entry, targetInstanceId, replace, cancellationToken), cancellationToken);
 
     public Task<string> DeleteAsync(Guid instanceId, GameSaveEntry entry, CancellationToken cancellationToken = default)
         => Task.Run(() =>
         {
             RequireInInstance(instanceId, entry);
             EnsureNotInUse(entry.Path);
-            return MoveToBackups(instanceId, entry.Kind, entry.Path);
+            return _backups.MoveInAsync(instanceId, entry.Kind, entry.Path, GameSaveBackupReason.Deleted);
         }, cancellationToken);
 
     private string GetSharedProfileFolder(GameSaveKind kind) => FindFolder(Path.Combine(_paths.GetSharedProfileRoot(), FolderName(kind)));
 
-    // GameSaves.SaveFolderPath and VehicleSaves.SaveFolderPath below Constants.DocumentsFolderPath
-    private static string FolderName(GameSaveKind kind) => kind == GameSaveKind.Save ? "saves" : "Vehicles";
+    private static string FolderName(GameSaveKind kind) => GameSaveBackupFolder.FolderName(kind);
 
     /// <summary>
     /// The folder in any letter case, because a profile can hold "vehicles"
     /// instead of "Vehicles". The exact spelling wins.
     /// </summary>
-    private static string FindFolder(string folder)
+    internal static string FindFolder(string folder)
     {
         var parent = new DirectoryInfo(Path.GetDirectoryName(folder)!);
         if (!parent.Exists)
@@ -132,14 +133,26 @@ public sealed class FileGameSaveStore : IGameSaveStore
             folder.EnumerateFiles("*", SizeOptions).Sum(file => file.Length));
     }
 
-    private static (string? Name, DateTimeOffset? Updated, string? Build) ReadMetadata(string path)
+    internal static (string? Name, DateTimeOffset? Updated, string? Build) ReadMetadata(string path)
+    {
+        try
+        {
+            return ParseMetadata(File.ReadAllText(path));
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            return default;
+        }
+    }
+
+    internal static (string? Name, DateTimeOffset? Updated, string? Build) ParseMetadata(string text)
     {
         TomlTable table;
         try
         {
-            table = TomlSerializer.Deserialize<TomlTable>(File.ReadAllText(path)) ?? new TomlTable();
+            table = TomlSerializer.Deserialize<TomlTable>(text) ?? new TomlTable();
         }
-        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or TomlException)
+        catch (TomlException)
         {
             return default;
         }
@@ -178,7 +191,7 @@ public sealed class FileGameSaveStore : IGameSaveStore
     /// Opens every file without sharing, which fails while another program
     /// holds one open, so no change stops halfway through a folder.
     /// </summary>
-    private static void EnsureNotInUse(string folder)
+    internal static void EnsureNotInUse(string folder)
     {
         foreach (var file in Directory.EnumerateFiles(folder, "*", EveryEntry))
         {
@@ -193,14 +206,15 @@ public sealed class FileGameSaveStore : IGameSaveStore
         }
     }
 
-    private string BackUp(Guid instanceId, GameSaveEntry entry, string stamp, CancellationToken cancellationToken)
+    private async Task<string> BackUpCoreAsync(Guid instanceId, GameSaveEntry entry, DateTimeOffset now, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
         EnsureNotInUse(entry.Path);
-        var folder = Directory.CreateDirectory(BackupFolder(instanceId, entry.Kind)).FullName;
+        var folder = Directory.CreateDirectory(_backups.KindFolder(instanceId, entry.Kind)).FullName;
+        var folderName = Path.GetFileName(entry.Path);
         for (var attempt = 1; ; attempt++)
         {
-            var path = Path.Combine(folder, BackupName(Path.GetFileName(entry.Path), stamp, attempt) + ".zip");
+            var path = Path.Combine(folder, GameSaveBackupFolder.Name(folderName, GameSaveBackupFolder.Stamp(now), attempt) + ".zip");
             FileStream stream;
             try
             {
@@ -222,11 +236,12 @@ public sealed class FileGameSaveStore : IGameSaveStore
                 throw;
             }
 
+            await GameSaveBackupFolder.TryWriteRecordAsync(path, folderName, now, GameSaveBackupReason.BackedUp).ConfigureAwait(false);
             return path;
         }
     }
 
-    private GameSaveCopyOutcome Copy(GameSaveEntry entry, Guid targetInstanceId, bool replace, CancellationToken cancellationToken)
+    private async Task<GameSaveCopyOutcome> CopyCoreAsync(GameSaveEntry entry, Guid targetInstanceId, bool replace, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(entry);
 
@@ -257,7 +272,7 @@ public sealed class FileGameSaveStore : IGameSaveStore
         {
             CopyFolder(source, staging, cancellationToken);
             Directory.CreateDirectory(folder);
-            var replaced = exists ? MoveToBackups(targetInstanceId, entry.Kind, target) : null;
+            var replaced = exists ? await _backups.MoveInAsync(targetInstanceId, entry.Kind, target, GameSaveBackupReason.Replaced).ConfigureAwait(false) : null;
             try
             {
                 Directory.Move(staging, target);
@@ -265,6 +280,7 @@ public sealed class FileGameSaveStore : IGameSaveStore
             catch when (replaced is not null)
             {
                 Directory.Move(replaced, target);
+                GameSaveBackupFolder.TryDeleteRecord(replaced);
                 throw;
             }
         }
@@ -296,30 +312,7 @@ public sealed class FileGameSaveStore : IGameSaveStore
         }
     }
 
-    private string MoveToBackups(Guid instanceId, GameSaveKind kind, string folder)
-    {
-        var backups = Directory.CreateDirectory(BackupFolder(instanceId, kind)).FullName;
-        var stamp = Stamp();
-        for (var attempt = 1; ; attempt++)
-        {
-            var target = Path.Combine(backups, BackupName(Path.GetFileName(folder), stamp, attempt));
-            if (Directory.Exists(target) || File.Exists(target))
-                continue;
-
-            Directory.Move(folder, target);
-            return target;
-        }
-    }
-
-    private string BackupFolder(Guid instanceId, GameSaveKind kind)
-        => Path.Combine(_paths.GetBackupsRoot(), instanceId.ToString(), FolderName(kind));
-
-    private static string BackupName(string folderName, string stamp, int attempt)
-        => attempt == 1 ? $"{folderName}-{stamp}" : $"{folderName}-{stamp}-{attempt}";
-
-    private string Stamp() => _time.GetUtcNow().ToString("yyyy-MM-dd'T'HHmmss'Z'", CultureInfo.InvariantCulture);
-
-    private static void TryDelete(Action delete)
+    internal static void TryDelete(Action delete)
     {
         try
         {

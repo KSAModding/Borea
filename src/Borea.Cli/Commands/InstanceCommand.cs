@@ -17,7 +17,7 @@ internal static class InstanceCommand
 
     public static Command Build(Func<CancellationToken, Task<CliServices>> services, PassThroughArguments passThrough)
     {
-        var instance = new Command("instance", "List, show, create, duplicate, rename, delete, activate, and deactivate instances, set their launch arguments, create one from the mods of the shared profile, export and import modlists, and adopt mods that Borea did not install.");
+        var instance = new Command("instance", "List, show, create, duplicate, rename, delete, activate, and deactivate instances, set their launch arguments, create one from the mods of the shared profile, export and import modlists, adopt mods that Borea did not install, and restore or delete backups of saves and vehicles.");
         instance.Subcommands.Add(BuildList(services));
         instance.Subcommands.Add(BuildShow(services));
         instance.Subcommands.Add(BuildCreate(services));
@@ -35,6 +35,9 @@ internal static class InstanceCommand
         instance.Subcommands.Add(BuildScan(services));
         instance.Subcommands.Add(BuildAdopt(services));
         instance.Subcommands.Add(BuildImportProfile(services));
+        instance.Subcommands.Add(BackupCommands.BuildList(services));
+        instance.Subcommands.Add(BackupCommands.BuildRestore(services));
+        instance.Subcommands.Add(BackupCommands.BuildDelete(services));
         return instance;
     }
 

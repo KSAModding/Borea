@@ -131,6 +131,44 @@
                 </StackPanel>
             </Border>
         </DataTemplate>
+
+        <DataTemplate x:Key="BackupRow" x:DataType="vm:GameSaveBackupItem">
+            <Border BorderBrush="{StaticResource Brush.BorderStrong}" BorderThickness="0,1,0,0" Padding="16,8">
+                <Grid ColumnDefinitions="48,16,*,24,Auto">
+                    <Border Classes="thumbnail" Width="48" Height="48">
+                        <Panel>
+                            <Path Classes="icon" Data="{StaticResource Icon.Cylinder}" IsVisible="{Binding IsVehicle}" />
+                            <Path Classes="icon" Data="{StaticResource Icon.Planet}" IsVisible="{Binding IsSave}" />
+                            <Path Classes="icon" Data="{StaticResource Icon.FolderOpen}" IsVisible="{Binding !CanRestore}" />
+                        </Panel>
+                    </Border>
+                    <StackPanel Grid.Column="2" VerticalAlignment="Center" Spacing="2">
+                        <TextBlock Classes="heading-sm" Text="{Binding Name}" ToolTip.Tip="{Binding Id}" TextTrimming="CharacterEllipsis" />
+                        <TextBlock Classes="body-sm secondary" Text="{Binding TimeText}" />
+                        <TextBlock Classes="body-sm secondary" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.BackupUnknownOrigin}" TextWrapping="Wrap" IsVisible="{Binding !CanRestore}" />
+                        <TextBlock Classes="body-sm danger" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.BackupDeleteConfirm}" TextWrapping="Wrap" IsVisible="{Binding IsConfirmingDelete}" />
+                        <TextBlock Classes="body-sm danger" Text="{Binding ReplaceText}" TextWrapping="Wrap" IsVisible="{Binding IsConfirmingReplace}" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="4" Orientation="Horizontal" Spacing="24" VerticalAlignment="Center">
+                        <TextBlock Classes="label-md" Text="{Binding SizeText}" VerticalAlignment="Center" />
+                        <Panel VerticalAlignment="Center">
+                            <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding IsConfirmingDelete}">
+                                <Button Classes="text danger" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryDelete}" Command="{Binding ConfirmDeleteCommand}" />
+                                <Button Classes="text" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryCancel}" Command="{Binding CancelCommand}" />
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding IsConfirmingReplace}">
+                                <Button Classes="text danger" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.GameSaveReplace}" Command="{Binding ConfirmReplaceCommand}" />
+                                <Button Classes="text" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryCancel}" Command="{Binding CancelCommand}" />
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding IsIdle}">
+                                <Button Classes="text primary" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.BackupRestore}" Command="{Binding RestoreCommand}" IsVisible="{Binding CanRestore}" />
+                                <Button Classes="text" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryDelete}" Command="{Binding BeginDeleteCommand}" />
+                            </StackPanel>
+                        </Panel>
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </DataTemplate>
     </UserControl.Resources>
 
     <!-- Instance (library-instance) -->
@@ -321,6 +359,16 @@
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
+                    <Border BorderBrush="{StaticResource Brush.BorderStrong}" BorderThickness="1" CornerRadius="16" views:RoundedClip.IsEnabled="True" Padding="0,0,0,4" Margin="0,24,0,0">
+                        <StackPanel>
+                            <Border Background="{StaticResource Brush.Surface}" Padding="16,11">
+                                <TextBlock Classes="body-md secondary" Text="{Binding Localization.BackupsTitle}" />
+                            </Border>
+                            <TextBlock Classes="body-sm danger" Text="{Binding BackupsError}" TextWrapping="Wrap" Margin="16,8" IsVisible="{Binding BackupsError, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                            <TextBlock Classes="body-md muted" Text="{Binding Localization.BackupsEmpty}" Margin="16,12" IsVisible="{Binding ShowNoBackups}" />
+                            <ItemsControl ItemsSource="{Binding BackupItems}" ItemTemplate="{StaticResource BackupRow}" />
+                        </StackPanel>
+                    </Border>
                 </StackPanel>
 
                 <StackPanel IsVisible="{Binding IsLogTab}" Spacing="8" Margin="0,32,0,0">
