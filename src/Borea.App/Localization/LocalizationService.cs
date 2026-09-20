@@ -826,6 +826,8 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string ListingGameMax => Resources.ListingGameMax;
 
+    public string ListingGameMaxHint => Resources.ListingGameMaxHint;
+
     public string ListingGameHint => Resources.ListingGameHint;
 
     public string ListingUsesLoader => Resources.ListingUsesLoader;
@@ -835,6 +837,8 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string ListingLoaderMin => Resources.ListingLoaderMin;
 
     public string ListingLoaderMax => Resources.ListingLoaderMax;
+
+    public string ListingLoaderMaxHint => Resources.ListingLoaderMaxHint;
 
     public string ListingDependenciesHint => Resources.ListingDependenciesHint;
 

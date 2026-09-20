@@ -193,6 +193,7 @@
                                 <TextBox Classes="field" Text="{Binding ListingEditor.GameMin}" AutomationProperties.Name="{Binding Localization.ListingGameMin}" />
                                 <TextBlock Classes="heading-sm" Text="{Binding Localization.ListingGameMax}" Margin="0,10,0,0" />
                                 <TextBox Classes="field" Text="{Binding ListingEditor.GameMax}" AutomationProperties.Name="{Binding Localization.ListingGameMax}" />
+                                <TextBlock Classes="body-sm secondary" Text="{Binding Localization.ListingGameMaxHint}" TextWrapping="Wrap" />
                                 <StackPanel Spacing="6" Margin="0,16,0,0" IsVisible="{Binding ListingEditor.CanUseLoader}">
                                     <Grid ColumnDefinitions="*,16,Auto">
                                         <TextBlock Classes="heading-sm" Text="{Binding Localization.ListingUsesLoader}" TextWrapping="Wrap" VerticalAlignment="Center" />
@@ -205,6 +206,7 @@
                                         <TextBox Classes="field" Text="{Binding ListingEditor.LoaderMin}" AutomationProperties.Name="{Binding Localization.ListingLoaderMin}" />
                                         <TextBlock Classes="heading-sm" Text="{Binding Localization.ListingLoaderMax}" Margin="0,10,0,0" />
                                         <TextBox Classes="field" Text="{Binding ListingEditor.LoaderMax}" AutomationProperties.Name="{Binding Localization.ListingLoaderMax}" />
+                                        <TextBlock Classes="body-sm secondary" Text="{Binding Localization.ListingLoaderMaxHint}" TextWrapping="Wrap" />
                                     </StackPanel>
                                 </StackPanel>
                             </StackPanel>

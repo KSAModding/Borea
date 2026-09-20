@@ -1243,10 +1243,13 @@
     <value>Älteste Spielversion</value>
   </data>
   <data name="ListingGameMax" xml:space="preserve">
-    <value>Neueste getestete Spielversion</value>
+    <value>Letzte funktionierende Spielversion</value>
+  </data>
+  <data name="ListingGameMaxHint" xml:space="preserve">
+    <value>Lass das leer, außer die Mod funktioniert mit neueren Spielversionen nicht mehr. Spieler mit einer neueren Version bekommen dann vor dem Installieren eine Warnung. Jedes Release, das mit dieser Grenze gestempelt wird, behält sie, weil ein Release später nur strenger werden kann.</value>
   </data>
   <data name="ListingGameHint" xml:space="preserve">
-    <value>So, wie das Spiel sie anzeigt, zum Beispiel 2026.9.10.5438, oder ein Monat wie 2026.9. Lass die neueste leer, außer ein neueres Spiel macht die Mod kaputt.</value>
+    <value>So, wie das Spiel sie anzeigt, zum Beispiel 2026.9.10.5438, oder ein Monat wie 2026.9.</value>
   </data>
   <data name="ListingUsesLoader" xml:space="preserve">
     <value>Braucht einen Mod-Loader</value>
@@ -1258,7 +1261,10 @@
     <value>Älteste Loader-Version</value>
   </data>
   <data name="ListingLoaderMax" xml:space="preserve">
-    <value>Neueste Loader-Version</value>
+    <value>Letzte funktionierende Loader-Version</value>
+  </data>
+  <data name="ListingLoaderMaxHint" xml:space="preserve">
+    <value>Lass das leer, außer die Mod funktioniert mit neueren Loader-Versionen nicht mehr. Jedes Release, das mit dieser Grenze gestempelt wird, behält sie, weil ein Release später nur strenger werden kann.</value>
   </data>
   <data name="ListingDependenciesHint" xml:space="preserve">
     <value>Nur, was die mod.toml deines Archivs nicht sagen kann, zum Beispiel Versionsgrenzen oder einen Konflikt.</value>

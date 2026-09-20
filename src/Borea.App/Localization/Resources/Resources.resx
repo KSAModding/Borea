@@ -1243,10 +1243,13 @@
     <value>Oldest game version</value>
   </data>
   <data name="ListingGameMax" xml:space="preserve">
-    <value>Newest tested game version</value>
+    <value>Last working game version</value>
+  </data>
+  <data name="ListingGameMaxHint" xml:space="preserve">
+    <value>Leave this empty unless the mod stops working on newer game builds. Players on a newer build then get a warning before they install. Every release stamped while this is set keeps the limit, because a release can only get stricter later.</value>
   </data>
   <data name="ListingGameHint" xml:space="preserve">
-    <value>As the game shows it, such as 2026.9.10.5438, or a month such as 2026.9. Leave the newest empty unless a newer game breaks the mod.</value>
+    <value>As the game shows it, such as 2026.9.10.5438, or a month such as 2026.9.</value>
   </data>
   <data name="ListingUsesLoader" xml:space="preserve">
     <value>Needs a mod loader</value>
@@ -1258,7 +1261,10 @@
     <value>Oldest loader version</value>
   </data>
   <data name="ListingLoaderMax" xml:space="preserve">
-    <value>Newest loader version</value>
+    <value>Last working loader version</value>
+  </data>
+  <data name="ListingLoaderMaxHint" xml:space="preserve">
+    <value>Leave this empty unless the mod stops working with newer loader versions. Every release stamped while this is set keeps the limit, because a release can only get stricter later.</value>
   </data>
   <data name="ListingDependenciesHint" xml:space="preserve">
     <value>Only what the mod.toml of your archive cannot say, such as version bounds or a conflict.</value>
