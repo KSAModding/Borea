@@ -36,6 +36,11 @@
   --gutter: 24px;
   --section-gap: 64px;
   --column: 880px;
+  /* A share page is wider than the landing page, because it holds a description beside the side panel. */
+  --column-wide: 1040px;
+  /* The line length of prose, about 75 characters, which a wide block such as a code block or an image passes. */
+  --measure: 620px;
+  --shot-height: 620px;
   color-scheme: dark;
 }
 
@@ -209,6 +214,10 @@ h1 {
   padding: 0 var(--gutter);
 }
 
+.share .column {
+  max-width: calc(var(--column-wide) + 2 * var(--gutter));
+}
+
 section p {
   text-wrap: pretty;
 }
@@ -309,6 +318,28 @@ footer p {
   text-transform: uppercase;
 }
 
+/* The header of a share page holds the icon beside the name, the way the mod page of the App does. */
+.listing-header {
+  display: grid;
+  grid-template-columns: 128px minmax(0, 1fr);
+  gap: 32px;
+  padding: 56px 0 0;
+}
+
+.listing-header .kind {
+  margin-top: 0;
+}
+
+.listing-header .tagline {
+  margin-top: 12px;
+  font-size: 1.125rem;
+}
+
+.listing-header .actions {
+  justify-content: flex-start;
+  margin-top: 24px;
+}
+
 .listing h1 {
   margin-top: 8px;
   font-size: clamp(2rem, 7vw, 3rem);
@@ -368,6 +399,251 @@ footer p {
   margin-top: 16px;
 }
 
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 16px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.chip {
+  padding: 2px 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font-family: var(--mono);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
+
+/* The description beside the side panel, one column below 760px. The column never grows past the page,
+   so a wide code block scrolls by itself instead of widening the page around it. */
+.listing-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+  margin-top: 48px;
+}
+
+@media (min-width: 760px) {
+  .listing-body {
+    grid-template-columns: minmax(0, 1fr) 260px;
+    align-items: start;
+  }
+
+  /* The panel follows a description that can be many screens tall. It stops at the end of the listing body,
+     so it never reaches the footer, and it scrolls by itself when a screen is too short for it. */
+  .panel {
+    position: sticky;
+    top: var(--gutter);
+    max-height: calc(100vh - 2 * var(--gutter));
+    max-height: calc(100dvh - 2 * var(--gutter));
+    overflow-y: auto;
+  }
+}
+
+/* A section of a share page keeps its heading above its content, unlike the sections of the landing page. */
+.listing-body section {
+  display: block;
+  margin-top: 0;
+}
+
+.listing-body section h2 {
+  margin-bottom: 12px;
+}
+
+.panel {
+  display: grid;
+  gap: 20px;
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+}
+
+.panel section + section {
+  padding-top: 20px;
+  border-top: 1px solid var(--line);
+}
+
+.panel .chips {
+  margin-top: 0;
+}
+
+.prose {
+  overflow-wrap: break-word;
+}
+
+/* Prose keeps a line length that reads well, and a block that needs the room takes the whole column. */
+.prose > * {
+  max-width: var(--measure);
+}
+
+.prose > pre,
+.prose > table,
+.author-images .prose > figure[data-image]:not(.no-image) {
+  max-width: none;
+}
+
+.prose > :first-child {
+  margin-top: 0;
+}
+
+.prose p,
+.prose ul,
+.prose ol,
+.prose pre {
+  margin-top: 12px;
+}
+
+/* Prose only, because a code block keeps the lines its author wrote and scrolls instead of wrapping them. */
+.prose p,
+.prose ul,
+.prose ol {
+  text-wrap: pretty;
+}
+
+.prose h3,
+.prose h4,
+.prose h5,
+.prose h6 {
+  margin: 28px 0 0;
+  color: var(--text);
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.prose ul,
+.prose ol {
+  padding-left: 24px;
+}
+
+.prose li + li {
+  margin-top: 4px;
+}
+
+.prose pre {
+  padding: 12px 16px;
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+}
+
+.prose code {
+  font-family: var(--mono);
+  font-size: 0.875rem;
+}
+
+.prose pre code {
+  font-size: 0.8125rem;
+}
+
+/* An image the page does not show stands as its caption alone, marked as a caption. That is an image with no
+   record of its own, an image the reader asked the page not to load, and an image whose bytes did not arrive
+   or did not match their record. */
+.prose .figure,
+.prose figcaption {
+  max-width: var(--measure);
+  padding: 10px 14px;
+  border: 1px dashed var(--line);
+  border-radius: 12px;
+  font-size: 0.875rem;
+}
+
+.prose figure {
+  margin: 12px 0 0;
+}
+
+.prose figcaption {
+  margin-top: 8px;
+}
+
+.prose .frame {
+  display: none;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+}
+
+.prose .frame img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.prose .credit {
+  display: none;
+}
+
+/* The page keeps the room of an image from the first paint, because the script reads the switch of the reader
+   before the body is parsed, so nothing moves when the bytes arrive. A figure gives the room back when its
+   bytes do not arrive or do not match their record, which is the class the script writes on it. */
+.author-images .prose figure[data-image]:not(.no-image) {
+  margin-top: 24px;
+}
+
+.author-images .prose figure[data-image]:not(.no-image) .frame {
+  display: block;
+}
+
+.author-images .prose figure[data-image]:not(.no-image) figcaption {
+  padding: 0;
+  border: 0;
+}
+
+/* An image that has nothing to say keeps a caption for the reader who does not get the image, and no
+   caption under the image itself. */
+.author-images .prose figure[data-image]:not(.no-image) figcaption.untitled {
+  display: none;
+}
+
+.author-images .prose figure[data-image]:not(.no-image) .credit {
+  display: inline;
+  margin-left: 10px;
+  color: var(--text-2);
+}
+
+/* RFC 0058 asks a client to offer a reader a way to load no image from the host of an author. The page
+   carries the switch, and the script that drives it opens it, so a page with no script offers no switch. */
+.image-switch {
+  display: none;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+  margin-bottom: 16px;
+}
+
+.author-images-ready .image-switch {
+  display: flex;
+}
+
+.image-switch label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text);
+}
+
+.image-switch input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: var(--accent);
+}
+
+.prose a {
+  text-decoration: underline;
+  text-decoration-color: rgb(202 188 255 / 0.4);
+}
+
+.prose a:hover,
+.prose a:focus-visible {
+  text-decoration-color: currentColor;
+}
+
 .facts {
   display: grid;
   grid-template-columns: max-content 1fr;
@@ -382,6 +658,16 @@ footer p {
 .facts dd {
   margin: 0;
   overflow-wrap: anywhere;
+}
+
+/* The side panel is too narrow for two columns, so a fact stands above its value there. */
+.panel .facts {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 2px;
+}
+
+.panel .facts dd + dt {
+  margin-top: 12px;
 }
 
 .channel {
@@ -413,6 +699,12 @@ footer p {
 
   .hero {
     padding: 72px var(--gutter) 56px;
+  }
+
+  .listing-header {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 20px;
+    padding-top: 40px;
   }
 
   .icon {

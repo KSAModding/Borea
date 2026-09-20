@@ -62,7 +62,7 @@ class FakeFetch:
 
 
 class Tags(html.parser.HTMLParser):
-    """Every start tag of a page with its attributes, and the text of its script elements."""
+    """Every start tag of a page with its attributes, and the text of the script elements that carry one."""
 
     def __init__(self):
         super().__init__()
@@ -81,7 +81,9 @@ class Tags(html.parser.HTMLParser):
 
     def handle_endtag(self, tag):
         if tag == "script" and self._script is not None:
-            self.scripts.append("".join(self._script))
+            text = "".join(self._script)
+            if text:
+                self.scripts.append(text)
             self._script = None
 
 
@@ -89,6 +91,39 @@ def parse(page: str) -> Tags:
     tags = Tags()
     tags.feed(page)
     return tags
+
+
+class Nodes(html.parser.HTMLParser):
+    """A fragment of HTML as elements and text, in the shape the fallback builds in the browser."""
+
+    def __init__(self):
+        super().__init__()
+        self.stack = [{"tag": None, "attrs": {}, "children": []}]
+
+    def handle_starttag(self, tag, attrs):
+        node = {"tag": tag, "attrs": dict(attrs), "children": []}
+        self.stack[-1]["children"].append(node)
+        self.stack.append(node)
+
+    def handle_endtag(self, tag):
+        if len(self.stack) > 1:
+            self.stack.pop()
+
+    def handle_data(self, data):
+        children = self.stack[-1]["children"]
+        # The generator writes one block per line, and the browser has no line between two elements.
+        if not data.strip() and self.stack[-1]["tag"] in (None, "ul", "ol", "figure"):
+            return
+        if children and isinstance(children[-1], str):
+            children[-1] += data
+        else:
+            children.append(data)
+
+
+def html_nodes(fragment: str) -> list:
+    nodes = Nodes()
+    nodes.feed(fragment)
+    return nodes.stack[0]["children"]
 
 
 class Build(unittest.TestCase):
@@ -107,6 +142,18 @@ class Build(unittest.TestCase):
 
     def page(self, kind, identifier) -> str:
         return (self.out / kind / identifier / "index.html").read_text(encoding="utf-8")
+
+    def prose(self, kind, identifier) -> str:
+        """The description of a page, without the side panel that follows it."""
+        page = self.page(kind, identifier)
+        start = page.index('<div class="prose">')
+        return page[start:page.index("</section>", start)]
+
+    def panel_links(self, kind, identifier) -> str:
+        """The Links list of the side panel, without the links a description holds."""
+        page = self.page(kind, identifier)
+        start = page.index('<ul class="links">')
+        return page[start:page.index("</ul>", start)]
 
     def test_one_page_per_listing_and_pack_in_its_authored_casing(self):
         written = self.build()
@@ -138,10 +185,126 @@ class Build(unittest.TestCase):
         self.assertIn("by Maxi, cairn5", page)
         self.assertIn("Maneuver planning, burn execution and closed-loop guidance", page)
         self.assertIn("<dt>Latest version</dt><dd>0.7.5 &middot; <time datetime=\"2026-09-02T09:48:03Z\">2 September 2026</time></dd>", page)
-        self.assertIn("<dt>Game</dt><dd>2026.9.4.5400 to 2026.9.7.5402</dd>", page)
         self.assertIn("<dt>Downloads</dt><dd>1,183</dd>", page)
         self.assertIn("<dt>License</dt><dd>MIT</dd>", page)
         self.assertIn("<dt>Type</dt><dd>Mod</dd>", page)
+
+    def test_the_side_panel_shows_the_compatibility_above_the_links(self):
+        self.build()
+        page = self.page("mod", "AdvancedFlightComputer")
+        panel = page[page.index('<aside class="panel">'):]
+
+        self.assertIn('<li class="chip">2026.9.4.5400 to 2026.9.7.5402</li>', panel)
+        self.assertLess(panel.index("<h2>Compatibility</h2>"), panel.index("<h2>Links</h2>"))
+        self.assertLess(panel.index("<h2>Links</h2>"), panel.index("<h2>Details</h2>"))
+
+    def test_the_header_names_the_curated_tags_first_and_keeps_the_other_tags(self):
+        self.build()
+        header = self.page("mod", "AdvancedFlightComputer").split('<div class="listing-body">')[0]
+
+        self.assertIn('<li class="chip">Gameplay</li>\n          <li class="chip">User Interface</li>\n'
+                      '          <li class="chip">navigation</li>', header)
+
+    def test_the_description_is_markdown(self):
+        self.build()
+        page = self.page("mod", "AdvancedFlightComputer")
+
+        self.assertIn("<h4>Features</h4>", page)
+        self.assertIn("Plans <strong>maneuvers</strong> and flies them, with <em>quick tools</em>", page)
+        self.assertIn("<li>Flyby targeting and multi-pass burns</li>", page)
+        self.assertIn("<ol>\n            <li>Plan the burn</li>", page)
+        self.assertIn('<a href="https://example.org/afc/manual" rel="nofollow noopener">manual</a>', page)
+        self.assertIn("never a rogue one", page)
+        self.assertIn("keep snake_case_names and \u00fcber_wert_ whole", page)
+        self.assertIn('<a href="https://example.org/afc/demo" rel="nofollow noopener">Watch the demo</a>', page)
+        self.assertIn("<pre><code>[staging]\ndelay = 2.0</code></pre>", page)
+
+    def test_an_image_with_a_record_carries_it_and_keeps_room_for_the_image(self):
+        self.build()
+        prose = self.prose("mod", "AdvancedFlightComputer")
+
+        self.assertIn(
+            '<figure data-image="https://example.org/afc/planner.png" '
+            'data-sha256="1111111111111111111111111111111111111111111111111111111111111111" '
+            'data-width="1600" data-height="900" data-size="402117">\n'
+            '            <div class="frame" style="aspect-ratio: 1600 / 900; '
+            'max-width: min(1600px, calc(var(--shot-height) * 1600 / 900))"></div>\n'
+            "            <figcaption>The planner window</figcaption>\n"
+            "          </figure>", prose)
+        self.assertNotIn("<img", prose)
+
+    def test_a_linked_image_keeps_its_link_on_the_frame_and_on_the_caption(self):
+        self.build()
+        prose = self.prose("mod", "AdvancedFlightComputer")
+
+        self.assertIn('<a class="frame" style="aspect-ratio: 800 / 1600; '
+                      'max-width: min(800px, calc(var(--shot-height) * 800 / 1600))" href="https://example.org/afc/demo" '
+                      'rel="nofollow noopener" tabindex="-1" aria-hidden="true"></a>', prose)
+        self.assertIn('<figcaption><a href="https://example.org/afc/demo" rel="nofollow noopener">Watch the demo</a>'
+                      '<span class="credit">Artwork by cairn5 &middot; '
+                      '<a href="https://example.org/afc/source" rel="nofollow noopener">Source</a></span></figcaption>',
+                      prose)
+
+    def test_an_image_without_a_usable_record_stands_as_its_caption(self):
+        self.build()
+
+        self.assertIn('<p class="figure">The burn editor</p>', self.prose("mod", "AdvancedFlightComputer"))
+        self.assertIn('<p class="figure">Not served over https</p>', self.prose("mod", "EvilMod"))
+
+    def test_an_image_with_nothing_to_say_keeps_a_caption_for_the_reader_who_gets_no_image(self):
+        images = {"plain": {"id": "plain", "url": "https://example.org/plain.png", "sha256": "3" * 64,
+                            "width": 40, "height": 30, "size": 900, "attribution": None, "source": None}}
+
+        self.assertIn('<figcaption class="untitled">Image</figcaption>',
+                      share.markdown_html("![](ksa-image:plain)", "", images))
+        self.assertEqual('<p class="figure">Image</p>\n', share.markdown_html("![](ksa-image:gone)", "", images))
+        self.assertEqual("", share.markdown_html("![](https://example.org/other.png)", "", images))
+
+    def test_a_record_the_page_may_not_fetch_or_lay_out_is_left_out(self):
+        self.build()
+
+        self.assertNotIn("second-planner", self.page("mod", "AdvancedFlightComputer"))
+        self.assertNotIn("toobig", self.page("mod", "AdvancedFlightComputer"))
+        self.assertNotIn("plain.png", self.page("mod", "EvilMod"))
+
+    def test_the_record_of_an_image_is_escaped_in_its_attributes_and_its_credit(self):
+        self.build()
+        prose = self.prose("mod", "EvilMod")
+
+        self.assertIn('data-image="https://example.org/evil/a&quot;onmouseover=&quot;alert(1).png"', prose)
+        self.assertIn("By &lt;b&gt;nobody&lt;/b&gt; &quot; onmouseover=&quot;alert(1)", prose)
+        for _, attrs in parse(prose).tags:
+            self.assertNotIn("onmouseover", attrs)
+
+    def test_the_page_loads_the_script_that_shows_the_description_images(self):
+        self.build()
+        page = self.page("mod", "AdvancedFlightComputer")
+
+        # The script is not deferred, because it reads the switch of the reader before the body is parsed.
+        self.assertIn('<script src="../../description-images.js"></script>', page)
+        self.assertTrue((self.out / "description-images.js").is_file())
+        self.assertIn('<section class="description">', page)
+
+    def test_a_page_with_an_image_carries_the_switch_above_the_description(self):
+        self.build()
+        page = self.page("mod", "AdvancedFlightComputer")
+
+        self.assertIn('<p class="image-switch">\n'
+                      '          <label><input type="checkbox"> Show images from author hosts</label>',
+                      page)
+        self.assertLess(page.index('class="image-switch"'), page.index('<div class="prose">'))
+        self.assertNotIn("image-switch", self.page("mod", "NoRelease"))
+
+    def test_the_switch_is_off_until_the_reader_asks(self):
+        self.build()
+        page = self.page("mod", "AdvancedFlightComputer")
+
+        self.assertNotIn('type="checkbox" checked', page)
+
+    def test_a_listing_without_a_description_says_so(self):
+        self.build()
+
+        self.assertIn('<p class="meta">No description provided.</p>', self.page("mod", "NoRelease"))
 
     def test_the_buttons_link_to_borea_and_the_landing_page(self):
         self.build()
@@ -157,12 +320,13 @@ class Build(unittest.TestCase):
         page = self.page("mod", "AdvancedFlightComputer")
 
         self.assertNotIn("http-equiv", page)
-        self.assertEqual(["application/ld+json"], [attrs.get("type") for tag, attrs in parse(page).tags if tag == "script"])
+        self.assertEqual([None, "application/ld+json"],
+                         [attrs.get("type") for tag, attrs in parse(page).tags if tag == "script"])
 
     def test_links_keep_the_app_order_and_only_http_and_https(self):
         self.build()
-        links = [attrs["href"] for tag, attrs in parse(self.page("mod", "AdvancedFlightComputer")).tags
-                 if tag == "a" and attrs.get("rel") == "nofollow noopener"]
+        links = [attrs["href"] for tag, attrs in parse(self.panel_links("mod", "AdvancedFlightComputer")).tags
+                 if tag == "a"]
 
         self.assertEqual(
             ["https://forums.ahwoo.com/threads/advanced-flight-computer.783/",
@@ -209,6 +373,19 @@ class Build(unittest.TestCase):
         self.assertIn('class="listing-icon placeholder"', self.page("mod", "AdvancedFlightComputer"))
         self.assertIn("because of an unexpected error", self.log)
 
+    def test_a_description_cannot_bring_markup_of_its_own(self):
+        self.build()
+        page = self.page("mod", "EvilMod")
+        prose = page[page.index('<div class="prose">'):]
+
+        self.assertNotIn("<script>alert", page)
+        self.assertNotIn("<img src=x", page)
+        self.assertNotIn("<b>bold</b>", page)
+        self.assertIn("&lt;img src=x onerror=alert(1)&gt;", prose)
+        self.assertIn("<code>&lt;script&gt;</code>", prose)
+        self.assertIn(">A link, an ", prose)
+        self.assertIn('<li class="chip">&lt;b&gt;bold&lt;/b&gt;</li>', page)
+
     def test_author_text_is_escaped_in_text_attributes_and_script(self):
         self.build()
         page = self.page("mod", "EvilMod")
@@ -230,8 +407,8 @@ class Build(unittest.TestCase):
 
     def test_a_link_with_a_quote_or_a_space_is_escaped_or_left_out(self):
         self.build()
-        links = [attrs["href"] for tag, attrs in parse(self.page("mod", "EvilMod")).tags
-                 if tag == "a" and attrs.get("rel") == "nofollow noopener"]
+        links = [attrs["href"] for tag, attrs in parse(self.panel_links("mod", "EvilMod")).tags
+                 if tag == "a"]
 
         self.assertEqual(['https://example.org/a"onmouseover="alert(1)'], links)
 
@@ -266,7 +443,7 @@ class Build(unittest.TestCase):
     def test_a_revision_that_is_not_in_the_game_versions_shows_the_release_text(self):
         self.build(edge_snapshot())
 
-        self.assertIn("<dt>Game</dt><dd>2026.9 to 2026.9.7.5402</dd>", self.page("mod", "AdvancedFlightComputer"))
+        self.assertIn('<li class="chip">2026.9 to 2026.9.7.5402</li>', self.page("mod", "AdvancedFlightComputer"))
 
     def test_a_pack_with_every_version_retracted_says_so(self):
         self.build(edge_snapshot())
@@ -287,7 +464,7 @@ class Build(unittest.TestCase):
         page = self.page("mod", "NoRelease")
 
         self.assertIn("<dt>Latest version</dt><dd>No release yet</dd>", page)
-        self.assertIn("<dt>Game</dt><dd>2026.8 or newer</dd>", page)
+        self.assertIn('<li class="chip">2026.8 or newer</li>', page)
         self.assertNotIn("<dt>Downloads</dt>", page)
 
     def test_a_mod_loader_page_says_so(self):
@@ -295,13 +472,15 @@ class Build(unittest.TestCase):
         page = self.page("mod", "StarMap")
 
         self.assertIn('<p class="meta kind">Mod loader</p>', page)
-        self.assertIn("<dt>Game</dt><dd>2026.8.3.5117 or newer</dd>", page)
+        self.assertIn('<li class="chip">2026.8.3.5117 or newer</li>', page)
 
     def test_a_pack_page_shows_its_newest_version_that_is_not_retracted(self):
         self.build()
         page = self.page("pack", "NavigationStarterPack")
 
         self.assertIn("<h1>Navigation Starter Pack</h1>", page)
+        self.assertIn('<li class="chip">Gameplay</li>', page)
+        self.assertIn("<p>Two mods that <strong>work together</strong>.</p>", page)
         self.assertIn("<dt>Mods</dt><dd>2</dd>", page)
         self.assertIn(">5 August 2026</time>", page)
         self.assertIn("borea://pack/NavigationStarterPack", page)
@@ -351,6 +530,92 @@ class Build(unittest.TestCase):
         self.assertIn("the icon record is incomplete", self.log)
 
 
+NODE_BLOCKS = """
+const path = require("path");
+const share = require(path.resolve(process.argv[1]));
+const samples = JSON.parse(process.argv[2]);
+process.stdout.write(JSON.stringify(samples.map((sample) => share.markdownBlocks(sample))));
+"""
+
+MARKDOWN_SAMPLES = [
+    "\u00fcber_wert_ stays whole, and `x`_y_ does not",
+    "## Features\n\nPlans **maneuvers** with _quick tools_ and `code`.",
+    "- one\n- two\n\n1. first\n2. second",
+    "Read the [manual](https://example.org/a_(b)), never a [rogue](javascript:alert(1)) one.",
+    "![The planner](https://example.org/i.png) and ![](https://example.org/j.png)",
+    "```\n[staging]\ndelay = 2.0\n```\n\nafter the code",
+    "snake_case_name stays, __strong__ and *thin* do not, a_b_c stays",
+    "###### deep\n\n####### not a heading",
+    "**a *b* c** and [**bold link**](https://example.org/)",
+    "[![Watch the demo](ksa-image:demo)](https://example.org/v) and ![](ksa-image:none)",
+    "![A shot](ksa-image:plain)\n\n![](ksa-image:demo)\n\n# [![in a heading](ksa-image:plain)](https://example.org/h)",
+    "![](ksa-image:plain)\n\nan image with nothing to say",
+]
+
+MARKDOWN_IMAGES = {
+    "demo": {"id": "demo", "url": "https://example.org/demo.png", "sha256": "2" * 64, "width": 800, "height": 600,
+             "size": 1000, "attribution": "Artwork by an artist", "source": "https://example.org/source"},
+    "plain": {"id": "plain", "url": "https://example.org/plain.png", "sha256": "3" * 64, "width": 1200, "height": 900,
+              "size": 2000, "attribution": None, "source": None},
+}
+
+
+NODE_NODES = """
+const path = require("path");
+const share = require(path.resolve(process.argv[1]));
+
+function Node(tag) {
+  this.tag = tag;
+  this.attrs = {};
+  this.children = [];
+}
+
+Object.defineProperty(Node.prototype, "className", { set: function (value) { this.attrs.class = value; } });
+Object.defineProperty(Node.prototype, "textContent", { set: function (value) { this.children = [{ text: String(value) }]; } });
+Object.defineProperty(Node.prototype, "href", { set: function (value) { this.attrs.href = value; } });
+Object.defineProperty(Node.prototype, "rel", { set: function (value) { this.attrs.rel = value; } });
+Object.defineProperty(Node.prototype, "childNodes", { get: function () { return this.children; } });
+
+Node.prototype.setAttribute = function (name, value) { this.attrs[name] = value; };
+
+Node.prototype.appendChild = function (child) {
+  if (child instanceof Node && child.tag === null) {
+    child.children.forEach(function (one) { this.children.push(one); }, this);
+    child.children = [];
+    return;
+  }
+  this.children.push(child);
+};
+
+global.document = {
+  createElement: function (tag) { return new Node(tag); },
+  createDocumentFragment: function () { return new Node(null); },
+  createTextNode: function (text) { return { text: text }; }
+};
+
+function plain(node) {
+  if (node.tag === undefined) {
+    return node.text;
+  }
+  const children = [];
+  node.children.forEach(function (child) {
+    const value = plain(child);
+    if (typeof value === "string" && typeof children[children.length - 1] === "string") {
+      children[children.length - 1] += value;
+      return;
+    }
+    children.push(value);
+  });
+  return { tag: node.tag, attrs: node.attrs, children: children };
+}
+
+const samples = JSON.parse(process.argv[2]);
+const images = JSON.parse(process.argv[3]);
+process.stdout.write(JSON.stringify(samples.map(function (sample) {
+  return plain(share.markdownNodes(sample, images)).children;
+})));
+"""
+
 NODE_VIEWS = """
 const fs = require("fs");
 const path = require("path");
@@ -363,7 +628,7 @@ for (const entry of snapshot.listings) {
   }
 }
 for (const entry of snapshot.packs) {
-  const view = share.packView(entry);
+  const view = share.packView(entry, snapshot);
   if (view) {
     views.pack[entry.id] = view;
   }
@@ -390,6 +655,27 @@ class FallbackParity(unittest.TestCase):
                                     capture_output=True, text=True, encoding="utf-8", check=True)
         return json.loads(result.stdout)
 
+    def nodes(self, samples) -> list:
+        result = subprocess.run(["node", "-e", NODE_NODES, str(SITE / "share.js"), json.dumps(samples),
+                                 json.dumps(MARKDOWN_IMAGES)],
+                                capture_output=True, text=True, encoding="utf-8", check=True)
+        return json.loads(result.stdout)
+
+    def blocks(self, samples) -> list:
+        result = subprocess.run(["node", "-e", NODE_BLOCKS, str(SITE / "share.js"), json.dumps(samples)],
+                                capture_output=True, text=True, encoding="utf-8", check=True)
+        return json.loads(result.stdout)
+
+    def test_the_fallback_reads_a_description_the_way_the_generator_reads_it(self):
+        for sample, blocks in zip(MARKDOWN_SAMPLES, self.blocks(MARKDOWN_SAMPLES)):
+            with self.subTest(sample=sample):
+                self.assertEqual(share.markdown_blocks(sample), blocks)
+
+    def test_the_fallback_shows_a_description_the_way_the_generator_shows_it(self):
+        for sample, nodes in zip(MARKDOWN_SAMPLES, self.nodes(MARKDOWN_SAMPLES)):
+            with self.subTest(sample=sample):
+                self.assertEqual(html_nodes(share.markdown_html(sample, "", MARKDOWN_IMAGES)), nodes)
+
     def test_the_fallback_shows_what_the_generator_shows(self):
         for name, document in (("fixture", snapshot()), ("edge cases", edge_snapshot())):
             views = self.views(document)
@@ -402,7 +688,8 @@ class FallbackParity(unittest.TestCase):
                         "name": page.name, "type": page.type_label, "authors": page.authors, "abstract": page.abstract,
                         "license": page.license, "version": page.version, "channel": page.channel,
                         "date": share.date_text(page.date) if page.date else None, "game": page.game,
-                        "downloads": page.downloads, "modCount": page.mod_count,
+                        "downloads": page.downloads, "modCount": page.mod_count, "tags": page.tags,
+                        "description": page.description, "images": page.images,
                         "links": [[label, share.urllib.parse.urlsplit(url).hostname] for label, url in page.links],
                         "notices": [[notice.text, notice.link[0] if notice.link else None] for notice in page.notices],
                     }
@@ -434,6 +721,16 @@ class Values(unittest.TestCase):
             self.assertTrue(share.valid_id(value), value)
         for value in ("..", "../x", "a/b", "-a", "a-", "", "CON", "com1.x", "a" * 65, None, 5):
             self.assertFalse(share.valid_id(value), value)
+
+    def test_a_record_that_ends_in_a_newline_is_no_record(self):
+        """A browser ends a pattern at the end of the value, so the generator must end it there as well."""
+        record = {"id": "shot", "url": "https://example.org/a.png", "sha256": "a" * 64, "width": 10, "height": 10,
+                  "size": 100}
+
+        self.assertIsNotNone(share.image_record(record))
+        self.assertIsNone(share.image_record({**record, "sha256": "a" * 64 + "\n"}))
+        self.assertIsNone(share.image_record({**record, "id": "shot\n"}))
+        self.assertIsNone(share.image_reference("ksa-image:shot\n"))
 
     def test_text_collapses_whitespace_and_control_characters(self):
         self.assertEqual("a b c", share.text(" a\n\tb \x00 c "))

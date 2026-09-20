@@ -37,6 +37,8 @@ ID_PATTERN = re.compile(r"^[A-Za-z0-9](?:[A-Za-z0-9._-]{0,62}[A-Za-z0-9])?$")
 RESERVED_IDS = {"core", "con", "prn", "aux", "nul"} | {f"{name}{digit}" for name in ("com", "lpt") for digit in range(1, 10)}
 SHA256_PATTERN = re.compile(r"^[0-9a-f]{64}$")
 CONTROL = re.compile(r"[\x00-\x1f\x7f]")
+# The same, but a description keeps its line breaks and its tabs.
+BLOCK_CONTROL = re.compile(r"[\x00-\x08\x0b-\x1f\x7f]")
 
 TYPE_LABELS = {"mod": "Mod", "mod-loader": "Mod loader", "modpack": "Modpack"}
 # The order and names of the links on the content page of the App.
@@ -51,6 +53,47 @@ LINK_LABELS = {
 MONTHS = ("January", "February", "March", "April", "May", "June", "July", "August", "September", "October",
           "November", "December")
 DESCRIPTION_LIMIT = 300
+
+# The blocks and the inline spans of a description, a narrower subset than the description view of the App reads,
+# because a reference-style link and a raw HTML image stay the text the author wrote.
+HEADING_PATTERN = re.compile(r"^(#{1,6})\s+(.*)$")
+ITEM_PATTERN = re.compile(r"^\s*([-*+]|\d+\.)\s+(.*)$")
+IMAGE = r"!\[(?P<alt>[^\]]*)\]\((?P<target>(?:[^\s()]|\([^\s()]*\))*)(?:\s+[^)]*)?\)"
+# The same image, as the whole label of a link, so a linked image becomes the image and keeps its link.
+IMAGE_ONLY = re.compile(IMAGE)
+# An image inside the label of a link, without the capture groups an image of its own has.
+NESTED_IMAGE = r"!\[[^\]]*\]\((?:[^\s()]|\([^\s()]*\))*(?:\s+[^)]*)?\)"
+# An underscore opens emphasis only outside a word, the way the App reads it, so a snake_case_name stays whole.
+INLINE_PATTERN = re.compile(
+    IMAGE
+    + r"|`(?P<code>[^`]+)`"
+    + rf"|\[(?P<label>(?:{NESTED_IMAGE}|[^\]])*)\]\((?P<url>(?:[^\s()]|\([^\s()]*\))*)(?:\s+[^)]*)?\)"
+    + r"|\*\*(?P<strong>[^*]+)\*\*"
+    + r"|(?<!\w)__(?P<strong_score>[^_]+)__(?!\w)"
+    + r"|\*(?P<emphasis>[^*]+)\*"
+    + r"|(?<!\w)_(?P<emphasis_score>[^_]+)_(?!\w)")
+# A heading of a description sits below the name of the listing and the heading of its section.
+HEADING_OFFSET = 2
+# Emphasis inside emphasis stops here, so a pathological description cannot recurse without an end.
+SPAN_DEPTH = 3
+
+# RFC 0058: a description shows the images of its own records, which it names as ksa-image:<id>, and no other image.
+IMAGE_REFERENCE = "ksa-image:"
+IMAGE_ID = re.compile(r"^[A-Za-z0-9](?:[A-Za-z0-9_-]{0,62}[A-Za-z0-9])?$")
+IMAGE_PIXELS = 2048
+IMAGE_CAP = 1024 * 1024
+# What an image with no words of its own is called, so that a reader always sees a line where an image is.
+IMAGE_PLACEHOLDER = "Image"
+# RFC 0058 asks a client to offer a reader a way to load no image from the host of an author. A share page goes
+# further and loads none until the reader asks, because a reader arrives here from a link and never chose to
+# tell a host their address. The page carries the switch, so that it stands in its place from the first paint,
+# and the style sheet shows it only when the script that drives it runs. The script reads the answer of the
+# reader and sets the box.
+IMAGE_SWITCH = """        <p class="image-switch">
+          <label><input type="checkbox"> Show images from author hosts</label>
+          <span class="meta">Every image comes from the host of its author, which then learns your address.</span>
+        </p>
+"""
 
 
 @dataclass
@@ -67,6 +110,7 @@ class Page:
     type_label: str
     authors: list[str]
     abstract: str | None
+    description: str | None
     license: str | None
     version: str | None
     channel: str | None
@@ -74,8 +118,10 @@ class Page:
     game: str | None
     downloads: int | None
     mod_count: int | None
+    tags: list[str] = field(default_factory=list)
     links: list[tuple[str, str]] = field(default_factory=list)
     notices: list[Notice] = field(default_factory=list)
+    images: dict[str, dict] = field(default_factory=dict)
     icon: tuple[str, int, int] | None = None
 
 
@@ -91,6 +137,14 @@ def text(value) -> str | None:
     return collapsed or None
 
 
+def rich_text(value) -> str | None:
+    """A trimmed string that keeps its line breaks, for a description, or None for anything else."""
+    if not isinstance(value, str):
+        return None
+    cleaned = BLOCK_CONTROL.sub(" ", value.replace("\r\n", "\n").replace("\r", "\n")).strip()
+    return cleaned or None
+
+
 def web_url(value) -> str | None:
     """`value` when it is an absolute http or https URL, else None."""
     if not isinstance(value, str) or CONTROL.search(value) or any(character.isspace() for character in value):
@@ -102,6 +156,12 @@ def web_url(value) -> str | None:
     if parts.scheme.lower() not in ("http", "https") or not parts.hostname:
         return None
     return value
+
+
+def https_url(value) -> str | None:
+    """`value` when it is an absolute https URL, else None. An image and its source are https only."""
+    url = web_url(value)
+    return url if url is not None and url.split(":", 1)[0].lower() == "https" else None
 
 
 def count(value) -> int | None:
@@ -145,6 +205,238 @@ def game_text(minimum: str | None, maximum: str | None) -> str | None:
     return minimum if minimum == maximum else f"{minimum} to {maximum}"
 
 
+def image_reference(target) -> str | None:
+    """The record id an image names, or None for an image with any other destination, which a page never fetches."""
+    if not isinstance(target, str) or not target.startswith(IMAGE_REFERENCE):
+        return None
+    name = target[len(IMAGE_REFERENCE):]
+    return name if IMAGE_ID.fullmatch(name) else None
+
+
+def image_record(record) -> dict | None:
+    """One description image record, or None when a page may not fetch it or cannot lay it out."""
+    if not isinstance(record, dict):
+        return None
+    identifier = record.get("id")
+    url = https_url(record.get("url"))
+    digest = str(record.get("sha256") or "").lower()
+    width, height, size = (count(record.get(key)) for key in ("width", "height", "size"))
+    if (not isinstance(identifier, str) or not IMAGE_ID.fullmatch(identifier) or url is None
+            or not SHA256_PATTERN.fullmatch(digest)):
+        return None
+    if width is None or height is None or not 0 < width <= IMAGE_PIXELS or not 0 < height <= IMAGE_PIXELS:
+        return None
+    if size is None or not 0 < size <= IMAGE_CAP:
+        return None
+    return {"id": identifier, "url": url, "sha256": digest, "width": width, "height": height, "size": size,
+            "attribution": text(record.get("attribution")), "source": https_url(record.get("source"))}
+
+
+def image_records(authored) -> dict[str, dict]:
+    """The description image records of a document by id, the first one when two records share an id."""
+    images = authored.get("images") if isinstance(authored, dict) else None
+    records = images.get("description") if isinstance(images, dict) else None
+    found: dict[str, dict] = {}
+    for record in records if isinstance(records, list) else []:
+        checked = image_record(record)
+        if checked is not None:
+            found.setdefault(checked["id"], checked)
+    return found
+
+
+def image_spans(alt: str, target, href: str | None) -> list[dict]:
+    """The span of one image, or nothing when it has neither a text nor a record to show."""
+    reference = image_reference(target)
+    if not alt and reference is None:
+        return []
+    return [{"kind": "image", "text": alt, "id": reference, "href": href}]
+
+
+def markdown_spans(value: str, depth: int = 0, images: bool = False) -> list[dict]:
+    """The inline spans of one block. With `images` an image is a span of its own, else it becomes its alternative text."""
+    if depth >= SPAN_DEPTH:
+        return [{"kind": "text", "text": value}] if value else []
+    spans: list[dict] = []
+    position = 0
+    for match in INLINE_PATTERN.finditer(value):
+        if match.start() > position:
+            spans.append({"kind": "text", "text": value[position:match.start()]})
+        position = match.end()
+        groups = match.groupdict()
+        if groups["alt"] is not None:
+            spans.extend(image_spans(groups["alt"], groups["target"], None) if images
+                         else ([{"kind": "text", "text": groups["alt"]}] if groups["alt"] else []))
+        elif groups["code"] is not None:
+            spans.append({"kind": "code", "text": groups["code"]})
+        elif groups["label"] is not None:
+            url = web_url(groups["url"])
+            # A link whose whole label is an image becomes that image, and the image keeps the link.
+            linked = IMAGE_ONLY.fullmatch(groups["label"].strip()) if images else None
+            inside = image_spans(linked.group("alt"), linked.group("target"), url) if linked else []
+            spans.extend(inside if inside
+                         else [{"kind": "link", "url": url, "spans": markdown_spans(groups["label"], depth + 1)}])
+        else:
+            strong = groups["strong"] if groups["strong"] is not None else groups["strong_score"]
+            inner = strong if strong is not None else (groups["emphasis"] if groups["emphasis"] is not None else groups["emphasis_score"])
+            spans.append({"kind": "strong" if strong is not None else "emphasis", "spans": markdown_spans(inner, depth + 1)})
+    if position < len(value):
+        spans.append({"kind": "text", "text": value[position:]})
+    return spans
+
+
+def markdown_blocks(value: str) -> list[dict]:
+    """The blocks of a description, which are fenced code, a heading, a list, a paragraph and the caption of an image."""
+    blocks: list[dict] = []
+    paragraph: list[str] = []
+    lines = value.split("\n")
+    index = 0
+
+    def close(run: list[dict]) -> None:
+        if any(span["kind"] != "text" or span["text"].strip() for span in run):
+            blocks.append({"kind": "paragraph", "spans": run})
+
+    def add(spans: list[dict]) -> None:
+        """One paragraph per run of spans, with a block for every image between them, so two images never merge into one sentence."""
+        run: list[dict] = []
+        for span in spans:
+            if span["kind"] != "image":
+                run.append(span)
+                continue
+            close(run)
+            run = []
+            blocks.append({"kind": "image", "text": span["text"], "id": span["id"], "href": span["href"]})
+        close(run)
+
+    def flush() -> None:
+        if paragraph:
+            add(markdown_spans(" ".join(paragraph), images=True))
+            paragraph.clear()
+
+    while index < len(lines):
+        line = lines[index]
+        if line.startswith("```"):
+            flush()
+            index += 1
+            code = []
+            while index < len(lines) and not lines[index].startswith("```"):
+                code.append(lines[index])
+                index += 1
+            index += 1
+            blocks.append({"kind": "code", "text": "\n".join(code)})
+            continue
+        heading = HEADING_PATTERN.match(line)
+        item = None if heading else ITEM_PATTERN.match(line)
+        if heading:
+            flush()
+            blocks.append({"kind": "heading", "level": len(heading.group(1)), "spans": markdown_spans(heading.group(2))})
+        elif item:
+            flush()
+            ordered = item.group(1)[0].isdecimal()
+            if not blocks or blocks[-1]["kind"] != "list" or blocks[-1]["ordered"] != ordered:
+                blocks.append({"kind": "list", "ordered": ordered, "items": []})
+            blocks[-1]["items"].append(markdown_spans(item.group(2)))
+        elif line.strip():
+            paragraph.append(line.strip())
+        else:
+            flush()
+        index += 1
+
+    flush()
+    return blocks
+
+
+def span_html(spans: list[dict]) -> str:
+    parts = []
+    for span in spans:
+        if span["kind"] in ("text", "image"):
+            parts.append(escape(span["text"]))
+        elif span["kind"] == "code":
+            parts.append(f"<code>{escape(span['text'])}</code>")
+        else:
+            inner = span_html(span["spans"])
+            if not inner:
+                continue
+            if span["kind"] == "strong":
+                parts.append(f"<strong>{inner}</strong>")
+            elif span["kind"] == "emphasis":
+                parts.append(f"<em>{inner}</em>")
+            elif span["url"]:
+                parts.append(f'<a href="{escape(span["url"])}" rel="nofollow noopener">{inner}</a>')
+            else:
+                parts.append(inner)
+    return "".join(parts)
+
+
+def figure_style(record: dict) -> str:
+    """The room the figure keeps for the image before it arrives, and the size a large image may not pass.
+
+    The frame is never wider than the image itself, so a small image keeps its own pixels instead of
+    being stretched, and never taller than the height a screen has room for.
+    """
+    return f'aspect-ratio: {record["width"]} / {record["height"]}; ' \
+           f'max-width: min({record["width"]}px, calc(var(--shot-height) * {record["width"]} / {record["height"]}))'
+
+
+def figure_credit(record: dict) -> str:
+    """The attribution of a record and the link to its source, which RFC 0058 asks a client to show with the image."""
+    parts = []
+    if record["attribution"]:
+        parts.append(escape(record["attribution"]))
+    if record["source"]:
+        parts.append(f'<a href="{escape(record["source"])}" rel="nofollow noopener">Source</a>')
+    return f'<span class="credit">{" &middot; ".join(parts)}</span>' if parts else ""
+
+
+def figure_html(block: dict, record: dict | None, indent: str) -> list[str]:
+    """One image of a description, as its figure with the facts of its record, or as its caption alone."""
+    caption = escape(block["text"])
+    if caption and block["href"]:
+        caption = f'<a href="{escape(block["href"])}" rel="nofollow noopener">{caption}</a>'
+    if record is None:
+        # An image that names a record the page does not have still leaves a line behind, because a reader
+        # has to see that there is an image here that the page does not show.
+        if not caption and block["id"] is None:
+            return []
+        return [f'{indent}<p class="figure">{caption or IMAGE_PLACEHOLDER}</p>']
+    # The frame carries the link as well, so a reader can open it from the image, and the caption gives
+    # the only link that a reader who navigates by keyboard or by screen reader meets.
+    tag = "a" if block["href"] else "div"
+    link = f' href="{escape(block["href"])}" rel="nofollow noopener" tabindex="-1" aria-hidden="true"' if block["href"] else ""
+    body = caption + figure_credit(record)
+    lines = [f'{indent}<figure data-image="{escape(record["url"])}" data-sha256="{record["sha256"]}" '
+             f'data-width="{record["width"]}" data-height="{record["height"]}" data-size="{record["size"]}">',
+             f'{indent}  <{tag} class="frame" style="{escape(figure_style(record))}"{link}></{tag}>']
+    if body:
+        lines.append(f"{indent}  <figcaption>{body}</figcaption>")
+    else:
+        # An image with no words of its own still gets a caption, because the caption is the whole of what
+        # a reader sees when the image does not arrive. The page hides it again once the image is there.
+        lines.append(f'{indent}  <figcaption class="untitled">{IMAGE_PLACEHOLDER}</figcaption>')
+    lines.append(f"{indent}</figure>")
+    return lines
+
+
+def markdown_html(value: str, indent: str = "", images: dict | None = None) -> str:
+    """The description as HTML, one block per line."""
+    lines = []
+    for block in markdown_blocks(value):
+        if block["kind"] == "heading":
+            level = min(block["level"] + HEADING_OFFSET, 6)
+            lines.append(f"{indent}<h{level}>{span_html(block['spans'])}</h{level}>")
+        elif block["kind"] == "code":
+            lines.append(f"{indent}<pre><code>{escape(block['text'])}</code></pre>")
+        elif block["kind"] == "image":
+            lines.extend(figure_html(block, (images or {}).get(block["id"]), indent))
+        elif block["kind"] == "list":
+            tag = "ol" if block["ordered"] else "ul"
+            lines.append(f"{indent}<{tag}>")
+            lines.extend(f"{indent}  <li>{span_html(item)}</li>" for item in block["items"])
+            lines.append(f"{indent}</{tag}>")
+        else:
+            lines.append(f"{indent}<p>{span_html(block['spans'])}</p>")
+    return "".join(line + "\n" for line in lines)
+
+
 class Snapshot:
     """The parts of a snapshot the pages need, read defensively."""
 
@@ -160,11 +452,25 @@ class Snapshot:
         for entry in self.listings:
             if valid_id(entry.get("id")) and isinstance(entry.get("authored"), dict):
                 self.names.setdefault(entry["id"].lower(), (entry["id"], text(entry["authored"].get("name")) or entry["id"]))
+        curated = document["tags"].get("mod") if isinstance(document.get("tags"), dict) else None
+        self.curated_tags = []
+        for tag in curated if isinstance(curated, list) else []:
+            key = text(tag.get("tag")) if isinstance(tag, dict) else None
+            name = text(tag.get("name")) if isinstance(tag, dict) else None
+            if key and name:
+                self.curated_tags.append((key.lower(), name))
 
     def game_version(self, revision, fallback) -> str | None:
         if count(revision) is not None and revision in self.game_versions:
             return self.game_versions[revision]
         return text(fallback)
+
+    def display_tags(self, tags) -> list[str]:
+        """The curated tags of a listing under their vocabulary name and in its order, then the tags the author wrote."""
+        written = [name for name in (text(tag) for tag in tags) if name] if isinstance(tags, list) else []
+        chosen = {name.lower() for name in written}
+        known = {key for key, _ in self.curated_tags}
+        return [name for key, name in self.curated_tags if key in chosen] + [name for name in written if name.lower() not in known]
 
 
 def links_of(authored: dict) -> list[tuple[str, str]]:
@@ -218,6 +524,7 @@ def listing_page(entry: dict, snapshot: Snapshot) -> Page:
         type_label=TYPE_LABELS.get(text(authored.get("type")), "Mod"),
         authors=authors_of(authored),
         abstract=text(authored.get("abstract")),
+        description=rich_text(authored.get("description")),
         license=text(authored.get("license")),
         version=text(release.get("version")) if release else None,
         channel=None if channel in (None, "stable") else channel,
@@ -225,7 +532,9 @@ def listing_page(entry: dict, snapshot: Snapshot) -> Page:
         game=game,
         downloads=count(downloads.get("total")) if isinstance(downloads, dict) else None,
         mod_count=None,
+        tags=snapshot.display_tags(authored.get("tags")),
         links=links_of(authored),
+        images=image_records(authored),
     )
     notice = status_notice(entry)
     if notice:
@@ -258,6 +567,7 @@ def pack_page(entry: dict, snapshot: Snapshot) -> Page | None:
         type_label=TYPE_LABELS["modpack"],
         authors=authors_of(authored),
         abstract=text(authored.get("abstract")),
+        description=rich_text(authored.get("description")),
         license=text(authored.get("license")),
         version=text(authored.get("version")),
         channel=None,
@@ -265,7 +575,9 @@ def pack_page(entry: dict, snapshot: Snapshot) -> Page | None:
         game=game_text(text(compatibility.get("game_min")), text(compatibility.get("game_max"))),
         downloads=None,
         mod_count=len(mods) if isinstance(mods, list) else None,
+        tags=snapshot.display_tags(authored.get("tags")),
         links=links_of(authored),
+        images=image_records(authored),
     )
     notice = status_notice(entry)
     if notice:
@@ -306,7 +618,7 @@ class Icons:
     def get(self, owner: str, record: dict) -> tuple[str, int, int] | None:
         """The site path, width and height of the verified icon, or None when the page shows the placeholder."""
         digest = str(record.get("sha256") or "").lower()
-        if not SHA256_PATTERN.match(digest) or not isinstance(record.get("url"), str):
+        if not SHA256_PATTERN.fullmatch(digest) or not isinstance(record.get("url"), str):
             log(f"{owner}: the icon record is incomplete")
             return None
         try:
@@ -407,7 +719,18 @@ def render(page: Page, site_url: str = SITE_URL) -> str:
     notices = []
     for notice in page.notices:
         link = f' <a href="{escape(notice.link[1])}">{escape(notice.link[0])}</a>.' if notice.link else ""
-        notices.append(f'      <p class="notice" role="note">{escape(notice.text)}{link}</p>\n')
+        notices.append(f'        <p class="notice" role="note">{escape(notice.text)}{link}</p>\n')
+
+    tags = ""
+    if page.tags:
+        items = "".join(f'          <li class="chip">{escape(tag)}</li>\n' for tag in page.tags)
+        tags = f'        <ul class="chips">\n{items}        </ul>\n'
+
+    compatibility = ""
+    if page.game:
+        compatibility = ('        <section>\n          <h2>Compatibility</h2>\n          <ul class="chips">\n'
+                         f'            <li class="chip">{escape(page.game)}</li>\n'
+                         '          </ul>\n        </section>\n')
 
     facts = [("Type", escape(page.type_label))]
     if page.version:
@@ -419,27 +742,28 @@ def render(page: Page, site_url: str = SITE_URL) -> str:
         facts.append(("Latest version", version))
     else:
         facts.append(("Latest version", "No release yet"))
-    if page.game:
-        facts.append(("Game", escape(page.game)))
     if page.mod_count is not None:
         facts.append(("Mods", str(page.mod_count)))
     if page.downloads is not None:
         facts.append(("Downloads", f"{page.downloads:,}"))
     if page.license:
         facts.append(("License", escape(page.license)))
-    fact_rows = "".join(f"          <dt>{name}</dt><dd>{value}</dd>\n" for name, value in facts)
+    fact_rows = "".join(f"            <dt>{name}</dt><dd>{value}</dd>\n" for name, value in facts)
 
     links = ""
     if page.links:
         items = "".join(
-            f'          <li><a href="{escape(link)}" rel="nofollow noopener">{escape(label)}</a> '
+            f'            <li><a href="{escape(link)}" rel="nofollow noopener">{escape(label)}</a> '
             f'<span class="meta">{escape(urllib.parse.urlsplit(link).hostname or "")}</span></li>\n'
             for label, link in page.links)
-        links = (f'      <section>\n        <h2>Links</h2>\n        <ul class="links">\n{items}        </ul>\n'
-                 f'      </section>\n')
+        links = (f'        <section>\n          <h2>Links</h2>\n          <ul class="links">\n{items}'
+                 f'          </ul>\n        </section>\n')
 
-    authors = f'      <p class="meta by">by {escape(", ".join(page.authors))}</p>\n' if page.authors else ""
-    abstract = f'      <p class="tagline">{escape(page.abstract)}</p>\n' if page.abstract else ""
+    body = (markdown_html(page.description, "          ", page.images) if page.description
+            else '          <p class="meta">No description provided.</p>\n')
+    switch = IMAGE_SWITCH if '<figure data-image="' in body else ""
+    authors = f'        <p class="meta by">by {escape(", ".join(page.authors))}</p>\n' if page.authors else ""
+    abstract = f'        <p class="tagline">{escape(page.abstract)}</p>\n' if page.abstract else ""
     data = script_json(structured_data(page, url, image))
 
     return f"""<!doctype html>
@@ -463,33 +787,45 @@ def render(page: Page, site_url: str = SITE_URL) -> str:
   <meta name="twitter:image" content="{escape(image)}">
   <link rel="icon" href="{root}favicon.ico">
   <link rel="preload" href="{root}fonts/IBMPlexSans-SemiBold.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="{root}fonts/IBMPlexSans-Regular.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="{root}styles.css">
+  <script src="{root}description-images.js"></script>
   <script type="application/ld+json">{data}</script>
 </head>
-<body>
+<body class="share">
   <header class="column top">
     <a class="brand" href="{root}"><img src="{root}img/icon.png" width="28" height="28" alt="">Borea</a>
   </header>
-  <main>
-    <div class="hero listing">
+  <main class="column">
+    <div class="listing listing-header">
       <div class="{icon_class}">{icon}</div>
-      <p class="meta kind">{escape(page.type_label)}</p>
-      <h1>{escape(page.name)}</h1>
-{authors}{abstract}{"".join(notices)}      <div class="actions">
-        <a class="button" href="borea://{page.kind}/{page.id}">Open in Borea</a>
-        <a class="button secondary" href="borea://install/{page.id}">Install with Borea</a>
-        <a class="button secondary" href="{root}#download">Get Borea</a>
+      <div class="listing-intro">
+        <p class="meta kind">{escape(page.type_label)}</p>
+        <h1>{escape(page.name)}</h1>
+{authors}{abstract}{tags}{"".join(notices)}        <div class="actions">
+          <a class="button" href="borea://{page.kind}/{page.id}">Open in Borea</a>
+          <a class="button secondary" href="borea://install/{page.id}">Install with Borea</a>
+          <a class="button secondary" href="{root}#download">Get Borea</a>
+        </div>
+        <p class="meta hint">Open in Borea and Install with Borea need Borea on this computer.</p>
       </div>
-      <p class="meta hint">Open in Borea and Install with Borea need Borea on this computer.</p>
     </div>
 
-    <div class="column">
-      <section>
-        <h2>Details</h2>
-        <dl class="facts">
-{fact_rows}        </dl>
+    <div class="listing-body">
+      <section class="description">
+        <h2>Description</h2>
+{switch}        <div class="prose">
+{body}        </div>
       </section>
-{links}    </div>
+
+      <aside class="panel">
+{compatibility}{links}        <section>
+          <h2>Details</h2>
+          <dl class="facts">
+{fact_rows}          </dl>
+        </section>
+      </aside>
+    </div>
   </main>
 
   <footer class="column">
