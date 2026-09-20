@@ -293,13 +293,14 @@
                     <ContentControl Grid.Row="1" Margin="0,8" Content="{Binding Choices}" IsVisible="{Binding Choices, Converter={x:Static ObjectConverters.IsNotNull}}" />
                     <!-- the row's actions and status, on a line of their own so that they never reach past the card -->
                     <StackPanel Grid.Row="2">
-                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8" Margin="0,0,4,8" IsVisible="{Binding IsConfirmingRemove}">
-                            <TextBlock Classes="body-sm danger" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ContentRemoveConfirm}" TextTrimming="CharacterEllipsis" HorizontalAlignment="Right" VerticalAlignment="Center" />
-                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                        <!-- the question and the two buttons keep one line while they fit, and the buttons take the next line when they do not -->
+                        <WrapPanel HorizontalAlignment="Right" ItemsAlignment="End" ItemSpacing="8" LineSpacing="8" Margin="0,0,4,8" IsVisible="{Binding IsConfirmingRemove}">
+                            <TextBlock Classes="body-sm danger" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ContentRemoveConfirm}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                            <StackPanel Orientation="Horizontal" Spacing="8">
                                 <Button Classes="text danger" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ContentRemove}" Command="{Binding ConfirmRemoveCommand}" />
                                 <Button Classes="text" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryCancel}" Command="{Binding CancelRemoveCommand}" />
                             </StackPanel>
-                        </Grid>
+                        </WrapPanel>
                         <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8" Margin="0,0,4,8" IsVisible="{Binding ProgressStatus, Converter={x:Static ObjectConverters.IsNotNull}}">
                             <TextBlock Classes="body-sm secondary" Text="{Binding ProgressStatus}" ToolTip.Tip="{Binding ProgressStatus}" TextTrimming="CharacterEllipsis" HorizontalAlignment="Right" VerticalAlignment="Center" />
                             <TextBlock Grid.Column="1" Classes="label-md" Text="{Binding ProgressDetail}" VerticalAlignment="Center" IsVisible="{Binding ProgressDetail, Converter={x:Static ObjectConverters.IsNotNull}}" />
