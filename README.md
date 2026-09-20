@@ -104,12 +104,21 @@ cd Borea-<version>-macos-arm64
 ./borea
 ```
 
+macOS might block that first start, because the build is not signed with an Apple developer account.
+It says that Apple could not verify that `borea` is free of malware.
+The full source code of Borea is in this repository, so you can check it yourself.
+
+1. Select **Done**. Never select **Move to Trash**, because that deletes `borea`.
+2. Open **System Settings**, go to **Privacy & Security** and scroll down to **Security**. It names `borea` there and offers **Open Anyway**.
+3. Confirm with your password or Touch ID, then run `./borea` again. It starts.
+
+Instead of the three steps you can remove the download mark in Terminal: `xattr -dr com.apple.quarantine Borea-<version>-macos-arm64`.
+Either way, you do this once per version.
+
 For the command line, run `./borea --help` in the same directory.
 The matching `Borea-Cli-` archive contains only the command line.
 
 Do not unpack the archive by double-clicking it in Finder, and do not start `borea` from Finder.
-
-If that already happened, remove the download mark and start Borea from Terminal again: `xattr -dr com.apple.quarantine Borea-<version>-macos-arm64`.
 
 Once it runs, Borea behaves like any other Mac program.
 
