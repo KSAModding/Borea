@@ -15,10 +15,17 @@ namespace Borea.App.Tests.Views;
 [Collection(HeadlessCollection.Name)]
 public sealed class InstanceRowTests
 {
-    private static async Task<T> OnLibraryAsync<T>(MainViewModel viewModel, Func<Window, Control, Task<T>> read)
+    /// <summary>
+    /// Renders the Library and hands the window to <paramref name="read"/>, which
+    /// runs on the headless thread. It takes no asynchronous work on purpose: a
+    /// command started here is awaited by the caller after the dispatch returned,
+    /// because waiting on the headless thread for work that needs that same thread
+    /// blocks it, and a blocked thread cannot run the timeout either.
+    /// </summary>
+    private static async Task<T> OnLibraryAsync<T>(MainViewModel viewModel, Func<Window, Control, T> read)
     {
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
-        return await HeadlessApp.Session.Dispatch(async () =>
+        return await HeadlessApp.Session.Dispatch(() =>
         {
             var page = new LibraryPage();
             var window = new Window { Width = 1200, Height = 600, DataContext = viewModel, Content = page };
@@ -26,7 +33,7 @@ public sealed class InstanceRowTests
             try
             {
                 page.UpdateLayout();
-                return await read(window, page);
+                return read(window, page);
             }
             finally
             {
@@ -61,18 +68,16 @@ public sealed class InstanceRowTests
         using var harness = await CreateAsync();
         var viewModel = harness.ViewModel;
 
-        var opened = await OnLibraryAsync(viewModel, async (window, page) =>
+        var opening = await OnLibraryAsync(viewModel, (window, page) =>
         {
             var card = Card(page);
             Click(window, card, new Point(150, card.Bounds.Height / 2));
-            var running = viewModel.ActiveInstance!.OpenCommand.ExecutionTask;
-            if (running is not null)
-                await running;
-            return (running, viewModel.SelectedInstance?.InstanceId);
+            return viewModel.ActiveInstance!.OpenCommand.ExecutionTask;
         });
 
-        Assert.NotNull(opened.Item1);
-        Assert.Equal(viewModel.ActiveInstance!.InstanceId, opened.Item2);
+        Assert.NotNull(opening);
+        await opening;
+        Assert.Equal(viewModel.ActiveInstance!.InstanceId, viewModel.SelectedInstance?.InstanceId);
     }
 
     [Fact]
@@ -81,21 +86,21 @@ public sealed class InstanceRowTests
         using var harness = await CreateAsync();
         var viewModel = harness.ViewModel;
 
-        var (prompt, opened, selected) = await OnLibraryAsync(viewModel, async (window, page) =>
+        var item = viewModel.ActiveInstance!;
+        var launching = await OnLibraryAsync(viewModel, (window, page) =>
         {
-            var item = viewModel.ActiveInstance!;
             var play = Card(page).GetVisualDescendants().OfType<Button>().Single(button => button.Command == item.PlayCommand);
             Click(window, play, new Point(play.Bounds.Width / 2, play.Bounds.Height / 2));
-            var running = item.PlayCommand.ExecutionTask;
-            if (running is not null)
-                await running;
-            return (viewModel.IsLoaderPromptOpen, item.OpenCommand.ExecutionTask, viewModel.SelectedInstance);
+            return item.PlayCommand.ExecutionTask;
         });
 
+        Assert.NotNull(launching);
+        await launching;
+
         // no loader takes this instance, so a launch that ran offers to install one
-        Assert.True(prompt);
-        Assert.Null(opened);
-        Assert.Null(selected);
+        Assert.True(viewModel.IsLoaderPromptOpen);
+        Assert.Null(item.OpenCommand.ExecutionTask);
+        Assert.Null(viewModel.SelectedInstance);
     }
 
     [Fact]
@@ -108,7 +113,7 @@ public sealed class InstanceRowTests
         {
             var menu = Card(page).GetVisualDescendants().OfType<Button>().Single(button => button.Flyout is not null);
             Click(window, menu, new Point(menu.Bounds.Width / 2, menu.Bounds.Height / 2));
-            return Task.FromResult((menu.Flyout!.IsOpen, viewModel.ActiveInstance!.OpenCommand.ExecutionTask, viewModel.SelectedInstance));
+            return (menu.Flyout!.IsOpen, viewModel.ActiveInstance!.OpenCommand.ExecutionTask, viewModel.SelectedInstance);
         });
 
         Assert.True(flyoutOpen);
@@ -124,20 +129,20 @@ public sealed class InstanceRowTests
 
         var row = viewModel.Instances.Single();
 
-        var (opened, selected) = await OnLibraryAsync(viewModel, async (window, page) =>
+        var toggling = await OnLibraryAsync(viewModel, (window, page) =>
         {
             var toggle = Card(page).GetVisualDescendants().OfType<ToggleSwitch>().Single();
             Click(window, toggle, new Point(toggle.Bounds.Width / 2, toggle.Bounds.Height / 2));
-            var toggling = row.ToggleActiveCommand.ExecutionTask;
-            if (toggling is not null)
-                await toggling;
-            return (row.OpenCommand.ExecutionTask, viewModel.SelectedInstance);
+            return row.ToggleActiveCommand.ExecutionTask;
         });
+
+        Assert.NotNull(toggling);
+        await toggling;
 
         // the switch turned the instance off, which is the proof that the click reached it
         Assert.Null(viewModel.ActiveInstance);
-        Assert.Null(opened);
-        Assert.Null(selected);
+        Assert.Null(row.OpenCommand.ExecutionTask);
+        Assert.Null(viewModel.SelectedInstance);
     }
 
     [Fact]
@@ -152,7 +157,7 @@ public sealed class InstanceRowTests
             var cancel = Card(page).GetVisualDescendants().OfType<Button>()
                 .Single(button => button.Content as string == harness.Localization.LibraryCancel);
             Click(window, cancel, new Point(cancel.Bounds.Width / 2, cancel.Bounds.Height / 2));
-            return Task.FromResult((viewModel.ActiveInstance!.OpenCommand.ExecutionTask, viewModel.SelectedInstance));
+            return (viewModel.ActiveInstance!.OpenCommand.ExecutionTask, viewModel.SelectedInstance);
         });
 
         Assert.Null(opened);
