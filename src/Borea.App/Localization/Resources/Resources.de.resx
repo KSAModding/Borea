@@ -2253,4 +2253,10 @@
   <data name="LaunchNoOutput" xml:space="preserve">
     <value>Der Loader hat vor dem Beenden nichts ausgegeben.</value>
   </data>
+  <data name="ChooseGameSettingsPreset" xml:space="preserve">
+    <value>Voreinstellung für Spieleinstellungen</value>
+  </data>
+  <data name="SelectAPreset" xml:space="preserve">
+    <value>Wählen Sie eine Voreinstellung aus.</value>
+  </data>
 </root>

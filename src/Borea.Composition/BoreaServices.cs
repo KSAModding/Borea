@@ -100,6 +100,8 @@ public sealed class BoreaServices : IDisposable
 
     public required IInstanceRepository Instances { get; init; }
 
+    public required IGameSettingsPresetRepository GameSettingsPresets { get; init; }
+
     public required IGameDataReader GameData { get; init; }
 
     public required IGameSaveStore GameSaves { get; init; }
@@ -353,6 +355,8 @@ public sealed class BoreaServices : IDisposable
         installCandidates ??= OperatingSystem.IsWindows() ? new WindowsInstallCandidateSource() : new NoInstallCandidates();
 
         var modState = new FileModStateRepository(paths);
+        var fileGameSettingsPresets = new GameSettingsPresetRepository(paths);
+        var gameSettingsPresets = new LoggingGameSettingsPresetRepository(fileGameSettingsPresets, log);
         var modInstaller = new LoggingModInstaller(new FileModInstaller(paths, downloader, instances, modState), log);
         var modReplacer = new LoggingModReplacer(new FileModReplacer(paths, downloader, instances, modState), log);
         var foreignModAdopter = new FileForeignModAdopter(paths, instances, contentIndex);
@@ -382,6 +386,7 @@ public sealed class BoreaServices : IDisposable
             InstanceSizes = new FileInstanceSizeReader(paths),
             ModListFormat = new TomlModListFormat(),
             ModState = modState,
+            GameSettingsPresets = gameSettingsPresets,
             ModFavorites = new FileModFavoritesRepository(paths),
             ModPackFavorites = new FileModPackFavoritesRepository(paths),
             Uninstaller = new LoggingModUninstaller(new FileModUninstaller(paths, instances), log),
