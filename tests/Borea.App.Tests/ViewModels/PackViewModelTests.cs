@@ -515,6 +515,122 @@ public sealed class PackViewModelTests
         Assert.Equal(["august-pack"], viewModel.DiscoverPacks.Select(pack => pack.PackId));
     }
 
+    [Fact]
+    public async Task PackUpdate_NewerVersion_ListsTheChangesAndUpdatesAfterTheConfirmation()
+    {
+        var archive = Archive(("MeasureTools/mod.toml", "name = \"MeasureTools\""));
+        using var harness = await ViewModelHarness.CreateAsync(
+            respond: request => request.RequestUri?.AbsoluteUri == MeasureToolsUrl ? ArchiveResponse(archive) : null,
+            editSnapshot: snapshot => WithPacks(ToolsPackVersions())(
+                snapshot.Replace(MeasureToolsSha256, Convert.ToHexString(SHA256.HashData(archive)), StringComparison.Ordinal)
+                    .Replace("\"size\": 41782", $"\"size\": {archive.Length}", StringComparison.Ordinal)));
+        var viewModel = harness.ViewModel;
+        var instance = await OpenToolsPackInstanceAsync(harness);
+        var update = viewModel.PackUpdate!;
+        Assert.Equal(harness.Localization.FormatPackUpdateAvailable("Tools Pack", "1.1.0"), update.NoticeText);
+
+        await update.UpdateCommand.ExecuteAsync(null);
+
+        Assert.True(update.IsConfirming);
+        Assert.Equal(
+            [harness.Localization.FormatPackUpdateAdd(viewModel.ContentName("MeasureTools"), "1.1.10"), harness.Localization.FormatPackUpdateRemove(viewModel.ContentName("KSArmory"), "0.8.44")],
+            update.ChangeTexts);
+        Assert.Equal("KSArmory", Assert.Single((await harness.Services.Instances.GetByIdAsync(instance.InstanceId))!.Mods).ModId);
+
+        await update.ConfirmUpdateCommand.ExecuteAsync(null);
+
+        var updated = (await harness.Services.Instances.GetByIdAsync(instance.InstanceId))!;
+        Assert.Equal(new InstanceSource.FromModPack("tools-pack", ModVersion.Parse("1.1.0")), updated.Source);
+        var mod = Assert.Single(updated.Mods);
+        Assert.Equal("MeasureTools", mod.ModId);
+        Assert.Equal(InstallReason.ModPack, mod.Reason);
+        Assert.Null(viewModel.PackUpdate);
+        var task = viewModel.Tasks.History[0];
+        Assert.Equal(TaskKind.PackUpdate, task.Kind);
+        Assert.Equal(TaskState.Finished, task.State);
+    }
+
+    [Fact]
+    public async Task PackUpdate_FailedDownload_KeepsTheOldSourceAndTheNotice()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: WithPacks(ToolsPackVersions()));
+        var viewModel = harness.ViewModel;
+        var instance = await OpenToolsPackInstanceAsync(harness);
+
+        await viewModel.PackUpdate!.UpdateCommand.ExecuteAsync(null);
+        await viewModel.PackUpdate.ConfirmUpdateCommand.ExecuteAsync(null);
+
+        // tests have no network, so the added mod gets as far as its download
+        Assert.Equal(new InstanceSource.FromModPack("tools-pack", ModVersion.Parse("1.0.0")), (await harness.Services.Instances.GetByIdAsync(instance.InstanceId))!.Source);
+        Assert.NotNull(viewModel.PackUpdate);
+        Assert.NotNull(viewModel.PackUpdate.InstallError);
+        Assert.False(viewModel.PackUpdate.IsConfirming);
+        Assert.Equal(TaskState.Failed, viewModel.Tasks.History[0].State);
+    }
+
+    [Fact]
+    public async Task PackUpdate_RetractedNewerVersion_ShowsNoNotice()
+    {
+        var retracted = Version("1.1.0", Pin("MeasureTools", "1.1.10"));
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: WithPacks(Pack("tools-pack", "Tools Pack",
+            Version("1.0.0", Pin("KSArmory", "0.8.44")),
+            (id, name) => retracted(id, name).Replace("{ \"authored\"", "{ \"index_status\": { \"state\": \"retracted\", \"reason\": \"Broken.\" }, \"authored\"", StringComparison.Ordinal))));
+
+        await OpenToolsPackInstanceAsync(harness);
+
+        Assert.Null(harness.ViewModel.PackUpdate);
+    }
+
+    [Fact]
+    public async Task PackUpdate_VersionThatAnIndexRefreshPublishes_ShowsTheNoticeOnTheOpenPage()
+    {
+        var packs = Pack("tools-pack", "Tools Pack", Version("1.0.0", Pin("KSArmory", "0.8.44")));
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: snapshot => WithPacks(packs)(snapshot));
+        var viewModel = harness.ViewModel;
+        await OpenToolsPackInstanceAsync(harness);
+        await viewModel.WhenContentUpdatesCheckedAsync();
+        Assert.Null(viewModel.PackUpdate);
+
+        packs = ToolsPackVersions();
+        await viewModel.RetryContentIndexCommand.ExecuteAsync(null);
+        await viewModel.WhenContentUpdatesCheckedAsync();
+
+        Assert.Equal("1.1.0", viewModel.PackUpdate?.Version);
+    }
+
+    [Fact]
+    public async Task PackUpdate_OpeningAnotherInstance_HidesTheNoticeAtOnce()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: WithPacks(ToolsPackVersions()));
+        var viewModel = harness.ViewModel;
+        await harness.Services.Instances.CreateAsync("Other", InstanceSource.Custom.Value);
+        await OpenToolsPackInstanceAsync(harness);
+        Assert.NotNull(viewModel.PackUpdate);
+
+        var opening = viewModel.Instances.Single(instance => instance.Name == "Other").OpenCommand.ExecuteAsync(null);
+
+        Assert.Null(viewModel.PackUpdate);
+        await opening;
+        Assert.Null(viewModel.PackUpdate);
+    }
+
+    private static string ToolsPackVersions()
+        => Pack("tools-pack", "Tools Pack", Version("1.0.0", Pin("KSArmory", "0.8.44")), Version("1.1.0", Pin("MeasureTools", "1.1.10")));
+
+    /// <summary>An active instance created from Tools Pack 1.0.0 with its pinned mod, opened on its page.</summary>
+    private static async Task<Instance> OpenToolsPackInstanceAsync(ViewModelHarness harness)
+    {
+        var release = (await harness.Services.Mods.GetReleaseAsync("KSArmory", ModVersion.Parse("0.8.44")))!;
+        var installed = new InstalledMod("KSArmory", release.Version, InstallReason.ModPack, DateTimeOffset.UnixEpoch, release, ownershipToken: "token");
+        var instance = Instance.FromExisting(Guid.NewGuid(), "Tools", new InstanceSource.FromModPack("tools-pack", ModVersion.Parse("1.0.0")), DateTimeOffset.UnixEpoch, [installed], false);
+        await harness.Services.Instances.CreateAsync(instance);
+        await harness.Services.Instances.SetActiveInstanceAsync(instance.InstanceId);
+        await harness.ViewModel.LoadAsync();
+        await harness.ViewModel.EnsureDiscoverLoadedAsync();
+        await harness.ViewModel.ActiveInstance!.OpenCommand.ExecuteAsync(null);
+        return instance;
+    }
+
     /// <summary>A harness whose game folder holds a game of version 2026.8.3.5117.</summary>
     private static Task<ViewModelHarness> CreateWithGameAsync(Func<string, string> editSnapshot) =>
         ViewModelHarness.CreateAsync(

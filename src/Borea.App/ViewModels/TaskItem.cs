@@ -98,7 +98,7 @@ public sealed partial class TaskItem : ObservableObject
     public string Title => Kind switch
     {
         TaskKind.IndexRefresh => Localization.TaskIndexRefresh,
-        TaskKind.Update => Localization.FormatTaskUpdate(Subject ?? string.Empty),
+        TaskKind.Update or TaskKind.PackUpdate => Localization.FormatTaskUpdate(Subject ?? string.Empty),
         TaskKind.UpdateAll => Localization.TaskUpdateAll,
         TaskKind.ModRemoval => Localization.FormatTaskRemove(Subject ?? string.Empty),
         TaskKind.ModListImport => Localization.FormatTaskCreateInstance(Subject ?? string.Empty),
@@ -131,7 +131,7 @@ public sealed partial class TaskItem : ObservableObject
     public bool HasRetry => State == TaskState.Failed && Kind switch
     {
         TaskKind.IndexRefresh => true,
-        TaskKind.UpdateAll => InstanceId is not null,
+        TaskKind.UpdateAll or TaskKind.PackUpdate => InstanceId is not null,
         TaskKind.ModInstall or TaskKind.PackInstall or TaskKind.Update => InstanceId is not null && ContentId is not null,
         _ => false,
     };
@@ -142,8 +142,8 @@ public sealed partial class TaskItem : ObservableObject
     private Task RetryAsync() => _registry.RetryAsync(this);
 
     /// <summary>The installs of one mod or pack share one row, and the updates of one instance run one at a time.</summary>
-    internal bool DoesSameWorkAs(TaskItem other) => Kind is TaskKind.Update or TaskKind.UpdateAll
-        ? other.Kind is TaskKind.Update or TaskKind.UpdateAll && other.InstanceId == InstanceId
+    internal bool DoesSameWorkAs(TaskItem other) => Kind is TaskKind.Update or TaskKind.UpdateAll or TaskKind.PackUpdate
+        ? other.Kind is TaskKind.Update or TaskKind.UpdateAll or TaskKind.PackUpdate && other.InstanceId == InstanceId
         : other.Kind == Kind && ModIds.Equals(other.ContentId, ContentId);
 
     /// <summary>Names the instance that the task created.</summary>

@@ -107,7 +107,7 @@ public partial class MainViewModel
     }
 
     /// <summary>What a stopped install shows where its progress was.</summary>
-    private string StoppedText(IInstallProgressRow row, int completed = 0, int total = 0) => row is IUpdateRow
+    private string StoppedText(IInstallProgressRow row, int completed = 0, int total = 0) => row is IUpdateRow or PackUpdateItem
         ? completed == 0 ? Localization.UpdateStopped : Localization.FormatUpdateStoppedAfter(completed, total)
         : completed == 0 ? Localization.InstallStopped : Localization.FormatInstallStoppedAfter(completed, total);
 
@@ -283,7 +283,7 @@ public partial class MainViewModel
         return choices;
     }
 
-    private string ContentName(string modId)
+    internal string ContentName(string modId)
         => _listings.FirstOrDefault(item => ModIds.Equals(item.ModId, modId))?.Name ?? modId;
 
     /// <summary>"Add" or "Install anyway", with the download size of the plan when the index states one.</summary>

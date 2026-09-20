@@ -6,6 +6,7 @@ using Borea.Core.Index;
 using Borea.Core.Instances;
 using Borea.Core.ModPacks;
 using Borea.Core.Mods;
+using Borea.Core.Planning;
 using Borea.Storage.Instances;
 using Borea.Storage.ModPacks;
 
@@ -849,6 +850,94 @@ public sealed class PackCommandTests : IDisposable
         Assert.Equal(2, run.ExitCode);
         Assert.Equal(0, _host.Builds);
     }
+
+    [Fact]
+    public async Task PackUpdateDryRun_PrintsTheChangesAndWritesNothing()
+    {
+        await CreateNavigationInstanceAsync();
+        _host.IndexReader.Snapshot = Snapshot(Pack(ContentCommandFixtures.PackVersion(), NewerNavigationPack()));
+        var before = FileHashes();
+
+        var run = await _host.RunAsync("pack", "update", "Navigation", "--dry-run");
+
+        Assert.Equal(0, run.ExitCode);
+        Assert.Contains("Pack navigation-pack 1.0.0 to 1.1.0 in 'Navigation':", run.Output);
+        Assert.Contains("Add library 1.0.0.", run.Output);
+        Assert.Contains("Remove flight-tools 2.0.0.", run.Output);
+        Assert.Equal(string.Empty, run.Error);
+        Assert.Equal(before, FileHashes());
+    }
+
+    [Fact]
+    public async Task PackUpdate_RemovesTheDroppedModAddsTheNewOneAndNamesTheNewVersion()
+    {
+        await CreateNavigationInstanceAsync();
+        _host.IndexReader.Snapshot = Snapshot(Pack(ContentCommandFixtures.PackVersion(), NewerNavigationPack()));
+
+        var run = await _host.RunAsync("pack", "update", "Navigation", "--json");
+
+        Assert.Equal(0, run.ExitCode);
+        Assert.True(run.Json.GetProperty("complete").GetBoolean());
+        Assert.Equal("1.1.0", run.Json.GetProperty("newVersion").GetString());
+        Assert.Equal(
+            [("library", "add"), ("flight-tools", "remove")],
+            run.Json.GetProperty("changes").EnumerateArray().Select(change => (change.GetProperty("id").GetString(), change.GetProperty("change").GetString())));
+        var instance = Assert.Single(await new FileInstanceRepository(_host.Paths).GetAllAsync());
+        Assert.Equal(new InstanceSource.FromModPack("navigation-pack", ModVersion.Parse("1.1.0")), instance.Source);
+        var mod = Assert.Single(instance.Mods);
+        Assert.Equal("library", mod.ModId);
+        Assert.Equal(InstallReason.ModPack, mod.Reason);
+        Assert.False(Directory.Exists(Path.Combine(_host.Paths.GetInstanceModsFolder(instance.InstanceId), "flight-tools")));
+    }
+
+    [Fact]
+    public async Task PackUpdate_RetractedNewerVersion_IsIgnored()
+    {
+        await CreateNavigationInstanceAsync();
+        _host.IndexReader.Snapshot = Snapshot(Pack(Usable(ContentCommandFixtures.PackVersion()), ContentCommandFixtures.Retracted(NewerNavigationPack())));
+
+        var run = await _host.RunAsync("pack", "update", "Navigation", "--dry-run");
+
+        Assert.Equal(0, run.ExitCode);
+        Assert.Contains("Instance 'Navigation' has the newest version of pack navigation-pack, 1.0.0.", run.Output);
+    }
+
+    [Fact]
+    public async Task PackUpdate_RetractedNewestVersion_UpdatesToTheNewestUsableOne()
+    {
+        await CreateNavigationInstanceAsync();
+        var retracted = ContentCommandFixtures.PackVersion(version: "1.2.0", mods: [new ModPackEntry("library", ModVersion.Parse("1.0.0"))]);
+        _host.IndexReader.Snapshot = Snapshot(Pack(Usable(ContentCommandFixtures.PackVersion()), Usable(NewerNavigationPack()), ContentCommandFixtures.Retracted(retracted)));
+
+        var run = await _host.RunAsync("pack", "update", "Navigation", "--dry-run");
+
+        Assert.Equal(0, run.ExitCode);
+        Assert.Contains("Pack navigation-pack 1.0.0 to 1.1.0 in 'Navigation':", run.Output);
+    }
+
+    [Fact]
+    public async Task PackUpdate_InstanceThatNoPackCreated_Fails()
+    {
+        _host.IndexReader.Snapshot = Snapshot(Pack(ContentCommandFixtures.PackVersion()));
+        await _host.RunAsync("instance", "create", "Alpha");
+
+        var run = await _host.RunAsync("pack", "update", "Alpha");
+
+        Assert.Equal(1, run.ExitCode);
+        Assert.Contains("Instance 'Alpha' was not created from a mod pack.", run.Error);
+    }
+
+    private async Task CreateNavigationInstanceAsync()
+    {
+        _host.IndexReader.Snapshot = Snapshot(Pack(ContentCommandFixtures.PackVersion()));
+        _host.Mods.Releases.Add(ContentCommandFixtures.Release());
+        _host.Mods.Releases.Add(ContentCommandFixtures.Release(id: "library", version: "1.0.0"));
+        _host.ModPackInstallerFactory = graph => new ModPackInstaller(graph.Instances, graph.InstallPlanner, new FolderInstaller(graph), graph.Replacer);
+        _host.ModPackUpdaterFactory = graph => new ModPackUpdater(graph.Instances, graph.InstallPlanner, new InstallPlanExecutor(graph.Instances, new FolderInstaller(graph), graph.Replacer), graph.Uninstaller);
+        Assert.Equal(0, (await _host.RunAsync("pack", "install", "navigation-pack", "--new-instance", "Navigation")).ExitCode);
+    }
+
+    private static ModPackMetadata NewerNavigationPack() => ContentCommandFixtures.PackVersion(version: "1.1.0", mods: [new ModPackEntry("library", ModVersion.Parse("1.0.0"))]);
 
     private void UseThePackInstaller() =>
         _host.ModPackInstallerFactory = graph => new ModPackInstaller(graph.Instances, graph.InstallPlanner, graph.Installer, graph.Replacer);

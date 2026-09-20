@@ -1169,6 +1169,30 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string FormatPackCreatesInstance(string instanceName)
         => string.Format(CultureInfo.CurrentCulture, Resources.PackCreatesInstanceFormat, instanceName);
 
+    public string PackUpdate => Resources.PackUpdate;
+
+    public string FormatPackUpdateAvailable(string packName, string version)
+        => string.Format(CultureInfo.CurrentCulture, Resources.PackUpdateAvailableFormat, packName, version);
+
+    public string PackUpdateNotNewer => Resources.PackUpdateNotNewer;
+
+    public string FormatPackUpdateAdd(string name, string version)
+        => string.Format(CultureInfo.CurrentCulture, Resources.PackUpdateAddFormat, name, version);
+
+    public string FormatPackUpdateChange(string name, string from, string to)
+        => string.Format(CultureInfo.CurrentCulture, Resources.PackUpdateChangeFormat, name, from, to);
+
+    public string FormatPackUpdateRemove(string name, string version)
+        => string.Format(CultureInfo.CurrentCulture, Resources.PackUpdateRemoveFormat, name, version);
+
+    public string FormatPackUpdateKeep(string name, string version)
+        => string.Format(CultureInfo.CurrentCulture, Resources.PackUpdateKeepFormat, name, version);
+
+    public string FormatPackUpdateKeepChange(string name, string from, string to)
+        => string.Format(CultureInfo.CurrentCulture, Resources.PackUpdateKeepChangeFormat, name, from, to);
+
+    public string PackUpdateNoModChanges => Resources.PackUpdateNoModChanges;
+
     public string PackModHeader => Resources.PackModHeader;
 
     public string PackMemberYanked => Resources.PackMemberYanked;
