@@ -51,6 +51,7 @@ public sealed partial class TaskItem : ObservableObject
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(TimeText))]
+    [NotifyPropertyChangedFor(nameof(TimeToolTip))]
     private DateTimeOffset? _endedAt;
 
     [ObservableProperty]
@@ -121,7 +122,10 @@ public sealed partial class TaskItem : ObservableObject
 
     public string StepText => Step ?? StateText;
 
-    public string TimeText => MainViewModel.DateTimeText(EndedAt ?? StartedAt);
+    /// <summary>The short form, because the row shows it next to the state and the instance.</summary>
+    public string TimeText => MainViewModel.ShortDateTimeText(EndedAt ?? StartedAt);
+
+    public string TimeToolTip => MainViewModel.DateTimeText(EndedAt ?? StartedAt);
 
     public bool IsFailed => State == TaskState.Failed;
 
@@ -224,5 +228,6 @@ public sealed partial class TaskItem : ObservableObject
         OnPropertyChanged(nameof(StateText));
         OnPropertyChanged(nameof(StepText));
         OnPropertyChanged(nameof(TimeText));
+        OnPropertyChanged(nameof(TimeToolTip));
     }
 }

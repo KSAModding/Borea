@@ -28,14 +28,13 @@
         <DataTemplate x:Key="EndedTaskRow" x:DataType="vm:TaskItem">
             <Border Classes="card" Background="{StaticResource Brush.Window}" Padding="12">
                 <StackPanel Spacing="4">
-                    <Grid ColumnDefinitions="*,8,Auto">
-                        <TextBlock Classes="heading-sm" Text="{Binding Title}" ToolTip.Tip="{Binding Title}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
-                        <TextBlock Grid.Column="2" Classes="label-md" Text="{Binding TimeText}" VerticalAlignment="Center" />
-                    </Grid>
-                    <Grid ColumnDefinitions="*,8,Auto">
+                    <!-- the title says what the task did, so it has the row to itself and the state line carries the time -->
+                    <TextBlock Classes="heading-sm" Text="{Binding Title}" ToolTip.Tip="{Binding Title}" TextWrapping="Wrap" MaxLines="2" TextTrimming="CharacterEllipsis" />
+                    <Grid ColumnDefinitions="Auto,8,Auto,8,*">
                         <TextBlock Classes="body-sm secondary" Text="{Binding StateText}" Classes.danger="{Binding IsFailed}" VerticalAlignment="Center" />
-                        <Border Grid.Column="2" Classes="chip" VerticalAlignment="Center" IsVisible="{Binding InstanceName, Converter={x:Static ObjectConverters.IsNotNull}}">
-                            <TextBlock Text="{Binding InstanceName}" MaxWidth="120" TextTrimming="CharacterEllipsis" />
+                        <TextBlock Grid.Column="2" Classes="label-md" Text="{Binding TimeText}" ToolTip.Tip="{Binding TimeToolTip}" VerticalAlignment="Center" />
+                        <Border Grid.Column="4" Classes="chip" HorizontalAlignment="Right" VerticalAlignment="Center" IsVisible="{Binding InstanceName, Converter={x:Static ObjectConverters.IsNotNull}}">
+                            <TextBlock Text="{Binding InstanceName}" MaxWidth="120" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding InstanceName}" />
                         </Border>
                     </Grid>
                     <StackPanel Spacing="4" IsVisible="{Binding IsFailed}">
@@ -50,7 +49,7 @@
     <!-- the drawer opens next to the rail over the page, and a click on the dimmed page closes it like the backdrop of a modal -->
     <Panel>
         <Border x:Name="Scrim" Background="#99000000" />
-        <Border Width="300" HorizontalAlignment="Left" Background="{StaticResource Brush.Rail}" BorderBrush="{StaticResource Brush.Border}" BorderThickness="0,0,1,0">
+        <Border Width="360" HorizontalAlignment="Left" Background="{StaticResource Brush.Rail}" BorderBrush="{StaticResource Brush.Border}" BorderThickness="0,0,1,0">
             <!-- the newest task sits at the bottom, next to the rail item that opens the drawer, so the list grows upward -->
             <ScrollViewer x:Name="Scroller" Focusable="True">
                 <StackPanel VerticalAlignment="Bottom" Margin="24" Spacing="8">
