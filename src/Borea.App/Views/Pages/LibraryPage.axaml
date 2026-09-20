@@ -7,8 +7,6 @@
     <!-- Library -->
     <Grid RowDefinitions="Auto,*">
         <views:PageBodyPanel HasBottomMargin="False">
-            <ContentControl Content="{Binding}" ContentTemplate="{StaticResource GameSetupBanner}" IsVisible="{Binding NeedsGameSetup}" Margin="0,0,0,16" />
-            <ContentControl Content="{Binding}" ContentTemplate="{StaticResource SharedProfileBanner}" IsVisible="{Binding ShowSharedProfileBanner}" Margin="0,0,0,16" />
             <!-- header: breadcrumb, c/link-cta, the menu, bottom border -->
             <Border BorderBrush="{StaticResource Brush.Surface}" BorderThickness="0,0,0,1" Padding="0,0,0,12">
                 <Grid ColumnDefinitions="*,Auto,Auto" RowDefinitions="24">
@@ -40,6 +38,8 @@
                     </Button>
                 </Grid>
             </Border>
+            <ContentControl Content="{Binding}" ContentTemplate="{StaticResource GameSetupBanner}" IsVisible="{Binding NeedsGameSetup}" />
+            <ContentControl Content="{Binding}" ContentTemplate="{StaticResource SharedProfileBanner}" IsVisible="{Binding ShowSharedProfileBanner}" />
 
             <ScrollViewer MaxHeight="{Binding $parent[UserControl].Bounds.Height, Converter={x:Static views:PageBodyPanel.HeaderMessagesMaxHeight}}">
                 <StackPanel>
