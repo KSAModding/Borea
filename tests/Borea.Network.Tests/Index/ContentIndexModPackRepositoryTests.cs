@@ -230,6 +230,8 @@ public sealed class ContentIndexModPackRepositoryTests
         public string GetAppLockPath() => throw new NotSupportedException();
         public string GetInstancesRoot() => throw new NotSupportedException();
         public string GetLoadersRoot() => throw new NotSupportedException();
+        public string GetPresetsRoot() => throw new NotSupportedException();
+        public string GetGameSettingsPresetsRoot() => throw new NotSupportedException();
         public string GetActiveInstancePointerPath() => throw new NotSupportedException();
         public string GetModFavoritesPath() => throw new NotSupportedException();
         public string GetModPackFavoritesPath() => throw new NotSupportedException();
