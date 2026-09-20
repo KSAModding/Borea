@@ -107,8 +107,26 @@ public sealed partial class TaskItem : ObservableObject
         TaskKind.LibraryFolderChange => Localization.FormatTaskLibraryFolder(Subject ?? string.Empty),
         TaskKind.BackupRestore => Localization.FormatTaskBackupRestore(Subject ?? string.Empty),
         TaskKind.BackupDelete => Localization.FormatTaskBackupDelete(Subject ?? string.Empty),
+        TaskKind.LoaderInstall => Localization.FormatTaskInstall(LoaderInstallName),
         _ => Localization.FormatTaskInstall(Subject ?? string.Empty),
     };
+
+    /// <summary>
+    /// The loader name with the version it installs. The subject keeps the plain loader
+    /// name because the toast of a finished install formats the version itself, so the
+    /// title is the one place that joins the two.
+    /// </summary>
+    private string LoaderInstallName
+    {
+        get
+        {
+            var name = Subject ?? string.Empty;
+            if (string.IsNullOrEmpty(Version))
+                return name;
+
+            return string.IsNullOrEmpty(name) ? Version : $"{name} {Version}";
+        }
+    }
 
     public string StateText => State switch
     {
