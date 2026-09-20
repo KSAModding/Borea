@@ -317,7 +317,7 @@ public sealed class ListingPullRequestViewModelTests
     public async Task ForkWithoutTheApp_AsksToAllowBoreaOnIt()
     {
         _session.SignIn();
-        _publisher.Failure = new ListingPublishException(ListingPublishFailure.AppNotOnFork, ListingPublishStep.Fork, "octocat/content-index");
+        _publisher.Failure = new ListingPublishException(ListingPublishFailure.AppNotOnFork, ListingPublishStep.Fork, "octocat/content-index", repositoryId: 42);
         using var harness = await CreateAsync();
         var editor = await ValidNewListingAsync(harness);
         var opened = new List<string>();
@@ -328,7 +328,7 @@ public sealed class ListingPullRequestViewModelTests
 
         Assert.Equal("Allow Borea on octocat/content-index. On GitHub, choose Only select repositories and pick octocat/content-index. Borea can then write only to that copy.", editor.ForkStepText);
         Assert.Equal("Allow Borea on your copy", editor.ForkStepLabel);
-        Assert.Equal([FakeSession.Install], opened);
+        Assert.Equal([FakeSession.Install + "?repository=42"], opened);
         Assert.Null(editor.PublishError);
     }
 
@@ -641,6 +641,8 @@ public sealed class ListingPullRequestViewModelTests
         public string ManageAccessUrl => "https://github.com/settings/apps/authorizations";
 
         public string InstallUrl => Install;
+
+        public string InstallUrlFor(long repositoryId) => Install + "?repository=" + repositoryId;
 
         public GitHubSignInOutcome Outcome { get; set; } = GitHubSignInOutcome.SignedIn;
 

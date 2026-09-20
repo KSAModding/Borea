@@ -462,6 +462,8 @@ public sealed class LoggingDecoratorsTests
 
         public string InstallUrl => "https://github.com/apps/borea/installations/new";
 
+        public string InstallUrlFor(long repositoryId) => InstallUrl + "?repository=" + repositoryId;
+
         public GitHubSessionState State { get; private set; } = GitHubSessionState.SignedOut;
 
         public event EventHandler? StateChanged;

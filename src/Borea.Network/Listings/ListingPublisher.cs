@@ -385,7 +385,7 @@ public sealed class ListingPublisher : IListingPublisher
 
         var reply = await SendAsync(HttpMethod.Get, $"{Api}/repos/{login}/content-index", null, step, cancellationToken, anonymous: true).ConfigureAwait(false);
         if (reply.Status != HttpStatusCode.NotFound && Parse<RepositoryDto>(Ensure(reply, step), step) is var named && IsForkOfUpstream(named))
-            throw new ListingPublishException(ListingPublishFailure.AppNotOnFork, step, named.FullName);
+            throw new ListingPublishException(ListingPublishFailure.AppNotOnFork, step, named.FullName, repositoryId: named.Id > 0 ? named.Id : null);
 
         throw new ListingPublishException(ListingPublishFailure.NoFork, step);
     }
@@ -662,6 +662,8 @@ public sealed class ListingPublisher : IListingPublisher
 
     private sealed class RepositoryDto
     {
+        public long Id { get; set; }
+
         public string FullName { get; set; } = string.Empty;
 
         public bool Fork { get; set; }

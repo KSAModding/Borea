@@ -21,6 +21,7 @@ public sealed partial class ListingEditor
     private string? _ownershipKey;
     private ListingPullRequest? _pullRequest;
     private string? _forkName;
+    private long? _forkId;
     private bool _isPageOpen;
     private bool _signOutAfterPublish;
     private int _refreshes;
@@ -248,6 +249,7 @@ public sealed partial class ListingEditor
         catch (ListingPublishException exception) when (ReferenceEquals(_publishing, cancel) && exception.Failure is ListingPublishFailure.NoFork or ListingPublishFailure.AppNotOnFork)
         {
             _forkName = exception.Detail;
+            _forkId = exception.RepositoryId;
             ForkStep = exception.Failure;
         }
         catch (ListingPublishException exception) when (ReferenceEquals(_publishing, cancel))
@@ -305,7 +307,7 @@ public sealed partial class ListingEditor
         var url = ForkStep switch
         {
             ListingPublishFailure.NoFork => $"https://github.com/{ListingPullRequestLinks.Repository}/fork",
-            ListingPublishFailure.AppNotOnFork => _owner.Services?.GitHub.InstallUrl,
+            ListingPublishFailure.AppNotOnFork => _forkId is { } fork ? _owner.Services?.GitHub.InstallUrlFor(fork) : _owner.Services?.GitHub.InstallUrl,
             _ => null,
         };
         if (url is not null && _owner.OpenListingPage(url) is { } error)

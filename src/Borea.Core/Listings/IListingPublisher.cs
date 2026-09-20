@@ -96,13 +96,14 @@ public enum ListingPublishFailure
 /// <summary>A step of the pull request failed. The message never holds the token.</summary>
 public sealed class ListingPublishException : Exception
 {
-    public ListingPublishException(ListingPublishFailure failure, ListingPublishStep step, string? detail = null, DateTimeOffset? retryAt = null, Exception? innerException = null)
+    public ListingPublishException(ListingPublishFailure failure, ListingPublishStep step, string? detail = null, DateTimeOffset? retryAt = null, Exception? innerException = null, long? repositoryId = null)
         : base($"{step} failed: {failure}{(detail is null ? string.Empty : ", " + detail)}", innerException)
     {
         Failure = failure;
         Step = step;
         Detail = detail;
         RetryAt = retryAt;
+        RepositoryId = repositoryId;
     }
 
     public ListingPublishFailure Failure { get; }
@@ -114,4 +115,7 @@ public sealed class ListingPublishException : Exception
 
     /// <summary>When GitHub accepts requests again after a rate limit.</summary>
     public DateTimeOffset? RetryAt { get; }
+
+    /// <summary>The GitHub id of the repository the failure is about, when known.</summary>
+    public long? RepositoryId { get; }
 }

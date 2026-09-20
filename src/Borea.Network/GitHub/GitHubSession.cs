@@ -58,16 +58,21 @@ public sealed class GitHubSession : IGitHubSession
     /// The install page of the App. With the account of the signed-in user as the suggested target,
     /// because GitHub otherwise opens the installation of an organization that the user administers.
     /// </summary>
-    public string InstallUrl
+    public string InstallUrl => InstallPage(null);
+
+    public string InstallUrlFor(long repositoryId) => InstallPage(repositoryId);
+
+    private string InstallPage(long? repositoryId)
     {
-        get
-        {
-            var page = "https://github.com/apps/" + Uri.EscapeDataString(_slug) + "/installations/new";
-            long? user;
-            lock (_gate)
-                user = _userId;
-            return user is null ? page : $"{page}/permissions?suggested_target_id={user}";
-        }
+        var page = "https://github.com/apps/" + Uri.EscapeDataString(_slug) + "/installations/new";
+        long? user;
+        lock (_gate)
+            user = _userId;
+        if (user is null)
+            return page;
+
+        var suggested = $"{page}/permissions?suggested_target_id={user}";
+        return repositoryId is null ? suggested : $"{suggested}&repository_ids[]={repositoryId}";
     }
 
     public GitHubSessionState State

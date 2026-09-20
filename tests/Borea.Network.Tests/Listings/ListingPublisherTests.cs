@@ -20,7 +20,7 @@ public sealed class ListingPublisherTests
     private const string Text = "spec_version = 1\nid = \"MyMod\"\nname = \"My Mod\"\n";
 
     private const string ForkJson = """
-        { "full_name": "octocat/content-index", "fork": true, "default_branch": "main",
+        { "id": 42, "full_name": "octocat/content-index", "fork": true, "default_branch": "main",
           "owner": { "id": 1, "login": "octocat" }, "parent": { "full_name": "KSAModding/content-index" } }
         """;
 
@@ -153,6 +153,7 @@ public sealed class ListingPublisherTests
         Assert.Equal(ListingPublishFailure.AppNotOnFork, failure.Failure);
         Assert.Equal(ListingPublishStep.Fork, failure.Step);
         Assert.Equal("octocat/content-index", failure.Detail);
+        Assert.Equal(42, failure.RepositoryId);
         Assert.Null(_sent.Single(sent => sent.Url == Fork).Authorization);
         Assert.All(_sent, sent => Assert.Equal("GET", sent.Method));
         Assert.DoesNotContain(_sent, sent => sent.Url.StartsWith(Upstream, StringComparison.Ordinal));
