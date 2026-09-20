@@ -410,8 +410,9 @@ public partial class MainViewModel
             ?? throw new InvalidOperationException(Localization.DiscoverNoRelease);
         var release = await services.Mods.GetLatestReleaseAsync(loaderId)
             ?? throw new InvalidOperationException(Localization.DiscoverNoRelease);
-        var run = LoaderInstallRun = StartInstallRun(StartTask(TaskKind.LoaderInstall, listing.Name));
-        run.TaskItem.NewVersion = release.Version.ToString();
+        var version = release.Version.ToString();
+        var run = LoaderInstallRun = StartInstallRun(StartTask(TaskKind.LoaderInstall, listing.Name, version: version));
+        run.TaskItem.NewVersion = version;
         var text = new InstallProgressText(Localization);
         InstallProgress? paused = null;
         void Show(InstallProgress value)

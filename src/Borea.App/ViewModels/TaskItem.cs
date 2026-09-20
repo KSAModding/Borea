@@ -51,6 +51,7 @@ public sealed partial class TaskItem : ObservableObject
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(TimeText))]
+    [NotifyPropertyChangedFor(nameof(TimeToolTip))]
     private DateTimeOffset? _endedAt;
 
     [ObservableProperty]
@@ -106,8 +107,26 @@ public sealed partial class TaskItem : ObservableObject
         TaskKind.LibraryFolderChange => Localization.FormatTaskLibraryFolder(Subject ?? string.Empty),
         TaskKind.BackupRestore => Localization.FormatTaskBackupRestore(Subject ?? string.Empty),
         TaskKind.BackupDelete => Localization.FormatTaskBackupDelete(Subject ?? string.Empty),
+        TaskKind.LoaderInstall => Localization.FormatTaskInstall(LoaderInstallName),
         _ => Localization.FormatTaskInstall(Subject ?? string.Empty),
     };
+
+    /// <summary>
+    /// The loader name with the version it installs. The subject keeps the plain loader
+    /// name because the toast of a finished install formats the version itself, so the
+    /// title is the one place that joins the two.
+    /// </summary>
+    private string LoaderInstallName
+    {
+        get
+        {
+            var name = Subject ?? string.Empty;
+            if (string.IsNullOrEmpty(Version))
+                return name;
+
+            return string.IsNullOrEmpty(name) ? Version : $"{name} {Version}";
+        }
+    }
 
     public string StateText => State switch
     {
@@ -121,7 +140,10 @@ public sealed partial class TaskItem : ObservableObject
 
     public string StepText => Step ?? StateText;
 
-    public string TimeText => MainViewModel.DateTimeText(EndedAt ?? StartedAt);
+    /// <summary>The short form, because the row shows it next to the state and the instance.</summary>
+    public string TimeText => MainViewModel.ShortDateTimeText(EndedAt ?? StartedAt);
+
+    public string TimeToolTip => MainViewModel.DateTimeText(EndedAt ?? StartedAt);
 
     public bool IsFailed => State == TaskState.Failed;
 
@@ -224,5 +246,6 @@ public sealed partial class TaskItem : ObservableObject
         OnPropertyChanged(nameof(StateText));
         OnPropertyChanged(nameof(StepText));
         OnPropertyChanged(nameof(TimeText));
+        OnPropertyChanged(nameof(TimeToolTip));
     }
 }
