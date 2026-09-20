@@ -1,6 +1,7 @@
 ﻿using Borea.Core.Game;
 using Borea.Core.Paths;
 using Borea.Core.Settings;
+using Borea.Storage.Files;
 using Borea.Storage.Toml;
 using Tomlyn;
 using Tomlyn.Parsing;
@@ -60,6 +61,18 @@ public sealed class GameSettingsPresetRepository : IGameSettingsPresetRepository
         var metadataPath = Path.Combine(_pathProvider.GetGameSettingsPresetsRoot(), id.ToString(), MetadataFileName);
         var dto = await TomlFileStore.ReadAsync<GameSettingsPresetDto>(metadataPath, cancellationToken).ConfigureAwait(false);
         return dto is null ? null : GameSettingsPresetMapper.FromDto(dto);
+    }
+
+    public async Task ApplyAsync(Guid presetId, Guid instanceId, CancellationToken cancellationToken = default)
+    {
+        var sourcePath = Path.Combine(_pathProvider.GetGameSettingsPresetsRoot(), presetId.ToString(), SettingsFileName);
+        if (!File.Exists(sourcePath))
+            throw new InvalidOperationException($"Settings preset '{presetId}' has no settings.toml.");
+
+        var destinationPath = _pathProvider.GetInstanceSettingsPath(instanceId); // name TBD per Q1
+        Directory.CreateDirectory(Path.GetDirectoryName(destinationPath)!);
+        var text = await File.ReadAllTextAsync(sourcePath, cancellationToken).ConfigureAwait(false);
+        await AtomicFile.WriteAllTextAsync(destinationPath, text, cancellationToken).ConfigureAwait(false);
     }
 
     public async Task<GameSettingsPreset> SaveAsync(

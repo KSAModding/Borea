@@ -15,6 +15,11 @@ public interface IGameSettingsPresetRepository
     Task<GameSettingsPreset?> GetAsync(Guid id, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// 
+    /// </summary>
+    Task ApplyAsync(Guid presetId, Guid instanceId, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Saves a new <see cref="GameSettingsPreset"/> to the specified path
     /// </summary>
     Task<GameSettingsPreset> SaveAsync(string name, GameVersion gameVersion, string sourceSettingsTomlPath, CancellationToken cancellationToken = default);

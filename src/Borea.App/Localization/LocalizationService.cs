@@ -1644,6 +1644,10 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string LaunchInstanceMissing => Resources.LaunchInstanceMissing;
 
+    public string ChooseGameSettingsPreset => Resources.ChooseGameSettingsPreset;
+
+    public string SelectAPreset => Resources.SelectAPreset;
+
     public string FormatLaunchLoaderNotInstalled(string loader)
         => string.Format(CultureInfo.CurrentCulture, Resources.LaunchLoaderNotInstalledFormat, loader);
 

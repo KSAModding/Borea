@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -535,6 +535,7 @@ public partial class MainViewModel : ViewModelBase
         ModalInstanceName = string.Empty;
         RenamingInstance = null;
         IsCreatingInstance = true;
+        _ = LoadGameSettingsPresetsAsync();
     }
 
     /// <summary>Opens the name modal to rename <paramref name="item"/>.</summary>
@@ -584,12 +585,16 @@ public partial class MainViewModel : ViewModelBase
         if (_newInstancePack is { } pack)
             return CreatePackInstanceAsync(pack, name);
 
+        var presetId = SelectedGameSettingsPreset?.Id;
         return IsImportingSharedProfile ? ImportSharedProfileAsync(name) : RunModalInstanceOperationAsync(async instances =>
         {
             if (!await instances.IsNameAvailableAsync(name))
                 throw new InvalidOperationException(Localization.ModalNameTaken);
 
-            await instances.CreateAsync(name, InstanceSource.Custom.Value);
+            var created = await instances.CreateAsync(name, InstanceSource.Custom.Value);
+            if (presetId is { } id && _services is { } services)
+                await services.GameSettingsPresets.ApplyAsync(id, created.Instance.InstanceId);
+
             ModalInstanceName = string.Empty;
             IsCreatingInstance = false;
         }, () => IsCreatingInstance, () => Localization.FormatToastCreateFailed(name));
