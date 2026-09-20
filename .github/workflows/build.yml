@@ -16,6 +16,9 @@ jobs:
       matrix:
         os: [ubuntu-24.04, windows-2025, macos-26]
     runs-on: ${{ matrix.os }}
+    # a test that blocks the headless thread takes the whole job with it, and the
+    # run then holds a machine until somebody cancels it, so the job gives up first
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
