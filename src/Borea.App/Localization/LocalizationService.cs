@@ -826,6 +826,8 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string ListingGameMax => Resources.ListingGameMax;
 
+    public string ListingGameMaxHint => Resources.ListingGameMaxHint;
+
     public string ListingGameHint => Resources.ListingGameHint;
 
     public string ListingUsesLoader => Resources.ListingUsesLoader;
@@ -835,6 +837,8 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string ListingLoaderMin => Resources.ListingLoaderMin;
 
     public string ListingLoaderMax => Resources.ListingLoaderMax;
+
+    public string ListingLoaderMaxHint => Resources.ListingLoaderMaxHint;
 
     public string ListingDependenciesHint => Resources.ListingDependenciesHint;
 
@@ -935,6 +939,86 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string ListingOpenedWithText => Resources.ListingOpenedWithText;
 
     public string ListingOpenedPaste => Resources.ListingOpenedPaste;
+
+    public string ListingPublish => Resources.ListingPublish;
+
+    public string ListingUpdatePullRequest => Resources.ListingUpdatePullRequest;
+
+    public string ListingSignInText => Resources.ListingSignInText;
+
+    public string ListingSignIn => Resources.ListingSignIn;
+
+    public string ListingOpenInBrowser => Resources.ListingOpenInBrowser;
+
+    public string ListingOwnershipChecking => Resources.ListingOwnershipChecking;
+
+    public string ListingOwnershipVerified => Resources.ListingOwnershipVerified;
+
+    public string ListingOwnershipSteward => Resources.ListingOwnershipSteward;
+
+    public string ListingOwnershipUnknown => Resources.ListingOwnershipUnknown;
+
+    public string ListingFixNoHost => Resources.ListingFixNoHost;
+
+    public string ListingOpenRepository => Resources.ListingOpenRepository;
+
+    public string ListingOpenSpaceDock => Resources.ListingOpenSpaceDock;
+
+    public string ListingOpenYourPullRequest => Resources.ListingOpenYourPullRequest;
+
+    public string ListingCheckAgain => Resources.ListingCheckAgain;
+
+    public string ListingForkMissing => Resources.ListingForkMissing;
+
+    public string ListingMakeFork => Resources.ListingMakeFork;
+
+    public string ListingAllowOnFork => Resources.ListingAllowOnFork;
+
+    public string ListingStepFindPullRequest => Resources.ListingStepFindPullRequest;
+
+    public string ListingStepFork => Resources.ListingStepFork;
+
+    public string ListingStepBranch => Resources.ListingStepBranch;
+
+    public string ListingStepCommit => Resources.ListingStepCommit;
+
+    public string ListingStepPullRequest => Resources.ListingStepPullRequest;
+
+    public string ListingErrorSignedOut => Resources.ListingErrorSignedOut;
+
+    public string ListingErrorNetwork => Resources.ListingErrorNetwork;
+
+    public string ListingErrorNoChange => Resources.ListingErrorNoChange;
+
+    public string ListingWhatPullRequests => Resources.ListingWhatPullRequests;
+
+    public string ListingWhatFork => Resources.ListingWhatFork;
+
+    public string ListingWhatBranch => Resources.ListingWhatBranch;
+
+    public string ListingWhatFile => Resources.ListingWhatFile;
+
+    public string ListingWhatPullRequest => Resources.ListingWhatPullRequest;
+
+    public string ListingWhatStatus => Resources.ListingWhatStatus;
+
+    public string ListingRefresh => Resources.ListingRefresh;
+
+    public string ListingStateRunning => Resources.ListingStateRunning;
+
+    public string ListingStateMerging => Resources.ListingStateMerging;
+
+    public string ListingStateSteward => Resources.ListingStateSteward;
+
+    public string ListingStateRejected => Resources.ListingStateRejected;
+
+    public string ListingStateNoVerdict => Resources.ListingStateNoVerdict;
+
+    public string ListingStateMerged => Resources.ListingStateMerged;
+
+    public string ListingStateClosed => Resources.ListingStateClosed;
+
+    public string ListingFollowSignedOut => Resources.ListingFollowSignedOut;
 
     public string InstallAnyway => Resources.InstallAnyway;
 
@@ -1439,6 +1523,72 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string FormatListingOpenFailed(string reason)
         => string.Format(CultureInfo.CurrentCulture, Resources.ListingOpenFailedFormat, reason);
+
+    public string FormatListingPublishText(string login)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ListingPublishTextFormat, login);
+
+    public string FormatListingProofOwner(string repository)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ListingProofOwnerFormat, repository);
+
+    public string FormatListingProofTopic(string repository, string topic)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ListingProofTopicFormat, repository, topic);
+
+    public string FormatListingProofMarker(string repository)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ListingProofMarkerFormat, repository);
+
+    public string FormatListingFixTopic(string repository, string topic)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ListingFixTopicFormat, repository, topic);
+
+    public string FormatListingFixMissing(string repository)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ListingFixMissingFormat, repository);
+
+    public string FormatListingFixFork(string repository)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ListingFixForkFormat, repository);
+
+    public string FormatListingFixRenamed(string repository, string newName)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ListingFixRenamedFormat, repository, newName);
+
+    public string FormatListingFixSpaceDockMod(string modId)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ListingFixSpaceDockModFormat, modId);
+
+    public string FormatListingFixSpaceDockLink(string modId)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ListingFixSpaceDockLinkFormat, modId);
+
+    public string FormatListingFixOtherFiles(string number)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ListingFixOtherFilesFormat, number);
+
+    public string FormatListingAppNotOnFork(string repository)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ListingAppNotOnForkFormat, repository);
+
+    public string FormatListingOpened(string number)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ListingOpenedFormat, number);
+
+    public string FormatListingUpdated(string number)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ListingUpdatedFormat, number);
+
+    public string FormatListingUnchanged(string number)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ListingUnchangedFormat, number);
+
+    public string FormatListingErrorRateLimit(string time)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ListingErrorRateLimitFormat, time);
+
+    public string FormatListingErrorNotFound(string what)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ListingErrorNotFoundFormat, what);
+
+    public string FormatListingErrorRefused(string what, string detail)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ListingErrorRefusedFormat, what, detail);
+
+    public string FormatListingErrorForbidden(string what)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ListingErrorForbiddenFormat, what);
+
+    public string FormatListingErrorPullRequestNotOnFork(string number)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ListingErrorPullRequestNotOnForkFormat, number);
+
+    public string FormatListingErrorUnexpected(string what)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ListingErrorUnexpectedFormat, what);
+
+    public string FormatListingPullRequest(string number)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ListingPullRequestFormat, number);
 
     public string FormatIndexUnreachable(string reason)
         => string.Format(CultureInfo.CurrentCulture, Resources.IndexUnreachableFormat, reason);

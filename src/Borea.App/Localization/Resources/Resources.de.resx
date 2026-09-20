@@ -1243,10 +1243,13 @@
     <value>Älteste Spielversion</value>
   </data>
   <data name="ListingGameMax" xml:space="preserve">
-    <value>Neueste getestete Spielversion</value>
+    <value>Letzte funktionierende Spielversion</value>
+  </data>
+  <data name="ListingGameMaxHint" xml:space="preserve">
+    <value>Lass das leer, außer die Mod funktioniert mit neueren Spielversionen nicht mehr. Spieler mit einer neueren Version bekommen dann vor dem Installieren eine Warnung. Jedes Release, das mit dieser Grenze gestempelt wird, behält sie, weil ein Release später nur strenger werden kann.</value>
   </data>
   <data name="ListingGameHint" xml:space="preserve">
-    <value>So, wie das Spiel sie anzeigt, zum Beispiel 2026.9.10.5438, oder ein Monat wie 2026.9. Lass die neueste leer, außer ein neueres Spiel macht die Mod kaputt.</value>
+    <value>So, wie das Spiel sie anzeigt, zum Beispiel 2026.9.10.5438, oder ein Monat wie 2026.9.</value>
   </data>
   <data name="ListingUsesLoader" xml:space="preserve">
     <value>Braucht einen Mod-Loader</value>
@@ -1258,7 +1261,10 @@
     <value>Älteste Loader-Version</value>
   </data>
   <data name="ListingLoaderMax" xml:space="preserve">
-    <value>Neueste Loader-Version</value>
+    <value>Letzte funktionierende Loader-Version</value>
+  </data>
+  <data name="ListingLoaderMaxHint" xml:space="preserve">
+    <value>Lass das leer, außer die Mod funktioniert mit neueren Loader-Versionen nicht mehr. Jedes Release, das mit dieser Grenze gestempelt wird, behält sie, weil ein Release später nur strenger werden kann.</value>
   </data>
   <data name="ListingDependenciesHint" xml:space="preserve">
     <value>Nur, was die mod.toml deines Archivs nicht sagen kann, zum Beispiel Versionsgrenzen oder einen Konflikt.</value>
@@ -1436,6 +1442,192 @@
   </data>
   <data name="ListingOpenFailedFormat" xml:space="preserve">
     <value>GitHub konnte nicht geöffnet werden: {0}</value>
+  </data>
+  <data name="ListingPublish" xml:space="preserve">
+    <value>Pull Request öffnen</value>
+  </data>
+  <data name="ListingUpdatePullRequest" xml:space="preserve">
+    <value>Pull Request aktualisieren</value>
+  </data>
+  <data name="ListingPublishTextFormat" xml:space="preserve">
+    <value>Borea öffnet den Pull Request von deinem GitHub-Konto {0}.</value>
+  </data>
+  <data name="ListingSignInText" xml:space="preserve">
+    <value>Borea meldet dich bei GitHub an und öffnet den Pull Request von deinem Konto.</value>
+  </data>
+  <data name="ListingSignIn" xml:space="preserve">
+    <value>Bei GitHub anmelden</value>
+  </data>
+  <data name="ListingOpenInBrowser" xml:space="preserve">
+    <value>Stattdessen im Browser erledigen</value>
+  </data>
+  <data name="ListingOwnershipChecking" xml:space="preserve">
+    <value>Prüfe, ob dein Eintrag sich selbst mergen kann...</value>
+  </data>
+  <data name="ListingOwnershipVerified" xml:space="preserve">
+    <value>Dein Eintrag kann sich selbst mergen.</value>
+  </data>
+  <data name="ListingOwnershipSteward" xml:space="preserve">
+    <value>Ein Steward muss ihn annehmen.</value>
+  </data>
+  <data name="ListingOwnershipUnknown" xml:space="preserve">
+    <value>Borea konnte nicht prüfen, wer den Release-Host kontrolliert. Die Prüfungen entscheiden, wenn du den Pull Request öffnest.</value>
+  </data>
+  <data name="ListingProofOwnerFormat" xml:space="preserve">
+    <value>{0} gehört dir.</value>
+  </data>
+  <data name="ListingProofTopicFormat" xml:space="preserve">
+    <value>{0} hat das Topic {1}.</value>
+  </data>
+  <data name="ListingProofMarkerFormat" xml:space="preserve">
+    <value>{0} nennt dich in .github/ksa-content-index.toml.</value>
+  </data>
+  <data name="ListingFixTopicFormat" xml:space="preserve">
+    <value>Damit er sich selbst mergt, füge {0} das Topic {1} hinzu.</value>
+  </data>
+  <data name="ListingFixNoHost" xml:space="preserve">
+    <value>Nenne unter Releases das GitHub-Repository oder die SpaceDock-Mod.</value>
+  </data>
+  <data name="ListingFixMissingFormat" xml:space="preserve">
+    <value>GitHub hat kein öffentliches Repository {0}.</value>
+  </data>
+  <data name="ListingFixForkFormat" xml:space="preserve">
+    <value>{0} ist ein Fork. Nenne das ursprüngliche Repository.</value>
+  </data>
+  <data name="ListingFixRenamedFormat" xml:space="preserve">
+    <value>{0} heißt jetzt {1}. Nutze den neuen Namen unter Releases.</value>
+  </data>
+  <data name="ListingFixSpaceDockModFormat" xml:space="preserve">
+    <value>SpaceDock-Mod {0} ist keine veröffentlichte Mod für Kitten Space Agency.</value>
+  </data>
+  <data name="ListingFixSpaceDockLinkFormat" xml:space="preserve">
+    <value>Trage dein GitHub-Repository als Quellcode-Link der SpaceDock-Mod {0} ein.</value>
+  </data>
+  <data name="ListingFixOtherFilesFormat" xml:space="preserve">
+    <value>Borea ergänzt deinen offenen Pull Request #{0}, der auch andere Dateien ändert. Nimm sie heraus, damit er sich selbst mergt.</value>
+  </data>
+  <data name="ListingOpenRepository" xml:space="preserve">
+    <value>Repository öffnen</value>
+  </data>
+  <data name="ListingOpenSpaceDock" xml:space="preserve">
+    <value>Mod auf SpaceDock öffnen</value>
+  </data>
+  <data name="ListingOpenYourPullRequest" xml:space="preserve">
+    <value>Pull Request öffnen</value>
+  </data>
+  <data name="ListingCheckAgain" xml:space="preserve">
+    <value>Erneut prüfen</value>
+  </data>
+  <data name="ListingForkMissing" xml:space="preserve">
+    <value>Borea öffnet den Pull Request von deiner eigenen Kopie von content-index. Lege die Kopie zuerst auf GitHub an.</value>
+  </data>
+  <data name="ListingMakeFork" xml:space="preserve">
+    <value>Kopie des Index anlegen</value>
+  </data>
+  <data name="ListingAppNotOnForkFormat" xml:space="preserve">
+    <value>Erlaube Borea den Zugriff auf {0}. Wähle auf GitHub Only select repositories und dann {0}. Borea kann dann nur in diese Kopie schreiben.</value>
+  </data>
+  <data name="ListingAllowOnFork" xml:space="preserve">
+    <value>Borea für deine Kopie erlauben</value>
+  </data>
+  <data name="ListingStepFindPullRequest" xml:space="preserve">
+    <value>Suche deinen offenen Pull Request...</value>
+  </data>
+  <data name="ListingStepFork" xml:space="preserve">
+    <value>Suche deine Kopie von content-index...</value>
+  </data>
+  <data name="ListingStepBranch" xml:space="preserve">
+    <value>Erstelle einen Branch...</value>
+  </data>
+  <data name="ListingStepCommit" xml:space="preserve">
+    <value>Speichere die Datei...</value>
+  </data>
+  <data name="ListingStepPullRequest" xml:space="preserve">
+    <value>Öffne den Pull Request...</value>
+  </data>
+  <data name="ListingOpenedFormat" xml:space="preserve">
+    <value>Pull Request #{0} geöffnet.</value>
+  </data>
+  <data name="ListingUpdatedFormat" xml:space="preserve">
+    <value>Borea hat die neue Datei zu deinem offenen Pull Request #{0} hinzugefügt.</value>
+  </data>
+  <data name="ListingUnchangedFormat" xml:space="preserve">
+    <value>Dein offener Pull Request #{0} hat diese Datei schon.</value>
+  </data>
+  <data name="ListingErrorSignedOut" xml:space="preserve">
+    <value>GitHub hat dich abgemeldet. Melde dich wieder an und versuche es noch einmal. Dein Eintrag bleibt hier.</value>
+  </data>
+  <data name="ListingErrorRateLimitFormat" xml:space="preserve">
+    <value>GitHub begrenzt, wie oft Borea fragen darf. Versuche es nach {0} wieder.</value>
+  </data>
+  <data name="ListingErrorNotFoundFormat" xml:space="preserve">
+    <value>GitHub hat {0} nicht gefunden.</value>
+  </data>
+  <data name="ListingErrorRefusedFormat" xml:space="preserve">
+    <value>GitHub hat {0} abgelehnt. {1}</value>
+  </data>
+  <data name="ListingErrorForbiddenFormat" xml:space="preserve">
+    <value>GitHub verweigert den Zugriff auf {0}.</value>
+  </data>
+  <data name="ListingErrorNetwork" xml:space="preserve">
+    <value>GitHub ist nicht erreichbar. Dein Eintrag bleibt hier. Versuche es noch einmal.</value>
+  </data>
+  <data name="ListingErrorNoChange" xml:space="preserve">
+    <value>Die Datei ist dieselbe wie die eingetragene. Ändere zuerst etwas.</value>
+  </data>
+  <data name="ListingErrorPullRequestNotOnForkFormat" xml:space="preserve">
+    <value>Dein Pull Request #{0} ändert diese Datei schon, aber nicht aus deiner Kopie des Index. Ändere ihn auf GitHub, oder schließe ihn und versuche es noch einmal.</value>
+  </data>
+  <data name="ListingErrorUnexpectedFormat" xml:space="preserve">
+    <value>Borea versteht die Antwort von GitHub für {0} nicht.</value>
+  </data>
+  <data name="ListingWhatPullRequests" xml:space="preserve">
+    <value>deine offenen Pull Requests</value>
+  </data>
+  <data name="ListingWhatFork" xml:space="preserve">
+    <value>deine Kopie von content-index</value>
+  </data>
+  <data name="ListingWhatBranch" xml:space="preserve">
+    <value>den Branch</value>
+  </data>
+  <data name="ListingWhatFile" xml:space="preserve">
+    <value>die Eintragsdatei</value>
+  </data>
+  <data name="ListingWhatPullRequest" xml:space="preserve">
+    <value>den Pull Request</value>
+  </data>
+  <data name="ListingWhatStatus" xml:space="preserve">
+    <value>den Status des Pull Requests</value>
+  </data>
+  <data name="ListingPullRequestFormat" xml:space="preserve">
+    <value>Pull Request #{0}</value>
+  </data>
+  <data name="ListingRefresh" xml:space="preserve">
+    <value>Aktualisieren</value>
+  </data>
+  <data name="ListingStateRunning" xml:space="preserve">
+    <value>Die Prüfungen laufen.</value>
+  </data>
+  <data name="ListingStateMerging" xml:space="preserve">
+    <value>Geprüft. Er wird von selbst gemergt.</value>
+  </data>
+  <data name="ListingStateSteward" xml:space="preserve">
+    <value>Geprüft. Ein Steward muss ihn annehmen.</value>
+  </data>
+  <data name="ListingStateRejected" xml:space="preserve">
+    <value>Die Prüfungen haben ihn abgelehnt. Behebe, was die Hinweise sagen, und aktualisiere dann den Pull Request.</value>
+  </data>
+  <data name="ListingStateNoVerdict" xml:space="preserve">
+    <value>Die Prüfungen kamen zu keinem Ergebnis. Sie laufen mit der nächsten Änderung noch einmal, oder ein Steward entscheidet.</value>
+  </data>
+  <data name="ListingStateMerged" xml:space="preserve">
+    <value>Gemergt. Dein Eintrag erscheint in Borea nach dem nächsten Update des Index.</value>
+  </data>
+  <data name="ListingStateClosed" xml:space="preserve">
+    <value>Ohne Merge geschlossen.</value>
+  </data>
+  <data name="ListingFollowSignedOut" xml:space="preserve">
+    <value>Melde dich bei GitHub an, um den Pull Request zu verfolgen.</value>
   </data>
   <data name="InstallAnyway" xml:space="preserve">
     <value>Trotzdem installieren</value>

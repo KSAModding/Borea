@@ -1243,10 +1243,13 @@
     <value>Oldest game version</value>
   </data>
   <data name="ListingGameMax" xml:space="preserve">
-    <value>Newest tested game version</value>
+    <value>Last working game version</value>
+  </data>
+  <data name="ListingGameMaxHint" xml:space="preserve">
+    <value>Leave this empty unless the mod stops working on newer game builds. Players on a newer build then get a warning before they install. Every release stamped while this is set keeps the limit, because a release can only get stricter later.</value>
   </data>
   <data name="ListingGameHint" xml:space="preserve">
-    <value>As the game shows it, such as 2026.9.10.5438, or a month such as 2026.9. Leave the newest empty unless a newer game breaks the mod.</value>
+    <value>As the game shows it, such as 2026.9.10.5438, or a month such as 2026.9.</value>
   </data>
   <data name="ListingUsesLoader" xml:space="preserve">
     <value>Needs a mod loader</value>
@@ -1258,7 +1261,10 @@
     <value>Oldest loader version</value>
   </data>
   <data name="ListingLoaderMax" xml:space="preserve">
-    <value>Newest loader version</value>
+    <value>Last working loader version</value>
+  </data>
+  <data name="ListingLoaderMaxHint" xml:space="preserve">
+    <value>Leave this empty unless the mod stops working with newer loader versions. Every release stamped while this is set keeps the limit, because a release can only get stricter later.</value>
   </data>
   <data name="ListingDependenciesHint" xml:space="preserve">
     <value>Only what the mod.toml of your archive cannot say, such as version bounds or a conflict.</value>
@@ -1436,6 +1442,192 @@
   </data>
   <data name="ListingOpenFailedFormat" xml:space="preserve">
     <value>GitHub could not be opened: {0}</value>
+  </data>
+  <data name="ListingPublish" xml:space="preserve">
+    <value>Open pull request</value>
+  </data>
+  <data name="ListingUpdatePullRequest" xml:space="preserve">
+    <value>Update pull request</value>
+  </data>
+  <data name="ListingPublishTextFormat" xml:space="preserve">
+    <value>Borea opens the pull request from your GitHub account {0}.</value>
+  </data>
+  <data name="ListingSignInText" xml:space="preserve">
+    <value>Borea signs you in to GitHub and opens the pull request from your account.</value>
+  </data>
+  <data name="ListingSignIn" xml:space="preserve">
+    <value>Sign in to GitHub</value>
+  </data>
+  <data name="ListingOpenInBrowser" xml:space="preserve">
+    <value>Do it in the browser instead</value>
+  </data>
+  <data name="ListingOwnershipChecking" xml:space="preserve">
+    <value>Checking whether your listing can merge itself...</value>
+  </data>
+  <data name="ListingOwnershipVerified" xml:space="preserve">
+    <value>Your listing can merge itself.</value>
+  </data>
+  <data name="ListingOwnershipSteward" xml:space="preserve">
+    <value>A steward has to accept it.</value>
+  </data>
+  <data name="ListingOwnershipUnknown" xml:space="preserve">
+    <value>Borea could not check who controls the release host. The checks decide after you open the pull request.</value>
+  </data>
+  <data name="ListingProofOwnerFormat" xml:space="preserve">
+    <value>You own {0}.</value>
+  </data>
+  <data name="ListingProofTopicFormat" xml:space="preserve">
+    <value>{0} has the topic {1}.</value>
+  </data>
+  <data name="ListingProofMarkerFormat" xml:space="preserve">
+    <value>{0} names you in .github/ksa-content-index.toml.</value>
+  </data>
+  <data name="ListingFixTopicFormat" xml:space="preserve">
+    <value>To let it merge itself, add the topic {1} to {0}.</value>
+  </data>
+  <data name="ListingFixNoHost" xml:space="preserve">
+    <value>Name the GitHub repository or the SpaceDock mod under Releases.</value>
+  </data>
+  <data name="ListingFixMissingFormat" xml:space="preserve">
+    <value>GitHub has no public repository {0}.</value>
+  </data>
+  <data name="ListingFixForkFormat" xml:space="preserve">
+    <value>{0} is a fork. Name the original repository.</value>
+  </data>
+  <data name="ListingFixRenamedFormat" xml:space="preserve">
+    <value>{0} is now {1}. Use the new name under Releases.</value>
+  </data>
+  <data name="ListingFixSpaceDockModFormat" xml:space="preserve">
+    <value>SpaceDock mod {0} is not a published Kitten Space Agency mod.</value>
+  </data>
+  <data name="ListingFixSpaceDockLinkFormat" xml:space="preserve">
+    <value>Set your GitHub repository as the source code link of SpaceDock mod {0}.</value>
+  </data>
+  <data name="ListingFixOtherFilesFormat" xml:space="preserve">
+    <value>Borea adds to your open pull request #{0}, which also changes other files. Take them out of it to let it merge itself.</value>
+  </data>
+  <data name="ListingOpenRepository" xml:space="preserve">
+    <value>Open the repository</value>
+  </data>
+  <data name="ListingOpenSpaceDock" xml:space="preserve">
+    <value>Open the mod on SpaceDock</value>
+  </data>
+  <data name="ListingOpenYourPullRequest" xml:space="preserve">
+    <value>Open the pull request</value>
+  </data>
+  <data name="ListingCheckAgain" xml:space="preserve">
+    <value>Check again</value>
+  </data>
+  <data name="ListingForkMissing" xml:space="preserve">
+    <value>Borea opens the pull request from your own copy of content-index. Make the copy on GitHub first.</value>
+  </data>
+  <data name="ListingMakeFork" xml:space="preserve">
+    <value>Make your copy of the index</value>
+  </data>
+  <data name="ListingAppNotOnForkFormat" xml:space="preserve">
+    <value>Allow Borea on {0}. On GitHub, choose Only select repositories and pick {0}. Borea can then write only to that copy.</value>
+  </data>
+  <data name="ListingAllowOnFork" xml:space="preserve">
+    <value>Allow Borea on your copy</value>
+  </data>
+  <data name="ListingStepFindPullRequest" xml:space="preserve">
+    <value>Looking for your open pull request...</value>
+  </data>
+  <data name="ListingStepFork" xml:space="preserve">
+    <value>Looking for your copy of content-index...</value>
+  </data>
+  <data name="ListingStepBranch" xml:space="preserve">
+    <value>Creating a branch...</value>
+  </data>
+  <data name="ListingStepCommit" xml:space="preserve">
+    <value>Saving the file...</value>
+  </data>
+  <data name="ListingStepPullRequest" xml:space="preserve">
+    <value>Opening the pull request...</value>
+  </data>
+  <data name="ListingOpenedFormat" xml:space="preserve">
+    <value>Opened pull request #{0}.</value>
+  </data>
+  <data name="ListingUpdatedFormat" xml:space="preserve">
+    <value>Borea added the new file to your open pull request #{0}.</value>
+  </data>
+  <data name="ListingUnchangedFormat" xml:space="preserve">
+    <value>Your open pull request #{0} already has this file.</value>
+  </data>
+  <data name="ListingErrorSignedOut" xml:space="preserve">
+    <value>GitHub signed you out. Sign in again and try once more. Your listing stays here.</value>
+  </data>
+  <data name="ListingErrorRateLimitFormat" xml:space="preserve">
+    <value>GitHub limits how often Borea can ask. Try again after {0}.</value>
+  </data>
+  <data name="ListingErrorNotFoundFormat" xml:space="preserve">
+    <value>GitHub did not find {0}.</value>
+  </data>
+  <data name="ListingErrorRefusedFormat" xml:space="preserve">
+    <value>GitHub refused {0}. {1}</value>
+  </data>
+  <data name="ListingErrorForbiddenFormat" xml:space="preserve">
+    <value>GitHub refused access to {0}.</value>
+  </data>
+  <data name="ListingErrorNetwork" xml:space="preserve">
+    <value>Cannot reach GitHub. Your listing stays here. Try again.</value>
+  </data>
+  <data name="ListingErrorNoChange" xml:space="preserve">
+    <value>The file is the same as the listed one. Change something first.</value>
+  </data>
+  <data name="ListingErrorPullRequestNotOnForkFormat" xml:space="preserve">
+    <value>Your pull request #{0} already changes this file, but not from your copy of the index. Change it on GitHub, or close it and try again.</value>
+  </data>
+  <data name="ListingErrorUnexpectedFormat" xml:space="preserve">
+    <value>GitHub gave an answer for {0} that Borea does not understand.</value>
+  </data>
+  <data name="ListingWhatPullRequests" xml:space="preserve">
+    <value>your open pull requests</value>
+  </data>
+  <data name="ListingWhatFork" xml:space="preserve">
+    <value>your copy of content-index</value>
+  </data>
+  <data name="ListingWhatBranch" xml:space="preserve">
+    <value>the branch</value>
+  </data>
+  <data name="ListingWhatFile" xml:space="preserve">
+    <value>the listing file</value>
+  </data>
+  <data name="ListingWhatPullRequest" xml:space="preserve">
+    <value>the pull request</value>
+  </data>
+  <data name="ListingWhatStatus" xml:space="preserve">
+    <value>the pull request status</value>
+  </data>
+  <data name="ListingPullRequestFormat" xml:space="preserve">
+    <value>Pull request #{0}</value>
+  </data>
+  <data name="ListingRefresh" xml:space="preserve">
+    <value>Refresh</value>
+  </data>
+  <data name="ListingStateRunning" xml:space="preserve">
+    <value>The checks are running.</value>
+  </data>
+  <data name="ListingStateMerging" xml:space="preserve">
+    <value>Validated. It merges on its own.</value>
+  </data>
+  <data name="ListingStateSteward" xml:space="preserve">
+    <value>Validated. A steward has to accept it.</value>
+  </data>
+  <data name="ListingStateRejected" xml:space="preserve">
+    <value>The checks rejected it. Fix what the notes say, then update the pull request.</value>
+  </data>
+  <data name="ListingStateNoVerdict" xml:space="preserve">
+    <value>The checks could not reach a verdict. They run again with the next change, or a steward decides.</value>
+  </data>
+  <data name="ListingStateMerged" xml:space="preserve">
+    <value>Merged. Your listing shows in Borea after the next index update.</value>
+  </data>
+  <data name="ListingStateClosed" xml:space="preserve">
+    <value>Closed without a merge.</value>
+  </data>
+  <data name="ListingFollowSignedOut" xml:space="preserve">
+    <value>Sign in to GitHub to follow the pull request.</value>
   </data>
   <data name="InstallAnyway" xml:space="preserve">
     <value>Install anyway</value>

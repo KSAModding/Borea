@@ -39,6 +39,7 @@ public sealed class GitHubSession : IGitHubSession
     private readonly object _gate = new();
     private GitHubSessionState _state = GitHubSessionState.SignedOut;
     private string? _token;
+    private long? _userId;
     private CancellationTokenSource? _signIn;
 
     public GitHubSession(HttpClient httpClient, string clientId, string slug, TimeProvider? time = null)
@@ -53,7 +54,26 @@ public sealed class GitHubSession : IGitHubSession
 
     public string ManageAccessUrl => ManageAccessPage;
 
-    public string InstallUrl => "https://github.com/apps/" + Uri.EscapeDataString(_slug) + "/installations/new";
+    /// <summary>
+    /// The install page of the App. With the account of the signed-in user as the suggested target,
+    /// because GitHub otherwise opens the installation of an organization that the user administers.
+    /// </summary>
+    public string InstallUrl => InstallPage(null);
+
+    public string InstallUrlFor(long repositoryId) => InstallPage(repositoryId);
+
+    private string InstallPage(long? repositoryId)
+    {
+        var page = "https://github.com/apps/" + Uri.EscapeDataString(_slug) + "/installations/new";
+        long? user;
+        lock (_gate)
+            user = _userId;
+        if (user is null)
+            return page;
+
+        var suggested = $"{page}/permissions?suggested_target_id={user}";
+        return repositoryId is null ? suggested : $"{suggested}&repository_ids[]={repositoryId}";
+    }
 
     public GitHubSessionState State
     {
@@ -107,6 +127,7 @@ public sealed class GitHubSession : IGitHubSession
             _signIn = null;
             changed = _state.Status != GitHubSessionStatus.SignedOut;
             _token = null;
+            _userId = null;
             _state = GitHubSessionState.SignedOut;
         }
 
@@ -218,13 +239,14 @@ public sealed class GitHubSession : IGitHubSession
         if (reply.Status != HttpStatusCode.OK)
             return new(GitHubSignInOutcome.UnexpectedResponse);
 
-        if (Parse<UserDto>(reply.Body)?.Login is not { Length: > 0 } login)
+        if (Parse<UserDto>(reply.Body) is not { Login: { Length: > 0 } login } user)
             return new(GitHubSignInOutcome.UnexpectedResponse);
 
         lock (_gate)
         {
             ThrowIfStopped(run);
             _token = token;
+            _userId = user.Id;
             _state = GitHubSessionState.SignedInAs(login);
         }
 
@@ -277,6 +299,7 @@ public sealed class GitHubSession : IGitHubSession
                 return;
 
             _token = null;
+            _userId = null;
             _state = GitHubSessionState.SignedOut;
         }
 
@@ -405,5 +428,8 @@ public sealed class GitHubSession : IGitHubSession
     {
         [JsonPropertyName("login")]
         public string? Login { get; set; }
+
+        [JsonPropertyName("id")]
+        public long? Id { get; set; }
     }
 }

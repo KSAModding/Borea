@@ -21,6 +21,8 @@ public sealed class LoggingGitHubSession : IGitHubSession
 
     public string InstallUrl => Inner.InstallUrl;
 
+    public string InstallUrlFor(long repositoryId) => Inner.InstallUrlFor(repositoryId);
+
     public GitHubSessionState State => Inner.State;
 
     public event EventHandler? StateChanged

@@ -3,6 +3,7 @@ using Borea.Core.GitHub;
 using Borea.Core.Index;
 using Borea.Core.Instances;
 using Borea.Core.Launch;
+using Borea.Core.Listings;
 using Borea.Core.Logging;
 using Borea.Core.Mods;
 using Borea.Core.Planning;
@@ -292,6 +293,58 @@ public sealed class LoggingDecoratorsTests
         Assert.Equal("Signed out of GitHub, because GitHub refused the token.", _log.Messages[^1]);
     }
 
+    [Theory]
+    [InlineData(ListingPublishOutcome.Opened, "Opened listing pull request https://github.com/KSAModding/content-index/pull/90")]
+    [InlineData(ListingPublishOutcome.Updated, "Updated listing pull request https://github.com/KSAModding/content-index/pull/90")]
+    public async Task ListingPublisher_OpenedOrUpdated_WritesTheUrl(ListingPublishOutcome outcome, string message)
+    {
+        var publisher = new LoggingListingPublisher(new FakeListingPublisher { Outcome = outcome }, _log);
+
+        await publisher.PublishAsync(new ListingSubmission("MyMod", "My Mod", string.Empty, IsEdit: false));
+
+        Assert.Equal([message], _log.Messages);
+    }
+
+    [Fact]
+    public async Task ListingPublisher_NothingToCommit_WritesNothing()
+    {
+        var publisher = new LoggingListingPublisher(new FakeListingPublisher { Outcome = ListingPublishOutcome.Unchanged }, _log);
+
+        await publisher.PublishAsync(new ListingSubmission("MyMod", "My Mod", string.Empty, IsEdit: false));
+
+        Assert.Empty(_log.Messages);
+    }
+
+    [Fact]
+    public async Task ListingPublisher_Failure_WritesTheStepAndRethrows()
+    {
+        var failure = new ListingPublishException(ListingPublishFailure.Refused, ListingPublishStep.PullRequest, "Validation Failed");
+        var publisher = new LoggingListingPublisher(new FakeListingPublisher { Failure = failure }, _log);
+
+        var thrown = await Assert.ThrowsAsync<ListingPublishException>(() => publisher.PublishAsync(new ListingSubmission("MyMod", "My Mod", string.Empty, IsEdit: false)));
+
+        Assert.Same(failure, thrown);
+        Assert.Equal(["Listing pull request of MyMod failed. PullRequest failed: Refused, Validation Failed"], _log.Messages);
+    }
+
+    private sealed class FakeListingPublisher : IListingPublisher
+    {
+        public ListingPublishOutcome Outcome { get; init; }
+
+        public ListingPublishException? Failure { get; init; }
+
+        public Task<ListingOwnership> CheckOwnershipAsync(ListingDraft submitted, ListingDraft? listed, CancellationToken cancellationToken = default) =>
+            Task.FromResult(ListingOwnership.Unknown);
+
+        public Task<ListingPullRequest> PublishAsync(ListingSubmission submission, IProgress<ListingPublishStep>? progress = null, CancellationToken cancellationToken = default) =>
+            Failure is not null
+                ? Task.FromException<ListingPullRequest>(Failure)
+                : Task.FromResult(new ListingPullRequest(90, new Uri("https://github.com/KSAModding/content-index/pull/90"), Outcome));
+
+        public Task<ListingPullRequestStatus> GetStatusAsync(int number, CancellationToken cancellationToken = default) =>
+            Task.FromResult(new ListingPullRequestStatus(ListingPullRequestState.ChecksRunning, null));
+    }
+
     private sealed class RecordingLog : IBoreaLog
     {
         public List<string> Messages { get; } = [];
@@ -408,6 +461,8 @@ public sealed class LoggingDecoratorsTests
         public string ManageAccessUrl => "https://github.com/settings/apps/authorizations";
 
         public string InstallUrl => "https://github.com/apps/borea/installations/new";
+
+        public string InstallUrlFor(long repositoryId) => InstallUrl + "?repository=" + repositoryId;
 
         public GitHubSessionState State { get; private set; } = GitHubSessionState.SignedOut;
 
