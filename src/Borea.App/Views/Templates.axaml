@@ -41,7 +41,7 @@
     <!-- c/instance-row: used by the library list and by the Current Install card on Home.
          Delete asks for a confirmation in the row, and rename opens the name modal. -->
     <DataTemplate x:Key="InstanceRow" x:DataType="vm:InstanceItem">
-        <Button Classes="plain card-button" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Command="{Binding OpenCommand}" AutomationProperties.Name="{Binding Name}">
+        <Button Classes="plain card-button" views:RowButton.IgnoresDisabled="True" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Command="{Binding OpenCommand}" AutomationProperties.Name="{Binding Name}">
             <Border Classes="card" Padding="12">
                 <Grid ColumnDefinitions="70,16,*" RowDefinitions="Auto,*,Auto" Height="70">
                     <Border Grid.RowSpan="3" Classes="thumbnail" Width="70" Height="70">
