@@ -36,6 +36,21 @@
   <data name="PreferenceSaveErrorFormat" xml:space="preserve">
     <value>Die Einstellung konnte nicht gespeichert werden: {0}</value>
   </data>
+  <data name="UnexpectedErrorHint" xml:space="preserve">
+    <value>Etwas ist schiefgelaufen. Borea läuft weiter, und die Details stehen im Log.</value>
+  </data>
+  <data name="UnexpectedErrorCopyDetails" xml:space="preserve">
+    <value>Details kopieren</value>
+  </data>
+  <data name="UnexpectedErrorReport" xml:space="preserve">
+    <value>Problem melden</value>
+  </data>
+  <data name="UnexpectedErrorCopied" xml:space="preserve">
+    <value>Die Fehlerdetails sind in der Zwischenablage.</value>
+  </data>
+  <data name="UnexpectedErrorCopyFailed" xml:space="preserve">
+    <value>Die Fehlerdetails konnten nicht kopiert werden</value>
+  </data>
   <data name="SettingsLanguageLabel" xml:space="preserve">
     <value>Sprache</value>
   </data>

@@ -36,6 +36,21 @@
   <data name="PreferenceSaveErrorFormat" xml:space="preserve">
     <value>The preference could not be saved: {0}</value>
   </data>
+  <data name="UnexpectedErrorHint" xml:space="preserve">
+    <value>Something went wrong. Borea keeps running, and the details are in the log.</value>
+  </data>
+  <data name="UnexpectedErrorCopyDetails" xml:space="preserve">
+    <value>Copy details</value>
+  </data>
+  <data name="UnexpectedErrorReport" xml:space="preserve">
+    <value>Report this</value>
+  </data>
+  <data name="UnexpectedErrorCopied" xml:space="preserve">
+    <value>The error details are on the clipboard.</value>
+  </data>
+  <data name="UnexpectedErrorCopyFailed" xml:space="preserve">
+    <value>Could not copy the error details</value>
+  </data>
   <data name="SettingsLanguageLabel" xml:space="preserve">
     <value>Language</value>
   </data>
