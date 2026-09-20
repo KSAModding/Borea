@@ -14,8 +14,8 @@ using CommunityToolkit.Mvvm.Input;
 namespace Borea.App.ViewModels;
 
 /// <summary>
-/// The About section of the settings modal: what is installed, where Borea
-/// keeps its files, where to report a problem, and whose work ships inside.
+/// The About section of the settings modal: what is installed and whose work
+/// ships inside, with the open and copy commands the Help section shares.
 /// </summary>
 public partial class MainViewModel
 {
@@ -102,8 +102,13 @@ public partial class MainViewModel
 
             if (_services is not null)
             {
+                if (_services.Paths.GetGameDirectoryPath() is { } gameDirectory)
+                    text.AppendLine($"Game folder: {WithoutUserProfile(gameDirectory)}");
+
                 text.AppendLine(IndexDiagnosticsLine(_services.IndexRefresh.Status));
                 text.AppendLine($"Library: {WithoutUserProfile(LibraryFolder!)}");
+                if (ActiveInstance is { } instance)
+                    text.AppendLine($"Instance: {instance.Name}");
 
                 // the matched release is what the Game tab shows; the file version is the fallback for an adopted loader
                 foreach (var (loaderId, installation) in _services.Settings.LoaderInstallations)

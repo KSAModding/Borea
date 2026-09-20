@@ -1,4 +1,5 @@
 using Borea.App.ViewModels;
+using Borea.Core.Instances;
 using Borea.Core.ModLoaders;
 using Borea.Core.Mods;
 
@@ -175,6 +176,24 @@ public sealed class AboutViewModelTests
     }
 
     [Fact]
+    public async Task Diagnostics_NameTheGameFolderAndTheActiveInstance()
+    {
+        string game = null!;
+        using var harness = await ViewModelHarness.CreateAsync(
+            services => services.SettingsRepository.SaveAsync(services.Settings.WithGameDirectory(game)),
+            candidates: harness => harness.Candidates.Games.Add(game = PlaceGame(harness)));
+        var viewModel = harness.ViewModel;
+        var instance = (await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value)).Instance;
+        await harness.Services.Instances.SetActiveInstanceAsync(instance.InstanceId);
+        await viewModel.LoadAsync();
+
+        var text = viewModel.DiagnosticsText;
+
+        Assert.Contains("Game folder: " + MainViewModel.WithoutUserProfile(game), text);
+        Assert.Contains("Instance: Main", text);
+    }
+
+    [Fact]
     public async Task OpenFolder_MissingFolder_ReportsInsteadOfStarting()
     {
         using var harness = await ViewModelHarness.CreateAsync();
@@ -210,5 +229,13 @@ public sealed class AboutViewModelTests
         Assert.Equal("~", MainViewModel.WithoutUserProfile(profile));
         Assert.Equal(elsewhere, MainViewModel.WithoutUserProfile(elsewhere));
         Assert.Equal(profile + "2", MainViewModel.WithoutUserProfile(profile + "2"));
+    }
+
+    private static string PlaceGame(ViewModelHarness harness)
+    {
+        var directory = Directory.CreateDirectory(Path.Combine(harness.Root, "KSA")).FullName;
+        File.WriteAllText(Path.Combine(directory, "KSA.exe"), "game");
+        File.Copy(Path.Combine(AppContext.BaseDirectory, "GameVersionFixture.dll"), Path.Combine(directory, "KSA.dll"));
+        return directory;
     }
 }
