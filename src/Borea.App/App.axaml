@@ -524,6 +524,10 @@
         <Style Selector="Button.chip-button:pointerover /template/ ContentPresenter">
             <Setter Property="Background" Value="{StaticResource Brush.Surface}" />
         </Style>
+        <!-- the back control before a breadcrumb -->
+        <Style Selector="Button.back:pointerover Path.icon">
+            <Setter Property="Stroke" Value="{StaticResource Brush.Text}" />
+        </Style>
         <!-- an invisible button around text or a thumbnail -->
         <Style Selector="Button.plain">
             <Setter Property="Padding" Value="0" />
