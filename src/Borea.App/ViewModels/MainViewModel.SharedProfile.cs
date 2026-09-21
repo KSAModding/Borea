@@ -107,6 +107,7 @@ public partial class MainViewModel
 
         IsImportingSharedProfile = false;
         _newInstancePack = null;
+        _newInstancePackVersion = null;
         IsSharedProfileImportRunning = false;
         _sharedProfileImport?.Cancel();
     }

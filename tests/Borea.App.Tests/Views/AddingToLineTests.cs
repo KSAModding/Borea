@@ -202,18 +202,22 @@ public sealed class AddingToLineTests
     }
 
     [Fact]
-    public async Task PackPage_NamesTheInstanceOnTheLineAndTheAddButton()
+    public async Task PackPage_NamesTheInstanceOnTheLineTheAddButtonAndTheVersionRows()
     {
         using var harness = await CreateAsync("Alpha", InstanceViewModelTests.WithPack("starter-pack", "Starter Pack", "1.0.0", ("AdvancedFlightComputer", "0.7.5")));
         var viewModel = harness.ViewModel;
         viewModel.ShowDiscoverModpacksCommand.Execute(null);
         await Assert.Single(viewModel.DiscoverPacks).OpenCommand.ExecuteAsync(null);
+        viewModel.ShowPackVersionsCommand.Execute(null);
 
-        var (line, add) = await RenderAsync(viewModel, () => new PackPage(), 1200, page => Task.FromResult((
+        var (line, add, versions) = await RenderAsync(viewModel, () => new PackPage(), 1200, page => Task.FromResult((
             ReadLine(viewModel, page),
-            AddButtons(page, [viewModel.SelectedPack!.InstallCommand]))));
+            AddButtons(page, [viewModel.SelectedPack!.InstallCommand]),
+            AddButtons(page, viewModel.PackVersions.Select(version => version.InstallCommand)))));
 
         AssertNamesAlpha(line);
         Assert.Equal(("Add to Alpha", "Add to Alpha"), Assert.Single(add));
+        Assert.Equal(viewModel.PackVersions.Count, versions.Count);
+        Assert.All(versions, version => Assert.Equal(("Add to Alpha", "Add to Alpha"), version));
     }
 }

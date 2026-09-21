@@ -18,6 +18,8 @@ public sealed class PackViewModelTests
 {
     private const string MeasureToolsUrl = "https://github.com/Maximilian-Nesslauer/KSA-MeasureTools/releases/download/v1.1.10/MeasureTools.zip";
     private const string MeasureToolsSha256 = "8718558358629EFC3753ACFF9052851EFEB142A9343A1794485C177651265F15";
+    private const string MeasureTools119Url = "https://github.com/Maximilian-Nesslauer/KSA-MeasureTools/releases/download/v1.1.9/MeasureTools.zip";
+    private const string MeasureTools119Sha256 = "0367A612BD8D0A3A2225A92AB8A9292F7EF4FF47238E159301D8F514BA87E04C";
 
     [Fact]
     public async Task ModpacksTab_ListsThePacksOfTheSnapshot()
@@ -153,6 +155,74 @@ public sealed class PackViewModelTests
         Assert.True(viewModel.CurrentWindowContent);
         Assert.False(viewModel.CurrentWindowPack);
         Assert.Equal("AdvancedFlightComputer", viewModel.SelectedContent?.ModId);
+    }
+
+    [Fact]
+    public async Task Versions_InstallRow_PutsThatVersionIntoTheActiveInstance()
+    {
+        var archive = Archive(("MeasureTools/mod.toml", "name = \"MeasureTools\""));
+        using var harness = await CreateWithToolsVersionsAsync(archive);
+        var viewModel = harness.ViewModel;
+        var instance = await ActivateInstanceAsync(harness);
+        var pack = await OpenPackVersionsAsync(harness);
+        var older = viewModel.PackVersions.Single(version => version.Version == "1.0.0");
+        Assert.False(older.IsInstalled);
+        Assert.True(older.CanInstall);
+
+        await older.InstallCommand.ExecuteAsync(null);
+
+        Assert.Contains(harness.Localization.PackCompatibilityUnknown, pack.InstallWarning);
+        await pack.ConfirmInstallCommand.ExecuteAsync(null);
+
+        Assert.Null(pack.InstallError);
+        var mod = Assert.Single((await harness.Services.Instances.GetByIdAsync(instance.InstanceId))!.Mods);
+        Assert.Equal("MeasureTools", mod.ModId);
+        Assert.Equal(ModVersion.Parse("1.1.9"), mod.Version);
+        Assert.Equal(InstallReason.ModPack, mod.Reason);
+        Assert.True(older.IsInstalled);
+        Assert.False(older.CanInstall);
+        Assert.False(viewModel.PackVersions.Single(version => version.Version == "1.1.0").IsInstalled);
+        Assert.False(pack.IsInstalled);
+    }
+
+    [Fact]
+    public async Task Versions_NewInstanceRow_CreatesTheInstanceFromThatVersion()
+    {
+        var archive = Archive(("MeasureTools/mod.toml", "name = \"MeasureTools\""));
+        using var harness = await CreateWithToolsVersionsAsync(archive);
+        var viewModel = harness.ViewModel;
+        await viewModel.LoadAsync();
+        await OpenPackVersionsAsync(harness);
+        var older = viewModel.PackVersions.Single(version => version.Version == "1.0.0");
+
+        older.NewInstanceCommand.Execute(null);
+
+        Assert.True(viewModel.IsNameModalOpen);
+        Assert.Equal("Tools Pack 1.0.0", viewModel.ModalInstanceName);
+
+        await viewModel.ConfirmNameModalCommand.ExecuteAsync(null);
+        await viewModel.SelectedPack!.ConfirmInstallCommand.ExecuteAsync(null);
+
+        Assert.Null(viewModel.SelectedPack.InstallError);
+        var instance = Assert.Single(await harness.Services.Instances.GetAllAsync());
+        Assert.Equal("Tools Pack 1.0.0", instance.Name);
+        Assert.Equal(new InstanceSource.FromModPack("tools-pack", ModVersion.Parse("1.0.0")), instance.Source);
+        Assert.Equal(ModVersion.Parse("1.1.9"), Assert.Single(instance.Mods).Version);
+        Assert.True(older.IsInstalled);
+    }
+
+    [Fact]
+    public async Task Versions_InstanceThatHoldsAnOlderVersion_MarksThatRow()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: WithPacks(ToolsPackVersions()));
+        var viewModel = harness.ViewModel;
+        await OpenToolsPackInstanceAsync(harness);
+
+        await OpenPackVersionsAsync(harness);
+
+        Assert.True(viewModel.IsPackVersionsTab);
+        Assert.True(viewModel.PackVersions.Single(version => version.Version == "1.0.0").IsInstalled);
+        Assert.False(viewModel.PackVersions.Single(version => version.Version == "1.1.0").IsInstalled);
     }
 
     [Fact]
@@ -612,6 +682,26 @@ public sealed class PackViewModelTests
         Assert.Null(viewModel.PackUpdate);
         await opening;
         Assert.Null(viewModel.PackUpdate);
+    }
+
+    /// <summary>A pack whose 1.0.0 pins MeasureTools 1.1.9 and whose 1.1.0 pins 1.1.10, with the 1.1.9 archive served.</summary>
+    private static Task<ViewModelHarness> CreateWithToolsVersionsAsync(byte[] archive) =>
+        ViewModelHarness.CreateAsync(
+            respond: request => request.RequestUri?.AbsoluteUri == MeasureTools119Url ? ArchiveResponse(archive) : null,
+            editSnapshot: snapshot => WithPacks(Pack("tools-pack", "Tools Pack", Version("1.0.0", Pin("MeasureTools", "1.1.9")), Version("1.1.0", Pin("MeasureTools", "1.1.10"))))(
+                snapshot.Replace(MeasureTools119Sha256, Convert.ToHexString(SHA256.HashData(archive)), StringComparison.Ordinal)
+                    .Replace("\"size\": 41783", $"\"size\": {archive.Length}", StringComparison.Ordinal)));
+
+    /// <summary>Opens the only pack of the snapshot on its Versions tab.</summary>
+    private static async Task<PackItem> OpenPackVersionsAsync(ViewModelHarness harness)
+    {
+        var viewModel = harness.ViewModel;
+        await viewModel.EnsureDiscoverLoadedAsync();
+        viewModel.ShowDiscoverModpacksCommand.Execute(null);
+        var pack = Assert.Single(viewModel.DiscoverPacks);
+        await pack.OpenCommand.ExecuteAsync(null);
+        viewModel.ShowPackVersionsCommand.Execute(null);
+        return pack;
     }
 
     private static string ToolsPackVersions()
