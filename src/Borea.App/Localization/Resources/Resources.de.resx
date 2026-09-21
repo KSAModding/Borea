@@ -2163,6 +2163,9 @@
   <data name="SettingsAbout" xml:space="preserve">
     <value>Über</value>
   </data>
+  <data name="SettingsHelp" xml:space="preserve">
+    <value>Hilfe</value>
+  </data>
   <data name="AboutVersion" xml:space="preserve">
     <value>Version</value>
   </data>
@@ -2237,6 +2240,18 @@
   </data>
   <data name="AboutNoticesMissing" xml:space="preserve">
     <value>Dieser Build hat keine THIRD-PARTY-NOTICES.txt. Die Veröffentlichungsarchive enthalten sie.</value>
+  </data>
+  <data name="HelpAsk" xml:space="preserve">
+    <value>Jemanden fragen</value>
+  </data>
+  <data name="HelpReportHint" xml:space="preserve">
+    <value>Nenne deine Borea-Version, die Spielversion und die Loader-Version, und hänge das Borea-Log an.</value>
+  </data>
+  <data name="HelpForums" xml:space="preserve">
+    <value>KSA-Forum</value>
+  </data>
+  <data name="HelpFacts" xml:space="preserve">
+    <value>Die Angaben holen, nach denen gefragt wird</value>
   </data>
   <data name="AboutCannotOpenFormat" xml:space="preserve">
     <value>{0} lässt sich nicht öffnen.</value>

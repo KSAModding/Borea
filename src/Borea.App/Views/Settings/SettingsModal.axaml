@@ -20,17 +20,21 @@
                         <Button Classes="menu" Classes.active="{Binding IsGeneralTab}" Content="{Binding Localization.SettingsGeneral}" Command="{Binding ShowGeneralSettingsCommand}" />
                         <Button Classes="menu" Classes.active="{Binding IsGameTab}" Content="{Binding Localization.SettingsGame}" Command="{Binding ShowGameSettingsCommand}" />
                         <Button Classes="menu" Classes.active="{Binding IsAboutTab}" Content="{Binding Localization.SettingsAbout}" Command="{Binding ShowAboutSettingsCommand}" />
+                        <Button Classes="menu" Classes.active="{Binding IsHelpTab}" Content="{Binding Localization.SettingsHelp}" Command="{Binding ShowHelpSettingsCommand}" />
                     </StackPanel>
                     <Border Grid.Column="1" Background="{StaticResource Brush.Window}" />
 
                     <!-- General -->
                     <settings:GeneralSettings Grid.Column="2" IsVisible="{Binding IsGeneralTab}" />
 
-                    <!-- About: what is installed, where it lives, where to report a problem -->
+                    <!-- About: what is installed, what it is built from, and under which licenses -->
                     <settings:AboutSettings Grid.Column="2" IsVisible="{Binding IsAboutTab}" />
 
                     <!-- Game: where KSA is, and which loader starts it -->
                     <settings:GameSettings Grid.Column="2" IsVisible="{Binding IsGameTab}" />
+
+                    <!-- Help: whom to ask, which facts to bring, what to read, and what repairs a broken setup -->
+                    <settings:HelpSettings Grid.Column="2" IsVisible="{Binding IsHelpTab}" />
                 </Grid>
             </Grid>
         </Border>

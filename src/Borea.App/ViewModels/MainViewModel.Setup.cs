@@ -21,6 +21,7 @@ public enum SettingsTab
     General,
     Game,
     About,
+    Help,
 }
 
 public enum GameSetupState
@@ -41,6 +42,7 @@ public partial class MainViewModel
     [NotifyPropertyChangedFor(nameof(IsGeneralTab))]
     [NotifyPropertyChangedFor(nameof(IsGameTab))]
     [NotifyPropertyChangedFor(nameof(IsAboutTab))]
+    [NotifyPropertyChangedFor(nameof(IsHelpTab))]
     private SettingsTab _settingsTab;
 
     public bool IsGeneralTab => SettingsTab == SettingsTab.General;
@@ -48,6 +50,8 @@ public partial class MainViewModel
     public bool IsGameTab => SettingsTab == SettingsTab.Game;
 
     public bool IsAboutTab => SettingsTab == SettingsTab.About;
+
+    public bool IsHelpTab => SettingsTab == SettingsTab.Help;
 
     [ObservableProperty]
     private string _gameDirectoryInput = string.Empty;

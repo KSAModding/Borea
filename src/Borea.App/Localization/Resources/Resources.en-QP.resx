@@ -1338,6 +1338,9 @@
   <data name="SettingsAbout" xml:space="preserve">
     <value>Explainin'</value>
   </data>
+  <data name="SettingsHelp" xml:space="preserve">
+    <value>Cryin' for help</value>
+  </data>
   <data name="AboutVersion" xml:space="preserve">
     <value>Version</value>
   </data>
@@ -1412,6 +1415,18 @@
   </data>
   <data name="AboutNoticesMissing" xml:space="preserve">
     <value>This build ain't be havin' a THIRD-PARTY-NOTICES.txt. The bounty archives be containin' it.</value>
+  </data>
+  <data name="HelpAsk" xml:space="preserve">
+    <value>Holler at a shipmate</value>
+  </data>
+  <data name="HelpReportHint" xml:space="preserve">
+    <value>Name yer Borea version, the game version 'n the loader version, 'n pin the logbook o' The Borea to it.</value>
+  </data>
+  <data name="HelpForums" xml:space="preserve">
+    <value>KSA taverns</value>
+  </data>
+  <data name="HelpFacts" xml:space="preserve">
+    <value>Fetch the tidin's they be askin' for</value>
   </data>
   <data name="AboutCannotOpenFormat" xml:space="preserve">
     <value>{0} cannot be cracked open.</value>
