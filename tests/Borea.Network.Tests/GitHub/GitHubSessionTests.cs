@@ -301,6 +301,34 @@ public sealed class GitHubSessionTests
     }
 
     [Fact]
+    public async Task InstallUrl_SignedIn_SuggestsTheUsersOwnAccount()
+    {
+        _tokenAnswers.Enqueue(() => Json(TokenJson));
+        var session = Session();
+
+        await session.SignInAsync();
+
+        Assert.Equal("https://github.com/apps/borea-test/installations/new/permissions?suggested_target_id=1", session.InstallUrl);
+
+        session.SignOut();
+
+        Assert.Equal("https://github.com/apps/borea-test/installations/new", session.InstallUrl);
+    }
+
+    [Fact]
+    public async Task InstallUrlFor_SignedIn_SelectsTheRepository()
+    {
+        _tokenAnswers.Enqueue(() => Json(TokenJson));
+        var session = Session();
+
+        Assert.Equal("https://github.com/apps/borea-test/installations/new", session.InstallUrlFor(42));
+
+        await session.SignInAsync();
+
+        Assert.Equal("https://github.com/apps/borea-test/installations/new/permissions?suggested_target_id=1&repository_ids[]=42", session.InstallUrlFor(42));
+    }
+
+    [Fact]
     public void ManageAccessUrl_IsTheAuthorizedAppsPage()
     {
         Assert.Equal("https://github.com/settings/apps/authorizations", Session().ManageAccessUrl);

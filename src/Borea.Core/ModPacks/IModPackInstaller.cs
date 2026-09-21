@@ -20,6 +20,16 @@ public interface IModPackInstaller
     /// </param>
     Task<ModPackInstallResult> InstallAsync(ModPackInstallRequest request, IProgress<InstallProgress>? progress = null, InstallStop? stop = null, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Plans the install into a new instance of that name without creating it. The result has an empty
+    /// <see cref="ModPackInstallResult.InstanceId"/>, and <see cref="ModPackInstallRequest.InstanceId"/> is not read.
+    /// </summary>
+    Task<ModPackInstallResult> PlanNewAsync(string instanceName, ModPackInstallRequest request, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Creates the instance only when the plan of <see cref="PlanNewAsync"/> can run, and then installs like <see cref="InstallAsync"/>.
+    /// Otherwise it creates nothing and returns that plan.
+    /// </summary>
     Task<ModPackInstallResult> CreateAndInstallAsync(string instanceName, ModPackInstallRequest request, IProgress<InstallProgress>? progress = null, InstallStop? stop = null, CancellationToken cancellationToken = default);
 }
 
@@ -43,6 +53,7 @@ public enum ModPackMemberStatus
     Unresolved,
     Failed,
     NotAttempted,
+    Removed,
 }
 
 public sealed record ModPackMemberResult(

@@ -343,11 +343,19 @@ jobs:
           $settings.App
           if ($help.App -cne $help.Cli) { throw 'borea --help prints different text from the two archives.' }
           if ($settings.App -cne $settings.Cli) { throw 'borea settings show prints different text from the two archives.' }
+          # See the comment in the Unix step: a request is what shows a runtime
+          # that corrupts memory, and exit code 1 is an operation that failed.
+          # The step ends with the exit code of the last program, so it is reset.
+          & (Join-Path $roots.App borea.exe) index refresh
+          $refresh = $LASTEXITCODE
+          $global:LASTEXITCODE = 0
+          if ($refresh -gt 1) { throw "borea index refresh crashed with exit code $refresh." }
       - name: Check and run the Unix archives
         if: matrix.platform != 'win-x64'
         shell: bash
         env:
           VERSION: ${{ needs.test.outputs.version }}
+          PLATFORM: ${{ matrix.platform }}
         run: |
           expected=$(printf '%s\n' LICENSE THIRD-PARTY-NOTICES.txt borea | LC_ALL=C sort)
           for kind in App Cli; do
@@ -401,6 +409,23 @@ jobs:
             echo "borea settings show prints different text from the two archives." >&2
             exit 1
           fi
+          # Only a start that makes a request shows a runtime that corrupts memory
+          # there, as dotnet/runtime#123324 did on macOS. Exit code 1 is a failed
+          # operation, which a host that does not answer gives as well, so only a
+          # higher code is a crash. macOS starts it several times, because that
+          # crash did not happen on every start.
+          starts=1
+          if [ "$PLATFORM" = macos-arm64 ]; then
+            starts=3
+          fi
+          for start in $(seq 1 "$starts"); do
+            status=0
+            "$app/borea" index refresh || status=$?
+            if [ "$status" -gt 1 ]; then
+              echo "borea index refresh crashed with exit code $status on start $start." >&2
+              exit 1
+            fi
+          done
 
   release:
     name: release

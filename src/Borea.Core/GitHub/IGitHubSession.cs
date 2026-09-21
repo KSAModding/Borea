@@ -15,6 +15,9 @@ public interface IGitHubSession
     /// <summary>The GitHub page where the user installs the App on a repository.</summary>
     string InstallUrl { get; }
 
+    /// <summary>The same page with the repository <paramref name="repositoryId"/> already selected, while signed in.</summary>
+    string InstallUrlFor(long repositoryId);
+
     GitHubSessionState State { get; }
 
     /// <summary>Raised on any thread when <see cref="State"/> changes.</summary>

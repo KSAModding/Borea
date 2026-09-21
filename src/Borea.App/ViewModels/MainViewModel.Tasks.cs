@@ -47,7 +47,7 @@ public partial class MainViewModel
         return StartTask(TaskKind.ModInstall, version is null ? name : $"{name} {version}", instanceId, modId, version, TaskState.Waiting);
     }
 
-    private TaskItem StartPackInstallTask(PackItem pack, Guid instanceId)
+    private TaskItem StartPackInstallTask(PackItem pack, Guid? instanceId)
     {
         var version = pack.RequestedVersion?.ToString();
         return StartTask(TaskKind.PackInstall, version is null ? pack.Name : $"{pack.Name} {version}", instanceId, pack.PackId, version, TaskState.Waiting);
@@ -95,6 +95,9 @@ public partial class MainViewModel
                 break;
             case TaskKind.Update or TaskKind.UpdateAll when instance is not null:
                 await RetryUpdateAsync(task, instance);
+                break;
+            case TaskKind.PackUpdate when instance is not null:
+                await RetryPackUpdateAsync(task, instance);
                 break;
         }
     }
@@ -146,6 +149,15 @@ public partial class MainViewModel
         {
             FailRetry(task, Localization.TaskRetryModMissing);
         }
+    }
+
+    private async Task RetryPackUpdateAsync(TaskItem task, InstanceItem instance)
+    {
+        await OpenInstanceAsync(instance);
+        if (PackUpdate is { } update)
+            await UpdatePackAsync(update);
+        else
+            FailRetry(task, Localization.PackUpdateNotNewer);
     }
 
     private void FailRetry(TaskItem task, string reason)

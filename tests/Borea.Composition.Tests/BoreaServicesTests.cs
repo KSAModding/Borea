@@ -13,6 +13,7 @@ using Borea.Core.Mods;
 using Borea.Core.Settings;
 using Borea.Network.GitHub;
 using Borea.Network.Index;
+using Borea.Network.Listings;
 using Borea.Network.Planning;
 using Borea.Network.Sources;
 using Borea.Storage.Game;
@@ -98,6 +99,7 @@ public sealed class BoreaServicesTests : IDisposable
         Assert.IsType<GitHubSession>(firstSession);
         Assert.Same(firstSession, Assert.IsType<LoggingGitHubSession>(second.GitHub).Inner);
         Assert.Equal(BoreaGitHubApp.ClientId.Length > 0 && BoreaGitHubApp.Slug.Length > 0, first.GitHub.IsAvailable);
+        Assert.IsType<ListingPublisher>(Assert.IsType<LoggingListingPublisher>(first.ListingPublisher).Inner);
     }
 
     [Fact]

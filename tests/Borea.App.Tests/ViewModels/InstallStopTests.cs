@@ -261,6 +261,44 @@ public sealed class InstallStopTests
     }
 
     [Fact]
+    public async Task StopPackNewInstance_DuringTheSecondMember_KeepsTheInstanceWithTheFirst()
+    {
+        var archive = Archive("AdvancedFlightComputer");
+        using var harness = await ViewModelHarness.CreateAsync(
+            respond: request => request.RequestUri?.AbsolutePath.EndsWith("/AdvancedFlightComputer.zip", StringComparison.Ordinal) == true
+                ? new HttpResponseMessage(HttpStatusCode.OK) { Content = new ByteArrayContent(archive) { Headers = { ContentType = new MediaTypeHeaderValue("application/zip") } } }
+                : request.RequestUri?.AbsolutePath.EndsWith("/MeasureTools.zip", StringComparison.Ordinal) == true
+                    ? new HttpResponseMessage(HttpStatusCode.OK) { Content = new StreamContent(new StalledBody(_downloading)) }
+                    : null,
+            editSnapshot: snapshot => snapshot
+                .Replace("AD14E4FE8111F4DAE8406D50459B7E5C42D58F1E01F549636946922CF72AE9E6", Convert.ToHexString(SHA256.HashData(archive)), StringComparison.Ordinal)
+                .Replace("\"size\": 129696", $"\"size\": {archive.Length}", StringComparison.Ordinal)
+                .Replace("\"packs\": []", StarterPack, StringComparison.Ordinal));
+        var viewModel = harness.ViewModel;
+        await viewModel.LoadAsync();
+        await viewModel.EnsureDiscoverLoadedAsync();
+        viewModel.ShowDiscoverModpacksCommand.Execute(null);
+        var pack = Assert.Single(viewModel.DiscoverPacks);
+        pack.NewInstanceCommand.Execute(null);
+        await viewModel.ConfirmNameModalCommand.ExecuteAsync(null);
+        Assert.True(pack.IsConfirmingInstall);
+
+        var install = pack.ConfirmInstallCommand.ExecuteAsync(null);
+        await _downloading.Task.WaitAsync(Timeout);
+        pack.Run!.StopCommand.Execute(null);
+        await install;
+
+        Assert.Null(pack.InstallError);
+        Assert.Equal(harness.Localization.FormatInstallStoppedAfter(1, 2), pack.ProgressStatus);
+        var instance = Assert.Single(await harness.Services.Instances.GetAllAsync());
+        Assert.Equal("Starter Pack", instance.Name);
+        Assert.IsType<InstanceSource.FromModPack>(instance.Source);
+        Assert.Equal("AdvancedFlightComputer", Assert.Single(instance.Mods).ModId);
+        Assert.Equal(TaskState.Stopped, viewModel.Tasks.History[0].State);
+        Assert.Equal("Starter Pack", viewModel.Tasks.History[0].InstanceName);
+    }
+
+    [Fact]
     public async Task Install_WhileTheWindowCloses_StopsBeforeTheDownload()
     {
         using var harness = await ViewModelHarness.CreateAsync(respond: StallArchive);

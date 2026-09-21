@@ -264,6 +264,8 @@ public sealed class GitHubAccountViewModelTests
 
         public string InstallUrl => "https://github.com/apps/borea-test/installations/new";
 
+        public string InstallUrlFor(long repositoryId) => InstallUrl + "?repository=" + repositoryId;
+
         public GitHubSessionState State { get; private set; } = GitHubSessionState.SignedOut;
 
         public bool WasCancelled { get; private set; }

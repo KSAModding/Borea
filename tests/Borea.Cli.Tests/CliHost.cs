@@ -55,6 +55,8 @@ internal sealed class CliHost : IDisposable
 
     public Func<BoreaServices, IModPackInstaller>? ModPackInstallerFactory { get; set; }
 
+    public Func<BoreaServices, IModPackUpdater>? ModPackUpdaterFactory { get; set; }
+
     public FakeProcessStarter ProcessStarter { get; } = new();
 
     public ILoaderInstaller? LoaderInstaller { get; set; }
@@ -130,6 +132,7 @@ internal sealed class CliHost : IDisposable
             modPacks: ModPacks ?? new ContentIndexModPackRepository(IndexSnapshots ?? new ReaderSnapshotProvider(IndexReader)),
             readOnlyModPacks: ModPacks ?? new ContentIndexModPackRepository(new ReaderSnapshotProvider(IndexReader)),
             modPackInstaller: ModPackInstallerFactory?.Invoke(graph) ?? ModPackInstaller,
+            modPackUpdater: ModPackUpdaterFactory?.Invoke(graph),
             sharedProfileLauncher: new SharedProfileLauncher(graph.Paths, ProcessStarter, OsPlatform.Windows),
             indexRefresh: IndexRefresh,
             sharedProfileImporter: BuildSharedProfileImporter(graph),

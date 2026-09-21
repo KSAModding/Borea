@@ -72,6 +72,6 @@ public partial class MainViewModel
             return;
 
         CurrentWindowListing = false;
-        _listingEditor?.Cancel();
+        _listingEditor?.Leave();
     }
 }

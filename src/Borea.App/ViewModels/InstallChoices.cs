@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Borea.App.Localization;
 using Borea.Core.Dependencies;
+using Borea.Core.Instances;
 using Borea.Core.Mods;
 using Borea.Core.Planning;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -27,6 +28,9 @@ public sealed partial class InstallChoices : ViewModelBase
     }
 
     internal Guid InstanceId { get; }
+
+    /// <summary>The instance that a pack install creates, which does not exist until the install runs. Null for an existing instance.</summary>
+    internal Instance? NewInstance { get; set; }
 
     internal IReadOnlyList<RequestedMod> Requested { get; }
 

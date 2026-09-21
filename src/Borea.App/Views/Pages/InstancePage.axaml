@@ -276,6 +276,49 @@
                         </ItemsControl.ItemsPanel>
                     </ItemsControl>
                     <TextBlock Classes="body-md danger" Text="{Binding UpdateAll.InstallError}" TextWrapping="Wrap" Margin="0,16,0,0" IsVisible="{Binding UpdateAll.InstallError, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                    <!-- a newer version of the pack the instance was created from -->
+                    <StackPanel Margin="0,16,0,0" IsVisible="{Binding PackUpdate, Converter={x:Static ObjectConverters.IsNotNull}}">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <TextBlock Classes="body-md secondary" Text="{Binding PackUpdate.NoticeText}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" Margin="16,0,0,0" VerticalAlignment="Center">
+                                <Button Classes="link" Command="{Binding PackUpdate.UpdateCommand}" IsEnabled="{Binding CanChangeContent}">
+                                    <Button.IsVisible>
+                                        <MultiBinding Converter="{x:Static BoolConverters.And}">
+                                            <Binding Path="!PackUpdate.IsInstalling" FallbackValue="{x:False}" />
+                                            <Binding Path="!PackUpdate.IsConfirming" FallbackValue="{x:False}" />
+                                        </MultiBinding>
+                                    </Button.IsVisible>
+                                    <TextBlock Classes="action-md" Text="{Binding Localization.PackUpdate}" />
+                                </Button>
+                                <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding PackUpdate.IsInstalling, FallbackValue={x:False}}">
+                                    <ProgressBar Width="96" Height="6" VerticalAlignment="Center" Value="{Binding PackUpdate.Progress}" Maximum="100" Foreground="{StaticResource Brush.Accent}" />
+                                    <Button Classes="text" Content="{Binding PackUpdate.Run.PauseText}" Command="{Binding PackUpdate.Run.TogglePauseCommand}" />
+                                    <Button Classes="text" Content="{Binding PackUpdate.Run.StopText}" Command="{Binding PackUpdate.Run.StopCommand}" />
+                                </StackPanel>
+                            </StackPanel>
+                        </Grid>
+                        <TextBlock Classes="body-md secondary" Text="{Binding PackUpdate.ProgressStatus}" TextWrapping="Wrap" Margin="0,8,0,0" IsVisible="{Binding PackUpdate.ProgressStatus, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                        <StackPanel Margin="0,12,0,0" Spacing="4" IsVisible="{Binding PackUpdate.IsConfirming, FallbackValue={x:False}}">
+                            <ItemsControl ItemsSource="{Binding PackUpdate.ChangeTexts}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="x:String">
+                                        <TextBlock Classes="body-md" Text="{Binding}" TextWrapping="Wrap" />
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                            <Grid ColumnDefinitions="*,Auto" Margin="0,8,0,0">
+                                <TextBlock Classes="body-md secondary" Text="{Binding PackUpdate.InstallWarning}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" Margin="16,0,0,0" VerticalAlignment="Center">
+                                    <Panel IsEnabled="{Binding CanChangeContent}">
+                                        <Button Classes="text primary" Content="{Binding PackUpdate.ConfirmText}" Command="{Binding PackUpdate.ConfirmUpdateCommand}" IsEnabled="{Binding PackUpdate.Choices.IsComplete, FallbackValue={x:True}}" />
+                                    </Panel>
+                                    <Button Classes="text" Content="{Binding Localization.LibraryCancel}" Command="{Binding PackUpdate.CancelUpdateCommand}" />
+                                </StackPanel>
+                            </Grid>
+                        </StackPanel>
+                        <ContentControl Margin="0,12,0,0" Content="{Binding PackUpdate.Choices}" IsVisible="{Binding PackUpdate.Choices, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                        <TextBlock Classes="body-md danger" Text="{Binding PackUpdate.InstallError}" TextWrapping="Wrap" Margin="0,8,0,0" IsVisible="{Binding PackUpdate.InstallError, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                    </StackPanel>
                 </StackPanel>
             </ScrollViewer>
 

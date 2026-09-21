@@ -117,6 +117,16 @@ public sealed class TaskRegistryTests
         Assert.Null(task.Step);
     }
 
+    [Fact]
+    public void LoaderInstall_NamesTheVersionItInstalls()
+    {
+        var registry = Registry(null);
+
+        var task = registry.Start(TaskKind.LoaderInstall, "StarMap", null, null, null, "0.4.7", TaskState.Running);
+
+        Assert.Equal(_localization.FormatTaskInstall("StarMap 0.4.7"), task.Title);
+    }
+
     private TaskRegistry Registry(FakeRepository? repository)
         => new(_localization, () => repository, () => null, _ => Task.CompletedTask);
 

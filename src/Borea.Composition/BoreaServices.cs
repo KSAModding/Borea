@@ -151,6 +151,8 @@ public sealed class BoreaServices : IDisposable
 
     public required IModPackInstaller ModPackInstaller { get; init; }
 
+    public required IModPackUpdater ModPackUpdater { get; init; }
+
     public required IModDownloader Downloader { get; init; }
 
     public required IInstallPlanner InstallPlanner { get; init; }
@@ -212,6 +214,9 @@ public sealed class BoreaServices : IDisposable
 
     public required IListingValidator ListingValidator { get; init; }
 
+    /// <summary>Opens and follows the listing pull request from the signed-in account.</summary>
+    public required IListingPublisher ListingPublisher { get; init; }
+
     /// <summary>The games this process started, which every graph built by a public overload shares.</summary>
     private static readonly RunningLaunches ProcessLaunches = new();
 
@@ -266,6 +271,7 @@ public sealed class BoreaServices : IDisposable
     /// <param name="isGameProcessRunning">Whether a KSA or StarMap process runs. Null looks for one.</param>
     /// <param name="isOtherBoreaRunning">Whether another Borea App or command runs. Null looks for one.</param>
     /// <param name="gitHub">The GitHub session. Null builds one on this graph's client for <see cref="BoreaGitHubApp"/>.</param>
+    /// <param name="listingPublisher">Opens the listing pull request. Null builds one on the GitHub session.</param>
     internal static Task<BoreaServices> BuildAsync(
         string? boreaRoot,
         HttpMessageHandler httpHandler,
@@ -277,12 +283,13 @@ public sealed class BoreaServices : IDisposable
         string? sharedProfileRoot = null,
         Func<bool>? isGameProcessRunning = null,
         Func<bool>? isOtherBoreaRunning = null,
-        IGitHubSession? gitHub = null)
+        IGitHubSession? gitHub = null,
+        IListingPublisher? listingPublisher = null)
     {
         ArgumentNullException.ThrowIfNull(httpHandler);
         ArgumentNullException.ThrowIfNull(fallbackRepository);
         ArgumentNullException.ThrowIfNull(installCandidates);
-        return BuildCoreAsync(boreaRoot, BoreaLogSource.App, httpHandler, fallbackRepository, installCandidates, new RunningLaunches(), cancellationToken, processStarter, images, sharedProfileRoot, isGameProcessRunning, isOtherBoreaRunning, gitHub);
+        return BuildCoreAsync(boreaRoot, BoreaLogSource.App, httpHandler, fallbackRepository, installCandidates, new RunningLaunches(), cancellationToken, processStarter, images, sharedProfileRoot, isGameProcessRunning, isOtherBoreaRunning, gitHub, listingPublisher);
     }
 
     private static async Task<BoreaServices> BuildCoreAsync(
@@ -298,7 +305,8 @@ public sealed class BoreaServices : IDisposable
         string? sharedProfileRoot = null,
         Func<bool>? isGameProcessRunning = null,
         Func<bool>? isOtherBoreaRunning = null,
-        IGitHubSession? gitHub = null)
+        IGitHubSession? gitHub = null,
+        IListingPublisher? listingPublisher = null)
     {
         // the settings file lives under Borea's own root and needs no
         // game path to be found, so a provider without one reads it.
@@ -366,6 +374,8 @@ public sealed class BoreaServices : IDisposable
         var defaultLibraryFolder = Path.GetDirectoryName(bootstrapPaths.GetInstancesRoot())!;
         var announcementReader = new AnnouncementReader();
         var listedDocuments = new ListedDocumentFetcher(http);
+        var listingFormat = new TomlListingFormat();
+        var gitHubSession = new LoggingGitHubSession(gitHub ?? new GitHubSession(http, BoreaGitHubApp.ClientId, BoreaGitHubApp.Slug), log);
 
         return new BoreaServices(http)
         {
@@ -401,6 +411,7 @@ public sealed class BoreaServices : IDisposable
             ModPacks = modPacks,
             ReadOnlyModPacks = new ContentIndexModPackRepository(new ReaderSnapshotProvider(indexReader)),
             ModPackInstaller = new ModPackInstaller(instances, installPlanner, modInstaller, modReplacer),
+            ModPackUpdater = new ModPackUpdater(instances, installPlanner, new InstallPlanExecutor(instances, modInstaller, modReplacer), new LoggingModUninstaller(new FileModUninstaller(paths, instances), log)),
             Downloader = downloader,
             InstallPlanner = installPlanner,
             PlanExecutor = new InstallPlanExecutor(instances, modInstaller, modReplacer),
@@ -422,13 +433,14 @@ public sealed class BoreaServices : IDisposable
             IndexRefresh = indexSnapshots,
             ContentIndex = contentIndex,
             Images = images ?? new ContentImageSource(new FileContentImageCache(paths)),
-            GitHub = new LoggingGitHubSession(gitHub ?? new GitHubSession(http, BoreaGitHubApp.ClientId, BoreaGitHubApp.Slug), log),
+            GitHub = gitHubSession,
             ListingSources = new ListingSourceReader(new ListingHostClient(http), downloader),
             ForumThreads = new ForumThreadReader(http),
             ListingImages = new ListingImageMeasurer(),
             ListedDocuments = listedDocuments,
-            ListingFormat = new TomlListingFormat(),
+            ListingFormat = listingFormat,
             ListingValidator = new ListingValidator(new ListingSchemaStore(listedDocuments, paths)),
+            ListingPublisher = new LoggingListingPublisher(listingPublisher ?? new ListingPublisher(gitHubSession, http, listingFormat), log),
         };
     }
 

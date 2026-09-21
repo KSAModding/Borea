@@ -9,6 +9,7 @@ using Borea.Composition;
 using Borea.Core.Game;
 using Borea.Core.History;
 using Borea.Core.Index;
+using Borea.Core.Instances;
 using Borea.Core.ModPacks;
 using Borea.Core.Mods;
 using Borea.Core.Planning;
@@ -29,6 +30,8 @@ public partial class MainViewModel
     private IReadOnlyList<PackItem> _packs = [];
 
     private GameReleaseList _gameReleases = GameReleaseList.Empty;
+
+    private PackItem? _newInstancePack;
 
     public ObservableCollection<PackItem> DiscoverPacks { get; } = [];
 
@@ -130,6 +133,7 @@ public partial class MainViewModel
             pack.RefreshText();
         foreach (var version in PackVersions)
             version.RefreshText();
+        PackUpdate?.RefreshText();
     }
 
     [RelayCommand]
@@ -228,9 +232,63 @@ public partial class MainViewModel
     /// <param name="targetInstanceId">The instance a Try again of the Tasks page installs into. Null installs into the active instance.</param>
     /// <param name="version">A usable version to install instead of the newest one.</param>
     /// <param name="confirm">Waits for the confirmation even without a warning, for an install that a borea:// link asked for.</param>
-    internal async Task InstallPackAsync(PackItem pack, Guid? targetInstanceId = null, ModVersion? version = null, bool confirm = false)
+    internal Task InstallPackAsync(PackItem pack, Guid? targetInstanceId = null, ModVersion? version = null, bool confirm = false)
+        => (targetInstanceId ?? ActiveInstance?.InstanceId) is { } instanceId ? PlanPackInstallAsync(pack, instanceId, newInstanceName: null, version, confirm) : Task.CompletedTask;
+
+    /// <summary>Opens the name modal of a new instance with the name of the pack.</summary>
+    internal void BeginPackInstance(PackItem pack)
     {
-        if (_services is null || (targetInstanceId ?? ActiveInstance?.InstanceId) is not { } instanceId || pack.IsInstalling)
+        InstanceError = null;
+        ModalInstanceName = pack.Name;
+        RenamingInstance = null;
+        _newInstancePack = pack;
+        IsCreatingInstance = true;
+    }
+
+    /// <summary>Keeps the modal open with the error when the name is taken, and otherwise installs the pack into a new instance of that name.</summary>
+    private async Task CreatePackInstanceAsync(PackItem pack, string name)
+    {
+        if (_instances is null)
+            return;
+
+        using var libraryUse = TryUseLibrary();
+        if (libraryUse is null)
+        {
+            InstanceError = Localization.LibraryFolderBusy;
+            return;
+        }
+
+        string? error;
+        try
+        {
+            error = await _instances.IsNameAvailableAsync(name) ? null : Localization.ModalNameTaken;
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or InvalidOperationException)
+        {
+            error = exception.Message;
+        }
+
+        if (!ReferenceEquals(_newInstancePack, pack))
+            return;
+
+        if (error is not null)
+        {
+            InstanceError = error;
+            return;
+        }
+
+        IsCreatingInstance = false;
+        ModalInstanceName = string.Empty;
+        await PlanPackInstallAsync(pack, instanceId: null, name);
+    }
+
+    /// <param name="instanceId">The instance the pack installs into, or null for a new instance.</param>
+    /// <param name="newInstanceName">The name of the instance the install creates, or null.</param>
+    /// <param name="version">A usable version to install instead of the newest one.</param>
+    /// <param name="confirm">Waits for the confirmation even without a warning.</param>
+    private async Task PlanPackInstallAsync(PackItem pack, Guid? instanceId, string? newInstanceName, ModVersion? version = null, bool confirm = false)
+    {
+        if (_services is null || pack.IsInstalling)
             return;
 
         using var libraryUse = TryUseLibrary();
@@ -259,8 +317,9 @@ public partial class MainViewModel
             if (compatibility == GameCompatibility.Incompatible)
                 throw new InvalidOperationException(Localization.FormatPackIncompatible(metadata.GameMin));
 
-            var instance = await services.Instances.GetByIdAsync(instanceId)
-                ?? throw new InvalidOperationException(Localization.InstallInstanceMissing);
+            var instance = instanceId is { } existing
+                ? await services.Instances.GetByIdAsync(existing) ?? throw new InvalidOperationException(Localization.InstallInstanceMissing)
+                : NewPackInstance(newInstanceName!, metadata);
             var reasons = PackWarnings(selected, metadata, compatibility);
             var yanked = new HashSet<string>(ModIds.Comparer);
             var requested = new List<RequestedMod>();
@@ -284,11 +343,14 @@ public partial class MainViewModel
             {
                 plan = await PlanWithChoicesAsync(services, new InstallPlanningRequest(instance, requested, services.Mods, installed, CurrentPlatform()), null);
                 if (InstallChoices.AreNeeded(plan))
-                    choices = NewChoices(instanceId, requested, plan);
+                {
+                    choices = NewChoices(instance.InstanceId, requested, plan);
+                    choices.NewInstance = instanceId is null ? instance : null;
+                }
             }
 
             var request = new ModPackInstallRequest(
-                instanceId,
+                instance.InstanceId,
                 selected,
                 services.Mods,
                 installed,
@@ -302,6 +364,7 @@ public partial class MainViewModel
             else if (confirm || reasons.Count > 0 || choices is not null || (plan is { IsReady: true } && PackPlanWarnings(plan).Count > 0))
             {
                 pack.PendingInstall = request;
+                pack.PendingInstanceName = newInstanceName;
                 pack.PendingReasons = reasons;
                 pack.Choices = choices;
                 HoldPack(pack, plan);
@@ -311,7 +374,7 @@ public partial class MainViewModel
             else
             {
                 executed = true;
-                stopped = await ExecutePackInstallAsync(services, pack, request, run);
+                stopped = await ExecutePackInstallAsync(services, pack, request, run, newInstanceName);
                 completed = true;
             }
         }
@@ -326,7 +389,18 @@ public partial class MainViewModel
         }
 
         if (executed)
-            await ReloadInstancesAsync();
+            await ReloadAfterPackInstallAsync(run, newInstanceName);
+    }
+
+    private static Instance NewPackInstance(string name, ModPackMetadata metadata)
+        => new(name, new InstanceSource.FromModPack(metadata.ModPackId, metadata.Version));
+
+    /// <summary>Says so when the pack created the instance that is now active.</summary>
+    private async Task ReloadAfterPackInstallAsync(InstallRun run, string? newInstanceName)
+    {
+        await ReloadInstancesAsync();
+        if (newInstanceName is not null && run.TaskItem.InstanceId is { } created && ActiveInstance?.InstanceId == created)
+            ShowSuccessToast(() => Localization.FormatLibraryNowActive(newInstanceName));
     }
 
     private List<string> PackWarnings(ModPackResult selected, ModPackMetadata metadata, GameCompatibility compatibility)
@@ -359,6 +433,8 @@ public partial class MainViewModel
         var reasons = pack.PendingReasons.ToList();
         if (plan is not null && (plan.IsReady || pack.Choices is not null) && PackPlanWarnings(plan) is { Count: > 0 } warnings)
             reasons.Add(Describe(warnings));
+        if (reasons.Count > 0 && pack.PendingInstanceName is { } name)
+            reasons.Insert(0, Localization.FormatPackCreatesInstance(name));
 
         pack.PendingPlan = plan;
         pack.InstallWarning = reasons.Count > 0 ? string.Join(" ", reasons.Distinct()) : null;
@@ -387,8 +463,9 @@ public partial class MainViewModel
         }
 
         var services = _services;
+        var newInstanceName = pack.PendingInstanceName;
         pack.IsInstalling = true;
-        var run = pack.Run = StartInstallRun(StartPackInstallTask(pack, request.InstanceId));
+        var run = pack.Run = StartInstallRun(StartPackInstallTask(pack, newInstanceName is null ? request.InstanceId : null));
         var executed = false;
         var completed = false;
         string? stopped = null;
@@ -396,13 +473,17 @@ public partial class MainViewModel
         int? revision = null;
         try
         {
+            if (newInstanceName is not null && !await services.Instances.IsNameAvailableAsync(newInstanceName))
+                throw new InvalidOperationException(Localization.ModalNameTaken);
+
             if (pack.Choices is { } choices)
             {
                 await WhenPlanningEndedAsync(choices);
                 revision = choices.Revision;
                 var shown = (pack.PendingPlan ?? choices.ShownPlan)?.Warnings ?? [];
-                var instance = await services.Instances.GetByIdAsync(choices.InstanceId)
-                    ?? throw new InvalidOperationException(Localization.InstallInstanceMissing);
+                var instance = newInstanceName is null
+                    ? await services.Instances.GetByIdAsync(choices.InstanceId) ?? throw new InvalidOperationException(Localization.InstallInstanceMissing)
+                    : choices.NewInstance ?? NewPackInstance(newInstanceName, request.Pack.Metadata!);
                 var plan = await PlanWithChoicesAsync(services, PlanningRequest(services, instance, choices.Requested), choices);
                 if (revision != choices.Revision)
                     return;
@@ -418,7 +499,7 @@ public partial class MainViewModel
 
             pack.CancelInstall();
             executed = true;
-            stopped = await ExecutePackInstallAsync(services, pack, request, run);
+            stopped = await ExecutePackInstallAsync(services, pack, request, run, newInstanceName);
             error = pack.InstallError;
             completed = true;
         }
@@ -439,14 +520,18 @@ public partial class MainViewModel
         }
 
         if (executed)
-            await ReloadInstancesAsync();
+            await ReloadAfterPackInstallAsync(run, newInstanceName);
     }
 
     /// <summary>Returns what the row shows after a stop, or null when nothing stopped the pack.</summary>
-    private async Task<string?> ExecutePackInstallAsync(BoreaServices services, PackItem pack, ModPackInstallRequest request, InstallRun run)
+    private async Task<string?> ExecutePackInstallAsync(BoreaServices services, PackItem pack, ModPackInstallRequest request, InstallRun run, string? newInstanceName)
     {
         run.TaskItem.MarkRunning();
-        var result = await services.ModPackInstaller.InstallAsync(request, ProgressOf(pack), run.InstallStop);
+        var result = newInstanceName is null
+            ? await services.ModPackInstaller.InstallAsync(request, ProgressOf(pack), run.InstallStop)
+            : await services.ModPackInstaller.CreateAndInstallAsync(newInstanceName, request, ProgressOf(pack), run.InstallStop);
+        if (newInstanceName is not null && result.InstanceId != Guid.Empty)
+            run.TaskItem.SetInstance(result.InstanceId, newInstanceName);
         pack.ShowResults(result.Members.Select(member => new PackResultItem(this, member)));
         if (result.IsStopped)
         {
@@ -608,6 +693,9 @@ public sealed partial class PackItem : ObservableObject, IPlanRow
     /// <summary>The version a borea:// link pinned for the last install, so Try again keeps it. Null for the newest.</summary>
     internal ModVersion? RequestedVersion { get; set; }
 
+    /// <summary>The name of the instance that <see cref="PendingInstall"/> creates, or null when it installs into an existing one.</summary>
+    internal string? PendingInstanceName { get; set; }
+
     /// <summary>The warnings about the pack itself, without those of <see cref="PendingPlan"/>.</summary>
     internal IReadOnlyList<string> PendingReasons { get; set; } = [];
 
@@ -704,9 +792,13 @@ public sealed partial class PackItem : ObservableObject, IPlanRow
     private Task ConfirmInstallAsync() => _owner.ConfirmPackInstallAsync(this);
 
     [RelayCommand]
+    private void NewInstance() => _owner.BeginPackInstance(this);
+
+    [RelayCommand]
     internal void CancelInstall()
     {
         PendingInstall = null;
+        PendingInstanceName = null;
         PendingReasons = [];
         PendingPlan = null;
         InstallWarning = null;

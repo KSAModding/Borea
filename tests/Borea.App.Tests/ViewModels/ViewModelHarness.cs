@@ -9,6 +9,7 @@ using Borea.Composition;
 using Borea.Core.Game;
 using Borea.Core.GitHub;
 using Borea.Core.Index;
+using Borea.Core.Listings;
 using Borea.Core.Mods;
 using Borea.Core.Preferences;
 
@@ -48,6 +49,8 @@ internal sealed class ViewModelHarness : IDisposable
 
     private IGitHubSession? _gitHub;
 
+    private IListingPublisher? _listingPublisher;
+
     public const string OfflineMessage = "The content index host is offline.";
 
     /// <summary>Fails every content index request with <see cref="OfflineMessage"/>.</summary>
@@ -71,9 +74,10 @@ internal sealed class ViewModelHarness : IDisposable
     /// <param name="waitForDetection">False returns while the game detection of the first load may still run.</param>
     /// <param name="sharedProfileRoot">The game profile folder. Null puts it into the temporary root.</param>
     /// <param name="gitHub">The GitHub session every service graph of this harness shares. Null builds one per graph for <see cref="Borea.Network.GitHub.BoreaGitHubApp"/>.</param>
-    public static async Task<ViewModelHarness> CreateAsync(Func<BoreaServices, Task>? seed = null, Func<HttpRequestMessage, HttpResponseMessage?>? respond = null, Func<string, string>? editSnapshot = null, bool indexOffline = false, Action<ViewModelHarness>? candidates = null, Borea.Storage.Launch.IProcessStarter? processStarter = null, bool waitForDetection = true, string? sharedProfileRoot = null, IGitHubSession? gitHub = null)
+    /// <param name="listingPublisher">Opens the listing pull request. Null builds one on the GitHub session.</param>
+    public static async Task<ViewModelHarness> CreateAsync(Func<BoreaServices, Task>? seed = null, Func<HttpRequestMessage, HttpResponseMessage?>? respond = null, Func<string, string>? editSnapshot = null, bool indexOffline = false, Action<ViewModelHarness>? candidates = null, Borea.Storage.Launch.IProcessStarter? processStarter = null, bool waitForDetection = true, string? sharedProfileRoot = null, IGitHubSession? gitHub = null, IListingPublisher? listingPublisher = null)
     {
-        var harness = new ViewModelHarness { _respond = respond, _editSnapshot = editSnapshot, IndexOffline = indexOffline, _processStarter = processStarter, _sharedProfileRoot = sharedProfileRoot, _gitHub = gitHub };
+        var harness = new ViewModelHarness { _respond = respond, _editSnapshot = editSnapshot, IndexOffline = indexOffline, _processStarter = processStarter, _sharedProfileRoot = sharedProfileRoot, _gitHub = gitHub, _listingPublisher = listingPublisher };
         Directory.CreateDirectory(harness.Root);
         candidates?.Invoke(harness);
         harness.Services = await harness.BuildServicesAsync();
@@ -106,7 +110,7 @@ internal sealed class ViewModelHarness : IDisposable
         json => "{ \"tags\": " + $$"""{ "spec_version": 1, "mod": [{{string.Join(", ", tags.Select(tag => $$"""{ "tag": "{{tag.Tag}}", "name": "{{tag.Name}}", "meaning": "{{tag.Name}} content." }"""))}}] }""" + "," + json.TrimStart()[1..];
 
     public Task<BoreaServices> BuildServicesAsync() =>
-        BoreaServices.BuildAsync(Root, new IndexOnlyHandler(this), SpaceDock, Candidates, processStarter: _processStarter, images: Images, sharedProfileRoot: _sharedProfileRoot ?? Path.Combine(Root, "GameProfile"), isGameProcessRunning: () => false, isOtherBoreaRunning: () => IsOtherBoreaRunning(), gitHub: _gitHub);
+        BoreaServices.BuildAsync(Root, new IndexOnlyHandler(this), SpaceDock, Candidates, processStarter: _processStarter, images: Images, sharedProfileRoot: _sharedProfileRoot ?? Path.Combine(Root, "GameProfile"), isGameProcessRunning: () => false, isOtherBoreaRunning: () => IsOtherBoreaRunning(), gitHub: _gitHub, listingPublisher: _listingPublisher);
 
     public void Dispose()
     {

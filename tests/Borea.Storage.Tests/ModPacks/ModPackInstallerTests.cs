@@ -286,6 +286,35 @@ public sealed class ModPackInstallerTests
         Assert.Empty((await instances.GetByIdAsync(instance.InstanceId))!.Mods);
     }
 
+    [Fact]
+    public async Task PlanNew_ReadyPlan_ReturnsTheOperationsAndCreatesNothing()
+    {
+        var dependency = Release("Dependency");
+        var member = Release("Member", dependencies: [new ModDependency("Dependency", ModDependencyKind.Required)]);
+        var instances = new MemoryInstanceRepository();
+
+        var result = await Services(instances).PlanNewAsync("New", Request(Guid.NewGuid(), Pack(member), new FakeModRepository([member, dependency])));
+
+        Assert.Equal(Guid.Empty, result.InstanceId);
+        Assert.True(result.Plan!.IsReady);
+        Assert.Equal(["Member", "Dependency"], result.Plan.Operations.Select(operation => operation.Release.ModId));
+        Assert.Empty(await instances.GetAllAsync());
+    }
+
+    [Fact]
+    public async Task CreateAndInstall_PlanThatCannotRun_CreatesNothing()
+    {
+        var valid = Release("Valid");
+        var instances = new MemoryInstanceRepository();
+
+        var result = await Services(instances).CreateAndInstallAsync("New", Request(Guid.Empty, Pack(valid, Release("Missing")), new FakeModRepository([valid])));
+
+        Assert.Equal(Guid.Empty, result.InstanceId);
+        Assert.False(result.IsComplete);
+        Assert.Equal(ModPackMemberStatus.Unresolved, Assert.Single(result.Members, value => value.ModId == "Missing").Status);
+        Assert.Empty(await instances.GetAllAsync());
+    }
+
     private static ModPackInstaller Services(MemoryInstanceRepository instances) => new(instances, new FakePlanner(), new FakeInstaller(instances), new FakeReplacer(instances));
 
     private static ModPackInstallRequest Request(Guid instanceId, ModPackResult pack, IModRepository repository) => new(instanceId, pack, repository);
@@ -302,11 +331,11 @@ public sealed class ModPackInstallerTests
 
     private static ModPackMetadata Metadata(IReadOnlyList<ModPackEntry> entries) => new(1, "Pack", "test", "Pack", ["Author"], "Pack.", "CC0-1.0", new Dictionary<string, string> { ["forums"] = "https://example.com/pack" }, "2026.7", ModVersion.Parse("1.0.0"), DateTimeOffset.UnixEpoch, entries);
 
-    private static ModVersionMetadata Release(string id, string version = "1.0.0", IReadOnlyList<ModDependency>? dependencies = null, bool yanked = false) => new(1, id, ModVersion.Parse(version), ReleaseStatus.Stable, DateTimeOffset.UnixEpoch, "2026.7.4.2131", 2131, new DownloadInfo($"https://example.com/{id}.zip", new string('A', 64), 1, "application/zip"), 1, dependencies ?? [], yanked: yanked, yankedReason: yanked ? "Broken release." : null);
+    internal static ModVersionMetadata Release(string id, string version = "1.0.0", IReadOnlyList<ModDependency>? dependencies = null, bool yanked = false) => new(1, id, ModVersion.Parse(version), ReleaseStatus.Stable, DateTimeOffset.UnixEpoch, "2026.7.4.2131", 2131, new DownloadInfo($"https://example.com/{id}.zip", new string('A', 64), 1, "application/zip"), 1, dependencies ?? [], yanked: yanked, yankedReason: yanked ? "Broken release." : null);
 
     private static ModMetadata Listing(string id) => new(1, id, "test", id, ["Author"], "Listing.", "MIT", new Dictionary<string, string> { ["forums"] = "https://example.com/forum", ["repository"] = $"https://example.com/{id}" }, "2026.7.4.2131");
 
-    private sealed class FakeModRepository(IReadOnlyList<ModVersionMetadata> releases, IReadOnlyList<ModMetadata>? listings = null) : IModRepository
+    internal sealed class FakeModRepository(IReadOnlyList<ModVersionMetadata> releases, IReadOnlyList<ModMetadata>? listings = null) : IModRepository
     {
         public Task<IReadOnlyList<ModMetadata>> GetAvailableModsAsync(CancellationToken cancellationToken = default) => Task.FromResult(listings ?? (IReadOnlyList<ModMetadata>)[]);
         public Task<ModVersionMetadata?> GetLatestReleaseAsync(string modId, CancellationToken cancellationToken = default) => Task.FromResult(releases.Where(value => ModIds.Equals(value.ModId, modId) && !value.Yanked).OrderByDescending(value => value.Version).FirstOrDefault());
@@ -315,7 +344,7 @@ public sealed class ModPackInstallerTests
         public Task<IReadOnlyList<ModMetadata>> SearchAsync(string query, CancellationToken cancellationToken = default) => Task.FromResult(listings ?? (IReadOnlyList<ModMetadata>)[]);
     }
 
-    private sealed class FakePlanner : IInstallPlanner
+    internal sealed class FakePlanner : IInstallPlanner
     {
         public async Task<InstallPlan> PlanAsync(InstallPlanningRequest request, CancellationToken cancellationToken = default)
         {
@@ -330,7 +359,7 @@ public sealed class ModPackInstallerTests
                     conflicts.Add(new PlanningMessage(item.Release.ModId, PlanningMessageKind.ForeignOwned));
                 foreach (var dependency in item.Release.Dependencies.Where(value => value.Kind == ModDependencyKind.Required && !value.IsAnyOf))
                 {
-                    var release = await request.Repository.GetReleaseAsync(dependency.ModId!, ModVersion.Parse("1.0.0"), cancellationToken);
+                    var release = await request.Repository.GetReleaseAsync(dependency.ModId!, dependency.MinVersion ?? ModVersion.Parse("1.0.0"), cancellationToken);
                     if (release is not null) pending.Enqueue(new RequestedMod(release, InstallReason.Dependency));
                 }
             }
@@ -351,7 +380,7 @@ public sealed class ModPackInstallerTests
         }
     }
 
-    private sealed class FakeInstaller(MemoryInstanceRepository instances) : IModInstaller
+    internal sealed class FakeInstaller(MemoryInstanceRepository instances) : IModInstaller
     {
         public string? FailOnceFor { get; init; }
         public ModVersionMetadata? AddConcurrentMod { get; init; }
@@ -400,7 +429,7 @@ public sealed class ModPackInstallerTests
         }, cancellationToken);
     }
 
-    private sealed class FakeReplacer(MemoryInstanceRepository instances) : IModReplacer
+    internal sealed class FakeReplacer(MemoryInstanceRepository instances) : IModReplacer
     {
         public async Task<ModReplacementResult> ReplaceAsync(Guid instanceId, InstalledMod expectedCurrent, ModVersionMetadata replacement, IProgress<InstallProgress>? progress = null, CancellationToken cancellationToken = default)
         {
@@ -423,7 +452,7 @@ public sealed class ModPackInstallerTests
         }
     }
 
-    private sealed class MemoryInstanceRepository : IInstanceRepository
+    internal sealed class MemoryInstanceRepository : IInstanceRepository
     {
         private readonly Dictionary<Guid, Instance> _values = [];
         public MemoryInstanceRepository() { }

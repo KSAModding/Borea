@@ -482,6 +482,45 @@ public partial class MainViewModel : ViewModelBase
 
     internal static string DateTimeText(DateTimeOffset at) => at.ToLocalTime().ToString("g", CultureInfo.CurrentCulture);
 
+    /// <summary>The date and time without the year of the current year, such as "19.09. 19:27", where the full form does not fit.</summary>
+    internal static string ShortDateTimeText(DateTimeOffset at, DateTimeOffset? now = null)
+    {
+        var local = at.ToLocalTime();
+        var culture = CultureInfo.CurrentCulture;
+        if (!IsCurrentYear(local, now ?? DateTimeOffset.Now, culture) || DatePatternWithoutYear(culture) is not { } datePattern)
+            return DateTimeText(at);
+
+        return local.ToString($"{datePattern} {culture.DateTimeFormat.ShortTimePattern}", culture);
+    }
+
+    /// <summary>The year the culture shows, which is not the Gregorian one in a calendar such as the Persian one.</summary>
+    private static bool IsCurrentYear(DateTimeOffset local, DateTimeOffset now, CultureInfo culture)
+    {
+        var calendar = culture.DateTimeFormat.Calendar;
+        return calendar.GetYear(local.DateTime) == calendar.GetYear(now.ToLocalTime().DateTime);
+    }
+
+    /// <summary>
+    /// The short date of the culture without its year, or null when what is left
+    /// is no longer a date. A date such as the German one ends in a separator of
+    /// its own, so only the start of the pattern loses one.
+    /// </summary>
+    private static string? DatePatternWithoutYear(CultureInfo culture)
+    {
+        var pattern = culture.DateTimeFormat.ShortDatePattern
+            .Replace("yyyy", string.Empty, StringComparison.Ordinal)
+            .Replace("yy", string.Empty, StringComparison.Ordinal)
+            .Replace("y", string.Empty, StringComparison.Ordinal)
+            .TrimStart(' ', ',', '.', '/', '-')
+            .TrimEnd(' ', ',', '/', '-');
+
+        // An era designator or a quoted literal is left over from the year that went out, so the full form stays.
+        if (pattern.Contains('g') || pattern.Contains('\'') || pattern.Contains('"'))
+            return null;
+
+        return pattern.Contains('d') && pattern.Contains('M') ? pattern : null;
+    }
+
     /// <summary>Brings the rows into the given order in place, so a row that stays keeps its view and what the view shows.</summary>
     internal static void Arrange<T>(ObservableCollection<T> rows, IReadOnlyList<T> order)
     {
@@ -560,9 +599,16 @@ public partial class MainViewModel : ViewModelBase
             return Task.CompletedTask;
         }
 
+        if (_newInstancePack is { } pack)
+            return CreatePackInstanceAsync(pack, name);
+
         var presetId = SelectedGameSettingsPreset?.Id;
         return IsImportingSharedProfile ? ImportSharedProfileAsync(name) : RunModalInstanceOperationAsync(async instances =>
         {
+            if (!await instances.IsNameAvailableAsync(name))
+                throw new InvalidOperationException(Localization.ModalNameTaken);
+
+            await instances.CreateAsync(name, InstanceSource.Custom.Value);
             var instance = new Instance(name, InstanceSource.Custom.Value);
             await instances.CreateAsync(instance);
             if (presetId is { } id && _services is { } services)
@@ -936,6 +982,8 @@ public sealed partial class InstanceItem : ObservableObject
     [ObservableProperty]
     private bool _isConfirmingDelete;
 
+    private bool _isOpening;
+
     public InstanceItem(MainViewModel owner, Instance instance, bool isActive, DateTimeOffset? lastPlayedAt = null)
     {
         _owner = owner;
@@ -972,8 +1020,27 @@ public sealed partial class InstanceItem : ObservableObject
     [RelayCommand]
     private Task ToggleActiveAsync() => IsActive ? _owner.DeactivateInstanceAsync() : _owner.ActivateInstanceAsync(InstanceId);
 
-    [RelayCommand]
-    private Task OpenAsync() => _owner.OpenInstanceAsync(this);
+    /// <summary>
+    /// The whole card is this command, so it stays executable while the page loads,
+    /// because a command that cannot execute greys out every control on the card.
+    /// The flag takes over the job of dropping a second click on the same row.
+    /// </summary>
+    [RelayCommand(AllowConcurrentExecutions = true)]
+    private async Task OpenAsync()
+    {
+        if (_isOpening)
+            return;
+
+        _isOpening = true;
+        try
+        {
+            await _owner.OpenInstanceAsync(this);
+        }
+        finally
+        {
+            _isOpening = false;
+        }
+    }
 
     /// <summary>Play on the active row of the Library, which starts the same watched launch as Home.</summary>
     [RelayCommand]

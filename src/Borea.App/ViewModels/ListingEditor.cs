@@ -52,6 +52,7 @@ public sealed partial class ListingEditor : ObservableObject
     {
         _owner = owner ?? throw new ArgumentNullException(nameof(owner));
         _owner.Localization.PropertyChanged += (_, _) => RefreshText();
+        _owner.PropertyChanged += OnOwnerChanged;
     }
 
     private LocalizationService Localization => _owner.Localization;
@@ -241,7 +242,11 @@ public sealed partial class ListingEditor : ObservableObject
     public bool CanOpenPullRequest => !HasErrors && ModIds.IsValid(Draft.Id);
 
     /// <summary>Loads the content index and the newest schema, which the checks use. The draft stays as it is.</summary>
-    internal Task OpenAsync() => _opening = OpenCoreAsync();
+    internal Task OpenAsync()
+    {
+        Enter();
+        return _opening = OpenCoreAsync();
+    }
 
     private async Task OpenCoreAsync()
     {
@@ -397,6 +402,7 @@ public sealed partial class ListingEditor : ObservableObject
     private void StartOver()
     {
         Cancel();
+        ForgetPullRequest();
         OutputMessage = null;
         SourceError = null;
         ListedError = null;
@@ -587,6 +593,7 @@ public sealed partial class ListingEditor : ObservableObject
         }
 
         OutputMessage = null;
+        ForgetPullRequest();
         Step = ListingStep.Form;
         Refresh();
     }
@@ -629,6 +636,8 @@ public sealed partial class ListingEditor : ObservableObject
         OnPropertyChanged(nameof(HasNoIssues));
         OnPropertyChanged(nameof(CanOpenPullRequest));
         RefreshOverview(issues);
+        OnPropertyChanged(nameof(CanPublish));
+        ScheduleOwnershipCheck();
     }
 
     internal string ImageFacts(long? width, long? height, long? size) => Localization.FormatListingImageFacts(
@@ -649,6 +658,7 @@ public sealed partial class ListingEditor : ObservableObject
         foreach (var image in DescriptionImages)
             image.RefreshText();
         OnPropertyChanged(nameof(PullRequestText));
+        RefreshPullRequestText();
         Refresh();
     }
 

@@ -21,9 +21,9 @@ public sealed partial class TaskItem : ObservableObject
 
     internal string? Subject { get; }
 
-    internal Guid? InstanceId { get; }
+    internal Guid? InstanceId { get; private set; }
 
-    public string? InstanceName { get; }
+    public string? InstanceName { get; private set; }
 
     internal string? ContentId { get; }
 
@@ -51,6 +51,7 @@ public sealed partial class TaskItem : ObservableObject
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(TimeText))]
+    [NotifyPropertyChangedFor(nameof(TimeToolTip))]
     private DateTimeOffset? _endedAt;
 
     [ObservableProperty]
@@ -98,7 +99,7 @@ public sealed partial class TaskItem : ObservableObject
     public string Title => Kind switch
     {
         TaskKind.IndexRefresh => Localization.TaskIndexRefresh,
-        TaskKind.Update => Localization.FormatTaskUpdate(Subject ?? string.Empty),
+        TaskKind.Update or TaskKind.PackUpdate => Localization.FormatTaskUpdate(Subject ?? string.Empty),
         TaskKind.UpdateAll => Localization.TaskUpdateAll,
         TaskKind.ModRemoval => Localization.FormatTaskRemove(Subject ?? string.Empty),
         TaskKind.ModListImport => Localization.FormatTaskCreateInstance(Subject ?? string.Empty),
@@ -106,8 +107,26 @@ public sealed partial class TaskItem : ObservableObject
         TaskKind.LibraryFolderChange => Localization.FormatTaskLibraryFolder(Subject ?? string.Empty),
         TaskKind.BackupRestore => Localization.FormatTaskBackupRestore(Subject ?? string.Empty),
         TaskKind.BackupDelete => Localization.FormatTaskBackupDelete(Subject ?? string.Empty),
+        TaskKind.LoaderInstall => Localization.FormatTaskInstall(LoaderInstallName),
         _ => Localization.FormatTaskInstall(Subject ?? string.Empty),
     };
+
+    /// <summary>
+    /// The loader name with the version it installs. The subject keeps the plain loader
+    /// name because the toast of a finished install formats the version itself, so the
+    /// title is the one place that joins the two.
+    /// </summary>
+    private string LoaderInstallName
+    {
+        get
+        {
+            var name = Subject ?? string.Empty;
+            if (string.IsNullOrEmpty(Version))
+                return name;
+
+            return string.IsNullOrEmpty(name) ? Version : $"{name} {Version}";
+        }
+    }
 
     public string StateText => State switch
     {
@@ -121,7 +140,10 @@ public sealed partial class TaskItem : ObservableObject
 
     public string StepText => Step ?? StateText;
 
-    public string TimeText => MainViewModel.DateTimeText(EndedAt ?? StartedAt);
+    /// <summary>The short form, because the row shows it next to the state and the instance.</summary>
+    public string TimeText => MainViewModel.ShortDateTimeText(EndedAt ?? StartedAt);
+
+    public string TimeToolTip => MainViewModel.DateTimeText(EndedAt ?? StartedAt);
 
     public bool IsFailed => State == TaskState.Failed;
 
@@ -131,7 +153,7 @@ public sealed partial class TaskItem : ObservableObject
     public bool HasRetry => State == TaskState.Failed && Kind switch
     {
         TaskKind.IndexRefresh => true,
-        TaskKind.UpdateAll => InstanceId is not null,
+        TaskKind.UpdateAll or TaskKind.PackUpdate => InstanceId is not null,
         TaskKind.ModInstall or TaskKind.PackInstall or TaskKind.Update => InstanceId is not null && ContentId is not null,
         _ => false,
     };
@@ -142,9 +164,17 @@ public sealed partial class TaskItem : ObservableObject
     private Task RetryAsync() => _registry.RetryAsync(this);
 
     /// <summary>The installs of one mod or pack share one row, and the updates of one instance run one at a time.</summary>
-    internal bool DoesSameWorkAs(TaskItem other) => Kind is TaskKind.Update or TaskKind.UpdateAll
-        ? other.Kind is TaskKind.Update or TaskKind.UpdateAll && other.InstanceId == InstanceId
+    internal bool DoesSameWorkAs(TaskItem other) => Kind is TaskKind.Update or TaskKind.UpdateAll or TaskKind.PackUpdate
+        ? other.Kind is TaskKind.Update or TaskKind.UpdateAll or TaskKind.PackUpdate && other.InstanceId == InstanceId
         : other.Kind == Kind && ModIds.Equals(other.ContentId, ContentId);
+
+    /// <summary>Names the instance that the task created.</summary>
+    internal void SetInstance(Guid instanceId, string instanceName)
+    {
+        InstanceId = instanceId;
+        InstanceName = instanceName;
+        OnPropertyChanged(nameof(InstanceName));
+    }
 
     internal void MarkRunning()
     {
@@ -216,5 +246,6 @@ public sealed partial class TaskItem : ObservableObject
         OnPropertyChanged(nameof(StateText));
         OnPropertyChanged(nameof(StepText));
         OnPropertyChanged(nameof(TimeText));
+        OnPropertyChanged(nameof(TimeToolTip));
     }
 }
