@@ -372,6 +372,9 @@
   <data name="ModListNotCopiedFormat" xml:space="preserve">
     <value>{0} ain't parrot'd, seein' as The Borea ain't haul this treasure chest onboard.</value>
   </data>
+  <data name="ModListNotCopiedManyFormat" xml:space="preserve">
+    <value>These barrels o' fun ain't parrot'd, seein' as The Borea ain't haul their treasure chests onboard: {0}</value>
+  </data>
   <data name="ModListUnknownFormat" xml:space="preserve">
     <value>Nary an X marks the spot fer {0} {1}, so The Borea ain't be haulin' it onboard.</value>
   </data>
