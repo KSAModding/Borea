@@ -1,5 +1,6 @@
 using Borea.Core.Instances;
 using Borea.Core.Paths;
+using Borea.Storage.Files;
 using Borea.Storage.Toml;
 
 namespace Borea.Storage.Instances;
@@ -148,6 +149,7 @@ public sealed class FileInstanceRepository : IInstanceRepository, IInstanceLocks
 
     /// <summary>
     /// Deletes the instance with the given ID from disk, and removes the pointer file when it names that instance. No-op if the instance does not exist.
+    /// A link below the instance is removed as a link, so the folder it points at keeps its files.
     /// </summary>
     public async Task DeleteAsync(Guid instanceId)
     {
@@ -158,8 +160,7 @@ public sealed class FileInstanceRepository : IInstanceRepository, IInstanceLocks
             var root = _pathProvider.GetInstanceRoot(instanceId);
             try
             {
-                if (Directory.Exists(root))
-                    Directory.Delete(root, recursive: true);
+                DirectoryLinks.DeleteTreeWithoutFollowingLinks(root);
             }
             finally
             {

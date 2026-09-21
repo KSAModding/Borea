@@ -1,6 +1,7 @@
 ﻿using Borea.Core.Dependencies;
 using Borea.Core.Instances;
 using Borea.Core.Mods;
+using Borea.Storage.Files;
 using Borea.Storage.Instances;
 using Borea.Storage.Tests.Launch;
 using Borea.Storage.Tests.Mods;
@@ -256,6 +257,21 @@ public sealed class FileInstanceRepositoryTests : IDisposable
     }
 
     [Fact]
+    public async Task DeleteAsync_AnInstanceWithALinkedMod_RemovesItAndKeepsTheLinkTarget()
+    {
+        var instance = (await _repository.CreateAsync("Linked", InstanceSource.Custom.Value)).Instance;
+        var target = Directory.CreateDirectory(Path.Combine(_tempRoot, "Static Mod Files", "SomeMod")).FullName;
+        File.WriteAllText(Path.Combine(target, "mod.toml"), "name = \"SomeMod\"");
+        var link = Path.Combine(_pathProvider.GetInstanceModsFolder(instance.InstanceId), "SomeMod");
+        Assert.True(new DirectoryLinker().TryCreate(link, target).Linked);
+
+        await _repository.DeleteAsync(instance.InstanceId);
+
+        Assert.False(Directory.Exists(_pathProvider.GetInstanceRoot(instance.InstanceId)));
+        Assert.True(File.Exists(Path.Combine(target, "mod.toml")));
+    }
+
+    [Fact]
     public async Task DeleteAsync_AnotherInstance_KeepsTheActiveInstance()
     {
         var active = await _repository.CreateAsync("Active", InstanceSource.Custom.Value);
@@ -340,9 +356,5 @@ public sealed class FileInstanceRepositoryTests : IDisposable
         Assert.Null(result);
     }
 
-    public void Dispose()
-    {
-        if (Directory.Exists(_tempRoot))
-            Directory.Delete(_tempRoot, recursive: true);
-    }
+    public void Dispose() => DirectoryLinks.DeleteTreeWithoutFollowingLinks(_tempRoot);
 }
