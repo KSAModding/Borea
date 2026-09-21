@@ -33,6 +33,9 @@ public partial class MainViewModel
 
     private PackItem? _newInstancePack;
 
+    /// <summary>The pack version the name modal creates the instance from, or null for the newest one.</summary>
+    private ModVersion? _newInstancePackVersion;
+
     public ObservableCollection<PackItem> DiscoverPacks { get; } = [];
 
     public bool IsModpacksTab => DiscoverType == ContentType.ModPack;
@@ -236,12 +239,14 @@ public partial class MainViewModel
         => (targetInstanceId ?? ActiveInstance?.InstanceId) is { } instanceId ? PlanPackInstallAsync(pack, instanceId, newInstanceName: null, version, confirm) : Task.CompletedTask;
 
     /// <summary>Opens the name modal of a new instance with the name of the pack.</summary>
-    internal void BeginPackInstance(PackItem pack)
+    /// <param name="version">The version the instance gets, or null for the newest one. An older version goes into the suggested name, so two instances of the same pack do not collide.</param>
+    internal void BeginPackInstance(PackItem pack, ModVersion? version = null)
     {
         InstanceError = null;
-        ModalInstanceName = pack.Name;
+        ModalInstanceName = version is null ? pack.Name : $"{pack.Name} {version}";
         RenamingInstance = null;
         _newInstancePack = pack;
+        _newInstancePackVersion = version;
         IsCreatingInstance = true;
     }
 
@@ -251,6 +256,8 @@ public partial class MainViewModel
         if (_instances is null)
             return;
 
+        // closing the modal clears the pinned version, so the row reads it first
+        var version = _newInstancePackVersion;
         using var libraryUse = TryUseLibrary();
         if (libraryUse is null)
         {
@@ -279,7 +286,7 @@ public partial class MainViewModel
 
         IsCreatingInstance = false;
         ModalInstanceName = string.Empty;
-        await PlanPackInstallAsync(pack, instanceId: null, name);
+        await PlanPackInstallAsync(pack, instanceId: null, name, version);
     }
 
     /// <param name="instanceId">The instance the pack installs into, or null for a new instance.</param>
