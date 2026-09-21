@@ -141,18 +141,71 @@ public sealed class ContentViewModelTests
     }
 
     [Fact]
+    public async Task Versions_OfAModInstalledInAnotherVersion_NameTheChange()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var viewModel = harness.ViewModel;
+        await InstalledContent.AddAsync(harness, "AdvancedFlightComputer", activate: true, version: "0.7.3");
+        await viewModel.LoadAsync();
+        await viewModel.EnsureDiscoverLoadedAsync();
+        await viewModel.DiscoverItems.Single(item => item.ModId == "AdvancedFlightComputer").OpenCommand.ExecuteAsync(null);
+
+        await viewModel.ShowContentVersionsCommand.ExecuteAsync(null);
+
+        var rows = viewModel.ContentVersions.ToDictionary(row => row.Version);
+        var newer = rows["0.7.5"];
+        Assert.Equal("0.7.3", newer.ReplacedVersion);
+        Assert.Equal(harness.Localization.FormatContentReplaceVersionIn("0.7.3", "Main"), newer.InstallToolTip);
+        Assert.Equal(harness.Localization.FormatContentReplaceVersion("0.7.3"), newer.ConfirmInstallText);
+        newer.InstallWarning = "The release is untested.";
+        Assert.Equal(harness.Localization.FormatContentReplaceVersionAnyway("0.7.3"), newer.ConfirmInstallText);
+
+        var installed = rows["0.7.3"];
+        Assert.True(installed.IsInstalled);
+        Assert.Null(installed.ReplacedVersion);
+        Assert.Equal(viewModel.AddToText, installed.InstallToolTip);
+        Assert.Equal(harness.Localization.ContentAdd, installed.ConfirmInstallText);
+
+        await viewModel.DeactivateInstanceAsync();
+
+        Assert.Null(newer.ReplacedVersion);
+        Assert.Equal(viewModel.AddToText, newer.InstallToolTip);
+    }
+
+    [Fact]
+    public async Task ChangeVersion_OpensTheModPageOnTheVersionsTab()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var viewModel = harness.ViewModel;
+        await InstalledContent.AddAsync(harness, "AdvancedFlightComputer", activate: true, version: "0.7.3");
+        await viewModel.LoadAsync();
+        await viewModel.EnsureDiscoverLoadedAsync();
+        var afc = viewModel.DiscoverItems.Single(item => item.ModId == "AdvancedFlightComputer");
+        Assert.True(afc.CanChangeVersion);
+
+        await afc.ChangeVersionCommand.ExecuteAsync(null);
+
+        Assert.True(viewModel.CurrentWindowContent);
+        Assert.Same(afc, viewModel.SelectedContent);
+        Assert.True(viewModel.IsVersionsTab);
+        Assert.NotEmpty(viewModel.ContentVersions);
+    }
+
+    [Fact]
     public async Task Loader_OffersNoInstallButtons()
     {
         using var harness = await ViewModelHarness.CreateAsync();
         var viewModel = harness.ViewModel;
         await viewModel.EnsureDiscoverLoadedAsync();
         viewModel.ShowDiscoverLoadersCommand.Execute(null);
-        await viewModel.DiscoverItems.Single().OpenCommand.ExecuteAsync(null);
+        var loader = viewModel.DiscoverItems.Single();
+        await loader.OpenCommand.ExecuteAsync(null);
 
         await viewModel.ShowContentVersionsCommand.ExecuteAsync(null);
 
         Assert.True(viewModel.IsLoaderContent);
         Assert.All(viewModel.ContentVersions, version => Assert.False(version.CanInstall));
+        Assert.False(loader.CanChangeVersion);
     }
 
     [Fact]
