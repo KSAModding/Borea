@@ -32,7 +32,7 @@ jobs:
       # A test that never returns is reported as that test with a dump of where it
       # stopped, because a run that only hangs is cancelled by a person later and
       # a cancelled check does not read as a failure.
-      - run: dotnet test Borea.slnx --configuration Release --no-build --collect:"XPlat Code Coverage" --results-directory coverage --blame-hang --blame-hang-timeout 5m --blame-hang-dump-type full
+      - run: dotnet test Borea.slnx --configuration Release --no-build --collect:"XPlat Code Coverage" --results-directory coverage --blame-hang --blame-hang-timeout 5m --blame-hang-dump-type mini
       - name: Keep the hang dump
         if: failure()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
