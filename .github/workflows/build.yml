@@ -16,6 +16,9 @@ jobs:
       matrix:
         os: [ubuntu-24.04, windows-2025, macos-26]
     runs-on: ${{ matrix.os }}
+    # a test that blocks the headless thread takes the whole job with it, and the
+    # run then holds a machine until somebody cancels it, so the job gives up first
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
@@ -26,7 +29,17 @@ jobs:
         run: bash .github/scripts/verify-dotnet-tool-package.sh
       - run: dotnet build Borea.slnx --configuration Release
       # Collected on every leg, reported from Linux only so one build is one Coveralls job.
-      - run: dotnet test Borea.slnx --configuration Release --no-build --collect:"XPlat Code Coverage" --results-directory coverage
+      # A test that never returns is reported as that test with a dump of where it
+      # stopped, because a run that only hangs is cancelled by a person later and
+      # a cancelled check does not read as a failure.
+      - run: dotnet test Borea.slnx --configuration Release --no-build --collect:"XPlat Code Coverage" --results-directory coverage --blame-hang --blame-hang-timeout 5m --blame-hang-dump-type full
+      - name: Keep the hang dump
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: hang-dump-${{ matrix.os }}
+          path: coverage/**/*.dmp
+          if-no-files-found: ignore
 
       # Merge the per-project Cobertura files into one lcov report; lcov keeps the absolute
       # source paths Coveralls needs, and the filter drops generated code under obj/.
