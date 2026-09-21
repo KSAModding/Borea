@@ -12,12 +12,14 @@ public sealed class InstallPlanExecutor : IInstallPlanExecutor
     private readonly IInstanceRepository _instances;
     private readonly IModInstaller _installer;
     private readonly IModReplacer _replacer;
+    private readonly IInstallSpaceCheck? _space;
 
-    public InstallPlanExecutor(IInstanceRepository instances, IModInstaller installer, IModReplacer replacer)
+    public InstallPlanExecutor(IInstanceRepository instances, IModInstaller installer, IModReplacer replacer, IInstallSpaceCheck? space = null)
     {
         _instances = instances ?? throw new ArgumentNullException(nameof(instances));
         _installer = installer ?? throw new ArgumentNullException(nameof(installer));
         _replacer = replacer ?? throw new ArgumentNullException(nameof(replacer));
+        _space = space;
     }
 
     public async Task ExecuteAsync(
@@ -30,6 +32,8 @@ public sealed class InstallPlanExecutor : IInstallPlanExecutor
         ArgumentNullException.ThrowIfNull(plan);
         if (!plan.IsReady)
             throw new InvalidOperationException("The install plan has unresolved choices or conflicts.");
+
+        _space?.EnsureFits(plan);
 
         var fresh = await _instances.GetByIdAsync(plan.InstanceId).ConfigureAwait(false)
             ?? throw new InvalidOperationException($"Instance '{plan.InstanceId}' no longer exists.");

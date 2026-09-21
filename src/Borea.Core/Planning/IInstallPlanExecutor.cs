@@ -24,6 +24,7 @@ public interface IInstallPlanExecutor
     /// The plan has unresolved choices or conflicts, the instance no longer
     /// exists, or the instance changed after planning or between operations.
     /// </exception>
+    /// <exception cref="InsufficientDiskSpaceException">The plan needs more room than the disk has.</exception>
     /// <exception cref="InstallStoppedException">The stop ended the plan before its last operation finished.</exception>
     Task ExecuteAsync(
         InstallPlan plan,

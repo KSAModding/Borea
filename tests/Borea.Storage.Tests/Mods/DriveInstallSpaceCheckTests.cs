@@ -110,6 +110,35 @@ public sealed class DriveInstallSpaceCheckTests : IAsyncLifetime
         check.EnsureFits(plan);
     }
 
+    [Fact]
+    public async Task Execute_PlanThatDoesNotFit_DownloadsNothing()
+    {
+        var executor = Executor(Check(("library", Gigabyte), ("downloads", 50 * Gigabyte)));
+        var plan = await PlanAsync(Release("first-mod", downloadBytes: Gigabyte, installBytes: 4 * Gigabyte));
+
+        await Assert.ThrowsAsync<InsufficientDiskSpaceException>(async () => await executor.ExecuteAsync(plan, enable: true));
+
+        Assert.Empty(_downloader.ArchivePaths);
+        Assert.Empty((await _instances.GetByIdAsync(_instanceId))!.Mods);
+    }
+
+    [Fact]
+    public async Task Execute_PlanThatFits_InstallsAsBefore()
+    {
+        var executor = Executor(Check(("library", 50 * Gigabyte), ("downloads", 50 * Gigabyte)));
+        var plan = await PlanAsync(Release("first-mod", downloadBytes: Gigabyte, installBytes: 4 * Gigabyte));
+
+        await executor.ExecuteAsync(plan, enable: true);
+
+        Assert.Equal("first-mod", Assert.Single((await _instances.GetByIdAsync(_instanceId))!.Mods).ModId);
+    }
+
+    private InstallPlanExecutor Executor(DriveInstallSpaceCheck check) => new(
+        _instances,
+        new FileModInstaller(_pathProvider, _downloader, _instances, _modState),
+        new FileModReplacer(_pathProvider, _downloader, _instances, _modState),
+        check);
+
     private DriveInstallSpaceCheck Check((string Volume, long Free) library, (string Volume, long Free) downloads)
     {
         var probe = new FakeFreeSpaceProbe(path => path == _downloadFolder
