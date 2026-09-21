@@ -1687,8 +1687,13 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string FormatModListInstallCount(int count)
         => string.Format(CultureInfo.CurrentCulture, Resources.ModListInstallCountFormat, count);
 
-    public string FormatModListNotCopied(string folder)
-        => string.Format(CultureInfo.CurrentCulture, Resources.ModListNotCopiedFormat, folder);
+    public string FormatModListNotCopied(IReadOnlyCollection<string> folderNames)
+        => folderNames.Count switch
+        {
+            0 => string.Empty,
+            1 => string.Format(CultureInfo.CurrentCulture, Resources.ModListNotCopiedFormat, folderNames.First()),
+            _ => string.Format(CultureInfo.CurrentCulture, Resources.ModListNotCopiedManyFormat, string.Join(", ", folderNames)),
+        };
 
     public string FormatModListUnknown(string modId, string version)
         => string.Format(CultureInfo.CurrentCulture, Resources.ModListUnknownFormat, modId, version);

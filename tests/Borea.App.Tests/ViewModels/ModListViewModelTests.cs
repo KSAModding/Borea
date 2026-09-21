@@ -29,7 +29,7 @@ public sealed class ModListViewModelTests
         Assert.NotNull(review);
         Assert.True(review.IsDuplicate);
         Assert.Equal("Main (copy)", review.Name);
-        Assert.Equal([harness.Localization.FormatModListNotCopied("LocalOnly")], review.Notes);
+        Assert.Equal([harness.Localization.FormatModListNotCopied(["LocalOnly"])], review.Notes);
         Assert.Single(await harness.Services.Instances.GetAllAsync());
 
         await review.ConfirmCommand.ExecuteAsync(null);
@@ -43,6 +43,28 @@ public sealed class ModListViewModelTests
         Assert.Contains(viewModel.Instances, row => row.Name == "Main (copy)");
         Assert.DoesNotContain(viewModel.Toasts.Items, toast => toast.Message == harness.Localization.FormatLibraryNowActive("Main (copy)"));
         Assert.Equal("Main", viewModel.ActiveInstance?.Name);
+    }
+
+    [Fact]
+    public async Task Duplicate_SeveralFoldersBoreaDidNotInstall_AreOneNote()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(respond: ServeArchive);
+        var source = await SeedMainAsync(harness);
+        foreach (var folderName in new[] { "Alpha", "Beta", "Gamma" })
+        {
+            var folder = Directory.CreateDirectory(Path.Combine(harness.Services.Paths.GetInstanceModsFolder(source.InstanceId), folderName));
+            await File.WriteAllTextAsync(Path.Combine(folder.FullName, "mod.toml"), $"name = \"{folderName}\"");
+        }
+
+        await harness.Services.ForeignModAdopter.ScanAsync(source.InstanceId);
+        var viewModel = harness.ViewModel;
+        await viewModel.LoadAsync();
+
+        await viewModel.Instances.Single().DuplicateCommand.ExecuteAsync(null);
+
+        var note = Assert.Single(viewModel.ModListImport!.Notes);
+        Assert.Equal(harness.Localization.FormatModListNotCopied(["Alpha", "Beta", "Gamma"]), note);
+        Assert.Contains("Alpha, Beta, Gamma", note);
     }
 
     [Fact]

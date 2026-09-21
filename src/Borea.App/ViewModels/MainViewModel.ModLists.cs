@@ -236,10 +236,12 @@ public partial class MainViewModel
             return;
 
         var plan = item.Plan.Plan;
-        var notes = item.NotCopied.Select(Localization.FormatModListNotCopied)
-            .Concat(item.Plan.Unknown.Select(unknown => Localization.FormatModListUnknown(unknown.Entry.ModId, unknown.Entry.Version.ToString())))
-            .Concat(item.Plan.Yanked.Select(yanked => Localization.FormatPackMemberYanked(yanked.Entry.ModId, yanked.Entry.Version.ToString(), yanked.Release!.YankedReason)))
-            .ToList();
+        var notes = new List<string>();
+        if (item.NotCopied.Count > 0)
+            notes.Add(Localization.FormatModListNotCopied(item.NotCopied));
+
+        notes.AddRange(item.Plan.Unknown.Select(unknown => Localization.FormatModListUnknown(unknown.Entry.ModId, unknown.Entry.Version.ToString())));
+        notes.AddRange(item.Plan.Yanked.Select(yanked => Localization.FormatPackMemberYanked(yanked.Entry.ModId, yanked.Entry.Version.ToString(), yanked.Release!.YankedReason)));
         var warnings = plan.Warnings.Where(warning => warning.Code != "yanked").ToList();
         item.ShowText(
             notes,

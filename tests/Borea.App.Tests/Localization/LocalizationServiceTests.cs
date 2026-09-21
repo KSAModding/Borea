@@ -105,6 +105,25 @@ public sealed class LocalizationServiceTests : IDisposable
         Assert.Equal("en", service.SelectedCultureName);
     }
 
+    [Theory]
+    [InlineData("en", "Alpha is not copied, because Borea did not install this folder.", "These mods are not copied, because Borea did not install their folders: Alpha, Beta, Gamma")]
+    [InlineData("de", "Alpha wird nicht kopiert, weil Borea diesen Ordner nicht installiert hat.", "Diese Mods werden nicht kopiert, weil Borea ihre Ordner nicht installiert hat: Alpha, Beta, Gamma")]
+    public void FormatModListNotCopied_NamesOneFolderInASentenceAndSeveralInOneLine(string culture, string one, string several)
+    {
+        var service = new LocalizationService(CultureInfo.GetCultureInfo(culture));
+
+        Assert.Equal(one, service.FormatModListNotCopied(["Alpha"]));
+        Assert.Equal(several, service.FormatModListNotCopied(["Alpha", "Beta", "Gamma"]));
+    }
+
+    [Fact]
+    public void FormatModListNotCopied_WithoutFolders_IsEmpty()
+    {
+        var service = new LocalizationService(CultureInfo.GetCultureInfo("en"));
+
+        Assert.Equal(string.Empty, service.FormatModListNotCopied([]));
+    }
+
     [Fact]
     public void FormatViewNotFound_UsesOneFormattedResourceInTheSelectedLanguage()
     {
