@@ -29,8 +29,12 @@ jobs:
       changed: ${{ steps.compare.outputs.changed }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      # Only the scripts this job runs. A test of another script can need a toolchain
+      # this job does not have, and it must not be able to stop the deployment.
       - name: Test the share page scripts
-        run: python3 -m unittest discover --start-directory .github/scripts/tests --pattern 'test_*.py'
+        run: |
+          python3 -m unittest discover --start-directory .github/scripts/tests --pattern 'test_build_share_pages.py'
+          python3 -m unittest discover --start-directory .github/scripts/tests --pattern 'test_listing_icons.py'
       # Verified icons from the last build, so an unchanged icon is not fetched from its author host again.
       - id: icons
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
