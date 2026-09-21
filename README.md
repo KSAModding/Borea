@@ -1,4 +1,9 @@
 # Borea
+![Downloads](https://img.shields.io/github/downloads/KSAModding/Borea/total)
+![License](https://img.shields.io/badge/License-MIT-green.svg)
+![Last commit](https://img.shields.io/github/last-commit/KSAModding/Borea/main.svg)
+![GitHub release (latest by date)](https://img.shields.io/github/v/release/KSAModding/Borea)
+
 
 <img src="assets/borea.png" alt="The Borea icon, an aurora over a dark planet" width="128" height="128">
 
