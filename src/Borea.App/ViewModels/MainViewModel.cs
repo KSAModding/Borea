@@ -608,7 +608,6 @@ public partial class MainViewModel : ViewModelBase
             if (!await instances.IsNameAvailableAsync(name))
                 throw new InvalidOperationException(Localization.ModalNameTaken);
 
-            await instances.CreateAsync(name, InstanceSource.Custom.Value);
             var instance = new Instance(name, InstanceSource.Custom.Value);
             await instances.CreateAsync(instance);
             if (presetId is { } id && _services is { } services)
