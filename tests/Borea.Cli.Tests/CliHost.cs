@@ -7,6 +7,7 @@ using Borea.Core.Logging;
 using Borea.Core.ModLoaders;
 using Borea.Core.ModPacks;
 using Borea.Core.Mods;
+using Borea.Core.Planning;
 using Borea.Core.Settings;
 using Borea.Core.Instances;
 using Borea.Network.Index;
@@ -42,6 +43,12 @@ internal sealed class CliHost : IDisposable
     public IContentIndexRefresh? IndexRefresh { get; set; }
 
     public FakeModRepository Mods { get; } = new();
+
+    /// <summary>
+    /// The space check the commands install through. It accepts every plan, so
+    /// the free space of the machine the tests run on does not reach them.
+    /// </summary>
+    public IInstallSpaceCheck SpaceCheck { get; set; } = new FakeInstallSpaceCheck();
 
     public IModRepository? ModRepository { get; set; }
 
@@ -120,6 +127,7 @@ internal sealed class CliHost : IDisposable
             indexSnapshots: IndexSnapshots ?? new ReaderSnapshotProvider(IndexReader),
             mods: ModRepository ?? Mods,
             readOnlyMods: ModRepository ?? Mods,
+            spaceCheck: SpaceCheck,
             installer: InstallerFactory?.Invoke(graph),
             replacer: ReplacerFactory?.Invoke(graph),
             uninstaller: UninstallerFactory?.Invoke(graph),
