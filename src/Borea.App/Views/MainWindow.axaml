@@ -87,8 +87,15 @@
     <!-- last-resort error bar -->
     <Border Background="{StaticResource Brush.DangerSoft}" BorderBrush="{StaticResource Brush.Danger}" BorderThickness="1" CornerRadius="12" Padding="16,10" Margin="96,0,24,16" VerticalAlignment="Bottom" IsVisible="{Binding UnexpectedError, Converter={x:Static ObjectConverters.IsNotNull}}">
         <Grid ColumnDefinitions="*,12,Auto">
-            <TextBlock Classes="body-md danger" Text="{Binding UnexpectedError}" TextWrapping="Wrap" VerticalAlignment="Center" />
-            <Button Grid.Column="2" Classes="icon" Command="{Binding DismissUnexpectedErrorCommand}" AutomationProperties.Name="{Binding Localization.ModalClose}">
+            <StackPanel Spacing="4">
+                <TextBlock Classes="body-md danger" Text="{Binding Localization.UnexpectedErrorHint}" TextWrapping="Wrap" />
+                <TextBlock Classes="body-sm danger" Text="{Binding UnexpectedError}" TextWrapping="Wrap" />
+                <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,2,0,0">
+                    <Button Classes="text" Content="{Binding Localization.UnexpectedErrorCopyDetails}" Command="{Binding CopyUnexpectedErrorCommand}" />
+                    <Button Classes="text" Content="{Binding Localization.UnexpectedErrorReport}" Command="{Binding ReportUnexpectedErrorCommand}" />
+                </StackPanel>
+            </StackPanel>
+            <Button Grid.Column="2" Classes="icon" VerticalAlignment="Top" Command="{Binding DismissUnexpectedErrorCommand}" AutomationProperties.Name="{Binding Localization.ModalClose}">
                 <Path Classes="icon size-16" Data="{StaticResource Icon.Close}" Stroke="{StaticResource Brush.Danger}" />
             </Button>
         </Grid>

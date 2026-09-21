@@ -1907,6 +1907,16 @@ public sealed class LocalizationService : INotifyPropertyChanged
         return string.Format(CultureInfo.CurrentCulture, Resources.PreferenceSaveErrorFormat, error);
     }
 
+    public string UnexpectedErrorHint => Resources.UnexpectedErrorHint;
+
+    public string UnexpectedErrorCopyDetails => Resources.UnexpectedErrorCopyDetails;
+
+    public string UnexpectedErrorReport => Resources.UnexpectedErrorReport;
+
+    public string UnexpectedErrorCopied => Resources.UnexpectedErrorCopied;
+
+    public string UnexpectedErrorCopyFailed => Resources.UnexpectedErrorCopyFailed;
+
     private static SupportedCulture? ResolveSupportedCulture(CultureInfo culture)
     {
         for (var candidate = culture; candidate != CultureInfo.InvariantCulture; candidate = candidate.Parent)

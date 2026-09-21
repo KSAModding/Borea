@@ -36,6 +36,21 @@
   <data name="PreferenceSaveErrorFormat" xml:space="preserve">
     <value>Yer prefarrrence couldn't be bottled up: {0}</value>
   </data>
+  <data name="UnexpectedErrorHint" xml:space="preserve">
+    <value>Somethin' went sideways. Borea sails on, and the details be in the log.</value>
+  </data>
+  <data name="UnexpectedErrorCopyDetails" xml:space="preserve">
+    <value>Copy the details</value>
+  </data>
+  <data name="UnexpectedErrorReport" xml:space="preserve">
+    <value>Report this mutiny</value>
+  </data>
+  <data name="UnexpectedErrorCopied" xml:space="preserve">
+    <value>The details be in yer clipboard.</value>
+  </data>
+  <data name="UnexpectedErrorCopyFailed" xml:space="preserve">
+    <value>Couldn't copy the details</value>
+  </data>
   <data name="SettingsLanguageLabel" xml:space="preserve">
     <value>Manner o' speech</value>
   </data>

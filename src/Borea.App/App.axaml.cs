@@ -117,7 +117,7 @@ public partial class App : Application
             Dispatcher.UIThread.UnhandledException += (_, args) =>
             {
                 Services?.Log.Write("Unhandled exception on the UI thread.", args.Exception);
-                viewModel.UnexpectedError = args.Exception.Message;
+                viewModel.ShowUnexpectedError(args.Exception);
                 args.Handled = true;
             };
         }
