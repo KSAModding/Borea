@@ -112,21 +112,94 @@ internal sealed class ViewModelHarness : IDisposable
     public Task<BoreaServices> BuildServicesAsync() =>
         BoreaServices.BuildAsync(Root, new IndexOnlyHandler(this), SpaceDock, Candidates, processStarter: _processStarter, images: Images, sharedProfileRoot: _sharedProfileRoot ?? Path.Combine(Root, "GameProfile"), isGameProcessRunning: () => false, isOtherBoreaRunning: () => IsOtherBoreaRunning(), gitHub: _gitHub, listingPublisher: _listingPublisher);
 
+    /// <summary>
+    /// Completes when no background work of the view model is in flight. Work that
+    /// such a task starts is waited for as well, until nothing is left.
+    /// </summary>
+    /// <remarks>
+    /// A test that renders must call this inside its headless dispatch. The work of
+    /// a click continues on the Avalonia dispatcher of that dispatch, and that
+    /// dispatcher is gone once the dispatch returned, so what is left behind then
+    /// never continues.
+    /// </remarks>
+    /// <param name="limit">
+    /// How long one wait may take, or null for a wait without an end. A wait inside
+    /// a dispatch needs no limit, because the dispatcher of that dispatch runs the
+    /// work.
+    /// </param>
+    public async Task WhenIdleAsync(TimeSpan? limit = null)
+    {
+        for (var pass = 0; pass < IdlePasses; pass++)
+        {
+            var pending = Pending().ToList();
+            if (pending.Count == 0)
+                return;
+
+            var all = Task.WhenAll(pending.Select(work => work.Task));
+            if (limit is not { } end)
+            {
+                await all;
+                continue;
+            }
+
+            try
+            {
+                await all.WaitAsync(end);
+            }
+            catch (TimeoutException)
+            {
+                throw new TimeoutException($"The background work of the view model did not finish in {end.TotalSeconds:0} seconds, which leaves {string.Join(", ", pending.Select(work => work.Name))}.");
+            }
+        }
+
+        if (Pending().Any())
+            throw new InvalidOperationException($"The view model started new background work in each of {IdlePasses} passes.");
+    }
+
+    /// <summary>How often <see cref="WhenIdleAsync"/> waits for work that the last wait started.</summary>
+    private const int IdlePasses = 10;
+
+    /// <summary>
+    /// The limit of the wait in <see cref="Dispose"/>. The wait needs an end because
+    /// a dispose runs outside the headless dispatch, where work that still waits for
+    /// the Avalonia dispatcher of that dispatch never continues. A test that reaches
+    /// this limit says which work is left instead of stopping the whole test run.
+    /// </summary>
+    private static readonly TimeSpan DisposeLimit = TimeSpan.FromSeconds(60);
+
+    /// <summary>Every background task of the view model that is not done yet, by name.</summary>
+    private IEnumerable<(string Name, Task Task)> Pending()
+    {
+        if (ViewModel is not { } viewModel)
+            yield break;
+
+        (string Name, Task Task)[] work =
+        [
+            ("PreferencesSaved", viewModel.WhenPreferencesSavedAsync()),
+            ("UpdateChecked", viewModel.WhenUpdateCheckedAsync()),
+            ("BackupsCleaned", viewModel.WhenBackupsCleanedAsync()),
+            ("GameBuildChecked", viewModel.WhenGameBuildCheckedAsync()),
+            ("NewerGamePatchNotesLoaded", viewModel.WhenNewerGamePatchNotesLoadedAsync()),
+            ("AnnouncementsChecked", viewModel.WhenAnnouncementsCheckedAsync()),
+            ("ReleaseChannelSaved", viewModel.WhenReleaseChannelSavedAsync()),
+            ("ContentUpdatesChecked", viewModel.WhenContentUpdatesCheckedAsync()),
+            ("PlaytimeLoaded", viewModel.WhenPlaytimeLoadedAsync()),
+            ("InstanceSizesLoaded", viewModel.WhenInstanceSizesLoadedAsync()),
+            ("GameDetected", viewModel.WhenGameDetectedAsync()),
+            ("GitHubSignInDone", viewModel.WhenGitHubSignInDoneAsync()),
+            ("LinkRegistrationDone", viewModel.WhenLinkRegistrationDoneAsync()),
+            ("TasksSaved", viewModel.Tasks.WhenSavedAsync()),
+        ];
+
+        foreach (var item in work)
+            if (!item.Task.IsCompleted)
+                yield return item;
+    }
+
     public void Dispose()
     {
         // a language or theme change saves in the background; let it finish before the folder goes
-        ViewModel?.WhenPreferencesSavedAsync().GetAwaiter().GetResult();
-        ViewModel?.WhenUpdateCheckedAsync().GetAwaiter().GetResult();
-        ViewModel?.WhenBackupsCleanedAsync().GetAwaiter().GetResult();
-        ViewModel?.WhenGameBuildCheckedAsync().GetAwaiter().GetResult();
-        ViewModel?.WhenNewerGamePatchNotesLoadedAsync().GetAwaiter().GetResult();
-        ViewModel?.WhenAnnouncementsCheckedAsync().GetAwaiter().GetResult();
-        ViewModel?.WhenReleaseChannelSavedAsync().GetAwaiter().GetResult();
-        ViewModel?.WhenContentUpdatesCheckedAsync().GetAwaiter().GetResult();
-        ViewModel?.WhenPlaytimeLoadedAsync().GetAwaiter().GetResult();
-        ViewModel?.WhenInstanceSizesLoadedAsync().GetAwaiter().GetResult();
-        ViewModel?.WhenGameDetectedAsync().GetAwaiter().GetResult();
-        ViewModel?.Tasks.WhenSavedAsync().GetAwaiter().GetResult();
+        WhenIdleAsync(DisposeLimit).GetAwaiter().GetResult();
         Services.Dispose();
         CultureInfo.CurrentCulture = _originalCulture;
         CultureInfo.CurrentUICulture = _originalUiCulture;
