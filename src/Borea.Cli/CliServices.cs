@@ -66,6 +66,8 @@ internal sealed class CliServices : IDisposable
 
     public required IInstallPlanner InstallPlanner { get; init; }
 
+    public required IInstallSpaceCheck SpaceCheck { get; init; }
+
     public required IModInstaller Installer { get; init; }
 
     public required IModReplacer Replacer { get; init; }
@@ -106,6 +108,9 @@ internal sealed class CliServices : IDisposable
     /// The graph's services. <paramref name="latestVersion"/> replaces the
     /// graph's master-server ping and <paramref name="installedVersion"/> its
     /// reader of the installed build, which is what a test needs.
+    /// <paramref name="spaceCheck"/> replaces the check against the real
+    /// volumes, so a test does not depend on the free space of the machine it
+    /// runs on.
     /// </summary>
     public static CliServices From(
         BoreaServices services,
@@ -118,6 +123,7 @@ internal sealed class CliServices : IDisposable
         IModRepository? mods = null,
         IModRepository? readOnlyMods = null,
         IInstallPlanner? installPlanner = null,
+        IInstallSpaceCheck? spaceCheck = null,
         IModInstaller? installer = null,
         IModReplacer? replacer = null,
         IModUninstaller? uninstaller = null,
@@ -161,6 +167,7 @@ internal sealed class CliServices : IDisposable
             Mods = mods ?? services.Mods,
             ReadOnlyMods = readOnlyMods ?? services.ReadOnlyMods,
             InstallPlanner = installPlanner ?? services.InstallPlanner,
+            SpaceCheck = spaceCheck ?? services.SpaceCheck,
             Installer = installer ?? services.Installer,
             Replacer = replacer ?? services.Replacer,
             Uninstaller = uninstaller ?? services.Uninstaller,
