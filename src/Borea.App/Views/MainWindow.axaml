@@ -141,6 +141,12 @@
     <!-- modal: the code of a GitHub sign-in, over the settings and the pages -->
     <views:GitHubSignInModal IsVisible="{Binding IsGitHubSignInOpen}" />
 
+	<!-- modal: new instance, and rename instance -->
+	<views:InstanceNameModal IsVisible="{Binding IsNameModalOpen}" />
+
+	<!-- modal: create a game settings preset from an instance's settings.toml -->
+	<views:CreateGameSettingsPresetModal IsVisible="{Binding IsCreatingGameSettingsPreset}" />
+
     <!-- the window stays open until the running installs reached a safe point -->
     <Border Background="{StaticResource Brush.SurfaceRaised}" BorderBrush="{StaticResource Brush.BorderStrong}" BorderThickness="1" CornerRadius="12" Padding="16,10" Margin="96,0,24,16" VerticalAlignment="Bottom" IsVisible="{Binding IsClosing}">
         <Grid ColumnDefinitions="Auto,12,*">
