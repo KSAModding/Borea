@@ -72,10 +72,9 @@ public sealed class ListingImageViewTests
     [Fact]
     public async Task Render_ClipsTheBackgroundAndTheImageToTheCornerRadius()
     {
-        var session = HeadlessApp.Session;
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
 
-        var pixels = await session.Dispatch(async () =>
+        var pixels = await HeadlessApp.RunAsync(async () =>
         {
             var image = new ListingImage(new MainViewModel(), Icon(256, 256));
             var view = new ListingImageView
@@ -108,7 +107,7 @@ public sealed class ListingImageViewTests
                 loaded = await RenderFrame();
 
             return (Skeleton: skeleton, Loaded: loaded);
-        }, timeout.Token);
+        });
 
         Assert.Equal((Colors.White, Colors.White, Colors.Red, Colors.Red), pixels.Skeleton);
         Assert.Equal((Colors.White, Colors.White, Colors.Blue, Colors.Red), pixels.Loaded);
@@ -117,10 +116,9 @@ public sealed class ListingImageViewTests
     [Fact]
     public async Task Render_LoadingImage_PulsesTheSkeletonFromTheBackgroundToThePulseBrush()
     {
-        var session = HeadlessApp.Session;
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
 
-        var first = await session.Dispatch(async () =>
+        var first = await HeadlessApp.RunAsync(async () =>
         {
             var view = new ListingImageView
             {
@@ -138,7 +136,7 @@ public sealed class ListingImageViewTests
                 await Task.Delay(10, timeout.Token);
 
             return background;
-        }, timeout.Token);
+        });
 
         Assert.Equal(Colors.Red, first);
     }
@@ -146,10 +144,9 @@ public sealed class ListingImageViewTests
     [Fact]
     public async Task State_ImageLoads_GoesFromThePulsingSkeletonToTheImage()
     {
-        var session = HeadlessApp.Session;
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
 
-        var states = await session.Dispatch(async () =>
+        var states = await HeadlessApp.RunAsync(async () =>
         {
             var image = new ListingImage(new MainViewModel(), Icon(256, 256));
             var view = Show(image);
@@ -160,7 +157,7 @@ public sealed class ListingImageViewTests
                 await Task.Delay(10, timeout.Token);
 
             return (Loading: loading, Loaded: Snapshot(view));
-        }, timeout.Token);
+        });
 
         Assert.Equal((ListingImageView.DisplayState.Loading, true, false), states.Loading);
         Assert.Equal((ListingImageView.DisplayState.Loaded, false, false), states.Loaded);
@@ -190,10 +187,9 @@ public sealed class ListingImageViewTests
     [Fact]
     public async Task State_BytesDoNotDecode_GoesFromThePulsingSkeletonToThePlaceholder()
     {
-        var session = HeadlessApp.Session;
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
 
-        var states = await session.Dispatch(async () =>
+        var states = await HeadlessApp.RunAsync(async () =>
         {
             var image = new ListingImage(new MainViewModel(), Icon(256, 256));
             var view = Show(image);
@@ -204,7 +200,7 @@ public sealed class ListingImageViewTests
                 await Task.Delay(10, timeout.Token);
 
             return (Decoding: decoding, Failed: Snapshot(view));
-        }, timeout.Token);
+        });
 
         Assert.Equal((ListingImageView.DisplayState.Loading, true, false), states.Decoding);
         Assert.Equal((ListingImageView.DisplayState.Placeholder, false, true), states.Failed);
@@ -213,10 +209,9 @@ public sealed class ListingImageViewTests
     [Fact]
     public async Task State_ImagesTurnedOff_ShowsThePlaceholderAtOnceAndACachedImageWithoutPulse()
     {
-        var session = HeadlessApp.Session;
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
 
-        var states = await session.Dispatch(async () =>
+        var states = await HeadlessApp.RunAsync(async () =>
         {
             var image = new ListingImage(new MainViewModel { LoadImagesFromAuthorHosts = false }, Icon(256, 256));
             var view = Show(image);
@@ -228,7 +223,7 @@ public sealed class ListingImageViewTests
                 await Task.Delay(10, timeout.Token);
 
             return (TurnedOff: turnedOff, Decoding: decoding, Cached: Snapshot(view));
-        }, timeout.Token);
+        });
 
         Assert.Equal((ListingImageView.DisplayState.Placeholder, false, true), states.TurnedOff);
         Assert.Equal((ListingImageView.DisplayState.Placeholder, false, true), states.Decoding);
@@ -265,10 +260,9 @@ public sealed class ListingImageViewTests
     [InlineData(true)]
     public async Task ListRow_ComesBackOrMoves_ShowsItsImageInTheFirstFrame(bool move)
     {
-        var session = HeadlessApp.Session;
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
 
-        var shown = await session.Dispatch(async () =>
+        var shown = await HeadlessApp.RunAsync(async () =>
         {
             var owner = new MainViewModel();
             var first = new ListingImage(owner, Icon(256, 256)) { Bytes = LeftHalfBluePng() };
@@ -305,7 +299,7 @@ public sealed class ListingImageViewTests
             using var frame = window.CaptureRenderedFrame()!;
             using var buffer = frame.Lock();
             return (NewView: !ReferenceEquals(before, after), after.State, Pixel(buffer, (int)at.X, (int)at.Y));
-        }, timeout.Token);
+        });
 
         Assert.Equal((true, ListingImageView.DisplayState.Loaded, Colors.Blue), shown);
     }
@@ -315,10 +309,9 @@ public sealed class ListingImageViewTests
     [InlineData(false)]
     public async Task State_ImageShownAgainInANewView_TakesOnlyAnIconFromTheShelf(bool icon)
     {
-        var session = HeadlessApp.Session;
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
 
-        var state = await session.Dispatch(async () =>
+        var state = await HeadlessApp.RunAsync(async () =>
         {
             ContentImage record = icon ? Icon(256, 256) : new DescriptionImage("shot", Url, Digest, 256, 256, 1000);
             var image = new ListingImage(new MainViewModel(), record) { Bytes = LeftHalfBluePng() };
@@ -332,7 +325,7 @@ public sealed class ListingImageViewTests
             window.UpdateLayout();
 
             return ((ListingImageView)window.Content).State;
-        }, timeout.Token);
+        });
 
         Assert.Equal(icon ? ListingImageView.DisplayState.Loaded : ListingImageView.DisplayState.Loading, state);
     }
@@ -340,10 +333,9 @@ public sealed class ListingImageViewTests
     [Fact]
     public async Task Show_BeforeTheFirstLayout_WaitsAndDecodesAtTheSlotWidth()
     {
-        var session = HeadlessApp.Session;
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
 
-        var decoded = await session.Dispatch(async () =>
+        var decoded = await HeadlessApp.RunAsync(async () =>
         {
             var image = new ListingImage(new MainViewModel(), Icon(256, 256)) { Bytes = LeftHalfBluePng() };
             var view = new ListingImageView { Image = image, Child = new Border() };
@@ -359,7 +351,7 @@ public sealed class ListingImageViewTests
                 await Task.Delay(10, timeout.Token);
 
             return (Unsized: unsized, view.BitmapWidth, Expected: ListingImageView.DecodeWidth(image.Record, view.Bounds.Size, window.RenderScaling));
-        }, timeout.Token);
+        });
 
         Assert.Equal((ListingImageView.DisplayState.Loading, (int?)null), decoded.Unsized);
         Assert.Equal(decoded.Expected, decoded.BitmapWidth);

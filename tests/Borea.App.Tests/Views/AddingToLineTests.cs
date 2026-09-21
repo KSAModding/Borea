@@ -17,13 +17,17 @@ public sealed class AddingToLineTests
 {
     private sealed record Line(bool Visible, string? Name, string? ToolTip, string Text, int TextLines, bool Trimmed, double? TabsTop, bool KeepsTheSpace);
 
-    private static async Task<T> RenderAsync<T>(MainViewModel viewModel, Func<Control> createPage, double width, Func<Control, Task<T>> read)
-    {
-        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
-        return await HeadlessApp.Session.Dispatch(async () =>
+    /// <summary>
+    /// Renders <paramref name="createPage"/> and hands it to <paramref name="read"/>,
+    /// which runs on the headless thread. What a click or a command of it starts
+    /// belongs to the Avalonia dispatcher of this dispatch, which is gone once the
+    /// dispatch returned, so the helper waits for that work here.
+    /// </summary>
+    private static Task<T> RenderAsync<T>(ViewModelHarness harness, Func<Control> createPage, double width, Func<Control, Task<T>> read) =>
+        HeadlessApp.RunAsync(harness, async () =>
         {
             var page = createPage();
-            var window = new Window { Width = width, Height = 600, DataContext = viewModel, Content = page };
+            var window = new Window { Width = width, Height = 600, DataContext = harness.ViewModel, Content = page };
             window.Show();
             try
             {
@@ -33,8 +37,7 @@ public sealed class AddingToLineTests
             {
                 window.Close();
             }
-        }, timeout.Token);
-    }
+        });
 
     private static Button LineButton(MainViewModel viewModel, Control page)
         => page.GetVisualDescendants().OfType<Button>().Single(button => button.Command == viewModel.SetMainWindowLibraryCommand);
@@ -105,7 +108,7 @@ public sealed class AddingToLineTests
         var viewModel = harness.ViewModel;
         await viewModel.ActiveInstance!.ToggleActiveCommand.ExecuteAsync(null);
 
-        var (inactive, active, adds, openedLibrary) = await RenderAsync(viewModel, () => new DiscoverPage(), 1200, async page =>
+        var (inactive, active, adds, openedLibrary) = await RenderAsync(harness, () => new DiscoverPage(), 1200, async page =>
         {
             var inactive = ReadLine(viewModel, page);
             await viewModel.Instances.Single().ActivateCommand.ExecuteAsync(null);
@@ -130,7 +133,7 @@ public sealed class AddingToLineTests
         using var harness = await CreateAsync("Alpha");
         var viewModel = harness.ViewModel;
 
-        var (renamed, german, germanAdds) = await RenderAsync(viewModel, () => new DiscoverPage(), 1200, async page =>
+        var (renamed, german, germanAdds) = await RenderAsync(harness, () => new DiscoverPage(), 1200, async page =>
         {
             await viewModel.RenameInstanceAsync(viewModel.ActiveInstance!, "Game profile");
             var renamed = ReadLine(viewModel, page);
@@ -152,7 +155,7 @@ public sealed class AddingToLineTests
         var name = string.Concat(Enumerable.Repeat("Very long instance name ", 8)).Trim();
         using var harness = await CreateAsync(name);
 
-        var line = await RenderAsync(harness.ViewModel, () => new DiscoverPage(), 700, page => Task.FromResult(ReadLine(harness.ViewModel, page)));
+        var line = await RenderAsync(harness, () => new DiscoverPage(), 700, page => Task.FromResult(ReadLine(harness.ViewModel, page)));
 
         Assert.True(line.Visible);
         Assert.True(line.Trimmed);
@@ -165,7 +168,7 @@ public sealed class AddingToLineTests
     {
         using var harness = await ViewModelHarness.CreateAsync();
 
-        var line = await RenderAsync(harness.ViewModel, () => new DiscoverPage(), 1200, page => Task.FromResult(ReadLine(harness.ViewModel, page)));
+        var line = await RenderAsync(harness, () => new DiscoverPage(), 1200, page => Task.FromResult(ReadLine(harness.ViewModel, page)));
 
         Assert.False(line.Visible);
     }
@@ -177,7 +180,7 @@ public sealed class AddingToLineTests
         var viewModel = harness.ViewModel;
         viewModel.ShowDiscoverModpacksCommand.Execute(null);
 
-        var adds = await RenderAsync(viewModel, () => new DiscoverPage(), 1200, page => Task.FromResult(AddButtons(page, viewModel.DiscoverPacks.Select(pack => pack.InstallCommand))));
+        var adds = await RenderAsync(harness, () => new DiscoverPage(), 1200, page => Task.FromResult(AddButtons(page, viewModel.DiscoverPacks.Select(pack => pack.InstallCommand))));
 
         Assert.Equal(("Add to Alpha", "Add to Alpha"), Assert.Single(adds));
     }
@@ -190,7 +193,7 @@ public sealed class AddingToLineTests
         await viewModel.DiscoverItems.Single(item => item.ModId == "AdvancedFlightComputer").OpenCommand.ExecuteAsync(null);
         await viewModel.ShowContentVersionsCommand.ExecuteAsync(null);
 
-        var (line, add, versions) = await RenderAsync(viewModel, () => new Borea.App.Views.Pages.ContentPage(), 1200, page => Task.FromResult((
+        var (line, add, versions) = await RenderAsync(harness, () => new Borea.App.Views.Pages.ContentPage(), 1200, page => Task.FromResult((
             ReadLine(viewModel, page),
             AddButtons(page, [viewModel.SelectedContent!.InstallCommand]),
             AddButtons(page, viewModel.ContentVersions.Select(version => version.InstallCommand)))));
@@ -210,7 +213,7 @@ public sealed class AddingToLineTests
         await Assert.Single(viewModel.DiscoverPacks).OpenCommand.ExecuteAsync(null);
         viewModel.ShowPackVersionsCommand.Execute(null);
 
-        var (line, add, versions) = await RenderAsync(viewModel, () => new PackPage(), 1200, page => Task.FromResult((
+        var (line, add, versions) = await RenderAsync(harness, () => new PackPage(), 1200, page => Task.FromResult((
             ReadLine(viewModel, page),
             AddButtons(page, [viewModel.SelectedPack!.InstallCommand]),
             AddButtons(page, viewModel.PackVersions.Select(version => version.InstallCommand)))));
