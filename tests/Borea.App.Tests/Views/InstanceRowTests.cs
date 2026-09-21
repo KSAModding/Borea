@@ -159,7 +159,7 @@ public sealed class InstanceRowTests
             page.UpdateLayout();
 
             Click(window, play, new Point(play.Bounds.Width / 2, play.Bounds.Height / 2));
-            return Task.FromResult((item.OpenCommand.ExecutionTask, viewModel.SelectedInstance));
+            return (item.OpenCommand.ExecutionTask, viewModel.SelectedInstance);
         });
 
         Assert.Null(opened);
