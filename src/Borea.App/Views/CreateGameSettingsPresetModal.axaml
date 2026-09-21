@@ -3,30 +3,30 @@
              xmlns:vm="using:Borea.App.ViewModels"
              x:Class="Borea.App.Views.CreateGameSettingsPresetModal"
              x:DataType="vm:MainViewModel">
-    <Panel Background="#99000000" IsVisible="{Binding IsCreatingGameSettingsPreset}">
-        <Border Classes="modal" Width="561" Margin="80,0,0,0">
-            <StackPanel>
-                <Grid ColumnDefinitions="*,Auto" Margin="24,24,24,0">
-                    <TextBlock Classes="heading-lg" Text="{Binding Localization.ModalCreateSettingsPresetTitle}" VerticalAlignment="Center" />
-                    <Button Grid.Column="1" Classes="icon" Command="{Binding CancelGameSettingsPresetModalCommand}" AutomationProperties.Name="{Binding Localization.ModalClose}">
-                        <Path Classes="icon" Data="{StaticResource Icon.Close}" />
-                    </Button>
-                </Grid>
-                <Border Height="1" Background="{StaticResource Brush.Window}" Margin="0,24,0,0" />
-                <Grid ColumnDefinitions="Auto,12,*,16,Auto" Margin="36,32,24,32">
-                    <TextBlock Classes="heading-md heading" Text="{Binding Localization.ModalNameLabel}" VerticalAlignment="Center" />
-                    <TextBox Grid.Column="2" Classes="field" Text="{Binding NewGameSettingsPresetName}" AutomationProperties.Name="{Binding Localization.ModalNameLabel}" VerticalAlignment="Center">
-                        <TextBox.KeyBindings>
-                            <KeyBinding Gesture="Enter" Command="{Binding ConfirmGameSettingsPresetModalCommand}" />
-                            <KeyBinding Gesture="Escape" Command="{Binding CancelGameSettingsPresetModalCommand}" />
-                        </TextBox.KeyBindings>
-                    </TextBox>
-                    <Button Grid.Column="4" Classes="cta" Command="{Binding ConfirmGameSettingsPresetModalCommand}">
-                        <TextBlock Classes="action-lg" Text="{Binding Localization.LibraryCreate}" VerticalAlignment="Center" />
-                    </Button>
-                </Grid>
-                <TextBlock Classes="body-md danger" Text="{Binding GameSettingsPresetError}" TextWrapping="Wrap" Margin="36,0,24,24" IsVisible="{Binding GameSettingsPresetError, Converter={x:Static ObjectConverters.IsNotNull}}" />
-            </StackPanel>
-        </Border>
-    </Panel>
+	<Panel Background="#99000000" IsVisible="{Binding IsCreatingGameSettingsPreset}">
+		<Border Classes="modal" Width="561" Margin="80,0,0,0">
+			<StackPanel>
+				<Grid ColumnDefinitions="*,Auto" Margin="24,24,24,0">
+					<TextBlock Classes="heading-lg" Text="{Binding Localization.ModalNameLabel}" VerticalAlignment="Center" />
+					<Button Grid.Column="1" Classes="icon" Command="{Binding CancelGameSettingsPresetModalCommand}" AutomationProperties.Name="{Binding Localization.ModalClose}">
+						<Path Classes="icon" Data="{StaticResource Icon.Close}" />
+					</Button>
+				</Grid>
+				<Border Height="1" Background="{StaticResource Brush.Window}" Margin="0,24,0,0" />
+				<Grid ColumnDefinitions="Auto,12,*,16,Auto" Margin="36,32,24,32">
+					<TextBlock Classes="heading-md heading" Text="{Binding Localization.ModalNameLabel}" VerticalAlignment="Center" />
+					<TextBox Grid.Column="2" Classes="field" Text="{Binding NewGameSettingsPresetName}" AutomationProperties.Name="{Binding Localization.ModalNameLabel}" VerticalAlignment="Center">
+						<TextBox.KeyBindings>
+							<KeyBinding Gesture="Enter" Command="{Binding ConfirmGameSettingsPresetModalCommand}" />
+							<KeyBinding Gesture="Escape" Command="{Binding CancelGameSettingsPresetModalCommand}" />
+						</TextBox.KeyBindings>
+					</TextBox>
+					<Button Grid.Column="4" Classes="cta" Command="{Binding ConfirmGameSettingsPresetModalCommand}">
+						<TextBlock Classes="action-lg" Text="{Binding Localization.LibraryCreate}" VerticalAlignment="Center" />
+					</Button>
+				</Grid>
+				<TextBlock Classes="body-md danger" Text="{Binding GameSettingsPresetError}" TextWrapping="Wrap" Margin="36,0,24,24" IsVisible="{Binding GameSettingsPresetError, Converter={x:Static ObjectConverters.IsNotNull}}" />
+			</StackPanel>
+		</Border>
+	</Panel>
 </UserControl>

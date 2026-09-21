@@ -1396,6 +1396,8 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string ModalSettingsPresetNoGameVersion => Resources.ModalSettingsPresetNoGameVersion;
 
+    public string NoPreset => Resources.NoPreset;
+
     public string FormatLaunchLoaderNotInstalled(string loader)
         => string.Format(CultureInfo.CurrentCulture, Resources.LaunchLoaderNotInstalledFormat, loader);
 

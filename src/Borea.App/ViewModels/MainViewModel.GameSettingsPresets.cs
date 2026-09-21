@@ -1,9 +1,11 @@
-﻿using Borea.Core.Settings;
+﻿using Borea.App.Localization;
+using Borea.Core.Settings;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using System;
 using System.Collections.ObjectModel;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace Borea.App.ViewModels;
@@ -29,18 +31,21 @@ public partial class MainViewModel
     private async Task LoadGameSettingsPresetsAsync()
     {
         GameSettingsPresets.Clear();
-        SelectedGameSettingsPreset = null;
+        var none = GameSettingsPresetItem.CreateNone(this);
+        GameSettingsPresets.Add(none);
+        SelectedGameSettingsPreset = none;
         if (_services is null)
             return;
 
         try
         {
-            foreach (var preset in await _services.GameSettingsPresets.ListAsync())
+            var presets = await _services.GameSettingsPresets.ListAsync();
+            foreach (var preset in presets.OrderBy(preset => preset.Name, StringComparer.OrdinalIgnoreCase))
                 GameSettingsPresets.Add(new GameSettingsPresetItem(preset));
         }
         catch (Exception exception) when (exception is IOException or InvalidOperationException)
         {
-            // the picker just stays empty; creation still works without a preset
+            // the picker just stays at "No Preset"; creation still works
         }
     }
 
@@ -101,9 +106,25 @@ public partial class MainViewModel
     }
 }
 
-public sealed class GameSettingsPresetItem(GameSettingsPreset preset)
+public sealed class GameSettingsPresetItem
 {
-    public Guid Id { get; } = preset.Id;
-    public string Name { get; } = preset.Name;
-    public string VersionText { get; } = preset.Version.ToString();
+    public Guid? Id { get; }
+    public string Name { get; }
+    public string? VersionText { get; }
+
+    /// <summary>The "no preset" row.</summary>
+    private GameSettingsPresetItem(MainViewModel owner)
+    {
+        Id = null;
+        Name = owner.Localization.NoPreset;
+    }
+
+    public GameSettingsPresetItem(GameSettingsPreset preset)
+    {
+        Id = preset.Id;
+        Name = preset.Name;
+        VersionText = preset.Version.ToString();
+    }
+
+    internal static GameSettingsPresetItem CreateNone(MainViewModel owner) => new(owner);
 }
