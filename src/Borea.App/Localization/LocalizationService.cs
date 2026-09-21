@@ -665,6 +665,8 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string ContentRemoveConfirm => Resources.ContentRemoveConfirm;
 
+    public string ContentChangeVersion => Resources.ContentChangeVersion;
+
     public string DiscoverTabMods => Resources.DiscoverTabMods;
 
     public string DiscoverTabModpacks => Resources.DiscoverTabModpacks;
@@ -1497,6 +1499,15 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string FormatDiscoverAddTo(string instance)
         => string.Format(CultureInfo.CurrentCulture, Resources.DiscoverAddToFormat, instance);
+
+    public string FormatContentReplaceVersion(string installedVersion)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ContentReplaceVersionFormat, installedVersion);
+
+    public string FormatContentReplaceVersionIn(string installedVersion, string instance)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ContentReplaceVersionInFormat, installedVersion, instance);
+
+    public string FormatContentReplaceVersionAnyway(string installedVersion)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ContentReplaceVersionAnywayFormat, installedVersion);
 
     public string FormatDiscoverAddingTo(string instance)
         => string.Format(CultureInfo.CurrentCulture, Resources.DiscoverAddingToFormat, instance);

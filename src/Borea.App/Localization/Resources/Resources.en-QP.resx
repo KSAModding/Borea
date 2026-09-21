@@ -768,6 +768,9 @@
   <data name="DurationMinutesFormat" xml:space="preserve">
     <value>{0} min</value>
   </data>
+  <data name="ContentChangeVersion" xml:space="preserve">
+    <value>Swap the version</value>
+  </data>
   <data name="ContentRemove" xml:space="preserve">
     <value>Toss overboard</value>
   </data>
@@ -1154,6 +1157,15 @@
   </data>
   <data name="ContentAdd" xml:space="preserve">
     <value>Loot</value>
+  </data>
+  <data name="ContentReplaceVersionFormat" xml:space="preserve">
+    <value>Swap out {0}</value>
+  </data>
+  <data name="ContentReplaceVersionInFormat" xml:space="preserve">
+    <value>Swap out {0} aboard {1}</value>
+  </data>
+  <data name="ContentReplaceVersionAnywayFormat" xml:space="preserve">
+    <value>Swap out {0} anyway</value>
   </data>
   <data name="ContentVersionHeader" xml:space="preserve">
     <value>Version</value>
