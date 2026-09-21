@@ -41,7 +41,7 @@
                     </Button>
                 </StackPanel>
                 <StackPanel VerticalAlignment="Center" Spacing="16">
-                    <Button Classes="nav" Classes.active="{Binding CurrentWindowHome}" Command="{Binding SetMainWindowHome}" ToolTip.Tip="{Binding Localization.NavigationHome}" AutomationProperties.Name="{Binding Localization.NavigationHome}">
+                    <Button Classes="nav" Classes.active="{Binding IsHomeSection}" Command="{Binding SetMainWindowHome}" ToolTip.Tip="{Binding Localization.NavigationHome}" AutomationProperties.Name="{Binding Localization.NavigationHome}">
                         <Path Classes="icon size-32 optical-lift" Data="{StaticResource Icon.Home}" />
                     </Button>
                     <Button Classes="nav" Classes.active="{Binding IsDiscoverSection}" Command="{Binding SetMainWindowDiscover}" ToolTip.Tip="{Binding Localization.NavigationDiscover}" AutomationProperties.Name="{Binding Localization.NavigationDiscover}">

@@ -150,6 +150,7 @@ public partial class MainViewModel
         SelectedPack?.ClearOutcome();
         pack.ClearOutcome();
         SelectedPack = pack;
+        OpenedFrom = PageOrigin.Discover;
         PackDescriptionImages = new DescriptionImages(this, pack.Images);
         PackTab = PackPageTab.Description;
         PackDetailError = null;
