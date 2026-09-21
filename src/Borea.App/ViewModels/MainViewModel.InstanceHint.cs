@@ -25,6 +25,11 @@ public partial class MainViewModel
 
     public string AddToText => ActiveInstance is { } active ? Localization.FormatDiscoverAddTo(active.Name) : Localization.DiscoverAdd;
 
+    /// <summary>What Add does on a mod the active instance already holds in <paramref name="installedVersion"/>.</summary>
+    public string ReplaceVersionText(string installedVersion) => ActiveInstance is { } active
+        ? Localization.FormatContentReplaceVersionIn(installedVersion, active.Name)
+        : Localization.FormatContentReplaceVersion(installedVersion);
+
     [RelayCommand]
     private void FollowInstanceHint()
     {

@@ -276,6 +276,7 @@
                                 </Button.IsVisible>
                                 <Button.Flyout>
                                     <MenuFlyout Placement="BottomEdgeAlignedRight">
+                                        <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ContentChangeVersion}" Command="{Binding ChangeVersionCommand}" IsVisible="{Binding CanChangeVersion}" />
                                         <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ContentRemove}" Command="{Binding BeginRemoveCommand}" AutomationProperties.HelpText="{Binding RemoveBlockedText}" />
                                         <MenuItem IsEnabled="False" IsVisible="{Binding RemoveBlockedText, Converter={x:Static ObjectConverters.IsNotNull}}">
                                             <MenuItem.Header>

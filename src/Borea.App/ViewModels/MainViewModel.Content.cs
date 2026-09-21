@@ -126,6 +126,17 @@ public partial class MainViewModel
     }
 
     /// <summary>
+    /// Opens the page of a listing on its Versions tab, where another release
+    /// of the mod can be installed over the one in the active instance.
+    /// </summary>
+    internal async Task OpenContentVersionsAsync(DiscoverItem item)
+    {
+        await OpenContentAsync(item);
+        if (ReferenceEquals(SelectedContent, item))
+            await ShowContentVersionsAsync();
+    }
+
+    /// <summary>
     /// Opens the page of an installed mod from the instance page. The
     /// breadcrumb then names the instance and leads back to it.
     /// </summary>
@@ -351,10 +362,16 @@ public partial class MainViewModel
     }
 
     /// <summary>
-    /// Plans the install of one specific release into the active instance.
+    /// Plans the install of one specific release into the active instance. A row
+    /// that replaces another version always asks first, because the files of the
+    /// installed version go away with it.
     /// </summary>
     internal Task InstallVersionAsync(ModVersionMetadata release, VersionItem row)
-        => PlanInstallAsync(row, () => Task.FromResult<ModVersionMetadata?>(release), release.Version);
+        => PlanInstallAsync(
+            row,
+            () => Task.FromResult<ModVersionMetadata?>(release),
+            release.Version,
+            confirm: row.ReplacedVersion is not null);
 }
 
 public enum ContentPageTab
@@ -428,6 +445,18 @@ public sealed partial class VersionItem : ObservableObject, IInstallRow
     [ObservableProperty]
     private bool _isInstalled;
 
+    /// <summary>
+    /// The version of this mod the active instance holds, when it is another
+    /// one than this row. Installing this row then replaces it.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ConfirmInstallText))]
+    [NotifyPropertyChangedFor(nameof(InstallToolTip))]
+    private string? _replacedVersion;
+
+    /// <summary>"Add to Main", or "Replace 0.7.3 in Main" for a row that changes the installed version.</summary>
+    public string InstallToolTip => ReplacedVersion is { } installed ? _owner.ReplaceVersionText(installed) : _owner.AddToText;
+
     /// <summary>">= min" or "min - max", as the compatibility chip shows it.</summary>
     public string GameVersionText => _release.GameMax is null ? $">= {_release.GameMin}" : $"{_release.GameMin} - {_release.GameMax}";
 
@@ -481,7 +510,7 @@ public sealed partial class VersionItem : ObservableObject, IInstallRow
 
     public bool IsConfirmingInstall => PendingPlan is not null || Choices is not null;
 
-    public string ConfirmInstallText => _owner.ConfirmInstallText(InstallWarning, PendingPlan);
+    public string ConfirmInstallText => _owner.ConfirmInstallText(InstallWarning, PendingPlan, ReplacedVersion);
 
     public string? AddedModsText => _owner.AddedModsText(PendingPlan, Choices);
 
@@ -523,11 +552,19 @@ public sealed partial class VersionItem : ObservableObject, IInstallRow
         OnPropertyChanged(nameof(ConfirmInstallText));
         OnPropertyChanged(nameof(AddedModsText));
         OnPropertyChanged(nameof(AddedModsToolTip));
+        OnPropertyChanged(nameof(InstallToolTip));
     }
 
     internal void RefreshCompatibility(GameVersion? installed)
         => Compatibility = Borea.Core.Game.Compatibility.Evaluate(_release, installed);
 
     internal void RefreshInstalled(InstanceItem? instance)
-        => IsInstalled = instance?.InstalledVersionOf(_release.ModId) == _release.Version;
+    {
+        var installed = instance?.InstalledVersionOf(_release.ModId);
+        IsInstalled = installed == _release.Version;
+        ReplacedVersion = installed is { } version && version != _release.Version ? version.ToString() : null;
+
+        // the tooltip names the active instance, which changes without the row changing
+        OnPropertyChanged(nameof(InstallToolTip));
+    }
 }

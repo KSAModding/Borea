@@ -740,6 +740,12 @@ public sealed partial class DiscoverItem : ObservableObject, IInstallRow
     /// </summary>
     public bool CanInstall => !IsInstalled && !IsInstalling && Type == ContentType.Mod;
 
+    /// <summary>
+    /// Only a mod has a version to pick, because the Versions table of a
+    /// loader offers no install button.
+    /// </summary>
+    public bool CanChangeVersion => Type == ContentType.Mod;
+
     public bool CanRemove => IsInstalled && !IsRemoving && RemoveBlockedText is null;
 
     /// <summary>Why Remove is disabled, shown next to it. Null when the mod can be removed.</summary>
@@ -852,6 +858,9 @@ public sealed partial class DiscoverItem : ObservableObject, IInstallRow
 
     [RelayCommand]
     private Task OpenAsync() => _owner.OpenContentAsync(this);
+
+    [RelayCommand]
+    private Task ChangeVersionAsync() => _owner.OpenContentVersionsAsync(this);
 
     [RelayCommand]
     private Task InstallAsync() => _owner.InstallAsync(this);

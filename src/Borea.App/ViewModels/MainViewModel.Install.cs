@@ -286,10 +286,20 @@ public partial class MainViewModel
     internal string ContentName(string modId)
         => _listings.FirstOrDefault(item => ModIds.Equals(item.ModId, modId))?.Name ?? modId;
 
-    /// <summary>"Add" or "Install anyway", with the download size of the plan when the index states one.</summary>
-    internal string ConfirmInstallText(string? warning, InstallPlan? plan)
+    /// <summary>
+    /// "Add" or "Install anyway", with the download size of the plan when the
+    /// index states one. A row that changes the version of an installed mod
+    /// names the version it replaces instead.
+    /// </summary>
+    internal string ConfirmInstallText(string? warning, InstallPlan? plan, string? replacedVersion = null)
     {
-        var text = warning is null ? Localization.ContentAdd : Localization.InstallAnyway;
+        var text = (warning, replacedVersion) switch
+        {
+            (null, null) => Localization.ContentAdd,
+            (null, { } replaced) => Localization.FormatContentReplaceVersion(replaced),
+            (_, null) => Localization.InstallAnyway,
+            (_, { } replaced) => Localization.FormatContentReplaceVersionAnyway(replaced),
+        };
         return PlanSizeText(plan) is { } size ? $"{text} ({size})" : text;
     }
 
