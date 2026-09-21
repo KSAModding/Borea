@@ -4,7 +4,6 @@ using Avalonia.Headless;
 using Avalonia.Input;
 using Avalonia.VisualTree;
 using Borea.App.Tests.ViewModels;
-using Borea.App.ViewModels;
 using Borea.App.Views.Pages;
 using Borea.Core.Instances;
 using Borea.Core.Launch;
@@ -17,30 +16,39 @@ public sealed class InstanceRowTests
 {
     /// <summary>
     /// Renders the Library and hands the window to <paramref name="read"/>, which
-    /// runs on the headless thread. It takes no asynchronous work on purpose: a
-    /// command started here is awaited by the caller after the dispatch returned,
-    /// because waiting on the headless thread for work that needs that same thread
-    /// blocks it, and a blocked thread cannot run the timeout either.
+    /// runs on the headless thread and awaits the command that its click starts.
+    /// Both the click and its command belong to the Avalonia dispatcher of this
+    /// dispatch, so they finish here, where that dispatcher still runs, and nothing
+    /// of them is left for the caller.
     /// </summary>
-    private static async Task<T> OnLibraryAsync<T>(MainViewModel viewModel, Func<Window, Control, T> read)
-    {
-        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
-        return await HeadlessApp.Session.Dispatch(() =>
+    private static Task<T> OnLibraryAsync<T>(ViewModelHarness harness, Func<Window, Control, Task<T>> read) =>
+        HeadlessApp.RunAsync(harness, async () =>
         {
             var page = new LibraryPage();
-            var window = new Window { Width = 1200, Height = 600, DataContext = viewModel, Content = page };
+            var window = new Window { Width = 1200, Height = 600, DataContext = harness.ViewModel, Content = page };
             window.Show();
             try
             {
                 page.UpdateLayout();
-                return read(window, page);
+                return await read(window, page);
             }
             finally
             {
                 window.Close();
             }
-        }, timeout.Token);
-    }
+        });
+
+    /// <inheritdoc cref="OnLibraryAsync{T}(ViewModelHarness, Func{Window, Control, Task{T}})"/>
+    private static Task<T> OnLibraryAsync<T>(ViewModelHarness harness, Func<Window, Control, T> read) =>
+        OnLibraryAsync(harness, (window, page) => Task.FromResult(read(window, page)));
+
+    /// <inheritdoc cref="OnLibraryAsync{T}(ViewModelHarness, Func{Window, Control, Task{T}})"/>
+    private static Task OnLibraryAsync(ViewModelHarness harness, Func<Window, Control, Task> read) =>
+        OnLibraryAsync(harness, async (window, page) =>
+        {
+            await read(window, page);
+            return true;
+        });
 
     private static void Click(Window window, Visual target, Point inTarget)
     {
@@ -62,21 +70,21 @@ public sealed class InstanceRowTests
         return harness;
     }
 
-    [Fact(Skip = "Stops and never returns, rarely and on more than one platform. See issue 469.")]
+    [Fact]
     public async Task ClickingTheCardBesideTheNameOpensTheInstance()
     {
         using var harness = await CreateAsync();
         var viewModel = harness.ViewModel;
 
-        var opening = await OnLibraryAsync(viewModel, (window, page) =>
+        await OnLibraryAsync(harness, async (window, page) =>
         {
             var card = Card(page);
             Click(window, card, new Point(150, card.Bounds.Height / 2));
-            return viewModel.ActiveInstance!.OpenCommand.ExecutionTask;
+            var opening = viewModel.ActiveInstance!.OpenCommand.ExecutionTask;
+            Assert.NotNull(opening);
+            await opening;
         });
 
-        Assert.NotNull(opening);
-        await opening;
         Assert.Equal(viewModel.ActiveInstance!.InstanceId, viewModel.SelectedInstance?.InstanceId);
     }
 
@@ -87,15 +95,14 @@ public sealed class InstanceRowTests
         var viewModel = harness.ViewModel;
 
         var item = viewModel.ActiveInstance!;
-        var launching = await OnLibraryAsync(viewModel, (window, page) =>
+        await OnLibraryAsync(harness, async (window, page) =>
         {
             var play = Card(page).GetVisualDescendants().OfType<Button>().Single(button => button.Command == item.PlayCommand);
             Click(window, play, new Point(play.Bounds.Width / 2, play.Bounds.Height / 2));
-            return item.PlayCommand.ExecutionTask;
+            var launching = item.PlayCommand.ExecutionTask;
+            Assert.NotNull(launching);
+            await launching;
         });
-
-        Assert.NotNull(launching);
-        await launching;
 
         // no loader takes this instance, so a launch that ran offers to install one
         Assert.True(viewModel.IsLoaderPromptOpen);
@@ -109,7 +116,7 @@ public sealed class InstanceRowTests
         using var harness = await CreateAsync();
         var viewModel = harness.ViewModel;
 
-        var (flyoutOpen, opened, selected) = await OnLibraryAsync(viewModel, (window, page) =>
+        var (flyoutOpen, opened, selected) = await OnLibraryAsync(harness, (window, page) =>
         {
             var menu = Card(page).GetVisualDescendants().OfType<Button>().Single(button => button.Flyout is not null);
             Click(window, menu, new Point(menu.Bounds.Width / 2, menu.Bounds.Height / 2));
@@ -129,15 +136,14 @@ public sealed class InstanceRowTests
 
         var row = viewModel.Instances.Single();
 
-        var toggling = await OnLibraryAsync(viewModel, (window, page) =>
+        await OnLibraryAsync(harness, async (window, page) =>
         {
             var toggle = Card(page).GetVisualDescendants().OfType<ToggleSwitch>().Single();
             Click(window, toggle, new Point(toggle.Bounds.Width / 2, toggle.Bounds.Height / 2));
-            return row.ToggleActiveCommand.ExecutionTask;
+            var toggling = row.ToggleActiveCommand.ExecutionTask;
+            Assert.NotNull(toggling);
+            await toggling;
         });
-
-        Assert.NotNull(toggling);
-        await toggling;
 
         // the switch turned the instance off, which is the proof that the click reached it
         Assert.Null(viewModel.ActiveInstance);
@@ -151,7 +157,7 @@ public sealed class InstanceRowTests
         using var harness = await CreateAsync();
         var viewModel = harness.ViewModel;
 
-        var (opened, selected) = await OnLibraryAsync(viewModel, (window, page) =>
+        var (opened, selected) = await OnLibraryAsync(harness, (window, page) =>
         {
             var item = viewModel.ActiveInstance!;
             var play = Card(page).GetVisualDescendants().OfType<Button>().Single(button => button.Command == item.PlayCommand);
@@ -173,7 +179,7 @@ public sealed class InstanceRowTests
         var viewModel = harness.ViewModel;
         viewModel.ActiveInstance!.BeginDeleteCommand.Execute(null);
 
-        var (opened, selected) = await OnLibraryAsync(viewModel, (window, page) =>
+        var (opened, selected) = await OnLibraryAsync(harness, (window, page) =>
         {
             var cancel = Card(page).GetVisualDescendants().OfType<Button>()
                 .Single(button => button.Content as string == harness.Localization.LibraryCancel);
