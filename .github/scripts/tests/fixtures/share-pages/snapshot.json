@@ -18,7 +18,9 @@
         "name": "Advanced Flight Computer",
         "authors": ["Maxi", "cairn5"],
         "abstract": "Maneuver planning, burn execution and closed-loop guidance for Kitten Space Agency.",
+        "description": "## Features\n\nPlans **maneuvers** and flies them, with _quick tools_ in the planner.\n\n- Flyby targeting and multi-pass burns\n- RCS-only burn execution\n\n1. Plan the burn\n2. Arm the autopilot\n\nRead the [manual](https://example.org/afc/manual), never a [rogue](javascript:alert(1)) one, and keep snake_case_names and \u00fcber_wert_ whole.\n\n![The planner window](ksa-image:planner)\n![The burn editor](https://example.org/afc/editor.png)\n\n[![Watch the demo](ksa-image:demo)](https://example.org/afc/demo)\n\n\u0060\u0060\u0060\n[staging]\ndelay = 2.0\n\u0060\u0060\u0060",
         "license": "MIT",
+        "tags": ["user-interface", "gameplay", "navigation"],
         "links": {
           "wiki": "https://example.org/afc/wiki",
           "repository": "https://github.com/Maximilian-Nesslauer/KSA-AdvancedFlightComputer",
@@ -34,7 +36,44 @@
             "width": 256,
             "height": 256,
             "size": 2329
-          }
+          },
+          "description": [
+            {
+              "id": "planner",
+              "url": "https://example.org/afc/planner.png",
+              "sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+              "width": 1600,
+              "height": 900,
+              "size": 402117
+            },
+            {
+              "id": "demo",
+              "url": "https://example.org/afc/demo.png",
+              "sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+              "width": 800,
+              "height": 1600,
+              "size": 120000,
+              "license": "CC-BY-4.0",
+              "attribution": "Artwork by cairn5",
+              "source": "https://example.org/afc/source"
+            },
+            {
+              "id": "planner",
+              "url": "https://example.org/afc/second-planner.png",
+              "sha256": "3333333333333333333333333333333333333333333333333333333333333333",
+              "width": 100,
+              "height": 100,
+              "size": 100
+            },
+            {
+              "id": "toobig",
+              "url": "https://example.org/afc/toobig.png",
+              "sha256": "4444444444444444444444444444444444444444444444444444444444444444",
+              "width": 4096,
+              "height": 2048,
+              "size": 900000
+            }
+          ]
         }
       },
       "releases": [
@@ -77,7 +116,9 @@
         "name": "Evil </script><script>alert(1)</script> \"Mod\"",
         "authors": ["O'Brien \"x\" <img src=x onerror=alert(1)>"],
         "abstract": "Breaks <out> & \" onmouseover=\"alert(1) '",
+        "description": "# </script><script>alert(1)</script>\n\nA [link](javascript:alert(1)), an <img src=x onerror=alert(1)> and a `<script>` line.\n\n![A <b>shot</b>](ksa-image:credit)\n\n![Not served over https](ksa-image:plain)",
         "license": "MIT",
+        "tags": ["<b>bold</b>"],
         "links": {
           "repository": "https://example.org/a\"onmouseover=\"alert(1)",
           "forums": " https://example.org/space"
@@ -89,7 +130,27 @@
             "width": 256,
             "height": 256,
             "size": 2329
-          }
+          },
+          "description": [
+            {
+              "id": "credit",
+              "url": "https://example.org/evil/a\"onmouseover=\"alert(1).png",
+              "sha256": "5555555555555555555555555555555555555555555555555555555555555555",
+              "width": 640,
+              "height": 480,
+              "size": 5000,
+              "attribution": "By <b>nobody</b> \" onmouseover=\"alert(1)",
+              "source": "https://example.org/evil/a\"onmouseover=\"alert(1)"
+            },
+            {
+              "id": "plain",
+              "url": "http://example.org/evil/plain.png",
+              "sha256": "6666666666666666666666666666666666666666666666666666666666666666",
+              "width": 640,
+              "height": 480,
+              "size": 5000
+            }
+          ]
         }
       },
       "releases": [
@@ -202,7 +263,9 @@
             "name": "Navigation Starter Pack",
             "authors": ["Maxi"],
             "abstract": "Everything you need for maneuver planning, tested together.",
+            "description": "Two mods that **work together**.",
             "license": "CC0-1.0",
+            "tags": ["gameplay", "navigation"],
             "version": "1.0.0",
             "released_at": "2026-08-05T12:00:00Z",
             "links": { "forums": "https://forums.ahwoo.com/threads/navigation-starter-pack.999/" },
@@ -219,5 +282,13 @@
   "game_versions": {
     "spec_version": 1,
     "versions": ["2026.8.3.5117", "2026.9.4.5400", "2026.9.7.5402", "2026.9.10.5438"]
+  },
+  "tags": {
+    "spec_version": 1,
+    "mod": [
+      { "tag": "gameplay", "name": "Gameplay", "meaning": "Changes to what the player can do." },
+      { "tag": "user-interface", "name": "User Interface", "meaning": "Changes to what the player sees." },
+      { "tag": "visual", "name": "Visual", "meaning": "Changes to how the game looks." }
+    ]
   }
 }
