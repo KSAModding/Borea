@@ -191,7 +191,7 @@ internal static class ModListCommands
     private static string Describe(IEnumerable<ModListItem> items) => string.Join(", ", items.Select(item => $"{item.Entry.ModId} {item.Entry.Version}"));
 
     private static ModListInstaller Installer(CliServices cli) =>
-        new(cli.Instances, cli.InstallPlanner, new InstallPlanExecutor(cli.Instances, cli.Installer, cli.Replacer), cli.ModState);
+        new(cli.Instances, cli.InstallPlanner, new InstallPlanExecutor(cli.Instances, cli.Installer, cli.Replacer, cli.SpaceCheck), cli.ModState);
 
     private static async Task<string> NameAsync(CliServices cli, ModListInstaller installer, string? given, string wanted)
     {

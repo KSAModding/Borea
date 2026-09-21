@@ -157,6 +157,8 @@ public sealed class BoreaServices : IDisposable
 
     public required IInstallPlanExecutor PlanExecutor { get; init; }
 
+    public required IInstallSpaceCheck SpaceCheck { get; init; }
+
     public required ILoaderInstaller LoaderInstaller { get; init; }
 
     public required ILoaderAdopter LoaderAdopter { get; init; }
@@ -365,6 +367,7 @@ public sealed class BoreaServices : IDisposable
         var modReplacer = new LoggingModReplacer(new FileModReplacer(paths, downloader, instances, modState), log);
         var foreignModAdopter = new FileForeignModAdopter(paths, instances, contentIndex);
         var foreignModReleaseMatcher = new FileForeignModReleaseMatcher(paths, downloader, foreignModAdopter, indexSnapshots);
+        var spaceCheck = new DriveInstallSpaceCheck(paths);
         var installPlanner = new LoggingInstallPlanner(new RepositoryInstallPlanner(new ModDependencyResolver(), settings.ReleaseChannel), log);
         var launcher = new LoggingLauncher(new LastPlayedLauncher(new LoaderLauncher(paths, processStarter ?? new ProcessStarter(), launches), instances), log);
         var defaultLibraryFolder = Path.GetDirectoryName(bootstrapPaths.GetInstancesRoot())!;
@@ -405,11 +408,12 @@ public sealed class BoreaServices : IDisposable
             OfflineMods = new ReleaseChannelModRepository(offlineMods, settings.ReleaseChannel),
             ModPacks = modPacks,
             ReadOnlyModPacks = new ContentIndexModPackRepository(new ReaderSnapshotProvider(indexReader)),
-            ModPackInstaller = new ModPackInstaller(instances, installPlanner, modInstaller, modReplacer),
-            ModPackUpdater = new ModPackUpdater(instances, installPlanner, new InstallPlanExecutor(instances, modInstaller, modReplacer), new LoggingModUninstaller(new FileModUninstaller(paths, instances), log)),
+            ModPackInstaller = new ModPackInstaller(instances, installPlanner, modInstaller, modReplacer, spaceCheck),
+            ModPackUpdater = new ModPackUpdater(instances, installPlanner, new InstallPlanExecutor(instances, modInstaller, modReplacer, spaceCheck), new LoggingModUninstaller(new FileModUninstaller(paths, instances), log)),
             Downloader = downloader,
             InstallPlanner = installPlanner,
-            PlanExecutor = new InstallPlanExecutor(instances, modInstaller, modReplacer),
+            PlanExecutor = new InstallPlanExecutor(instances, modInstaller, modReplacer, spaceCheck),
+            SpaceCheck = spaceCheck,
             LoaderInstaller = new FileLoaderInstaller(paths, downloader, settingsRepository, loaderConfiguration),
             LoaderAdopter = loaderAdopter,
             LoaderUninstaller = new FileLoaderUninstaller(settingsRepository),

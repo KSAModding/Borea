@@ -18,6 +18,7 @@ public interface IModPackInstaller
     /// Stops the operations at a safe point, under the rule of <see cref="InstallStop"/>. A member it kept from
     /// running is <see cref="ModPackMemberStatus.NotAttempted"/>, and the result is <see cref="ModPackInstallResult.IsStopped"/>.
     /// </param>
+    /// <exception cref="InsufficientDiskSpaceException">The plan needs more room than the disk has, so no member was installed.</exception>
     Task<ModPackInstallResult> InstallAsync(ModPackInstallRequest request, IProgress<InstallProgress>? progress = null, InstallStop? stop = null, CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -30,6 +31,7 @@ public interface IModPackInstaller
     /// Creates the instance only when the plan of <see cref="PlanNewAsync"/> can run, and then installs like <see cref="InstallAsync"/>.
     /// Otherwise it creates nothing and returns that plan.
     /// </summary>
+    /// <exception cref="InsufficientDiskSpaceException">The plan needs more room than the disk has, so no instance was created.</exception>
     Task<ModPackInstallResult> CreateAndInstallAsync(string instanceName, ModPackInstallRequest request, IProgress<InstallProgress>? progress = null, InstallStop? stop = null, CancellationToken cancellationToken = default);
 }
 

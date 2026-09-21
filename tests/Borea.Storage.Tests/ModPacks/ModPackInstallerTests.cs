@@ -315,6 +315,37 @@ public sealed class ModPackInstallerTests
         Assert.Empty(await instances.GetAllAsync());
     }
 
+    [Fact]
+    public async Task Install_PlanThatDoesNotFitOnTheDisk_InstallsNothing()
+    {
+        var member = Release("Member");
+        var instances = new MemoryInstanceRepository();
+        var instance = (await instances.CreateAsync("Target", InstanceSource.Custom.Value)).Instance;
+        var installer = new FakeInstaller(instances);
+        var services = new ModPackInstaller(instances, new FakePlanner(), installer, new FakeReplacer(instances), new FullDisk());
+
+        await Assert.ThrowsAsync<InsufficientDiskSpaceException>(async () =>
+            await services.InstallAsync(Request(instance.InstanceId, Pack(member), new FakeModRepository([member]))));
+
+        Assert.Empty(installer.Counts);
+        Assert.Empty((await instances.GetByIdAsync(instance.InstanceId))!.Mods);
+    }
+
+    [Fact]
+    public async Task CreateAndInstall_PlanThatDoesNotFitOnTheDisk_CreatesNothing()
+    {
+        var member = Release("Member");
+        var instances = new MemoryInstanceRepository();
+        var installer = new FakeInstaller(instances);
+        var services = new ModPackInstaller(instances, new FakePlanner(), installer, new FakeReplacer(instances), new FullDisk());
+
+        await Assert.ThrowsAsync<InsufficientDiskSpaceException>(async () =>
+            await services.CreateAndInstallAsync("New", Request(Guid.Empty, Pack(member), new FakeModRepository([member]))));
+
+        Assert.Empty(installer.Counts);
+        Assert.Empty(await instances.GetAllAsync());
+    }
+
     private static ModPackInstaller Services(MemoryInstanceRepository instances) => new(instances, new FakePlanner(), new FakeInstaller(instances), new FakeReplacer(instances));
 
     private static ModPackInstallRequest Request(Guid instanceId, ModPackResult pack, IModRepository repository) => new(instanceId, pack, repository);
@@ -450,6 +481,11 @@ public sealed class ModPackInstallerTests
             }, cancellationToken);
             return result;
         }
+    }
+
+    private sealed class FullDisk : IInstallSpaceCheck
+    {
+        public void EnsureFits(InstallPlan plan) => throw new InsufficientDiskSpaceException("volume", 2000, 1000);
     }
 
     internal sealed class MemoryInstanceRepository : IInstanceRepository

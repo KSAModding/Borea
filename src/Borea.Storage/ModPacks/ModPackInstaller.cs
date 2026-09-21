@@ -14,13 +14,15 @@ public sealed class ModPackInstaller : IModPackInstaller
     private readonly IInstallPlanner _planner;
     private readonly IModInstaller _installer;
     private readonly IModReplacer _replacer;
+    private readonly IInstallSpaceCheck? _space;
 
-    public ModPackInstaller(IInstanceRepository instances, IInstallPlanner planner, IModInstaller installer, IModReplacer replacer)
+    public ModPackInstaller(IInstanceRepository instances, IInstallPlanner planner, IModInstaller installer, IModReplacer replacer, IInstallSpaceCheck? space = null)
     {
         _instances = instances ?? throw new ArgumentNullException(nameof(instances));
         _planner = planner ?? throw new ArgumentNullException(nameof(planner));
         _installer = installer ?? throw new ArgumentNullException(nameof(installer));
         _replacer = replacer ?? throw new ArgumentNullException(nameof(replacer));
+        _space = space;
     }
 
     public async Task<ModPackInstallResult> CreateAndInstallAsync(string instanceName, ModPackInstallRequest request, IProgress<InstallProgress>? progress = null, InstallStop? stop = null, CancellationToken cancellationToken = default)
@@ -32,6 +34,9 @@ public sealed class ModPackInstaller : IModPackInstaller
         var metadata = RequireMetadata(request.Pack);
         if (stop is { IsRequested: true })
             return Result(Guid.Empty, null, metadata.Mods.Select(pin => Member(pin, ModPackMemberStatus.NotAttempted, StoppedMessage)).ToList(), planned.Warnings, false, stopped: true);
+
+        // The draft plan holds the same releases as the plan the install runs, so the refusal comes before the instance exists.
+        _space?.EnsureFits(planned.Plan);
 
         var created = await _instances.CreateAsync(instanceName, Source(metadata)).ConfigureAwait(false);
         return await InstallAsync(request with { InstanceId = created.Instance.InstanceId }, progress, stop, cancellationToken).ConfigureAwait(false);
@@ -138,6 +143,8 @@ public sealed class ModPackInstaller : IModPackInstaller
             members.AddRange(AlreadyInstalled(instance, plan));
             return Result(instance.InstanceId, plan, Ordered(members), warnings, IsComplete(metadata, members));
         }
+
+        _space?.EnsureFits(plan);
 
         var fresh = await _instances.GetByIdAsync(instance.InstanceId).ConfigureAwait(false)
             ?? throw new InvalidOperationException($"Instance '{instance.InstanceId}' no longer exists.");

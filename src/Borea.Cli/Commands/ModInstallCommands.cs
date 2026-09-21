@@ -160,7 +160,7 @@ internal static class ModInstallCommands
         using var registration = cancellationToken.Register(stop.Request);
         try
         {
-            await new InstallPlanExecutor(cli.Instances, cli.Installer, cli.Replacer).ExecuteAsync(plan, enable: true, new InstallProgressOutput(error), stop).ConfigureAwait(false);
+            await new InstallPlanExecutor(cli.Instances, cli.Installer, cli.Replacer, cli.SpaceCheck).ExecuteAsync(plan, enable: true, new InstallProgressOutput(error), stop).ConfigureAwait(false);
         }
         catch (InstallStoppedException stopped)
         {
