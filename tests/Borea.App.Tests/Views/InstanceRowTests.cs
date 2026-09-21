@@ -146,6 +146,27 @@ public sealed class InstanceRowTests
     }
 
     [Fact]
+    public async Task ClickingPlayWhileItIsOffLeavesTheInstanceClosed()
+    {
+        using var harness = await CreateAsync();
+        var viewModel = harness.ViewModel;
+
+        var (opened, selected) = await OnLibraryAsync(viewModel, (window, page) =>
+        {
+            var item = viewModel.ActiveInstance!;
+            var play = Card(page).GetVisualDescendants().OfType<Button>().Single(button => button.Command == item.PlayCommand);
+            play.IsEnabled = false;
+            page.UpdateLayout();
+
+            Click(window, play, new Point(play.Bounds.Width / 2, play.Bounds.Height / 2));
+            return (item.OpenCommand.ExecutionTask, viewModel.SelectedInstance);
+        });
+
+        Assert.Null(opened);
+        Assert.Null(selected);
+    }
+
+    [Fact]
     public async Task ClickingTheDeleteConfirmationLeavesTheInstanceClosed()
     {
         using var harness = await CreateAsync();
