@@ -591,9 +591,9 @@ public sealed partial class PackItem : ObservableObject, IPlanRow
 
     public IReadOnlyDictionary<string, string> Links => Metadata.Links;
 
-    public IReadOnlyList<string> Tags { get; }
+    public IReadOnlyList<string> Tags { get; private set; }
 
-    public IReadOnlyList<string> AllTags { get; }
+    public IReadOnlyList<string> AllTags { get; private set; }
 
     public int ModCount => Metadata.Mods.Count;
 
@@ -725,7 +725,7 @@ public sealed partial class PackItem : ObservableObject, IPlanRow
         Metadata = metadata;
         Images = MainViewModel.ImagesOf(indexEntry, metadata);
         Icon = owner.IconFor(Images?.Icon);
-        AllTags = DiscoverItem.DisplayTags(owner.TagVocabulary, ContentType.ModPack, metadata.Tags);
+        AllTags = DiscoverItem.DisplayTags(owner, ContentType.ModPack, metadata.Tags);
         Tags = AllTags.Take(3).ToList();
         PublishedAt = indexEntry?.PublishedAt;
     }
@@ -770,6 +770,10 @@ public sealed partial class PackItem : ObservableObject, IPlanRow
 
     internal void RefreshText()
     {
+        AllTags = DiscoverItem.DisplayTags(_owner, ContentType.ModPack, Metadata.Tags);
+        Tags = AllTags.Take(3).ToList();
+        OnPropertyChanged(nameof(AllTags));
+        OnPropertyChanged(nameof(Tags));
         OnPropertyChanged(nameof(AuthorsText));
         OnPropertyChanged(nameof(TypeText));
         OnPropertyChanged(nameof(CompatibilityText));

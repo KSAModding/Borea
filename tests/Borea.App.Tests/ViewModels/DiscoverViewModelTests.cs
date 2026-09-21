@@ -144,7 +144,7 @@ public sealed class DiscoverViewModelTests
     [Fact]
     public async Task Search_MatchesACuratedTagByItsName()
     {
-        var tags = ViewModelHarness.CuratedTags(("parts", "Hardware"));
+        var tags = ViewModelHarness.CuratedTags(("weapons", "Hardware"));
         using var harness = await ViewModelHarness.CreateAsync(editSnapshot: tags);
         var viewModel = harness.ViewModel;
         await viewModel.EnsureDiscoverLoadedAsync();
@@ -180,6 +180,59 @@ public sealed class DiscoverViewModelTests
         var other = viewModel.CategoryOptions[1].Name;
         harness.Localization.TrySetCulture("de");
         Assert.NotEqual(other, viewModel.CategoryOptions[1].Name);
+    }
+
+    [Fact]
+    public async Task Categories_TranslateAKnownTagAndKeepTheIndexNameOfAnUnknownOne()
+    {
+        var tags = ViewModelHarness.CuratedTags(("parts", "Parts"), ("weapons", "Hardware"));
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: tags);
+        var viewModel = harness.ViewModel;
+        await viewModel.EnsureDiscoverLoadedAsync();
+
+        harness.Localization.TrySetCulture("de");
+
+        Assert.Equal(harness.Localization.DiscoverCategoryParts, viewModel.CategoryOptions.Single(category => category.Tag == "parts").Name);
+        Assert.Equal("Hardware", viewModel.CategoryOptions.Single(category => category.Tag == "weapons").Name);
+        var armory = viewModel.DiscoverItems.Single(item => item.ModId == "KSArmory");
+        Assert.Equal([harness.Localization.DiscoverCategoryParts, "Hardware", "physics"], armory.AllTags);
+    }
+
+    [Fact]
+    public async Task Search_InAnotherLanguage_MatchesTheTranslatedNameAndTheTagButNotTheIndexName()
+    {
+        var tags = ViewModelHarness.CuratedTags(("parts", "Hardware"));
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: tags);
+        var viewModel = harness.ViewModel;
+        await viewModel.EnsureDiscoverLoadedAsync();
+        harness.Localization.TrySetCulture("de");
+
+        viewModel.SearchText = harness.Localization.DiscoverCategoryParts;
+        Assert.Equal(["KSArmory"], viewModel.DiscoverItems.Select(item => item.ModId));
+
+        viewModel.SearchText = "parts";
+        Assert.Equal(["KSArmory"], viewModel.DiscoverItems.Select(item => item.ModId));
+
+        // the App translates this tag, so its English name in the index is no longer shown or searched
+        viewModel.SearchText = "hardware";
+        Assert.False(viewModel.HasDiscoverItems);
+    }
+
+    [Fact]
+    public async Task Search_WhenTheLanguageChanges_SelectsTheRowsAgain()
+    {
+        var tags = ViewModelHarness.CuratedTags(("parts", "Parts"));
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: tags);
+        var viewModel = harness.ViewModel;
+        await viewModel.EnsureDiscoverLoadedAsync();
+        harness.Localization.TrySetCulture("de");
+
+        viewModel.SearchText = harness.Localization.DiscoverCategoryParts;
+        Assert.Equal(["KSArmory"], viewModel.DiscoverItems.Select(item => item.ModId));
+
+        harness.Localization.TrySetCulture("en");
+
+        Assert.False(viewModel.HasDiscoverItems);
     }
 
     [Fact]

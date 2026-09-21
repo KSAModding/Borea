@@ -969,6 +969,30 @@
   <data name="DiscoverCategory" xml:space="preserve">
     <value>Category</value>
   </data>
+  <data name="DiscoverCategoryParts" xml:space="preserve">
+    <value>Parts</value>
+  </data>
+  <data name="DiscoverCategoryCelestial" xml:space="preserve">
+    <value>Celestial</value>
+  </data>
+  <data name="DiscoverCategoryGameplay" xml:space="preserve">
+    <value>Gameplay</value>
+  </data>
+  <data name="DiscoverCategoryUserInterface" xml:space="preserve">
+    <value>User Interface</value>
+  </data>
+  <data name="DiscoverCategoryVisual" xml:space="preserve">
+    <value>Visual</value>
+  </data>
+  <data name="DiscoverCategoryAudio" xml:space="preserve">
+    <value>Audio</value>
+  </data>
+  <data name="DiscoverCategoryTools" xml:space="preserve">
+    <value>Tools</value>
+  </data>
+  <data name="DiscoverCategoryLibrary" xml:space="preserve">
+    <value>Library</value>
+  </data>
   <data name="DiscoverCategoryOther" xml:space="preserve">
     <value>Other</value>
   </data>

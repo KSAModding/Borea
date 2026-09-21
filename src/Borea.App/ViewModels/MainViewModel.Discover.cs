@@ -319,6 +319,20 @@ public partial class MainViewModel
     private bool HasCuratedTag(ContentType type, IReadOnlyList<string> tags)
         => _categoryVocabulary.GetTags(type).Any(tag => tags.Contains(tag.Tag, StringComparer.OrdinalIgnoreCase));
 
+    /// <summary>A tag that this version does not translate keeps the name the index gives it.</summary>
+    internal string CategoryName(string tag, string indexName) => tag.ToLowerInvariant() switch
+    {
+        "parts" => Localization.DiscoverCategoryParts,
+        "celestial" => Localization.DiscoverCategoryCelestial,
+        "gameplay" => Localization.DiscoverCategoryGameplay,
+        "user-interface" => Localization.DiscoverCategoryUserInterface,
+        "visual" => Localization.DiscoverCategoryVisual,
+        "audio" => Localization.DiscoverCategoryAudio,
+        "tools" => Localization.DiscoverCategoryTools,
+        "library" => Localization.DiscoverCategoryLibrary,
+        _ => indexName,
+    };
+
     /// <summary>
     /// Marks listings that the active instance already holds.
     /// </summary>
@@ -744,7 +758,7 @@ public sealed partial class DiscoverItem : ObservableObject, IInstallRow
     {
         _owner = owner;
         _listing = listing;
-        AllTags = DisplayTags(owner.TagVocabulary, listing.Type, listing.Tags);
+        AllTags = DisplayTags(owner, listing.Type, listing.Tags);
         Tags = AllTags.Take(3).ToList();
         Images = indexEntry?.Images;
         Icon = owner.IconFor(Images?.Icon);
@@ -752,12 +766,12 @@ public sealed partial class DiscoverItem : ObservableObject, IInstallRow
         PublishedAt = indexEntry?.PublishedAt;
     }
 
-    internal static List<string> DisplayTags(CuratedTagVocabulary vocabulary, ContentType type, IReadOnlyList<string> tags)
+    internal static List<string> DisplayTags(MainViewModel owner, ContentType type, IReadOnlyList<string> tags)
     {
-        var curated = vocabulary.GetTags(type)
+        var curated = owner.TagVocabulary.GetTags(type)
             .Where(tag => tags.Contains(tag.Tag, StringComparer.OrdinalIgnoreCase))
             .ToList();
-        return curated.Select(tag => tag.Name)
+        return curated.Select(tag => owner.CategoryName(tag.Tag, tag.Name))
             .Concat(tags.Where(value => !curated.Any(tag => string.Equals(tag.Tag, value, StringComparison.OrdinalIgnoreCase))))
             .ToList();
     }
@@ -780,7 +794,7 @@ public sealed partial class DiscoverItem : ObservableObject, IInstallRow
     internal void Update(ModMetadata full)
     {
         _listing = full;
-        AllTags = DisplayTags(_owner.TagVocabulary, full.Type, full.Tags);
+        AllTags = DisplayTags(_owner, full.Type, full.Tags);
         Tags = AllTags.Take(3).ToList();
         OnPropertyChanged(string.Empty);
     }
@@ -800,6 +814,10 @@ public sealed partial class DiscoverItem : ObservableObject, IInstallRow
 
     internal void RefreshText()
     {
+        AllTags = DisplayTags(_owner, _listing.Type, _listing.Tags);
+        Tags = AllTags.Take(3).ToList();
+        OnPropertyChanged(nameof(AllTags));
+        OnPropertyChanged(nameof(Tags));
         OnPropertyChanged(nameof(AuthorsText));
         OnPropertyChanged(nameof(TypeText));
         OnPropertyChanged(nameof(CompatibilityText));
@@ -870,7 +888,7 @@ public sealed partial class DiscoverCategory : ObservableObject
 
     public bool IsOther => _tag is null;
 
-    public string Name => _tag?.Name ?? _owner.Localization.DiscoverCategoryOther;
+    public string Name => _tag is null ? _owner.Localization.DiscoverCategoryOther : _owner.CategoryName(_tag.Tag, _tag.Name);
 
     public string? Meaning => _tag?.Meaning;
 

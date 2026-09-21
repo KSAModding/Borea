@@ -816,6 +816,30 @@
   <data name="DiscoverCategory" xml:space="preserve">
     <value>Categorrry</value>
   </data>
+  <data name="DiscoverCategoryParts" xml:space="preserve">
+    <value>Bits o' ship</value>
+  </data>
+  <data name="DiscoverCategoryCelestial" xml:space="preserve">
+    <value>Stars 'n' spheres</value>
+  </data>
+  <data name="DiscoverCategoryGameplay" xml:space="preserve">
+    <value>Way o' the voyage</value>
+  </data>
+  <data name="DiscoverCategoryUserInterface" xml:space="preserve">
+    <value>Wheel 'n' charts</value>
+  </data>
+  <data name="DiscoverCategoryVisual" xml:space="preserve">
+    <value>Sights</value>
+  </data>
+  <data name="DiscoverCategoryAudio" xml:space="preserve">
+    <value>Shanties</value>
+  </data>
+  <data name="DiscoverCategoryTools" xml:space="preserve">
+    <value>Tools o' the trade</value>
+  </data>
+  <data name="DiscoverCategoryLibrary" xml:space="preserve">
+    <value>Ship's library</value>
+  </data>
   <data name="DiscoverCategoryOther" xml:space="preserve">
     <value>Sumthin' else</value>
   </data>
