@@ -62,7 +62,7 @@ public sealed class InstanceRowTests
         return harness;
     }
 
-    [Fact]
+    [Fact(Skip = "Stops and never returns, rarely and on more than one platform. See issue 469.")]
     public async Task ClickingTheCardBesideTheNameOpensTheInstance()
     {
         using var harness = await CreateAsync();
