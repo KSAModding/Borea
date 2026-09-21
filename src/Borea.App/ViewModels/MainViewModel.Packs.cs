@@ -128,6 +128,8 @@ public partial class MainViewModel
             pack.IsInstalled = pack.Metadata.Mods.All(Holds);
         foreach (var member in PackMembers)
             member.IsInstalled = Holds(member.Pin);
+        foreach (var version in PackVersions)
+            version.IsInstalled = version.Metadata.Mods.All(Holds);
     }
 
     private void RefreshPackText()
@@ -190,7 +192,7 @@ public partial class MainViewModel
             foreach (var member in members)
                 PackMembers.Add(member);
             foreach (var version in versions.Where(version => version.Metadata is not null))
-                PackVersions.Add(new PackVersionItem(this, version.Metadata!));
+                PackVersions.Add(new PackVersionItem(this, pack, version.Metadata!));
             RefreshInstalledFlags();
         }
         catch (Exception exception) when (exception is HttpRequestException or IOException or InvalidOperationException or TaskCanceledException)
@@ -697,7 +699,7 @@ public sealed partial class PackItem : ObservableObject, IPlanRow
 
     internal ModPackInstallRequest? PendingInstall { get; set; }
 
-    /// <summary>The version a borea:// link pinned for the last install, so Try again keeps it. Null for the newest.</summary>
+    /// <summary>The exact version of the running install, which its task records, so the task name and a Try again keep it. Null installs the newest version.</summary>
     internal ModVersion? RequestedVersion { get; set; }
 
     /// <summary>The name of the instance that <see cref="PendingInstall"/> creates, or null when it installs into an existing one.</summary>
@@ -859,27 +861,45 @@ public sealed partial class PackMemberItem : ObservableObject
 /// <summary>
 /// One usable version of a pack on the Versions tab of the pack page.
 /// </summary>
-public sealed class PackVersionItem : ObservableObject
+public sealed partial class PackVersionItem : ObservableObject
 {
     private readonly MainViewModel _owner;
-    private readonly ModPackMetadata _pack;
 
-    public string Version => _pack.Version.ToString();
+    internal ModPackMetadata Metadata { get; }
 
-    public string GameVersionText => PackItem.GameVersion(_pack);
+    /// <summary>The pack this version belongs to, which carries the state of a running install.</summary>
+    public PackItem Pack { get; }
+
+    public string Version => Metadata.Version.ToString();
+
+    public string GameVersionText => PackItem.GameVersion(Metadata);
 
     /// <summary>How long ago this version came out.</summary>
-    public string PublishedText => _owner.ShortAgeText(_pack.ReleasedAt);
+    public string PublishedText => _owner.ShortAgeText(Metadata.ReleasedAt);
 
-    public string PublishedDateText => MainViewModel.DateText(_pack.ReleasedAt);
+    public string PublishedDateText => MainViewModel.DateText(Metadata.ReleasedAt);
 
-    public int ModCount => _pack.Mods.Count;
+    public int ModCount => Metadata.Mods.Count;
 
-    public PackVersionItem(MainViewModel owner, ModPackMetadata pack)
+    /// <summary>True when the active instance holds every mod this version pins, in the pinned version.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanInstall))]
+    private bool _isInstalled;
+
+    public bool CanInstall => !IsInstalled;
+
+    public PackVersionItem(MainViewModel owner, PackItem pack, ModPackMetadata metadata)
     {
         _owner = owner;
-        _pack = pack;
+        Pack = pack;
+        Metadata = metadata;
     }
+
+    [RelayCommand]
+    private Task InstallAsync() => _owner.InstallPackAsync(Pack, version: Metadata.Version);
+
+    [RelayCommand]
+    private void NewInstance() => _owner.BeginPackInstance(Pack, Metadata.Version);
 
     internal void RefreshText()
     {
