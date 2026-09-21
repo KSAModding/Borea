@@ -1648,6 +1648,10 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string SelectAPreset => Resources.SelectAPreset;
 
+    public string GameDataCreatePreset => Resources.GameDataCreatePreset;
+
+    public string ModalSettingsPresetNoGameVersion => Resources.ModalSettingsPresetNoGameVersion;
+
     public string FormatLaunchLoaderNotInstalled(string loader)
         => string.Format(CultureInfo.CurrentCulture, Resources.LaunchLoaderNotInstalledFormat, loader);
 

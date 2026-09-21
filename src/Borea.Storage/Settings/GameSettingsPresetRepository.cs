@@ -69,10 +69,8 @@ public sealed class GameSettingsPresetRepository : IGameSettingsPresetRepository
         if (!File.Exists(sourcePath))
             throw new InvalidOperationException($"Settings preset '{presetId}' has no settings.toml.");
 
-        var destinationPath = _pathProvider.GetInstanceSettingsPath(instanceId); // name TBD per Q1
-        Directory.CreateDirectory(Path.GetDirectoryName(destinationPath)!);
         var text = await File.ReadAllTextAsync(sourcePath, cancellationToken).ConfigureAwait(false);
-        await AtomicFile.WriteAllTextAsync(destinationPath, text, cancellationToken).ConfigureAwait(false);
+        await AtomicFile.WriteAllTextAsync(_pathProvider.GetInstanceSettingsPath(instanceId), text, cancellationToken).ConfigureAwait(false);
     }
 
     public async Task<GameSettingsPreset> SaveAsync(

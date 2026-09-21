@@ -1,4 +1,4 @@
-<UserControl xmlns="https://github.com/avaloniaui"
+﻿<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Borea.App.ViewModels"
              xmlns:views="using:Borea.App.Views"
@@ -492,6 +492,7 @@
                                                 <TextBlock Grid.Column="2" Classes="heading-sm" Text="{Binding Name}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
                                                 <StackPanel Grid.Column="4" Orientation="Horizontal" Spacing="24" VerticalAlignment="Center">
                                                     <TextBlock Classes="label-md" Text="{Binding SizeText}" VerticalAlignment="Center" />
+                                                    <Button Classes="text" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.GameDataCreatePreset}" Command="{Binding CreatePresetCommand}" IsVisible="{Binding IsSettingsFile}" />
                                                     <Button Classes="text" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.GameDataOpenFolder}" Command="{Binding OpenFolderCommand}" IsEnabled="{Binding Exists}" />
                                                 </StackPanel>
                                             </Grid>
