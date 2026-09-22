@@ -132,6 +132,8 @@ public sealed class BoreaServices : IDisposable
 
     public required IForeignModReleaseMatcher ForeignModReleaseMatcher { get; init; }
 
+    public required IForeignModHandover ForeignModHandover { get; init; }
+
     public required ISharedProfileImporter SharedProfileImporter { get; init; }
 
     /// <summary>
@@ -370,6 +372,7 @@ public sealed class BoreaServices : IDisposable
         var foreignModAdopter = new FileForeignModAdopter(paths, instances, contentIndex);
         var foreignModReleaseMatcher = new FileForeignModReleaseMatcher(paths, downloader, foreignModAdopter, indexSnapshots);
         var spaceCheck = new DriveInstallSpaceCheck(paths);
+        var foreignModHandover = new LoggingForeignModHandover(new FileForeignModHandover(paths, downloader, instances, modState), log);
         var installPlanner = new LoggingInstallPlanner(new RepositoryInstallPlanner(new ModDependencyResolver(), settings.ReleaseChannel), log);
         var launcher = new LoggingLauncher(new LastPlayedLauncher(new LoaderLauncher(paths, processStarter ?? new ProcessStarter(), launches), instances), log);
         var defaultLibraryFolder = Path.GetDirectoryName(bootstrapPaths.GetInstancesRoot())!;
@@ -405,6 +408,7 @@ public sealed class BoreaServices : IDisposable
             ForeignModAdopter = foreignModAdopter,
             MissingMods = new FileMissingModDetector(paths, instances),
             ForeignModReleaseMatcher = foreignModReleaseMatcher,
+            ForeignModHandover = foreignModHandover,
             SharedProfileImporter = new FileSharedProfileImporter(paths, instances, modState, foreignModAdopter, foreignModReleaseMatcher),
             Mods = new ReleaseChannelModRepository(mods, settings.ReleaseChannel),
             ReadOnlyMods = new ReleaseChannelModRepository(readOnlyMods, settings.ReleaseChannel),

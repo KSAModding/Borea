@@ -11,6 +11,7 @@ public enum TaskKind
     ModRemoval,
     ModListImport,
     ManualReplace,
+    ModHandover,
     LibraryFolderChange,
     BackupRestore,
     BackupDelete,

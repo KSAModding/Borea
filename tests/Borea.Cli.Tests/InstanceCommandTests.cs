@@ -756,6 +756,41 @@ public sealed class InstanceCommandTests : IDisposable
     }
 
     [Fact]
+    public async Task TakeOwnership_ForeignMod_InstallsTheRecordedReleaseAndOwnsIt()
+    {
+        var instanceId = await CreateInstanceAsync("Alpha");
+        var folder = WriteMod(instanceId, "flight-tools", "name = \"Flight Tools\"");
+        File.WriteAllText(Path.Combine(folder, "settings.json"), "{}");
+        var archive = WriteZip(("flight-tools/mod.toml", "name = \"Flight Tools\""), ("flight-tools/value.txt", "release"));
+        UseArchiveLookup().Releases.Add(ReleaseFor("flight-tools", archive));
+        _host.ForeignModHandoverFactory = graph => new FileForeignModHandover(graph.Paths, new ArchiveDownloader(archive), graph.Instances, graph.ModState);
+        await _host.RunAsync("instance", "adopt", "Alpha", "flight-tools", "--archive", archive);
+
+        var run = await _host.RunAsync("instance", "take-ownership", "Alpha", "flight-tools");
+
+        Assert.Equal(0, run.ExitCode);
+        Assert.Contains("Borea manages 'flight-tools' 2.0.0 in 'Alpha' now.", run.Output);
+        Assert.Contains("Extracting flight-tools 2.0.0", run.Error);
+        var mod = Assert.Single((await new FileInstanceRepository(_host.Paths).GetByIdAsync(instanceId))!.Mods);
+        Assert.Equal(ModInstallOwnership.Borea, mod.Ownership);
+        Assert.True(mod.CanDeleteFiles);
+        Assert.Equal("release", File.ReadAllText(Path.Combine(folder, "value.txt")));
+        Assert.False(File.Exists(Path.Combine(folder, "settings.json")));
+    }
+
+    [Fact]
+    public async Task TakeOwnership_ModThatIsNotInstalled_Fails()
+    {
+        await CreateInstanceAsync("Alpha");
+
+        var run = await _host.RunAsync("instance", "take-ownership", "Alpha", "flight-tools");
+
+        Assert.Equal(1, run.ExitCode);
+        Assert.Contains("Mod 'flight-tools' is not installed in this instance.", run.Error);
+        Assert.DoesNotContain("Unhandled exception", run.Error);
+    }
+
+    [Fact]
     public async Task ImportProfile_CopiesTheModsInLoadOrderWithTheirEnabledState()
     {
         WriteProfileManifest(("Zeta", true), ("Alpha", false));

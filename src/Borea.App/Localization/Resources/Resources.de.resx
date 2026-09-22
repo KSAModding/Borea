@@ -519,6 +519,9 @@
   <data name="TaskReplaceFormat" xml:space="preserve">
     <value>{0} ersetzen</value>
   </data>
+  <data name="TaskManageFormat" xml:space="preserve">
+    <value>{0} übernehmen</value>
+  </data>
   <data name="TaskLibraryFolderFormat" xml:space="preserve">
     <value>Bibliothek nach {0} verschieben</value>
   </data>
@@ -576,6 +579,9 @@
   <data name="ToastReplacedFormat" xml:space="preserve">
     <value>{0} in {1} ersetzt</value>
   </data>
+  <data name="ToastManagedFormat" xml:space="preserve">
+    <value>Borea verwaltet {0} in {1} jetzt</value>
+  </data>
   <data name="ToastLibraryFolderChangedFormat" xml:space="preserve">
     <value>Der Bibliotheksordner ist jetzt {0}</value>
   </data>
@@ -629,6 +635,9 @@
   </data>
   <data name="ToastReplaceFailedFormat" xml:space="preserve">
     <value>{0} konnte nicht ersetzt werden</value>
+  </data>
+  <data name="ToastManageFailedFormat" xml:space="preserve">
+    <value>Borea konnte die Dateien von {0} nicht übernehmen</value>
   </data>
   <data name="ToastLibraryFolderFailedFormat" xml:space="preserve">
     <value>Die Bibliothek konnte nicht nach {0} verschoben werden</value>
@@ -983,6 +992,15 @@
   </data>
   <data name="ContentEnabled" xml:space="preserve">
     <value>Aktiviert</value>
+  </data>
+  <data name="ContentManage" xml:space="preserve">
+    <value>Von Borea verwalten lassen</value>
+  </data>
+  <data name="ContentManageConfirmFormat" xml:space="preserve">
+    <value>Borea installiert {0} {1} über diesen Ordner. Dateien im Ordner, die nicht zur Version gehören, gehen verloren.</value>
+  </data>
+  <data name="ContentManageConfirmAction" xml:space="preserve">
+    <value>Ersetzen und verwalten</value>
   </data>
   <data name="ContentUpdate" xml:space="preserve">
     <value>Aktualisieren</value>
@@ -2523,6 +2541,9 @@
   <data name="InstallStoppingAfterMod" xml:space="preserve">
     <value>Stoppt nach dieser Mod</value>
   </data>
+  <data name="InstallRecoveryFolderFormat" xml:space="preserve">
+    <value>Die vorherigen Dateien liegen in {0}.</value>
+  </data>
   <data name="InstallStopped" xml:space="preserve">
     <value>Installation gestoppt.</value>
   </data>
@@ -2591,9 +2612,6 @@
   </data>
   <data name="InstanceContentNotInIndex" xml:space="preserve">
     <value>Diese Mod ist nicht im Content-Index und hat deshalb keine Seite.</value>
-  </data>
-  <data name="InstanceContentNotOwned" xml:space="preserve">
-    <value>Borea hat diese Mod nicht installiert, deshalb verweist sie auf keine Seite.</value>
   </data>
   <data name="ContentInsideInstance" xml:space="preserve">
     <value>Du siehst Inhalt aus einer Instanz.</value>

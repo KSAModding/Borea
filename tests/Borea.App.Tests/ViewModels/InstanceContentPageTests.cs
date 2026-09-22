@@ -87,7 +87,7 @@ public sealed class InstanceContentPageTests
     }
 
     [Fact]
-    public async Task ModNotInstalledByBorea_HasNoLinkAndSaysWhy()
+    public async Task ModNotInstalledByBorea_LinksToItsPageAndOffersTheHandover()
     {
         using var harness = await ViewModelHarness.CreateAsync();
         var viewModel = harness.ViewModel;
@@ -95,13 +95,84 @@ public sealed class InstanceContentPageTests
         await viewModel.LoadAsync();
         await viewModel.ActiveInstance!.OpenCommand.ExecuteAsync(null);
         var row = viewModel.ContentGroups.SelectMany(group => group.Items).Single();
+        Assert.False(row.IsOwned);
+        Assert.True(row.CanManage);
+        Assert.Null(row.NoPageText);
 
         await row.OpenCommand.ExecuteAsync(null);
 
-        Assert.False(row.CanOpen);
-        Assert.Equal(harness.Localization.InstanceContentNotOwned, row.NoPageText);
-        Assert.True(viewModel.CurrentWindowInstance);
-        Assert.False(viewModel.CurrentWindowContent);
+        Assert.True(row.CanOpen);
+        Assert.True(viewModel.CurrentWindowContent);
+        Assert.Equal("AdvancedFlightComputer", viewModel.SelectedContent?.ModId);
+    }
+
+    [Fact]
+    public async Task ModWhoseFolderIsGone_OffersNoHandover()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var viewModel = harness.ViewModel;
+        var instance = await InstalledContent.AddAsync(harness, "AdvancedFlightComputer", activate: true);
+        Directory.Delete(Path.Combine(harness.Services.Paths.GetInstanceModsFolder(instance.InstanceId), "AdvancedFlightComputer"), recursive: true);
+        await viewModel.LoadAsync();
+        await viewModel.ActiveInstance!.OpenCommand.ExecuteAsync(null);
+        var row = viewModel.ContentGroups.SelectMany(group => group.Items).Single();
+
+        Assert.True(row.IsMissing);
+        Assert.False(row.CanManage);
+    }
+
+    [Fact]
+    public async Task ModInstalledByBorea_OffersNoHandover()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var viewModel = harness.ViewModel;
+        await InstalledContent.AddAsync(harness, "AdvancedFlightComputer", activate: true, ownership: ModInstallOwnership.Borea);
+        await viewModel.LoadAsync();
+        await viewModel.ActiveInstance!.OpenCommand.ExecuteAsync(null);
+
+        Assert.False(viewModel.ContentGroups.SelectMany(group => group.Items).Single().CanManage);
+    }
+
+    [Fact]
+    public async Task Manage_AsksBeforeTheFilesAreReplaced()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var viewModel = harness.ViewModel;
+        var instance = await InstalledContent.AddAsync(harness, "AdvancedFlightComputer", activate: true);
+        await viewModel.LoadAsync();
+        await viewModel.ActiveInstance!.OpenCommand.ExecuteAsync(null);
+        var row = viewModel.ContentGroups.SelectMany(group => group.Items).Single();
+
+        row.BeginManageCommand.Execute(null);
+
+        Assert.True(row.IsConfirmingManage);
+        Assert.Contains(row.Version, row.ManageConfirmText);
+        Assert.Equal(ModInstallOwnership.Foreign, Assert.Single((await harness.Services.Instances.GetByIdAsync(instance.InstanceId))!.Mods).Ownership);
+
+        row.CancelManageCommand.Execute(null);
+
+        Assert.False(row.IsConfirmingManage);
+    }
+
+    [Fact]
+    public async Task Manage_DownloadFails_SaysSoAndLeavesTheModForeign()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var viewModel = harness.ViewModel;
+        var instance = await InstalledContent.AddAsync(harness, "AdvancedFlightComputer", activate: true);
+        await viewModel.LoadAsync();
+        await viewModel.ActiveInstance!.OpenCommand.ExecuteAsync(null);
+        var row = viewModel.ContentGroups.SelectMany(group => group.Items).Single();
+        row.BeginManageCommand.Execute(null);
+
+        await row.ConfirmManageCommand.ExecuteAsync(null);
+
+        var toast = Assert.Single(viewModel.Toasts.Items);
+        Assert.Equal(harness.Localization.FormatToastManageFailed(row.Name), toast.Message);
+        Assert.False(row.IsInstalling);
+        var saved = Assert.Single((await harness.Services.Instances.GetByIdAsync(instance.InstanceId))!.Mods);
+        Assert.Equal(ModInstallOwnership.Foreign, saved.Ownership);
+        Assert.True(File.Exists(Path.Combine(harness.Services.Paths.GetInstanceModsFolder(instance.InstanceId), "AdvancedFlightComputer", "mod.toml")));
     }
 
     [Fact]
@@ -124,7 +195,7 @@ public sealed class InstanceContentPageTests
     }
 
     [Fact]
-    public async Task LanguageChange_RetranslatesTheReason()
+    public async Task LanguageChange_RetranslatesTheHandoverConfirmation()
     {
         using var harness = await ViewModelHarness.CreateAsync();
         var viewModel = harness.ViewModel;
@@ -135,7 +206,7 @@ public sealed class InstanceContentPageTests
         harness.Localization.TrySetCulture("de");
 
         var row = viewModel.ContentGroups.SelectMany(group => group.Items).Single();
-        Assert.Equal(harness.Localization.InstanceContentNotOwned, row.NoPageText);
-        Assert.Contains("Borea", row.NoPageText);
+        Assert.Equal(harness.Localization.FormatContentManageConfirm(row.Name, row.Version), row.ManageConfirmText);
+        Assert.Contains("Borea", row.ManageConfirmText);
     }
 }

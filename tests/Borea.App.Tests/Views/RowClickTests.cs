@@ -121,6 +121,40 @@ public sealed class RowClickTests
         return harness;
     }
 
+    /// <summary>An instance whose only mod the content index does not list, so its row has no page to link to.</summary>
+    private static async Task<ViewModelHarness> InstanceWithAnUnlistedModAsync()
+    {
+        const string unlisted = "HandDropped";
+        var harness = await ViewModelHarness.CreateAsync();
+        var services = harness.Services;
+        var instance = (await services.Instances.CreateAsync("Main", InstanceSource.Custom.Value)).Instance;
+
+        // the manifest only lists a mod whose folder holds a mod.toml
+        var folder = Directory.CreateDirectory(Path.Combine(services.Paths.GetInstanceModsFolder(instance.InstanceId), unlisted));
+        await File.WriteAllTextAsync(Path.Combine(folder.FullName, "mod.toml"), $"name = \"{unlisted}\"");
+
+        var release = new ModVersionMetadata(
+            specVersion: 1,
+            modId: unlisted,
+            version: ModVersion.Parse("1.0.0"),
+            releaseStatus: ReleaseStatus.Stable,
+            releaseDate: DateTimeOffset.Parse("2026-09-12T00:00:00Z"),
+            gameMin: "2026.9.7.5402",
+            gameMinRevision: 5402,
+            download: new DownloadInfo("https://example.invalid/hand-dropped.zip", new string('A', 64), null, "application/zip"),
+            installSizeBytes: null,
+            dependencies: []);
+        instance.AddMod(new InstalledMod(unlisted, release.Version, InstallReason.Manual, DateTimeOffset.UtcNow, release, ownership: ModInstallOwnership.Foreign));
+        await services.Instances.SaveAsync(instance);
+        await services.ModState.AddEntryAsync(instance.InstanceId, unlisted, enabled: true);
+        await services.Instances.SetActiveInstanceAsync(instance.InstanceId);
+
+        await harness.ViewModel.LoadAsync();
+        await harness.ViewModel.ActiveInstance!.OpenCommand.ExecuteAsync(null);
+        await harness.ViewModel.WhenContentUpdatesCheckedAsync();
+        return harness;
+    }
+
     /// <summary>An instance whose mod another mod needs, so that the row links to the page but its trash stays off.</summary>
     private static async Task<ViewModelHarness> InstanceWithABlockedRemoveAsync()
     {
@@ -449,7 +483,7 @@ public sealed class RowClickTests
     [Fact]
     public async Task ContentRow_WithoutAModPage_IsNoButtonAndKeepsItsSwitch()
     {
-        using var harness = await InstanceAsync(ModInstallOwnership.Foreign);
+        using var harness = await InstanceWithAnUnlistedModAsync();
         var viewModel = harness.ViewModel;
         var item = viewModel.ContentGroups.Single().Items.Single();
         Assert.False(item.CanOpen);
