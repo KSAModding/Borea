@@ -736,6 +736,8 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string DiscoverIndexRetry => Resources.DiscoverIndexRetry;
 
+    public string DiscoverRefresh => Resources.DiscoverRefresh;
+
     public string DiscoverAdd => Resources.DiscoverAdd;
 
     public string DiscoverInstalled => Resources.DiscoverInstalled;

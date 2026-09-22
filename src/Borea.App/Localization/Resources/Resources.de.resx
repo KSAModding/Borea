@@ -1056,6 +1056,9 @@
   <data name="DiscoverIndexRetry" xml:space="preserve">
     <value>Erneut versuchen</value>
   </data>
+  <data name="DiscoverRefresh" xml:space="preserve">
+    <value>Aktualisieren</value>
+  </data>
   <data name="TimeJustNow" xml:space="preserve">
     <value>gerade eben</value>
   </data>

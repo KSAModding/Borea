@@ -903,6 +903,9 @@
   <data name="DiscoverIndexRetry" xml:space="preserve">
     <value>Have at it again</value>
   </data>
+  <data name="DiscoverRefresh" xml:space="preserve">
+    <value>Freshen up</value>
+  </data>
   <data name="TimeJustNow" xml:space="preserve">
     <value>just now</value>
   </data>
