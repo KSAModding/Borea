@@ -924,6 +924,9 @@
   <data name="DurationMinutesFormat" xml:space="preserve">
     <value>{0} Min.</value>
   </data>
+  <data name="ContentChangeVersion" xml:space="preserve">
+    <value>Version wechseln</value>
+  </data>
   <data name="ContentRemove" xml:space="preserve">
     <value>Entfernen</value>
   </data>
@@ -1949,6 +1952,15 @@
   </data>
   <data name="ContentAdd" xml:space="preserve">
     <value>Hinzufügen</value>
+  </data>
+  <data name="ContentReplaceVersionFormat" xml:space="preserve">
+    <value>{0} ersetzen</value>
+  </data>
+  <data name="ContentReplaceVersionInFormat" xml:space="preserve">
+    <value>{0} in {1} ersetzen</value>
+  </data>
+  <data name="ContentReplaceVersionAnywayFormat" xml:space="preserve">
+    <value>{0} trotzdem ersetzen</value>
   </data>
   <data name="ContentVersionHeader" xml:space="preserve">
     <value>Version</value>

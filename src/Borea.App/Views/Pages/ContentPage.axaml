@@ -322,7 +322,7 @@
                                                         <Button Classes="icon" Command="{Binding ToggleChangelogCommand}" IsVisible="{Binding Changelog, Converter={x:Static ObjectConverters.IsNotNull}}" ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ContentChangelog}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ContentChangelog}">
                                                             <Path Classes="icon size-16" Data="{StaticResource Icon.CaretDown}" />
                                                         </Button>
-                                                        <Button Classes="icon" Command="{Binding InstallCommand}" IsEnabled="{Binding !IsInstalling}" ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).AddToText}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).AddToText}">
+                                                        <Button Classes="icon" Command="{Binding InstallCommand}" IsEnabled="{Binding !IsInstalling}" ToolTip.Tip="{Binding InstallToolTip}" AutomationProperties.Name="{Binding InstallToolTip}">
                                                             <Button.IsVisible>
                                                                 <MultiBinding Converter="{x:Static BoolConverters.And}">
                                                                     <Binding Path="CanInstall" />
