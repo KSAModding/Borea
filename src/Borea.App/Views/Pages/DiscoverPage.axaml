@@ -14,6 +14,9 @@
                         <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" Spacing="4">
                             <Path Classes="icon" Data="{StaticResource Icon.Compass}" />
                             <TextBlock Classes="label-lg" Text="{Binding Localization.PageDiscoverHeading}" VerticalAlignment="Center" />
+                            <Button Classes="plain" Margin="8,0,0,0" VerticalAlignment="Center" Command="{Binding RefreshContentIndexCommand}" ToolTip.Tip="{Binding Localization.DiscoverRefresh}" AutomationProperties.Name="{Binding Localization.DiscoverRefresh}">
+                                <Path Classes="icon size-16" Data="{StaticResource Icon.ArrowClockwise}" />
+                            </Button>
                         </StackPanel>
                         <ContentControl Content="{Binding}" ContentTemplate="{StaticResource AddingTo}" />
                     </DockPanel>

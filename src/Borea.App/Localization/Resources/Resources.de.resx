@@ -606,6 +606,12 @@
   <data name="ToastStoppedUpdatedFormat" xml:space="preserve">
     <value>{0} von {1} Mods aktualisiert</value>
   </data>
+  <data name="ToastIndexRefreshed" xml:space="preserve">
+    <value>Inhaltsindex aktualisiert</value>
+  </data>
+  <data name="ToastIndexUpToDate" xml:space="preserve">
+    <value>Der Inhaltsindex ist aktuell</value>
+  </data>
   <data name="ToastIndexRefreshFailed" xml:space="preserve">
     <value>Der Inhaltsindex konnte nicht aktualisiert werden</value>
   </data>
@@ -1052,6 +1058,9 @@
   </data>
   <data name="DiscoverIndexRetry" xml:space="preserve">
     <value>Erneut versuchen</value>
+  </data>
+  <data name="DiscoverRefresh" xml:space="preserve">
+    <value>Aktualisieren</value>
   </data>
   <data name="TimeJustNow" xml:space="preserve">
     <value>gerade eben</value>

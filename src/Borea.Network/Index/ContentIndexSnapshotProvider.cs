@@ -6,7 +6,6 @@ namespace Borea.Network.Index;
 /// <summary>Refreshes and caches the one snapshot shared by all index repositories.</summary>
 public sealed class ContentIndexSnapshotProvider : IContentIndexSnapshotProvider, IContentIndexRefresh
 {
-    private static readonly TimeSpan RevalidationInterval = TimeSpan.FromMinutes(10);
     private readonly IContentIndexFetcher _fetcher;
     private readonly IContentIndexReader _reader;
     private readonly IGamePathProvider _paths;
@@ -29,6 +28,8 @@ public sealed class ContentIndexSnapshotProvider : IContentIndexSnapshotProvider
 
     /// <summary>Serves the snapshot in memory, or reads the cached file when there is none, and never fetches.</summary>
     public IContentIndexSnapshotProvider CachedOnly { get; }
+
+    public TimeSpan RevalidationInterval { get; } = TimeSpan.FromMinutes(10);
 
     /// <summary>The cache age is the last write time of the cached file, which a successful fetch sets.</summary>
     public ContentIndexRefreshStatus Status

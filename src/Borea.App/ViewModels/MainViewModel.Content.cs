@@ -94,6 +94,9 @@ public partial class MainViewModel
 
     private readonly List<VersionItem> _contentReleases = [];
 
+    /// <summary>The running version load, so that a page that reloads can wait for it.</summary>
+    private Task _contentVersionsLoad = Task.CompletedTask;
+
     /// <summary>The releases the Show filter lets through, newest first.</summary>
     public ObservableCollection<VersionItem> ContentVersions { get; } = [];
 
@@ -246,6 +249,24 @@ public partial class MainViewModel
         await LoadLatestVersionAsync(item);
     }
 
+    /// <summary>
+    /// Reads the open mod page again after the index changed. The page keeps
+    /// the tab it shows, and its version list loads again when it is open.
+    /// </summary>
+    private async Task ReloadContentPageAsync()
+    {
+        // a version load that is still running would fill the cleared list with the releases from before the refresh
+        await _contentVersionsLoad;
+        if (!CurrentWindowContent || SelectedContent is not { } item)
+            return;
+
+        _contentReleases.Clear();
+        ApplyVersionFilter();
+        await LoadLatestVersionAsync(item);
+        if (ContentTab == ContentPageTab.Versions)
+            await ShowContentVersionsAsync();
+    }
+
     private async Task LoadLatestVersionAsync(DiscoverItem item)
     {
         if (_services is null)
@@ -333,13 +354,24 @@ public partial class MainViewModel
     }
 
     [RelayCommand]
-    private async Task ShowContentVersionsAsync()
+    private Task ShowContentVersionsAsync()
     {
         ContentTab = ContentPageTab.Versions;
-        if (_contentReleases.Count > 0 || SelectedContent is null || _services is null || IsLoadingVersions)
+        if (_contentReleases.Count > 0 || SelectedContent is not { } item || _services is null)
+            return Task.CompletedTask;
+
+        // a second caller waits for the load that runs instead of starting one of its own
+        if (IsLoadingVersions)
+            return _contentVersionsLoad;
+
+        return _contentVersionsLoad = LoadContentVersionsAsync(item);
+    }
+
+    private async Task LoadContentVersionsAsync(DiscoverItem item)
+    {
+        if (_services is null)
             return;
 
-        var item = SelectedContent;
         IsLoadingVersions = true;
         try
         {
