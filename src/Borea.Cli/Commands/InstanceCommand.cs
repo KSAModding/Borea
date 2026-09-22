@@ -4,6 +4,7 @@ using Borea.Cli.Output;
 using Borea.Core.Index;
 using Borea.Core.Instances;
 using Borea.Core.Launch;
+using Borea.Core.ModLoaders;
 using Borea.Core.Mods;
 
 namespace Borea.Cli.Commands;
@@ -98,7 +99,8 @@ internal static class InstanceCommand
             var activeId = await cli.Instances.GetActiveInstanceIdAsync().ConfigureAwait(false);
             var lastPlayedAt = await LastPlayedAsync(cli, target, ct).ConfigureAwait(false);
             var playtime = await cli.Playtime.GetPlaytimeAsync(target.InstanceId, ct).ConfigureAwait(false);
-            var view = InstanceDetailsView.From(target, target.InstanceId == activeId, lastPlayedAt, playtime);
+            var loaderNeed = LoaderNeed.For(target);
+            var view = InstanceDetailsView.From(target, target.InstanceId == activeId, lastPlayedAt, playtime, loaderNeed, cli.Settings.LoaderInstallations);
 
             if (parseResult.GetValue(json))
             {
@@ -111,6 +113,7 @@ internal static class InstanceCommand
             output.WriteLine($"Source: {Describe(target.Source)}");
             output.WriteLine($"Created: {Timestamp(view.CreatedAt)}");
             output.WriteLine($"Mods: {view.ModCount}");
+            output.WriteLine($"Mod loader: {DescribeLoaderNeed(view.ModLoaders)}");
             output.WriteLine($"Launch arguments: {DescribeLaunchArguments(target)}");
             output.WriteLine($"Last played: {(view.LastPlayedAt is { } lastPlayed ? Timestamp(lastPlayed) : "never")}");
             output.WriteLine($"Playtime: {DescribePlaytime(playtime)}");
@@ -126,6 +129,26 @@ internal static class InstanceCommand
 
     private static string DescribeLastPlayed(DateTimeOffset? lastPlayed)
         => lastPlayed is { } at ? $"last played {Timestamp(at)}" : "never played";
+
+    /// <summary>"none needed", or each loader with its range, installed version and the mods that need it.</summary>
+    private static string DescribeLoaderNeed(IReadOnlyList<ModLoaderNeedView> loaders)
+    {
+        if (loaders.Count == 0)
+            return "none needed by the mods, the instance still starts through an installed loader that takes an instance";
+
+        var described = loaders.Select(loader =>
+        {
+            var range = loader.MaxVersion is null ? $"{loader.MinVersion} or newer" : $"{loader.MinVersion} to {loader.MaxVersion}";
+            var state = loader.Conflict
+                ? "the mods need versions that do not overlap"
+                : loader.InstalledVersion is { } installed
+                    ? loader.Accepted == true ? $"{installed} installed" : $"{installed} installed, outside the range"
+                    : loader.Installed ? "installed, version unknown" : "not installed";
+            return $"{loader.Id} {range}, {state}, needed by {string.Join(", ", loader.NeededBy)}";
+        });
+        var text = string.Join("; ", described);
+        return loaders.Count > 1 ? $"{text} (one launch can only start one of them)" : text;
+    }
 
     private static string DescribePlaytime(InstancePlaytime playtime)
     {
@@ -608,10 +631,39 @@ internal static class InstanceCommand
     }
 
     /// <summary><c>instance show --json</c>.</summary>
-    private sealed record InstanceDetailsView(Guid Id, string Name, bool Active, InstanceSourceView Source, DateTimeOffset CreatedAt, int ModCount, IReadOnlyList<string> LaunchArguments, DateTimeOffset? LastPlayedAt, PlaytimeView Playtime)
+    private sealed record InstanceDetailsView(Guid Id, string Name, bool Active, InstanceSourceView Source, DateTimeOffset CreatedAt, int ModCount, IReadOnlyList<ModLoaderNeedView> ModLoaders, IReadOnlyList<string> LaunchArguments, DateTimeOffset? LastPlayedAt, PlaytimeView Playtime)
     {
-        public static InstanceDetailsView From(Instance instance, bool active, DateTimeOffset? lastPlayedAt, InstancePlaytime playtime)
-            => new(instance.InstanceId, instance.Name, active, InstanceSourceView.From(instance.Source), instance.CreatedAt, instance.Mods.Count, instance.LaunchArguments, lastPlayedAt, PlaytimeView.From(playtime));
+        public static InstanceDetailsView From(Instance instance, bool active, DateTimeOffset? lastPlayedAt, InstancePlaytime playtime, LoaderNeed need, IReadOnlyDictionary<string, LoaderInstallation> installations)
+            => new(
+                instance.InstanceId,
+                instance.Name,
+                active,
+                InstanceSourceView.From(instance.Source),
+                instance.CreatedAt,
+                instance.Mods.Count,
+                need.Loaders.Select(loader => ModLoaderNeedView.From(loader, installations)).ToList(),
+                instance.LaunchArguments,
+                lastPlayedAt,
+                PlaytimeView.From(playtime));
+    }
+
+    /// <summary>One loader the mods of an instance need, for <c>instance show</c>.</summary>
+    private sealed record ModLoaderNeedView(string Id, string MinVersion, string? MaxVersion, bool Conflict, IReadOnlyList<string> NeededBy, bool Installed, string? InstalledVersion, bool? Accepted)
+    {
+        public static ModLoaderNeedView From(NeededLoader loader, IReadOnlyDictionary<string, LoaderInstallation> installations)
+        {
+            var installation = installations.FirstOrDefault(entry => ModIds.Equals(entry.Key, loader.LoaderId)).Value;
+            var version = installation?.Version;
+            return new(
+                loader.LoaderId,
+                loader.MinVersion.ToString(),
+                loader.MaxVersion?.ToString(),
+                loader.HasConflict,
+                loader.NeededBy,
+                installation is not null,
+                version?.ToString(),
+                version is { } known ? loader.Accepts(known) : null);
+        }
     }
 
     /// <summary>The JSON shape of <c>instance arguments</c>, <c>set-arguments</c> and <c>clear-arguments</c>.</summary>

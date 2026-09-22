@@ -1998,6 +1998,42 @@
   <data name="InstanceSizeToolTip" xml:space="preserve">
     <value>Größe des Instanzordners auf der Festplatte</value>
   </data>
+  <data name="InstanceLoaderTitle" xml:space="preserve">
+    <value>Mod-Loader</value>
+  </data>
+  <data name="InstanceLoaderNone" xml:space="preserve">
+    <value>Kein Mod braucht einen Mod-Loader. Borea startet diese Instanz trotzdem über einen, weil nur ein Loader das Spiel auf eine Instanz zeigen kann.</value>
+  </data>
+  <data name="InstanceLoaderNotInstalled" xml:space="preserve">
+    <value>Nicht installiert</value>
+  </data>
+  <data name="InstanceLoaderVersionUnknown" xml:space="preserve">
+    <value>Installiert, Version unbekannt</value>
+  </data>
+  <data name="InstanceLoaderConflict" xml:space="preserve">
+    <value>Die Mods brauchen Versionen, die sich nicht überschneiden</value>
+  </data>
+  <data name="InstanceLoaderOpenSettings" xml:space="preserve">
+    <value>Spieleinstellungen</value>
+  </data>
+  <data name="InstanceLoaderDifferentFormat" xml:space="preserve">
+    <value>Die Mods brauchen verschiedene Mod-Loader: {0}. Ein Start kann nur einen davon starten.</value>
+  </data>
+  <data name="InstanceLoaderRangeFormat" xml:space="preserve">
+    <value>Braucht {0} bis {1}</value>
+  </data>
+  <data name="InstanceLoaderMinimumFormat" xml:space="preserve">
+    <value>Braucht {0} oder neuer</value>
+  </data>
+  <data name="InstanceLoaderNeededByFormat" xml:space="preserve">
+    <value>Gebraucht von {0}</value>
+  </data>
+  <data name="InstanceLoaderInstalledFormat" xml:space="preserve">
+    <value>{0} installiert</value>
+  </data>
+  <data name="InstanceLoaderWrongVersionFormat" xml:space="preserve">
+    <value>{0} installiert</value>
+  </data>
   <data name="ContentShowVersions" xml:space="preserve">
     <value>Anzeigen</value>
   </data>

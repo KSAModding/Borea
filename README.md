@@ -168,7 +168,7 @@ The exit code is 0 when the command completed, 1 when the operation failed and t
 | `borea settings set library <directory>` | Move the instances and backups to another folder, or use the library that folder already holds. `--default` moves them back. |
 | `borea game version` | Print the installed build and the current public build the master server reports. |
 | `borea instance list` | Print every instance and mark the active one. |
-| `borea instance show <instance>` | Print one instance, its launch arguments, when it was last played, and how long it was played. |
+| `borea instance show <instance>` | Print one instance, the mod loader its mods need, its launch arguments, when it was last played, and how long it was played. |
 | `borea instance create <name>` | Create an empty instance. |
 | `borea instance duplicate <instance> [--name <name>]` | Create an instance with the same mods, versions, and enabled flags. |
 | `borea instance export <instance> [file]` | Write the mods of an instance, with their versions and enabled flags, as a modlist. |
