@@ -315,6 +315,42 @@ public sealed class ContentUpdateTests
     }
 
     [Fact]
+    public async Task Manage_ReloadWhileItRuns_KeepsTheRowAndBlocksOtherChanges()
+    {
+        using var download = new ManualResetEventSlim();
+        using var harness = await ViewModelHarness.CreateAsync(respond: request =>
+        {
+            if (request.RequestUri?.Host == ArchiveHost)
+                download.Wait(TimeSpan.FromSeconds(30));
+            return ServeArchive(request);
+        });
+        harness.SpaceDock.Releases.Add(Release("1.0.0"));
+        var viewModel = harness.ViewModel;
+        var instance = await InstalledContent.AddAsync(harness, OwnId, activate: true, version: "1.0.0");
+        await viewModel.LoadAsync();
+        await viewModel.ActiveInstance!.OpenCommand.ExecuteAsync(null);
+        var row = viewModel.ContentGroups.SelectMany(group => group.Items).Single();
+        row.BeginManageCommand.Execute(null);
+
+        var handover = row.ConfirmManageCommand.ExecuteAsync(null);
+        for (var wait = 0; wait < 300 && !harness.Requests.Any(uri => uri.Host == ArchiveHost); wait++)
+            await Task.Delay(100);
+        await viewModel.ActiveInstance!.OpenCommand.ExecuteAsync(null);
+
+        Assert.Same(row, viewModel.ContentGroups.SelectMany(group => group.Items).Single());
+        Assert.True(row.IsInstalling);
+        Assert.False(row.CanManage);
+        Assert.False(viewModel.CanChangeContent);
+
+        download.Set();
+        await handover;
+
+        Assert.True(viewModel.CanChangeContent);
+        var managed = Assert.Single((await harness.Services.Instances.GetByIdAsync(instance.InstanceId))!.Mods);
+        Assert.Equal(ModInstallOwnership.Borea, managed.Ownership);
+    }
+
+    [Fact]
     public async Task UpdateAll_PlansEveryOwnedModInOnePlan()
     {
         using var harness = await ViewModelHarness.CreateAsync();

@@ -212,7 +212,7 @@ public partial class MainViewModel
         }
         catch (Exception exception) when (IsInstallFailure(exception))
         {
-            row.InstallError = exception.Message;
+            row.InstallError = InstallFailureText(exception);
         }
         finally
         {
@@ -492,7 +492,7 @@ public partial class MainViewModel
         }
         catch (Exception exception) when (IsInstallFailure(exception))
         {
-            error = exception.Message;
+            error = InstallFailureText(exception);
             if (row.Choices is { } choices)
                 choices.BlockedText = error;
             else
@@ -577,6 +577,15 @@ public partial class MainViewModel
         started.RepeatPausedReport = () => { if (paused is { } value) started.ShowReport(() => Show(value)); };
         return new Progress<InstallProgress>(value => started.ShowReport(() => Show(value)));
     }
+
+    /// <summary>
+    /// What a failed install, update or handover says. A failure whose recovery
+    /// failed too also names the folder that holds the previous files, which
+    /// the message of the exception leaves out.
+    /// </summary>
+    private string InstallFailureText(Exception exception) => exception is ModReplacementRecoveryException recovery
+        ? $"{recovery.Message} {Localization.FormatInstallRecoveryFolder(recovery.RecoveryDirectory)}"
+        : exception.Message;
 
     private static bool IsInstallFailure(Exception exception)
         => exception is HttpRequestException or IOException or InvalidOperationException or UnauthorizedAccessException

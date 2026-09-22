@@ -420,6 +420,9 @@
   <data name="TaskReplaceFormat" xml:space="preserve">
     <value>Swab {0}</value>
   </data>
+  <data name="TaskManageFormat" xml:space="preserve">
+    <value>Take the helm o' {0}</value>
+  </data>
   <data name="TaskLibraryFolderFormat" xml:space="preserve">
     <value>Haul the List o' Loot to {0}</value>
   </data>
@@ -471,6 +474,9 @@
   <data name="ToastReplacedFormat" xml:space="preserve">
     <value>{0} swabbed in {1}</value>
   </data>
+  <data name="ToastManagedFormat" xml:space="preserve">
+    <value>The Borea steers {0} in {1} now</value>
+  </data>
   <data name="ToastLibraryFolderChangedFormat" xml:space="preserve">
     <value>The List o' Loot treasure chest be {0} now</value>
   </data>
@@ -518,6 +524,9 @@
   </data>
   <data name="ToastReplaceFailedFormat" xml:space="preserve">
     <value>Couldn't swab {0}</value>
+  </data>
+  <data name="ToastManageFailedFormat" xml:space="preserve">
+    <value>The Borea couldn't take the helm o' {0}</value>
   </data>
   <data name="ToastLibraryFolderFailedFormat" xml:space="preserve">
     <value>Couldn't haul the List o' Loot to {0}</value>
@@ -830,6 +839,15 @@
   </data>
   <data name="ContentEnabled" xml:space="preserve">
     <value>Flag hoisted</value>
+  </data>
+  <data name="ContentManage" xml:space="preserve">
+    <value>Let The Borea take the helm</value>
+  </data>
+  <data name="ContentManageConfirmFormat" xml:space="preserve">
+    <value>The Borea hauls {0} {1} over this here treasure chest. Doubloons in the chest that ain't part o' the bounty be lost.</value>
+  </data>
+  <data name="ContentManageConfirmAction" xml:space="preserve">
+    <value>Swab and take the helm</value>
   </data>
   <data name="ContentUpdate" xml:space="preserve">
     <value>Bring in the tide</value>
@@ -1647,6 +1665,9 @@
   <data name="InstallStoppingAfterMod" xml:space="preserve">
     <value>Belayin' after this barrel o' fun</value>
   </data>
+  <data name="InstallRecoveryFolderFormat" xml:space="preserve">
+    <value>The old booty be stowed in {0}.</value>
+  </data>
   <data name="InstallStopped" xml:space="preserve">
     <value>Haulin' belayed.</value>
   </data>
@@ -1697,9 +1718,6 @@
   </data>
   <data name="InstanceContentNotInIndex" xml:space="preserve">
     <value>This barrel o' fun ain't on the bulletin board, so it has no parchment.</value>
-  </data>
-  <data name="InstanceContentNotOwned" xml:space="preserve">
-    <value>The Borea ain't haul this barrel o' fun onboard, so she ain't steer to any parchment.</value>
   </data>
   <data name="ContentInsideInstance" xml:space="preserve">
     <value>Yer takin' a gander at treasure found in the sea.</value>

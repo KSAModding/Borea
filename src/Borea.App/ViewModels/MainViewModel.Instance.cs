@@ -177,8 +177,7 @@ public partial class MainViewModel
             // a release from SpaceDock carries no listing, so the name comes from the catalog
             var listing = mod.Metadata.Listing is null ? await ResolveListingAsync(mod.ModId) : null;
             var indexed = _listings.FirstOrDefault(entry => ModIds.Equals(entry.ModId, mod.ModId));
-            var page = mod.Ownership == ModInstallOwnership.Borea ? indexed : null;
-            content.Add(new ContentItem(this, _selectedInstanceEntity!, mod, enabled.Contains(mod.ModId), listing, page, indexed?.Icon));
+            content.Add(new ContentItem(this, _selectedInstanceEntity!, mod, enabled.Contains(mod.ModId), listing, indexed, indexed?.Icon));
         }
 
         _content = content.OrderBy(content => content.Name, StringComparer.CurrentCultureIgnoreCase).ToList();
@@ -853,6 +852,67 @@ public partial class MainViewModel
     }
 
     /// <summary>
+    /// Installs the release a mod Borea did not install is recorded as over its
+    /// folder, so Borea owns it from then on. The mod keeps its place in the
+    /// instance and its enabled state, and a handover that fails leaves it
+    /// foreign. It takes the run slot of the instance, because it writes the
+    /// same manifest an update writes and nothing below serializes the two.
+    /// </summary>
+    internal Task TakeOwnershipOfContentAsync(ContentItem item)
+        => RunUpdateAsync(item, item.InstanceId, () => RunHandoverAsync(item));
+
+    /// <summary>
+    /// Returns whether the handover ran, so the caller reloads the instances.
+    /// </summary>
+    private async Task<bool> RunHandoverAsync(ContentItem item)
+    {
+        if (_services is not { } services || item.IsInstalling)
+            return false;
+
+        using var libraryUse = TryUseLibrary();
+        if (libraryUse is null)
+        {
+            ShowErrorToast(() => Localization.FormatToastManageFailed(item.Name), Localization.LibraryFolderBusy);
+            return false;
+        }
+
+        item.IsConfirmingManage = false;
+        item.InstallError = null;
+        item.IsInstalling = true;
+        var run = item.Run = StartInstallRun(StartTask(TaskKind.ModHandover, item.Name, item.InstanceId, item.ModId));
+        var completed = false;
+        string? stopped = null;
+        string? error = null;
+        try
+        {
+            // the stop reaches the download only, so a stopped handover never touched the folder
+            await run.InstallStop.RunAsync(
+                (progress, cancellationToken) => services.ForeignModHandover.TakeOwnershipAsync(item.InstanceId, item.ModId, progress, cancellationToken),
+                ProgressOf(item));
+            completed = true;
+        }
+        catch (InstallStoppedException)
+        {
+            stopped = Localization.InstallStopped;
+        }
+        catch (Exception exception) when (IsInstallFailure(exception))
+        {
+            error = item.InstallError = InstallFailureText(exception);
+        }
+        finally
+        {
+            EndInstallRun(run, completed, stopped is not null, error);
+            item.IsInstalling = false;
+            item.Run = null;
+            item.Progress = 0;
+            item.ProgressStatus = stopped;
+            item.ProgressDetail = null;
+        }
+
+        return true;
+    }
+
+    /// <summary>
     /// Removes the mod, or returns why it stays.
     /// </summary>
     private async Task<string?> TryRemoveContentAsync(BoreaServices services, Guid instanceId, string modId)
@@ -937,7 +997,7 @@ public sealed partial class ContentItem : ObservableObject, IUpdateRow
 
     public string RemoveActionText => IsMissing ? _owner.Localization.ContentRemoveFromList : _owner.Localization.ContentRemove;
 
-    /// <summary>Whether the row links to the mod page: installed by Borea and in the content index.</summary>
+    /// <summary>Whether the row links to the mod page, which every mod in the content index does.</summary>
     public bool CanOpen => _page is not null;
 
     /// <summary>The row itself while it links to the mod page, so that only the linked body is built.</summary>
@@ -950,9 +1010,12 @@ public sealed partial class ContentItem : ObservableObject, IUpdateRow
     public ListingImage? Icon { get; }
 
     /// <summary>Why the row has no link, for its tooltip. Null when it links.</summary>
-    public string? NoPageText => CanOpen
-        ? null
-        : IsOwned ? _owner.Localization.InstanceContentNotInIndex : _owner.Localization.InstanceContentNotOwned;
+    public string? NoPageText => CanOpen ? null : _owner.Localization.InstanceContentNotInIndex;
+
+    /// <summary>Whether the row offers to let Borea install the recorded release over the folder and own it.</summary>
+    public bool CanManage => !IsOwned && !IsInstalling;
+
+    public string ManageConfirmText => _owner.Localization.FormatContentManageConfirm(Name, Version);
 
     [ObservableProperty]
     private bool _isEnabled;
@@ -977,6 +1040,9 @@ public sealed partial class ContentItem : ObservableObject, IUpdateRow
     private bool _isConfirmingRemove;
 
     [ObservableProperty]
+    private bool _isConfirmingManage;
+
+    [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasUpdate))]
     [NotifyPropertyChangedFor(nameof(UpdateText))]
     private string? _updateVersion;
@@ -988,6 +1054,7 @@ public sealed partial class ContentItem : ObservableObject, IUpdateRow
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasUpdate))]
+    [NotifyPropertyChangedFor(nameof(CanManage))]
     private bool _isInstalling;
 
     [ObservableProperty]
@@ -1084,6 +1151,7 @@ public sealed partial class ContentItem : ObservableObject, IUpdateRow
         OnPropertyChanged(nameof(RemoveConfirmText));
         OnPropertyChanged(nameof(RemoveActionText));
         OnPropertyChanged(nameof(UpdateText));
+        OnPropertyChanged(nameof(ManageConfirmText));
     }
 
     [RelayCommand]
@@ -1103,6 +1171,19 @@ public sealed partial class ContentItem : ObservableObject, IUpdateRow
 
     [RelayCommand]
     private Task InstallAgainAsync() => _owner.InstallMissingAgainAsync(this, InstanceId, [ModId]);
+
+    [RelayCommand]
+    private void BeginManage()
+    {
+        MainViewModel.CancelUpdate(this);
+        IsConfirmingManage = true;
+    }
+
+    [RelayCommand]
+    private void CancelManage() => IsConfirmingManage = false;
+
+    [RelayCommand]
+    private Task ConfirmManageAsync() => _owner.TakeOwnershipOfContentAsync(this);
 
     [RelayCommand]
     private Task UpdateAsync() => _owner.UpdateContentAsync(this);

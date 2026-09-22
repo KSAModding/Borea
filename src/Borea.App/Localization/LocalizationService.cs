@@ -68,6 +68,9 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string FormatTaskReplace(string folder)
         => string.Format(CultureInfo.CurrentCulture, Resources.TaskReplaceFormat, folder);
 
+    public string FormatTaskManage(string content)
+        => string.Format(CultureInfo.CurrentCulture, Resources.TaskManageFormat, content);
+
     public string FormatTaskLibraryFolder(string folder)
         => string.Format(CultureInfo.CurrentCulture, Resources.TaskLibraryFolderFormat, folder);
 
@@ -115,6 +118,9 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string FormatToastReplaced(string folder, string instanceName)
         => string.Format(CultureInfo.CurrentCulture, Resources.ToastReplacedFormat, folder, instanceName);
+
+    public string FormatToastManaged(string content, string instanceName)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ToastManagedFormat, content, instanceName);
 
     public string FormatToastLibraryFolderChanged(string folder)
         => string.Format(CultureInfo.CurrentCulture, Resources.ToastLibraryFolderChangedFormat, folder);
@@ -165,6 +171,9 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string FormatToastReplaceFailed(string folder)
         => string.Format(CultureInfo.CurrentCulture, Resources.ToastReplaceFailedFormat, folder);
+
+    public string FormatToastManageFailed(string content)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ToastManageFailedFormat, content);
 
     public string FormatToastLibraryFolderFailed(string folder)
         => string.Format(CultureInfo.CurrentCulture, Resources.ToastLibraryFolderFailedFormat, folder);
@@ -552,8 +561,6 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string InstanceContentNotInIndex => Resources.InstanceContentNotInIndex;
 
-    public string InstanceContentNotOwned => Resources.InstanceContentNotOwned;
-
     public string ManualInstallsEmpty => Resources.ManualInstallsEmpty;
 
     public string ManualInstallsInIndex => Resources.ManualInstallsInIndex;
@@ -699,6 +706,10 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string FormatInstanceModsMissing(int count)
         => FormatCount(count, Resources.InstanceModsMissingOne, Resources.InstanceModsMissingFormat);
     public string ContentEnabled => Resources.ContentEnabled;
+
+    public string ContentManage => Resources.ContentManage;
+
+    public string ContentManageConfirmAction => Resources.ContentManageConfirmAction;
 
     public string DiscoverTabMods => Resources.DiscoverTabMods;
 
@@ -1871,6 +1882,9 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string InstallStopped => Resources.InstallStopped;
 
+    public string FormatInstallRecoveryFolder(string folder)
+        => string.Format(CultureInfo.CurrentCulture, Resources.InstallRecoveryFolderFormat, folder);
+
     public string FormatInstallStoppedAfter(int completed, int total)
         => string.Format(CultureInfo.CurrentCulture, Resources.InstallStoppedAfterFormat, completed, total);
 
@@ -1989,6 +2003,9 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string FormatContentRemoveRequired(string modId, string dependents)
         => string.Format(CultureInfo.CurrentCulture, Resources.ContentRemoveRequiredFormat, modId, dependents);
+
+    public string FormatContentManageConfirm(string name, string version)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ContentManageConfirmFormat, name, version);
 
     public string FormatManualInstallsReplaceWarning(string folderName)
         => string.Format(CultureInfo.CurrentCulture, Resources.ManualInstallsReplaceWarningFormat, folderName);

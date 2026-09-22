@@ -254,7 +254,7 @@ public partial class MainViewModel
         }
         catch (Exception exception) when (IsInstallFailure(exception))
         {
-            error = exception.Message;
+            error = InstallFailureText(exception);
         }
         finally
         {

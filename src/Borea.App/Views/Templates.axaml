@@ -150,6 +150,7 @@
                     <TextBlock Classes="body-sm secondary" Text="{Binding AuthorsText}" IsVisible="{Binding AuthorsText, Converter={x:Static ObjectConverters.IsNotNull}}" />
                     <TextBlock Classes="body-sm danger" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ContentNotOnDisk}" ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ContentNotOnDiskDetail}" IsVisible="{Binding IsMissing}" />
                     <TextBlock Classes="body-sm danger" Text="{Binding RemoveConfirmText}" IsVisible="{Binding IsConfirmingRemove}" />
+                    <TextBlock Classes="body-sm danger" Text="{Binding ManageConfirmText}" TextWrapping="Wrap" IsVisible="{Binding IsConfirmingManage}" />
                     <TextBlock Classes="body-sm secondary" Text="{Binding ProgressStatus}" ToolTip.Tip="{Binding ProgressStatus}" TextTrimming="CharacterEllipsis" IsVisible="{Binding ProgressStatus, Converter={x:Static ObjectConverters.IsNotNull}}" />
                     <TextBlock Classes="body-sm secondary" Text="{Binding InstallWarning}" ToolTip.Tip="{Binding InstallWarning}" TextTrimming="CharacterEllipsis" IsVisible="{Binding IsConfirmingUpdate}" />
                     <TextBlock Classes="body-sm danger" Text="{Binding InstallError}" ToolTip.Tip="{Binding InstallError}" TextTrimming="CharacterEllipsis" IsVisible="{Binding InstallError, Converter={x:Static ObjectConverters.IsNotNull}}" />
@@ -192,14 +193,20 @@
                             <Button Classes="text primary" Content="{Binding ConfirmUpdateText}" Command="{Binding ConfirmUpdateCommand}" IsEnabled="{Binding Choices.IsComplete, FallbackValue={x:True}}" />
                             <Button Classes="text" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryCancel}" Command="{Binding CancelUpdateCommand}" />
                         </StackPanel>
+                        <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding IsConfirmingManage}">
+                            <Button Classes="text danger" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ContentManageConfirmAction}" Command="{Binding ConfirmManageCommand}" />
+                            <Button Classes="text" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryCancel}" Command="{Binding CancelManageCommand}" />
+                        </StackPanel>
                         <StackPanel Orientation="Horizontal" Spacing="12">
                             <StackPanel.IsVisible>
                                 <MultiBinding Converter="{x:Static BoolConverters.And}">
                                     <Binding Path="!IsConfirmingRemove" />
                                     <Binding Path="!IsConfirmingUpdate" />
+                                    <Binding Path="!IsConfirmingManage" />
                                 </MultiBinding>
                             </StackPanel.IsVisible>
                             <Button Classes="text primary" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ContentInstallAgain}" Command="{Binding InstallAgainCommand}" IsVisible="{Binding IsMissing}" VerticalAlignment="Center" />
+                            <Button Classes="text primary" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ContentManage}" Command="{Binding BeginManageCommand}" IsVisible="{Binding CanManage}" VerticalAlignment="Center" />
                             <ToggleSwitch Classes="switch" IsChecked="{Binding IsEnabled}" Command="{Binding ToggleEnabledCommand}" VerticalAlignment="Center" AutomationProperties.Name="{Binding Name}" />
                             <Button Classes="icon" Command="{Binding BeginRemoveCommand}" IsEnabled="{Binding CanRemove}" ToolTip.Tip="{Binding RemoveToolTip}" ToolTip.ShowOnDisabled="True" AutomationProperties.Name="{Binding Name}" AutomationProperties.HelpText="{Binding RemoveToolTip}">
                                 <Path Classes="icon size-18" Data="{StaticResource Icon.Trash}" />
