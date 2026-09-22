@@ -148,7 +148,7 @@ public sealed class FileInstanceRepository : IInstanceRepository, IInstanceLocks
     }
 
     /// <summary>
-    /// Deletes the instance with the given ID from disk, and removes the pointer file when it names that instance. No-op if the instance does not exist.
+    /// Deletes the instance folder with the given ID when it is there, always deletes the backups of its saves and vehicles, and removes the pointer file when it names that instance.
     /// A link below the instance is removed as a link, so the folder it points at keeps its files.
     /// </summary>
     public async Task DeleteAsync(Guid instanceId)
@@ -160,6 +160,12 @@ public sealed class FileInstanceRepository : IInstanceRepository, IInstanceLocks
             var root = _pathProvider.GetInstanceRoot(instanceId);
             try
             {
+                // the backups are below the Backups folder and not below the instance folder, so they would stay behind.
+                // they go first, because a backup that cannot be removed then leaves the instance in place and the caller can repeat the delete
+                var backups = GameSaveBackupFolder.InstanceFolder(_pathProvider, instanceId);
+                if (Directory.Exists(backups))
+                    Directory.Delete(backups, recursive: true);
+
                 DirectoryLinks.DeleteTreeWithoutFollowingLinks(root);
             }
             finally

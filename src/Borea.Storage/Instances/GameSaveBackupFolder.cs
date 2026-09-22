@@ -36,7 +36,11 @@ internal sealed partial class GameSaveBackupFolder
 
     public DateTimeOffset Now() => _time.GetUtcNow();
 
-    public string InstanceFolder(Guid instanceId) => Path.Combine(_paths.GetBackupsRoot(), instanceId.ToString());
+    public string InstanceFolder(Guid instanceId) => InstanceFolder(_paths, instanceId);
+
+    /// <summary>The backup folder of one instance, for callers that have no reason to hold a TimeProvider.</summary>
+    public static string InstanceFolder(IGamePathProvider paths, Guid instanceId)
+        => Path.Combine(paths.GetBackupsRoot(), instanceId.ToString());
 
     public string KindFolder(Guid instanceId, GameSaveKind kind) => Path.Combine(InstanceFolder(instanceId), FolderName(kind));
 
