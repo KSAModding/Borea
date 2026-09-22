@@ -228,6 +228,54 @@
   <data name="UpdateNoNotes" xml:space="preserve">
     <value>This bounty came with nary a note.</value>
   </data>
+  <data name="SelfUpdateNow" xml:space="preserve">
+    <value>Hoist the new colors</value>
+  </data>
+  <data name="SelfUpdateDownloadingFormat" xml:space="preserve">
+    <value>Haulin' aboard Borea {0} ({1}%)</value>
+  </data>
+  <data name="SelfUpdateVerifyingFormat" xml:space="preserve">
+    <value>Inspectin' the haul of Borea {0}</value>
+  </data>
+  <data name="SelfUpdateUnpackingFormat" xml:space="preserve">
+    <value>Crackin' open Borea {0}</value>
+  </data>
+  <data name="SelfUpdateReadyFormat" xml:space="preserve">
+    <value>Borea {0} be ready. She sets sail anew.</value>
+  </data>
+  <data name="SelfUpdatePackageManagedFormat" xml:space="preserve">
+    <value>{0} brought Borea aboard, so let {0} bring the new one.</value>
+  </data>
+  <data name="SelfUpdatePackageManaged" xml:space="preserve">
+    <value>A quartermaster brought Borea aboard, so let that quartermaster bring the new one.</value>
+  </data>
+  <data name="SelfUpdateReadOnly" xml:space="preserve">
+    <value>Borea cannot write in her own hold, so she cannot swap herself.</value>
+  </data>
+  <data name="SelfUpdateNotAReleaseBuild" xml:space="preserve">
+    <value>This build came from no proper chest, so she cannot swap herself.</value>
+  </data>
+  <data name="SelfUpdateUnsupportedPlatform" xml:space="preserve">
+    <value>No chest be packed for these waters.</value>
+  </data>
+  <data name="SelfUpdateDownloadFailed" xml:space="preserve">
+    <value>The haul be lost, so Borea stays as she be.</value>
+  </data>
+  <data name="SelfUpdateChecksumFailed" xml:space="preserve">
+    <value>The haul don't match the ledger, so Borea stays as she be.</value>
+  </data>
+  <data name="SelfUpdateUnpackFailed" xml:space="preserve">
+    <value>The chest would not open, so Borea stays as she be.</value>
+  </data>
+  <data name="SelfUpdateInstallFailed" xml:space="preserve">
+    <value>The new build could not take her place, so Borea stays as she be.</value>
+  </data>
+  <data name="SelfUpdateRestoreFailedFormat" xml:space="preserve">
+    <value>Borea could not lay her own program back. Rename {0} to {1} in her hold to set sail anew.</value>
+  </data>
+  <data name="SelfUpdateStartAgainFormat" xml:space="preserve">
+    <value>Borea {0} waits in her hold. Close her and cast off anew.</value>
+  </data>
   <data name="GameBuildAvailable" xml:space="preserve">
     <value>A fresher game build awaits ye:</value>
   </data>

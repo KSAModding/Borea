@@ -430,6 +430,45 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string UpdateNoNotes => Resources.UpdateNoNotes;
 
+    public string SelfUpdateNow => Resources.SelfUpdateNow;
+
+    public string FormatSelfUpdateDownloading(string version, int percent)
+        => string.Format(CultureInfo.CurrentCulture, Resources.SelfUpdateDownloadingFormat, version, percent);
+
+    public string FormatSelfUpdateVerifying(string version)
+        => string.Format(CultureInfo.CurrentCulture, Resources.SelfUpdateVerifyingFormat, version);
+
+    public string FormatSelfUpdateUnpacking(string version)
+        => string.Format(CultureInfo.CurrentCulture, Resources.SelfUpdateUnpackingFormat, version);
+
+    public string FormatSelfUpdateReady(string version)
+        => string.Format(CultureInfo.CurrentCulture, Resources.SelfUpdateReadyFormat, version);
+
+    public string FormatSelfUpdatePackageManaged(string packageManager)
+        => string.Format(CultureInfo.CurrentCulture, Resources.SelfUpdatePackageManagedFormat, packageManager);
+
+    public string SelfUpdatePackageManaged => Resources.SelfUpdatePackageManaged;
+
+    public string SelfUpdateReadOnly => Resources.SelfUpdateReadOnly;
+
+    public string SelfUpdateNotAReleaseBuild => Resources.SelfUpdateNotAReleaseBuild;
+
+    public string SelfUpdateUnsupportedPlatform => Resources.SelfUpdateUnsupportedPlatform;
+
+    public string SelfUpdateDownloadFailed => Resources.SelfUpdateDownloadFailed;
+
+    public string SelfUpdateChecksumFailed => Resources.SelfUpdateChecksumFailed;
+
+    public string SelfUpdateUnpackFailed => Resources.SelfUpdateUnpackFailed;
+
+    public string SelfUpdateInstallFailed => Resources.SelfUpdateInstallFailed;
+
+    public string FormatSelfUpdateRestoreFailed(string replacedName, string programName)
+        => string.Format(CultureInfo.CurrentCulture, Resources.SelfUpdateRestoreFailedFormat, replacedName, programName);
+
+    public string FormatSelfUpdateStartAgain(string version)
+        => string.Format(CultureInfo.CurrentCulture, Resources.SelfUpdateStartAgainFormat, version);
+
     public string GameBuildAvailable => Resources.GameBuildAvailable;
 
     public string GameBuildDownload => Resources.GameBuildDownload;

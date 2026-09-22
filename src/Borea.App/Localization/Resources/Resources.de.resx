@@ -312,6 +312,54 @@
   <data name="UpdateNoNotes" xml:space="preserve">
     <value>Diese Version hat keine Hinweise.</value>
   </data>
+  <data name="SelfUpdateNow" xml:space="preserve">
+    <value>Jetzt aktualisieren</value>
+  </data>
+  <data name="SelfUpdateDownloadingFormat" xml:space="preserve">
+    <value>Borea {0} wird heruntergeladen ({1}%)</value>
+  </data>
+  <data name="SelfUpdateVerifyingFormat" xml:space="preserve">
+    <value>Der Download von Borea {0} wird geprüft</value>
+  </data>
+  <data name="SelfUpdateUnpackingFormat" xml:space="preserve">
+    <value>Borea {0} wird entpackt</value>
+  </data>
+  <data name="SelfUpdateReadyFormat" xml:space="preserve">
+    <value>Borea {0} ist bereit. Borea startet jetzt die neue Version.</value>
+  </data>
+  <data name="SelfUpdatePackageManagedFormat" xml:space="preserve">
+    <value>{0} hat Borea installiert. Aktualisiere Borea deshalb mit {0}.</value>
+  </data>
+  <data name="SelfUpdatePackageManaged" xml:space="preserve">
+    <value>Ein Paketmanager hat Borea installiert. Aktualisiere Borea deshalb mit diesem Paketmanager.</value>
+  </data>
+  <data name="SelfUpdateReadOnly" xml:space="preserve">
+    <value>Borea kann nicht in seinen eigenen Ordner schreiben und sich deshalb nicht selbst ersetzen.</value>
+  </data>
+  <data name="SelfUpdateNotAReleaseBuild" xml:space="preserve">
+    <value>Diese Version stammt nicht aus einem Release-Archiv und kann sich deshalb nicht selbst ersetzen.</value>
+  </data>
+  <data name="SelfUpdateUnsupportedPlatform" xml:space="preserve">
+    <value>Für dieses System gibt es keine Borea-Version.</value>
+  </data>
+  <data name="SelfUpdateDownloadFailed" xml:space="preserve">
+    <value>Der Download ist fehlgeschlagen. Borea wurde nicht verändert.</value>
+  </data>
+  <data name="SelfUpdateChecksumFailed" xml:space="preserve">
+    <value>Der Download passt nicht zu den Prüfsummen der Veröffentlichung. Borea wurde nicht verändert.</value>
+  </data>
+  <data name="SelfUpdateUnpackFailed" xml:space="preserve">
+    <value>Die neue Version konnte nicht entpackt werden. Borea wurde nicht verändert.</value>
+  </data>
+  <data name="SelfUpdateInstallFailed" xml:space="preserve">
+    <value>Die neue Version konnte diese hier nicht ersetzen. Borea wurde nicht verändert.</value>
+  </data>
+  <data name="SelfUpdateRestoreFailedFormat" xml:space="preserve">
+    <value>Borea konnte seine Programmdatei nicht zurücklegen. Benenne {0} im Ordner von Borea wieder in {1} um, um Borea zu starten.</value>
+  </data>
+  <data name="SelfUpdateStartAgainFormat" xml:space="preserve">
+    <value>Borea {0} liegt bereit. Schließe Borea und starte es neu, um die neue Version zu verwenden.</value>
+  </data>
   <data name="GameBuildAvailable" xml:space="preserve">
     <value>Ein neuerer KSA-Build ist verfügbar:</value>
   </data>
