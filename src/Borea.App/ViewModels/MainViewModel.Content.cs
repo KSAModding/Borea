@@ -66,6 +66,9 @@ public partial class MainViewModel
 
     private readonly List<VersionItem> _contentReleases = [];
 
+    /// <summary>The running version load, so that a page that reloads can wait for it.</summary>
+    private Task _contentVersionsLoad = Task.CompletedTask;
+
     /// <summary>The releases the Show filter lets through, newest first.</summary>
     public ObservableCollection<VersionItem> ContentVersions { get; } = [];
 
@@ -275,13 +278,24 @@ public partial class MainViewModel
     }
 
     [RelayCommand]
-    private async Task ShowContentVersionsAsync()
+    private Task ShowContentVersionsAsync()
     {
         ContentTab = ContentPageTab.Versions;
-        if (_contentReleases.Count > 0 || SelectedContent is null || _services is null || IsLoadingVersions)
+        if (_contentReleases.Count > 0 || SelectedContent is not { } item || _services is null)
+            return Task.CompletedTask;
+
+        // a second caller waits for the load that runs instead of starting one of its own
+        if (IsLoadingVersions)
+            return _contentVersionsLoad;
+
+        return _contentVersionsLoad = LoadContentVersionsAsync(item);
+    }
+
+    private async Task LoadContentVersionsAsync(DiscoverItem item)
+    {
+        if (_services is null)
             return;
 
-        var item = SelectedContent;
         IsLoadingVersions = true;
         try
         {
