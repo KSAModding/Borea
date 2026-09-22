@@ -10,13 +10,13 @@ namespace Borea.App.Tests.Views;
 [Collection(HeadlessCollection.Name)]
 public sealed class BannerTests
 {
-    private sealed record Parts(bool Title, bool Message, bool Action, bool Dismiss);
+    private sealed record Parts(bool Title, bool Message, bool SecondaryAction, bool Action, bool Dismiss);
 
     private static Parts VisibleParts(Banner banner)
     {
         bool Visible(string name) => banner.GetVisualDescendants().OfType<Control>().Single(control => control.Name == name).IsEffectivelyVisible;
 
-        return new Parts(Visible("PART_Title"), Visible("PART_Message"), Visible("PART_Action"), Visible("PART_Dismiss"));
+        return new Parts(Visible("PART_Title"), Visible("PART_Message"), Visible("PART_SecondaryAction"), Visible("PART_Action"), Visible("PART_Dismiss"));
     }
 
     /// <summary>Builds the banner on the UI thread, which owns every control.</summary>
@@ -40,7 +40,7 @@ public sealed class BannerTests
     {
         var parts = await RenderAsync(() => new Banner { Message = "A short message." }, VisibleParts);
 
-        Assert.Equal(new Parts(Title: false, Message: true, Action: false, Dismiss: false), parts);
+        Assert.Equal(new Parts(Title: false, Message: true, SecondaryAction: false, Action: false, Dismiss: false), parts);
     }
 
     [Fact]
@@ -48,16 +48,18 @@ public sealed class BannerTests
     {
         var parts = await RenderAsync(() => new Banner { Message = "A short message.", ActionText = "Take action", ActionCommand = new RelayCommand(() => { }) }, VisibleParts);
 
-        Assert.Equal(new Parts(Title: false, Message: true, Action: true, Dismiss: false), parts);
+        Assert.Equal(new Parts(Title: false, Message: true, SecondaryAction: false, Action: true, Dismiss: false), parts);
     }
 
     [Fact]
-    public async Task EveryPart_ShowsTitleMessageActionAndCloseButton()
+    public async Task EveryPart_ShowsTitleMessageBothActionsAndCloseButton()
     {
         Banner Create() => new()
         {
             Title = "A title",
             Message = "The body.",
+            SecondaryActionText = "Do it now",
+            SecondaryActionCommand = new RelayCommand(() => { }),
             ActionText = "Take action",
             ActionCommand = new RelayCommand(() => { }),
             DismissCommand = new RelayCommand(() => { }),
@@ -65,17 +67,20 @@ public sealed class BannerTests
 
         var parts = await RenderAsync(Create, VisibleParts);
 
-        Assert.Equal(new Parts(Title: true, Message: true, Action: true, Dismiss: true), parts);
+        Assert.Equal(new Parts(Title: true, Message: true, SecondaryAction: true, Action: true, Dismiss: true), parts);
     }
 
     [Fact]
     public async Task ActionAndClose_RunTheirCommands()
     {
         object? actionParameter = null;
+        var secondaryRan = false;
         var dismissed = false;
         Banner Create() => new()
         {
             Message = "A short message.",
+            SecondaryActionText = "Do it now",
+            SecondaryActionCommand = new RelayCommand(() => secondaryRan = true),
             ActionText = "Take action",
             ActionCommand = new RelayCommand<object?>(parameter => actionParameter = parameter),
             ActionCommandParameter = "https://example.com",
@@ -90,6 +95,7 @@ public sealed class BannerTests
         });
 
         Assert.Equal("https://example.com", actionParameter);
+        Assert.True(secondaryRan);
         Assert.True(dismissed);
     }
 

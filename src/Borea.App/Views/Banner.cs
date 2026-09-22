@@ -40,6 +40,13 @@ public sealed class Banner : TemplatedControl
     public static readonly StyledProperty<object?> ActionCommandParameterProperty =
         AvaloniaProperty.Register<Banner, object?>(nameof(ActionCommandParameter));
 
+    /// <summary>The action in front of <see cref="ActionText"/>. It shows only when it has text.</summary>
+    public static readonly StyledProperty<string?> SecondaryActionTextProperty =
+        AvaloniaProperty.Register<Banner, string?>(nameof(SecondaryActionText));
+
+    public static readonly StyledProperty<ICommand?> SecondaryActionCommandProperty =
+        AvaloniaProperty.Register<Banner, ICommand?>(nameof(SecondaryActionCommand));
+
     public static readonly StyledProperty<ICommand?> DismissCommandProperty =
         AvaloniaProperty.Register<Banner, ICommand?>(nameof(DismissCommand));
 
@@ -90,6 +97,18 @@ public sealed class Banner : TemplatedControl
     {
         get => GetValue(ActionCommandParameterProperty);
         set => SetValue(ActionCommandParameterProperty, value);
+    }
+
+    public string? SecondaryActionText
+    {
+        get => GetValue(SecondaryActionTextProperty);
+        set => SetValue(SecondaryActionTextProperty, value);
+    }
+
+    public ICommand? SecondaryActionCommand
+    {
+        get => GetValue(SecondaryActionCommandProperty);
+        set => SetValue(SecondaryActionCommandProperty, value);
     }
 
     public ICommand? DismissCommand
