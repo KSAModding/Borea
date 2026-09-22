@@ -1,5 +1,6 @@
 using System;
 using System.ComponentModel;
+using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
@@ -14,7 +15,10 @@ using Borea.App.ViewModels;
 using Borea.App.Views;
 using Borea.Composition;
 using Borea.Core.Links;
+using Borea.Core.Logging;
 using Borea.Core.Preferences;
+using Borea.Core.Updates;
+using Borea.Storage.Updates;
 
 namespace Borea.App;
 
@@ -37,6 +41,10 @@ public partial class App : Application
     private readonly StartArgumentsInbox? _startArguments;
 
     private readonly PrimaryInstance? _primary;
+
+    private readonly PendingHandover? _pendingHandover;
+
+    private readonly SelfUpdateHandover? _selfUpdateHandover;
 
     private WindowFront? _windowFront;
 
@@ -68,11 +76,19 @@ public partial class App : Application
             _preferences.RegionalCultureName);
     }
 
-    internal App(BoreaServices services, StartArgumentsInbox startArguments, PrimaryInstance primary)
+    /// <param name="selfUpdateHandover">The build this one replaced, when a self-update started it. Null otherwise.</param>
+    internal App(
+        BoreaServices services,
+        StartArgumentsInbox startArguments,
+        PrimaryInstance primary,
+        PendingHandover pendingHandover,
+        SelfUpdateHandover? selfUpdateHandover = null)
         : this(services)
     {
         _startArguments = startArguments ?? throw new ArgumentNullException(nameof(startArguments));
         _primary = primary ?? throw new ArgumentNullException(nameof(primary));
+        _pendingHandover = pendingHandover ?? throw new ArgumentNullException(nameof(pendingHandover));
+        _selfUpdateHandover = selfUpdateHandover;
     }
 
     public override void Initialize()
@@ -108,7 +124,12 @@ public partial class App : Application
             window.Opened += async (_, _) => await viewModel.LoadAsync();
             window.Closing += OnMainWindowClosing;
             if (Services is { } services)
+            {
                 window.Opened += (_, _) => ExtractionFolderCleanup.StartForThisProcess(services.Log);
+                window.Opened += (_, _) => SweepUpdateLeftovers(services.Log);
+                if (_selfUpdateHandover is { } selfUpdateHandover)
+                    window.Opened += (_, _) => RemoveReplacedBuild(selfUpdateHandover, services.Log);
+            }
 
             // players come back to Borea after installing a new KSA release
             desktop.MainWindow.Activated += async (_, _) => await viewModel.RefreshInstalledGameAsync();
@@ -124,6 +145,25 @@ public partial class App : Application
 
         base.OnFrameworkInitializationCompleted();
     }
+
+    /// <summary>
+    /// Removes the build that this one replaced. It runs when the window stands, so a new build which
+    /// cannot open one leaves the old build in place, and it runs off the UI thread because it waits
+    /// for the old process to end.
+    /// </summary>
+    private static void RemoveReplacedBuild(SelfUpdateHandover handover, IBoreaLog log)
+        => Task.Run(() => log.Write(SelfUpdateCleanup.Run(handover)));
+
+    /// <summary>
+    /// Removes what an update that never finished left in the folder Borea runs in. A crash or a
+    /// power loss inside an update leaves the unpacked build there, and no other step takes it.
+    /// </summary>
+    private static void SweepUpdateLeftovers(IBoreaLog log)
+        => Task.Run(() =>
+        {
+            if (SelfUpdateCleanup.SweepStaging() is { } message)
+                log.Write(message);
+        });
 
     private void OnMainWindowOpened(object? sender, EventArgs e)
     {

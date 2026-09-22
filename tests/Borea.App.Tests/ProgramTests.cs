@@ -1,4 +1,5 @@
 using Borea.App.SingleInstance;
+using Borea.Core.Updates;
 
 namespace Borea.App.Tests;
 
@@ -41,6 +42,15 @@ public sealed class ProgramTests
     {
         Assert.Equal(StartMode.Cli, Program.ChooseStartMode(["install", "borea://mod/MeasureTools"], consoleOwnedAlone: false));
         Assert.Equal(StartMode.Cli, Program.ChooseStartMode(["boreas://mod/MeasureTools"], consoleOwnedAlone: false));
+    }
+
+    [Fact]
+    public void ChooseStartMode_WhatIsLeftOfASelfUpdateHandover_OpensTheApp()
+    {
+        var arguments = new SelfUpdateHandover("/opt/Borea-0.1.0-linux-x64/borea", 7, "A1B2C3").ToArguments().ToArray();
+
+        Assert.NotNull(SelfUpdateHandover.Take(ref arguments));
+        Assert.Equal(StartMode.App, Program.ChooseStartMode(arguments, consoleOwnedAlone: false));
     }
 
     [Fact]

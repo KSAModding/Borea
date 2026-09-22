@@ -5,6 +5,8 @@ using Borea.App.ViewModels;
 using Borea.Cli;
 using Borea.Composition;
 using Borea.Core.Links;
+using Borea.Core.Updates;
+using Borea.Storage.Updates;
 using System;
 
 namespace Borea.App;
@@ -17,16 +19,29 @@ sealed class Program
     [STAThread]
     public static int Main(string[] args)
     {
+        // A self-update starts this build with the old one as an argument and with nothing else.
+        var handover = SelfUpdateHandover.Take(ref args);
+
+        // An update that a command started finishes the same way, so no window opens on a machine that has none.
+        if (handover is { FromCommandLine: true } && args.Length == 0)
+            return Cli.Program.FinishSelfUpdate(handover);
+
         switch (ChooseStartMode(args, WindowsConsole.IsOwnedAlone()))
         {
             case StartMode.Cli:
-                return Cli.Program.RunAsync(args).GetAwaiter().GetResult();
+                var exitCode = Cli.Program.RunAsync(args).GetAwaiter().GetResult();
+
+                // The old files go after the command, because only then has this build shown that it runs.
+                if (handover is not null)
+                    Cli.Program.FinishSelfUpdate(handover);
+
+                return exitCode;
             case StartMode.AppWithoutConsole:
                 WindowsConsole.Free();
                 break;
         }
 
-        return RunApp(args);
+        return RunApp(args, handover);
     }
 
     /// <summary>
@@ -42,7 +57,7 @@ sealed class Program
         return consoleOwnedAlone ? StartMode.AppWithoutConsole : StartMode.App;
     }
 
-    private static int RunApp(string[] args)
+    private static int RunApp(string[] args, SelfUpdateHandover? handover = null)
     {
         using var services = BoreaServices.BuildAsync().GetAwaiter().GetResult();
         AppDomain.CurrentDomain.UnhandledException += (_, e) =>
@@ -50,6 +65,11 @@ sealed class Program
             if (e.ExceptionObject is Exception exception)
                 services.Log.Write("Unhandled exception.", exception);
         };
+
+        // The replaced build must have ended before the election, because its lock is the one this build takes.
+        // Its files go only once the window stands, which App does, so a build that cannot open one leaves them.
+        if (handover is not null)
+            SelfUpdateCleanup.WaitForPreviousExit(handover);
 
         var inbox = new StartArgumentsInbox();
         inbox.Post(new StartArguments(args, Forwarded: false));
@@ -65,8 +85,28 @@ sealed class Program
         if (ExitCodeWithoutApp(election, services.Log.Write, message => ShowHandoverFailure(services, message)) is { } exitCode)
             return exitCode;
 
-        using var primary = election.Primary!;
-        return BuildAvaloniaApp(services, inbox, primary).StartWithClassicDesktopLifetime(args);
+        var pendingHandover = new PendingHandover();
+        int result;
+        using (var primary = election.Primary!)
+        {
+            result = BuildAvaloniaApp(services, inbox, primary, pendingHandover, handover).StartWithClassicDesktopLifetime(args);
+        }
+
+        // The lock and the handover server are gone now, so a new build can take the App over.
+        try
+        {
+            pendingHandover.Run?.Invoke();
+        }
+        catch (SelfUpdateFailedException exception)
+        {
+            services.Log.Write("The self-update could not start the new build.", exception);
+
+            // The window is gone, so a player who reads nothing here reads nothing at all.
+            if (pendingHandover.Describe?.Invoke(exception) is { } text)
+                ShowWithoutWindow(text);
+        }
+
+        return result;
     }
 
     /// <returns>Null when this process opens the App.</returns>
@@ -88,6 +128,14 @@ sealed class Program
         return AppElection.HandoverFailedExitCode;
     }
 
+    /// <summary>Says one sentence to a player who has no Borea window to read it in.</summary>
+    private static void ShowWithoutWindow(string message)
+    {
+        Console.Error.WriteLine(message);
+        if (HandoverFailureDialog.IsNeeded)
+            HandoverFailureDialog.Show(message);
+    }
+
     private static void ShowHandoverFailure(BoreaServices services, string message)
     {
         Console.Error.WriteLine(message);
@@ -107,8 +155,13 @@ sealed class Program
     public static AppBuilder BuildAvaloniaApp()
         => Configure(AppBuilder.Configure<App>());
 
-    private static AppBuilder BuildAvaloniaApp(BoreaServices services, StartArgumentsInbox startArguments, PrimaryInstance primary)
-        => Configure(AppBuilder.Configure(() => new App(services, startArguments, primary)));
+    private static AppBuilder BuildAvaloniaApp(
+        BoreaServices services,
+        StartArgumentsInbox startArguments,
+        PrimaryInstance primary,
+        PendingHandover pendingHandover,
+        SelfUpdateHandover? handover)
+        => Configure(AppBuilder.Configure(() => new App(services, startArguments, primary, pendingHandover, handover)));
 
     private static AppBuilder Configure(AppBuilder builder)
         => builder
