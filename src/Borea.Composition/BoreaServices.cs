@@ -1,4 +1,5 @@
 using System.Net.Http.Headers;
+using System.Reflection;
 using Borea.Core.Announcements;
 using Borea.Core.Dependencies;
 using Borea.Core.Game;
@@ -44,6 +45,7 @@ using Borea.Storage.Paths;
 using Borea.Storage.Preferences;
 using Borea.Storage.Settings;
 using Borea.Storage.State;
+using Borea.Storage.Updates;
 
 namespace Borea.Composition;
 
@@ -178,6 +180,9 @@ public sealed class BoreaServices : IDisposable
     /// <summary>The newest published Borea release.</summary>
     public required IBoreaReleaseCheck ReleaseCheck { get; init; }
 
+    /// <summary>Replaces the running Borea build with a published release.</summary>
+    public required ISelfUpdater SelfUpdater { get; init; }
+
     /// <summary>The posts of the KSAModding team, fetched from the Borea repository and cached.</summary>
     public required IAnnouncementFeed Announcements { get; init; }
 
@@ -283,6 +288,7 @@ public sealed class BoreaServices : IDisposable
     /// <param name="isOtherBoreaRunning">Whether another Borea App or command runs. Null looks for one.</param>
     /// <param name="gitHub">The GitHub session. Null builds one on this graph's client for <see cref="BoreaGitHubApp"/>.</param>
     /// <param name="listingPublisher">Opens the listing pull request. Null builds one on the GitHub session.</param>
+    /// <param name="selfUpdater">Replaces this Borea build. Null reads the build that runs.</param>
     internal static Task<BoreaServices> BuildAsync(
         string? boreaRoot,
         HttpMessageHandler httpHandler,
@@ -295,12 +301,13 @@ public sealed class BoreaServices : IDisposable
         Func<bool>? isGameProcessRunning = null,
         Func<bool>? isOtherBoreaRunning = null,
         IGitHubSession? gitHub = null,
-        IListingPublisher? listingPublisher = null)
+        IListingPublisher? listingPublisher = null,
+        ISelfUpdater? selfUpdater = null)
     {
         ArgumentNullException.ThrowIfNull(httpHandler);
         ArgumentNullException.ThrowIfNull(fallbackRepository);
         ArgumentNullException.ThrowIfNull(installCandidates);
-        return BuildCoreAsync(boreaRoot, BoreaLogSource.App, httpHandler, fallbackRepository, installCandidates, new RunningLaunches(), cancellationToken, processStarter, images, sharedProfileRoot, isGameProcessRunning, isOtherBoreaRunning, gitHub, listingPublisher);
+        return BuildCoreAsync(boreaRoot, BoreaLogSource.App, httpHandler, fallbackRepository, installCandidates, new RunningLaunches(), cancellationToken, processStarter, images, sharedProfileRoot, isGameProcessRunning, isOtherBoreaRunning, gitHub, listingPublisher, selfUpdater);
     }
 
     private static async Task<BoreaServices> BuildCoreAsync(
@@ -317,7 +324,8 @@ public sealed class BoreaServices : IDisposable
         Func<bool>? isGameProcessRunning = null,
         Func<bool>? isOtherBoreaRunning = null,
         IGitHubSession? gitHub = null,
-        IListingPublisher? listingPublisher = null)
+        IListingPublisher? listingPublisher = null,
+        ISelfUpdater? selfUpdater = null)
     {
         // the settings file lives under Borea's own root and needs no
         // game path to be found, so a provider without one reads it.
@@ -443,6 +451,7 @@ public sealed class BoreaServices : IDisposable
             SharedProfileLauncher = new LoggingSharedProfileLauncher(new SharedProfileLauncher(paths, processStarter ?? new ProcessStarter()), log),
             LatestVersion = new LatestVersionPing(http),
             ReleaseCheck = new BoreaReleaseCheck(http),
+            SelfUpdater = selfUpdater ?? new FileSelfUpdater(new BoreaReleaseFiles(http), log, RunningProduct(), platform: BoreaArchive.RunningPlatform, fromCommandLine: logSource == BoreaLogSource.Cli),
             Announcements = new AnnouncementFeed(new AnnouncementFetcher(http, AnnouncementFetcher.DefaultUri, announcementReader), announcementReader, paths, log),
             InstalledVersion = installedVersion,
             GameShape = gameShape,
@@ -465,6 +474,15 @@ public sealed class BoreaServices : IDisposable
             ListingPublisher = new LoggingListingPublisher(listingPublisher ?? new ListingPublisher(gitHubSession, http, listingFormat), log),
         };
     }
+
+    /// <summary>
+    /// Which release archive this build came from. The App archive's program runs the commands too,
+    /// so this follows the program that started and not the command it runs.
+    /// </summary>
+    private static BoreaProduct RunningProduct()
+        => string.Equals(Assembly.GetEntryAssembly()?.GetName().Name, "borea", StringComparison.Ordinal)
+            ? BoreaProduct.Cli
+            : BoreaProduct.App;
 
     private static HttpClient BuildHttpClient(HttpMessageHandler? handler)
     {
