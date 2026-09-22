@@ -9,6 +9,7 @@ using Borea.Core.ModPacks;
 using Borea.Core.Mods;
 using Borea.Core.Planning;
 using Borea.Core.Settings;
+using Borea.Core.Updates;
 using Borea.Core.Instances;
 using Borea.Network.Index;
 using Borea.Storage.Game;
@@ -97,6 +98,12 @@ internal sealed class CliHost : IDisposable
     /// <summary>Changes the library folder. A changer over the graph when a test does not set it.</summary>
     public ILibraryFolderChanger? LibraryChanger { get; set; }
 
+    /// <summary>The published Borea releases the update check reports. The real check when a test does not set it.</summary>
+    public IBoreaReleaseCheck? ReleaseCheck { get; set; }
+
+    /// <summary>Replaces this build. The real updater when a test does not set it, which refuses in a test run.</summary>
+    public ISelfUpdater? SelfUpdater { get; set; }
+
     /// <summary>How many times a command built its services.</summary>
     public int Builds { get; private set; }
 
@@ -150,6 +157,8 @@ internal sealed class CliHost : IDisposable
             sharedProfileLauncher: new SharedProfileLauncher(graph.Paths, ProcessStarter, OsPlatform.Windows),
             indexRefresh: IndexRefresh,
             sharedProfileImporter: BuildSharedProfileImporter(graph),
+            releaseCheck: ReleaseCheck,
+            selfUpdater: SelfUpdater,
             // a game or a Borea the developer runs next to the tests must not refuse the move
             libraryFolderChanger: LibraryChanger ?? new LibraryFolderChanger(graph.SettingsRepository, graph.Paths, Root, graph.Launcher, (FileInstanceRepository)((LoggingInstanceRepository)graph.Instances).Inner, isGameProcessRunning: () => false, isOtherBoreaRunning: () => false, isSameVolume: LibraryOnSameVolume));
     }

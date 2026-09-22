@@ -15,15 +15,18 @@
         <Setter Property="Template">
             <ControlTemplate>
                 <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="{TemplateBinding CornerRadius}" Padding="{TemplateBinding Padding}">
-                    <Grid ColumnDefinitions="*,Auto,Auto">
+                    <Grid ColumnDefinitions="*,Auto,Auto,Auto">
                         <StackPanel Spacing="8">
                             <TextBlock Name="PART_Title" Classes="heading-sm" Text="{TemplateBinding Title}" Foreground="{TemplateBinding TitleForeground}" TextWrapping="Wrap" IsVisible="{TemplateBinding Title, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
                             <TextBlock Name="PART_Message" Classes="body-md" Text="{TemplateBinding Message}" Foreground="{TemplateBinding Foreground}" TextWrapping="Wrap" IsVisible="{TemplateBinding Message, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
                         </StackPanel>
-                        <Button Name="PART_Action" Grid.Column="1" Classes="plain" Height="20" Margin="24,0,0,0" VerticalAlignment="Top" Command="{TemplateBinding ActionCommand}" CommandParameter="{TemplateBinding ActionCommandParameter}" IsVisible="{TemplateBinding ActionText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                        <Button Name="PART_SecondaryAction" Grid.Column="1" Classes="plain" Height="20" Margin="24,0,0,0" VerticalAlignment="Top" Command="{TemplateBinding SecondaryActionCommand}" IsVisible="{TemplateBinding SecondaryActionText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                            <TextBlock Name="PART_SecondaryActionText" FontSize="14" FontWeight="SemiBold" Text="{TemplateBinding SecondaryActionText}" Foreground="{TemplateBinding ActionForeground}" VerticalAlignment="Center" />
+                        </Button>
+                        <Button Name="PART_Action" Grid.Column="2" Classes="plain" Height="20" Margin="24,0,0,0" VerticalAlignment="Top" Command="{TemplateBinding ActionCommand}" CommandParameter="{TemplateBinding ActionCommandParameter}" IsVisible="{TemplateBinding ActionText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
                             <TextBlock Name="PART_ActionText" FontSize="14" FontWeight="SemiBold" Text="{TemplateBinding ActionText}" Foreground="{TemplateBinding ActionForeground}" VerticalAlignment="Center" />
                         </Button>
-                        <Button Name="PART_Dismiss" Grid.Column="2" Classes="plain" Width="16" Height="16" Margin="16,2,0,0" VerticalAlignment="Top" Command="{TemplateBinding DismissCommand}" ToolTip.Tip="{TemplateBinding DismissText}" AutomationProperties.Name="{TemplateBinding DismissText}" IsVisible="{TemplateBinding DismissCommand, Converter={x:Static ObjectConverters.IsNotNull}}">
+                        <Button Name="PART_Dismiss" Grid.Column="3" Classes="plain" Width="16" Height="16" Margin="16,2,0,0" VerticalAlignment="Top" Command="{TemplateBinding DismissCommand}" ToolTip.Tip="{TemplateBinding DismissText}" AutomationProperties.Name="{TemplateBinding DismissText}" IsVisible="{TemplateBinding DismissCommand, Converter={x:Static ObjectConverters.IsNotNull}}">
                             <Path Name="PART_DismissIcon" Width="24" Height="24" Margin="-4" Stretch="None" Fill="Transparent" StrokeThickness="1.5" StrokeLineCap="Round" StrokeJoin="Round" RenderTransformOrigin="50%,50%" RenderTransform="scale(0.6667)" Data="{DynamicResource Icon.Close}" Stroke="{TemplateBinding DismissForeground}" />
                         </Button>
                     </Grid>

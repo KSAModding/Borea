@@ -8,6 +8,7 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
 using Borea.Core.Paths;
+using Borea.Core.Updates;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -33,12 +34,12 @@ public partial class MainViewModel
     /// The version the release workflow stamped, with the commit after the
     /// "+". A local build reports 1.0.0 plus the commit it was built from.
     /// </summary>
-    public static string BoreaInformationalVersion { get; } = ReadVersion();
+    public static string BoreaInformationalVersion => BoreaBuild.InformationalVersion;
 
     /// <summary>
     /// <see cref="BoreaInformationalVersion"/> without the build metadata, for the page.
     /// </summary>
-    public static string BoreaVersion { get; } = BoreaInformationalVersion.Split('+')[0];
+    public static string BoreaVersion => BoreaBuild.Version;
 
     public static string RuntimeText { get; } = RuntimeInformation.FrameworkDescription;
 
@@ -225,15 +226,6 @@ public partial class MainViewModel
         {
             return exception.Message;
         }
-    }
-
-    private static string ReadVersion()
-    {
-        var informational = typeof(MainViewModel).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
-        if (!string.IsNullOrWhiteSpace(informational))
-            return informational;
-
-        return typeof(MainViewModel).Assembly.GetName().Version?.ToString(3) ?? "0.0.0";
     }
 
     /// <summary>

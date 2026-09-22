@@ -279,6 +279,21 @@ jobs:
           # Mark it the way a browser download would, then ask Gatekeeper.
           xattr -w com.apple.quarantine '0083;00000000;Safari;' "$app"
           spctl --assess --type execute --verbose=4 "$app" || true
+      - name: Run the moves a self-update makes
+        run: |
+          mkdir update-test
+          tar -xzf dist/*.tar.gz -C update-test
+          folder=$(find update-test -mindepth 1 -maxdepth 1 -type d | head -1)
+          cp "$folder/borea" "$folder/borea.new"
+          # An update moves the program that runs aside and puts the new one in its place.
+          mv "$folder/borea" "$folder/borea.old"
+          mv "$folder/borea.new" "$folder/borea"
+          codesign --verify --strict --verbose=2 "$folder/borea"
+          "$folder/borea" --version
+          # A step that fails puts the program that ran back, over the one that took its place.
+          mv "$folder/borea.old" "$folder/borea"
+          codesign --verify --strict --verbose=2 "$folder/borea"
+          "$folder/borea" --version
 
   # Both archives of each platform, on a runner that can start their programs.
   # No App window opens, because that needs a desktop session.

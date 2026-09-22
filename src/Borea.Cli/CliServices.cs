@@ -9,8 +9,10 @@ using Borea.Core.ModPacks;
 using Borea.Core.Mods;
 using Borea.Core.Paths;
 using Borea.Core.Planning;
+using Borea.Core.Preferences;
 using Borea.Core.Settings;
 using Borea.Core.State;
+using Borea.Core.Updates;
 
 namespace Borea.Cli;
 
@@ -101,6 +103,12 @@ internal sealed class CliServices : IDisposable
 
     public required ISharedProfileLauncher SharedProfileLauncher { get; init; }
 
+    public required IAppPreferencesRepository AppPreferences { get; init; }
+
+    public required IBoreaReleaseCheck ReleaseCheck { get; init; }
+
+    public required ISelfUpdater SelfUpdater { get; init; }
+
     /// <summary>
     /// The graph the services came from, disposed with this instance. Null when
     /// nothing needs disposing.
@@ -147,7 +155,9 @@ internal sealed class CliServices : IDisposable
         ISharedProfileLauncher? sharedProfileLauncher = null,
         IContentIndexRefresh? indexRefresh = null,
         ISharedProfileImporter? sharedProfileImporter = null,
-        ILibraryFolderChanger? libraryFolderChanger = null)
+        ILibraryFolderChanger? libraryFolderChanger = null,
+        IBoreaReleaseCheck? releaseCheck = null,
+        ISelfUpdater? selfUpdater = null)
     {
         if (services is null)
             throw new ArgumentNullException(nameof(services));
@@ -193,6 +203,9 @@ internal sealed class CliServices : IDisposable
             ModPackInstaller = modPackInstaller ?? services.ModPackInstaller,
             ModPackUpdater = modPackUpdater ?? services.ModPackUpdater,
             SharedProfileLauncher = sharedProfileLauncher ?? services.SharedProfileLauncher,
+            AppPreferences = services.AppPreferences,
+            ReleaseCheck = releaseCheck ?? services.ReleaseCheck,
+            SelfUpdater = selfUpdater ?? services.SelfUpdater,
             Graph = services,
             AdditionalDisposable = launcher is IDisposable disposable && !ReferenceEquals(launcher, services.Launcher)
                 ? disposable

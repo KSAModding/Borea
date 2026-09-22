@@ -4,7 +4,7 @@
              x:Class="Borea.App.Views.GamePatchNotesModal"
              x:DataType="vm:MainViewModel">
     <Panel Background="#99000000">
-        <Border Classes="modal" Width="640" Margin="80,32,0,32">
+        <Border Classes="modal" MaxWidth="800" HorizontalAlignment="Stretch" Margin="104,32,24,32">
             <DockPanel>
                 <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto,Auto" Margin="24,24,24,0">
                     <TextBlock Classes="heading-lg" Text="{Binding Localization.GamePatchNotesTitle}" VerticalAlignment="Center" />

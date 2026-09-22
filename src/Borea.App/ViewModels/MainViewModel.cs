@@ -873,6 +873,8 @@ public partial class MainViewModel : ViewModelBase
         OnPropertyChanged(nameof(LoaderPromptText));
         OnPropertyChanged(nameof(SharedProfileBannerText));
         OnPropertyChanged(nameof(AvailableUpdateText));
+        OnPropertyChanged(nameof(ReleaseBannerText));
+        OnPropertyChanged(nameof(SelfUpdateActionText));
         OnPropertyChanged(nameof(GameBuildBannerText));
         OnPropertyChanged(nameof(GameShapeBrokenText));
         OnPropertyChanged(nameof(GameShapeUntestedText));

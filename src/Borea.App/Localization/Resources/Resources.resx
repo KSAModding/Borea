@@ -312,6 +312,54 @@
   <data name="UpdateNoNotes" xml:space="preserve">
     <value>This release has no notes.</value>
   </data>
+  <data name="SelfUpdateNow" xml:space="preserve">
+    <value>Update now</value>
+  </data>
+  <data name="SelfUpdateDownloadingFormat" xml:space="preserve">
+    <value>Downloading Borea {0} ({1}%)</value>
+  </data>
+  <data name="SelfUpdateVerifyingFormat" xml:space="preserve">
+    <value>Checking the download of Borea {0}</value>
+  </data>
+  <data name="SelfUpdateUnpackingFormat" xml:space="preserve">
+    <value>Unpacking Borea {0}</value>
+  </data>
+  <data name="SelfUpdateReadyFormat" xml:space="preserve">
+    <value>Borea {0} is ready. Borea starts the new build now.</value>
+  </data>
+  <data name="SelfUpdatePackageManagedFormat" xml:space="preserve">
+    <value>{0} installed Borea, so update Borea with {0}.</value>
+  </data>
+  <data name="SelfUpdatePackageManaged" xml:space="preserve">
+    <value>A package manager installed Borea, so update Borea with that package manager.</value>
+  </data>
+  <data name="SelfUpdateReadOnly" xml:space="preserve">
+    <value>Borea cannot write to its own folder, so it cannot replace itself.</value>
+  </data>
+  <data name="SelfUpdateNotAReleaseBuild" xml:space="preserve">
+    <value>This build did not come from a release archive, so it cannot replace itself.</value>
+  </data>
+  <data name="SelfUpdateUnsupportedPlatform" xml:space="preserve">
+    <value>Borea publishes no release for this system.</value>
+  </data>
+  <data name="SelfUpdateDownloadFailed" xml:space="preserve">
+    <value>The download failed, so Borea was not changed.</value>
+  </data>
+  <data name="SelfUpdateChecksumFailed" xml:space="preserve">
+    <value>The download does not agree with the checksums of the release, so Borea was not changed.</value>
+  </data>
+  <data name="SelfUpdateUnpackFailed" xml:space="preserve">
+    <value>The new build could not be unpacked, so Borea was not changed.</value>
+  </data>
+  <data name="SelfUpdateInstallFailed" xml:space="preserve">
+    <value>The new build could not take the place of this one, so Borea was not changed.</value>
+  </data>
+  <data name="SelfUpdateRestoreFailedFormat" xml:space="preserve">
+    <value>Borea could not put its program file back. Rename {0} to {1} in the folder Borea runs in, to start Borea again.</value>
+  </data>
+  <data name="SelfUpdateStartAgainFormat" xml:space="preserve">
+    <value>Borea {0} is in place. Close Borea and start it again to use it.</value>
+  </data>
   <data name="GameBuildAvailable" xml:space="preserve">
     <value>A newer KSA build is available:</value>
   </data>

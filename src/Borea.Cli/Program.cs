@@ -1,6 +1,10 @@
 using System.Text;
 using Borea.Composition;
 using Borea.Core.Logging;
+using Borea.Core.Updates;
+using Borea.Storage.Logging;
+using Borea.Storage.Paths;
+using Borea.Storage.Updates;
 
 namespace Borea.Cli;
 
@@ -18,6 +22,11 @@ public static class Program
 
     private static async Task<int> Main(string[] args)
     {
+        // A self-update starts this build with the old one as an argument, and the old files go last.
+        var handover = SelfUpdateHandover.Take(ref args);
+        if (handover is not null && args.Length == 0)
+            return FinishSelfUpdate(handover);
+
         if (ShowsStartHint(args, WindowsConsole.IsOwnedAlone(), Console.IsInputRedirected, Console.IsOutputRedirected))
         {
             Console.WriteLine(StartHint);
@@ -25,7 +34,11 @@ public static class Program
             return ExitCodes.Usage;
         }
 
-        return await RunAsync(args).ConfigureAwait(false);
+        var exitCode = await RunAsync(args).ConfigureAwait(false);
+        if (handover is not null)
+            FinishSelfUpdate(handover);
+
+        return exitCode;
     }
 
     public static async Task<int> RunAsync(string[] args)
@@ -34,6 +47,18 @@ public static class Program
         using var error = Console.IsErrorRedirected ? Utf8Writer(Console.OpenStandardError()) : null;
 
         return await BoreaCli.RunAsync(args, BuildServicesAsync, output ?? Console.Out, error ?? Console.Error).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Removes the build this one replaced, after this build has shown that it runs. Only the log says
+    /// what happened, because a player who updated from the App never sees this process.
+    /// </summary>
+    /// <returns>The exit code of a start that did nothing else.</returns>
+    public static int FinishSelfUpdate(SelfUpdateHandover handover)
+    {
+        var message = SelfUpdateCleanup.Run(handover);
+        new FileBoreaLog(new GamePathProvider(gameDirectory: null), BoreaLogSource.Cli).Write(message);
+        return ExitCodes.Done;
     }
 
     /// <summary>

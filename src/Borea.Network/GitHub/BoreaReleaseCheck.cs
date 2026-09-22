@@ -17,6 +17,9 @@ public sealed class BoreaReleaseCheck : IBoreaReleaseCheck
 
     private const string ReleasePagePathPrefix = "/KSAModding/Borea/releases/";
 
+    /// <summary>Where the release files of this repository are served from. Only these URLs are fetched.</summary>
+    internal const string DownloadUrlPrefix = "https://github.com/KSAModding/Borea/releases/download/";
+
     private readonly HttpClient _httpClient;
 
     public BoreaReleaseCheck(HttpClient httpClient)
@@ -93,7 +96,29 @@ public sealed class BoreaReleaseCheck : IBoreaReleaseCheck
             return null;
         }
 
-        return new BoreaRelease(version, dto.TagName!, page.AbsoluteUri, string.IsNullOrWhiteSpace(dto.Body) ? null : dto.Body, dto.PublishedAt);
+        return new BoreaRelease(version, dto.TagName!, page.AbsoluteUri, string.IsNullOrWhiteSpace(dto.Body) ? null : dto.Body, dto.PublishedAt)
+        {
+            Assets = dto.Assets?.Select(ToAsset).OfType<BoreaReleaseAsset>().ToList() ?? [],
+        };
+    }
+
+    /// <summary>
+    /// A published file of this repository. A name that is not a plain file name or a URL that is not a
+    /// release download of this repository is dropped, so nothing else is ever fetched or written.
+    /// </summary>
+    private static BoreaReleaseAsset? ToAsset(AssetDto? dto)
+    {
+        if (dto?.Name is not { Length: > 0 } name
+            || name != Path.GetFileName(name)
+            || name is "." or "..")
+        {
+            return null;
+        }
+
+        var url = dto.BrowserDownloadUrl;
+        return url is not null && url.StartsWith(DownloadUrlPrefix, StringComparison.Ordinal)
+            ? new BoreaReleaseAsset(name, url, dto.Size < 0 ? 0 : dto.Size)
+            : null;
     }
 }
 
@@ -116,4 +141,19 @@ internal sealed class ReleaseDto
 
     [JsonPropertyName("published_at")]
     public DateTimeOffset? PublishedAt { get; set; }
+
+    [JsonPropertyName("assets")]
+    public List<AssetDto?>? Assets { get; set; }
+}
+
+internal sealed class AssetDto
+{
+    [JsonPropertyName("name")]
+    public string? Name { get; set; }
+
+    [JsonPropertyName("browser_download_url")]
+    public string? BrowserDownloadUrl { get; set; }
+
+    [JsonPropertyName("size")]
+    public long Size { get; set; }
 }

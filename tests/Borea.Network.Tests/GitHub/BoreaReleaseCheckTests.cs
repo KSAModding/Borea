@@ -44,6 +44,52 @@ public sealed class BoreaReleaseCheckTests
     }
 
     [Fact]
+    public async Task GetReleasesAsync_Assets_AreTheFilesOfThisRepository()
+    {
+        var assets = """
+            ,"assets":[
+              {"name":"Borea-0.4.0-win-x64.zip","browser_download_url":"https://github.com/KSAModding/Borea/releases/download/v0.4.0/Borea-0.4.0-win-x64.zip","size":64000000},
+              {"name":"SHA256SUMS.txt","browser_download_url":"https://github.com/KSAModding/Borea/releases/download/v0.4.0/SHA256SUMS.txt","size":512}
+            ]
+            """;
+        var check = CheckAnswering(ReleasesJson(WithAssets(ReleaseJson("v0.4.0"), assets)), out _);
+
+        var release = Assert.Single(await check.GetReleasesAsync());
+
+        Assert.Equal(["Borea-0.4.0-win-x64.zip", "SHA256SUMS.txt"], release.Assets.Select(asset => asset.Name));
+        Assert.Equal("https://github.com/KSAModding/Borea/releases/download/v0.4.0/Borea-0.4.0-win-x64.zip", release.Assets[0].Url);
+        Assert.Equal(64000000, release.Assets[0].SizeBytes);
+    }
+
+    [Fact]
+    public async Task GetReleasesAsync_AnAssetFromAnotherHostOrWithAPath_IsDropped()
+    {
+        var assets = """
+            ,"assets":[
+              {"name":"Borea-0.4.0-win-x64.zip","browser_download_url":"https://example.com/Borea-0.4.0-win-x64.zip"},
+              {"name":"../borea","browser_download_url":"https://github.com/KSAModding/Borea/releases/download/v0.4.0/borea"},
+              {"name":"SHA256SUMS.txt","browser_download_url":"https://github.com/KSAModding/Borea/releases/download/v0.4.0/SHA256SUMS.txt"}
+            ]
+            """;
+        var check = CheckAnswering(ReleasesJson(WithAssets(ReleaseJson("v0.4.0"), assets)), out _);
+
+        var release = Assert.Single(await check.GetReleasesAsync());
+
+        Assert.Equal(["SHA256SUMS.txt"], release.Assets.Select(asset => asset.Name));
+    }
+
+    [Fact]
+    public async Task GetReleasesAsync_ReleaseWithoutAssets_HasNone()
+    {
+        var check = CheckAnswering(ReleasesJson(ReleaseJson("v0.4.0")), out _);
+
+        Assert.Empty(Assert.Single(await check.GetReleasesAsync()).Assets);
+    }
+
+    /// <summary>Puts an assets array into a release object.</summary>
+    private static string WithAssets(string releaseJson, string assets) => releaseJson[..^1] + assets + "}";
+
+    [Fact]
     public async Task GetReleasesAsync_BlankBody_HasNoNotes()
     {
         var check = CheckAnswering(ReleasesJson(ReleaseJson("v0.4.0", body: "  ")), out _);
