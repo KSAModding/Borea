@@ -831,6 +831,9 @@
   <data name="GameSaveProfileEmpty" xml:space="preserve">
     <value>The game profile has nothing to copy.</value>
   </data>
+  <data name="GameSaveProfileSelectedFormat" xml:space="preserve">
+    <value>{0} of {1} selected</value>
+  </data>
   <data name="GameSaveExistsInInstance" xml:space="preserve">
     <value>Already in this instance</value>
   </data>

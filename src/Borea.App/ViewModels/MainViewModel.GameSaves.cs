@@ -325,6 +325,13 @@ public sealed partial class GameSaveSection : ObservableObject
 
     public bool HasProfileItems => ProfileItems.Count > 0;
 
+    /// <summary>Null while only some of the items are selected, so the check box shows the mixed state.</summary>
+    public bool? AreAllProfileItemsSelected => SelectedProfileItemCount == 0 ? false : SelectedProfileItemCount == ProfileItems.Count ? true : null;
+
+    public string ProfileSelectionText => _owner.Localization.FormatGameSaveProfileSelected(SelectedProfileItemCount, ProfileItems.Count);
+
+    private int SelectedProfileItemCount => ProfileItems.Count(item => item.IsSelected);
+
     /// <summary>Why the section could not be read.</summary>
     [ObservableProperty]
     private string? _error;
@@ -356,6 +363,7 @@ public sealed partial class GameSaveSection : ObservableObject
         foreach (var item in items)
             ProfileItems.Add(item);
         OnPropertyChanged(nameof(HasProfileItems));
+        RefreshProfileSelection();
         IsConfirmingProfileReplace = false;
         IsChoosingFromProfile = true;
     }
@@ -366,6 +374,20 @@ public sealed partial class GameSaveSection : ObservableObject
         IsConfirmingProfileReplace = false;
         ProfileItems.Clear();
         OnPropertyChanged(nameof(HasProfileItems));
+        RefreshProfileSelection();
+    }
+
+    /// <summary>Takes the chooser back to the normal copy state, because the replace question belongs to the selection that made it.</summary>
+    internal void OnProfileSelectionChanged()
+    {
+        IsConfirmingProfileReplace = false;
+        RefreshProfileSelection();
+    }
+
+    internal void RefreshProfileSelection()
+    {
+        OnPropertyChanged(nameof(AreAllProfileItemsSelected));
+        OnPropertyChanged(nameof(ProfileSelectionText));
     }
 
     internal void RefreshText()
@@ -373,6 +395,7 @@ public sealed partial class GameSaveSection : ObservableObject
         OnPropertyChanged(nameof(Title));
         OnPropertyChanged(nameof(EmptyText));
         OnPropertyChanged(nameof(CopyNoteText));
+        OnPropertyChanged(nameof(ProfileSelectionText));
         foreach (var item in Items.Concat(ProfileItems))
             item.RefreshText();
     }
@@ -388,6 +411,15 @@ public sealed partial class GameSaveSection : ObservableObject
 
     [RelayCommand]
     private Task ReplaceFromProfileAsync() => _owner.CopyFromProfileAsync(this, replace: true);
+
+    /// <summary>Selects the items that are not selected yet, and clears them all when every item is selected.</summary>
+    [RelayCommand]
+    private void ToggleAllProfileItems()
+    {
+        var select = AreAllProfileItemsSelected != true;
+        foreach (var item in ProfileItems)
+            item.IsSelected = select;
+    }
 
     [RelayCommand]
     private void CancelCopyFromProfile() => HideProfile();
@@ -441,6 +473,8 @@ public sealed partial class GameSaveItem : ObservableObject
 
     [ObservableProperty]
     private bool _isSelected;
+
+    partial void OnIsSelectedChanged(bool value) => Section.OnProfileSelectionChanged();
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsIdle))]
