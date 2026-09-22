@@ -1,4 +1,5 @@
 using System.Globalization;
+using Borea.App.ViewModels;
 using Borea.Composition;
 using Borea.Core.Instances;
 using Borea.Core.Launch;
@@ -173,6 +174,76 @@ public sealed class GameSavesViewModelTests
 
         Assert.Equal(300, new FileInfo(moon).Length);
         Assert.False(section.IsChoosingFromProfile);
+    }
+
+    [Fact]
+    public async Task CopyFromGameProfile_SelectAll_TakesOnlyItsOwnSectionAndCountsTheChoice()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var paths = harness.Services.Paths;
+        await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value);
+        var profileSaves = Path.Combine(paths.GetSharedProfileRoot(), "saves");
+        WriteItem(profileSaves, "Orbit", "2026-08-01T14:34:32.4054896", "v2026.8.3.5117", 10);
+        WriteItem(profileSaves, "Moon", "2026-08-02T14:34:32.4054896", "v2026.8.3.5117", 300);
+        WriteItem(Path.Combine(paths.GetSharedProfileRoot(), "vehicles"), "Rocket", "2026-08-02T14:34:32.4054896", "v2026.8.3.5117", 10, "vehicle.xml");
+        await OpenAsync(harness, "Main");
+        var saves = harness.ViewModel.SavesSection;
+        var vehicles = harness.ViewModel.VehiclesSection;
+        await saves.BeginCopyFromProfileCommand.ExecuteAsync(null);
+        await vehicles.BeginCopyFromProfileCommand.ExecuteAsync(null);
+        var changed = new List<string?>();
+        saves.PropertyChanged += (_, e) => changed.Add(e.PropertyName);
+
+        Assert.False(saves.AreAllProfileItemsSelected);
+        Assert.Equal(harness.Localization.FormatGameSaveProfileSelected(0, 2), saves.ProfileSelectionText);
+
+        saves.ToggleAllProfileItemsCommand.Execute(null);
+
+        Assert.True(saves.AreAllProfileItemsSelected);
+        Assert.All(saves.ProfileItems, item => Assert.True(item.IsSelected));
+        Assert.Equal(harness.Localization.FormatGameSaveProfileSelected(2, 2), saves.ProfileSelectionText);
+        Assert.False(Assert.Single(vehicles.ProfileItems).IsSelected);
+
+        saves.ToggleAllProfileItemsCommand.Execute(null);
+
+        Assert.False(saves.AreAllProfileItemsSelected);
+        Assert.All(saves.ProfileItems, item => Assert.False(item.IsSelected));
+
+        changed.Clear();
+        saves.ProfileItems[0].IsSelected = true;
+
+        Assert.Null(saves.AreAllProfileItemsSelected);
+        Assert.Equal(harness.Localization.FormatGameSaveProfileSelected(1, 2), saves.ProfileSelectionText);
+        Assert.Contains(nameof(GameSaveSection.ProfileSelectionText), changed);
+
+        saves.ToggleAllProfileItemsCommand.Execute(null);
+
+        Assert.True(saves.AreAllProfileItemsSelected);
+        Assert.All(saves.ProfileItems, item => Assert.True(item.IsSelected));
+    }
+
+    [Fact]
+    public async Task CopyFromGameProfile_ClearingTheSelection_TakesTheChooserBackFromTheReplaceQuestion()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var paths = harness.Services.Paths;
+        var instance = (await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value)).Instance;
+        var profileSaves = Path.Combine(paths.GetSharedProfileRoot(), "saves");
+        WriteItem(profileSaves, "Moon", "2026-08-02T14:34:32.4054896", "v2026.8.3.5117", 300);
+        WriteItem(paths.GetInstanceSavesFolder(instance.InstanceId), "Moon", "2026-08-02T14:34:32.4054896", "v2026.8.3.5117", 20);
+        await OpenAsync(harness, "Main");
+        var section = harness.ViewModel.SavesSection;
+        await section.BeginCopyFromProfileCommand.ExecuteAsync(null);
+        section.ProfileItems.Single().IsSelected = true;
+        await section.CopyFromProfileCommand.ExecuteAsync(null);
+
+        Assert.True(section.IsConfirmingProfileReplace);
+
+        section.ToggleAllProfileItemsCommand.Execute(null);
+
+        Assert.False(section.IsConfirmingProfileReplace);
+        Assert.True(section.IsChoosingFromProfile);
+        Assert.False(section.AreAllProfileItemsSelected);
     }
 
     [Fact]
