@@ -144,10 +144,8 @@ public sealed class ListingPageTests
     }
 
     /// <summary>The visible texts, with the Markdown of every visible Markdown view.</summary>
-    private static async Task<List<string?>> RenderAsync(ViewModelHarness harness)
-    {
-        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
-        return await HeadlessApp.Session.Dispatch(() =>
+    private static Task<List<string?>> RenderAsync(ViewModelHarness harness) =>
+        HeadlessApp.RunAsync(harness, () =>
         {
             var page = new ListingPage { DataContext = harness.ViewModel };
             var window = new Window { Width = 1280, Height = 832, Content = page, DataContext = harness.ViewModel };
@@ -157,7 +155,6 @@ public sealed class ListingPageTests
                 .Concat(page.GetVisualDescendants().OfType<MarkdownView>().Where(view => view.IsEffectivelyVisible).Select(view => view.Markdown))
                 .ToList();
             window.Close();
-            return texts;
-        }, timeout.Token);
-    }
+            return Task.FromResult(texts);
+        });
 }

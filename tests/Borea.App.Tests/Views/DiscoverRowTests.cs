@@ -34,10 +34,8 @@ public sealed class DiscoverRowTests
     /// Renders Discover next to a navigation rail, as the main window does, and
     /// measures how the remove confirmation sits in its row.
     /// </summary>
-    private static async Task<ConfirmationLayout> ConfirmationAsync(ViewModelHarness harness, double windowWidth)
-    {
-        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
-        return await HeadlessApp.Session.Dispatch(() =>
+    private static Task<ConfirmationLayout> ConfirmationAsync(ViewModelHarness harness, double windowWidth) =>
+        HeadlessApp.RunAsync(harness, () =>
         {
             var page = new DiscoverPage { DataContext = harness.ViewModel };
             Grid.SetColumn(page, 1);
@@ -60,9 +58,8 @@ public sealed class DiscoverRowTests
             var result = new ConfirmationLayout(outside, trimmed, question.TextLayout.TextLines.Count, RightEdge(buttons, row), RightEdge(confirmation, row));
 
             window.Close();
-            return result;
-        }, timeout.Token);
-    }
+            return Task.FromResult(result);
+        });
 
     private static bool Fits(Control control, Border row)
     {

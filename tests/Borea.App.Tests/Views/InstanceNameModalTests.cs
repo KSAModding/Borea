@@ -17,9 +17,8 @@ public sealed class InstanceNameModalTests
         await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value);
         await viewModel.LoadAsync();
         var explanation = harness.Localization.ModalInstanceExplanation;
-        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
 
-        var shown = await HeadlessApp.Session.Dispatch(() =>
+        var shown = await HeadlessApp.RunAsync(harness, () =>
         {
             var modal = new InstanceNameModal { DataContext = viewModel };
             var window = new Window { Width = 1280, Height = 832, Content = modal };
@@ -41,8 +40,8 @@ public sealed class InstanceNameModalTests
             viewModel.CancelNameModalCommand.Execute(null);
 
             window.Close();
-            return (creating, importing, renaming);
-        }, timeout.Token);
+            return Task.FromResult((creating, importing, renaming));
+        });
 
         Assert.Contains(explanation, shown.creating);
         Assert.Contains(explanation, shown.importing);
