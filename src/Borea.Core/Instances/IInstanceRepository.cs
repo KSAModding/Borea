@@ -47,7 +47,7 @@ public interface IInstanceRepository
     Task RenameAsync(Guid instanceId, string newName);
 
     /// <summary>
-    /// Deletes the instance, and leaves no instance active when it was the active one.
+    /// Deletes the instance with the backups of its saves and vehicles, and leaves no instance active when it was the active one.
     /// </summary>
     Task DeleteAsync(Guid instanceId);
 

@@ -283,6 +283,31 @@ public sealed class FileInstanceRepositoryTests : IDisposable
     }
 
     [Fact]
+    public async Task DeleteAsync_RemovesTheBackupsOfThatInstanceOnly()
+    {
+        var deleted = (await _repository.CreateAsync("Deleted", InstanceSource.Custom.Value)).Instance;
+        var kept = (await _repository.CreateAsync("Kept", InstanceSource.Custom.Value)).Instance;
+        WriteBackup(deleted.InstanceId);
+        var keptBackups = WriteBackup(kept.InstanceId);
+
+        await _repository.DeleteAsync(deleted.InstanceId);
+
+        Assert.False(Directory.Exists(Path.Combine(_pathProvider.GetBackupsRoot(), deleted.InstanceId.ToString())));
+        Assert.True(File.Exists(Path.Combine(keptBackups, "meta.toml")));
+    }
+
+    [Fact]
+    public async Task DeleteAsync_InstanceFolderAlreadyGone_StillRemovesTheBackups()
+    {
+        var instanceId = Guid.NewGuid();
+        WriteBackup(instanceId);
+
+        await _repository.DeleteAsync(instanceId);
+
+        Assert.False(Directory.Exists(Path.Combine(_pathProvider.GetBackupsRoot(), instanceId.ToString())));
+    }
+
+    [Fact]
     public async Task GetActiveInstanceIdAsync_NoPointerSet_ReturnsNull()
     {
         var result = await _repository.GetActiveInstanceIdAsync();
@@ -354,6 +379,14 @@ public sealed class FileInstanceRepositoryTests : IDisposable
         var result = await _repository.GetActiveInstanceIdAsync();
 
         Assert.Null(result);
+    }
+
+    private string WriteBackup(Guid instanceId)
+    {
+        var folder = Path.Combine(_pathProvider.GetBackupsRoot(), instanceId.ToString(), "saves", "Orbit-2026-01-01T000000Z");
+        Directory.CreateDirectory(folder);
+        File.WriteAllText(Path.Combine(folder, "meta.toml"), "name = \"Orbit\"");
+        return folder;
     }
 
     public void Dispose() => DirectoryLinks.DeleteTreeWithoutFollowingLinks(_tempRoot);

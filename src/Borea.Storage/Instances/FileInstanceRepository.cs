@@ -163,8 +163,7 @@ public sealed class FileInstanceRepository : IInstanceRepository, IInstanceLocks
                 // the backups are below the Backups folder and not below the instance folder, so they would stay behind.
                 // they go first, because a backup that cannot be removed then leaves the instance in place and the caller can repeat the delete
                 var backups = GameSaveBackupFolder.InstanceFolder(_pathProvider, instanceId);
-                if (Directory.Exists(backups))
-                    Directory.Delete(backups, recursive: true);
+                DirectoryLinks.DeleteTreeWithoutFollowingLinks(backups);
 
                 DirectoryLinks.DeleteTreeWithoutFollowingLinks(root);
             }
