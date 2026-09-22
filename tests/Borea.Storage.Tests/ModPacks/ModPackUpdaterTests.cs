@@ -85,11 +85,12 @@ public sealed class ModPackUpdaterTests
     }
 
     [Fact]
-    public async Task Update_StopDuringTheDownload_KeepsTheOldSource()
+    public async Task Update_StopDuringTheDownload_KeepsTheOldSourceAndTheDroppedMod()
     {
         var added = Release("Added");
         var instance = PackInstance(Installed(Release("Dropped"), InstallReason.ModPack));
         var instances = new MemoryInstanceRepository(instance);
+        var uninstaller = new FakeUninstaller(instances);
         var stop = new InstallStop();
         var installer = new FakeInstaller(instances)
         {
@@ -100,12 +101,48 @@ public sealed class ModPackUpdaterTests
             },
         };
 
-        var result = await Updater(instances, installer, new FakeUninstaller(instances)).UpdateAsync(Request(instance.InstanceId, Pack("2.0.0", added), [added]), stop: stop).WaitAsync(TimeSpan.FromSeconds(30));
+        var result = await Updater(instances, installer, uninstaller).UpdateAsync(Request(instance.InstanceId, Pack("2.0.0", added), [added]), stop: stop).WaitAsync(TimeSpan.FromSeconds(30));
 
         Assert.True(result.IsStopped);
         Assert.False(result.IsComplete);
         Assert.Equal(ModPackMemberStatus.NotAttempted, result.Members.Single(member => member.ModId == "Added").Status);
-        Assert.Equal(new InstanceSource.FromModPack("Pack", ModVersion.Parse("1.0.0")), (await instances.GetByIdAsync(instance.InstanceId))!.Source);
+        Assert.Equal(ModPackMemberStatus.NotAttempted, result.Members.Single(member => member.ModId == "Dropped").Status);
+        Assert.Equal(["Dropped"], result.StillInstalled);
+        Assert.Empty(uninstaller.Removed);
+        var stoppedInstance = (await instances.GetByIdAsync(instance.InstanceId))!;
+        Assert.Equal(new InstanceSource.FromModPack("Pack", ModVersion.Parse("1.0.0")), stoppedInstance.Source);
+        Assert.Equal("Dropped", Assert.Single(stoppedInstance.Mods).ModId);
+    }
+
+    [Fact]
+    public async Task Update_StopAfterTheLastInstall_KeepsTheDroppedModUntilARetryCompletes()
+    {
+        var added = Release("Added");
+        var instance = PackInstance(Installed(Release("Dropped"), InstallReason.ModPack));
+        var instances = new MemoryInstanceRepository(instance);
+        var uninstaller = new FakeUninstaller(instances);
+        var stop = new InstallStop();
+        var updater = Updater(instances, new FakeInstaller(instances), uninstaller);
+        var request = Request(instance.InstanceId, Pack("2.0.0", added), [added]);
+        // the last report of the install comes after it wrote the mod, so the stop arrives between the install and the removals
+        var progress = new SynchronousProgress<InstallProgress>(report =>
+        {
+            if (report.Phase == InstallPhase.Finishing)
+                stop.Request();
+        });
+
+        var result = await updater.UpdateAsync(request, progress, stop);
+
+        Assert.True(result.IsStopped);
+        Assert.Equal(["Dropped"], result.StillInstalled);
+        Assert.Empty(uninstaller.Removed);
+        Assert.Equal(["Added", "Dropped"], (await instances.GetByIdAsync(instance.InstanceId))!.Mods.Select(mod => mod.ModId).Order());
+
+        var retried = await updater.UpdateAsync(request);
+
+        Assert.True(retried.IsComplete);
+        Assert.Empty(retried.StillInstalled);
+        Assert.Equal("Added", Assert.Single((await instances.GetByIdAsync(instance.InstanceId))!.Mods).ModId);
     }
 
     [Fact]
@@ -125,15 +162,19 @@ public sealed class ModPackUpdaterTests
         Assert.False(failed.IsComplete);
         Assert.False(failed.IsStopped);
         Assert.Equal(ModPackMemberStatus.Failed, failed.Members.Single(member => member.ModId == "Added").Status);
-        Assert.Equal(ModPackMemberStatus.Removed, failed.Members.Single(member => member.ModId == "Dropped").Status);
+        Assert.Equal(ModPackMemberStatus.NotAttempted, failed.Members.Single(member => member.ModId == "Dropped").Status);
+        Assert.Equal(["Dropped"], failed.StillInstalled);
         var afterFailure = (await instances.GetByIdAsync(instance.InstanceId))!;
         Assert.Equal(ModVersion.Parse("1.0.0"), Assert.IsType<InstanceSource.FromModPack>(afterFailure.Source).Version);
+        Assert.Equal(["Dropped", "Kept", "Player"], afterFailure.Mods.Select(mod => mod.ModId).Order());
         Assert.Equal(InstallReason.ModPack, afterFailure.Mods.Single(mod => mod.ModId == "Kept").Reason);
 
         var retried = await updater.UpdateAsync(request);
 
         Assert.True(retried.IsComplete);
+        Assert.Empty(retried.StillInstalled);
         var afterRetry = (await instances.GetByIdAsync(instance.InstanceId))!;
+        Assert.DoesNotContain("Dropped", afterRetry.Mods.Select(mod => mod.ModId));
         Assert.Equal(ModVersion.Parse("2.0.0"), Assert.IsType<InstanceSource.FromModPack>(afterRetry.Source).Version);
         Assert.Equal(InstallReason.Manual, afterRetry.Mods.Single(mod => mod.ModId == "Kept").Reason);
     }
@@ -174,6 +215,21 @@ public sealed class ModPackUpdaterTests
         Assert.False(refused.CanRun);
         Assert.Contains(refused.Warnings, warning => warning.Kind == PlanningMessageKind.YankedPin);
         Assert.True(accepted.CanRun);
+    }
+
+    [Fact]
+    public async Task Update_YankedPinThatTheCallerDidNotConfirm_NamesNoModAsStillInstalled()
+    {
+        var yanked = Release("Added", yanked: true);
+        var instance = PackInstance(Installed(Release("Dropped"), InstallReason.ModPack));
+        var instances = new MemoryInstanceRepository(instance);
+        var uninstaller = new FakeUninstaller(instances);
+
+        var result = await Updater(instances, new FakeInstaller(instances), uninstaller).UpdateAsync(Request(instance.InstanceId, Pack("2.0.0", yanked), [yanked]));
+
+        Assert.False(result.CanRun);
+        Assert.Empty(result.StillInstalled);
+        Assert.Empty(uninstaller.Removed);
     }
 
     private static ModPackUpdater Updater(MemoryInstanceRepository instances, FakeInstaller installer, FakeUninstaller uninstaller)

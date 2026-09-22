@@ -93,7 +93,7 @@ public static class ModPackUpdates
             .ToList());
     }
 
-    /// <summary>The instance as the update leaves it before its installs, without the removed mods.</summary>
+    /// <summary>The instance the update plans for, without the mods it removes.</summary>
     public static Instance Draft(Instance instance, IReadOnlyList<ModPackChange> changes)
     {
         ArgumentNullException.ThrowIfNull(instance);

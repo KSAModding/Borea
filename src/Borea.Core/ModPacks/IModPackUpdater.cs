@@ -11,8 +11,9 @@ public interface IModPackUpdater
     Task<ModPackUpdateResult> PlanAsync(ModPackUpdateRequest request, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Removes the mods the plan removes, then installs like a pack install. Only a complete update names
-    /// the new pack version in the instance source and makes the kept mods normal mods of the instance.
+    /// Installs like a pack install and removes the mods the plan removes after that, so a step that fails
+    /// or stops leaves the instance with the mods it had. Only a complete update names the new pack version
+    /// in the instance source and makes the kept mods normal mods of the instance.
     /// </summary>
     /// <param name="stop">Stops at a safe point, under the rule of <see cref="InstallStop"/>.</param>
     Task<ModPackUpdateResult> UpdateAsync(ModPackUpdateRequest request, IProgress<InstallProgress>? progress = null, InstallStop? stop = null, CancellationToken cancellationToken = default);
