@@ -44,9 +44,6 @@ public enum LibraryFolderChangeOutcome
 
     /// <summary>A change to an instance holds that instance's lock.</summary>
     InstanceBusy = 16,
-
-    /// <summary>A file in the library cannot be opened.</summary>
-    FileLocked = 17,
 }
 
 /// <param name="Folder">The chosen folder as a full path.</param>
@@ -58,9 +55,6 @@ public sealed record LibraryFolderChangeResult(
     string PreviousFolder,
     string Message)
 {
-    /// <summary>The file that could not be opened when the outcome is <see cref="LibraryFolderChangeOutcome.FileLocked"/>.</summary>
-    public string? LockedFile { get; init; }
-
     /// <summary>True when a copy succeeded but Borea could not delete every old file.</summary>
     public bool OldFilesRemain { get; init; }
 

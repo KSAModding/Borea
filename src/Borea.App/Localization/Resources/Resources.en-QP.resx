@@ -198,9 +198,6 @@
   <data name="LibraryFolderInstanceBusy" xml:space="preserve">
     <value>A sea be changin'. Wait 'til that be done, then give 'er another go.</value>
   </data>
-  <data name="LibraryFolderFileLockedFormat" xml:space="preserve">
-    <value>{0} be open in another program. Quit sailin' first, then change the List o' Loot treasure chest.</value>
-  </data>
   <data name="LibraryFolderWaitForTask" xml:space="preserve">
     <value>Wait 'til The Borea finishes the current chore, then change the List o' Loot treasure chest.</value>
   </data>

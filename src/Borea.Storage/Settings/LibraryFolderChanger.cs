@@ -192,14 +192,12 @@ public sealed class LibraryFolderChanger : ILibraryFolderChanger
         if (held is null)
             return Refused(LibraryFolderChangeOutcome.InstanceBusy, target, previous, "An instance is being changed. Wait until that finishes, then change the library folder.");
 
+        // an open file is not asked about first, because the only answer such a
+        // question gives is about handles this process holds: a lock is advisory
+        // on Linux and macOS, so another program stays invisible there, and the
+        // handle is closed again before the move begins. A move that a real
+        // conflict stops falls back to the copy and says what stayed behind.
         var entries = moves.Select(move => new FolderCopy(move, Scan(move.From))).ToList();
-        if (FindLockedFile(entries) is { } locked)
-        {
-            return new LibraryFolderChangeResult(LibraryFolderChangeOutcome.FileLocked, target, previous, $"{locked} is open in another program. Close the game first, then change the library folder.")
-            {
-                LockedFile = locked,
-            };
-        }
 
         foreach (var move in moves.Where(move => Directory.Exists(move.To)))
             Directory.Delete(move.To);
@@ -449,27 +447,6 @@ public sealed class LibraryFolderChanger : ILibraryFolderChanger
 
         var copied = copy.ToDictionary(entry => entry.RelativePath, StringComparer.Ordinal);
         return source.All(entry => copied.TryGetValue(entry.RelativePath, out var match) && match.Kind == entry.Kind && match.Length == entry.Length);
-    }
-
-    private static string? FindLockedFile(IReadOnlyList<FolderCopy> copies)
-    {
-        foreach (var (move, entries) in copies)
-        {
-            foreach (var entry in entries.Where(entry => entry.Kind == EntryKind.File))
-            {
-                var path = Path.Combine(move.From, entry.RelativePath);
-                try
-                {
-                    using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.None, 1);
-                }
-                catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
-                {
-                    return path;
-                }
-            }
-        }
-
-        return null;
     }
 
     private static void DeleteTree(string folder)

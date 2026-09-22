@@ -223,20 +223,24 @@ public sealed class LibraryFolderChangerTests : IDisposable
         await AssertLibraryAtAsync(BoreaRoot, instance);
     }
 
+    /// <summary>
+    /// Borea reads the files of the library next to the pages it shows, so a move
+    /// that asked whether a file is open would refuse itself. The handle here is
+    /// held the whole call, so the test does not wait for a moment to hit.
+    /// </summary>
     [Fact]
-    public async Task ChangeAsync_LockedFile_RefusesAndMovesNothing()
+    public async Task ChangeAsync_BoreaHoldsAFileItself_MovesAnyway()
     {
         var instance = await SeedLibraryAsync(BoreaRoot);
-        var locked = ModFile(BoreaRoot, instance);
+        var read = ModFile(BoreaRoot, instance);
 
         LibraryFolderChangeResult result;
-        using (new FileStream(locked, FileMode.Open, FileAccess.ReadWrite, FileShare.None))
-            result = await Changer(sameVolume: false).ChangeAsync(Target);
+        using (new FileStream(read, FileMode.Open, FileAccess.Read, FileShare.Read))
+            result = await Changer(sameVolume: true).ChangeAsync(Target);
 
-        Assert.Equal(LibraryFolderChangeOutcome.FileLocked, result.Outcome);
-        Assert.Equal(locked, result.LockedFile);
-        await AssertLibraryAtAsync(BoreaRoot, instance);
-        Assert.False(Directory.Exists(Target));
+        Assert.True(result.Changed, result.Message);
+        Assert.Equal(LibraryFolderChangeOutcome.Moved, result.Outcome);
+        Assert.True(File.Exists(ModFile(Target, instance)));
     }
 
     [Fact]
