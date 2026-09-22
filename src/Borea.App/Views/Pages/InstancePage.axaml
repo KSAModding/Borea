@@ -84,6 +84,61 @@
             </Border>
         </DataTemplate>
 
+        <!-- the mod loader the mods need, above the mods, in the shape of the other tables -->
+        <DataTemplate x:Key="InstanceLoaderTable" x:DataType="vm:InstanceLoaderSection">
+            <Border BorderBrush="{StaticResource Brush.BorderStrong}" BorderThickness="1" CornerRadius="16" views:RoundedClip.IsEnabled="True" Padding="0,0,0,4" Margin="0,0,0,16">
+                <StackPanel>
+                    <Border Background="{StaticResource Brush.Surface}" Padding="16,11">
+                        <TextBlock Classes="body-md secondary" Text="{Binding Title}" VerticalAlignment="Center" />
+                    </Border>
+                    <TextBlock Classes="body-md secondary" Text="{Binding NoneText}" TextWrapping="Wrap" Margin="16,12" IsVisible="{Binding NoneText, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                    <TextBlock Classes="body-sm danger" Text="{Binding DifferentText}" TextWrapping="Wrap" Margin="16,8" IsVisible="{Binding DifferentText, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                    <ItemsControl ItemsSource="{Binding Rows}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:InstanceLoaderRow">
+                                <Border BorderBrush="{StaticResource Brush.BorderStrong}" BorderThickness="0,1,0,0" Padding="16,8">
+                                    <Grid ColumnDefinitions="48,16,*,16,Auto">
+                                        <!-- like a mod row: the icon and the name open the loader's page -->
+                                        <Button Classes="plain" Command="{Binding OpenCommand}" IsVisible="{Binding CanOpen}" AutomationProperties.Name="{Binding Name}">
+                                            <Border Classes="thumbnail" Width="48" Height="48">
+                                                <views:ListingImageView Image="{Binding Icon}" Background="{StaticResource Brush.Surface}">
+                                                    <Path Classes="icon" Data="{StaticResource Icon.PuzzlePiece}" />
+                                                </views:ListingImageView>
+                                            </Border>
+                                        </Button>
+                                        <Border Classes="thumbnail" Width="48" Height="48" IsVisible="{Binding !CanOpen}" ToolTip.Tip="{Binding NoPageText}">
+                                            <views:ListingImageView Image="{Binding Icon}" Background="{StaticResource Brush.Surface}">
+                                                <Path Classes="icon" Data="{StaticResource Icon.PuzzlePiece}" />
+                                            </views:ListingImageView>
+                                        </Border>
+                                        <StackPanel Grid.Column="2" VerticalAlignment="Center">
+                                            <Button Classes="plain" Command="{Binding OpenCommand}" IsVisible="{Binding CanOpen}" HorizontalAlignment="Left">
+                                                <TextBlock Classes="heading-sm" Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
+                                            </Button>
+                                            <TextBlock Classes="heading-sm" Text="{Binding Name}" TextTrimming="CharacterEllipsis" IsVisible="{Binding !CanOpen}" ToolTip.Tip="{Binding NoPageText}" />
+                                            <TextBlock Classes="body-sm secondary" Text="{Binding RangeText}" TextWrapping="Wrap" />
+                                            <TextBlock Classes="body-sm secondary" Text="{Binding NeededByText}" TextWrapping="Wrap" IsVisible="{Binding NeededByText, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="4" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+                                            <Border Classes="chip" Classes.compatible="{Binding IsInstalled}" Classes.untested="{Binding IsWarning}" Classes.incompatible="{Binding IsConflict}" VerticalAlignment="Center" ToolTip.Tip="{Binding StatusToolTip}">
+                                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                                    <Ellipse />
+                                                    <TextBlock Text="{Binding StatusText}" />
+                                                </StackPanel>
+                                            </Border>
+                                            <Button Classes="link" Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).OpenLoaderSettingsCommand}" IsVisible="{Binding CanFix}" VerticalAlignment="Center">
+                                                <TextBlock Classes="action-md" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.InstanceLoaderOpenSettings}" />
+                                            </Button>
+                                        </StackPanel>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+        </DataTemplate>
+
         <DataTemplate x:Key="GameSaveTable" x:DataType="vm:GameSaveSection">
             <Border BorderBrush="{StaticResource Brush.BorderStrong}" BorderThickness="1" CornerRadius="16" views:RoundedClip.IsEnabled="True" Padding="0,0,0,4" Margin="0,0,0,16">
                 <StackPanel>
@@ -447,8 +502,9 @@
                     </TextBlock.IsVisible>
                 </TextBlock>
 
-                <!-- the design order: the groups, vehicles, saves, then the dependencies; a hidden group takes no space, margin included -->
+                <!-- the design order: the mod loader, the groups, vehicles, saves, then the dependencies; a hidden group takes no space, margin included -->
                 <StackPanel Margin="0,32,0,0" IsVisible="{Binding IsContentTab}">
+                    <ContentControl Content="{Binding InstanceLoader}" ContentTemplate="{StaticResource InstanceLoaderTable}" IsVisible="{Binding InstanceLoader, Converter={x:Static ObjectConverters.IsNotNull}}" />
                     <ItemsControl ItemsSource="{Binding ContentGroups}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate x:DataType="vm:ContentGroup">

@@ -2010,6 +2010,57 @@
   <data name="InstanceSizeToolTip" xml:space="preserve">
     <value>Size of the instance folder on disk</value>
   </data>
+  <data name="InstanceLoaderTitle" xml:space="preserve">
+    <value>Mod loader</value>
+  </data>
+  <data name="InstanceLoaderNone" xml:space="preserve">
+    <value>No mod needs a mod loader. Borea still starts this instance through one, because only a loader can point the game at an instance.</value>
+  </data>
+  <data name="InstanceLoaderNotInstalled" xml:space="preserve">
+    <value>Not installed</value>
+  </data>
+  <data name="InstanceLoaderVersionUnknown" xml:space="preserve">
+    <value>Installed, version unknown</value>
+  </data>
+  <data name="InstanceLoaderConflict" xml:space="preserve">
+    <value>The mods need versions that do not overlap</value>
+  </data>
+  <data name="InstanceLoaderOpenSettings" xml:space="preserve">
+    <value>Game settings</value>
+  </data>
+  <data name="InstanceLoaderConflictShort" xml:space="preserve">
+    <value>No version fits</value>
+  </data>
+  <data name="InstanceLoaderNotInIndex" xml:space="preserve">
+    <value>This mod loader is not in the content index, so it has no page.</value>
+  </data>
+  <data name="InstanceLoaderModNeedsFormat" xml:space="preserve">
+    <value>{0} needs {1}</value>
+  </data>
+  <data name="InstanceLoaderBoundsRangeFormat" xml:space="preserve">
+    <value>{0} to {1}</value>
+  </data>
+  <data name="InstanceLoaderBoundsMinimumFormat" xml:space="preserve">
+    <value>{0} or newer</value>
+  </data>
+  <data name="InstanceLoaderDifferentFormat" xml:space="preserve">
+    <value>The mods need different mod loaders: {0}. One launch can only start one of them.</value>
+  </data>
+  <data name="InstanceLoaderRangeFormat" xml:space="preserve">
+    <value>Needs {0} to {1}</value>
+  </data>
+  <data name="InstanceLoaderMinimumFormat" xml:space="preserve">
+    <value>Needs {0} or newer</value>
+  </data>
+  <data name="InstanceLoaderNeededByFormat" xml:space="preserve">
+    <value>Needed by {0}</value>
+  </data>
+  <data name="InstanceLoaderInstalledFormat" xml:space="preserve">
+    <value>Installed {0}</value>
+  </data>
+  <data name="InstanceLoaderWrongVersionFormat" xml:space="preserve">
+    <value>{0} installed</value>
+  </data>
   <data name="ContentShowVersions" xml:space="preserve">
     <value>Show</value>
   </data>

@@ -1270,6 +1270,49 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string InstanceSizeToolTip => Resources.InstanceSizeToolTip;
 
+    public string InstanceLoaderTitle => Resources.InstanceLoaderTitle;
+
+    public string InstanceLoaderNone => Resources.InstanceLoaderNone;
+
+    public string InstanceLoaderNotInstalled => Resources.InstanceLoaderNotInstalled;
+
+    public string InstanceLoaderVersionUnknown => Resources.InstanceLoaderVersionUnknown;
+
+    public string InstanceLoaderConflict => Resources.InstanceLoaderConflict;
+
+    public string InstanceLoaderOpenSettings => Resources.InstanceLoaderOpenSettings;
+
+    public string InstanceLoaderConflictShort => Resources.InstanceLoaderConflictShort;
+
+    public string InstanceLoaderNotInIndex => Resources.InstanceLoaderNotInIndex;
+
+    public string FormatInstanceLoaderModNeeds(string mod, string bounds)
+        => string.Format(CultureInfo.CurrentCulture, Resources.InstanceLoaderModNeedsFormat, mod, bounds);
+
+    public string FormatInstanceLoaderBoundsRange(string min, string max)
+        => string.Format(CultureInfo.CurrentCulture, Resources.InstanceLoaderBoundsRangeFormat, min, max);
+
+    public string FormatInstanceLoaderBoundsMinimum(string min)
+        => string.Format(CultureInfo.CurrentCulture, Resources.InstanceLoaderBoundsMinimumFormat, min);
+
+    public string FormatInstanceLoaderDifferent(string loaders)
+        => string.Format(CultureInfo.CurrentCulture, Resources.InstanceLoaderDifferentFormat, loaders);
+
+    public string FormatInstanceLoaderRange(string min, string max)
+        => string.Format(CultureInfo.CurrentCulture, Resources.InstanceLoaderRangeFormat, min, max);
+
+    public string FormatInstanceLoaderMinimum(string min)
+        => string.Format(CultureInfo.CurrentCulture, Resources.InstanceLoaderMinimumFormat, min);
+
+    public string FormatInstanceLoaderNeededBy(string mods)
+        => string.Format(CultureInfo.CurrentCulture, Resources.InstanceLoaderNeededByFormat, mods);
+
+    public string FormatInstanceLoaderInstalled(string version)
+        => string.Format(CultureInfo.CurrentCulture, Resources.InstanceLoaderInstalledFormat, version);
+
+    public string FormatInstanceLoaderWrongVersion(string version)
+        => string.Format(CultureInfo.CurrentCulture, Resources.InstanceLoaderWrongVersionFormat, version);
+
     public string ContentShowVersions => Resources.ContentShowVersions;
 
     public string ContentNoDescription => Resources.ContentNoDescription;

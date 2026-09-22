@@ -850,6 +850,7 @@ public partial class MainViewModel : ViewModelBase
         foreach (var category in CategoryOptions)
             category.RefreshText();
         RefreshContentGroups();
+        RefreshInstanceLoader();
         RefreshModListText();
         foreach (var item in ManualInstallItems)
             item.RefreshText();
