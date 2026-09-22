@@ -20,6 +20,9 @@ public sealed class GitHubSessionTests
     private readonly ConcurrentQueue<SentRequest> _sent = new();
     private readonly Queue<Func<HttpResponseMessage>> _tokenAnswers = new();
 
+    /// <summary>Holds back the answer to a token request, so that a test can keep a sign-in running.</summary>
+    private Task _tokenGate = Task.CompletedTask;
+
     private string _deviceCodeJson = DeviceCodeJson;
     private Func<HttpRequestMessage, HttpResponseMessage>? _otherAnswer;
 
@@ -247,12 +250,9 @@ public sealed class GitHubSessionTests
     [Fact]
     public async Task SignInAsync_WhileAnotherRuns_Throws()
     {
-        var release = new TaskCompletionSource();
-        _tokenAnswers.Enqueue(() =>
-        {
-            release.Task.Wait();
-            return Json(TokenJson);
-        });
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        _tokenGate = release.Task;
+        _tokenAnswers.Enqueue(() => Json(TokenJson));
         var session = Session();
         var first = session.SignInAsync();
         await WaitUntilAsync(() => session.State.Status == GitHubSessionStatus.WaitingForCode);
@@ -444,6 +444,7 @@ public sealed class GitHubSessionTests
             case GitHubSession.DeviceCodeUrl:
                 return Json(_deviceCodeJson);
             case GitHubSession.AccessTokenUrl:
+                await _tokenGate;
                 return _tokenAnswers.Count > 0 ? _tokenAnswers.Dequeue()() : Json(PendingJson);
             case GitHubSession.UserUrl when _otherAnswer is null:
                 return Json(UserJson);
