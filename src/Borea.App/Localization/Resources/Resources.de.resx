@@ -2016,6 +2016,21 @@
   <data name="InstanceLoaderOpenSettings" xml:space="preserve">
     <value>Spieleinstellungen</value>
   </data>
+  <data name="InstanceLoaderConflictShort" xml:space="preserve">
+    <value>Keine Version passt</value>
+  </data>
+  <data name="InstanceLoaderNotInIndex" xml:space="preserve">
+    <value>Dieser Mod-Loader ist nicht im Content-Index, deshalb hat er keine Seite.</value>
+  </data>
+  <data name="InstanceLoaderModNeedsFormat" xml:space="preserve">
+    <value>{0} braucht {1}</value>
+  </data>
+  <data name="InstanceLoaderBoundsRangeFormat" xml:space="preserve">
+    <value>{0} bis {1}</value>
+  </data>
+  <data name="InstanceLoaderBoundsMinimumFormat" xml:space="preserve">
+    <value>{0} oder neuer</value>
+  </data>
   <data name="InstanceLoaderDifferentFormat" xml:space="preserve">
     <value>Die Mods brauchen verschiedene Mod-Loader: {0}. Ein Start kann nur einen davon starten.</value>
   </data>

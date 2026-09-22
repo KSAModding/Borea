@@ -57,6 +57,33 @@ public sealed class LoaderNeedTests
     }
 
     [Fact]
+    public void For_RangesThatMeetInOneVersion_AreNoConflictAndAcceptIt()
+    {
+        // The bounds are inclusive (RFC 0031), so 0.4.0 to 0.5.0 and 0.5.0 to
+        // 0.9.0 share exactly 0.5.0.
+        var loader = Assert.Single(LoaderNeed.For(InstanceWith(
+            NeedsLoader("old-mod", "StarMap", "0.4.0", max: "0.5.0"),
+            NeedsLoader("new-mod", "StarMap", "0.5.0", max: "0.9.0"))).Loaders);
+
+        Assert.False(loader.HasConflict);
+        Assert.True(loader.Accepts(ModVersion.Parse("0.5.0")));
+        Assert.False(loader.Accepts(ModVersion.Parse("0.5.1")));
+    }
+
+    [Fact]
+    public void For_KeepsWhatEachModAsksFor_InIdOrder()
+    {
+        var loader = Assert.Single(LoaderNeed.For(InstanceWith(
+            NeedsLoader("old-mod", "StarMap", "0.3.0", max: "0.3.9"),
+            NeedsLoader("new-mod", "StarMap", "0.4.5"))).Loaders);
+
+        Assert.Equal(["new-mod", "old-mod"], loader.Requirements.Select(requirement => requirement.ModId));
+        Assert.Equal("0.4.5", loader.Requirements[0].MinVersion.ToString());
+        Assert.Null(loader.Requirements[0].MaxVersion);
+        Assert.Equal("0.3.9", loader.Requirements[1].MaxVersion?.ToString());
+    }
+
+    [Fact]
     public void For_ModsNameDifferentLoaders_ListsEachInIdOrder()
     {
         var need = LoaderNeed.For(InstanceWith(

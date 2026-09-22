@@ -138,16 +138,22 @@ internal static class InstanceCommand
 
         var described = loaders.Select(loader =>
         {
-            var range = loader.MaxVersion is null ? $"{loader.MinVersion} or newer" : $"{loader.MinVersion} to {loader.MaxVersion}";
-            var state = loader.Conflict
-                ? "the mods need versions that do not overlap"
-                : loader.InstalledVersion is { } installed
-                    ? loader.Accepted == true ? $"{installed} installed" : $"{installed} installed, outside the range"
-                    : loader.Installed ? "installed, version unknown" : "not installed";
-            return $"{loader.Id} {range}, {state}, needed by {string.Join(", ", loader.NeededBy)}";
+            // the combined bounds of a conflict hold no version, so each mod's own bounds are named instead
+            if (loader.Conflict)
+            {
+                var asks = loader.Requirements.Select(requirement => $"{requirement.ModId} needs {Bounds(requirement.MinVersion, requirement.MaxVersion)}");
+                return $"{loader.Id}, the mods need versions that do not overlap: {string.Join(", ", asks)}";
+            }
+
+            var state = loader.InstalledVersion is { } installed
+                ? loader.Accepted == true ? $"{installed} installed" : $"{installed} installed, outside the range"
+                : loader.Installed ? "installed, version unknown" : "not installed";
+            return $"{loader.Id} {Bounds(loader.MinVersion, loader.MaxVersion)}, {state}, needed by {string.Join(", ", loader.NeededBy)}";
         });
         var text = string.Join("; ", described);
         return loaders.Count > 1 ? $"{text} (one launch can only start one of them)" : text;
+
+        static string Bounds(string min, string? max) => max is null ? $"{min} or newer" : $"{min} to {max}";
     }
 
     private static string DescribePlaytime(InstancePlaytime playtime)
@@ -648,7 +654,7 @@ internal static class InstanceCommand
     }
 
     /// <summary>One loader the mods of an instance need, for <c>instance show</c>.</summary>
-    private sealed record ModLoaderNeedView(string Id, string MinVersion, string? MaxVersion, bool Conflict, IReadOnlyList<string> NeededBy, bool Installed, string? InstalledVersion, bool? Accepted)
+    private sealed record ModLoaderNeedView(string Id, string MinVersion, string? MaxVersion, bool Conflict, IReadOnlyList<string> NeededBy, IReadOnlyList<ModLoaderBoundsView> Requirements, bool Installed, string? InstalledVersion, bool? Accepted)
     {
         public static ModLoaderNeedView From(NeededLoader loader, IReadOnlyDictionary<string, LoaderInstallation> installations)
         {
@@ -660,6 +666,7 @@ internal static class InstanceCommand
                 loader.MaxVersion?.ToString(),
                 loader.HasConflict,
                 loader.NeededBy,
+                loader.Requirements.Select(requirement => new ModLoaderBoundsView(requirement.ModId, requirement.MinVersion.ToString(), requirement.MaxVersion?.ToString())).ToList(),
                 installation is not null,
                 version?.ToString(),
                 version is { } known ? loader.Accepts(known) : null);
@@ -677,6 +684,9 @@ internal static class InstanceCommand
         public static PlaytimeView From(InstancePlaytime playtime)
             => new((long)playtime.Total.TotalSeconds, playtime.Sessions, playtime.IncludesRunningSession, playtime.UnreadableLogs, playtime.IsKnown);
     }
+
+    /// <summary>What one mod asks of the loader, so a script sees which mod asks for which end of a conflict.</summary>
+    private sealed record ModLoaderBoundsView(string ModId, string MinVersion, string? MaxVersion);
 
     private sealed record InstanceSourceView(string Kind, string? ModPackId, string? Version)
     {

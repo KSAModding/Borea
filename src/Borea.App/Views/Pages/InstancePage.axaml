@@ -106,7 +106,7 @@
                                                 </views:ListingImageView>
                                             </Border>
                                         </Button>
-                                        <Border Classes="thumbnail" Width="48" Height="48" IsVisible="{Binding !CanOpen}">
+                                        <Border Classes="thumbnail" Width="48" Height="48" IsVisible="{Binding !CanOpen}" ToolTip.Tip="{Binding NoPageText}">
                                             <views:ListingImageView Image="{Binding Icon}" Background="{StaticResource Brush.Surface}">
                                                 <Path Classes="icon" Data="{StaticResource Icon.PuzzlePiece}" />
                                             </views:ListingImageView>
@@ -115,12 +115,12 @@
                                             <Button Classes="plain" Command="{Binding OpenCommand}" IsVisible="{Binding CanOpen}" HorizontalAlignment="Left">
                                                 <TextBlock Classes="heading-sm" Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
                                             </Button>
-                                            <TextBlock Classes="heading-sm" Text="{Binding Name}" TextTrimming="CharacterEllipsis" IsVisible="{Binding !CanOpen}" />
-                                            <TextBlock Classes="body-sm secondary" Text="{Binding RangeText}" />
-                                            <TextBlock Classes="body-sm secondary" Text="{Binding NeededByText}" TextWrapping="Wrap" />
+                                            <TextBlock Classes="heading-sm" Text="{Binding Name}" TextTrimming="CharacterEllipsis" IsVisible="{Binding !CanOpen}" ToolTip.Tip="{Binding NoPageText}" />
+                                            <TextBlock Classes="body-sm secondary" Text="{Binding RangeText}" TextWrapping="Wrap" />
+                                            <TextBlock Classes="body-sm secondary" Text="{Binding NeededByText}" TextWrapping="Wrap" IsVisible="{Binding NeededByText, Converter={x:Static ObjectConverters.IsNotNull}}" />
                                         </StackPanel>
                                         <StackPanel Grid.Column="4" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
-                                            <Border Classes="chip" Classes.compatible="{Binding IsInstalled}" Classes.untested="{Binding IsWarning}" Classes.incompatible="{Binding IsConflict}" VerticalAlignment="Center">
+                                            <Border Classes="chip" Classes.compatible="{Binding IsInstalled}" Classes.untested="{Binding IsWarning}" Classes.incompatible="{Binding IsConflict}" VerticalAlignment="Center" ToolTip.Tip="{Binding StatusToolTip}">
                                                 <StackPanel Orientation="Horizontal" Spacing="6">
                                                     <Ellipse />
                                                     <TextBlock Text="{Binding StatusText}" />

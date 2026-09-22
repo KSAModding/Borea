@@ -1274,6 +1274,19 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string InstanceLoaderOpenSettings => Resources.InstanceLoaderOpenSettings;
 
+    public string InstanceLoaderConflictShort => Resources.InstanceLoaderConflictShort;
+
+    public string InstanceLoaderNotInIndex => Resources.InstanceLoaderNotInIndex;
+
+    public string FormatInstanceLoaderModNeeds(string mod, string bounds)
+        => string.Format(CultureInfo.CurrentCulture, Resources.InstanceLoaderModNeedsFormat, mod, bounds);
+
+    public string FormatInstanceLoaderBoundsRange(string min, string max)
+        => string.Format(CultureInfo.CurrentCulture, Resources.InstanceLoaderBoundsRangeFormat, min, max);
+
+    public string FormatInstanceLoaderBoundsMinimum(string min)
+        => string.Format(CultureInfo.CurrentCulture, Resources.InstanceLoaderBoundsMinimumFormat, min);
+
     public string FormatInstanceLoaderDifferent(string loaders)
         => string.Format(CultureInfo.CurrentCulture, Resources.InstanceLoaderDifferentFormat, loaders);
 

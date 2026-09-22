@@ -36,7 +36,7 @@ public partial class MainViewModel
             loader,
             _listings.FirstOrDefault(listing => listing.Type == ContentType.ModLoader && ModIds.Equals(listing.ModId, loader.LoaderId)),
             _services.Settings.LoaderInstallations.FirstOrDefault(entry => ModIds.Equals(entry.Key, loader.LoaderId)).Value,
-            loader.NeededBy.Select(id => names.TryGetValue(id, out var name) ? name : id).ToList())).ToList();
+            id => names.TryGetValue(id, out var name) ? name : id)).ToList();
 
         InstanceLoader = new InstanceLoaderSection(this, need, rows);
     }
@@ -100,15 +100,16 @@ public sealed partial class InstanceLoaderRow
     private readonly NeededLoader _loader;
     private readonly DiscoverItem? _listing;
     private readonly LoaderInstallation? _installation;
-    private readonly IReadOnlyList<string> _neededBy;
+    private readonly Func<string, string> _nameOf;
 
-    public InstanceLoaderRow(MainViewModel owner, NeededLoader loader, DiscoverItem? listing, LoaderInstallation? installation, IReadOnlyList<string> neededBy)
+    /// <param name="nameOf">The display name of a mod id, as its row on the page shows it.</param>
+    public InstanceLoaderRow(MainViewModel owner, NeededLoader loader, DiscoverItem? listing, LoaderInstallation? installation, Func<string, string> nameOf)
     {
         _owner = owner;
         _loader = loader;
         _listing = listing;
         _installation = installation;
-        _neededBy = neededBy;
+        _nameOf = nameOf;
         Name = listing?.Name ?? loader.LoaderId;
         Icon = listing?.Icon;
         State = StateOf(loader, installation);
@@ -121,27 +122,47 @@ public sealed partial class InstanceLoaderRow
     /// <summary>Whether the row links to the loader's page, like a mod row does. A loader the index does not list has none.</summary>
     public bool CanOpen => _listing is not null;
 
+    /// <summary>Why the row has no link, for the tooltip of its icon and name, the way a mod row says it. Null when it links.</summary>
+    public string? NoPageText => CanOpen ? null : _owner.Localization.InstanceLoaderNotInIndex;
+
     /// <summary>Opens the loader's page with the way back to this instance, the way a mod row opens its page.</summary>
     [RelayCommand]
     private Task OpenAsync() => _listing is null ? Task.CompletedTask : _owner.OpenContentFromInstanceAsync(_listing);
 
     public InstanceLoaderState State { get; }
 
-    /// <summary>"0.4.5 or newer", or "0.4.5 to 0.8.0".</summary>
-    public string RangeText => _loader.MaxVersion is { } max
-        ? _owner.Localization.FormatInstanceLoaderRange(_loader.MinVersion.ToString(), max.ToString())
-        : _owner.Localization.FormatInstanceLoaderMinimum(_loader.MinVersion.ToString());
+    /// <summary>
+    /// "Needs 0.4.5 or newer", or "Needs 0.4.5 to 0.8.0". On a conflict the
+    /// combined bounds hold no version, so the line names what each mod asks for instead.
+    /// </summary>
+    public string RangeText => IsConflict
+        ? string.Join("; ", _loader.Requirements.Select(requirement =>
+            _owner.Localization.FormatInstanceLoaderModNeeds(_nameOf(requirement.ModId), Bounds(requirement.MinVersion, requirement.MaxVersion))))
+        : _loader.MaxVersion is { } max
+            ? _owner.Localization.FormatInstanceLoaderRange(_loader.MinVersion.ToString(), max.ToString())
+            : _owner.Localization.FormatInstanceLoaderMinimum(_loader.MinVersion.ToString());
 
-    public string NeededByText => _owner.Localization.FormatInstanceLoaderNeededBy(string.Join(", ", _neededBy));
+    /// <summary>The mods that need the loader. Null on a conflict, where the range line already names them.</summary>
+    public string? NeededByText => IsConflict
+        ? null
+        : _owner.Localization.FormatInstanceLoaderNeededBy(string.Join(", ", _loader.NeededBy.Select(_nameOf)));
 
+    /// <summary>A short label, so the chip keeps the size of the other chips on the page.</summary>
     public string StatusText => State switch
     {
         InstanceLoaderState.Installed => _owner.Localization.FormatInstanceLoaderInstalled(_installation!.Version!.Value.ToString()),
         InstanceLoaderState.VersionUnknown => _owner.Localization.InstanceLoaderVersionUnknown,
         InstanceLoaderState.WrongVersion => _owner.Localization.FormatInstanceLoaderWrongVersion(_installation!.Version!.Value.ToString()),
         InstanceLoaderState.NotInstalled => _owner.Localization.InstanceLoaderNotInstalled,
-        _ => _owner.Localization.InstanceLoaderConflict,
+        _ => _owner.Localization.InstanceLoaderConflictShort,
     };
+
+    /// <summary>The sentence behind a short chip. Null where the chip says it all.</summary>
+    public string? StatusToolTip => IsConflict ? _owner.Localization.InstanceLoaderConflict : null;
+
+    private string Bounds(ModVersion min, ModVersion? max) => max is { } upper
+        ? _owner.Localization.FormatInstanceLoaderBoundsRange(min.ToString(), upper.ToString())
+        : _owner.Localization.FormatInstanceLoaderBoundsMinimum(min.ToString());
 
     public bool IsInstalled => State == InstanceLoaderState.Installed;
 

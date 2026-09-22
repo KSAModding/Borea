@@ -55,15 +55,19 @@ public sealed class NeededLoader
     /// <summary>The ids of the mods that need the loader, ordered by id.</summary>
     public IReadOnlyList<string> NeededBy { get; }
 
+    /// <summary>What each of those mods asks for, in the order of <see cref="NeededBy"/>. On a conflict this says which mod asks for which end.</summary>
+    public IReadOnlyList<ModLoaderBounds> Requirements { get; }
+
     /// <summary>The mods ask for versions that do not overlap, so no single version satisfies them all.</summary>
     public bool HasConflict => MaxVersion is { } max && max.CompareTo(MinVersion) < 0;
 
-    private NeededLoader(string loaderId, ModVersion minVersion, ModVersion? maxVersion, IReadOnlyList<string> neededBy)
+    private NeededLoader(string loaderId, ModVersion minVersion, ModVersion? maxVersion, IReadOnlyList<ModLoaderBounds> requirements)
     {
         LoaderId = loaderId;
         MinVersion = minVersion;
         MaxVersion = maxVersion;
-        NeededBy = neededBy;
+        Requirements = requirements;
+        NeededBy = requirements.Select(requirement => requirement.ModId).ToList();
     }
 
     internal static NeededLoader From(string loaderId, IReadOnlyList<InstalledMod> mods)
@@ -72,11 +76,17 @@ public sealed class NeededLoader
         var min = requirements.Select(requirement => requirement.MinVersion).Max();
         var maxima = requirements.Select(requirement => requirement.MaxVersion).OfType<ModVersion>().ToList();
         var max = maxima.Count == 0 ? (ModVersion?)null : maxima.Min();
-        var ids = mods.Select(mod => mod.ModId).Order(ModIds.Comparer).ToList();
-        return new NeededLoader(loaderId, min, max, ids);
+        var bounds = mods
+            .OrderBy(mod => mod.ModId, ModIds.Comparer)
+            .Select(mod => new ModLoaderBounds(mod.ModId, mod.Metadata.Loader!.MinVersion, mod.Metadata.Loader.MaxVersion))
+            .ToList();
+        return new NeededLoader(loaderId, min, max, bounds);
     }
 
     /// <summary>Whether <paramref name="version"/> is inside the range. False when the range is empty.</summary>
     public bool Accepts(ModVersion version) =>
         !HasConflict && version.CompareTo(MinVersion) >= 0 && (MaxVersion is not { } max || version.CompareTo(max) <= 0);
 }
+
+/// <summary>The loader versions one mod accepts. A null maximum is open.</summary>
+public sealed record ModLoaderBounds(string ModId, ModVersion MinVersion, ModVersion? MaxVersion);
