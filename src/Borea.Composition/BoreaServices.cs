@@ -128,6 +128,8 @@ public sealed class BoreaServices : IDisposable
 
     public required IForeignModAdopter ForeignModAdopter { get; init; }
 
+    public required IMissingModDetector MissingMods { get; init; }
+
     public required IForeignModReleaseMatcher ForeignModReleaseMatcher { get; init; }
 
     public required ISharedProfileImporter SharedProfileImporter { get; init; }
@@ -401,6 +403,7 @@ public sealed class BoreaServices : IDisposable
             Installer = modInstaller,
             Replacer = modReplacer,
             ForeignModAdopter = foreignModAdopter,
+            MissingMods = new FileMissingModDetector(paths, instances),
             ForeignModReleaseMatcher = foreignModReleaseMatcher,
             SharedProfileImporter = new FileSharedProfileImporter(paths, instances, modState, foreignModAdopter, foreignModReleaseMatcher),
             Mods = new ReleaseChannelModRepository(mods, settings.ReleaseChannel),
