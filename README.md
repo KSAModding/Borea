@@ -30,7 +30,7 @@ Kitten Space Agency is their game and their trademark.
 
 - Browse the [content index](https://github.com/KSAModding/content-index) and install mods with one click. Dependencies are resolved, recommendations are offered, and the mod loader is installed when a launch needs it.
 - Keep several instances of the game, each with its own mods, saves and vehicles, and switch between them. Your game's own profile stays untouched.
-- Update mods when a new release appears.
+- Update mods when a new release appears, and update Borea itself from the Home banner or with `borea update-self`.
 - Install mod packs, and export or import a mod list to share a setup.
 - Start the game through the mod loader with the right instance, and see why a launch failed, with the mod that broke it and a button to disable it.
 - Import the mods you installed by hand into an instance.
@@ -127,6 +127,11 @@ Do not unpack the archive by double-clicking it in Finder, and do not start `bor
 
 Once it runs, Borea behaves like any other Mac program.
 
+### Updating Borea
+
+**Update now** on the Home banner, or `borea update-self`, installs the newest release of your update channel into the same folder, so shortcuts keep working.
+If Borea does not start after an update, rename `borea.exe.old` (`borea.old` on Linux and macOS) to `borea.exe` to get the build you had back.
+
 ### Checksums and provenance
 
 `SHA256SUMS.txt` in each release lists the checksum of every archive and every software bill of materials.
@@ -166,6 +171,7 @@ The exit code is 0 when the command completed, 1 when the operation failed and t
 | `borea settings set loader <loader-id> <directory>` | Point Borea at an installed mod loader. |
 | `borea settings set channel <channel>` | Choose which release statuses install and update offer: `stable` (the default), `testing` or `dev`. |
 | `borea settings set library <directory>` | Move the instances and backups to another folder, or use the library that folder already holds. `--default` moves them back. |
+| `borea update-self` | Replace this Borea build with the newest release of your update channel. `--check` only reports which release it would install. |
 | `borea game version` | Print the installed build and the current public build the master server reports. |
 | `borea game check` | Check the game installation against what Borea assumes about it. Exits 1 when an assumption is broken. |
 | `borea instance list` | Print every instance and mark the active one. |
