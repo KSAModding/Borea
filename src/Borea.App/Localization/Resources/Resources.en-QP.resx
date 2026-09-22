@@ -307,7 +307,7 @@
     <value>Belay that</value>
   </data>
   <data name="LibraryDeleteConfirm" xml:space="preserve">
-    <value>Send this 'ere instance and its chest to walk the plank?</value>
+    <value>Send this 'ere instance, its chest and its backup chests to walk the plank?</value>
   </data>
   <data name="LibraryEmpty" xml:space="preserve">
     <value>Nary any seas charted. Piece one togget'er before ye take the wheel.</value>

@@ -406,7 +406,7 @@
     <value>Cancel</value>
   </data>
   <data name="LibraryDeleteConfirm" xml:space="preserve">
-    <value>Delete this instance and its folder?</value>
+    <value>Delete this instance, its folder and its backups?</value>
   </data>
   <data name="LibraryEmpty" xml:space="preserve">
     <value>No instances yet. Create one to get started.</value>

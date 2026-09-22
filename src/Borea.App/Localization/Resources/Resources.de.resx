@@ -406,7 +406,7 @@
     <value>Abbrechen</value>
   </data>
   <data name="LibraryDeleteConfirm" xml:space="preserve">
-    <value>Diese Instanz und ihren Ordner löschen?</value>
+    <value>Diese Instanz, ihren Ordner und ihre Backups löschen?</value>
   </data>
   <data name="LibraryEmpty" xml:space="preserve">
     <value>Noch keine Instanzen. Erstelle eine, um loszulegen.</value>
