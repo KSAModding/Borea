@@ -226,6 +226,23 @@ public sealed class PackViewModelTests
     }
 
     [Fact]
+    public async Task OpenPack_GoesBackToDiscover()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: WithPacks(
+            Pack("starter-pack", "Starter Pack", Version("1.0.0", Pin("MeasureTools", "1.1.9")))));
+        var viewModel = harness.ViewModel;
+        await viewModel.EnsureDiscoverLoadedAsync();
+        viewModel.ShowDiscoverModpacksCommand.Execute(null);
+        await Assert.Single(viewModel.DiscoverPacks).OpenCommand.ExecuteAsync(null);
+        Assert.True(viewModel.CurrentWindowPack);
+
+        await viewModel.GoBackCommand.ExecuteAsync(null);
+
+        Assert.True(viewModel.CurrentWindowDiscover);
+        Assert.False(viewModel.CurrentWindowPack);
+    }
+
+    [Fact]
     public async Task Install_YankedMember_WaitsForConfirmation()
     {
         using var harness = await ViewModelHarness.CreateAsync(editSnapshot: snapshot =>

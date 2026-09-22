@@ -180,6 +180,9 @@
         <views:PageBodyPanel HasBottomMargin="False">
             <!-- breadcrumb: Library / name -->
             <StackPanel Orientation="Horizontal" Spacing="4" Height="24">
+                <Button Classes="plain back" Command="{Binding GoBackCommand}" VerticalAlignment="Center" ToolTip.Tip="{Binding Localization.NavigationBack}" AutomationProperties.Name="{Binding Localization.NavigationBack}">
+                    <Path Classes="icon" Data="{StaticResource Icon.ArrowLeft}" />
+                </Button>
                 <Path Classes="icon" Data="{StaticResource Icon.Library}" />
                 <Button Classes="plain" Command="{Binding SetMainWindowLibrary}">
                     <TextBlock Classes="label-lg" Text="{Binding Localization.PageLibraryHeading}" VerticalAlignment="Center" />

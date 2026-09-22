@@ -524,6 +524,10 @@
         <Style Selector="Button.chip-button:pointerover /template/ ContentPresenter">
             <Setter Property="Background" Value="{StaticResource Brush.Surface}" />
         </Style>
+        <!-- the back control before a breadcrumb, in the accent colour like the active item of the rail -->
+        <Style Selector="Button.back Path.icon">
+            <Setter Property="Stroke" Value="{StaticResource Brush.Accent}" />
+        </Style>
         <!-- an invisible button around text or a thumbnail -->
         <Style Selector="Button.plain">
             <Setter Property="Padding" Value="0" />
@@ -533,6 +537,10 @@
         </Style>
         <Style Selector="Button.plain:pointerover /template/ ContentPresenter">
             <Setter Property="Background" Value="Transparent" />
+        </Style>
+        <Style Selector="Button.plain.back:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="{StaticResource Brush.AccentSoft}" />
+            <Setter Property="CornerRadius" Value="100" />
         </Style>
         <Style Selector="Button.plain:pressed /template/ ContentPresenter">
             <Setter Property="Background" Value="Transparent" />

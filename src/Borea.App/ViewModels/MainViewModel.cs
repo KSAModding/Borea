@@ -69,6 +69,7 @@ public partial class MainViewModel : ViewModelBase
 
     //windows
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsHomeSection))]
     private bool _currentWindowHome = true;
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsDiscoverSection))]
@@ -90,9 +91,15 @@ public partial class MainViewModel : ViewModelBase
     public bool IsLibrarySection => CurrentWindowLibrary || CurrentWindowInstance || IsContentFromInstance;
 
     /// <summary>
-    /// The discover rail item stays lit on a content, pack or listing page too.
+    /// The home rail item stays lit on a content page opened from a Home card.
     /// </summary>
-    public bool IsDiscoverSection => CurrentWindowDiscover || (CurrentWindowContent && !IsContentFromInstance) || CurrentWindowPack || CurrentWindowListing;
+    public bool IsHomeSection => CurrentWindowHome || IsContentFromHome;
+
+    /// <summary>
+    /// The discover rail item stays lit on a content, pack or listing page too,
+    /// unless that content page belongs to Home or to an instance.
+    /// </summary>
+    public bool IsDiscoverSection => CurrentWindowDiscover || (CurrentWindowContent && !IsContentFromInstance && !IsContentFromHome) || CurrentWindowPack || CurrentWindowListing;
     [RelayCommand]
     public void SetMainWindowHome() // used to set whatever is on the main window (discover, library, etc.)
     {
@@ -408,7 +415,7 @@ public partial class MainViewModel : ViewModelBase
         await EnsureDiscoverLoadedAsync();
         var row = _listings.FirstOrDefault(listing => ModIds.Equals(listing.ModId, item.ModId) && listing.Source == item.Listing.Source)
             ?? new DiscoverItem(this, item.Listing);
-        await OpenContentAsync(row);
+        await OpenContentAsync(row, PageOrigin.Home);
     }
 
     /// <summary>The active instance as last read, for what the Discover rows can remove.</summary>

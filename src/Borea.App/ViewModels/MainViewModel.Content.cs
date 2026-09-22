@@ -22,8 +22,10 @@ public partial class MainViewModel
 {
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsDiscoverSection))]
+    [NotifyPropertyChangedFor(nameof(IsHomeSection))]
     [NotifyPropertyChangedFor(nameof(IsLibrarySection))]
     [NotifyPropertyChangedFor(nameof(IsContentFromInstance))]
+    [NotifyPropertyChangedFor(nameof(IsContentFromHome))]
     [NotifyPropertyChangedFor(nameof(CanActOnSelectedContent))]
     private bool _currentWindowContent;
 
@@ -39,6 +41,32 @@ public partial class MainViewModel
     private InstanceItem? _contentReturnInstance;
 
     public bool IsContentFromInstance => CurrentWindowContent && ContentReturnInstance is not null;
+
+    private PageOrigin _openedFrom;
+
+    /// <summary>
+    /// The page the content or pack page was opened from, which is where its
+    /// back control and its breadcrumb lead. An opening that has no page of
+    /// its own, such as a task or a borea link, comes from Discover, the list
+    /// the content is in.
+    /// </summary>
+    internal PageOrigin OpenedFrom
+    {
+        get => _openedFrom;
+        private set
+        {
+            if (_openedFrom == value)
+                return;
+
+            _openedFrom = value;
+            OnPropertyChanged(nameof(IsContentFromHome));
+            OnPropertyChanged(nameof(IsHomeSection));
+            OnPropertyChanged(nameof(IsDiscoverSection));
+        }
+    }
+
+    /// <summary>True while the open content page was reached from Home, which its breadcrumb then names.</summary>
+    public bool IsContentFromHome => CurrentWindowContent && OpenedFrom == PageOrigin.Home;
 
     /// <summary>
     /// Whether Add and Remove on the content page can be offered. They act on
@@ -116,12 +144,15 @@ public partial class MainViewModel
     partial void OnLatestVersionChanged(VersionItem? value) => RefreshContentDependencies();
 
     [RelayCommand]
-    internal async Task OpenContentAsync(DiscoverItem item)
+    internal Task OpenContentAsync(DiscoverItem item) => OpenContentAsync(item, PageOrigin.Discover);
+
+    internal async Task OpenContentAsync(DiscoverItem item, PageOrigin origin)
     {
         if (item is null)
             return;
 
         ContentReturnInstance = null;
+        OpenedFrom = origin;
         await ShowContentAsync(item);
     }
 
@@ -146,7 +177,34 @@ public partial class MainViewModel
             return;
 
         ContentReturnInstance = SelectedInstance;
+        OpenedFrom = PageOrigin.Instance;
         await ShowContentAsync(item);
+    }
+
+    /// <summary>
+    /// The back control of the content, pack and instance pages. It leads to the
+    /// page the content was opened from, and an instance leads to the Library.
+    /// </summary>
+    [RelayCommand]
+    private Task GoBackAsync()
+    {
+        // An instance is only ever reached from the Library, and OpenedFrom
+        // belongs to the content page, where it would be stale here.
+        if (CurrentWindowInstance)
+        {
+            SetMainWindowLibrary();
+            return Task.CompletedTask;
+        }
+
+        if (OpenedFrom == PageOrigin.Instance)
+            return ReturnToInstanceAsync();
+
+        if (OpenedFrom == PageOrigin.Home)
+            SetMainWindowHome();
+        else
+            SetMainWindowDiscover();
+
+        return Task.CompletedTask;
     }
 
     [RelayCommand]
@@ -372,6 +430,14 @@ public partial class MainViewModel
             () => Task.FromResult<ModVersionMetadata?>(release),
             release.Version,
             confirm: row.ReplacedVersion is not null);
+}
+
+/// <summary>Where a content or pack page was opened from.</summary>
+internal enum PageOrigin
+{
+    Discover,
+    Home,
+    Instance,
 }
 
 public enum ContentPageTab

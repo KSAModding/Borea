@@ -12,6 +12,9 @@
                 <StackPanel Container.Name="page-body" Container.Sizing="Width">
                     <DockPanel Height="24">
                         <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" Spacing="4">
+                            <Button Classes="plain back" Command="{Binding GoBackCommand}" VerticalAlignment="Center" ToolTip.Tip="{Binding Localization.NavigationBack}" AutomationProperties.Name="{Binding Localization.NavigationBack}">
+                                <Path Classes="icon" Data="{StaticResource Icon.ArrowLeft}" />
+                            </Button>
                             <Path Classes="icon" Data="{StaticResource Icon.Compass}" />
                             <Button Classes="plain" Command="{Binding SetMainWindowDiscover}">
                                 <TextBlock Classes="label-lg" Text="{Binding Localization.PageDiscoverHeading}" VerticalAlignment="Center" />
