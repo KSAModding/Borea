@@ -180,7 +180,7 @@ The exit code is 0 when the command completed, 1 when the operation failed and t
 | `borea instance delete <instance>` | Delete an instance, its folder, and the backups of its saves and vehicles. |
 | `borea instance activate <instance>` | Make an instance the active one. |
 | `borea instance deactivate` | Leave no instance active. |
-| `borea instance scan <instance>` | Print the mod folders that Borea did not install, and whether the content index lists them. |
+| `borea instance scan <instance>` | Print the mod folders that Borea did not install, and the recorded mods whose folder is gone. |
 | `borea instance adopt <instance> <folder> --archive <path>` | Record a mod folder that Borea did not install as the index release its archive matches. |
 | `borea instance import-profile <name> [--dry-run]` | Create an instance from copies of the mods in the shared profile, with the same load order and enabled state. The shared profile stays as it is. |
 | `borea instance backups <instance>` | Print the backups of the saves and vehicles of an instance, newest first. |

@@ -951,6 +951,39 @@
   <data name="ContentRemoveRequiredFormat" xml:space="preserve">
     <value>{0} bleibt, weil {1} es braucht.</value>
   </data>
+  <data name="ContentNotOnDisk" xml:space="preserve">
+    <value>Nicht auf der Festplatte</value>
+  </data>
+  <data name="ContentNotOnDiskDetail" xml:space="preserve">
+    <value>Der Ordner dieses Mods fehlt. Installiere ihn erneut, oder entferne ihn aus der Liste.</value>
+  </data>
+  <data name="ContentNotOnDiskEnable" xml:space="preserve">
+    <value>Borea kann einen Mod ohne Ordner nicht aktivieren.</value>
+  </data>
+  <data name="ContentInstallAgain" xml:space="preserve">
+    <value>Erneut installieren</value>
+  </data>
+  <data name="ContentRemoveFromList" xml:space="preserve">
+    <value>Aus der Liste entfernen</value>
+  </data>
+  <data name="ContentRemoveFromListConfirm" xml:space="preserve">
+    <value>Aus der Liste entfernen? Die Dateien fehlen bereits.</value>
+  </data>
+  <data name="ContentFolderInTheWayFormat" xml:space="preserve">
+    <value>Der Ordner '{0}' hat keine mod.toml, also kann Borea nicht darüber installieren. Entferne den Ordner, dann installiere erneut.</value>
+  </data>
+  <data name="ContentBackOnDiskFormat" xml:space="preserve">
+    <value>{0} ist wieder auf der Festplatte, also hat Borea nichts geändert. Öffne die Instanz erneut.</value>
+  </data>
+  <data name="ToastMissingScanFailed" xml:space="preserve">
+    <value>Borea konnte den Mods-Ordner dieser Instanz nicht lesen.</value>
+  </data>
+  <data name="InstanceModsMissingOne" xml:space="preserve">
+    <value>1 Mod dieser Instanz fehlt auf der Festplatte.</value>
+  </data>
+  <data name="InstanceModsMissingFormat" xml:space="preserve">
+    <value>{0} Mods dieser Instanz fehlen auf der Festplatte.</value>
+  </data>
   <data name="ContentUpdate" xml:space="preserve">
     <value>Aktualisieren</value>
   </data>

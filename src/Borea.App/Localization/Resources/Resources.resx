@@ -951,6 +951,39 @@
   <data name="ContentRemoveRequiredFormat" xml:space="preserve">
     <value>{0} stays because {1} requires it.</value>
   </data>
+  <data name="ContentNotOnDisk" xml:space="preserve">
+    <value>Not on disk</value>
+  </data>
+  <data name="ContentNotOnDiskDetail" xml:space="preserve">
+    <value>The folder of this mod is gone. Install it again, or remove it from the list.</value>
+  </data>
+  <data name="ContentNotOnDiskEnable" xml:space="preserve">
+    <value>Borea cannot enable a mod whose folder is gone.</value>
+  </data>
+  <data name="ContentInstallAgain" xml:space="preserve">
+    <value>Install again</value>
+  </data>
+  <data name="ContentRemoveFromList" xml:space="preserve">
+    <value>Remove from the list</value>
+  </data>
+  <data name="ContentRemoveFromListConfirm" xml:space="preserve">
+    <value>Remove from the list? The files are gone already.</value>
+  </data>
+  <data name="ContentFolderInTheWayFormat" xml:space="preserve">
+    <value>The folder '{0}' has no mod.toml, so Borea cannot install over it. Remove the folder, then install again.</value>
+  </data>
+  <data name="ContentBackOnDiskFormat" xml:space="preserve">
+    <value>{0} is on disk again, so Borea changed nothing. Open the instance again.</value>
+  </data>
+  <data name="ToastMissingScanFailed" xml:space="preserve">
+    <value>Borea could not read the mods folder of this instance.</value>
+  </data>
+  <data name="InstanceModsMissingOne" xml:space="preserve">
+    <value>1 mod of this instance is not on disk.</value>
+  </data>
+  <data name="InstanceModsMissingFormat" xml:space="preserve">
+    <value>{0} mods of this instance are not on disk.</value>
+  </data>
   <data name="ContentUpdate" xml:space="preserve">
     <value>Update</value>
   </data>

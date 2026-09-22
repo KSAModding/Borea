@@ -1,3 +1,4 @@
+using Borea.Core.Mods;
 using Borea.Storage.Instances;
 using Borea.Storage.State;
 
@@ -130,6 +131,23 @@ public sealed class ModStateCommandsTests : IDisposable
     }
 
     [Fact]
+    public async Task Enable_RecordedModWithoutItsFolder_Fails()
+    {
+        var instanceId = await CreateAsync("Alpha");
+        CreateModFolder(instanceId, "SomeMod");
+        await _host.RunAsync("enable", "SomeMod", "--instance", "Alpha");
+        await _host.RunAsync("disable", "SomeMod", "--instance", "Alpha");
+        await RecordModAsync(instanceId, "SomeMod");
+        Directory.Delete(Path.Combine(_host.Paths.GetInstanceModsFolder(instanceId), "SomeMod"), recursive: true);
+
+        var run = await _host.RunAsync("enable", "SomeMod", "--instance", "Alpha");
+
+        Assert.Equal(1, run.ExitCode);
+        Assert.Contains("but its folder is gone", run.Error);
+        Assert.False(await ModState.IsActiveAsync(instanceId, "SomeMod"));
+    }
+
+    [Fact]
     public async Task Disable_MakesTheModInactive()
     {
         var instanceId = await CreateAsync("Alpha");
@@ -191,6 +209,17 @@ public sealed class ModStateCommandsTests : IDisposable
         var modFolder = Path.Combine(_host.Paths.GetInstanceModsFolder(instanceId), folderName);
         Directory.CreateDirectory(modFolder);
         File.WriteAllText(Path.Combine(modFolder, "mod.toml"), $"name = \"{folderName}\"\n");
+    }
+
+    /// <summary>Records the folder as an installed mod, the way an install does.</summary>
+    private async Task RecordModAsync(Guid instanceId, string modId)
+    {
+        var release = ContentCommandFixtures.Release(id: modId);
+        await new FileInstanceRepository(_host.Paths).UpdateAsync(instanceId, instance =>
+        {
+            instance.AddMod(new InstalledMod(modId, release.Version, InstallReason.Manual, DateTimeOffset.UtcNow, release));
+            return true;
+        });
     }
 
     private FileModStateRepository ModState => new(_host.Paths);

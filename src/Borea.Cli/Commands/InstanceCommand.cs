@@ -440,7 +440,7 @@ internal static class InstanceCommand
     {
         var instance = ArgumentRules.Text("instance", InstanceArgumentDescription);
         var json = ArgumentRules.Json();
-        var scan = new Command("scan", "Print the mod folders that Borea did not install, and whether the content index lists them.");
+        var scan = new Command("scan", "Print the mod folders that Borea did not install, and the recorded mods whose folder is gone.");
         scan.Arguments.Add(instance);
         scan.Options.Add(json);
 
@@ -448,28 +448,45 @@ internal static class InstanceCommand
         {
             var target = await InstanceLookup.ResolveAsync(cli.Instances, parseResult.GetRequiredValue(instance)).ConfigureAwait(false);
             var foreignMods = await cli.ForeignModAdopter.ScanAsync(target.InstanceId, ct).ConfigureAwait(false);
-            var snapshot = foreignMods.Count > 0 ? await ReadIndexOrWarnAsync(cli, error, ct).ConfigureAwait(false) : null;
+            var missingIds = await cli.MissingMods.ScanAsync(target.InstanceId, ct).ConfigureAwait(false);
+            var snapshot = foreignMods.Count > 0 || missingIds.Count > 0 ? await ReadIndexOrWarnAsync(cli, error, ct).ConfigureAwait(false) : null;
             var views = foreignMods.Select(mod => ForeignModView.From(mod, snapshot)).ToList();
+            var missing = missingIds
+                .Select(id => target.Mods.First(mod => ModIds.Equals(mod.ModId, id)))
+                .Select(mod => new MissingModView(mod.ModId, mod.Version.ToString(), IsListedMod(snapshot, mod.ModId)))
+                .ToList();
 
             if (parseResult.GetValue(json))
             {
-                JsonOutput.Write(output, views);
+                JsonOutput.Write(output, new ScanView(views, missing));
                 return ExitCodes.Done;
             }
 
             if (views.Count == 0)
             {
                 output.WriteLine($"No mod folders in '{target.Name}' that Borea did not install.");
+            }
+            else
+            {
+                var folderWidth = views.Max(view => view.Folder.Length);
+                foreach (var view in views)
+                {
+                    output.WriteLine($"{view.Folder.PadRight(folderWidth)}  {DescribeIndexState(view.InIndex)}");
+                    if (view.DependencyReadError is not null)
+                        error.WriteLine($"warning: The mod.toml of '{view.Folder}' could not be read. {view.DependencyReadError}");
+                }
+            }
+
+            if (missing.Count == 0)
+            {
+                output.WriteLine($"Every mod recorded in '{target.Name}' is on disk.");
                 return ExitCodes.Done;
             }
 
-            var folderWidth = views.Max(view => view.Folder.Length);
-            foreach (var view in views)
-            {
-                output.WriteLine($"{view.Folder.PadRight(folderWidth)}  {DescribeIndexState(view.InIndex)}");
-                if (view.DependencyReadError is not null)
-                    error.WriteLine($"warning: The mod.toml of '{view.Folder}' could not be read. {view.DependencyReadError}");
-            }
+            output.WriteLine($"{ModCount(missing.Count)} recorded in '{target.Name}' but not on disk:");
+            var idWidth = missing.Max(view => view.Id.Length);
+            foreach (var view in missing)
+                output.WriteLine($"{view.Id.PadRight(idWidth)}  {view.Version}  {DescribeIndexState(view.InIndex)}");
 
             return ExitCodes.Done;
         }));
@@ -704,7 +721,13 @@ internal static class InstanceCommand
 
     private sealed record ModView(string Id, bool Enabled);
 
-    /// <summary>One entry of <c>instance scan --json</c>.</summary>
+    /// <summary>The JSON shape of <c>instance scan</c>, one list per direction.</summary>
+    private sealed record ScanView(IReadOnlyList<ForeignModView> ForeignFolders, IReadOnlyList<MissingModView> MissingMods);
+
+    /// <summary>One recorded mod of <c>instance scan --json</c> whose folder is gone.</summary>
+    private sealed record MissingModView(string Id, string Version, bool? InIndex);
+
+    /// <summary>One folder of <c>instance scan --json</c> that Borea did not install.</summary>
     private sealed record ForeignModView(string Folder, bool? InIndex, IReadOnlyList<DependencyView> Dependencies, string? DependencyReadError)
     {
         public static ForeignModView From(ForeignMod mod, ContentIndexSnapshot? snapshot)

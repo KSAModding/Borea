@@ -545,8 +545,10 @@ public sealed class InstanceCommandTests : IDisposable
 
         Assert.Equal(0, human.ExitCode);
         Assert.Contains("No mod folders in 'Alpha' that Borea did not install.", human.Output);
+        Assert.Contains("Every mod recorded in 'Alpha' is on disk.", human.Output);
         Assert.Equal(0, json.ExitCode);
-        Assert.Empty(json.Json.EnumerateArray());
+        Assert.Empty(json.Json.GetProperty("foreignFolders").EnumerateArray());
+        Assert.Empty(json.Json.GetProperty("missingMods").EnumerateArray());
     }
 
     [Fact]
@@ -566,8 +568,10 @@ public sealed class InstanceCommandTests : IDisposable
         var json = await _host.RunAsync("instance", "scan", "Alpha", "--json");
 
         Assert.Equal(0, human.ExitCode);
-        Assert.Equal(new[] { "flight-tools  in the content index", "LocalOnly     not in the content index" }, human.Output.Trim().Split(Environment.NewLine));
-        var entries = json.Json.EnumerateArray().ToList();
+        Assert.Equal(
+            new[] { "flight-tools  in the content index", "LocalOnly     not in the content index", "Every mod recorded in 'Alpha' is on disk." },
+            human.Output.Trim().Split(Environment.NewLine));
+        var entries = json.Json.GetProperty("foreignFolders").EnumerateArray().ToList();
         Assert.Equal(new[] { "flight-tools", "LocalOnly" }, entries.Select(entry => entry.GetProperty("folder").GetString()));
         Assert.Equal(new[] { true, false }, entries.Select(entry => entry.GetProperty("inIndex").GetBoolean()));
         var dependency = Assert.Single(entries[0].GetProperty("dependencies").EnumerateArray());
@@ -590,7 +594,7 @@ public sealed class InstanceCommandTests : IDisposable
         Assert.Equal(0, human.ExitCode);
         Assert.Contains("Broken", human.Output);
         Assert.Contains("warning: The mod.toml of 'Broken' could not be read.", human.Error);
-        var entry = Assert.Single(json.Json.EnumerateArray());
+        var entry = Assert.Single(json.Json.GetProperty("foreignFolders").EnumerateArray());
         Assert.False(string.IsNullOrEmpty(entry.GetProperty("dependencyReadError").GetString()));
     }
 
@@ -605,11 +609,46 @@ public sealed class InstanceCommandTests : IDisposable
         var json = await _host.RunAsync("instance", "scan", "Alpha", "--json");
 
         Assert.Equal(0, human.ExitCode);
-        Assert.Equal("flight-tools  content index not available", human.Output.Trim());
+        Assert.Equal(
+            new[] { "flight-tools  content index not available", "Every mod recorded in 'Alpha' is on disk." },
+            human.Output.Trim().Split(Environment.NewLine));
         Assert.Contains("warning: The content index could not be read. No cached index exists.", human.Error);
         Assert.Equal(0, json.ExitCode);
-        var entry = Assert.Single(json.Json.EnumerateArray());
+        var entry = Assert.Single(json.Json.GetProperty("foreignFolders").EnumerateArray());
         Assert.Equal(JsonValueKind.Null, entry.GetProperty("inIndex").ValueKind);
+    }
+
+    [Fact]
+    public async Task Scan_RecordedModWithoutItsFolder_ReportsIt()
+    {
+        var instanceId = await CreateInstanceAsync("Alpha");
+        await RecordModAsync(instanceId, "flight-tools");
+        IndexWithListing("flight-tools");
+
+        var human = await _host.RunAsync("instance", "scan", "Alpha");
+        var json = await _host.RunAsync("instance", "scan", "Alpha", "--json");
+
+        Assert.Equal(0, human.ExitCode);
+        Assert.Contains("1 mod recorded in 'Alpha' but not on disk:", human.Output);
+        Assert.Contains("flight-tools  2.0.0  in the content index", human.Output);
+        var entry = Assert.Single(json.Json.GetProperty("missingMods").EnumerateArray());
+        Assert.Equal("flight-tools", entry.GetProperty("id").GetString());
+        Assert.Equal("2.0.0", entry.GetProperty("version").GetString());
+        Assert.True(entry.GetProperty("inIndex").GetBoolean());
+    }
+
+    [Fact]
+    public async Task Scan_RecordedModWithItsFolder_ReportsNothingMissing()
+    {
+        var instanceId = await CreateInstanceAsync("Alpha");
+        await RecordModAsync(instanceId, "flight-tools");
+        WriteMod(instanceId, "flight-tools", "name = \"flight-tools\"");
+
+        var run = await _host.RunAsync("instance", "scan", "Alpha", "--json");
+
+        Assert.Equal(0, run.ExitCode);
+        Assert.Empty(run.Json.GetProperty("missingMods").EnumerateArray());
+        Assert.Empty(run.Json.GetProperty("foreignFolders").EnumerateArray());
     }
 
     [Fact]
@@ -897,6 +936,18 @@ public sealed class InstanceCommandTests : IDisposable
     {
         var created = await new FileInstanceRepository(_host.Paths).CreateAsync(name, InstanceSource.Custom.Value);
         return created.Instance.InstanceId;
+    }
+
+    /// <summary>Records an installed mod without writing its folder.</summary>
+    private async Task RecordModAsync(Guid instanceId, string modId)
+    {
+        var repository = new FileInstanceRepository(_host.Paths);
+        var release = ContentCommandFixtures.Release(id: modId);
+        await repository.UpdateAsync(instanceId, instance =>
+        {
+            instance.AddMod(new InstalledMod(modId, release.Version, InstallReason.Manual, DateTimeOffset.UtcNow, release));
+            return true;
+        });
     }
 
     private string WriteMod(Guid instanceId, string folderName, string manifest)
