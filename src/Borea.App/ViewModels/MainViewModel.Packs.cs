@@ -676,6 +676,8 @@ public sealed partial class PackItem : ObservableObject, IPlanRow
     [ObservableProperty]
     private string? _installError;
 
+    private bool _isOpening;
+
     /// <summary>
     /// The warnings while <see cref="PendingInstall"/> waits for a confirmation.
     /// </summary>
@@ -796,8 +798,27 @@ public sealed partial class PackItem : ObservableObject, IPlanRow
         OnPropertyChanged(nameof(IsConfirmingInstall));
     }
 
-    [RelayCommand]
-    private Task OpenAsync() => _owner.OpenPackAsync(this);
+    /// <summary>
+    /// The whole row is this command, so it stays executable while the page
+    /// loads, because a command that cannot execute greys out every control on
+    /// the row. The flag takes over the job of dropping a second click.
+    /// </summary>
+    [RelayCommand(AllowConcurrentExecutions = true)]
+    private async Task OpenAsync()
+    {
+        if (_isOpening)
+            return;
+
+        _isOpening = true;
+        try
+        {
+            await _owner.OpenPackAsync(this);
+        }
+        finally
+        {
+            _isOpening = false;
+        }
+    }
 
     [RelayCommand]
     private Task InstallAsync() => _owner.InstallPackAsync(this);

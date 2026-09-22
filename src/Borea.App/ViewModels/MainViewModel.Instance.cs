@@ -961,6 +961,8 @@ public sealed partial class ContentItem : ObservableObject, IUpdateRow
     [NotifyPropertyChangedFor(nameof(RemoveActionText))]
     private bool _isMissing;
 
+    private bool _isOpening;
+
     /// <summary>What the mod's folder takes on disk, or null until it is measured or when the folder is gone.</summary>
     [ObservableProperty]
     private string? _sizeText;
@@ -1045,8 +1047,27 @@ public sealed partial class ContentItem : ObservableObject, IUpdateRow
     [RelayCommand]
     private Task ToggleEnabledAsync() => _owner.SetContentEnabledAsync(InstanceId, ModId, Name, IsEnabled);
 
-    [RelayCommand]
-    private Task OpenAsync() => _page is null ? Task.CompletedTask : _owner.OpenContentFromInstanceAsync(_page);
+    /// <summary>
+    /// The whole row is this command, so it stays executable while the page
+    /// loads, because a command that cannot execute greys out every control on
+    /// the row. The flag takes over the job of dropping a second click.
+    /// </summary>
+    [RelayCommand(AllowConcurrentExecutions = true)]
+    private async Task OpenAsync()
+    {
+        if (_page is null || _isOpening)
+            return;
+
+        _isOpening = true;
+        try
+        {
+            await _owner.OpenContentFromInstanceAsync(_page);
+        }
+        finally
+        {
+            _isOpening = false;
+        }
+    }
 
     internal void RefreshText()
     {
