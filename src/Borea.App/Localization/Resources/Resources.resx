@@ -406,7 +406,7 @@
     <value>Cancel</value>
   </data>
   <data name="LibraryDeleteConfirm" xml:space="preserve">
-    <value>Delete this instance and its folder?</value>
+    <value>Delete this instance, its folder and its backups?</value>
   </data>
   <data name="LibraryEmpty" xml:space="preserve">
     <value>No instances yet. Create one to get started.</value>
@@ -808,10 +808,10 @@
     <value>Copied {0} to {1}.</value>
   </data>
   <data name="GameSaveDeleteConfirm" xml:space="preserve">
-    <value>Delete it? Borea moves the folder into the Backups folder.</value>
+    <value>Delete it? Borea moves the folder into the Backups folder, and Restore brings it back.</value>
   </data>
   <data name="GameSaveDeletedFormat" xml:space="preserve">
-    <value>Moved {0} into the Backups folder.</value>
+    <value>Moved {0} into the Backups folder. Restore it under Backups.</value>
   </data>
   <data name="GameSaveCloseGame" xml:space="preserve">
     <value>Close the game first.</value>

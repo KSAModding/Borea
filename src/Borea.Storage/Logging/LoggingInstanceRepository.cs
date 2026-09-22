@@ -1,6 +1,7 @@
 using Borea.Core.Instances;
 using Borea.Core.Logging;
 using Borea.Core.Paths;
+using Borea.Storage.Instances;
 
 namespace Borea.Storage.Logging;
 
@@ -82,8 +83,12 @@ public sealed class LoggingInstanceRepository : IInstanceRepository
         var folder = _paths.GetInstanceRoot(instanceId);
         if (knownName is null && !Directory.Exists(folder))
         {
+            var backups = GameSaveBackupFolder.InstanceFolder(_paths, instanceId);
+            var hadBackups = Directory.Exists(backups);
             await Inner.DeleteAsync(instanceId).ConfigureAwait(false);
-            _log.Write($"Instance {instanceId} not found, nothing deleted.");
+            _log.Write(hadBackups
+                ? $"Instance {instanceId} not found, its backups in {backups} deleted."
+                : $"Instance {instanceId} not found, nothing deleted.");
             return;
         }
 
