@@ -81,9 +81,11 @@ public partial class MainViewModel
     private string _searchText = string.Empty;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasDiscoverFilters))]
     private bool _hideInstalled;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasDiscoverFilters))]
     private bool _hideIncompatible;
 
     [ObservableProperty]
@@ -118,7 +120,7 @@ public partial class MainViewModel
         ({ } min, { } max) => $"{min.Text} - {max.Text}",
     };
 
-    public bool HasDiscoverFilters => SelectedOs is not null || SelectedLicense is not null || SelectedCategories.Count > 0 || HasGameVersionRange;
+    public bool HasDiscoverFilters => HideInstalled || HideIncompatible || SelectedOs is not null || SelectedLicense is not null || SelectedCategories.Count > 0 || HasGameVersionRange;
 
     /// <summary>The saved Sort by choice of the Mods and Modpacks tabs.</summary>
     public DiscoverSortOrder DiscoverSort => _discoverSort ?? _appPreferences.DiscoverSortOrder;
@@ -479,6 +481,8 @@ public partial class MainViewModel
     [RelayCommand]
     private void ClearDiscoverFilters()
     {
+        HideInstalled = false;
+        HideIncompatible = false;
         SelectedOs = null;
         SelectedLicense = null;
         DiscoverGameMin = null;
