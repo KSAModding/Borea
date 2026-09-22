@@ -831,6 +831,9 @@
   <data name="GameSaveProfileEmpty" xml:space="preserve">
     <value>Das Spielprofil hat nichts zum Kopieren.</value>
   </data>
+  <data name="GameSaveProfileSelectedFormat" xml:space="preserve">
+    <value>{0} von {1} ausgewählt</value>
+  </data>
   <data name="GameSaveExistsInInstance" xml:space="preserve">
     <value>Schon in dieser Instanz</value>
   </data>

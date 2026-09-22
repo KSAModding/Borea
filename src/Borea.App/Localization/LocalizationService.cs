@@ -608,6 +608,9 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string GameSaveProfileEmpty => Resources.GameSaveProfileEmpty;
 
+    public string FormatGameSaveProfileSelected(int selected, int total)
+        => string.Format(CultureInfo.CurrentCulture, Resources.GameSaveProfileSelectedFormat, selected, total);
+
     public string GameSaveExistsInInstance => Resources.GameSaveExistsInInstance;
 
     public string GameSaveProfileReplace => Resources.GameSaveProfileReplace;

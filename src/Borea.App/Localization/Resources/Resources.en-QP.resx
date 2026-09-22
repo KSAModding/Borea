@@ -705,6 +705,9 @@
   <data name="GameSaveProfileEmpty" xml:space="preserve">
     <value>The game board has nary a thing to parrot.</value>
   </data>
+  <data name="GameSaveProfileSelectedFormat" xml:space="preserve">
+    <value>{0} o' {1} in yer hold</value>
+  </data>
   <data name="GameSaveExistsInInstance" xml:space="preserve">
     <value>That tale has already been told in these 'ere seas</value>
   </data>
