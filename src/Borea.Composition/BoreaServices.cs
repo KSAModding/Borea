@@ -183,6 +183,13 @@ public sealed class BoreaServices : IDisposable
 
     public required IInstalledGameVersionProvider InstalledVersion { get; init; }
 
+    /// <summary>
+    /// What Borea assumes about the game, checked against the installation. The
+    /// install and enable paths already refuse on a broken shape; a caller that
+    /// launches the game reads this to warn first.
+    /// </summary>
+    public required IGameShapeCheck GameShape { get; init; }
+
     public required IGamePatchNotesReader GamePatchNotes { get; init; }
 
     public required IGamePatchNotesFetcher GamePatchNotesFetcher { get; init; }
@@ -366,13 +373,19 @@ public sealed class BoreaServices : IDisposable
         var loaderAdopter = new FileLoaderAdopter(settingsRepository, loaderConfiguration);
         installCandidates ??= OperatingSystem.IsWindows() ? new WindowsInstallCandidateSource() : new NoInstallCandidates();
 
+        var installedVersion = new InstalledGameVersionProvider(paths);
+        var gameShape = new GameShapeCheck(paths, installedVersion);
+
+        // The file repository stays unguarded, because the installer and the
+        // replacer own it and are guarded themselves.
         var modState = new FileModStateRepository(paths);
-        var modInstaller = new LoggingModInstaller(new FileModInstaller(paths, downloader, instances, modState), log);
-        var modReplacer = new LoggingModReplacer(new FileModReplacer(paths, downloader, instances, modState), log);
+        var checkedModState = new CheckedModStateRepository(modState, gameShape);
+        var modInstaller = new LoggingModInstaller(new CheckedModInstaller(new FileModInstaller(paths, downloader, instances, modState), gameShape), log);
+        var modReplacer = new LoggingModReplacer(new CheckedModReplacer(new FileModReplacer(paths, downloader, instances, modState), gameShape), log);
         var foreignModAdopter = new FileForeignModAdopter(paths, instances, contentIndex);
         var foreignModReleaseMatcher = new FileForeignModReleaseMatcher(paths, downloader, foreignModAdopter, indexSnapshots);
         var spaceCheck = new DriveInstallSpaceCheck(paths);
-        var foreignModHandover = new LoggingForeignModHandover(new FileForeignModHandover(paths, downloader, instances, modState), log);
+        var foreignModHandover = new LoggingForeignModHandover(new FileForeignModHandover(paths, downloader, instances, checkedModState), log);
         var installPlanner = new LoggingInstallPlanner(new RepositoryInstallPlanner(new ModDependencyResolver(), settings.ReleaseChannel), log);
         var launcher = new LoggingLauncher(new LastPlayedLauncher(new LoaderLauncher(paths, processStarter ?? new ProcessStarter(), launches), instances), log);
         var defaultLibraryFolder = Path.GetDirectoryName(bootstrapPaths.GetInstancesRoot())!;
@@ -399,7 +412,7 @@ public sealed class BoreaServices : IDisposable
             Playtime = new FilePlaytimeService(paths),
             InstanceSizes = new FileInstanceSizeReader(paths),
             ModListFormat = new TomlModListFormat(),
-            ModState = modState,
+            ModState = checkedModState,
             ModFavorites = new FileModFavoritesRepository(paths),
             ModPackFavorites = new FileModPackFavoritesRepository(paths),
             Uninstaller = new LoggingModUninstaller(new FileModUninstaller(paths, instances), log),
@@ -409,7 +422,9 @@ public sealed class BoreaServices : IDisposable
             MissingMods = new FileMissingModDetector(paths, instances),
             ForeignModReleaseMatcher = foreignModReleaseMatcher,
             ForeignModHandover = foreignModHandover,
-            SharedProfileImporter = new FileSharedProfileImporter(paths, instances, modState, foreignModAdopter, foreignModReleaseMatcher),
+            SharedProfileImporter = new CheckedSharedProfileImporter(
+                new FileSharedProfileImporter(paths, instances, checkedModState, foreignModAdopter, foreignModReleaseMatcher),
+                gameShape),
             Mods = new ReleaseChannelModRepository(mods, settings.ReleaseChannel),
             ReadOnlyMods = new ReleaseChannelModRepository(readOnlyMods, settings.ReleaseChannel),
             OfflineMods = new ReleaseChannelModRepository(offlineMods, settings.ReleaseChannel),
@@ -429,7 +444,8 @@ public sealed class BoreaServices : IDisposable
             LatestVersion = new LatestVersionPing(http),
             ReleaseCheck = new BoreaReleaseCheck(http),
             Announcements = new AnnouncementFeed(new AnnouncementFetcher(http, AnnouncementFetcher.DefaultUri, announcementReader), announcementReader, paths, log),
-            InstalledVersion = new InstalledGameVersionProvider(paths),
+            InstalledVersion = installedVersion,
+            GameShape = gameShape,
             GamePatchNotes = new FileGamePatchNotesReader(paths),
             GamePatchNotesFetcher = new GamePatchNotesFetcher(http, new FileGamePatchNotesCache(paths)),
             InstallDetector = new InstallDetector(installCandidates, loaderAdopter, paths.GetLoadersRoot()),
