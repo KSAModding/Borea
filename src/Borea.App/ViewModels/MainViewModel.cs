@@ -311,6 +311,7 @@ public partial class MainViewModel : ViewModelBase
         await LoadRecentItemsAsync();
         UpdateIndexRefreshStatus();
         RefreshGameSetup();
+        await RefreshGameShapeAsync();
         await RefreshSharedProfileAsync();
     }
 
@@ -329,6 +330,9 @@ public partial class MainViewModel : ViewModelBase
             return;
 
         InstalledVersionText = installed?.RawVersion;
+
+        // a new build is a new shape, so the assumptions are checked again
+        await RefreshGameShapeAsync();
 
         // the content page shows the same rows, so its chip follows too
         await RefreshCompatibilityAsync(installed?.Version);
@@ -790,6 +794,7 @@ public partial class MainViewModel : ViewModelBase
             && left.FetchAnnouncements == right.FetchAnnouncements
             && left.OpenBoreaLinks == right.OpenBoreaLinks
             && left.BackupRetentionDays == right.BackupRetentionDays
+            && left.DismissedUntestedGameRevision == right.DismissedUntestedGameRevision
             && left.DismissedAnnouncements.SequenceEqual(right.DismissedAnnouncements, StringComparer.Ordinal);
 
     private void OnRegionalFormatChanged(object? sender, PropertyChangedEventArgs e)
@@ -869,6 +874,8 @@ public partial class MainViewModel : ViewModelBase
         OnPropertyChanged(nameof(SharedProfileBannerText));
         OnPropertyChanged(nameof(AvailableUpdateText));
         OnPropertyChanged(nameof(GameBuildBannerText));
+        OnPropertyChanged(nameof(GameShapeBrokenText));
+        OnPropertyChanged(nameof(GameShapeUntestedText));
         OnPropertyChanged(nameof(NewerGamePatchNotesCappedText));
         OnPropertyChanged(nameof(SharedProfileImportNotice));
         OnPropertyChanged(nameof(InstalledInText));

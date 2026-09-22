@@ -191,5 +191,42 @@ public sealed class GameCommandTests : IDisposable
         Assert.Contains("HttpClient.Timeout", run.Error);
     }
 
+    [Fact]
+    public async Task Check_NoGameDirectory_FindsNothingToCheck()
+    {
+        var run = await _host.RunAsync("game", "check");
+
+        Assert.Equal(0, run.ExitCode);
+        Assert.Contains("There was no game installation to check.", run.Output);
+        Assert.Contains("NotChecked", run.Output);
+        Assert.Equal(string.Empty, run.Error);
+    }
+
+    [Fact]
+    public async Task Check_ContentWithoutAManifest_FailsAndNamesTheFile()
+    {
+        var game = Path.Combine(_host.Root, "Game");
+        Directory.CreateDirectory(Path.Combine(game, "Content"));
+        await _host.RunAsync("settings", "set", "game", game);
+
+        var run = await _host.RunAsync("game", "check");
+
+        Assert.Equal(1, run.ExitCode);
+        Assert.Contains("Installing and enabling mods are stopped.", run.Output);
+        Assert.Contains("manifest.toml is missing.", run.Output);
+        Assert.Contains("github.com/KSAModding/Borea/issues", run.Error);
+    }
+
+    [Fact]
+    public async Task Check_Json_CarriesEveryAssumption()
+    {
+        var run = await _host.RunAsync("game", "check", "--json");
+
+        Assert.Equal(0, run.ExitCode);
+        using var document = JsonDocument.Parse(run.Output);
+        Assert.Equal("Unknown", document.RootElement.GetProperty("status").GetString());
+        Assert.Equal(Enum.GetValues<GameAssumption>().Length, document.RootElement.GetProperty("assumptions").GetArrayLength());
+    }
+
     public void Dispose() => _host.Dispose();
 }

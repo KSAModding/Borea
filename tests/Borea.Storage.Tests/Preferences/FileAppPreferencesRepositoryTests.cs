@@ -261,6 +261,18 @@ public sealed class FileAppPreferencesRepositoryTests : IDisposable
     }
 
     [Fact]
+    public async Task SaveThenGet_DismissedUntestedGameRevision_RestoresTheRevision()
+    {
+        Assert.Null(AppPreferences.Empty.DismissedUntestedGameRevision);
+
+        await _repository.SaveAsync(AppPreferences.Empty.WithDismissedUntestedGameRevision(5438), BundledThemeNames);
+        var result = await _repository.GetAsync(BundledThemeNames);
+
+        Assert.Equal(5438, result.Preferences.DismissedUntestedGameRevision);
+        Assert.Equal(5438, result.Preferences.WithSelectedThemeName("Light").WithBackupRetentionDays(90).DismissedUntestedGameRevision);
+    }
+
+    [Fact]
     public void With_OtherPreferenceChanges_KeepTheDismissedGameRevision()
     {
         var preferences = AppPreferences.Empty.WithDismissedGameRevision(5438)

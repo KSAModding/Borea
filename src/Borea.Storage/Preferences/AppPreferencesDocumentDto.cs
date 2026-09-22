@@ -48,6 +48,9 @@ internal sealed class AppPreferencesDocumentDto
     /// <summary>Null keeps every backup. A value below one day reads as null.</summary>
     public int? BackupRetentionDays { get; set; }
 
+    /// <summary>The revision of the game build whose untested-build banner was closed. A value below zero reads as null.</summary>
+    public int? DismissedUntestedGameRevision { get; set; }
+
     public List<CustomThemePreferenceDto?>? CustomThemes { get; set; }
 }
 

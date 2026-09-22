@@ -29,6 +29,15 @@ public sealed class LocalizationServiceTests : IDisposable
     }
 
     [Fact]
+    public void FormatGameShapeBroken_NoBuildFound_NamesTheInstallation()
+    {
+        var service = new LocalizationService(CultureInfo.GetCultureInfo("en"));
+
+        Assert.StartsWith("This KSA installation looks different", service.FormatGameShapeBroken(null, "x"));
+        Assert.StartsWith("KSA 2026.9.10.5438 looks different", service.FormatGameShapeBroken("2026.9.10.5438", "x"));
+    }
+
+    [Fact]
     public void TrySetCulture_SupportedCulture_NotifiesAndChangesActiveValues()
     {
         var service = new LocalizationService(CultureInfo.GetCultureInfo("en"));

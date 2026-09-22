@@ -1,0 +1,10 @@
+{
+  "spec_version": 1,
+  "builds": [
+    {
+      "build": "2026.9.10.5438",
+      "checked_on": "2026-09-20",
+      "note": "The game files in tests/Borea.Storage.Tests/Game/Fixtures are copies from this build."
+    }
+  ]
+}

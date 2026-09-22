@@ -33,6 +33,16 @@ internal static class GameLogFiles
 
     private static readonly Regex ArchiveName = new(@"^[^.]+\.(\d{6})\.\d+\.log$", RegexOptions.CultureInvariant | RegexOptions.IgnoreCase);
 
+    private static readonly Regex TailName = new(@"^[^.]+\.\d{6}-\d{6}\.\d+\.[^.]+\.log$", RegexOptions.CultureInvariant | RegexOptions.IgnoreCase);
+
+    /// <summary>
+    /// Whether the name is one the game writes that <see cref="Find"/> leaves
+    /// out on purpose, such as the tail of a recovered crash. A caller that
+    /// counts the logs of the game uses this to tell a name it knows and skips
+    /// from a name it cannot place.
+    /// </summary>
+    public static bool IsKnownNonSession(string fileName) => TailName.IsMatch(fileName);
+
     public static IReadOnlyList<GameLogFile> Find(string gameLogPath)
     {
         var folder = Path.GetDirectoryName(gameLogPath)!;

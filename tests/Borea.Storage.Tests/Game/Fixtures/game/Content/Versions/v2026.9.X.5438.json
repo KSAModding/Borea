@@ -1,0 +1,16 @@
+{
+  "build": "2026.9.10.5438",
+  "date": "2026-09-15",
+  "fromRevision": 5402,
+  "toRevision": 5438,
+  "commits": [
+    {
+      "rev": 5403,
+      "date": "2026-09-03",
+      "author": "JPLRepoRocketWerkz",
+      "lines": [
+        "Fixed the Milky Way sitting in the wrong place on the sky. It should overlap Cygnus and Cassiopeia and pass between Orion and Gemini."
+      ]
+    }
+  ]
+}

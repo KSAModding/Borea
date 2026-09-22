@@ -48,6 +48,8 @@ internal sealed class CliServices : IDisposable
 
     public required IInstalledGameVersionProvider InstalledVersion { get; init; }
 
+    public required IGameShapeCheck GameShape { get; init; }
+
     public required IContentIndexFetcher IndexFetcher { get; init; }
 
     public required IContentIndexReader IndexReader { get; init; }
@@ -120,6 +122,7 @@ internal sealed class CliServices : IDisposable
         IInstanceRepository? instances = null,
         ILatestVersionPing? latestVersion = null,
         IInstalledGameVersionProvider? installedVersion = null,
+        IGameShapeCheck? gameShape = null,
         IContentIndexFetcher? indexFetcher = null,
         IContentIndexReader? indexReader = null,
         IContentIndexSnapshotProvider? indexSnapshots = null,
@@ -163,6 +166,7 @@ internal sealed class CliServices : IDisposable
             ModListFormat = services.ModListFormat,
             LatestVersion = latestVersion ?? services.LatestVersion,
             InstalledVersion = installedVersion ?? services.InstalledVersion,
+            GameShape = gameShape ?? services.GameShape,
             IndexFetcher = indexFetcher ?? services.IndexFetcher,
             IndexReader = indexReader ?? services.IndexReader,
             IndexSnapshots = indexSnapshots ?? services.IndexSnapshots,

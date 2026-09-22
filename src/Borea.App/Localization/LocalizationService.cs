@@ -447,6 +447,20 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string FormatGamePatchNotesCapped(int count)
         => string.Format(CultureInfo.CurrentCulture, Resources.GamePatchNotesCappedFormat, count);
 
+    public string GameShapeBrokenTitle => Resources.GameShapeBrokenTitle;
+
+    public string FormatGameShapeBroken(string? build, string assumptions)
+        => build is null
+            ? string.Format(CultureInfo.CurrentCulture, Resources.GameShapeBrokenUnknownBuildFormat, assumptions)
+            : string.Format(CultureInfo.CurrentCulture, Resources.GameShapeBrokenFormat, build, assumptions);
+
+    public string GameShapeUntestedTitle => Resources.GameShapeUntestedTitle;
+
+    public string FormatGameShapeUntested(string build, string newestVerified)
+        => string.Format(CultureInfo.CurrentCulture, Resources.GameShapeUntestedFormat, build, newestVerified);
+
+    public string GameShapeReport => Resources.GameShapeReport;
+
     public string AnnouncementOpenLink => Resources.AnnouncementOpenLink;
 
     public string SystemDefaultRegionalFormat => Resources.SystemDefaultRegionalFormat;
