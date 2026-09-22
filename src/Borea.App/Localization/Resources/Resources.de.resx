@@ -984,6 +984,9 @@
   <data name="InstanceModsMissingFormat" xml:space="preserve">
     <value>{0} Mods dieser Instanz fehlen auf der Festplatte.</value>
   </data>
+  <data name="ContentEnabled" xml:space="preserve">
+    <value>Aktiviert</value>
+  </data>
   <data name="ContentUpdate" xml:space="preserve">
     <value>Aktualisieren</value>
   </data>

@@ -984,6 +984,9 @@
   <data name="InstanceModsMissingFormat" xml:space="preserve">
     <value>{0} mods of this instance are not on disk.</value>
   </data>
+  <data name="ContentEnabled" xml:space="preserve">
+    <value>Enabled</value>
+  </data>
   <data name="ContentUpdate" xml:space="preserve">
     <value>Update</value>
   </data>

@@ -556,6 +556,14 @@
         <Style Selector="Button.card-button:pointerover Border.card">
             <Setter Property="Background" Value="{StaticResource Brush.SurfaceRaised}" />
         </Style>
+        <!-- a row of a list carries the same hover state, without the surface of a card -->
+        <Style Selector="Button.card-button:pointerover Border.list-row">
+            <Setter Property="Background" Value="{StaticResource Brush.SurfaceRaised}" />
+        </Style>
+        <!-- a button as wide as a row keeps its size under the pointer, because the press scale of the theme would pull its edge away from the pointer -->
+        <Style Selector="Button.card-button:pressed">
+            <Setter Property="RenderTransform" Value="none" />
+        </Style>
         <!-- modal: rounded card over a dimmed page -->
         <Style Selector="Border.modal">
             <Setter Property="Background" Value="{StaticResource Brush.Surface}" />
