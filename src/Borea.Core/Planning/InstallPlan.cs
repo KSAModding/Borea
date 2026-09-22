@@ -41,4 +41,8 @@ public sealed class InstallPlan
         Conflicts = conflicts;
         Choices = choices;
     }
+
+    /// <summary>The same plan, guarded against <paramref name="instanceState"/> instead of the state it was planned against.</summary>
+    public InstallPlan WithInstanceState(InstallPlanningState instanceState)
+        => new(InstanceId, instanceState, Selections, Operations, Warnings, UnresolvedChoices, Conflicts, Choices);
 }

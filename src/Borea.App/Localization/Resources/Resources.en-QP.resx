@@ -1551,6 +1551,9 @@
   <data name="PackIncompleteFormat" xml:space="preserve">
     <value>{0} o' {1} barrels o' fun ain't been hauled onboard.</value>
   </data>
+  <data name="PackUpdateStillInstalledFormat" xml:space="preserve">
+    <value>The ship still be carryin' {0}.</value>
+  </data>
   <data name="PackUntestedFormat" xml:space="preserve">
     <value>This pack ain't be tested with the game onboard, which be fresher than {0}.</value>
   </data>

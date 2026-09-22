@@ -11,8 +11,9 @@ public interface IModPackUpdater
     Task<ModPackUpdateResult> PlanAsync(ModPackUpdateRequest request, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Removes the mods the plan removes, then installs like a pack install. Only a complete update names
-    /// the new pack version in the instance source and makes the kept mods normal mods of the instance.
+    /// Installs like a pack install and removes the mods the plan removes after that, so a step that fails
+    /// or stops leaves the instance with the mods it had. Only a complete update names the new pack version
+    /// in the instance source and makes the kept mods normal mods of the instance.
     /// </summary>
     /// <param name="stop">Stops at a safe point, under the rule of <see cref="InstallStop"/>.</param>
     Task<ModPackUpdateResult> UpdateAsync(ModPackUpdateRequest request, IProgress<InstallProgress>? progress = null, InstallStop? stop = null, CancellationToken cancellationToken = default);
@@ -67,6 +68,16 @@ public sealed class ModPackUpdateResult
 
     /// <summary>The plan can run without a choice or a confirmation that the request does not carry.</summary>
     public bool CanRun => Plan is { IsReady: true } && Members.All(member => member.Status != ModPackMemberStatus.Unresolved);
+
+    /// <summary>
+    /// The mods the update removes that it has not removed, because it stopped or did not finish.
+    /// A plan that never got as far as running names none of them, because nothing about the instance changed.
+    /// </summary>
+    public IReadOnlyList<string> StillInstalled => !CanRun ? [] : Changes
+        .Where(change => change.Kind == ModPackChangeKind.Remove)
+        .Select(change => change.ModId)
+        .Where(modId => !Members.Any(member => member.Status == ModPackMemberStatus.Removed && ModIds.Equals(member.ModId, modId)))
+        .ToList();
 
     public ModPackUpdateResult(Guid instanceId, ModVersion currentVersion, ModPackMetadata target, IReadOnlyList<ModPackChange> changes, InstallPlan? plan, IReadOnlyList<ModPackMemberResult> members, IReadOnlyList<PlanningMessage> warnings, bool isComplete, bool isStopped = false)
     {

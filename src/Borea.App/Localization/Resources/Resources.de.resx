@@ -2058,6 +2058,9 @@
   <data name="PackUpdateNoModChanges" xml:space="preserve">
     <value>Keine Änderungen an Mods</value>
   </data>
+  <data name="PackUpdateStillInstalledFormat" xml:space="preserve">
+    <value>Die Instanz hat noch {0}.</value>
+  </data>
   <data name="PackModHeader" xml:space="preserve">
     <value>Mod</value>
   </data>

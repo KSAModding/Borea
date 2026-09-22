@@ -422,7 +422,7 @@ internal static class PackCommand
             if (parseResult.GetValue(json))
                 JsonOutput.Write(output, view);
             else
-                WriteHuman(output, view);
+                WriteHuman(output, view, result.StillInstalled);
 
             if (result.IsStopped)
                 throw new OperationCanceledException(ct);
@@ -845,7 +845,8 @@ internal static class PackCommand
         ContentOutput.WriteDiagnostics(output, view.Diagnostics);
     }
 
-    private static void WriteHuman(TextWriter output, UpdateView view)
+    /// <param name="stillInstalled">The mods the update removes that it has not removed.</param>
+    private static void WriteHuman(TextWriter output, UpdateView view, IReadOnlyList<string> stillInstalled)
     {
         output.WriteLine($"Pack {view.PackId} {view.CurrentVersion} to {view.NewVersion} in '{view.InstanceName}':");
         foreach (var warning in view.Warnings)
@@ -893,6 +894,9 @@ internal static class PackCommand
 
         if (view.Changes.Count == 0 && view.UnresolvedChoices.Count == 0 && view.Conflicts.Count == 0)
             output.WriteLine("No mods change.");
+
+        if (!view.DryRun && stillInstalled.Count > 0)
+            output.WriteLine($"The instance still names pack version {view.CurrentVersion} and has {string.Join(", ", stillInstalled)}.");
 
         ContentOutput.WriteDiagnostics(output, view.Diagnostics);
     }

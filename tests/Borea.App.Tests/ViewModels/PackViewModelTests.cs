@@ -621,7 +621,7 @@ public sealed class PackViewModelTests
     }
 
     [Fact]
-    public async Task PackUpdate_FailedDownload_KeepsTheOldSourceAndTheNotice()
+    public async Task PackUpdate_FailedDownload_KeepsTheOldSourceTheDroppedModAndTheNotice()
     {
         using var harness = await ViewModelHarness.CreateAsync(editSnapshot: WithPacks(ToolsPackVersions()));
         var viewModel = harness.ViewModel;
@@ -631,9 +631,11 @@ public sealed class PackViewModelTests
         await viewModel.PackUpdate.ConfirmUpdateCommand.ExecuteAsync(null);
 
         // tests have no network, so the added mod gets as far as its download
-        Assert.Equal(new InstanceSource.FromModPack("tools-pack", ModVersion.Parse("1.0.0")), (await harness.Services.Instances.GetByIdAsync(instance.InstanceId))!.Source);
+        var afterFailure = (await harness.Services.Instances.GetByIdAsync(instance.InstanceId))!;
+        Assert.Equal(new InstanceSource.FromModPack("tools-pack", ModVersion.Parse("1.0.0")), afterFailure.Source);
+        Assert.Equal("KSArmory", Assert.Single(afterFailure.Mods).ModId);
         Assert.NotNull(viewModel.PackUpdate);
-        Assert.NotNull(viewModel.PackUpdate.InstallError);
+        Assert.Contains(harness.Localization.FormatPackUpdateStillInstalled(viewModel.ContentName("KSArmory")), viewModel.PackUpdate.InstallError);
         Assert.False(viewModel.PackUpdate.IsConfirming);
         Assert.Equal(TaskState.Failed, viewModel.Tasks.History[0].State);
     }

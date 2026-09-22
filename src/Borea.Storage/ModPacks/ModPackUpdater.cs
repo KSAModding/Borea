@@ -48,20 +48,22 @@ public sealed class ModPackUpdater : IModPackUpdater
                 if (current is null || !InstallPlanningState.Capture(instance).Matches(current))
                     throw new InvalidOperationException("The instance changed after planning.");
 
-                foreach (var removal in removals)
+                await _executor.ExecuteAsync(plan, request.Enable, progress, stop, cancellationToken).ConfigureAwait(false);
+
+                // The removals are the last step, so a stop or a failure before them keeps the mods.
+                // Once they start they all run, because they are the step that commits the update.
+                if (stop is { IsRequested: true })
                 {
-                    if (stop is { IsRequested: true })
-                    {
-                        stopped = true;
-                        break;
-                    }
-
-                    await _uninstaller.UninstallAsync(instance.InstanceId, removal.ModId, cancellationToken).ConfigureAwait(false);
-                    removed.Add(removal.ModId);
+                    stopped = true;
                 }
-
-                if (!stopped)
-                    await _executor.ExecuteAsync(plan, request.Enable, progress, stop, cancellationToken).ConfigureAwait(false);
+                else
+                {
+                    foreach (var removal in removals)
+                    {
+                        await _uninstaller.UninstallAsync(instance.InstanceId, removal.ModId, cancellationToken).ConfigureAwait(false);
+                        removed.Add(removal.ModId);
+                    }
+                }
             }
             catch (InstallStoppedException)
             {
@@ -89,14 +91,15 @@ public sealed class ModPackUpdater : IModPackUpdater
             return new ModPackMemberResult(modId, version, reason, ModPackMemberStatus.NotAttempted, stopped ? StoppedMessage : EarlierStepFailedMessage);
         }
 
-        foreach (var removal in removals)
-            members.Add(Outcome(removal.ModId, removal.From!.Value, InstallReason.ModPack, removed.Contains(removal.ModId), ModPackMemberStatus.Removed));
         foreach (var operation in plan.Operations)
         {
             var done = fresh.Mods.Any(mod => ModIds.Equals(mod.ModId, operation.Release.ModId) && mod.Version == operation.Release.Version);
             var existing = draft.Mods.Any(mod => ModIds.Equals(mod.ModId, operation.Release.ModId));
             members.Add(Outcome(operation.Release.ModId, operation.Release.Version, ReasonAfter(planned.Changes, draft, operation.Release.ModId, operation.Reason), done, existing ? ModPackMemberStatus.Replaced : ModPackMemberStatus.Installed));
         }
+
+        foreach (var removal in removals)
+            members.Add(Outcome(removal.ModId, removal.From!.Value, InstallReason.ModPack, removed.Contains(removal.ModId), ModPackMemberStatus.Removed));
 
         members.AddRange(AlreadyInstalled(planned.Changes, draft, plan));
         var complete = failure is null && !stopped && members.All(member => IsDone(member.Status));
@@ -198,6 +201,8 @@ public sealed class ModPackUpdater : IModPackUpdater
             }
         }
 
+        // The update installs before it removes, so its plan runs against the instance with the mods it removes.
+        plan = plan.WithInstanceState(InstallPlanningState.Capture(instance));
         warnings.AddRange(plan.Warnings);
         changes = WithDependencies(changes, draft, plan);
         if (!plan.IsReady)
