@@ -377,6 +377,13 @@ public sealed partial class GameSaveSection : ObservableObject
         RefreshProfileSelection();
     }
 
+    /// <summary>Takes the chooser back to the normal copy state, because the replace question belongs to the selection that made it.</summary>
+    internal void OnProfileSelectionChanged()
+    {
+        IsConfirmingProfileReplace = false;
+        RefreshProfileSelection();
+    }
+
     internal void RefreshProfileSelection()
     {
         OnPropertyChanged(nameof(AreAllProfileItemsSelected));
@@ -467,7 +474,7 @@ public sealed partial class GameSaveItem : ObservableObject
     [ObservableProperty]
     private bool _isSelected;
 
-    partial void OnIsSelectedChanged(bool value) => Section.RefreshProfileSelection();
+    partial void OnIsSelectedChanged(bool value) => Section.OnProfileSelectionChanged();
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsIdle))]
