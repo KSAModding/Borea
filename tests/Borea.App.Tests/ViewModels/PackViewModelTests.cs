@@ -760,7 +760,7 @@ public sealed class PackViewModelTests
         return instance;
     }
 
-    private static Func<string, string> WithPacks(params string[] packs) => snapshot =>
+    internal static Func<string, string> WithPacks(params string[] packs) => snapshot =>
     {
         const string empty = "\"packs\": []";
         if (!snapshot.Contains(empty, StringComparison.Ordinal))
@@ -785,13 +785,13 @@ public sealed class PackViewModelTests
         return root.ToJsonString();
     }
 
-    private static string Pack(string id, string name, params Func<string, string, string>[] versions) =>
+    internal static string Pack(string id, string name, params Func<string, string, string>[] versions) =>
         $$"""{ "id": "{{id}}", "versions": [{{string.Join(", ", versions.Select(version => version(id, name)))}}] }""";
 
-    private static Func<string, string, string> Version(string version, params string[] pins) => (id, name) =>
+    internal static Func<string, string, string> Version(string version, params string[] pins) => (id, name) =>
         $$"""{ "authored": { "spec_version": 1, "id": "{{id}}", "type": "modpack", "name": "{{name}}", "authors": ["Maxi"], "abstract": "{{name}} abstract.", "description": "## {{name}}", "license": "MIT", "tags": ["starter"], "version": "{{version}}", "released_at": "2026-09-01T12:00:00Z", "links": { "forums": "https://forums.example.com/{{id}}" }, "compatibility": { "game_min": "2026.8.19.5261" }, "mods": [{{string.Join(", ", pins)}}] } }""";
 
-    private static string Pin(string id, string version) => $$"""{ "id": "{{id}}", "version": "{{version}}" }""";
+    internal static string Pin(string id, string version) => $$"""{ "id": "{{id}}", "version": "{{version}}" }""";
 
     private static byte[] Archive(params (string Path, string Content)[] entries)
     {
