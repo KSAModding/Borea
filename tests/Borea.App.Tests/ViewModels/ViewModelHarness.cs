@@ -1,6 +1,8 @@
 using System.Collections.Concurrent;
 using System.Globalization;
 using System.Net;
+using System.Net.Http.Headers;
+using System.Security.Cryptography;
 using System.Text;
 using Borea.App.Formatting;
 using Borea.App.Localization;
@@ -56,6 +58,15 @@ internal sealed class ViewModelHarness : IDisposable
     /// <summary>Fails every content index request with <see cref="OfflineMessage"/>.</summary>
     public bool IndexOffline { get; set; }
 
+    /// <summary>
+    /// Answers content index requests with an ETag of the served snapshot, and
+    /// with 304 Not Modified when the request carries that ETag.
+    /// </summary>
+    public bool IndexEtag { get; set; }
+
+    /// <summary>Runs before a content index request is answered, so that a test can hold it.</summary>
+    public Func<Task>? IndexRequest { get; set; }
+
     /// <summary>The folders the install detector checks. Empty unless a test adds some.</summary>
     public FakeInstallCandidates Candidates { get; } = new();
 
@@ -69,15 +80,16 @@ internal sealed class ViewModelHarness : IDisposable
     /// <param name="respond">Answers a request outside the content index. Null fails it.</param>
     /// <param name="editSnapshot">Changes the index snapshot before it is served.</param>
     /// <param name="indexOffline">The first value of <see cref="IndexOffline"/>.</param>
+    /// <param name="indexEtag">The first value of <see cref="IndexEtag"/>.</param>
     /// <param name="candidates">Adds the folders the install detector checks, before the first load.</param>
     /// <param name="processStarter">Starts the launchers' processes. Null starts real ones.</param>
     /// <param name="waitForDetection">False returns while the game detection of the first load may still run.</param>
     /// <param name="sharedProfileRoot">The game profile folder. Null puts it into the temporary root.</param>
     /// <param name="gitHub">The GitHub session every service graph of this harness shares. Null builds one per graph for <see cref="Borea.Network.GitHub.BoreaGitHubApp"/>.</param>
     /// <param name="listingPublisher">Opens the listing pull request. Null builds one on the GitHub session.</param>
-    public static async Task<ViewModelHarness> CreateAsync(Func<BoreaServices, Task>? seed = null, Func<HttpRequestMessage, HttpResponseMessage?>? respond = null, Func<string, string>? editSnapshot = null, bool indexOffline = false, Action<ViewModelHarness>? candidates = null, Borea.Storage.Launch.IProcessStarter? processStarter = null, bool waitForDetection = true, string? sharedProfileRoot = null, IGitHubSession? gitHub = null, IListingPublisher? listingPublisher = null)
+    public static async Task<ViewModelHarness> CreateAsync(Func<BoreaServices, Task>? seed = null, Func<HttpRequestMessage, HttpResponseMessage?>? respond = null, Func<string, string>? editSnapshot = null, bool indexOffline = false, bool indexEtag = false, Action<ViewModelHarness>? candidates = null, Borea.Storage.Launch.IProcessStarter? processStarter = null, bool waitForDetection = true, string? sharedProfileRoot = null, IGitHubSession? gitHub = null, IListingPublisher? listingPublisher = null)
     {
-        var harness = new ViewModelHarness { _respond = respond, _editSnapshot = editSnapshot, IndexOffline = indexOffline, _processStarter = processStarter, _sharedProfileRoot = sharedProfileRoot, _gitHub = gitHub, _listingPublisher = listingPublisher };
+        var harness = new ViewModelHarness { _respond = respond, _editSnapshot = editSnapshot, IndexOffline = indexOffline, IndexEtag = indexEtag, _processStarter = processStarter, _sharedProfileRoot = sharedProfileRoot, _gitHub = gitHub, _listingPublisher = listingPublisher };
         Directory.CreateDirectory(harness.Root);
         candidates?.Invoke(harness);
         harness.Services = await harness.BuildServicesAsync();
@@ -186,6 +198,7 @@ internal sealed class ViewModelHarness : IDisposable
             ("PlaytimeLoaded", viewModel.WhenPlaytimeLoadedAsync()),
             ("InstanceSizesLoaded", viewModel.WhenInstanceSizesLoadedAsync()),
             ("GameDetected", viewModel.WhenGameDetectedAsync()),
+            ("IndexChecked", viewModel.WhenIndexCheckedAsync()),
             ("GitHubSignInDone", viewModel.WhenGitHubSignInDoneAsync()),
             ("LinkRegistrationDone", viewModel.WhenLinkRegistrationDoneAsync()),
             ("TasksSaved", viewModel.Tasks.WhenSavedAsync()),
@@ -229,14 +242,31 @@ internal sealed class ViewModelHarness : IDisposable
             if (request.RequestUri?.AbsoluteUri.StartsWith("https://ksamodding.github.io/content-index-releases/", StringComparison.Ordinal) != true)
                 return owner._respond?.Invoke(request) ?? throw new HttpRequestException($"No network in tests: {request.RequestUri}");
 
+            if (owner.IndexRequest is { } held)
+                await held();
+
             if (owner.IndexOffline)
                 throw new HttpRequestException(OfflineMessage);
 
             var snapshot = await File.ReadAllTextAsync(SnapshotFixturePath, cancellationToken);
-            return new HttpResponseMessage(HttpStatusCode.OK)
+            var body = owner._editSnapshot?.Invoke(snapshot) ?? snapshot;
+            if (!owner.IndexEtag)
+                return Served(body, etag: null);
+
+            var etag = new EntityTagHeaderValue("\"" + Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(body)))[..16] + "\"");
+            return request.Headers.IfNoneMatch.Contains(etag)
+                ? new HttpResponseMessage(HttpStatusCode.NotModified) { Headers = { ETag = etag } }
+                : Served(body, etag);
+        }
+
+        private static HttpResponseMessage Served(string body, EntityTagHeaderValue? etag)
+        {
+            var response = new HttpResponseMessage(HttpStatusCode.OK)
             {
-                Content = new StringContent(owner._editSnapshot?.Invoke(snapshot) ?? snapshot, Encoding.UTF8, "application/json"),
+                Content = new StringContent(body, Encoding.UTF8, "application/json"),
             };
+            response.Headers.ETag = etag;
+            return response;
         }
     }
 
