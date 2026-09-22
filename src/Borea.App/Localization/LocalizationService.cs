@@ -1309,6 +1309,9 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string PackUpdateNoModChanges => Resources.PackUpdateNoModChanges;
 
+    public string FormatPackUpdateStillInstalled(string names)
+        => string.Format(CultureInfo.CurrentCulture, Resources.PackUpdateStillInstalledFormat, names);
+
     public string PackModHeader => Resources.PackModHeader;
 
     public string PackMemberYanked => Resources.PackMemberYanked;

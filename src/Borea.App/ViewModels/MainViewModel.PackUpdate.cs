@@ -204,16 +204,17 @@ public partial class MainViewModel
             var result = await services.ModPackUpdater.UpdateAsync(request, ProgressOf(item), run.InstallStop);
             var steps = result.Members.Where(member => member.Status != ModPackMemberStatus.AlreadyInstalled).ToList();
             var done = steps.Count(member => member.Status is ModPackMemberStatus.Installed or ModPackMemberStatus.Replaced or ModPackMemberStatus.Removed);
+            var kept = StillInstalledText(result);
             if (result.IsStopped)
             {
                 run.TaskItem.StoppedAfter = (done, steps.Count);
-                stopped = StoppedText(item, done, steps.Count);
+                stopped = Sentences(StoppedText(item, done, steps.Count), kept);
             }
             else if (!result.IsComplete)
             {
                 var summary = Localization.FormatPackIncomplete(steps.Count - done, steps.Count);
-                var details = result.Plan is null ? string.Empty : Describe(result.Plan.Conflicts.Concat(result.Plan.UnresolvedChoices));
-                error = item.InstallError = details.Length == 0 ? summary : $"{summary} {details}";
+                var details = result.Plan is null ? null : Describe(result.Plan.Conflicts.Concat(result.Plan.UnresolvedChoices));
+                error = item.InstallError = Sentences(summary, details, kept);
             }
 
             completed = true;
@@ -234,6 +235,15 @@ public partial class MainViewModel
 
         return executed;
     }
+
+    /// <summary>Names the mods an update that did not finish would have removed and still has, or null when it removed them.</summary>
+    private string? StillInstalledText(ModPackUpdateResult result)
+    {
+        var names = result.StillInstalled.Select(ContentName).ToList();
+        return names.Count == 0 ? null : Localization.FormatPackUpdateStillInstalled(string.Join(", ", names));
+    }
+
+    private static string Sentences(params string?[] parts) => string.Join(" ", parts.Where(part => !string.IsNullOrEmpty(part)));
 }
 
 /// <summary>The newer version of the instance's pack, with its plan and outcome the way an update row holds them.</summary>
