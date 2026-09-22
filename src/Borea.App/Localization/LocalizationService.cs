@@ -140,6 +140,10 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string FormatToastStoppedUpdated(int completed, int total)
         => string.Format(CultureInfo.CurrentCulture, Resources.ToastStoppedUpdatedFormat, completed, total);
 
+    public string ToastIndexRefreshed => Resources.ToastIndexRefreshed;
+
+    public string ToastIndexUpToDate => Resources.ToastIndexUpToDate;
+
     public string ToastIndexRefreshFailed => Resources.ToastIndexRefreshFailed;
 
     public string FormatToastInstallFailed(string content)

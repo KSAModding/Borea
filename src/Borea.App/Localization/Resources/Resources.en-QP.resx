@@ -492,6 +492,12 @@
   <data name="ToastStoppedUpdatedFormat" xml:space="preserve">
     <value>{0} o' {1} barrels o' fun brought in on the tide</value>
   </data>
+  <data name="ToastIndexRefreshed" xml:space="preserve">
+    <value>Bulletin board freshened up</value>
+  </data>
+  <data name="ToastIndexUpToDate" xml:space="preserve">
+    <value>The bulletin board be up to date</value>
+  </data>
   <data name="ToastIndexRefreshFailed" xml:space="preserve">
     <value>Couldn't freshen up the bulletin board</value>
   </data>

@@ -10,7 +10,6 @@ using System.Threading.Tasks;
 using Borea.App.Formatting;
 using Borea.App.Localization;
 using Borea.Composition;
-using Borea.Core.History;
 using Borea.Core.Index;
 using Borea.Core.Instances;
 using Borea.Core.Mods;
@@ -113,6 +112,7 @@ public partial class MainViewModel : ViewModelBase
         UpdateIndexRefreshStatus();
         LeavePackPage();
         _ = EnsureDiscoverLoadedAsync();
+        StartIndexCheck();
         CurrentWindowHome = false;
         CurrentWindowDiscover = true;
         CurrentWindowLibrary = false;
@@ -126,6 +126,7 @@ public partial class MainViewModel : ViewModelBase
     {
         LeaveContentPage();
         LeavePackPage();
+        StartIndexCheck();
         CurrentWindowHome = false;
         CurrentWindowDiscover = false;
         CurrentWindowLibrary = true;
@@ -299,7 +300,7 @@ public partial class MainViewModel : ViewModelBase
         InstalledVersionText = _services?.InstalledVersion.GetInstalledVersion()?.RawVersion;
         StartGameBuildCheck();
         await ReloadInstancesAsync();
-        await RefreshContentIndexAsync();
+        await RefreshContentIndexAtStartAsync();
         await LoadRecentItemsAsync();
         UpdateIndexRefreshStatus();
         RefreshGameSetup();
@@ -326,34 +327,15 @@ public partial class MainViewModel : ViewModelBase
         await RefreshCompatibilityAsync(installed?.Version);
     }
 
-    /// <summary>
-    /// Refreshes the content index once per start. A failure keeps the cached
-    /// snapshot in use, and <see cref="IndexRefreshStatus"/> tells the pages.
-    /// </summary>
-    private async Task RefreshContentIndexAsync()
+    /// <summary>Refreshes the content index once per start. Later refreshes go through the index check.</summary>
+    private async Task RefreshContentIndexAtStartAsync()
     {
-        if (_services is not { } services || _indexRefreshed)
+        if (_services is null || _indexRefreshed)
             return;
 
-        var task = StartTask(TaskKind.IndexRefresh);
-        var completed = false;
-        string? error = null;
-        try
-        {
-            await services.IndexRefresh.RefreshAsync();
-            completed = true;
-        }
-        catch (Exception exception) when (exception is System.Net.Http.HttpRequestException or IOException or InvalidOperationException or TaskCanceledException)
-        {
-            error = exception.Message;
-        }
-        finally
-        {
-            if (services.IndexRefresh.Status is { Outcome: ContentIndexRefreshOutcome.Failed } status)
-                error = status.FailureReason ?? error ?? string.Empty;
-            EndTask(task, completed, stopped: false, error);
-        }
-
+        // the same field the later checks use, so a Refresh click during the start joins this fetch
+        _indexCheck = CheckContentIndexAsync(reloadPages: false);
+        await _indexCheck;
         _indexRefreshed = true;
         StartContentUpdateCheck();
     }

@@ -191,6 +191,24 @@ public partial class MainViewModel
         await LoadLatestVersionAsync(item);
     }
 
+    /// <summary>
+    /// Reads the open mod page again after the index changed. The page keeps
+    /// the tab it shows, and its version list loads again when it is open.
+    /// </summary>
+    private async Task ReloadContentPageAsync()
+    {
+        // a version load that is still running would fill the cleared list with the releases from before the refresh
+        await _contentVersionsLoad;
+        if (!CurrentWindowContent || SelectedContent is not { } item)
+            return;
+
+        _contentReleases.Clear();
+        ApplyVersionFilter();
+        await LoadLatestVersionAsync(item);
+        if (ContentTab == ContentPageTab.Versions)
+            await ShowContentVersionsAsync();
+    }
+
     private async Task LoadLatestVersionAsync(DiscoverItem item)
     {
         if (_services is null)
