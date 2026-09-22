@@ -326,6 +326,46 @@
                         <ContentControl Margin="0,12,0,0" Content="{Binding PackUpdate.Choices}" IsVisible="{Binding PackUpdate.Choices, Converter={x:Static ObjectConverters.IsNotNull}}" />
                         <TextBlock Classes="body-md danger" Text="{Binding PackUpdate.InstallError}" TextWrapping="Wrap" Margin="0,8,0,0" IsVisible="{Binding PackUpdate.InstallError, Converter={x:Static ObjectConverters.IsNotNull}}" />
                     </StackPanel>
+                    <!-- mods the instance records whose folder is gone -->
+                    <StackPanel Margin="0,16,0,0" IsVisible="{Binding MissingContent, Converter={x:Static ObjectConverters.IsNotNull}}">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <TextBlock Classes="body-md danger" Text="{Binding MissingContent.NoticeText}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" Margin="16,0,0,0" VerticalAlignment="Center">
+                                <StackPanel Orientation="Horizontal" Spacing="8" IsEnabled="{Binding CanChangeContent}">
+                                    <StackPanel.IsVisible>
+                                        <MultiBinding Converter="{x:Static BoolConverters.And}">
+                                            <Binding Path="!MissingContent.IsInstalling" FallbackValue="{x:False}" />
+                                            <Binding Path="!MissingContent.IsConfirmingInstall" FallbackValue="{x:False}" />
+                                            <Binding Path="!MissingContent.IsConfirmingDrop" FallbackValue="{x:False}" />
+                                        </MultiBinding>
+                                    </StackPanel.IsVisible>
+                                    <Button Classes="text primary" Content="{Binding Localization.ContentInstallAgain}" Command="{Binding MissingContent.InstallAgainCommand}" />
+                                    <Button Classes="text" Content="{Binding Localization.ContentRemoveFromList}" Command="{Binding MissingContent.BeginDropCommand}" />
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding MissingContent.IsInstalling, FallbackValue={x:False}}">
+                                    <ProgressBar Width="96" Height="6" VerticalAlignment="Center" Value="{Binding MissingContent.Progress}" Maximum="100" Foreground="{StaticResource Brush.Accent}" />
+                                    <Button Classes="text" Content="{Binding MissingContent.Run.PauseText}" Command="{Binding MissingContent.Run.TogglePauseCommand}" />
+                                    <Button Classes="text" Content="{Binding MissingContent.Run.StopText}" Command="{Binding MissingContent.Run.StopCommand}" />
+                                </StackPanel>
+                            </StackPanel>
+                        </Grid>
+                        <TextBlock Classes="body-md secondary" Text="{Binding MissingContent.ProgressStatus}" TextWrapping="Wrap" Margin="0,8,0,0" IsVisible="{Binding MissingContent.ProgressStatus, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                        <Grid ColumnDefinitions="*,Auto" Margin="0,8,0,0" IsVisible="{Binding MissingContent.IsConfirmingDrop, FallbackValue={x:False}}">
+                            <TextBlock Classes="body-md danger" Text="{Binding MissingContent.ConfirmDropText}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" Margin="16,0,0,0" VerticalAlignment="Center">
+                                <Button Classes="text danger" Content="{Binding Localization.ContentRemoveFromList}" Command="{Binding MissingContent.ConfirmDropCommand}" />
+                                <Button Classes="text" Content="{Binding Localization.LibraryCancel}" Command="{Binding MissingContent.CancelDropCommand}" />
+                            </StackPanel>
+                        </Grid>
+                        <Grid ColumnDefinitions="*,Auto" Margin="0,8,0,0" IsVisible="{Binding MissingContent.IsConfirmingInstall, FallbackValue={x:False}}">
+                            <TextBlock Classes="body-md secondary" Text="{Binding MissingContent.InstallWarning}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" Margin="16,0,0,0" VerticalAlignment="Center">
+                                <Button Classes="text primary" Content="{Binding Localization.InstallAnyway}" Command="{Binding MissingContent.ConfirmInstallCommand}" IsEnabled="{Binding CanChangeContent}" />
+                                <Button Classes="text" Content="{Binding Localization.LibraryCancel}" Command="{Binding MissingContent.CancelInstallCommand}" />
+                            </StackPanel>
+                        </Grid>
+                        <TextBlock Classes="body-md danger" Text="{Binding MissingContent.InstallError}" TextWrapping="Wrap" Margin="0,8,0,0" IsVisible="{Binding MissingContent.InstallError, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                    </StackPanel>
                 </StackPanel>
             </ScrollViewer>
 

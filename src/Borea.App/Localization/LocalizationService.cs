@@ -676,6 +676,32 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string ContentChangeVersion => Resources.ContentChangeVersion;
 
+    public string ContentNotOnDisk => Resources.ContentNotOnDisk;
+
+    public string ContentNotOnDiskDetail => Resources.ContentNotOnDiskDetail;
+
+    public string ContentNotOnDiskEnable => Resources.ContentNotOnDiskEnable;
+
+    public string ContentInstallAgain => Resources.ContentInstallAgain;
+
+    public string ContentRemoveFromList => Resources.ContentRemoveFromList;
+
+    public string ContentRemoveFromListConfirm => Resources.ContentRemoveFromListConfirm;
+
+    public string ToastMissingScanFailed => Resources.ToastMissingScanFailed;
+
+    /// <summary>"The folder 'HudCore' has no mod.toml, so Borea cannot install over it."</summary>
+    public string FormatContentFolderInTheWay(string folderName)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ContentFolderInTheWayFormat, folderName);
+
+    /// <summary>"HudCore is on disk again, so Borea changed nothing."</summary>
+    public string FormatContentBackOnDisk(string content)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ContentBackOnDiskFormat, content);
+
+    /// <summary>"3 mods of this instance are not on disk."</summary>
+    public string FormatInstanceModsMissing(int count)
+        => FormatCount(count, Resources.InstanceModsMissingOne, Resources.InstanceModsMissingFormat);
+
     public string DiscoverTabMods => Resources.DiscoverTabMods;
 
     public string DiscoverTabModpacks => Resources.DiscoverTabModpacks;

@@ -182,6 +182,7 @@ public partial class MainViewModel
         }
 
         _content = content.OrderBy(content => content.Name, StringComparer.CurrentCultureIgnoreCase).ToList();
+        await ShowMissingContentAsync(item.InstanceId);
         _contentPack = await ResolveSourcePackAsync(_selectedInstanceEntity?.Source);
         ShowPackUpdate(item.InstanceId, await FindPackUpdateAsync(_selectedInstanceEntity));
         RefreshContentGroups();
@@ -220,6 +221,8 @@ public partial class MainViewModel
     {
         foreach (var item in _content)
             item.RefreshText();
+
+        MissingContent?.RefreshText();
 
         ContentGroups.Clear();
         var fromPacks = _content.Where(content => content.Reason == InstallReason.ModPack).ToList();
@@ -311,7 +314,7 @@ public partial class MainViewModel
                 return;
 
             ShowPackUpdate(shown.InstanceId, packUpdate, keepSameVersion: true);
-            foreach (var item in content.Where(item => item.IsOwned))
+            foreach (var item in content.Where(item => item.IsOwned && !item.IsMissing))
             {
                 var installed = shown.Mods.FirstOrDefault(mod => ModIds.Equals(mod.ModId, item.ModId));
                 if (installed is null)
@@ -327,8 +330,11 @@ public partial class MainViewModel
             OnPropertyChanged(nameof(HasUpdates));
         }
 
+        // the Home card counts what the instance page offers, and no update
+        // reaches a mod whose folder is gone
+        var missing = await MissingModIdsAsync(services, active);
         var count = 0;
-        foreach (var installed in active?.Mods.Where(mod => mod.Ownership == ModInstallOwnership.Borea) ?? [])
+        foreach (var installed in active?.Mods.Where(mod => mod.Ownership == ModInstallOwnership.Borea && !missing.Contains(mod.ModId, ModIds.Comparer)) ?? [])
         {
             var newer = await FindAsync(active!, installed);
             if (generation != _contentUpdateCheckGeneration)
@@ -339,6 +345,26 @@ public partial class MainViewModel
         }
 
         ActiveInstanceUpdateCount = count;
+    }
+
+    /// <summary>
+    /// The recorded mods of the instance that have no folder. Empty when there
+    /// is no instance or the folders cannot be read, so a count is never lost
+    /// over a read that failed.
+    /// </summary>
+    private static async Task<IReadOnlyList<string>> MissingModIdsAsync(BoreaServices services, Instance? instance)
+    {
+        if (instance is null)
+            return [];
+
+        try
+        {
+            return await services.MissingMods.ScanAsync(instance.InstanceId);
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or InvalidOperationException)
+        {
+            return [];
+        }
     }
 
     private static async Task<ModVersion?> FindUpdateAsync(BoreaServices services, Instance instance, InstalledMod installed)
@@ -463,6 +489,7 @@ public partial class MainViewModel
         {
             ContentItem item => _content.FirstOrDefault(content => ModIds.Equals(content.ModId, item.ModId)),
             PackUpdateItem => PackUpdate,
+            MissingContentItem => MissingContent,
             _ => UpdateAll,
         };
         if (target is not null)
@@ -722,6 +749,9 @@ public partial class MainViewModel
         if (libraryUse is null)
             return Localization.LibraryFolderBusy;
 
+        if (enabled && IsMissingContent(instanceId, modId))
+            return Localization.ContentNotOnDiskEnable;
+
         try
         {
             if (enabled)
@@ -887,12 +917,24 @@ public sealed partial class ContentItem : ObservableObject, IUpdateRow
 
     private readonly InstalledMod _mod;
 
-    /// <summary>Why the remove button is disabled, for its tooltip. Null when the mod can be removed.</summary>
-    public string? RemoveBlockedText => _owner.RemoveBlockedReason(_instance, _mod);
+    /// <summary>
+    /// Why the remove button is disabled, for its tooltip. Null when the mod can
+    /// be removed, which a mod without a folder always can, because the button
+    /// then only drops its record.
+    /// </summary>
+    public string? RemoveBlockedText => IsMissing ? null : _owner.RemoveBlockedReason(_instance, _mod);
 
     public bool CanRemove => RemoveBlockedText is null;
 
-    public string RemoveToolTip => RemoveBlockedText ?? _owner.Localization.ContentRemove;
+    public string RemoveToolTip => IsMissing
+        ? _owner.Localization.ContentRemoveFromList
+        : RemoveBlockedText ?? _owner.Localization.ContentRemove;
+
+    public string RemoveConfirmText => IsMissing
+        ? _owner.Localization.ContentRemoveFromListConfirm
+        : _owner.Localization.ContentRemoveConfirm;
+
+    public string RemoveActionText => IsMissing ? _owner.Localization.ContentRemoveFromList : _owner.Localization.ContentRemove;
 
     /// <summary>Whether the row links to the mod page: installed by Borea and in the content index.</summary>
     public bool CanOpen => _page is not null;
@@ -908,6 +950,16 @@ public sealed partial class ContentItem : ObservableObject, IUpdateRow
     [ObservableProperty]
     private bool _isEnabled;
 
+    /// <summary>The mod has no folder with a mod.toml, so the game would not load it.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasUpdate))]
+    [NotifyPropertyChangedFor(nameof(RemoveBlockedText))]
+    [NotifyPropertyChangedFor(nameof(CanRemove))]
+    [NotifyPropertyChangedFor(nameof(RemoveToolTip))]
+    [NotifyPropertyChangedFor(nameof(RemoveConfirmText))]
+    [NotifyPropertyChangedFor(nameof(RemoveActionText))]
+    private bool _isMissing;
+
     /// <summary>What the mod's folder takes on disk, or null until it is measured or when the folder is gone.</summary>
     [ObservableProperty]
     private string? _sizeText;
@@ -921,7 +973,7 @@ public sealed partial class ContentItem : ObservableObject, IUpdateRow
     private string? _updateVersion;
 
     /// <summary>A dependency shows no update of its own, "Update all" updates it.</summary>
-    public bool HasUpdate => UpdateVersion is not null && !IsInstalling && !IsDependency;
+    public bool HasUpdate => UpdateVersion is not null && !IsInstalling && !IsDependency && !IsMissing;
 
     public string? UpdateText => UpdateVersion is null ? null : _owner.Localization.FormatContentUpdateTo(UpdateVersion);
 
@@ -1001,6 +1053,8 @@ public sealed partial class ContentItem : ObservableObject, IUpdateRow
         OnPropertyChanged(nameof(NoPageText));
         OnPropertyChanged(nameof(RemoveBlockedText));
         OnPropertyChanged(nameof(RemoveToolTip));
+        OnPropertyChanged(nameof(RemoveConfirmText));
+        OnPropertyChanged(nameof(RemoveActionText));
         OnPropertyChanged(nameof(UpdateText));
     }
 
@@ -1015,13 +1069,20 @@ public sealed partial class ContentItem : ObservableObject, IUpdateRow
     private void CancelRemove() => IsConfirmingRemove = false;
 
     [RelayCommand]
-    private Task ConfirmRemoveAsync() => _owner.RemoveContentAsync(InstanceId, ModId);
+    private Task ConfirmRemoveAsync() => IsMissing
+        ? _owner.DropMissingContentAsync(InstanceId, [ModId])
+        : _owner.RemoveContentAsync(InstanceId, ModId);
+
+    [RelayCommand]
+    private Task InstallAgainAsync() => _owner.InstallMissingAgainAsync(this, InstanceId, [ModId]);
 
     [RelayCommand]
     private Task UpdateAsync() => _owner.UpdateContentAsync(this);
 
     [RelayCommand]
-    private Task ConfirmUpdateAsync() => _owner.ConfirmUpdateAsync(this, InstanceId);
+    private Task ConfirmUpdateAsync() => IsMissing
+        ? _owner.ConfirmMissingInstallAsync(this, InstanceId, [ModId])
+        : _owner.ConfirmUpdateAsync(this, InstanceId);
 
     [RelayCommand]
     private void CancelUpdate() => MainViewModel.CancelUpdate(this);

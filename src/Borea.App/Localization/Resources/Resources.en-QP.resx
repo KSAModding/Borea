@@ -798,6 +798,39 @@
   <data name="ContentRemoveRequiredFormat" xml:space="preserve">
     <value>{0} stows away 'cause {1} be needin' it.</value>
   </data>
+  <data name="ContentNotOnDisk" xml:space="preserve">
+    <value>Not in the hold</value>
+  </data>
+  <data name="ContentNotOnDiskDetail" xml:space="preserve">
+    <value>The chest o' this mod be gone. Haul it aboard again, or strike it from the roster.</value>
+  </data>
+  <data name="ContentNotOnDiskEnable" xml:space="preserve">
+    <value>The Borea cannot hoist a mod whose chest be gone.</value>
+  </data>
+  <data name="ContentInstallAgain" xml:space="preserve">
+    <value>Haul aboard again</value>
+  </data>
+  <data name="ContentRemoveFromList" xml:space="preserve">
+    <value>Strike from the roster</value>
+  </data>
+  <data name="ContentRemoveFromListConfirm" xml:space="preserve">
+    <value>Strike it from the roster? The booty be gone already.</value>
+  </data>
+  <data name="ContentFolderInTheWayFormat" xml:space="preserve">
+    <value>The chest '{0}' carries no mod.toml, so the Borea cannot stow over it. Heave it out, then haul aboard again.</value>
+  </data>
+  <data name="ContentBackOnDiskFormat" xml:space="preserve">
+    <value>{0} be back in the hold, so the Borea changed naught. Open the sea again.</value>
+  </data>
+  <data name="ToastMissingScanFailed" xml:space="preserve">
+    <value>The Borea could not read the mods hold o' this sea.</value>
+  </data>
+  <data name="InstanceModsMissingOne" xml:space="preserve">
+    <value>1 mod o' this sea ain't in the hold.</value>
+  </data>
+  <data name="InstanceModsMissingFormat" xml:space="preserve">
+    <value>{0} mods o' this sea ain't in the hold.</value>
+  </data>
   <data name="ContentUpdate" xml:space="preserve">
     <value>Bring in the tide</value>
   </data>
