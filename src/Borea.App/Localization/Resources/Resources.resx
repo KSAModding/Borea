@@ -282,9 +282,6 @@
   <data name="LibraryFolderInstanceBusy" xml:space="preserve">
     <value>An instance is being changed. Wait until that finishes, then try again.</value>
   </data>
-  <data name="LibraryFolderFileLockedFormat" xml:space="preserve">
-    <value>{0} is open in another program. Close the game first, then change the library folder.</value>
-  </data>
   <data name="LibraryFolderWaitForTask" xml:space="preserve">
     <value>Wait until Borea finishes the current task, then change the library folder.</value>
   </data>

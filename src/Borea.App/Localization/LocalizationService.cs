@@ -401,9 +401,6 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string LibraryFolderInstanceBusy => Resources.LibraryFolderInstanceBusy;
 
-    public string FormatLibraryFolderFileLocked(string file)
-        => string.Format(CultureInfo.CurrentCulture, Resources.LibraryFolderFileLockedFormat, file);
-
     public string LibraryFolderWaitForTask => Resources.LibraryFolderWaitForTask;
 
     public string LibraryFolderBusy => Resources.LibraryFolderBusy;
