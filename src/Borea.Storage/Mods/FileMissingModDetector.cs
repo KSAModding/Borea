@@ -54,6 +54,18 @@ public sealed class FileMissingModDetector : IMissingModDetector
             cancellationToken).ConfigureAwait(false);
     }
 
+    public Task<string?> FindLeftoverFolderAsync(Guid instanceId, string modId, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(modId))
+            throw new ArgumentException("Mod ID cannot be null or whitespace.", nameof(modId));
+
+        cancellationToken.ThrowIfCancellationRequested();
+        var folder = ModFolders.Find(_pathProvider.GetInstanceModsFolder(instanceId), modId);
+        if (folder is null || File.Exists(Path.Combine(folder, ModFolders.DefinitionFileName)))
+            return Task.FromResult<string?>(null);
+
+        return Task.FromResult<string?>(Path.GetFileName(folder));
+    }
 
     /// <summary>
     /// The names of the folders the game would load a mod from, which are the

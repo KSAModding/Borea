@@ -100,8 +100,31 @@ public sealed class FileMissingModDetectorTests : IAsyncLifetime
     public async Task DropAsync_ModIsNotRecorded_ChangesNothing()
         => Assert.False(await _detector.DropAsync(_instanceId, "FlightTools"));
 
+    [Fact]
+    public async Task FindLeftoverFolderAsync_FolderWithoutAModToml_NamesTheFolder()
+    {
+        await RecordAsync("FlightTools");
+        Directory.CreateDirectory(Path.Combine(ModsFolder, "flighttools"));
 
+        Assert.Equal("flighttools", await _detector.FindLeftoverFolderAsync(_instanceId, "FlightTools"));
+    }
 
+    [Fact]
+    public async Task FindLeftoverFolderAsync_FolderIsGone_FindsNothing()
+    {
+        await RecordAsync("FlightTools");
+
+        Assert.Null(await _detector.FindLeftoverFolderAsync(_instanceId, "FlightTools"));
+    }
+
+    [Fact]
+    public async Task FindLeftoverFolderAsync_FolderIsThere_FindsNothing()
+    {
+        await RecordAsync("FlightTools");
+        WriteMod("FlightTools");
+
+        Assert.Null(await _detector.FindLeftoverFolderAsync(_instanceId, "FlightTools"));
+    }
 
     private string ModsFolder => _paths.GetInstanceModsFolder(_instanceId);
 

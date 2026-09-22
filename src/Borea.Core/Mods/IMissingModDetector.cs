@@ -22,4 +22,11 @@ public interface IMissingModDetector
     /// </summary>
     Task<bool> DropAsync(Guid instanceId, string modId, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// The name of the folder that carries the id of a recorded mod but no
+    /// mod.toml, or null when the mod has no folder at all. The game ignores
+    /// such a folder and an install cannot write over it, so it is what a
+    /// message names when Borea cannot install the mod again.
+    /// </summary>
+    Task<string?> FindLeftoverFolderAsync(Guid instanceId, string modId, CancellationToken cancellationToken = default);
 }
