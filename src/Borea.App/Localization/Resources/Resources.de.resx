@@ -808,10 +808,10 @@
     <value>{0} nach {1} kopiert.</value>
   </data>
   <data name="GameSaveDeleteConfirm" xml:space="preserve">
-    <value>Löschen? Borea verschiebt den Ordner in den Ordner Backups.</value>
+    <value>Löschen? Borea verschiebt den Ordner in den Ordner Backups, und Wiederherstellen holt ihn zurück.</value>
   </data>
   <data name="GameSaveDeletedFormat" xml:space="preserve">
-    <value>{0} in den Ordner Backups verschoben.</value>
+    <value>{0} in den Ordner Backups verschoben. Unter Backups wiederherstellen.</value>
   </data>
   <data name="GameSaveCloseGame" xml:space="preserve">
     <value>Schließe zuerst das Spiel.</value>

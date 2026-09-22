@@ -691,10 +691,10 @@
     <value>Parrot'd {0} to {1}.</value>
   </data>
   <data name="GameSaveDeleteConfirm" xml:space="preserve">
-    <value>Send to Davy Jones' locker? The Borea hauls the treasure chest into the Backups treasure chest.</value>
+    <value>Send to Davy Jones' locker? The Borea hauls the treasure chest into the Backups treasure chest, and Restore fetches it back.</value>
   </data>
   <data name="GameSaveDeletedFormat" xml:space="preserve">
-    <value>Hauled {0} into the Backups treasure chest.</value>
+    <value>Hauled {0} into the Backups treasure chest. Fetch it back under Backups.</value>
   </data>
   <data name="GameSaveCloseGame" xml:space="preserve">
     <value>Quit sailin' before ye do that.</value>

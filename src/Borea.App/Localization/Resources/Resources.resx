@@ -808,10 +808,10 @@
     <value>Copied {0} to {1}.</value>
   </data>
   <data name="GameSaveDeleteConfirm" xml:space="preserve">
-    <value>Delete it? Borea moves the folder into the Backups folder.</value>
+    <value>Delete it? Borea moves the folder into the Backups folder, and Restore brings it back.</value>
   </data>
   <data name="GameSaveDeletedFormat" xml:space="preserve">
-    <value>Moved {0} into the Backups folder.</value>
+    <value>Moved {0} into the Backups folder. Restore it under Backups.</value>
   </data>
   <data name="GameSaveCloseGame" xml:space="preserve">
     <value>Close the game first.</value>
