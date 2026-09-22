@@ -68,6 +68,16 @@ public sealed class ModPackUpdateResult
     /// <summary>The plan can run without a choice or a confirmation that the request does not carry.</summary>
     public bool CanRun => Plan is { IsReady: true } && Members.All(member => member.Status != ModPackMemberStatus.Unresolved);
 
+    /// <summary>
+    /// The mods the update removes that it has not removed, because it stopped or did not finish.
+    /// A plan that never got as far as running names none of them, because nothing about the instance changed.
+    /// </summary>
+    public IReadOnlyList<string> StillInstalled => !CanRun ? [] : Changes
+        .Where(change => change.Kind == ModPackChangeKind.Remove)
+        .Select(change => change.ModId)
+        .Where(modId => !Members.Any(member => member.Status == ModPackMemberStatus.Removed && ModIds.Equals(member.ModId, modId)))
+        .ToList();
+
     public ModPackUpdateResult(Guid instanceId, ModVersion currentVersion, ModPackMetadata target, IReadOnlyList<ModPackChange> changes, InstallPlan? plan, IReadOnlyList<ModPackMemberResult> members, IReadOnlyList<PlanningMessage> warnings, bool isComplete, bool isStopped = false)
     {
         InstanceId = instanceId;
