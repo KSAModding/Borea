@@ -26,12 +26,18 @@ internal static class ModStateCommands
             var id = parseResult.GetRequiredValue(modId);
             var target = await InstanceLookup.ResolveTargetAsync(cli.Instances, parseResult.GetValue(instance)).ConfigureAwait(false);
 
+            // A recorded mod without its folder would be enabled in name only,
+            // because the game loads a mod from its folder.
+            var missing = await cli.MissingMods.ScanAsync(target.InstanceId, ct).ConfigureAwait(false);
+            if (missing.Any(mod => ModIds.Equals(mod, id)))
+                throw new InvalidOperationException($"'{target.Name}' records '{id}', but its folder is gone. Install it again, or remove it from the record.");
+
             var flipped = await cli.ModState.SetActiveAsync(target.InstanceId, id, ct).ConfigureAwait(false);
 
             // Nothing flipped means the manifest already lists the mod as enabled,
-            // or does not list it at all. The second case writes an entry, and
-            // it is also the only one that needs the files, so a mod whose folder
-            // the user deleted can still be enabled through its entry.
+            // or does not list it at all. The second case writes an entry, and it
+            // is also the only one that needs the files, so a folder the user made
+            // by hand is enabled the same way an installed one is.
             if (!flipped && !await cli.ModState.IsActiveAsync(target.InstanceId, id, ct).ConfigureAwait(false))
             {
                 if (!ModIds.IsValid(id))
