@@ -336,6 +336,45 @@
   <data name="GamePatchNotesCappedFormat" xml:space="preserve">
     <value>Only the {0} newest builds are shown.</value>
   </data>
+  <data name="GameShapeBrokenTitle" xml:space="preserve">
+    <value>KSA looks different from what Borea expects</value>
+  </data>
+  <data name="GameShapeBrokenFormat" xml:space="preserve">
+    <value>KSA {0} looks different from what Borea expects, so installing and launching may not work until Borea is updated. What failed: {1}</value>
+  </data>
+  <data name="GameShapeBrokenUnknownBuildFormat" xml:space="preserve">
+    <value>This KSA installation looks different from what Borea expects, so installing and launching may not work until Borea is updated. What failed: {0}</value>
+  </data>
+  <data name="GameShapeUntestedTitle" xml:space="preserve">
+    <value>Untested KSA build</value>
+  </data>
+  <data name="GameShapeUntestedFormat" xml:space="preserve">
+    <value>Borea was not tested with KSA {0}, which is newer than {1}. Tell us if something does not work.</value>
+  </data>
+  <data name="GameShapeReport" xml:space="preserve">
+    <value>Report a problem</value>
+  </data>
+  <data name="GameAssumptionGameAssembly" xml:space="preserve">
+    <value>the build in KSA.dll</value>
+  </data>
+  <data name="GameAssumptionContentManifest" xml:space="preserve">
+    <value>the content manifest of the game</value>
+  </data>
+  <data name="GameAssumptionPatchNotes" xml:space="preserve">
+    <value>the patch notes in the game folder</value>
+  </data>
+  <data name="GameAssumptionProfileLayout" xml:space="preserve">
+    <value>the folders of a profile</value>
+  </data>
+  <data name="GameAssumptionProfileManifest" xml:space="preserve">
+    <value>the manifest that says which mods load</value>
+  </data>
+  <data name="GameAssumptionModFolder" xml:space="preserve">
+    <value>the folder of a mod</value>
+  </data>
+  <data name="GameAssumptionSessionLog" xml:space="preserve">
+    <value>the log of the game</value>
+  </data>
   <data name="AnnouncementOpenLink" xml:space="preserve">
     <value>Open link</value>
   </data>

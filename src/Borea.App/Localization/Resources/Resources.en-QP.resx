@@ -240,6 +240,45 @@
   <data name="GamePatchNotesEmpty" xml:space="preserve">
     <value>The game treasure chest has nary a logbook o' changes.</value>
   </data>
+  <data name="GameShapeBrokenTitle" xml:space="preserve">
+    <value>The game looks queer to Borea</value>
+  </data>
+  <data name="GameShapeBrokenFormat" xml:space="preserve">
+    <value>KSA {0} looks nothin' like Borea reckoned, so haulin' mods aboard and settin' sail may not work 'til Borea be mended. What went adrift: {1}</value>
+  </data>
+  <data name="GameShapeBrokenUnknownBuildFormat" xml:space="preserve">
+    <value>This KSA be lookin' nothin' like Borea reckoned, so haulin' mods aboard and settin' sail may not work 'til Borea be mended. What went adrift: {0}</value>
+  </data>
+  <data name="GameShapeUntestedTitle" xml:space="preserve">
+    <value>Uncharted KSA build</value>
+  </data>
+  <data name="GameShapeUntestedFormat" xml:space="preserve">
+    <value>Borea ain't sailed with KSA {0} yet, and it be fresher than {1}. Give us a holler if somethin' goes adrift.</value>
+  </data>
+  <data name="GameShapeReport" xml:space="preserve">
+    <value>Sound the alarm</value>
+  </data>
+  <data name="GameAssumptionGameAssembly" xml:space="preserve">
+    <value>the build in KSA.dll</value>
+  </data>
+  <data name="GameAssumptionContentManifest" xml:space="preserve">
+    <value>the game's own roster o' content</value>
+  </data>
+  <data name="GameAssumptionPatchNotes" xml:space="preserve">
+    <value>the logbook o' changes in the game chest</value>
+  </data>
+  <data name="GameAssumptionProfileLayout" xml:space="preserve">
+    <value>the folders o' a sea</value>
+  </data>
+  <data name="GameAssumptionProfileManifest" xml:space="preserve">
+    <value>the roster that says which mods sail</value>
+  </data>
+  <data name="GameAssumptionModFolder" xml:space="preserve">
+    <value>the folder o' a mod</value>
+  </data>
+  <data name="GameAssumptionSessionLog" xml:space="preserve">
+    <value>the game's logbook</value>
+  </data>
   <data name="AnnouncementOpenLink" xml:space="preserve">
     <value>Follow the map</value>
   </data>

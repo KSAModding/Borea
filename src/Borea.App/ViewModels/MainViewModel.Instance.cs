@@ -573,7 +573,16 @@ public partial class MainViewModel
             }
 
             var loader = choice.Loader;
-            if (services.Settings.GameDirectoryPath is { } gameDirectory
+
+            // The load order is a write, so it waits for a shape Borea trusts.
+            // This is the shape of the instance that starts, which is not the
+            // shape Home reports, so it stays a local answer.
+            var shape = await services.GameShape.GetForInstanceAsync(instance.InstanceId);
+            if (!shape.AllowsWrites)
+                services.Log.Write($"Instance {instance.InstanceId}: the load order was left as it is. {shape.BrokenText}");
+
+            if (shape.AllowsWrites
+                && services.Settings.GameDirectoryPath is { } gameDirectory
                 && await services.ModState.PutGameContentFirstAsync(instance.InstanceId, gameDirectory))
             {
                 services.Log.Write($"Instance {instance.InstanceId}: the game's own content now loads before the mods.");

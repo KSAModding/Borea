@@ -336,6 +336,45 @@
   <data name="GamePatchNotesCappedFormat" xml:space="preserve">
     <value>Nur die {0} neuesten Builds werden angezeigt.</value>
   </data>
+  <data name="GameShapeBrokenTitle" xml:space="preserve">
+    <value>KSA sieht anders aus, als Borea es erwartet</value>
+  </data>
+  <data name="GameShapeBrokenFormat" xml:space="preserve">
+    <value>KSA {0} sieht anders aus, als Borea es erwartet. Installieren und Starten funktionieren vielleicht nicht, bis Borea aktualisiert ist. Fehlgeschlagen: {1}</value>
+  </data>
+  <data name="GameShapeBrokenUnknownBuildFormat" xml:space="preserve">
+    <value>Diese KSA-Installation sieht anders aus, als Borea es erwartet. Installieren und Starten funktionieren vielleicht nicht, bis Borea aktualisiert ist. Fehlgeschlagen: {0}</value>
+  </data>
+  <data name="GameShapeUntestedTitle" xml:space="preserve">
+    <value>Ungetesteter KSA-Build</value>
+  </data>
+  <data name="GameShapeUntestedFormat" xml:space="preserve">
+    <value>Borea wurde nicht mit KSA {0} getestet, das neuer als {1} ist. Sag uns Bescheid, wenn etwas nicht funktioniert.</value>
+  </data>
+  <data name="GameShapeReport" xml:space="preserve">
+    <value>Problem melden</value>
+  </data>
+  <data name="GameAssumptionGameAssembly" xml:space="preserve">
+    <value>der Build in KSA.dll</value>
+  </data>
+  <data name="GameAssumptionContentManifest" xml:space="preserve">
+    <value>das Content-Manifest des Spiels</value>
+  </data>
+  <data name="GameAssumptionPatchNotes" xml:space="preserve">
+    <value>die Patchnotes im Spielordner</value>
+  </data>
+  <data name="GameAssumptionProfileLayout" xml:space="preserve">
+    <value>die Ordner eines Profils</value>
+  </data>
+  <data name="GameAssumptionProfileManifest" xml:space="preserve">
+    <value>das Manifest, das die geladenen Mods nennt</value>
+  </data>
+  <data name="GameAssumptionModFolder" xml:space="preserve">
+    <value>der Ordner einer Mod</value>
+  </data>
+  <data name="GameAssumptionSessionLog" xml:space="preserve">
+    <value>das Log des Spiels</value>
+  </data>
   <data name="AnnouncementOpenLink" xml:space="preserve">
     <value>Link öffnen</value>
   </data>
