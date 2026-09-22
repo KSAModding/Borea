@@ -107,6 +107,21 @@ public sealed class InstanceContentPageTests
     }
 
     [Fact]
+    public async Task ModWhoseFolderIsGone_OffersNoHandover()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var viewModel = harness.ViewModel;
+        var instance = await InstalledContent.AddAsync(harness, "AdvancedFlightComputer", activate: true);
+        Directory.Delete(Path.Combine(harness.Services.Paths.GetInstanceModsFolder(instance.InstanceId), "AdvancedFlightComputer"), recursive: true);
+        await viewModel.LoadAsync();
+        await viewModel.ActiveInstance!.OpenCommand.ExecuteAsync(null);
+        var row = viewModel.ContentGroups.SelectMany(group => group.Items).Single();
+
+        Assert.True(row.IsMissing);
+        Assert.False(row.CanManage);
+    }
+
+    [Fact]
     public async Task ModInstalledByBorea_OffersNoHandover()
     {
         using var harness = await ViewModelHarness.CreateAsync();

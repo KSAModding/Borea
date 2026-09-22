@@ -1013,7 +1013,7 @@ public sealed partial class ContentItem : ObservableObject, IUpdateRow
     public string? NoPageText => CanOpen ? null : _owner.Localization.InstanceContentNotInIndex;
 
     /// <summary>Whether the row offers to let Borea install the recorded release over the folder and own it.</summary>
-    public bool CanManage => !IsOwned && !IsInstalling;
+    public bool CanManage => !IsOwned && !IsInstalling && !IsMissing;
 
     public string ManageConfirmText => _owner.Localization.FormatContentManageConfirm(Name, Version);
 
@@ -1023,6 +1023,7 @@ public sealed partial class ContentItem : ObservableObject, IUpdateRow
     /// <summary>The mod has no folder with a mod.toml, so the game would not load it.</summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasUpdate))]
+    [NotifyPropertyChangedFor(nameof(CanManage))]
     [NotifyPropertyChangedFor(nameof(RemoveBlockedText))]
     [NotifyPropertyChangedFor(nameof(CanRemove))]
     [NotifyPropertyChangedFor(nameof(RemoveToolTip))]
