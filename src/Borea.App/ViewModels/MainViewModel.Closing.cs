@@ -10,8 +10,10 @@ namespace Borea.App.ViewModels;
 
 /// <summary>
 /// Closing the window: running installs and a library folder change stop and
-/// the task history is saved first. A second close request while Borea waits
-/// offers to close at once.
+/// the task history is saved first, and a self-update that is putting the new
+/// build in place is waited for, because a process that ends inside that step
+/// leaves no program file. A second close request while Borea waits offers to
+/// close at once.
 /// </summary>
 public partial class MainViewModel
 {
@@ -59,7 +61,7 @@ public partial class MainViewModel
     }
 
     private bool MustWaitToClose()
-        => HasRunningInstalls || IsChangingLibraryFolder || !Tasks.WhenSavedAsync().IsCompleted;
+        => HasRunningInstalls || IsChangingLibraryFolder || IsInstallingSelfUpdate || !Tasks.WhenSavedAsync().IsCompleted;
 
     private async Task CloseAfterTasksAsync()
     {
@@ -68,6 +70,7 @@ public partial class MainViewModel
         {
             await StopInstallsAsync();
             await StopLibraryFolderChangeAsync();
+            await WhenSelfUpdateInstalledAsync();
             await Tasks.WhenSavedAsync();
         }
         while (MustWaitToClose());

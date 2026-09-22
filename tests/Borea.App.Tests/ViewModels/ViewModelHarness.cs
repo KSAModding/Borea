@@ -52,6 +52,7 @@ internal sealed class ViewModelHarness : IDisposable
     private IGitHubSession? _gitHub;
 
     private IListingPublisher? _listingPublisher;
+    private Borea.Core.Updates.ISelfUpdater? _selfUpdater;
 
     public const string OfflineMessage = "The content index host is offline.";
 
@@ -87,9 +88,10 @@ internal sealed class ViewModelHarness : IDisposable
     /// <param name="sharedProfileRoot">The game profile folder. Null puts it into the temporary root.</param>
     /// <param name="gitHub">The GitHub session every service graph of this harness shares. Null builds one per graph for <see cref="Borea.Network.GitHub.BoreaGitHubApp"/>.</param>
     /// <param name="listingPublisher">Opens the listing pull request. Null builds one on the GitHub session.</param>
-    public static async Task<ViewModelHarness> CreateAsync(Func<BoreaServices, Task>? seed = null, Func<HttpRequestMessage, HttpResponseMessage?>? respond = null, Func<string, string>? editSnapshot = null, bool indexOffline = false, bool indexEtag = false, Action<ViewModelHarness>? candidates = null, Borea.Storage.Launch.IProcessStarter? processStarter = null, bool waitForDetection = true, string? sharedProfileRoot = null, IGitHubSession? gitHub = null, IListingPublisher? listingPublisher = null)
+    /// <param name="selfUpdater">Replaces the Borea build. Null reads the build the tests run from, which is no release archive.</param>
+    public static async Task<ViewModelHarness> CreateAsync(Func<BoreaServices, Task>? seed = null, Func<HttpRequestMessage, HttpResponseMessage?>? respond = null, Func<string, string>? editSnapshot = null, bool indexOffline = false, bool indexEtag = false, Action<ViewModelHarness>? candidates = null, Borea.Storage.Launch.IProcessStarter? processStarter = null, bool waitForDetection = true, string? sharedProfileRoot = null, IGitHubSession? gitHub = null, IListingPublisher? listingPublisher = null, Borea.Core.Updates.ISelfUpdater? selfUpdater = null)
     {
-        var harness = new ViewModelHarness { _respond = respond, _editSnapshot = editSnapshot, IndexOffline = indexOffline, IndexEtag = indexEtag, _processStarter = processStarter, _sharedProfileRoot = sharedProfileRoot, _gitHub = gitHub, _listingPublisher = listingPublisher };
+        var harness = new ViewModelHarness { _respond = respond, _editSnapshot = editSnapshot, IndexOffline = indexOffline, IndexEtag = indexEtag, _processStarter = processStarter, _sharedProfileRoot = sharedProfileRoot, _gitHub = gitHub, _listingPublisher = listingPublisher, _selfUpdater = selfUpdater };
         Directory.CreateDirectory(harness.Root);
         candidates?.Invoke(harness);
         harness.Services = await harness.BuildServicesAsync();
@@ -122,7 +124,7 @@ internal sealed class ViewModelHarness : IDisposable
         json => "{ \"tags\": " + $$"""{ "spec_version": 1, "mod": [{{string.Join(", ", tags.Select(tag => $$"""{ "tag": "{{tag.Tag}}", "name": "{{tag.Name}}", "meaning": "{{tag.Name}} content." }"""))}}] }""" + "," + json.TrimStart()[1..];
 
     public Task<BoreaServices> BuildServicesAsync() =>
-        BoreaServices.BuildAsync(Root, new IndexOnlyHandler(this), SpaceDock, Candidates, processStarter: _processStarter, images: Images, sharedProfileRoot: _sharedProfileRoot ?? Path.Combine(Root, "GameProfile"), isGameProcessRunning: () => false, isOtherBoreaRunning: () => IsOtherBoreaRunning(), gitHub: _gitHub, listingPublisher: _listingPublisher);
+        BoreaServices.BuildAsync(Root, new IndexOnlyHandler(this), SpaceDock, Candidates, processStarter: _processStarter, images: Images, sharedProfileRoot: _sharedProfileRoot ?? Path.Combine(Root, "GameProfile"), isGameProcessRunning: () => false, isOtherBoreaRunning: () => IsOtherBoreaRunning(), gitHub: _gitHub, listingPublisher: _listingPublisher, selfUpdater: _selfUpdater);
 
     /// <summary>
     /// Completes when no background work of the view model is in flight. Work that
@@ -189,6 +191,7 @@ internal sealed class ViewModelHarness : IDisposable
         [
             ("PreferencesSaved", viewModel.WhenPreferencesSavedAsync()),
             ("UpdateChecked", viewModel.WhenUpdateCheckedAsync()),
+            ("SelfUpdateInstalled", viewModel.WhenSelfUpdateInstalledAsync()),
             ("BackupsCleaned", viewModel.WhenBackupsCleanedAsync()),
             ("GameBuildChecked", viewModel.WhenGameBuildCheckedAsync()),
             ("NewerGamePatchNotesLoaded", viewModel.WhenNewerGamePatchNotesLoadedAsync()),

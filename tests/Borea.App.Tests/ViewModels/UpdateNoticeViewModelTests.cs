@@ -54,6 +54,33 @@ public sealed class UpdateNoticeViewModelTests
     }
 
     [Fact]
+    public async Task Load_ABuildThatIsNoReleaseArchive_ShowsTheReleaseAndWhyItCannotUpdate()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(respond: ReleaseAt("v999.0.0"));
+        var viewModel = harness.ViewModel;
+
+        await viewModel.WhenUpdateCheckedAsync();
+
+        // the tests run from loose assemblies, which is not what a release archive holds
+        Assert.Null(viewModel.SelfUpdateActionText);
+        Assert.Equal($"{viewModel.AvailableUpdateText} {harness.Localization.SelfUpdateNotAReleaseBuild}", viewModel.ReleaseBannerText);
+    }
+
+    [Fact]
+    public async Task SelfUpdate_ABuildThatCannotReplaceItself_SaysSoInTheBanner()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(respond: ReleaseAt("v999.0.0"));
+        var viewModel = harness.ViewModel;
+        await viewModel.WhenUpdateCheckedAsync();
+
+        await viewModel.SelfUpdateCommand.ExecuteAsync(null);
+
+        Assert.Equal(harness.Localization.SelfUpdateNotAReleaseBuild, viewModel.SelfUpdateStatus);
+        Assert.Equal(harness.Localization.SelfUpdateNotAReleaseBuild, viewModel.ReleaseBannerText);
+        Assert.False(viewModel.IsSelfUpdating);
+    }
+
+    [Fact]
     public async Task Load_ReleaseOfTheRunningVersion_ShowsNoNotice()
     {
         using var harness = await ViewModelHarness.CreateAsync(respond: ReleaseAt("v" + MainViewModel.BoreaVersion));
@@ -296,5 +323,47 @@ public sealed class UpdateNoticeViewModelTests
         Assert.False(saved.Preferences.CheckForUpdatesAtStart);
         Assert.False(viewModel.CheckForUpdatesAtStart);
         Assert.Null(viewModel.PreferenceSaveError);
+    }
+
+    [Fact]
+    public async Task SelfUpdate_ACloseWhileTheNewBuildTakesItsPlace_WaitsUntilItIsInPlace()
+    {
+        var install = new TaskCompletionSource();
+        using var harness = await ViewModelHarness.CreateAsync(respond: ReleaseAt("v999.0.0"), selfUpdater: new WaitingSelfUpdater(install.Task));
+        var viewModel = harness.ViewModel;
+        await viewModel.WhenUpdateCheckedAsync();
+        var closed = false;
+
+        // nothing holds the window before the update starts
+        Assert.True(viewModel.RequestClose(() => closed = true));
+
+        var update = viewModel.SelfUpdateCommand.ExecuteAsync(null);
+        await ViewModelHarness.WaitUntilAsync(() => viewModel.IsInstallingSelfUpdate);
+
+        Assert.False(viewModel.RequestClose(() => closed = true));
+        Assert.False(closed);
+
+        install.SetResult();
+        await update;
+        await ViewModelHarness.WaitUntilAsync(() => closed);
+    }
+
+    /// <summary>Holds the update in the step where the new build takes the place of the running one.</summary>
+    private sealed class WaitingSelfUpdater(Task install) : ISelfUpdater
+    {
+        public SelfUpdateReadiness GetReadiness() => SelfUpdateReadiness.Ready;
+
+        public Task<StagedSelfUpdate> StageAsync(BoreaRelease release, IProgress<SelfUpdateProgress>? progress = null, CancellationToken cancellationToken = default)
+        {
+            var folder = Path.Combine(Path.GetTempPath(), "BoreaSelfUpdateTest");
+            var program = Path.Combine(folder, "borea.exe");
+            return Task.FromResult(new StagedSelfUpdate(
+                release.Version,
+                folder,
+                program,
+                program + ".old",
+                install.GetAwaiter().GetResult,
+                () => { }));
+        }
     }
 }
