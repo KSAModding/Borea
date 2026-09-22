@@ -11,6 +11,7 @@ using Borea.Core.Planning;
 using Borea.Core.Settings;
 using Borea.Core.Instances;
 using Borea.Network.Index;
+using Borea.Storage.Game;
 using Borea.Storage.Instances;
 using Borea.Storage.Launch;
 using Borea.Storage.Logging;
@@ -124,6 +125,8 @@ internal sealed class CliHost : IDisposable
             instances: instances,
             latestVersion: LatestVersion,
             installedVersion: InstalledVersion,
+            // the graph resolves the real shared profile, so the check gets a provider that points at the test one
+            gameShape: new GameShapeCheck(new GamePathProvider(graph.Settings.GameDirectoryPath, boreaRoot: Root, sharedProfileRoot: SharedProfile), graph.InstalledVersion),
             indexFetcher: IndexFetcher,
             indexReader: IndexReader,
             indexSnapshots: IndexSnapshots ?? new ReaderSnapshotProvider(IndexReader),

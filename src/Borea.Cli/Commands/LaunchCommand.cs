@@ -43,7 +43,12 @@ internal static class LaunchCommand
                     : $"No mod in '{target.Name}' needs a mod loader. Using {loader.ModId}, which takes an instance.");
             }
 
-            if (cli.Settings.GameDirectoryPath is { } gameDirectory
+            var shape = await cli.GameShape.GetForInstanceAsync(target.InstanceId, ct).ConfigureAwait(false);
+            GameShapeOutput.WriteWarning(shape, error);
+
+            // The load order is a write, so it waits for a shape Borea trusts.
+            if (shape.AllowsWrites
+                && cli.Settings.GameDirectoryPath is { } gameDirectory
                 && await cli.ModState.PutGameContentFirstAsync(target.InstanceId, gameDirectory, ct).ConfigureAwait(false))
             {
                 cli.Log.Write($"Instance {target.InstanceId}: the game's own content now loads before the mods.");

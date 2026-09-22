@@ -15,6 +15,7 @@ internal static class GameCommand
     {
         var game = new Command("game", "Read facts about the game installation, or start the game without a mod loader.");
         game.Subcommands.Add(BuildVersion(services));
+        game.Subcommands.Add(BuildCheck(services));
         game.Subcommands.Add(BuildLaunch(services, passThrough));
         return game;
     }
@@ -32,29 +33,79 @@ internal static class GameCommand
         launch.Options.Add(json);
         passThrough.Accept(launch);
 
-        launch.SetAction((parseResult, cancellationToken) => CommandRunner.RunAsync(parseResult, passThrough, services, cancellationToken, (cli, output, error, ct) =>
+        launch.SetAction((parseResult, cancellationToken) => CommandRunner.RunAsync(parseResult, passThrough, services, cancellationToken, async (cli, output, error, ct) =>
         {
+            GameShapeOutput.WriteWarning(await cli.GameShape.GetAsync(ct).ConfigureAwait(false), error);
+
             ct.ThrowIfCancellationRequested();
             var result = cli.SharedProfileLauncher.Launch(passThrough.Values);
 
             if (!result.Started)
             {
                 error.WriteLine($"error: {result.Message}");
-                return Task.FromResult(ExitCodes.Failed);
+                return ExitCodes.Failed;
             }
 
             if (parseResult.GetValue(json))
             {
                 JsonOutput.Write(output, new GameLaunchView(result.Plan!.Executable, result.Plan.Arguments, result.Plan.WorkingDirectory, result.ProcessId!.Value));
-                return Task.FromResult(ExitCodes.Done);
+                return ExitCodes.Done;
             }
 
             output.WriteLine(result.Message);
             output.WriteLine($"Process id: {result.ProcessId}");
-            return Task.FromResult(ExitCodes.Done);
+            return ExitCodes.Done;
         }));
 
         return launch;
+    }
+
+    /// <summary>
+    /// What Borea assumes about the game, and whether the installation still
+    /// has that shape.
+    /// </summary>
+    private static Command BuildCheck(Func<CancellationToken, Task<CliServices>> services)
+    {
+        var json = ArgumentRules.Json();
+        var check = new Command("check", "Check the game installation against what Borea assumes about it.");
+        check.Options.Add(json);
+
+        check.SetAction((parseResult, cancellationToken) => CommandRunner.RunAsync(parseResult, services, cancellationToken, async (cli, output, error, ct) =>
+        {
+            var shape = await cli.GameShape.GetAsync(ct).ConfigureAwait(false);
+
+            if (parseResult.GetValue(json))
+            {
+                JsonOutput.Write(output, GameShapeOutput.View(shape));
+                return shape.Broken.Count == 0 ? ExitCodes.Done : ExitCodes.Failed;
+            }
+
+            output.WriteLine($"Installed build: {shape.BuildText}");
+            output.WriteLine($"Newest verified build: {shape.VerifiedBuilds.Newest}");
+            output.WriteLine(shape.Status switch
+            {
+                GameShapeStatus.Verified => "The game has the shape Borea expects.",
+                GameShapeStatus.Untested => "The game has the shape Borea expects, on a build nobody checked yet. Tell us if something does not work.",
+                GameShapeStatus.Broken => shape.AllowsWrites
+                    ? "The game does not have the shape Borea expects, in a place Borea only reads."
+                    : "The game does not have the shape Borea expects. Installing and enabling mods are stopped.",
+                _ => "There was no game installation to check.",
+            });
+            output.WriteLine(string.Empty);
+
+            foreach (var result in shape.Results)
+                output.WriteLine($"{result.State,-10} {result.Assumption,-16} {result.Detail}");
+
+            if (shape.Broken.Count > 0)
+            {
+                error.WriteLine("error: report this at https://github.com/KSAModding/Borea/issues so the checks and Borea can be updated.");
+                return ExitCodes.Failed;
+            }
+
+            return ExitCodes.Done;
+        }));
+
+        return check;
     }
 
     /// <summary>

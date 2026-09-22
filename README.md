@@ -167,6 +167,7 @@ The exit code is 0 when the command completed, 1 when the operation failed and t
 | `borea settings set channel <channel>` | Choose which release statuses install and update offer: `stable` (the default), `testing` or `dev`. |
 | `borea settings set library <directory>` | Move the instances and backups to another folder, or use the library that folder already holds. `--default` moves them back. |
 | `borea game version` | Print the installed build and the current public build the master server reports. |
+| `borea game check` | Check the game installation against what Borea assumes about it. Exits 1 when an assumption is broken. |
 | `borea instance list` | Print every instance and mark the active one. |
 | `borea instance show <instance>` | Print one instance, the mod loader its mods need, its launch arguments, when it was last played, and how long it was played. |
 | `borea instance create <name>` | Create an empty instance. |
