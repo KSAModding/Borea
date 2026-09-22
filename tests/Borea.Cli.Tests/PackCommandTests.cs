@@ -891,6 +891,27 @@ public sealed class PackCommandTests : IDisposable
     }
 
     [Fact]
+    public async Task PackUpdate_FailedInstall_KeepsTheDroppedModAndSaysSo()
+    {
+        await CreateNavigationInstanceAsync();
+        _host.IndexReader.Snapshot = Snapshot(Pack(ContentCommandFixtures.PackVersion(), NewerNavigationPack()));
+        _host.ModPackUpdaterFactory = graph => new ModPackUpdater(
+            graph.Instances,
+            graph.InstallPlanner,
+            new InstallPlanExecutor(graph.Instances, new FolderInstaller(graph, failOn: "library"), graph.Replacer),
+            graph.Uninstaller);
+
+        var run = await _host.RunAsync("pack", "update", "Navigation");
+
+        Assert.Equal(1, run.ExitCode);
+        Assert.Contains("The instance still names pack version 1.0.0 and has flight-tools.", run.Output);
+        var instance = Assert.Single(await new FileInstanceRepository(_host.Paths).GetAllAsync());
+        Assert.Equal(new InstanceSource.FromModPack("navigation-pack", ModVersion.Parse("1.0.0")), instance.Source);
+        Assert.Equal("flight-tools", Assert.Single(instance.Mods).ModId);
+        Assert.True(Directory.Exists(Path.Combine(_host.Paths.GetInstanceModsFolder(instance.InstanceId), "flight-tools")));
+    }
+
+    [Fact]
     public async Task PackUpdate_RetractedNewerVersion_IsIgnored()
     {
         await CreateNavigationInstanceAsync();
