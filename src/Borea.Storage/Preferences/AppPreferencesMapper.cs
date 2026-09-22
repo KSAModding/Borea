@@ -53,11 +53,12 @@ internal static class AppPreferencesMapper
         DismissedAnnouncements = preferences.DismissedAnnouncements.Select(id => (string?)id).ToList(),
         OpenBoreaLinks = preferences.OpenBoreaLinks,
         BackupRetentionDays = preferences.BackupRetentionDays,
+        DismissedUntestedGameRevision = preferences.DismissedUntestedGameRevision,
         CustomThemes = preferences.CustomThemes.Select(theme => (CustomThemePreferenceDto?)ToDto(theme)).ToList(),
     };
 
     public static AppPreferences FromDto(AppPreferencesDocumentDto dto)
-        => new(dto.SelectedTheme, dto.CustomThemes?.Select(FromDto), NormalizeRegionalCulture(dto.RegionalCulture), NormalizeUiCulture(dto.UiCulture), dto.CheckForUpdatesAtStart ?? true, ReadUpdateChannel(dto.UpdateChannel), dto.ForeignFolderDeletionConfirmed ?? false, dto.LoadImagesFromAuthorHosts ?? true, ReadHomeLaunch(dto.HomeLaunch), ReadDiscoverSortOrder(dto.DiscoverSortOrder), dto.SharedProfileBannerDismissed ?? false, ModVersion.TryParse(dto.DismissedBoreaRelease, out var dismissed) ? dismissed : null, dto.DismissedGameRevision is >= 0 ? dto.DismissedGameRevision : null, ReadFirstStartedAt(dto.FirstStartedAt), dto.FetchAnnouncements ?? true, dto.DismissedAnnouncements?.OfType<string>(), dto.OpenBoreaLinks ?? true, dto.BackupRetentionDays is > 0 ? dto.BackupRetentionDays : null);
+        => new(dto.SelectedTheme, dto.CustomThemes?.Select(FromDto), NormalizeRegionalCulture(dto.RegionalCulture), NormalizeUiCulture(dto.UiCulture), dto.CheckForUpdatesAtStart ?? true, ReadUpdateChannel(dto.UpdateChannel), dto.ForeignFolderDeletionConfirmed ?? false, dto.LoadImagesFromAuthorHosts ?? true, ReadHomeLaunch(dto.HomeLaunch), ReadDiscoverSortOrder(dto.DiscoverSortOrder), dto.SharedProfileBannerDismissed ?? false, ModVersion.TryParse(dto.DismissedBoreaRelease, out var dismissed) ? dismissed : null, dto.DismissedGameRevision is >= 0 ? dto.DismissedGameRevision : null, ReadFirstStartedAt(dto.FirstStartedAt), dto.FetchAnnouncements ?? true, dto.DismissedAnnouncements?.OfType<string>(), dto.OpenBoreaLinks ?? true, dto.BackupRetentionDays is > 0 ? dto.BackupRetentionDays : null, dto.DismissedUntestedGameRevision is >= 0 ? dto.DismissedUntestedGameRevision : null);
 
     private static DateTimeOffset? ReadFirstStartedAt(string? text)
         => DateTimeOffset.TryParse(text, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var at) ? at : null;

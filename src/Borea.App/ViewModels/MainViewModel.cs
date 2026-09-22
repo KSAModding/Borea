@@ -790,6 +790,7 @@ public partial class MainViewModel : ViewModelBase
             && left.FetchAnnouncements == right.FetchAnnouncements
             && left.OpenBoreaLinks == right.OpenBoreaLinks
             && left.BackupRetentionDays == right.BackupRetentionDays
+            && left.DismissedUntestedGameRevision == right.DismissedUntestedGameRevision
             && left.DismissedAnnouncements.SequenceEqual(right.DismissedAnnouncements, StringComparer.Ordinal);
 
     private void OnRegionalFormatChanged(object? sender, PropertyChangedEventArgs e)
