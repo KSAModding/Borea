@@ -5,6 +5,9 @@ public interface IContentIndexRefresh
 {
     ContentIndexRefreshStatus Status { get; }
 
+    /// <summary>How long a snapshot counts as fresh, so that a caller knows when to check again.</summary>
+    TimeSpan RevalidationInterval { get; }
+
     /// <summary>Fetches and reads the index even when the shared snapshot is still fresh.</summary>
     Task<ContentIndexSnapshot> RefreshAsync(CancellationToken cancellationToken = default);
 }
