@@ -310,7 +310,7 @@ internal static class InstanceCommand
     private static Command BuildDelete(Func<CancellationToken, Task<CliServices>> services)
     {
         var instance = ArgumentRules.Text("instance", InstanceArgumentDescription);
-        var delete = new Command("delete", "Delete an instance and everything in its folder.");
+        var delete = new Command("delete", "Delete an instance, everything in its folder, and the backups of its saves and vehicles.");
         delete.Arguments.Add(instance);
 
         delete.SetAction((parseResult, cancellationToken) => CommandRunner.RunAsync(parseResult, services, cancellationToken, async (cli, output, _, _) =>

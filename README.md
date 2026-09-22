@@ -177,7 +177,7 @@ The exit code is 0 when the command completed, 1 when the operation failed and t
 | `borea instance arguments <instance>` | Print the launch arguments that every launch of an instance passes to the mod loader and the game. |
 | `borea instance set-arguments <instance> -- <arguments>` | Save the arguments after `--` as the launch arguments of an instance, in place of the saved ones. |
 | `borea instance clear-arguments <instance>` | Remove the launch arguments of an instance. |
-| `borea instance delete <instance>` | Delete an instance and its folder. |
+| `borea instance delete <instance>` | Delete an instance, its folder, and the backups of its saves and vehicles. |
 | `borea instance activate <instance>` | Make an instance the active one. |
 | `borea instance deactivate` | Leave no instance active. |
 | `borea instance scan <instance>` | Print the mod folders that Borea did not install, and whether the content index lists them. |
