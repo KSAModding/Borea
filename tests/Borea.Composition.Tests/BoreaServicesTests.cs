@@ -411,6 +411,7 @@ public sealed class BoreaServicesTests : IDisposable
             new ConflictingStarMapRepository());
         Assert.IsType<FileForeignModAdopter>(services.ForeignModAdopter);
         Assert.IsType<FileForeignModReleaseMatcher>(services.ForeignModReleaseMatcher);
+        Assert.IsType<FileForeignModHandover>(Assert.IsType<LoggingForeignModHandover>(services.ForeignModHandover).Inner);
         var instance = (await services.Instances.CreateAsync("Test", InstanceSource.Custom.Value)).Instance;
         var folder = WriteForeignMod(services, instance.InstanceId, "AdvancedFlightComputer");
         var payload = Path.Combine(folder, "keep.txt");
