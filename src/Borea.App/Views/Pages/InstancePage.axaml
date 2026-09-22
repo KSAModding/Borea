@@ -100,6 +100,10 @@
                     <StackPanel Spacing="8" Margin="16,8" IsVisible="{Binding IsChoosingFromProfile}">
                         <TextBlock Classes="body-sm secondary" Text="{Binding CopyNoteText}" TextWrapping="Wrap" IsVisible="{Binding CopyNoteText, Converter={x:Static ObjectConverters.IsNotNull}}" />
                         <TextBlock Classes="body-md muted" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.GameSaveProfileEmpty}" IsVisible="{Binding !HasProfileItems}" />
+                        <!-- the command decides between select all and clear all, because a check box in the mixed state clears on its own -->
+                        <CheckBox IsChecked="{Binding AreAllProfileItemsSelected, Mode=OneWay}" Command="{Binding ToggleAllProfileItemsCommand}" IsVisible="{Binding HasProfileItems}">
+                            <TextBlock Classes="body-sm secondary" Text="{Binding ProfileSelectionText}" />
+                        </CheckBox>
                         <ItemsControl ItemsSource="{Binding ProfileItems}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate x:DataType="vm:GameSaveItem">
