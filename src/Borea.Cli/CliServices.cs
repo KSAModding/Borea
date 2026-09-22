@@ -77,6 +77,7 @@ internal sealed class CliServices : IDisposable
     public required IForeignModAdopter ForeignModAdopter { get; init; }
 
     public required IMissingModDetector MissingMods { get; init; }
+    public required IForeignModHandover ForeignModHandover { get; init; }
 
     public required ISharedProfileImporter SharedProfileImporter { get; init; }
 
@@ -131,6 +132,7 @@ internal sealed class CliServices : IDisposable
         IModUninstaller? uninstaller = null,
         IForeignModAdopter? foreignModAdopter = null,
         IMissingModDetector? missingMods = null,
+        IForeignModHandover? foreignModHandover = null,
         ILoaderInstaller? loaderInstaller = null,
         ILoaderAdopter? loaderAdopter = null,
         ILoaderUninstaller? loaderUninstaller = null,
@@ -176,6 +178,7 @@ internal sealed class CliServices : IDisposable
             Uninstaller = uninstaller ?? services.Uninstaller,
             ForeignModAdopter = foreignModAdopter ?? services.ForeignModAdopter,
             MissingMods = missingMods ?? services.MissingMods,
+            ForeignModHandover = foreignModHandover ?? services.ForeignModHandover,
             SharedProfileImporter = sharedProfileImporter ?? services.SharedProfileImporter,
             LoaderInstaller = loaderInstaller ?? services.LoaderInstaller,
             LoaderAdopter = loaderAdopter ?? services.LoaderAdopter,

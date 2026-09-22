@@ -80,6 +80,8 @@ internal sealed class CliHost : IDisposable
 
     public Func<BoreaServices, IForeignModAdopter>? ForeignModAdopterFactory { get; set; }
 
+    public Func<BoreaServices, IForeignModHandover>? ForeignModHandoverFactory { get; set; }
+
     /// <summary>The shared profile the importer reads, so no test reads the real one.</summary>
     public string SharedProfile => Path.Combine(Root, "GameProfile");
 
@@ -132,6 +134,7 @@ internal sealed class CliHost : IDisposable
             replacer: ReplacerFactory?.Invoke(graph),
             uninstaller: UninstallerFactory?.Invoke(graph),
             foreignModAdopter: ForeignModAdopterFactory?.Invoke(graph),
+            foreignModHandover: ForeignModHandoverFactory?.Invoke(graph),
             loaderInstaller: LoaderInstaller,
             loaderAdopter: LoaderAdopter,
             loaderUninstaller: LoaderUninstaller,

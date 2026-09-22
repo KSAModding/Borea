@@ -100,6 +100,7 @@ public sealed class CliServicesTests : IDisposable
             Uninstaller = graph.Uninstaller,
             ForeignModAdopter = graph.ForeignModAdopter,
             MissingMods = graph.MissingMods,
+            ForeignModHandover = graph.ForeignModHandover,
             SharedProfileImporter = graph.SharedProfileImporter,
             LoaderInstaller = graph.LoaderInstaller,
             LoaderAdopter = graph.LoaderAdopter,

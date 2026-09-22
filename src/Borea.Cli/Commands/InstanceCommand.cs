@@ -18,7 +18,7 @@ internal static class InstanceCommand
 
     public static Command Build(Func<CancellationToken, Task<CliServices>> services, PassThroughArguments passThrough)
     {
-        var instance = new Command("instance", "List, show, create, duplicate, rename, delete, activate, and deactivate instances, set their launch arguments, create one from the mods of the shared profile, export and import modlists, adopt mods that Borea did not install, and restore or delete backups of saves and vehicles.");
+        var instance = new Command("instance", "List, show, create, duplicate, rename, delete, activate, and deactivate instances, set their launch arguments, create one from the mods of the shared profile, export and import modlists, adopt mods that Borea did not install and let Borea take their files over, and restore or delete backups of saves and vehicles.");
         instance.Subcommands.Add(BuildList(services));
         instance.Subcommands.Add(BuildShow(services));
         instance.Subcommands.Add(BuildCreate(services));
@@ -35,6 +35,7 @@ internal static class InstanceCommand
         instance.Subcommands.Add(BuildMods(services));
         instance.Subcommands.Add(BuildScan(services));
         instance.Subcommands.Add(BuildAdopt(services));
+        instance.Subcommands.Add(BuildTakeOwnership(services));
         instance.Subcommands.Add(BuildImportProfile(services));
         instance.Subcommands.Add(BackupCommands.BuildList(services));
         instance.Subcommands.Add(BackupCommands.BuildRestore(services));
@@ -540,6 +541,34 @@ internal static class InstanceCommand
         }));
 
         return adopt;
+    }
+
+    private static Command BuildTakeOwnership(Func<CancellationToken, Task<CliServices>> services)
+    {
+        var instance = ArgumentRules.Text("instance", InstanceArgumentDescription);
+        var mod = ArgumentRules.Text("mod-id", "The id of a mod in the instance that Borea did not install.");
+        var takeOwnership = new Command(
+            "take-ownership",
+            "Install the release a mod is recorded as over its folder, so Borea owns its files and can update and remove it. The mod keeps its place in the instance and its enabled state, and files in the folder that the release does not hold are lost.");
+        takeOwnership.Arguments.Add(instance);
+        takeOwnership.Arguments.Add(mod);
+
+        takeOwnership.SetAction((parseResult, cancellationToken) => CommandRunner.RunAsync(parseResult, services, cancellationToken, async (cli, output, error, ct) =>
+        {
+            var target = await InstanceLookup.ResolveAsync(cli.Instances, parseResult.GetRequiredValue(instance)).ConfigureAwait(false);
+            var result = await cli.ForeignModHandover
+                .TakeOwnershipAsync(target.InstanceId, parseResult.GetRequiredValue(mod), new InstallProgressOutput(error), ct)
+                .ConfigureAwait(false);
+
+            var owned = result.Installed;
+            output.WriteLine($"Borea manages '{owned.ModId}' {owned.Version} in '{target.Name}' now.");
+            if (result.RetainedRecoveryDirectory is { } kept)
+                error.WriteLine($"warning: Borea could not delete the previous files of '{owned.ModId}'. They stay in {kept}.");
+
+            return ExitCodes.Done;
+        }));
+
+        return takeOwnership;
     }
 
     private static Command BuildImportProfile(Func<CancellationToken, Task<CliServices>> services)
