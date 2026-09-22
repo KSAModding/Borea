@@ -940,6 +940,12 @@ public sealed partial class ContentItem : ObservableObject, IUpdateRow
     /// <summary>Whether the row links to the mod page: installed by Borea and in the content index.</summary>
     public bool CanOpen => _page is not null;
 
+    /// <summary>The row itself while it links to the mod page, so that only the linked body is built.</summary>
+    public ContentItem? PageRow => CanOpen ? this : null;
+
+    /// <summary>The row itself while it has no page, so that only the plain body is built.</summary>
+    public ContentItem? PlainRow => CanOpen ? null : this;
+
     /// <summary>The icon of the index listing with the mod's id, also when the row does not link to it.</summary>
     public ListingImage? Icon { get; }
 

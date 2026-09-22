@@ -701,6 +701,7 @@ public sealed class LocalizationService : INotifyPropertyChanged
     /// <summary>"3 mods of this instance are not on disk."</summary>
     public string FormatInstanceModsMissing(int count)
         => FormatCount(count, Resources.InstanceModsMissingOne, Resources.InstanceModsMissingFormat);
+    public string ContentEnabled => Resources.ContentEnabled;
 
     public string DiscoverTabMods => Resources.DiscoverTabMods;
 

@@ -136,26 +136,17 @@
     </DataTemplate>
 
     <!-- one row of c/table-versions on the instance page -->
-    <DataTemplate x:Key="ContentRow" x:DataType="vm:ContentItem">
-        <Border BorderBrush="{StaticResource Brush.BorderStrong}" BorderThickness="0,1,0,0" Padding="16,8">
+    <!-- the body of one row of c/table-versions, which the row shows inside its button or, without a page, on its own -->
+    <DataTemplate x:Key="ContentRowBody" x:DataType="vm:ContentItem">
+        <Border Classes="list-row" BorderBrush="{StaticResource Brush.BorderStrong}" BorderThickness="0,1,0,0" Padding="16,8">
             <Grid ColumnDefinitions="48,16,*,24,Auto" RowDefinitions="Auto,Auto,Auto">
-                <Button Classes="plain" Command="{Binding OpenCommand}" IsVisible="{Binding CanOpen}" AutomationProperties.Name="{Binding Name}">
-                    <Border Classes="thumbnail" Width="48" Height="48">
-                        <views:ListingImageView Image="{Binding Icon}" Background="{StaticResource Brush.Surface}">
-                            <Path Classes="icon" Data="{StaticResource Icon.PuzzlePiece}" />
-                        </views:ListingImageView>
-                    </Border>
-                </Button>
-                <Border Classes="thumbnail" Width="48" Height="48" IsVisible="{Binding !CanOpen}" ToolTip.Tip="{Binding NoPageText}">
+                <Border Classes="thumbnail" Width="48" Height="48" ToolTip.Tip="{Binding NoPageText}">
                     <views:ListingImageView Image="{Binding Icon}" Background="{StaticResource Brush.Surface}">
                         <Path Classes="icon" Data="{StaticResource Icon.PuzzlePiece}" />
                     </views:ListingImageView>
                 </Border>
                 <StackPanel Grid.Column="2" VerticalAlignment="Center">
-                    <Button Classes="plain" Command="{Binding OpenCommand}" IsVisible="{Binding CanOpen}" HorizontalAlignment="Left">
-                        <TextBlock Classes="heading-sm" Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
-                    </Button>
-                    <TextBlock Classes="heading-sm" Text="{Binding Name}" TextTrimming="CharacterEllipsis" IsVisible="{Binding !CanOpen}" ToolTip.Tip="{Binding NoPageText}" />
+                    <TextBlock Classes="heading-sm" Text="{Binding Name}" TextTrimming="CharacterEllipsis" HorizontalAlignment="Left" ToolTip.Tip="{Binding NoPageText}" />
                     <TextBlock Classes="body-sm secondary" Text="{Binding AuthorsText}" IsVisible="{Binding AuthorsText, Converter={x:Static ObjectConverters.IsNotNull}}" />
                     <TextBlock Classes="body-sm danger" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ContentNotOnDisk}" ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ContentNotOnDiskDetail}" IsVisible="{Binding IsMissing}" />
                     <TextBlock Classes="body-sm danger" Text="{Binding RemoveConfirmText}" IsVisible="{Binding IsConfirmingRemove}" />
@@ -228,231 +219,235 @@
         </Border>
     </DataTemplate>
 
+    <!-- one row of c/table-versions on the instance page. The whole row opens the mod page, unless the index knows no page for the mod. -->
+    <DataTemplate x:Key="ContentRow" x:DataType="vm:ContentItem">
+        <Panel>
+            <Button Classes="plain card-button" views:RowButton.IgnoresDisabled="True" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Command="{Binding OpenCommand}" AutomationProperties.Name="{Binding Name}" IsVisible="{Binding CanOpen}" Content="{Binding PageRow}" ContentTemplate="{StaticResource ContentRowBody}" />
+            <ContentControl IsVisible="{Binding !CanOpen}" Content="{Binding PlainRow}" ContentTemplate="{StaticResource ContentRowBody}" />
+        </Panel>
+    </DataTemplate>
+
     <!-- c/content-row on Discover -->
     <DataTemplate x:Key="DiscoverRow" x:DataType="vm:DiscoverItem">
-        <Border Classes="card" Padding="12">
-            <Grid ColumnDefinitions="100,16,*" MinHeight="100">
-                <Button Classes="plain" Command="{Binding OpenCommand}" AutomationProperties.Name="{Binding Name}">
+        <Button Classes="plain card-button" views:RowButton.IgnoresDisabled="True" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Command="{Binding OpenCommand}" AutomationProperties.Name="{Binding Name}">
+            <Border Classes="card" Padding="12">
+                <Grid ColumnDefinitions="100,16,*" MinHeight="100">
                     <Border Classes="thumbnail" Width="100" Height="100">
                         <views:ListingImageView Image="{Binding Icon}" Background="{StaticResource Brush.Surface}">
                             <Path Classes="icon size-32" Data="{StaticResource Icon.PuzzlePiece}" />
                         </views:ListingImageView>
                     </Border>
-                </Button>
-                <Grid Grid.Column="2" RowDefinitions="Auto,*,Auto,Auto">
-                    <Grid ColumnDefinitions="*,16,Auto">
-                        <StackPanel Spacing="4">
-                            <DockPanel>
-                                <Button DockPanel.Dock="Left" Classes="plain" Command="{Binding OpenCommand}">
-                                    <TextBlock Classes="heading-md" Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
-                                </Button>
-                                <TextBlock Classes="body-sm secondary" Text="{Binding AuthorsText}" TextTrimming="CharacterEllipsis" Margin="8,0,0,0" VerticalAlignment="Center" />
-                            </DockPanel>
-                            <TextBlock Classes="body-md secondary" Text="{Binding Abstract}" TextWrapping="Wrap" TextTrimming="CharacterEllipsis" MaxLines="2" LineHeight="18" />
-                        </StackPanel>
-                        <!-- c/button-icon-add -->
-                        <Panel Grid.Column="2" VerticalAlignment="Top">
-                            <Button Classes="add" Command="{Binding InstallCommand}" IsVisible="{Binding CanInstall}" ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).AddToText}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).AddToText}">
-                                <Path Classes="icon size-16" Data="{StaticResource Icon.Plus}" />
-                            </Button>
-                            <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center" IsVisible="{Binding IsInstalling}">
-                                <ProgressBar Width="38" Height="6" VerticalAlignment="Center" Value="{Binding Progress}" Maximum="100" Foreground="{StaticResource Brush.Accent}" />
-                                <Button Classes="icon" Command="{Binding Run.TogglePauseCommand}" IsVisible="{Binding !Run.IsStopping, FallbackValue={x:True}}" ToolTip.Tip="{Binding Run.PauseText}" AutomationProperties.Name="{Binding Run.PauseText}">
-                                    <Panel>
-                                        <Path Classes="icon size-16" Data="{StaticResource Icon.Pause}" IsVisible="{Binding !Run.IsPaused, FallbackValue={x:True}}" />
-                                        <Path Classes="icon-filled size-16" Data="{StaticResource Icon.Play}" IsVisible="{Binding Run.IsPaused, FallbackValue={x:False}}" />
-                                    </Panel>
-                                </Button>
-                                <Button Classes="icon" Command="{Binding Run.StopCommand}" IsVisible="{Binding !Run.IsStopping, FallbackValue={x:True}}" ToolTip.Tip="{Binding Run.StopText}" AutomationProperties.Name="{Binding Run.StopText}">
-                                    <Path Classes="icon size-16" Data="{StaticResource Icon.Close}" />
-                                </Button>
-                                <TextBlock Classes="body-sm secondary" Text="{Binding Run.StopText}" VerticalAlignment="Center" IsVisible="{Binding Run.IsStopping, FallbackValue={x:False}}" />
+                    <Grid Grid.Column="2" RowDefinitions="Auto,*,Auto,Auto">
+                        <Grid ColumnDefinitions="*,16,Auto">
+                            <StackPanel Spacing="4">
+                                <DockPanel>
+                                    <TextBlock Classes="heading-md" Text="{Binding Name}" TextTrimming="CharacterEllipsis" DockPanel.Dock="Left" VerticalAlignment="Center" />
+                                    <TextBlock Classes="body-sm secondary" Text="{Binding AuthorsText}" TextTrimming="CharacterEllipsis" Margin="8,0,0,0" VerticalAlignment="Center" />
+                                </DockPanel>
+                                <TextBlock Classes="body-md secondary" Text="{Binding Abstract}" TextWrapping="Wrap" TextTrimming="CharacterEllipsis" MaxLines="2" LineHeight="18" />
                             </StackPanel>
-                            <ProgressBar Width="38" Height="6" VerticalAlignment="Center" IsVisible="{Binding IsRemoving}" IsIndeterminate="True" Foreground="{StaticResource Brush.Accent}" />
-                            <Button Classes="add installed" ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).InstalledInText}" AutomationProperties.Name="{Binding InstalledAutomationName}" AutomationProperties.HelpText="{Binding $parent[Window].((vm:MainViewModel)DataContext).InstalledInText}">
-                                <Button.IsVisible>
-                                    <MultiBinding Converter="{x:Static BoolConverters.And}">
-                                        <Binding Path="IsInstalled" />
-                                        <Binding Path="!IsRemoving" />
-                                    </MultiBinding>
-                                </Button.IsVisible>
-                                <Button.Flyout>
-                                    <MenuFlyout Placement="BottomEdgeAlignedRight">
-                                        <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ContentChangeVersion}" Command="{Binding ChangeVersionCommand}" IsVisible="{Binding CanChangeVersion}" />
-                                        <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ContentRemove}" Command="{Binding BeginRemoveCommand}" AutomationProperties.HelpText="{Binding RemoveBlockedText}" />
-                                        <MenuItem IsEnabled="False" IsVisible="{Binding RemoveBlockedText, Converter={x:Static ObjectConverters.IsNotNull}}">
-                                            <MenuItem.Header>
-                                                <TextBlock Classes="body-sm secondary" Text="{Binding RemoveBlockedText}" TextWrapping="Wrap" MaxWidth="260" />
-                                            </MenuItem.Header>
-                                        </MenuItem>
-                                    </MenuFlyout>
-                                </Button.Flyout>
-                                <Path Classes="icon size-16" Data="{StaticResource Icon.Check}" />
-                            </Button>
-                        </Panel>
-                    </Grid>
-                    <ContentControl Grid.Row="1" Margin="0,8" Content="{Binding Choices}" IsVisible="{Binding Choices, Converter={x:Static ObjectConverters.IsNotNull}}" />
-                    <!-- the row's actions and status, on a line of their own so that they never reach past the card -->
-                    <StackPanel Grid.Row="2">
-                        <!-- the question and the two buttons keep one line while they fit, and the buttons take the next line when they do not -->
-                        <WrapPanel HorizontalAlignment="Right" ItemsAlignment="End" ItemSpacing="8" LineSpacing="8" Margin="0,0,4,8" IsVisible="{Binding IsConfirmingRemove}">
-                            <TextBlock Classes="body-sm danger" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ContentRemoveConfirm}" TextWrapping="Wrap" VerticalAlignment="Center" />
-                            <StackPanel Orientation="Horizontal" Spacing="8">
-                                <Button Classes="text danger" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ContentRemove}" Command="{Binding ConfirmRemoveCommand}" />
-                                <Button Classes="text" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryCancel}" Command="{Binding CancelRemoveCommand}" />
-                            </StackPanel>
-                        </WrapPanel>
-                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8" Margin="0,0,4,8" IsVisible="{Binding ProgressStatus, Converter={x:Static ObjectConverters.IsNotNull}}">
-                            <TextBlock Classes="body-sm secondary" Text="{Binding ProgressStatus}" ToolTip.Tip="{Binding ProgressStatus}" TextTrimming="CharacterEllipsis" HorizontalAlignment="Right" VerticalAlignment="Center" />
-                            <TextBlock Grid.Column="1" Classes="label-md" Text="{Binding ProgressDetail}" VerticalAlignment="Center" IsVisible="{Binding ProgressDetail, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                            <!-- c/button-icon-add -->
+                            <Panel Grid.Column="2" VerticalAlignment="Top">
+                                <Button Classes="add" Command="{Binding InstallCommand}" IsVisible="{Binding CanInstall}" ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).AddToText}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).AddToText}">
+                                    <Path Classes="icon size-16" Data="{StaticResource Icon.Plus}" />
+                                </Button>
+                                <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center" IsVisible="{Binding IsInstalling}">
+                                    <ProgressBar Width="38" Height="6" VerticalAlignment="Center" Value="{Binding Progress}" Maximum="100" Foreground="{StaticResource Brush.Accent}" />
+                                    <Button Classes="icon" Command="{Binding Run.TogglePauseCommand}" IsVisible="{Binding !Run.IsStopping, FallbackValue={x:True}}" ToolTip.Tip="{Binding Run.PauseText}" AutomationProperties.Name="{Binding Run.PauseText}">
+                                        <Panel>
+                                            <Path Classes="icon size-16" Data="{StaticResource Icon.Pause}" IsVisible="{Binding !Run.IsPaused, FallbackValue={x:True}}" />
+                                            <Path Classes="icon-filled size-16" Data="{StaticResource Icon.Play}" IsVisible="{Binding Run.IsPaused, FallbackValue={x:False}}" />
+                                        </Panel>
+                                    </Button>
+                                    <Button Classes="icon" Command="{Binding Run.StopCommand}" IsVisible="{Binding !Run.IsStopping, FallbackValue={x:True}}" ToolTip.Tip="{Binding Run.StopText}" AutomationProperties.Name="{Binding Run.StopText}">
+                                        <Path Classes="icon size-16" Data="{StaticResource Icon.Close}" />
+                                    </Button>
+                                    <TextBlock Classes="body-sm secondary" Text="{Binding Run.StopText}" VerticalAlignment="Center" IsVisible="{Binding Run.IsStopping, FallbackValue={x:False}}" />
+                                </StackPanel>
+                                <ProgressBar Width="38" Height="6" VerticalAlignment="Center" IsVisible="{Binding IsRemoving}" IsIndeterminate="True" Foreground="{StaticResource Brush.Accent}" />
+                                <Button Classes="add installed" ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).InstalledInText}" AutomationProperties.Name="{Binding InstalledAutomationName}" AutomationProperties.HelpText="{Binding $parent[Window].((vm:MainViewModel)DataContext).InstalledInText}">
+                                    <Button.IsVisible>
+                                        <MultiBinding Converter="{x:Static BoolConverters.And}">
+                                            <Binding Path="IsInstalled" />
+                                            <Binding Path="!IsRemoving" />
+                                        </MultiBinding>
+                                    </Button.IsVisible>
+                                    <Button.Flyout>
+                                        <MenuFlyout Placement="BottomEdgeAlignedRight">
+                                            <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ContentChangeVersion}" Command="{Binding ChangeVersionCommand}" IsVisible="{Binding CanChangeVersion}" />
+                                            <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ContentRemove}" Command="{Binding BeginRemoveCommand}" AutomationProperties.HelpText="{Binding RemoveBlockedText}" />
+                                            <MenuItem IsEnabled="False" IsVisible="{Binding RemoveBlockedText, Converter={x:Static ObjectConverters.IsNotNull}}">
+                                                <MenuItem.Header>
+                                                    <TextBlock Classes="body-sm secondary" Text="{Binding RemoveBlockedText}" TextWrapping="Wrap" MaxWidth="260" />
+                                                </MenuItem.Header>
+                                            </MenuItem>
+                                        </MenuFlyout>
+                                    </Button.Flyout>
+                                    <Path Classes="icon size-16" Data="{StaticResource Icon.Check}" />
+                                </Button>
+                            </Panel>
                         </Grid>
-                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8" Margin="0,0,4,8" IsVisible="{Binding IsConfirmingInstall}">
-                            <StackPanel HorizontalAlignment="Right" VerticalAlignment="Center">
-                                <TextBlock Classes="body-sm secondary" Text="{Binding AddedModsText}" ToolTip.Tip="{Binding AddedModsToolTip}" IsVisible="{Binding AddedModsText, Converter={x:Static ObjectConverters.IsNotNull}}" TextTrimming="CharacterEllipsis" />
-                                <TextBlock Classes="body-sm secondary" Text="{Binding InstallWarning}" ToolTip.Tip="{Binding InstallWarning}" IsVisible="{Binding InstallWarning, Converter={x:Static ObjectConverters.IsNotNull}}" TextTrimming="CharacterEllipsis" />
-                            </StackPanel>
-                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
-                                <Button Classes="text primary" Content="{Binding ConfirmInstallText}" Command="{Binding ConfirmInstallCommand}" IsEnabled="{Binding Choices.IsComplete, FallbackValue={x:True}}" />
-                                <Button Classes="text" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryCancel}" Command="{Binding CancelInstallCommand}" />
+                        <ContentControl Grid.Row="1" Margin="0,8" Content="{Binding Choices}" IsVisible="{Binding Choices, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                        <!-- the row's actions and status, on a line of their own so that they never reach past the card -->
+                        <StackPanel Grid.Row="2">
+                            <!-- the question and the two buttons keep one line while they fit, and the buttons take the next line when they do not -->
+                            <WrapPanel HorizontalAlignment="Right" ItemsAlignment="End" ItemSpacing="8" LineSpacing="8" Margin="0,0,4,8" IsVisible="{Binding IsConfirmingRemove}">
+                                <TextBlock Classes="body-sm danger" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ContentRemoveConfirm}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <Button Classes="text danger" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ContentRemove}" Command="{Binding ConfirmRemoveCommand}" />
+                                    <Button Classes="text" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryCancel}" Command="{Binding CancelRemoveCommand}" />
+                                </StackPanel>
+                            </WrapPanel>
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8" Margin="0,0,4,8" IsVisible="{Binding ProgressStatus, Converter={x:Static ObjectConverters.IsNotNull}}">
+                                <TextBlock Classes="body-sm secondary" Text="{Binding ProgressStatus}" ToolTip.Tip="{Binding ProgressStatus}" TextTrimming="CharacterEllipsis" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                                <TextBlock Grid.Column="1" Classes="label-md" Text="{Binding ProgressDetail}" VerticalAlignment="Center" IsVisible="{Binding ProgressDetail, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                            </Grid>
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8" Margin="0,0,4,8" IsVisible="{Binding IsConfirmingInstall}">
+                                <StackPanel HorizontalAlignment="Right" VerticalAlignment="Center">
+                                    <TextBlock Classes="body-sm secondary" Text="{Binding AddedModsText}" ToolTip.Tip="{Binding AddedModsToolTip}" IsVisible="{Binding AddedModsText, Converter={x:Static ObjectConverters.IsNotNull}}" TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Classes="body-sm secondary" Text="{Binding InstallWarning}" ToolTip.Tip="{Binding InstallWarning}" IsVisible="{Binding InstallWarning, Converter={x:Static ObjectConverters.IsNotNull}}" TextTrimming="CharacterEllipsis" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                                    <Button Classes="text primary" Content="{Binding ConfirmInstallText}" Command="{Binding ConfirmInstallCommand}" IsEnabled="{Binding Choices.IsComplete, FallbackValue={x:True}}" />
+                                    <Button Classes="text" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryCancel}" Command="{Binding CancelInstallCommand}" />
+                                </StackPanel>
+                            </Grid>
+                            <TextBlock Classes="body-sm danger" Text="{Binding InstallError}" ToolTip.Tip="{Binding InstallError}" IsVisible="{Binding InstallError, Converter={x:Static ObjectConverters.IsNotNull}}" TextTrimming="CharacterEllipsis" HorizontalAlignment="Right" Margin="0,0,4,8" />
+                        </StackPanel>
+                        <Grid Grid.Row="3" ColumnDefinitions="Auto,*,Auto" Margin="0,0,4,0">
+                            <Border Classes="chip" Classes.compatible="{Binding IsCompatible}" Classes.untested="{Binding IsUntested}" Classes.incompatible="{Binding IsIncompatible}" IsVisible="{Binding ShowsCompatibility}" VerticalAlignment="Center" Margin="0,0,8,0">
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                    <Ellipse />
+                                    <TextBlock Text="{Binding CompatibilityText}" />
+                                </StackPanel>
+                            </Border>
+                            <ItemsControl Grid.Column="1" ItemsSource="{Binding Tags}" VerticalAlignment="Center" ClipToBounds="True">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <StackPanel Orientation="Horizontal" Spacing="4" />
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="x:String">
+                                        <Border Classes="chip">
+                                            <TextBlock Text="{Binding}" />
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                            <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="16" VerticalAlignment="Center" Margin="8,0,0,0">
+                                <!-- c/meta: the size, the downloads and the age of the newest release, when the index reports them -->
+                                <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center" IsVisible="{Binding DownloadSizeText, Converter={x:Static ObjectConverters.IsNotNull}}" ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ContentDownloadSize}">
+                                    <Path Classes="icon size-16" Data="{StaticResource Icon.HardDrive}" />
+                                    <TextBlock Classes="label-md" Text="{Binding DownloadSizeText}" VerticalAlignment="Center" />
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center" IsVisible="{Binding DownloadsText, Converter={x:Static ObjectConverters.IsNotNull}}" ToolTip.Tip="{Binding DownloadsExactText}">
+                                    <Path Classes="icon size-16" Data="{StaticResource Icon.Download}" />
+                                    <TextBlock Classes="label-md" Text="{Binding DownloadsText}" VerticalAlignment="Center" />
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center" IsVisible="{Binding UpdatedText, Converter={x:Static ObjectConverters.IsNotNull}}" ToolTip.Tip="{Binding UpdatedDateText}">
+                                    <Path Classes="icon size-16" Data="{StaticResource Icon.Clock}" />
+                                    <TextBlock Classes="label-md" Text="{Binding UpdatedText}" VerticalAlignment="Center" />
+                                </StackPanel>
                             </StackPanel>
                         </Grid>
-                        <TextBlock Classes="body-sm danger" Text="{Binding InstallError}" ToolTip.Tip="{Binding InstallError}" IsVisible="{Binding InstallError, Converter={x:Static ObjectConverters.IsNotNull}}" TextTrimming="CharacterEllipsis" HorizontalAlignment="Right" Margin="0,0,4,8" />
-                    </StackPanel>
-                    <Grid Grid.Row="3" ColumnDefinitions="Auto,*,Auto" Margin="0,0,4,0">
-                        <Border Classes="chip" Classes.compatible="{Binding IsCompatible}" Classes.untested="{Binding IsUntested}" Classes.incompatible="{Binding IsIncompatible}" IsVisible="{Binding ShowsCompatibility}" VerticalAlignment="Center" Margin="0,0,8,0">
-                            <StackPanel Orientation="Horizontal" Spacing="6">
-                                <Ellipse />
-                                <TextBlock Text="{Binding CompatibilityText}" />
-                            </StackPanel>
-                        </Border>
-                        <ItemsControl Grid.Column="1" ItemsSource="{Binding Tags}" VerticalAlignment="Center" ClipToBounds="True">
-                            <ItemsControl.ItemsPanel>
-                                <ItemsPanelTemplate>
-                                    <StackPanel Orientation="Horizontal" Spacing="4" />
-                                </ItemsPanelTemplate>
-                            </ItemsControl.ItemsPanel>
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate x:DataType="x:String">
-                                    <Border Classes="chip">
-                                        <TextBlock Text="{Binding}" />
-                                    </Border>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="16" VerticalAlignment="Center" Margin="8,0,0,0">
-                            <!-- c/meta: the size, the downloads and the age of the newest release, when the index reports them -->
-                            <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center" IsVisible="{Binding DownloadSizeText, Converter={x:Static ObjectConverters.IsNotNull}}" ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ContentDownloadSize}">
-                                <Path Classes="icon size-16" Data="{StaticResource Icon.HardDrive}" />
-                                <TextBlock Classes="label-md" Text="{Binding DownloadSizeText}" VerticalAlignment="Center" />
-                            </StackPanel>
-                            <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center" IsVisible="{Binding DownloadsText, Converter={x:Static ObjectConverters.IsNotNull}}" ToolTip.Tip="{Binding DownloadsExactText}">
-                                <Path Classes="icon size-16" Data="{StaticResource Icon.Download}" />
-                                <TextBlock Classes="label-md" Text="{Binding DownloadsText}" VerticalAlignment="Center" />
-                            </StackPanel>
-                            <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center" IsVisible="{Binding UpdatedText, Converter={x:Static ObjectConverters.IsNotNull}}" ToolTip.Tip="{Binding UpdatedDateText}">
-                                <Path Classes="icon size-16" Data="{StaticResource Icon.Clock}" />
-                                <TextBlock Classes="label-md" Text="{Binding UpdatedText}" VerticalAlignment="Center" />
-                            </StackPanel>
-                        </StackPanel>
                     </Grid>
                 </Grid>
-            </Grid>
-        </Border>
+            </Border>
+        </Button>
     </DataTemplate>
 
     <!-- a pack row: the Discover row with the mod count, and no removal -->
     <DataTemplate x:Key="PackRow" x:DataType="vm:PackItem">
-        <Border Classes="card" Padding="12">
-            <Grid ColumnDefinitions="100,16,*" MinHeight="100">
-                <Button Classes="plain" Command="{Binding OpenCommand}" AutomationProperties.Name="{Binding Name}">
+        <Button Classes="plain card-button" views:RowButton.IgnoresDisabled="True" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Command="{Binding OpenCommand}" AutomationProperties.Name="{Binding Name}">
+            <Border Classes="card" Padding="12">
+                <Grid ColumnDefinitions="100,16,*" MinHeight="100">
                     <Border Classes="thumbnail" Width="100" Height="100">
                         <views:ListingImageView Image="{Binding Icon}" Background="{StaticResource Brush.Surface}">
                             <Path Classes="icon size-32" Data="{StaticResource Icon.Box}" />
                         </views:ListingImageView>
                     </Border>
-                </Button>
-                <Grid Grid.Column="2" RowDefinitions="Auto,*,Auto,Auto">
-                    <Grid ColumnDefinitions="*,16,Auto">
-                        <StackPanel Spacing="4">
-                            <DockPanel>
-                                <Button DockPanel.Dock="Left" Classes="plain" Command="{Binding OpenCommand}">
-                                    <TextBlock Classes="heading-md" Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
-                                </Button>
-                                <TextBlock Classes="body-sm secondary" Text="{Binding AuthorsText}" TextTrimming="CharacterEllipsis" Margin="8,0,0,0" VerticalAlignment="Center" />
-                            </DockPanel>
-                            <TextBlock Classes="body-md secondary" Text="{Binding Abstract}" TextWrapping="Wrap" TextTrimming="CharacterEllipsis" MaxLines="2" LineHeight="18" />
-                        </StackPanel>
-                        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Top">
-                            <Button Classes="add" Command="{Binding NewInstanceCommand}" IsVisible="{Binding !IsInstalling}" ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.PackNewInstance}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.PackNewInstance}">
-                                <Path Classes="icon size-16" Data="{StaticResource Icon.Library}" />
-                            </Button>
-                            <Button Classes="add" Command="{Binding InstallCommand}" IsVisible="{Binding CanInstall}" ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).AddToText}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).AddToText}">
-                                <Path Classes="icon size-16" Data="{StaticResource Icon.Plus}" />
-                            </Button>
-                            <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center" IsVisible="{Binding IsInstalling}">
-                                <ProgressBar Width="38" Height="6" VerticalAlignment="Center" Value="{Binding Progress}" Maximum="100" Foreground="{StaticResource Brush.Accent}" />
-                                <Button Classes="icon" Command="{Binding Run.TogglePauseCommand}" IsVisible="{Binding !Run.IsStopping, FallbackValue={x:True}}" ToolTip.Tip="{Binding Run.PauseText}" AutomationProperties.Name="{Binding Run.PauseText}">
-                                    <Panel>
-                                        <Path Classes="icon size-16" Data="{StaticResource Icon.Pause}" IsVisible="{Binding !Run.IsPaused, FallbackValue={x:True}}" />
-                                        <Path Classes="icon-filled size-16" Data="{StaticResource Icon.Play}" IsVisible="{Binding Run.IsPaused, FallbackValue={x:False}}" />
-                                    </Panel>
-                                </Button>
-                                <Button Classes="icon" Command="{Binding Run.StopCommand}" IsVisible="{Binding !Run.IsStopping, FallbackValue={x:True}}" ToolTip.Tip="{Binding Run.StopText}" AutomationProperties.Name="{Binding Run.StopText}">
-                                    <Path Classes="icon size-16" Data="{StaticResource Icon.Close}" />
-                                </Button>
-                                <TextBlock Classes="body-sm secondary" Text="{Binding Run.StopText}" VerticalAlignment="Center" IsVisible="{Binding Run.IsStopping, FallbackValue={x:False}}" />
+                    <Grid Grid.Column="2" RowDefinitions="Auto,*,Auto,Auto">
+                        <Grid ColumnDefinitions="*,16,Auto">
+                            <StackPanel Spacing="4">
+                                <DockPanel>
+                                    <TextBlock Classes="heading-md" Text="{Binding Name}" TextTrimming="CharacterEllipsis" DockPanel.Dock="Left" VerticalAlignment="Center" />
+                                    <TextBlock Classes="body-sm secondary" Text="{Binding AuthorsText}" TextTrimming="CharacterEllipsis" Margin="8,0,0,0" VerticalAlignment="Center" />
+                                </DockPanel>
+                                <TextBlock Classes="body-md secondary" Text="{Binding Abstract}" TextWrapping="Wrap" TextTrimming="CharacterEllipsis" MaxLines="2" LineHeight="18" />
                             </StackPanel>
-                            <Border Classes="chip positive" VerticalAlignment="Center" IsVisible="{Binding IsInstalled}" ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).InstalledInText}">
-                                <TextBlock Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.DiscoverInstalled}" />
+                            <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Top">
+                                <Button Classes="add" Command="{Binding NewInstanceCommand}" IsVisible="{Binding !IsInstalling}" ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.PackNewInstance}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.PackNewInstance}">
+                                    <Path Classes="icon size-16" Data="{StaticResource Icon.Library}" />
+                                </Button>
+                                <Button Classes="add" Command="{Binding InstallCommand}" IsVisible="{Binding CanInstall}" ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).AddToText}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).AddToText}">
+                                    <Path Classes="icon size-16" Data="{StaticResource Icon.Plus}" />
+                                </Button>
+                                <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center" IsVisible="{Binding IsInstalling}">
+                                    <ProgressBar Width="38" Height="6" VerticalAlignment="Center" Value="{Binding Progress}" Maximum="100" Foreground="{StaticResource Brush.Accent}" />
+                                    <Button Classes="icon" Command="{Binding Run.TogglePauseCommand}" IsVisible="{Binding !Run.IsStopping, FallbackValue={x:True}}" ToolTip.Tip="{Binding Run.PauseText}" AutomationProperties.Name="{Binding Run.PauseText}">
+                                        <Panel>
+                                            <Path Classes="icon size-16" Data="{StaticResource Icon.Pause}" IsVisible="{Binding !Run.IsPaused, FallbackValue={x:True}}" />
+                                            <Path Classes="icon-filled size-16" Data="{StaticResource Icon.Play}" IsVisible="{Binding Run.IsPaused, FallbackValue={x:False}}" />
+                                        </Panel>
+                                    </Button>
+                                    <Button Classes="icon" Command="{Binding Run.StopCommand}" IsVisible="{Binding !Run.IsStopping, FallbackValue={x:True}}" ToolTip.Tip="{Binding Run.StopText}" AutomationProperties.Name="{Binding Run.StopText}">
+                                        <Path Classes="icon size-16" Data="{StaticResource Icon.Close}" />
+                                    </Button>
+                                    <TextBlock Classes="body-sm secondary" Text="{Binding Run.StopText}" VerticalAlignment="Center" IsVisible="{Binding Run.IsStopping, FallbackValue={x:False}}" />
+                                </StackPanel>
+                                <Border Classes="chip positive" VerticalAlignment="Center" IsVisible="{Binding IsInstalled}" ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).InstalledInText}">
+                                    <TextBlock Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.DiscoverInstalled}" />
+                                </Border>
+                            </StackPanel>
+                        </Grid>
+                        <ContentControl Grid.Row="1" Margin="0,8" Content="{Binding Choices}" IsVisible="{Binding Choices, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                        <StackPanel Grid.Row="2">
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8" Margin="0,0,4,8" IsVisible="{Binding ProgressStatus, Converter={x:Static ObjectConverters.IsNotNull}}">
+                                <TextBlock Classes="body-sm secondary" Text="{Binding ProgressStatus}" ToolTip.Tip="{Binding ProgressStatus}" TextTrimming="CharacterEllipsis" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                                <TextBlock Grid.Column="1" Classes="label-md" Text="{Binding ProgressDetail}" VerticalAlignment="Center" IsVisible="{Binding ProgressDetail, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                            </Grid>
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8" Margin="0,0,4,8" IsVisible="{Binding IsConfirmingInstall}">
+                                <TextBlock Classes="body-sm secondary" Text="{Binding InstallWarning}" ToolTip.Tip="{Binding InstallWarning}" TextTrimming="CharacterEllipsis" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                                    <Button Classes="text primary" Content="{Binding ConfirmInstallText}" Command="{Binding ConfirmInstallCommand}" IsEnabled="{Binding Choices.IsComplete, FallbackValue={x:True}}" />
+                                    <Button Classes="text" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryCancel}" Command="{Binding CancelInstallCommand}" />
+                                </StackPanel>
+                            </Grid>
+                            <TextBlock Classes="body-sm danger" Text="{Binding InstallError}" ToolTip.Tip="{Binding InstallError}" IsVisible="{Binding InstallError, Converter={x:Static ObjectConverters.IsNotNull}}" TextTrimming="CharacterEllipsis" HorizontalAlignment="Right" Margin="0,0,4,8" />
+                        </StackPanel>
+                        <Grid Grid.Row="3" ColumnDefinitions="Auto,*,Auto" Margin="0,0,4,0">
+                            <Border Classes="chip" Classes.compatible="{Binding IsCompatible}" Classes.untested="{Binding IsUntested}" Classes.incompatible="{Binding IsIncompatible}" IsVisible="{Binding ShowsCompatibility}" VerticalAlignment="Center" Margin="0,0,8,0">
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                    <Ellipse />
+                                    <TextBlock Text="{Binding CompatibilityText}" />
+                                </StackPanel>
                             </Border>
-                        </StackPanel>
-                    </Grid>
-                    <ContentControl Grid.Row="1" Margin="0,8" Content="{Binding Choices}" IsVisible="{Binding Choices, Converter={x:Static ObjectConverters.IsNotNull}}" />
-                    <StackPanel Grid.Row="2">
-                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8" Margin="0,0,4,8" IsVisible="{Binding ProgressStatus, Converter={x:Static ObjectConverters.IsNotNull}}">
-                            <TextBlock Classes="body-sm secondary" Text="{Binding ProgressStatus}" ToolTip.Tip="{Binding ProgressStatus}" TextTrimming="CharacterEllipsis" HorizontalAlignment="Right" VerticalAlignment="Center" />
-                            <TextBlock Grid.Column="1" Classes="label-md" Text="{Binding ProgressDetail}" VerticalAlignment="Center" IsVisible="{Binding ProgressDetail, Converter={x:Static ObjectConverters.IsNotNull}}" />
-                        </Grid>
-                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8" Margin="0,0,4,8" IsVisible="{Binding IsConfirmingInstall}">
-                            <TextBlock Classes="body-sm secondary" Text="{Binding InstallWarning}" ToolTip.Tip="{Binding InstallWarning}" TextTrimming="CharacterEllipsis" HorizontalAlignment="Right" VerticalAlignment="Center" />
-                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
-                                <Button Classes="text primary" Content="{Binding ConfirmInstallText}" Command="{Binding ConfirmInstallCommand}" IsEnabled="{Binding Choices.IsComplete, FallbackValue={x:True}}" />
-                                <Button Classes="text" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryCancel}" Command="{Binding CancelInstallCommand}" />
+                            <ItemsControl Grid.Column="1" ItemsSource="{Binding Tags}" VerticalAlignment="Center" ClipToBounds="True">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <StackPanel Orientation="Horizontal" Spacing="4" />
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="x:String">
+                                        <Border Classes="chip">
+                                            <TextBlock Text="{Binding}" />
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                            <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="16" VerticalAlignment="Center" Margin="8,0,0,0">
+                                <TextBlock Classes="label-md" Text="{Binding ModCountText}" VerticalAlignment="Center" />
+                                <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center" ToolTip.Tip="{Binding ReleasedDateText}">
+                                    <Path Classes="icon size-16" Data="{StaticResource Icon.Clock}" />
+                                    <TextBlock Classes="label-md" Text="{Binding ReleasedText}" VerticalAlignment="Center" />
+                                </StackPanel>
                             </StackPanel>
                         </Grid>
-                        <TextBlock Classes="body-sm danger" Text="{Binding InstallError}" ToolTip.Tip="{Binding InstallError}" IsVisible="{Binding InstallError, Converter={x:Static ObjectConverters.IsNotNull}}" TextTrimming="CharacterEllipsis" HorizontalAlignment="Right" Margin="0,0,4,8" />
-                    </StackPanel>
-                    <Grid Grid.Row="3" ColumnDefinitions="Auto,*,Auto" Margin="0,0,4,0">
-                        <Border Classes="chip" Classes.compatible="{Binding IsCompatible}" Classes.untested="{Binding IsUntested}" Classes.incompatible="{Binding IsIncompatible}" IsVisible="{Binding ShowsCompatibility}" VerticalAlignment="Center" Margin="0,0,8,0">
-                            <StackPanel Orientation="Horizontal" Spacing="6">
-                                <Ellipse />
-                                <TextBlock Text="{Binding CompatibilityText}" />
-                            </StackPanel>
-                        </Border>
-                        <ItemsControl Grid.Column="1" ItemsSource="{Binding Tags}" VerticalAlignment="Center" ClipToBounds="True">
-                            <ItemsControl.ItemsPanel>
-                                <ItemsPanelTemplate>
-                                    <StackPanel Orientation="Horizontal" Spacing="4" />
-                                </ItemsPanelTemplate>
-                            </ItemsControl.ItemsPanel>
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate x:DataType="x:String">
-                                    <Border Classes="chip">
-                                        <TextBlock Text="{Binding}" />
-                                    </Border>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="16" VerticalAlignment="Center" Margin="8,0,0,0">
-                            <TextBlock Classes="label-md" Text="{Binding ModCountText}" VerticalAlignment="Center" />
-                            <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center" ToolTip.Tip="{Binding ReleasedDateText}">
-                                <Path Classes="icon size-16" Data="{StaticResource Icon.Clock}" />
-                                <TextBlock Classes="label-md" Text="{Binding ReleasedText}" VerticalAlignment="Center" />
-                            </StackPanel>
-                        </StackPanel>
                     </Grid>
                 </Grid>
-            </Grid>
-        </Border>
+            </Border>
+        </Button>
     </DataTemplate>
 </ResourceDictionary>

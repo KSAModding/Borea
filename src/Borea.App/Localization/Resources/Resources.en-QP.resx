@@ -831,6 +831,9 @@
   <data name="InstanceModsMissingFormat" xml:space="preserve">
     <value>{0} mods o' this sea ain't in the hold.</value>
   </data>
+  <data name="ContentEnabled" xml:space="preserve">
+    <value>Flag hoisted</value>
+  </data>
   <data name="ContentUpdate" xml:space="preserve">
     <value>Bring in the tide</value>
   </data>
