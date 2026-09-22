@@ -30,9 +30,14 @@
                     <TextBlock Classes="body-md secondary" Text="{Binding SummaryText}" TextWrapping="Wrap" />
                     <ScrollViewer MaxHeight="200" IsVisible="{Binding HasNotes}">
                         <ItemsControl ItemsSource="{Binding Notes}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <StackPanel Spacing="4" />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate x:DataType="x:String">
-                                    <TextBlock Classes="body-md" Text="{Binding}" TextWrapping="Wrap" Margin="0,0,0,4" />
+                                    <TextBlock Classes="body-md secondary" Text="{Binding}" TextWrapping="Wrap" />
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>

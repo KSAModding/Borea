@@ -471,6 +471,9 @@
   <data name="ModListNotCopiedFormat" xml:space="preserve">
     <value>{0} is not copied, because Borea did not install this folder.</value>
   </data>
+  <data name="ModListNotCopiedManyFormat" xml:space="preserve">
+    <value>These mods are not copied, because Borea did not install their folders: {0}</value>
+  </data>
   <data name="ModListUnknownFormat" xml:space="preserve">
     <value>No source has {0} {1}, so Borea does not install it.</value>
   </data>
