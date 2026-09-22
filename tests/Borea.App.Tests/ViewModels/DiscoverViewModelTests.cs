@@ -502,6 +502,44 @@ public sealed class DiscoverViewModelTests
     }
 
     [Fact]
+    public async Task ShowFilters_CountAsFiltersAndClearAllTurnsThemOff()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var viewModel = harness.ViewModel;
+        await viewModel.EnsureDiscoverLoadedAsync();
+        var changed = new List<string?>();
+        viewModel.PropertyChanged += (_, e) => changed.Add(e.PropertyName);
+        Assert.False(viewModel.HasDiscoverFilters);
+
+        viewModel.HideIncompatible = true;
+        Assert.True(viewModel.HasDiscoverFilters);
+        Assert.Contains(nameof(MainViewModel.HasDiscoverFilters), changed);
+
+        viewModel.ClearHideIncompatibleCommand.Execute(null);
+        Assert.False(viewModel.HideIncompatible);
+        Assert.False(viewModel.HasDiscoverFilters);
+
+        changed.Clear();
+        viewModel.HideInstalled = true;
+        Assert.True(viewModel.HasDiscoverFilters);
+        Assert.Contains(nameof(MainViewModel.HasDiscoverFilters), changed);
+
+        viewModel.ClearHideInstalledCommand.Execute(null);
+        Assert.False(viewModel.HideInstalled);
+        Assert.False(viewModel.HasDiscoverFilters);
+
+        viewModel.HideInstalled = true;
+        viewModel.HideIncompatible = true;
+        viewModel.SelectOsCommand.Execute("windows");
+
+        viewModel.ClearDiscoverFiltersCommand.Execute(null);
+        Assert.False(viewModel.HideInstalled);
+        Assert.False(viewModel.HideIncompatible);
+        Assert.Null(viewModel.SelectedOs);
+        Assert.False(viewModel.HasDiscoverFilters);
+    }
+
+    [Fact]
     public async Task CompatibilityChip_NinetyPercentCompatible_HidesOnlyTheirChips()
     {
         // with this game, AdvancedFlightComputer and MeasureTools are incompatible and the eighteen KSArmory rows are compatible
