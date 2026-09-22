@@ -61,6 +61,18 @@
                                     <TextBlock Classes="label-sm" Text="{Binding Localization.DiscoverClearAll}" VerticalAlignment="Center" />
                                 </StackPanel>
                             </Button>
+                            <Button Classes="chip-button" Command="{Binding ClearHideInstalledCommand}" IsVisible="{Binding HideInstalled}">
+                                <StackPanel Orientation="Horizontal" Spacing="4">
+                                    <Path Classes="icon size-16" Data="{StaticResource Icon.Close}" />
+                                    <TextBlock Classes="label-sm" Text="{Binding Localization.DiscoverHideInstalled}" VerticalAlignment="Center" />
+                                </StackPanel>
+                            </Button>
+                            <Button Classes="chip-button" Command="{Binding ClearHideIncompatibleCommand}" IsVisible="{Binding HideIncompatible}">
+                                <StackPanel Orientation="Horizontal" Spacing="4">
+                                    <Path Classes="icon size-16" Data="{StaticResource Icon.Close}" />
+                                    <TextBlock Classes="label-sm" Text="{Binding Localization.DiscoverHideIncompatible}" VerticalAlignment="Center" />
+                                </StackPanel>
+                            </Button>
                             <ItemsControl ItemsSource="{Binding SelectedCategories}" IsVisible="{Binding !!SelectedCategories.Count}">
                                 <ItemsControl.ItemsPanel>
                                     <ItemsPanelTemplate>

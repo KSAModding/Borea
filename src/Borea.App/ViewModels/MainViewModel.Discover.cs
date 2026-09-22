@@ -450,6 +450,12 @@ public partial class MainViewModel
     }
 
     [RelayCommand]
+    private void ClearHideInstalled() => HideInstalled = false;
+
+    [RelayCommand]
+    private void ClearHideIncompatible() => HideIncompatible = false;
+
+    [RelayCommand]
     private void SelectDiscoverSort(DiscoverSortOrder order)
     {
         if (order == DiscoverSort)
