@@ -29,6 +29,8 @@
     <Compile Remove="Fixtures\**" />
     <None Remove="Fixtures\**" />
     <None Update="Index\Fixtures\current-snapshot.json" CopyToOutputDirectory="PreserveNewest" />
+    <!-- The copies of real game files, which the game check runs against. -->
+    <None Update="Game\Fixtures\**\*" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\..\announcements.toml" Link="Announcements\announcements.toml" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 

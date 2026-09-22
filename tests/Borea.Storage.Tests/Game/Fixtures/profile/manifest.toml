@@ -1,0 +1,7 @@
+[[mods]]
+id = "Core"
+enabled = true
+
+[[mods]]
+id = "AdvancedFlightComputer"
+enabled = true

@@ -1,0 +1,9 @@
+name = "AdvancedFlightComputer"
+patches = [ "Patches/HyperbolicBodies.xml", "Patches/AutoStageButton.xml" ]
+
+[StarMap]
+EntryAssembly = "AdvancedFlightComputer"
+
+[[StarMap.ModDependencies]]
+ModId = "KittenExtensions"
+Optional = true

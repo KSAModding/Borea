@@ -363,3 +363,6 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+# Copies of game logs that the game check tests run against.
+!tests/Borea.Storage.Tests/Game/Fixtures/profile/logs/
+!tests/Borea.Storage.Tests/Game/Fixtures/**/*.log
