@@ -98,13 +98,24 @@
                             <DataTemplate x:DataType="vm:InstanceLoaderRow">
                                 <Border BorderBrush="{StaticResource Brush.BorderStrong}" BorderThickness="0,1,0,0" Padding="16,8">
                                     <Grid ColumnDefinitions="48,16,*,16,Auto">
-                                        <Border Classes="thumbnail" Width="48" Height="48">
+                                        <!-- like a mod row: the icon and the name open the loader's page -->
+                                        <Button Classes="plain" Command="{Binding OpenCommand}" IsVisible="{Binding CanOpen}" AutomationProperties.Name="{Binding Name}">
+                                            <Border Classes="thumbnail" Width="48" Height="48">
+                                                <views:ListingImageView Image="{Binding Icon}" Background="{StaticResource Brush.Surface}">
+                                                    <Path Classes="icon" Data="{StaticResource Icon.PuzzlePiece}" />
+                                                </views:ListingImageView>
+                                            </Border>
+                                        </Button>
+                                        <Border Classes="thumbnail" Width="48" Height="48" IsVisible="{Binding !CanOpen}">
                                             <views:ListingImageView Image="{Binding Icon}" Background="{StaticResource Brush.Surface}">
                                                 <Path Classes="icon" Data="{StaticResource Icon.PuzzlePiece}" />
                                             </views:ListingImageView>
                                         </Border>
                                         <StackPanel Grid.Column="2" VerticalAlignment="Center">
-                                            <TextBlock Classes="heading-sm" Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
+                                            <Button Classes="plain" Command="{Binding OpenCommand}" IsVisible="{Binding CanOpen}" HorizontalAlignment="Left">
+                                                <TextBlock Classes="heading-sm" Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
+                                            </Button>
+                                            <TextBlock Classes="heading-sm" Text="{Binding Name}" TextTrimming="CharacterEllipsis" IsVisible="{Binding !CanOpen}" />
                                             <TextBlock Classes="body-sm secondary" Text="{Binding RangeText}" />
                                             <TextBlock Classes="body-sm secondary" Text="{Binding NeededByText}" TextWrapping="Wrap" />
                                         </StackPanel>

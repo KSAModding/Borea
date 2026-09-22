@@ -64,6 +64,24 @@ public sealed class InstanceLoaderTests
     }
 
     [Fact]
+    public async Task OpenLoaderRow_OpensTheLoaderPageAndLeadsBackToTheInstance()
+    {
+        using var harness = await CreateAsync(starMap: "0.4.7");
+        await OpenWithAsync(harness, "AdvancedFlightComputer");
+        var viewModel = harness.ViewModel;
+        var instance = viewModel.SelectedInstance!;
+        var row = Assert.Single(viewModel.InstanceLoader!.Rows);
+        Assert.True(row.CanOpen);
+
+        await row.OpenCommand.ExecuteAsync(null);
+
+        Assert.True(viewModel.CurrentWindowContent);
+        Assert.Equal("StarMap", viewModel.SelectedContent?.ModId);
+        Assert.True(viewModel.IsContentFromInstance);
+        Assert.Equal(instance.InstanceId, viewModel.ContentReturnInstance?.InstanceId);
+    }
+
+    [Fact]
     public async Task OpenLoaderSettings_OpensTheGameTabOfTheSettings()
     {
         using var harness = await CreateAsync(starMap: null);

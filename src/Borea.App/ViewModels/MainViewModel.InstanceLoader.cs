@@ -94,10 +94,11 @@ public enum InstanceLoaderState
 }
 
 /// <summary>One loader the mods of the instance need.</summary>
-public sealed class InstanceLoaderRow
+public sealed partial class InstanceLoaderRow
 {
     private readonly MainViewModel _owner;
     private readonly NeededLoader _loader;
+    private readonly DiscoverItem? _listing;
     private readonly LoaderInstallation? _installation;
     private readonly IReadOnlyList<string> _neededBy;
 
@@ -105,6 +106,7 @@ public sealed class InstanceLoaderRow
     {
         _owner = owner;
         _loader = loader;
+        _listing = listing;
         _installation = installation;
         _neededBy = neededBy;
         Name = listing?.Name ?? loader.LoaderId;
@@ -115,6 +117,13 @@ public sealed class InstanceLoaderRow
     public string Name { get; }
 
     public ListingImage? Icon { get; }
+
+    /// <summary>Whether the row links to the loader's page, like a mod row does. A loader the index does not list has none.</summary>
+    public bool CanOpen => _listing is not null;
+
+    /// <summary>Opens the loader's page with the way back to this instance, the way a mod row opens its page.</summary>
+    [RelayCommand]
+    private Task OpenAsync() => _listing is null ? Task.CompletedTask : _owner.OpenContentFromInstanceAsync(_listing);
 
     public InstanceLoaderState State { get; }
 
