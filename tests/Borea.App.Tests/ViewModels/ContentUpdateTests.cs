@@ -2,6 +2,7 @@ using System.IO.Compression;
 using System.Net;
 using System.Text;
 using System.Text.Json;
+using Borea.App.ViewModels;
 using Borea.Core.Dependencies;
 using Borea.Core.Mods;
 using Borea.Core.Settings;
@@ -330,7 +331,7 @@ public sealed class ContentUpdateTests
         await viewModel.LoadAsync();
         await viewModel.ActiveInstance!.OpenCommand.ExecuteAsync(null);
         var row = viewModel.ContentGroups.SelectMany(group => group.Items).Single();
-        row.BeginManageCommand.Execute(null);
+        await row.BeginManageCommand.ExecuteAsync(null);
 
         var handover = row.ConfirmManageCommand.ExecuteAsync(null);
         for (var wait = 0; wait < 300 && !harness.Requests.Any(uri => uri.Host == ArchiveHost); wait++)
@@ -348,6 +349,106 @@ public sealed class ContentUpdateTests
         Assert.True(viewModel.CanChangeContent);
         var managed = Assert.Single((await harness.Services.Instances.GetByIdAsync(instance.InstanceId))!.Mods);
         Assert.Equal(ModInstallOwnership.Borea, managed.Ownership);
+    }
+
+    [Fact]
+    public async Task Manage_MissingRequiredDependency_NamesItAndInstallsItFirst()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(respond: ServeArchive);
+        harness.SpaceDock.Releases.AddRange([Release("1.0.0", dependencies: [new ModDependency("library", ModDependencyKind.Required)]), Release("1.0.0", modId: "library")]);
+        var instance = await InstalledContent.AddAsync(harness, OwnId, activate: true, version: "1.0.0");
+        var row = await OpenSingleRowAsync(harness);
+
+        await row.BeginManageCommand.ExecuteAsync(null);
+
+        Assert.True(row.IsConfirmingManage);
+        Assert.Contains("library", row.ManageMissingText);
+        Assert.Equal(harness.Localization.FormatContentManageInstallMissing("library 1.0.0"), row.ManageInstallMissingText);
+        Assert.True(row.InstallManageDependencies);
+
+        await row.ConfirmManageCommand.ExecuteAsync(null);
+
+        var mods = (await harness.Services.Instances.GetByIdAsync(instance.InstanceId))!.Mods;
+        Assert.Equal(ModInstallOwnership.Borea, mods.Single(mod => mod.ModId == OwnId).Ownership);
+        Assert.Equal(InstallReason.Dependency, mods.Single(mod => mod.ModId == "library").Reason);
+    }
+
+    [Fact]
+    public async Task Manage_MissingRequiredDependencyDeselected_TakesOverWithoutIt()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(respond: ServeArchive);
+        harness.SpaceDock.Releases.AddRange([Release("1.0.0", dependencies: [new ModDependency("library", ModDependencyKind.Required)]), Release("1.0.0", modId: "library")]);
+        var instance = await InstalledContent.AddAsync(harness, OwnId, activate: true, version: "1.0.0");
+        var row = await OpenSingleRowAsync(harness);
+        await row.BeginManageCommand.ExecuteAsync(null);
+
+        row.InstallManageDependencies = false;
+        await row.ConfirmManageCommand.ExecuteAsync(null);
+
+        var managed = Assert.Single((await harness.Services.Instances.GetByIdAsync(instance.InstanceId))!.Mods);
+        Assert.Equal(ModInstallOwnership.Borea, managed.Ownership);
+        Assert.DoesNotContain(harness.Requests, uri => uri.AbsolutePath.StartsWith("/library/", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task Manage_UnavailableRequiredDependency_SaysBoreaCannotInstallIt()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(respond: ServeArchive);
+        harness.SpaceDock.Releases.Add(Release("1.0.0", dependencies: [new ModDependency("library", ModDependencyKind.Required)]));
+        await InstalledContent.AddAsync(harness, OwnId, activate: true, version: "1.0.0");
+        var row = await OpenSingleRowAsync(harness);
+
+        await row.BeginManageCommand.ExecuteAsync(null);
+
+        Assert.True(row.IsConfirmingManage);
+        Assert.Null(row.ManageInstallMissingText);
+        Assert.StartsWith(harness.Localization.FormatContentManageMissing("library"), row.ManageMissingText);
+        Assert.Contains(harness.Localization.FormatContentManageCannotInstall(string.Empty), row.ManageMissingText);
+    }
+
+    [Fact]
+    public async Task Manage_DependencyBoreaDoesNotManage_AsksToManageItFirst()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(respond: ServeArchive);
+        harness.SpaceDock.Releases.AddRange([Release("1.0.0", dependencies: [new ModDependency("library", ModDependencyKind.Required, ModVersion.Parse("2.0.0"))]), Release("1.0.0", modId: "library"), Release("2.0.0", modId: "library")]);
+        await InstalledContent.AddAsync(harness, OwnId, activate: true, version: "1.0.0");
+        await InstalledContent.AddAsync(harness, "library", activate: true, version: "1.0.0");
+        await harness.ViewModel.LoadAsync();
+        await harness.ViewModel.ActiveInstance!.OpenCommand.ExecuteAsync(null);
+        var row = harness.ViewModel.ContentGroups.SelectMany(group => group.Items).Single(item => item.ModId == OwnId);
+
+        await row.BeginManageCommand.ExecuteAsync(null);
+
+        Assert.True(row.IsConfirmingManage);
+        Assert.Null(row.ManageInstallMissingText);
+        Assert.EndsWith(harness.Localization.FormatContentManageNotOwned(harness.ViewModel.ContentName("library")), row.ManageMissingText);
+    }
+
+    [Fact]
+    public async Task Manage_MissingOptionalDependency_ReportsItAndInstallsNothingElse()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(respond: ServeArchive);
+        harness.SpaceDock.Releases.AddRange([Release("1.0.0", dependencies: [new ModDependency("extra", ModDependencyKind.Optional)]), Release("1.0.0", modId: "extra")]);
+        var instance = await InstalledContent.AddAsync(harness, OwnId, activate: true, version: "1.0.0");
+        var row = await OpenSingleRowAsync(harness);
+
+        await row.BeginManageCommand.ExecuteAsync(null);
+
+        Assert.Null(row.ManageMissingText);
+        Assert.Null(row.ManageInstallMissingText);
+        Assert.Equal(harness.Localization.FormatContentManageNotInstalled("extra"), row.ManageNotInstalledText);
+
+        await row.ConfirmManageCommand.ExecuteAsync(null);
+
+        var managed = Assert.Single((await harness.Services.Instances.GetByIdAsync(instance.InstanceId))!.Mods);
+        Assert.Equal(ModInstallOwnership.Borea, managed.Ownership);
+    }
+
+    private static async Task<ContentItem> OpenSingleRowAsync(ViewModelHarness harness)
+    {
+        await harness.ViewModel.LoadAsync();
+        await harness.ViewModel.ActiveInstance!.OpenCommand.ExecuteAsync(null);
+        return harness.ViewModel.ContentGroups.SelectMany(group => group.Items).Single();
     }
 
     [Fact]

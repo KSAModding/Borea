@@ -2,6 +2,7 @@ using System.Globalization;
 using System.IO.Compression;
 using System.Security.Cryptography;
 using System.Text.Json;
+using Borea.Core.Dependencies;
 using Borea.Core.Index;
 using Borea.Core.Instances;
 using Borea.Core.Mods;
@@ -791,6 +792,74 @@ public sealed class InstanceCommandTests : IDisposable
     }
 
     [Fact]
+    public async Task TakeOwnership_MissingRequiredDependency_StopsAndNamesIt()
+    {
+        var instanceId = await RecordForeignAsync(new ModDependency("library", ModDependencyKind.Required));
+        _host.Mods.AvailableVersions = (_, _) => throw new HttpRequestException("The index is offline.");
+
+        var run = await _host.RunAsync("instance", "take-ownership", "Alpha", "flight-tools");
+
+        Assert.Equal(1, run.ExitCode);
+        Assert.Contains("needs what 'Alpha' does not have: Required dependency on mod 'library'.", run.Error);
+        Assert.Contains("--with-dependencies", run.Error);
+        var mod = Assert.Single((await new FileInstanceRepository(_host.Paths).GetByIdAsync(instanceId))!.Mods);
+        Assert.Equal(ModInstallOwnership.Foreign, mod.Ownership);
+    }
+
+    [Fact]
+    public async Task TakeOwnership_WithDependencies_InstallsTheMissingOneFirst()
+    {
+        var instanceId = await RecordForeignAsync(new ModDependency("library", ModDependencyKind.Required));
+        _host.Mods.Releases.Add(ContentCommandFixtures.Release(id: "library", version: "1.0.0"));
+        _host.InstallerFactory = graph => new FolderInstaller(graph);
+
+        var run = await _host.RunAsync("instance", "take-ownership", "Alpha", "flight-tools", "--with-dependencies");
+
+        Assert.Equal(0, run.ExitCode);
+        Assert.Contains("Install dependency library 1.0.0.", run.Output);
+        Assert.Contains("Borea manages 'flight-tools' 2.0.0 in 'Alpha' now.", run.Output);
+        var mods = (await new FileInstanceRepository(_host.Paths).GetByIdAsync(instanceId))!.Mods;
+        Assert.Equal(ModInstallOwnership.Borea, mods.Single(mod => mod.ModId == "flight-tools").Ownership);
+        Assert.Equal(InstallReason.Dependency, mods.Single(mod => mod.ModId == "library").Reason);
+    }
+
+    [Fact]
+    public async Task TakeOwnership_WithoutDependencies_WarnsAndTakesOver()
+    {
+        var instanceId = await RecordForeignAsync(new ModDependency("library", ModDependencyKind.Required));
+        _host.Mods.AvailableVersions = (_, _) => throw new HttpRequestException("The index is offline.");
+
+        var run = await _host.RunAsync("instance", "take-ownership", "Alpha", "flight-tools", "--without-dependencies");
+
+        Assert.Equal(0, run.ExitCode);
+        Assert.Contains("warning: Required dependency on mod 'library' is not installed.", run.Error);
+        var mod = Assert.Single((await new FileInstanceRepository(_host.Paths).GetByIdAsync(instanceId))!.Mods);
+        Assert.Equal(ModInstallOwnership.Borea, mod.Ownership);
+    }
+
+    [Fact]
+    public async Task TakeOwnership_MissingOptionalDependency_NotesItAndTakesOver()
+    {
+        var instanceId = await RecordForeignAsync(new ModDependency("extra", ModDependencyKind.Optional));
+
+        var run = await _host.RunAsync("instance", "take-ownership", "Alpha", "flight-tools");
+
+        Assert.Equal(0, run.ExitCode);
+        Assert.Contains("note: Optional dependency on mod 'extra' is not installed. Borea does not install it.", run.Output);
+        var mod = Assert.Single((await new FileInstanceRepository(_host.Paths).GetByIdAsync(instanceId))!.Mods);
+        Assert.Equal(ModInstallOwnership.Borea, mod.Ownership);
+    }
+
+    [Fact]
+    public async Task TakeOwnership_BothDependencyOptions_IsAUsageError()
+    {
+        var run = await _host.RunAsync("instance", "take-ownership", "Alpha", "flight-tools", "--with-dependencies", "--without-dependencies");
+
+        Assert.Equal(2, run.ExitCode);
+        Assert.Contains("Pass --with-dependencies or --without-dependencies, not both.", run.Error);
+    }
+
+    [Fact]
     public async Task ImportProfile_CopiesTheModsInLoadOrderWithTheirEnabledState()
     {
         WriteProfileManifest(("Zeta", true), ("Alpha", false));
@@ -1012,6 +1081,18 @@ public sealed class InstanceCommandTests : IDisposable
             Array.Empty<ContentIndexDiagnostic>());
     }
 
+    /// <summary>Records flight-tools in the instance Alpha as a foreign mod whose release declares the dependencies.</summary>
+    private async Task<Guid> RecordForeignAsync(params ModDependency[] dependencies)
+    {
+        var instanceId = await CreateInstanceAsync("Alpha");
+        WriteMod(instanceId, "flight-tools", "name = \"Flight Tools\"");
+        var archive = WriteZip(("flight-tools/mod.toml", "name = \"Flight Tools\""));
+        UseArchiveLookup().Releases.Add(ReleaseFor("flight-tools", archive, dependencies));
+        _host.ForeignModHandoverFactory = graph => new FileForeignModHandover(graph.Paths, new ArchiveDownloader(archive), graph.Instances, graph.ModState);
+        await _host.RunAsync("instance", "adopt", "Alpha", "flight-tools", "--archive", archive);
+        return instanceId;
+    }
+
     private FakeArchiveReleaseLookup UseArchiveLookup()
     {
         var lookup = new FakeArchiveReleaseLookup();
@@ -1019,7 +1100,7 @@ public sealed class InstanceCommandTests : IDisposable
         return lookup;
     }
 
-    private static ModVersionMetadata ReleaseFor(string id, string archive)
+    private static ModVersionMetadata ReleaseFor(string id, string archive, IReadOnlyList<ModDependency>? dependencies = null)
     {
         var release = ContentCommandFixtures.Release(id: id);
         var sha256 = Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(archive)));
@@ -1033,7 +1114,7 @@ public sealed class InstanceCommandTests : IDisposable
             gameMinRevision: release.GameMinRevision,
             download: new DownloadInfo(release.Download.Url, sha256, release.Download.SizeBytes, release.Download.ContentType),
             installSizeBytes: release.InstallSizeBytes,
-            dependencies: release.Dependencies,
+            dependencies: dependencies ?? release.Dependencies,
             source: "index");
     }
 

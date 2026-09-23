@@ -4,6 +4,7 @@ using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using Borea.App.Localization;
 using Borea.Composition;
 using Borea.Core.Dependencies;
 using Borea.Core.History;
@@ -871,6 +872,81 @@ public partial class MainViewModel
         => RunUpdateAsync(item, item.InstanceId, () => RunHandoverAsync(item));
 
     /// <summary>
+    /// Checks what the recorded release needs before the row asks, so that the
+    /// confirmation names a required dependency the instance does not have.
+    /// </summary>
+    internal async Task BeginManageContentAsync(ContentItem item)
+    {
+        if (_services is not { } services || item.IsInstalling)
+            return;
+
+        using var libraryUse = TryUseLibrary();
+        if (libraryUse is null)
+        {
+            item.InstallError = Localization.LibraryFolderBusy;
+            return;
+        }
+
+        CancelUpdate(item);
+        item.InstallError = null;
+        try
+        {
+            var instance = await services.Instances.GetByIdAsync(item.InstanceId)
+                ?? throw new InvalidOperationException(Localization.InstallInstanceMissing);
+            var recorded = instance.Mods.FirstOrDefault(mod => ModIds.Equals(mod.ModId, item.ModId) && mod.Ownership == ModInstallOwnership.Foreign)
+                ?? throw new InvalidOperationException(Localization.ManualInstallsInstanceChanged);
+            item.ManageDependencies = await HandoverDependencies.Check(instance, recorded).PlanAsync(
+                services.InstallPlanner,
+                instance,
+                recorded,
+                services.Mods,
+                services.InstalledVersion.GetInstalledVersion()?.Version,
+                CurrentPlatform());
+            item.InstallManageDependencies = true;
+            item.IsConfirmingManage = true;
+        }
+        catch (Exception exception) when (IsInstallFailure(exception))
+        {
+            item.InstallError = exception.Message;
+        }
+    }
+
+    /// <summary>
+    /// "Needs library >= 1.0.0, which this instance does not have.", followed
+    /// by why Borea cannot install it or by the warnings of the plan that would.
+    /// </summary>
+    internal string? HandoverMissingText(HandoverDependencies? dependencies)
+    {
+        if (dependencies is not { Missing.Count: > 0 })
+            return null;
+
+        var text = Localization.FormatContentManageMissing(DependencyList(dependencies.Missing));
+        if (dependencies.Plan is not { } plan)
+            return text;
+
+        if (!plan.IsReady)
+            return $"{text} {Localization.FormatContentManageCannotInstall(Describe(plan.Conflicts.Concat(plan.UnresolvedChoices)))}";
+
+        if (dependencies.NotOwned.Count > 0)
+            return $"{text} {Localization.FormatContentManageNotOwned(string.Join(", ", dependencies.NotOwned.Select(ContentName)))}";
+
+        return plan.Warnings.Count > 0 ? $"{text} {Describe(plan.Warnings)}" : text;
+    }
+
+    internal string? HandoverInstallMissingText(HandoverDependencies? dependencies)
+        => dependencies is { CanInstallMissing: true, Plan: { } plan }
+            ? Localization.FormatContentManageInstallMissing(string.Join(", ", plan.Operations.Select(operation => $"{ContentName(operation.Release.ModId)} {operation.Release.Version}")))
+            : null;
+
+    internal string? HandoverNotInstalledText(HandoverDependencies? dependencies)
+        => dependencies is { NotInstalled.Count: > 0 }
+            ? Localization.FormatContentManageNotInstalled(DependencyList(dependencies.NotInstalled))
+            : null;
+
+    private static string DependencyList(IEnumerable<ModDependency> dependencies)
+        => string.Join(", ", dependencies.Select(PlanningText.Dependency));
+
+    /// <summary>
     /// Returns whether the handover ran, so the caller reloads the instances.
     /// </summary>
     private async Task<bool> RunHandoverAsync(ContentItem item)
@@ -885,7 +961,9 @@ public partial class MainViewModel
             return false;
         }
 
+        var dependencies = item.InstallManageDependencies && item.ManageDependencies is { CanInstallMissing: true } check ? check.Plan : null;
         item.IsConfirmingManage = false;
+        item.ManageDependencies = null;
         item.InstallError = null;
         item.IsInstalling = true;
         var run = item.Run = StartInstallRun(StartTask(TaskKind.ModHandover, item.Name, item.InstanceId, item.ModId));
@@ -894,6 +972,9 @@ public partial class MainViewModel
         string? error = null;
         try
         {
+            if (dependencies is not null)
+                await services.PlanExecutor.ExecuteAsync(dependencies, enable: true, ProgressOf(item), run.InstallStop);
+
             // the stop reaches the download only, so a stopped handover never touched the folder
             await run.InstallStop.RunAsync(
                 (progress, cancellationToken) => services.ForeignModHandover.TakeOwnershipAsync(item.InstanceId, item.ModId, progress, cancellationToken),
@@ -1025,6 +1106,23 @@ public sealed partial class ContentItem : ObservableObject, IUpdateRow
     public bool CanManage => !IsOwned && !IsInstalling && !IsMissing;
 
     public string ManageConfirmText => _owner.Localization.FormatContentManageConfirm(Name, Version);
+
+    public string? ManageMissingText => _owner.HandoverMissingText(ManageDependencies);
+
+    /// <summary>The label of the choice to install the missing dependencies first, or null when Borea cannot install them.</summary>
+    public string? ManageInstallMissingText => _owner.HandoverInstallMissingText(ManageDependencies);
+
+    public string? ManageNotInstalledText => _owner.HandoverNotInstalledText(ManageDependencies);
+
+    /// <summary>What the recorded release needs, checked when the row starts to ask for the handover.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ManageMissingText))]
+    [NotifyPropertyChangedFor(nameof(ManageInstallMissingText))]
+    [NotifyPropertyChangedFor(nameof(ManageNotInstalledText))]
+    private HandoverDependencies? _manageDependencies;
+
+    [ObservableProperty]
+    private bool _installManageDependencies = true;
 
     [ObservableProperty]
     private bool _isEnabled;
@@ -1162,6 +1260,9 @@ public sealed partial class ContentItem : ObservableObject, IUpdateRow
         OnPropertyChanged(nameof(RemoveActionText));
         OnPropertyChanged(nameof(UpdateText));
         OnPropertyChanged(nameof(ManageConfirmText));
+        OnPropertyChanged(nameof(ManageMissingText));
+        OnPropertyChanged(nameof(ManageInstallMissingText));
+        OnPropertyChanged(nameof(ManageNotInstalledText));
     }
 
     [RelayCommand]
@@ -1183,14 +1284,14 @@ public sealed partial class ContentItem : ObservableObject, IUpdateRow
     private Task InstallAgainAsync() => _owner.InstallMissingAgainAsync(this, InstanceId, [ModId]);
 
     [RelayCommand]
-    private void BeginManage()
-    {
-        MainViewModel.CancelUpdate(this);
-        IsConfirmingManage = true;
-    }
+    private Task BeginManageAsync() => _owner.BeginManageContentAsync(this);
 
     [RelayCommand]
-    private void CancelManage() => IsConfirmingManage = false;
+    private void CancelManage()
+    {
+        IsConfirmingManage = false;
+        ManageDependencies = null;
+    }
 
     [RelayCommand]
     private Task ConfirmManageAsync() => _owner.TakeOwnershipOfContentAsync(this);

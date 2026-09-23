@@ -6,6 +6,7 @@ using Borea.Core.Instances;
 using Borea.Core.Launch;
 using Borea.Core.ModLoaders;
 using Borea.Core.Mods;
+using Borea.Core.Planning;
 
 namespace Borea.Cli.Commands;
 
@@ -547,17 +548,74 @@ internal static class InstanceCommand
     {
         var instance = ArgumentRules.Text("instance", InstanceArgumentDescription);
         var mod = ArgumentRules.Text("mod-id", "The id of a mod in the instance that Borea did not install.");
+        var withDependencies = new Option<bool>("--with-dependencies") { Description = "Also install the required dependencies of the release that the instance does not have." };
+        var withoutDependencies = new Option<bool>("--without-dependencies") { Description = "Take the mod over although required dependencies of the release are missing." };
         var takeOwnership = new Command(
             "take-ownership",
-            "Install the release a mod is recorded as over its folder, so Borea owns its files and can update and remove it. The mod keeps its place in the instance and its enabled state, and files in the folder that the release does not hold are lost.");
+            "Install the release a mod is recorded as over its folder, so Borea owns its files and can update and remove it. The mod keeps its place in the instance and its enabled state, and files in the folder that the release does not hold are lost. A required dependency that the instance does not have stops the command, unless --with-dependencies or --without-dependencies says what to do.");
         takeOwnership.Arguments.Add(instance);
         takeOwnership.Arguments.Add(mod);
+        takeOwnership.Options.Add(withDependencies);
+        takeOwnership.Options.Add(withoutDependencies);
+        takeOwnership.Validators.Add(result =>
+        {
+            if (result.GetValue(withDependencies) && result.GetValue(withoutDependencies))
+                result.AddError("Pass --with-dependencies or --without-dependencies, not both.");
+        });
 
         takeOwnership.SetAction((parseResult, cancellationToken) => CommandRunner.RunAsync(parseResult, services, cancellationToken, async (cli, output, error, ct) =>
         {
             var target = await InstanceLookup.ResolveAsync(cli.Instances, parseResult.GetRequiredValue(instance)).ConfigureAwait(false);
+            var modId = parseResult.GetRequiredValue(mod);
+
+            // a mod that is not foreign goes on to the handover, which says why it refuses
+            if (target.Mods.FirstOrDefault(item => ModIds.Equals(item.ModId, modId)) is { Ownership: ModInstallOwnership.Foreign } recorded)
+            {
+                var dependencies = HandoverDependencies.Check(target, recorded);
+                foreach (var dependency in dependencies.NotInstalled)
+                    output.WriteLine($"note: {dependency} is not installed. Borea does not install it.");
+
+                if (dependencies.Missing.Count > 0)
+                {
+                    if (parseResult.GetValue(withDependencies))
+                    {
+                        dependencies = await dependencies.PlanAsync(
+                            cli.InstallPlanner,
+                            target,
+                            recorded,
+                            cli.Mods,
+                            cli.InstalledVersion.GetInstalledVersion()?.Version,
+                            ModInstallCommands.CurrentPlatform(),
+                            ct).ConfigureAwait(false);
+                        ModInstallCommands.PrintPlan(output, dependencies.Plan!);
+                        if (dependencies.NotOwned.Count > 0)
+                        {
+                            throw new InvalidOperationException(
+                                $"Borea does not manage {string.Join(", ", dependencies.NotOwned.Select(id => $"'{id}'"))} yet, so it cannot update it. " +
+                                "Take it over first with 'borea instance take-ownership', or run the command with --without-dependencies.");
+                        }
+
+                        if (!dependencies.CanInstallMissing)
+                            throw new InvalidOperationException("Borea cannot install the missing dependencies. Run the command with --without-dependencies to take the mod over without them.");
+
+                        await ModInstallCommands.ExecuteAsync(cli, dependencies.Plan!, error, ct).ConfigureAwait(false);
+                    }
+                    else if (parseResult.GetValue(withoutDependencies))
+                    {
+                        foreach (var dependency in dependencies.Missing)
+                            error.WriteLine($"warning: {dependency} is not installed.");
+                    }
+                    else
+                    {
+                        throw new InvalidOperationException(
+                            $"'{recorded.ModId}' {recorded.Version} needs what '{target.Name}' does not have: {string.Join("; ", dependencies.Missing)}. " +
+                            "Run the command with --with-dependencies to install it as well, or with --without-dependencies to take the mod over without it.");
+                    }
+                }
+            }
+
             var result = await cli.ForeignModHandover
-                .TakeOwnershipAsync(target.InstanceId, parseResult.GetRequiredValue(mod), new InstallProgressOutput(error), ct)
+                .TakeOwnershipAsync(target.InstanceId, modId, new InstallProgressOutput(error), ct)
                 .ConfigureAwait(false);
 
             var owned = result.Installed;

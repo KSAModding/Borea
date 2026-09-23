@@ -1089,6 +1089,21 @@
   <data name="ContentManageConfirmAction" xml:space="preserve">
     <value>Ersetzen und verwalten</value>
   </data>
+  <data name="ContentManageMissingFormat" xml:space="preserve">
+    <value>Benötigt {0}, was in dieser Instanz fehlt.</value>
+  </data>
+  <data name="ContentManageCannotInstallFormat" xml:space="preserve">
+    <value>Borea kann es nicht installieren: {0}</value>
+  </data>
+  <data name="ContentManageNotOwnedFormat" xml:space="preserve">
+    <value>Borea verwaltet {0} noch nicht und kann es daher nicht aktualisieren. Lass Borea zuerst {0} verwalten.</value>
+  </data>
+  <data name="ContentManageInstallMissingFormat" xml:space="preserve">
+    <value>Auch {0} installieren</value>
+  </data>
+  <data name="ContentManageNotInstalledFormat" xml:space="preserve">
+    <value>Kann auch {0} nutzen, was Borea nicht installiert.</value>
+  </data>
   <data name="ContentUpdate" xml:space="preserve">
     <value>Aktualisieren</value>
   </data>
