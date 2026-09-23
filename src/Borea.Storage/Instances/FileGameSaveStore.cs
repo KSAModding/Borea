@@ -288,13 +288,23 @@ public sealed class FileGameSaveStore : IGameSaveStore
             if (item is FileInfo file)
             {
                 Directory.CreateDirectory(Path.GetDirectoryName(target)!);
-                file.CopyTo(target);
+                CopyFile(file, target);
             }
             else
             {
                 Directory.CreateDirectory(target);
             }
         }
+    }
+
+    /// <summary>On Windows, a file that another program is writing fails the copy instead of arriving half written.</summary>
+    private static void CopyFile(FileInfo source, string target)
+    {
+        using (var input = source.Open(FileMode.Open, FileAccess.Read, FileShare.Read))
+        using (var output = new FileStream(target, FileMode.CreateNew, FileAccess.Write, FileShare.None))
+            input.CopyTo(output);
+
+        File.SetLastWriteTimeUtc(target, source.LastWriteTimeUtc);
     }
 
     internal static void TryDelete(Action delete)

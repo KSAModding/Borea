@@ -178,6 +178,17 @@ public sealed class FileGameSaveStoreTests : IDisposable
         Assert.True(Directory.Exists(entry.Path));
     }
 
+    [WindowsFact("Only Windows keeps a reader out while another handle writes the file.")]
+    public async Task CopyAsync_FileOpenForWriting_FailsInsteadOfCopyingItHalfWritten()
+    {
+        var entry = await AddSaveAsync(_instanceId, "Orbit");
+        using var writer = new FileStream(Path.Combine(entry.Path, "universe.xml"), FileMode.Open, FileAccess.Write, FileShare.Read);
+
+        await Assert.ThrowsAsync<IOException>(() => _store.CopyAsync(entry, _otherInstanceId, replace: false));
+
+        Assert.Empty(Directory.GetFileSystemEntries(_paths.GetInstanceRoot(_otherInstanceId)));
+    }
+
     [Fact]
     public async Task DeleteAsync_MovesTheFolderIntoTheBackups()
     {
