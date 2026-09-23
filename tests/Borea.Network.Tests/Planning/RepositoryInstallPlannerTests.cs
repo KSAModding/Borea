@@ -670,12 +670,69 @@ public sealed class RepositoryInstallPlannerTests
     }
 
     [Fact]
+    public async Task CheckHandover_MissingRequiredDependency_PlansOnlyTheDependency()
+    {
+        var owner = Foreign("A", [Required("B"), new ModDependency("C", ModDependencyKind.Optional), new ModDependency("D", ModDependencyKind.Recommends)]);
+        var instance = Instance.FromExisting(Guid.NewGuid(), "Test", InstanceSource.Custom.Value, DateTimeOffset.UtcNow, [owner], false);
+
+        var check = await CheckHandoverAsync(instance, owner, [owner.Metadata, Release("B"), Release("C"), Release("D")]);
+
+        Assert.Equal(["B"], check.Missing.Select(value => value.ModId));
+        Assert.Equal(["C", "D"], check.NotInstalled.Select(value => value.ModId));
+        Assert.True(check.CanInstallMissing);
+        Assert.Equal(["B"], check.Plan!.Operations.Select(value => value.Release.ModId));
+        Assert.Equal(InstallReason.Dependency, check.Plan.Operations.Single().Reason);
+    }
+
+    [Fact]
+    public async Task CheckHandover_DependenciesPresent_PlansNothing()
+    {
+        var owner = Foreign("A", [Required("B")]);
+        var instance = Instance.FromExisting(Guid.NewGuid(), "Test", InstanceSource.Custom.Value, DateTimeOffset.UtcNow, [owner, Installed("B")], false);
+        var repository = new FakeRepository([owner.Metadata, Release("B")]);
+
+        var check = await HandoverDependencies.Check(instance, owner).PlanAsync(new RepositoryInstallPlanner(new ModDependencyResolver()), instance, owner, repository, null, null);
+
+        Assert.Empty(check.Missing);
+        Assert.Null(check.Plan);
+        Assert.Equal(0, repository.VersionReads);
+    }
+
+    [Fact]
+    public async Task CheckHandover_UnavailableRequiredDependency_CannotInstallIt()
+    {
+        var owner = Foreign("A", [Required("B")]);
+        var instance = Instance.FromExisting(Guid.NewGuid(), "Test", InstanceSource.Custom.Value, DateTimeOffset.UtcNow, [owner], false);
+
+        var check = await CheckHandoverAsync(instance, owner, [owner.Metadata]);
+
+        Assert.Equal(["B"], check.Missing.Select(value => value.ModId));
+        Assert.False(check.CanInstallMissing);
+        Assert.Contains(check.Plan!.Conflicts, value => value.Code == "unsatisfied-dependency");
+    }
+
+    [Fact]
+    public async Task CheckHandover_DependencyRecordedAsForeignBelowTheBound_CannotInstallIt()
+    {
+        var owner = Foreign("A", [Required("B", min: "2.0.0")]);
+        var instance = Instance.FromExisting(Guid.NewGuid(), "Test", InstanceSource.Custom.Value, DateTimeOffset.UtcNow, [owner, Foreign("B", [])], false);
+
+        var check = await CheckHandoverAsync(instance, owner, [owner.Metadata, Release("B"), Release("B", "2.0.0")]);
+
+        Assert.Equal(["B"], check.Missing.Select(value => value.ModId));
+        Assert.Equal(["B"], check.NotOwned);
+        Assert.False(check.CanInstallMissing);
+    }
+
+    [Fact]
     public void Constructor_UndefinedChannel_Throws()
     {
         Assert.Throws<ArgumentOutOfRangeException>(() => new RepositoryInstallPlanner(new ModDependencyResolver(), (ReleaseChannel)42));
     }
 
     private static Instance EmptyInstance() => new("Test", InstanceSource.Custom.Value);
+    private static Task<HandoverDependencies> CheckHandoverAsync(Instance instance, InstalledMod owner, IReadOnlyList<ModVersionMetadata> available) => HandoverDependencies.Check(instance, owner).PlanAsync(new RepositoryInstallPlanner(new ModDependencyResolver()), instance, owner, new FakeRepository(available), null, null);
+    private static InstalledMod Foreign(string id, IReadOnlyList<ModDependency> dependencies) => new(id, ModVersion.Parse("1.0.0"), InstallReason.Manual, DateTimeOffset.UtcNow, Release(id, dependencies: dependencies), ownership: ModInstallOwnership.Foreign);
     private static Task<InstallPlan> PlanInChannelAsync(ReleaseChannel? plannerChannel, Instance instance, IReadOnlyList<RequestedMod> requested, IReadOnlyList<ModVersionMetadata> available) => (plannerChannel is { } channel ? new RepositoryInstallPlanner(new ModDependencyResolver(), channel) : new RepositoryInstallPlanner(new ModDependencyResolver())).PlanAsync(new InstallPlanningRequest(instance, requested, new FakeRepository(available)));
     private static Task<InstallPlan> PlanAsync(IReadOnlyList<ModVersionMetadata> requested, IReadOnlyList<ModVersionMetadata> available) => new RepositoryInstallPlanner(new ModDependencyResolver()).PlanAsync(new InstallPlanningRequest(new Instance("Test", InstanceSource.Custom.Value), requested.Select(value => new RequestedMod(value, InstallReason.Manual)).ToList(), new FakeRepository(available)));
     private static ModDependency Required(string id, string? min = null, string? max = null) => new(id, ModDependencyKind.Required, min is null ? null : ModVersion.Parse(min), max is null ? null : ModVersion.Parse(max));
