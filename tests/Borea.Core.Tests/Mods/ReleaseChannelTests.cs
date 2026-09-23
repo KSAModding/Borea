@@ -24,6 +24,16 @@ public sealed class ReleaseChannelTests
     }
 
     [Theory]
+    [InlineData(ReleaseStatus.Stable, ReleaseChannel.Stable)]
+    [InlineData(ReleaseStatus.Testing, ReleaseChannel.Testing)]
+    [InlineData(ReleaseStatus.Dev, ReleaseChannel.Dev)]
+    [InlineData(ReleaseStatus.Unknown, ReleaseChannel.Dev)]
+    public void NarrowestFor_IsTheFirstChannelThatIncludesTheStatus(ReleaseStatus status, ReleaseChannel expected)
+    {
+        Assert.Equal(expected, ReleaseChannels.NarrowestFor(status));
+    }
+
+    [Theory]
     [InlineData(ReleaseChannel.Stable, "stable")]
     [InlineData(ReleaseChannel.Testing, "testing")]
     [InlineData(ReleaseChannel.Dev, "dev")]
