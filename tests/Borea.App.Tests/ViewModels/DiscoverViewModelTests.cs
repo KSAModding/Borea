@@ -311,6 +311,63 @@ public sealed class DiscoverViewModelTests
     }
 
     [Fact]
+    public async Task Count_WithoutAFilter_NamesTheEntriesOfTheTab()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var viewModel = harness.ViewModel;
+        await viewModel.EnsureDiscoverLoadedAsync();
+
+        Assert.Equal("3 mods", viewModel.DiscoverCountText);
+
+        viewModel.ShowDiscoverLoadersCommand.Execute(null);
+        Assert.Equal("1 mod loader", viewModel.DiscoverCountText);
+    }
+
+    [Fact]
+    public async Task Count_WithAFilterOrASearch_NamesTheShownAndTheTotal()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var viewModel = harness.ViewModel;
+        await viewModel.EnsureDiscoverLoadedAsync();
+
+        viewModel.SearchText = "advanced flight";
+        Assert.Equal("1 of 3 mods", viewModel.DiscoverCountText);
+
+        viewModel.SearchText = string.Empty;
+        viewModel.SelectLicenseCommand.Execute("GPL-3.0");
+        Assert.Equal("0 of 3 mods", viewModel.DiscoverCountText);
+
+        viewModel.ClearDiscoverFiltersCommand.Execute(null);
+        Assert.Equal("3 mods", viewModel.DiscoverCountText);
+    }
+
+    [Fact]
+    public async Task Count_InGerman_UsesTheGermanWords()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var viewModel = harness.ViewModel;
+        await viewModel.EnsureDiscoverLoadedAsync();
+        var changed = new List<string?>();
+        viewModel.PropertyChanged += (_, e) => changed.Add(e.PropertyName);
+
+        harness.Localization.TrySetCulture("de");
+
+        Assert.Contains(nameof(MainViewModel.DiscoverCountText), changed);
+        Assert.Equal("3 Mods", viewModel.DiscoverCountText);
+        viewModel.SearchText = "advanced flight";
+        Assert.Equal("1 von 3 Mods", viewModel.DiscoverCountText);
+    }
+
+    [Fact]
+    public async Task Count_WhenTheIndexIsUnreachable_IsHidden()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(indexOffline: true);
+        await harness.ViewModel.EnsureDiscoverLoadedAsync();
+
+        Assert.Null(harness.ViewModel.DiscoverCountText);
+    }
+
+    [Fact]
     public async Task HideInstalled_DropsModsTheActiveInstanceHolds()
     {
         using var harness = await ViewModelHarness.CreateAsync();
