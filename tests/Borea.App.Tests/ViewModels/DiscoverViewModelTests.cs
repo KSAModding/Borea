@@ -52,6 +52,7 @@ public sealed class DiscoverViewModelTests
         Assert.Equal<DateTimeOffset?>(release!.ReleaseDate, afc.UpdatedAt);
         Assert.NotEqual<DateTimeOffset?>(SnapshotUpdatedAt, afc.UpdatedAt);
         Assert.Equal(harness.Localization.FormatTimeAgoShort(DateTimeOffset.UtcNow - afc.UpdatedAt!.Value), afc.UpdatedText);
+        Assert.Equal($"Updated on {MainViewModel.DateText(afc.UpdatedAt.Value)}", afc.UpdatedDateText);
 
         Assert.Null(armory.DownloadsText);
         Assert.Null(armory.PublishedText);

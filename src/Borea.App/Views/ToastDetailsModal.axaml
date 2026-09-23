@@ -1,15 +1,16 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Borea.App.ViewModels"
+             xmlns:views="using:Borea.App.Views"
              x:Class="Borea.App.Views.ToastDetailsModal"
              x:DataType="vm:MainViewModel">
     <!-- the whole text of an error toast -->
-    <Panel Background="#99000000">
+    <Panel Background="#99000000" views:ModalBackdrop.CloseButton="{Binding #CloseButton}">
         <Border Classes="modal" Width="561" Margin="80,0,0,0">
             <StackPanel>
                 <Grid ColumnDefinitions="*,Auto" Margin="24,24,24,0">
                     <TextBlock Classes="heading-lg" Text="{Binding ToastInDetails.Message}" TextWrapping="Wrap" VerticalAlignment="Center" />
-                    <Button Grid.Column="1" Classes="icon" Command="{Binding CloseToastDetailsCommand}" AutomationProperties.Name="{Binding Localization.ModalClose}">
+                    <Button x:Name="CloseButton" Grid.Column="1" Classes="icon" Command="{Binding CloseToastDetailsCommand}" AutomationProperties.Name="{Binding Localization.ModalClose}">
                         <Path Classes="icon" Data="{StaticResource Icon.Close}" />
                     </Button>
                 </Grid>

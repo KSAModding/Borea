@@ -1,3 +1,5 @@
+using Borea.App.ViewModels;
+
 namespace Borea.App.Tests.ViewModels;
 
 public sealed class HomeViewModelTests
@@ -12,6 +14,7 @@ public sealed class HomeViewModelTests
         Assert.Equal(["MeasureTools", "AdvancedFlightComputer", "KSArmory"], viewModel.RecentItems.Select(item => item.ModId));
         Assert.DoesNotContain(viewModel.RecentItems, item => item.ModId == "StarMap");
         Assert.Equal(harness.Localization.FormatTimeAgoShort(DateTimeOffset.UtcNow - viewModel.RecentItems[0].UpdatedAt), viewModel.RecentItems[0].UpdatedText);
+        Assert.Equal($"Updated on {MainViewModel.DateText(viewModel.RecentItems[0].UpdatedAt)}", viewModel.RecentItems[0].UpdatedDateText);
     }
 
     [Fact]

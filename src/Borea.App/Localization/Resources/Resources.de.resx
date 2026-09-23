@@ -513,6 +513,9 @@
   <data name="LibraryLastPlayedFormat" xml:space="preserve">
     <value>Zuletzt gespielt am {0}</value>
   </data>
+  <data name="LibraryModCountFormat" xml:space="preserve">
+    <value>Installierte Mods: {0}</value>
+  </data>
   <data name="LibraryNowActiveFormat" xml:space="preserve">
     <value>{0} ist jetzt die aktive Instanz.</value>
   </data>
@@ -878,6 +881,9 @@
   </data>
   <data name="GameSaveOlderBuild" xml:space="preserve">
     <value>Älterer Build</value>
+  </data>
+  <data name="GameSaveBuildFormat" xml:space="preserve">
+    <value>Mit dem Spiel-Build {0} erstellt</value>
   </data>
   <data name="GameSaveOlderBuildFormat" xml:space="preserve">
     <value>Mit {0} erstellt. Installiert ist {1}.</value>
@@ -2181,6 +2187,9 @@
   <data name="ContentPublishedFormat" xml:space="preserve">
     <value>Veröffentlicht {0}</value>
   </data>
+  <data name="ContentUpdatedOnFormat" xml:space="preserve">
+    <value>Aktualisiert am {0}</value>
+  </data>
   <data name="ContentDownloads" xml:space="preserve">
     <value>Downloads</value>
   </data>
@@ -2621,6 +2630,9 @@
   </data>
   <data name="PackModCountFormat" xml:space="preserve">
     <value>Mods: {0}</value>
+  </data>
+  <data name="PackReleasedOnFormat" xml:space="preserve">
+    <value>Veröffentlicht am {0}</value>
   </data>
   <data name="PackIncompatibleFormat" xml:space="preserve">
     <value>Dieses Modpack braucht die Spielversion {0} oder neuer.</value>

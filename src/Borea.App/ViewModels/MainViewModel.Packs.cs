@@ -613,7 +613,7 @@ public sealed partial class PackItem : ObservableObject, IPlanRow
     /// <summary>How long ago this pack version came out.</summary>
     public string ReleasedText => _owner.ShortAgeText(Metadata.ReleasedAt);
 
-    public string ReleasedDateText => MainViewModel.DateText(Metadata.ReleasedAt);
+    public string ReleasedDateText => _owner.Localization.FormatPackReleasedOn(MainViewModel.DateText(Metadata.ReleasedAt));
 
     /// <summary>The date of the first pack version the index reports, or null when it reports none.</summary>
     public DateTimeOffset? PublishedAt { get; }

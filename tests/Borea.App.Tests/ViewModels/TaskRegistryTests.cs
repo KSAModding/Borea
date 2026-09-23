@@ -127,6 +127,16 @@ public sealed class TaskRegistryTests
         Assert.Equal(_localization.FormatTaskInstall("StarMap 0.4.7"), task.Title);
     }
 
+    [Fact]
+    public void EndedTask_ShowsHowLongAgoItEnded_AndTheDateInItsToolTip()
+    {
+        var endedAt = DateTimeOffset.UtcNow.AddMinutes(-5);
+        var task = TaskItem.FromEntry(Registry(null), new(TaskKind.ModRemoval, TaskState.Finished, "MeasureTools", null, null, endedAt.AddMinutes(-1), endedAt));
+
+        Assert.Equal("5m ago", task.TimeText);
+        Assert.Equal(MainViewModel.DateTimeText(endedAt), task.TimeToolTip);
+    }
+
     private TaskRegistry Registry(FakeRepository? repository)
         => new(_localization, () => repository, () => null, _ => Task.CompletedTask);
 

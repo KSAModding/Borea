@@ -407,6 +407,19 @@ public sealed class LibraryViewModelTests
     }
 
     [Fact]
+    public async Task Load_NamesTheModCountInItsToolTip()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var viewModel = harness.ViewModel;
+        await harness.Services.Instances.CreateAsync("Alpha", InstanceSource.Custom.Value);
+        await viewModel.LoadAsync();
+
+        var row = Assert.Single(viewModel.Instances);
+
+        Assert.Equal("Installed mods: 0", row.ModCountToolTip);
+    }
+
+    [Fact]
     public async Task Load_GameLogNewerThanTheRecordedLaunch_ShowsTheLogTime()
     {
         using var harness = await ViewModelHarness.CreateAsync();

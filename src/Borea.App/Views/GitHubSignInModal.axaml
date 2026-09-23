@@ -33,7 +33,7 @@
                     </StackPanel>
                     <TextBlock Classes="body-md danger" Text="{Binding GitHubSignInError}" TextWrapping="Wrap" IsVisible="{Binding GitHubSignInError, Converter={x:Static ObjectConverters.IsNotNull}}" />
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
-                        <Button Classes="text" Content="{Binding Localization.LibraryCancel}" Command="{Binding CancelGitHubSignInCommand}" VerticalAlignment="Center" />
+                        <Button Classes="text tall" Content="{Binding Localization.LibraryCancel}" Command="{Binding CancelGitHubSignInCommand}" VerticalAlignment="Center" />
                         <Button Classes="cta" Command="{Binding SignInToGitHubCommand}" IsVisible="{Binding CanRetryGitHubSignIn}">
                             <TextBlock Classes="action-lg" Text="{Binding Localization.DiscoverIndexRetry}" VerticalAlignment="Center" />
                         </Button>

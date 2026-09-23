@@ -414,6 +414,9 @@
   <data name="LibraryLastPlayedFormat" xml:space="preserve">
     <value>Sailed last on {0}</value>
   </data>
+  <data name="LibraryModCountFormat" xml:space="preserve">
+    <value>Barrels aboard: {0}</value>
+  </data>
   <data name="LibraryNowActiveFormat" xml:space="preserve">
     <value>{0} be the active sea now.</value>
   </data>
@@ -761,6 +764,9 @@
   </data>
   <data name="GameSaveOlderBuild" xml:space="preserve">
     <value>Build o' the past</value>
+  </data>
+  <data name="GameSaveBuildFormat" xml:space="preserve">
+    <value>Put t'getter with build {0}</value>
   </data>
   <data name="GameSaveOlderBuildFormat" xml:space="preserve">
     <value>Put t'getter with {0}. The build onboard is {1}.</value>
@@ -1380,6 +1386,9 @@
   <data name="ContentPublishedFormat" xml:space="preserve">
     <value>Maiden voyage {0}</value>
   </data>
+  <data name="ContentUpdatedOnFormat" xml:space="preserve">
+    <value>Refitted on {0}</value>
+  </data>
   <data name="ContentDownloads" xml:space="preserve">
     <value>Booty in the hold</value>
   </data>
@@ -1733,6 +1742,9 @@
   </data>
   <data name="PackModCountFormat" xml:space="preserve">
     <value>Barrels o' fun: {0}</value>
+  </data>
+  <data name="PackReleasedOnFormat" xml:space="preserve">
+    <value>Set sail on {0}</value>
   </data>
   <data name="PackIncompatibleFormat" xml:space="preserve">
     <value>This pack be needin' game {0} or fresher.</value>

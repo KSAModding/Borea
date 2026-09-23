@@ -374,6 +374,12 @@
         </Style>
 
         <!-- Buttons -->
+        <Style Selector="Button, ToggleSwitch, ComboBox, CheckBox, RadioButton">
+            <Setter Property="Cursor" Value="Hand" />
+        </Style>
+        <Style Selector="Button:disabled, ToggleSwitch:disabled, ComboBox:disabled, CheckBox:disabled, RadioButton:disabled">
+            <Setter Property="Cursor" Value="Arrow" />
+        </Style>
         <Style Selector="Button.text">
             <Setter Property="Padding" Value="12,6" />
             <Setter Property="CornerRadius" Value="100" />
@@ -420,6 +426,10 @@
         <Style Selector="Button.cta:pointerover /template/ ContentPresenter">
             <Setter Property="Background" Value="{StaticResource Brush.Accent}" />
             <Setter Property="Opacity" Value="0.9" />
+        </Style>
+        <!-- a text button beside a cta takes its height, so the two read as one pair -->
+        <Style Selector="Button.text.tall">
+            <Setter Property="Height" Value="38" />
         </Style>
         <!-- the purple buttons stay purple while pressed or disabled, instead of turning into the grey Fluent button -->
         <Style Selector="Button.text.primary:pressed /template/ ContentPresenter, Button.cta:pressed /template/ ContentPresenter">
@@ -533,10 +543,16 @@
             <Setter Property="Padding" Value="0" />
             <Setter Property="Background" Value="Transparent" />
             <Setter Property="BorderThickness" Value="0" />
-            <Setter Property="Cursor" Value="Hand" />
         </Style>
         <Style Selector="Button.plain:pointerover /template/ ContentPresenter">
             <Setter Property="Background" Value="Transparent" />
+        </Style>
+        <!-- a plain button that is only a title or an icon turns to the accent colour under the pointer; a row keeps the hover of its card -->
+        <Style Selector="Button.plain:pointerover > TextBlock">
+            <Setter Property="Foreground" Value="{StaticResource Brush.Accent}" />
+        </Style>
+        <Style Selector="Button.plain:pointerover > Path.icon">
+            <Setter Property="Stroke" Value="{StaticResource Brush.Accent}" />
         </Style>
         <Style Selector="Button.plain.back:pointerover /template/ ContentPresenter">
             <Setter Property="Background" Value="{StaticResource Brush.AccentSoft}" />
@@ -545,10 +561,7 @@
         <Style Selector="Button.plain:pressed /template/ ContentPresenter">
             <Setter Property="Background" Value="Transparent" />
         </Style>
-        <!-- a plain button carries its own content, so a disabled one keeps it and only loses the pointer -->
-        <Style Selector="Button.plain:disabled">
-            <Setter Property="Cursor" Value="Arrow" />
-        </Style>
+        <!-- a plain button carries its own content, so a disabled one keeps it -->
         <Style Selector="Button.plain:disabled /template/ ContentPresenter">
             <Setter Property="Background" Value="Transparent" />
             <Setter Property="Foreground" Value="{StaticResource Brush.Text}" />
@@ -649,7 +662,6 @@
             <Setter Property="HorizontalContentAlignment" Value="Center" />
             <Setter Property="VerticalContentAlignment" Value="Center" />
             <Setter Property="VerticalAlignment" Value="Center" />
-            <Setter Property="Cursor" Value="Hand" />
             <Setter Property="Content">
                 <Template>
                     <Path Classes="icon size-16" Data="{StaticResource Icon.Question}" />
@@ -680,12 +692,22 @@
             <Setter Property="BorderBrush" Value="{StaticResource Brush.Surface}" />
         </Style>
 
+        <!-- the track and the knob of the Fluent switch, without the header and the on and off text it keeps space for; the names let the Fluent states style the parts -->
         <Style Selector="ToggleSwitch.switch">
-            <Setter Property="MinWidth" Value="0" />
-            <Setter Property="Margin" Value="0" />
-            <Setter Property="Padding" Value="0" />
-            <Setter Property="OnContent" Value="" />
-            <Setter Property="OffContent" Value="" />
+            <Setter Property="Template">
+                <ControlTemplate>
+                    <Grid x:Name="SwitchAreaGrid" Background="{TemplateBinding Background}" TemplatedControl.IsTemplateFocusTarget="True">
+                        <Border x:Name="OuterBorder" Width="40" Height="20" CornerRadius="10" Background="{DynamicResource ToggleSwitchFillOff}" BorderBrush="{DynamicResource ToggleSwitchStrokeOff}" BorderThickness="{DynamicResource ToggleSwitchOuterBorderStrokeThickness}" />
+                        <Border x:Name="SwitchKnobBounds" Width="40" Height="20" CornerRadius="10" Background="{DynamicResource ToggleSwitchFillOn}" BorderBrush="{DynamicResource ToggleSwitchStrokeOn}" BorderThickness="{DynamicResource ToggleSwitchOnStrokeThickness}" />
+                        <Canvas x:Name="PART_SwitchKnob" Width="20" Height="20" HorizontalAlignment="Left">
+                            <Grid x:Name="PART_MovingKnobs" Width="20" Height="20">
+                                <Ellipse x:Name="SwitchKnobOn" Width="10" Height="10" Fill="{DynamicResource ToggleSwitchKnobFillOn}" />
+                                <Ellipse x:Name="SwitchKnobOff" Width="10" Height="10" Fill="{DynamicResource ToggleSwitchKnobFillOff}" />
+                            </Grid>
+                        </Canvas>
+                    </Grid>
+                </ControlTemplate>
+            </Setter>
         </Style>
 
         <!-- c/SplitButton-launch: a purple pill cut in two, 32px tall like c/link-cta, purple in every state -->

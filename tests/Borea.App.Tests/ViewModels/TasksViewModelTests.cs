@@ -22,6 +22,21 @@ public sealed class TasksViewModelTests
     private readonly TaskCompletionSource _gate = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
     [Fact]
+    public async Task TasksDrawer_BringsTheAgesOfTheTasksUpToDateWhenItOpens()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var viewModel = harness.ViewModel;
+        var task = viewModel.Tasks.Start(TaskKind.IndexRefresh, null, null, null, null, null, TaskState.Running);
+        viewModel.Tasks.End(task, TaskState.Finished);
+        var changed = new List<string?>();
+        task.PropertyChanged += (_, args) => changed.Add(args.PropertyName);
+
+        viewModel.ToggleTasksCommand.Execute(null);
+
+        Assert.Contains(nameof(TaskItem.TimeText), changed);
+    }
+
+    [Fact]
     public async Task TasksDrawer_OpensOverThePage_AndClosesOnToggleCloseAndNavigation()
     {
         using var harness = await ViewModelHarness.CreateAsync();
