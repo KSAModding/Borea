@@ -498,9 +498,6 @@
   <data name="LibraryCancel" xml:space="preserve">
     <value>Cancel</value>
   </data>
-  <data name="LibraryDeleteConfirm" xml:space="preserve">
-    <value>Delete this instance, its folder and its backups?</value>
-  </data>
   <data name="LibraryEmpty" xml:space="preserve">
     <value>No instances yet. Create one to get started.</value>
   </data>
@@ -2012,6 +2009,12 @@
   </data>
   <data name="ModalRenameInstanceTitle" xml:space="preserve">
     <value>Rename instance</value>
+  </data>
+  <data name="ModalDeleteInstanceTitle" xml:space="preserve">
+    <value>Delete instance</value>
+  </data>
+  <data name="ModalDeleteInstanceTextFormat" xml:space="preserve">
+    <value>Delete {0}, its folder and its backups? You cannot undo this.</value>
   </data>
   <data name="ModalInstanceExplanation" xml:space="preserve">
     <value>Instances are packages of mods and game content that Borea manages on top of your existing game install. You can create multiple instances and activate one at a time for different play experiences.</value>

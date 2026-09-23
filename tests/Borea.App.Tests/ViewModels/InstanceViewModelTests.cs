@@ -208,7 +208,8 @@ public sealed class InstanceViewModelTests
         await viewModel.LoadAsync();
         await viewModel.Instances.Single().OpenCommand.ExecuteAsync(null);
 
-        await viewModel.SelectedInstance!.ConfirmDeleteCommand.ExecuteAsync(null);
+        viewModel.SelectedInstance!.BeginDeleteCommand.Execute(null);
+        await viewModel.ConfirmDeleteModalCommand.ExecuteAsync(null);
 
         Assert.True(viewModel.CurrentWindowLibrary);
         Assert.False(viewModel.CurrentWindowInstance);
@@ -223,7 +224,8 @@ public sealed class InstanceViewModelTests
         await viewModel.LoadAsync();
         viewModel.IsChangingLibraryFolder = true;
 
-        await viewModel.Instances.Single().ConfirmDeleteCommand.ExecuteAsync(null);
+        viewModel.Instances.Single().BeginDeleteCommand.Execute(null);
+        await viewModel.ConfirmDeleteModalCommand.ExecuteAsync(null);
 
         var toast = Assert.Single(viewModel.Toasts.Items);
         Assert.True(toast.IsFailed);

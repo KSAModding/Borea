@@ -172,25 +172,6 @@ public sealed class InstanceRowTests
         Assert.Null(selected);
     }
 
-    [Fact]
-    public async Task ClickingTheDeleteConfirmationLeavesTheInstanceClosed()
-    {
-        using var harness = await CreateAsync();
-        var viewModel = harness.ViewModel;
-        viewModel.ActiveInstance!.BeginDeleteCommand.Execute(null);
-
-        var (opened, selected) = await OnLibraryAsync(harness, (window, page) =>
-        {
-            var cancel = Card(page).GetVisualDescendants().OfType<Button>()
-                .Single(button => button.Content as string == harness.Localization.LibraryCancel);
-            Click(window, cancel, new Point(cancel.Bounds.Width / 2, cancel.Bounds.Height / 2));
-            return (viewModel.ActiveInstance!.OpenCommand.ExecutionTask, viewModel.SelectedInstance);
-        });
-
-        Assert.Null(opened);
-        Assert.Null(selected);
-    }
-
     /// <summary>No test of the row starts the game, so a start is a failure and not a real process.</summary>
     private sealed class NoProcessStarter : IProcessStarter
     {

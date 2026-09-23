@@ -552,8 +552,6 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string LibraryCancel => Resources.LibraryCancel;
 
-    public string LibraryDeleteConfirm => Resources.LibraryDeleteConfirm;
-
     public string LibraryEmpty => Resources.LibraryEmpty;
 
     public string LibraryNeverPlayed => Resources.LibraryNeverPlayed;
@@ -1175,6 +1173,11 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string ModalCreateInstanceTitle => Resources.ModalCreateInstanceTitle;
 
     public string ModalRenameInstanceTitle => Resources.ModalRenameInstanceTitle;
+
+    public string ModalDeleteInstanceTitle => Resources.ModalDeleteInstanceTitle;
+
+    public string FormatModalDeleteInstanceText(string name)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ModalDeleteInstanceTextFormat, name);
 
     public string ModalInstanceExplanation => Resources.ModalInstanceExplanation;
 

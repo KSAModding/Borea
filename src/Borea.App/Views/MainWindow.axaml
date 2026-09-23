@@ -105,6 +105,9 @@
     <!-- modal: new instance, and rename instance -->
     <views:InstanceNameModal IsVisible="{Binding IsNameModalOpen}" />
 
+    <!-- modal: delete instance -->
+    <views:DeleteInstanceModal IsVisible="{Binding IsDeleteModalOpen}" />
+
     <!-- modal: launch arguments of an instance -->
     <views:LaunchArgumentsModal IsVisible="{Binding IsLaunchArgumentsModalOpen}" />
 

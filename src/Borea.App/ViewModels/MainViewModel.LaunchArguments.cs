@@ -35,7 +35,6 @@ public partial class MainViewModel
 
     internal void BeginEditLaunchArguments(InstanceItem item)
     {
-        item.IsConfirmingDelete = false;
         InstanceError = null;
         ModalLaunchArguments = ArgumentLine.Join(item.LaunchArguments);
         EditingLaunchArguments = item;

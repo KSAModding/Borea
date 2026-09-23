@@ -116,7 +116,8 @@ public sealed class InstanceHintTests
         Assert.Equal(harness.Localization.HomeNoActiveInstance, viewModel.HomeInstanceHintText);
 
         changed.Clear();
-        await viewModel.Instances.Single().ConfirmDeleteCommand.ExecuteAsync(null);
+        viewModel.Instances.Single().BeginDeleteCommand.Execute(null);
+        await viewModel.ConfirmDeleteModalCommand.ExecuteAsync(null);
         Assert.False(viewModel.HasInstances);
         Assert.Equal(harness.Localization.HomeNoInstance, viewModel.HomeInstanceHintText);
         Assert.Equal(harness.Localization.DiscoverNoInstance, viewModel.InstanceHintText);

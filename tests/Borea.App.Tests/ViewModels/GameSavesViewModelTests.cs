@@ -104,12 +104,30 @@ public sealed class GameSavesViewModelTests
         await OpenAsync(harness, "Main");
         await harness.ViewModel.ShowInstanceGameDataCommand.ExecuteAsync(null);
 
-        await harness.ViewModel.BackUpAllSavesCommand.ExecuteAsync(null);
+        await harness.ViewModel.SelectedInstance!.BackUpAllSavesCommand.ExecuteAsync(null);
 
         var backups = Path.Combine(harness.Services.Paths.GetBackupsRoot(), instance.InstanceId.ToString(), "saves");
         Assert.Equal(2, Directory.GetFiles(backups, "*.zip").Length);
         Assert.Equal(harness.Localization.FormatGameSavesBackedUp(2, backups), harness.ViewModel.Toasts.Items[^1].Message);
         Assert.True(harness.ViewModel.IsContentTab);
+    }
+
+    [Fact]
+    public async Task BackUpAllSaves_FromTheLibraryRow_LeavesTheInstancePageAsItWas()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var instance = (await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value)).Instance;
+        WriteItem(harness.Services.Paths.GetInstanceSavesFolder(instance.InstanceId), "Orbit", "2026-08-01T14:34:32.4054896", "v2026.8.3.5117", 10);
+        await OpenAsync(harness, "Main");
+        await harness.ViewModel.ShowInstanceGameDataCommand.ExecuteAsync(null);
+        harness.ViewModel.SetMainWindowLibrary();
+
+        await harness.ViewModel.Instances.Single().BackUpAllSavesCommand.ExecuteAsync(null);
+
+        var backups = Path.Combine(harness.Services.Paths.GetBackupsRoot(), instance.InstanceId.ToString(), "saves");
+        Assert.Single(Directory.GetFiles(backups, "*.zip"));
+        Assert.True(harness.ViewModel.CurrentWindowLibrary);
+        Assert.True(harness.ViewModel.IsGameDataTab);
     }
 
     [Fact]

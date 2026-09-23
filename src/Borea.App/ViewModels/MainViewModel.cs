@@ -221,6 +221,15 @@ public partial class MainViewModel : ViewModelBase
 
     public string NameModalConfirmText => RenamingInstance is null ? Localization.LibraryCreate : Localization.LibrarySave;
 
+    /// <summary>The row the delete modal asks about. Null while the modal is closed.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsDeleteModalOpen), nameof(DeleteModalText))]
+    private InstanceItem? _deletingInstance;
+
+    public bool IsDeleteModalOpen => DeletingInstance is not null;
+
+    public string? DeleteModalText => DeletingInstance is { } item ? Localization.FormatModalDeleteInstanceText(item.Name) : null;
+
     /// <summary>
     /// Why the name modal or the launch arguments modal cannot save, as the repository reported it.
     /// </summary>
@@ -518,7 +527,6 @@ public partial class MainViewModel : ViewModelBase
     /// <summary>Opens the name modal to rename <paramref name="item"/>.</summary>
     internal void BeginRenameInstance(InstanceItem item)
     {
-        item.IsConfirmingDelete = false;
         InstanceError = null;
         ModalInstanceName = item.Name;
         IsCreatingInstance = false;
@@ -614,7 +622,22 @@ public partial class MainViewModel : ViewModelBase
             () => RenamingInstance == item,
             () => Localization.FormatToastRenameFailed(item.Name));
 
-    internal Task DeleteInstanceAsync(Guid instanceId)
+    internal void BeginDeleteInstance(InstanceItem item) => DeletingInstance = item;
+
+    [RelayCommand]
+    private void CancelDeleteModal() => DeletingInstance = null;
+
+    [RelayCommand]
+    private Task ConfirmDeleteModalAsync()
+    {
+        if (DeletingInstance is not { } item)
+            return Task.CompletedTask;
+
+        DeletingInstance = null;
+        return DeleteInstanceAsync(item.InstanceId);
+    }
+
+    private Task DeleteInstanceAsync(Guid instanceId)
     {
         var name = InstanceName(instanceId);
         return RunInstanceOperationAsync(instances => instances.DeleteAsync(instanceId), () => Localization.FormatToastDeleteFailed(name));
@@ -855,6 +878,7 @@ public partial class MainViewModel : ViewModelBase
         RefreshInstanceHint();
         OnPropertyChanged(nameof(NameModalTitle));
         OnPropertyChanged(nameof(NameModalConfirmText));
+        OnPropertyChanged(nameof(DeleteModalText));
         OnPropertyChanged(nameof(ContentVersionsEmptyText));
         OnPropertyChanged(nameof(DiscoverSortText));
 
@@ -909,8 +933,7 @@ public sealed partial class RecentItem : ObservableObject
 }
 
 /// <summary>
-/// One row of the instance list. Delete asks for a confirmation in the row, and
-/// rename opens the name modal.
+/// One row of the instance list. Delete and rename open their modals.
 /// </summary>
 public sealed partial class InstanceItem : ObservableObject
 {
@@ -947,9 +970,6 @@ public sealed partial class InstanceItem : ObservableObject
     public string? LastPlayedToolTip => LastPlayedAt is { } at ? _owner.Localization.FormatLibraryLastPlayed(MainViewModel.DateTimeText(at)) : null;
 
     public string ModCountToolTip => _owner.Localization.FormatLibraryModCount(ModCount);
-
-    [ObservableProperty]
-    private bool _isConfirmingDelete;
 
     private bool _isOpening;
 
@@ -1035,11 +1055,8 @@ public sealed partial class InstanceItem : ObservableObject
     private Task CopyModListAsync() => _owner.CopyModListAsync(InstanceId);
 
     [RelayCommand]
-    private void BeginDelete() => IsConfirmingDelete = true;
+    private Task BackUpAllSavesAsync() => _owner.BackUpAllSavesAsync(this);
 
     [RelayCommand]
-    private Task ConfirmDeleteAsync() => _owner.DeleteInstanceAsync(InstanceId);
-
-    [RelayCommand]
-    private void Cancel() => IsConfirmingDelete = false;
+    private void BeginDelete() => _owner.BeginDeleteInstance(this);
 }
