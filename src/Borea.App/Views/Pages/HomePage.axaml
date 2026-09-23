@@ -77,7 +77,8 @@
             <!-- Recently updated: the index has no trend over time, so Home shows the newest releases instead of the trending ones of the design -->
             <Grid ColumnDefinitions="*,Auto" Margin="3,44,3,0" IsVisible="{Binding HasRecentItems}">
                 <TextBlock Classes="heading-sm heading" Text="{Binding Localization.HomeRecentlyUpdated}" />
-                <Button Grid.Column="1" Classes="link" Padding="0" Height="18" Command="{Binding SetMainWindowDiscover}">
+                <!-- the negative margin keeps the row height and the right edge, and the padding keeps the text inside the hover background -->
+                <Button Grid.Column="1" Classes="link" Margin="0,-7,-8,-7" Command="{Binding SetMainWindowDiscover}">
                     <TextBlock Classes="action-md" Text="{Binding Localization.HomeDiscoverMods}" />
                 </Button>
             </Grid>
