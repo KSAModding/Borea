@@ -119,14 +119,43 @@ public sealed class DiscoverPageTests
         Assert.Equal(0, offset, 0.5);
     }
 
+    [Theory]
+    [InlineData(860)]
+    [InlineData(1280)]
+    [InlineData(1920)]
+    public async Task Count_StaysAtTheFootOfTheSidePanelWhileItsFiltersScroll(double windowWidth)
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var viewModel = harness.ViewModel;
+        await viewModel.EnsureDiscoverLoadedAsync();
+        viewModel.SearchText = "advanced flight";
+
+        var (overflows, text, before, after) = await RenderAsync(harness, windowWidth, page =>
+        {
+            var panel = SidePanel(page);
+            var filters = panel.GetVisualDescendants().OfType<ScrollViewer>().First();
+            var count = panel.GetVisualDescendants().OfType<TextBlock>().Single(block => block.Text == viewModel.DiscoverCountText);
+            var before = new Rect(Corner(count, panel), count.Bounds.Size);
+            filters.Offset = new Vector(0, filters.Extent.Height);
+            page.UpdateLayout();
+            var after = new Rect(Corner(count, panel), count.Bounds.Size);
+            return (filters.Extent.Height > filters.Viewport.Height, count.Text, before, after);
+        }, windowHeight: 500);
+
+        Assert.True(overflows, "The filters must be taller than the panel, or the test proves nothing.");
+        Assert.Equal("1 of 3 mods", text);
+        Assert.Equal(before, after);
+        Assert.True(after.Bottom <= 500, $"The count ends at {after.Bottom} px, below the window.");
+    }
+
     /// <summary>Renders Discover next to a navigation rail, as the main window does.</summary>
-    private static Task<T> RenderAsync<T>(ViewModelHarness harness, double windowWidth, Func<DiscoverPage, T> read) =>
+    private static Task<T> RenderAsync<T>(ViewModelHarness harness, double windowWidth, Func<DiscoverPage, T> read, double windowHeight = 832) =>
         HeadlessApp.RunAsync(harness, () =>
         {
             var page = new DiscoverPage { DataContext = harness.ViewModel };
             Grid.SetColumn(page, 1);
             var body = new Grid { ColumnDefinitions = new ColumnDefinitions($"{PageBodyPanel.NavigationRailWidth},*"), Children = { page } };
-            var window = new Window { Width = windowWidth, Height = 832, Content = body, DataContext = harness.ViewModel };
+            var window = new Window { Width = windowWidth, Height = windowHeight, Content = body, DataContext = harness.ViewModel };
             window.Show();
             try
             {

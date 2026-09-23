@@ -1191,6 +1191,27 @@
   <data name="DiscoverEmpty" xml:space="preserve">
     <value>No content matches.</value>
   </data>
+  <data name="DiscoverCountModOne" xml:space="preserve">
+    <value>1 mod</value>
+  </data>
+  <data name="DiscoverCountModsFormat" xml:space="preserve">
+    <value>{0} mods</value>
+  </data>
+  <data name="DiscoverCountLoaderOne" xml:space="preserve">
+    <value>1 mod loader</value>
+  </data>
+  <data name="DiscoverCountLoadersFormat" xml:space="preserve">
+    <value>{0} mod loaders</value>
+  </data>
+  <data name="DiscoverCountPackOne" xml:space="preserve">
+    <value>1 modpack</value>
+  </data>
+  <data name="DiscoverCountPacksFormat" xml:space="preserve">
+    <value>{0} modpacks</value>
+  </data>
+  <data name="DiscoverCountShownFormat" xml:space="preserve">
+    <value>{0} of {1}</value>
+  </data>
   <data name="DiscoverLoading" xml:space="preserve">
     <value>Loading content...</value>
   </data>

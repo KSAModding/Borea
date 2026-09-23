@@ -134,6 +134,26 @@ public partial class MainViewModel
 
     public bool HasDiscoverItems => DiscoverItems.Count > 0 || DiscoverPacks.Count > 0;
 
+    public string? DiscoverCountText
+    {
+        get
+        {
+            var (shown, total) = IsModpacksTab
+                ? (DiscoverPacks.Count, _packs.Count)
+                : (DiscoverItems.Count, _listings.Count(item => item.Type == DiscoverType));
+            if (total == 0)
+                return null;
+
+            var totalText = DiscoverType switch
+            {
+                ContentType.ModLoader => Localization.FormatDiscoverLoaderCount(total),
+                ContentType.ModPack => Localization.FormatDiscoverPackCount(total),
+                _ => Localization.FormatDiscoverModCount(total),
+            };
+            return HasDiscoverFilters || !string.IsNullOrWhiteSpace(SearchText) ? Localization.FormatDiscoverCountShown(shown, totalText) : totalText;
+        }
+    }
+
     /// <summary>
     /// Loads the listings once. Every caller awaits the same load, so a page
     /// that opens while it runs sees the result instead of an empty list.
@@ -246,6 +266,7 @@ public partial class MainViewModel
         Arrange(DiscoverItems, rows);
         ApplyPackFilters(query);
         OnPropertyChanged(nameof(HasDiscoverItems));
+        OnPropertyChanged(nameof(DiscoverCountText));
     }
 
     /// <summary>The state whose chip a row of the list leaves out, or null when every row shows its chip.</summary>

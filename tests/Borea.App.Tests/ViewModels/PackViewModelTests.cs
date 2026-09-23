@@ -58,6 +58,23 @@ public sealed class PackViewModelTests
     }
 
     [Fact]
+    public async Task ModpacksTab_CountsThePacks()
+    {
+        var packs = WithPacks(
+            Pack("starter-pack", "Starter Pack", Version("1.0.0", Pin("MeasureTools", "1.1.9"))),
+            Pack("armory-pack", "Armory Pack", Version("1.0.0", Pin("KSArmory", "0.8.44"))));
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: packs);
+        var viewModel = harness.ViewModel;
+        await viewModel.EnsureDiscoverLoadedAsync();
+
+        viewModel.ShowDiscoverModpacksCommand.Execute(null);
+        Assert.Equal("2 modpacks", viewModel.DiscoverCountText);
+
+        viewModel.SearchText = "armory";
+        Assert.Equal("1 of 2 modpacks", viewModel.DiscoverCountText);
+    }
+
+    [Fact]
     public async Task ModpacksTab_HidesTheCommonCompatibilityOnItsOwn()
     {
         var packs = Enumerable.Range(1, 9).Select(number => Pack($"pack-{number}", $"Pack {number}", Version("1.0.0", Pin("KSArmory", "0.8.44"))))
