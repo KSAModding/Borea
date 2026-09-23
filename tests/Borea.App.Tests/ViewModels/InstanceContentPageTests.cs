@@ -143,7 +143,7 @@ public sealed class InstanceContentPageTests
         await viewModel.ActiveInstance!.OpenCommand.ExecuteAsync(null);
         var row = viewModel.ContentGroups.SelectMany(group => group.Items).Single();
 
-        row.BeginManageCommand.Execute(null);
+        await row.BeginManageCommand.ExecuteAsync(null);
 
         Assert.True(row.IsConfirmingManage);
         Assert.Contains(row.Version, row.ManageConfirmText);
@@ -163,7 +163,7 @@ public sealed class InstanceContentPageTests
         await viewModel.LoadAsync();
         await viewModel.ActiveInstance!.OpenCommand.ExecuteAsync(null);
         var row = viewModel.ContentGroups.SelectMany(group => group.Items).Single();
-        row.BeginManageCommand.Execute(null);
+        await row.BeginManageCommand.ExecuteAsync(null);
 
         await row.ConfirmManageCommand.ExecuteAsync(null);
 
