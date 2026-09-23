@@ -1,3 +1,5 @@
+using System.Collections.Concurrent;
+using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Globalization;
 using Borea.App.ViewModels;
@@ -124,9 +126,25 @@ public sealed class GameDataViewModelTests
         await viewModel.Instances.Single(instance => instance.Name == "Second").OpenCommand.ExecuteAsync(null);
         var firstRoot = harness.Services.Paths.GetInstanceRoot(first.InstanceId);
 
+        // The load fills the rows on another thread here, so the test records the changes instead
+        // of reading the collection while it is written.
+        const string Returned = "returned";
+        var changes = new ConcurrentQueue<string>();
+        viewModel.GameDataItems.CollectionChanged += (_, e) =>
+        {
+            if (e.Action == NotifyCollectionChangedAction.Reset)
+                changes.Enqueue("reset");
+            foreach (GameDataItem item in e.NewItems ?? Array.Empty<GameDataItem>())
+                changes.Enqueue(item.FolderPath);
+        };
+
         var loading = viewModel.ShowInstanceGameDataCommand.ExecuteAsync(null);
-        Assert.DoesNotContain(viewModel.GameDataItems, item => item.FolderPath.StartsWith(firstRoot, StringComparison.Ordinal));
+        changes.Enqueue(Returned);
         await loading;
+
+        var recorded = changes.ToList();
+        Assert.Contains("reset", recorded.TakeWhile(change => change != Returned));
+        Assert.DoesNotContain(recorded, change => change.StartsWith(firstRoot, StringComparison.Ordinal));
 
         var secondRoot = harness.Services.Paths.GetInstanceRoot(second.InstanceId);
         Assert.Equal(4, viewModel.GameDataItems.Count);
