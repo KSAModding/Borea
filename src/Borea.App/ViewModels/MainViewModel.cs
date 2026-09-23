@@ -145,6 +145,13 @@ public partial class MainViewModel : ViewModelBase
     [RelayCommand]
     private void ToggleTasks() => IsTasksOpen = !IsTasksOpen;
 
+    // the queue shows ages, which an opened drawer brings up to date
+    partial void OnIsTasksOpenChanged(bool value)
+    {
+        if (value)
+            Tasks.RefreshText();
+    }
+
     [RelayCommand]
     private void CloseTasks() => IsTasksOpen = false;
     /// <summary>
@@ -474,45 +481,6 @@ public partial class MainViewModel : ViewModelBase
     internal static string DateText(DateTimeOffset at) => at.ToLocalTime().ToString("d", CultureInfo.CurrentCulture);
 
     internal static string DateTimeText(DateTimeOffset at) => at.ToLocalTime().ToString("g", CultureInfo.CurrentCulture);
-
-    /// <summary>The date and time without the year of the current year, such as "19.09. 19:27", where the full form does not fit.</summary>
-    internal static string ShortDateTimeText(DateTimeOffset at, DateTimeOffset? now = null)
-    {
-        var local = at.ToLocalTime();
-        var culture = CultureInfo.CurrentCulture;
-        if (!IsCurrentYear(local, now ?? DateTimeOffset.Now, culture) || DatePatternWithoutYear(culture) is not { } datePattern)
-            return DateTimeText(at);
-
-        return local.ToString($"{datePattern} {culture.DateTimeFormat.ShortTimePattern}", culture);
-    }
-
-    /// <summary>The year the culture shows, which is not the Gregorian one in a calendar such as the Persian one.</summary>
-    private static bool IsCurrentYear(DateTimeOffset local, DateTimeOffset now, CultureInfo culture)
-    {
-        var calendar = culture.DateTimeFormat.Calendar;
-        return calendar.GetYear(local.DateTime) == calendar.GetYear(now.ToLocalTime().DateTime);
-    }
-
-    /// <summary>
-    /// The short date of the culture without its year, or null when what is left
-    /// is no longer a date. A date such as the German one ends in a separator of
-    /// its own, so only the start of the pattern loses one.
-    /// </summary>
-    private static string? DatePatternWithoutYear(CultureInfo culture)
-    {
-        var pattern = culture.DateTimeFormat.ShortDatePattern
-            .Replace("yyyy", string.Empty, StringComparison.Ordinal)
-            .Replace("yy", string.Empty, StringComparison.Ordinal)
-            .Replace("y", string.Empty, StringComparison.Ordinal)
-            .TrimStart(' ', ',', '.', '/', '-')
-            .TrimEnd(' ', ',', '/', '-');
-
-        // An era designator or a quoted literal is left over from the year that went out, so the full form stays.
-        if (pattern.Contains('g') || pattern.Contains('\'') || pattern.Contains('"'))
-            return null;
-
-        return pattern.Contains('d') && pattern.Contains('M') ? pattern : null;
-    }
 
     /// <summary>Brings the rows into the given order in place, so a row that stays keeps its view and what the view shows.</summary>
     internal static void Arrange<T>(ObservableCollection<T> rows, IReadOnlyList<T> order)

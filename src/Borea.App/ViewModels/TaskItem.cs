@@ -141,8 +141,8 @@ public sealed partial class TaskItem : ObservableObject
 
     public string StepText => Step ?? StateText;
 
-    /// <summary>The short form, because the row shows it next to the state and the instance.</summary>
-    public string TimeText => MainViewModel.ShortDateTimeText(EndedAt ?? StartedAt);
+    /// <summary>How long ago the task ended or started, such as "5m ago". The drawer refreshes it when it opens.</summary>
+    public string TimeText => Localization.FormatTimeAgoShort(DateTimeOffset.UtcNow - (EndedAt ?? StartedAt));
 
     public string TimeToolTip => MainViewModel.DateTimeText(EndedAt ?? StartedAt);
 
