@@ -1089,6 +1089,21 @@
   <data name="ContentManageConfirmAction" xml:space="preserve">
     <value>Replace and manage</value>
   </data>
+  <data name="ContentManageMissingFormat" xml:space="preserve">
+    <value>Needs {0}, which this instance does not have.</value>
+  </data>
+  <data name="ContentManageCannotInstallFormat" xml:space="preserve">
+    <value>Borea cannot install it: {0}</value>
+  </data>
+  <data name="ContentManageNotOwnedFormat" xml:space="preserve">
+    <value>Borea does not manage {0} yet, so it cannot update it. Let Borea manage {0} first.</value>
+  </data>
+  <data name="ContentManageInstallMissingFormat" xml:space="preserve">
+    <value>Also install {0}</value>
+  </data>
+  <data name="ContentManageNotInstalledFormat" xml:space="preserve">
+    <value>Can also use {0}, which Borea does not install.</value>
+  </data>
   <data name="ContentUpdate" xml:space="preserve">
     <value>Update</value>
   </data>

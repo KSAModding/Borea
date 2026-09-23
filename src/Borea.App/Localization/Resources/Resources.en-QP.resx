@@ -936,6 +936,21 @@
   <data name="ContentManageConfirmAction" xml:space="preserve">
     <value>Swab and take the helm</value>
   </data>
+  <data name="ContentManageMissingFormat" xml:space="preserve">
+    <value>Needs {0}, which this here ship be lackin'.</value>
+  </data>
+  <data name="ContentManageCannotInstallFormat" xml:space="preserve">
+    <value>The Borea can't haul it aboard: {0}</value>
+  </data>
+  <data name="ContentManageNotOwnedFormat" xml:space="preserve">
+    <value>The Borea don't take the helm o' {0} yet, so it can't bring in the tide fer it. Let The Borea take the helm o' {0} first.</value>
+  </data>
+  <data name="ContentManageInstallMissingFormat" xml:space="preserve">
+    <value>Haul {0} aboard too</value>
+  </data>
+  <data name="ContentManageNotInstalledFormat" xml:space="preserve">
+    <value>Can also use {0}, which The Borea don't haul aboard.</value>
+  </data>
   <data name="ContentUpdate" xml:space="preserve">
     <value>Bring in the tide</value>
   </data>

@@ -2083,6 +2083,21 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string FormatContentManageConfirm(string name, string version)
         => string.Format(CultureInfo.CurrentCulture, Resources.ContentManageConfirmFormat, name, version);
 
+    public string FormatContentManageMissing(string dependencies)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ContentManageMissingFormat, dependencies);
+
+    public string FormatContentManageCannotInstall(string reason)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ContentManageCannotInstallFormat, reason);
+
+    public string FormatContentManageNotOwned(string names)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ContentManageNotOwnedFormat, names);
+
+    public string FormatContentManageInstallMissing(string releases)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ContentManageInstallMissingFormat, releases);
+
+    public string FormatContentManageNotInstalled(string dependencies)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ContentManageNotInstalledFormat, dependencies);
+
     public string FormatManualInstallsReplaceWarning(string folderName)
         => string.Format(CultureInfo.CurrentCulture, Resources.ManualInstallsReplaceWarningFormat, folderName);
 
