@@ -86,18 +86,23 @@
             <ItemsControl ItemsSource="{Binding RecentItems}" Margin="0,16,0,0" IsVisible="{Binding HasRecentItems}">
                 <ItemsControl.ItemsPanel>
                     <ItemsPanelTemplate>
-                        <views:TileRowPanel MinTileSize="171" Spacing="5" />
+                        <views:TileRowPanel MinTileSize="171" Spacing="5" MaxRows="2" />
                     </ItemsPanelTemplate>
                 </ItemsControl.ItemsPanel>
                 <ItemsControl.ItemTemplate>
                     <DataTemplate x:DataType="vm:RecentItem">
-                        <!-- the tile shows the icon with the text over its bottom, and the gradient when no icon shows; the panel sizes it -->
+                        <!-- the tile shows the icon with the text over its bottom, and without an icon the puzzle placeholder centred in the space above the text; the panel sizes it -->
                         <Button Classes="plain" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" Command="{Binding OpenCommand}" AutomationProperties.Name="{Binding Name}">
                             <Border Classes="card" Background="{StaticResource Brush.Thumbnail}">
                                 <Panel>
-                                    <views:ListingImageView Image="{Binding Icon}" Background="{StaticResource Brush.Surface}" />
+                                    <views:ListingImageView Image="{Binding Icon}" Background="{StaticResource Brush.Surface}">
+                                        <Grid RowDefinitions="*,Auto">
+                                            <Path Classes="icon" Data="{StaticResource Icon.PuzzlePiece}" RenderTransform="scale(2.5)" StrokeThickness="0.8" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                            <Panel Grid.Row="1" Height="{Binding #TileText.Bounds.Height}" Margin="0,0,0,16" />
+                                        </Grid>
+                                    </views:ListingImageView>
                                     <Border Background="{StaticResource Brush.Scrim}" IsVisible="{Binding Icon.IsLoaded, FallbackValue=False}" />
-                                    <StackPanel VerticalAlignment="Bottom" Spacing="10" Margin="16">
+                                    <StackPanel x:Name="TileText" VerticalAlignment="Bottom" Spacing="10" Margin="16">
                                         <TextBlock Classes="heading-md" Text="{Binding Name}" TextWrapping="Wrap" MaxLines="3" TextTrimming="CharacterEllipsis" />
                                         <Grid ColumnDefinitions="*,Auto">
                                             <TextBlock Classes="label-md" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ContentTypeMod}" />

@@ -52,4 +52,52 @@ public sealed class TileRowPanelTests
 
         Assert.Equal(default, panel.DesiredSize);
     }
+
+    [Theory]
+    // no limit, one short row, full rows, and a short last row that goes
+    [InlineData(14, 4, 0, 14)]
+    [InlineData(3, 4, 2, 3)]
+    [InlineData(14, 4, 2, 8)]
+    [InlineData(14, 7, 2, 14)]
+    [InlineData(10, 4, 2, 8)]
+    [InlineData(6, 4, 2, 4)]
+    public void Shown_KeepsFullRowsUpToTheLimit(int count, int columns, int maxRows, int shown)
+    {
+        Assert.Equal(shown, TileRowPanel.Shown(count, columns, maxRows));
+    }
+
+    [Fact]
+    public void Layout_WithMaxRows_HidesTheTilesPastTheLastRowUntilTheyFit()
+    {
+        var tiles = Enumerable.Range(0, 14).Select(_ => new Border()).ToList();
+        var panel = new TileRowPanel { MinTileSize = 171, Spacing = 5, MaxRows = 2 };
+        panel.Children.AddRange(tiles);
+
+        // four tiles of 176 and three gaps of 5, so layout rounding changes nothing
+        panel.Measure(new Size(719, double.PositiveInfinity));
+        panel.Arrange(new Rect(panel.DesiredSize));
+        var narrow = tiles.Count(tile => tile.IsVisible);
+        var height = panel.DesiredSize.Height;
+
+        panel.Measure(new Size(1264, double.PositiveInfinity));
+        var wide = tiles.Count(tile => tile.IsVisible);
+
+        Assert.Equal(8, narrow);
+        Assert.Equal(2 * 176 + 5, height);
+        Assert.Equal(14, wide);
+    }
+
+    [Fact]
+    public void RemovedTile_ShowsAgain()
+    {
+        var tiles = Enumerable.Range(0, 5).Select(_ => new Border()).ToList();
+        var panel = new TileRowPanel { MinTileSize = 171, Spacing = 5, MaxRows = 1 };
+        panel.Children.AddRange(tiles);
+        panel.Measure(new Size(732, double.PositiveInfinity));
+        Assert.False(tiles[4].IsVisible);
+
+        panel.Children.Remove(tiles[4]);
+
+        Assert.True(tiles[4].IsVisible);
+    }
 }

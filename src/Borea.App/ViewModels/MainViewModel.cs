@@ -360,7 +360,8 @@ public partial class MainViewModel : ViewModelBase
 
     private bool _indexRefreshed;
 
-    internal const int RecentItemCount = 8;
+    /// <summary>Two full rows of Home tiles in the widest page body.</summary>
+    internal const int RecentItemCount = 14;
 
     /// <summary>
     /// Fills the Home grid from the cached content index. A failure leaves the
