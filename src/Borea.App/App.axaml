@@ -688,12 +688,22 @@
             <Setter Property="BorderBrush" Value="{StaticResource Brush.Surface}" />
         </Style>
 
+        <!-- the track and the knob of the Fluent switch, without the header and the on and off text it keeps space for; the names let the Fluent states style the parts -->
         <Style Selector="ToggleSwitch.switch">
-            <Setter Property="MinWidth" Value="0" />
-            <Setter Property="Margin" Value="0" />
-            <Setter Property="Padding" Value="0" />
-            <Setter Property="OnContent" Value="" />
-            <Setter Property="OffContent" Value="" />
+            <Setter Property="Template">
+                <ControlTemplate>
+                    <Grid x:Name="SwitchAreaGrid" Background="{TemplateBinding Background}" TemplatedControl.IsTemplateFocusTarget="True">
+                        <Border x:Name="OuterBorder" Width="40" Height="20" CornerRadius="10" Background="{DynamicResource ToggleSwitchFillOff}" BorderBrush="{DynamicResource ToggleSwitchStrokeOff}" BorderThickness="{DynamicResource ToggleSwitchOuterBorderStrokeThickness}" />
+                        <Border x:Name="SwitchKnobBounds" Width="40" Height="20" CornerRadius="10" Background="{DynamicResource ToggleSwitchFillOn}" BorderBrush="{DynamicResource ToggleSwitchStrokeOn}" BorderThickness="{DynamicResource ToggleSwitchOnStrokeThickness}" />
+                        <Canvas x:Name="PART_SwitchKnob" Width="20" Height="20" HorizontalAlignment="Left">
+                            <Grid x:Name="PART_MovingKnobs" Width="20" Height="20">
+                                <Ellipse x:Name="SwitchKnobOn" Width="10" Height="10" Fill="{DynamicResource ToggleSwitchKnobFillOn}" />
+                                <Ellipse x:Name="SwitchKnobOff" Width="10" Height="10" Fill="{DynamicResource ToggleSwitchKnobFillOff}" />
+                            </Grid>
+                        </Canvas>
+                    </Grid>
+                </ControlTemplate>
+            </Setter>
         </Style>
 
         <!-- c/SplitButton-launch: a purple pill cut in two, 32px tall like c/link-cta, purple in every state -->
