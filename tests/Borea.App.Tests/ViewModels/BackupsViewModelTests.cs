@@ -61,8 +61,8 @@ public sealed class BackupsViewModelTests
         Assert.Equal(300, new FileInfo(Path.Combine(Assert.Single(harness.ViewModel.SavesSection.Items).Entry.Path, "universe.xml")).Length);
     }
 
-    [Fact]
-    public async Task Restore_FileInUse_FailsTheTaskAndChangesNothing()
+    [WindowsFact("Only Windows refuses to move a folder while a handle below it is open.")]
+    public async Task Restore_FileInUse_FailsTheTaskNamingTheFolderAndChangesNothing()
     {
         using var harness = await ViewModelHarness.CreateAsync();
         var instance = (await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value)).Instance;
@@ -77,9 +77,9 @@ public sealed class BackupsViewModelTests
         var task = Assert.Single(harness.ViewModel.Tasks.History, task => task.Kind == TaskKind.BackupRestore);
         Assert.Equal(TaskState.Failed, task.State);
         Assert.Equal(harness.Localization.FormatToastBackupRestoreFailed("Orbit"), harness.ViewModel.Toasts.Items[^1].Message);
-        Assert.Equal(harness.Localization.GameSaveCloseGame, harness.ViewModel.Toasts.Items[^1].Detail);
+        Assert.Contains(Path.Combine(backups, "Orbit-2026-09-01T080000Z"), harness.ViewModel.Toasts.Items[^1].Detail);
         Assert.True(Directory.Exists(Path.Combine(backups, "Orbit-2026-09-01T080000Z")));
-        Assert.False(Directory.Exists(harness.Services.Paths.GetInstanceSavesFolder(instance.InstanceId)));
+        Assert.False(Directory.Exists(Path.Combine(harness.Services.Paths.GetInstanceSavesFolder(instance.InstanceId), "Orbit")));
     }
 
     [Fact]

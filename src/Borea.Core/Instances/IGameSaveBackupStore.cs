@@ -2,8 +2,7 @@ namespace Borea.Core.Instances;
 
 /// <summary>
 /// The backups that Back up, Delete, a replacing copy and a replacing restore
-/// leave in the Backups folder. A change throws <see cref="GameSaveInUseException"/>
-/// before it touches a folder that holds a file in use.
+/// leave in the Backups folder. A change that fails leaves every save and vehicle as it was.
 /// </summary>
 public interface IGameSaveBackupStore
 {

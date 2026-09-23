@@ -229,11 +229,6 @@ public sealed class FileGameSaveBackupStore : IGameSaveBackupStore
         if (exists && !replace)
             return GameSaveRestoreOutcome.Exists;
 
-        if (!backup.IsArchive)
-            FileGameSaveStore.EnsureNotInUse(path);
-        if (exists)
-            FileGameSaveStore.EnsureNotInUse(target);
-
         // the game reads only the saves and Vehicles folders, so an extract that stops leaves nothing it would load
         var staging = backup.IsArchive ? Path.Combine(instanceRoot, GameSaveBackupFolder.WorkPrefix + "restore-" + Guid.NewGuid().ToString("N")) : null;
         try
@@ -291,12 +286,8 @@ public sealed class FileGameSaveBackupStore : IGameSaveBackupStore
         foreach (var leftover in Directory.EnumerateFileSystemEntries(parent, GameSaveBackupFolder.WorkPrefix + "delete-*"))
             FileGameSaveStore.TryDelete(() => DeleteEntry(leftover));
 
-        var isFolder = Directory.Exists(path);
-        if (isFolder)
-            FileGameSaveStore.EnsureNotInUse(path);
-
         var trash = Path.Combine(parent, GameSaveBackupFolder.WorkPrefix + "delete-" + Guid.NewGuid().ToString("N"));
-        if (isFolder)
+        if (Directory.Exists(path))
             Directory.Move(path, trash);
         else
             File.Move(path, trash);
