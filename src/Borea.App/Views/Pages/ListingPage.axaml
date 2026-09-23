@@ -69,12 +69,15 @@
         </DataTemplate>
     </UserControl.Resources>
 
-    <!-- List your mod: the form, with the checks along the right edge -->
+    <!-- List or change your mod: the form, with the checks along the right edge -->
     <Grid>
         <ScrollViewer>
             <views:PageBodyPanel HasSidePanel="True">
                 <StackPanel Container.Name="page-body" Container.Sizing="Width">
                     <StackPanel Orientation="Horizontal" Spacing="4" Height="24">
+                        <Button Classes="plain back" Command="{Binding GoBackCommand}" VerticalAlignment="Center" ToolTip.Tip="{Binding Localization.NavigationBack}" AutomationProperties.Name="{Binding Localization.NavigationBack}">
+                            <Path Classes="icon" Data="{StaticResource Icon.ArrowLeft}" />
+                        </Button>
                         <Path Classes="icon" Data="{StaticResource Icon.Compass}" />
                         <Button Classes="plain" Command="{Binding SetMainWindowDiscover}">
                             <TextBlock Classes="label-lg" Text="{Binding Localization.PageDiscoverHeading}" VerticalAlignment="Center" />
@@ -109,9 +112,30 @@
                                 <TextBlock Classes="heading-md" Text="{Binding Localization.ListingChangeTitle}" />
                                 <TextBlock Classes="body-sm secondary" Text="{Binding Localization.ListingChangeHint}" TextWrapping="Wrap" />
                                 <Grid ColumnDefinitions="*,8,Auto" Margin="0,4,0,0" IsEnabled="{Binding !ListingEditor.IsBusy}">
-                                    <ComboBox ItemsSource="{Binding ListingEditor.ListedIds}" SelectedItem="{Binding ListingEditor.SelectedListedId}" PlaceholderText="{Binding Localization.ListingId}" AutomationProperties.Name="{Binding Localization.ListingChangeTitle}" HorizontalAlignment="Stretch" MaxDropDownHeight="300" />
+                                    <TextBox x:Name="ListedSearch" Classes="field search" Text="{Binding ListingEditor.ListedQuery}" PlaceholderText="{Binding Localization.ListingSearchListed}" AutomationProperties.Name="{Binding Localization.ListingChangeTitle}">
+                                        <TextBox.InnerLeftContent>
+                                            <Path Classes="icon size-16" Data="{StaticResource Icon.Search}" Margin="10,0,0,0" />
+                                        </TextBox.InnerLeftContent>
+                                    </TextBox>
                                     <Button Grid.Column="2" Classes="text" Content="{Binding Localization.ListingLoad}" Command="{Binding ListingEditor.LoadListedCommand}" />
                                 </Grid>
+                                <ListBox x:Name="ListedResults" ItemsSource="{Binding ListingEditor.ListedMatches}" SelectedItem="{Binding ListingEditor.SelectedListed}" MaxHeight="240" IsEnabled="{Binding !ListingEditor.IsBusy}" AutomationProperties.Name="{Binding Localization.ListingChangeTitle}" IsVisible="{Binding !!ListingEditor.ListedMatches.Count}">
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate x:DataType="vm:ListedListing">
+                                            <Grid ColumnDefinitions="*,16,Auto,8,Auto">
+                                                <StackPanel Spacing="2">
+                                                    <TextBlock Classes="heading-sm" Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
+                                                    <TextBlock Classes="label-md" Text="{Binding Id}" TextTrimming="CharacterEllipsis" />
+                                                </StackPanel>
+                                                <TextBlock Grid.Column="2" Classes="body-sm secondary" Text="{Binding AuthorsText}" MaxWidth="240" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                                <Border Grid.Column="4" Classes="chip positive" VerticalAlignment="Center" IsVisible="{Binding IsOwn}">
+                                                    <TextBlock Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ListingYourMod}" />
+                                                </Border>
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+                                <TextBlock Classes="body-sm secondary" Text="{Binding Localization.ListingNoListedMatch}" IsVisible="{Binding ListingEditor.HasNoListedMatch}" />
                                 <TextBlock Classes="body-sm danger" Text="{Binding ListingEditor.ListedError}" TextWrapping="Wrap" IsVisible="{Binding ListingEditor.ListedError, Converter={x:Static ObjectConverters.IsNotNull}}" />
                             </StackPanel>
                         </Border>

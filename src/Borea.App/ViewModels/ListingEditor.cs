@@ -26,7 +26,7 @@ public enum ListingStep
 }
 
 /// <summary>
-/// The "List your mod" page: a listing draft for content-index, checked while the author types,
+/// The "List or change your mod" page: a listing draft for content-index, checked while the author types,
 /// and handed to GitHub as a pull request of one document.
 /// </summary>
 public sealed partial class ListingEditor : ObservableObject
@@ -78,12 +78,6 @@ public sealed partial class ListingEditor : ObservableObject
 
     [ObservableProperty]
     private string? _sourceError;
-
-    public ObservableCollection<string> ListedIds { get; } = [];
-
-    [ObservableProperty]
-    [NotifyCanExecuteChangedFor(nameof(LoadListedCommand))]
-    private string? _selectedListedId;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsBusy))]
@@ -262,12 +256,7 @@ public sealed partial class ListingEditor : ObservableObject
             _snapshot = null;
         }
 
-        var listed = _snapshot?.Listings
-            .Where(listing => listing.Authored?.Type is ContentType.Mod or ContentType.ModLoader)
-            .Select(listing => listing.Id)
-            .Order(StringComparer.OrdinalIgnoreCase)
-            .ToList() ?? [];
-        MainViewModel.Arrange(ListedIds, listed);
+        SetListedMods(_snapshot);
         FillCuratedTags(Draft.Tags);
 
         if (services.ListingValidator.SchemaOrigin != ListingSchemaOrigin.Downloaded)
@@ -356,7 +345,7 @@ public sealed partial class ListingEditor : ObservableObject
     [RelayCommand(CanExecute = nameof(CanLoadListed))]
     private async Task LoadListedAsync()
     {
-        if (_owner.Services is not { } services || SelectedListedId is not { } id || IsBusy)
+        if (_owner.Services is not { } services || SelectedListed?.Id is not { } id || IsBusy)
             return;
 
         ListedError = null;
@@ -387,7 +376,7 @@ public sealed partial class ListingEditor : ObservableObject
         }
     }
 
-    private bool CanLoadListed() => SelectedListedId is not null;
+    private bool CanLoadListed() => SelectedListed is not null;
 
     /// <summary>Stops reading a source or a listed file, and drops what it would have loaded.</summary>
     [RelayCommand]
@@ -662,6 +651,7 @@ public sealed partial class ListingEditor : ObservableObject
             FillCuratedTags([]);
         OnPropertyChanged(nameof(PullRequestText));
         RefreshPullRequestText();
+        FindListed();
         Refresh();
     }
 

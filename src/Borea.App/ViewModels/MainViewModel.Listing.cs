@@ -9,7 +9,7 @@ using CommunityToolkit.Mvvm.Input;
 namespace Borea.App.ViewModels;
 
 /// <summary>
-/// The "List your mod" page, opened from the side panel of Discover. Its editor lives as long as the App,
+/// The "List or change your mod" page, opened from the side panel of Discover. Its editor lives as long as the App,
 /// so leaving the page and coming back keeps the draft.
 /// </summary>
 public partial class MainViewModel
