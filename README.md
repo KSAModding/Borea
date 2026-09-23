@@ -191,7 +191,7 @@ The exit code is 0 when the command completed, 1 when the operation failed and t
 | `borea instance deactivate` | Leave no instance active. |
 | `borea instance scan <instance>` | Print the mod folders that Borea did not install, and the recorded mods whose folder is gone. |
 | `borea instance adopt <instance> <folder> --archive <path>` | Record a mod folder that Borea did not install as the index release its archive matches. |
-| `borea instance take-ownership <instance> <mod-id>` | Install the release a mod is recorded as over its folder, so Borea owns its files and can update and remove it. Files in the folder that the release does not hold are lost. |
+| `borea instance take-ownership <instance> <mod-id> [--with-dependencies] [--without-dependencies]` | Install the release a mod is recorded as over its folder, so Borea owns its files and can update and remove it. Files in the folder that the release does not hold are lost. A required dependency that the instance does not have stops the command, unless `--with-dependencies` installs it first or `--without-dependencies` goes on without it. |
 | `borea instance import-profile <name> [--dry-run]` | Create an instance from copies of the mods in the shared profile, with the same load order and enabled state. The shared profile stays as it is. |
 | `borea instance backups <instance>` | Print the backups of the saves and vehicles of an instance, newest first. |
 | `borea instance restore-backup <instance> <backup> [--replace]` | Put a backup back where it came from. `--replace` first moves a save or vehicle of the same name into the backups. |

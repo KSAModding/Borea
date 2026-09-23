@@ -154,7 +154,7 @@ internal static class ModInstallCommands
     }
 
     // built from the CLI's own services, so a test that replaces the installer or the replacer replaces them here too
-    private static async Task ExecuteAsync(CliServices cli, InstallPlan plan, TextWriter error, CancellationToken cancellationToken)
+    internal static async Task ExecuteAsync(CliServices cli, InstallPlan plan, TextWriter error, CancellationToken cancellationToken)
     {
         var stop = new InstallStop();
         using var registration = cancellationToken.Register(stop.Request);
@@ -190,7 +190,7 @@ internal static class ModInstallCommands
             output.WriteLine("Nothing to do.");
     }
 
-    private static OsPlatform CurrentPlatform() =>
+    internal static OsPlatform CurrentPlatform() =>
         OperatingSystem.IsWindows() ? OsPlatform.Windows : OperatingSystem.IsLinux() ? OsPlatform.Linux : OsPlatform.MacOs;
 
     internal static async Task RequireCachedIndexAsync(CliServices cli, CancellationToken cancellationToken)
