@@ -87,6 +87,37 @@ public sealed class ListingPageTests
         Assert.Equal("StarMap", editor.Id);
     }
 
+    [Fact]
+    public async Task ResultList_DoubleClick_LoadsTheListing()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(respond: ServeStarMap);
+        var editor = harness.ViewModel.ListingEditor;
+        await harness.ViewModel.OpenListingAsync();
+
+        await HeadlessApp.RunAsync(harness, async () =>
+        {
+            var page = new ListingPage { DataContext = harness.ViewModel };
+            var window = new Window { Width = 1280, Height = 832, Content = page, DataContext = harness.ViewModel };
+            window.Show();
+            window.UpdateLayout();
+
+            var item = page.FindControl<ListBox>("ListedResults")!.GetVisualDescendants().OfType<ListBoxItem>().Last();
+            var center = item.TranslatePoint(new Point(item.Bounds.Width / 2, item.Bounds.Height / 2), window)!.Value;
+            for (var click = 0; click < 2; click++)
+            {
+                window.MouseDown(center, MouseButton.Left);
+                window.MouseUp(center, MouseButton.Left);
+            }
+
+            await (editor.LoadListedCommand.ExecutionTask ?? Task.CompletedTask);
+            window.Close();
+            return 0;
+        });
+
+        Assert.True(editor.IsFormStep);
+        Assert.Equal("StarMap", editor.Id);
+    }
+
     [Theory]
     [InlineData(860)]
     [InlineData(1280)]
