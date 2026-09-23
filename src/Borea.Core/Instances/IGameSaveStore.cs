@@ -1,7 +1,7 @@
 namespace Borea.Core.Instances;
 
 /// <summary>
-/// A change throws <see cref="GameSaveInUseException"/> before it touches a folder that holds a file in use.
+/// A change that fails leaves every save and vehicle as it was.
 /// </summary>
 public interface IGameSaveStore
 {
@@ -20,7 +20,7 @@ public interface IGameSaveStore
     /// <summary>Returns the path of the zip.</summary>
     Task<string> BackUpAsync(Guid instanceId, GameSaveEntry entry, CancellationToken cancellationToken = default);
 
-    /// <summary>Writes no zip when a file in any folder is in use.</summary>
+    /// <summary>Keeps no zip when one folder fails.</summary>
     Task<IReadOnlyList<string>> BackUpAllAsync(Guid instanceId, GameSaveKind kind, CancellationToken cancellationToken = default);
 
     /// <summary>Replaces a folder of the same name only when <paramref name="replace"/> is true, after it moves the old folder into the backups.</summary>

@@ -60,14 +60,24 @@ public sealed class FileGameSaveStore : IGameSaveStore
     public Task<IReadOnlyList<string>> BackUpAllAsync(Guid instanceId, GameSaveKind kind, CancellationToken cancellationToken = default)
         => Task.Run<IReadOnlyList<string>>(async () =>
         {
-            var entries = List(GetFolder(instanceId, kind), kind, cancellationToken);
-            foreach (var entry in entries)
-                EnsureNotInUse(entry.Path);
-
             var now = _backups.Now();
             var zips = new List<string>();
-            foreach (var entry in entries)
-                zips.Add(await BackUpCoreAsync(instanceId, entry, now, cancellationToken).ConfigureAwait(false));
+            try
+            {
+                foreach (var entry in List(GetFolder(instanceId, kind), kind, cancellationToken))
+                    zips.Add(await BackUpCoreAsync(instanceId, entry, now, cancellationToken).ConfigureAwait(false));
+            }
+            catch
+            {
+                foreach (var zip in zips)
+                {
+                    TryDelete(() => File.Delete(zip));
+                    GameSaveBackupFolder.TryDeleteRecord(zip);
+                }
+
+                throw;
+            }
+
             return zips;
         }, cancellationToken);
 
@@ -78,7 +88,6 @@ public sealed class FileGameSaveStore : IGameSaveStore
         => Task.Run(() =>
         {
             RequireInInstance(instanceId, entry);
-            EnsureNotInUse(entry.Path);
             return _backups.MoveInAsync(instanceId, entry.Kind, entry.Path, GameSaveBackupReason.Deleted);
         }, cancellationToken);
 
@@ -187,29 +196,9 @@ public sealed class FileGameSaveStore : IGameSaveStore
         return entry;
     }
 
-    /// <summary>
-    /// Opens every file without sharing, which fails while another program
-    /// holds one open, so no change stops halfway through a folder.
-    /// </summary>
-    internal static void EnsureNotInUse(string folder)
-    {
-        foreach (var file in Directory.EnumerateFiles(folder, "*", EveryEntry))
-        {
-            try
-            {
-                new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.None).Dispose();
-            }
-            catch (IOException exception) when (exception is not FileNotFoundException and not DirectoryNotFoundException)
-            {
-                throw new GameSaveInUseException(folder, exception);
-            }
-        }
-    }
-
     private async Task<string> BackUpCoreAsync(Guid instanceId, GameSaveEntry entry, DateTimeOffset now, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        EnsureNotInUse(entry.Path);
         var folder = Directory.CreateDirectory(_backups.KindFolder(instanceId, entry.Kind)).FullName;
         var folderName = Path.GetFileName(entry.Path);
         for (var attempt = 1; ; attempt++)
@@ -258,13 +247,9 @@ public sealed class FileGameSaveStore : IGameSaveStore
         if (PathComparer.Equals(Path.GetFullPath(target), source.FullName))
             throw new InvalidOperationException($"{entry.Path} is already in instance '{targetInstanceId}'.");
 
-        EnsureNotInUse(source.FullName);
         var exists = Directory.Exists(target);
         if (exists && !replace)
             return GameSaveCopyOutcome.Exists;
-
-        if (exists)
-            EnsureNotInUse(target);
 
         // the game reads only the saves and Vehicles folders, so a copy that stops leaves nothing it would load
         var staging = Path.Combine(instanceRoot, ".borea-copy-" + Guid.NewGuid().ToString("N"));
