@@ -105,6 +105,8 @@ public sealed class BackupCommandTests : IDisposable
         Assert.Equal(300, new FileInfo(Path.Combine(orbit.Path, "universe.xml")).Length);
         var list = await _host.RunAsync("instance", "backups", "Alpha", "--json");
         Assert.Equal("replaced", Assert.Single(list.Json.EnumerateArray()).GetProperty("reason").GetString());
+        var replaced = Assert.Single(await new FileGameSaveBackupStore(_host.Paths).ListAsync(instanceId));
+        Assert.Equal(20, new FileInfo(Path.Combine(replaced.Path, "universe.xml")).Length);
     }
 
     [Fact]
@@ -119,6 +121,31 @@ public sealed class BackupCommandTests : IDisposable
         Assert.Equal(0, restored.ExitCode);
         Assert.Contains("Restored 'Orbit' into 'Alpha'.", restored.Output);
         Assert.True(File.Exists(Path.Combine(orbit.Path, "universe.xml")));
+    }
+
+    [Fact]
+    public async Task RestoreBackup_UnknownBackup_Fails()
+    {
+        await CreateInstanceAsync();
+
+        var result = await _host.RunAsync("instance", "restore-backup", "Alpha", "saves/Nothing");
+
+        Assert.Equal(1, result.ExitCode);
+        Assert.Contains("has no backup 'saves/Nothing'", result.Error);
+    }
+
+    [Theory]
+    [InlineData("backups", "Beta")]
+    [InlineData("restore-backup", "Beta", "saves/Orbit")]
+    [InlineData("delete-backup", "Beta", "saves/Orbit")]
+    public async Task BackupVerbs_UnknownInstance_Fail(params string[] arguments)
+    {
+        await CreateInstanceAsync();
+
+        var result = await _host.RunAsync(["instance", .. arguments]);
+
+        Assert.Equal(1, result.ExitCode);
+        Assert.Contains("No instance is named 'Beta'.", result.Error);
     }
 
     [Fact]
