@@ -101,23 +101,11 @@ public partial class MainViewModel
 
     internal void OpenGameSaveSectionFolder(GameSaveSection section)
     {
-        if (_services is null || SelectedInstance is null)
+        if (_services is not { } services || SelectedInstance is not { } instance)
             return;
 
-        string? error;
-        try
-        {
-            // GameSaves and VehicleSaves create the folder in OnApplicationStart too, so creating it first changes nothing for the game
-            var folder = _services.GameSaves.GetFolder(SelectedInstance.InstanceId, section.Kind);
-            Directory.CreateDirectory(folder);
-            error = TryOpenWithSystem(folder);
-        }
-        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
-        {
-            error = exception.Message;
-        }
-
-        ShowOpenError(() => section.Title, error);
+        // GameSaves and VehicleSaves create the folder in OnApplicationStart too, so creating it first changes nothing for the game
+        OpenCreatingFolder(() => services.GameSaves.GetFolder(instance.InstanceId, section.Kind), () => section.Title);
     }
 
     internal Task BackUpGameSaveAsync(GameSaveItem item) => RunGameSaveActionAsync([item.InstanceId], () => Localization.FormatToastBackUpFailed(item.Name), async services =>
