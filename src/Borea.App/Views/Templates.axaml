@@ -151,6 +151,11 @@
                     <TextBlock Classes="body-sm danger" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ContentNotOnDisk}" ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ContentNotOnDiskDetail}" IsVisible="{Binding IsMissing}" />
                     <TextBlock Classes="body-sm danger" Text="{Binding RemoveConfirmText}" IsVisible="{Binding IsConfirmingRemove}" />
                     <TextBlock Classes="body-sm danger" Text="{Binding ManageConfirmText}" TextWrapping="Wrap" IsVisible="{Binding IsConfirmingManage}" />
+                    <TextBlock Classes="body-sm danger" Text="{Binding ManageMissingText}" TextWrapping="Wrap" IsVisible="{Binding ManageMissingText, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                    <CheckBox IsChecked="{Binding InstallManageDependencies}" IsVisible="{Binding ManageInstallMissingText, Converter={x:Static ObjectConverters.IsNotNull}}">
+                        <TextBlock Classes="body-sm" Text="{Binding ManageInstallMissingText}" TextWrapping="Wrap" />
+                    </CheckBox>
+                    <TextBlock Classes="body-sm secondary" Text="{Binding ManageNotInstalledText}" TextWrapping="Wrap" IsVisible="{Binding ManageNotInstalledText, Converter={x:Static ObjectConverters.IsNotNull}}" />
                     <TextBlock Classes="body-sm secondary" Text="{Binding ProgressStatus}" ToolTip.Tip="{Binding ProgressStatus}" TextTrimming="CharacterEllipsis" IsVisible="{Binding ProgressStatus, Converter={x:Static ObjectConverters.IsNotNull}}" />
                     <TextBlock Classes="body-sm secondary" Text="{Binding InstallWarning}" ToolTip.Tip="{Binding InstallWarning}" TextTrimming="CharacterEllipsis" IsVisible="{Binding IsConfirmingUpdate}" />
                     <TextBlock Classes="body-sm danger" Text="{Binding InstallError}" ToolTip.Tip="{Binding InstallError}" TextTrimming="CharacterEllipsis" IsVisible="{Binding InstallError, Converter={x:Static ObjectConverters.IsNotNull}}" />

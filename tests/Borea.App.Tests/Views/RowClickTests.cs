@@ -389,7 +389,7 @@ public sealed class RowClickTests
         var (opened, selected) = await OnPageAsync(harness, () => new InstancePage(), (window, page) =>
         {
             var row = Row(page, item.OpenCommand);
-            ClickCenter(window, row.GetVisualDescendants().OfType<CheckBox>().Single());
+            ClickCenter(window, row.GetVisualDescendants().OfType<CheckBox>().Single(box => box.IsEffectivelyVisible));
             page.UpdateLayout();
             ClickCenter(window, row.GetVisualDescendants().OfType<RadioButton>().First());
             return Task.FromResult((item.OpenCommand.ExecutionTask, viewModel.SelectedContent));
