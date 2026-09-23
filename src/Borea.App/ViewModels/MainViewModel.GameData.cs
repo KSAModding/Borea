@@ -4,6 +4,7 @@ using System.Collections.ObjectModel;
 using System.Globalization;
 using System.IO;
 using System.Threading.Tasks;
+using Borea.Core.Files;
 using Borea.Core.Instances;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -15,8 +16,6 @@ namespace Borea.App.ViewModels;
 /// </summary>
 public partial class MainViewModel
 {
-    private static readonly string[] SizeUnits = ["KB", "MB", "GB", "TB"];
-
     private IReadOnlyList<GameDataEntry> _gameData = [];
 
     public ObservableCollection<GameDataItem> GameDataItems { get; } = [];
@@ -69,22 +68,7 @@ public partial class MainViewModel
 
     internal string FormatGameDataSize(long bytes) => bytes <= 0 ? Localization.GameDataEmpty : SizeText(bytes);
 
-    /// <summary>A byte count in decimal units, the way the download progress counts them: "38.0 MB".</summary>
-    internal static string SizeText(long bytes)
-    {
-        if (bytes < 1000)
-            return bytes.ToString(CultureInfo.CurrentCulture) + " B";
-
-        var value = bytes / 1000.0;
-        var unit = 0;
-        while (value >= 999.95 && unit < SizeUnits.Length - 1)
-        {
-            value /= 1000;
-            unit++;
-        }
-
-        return value.ToString("0.0", CultureInfo.CurrentCulture) + " " + SizeUnits[unit];
-    }
+    internal static string SizeText(long bytes) => ByteSize.Format(bytes, CultureInfo.CurrentCulture);
 
     /// <summary>
     /// A count the way a row shows it: 999, 1.2k, 15k, 1.2M. The exact number
