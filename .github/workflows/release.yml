@@ -143,19 +143,23 @@ jobs:
           CLI: ${{ steps.name.outputs.cli }}
         run: chmod +x "publish/$APP/borea" "publish/$CLI/borea"
 
+      # The archive names carry the version, and the folder inside does not, because Borea updates
+      # itself into the folder it runs from, and a version in that name would stay there for good.
       - name: Archive
         env:
           APP: ${{ steps.name.outputs.app }}
           CLI: ${{ steps.name.outputs.cli }}
           RID: ${{ matrix.rid }}
         run: |
-          mkdir -p dist/App dist/Cli
+          mkdir -p dist/App dist/Cli folders/App folders/Cli
+          mv "publish/$APP" folders/App/Borea
+          mv "publish/$CLI" folders/Cli/Borea-Cli
           if [ "$RID" = win-x64 ]; then
-            (cd publish && zip -qr "$GITHUB_WORKSPACE/dist/App/$APP.zip" "$APP")
-            (cd publish && zip -qr "$GITHUB_WORKSPACE/dist/Cli/$CLI.zip" "$CLI")
+            (cd folders/App && zip -qr "$GITHUB_WORKSPACE/dist/App/$APP.zip" Borea)
+            (cd folders/Cli && zip -qr "$GITHUB_WORKSPACE/dist/Cli/$CLI.zip" Borea-Cli)
           else
-            tar -czf "dist/App/$APP.tar.gz" -C publish "$APP"
-            tar -czf "dist/Cli/$CLI.tar.gz" -C publish "$CLI"
+            tar -czf "dist/App/$APP.tar.gz" -C folders/App Borea
+            tar -czf "dist/Cli/$CLI.tar.gz" -C folders/Cli Borea-Cli
           fi
 
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
@@ -565,7 +569,8 @@ jobs:
 
           The builds include the .NET runtime and are self-contained, so there is nothing to install first.
 
-          Each archive contains `borea` (`borea.exe` on Windows), `LICENSE` and `THIRD-PARTY-NOTICES.txt`.
+          Each archive contains `borea` (`borea.exe` on Windows), `LICENSE` and `THIRD-PARTY-NOTICES.txt`, in a folder named `Borea`, or `Borea-Cli` for the CLI archive.
+          Put that folder where it can stay, for example `%LocalAppData%\Programs\Borea` on Windows or `~/.local/share/Borea` on Linux, because Borea updates itself into the folder it runs from.
 
           ### First start
 

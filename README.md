@@ -56,6 +56,8 @@ It is a smaller download for scripts and for computers without a desktop.
 The builds include the .NET runtime and are self-contained, so there is nothing you need to install first.
 
 Each archive also contains `LICENSE` and `THIRD-PARTY-NOTICES.txt` with the licenses of the third-party software in it.
+The App archive unpacks into a folder named `Borea`, and the CLI archive into `Borea-Cli`.
+Put that folder where it can stay, for example `%LocalAppData%\Programs\Borea` on Windows or `~/.local/share/Borea` on Linux, because Borea updates itself into the folder it runs from.
 
 | Platform | App and CLI | CLI only |
 | --- | --- | --- |
