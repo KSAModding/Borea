@@ -119,10 +119,15 @@
                                 <ListBox x:Name="ListedResults" ItemsSource="{Binding ListingEditor.ListedMatches}" SelectedItem="{Binding ListingEditor.SelectedListed}" MaxHeight="240" IsEnabled="{Binding !ListingEditor.IsBusy}" AutomationProperties.Name="{Binding Localization.ListingChangeTitle}" IsVisible="{Binding !!ListingEditor.ListedMatches.Count}">
                                     <ListBox.ItemTemplate>
                                         <DataTemplate x:DataType="vm:ListedListing">
-                                            <StackPanel Spacing="2">
-                                                <TextBlock Classes="heading-sm" Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
-                                                <TextBlock Classes="label-md" Text="{Binding Id}" TextTrimming="CharacterEllipsis" />
-                                            </StackPanel>
+                                            <Grid ColumnDefinitions="*,8,Auto">
+                                                <StackPanel Spacing="2">
+                                                    <TextBlock Classes="heading-sm" Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
+                                                    <TextBlock Classes="label-md" Text="{Binding Id}" TextTrimming="CharacterEllipsis" />
+                                                </StackPanel>
+                                                <Border Grid.Column="2" Classes="chip positive" VerticalAlignment="Center" IsVisible="{Binding IsOwn}">
+                                                    <TextBlock Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ListingYourMod}" />
+                                                </Border>
+                                            </Grid>
                                         </DataTemplate>
                                     </ListBox.ItemTemplate>
                                 </ListBox>

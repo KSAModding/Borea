@@ -3,16 +3,17 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using Borea.Core.Index;
+using Borea.Core.Listings;
 using Borea.Core.Mods;
 using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace Borea.App.ViewModels;
 
 /// <summary>A listed mod that the start step can load to change it.</summary>
-public sealed record ListedListing(string Id, string Name);
+public sealed record ListedListing(string Id, string Name, bool IsOwn);
 
 /// <summary>
-/// The search for a listed mod on the start step.
+/// The search for a listed mod on the start step. The listings of the signed-in GitHub account come first.
 /// </summary>
 public sealed partial class ListingEditor
 {
@@ -50,17 +51,28 @@ public sealed partial class ListingEditor
 
     private void FindListed()
     {
+        var login = IsSignedIn ? _owner.GitHubLogin : null;
         var query = ListedQuery.Trim();
         var matches = _listedMods
-            .Select(listing => new ListedListing(listing.Id, listing.Authored!.Name))
+            .Select(listing => new ListedListing(listing.Id, listing.Authored!.Name, login is not null && IsOwnedBy(listing.Authored, login)))
             .Where(listing => listing.Id.Contains(query, StringComparison.OrdinalIgnoreCase) || listing.Name.Contains(query, StringComparison.OrdinalIgnoreCase))
-            .OrderBy(listing => listing.Id, StringComparer.OrdinalIgnoreCase)
+            .OrderByDescending(listing => listing.IsOwn)
+            .ThenBy(listing => listing.Id, StringComparer.OrdinalIgnoreCase)
             .ToList();
 
         MainViewModel.Arrange(ListedMatches, matches);
         SelectedListed = matches.FirstOrDefault(listing => listing.Id == SelectedListed?.Id) ?? (query.Length > 0 ? matches.FirstOrDefault() : null);
         OnPropertyChanged(nameof(HasNoListedMatch));
     }
+
+    /// <summary>
+    /// A listing is your own when the owner of a GitHub repository in its [releases] is the signed-in login.
+    /// GitHub logins ignore letter case. A repository of an organization counts only when the login is that name.
+    /// </summary>
+    private static bool IsOwnedBy(ModMetadata listing, string login) =>
+        listing.Releases?.Hosts.Any(host =>
+            string.Equals(host.Host, ListingAuthority.GitHub, StringComparison.OrdinalIgnoreCase)
+            && string.Equals(host.Reference.Split('/')[0], login, StringComparison.OrdinalIgnoreCase)) == true;
 
     partial void OnListedQueryChanged(string value) => FindListed();
 }

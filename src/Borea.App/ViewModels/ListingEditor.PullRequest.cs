@@ -509,6 +509,7 @@ public sealed partial class ListingEditor
         OnPropertyChanged(nameof(CanPublish));
         OnPropertyChanged(nameof(PublishText));
         ScheduleOwnershipCheck();
+        FindListed();
         ForkStep = null;
         if (!IsSignedIn)
         {

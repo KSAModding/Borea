@@ -1332,6 +1332,9 @@
   <data name="ListingSearchListed" xml:space="preserve">
     <value>Nach Name oder ID suchen</value>
   </data>
+  <data name="ListingYourMod" xml:space="preserve">
+    <value>Deine Mod</value>
+  </data>
   <data name="ListingNoListedMatch" xml:space="preserve">
     <value>Keine eingetragene Mod passt.</value>
   </data>

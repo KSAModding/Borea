@@ -883,6 +883,8 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string ListingSearchListed => Resources.ListingSearchListed;
 
+    public string ListingYourMod => Resources.ListingYourMod;
+
     public string ListingNoListedMatch => Resources.ListingNoListedMatch;
 
     public string ListingLoad => Resources.ListingLoad;

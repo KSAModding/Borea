@@ -436,6 +436,29 @@ public sealed class ListingEditorTests
     }
 
     [Fact]
+    public async Task SignedIn_OwnListingsComeFirstUntilTheSignOut()
+    {
+        var session = new ListingPullRequestViewModelTests.FakeSession();
+        session.SignIn();
+        using var harness = await ViewModelHarness.CreateAsync(gitHub: session, editSnapshot: json => json
+            .Replace("StarMapLoader/StarMap", "OctoCat/StarMap", StringComparison.Ordinal)
+            .Replace("LaurensDeV/KSArmory", "octocat-org/KSArmory", StringComparison.Ordinal));
+        var editor = harness.ViewModel.ListingEditor;
+        await harness.ViewModel.OpenListingAsync();
+
+        var signedIn = editor.ListedMatches.ToList();
+        editor.SelectedListed = signedIn[0];
+        session.SignOut();
+
+        Assert.Equal(
+            [new ListedListing("StarMap", "StarMap", true), new ListedListing("AdvancedFlightComputer", "Advanced Flight Computer", false), new ListedListing("KSArmory", "KSArmory", false), new ListedListing("MeasureTools", "MeasureTools", false)],
+            signedIn);
+        Assert.Equal(["AdvancedFlightComputer", "KSArmory", "MeasureTools", "StarMap"], editor.ListedMatches.Select(listing => listing.Id));
+        Assert.DoesNotContain(editor.ListedMatches, listing => listing.IsOwn);
+        Assert.Same(editor.ListedMatches[3], editor.SelectedListed);
+    }
+
+    [Fact]
     public async Task LeavingThePage_KeepsTheDraft()
     {
         using var harness = await ViewModelHarness.CreateAsync();
