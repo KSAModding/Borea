@@ -108,6 +108,23 @@ public sealed class PageBackTests
     }
 
     [Fact]
+    public async Task ListingPage_GoesBackToDiscoverAfterAModWasOpenedFromHome()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var viewModel = harness.ViewModel;
+        await viewModel.RecentItems.Single(item => item.ModId == "AdvancedFlightComputer").OpenCommand.ExecuteAsync(null);
+        await viewModel.GoBackCommand.ExecuteAsync(null);
+        viewModel.SetMainWindowDiscover();
+        await viewModel.OpenListingAsync();
+        Assert.True(viewModel.CurrentWindowListing);
+
+        await viewModel.GoBackCommand.ExecuteAsync(null);
+
+        Assert.True(viewModel.CurrentWindowDiscover);
+        Assert.False(viewModel.CurrentWindowListing);
+    }
+
+    [Fact]
     public async Task ModOpenedFromAnotherContentPage_GoesBackToDiscover()
     {
         using var harness = await ViewModelHarness.CreateAsync();

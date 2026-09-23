@@ -185,12 +185,19 @@ public partial class MainViewModel
     }
 
     /// <summary>
-    /// The back control of the content, pack and instance pages. It leads to the
-    /// page the content was opened from, and an instance leads to the Library.
+    /// The back control of the content, pack, instance and listing pages. It leads to the
+    /// page the content was opened from, an instance leads to the Library, and the listing page to Discover.
     /// </summary>
     [RelayCommand]
     private Task GoBackAsync()
     {
+        // the listing page is only ever reached from Discover
+        if (CurrentWindowListing)
+        {
+            SetMainWindowDiscover();
+            return Task.CompletedTask;
+        }
+
         // An instance is only ever reached from the Library, and OpenedFrom
         // belongs to the content page, where it would be stale here.
         if (CurrentWindowInstance)
