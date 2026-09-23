@@ -32,6 +32,10 @@ public static class ReleaseChannels
         _ => channel == ReleaseChannel.Dev,
     };
 
+    /// <summary>The narrowest channel that offers <paramref name="status"/>. An unknown status counts as dev.</summary>
+    public static ReleaseChannel NarrowestFor(ReleaseStatus status) =>
+        Enum.GetValues<ReleaseChannel>().First(channel => channel.Includes(status));
+
     /// <summary>The lowercase channel name.</summary>
     public static string ToName(this ReleaseChannel channel) => channel switch
     {

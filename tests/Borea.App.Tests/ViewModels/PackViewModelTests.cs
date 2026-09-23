@@ -176,6 +176,43 @@ public sealed class PackViewModelTests
     }
 
     [Fact]
+    public async Task Pack_WhoseMembersAreAtTheirNewestRelease_ShowsNoMark()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: WithPacks(
+            Pack("starter-pack", "Starter Pack", Version("1.0.0", Pin("AdvancedFlightComputer", "0.7.5"), Pin("MeasureTools", "1.1.10")))));
+        var viewModel = harness.ViewModel;
+        await viewModel.EnsureDiscoverLoadedAsync();
+        viewModel.ShowDiscoverModpacksCommand.Execute(null);
+        var pack = Assert.Single(viewModel.DiscoverPacks);
+
+        await pack.OpenCommand.ExecuteAsync(null);
+
+        Assert.False(pack.HasNewerReleases);
+        Assert.Null(pack.NewerReleasesText);
+        Assert.All(viewModel.PackMembers, member => Assert.Null(member.NewerText));
+    }
+
+    [Fact]
+    public async Task Pack_WithNewerMemberReleases_CountsThemOnTheRow_AndNamesThemOnThePage()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: WithPacks(
+            Pack("starter-pack", "Starter Pack", Version("1.0.0", Pin("AdvancedFlightComputer", "0.7.4"), Pin("KSArmory", "0.8.44"), Pin("MeasureTools", "1.1.9")))));
+        var viewModel = harness.ViewModel;
+        await viewModel.EnsureDiscoverLoadedAsync();
+        viewModel.ShowDiscoverModpacksCommand.Execute(null);
+        var pack = Assert.Single(viewModel.DiscoverPacks);
+
+        Assert.Equal(harness.Localization.FormatPackNewerReleases(2, 3), pack.NewerReleasesText);
+        Assert.Equal("2 of 3 mods have newer releases", pack.NewerReleasesText);
+
+        await pack.OpenCommand.ExecuteAsync(null);
+
+        Assert.Equal(["0.7.5", null, "1.1.10"], viewModel.PackMembers.Select(member => member.NewerVersion));
+        Assert.Equal(harness.Localization.FormatPackMemberNewer("0.7.5"), viewModel.PackMembers[0].NewerText);
+        Assert.Equal(["0.7.4", "0.8.44", "1.1.9"], viewModel.PackMembers.Select(member => member.Version));
+    }
+
+    [Fact]
     public async Task Versions_InstallRow_PutsThatVersionIntoTheActiveInstance()
     {
         var archive = Archive(("MeasureTools/mod.toml", "name = \"MeasureTools\""));

@@ -2349,6 +2349,18 @@
   <data name="PackMemberUnlisted" xml:space="preserve">
     <value>Nicht gelistet</value>
   </data>
+  <data name="PackMemberNewerFormat" xml:space="preserve">
+    <value>{0} verfügbar</value>
+  </data>
+  <data name="PackCopyForumList" xml:space="preserve">
+    <value>Forenliste kopieren</value>
+  </data>
+  <data name="PackForumListCopied" xml:space="preserve">
+    <value>Die Forenliste wurde in die Zwischenablage kopiert.</value>
+  </data>
+  <data name="PackForumListName" xml:space="preserve">
+    <value>Die Forenliste</value>
+  </data>
   <data name="PackResultInstalled" xml:space="preserve">
     <value>Installiert</value>
   </data>
@@ -2651,6 +2663,12 @@
   </data>
   <data name="PackReleasedOnFormat" xml:space="preserve">
     <value>Veröffentlicht am {0}</value>
+  </data>
+  <data name="PackNewerReleasesOneFormat" xml:space="preserve">
+    <value>1 von {0} Mods hat eine neuere Version</value>
+  </data>
+  <data name="PackNewerReleasesFormat" xml:space="preserve">
+    <value>{0} von {1} Mods haben neuere Versionen</value>
   </data>
   <data name="PackIncompatibleFormat" xml:space="preserve">
     <value>Dieses Modpack braucht die Spielversion {0} oder neuer.</value>

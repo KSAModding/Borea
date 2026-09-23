@@ -14,6 +14,9 @@
   var TYPES = Object.assign(Object.create(null), { mod: "Mod", "mod-loader": "Mod loader", modpack: "Modpack" });
   var LINKS = Object.assign(Object.create(null), { forums: "Forum", repository: "Repository", spacedock: "SpaceDock", bugtracker: "Bug tracker", homepage: "Homepage", discussions: "Discussions" });
   var LINK_ORDER = Object.keys(LINKS);
+  // ReleaseChannels in Borea.Core: stable offers stable releases, testing adds testing ones, and dev offers every status.
+  var CHANNELS = Object.assign(Object.create(null), { stable: 0, testing: 1 });
+  var DEV_CHANNEL = 2;
   var MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
   // The blocks and the inline spans the share page generator reads, kept the same by the parity test.
   var HEADING = /^(#{1,6})\s+(.*)$/;
@@ -347,6 +350,76 @@
     return stable[0] || usable[0] || null;
   }
 
+  function channelOf(release) {
+    var status = release.release_status;
+    if (status === undefined || status === null) {
+      return CHANNELS.stable;
+    }
+    var channel = CHANNELS[String(status).toLowerCase()];
+    return channel === undefined ? DEV_CHANNEL : channel;
+  }
+
+  function forumLink(authored) {
+    if (!isObject(authored.links)) {
+      return null;
+    }
+    var keys = Object.keys(authored.links).filter(function (key) { return key.toLowerCase() === "forums"; });
+    for (var i = 0; i < keys.length; i++) {
+      if (webUrl(authored.links[keys[i]])) {
+        return authored.links[keys[i]];
+      }
+    }
+    return null;
+  }
+
+  // The forum line of one pin and its newer release, the way the share page generator writes them.
+  function packMember(pin, snapshot) {
+    if (!isObject(pin) || !validId(pin.id) || !text(pin.version)) {
+      return null;
+    }
+    var version = text(pin.version);
+    var entry = (Array.isArray(snapshot.listings) ? snapshot.listings : []).filter(function (candidate) {
+      return isObject(candidate) && validId(candidate.id) && candidate.id.toLowerCase() === pin.id.toLowerCase()
+        && isObject(candidate.authored) && stateOf(candidate) !== "delisted";
+    })[0];
+    var releases = entry && Array.isArray(entry.releases) ? entry.releases.filter(isObject) : [];
+    var index = -1;
+    for (var i = 0; i < releases.length && index < 0; i++) {
+      if (text(releases[i].version) === version) {
+        index = i;
+      }
+    }
+    if (index < 0) {
+      return { line: pin.id + " " + version + " - Not listed in the content index", newer: null };
+    }
+    var authored = entry.authored;
+    var name = text(authored.name) || entry.id;
+    var download = isObject(releases[index].download) && webUrl(releases[index].download.url) ? releases[index].download.url : null;
+    var line = [
+      name + " " + version,
+      "Author: " + (authorsOf(authored).join(", ") || "not stated"),
+      "License: " + (text(authored.license) || "not stated"),
+      "Download: " + (download || "not stated"),
+      "Thread: " + (forumLink(authored) || "not stated")
+    ].join(" - ");
+    var channel = channelOf(releases[index]);
+    // The releases are in descending SemVer precedence, so every release before the pinned one is newer.
+    var newer = releases.slice(0, index).filter(function (release) {
+      return release.yanked !== true && channelOf(release) <= channel && text(release.version);
+    })[0];
+    return { line: line, newer: newer ? name + " " + text(newer.version) : null };
+  }
+
+  function newerText(view) {
+    if (!view.newer.length) {
+      return null;
+    }
+    var total = view.forumList.length;
+    var head = view.newer.length === 1 ? "1 of " + total + " mods has a newer release"
+      : view.newer.length + " of " + total + " mods have newer releases";
+    return head + ": " + view.newer.join(", ") + ".";
+  }
+
   function findEntry(entries, id) {
     var lower = id.toLowerCase();
     for (var i = 0; Array.isArray(entries) && i < entries.length; i++) {
@@ -385,6 +458,8 @@
       game: game,
       downloads: isObject(entry.downloads) ? count(entry.downloads.total) : null,
       modCount: null,
+      forumList: null,
+      newer: [],
       tags: displayTags(snapshot, authored.tags),
       links: linksOf(authored),
       images: imageRecords(authored),
@@ -429,11 +504,22 @@
       game: gameText(text(compatibility.game_min), text(compatibility.game_max)),
       downloads: null,
       modCount: Array.isArray(authored.mods) ? authored.mods.length : null,
+      forumList: [],
+      newer: [],
       tags: displayTags(snapshot, authored.tags),
       links: linksOf(authored),
       images: imageRecords(authored),
       notices: []
     };
+    (Array.isArray(authored.mods) ? authored.mods : []).forEach(function (pin) {
+      var member = packMember(pin, snapshot);
+      if (member) {
+        view.forumList.push(member.line);
+        if (member.newer) {
+          view.newer.push(member.newer);
+        }
+      }
+    });
     var notice = statusNotice(entry);
     if (notice) {
       view.notices.push(notice);
@@ -625,6 +711,24 @@
     return fragment;
   }
 
+  function members(view) {
+    var section = element("section", "members");
+    section.appendChild(element("h2", null, "Mods"));
+    var summary = newerText(view);
+    if (summary) {
+      section.appendChild(element("p", "newer", summary));
+    }
+    section.appendChild(element("pre", "forum-list", view.forumList.join("\n")));
+    var button = element("button", "button secondary", "Copy forum list");
+    button.setAttribute("type", "button");
+    button.setAttribute("data-copy-list", "");
+    button.hidden = true;
+    section.appendChild(button);
+    section.appendChild(element("p", "meta",
+      "One line per mod with its version, author, license, download and release thread, the way the forum rules ask a pack thread to list them."));
+    return section;
+  }
+
   function render(view) {
     var header = element("div", "listing listing-header");
     var icon = element("div", "listing-icon placeholder");
@@ -675,7 +779,14 @@
       description.appendChild(imageSwitch());
     }
     description.appendChild(prose);
-    body.appendChild(description);
+    if (view.forumList) {
+      var main = element("div", "listing-main");
+      main.appendChild(description);
+      main.appendChild(members(view));
+      body.appendChild(main);
+    } else {
+      body.appendChild(description);
+    }
 
     var panel = element("aside", "panel");
     if (view.game) {
@@ -753,6 +864,9 @@
     // The same script the static pages use, so both show a description image the same way.
     if (window.boreaImages) {
       window.boreaImages.start(description);
+    }
+    if (window.boreaCopyList) {
+      window.boreaCopyList.start(page);
     }
   }
 

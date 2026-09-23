@@ -53,6 +53,9 @@ LINK_LABELS = {
 MONTHS = ("January", "February", "March", "April", "May", "June", "July", "August", "September", "October",
           "November", "December")
 DESCRIPTION_LIMIT = 300
+# ReleaseChannels in Borea.Core: stable offers stable releases, testing adds testing ones, and dev offers every status.
+CHANNELS = {"stable": 0, "testing": 1}
+DEV_CHANNEL = 2
 
 # The blocks and the inline spans of a description, a narrower subset than the description view of the App reads,
 # because a reference-style link and a raw HTML image stay the text the author wrote.
@@ -119,6 +122,9 @@ class Page:
     downloads: int | None
     mod_count: int | None
     tags: list[str] = field(default_factory=list)
+    # The member lines a pack thread lists by forum rule 4.3, and the members with a newer release. None on a mod page.
+    forum_list: list[str] | None = None
+    newer: list[str] = field(default_factory=list)
     links: list[tuple[str, str]] = field(default_factory=list)
     notices: list[Notice] = field(default_factory=list)
     images: dict[str, dict] = field(default_factory=dict)
@@ -449,9 +455,12 @@ class Snapshot:
             if isinstance(version, str) and version.rsplit(".", 1)[-1].isdecimal():
                 self.game_versions.setdefault(int(version.rsplit(".", 1)[-1]), version)
         self.names = {}
+        self.entries = {}
         for entry in self.listings:
             if valid_id(entry.get("id")) and isinstance(entry.get("authored"), dict):
                 self.names.setdefault(entry["id"].lower(), (entry["id"], text(entry["authored"].get("name")) or entry["id"]))
+                if state_of(entry) != "delisted":
+                    self.entries.setdefault(entry["id"].lower(), entry)
         curated = document["tags"].get("mod") if isinstance(document.get("tags"), dict) else None
         self.curated_tags = []
         for tag in curated if isinstance(curated, list) else []:
@@ -501,6 +510,61 @@ def newest_release(releases) -> dict | None:
     usable = [release for release in releases if isinstance(release, dict) and release.get("yanked") is not True]
     stable = [release for release in usable if release.get("release_status") in (None, "stable")]
     return (stable or usable or [None])[0]
+
+
+def channel_of(release: dict) -> int:
+    """The narrowest channel that offers a release. An unknown status counts as dev, and no status as stable."""
+    status = release.get("release_status")
+    return CHANNELS["stable"] if status is None else CHANNELS.get(str(status).lower(), DEV_CHANNEL)
+
+
+def forum_link(authored: dict) -> str | None:
+    links = authored.get("links")
+    found = [web_url(value) for key, value in links.items() if str(key).lower() == "forums"] if isinstance(links, dict) else []
+    return next((url for url in found if url), None)
+
+
+def pack_member(pin, snapshot: Snapshot) -> tuple[str, str | None] | None:
+    """The forum line of one pin and its newer release, or None for an entry that is no pin.
+
+    ModPackForumList in Borea.Core writes the same line. A newer release counts when the channel of the pinned
+    release offers it, which is what ModPackMemberReleases finds for a player on the stable channel.
+    """
+    if not isinstance(pin, dict) or not valid_id(pin.get("id")) or text(pin.get("version")) is None:
+        return None
+    identifier, version = pin["id"], text(pin["version"])
+    entry = snapshot.entries.get(identifier.lower())
+    releases = entry.get("releases") if entry and isinstance(entry.get("releases"), list) else []
+    releases = [release for release in releases if isinstance(release, dict)]
+    index = next((number for number, release in enumerate(releases) if text(release.get("version")) == version), None)
+    if index is None:
+        return f"{identifier} {version} - Not listed in the content index", None
+
+    authored = entry["authored"]
+    name = text(authored.get("name")) or entry["id"]
+    download = releases[index].get("download")
+    facts = [
+        f"{name} {version}",
+        f"Author: {', '.join(authors_of(authored)) or 'not stated'}",
+        f"License: {text(authored.get('license')) or 'not stated'}",
+        f"Download: {(web_url(download.get('url')) if isinstance(download, dict) else None) or 'not stated'}",
+        f"Thread: {forum_link(authored) or 'not stated'}",
+    ]
+    channel = channel_of(releases[index])
+    # The releases are in descending SemVer precedence, so every release before the pinned one is newer.
+    newer = next((release for release in releases[:index]
+                  if release.get("yanked") is not True and channel_of(release) <= channel and text(release.get("version"))), None)
+    return " - ".join(facts), f"{name} {text(newer['version'])}" if newer else None
+
+
+def newer_text(page: Page) -> str | None:
+    """The mark forum rule 4.6 asks for, which Borea computes because a pack pins exact versions on purpose."""
+    if not page.newer:
+        return None
+    total = len(page.forum_list)
+    count_text = (f"1 of {total} mods has a newer release" if len(page.newer) == 1
+                  else f"{len(page.newer)} of {total} mods have newer releases")
+    return f"{count_text}: {', '.join(page.newer)}."
 
 
 def listing_page(entry: dict, snapshot: Snapshot) -> Page:
@@ -579,6 +643,10 @@ def pack_page(entry: dict, snapshot: Snapshot) -> Page | None:
         links=links_of(authored),
         images=image_records(authored),
     )
+    members = [member for member in (pack_member(pin, snapshot) for pin in (mods if isinstance(mods, list) else []))
+               if member is not None]
+    page.forum_list = [line for line, _ in members]
+    page.newer = [newer for _, newer in members if newer]
     notice = status_notice(entry)
     if notice:
         page.notices.append(notice)
@@ -699,6 +767,19 @@ def structured_data(page: Page, url: str, image: str) -> dict:
     return data
 
 
+def members_html(page: Page) -> str:
+    """The Mods section of a pack page, with the forum list that copy-list.js copies, or nothing on a mod page."""
+    if page.forum_list is None:
+        return ""
+    summary = f'        <p class="newer">{escape(newer_text(page))}</p>\n' if page.newer else ""
+    return ('      <section class="members">\n        <h2>Mods</h2>\n'
+            f'{summary}        <pre class="forum-list">{escape(chr(10).join(page.forum_list))}</pre>\n'
+            '        <button class="button secondary" type="button" data-copy-list hidden>Copy forum list</button>\n'
+            '        <p class="meta">One line per mod with its version, author, license, download and release thread, '
+            'the way the forum rules ask a pack thread to list them.</p>\n'
+            '      </section>\n')
+
+
 def render(page: Page, site_url: str = SITE_URL) -> str:
     root = "../../"
     url = share_url(site_url, page)
@@ -761,6 +842,9 @@ def render(page: Page, site_url: str = SITE_URL) -> str:
 
     body = (markdown_html(page.description, "          ", page.images) if page.description
             else '          <p class="meta">No description provided.</p>\n')
+    members = members_html(page)
+    main_open, main_close = ('      <div class="listing-main">\n', "      </div>\n") if members else ("", "")
+    copy_script = f'  <script src="{root}copy-list.js" defer></script>\n' if members else ""
     switch = IMAGE_SWITCH if '<figure data-image="' in body else ""
     authors = f'        <p class="meta by">by {escape(", ".join(page.authors))}</p>\n' if page.authors else ""
     abstract = f'        <p class="tagline">{escape(page.abstract)}</p>\n' if page.abstract else ""
@@ -790,7 +874,7 @@ def render(page: Page, site_url: str = SITE_URL) -> str:
   <link rel="preload" href="{root}fonts/IBMPlexSans-Regular.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="{root}styles.css">
   <script src="{root}description-images.js"></script>
-  <script type="application/ld+json">{data}</script>
+{copy_script}  <script type="application/ld+json">{data}</script>
 </head>
 <body class="share">
   <header class="column top">
@@ -812,12 +896,12 @@ def render(page: Page, site_url: str = SITE_URL) -> str:
     </div>
 
     <div class="listing-body">
-      <section class="description">
+{main_open}      <section class="description">
         <h2>Description</h2>
 {switch}        <div class="prose">
 {body}        </div>
       </section>
-
+{members}{main_close}
       <aside class="panel">
 {compatibility}{links}        <section>
           <h2>Details</h2>

@@ -429,19 +429,23 @@ public partial class MainViewModel
     [RelayCommand]
     private Task CopyContentShareLinkAsync() => CopyShareLinkAsync(ContentShareUrl);
 
-    private async Task CopyShareLinkAsync(string? url)
+    private Task CopyShareLinkAsync(string? url)
+        => url is null ? Task.CompletedTask : CopyTextAsync(() => Task.FromResult(url), () => url, () => Localization.ContentLinkCopied);
+
+    /// <param name="name">What the failure toast says could not be copied.</param>
+    private async Task CopyTextAsync(Func<Task<string>> text, Func<string> name, Func<string> copied)
     {
-        if (url is null || WindowServices is not { } window)
+        if (WindowServices is not { } window)
             return;
 
         try
         {
-            await window.CopyTextAsync(url);
-            ShowSuccessToast(() => Localization.ContentLinkCopied);
+            await window.CopyTextAsync(await text());
+            ShowSuccessToast(copied);
         }
-        catch (Exception exception) when (exception is InvalidOperationException or IOException or UnauthorizedAccessException)
+        catch (Exception exception) when (exception is InvalidOperationException or IOException or UnauthorizedAccessException or HttpRequestException or TaskCanceledException)
         {
-            ShowErrorToast(() => Localization.FormatToastCopyFailed(url), exception.Message);
+            ShowErrorToast(() => Localization.FormatToastCopyFailed(name()), exception.Message);
         }
     }
 

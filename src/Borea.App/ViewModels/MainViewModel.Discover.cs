@@ -418,8 +418,12 @@ public partial class MainViewModel
             release.RefreshCompatibility(installed);
 
         foreach (var pack in _packs)
+        {
             pack.Compatibility = Borea.Core.Game.Compatibility.Evaluate(pack.Metadata, installed, _gameReleases);
+            pack.NewerMembers = await ModPackMemberReleases.FindAsync(pack.Metadata, _services.ContentIndex, _services.Settings.ReleaseChannel);
+        }
 
+        ShowNewerMembers();
         ApplyDiscoverFilters();
     }
 

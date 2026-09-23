@@ -138,7 +138,16 @@ public partial class MainViewModel
             pack.RefreshText();
         foreach (var version in PackVersions)
             version.RefreshText();
+        foreach (var member in PackMembers)
+            member.RefreshText();
         PackUpdate?.RefreshText();
+    }
+
+    /// <summary>Names the newer release of each member row of the open pack.</summary>
+    private void ShowNewerMembers()
+    {
+        foreach (var member in PackMembers)
+            member.NewerVersion = SelectedPack?.NewerMembers.FirstOrDefault(newer => ModIds.Equals(newer.ModId, member.ModId))?.Newer.Version.ToString();
     }
 
     [RelayCommand]
@@ -194,6 +203,7 @@ public partial class MainViewModel
                 PackMembers.Add(member);
             foreach (var version in versions.Where(version => version.Metadata is not null))
                 PackVersions.Add(new PackVersionItem(this, pack, version.Metadata!));
+            ShowNewerMembers();
             RefreshInstalledFlags();
         }
         catch (Exception exception) when (exception is HttpRequestException or IOException or InvalidOperationException or TaskCanceledException)
@@ -223,6 +233,18 @@ public partial class MainViewModel
 
     [RelayCommand]
     private Task CopyPackShareLinkAsync() => CopyShareLinkAsync(PackShareUrl);
+
+    [RelayCommand]
+    private Task CopyPackForumListAsync()
+    {
+        if (_services is not { } services || SelectedPack is not { } pack)
+            return Task.CompletedTask;
+
+        return CopyTextAsync(
+            async () => string.Join(Environment.NewLine, await ModPackForumList.WriteAsync(pack.Metadata, services.ContentIndex)),
+            () => Localization.PackForumListName,
+            () => Localization.PackForumListCopied);
+    }
 
     [RelayCommand]
     private void OpenPackLink(ContentLink link)
@@ -608,6 +630,16 @@ public sealed partial class PackItem : ObservableObject, IPlanRow
 
     public string ModCountText => _owner.Localization.FormatPackModCount(ModCount);
 
+    /// <summary>The members that have a newer release than this version pins, in pack order.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasNewerReleases))]
+    [NotifyPropertyChangedFor(nameof(NewerReleasesText))]
+    private IReadOnlyList<NewerMemberRelease> _newerMembers = [];
+
+    public bool HasNewerReleases => NewerMembers.Count > 0;
+
+    public string? NewerReleasesText => HasNewerReleases ? _owner.Localization.FormatPackNewerReleases(NewerMembers.Count, ModCount) : null;
+
     public string GameVersionText => GameVersion(Metadata);
 
     /// <summary>How long ago this pack version came out.</summary>
@@ -781,6 +813,7 @@ public sealed partial class PackItem : ObservableObject, IPlanRow
         OnPropertyChanged(nameof(TypeText));
         OnPropertyChanged(nameof(CompatibilityText));
         OnPropertyChanged(nameof(ModCountText));
+        OnPropertyChanged(nameof(NewerReleasesText));
         OnPropertyChanged(nameof(ConfirmInstallText));
         OnPropertyChanged(nameof(ReleasedText));
         OnPropertyChanged(nameof(ReleasedDateText));
@@ -869,6 +902,13 @@ public sealed partial class PackMemberItem : ObservableObject
     [ObservableProperty]
     private bool _isInstalled;
 
+    /// <summary>The newer release of this mod, or null when the pin is the newest one.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(NewerText))]
+    private string? _newerVersion;
+
+    public string? NewerText => NewerVersion is null ? null : _owner.Localization.FormatPackMemberNewer(NewerVersion);
+
     public PackMemberItem(MainViewModel owner, ModPackEntry pin, ModVersionMetadata? release, DiscoverItem? listing)
     {
         _owner = owner;
@@ -882,6 +922,8 @@ public sealed partial class PackMemberItem : ObservableObject
 
     [RelayCommand]
     private Task OpenAsync() => _listing is null ? Task.CompletedTask : _owner.OpenContentAsync(_listing);
+
+    internal void RefreshText() => OnPropertyChanged(nameof(NewerText));
 }
 
 /// <summary>
