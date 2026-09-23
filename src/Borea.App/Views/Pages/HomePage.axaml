@@ -36,7 +36,6 @@
             <ContentControl Content="{Binding}" ContentTemplate="{StaticResource LaunchStatus}" />
             <!-- the Home banners in their order, each with its own top margin; a new banner goes at the end -->
             <StackPanel>
-                <ContentControl Content="{Binding}" ContentTemplate="{StaticResource GameSetupBanner}" IsVisible="{Binding NeedsGameSetup}" />
                 <ContentControl Content="{Binding}" ContentTemplate="{StaticResource SharedProfileBanner}" IsVisible="{Binding ShowSharedProfileBanner}" />
                 <views:Banner Margin="0,16,0,0" Message="{Binding ReleaseBannerText}" SecondaryActionText="{Binding SelfUpdateActionText}" SecondaryActionCommand="{Binding SelfUpdateCommand}" ActionText="{Binding Localization.UpdateSeeMore}" ActionCommand="{Binding OpenReleaseNotesCommand}" DismissCommand="{Binding DismissReleaseBannerCommand}" DismissText="{Binding Localization.UpdateDismiss}" IsVisible="{Binding ShowReleaseBanner}" />
                 <views:Banner Margin="0,16,0,0" Message="{Binding GameBuildBannerText}" ActionText="{Binding Localization.UpdateSeeMore}" ActionCommand="{Binding OpenGamePatchNotesCommand}" DismissCommand="{Binding DismissGameBuildBannerCommand}" DismissText="{Binding Localization.UpdateDismiss}" IsVisible="{Binding ShowGameBuildBanner}" />
@@ -45,13 +44,20 @@
                 <views:Banner Margin="0,16,0,0" Title="{Binding CurrentAnnouncement.Title}" Message="{Binding AnnouncementSummary}" ActionText="{Binding Localization.UpdateSeeMore}" ActionCommand="{Binding OpenAnnouncementCommand}" DismissCommand="{Binding DismissAnnouncementCommand}" DismissText="{Binding Localization.UpdateDismiss}" IsVisible="{Binding ShowAnnouncementBanner}" />
             </StackPanel>
 
-            <!-- Current install: black container with the header strip, holding the active instance row -->
+            <!-- Current install: black container with the header strip, holding the row of the Home instance -->
             <Border Background="{StaticResource Brush.SurfaceHeader}" CornerRadius="16" Margin="0,16,0,0">
                 <StackPanel>
                     <Grid ColumnDefinitions="Auto,8,*,Auto" Height="44" Margin="12,0">
                         <Path Grid.Column="0" Classes="icon-filled size-16" Fill="{StaticResource Brush.Positive}" Data="{StaticResource Icon.Paw}" VerticalAlignment="Center" />
                         <TextBlock Grid.Column="2" Classes="label-md positive" Text="{Binding Localization.HomeCurrentInstall}" VerticalAlignment="Center" />
-                        <Border Grid.Column="3" Classes="chip" VerticalAlignment="Center">
+                        <!-- the game is not set up: a short line and the way to the Game tab, in place of the version -->
+                        <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="8" IsVisible="{Binding NeedsGameSetup}">
+                            <TextBlock Classes="body-md secondary" Text="{Binding HomeSetupText}" VerticalAlignment="Center" />
+                            <Button Classes="link" Command="{Binding OpenGameSetupCommand}" VerticalAlignment="Center">
+                                <TextBlock Classes="action-md" Text="{Binding Localization.SetupBannerAction}" />
+                            </Button>
+                        </StackPanel>
+                        <Border Grid.Column="3" Classes="chip" VerticalAlignment="Center" IsVisible="{Binding !NeedsGameSetup}">
                             <Panel>
                                 <TextBlock IsVisible="{Binding InstalledVersionText, Converter={x:Static ObjectConverters.IsNotNull}}">
                                     <Run Text="KSA" /><Run Text=" " /><Run Text="{Binding InstalledVersionText}" />
@@ -60,8 +66,8 @@
                             </Panel>
                         </Border>
                     </Grid>
-                    <ContentControl Content="{Binding ActiveInstance}" ContentTemplate="{StaticResource InstanceRow}" IsVisible="{Binding HasActiveInstance}" />
-                    <Button Classes="plain card-button" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Command="{Binding FollowInstanceHintCommand}" IsVisible="{Binding !HasActiveInstance}" AutomationProperties.Name="{Binding HomeInstanceHintText}" AutomationProperties.HelpText="{Binding InstanceHintActionText}">
+                    <ContentControl Content="{Binding HomeInstance}" ContentTemplate="{StaticResource InstanceRow}" IsVisible="{Binding HasHomeInstance}" />
+                    <Button Classes="plain card-button" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Command="{Binding FollowInstanceHintCommand}" IsVisible="{Binding !HasHomeInstance}" AutomationProperties.Name="{Binding HomeInstanceHintText}" AutomationProperties.HelpText="{Binding InstanceHintActionText}">
                         <Border Classes="card" Padding="12">
                             <Grid ColumnDefinitions="70,16,*" Height="70">
                                 <Border Classes="thumbnail">
@@ -86,18 +92,23 @@
             <ItemsControl ItemsSource="{Binding RecentItems}" Margin="0,16,0,0" IsVisible="{Binding HasRecentItems}">
                 <ItemsControl.ItemsPanel>
                     <ItemsPanelTemplate>
-                        <views:TileRowPanel MinTileSize="171" Spacing="5" />
+                        <views:TileRowPanel MinTileSize="171" Spacing="5" MaxRows="2" />
                     </ItemsPanelTemplate>
                 </ItemsControl.ItemsPanel>
                 <ItemsControl.ItemTemplate>
                     <DataTemplate x:DataType="vm:RecentItem">
-                        <!-- the tile shows the icon with the text over its bottom, and the gradient when no icon shows; the panel sizes it -->
+                        <!-- the tile shows the icon with the text over its bottom, and without an icon the puzzle placeholder centred in the space above the text; the panel sizes it -->
                         <Button Classes="plain" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" Command="{Binding OpenCommand}" AutomationProperties.Name="{Binding Name}">
                             <Border Classes="card" Background="{StaticResource Brush.Thumbnail}">
                                 <Panel>
-                                    <views:ListingImageView Image="{Binding Icon}" Background="{StaticResource Brush.Surface}" />
+                                    <views:ListingImageView Image="{Binding Icon}" Background="{StaticResource Brush.Surface}">
+                                        <Grid RowDefinitions="*,Auto">
+                                            <Path Classes="icon" Data="{StaticResource Icon.PuzzlePiece}" RenderTransform="scale(2.5)" StrokeThickness="0.8" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                            <Panel Grid.Row="1" Height="{Binding #TileText.Bounds.Height}" Margin="0,0,0,16" />
+                                        </Grid>
+                                    </views:ListingImageView>
                                     <Border Background="{StaticResource Brush.Scrim}" IsVisible="{Binding Icon.IsLoaded, FallbackValue=False}" />
-                                    <StackPanel VerticalAlignment="Bottom" Spacing="10" Margin="16">
+                                    <StackPanel x:Name="TileText" VerticalAlignment="Bottom" Spacing="10" Margin="16">
                                         <TextBlock Classes="heading-md" Text="{Binding Name}" TextWrapping="Wrap" MaxLines="3" TextTrimming="CharacterEllipsis" />
                                         <Grid ColumnDefinitions="*,Auto">
                                             <TextBlock Classes="label-md" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ContentTypeMod}" />

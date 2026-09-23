@@ -1,0 +1,22 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Borea.App.ViewModels"
+             x:Class="Borea.App.Views.InstanceMenu"
+             x:DataType="vm:InstanceItem">
+    <!-- c/button-icon-more of an instance, the same on the Library row, the Home card and the instance page -->
+    <Button Classes="icon" AutomationProperties.Name="{Binding Name}">
+        <Button.Flyout>
+            <MenuFlyout Placement="BottomEdgeAlignedRight">
+                <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryRename}" Command="{Binding BeginRenameCommand}" />
+                <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryLaunchArguments}" Command="{Binding BeginEditLaunchArgumentsCommand}" />
+                <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryOpenFolder}" Command="{Binding OpenFolderCommand}" />
+                <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.InstanceBackUpAllSaves}" Command="{Binding BackUpAllSavesCommand}" />
+                <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryDuplicate}" Command="{Binding DuplicateCommand}" />
+                <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryExportModList}" Command="{Binding ExportModListCommand}" />
+                <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryCopyModList}" Command="{Binding CopyModListCommand}" />
+                <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryDelete}" Command="{Binding BeginDeleteCommand}" />
+            </MenuFlyout>
+        </Button.Flyout>
+        <Path Classes="icon-filled" Data="{StaticResource Icon.More}" />
+    </Button>
+</UserControl>

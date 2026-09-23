@@ -447,6 +447,12 @@
   <data name="HomeNoGameVersion" xml:space="preserve">
     <value>Spiel nicht eingerichtet</value>
   </data>
+  <data name="HomeSetupNotSaved" xml:space="preserve">
+    <value>Borea weiß nicht, wo das Spiel ist.</value>
+  </data>
+  <data name="HomeSetupFolderMissing" xml:space="preserve">
+    <value>Der Spielordner fehlt.</value>
+  </data>
   <data name="HomeNoInstance" xml:space="preserve">
     <value>Noch keine Instanz</value>
   </data>
@@ -491,9 +497,6 @@
   </data>
   <data name="LibraryCancel" xml:space="preserve">
     <value>Abbrechen</value>
-  </data>
-  <data name="LibraryDeleteConfirm" xml:space="preserve">
-    <value>Diese Instanz, ihren Ordner und ihre Backups löschen?</value>
   </data>
   <data name="LibraryEmpty" xml:space="preserve">
     <value>Noch keine Instanzen. Erstelle eine, um loszulegen.</value>
@@ -2009,6 +2012,12 @@
   </data>
   <data name="ModalRenameInstanceTitle" xml:space="preserve">
     <value>Instanz umbenennen</value>
+  </data>
+  <data name="ModalDeleteInstanceTitle" xml:space="preserve">
+    <value>Instanz löschen</value>
+  </data>
+  <data name="ModalDeleteInstanceTextFormat" xml:space="preserve">
+    <value>{0} mit Ordner und Backups löschen? Das lässt sich nicht rückgängig machen.</value>
   </data>
   <data name="ModalInstanceExplanation" xml:space="preserve">
     <value>Instanzen sind Pakete aus Mods und Spielinhalten, die Borea zusätzlich zu deiner vorhandenen Spielinstallation verwaltet. Du kannst mehrere Instanzen erstellen und für verschiedene Spielerlebnisse jeweils eine davon aktivieren.</value>

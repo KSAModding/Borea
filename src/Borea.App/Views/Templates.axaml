@@ -38,8 +38,7 @@
             </Grid>
         </Button>
     </DataTemplate>
-    <!-- c/instance-row: used by the library list and by the Current Install card on Home.
-         Delete asks for a confirmation in the row, and rename opens the name modal. -->
+    <!-- c/instance-row: used by the library list and by the Current Install card on Home -->
     <DataTemplate x:Key="InstanceRow" x:DataType="vm:InstanceItem">
         <Button Classes="plain card-button" views:RowButton.IgnoresDisabled="True" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Command="{Binding OpenCommand}" AutomationProperties.Name="{Binding Name}">
             <Border Classes="card" Padding="12">
@@ -48,44 +47,25 @@
                         <Path Classes="icon size-32" Data="{StaticResource Icon.Box}" />
                     </Border>
 
-                    <!-- Title row: the name, and Play on the active row of the Library, the switch + more, or the delete confirmation -->
+                    <!-- Title row: the name, and Play on the active row of the Library, the switch + more -->
                     <Grid Grid.Column="2" Grid.Row="0" ColumnDefinitions="*,16,Auto">
                         <TextBlock Classes="heading-md" Text="{Binding Name}" TextTrimming="CharacterEllipsis" HorizontalAlignment="Left" VerticalAlignment="Center" />
-                        <Panel Grid.Column="2" VerticalAlignment="Center">
-                            <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding IsConfirmingDelete}">
-                                <Button Classes="text danger" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryDelete}" Command="{Binding ConfirmDeleteCommand}" />
-                                <Button Classes="text" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryCancel}" Command="{Binding CancelCommand}" />
-                            </StackPanel>
-                            <StackPanel Orientation="Horizontal" Spacing="12" IsVisible="{Binding !IsConfirmingDelete}">
-                                <Button Classes="cta" Command="{Binding PlayCommand}" IsEnabled="{Binding $parent[Window].((vm:MainViewModel)DataContext).EnableActiveInstance}" VerticalAlignment="Center">
-                                    <Button.IsVisible>
-                                        <MultiBinding Converter="{x:Static BoolConverters.And}">
-                                            <Binding Path="IsActive" />
-                                            <Binding Path="$parent[Window].((vm:MainViewModel)DataContext).CurrentWindowLibrary" />
-                                        </MultiBinding>
-                                    </Button.IsVisible>
-                                    <StackPanel Orientation="Horizontal" Spacing="6">
-                                        <Path Classes="icon-filled size-16" Fill="{StaticResource Brush.SurfaceHeader}" Data="{StaticResource Icon.Play}" VerticalAlignment="Center" />
-                                        <TextBlock Classes="action-lg" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.InstancePlay}" VerticalAlignment="Center" />
-                                    </StackPanel>
-                                </Button>
-                                <ToggleSwitch Classes="switch" IsChecked="{Binding IsActive, Mode=OneWay}" Command="{Binding ToggleActiveCommand}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryActivate}" VerticalAlignment="Center" />
-                                <Button Classes="icon" AutomationProperties.Name="{Binding Name}">
-                                    <Button.Flyout>
-                                        <MenuFlyout Placement="BottomEdgeAlignedRight">
-                                            <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryRename}" Command="{Binding BeginRenameCommand}" />
-                                            <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryLaunchArguments}" Command="{Binding BeginEditLaunchArgumentsCommand}" />
-                                            <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryOpenFolder}" Command="{Binding OpenFolderCommand}" />
-                                            <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryDuplicate}" Command="{Binding DuplicateCommand}" />
-                                            <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryExportModList}" Command="{Binding ExportModListCommand}" />
-                                            <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryCopyModList}" Command="{Binding CopyModListCommand}" />
-                                            <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryDelete}" Command="{Binding BeginDeleteCommand}" />
-                                        </MenuFlyout>
-                                    </Button.Flyout>
-                                    <Path Classes="icon-filled" Data="{StaticResource Icon.More}" />
-                                </Button>
-                            </StackPanel>
-                        </Panel>
+                        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+                            <Button Classes="cta" Command="{Binding PlayCommand}" IsEnabled="{Binding $parent[Window].((vm:MainViewModel)DataContext).EnableActiveInstance}" VerticalAlignment="Center">
+                                <Button.IsVisible>
+                                    <MultiBinding Converter="{x:Static BoolConverters.And}">
+                                        <Binding Path="IsActive" />
+                                        <Binding Path="$parent[Window].((vm:MainViewModel)DataContext).CurrentWindowLibrary" />
+                                    </MultiBinding>
+                                </Button.IsVisible>
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                    <Path Classes="icon-filled size-16" Fill="{StaticResource Brush.SurfaceHeader}" Data="{StaticResource Icon.Play}" VerticalAlignment="Center" />
+                                    <TextBlock Classes="action-lg" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.InstancePlay}" VerticalAlignment="Center" />
+                                </StackPanel>
+                            </Button>
+                            <ToggleSwitch Classes="switch" IsChecked="{Binding IsActive, Mode=OneWay}" Command="{Binding ToggleActiveCommand}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryActivate}" VerticalAlignment="Center" />
+                            <views:InstanceMenu />
+                        </StackPanel>
                     </Grid>
 
                     <!-- Bottom row: chips, and the meta on the right -->
@@ -94,7 +74,6 @@
                             <Border Classes="chip positive" IsVisible="{Binding SourceText, Converter={x:Static ObjectConverters.IsNotNull}}">
                                 <TextBlock Text="{Binding SourceText}" />
                             </Border>
-                            <TextBlock Classes="body-md danger" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryDeleteConfirm}" VerticalAlignment="Center" IsVisible="{Binding IsConfirmingDelete}" />
                         </StackPanel>
                         <!-- c/meta: GameController + when the instance was last played, CirclesThree + the number of installed mods -->
                         <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
@@ -107,10 +86,11 @@
                                 <TextBlock Classes="label-md" Text="{Binding ModCount}" VerticalAlignment="Center" />
                             </StackPanel>
                         </StackPanel>
-                        <!-- the update count shows only on the Current Install card of Home -->
+                        <!-- the update count shows only on the Current Install card of Home, and only for the active instance it counts -->
                         <Button Grid.Column="2" Classes="link" Height="24" Padding="6,0" Margin="8,0,0,0" VerticalAlignment="Center" Command="{Binding OpenCommand}">
                             <Button.IsVisible>
                                 <MultiBinding Converter="{x:Static BoolConverters.And}">
+                                    <Binding Path="IsActive" />
                                     <Binding Path="$parent[Window].((vm:MainViewModel)DataContext).CurrentWindowHome" />
                                     <Binding Path="$parent[Window].((vm:MainViewModel)DataContext).HasActiveInstanceUpdates" />
                                 </MultiBinding>

@@ -1,4 +1,5 @@
 using Borea.App.ViewModels;
+using Borea.Core.Instances;
 
 namespace Borea.App.Tests.ViewModels;
 
@@ -28,5 +29,48 @@ public sealed class HomeViewModelTests
         Assert.True(viewModel.CurrentWindowContent);
         Assert.Equal("AdvancedFlightComputer", viewModel.SelectedContent?.ModId);
         Assert.Contains(viewModel.DiscoverItems, item => ReferenceEquals(item, viewModel.SelectedContent));
+    }
+
+    [Fact]
+    public async Task SwitchOffOnHome_KeepsTheInstanceUntilTheNextVisit()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var viewModel = harness.ViewModel;
+        await harness.Services.Instances.CreateAsync("Alpha", InstanceSource.Custom.Value);
+        await viewModel.LoadAsync();
+        await viewModel.Instances.Single().ActivateCommand.ExecuteAsync(null);
+        Assert.Same(viewModel.ActiveInstance, viewModel.HomeInstance);
+
+        await viewModel.HomeInstance!.ToggleActiveCommand.ExecuteAsync(null);
+
+        Assert.Null(viewModel.ActiveInstance);
+        Assert.Equal("Alpha", viewModel.HomeInstance?.Name);
+        Assert.False(viewModel.HomeInstance!.IsActive);
+
+        await viewModel.HomeInstance.ToggleActiveCommand.ExecuteAsync(null);
+        Assert.Same(viewModel.ActiveInstance, viewModel.HomeInstance);
+
+        await viewModel.HomeInstance!.ToggleActiveCommand.ExecuteAsync(null);
+        viewModel.SetMainWindowLibrary();
+        viewModel.SetMainWindowHome();
+
+        Assert.Null(viewModel.HomeInstance);
+        Assert.False(viewModel.HasHomeInstance);
+    }
+
+    [Fact]
+    public async Task InstanceActivatedElsewhere_ShowsOnHome()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var viewModel = harness.ViewModel;
+        await harness.Services.Instances.CreateAsync("Alpha", InstanceSource.Custom.Value);
+        await viewModel.LoadAsync();
+        viewModel.SetMainWindowLibrary();
+
+        await viewModel.Instances.Single().ActivateCommand.ExecuteAsync(null);
+        viewModel.SetMainWindowHome();
+
+        Assert.Same(viewModel.ActiveInstance, viewModel.HomeInstance);
+        Assert.Equal("Alpha", viewModel.HomeInstance?.Name);
     }
 }

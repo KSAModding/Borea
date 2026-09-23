@@ -216,13 +216,12 @@ public partial class MainViewModel
         await RefreshInstanceStartsEmptyAsync();
     }
 
-    [RelayCommand]
-    private async Task BackUpAllSavesAsync()
+    /// <summary>Backs up every save of the instance. Its page, when shown, turns to the tab with the saves.</summary>
+    internal async Task BackUpAllSavesAsync(InstanceItem instance)
     {
-        if (SelectedInstance is not { } instance)
-            return;
+        if (CurrentWindowInstance && SelectedInstance?.InstanceId == instance.InstanceId)
+            InstanceTab = InstanceTab.Content;
 
-        InstanceTab = InstanceTab.Content;
         await RunGameSaveActionAsync([instance.InstanceId], () => Localization.ToastBackUpAllFailed, async services =>
         {
             var zips = await services.GameSaves.BackUpAllAsync(instance.InstanceId, GameSaveKind.Save);

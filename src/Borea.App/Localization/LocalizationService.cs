@@ -514,6 +514,10 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string HomeNoGameVersion => Resources.HomeNoGameVersion;
 
+    public string HomeSetupNotSaved => Resources.HomeSetupNotSaved;
+
+    public string HomeSetupFolderMissing => Resources.HomeSetupFolderMissing;
+
     public string HomeNoInstance => Resources.HomeNoInstance;
 
     public string HomeNoActiveInstance => Resources.HomeNoActiveInstance;
@@ -547,8 +551,6 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string LibrarySave => Resources.LibrarySave;
 
     public string LibraryCancel => Resources.LibraryCancel;
-
-    public string LibraryDeleteConfirm => Resources.LibraryDeleteConfirm;
 
     public string LibraryEmpty => Resources.LibraryEmpty;
 
@@ -1173,6 +1175,11 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string ModalCreateInstanceTitle => Resources.ModalCreateInstanceTitle;
 
     public string ModalRenameInstanceTitle => Resources.ModalRenameInstanceTitle;
+
+    public string ModalDeleteInstanceTitle => Resources.ModalDeleteInstanceTitle;
+
+    public string FormatModalDeleteInstanceText(string name)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ModalDeleteInstanceTextFormat, name);
 
     public string ModalInstanceExplanation => Resources.ModalInstanceExplanation;
 

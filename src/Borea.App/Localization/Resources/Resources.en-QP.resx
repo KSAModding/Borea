@@ -348,6 +348,12 @@
   <data name="HomeNoGameVersion" xml:space="preserve">
     <value>Game ain't been drawn up</value>
   </data>
+  <data name="HomeSetupNotSaved" xml:space="preserve">
+    <value>The Borea don't know where the game be anchored.</value>
+  </data>
+  <data name="HomeSetupFolderMissing" xml:space="preserve">
+    <value>The game chest be lost at sea.</value>
+  </data>
   <data name="HomeNoInstance" xml:space="preserve">
     <value>Nary a sea charted</value>
   </data>
@@ -392,9 +398,6 @@
   </data>
   <data name="LibraryCancel" xml:space="preserve">
     <value>Belay that</value>
-  </data>
-  <data name="LibraryDeleteConfirm" xml:space="preserve">
-    <value>Send this 'ere instance, its chest and its backup chests to walk the plank?</value>
   </data>
   <data name="LibraryEmpty" xml:space="preserve">
     <value>Nary any seas charted. Piece one togget'er before ye take the wheel.</value>
@@ -1298,6 +1301,12 @@
   </data>
   <data name="ModalRenameInstanceTitle" xml:space="preserve">
     <value>Change name o' the sea</value>
+  </data>
+  <data name="ModalDeleteInstanceTitle" xml:space="preserve">
+    <value>Toss the sea overboard</value>
+  </data>
+  <data name="ModalDeleteInstanceTextFormat" xml:space="preserve">
+    <value>Send {0}, its chest and its backup chests to walk the plank? There be no fishin' them back.</value>
   </data>
   <data name="ModalNameRequired" xml:space="preserve">
     <value>Give the sea a name.</value>

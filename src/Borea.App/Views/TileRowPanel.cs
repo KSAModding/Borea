@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.Linq;
 using Avalonia;
 using Avalonia.Controls;
@@ -21,9 +22,15 @@ public sealed class TileRowPanel : Panel
     public static readonly StyledProperty<double> SpacingProperty =
         AvaloniaProperty.Register<TileRowPanel, double>(nameof(Spacing), 5);
 
+    public static readonly StyledProperty<int> MaxRowsProperty =
+        AvaloniaProperty.Register<TileRowPanel, int>(nameof(MaxRows));
+
+    /// <summary>The tiles this panel hid because they did not fit in <see cref="MaxRows"/>.</summary>
+    private readonly HashSet<Control> _cut = [];
+
     static TileRowPanel()
     {
-        AffectsMeasure<TileRowPanel>(MinTileSizeProperty, SpacingProperty);
+        AffectsMeasure<TileRowPanel>(MinTileSizeProperty, SpacingProperty, MaxRowsProperty);
     }
 
     public double MinTileSize
@@ -39,6 +46,13 @@ public sealed class TileRowPanel : Panel
         set => SetValue(SpacingProperty, value);
     }
 
+    /// <summary>The most rows the panel shows, or 0 for no limit. With a limit, a row shows only when it is full, unless it is the only row.</summary>
+    public int MaxRows
+    {
+        get => GetValue(MaxRowsProperty);
+        set => SetValue(MaxRowsProperty, value);
+    }
+
     /// <summary>How many tiles a row that is <paramref name="width"/> wide holds, and the size of each.</summary>
     internal static (int Columns, double Size) Fit(double width, double minTileSize, double spacing)
     {
@@ -49,9 +63,19 @@ public sealed class TileRowPanel : Panel
         return (columns, (width - spacing * (columns - 1)) / columns);
     }
 
+    /// <summary>How many of <paramref name="count"/> tiles show in rows of <paramref name="columns"/>.</summary>
+    internal static int Shown(int count, int columns, int maxRows)
+    {
+        if (maxRows <= 0 || count <= columns)
+            return count;
+
+        var shown = Math.Min(count, columns * maxRows);
+        return shown - shown % columns;
+    }
+
     protected override Size MeasureOverride(Size availableSize)
     {
-        var tiles = VisibleTiles();
+        var tiles = Children.Where(child => child.IsVisible || _cut.Contains(child)).ToList();
         if (tiles.Count == 0)
             return default;
 
@@ -59,10 +83,14 @@ public sealed class TileRowPanel : Panel
             ? tiles.Count * (MinTileSize + Spacing) - Spacing
             : availableSize.Width;
         var (columns, size) = Fit(width, MinTileSize, Spacing);
-        foreach (var tile in tiles)
+        var shown = Shown(tiles.Count, columns, MaxRows);
+        for (var i = 0; i < tiles.Count; i++)
+            Cut(tiles[i], i >= shown);
+
+        foreach (var tile in tiles.Take(shown))
             tile.Measure(new Size(size, size));
 
-        var rows = (tiles.Count + columns - 1) / columns;
+        var rows = (shown + columns - 1) / columns;
         return new Size(width, rows * size + (rows - 1) * Spacing);
     }
 
@@ -82,6 +110,23 @@ public sealed class TileRowPanel : Panel
         }
 
         return finalSize;
+    }
+
+    protected override void ChildrenChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    {
+        base.ChildrenChanged(sender, e);
+        foreach (var removed in e.OldItems?.OfType<Control>() ?? [])
+            Cut(removed, false);
+    }
+
+    /// <summary>
+    /// Hides a tile past the last row instead of leaving it at no size, so it
+    /// cannot take the focus. The current value keeps a binding of the tile.
+    /// </summary>
+    private void Cut(Control tile, bool cut)
+    {
+        if (cut ? _cut.Add(tile) : _cut.Remove(tile))
+            tile.SetCurrentValue(IsVisibleProperty, !cut);
     }
 
     private List<Control> VisibleTiles() => Children.Where(child => child.IsVisible).ToList();

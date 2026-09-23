@@ -375,7 +375,7 @@ public sealed class LibraryViewModelTests
     }
 
     [Fact]
-    public async Task Delete_NeedsConfirmationThenRemovesTheInstance()
+    public async Task Delete_AsksInTheModalThenRemovesTheInstance()
     {
         using var harness = await ViewModelHarness.CreateAsync();
         var viewModel = harness.ViewModel;
@@ -384,11 +384,30 @@ public sealed class LibraryViewModelTests
         var row = Assert.Single(viewModel.Instances);
 
         row.BeginDeleteCommand.Execute(null);
-        Assert.True(row.IsConfirmingDelete);
-        await row.ConfirmDeleteCommand.ExecuteAsync(null);
+        Assert.True(viewModel.IsDeleteModalOpen);
+        Assert.Equal(harness.Localization.FormatModalDeleteInstanceText("Alpha"), viewModel.DeleteModalText);
+        await viewModel.ConfirmDeleteModalCommand.ExecuteAsync(null);
 
+        Assert.False(viewModel.IsDeleteModalOpen);
         Assert.Empty(viewModel.Instances);
         Assert.Empty(await harness.Services.Instances.GetAllAsync());
+    }
+
+    [Fact]
+    public async Task Delete_CancelInTheModal_KeepsTheInstance()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var viewModel = harness.ViewModel;
+        await harness.Services.Instances.CreateAsync("Alpha", InstanceSource.Custom.Value);
+        await viewModel.LoadAsync();
+
+        viewModel.Instances.Single().BeginDeleteCommand.Execute(null);
+        viewModel.CancelDeleteModalCommand.Execute(null);
+        await viewModel.ConfirmDeleteModalCommand.ExecuteAsync(null);
+
+        Assert.False(viewModel.IsDeleteModalOpen);
+        Assert.Single(viewModel.Instances);
+        Assert.Single(await harness.Services.Instances.GetAllAsync());
     }
 
     [Fact]

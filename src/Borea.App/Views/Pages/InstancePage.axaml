@@ -277,18 +277,7 @@
                                     <TextBlock Classes="action-lg" Text="{Binding Localization.InstancePlay}" VerticalAlignment="Center" />
                                 </StackPanel>
                             </Button>
-                            <Button Classes="icon" AutomationProperties.Name="{Binding SelectedInstance.Name}">
-                                <Button.Flyout>
-                                    <MenuFlyout Placement="BottomEdgeAlignedRight">
-                                        <MenuItem Header="{Binding Localization.InstanceBackUpAllSaves}" Command="{Binding BackUpAllSavesCommand}" />
-                                        <MenuItem Header="{Binding Localization.LibraryRename}" Command="{Binding SelectedInstance.BeginRenameCommand}" />
-                                        <MenuItem Header="{Binding Localization.LibraryLaunchArguments}" Command="{Binding SelectedInstance.BeginEditLaunchArgumentsCommand}" />
-                                        <MenuItem Header="{Binding Localization.LibraryOpenFolder}" Command="{Binding SelectedInstance.OpenFolderCommand}" />
-                                        <MenuItem Header="{Binding Localization.LibraryDelete}" Command="{Binding SelectedInstance.BeginDeleteCommand}" />
-                                    </MenuFlyout>
-                                </Button.Flyout>
-                                <Path Classes="icon-filled" Data="{StaticResource Icon.More}" />
-                            </Button>
+                            <views:InstanceMenu DataContext="{Binding SelectedInstance}" />
                         </StackPanel>
                     </Grid>
                     <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="24">
@@ -314,9 +303,6 @@
 
             <ScrollViewer MaxHeight="{Binding $parent[UserControl].Bounds.Height, Converter={x:Static views:PageBodyPanel.HeaderMessagesMaxHeight}}">
                 <StackPanel>
-                    <!-- the delete confirmation of the selected row, so it works from here too -->
-                    <ContentControl Content="{Binding SelectedInstance}" ContentTemplate="{StaticResource InstanceRow}" Margin="0,16,0,0" IsVisible="{Binding SelectedInstance.IsConfirmingDelete, FallbackValue=False}" />
-
                     <ContentControl Content="{Binding}" ContentTemplate="{StaticResource LaunchStatus}" />
                     <TextBlock Classes="body-md secondary" Text="{Binding SharedProfileImportNotice}" TextWrapping="Wrap" Margin="0,16,0,0" IsVisible="{Binding SharedProfileImportNotice, Converter={x:Static ObjectConverters.IsNotNull}}" />
                     <TextBlock Classes="body-md secondary" Text="{Binding UpdateAll.ProgressStatus}" TextWrapping="Wrap" Margin="0,16,0,0" IsVisible="{Binding UpdateAll.ProgressStatus, Converter={x:Static ObjectConverters.IsNotNull}}" />
