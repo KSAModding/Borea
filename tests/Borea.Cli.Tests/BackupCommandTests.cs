@@ -49,6 +49,23 @@ public sealed class BackupCommandTests : IDisposable
     }
 
     [Fact]
+    public async Task RestoreBackup_GameRunning_Refuses()
+    {
+        var instanceId = await CreateInstanceAsync();
+        var orbit = await AddSaveAsync(instanceId, "Orbit", 300);
+        var moved = await new FileGameSaveStore(_host.Paths).DeleteAsync(instanceId, orbit);
+        await AddSaveAsync(instanceId, "Orbit", 20);
+        _host.GameRunning = true;
+
+        var refused = await _host.RunAsync("instance", "restore-backup", "Alpha", "saves/" + Path.GetFileName(moved), "--replace");
+
+        Assert.Equal(1, refused.ExitCode);
+        Assert.Contains("Close the game", refused.Error);
+        Assert.Equal(20, new FileInfo(Path.Combine(orbit.Path, "universe.xml")).Length);
+        Assert.True(Directory.Exists(moved));
+    }
+
+    [Fact]
     public async Task RestoreBackup_OccupiedTarget_NeedsReplace()
     {
         var instanceId = await CreateInstanceAsync();

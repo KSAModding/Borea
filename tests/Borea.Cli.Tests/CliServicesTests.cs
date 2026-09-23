@@ -77,6 +77,7 @@ public sealed class CliServicesTests : IDisposable
             SettingsRepository = graph.SettingsRepository,
             GameDirectoryChanger = graph.GameDirectoryChanger,
             LibraryFolderChanger = graph.LibraryFolderChanger,
+            IsGameProcessRunning = graph.IsGameProcessRunning,
             Instances = graph.Instances,
             ModState = graph.ModState,
             GameLog = graph.GameLog,

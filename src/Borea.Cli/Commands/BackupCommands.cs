@@ -54,7 +54,7 @@ internal static class BackupCommands
         var backupId = ArgumentRules.Text("backup", BackupArgumentDescription);
         var replace = new Option<bool>("--replace") { Description = "Move a save or vehicle of the same name into the backups, and restore this backup in its place." };
         var json = ArgumentRules.Json();
-        var restore = new Command("restore-backup", "Put a backup back where it came from. A zip stays in the backups, a moved folder leaves them.");
+        var restore = new Command("restore-backup", "Put a backup back where it came from. A zip stays in the backups, a moved folder leaves them. Close the game first.");
         restore.Arguments.Add(instance);
         restore.Arguments.Add(backupId);
         restore.Options.Add(replace);
@@ -64,6 +64,11 @@ internal static class BackupCommands
         {
             var target = await InstanceLookup.ResolveAsync(cli.Instances, parseResult.GetRequiredValue(instance)).ConfigureAwait(false);
             var backup = await FindAsync(cli, target, parseResult.GetRequiredValue(backupId), ct).ConfigureAwait(false);
+
+            // the game holds a save file open only while it writes it, so a file check alone misses a running game
+            if (cli.IsGameProcessRunning())
+                throw new InvalidOperationException("Close the game before you restore a backup.");
+
             var outcome = await cli.GameSaveBackups.RestoreAsync(backup, parseResult.GetValue(replace), ct).ConfigureAwait(false);
             if (outcome == GameSaveRestoreOutcome.Exists)
                 throw new InvalidOperationException($"'{target.Name}' already has the {KindName(backup.Kind)} folder '{backup.FolderName}'. Add --replace to move it into the backups and restore this backup.");
