@@ -1297,13 +1297,13 @@
     <value>Version {0} is yanked, so Borea offers the newest release instead.</value>
   </data>
   <data name="DiscoverListYourMod" xml:space="preserve">
-    <value>List your mod</value>
+    <value>List or change your mod</value>
   </data>
   <data name="DiscoverForModAuthors" xml:space="preserve">
     <value>For mod authors</value>
   </data>
   <data name="DiscoverForModAuthorsText" xml:space="preserve">
-    <value>Borea writes and checks the file that lists your mod in the content index.</value>
+    <value>Borea writes and checks the file that lists your mod in the content index, for a new listing or a change to a listed mod.</value>
   </data>
   <data name="ListingIntro" xml:space="preserve">
     <value>Borea writes the file that lists your mod in the content index, and checks it before you open the pull request.</value>

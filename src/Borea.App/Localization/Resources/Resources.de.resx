@@ -1297,13 +1297,13 @@
     <value>Version {0} wurde zurückgezogen, daher bietet Borea stattdessen die neueste Version an.</value>
   </data>
   <data name="DiscoverListYourMod" xml:space="preserve">
-    <value>Mod eintragen</value>
+    <value>Mod eintragen oder ändern</value>
   </data>
   <data name="DiscoverForModAuthors" xml:space="preserve">
     <value>Für Mod-Autoren</value>
   </data>
   <data name="DiscoverForModAuthorsText" xml:space="preserve">
-    <value>Borea schreibt und prüft die Datei, die deine Mod im Inhaltsindex einträgt.</value>
+    <value>Borea schreibt und prüft die Datei, die deine Mod im Inhaltsindex einträgt, für einen neuen Eintrag oder eine Änderung an einer eingetragenen Mod.</value>
   </data>
   <data name="ListingIntro" xml:space="preserve">
     <value>Borea schreibt die Datei, die deine Mod im Inhaltsindex einträgt, und prüft sie, bevor du den Pull Request öffnest.</value>

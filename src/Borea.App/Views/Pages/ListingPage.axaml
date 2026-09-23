@@ -69,7 +69,7 @@
         </DataTemplate>
     </UserControl.Resources>
 
-    <!-- List your mod: the form, with the checks along the right edge -->
+    <!-- List or change your mod: the form, with the checks along the right edge -->
     <Grid>
         <ScrollViewer>
             <views:PageBodyPanel HasSidePanel="True">

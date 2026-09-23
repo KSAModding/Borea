@@ -73,7 +73,7 @@
         <!-- Pack: one modpack, laid out like the content page -->
         <pages:PackPage Grid.Column="1" IsVisible="{Binding CurrentWindowPack}" />
 
-        <!-- List your mod: a listing for content-index, with its checks on the right -->
+        <!-- List or change your mod: a listing for content-index, with its checks on the right -->
         <pages:ListingPage Grid.Column="1" IsVisible="{Binding CurrentWindowListing}" />
 
         <!-- Tasks: a drawer over the current page, which stays open behind it -->

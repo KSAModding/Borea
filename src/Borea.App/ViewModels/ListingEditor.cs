@@ -26,7 +26,7 @@ public enum ListingStep
 }
 
 /// <summary>
-/// The "List your mod" page: a listing draft for content-index, checked while the author types,
+/// The "List or change your mod" page: a listing draft for content-index, checked while the author types,
 /// and handed to GitHub as a pull request of one document.
 /// </summary>
 public sealed partial class ListingEditor : ObservableObject
