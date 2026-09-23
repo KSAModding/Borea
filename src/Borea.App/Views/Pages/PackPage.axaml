@@ -204,14 +204,14 @@
                                                 </Border>
                                                 <TextBlock Grid.Column="2" Classes="body-md secondary hide-small" Width="120" Text="{Binding PublishedText}" ToolTip.Tip="{Binding PublishedDateText}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
                                                 <TextBlock Grid.Column="3" Classes="body-md secondary" Text="{Binding ModCount}" VerticalAlignment="Center" />
-                                                <StackPanel Grid.Column="4" Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right" VerticalAlignment="Center" IsVisible="{Binding !Pack.IsInstalling}">
+                                                <Grid Grid.Column="4" ColumnDefinitions="32,32" ColumnSpacing="8" HorizontalAlignment="Right" VerticalAlignment="Center" IsVisible="{Binding !Pack.IsInstalling}">
                                                     <Button Classes="icon" Command="{Binding NewInstanceCommand}" ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.PackNewInstance}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.PackNewInstance}">
                                                         <Path Classes="icon size-16" Data="{StaticResource Icon.Library}" />
                                                     </Button>
-                                                    <Button Classes="icon" Command="{Binding InstallCommand}" IsVisible="{Binding CanInstall}" ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).AddToText}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).AddToText}">
+                                                    <Button Grid.Column="1" Classes="icon" Command="{Binding InstallCommand}" IsVisible="{Binding CanInstall}" ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).AddToText}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).AddToText}">
                                                         <Path Classes="icon size-16" Data="{StaticResource Icon.Plus}" Stroke="{StaticResource Brush.Accent}" StrokeThickness="2" />
                                                     </Button>
-                                                </StackPanel>
+                                                </Grid>
                                             </Grid>
                                         </Border>
                                     </DataTemplate>
