@@ -28,7 +28,7 @@ public sealed class DiscoverViewModelTests
         Assert.All(viewModel.DiscoverItems, item => Assert.Equal(ContentType.Mod, item.Type));
         Assert.DoesNotContain(viewModel.DiscoverItems, item => item.ModId == ViewModelHarness.FakeSpaceDock.OwnId);
         Assert.DoesNotContain(viewModel.DiscoverItems, item => item.ModId == ViewModelHarness.FakeSpaceDock.MirroredId);
-        Assert.Equal(["MIT"], viewModel.LicenseOptions);
+        Assert.Equal(["MIT"], viewModel.LicenseOptions.Select(license => license.Value));
         Assert.Null(viewModel.DiscoverError);
     }
 
@@ -284,6 +284,30 @@ public sealed class DiscoverViewModelTests
         viewModel.ClearDiscoverFiltersCommand.Execute(null);
         Assert.False(viewModel.HasDiscoverFilters);
         Assert.Equal(all, viewModel.DiscoverItems.Count);
+    }
+
+    [Fact]
+    public async Task LicenseFilter_MarksTheChosenLicenseUntilItIsChosenAgainOrCleared()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var viewModel = harness.ViewModel;
+        await viewModel.EnsureDiscoverLoadedAsync();
+        var mit = viewModel.LicenseOptions.Single();
+
+        viewModel.SelectLicenseCommand.Execute("MIT");
+        Assert.True(mit.IsSelected);
+
+        viewModel.SelectLicenseCommand.Execute("MIT");
+        Assert.False(mit.IsSelected);
+        Assert.Null(viewModel.SelectedLicense);
+
+        viewModel.SelectLicenseCommand.Execute("MIT");
+        viewModel.SelectLicenseCommand.Execute(null);
+        Assert.False(mit.IsSelected);
+
+        viewModel.SelectLicenseCommand.Execute("MIT");
+        viewModel.ClearDiscoverFiltersCommand.Execute(null);
+        Assert.False(mit.IsSelected);
     }
 
     [Fact]
@@ -644,6 +668,31 @@ public sealed class DiscoverViewModelTests
         Assert.Null(viewModel.DiscoverGameMax);
         Assert.False(viewModel.HasDiscoverFilters);
         Assert.Equal(3, viewModel.DiscoverItems.Count);
+    }
+
+    [Fact]
+    public async Task GameVersionRange_ClearingOneBound_KeepsTheOther()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var viewModel = harness.ViewModel;
+        await viewModel.EnsureDiscoverLoadedAsync();
+        var older = viewModel.GameVersionOptions.Single(build => build.Revision == 5261);
+        var newer = viewModel.GameVersionOptions.Single(build => build.Revision == 5402);
+        viewModel.DiscoverGameMin = older;
+        viewModel.DiscoverGameMax = newer;
+
+        viewModel.ClearDiscoverGameMaxCommand.Execute(null);
+        Assert.Same(older, viewModel.DiscoverGameMin);
+        Assert.Equal(">= 2026.8.19.5261", viewModel.DiscoverGameVersionRangeText);
+
+        viewModel.DiscoverGameMax = newer;
+        viewModel.ClearDiscoverGameMinCommand.Execute(null);
+        Assert.Same(newer, viewModel.DiscoverGameMax);
+        Assert.Equal("<= 2026.9.7.5402", viewModel.DiscoverGameVersionRangeText);
+
+        viewModel.ClearDiscoverGameVersionRangeCommand.Execute(null);
+        Assert.Null(viewModel.DiscoverGameVersionRangeText);
+        Assert.False(viewModel.HasDiscoverFilters);
     }
 
     [Fact]

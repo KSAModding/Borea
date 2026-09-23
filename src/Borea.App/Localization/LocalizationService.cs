@@ -804,6 +804,10 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string DiscoverGameVersionMax => Resources.DiscoverGameVersionMax;
 
+    public string DiscoverGameVersionClearMin => Resources.DiscoverGameVersionClearMin;
+
+    public string DiscoverGameVersionClearMax => Resources.DiscoverGameVersionClearMax;
+
     public string DiscoverOperatingSystem => Resources.DiscoverOperatingSystem;
 
     public string DiscoverLicense => Resources.DiscoverLicense;

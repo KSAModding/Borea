@@ -43,7 +43,7 @@
 
                     <!-- active filters, and the sort order of the Mods and Modpacks tabs -->
                     <DockPanel MinHeight="32" Margin="8,24,0,0">
-                        <Button DockPanel.Dock="Right" Classes="dropdown" Margin="16,0,0,0" IsVisible="{Binding !IsLoadersTab}" AutomationProperties.Name="{Binding Localization.DiscoverSortBy}">
+                        <Button DockPanel.Dock="Right" Classes="dropdown" Margin="16,0,0,0" VerticalAlignment="Top" IsVisible="{Binding !IsLoadersTab}" AutomationProperties.Name="{Binding Localization.DiscoverSortBy}">
                             <Button.Flyout>
                                 <MenuFlyout Placement="BottomEdgeAlignedRight">
                                     <MenuItem Header="{Binding Localization.DiscoverSortPopularity}" Command="{Binding SelectDiscoverSortCommand}" CommandParameter="{x:Static prefs:DiscoverSortOrder.Popularity}" />
@@ -57,7 +57,8 @@
                                 <Path Classes="icon size-16" Data="{StaticResource Icon.CaretDown}" VerticalAlignment="Center" />
                             </StackPanel>
                         </Button>
-                        <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center" ClipToBounds="True" IsVisible="{Binding HasDiscoverFilters}">
+                        <!-- the chips wrap onto more lines, and the first line stays level with Sort by -->
+                        <WrapPanel ItemSpacing="8" LineSpacing="8" Margin="0,4" IsVisible="{Binding HasDiscoverFilters}">
                             <Button Classes="chip-button" Command="{Binding ClearDiscoverFiltersCommand}">
                                 <StackPanel Orientation="Horizontal" Spacing="4">
                                     <Path Classes="icon size-16" Data="{StaticResource Icon.Close}" />
@@ -79,7 +80,7 @@
                             <ItemsControl ItemsSource="{Binding SelectedCategories}" IsVisible="{Binding !!SelectedCategories.Count}">
                                 <ItemsControl.ItemsPanel>
                                     <ItemsPanelTemplate>
-                                        <StackPanel Orientation="Horizontal" Spacing="8" />
+                                        <WrapPanel ItemSpacing="8" LineSpacing="8" />
                                     </ItemsPanelTemplate>
                                 </ItemsControl.ItemsPanel>
                                 <ItemsControl.ItemTemplate>
@@ -111,7 +112,7 @@
                                     <TextBlock Classes="label-sm" Text="{Binding SelectedLicense}" VerticalAlignment="Center" />
                                 </StackPanel>
                             </Button>
-                        </StackPanel>
+                        </WrapPanel>
                     </DockPanel>
 
                     <TextBlock Classes="body-md muted" Text="{Binding Localization.DiscoverLoading}" Margin="8,24,0,0" IsVisible="{Binding IsDiscoverLoading}" />
@@ -213,7 +214,8 @@
                     <Border Height="1" Background="{StaticResource Brush.BorderStrong}" IsVisible="{Binding !!GameVersionOptions.Count}" />
                     <StackPanel Spacing="10" IsVisible="{Binding !!GameVersionOptions.Count}">
                         <TextBlock Classes="heading-md" Text="{Binding Localization.ContentGameVersionHeader}" />
-                        <StackPanel Spacing="8">
+                        <!-- the X of an empty box stays in place and only turns inactive, so the box keeps its width -->
+                        <Grid ColumnDefinitions="*,8,Auto" RowDefinitions="Auto,8,Auto">
                             <!-- a chosen build keeps its "Min:" or "Max:" label, like the inline dropdowns -->
                             <ComboBox ItemsSource="{Binding GameVersionOptions}" SelectedItem="{Binding DiscoverGameMax}" PlaceholderText="{Binding Localization.DiscoverGameVersionMax}" AutomationProperties.Name="{Binding Localization.DiscoverGameVersionMax}" HorizontalAlignment="Stretch" MaxDropDownHeight="300">
                                 <ComboBox.ItemTemplate>
@@ -230,7 +232,10 @@
                                     </DataTemplate>
                                 </ComboBox.SelectionBoxItemTemplate>
                             </ComboBox>
-                            <ComboBox ItemsSource="{Binding GameVersionOptions}" SelectedItem="{Binding DiscoverGameMin}" PlaceholderText="{Binding Localization.DiscoverGameVersionMin}" AutomationProperties.Name="{Binding Localization.DiscoverGameVersionMin}" HorizontalAlignment="Stretch" MaxDropDownHeight="300">
+                            <Button Grid.Column="2" Classes="icon" Command="{Binding ClearDiscoverGameMaxCommand}" IsEnabled="{Binding DiscoverGameMax, Converter={x:Static ObjectConverters.IsNotNull}}" ToolTip.Tip="{Binding Localization.DiscoverGameVersionClearMax}" AutomationProperties.Name="{Binding Localization.DiscoverGameVersionClearMax}">
+                                <Path Classes="icon size-16" Data="{StaticResource Icon.Close}" />
+                            </Button>
+                            <ComboBox Grid.Row="2" ItemsSource="{Binding GameVersionOptions}" SelectedItem="{Binding DiscoverGameMin}" PlaceholderText="{Binding Localization.DiscoverGameVersionMin}" AutomationProperties.Name="{Binding Localization.DiscoverGameVersionMin}" HorizontalAlignment="Stretch" MaxDropDownHeight="300">
                                 <ComboBox.ItemTemplate>
                                     <DataTemplate x:DataType="vm:GameVersionOption">
                                         <TextBlock Text="{Binding Text}" />
@@ -245,7 +250,10 @@
                                     </DataTemplate>
                                 </ComboBox.SelectionBoxItemTemplate>
                             </ComboBox>
-                        </StackPanel>
+                            <Button Grid.Row="2" Grid.Column="2" Classes="icon" Command="{Binding ClearDiscoverGameMinCommand}" IsEnabled="{Binding DiscoverGameMin, Converter={x:Static ObjectConverters.IsNotNull}}" ToolTip.Tip="{Binding Localization.DiscoverGameVersionClearMin}" AutomationProperties.Name="{Binding Localization.DiscoverGameVersionClearMin}">
+                                <Path Classes="icon size-16" Data="{StaticResource Icon.Close}" />
+                            </Button>
+                        </Grid>
                     </StackPanel>
                     <Border Height="1" Background="{StaticResource Brush.BorderStrong}" IsVisible="{Binding !!OsOptions.Count}" />
                     <StackPanel Spacing="10" IsVisible="{Binding !!OsOptions.Count}">
@@ -257,8 +265,8 @@
                                 </ItemsPanelTemplate>
                             </ItemsControl.ItemsPanel>
                             <ItemsControl.ItemTemplate>
-                                <DataTemplate x:DataType="x:String">
-                                    <Button Classes="filter" Content="{Binding}" Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).SelectOsCommand}" CommandParameter="{Binding}" />
+                                <DataTemplate x:DataType="vm:DiscoverChoice">
+                                    <Button Classes="filter" Classes.active="{Binding IsSelected}" Content="{Binding Value}" Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).SelectOsCommand}" CommandParameter="{Binding Value}" />
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
@@ -273,8 +281,8 @@
                                 </ItemsPanelTemplate>
                             </ItemsControl.ItemsPanel>
                             <ItemsControl.ItemTemplate>
-                                <DataTemplate x:DataType="x:String">
-                                    <Button Classes="filter" Content="{Binding}" Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).SelectLicenseCommand}" CommandParameter="{Binding}" />
+                                <DataTemplate x:DataType="vm:DiscoverChoice">
+                                    <Button Classes="filter" Classes.active="{Binding IsSelected}" Content="{Binding Value}" Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).SelectLicenseCommand}" CommandParameter="{Binding Value}" />
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
@@ -283,7 +291,8 @@
                     <StackPanel Spacing="10">
                         <TextBlock Classes="heading-md" Text="{Binding Localization.DiscoverForModAuthors}" />
                         <TextBlock Classes="body-sm secondary" TextWrapping="Wrap" Text="{Binding Localization.DiscoverForModAuthorsText}" />
-                        <Button Classes="link" HorizontalAlignment="Left" Padding="0" Command="{Binding OpenListingCommand}">
+                        <!-- the padding keeps the text inside the hover background, and the margin lines the text up with the one above -->
+                        <Button Classes="link" HorizontalAlignment="Left" Margin="-8,0,0,0" Command="{Binding OpenListingCommand}">
                             <TextBlock Classes="action-md" Text="{Binding Localization.DiscoverListYourMod}" />
                         </Button>
                     </StackPanel>

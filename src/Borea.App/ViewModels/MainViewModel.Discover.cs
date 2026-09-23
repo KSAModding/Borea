@@ -49,9 +49,9 @@ public partial class MainViewModel
 
     public ObservableCollection<DiscoverItem> DiscoverItems { get; } = [];
 
-    public ObservableCollection<string> OsOptions { get; } = [];
+    public ObservableCollection<DiscoverChoice> OsOptions { get; } = [];
 
-    public ObservableCollection<string> LicenseOptions { get; } = [];
+    public ObservableCollection<DiscoverChoice> LicenseOptions { get; } = [];
 
     public ObservableCollection<DiscoverCategory> CategoryOptions { get; } = [];
 
@@ -179,11 +179,13 @@ public partial class MainViewModel
 
             OsOptions.Clear();
             foreach (var os in listings.SelectMany(listing => listing.Os ?? []).Concat(packs.SelectMany(pack => pack.Os ?? [])).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(os => os))
-                OsOptions.Add(os);
+                OsOptions.Add(new DiscoverChoice(os));
+            MarkChoice(OsOptions, SelectedOs);
 
             LicenseOptions.Clear();
             foreach (var license in listings.Select(listing => listing.License).Concat(packs.Select(pack => pack.License)).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(license => license))
-                LicenseOptions.Add(license);
+                LicenseOptions.Add(new DiscoverChoice(license));
+            MarkChoice(LicenseOptions, SelectedLicense);
 
             LoadCategoryOptions(listings, packs);
             LoadGameVersionOptions(snapshot.GameVersions);
@@ -408,9 +410,23 @@ public partial class MainViewModel
         _ => Localization.CompatibilityUnknown,
     };
 
-    partial void OnSelectedOsChanged(string? value) => ApplyDiscoverFilters();
+    partial void OnSelectedOsChanged(string? value)
+    {
+        MarkChoice(OsOptions, value);
+        ApplyDiscoverFilters();
+    }
 
-    partial void OnSelectedLicenseChanged(string? value) => ApplyDiscoverFilters();
+    partial void OnSelectedLicenseChanged(string? value)
+    {
+        MarkChoice(LicenseOptions, value);
+        ApplyDiscoverFilters();
+    }
+
+    private static void MarkChoice(IEnumerable<DiscoverChoice> choices, string? selected)
+    {
+        foreach (var choice in choices)
+            choice.IsSelected = string.Equals(choice.Value, selected, StringComparison.OrdinalIgnoreCase);
+    }
 
     // a range whose Min is above its Max would match nothing, so the other bound follows
     partial void OnDiscoverGameMinChanged(GameVersionOption? value)
@@ -436,11 +452,12 @@ public partial class MainViewModel
     [RelayCommand]
     private void ShowDiscoverModpacks() => DiscoverType = ContentType.ModPack;
 
+    // choosing the chosen one again, or null from its chip, clears the filter
     [RelayCommand]
-    private void SelectOs(string? os) => SelectedOs = os;
+    private void SelectOs(string? os) => SelectedOs = string.Equals(os, SelectedOs, StringComparison.OrdinalIgnoreCase) ? null : os;
 
     [RelayCommand]
-    private void SelectLicense(string? license) => SelectedLicense = license;
+    private void SelectLicense(string? license) => SelectedLicense = string.Equals(license, SelectedLicense, StringComparison.OrdinalIgnoreCase) ? null : license;
 
     [RelayCommand]
     private void ClearDiscoverGameVersionRange()
@@ -448,6 +465,12 @@ public partial class MainViewModel
         DiscoverGameMin = null;
         DiscoverGameMax = null;
     }
+
+    [RelayCommand]
+    private void ClearDiscoverGameMin() => DiscoverGameMin = null;
+
+    [RelayCommand]
+    private void ClearDiscoverGameMax() => DiscoverGameMax = null;
 
     [RelayCommand]
     private void ClearHideInstalled() => HideInstalled = false;
@@ -942,6 +965,17 @@ public sealed partial class DiscoverCategory : ObservableObject
     }
 
     internal void RefreshText() => OnPropertyChanged(nameof(Name));
+}
+
+/// <summary>
+/// One row of a filter that holds one choice at a time, an operating system or a license.
+/// </summary>
+public sealed partial class DiscoverChoice(string value) : ObservableObject
+{
+    public string Value { get; } = value;
+
+    [ObservableProperty]
+    private bool _isSelected;
 }
 
 public sealed record GameVersionOption(string Text, int Revision);

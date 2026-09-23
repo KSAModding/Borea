@@ -1158,6 +1158,12 @@
   <data name="DiscoverGameVersionMax" xml:space="preserve">
     <value>Max</value>
   </data>
+  <data name="DiscoverGameVersionClearMin" xml:space="preserve">
+    <value>Min zurücksetzen</value>
+  </data>
+  <data name="DiscoverGameVersionClearMax" xml:space="preserve">
+    <value>Max zurücksetzen</value>
+  </data>
   <data name="DiscoverOperatingSystem" xml:space="preserve">
     <value>Betriebssystem</value>
   </data>
