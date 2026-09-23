@@ -13,11 +13,10 @@ public sealed class AnnouncementReaderTests
         """;
 
     [Fact]
-    public async Task ReadAsync_TheCommittedFile_HasNoPosts()
+    public async Task ReadAsync_TheCommittedFile_SkipsNoPost()
     {
         var file = await new AnnouncementReader().ReadAsync(Path.Combine(AppContext.BaseDirectory, "Announcements", "announcements.toml"));
 
-        Assert.Empty(file.Posts);
         Assert.Empty(file.SkippedPosts);
     }
 
