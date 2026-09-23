@@ -63,7 +63,10 @@ public sealed partial class ListingEditor
     [ObservableProperty]
     private string? _publishError;
 
-    /// <summary>What the author still has to do on GitHub before Borea can write: <see cref="ListingPublishFailure.NoFork"/> or <see cref="ListingPublishFailure.AppNotOnFork"/>.</summary>
+    /// <summary>
+    /// What the author still has to do on GitHub before Borea can write: <see cref="ListingPublishFailure.NoFork"/>,
+    /// <see cref="ListingPublishFailure.AppNotOnFork"/> or <see cref="ListingPublishFailure.ForkNeedsSync"/>.
+    /// </summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasForkStep), nameof(ForkStepText), nameof(ForkStepLabel), nameof(CanCheckOwnershipAgain))]
     private ListingPublishFailure? _forkStep;
@@ -74,6 +77,7 @@ public sealed partial class ListingEditor
     {
         ListingPublishFailure.NoFork => Localization.ListingForkMissing,
         ListingPublishFailure.AppNotOnFork => Localization.FormatListingAppNotOnFork(_forkName ?? string.Empty),
+        ListingPublishFailure.ForkNeedsSync => Localization.FormatListingForkNeedsSync(_forkName ?? string.Empty),
         _ => null,
     };
 
@@ -81,6 +85,7 @@ public sealed partial class ListingEditor
     {
         ListingPublishFailure.NoFork => Localization.ListingMakeFork,
         ListingPublishFailure.AppNotOnFork => Localization.ListingAllowOnFork,
+        ListingPublishFailure.ForkNeedsSync => Localization.ListingSyncFork,
         _ => null,
     };
 
@@ -246,7 +251,7 @@ public sealed partial class ListingEditor
         catch (OperationCanceledException) when (cancel.IsCancellationRequested)
         {
         }
-        catch (ListingPublishException exception) when (ReferenceEquals(_publishing, cancel) && exception.Failure is ListingPublishFailure.NoFork or ListingPublishFailure.AppNotOnFork)
+        catch (ListingPublishException exception) when (ReferenceEquals(_publishing, cancel) && exception.Failure is ListingPublishFailure.NoFork or ListingPublishFailure.AppNotOnFork or ListingPublishFailure.ForkNeedsSync)
         {
             _forkName = exception.Detail;
             _forkId = exception.RepositoryId;
@@ -308,6 +313,7 @@ public sealed partial class ListingEditor
         {
             ListingPublishFailure.NoFork => $"https://github.com/{ListingPullRequestLinks.Repository}/fork",
             ListingPublishFailure.AppNotOnFork => _forkId is { } fork ? _owner.Services?.GitHub.InstallUrlFor(fork) : _owner.Services?.GitHub.InstallUrl,
+            ListingPublishFailure.ForkNeedsSync when _forkName is { } fork => "https://github.com/" + fork,
             _ => null,
         };
         if (url is not null && _owner.OpenListingPage(url) is { } error)

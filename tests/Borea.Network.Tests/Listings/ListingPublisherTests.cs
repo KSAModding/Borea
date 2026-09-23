@@ -15,7 +15,9 @@ public sealed class ListingPublisherTests
     private const string Fork = Api + "/repos/octocat/content-index";
     private const string Installations = Api + "/user/installations?per_page=100&page=1";
     private const string InstalledRepositories = Api + "/user/installations/7/repositories?per_page=100&page=1";
+    private const string Compare = Upstream + "/compare/main...octocat:content-index:main?per_page=1";
     private const string MainSha = "4f1c2a9";
+    private const string BaseSha = "0054ba6";
     private const string Token = "ghu_secret";
     private const string Text = "spec_version = 1\nid = \"MyMod\"\nname = \"My Mod\"\n";
 
@@ -52,7 +54,7 @@ public sealed class ListingPublisherTests
         On("POST", "https://github.com/login/oauth/access_token", () => Json($$"""{"access_token":"{{Token}}","token_type":"bearer","scope":"","expires_in":28800}"""));
         On("GET", Api + "/user", () => Json("""{"login":"octocat","id":1}"""));
         On("GET", Upstream + "/pulls?state=open&per_page=100&page=1", () => Json("[]"));
-        On("GET", Upstream + "/git/ref/heads/main", () => Json($$"""{"ref":"refs/heads/main","object":{"sha":"{{MainSha}}","type":"commit"} }"""));
+        OnCompare(MainSha);
     }
 
     [Fact]
@@ -72,7 +74,7 @@ public sealed class ListingPublisherTests
                 "GET " + InstalledRepositories,
                 "GET " + Fork,
                 "GET " + Upstream + "/pulls?state=open&per_page=100&page=1",
-                "GET " + Upstream + "/git/ref/heads/main",
+                "GET " + Compare,
                 "GET " + Upstream + "/contents/listings/MyMod.toml?ref=" + MainSha,
                 "GET " + Fork + "/git/ref/heads/listing-mymod",
                 "POST " + Fork + "/git/refs",
@@ -126,6 +128,7 @@ public sealed class ListingPublisherTests
             """));
         On("GET", Api + "/repos/octocat/other-fork", () => Json("""{ "full_name": "octocat/other-fork", "fork": true, "default_branch": "main", "parent": { "full_name": "someone/content-index" } }"""));
         On("GET", Api + "/repos/octocat/ksa-index-fork", () => Json(ForkJson.Replace("octocat/content-index", "octocat/ksa-index-fork", StringComparison.Ordinal)));
+        OnCompare(MainSha, url: Upstream + "/compare/main...octocat:ksa-index-fork:main?per_page=1");
         On("POST", Api + "/repos/octocat/ksa-index-fork/git/refs", () => Json("{}", HttpStatusCode.Created));
         On("PUT", Api + "/repos/octocat/ksa-index-fork/contents/listings/MyMod.toml", () => Json("{}", HttpStatusCode.Created));
         On("POST", Upstream + "/pulls", () => Json(PullJson, HttpStatusCode.Created));
@@ -194,30 +197,85 @@ public sealed class ListingPublisherTests
         Assert.Equal(GitHubSessionStatus.SignedIn, session.State.Status);
     }
 
-    [Fact]
-    public async Task PublishAsync_CommitOfMainNotInTheFork_MergesUpstreamOnceAndTriesAgain()
+    [Theory]
+    [InlineData(null)]
+    [InlineData("f0cc000")]
+    public async Task PublishAsync_ForkBehindContentIndex_BranchesAtTheMergeBaseAndKeepsItsOwnCommitsOut(string? ownCommit)
     {
         OnInstalledFork();
-        On("POST", Fork + "/git/refs",
-            () => Json("""{"message":"Object does not exist"}""", HttpStatusCode.UnprocessableEntity),
-            () => Json("{}", HttpStatusCode.Created));
-        On("POST", Fork + "/merge-upstream", () => Json("""{"message":"Successfully fetched and fast-forwarded from upstream KSAModding:main."}"""));
+        OnCompare(BaseSha, ownCommit);
         On("POST", Upstream + "/pulls", () => Json(PullJson, HttpStatusCode.Created));
         var (publisher, _) = await SignedInAsync();
 
         await publisher.PublishAsync(New());
 
-        Assert.Equal("""{"branch":"main"}""", Body("POST", Fork + "/merge-upstream"));
-        Assert.Equal(2, _sent.Count(sent => sent.Line == "POST " + Fork + "/git/refs"));
-        Assert.Contains("\"branch\":\"listing-mymod\"", Body("PUT", Fork + "/contents/listings/MyMod.toml"), StringComparison.Ordinal);
+        Assert.Equal($$"""{"ref":"refs/heads/listing-mymod","sha":"{{BaseSha}}"}""", Body("POST", Fork + "/git/refs"));
+        Assert.Equal(JsonSerializer.Serialize(new { message = "List MyMod", content = Base64(Text), branch = "listing-mymod" }), Body("PUT", Fork + "/contents/listings/MyMod.toml"));
+        Assert.Contains("\"head\":\"octocat:listing-mymod\"", Body("POST", Upstream + "/pulls"), StringComparison.Ordinal);
+        Assert.Equal(["POST " + Fork + "/git/refs", "PUT " + Fork + "/contents/listings/MyMod.toml", "POST " + Upstream + "/pulls"], _sent.Where(sent => sent.Method != "GET").Select(sent => sent.Line));
+        Assert.DoesNotContain(_sent, sent => ownCommit is not null && sent.Body?.Contains(ownCommit, StringComparison.Ordinal) == true);
     }
 
     [Fact]
-    public async Task PublishAsync_CommitStillMissingAfterTheMerge_NamesTheBranch()
+    public async Task PublishAsync_ChangeOfAFileUnchangedSinceTheMergeBase_CommitsOverItAtTheMergeBase()
+    {
+        OnInstalledFork();
+        OnCompare(BaseSha);
+        On("GET", Upstream + "/contents/listings/MyMod.toml?ref=" + MainSha, () => Json(Content("id = \"MyMod\"\n", "b10b5a")));
+        On("GET", Upstream + "/contents/listings/MyMod.toml?ref=" + BaseSha, () => Json(Content("id = \"MyMod\"\n", "b10b5a")));
+        On("POST", Upstream + "/pulls", () => Json(PullJson, HttpStatusCode.Created));
+        var (publisher, _) = await SignedInAsync();
+
+        await publisher.PublishAsync(New() with { IsEdit = true });
+
+        Assert.Equal($$"""{"ref":"refs/heads/listing-mymod","sha":"{{BaseSha}}"}""", Body("POST", Fork + "/git/refs"));
+        Assert.Equal(JsonSerializer.Serialize(new { message = "Update MyMod", content = Base64(Text), branch = "listing-mymod", sha = "b10b5a" }), Body("PUT", Fork + "/contents/listings/MyMod.toml"));
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task PublishAsync_ChangeOfAFileChangedAfterTheMergeBase_AsksForASyncAndWritesNothing(bool atMergeBase)
+    {
+        OnInstalledFork();
+        OnCompare(BaseSha);
+        On("GET", Upstream + "/contents/listings/MyMod.toml?ref=" + MainSha, () => Json(Content("id = \"MyMod\"\n", "b10b5a")));
+        if (atMergeBase)
+            On("GET", Upstream + "/contents/listings/MyMod.toml?ref=" + BaseSha, () => Json(Content("id = \"Old\"\n", "01d5a")));
+        var (publisher, _) = await SignedInAsync();
+
+        var failure = await Assert.ThrowsAsync<ListingPublishException>(() => publisher.PublishAsync(New() with { IsEdit = true }));
+
+        Assert.Equal(ListingPublishFailure.ForkNeedsSync, failure.Failure);
+        Assert.Equal(ListingPublishStep.Branch, failure.Step);
+        Assert.Equal("octocat/content-index", failure.Detail);
+        Assert.Contains(_sent, sent => sent.Line == "GET " + Upstream + "/contents/listings/MyMod.toml?ref=" + BaseSha);
+        Assert.All(_sent, sent => Assert.Equal("GET", sent.Method));
+    }
+
+    [Theory]
+    [InlineData("POST")]
+    [InlineData("GET")]
+    public async Task PublishAsync_BranchForbidden_AsksForASyncAndKeepsGitHubsReason(string method)
+    {
+        OnInstalledFork();
+        On(method, method == "GET" ? Fork + "/git/ref/heads/listing-mymod" : Fork + "/git/refs", () => Json("""{"message":"Resource not accessible by integration"}""", HttpStatusCode.Forbidden));
+        var (publisher, _) = await SignedInAsync();
+
+        var failure = await Assert.ThrowsAsync<ListingPublishException>(() => publisher.PublishAsync(New()));
+
+        Assert.Equal(ListingPublishFailure.ForkNeedsSync, failure.Failure);
+        Assert.Equal(ListingPublishStep.Branch, failure.Step);
+        Assert.Equal("octocat/content-index", failure.Detail);
+        Assert.Equal("Branch failed: ForkNeedsSync, octocat/content-index (Forbidden, Resource not accessible by integration)", failure.Message);
+        Assert.DoesNotContain(_sent, sent => sent.Method == "PUT" || sent.Url.EndsWith("/merge-upstream", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task PublishAsync_BranchRefused_KeepsGitHubsReasonWithoutMergingUpstream()
     {
         OnInstalledFork();
         On("POST", Fork + "/git/refs", () => Json("""{"message":"Object does not exist"}""", HttpStatusCode.UnprocessableEntity));
-        On("POST", Fork + "/merge-upstream", () => Json("{}"));
         var (publisher, _) = await SignedInAsync();
 
         var failure = await Assert.ThrowsAsync<ListingPublishException>(() => publisher.PublishAsync(New()));
@@ -225,7 +283,8 @@ public sealed class ListingPublisherTests
         Assert.Equal(ListingPublishFailure.Refused, failure.Failure);
         Assert.Equal(ListingPublishStep.Branch, failure.Step);
         Assert.Equal("Object does not exist", failure.Detail);
-        Assert.Single(_sent, sent => sent.Line == "POST " + Fork + "/merge-upstream");
+        Assert.Single(_sent, sent => sent.Line == "POST " + Fork + "/git/refs");
+        Assert.DoesNotContain(_sent, sent => sent.Url.EndsWith("/merge-upstream", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -245,7 +304,6 @@ public sealed class ListingPublisherTests
         Assert.Equal(
             [$$"""{"ref":"refs/heads/listing-mymod-3","sha":"{{MainSha}}"}""", $$"""{"ref":"refs/heads/listing-mymod-4","sha":"{{MainSha}}"}"""],
             _sent.Where(sent => sent.Line == "POST " + Fork + "/git/refs").Select(sent => sent.Body));
-        Assert.DoesNotContain(_sent, sent => sent.Url.EndsWith("/merge-upstream", StringComparison.Ordinal));
         Assert.Contains("\"head\":\"octocat:listing-mymod-4\"", Body("POST", Upstream + "/pulls"), StringComparison.Ordinal);
     }
 
@@ -429,7 +487,7 @@ public sealed class ListingPublisherTests
     public async Task PublishAsync_UpstreamMissing_IsNotFoundAtTheBranch()
     {
         OnInstalledFork();
-        On("GET", Upstream + "/git/ref/heads/main", () => Json("""{"message":"Not Found"}""", HttpStatusCode.NotFound));
+        On("GET", Compare, () => Json("""{"message":"Not Found"}""", HttpStatusCode.NotFound));
         var (publisher, _) = await SignedInAsync();
 
         var failure = await Assert.ThrowsAsync<ListingPublishException>(() => publisher.PublishAsync(New()));
@@ -865,6 +923,17 @@ public sealed class ListingPublisherTests
         On("POST", Fork + "/git/refs", () => Json("{}", HttpStatusCode.Created));
         On("PUT", Fork + "/contents/listings/MyMod.toml", () => Json("{}", HttpStatusCode.Created));
     }
+
+    /// <summary>The compare of main of content-index with the default branch of the fork.</summary>
+    /// <param name="ownCommit">A commit on the fork that content-index does not have.</param>
+    private void OnCompare(string mergeBase, string? ownCommit = null, string url = Compare) =>
+        On("GET", url, () => Json(JsonSerializer.Serialize(new
+        {
+            status = ownCommit is null ? "behind" : "diverged",
+            base_commit = new { sha = MainSha },
+            merge_base_commit = new { sha = mergeBase },
+            commits = ownCommit is null ? [] : new[] { new { sha = ownCommit } },
+        })));
 
     private void OnProof(string repository, bool proven)
     {

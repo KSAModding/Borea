@@ -333,6 +333,31 @@ public sealed class ListingPullRequestViewModelTests
     }
 
     [Fact]
+    public async Task ForkBehindContentIndex_AsksToSyncItOnGitHub()
+    {
+        _session.SignIn();
+        _publisher.Failure = new ListingPublishException(ListingPublishFailure.ForkNeedsSync, ListingPublishStep.Branch, "octocat/content-index");
+        using var harness = await CreateAsync();
+        var editor = await ValidNewListingAsync(harness);
+        var opened = new List<string>();
+        harness.ViewModel.OpenWithSystem = opened.Add;
+
+        await editor.PublishCommand.ExecuteAsync(null);
+        editor.OpenForkStepCommand.Execute(null);
+
+        Assert.Equal("Your copy octocat/content-index is behind content-index. Choose Sync fork on GitHub, then check again.", editor.ForkStepText);
+        Assert.Equal("Sync your copy", editor.ForkStepLabel);
+        Assert.Equal(["https://github.com/octocat/content-index"], opened);
+        Assert.Null(editor.PublishError);
+
+        harness.Localization.TrySetCulture("de");
+        await editor.PublishCommand.ExecuteAsync(null);
+
+        Assert.Equal("Deine Kopie octocat/content-index ist nicht auf dem Stand von content-index. W\u00e4hle auf GitHub Sync fork und pr\u00fcfe dann erneut.", editor.ForkStepText);
+        Assert.Equal("Kopie abgleichen", editor.ForkStepLabel);
+    }
+
+    [Fact]
     public async Task ForkStep_HidesTheOwnershipCheckAgain()
     {
         _session.SignIn();

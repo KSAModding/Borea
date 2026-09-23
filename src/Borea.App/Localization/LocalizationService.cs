@@ -1101,6 +1101,8 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string ListingAllowOnFork => Resources.ListingAllowOnFork;
 
+    public string ListingSyncFork => Resources.ListingSyncFork;
+
     public string ListingStepFindPullRequest => Resources.ListingStepFindPullRequest;
 
     public string ListingStepFork => Resources.ListingStepFork;
@@ -1765,6 +1767,9 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string FormatListingAppNotOnFork(string repository)
         => string.Format(CultureInfo.CurrentCulture, Resources.ListingAppNotOnForkFormat, repository);
+
+    public string FormatListingForkNeedsSync(string repository)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ListingForkNeedsSyncFormat, repository);
 
     public string FormatListingOpened(string number)
         => string.Format(CultureInfo.CurrentCulture, Resources.ListingOpenedFormat, number);
