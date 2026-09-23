@@ -647,6 +647,31 @@ public sealed class DiscoverViewModelTests
     }
 
     [Fact]
+    public async Task GameVersionRange_ClearingOneBound_KeepsTheOther()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var viewModel = harness.ViewModel;
+        await viewModel.EnsureDiscoverLoadedAsync();
+        var older = viewModel.GameVersionOptions.Single(build => build.Revision == 5261);
+        var newer = viewModel.GameVersionOptions.Single(build => build.Revision == 5402);
+        viewModel.DiscoverGameMin = older;
+        viewModel.DiscoverGameMax = newer;
+
+        viewModel.ClearDiscoverGameMaxCommand.Execute(null);
+        Assert.Same(older, viewModel.DiscoverGameMin);
+        Assert.Equal(">= 2026.8.19.5261", viewModel.DiscoverGameVersionRangeText);
+
+        viewModel.DiscoverGameMax = newer;
+        viewModel.ClearDiscoverGameMinCommand.Execute(null);
+        Assert.Same(newer, viewModel.DiscoverGameMax);
+        Assert.Equal("<= 2026.9.7.5402", viewModel.DiscoverGameVersionRangeText);
+
+        viewModel.ClearDiscoverGameVersionRangeCommand.Execute(null);
+        Assert.Null(viewModel.DiscoverGameVersionRangeText);
+        Assert.False(viewModel.HasDiscoverFilters);
+    }
+
+    [Fact]
     public async Task GameVersionRange_BoundPastTheOtherOne_MovesTheOtherBound()
     {
         using var harness = await ViewModelHarness.CreateAsync();

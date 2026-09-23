@@ -450,6 +450,12 @@ public partial class MainViewModel
     }
 
     [RelayCommand]
+    private void ClearDiscoverGameMin() => DiscoverGameMin = null;
+
+    [RelayCommand]
+    private void ClearDiscoverGameMax() => DiscoverGameMax = null;
+
+    [RelayCommand]
     private void ClearHideInstalled() => HideInstalled = false;
 
     [RelayCommand]
