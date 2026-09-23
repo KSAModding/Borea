@@ -1,8 +1,10 @@
 using System.Net;
 using System.Text;
 using System.Text.Json;
+using Borea.App.Formatting;
 using Borea.App.ViewModels;
 using Borea.Composition;
+using Borea.Core.History;
 using Borea.Core.Mods;
 using Borea.Core.Preferences;
 using Borea.Core.Updates;
@@ -333,22 +335,148 @@ public sealed class UpdateNoticeViewModelTests
         await ViewModelHarness.WaitUntilAsync(() => closed);
     }
 
+    [Fact]
+    public async Task SelfUpdate_WhileTheNewBuildTakesItsPlace_OffersNoCloseNow_AndDisablesAnOpenOne()
+    {
+        var install = new TaskCompletionSource();
+        using var harness = await ViewModelHarness.CreateAsync(respond: ReleaseAt("v999.0.0"), selfUpdater: new WaitingSelfUpdater(install.Task));
+        var viewModel = harness.ViewModel;
+        await viewModel.WhenUpdateCheckedAsync();
+        var closeNowChanges = 0;
+        viewModel.CloseNowCommand.CanExecuteChanged += (_, _) => closeNowChanges++;
+        Assert.True(viewModel.CloseNowCommand.CanExecute(null));
+
+        var update = viewModel.SelfUpdateCommand.ExecuteAsync(null);
+        await ViewModelHarness.WaitUntilAsync(() => viewModel.IsInstallingSelfUpdate);
+        Assert.False(viewModel.RequestClose(() => { }));
+        Assert.False(viewModel.RequestClose(() => { }));
+
+        Assert.False(viewModel.IsCloseNowOpen);
+        Assert.False(viewModel.CloseNowCommand.CanExecute(null));
+        Assert.Equal(1, closeNowChanges);
+
+        install.SetResult();
+        await update;
+        Assert.True(viewModel.CloseNowCommand.CanExecute(null));
+        Assert.Equal(2, closeNowChanges);
+    }
+
+    [Fact]
+    public async Task SelfUpdate_RunsAsATask_ThatShowsTheDownloadTheCheckAndTheUnpackingInTurn()
+    {
+        var updater = new SteppingSelfUpdater();
+        using var harness = await ViewModelHarness.CreateAsync(respond: ReleaseAt("v999.0.0"), selfUpdater: updater);
+        var viewModel = harness.ViewModel;
+        var localization = harness.Localization;
+        await viewModel.WhenUpdateCheckedAsync();
+        await viewModel.Tasks.WhenSavedAsync();
+
+        var update = viewModel.SelfUpdateCommand.ExecuteAsync(null);
+        var task = Assert.Single(viewModel.Tasks.Running);
+        Assert.Equal(localization.FormatTaskSelfUpdate("999.0.0"), task.Title);
+
+        await ViewModelHarness.WaitUntilAsync(() => task.Progress == 40);
+        Assert.Equal(localization.FormatInstallDownloading("Borea 999.0.0"), task.Step);
+        Assert.True(task.HasProgress);
+        Assert.True(viewModel.Tasks.HasProgress);
+        updater.Next();
+
+        await ViewModelHarness.WaitUntilAsync(() => task.Step == localization.FormatSelfUpdateVerifying("999.0.0"));
+        Assert.False(task.HasProgress);
+        updater.Next();
+
+        await ViewModelHarness.WaitUntilAsync(() => task.Step == localization.FormatSelfUpdateUnpacking("999.0.0"));
+        updater.Next();
+        await update;
+
+        Assert.Empty(viewModel.Tasks.Running);
+        Assert.Same(task, viewModel.Tasks.History[0]);
+        Assert.Equal(TaskState.Finished, task.State);
+        Assert.Equal(localization.FormatSelfUpdateStartAgain("999.0.0"), viewModel.ReleaseBannerText);
+        Assert.Empty(viewModel.Toasts.Items);
+    }
+
+    [Theory]
+    [InlineData(SelfUpdateFailure.Download)]
+    [InlineData(SelfUpdateFailure.Checksum)]
+    public async Task SelfUpdate_AFailedDownloadOrCheck_EndsTheTaskAsFailedWithTheReason_AndTheHistoryKeepsIt(SelfUpdateFailure failure)
+    {
+        var updater = new SteppingSelfUpdater(failure);
+        using var harness = await ViewModelHarness.CreateAsync(respond: ReleaseAt("v999.0.0"), selfUpdater: updater);
+        var viewModel = harness.ViewModel;
+        var localization = harness.Localization;
+        await viewModel.WhenUpdateCheckedAsync();
+
+        var update = viewModel.SelfUpdateCommand.ExecuteAsync(null);
+        var task = Assert.Single(viewModel.Tasks.Running);
+        await ViewModelHarness.WaitUntilAsync(() => task.Progress == 40);
+        updater.Next();
+        if (failure == SelfUpdateFailure.Checksum)
+        {
+            await ViewModelHarness.WaitUntilAsync(() => task.Step == localization.FormatSelfUpdateVerifying("999.0.0"));
+            updater.Next();
+        }
+
+        await update;
+
+        var reason = failure == SelfUpdateFailure.Download ? localization.SelfUpdateDownloadFailed : localization.SelfUpdateChecksumFailed;
+        Assert.Equal(TaskState.Failed, task.State);
+        Assert.Equal(reason, task.FailureReason);
+        Assert.Equal(reason, viewModel.ReleaseBannerText);
+        Assert.Equal(localization.FormatToastSelfUpdateFailed("999.0.0"), Assert.Single(viewModel.Toasts.Items).Message);
+
+        await viewModel.Tasks.WhenSavedAsync();
+        var restarted = new MainViewModel(localization, new RegionalFormatService(localization), appPreferencesRepository: null, AppPreferences.Empty, harness.Services);
+        await restarted.Tasks.LoadAsync();
+        var entry = Assert.Single(restarted.Tasks.History, item => item.Kind == TaskKind.BoreaUpdate);
+        Assert.Equal(task.Title, entry.Title);
+        Assert.Equal(TaskState.Failed, entry.State);
+        Assert.Equal(reason, entry.FailureReason);
+        Assert.False(entry.HasRetry);
+    }
+
+    private static StagedSelfUpdate Staged(BoreaRelease release, Action install)
+    {
+        var folder = Path.Combine(Path.GetTempPath(), "BoreaSelfUpdateTest");
+        var program = Path.Combine(folder, "borea.exe");
+        return new StagedSelfUpdate(release.Version, folder, program, program + ".old", install, () => { });
+    }
+
     /// <summary>Holds the update in the step where the new build takes the place of the running one.</summary>
     private sealed class WaitingSelfUpdater(Task install) : ISelfUpdater
     {
         public SelfUpdateReadiness GetReadiness() => SelfUpdateReadiness.Ready;
 
         public Task<StagedSelfUpdate> StageAsync(BoreaRelease release, IProgress<SelfUpdateProgress>? progress = null, CancellationToken cancellationToken = default)
+            => Task.FromResult(Staged(release, install.GetAwaiter().GetResult));
+    }
+
+    /// <summary>Reports the download, the check and the unpacking, each held until <see cref="Next"/>, and fails after the step of its failure.</summary>
+    private sealed class SteppingSelfUpdater(SelfUpdateFailure? failure = null) : ISelfUpdater
+    {
+        private readonly SemaphoreSlim _next = new(0);
+
+        public void Next() => _next.Release();
+
+        public SelfUpdateReadiness GetReadiness() => SelfUpdateReadiness.Ready;
+
+        public async Task<StagedSelfUpdate> StageAsync(BoreaRelease release, IProgress<SelfUpdateProgress>? progress = null, CancellationToken cancellationToken = default)
         {
-            var folder = Path.Combine(Path.GetTempPath(), "BoreaSelfUpdateTest");
-            var program = Path.Combine(folder, "borea.exe");
-            return Task.FromResult(new StagedSelfUpdate(
-                release.Version,
-                folder,
-                program,
-                program + ".old",
-                install.GetAwaiter().GetResult,
-                () => { }));
+            (SelfUpdateProgress Report, SelfUpdateFailure Failure)[] steps =
+            [
+                (new(SelfUpdatePhase.Downloading, 40, 100), SelfUpdateFailure.Download),
+                (new(SelfUpdatePhase.Verifying), SelfUpdateFailure.Checksum),
+                (new(SelfUpdatePhase.Unpacking), SelfUpdateFailure.Unpack),
+            ];
+            foreach (var (report, stepFailure) in steps)
+            {
+                progress?.Report(report);
+                await _next.WaitAsync(cancellationToken);
+                if (failure == stepFailure)
+                    throw new SelfUpdateFailedException(stepFailure, "The test fails this step.");
+            }
+
+            return Staged(release, () => { });
         }
     }
 }

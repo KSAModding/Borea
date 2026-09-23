@@ -43,12 +43,14 @@ public sealed partial class ToastService : ObservableObject
     /// <summary>
     /// A finished index refresh or an update that changed nothing has nothing
     /// to say, and only a closing window stops a mod list import or a replace.
+    /// The Home banner says what a Borea update that did not fail does next.
     /// </summary>
     private static bool HasToast(TaskItem task) => task switch
     {
         { State: TaskState.Finished, Kind: TaskKind.IndexRefresh } => false,
         { State: TaskState.Finished, Kind: TaskKind.Update or TaskKind.UpdateAll, ModCount: 0 } => false,
         { State: TaskState.Stopped, Kind: TaskKind.ModListImport or TaskKind.ManualReplace } => false,
+        { State: not TaskState.Failed, Kind: TaskKind.BoreaUpdate } => false,
         _ => true,
     };
 

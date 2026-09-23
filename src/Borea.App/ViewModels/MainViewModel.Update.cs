@@ -6,6 +6,7 @@ using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using Borea.App.Localization;
+using Borea.Core.History;
 using Borea.Core.Mods;
 using Borea.Core.Updates;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -182,18 +183,24 @@ public partial class MainViewModel
         }
 
         IsSelfUpdating = true;
-        SelfUpdateStatus = Localization.FormatSelfUpdateDownloading(release.Version.ToString(), 0);
+        var task = StartTask(TaskKind.BoreaUpdate, version: release.Version.ToString());
+        var downloadText = new InstallProgressText(Localization);
+        ReportSelfUpdate(task, downloadText, release.Version, new SelfUpdateProgress(SelfUpdatePhase.Downloading));
         StagedSelfUpdate? staged = null;
         try
         {
-            var progress = new Progress<SelfUpdateProgress>(value => SelfUpdateStatus = ProgressText(release.Version, value));
+            var progress = new Progress<SelfUpdateProgress>(value => ReportSelfUpdate(task, downloadText, release.Version, value));
             staged = await _services.SelfUpdater.StageAsync(release, progress, cancellationToken);
 
             // From here a close waits, because the folder holds no program file for a moment.
             _selfUpdateInstall = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            CloseNowCommand.NotifyCanExecuteChanged();
+            SelfUpdateStatus = Localization.FormatSelfUpdateInstalling(staged.Version.ToString());
+            task.Report(SelfUpdateStatus, null);
 
             // The new build takes its place while the window stands, so the player reads what a failed step did.
             await Task.Run(staged.Install);
+            Tasks.End(task, TaskState.Finished);
             if (PendingHandover is null)
             {
                 SelfUpdateStatus = Localization.FormatSelfUpdateStartAgain(staged.Version.ToString());
@@ -205,7 +212,8 @@ public partial class MainViewModel
             PendingHandover.Run = staged.HandOver;
             PendingHandover.Describe = failure => FailureText(failure, staged);
 
-            // The window may go now, and it has to go before the new build starts.
+            // The window may go now, and it has to go before the new build starts, which reads the task history.
+            await Tasks.WhenSavedAsync();
             EndSelfUpdateInstall();
             EndApp?.Invoke();
         }
@@ -213,17 +221,34 @@ public partial class MainViewModel
         {
             _services.Log.Write("The self-update stopped.", exception);
             SelfUpdateStatus = FailureText(exception, staged);
+            Tasks.End(task, TaskState.Failed, SelfUpdateStatus);
             IsSelfUpdating = false;
         }
         catch (OperationCanceledException)
         {
             SelfUpdateStatus = null;
+            Tasks.End(task, TaskState.Stopped);
             IsSelfUpdating = false;
         }
         finally
         {
+            Tasks.Discard(task);
             EndSelfUpdateInstall();
         }
+    }
+
+    /// <summary>Shows a step in the banner and in the task. The download shows in the task like the download of an install.</summary>
+    private void ReportSelfUpdate(TaskItem task, InstallProgressText downloadText, ModVersion version, SelfUpdateProgress progress)
+    {
+        SelfUpdateStatus = ProgressText(version, progress);
+        if (progress.Phase != SelfUpdatePhase.Downloading)
+        {
+            task.Report(SelfUpdateStatus, null);
+            return;
+        }
+
+        downloadText.Report(new InstallProgress("Borea", version, InstallPhase.Downloading, new DownloadProgress(progress.BytesDownloaded, progress.TotalBytes)));
+        task.Report(downloadText);
     }
 
     /// <summary>Whether the new build is taking the place of this one right now.</summary>
@@ -238,6 +263,7 @@ public partial class MainViewModel
         var install = _selfUpdateInstall;
         _selfUpdateInstall = null;
         install?.TrySetResult();
+        CloseNowCommand.NotifyCanExecuteChanged();
     }
 
     /// <summary>

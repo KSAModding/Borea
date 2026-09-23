@@ -109,6 +109,7 @@ public sealed partial class TaskItem : ObservableObject
         TaskKind.BackupRestore => Localization.FormatTaskBackupRestore(Subject ?? string.Empty),
         TaskKind.BackupDelete => Localization.FormatTaskBackupDelete(Subject ?? string.Empty),
         TaskKind.LoaderInstall => Localization.FormatTaskInstall(LoaderInstallName),
+        TaskKind.BoreaUpdate => Localization.FormatTaskSelfUpdate(Version ?? string.Empty),
         _ => Localization.FormatTaskInstall(Subject ?? string.Empty),
     };
 
