@@ -104,6 +104,7 @@ public partial class MainViewModel : ViewModelBase
     {
         LeaveContentPage();
         LeavePackPage();
+        HomeInstance = ActiveInstance;
         CurrentWindowHome = true;
         CurrentWindowDiscover = false;
         CurrentWindowLibrary = false;
@@ -179,8 +180,8 @@ public partial class MainViewModel : ViewModelBase
     private string? _installedVersionText;
 
     /// <summary>
-    /// The row of the active instance, shared with the library list so the same
-    /// actions work from the Current Install card. Null when none is active.
+    /// The row of the active instance, shared with the library list. Null when
+    /// none is active.
     /// </summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasActiveInstance), nameof(EnableActiveInstance), nameof(EnableHomeLaunch))]
@@ -189,6 +190,16 @@ public partial class MainViewModel : ViewModelBase
     public bool HasActiveInstance => ActiveInstance is not null;
 
     public bool EnableActiveInstance => ActiveInstance is not null && !IsLaunching;
+
+    /// <summary>
+    /// The row the Current Install card shows. Home takes the active instance when it
+    /// is shown, so an instance switched off on the card stays there until the next visit.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasHomeInstance))]
+    private InstanceItem? _homeInstance;
+
+    public bool HasHomeInstance => HomeInstance is not null;
 
     /// <summary>
     /// The mods of the content index with the most recent newest release,
@@ -442,6 +453,8 @@ public partial class MainViewModel : ViewModelBase
         _activeInstanceEntity = all.FirstOrDefault(instance => instance.InstanceId == activeId);
 
         ActiveInstance = Instances.FirstOrDefault(instance => instance.IsActive);
+        var kept = CurrentWindowHome ? Instances.FirstOrDefault(instance => instance.InstanceId == HomeInstance?.InstanceId) : null;
+        HomeInstance = kept ?? ActiveInstance;
         RefreshInstanceHint();
         OnPropertyChanged(nameof(CanActOnSelectedContent));
         RefreshInstalledFlags();

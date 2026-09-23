@@ -66,8 +66,8 @@
                             </Panel>
                         </Border>
                     </Grid>
-                    <ContentControl Content="{Binding ActiveInstance}" ContentTemplate="{StaticResource InstanceRow}" IsVisible="{Binding HasActiveInstance}" />
-                    <Button Classes="plain card-button" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Command="{Binding FollowInstanceHintCommand}" IsVisible="{Binding !HasActiveInstance}" AutomationProperties.Name="{Binding HomeInstanceHintText}" AutomationProperties.HelpText="{Binding InstanceHintActionText}">
+                    <ContentControl Content="{Binding HomeInstance}" ContentTemplate="{StaticResource InstanceRow}" IsVisible="{Binding HasHomeInstance}" />
+                    <Button Classes="plain card-button" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Command="{Binding FollowInstanceHintCommand}" IsVisible="{Binding !HasHomeInstance}" AutomationProperties.Name="{Binding HomeInstanceHintText}" AutomationProperties.HelpText="{Binding InstanceHintActionText}">
                         <Border Classes="card" Padding="12">
                             <Grid ColumnDefinitions="70,16,*" Height="70">
                                 <Border Classes="thumbnail">

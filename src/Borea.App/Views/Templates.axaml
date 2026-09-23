@@ -86,10 +86,11 @@
                                 <TextBlock Classes="label-md" Text="{Binding ModCount}" VerticalAlignment="Center" />
                             </StackPanel>
                         </StackPanel>
-                        <!-- the update count shows only on the Current Install card of Home -->
+                        <!-- the update count shows only on the Current Install card of Home, and only for the active instance it counts -->
                         <Button Grid.Column="2" Classes="link" Height="24" Padding="6,0" Margin="8,0,0,0" VerticalAlignment="Center" Command="{Binding OpenCommand}">
                             <Button.IsVisible>
                                 <MultiBinding Converter="{x:Static BoolConverters.And}">
+                                    <Binding Path="IsActive" />
                                     <Binding Path="$parent[Window].((vm:MainViewModel)DataContext).CurrentWindowHome" />
                                     <Binding Path="$parent[Window].((vm:MainViewModel)DataContext).HasActiveInstanceUpdates" />
                                 </MultiBinding>
