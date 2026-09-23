@@ -335,7 +335,7 @@ public sealed class GameSavesViewModelTests
     }
 
     [Fact]
-    public async Task LockedFile_CopyAndDeleteRefuseWithCloseTheGame()
+    public async Task LockedFile_CopyFailsNamingTheFile()
     {
         using var harness = await ViewModelHarness.CreateAsync();
         var paths = harness.Services.Paths;
@@ -346,22 +346,36 @@ public sealed class GameSavesViewModelTests
         await OpenAsync(harness, "First");
         var section = harness.ViewModel.SavesSection;
         var row = Assert.Single(section.Items);
-        using var locked = new FileStream(Path.Combine(saves, "Orbit", "universe.xml"), FileMode.Open, FileAccess.ReadWrite, FileShare.None);
+        var file = Path.Combine(saves, "Orbit", "universe.xml");
+        using var locked = new FileStream(file, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
 
         row.BeginCopyCommand.Execute(null);
         await row.CopyCommand.ExecuteAsync(null);
 
         var toast = harness.ViewModel.Toasts.Items[^1];
         Assert.Equal(harness.Localization.FormatToastCopyFailed("Orbit"), toast.Message);
-        Assert.Equal(harness.Localization.GameSaveCloseGame, toast.Detail);
+        Assert.Contains(file, toast.Detail);
         Assert.Null(section.Error);
         Assert.False(Directory.Exists(Path.Combine(paths.GetInstanceSavesFolder(second.InstanceId), "Orbit")));
+    }
+
+    [WindowsFact("Only Windows refuses to move a folder while a handle below it is open.")]
+    public async Task LockedFile_DeleteFailsNamingTheFolderAndKeepsTheRow()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var instance = (await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value)).Instance;
+        var saves = harness.Services.Paths.GetInstanceSavesFolder(instance.InstanceId);
+        WriteItem(saves, "Orbit", "2026-08-01T14:34:32.4054896", "v2026.8.3.5117", 10);
+        await OpenAsync(harness, "Main");
+        var section = harness.ViewModel.SavesSection;
+        var row = Assert.Single(section.Items);
+        using var locked = new FileStream(Path.Combine(saves, "Orbit", "universe.xml"), FileMode.Open, FileAccess.ReadWrite, FileShare.None);
 
         row.BeginDeleteCommand.Execute(null);
         await row.ConfirmDeleteCommand.ExecuteAsync(null);
 
         Assert.Equal(harness.Localization.FormatToastDeleteFailed("Orbit"), harness.ViewModel.Toasts.Items[^1].Message);
-        Assert.Equal(harness.Localization.GameSaveCloseGame, harness.ViewModel.Toasts.Items[^1].Detail);
+        Assert.Contains(Path.Combine(saves, "Orbit"), harness.ViewModel.Toasts.Items[^1].Detail);
         Assert.True(Directory.Exists(Path.Combine(saves, "Orbit")));
         Assert.Single(section.Items);
     }
