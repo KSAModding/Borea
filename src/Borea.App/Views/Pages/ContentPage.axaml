@@ -328,11 +328,11 @@
                                                     </Border>
                                                     <TextBlock Grid.Column="4" Classes="body-md secondary hide-narrow" Width="84" Text="{Binding DownloadSizeText}" ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ContentDownloadSize}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
                                                     <TextBlock Grid.Column="5" Classes="body-md secondary hide-narrow" Width="104" Text="{Binding PublishedText}" ToolTip.Tip="{Binding PublishedDateText}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
-                                                    <StackPanel Grid.Column="6" Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right" VerticalAlignment="Center">
+                                                    <Grid Grid.Column="6" ColumnDefinitions="32,32" ColumnSpacing="8" HorizontalAlignment="Right" VerticalAlignment="Center">
                                                         <Button Classes="icon" Command="{Binding ToggleChangelogCommand}" IsVisible="{Binding Changelog, Converter={x:Static ObjectConverters.IsNotNull}}" ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ContentChangelog}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ContentChangelog}">
                                                             <Path Classes="icon size-16" Data="{StaticResource Icon.CaretDown}" />
                                                         </Button>
-                                                        <Button Classes="icon" Command="{Binding InstallCommand}" IsEnabled="{Binding !IsInstalling}" ToolTip.Tip="{Binding InstallToolTip}" AutomationProperties.Name="{Binding InstallToolTip}">
+                                                        <Button Grid.Column="1" Classes="icon" Command="{Binding InstallCommand}" IsEnabled="{Binding !IsInstalling}" ToolTip.Tip="{Binding InstallToolTip}" AutomationProperties.Name="{Binding InstallToolTip}">
                                                             <Button.IsVisible>
                                                                 <MultiBinding Converter="{x:Static BoolConverters.And}">
                                                                     <Binding Path="CanInstall" />
@@ -341,7 +341,7 @@
                                                             </Button.IsVisible>
                                                             <Path Classes="icon size-16" Data="{StaticResource Icon.Plus}" Stroke="{StaticResource Brush.Accent}" StrokeThickness="2" />
                                                         </Button>
-                                                    </StackPanel>
+                                                    </Grid>
                                                     <StackPanel Grid.Row="1" Grid.ColumnSpan="7" Spacing="6" Margin="0,6,0,0" IsVisible="{Binding IsConfirmingInstall}">
                                                         <ContentControl Content="{Binding Choices}" IsVisible="{Binding Choices, Converter={x:Static ObjectConverters.IsNotNull}}" />
                                                         <WrapPanel ItemSpacing="8" LineSpacing="8">
