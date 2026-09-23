@@ -31,7 +31,7 @@
                     </ListBox>
                     <TextBlock Classes="body-md danger" Text="{Binding SetupError}" TextWrapping="Wrap" IsVisible="{Binding SetupError, Converter={x:Static ObjectConverters.IsNotNull}}" />
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
-                        <Button Classes="text" Content="{Binding Localization.SetupLater}" Command="{Binding DismissFoundGameCommand}" IsEnabled="{Binding !IsSetupBusy}" VerticalAlignment="Center" />
+                        <Button Classes="text tall" Content="{Binding Localization.SetupLater}" Command="{Binding DismissFoundGameCommand}" IsEnabled="{Binding !IsSetupBusy}" VerticalAlignment="Center" />
                         <Button Classes="cta" Command="{Binding UseFoundGameCommand}" IsEnabled="{Binding SelectedFoundGame, Converter={x:Static ObjectConverters.IsNotNull}}">
                             <Panel VerticalAlignment="Center">
                                 <TextBlock Classes="action-lg" Text="{Binding Localization.SetupUseFoundGame}" IsVisible="{Binding !HasSeveralFoundGames}" />

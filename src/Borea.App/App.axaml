@@ -427,6 +427,10 @@
             <Setter Property="Background" Value="{StaticResource Brush.Accent}" />
             <Setter Property="Opacity" Value="0.9" />
         </Style>
+        <!-- a text button beside a cta takes its height, so the two read as one pair -->
+        <Style Selector="Button.text.tall">
+            <Setter Property="Height" Value="38" />
+        </Style>
         <!-- the purple buttons stay purple while pressed or disabled, instead of turning into the grey Fluent button -->
         <Style Selector="Button.text.primary:pressed /template/ ContentPresenter, Button.cta:pressed /template/ ContentPresenter">
             <Setter Property="Background" Value="{StaticResource Brush.Accent}" />

@@ -25,13 +25,13 @@
                     <TextBlock Classes="body-md danger" Text="{Binding LaunchFailureError}" TextWrapping="Wrap" IsVisible="{Binding LaunchFailureError, Converter={x:Static ObjectConverters.IsNotNull}}" />
                     <Grid ColumnDefinitions="Auto,*,Auto">
                         <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                            <Button Classes="text" Content="{Binding Localization.LaunchShowDetails}" Command="{Binding ToggleLaunchOutputCommand}" />
-                            <Button Classes="text" Content="{Binding Localization.LaunchOpenLog}" Command="{Binding OpenLaunchLogCommand}" />
+                            <Button Classes="text tall" Content="{Binding Localization.LaunchShowDetails}" Command="{Binding ToggleLaunchOutputCommand}" />
+                            <Button Classes="text tall" Content="{Binding Localization.LaunchOpenLog}" Command="{Binding OpenLaunchLogCommand}" />
                         </StackPanel>
                         <Button Grid.Column="2" Classes="cta" Command="{Binding DisableBlamedModCommand}" IsVisible="{Binding CanDisableBlamedMod}">
                             <TextBlock Classes="action-lg" Text="{Binding DisableBlamedModText}" VerticalAlignment="Center" />
                         </Button>
-                        <Button Grid.Column="2" Classes="text" Content="{Binding Localization.ModalClose}" Command="{Binding CloseLaunchFailureCommand}" IsVisible="{Binding !CanDisableBlamedMod}" VerticalAlignment="Center" />
+                        <Button Grid.Column="2" Classes="text tall" Content="{Binding Localization.ModalClose}" Command="{Binding CloseLaunchFailureCommand}" IsVisible="{Binding !CanDisableBlamedMod}" VerticalAlignment="Center" />
                     </Grid>
                 </StackPanel>
             </StackPanel>

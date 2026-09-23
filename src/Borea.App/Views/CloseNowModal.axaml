@@ -28,7 +28,7 @@
                     </StackPanel>
                     <TextBlock Classes="body-md secondary" Text="{Binding Localization.CloseNowInstallWarning}" TextWrapping="Wrap" IsVisible="{Binding CloseStopsInstall}" />
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
-                        <Button Classes="text danger" Content="{Binding Localization.CloseNowConfirm}" Command="{Binding CloseNowCommand}" VerticalAlignment="Center" />
+                        <Button Classes="text danger tall" Content="{Binding Localization.CloseNowConfirm}" Command="{Binding CloseNowCommand}" VerticalAlignment="Center" />
                         <Button Classes="cta" Command="{Binding KeepWaitingCommand}">
                             <TextBlock Classes="action-lg" Text="{Binding Localization.CloseNowKeepWaiting}" VerticalAlignment="Center" />
                         </Button>
