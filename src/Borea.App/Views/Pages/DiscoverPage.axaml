@@ -43,7 +43,7 @@
 
                     <!-- active filters, and the sort order of the Mods and Modpacks tabs -->
                     <DockPanel MinHeight="32" Margin="8,24,0,0">
-                        <Button DockPanel.Dock="Right" Classes="dropdown" Margin="16,0,0,0" IsVisible="{Binding !IsLoadersTab}" AutomationProperties.Name="{Binding Localization.DiscoverSortBy}">
+                        <Button DockPanel.Dock="Right" Classes="dropdown" Margin="16,0,0,0" VerticalAlignment="Top" IsVisible="{Binding !IsLoadersTab}" AutomationProperties.Name="{Binding Localization.DiscoverSortBy}">
                             <Button.Flyout>
                                 <MenuFlyout Placement="BottomEdgeAlignedRight">
                                     <MenuItem Header="{Binding Localization.DiscoverSortPopularity}" Command="{Binding SelectDiscoverSortCommand}" CommandParameter="{x:Static prefs:DiscoverSortOrder.Popularity}" />
@@ -57,7 +57,8 @@
                                 <Path Classes="icon size-16" Data="{StaticResource Icon.CaretDown}" VerticalAlignment="Center" />
                             </StackPanel>
                         </Button>
-                        <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center" ClipToBounds="True" IsVisible="{Binding HasDiscoverFilters}">
+                        <!-- the chips wrap onto more lines, and the first line stays level with Sort by -->
+                        <WrapPanel ItemSpacing="8" LineSpacing="8" Margin="0,4" IsVisible="{Binding HasDiscoverFilters}">
                             <Button Classes="chip-button" Command="{Binding ClearDiscoverFiltersCommand}">
                                 <StackPanel Orientation="Horizontal" Spacing="4">
                                     <Path Classes="icon size-16" Data="{StaticResource Icon.Close}" />
@@ -79,7 +80,7 @@
                             <ItemsControl ItemsSource="{Binding SelectedCategories}" IsVisible="{Binding !!SelectedCategories.Count}">
                                 <ItemsControl.ItemsPanel>
                                     <ItemsPanelTemplate>
-                                        <StackPanel Orientation="Horizontal" Spacing="8" />
+                                        <WrapPanel ItemSpacing="8" LineSpacing="8" />
                                     </ItemsPanelTemplate>
                                 </ItemsControl.ItemsPanel>
                                 <ItemsControl.ItemTemplate>
@@ -111,7 +112,7 @@
                                     <TextBlock Classes="label-sm" Text="{Binding SelectedLicense}" VerticalAlignment="Center" />
                                 </StackPanel>
                             </Button>
-                        </StackPanel>
+                        </WrapPanel>
                     </DockPanel>
 
                     <TextBlock Classes="body-md muted" Text="{Binding Localization.DiscoverLoading}" Margin="8,24,0,0" IsVisible="{Binding IsDiscoverLoading}" />

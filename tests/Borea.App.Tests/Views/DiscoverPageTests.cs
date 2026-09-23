@@ -61,6 +61,43 @@ public sealed class DiscoverPageTests
         Assert.Null(viewModel.SelectedLicense);
     }
 
+    [Theory]
+    [InlineData(860)]
+    [InlineData(1280)]
+    [InlineData(1920)]
+    public async Task ActiveFilters_EveryChipStaysInsideTheFilterRow(double windowWidth)
+    {
+        var tags = ViewModelHarness.CuratedTags(("control", "Flight control and autopilots"), ("parts", "Parts"), ("weapons", "Weapons and armament"), ("physics", "Physics and simulation"), ("information", "Information and readouts"));
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: tags);
+        var viewModel = harness.ViewModel;
+        await viewModel.EnsureDiscoverLoadedAsync();
+        foreach (var category in viewModel.CategoryOptions)
+            viewModel.ToggleCategoryCommand.Execute(category);
+        viewModel.HideInstalled = true;
+        viewModel.HideIncompatible = true;
+        viewModel.SelectOsCommand.Execute("windows");
+        viewModel.SelectLicenseCommand.Execute("MIT");
+        viewModel.DiscoverGameMin = viewModel.GameVersionOptions.Single(build => build.Revision == 5261);
+        viewModel.DiscoverGameMax = viewModel.GameVersionOptions.Single(build => build.Revision == 5402);
+
+        var (chips, outside) = await RenderAsync(harness, windowWidth, page =>
+        {
+            var body = page.GetVisualDescendants().OfType<PageBodyPanel>().Single().Children.Single();
+            var sort = page.GetVisualDescendants().OfType<Button>().Single(button => button.Classes.Contains("dropdown"));
+            var left = Corner(body, page).X;
+            var row = new Rect(left, 0, Corner(sort, page).X - left, page.Bounds.Height);
+            var chips = page.GetVisualDescendants().OfType<Button>().Where(button => button.Classes.Contains("chip-button") && button.IsEffectivelyVisible).ToList();
+            var outside = chips
+                .Where(chip => !row.Contains(new Rect(Corner(chip, page), chip.Bounds.Size)))
+                .Select(chip => string.Concat(chip.GetVisualDescendants().OfType<TextBlock>().Select(text => text.Text)))
+                .ToList();
+            return (chips.Count, outside);
+        });
+
+        Assert.Equal(viewModel.CategoryOptions.Count + 6, chips);
+        Assert.Empty(outside);
+    }
+
     /// <summary>Renders Discover next to a navigation rail, as the main window does.</summary>
     private static Task<T> RenderAsync<T>(ViewModelHarness harness, double windowWidth, Func<DiscoverPage, T> read) =>
         HeadlessApp.RunAsync(harness, () =>
@@ -106,4 +143,8 @@ public sealed class DiscoverPageTests
         window.MouseDown(center, MouseButton.Left);
         window.MouseUp(center, MouseButton.Left);
     }
+
+    private static Point Corner(Visual control, Visual page) =>
+        control.TranslatePoint(new Point(0, 0), page)
+        ?? throw new InvalidOperationException($"{control} is not laid out inside the page.");
 }
