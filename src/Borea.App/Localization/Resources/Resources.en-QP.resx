@@ -1005,6 +1005,12 @@
   <data name="DiscoverGameVersionMax" xml:space="preserve">
     <value>Ye freshest</value>
   </data>
+  <data name="DiscoverGameVersionClearMin" xml:space="preserve">
+    <value>Scrub ye oldest</value>
+  </data>
+  <data name="DiscoverGameVersionClearMax" xml:space="preserve">
+    <value>Scrub ye freshest</value>
+  </data>
   <data name="DiscoverOperatingSystem" xml:space="preserve">
     <value>Thinkin' machine's soul</value>
   </data>

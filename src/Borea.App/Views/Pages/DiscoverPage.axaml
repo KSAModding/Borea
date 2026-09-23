@@ -213,7 +213,8 @@
                     <Border Height="1" Background="{StaticResource Brush.BorderStrong}" IsVisible="{Binding !!GameVersionOptions.Count}" />
                     <StackPanel Spacing="10" IsVisible="{Binding !!GameVersionOptions.Count}">
                         <TextBlock Classes="heading-md" Text="{Binding Localization.ContentGameVersionHeader}" />
-                        <StackPanel Spacing="8">
+                        <!-- the X of an empty box stays in place and only turns inactive, so the box keeps its width -->
+                        <Grid ColumnDefinitions="*,8,Auto" RowDefinitions="Auto,8,Auto">
                             <!-- a chosen build keeps its "Min:" or "Max:" label, like the inline dropdowns -->
                             <ComboBox ItemsSource="{Binding GameVersionOptions}" SelectedItem="{Binding DiscoverGameMax}" PlaceholderText="{Binding Localization.DiscoverGameVersionMax}" AutomationProperties.Name="{Binding Localization.DiscoverGameVersionMax}" HorizontalAlignment="Stretch" MaxDropDownHeight="300">
                                 <ComboBox.ItemTemplate>
@@ -230,7 +231,10 @@
                                     </DataTemplate>
                                 </ComboBox.SelectionBoxItemTemplate>
                             </ComboBox>
-                            <ComboBox ItemsSource="{Binding GameVersionOptions}" SelectedItem="{Binding DiscoverGameMin}" PlaceholderText="{Binding Localization.DiscoverGameVersionMin}" AutomationProperties.Name="{Binding Localization.DiscoverGameVersionMin}" HorizontalAlignment="Stretch" MaxDropDownHeight="300">
+                            <Button Grid.Column="2" Classes="icon" Command="{Binding ClearDiscoverGameMaxCommand}" IsEnabled="{Binding DiscoverGameMax, Converter={x:Static ObjectConverters.IsNotNull}}" ToolTip.Tip="{Binding Localization.DiscoverGameVersionClearMax}" AutomationProperties.Name="{Binding Localization.DiscoverGameVersionClearMax}">
+                                <Path Classes="icon size-16" Data="{StaticResource Icon.Close}" />
+                            </Button>
+                            <ComboBox Grid.Row="2" ItemsSource="{Binding GameVersionOptions}" SelectedItem="{Binding DiscoverGameMin}" PlaceholderText="{Binding Localization.DiscoverGameVersionMin}" AutomationProperties.Name="{Binding Localization.DiscoverGameVersionMin}" HorizontalAlignment="Stretch" MaxDropDownHeight="300">
                                 <ComboBox.ItemTemplate>
                                     <DataTemplate x:DataType="vm:GameVersionOption">
                                         <TextBlock Text="{Binding Text}" />
@@ -245,7 +249,10 @@
                                     </DataTemplate>
                                 </ComboBox.SelectionBoxItemTemplate>
                             </ComboBox>
-                        </StackPanel>
+                            <Button Grid.Row="2" Grid.Column="2" Classes="icon" Command="{Binding ClearDiscoverGameMinCommand}" IsEnabled="{Binding DiscoverGameMin, Converter={x:Static ObjectConverters.IsNotNull}}" ToolTip.Tip="{Binding Localization.DiscoverGameVersionClearMin}" AutomationProperties.Name="{Binding Localization.DiscoverGameVersionClearMin}">
+                                <Path Classes="icon size-16" Data="{StaticResource Icon.Close}" />
+                            </Button>
+                        </Grid>
                     </StackPanel>
                     <Border Height="1" Background="{StaticResource Brush.BorderStrong}" IsVisible="{Binding !!OsOptions.Count}" />
                     <StackPanel Spacing="10" IsVisible="{Binding !!OsOptions.Count}">
