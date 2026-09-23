@@ -1080,6 +1080,9 @@
   <data name="ContentEnabled" xml:space="preserve">
     <value>Aktiviert</value>
   </data>
+  <data name="ContentOpenPage" xml:space="preserve">
+    <value>Seite öffnen</value>
+  </data>
   <data name="ContentManage" xml:space="preserve">
     <value>Von Borea verwalten lassen</value>
   </data>

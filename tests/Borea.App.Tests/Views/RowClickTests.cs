@@ -83,6 +83,17 @@ public sealed class RowClickTests
         => row.GetVisualDescendants().OfType<Button>()
             .Single(button => button.IsEffectivelyVisible && button.Content as string == content);
 
+    /// <summary>
+    /// Opens the menu of the row and returns its entry with the command. The menu
+    /// lives in a layer of its own above the page, so the entry is looked up from the window.
+    /// </summary>
+    private static MenuItem MenuEntry(Window window, Visual row, ICommand command)
+    {
+        ClickCenter(window, row.GetVisualDescendants().OfType<Button>().Single(button => button.IsEffectivelyVisible && button.Flyout is not null));
+        window.UpdateLayout();
+        return window.GetVisualDescendants().OfType<MenuItem>().Single(entry => ReferenceEquals(entry.Command, command));
+    }
+
     /// <summary>A run that reports no install, so that a click on Pause or on Stop is the only thing that moves it.</summary>
     private static InstallRun NewRun(ViewModelHarness harness)
     {
@@ -329,6 +340,48 @@ public sealed class RowClickTests
     }
 
     [Fact]
+    public async Task ContentRow_TheMenu_OpensTheModPage()
+    {
+        using var harness = await InstanceAsync();
+        var viewModel = harness.ViewModel;
+        var item = viewModel.ContentGroups.Single().Items.Single();
+
+        var selected = await OnPageAsync(harness, () => new InstancePage(), async (window, page) =>
+        {
+            ClickCenter(window, MenuEntry(window, Row(page, item.OpenCommand), item.OpenCommand));
+            if (item.OpenCommand.ExecutionTask is { } running)
+                await running;
+            return viewModel.SelectedContent?.ModId;
+        });
+
+        Assert.True(viewModel.CurrentWindowContent);
+        Assert.Equal(ModId, selected);
+    }
+
+    [Fact]
+    public async Task ContentRow_ManageInTheMenu_AsksForAConfirmationAndLeavesTheModPageClosed()
+    {
+        using var harness = await InstanceAsync(ModInstallOwnership.Foreign);
+        var viewModel = harness.ViewModel;
+        var item = viewModel.ContentGroups.Single().Items.Single();
+        Assert.True(item.CanManage);
+
+        var (buttons, opened, selected) = await OnPageAsync(harness, () => new InstancePage(), (window, page) =>
+        {
+            var row = Row(page, item.OpenCommand);
+            var buttons = row.GetVisualDescendants().OfType<Button>().Count(button => button.IsEffectivelyVisible && button.Classes.Contains("text"));
+            ClickCenter(window, MenuEntry(window, row, item.BeginManageCommand));
+            return Task.FromResult((buttons, item.OpenCommand.ExecutionTask, viewModel.SelectedContent));
+        });
+
+        // the row itself carries no text button, only the switch, the update and the menu
+        Assert.Equal(0, buttons);
+        Assert.True(item.IsConfirmingManage);
+        Assert.Null(opened);
+        Assert.Null(selected);
+    }
+
+    [Fact]
     public async Task ContentRow_Remove_AsksForAConfirmationAndLeavesTheModPageClosed()
     {
         using var harness = await InstanceAsync();
@@ -339,7 +392,7 @@ public sealed class RowClickTests
         var (confirming, cancelled, opened, selected) = await OnPageAsync(harness, () => new InstancePage(), (window, page) =>
         {
             var row = Row(page, item.OpenCommand);
-            ClickCenter(window, Inside(row, item.BeginRemoveCommand));
+            ClickCenter(window, MenuEntry(window, row, item.BeginRemoveCommand));
             var confirming = item.IsConfirmingRemove;
             page.UpdateLayout();
             ClickCenter(window, Shown(row, harness.Localization.LibraryCancel));
@@ -363,7 +416,7 @@ public sealed class RowClickTests
         var (opened, selected) = await OnPageAsync(harness, () => new InstancePage(), async (window, page) =>
         {
             var row = Row(page, item.OpenCommand);
-            ClickCenter(window, Inside(row, item.BeginRemoveCommand));
+            ClickCenter(window, MenuEntry(window, row, item.BeginRemoveCommand));
             page.UpdateLayout();
             ClickCenter(window, Shown(row, harness.Localization.ContentRemove));
             if (item.ConfirmRemoveCommand.ExecutionTask is { } running)
@@ -435,17 +488,19 @@ public sealed class RowClickTests
         Assert.True(item.CanOpen);
         Assert.False(item.CanRemove);
 
-        var (wasOff, opened, selected) = await OnPageAsync(harness, () => new InstancePage(), (window, page) =>
+        var (wasOff, reasonShown, opened, selected) = await OnPageAsync(harness, () => new InstancePage(), (window, page) =>
         {
             var row = Row(page, item.OpenCommand);
-            var trash = Inside(row, item.BeginRemoveCommand);
-            var wasOff = !trash.IsEffectivelyEnabled;
-            ClickCenter(window, trash);
-            return Task.FromResult((wasOff, item.OpenCommand.ExecutionTask, viewModel.SelectedContent));
+            var remove = MenuEntry(window, row, item.BeginRemoveCommand);
+            var wasOff = !remove.IsEffectivelyEnabled;
+            var reasonShown = window.GetVisualDescendants().OfType<TextBlock>().Any(text => text.IsEffectivelyVisible && text.Text == item.RemoveBlockedText);
+            ClickCenter(window, remove);
+            return Task.FromResult((wasOff, reasonShown, item.OpenCommand.ExecutionTask, viewModel.SelectedContent));
         });
 
-        // the tooltip of the trash explains why it is off, so a click on it must answer nothing at all
+        // the menu explains why Remove is off, so a click on it must answer nothing at all
         Assert.True(wasOff);
+        Assert.True(reasonShown);
         Assert.False(item.IsConfirmingRemove);
         Assert.Null(opened);
         Assert.Null(selected);

@@ -49,7 +49,7 @@ public sealed class RemoveButtonTests
         await viewModel.ActiveInstance!.OpenCommand.ExecuteAsync(null);
         var row = viewModel.ContentGroups.SelectMany(group => group.Items).Single();
         Assert.False(row.CanRemove);
-        Assert.Equal(expected, row.RemoveToolTip);
+        Assert.Equal(expected, row.RemoveBlockedText);
     }
 
     [Fact]

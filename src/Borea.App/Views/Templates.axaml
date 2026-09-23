@@ -210,11 +210,22 @@
                                     <Binding Path="!IsConfirmingManage" />
                                 </MultiBinding>
                             </StackPanel.IsVisible>
-                            <Button Classes="text primary" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ContentInstallAgain}" Command="{Binding InstallAgainCommand}" IsVisible="{Binding IsMissing}" VerticalAlignment="Center" />
-                            <Button Classes="text primary" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ContentManage}" Command="{Binding BeginManageCommand}" IsVisible="{Binding CanManage}" VerticalAlignment="Center" />
                             <ToggleSwitch Classes="switch" IsChecked="{Binding IsEnabled}" Command="{Binding ToggleEnabledCommand}" VerticalAlignment="Center" AutomationProperties.Name="{Binding Name}" />
-                            <Button Classes="icon" Command="{Binding BeginRemoveCommand}" IsEnabled="{Binding CanRemove}" ToolTip.Tip="{Binding RemoveToolTip}" ToolTip.ShowOnDisabled="True" AutomationProperties.Name="{Binding Name}" AutomationProperties.HelpText="{Binding RemoveToolTip}">
-                                <Path Classes="icon size-18" Data="{StaticResource Icon.Trash}" />
+                            <Button Classes="icon" VerticalAlignment="Center" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryMoreActions}">
+                                <Button.Flyout>
+                                    <MenuFlyout Placement="BottomEdgeAlignedRight">
+                                        <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ContentOpenPage}" Command="{Binding OpenCommand}" IsVisible="{Binding CanOpen}" />
+                                        <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ContentManage}" Command="{Binding BeginManageCommand}" IsVisible="{Binding CanManage}" />
+                                        <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ContentInstallAgain}" Command="{Binding InstallAgainCommand}" IsVisible="{Binding IsMissing}" />
+                                        <MenuItem Header="{Binding RemoveActionText}" Command="{Binding BeginRemoveCommand}" IsEnabled="{Binding CanRemove}" AutomationProperties.HelpText="{Binding RemoveBlockedText}" />
+                                        <MenuItem IsEnabled="False" IsVisible="{Binding RemoveBlockedText, Converter={x:Static ObjectConverters.IsNotNull}}">
+                                            <MenuItem.Header>
+                                                <TextBlock Classes="body-sm secondary" Text="{Binding RemoveBlockedText}" TextWrapping="Wrap" MaxWidth="260" />
+                                            </MenuItem.Header>
+                                        </MenuItem>
+                                    </MenuFlyout>
+                                </Button.Flyout>
+                                <Path Classes="icon-filled" Data="{StaticResource Icon.More}" />
                             </Button>
                         </StackPanel>
                     </Panel>
