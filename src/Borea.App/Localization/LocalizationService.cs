@@ -514,6 +514,10 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string HomeNoGameVersion => Resources.HomeNoGameVersion;
 
+    public string HomeSetupNotSaved => Resources.HomeSetupNotSaved;
+
+    public string HomeSetupFolderMissing => Resources.HomeSetupFolderMissing;
+
     public string HomeNoInstance => Resources.HomeNoInstance;
 
     public string HomeNoActiveInstance => Resources.HomeNoActiveInstance;

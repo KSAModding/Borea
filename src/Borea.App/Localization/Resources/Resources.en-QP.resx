@@ -348,6 +348,12 @@
   <data name="HomeNoGameVersion" xml:space="preserve">
     <value>Game ain't been drawn up</value>
   </data>
+  <data name="HomeSetupNotSaved" xml:space="preserve">
+    <value>The Borea don't know where the game be anchored.</value>
+  </data>
+  <data name="HomeSetupFolderMissing" xml:space="preserve">
+    <value>The game chest be lost at sea.</value>
+  </data>
   <data name="HomeNoInstance" xml:space="preserve">
     <value>Nary a sea charted</value>
   </data>

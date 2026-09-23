@@ -837,6 +837,7 @@ public partial class MainViewModel : ViewModelBase
         RefreshGitHubAccount();
         RefreshIndexStatusText();
         OnPropertyChanged(nameof(GameSetupBannerText));
+        OnPropertyChanged(nameof(HomeSetupText));
         OnPropertyChanged(nameof(FoundGameText));
         OnPropertyChanged(nameof(LoaderPromptText));
         OnPropertyChanged(nameof(SharedProfileBannerText));

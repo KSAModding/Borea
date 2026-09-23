@@ -447,6 +447,12 @@
   <data name="HomeNoGameVersion" xml:space="preserve">
     <value>Game not set up</value>
   </data>
+  <data name="HomeSetupNotSaved" xml:space="preserve">
+    <value>Borea does not know where the game is.</value>
+  </data>
+  <data name="HomeSetupFolderMissing" xml:space="preserve">
+    <value>The game folder is gone.</value>
+  </data>
   <data name="HomeNoInstance" xml:space="preserve">
     <value>No instance yet</value>
   </data>

@@ -79,7 +79,7 @@ public partial class MainViewModel
 
     /// <summary>
     /// Why the game is not usable yet, or null when it is. Drives the banner
-    /// on Home, Discover and Library (#152).
+    /// on Discover and Library (#152) and the Current Install header of Home.
     /// </summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(NeedsGameSetup))]
@@ -91,6 +91,14 @@ public partial class MainViewModel
     {
         GameSetupState.NotSaved => Localization.SetupBannerNotSaved,
         GameSetupState.FolderMissing => Localization.SetupBannerFolderMissing,
+        _ => null,
+    };
+
+    /// <summary>The short form of <see cref="GameSetupBannerText"/> for the Current Install header of Home.</summary>
+    public string? HomeSetupText => GameSetupState switch
+    {
+        GameSetupState.NotSaved => Localization.HomeSetupNotSaved,
+        GameSetupState.FolderMissing => Localization.HomeSetupFolderMissing,
         _ => null,
     };
 
@@ -118,6 +126,7 @@ public partial class MainViewModel
             ? GameSetupState.Ready
             : directory is null ? GameSetupState.NotSaved : GameSetupState.FolderMissing;
         OnPropertyChanged(nameof(GameSetupBannerText));
+        OnPropertyChanged(nameof(HomeSetupText));
 
         if (_services is { } services && !_promptedForGameSetup)
         {

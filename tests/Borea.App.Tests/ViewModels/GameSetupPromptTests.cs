@@ -13,6 +13,7 @@ public sealed class GameSetupPromptTests
         Assert.Equal(GameSetupState.NotSaved, viewModel.GameSetupState);
         Assert.True(viewModel.NeedsGameSetup);
         Assert.Equal(harness.Localization.SetupBannerNotSaved, viewModel.GameSetupBannerText);
+        Assert.Equal(harness.Localization.HomeSetupNotSaved, viewModel.HomeSetupText);
         Assert.False(viewModel.IsSettingsOpen);
         Assert.False(viewModel.IsFoundGameModalOpen);
     }
@@ -42,6 +43,7 @@ public sealed class GameSetupPromptTests
         Assert.Equal(GameSetupState.Ready, viewModel.GameSetupState);
         Assert.False(viewModel.NeedsGameSetup);
         Assert.Null(viewModel.GameSetupBannerText);
+        Assert.Null(viewModel.HomeSetupText);
     }
 
     [Fact]
@@ -56,6 +58,7 @@ public sealed class GameSetupPromptTests
 
         Assert.Equal(GameSetupState.FolderMissing, viewModel.GameSetupState);
         Assert.Equal(harness.Localization.SetupBannerFolderMissing, viewModel.GameSetupBannerText);
+        Assert.Equal(harness.Localization.HomeSetupFolderMissing, viewModel.HomeSetupText);
         Assert.False(viewModel.IsSettingsOpen);
     }
 
@@ -77,9 +80,14 @@ public sealed class GameSetupPromptTests
         using var harness = await ViewModelHarness.CreateAsync();
         var viewModel = harness.ViewModel;
 
+        var changed = new List<string?>();
+        viewModel.PropertyChanged += (_, e) => changed.Add(e.PropertyName);
+
         harness.Localization.TrySetCulture("de");
 
         Assert.Equal(harness.Localization.SetupBannerNotSaved, viewModel.GameSetupBannerText);
+        Assert.Equal(harness.Localization.HomeSetupNotSaved, viewModel.HomeSetupText);
+        Assert.Contains(nameof(MainViewModel.HomeSetupText), changed);
         Assert.Contains("Kitten Space Agency", viewModel.GameSetupBannerText);
     }
 }

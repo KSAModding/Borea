@@ -447,6 +447,12 @@
   <data name="HomeNoGameVersion" xml:space="preserve">
     <value>Spiel nicht eingerichtet</value>
   </data>
+  <data name="HomeSetupNotSaved" xml:space="preserve">
+    <value>Borea weiß nicht, wo das Spiel ist.</value>
+  </data>
+  <data name="HomeSetupFolderMissing" xml:space="preserve">
+    <value>Der Spielordner fehlt.</value>
+  </data>
   <data name="HomeNoInstance" xml:space="preserve">
     <value>Noch keine Instanz</value>
   </data>
