@@ -5,6 +5,12 @@
              xmlns:prefs="using:Borea.Core.Preferences"
              x:Class="Borea.App.Views.Pages.DiscoverPage"
              x:DataType="vm:MainViewModel">
+    <UserControl.Styles>
+        <!-- a virtualizing panel has no Spacing, so each row keeps the gap below itself; a row's logical parent is the list, not the panel -->
+        <Style Selector="ItemsControl.rows > ContentPresenter">
+            <Setter Property="Margin" Value="0,0,0,8" />
+        </Style>
+    </UserControl.Styles>
     <!-- Discover: the list, with the filter panel along the right edge -->
     <Grid>
         <ScrollViewer>
@@ -153,17 +159,17 @@
                             </MultiBinding>
                         </Border.IsVisible>
                     </Border>
-                    <ItemsControl ItemsSource="{Binding DiscoverItems}" ItemTemplate="{StaticResource DiscoverRow}" Margin="0,4,0,0" IsVisible="{Binding !IsModpacksTab}">
+                    <ItemsControl Classes="rows" ItemsSource="{Binding DiscoverItems}" ItemTemplate="{StaticResource DiscoverRow}" Margin="0,4,0,0" IsVisible="{Binding !IsModpacksTab}">
                         <ItemsControl.ItemsPanel>
                             <ItemsPanelTemplate>
-                                <StackPanel Spacing="8" />
+                                <VirtualizingStackPanel CacheLength="1" />
                             </ItemsPanelTemplate>
                         </ItemsControl.ItemsPanel>
                     </ItemsControl>
-                    <ItemsControl ItemsSource="{Binding DiscoverPacks}" ItemTemplate="{StaticResource PackRow}" Margin="0,4,0,0" IsVisible="{Binding IsModpacksTab}">
+                    <ItemsControl Classes="rows" ItemsSource="{Binding DiscoverPacks}" ItemTemplate="{StaticResource PackRow}" Margin="0,4,0,0" IsVisible="{Binding IsModpacksTab}">
                         <ItemsControl.ItemsPanel>
                             <ItemsPanelTemplate>
-                                <StackPanel Spacing="8" />
+                                <VirtualizingStackPanel CacheLength="1" />
                             </ItemsPanelTemplate>
                         </ItemsControl.ItemsPanel>
                     </ItemsControl>
