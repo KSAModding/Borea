@@ -23,8 +23,7 @@ public sealed class TasksDrawerTests
         var task = viewModel.Tasks.Start(TaskKind.ModInstall, LongSubject, instanceId: null, instanceName: null, contentId: null, version: null, TaskState.Running);
         viewModel.Tasks.End(task, TaskState.Finished);
 
-        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
-        var row = await HeadlessApp.Session.Dispatch(() =>
+        var row = await HeadlessApp.RunAsync(harness, () =>
         {
             var drawer = new TasksDrawer();
             var window = new Window { Width = 1280, Height = 832, DataContext = viewModel, Content = drawer };
@@ -49,7 +48,7 @@ public sealed class TasksDrawerTests
             {
                 window.Close();
             }
-        }, timeout.Token);
+        });
 
         Assert.Equal(2, row.TitleLines);
         Assert.False(row.TitleTrimmed);

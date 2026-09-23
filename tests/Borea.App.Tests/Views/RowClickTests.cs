@@ -25,13 +25,11 @@ public sealed class RowClickTests
 {
     private const string ModId = "AdvancedFlightComputer";
 
-    private static async Task<T> OnPageAsync<T>(MainViewModel viewModel, Func<Control> createPage, Func<Window, Control, Task<T>> read)
-    {
-        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
-        return await HeadlessApp.Session.Dispatch(async () =>
+    private static Task<T> OnPageAsync<T>(ViewModelHarness harness, Func<Control> createPage, Func<Window, Control, Task<T>> read) =>
+        HeadlessApp.RunAsync(harness, async () =>
         {
             var page = createPage();
-            var window = new Window { Width = 1200, Height = 900, DataContext = viewModel, Content = page };
+            var window = new Window { Width = 1200, Height = 900, DataContext = harness.ViewModel, Content = page };
             window.Show();
             try
             {
@@ -42,8 +40,7 @@ public sealed class RowClickTests
             {
                 window.Close();
             }
-        }, timeout.Token);
-    }
+        });
 
     private static void Click(Window window, Visual target, Point inTarget)
     {
@@ -203,7 +200,7 @@ public sealed class RowClickTests
         var viewModel = harness.ViewModel;
         var item = viewModel.ContentGroups.Single().Items.Single();
 
-        var (running, opened, selected) = await OnPageAsync(viewModel, () => new InstancePage(), async (window, page) =>
+        var (running, opened, selected) = await OnPageAsync(harness, () => new InstancePage(), async (window, page) =>
         {
             var row = Row(page, item.OpenCommand);
             ClickThePadding(window, row);
@@ -226,7 +223,7 @@ public sealed class RowClickTests
         var item = viewModel.ContentGroups.Single().Items.Single();
         Assert.True(item.HasUpdate);
 
-        var (confirming, cancelled, opened, selected) = await OnPageAsync(viewModel, () => new InstancePage(), async (window, page) =>
+        var (confirming, cancelled, opened, selected) = await OnPageAsync(harness, () => new InstancePage(), async (window, page) =>
         {
             var row = Row(page, item.OpenCommand);
             ClickCenter(window, Inside(row, item.UpdateCommand));
@@ -253,7 +250,7 @@ public sealed class RowClickTests
         var viewModel = harness.ViewModel;
         var item = viewModel.ContentGroups.Single().Items.Single();
 
-        var (confirmed, opened, selected) = await OnPageAsync(viewModel, () => new InstancePage(), async (window, page) =>
+        var (confirmed, opened, selected) = await OnPageAsync(harness, () => new InstancePage(), async (window, page) =>
         {
             var row = Row(page, item.OpenCommand);
             ClickCenter(window, Inside(row, item.UpdateCommand));
@@ -287,7 +284,7 @@ public sealed class RowClickTests
         item.Run = run;
         item.IsInstalling = true;
 
-        var (resumed, stopped, opened, selected) = await OnPageAsync(viewModel, () => new InstancePage(), (window, page) =>
+        var (resumed, stopped, opened, selected) = await OnPageAsync(harness, () => new InstancePage(), (window, page) =>
         {
             var row = Row(page, item.OpenCommand);
             ClickCenter(window, Inside(row, run.TogglePauseCommand));
@@ -314,7 +311,7 @@ public sealed class RowClickTests
         var instanceId = viewModel.SelectedInstance!.InstanceId;
         Assert.True(item.IsEnabled);
 
-        var (opened, selected) = await OnPageAsync(viewModel, () => new InstancePage(), async (window, page) =>
+        var (opened, selected) = await OnPageAsync(harness, () => new InstancePage(), async (window, page) =>
         {
             var row = Row(page, item.OpenCommand);
             ClickCenter(window, row.GetVisualDescendants().OfType<ToggleSwitch>().Single());
@@ -339,7 +336,7 @@ public sealed class RowClickTests
         var item = viewModel.ContentGroups.Single().Items.Single();
         Assert.True(item.CanRemove);
 
-        var (confirming, cancelled, opened, selected) = await OnPageAsync(viewModel, () => new InstancePage(), (window, page) =>
+        var (confirming, cancelled, opened, selected) = await OnPageAsync(harness, () => new InstancePage(), (window, page) =>
         {
             var row = Row(page, item.OpenCommand);
             ClickCenter(window, Inside(row, item.BeginRemoveCommand));
@@ -363,7 +360,7 @@ public sealed class RowClickTests
         var item = viewModel.ContentGroups.Single().Items.Single();
         var instanceId = viewModel.SelectedInstance!.InstanceId;
 
-        var (opened, selected) = await OnPageAsync(viewModel, () => new InstancePage(), async (window, page) =>
+        var (opened, selected) = await OnPageAsync(harness, () => new InstancePage(), async (window, page) =>
         {
             var row = Row(page, item.OpenCommand);
             ClickCenter(window, Inside(row, item.BeginRemoveCommand));
@@ -389,7 +386,7 @@ public sealed class RowClickTests
         var choices = OpenChoices(viewModel.SelectedInstance!.InstanceId);
         item.Choices = choices;
 
-        var (opened, selected) = await OnPageAsync(viewModel, () => new InstancePage(), (window, page) =>
+        var (opened, selected) = await OnPageAsync(harness, () => new InstancePage(), (window, page) =>
         {
             var row = Row(page, item.OpenCommand);
             ClickCenter(window, row.GetVisualDescendants().OfType<CheckBox>().Single());
@@ -414,7 +411,7 @@ public sealed class RowClickTests
         var item = viewModel.ContentGroups.Single().Items.Single();
         item.Choices = OpenChoices(viewModel.SelectedInstance!.InstanceId);
 
-        var (wasOff, opened, selected) = await OnPageAsync(viewModel, () => new InstancePage(), (window, page) =>
+        var (wasOff, opened, selected) = await OnPageAsync(harness, () => new InstancePage(), (window, page) =>
         {
             var row = Row(page, item.OpenCommand);
             var confirm = Shown(row, item.ConfirmUpdateText);
@@ -438,7 +435,7 @@ public sealed class RowClickTests
         Assert.True(item.CanOpen);
         Assert.False(item.CanRemove);
 
-        var (wasOff, opened, selected) = await OnPageAsync(viewModel, () => new InstancePage(), (window, page) =>
+        var (wasOff, opened, selected) = await OnPageAsync(harness, () => new InstancePage(), (window, page) =>
         {
             var row = Row(page, item.OpenCommand);
             var trash = Inside(row, item.BeginRemoveCommand);
@@ -466,7 +463,7 @@ public sealed class RowClickTests
         item.Changelogs = [new ReleaseChangelog($"{item.Name} 0.7.5", null, link)];
         Assert.True(item.IsConfirmingUpdate);
 
-        var (opened, selected) = await OnPageAsync(viewModel, () => new InstancePage(), (window, page) =>
+        var (opened, selected) = await OnPageAsync(harness, () => new InstancePage(), (window, page) =>
         {
             var row = Row(page, item.OpenCommand);
             var linkButton = row.GetVisualDescendants().OfType<Button>()
@@ -488,7 +485,7 @@ public sealed class RowClickTests
         var item = viewModel.ContentGroups.Single().Items.Single();
         Assert.False(item.CanOpen);
 
-        var (rowButtons, nameInARowButton, opened, selected) = await OnPageAsync(viewModel, () => new InstancePage(), (window, page) =>
+        var (rowButtons, nameInARowButton, opened, selected) = await OnPageAsync(harness, () => new InstancePage(), async (window, page) =>
         {
             var name = page.GetVisualDescendants().OfType<TextBlock>().First(text => text.IsEffectivelyVisible && text.Text == item.Name);
             var rowButtons = page.GetVisualDescendants().OfType<Button>().Count(button => button.Classes.Contains("card-button") && button.IsEffectivelyVisible);
@@ -498,7 +495,9 @@ public sealed class RowClickTests
             var body = name.GetVisualAncestors().OfType<Border>().First(border => border.Classes.Contains("list-row"));
             Click(window, body, new Point(4, body.Bounds.Height / 2));
             ClickCenter(window, page.GetVisualDescendants().OfType<ToggleSwitch>().Single());
-            return Task.FromResult((rowButtons, inside, item.OpenCommand.ExecutionTask, viewModel.SelectedContent));
+            if (item.ToggleEnabledCommand.ExecutionTask is { } running)
+                await running;
+            return (rowButtons, inside, item.OpenCommand.ExecutionTask, viewModel.SelectedContent);
         });
 
         Assert.Equal(0, rowButtons);
@@ -507,7 +506,7 @@ public sealed class RowClickTests
         Assert.Null(selected);
 
         // the row is no button, and its own controls still work
-        await ViewModelHarness.WaitUntilAsync(() => !item.IsEnabled);
+        Assert.False(item.IsEnabled);
     }
 
     [Fact]
@@ -517,7 +516,7 @@ public sealed class RowClickTests
         var viewModel = harness.ViewModel;
         var item = viewModel.DiscoverItems.Single(row => row.ModId == ModId);
 
-        var (running, opened, selected) = await OnPageAsync(viewModel, () => new DiscoverPage(), async (window, page) =>
+        var (running, opened, selected) = await OnPageAsync(harness, () => new DiscoverPage(), async (window, page) =>
         {
             var row = Row(page, item.OpenCommand);
             ClickThePadding(window, row);
@@ -540,7 +539,7 @@ public sealed class RowClickTests
         var item = viewModel.DiscoverItems.Single(row => row.ModId == ModId);
         Assert.True(item.CanInstall);
 
-        var (confirming, cancelled, opened, selected) = await OnPageAsync(viewModel, () => new DiscoverPage(), async (window, page) =>
+        var (confirming, cancelled, opened, selected) = await OnPageAsync(harness, () => new DiscoverPage(), async (window, page) =>
         {
             var row = Row(page, item.OpenCommand);
             ClickCenter(window, Inside(row, item.InstallCommand));
@@ -567,7 +566,7 @@ public sealed class RowClickTests
         var viewModel = harness.ViewModel;
         var item = viewModel.DiscoverItems.Single(row => row.ModId == ModId);
 
-        var (confirmed, opened, selected) = await OnPageAsync(viewModel, () => new DiscoverPage(), async (window, page) =>
+        var (confirmed, opened, selected) = await OnPageAsync(harness, () => new DiscoverPage(), async (window, page) =>
         {
             var row = Row(page, item.OpenCommand);
             ClickCenter(window, Inside(row, item.InstallCommand));
@@ -598,7 +597,7 @@ public sealed class RowClickTests
         var item = viewModel.DiscoverItems.Single(row => row.ModId == ModId);
         Assert.True(item.IsInstalled);
 
-        var (flyoutOpen, confirming, opened, selected) = await OnPageAsync(viewModel, () => new DiscoverPage(), (window, page) =>
+        var (flyoutOpen, confirming, opened, selected) = await OnPageAsync(harness, () => new DiscoverPage(), (window, page) =>
         {
             var row = Row(page, item.OpenCommand);
             var menu = row.GetVisualDescendants().OfType<Button>().Single(button => button.IsEffectivelyVisible && button.Flyout is not null);
@@ -628,7 +627,7 @@ public sealed class RowClickTests
         var instanceId = viewModel.ActiveInstance!.InstanceId;
         item.BeginRemoveCommand.Execute(null);
 
-        var (opened, selected) = await OnPageAsync(viewModel, () => new DiscoverPage(), async (window, page) =>
+        var (opened, selected) = await OnPageAsync(harness, () => new DiscoverPage(), async (window, page) =>
         {
             var row = Row(page, item.OpenCommand);
             ClickCenter(window, Shown(row, harness.Localization.ContentRemove));
@@ -652,7 +651,7 @@ public sealed class RowClickTests
         var choices = OpenChoices(viewModel.ActiveInstance!.InstanceId);
         item.Choices = choices;
 
-        var (wasOff, opened, selected) = await OnPageAsync(viewModel, () => new DiscoverPage(), (window, page) =>
+        var (wasOff, opened, selected) = await OnPageAsync(harness, () => new DiscoverPage(), (window, page) =>
         {
             var row = Row(page, item.OpenCommand);
             var confirm = Shown(row, item.ConfirmInstallText);
@@ -684,7 +683,7 @@ public sealed class RowClickTests
         item.Run = run;
         item.IsInstalling = true;
 
-        var (resumed, stopped, opened, selected) = await OnPageAsync(viewModel, () => new DiscoverPage(), (window, page) =>
+        var (resumed, stopped, opened, selected) = await OnPageAsync(harness, () => new DiscoverPage(), (window, page) =>
         {
             var row = Row(page, item.OpenCommand);
             ClickCenter(window, Inside(row, run.TogglePauseCommand));
@@ -707,7 +706,7 @@ public sealed class RowClickTests
         var viewModel = harness.ViewModel;
         var pack = viewModel.DiscoverPacks.Single();
 
-        var (running, opened, selected) = await OnPageAsync(viewModel, () => new DiscoverPage(), async (window, page) =>
+        var (running, opened, selected) = await OnPageAsync(harness, () => new DiscoverPage(), async (window, page) =>
         {
             var row = Row(page, pack.OpenCommand);
             ClickThePadding(window, row);
@@ -729,7 +728,7 @@ public sealed class RowClickTests
         var viewModel = harness.ViewModel;
         var pack = viewModel.DiscoverPacks.Single();
 
-        var (naming, opened, selected) = await OnPageAsync(viewModel, () => new DiscoverPage(), (window, page) =>
+        var (naming, opened, selected) = await OnPageAsync(harness, () => new DiscoverPage(), (window, page) =>
         {
             var row = Row(page, pack.OpenCommand);
             ClickCenter(window, Inside(row, pack.NewInstanceCommand));
@@ -751,7 +750,7 @@ public sealed class RowClickTests
         var pack = viewModel.DiscoverPacks.Single();
         Assert.True(pack.CanInstall);
 
-        var (confirming, cancelled, opened, selected) = await OnPageAsync(viewModel, () => new DiscoverPage(), async (window, page) =>
+        var (confirming, cancelled, opened, selected) = await OnPageAsync(harness, () => new DiscoverPage(), async (window, page) =>
         {
             var row = Row(page, pack.OpenCommand);
             ClickCenter(window, Inside(row, pack.InstallCommand));
@@ -777,7 +776,7 @@ public sealed class RowClickTests
         var viewModel = harness.ViewModel;
         var pack = viewModel.DiscoverPacks.Single();
 
-        var (confirmed, opened, selected) = await OnPageAsync(viewModel, () => new DiscoverPage(), async (window, page) =>
+        var (confirmed, opened, selected) = await OnPageAsync(harness, () => new DiscoverPage(), async (window, page) =>
         {
             var row = Row(page, pack.OpenCommand);
             ClickCenter(window, Inside(row, pack.InstallCommand));
@@ -808,7 +807,7 @@ public sealed class RowClickTests
         var choices = OpenChoices(viewModel.ActiveInstance!.InstanceId);
         pack.Choices = choices;
 
-        var (wasOff, opened, selected) = await OnPageAsync(viewModel, () => new DiscoverPage(), (window, page) =>
+        var (wasOff, opened, selected) = await OnPageAsync(harness, () => new DiscoverPage(), (window, page) =>
         {
             var row = Row(page, pack.OpenCommand);
             var confirm = Shown(row, pack.ConfirmInstallText);
@@ -839,7 +838,7 @@ public sealed class RowClickTests
         pack.Run = run;
         pack.IsInstalling = true;
 
-        var (resumed, stopped, opened, selected) = await OnPageAsync(viewModel, () => new DiscoverPage(), (window, page) =>
+        var (resumed, stopped, opened, selected) = await OnPageAsync(harness, () => new DiscoverPage(), (window, page) =>
         {
             var row = Row(page, pack.OpenCommand);
             ClickCenter(window, Inside(row, run.TogglePauseCommand));

@@ -17,8 +17,7 @@ public sealed class ContentDependenciesViewTests
         await viewModel.DiscoverItems.Single(item => item.ModId == "AdvancedFlightComputer").OpenCommand.ExecuteAsync(null);
         viewModel.ShowContentDependenciesCommand.Execute(null);
 
-        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
-        var (tabs, texts) = await HeadlessApp.Session.Dispatch(() =>
+        var (tabs, texts) = await HeadlessApp.RunAsync(harness, () =>
         {
             var page = new Borea.App.Views.Pages.ContentPage();
             var window = new Window { Width = 1200, Height = 800, DataContext = viewModel, Content = page };
@@ -41,7 +40,7 @@ public sealed class ContentDependenciesViewTests
             {
                 window.Close();
             }
-        }, timeout.Token);
+        });
 
         Assert.Equal([harness.Localization.ContentTabDescription, harness.Localization.ContentTabDependencies, harness.Localization.ContentTabVersions], tabs);
         Assert.Contains("Dependencies of 0.7.5", texts);
