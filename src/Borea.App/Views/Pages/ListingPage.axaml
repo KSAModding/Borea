@@ -109,9 +109,24 @@
                                 <TextBlock Classes="heading-md" Text="{Binding Localization.ListingChangeTitle}" />
                                 <TextBlock Classes="body-sm secondary" Text="{Binding Localization.ListingChangeHint}" TextWrapping="Wrap" />
                                 <Grid ColumnDefinitions="*,8,Auto" Margin="0,4,0,0" IsEnabled="{Binding !ListingEditor.IsBusy}">
-                                    <ComboBox ItemsSource="{Binding ListingEditor.ListedIds}" SelectedItem="{Binding ListingEditor.SelectedListedId}" PlaceholderText="{Binding Localization.ListingId}" AutomationProperties.Name="{Binding Localization.ListingChangeTitle}" HorizontalAlignment="Stretch" MaxDropDownHeight="300" />
+                                    <TextBox x:Name="ListedSearch" Classes="field search" Text="{Binding ListingEditor.ListedQuery}" PlaceholderText="{Binding Localization.ListingSearchListed}" AutomationProperties.Name="{Binding Localization.ListingChangeTitle}">
+                                        <TextBox.InnerLeftContent>
+                                            <Path Classes="icon size-16" Data="{StaticResource Icon.Search}" Margin="10,0,0,0" />
+                                        </TextBox.InnerLeftContent>
+                                    </TextBox>
                                     <Button Grid.Column="2" Classes="text" Content="{Binding Localization.ListingLoad}" Command="{Binding ListingEditor.LoadListedCommand}" />
                                 </Grid>
+                                <ListBox x:Name="ListedResults" ItemsSource="{Binding ListingEditor.ListedMatches}" SelectedItem="{Binding ListingEditor.SelectedListed}" MaxHeight="240" IsEnabled="{Binding !ListingEditor.IsBusy}" AutomationProperties.Name="{Binding Localization.ListingChangeTitle}" IsVisible="{Binding !!ListingEditor.ListedMatches.Count}">
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate x:DataType="vm:ListedListing">
+                                            <StackPanel Spacing="2">
+                                                <TextBlock Classes="heading-sm" Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
+                                                <TextBlock Classes="label-md" Text="{Binding Id}" TextTrimming="CharacterEllipsis" />
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+                                <TextBlock Classes="body-sm secondary" Text="{Binding Localization.ListingNoListedMatch}" IsVisible="{Binding ListingEditor.HasNoListedMatch}" />
                                 <TextBlock Classes="body-sm danger" Text="{Binding ListingEditor.ListedError}" TextWrapping="Wrap" IsVisible="{Binding ListingEditor.ListedError, Converter={x:Static ObjectConverters.IsNotNull}}" />
                             </StackPanel>
                         </Border>

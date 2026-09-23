@@ -1,4 +1,7 @@
+using System.Net;
 using Avalonia.Controls;
+using Avalonia.Headless;
+using Avalonia.Input;
 using Avalonia.VisualTree;
 using Borea.App.Tests.ViewModels;
 using Borea.App.ViewModels;
@@ -23,6 +26,64 @@ public sealed class ListingPageTests
         Assert.Contains(harness.Localization.ListingNewTitle, texts);
         Assert.Contains(harness.Localization.ListingChangeTitle, texts);
         Assert.DoesNotContain(harness.Localization.ListingSteps, texts);
+    }
+
+    [Fact]
+    public async Task SearchField_TypingTheArrowKeysAndEnter_LoadTheChosenListing()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(respond: ServeStarMap);
+        var editor = harness.ViewModel.ListingEditor;
+        await harness.ViewModel.OpenListingAsync();
+
+        var chosen = await HeadlessApp.RunAsync(harness, async () =>
+        {
+            var page = new ListingPage { DataContext = harness.ViewModel };
+            var window = new Window { Width = 1280, Height = 832, Content = page, DataContext = harness.ViewModel };
+            window.Show();
+            window.UpdateLayout();
+
+            page.FindControl<TextBox>("ListedSearch")!.Focus();
+            window.KeyTextInput("s");
+            foreach (var key in new[] { PhysicalKey.ArrowDown, PhysicalKey.ArrowDown, PhysicalKey.ArrowUp, PhysicalKey.ArrowDown })
+                Press(window, key);
+            var chosen = editor.SelectedListed?.Id;
+            Press(window, PhysicalKey.Enter);
+            await (editor.LoadListedCommand.ExecutionTask ?? Task.CompletedTask);
+            window.Close();
+            return chosen;
+        });
+
+        Assert.Equal("s", editor.ListedQuery);
+        Assert.Equal("StarMap", chosen);
+        Assert.True(editor.IsFormStep);
+        Assert.Equal("StarMap", editor.Id);
+    }
+
+    [Fact]
+    public async Task ResultList_Enter_LoadsTheChosenListing()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(respond: ServeStarMap);
+        var editor = harness.ViewModel.ListingEditor;
+        await harness.ViewModel.OpenListingAsync();
+
+        await HeadlessApp.RunAsync(harness, async () =>
+        {
+            var page = new ListingPage { DataContext = harness.ViewModel };
+            var window = new Window { Width = 1280, Height = 832, Content = page, DataContext = harness.ViewModel };
+            window.Show();
+            window.UpdateLayout();
+
+            page.FindControl<ListBox>("ListedResults")!.GetVisualDescendants().OfType<ListBoxItem>().Last().Focus();
+            Press(window, PhysicalKey.ArrowUp);
+            Press(window, PhysicalKey.ArrowDown);
+            Press(window, PhysicalKey.Enter);
+            await (editor.LoadListedCommand.ExecutionTask ?? Task.CompletedTask);
+            window.Close();
+            return 0;
+        });
+
+        Assert.True(editor.IsFormStep);
+        Assert.Equal("StarMap", editor.Id);
     }
 
     [Fact]
@@ -141,6 +202,17 @@ public sealed class ListingPageTests
         editor.License = "MIT";
         editor.Forums = "https://forums.ahwoo.com/threads/my-mod.42/";
         editor.ReleasesGitHub = "owner/MyMod";
+    }
+
+    private static HttpResponseMessage? ServeStarMap(HttpRequestMessage request) =>
+        request.RequestUri!.AbsolutePath.EndsWith("/listings/StarMap.toml", StringComparison.Ordinal)
+            ? new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(ListingEditorTests.StarMapListing) }
+            : null;
+
+    private static void Press(Window window, PhysicalKey key)
+    {
+        window.KeyPressQwerty(key, RawInputModifiers.None);
+        window.KeyReleaseQwerty(key, RawInputModifiers.None);
     }
 
     /// <summary>The visible texts, with the Markdown of every visible Markdown view.</summary>

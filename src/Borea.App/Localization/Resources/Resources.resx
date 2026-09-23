@@ -1329,6 +1329,12 @@
   <data name="ListingChangeHint" xml:space="preserve">
     <value>Load a listing of the content index, for example to add an icon.</value>
   </data>
+  <data name="ListingSearchListed" xml:space="preserve">
+    <value>Search by name or id</value>
+  </data>
+  <data name="ListingNoListedMatch" xml:space="preserve">
+    <value>No listed mod matches.</value>
+  </data>
   <data name="ListingLoad" xml:space="preserve">
     <value>Load</value>
   </data>

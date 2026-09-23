@@ -24,7 +24,7 @@ public sealed class ListingEditorTests
         ] } ]
         """;
 
-    private const string StarMapListing = """
+    internal const string StarMapListing = """
         spec_version = 1
         id = "StarMap"
         type = "mod-loader"
@@ -64,7 +64,7 @@ public sealed class ListingEditorTests
         Assert.False(viewModel.CurrentWindowDiscover);
         Assert.True(viewModel.IsDiscoverSection);
         Assert.True(viewModel.ListingEditor.IsStartStep);
-        Assert.Equal(["AdvancedFlightComputer", "KSArmory", "MeasureTools", "StarMap"], viewModel.ListingEditor.ListedIds);
+        Assert.Equal(["AdvancedFlightComputer", "KSArmory", "MeasureTools", "StarMap"], viewModel.ListingEditor.ListedMatches.Select(listing => listing.Id));
 
         viewModel.SetMainWindowHome();
 
@@ -370,7 +370,7 @@ public sealed class ListingEditorTests
         var window = new FakeWindowServices();
         harness.ViewModel.WindowServices = window;
         await harness.ViewModel.OpenListingAsync();
-        editor.SelectedListedId = "StarMap";
+        editor.ListedQuery = "starm";
 
         await editor.LoadListedCommand.ExecuteAsync(null);
         editor.Abstract = "Runs code mods.";
@@ -382,6 +382,57 @@ public sealed class ListingEditorTests
         Assert.Contains("abstract = \"Runs code mods.\"\n", editor.DocumentText, StringComparison.Ordinal);
         Assert.Equal("https://github.com/KSAModding/content-index/edit/main/listings/StarMap.toml", Assert.Single(opened));
         Assert.Equal(editor.DocumentText, window.CopiedText);
+    }
+
+    [Theory]
+    [InlineData("flight com", "AdvancedFlightComputer")]
+    [InlineData("MEASURE", "MeasureTools")]
+    [InlineData("ksarm", "KSArmory")]
+    public async Task ListedQuery_FindsPartOfTheNameOrTheIdInAnyCaseAndChoosesIt(string query, string id)
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var editor = harness.ViewModel.ListingEditor;
+        await harness.ViewModel.OpenListingAsync();
+
+        editor.ListedQuery = query;
+
+        Assert.Equal(id, Assert.Single(editor.ListedMatches).Id);
+        Assert.Equal(id, editor.SelectedListed?.Id);
+        Assert.True(editor.LoadListedCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public async Task ListedQuery_NoMatch_SaysSoAndLoadsNothing()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var editor = harness.ViewModel.ListingEditor;
+        await harness.ViewModel.OpenListingAsync();
+
+        editor.ListedQuery = "nothing like it";
+
+        Assert.Empty(editor.ListedMatches);
+        Assert.True(editor.HasNoListedMatch);
+        Assert.Null(editor.SelectedListed);
+        Assert.False(editor.LoadListedCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public async Task MoveListedSelection_StepsThroughTheMatchesAndStopsAtTheEnds()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var editor = harness.ViewModel.ListingEditor;
+        await harness.ViewModel.OpenListingAsync();
+        editor.ListedQuery = "s";
+
+        editor.MoveListedSelection(1);
+        editor.MoveListedSelection(1);
+        editor.MoveListedSelection(1);
+        var last = editor.SelectedListed?.Id;
+        editor.MoveListedSelection(-1);
+
+        Assert.Equal(["KSArmory", "MeasureTools", "StarMap"], editor.ListedMatches.Select(listing => listing.Id));
+        Assert.Equal("StarMap", last);
+        Assert.Equal("MeasureTools", editor.SelectedListed?.Id);
     }
 
     [Fact]

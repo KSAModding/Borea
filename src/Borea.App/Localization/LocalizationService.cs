@@ -881,6 +881,10 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string ListingChangeHint => Resources.ListingChangeHint;
 
+    public string ListingSearchListed => Resources.ListingSearchListed;
+
+    public string ListingNoListedMatch => Resources.ListingNoListedMatch;
+
     public string ListingLoad => Resources.ListingLoad;
 
     public string ListingSourceInvalid => Resources.ListingSourceInvalid;
