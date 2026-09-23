@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using System.Reflection;
 using System.Security.Cryptography;
 using Borea.Core.Logging;
 using Borea.Core.Mods;
@@ -239,6 +240,8 @@ public sealed class FileSelfUpdater : ISelfUpdater
                 ?? throw new SelfUpdateFailedException(
                     SelfUpdateFailure.Install,
                     $"Another Borea update is changing {folder} right now, so this one stopped before it changed anything.");
+
+            ProgramAssemblies.LoadAll(Assembly.GetEntryAssembly() ?? typeof(FileSelfUpdater).Assembly);
 
             var aside = swap.Aside;
             var moved = swap.Moved;
