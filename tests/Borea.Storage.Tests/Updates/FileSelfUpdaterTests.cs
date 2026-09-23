@@ -95,6 +95,11 @@ public sealed class FileSelfUpdaterTests : IDisposable
         Assert.Equal("MIT", File.ReadAllText(Path.Combine(_folder, "LICENSE")));
         Assert.Equal("Avalonia", File.ReadAllText(Path.Combine(_folder, "THIRD-PARTY-NOTICES.txt")));
         Assert.Equal([InstallFolderName], Directory.GetDirectories(_root).Select(Path.GetFileName));
+
+        // the files of the build that ran wait until the new build started, and then they go
+        var staging = Assert.Single(Directory.GetDirectories(_folder));
+        Assert.Equal("the license of the running build", File.ReadAllText(Path.Combine(staging, "replaced", "LICENSE")));
+        staged.HandOver();
         Assert.Empty(Directory.GetDirectories(_folder));
     }
 
@@ -254,8 +259,11 @@ public sealed class FileSelfUpdaterTests : IDisposable
 
         Assert.Equal(SelfUpdateFailure.Start, failure.Reason);
         Assert.Equal("the running build", File.ReadAllText(_programPath));
+        Assert.Equal("the license of the running build", File.ReadAllText(Path.Combine(_folder, "LICENSE")));
+        Assert.False(File.Exists(Path.Combine(_folder, "THIRD-PARTY-NOTICES.txt")));
         Assert.False(File.Exists(_replacedPath));
         Assert.False(File.Exists(Path.Combine(_folder, SelfUpdateReceipt.FileName)));
+        Assert.Empty(Directory.GetDirectories(_folder));
     }
 
     [Fact]
@@ -284,6 +292,7 @@ public sealed class FileSelfUpdaterTests : IDisposable
 
         var staged = await Updater().StageAsync(ServeWindowsRelease());
         staged.Install();
+        staged.HandOver();
 
         Assert.False(Directory.Exists(old));
         Assert.Empty(Directory.GetDirectories(_folder));
