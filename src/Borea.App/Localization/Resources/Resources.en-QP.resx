@@ -1455,6 +1455,18 @@
   <data name="PackMemberUnlisted" xml:space="preserve">
     <value>Ain't be listed</value>
   </data>
+  <data name="PackMemberNewerFormat" xml:space="preserve">
+    <value>{0} be in port</value>
+  </data>
+  <data name="PackCopyForumList" xml:space="preserve">
+    <value>Copy the tavern list</value>
+  </data>
+  <data name="PackForumListCopied" xml:space="preserve">
+    <value>The tavern list be stowed in yer clipboard.</value>
+  </data>
+  <data name="PackForumListName" xml:space="preserve">
+    <value>the tavern list</value>
+  </data>
   <data name="PackResultInstalled" xml:space="preserve">
     <value>Hauled onboard</value>
   </data>
@@ -1757,6 +1769,12 @@
   </data>
   <data name="PackReleasedOnFormat" xml:space="preserve">
     <value>Set sail on {0}</value>
+  </data>
+  <data name="PackNewerReleasesOneFormat" xml:space="preserve">
+    <value>1 o' {0} barrels has a fresher haul</value>
+  </data>
+  <data name="PackNewerReleasesFormat" xml:space="preserve">
+    <value>{0} o' {1} barrels have fresher hauls</value>
   </data>
   <data name="PackIncompatibleFormat" xml:space="preserve">
     <value>This pack be needin' game {0} or fresher.</value>

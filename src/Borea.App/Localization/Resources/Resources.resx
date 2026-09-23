@@ -2349,6 +2349,18 @@
   <data name="PackMemberUnlisted" xml:space="preserve">
     <value>Not listed</value>
   </data>
+  <data name="PackMemberNewerFormat" xml:space="preserve">
+    <value>{0} available</value>
+  </data>
+  <data name="PackCopyForumList" xml:space="preserve">
+    <value>Copy forum list</value>
+  </data>
+  <data name="PackForumListCopied" xml:space="preserve">
+    <value>Copied the forum list to the clipboard.</value>
+  </data>
+  <data name="PackForumListName" xml:space="preserve">
+    <value>the forum list</value>
+  </data>
   <data name="PackResultInstalled" xml:space="preserve">
     <value>Installed</value>
   </data>
@@ -2651,6 +2663,12 @@
   </data>
   <data name="PackReleasedOnFormat" xml:space="preserve">
     <value>Released on {0}</value>
+  </data>
+  <data name="PackNewerReleasesOneFormat" xml:space="preserve">
+    <value>1 of {0} mods has a newer release</value>
+  </data>
+  <data name="PackNewerReleasesFormat" xml:space="preserve">
+    <value>{0} of {1} mods have newer releases</value>
   </data>
   <data name="PackIncompatibleFormat" xml:space="preserve">
     <value>This pack needs game {0} or newer.</value>

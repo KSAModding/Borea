@@ -1481,6 +1481,15 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string PackMemberUnlisted => Resources.PackMemberUnlisted;
 
+    public string FormatPackMemberNewer(string version)
+        => string.Format(CultureInfo.CurrentCulture, Resources.PackMemberNewerFormat, version);
+
+    public string PackCopyForumList => Resources.PackCopyForumList;
+
+    public string PackForumListCopied => Resources.PackForumListCopied;
+
+    public string PackForumListName => Resources.PackForumListName;
+
     public string PackDeprecated => Resources.PackDeprecated;
 
     public string PackStatusUnknown => Resources.PackStatusUnknown;
@@ -1914,6 +1923,11 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string FormatPackReleasedOn(string date)
         => string.Format(CultureInfo.CurrentCulture, Resources.PackReleasedOnFormat, date);
+
+    public string FormatPackNewerReleases(int newer, int total)
+        => newer == 1
+            ? string.Format(CultureInfo.CurrentCulture, Resources.PackNewerReleasesOneFormat, total)
+            : string.Format(CultureInfo.CurrentCulture, Resources.PackNewerReleasesFormat, newer, total);
 
     public string FormatPackIncompatible(string gameMin)
         => string.Format(CultureInfo.CurrentCulture, Resources.PackIncompatibleFormat, gameMin);
