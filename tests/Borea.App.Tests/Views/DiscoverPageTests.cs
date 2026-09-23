@@ -98,6 +98,27 @@ public sealed class DiscoverPageTests
         Assert.Empty(outside);
     }
 
+    [Fact]
+    public async Task ListYourMod_TheTextKeepsRoomInsideTheHoverAndLinesUpWithTheSection()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var viewModel = harness.ViewModel;
+        await viewModel.EnsureDiscoverLoadedAsync();
+
+        var (left, right, offset) = await RenderAsync(harness, 1280, page =>
+        {
+            var link = SidePanelButton(page, viewModel.OpenListingCommand);
+            var text = link.GetVisualDescendants().OfType<TextBlock>().Single();
+            var heading = SidePanel(page).GetVisualDescendants().OfType<TextBlock>().Single(block => block.Text == viewModel.Localization.DiscoverForModAuthors);
+            var start = Corner(text, link).X;
+            return (start, link.Bounds.Width - start - text.Bounds.Width, Corner(text, page).X - Corner(heading, page).X);
+        });
+
+        Assert.True(left >= 8, $"The text starts {left} px inside the link.");
+        Assert.True(right >= 8, $"The text ends {right} px inside the link.");
+        Assert.Equal(0, offset, 0.5);
+    }
+
     /// <summary>Renders Discover next to a navigation rail, as the main window does.</summary>
     private static Task<T> RenderAsync<T>(ViewModelHarness harness, double windowWidth, Func<DiscoverPage, T> read) =>
         HeadlessApp.RunAsync(harness, () =>
