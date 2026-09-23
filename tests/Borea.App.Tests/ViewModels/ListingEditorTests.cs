@@ -451,11 +451,29 @@ public sealed class ListingEditorTests
         session.SignOut();
 
         Assert.Equal(
-            [new ListedListing("StarMap", "StarMap", true), new ListedListing("AdvancedFlightComputer", "Advanced Flight Computer", false), new ListedListing("KSArmory", "KSArmory", false), new ListedListing("MeasureTools", "MeasureTools", false)],
-            signedIn);
+            [("StarMap", true), ("AdvancedFlightComputer", false), ("KSArmory", false), ("MeasureTools", false)],
+            signedIn.Select(listing => (listing.Id, listing.IsOwn)));
         Assert.Equal(["AdvancedFlightComputer", "KSArmory", "MeasureTools", "StarMap"], editor.ListedMatches.Select(listing => listing.Id));
         Assert.DoesNotContain(editor.ListedMatches, listing => listing.IsOwn);
         Assert.Same(editor.ListedMatches[3], editor.SelectedListed);
+    }
+
+    [Fact]
+    public async Task ListedSearch_FindsAnAuthorAndNamesTheAuthors()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var editor = harness.ViewModel.ListingEditor;
+        await harness.ViewModel.OpenListingAsync();
+
+        editor.ListedQuery = "laurens";
+
+        var match = Assert.Single(editor.ListedMatches);
+        Assert.Equal("KSArmory", match.Id);
+        Assert.Equal(harness.ViewModel.Localization.FormatContentByAuthor("Laurens"), match.AuthorsText);
+
+        // the "by" around the names is display text, not something a listing is found by
+        editor.ListedQuery = "by";
+        Assert.Empty(editor.ListedMatches);
     }
 
     [Fact]

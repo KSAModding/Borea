@@ -10,7 +10,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 namespace Borea.App.ViewModels;
 
 /// <summary>A listed mod that the start step can load to change it.</summary>
-public sealed record ListedListing(string Id, string Name, bool IsOwn);
+public sealed record ListedListing(string Id, string Name, string AuthorsText, bool IsOwn);
 
 /// <summary>
 /// The search for a listed mod on the start step. The listings of the signed-in GitHub account come first.
@@ -22,7 +22,7 @@ public sealed partial class ListingEditor
     [ObservableProperty]
     private string _listedQuery = string.Empty;
 
-    /// <summary>The listed mods whose id or name contains the query, in any letter case.</summary>
+    /// <summary>The listed mods whose id, name or authors contain the query, in any letter case.</summary>
     public ObservableCollection<ListedListing> ListedMatches { get; } = [];
 
     [ObservableProperty]
@@ -54,8 +54,10 @@ public sealed partial class ListingEditor
         var login = IsSignedIn ? _owner.GitHubLogin : null;
         var query = ListedQuery.Trim();
         var matches = _listedMods
-            .Select(listing => new ListedListing(listing.Id, listing.Authored!.Name, login is not null && IsOwnedBy(listing.Authored, login)))
-            .Where(listing => listing.Id.Contains(query, StringComparison.OrdinalIgnoreCase) || listing.Name.Contains(query, StringComparison.OrdinalIgnoreCase))
+            .Where(listing => listing.Id.Contains(query, StringComparison.OrdinalIgnoreCase)
+                || listing.Authored!.Name.Contains(query, StringComparison.OrdinalIgnoreCase)
+                || listing.Authored.Authors.Any(author => author.Contains(query, StringComparison.OrdinalIgnoreCase)))
+            .Select(listing => new ListedListing(listing.Id, listing.Authored!.Name, AuthorsText(listing.Authored), login is not null && IsOwnedBy(listing.Authored, login)))
             .OrderByDescending(listing => listing.IsOwn)
             .ThenBy(listing => listing.Id, StringComparer.OrdinalIgnoreCase)
             .ToList();
@@ -64,6 +66,9 @@ public sealed partial class ListingEditor
         SelectedListed = matches.FirstOrDefault(listing => listing.Id == SelectedListed?.Id) ?? (query.Length > 0 ? matches.FirstOrDefault() : null);
         OnPropertyChanged(nameof(HasNoListedMatch));
     }
+
+    private string AuthorsText(ModMetadata listing) =>
+        listing.Authors.Count == 0 ? string.Empty : _owner.Localization.FormatContentByAuthor(string.Join(", ", listing.Authors));
 
     /// <summary>
     /// A listing is your own when the owner of a GitHub repository in its [releases] is the signed-in login.

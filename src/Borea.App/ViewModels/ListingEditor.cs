@@ -651,6 +651,7 @@ public sealed partial class ListingEditor : ObservableObject
             FillCuratedTags([]);
         OnPropertyChanged(nameof(PullRequestText));
         RefreshPullRequestText();
+        FindListed();
         Refresh();
     }
 

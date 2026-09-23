@@ -1330,7 +1330,7 @@
     <value>Load a listing of the content index, for example to add an icon.</value>
   </data>
   <data name="ListingSearchListed" xml:space="preserve">
-    <value>Search by name or id</value>
+    <value>Search by name, id or author</value>
   </data>
   <data name="ListingYourMod" xml:space="preserve">
     <value>Your mod</value>

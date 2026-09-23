@@ -1330,7 +1330,7 @@
     <value>Lade einen Eintrag des Inhaltsindex, zum Beispiel um ein Icon hinzuzufügen.</value>
   </data>
   <data name="ListingSearchListed" xml:space="preserve">
-    <value>Nach Name oder ID suchen</value>
+    <value>Nach Name, ID oder Autor suchen</value>
   </data>
   <data name="ListingYourMod" xml:space="preserve">
     <value>Deine Mod</value>
