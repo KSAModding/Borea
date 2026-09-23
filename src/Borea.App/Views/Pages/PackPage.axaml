@@ -37,6 +37,13 @@
                                 <StackPanel Classes="content-text" Spacing="4">
                                     <TextBlock Classes="heading-lg" Text="{Binding SelectedPack.Name}" TextWrapping="Wrap" />
                                     <TextBlock Classes="body-md secondary" Text="{Binding SelectedPack.Abstract}" TextWrapping="Wrap" LineHeight="18" />
+                                    <!-- the members with a newer release, which the Mods tab names -->
+                                    <Button Classes="plain" Command="{Binding ShowPackModsCommand}" HorizontalAlignment="Left" Margin="0,4,0,0" IsVisible="{Binding SelectedPack.HasNewerReleases, FallbackValue={x:False}}">
+                                        <Grid ColumnDefinitions="Auto,4,*">
+                                            <Path Classes="icon size-16" Data="{StaticResource Icon.ArrowsLeftRight}" VerticalAlignment="Center" />
+                                            <TextBlock Grid.Column="2" Classes="body-sm secondary" Text="{Binding SelectedPack.NewerReleasesText}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                                        </Grid>
+                                    </Button>
                                     <ContentControl Margin="0,8,0,0" Content="{Binding SelectedPack.Choices}" IsVisible="{Binding SelectedPack.Choices, Converter={x:Static ObjectConverters.IsNotNull}}" />
                                     <WrapPanel ItemSpacing="8" LineSpacing="8" Margin="0,8,0,0" IsVisible="{Binding SelectedPack.IsConfirmingInstall}">
                                         <TextBlock Classes="body-sm" Text="{Binding SelectedPack.LinkRequestText}" IsVisible="{Binding SelectedPack.LinkRequestText, Converter={x:Static ObjectConverters.IsNotNull}}" TextWrapping="Wrap" VerticalAlignment="Center" />
@@ -159,6 +166,9 @@
                                                 </Button>
                                                 <TextBlock Grid.Column="1" Classes="body-md secondary hide-small" Width="150" Text="{Binding Version}" VerticalAlignment="Center" />
                                                 <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4" HorizontalAlignment="Right" VerticalAlignment="Center">
+                                                    <Border Classes="chip" IsVisible="{Binding NewerText, Converter={x:Static ObjectConverters.IsNotNull}}">
+                                                        <TextBlock Text="{Binding NewerText}" ToolTip.Tip="{Binding NewerText}" MaxWidth="110" TextTrimming="CharacterEllipsis" />
+                                                    </Border>
                                                     <Border Classes="chip incompatible" IsVisible="{Binding IsYanked}" ToolTip.Tip="{Binding YankedReason}">
                                                         <TextBlock Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.PackMemberYanked}" />
                                                     </Border>
