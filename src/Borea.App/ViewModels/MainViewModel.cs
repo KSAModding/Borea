@@ -788,7 +788,6 @@ public partial class MainViewModel : ViewModelBase
             && left.HomeLaunch == right.HomeLaunch
             && left.DiscoverSortOrder == right.DiscoverSortOrder
             && left.SharedProfileBannerDismissed == right.SharedProfileBannerDismissed
-            && left.DismissedBoreaRelease == right.DismissedBoreaRelease
             && left.DismissedGameRevision == right.DismissedGameRevision
             && left.FirstStartedAt == right.FirstStartedAt
             && left.FetchAnnouncements == right.FetchAnnouncements
