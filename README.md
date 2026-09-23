@@ -40,6 +40,7 @@ Kitten Space Agency is their game and their trademark.
 Everything Borea knows about a mod comes from the content index, which the [content-manager-design](https://github.com/KSAModding/content-manager-design) RFCs define.
 The index has two repositories: [content-index](https://github.com/KSAModding/content-index) holds the listings that mod authors write, and [content-index-releases](https://github.com/KSAModding/content-index-releases) holds the release files that are generated for each new release.
 Listing a mod is a pull request with one TOML file in content-index.
+If your mod reads files under `Documents/My Games/Kitten Space Agency`, see [Make your mod work in a Borea instance](docs/mod-authors.md).
 
 ## Downloads
 

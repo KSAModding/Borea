@@ -98,14 +98,24 @@ public sealed class ListingPublisher : IListingPublisher
             return await CommitToOpenAsync(open.Pull, submission, cancellationToken).ConfigureAwait(false);
         }
 
-        var main = await GetAsync<RefDto>($"{Api}/repos/{Upstream}/git/ref/heads/{ListingPullRequestLinks.Branch}", ListingPublishStep.Branch, cancellationToken).ConfigureAwait(false);
-        var sha = main.Object?.Sha ?? throw Unexpected(ListingPublishStep.Branch);
-        var listed = await ReadFileAsync(Upstream, submission.Path, sha, ListingPublishStep.Branch, cancellationToken).ConfigureAwait(false);
+        // The branch starts at a commit the fork already has, because writing newer history of content-index into the fork
+        // needs the Workflows permission whenever that history changes a workflow.
+        var compare = await GetAsync<CompareDto>(
+            $"{Api}/repos/{Upstream}/compare/{ListingPullRequestLinks.Branch}...{fork.FullName.Replace('/', ':')}:{Uri.EscapeDataString(fork.DefaultBranch)}?per_page=1",
+            ListingPublishStep.Branch,
+            cancellationToken).ConfigureAwait(false);
+        var main = compare.BaseCommit?.Sha ?? throw Unexpected(ListingPublishStep.Branch);
+        var start = compare.MergeBaseCommit?.Sha ?? throw Unexpected(ListingPublishStep.Branch);
+        var listed = await ReadFileAsync(Upstream, submission.Path, main, ListingPublishStep.Branch, cancellationToken).ConfigureAwait(false);
         if (listed?.Text == submission.Text)
             throw new ListingPublishException(ListingPublishFailure.NoChange, ListingPublishStep.Commit);
 
+        var based = start == main ? listed : await ReadFileAsync(Upstream, submission.Path, start, ListingPublishStep.Branch, cancellationToken).ConfigureAwait(false);
+        if (based?.Sha != listed?.Sha)
+            throw new ListingPublishException(ListingPublishFailure.ForkNeedsSync, ListingPublishStep.Branch, fork.FullName);
+
         progress?.Report(ListingPublishStep.Branch);
-        var branch = await CreateBranchAsync(fork, submission.Id, sha, cancellationToken).ConfigureAwait(false);
+        var branch = await CreateBranchAsync(fork, submission.Id, start, cancellationToken).ConfigureAwait(false);
 
         progress?.Report(ListingPublishStep.Commit);
         await PutFileAsync(fork.FullName, branch, submission, listed?.Sha, cancellationToken).ConfigureAwait(false);
@@ -414,12 +424,23 @@ public sealed class ListingPublisher : IListingPublisher
         return slash > 0 && repository.DefaultBranch.Length > 0 ? new Fork(repository.FullName, repository.FullName[..slash], repository.DefaultBranch) : null;
     }
 
-    /// <summary>Creates listing-&lt;id&gt; at <paramref name="sha"/>, or the first free listing-&lt;id&gt;-N.</summary>
+    /// <summary>Creates listing-&lt;id&gt; at <paramref name="sha"/>, or the first free listing-&lt;id&gt;-N. A refusal asks for a sync of the fork.</summary>
     private async Task<string> CreateBranchAsync(Fork fork, string id, string sha, CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await CreateFreeBranchAsync(fork, id, sha, cancellationToken).ConfigureAwait(false);
+        }
+        catch (ListingPublishException exception) when (exception.Failure == ListingPublishFailure.Forbidden)
+        {
+            throw new ListingPublishException(ListingPublishFailure.ForkNeedsSync, ListingPublishStep.Branch, fork.FullName, innerException: exception);
+        }
+    }
+
+    private async Task<string> CreateFreeBranchAsync(Fork fork, string id, string sha, CancellationToken cancellationToken)
     {
         const ListingPublishStep step = ListingPublishStep.Branch;
         var baseName = "listing-" + id.ToLowerInvariant();
-        var mergedUpstream = false;
         for (var number = 1; number <= MaxBranchNumber; number++)
         {
             var name = number == 1 ? baseName : $"{baseName}-{number.ToString(CultureInfo.InvariantCulture)}";
@@ -433,18 +454,11 @@ public sealed class ListingPublisher : IListingPublisher
             var created = await SendAsync(HttpMethod.Post, $"{Api}/repos/{fork.FullName}/git/refs", body, step, cancellationToken).ConfigureAwait(false);
             if (created.Status == HttpStatusCode.Created)
                 return name;
-            if (created.Status != HttpStatusCode.UnprocessableEntity)
-                Ensure(created, step);
-            if (created.Message?.Contains("already exists", StringComparison.OrdinalIgnoreCase) == true)
+            if (created.Status == HttpStatusCode.UnprocessableEntity && created.Message?.Contains("already exists", StringComparison.OrdinalIgnoreCase) == true)
                 continue;
-            if (mergedUpstream)
-                Ensure(created, step);
 
-            // The commit of main is not in the fork yet, so the fork catches up once.
-            var merge = new Dictionary<string, object> { ["branch"] = fork.DefaultBranch };
-            Ensure(await SendAsync(HttpMethod.Post, $"{Api}/repos/{fork.FullName}/merge-upstream", merge, step, cancellationToken).ConfigureAwait(false), step);
-            mergedUpstream = true;
-            number--;
+            Ensure(created, step);
+            throw Unexpected(step);
         }
 
         throw new ListingPublishException(ListingPublishFailure.Refused, step, $"{baseName} to {baseName}-{MaxBranchNumber} are taken");
@@ -692,12 +706,14 @@ public sealed class ListingPublisher : IListingPublisher
         public List<RepositoryDto> Repositories { get; set; } = [];
     }
 
-    private sealed class RefDto
+    private sealed class CompareDto
     {
-        public RefObjectDto? Object { get; set; }
+        public CommitDto? BaseCommit { get; set; }
+
+        public CommitDto? MergeBaseCommit { get; set; }
     }
 
-    private sealed class RefObjectDto
+    private sealed class CommitDto
     {
         public string? Sha { get; set; }
     }

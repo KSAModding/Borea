@@ -246,7 +246,7 @@ public partial class MainViewModel
 
     /// <summary>
     /// Shows the outcome as a toast, and "Close the game first" when Borea
-    /// runs one of the instances or the game holds a file of the folder.
+    /// runs one of the instances.
     /// </summary>
     private async Task<bool> RunGameSaveActionAsync(IReadOnlyCollection<Guid> instanceIds, Func<string> failed, Func<BoreaServices, Task<Func<string>?>> action)
     {
@@ -260,7 +260,7 @@ public partial class MainViewModel
             return false;
         }
 
-        // the game holds a save file open only while it writes it, so the file check alone misses a running game
+        // the game opens a save file only while it writes it, so the change itself does not notice a running game
         if (instanceIds.Any(services.Launcher.IsRunning))
         {
             ShowErrorToast(failed, Localization.GameSaveCloseGame);
@@ -272,10 +272,6 @@ public partial class MainViewModel
             if (await action(services) is { } result)
                 ShowSuccessToast(result);
             return true;
-        }
-        catch (GameSaveInUseException)
-        {
-            ShowErrorToast(failed, Localization.GameSaveCloseGame);
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or InvalidOperationException or ArgumentException)
         {

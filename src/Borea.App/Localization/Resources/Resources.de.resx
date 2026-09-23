@@ -1764,6 +1764,12 @@
   <data name="ListingAllowOnFork" xml:space="preserve">
     <value>Borea für deine Kopie erlauben</value>
   </data>
+  <data name="ListingForkNeedsSyncFormat" xml:space="preserve">
+    <value>Deine Kopie {0} ist nicht auf dem Stand von content-index. Wähle auf GitHub Sync fork und prüfe dann erneut.</value>
+  </data>
+  <data name="ListingSyncFork" xml:space="preserve">
+    <value>Kopie abgleichen</value>
+  </data>
   <data name="ListingStepFindPullRequest" xml:space="preserve">
     <value>Suche deinen offenen Pull Request...</value>
   </data>

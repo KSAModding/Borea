@@ -185,15 +185,11 @@ public partial class MainViewModel
         string? error = null;
         try
         {
-            // the game holds a save file open only while it writes it, so the file check alone misses a running game
+            // the game opens a save file only while it writes it, so the change itself does not notice a running game
             if (kind == TaskKind.BackupRestore && services.Launcher.IsRunning(item.Backup.InstanceId))
                 error = Localization.GameSaveCloseGame;
             else
                 completed = await action(services);
-        }
-        catch (GameSaveInUseException)
-        {
-            error = Localization.GameSaveCloseGame;
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or InvalidOperationException or ArgumentException)
         {

@@ -1,6 +1,7 @@
 using System.IO.Compression;
 using Borea.Core.Instances;
 using Borea.Storage.Instances;
+using Borea.Storage.Tests.Launch;
 using Borea.Storage.Tests.Paths;
 
 namespace Borea.Storage.Tests.Instances;
@@ -177,6 +178,17 @@ public sealed class FileGameSaveStoreTests : IDisposable
         Assert.True(Directory.Exists(entry.Path));
     }
 
+    [WindowsFact("Only Windows keeps a reader out while another handle writes the file.")]
+    public async Task CopyAsync_FileOpenForWriting_FailsInsteadOfCopyingItHalfWritten()
+    {
+        var entry = await AddSaveAsync(_instanceId, "Orbit");
+        using var writer = new FileStream(Path.Combine(entry.Path, "universe.xml"), FileMode.Open, FileAccess.Write, FileShare.Read);
+
+        await Assert.ThrowsAsync<IOException>(() => _store.CopyAsync(entry, _otherInstanceId, replace: false));
+
+        Assert.Empty(Directory.GetFileSystemEntries(_paths.GetInstanceRoot(_otherInstanceId)));
+    }
+
     [Fact]
     public async Task DeleteAsync_MovesTheFolderIntoTheBackups()
     {
@@ -200,63 +212,89 @@ public sealed class FileGameSaveStoreTests : IDisposable
     }
 
     [Fact]
-    public async Task CopyAsync_LockedFile_RefusesAndLeavesNoFolder()
+    public async Task CopyAsync_LockedFile_FailsNamingTheFileAndLeavesNoFolder()
     {
         var entry = await AddSaveAsync(_instanceId, "Orbit");
-        using var locked = Lock(Path.Combine(entry.Path, "universe.xml"));
+        var file = Path.Combine(entry.Path, "universe.xml");
+        using var locked = Lock(file);
 
-        await Assert.ThrowsAsync<GameSaveInUseException>(() => _store.CopyAsync(entry, _otherInstanceId, replace: false));
+        var exception = await Assert.ThrowsAsync<IOException>(() => _store.CopyAsync(entry, _otherInstanceId, replace: false));
 
+        Assert.Contains(file, exception.Message);
         Assert.Empty(Directory.GetFileSystemEntries(_paths.GetInstanceRoot(_otherInstanceId)));
     }
 
     [Fact]
-    public async Task DeleteAsync_LockedFile_RefusesAndKeepsTheFolder()
+    public async Task CopyAsync_FileOpenForReading_Copies()
+    {
+        var entry = await AddSaveAsync(_instanceId, "Orbit");
+        using var reader = File.OpenRead(Path.Combine(entry.Path, "universe.xml"));
+
+        Assert.Equal(GameSaveCopyOutcome.Copied, await _store.CopyAsync(entry, _otherInstanceId, replace: false));
+
+        Assert.True(File.Exists(Path.Combine(_paths.GetInstanceSavesFolder(_otherInstanceId), "Orbit", "universe.xml")));
+    }
+
+    [WindowsFact("Only Windows refuses to move a folder while a handle below it is open.")]
+    public async Task DeleteAsync_LockedFile_FailsAndKeepsTheFolder()
     {
         var entry = await AddSaveAsync(_instanceId, "Orbit");
         using var locked = Lock(Path.Combine(entry.Path, "meta.toml"));
 
-        await Assert.ThrowsAsync<GameSaveInUseException>(() => _store.DeleteAsync(_instanceId, entry));
+        await Assert.ThrowsAnyAsync<IOException>(() => _store.DeleteAsync(_instanceId, entry));
 
         Assert.True(File.Exists(Path.Combine(entry.Path, "universe.xml")));
-        Assert.False(Directory.Exists(_paths.GetBackupsRoot()));
+        Assert.Empty(BackupEntries(_instanceId));
     }
 
     [Fact]
-    public async Task BackUpAsync_LockedFile_RefusesAndWritesNoZip()
+    public async Task BackUpAsync_LockedFile_FailsNamingTheFileAndWritesNoZip()
     {
         var entry = await AddSaveAsync(_instanceId, "Orbit");
-        using var locked = Lock(Path.Combine(entry.Path, "universe.xml"));
+        var file = Path.Combine(entry.Path, "universe.xml");
+        using var locked = Lock(file);
 
-        await Assert.ThrowsAsync<GameSaveInUseException>(() => _store.BackUpAsync(_instanceId, entry));
+        var exception = await Assert.ThrowsAsync<IOException>(() => _store.BackUpAsync(_instanceId, entry));
 
-        Assert.False(Directory.Exists(_paths.GetBackupsRoot()));
+        Assert.Contains(file, exception.Message);
+        Assert.Empty(BackupEntries(_instanceId));
     }
 
     [Fact]
-    public async Task BackUpAllAsync_LockedFileInOneSave_WritesNoZip()
+    public async Task BackUpAsync_FileOpenForReading_WritesTheZip()
+    {
+        var entry = await AddSaveAsync(_instanceId, "Orbit");
+        using var reader = File.OpenRead(Path.Combine(entry.Path, "universe.xml"));
+
+        var zip = await _store.BackUpAsync(_instanceId, entry);
+
+        Assert.True(File.Exists(zip));
+    }
+
+    [Fact]
+    public async Task BackUpAllAsync_LockedFileInTheLastSave_KeepsNoZip()
     {
         await AddSaveAsync(_instanceId, "Moon");
         var orbit = await AddSaveAsync(_instanceId, "Orbit");
         using var locked = Lock(Path.Combine(orbit.Path, "universe.xml"));
 
-        await Assert.ThrowsAsync<GameSaveInUseException>(() => _store.BackUpAllAsync(_instanceId, GameSaveKind.Save));
+        await Assert.ThrowsAsync<IOException>(() => _store.BackUpAllAsync(_instanceId, GameSaveKind.Save));
 
-        Assert.False(Directory.Exists(_paths.GetBackupsRoot()));
+        Assert.Empty(BackupEntries(_instanceId));
     }
 
-    [Fact]
-    public async Task CopyAsync_ReplaceWithLockedTarget_RefusesAndKeepsBothFolders()
+    [WindowsFact("Only Windows refuses to move a folder while a handle below it is open.")]
+    public async Task CopyAsync_ReplaceWithLockedTarget_FailsAndKeepsBothFolders()
     {
         var entry = await AddSaveAsync(_instanceId, "Orbit", universeBytes: 300);
         var existing = await AddSaveAsync(_otherInstanceId, "Orbit", universeBytes: 20);
         using var locked = Lock(Path.Combine(existing.Path, "meta.toml"));
 
-        await Assert.ThrowsAsync<GameSaveInUseException>(() => _store.CopyAsync(entry, _otherInstanceId, replace: true));
+        await Assert.ThrowsAnyAsync<IOException>(() => _store.CopyAsync(entry, _otherInstanceId, replace: true));
 
         Assert.Equal(300, new FileInfo(Path.Combine(entry.Path, "universe.xml")).Length);
         Assert.Equal(20, new FileInfo(Path.Combine(existing.Path, "universe.xml")).Length);
-        Assert.False(Directory.Exists(_paths.GetBackupsRoot()));
+        Assert.Empty(BackupEntries(_otherInstanceId));
         Assert.Equal(["saves"], Directory.GetDirectories(_paths.GetInstanceRoot(_otherInstanceId)).Select(Path.GetFileName));
     }
 
@@ -267,6 +305,12 @@ public sealed class FileGameSaveStoreTests : IDisposable
     }
 
     private static FileStream Lock(string path) => new(path, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
+
+    private string[] BackupEntries(Guid instanceId)
+    {
+        var folder = Path.Combine(_paths.GetBackupsRoot(), instanceId.ToString(), "saves");
+        return Directory.Exists(folder) ? Directory.GetFileSystemEntries(folder) : [];
+    }
 
     /// <summary>A folder the way the game writes it, with a meta.toml in the shape of SaveMetaData.</summary>
     private static void WriteItem(string kindFolder, string folderName, string name, string updated, string version, int dataBytes, string dataFile = "universe.xml")

@@ -1764,6 +1764,12 @@
   <data name="ListingAllowOnFork" xml:space="preserve">
     <value>Allow Borea on your copy</value>
   </data>
+  <data name="ListingForkNeedsSyncFormat" xml:space="preserve">
+    <value>Your copy {0} is behind content-index. Choose Sync fork on GitHub, then check again.</value>
+  </data>
+  <data name="ListingSyncFork" xml:space="preserve">
+    <value>Sync your copy</value>
+  </data>
   <data name="ListingStepFindPullRequest" xml:space="preserve">
     <value>Looking for your open pull request...</value>
   </data>

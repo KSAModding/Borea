@@ -89,6 +89,9 @@ public enum ListingPublishFailure
     /// <summary>The author's open pull request that changes the file does not come from the fork. <see cref="ListingPublishException.Detail"/> holds its number.</summary>
     PullRequestNotOnFork,
 
+    /// <summary>The author's fork, which <see cref="ListingPublishException.Detail"/> names, has to be synced with content-index on GitHub first.</summary>
+    ForkNeedsSync,
+
     NoChange,
     UnexpectedResponse,
 }
@@ -97,7 +100,7 @@ public enum ListingPublishFailure
 public sealed class ListingPublishException : Exception
 {
     public ListingPublishException(ListingPublishFailure failure, ListingPublishStep step, string? detail = null, DateTimeOffset? retryAt = null, Exception? innerException = null, long? repositoryId = null)
-        : base($"{step} failed: {failure}{(detail is null ? string.Empty : ", " + detail)}", innerException)
+        : base(Describe(failure, step, detail) + (innerException is ListingPublishException cause ? $" ({Describe(cause.Failure, null, cause.Detail)})" : string.Empty), innerException)
     {
         Failure = failure;
         Step = step;
@@ -118,4 +121,7 @@ public sealed class ListingPublishException : Exception
 
     /// <summary>The GitHub id of the repository the failure is about, when known.</summary>
     public long? RepositoryId { get; }
+
+    private static string Describe(ListingPublishFailure failure, ListingPublishStep? step, string? detail) =>
+        $"{(step is null ? string.Empty : step + " failed: ")}{failure}{(detail is null ? string.Empty : ", " + detail)}";
 }
