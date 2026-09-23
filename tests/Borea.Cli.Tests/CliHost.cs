@@ -104,6 +104,9 @@ internal sealed class CliHost : IDisposable
     /// <summary>Replaces this build. The real updater when a test does not set it, which refuses in a test run.</summary>
     public ISelfUpdater? SelfUpdater { get; set; }
 
+    /// <summary>Whether the commands see a running game. False by default, so a game the developer runs next to the tests does not reach them.</summary>
+    public bool GameRunning { get; set; }
+
     /// <summary>How many times a command built its services.</summary>
     public int Builds { get; private set; }
 
@@ -160,7 +163,8 @@ internal sealed class CliHost : IDisposable
             releaseCheck: ReleaseCheck,
             selfUpdater: SelfUpdater,
             // a game or a Borea the developer runs next to the tests must not refuse the move
-            libraryFolderChanger: LibraryChanger ?? new LibraryFolderChanger(graph.SettingsRepository, graph.Paths, Root, graph.Launcher, (FileInstanceRepository)((LoggingInstanceRepository)graph.Instances).Inner, isGameProcessRunning: () => false, isOtherBoreaRunning: () => false, isSameVolume: LibraryOnSameVolume));
+            libraryFolderChanger: LibraryChanger ?? new LibraryFolderChanger(graph.SettingsRepository, graph.Paths, Root, graph.Launcher, (FileInstanceRepository)((LoggingInstanceRepository)graph.Instances).Inner, isGameProcessRunning: () => false, isOtherBoreaRunning: () => false, isSameVolume: LibraryOnSameVolume),
+            isGameProcessRunning: () => GameRunning);
     }
 
     private FileSharedProfileImporter BuildSharedProfileImporter(BoreaServices graph)

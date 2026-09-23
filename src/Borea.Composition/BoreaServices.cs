@@ -96,6 +96,9 @@ public sealed class BoreaServices : IDisposable
     /// <summary>Moves the Instances and Backups folders. Build the services again after a change.</summary>
     public required ILibraryFolderChanger LibraryFolderChanger { get; init; }
 
+    /// <summary>Whether a KSA or StarMap process runs, whoever started it.</summary>
+    public required Func<bool> IsGameProcessRunning { get; init; }
+
     public required IAppPreferencesRepository AppPreferences { get; init; }
 
     public required ITaskHistoryRepository TaskHistory { get; init; }
@@ -400,6 +403,7 @@ public sealed class BoreaServices : IDisposable
         var announcementReader = new AnnouncementReader();
         var listedDocuments = new ListedDocumentFetcher(http);
         var listingFormat = new TomlListingFormat();
+        isGameProcessRunning ??= RunningProcesses.IsGameRunning;
         var gitHubSession = new LoggingGitHubSession(gitHub ?? new GitHubSession(http, BoreaGitHubApp.ClientId, BoreaGitHubApp.Slug), log);
 
         return new BoreaServices(http)
@@ -410,6 +414,7 @@ public sealed class BoreaServices : IDisposable
             SettingsRepository = settingsRepository,
             GameDirectoryChanger = new GameDirectoryChanger(settingsRepository, mods, loaderConfiguration),
             LibraryFolderChanger = new LoggingLibraryFolderChanger(new LibraryFolderChanger(settingsRepository, paths, defaultLibraryFolder, launcher, fileInstances, isGameProcessRunning, isOtherBoreaRunning), log),
+            IsGameProcessRunning = isGameProcessRunning,
             AppPreferences = new FileAppPreferencesRepository(paths),
             TaskHistory = new FileTaskHistoryRepository(paths),
             Instances = instances,

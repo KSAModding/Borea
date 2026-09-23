@@ -34,6 +34,9 @@ internal sealed class CliServices : IDisposable
 
     public required ILibraryFolderChanger LibraryFolderChanger { get; init; }
 
+    /// <summary>Whether a KSA or StarMap process runs, whoever started it.</summary>
+    public required Func<bool> IsGameProcessRunning { get; init; }
+
     public required IInstanceRepository Instances { get; init; }
 
     public required IModStateRepository ModState { get; init; }
@@ -157,7 +160,8 @@ internal sealed class CliServices : IDisposable
         ISharedProfileImporter? sharedProfileImporter = null,
         ILibraryFolderChanger? libraryFolderChanger = null,
         IBoreaReleaseCheck? releaseCheck = null,
-        ISelfUpdater? selfUpdater = null)
+        ISelfUpdater? selfUpdater = null,
+        Func<bool>? isGameProcessRunning = null)
     {
         if (services is null)
             throw new ArgumentNullException(nameof(services));
@@ -168,6 +172,7 @@ internal sealed class CliServices : IDisposable
             SettingsRepository = services.SettingsRepository,
             GameDirectoryChanger = services.GameDirectoryChanger,
             LibraryFolderChanger = libraryFolderChanger ?? services.LibraryFolderChanger,
+            IsGameProcessRunning = isGameProcessRunning ?? services.IsGameProcessRunning,
             Instances = instances ?? services.Instances,
             ModState = services.ModState,
             GameLog = services.GameLog,

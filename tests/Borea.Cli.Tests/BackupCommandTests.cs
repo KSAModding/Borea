@@ -1,3 +1,4 @@
+using System.Globalization;
 using Borea.Core.Instances;
 using Borea.Storage.Instances;
 
@@ -20,6 +21,23 @@ public sealed class BackupCommandTests : IDisposable
         Assert.Equal(0, human.ExitCode);
         Assert.Contains("No backups of 'Alpha'.", human.Output);
         Assert.Empty(json.Json.EnumerateArray());
+    }
+
+    [Fact]
+    public async Task Backups_HumanLinePrintsTheTimeTheSizeAndWhatHappened()
+    {
+        var instanceId = await CreateInstanceAsync();
+        await new FileGameSaveStore(_host.Paths).DeleteAsync(instanceId, await AddSaveAsync(instanceId, "Orbit", 1500));
+        var backup = Assert.Single(await new FileGameSaveBackupStore(_host.Paths).ListAsync(instanceId));
+
+        var human = await _host.RunAsync("instance", "backups", "Alpha");
+
+        var line = Assert.Single(human.Output.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
+        Assert.StartsWith(backup.CreatedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture), line);
+        Assert.Contains("Orbit", line);
+        Assert.Contains("deleted", line);
+        Assert.Contains(" 1.5 KB ", line);
+        Assert.EndsWith(backup.Id, line);
     }
 
     [Fact]
@@ -49,6 +67,23 @@ public sealed class BackupCommandTests : IDisposable
     }
 
     [Fact]
+    public async Task RestoreBackup_GameRunning_Refuses()
+    {
+        var instanceId = await CreateInstanceAsync();
+        var orbit = await AddSaveAsync(instanceId, "Orbit", 300);
+        var moved = await new FileGameSaveStore(_host.Paths).DeleteAsync(instanceId, orbit);
+        await AddSaveAsync(instanceId, "Orbit", 20);
+        _host.GameRunning = true;
+
+        var refused = await _host.RunAsync("instance", "restore-backup", "Alpha", "saves/" + Path.GetFileName(moved), "--replace");
+
+        Assert.Equal(1, refused.ExitCode);
+        Assert.Contains("Close the game", refused.Error);
+        Assert.Equal(20, new FileInfo(Path.Combine(orbit.Path, "universe.xml")).Length);
+        Assert.True(Directory.Exists(moved));
+    }
+
+    [Fact]
     public async Task RestoreBackup_OccupiedTarget_NeedsReplace()
     {
         var instanceId = await CreateInstanceAsync();
@@ -70,6 +105,8 @@ public sealed class BackupCommandTests : IDisposable
         Assert.Equal(300, new FileInfo(Path.Combine(orbit.Path, "universe.xml")).Length);
         var list = await _host.RunAsync("instance", "backups", "Alpha", "--json");
         Assert.Equal("replaced", Assert.Single(list.Json.EnumerateArray()).GetProperty("reason").GetString());
+        var replaced = Assert.Single(await new FileGameSaveBackupStore(_host.Paths).ListAsync(instanceId));
+        Assert.Equal(20, new FileInfo(Path.Combine(replaced.Path, "universe.xml")).Length);
     }
 
     [Fact]
@@ -84,6 +121,31 @@ public sealed class BackupCommandTests : IDisposable
         Assert.Equal(0, restored.ExitCode);
         Assert.Contains("Restored 'Orbit' into 'Alpha'.", restored.Output);
         Assert.True(File.Exists(Path.Combine(orbit.Path, "universe.xml")));
+    }
+
+    [Fact]
+    public async Task RestoreBackup_UnknownBackup_Fails()
+    {
+        await CreateInstanceAsync();
+
+        var result = await _host.RunAsync("instance", "restore-backup", "Alpha", "saves/Nothing");
+
+        Assert.Equal(1, result.ExitCode);
+        Assert.Contains("has no backup 'saves/Nothing'", result.Error);
+    }
+
+    [Theory]
+    [InlineData("backups", "Beta")]
+    [InlineData("restore-backup", "Beta", "saves/Orbit")]
+    [InlineData("delete-backup", "Beta", "saves/Orbit")]
+    public async Task BackupVerbs_UnknownInstance_Fail(params string[] arguments)
+    {
+        await CreateInstanceAsync();
+
+        var result = await _host.RunAsync(["instance", .. arguments]);
+
+        Assert.Equal(1, result.ExitCode);
+        Assert.Contains("No instance is named 'Beta'.", result.Error);
     }
 
     [Fact]

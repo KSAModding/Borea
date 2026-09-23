@@ -1,4 +1,5 @@
 using System.Globalization;
+using Borea.Core.Files;
 
 namespace Borea.Core.Planning;
 
@@ -9,8 +10,6 @@ namespace Borea.Core.Planning;
 /// </summary>
 public sealed class InsufficientDiskSpaceException : IOException
 {
-    private static readonly string[] Units = ["KB", "MB", "GB", "TB"];
-
     public InsufficientDiskSpaceException(string volumeName, long requiredBytes, long availableBytes)
         : base($"The install needs {Size(requiredBytes)} on {volumeName}, and only {Size(availableBytes)} is free.")
     {
@@ -28,20 +27,5 @@ public sealed class InsufficientDiskSpaceException : IOException
     /// <summary>What the volume has left.</summary>
     public long AvailableBytes { get; }
 
-    /// <summary>A byte count in decimal units, the way the download progress counts them.</summary>
-    private static string Size(long bytes)
-    {
-        if (bytes < 1000)
-            return bytes.ToString(CultureInfo.InvariantCulture) + " B";
-
-        var value = bytes / 1000.0;
-        var unit = 0;
-        while (value >= 999.95 && unit < Units.Length - 1)
-        {
-            value /= 1000;
-            unit++;
-        }
-
-        return value.ToString("0.0", CultureInfo.InvariantCulture) + " " + Units[unit];
-    }
+    private static string Size(long bytes) => ByteSize.Format(bytes, CultureInfo.InvariantCulture);
 }

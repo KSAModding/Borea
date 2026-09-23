@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using Borea.Core.Instances;
 using Borea.Core.Launch;
 using Borea.Core.Paths;
@@ -15,13 +14,6 @@ public sealed class LibraryFolderChanger : ILibraryFolderChanger
     private const string BackupsFolderName = "Backups";
     private const int CopyBufferSize = 1 << 20;
     private const int MaxLinkDepth = 32;
-    private const string StarMapProcessName = "StarMap";
-    private static readonly string[] BoreaProcessNames = ["Borea.App", "borea"];
-
-    // StarMap's GameSurveyer.TryLoadCoreAndGame loads the game assembly into the StarMap process
-    private static readonly string[] GameProcessNames = SharedProfileLauncher.CurrentPlatform() is { } platform && GameExecutable.FileName(platform) is { } game
-        ? [Path.GetFileNameWithoutExtension(game), StarMapProcessName]
-        : [StarMapProcessName];
 
     private static readonly EnumerationOptions EveryEntry = new()
     {
@@ -77,8 +69,8 @@ public sealed class LibraryFolderChanger : ILibraryFolderChanger
         _defaultFolder = Normalize(defaultFolder);
         _launcher = launcher ?? throw new ArgumentNullException(nameof(launcher));
         _locks = locks ?? throw new ArgumentNullException(nameof(locks));
-        _isGameProcessRunning = isGameProcessRunning ?? (() => IsProcessRunning(GameProcessNames));
-        _isOtherBoreaRunning = isOtherBoreaRunning ?? (() => IsProcessRunning(BoreaProcessNames));
+        _isGameProcessRunning = isGameProcessRunning ?? RunningProcesses.IsGameRunning;
+        _isOtherBoreaRunning = isOtherBoreaRunning ?? RunningProcesses.IsOtherBoreaRunning;
         _isSameVolume = isSameVolume ?? OnSameVolume;
         _moveDirectory = moveDirectory ?? throw new ArgumentNullException(nameof(moveDirectory));
     }
@@ -514,22 +506,6 @@ public sealed class LibraryFolderChanger : ILibraryFolderChanger
         {
             return false;
         }
-    }
-
-    private static bool IsProcessRunning(string[] names)
-    {
-        foreach (var name in names)
-        {
-            var processes = Process.GetProcessesByName(name);
-            var found = processes.Any(process => process.Id != Environment.ProcessId);
-            foreach (var process in processes)
-                process.Dispose();
-
-            if (found)
-                return true;
-        }
-
-        return false;
     }
 
     internal static bool OnSameVolume(string left, string right)
