@@ -539,10 +539,16 @@
             <Setter Property="Padding" Value="0" />
             <Setter Property="Background" Value="Transparent" />
             <Setter Property="BorderThickness" Value="0" />
-            <Setter Property="Cursor" Value="Hand" />
         </Style>
         <Style Selector="Button.plain:pointerover /template/ ContentPresenter">
             <Setter Property="Background" Value="Transparent" />
+        </Style>
+        <!-- a plain button that is only a title or an icon turns to the accent colour under the pointer; a row keeps the hover of its card -->
+        <Style Selector="Button.plain:pointerover > TextBlock">
+            <Setter Property="Foreground" Value="{StaticResource Brush.Accent}" />
+        </Style>
+        <Style Selector="Button.plain:pointerover > Path.icon">
+            <Setter Property="Stroke" Value="{StaticResource Brush.Accent}" />
         </Style>
         <Style Selector="Button.plain.back:pointerover /template/ ContentPresenter">
             <Setter Property="Background" Value="{StaticResource Brush.AccentSoft}" />
