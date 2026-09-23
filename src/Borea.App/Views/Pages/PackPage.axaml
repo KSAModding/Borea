@@ -288,6 +288,12 @@
                                 <TextBlock Text="{Binding Localization.ContentCopyLink}" VerticalAlignment="Center" />
                             </StackPanel>
                         </Button>
+                        <Button Classes="filter" Command="{Binding CopyPackForumListCommand}">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <Path Classes="icon size-16" Data="{StaticResource Icon.Copy}" />
+                                <TextBlock Text="{Binding Localization.PackCopyForumList}" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
                     </StackPanel>
                     <Border Height="1" Background="{StaticResource Brush.BorderStrong}" IsVisible="{Binding HasPackTags}" />
                     <StackPanel Spacing="10" IsVisible="{Binding HasPackTags}">

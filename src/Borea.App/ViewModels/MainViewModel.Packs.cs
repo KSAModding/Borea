@@ -235,6 +235,18 @@ public partial class MainViewModel
     private Task CopyPackShareLinkAsync() => CopyShareLinkAsync(PackShareUrl);
 
     [RelayCommand]
+    private Task CopyPackForumListAsync()
+    {
+        if (_services is not { } services || SelectedPack is not { } pack)
+            return Task.CompletedTask;
+
+        return CopyTextAsync(
+            async () => string.Join(Environment.NewLine, await ModPackForumList.WriteAsync(pack.Metadata, services.ContentIndex)),
+            () => Localization.PackForumListName,
+            () => Localization.PackForumListCopied);
+    }
+
+    [RelayCommand]
     private void OpenPackLink(ContentLink link)
     {
         if (link is not null && TryOpenUrl(link.Url) is { } error)

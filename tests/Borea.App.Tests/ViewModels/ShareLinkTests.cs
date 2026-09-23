@@ -78,6 +78,31 @@ public sealed class ShareLinkTests
     }
 
     [Fact]
+    public async Task PackPage_CopiesTheForumList_OneLinePerMemberInPackOrder()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: PackViewModelTests.WithPacks(PackViewModelTests.Pack(
+            "starter-pack",
+            "Starter Pack",
+            PackViewModelTests.Version("1.0.0", PackViewModelTests.Pin("MeasureTools", "1.1.10"), PackViewModelTests.Pin("OrbitTools", "1.0.0"), PackViewModelTests.Pin("AdvancedFlightComputer", "0.7.5")))));
+        var viewModel = harness.ViewModel;
+        var window = new ClipboardWindow();
+        viewModel.WindowServices = window;
+        await viewModel.EnsureDiscoverLoadedAsync();
+        viewModel.ShowDiscoverModpacksCommand.Execute(null);
+        await viewModel.DiscoverPacks.Single().OpenCommand.ExecuteAsync(null);
+
+        await viewModel.CopyPackForumListCommand.ExecuteAsync(null);
+
+        Assert.Equal(
+            string.Join(Environment.NewLine,
+                "MeasureTools 1.1.10 - Author: Maxi - License: MIT - Download: https://github.com/Maximilian-Nesslauer/KSA-MeasureTools/releases/download/v1.1.10/MeasureTools.zip - Thread: https://forums.ahwoo.com/threads/measuretools.992/",
+                "OrbitTools 1.0.0 - Not listed in the content index",
+                "Advanced Flight Computer 0.7.5 - Author: Maxi - License: MIT - Download: https://github.com/Maximilian-Nesslauer/KSA-AdvancedFlightComputer/releases/download/v0.7.5/AdvancedFlightComputer.zip - Thread: https://forums.ahwoo.com/threads/advanced-flight-computer.783/"),
+            window.CopiedText);
+        Assert.Equal(harness.Localization.PackForumListCopied, viewModel.Toasts.Items[^1].Message);
+    }
+
+    [Fact]
     public async Task CopyLink_WhenTheClipboardFails_ShowsAnError()
     {
         using var harness = await ViewModelHarness.CreateAsync();
