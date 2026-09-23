@@ -156,52 +156,34 @@ public sealed class FileAppPreferencesRepositoryTests : IDisposable
         Assert.True(result.Preferences.ForeignFolderDeletionConfirmed);
     }
 
-    [Fact]
-    public async Task SaveThenGet_DismissedBoreaRelease_RestoresTheVersion()
-    {
-        Assert.Null(AppPreferences.Empty.DismissedBoreaRelease);
-
-        await _repository.SaveAsync(AppPreferences.Empty.WithDismissedBoreaRelease(ModVersion.Parse("0.5.0-beta.2")), BundledThemeNames);
-        var result = await _repository.GetAsync(BundledThemeNames);
-
-        Assert.Equal(ModVersion.Parse("0.5.0-beta.2"), result.Preferences.DismissedBoreaRelease);
-        using var document = JsonDocument.Parse(await File.ReadAllTextAsync(_pathProvider.GetAppPreferencesPath()));
-        Assert.Equal("0.5.0-beta.2", document.RootElement.GetProperty("dismissedBoreaRelease").GetString());
-    }
-
     [Theory]
-    [InlineData("")]
-    [InlineData(""", "dismissedBoreaRelease": null""")]
-    [InlineData(""", "dismissedBoreaRelease": "latest" """)]
-    public async Task GetAsync_NoOrUnparseableDismissedBoreaRelease_LoadsAsNone(string dismissed)
+    [InlineData("\"0.1.0\"")]
+    [InlineData("\"latest\"")]
+    [InlineData("null")]
+    public async Task GetAsync_DismissedBoreaReleaseOfAnOlderFile_LoadsAndRemovesTheKey(string dismissed)
     {
         await WriteAsync($$"""
-            { "formatVersion": 1, "selectedTheme": "Light"{{dismissed}} }
+            { "formatVersion": 1, "selectedTheme": "Light", "dismissedBoreaRelease": {{dismissed}} }
             """);
 
         var result = await _repository.GetAsync(BundledThemeNames);
 
         Assert.Equal(AppPreferencesLoadStatus.Loaded, result.Status);
         Assert.Equal("Light", result.Preferences.SelectedThemeName);
-        Assert.Null(result.Preferences.DismissedBoreaRelease);
+        using var document = JsonDocument.Parse(await File.ReadAllTextAsync(_pathProvider.GetAppPreferencesPath()));
+        Assert.False(document.RootElement.TryGetProperty("dismissedBoreaRelease", out _));
+        Assert.Equal("Light", document.RootElement.GetProperty("selectedTheme").GetString());
     }
 
     [Fact]
-    public void With_OtherPreferenceChanges_KeepTheDismissedBoreaRelease()
+    public async Task GetAsync_CurrentFile_LeavesTheFileAsItIs()
     {
-        var preferences = AppPreferences.Empty.WithDismissedBoreaRelease(ModVersion.Parse("0.5.0"))
-            .WithSelectedThemeName("Light")
-            .WithRegionalCultureName("de-DE")
-            .WithUiCultureName("de")
-            .WithCheckForUpdatesAtStart(false)
-            .WithUpdateChannel(BoreaUpdateChannel.Dev)
-            .WithForeignFolderDeletionConfirmed(true)
-            .WithLoadImagesFromAuthorHosts(false)
-            .WithHomeLaunch(HomeLaunchOption.WithoutModLoader)
-            .WithDiscoverSortOrder(DiscoverSortOrder.Name)
-            .WithSharedProfileBannerDismissed(true);
+        const string text = """{ "formatVersion": 1, "selectedTheme": "Light" }""";
+        await WriteAsync(text);
 
-        Assert.Equal(ModVersion.Parse("0.5.0"), preferences.DismissedBoreaRelease);
+        await _repository.GetAsync(BundledThemeNames);
+
+        Assert.Equal(text, await File.ReadAllTextAsync(_pathProvider.GetAppPreferencesPath()));
     }
 
     [Fact]
@@ -285,11 +267,10 @@ public sealed class FileAppPreferencesRepositoryTests : IDisposable
             .WithLoadImagesFromAuthorHosts(false)
             .WithHomeLaunch(HomeLaunchOption.WithoutModLoader)
             .WithDiscoverSortOrder(DiscoverSortOrder.Name)
-            .WithSharedProfileBannerDismissed(true)
-            .WithDismissedBoreaRelease(ModVersion.Parse("0.5.0"));
+            .WithSharedProfileBannerDismissed(true);
 
         Assert.Equal(5438, preferences.DismissedGameRevision);
-        Assert.Equal(ModVersion.Parse("0.5.0"), preferences.WithDismissedGameRevision(5500).DismissedBoreaRelease);
+        Assert.Equal(5500, preferences.WithDismissedGameRevision(5500).DismissedGameRevision);
     }
 
     [Fact]
@@ -745,8 +726,7 @@ public sealed class FileAppPreferencesRepositoryTests : IDisposable
             .WithLoadImagesFromAuthorHosts(false)
             .WithHomeLaunch(HomeLaunchOption.WithoutModLoader)
             .WithDiscoverSortOrder(DiscoverSortOrder.Name)
-            .WithSharedProfileBannerDismissed(true)
-            .WithDismissedBoreaRelease(ModVersion.Parse("0.5.0"));
+            .WithSharedProfileBannerDismissed(true);
 
         Assert.Equal(firstStart, preferences.FirstStartedAt);
         Assert.False(preferences.FetchAnnouncements);
