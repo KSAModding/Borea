@@ -1,4 +1,5 @@
 using System.Net;
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Headless;
 using Avalonia.Input;
@@ -84,6 +85,50 @@ public sealed class ListingPageTests
 
         Assert.True(editor.IsFormStep);
         Assert.Equal("StarMap", editor.Id);
+    }
+
+    [Theory]
+    [InlineData(860)]
+    [InlineData(1280)]
+    [InlineData(1920)]
+    public async Task StartStep_SearchFieldAndResultsFitTheCard(double windowWidth)
+    {
+        var session = new ListingPullRequestViewModelTests.FakeSession();
+        session.SignIn();
+        using var harness = await ViewModelHarness.CreateAsync(gitHub: session, editSnapshot: json => json.Replace("StarMapLoader/StarMap", "octocat/StarMap", StringComparison.Ordinal));
+        await harness.ViewModel.OpenListingAsync();
+
+        var layout = await HeadlessApp.RunAsync(harness, () =>
+        {
+            var page = new ListingPage { DataContext = harness.ViewModel };
+            Grid.SetColumn(page, 1);
+            var body = new Grid { ColumnDefinitions = new ColumnDefinitions($"{PageBodyPanel.NavigationRailWidth},*"), Children = { page } };
+            var window = new Window { Width = windowWidth, Height = 1080, Content = body, DataContext = harness.ViewModel };
+            window.Show();
+            window.UpdateLayout();
+
+            var search = page.FindControl<TextBox>("ListedSearch")!;
+            var results = page.FindControl<ListBox>("ListedResults")!;
+            var card = search.GetVisualAncestors().OfType<Border>().First(border => border.Classes.Contains("card"));
+            var rows = results.GetVisualDescendants().OfType<ListBoxItem>().ToList();
+            var controls = new List<Control> { search, results }
+                .Concat(search.GetVisualParent()!.GetVisualChildren().OfType<Button>())
+                .Concat(rows.SelectMany(row => row.GetVisualDescendants().OfType<Control>().Where(control => control is TextBlock || control.Classes.Contains("chip"))))
+                .Where(control => control.IsEffectivelyVisible)
+                .ToList();
+            var result = new SearchLayout(
+                rows.Count,
+                controls.Count(control => control is Border),
+                controls.Where(control => !Fits(control, card)).Select(control => control.ToString() ?? string.Empty).ToList(),
+                controls.OfType<TextBlock>().Any(text => text.TextLayout.TextLines.Any(line => line.HasCollapsed)));
+            window.Close();
+            return Task.FromResult(result);
+        });
+
+        Assert.Equal(4, layout.Rows);
+        Assert.Equal(1, layout.OwnChips);
+        Assert.Equal([], layout.Outside);
+        Assert.False(layout.Trimmed);
     }
 
     [Fact]
@@ -214,6 +259,19 @@ public sealed class ListingPageTests
         window.KeyPressQwerty(key, RawInputModifiers.None);
         window.KeyReleaseQwerty(key, RawInputModifiers.None);
     }
+
+    private static bool Fits(Control control, Border card)
+    {
+        var corner = control.TranslatePoint(new Point(0, 0), card)
+            ?? throw new InvalidOperationException($"{control} is not laid out inside the card.");
+
+        return corner.X >= card.Padding.Left
+            && corner.Y >= card.Padding.Top
+            && corner.X + control.Bounds.Width <= card.Bounds.Width - card.Padding.Right
+            && corner.Y + control.Bounds.Height <= card.Bounds.Height - card.Padding.Bottom;
+    }
+
+    private sealed record SearchLayout(int Rows, int OwnChips, List<string> Outside, bool Trimmed);
 
     /// <summary>The visible texts, with the Markdown of every visible Markdown view.</summary>
     private static Task<List<string?>> RenderAsync(ViewModelHarness harness) =>
