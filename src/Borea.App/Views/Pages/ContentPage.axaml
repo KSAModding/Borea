@@ -130,7 +130,7 @@
                                             <Button Classes="text" Content="{Binding SelectedContent.Run.StopText}" Command="{Binding SelectedContent.Run.StopCommand}" />
                                         </StackPanel>
                                         <ProgressBar Width="96" Height="6" VerticalAlignment="Center" IsVisible="{Binding SelectedContent.IsRemoving}" IsIndeterminate="True" Foreground="{StaticResource Brush.Accent}" />
-                                        <!-- an installed mod: the chip names the instance, Remove sits where Add was and is disabled with the reason when the mod has to stay -->
+                                        <!-- an installed mod: the chip names the instance, Remove sits where Add was and is disabled with the reason when the mod has to stay. Opened from an instance, the chip leads the meta row instead. -->
                                         <WrapPanel ItemSpacing="8" LineSpacing="8" VerticalAlignment="Center">
                                             <WrapPanel.IsVisible>
                                                 <MultiBinding Converter="{x:Static BoolConverters.And}">
@@ -138,7 +138,7 @@
                                                     <Binding Path="!SelectedContent.IsRemoving" />
                                                 </MultiBinding>
                                             </WrapPanel.IsVisible>
-                                            <Border Classes="chip positive" VerticalAlignment="Center" ToolTip.Tip="{Binding InstalledInText}">
+                                            <Border Classes="chip positive" VerticalAlignment="Center" ToolTip.Tip="{Binding InstalledInText}" IsVisible="{Binding !IsContentFromInstance}">
                                                 <TextBlock Text="{Binding Localization.DiscoverInstalled}" />
                                             </Border>
                                             <Button Classes="text danger" Height="38" Padding="16,0,20,0" Command="{Binding SelectedContent.BeginRemoveCommand}" IsEnabled="{Binding SelectedContent.CanRemove}" IsVisible="{Binding !SelectedContent.IsConfirmingRemove}" ToolTip.Tip="{Binding SelectedContent.RemoveToolTip}" ToolTip.ShowOnDisabled="True" AutomationProperties.HelpText="{Binding SelectedContent.RemoveToolTip}">
@@ -152,6 +152,17 @@
                                 </Panel>
                             </Grid>
                             <WrapPanel Grid.Row="2" ItemSpacing="24" LineSpacing="8" Margin="0,16,0,0">
+                                <Border Classes="chip positive" VerticalAlignment="Center" ToolTip.Tip="{Binding InstalledInText}">
+                                    <Border.IsVisible>
+                                        <MultiBinding Converter="{x:Static BoolConverters.And}">
+                                            <Binding Path="IsContentFromInstance" />
+                                            <Binding Path="CanActOnSelectedContent" />
+                                            <Binding Path="SelectedContent.IsInstalled" />
+                                            <Binding Path="!SelectedContent.IsRemoving" />
+                                        </MultiBinding>
+                                    </Border.IsVisible>
+                                    <TextBlock Text="{Binding Localization.DiscoverInstalled}" />
+                                </Border>
                                 <ItemsControl ItemsSource="{Binding SelectedContent.Tags}" VerticalAlignment="Center" IsVisible="{Binding HasContentTags}">
                                     <ItemsControl.ItemsPanel>
                                         <ItemsPanelTemplate>
