@@ -47,6 +47,22 @@ def edge_snapshot() -> dict:
     return document
 
 
+def member_snapshot() -> dict:
+    """The fixture with a pack that pins an outdated, an unlisted and a hostile member."""
+    document = snapshot()
+    listings = {entry["id"]: entry for entry in document["listings"]}
+    afc = listings["AdvancedFlightComputer"]["releases"]
+    afc[2]["download"] = {"url": "https://example.org/afc/0.7.5.zip"}
+    afc.insert(1, {"id": "AdvancedFlightComputer", "version": "0.7.7", "release_status": "stable"})
+    listings["StarMap"]["authored"]["links"]["Forums"] = "https://forums.ahwoo.com/threads/starmap.384/"
+    mods = document["packs"][1]["versions"][1]["authored"]["mods"]
+    mods.insert(1, {"id": "Unlisted", "version": "1.0.0"})
+    mods.append({"id": "EvilMod", "version": "1.0.0"})
+    mods.append({"id": "OldMod", "version": "0.9.0"})
+    mods.append({"id": "../escape", "version": "1.0.0"})
+    return document
+
+
 class FakeFetch:
     """Serves the fixture icon at its URL and fails every other request."""
 
@@ -487,6 +503,43 @@ class Build(unittest.TestCase):
         self.assertIn("borea://install/NavigationStarterPack", page)
         self.assertIn('content="https://ksamodding.github.io/Borea/pack/NavigationStarterPack/"', page)
 
+    def forum_list(self, identifier) -> list[str]:
+        page = self.page("pack", identifier)
+        start = page.index('<pre class="forum-list">') + len('<pre class="forum-list">')
+        return html.unescape(page[start:page.index("</pre>", start)]).split("\n")
+
+    def test_a_pack_page_lists_its_mods_for_the_forum_in_pack_order(self):
+        self.build()
+        page = self.page("pack", "NavigationStarterPack")
+
+        self.assertEqual(
+            ["Advanced Flight Computer 0.7.5 - Author: Maxi, cairn5 - License: MIT - Download: not stated"
+             " - Thread: https://forums.ahwoo.com/threads/advanced-flight-computer.783/",
+             "StarMap 0.4.7 - Author: KlaasWhite - License: MIT - Download: not stated - Thread: not stated"],
+            self.forum_list("NavigationStarterPack"))
+        self.assertIn('<button class="button secondary" type="button" data-copy-list hidden>Copy forum list</button>', page)
+        self.assertIn('<script src="../../copy-list.js" defer></script>', page)
+        # a dev release and a yanked stable one do not outdate a stable pin
+        self.assertNotIn('class="newer"', page)
+        self.assertNotIn('class="members"', self.page("mod", "AdvancedFlightComputer"))
+
+    def test_a_pack_page_counts_and_names_the_members_with_a_newer_stable_release(self):
+        self.build(member_snapshot())
+        page = self.page("pack", "NavigationStarterPack")
+
+        self.assertIn('<p class="newer">1 of 5 mods has a newer release: Advanced Flight Computer 0.7.7.</p>', page)
+        lines = self.forum_list("NavigationStarterPack")
+        self.assertEqual(5, len(lines))
+        self.assertTrue(lines[0].startswith("Advanced Flight Computer 0.7.5 - "))
+        self.assertIn(" - Download: https://example.org/afc/0.7.5.zip - ", lines[0])
+        self.assertEqual("Unlisted 1.0.0 - Not listed in the content index", lines[1])
+        self.assertEqual("StarMap 0.4.7 - Author: KlaasWhite - License: MIT - Download: not stated"
+                         " - Thread: https://forums.ahwoo.com/threads/starmap.384/", lines[2])
+        self.assertEqual("OldMod 0.9.0 - Not listed in the content index", lines[4])
+        # an author writes the name of a listing, so it reaches the list only as text
+        self.assertIn("Evil </script><script>alert(1)</script> \"Mod\" 1.0.0", lines[3])
+        self.assertNotIn("<script>alert(1)", page)
+
     def test_an_unknown_snapshot_version_fails_and_writes_nothing(self):
         document = snapshot()
         document["snapshot_version"] = 2
@@ -677,7 +730,7 @@ class FallbackParity(unittest.TestCase):
                 self.assertEqual(html_nodes(share.markdown_html(sample, "", MARKDOWN_IMAGES)), nodes)
 
     def test_the_fallback_shows_what_the_generator_shows(self):
-        for name, document in (("fixture", snapshot()), ("edge cases", edge_snapshot())):
+        for name, document in (("fixture", snapshot()), ("edge cases", edge_snapshot()), ("pack members", member_snapshot())):
             views = self.views(document)
             with contextlib.redirect_stderr(io.StringIO()):
                 pages = share.pages_of(share.Snapshot(document))
@@ -690,6 +743,7 @@ class FallbackParity(unittest.TestCase):
                         "date": share.date_text(page.date) if page.date else None, "game": page.game,
                         "downloads": page.downloads, "modCount": page.mod_count, "tags": page.tags,
                         "description": page.description, "images": page.images,
+                        "forumList": page.forum_list, "newer": page.newer,
                         "links": [[label, share.urllib.parse.urlsplit(url).hostname] for label, url in page.links],
                         "notices": [[notice.text, notice.link[0] if notice.link else None] for notice in page.notices],
                     }
