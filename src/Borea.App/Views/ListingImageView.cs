@@ -25,7 +25,8 @@ public sealed class ListingImageView : Decorator
     private static readonly TimeSpan PulseLimit = TimeSpan.FromSeconds(30);
     private static readonly TimeSpan FadeDuration = TimeSpan.FromMilliseconds(200);
     private static readonly TimeSpan CachedFadeDuration = TimeSpan.FromMilliseconds(100);
-    private static readonly BitmapShelf Shelf = new(32 * 1024 * 1024);
+    // a few windows of recently shown icons, so a long list does not keep every icon it scrolled past
+    internal static readonly BitmapShelf Shelf = new(8 * 1024 * 1024);
 
     public static readonly StyledProperty<ListingImage?> ImageProperty =
         AvaloniaProperty.Register<ListingImageView, ListingImage?>(nameof(Image));
