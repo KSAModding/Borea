@@ -697,7 +697,7 @@ public sealed partial class DiscoverItem : ObservableObject, IInstallRow
 
     public string? UpdatedText => UpdatedAt is { } at ? _owner.ShortAgeText(at) : null;
 
-    public string? UpdatedDateText => UpdatedAt is { } at ? MainViewModel.DateText(at) : null;
+    public string? UpdatedDateText => UpdatedAt is { } at ? _owner.Localization.FormatContentUpdatedOn(MainViewModel.DateText(at)) : null;
 
     /// <summary>
     /// How the newest release fits the installed game (RFC 0017).

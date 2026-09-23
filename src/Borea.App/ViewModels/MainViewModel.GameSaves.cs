@@ -457,6 +457,8 @@ public sealed partial class GameSaveItem : ObservableObject
 
     public string? BuildText => _build?.ToString() ?? Entry.GameBuild;
 
+    public string? BuildToolTip => BuildText is { } build ? _owner.Localization.FormatGameSaveBuild(build) : null;
+
     public bool IsOlderBuild => _build is { } build && _installed is { } installed && build < installed;
 
     public string? OlderBuildText => IsOlderBuild ? _owner.Localization.FormatGameSaveOlderBuild(BuildText!, _installed!.Value.ToString()) : null;
@@ -505,6 +507,7 @@ public sealed partial class GameSaveItem : ObservableObject
     internal void RefreshText()
     {
         OnPropertyChanged(nameof(UpdatedText));
+        OnPropertyChanged(nameof(BuildToolTip));
         OnPropertyChanged(nameof(OlderBuildText));
         OnPropertyChanged(nameof(SizeText));
         OnPropertyChanged(nameof(CopyNoteText));

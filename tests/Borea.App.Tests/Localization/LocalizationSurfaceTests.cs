@@ -40,6 +40,10 @@ public sealed class LocalizationSurfaceTests : IDisposable
 
         Assert.Equal("by Maxi, Renan", service.FormatContentByAuthor("Maxi, Renan"));
         Assert.Equal("Published 2 days ago", service.FormatContentPublished("2 days ago"));
+        Assert.Equal("Updated on 9/12/2026", service.FormatContentUpdatedOn("9/12/2026"));
+        Assert.Equal("Released on 9/12/2026", service.FormatPackReleasedOn("9/12/2026"));
+        Assert.Equal("Installed mods: 4", service.FormatLibraryModCount(4));
+        Assert.Equal("Made with game build 2026.8.3.5117", service.FormatGameSaveBuild("2026.8.3.5117"));
         Assert.Equal("Installed StarMap 0.4.6 to loaders.", service.FormatSetupLoaderInstalled("StarMap", "0.4.6", "loaders"));
         Assert.Equal("Replace 0.7.3 in Main", service.FormatContentReplaceVersionIn("0.7.3", "Main"));
         Assert.Equal("1 of 3 selected", service.FormatGameSaveProfileSelected(1, 3));

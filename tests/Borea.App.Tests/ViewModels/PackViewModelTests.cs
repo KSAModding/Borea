@@ -47,6 +47,7 @@ public sealed class PackViewModelTests
         Assert.Equal(["starter"], starter.Tags);
         Assert.Equal(GameCompatibility.Unknown, starter.Compatibility);
         Assert.False(string.IsNullOrWhiteSpace(starter.ReleasedText));
+        Assert.StartsWith("Released on ", starter.ReleasedDateText);
         Assert.Null(starter.PublishedText);
         Assert.StartsWith("Published ", viewModel.DiscoverPacks[0].PublishedText);
 

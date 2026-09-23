@@ -917,8 +917,8 @@ public sealed partial class RecentItem : ObservableObject
     /// <summary>How long ago the release came out.</summary>
     public string UpdatedText => _owner.ShortAgeText(UpdatedAt);
 
-    /// <summary>The release date in the regional format the user chose.</summary>
-    public string UpdatedDateText => MainViewModel.DateText(UpdatedAt);
+    /// <summary>The tooltip of the age, the release date after "Updated on".</summary>
+    public string UpdatedDateText => _owner.Localization.FormatContentUpdatedOn(MainViewModel.DateText(UpdatedAt));
 
     public RecentItem(MainViewModel owner, ModMetadata listing, DateTimeOffset updatedAt, ListingImage? icon = null)
     {
@@ -976,6 +976,8 @@ public sealed partial class InstanceItem : ObservableObject
 
     public string? LastPlayedToolTip => LastPlayedAt is { } at ? _owner.Localization.FormatLibraryLastPlayed(MainViewModel.DateTimeText(at)) : null;
 
+    public string ModCountToolTip => _owner.Localization.FormatLibraryModCount(ModCount);
+
     [ObservableProperty]
     private bool _isConfirmingDelete;
 
@@ -1002,6 +1004,7 @@ public sealed partial class InstanceItem : ObservableObject
         OnPropertyChanged(nameof(SourceText));
         OnPropertyChanged(nameof(LastPlayedText));
         OnPropertyChanged(nameof(LastPlayedToolTip));
+        OnPropertyChanged(nameof(ModCountToolTip));
     }
 
     internal ModVersion? InstalledVersionOf(string modId)

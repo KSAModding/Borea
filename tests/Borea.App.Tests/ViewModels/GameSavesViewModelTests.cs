@@ -28,6 +28,7 @@ public sealed class GameSavesViewModelTests
         var updated = new DateTimeOffset(2026, 8, 1, 14, 34, 32, TimeSpan.Zero).AddTicks(4054896);
         Assert.Equal(harness.Localization.FormatGameSaveUpdated(updated.ToLocalTime().ToString("g", CultureInfo.CurrentCulture)), save.UpdatedText);
         Assert.Equal("2026.8.3.5117", save.BuildText);
+        Assert.Equal(harness.Localization.FormatGameSaveBuild("2026.8.3.5117"), save.BuildToolTip);
         Assert.Equal(viewModel.FormatGameDataSize(save.Entry.SizeBytes), save.SizeText);
         Assert.False(save.IsVehicle);
         var vehicle = Assert.Single(viewModel.VehiclesSection.Items);

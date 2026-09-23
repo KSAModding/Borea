@@ -565,6 +565,9 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string FormatLibraryLastPlayed(string date)
         => string.Format(CultureInfo.CurrentCulture, Resources.LibraryLastPlayedFormat, date);
 
+    public string FormatLibraryModCount(int count)
+        => string.Format(CultureInfo.CurrentCulture, Resources.LibraryModCountFormat, count);
+
     public string FormatLibraryNowActive(string instanceName)
         => string.Format(CultureInfo.CurrentCulture, Resources.LibraryNowActiveFormat, instanceName);
 
@@ -1895,6 +1898,9 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string FormatPackModCount(int count)
         => string.Format(CultureInfo.CurrentCulture, Resources.PackModCountFormat, count);
 
+    public string FormatPackReleasedOn(string date)
+        => string.Format(CultureInfo.CurrentCulture, Resources.PackReleasedOnFormat, date);
+
     public string FormatPackIncompatible(string gameMin)
         => string.Format(CultureInfo.CurrentCulture, Resources.PackIncompatibleFormat, gameMin);
 
@@ -2035,11 +2041,17 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string FormatContentPublished(string age)
         => string.Format(CultureInfo.CurrentCulture, Resources.ContentPublishedFormat, age);
 
+    public string FormatContentUpdatedOn(string date)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ContentUpdatedOnFormat, date);
+
     public string FormatInstanceGroupModpack(string name, string version)
         => string.Format(CultureInfo.CurrentCulture, Resources.InstanceGroupModpackFormat, name, version);
 
     public string FormatGameSaveUpdated(string time)
         => string.Format(CultureInfo.CurrentCulture, Resources.GameSaveUpdatedFormat, time);
+
+    public string FormatGameSaveBuild(string build)
+        => string.Format(CultureInfo.CurrentCulture, Resources.GameSaveBuildFormat, build);
 
     public string FormatGameSaveOlderBuild(string build, string installedBuild)
         => string.Format(CultureInfo.CurrentCulture, Resources.GameSaveOlderBuildFormat, build, installedBuild);
