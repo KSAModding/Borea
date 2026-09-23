@@ -40,6 +40,27 @@ public sealed class DiscoverPageTests
         Assert.Equal(new GameVersionControls(null, null, 0, false, false), bothCleared);
     }
 
+    [Fact]
+    public async Task License_TheChosenOneIsMarkedUntilItIsChosenAgain()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var viewModel = harness.ViewModel;
+        await viewModel.EnsureDiscoverLoadedAsync();
+
+        var marks = await RenderAsync(harness, 1280, page =>
+        {
+            var license = page.GetVisualDescendants().OfType<Button>().Single(button => button.Content is "MIT");
+            var before = license.Classes.Contains("active");
+            Click(license);
+            var chosen = license.Classes.Contains("active");
+            Click(license);
+            return (before, chosen, license.Classes.Contains("active"));
+        });
+
+        Assert.Equal((false, true, false), marks);
+        Assert.Null(viewModel.SelectedLicense);
+    }
+
     /// <summary>Renders Discover next to a navigation rail, as the main window does.</summary>
     private static Task<T> RenderAsync<T>(ViewModelHarness harness, double windowWidth, Func<DiscoverPage, T> read) =>
         HeadlessApp.RunAsync(harness, () =>

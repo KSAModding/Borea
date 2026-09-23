@@ -28,7 +28,7 @@ public sealed class DiscoverViewModelTests
         Assert.All(viewModel.DiscoverItems, item => Assert.Equal(ContentType.Mod, item.Type));
         Assert.DoesNotContain(viewModel.DiscoverItems, item => item.ModId == ViewModelHarness.FakeSpaceDock.OwnId);
         Assert.DoesNotContain(viewModel.DiscoverItems, item => item.ModId == ViewModelHarness.FakeSpaceDock.MirroredId);
-        Assert.Equal(["MIT"], viewModel.LicenseOptions);
+        Assert.Equal(["MIT"], viewModel.LicenseOptions.Select(license => license.Value));
         Assert.Null(viewModel.DiscoverError);
     }
 
@@ -284,6 +284,30 @@ public sealed class DiscoverViewModelTests
         viewModel.ClearDiscoverFiltersCommand.Execute(null);
         Assert.False(viewModel.HasDiscoverFilters);
         Assert.Equal(all, viewModel.DiscoverItems.Count);
+    }
+
+    [Fact]
+    public async Task LicenseFilter_MarksTheChosenLicenseUntilItIsChosenAgainOrCleared()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var viewModel = harness.ViewModel;
+        await viewModel.EnsureDiscoverLoadedAsync();
+        var mit = viewModel.LicenseOptions.Single();
+
+        viewModel.SelectLicenseCommand.Execute("MIT");
+        Assert.True(mit.IsSelected);
+
+        viewModel.SelectLicenseCommand.Execute("MIT");
+        Assert.False(mit.IsSelected);
+        Assert.Null(viewModel.SelectedLicense);
+
+        viewModel.SelectLicenseCommand.Execute("MIT");
+        viewModel.SelectLicenseCommand.Execute(null);
+        Assert.False(mit.IsSelected);
+
+        viewModel.SelectLicenseCommand.Execute("MIT");
+        viewModel.ClearDiscoverFiltersCommand.Execute(null);
+        Assert.False(mit.IsSelected);
     }
 
     [Fact]

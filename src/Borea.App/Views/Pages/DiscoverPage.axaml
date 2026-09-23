@@ -264,8 +264,8 @@
                                 </ItemsPanelTemplate>
                             </ItemsControl.ItemsPanel>
                             <ItemsControl.ItemTemplate>
-                                <DataTemplate x:DataType="x:String">
-                                    <Button Classes="filter" Content="{Binding}" Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).SelectOsCommand}" CommandParameter="{Binding}" />
+                                <DataTemplate x:DataType="vm:DiscoverChoice">
+                                    <Button Classes="filter" Classes.active="{Binding IsSelected}" Content="{Binding Value}" Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).SelectOsCommand}" CommandParameter="{Binding Value}" />
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
@@ -280,8 +280,8 @@
                                 </ItemsPanelTemplate>
                             </ItemsControl.ItemsPanel>
                             <ItemsControl.ItemTemplate>
-                                <DataTemplate x:DataType="x:String">
-                                    <Button Classes="filter" Content="{Binding}" Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).SelectLicenseCommand}" CommandParameter="{Binding}" />
+                                <DataTemplate x:DataType="vm:DiscoverChoice">
+                                    <Button Classes="filter" Classes.active="{Binding IsSelected}" Content="{Binding Value}" Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).SelectLicenseCommand}" CommandParameter="{Binding Value}" />
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
