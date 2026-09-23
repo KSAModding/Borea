@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using System.Reflection;
 using System.Security.Cryptography;
 using Borea.Core.Logging;
 using Borea.Core.Mods;
@@ -116,13 +117,14 @@ public sealed class FileSelfUpdater : ISelfUpdater
 
             var programPath = Path.Combine(folder, programName);
             var replaced = SelfUpdateCleanup.ReplacedPath(programPath);
+            var swap = new Swap(staging);
             return new StagedSelfUpdate(
                 release.Version,
                 folder,
                 programPath,
                 replaced,
-                () => Install(staging, unpacked, programPath, replaced, programHash),
-                () => HandOver(programPath, replaced, programHash));
+                () => Install(swap, unpacked, programPath, replaced, programHash),
+                () => HandOver(swap, programPath, replaced, programHash));
         }
         catch
         {
@@ -224,12 +226,14 @@ public sealed class FileSelfUpdater : ISelfUpdater
     /// Puts the unpacked build in the folder Borea runs in, and takes that folder for the time it
     /// needs it, so that a second update waits. The program file is checked once more, the files
     /// beside it go first and keep their old copy in the staging folder, and the running program is
-    /// moved aside last. A step that fails puts every file of the build that runs back.
+    /// moved aside last. A step that fails puts every file of the build that runs back, and the old
+    /// files wait in the staging folder until <see cref="HandOver"/> knows whether the new build starts.
     /// </summary>
-    private void Install(string staging, string unpacked, string programPath, string replaced, string programHash)
+    private void Install(Swap swap, string unpacked, string programPath, string replaced, string programHash)
     {
         var newProgram = Path.Combine(unpacked, Path.GetFileName(programPath));
         var folder = Path.GetDirectoryName(programPath)!;
+        var installed = false;
         try
         {
             using var claim = SelfUpdateLock.TryTake(folder)
@@ -237,9 +241,10 @@ public sealed class FileSelfUpdater : ISelfUpdater
                     SelfUpdateFailure.Install,
                     $"Another Borea update is changing {folder} right now, so this one stopped before it changed anything.");
 
-            // where the files of the build that runs wait until the new build is in place
-            var aside = Path.Combine(staging, "replaced");
-            var moved = new List<string>();
+            ProgramAssemblies.LoadAll(Assembly.GetEntryAssembly() ?? typeof(FileSelfUpdater).Assembly);
+
+            var aside = swap.Aside;
+            var moved = swap.Moved;
             var programIsAside = false;
             try
             {
@@ -283,10 +288,12 @@ public sealed class FileSelfUpdater : ISelfUpdater
 
             MakeRunnable(programPath);
             _log.Write($"Self-update: the new build is in {folder} and the replaced program waits as {Path.GetFileName(replaced)}.");
+            installed = true;
         }
         finally
         {
-            TryDeleteFolder(staging);
+            if (!installed)
+                TryDeleteFolder(swap.Staging);
         }
     }
 
@@ -325,7 +332,7 @@ public sealed class FileSelfUpdater : ISelfUpdater
     /// checked once more, as late as that can be done, and the replaced build is put back when the
     /// new one is not the build that was checked or does not start.
     /// </summary>
-    private void HandOver(string programPath, string replaced, string programHash)
+    private void HandOver(Swap swap, string programPath, string replaced, string programHash)
     {
         var handover = new SelfUpdateHandover(replaced, Environment.ProcessId, SelfUpdateHandover.NewToken(), _fromCommandLine);
         try
@@ -340,26 +347,43 @@ public sealed class FileSelfUpdater : ISelfUpdater
         }
         catch (SelfUpdateFailedException)
         {
-            Undo(programPath, replaced);
+            Undo(swap, programPath, replaced);
             throw;
         }
         catch (Exception exception) when (IsFileFailure(exception) || exception is InvalidOperationException or Win32Exception)
         {
-            Undo(programPath, replaced);
+            Undo(swap, programPath, replaced);
             throw new SelfUpdateFailedException(
                 SelfUpdateFailure.Start,
                 $"The new build in {Path.GetDirectoryName(programPath)} did not start, so Borea put the build that ran back. {exception.Message}",
                 exception);
+        }
+        finally
+        {
+            TryDeleteFolder(swap.Staging);
         }
 
         _log.Write($"Self-update: {programPath} was started and takes over from process {handover.PreviousProcessId}.");
     }
 
     /// <summary>Takes back an update whose new build did not start, so that the build which ran runs again.</summary>
-    private static void Undo(string programPath, string replaced)
+    private static void Undo(Swap swap, string programPath, string replaced)
     {
-        SelfUpdateReceipt.Delete(Path.GetDirectoryName(programPath)!);
+        var folder = Path.GetDirectoryName(programPath)!;
+        SelfUpdateReceipt.Delete(folder);
+        PutFilesBack(folder, swap.Aside, swap.Moved);
         PutBack(replaced, programPath);
+    }
+
+    /// <summary>What an install moved, kept until the new build started so that a failed start can take all of it back.</summary>
+    private sealed class Swap(string staging)
+    {
+        public string Staging { get; } = staging;
+
+        /// <summary>Where the files of the build that runs wait until the new build started.</summary>
+        public string Aside { get; } = Path.Combine(staging, "replaced");
+
+        public List<string> Moved { get; } = [];
     }
 
     /// <summary>Gives the program file its path back, which is the whole undo of an update that did not finish.</summary>
