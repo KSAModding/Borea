@@ -87,9 +87,11 @@ public partial class MainViewModel
     public string? SelfUpdateActionText
         => AvailableUpdate is not null && !IsSelfUpdating && _selfUpdateReadiness is { CanUpdate: true } ? Localization.SelfUpdateNow : null;
 
-    /// <summary>The Home banner shows until the player closes it for this release or a newer one.</summary>
-    public bool ShowReleaseBanner => AvailableUpdate is { } release
-        && !((_dismissedBoreaRelease ?? _appPreferences.DismissedBoreaRelease) >= release.Version);
+    /// <summary>
+    /// The Home banner shows until the player closes it, and it is back at the next start,
+    /// because it holds the only "Update now".
+    /// </summary>
+    public bool ShowReleaseBanner => AvailableUpdate is { } release && !(_dismissedBoreaRelease >= release.Version);
 
     [ObservableProperty]
     private bool _isReleaseNotesOpen;
@@ -305,7 +307,6 @@ public partial class MainViewModel
 
         _dismissedBoreaRelease = release.Version;
         OnPropertyChanged(nameof(ShowReleaseBanner));
-        QueuePreferenceSave(preferences => preferences.WithDismissedBoreaRelease(release.Version));
     }
 }
 

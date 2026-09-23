@@ -29,8 +29,9 @@ public sealed class UpdateNoticeViewModelTests
 
     private static Func<HttpRequestMessage, HttpResponseMessage?> ReleaseAt(string tag) => Releases(Release(tag));
 
-    private static Func<BoreaServices, Task> Dismissed(string version) =>
-        services => services.AppPreferences.SaveAsync(AppPreferences.Empty.WithDismissedBoreaRelease(ModVersion.Parse(version)), MainViewModel.BundledThemeNames);
+    /// <summary>Writes the preferences file of a Borea before 0.2.0 that kept a closed update banner closed.</summary>
+    private static Func<BoreaServices, Task> ClosedBeforeFor(string version) =>
+        services => File.WriteAllTextAsync(services.Paths.GetAppPreferencesPath(), $$"""{ "formatVersion": 1, "dismissedBoreaRelease": "{{version}}" }""");
 
     [Fact]
     public async Task Load_NewerRelease_ShowsTheNoticeAndTheBanner()
@@ -253,44 +254,27 @@ public sealed class UpdateNoticeViewModelTests
     }
 
     [Fact]
-    public async Task Close_HidesTheBannerAndSavesTheRelease()
+    public async Task Close_HidesTheBannerAndKeepsTheNotice()
     {
         using var harness = await ViewModelHarness.CreateAsync(respond: ReleaseAt("v999.0.0"));
         var viewModel = harness.ViewModel;
         await viewModel.WhenUpdateCheckedAsync();
 
         viewModel.DismissReleaseBannerCommand.Execute(null);
-        await viewModel.WhenPreferencesSavedAsync();
 
         Assert.False(viewModel.ShowReleaseBanner);
         Assert.True(viewModel.HasAvailableUpdate);
-        Assert.Null(viewModel.PreferenceSaveError);
-        var saved = await harness.Services.AppPreferences.GetAsync(MainViewModel.BundledThemeNames);
-        Assert.Equal(ModVersion.Parse("999.0.0"), saved.Preferences.DismissedBoreaRelease);
     }
 
     [Fact]
-    public async Task Load_ClosedForThisRelease_HidesTheBannerAndKeepsTheNotice()
+    public async Task Load_AReleaseClosedByAnOlderBorea_ShowsTheBannerAgain()
     {
-        using var harness = await ViewModelHarness.CreateAsync(Dismissed("999.0.0"), ReleaseAt("v999.0.0"));
-        var viewModel = harness.ViewModel;
-
-        await viewModel.WhenUpdateCheckedAsync();
-
-        Assert.True(viewModel.HasAvailableUpdate);
-        Assert.False(viewModel.ShowReleaseBanner);
-    }
-
-    [Fact]
-    public async Task Load_ClosedForAnOlderRelease_ShowsTheBannerForTheNewerOne()
-    {
-        using var harness = await ViewModelHarness.CreateAsync(Dismissed("999.0.0"), Releases(Release("v999.0.0"), Release("v999.1.0")));
+        using var harness = await ViewModelHarness.CreateAsync(ClosedBeforeFor("999.0.0"), ReleaseAt("v999.0.0"));
         var viewModel = harness.ViewModel;
 
         await viewModel.WhenUpdateCheckedAsync();
 
         Assert.True(viewModel.ShowReleaseBanner);
-        Assert.Equal("999.1.0", viewModel.AvailableUpdateVersion);
     }
 
     [Fact]

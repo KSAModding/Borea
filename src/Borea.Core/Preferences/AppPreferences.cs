@@ -40,9 +40,6 @@ public sealed class AppPreferences
     /// <summary>Whether the user dismissed the offer to create an instance from the mods of the game profile. Off by default.</summary>
     public bool SharedProfileBannerDismissed { get; }
 
-    /// <summary>The newest Borea release whose Home banner the user closed, or null. A newer release shows the banner again.</summary>
-    public ModVersion? DismissedBoreaRelease { get; }
-
     /// <summary>The revision of the newest game build whose Home banner the user closed, or null. A higher revision shows the banner again.</summary>
     public int? DismissedGameRevision { get; }
 
@@ -78,7 +75,6 @@ public sealed class AppPreferences
         HomeLaunchOption homeLaunch = HomeLaunchOption.ActiveInstance,
         DiscoverSortOrder discoverSortOrder = DiscoverSortOrder.Popularity,
         bool sharedProfileBannerDismissed = false,
-        ModVersion? dismissedBoreaRelease = null,
         int? dismissedGameRevision = null,
         DateTimeOffset? firstStartedAt = null,
         bool fetchAnnouncements = true,
@@ -118,7 +114,6 @@ public sealed class AppPreferences
         HomeLaunch = homeLaunch;
         DiscoverSortOrder = discoverSortOrder;
         SharedProfileBannerDismissed = sharedProfileBannerDismissed;
-        DismissedBoreaRelease = dismissedBoreaRelease;
         DismissedGameRevision = dismissedGameRevision;
         FirstStartedAt = firstStartedAt;
         FetchAnnouncements = fetchAnnouncements;
@@ -130,59 +125,56 @@ public sealed class AppPreferences
     }
 
     public AppPreferences WithRegionalCultureName(string? regionalCultureName)
-        => new(SelectedThemeName, CustomThemes, regionalCultureName, UiCultureName, CheckForUpdatesAtStart, UpdateChannel, ForeignFolderDeletionConfirmed, LoadImagesFromAuthorHosts, HomeLaunch, DiscoverSortOrder, SharedProfileBannerDismissed, DismissedBoreaRelease, DismissedGameRevision, FirstStartedAt, FetchAnnouncements, DismissedAnnouncements, OpenBoreaLinks, BackupRetentionDays, DismissedUntestedGameRevision);
+        => new(SelectedThemeName, CustomThemes, regionalCultureName, UiCultureName, CheckForUpdatesAtStart, UpdateChannel, ForeignFolderDeletionConfirmed, LoadImagesFromAuthorHosts, HomeLaunch, DiscoverSortOrder, SharedProfileBannerDismissed, DismissedGameRevision, FirstStartedAt, FetchAnnouncements, DismissedAnnouncements, OpenBoreaLinks, BackupRetentionDays, DismissedUntestedGameRevision);
 
     public AppPreferences WithUiCultureName(string? uiCultureName)
-        => new(SelectedThemeName, CustomThemes, RegionalCultureName, uiCultureName, CheckForUpdatesAtStart, UpdateChannel, ForeignFolderDeletionConfirmed, LoadImagesFromAuthorHosts, HomeLaunch, DiscoverSortOrder, SharedProfileBannerDismissed, DismissedBoreaRelease, DismissedGameRevision, FirstStartedAt, FetchAnnouncements, DismissedAnnouncements, OpenBoreaLinks, BackupRetentionDays, DismissedUntestedGameRevision);
+        => new(SelectedThemeName, CustomThemes, RegionalCultureName, uiCultureName, CheckForUpdatesAtStart, UpdateChannel, ForeignFolderDeletionConfirmed, LoadImagesFromAuthorHosts, HomeLaunch, DiscoverSortOrder, SharedProfileBannerDismissed, DismissedGameRevision, FirstStartedAt, FetchAnnouncements, DismissedAnnouncements, OpenBoreaLinks, BackupRetentionDays, DismissedUntestedGameRevision);
 
     public AppPreferences WithSelectedThemeName(string? selectedThemeName)
-        => new(selectedThemeName, CustomThemes, RegionalCultureName, UiCultureName, CheckForUpdatesAtStart, UpdateChannel, ForeignFolderDeletionConfirmed, LoadImagesFromAuthorHosts, HomeLaunch, DiscoverSortOrder, SharedProfileBannerDismissed, DismissedBoreaRelease, DismissedGameRevision, FirstStartedAt, FetchAnnouncements, DismissedAnnouncements, OpenBoreaLinks, BackupRetentionDays, DismissedUntestedGameRevision);
+        => new(selectedThemeName, CustomThemes, RegionalCultureName, UiCultureName, CheckForUpdatesAtStart, UpdateChannel, ForeignFolderDeletionConfirmed, LoadImagesFromAuthorHosts, HomeLaunch, DiscoverSortOrder, SharedProfileBannerDismissed, DismissedGameRevision, FirstStartedAt, FetchAnnouncements, DismissedAnnouncements, OpenBoreaLinks, BackupRetentionDays, DismissedUntestedGameRevision);
 
     public AppPreferences WithCheckForUpdatesAtStart(bool checkForUpdatesAtStart)
-        => new(SelectedThemeName, CustomThemes, RegionalCultureName, UiCultureName, checkForUpdatesAtStart, UpdateChannel, ForeignFolderDeletionConfirmed, LoadImagesFromAuthorHosts, HomeLaunch, DiscoverSortOrder, SharedProfileBannerDismissed, DismissedBoreaRelease, DismissedGameRevision, FirstStartedAt, FetchAnnouncements, DismissedAnnouncements, OpenBoreaLinks, BackupRetentionDays, DismissedUntestedGameRevision);
+        => new(SelectedThemeName, CustomThemes, RegionalCultureName, UiCultureName, checkForUpdatesAtStart, UpdateChannel, ForeignFolderDeletionConfirmed, LoadImagesFromAuthorHosts, HomeLaunch, DiscoverSortOrder, SharedProfileBannerDismissed, DismissedGameRevision, FirstStartedAt, FetchAnnouncements, DismissedAnnouncements, OpenBoreaLinks, BackupRetentionDays, DismissedUntestedGameRevision);
 
     public AppPreferences WithUpdateChannel(BoreaUpdateChannel updateChannel)
-        => new(SelectedThemeName, CustomThemes, RegionalCultureName, UiCultureName, CheckForUpdatesAtStart, updateChannel, ForeignFolderDeletionConfirmed, LoadImagesFromAuthorHosts, HomeLaunch, DiscoverSortOrder, SharedProfileBannerDismissed, DismissedBoreaRelease, DismissedGameRevision, FirstStartedAt, FetchAnnouncements, DismissedAnnouncements, OpenBoreaLinks, BackupRetentionDays, DismissedUntestedGameRevision);
+        => new(SelectedThemeName, CustomThemes, RegionalCultureName, UiCultureName, CheckForUpdatesAtStart, updateChannel, ForeignFolderDeletionConfirmed, LoadImagesFromAuthorHosts, HomeLaunch, DiscoverSortOrder, SharedProfileBannerDismissed, DismissedGameRevision, FirstStartedAt, FetchAnnouncements, DismissedAnnouncements, OpenBoreaLinks, BackupRetentionDays, DismissedUntestedGameRevision);
 
     public AppPreferences WithForeignFolderDeletionConfirmed(bool foreignFolderDeletionConfirmed)
-        => new(SelectedThemeName, CustomThemes, RegionalCultureName, UiCultureName, CheckForUpdatesAtStart, UpdateChannel, foreignFolderDeletionConfirmed, LoadImagesFromAuthorHosts, HomeLaunch, DiscoverSortOrder, SharedProfileBannerDismissed, DismissedBoreaRelease, DismissedGameRevision, FirstStartedAt, FetchAnnouncements, DismissedAnnouncements, OpenBoreaLinks, BackupRetentionDays, DismissedUntestedGameRevision);
+        => new(SelectedThemeName, CustomThemes, RegionalCultureName, UiCultureName, CheckForUpdatesAtStart, UpdateChannel, foreignFolderDeletionConfirmed, LoadImagesFromAuthorHosts, HomeLaunch, DiscoverSortOrder, SharedProfileBannerDismissed, DismissedGameRevision, FirstStartedAt, FetchAnnouncements, DismissedAnnouncements, OpenBoreaLinks, BackupRetentionDays, DismissedUntestedGameRevision);
 
     public AppPreferences WithLoadImagesFromAuthorHosts(bool loadImagesFromAuthorHosts)
-        => new(SelectedThemeName, CustomThemes, RegionalCultureName, UiCultureName, CheckForUpdatesAtStart, UpdateChannel, ForeignFolderDeletionConfirmed, loadImagesFromAuthorHosts, HomeLaunch, DiscoverSortOrder, SharedProfileBannerDismissed, DismissedBoreaRelease, DismissedGameRevision, FirstStartedAt, FetchAnnouncements, DismissedAnnouncements, OpenBoreaLinks, BackupRetentionDays, DismissedUntestedGameRevision);
+        => new(SelectedThemeName, CustomThemes, RegionalCultureName, UiCultureName, CheckForUpdatesAtStart, UpdateChannel, ForeignFolderDeletionConfirmed, loadImagesFromAuthorHosts, HomeLaunch, DiscoverSortOrder, SharedProfileBannerDismissed, DismissedGameRevision, FirstStartedAt, FetchAnnouncements, DismissedAnnouncements, OpenBoreaLinks, BackupRetentionDays, DismissedUntestedGameRevision);
 
     public AppPreferences WithHomeLaunch(HomeLaunchOption homeLaunch)
-        => new(SelectedThemeName, CustomThemes, RegionalCultureName, UiCultureName, CheckForUpdatesAtStart, UpdateChannel, ForeignFolderDeletionConfirmed, LoadImagesFromAuthorHosts, homeLaunch, DiscoverSortOrder, SharedProfileBannerDismissed, DismissedBoreaRelease, DismissedGameRevision, FirstStartedAt, FetchAnnouncements, DismissedAnnouncements, OpenBoreaLinks, BackupRetentionDays, DismissedUntestedGameRevision);
+        => new(SelectedThemeName, CustomThemes, RegionalCultureName, UiCultureName, CheckForUpdatesAtStart, UpdateChannel, ForeignFolderDeletionConfirmed, LoadImagesFromAuthorHosts, homeLaunch, DiscoverSortOrder, SharedProfileBannerDismissed, DismissedGameRevision, FirstStartedAt, FetchAnnouncements, DismissedAnnouncements, OpenBoreaLinks, BackupRetentionDays, DismissedUntestedGameRevision);
 
     public AppPreferences WithDiscoverSortOrder(DiscoverSortOrder discoverSortOrder)
-        => new(SelectedThemeName, CustomThemes, RegionalCultureName, UiCultureName, CheckForUpdatesAtStart, UpdateChannel, ForeignFolderDeletionConfirmed, LoadImagesFromAuthorHosts, HomeLaunch, discoverSortOrder, SharedProfileBannerDismissed, DismissedBoreaRelease, DismissedGameRevision, FirstStartedAt, FetchAnnouncements, DismissedAnnouncements, OpenBoreaLinks, BackupRetentionDays, DismissedUntestedGameRevision);
+        => new(SelectedThemeName, CustomThemes, RegionalCultureName, UiCultureName, CheckForUpdatesAtStart, UpdateChannel, ForeignFolderDeletionConfirmed, LoadImagesFromAuthorHosts, HomeLaunch, discoverSortOrder, SharedProfileBannerDismissed, DismissedGameRevision, FirstStartedAt, FetchAnnouncements, DismissedAnnouncements, OpenBoreaLinks, BackupRetentionDays, DismissedUntestedGameRevision);
 
     public AppPreferences WithSharedProfileBannerDismissed(bool sharedProfileBannerDismissed)
-        => new(SelectedThemeName, CustomThemes, RegionalCultureName, UiCultureName, CheckForUpdatesAtStart, UpdateChannel, ForeignFolderDeletionConfirmed, LoadImagesFromAuthorHosts, HomeLaunch, DiscoverSortOrder, sharedProfileBannerDismissed, DismissedBoreaRelease, DismissedGameRevision, FirstStartedAt, FetchAnnouncements, DismissedAnnouncements, OpenBoreaLinks, BackupRetentionDays, DismissedUntestedGameRevision);
-
-    public AppPreferences WithDismissedBoreaRelease(ModVersion? dismissedBoreaRelease)
-        => new(SelectedThemeName, CustomThemes, RegionalCultureName, UiCultureName, CheckForUpdatesAtStart, UpdateChannel, ForeignFolderDeletionConfirmed, LoadImagesFromAuthorHosts, HomeLaunch, DiscoverSortOrder, SharedProfileBannerDismissed, dismissedBoreaRelease, DismissedGameRevision, FirstStartedAt, FetchAnnouncements, DismissedAnnouncements, OpenBoreaLinks, BackupRetentionDays, DismissedUntestedGameRevision);
+        => new(SelectedThemeName, CustomThemes, RegionalCultureName, UiCultureName, CheckForUpdatesAtStart, UpdateChannel, ForeignFolderDeletionConfirmed, LoadImagesFromAuthorHosts, HomeLaunch, DiscoverSortOrder, sharedProfileBannerDismissed, DismissedGameRevision, FirstStartedAt, FetchAnnouncements, DismissedAnnouncements, OpenBoreaLinks, BackupRetentionDays, DismissedUntestedGameRevision);
 
     public AppPreferences WithDismissedGameRevision(int? dismissedGameRevision)
-        => new(SelectedThemeName, CustomThemes, RegionalCultureName, UiCultureName, CheckForUpdatesAtStart, UpdateChannel, ForeignFolderDeletionConfirmed, LoadImagesFromAuthorHosts, HomeLaunch, DiscoverSortOrder, SharedProfileBannerDismissed, DismissedBoreaRelease, dismissedGameRevision, FirstStartedAt, FetchAnnouncements, DismissedAnnouncements, OpenBoreaLinks, BackupRetentionDays, DismissedUntestedGameRevision);
+        => new(SelectedThemeName, CustomThemes, RegionalCultureName, UiCultureName, CheckForUpdatesAtStart, UpdateChannel, ForeignFolderDeletionConfirmed, LoadImagesFromAuthorHosts, HomeLaunch, DiscoverSortOrder, SharedProfileBannerDismissed, dismissedGameRevision, FirstStartedAt, FetchAnnouncements, DismissedAnnouncements, OpenBoreaLinks, BackupRetentionDays, DismissedUntestedGameRevision);
 
     public AppPreferences WithFirstStartedAt(DateTimeOffset? firstStartedAt)
-        => new(SelectedThemeName, CustomThemes, RegionalCultureName, UiCultureName, CheckForUpdatesAtStart, UpdateChannel, ForeignFolderDeletionConfirmed, LoadImagesFromAuthorHosts, HomeLaunch, DiscoverSortOrder, SharedProfileBannerDismissed, DismissedBoreaRelease, DismissedGameRevision, firstStartedAt, FetchAnnouncements, DismissedAnnouncements, OpenBoreaLinks, BackupRetentionDays, DismissedUntestedGameRevision);
+        => new(SelectedThemeName, CustomThemes, RegionalCultureName, UiCultureName, CheckForUpdatesAtStart, UpdateChannel, ForeignFolderDeletionConfirmed, LoadImagesFromAuthorHosts, HomeLaunch, DiscoverSortOrder, SharedProfileBannerDismissed, DismissedGameRevision, firstStartedAt, FetchAnnouncements, DismissedAnnouncements, OpenBoreaLinks, BackupRetentionDays, DismissedUntestedGameRevision);
 
     public AppPreferences WithFetchAnnouncements(bool fetchAnnouncements)
-        => new(SelectedThemeName, CustomThemes, RegionalCultureName, UiCultureName, CheckForUpdatesAtStart, UpdateChannel, ForeignFolderDeletionConfirmed, LoadImagesFromAuthorHosts, HomeLaunch, DiscoverSortOrder, SharedProfileBannerDismissed, DismissedBoreaRelease, DismissedGameRevision, FirstStartedAt, fetchAnnouncements, DismissedAnnouncements, OpenBoreaLinks, BackupRetentionDays, DismissedUntestedGameRevision);
+        => new(SelectedThemeName, CustomThemes, RegionalCultureName, UiCultureName, CheckForUpdatesAtStart, UpdateChannel, ForeignFolderDeletionConfirmed, LoadImagesFromAuthorHosts, HomeLaunch, DiscoverSortOrder, SharedProfileBannerDismissed, DismissedGameRevision, FirstStartedAt, fetchAnnouncements, DismissedAnnouncements, OpenBoreaLinks, BackupRetentionDays, DismissedUntestedGameRevision);
 
     public AppPreferences WithOpenBoreaLinks(bool openBoreaLinks)
-        => new(SelectedThemeName, CustomThemes, RegionalCultureName, UiCultureName, CheckForUpdatesAtStart, UpdateChannel, ForeignFolderDeletionConfirmed, LoadImagesFromAuthorHosts, HomeLaunch, DiscoverSortOrder, SharedProfileBannerDismissed, DismissedBoreaRelease, DismissedGameRevision, FirstStartedAt, FetchAnnouncements, DismissedAnnouncements, openBoreaLinks, BackupRetentionDays, DismissedUntestedGameRevision);
+        => new(SelectedThemeName, CustomThemes, RegionalCultureName, UiCultureName, CheckForUpdatesAtStart, UpdateChannel, ForeignFolderDeletionConfirmed, LoadImagesFromAuthorHosts, HomeLaunch, DiscoverSortOrder, SharedProfileBannerDismissed, DismissedGameRevision, FirstStartedAt, FetchAnnouncements, DismissedAnnouncements, openBoreaLinks, BackupRetentionDays, DismissedUntestedGameRevision);
 
     public AppPreferences WithBackupRetentionDays(int? backupRetentionDays)
-        => new(SelectedThemeName, CustomThemes, RegionalCultureName, UiCultureName, CheckForUpdatesAtStart, UpdateChannel, ForeignFolderDeletionConfirmed, LoadImagesFromAuthorHosts, HomeLaunch, DiscoverSortOrder, SharedProfileBannerDismissed, DismissedBoreaRelease, DismissedGameRevision, FirstStartedAt, FetchAnnouncements, DismissedAnnouncements, OpenBoreaLinks, backupRetentionDays, DismissedUntestedGameRevision);
+        => new(SelectedThemeName, CustomThemes, RegionalCultureName, UiCultureName, CheckForUpdatesAtStart, UpdateChannel, ForeignFolderDeletionConfirmed, LoadImagesFromAuthorHosts, HomeLaunch, DiscoverSortOrder, SharedProfileBannerDismissed, DismissedGameRevision, FirstStartedAt, FetchAnnouncements, DismissedAnnouncements, OpenBoreaLinks, backupRetentionDays, DismissedUntestedGameRevision);
 
     public AppPreferences WithDismissedUntestedGameRevision(int? dismissedUntestedGameRevision)
-        => new(SelectedThemeName, CustomThemes, RegionalCultureName, UiCultureName, CheckForUpdatesAtStart, UpdateChannel, ForeignFolderDeletionConfirmed, LoadImagesFromAuthorHosts, HomeLaunch, DiscoverSortOrder, SharedProfileBannerDismissed, DismissedBoreaRelease, DismissedGameRevision, FirstStartedAt, FetchAnnouncements, DismissedAnnouncements, OpenBoreaLinks, BackupRetentionDays, dismissedUntestedGameRevision);
+        => new(SelectedThemeName, CustomThemes, RegionalCultureName, UiCultureName, CheckForUpdatesAtStart, UpdateChannel, ForeignFolderDeletionConfirmed, LoadImagesFromAuthorHosts, HomeLaunch, DiscoverSortOrder, SharedProfileBannerDismissed, DismissedGameRevision, FirstStartedAt, FetchAnnouncements, DismissedAnnouncements, OpenBoreaLinks, BackupRetentionDays, dismissedUntestedGameRevision);
 
     /// <summary>Keeps the last <see cref="MaxDismissedAnnouncements"/> ids of <paramref name="dismissedAnnouncements"/>, which lists the oldest first.</summary>
     public AppPreferences WithDismissedAnnouncements(IEnumerable<string> dismissedAnnouncements)
-        => new(SelectedThemeName, CustomThemes, RegionalCultureName, UiCultureName, CheckForUpdatesAtStart, UpdateChannel, ForeignFolderDeletionConfirmed, LoadImagesFromAuthorHosts, HomeLaunch, DiscoverSortOrder, SharedProfileBannerDismissed, DismissedBoreaRelease, DismissedGameRevision, FirstStartedAt, FetchAnnouncements, dismissedAnnouncements, OpenBoreaLinks, BackupRetentionDays, DismissedUntestedGameRevision);
+        => new(SelectedThemeName, CustomThemes, RegionalCultureName, UiCultureName, CheckForUpdatesAtStart, UpdateChannel, ForeignFolderDeletionConfirmed, LoadImagesFromAuthorHosts, HomeLaunch, DiscoverSortOrder, SharedProfileBannerDismissed, DismissedGameRevision, FirstStartedAt, FetchAnnouncements, dismissedAnnouncements, OpenBoreaLinks, BackupRetentionDays, DismissedUntestedGameRevision);
 
     public string ResolveSelectedThemeName(IReadOnlyCollection<string> bundledThemeNames, string defaultThemeName)
     {

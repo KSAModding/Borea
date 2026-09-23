@@ -9,6 +9,9 @@ public sealed class FileAppPreferencesRepository : IAppPreferencesRepository
 {
     internal const int CurrentFormatVersion = 1;
 
+    /// <summary>The closed update banner of Borea before 0.2.0, which is read and never acted on.</summary>
+    private const string RetiredDismissedReleaseKey = "dismissedBoreaRelease";
+
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
     {
         UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow,
@@ -33,9 +36,10 @@ public sealed class FileAppPreferencesRepository : IAppPreferencesRepository
         try
         {
             var text = await File.ReadAllTextAsync(path, cancellationToken).ConfigureAwait(false);
-            RejectDuplicateProperties(text);
+            using var document = JsonDocument.Parse(text);
+            RejectDuplicateProperties(document.RootElement);
 
-            var dto = JsonSerializer.Deserialize<AppPreferencesDocumentDto>(text, JsonOptions);
+            var dto = document.Deserialize<AppPreferencesDocumentDto>(JsonOptions);
             if (dto is null)
                 return Invalid(path, "The document is empty.");
 
@@ -44,6 +48,10 @@ public sealed class FileAppPreferencesRepository : IAppPreferencesRepository
 
             var preferences = AppPreferencesMapper.FromDto(dto);
             preferences.ValidateBundledThemeNames(bundledThemeNames);
+
+            if (document.RootElement.TryGetProperty(RetiredDismissedReleaseKey, out _))
+                await TryRewriteAsync(preferences, bundledThemeNames, cancellationToken).ConfigureAwait(false);
+
             return new(AppPreferencesLoadStatus.Loaded, preferences);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -109,10 +117,25 @@ public sealed class FileAppPreferencesRepository : IAppPreferencesRepository
         }
     }
 
-    private static void RejectDuplicateProperties(string text)
+    /// <summary>
+    /// Saves a file that still holds a key Borea no longer uses, so the key goes at once
+    /// instead of at the next change of a setting. A failed save leaves it for the next start.
+    /// </summary>
+    private async Task TryRewriteAsync(
+        AppPreferences preferences,
+        IReadOnlyCollection<string> bundledThemeNames,
+        CancellationToken cancellationToken)
     {
-        using var document = JsonDocument.Parse(text);
-        RejectDuplicateProperties(document.RootElement);
+        try
+        {
+            await SaveAsync(preferences, bundledThemeNames, cancellationToken).ConfigureAwait(false);
+        }
+        catch (IOException)
+        {
+        }
+        catch (UnauthorizedAccessException)
+        {
+        }
     }
 
     private static void RejectDuplicateProperties(JsonElement element)

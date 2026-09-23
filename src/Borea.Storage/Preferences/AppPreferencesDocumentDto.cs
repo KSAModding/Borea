@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace Borea.Storage.Preferences;
 
 internal sealed class AppPreferencesDocumentDto
@@ -29,7 +31,11 @@ internal sealed class AppPreferencesDocumentDto
 
     public bool? SharedProfileBannerDismissed { get; set; }
 
-    /// <summary>A release version such as "0.5.0". Null or a version that does not parse reads as none.</summary>
+    /// <summary>
+    /// Written by Borea before 0.2.0, when a closed update banner stayed closed.
+    /// Accepted so that such a file loads, never acted on, and removed when the file is read.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? DismissedBoreaRelease { get; set; }
 
     public int? DismissedGameRevision { get; set; }
