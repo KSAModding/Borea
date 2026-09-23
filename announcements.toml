@@ -1,3 +1,14 @@
 # Posts of the KSAModding team for the Home page of Borea.
 # CONTRIBUTING.md explains how to add one.
 spec_version = 1
+
+[[posts]]
+id = "borea-0-2-0"
+title = "Borea v0.2.0 updates itself"
+date = 2026-09-23T18:00:00Z
+body = """
+Borea v0.2.0 is out, and it is the last version you need to download by hand. From v0.2.0 on, "Update now" on Home installs every new release.
+
+Unpack the `Borea` folder somewhere it can stay, and start it from there.
+"""
+link = "https://github.com/KSAModding/Borea/releases/tag/v0.2.0"
