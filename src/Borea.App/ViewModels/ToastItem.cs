@@ -185,6 +185,7 @@ public sealed partial class ToastItem : ObservableObject
         TaskKind.LibraryFolderChange => Localization.FormatToastLibraryFolderFailed(Subject),
         TaskKind.BackupRestore => Localization.FormatToastBackupRestoreFailed(Subject),
         TaskKind.BackupDelete => Localization.FormatToastBackupDeleteFailed(Subject),
+        TaskKind.BoreaUpdate => Localization.FormatToastSelfUpdateFailed(task.Version ?? string.Empty),
         _ => Localization.FormatToastInstallFailed(Subject),
     };
 

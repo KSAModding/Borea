@@ -16,4 +16,7 @@ public enum TaskKind
     BackupRestore,
     BackupDelete,
     PackUpdate,
+
+    /// <summary>Borea replaces itself with a newer release.</summary>
+    BoreaUpdate,
 }

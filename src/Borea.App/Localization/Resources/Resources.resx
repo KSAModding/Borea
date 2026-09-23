@@ -324,6 +324,9 @@
   <data name="SelfUpdateUnpackingFormat" xml:space="preserve">
     <value>Unpacking Borea {0}</value>
   </data>
+  <data name="SelfUpdateInstallingFormat" xml:space="preserve">
+    <value>Putting Borea {0} in place</value>
+  </data>
   <data name="SelfUpdateReadyFormat" xml:space="preserve">
     <value>Borea {0} is ready. Borea starts the new build now.</value>
   </data>
@@ -603,6 +606,9 @@
   <data name="TaskUpdateAll" xml:space="preserve">
     <value>Update all mods</value>
   </data>
+  <data name="TaskSelfUpdateFormat" xml:space="preserve">
+    <value>Update Borea to {0}</value>
+  </data>
   <data name="TaskRemoveFormat" xml:space="preserve">
     <value>Remove {0}</value>
   </data>
@@ -716,6 +722,9 @@
   </data>
   <data name="ToastUpdateFailedFormat" xml:space="preserve">
     <value>Could not update {0}</value>
+  </data>
+  <data name="ToastSelfUpdateFailedFormat" xml:space="preserve">
+    <value>Could not update Borea to {0}</value>
   </data>
   <data name="ToastUpdateAllFailedFormat" xml:space="preserve">
     <value>Could not update the mods in {0}</value>

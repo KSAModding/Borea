@@ -324,6 +324,9 @@
   <data name="SelfUpdateUnpackingFormat" xml:space="preserve">
     <value>Borea {0} wird entpackt</value>
   </data>
+  <data name="SelfUpdateInstallingFormat" xml:space="preserve">
+    <value>Borea {0} wird eingesetzt</value>
+  </data>
   <data name="SelfUpdateReadyFormat" xml:space="preserve">
     <value>Borea {0} ist bereit. Borea startet jetzt die neue Version.</value>
   </data>
@@ -603,6 +606,9 @@
   <data name="TaskUpdateAll" xml:space="preserve">
     <value>Alle Mods aktualisieren</value>
   </data>
+  <data name="TaskSelfUpdateFormat" xml:space="preserve">
+    <value>Borea auf {0} aktualisieren</value>
+  </data>
   <data name="TaskRemoveFormat" xml:space="preserve">
     <value>{0} entfernen</value>
   </data>
@@ -716,6 +722,9 @@
   </data>
   <data name="ToastUpdateFailedFormat" xml:space="preserve">
     <value>{0} konnte nicht aktualisiert werden</value>
+  </data>
+  <data name="ToastSelfUpdateFailedFormat" xml:space="preserve">
+    <value>Borea konnte nicht auf {0} aktualisiert werden</value>
   </data>
   <data name="ToastUpdateAllFailedFormat" xml:space="preserve">
     <value>Die Mods in {0} konnten nicht aktualisiert werden</value>

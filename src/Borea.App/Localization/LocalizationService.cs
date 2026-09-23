@@ -59,6 +59,9 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string TaskUpdateAll => Resources.TaskUpdateAll;
 
+    public string FormatTaskSelfUpdate(string version)
+        => string.Format(CultureInfo.CurrentCulture, Resources.TaskSelfUpdateFormat, version);
+
     public string FormatTaskRemove(string content)
         => string.Format(CultureInfo.CurrentCulture, Resources.TaskRemoveFormat, content);
 
@@ -159,6 +162,9 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string FormatToastUpdateFailed(string content)
         => string.Format(CultureInfo.CurrentCulture, Resources.ToastUpdateFailedFormat, content);
+
+    public string FormatToastSelfUpdateFailed(string version)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ToastSelfUpdateFailedFormat, version);
 
     public string FormatToastUpdateAllFailed(string instanceName)
         => string.Format(CultureInfo.CurrentCulture, Resources.ToastUpdateAllFailedFormat, instanceName);
@@ -440,6 +446,9 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string FormatSelfUpdateUnpacking(string version)
         => string.Format(CultureInfo.CurrentCulture, Resources.SelfUpdateUnpackingFormat, version);
+
+    public string FormatSelfUpdateInstalling(string version)
+        => string.Format(CultureInfo.CurrentCulture, Resources.SelfUpdateInstallingFormat, version);
 
     public string FormatSelfUpdateReady(string version)
         => string.Format(CultureInfo.CurrentCulture, Resources.SelfUpdateReadyFormat, version);

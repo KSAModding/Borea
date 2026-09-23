@@ -13,7 +13,7 @@ namespace Borea.App.ViewModels;
 /// the task history is saved first, and a self-update that is putting the new
 /// build in place is waited for, because a process that ends inside that step
 /// leaves no program file. A second close request while Borea waits offers to
-/// close at once.
+/// close at once, except while that step runs.
 /// </summary>
 public partial class MainViewModel
 {
@@ -39,7 +39,8 @@ public partial class MainViewModel
     /// <summary>
     /// Returns whether the window may close now. Otherwise the first request
     /// stops the work and calls <paramref name="closeWindow"/> once it ended,
-    /// and a later request opens the Close now modal.
+    /// and a later request opens the Close now modal unless the new build is
+    /// taking the place of this one.
     /// </summary>
     internal bool RequestClose(Action closeWindow)
     {
@@ -51,7 +52,7 @@ public partial class MainViewModel
             _closeWindow = closeWindow;
             _ = CloseAfterTasksAsync();
         }
-        else
+        else if (!IsInstallingSelfUpdate)
         {
             RefreshCloseWaitsFor();
             IsCloseNowOpen = true;
@@ -85,7 +86,10 @@ public partial class MainViewModel
     [RelayCommand]
     private void KeepWaiting() => IsCloseNowOpen = false;
 
-    [RelayCommand]
+    // An end while the new build takes its place leaves the folder with no program file, and that step is short.
+    private bool CanCloseNow() => !IsInstallingSelfUpdate;
+
+    [RelayCommand(CanExecute = nameof(CanCloseNow))]
     private void CloseNow()
     {
         RefreshCloseWaitsFor();
