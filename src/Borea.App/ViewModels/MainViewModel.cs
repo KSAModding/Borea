@@ -627,20 +627,26 @@ public partial class MainViewModel : ViewModelBase
         if (_services is not { } services)
             return;
 
-        var root = services.Paths.GetInstanceRoot(instanceId);
+        var name = InstanceName(instanceId);
+        OpenCreatingFolder(() => services.Paths.GetInstanceRoot(instanceId), () => name);
+    }
+
+    /// <summary>Finds the folder inside the error handling, because finding it can read the disk.</summary>
+    private void OpenCreatingFolder(Func<string> findFolder, Func<string> name)
+    {
         string? error;
         try
         {
-            Directory.CreateDirectory(root);
-            error = TryOpenWithSystem(root);
+            var folder = findFolder();
+            Directory.CreateDirectory(folder);
+            error = TryOpenWithSystem(folder);
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {
             error = exception.Message;
         }
 
-        var name = InstanceName(instanceId);
-        ShowOpenError(() => name, error);
+        ShowOpenError(name, error);
     }
 
     /// <summary>Shows an error toast when a folder, file or link could not be opened.</summary>

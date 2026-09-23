@@ -1086,6 +1086,9 @@
   <data name="ContentEnabled" xml:space="preserve">
     <value>Enabled</value>
   </data>
+  <data name="ContentOpenPage" xml:space="preserve">
+    <value>Open page</value>
+  </data>
   <data name="ContentManage" xml:space="preserve">
     <value>Let Borea manage</value>
   </data>

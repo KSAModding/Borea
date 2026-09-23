@@ -36,6 +36,17 @@ public partial class MainViewModel
         await LoadManualInstallsAsync();
     }
 
+    /// <summary>Opens the mods folder of the instance on the page, where a mod installed by hand goes.</summary>
+    [RelayCommand]
+    private void OpenInstanceModsFolder()
+    {
+        if (_services is not { } services || SelectedInstance is not { } instance)
+            return;
+
+        var folder = services.Paths.GetInstanceModsFolder(instance.InstanceId);
+        OpenCreatingFolder(() => folder, () => PathName(folder));
+    }
+
     private async Task LoadManualInstallsAsync()
     {
         ManualInstallsError = null;

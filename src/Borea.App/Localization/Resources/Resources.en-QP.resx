@@ -933,6 +933,9 @@
   <data name="ContentEnabled" xml:space="preserve">
     <value>Flag hoisted</value>
   </data>
+  <data name="ContentOpenPage" xml:space="preserve">
+    <value>Unroll the chart</value>
+  </data>
   <data name="ContentManage" xml:space="preserve">
     <value>Let The Borea take the helm</value>
   </data>

@@ -1069,17 +1069,13 @@ public sealed partial class ContentItem : ObservableObject, IUpdateRow
     private readonly InstalledMod _mod;
 
     /// <summary>
-    /// Why the remove button is disabled, for its tooltip. Null when the mod can
-    /// be removed, which a mod without a folder always can, because the button
-    /// then only drops its record.
+    /// Why Remove in the row menu is off, which the menu shows below it. Null when
+    /// the mod can be removed, which a mod without a folder always can, because
+    /// Remove then only drops its record.
     /// </summary>
     public string? RemoveBlockedText => IsMissing ? null : _owner.RemoveBlockedReason(_instance, _mod);
 
     public bool CanRemove => RemoveBlockedText is null;
-
-    public string RemoveToolTip => IsMissing
-        ? _owner.Localization.ContentRemoveFromList
-        : RemoveBlockedText ?? _owner.Localization.ContentRemove;
 
     public string RemoveConfirmText => IsMissing
         ? _owner.Localization.ContentRemoveFromListConfirm
@@ -1133,7 +1129,6 @@ public sealed partial class ContentItem : ObservableObject, IUpdateRow
     [NotifyPropertyChangedFor(nameof(CanManage))]
     [NotifyPropertyChangedFor(nameof(RemoveBlockedText))]
     [NotifyPropertyChangedFor(nameof(CanRemove))]
-    [NotifyPropertyChangedFor(nameof(RemoveToolTip))]
     [NotifyPropertyChangedFor(nameof(RemoveConfirmText))]
     [NotifyPropertyChangedFor(nameof(RemoveActionText))]
     private bool _isMissing;
@@ -1255,7 +1250,6 @@ public sealed partial class ContentItem : ObservableObject, IUpdateRow
         OnPropertyChanged(nameof(AuthorsText));
         OnPropertyChanged(nameof(NoPageText));
         OnPropertyChanged(nameof(RemoveBlockedText));
-        OnPropertyChanged(nameof(RemoveToolTip));
         OnPropertyChanged(nameof(RemoveConfirmText));
         OnPropertyChanged(nameof(RemoveActionText));
         OnPropertyChanged(nameof(UpdateText));

@@ -763,6 +763,8 @@ public sealed class LocalizationService : INotifyPropertyChanged
         => FormatCount(count, Resources.InstanceModsMissingOne, Resources.InstanceModsMissingFormat);
     public string ContentEnabled => Resources.ContentEnabled;
 
+    public string ContentOpenPage => Resources.ContentOpenPage;
+
     public string ContentManage => Resources.ContentManage;
 
     public string ContentManageConfirmAction => Resources.ContentManageConfirmAction;
