@@ -27,6 +27,7 @@ public sealed class FileTaskHistoryRepositoryTests : IDisposable
         [
             new(TaskKind.ModInstall, TaskState.Failed, "AdvancedFlightComputer 0.7.5", instanceId, "Main", Start, Start.AddMinutes(2), "The download failed.", "AdvancedFlightComputer", "0.7.5"),
             new(TaskKind.IndexRefresh, TaskState.Finished, null, null, null, Start, Start.AddMinutes(1)),
+            new(TaskKind.BoreaUpdate, TaskState.Failed, null, null, null, Start, Start, "The download failed, so Borea was not changed.", Version: "0.2.1"),
         ];
 
         await _repository.SaveAsync(entries);
