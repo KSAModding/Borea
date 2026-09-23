@@ -541,6 +541,7 @@ public sealed partial class VersionItem : ObservableObject, IInstallRow
     public bool IsIncompatible => Compatibility == GameCompatibility.Incompatible;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanInstall))]
     private bool _isInstalled;
 
     /// <summary>
@@ -614,8 +615,8 @@ public sealed partial class VersionItem : ObservableObject, IInstallRow
 
     public string? AddedModsToolTip => _owner.AddedModsText(PendingPlan, Choices, all: true);
 
-    /// <summary>Mods install into an instance; a loader is set up from the settings.</summary>
-    public bool CanInstall => _release.Type == ContentType.Mod;
+    /// <summary>Mods install into an instance; a loader is set up from the settings. The installed version has nothing to add.</summary>
+    public bool CanInstall => _release.Type == ContentType.Mod && !IsInstalled;
 
     public ReleaseChangelog? Changelog { get; }
 

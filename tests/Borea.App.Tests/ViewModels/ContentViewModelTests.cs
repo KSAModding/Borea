@@ -154,6 +154,7 @@ public sealed class ContentViewModelTests
 
         var rows = viewModel.ContentVersions.ToDictionary(row => row.Version);
         var newer = rows["0.7.5"];
+        Assert.True(newer.CanInstall);
         Assert.Equal("0.7.3", newer.ReplacedVersion);
         Assert.Equal(harness.Localization.FormatContentReplaceVersionIn("0.7.3", "Main"), newer.InstallToolTip);
         Assert.Equal(harness.Localization.FormatContentReplaceVersion("0.7.3"), newer.ConfirmInstallText);
@@ -162,6 +163,7 @@ public sealed class ContentViewModelTests
 
         var installed = rows["0.7.3"];
         Assert.True(installed.IsInstalled);
+        Assert.False(installed.CanInstall);
         Assert.Null(installed.ReplacedVersion);
         Assert.Equal(viewModel.AddToText, installed.InstallToolTip);
         Assert.Equal(harness.Localization.ContentAdd, installed.ConfirmInstallText);
@@ -170,6 +172,7 @@ public sealed class ContentViewModelTests
 
         Assert.Null(newer.ReplacedVersion);
         Assert.Equal(viewModel.AddToText, newer.InstallToolTip);
+        Assert.True(installed.CanInstall);
     }
 
     [Fact]
