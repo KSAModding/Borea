@@ -1,6 +1,7 @@
 using System.CommandLine;
 using System.Globalization;
 using Borea.Cli.Output;
+using Borea.Core.Files;
 using Borea.Core.Instances;
 
 namespace Borea.Cli.Commands;
@@ -17,7 +18,7 @@ internal static class BackupCommands
     {
         var instance = ArgumentRules.Text("instance", InstanceCommand.InstanceArgumentDescription);
         var json = ArgumentRules.Json();
-        var list = new Command("backups", "Print the backups of the saves and vehicles of an instance, newest first.");
+        var list = new Command("backups", "Print the backups of the saves and vehicles of an instance, newest first, with when and why each was made and its size.");
         list.Arguments.Add(instance);
         list.Options.Add(json);
 
@@ -40,7 +41,7 @@ internal static class BackupCommands
 
             var nameWidth = backups.Max(backup => backup.Name.Length);
             foreach (var backup in backups)
-                output.WriteLine($"{Timestamp(backup.CreatedAt)}  {KindName(backup.Kind) ?? "unknown",-7}  {backup.Name.PadRight(nameWidth)}  {ReasonName(backup.Reason),-9}  {backup.Id}");
+                output.WriteLine($"{Timestamp(backup.CreatedAt)}  {KindName(backup.Kind) ?? "unknown",-7}  {backup.Name.PadRight(nameWidth)}  {ReasonName(backup.Reason),-9}  {ByteSize.Format(backup.SizeBytes, CultureInfo.InvariantCulture),8}  {backup.Id}");
 
             return ExitCodes.Done;
         }));

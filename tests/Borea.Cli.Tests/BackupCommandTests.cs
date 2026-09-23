@@ -1,3 +1,4 @@
+using System.Globalization;
 using Borea.Core.Instances;
 using Borea.Storage.Instances;
 
@@ -20,6 +21,23 @@ public sealed class BackupCommandTests : IDisposable
         Assert.Equal(0, human.ExitCode);
         Assert.Contains("No backups of 'Alpha'.", human.Output);
         Assert.Empty(json.Json.EnumerateArray());
+    }
+
+    [Fact]
+    public async Task Backups_HumanLinePrintsTheTimeTheSizeAndWhatHappened()
+    {
+        var instanceId = await CreateInstanceAsync();
+        await new FileGameSaveStore(_host.Paths).DeleteAsync(instanceId, await AddSaveAsync(instanceId, "Orbit", 1500));
+        var backup = Assert.Single(await new FileGameSaveBackupStore(_host.Paths).ListAsync(instanceId));
+
+        var human = await _host.RunAsync("instance", "backups", "Alpha");
+
+        var line = Assert.Single(human.Output.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
+        Assert.StartsWith(backup.CreatedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture), line);
+        Assert.Contains("Orbit", line);
+        Assert.Contains("deleted", line);
+        Assert.Contains(" 1.5 KB ", line);
+        Assert.EndsWith(backup.Id, line);
     }
 
     [Fact]

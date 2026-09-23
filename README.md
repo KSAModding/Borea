@@ -193,8 +193,8 @@ The exit code is 0 when the command completed, 1 when the operation failed and t
 | `borea instance adopt <instance> <folder> --archive <path>` | Record a mod folder that Borea did not install as the index release its archive matches. |
 | `borea instance take-ownership <instance> <mod-id>` | Install the release a mod is recorded as over its folder, so Borea owns its files and can update and remove it. Files in the folder that the release does not hold are lost. |
 | `borea instance import-profile <name> [--dry-run]` | Create an instance from copies of the mods in the shared profile, with the same load order and enabled state. The shared profile stays as it is. |
-| `borea instance backups <instance>` | Print the backups of the saves and vehicles of an instance, newest first. |
-| `borea instance restore-backup <instance> <backup> [--replace]` | Put a backup back where it came from. `--replace` first moves a save or vehicle of the same name into the backups. |
+| `borea instance backups <instance>` | Print the backups of the saves and vehicles of an instance, newest first, with when and why each was made and its size. |
+| `borea instance restore-backup <instance> <backup> [--replace]` | Put a backup back where it came from. `--replace` first moves a save or vehicle of the same name into the backups. Close the game first. |
 | `borea instance delete-backup <instance> <backup>` | Delete a backup for good. |
 | `borea enable <mod-id> [--instance <instance>]` | Make the game load a mod. |
 | `borea disable <mod-id> [--instance <instance>]` | Stop the game from loading a mod. |
