@@ -316,6 +316,7 @@ public sealed class UpdateNoticeViewModelTests
         using var harness = await ViewModelHarness.CreateAsync(respond: ReleaseAt("v999.0.0"), selfUpdater: new WaitingSelfUpdater(install.Task));
         var viewModel = harness.ViewModel;
         await viewModel.WhenUpdateCheckedAsync();
+        await viewModel.Tasks.WhenSavedAsync();
         var closed = false;
 
         // nothing holds the window before the update starts
