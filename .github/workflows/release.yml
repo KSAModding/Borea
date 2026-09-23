@@ -569,7 +569,8 @@ jobs:
 
           The builds include the .NET runtime and are self-contained, so there is nothing to install first.
 
-          Each archive contains `borea` (`borea.exe` on Windows), `LICENSE` and `THIRD-PARTY-NOTICES.txt`.
+          Each archive contains `borea` (`borea.exe` on Windows), `LICENSE` and `THIRD-PARTY-NOTICES.txt`, in a folder named `Borea`, or `Borea-Cli` for the CLI archive.
+          Put that folder where it can stay, for example `%LocalAppData%\Programs\Borea` on Windows or `~/.local/share/Borea` on Linux, because Borea updates itself into the folder it runs from.
 
           ### First start
 
