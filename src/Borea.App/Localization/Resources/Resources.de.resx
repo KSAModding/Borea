@@ -1191,6 +1191,27 @@
   <data name="DiscoverEmpty" xml:space="preserve">
     <value>Keine passenden Inhalte.</value>
   </data>
+  <data name="DiscoverCountModOne" xml:space="preserve">
+    <value>1 Mod</value>
+  </data>
+  <data name="DiscoverCountModsFormat" xml:space="preserve">
+    <value>{0} Mods</value>
+  </data>
+  <data name="DiscoverCountLoaderOne" xml:space="preserve">
+    <value>1 Mod-Loader</value>
+  </data>
+  <data name="DiscoverCountLoadersFormat" xml:space="preserve">
+    <value>{0} Mod-Loader</value>
+  </data>
+  <data name="DiscoverCountPackOne" xml:space="preserve">
+    <value>1 Modpack</value>
+  </data>
+  <data name="DiscoverCountPacksFormat" xml:space="preserve">
+    <value>{0} Modpacks</value>
+  </data>
+  <data name="DiscoverCountShownFormat" xml:space="preserve">
+    <value>{0} von {1}</value>
+  </data>
   <data name="DiscoverLoading" xml:space="preserve">
     <value>Inhalte werden geladen...</value>
   </data>

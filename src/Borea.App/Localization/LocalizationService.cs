@@ -1681,6 +1681,19 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string FormatDiscoverIndexStale(string age)
         => string.Format(CultureInfo.CurrentCulture, Resources.DiscoverIndexStaleFormat, age);
 
+    public string FormatDiscoverModCount(int count)
+        => FormatCount(count, Resources.DiscoverCountModOne, Resources.DiscoverCountModsFormat);
+
+    public string FormatDiscoverLoaderCount(int count)
+        => FormatCount(count, Resources.DiscoverCountLoaderOne, Resources.DiscoverCountLoadersFormat);
+
+    public string FormatDiscoverPackCount(int count)
+        => FormatCount(count, Resources.DiscoverCountPackOne, Resources.DiscoverCountPacksFormat);
+
+    /// <summary>"5 of 12 mods", where <paramref name="total"/> is the count as the unfiltered list names it.</summary>
+    public string FormatDiscoverCountShown(int shown, string total)
+        => string.Format(CultureInfo.CurrentCulture, Resources.DiscoverCountShownFormat, shown, total);
+
     public string FormatListingDownloading(string size)
         => string.Format(CultureInfo.CurrentCulture, Resources.ListingDownloadingFormat, size);
 

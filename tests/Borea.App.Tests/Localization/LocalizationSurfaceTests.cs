@@ -43,6 +43,9 @@ public sealed class LocalizationSurfaceTests : IDisposable
         Assert.Equal("Installed StarMap 0.4.6 to loaders.", service.FormatSetupLoaderInstalled("StarMap", "0.4.6", "loaders"));
         Assert.Equal("Replace 0.7.3 in Main", service.FormatContentReplaceVersionIn("0.7.3", "Main"));
         Assert.Equal("1 of 3 selected", service.FormatGameSaveProfileSelected(1, 3));
+        Assert.Equal("1 mod", service.FormatDiscoverModCount(1));
+        Assert.Equal("1 modpack", service.FormatDiscoverPackCount(1));
+        Assert.Equal("0 of 1 mod loader", service.FormatDiscoverCountShown(0, service.FormatDiscoverLoaderCount(1)));
         Assert.Equal("just now", service.FormatTimeAgo(TimeSpan.FromSeconds(-5)));
         Assert.Equal("1 minute ago", service.FormatTimeAgo(TimeSpan.FromSeconds(90)));
         Assert.Equal("5 hours ago", service.FormatTimeAgo(TimeSpan.FromHours(5.5)));

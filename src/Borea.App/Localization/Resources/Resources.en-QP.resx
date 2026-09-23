@@ -1038,6 +1038,27 @@
   <data name="DiscoverEmpty" xml:space="preserve">
     <value>Thar ain't any booty matches.</value>
   </data>
+  <data name="DiscoverCountModOne" xml:space="preserve">
+    <value>1 barrel o' fun</value>
+  </data>
+  <data name="DiscoverCountModsFormat" xml:space="preserve">
+    <value>{0} barrels o' fun</value>
+  </data>
+  <data name="DiscoverCountLoaderOne" xml:space="preserve">
+    <value>1 loader o' barrels o' fun</value>
+  </data>
+  <data name="DiscoverCountLoadersFormat" xml:space="preserve">
+    <value>{0} loaders o' barrels o' fun</value>
+  </data>
+  <data name="DiscoverCountPackOne" xml:space="preserve">
+    <value>1 pack o' barrels o' fun</value>
+  </data>
+  <data name="DiscoverCountPacksFormat" xml:space="preserve">
+    <value>{0} packs o' barrels o' fun</value>
+  </data>
+  <data name="DiscoverCountShownFormat" xml:space="preserve">
+    <value>{0} o' {1}</value>
+  </data>
   <data name="DiscoverLoading" xml:space="preserve">
     <value>Bringin' in the tide o' booty</value>
   </data>
