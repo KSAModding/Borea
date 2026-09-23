@@ -374,6 +374,12 @@
         </Style>
 
         <!-- Buttons -->
+        <Style Selector="Button, ToggleSwitch, ComboBox, CheckBox, RadioButton">
+            <Setter Property="Cursor" Value="Hand" />
+        </Style>
+        <Style Selector="Button:disabled, ToggleSwitch:disabled, ComboBox:disabled, CheckBox:disabled, RadioButton:disabled">
+            <Setter Property="Cursor" Value="Arrow" />
+        </Style>
         <Style Selector="Button.text">
             <Setter Property="Padding" Value="12,6" />
             <Setter Property="CornerRadius" Value="100" />
@@ -545,10 +551,7 @@
         <Style Selector="Button.plain:pressed /template/ ContentPresenter">
             <Setter Property="Background" Value="Transparent" />
         </Style>
-        <!-- a plain button carries its own content, so a disabled one keeps it and only loses the pointer -->
-        <Style Selector="Button.plain:disabled">
-            <Setter Property="Cursor" Value="Arrow" />
-        </Style>
+        <!-- a plain button carries its own content, so a disabled one keeps it -->
         <Style Selector="Button.plain:disabled /template/ ContentPresenter">
             <Setter Property="Background" Value="Transparent" />
             <Setter Property="Foreground" Value="{StaticResource Brush.Text}" />
@@ -649,7 +652,6 @@
             <Setter Property="HorizontalContentAlignment" Value="Center" />
             <Setter Property="VerticalContentAlignment" Value="Center" />
             <Setter Property="VerticalAlignment" Value="Center" />
-            <Setter Property="Cursor" Value="Hand" />
             <Setter Property="Content">
                 <Template>
                     <Path Classes="icon size-16" Data="{StaticResource Icon.Question}" />
