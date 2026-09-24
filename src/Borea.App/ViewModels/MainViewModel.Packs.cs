@@ -576,11 +576,35 @@ public partial class MainViewModel
         if (result.IsComplete)
             return null;
 
-        var incomplete = result.Members.Count(member => !PackResultItem.IsDone(member.Status));
-        var summary = Localization.FormatPackIncomplete(incomplete, result.Members.Count);
-        var details = result.Plan is null ? string.Empty : Describe(result.Plan.Conflicts.Concat(result.Plan.UnresolvedChoices));
-        pack.InstallError = details.Length == 0 ? summary : $"{summary} {details}";
+        pack.InstallError = IncompleteText(result);
         return null;
+    }
+
+    /// <summary>Names each member that kept the pack from installing and why.</summary>
+    internal string IncompleteText(ModPackInstallResult result)
+    {
+        var reasons = result.Blockers.Select(BlockerText).Append(Describe(result.PackReasons)).Where(reason => reason.Length > 0).Distinct().ToList();
+        if (reasons.Count == 0)
+            reasons.Add(Localization.PackInstanceChanged);
+
+        var failed = result.Blockers.Count > 0 ? result.Blockers.Count : result.Members.Count(member => !PackResultItem.IsDone(member.Status));
+        reasons.Add(result.Members.Any(member => member.Status is ModPackMemberStatus.Installed or ModPackMemberStatus.Replaced)
+            ? Localization.FormatPackIncomplete(failed, result.Members.Count)
+            : Localization.PackNothingInstalled);
+        return string.Join(" ", reasons);
+    }
+
+    private string BlockerText(ModPackBlocker blocker)
+    {
+        var (modId, version) = (blocker.Member.ModId, blocker.Member.Version.ToString());
+        return blocker.Member.Status == ModPackMemberStatus.Failed
+            ? Localization.FormatPackMemberFailed(modId, version, blocker.Member.Message)
+            : blocker.Warning switch
+            {
+                { Kind: PlanningMessageKind.UnlistedPin } => Localization.FormatPackMemberUnlisted(modId, version),
+                { Kind: PlanningMessageKind.YankedPin } => Localization.FormatPackMemberNotConfirmed(modId, version),
+                _ => Localization.FormatPackMemberUnresolved(modId, version),
+            };
     }
 }
 

@@ -2715,6 +2715,24 @@
   <data name="PackIncompleteFormat" xml:space="preserve">
     <value>{0} von {1} Mods wurden nicht installiert.</value>
   </data>
+  <data name="PackMemberUnlistedFormat" xml:space="preserve">
+    <value>{0} {1} ist nicht im Inhaltsindex.</value>
+  </data>
+  <data name="PackMemberNotConfirmedFormat" xml:space="preserve">
+    <value>{0} {1} wurde zurückgezogen, und die Installation wurde dafür nicht bestätigt.</value>
+  </data>
+  <data name="PackMemberUnresolvedFormat" xml:space="preserve">
+    <value>Borea konnte {0} {1} nicht auflösen.</value>
+  </data>
+  <data name="PackMemberFailedFormat" xml:space="preserve">
+    <value>{0} {1} wurde nicht installiert.</value>
+  </data>
+  <data name="PackInstanceChanged" xml:space="preserve">
+    <value>Die Instanz hat sich während der Installation des Modpacks geändert.</value>
+  </data>
+  <data name="PackNothingInstalled" xml:space="preserve">
+    <value>Es wurde nichts installiert.</value>
+  </data>
   <data name="PackUntestedFormat" xml:space="preserve">
     <value>Dieses Modpack ist nicht mit dem installierten Spiel getestet, das neuer als {0} ist.</value>
   </data>

@@ -1538,6 +1538,10 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string PackResultNotAttempted => Resources.PackResultNotAttempted;
 
+    public string PackInstanceChanged => Resources.PackInstanceChanged;
+
+    public string PackNothingInstalled => Resources.PackNothingInstalled;
+
     public string ReleaseStable => Resources.ReleaseStable;
 
     public string ReleaseTesting => Resources.ReleaseTesting;
@@ -1970,6 +1974,21 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string FormatPackIncomplete(int failed, int total)
         => string.Format(CultureInfo.CurrentCulture, Resources.PackIncompleteFormat, failed, total);
+
+    public string FormatPackMemberUnlisted(string modId, string version)
+        => string.Format(CultureInfo.CurrentCulture, Resources.PackMemberUnlistedFormat, modId, version);
+
+    public string FormatPackMemberNotConfirmed(string modId, string version)
+        => string.Format(CultureInfo.CurrentCulture, Resources.PackMemberNotConfirmedFormat, modId, version);
+
+    public string FormatPackMemberUnresolved(string modId, string version)
+        => string.Format(CultureInfo.CurrentCulture, Resources.PackMemberUnresolvedFormat, modId, version);
+
+    public string FormatPackMemberFailed(string modId, string version, string? reason)
+    {
+        var text = string.Format(CultureInfo.CurrentCulture, Resources.PackMemberFailedFormat, modId, version);
+        return string.IsNullOrWhiteSpace(reason) ? text : $"{text} {reason}";
+    }
 
     public string FormatPackUntested(string gameMax)
         => string.Format(CultureInfo.CurrentCulture, Resources.PackUntestedFormat, gameMax);

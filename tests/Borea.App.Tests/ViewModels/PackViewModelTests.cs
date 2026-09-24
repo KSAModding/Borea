@@ -4,12 +4,14 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Security.Cryptography;
 using System.Text.Json.Nodes;
+using Borea.App.Localization;
 using Borea.App.ViewModels;
 using Borea.Core.Game;
 using Borea.Core.History;
 using Borea.Core.Instances;
 using Borea.Core.ModPacks;
 using Borea.Core.Mods;
+using Borea.Core.Planning;
 using Borea.Core.Preferences;
 
 namespace Borea.App.Tests.ViewModels;
@@ -326,8 +328,75 @@ public sealed class PackViewModelTests
         var result = Assert.Single(pack.Results);
         Assert.Equal(ModPackMemberStatus.Failed, result.Status);
         Assert.DoesNotContain("confirmation", result.Message ?? string.Empty);
-        Assert.Equal(harness.Localization.FormatPackIncomplete(1, 1), pack.InstallError);
+        Assert.StartsWith(harness.Localization.FormatPackMemberFailed("KSArmory", "0.8.44", null), pack.InstallError);
+        Assert.EndsWith(harness.Localization.PackNothingInstalled, pack.InstallError);
         Assert.Empty((await harness.Services.Instances.GetByIdAsync(instance.InstanceId))!.Mods);
+    }
+
+    [Fact]
+    public async Task Install_UnconfirmedYankedMember_NamesThatMember()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: snapshot =>
+            WithPacks(Pack("armory-pack", "Armory Pack", Version("1.0.0", Pin("KSArmory", "0.8.44"), Pin("MeasureTools", "1.1.10"))))(Yank(snapshot, "0.8.44", "Broken build.")));
+        var viewModel = harness.ViewModel;
+        var instance = await ActivateInstanceAsync(harness);
+        viewModel.ShowDiscoverModpacksCommand.Execute(null);
+        var pack = Assert.Single(viewModel.DiscoverPacks);
+        await pack.InstallCommand.ExecuteAsync(null);
+        pack.PendingInstall = pack.PendingInstall! with { ProceedWithYankedMembers = null };
+
+        await pack.ConfirmInstallCommand.ExecuteAsync(null);
+
+        var expected = $"{harness.Localization.FormatPackMemberNotConfirmed("KSArmory", "0.8.44")} {harness.Localization.PackNothingInstalled}";
+        Assert.Equal(expected, pack.InstallError);
+        Assert.Equal(expected, viewModel.Tasks.History[0].FailureReason);
+        Assert.Empty((await harness.Services.Instances.GetByIdAsync(instance.InstanceId))!.Mods);
+    }
+
+    [Fact]
+    public async Task Install_UnlistedMember_NamesItInTheTaskAndTheLogAndInstallsNothing()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: WithPacks(
+            Pack("test-pack", "Test Pack", Version("1.0.0", Pin("MeasureTools", "1.1.10"), Pin("KSArmory", "0.8.44"), Pin("NotListedMod", "1.0.0")))));
+        var viewModel = harness.ViewModel;
+        var instance = await ActivateInstanceAsync(harness);
+        viewModel.ShowDiscoverModpacksCommand.Execute(null);
+        var pack = Assert.Single(viewModel.DiscoverPacks);
+        await pack.InstallCommand.ExecuteAsync(null);
+
+        await pack.ConfirmInstallCommand.ExecuteAsync(null);
+
+        var expected = $"{harness.Localization.FormatPackMemberUnlisted("NotListedMod", "1.0.0")} {harness.Localization.PackNothingInstalled}";
+        Assert.Equal(expected, pack.InstallError);
+        var task = viewModel.Tasks.History[0];
+        Assert.Equal(TaskState.Failed, task.State);
+        Assert.Equal(expected, task.FailureReason);
+        Assert.Contains(harness.Services.Log.ReadRecentLines(100), line =>
+            line.Contains($"Pack test-pack 1.0.0 into instance {instance.InstanceId} did not complete, 0 of 3 members done. Blocked by: NotListedMod 1.0.0: The exact pinned release is not listed.", StringComparison.Ordinal));
+        Assert.Equal(2, pack.Results.Count(result => result.Status == ModPackMemberStatus.NotAttempted));
+        Assert.Empty((await harness.Services.Instances.GetByIdAsync(instance.InstanceId))!.Mods);
+    }
+
+    [Fact]
+    public async Task IncompleteText_NamesAPackReasonOnceAndCountsOnlyTheMembersThatDidNotInstall()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var localization = harness.Localization;
+        var retraction = new PlanningMessage("test-pack", PlanningMessageKind.RetractedPack) { Value = "Broken pack." };
+        static ModPackMemberResult Member(string id, ModPackMemberStatus status, string? message = null) => new(id, ModVersion.Parse("1.0.0"), InstallReason.ModPack, status, message);
+        static ModPackInstallResult Result(ModPackMemberResult[] members, params PlanningMessage[] warnings) => new(Guid.NewGuid(), null, members, warnings, isComplete: false);
+
+        var changed = harness.ViewModel.IncompleteText(Result(
+            [Member("First", ModPackMemberStatus.Installed), Member("Second", ModPackMemberStatus.NotAttempted, "The instance changed during pack installation.")]));
+        var failed = harness.ViewModel.IncompleteText(Result(
+            [Member("First", ModPackMemberStatus.Installed), Member("Second", ModPackMemberStatus.Failed, "The archive hash did not match."), Member("Third", ModPackMemberStatus.NotAttempted, "An earlier operation failed.")]));
+        var retracted = harness.ViewModel.IncompleteText(Result(
+            [Member("First", ModPackMemberStatus.Unresolved, "Caller confirmation is required for the retracted pack version."), Member("Second", ModPackMemberStatus.Unresolved, "Caller confirmation is required for the retracted pack version.")],
+            retraction));
+
+        Assert.Equal($"{localization.PackInstanceChanged} {localization.FormatPackIncomplete(1, 2)}", changed);
+        Assert.Equal($"{localization.FormatPackMemberFailed("Second", "1.0.0", "The archive hash did not match.")} {localization.FormatPackIncomplete(1, 3)}", failed);
+        Assert.Equal($"test-pack: {PlanningText.Message(retraction)} {localization.PackNothingInstalled}", retracted);
     }
 
     [Fact]
