@@ -77,6 +77,12 @@ public sealed class ModPackInstallResult
     /// <summary>A stop kept at least one member from running.</summary>
     public bool IsStopped { get; }
 
+    /// <summary>The reasons that hold for the whole pack, a retraction that was not confirmed or the conflicts and open choices of a plan that is not ready.</summary>
+    public IReadOnlyList<PlanningMessage> PackReasons { get; }
+
+    /// <summary>The unresolved and failed members. Empty when <see cref="PackReasons"/> says why.</summary>
+    public IReadOnlyList<ModPackBlocker> Blockers { get; }
+
     public ModPackInstallResult(Guid instanceId, InstallPlan? plan, IReadOnlyList<ModPackMemberResult> members, IReadOnlyList<PlanningMessage> warnings, bool isComplete, bool isStopped = false)
     {
         InstanceId = instanceId;
@@ -85,5 +91,36 @@ public sealed class ModPackInstallResult
         Warnings = warnings;
         IsComplete = isComplete;
         IsStopped = isStopped;
+        PackReasons = plan is { IsReady: false }
+            ? [.. plan.Conflicts, .. plan.UnresolvedChoices]
+            : [.. warnings.Where(warning => warning.Kind == PlanningMessageKind.RetractedPack)];
+        Blockers = PackReasons.Count > 0
+            ? []
+            : members
+                .Where(member => member.Status is ModPackMemberStatus.Unresolved or ModPackMemberStatus.Failed)
+                .Select(member => new ModPackBlocker(member, member.Status == ModPackMemberStatus.Unresolved ? WarningOf(member) : null))
+                .ToList();
     }
+
+    /// <summary>
+    /// What kept the pack from installing completely, in English for the CLI and the log. Without a blocker or a pack reason,
+    /// the members that were not tried say why, unless a stop was requested.
+    /// </summary>
+    public string DescribeBlockers()
+    {
+        var reasons = Blockers
+            .Select(blocker => $"{blocker.Member.ModId} {blocker.Member.Version}: {blocker.Member.Message}")
+            .Concat(PackReasons.Select(message => $"{message.ModId}: {message.Message}"))
+            .Distinct()
+            .ToList();
+        if (reasons.Count == 0 && !IsStopped)
+            reasons = Members.Where(member => member.Status == ModPackMemberStatus.NotAttempted).Select(member => member.Message ?? string.Empty).Distinct().ToList();
+        return string.Join(" ", reasons);
+    }
+
+    private PlanningMessage? WarningOf(ModPackMemberResult member) =>
+        Warnings.FirstOrDefault(warning => (warning.Kind is PlanningMessageKind.UnlistedPin or PlanningMessageKind.YankedPin) && ModIds.Equals(warning.ModId, member.ModId));
 }
+
+/// <param name="Warning">The warning that says why an unresolved member is unresolved, or null for a failed member, whose message says why.</param>
+public sealed record ModPackBlocker(ModPackMemberResult Member, PlanningMessage? Warning);

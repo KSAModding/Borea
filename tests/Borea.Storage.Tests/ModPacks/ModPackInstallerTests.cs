@@ -161,6 +161,8 @@ public sealed class ModPackInstallerTests
         var accepted = await services.InstallAsync(Request(instance.InstanceId, pack, repository) with { ProceedWithRetractedPack = true, ProceedWithYankedMembers = new HashSet<string> { "member" } });
 
         Assert.Contains(retracted.Warnings, value => value.Code == "retracted-pack");
+        Assert.Empty(retracted.Blockers);
+        Assert.Equal("Pack: Broken pack.", retracted.DescribeBlockers());
         Assert.Contains(yankedResult.Warnings, value => value.Code == "yanked");
         Assert.True(accepted.IsComplete);
     }
@@ -221,6 +223,8 @@ public sealed class ModPackInstallerTests
         Assert.False(result.IsComplete);
         Assert.Equal(ModPackMemberStatus.Installed, Assert.Single(result.Members, value => value.ModId == "First").Status);
         Assert.Equal(ModPackMemberStatus.NotAttempted, Assert.Single(result.Members, value => value.ModId == "Second").Status);
+        Assert.Empty(result.Blockers);
+        Assert.Equal("The instance changed during pack installation.", result.DescribeBlockers());
         Assert.Equal(1, installer.Counts["First"]);
         Assert.False(installer.Counts.ContainsKey("Second"));
     }
