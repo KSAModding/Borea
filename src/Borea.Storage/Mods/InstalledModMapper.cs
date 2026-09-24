@@ -13,6 +13,7 @@ public static class InstalledModMapper
         Checksum = mod.Checksum,
         Ownership = mod.Ownership.ToString(),
         OwnershipToken = mod.OwnershipToken,
+        Storage = mod.Storage.ToString(),
         Metadata = ModVersionMetadataMapper.ToDto(mod.Metadata),
     };
 
@@ -26,5 +27,8 @@ public static class InstalledModMapper
         string.IsNullOrWhiteSpace(dto.Ownership)
             ? ModInstallOwnership.Borea
             : Enum.Parse<ModInstallOwnership>(dto.Ownership),
-        dto.OwnershipToken);
+        dto.OwnershipToken,
+        string.IsNullOrWhiteSpace(dto.Storage)
+            ? ModStorage.Private
+            : Enum.Parse<ModStorage>(dto.Storage));
 }

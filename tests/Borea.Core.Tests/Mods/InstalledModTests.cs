@@ -5,6 +5,8 @@ namespace Borea.Core.Tests.Mods;
 
 public sealed class InstalledModTests
 {
+    private const string Sha256 = "0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF";
+
     [Fact]
     public void Constructor_ValidInput_SetsAllProperties()
     {
@@ -71,6 +73,32 @@ public sealed class InstalledModTests
             "test-mod", ModVersion.Parse("1.0.0"), InstallReason.Manual, DateTimeOffset.UtcNow, metadata, "abc123");
 
         Assert.Equal("abc123", withChecksum.Checksum);
+    }
+
+    [Fact]
+    public void Constructor_LinkedWithChecksumAndNoToken_CanDeleteItsFiles()
+    {
+        var metadata = TestFixtures.SampleVersionMetadata("test-mod");
+
+        var linked = new InstalledMod(
+            "test-mod", ModVersion.Parse("1.0.0"), InstallReason.Manual, DateTimeOffset.UtcNow, metadata, Sha256, storage: ModStorage.Linked);
+
+        Assert.Equal(ModStorage.Linked, linked.Storage);
+        Assert.True(linked.CanDeleteFiles);
+    }
+
+    [Theory]
+    [InlineData(ModInstallOwnership.Foreign, Sha256, null)]
+    [InlineData(ModInstallOwnership.Borea, null, null)]
+    [InlineData(ModInstallOwnership.Borea, "ABCD", null)]
+    [InlineData(ModInstallOwnership.Borea, "../../../../0123456789abcdef0123456789abcdef0123456789abcdef0123", null)]
+    [InlineData(ModInstallOwnership.Borea, Sha256, "token")]
+    public void Constructor_LinkedWithoutItsProof_ThrowsArgumentException(ModInstallOwnership ownership, string? checksum, string? ownershipToken)
+    {
+        var metadata = TestFixtures.SampleVersionMetadata("test-mod");
+
+        Assert.Throws<ArgumentException>(() => new InstalledMod(
+            "test-mod", ModVersion.Parse("1.0.0"), InstallReason.Manual, DateTimeOffset.UtcNow, metadata, checksum, ownership, ownershipToken, ModStorage.Linked));
     }
 
     [Fact]

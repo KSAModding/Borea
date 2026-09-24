@@ -16,6 +16,9 @@ public sealed class InstalledModDto
     public string? Ownership { get; set; }
     public string? OwnershipToken { get; set; }
 
+    /// <summary>ModStorage as a string. Absent means Private.</summary>
+    public string? Storage { get; set; }
+
     /// <summary>The release the mod was installed from.</summary>
     public ModVersionMetadataDto Metadata { get; set; } = new();
 }
