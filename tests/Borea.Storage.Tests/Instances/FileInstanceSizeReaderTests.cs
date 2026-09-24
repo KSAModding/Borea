@@ -1,3 +1,4 @@
+using Borea.Storage.Files;
 using Borea.Storage.Instances;
 using Borea.Storage.Tests.Paths;
 
@@ -18,8 +19,7 @@ public sealed class FileInstanceSizeReaderTests : IDisposable
 
     public void Dispose()
     {
-        if (Directory.Exists(_tempRoot))
-            Directory.Delete(_tempRoot, recursive: true);
+        DirectoryLinks.DeleteTreeWithoutFollowingLinks(_tempRoot);
     }
 
     [Fact]
@@ -40,6 +40,21 @@ public sealed class FileInstanceSizeReaderTests : IDisposable
         Assert.Equal(4100L, sizes.ModBytes["advancedflightcomputer"]);
         Assert.Equal(50L, sizes.ModBytes["KSArmory"]);
         Assert.Equal(2, sizes.ModBytes.Count);
+    }
+
+    [Fact]
+    public async Task ReadAsync_ModFolderLinkedToTheStore_CountsTheStoredRelease()
+    {
+        var stored = Path.Combine(_paths.GetStaticModFilesRoot(), "KSArmory", "1.0.0");
+        Write(Path.Combine(stored, "mod.toml"), 50);
+        Write(Path.Combine(stored, "bin", "armory.dll"), 3000);
+        Assert.True(new DirectoryLinker().TryCreate(Path.Combine(_paths.GetInstanceModsFolder(_instanceId), "KSArmory"), stored).Linked);
+        Write(_paths.GetInstanceSettingsPath(_instanceId), 12);
+
+        var sizes = await _reader.ReadAsync(_instanceId);
+
+        Assert.Equal(3050L, sizes.ModBytes["KSArmory"]);
+        Assert.Equal(3062L, sizes.TotalBytes);
     }
 
     [Fact]

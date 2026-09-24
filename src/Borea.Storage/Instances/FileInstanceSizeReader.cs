@@ -6,7 +6,8 @@ namespace Borea.Storage.Instances;
 
 /// <summary>
 /// Adds up the files under the instance folder and under each mod folder,
-/// the way <see cref="FileGameDataReader"/> does for the game data rows.
+/// the way <see cref="FileGameDataReader"/> does for the game data rows. A mod
+/// folder that links to the shared mod store counts the release it links to.
 /// </summary>
 public sealed class FileInstanceSizeReader : IInstanceSizeReader
 {
@@ -21,6 +22,12 @@ public sealed class FileInstanceSizeReader : IInstanceSizeReader
     {
         IgnoreInaccessible = true,
         AttributesToSkip = FileAttributes.ReparsePoint,
+    };
+
+    private static readonly EnumerationOptions TopFoldersWithLinks = new()
+    {
+        IgnoreInaccessible = true,
+        AttributesToSkip = 0,
     };
 
     /// <summary>Paths compare the way the file system does: without case on Windows and macOS.</summary>
@@ -51,7 +58,7 @@ public sealed class FileInstanceSizeReader : IInstanceSizeReader
         if (modsFolder.Exists)
         {
             total += Size(modsFolder, cancellationToken, skip: null, recurse: false);
-            foreach (var folder in Children(modsFolder))
+            foreach (var folder in Children(modsFolder, TopFoldersWithLinks))
             {
                 var size = Size(folder, cancellationToken);
                 mods[folder.Name] = size;
@@ -104,11 +111,11 @@ public sealed class FileInstanceSizeReader : IInstanceSizeReader
         return size;
     }
 
-    private static IEnumerable<DirectoryInfo> Children(DirectoryInfo folder)
+    private static IEnumerable<DirectoryInfo> Children(DirectoryInfo folder, EnumerationOptions? options = null)
     {
         try
         {
-            return folder.EnumerateDirectories("*", TopFiles).ToList();
+            return folder.EnumerateDirectories("*", options ?? TopFiles).ToList();
         }
         catch (DirectoryNotFoundException)
         {
