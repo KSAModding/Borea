@@ -189,7 +189,14 @@ public partial class MainViewModel
     /// page the content was opened from, an instance leads to the Library, and the listing page to Discover.
     /// </summary>
     [RelayCommand]
-    private Task GoBackAsync()
+    private async Task GoBackAsync()
+    {
+        var left = PageToReopen();
+        await ShowPreviousPageAsync();
+        _forwardPage = left;
+    }
+
+    private Task ShowPreviousPageAsync()
     {
         // the listing page is only ever reached from Discover
         if (CurrentWindowListing)
