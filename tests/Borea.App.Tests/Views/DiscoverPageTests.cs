@@ -75,6 +75,7 @@ public sealed class DiscoverPageTests
             viewModel.ToggleCategoryCommand.Execute(category);
         viewModel.HideInstalled = true;
         viewModel.HideIncompatible = true;
+        viewModel.FavoritesOnly = true;
         viewModel.SelectOsCommand.Execute("windows");
         viewModel.SelectLicenseCommand.Execute("MIT");
         viewModel.DiscoverGameMin = viewModel.GameVersionOptions.Single(build => build.Revision == 5261);
@@ -94,7 +95,7 @@ public sealed class DiscoverPageTests
             return (chips.Count, outside);
         });
 
-        Assert.Equal(viewModel.CategoryOptions.Count + 6, chips);
+        Assert.Equal(viewModel.CategoryOptions.Count + 7, chips);
         Assert.Empty(outside);
     }
 

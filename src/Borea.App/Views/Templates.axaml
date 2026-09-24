@@ -197,6 +197,7 @@
                                 <Button.Flyout>
                                     <MenuFlyout Placement="BottomEdgeAlignedRight">
                                         <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ContentOpenPage}" Command="{Binding OpenCommand}" IsVisible="{Binding CanOpen}" />
+                                        <MenuItem Header="{Binding Page.FavoriteText}" Command="{Binding Page.ToggleFavoriteCommand}" IsVisible="{Binding CanOpen}" />
                                         <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ContentManage}" Command="{Binding BeginManageCommand}" IsVisible="{Binding CanManage}" />
                                         <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ContentInstallAgain}" Command="{Binding InstallAgainCommand}" IsVisible="{Binding IsMissing}" />
                                         <MenuItem Header="{Binding RemoveActionText}" Command="{Binding BeginRemoveCommand}" IsEnabled="{Binding CanRemove}" AutomationProperties.HelpText="{Binding RemoveBlockedText}" />
@@ -247,6 +248,7 @@
                             <StackPanel Spacing="4">
                                 <DockPanel>
                                     <TextBlock Classes="heading-md" Text="{Binding Name}" TextTrimming="CharacterEllipsis" DockPanel.Dock="Left" VerticalAlignment="Center" />
+                                    <Path Classes="icon size-16 favorite" Data="{StaticResource Icon.Star}" DockPanel.Dock="Left" Margin="8,0,0,0" VerticalAlignment="Center" IsVisible="{Binding IsFavorite}" ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.DiscoverFavorite}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.DiscoverFavorite}" />
                                     <TextBlock Classes="body-sm secondary" Text="{Binding AuthorsText}" TextTrimming="CharacterEllipsis" Margin="8,0,0,0" VerticalAlignment="Center" />
                                 </DockPanel>
                                 <TextBlock Classes="body-md secondary" Text="{Binding Abstract}" TextWrapping="Wrap" TextTrimming="CharacterEllipsis" MaxLines="2" LineHeight="18" />
@@ -279,6 +281,7 @@
                                     </Button.IsVisible>
                                     <Button.Flyout>
                                         <MenuFlyout Placement="BottomEdgeAlignedRight">
+                                            <MenuItem Header="{Binding FavoriteText}" Command="{Binding ToggleFavoriteCommand}" />
                                             <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ContentChangeVersion}" Command="{Binding ChangeVersionCommand}" IsVisible="{Binding CanChangeVersion}" />
                                             <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ContentRemove}" Command="{Binding BeginRemoveCommand}" AutomationProperties.HelpText="{Binding RemoveBlockedText}" />
                                             <MenuItem IsEnabled="False" IsVisible="{Binding RemoveBlockedText, Converter={x:Static ObjectConverters.IsNotNull}}">
@@ -377,6 +380,7 @@
                             <StackPanel Spacing="4">
                                 <DockPanel>
                                     <TextBlock Classes="heading-md" Text="{Binding Name}" TextTrimming="CharacterEllipsis" DockPanel.Dock="Left" VerticalAlignment="Center" />
+                                    <Path Classes="icon size-16 favorite" Data="{StaticResource Icon.Star}" DockPanel.Dock="Left" Margin="8,0,0,0" VerticalAlignment="Center" IsVisible="{Binding IsFavorite}" ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.DiscoverFavorite}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.DiscoverFavorite}" />
                                     <TextBlock Classes="body-sm secondary" Text="{Binding AuthorsText}" TextTrimming="CharacterEllipsis" Margin="8,0,0,0" VerticalAlignment="Center" />
                                 </DockPanel>
                                 <TextBlock Classes="body-md secondary" Text="{Binding Abstract}" TextWrapping="Wrap" TextTrimming="CharacterEllipsis" MaxLines="2" LineHeight="18" />

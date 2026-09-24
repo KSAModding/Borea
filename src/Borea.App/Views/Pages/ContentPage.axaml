@@ -115,9 +115,9 @@
                                     </WrapPanel>
                                     <TextBlock Classes="body-sm danger" Text="{Binding SelectedContent.InstallError}" TextWrapping="Wrap" Margin="0,8,0,0" IsVisible="{Binding SelectedContent.InstallError, Converter={x:Static ObjectConverters.IsNotNull}}" />
                                 </StackPanel>
-                                <!-- Add and Remove act on the active instance, so a page from another instance does not offer them -->
-                                <Panel Classes="content-actions" VerticalAlignment="Top" IsVisible="{Binding CanActOnSelectedContent}">
-                                    <Panel VerticalAlignment="Center">
+                                <StackPanel Classes="content-actions" Orientation="Horizontal" Spacing="8" VerticalAlignment="Top">
+                                    <!-- Add and Remove act on the active instance, so a page from another instance does not offer them -->
+                                    <Panel VerticalAlignment="Center" IsVisible="{Binding CanActOnSelectedContent}">
                                         <Button Classes="cta" Command="{Binding SelectedContent.InstallCommand}" IsVisible="{Binding SelectedContent.CanInstall}" ToolTip.Tip="{Binding AddToText}" AutomationProperties.Name="{Binding AddToText}">
                                             <StackPanel Orientation="Horizontal" Spacing="6">
                                                 <Path Classes="icon size-16" Data="{StaticResource Icon.Plus}" Stroke="{StaticResource Brush.SurfaceHeader}" StrokeThickness="2" VerticalAlignment="Center" />
@@ -149,7 +149,15 @@
                                             </Button>
                                         </WrapPanel>
                                     </Panel>
-                                </Panel>
+                                    <Button Classes="icon" VerticalAlignment="Center" AutomationProperties.Name="{Binding Localization.LibraryMoreActions}">
+                                        <Button.Flyout>
+                                            <MenuFlyout Placement="BottomEdgeAlignedRight">
+                                                <MenuItem Header="{Binding SelectedContent.FavoriteText}" Command="{Binding SelectedContent.ToggleFavoriteCommand}" />
+                                            </MenuFlyout>
+                                        </Button.Flyout>
+                                        <Path Classes="icon-filled" Data="{StaticResource Icon.More}" />
+                                    </Button>
+                                </StackPanel>
                             </Grid>
                             <WrapPanel Grid.Row="2" ItemSpacing="24" LineSpacing="8" Margin="0,16,0,0">
                                 <Border Classes="chip positive" VerticalAlignment="Center" ToolTip.Tip="{Binding InstalledInText}">

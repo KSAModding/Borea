@@ -359,6 +359,29 @@ public sealed class RowClickTests
     }
 
     [Fact]
+    public async Task ContentRow_FavoriteInTheMenu_MarksTheMod()
+    {
+        using var harness = await InstanceAsync();
+        var viewModel = harness.ViewModel;
+        var item = viewModel.ContentGroups.Single().Items.Single();
+        var listing = item.Page!;
+
+        var header = await OnPageAsync(harness, () => new InstancePage(), async (window, page) =>
+        {
+            var entry = MenuEntry(window, Row(page, item.OpenCommand), listing.ToggleFavoriteCommand);
+            var shown = entry.Header;
+            ClickCenter(window, entry);
+            if (listing.ToggleFavoriteCommand.ExecutionTask is { } running)
+                await running;
+            return shown;
+        });
+
+        Assert.Equal(harness.Localization.ContentAddFavorite, header);
+        Assert.True(listing.IsFavorite);
+        Assert.Equal([ModId], await harness.Services.ModFavorites.GetFavoriteModIdsAsync());
+    }
+
+    [Fact]
     public async Task ContentRow_ManageInTheMenu_AsksForAConfirmationAndLeavesTheModPageClosed()
     {
         using var harness = await InstanceAsync(ModInstallOwnership.Foreign);

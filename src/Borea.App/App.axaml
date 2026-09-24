@@ -235,6 +235,11 @@
             <Setter Property="Fill" Value="{StaticResource Brush.TextSecondary}" />
             <Setter Property="RenderTransformOrigin" Value="50%,50%" />
         </Style>
+        <!-- the star of a favorite is filled -->
+        <Style Selector="Path.icon.favorite">
+            <Setter Property="Fill" Value="{StaticResource Brush.Accent}" />
+            <Setter Property="Stroke" Value="{StaticResource Brush.Accent}" />
+        </Style>
         <Style Selector="Path.size-32">
             <Setter Property="RenderTransform" Value="scale(1.3333)" />
             <Setter Property="Margin" Value="4" />
