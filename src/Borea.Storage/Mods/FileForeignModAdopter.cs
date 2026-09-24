@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using Borea.Core.Instances;
 using Borea.Core.Mods;
 using Borea.Core.Paths;
+using Borea.Storage.Files;
 using Tomlyn;
 using Tomlyn.Serialization;
 
@@ -271,12 +272,12 @@ public sealed class FileForeignModAdopter : IForeignModAdopter
             throw new InvalidOperationException($"The instance no longer has the foreign mod folder '{folderName}'.");
     }
 
+    /// <summary>A foreign folder can be a link of the player's own, and then only the link goes.</summary>
     private static void TryDeleteDirectory(string path)
     {
         try
         {
-            if (Directory.Exists(path))
-                Directory.Delete(path, recursive: true);
+            DirectoryLinks.DeleteTreeWithoutFollowingLinks(path);
         }
         catch (IOException) { }
         catch (UnauthorizedAccessException) { }

@@ -515,6 +515,17 @@ public sealed class DtoMapperTests
         Assert.False(result.Yanked);
         Assert.Null(result.Listing);
         Assert.Equal("test-source", result.Source);
+        Assert.Null(result.Manages);
+    }
+
+    [Fact]
+    public void MapRelease_AuthoredListingManagesPaths_CarriesThemIntoTheRelease()
+    {
+        var authored = Borea.Storage.Tests.Mods.MetadataFixtures.FullMetadata();
+
+        var result = DtoMapper.MapRelease(MinimalReleaseDto(), null, authored);
+
+        Assert.Equal(new[] { "config/settings.json" }, result.Manages);
     }
 
     [Theory]

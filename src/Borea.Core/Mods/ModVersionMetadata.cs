@@ -94,6 +94,13 @@ public sealed class ModVersionMetadata
     public InstallInfo? Install { get; }
 
     /// <summary>
+    /// The paths the listing's [install].manages claims (RFC 0035), carried
+    /// into the release because the release file does not stamp them. Null
+    /// means the author said nothing.
+    /// </summary>
+    public IReadOnlyList<string>? Manages { get; }
+
+    /// <summary>
     /// The loader bounds current at stamp time. Null when the mod runs without one.
     /// </summary>
     public LoaderRequirement? Loader { get; }
@@ -151,7 +158,8 @@ public sealed class ModVersionMetadata
         ListingSnapshot? listing = null,
         bool yanked = false,
         string? yankedReason = null,
-        string? source = null)
+        string? source = null,
+        IReadOnlyList<string>? manages = null)
     {
         if (specVersion < 1)
             throw new ArgumentOutOfRangeException(nameof(specVersion), "Spec version must be a positive integer.");
@@ -215,6 +223,7 @@ public sealed class ModVersionMetadata
         Download = download;
         InstallSizeBytes = installSizeBytes;
         Install = install;
+        Manages = manages is null ? null : new ReadOnlyCollection<string>(manages.ToArray());
         Loader = loader;
         Dependencies = new ReadOnlyCollection<ModDependency>(dependencies.ToArray());
         Changelog = changelog;

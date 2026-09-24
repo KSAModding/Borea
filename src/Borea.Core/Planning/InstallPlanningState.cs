@@ -23,6 +23,7 @@ public sealed record InstallPlanningState(string Value)
             Add(value, mod.Reason.ToString());
             Add(value, mod.Ownership.ToString());
             Add(value, mod.OwnershipToken);
+            Add(value, mod.Storage.ToString());
             Add(value, mod.Checksum);
             Add(value, mod.Metadata.ModId);
             Add(value, mod.Metadata.Version.ToString());

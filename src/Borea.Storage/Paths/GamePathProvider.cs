@@ -6,7 +6,7 @@ namespace Borea.Storage.Paths;
 
 /// <summary>
 /// Resolves Borea's own paths under its root, %LocalAppData%\Borea unless another
-/// root is given, the Instances and Backups folders under the library folder,
+/// root is given, the Instances, Backups and Static Mod Files folders under the library folder,
 /// which is the root unless another one is given, and KSA and mod loader paths
 /// from the provided settings.
 /// </summary>
@@ -58,6 +58,7 @@ public sealed class GamePathProvider : IGamePathProvider
     public string GetImageCacheFolder() => Path.Combine(_boreaRoot, "ImageCache");
     public string GetGamePatchNotesFolder() => Path.Combine(_boreaRoot, "GamePatchNotes");
     public string GetInstancesRoot() => Path.Combine(_libraryFolder, "Instances");
+    public string GetStaticModFilesRoot() => Path.Combine(_libraryFolder, "Static Mod Files");
     public string GetLoadersRoot() => Path.Combine(_boreaRoot, "Loaders");
     public string GetInstanceRoot(Guid instanceId) => Path.Combine(GetInstancesRoot(), instanceId.ToString());
     public string GetInstanceModsFolder(Guid instanceId) => Path.Combine(GetInstanceRoot(instanceId), "mods");

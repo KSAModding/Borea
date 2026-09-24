@@ -118,5 +118,6 @@ internal static class MetadataFixtures
             "Description at stamp time."),
         yanked: true,
         yankedReason: "Broken above revision 5117.",
-        source: "TestSource");
+        source: "TestSource",
+        manages: new[] { "config/settings.json" });
 }

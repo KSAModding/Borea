@@ -36,6 +36,10 @@ public sealed class ModVersionMetadataDto
     /// <summary>Null means the source did not expose the unpacked size.</summary>
     public long? InstallSizeBytes { get; set; }
     public InstallInfoDto? Install { get; set; }
+
+    /// <summary>Null means the listing said nothing about managed paths.</summary>
+    public List<string>? Manages { get; set; }
+
     public LoaderRequirementDto? Loader { get; set; }
     public List<ModDependencyDto> Dependencies { get; set; } = new();
     public string? Changelog { get; set; }
