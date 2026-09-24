@@ -83,6 +83,12 @@
                                     <TextBlock Classes="label-sm" Text="{Binding Localization.DiscoverHideIncompatible}" VerticalAlignment="Center" />
                                 </StackPanel>
                             </Button>
+                            <Button Classes="chip-button" Command="{Binding ClearFavoritesOnlyCommand}" IsVisible="{Binding FavoritesOnly}">
+                                <StackPanel Orientation="Horizontal" Spacing="4">
+                                    <Path Classes="icon size-16" Data="{StaticResource Icon.Close}" />
+                                    <TextBlock Classes="label-sm" Text="{Binding Localization.DiscoverFavoritesOnly}" VerticalAlignment="Center" />
+                                </StackPanel>
+                            </Button>
                             <ItemsControl ItemsSource="{Binding SelectedCategories}" IsVisible="{Binding !!SelectedCategories.Count}">
                                 <ItemsControl.ItemsPanel>
                                     <ItemsPanelTemplate>
@@ -199,6 +205,10 @@
                             <Grid ColumnDefinitions="*,16,Auto">
                                 <TextBlock Classes="heading-sm" Text="{Binding Localization.DiscoverHideIncompatible}" TextWrapping="Wrap" VerticalAlignment="Center" />
                                 <ToggleSwitch Grid.Column="2" Classes="switch" IsChecked="{Binding HideIncompatible}" AutomationProperties.Name="{Binding Localization.DiscoverHideIncompatible}" />
+                            </Grid>
+                            <Grid ColumnDefinitions="*,16,Auto" IsVisible="{Binding HasFavorites}">
+                                <TextBlock Classes="heading-sm" Text="{Binding Localization.DiscoverFavoritesOnly}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                                <ToggleSwitch Grid.Column="2" Classes="switch" IsChecked="{Binding FavoritesOnly}" AutomationProperties.Name="{Binding Localization.DiscoverFavoritesOnly}" />
                             </Grid>
                         </StackPanel>
                         <Border Height="1" Background="{StaticResource Brush.BorderStrong}" IsVisible="{Binding !!CategoryOptions.Count}" />

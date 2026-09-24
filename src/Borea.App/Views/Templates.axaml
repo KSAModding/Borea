@@ -248,6 +248,7 @@
                             <StackPanel Spacing="4">
                                 <DockPanel>
                                     <TextBlock Classes="heading-md" Text="{Binding Name}" TextTrimming="CharacterEllipsis" DockPanel.Dock="Left" VerticalAlignment="Center" />
+                                    <Path Classes="icon size-16 favorite" Data="{StaticResource Icon.Star}" DockPanel.Dock="Left" Margin="8,0,0,0" VerticalAlignment="Center" IsVisible="{Binding IsFavorite}" ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.DiscoverFavorite}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.DiscoverFavorite}" />
                                     <TextBlock Classes="body-sm secondary" Text="{Binding AuthorsText}" TextTrimming="CharacterEllipsis" Margin="8,0,0,0" VerticalAlignment="Center" />
                                 </DockPanel>
                                 <TextBlock Classes="body-md secondary" Text="{Binding Abstract}" TextWrapping="Wrap" TextTrimming="CharacterEllipsis" MaxLines="2" LineHeight="18" />
@@ -379,6 +380,7 @@
                             <StackPanel Spacing="4">
                                 <DockPanel>
                                     <TextBlock Classes="heading-md" Text="{Binding Name}" TextTrimming="CharacterEllipsis" DockPanel.Dock="Left" VerticalAlignment="Center" />
+                                    <Path Classes="icon size-16 favorite" Data="{StaticResource Icon.Star}" DockPanel.Dock="Left" Margin="8,0,0,0" VerticalAlignment="Center" IsVisible="{Binding IsFavorite}" ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.DiscoverFavorite}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.DiscoverFavorite}" />
                                     <TextBlock Classes="body-sm secondary" Text="{Binding AuthorsText}" TextTrimming="CharacterEllipsis" Margin="8,0,0,0" VerticalAlignment="Center" />
                                 </DockPanel>
                                 <TextBlock Classes="body-md secondary" Text="{Binding Abstract}" TextWrapping="Wrap" TextTrimming="CharacterEllipsis" MaxLines="2" LineHeight="18" />
