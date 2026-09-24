@@ -3,6 +3,7 @@ using Borea.Core.Mods;
 using Borea.Core.Paths;
 using Borea.Core.Planning;
 using Borea.Core.State;
+using Borea.Storage.Files;
 
 namespace Borea.Storage.Mods;
 
@@ -14,14 +15,17 @@ public sealed class FileModReplacer : IModReplacer
     private readonly IModStateRepository _modState;
     private readonly TimeProvider _timeProvider;
     private readonly Func<string, bool> _deleteRecoveryDirectory;
+    private readonly ModStore _store;
 
+    /// <param name="store">Null copies every release into its instance.</param>
     public FileModReplacer(
         IGamePathProvider paths,
         IModDownloader downloader,
         IInstanceRepository instances,
         IModStateRepository modState,
-        TimeProvider? timeProvider = null)
-        : this(paths, downloader, instances, modState, timeProvider, TryDeleteDirectory)
+        TimeProvider? timeProvider = null,
+        ModStore? store = null)
+        : this(paths, downloader, instances, modState, timeProvider, TryDeleteDirectory, store)
     {
     }
 
@@ -31,7 +35,8 @@ public sealed class FileModReplacer : IModReplacer
         IInstanceRepository instances,
         IModStateRepository modState,
         TimeProvider? timeProvider,
-        Func<string, bool> deleteRecoveryDirectory)
+        Func<string, bool> deleteRecoveryDirectory,
+        ModStore? store = null)
     {
         _paths = paths ?? throw new ArgumentNullException(nameof(paths));
         _downloader = downloader ?? throw new ArgumentNullException(nameof(downloader));
@@ -39,6 +44,7 @@ public sealed class FileModReplacer : IModReplacer
         _modState = modState ?? throw new ArgumentNullException(nameof(modState));
         _timeProvider = timeProvider ?? TimeProvider.System;
         _deleteRecoveryDirectory = deleteRecoveryDirectory ?? throw new ArgumentNullException(nameof(deleteRecoveryDirectory));
+        _store = store ?? new ModStore(paths, new DirectoryLinker(), linksReleases: false);
     }
 
     public async Task<ModReplacementResult> ReplaceAsync(
@@ -87,7 +93,6 @@ public sealed class FileModReplacer : IModReplacer
             throw new InvalidOperationException($"The manifest has no entry for installed mod '{expectedCurrent.ModId}'.");
         var wasActive = matchingEntries.Any(entry => entry.Enabled);
 
-        var archivePath = Path.Combine(Path.GetTempPath(), $"borea-download-{Guid.NewGuid():N}.zip");
         var instanceRoot = _paths.GetInstanceRoot(instanceId);
         var stagingFolder = Path.Combine(instanceRoot, $".borea-staging-{Guid.NewGuid():N}");
         var backupFolder = Path.Combine(instanceRoot, $".borea-recovery-{Guid.NewGuid():N}");
@@ -101,13 +106,8 @@ public sealed class FileModReplacer : IModReplacer
 
         try
         {
-            download = await _downloader.DownloadAsync(replacement, archivePath, progress.ForDownload(replacement), cancellationToken).ConfigureAwait(false);
-            progress.Report(replacement, InstallPhase.Extracting);
-            FileModInstaller.Unpack(archivePath, replacement, stagingFolder);
-            progress.Report(replacement, InstallPhase.Finishing);
-            var ownershipToken = Guid.NewGuid().ToString("N");
-            await File.WriteAllTextAsync(Path.Combine(stagingFolder, ModFolders.OwnershipFileName), ownershipToken, cancellationToken).ConfigureAwait(false);
-
+            var staged = await _store.StageAsync(_downloader, replacement, stagingFolder, progress, cancellationToken).ConfigureAwait(false);
+            download = staged.Download;
             installed = new InstalledMod(
                 replacement.ModId,
                 replacement.Version,
@@ -116,7 +116,8 @@ public sealed class FileModReplacer : IModReplacer
                 replacement,
                 download.Sha256,
                 ModInstallOwnership.Borea,
-                ownershipToken);
+                staged.OwnershipToken,
+                staged.Storage);
 
             await _instances.UpdateAsync(
                 instanceId,
@@ -126,7 +127,7 @@ public sealed class FileModReplacer : IModReplacer
                         throw new InvalidOperationException("The instance changed after the replacement was planned.");
 
                     RequireExpected(current, expectedCurrent);
-                    installedFolder = ModFolders.FindOwned(modsFolder, expectedCurrent.ModId, expectedCurrent.OwnershipToken!)
+                    installedFolder = ModFolders.FindOwned(modsFolder, expectedCurrent, _store)
                         ?? throw new InvalidOperationException($"Borea cannot find its owned folder for '{expectedCurrent.ModId}'.");
                     Directory.Move(installedFolder, backupFolder);
                     backupCreated = true;
@@ -145,6 +146,7 @@ public sealed class FileModReplacer : IModReplacer
 
             var retainedRecoveryDirectory = _deleteRecoveryDirectory(backupFolder) ? null : backupFolder;
             backupCreated = retainedRecoveryDirectory is not null;
+            await _store.ReleaseAsync(expectedCurrent).ConfigureAwait(false);
             var result = new ModReplacementResult(expectedCurrent, installed, download, retainedRecoveryDirectory);
             return new GuardedModReplacementResult(result, resultingState!);
         }
@@ -165,11 +167,14 @@ public sealed class FileModReplacer : IModReplacer
                 }
             }
 
+            TryDeleteDirectory(stagingFolder);
+            if (installed is not null)
+                await _store.ReleaseAsync(installed).ConfigureAwait(false);
+
             throw;
         }
         finally
         {
-            TryDeleteFile(archivePath);
             TryDeleteDirectory(stagingFolder);
         }
     }
@@ -187,10 +192,10 @@ public sealed class FileModReplacer : IModReplacer
 
                 if (replacementMoved && Directory.Exists(installedFolder))
                 {
-                    var ownedReplacement = ModFolders.FindOwned(Path.GetDirectoryName(installedFolder)!, replacement.ModId, replacement.OwnershipToken!);
+                    var ownedReplacement = ModFolders.FindOwned(Path.GetDirectoryName(installedFolder)!, replacement, _store);
                     if (!string.Equals(ownedReplacement, installedFolder, StringComparison.Ordinal))
                         throw new InvalidOperationException($"The installed folder for '{previous.ModId}' changed while Borea tried to restore it.");
-                    Directory.Delete(installedFolder, recursive: true);
+                    DirectoryLinks.DeleteTreeWithoutFollowingLinks(installedFolder);
                 }
                 if (!Directory.Exists(backupFolder))
                     throw new InvalidOperationException($"The recovery folder for '{previous.ModId}' is missing.");
@@ -217,6 +222,7 @@ public sealed class FileModReplacer : IModReplacer
         current.InstalledAt == expected.InstalledAt &&
         string.Equals(current.Checksum, expected.Checksum, StringComparison.OrdinalIgnoreCase) &&
         current.Ownership == expected.Ownership &&
+        current.Storage == expected.Storage &&
         string.Equals(current.OwnershipToken, expected.OwnershipToken, StringComparison.Ordinal);
 
     private static void RequireOwned(InstalledMod installed)
@@ -229,22 +235,10 @@ public sealed class FileModReplacer : IModReplacer
     {
         try
         {
-            if (Directory.Exists(path))
-                Directory.Delete(path, recursive: true);
+            DirectoryLinks.DeleteTreeWithoutFollowingLinks(path);
             return true;
         }
         catch (IOException) { return false; }
         catch (UnauthorizedAccessException) { return false; }
-    }
-
-    private static void TryDeleteFile(string path)
-    {
-        try
-        {
-            if (File.Exists(path))
-                File.Delete(path);
-        }
-        catch (IOException) { }
-        catch (UnauthorizedAccessException) { }
     }
 }

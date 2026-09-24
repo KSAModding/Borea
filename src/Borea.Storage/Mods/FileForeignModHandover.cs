@@ -2,14 +2,16 @@ using Borea.Core.Instances;
 using Borea.Core.Mods;
 using Borea.Core.Paths;
 using Borea.Core.State;
+using Borea.Storage.Files;
 
 namespace Borea.Storage.Mods;
 
 /// <summary>
 /// File-backed <see cref="IForeignModHandover"/>. The release is downloaded and
-/// unpacked into a staging folder first, so the folder and the record change
-/// together at the end, and the ownership marker reaches the instance only with
-/// the files Borea itself wrote. The previous files go into a recovery folder
+/// unpacked into a staging folder first, or linked there from the
+/// <see cref="ModStore"/>, so the folder and the record change together at the
+/// end, and the ownership marker or link reaches the instance only with the
+/// files Borea itself wrote. The previous files go into a recovery folder
 /// that the handover deletes when it is finished, and a delete that fails names
 /// that folder in the result instead of dropping it silently.
 /// </summary>
@@ -21,14 +23,17 @@ public sealed class FileForeignModHandover : IForeignModHandover
     private readonly IModStateRepository _modState;
     private readonly TimeProvider _timeProvider;
     private readonly Func<string, bool> _deleteRecoveryDirectory;
+    private readonly ModStore _store;
 
+    /// <param name="store">Null copies every release into its instance.</param>
     public FileForeignModHandover(
         IGamePathProvider paths,
         IModDownloader downloader,
         IInstanceRepository instances,
         IModStateRepository modState,
-        TimeProvider? timeProvider = null)
-        : this(paths, downloader, instances, modState, timeProvider, TryDeleteDirectory)
+        TimeProvider? timeProvider = null,
+        ModStore? store = null)
+        : this(paths, downloader, instances, modState, timeProvider, TryDeleteDirectory, store)
     {
     }
 
@@ -38,7 +43,8 @@ public sealed class FileForeignModHandover : IForeignModHandover
         IInstanceRepository instances,
         IModStateRepository modState,
         TimeProvider? timeProvider,
-        Func<string, bool> deleteRecoveryDirectory)
+        Func<string, bool> deleteRecoveryDirectory,
+        ModStore? store = null)
     {
         _paths = paths ?? throw new ArgumentNullException(nameof(paths));
         _downloader = downloader ?? throw new ArgumentNullException(nameof(downloader));
@@ -46,6 +52,7 @@ public sealed class FileForeignModHandover : IForeignModHandover
         _modState = modState ?? throw new ArgumentNullException(nameof(modState));
         _timeProvider = timeProvider ?? TimeProvider.System;
         _deleteRecoveryDirectory = deleteRecoveryDirectory ?? throw new ArgumentNullException(nameof(deleteRecoveryDirectory));
+        _store = store ?? new ModStore(paths, new DirectoryLinker(), linksReleases: false);
     }
 
     public async Task<ModHandoverResult> TakeOwnershipAsync(
@@ -69,7 +76,6 @@ public sealed class FileForeignModHandover : IForeignModHandover
 
         var wasActive = await _modState.IsActiveAsync(instanceId, foreign.ModId, cancellationToken).ConfigureAwait(false);
         var instanceRoot = _paths.GetInstanceRoot(instanceId);
-        var archivePath = Path.Combine(Path.GetTempPath(), $"borea-download-{Guid.NewGuid():N}.zip");
         var stagingFolder = Path.Combine(instanceRoot, $".borea-staging-{Guid.NewGuid():N}");
         var backupFolder = Path.Combine(instanceRoot, $".borea-recovery-{Guid.NewGuid():N}");
         InstalledMod? owned = null;
@@ -79,13 +85,8 @@ public sealed class FileForeignModHandover : IForeignModHandover
 
         try
         {
-            var download = await _downloader.DownloadAsync(release, archivePath, progress.ForDownload(release), cancellationToken).ConfigureAwait(false);
-            progress.Report(release, InstallPhase.Extracting);
-            FileModInstaller.Unpack(archivePath, release, stagingFolder);
-
-            progress.Report(release, InstallPhase.Finishing);
-            var ownershipToken = Guid.NewGuid().ToString("N");
-            await File.WriteAllTextAsync(Path.Combine(stagingFolder, ModFolders.OwnershipFileName), ownershipToken, cancellationToken).ConfigureAwait(false);
+            var staged = await _store.StageAsync(_downloader, release, stagingFolder, progress, cancellationToken).ConfigureAwait(false);
+            var download = staged.Download;
             owned = new InstalledMod(
                 foreign.ModId,
                 release.Version,
@@ -94,7 +95,8 @@ public sealed class FileForeignModHandover : IForeignModHandover
                 release,
                 download.Sha256,
                 ModInstallOwnership.Borea,
-                ownershipToken);
+                staged.OwnershipToken,
+                staged.Storage);
 
             await _instances.UpdateAsync(
                 instanceId,
@@ -137,11 +139,14 @@ public sealed class FileForeignModHandover : IForeignModHandover
                 }
             }
 
+            TryDeleteDirectory(stagingFolder);
+            if (owned is not null)
+                await _store.ReleaseAsync(owned).ConfigureAwait(false);
+
             throw;
         }
         finally
         {
-            TryDeleteFile(archivePath);
             TryDeleteDirectory(stagingFolder);
         }
     }
@@ -165,11 +170,11 @@ public sealed class FileForeignModHandover : IForeignModHandover
 
                 if (ownedMoved && Directory.Exists(folder))
                 {
-                    var ownedFolder = ModFolders.FindOwned(Path.GetDirectoryName(folder)!, owned.ModId, owned.OwnershipToken!);
+                    var ownedFolder = ModFolders.FindOwned(Path.GetDirectoryName(folder)!, owned, _store);
                     if (!string.Equals(ownedFolder, folder, StringComparison.Ordinal))
                         throw new InvalidOperationException($"The folder of '{foreign.ModId}' changed while Borea tried to restore it.");
 
-                    Directory.Delete(folder, recursive: true);
+                    DirectoryLinks.DeleteTreeWithoutFollowingLinks(folder);
                 }
 
                 if (!Directory.Exists(backupFolder))
@@ -200,28 +205,17 @@ public sealed class FileForeignModHandover : IForeignModHandover
         current.InstalledAt == expected.InstalledAt &&
         string.Equals(current.Checksum, expected.Checksum, StringComparison.OrdinalIgnoreCase) &&
         current.Ownership == expected.Ownership &&
+        current.Storage == expected.Storage &&
         string.Equals(current.OwnershipToken, expected.OwnershipToken, StringComparison.Ordinal);
 
     private static bool TryDeleteDirectory(string path)
     {
         try
         {
-            if (Directory.Exists(path))
-                Directory.Delete(path, recursive: true);
+            DirectoryLinks.DeleteTreeWithoutFollowingLinks(path);
             return true;
         }
         catch (IOException) { return false; }
         catch (UnauthorizedAccessException) { return false; }
-    }
-
-    private static void TryDeleteFile(string path)
-    {
-        try
-        {
-            if (File.Exists(path))
-                File.Delete(path);
-        }
-        catch (IOException) { }
-        catch (UnauthorizedAccessException) { }
     }
 }
