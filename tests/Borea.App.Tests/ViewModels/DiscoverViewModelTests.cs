@@ -386,6 +386,45 @@ public sealed class DiscoverViewModelTests
     }
 
     [Fact]
+    public async Task InstalledInOtherInstances_ShowsOnlyModsAnotherInstanceHolds()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var viewModel = harness.ViewModel;
+        var main = await InstalledContent.AddAsync(harness, "AdvancedFlightComputer", activate: true);
+        await InstalledContent.AddAsync(harness, "MeasureTools", activate: true, into: main);
+        var other = (await harness.Services.Instances.CreateAsync("Other", InstanceSource.Custom.Value)).Instance;
+        await InstalledContent.AddAsync(harness, "KSArmory", activate: false, into: other);
+        await InstalledContent.AddAsync(harness, "MeasureTools", activate: false, into: other);
+        await viewModel.LoadAsync();
+        await viewModel.EnsureDiscoverLoadedAsync();
+
+        viewModel.InstalledInOtherInstances = true;
+
+        Assert.Equal(["KSArmory", "MeasureTools"], viewModel.DiscoverItems.Select(item => item.ModId));
+    }
+
+    [Fact]
+    public async Task InstalledInOtherInstances_FollowsTheActiveInstanceAndARemoval()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var viewModel = harness.ViewModel;
+        var main = await InstalledContent.AddAsync(harness, "AdvancedFlightComputer", activate: true);
+        var other = (await harness.Services.Instances.CreateAsync("Other", InstanceSource.Custom.Value)).Instance;
+        await InstalledContent.AddAsync(harness, "KSArmory", activate: false, ownership: ModInstallOwnership.Borea, into: other);
+        await viewModel.LoadAsync();
+        await viewModel.EnsureDiscoverLoadedAsync();
+        viewModel.InstalledInOtherInstances = true;
+        Assert.Equal(["KSArmory"], viewModel.DiscoverItems.Select(item => item.ModId));
+
+        await viewModel.ActivateInstanceAsync(other.InstanceId);
+        Assert.Equal(["AdvancedFlightComputer"], viewModel.DiscoverItems.Select(item => item.ModId));
+
+        await viewModel.ActivateInstanceAsync(main.InstanceId);
+        await viewModel.RemoveContentAsync(other.InstanceId, "KSArmory");
+        Assert.Empty(viewModel.DiscoverItems);
+    }
+
+    [Fact]
     public async Task Install_WithoutActiveInstance_DoesNothing()
     {
         using var harness = await ViewModelHarness.CreateAsync();
@@ -619,6 +658,30 @@ public sealed class DiscoverViewModelTests
         Assert.False(viewModel.HideIncompatible);
         Assert.Null(viewModel.SelectedOs);
         Assert.False(viewModel.HasDiscoverFilters);
+    }
+
+    [Fact]
+    public async Task InstalledInOtherInstances_CountsAsAFilterAndClearAllTurnsItOff()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var viewModel = harness.ViewModel;
+        await viewModel.EnsureDiscoverLoadedAsync();
+        var changed = new List<string?>();
+        viewModel.PropertyChanged += (_, e) => changed.Add(e.PropertyName);
+
+        viewModel.InstalledInOtherInstances = true;
+        Assert.True(viewModel.HasDiscoverFilters);
+        Assert.Contains(nameof(MainViewModel.HasDiscoverFilters), changed);
+
+        viewModel.ClearInstalledInOtherInstancesCommand.Execute(null);
+        Assert.False(viewModel.InstalledInOtherInstances);
+        Assert.False(viewModel.HasDiscoverFilters);
+
+        viewModel.InstalledInOtherInstances = true;
+        viewModel.ClearDiscoverFiltersCommand.Execute(null);
+        Assert.False(viewModel.InstalledInOtherInstances);
+        Assert.False(viewModel.HasDiscoverFilters);
+        Assert.Equal(["AdvancedFlightComputer", "KSArmory", "MeasureTools"], viewModel.DiscoverItems.Select(item => item.ModId));
     }
 
     [Fact]
@@ -916,10 +979,12 @@ public sealed class DiscoverViewModelTests
 /// </summary>
 internal static class InstalledContent
 {
-    public static async Task<Instance> AddAsync(ViewModelHarness harness, string modId, bool activate, InstallReason reason = InstallReason.Manual, ModInstallOwnership ownership = ModInstallOwnership.Foreign, string? version = null)
+    /// <param name="into">The instance to add to. Without one, the first instance, created as Main when there is none.</param>
+    public static async Task<Instance> AddAsync(ViewModelHarness harness, string modId, bool activate, InstallReason reason = InstallReason.Manual, ModInstallOwnership ownership = ModInstallOwnership.Foreign, string? version = null, Instance? into = null)
     {
         var services = harness.Services;
-        var instance = (await services.Instances.GetAllAsync()).FirstOrDefault()
+        var instance = into
+            ?? (await services.Instances.GetAllAsync()).FirstOrDefault()
             ?? (await services.Instances.CreateAsync("Main", InstanceSource.Custom.Value)).Instance;
         var release = (version is null ? await services.Mods.GetLatestReleaseAsync(modId) : await services.Mods.GetReleaseAsync(modId, ModVersion.Parse(version)))
             ?? throw new InvalidOperationException($"The fixture has no release of {modId}.");

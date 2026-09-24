@@ -438,6 +438,23 @@ public sealed class PackViewModelTests
     }
 
     [Fact]
+    public async Task InstalledInOtherInstances_ShowsPacksAnotherInstanceHoldsInThePinnedVersions()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: WithPacks(
+            Pack("tools-pack", "Tools Pack", Version("1.0.0", Pin("MeasureTools", "1.1.10"))),
+            Pack("old-tools-pack", "Old Tools Pack", Version("1.0.0", Pin("MeasureTools", "1.1.9")))));
+        var viewModel = harness.ViewModel;
+        var other = (await harness.Services.Instances.CreateAsync("Other", InstanceSource.Custom.Value)).Instance;
+        await InstalledContent.AddAsync(harness, "MeasureTools", activate: false, version: "1.1.10", into: other);
+        await ActivateInstanceAsync(harness);
+        viewModel.ShowDiscoverModpacksCommand.Execute(null);
+
+        viewModel.InstalledInOtherInstances = true;
+
+        Assert.Equal(["tools-pack"], viewModel.DiscoverPacks.Select(item => item.PackId));
+    }
+
+    [Fact]
     public async Task NewInstance_CreatesTheActiveInstanceWithThePackSourceAndThePinnedMods()
     {
         var archive = Archive(("MeasureTools/mod.toml", "name = \"MeasureTools\""));

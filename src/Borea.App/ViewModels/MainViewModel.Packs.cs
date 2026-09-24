@@ -89,6 +89,8 @@ public partial class MainViewModel
             filtered = filtered.Where(pack => pack.Compatibility != GameCompatibility.Incompatible);
         if (FavoritesOnly)
             filtered = filtered.Where(pack => pack.IsFavorite);
+        if (InstalledInOtherInstances)
+            filtered = filtered.Where(pack => pack.IsInOtherInstance);
         if (SelectedOs is not null)
             filtered = filtered.Where(pack => pack.SupportsOs(SelectedOs));
         if (SelectedLicense is not null)
@@ -120,19 +122,30 @@ public partial class MainViewModel
 
     /// <summary>
     /// A pack counts as installed when the active instance holds every mod it pins, in the pinned version.
+    /// Returns whether a pack moved into or out of the other instances.
     /// </summary>
-    private void RefreshPackInstalledFlags()
+    private bool RefreshPackInstalledFlags()
     {
         var installed = ActiveInstance?.Mods ?? [];
-        bool Holds(ModPackEntry pin) => installed.Any(mod => ModIds.Equals(mod.ModId, pin.ContentId) && mod.Version == pin.Version);
+        bool Holds(ModPackEntry pin) => HoldsPin(installed, pin);
 
+        var elsewhereChanged = false;
         foreach (var pack in _packs)
+        {
             pack.IsInstalled = pack.Metadata.Mods.All(Holds);
+            var inOtherInstance = OtherInstances.Any(instance => pack.Metadata.Mods.All(pin => HoldsPin(instance.Mods, pin)));
+            elsewhereChanged |= pack.IsInOtherInstance != inOtherInstance;
+            pack.IsInOtherInstance = inOtherInstance;
+        }
         foreach (var member in PackMembers)
             member.IsInstalled = Holds(member.Pin);
         foreach (var version in PackVersions)
             version.IsInstalled = version.Metadata.Mods.All(Holds);
+        return elsewhereChanged;
     }
+
+    private static bool HoldsPin(IReadOnlyList<InstalledMod> mods, ModPackEntry pin)
+        => mods.Any(mod => ModIds.Equals(mod.ModId, pin.ContentId) && mod.Version == pin.Version);
 
     private void RefreshPackText()
     {
@@ -714,6 +727,9 @@ public sealed partial class PackItem : ObservableObject, IPlanRow
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CanInstall))]
     private bool _isInstalled;
+
+    /// <summary>True when an instance other than the active one holds every mod the pack pins.</summary>
+    internal bool IsInOtherInstance { get; set; }
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CanInstall))]
