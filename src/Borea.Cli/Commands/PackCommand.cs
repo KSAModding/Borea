@@ -331,7 +331,7 @@ internal static class PackCommand
                 return ExitCodes.Done;
 
             var notCreated = newInstanceName is not null && !isDryRun && created is null ? $" Borea did not create the instance '{newInstanceName}'." : string.Empty;
-            error.WriteLine($"error: {FailureReason(view, request)}{notCreated}");
+            error.WriteLine($"error: {FailureReason(view, request, result)}{notCreated}");
             return ExitCodes.Failed;
         }));
 
@@ -599,11 +599,11 @@ internal static class PackCommand
     }
 
     /// <summary>
-    /// One sentence for an incomplete install. An option is named only for a choice the
-    /// caller did not make and that left a member unresolved, because the planner also
-    /// warns about yanked releases the caller already accepted.
+    /// Why an install is incomplete. An option is named only for a choice the caller did
+    /// not make and that left a member unresolved, because the planner also warns about
+    /// yanked releases the caller already accepted.
     /// </summary>
-    private static string FailureReason(InstallView view, ModPackInstallRequest request)
+    private static string FailureReason(InstallView view, ModPackInstallRequest request, ModPackInstallResult result)
     {
         if (!request.ProceedWithRetractedPack && view.Warnings.Any(warning => warning.Code == "retracted-pack"))
             return $"Pack '{view.PackId}' {view.Version} is retracted. Pass --proceed-with-retracted to install it anyway.";
@@ -623,8 +623,13 @@ internal static class PackCommand
         if (view.DryRun)
             return $"The pack cannot be installed as planned, because {unresolved.Count} of {view.Members.Count} members are unresolved.";
 
-        var incomplete = view.Members.Count(member => member.Status is not ("installed" or "replaced" or "already-installed"));
-        return $"The pack was not installed completely, because {incomplete} of {view.Members.Count} members did not install.";
+        var outcome = result.Members.Any(member => member.Status is ModPackMemberStatus.Installed or ModPackMemberStatus.Replaced)
+            ? "The pack was not installed completely"
+            : "Nothing was installed";
+        var cause = result.Plan is { IsReady: false } ? "the plan has conflicts or open choices"
+            : result.Blockers.Count > 0 ? $"{result.Blockers.Count} of {view.Members.Count} members did not install"
+            : $"{result.Members.Count(member => member.Status == ModPackMemberStatus.NotAttempted)} of {view.Members.Count} members were not tried";
+        return $"{outcome}, because {cause}. {result.DescribeBlockers()}".TrimEnd();
     }
 
     private static string UpdateFailureReason(UpdateView view, ModPackUpdateRequest request)
