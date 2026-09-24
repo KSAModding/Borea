@@ -52,6 +52,7 @@ public sealed class ModVersionMetadataMapperTests : IDisposable
         Assert.NotNull(reloaded.Install);
         Assert.Equal(original.Install!.Root, reloaded.Install!.Root);
         Assert.True(reloaded.Install.Derived);
+        Assert.Equal(original.Manages, reloaded.Manages);
 
         Assert.NotNull(reloaded.Loader);
         Assert.Equal(MetadataSource.Authored, reloaded.Loader!.Source);
@@ -96,6 +97,7 @@ public sealed class ModVersionMetadataMapperTests : IDisposable
         Assert.Null(reloadedDto.ChangelogText);
         Assert.Null(reloadedDto.Listing);
         Assert.Null(reloadedDto.YankedReason);
+        Assert.Null(reloadedDto.Manages);
 
         Assert.Null(reloaded.GameMax);
         Assert.Null(reloaded.GameMaxRevision);

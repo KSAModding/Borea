@@ -21,6 +21,7 @@ public static class ModVersionMetadataMapper
         Download = DownloadInfoMapper.ToDto(release.Download),
         InstallSizeBytes = release.InstallSizeBytes,
         Install = release.Install is null ? null : InstallInfoMapper.ToDto(release.Install),
+        Manages = release.Manages?.ToList(),
         Loader = release.Loader is null ? null : LoaderRequirementMapper.ToDto(release.Loader),
         Dependencies = release.Dependencies.Select(ModDependencyMapper.ToDto).ToList(),
         Changelog = release.Changelog,
@@ -61,6 +62,7 @@ public static class ModVersionMetadataMapper
         listing: dto.Listing is null ? null : ListingSnapshotMapper.FromDto(dto.Listing),
         yanked: dto.Yanked,
         yankedReason: dto.YankedReason,
-        source: dto.Source);
+        source: dto.Source,
+        manages: dto.Manages);
     }
 }

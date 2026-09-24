@@ -78,7 +78,8 @@ public static class DtoMapper
             listing: dto.Listing is { } listingElement ? MapListingSnapshot(listingElement, authored) : null,
             yanked: dto.Yanked ?? false,
             yankedReason: dto.YankedReason,
-            source: source));
+            source: source,
+            manages: authored?.Install?.Manages));
     }
 
     public static ModPackMetadata MapPackVersion(PackAuthoredDto dto, string source)
