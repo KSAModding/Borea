@@ -1,11 +1,13 @@
 using Borea.Core.Dependencies;
 using Borea.Core.Index;
 using Borea.Core.Instances;
+using Borea.Core.Logging;
 using Borea.Core.ModPacks;
 using Borea.Core.Mods;
 using Borea.Core.Planning;
 using Borea.Core.State;
 using Borea.Storage.ModPacks;
+using Borea.Storage.Tests.Logging;
 
 namespace Borea.Storage.Tests.ModPacks;
 
@@ -56,10 +58,12 @@ public sealed class ModPackInstallerTests
                 await Task.Delay(Timeout.Infinite, token);
             },
         };
-        var services = new ModPackInstaller(instances, new FakePlanner(), installer, new FakeReplacer(instances));
+        var log = new RecordingLog();
+        var services = new LoggingModPackInstaller(new ModPackInstaller(instances, new FakePlanner(), installer, new FakeReplacer(instances)), log);
 
         var result = await services.InstallAsync(Request(instance.InstanceId, Pack(first, second), new FakeModRepository([first, second])), stop: stop);
 
+        Assert.Equal($"Pack Pack 1.0.0 into instance {instance.InstanceId} stopped on request, 1 of 2 members done.", Assert.Single(log.Messages));
         Assert.True(result.IsStopped);
         Assert.False(result.IsComplete);
         Assert.Equal(ModPackMemberStatus.Installed, result.Members.Single(member => member.ModId == "First").Status);
@@ -131,6 +135,45 @@ public sealed class ModPackInstallerTests
     }
 
     [Fact]
+    public async Task CreateAndInstall_UnlistedPin_NamesOnlyThatMemberAndLogsIt()
+    {
+        var valid = Release("Valid");
+        var instances = new MemoryInstanceRepository();
+        var log = new RecordingLog();
+        var services = new LoggingModPackInstaller(Services(instances), log);
+
+        var result = await services.CreateAndInstallAsync("New", Request(Guid.Empty, Pack(valid, Release("Missing")), new FakeModRepository([valid])));
+
+        var blocker = Assert.Single(result.Blockers);
+        Assert.Equal("Missing", blocker.Member.ModId);
+        Assert.Equal(PlanningMessageKind.UnlistedPin, blocker.Warning?.Kind);
+        Assert.Equal("Pack Pack 1.0.0 into the new instance 'New' did not complete, 0 of 2 members done. Blocked by: Missing 1.0.0: The exact pinned release is not listed.", Assert.Single(log.Messages));
+        Assert.Empty(await instances.GetAllAsync());
+    }
+
+    [Fact]
+    public async Task Install_UnconfirmedYankedMember_NamesOnlyThatMemberAndACompleteInstallLogsNothing()
+    {
+        var valid = Release("Valid");
+        var yanked = Release("Yanked", yanked: true);
+        var repository = new FakeModRepository([valid, yanked]);
+        var instances = new MemoryInstanceRepository();
+        var instance = (await instances.CreateAsync("Target", InstanceSource.Custom.Value)).Instance;
+        var log = new RecordingLog();
+        var services = new LoggingModPackInstaller(Services(instances), log);
+
+        var refused = await services.InstallAsync(Request(instance.InstanceId, Pack(valid, yanked), repository));
+        var accepted = await services.InstallAsync(Request(instance.InstanceId, Pack(valid, yanked), repository) with { ProceedWithYankedMembers = new HashSet<string> { "Yanked" } });
+
+        var blocker = Assert.Single(refused.Blockers);
+        Assert.Equal("Yanked", blocker.Member.ModId);
+        Assert.Equal(PlanningMessageKind.YankedPin, blocker.Warning?.Kind);
+        Assert.True(accepted.IsComplete);
+        Assert.Empty(accepted.Blockers);
+        Assert.Equal($"Pack Pack 1.0.0 into instance {instance.InstanceId} did not complete, 0 of 2 members done. Blocked by: Yanked 1.0.0: Caller confirmation is required for the yanked release.", Assert.Single(log.Messages));
+    }
+
+    [Fact]
     public async Task CreateAndInstall_PreCanceled_DoesNotCreateInstance()
     {
         var release = Release("Member");
@@ -161,6 +204,8 @@ public sealed class ModPackInstallerTests
         var accepted = await services.InstallAsync(Request(instance.InstanceId, pack, repository) with { ProceedWithRetractedPack = true, ProceedWithYankedMembers = new HashSet<string> { "member" } });
 
         Assert.Contains(retracted.Warnings, value => value.Code == "retracted-pack");
+        Assert.Empty(retracted.Blockers);
+        Assert.Equal("Pack: Broken pack.", retracted.DescribeBlockers());
         Assert.Contains(yankedResult.Warnings, value => value.Code == "yanked");
         Assert.True(accepted.IsComplete);
     }
@@ -221,6 +266,8 @@ public sealed class ModPackInstallerTests
         Assert.False(result.IsComplete);
         Assert.Equal(ModPackMemberStatus.Installed, Assert.Single(result.Members, value => value.ModId == "First").Status);
         Assert.Equal(ModPackMemberStatus.NotAttempted, Assert.Single(result.Members, value => value.ModId == "Second").Status);
+        Assert.Empty(result.Blockers);
+        Assert.Equal("The instance changed during pack installation.", result.DescribeBlockers());
         Assert.Equal(1, installer.Counts["First"]);
         Assert.False(installer.Counts.ContainsKey("Second"));
     }
@@ -255,7 +302,8 @@ public sealed class ModPackInstallerTests
         var foreignRelease = Release("Foreign");
         var repository = new FakeModRepository([installedRelease, foreignRelease]);
         var installer = new FakeInstaller(instances);
-        var service = new ModPackInstaller(instances, new FakePlanner(), installer, new FakeReplacer(instances));
+        var log = new RecordingLog();
+        var service = new LoggingModPackInstaller(new ModPackInstaller(instances, new FakePlanner(), installer, new FakeReplacer(instances)), log);
 
         var result = await service.InstallAsync(Request(instance.InstanceId, Pack(installedRelease, foreignRelease), repository));
 
@@ -263,6 +311,8 @@ public sealed class ModPackInstallerTests
         Assert.Equal(ModPackMemberStatus.AlreadyInstalled, Assert.Single(result.Members, value => value.ModId == "Installed").Status);
         Assert.Equal(InstallReason.Manual, Assert.Single(result.Members, value => value.ModId == "Installed").Reason);
         Assert.Equal(ModPackMemberStatus.Unresolved, Assert.Single(result.Members, value => value.ModId == "Foreign").Status);
+        Assert.Empty(result.Blockers);
+        Assert.Equal($"Pack Pack 1.0.0 into instance {instance.InstanceId} did not complete, 1 of 2 members done. Blocked by: Foreign: A managed install cannot replace foreign content.", Assert.Single(log.Messages));
         Assert.Empty(installer.Counts);
     }
 

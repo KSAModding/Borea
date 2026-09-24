@@ -2715,6 +2715,24 @@
   <data name="PackIncompleteFormat" xml:space="preserve">
     <value>{0} of {1} mods did not install.</value>
   </data>
+  <data name="PackMemberUnlistedFormat" xml:space="preserve">
+    <value>{0} {1} is not in the content index.</value>
+  </data>
+  <data name="PackMemberNotConfirmedFormat" xml:space="preserve">
+    <value>{0} {1} is yanked, and the install was not confirmed for it.</value>
+  </data>
+  <data name="PackMemberUnresolvedFormat" xml:space="preserve">
+    <value>Borea could not resolve {0} {1}.</value>
+  </data>
+  <data name="PackMemberFailedFormat" xml:space="preserve">
+    <value>{0} {1} did not install.</value>
+  </data>
+  <data name="PackInstanceChanged" xml:space="preserve">
+    <value>The instance changed while the pack was installing.</value>
+  </data>
+  <data name="PackNothingInstalled" xml:space="preserve">
+    <value>Nothing was installed.</value>
+  </data>
   <data name="PackUntestedFormat" xml:space="preserve">
     <value>This pack is not tested with the installed game, which is newer than {0}.</value>
   </data>

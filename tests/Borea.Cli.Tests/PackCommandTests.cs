@@ -4,6 +4,7 @@ using Borea.Core.Dependencies;
 using Borea.Core.Game;
 using Borea.Core.Index;
 using Borea.Core.Instances;
+using Borea.Core.Logging;
 using Borea.Core.ModPacks;
 using Borea.Core.Mods;
 using Borea.Core.Planning;
@@ -417,7 +418,7 @@ public sealed class PackCommandTests : IDisposable
         Assert.Contains("warning: missing-mod: The exact pinned release is not listed and cannot be installed by Borea.", run.Output);
         Assert.Contains("  unresolved  missing-mod 1.0.0  modpack: The exact pinned release is not listed.", run.Output);
         Assert.Contains("  not-attempted  flight-tools 2.0.0  modpack: Another pack member needs caller action.", run.Output);
-        Assert.Contains("error: The pack was not installed completely, because 2 of 2 members did not install.", run.Error);
+        Assert.Contains("error: Nothing was installed, because 1 of 2 members did not install. missing-mod 1.0.0: The exact pinned release is not listed.", run.Error);
     }
 
     [Fact]
@@ -603,7 +604,8 @@ public sealed class PackCommandTests : IDisposable
     {
         var flightTools = new ModPackEntry("flight-tools", ModVersion.Parse("2.0.0"));
         var library = new ModPackEntry("library", ModVersion.Parse("1.0.0"));
-        _host.IndexReader.Snapshot = Snapshot(Pack(ContentCommandFixtures.PackVersion(mods: new[] { flightTools, library })));
+        var map = new ModPackEntry("map", ModVersion.Parse("1.0.0"));
+        _host.IndexReader.Snapshot = Snapshot(Pack(ContentCommandFixtures.PackVersion(mods: new[] { flightTools, library, map })));
         _host.ModPackInstaller.Result = request => new ModPackInstallResult(
             request.InstanceId,
             null,
@@ -611,6 +613,7 @@ public sealed class PackCommandTests : IDisposable
             {
                 FakeModPackInstaller.Member(flightTools, ModPackMemberStatus.Installed),
                 FakeModPackInstaller.Member(library, ModPackMemberStatus.Failed, "The archive hash did not match."),
+                FakeModPackInstaller.Member(map, ModPackMemberStatus.NotAttempted, "An earlier operation failed."),
             },
             Array.Empty<Borea.Core.Planning.PlanningMessage>(),
             false);
@@ -621,7 +624,31 @@ public sealed class PackCommandTests : IDisposable
         Assert.Equal(1, run.ExitCode);
         Assert.Contains("  installed  flight-tools 2.0.0  modpack", run.Output);
         Assert.Contains("  failed  library 1.0.0  modpack: The archive hash did not match.", run.Output);
-        Assert.Contains("error: The pack was not installed completely, because 1 of 2 members did not install.", run.Error);
+        Assert.Contains("error: The pack was not installed completely, because 1 of 3 members did not install. library 1.0.0: The archive hash did not match.", run.Error);
+    }
+
+    [Fact]
+    public async Task PackInstall_InstanceChangedDuringTheInstall_NamesThatReason()
+    {
+        var flightTools = new ModPackEntry("flight-tools", ModVersion.Parse("2.0.0"));
+        var library = new ModPackEntry("library", ModVersion.Parse("1.0.0"));
+        _host.IndexReader.Snapshot = Snapshot(Pack(ContentCommandFixtures.PackVersion(mods: new[] { flightTools, library })));
+        _host.ModPackInstaller.Result = request => new ModPackInstallResult(
+            request.InstanceId,
+            null,
+            new[]
+            {
+                FakeModPackInstaller.Member(flightTools, ModPackMemberStatus.Installed),
+                FakeModPackInstaller.Member(library, ModPackMemberStatus.NotAttempted, "The instance changed during pack installation."),
+            },
+            Array.Empty<Borea.Core.Planning.PlanningMessage>(),
+            false);
+        await _host.RunAsync("instance", "create", "Alpha");
+
+        var run = await _host.RunAsync("pack", "install", "navigation-pack", "--instance", "Alpha");
+
+        Assert.Equal(1, run.ExitCode);
+        Assert.Contains("error: The pack was not installed completely, because 1 of 2 members were not tried. The instance changed during pack installation.", run.Error);
     }
 
     [Fact]
@@ -775,6 +802,55 @@ public sealed class PackCommandTests : IDisposable
         Assert.Equal(1, run.ExitCode);
         Assert.Contains("  unresolved  flight-tools 2.0.0", run.Output);
         Assert.Contains("Borea did not create the instance 'Navigation'.", run.Error);
+        Assert.Empty(await new FileInstanceRepository(_host.Paths).GetAllAsync());
+    }
+
+    [Fact]
+    public async Task PackInstall_NewInstanceWithAnUnlistedMember_NamesItInTheErrorAndTheLog()
+    {
+        _host.IndexReader.Snapshot = Snapshot(Pack(ContentCommandFixtures.PackVersion(mods: new[]
+        {
+            new ModPackEntry("flight-tools", ModVersion.Parse("2.0.0")),
+            new ModPackEntry("missing-mod", ModVersion.Parse("1.0.0")),
+        })));
+        _host.Mods.Releases.Add(ContentCommandFixtures.Release());
+        IBoreaLog? log = null;
+        _host.ModPackInstallerFactory = graph =>
+        {
+            log = graph.Log;
+            return graph.ModPackInstaller;
+        };
+
+        var run = await _host.RunAsync("pack", "install", "navigation-pack", "--new-instance", "Navigation");
+
+        Assert.Equal(1, run.ExitCode);
+        Assert.Contains("error: Nothing was installed, because 1 of 2 members did not install. missing-mod 1.0.0: The exact pinned release is not listed. Borea did not create the instance 'Navigation'.", run.Error);
+        Assert.Contains(log!.ReadRecentLines(100), line => line.Contains("Pack navigation-pack 1.0.0 into the new instance 'Navigation' did not complete, 0 of 2 members done. Blocked by: missing-mod 1.0.0: The exact pinned release is not listed.", StringComparison.Ordinal));
+        Assert.Empty(await new FileInstanceRepository(_host.Paths).GetAllAsync());
+    }
+
+    [Fact]
+    public async Task PackInstall_NewInstanceWithConflictingMembers_NamesTheConflictInTheErrorAndTheLog()
+    {
+        _host.IndexReader.Snapshot = Snapshot(Pack(ContentCommandFixtures.PackVersion(mods: new[]
+        {
+            new ModPackEntry("flight-tools", ModVersion.Parse("2.0.0")),
+            new ModPackEntry("library", ModVersion.Parse("1.0.0")),
+        })));
+        _host.Mods.Releases.Add(ContentCommandFixtures.Release(dependencies: [new ModDependency("library", ModDependencyKind.Conflict)]));
+        _host.Mods.Releases.Add(ContentCommandFixtures.Release(id: "library", version: "1.0.0"));
+        IBoreaLog? log = null;
+        _host.ModPackInstallerFactory = graph =>
+        {
+            log = graph.Log;
+            return graph.ModPackInstaller;
+        };
+
+        var run = await _host.RunAsync("pack", "install", "navigation-pack", "--new-instance", "Navigation");
+
+        Assert.Equal(1, run.ExitCode);
+        Assert.Contains("error: Nothing was installed, because the plan has conflicts or open choices. flight-tools: Conflict dependency on mod 'library' library: Conflict dependency on mod 'library' Borea did not create the instance 'Navigation'.", run.Error);
+        Assert.Contains(log!.ReadRecentLines(100), line => line.Contains("Pack navigation-pack 1.0.0 into the new instance 'Navigation' did not complete, 0 of 2 members done. Blocked by: flight-tools: Conflict dependency on mod 'library' library: Conflict dependency on mod 'library'", StringComparison.Ordinal));
         Assert.Empty(await new FileInstanceRepository(_host.Paths).GetAllAsync());
     }
 
