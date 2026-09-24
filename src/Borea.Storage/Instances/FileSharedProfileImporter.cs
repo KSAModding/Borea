@@ -100,7 +100,7 @@ public sealed class FileSharedProfileImporter : ISharedProfileImporter
             () =>
             {
                 foreach (var mod in mods)
-                    CopyDirectory(Path.Combine(ModsFolder, mod.FolderName), Path.Combine(staging, mod.FolderName), isModRoot: true, cancellationToken);
+                    ModFolders.CopyWithoutMarker(Path.Combine(ModsFolder, mod.FolderName), Path.Combine(staging, mod.FolderName), cancellationToken);
                 Directory.Move(staging, modsFolder);
             },
             cancellationToken).ConfigureAwait(false);
@@ -136,25 +136,6 @@ public sealed class FileSharedProfileImporter : ISharedProfileImporter
         var instance = await _instances.GetByIdAsync(instanceId).ConfigureAwait(false)
             ?? throw new InvalidOperationException($"No instance with ID '{instanceId}' exists.");
         return new SharedProfileImportResult(instance, imported, activated);
-    }
-
-    /// <summary>
-    /// Leaves out the ownership marker at the root of a mod, because a marker
-    /// from another instance would claim that Borea installed this copy.
-    /// </summary>
-    private static void CopyDirectory(string source, string target, bool isModRoot, CancellationToken cancellationToken)
-    {
-        Directory.CreateDirectory(target);
-        foreach (var file in Directory.EnumerateFiles(source))
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            var fileName = Path.GetFileName(file);
-            if (!isModRoot || !string.Equals(fileName, ModFolders.OwnershipFileName, StringComparison.OrdinalIgnoreCase))
-                File.Copy(file, Path.Combine(target, fileName));
-        }
-
-        foreach (var directory in Directory.EnumerateDirectories(source))
-            CopyDirectory(directory, Path.Combine(target, Path.GetFileName(directory)), isModRoot: false, cancellationToken);
     }
 
     private static bool IsMatchFailure(Exception exception, CancellationToken cancellationToken)

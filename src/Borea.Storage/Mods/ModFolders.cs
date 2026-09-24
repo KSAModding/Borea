@@ -60,4 +60,26 @@ internal static class ModFolders
 
         return ownedFolder;
     }
+
+    /// <summary>
+    /// Copies a mod folder without the ownership marker at its root, because a
+    /// marker from elsewhere would claim that Borea installed the copy.
+    /// </summary>
+    public static void CopyWithoutMarker(string source, string target, CancellationToken cancellationToken)
+        => Copy(source, target, isModRoot: true, cancellationToken);
+
+    private static void Copy(string source, string target, bool isModRoot, CancellationToken cancellationToken)
+    {
+        Directory.CreateDirectory(target);
+        foreach (var file in Directory.EnumerateFiles(source))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var fileName = Path.GetFileName(file);
+            if (!isModRoot || !string.Equals(fileName, OwnershipFileName, StringComparison.OrdinalIgnoreCase))
+                File.Copy(file, Path.Combine(target, fileName));
+        }
+
+        foreach (var directory in Directory.EnumerateDirectories(source))
+            Copy(directory, Path.Combine(target, Path.GetFileName(directory)), isModRoot: false, cancellationToken);
+    }
 }
