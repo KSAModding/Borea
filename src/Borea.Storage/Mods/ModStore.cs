@@ -3,6 +3,7 @@ using Borea.Core.Files;
 using Borea.Core.Mods;
 using Borea.Core.Paths;
 using Borea.Storage.Files;
+using Borea.Storage.Toml;
 
 namespace Borea.Storage.Mods;
 
@@ -11,13 +12,17 @@ namespace Borea.Storage.Mods;
 /// Static Mod Files/&lt;Mod&gt;/&lt;Version&gt;-&lt;first 12 hex of its SHA-256&gt;, an
 /// instance links its mod folder to that entry, and the entry goes when no
 /// link in any instance leads to it any more. A mod that claims paths it
-/// rewrites, and a release the filesystem cannot link, get a private copy
-/// instead, because a shared folder shows every write to every instance.
+/// rewrites, a mod that was broken out of the store, and a release the
+/// filesystem cannot link get a private copy instead, because a shared folder
+/// shows every write to every instance. Beside each entry is the snapshot
+/// that tells whether it changed since it was stored.
 /// </summary>
 public sealed class ModStore
 {
     private const int DigestLength = 12;
     private const string TrashPrefix = ".borea-trash-";
+    private const string SnapshotExtension = ".snapshot.toml";
+    private const string PrivateModsFileName = "private-mods.toml";
 
     private static readonly StringComparer PathComparer = OperatingSystem.IsLinux() ? StringComparer.Ordinal : StringComparer.OrdinalIgnoreCase;
 
@@ -25,6 +30,7 @@ public sealed class ModStore
     private readonly IDirectoryLinker _linker;
     private readonly bool _linksReleases;
     private readonly ConcurrentDictionary<string, SemaphoreSlim> _modLocks = new(PathComparer);
+    private readonly SemaphoreSlim _privateModsLock = new(1, 1);
 
     /// <param name="linksReleases">
     /// Whether a new install links to the store. Off copies every release into
@@ -46,6 +52,9 @@ public sealed class ModStore
     internal bool IsLinkTo(string path, string entry)
         => _linker.GetTarget(path) is { } target && SamePath(FullPath(target, path), entry);
 
+    internal bool IsStoredIn(InstalledMod mod, string entry)
+        => mod.Storage == ModStorage.Linked && SamePath(EntryPath(mod), entry);
+
     /// <summary>
     /// Downloads the release when it is not stored yet and puts it at
     /// <paramref name="stagingFolder"/>, as a link to its entry or as a private
@@ -63,7 +72,7 @@ public sealed class ModStore
         var archivePath = Path.Combine(Path.GetTempPath(), $"borea-download-{Guid.NewGuid():N}.zip");
         try
         {
-            if (!ShouldLink(release))
+            if (!await ShouldLinkAsync(release, cancellationToken).ConfigureAwait(false))
             {
                 var download = await downloader.DownloadAsync(release, archivePath, progress.ForDownload(release), cancellationToken).ConfigureAwait(false);
                 progress.Report(release, InstallPhase.Extracting);
@@ -87,7 +96,7 @@ public sealed class ModStore
                 {
                     downloaded ??= await downloader.DownloadAsync(release, archivePath, progress.ForDownload(release), cancellationToken).ConfigureAwait(false);
                     progress.Report(release, InstallPhase.Extracting);
-                    Add(archivePath, release, entry);
+                    await AddAsync(archivePath, release, entry, cancellationToken).ConfigureAwait(false);
                 }
 
                 progress.Report(release, InstallPhase.Finishing);
@@ -147,14 +156,76 @@ public sealed class ModStore
             .ToList();
     }
 
-    /// <summary>
-    /// A mod that claims paths it rewrites needs a folder of its own. An empty
-    /// claim says that there are none.
-    /// </summary>
-    private bool ShouldLink(ModVersionMetadata release) => _linksReleases && release.Manages is not { Count: > 0 };
+    /// <summary>Every entry in the store.</summary>
+    internal IReadOnlyList<string> Entries()
+        => Children(_paths.GetStaticModFilesRoot())
+            .Where(modFolder => !Path.GetFileName(modFolder).StartsWith(".borea-", StringComparison.Ordinal))
+            .SelectMany(Children)
+            .Select(Path.GetFullPath)
+            .ToList();
 
-    /// <summary>Unpacks beside the entry first, so an entry is only ever there complete.</summary>
-    private void Add(string archivePath, ModVersionMetadata release, string entry)
+    /// <summary>
+    /// Whether the entry differs from the snapshot taken when it was stored. An
+    /// entry without a readable snapshot cannot be shown to be unchanged, so it
+    /// counts as changed. A missing entry has nothing left to break out.
+    /// </summary>
+    internal async Task<bool> HasChangedAsync(string entry, CancellationToken cancellationToken)
+    {
+        if (!Directory.Exists(entry))
+            return false;
+
+        try
+        {
+            var stored = await StoredReleaseSnapshot.ReadAsync(SnapshotPath(entry), cancellationToken).ConfigureAwait(false);
+            return stored is null || !stored.Matches(StoredReleaseSnapshot.Measure(entry));
+        }
+        catch (InvalidOperationException)
+        {
+            return true;
+        }
+    }
+
+    /// <summary>Records that the mod is copied into each instance from now on. False when it was already.</summary>
+    internal async Task<bool> MakePrivateAsync(string modId, CancellationToken cancellationToken)
+    {
+        await _privateModsLock.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            var privateMods = await ReadPrivateModsAsync(cancellationToken).ConfigureAwait(false);
+            if (privateMods.ModIds.Contains(modId, ModIds.Comparer))
+                return false;
+
+            privateMods.ModIds.Add(modId);
+            await TomlFileStore.WriteAsync(PrivateModsPath, privateMods, cancellationToken).ConfigureAwait(false);
+            return true;
+        }
+        finally
+        {
+            _privateModsLock.Release();
+        }
+    }
+
+    /// <summary>
+    /// A mod that claims paths it rewrites needs a folder of its own, and so
+    /// does one that was broken out. An empty claim says that there are none.
+    /// </summary>
+    private async Task<bool> ShouldLinkAsync(ModVersionMetadata release, CancellationToken cancellationToken)
+        => _linksReleases
+            && release.Manages is not { Count: > 0 }
+            && !(await ReadPrivateModsAsync(cancellationToken).ConfigureAwait(false)).ModIds.Contains(release.ModId, ModIds.Comparer);
+
+    private string PrivateModsPath => Path.Combine(_paths.GetStaticModFilesRoot(), PrivateModsFileName);
+
+    private async Task<PrivateModsDto> ReadPrivateModsAsync(CancellationToken cancellationToken)
+        => await TomlFileStore.ReadAsync<PrivateModsDto>(PrivateModsPath, cancellationToken).ConfigureAwait(false) ?? new PrivateModsDto();
+
+    private static string SnapshotPath(string entry) => entry + SnapshotExtension;
+
+    /// <summary>
+    /// Unpacks beside the entry first, so an entry is only ever there complete,
+    /// and never without its snapshot.
+    /// </summary>
+    private async Task AddAsync(string archivePath, ModVersionMetadata release, string entry, CancellationToken cancellationToken)
     {
         var root = _paths.GetStaticModFilesRoot();
         if (Directory.Exists(root))
@@ -168,7 +239,13 @@ public sealed class ModStore
         {
             FileModInstaller.Unpack(archivePath, release, staging);
             Directory.CreateDirectory(Path.GetDirectoryName(entry)!);
+            await StoredReleaseSnapshot.Measure(staging).WriteAsync(SnapshotPath(entry), cancellationToken).ConfigureAwait(false);
             Directory.Move(staging, entry);
+        }
+        catch
+        {
+            TryDeleteFile(SnapshotPath(entry));
+            throw;
         }
         finally
         {
@@ -198,6 +275,7 @@ public sealed class ModStore
 
             var trash = Path.Combine(_paths.GetStaticModFilesRoot(), TrashPrefix + Guid.NewGuid().ToString("N"));
             Directory.Move(entry, trash);
+            File.Delete(SnapshotPath(entry));
             var modFolder = Path.GetDirectoryName(entry)!;
             if (!Directory.EnumerateFileSystemEntries(modFolder).Any())
                 Directory.Delete(modFolder);
