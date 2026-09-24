@@ -147,6 +147,8 @@ public sealed class BoreaServices : IDisposable
 
     public required IForeignModHandover ForeignModHandover { get; init; }
 
+    public required ISharedModStore SharedModStore { get; init; }
+
     public required ISharedProfileImporter SharedProfileImporter { get; init; }
 
     /// <summary>
@@ -444,6 +446,7 @@ public sealed class BoreaServices : IDisposable
             MissingMods = new FileMissingModDetector(paths, instances),
             ForeignModReleaseMatcher = foreignModReleaseMatcher,
             ForeignModHandover = foreignModHandover,
+            SharedModStore = new FileSharedModStore(paths, modStore, instances, settingsRepository, launcher, isGameProcessRunning, isOtherBoreaRunning),
             SharedProfileImporter = new CheckedSharedProfileImporter(
                 new FileSharedProfileImporter(paths, instances, checkedModState, foreignModAdopter, foreignModReleaseMatcher),
                 gameShape),
