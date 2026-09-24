@@ -729,6 +729,24 @@
     return section;
   }
 
+  function actionNodes(view, base) {
+    var fragment = document.createDocumentFragment();
+    var actions = element("div", "actions");
+    actions.appendChild(link("borea://" + view.kind + "/" + view.id, "Open in Borea", "button desktop-only"));
+    actions.appendChild(link("borea://install/" + view.id, "Install with Borea", "button secondary desktop-only"));
+    var copy = element("button", "button handheld-only", "Copy link");
+    copy.setAttribute("type", "button");
+    copy.setAttribute("data-copy-link", "");
+    copy.hidden = true;
+    actions.appendChild(copy);
+    actions.appendChild(link(base + "#download", "Get Borea", "button secondary"));
+    fragment.appendChild(actions);
+    fragment.appendChild(element("p", "meta hint desktop-only", "Open in Borea and Install with Borea need Borea on this computer."));
+    fragment.appendChild(element("p", "meta hint handheld-only",
+      "Borea runs on Windows, Linux and macOS. To install this with Borea, open this page on a computer."));
+    return fragment;
+  }
+
   function render(view) {
     var header = element("div", "listing listing-header");
     var icon = element("div", "listing-icon placeholder");
@@ -762,12 +780,7 @@
       }
       intro.appendChild(line);
     });
-    var actions = element("div", "actions");
-    actions.appendChild(link("borea://" + view.kind + "/" + view.id, "Open in Borea", "button"));
-    actions.appendChild(link("borea://install/" + view.id, "Install with Borea", "button secondary"));
-    actions.appendChild(link(root + "#download", "Get Borea", "button secondary"));
-    intro.appendChild(actions);
-    intro.appendChild(element("p", "meta hint", "Open in Borea and Install with Borea need Borea on this computer."));
+    intro.appendChild(actionNodes(view, root));
     header.appendChild(intro);
 
     var body = element("div", "listing-body");
@@ -880,7 +893,7 @@
 
   // The parity test in .github/scripts/tests loads this file in Node.
   if (typeof document === "undefined") {
-    module.exports = { listingView: listingView, packView: packView, markdownBlocks: markdownBlocks, markdownNodes: markdownNodes };
+    module.exports = { listingView: listingView, packView: packView, markdownBlocks: markdownBlocks, markdownNodes: markdownNodes, actionNodes: actionNodes };
     return;
   }
 
