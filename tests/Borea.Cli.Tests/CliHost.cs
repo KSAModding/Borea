@@ -12,6 +12,7 @@ using Borea.Core.Settings;
 using Borea.Core.Updates;
 using Borea.Core.Instances;
 using Borea.Network.Index;
+using Borea.Storage.Files;
 using Borea.Storage.Game;
 using Borea.Storage.Instances;
 using Borea.Storage.Launch;
@@ -107,6 +108,9 @@ internal sealed class CliHost : IDisposable
     /// <summary>Whether the commands see a running game. False by default, so a game the developer runs next to the tests does not reach them.</summary>
     public bool GameRunning { get; set; }
 
+    /// <summary>Whether the shared mod store sees another Borea.</summary>
+    public bool OtherBoreaRunning { get; set; }
+
     /// <summary>How many times a command built its services.</summary>
     public int Builds { get; private set; }
 
@@ -164,7 +168,8 @@ internal sealed class CliHost : IDisposable
             selfUpdater: SelfUpdater,
             // a game or a Borea the developer runs next to the tests must not refuse the move
             libraryFolderChanger: LibraryChanger ?? new LibraryFolderChanger(graph.SettingsRepository, graph.Paths, Root, graph.Launcher, (FileInstanceRepository)((LoggingInstanceRepository)graph.Instances).Inner, isGameProcessRunning: () => false, isOtherBoreaRunning: () => false, isSameVolume: LibraryOnSameVolume),
-            isGameProcessRunning: () => GameRunning);
+            isGameProcessRunning: () => GameRunning,
+            sharedModStore: new FileSharedModStore(graph.Paths, new ModStore(graph.Paths, new DirectoryLinker(), graph.Settings.SharedModStore), graph.Instances, graph.SettingsRepository, graph.Launcher, () => GameRunning, () => OtherBoreaRunning));
     }
 
     private FileSharedProfileImporter BuildSharedProfileImporter(BoreaServices graph)

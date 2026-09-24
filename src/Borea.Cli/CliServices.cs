@@ -86,6 +86,8 @@ internal sealed class CliServices : IDisposable
     public required IMissingModDetector MissingMods { get; init; }
     public required IForeignModHandover ForeignModHandover { get; init; }
 
+    public required ISharedModStore SharedModStore { get; init; }
+
     public required ISharedProfileImporter SharedProfileImporter { get; init; }
 
     public required ILoaderInstaller LoaderInstaller { get; init; }
@@ -161,7 +163,8 @@ internal sealed class CliServices : IDisposable
         ILibraryFolderChanger? libraryFolderChanger = null,
         IBoreaReleaseCheck? releaseCheck = null,
         ISelfUpdater? selfUpdater = null,
-        Func<bool>? isGameProcessRunning = null)
+        Func<bool>? isGameProcessRunning = null,
+        ISharedModStore? sharedModStore = null)
     {
         if (services is null)
             throw new ArgumentNullException(nameof(services));
@@ -198,6 +201,7 @@ internal sealed class CliServices : IDisposable
             ForeignModAdopter = foreignModAdopter ?? services.ForeignModAdopter,
             MissingMods = missingMods ?? services.MissingMods,
             ForeignModHandover = foreignModHandover ?? services.ForeignModHandover,
+            SharedModStore = sharedModStore ?? services.SharedModStore,
             SharedProfileImporter = sharedProfileImporter ?? services.SharedProfileImporter,
             LoaderInstaller = loaderInstaller ?? services.LoaderInstaller,
             LoaderAdopter = loaderAdopter ?? services.LoaderAdopter,

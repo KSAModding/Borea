@@ -103,6 +103,7 @@ public sealed class CliServicesTests : IDisposable
             ForeignModAdopter = graph.ForeignModAdopter,
             MissingMods = graph.MissingMods,
             ForeignModHandover = graph.ForeignModHandover,
+            SharedModStore = graph.SharedModStore,
             SharedProfileImporter = graph.SharedProfileImporter,
             LoaderInstaller = graph.LoaderInstaller,
             LoaderAdopter = graph.LoaderAdopter,
