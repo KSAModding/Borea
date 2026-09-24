@@ -1,20 +1,24 @@
 using Borea.Core.Mods;
 using Borea.Core.Paths;
+using Borea.Storage.Files;
 
 namespace Borea.Storage.Mods;
 
 /// <summary>
-/// File-backed implementation of IModUninstaller.
+/// File-backed implementation of IModUninstaller. A linked mod loses only its
+/// link, and its stored release goes when no other instance links to it.
 /// </summary>
 public sealed class FileModUninstaller : IModUninstaller
 {
     private readonly IGamePathProvider _pathProvider;
     private readonly Borea.Core.Instances.IInstanceRepository _instances;
+    private readonly ModStore _store;
 
-    public FileModUninstaller(IGamePathProvider pathProvider, Borea.Core.Instances.IInstanceRepository instances)
+    public FileModUninstaller(IGamePathProvider pathProvider, Borea.Core.Instances.IInstanceRepository instances, ModStore? store = null)
     {
         _pathProvider = pathProvider ?? throw new ArgumentNullException(nameof(pathProvider));
         _instances = instances ?? throw new ArgumentNullException(nameof(instances));
+        _store = store ?? new ModStore(pathProvider, new DirectoryLinker(), linksReleases: false);
     }
 
     public async Task UninstallAsync(Guid instanceId, string modId, CancellationToken cancellationToken = default)
@@ -29,6 +33,7 @@ public sealed class FileModUninstaller : IModUninstaller
 
         // The folder and the record change while other changes to the instance
         // wait, so an install or a replacement never sees one without the other.
+        InstalledMod? removed = null;
         await _instances.UpdateAsync(
             instanceId,
             current =>
@@ -43,16 +48,17 @@ public sealed class FileModUninstaller : IModUninstaller
                         $"Borea cannot verify ownership of the installed folder for '{installed.ModId}'. Remove it manually or install it again before uninstalling it.");
                 }
 
-                var modDirectory = ModFolders.FindOwned(
-                    _pathProvider.GetInstanceModsFolder(instanceId),
-                    installed.ModId,
-                    installed.OwnershipToken!);
+                var modDirectory = ModFolders.FindOwned(_pathProvider.GetInstanceModsFolder(instanceId), installed, _store);
                 cancellationToken.ThrowIfCancellationRequested();
                 if (modDirectory is not null)
-                    Directory.Delete(modDirectory, recursive: true);
+                    DirectoryLinks.DeleteTreeWithoutFollowingLinks(modDirectory);
 
+                removed = installed;
                 return current.RemoveMod(installed.ModId);
             },
             cancellationToken).ConfigureAwait(false);
+
+        if (removed is not null)
+            await _store.ReleaseAsync(removed).ConfigureAwait(false);
     }
 }

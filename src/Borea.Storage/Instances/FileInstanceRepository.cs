@@ -1,6 +1,7 @@
 using Borea.Core.Instances;
 using Borea.Core.Paths;
 using Borea.Storage.Files;
+using Borea.Storage.Mods;
 using Borea.Storage.Toml;
 
 namespace Borea.Storage.Instances;
@@ -15,12 +16,14 @@ namespace Borea.Storage.Instances;
 public sealed class FileInstanceRepository : IInstanceRepository, IInstanceLocks
 {
     private readonly IGamePathProvider _pathProvider;
+    private readonly ModStore _store;
     private readonly System.Collections.Concurrent.ConcurrentDictionary<Guid, SemaphoreSlim> _instanceLocks = new();
     private readonly SemaphoreSlim _activeInstanceLock = new(1, 1);
 
-    public FileInstanceRepository(IGamePathProvider pathProvider)
+    public FileInstanceRepository(IGamePathProvider pathProvider, ModStore? store = null)
     {
         _pathProvider = pathProvider ?? throw new ArgumentNullException(nameof(pathProvider));
+        _store = store ?? new ModStore(pathProvider, new DirectoryLinker(), linksReleases: false);
     }
 
 
@@ -149,14 +152,16 @@ public sealed class FileInstanceRepository : IInstanceRepository, IInstanceLocks
 
     /// <summary>
     /// Deletes the instance folder with the given ID when it is there, always deletes the backups of its saves and vehicles, and removes the pointer file when it names that instance.
-    /// A link below the instance is removed as a link, so the folder it points at keeps its files.
+    /// A link below the instance is removed as a link, so the folder it points at keeps its files, and a stored release it linked to goes when no other instance links to it.
     /// </summary>
     public async Task DeleteAsync(Guid instanceId)
     {
+        IReadOnlyList<string> linkedEntries;
         var gate = GetInstanceLock(instanceId);
         await gate.WaitAsync().ConfigureAwait(false);
         try
         {
+            linkedEntries = _store.EntriesLinkedFrom(instanceId);
             var root = _pathProvider.GetInstanceRoot(instanceId);
             try
             {
@@ -176,6 +181,8 @@ public sealed class FileInstanceRepository : IInstanceRepository, IInstanceLocks
         {
             gate.Release();
         }
+
+        await _store.ReleaseAsync(linkedEntries).ConfigureAwait(false);
     }
 
     // a recursive delete that fails part way can already have removed the metadata file

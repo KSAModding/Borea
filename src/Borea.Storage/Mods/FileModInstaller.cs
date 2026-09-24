@@ -3,13 +3,15 @@ using Borea.Core.Mods;
 using Borea.Core.Paths;
 using Borea.Core.Planning;
 using Borea.Core.State;
+using Borea.Storage.Files;
 
 namespace Borea.Storage.Mods;
 
 /// <summary>
 /// File-backed <see cref="IModInstaller"/>. The archive goes to a temporary
 /// file first, so nothing reaches the instance until the bytes are verified,
-/// and a failed install removes the folder and the record it created.
+/// and a failed install removes the folder and the record it created. A release
+/// the <see cref="ModStore"/> holds already is only linked.
 /// </summary>
 public sealed class FileModInstaller : IModInstaller
 {
@@ -18,19 +20,23 @@ public sealed class FileModInstaller : IModInstaller
     private readonly IInstanceRepository _instances;
     private readonly IModStateRepository _modState;
     private readonly TimeProvider _timeProvider;
+    private readonly ModStore _store;
 
+    /// <param name="store">Null copies every release into its instance.</param>
     public FileModInstaller(
         IGamePathProvider pathProvider,
         IModDownloader downloader,
         IInstanceRepository instances,
         IModStateRepository modState,
-        TimeProvider? timeProvider = null)
+        TimeProvider? timeProvider = null,
+        ModStore? store = null)
     {
         _pathProvider = pathProvider ?? throw new ArgumentNullException(nameof(pathProvider));
         _downloader = downloader ?? throw new ArgumentNullException(nameof(downloader));
         _instances = instances ?? throw new ArgumentNullException(nameof(instances));
         _modState = modState ?? throw new ArgumentNullException(nameof(modState));
         _timeProvider = timeProvider ?? TimeProvider.System;
+        _store = store ?? new ModStore(pathProvider, new DirectoryLinker(), linksReleases: false);
     }
 
     public async Task<InstallResult> InstallAsync(
@@ -83,29 +89,17 @@ public sealed class FileModInstaller : IModInstaller
                 $"The instance already holds a folder '{Path.GetFileName(foreignFolder)}' that Borea did not install.");
         }
 
-        var archivePath = Path.Combine(Path.GetTempPath(), $"borea-download-{Guid.NewGuid():N}.zip");
         var modFolder = Path.Combine(modsFolder, release.ModId);
         var stagingFolder = Path.Combine(_pathProvider.GetInstanceRoot(instanceId), $".borea-staging-{Guid.NewGuid():N}");
         var recorded = false;
-        string? ownershipToken = null;
+        InstalledMod? installed = null;
         InstallPlanningState? resultingState = null;
 
         try
         {
-            var download = await _downloader.DownloadAsync(release, archivePath, progress.ForDownload(release), cancellationToken).ConfigureAwait(false);
-
-            progress.Report(release, InstallPhase.Extracting);
-            Unpack(archivePath, release, stagingFolder);
-
-            progress.Report(release, InstallPhase.Finishing);
-
-            ownershipToken = Guid.NewGuid().ToString("N");
-            await File.WriteAllTextAsync(
-                Path.Combine(stagingFolder, ModFolders.OwnershipFileName),
-                ownershipToken,
-                cancellationToken).ConfigureAwait(false);
-
-            var installed = new InstalledMod(
+            var staged = await _store.StageAsync(_downloader, release, stagingFolder, progress, cancellationToken).ConfigureAwait(false);
+            var download = staged.Download;
+            installed = new InstalledMod(
                 release.ModId,
                 release.Version,
                 reason,
@@ -113,7 +107,8 @@ public sealed class FileModInstaller : IModInstaller
                 release,
                 download.Sha256,
                 ModInstallOwnership.Borea,
-                ownershipToken);
+                staged.OwnershipToken,
+                staged.Storage);
             await _instances.UpdateAsync(
                 instanceId,
                 current =>
@@ -141,11 +136,13 @@ public sealed class FileModInstaller : IModInstaller
         catch
         {
             TryDeleteDirectory(stagingFolder);
-            if (ownershipToken is not null)
+            if (installed is not null)
             {
-                var ownedFolder = ModFolders.FindOwned(modsFolder, release.ModId, ownershipToken);
+                var ownedFolder = ModFolders.FindOwned(modsFolder, installed, _store);
                 if (ownedFolder is not null)
                     TryDeleteDirectory(ownedFolder);
+
+                await _store.ReleaseAsync(installed).ConfigureAwait(false);
             }
 
             if (recorded)
@@ -155,7 +152,6 @@ public sealed class FileModInstaller : IModInstaller
         }
         finally
         {
-            TryDeleteFile(archivePath);
             TryDeleteDirectory(stagingFolder);
         }
     }
@@ -231,32 +227,13 @@ public sealed class FileModInstaller : IModInstaller
     /// <summary>
     /// Cleanup that must not replace the outcome: a folder the rollback cannot
     /// remove stays behind, and the error that caused the rollback still wins.
+    /// A linked folder loses only its link.
     /// </summary>
     private static void TryDeleteDirectory(string path)
     {
         try
         {
-            if (Directory.Exists(path))
-                Directory.Delete(path, recursive: true);
-        }
-        catch (IOException)
-        {
-        }
-        catch (UnauthorizedAccessException)
-        {
-        }
-    }
-
-    /// <summary>
-    /// Same for the temporary archive, which a scanner may still hold open
-    /// after a finished install.
-    /// </summary>
-    private static void TryDeleteFile(string path)
-    {
-        try
-        {
-            if (File.Exists(path))
-                File.Delete(path);
+            DirectoryLinks.DeleteTreeWithoutFollowingLinks(path);
         }
         catch (IOException)
         {
