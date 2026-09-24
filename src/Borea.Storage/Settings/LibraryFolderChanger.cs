@@ -2,6 +2,7 @@ using Borea.Core.Instances;
 using Borea.Core.Launch;
 using Borea.Core.Paths;
 using Borea.Core.Settings;
+using Borea.Storage.Files;
 using Borea.Storage.Instances;
 using Borea.Storage.Launch;
 using Borea.Storage.Paths;
@@ -12,6 +13,7 @@ public sealed class LibraryFolderChanger : ILibraryFolderChanger
 {
     private const string InstancesFolderName = "Instances";
     private const string BackupsFolderName = "Backups";
+    private const string StaticModFilesFolderName = "Static Mod Files";
     private const int CopyBufferSize = 1 << 20;
     private const int MaxLinkDepth = 32;
 
@@ -31,6 +33,7 @@ public sealed class LibraryFolderChanger : ILibraryFolderChanger
     private readonly Func<bool> _isOtherBoreaRunning;
     private readonly Func<string, string, bool> _isSameVolume;
     private readonly Action<string, string> _moveDirectory;
+    private readonly DirectoryLinker _linker = new();
 
     /// <param name="defaultFolder">Where the Instances and Backups folders are when no library folder is saved.</param>
     /// <param name="isGameProcessRunning">Null looks for a KSA or StarMap process.</param>
@@ -169,11 +172,12 @@ public sealed class LibraryFolderChanger : ILibraryFolderChanger
             return new LibraryFolderChangeResult(LibraryFolderChangeOutcome.Adopted, target, previous, $"Borea now uses the library in {target}.");
         }
 
-        var moves = new[] { InstancesFolderName, BackupsFolderName }
+        // the store goes first, so a copied link to it has its target already
+        var moves = new[] { StaticModFilesFolderName, InstancesFolderName, BackupsFolderName }
             .Select(name => new FolderMove(Path.Combine(previous, name), Path.Combine(target, name)))
             .ToList();
         if (moves.Any(move => HasEntries(move.To)))
-            return Refused(LibraryFolderChangeOutcome.TargetNotEmpty, target, previous, $"{target} already has an Instances or Backups folder without a Borea instance. Choose another folder.");
+            return Refused(LibraryFolderChangeOutcome.TargetNotEmpty, target, previous, $"{target} already has an Instances, Backups or Static Mod Files folder without a Borea instance. Choose another folder.");
 
         moves.RemoveAll(move => !Directory.Exists(move.From));
         var instanceIds = InstanceFolderIds(previous);
@@ -190,6 +194,7 @@ public sealed class LibraryFolderChanger : ILibraryFolderChanger
         // handle is closed again before the move begins. A move that a real
         // conflict stops falls back to the copy and says what stayed behind.
         var entries = moves.Select(move => new FolderCopy(move, Scan(move.From))).ToList();
+        var relinks = Relinks(entries);
 
         foreach (var move in moves.Where(move => Directory.Exists(move.To)))
             Directory.Delete(move.To);
@@ -203,10 +208,10 @@ public sealed class LibraryFolderChanger : ILibraryFolderChanger
             return new LibraryFolderChangeResult(LibraryFolderChangeOutcome.Moved, target, previous, message);
         }
 
-        if (_isSameVolume(previous, target) && await TryRenameAsync(moves, changedSettings).ConfigureAwait(false))
+        if (_isSameVolume(previous, target) && await TryRenameAsync(moves, relinks, changedSettings).ConfigureAwait(false))
             return new LibraryFolderChangeResult(LibraryFolderChangeOutcome.Moved, target, previous, message);
 
-        await CopyAsync(entries, changedSettings, progress, cancellationToken).ConfigureAwait(false);
+        await CopyAsync(entries, relinks, changedSettings, progress, cancellationToken).ConfigureAwait(false);
         if (RemoveOldFolders(entries, progress))
             return new LibraryFolderChangeResult(LibraryFolderChangeOutcome.Moved, target, previous, message);
 
@@ -217,7 +222,7 @@ public sealed class LibraryFolderChanger : ILibraryFolderChanger
     }
 
     /// <summary>False when the first folder cannot be renamed, which moves nothing, so a copy can take over.</summary>
-    private async Task<bool> TryRenameAsync(IReadOnlyList<FolderMove> moves, BoreaSettings changedSettings)
+    private async Task<bool> TryRenameAsync(IReadOnlyList<FolderMove> moves, IReadOnlyList<Relink> relinks, BoreaSettings changedSettings)
     {
         var renamed = new List<FolderMove>();
         try
@@ -235,6 +240,9 @@ public sealed class LibraryFolderChanger : ILibraryFolderChanger
 
                 renamed.Add(move);
             }
+
+            foreach (var relink in relinks)
+                Repoint(relink.To, relink.NewTarget);
 
             await _settings.SaveAsync(changedSettings, CancellationToken.None).ConfigureAwait(false);
             return true;
@@ -254,6 +262,18 @@ public sealed class LibraryFolderChanger : ILibraryFolderChanger
                 }
             }
 
+            foreach (var relink in relinks)
+            {
+                try
+                {
+                    Repoint(relink.From, relink.OldTarget);
+                }
+                catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+                {
+                    rollbackFailures.Add(new IOException($"Borea could not link {relink.From} back to {relink.OldTarget}.", exception));
+                }
+            }
+
             ThrowWithRollbackFailures(failure, rollbackFailures);
             throw;
         }
@@ -261,6 +281,7 @@ public sealed class LibraryFolderChanger : ILibraryFolderChanger
 
     private async Task CopyAsync(
         IReadOnlyList<FolderCopy> copies,
+        IReadOnlyList<Relink> relinks,
         BoreaSettings changedSettings,
         IProgress<LibraryMoveProgress>? progress,
         CancellationToken cancellationToken)
@@ -268,6 +289,7 @@ public sealed class LibraryFolderChanger : ILibraryFolderChanger
         var (totalBytes, totalFiles) = Totals(copies);
         var report = new CopyReport(progress, totalBytes, totalFiles);
         var started = new List<string>();
+        var newTargets = relinks.ToDictionary(relink => relink.From, relink => relink.NewTarget, StringComparer.Ordinal);
         try
         {
             report.Send();
@@ -276,7 +298,7 @@ public sealed class LibraryFolderChanger : ILibraryFolderChanger
                 started.Add(move.To);
                 Directory.CreateDirectory(move.To);
                 foreach (var entry in entries)
-                    await CopyEntryAsync(move, entry, report, cancellationToken).ConfigureAwait(false);
+                    await CopyEntryAsync(move, entry, newTargets, report, cancellationToken).ConfigureAwait(false);
             }
 
             foreach (var (move, entries) in copies)
@@ -309,14 +331,22 @@ public sealed class LibraryFolderChanger : ILibraryFolderChanger
         }
     }
 
-    private static async Task CopyEntryAsync(FolderMove move, FolderEntry entry, CopyReport report, CancellationToken cancellationToken)
+    private async Task CopyEntryAsync(FolderMove move, FolderEntry entry, Dictionary<string, string> newTargets, CopyReport report, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
+        var source = Path.Combine(move.From, entry.RelativePath);
         var destination = Path.Combine(move.To, entry.RelativePath);
         switch (entry.Kind)
         {
             case EntryKind.Directory:
                 Directory.CreateDirectory(destination);
+                break;
+            case EntryKind.DirectoryLink when newTargets.TryGetValue(source, out var newTarget):
+                CreateLink(destination, newTarget);
+                break;
+            // A symbolic link needs a privilege on Windows, so a folder link is copied as the junction Borea makes there.
+            case EntryKind.DirectoryLink when OperatingSystem.IsWindows():
+                WindowsJunction.Create(destination, Path.GetFullPath(entry.LinkTarget!, Path.GetDirectoryName(source)!));
                 break;
             case EntryKind.DirectoryLink:
                 Directory.CreateSymbolicLink(destination, entry.LinkTarget!);
@@ -325,7 +355,7 @@ public sealed class LibraryFolderChanger : ILibraryFolderChanger
                 File.CreateSymbolicLink(destination, entry.LinkTarget!);
                 break;
             default:
-                await CopyFileAsync(Path.Combine(move.From, entry.RelativePath), destination, report, cancellationToken).ConfigureAwait(false);
+                await CopyFileAsync(source, destination, report, cancellationToken).ConfigureAwait(false);
                 break;
         }
     }
@@ -452,7 +482,53 @@ public sealed class LibraryFolderChanger : ILibraryFolderChanger
                 file.Attributes &= ~FileAttributes.ReadOnly;
         }
 
-        Directory.Delete(folder, recursive: true);
+        DirectoryLinks.DeleteTreeWithoutFollowingLinks(folder);
+    }
+
+    /// <summary>
+    /// The links that lead into a moved folder, such as the mod folders linked
+    /// to the store. They still name the old place after the move, so each is
+    /// made again to the same place in the new library. A link whose target is
+    /// gone cannot be made again, so it moves as it is.
+    /// </summary>
+    private static List<Relink> Relinks(IReadOnlyList<FolderCopy> copies)
+    {
+        var relinks = new List<Relink>();
+        foreach (var (move, entries) in copies)
+        {
+            foreach (var entry in entries.Where(entry => entry.Kind == EntryKind.DirectoryLink))
+            {
+                var link = Path.Combine(move.From, entry.RelativePath);
+                var oldTarget = Normalize(Path.GetFullPath(entry.LinkTarget!, Path.GetDirectoryName(link)!));
+                var moved = copies.Select(copy => copy.Move).FirstOrDefault(other => IsSameOrInside(oldTarget, other.From));
+                if (moved is not null && Directory.Exists(oldTarget))
+                    relinks.Add(new Relink(link, Path.Combine(move.To, entry.RelativePath), oldTarget, Path.Combine(moved.To, Path.GetRelativePath(moved.From, oldTarget))));
+            }
+        }
+
+        return relinks;
+    }
+
+    /// <summary>
+    /// Makes the link at <paramref name="link"/> lead to <paramref name="target"/>,
+    /// and makes it again when it is missing. A folder that is no link stays as it is.
+    /// </summary>
+    private void Repoint(string link, string target)
+    {
+        var info = new DirectoryInfo(link);
+        if (DirectoryLinks.IsLink(info))
+            DirectoryLinks.DeleteLink(link);
+        else if (info.Exists || !Directory.Exists(info.Parent?.FullName))
+            return;
+
+        CreateLink(link, target);
+    }
+
+    private void CreateLink(string link, string target)
+    {
+        var result = _linker.TryCreate(link, target);
+        if (!result.Linked)
+            throw new IOException($"Borea could not link {link} to {target}. {result.Reason}");
     }
 
     private static bool HasEntries(string folder)
@@ -593,6 +669,8 @@ public sealed class LibraryFolderChanger : ILibraryFolderChanger
     private sealed record FolderMove(string From, string To);
 
     private sealed record FolderCopy(FolderMove Move, List<FolderEntry> Entries);
+
+    private sealed record Relink(string From, string To, string OldTarget, string NewTarget);
 
     private enum EntryKind
     {

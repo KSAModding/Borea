@@ -268,7 +268,7 @@
     <value>Borea cannot create or write to {0}.</value>
   </data>
   <data name="LibraryFolderTargetNotEmptyFormat" xml:space="preserve">
-    <value>{0} already has an Instances or Backups folder without an instance Borea can read. Choose another folder.</value>
+    <value>{0} already has an Instances, Backups or Static Mod Files folder without an instance Borea can read. Choose another folder.</value>
   </data>
   <data name="LibraryFolderBothHaveInstancesFormat" xml:space="preserve">
     <value>Both {0} and {1} hold instances. Borea does not merge libraries.</value>

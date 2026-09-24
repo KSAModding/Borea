@@ -2,6 +2,7 @@ using Borea.Core.Instances;
 using Borea.Core.Launch;
 using Borea.Core.Mods;
 using Borea.Core.Settings;
+using Borea.Storage.Files;
 using Borea.Storage.Instances;
 using Borea.Storage.Paths;
 using Borea.Storage.Settings;
@@ -62,6 +63,52 @@ public sealed class LibraryFolderChangerTests : IDisposable
         Assert.Equal(copied.TotalFiles, copied.Files);
         Assert.Equal(copied.TotalBytes, copied.Bytes);
         Assert.Equal(LibraryMoveStage.RemovingOldFiles, reports[^1].Stage);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task ChangeAsync_ModLinkedToTheStore_LinksToTheStoreInTheNewLibrary(bool sameVolume)
+    {
+        var instance = await SeedLibraryAsync(BoreaRoot);
+        SeedLinkedMod(BoreaRoot, instance);
+
+        var result = await Changer(sameVolume).ChangeAsync(Target);
+
+        Assert.Equal(LibraryFolderChangeOutcome.Moved, result.Outcome);
+        Assert.False(result.OldFilesRemain);
+        Assert.Equal(StoreEntry(Target), new DirectoryLinker().GetTarget(LinkedModFolder(Target, instance)));
+        Assert.True(File.Exists(Path.Combine(LinkedModFolder(Target, instance), "mod.toml")));
+        Assert.False(Directory.Exists(Path.Combine(BoreaRoot, "Static Mod Files")));
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task ChangeAsync_LinkToAStoredReleaseThatIsGone_MovesTheLinkAsItIs(bool sameVolume)
+    {
+        var instance = await SeedLibraryAsync(BoreaRoot);
+        SeedLinkedMod(BoreaRoot, instance);
+        Directory.Delete(StoreEntry(BoreaRoot), recursive: true);
+
+        var result = await Changer(sameVolume).ChangeAsync(Target);
+
+        Assert.Equal(LibraryFolderChangeOutcome.Moved, result.Outcome);
+        Assert.True(new DirectoryLinker().IsLink(LinkedModFolder(Target, instance)));
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task ChangeAsync_SettingsSaveFailsWithALinkedMod_KeepsTheLinkToTheOldStore(bool sameVolume)
+    {
+        var instance = await SeedLibraryAsync(BoreaRoot);
+        SeedLinkedMod(BoreaRoot, instance);
+
+        await Assert.ThrowsAsync<IOException>(() => Changer(sameVolume, new FailingSaveRepository(SettingsRepository())).ChangeAsync(Target));
+
+        Assert.Equal(StoreEntry(BoreaRoot), new DirectoryLinker().GetTarget(LinkedModFolder(BoreaRoot, instance)));
+        Assert.True(File.Exists(Path.Combine(LinkedModFolder(BoreaRoot, instance), "mod.toml")));
     }
 
     [Theory]
@@ -444,6 +491,18 @@ public sealed class LibraryFolderChangerTests : IDisposable
         return instance;
     }
 
+    private static void SeedLinkedMod(string folder, Instance instance)
+    {
+        var entry = Directory.CreateDirectory(StoreEntry(folder)).FullName;
+        File.WriteAllText(Path.Combine(entry, "mod.toml"), "name = \"Linked\"");
+        Assert.True(new DirectoryLinker().TryCreate(LinkedModFolder(folder, instance), entry).Linked);
+    }
+
+    private static string StoreEntry(string folder) => Path.Combine(folder, "Static Mod Files", "Linked", "1.0.0-0123456789ab");
+
+    private static string LinkedModFolder(string folder, Instance instance)
+        => Path.Combine(folder, "Instances", instance.InstanceId.ToString(), "mods", "Linked");
+
     private static string ModFile(string folder, Instance instance)
         => Path.Combine(folder, "Instances", instance.InstanceId.ToString(), "mods", "Tools", "Tools.dll");
 
@@ -468,8 +527,7 @@ public sealed class LibraryFolderChangerTests : IDisposable
 
     public void Dispose()
     {
-        if (Directory.Exists(_tempRoot))
-            Directory.Delete(_tempRoot, recursive: true);
+        DirectoryLinks.DeleteTreeWithoutFollowingLinks(_tempRoot);
     }
 
     private sealed class FakeLauncher : ILauncher

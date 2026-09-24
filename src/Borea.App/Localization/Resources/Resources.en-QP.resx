@@ -184,7 +184,7 @@
     <value>The Borea ain't able to piece togett'er or scribble in {0}.</value>
   </data>
   <data name="LibraryFolderTargetNotEmptyFormat" xml:space="preserve">
-    <value>{0} already has an Instances or Backups treasure chest without a sea The Borea can make heads or tails of. Choose another treasure chest.</value>
+    <value>{0} already has an Instances, Backups or Static Mod Files treasure chest without a sea The Borea can make heads or tails of. Choose another treasure chest.</value>
   </data>
   <data name="LibraryFolderBothHaveInstancesFormat" xml:space="preserve">
     <value>Both {0} and {1} hold seas. The Borea don't merge Lists o' Loot.</value>

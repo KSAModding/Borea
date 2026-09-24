@@ -268,7 +268,7 @@
     <value>Borea kann {0} nicht erstellen oder nicht darin schreiben.</value>
   </data>
   <data name="LibraryFolderTargetNotEmptyFormat" xml:space="preserve">
-    <value>{0} hat schon einen Ordner Instances oder Backups ohne eine Instanz, die Borea lesen kann. Wähle einen anderen Ordner.</value>
+    <value>{0} hat schon einen Ordner Instances, Backups oder Static Mod Files ohne eine Instanz, die Borea lesen kann. Wähle einen anderen Ordner.</value>
   </data>
   <data name="LibraryFolderBothHaveInstancesFormat" xml:space="preserve">
     <value>{0} und {1} enthalten beide Instanzen. Borea führt keine Bibliotheken zusammen.</value>

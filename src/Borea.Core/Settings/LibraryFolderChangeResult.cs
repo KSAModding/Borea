@@ -30,7 +30,7 @@ public enum LibraryFolderChangeOutcome
     /// <summary>Borea could not create the folder or write a file into it.</summary>
     NotWritable = 11,
 
-    /// <summary>The folder has an Instances or Backups folder with files but no instance Borea can read.</summary>
+    /// <summary>The folder has an Instances, Backups or Static Mod Files folder with files but no instance Borea can read.</summary>
     TargetNotEmpty = 12,
 
     /// <summary>Both folders hold instances, and Borea does not merge libraries.</summary>
