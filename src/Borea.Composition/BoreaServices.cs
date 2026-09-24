@@ -448,7 +448,7 @@ public sealed class BoreaServices : IDisposable
             OfflineMods = new ReleaseChannelModRepository(offlineMods, settings.ReleaseChannel),
             ModPacks = modPacks,
             ReadOnlyModPacks = new ContentIndexModPackRepository(new ReaderSnapshotProvider(indexReader)),
-            ModPackInstaller = new ModPackInstaller(instances, installPlanner, modInstaller, modReplacer, spaceCheck),
+            ModPackInstaller = new LoggingModPackInstaller(new ModPackInstaller(instances, installPlanner, modInstaller, modReplacer, spaceCheck), log),
             ModPackUpdater = new ModPackUpdater(instances, installPlanner, new InstallPlanExecutor(instances, modInstaller, modReplacer, spaceCheck), new LoggingModUninstaller(new FileModUninstaller(paths, instances, modStore), log)),
             Downloader = downloader,
             InstallPlanner = installPlanner,
