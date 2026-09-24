@@ -831,6 +831,12 @@
   <data name="ToastCopyFromProfileFailed" xml:space="preserve">
     <value>Could not copy from the game profile</value>
   </data>
+  <data name="ToastFavoriteFailedFormat" xml:space="preserve">
+    <value>Could not save the favorites for {0}</value>
+  </data>
+  <data name="ToastFavoritesReadFailed" xml:space="preserve">
+    <value>Could not read the favorites</value>
+  </data>
   <data name="InstanceTabContent" xml:space="preserve">
     <value>Content</value>
   </data>
@@ -1128,6 +1134,12 @@
   <data name="ContentOpenPage" xml:space="preserve">
     <value>Open page</value>
   </data>
+  <data name="ContentAddFavorite" xml:space="preserve">
+    <value>Add to favorites</value>
+  </data>
+  <data name="ContentRemoveFavorite" xml:space="preserve">
+    <value>Remove from favorites</value>
+  </data>
   <data name="ContentManage" xml:space="preserve">
     <value>Let Borea manage</value>
   </data>
@@ -1184,6 +1196,12 @@
   </data>
   <data name="DiscoverHideIncompatible" xml:space="preserve">
     <value>Hide incompatible</value>
+  </data>
+  <data name="DiscoverFavoritesOnly" xml:space="preserve">
+    <value>Only favorites</value>
+  </data>
+  <data name="DiscoverFavorite" xml:space="preserve">
+    <value>In your favorites</value>
   </data>
   <data name="DiscoverCategory" xml:space="preserve">
     <value>Category</value>

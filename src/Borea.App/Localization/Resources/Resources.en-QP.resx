@@ -693,6 +693,12 @@
   <data name="ToastCopyFromProfileFailed" xml:space="preserve">
     <value>Couldn't parrot from the game board</value>
   </data>
+  <data name="ToastFavoriteFailedFormat" xml:space="preserve">
+    <value>Couldn't stash the treasures for {0}</value>
+  </data>
+  <data name="ToastFavoritesReadFailed" xml:space="preserve">
+    <value>Couldn't read the treasure map</value>
+  </data>
   <data name="InstanceTabContent" xml:space="preserve">
     <value>Booty</value>
   </data>
@@ -954,6 +960,12 @@
   <data name="ContentOpenPage" xml:space="preserve">
     <value>Unroll the chart</value>
   </data>
+  <data name="ContentAddFavorite" xml:space="preserve">
+    <value>Add to me treasures</value>
+  </data>
+  <data name="ContentRemoveFavorite" xml:space="preserve">
+    <value>Toss from me treasures</value>
+  </data>
   <data name="ContentManage" xml:space="preserve">
     <value>Let The Borea take the helm</value>
   </data>
@@ -1010,6 +1022,9 @@
   </data>
   <data name="DiscoverHideIncompatible" xml:space="preserve">
     <value>Stow incompatible</value>
+  </data>
+  <data name="DiscoverFavoritesOnly" xml:space="preserve">
+    <value>Only me treasures</value>
   </data>
   <data name="DiscoverCategory" xml:space="preserve">
     <value>Categorrry</value>

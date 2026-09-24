@@ -241,6 +241,11 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string ToastCopyFromProfileFailed => Resources.ToastCopyFromProfileFailed;
 
+    public string FormatToastFavoriteFailed(string name)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ToastFavoriteFailedFormat, name);
+
+    public string ToastFavoritesReadFailed => Resources.ToastFavoritesReadFailed;
+
     public string PageHomeHeading => Resources.PageHomeHeading;
 
     public string PageDiscoverHeading => Resources.PageDiscoverHeading;
@@ -797,6 +802,10 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string ContentOpenPage => Resources.ContentOpenPage;
 
+    public string ContentAddFavorite => Resources.ContentAddFavorite;
+
+    public string ContentRemoveFavorite => Resources.ContentRemoveFavorite;
+
     public string ContentManage => Resources.ContentManage;
 
     public string ContentManageConfirmAction => Resources.ContentManageConfirmAction;
@@ -816,6 +825,10 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string DiscoverHideInstalled => Resources.DiscoverHideInstalled;
 
     public string DiscoverHideIncompatible => Resources.DiscoverHideIncompatible;
+
+    public string DiscoverFavoritesOnly => Resources.DiscoverFavoritesOnly;
+
+    public string DiscoverFavorite => Resources.DiscoverFavorite;
 
     public string DiscoverCategory => Resources.DiscoverCategory;
 
