@@ -527,6 +527,7 @@ public partial class MainViewModel
         AttachGitHubSession(previous, _services);
         previous.Dispose();
         OnPropertyChanged(nameof(SelectedReleaseChannel));
+        OnPropertyChanged(nameof(UseSharedModStore));
         await LoadAsync();
         await RefreshCompatibilityAsync();
     }

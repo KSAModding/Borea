@@ -200,6 +200,8 @@ internal sealed class ViewModelHarness : IDisposable
             ("ContentUpdatesChecked", viewModel.WhenContentUpdatesCheckedAsync()),
             ("PlaytimeLoaded", viewModel.WhenPlaytimeLoadedAsync()),
             ("InstanceSizesLoaded", viewModel.WhenInstanceSizesLoadedAsync()),
+            ("ModStoreChecked", viewModel.WhenModStoreCheckedAsync()),
+            ("SharedModStoreSaved", viewModel.WhenSharedModStoreSavedAsync()),
             ("GameDetected", viewModel.WhenGameDetectedAsync()),
             ("IndexChecked", viewModel.WhenIndexCheckedAsync()),
             ("GitHubSignInDone", viewModel.WhenGitHubSignInDoneAsync()),

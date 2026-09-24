@@ -147,6 +147,33 @@
   <data name="BackupRetentionDaysFormat" xml:space="preserve">
     <value>{0} Tage</value>
   </data>
+  <data name="SettingsSharedModStore" xml:space="preserve">
+    <value>Mod-Dateien zwischen Instanzen teilen</value>
+  </data>
+  <data name="SettingsSharedModStoreHint" xml:space="preserve">
+    <value>Borea speichert jede Version einer Mod einmal, und jede Instanz, die sie nutzt, verweist darauf. Aus gibt jeder Instanz eine eigene Kopie.</value>
+  </data>
+  <data name="SharedModStoreTurningOff" xml:space="preserve">
+    <value>Borea gibt jeder Instanz eine eigene Kopie ihrer Mods.</value>
+  </data>
+  <data name="SharedModStoreWaitForTask" xml:space="preserve">
+    <value>Warte, bis Borea die aktuelle Aufgabe beendet hat, und ändere dann diese Einstellung.</value>
+  </data>
+  <data name="SharedModStoreGameRunning" xml:space="preserve">
+    <value>Das Spiel läuft. Schließe zuerst das Spiel und schalte dann diese Einstellung aus.</value>
+  </data>
+  <data name="SharedModStoreBoreaRunning" xml:space="preserve">
+    <value>Ein anderes Borea-Fenster oder ein Borea-Befehl läuft noch. Schließe es zuerst und schalte dann diese Einstellung aus.</value>
+  </data>
+  <data name="SharedModStoreFailedFormat" xml:space="preserve">
+    <value>Die Einstellung wurde nicht geändert: {0}</value>
+  </data>
+  <data name="SharedModStoreBreakOutFailedFormat" xml:space="preserve">
+    <value>Die Einstellung ist aus, aber Borea konnte nicht jeder Instanz eine eigene Kopie geben: {0} Schalte sie ein und wieder aus, um das abzuschließen.</value>
+  </data>
+  <data name="SharedModStoreBrokenOutFormat" xml:space="preserve">
+    <value>Die Mod {0} hat ihre eigenen Dateien geändert, deshalb hat jetzt jede Instanz eine eigene Kopie davon.</value>
+  </data>
   <data name="SettingsGitHubLabel" xml:space="preserve">
     <value>GitHub-Konto</value>
   </data>

@@ -88,6 +88,13 @@
                     </DataTemplate>
                 </ComboBox.ItemTemplate>
             </ComboBox>
+            <Grid ColumnDefinitions="*,16,Auto" Width="340" HorizontalAlignment="Left" Margin="0,12,0,0">
+                <TextBlock Classes="body-md" Text="{Binding Localization.SettingsSharedModStore}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                <ToggleSwitch Grid.Column="2" Classes="switch" IsChecked="{Binding UseSharedModStore}" IsEnabled="{Binding !IsSetupBusy}" AutomationProperties.Name="{Binding Localization.SettingsSharedModStore}" />
+            </Grid>
+            <TextBlock Classes="body-sm secondary" Text="{Binding Localization.SettingsSharedModStoreHint}" TextWrapping="Wrap" Width="340" HorizontalAlignment="Left" />
+            <TextBlock Classes="body-md secondary" Text="{Binding Localization.SharedModStoreTurningOff}" TextWrapping="Wrap" IsVisible="{Binding IsChangingSharedModStore}" />
+            <TextBlock Classes="body-md danger" Text="{Binding SharedModStoreError}" TextWrapping="Wrap" IsVisible="{Binding SharedModStoreError, Converter={x:Static ObjectConverters.IsNotNull}}" />
             <StackPanel Spacing="6" Margin="0,18,0,0" IsVisible="{Binding IsGitHubAccountAvailable}">
                 <TextBlock Classes="heading-md" Text="{Binding Localization.SettingsGitHubLabel}" />
                 <StackPanel Spacing="6" IsVisible="{Binding !IsGitHubSignedIn}">
