@@ -1,5 +1,6 @@
 using System.Windows.Input;
 using Avalonia;
+using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Headless;
 using Avalonia.Input;
@@ -8,6 +9,7 @@ using Borea.App.Tests.ViewModels;
 using Borea.App.ViewModels;
 using Borea.App.Views;
 using Borea.App.Views.Pages;
+using Borea.Core.Instances;
 
 namespace Borea.App.Tests.Views;
 
@@ -38,6 +40,28 @@ public sealed class DiscoverPageTests
 
         Assert.Equal(new GameVersionControls(older, null, 1, true, false), maxCleared);
         Assert.Equal(new GameVersionControls(null, null, 0, false, false), bothCleared);
+    }
+
+    [Fact]
+    public async Task InstalledInOtherInstances_IsOfferedOnlyWithAnotherInstance()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var viewModel = harness.ViewModel;
+        await viewModel.EnsureDiscoverLoadedAsync();
+        bool Offered(DiscoverPage page) => page.GetVisualDescendants().OfType<ToggleSwitch>()
+            .Single(toggle => AutomationProperties.GetName(toggle) == harness.Localization.DiscoverInstalledInOtherInstances).IsEffectivelyVisible;
+        await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value);
+        await viewModel.LoadAsync();
+        Assert.Empty(viewModel.OtherInstances);
+        var alone = await RenderAsync(harness, 1280, Offered);
+
+        await harness.Services.Instances.CreateAsync("Other", InstanceSource.Custom.Value);
+        await viewModel.LoadAsync();
+        Assert.Single(viewModel.OtherInstances);
+        var withAnother = await RenderAsync(harness, 1280, Offered);
+
+        Assert.False(alone);
+        Assert.True(withAnother);
     }
 
     [Fact]
@@ -76,6 +100,7 @@ public sealed class DiscoverPageTests
         viewModel.HideInstalled = true;
         viewModel.HideIncompatible = true;
         viewModel.FavoritesOnly = true;
+        viewModel.InstalledInOtherInstances = true;
         viewModel.SelectOsCommand.Execute("windows");
         viewModel.SelectLicenseCommand.Execute("MIT");
         viewModel.DiscoverGameMin = viewModel.GameVersionOptions.Single(build => build.Revision == 5261);
@@ -95,7 +120,7 @@ public sealed class DiscoverPageTests
             return (chips.Count, outside);
         });
 
-        Assert.Equal(viewModel.CategoryOptions.Count + 7, chips);
+        Assert.Equal(viewModel.CategoryOptions.Count + 8, chips);
         Assert.Empty(outside);
     }
 
