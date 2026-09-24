@@ -54,23 +54,8 @@ public partial class MainViewModel
         }
     }
 
-    partial void OnCurrentWindowHomeChanged(bool value) => LeaveListingPage(value);
-
-    partial void OnCurrentWindowDiscoverChanged(bool value) => LeaveListingPage(value);
-
-    partial void OnCurrentWindowLibraryChanged(bool value) => LeaveListingPage(value);
-
-    partial void OnCurrentWindowInstanceChanged(bool value) => LeaveListingPage(value);
-
-    partial void OnCurrentWindowContentChanged(bool value) => LeaveListingPage(value);
-
-    partial void OnCurrentWindowPackChanged(bool value) => LeaveListingPage(value);
-
-    private void LeaveListingPage(bool otherPageOpened)
+    private void LeaveListingPage()
     {
-        if (!otherPageOpened)
-            return;
-
         CurrentWindowListing = false;
         _listingEditor?.Leave();
     }
