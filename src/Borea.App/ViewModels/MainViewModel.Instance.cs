@@ -1090,6 +1090,9 @@ public sealed partial class ContentItem : ObservableObject, IUpdateRow
     /// <summary>Whether the row links to the mod page, which every mod in the content index does.</summary>
     public bool CanOpen => _page is not null;
 
+    /// <summary>The Discover row of the mod page, which the row menu marks as a favorite. Null without a page.</summary>
+    public DiscoverItem? Page => _page;
+
     /// <summary>The row itself while it links to the mod page, so that only the linked body is built.</summary>
     public ContentItem? PageRow => CanOpen ? this : null;
 

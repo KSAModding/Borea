@@ -87,6 +87,8 @@ public partial class MainViewModel
             filtered = filtered.Where(pack => !pack.IsInstalled);
         if (HideIncompatible)
             filtered = filtered.Where(pack => pack.Compatibility != GameCompatibility.Incompatible);
+        if (FavoritesOnly)
+            filtered = filtered.Where(pack => pack.IsFavorite);
         if (SelectedOs is not null)
             filtered = filtered.Where(pack => pack.SupportsOs(SelectedOs));
         if (SelectedLicense is not null)
@@ -753,6 +755,13 @@ public sealed partial class PackItem : ObservableObject, IPlanRow
 
     public bool CanInstall => !IsInstalled && !IsInstalling;
 
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(FavoriteText))]
+    private bool _isFavorite;
+
+    /// <summary>What the favorite toggle does, as its label and tooltip.</summary>
+    public string FavoriteText => _owner.FavoriteText(IsFavorite);
+
     /// <param name="indexEntry">The snapshot entry of the pack, for its dates and the images of this version. Null when the snapshot has none.</param>
     public PackItem(MainViewModel owner, ModPackMetadata metadata, ContentIndexPack? indexEntry = null)
     {
@@ -763,6 +772,7 @@ public sealed partial class PackItem : ObservableObject, IPlanRow
         AllTags = DiscoverItem.DisplayTags(owner, ContentType.ModPack, metadata.Tags);
         Tags = AllTags.Take(3).ToList();
         PublishedAt = indexEntry?.PublishedAt;
+        _isFavorite = owner.IsFavoritePack(metadata.ModPackId);
     }
 
     internal static string GameVersion(ModPackMetadata pack)
@@ -820,6 +830,7 @@ public sealed partial class PackItem : ObservableObject, IPlanRow
         OnPropertyChanged(nameof(PublishedText));
         OnPropertyChanged(nameof(PublishedDateText));
         OnPropertyChanged(nameof(LinkRequestText));
+        OnPropertyChanged(nameof(FavoriteText));
         foreach (var result in Results)
             result.RefreshText();
     }
@@ -861,6 +872,9 @@ public sealed partial class PackItem : ObservableObject, IPlanRow
 
     [RelayCommand]
     private void NewInstance() => _owner.BeginPackInstance(this);
+
+    [RelayCommand]
+    private Task ToggleFavoriteAsync() => _owner.ToggleFavoriteAsync(this);
 
     [RelayCommand]
     internal void CancelInstall()

@@ -90,6 +90,10 @@ public partial class MainViewModel
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasDiscoverFilters))]
+    private bool _favoritesOnly;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasDiscoverFilters))]
     private string? _selectedOs;
 
     [ObservableProperty]
@@ -120,7 +124,7 @@ public partial class MainViewModel
         ({ } min, { } max) => $"{min.Text} - {max.Text}",
     };
 
-    public bool HasDiscoverFilters => HideInstalled || HideIncompatible || SelectedOs is not null || SelectedLicense is not null || SelectedCategories.Count > 0 || HasGameVersionRange;
+    public bool HasDiscoverFilters => HideInstalled || HideIncompatible || FavoritesOnly || SelectedOs is not null || SelectedLicense is not null || SelectedCategories.Count > 0 || HasGameVersionRange;
 
     /// <summary>The saved Sort by choice of the Mods and Modpacks tabs.</summary>
     public DiscoverSortOrder DiscoverSort => _discoverSort ?? _appPreferences.DiscoverSortOrder;
@@ -183,6 +187,7 @@ public partial class MainViewModel
             foreach (var entry in snapshot.Packs)
                 packEntries.TryAdd(entry.Id, entry);
 
+            await EnsureFavoritesLoadedAsync(services);
             var listings = await services.ContentIndex.GetAvailableModsAsync();
             _listings = listings
                 .Select(listing => new DiscoverItem(this, listing, listing.Source == "index" ? listingEntries.GetValueOrDefault(listing.ModId) : null))
@@ -240,6 +245,8 @@ public partial class MainViewModel
             filtered = filtered.Where(item => !item.IsInstalled);
         if (HideIncompatible)
             filtered = filtered.Where(item => item.Compatibility != GameCompatibility.Incompatible);
+        if (FavoritesOnly)
+            filtered = filtered.Where(item => item.IsFavorite);
         if (SelectedOs is not null)
             filtered = filtered.Where(item => item.SupportsOs(SelectedOs));
         if (SelectedLicense is not null)
@@ -384,6 +391,8 @@ public partial class MainViewModel
 
     partial void OnHideIncompatibleChanged(bool value) => ApplyDiscoverFilters();
 
+    partial void OnFavoritesOnlyChanged(bool value) => ApplyDiscoverFilters();
+
     /// <summary>
     /// Evaluates every listing against the game the settings point at, for
     /// example after the game directory changed.
@@ -504,6 +513,9 @@ public partial class MainViewModel
     private void ClearHideIncompatible() => HideIncompatible = false;
 
     [RelayCommand]
+    private void ClearFavoritesOnly() => FavoritesOnly = false;
+
+    [RelayCommand]
     private void SelectDiscoverSort(DiscoverSortOrder order)
     {
         if (order == DiscoverSort)
@@ -537,6 +549,7 @@ public partial class MainViewModel
     {
         HideInstalled = false;
         HideIncompatible = false;
+        FavoritesOnly = false;
         SelectedOs = null;
         SelectedLicense = null;
         DiscoverGameMin = null;
@@ -819,6 +832,13 @@ public sealed partial class DiscoverItem : ObservableObject, IInstallRow
 
     public string InstalledAutomationName => _owner.Localization.FormatDiscoverInstalledMod(Name);
 
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(FavoriteText))]
+    private bool _isFavorite;
+
+    /// <summary>What the favorite toggle does, as its label and tooltip.</summary>
+    public string FavoriteText => _owner.FavoriteText(IsFavorite);
+
     /// <param name="indexEntry">The snapshot entry of an index listing, for its download count and the date of its first release. Null for any other listing.</param>
     public DiscoverItem(MainViewModel owner, ModMetadata listing, ContentIndexListing? indexEntry = null)
     {
@@ -830,6 +850,7 @@ public sealed partial class DiscoverItem : ObservableObject, IInstallRow
         Icon = owner.IconFor(Images?.Icon);
         Downloads = indexEntry?.Downloads?.Total;
         PublishedAt = indexEntry?.PublishedAt;
+        _isFavorite = owner.IsFavoriteMod(listing.ModId);
     }
 
     internal static List<string> DisplayTags(MainViewModel owner, ContentType type, IReadOnlyList<string> tags)
@@ -898,6 +919,7 @@ public sealed partial class DiscoverItem : ObservableObject, IInstallRow
         OnPropertyChanged(nameof(AddedModsToolTip));
         OnPropertyChanged(nameof(InstalledAutomationName));
         OnPropertyChanged(nameof(LinkRequestText));
+        OnPropertyChanged(nameof(FavoriteText));
     }
 
     internal void ShowLinkRequest(Func<string>? request)
@@ -962,6 +984,9 @@ public sealed partial class DiscoverItem : ObservableObject, IInstallRow
 
     [RelayCommand]
     private Task ConfirmRemoveAsync() => _owner.RemoveAsync(this);
+
+    [RelayCommand]
+    private Task ToggleFavoriteAsync() => _owner.ToggleFavoriteAsync(this);
 }
 
 /// <summary>
