@@ -73,6 +73,14 @@
                                         <TextBlock Text="{Binding Localization.DiscoverInstalled}" />
                                     </Border>
                                     <Button Classes="text" Content="{Binding Localization.PackNewInstance}" Command="{Binding SelectedPack.NewInstanceCommand}" IsVisible="{Binding !SelectedPack.IsInstalling, FallbackValue={x:False}}" VerticalAlignment="Center" />
+                                    <Button Classes="icon" VerticalAlignment="Center" AutomationProperties.Name="{Binding Localization.LibraryMoreActions}">
+                                        <Button.Flyout>
+                                            <MenuFlyout Placement="BottomEdgeAlignedRight">
+                                                <MenuItem Header="{Binding SelectedPack.FavoriteText}" Command="{Binding SelectedPack.ToggleFavoriteCommand}" />
+                                            </MenuFlyout>
+                                        </Button.Flyout>
+                                        <Path Classes="icon-filled" Data="{StaticResource Icon.More}" />
+                                    </Button>
                                 </StackPanel>
                             </Grid>
                             <WrapPanel Grid.Row="2" ItemSpacing="24" LineSpacing="8" Margin="0,16,0,0">

@@ -197,6 +197,7 @@
                                 <Button.Flyout>
                                     <MenuFlyout Placement="BottomEdgeAlignedRight">
                                         <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ContentOpenPage}" Command="{Binding OpenCommand}" IsVisible="{Binding CanOpen}" />
+                                        <MenuItem Header="{Binding Page.FavoriteText}" Command="{Binding Page.ToggleFavoriteCommand}" IsVisible="{Binding CanOpen}" />
                                         <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ContentManage}" Command="{Binding BeginManageCommand}" IsVisible="{Binding CanManage}" />
                                         <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ContentInstallAgain}" Command="{Binding InstallAgainCommand}" IsVisible="{Binding IsMissing}" />
                                         <MenuItem Header="{Binding RemoveActionText}" Command="{Binding BeginRemoveCommand}" IsEnabled="{Binding CanRemove}" AutomationProperties.HelpText="{Binding RemoveBlockedText}" />
@@ -279,6 +280,7 @@
                                     </Button.IsVisible>
                                     <Button.Flyout>
                                         <MenuFlyout Placement="BottomEdgeAlignedRight">
+                                            <MenuItem Header="{Binding FavoriteText}" Command="{Binding ToggleFavoriteCommand}" />
                                             <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ContentChangeVersion}" Command="{Binding ChangeVersionCommand}" IsVisible="{Binding CanChangeVersion}" />
                                             <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ContentRemove}" Command="{Binding BeginRemoveCommand}" AutomationProperties.HelpText="{Binding RemoveBlockedText}" />
                                             <MenuItem IsEnabled="False" IsVisible="{Binding RemoveBlockedText, Converter={x:Static ObjectConverters.IsNotNull}}">
