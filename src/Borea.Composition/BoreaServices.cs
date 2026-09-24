@@ -72,13 +72,6 @@ public sealed class BoreaServices : IDisposable
     private static readonly TimeSpan ConnectionLifetime = TimeSpan.FromMinutes(2);
 
     /// <summary>
-    /// Whether a new install links to one stored copy of its release instead of
-    /// unpacking its own. Off until players have a setting to turn it off and
-    /// Borea recovers a mod that writes into its folder.
-    /// </summary>
-    private const bool LinksModsToStore = false;
-
-    /// <summary>
     /// The one HttpClient every network service shares. It names Borea in its
     /// User-Agent and its handler recycles pooled connections, so only the process
     /// GitHub session creates a second one. LatestVersionPing caches per instance,
@@ -389,7 +382,7 @@ public sealed class BoreaServices : IDisposable
         var downloader = new HttpModDownloader(http);
         var settingsRepository = new FileBoreaSettingsRepository(paths);
         var loaderConfiguration = new LoaderConfigurator();
-        var modStore = new ModStore(paths, new DirectoryLinker(), LinksModsToStore);
+        var modStore = new ModStore(paths, new DirectoryLinker(), settings.SharedModStore);
         var fileInstances = new FileInstanceRepository(paths, modStore);
         var instances = new LoggingInstanceRepository(fileInstances, paths, log);
         var loaderAdopter = new FileLoaderAdopter(settingsRepository, loaderConfiguration);

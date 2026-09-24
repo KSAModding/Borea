@@ -221,7 +221,17 @@ internal sealed class ViewModelHarness : IDisposable
         CultureInfo.CurrentUICulture = _originalUiCulture;
         Resources.Culture = _originalUiCulture;
         if (Directory.Exists(Root))
-            Directory.Delete(Root, recursive: true);
+            DeleteFolder(Root);
+    }
+
+    /// <summary>The mod links go first, because a recursive delete stops at a junction.</summary>
+    private static void DeleteFolder(string folder)
+    {
+        var everyFolder = new EnumerationOptions { RecurseSubdirectories = true, AttributesToSkip = 0 };
+        foreach (var link in Directory.EnumerateDirectories(folder, "*", everyFolder).Where(path => new DirectoryInfo(path).LinkTarget is not null).ToList())
+            Directory.Delete(link);
+
+        Directory.Delete(folder, recursive: true);
     }
 
     public static async Task WaitUntilAsync(Func<bool> condition)
