@@ -1026,6 +1026,9 @@
   <data name="DiscoverFavoritesOnly" xml:space="preserve">
     <value>Only me treasures</value>
   </data>
+  <data name="DiscoverInstalledInOtherInstances" xml:space="preserve">
+    <value>Hauled aboard in other seas</value>
+  </data>
   <data name="DiscoverCategory" xml:space="preserve">
     <value>Categorrry</value>
   </data>

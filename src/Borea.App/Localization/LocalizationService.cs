@@ -830,6 +830,8 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string DiscoverFavorite => Resources.DiscoverFavorite;
 
+    public string DiscoverInstalledInOtherInstances => Resources.DiscoverInstalledInOtherInstances;
+
     public string DiscoverCategory => Resources.DiscoverCategory;
 
     public string DiscoverCategoryParts => Resources.DiscoverCategoryParts;

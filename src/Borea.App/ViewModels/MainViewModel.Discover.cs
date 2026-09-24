@@ -94,6 +94,10 @@ public partial class MainViewModel
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasDiscoverFilters))]
+    private bool _installedInOtherInstances;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasDiscoverFilters))]
     private string? _selectedOs;
 
     [ObservableProperty]
@@ -124,7 +128,7 @@ public partial class MainViewModel
         ({ } min, { } max) => $"{min.Text} - {max.Text}",
     };
 
-    public bool HasDiscoverFilters => HideInstalled || HideIncompatible || FavoritesOnly || SelectedOs is not null || SelectedLicense is not null || SelectedCategories.Count > 0 || HasGameVersionRange;
+    public bool HasDiscoverFilters => HideInstalled || HideIncompatible || FavoritesOnly || InstalledInOtherInstances || SelectedOs is not null || SelectedLicense is not null || SelectedCategories.Count > 0 || HasGameVersionRange;
 
     /// <summary>The saved Sort by choice of the Mods and Modpacks tabs.</summary>
     public DiscoverSortOrder DiscoverSort => _discoverSort ?? _appPreferences.DiscoverSortOrder;
@@ -247,6 +251,8 @@ public partial class MainViewModel
             filtered = filtered.Where(item => item.Compatibility != GameCompatibility.Incompatible);
         if (FavoritesOnly)
             filtered = filtered.Where(item => item.IsFavorite);
+        if (InstalledInOtherInstances)
+            filtered = filtered.Where(item => item.IsInOtherInstance);
         if (SelectedOs is not null)
             filtered = filtered.Where(item => item.SupportsOs(SelectedOs));
         if (SelectedLicense is not null)
@@ -366,21 +372,31 @@ public partial class MainViewModel
     };
 
     /// <summary>
-    /// Marks listings that the active instance already holds.
+    /// Marks listings that the active instance already holds, and those that another instance holds.
     /// </summary>
     private void RefreshInstalledFlags()
     {
         var installed = new HashSet<string>(ActiveInstance?.ModIds ?? [], ModIds.Comparer);
+        var installedElsewhere = new HashSet<string>(OtherInstances.SelectMany(instance => instance.ModIds), ModIds.Comparer);
+        var elsewhereChanged = false;
         foreach (var item in _listings)
         {
             item.IsInstalled = installed.Contains(item.ModId);
             var mod = _activeInstanceEntity?.Mods.FirstOrDefault(entry => ModIds.Equals(entry.ModId, item.ModId));
             item.RemoveBlockedText = item.IsInstalled ? RemoveBlockedReason(_activeInstanceEntity, mod) : null;
+            var inOtherInstance = installedElsewhere.Contains(item.ModId);
+            elsewhereChanged |= item.IsInOtherInstance != inOtherInstance;
+            item.IsInOtherInstance = inOtherInstance;
         }
         foreach (var release in _contentReleases)
             release.RefreshInstalled(ActiveInstance);
-        RefreshPackInstalledFlags();
+        elsewhereChanged |= RefreshPackInstalledFlags();
         RefreshContentDependencies();
+
+        // the list is filtered again only when another instance changed,
+        // so a row the user just added stays under Hide already installed
+        if (elsewhereChanged && InstalledInOtherInstances)
+            ApplyDiscoverFilters();
     }
 
     partial void OnDiscoverTypeChanged(ContentType value) => ApplyDiscoverFilters();
@@ -392,6 +408,8 @@ public partial class MainViewModel
     partial void OnHideIncompatibleChanged(bool value) => ApplyDiscoverFilters();
 
     partial void OnFavoritesOnlyChanged(bool value) => ApplyDiscoverFilters();
+
+    partial void OnInstalledInOtherInstancesChanged(bool value) => ApplyDiscoverFilters();
 
     /// <summary>
     /// Evaluates every listing against the game the settings point at, for
@@ -516,6 +534,9 @@ public partial class MainViewModel
     private void ClearFavoritesOnly() => FavoritesOnly = false;
 
     [RelayCommand]
+    private void ClearInstalledInOtherInstances() => InstalledInOtherInstances = false;
+
+    [RelayCommand]
     private void SelectDiscoverSort(DiscoverSortOrder order)
     {
         if (order == DiscoverSort)
@@ -550,6 +571,7 @@ public partial class MainViewModel
         HideInstalled = false;
         HideIncompatible = false;
         FavoritesOnly = false;
+        InstalledInOtherInstances = false;
         SelectedOs = null;
         SelectedLicense = null;
         DiscoverGameMin = null;
@@ -743,6 +765,9 @@ public sealed partial class DiscoverItem : ObservableObject, IInstallRow
     [NotifyPropertyChangedFor(nameof(CanRemove))]
     [NotifyCanExecuteChangedFor(nameof(BeginRemoveCommand))]
     private bool _isInstalled;
+
+    /// <summary>True when an instance other than the active one holds the mod.</summary>
+    internal bool IsInOtherInstance { get; set; }
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CanInstall))]
