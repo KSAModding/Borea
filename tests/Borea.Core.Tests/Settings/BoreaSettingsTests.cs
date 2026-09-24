@@ -69,6 +69,22 @@ public sealed class BoreaSettingsTests
         Assert.Equal(ReleaseChannel.Stable, settings.WithLibraryFolder(null).ReleaseChannel);
     }
 
+    [Fact]
+    public void EveryOtherCopy_KeepsTheSharedModStoreOff()
+    {
+        var settings = new BoreaSettings(null, StarMapAt(), sharedModStore: false);
+        var loader = new LoaderInstallation(@"C:\Games\Cheese", null, null, isAdopted: false);
+
+        Assert.True(new BoreaSettings(null).SharedModStore);
+        Assert.False(settings.WithGameDirectory(@"C:\Games\KSA").SharedModStore);
+        Assert.False(settings.WithReleaseChannel(ReleaseChannel.Dev).SharedModStore);
+        Assert.False(settings.WithLibraryFolder(null).SharedModStore);
+        Assert.False(settings.WithLoaderInstallation("Cheese-Loader", loader).SharedModStore);
+        Assert.False(settings.WithoutLoaderInstallation("StarMap").SharedModStore);
+        Assert.True(settings.WithSharedModStore(true).SharedModStore);
+        Assert.Equal(@"C:\Games\StarMap", settings.WithSharedModStore(true).LoaderInstallations["StarMap"].DirectoryPath);
+    }
+
     [Theory]
     [InlineData("")]
     [InlineData("   ")]

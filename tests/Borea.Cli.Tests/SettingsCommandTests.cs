@@ -350,6 +350,63 @@ public sealed class SettingsCommandTests : IDisposable
         Assert.False(File.Exists(_host.Paths.GetBoreaSettingsPath()));
     }
 
+    [Fact]
+    public async Task Show_NoSettingsFile_ReportsTheSharedModStoreOn()
+    {
+        var text = await _host.RunAsync("settings", "show");
+        var json = await _host.RunAsync("settings", "show", "--json");
+
+        Assert.Contains("Shared mod store: on", text.Output);
+        Assert.True(json.Json.GetProperty("sharedModStore").GetBoolean());
+    }
+
+    [Fact]
+    public async Task SetSharedStore_OffThenOn_SavesItAndShowReadsItBack()
+    {
+        var off = await _host.RunAsync("settings", "set", "shared-store", "off");
+        var shown = await _host.RunAsync("settings", "show", "--json");
+        var on = await _host.RunAsync("settings", "set", "shared-store", "on");
+
+        Assert.Equal(0, off.ExitCode);
+        Assert.Contains("Shared mod store: off", off.Output);
+        Assert.False(shown.Json.GetProperty("sharedModStore").GetBoolean());
+        Assert.Equal(0, on.ExitCode);
+        Assert.True((await _host.RunAsync("settings", "show", "--json")).Json.GetProperty("sharedModStore").GetBoolean());
+    }
+
+    [Fact]
+    public async Task SetSharedStore_OffWhileTheGameRuns_FailsAndChangesNothing()
+    {
+        _host.GameRunning = true;
+
+        var run = await _host.RunAsync("settings", "set", "shared-store", "off");
+
+        Assert.Equal(1, run.ExitCode);
+        Assert.Contains("The game is running", run.Error);
+        Assert.False(File.Exists(_host.Paths.GetBoreaSettingsPath()));
+    }
+
+    [Fact]
+    public async Task SetSharedStore_OffWhileAnotherBoreaRuns_FailsAndChangesNothing()
+    {
+        _host.OtherBoreaRunning = true;
+
+        var run = await _host.RunAsync("settings", "set", "shared-store", "off");
+
+        Assert.Equal(1, run.ExitCode);
+        Assert.Contains("Another Borea window or command is running", run.Error);
+        Assert.False(File.Exists(_host.Paths.GetBoreaSettingsPath()));
+    }
+
+    [Fact]
+    public async Task SetSharedStore_NeitherOnNorOff_IsAUsageError()
+    {
+        var run = await _host.RunAsync("settings", "set", "shared-store", "maybe");
+
+        Assert.Equal(2, run.ExitCode);
+        Assert.False(File.Exists(_host.Paths.GetBoreaSettingsPath()));
+    }
+
     public void Dispose() => _host.Dispose();
 
     private sealed class FixedLibraryChanger(LibraryFolderChangeResult result) : ILibraryFolderChanger

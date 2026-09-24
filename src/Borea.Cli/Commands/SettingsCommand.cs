@@ -7,13 +7,16 @@ using Borea.Core.Settings;
 namespace Borea.Cli.Commands;
 
 /// <summary>
-/// <c>borea settings</c>: where the game, the mod loaders and the library are, and the release channel.
+/// <c>borea settings</c>: where the game, the mod loaders and the library are, the release channel and the shared mod store.
 /// </summary>
 internal static class SettingsCommand
 {
+    private const string On = "on";
+    private const string Off = "off";
+
     public static Command Build(Func<CancellationToken, Task<CliServices>> services)
     {
-        var settings = new Command("settings", "Read and write Borea's own settings: where the game, the mod loaders and the library are, and the release channel.");
+        var settings = new Command("settings", "Read and write Borea's own settings: where the game, the mod loaders and the library are, the release channel and the shared mod store.");
         settings.Subcommands.Add(BuildShow(services));
         settings.Subcommands.Add(BuildSet(services));
         return settings;
@@ -45,6 +48,7 @@ internal static class SettingsCommand
         set.Subcommands.Add(BuildSetLoader(services));
         set.Subcommands.Add(BuildSetChannel(services));
         set.Subcommands.Add(BuildSetLibrary(services));
+        set.Subcommands.Add(BuildSetSharedStore(services));
         return set;
     }
 
@@ -96,6 +100,32 @@ internal static class SettingsCommand
         }));
 
         return library;
+    }
+
+    private static Command BuildSetSharedStore(Func<CancellationToken, Task<CliServices>> services)
+    {
+        var state = new Argument<string>("state") { Description = "on or off." };
+        state.AcceptOnlyFromAmong(On, Off);
+        var sharedStore = new Command("shared-store", "Store each mod release once and link every instance to it, or copy it into each instance. Off also gives every instance its own copy of the mods it links to.");
+        sharedStore.Arguments.Add(state);
+
+        sharedStore.SetAction((parseResult, cancellationToken) => CommandRunner.RunAsync(parseResult, services, cancellationToken, async (cli, output, error, ct) =>
+        {
+            var enabled = parseResult.GetRequiredValue(state) == On;
+            var change = await cli.SharedModStore.SetEnabledAsync(enabled, ct).ConfigureAwait(false);
+            if (change != SharedModStoreChange.Saved)
+            {
+                error.WriteLine(change == SharedModStoreChange.GameRunning
+                    ? "error: The game is running. Close the game first, then turn the shared mod store off."
+                    : "error: Another Borea window or command is running. Close it first, then turn the shared mod store off.");
+                return ExitCodes.Failed;
+            }
+
+            output.WriteLine($"Shared mod store: {OnOff(enabled)}");
+            return ExitCodes.Done;
+        }));
+
+        return sharedStore;
     }
 
     private static Command BuildSetChannel(Func<CancellationToken, Task<CliServices>> services)
@@ -172,6 +202,7 @@ internal static class SettingsCommand
         output.WriteLine($"Game directory: {settings.GameDirectoryPath ?? "not set"}");
         output.WriteLine($"Library folder: {LibraryFolderOf(paths)}{(settings.LibraryFolderPath is null ? " (default)" : string.Empty)}");
         output.WriteLine($"Release channel: {settings.ReleaseChannel.ToName()}");
+        output.WriteLine($"Shared mod store: {OnOff(settings.SharedModStore)}");
 
         if (settings.LoaderInstallations.Count == 0)
         {
@@ -184,10 +215,12 @@ internal static class SettingsCommand
             output.WriteLine($"  {loaderId}: {installation.DirectoryPath}");
     }
 
+    private static string OnOff(bool value) => value ? On : Off;
+
     private static string LibraryFolderOf(IGamePathProvider paths) => Path.GetDirectoryName(paths.GetInstancesRoot())!;
 
     /// <summary>The JSON shape of <c>settings show</c>.</summary>
-    private sealed record SettingsView(string? GameDirectory, IReadOnlyDictionary<string, string> LoaderDirectories, string ReleaseChannel, string LibraryFolder, bool LibraryFolderIsDefault)
+    private sealed record SettingsView(string? GameDirectory, IReadOnlyDictionary<string, string> LoaderDirectories, string ReleaseChannel, string LibraryFolder, bool LibraryFolderIsDefault, bool SharedModStore)
     {
         public static SettingsView From(BoreaSettings settings, IGamePathProvider paths)
             => new(
@@ -198,7 +231,8 @@ internal static class SettingsCommand
                     ModIds.Comparer),
                 settings.ReleaseChannel.ToName(),
                 LibraryFolderOf(paths),
-                settings.LibraryFolderPath is null);
+                settings.LibraryFolderPath is null,
+                settings.SharedModStore);
     }
 
     /// <summary>The JSON shape of <c>settings set library</c>.</summary>

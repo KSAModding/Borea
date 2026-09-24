@@ -22,11 +22,15 @@ public sealed class BoreaSettings
     /// <summary>The absolute folder that holds the Instances and Backups folders. Null means Borea's own folder.</summary>
     public string? LibraryFolderPath { get; }
 
+    /// <summary>Whether an install links to the one stored copy of its release that instances share. On by default.</summary>
+    public bool SharedModStore { get; }
+
     public BoreaSettings(
         string? gameDirectoryPath,
         IReadOnlyDictionary<string, LoaderInstallation>? loaderInstallations = null,
         ReleaseChannel releaseChannel = ReleaseChannel.Stable,
-        string? libraryFolderPath = null)
+        string? libraryFolderPath = null,
+        bool sharedModStore = true)
     {
         if (gameDirectoryPath is not null && string.IsNullOrWhiteSpace(gameDirectoryPath))
             throw new ArgumentException("Game directory path, if provided, cannot be whitespace.", nameof(gameDirectoryPath));
@@ -41,21 +45,26 @@ public sealed class BoreaSettings
         LoaderInstallations = Build(loaderInstallations, nameof(loaderInstallations));
         ReleaseChannel = releaseChannel;
         LibraryFolderPath = libraryFolderPath;
+        SharedModStore = sharedModStore;
     }
 
     /// <summary>
     /// A copy with the game directory replaced. The other settings stay as they are.
     /// </summary>
     public BoreaSettings WithGameDirectory(string? gameDirectoryPath)
-        => new(gameDirectoryPath, LoaderInstallations, ReleaseChannel, LibraryFolderPath);
+        => new(gameDirectoryPath, LoaderInstallations, ReleaseChannel, LibraryFolderPath, SharedModStore);
 
     /// <summary>A copy with the release channel replaced. The other settings stay as they are.</summary>
     public BoreaSettings WithReleaseChannel(ReleaseChannel releaseChannel)
-        => new(GameDirectoryPath, LoaderInstallations, releaseChannel, LibraryFolderPath);
+        => new(GameDirectoryPath, LoaderInstallations, releaseChannel, LibraryFolderPath, SharedModStore);
 
     /// <summary>A copy with the library folder replaced. The other settings stay as they are.</summary>
     public BoreaSettings WithLibraryFolder(string? libraryFolderPath)
-        => new(GameDirectoryPath, LoaderInstallations, ReleaseChannel, libraryFolderPath);
+        => new(GameDirectoryPath, LoaderInstallations, ReleaseChannel, libraryFolderPath, SharedModStore);
+
+    /// <summary>A copy with the shared mod store turned on or off. The other settings stay as they are.</summary>
+    public BoreaSettings WithSharedModStore(bool sharedModStore)
+        => new(GameDirectoryPath, LoaderInstallations, ReleaseChannel, LibraryFolderPath, sharedModStore);
 
     /// <summary>
     /// A copy with one loader installation set. The id is stored as given here,
@@ -72,7 +81,7 @@ public sealed class BoreaSettings
         installations.Remove(loaderId);
         installations[loaderId] = installation;
 
-        return new BoreaSettings(GameDirectoryPath, installations, ReleaseChannel, LibraryFolderPath);
+        return new BoreaSettings(GameDirectoryPath, installations, ReleaseChannel, LibraryFolderPath, SharedModStore);
     }
 
     /// <summary>A copy without one loader installation. The other settings stay as they are.</summary>
@@ -83,7 +92,7 @@ public sealed class BoreaSettings
         var installations = new Dictionary<string, LoaderInstallation>(LoaderInstallations, ModIds.Comparer);
         installations.Remove(loaderId);
 
-        return new BoreaSettings(GameDirectoryPath, installations, ReleaseChannel, LibraryFolderPath);
+        return new BoreaSettings(GameDirectoryPath, installations, ReleaseChannel, LibraryFolderPath, SharedModStore);
     }
 
     private static IReadOnlyDictionary<string, LoaderInstallation> Build(

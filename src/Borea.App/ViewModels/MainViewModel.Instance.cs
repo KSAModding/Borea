@@ -207,6 +207,7 @@ public partial class MainViewModel
         StartContentUpdateCheck();
         StartPlaytimeLoad(item.InstanceId);
         StartInstanceSizeLoad(item.InstanceId);
+        StartModStoreCheck(item.InstanceId);
     }
 
     [RelayCommand]
@@ -603,7 +604,10 @@ public partial class MainViewModel
                 LaunchMessage = LaunchResultText(result, loader);
 
             if (result.Started)
+            {
                 await RefreshLastPlayedAsync(instance.InstanceId);
+                StartModStoreCheckAfterGame(instance.InstanceId);
+            }
         }
         catch (Exception exception) when (exception is IOException or InvalidOperationException or System.Net.Http.HttpRequestException)
         {

@@ -310,6 +310,27 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string FormatBackupRetentionDays(int days)
         => string.Format(CultureInfo.CurrentCulture, Resources.BackupRetentionDaysFormat, days);
 
+    public string SettingsSharedModStore => Resources.SettingsSharedModStore;
+
+    public string SettingsSharedModStoreHint => Resources.SettingsSharedModStoreHint;
+
+    public string SharedModStoreTurningOff => Resources.SharedModStoreTurningOff;
+
+    public string SharedModStoreWaitForTask => Resources.SharedModStoreWaitForTask;
+
+    public string SharedModStoreGameRunning => Resources.SharedModStoreGameRunning;
+
+    public string SharedModStoreBoreaRunning => Resources.SharedModStoreBoreaRunning;
+
+    public string FormatSharedModStoreFailed(string reason)
+        => string.Format(CultureInfo.CurrentCulture, Resources.SharedModStoreFailedFormat, reason);
+
+    public string FormatSharedModStoreBreakOutFailed(string reason)
+        => string.Format(CultureInfo.CurrentCulture, Resources.SharedModStoreBreakOutFailedFormat, reason);
+
+    public string FormatSharedModStoreBrokenOut(string modName)
+        => string.Format(CultureInfo.CurrentCulture, Resources.SharedModStoreBrokenOutFormat, modName);
+
     public string SettingsGitHubLabel => Resources.SettingsGitHubLabel;
 
     public string SettingsGitHubHint => Resources.SettingsGitHubHint;

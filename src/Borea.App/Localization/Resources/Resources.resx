@@ -147,6 +147,33 @@
   <data name="BackupRetentionDaysFormat" xml:space="preserve">
     <value>{0} days</value>
   </data>
+  <data name="SettingsSharedModStore" xml:space="preserve">
+    <value>Share mod files between instances</value>
+  </data>
+  <data name="SettingsSharedModStoreHint" xml:space="preserve">
+    <value>Borea stores each mod release once, and every instance that uses it links to it. Off gives every instance its own copy.</value>
+  </data>
+  <data name="SharedModStoreTurningOff" xml:space="preserve">
+    <value>Borea is giving every instance its own copy of its mods.</value>
+  </data>
+  <data name="SharedModStoreWaitForTask" xml:space="preserve">
+    <value>Wait until Borea finishes the current task, then change this setting.</value>
+  </data>
+  <data name="SharedModStoreGameRunning" xml:space="preserve">
+    <value>The game is running. Close the game first, then turn this setting off.</value>
+  </data>
+  <data name="SharedModStoreBoreaRunning" xml:space="preserve">
+    <value>Another Borea window or command is running. Close it first, then turn this setting off.</value>
+  </data>
+  <data name="SharedModStoreFailedFormat" xml:space="preserve">
+    <value>The setting did not change: {0}</value>
+  </data>
+  <data name="SharedModStoreBreakOutFailedFormat" xml:space="preserve">
+    <value>The setting is off, but Borea could not give every instance its own copy: {0} Turn it on and off again to finish.</value>
+  </data>
+  <data name="SharedModStoreBrokenOutFormat" xml:space="preserve">
+    <value>{0} changed its own files, so every instance now has its own copy of it.</value>
+  </data>
   <data name="SettingsGitHubLabel" xml:space="preserve">
     <value>GitHub account</value>
   </data>

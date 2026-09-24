@@ -126,6 +126,21 @@
   <data name="SettingsLibraryFolderPickerTitle" xml:space="preserve">
     <value>Choose the new List o' Loot treasure chest</value>
   </data>
+  <data name="SettingsSharedModStore" xml:space="preserve">
+    <value>Share mod booty between seas</value>
+  </data>
+  <data name="SettingsSharedModStoreHint" xml:space="preserve">
+    <value>The Borea stows each mod release once, an' every sea that uses it points to it. Off gives every sea its own copy.</value>
+  </data>
+  <data name="SharedModStoreGameRunning" xml:space="preserve">
+    <value>Ye be sailin' the game. Quit sailin' first, then turn this off.</value>
+  </data>
+  <data name="SharedModStoreBoreaRunning" xml:space="preserve">
+    <value>Another Borea window or command be runnin'. Belay it first, then turn this off.</value>
+  </data>
+  <data name="SharedModStoreBrokenOutFormat" xml:space="preserve">
+    <value>{0} scribbled on its own booty, so every sea now has its own copy of it.</value>
+  </data>
   <data name="LibraryFolderMoving" xml:space="preserve">
     <value>Haulin' the List o' Loot to a new treasure chest...</value>
   </data>
