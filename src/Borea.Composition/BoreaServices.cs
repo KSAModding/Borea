@@ -30,6 +30,7 @@ using Borea.Network.Planning;
 using Borea.Network.Sources;
 using Borea.Network.SpaceDock;
 using Borea.Storage.Announcements;
+using Borea.Storage.Files;
 using Borea.Storage.Game;
 using Borea.Storage.History;
 using Borea.Storage.Images;
@@ -69,6 +70,13 @@ public sealed class BoreaServices : IDisposable
     /// address after a DNS change.
     /// </summary>
     private static readonly TimeSpan ConnectionLifetime = TimeSpan.FromMinutes(2);
+
+    /// <summary>
+    /// Whether a new install links to one stored copy of its release instead of
+    /// unpacking its own. Off until players have a setting to turn it off and
+    /// Borea recovers a mod that writes into its folder.
+    /// </summary>
+    private const bool LinksModsToStore = false;
 
     /// <summary>
     /// The one HttpClient every network service shares. It names Borea in its
@@ -379,7 +387,8 @@ public sealed class BoreaServices : IDisposable
         var downloader = new HttpModDownloader(http);
         var settingsRepository = new FileBoreaSettingsRepository(paths);
         var loaderConfiguration = new LoaderConfigurator();
-        var fileInstances = new FileInstanceRepository(paths);
+        var modStore = new ModStore(paths, new DirectoryLinker(), LinksModsToStore);
+        var fileInstances = new FileInstanceRepository(paths, modStore);
         var instances = new LoggingInstanceRepository(fileInstances, paths, log);
         var loaderAdopter = new FileLoaderAdopter(settingsRepository, loaderConfiguration);
         installCandidates ??= OperatingSystem.IsWindows() ? new WindowsInstallCandidateSource() : new NoInstallCandidates();
@@ -391,12 +400,12 @@ public sealed class BoreaServices : IDisposable
         // replacer own it and are guarded themselves.
         var modState = new FileModStateRepository(paths);
         var checkedModState = new CheckedModStateRepository(modState, gameShape);
-        var modInstaller = new LoggingModInstaller(new CheckedModInstaller(new FileModInstaller(paths, downloader, instances, modState), gameShape), log);
-        var modReplacer = new LoggingModReplacer(new CheckedModReplacer(new FileModReplacer(paths, downloader, instances, modState), gameShape), log);
+        var modInstaller = new LoggingModInstaller(new CheckedModInstaller(new FileModInstaller(paths, downloader, instances, modState, store: modStore), gameShape), log);
+        var modReplacer = new LoggingModReplacer(new CheckedModReplacer(new FileModReplacer(paths, downloader, instances, modState, store: modStore), gameShape), log);
         var foreignModAdopter = new FileForeignModAdopter(paths, instances, contentIndex);
         var foreignModReleaseMatcher = new FileForeignModReleaseMatcher(paths, downloader, foreignModAdopter, indexSnapshots);
         var spaceCheck = new DriveInstallSpaceCheck(paths);
-        var foreignModHandover = new LoggingForeignModHandover(new FileForeignModHandover(paths, downloader, instances, checkedModState), log);
+        var foreignModHandover = new LoggingForeignModHandover(new FileForeignModHandover(paths, downloader, instances, checkedModState, store: modStore), log);
         var installPlanner = new LoggingInstallPlanner(new RepositoryInstallPlanner(new ModDependencyResolver(), settings.ReleaseChannel), log);
         var launcher = new LoggingLauncher(new LastPlayedLauncher(new LoaderLauncher(paths, processStarter ?? new ProcessStarter(), launches), instances), log);
         var defaultLibraryFolder = Path.GetDirectoryName(bootstrapPaths.GetInstancesRoot())!;
@@ -428,7 +437,7 @@ public sealed class BoreaServices : IDisposable
             ModState = checkedModState,
             ModFavorites = new FileModFavoritesRepository(paths),
             ModPackFavorites = new FileModPackFavoritesRepository(paths),
-            Uninstaller = new LoggingModUninstaller(new FileModUninstaller(paths, instances), log),
+            Uninstaller = new LoggingModUninstaller(new FileModUninstaller(paths, instances, modStore), log),
             Installer = modInstaller,
             Replacer = modReplacer,
             ForeignModAdopter = foreignModAdopter,
@@ -444,7 +453,7 @@ public sealed class BoreaServices : IDisposable
             ModPacks = modPacks,
             ReadOnlyModPacks = new ContentIndexModPackRepository(new ReaderSnapshotProvider(indexReader)),
             ModPackInstaller = new ModPackInstaller(instances, installPlanner, modInstaller, modReplacer, spaceCheck),
-            ModPackUpdater = new ModPackUpdater(instances, installPlanner, new InstallPlanExecutor(instances, modInstaller, modReplacer, spaceCheck), new LoggingModUninstaller(new FileModUninstaller(paths, instances), log)),
+            ModPackUpdater = new ModPackUpdater(instances, installPlanner, new InstallPlanExecutor(instances, modInstaller, modReplacer, spaceCheck), new LoggingModUninstaller(new FileModUninstaller(paths, instances, modStore), log)),
             Downloader = downloader,
             InstallPlanner = installPlanner,
             PlanExecutor = new InstallPlanExecutor(instances, modInstaller, modReplacer, spaceCheck),
