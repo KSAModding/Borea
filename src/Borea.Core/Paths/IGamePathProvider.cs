@@ -37,6 +37,11 @@ public interface IGamePathProvider
     string GetInstancesRoot();
 
     /// <summary>
+    /// Root of the mod releases that instances share, one folder per release below the folder of its mod.
+    /// </summary>
+    string GetStaticModFilesRoot();
+
+    /// <summary>
     /// Root for loaders installed standalone (RFC 0035), one folder per loader id.
     /// </summary>
     string GetLoadersRoot();
