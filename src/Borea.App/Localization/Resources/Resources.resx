@@ -1203,6 +1203,9 @@
   <data name="DiscoverFavorite" xml:space="preserve">
     <value>In your favorites</value>
   </data>
+  <data name="DiscoverInstalledInOtherInstances" xml:space="preserve">
+    <value>Installed in other instances</value>
+  </data>
   <data name="DiscoverCategory" xml:space="preserve">
     <value>Category</value>
   </data>
