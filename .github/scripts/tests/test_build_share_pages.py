@@ -6,6 +6,7 @@ import contextlib
 import html.parser
 import io
 import json
+import re
 import shutil
 import subprocess
 import sys
@@ -128,7 +129,7 @@ class Nodes(html.parser.HTMLParser):
     def handle_data(self, data):
         children = self.stack[-1]["children"]
         # The generator writes one block per line, and the browser has no line between two elements.
-        if not data.strip() and self.stack[-1]["tag"] in (None, "ul", "ol", "figure"):
+        if not data.strip() and self.stack[-1]["tag"] in (None, "ul", "ol", "figure", "div"):
             return
         if children and isinstance(children[-1], str):
             children[-1] += data
@@ -331,12 +332,53 @@ class Build(unittest.TestCase):
         self.assertIn("../../#download", hrefs)
         self.assertIn("need Borea on this computer", self.page("mod", "AdvancedFlightComputer"))
 
+    def test_a_phone_gets_the_line_and_copy_link_in_place_of_the_borea_buttons(self):
+        self.build()
+        for kind, identifier in (("mod", "AdvancedFlightComputer"), ("pack", "NavigationStarterPack")):
+            with self.subTest(page=f"{kind}/{identifier}"):
+                page = self.page(kind, identifier)
+                start = page.index('<div class="actions">')
+                buttons = parse(page[start:page.index("</div>", start)]).tags[1:]
+
+                self.assertEqual(
+                    [("a", {"class": "button desktop-only", "href": f"borea://{kind}/{identifier}"}),
+                     ("a", {"class": "button secondary desktop-only", "href": f"borea://install/{identifier}"}),
+                     ("button", {"class": "button handheld-only", "type": "button", "data-copy-link": None,
+                                 "hidden": None}),
+                     ("a", {"class": "button secondary", "href": "../../#download"})],
+                    buttons)
+                self.assertEqual(2, page.count('href="borea://'))
+                self.assertIn('<p class="meta hint desktop-only">Open in Borea and Install with Borea need Borea on '
+                              'this computer.</p>', page)
+                self.assertIn('<p class="meta hint handheld-only">Borea runs on Windows, Linux and macOS. To install '
+                              'this with Borea, open this page on a computer.</p>', page)
+
+    def test_the_style_sheet_shows_a_phone_the_line_and_a_computer_the_buttons(self):
+        styles = re.sub(r"/\*.*?\*/", "", (SITE / "styles.css").read_text(encoding="utf-8"), flags=re.S)
+        hidden = [selector.strip() for selectors, body in re.findall(r"([^{}]+)\{([^{}]*)\}", styles)
+                  if re.search(r"(^|;)\s*display:\s*none\s*(;|$)", body.strip()) for selector in selectors.split(",")]
+
+        self.assertIn(".handheld .desktop-only", hidden)
+        self.assertIn(":root:not(.handheld) .handheld-only", hidden)
+
+    def test_the_page_marks_a_phone_before_the_body_is_parsed(self):
+        self.build()
+        page = self.page("mod", "AdvancedFlightComputer")
+        head = page[:page.index("</head>")]
+
+        # Not deferred, so the first paint already shows what a phone or a computer can use.
+        self.assertIn('<script src="../../handheld.js"></script>', head)
+        self.assertTrue((self.out / "handheld.js").is_file())
+        self.assertIn('<script src="../../copy-list.js" defer></script>', head)
+        fallback = (SITE / "404.html").read_text(encoding="utf-8")
+        self.assertIn('<script src="handheld.js"></script>', fallback[:fallback.index("</head>")])
+
     def test_the_page_does_not_redirect_by_itself(self):
         self.build()
         page = self.page("mod", "AdvancedFlightComputer")
 
         self.assertNotIn("http-equiv", page)
-        self.assertEqual([None, "application/ld+json"],
+        self.assertEqual([None, None, None, "application/ld+json"],
                          [attrs.get("type") for tag, attrs in parse(page).tags if tag == "script"])
 
     def test_links_keep_the_app_order_and_only_http_and_https(self):
@@ -613,7 +655,8 @@ MARKDOWN_IMAGES = {
 }
 
 
-NODE_NODES = """
+# The part of a browser document share.js builds with, and the shape html_nodes gives the generated HTML.
+NODE_DOM = """
 const path = require("path");
 const share = require(path.resolve(process.argv[1]));
 
@@ -628,8 +671,10 @@ Object.defineProperty(Node.prototype, "textContent", { set: function (value) { t
 Object.defineProperty(Node.prototype, "href", { set: function (value) { this.attrs.href = value; } });
 Object.defineProperty(Node.prototype, "rel", { set: function (value) { this.attrs.rel = value; } });
 Object.defineProperty(Node.prototype, "childNodes", { get: function () { return this.children; } });
+Object.defineProperty(Node.prototype, "hidden", { set: function (value) { if (value) { this.attrs.hidden = null; } } });
 
-Node.prototype.setAttribute = function (name, value) { this.attrs[name] = value; };
+// An empty attribute is the attribute with no value, the way the HTML parser reads it.
+Node.prototype.setAttribute = function (name, value) { this.attrs[name] = value === "" ? null : value; };
 
 Node.prototype.appendChild = function (child) {
   if (child instanceof Node && child.tag === null) {
@@ -661,13 +706,175 @@ function plain(node) {
   });
   return { tag: node.tag, attrs: node.attrs, children: children };
 }
+"""
 
+NODE_NODES = NODE_DOM + """
 const samples = JSON.parse(process.argv[2]);
 const images = JSON.parse(process.argv[3]);
 process.stdout.write(JSON.stringify(samples.map(function (sample) {
   return plain(share.markdownNodes(sample, images)).children;
 })));
 """
+
+NODE_ACTIONS = NODE_DOM + """
+const snapshot = JSON.parse(require("fs").readFileSync(process.argv[2], "utf8"));
+const views = snapshot.listings.filter((entry) => entry && entry.authored && typeof entry.authored === "object")
+  .map((entry) => share.listingView(entry, snapshot))
+  .concat(snapshot.packs.map((entry) => share.packView(entry, snapshot)).filter(Boolean));
+const nodes = { mod: {}, pack: {} };
+views.forEach(function (view) {
+  nodes[view.kind][view.id] = plain(share.actionNodes(view, process.argv[3])).children;
+});
+process.stdout.write(JSON.stringify(nodes));
+"""
+
+# A navigator per case, then the class list of the page when handheld.js runs as the page script.
+NODE_HANDHELD = """
+const path = require("path");
+const file = path.resolve(process.argv[1]);
+const cases = JSON.parse(process.argv[2]);
+const answers = cases.map((nav) => require(file).isHandheld(nav));
+const classes = cases.map(function (nav) {
+  const added = [];
+  global.document = { documentElement: { classList: { add: function (name) { added.push(name); } } } };
+  Object.defineProperty(globalThis, "navigator", { value: nav, configurable: true });
+  delete require.cache[file];
+  require(file);
+  delete global.document;
+  delete require.cache[file];
+  return added;
+});
+process.stdout.write(JSON.stringify({ answers: answers, classes: classes }));
+"""
+
+ANDROID_PHONE = "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Mobile Safari/537.36"
+ANDROID_TABLET = "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36"
+IPHONE = ("Mozilla/5.0 (iPhone; CPU iPhone OS 18_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) "
+          "Version/18.6 Mobile/15E148 Safari/604.1")
+IPAD = ("Mozilla/5.0 (iPad; CPU OS 18_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) "
+        "Version/18.6 Mobile/15E148 Safari/604.1")
+IPOD = ("Mozilla/5.0 (iPod touch; CPU iPhone OS 15_8 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) "
+        "Version/15.6 Mobile/15E148 Safari/604.1")
+FIREFOX_ANDROID = "Mozilla/5.0 (Android 15; Mobile; rv:143.0) Gecko/143.0 Firefox/143.0"
+MAC = ("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) "
+       "Version/18.6 Safari/605.1.15")
+WINDOWS = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36"
+LINUX = "Mozilla/5.0 (X11; Linux x86_64; rv:143.0) Gecko/20100101 Firefox/143.0"
+
+HANDHELDS = {
+    "Android phone": {"userAgent": ANDROID_PHONE, "maxTouchPoints": 5,
+                      "userAgentData": {"mobile": True, "platform": "Android"}},
+    # Chrome on an Android tablet reports mobile as false.
+    "Android tablet": {"userAgent": ANDROID_TABLET, "maxTouchPoints": 5,
+                       "userAgentData": {"mobile": False, "platform": "Android"}},
+    "Android phone with client hints only": {"userAgent": "", "userAgentData": {"mobile": True, "platform": ""}},
+    "Firefox on Android": {"userAgent": FIREFOX_ANDROID, "maxTouchPoints": 5},
+    "iPhone": {"userAgent": IPHONE, "maxTouchPoints": 5},
+    "iPad": {"userAgent": IPAD, "maxTouchPoints": 5},
+    "iPod": {"userAgent": IPOD, "maxTouchPoints": 5},
+    "iPad that names itself a Mac": {"userAgent": MAC, "maxTouchPoints": 5},
+}
+
+COMPUTERS = {
+    "Mac": {"userAgent": MAC, "maxTouchPoints": 0},
+    "Mac of a browser without touch points": {"userAgent": MAC},
+    "Windows": {"userAgent": WINDOWS, "maxTouchPoints": 0,
+                "userAgentData": {"mobile": False, "platform": "Windows"}},
+    "Windows with a touch screen": {"userAgent": WINDOWS, "maxTouchPoints": 10,
+                                    "userAgentData": {"mobile": False, "platform": "Windows"}},
+    "Linux": {"userAgent": LINUX, "maxTouchPoints": 0},
+}
+
+
+@unittest.skipUnless(shutil.which("node"), "Node is not installed")
+class Handheld(unittest.TestCase):
+    """site/handheld.js marks a phone or a tablet, where the style sheet shows the line in place of the Borea buttons."""
+
+    def run_script(self, cases: dict) -> dict:
+        result = subprocess.run(["node", "-e", NODE_HANDHELD, str(SITE / "handheld.js"), json.dumps(list(cases.values()))],
+                                capture_output=True, text=True, encoding="utf-8", check=True)
+        found = json.loads(result.stdout)
+        return {name: (answer, classes) for name, answer, classes in zip(cases, found["answers"], found["classes"])}
+
+    def test_a_phone_or_a_tablet_is_marked(self):
+        for name, (answer, classes) in self.run_script(HANDHELDS).items():
+            with self.subTest(device=name):
+                self.assertTrue(answer)
+                self.assertEqual(["handheld"], classes)
+
+    def test_a_computer_is_not_marked(self):
+        for name, (answer, classes) in self.run_script(COMPUTERS).items():
+            with self.subTest(device=name):
+                self.assertFalse(answer)
+                self.assertEqual([], classes)
+
+
+# A page per case with one Copy link button, then the button and the clipboard after one click.
+NODE_COPY_LINK = """
+const path = require("path");
+const file = path.resolve(process.argv[1]);
+const cases = JSON.parse(process.argv[2]);
+global.setTimeout = function () { return 0; };
+global.clearTimeout = function () {};
+
+async function run(page) {
+  const written = [];
+  const button = { hidden: true, textContent: "Copy link", clicks: [],
+                   addEventListener: function (type, handler) { if (type === "click") { this.clicks.push(handler); } } };
+  const clipboard = { writeText: function (text) { written.push(text); return Promise.resolve(); } };
+  Object.defineProperty(globalThis, "navigator", { value: page.clipboard ? { clipboard: clipboard } : {}, configurable: true });
+  global.window = {};
+  global.location = { href: page.location };
+  global.document = {
+    readyState: "complete",
+    querySelector: function (selector) {
+      return selector === 'link[rel="canonical"]' && page.canonical ? { href: page.canonical } : null;
+    },
+    querySelectorAll: function (selector) { return selector === "button[data-copy-link]" ? [button] : []; }
+  };
+  delete require.cache[file];
+  require(file);
+  button.clicks.forEach(function (click) { click(); });
+  await new Promise(function (resolve) { setImmediate(resolve); });
+  return { hidden: button.hidden, written: written, label: button.textContent };
+}
+
+(async function () {
+  const found = [];
+  for (const page of cases) {
+    found.push(await run(page));
+  }
+  process.stdout.write(JSON.stringify(found));
+})();
+"""
+
+SHARE_URL = "https://ksamodding.github.io/Borea/mod/AdvancedFlightComputer/"
+
+
+@unittest.skipUnless(shutil.which("node"), "Node is not installed")
+class CopyLink(unittest.TestCase):
+    """site/copy-list.js turns on Copy link, which copies the address of the share page."""
+
+    def run_script(self, page: dict) -> dict:
+        result = subprocess.run(["node", "-e", NODE_COPY_LINK, str(SITE / "copy-list.js"), json.dumps([page])],
+                                capture_output=True, text=True, encoding="utf-8", check=True)
+        return json.loads(result.stdout)[0]
+
+    def test_copy_link_copies_the_canonical_address(self):
+        found = self.run_script({"clipboard": True, "canonical": SHARE_URL, "location": SHARE_URL + "?ref=discord#top"})
+
+        self.assertEqual({"hidden": False, "written": [SHARE_URL], "label": "Copied"}, found)
+
+    def test_copy_link_copies_the_address_of_a_page_without_a_canonical_link(self):
+        found = self.run_script({"clipboard": True, "canonical": None, "location": SHARE_URL})
+
+        self.assertEqual({"hidden": False, "written": [SHARE_URL], "label": "Copied"}, found)
+
+    def test_copy_link_stays_hidden_without_a_clipboard(self):
+        found = self.run_script({"clipboard": False, "canonical": SHARE_URL, "location": SHARE_URL})
+
+        self.assertEqual({"hidden": True, "written": [], "label": "Copy link"}, found)
+
 
 NODE_VIEWS = """
 const fs = require("fs");
@@ -728,6 +935,22 @@ class FallbackParity(unittest.TestCase):
         for sample, nodes in zip(MARKDOWN_SAMPLES, self.nodes(MARKDOWN_SAMPLES)):
             with self.subTest(sample=sample):
                 self.assertEqual(html_nodes(share.markdown_html(sample, "", MARKDOWN_IMAGES)), nodes)
+
+    def test_the_fallback_offers_the_buttons_and_the_line_for_a_phone_the_way_the_generator_does(self):
+        root = "/Borea/"
+        document = snapshot()
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / "snapshot.json"
+            path.write_text(json.dumps(document), encoding="utf-8")
+            result = subprocess.run(["node", "-e", NODE_ACTIONS, str(SITE / "share.js"), str(path), root],
+                                    capture_output=True, text=True, encoding="utf-8", check=True)
+        nodes = json.loads(result.stdout)
+        with contextlib.redirect_stderr(io.StringIO()):
+            pages = share.pages_of(share.Snapshot(document))
+        self.assertEqual({"mod", "pack"}, {page.kind for page, _ in pages})
+        for page, _ in pages:
+            with self.subTest(page=f"{page.kind}/{page.id}"):
+                self.assertEqual(html_nodes(share.actions_html(page, root)), nodes[page.kind][page.id])
 
     def test_the_fallback_shows_what_the_generator_shows(self):
         for name, document in (("fixture", snapshot()), ("edge cases", edge_snapshot()), ("pack members", member_snapshot())):

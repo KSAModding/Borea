@@ -399,6 +399,12 @@ footer p {
   margin-top: 16px;
 }
 
+/* handheld.js sets .handheld, and a page with no script shows the Borea buttons. */
+.handheld .desktop-only,
+:root:not(.handheld) .handheld-only {
+  display: none;
+}
+
 .chips {
   display: flex;
   flex-wrap: wrap;

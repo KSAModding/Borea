@@ -87,6 +87,9 @@ IMAGE_PIXELS = 2048
 IMAGE_CAP = 1024 * 1024
 # What an image with no words of its own is called, so that a reader always sees a line where an image is.
 IMAGE_PLACEHOLDER = "Image"
+# The line under the Borea buttons, and the line that takes their place on a phone or a tablet.
+DESKTOP_HINT = "Open in Borea and Install with Borea need Borea on this computer."
+HANDHELD_HINT = "Borea runs on Windows, Linux and macOS. To install this with Borea, open this page on a computer."
 # RFC 0058 asks a client to offer a reader a way to load no image from the host of an author. A share page goes
 # further and loads none until the reader asks, because a reader arrives here from a link and never chose to
 # tell a host their address. The page carries the switch, so that it stands in its place from the first paint,
@@ -780,6 +783,21 @@ def members_html(page: Page) -> str:
             '      </section>\n')
 
 
+def actions_html(page: Page, root: str) -> str:
+    """The buttons under the header, and the line that sends a reader on a phone or a tablet to a computer.
+
+    Copy link stays hidden until copy-list.js finds a clipboard.
+    """
+    return ('        <div class="actions">\n'
+            f'          <a class="button desktop-only" href="borea://{page.kind}/{page.id}">Open in Borea</a>\n'
+            f'          <a class="button secondary desktop-only" href="borea://install/{page.id}">Install with Borea</a>\n'
+            '          <button class="button handheld-only" type="button" data-copy-link hidden>Copy link</button>\n'
+            f'          <a class="button secondary" href="{root}#download">Get Borea</a>\n'
+            '        </div>\n'
+            f'        <p class="meta hint desktop-only">{DESKTOP_HINT}</p>\n'
+            f'        <p class="meta hint handheld-only">{HANDHELD_HINT}</p>\n')
+
+
 def render(page: Page, site_url: str = SITE_URL) -> str:
     root = "../../"
     url = share_url(site_url, page)
@@ -844,7 +862,6 @@ def render(page: Page, site_url: str = SITE_URL) -> str:
             else '          <p class="meta">No description provided.</p>\n')
     members = members_html(page)
     main_open, main_close = ('      <div class="listing-main">\n', "      </div>\n") if members else ("", "")
-    copy_script = f'  <script src="{root}copy-list.js" defer></script>\n' if members else ""
     switch = IMAGE_SWITCH if '<figure data-image="' in body else ""
     authors = f'        <p class="meta by">by {escape(", ".join(page.authors))}</p>\n' if page.authors else ""
     abstract = f'        <p class="tagline">{escape(page.abstract)}</p>\n' if page.abstract else ""
@@ -873,8 +890,10 @@ def render(page: Page, site_url: str = SITE_URL) -> str:
   <link rel="preload" href="{root}fonts/IBMPlexSans-SemiBold.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="{root}fonts/IBMPlexSans-Regular.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="{root}styles.css">
+  <script src="{root}handheld.js"></script>
   <script src="{root}description-images.js"></script>
-{copy_script}  <script type="application/ld+json">{data}</script>
+  <script src="{root}copy-list.js" defer></script>
+  <script type="application/ld+json">{data}</script>
 </head>
 <body class="share">
   <header class="column top">
@@ -886,13 +905,7 @@ def render(page: Page, site_url: str = SITE_URL) -> str:
       <div class="listing-intro">
         <p class="meta kind">{escape(page.type_label)}</p>
         <h1>{escape(page.name)}</h1>
-{authors}{abstract}{tags}{"".join(notices)}        <div class="actions">
-          <a class="button" href="borea://{page.kind}/{page.id}">Open in Borea</a>
-          <a class="button secondary" href="borea://install/{page.id}">Install with Borea</a>
-          <a class="button secondary" href="{root}#download">Get Borea</a>
-        </div>
-        <p class="meta hint">Open in Borea and Install with Borea need Borea on this computer.</p>
-      </div>
+{authors}{abstract}{tags}{"".join(notices)}{actions_html(page, root)}      </div>
     </div>
 
     <div class="listing-body">
