@@ -10,6 +10,9 @@ public sealed class BoreaSettingsDto
     /// <summary>The folder of Instances and Backups. An older file without it loads as Borea's own folder.</summary>
     public string? LibraryFolderPath { get; set; }
 
+    /// <summary>An older file without it loads as on.</summary>
+    public bool? SharedModStore { get; set; }
+
     /// <summary>
     /// Loader id to installation record. Absent when none, so no empty table is
     /// written. Keep last because TOML puts each later key below this table.

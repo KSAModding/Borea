@@ -95,6 +95,17 @@ public sealed class FileBoreaSettingsRepositoryTests : IDisposable
 
         Assert.Null(reloaded!.LibraryFolderPath);
         Assert.Equal(ReleaseChannel.Testing, reloaded.ReleaseChannel);
+        Assert.True(reloaded.SharedModStore);
+    }
+
+    [Fact]
+    public async Task SaveThenGet_RoundTripsTheSharedModStoreOff()
+    {
+        await _repository.SaveAsync(new BoreaSettings(null, sharedModStore: false));
+
+        var reloaded = await _repository.GetAsync();
+
+        Assert.False(reloaded!.SharedModStore);
     }
 
     [Fact]

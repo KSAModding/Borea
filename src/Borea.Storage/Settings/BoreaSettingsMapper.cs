@@ -11,6 +11,7 @@ public static class BoreaSettingsMapper
         GameDirectoryPath = settings.GameDirectoryPath,
         ReleaseChannel = settings.ReleaseChannel.ToName(),
         LibraryFolderPath = settings.LibraryFolderPath,
+        SharedModStore = settings.SharedModStore,
         LoaderInstallations = settings.LoaderInstallations.Count == 0
             ? null
             : settings.LoaderInstallations.ToDictionary(
@@ -24,7 +25,8 @@ public static class BoreaSettingsMapper
             pair => pair.Key,
             pair => FromDto(pair.Value)),
         ReadReleaseChannel(dto.ReleaseChannel),
-        dto.LibraryFolderPath);
+        dto.LibraryFolderPath,
+        dto.SharedModStore ?? true);
 
     /// <summary>An absent or unknown name loads as stable, which offers the fewest releases.</summary>
     private static ReleaseChannel ReadReleaseChannel(string? name)
