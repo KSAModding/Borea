@@ -109,6 +109,46 @@ namespace Borea.Core.Mods
             return true;
         }
 
+        public static ModVersion ParseAuthored(string value)
+        {
+            if (!TryParseAuthored(value, out var result))
+            {
+                throw new FormatException($"'{value}' is not a valid mod version.");
+            }
+
+            return result;
+        }
+
+        /// <summary>
+        /// Reads a version as an author may write it on a release tag or in a bound (RFC 0072): an optional leading "v",
+        /// then one to three core components, the missing ones filled with 0, so "0.5" reads as 0.5.0.
+        /// A version the index stamped is always complete, so it goes through <see cref="TryParse"/> instead.
+        /// </summary>
+        public static bool TryParseAuthored(string? value, out ModVersion result)
+        {
+            result = default;
+
+            if (value is null)
+            {
+                return false;
+            }
+
+            if (value.StartsWith('v'))
+            {
+                value = value[1..];
+            }
+
+            var coreEnd = value.IndexOfAny(['-', '+']);
+            var core = coreEnd < 0 ? value : value[..coreEnd];
+            var missing = 2 - core.Count(c => c == '.');
+            if (missing > 0)
+            {
+                value = core + string.Concat(Enumerable.Repeat(".0", missing)) + value[core.Length..];
+            }
+
+            return TryParse(value, out result);
+        }
+
         /// <summary>
         /// A core component is digits only, without a leading zero, sign, or
         /// whitespace (SemVer 2.0.0 item 2), and must fit an int.

@@ -161,7 +161,7 @@ internal static partial class ListingRules
     {
         var min = bounds.GetString("min");
         var max = bounds.GetString("max");
-        if (ModVersion.TryParse(min, out var low) && ModVersion.TryParse(max, out var high) && high < low)
+        if (ModVersion.TryParseAuthored(min, out var low) && ModVersion.TryParseAuthored(max, out var high) && high < low)
             issues.Add(Error(where, $"max '{max}' is below min '{min}'"));
     }
 

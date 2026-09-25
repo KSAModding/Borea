@@ -307,6 +307,40 @@ public sealed class DtoMapperTests
     }
 
     [Fact]
+    public void MapAuthored_ShortBounds_AreFilled()
+    {
+        var dto = MinimalAuthoredDto();
+        dto.Loader = new LoaderDto { Id = "test-loader", Min = "0.4", Max = "1" };
+        dto.Dependencies = new List<DependencyEntryDto>
+        {
+            new() { Id = "other-mod", Kind = "required", Min = "1", Max = "v2.1-rc.1" },
+            new() { Kind = "recommends", AnyOf = new List<AnyOfDependencyDto> { new() { Id = "mod-a", Min = "0.5" } } },
+        };
+
+        var result = DtoMapper.MapAuthored(dto, "source");
+
+        Assert.Equal(new ModVersion(0, 4, 0), result.Loader!.MinVersion);
+        Assert.Equal(new ModVersion(1, 0, 0), result.Loader.MaxVersion);
+        Assert.Equal(new ModVersion(1, 0, 0), result.Dependencies[0].MinVersion);
+        Assert.Equal(new ModVersion(2, 1, 0, "rc.1"), result.Dependencies[0].MaxVersion);
+        Assert.Equal(new ModVersion(0, 5, 0), result.Dependencies[1].AnyOf![0].MinVersion);
+    }
+
+    [Theory]
+    [InlineData("0.5.0.1")]
+    [InlineData("01.2")]
+    public void MapAuthored_BoundThatIsNoVersion_Throws(string bound)
+    {
+        var loader = MinimalAuthoredDto();
+        loader.Loader = new LoaderDto { Id = "test-loader", Min = bound };
+        var dependency = MinimalAuthoredDto();
+        dependency.Dependencies = new List<DependencyEntryDto> { new() { Id = "other-mod", Kind = "required", Min = bound } };
+
+        Assert.Throws<FormatException>(() => DtoMapper.MapAuthored(loader, "source"));
+        Assert.Throws<FormatException>(() => DtoMapper.MapAuthored(dependency, "source"));
+    }
+
+    [Fact]
     public void MapAuthored_InstallDescriptor_MapsFields()
     {
         var dto = MinimalAuthoredDto();
@@ -617,6 +651,21 @@ public sealed class DtoMapperTests
         Assert.Equal(ModDependencyKind.Conflict, dependency.Kind);
         Assert.Null(dependency.MinVersion);
         Assert.Null(dependency.MaxVersion);
+    }
+
+    [Fact]
+    public void MapRelease_ShortVersionOrBound_Throws()
+    {
+        var version = MinimalReleaseDto();
+        version.Version = "1.0";
+        var loader = MinimalReleaseDto();
+        loader.Loader = new LoaderDto { Id = "test-loader", Min = "0.4" };
+        var dependency = MinimalReleaseDto();
+        dependency.Dependencies.Add(new DependencyEntryDto { Id = "other-mod", Kind = "required", Min = "1" });
+
+        Assert.Throws<FormatException>(() => DtoMapper.MapRelease(version, null, authored: null));
+        Assert.Throws<FormatException>(() => DtoMapper.MapRelease(loader, null, authored: null));
+        Assert.Throws<FormatException>(() => DtoMapper.MapRelease(dependency, null, authored: null));
     }
 
     [Fact]

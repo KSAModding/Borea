@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://raw.githubusercontent.com/KSAModding/content-index/main/schemas/authored.schema.json",
   "title": "KSA content index: authored document",
-  "description": "One authored TOML document per listing or pack version, per RFC 0031, RFC 0035, RFC 0049, RFC 0058 and RFC 0067. Validate the parsed document.",
+  "description": "One authored TOML document per listing or pack version, per RFC 0031, RFC 0035, RFC 0049, RFC 0058, RFC 0067 and RFC 0072. Validate the parsed document.",
   "type": "object",
   "additionalProperties": false,
 
@@ -181,11 +181,11 @@
         },
         "min": {
           "description": "Oldest loader version known to work, inclusive.",
-          "$ref": "#/$defs/semver"
+          "$ref": "#/$defs/versionBound"
         },
         "max": {
           "description": "Newest known-working loader version, inclusive. Absent means open, which is the recommended default.",
-          "$ref": "#/$defs/semver"
+          "$ref": "#/$defs/versionBound"
         }
       }
     },
@@ -474,8 +474,15 @@
       }
     },
 
+    "versionBound": {
+      "$comment": "RFC 0072: one to three numbers, and a missing one reads as 0, so 0.5 is 0.5.0. The rest is SemVer 2.0.0, and like every authored version it takes no leading v.",
+      "title": "a version such as 1.2.3, 0.5 or 2.0.0-rc.1, with one to three numbers and no leading v",
+      "type": "string",
+      "pattern": "^(?:0|[1-9][0-9]*)(?:\\.(?:0|[1-9][0-9]*)){0,2}(?:-(?:0|[1-9][0-9]*|[0-9]*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9][0-9]*|[0-9]*[a-zA-Z-][0-9a-zA-Z-]*))*)?(?:\\+[0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*)?(?![\\s\\S])"
+    },
+
     "semver": {
-      "$comment": "SemVer 2.0.0. No leading v: these are authored versions, not release tags, and only a tag gets its v stripped at stamp time.",
+      "$comment": "SemVer 2.0.0 with all three numbers, because a pack version and a pin name a release as the index stores it. No leading v: these are authored versions, not release tags, and only a tag gets its v stripped at stamp time.",
       "type": "string",
       "pattern": "^(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)(?:-(?:0|[1-9][0-9]*|[0-9]*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9][0-9]*|[0-9]*[a-zA-Z-][0-9a-zA-Z-]*))*)?(?:\\+[0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*)?(?![\\s\\S])"
     },
@@ -627,11 +634,11 @@
         },
         "min": {
           "description": "Inclusive lower bound. For a conflict entry the bounds narrow the conflicting range.",
-          "$ref": "#/$defs/semver"
+          "$ref": "#/$defs/versionBound"
         },
         "max": {
           "description": "Inclusive upper bound. Absent means open.",
-          "$ref": "#/$defs/semver"
+          "$ref": "#/$defs/versionBound"
         },
         "any_of": {
           "description": "Alternatives, satisfied by any one of them. Replaces id.",
@@ -643,8 +650,8 @@
             "required": ["id"],
             "properties": {
               "id": { "$ref": "#/$defs/contentId" },
-              "min": { "$ref": "#/$defs/semver" },
-              "max": { "$ref": "#/$defs/semver" }
+              "min": { "$ref": "#/$defs/versionBound" },
+              "max": { "$ref": "#/$defs/versionBound" }
             }
           }
         }

@@ -147,14 +147,9 @@ public sealed class ListingHostClient : IListingHostClient
         return await response.Content.ReadFromJsonAsync<T>(Json, cancellationToken).ConfigureAwait(false);
     }
 
-    /// <summary>The SemVer version of a tag, with the leading v a tag may carry stripped, or null.</summary>
-    private static string? Version(string? tag)
-    {
-        var value = tag?.Trim() ?? string.Empty;
-        if (value.StartsWith('v') || value.StartsWith('V'))
-            value = value[1..];
-        return ModVersion.TryParse(value, out _) ? value : null;
-    }
+    /// <summary>The version of a tag as the watcher reads it, with its missing components filled, or null.</summary>
+    private static string? Version(string? tag) =>
+        ModVersion.TryParseAuthored(tag?.Trim(), out var version) ? version.ToString() : null;
 
     private static string? Https(string? url) =>
         Uri.TryCreate(url?.Trim(), UriKind.Absolute, out var uri) && uri.Scheme is "https" or "http" ? uri.AbsoluteUri : null;
