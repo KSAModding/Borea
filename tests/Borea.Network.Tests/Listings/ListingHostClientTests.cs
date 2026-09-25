@@ -86,6 +86,24 @@ public sealed class ListingHostClientTests
         Assert.Equal(chosen is null ? [named, "Sources.zip"] : [], latest.Candidates);
     }
 
+    [Theory]
+    [InlineData("0.5", "0.5.0")]
+    [InlineData("v1-rc.1", "1.0.0-rc.1")]
+    public async Task ReadAsync_ShortTag_IsTheReleaseWithItsVersionFilled(string tag, string version)
+    {
+        var releases = $$"""
+            [ { "tag_name": "{{tag}}", "draft": false, "published_at": "2026-09-08T00:00:00Z", "assets": [] },
+              { "tag_name": "0.4.0.1", "draft": false, "published_at": "2026-09-09T00:00:00Z", "assets": [] } ]
+            """;
+        var client = new ListingHostClient(FakeHttpMessageHandler.BuildClient(request =>
+            FakeHttpMessageHandler.JsonResponse(request.RequestUri!.AbsolutePath.EndsWith("/releases", StringComparison.Ordinal) ? releases : Repository), out _));
+
+        var latest = (await client.ReadAsync(new ListingSourceReference.GitHub("Owner", "KSA-MyMod"))).Latest!;
+
+        Assert.Equal(tag, latest.Tag);
+        Assert.Equal(version, latest.Version);
+    }
+
     [Fact]
     public async Task ReadAsync_UnknownRepository_ThrowsListingSourceException()
     {

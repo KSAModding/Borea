@@ -6,7 +6,7 @@ namespace Borea.Core.Listings;
 /// <param name="Name">The display name the host shows, or null.</param>
 /// <param name="License">The license as the host names it, which need not be an SPDX expression.</param>
 /// <param name="Links">The links the host knows, keyed like [links].</param>
-/// <param name="Latest">The latest release, or null when the host has none with a SemVer version.</param>
+/// <param name="Latest">The latest release, or null when the host has none with a version the index can read.</param>
 public sealed record ListingHostFacts(
     ListingSourceReference Source,
     string? Name,
