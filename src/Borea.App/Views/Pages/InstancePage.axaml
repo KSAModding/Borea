@@ -426,7 +426,10 @@
                 <Border IsVisible="{Binding IsManualInstallsTab}" BorderBrush="{StaticResource Brush.BorderStrong}" BorderThickness="1" CornerRadius="16" views:RoundedClip.IsEnabled="True" Padding="0,0,0,4" Margin="0,32,0,0">
                     <StackPanel>
                         <Border Background="{StaticResource Brush.Surface}" Padding="16,11">
-                            <TextBlock Classes="body-md secondary" Text="{Binding Localization.InstanceTabManualInstalls}" />
+                            <Grid ColumnDefinitions="*,16,Auto">
+                                <TextBlock Classes="body-md secondary" Text="{Binding Localization.InstanceTabManualInstalls}" VerticalAlignment="Center" />
+                                <views:InfoButton Grid.Column="2" Text="{Binding Localization.ManualInstallsInfo}" AutomationProperties.Name="{Binding Localization.MoreInformation}" />
+                            </Grid>
                         </Border>
                         <TextBlock Classes="body-sm danger" Text="{Binding ManualInstallsError}" TextWrapping="Wrap" Margin="16,8" IsVisible="{Binding ManualInstallsError, Converter={x:Static ObjectConverters.IsNotNull}}" />
                         <Grid ColumnDefinitions="*,16,Auto" Margin="16,12" IsVisible="{Binding !HasManualInstalls}">
