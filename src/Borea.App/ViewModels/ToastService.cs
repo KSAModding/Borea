@@ -61,9 +61,9 @@ public sealed partial class ToastService : ObservableObject
     }
 
     /// <summary>Shows a short result that belongs to no task.</summary>
-    internal ToastItem ShowMessage(ToastKind kind, Func<string> message, string? detail = null)
+    internal ToastItem ShowMessage(ToastKind kind, Func<string> message, string? detail = null, ToastAction? action = null)
     {
-        var toast = new ToastItem(this, kind, message, detail);
+        var toast = new ToastItem(this, kind, message, detail, action);
         Show(toast);
         return toast;
     }
