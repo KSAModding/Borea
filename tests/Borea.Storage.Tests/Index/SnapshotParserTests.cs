@@ -158,6 +158,21 @@ public sealed class SnapshotParserTests
     }
 
     [Fact]
+    public void Parse_AuthoredListingWithShortBounds_LoadsWithTheBoundsFilled()
+    {
+        var authored = ValidAuthoredJson.Replace(
+            "\"links\":",
+            "\"loader\": { \"id\": \"test-loader\", \"min\": \"0.4\" }, \"dependencies\": [{ \"id\": \"other-mod\", \"kind\": \"required\", \"min\": \"1\" }], \"links\":");
+        var listing = $$"""{ "id": "test-mod", "authored": {{authored}}, "releases": [] }""";
+
+        var result = SnapshotParser.Parse(Snapshot(listing, ""));
+
+        var parsed = Assert.Single(result.ValidListings);
+        Assert.Equal("0.4.0", parsed.Authored!.Loader!.MinVersion.ToString());
+        Assert.Equal("1.0.0", Assert.Single(parsed.Authored.Dependencies).MinVersion.ToString());
+    }
+
+    [Fact]
     public void Parse_TombstoneListing_IsValidWithNoAuthoredData()
     {
         var listing = """{ "id": "removed-mod", "index_status": { "state": "delisted" } }""";

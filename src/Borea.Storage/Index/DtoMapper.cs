@@ -42,8 +42,8 @@ public static class DtoMapper
             releases: dto.Releases is null ? null : MapReleaseSource(dto.Releases),
             gameMax: dto.Compatibility.GameMax,
             os: RequireItems(dto.Compatibility.Os, "compatibility.os"),
-            loader: dto.Loader is null ? null : MapLoaderRequirement(dto.Loader),
-            dependencies: MapItems(dto.Dependencies, MapDependency, "dependencies")!,
+            loader: dto.Loader is null ? null : MapLoaderRequirement(dto.Loader, ModVersion.ParseAuthored),
+            dependencies: MapItems(dto.Dependencies, dependency => MapDependency(dependency, ModVersion.ParseAuthored), "dependencies")!,
             install: dto.Install is null ? null : MapInstallDescriptor(dto.Install),
             provides: dto.Provides is null ? null : MapProvides(dto.Provides)));
     }
@@ -63,14 +63,14 @@ public static class DtoMapper
             gameMinRevision: dto.GameMinRevision,
             download: MapDownloadInfo(dto.Download),
             installSizeBytes: dto.InstallSize,
-            dependencies: MapItems(dto.Dependencies, MapDependency, "dependencies")!,
+            dependencies: MapItems(dto.Dependencies, dependency => MapDependency(dependency, ModVersion.Parse), "dependencies")!,
             type: MapContentType(dto.Type),
             versionScheme: dto.VersionScheme,
             gameMax: dto.GameMax,
             gameMaxRevision: dto.GameMaxRevision,
             os: RequireItems(dto.Os, "os"),
             install: dto.Install is null ? null : MapInstallInfo(dto.Install),
-            loader: dto.Loader is null ? null : MapLoaderRequirement(dto.Loader),
+            loader: dto.Loader is null ? null : MapLoaderRequirement(dto.Loader, ModVersion.Parse),
             changelog: dto.Changelog,
             changelogText: changelogText,
             // Absent "listing" key entirely -> no snapshot to merge, leave null.
@@ -239,7 +239,8 @@ public static class DtoMapper
             $"Host reference must be a string or number, but was {value.ValueKind}."),
     };
 
-    private static ModDependency MapDependency(DependencyEntryDto dto)
+    // A release file carries its bounds in full, while an authored listing reaches Borea verbatim and may write them shorter.
+    private static ModDependency MapDependency(DependencyEntryDto dto, Func<string, ModVersion> parseBound)
     {
         ArgumentNullException.ThrowIfNull(dto);
 
@@ -264,8 +265,8 @@ public static class DtoMapper
                 dto.AnyOf,
                 alternative => new ModDependencyAlternative(
                     alternative.Id,
-                    MetadataEnumMapper.ParseVersion(alternative.Min),
-                    MetadataEnumMapper.ParseVersion(alternative.Max)),
+                    MapBound(alternative.Min, parseBound),
+                    MapBound(alternative.Max, parseBound)),
                 "dependency.any_of")!;
 
             return ModDependency.OfAlternatives(kind, alternatives, source);
@@ -274,16 +275,19 @@ public static class DtoMapper
         return new ModDependency(
             dto.Id!,
             kind,
-            MetadataEnumMapper.ParseVersion(dto.Min),
-            MetadataEnumMapper.ParseVersion(dto.Max),
+            MapBound(dto.Min, parseBound),
+            MapBound(dto.Max, parseBound),
             source);
     }
 
-    private static LoaderRequirement MapLoaderRequirement(LoaderDto dto) =>
+    private static ModVersion? MapBound(string? value, Func<string, ModVersion> parseBound) =>
+        value is null ? null : parseBound(value);
+
+    private static LoaderRequirement MapLoaderRequirement(LoaderDto dto, Func<string, ModVersion> parseBound) =>
         new(
             dto.Id,
-            ModVersion.Parse(dto.Min),
-            dto.Max is null ? null : ModVersion.Parse(dto.Max),
+            parseBound(dto.Min),
+            MapBound(dto.Max, parseBound),
             dto.Source is null ? null : MapMetadataSource(dto.Source));
 
     private static InstallDescriptor MapInstallDescriptor(InstallDescriptorDto dto) =>
