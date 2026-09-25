@@ -874,10 +874,13 @@
     <value>Abhängigkeiten</value>
   </data>
   <data name="InstanceEmptyContent" xml:space="preserve">
-    <value>Noch nichts installiert. Füge Inhalte über Entdecken hinzu.</value>
+    <value>Borea hat in dieser Instanz noch keine Inhalte installiert. Füge Inhalte über Entdecken hinzu. Mods, die du ohne Borea installiert hast, findest du unter Manuelle Installationen.</value>
   </data>
   <data name="ManualInstallsEmpty" xml:space="preserve">
     <value>Kein Mod-Ordner in dieser Instanz wurde ohne Borea installiert.</value>
+  </data>
+  <data name="ManualInstallsInfo" xml:space="preserve">
+    <value>Borea hat die Mods in dieser Liste nicht installiert, aber sie gehören zu dieser Instanz. Wenn du diese Instanz über Borea spielst, lädt das Spiel jeden dieser Mods, der aktiviert ist. Findet das Spiel einen neuen Mod, fragt es dich zuerst, ob du ihn aktivieren willst. Borea aktualisiert sie nicht.</value>
   </data>
   <data name="ManualInstallsInIndex" xml:space="preserve">
     <value>Im Inhaltsindex</value>
