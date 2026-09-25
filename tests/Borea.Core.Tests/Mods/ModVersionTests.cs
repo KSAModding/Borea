@@ -63,6 +63,46 @@ public sealed class ModVersionTests
     }
 
     [Theory]
+    [InlineData("2.3.4", "2.3.4")]
+    [InlineData("v2.3.4", "2.3.4")]
+    [InlineData("0.5", "0.5.0")]
+    [InlineData("v1", "1.0.0")]
+    [InlineData("1.2-rc.1", "1.2.0-rc.1")]
+    [InlineData("1.2+build.7", "1.2.0")]
+    [InlineData("1-beta+exp.sha-5114f85", "1.0.0-beta")] // The '-' inside the build metadata does not end the core.
+    [InlineData("2026.9", "2026.9.0")]
+    public void TryParseAuthored_ShortForm_FillsTheMissingComponents(string input, string expected)
+    {
+        Assert.True(ModVersion.TryParseAuthored(input, out var result));
+        Assert.Equal(ModVersion.Parse(expected), result);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("v")]
+    [InlineData("0.5.0.1")] // Four components.
+    [InlineData("01.2.3")]  // Leading zero.
+    [InlineData("01")]
+    [InlineData("latest")]
+    [InlineData("1.")]
+    [InlineData("1..2")]
+    [InlineData("-rc.1")]
+    [InlineData("V1.2")]    // Only a lowercase v is a tag prefix.
+    [InlineData("vv1")]
+    [InlineData(" 0.5")]
+    public void TryParseAuthored_NotAVersion_ReturnsFalse(string? input)
+    {
+        Assert.False(ModVersion.TryParseAuthored(input, out _));
+    }
+
+    [Fact]
+    public void ParseAuthored_InvalidInput_ThrowsFormatException()
+    {
+        Assert.Throws<FormatException>(() => ModVersion.ParseAuthored("0.5.0.1"));
+    }
+
+    [Theory]
     [InlineData(-1, 0, 0, "major")]
     [InlineData(0, -1, 0, "minor")]
     [InlineData(0, 0, -1, "patch")]
