@@ -243,3 +243,5 @@ And everyone who reported a bug, tested a build or listed a mod.
 
 Borea is under the [MIT license](LICENSE).
 `THIRD-PARTY-NOTICES.txt` in each release lists the licenses of the software it ships with.
+
+The Borea name and logo are separate project branding. See [BRANDING.md⁠](BRANDING.md⁠)￼.
