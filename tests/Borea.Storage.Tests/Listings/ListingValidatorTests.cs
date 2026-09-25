@@ -165,6 +165,26 @@ public sealed class ListingValidatorTests
         Assert.Contains(errors, issue => issue.Location == "loader" && issue.Message == "max '0.4.6' is below min '0.5.0'");
     }
 
+    [Fact]
+    public void Validate_ShortLoaderBound_PassesAndComparesFilled()
+    {
+        Assert.Empty(Errors(Valid() with { Loader = new ListingLoader("StarMap", "0.5", "0.5.0") }));
+
+        var errors = Errors(Valid() with { Loader = new ListingLoader("StarMap", "0.6", "0.5.9") });
+
+        Assert.Contains(errors, issue => issue.Location == "loader" && issue.Message == "max '0.5.9' is below min '0.6'");
+    }
+
+    [Theory]
+    [InlineData("0.5.0.1")]
+    [InlineData("01.5")]
+    public void Validate_LoaderBoundThatIsNoVersion_IsRefused(string min)
+    {
+        var errors = Errors(Valid() with { Loader = new ListingLoader("StarMap", min) });
+
+        Assert.Contains(errors, issue => issue.Location == "loader.min" && issue.Message.StartsWith($"'{min}' is not a version", StringComparison.Ordinal));
+    }
+
     [Theory]
     [InlineData("2026.99999999999", "2026.99999999998")]
     [InlineData("2026.1.1.123456789012345678901", "2026.1.1.123456789012345678900")]
