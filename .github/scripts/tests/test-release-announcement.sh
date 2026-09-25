@@ -262,7 +262,7 @@ role=""
 check "announce runs only when this run created the release" grep -q "if: needs.release.outputs.created == 'true'" "$workflow"
 check "only the step that creates a release sets created" test "$(grep -c 'created=true' "$workflow")" -eq 1
 create_step_needs_a_tag_push() {
-  grep -A2 -- '- name: Create or update the release' "$workflow" | grep -q "if: github.event_name == 'push'"
+  grep -A2 -- '- name: Create the release' "$workflow" | grep -q "if: github.event_name == 'push'"
 }
 check "the step that creates a release runs only for a tag push" create_step_needs_a_tag_push
 # The dollar sign is part of the text that the check looks for.

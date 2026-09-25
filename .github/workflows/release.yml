@@ -39,6 +39,28 @@ jobs:
           echo "version=$version" >> "$GITHUB_OUTPUT"
 
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      # A release tag on a commit that is not on main or a release branch is a mistake,
+      # so the run stops before it builds anything. The tag ruleset decides who may tag.
+      # The compare API answers "ahead" or "identical" when the branch contains the tagged
+      # commit, and it needs no history in the shallow checkout.
+      - name: Check that the tag is on main or a release branch
+        if: github.ref_type == 'tag'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          branches=$(gh api "repos/$GH_REPO/branches" --paginate --jq '.[].name | select(. == "main" or startswith("release/"))')
+          for branch in $branches; do
+            status=$(gh api "repos/$GH_REPO/compare/$GITHUB_SHA...$branch" --jq .status)
+            if [ "$status" = ahead ] || [ "$status" = identical ]; then
+              echo "$GITHUB_REF_NAME is on $branch."
+              exit 0
+            fi
+          done
+          echo "$GITHUB_REF_NAME points at $GITHUB_SHA, which is not on main or a release branch." >&2
+          exit 1
+
       - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
         with:
           global-json-file: global.json
@@ -519,7 +541,7 @@ jobs:
           sbom-path: dist/Borea-Cli-${{ needs.test.outputs.version }}.cdx.json
 
       # The changelog is fetched here instead of with `gh release create --generate-notes`,
-      # so a re-run for the same tag can rewrite the whole body, checksum table included.
+      # so the body can hold the checksum table as well.
       # .github/release-notes/<version>.md in the tagged commit, when it exists, goes first.
       # GitHub starts the change list at the previous release of any kind, so a stable release
       # names the previous stable release, and dev and beta builds in between do not shorten it.
@@ -632,9 +654,8 @@ jobs:
           } >> "$GITHUB_OUTPUT"
 
       # `gh release create` uploads into a draft and publishes at the end, so a cancelled
-      # run leaves a draft behind. That draft must not take the update path below, or the
-      # release stays invisible.
-      - name: Create or update the release
+      # run leaves a draft behind, which is deleted first so that the run publishes anew.
+      - name: Create the release
         id: create
         if: github.event_name == 'push'
         working-directory: dist
@@ -648,10 +669,11 @@ jobs:
             gh release delete "$GITHUB_REF_NAME" --yes
             state=missing
           fi
+          # Published releases are immutable in this repository, so a published one cannot
+          # take new files. A new version needs a new tag.
           if [ "$state" = false ]; then
-            echo "$GITHUB_REF_NAME already has a release. Replacing its files and notes."
-            gh release upload "$GITHUB_REF_NAME" Borea-* SHA256SUMS.txt --clobber
-            gh release edit "$GITHUB_REF_NAME" --notes-file body.md
+            echo "$GITHUB_REF_NAME is already published, and a published release cannot change." >&2
+            exit 1
           else
             flags=(--verify-tag --notes-file body.md --title "$GITHUB_REF_NAME")
             # Only a SemVer pre-release carries a hyphen.
