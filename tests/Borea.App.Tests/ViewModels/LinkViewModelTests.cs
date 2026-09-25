@@ -132,7 +132,9 @@ public sealed class LinkViewModelTests
 
         Assert.True(viewModel.CurrentWindowContent);
         Assert.False(viewModel.SelectedContent!.IsConfirmingInstall);
-        Assert.Equal(viewModel.InstanceHintText, Assert.Single(viewModel.Toasts.Items).Message);
+        var toast = Assert.Single(viewModel.Toasts.Items);
+        Assert.Equal(viewModel.InstanceHintText, toast.Message);
+        Assert.Equal(harness.Localization.DiscoverOpenLibrary, toast.ActionText);
     }
 
     [Fact]

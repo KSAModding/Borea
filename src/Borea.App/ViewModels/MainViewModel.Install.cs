@@ -121,8 +121,14 @@ public partial class MainViewModel
     /// <param name="confirm">Holds even a plan without warnings or choices, for an install that a borea:// link asked for.</param>
     internal async Task PlanInstallAsync(IInstallRow row, Func<Task<ModVersionMetadata?>> findRelease, ModVersion? exactVersion, Guid? instanceId = null, bool confirm = false)
     {
-        if (_services is null || row.IsInstalling || (instanceId ?? ActiveInstance?.InstanceId) is not { } target)
+        if (_services is null || row.IsInstalling)
             return;
+
+        if ((instanceId ?? ActiveInstance?.InstanceId) is not { } target)
+        {
+            ShowInstanceHintToast();
+            return;
+        }
 
         RememberRequestedVersion(row, exactVersion);
         var executed = await PlanAndExecuteAsync(
