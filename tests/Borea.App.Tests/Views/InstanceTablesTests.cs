@@ -2,6 +2,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.VisualTree;
 using Borea.App.Tests.ViewModels;
+using Borea.App.Views;
 using Borea.App.Views.Pages;
 using Borea.Core.Instances;
 
@@ -134,6 +135,31 @@ public sealed class InstanceTablesTests
 
         Assert.Equal([harness.Services.Paths.GetInstanceModsFolder(viewModel.SelectedInstance!.InstanceId)], opened);
         Assert.Empty(viewModel.Toasts.Items);
+    }
+
+    [Theory]
+    [InlineData(860)]
+    [InlineData(1280)]
+    [InlineData(1920)]
+    public async Task ManualInstalls_TheHeaderExplainsThatTheGameLoadsTheseMods(double width)
+    {
+        using var harness = await EmptyInstanceAsync();
+        var viewModel = harness.ViewModel;
+        var localization = harness.Localization;
+        var folder = Path.Combine(harness.Services.Paths.GetInstanceModsFolder(viewModel.SelectedInstance!.InstanceId), "LocalOnly");
+        Directory.CreateDirectory(folder);
+        File.WriteAllText(Path.Combine(folder, "mod.toml"), "name = \"LocalOnly\"");
+        await viewModel.ShowInstanceManualInstallsCommand.ExecuteAsync(null);
+
+        var (info, fits) = await OnInstancePageAsync(harness, width, page =>
+        {
+            var table = TableAround(page, "LocalOnly")!;
+            var info = table.GetVisualDescendants().OfType<InfoButton>().Single(button => button.IsEffectivelyVisible);
+            return (info.Text, Holds(table, info));
+        });
+
+        Assert.Equal(localization.ManualInstallsInfo, info);
+        Assert.True(fits);
     }
 
     [Theory]

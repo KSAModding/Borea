@@ -736,10 +736,13 @@
     <value>Peg legs</value>
   </data>
   <data name="InstanceEmptyContent" xml:space="preserve">
-    <value>Ain't a thing hauled onboard yet. Loot some booty from Chart a Course.</value>
+    <value>The Borea ain't hauled a thing onboard this sea yet. Loot some booty from Chart a Course. Barrels o' fun ye hauled without The Borea be under Stuff on board ye hauled yerself.</value>
   </data>
   <data name="ManualInstallsEmpty" xml:space="preserve">
     <value>Nary a barrel o' fun treasure chest on this sea was hauled onboard without The Borea.</value>
+  </data>
+  <data name="ManualInstallsInfo" xml:space="preserve">
+    <value>The Borea didn't haul the barrels o' fun on this list, but they be part o' this sea. When ye set sail on this sea from The Borea, the game takes along every one o' 'em that has its flag hoisted. When the game spies a new one, it asks ye to hoist its flag first. The Borea won't bring in the tide fer 'em.</value>
   </data>
   <data name="ManualInstallsInIndex" xml:space="preserve">
     <value>On the bulletin board</value>

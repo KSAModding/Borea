@@ -656,6 +656,8 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string ManualInstallsEmpty => Resources.ManualInstallsEmpty;
 
+    public string ManualInstallsInfo => Resources.ManualInstallsInfo;
+
     public string ManualInstallsInIndex => Resources.ManualInstallsInIndex;
 
     public string ManualInstallsNotInIndex => Resources.ManualInstallsNotInIndex;

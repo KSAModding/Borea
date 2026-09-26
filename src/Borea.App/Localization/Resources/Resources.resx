@@ -874,10 +874,13 @@
     <value>Dependencies</value>
   </data>
   <data name="InstanceEmptyContent" xml:space="preserve">
-    <value>Nothing installed yet. Add content from Discover.</value>
+    <value>Borea has not installed content in this instance yet. Add content from Discover. Mods that you installed without Borea are under Manual installs.</value>
   </data>
   <data name="ManualInstallsEmpty" xml:space="preserve">
     <value>No mod folder in this instance was installed without Borea.</value>
+  </data>
+  <data name="ManualInstallsInfo" xml:space="preserve">
+    <value>Borea did not install the mods in this list, but they are part of this instance. When you play this instance from Borea, the game loads each of them that is enabled. When the game finds a new mod, it asks you to enable it first. Borea does not update them.</value>
   </data>
   <data name="ManualInstallsInIndex" xml:space="preserve">
     <value>In the content index</value>
