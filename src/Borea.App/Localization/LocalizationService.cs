@@ -1654,6 +1654,25 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string NoPreset => Resources.NoPreset;
 
+    public string PresetModalTitle => Resources.PresetModalTitle;
+
+    public string PresetModalHint => Resources.PresetModalHint;
+
+    public string PresetModalNoSettings => Resources.PresetModalNoSettings;
+
+    public string InstanceSaveSettingsPreset => Resources.InstanceSaveSettingsPreset;
+
+    public string SettingsPresetsTitle => Resources.SettingsPresetsTitle;
+
+    public string SettingsPresetsHint => Resources.SettingsPresetsHint;
+
+    public string SettingsPresetsEmpty => Resources.SettingsPresetsEmpty;
+
+    public string SettingsPresetsDeleteConfirm => Resources.SettingsPresetsDeleteConfirm;
+
+    public string FormatToastPresetSaved(string name)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ToastPresetSavedFormat, name);
+
     public string FormatLaunchLoaderNotInstalled(string loader)
         => string.Format(CultureInfo.CurrentCulture, Resources.LaunchLoaderNotInstalledFormat, loader);
 

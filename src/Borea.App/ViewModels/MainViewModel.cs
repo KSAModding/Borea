@@ -535,7 +535,7 @@ public partial class MainViewModel : ViewModelBase
         ModalInstanceName = string.Empty;
         RenamingInstance = null;
         IsCreatingInstance = true;
-        _ = LoadGameSettingsPresetsAsync();
+        StartGameSettingsPresetLoad();
     }
 
     /// <summary>Opens the name modal to rename <paramref name="item"/>.</summary>
@@ -1080,6 +1080,9 @@ public sealed partial class InstanceItem : ObservableObject
 
     [RelayCommand]
     private Task BackUpAllSavesAsync() => _owner.BackUpAllSavesAsync(this);
+
+    [RelayCommand]
+    private void SaveSettingsPreset() => _owner.BeginCreateGameSettingsPreset(InstanceId);
 
     [RelayCommand]
     private void BeginDelete() => _owner.BeginDeleteInstance(this);

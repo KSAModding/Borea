@@ -2946,4 +2946,31 @@
   <data name="NoPreset" xml:space="preserve">
     <value>No preset</value>
   </data>
+  <data name="PresetModalTitle" xml:space="preserve">
+    <value>Save the game settings as a preset</value>
+  </data>
+  <data name="PresetModalHint" xml:space="preserve">
+    <value>Borea copies this instance's settings.toml. A new instance can start from it instead of the settings the game writes fresh.</value>
+  </data>
+  <data name="PresetModalNoSettings" xml:space="preserve">
+    <value>This instance has no settings.toml yet. Start the game once, then save the preset.</value>
+  </data>
+  <data name="InstanceSaveSettingsPreset" xml:space="preserve">
+    <value>Save settings as preset</value>
+  </data>
+  <data name="SettingsPresetsTitle" xml:space="preserve">
+    <value>Game settings presets</value>
+  </data>
+  <data name="SettingsPresetsHint" xml:space="preserve">
+    <value>Saved from an instance, and offered when you create one. The version is the game build the preset was saved from.</value>
+  </data>
+  <data name="SettingsPresetsEmpty" xml:space="preserve">
+    <value>No presets yet. Save one from an instance's menu.</value>
+  </data>
+  <data name="SettingsPresetsDeleteConfirm" xml:space="preserve">
+    <value>Delete this preset?</value>
+  </data>
+  <data name="ToastPresetSavedFormat" xml:space="preserve">
+    <value>Saved the preset {0}</value>
+  </data>
 </root>

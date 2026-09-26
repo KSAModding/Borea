@@ -60,17 +60,8 @@ public partial class MainViewModel
     private void RefreshGameDataItems()
     {
         GameDataItems.Clear();
-        if (SelectedInstance is null)
-            return;
-
-        var instanceId = SelectedInstance.InstanceId;
-        var settingsPath = _services?.Paths.GetInstanceSettingsPath(instanceId);
         foreach (var entry in _gameData)
-        {
-            var isSettingsFile = settingsPath is not null && !entry.IsFolder
-                && string.Equals(entry.Path, settingsPath, StringComparison.OrdinalIgnoreCase);
-            GameDataItems.Add(new GameDataItem(this, entry, instanceId, isSettingsFile));
-        }
+            GameDataItems.Add(new GameDataItem(this, entry));
     }
 
     internal void OpenGameDataFolder(string folder) => ShowOpenError(() => PathName(folder), TryOpenWithSystem(folder));
@@ -107,30 +98,24 @@ public partial class MainViewModel
 public sealed partial class GameDataItem
 {
     private readonly MainViewModel _owner;
-    private readonly Guid _instanceId;
 
     public string Name { get; }
+
     public string SizeText { get; }
+
     public bool Exists { get; }
+
     public string FolderPath { get; }
-    public bool IsSettingsFile { get; }
 
-    private bool CanCreatePreset => IsSettingsFile && Exists;
-
-    public GameDataItem(MainViewModel owner, GameDataEntry entry, Guid instanceId, bool isSettingsFile)
+    public GameDataItem(MainViewModel owner, GameDataEntry entry)
     {
         _owner = owner;
-        _instanceId = instanceId;
         Name = entry.Name;
         SizeText = owner.FormatGameDataSize(entry.SizeBytes);
         Exists = entry.Exists;
         FolderPath = entry.IsFolder ? entry.Path : Path.GetDirectoryName(entry.Path) ?? entry.Path;
-        IsSettingsFile = isSettingsFile;
     }
 
     [RelayCommand]
     private void OpenFolder() => _owner.OpenGameDataFolder(FolderPath);
-
-    [RelayCommand(CanExecute = nameof(CanCreatePreset))]
-    private void CreatePreset() => _owner.BeginCreateGameSettingsPreset(_instanceId);
 }

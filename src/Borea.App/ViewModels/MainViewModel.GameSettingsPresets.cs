@@ -1,4 +1,3 @@
-﻿using Borea.App.Localization;
 using Borea.Core.Settings;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -10,9 +9,17 @@ using System.Threading.Tasks;
 
 namespace Borea.App.ViewModels;
 
+/// <summary>
+/// Game settings presets: saving one from an instance, picking one while a new
+/// instance is created, and the saved presets in the Game settings.
+/// </summary>
 public partial class MainViewModel
 {
+    /// <summary>The picker of the new instance modal, with "No preset" first.</summary>
     public ObservableCollection<GameSettingsPresetItem> GameSettingsPresets { get; } = [];
+
+    /// <summary>The saved presets, for the Game settings, without the "No preset" row.</summary>
+    public ObservableCollection<GameSettingsPresetItem> SavedGameSettingsPresets { get; } = [];
 
     [ObservableProperty]
     private GameSettingsPresetItem? _selectedGameSettingsPreset;
@@ -28,10 +35,24 @@ public partial class MainViewModel
 
     private Guid _gameSettingsPresetSourceInstanceId;
 
-    private async Task LoadGameSettingsPresetsAsync()
+    private Task _gameSettingsPresetLoad = Task.CompletedTask;
+
+    internal Task WhenGameSettingsPresetsLoadedAsync() => _gameSettingsPresetLoad;
+
+    /// <summary>Starts a read without awaiting it, for a caller that only opens a modal.</summary>
+    private void StartGameSettingsPresetLoad()
+    {
+        var previous = _gameSettingsPresetLoad;
+        var load = LoadGameSettingsPresetsAsync();
+        _gameSettingsPresetLoad = previous.IsCompleted ? load : Task.WhenAll(previous, load);
+    }
+
+    /// <summary>Reads the saved presets into both lists. A folder Borea cannot read is left out.</summary>
+    internal async Task LoadGameSettingsPresetsAsync()
     {
         GameSettingsPresets.Clear();
-        var none = GameSettingsPresetItem.CreateNone(this);
+        SavedGameSettingsPresets.Clear();
+        var none = GameSettingsPresetItem.None(this);
         GameSettingsPresets.Add(none);
         SelectedGameSettingsPreset = none;
         if (_services is null)
@@ -40,20 +61,24 @@ public partial class MainViewModel
         try
         {
             var presets = await _services.GameSettingsPresets.ListAsync();
-            foreach (var preset in presets.OrderBy(preset => preset.Name, StringComparer.OrdinalIgnoreCase))
-                GameSettingsPresets.Add(new GameSettingsPresetItem(preset));
+            foreach (var preset in presets.OrderBy(preset => preset.Name, StringComparer.CurrentCultureIgnoreCase))
+            {
+                GameSettingsPresets.Add(new GameSettingsPresetItem(this, preset));
+                SavedGameSettingsPresets.Add(new GameSettingsPresetItem(this, preset));
+            }
         }
-        catch (Exception exception) when (exception is IOException or InvalidOperationException)
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or InvalidOperationException)
         {
-            // the picker just stays at "No Preset"; creation still works
+            GameSettingsPresetError = exception.Message;
         }
     }
 
+    /// <summary>Opens the modal that saves the settings of <paramref name="instanceId"/> as a preset.</summary>
     internal void BeginCreateGameSettingsPreset(Guid instanceId)
     {
         if (_services?.InstalledVersion.GetInstalledVersion() is null)
         {
-            ShowErrorToast(() => Localization.GameDataCreatePreset, Localization.ModalSettingsPresetNoGameVersion);
+            ShowErrorToast(() => Localization.PresetModalTitle, Localization.ModalSettingsPresetNoGameVersion);
             return;
         }
 
@@ -83,7 +108,7 @@ public partial class MainViewModel
         if (_services is not { } services)
             return;
 
-        // Re-checked here: the installed version could disappear between opening the modal and confirming.
+        // read again: the installed version can go between opening the modal and confirming
         if (services.InstalledVersion.GetInstalledVersion()?.Version is not { } version)
         {
             GameSettingsPresetError = Localization.ModalSettingsPresetNoGameVersion;
@@ -91,6 +116,12 @@ public partial class MainViewModel
         }
 
         var sourcePath = services.Paths.GetInstanceSettingsPath(_gameSettingsPresetSourceInstanceId);
+        if (!File.Exists(sourcePath))
+        {
+            GameSettingsPresetError = Localization.PresetModalNoSettings;
+            return;
+        }
+
         try
         {
             await services.GameSettingsPresets.SaveAsync(name, version, sourcePath);
@@ -103,28 +134,76 @@ public partial class MainViewModel
 
         IsCreatingGameSettingsPreset = false;
         NewGameSettingsPresetName = string.Empty;
+        ShowSuccessToast(() => Localization.FormatToastPresetSaved(name));
+        await LoadGameSettingsPresetsAsync();
+    }
+
+    /// <summary>Removes the preset behind <paramref name="item"/>, after its row asked.</summary>
+    internal async Task DeleteGameSettingsPresetAsync(GameSettingsPresetItem item)
+    {
+        if (_services is not { } services || item.Id is not { } id)
+            return;
+
+        GameSettingsPresetError = null;
+        try
+        {
+            await services.GameSettingsPresets.DeleteAsync(id);
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            GameSettingsPresetError = exception.Message;
+            return;
+        }
+
+        await LoadGameSettingsPresetsAsync();
     }
 }
 
-public sealed class GameSettingsPresetItem
+/// <summary>One saved preset, in the picker of the new instance modal and in the Game settings.</summary>
+public sealed partial class GameSettingsPresetItem : ObservableObject
 {
+    private readonly MainViewModel _owner;
+
+    /// <summary>Null on the "No preset" row, which leaves the instance with the settings the game writes.</summary>
     public Guid? Id { get; }
+
     public string Name { get; }
+
+    /// <summary>The game version the preset was saved from. Null on the "No preset" row.</summary>
     public string? VersionText { get; }
 
-    /// <summary>The "no preset" row.</summary>
-    private GameSettingsPresetItem(MainViewModel owner)
-    {
-        Id = null;
-        Name = owner.Localization.NoPreset;
-    }
+    /// <summary>Delete asks once, the way the other destructive actions do.</summary>
+    [ObservableProperty]
+    private bool _isConfirmingDelete;
 
-    public GameSettingsPresetItem(GameSettingsPreset preset)
+    public GameSettingsPresetItem(MainViewModel owner, GameSettingsPreset preset)
     {
+        _owner = owner;
         Id = preset.Id;
         Name = preset.Name;
         VersionText = preset.Version.ToString();
     }
 
-    internal static GameSettingsPresetItem CreateNone(MainViewModel owner) => new(owner);
+    private GameSettingsPresetItem(MainViewModel owner)
+    {
+        _owner = owner;
+        Name = owner.Localization.NoPreset;
+    }
+
+    internal static GameSettingsPresetItem None(MainViewModel owner) => new(owner);
+
+    [RelayCommand]
+    private Task DeleteAsync()
+    {
+        if (!IsConfirmingDelete)
+        {
+            IsConfirmingDelete = true;
+            return Task.CompletedTask;
+        }
+
+        return _owner.DeleteGameSettingsPresetAsync(this);
+    }
+
+    [RelayCommand]
+    private void CancelDelete() => IsConfirmingDelete = false;
 }
