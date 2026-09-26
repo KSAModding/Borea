@@ -150,13 +150,16 @@ jobs:
             --config .github/notices/notices.json --product Cli --version "$VERSION" \
             --output "publish/$CLI/THIRD-PARTY-NOTICES.txt"
 
-      - name: Add the license
+      # The App shows the Borea logo, which the MIT License does not cover, so only its archive
+      # carries the branding notice next to the license.
+      - name: Add the license and the branding notice
         env:
           APP: ${{ steps.name.outputs.app }}
           CLI: ${{ steps.name.outputs.cli }}
         run: |
           cp LICENSE "publish/$APP/LICENSE"
           cp LICENSE "publish/$CLI/LICENSE"
+          cp BRANDING.md "publish/$APP/BRANDING.md"
 
       - name: Make the programs executable
         if: matrix.rid != 'win-x64'
@@ -353,7 +356,10 @@ jobs:
         env:
           VERSION: ${{ needs.test.outputs.version }}
         run: |
-          $expected = 'LICENSE', 'THIRD-PARTY-NOTICES.txt', 'borea.exe'
+          $expected = @{
+            App = 'BRANDING.md', 'LICENSE', 'THIRD-PARTY-NOTICES.txt', 'borea.exe'
+            Cli = 'LICENSE', 'THIRD-PARTY-NOTICES.txt', 'borea.exe'
+          }
           $roots = @{}
           foreach ($kind in 'App', 'Cli') {
             Expand-Archive (Get-ChildItem "dist/$kind/*.zip") -DestinationPath "unpacked/$kind"
@@ -361,10 +367,11 @@ jobs:
             if ($top.Count -ne 1 -or -not $top[0].PSIsContainer) { throw "The $kind archive must unpack into one folder." }
             $root = $top[0].FullName
             $found = @(Get-ChildItem -LiteralPath $root -Recurse -Force | ForEach-Object { [IO.Path]::GetRelativePath($root, $_.FullName) })
-            if (Compare-Object $expected $found -CaseSensitive) { throw "The $kind archive holds $($found -join ', ') instead of $($expected -join ', ')." }
+            if (Compare-Object $expected[$kind] $found -CaseSensitive) { throw "The $kind archive holds $($found -join ', ') instead of $($expected[$kind] -join ', ')." }
             if ((Get-Item -LiteralPath (Join-Path $root THIRD-PARTY-NOTICES.txt)).Length -lt 1) { throw "THIRD-PARTY-NOTICES.txt in the $kind archive is empty." }
             $roots[$kind] = $root
           }
+          if ((Get-Item -LiteralPath (Join-Path $roots.App BRANDING.md)).Length -lt 1) { throw 'BRANDING.md in the App archive is empty.' }
           if (-not (Select-String -LiteralPath (Join-Path $roots.App THIRD-PARTY-NOTICES.txt) -Pattern '^IBM Plex$' -Quiet)) { throw 'The notices in the App archive do not name IBM Plex.' }
           if (Select-String -LiteralPath (Join-Path $roots.Cli THIRD-PARTY-NOTICES.txt) -Pattern '^Avalonia ' -Quiet) { throw 'The notices in the CLI archive name Avalonia.' }
           $help = @{}
@@ -398,7 +405,8 @@ jobs:
           VERSION: ${{ needs.test.outputs.version }}
           PLATFORM: ${{ matrix.platform }}
         run: |
-          expected=$(printf '%s\n' LICENSE THIRD-PARTY-NOTICES.txt borea | LC_ALL=C sort)
+          cli_expected=$(printf '%s\n' LICENSE THIRD-PARTY-NOTICES.txt borea | LC_ALL=C sort)
+          app_expected=$(printf '%s\n' BRANDING.md LICENSE THIRD-PARTY-NOTICES.txt borea | LC_ALL=C sort)
           for kind in App Cli; do
             mkdir -p "unpacked/$kind"
             tar -xzf "dist/$kind/"*.tar.gz -C "unpacked/$kind"
@@ -412,10 +420,13 @@ jobs:
           test -n "$app"
           test -n "$cli"
           for root in "$cli" "$app"; do
+            if [ "$root" = "$app" ]; then expected=$app_expected; else expected=$cli_expected; fi
             found=$(cd "$root" && find . -mindepth 1 | sed 's|^\./||' | LC_ALL=C sort)
             if [ "$found" != "$expected" ]; then
-              echo "$root holds these files instead of borea, LICENSE and THIRD-PARTY-NOTICES.txt:" >&2
+              echo "$root holds these files:" >&2
               echo "$found" >&2
+              echo "instead of these:" >&2
+              echo "$expected" >&2
               exit 1
             fi
             test -x "$root/borea"
@@ -432,6 +443,7 @@ jobs:
               exit 1
             fi
           done
+          test -s "$app/BRANDING.md"
           grep -qx 'IBM Plex' "$app/THIRD-PARTY-NOTICES.txt"
           if grep -q '^Avalonia ' "$cli/THIRD-PARTY-NOTICES.txt"; then
             echo "The notices in the CLI archive name Avalonia." >&2

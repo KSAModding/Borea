@@ -99,4 +99,18 @@ public sealed class AboutNoticesTests
         Assert.Contains(MainViewModel.ThirdPartyNoticesFileName, resources["AboutNoticesMissing"]);
         Assert.Contains($"/{MainViewModel.ThirdPartyNoticesFileName}\"", workflow);
     }
+
+    [Fact]
+    public void ReleaseWorkflow_PutsTheBrandingNoticeIntoTheAppArchiveOnly()
+    {
+        var workflow = File.ReadAllText(Path.Combine(RepositoryRoot, ".github", "workflows", "release.yml"));
+
+        Assert.True(File.Exists(Path.Combine(RepositoryRoot, "BRANDING.md")));
+        Assert.Contains("cp BRANDING.md \"publish/$APP/BRANDING.md\"", workflow);
+        Assert.DoesNotContain("$CLI/BRANDING.md", workflow);
+        Assert.Contains("App = 'BRANDING.md', 'LICENSE', 'THIRD-PARTY-NOTICES.txt', 'borea.exe'", workflow);
+        Assert.Contains("Cli = 'LICENSE', 'THIRD-PARTY-NOTICES.txt', 'borea.exe'", workflow);
+        Assert.Contains("app_expected=$(printf '%s\\n' BRANDING.md LICENSE THIRD-PARTY-NOTICES.txt borea |", workflow);
+        Assert.Contains("cli_expected=$(printf '%s\\n' LICENSE THIRD-PARTY-NOTICES.txt borea |", workflow);
+    }
 }
