@@ -276,7 +276,13 @@ public partial class MainViewModel
     /// <param name="version">A usable version to install instead of the newest one.</param>
     /// <param name="confirm">Waits for the confirmation even without a warning, for an install that a borea:// link asked for.</param>
     internal Task InstallPackAsync(PackItem pack, Guid? targetInstanceId = null, ModVersion? version = null, bool confirm = false)
-        => (targetInstanceId ?? ActiveInstance?.InstanceId) is { } instanceId ? PlanPackInstallAsync(pack, instanceId, newInstanceName: null, version, confirm) : Task.CompletedTask;
+    {
+        if ((targetInstanceId ?? ActiveInstance?.InstanceId) is { } instanceId)
+            return PlanPackInstallAsync(pack, instanceId, newInstanceName: null, version, confirm);
+
+        ShowInstanceHintToast();
+        return Task.CompletedTask;
+    }
 
     /// <summary>Opens the name modal of a new instance with the name of the pack.</summary>
     /// <param name="version">The version the instance gets, or null for the newest one. An older version goes into the suggested name, so two instances of the same pack do not collide.</param>

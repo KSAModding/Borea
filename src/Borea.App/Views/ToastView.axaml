@@ -20,6 +20,7 @@
             <StackPanel Grid.Row="1" Grid.Column="2" Grid.ColumnSpan="3" Orientation="Horizontal" Spacing="8" Margin="0,12,0,0" IsVisible="{Binding HasActions}">
                 <Button Classes="text" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LaunchShowDetails}" Command="{Binding ShowDetailsCommand}" IsVisible="{Binding CanShowDetails}" />
                 <Button Classes="text" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ToastOpenInstance}" Command="{Binding OpenInstanceCommand}" IsVisible="{Binding CanOpenInstance}" />
+                <Button Classes="text" Content="{Binding ActionText}" Command="{Binding RunActionCommand}" IsVisible="{Binding HasAction}" />
             </StackPanel>
         </Grid>
     </Border>

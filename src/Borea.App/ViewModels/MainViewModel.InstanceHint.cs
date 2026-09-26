@@ -30,6 +30,14 @@ public partial class MainViewModel
         ? Localization.FormatContentReplaceVersionIn(installedVersion, active.Name)
         : Localization.FormatContentReplaceVersion(installedVersion);
 
+    /// <summary>
+    /// Says why an add without a target instance does nothing. The hint above a
+    /// list is out of sight of a click on a row, so the toast carries it there,
+    /// and the Library is where the player activates or creates an instance.
+    /// </summary>
+    internal void ShowInstanceHintToast()
+        => Toasts.ShowMessage(ToastKind.Error, () => InstanceHintText, action: new ToastAction(() => Localization.DiscoverOpenLibrary, SetMainWindowLibrary));
+
     [RelayCommand]
     private void FollowInstanceHint()
     {

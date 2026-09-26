@@ -425,20 +425,6 @@ public sealed class DiscoverViewModelTests
     }
 
     [Fact]
-    public async Task Install_WithoutActiveInstance_DoesNothing()
-    {
-        using var harness = await ViewModelHarness.CreateAsync();
-        var viewModel = harness.ViewModel;
-        await viewModel.EnsureDiscoverLoadedAsync();
-        var item = viewModel.DiscoverItems.First();
-
-        await item.InstallCommand.ExecuteAsync(null);
-
-        Assert.Null(item.InstallError);
-        Assert.False(item.IsInstalling);
-    }
-
-    [Fact]
     public async Task Install_DownloadFails_ShowsTheErrorOnTheRow()
     {
         using var harness = await ViewModelHarness.CreateAsync();

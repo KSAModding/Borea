@@ -143,7 +143,7 @@ public partial class MainViewModel
     {
         if (ActiveInstance is not { } instance)
         {
-            Toasts.ShowMessage(ToastKind.Error, () => InstanceHintText);
+            ShowInstanceHintToast();
             return;
         }
 
@@ -185,7 +185,7 @@ public partial class MainViewModel
     {
         if (ActiveInstance is not { } instance)
         {
-            Toasts.ShowMessage(ToastKind.Error, () => InstanceHintText);
+            ShowInstanceHintToast();
             return;
         }
 

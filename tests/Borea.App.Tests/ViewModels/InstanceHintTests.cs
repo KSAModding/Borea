@@ -1,4 +1,5 @@
 using Borea.App.ViewModels;
+using Borea.Core.History;
 using Borea.Core.Instances;
 
 namespace Borea.App.Tests.ViewModels;
@@ -74,6 +75,137 @@ public sealed class InstanceHintTests
         Assert.True(viewModel.CurrentWindowLibrary);
         Assert.False(viewModel.CurrentWindowDiscover);
         Assert.False(viewModel.IsNameModalOpen);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Add_WithoutActiveInstance_ShowsTheHintToast_AndStartsNoTask(bool hasInstances)
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var viewModel = harness.ViewModel;
+        if (hasInstances)
+            await LeaveOneInactiveInstanceAsync(harness);
+        await viewModel.EnsureDiscoverLoadedAsync();
+        var item = viewModel.DiscoverItems.First();
+
+        await item.InstallCommand.ExecuteAsync(null);
+
+        var toast = Assert.Single(viewModel.Toasts.Items);
+        Assert.Equal(hasInstances ? harness.Localization.DiscoverNoActiveInstance : harness.Localization.DiscoverNoInstance, toast.Message);
+        Assert.True(toast.IsFailed);
+        Assert.True(toast.HasAction);
+        Assert.Equal(harness.Localization.DiscoverOpenLibrary, toast.ActionText);
+        Assert.False(toast.CanShowDetails);
+        Assert.DoesNotContain(viewModel.Tasks.Running.Concat(viewModel.Tasks.History), task => task.Kind is TaskKind.ModInstall or TaskKind.PackInstall);
+        Assert.False(item.IsInstalling);
+        Assert.Null(item.InstallError);
+        Assert.Null(item.InstallWarning);
+    }
+
+    [Theory]
+    [InlineData("mod page")]
+    [InlineData("mod versions")]
+    [InlineData("modpacks")]
+    [InlineData("pack page")]
+    [InlineData("pack versions")]
+    public async Task EveryAdd_WithoutActiveInstance_ShowsTheHintToast(string where)
+    {
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: PackViewModelTests.WithPacks(
+            PackViewModelTests.Pack("tools-pack", "Tools Pack", PackViewModelTests.Version("1.0.0", PackViewModelTests.Pin("MeasureTools", "1.1.10")))));
+        var viewModel = harness.ViewModel;
+        await viewModel.EnsureDiscoverLoadedAsync();
+        var listing = viewModel.DiscoverItems.Single(item => item.ModId == "MeasureTools");
+        viewModel.ShowDiscoverModpacksCommand.Execute(null);
+        var pack = Assert.Single(viewModel.DiscoverPacks);
+
+        switch (where)
+        {
+            case "mod page":
+                await listing.OpenCommand.ExecuteAsync(null);
+                await viewModel.SelectedContent!.InstallCommand.ExecuteAsync(null);
+                break;
+            case "mod versions":
+                await listing.OpenCommand.ExecuteAsync(null);
+                await viewModel.ShowContentVersionsCommand.ExecuteAsync(null);
+                await viewModel.ContentVersions.First().InstallCommand.ExecuteAsync(null);
+                break;
+            case "modpacks":
+                await pack.InstallCommand.ExecuteAsync(null);
+                break;
+            case "pack page":
+                await pack.OpenCommand.ExecuteAsync(null);
+                await viewModel.SelectedPack!.InstallCommand.ExecuteAsync(null);
+                break;
+            default:
+                await pack.OpenCommand.ExecuteAsync(null);
+                viewModel.ShowPackVersionsCommand.Execute(null);
+                await viewModel.PackVersions.Single().InstallCommand.ExecuteAsync(null);
+                break;
+        }
+
+        Assert.Equal(harness.Localization.DiscoverNoInstance, Assert.Single(viewModel.Toasts.Items).Message);
+        Assert.DoesNotContain(viewModel.Tasks.Running.Concat(viewModel.Tasks.History), task => task.Kind is TaskKind.ModInstall or TaskKind.PackInstall);
+        Assert.False(pack.IsInstalling);
+        Assert.Null(pack.InstallError);
+    }
+
+    [Fact]
+    public async Task HintToast_ActionOpensTheLibrary()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var viewModel = harness.ViewModel;
+        await viewModel.EnsureDiscoverLoadedAsync();
+        viewModel.SetMainWindowDiscoverCommand.Execute(null);
+        await viewModel.DiscoverItems.First().InstallCommand.ExecuteAsync(null);
+        var toast = Assert.Single(viewModel.Toasts.Items);
+
+        toast.RunActionCommand.Execute(null);
+
+        Assert.True(viewModel.CurrentWindowLibrary);
+        Assert.False(viewModel.CurrentWindowDiscover);
+        Assert.False(viewModel.IsNameModalOpen);
+        Assert.Empty(viewModel.Toasts.Items);
+    }
+
+    [Fact]
+    public async Task HintToast_FollowsTheLanguage()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var viewModel = harness.ViewModel;
+        await viewModel.EnsureDiscoverLoadedAsync();
+        await viewModel.DiscoverItems.First().InstallCommand.ExecuteAsync(null);
+        var toast = Assert.Single(viewModel.Toasts.Items);
+        var english = (toast.Message, toast.ActionText);
+        var changed = new List<string?>();
+        toast.PropertyChanged += (_, e) => changed.Add(e.PropertyName);
+
+        harness.Localization.TrySetCulture("de");
+
+        Assert.NotEqual(english, (toast.Message, toast.ActionText));
+        Assert.Equal(harness.Localization.DiscoverNoInstance, toast.Message);
+        Assert.Equal(harness.Localization.DiscoverOpenLibrary, toast.ActionText);
+        Assert.Contains(nameof(ToastItem.Message), changed);
+        Assert.Contains(nameof(ToastItem.ActionText), changed);
+    }
+
+    [Fact]
+    public async Task Add_WithActiveInstance_PlansTheInstallAndShowsNoToast()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var viewModel = harness.ViewModel;
+        await harness.Services.Instances.CreateAsync("Alpha", InstanceSource.Custom.Value);
+        await viewModel.LoadAsync();
+        await viewModel.Instances.Single().ActivateCommand.ExecuteAsync(null);
+        await viewModel.EnsureDiscoverLoadedAsync();
+        var item = viewModel.DiscoverItems.Single(row => row.ModId == "AdvancedFlightComputer");
+
+        await item.InstallCommand.ExecuteAsync(null);
+
+        // without a game the compatibility is unknown, so the plan waits on the row for a confirmation
+        Assert.NotNull(item.InstallWarning);
+        Assert.NotNull(item.PendingPlan);
+        Assert.Empty(viewModel.Toasts.Items);
     }
 
     [Fact]

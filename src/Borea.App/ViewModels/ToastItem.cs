@@ -14,6 +14,9 @@ public enum ToastKind
     Error,
 }
 
+/// <summary>The one action a short result offers, such as the page that resolves it.</summary>
+internal sealed record ToastAction(Func<string> Text, Action Run);
+
 /// <summary>
 /// One toast about a task that ended or about a short result. It closes by itself
 /// after its time, which starts again once neither the pointer nor the keyboard focus is on it.
@@ -23,6 +26,7 @@ public sealed partial class ToastItem : ObservableObject
     private readonly ToastService _owner;
     private readonly Func<string>? _message;
     private readonly string? _detail;
+    private readonly ToastAction? _action;
     private readonly TaskState _messageState;
     private CancellationTokenSource? _timer;
     private bool _isPointerOver;
@@ -39,11 +43,12 @@ public sealed partial class ToastItem : ObservableObject
         _canOpenInstance = owner.HasInstance(taskItem.InstanceId);
     }
 
-    internal ToastItem(ToastService owner, ToastKind kind, Func<string> message, string? detail)
+    internal ToastItem(ToastService owner, ToastKind kind, Func<string> message, string? detail, ToastAction? action = null)
     {
         _owner = owner;
         _message = message;
         _detail = detail;
+        _action = action;
         _messageState = kind == ToastKind.Error ? TaskState.Failed : TaskState.Finished;
     }
 
@@ -83,9 +88,14 @@ public sealed partial class ToastItem : ObservableObject
 
     public bool HasDetail => !string.IsNullOrWhiteSpace(Detail);
 
-    public bool CanShowDetails => !IsFinished;
+    /// <summary>A toast with its own action points to what resolves it, so it has no details to show.</summary>
+    public bool CanShowDetails => !IsFinished && !HasAction;
 
-    public bool HasActions => CanOpenInstance || CanShowDetails;
+    public bool HasAction => _action is not null;
+
+    public string? ActionText => _action?.Text();
+
+    public bool HasActions => CanOpenInstance || CanShowDetails || HasAction;
 
     internal string AnnouncementText => HasDetail ? Message + Environment.NewLine + Detail : Message;
 
@@ -96,6 +106,13 @@ public sealed partial class ToastItem : ObservableObject
 
     [RelayCommand]
     private void ShowDetails() => _owner.ShowDetails(this);
+
+    [RelayCommand]
+    private void RunAction()
+    {
+        _owner.Close(this);
+        _action?.Run();
+    }
 
     [RelayCommand]
     private void Close() => _owner.Close(this);
@@ -195,5 +212,6 @@ public sealed partial class ToastItem : ObservableObject
     {
         OnPropertyChanged(nameof(Message));
         OnPropertyChanged(nameof(Detail));
+        OnPropertyChanged(nameof(ActionText));
     }
 }
