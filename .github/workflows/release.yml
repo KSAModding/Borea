@@ -604,6 +604,7 @@ jobs:
           The builds include the .NET runtime and are self-contained, so there is nothing to install first.
 
           Each archive contains `borea` (`borea.exe` on Windows), `LICENSE` and `THIRD-PARTY-NOTICES.txt`, in a folder named `Borea`, or `Borea-Cli` for the CLI archive.
+          The App archive also contains `BRANDING.md`, because the Borea logo in the App is not covered by the MIT License.
           Put that folder where it can stay, for example `%LocalAppData%\Programs\Borea` on Windows or `~/.local/share/Borea` on Linux, because Borea updates itself into the folder it runs from.
 
           ### First start
