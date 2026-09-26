@@ -106,6 +106,8 @@ public sealed class BoreaServices : IDisposable
 
     public required IInstanceRepository Instances { get; init; }
 
+    public required IGameSettingsPresetRepository GameSettingsPresets { get; init; }
+
     public required IGameDataReader GameData { get; init; }
 
     public required IGameSaveStore GameSaves { get; init; }
@@ -395,6 +397,7 @@ public sealed class BoreaServices : IDisposable
         // replacer own it and are guarded themselves.
         var modState = new FileModStateRepository(paths);
         var checkedModState = new CheckedModStateRepository(modState, gameShape);
+        var gameSettingsPresets = new LoggingGameSettingsPresetRepository(new GameSettingsPresetRepository(paths), log);
         var modInstaller = new LoggingModInstaller(new CheckedModInstaller(new FileModInstaller(paths, downloader, instances, modState, store: modStore), gameShape), log);
         var modReplacer = new LoggingModReplacer(new CheckedModReplacer(new FileModReplacer(paths, downloader, instances, modState, store: modStore), gameShape), log);
         var foreignModAdopter = new FileForeignModAdopter(paths, instances, contentIndex);
@@ -430,6 +433,7 @@ public sealed class BoreaServices : IDisposable
             InstanceSizes = new FileInstanceSizeReader(paths),
             ModListFormat = new TomlModListFormat(),
             ModState = checkedModState,
+            GameSettingsPresets = gameSettingsPresets,
             ModFavorites = new FileModFavoritesRepository(paths),
             ModPackFavorites = new FileModPackFavoritesRepository(paths),
             Uninstaller = new LoggingModUninstaller(new FileModUninstaller(paths, instances, modStore), log),

@@ -34,7 +34,7 @@ public partial class MainViewModel
     public string SharedProfileBannerText => Localization.FormatSharedProfileModCount(SharedProfileModCount);
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(NameModalTitle))]
+    [NotifyPropertyChangedFor(nameof(NameModalTitle), nameof(CanPickGameSettingsPreset))]
     private bool _isImportingSharedProfile;
 
     [ObservableProperty]

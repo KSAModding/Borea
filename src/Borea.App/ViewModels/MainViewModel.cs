@@ -214,7 +214,7 @@ public partial class MainViewModel : ViewModelBase
     public ObservableCollection<InstanceItem> Instances { get; } = [];
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsNameModalOpen))]
+    [NotifyPropertyChangedFor(nameof(IsNameModalOpen), nameof(CanPickGameSettingsPreset))]
     private bool _isCreatingInstance;
 
     /// <summary>The row the name modal renames. Null while the modal creates an instance or is closed.</summary>
@@ -333,6 +333,7 @@ public partial class MainViewModel : ViewModelBase
         StartAnnouncementCheck();
         InstalledVersionText = _services?.InstalledVersion.GetInstalledVersion()?.RawVersion;
         StartGameBuildCheck();
+        StartGameSettingsPresetLoad();
         await ReloadInstancesAsync();
         await RefreshContentIndexAtStartAsync();
         await LoadRecentItemsAsync();
@@ -535,6 +536,7 @@ public partial class MainViewModel : ViewModelBase
         ModalInstanceName = string.Empty;
         RenamingInstance = null;
         IsCreatingInstance = true;
+        StartGameSettingsPresetLoad();
     }
 
     /// <summary>Opens the name modal to rename <paramref name="item"/>.</summary>
@@ -584,12 +586,26 @@ public partial class MainViewModel : ViewModelBase
         if (_newInstancePack is { } pack)
             return CreatePackInstanceAsync(pack, name);
 
+        var presetId = SelectedGameSettingsPreset?.Id;
         return IsImportingSharedProfile ? ImportSharedProfileAsync(name) : RunModalInstanceOperationAsync(async instances =>
         {
             if (!await instances.IsNameAvailableAsync(name))
                 throw new InvalidOperationException(Localization.ModalNameTaken);
 
-            await instances.CreateAsync(name, InstanceSource.Custom.Value);
+            var created = await instances.CreateAsync(name, InstanceSource.Custom.Value);
+            if (presetId is { } id && _services is { } services)
+            {
+                try
+                {
+                    await services.GameSettingsPresets.ApplyAsync(id, created.Instance.InstanceId);
+                }
+                catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or InvalidOperationException)
+                {
+                    // the instance is there, so the modal closes and the toast says it came without the settings
+                    ShowErrorToast(() => Localization.FormatToastPresetNotApplied(name), exception.Message);
+                }
+            }
+
             ModalInstanceName = string.Empty;
             IsCreatingInstance = false;
         }, () => IsCreatingInstance, () => Localization.FormatToastCreateFailed(name));
@@ -1075,6 +1091,9 @@ public sealed partial class InstanceItem : ObservableObject
 
     [RelayCommand]
     private Task BackUpAllSavesAsync() => _owner.BackUpAllSavesAsync(this);
+
+    [RelayCommand]
+    private void SaveSettingsPreset() => _owner.BeginCreateGameSettingsPreset(InstanceId);
 
     [RelayCommand]
     private void BeginDelete() => _owner.BeginDeleteInstance(this);

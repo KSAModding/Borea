@@ -2931,4 +2931,46 @@
   <data name="LaunchNoOutput" xml:space="preserve">
     <value>Der Loader hat vor dem Beenden nichts ausgegeben.</value>
   </data>
+  <data name="ChooseGameSettingsPreset" xml:space="preserve">
+    <value>Vorlage für Spieleinstellungen</value>
+  </data>
+  <data name="SelectAPreset" xml:space="preserve">
+    <value>Wähle eine Vorlage aus</value>
+  </data>
+  <data name="ModalSettingsPresetNoGameVersion" xml:space="preserve">
+    <value>Keine KSA-Version erkannt</value>
+  </data>
+  <data name="NoPreset" xml:space="preserve">
+    <value>Keine Vorlage</value>
+  </data>
+  <data name="PresetModalTitle" xml:space="preserve">
+    <value>Spieleinstellungen als Vorlage speichern</value>
+  </data>
+  <data name="PresetModalHint" xml:space="preserve">
+    <value>Borea kopiert die settings.toml dieser Instanz. Eine neue Instanz kann damit starten, statt mit den Einstellungen, die das Spiel neu schreibt.</value>
+  </data>
+  <data name="PresetModalNoSettings" xml:space="preserve">
+    <value>Diese Instanz hat noch keine settings.toml. Starte das Spiel einmal und speichere die Vorlage dann.</value>
+  </data>
+  <data name="InstanceSaveSettingsPreset" xml:space="preserve">
+    <value>Einstellungen als Vorlage speichern</value>
+  </data>
+  <data name="SettingsPresetsTitle" xml:space="preserve">
+    <value>Vorlagen für Spieleinstellungen</value>
+  </data>
+  <data name="SettingsPresetsHint" xml:space="preserve">
+    <value>Aus einer Instanz gespeichert und beim Erstellen einer Instanz angeboten. Die Version ist die Spielversion, aus der die Vorlage gespeichert wurde.</value>
+  </data>
+  <data name="SettingsPresetsEmpty" xml:space="preserve">
+    <value>Noch keine Vorlagen. Speichere eine über das Menü einer Instanz.</value>
+  </data>
+  <data name="SettingsPresetsDeleteConfirm" xml:space="preserve">
+    <value>Diese Vorlage löschen?</value>
+  </data>
+  <data name="ToastPresetSavedFormat" xml:space="preserve">
+    <value>Vorlage {0} gespeichert</value>
+  </data>
+  <data name="ToastPresetNotAppliedFormat" xml:space="preserve">
+    <value>{0} wurde ohne die Vorlage erstellt</value>
+  </data>
 </root>

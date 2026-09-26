@@ -77,6 +77,28 @@
             </StackPanel>
             <TextBlock Classes="body-md secondary" Text="{Binding SetupMessage}" TextWrapping="Wrap" Margin="0,12,0,0" IsVisible="{Binding SetupMessage, Converter={x:Static ObjectConverters.IsNotNull}}" />
             <TextBlock Classes="body-md danger" Text="{Binding SetupError}" TextWrapping="Wrap" Margin="0,12,0,0" IsVisible="{Binding SetupError, Converter={x:Static ObjectConverters.IsNotNull}}" />
+
+            <Border Height="1" Background="{StaticResource Brush.BorderStrong}" Margin="0,24,0,16" />
+
+            <TextBlock Classes="heading-md" Text="{Binding Localization.SettingsPresetsTitle}" />
+            <TextBlock Classes="body-sm secondary" Text="{Binding Localization.SettingsPresetsHint}" TextWrapping="Wrap" />
+            <TextBlock Classes="body-md muted" Text="{Binding Localization.SettingsPresetsEmpty}" Margin="0,12,0,0" IsVisible="{Binding !SavedGameSettingsPresets.Count}" />
+            <ItemsControl ItemsSource="{Binding SavedGameSettingsPresets}" Margin="0,12,0,0">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:GameSettingsPresetItem">
+                        <Grid ColumnDefinitions="*,16,Auto,16,Auto" Margin="0,0,0,8">
+                            <TextBlock Classes="heading-sm" Text="{Binding Name}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                            <TextBlock Grid.Column="2" Classes="label-md" Text="{Binding VersionText}" VerticalAlignment="Center" />
+                            <StackPanel Grid.Column="4" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                                <TextBlock Classes="body-sm danger" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.SettingsPresetsDeleteConfirm}" VerticalAlignment="Center" IsVisible="{Binding IsConfirmingDelete}" />
+                                <Button Classes="text danger" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryDelete}" Command="{Binding DeleteCommand}" />
+                                <Button Classes="text" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryCancel}" Command="{Binding CancelDeleteCommand}" IsVisible="{Binding IsConfirmingDelete}" />
+                            </StackPanel>
+                        </Grid>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <TextBlock Classes="body-md danger" Text="{Binding GameSettingsPresetError}" TextWrapping="Wrap" Margin="0,8,0,0" IsVisible="{Binding GameSettingsPresetError, Converter={x:Static ObjectConverters.IsNotNull}}" />
         </StackPanel>
     </ScrollViewer>
 </UserControl>
