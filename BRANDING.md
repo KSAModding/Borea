@@ -2,7 +2,7 @@
 
 **Borea** and the **Borea logo** identify the official Borea project.
 
-The Borea source code is open source and available under the MIT License. The project name and logo are separate from the software license.
+The Borea source code is open source and available under the MIT License. The Borea logo, in any file or format, is not covered by the MIT License.
 
 ## Forks and modified versions
 
@@ -27,15 +27,17 @@ Truthful references to Borea are welcome, including references in documentation,
 
 ## Logo
 
-The Borea logo is reserved for identifying the official Borea project.
+The Borea logo was created by [renancamm (beik)](https://github.com/renancamm), who retains its copyright. It is reserved for identifying the official Borea project, and the Borea maintainers may use it for that purpose permanently.
 
 Please do not use the Borea logo as the primary branding, application icon, or identity of an unofficial version in a way that could cause confusion about its origin or affiliation.
+
+A fork may keep the logo files in its copy of the repository. Before you publish or distribute builds or releases of your version, replace the logo with your own, including the application icon.
 
 You may use the logo when truthfully referring to the official Borea project, such as in documentation or links to the official project.
 
 ## Official project
 
-The official Borea project is represented by the project's official repositories and communication channels.
+The official Borea project is represented by the project's official repositories and communication channels. The main repository is [github.com/KSAModding/Borea](https://github.com/KSAModding/Borea).
 
 If you are unsure whether a project, release, download, or communication is official, refer to the links published by the Borea project itself.
 
