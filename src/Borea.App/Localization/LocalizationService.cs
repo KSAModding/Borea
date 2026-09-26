@@ -1648,8 +1648,6 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string SelectAPreset => Resources.SelectAPreset;
 
-    public string GameDataCreatePreset => Resources.GameDataCreatePreset;
-
     public string ModalSettingsPresetNoGameVersion => Resources.ModalSettingsPresetNoGameVersion;
 
     public string NoPreset => Resources.NoPreset;
@@ -1672,6 +1670,9 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string FormatToastPresetSaved(string name)
         => string.Format(CultureInfo.CurrentCulture, Resources.ToastPresetSavedFormat, name);
+
+    public string FormatToastPresetNotApplied(string name)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ToastPresetNotAppliedFormat, name);
 
     public string FormatLaunchLoaderNotInstalled(string loader)
         => string.Format(CultureInfo.CurrentCulture, Resources.LaunchLoaderNotInstalledFormat, loader);

@@ -1,4 +1,4 @@
-﻿using System.Net.Http.Headers;
+using System.Net.Http.Headers;
 using System.Reflection;
 using Borea.Core.Announcements;
 using Borea.Core.Dependencies;

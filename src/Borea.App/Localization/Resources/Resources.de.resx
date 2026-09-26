@@ -2932,19 +2932,16 @@
     <value>Der Loader hat vor dem Beenden nichts ausgegeben.</value>
   </data>
   <data name="ChooseGameSettingsPreset" xml:space="preserve">
-    <value>Voreinstellung für Spieleinstellungen</value>
+    <value>Vorlage für Spieleinstellungen</value>
   </data>
   <data name="SelectAPreset" xml:space="preserve">
-    <value>Wählen Sie eine Voreinstellung aus.</value>
-  </data>
-  <data name="GameDataCreatePreset" xml:space="preserve">
-    <value>Einstellungsvorgabe erstellen</value>
+    <value>Wähle eine Vorlage aus</value>
   </data>
   <data name="ModalSettingsPresetNoGameVersion" xml:space="preserve">
     <value>Keine KSA-Version erkannt</value>
   </data>
   <data name="NoPreset" xml:space="preserve">
-    <value>Kein Preset</value>
+    <value>Keine Vorlage</value>
   </data>
   <data name="PresetModalTitle" xml:space="preserve">
     <value>Spieleinstellungen als Vorlage speichern</value>
@@ -2962,7 +2959,7 @@
     <value>Vorlagen für Spieleinstellungen</value>
   </data>
   <data name="SettingsPresetsHint" xml:space="preserve">
-    <value>Aus einer Instanz gespeichert und beim Erstellen einer Instanz angeboten. Die Version ist der Spielstand, aus dem die Vorlage gespeichert wurde.</value>
+    <value>Aus einer Instanz gespeichert und beim Erstellen einer Instanz angeboten. Die Version ist die Spielversion, aus der die Vorlage gespeichert wurde.</value>
   </data>
   <data name="SettingsPresetsEmpty" xml:space="preserve">
     <value>Noch keine Vorlagen. Speichere eine über das Menü einer Instanz.</value>
@@ -2972,5 +2969,8 @@
   </data>
   <data name="ToastPresetSavedFormat" xml:space="preserve">
     <value>Vorlage {0} gespeichert</value>
+  </data>
+  <data name="ToastPresetNotAppliedFormat" xml:space="preserve">
+    <value>{0} wurde ohne die Vorlage erstellt</value>
   </data>
 </root>

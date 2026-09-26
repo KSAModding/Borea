@@ -24,6 +24,12 @@ public partial class MainViewModel
     [ObservableProperty]
     private GameSettingsPresetItem? _selectedGameSettingsPreset;
 
+    /// <summary>
+    /// The picker belongs to a plain new instance. A pack and a shared profile
+    /// bring the settings of what they install, so they do not offer it.
+    /// </summary>
+    public bool CanPickGameSettingsPreset => IsCreatingInstance && !IsImportingSharedProfile && _newInstancePack is null;
+
     [ObservableProperty]
     private bool _isCreatingGameSettingsPreset;
 

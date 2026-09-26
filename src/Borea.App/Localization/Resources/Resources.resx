@@ -2937,9 +2937,6 @@
   <data name="SelectAPreset" xml:space="preserve">
     <value>Select a preset</value>
   </data>
-  <data name="GameDataCreatePreset" xml:space="preserve">
-    <value>Create settings preset</value>
-  </data>
   <data name="ModalSettingsPresetNoGameVersion" xml:space="preserve">
     <value>No detected KSA version</value>
   </data>
@@ -2972,5 +2969,8 @@
   </data>
   <data name="ToastPresetSavedFormat" xml:space="preserve">
     <value>Saved the preset {0}</value>
+  </data>
+  <data name="ToastPresetNotAppliedFormat" xml:space="preserve">
+    <value>Created {0} without the preset</value>
   </data>
 </root>

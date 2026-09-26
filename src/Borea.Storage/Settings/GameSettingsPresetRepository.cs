@@ -11,6 +11,7 @@ namespace Borea.Storage.Settings;
 public sealed class GameSettingsPresetRepository : IGameSettingsPresetRepository
 {
     private const string MetadataFileName = "preset.toml";
+    private const string TempSuffix = ".tmp";
     private const string SettingsFileName = "settings.toml";
 
     private readonly IGamePathProvider _pathProvider;
@@ -32,6 +33,10 @@ public sealed class GameSettingsPresetRepository : IGameSettingsPresetRepository
         {
             cancellationToken.ThrowIfCancellationRequested();
 
+            // a half written save, from a Borea that stopped between the copy and the move
+            if (presetDir.EndsWith(TempSuffix, StringComparison.OrdinalIgnoreCase))
+                continue;
+
             var metadataPath = Path.Combine(presetDir, MetadataFileName);
 
             GameSettingsPresetDto? dto;
@@ -39,9 +44,9 @@ public sealed class GameSettingsPresetRepository : IGameSettingsPresetRepository
             {
                 dto = await TomlFileStore.ReadAsync<GameSettingsPresetDto>(metadataPath, cancellationToken).ConfigureAwait(false);
             }
-            catch (InvalidOperationException)
+            catch (Exception exception) when (exception is InvalidOperationException or IOException or UnauthorizedAccessException)
             {
-                // preset.toml isn't valid TOML at all — skip this folder, per-item isolation.
+                // one folder Borea cannot read leaves the other presets alone
                 continue;
             }
 
@@ -89,7 +94,7 @@ public sealed class GameSettingsPresetRepository : IGameSettingsPresetRepository
 
         var preset = new GameSettingsPreset(Guid.NewGuid(), name, gameVersion);
         var presetDir = Path.Combine(_pathProvider.GetGameSettingsPresetsRoot(), preset.Id.ToString());
-        var tempDir = presetDir + ".tmp";
+        var tempDir = presetDir + TempSuffix;
 
         Directory.CreateDirectory(tempDir);
         await File.WriteAllTextAsync(Path.Combine(tempDir, SettingsFileName), sourceText, cancellationToken).ConfigureAwait(false);

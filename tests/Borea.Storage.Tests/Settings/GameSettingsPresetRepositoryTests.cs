@@ -61,7 +61,33 @@ public sealed class GameSettingsPresetRepositoryTests : IDisposable
     {
         var kept = await _repository.SaveAsync("Kept", _version, WriteSettings());
         Directory.CreateDirectory(Path.Combine(_paths.GetGameSettingsPresetsRoot(), "not-a-preset"));
-        await File.WriteAllTextAsync(Path.Combine(PresetFolder(Guid.NewGuid(), create: true), "preset.toml"), "id = \"nonsense\"\n");
+        await File.WriteAllTextAsync(Path.Combine(PresetFolder(Guid.NewGuid(), create: true), "preset.toml"), "Id = \"nonsense\"\n");
+
+        var presets = await _repository.ListAsync();
+
+        Assert.Equal(kept.Id, Assert.Single(presets).Id);
+    }
+
+    [Fact]
+    public async Task ListAsync_SkipsAHalfWrittenSave()
+    {
+        var kept = await _repository.SaveAsync("Kept", _version, WriteSettings());
+        var half = Path.Combine(_paths.GetGameSettingsPresetsRoot(), Guid.NewGuid() + ".tmp");
+        Directory.CreateDirectory(half);
+        File.Copy(Path.Combine(PresetFolder(kept.Id), "preset.toml"), Path.Combine(half, "preset.toml"));
+
+        var presets = await _repository.ListAsync();
+
+        Assert.Equal(kept.Id, Assert.Single(presets).Id);
+    }
+
+    [Fact]
+    public async Task ListAsync_SkipsAPresetWithoutAName()
+    {
+        var kept = await _repository.SaveAsync("Kept", _version, WriteSettings());
+        var blank = PresetFolder(Guid.NewGuid(), create: true);
+        var toml = string.Join("\n", $"Id = \"{Guid.NewGuid()}\"", "Name = \"  \"", $"Version = \"{_version}\"");
+        await File.WriteAllTextAsync(Path.Combine(blank, "preset.toml"), toml);
 
         var presets = await _repository.ListAsync();
 

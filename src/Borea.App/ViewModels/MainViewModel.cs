@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -214,7 +214,7 @@ public partial class MainViewModel : ViewModelBase
     public ObservableCollection<InstanceItem> Instances { get; } = [];
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsNameModalOpen))]
+    [NotifyPropertyChangedFor(nameof(IsNameModalOpen), nameof(CanPickGameSettingsPreset))]
     private bool _isCreatingInstance;
 
     /// <summary>The row the name modal renames. Null while the modal creates an instance or is closed.</summary>
@@ -333,6 +333,7 @@ public partial class MainViewModel : ViewModelBase
         StartAnnouncementCheck();
         InstalledVersionText = _services?.InstalledVersion.GetInstalledVersion()?.RawVersion;
         StartGameBuildCheck();
+        StartGameSettingsPresetLoad();
         await ReloadInstancesAsync();
         await RefreshContentIndexAtStartAsync();
         await LoadRecentItemsAsync();
@@ -593,7 +594,17 @@ public partial class MainViewModel : ViewModelBase
 
             var created = await instances.CreateAsync(name, InstanceSource.Custom.Value);
             if (presetId is { } id && _services is { } services)
-                await services.GameSettingsPresets.ApplyAsync(id, created.Instance.InstanceId);
+            {
+                try
+                {
+                    await services.GameSettingsPresets.ApplyAsync(id, created.Instance.InstanceId);
+                }
+                catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or InvalidOperationException)
+                {
+                    // the instance is there, so the modal closes and the toast says it came without the settings
+                    ShowErrorToast(() => Localization.FormatToastPresetNotApplied(name), exception.Message);
+                }
+            }
 
             ModalInstanceName = string.Empty;
             IsCreatingInstance = false;
