@@ -1161,6 +1161,249 @@ public sealed class PackViewModelTests
     }
 
     [Fact]
+    public async Task UseNewer_MemberThatTheActivePackInstanceHoldsAtThePin_OffersTheNewerRelease()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: WithPacks(Pack("tools-pack", "Tools Pack", Version("1.0.0", Pin("MeasureTools", "1.1.9"), Pin("KSArmory", "0.8.44")))));
+        var instance = await ActivateMeasureToolsPackInstanceAsync(harness);
+        await InstalledContent.AddAsync(harness, "KSArmory", activate: true, reason: InstallReason.ModPack, ownership: ModInstallOwnership.Borea, into: instance);
+        await harness.ViewModel.LoadAsync();
+
+        var row = await OpenMeasureToolsMemberAsync(harness);
+
+        Assert.True(row.CanUseNewer);
+        Assert.Equal(harness.Localization.FormatPackMemberUseNewer("1.1.10", "Tools"), row.UseNewerText);
+        Assert.Null(row.PinnedInInstanceText);
+        // the instance holds KSArmory at the pin too, but the pin is its newest release
+        var armory = harness.ViewModel.PackMembers.Single(member => member.ModId == "KSArmory");
+        Assert.Equal((true, false, null), (armory.IsInstalled, armory.CanUseNewer, armory.UseNewerText));
+    }
+
+    [Fact]
+    public async Task UseNewer_InstanceThatIsNotOfThePackOrHoldsAnotherVersion_IsNotOffered()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: WithPacks(MeasureToolsPinPack()));
+
+        var row = await OpenMeasureToolsMemberAsync(harness);
+        Assert.Equal("1.1.10", row.NewerVersion);
+        Assert.False(row.CanUseNewer);
+
+        await ActivateMeasureToolsPackInstanceAsync(harness, "Custom", InstanceSource.Custom.Value);
+        Assert.False((await OpenMeasureToolsMemberAsync(harness)).CanUseNewer);
+
+        await ActivateMeasureToolsPackInstanceAsync(harness, "Other pack", new InstanceSource.FromModPack("other-pack", ModVersion.Parse("1.0.0")));
+        Assert.False((await OpenMeasureToolsMemberAsync(harness)).CanUseNewer);
+
+        await ActivateMeasureToolsPackInstanceAsync(harness, "Older", version: "1.1.8");
+        row = await OpenMeasureToolsMemberAsync(harness);
+        Assert.Equal((false, null, null), (row.CanUseNewer, row.UseNewerText, row.PinnedInInstanceText));
+    }
+
+    [Fact]
+    public async Task UseNewer_NewerReleaseThatNeedsANewerGame_IsNotOffered()
+    {
+        using var harness = await CreateWithGameAsync(WithPacks(MeasureToolsPinPack()));
+        await ActivateMeasureToolsPackInstanceAsync(harness);
+
+        var row = await OpenMeasureToolsMemberAsync(harness);
+
+        Assert.Equal("1.1.10", row.NewerVersion);
+        Assert.Equal((false, null), (row.CanUseNewer, row.UseNewerText));
+    }
+
+    [Fact]
+    public async Task UseNewer_Confirmed_DetachesTheModAndInstallsTheNewerRelease()
+    {
+        var archive = Archive(("MeasureTools/mod.toml", "name = \"MeasureTools\""));
+        using var harness = await CreateWithMeasureToolsArchiveAsync(archive, MeasureToolsPinPack());
+        var instance = await ActivateMeasureToolsPackInstanceAsync(harness);
+        var row = await OpenMeasureToolsMemberAsync(harness);
+
+        await row.UseNewerCommand.ExecuteAsync(null);
+
+        Assert.True(row.IsConfirmingInstall);
+        Assert.False(row.CanUseNewer);
+        Assert.Equal(harness.Localization.FormatPackMemberUseNewerConfirm(row.Name, "Tools", "1.1.10"), row.UseNewerConfirmText);
+        var replace = row.InstallWarning is null ? harness.Localization.FormatContentReplaceVersion("1.1.9") : harness.Localization.FormatContentReplaceVersionAnyway("1.1.9");
+        Assert.StartsWith(replace, row.ConfirmInstallText);
+        // the files of 1.1.9 go away only after the confirmation
+        var waiting = (await harness.Services.Instances.GetByIdAsync(instance.InstanceId))!;
+        Assert.Equal(new InstanceSource.FromModPack("tools-pack", ModVersion.Parse("1.0.0")), waiting.Source);
+        Assert.Equal((ModVersion.Parse("1.1.9"), InstallReason.ModPack), (waiting.Mods.Single().Version, waiting.Mods.Single().Reason));
+
+        await row.ConfirmUseNewerCommand.ExecuteAsync(null);
+
+        Assert.Null(row.InstallError);
+        Assert.False(row.IsConfirmingInstall);
+        var saved = (await harness.Services.Instances.GetByIdAsync(instance.InstanceId))!;
+        Assert.Equal(new InstanceSource.FromModPack("tools-pack", ModVersion.Parse("1.0.0")).WithDetached(["MeasureTools"]), saved.Source);
+        var mod = Assert.Single(saved.Mods);
+        Assert.Equal((ModVersion.Parse("1.1.10"), InstallReason.Manual), (mod.Version, mod.Reason));
+        Assert.Equal((false, false), (row.IsInstalled, row.CanUseNewer));
+        Assert.Equal(TaskState.Finished, harness.ViewModel.Tasks.History[0].State);
+
+        // the Content tab offers to undo the change
+        await harness.ViewModel.ActiveInstance!.OpenCommand.ExecuteAsync(null);
+        var content = harness.ViewModel.ContentGroups.SelectMany(group => group.Items).Single();
+        Assert.Equal((true, true), (content.IsDetached, content.CanAttach));
+    }
+
+    [Fact]
+    public async Task UseNewer_Cancelled_ChangesNothing()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: WithPacks(MeasureToolsPinPack()));
+        var instance = await ActivateMeasureToolsPackInstanceAsync(harness);
+        var row = await OpenMeasureToolsMemberAsync(harness);
+        await row.UseNewerCommand.ExecuteAsync(null);
+        Assert.True(row.IsConfirmingInstall);
+
+        row.CancelUseNewerCommand.Execute(null);
+
+        Assert.Equal((false, true), (row.IsConfirmingInstall, row.CanUseNewer));
+        var saved = (await harness.Services.Instances.GetByIdAsync(instance.InstanceId))!;
+        Assert.Equal(new InstanceSource.FromModPack("tools-pack", ModVersion.Parse("1.0.0")), saved.Source);
+        var mod = Assert.Single(saved.Mods);
+        Assert.Equal((ModVersion.Parse("1.1.9"), InstallReason.ModPack), (mod.Version, mod.Reason));
+        Assert.DoesNotContain(harness.Requests, uri => uri.AbsoluteUri == MeasureToolsUrl);
+    }
+
+    [Fact]
+    public async Task UseNewer_InstanceChangedBeforeTheConfirmation_KeepsTheModAttached()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: WithPacks(MeasureToolsPinPack()));
+        var instance = await ActivateMeasureToolsPackInstanceAsync(harness);
+        var row = await OpenMeasureToolsMemberAsync(harness);
+        await row.UseNewerCommand.ExecuteAsync(null);
+        await harness.Services.Instances.UpdateAsync(instance.InstanceId, saved => saved.SetPinned("MeasureTools", true));
+
+        await row.ConfirmUseNewerCommand.ExecuteAsync(null);
+
+        Assert.Equal(harness.Localization.ManualInstallsInstanceChanged, row.InstallError);
+        Assert.False(row.IsConfirmingInstall);
+        var saved = (await harness.Services.Instances.GetByIdAsync(instance.InstanceId))!;
+        Assert.Equal(new InstanceSource.FromModPack("tools-pack", ModVersion.Parse("1.0.0")), saved.Source);
+        var mod = Assert.Single(saved.Mods);
+        Assert.Equal((ModVersion.Parse("1.1.9"), InstallReason.ModPack), (mod.Version, mod.Reason));
+    }
+
+    [Fact]
+    public async Task UseNewer_LaterPackUpdate_LeavesTheModAtTheNewerRelease()
+    {
+        var archive = Archive(("MeasureTools/mod.toml", "name = \"MeasureTools\""));
+        var versions = Pack("tools-pack", "Tools Pack", Version("1.0.0", Pin("MeasureTools", "1.1.9")), Version("1.1.0", Pin("MeasureTools", "1.1.9")));
+        using var harness = await CreateWithMeasureToolsArchiveAsync(archive, versions);
+        var viewModel = harness.ViewModel;
+        var instance = await ActivateMeasureToolsPackInstanceAsync(harness);
+        var row = await OpenMeasureToolsMemberAsync(harness);
+        await row.UseNewerCommand.ExecuteAsync(null);
+        await row.ConfirmUseNewerCommand.ExecuteAsync(null);
+        Assert.Null(row.InstallError);
+
+        await viewModel.ActiveInstance!.OpenCommand.ExecuteAsync(null);
+        await viewModel.PackUpdate!.UpdateCommand.ExecuteAsync(null);
+        Assert.Equal([harness.Localization.FormatPackUpdateDetached(viewModel.ContentName("MeasureTools"))], viewModel.PackUpdate.ChangeTexts);
+        await viewModel.PackUpdate.ConfirmUpdateCommand.ExecuteAsync(null);
+
+        var saved = (await harness.Services.Instances.GetByIdAsync(instance.InstanceId))!;
+        Assert.Equal(new InstanceSource.FromModPack("tools-pack", ModVersion.Parse("1.1.0")).WithDetached(["MeasureTools"]), saved.Source);
+        var mod = Assert.Single(saved.Mods);
+        Assert.Equal((ModVersion.Parse("1.1.10"), InstallReason.Manual), (mod.Version, mod.Reason));
+    }
+
+    [Fact]
+    public async Task UseNewer_ConfirmedWhileTheInstanceUpdates_SaysSoAndKeepsThePlan()
+    {
+        using var download = new ManualResetEventSlim();
+        var archive = Archive(("MeasureTools/mod.toml", "name = \"MeasureTools\""));
+        using var harness = await CreateWithMeasureToolsArchiveAsync(archive, MeasureToolsPinPack(), request =>
+        {
+            if (request.RequestUri?.AbsolutePath.EndsWith("/AdvancedFlightComputer.zip", StringComparison.Ordinal) == true)
+                download.Wait(TimeSpan.FromSeconds(30));
+            return null;
+        });
+        var viewModel = harness.ViewModel;
+        var instance = await ActivateMeasureToolsPackInstanceAsync(harness);
+        await InstalledContent.AddAsync(harness, "AdvancedFlightComputer", activate: true, ownership: ModInstallOwnership.Borea, version: "0.7.4", into: instance);
+        await viewModel.LoadAsync();
+        await viewModel.ActiveInstance!.OpenCommand.ExecuteAsync(null);
+        await viewModel.WhenContentUpdatesCheckedAsync();
+        var afc = viewModel.ContentGroups.SelectMany(group => group.Items).Single(item => item.ModId == "AdvancedFlightComputer");
+        await afc.UpdateCommand.ExecuteAsync(null);
+        var update = afc.ConfirmUpdateCommand.ExecuteAsync(null);
+        for (var wait = 0; wait < 300 && !harness.Requests.Any(uri => uri.AbsolutePath.EndsWith("/AdvancedFlightComputer.zip", StringComparison.Ordinal)); wait++)
+            await Task.Delay(100);
+        var row = await OpenMeasureToolsMemberAsync(harness);
+        await row.UseNewerCommand.ExecuteAsync(null);
+
+        await row.ConfirmUseNewerCommand.ExecuteAsync(null);
+
+        Assert.Equal(harness.Localization.LibraryFolderInstanceBusy, row.InstallError);
+        Assert.True(row.IsConfirmingInstall);
+        Assert.Equal(new InstanceSource.FromModPack("tools-pack", ModVersion.Parse("1.0.0")), (await harness.Services.Instances.GetByIdAsync(instance.InstanceId))!.Source);
+
+        // the update fails without its archive and leaves the instance as it was, so the waiting plan still fits
+        download.Set();
+        await update;
+        await row.ConfirmUseNewerCommand.ExecuteAsync(null);
+
+        Assert.Null(row.InstallError);
+        var saved = (await harness.Services.Instances.GetByIdAsync(instance.InstanceId))!;
+        Assert.Equal(new InstanceSource.FromModPack("tools-pack", ModVersion.Parse("1.0.0")).WithDetached(["MeasureTools"]), saved.Source);
+        Assert.Equal(ModVersion.Parse("1.1.10"), saved.Mods.Single(mod => mod.ModId == "MeasureTools").Version);
+    }
+
+    [Fact]
+    public async Task UseNewer_MemberThatIsDetachedAtThePin_ChangesOnlyItsVersion()
+    {
+        var archive = Archive(("MeasureTools/mod.toml", "name = \"MeasureTools\""));
+        using var harness = await CreateWithMeasureToolsArchiveAsync(archive, MeasureToolsPinPack());
+        var instance = await ActivateMeasureToolsPackInstanceAsync(harness);
+        await harness.Services.Instances.UpdateAsync(instance.InstanceId, saved => saved.DetachFromModPack("MeasureTools"));
+        await harness.ViewModel.LoadAsync();
+        var row = await OpenMeasureToolsMemberAsync(harness);
+        Assert.True(row.CanUseNewer);
+
+        await row.UseNewerCommand.ExecuteAsync(null);
+
+        // the mod is detached already, so the confirmation only names the version that goes away
+        Assert.True(row.IsConfirmingInstall);
+        Assert.Null(row.UseNewerConfirmText);
+        var replace = row.InstallWarning is null ? harness.Localization.FormatContentReplaceVersion("1.1.9") : harness.Localization.FormatContentReplaceVersionAnyway("1.1.9");
+        Assert.StartsWith(replace, row.ConfirmInstallText);
+
+        await row.ConfirmUseNewerCommand.ExecuteAsync(null);
+
+        Assert.Null(row.InstallError);
+        var saved = (await harness.Services.Instances.GetByIdAsync(instance.InstanceId))!;
+        Assert.Equal(new InstanceSource.FromModPack("tools-pack", ModVersion.Parse("1.0.0")).WithDetached(["MeasureTools"]), saved.Source);
+        var mod = Assert.Single(saved.Mods);
+        Assert.Equal((ModVersion.Parse("1.1.10"), InstallReason.Manual), (mod.Version, mod.Reason));
+    }
+
+    [Fact]
+    public async Task UseNewer_MemberThatTheInstancePins_ShowsTheNoteInsteadOfTheButton()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: WithPacks(MeasureToolsPinPack()));
+        var instance = await ActivateMeasureToolsPackInstanceAsync(harness, pinned: true);
+        var row = await OpenMeasureToolsMemberAsync(harness);
+
+        Assert.Equal((false, null), (row.CanUseNewer, row.UseNewerText));
+        Assert.Equal(harness.Localization.FormatPackMemberUseNewerPinned("Tools", "1.1.10"), row.PinnedInInstanceText);
+
+        await row.UseNewerCommand.ExecuteAsync(null);
+
+        Assert.False(row.IsConfirmingInstall);
+        var mod = Assert.Single((await harness.Services.Instances.GetByIdAsync(instance.InstanceId))!.Mods);
+        Assert.Equal((ModVersion.Parse("1.1.9"), InstallReason.ModPack, true), (mod.Version, mod.Reason, mod.IsPinned));
+
+        // unpinning on the Content tab brings the button back
+        await harness.ViewModel.ActiveInstance!.OpenCommand.ExecuteAsync(null);
+        await harness.ViewModel.ContentGroups.SelectMany(group => group.Items).Single().UnpinCommand.ExecuteAsync(null);
+
+        Assert.True(row.CanUseNewer);
+        Assert.Null(row.PinnedInInstanceText);
+    }
+
+    [Fact]
     public async Task PackUpdate_FailedDownload_KeepsTheOldSourceTheDroppedModAndTheNotice()
     {
         using var harness = await ViewModelHarness.CreateAsync(editSnapshot: WithPacks(ToolsPackVersions()));
@@ -1249,6 +1492,44 @@ public sealed class PackViewModelTests
             editSnapshot: snapshot => WithPacks(Pack("tools-pack", "Tools Pack", Version("1.0.0", Pin("MeasureTools", "1.1.9")), Version("1.1.0", Pin("MeasureTools", "1.1.10"))))(
                 snapshot.Replace(MeasureTools119Sha256, Convert.ToHexString(SHA256.HashData(archive)), StringComparison.Ordinal)
                     .Replace("\"size\": 41783", $"\"size\": {archive.Length}", StringComparison.Ordinal)));
+
+    /// <summary>Tools Pack 1.0.0 pinning MeasureTools 1.1.9, whose newer release 1.1.10 the snapshot has.</summary>
+    private static string MeasureToolsPinPack()
+        => Pack("tools-pack", "Tools Pack", Version("1.0.0", Pin("MeasureTools", "1.1.9")));
+
+    /// <summary>A harness that serves the archive of MeasureTools 1.1.10, answers other requests with <paramref name="respond"/> and has the pack.</summary>
+    private static Task<ViewModelHarness> CreateWithMeasureToolsArchiveAsync(byte[] archive, string pack, Func<HttpRequestMessage, HttpResponseMessage?>? respond = null) =>
+        ViewModelHarness.CreateAsync(
+            respond: request => request.RequestUri?.AbsoluteUri == MeasureToolsUrl ? ArchiveResponse(archive) : respond?.Invoke(request),
+            editSnapshot: snapshot => WithPacks(pack)(
+                snapshot.Replace(MeasureToolsSha256, Convert.ToHexString(SHA256.HashData(archive)), StringComparison.Ordinal)
+                    .Replace("\"size\": 41782", $"\"size\": {archive.Length}", StringComparison.Ordinal)));
+
+    /// <summary>
+    /// Makes an instance that holds MeasureTools as a pack member in files Borea owns the active one.
+    /// Without a source the instance was made from Tools Pack 1.0.0.
+    /// </summary>
+    private static async Task<Instance> ActivateMeasureToolsPackInstanceAsync(ViewModelHarness harness, string name = "Tools", InstanceSource? source = null, string version = "1.1.9", bool pinned = false)
+    {
+        var instance = (await harness.Services.Instances.CreateAsync(name, source ?? new InstanceSource.FromModPack("tools-pack", ModVersion.Parse("1.0.0")))).Instance;
+        var reason = instance.Source is InstanceSource.FromModPack ? InstallReason.ModPack : InstallReason.Manual;
+        instance = await InstalledContent.AddAsync(harness, "MeasureTools", activate: true, reason: reason, ownership: ModInstallOwnership.Borea, version: version, into: instance);
+        if (pinned)
+            await harness.Services.Instances.UpdateAsync(instance.InstanceId, saved => saved.SetPinned("MeasureTools", true));
+        await harness.ViewModel.LoadAsync();
+        return instance;
+    }
+
+    /// <summary>Opens the only pack of the snapshot on its Mods tab and returns the row of MeasureTools.</summary>
+    private static async Task<PackMemberItem> OpenMeasureToolsMemberAsync(ViewModelHarness harness)
+    {
+        var viewModel = harness.ViewModel;
+        await viewModel.EnsureDiscoverLoadedAsync();
+        viewModel.ShowDiscoverModpacksCommand.Execute(null);
+        await Assert.Single(viewModel.DiscoverPacks).OpenCommand.ExecuteAsync(null);
+        viewModel.ShowPackModsCommand.Execute(null);
+        return viewModel.PackMembers.Single(member => member.ModId == "MeasureTools");
+    }
 
     /// <summary>Opens the only pack of the snapshot on its Versions tab.</summary>
     private static async Task<PackItem> OpenPackVersionsAsync(ViewModelHarness harness)

@@ -46,6 +46,7 @@ public sealed class LocalizationSurfaceTests : IDisposable
         Assert.Equal("Made with game build 2026.8.3.5117", service.FormatGameSaveBuild("2026.8.3.5117"));
         Assert.Equal("Installed StarMap 0.4.6 to loaders.", service.FormatSetupLoaderInstalled("StarMap", "0.4.6", "loaders"));
         Assert.Equal("Replace 0.7.3 in Main", service.FormatContentReplaceVersionIn("0.7.3", "Main"));
+        Assert.Equal("Use 1.1.10 in Main", service.FormatPackMemberUseNewer("1.1.10", "Main"));
         Assert.Equal("1 of 3 selected", service.FormatGameSaveProfileSelected(1, 3));
         Assert.Equal("1 mod", service.FormatDiscoverModCount(1));
         Assert.Equal("1 modpack", service.FormatDiscoverPackCount(1));

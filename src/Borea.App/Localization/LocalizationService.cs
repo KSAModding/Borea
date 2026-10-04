@@ -2243,6 +2243,15 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string FormatPackMemberNewer(string version)
         => string.Format(CultureInfo.CurrentCulture, Resources.PackMemberNewerFormat, version);
 
+    public string FormatPackMemberUseNewer(string version, string instance)
+        => string.Format(CultureInfo.CurrentCulture, Resources.PackMemberUseNewerFormat, version, instance);
+
+    public string FormatPackMemberUseNewerConfirm(string name, string instance, string version)
+        => string.Format(CultureInfo.CurrentCulture, Resources.PackMemberUseNewerConfirmFormat, name, instance, version);
+
+    public string FormatPackMemberUseNewerPinned(string instance, string version)
+        => string.Format(CultureInfo.CurrentCulture, Resources.PackMemberUseNewerPinnedFormat, instance, version);
+
     public string PackCopyForumList => Resources.PackCopyForumList;
 
     public string PackMakeNextVersion => Resources.PackMakeNextVersion;

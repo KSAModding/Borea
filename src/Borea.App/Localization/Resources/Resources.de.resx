@@ -3444,6 +3444,15 @@
   <data name="PackMemberNewerFormat" xml:space="preserve">
     <value>{0} verfügbar</value>
   </data>
+  <data name="PackMemberUseNewerFormat" xml:space="preserve">
+    <value>{0} in {1} verwenden</value>
+  </data>
+  <data name="PackMemberUseNewerConfirmFormat" xml:space="preserve">
+    <value>Löst die Mod {0} in {1} vom Modpack und wechselt sie auf {2}. Modpack-Updates lassen sie dann unverändert.</value>
+  </data>
+  <data name="PackMemberUseNewerPinnedFormat" xml:space="preserve">
+    <value>In {0} angeheftet. Hebe das Anheften im Tab Inhalt auf, um {1} zu verwenden.</value>
+  </data>
   <data name="PackCopyForumList" xml:space="preserve">
     <value>Forenliste kopieren</value>
   </data>

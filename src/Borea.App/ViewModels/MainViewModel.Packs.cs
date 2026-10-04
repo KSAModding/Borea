@@ -144,6 +144,7 @@ public partial class MainViewModel
         }
         foreach (var member in PackMembers)
             member.IsInstalled = Holds(member.Pin);
+        ShowNewerMemberUse();
         foreach (var version in PackVersions)
             version.IsInstalled = version.Metadata.Mods.All(Holds);
         return elsewhereChanged;
@@ -167,7 +168,96 @@ public partial class MainViewModel
     private void ShowNewerMembers()
     {
         foreach (var member in PackMembers)
-            member.NewerVersion = SelectedPack?.NewerMembers.FirstOrDefault(newer => ModIds.Equals(newer.ModId, member.ModId))?.Newer.Version.ToString();
+            member.NewerRelease = SelectedPack?.NewerMembers.FirstOrDefault(newer => ModIds.Equals(newer.ModId, member.ModId))?.Newer;
+        ShowNewerMemberUse();
+    }
+
+    /// <summary>
+    /// Offers the newer release of a member while the active instance was made from the open pack and holds the member
+    /// at the pinned version in files that Borea owns. A release that does not fit the installed game is not offered.
+    /// A member that the instance pins gets a note instead, because the pin has to go first.
+    /// </summary>
+    private void ShowNewerMemberUse()
+    {
+        var instance = _activeInstanceEntity;
+        var source = instance?.Source is InstanceSource.FromModPack fromPack && SelectedPack is { } pack && ModIds.Equals(fromPack.ModPackId, pack.PackId) ? fromPack : null;
+        foreach (var member in PackMembers)
+        {
+            var mod = source is not null && member.NewerRelease is { } newer && Borea.Core.Game.Compatibility.Evaluate(newer, _compatibilityGame) != GameCompatibility.Incompatible
+                ? instance!.Mods.FirstOrDefault(installed => ModIds.Equals(installed.ModId, member.ModId)
+                    && installed.Version == member.Pin.Version
+                    && installed.Ownership == ModInstallOwnership.Borea
+                    && (installed.Reason == InstallReason.ModPack || source.Detached.Contains(installed.ModId)))
+                : null;
+            member.ShowUse(mod is null ? null : ActiveInstance, mod?.IsPinned == true, mod is not null && mod.Reason != InstallReason.ModPack);
+        }
+    }
+
+    /// <summary>
+    /// Plans the newer release of a member into the instance the row names and waits for a confirmation, because the
+    /// files of the pinned version go away. The plan counts the mod as detached already, and the confirmation saves that.
+    /// </summary>
+    internal async Task UseNewerMemberAsync(PackMemberItem member)
+    {
+        if (member.NewerRelease is not { } newer || member.UseNewerInstance is not { } target || member.IsPinnedInInstance)
+            return;
+
+        RememberRequestedVersion(member, newer.Version);
+        await PlanAndExecuteAsync(
+            member,
+            target.InstanceId,
+            instance =>
+            {
+                instance.DetachFromModPack(member.ModId);
+                return Task.FromResult<IReadOnlyList<RequestedMod>>([new RequestedMod(newer, InstallReason.Manual, Exact: true)]);
+            },
+            (_, _) => Task.FromResult(true));
+    }
+
+    /// <summary>
+    /// Detaches the mod from the pack, which the waiting plan counts on, and then runs that plan. The detach is saved
+    /// only while the instance still fits the plan. A run that fails or stops after it leaves the mod detached at the
+    /// pinned version, so that a Try again only has to install the newer release.
+    /// </summary>
+    internal async Task ConfirmUseNewerMemberAsync(PackMemberItem member)
+    {
+        if (_services is not { } services || member.IsInstalling || (member.PendingPlan?.InstanceId ?? member.Choices?.InstanceId) is not { } instanceId)
+            return;
+
+        // the waiting plan stays, so the player can confirm again when the update of the instance has finished
+        if (_runningUpdates.ContainsKey(instanceId))
+        {
+            member.InstallError = Localization.LibraryFolderInstanceBusy;
+            return;
+        }
+
+        using var libraryUse = TryUseLibrary();
+        if (libraryUse is null)
+        {
+            member.InstallError = Localization.LibraryFolderBusy;
+            return;
+        }
+
+        member.InstallError = null;
+        try
+        {
+            await services.Instances.UpdateAsync(instanceId, instance =>
+            {
+                var changed = instance.DetachFromModPack(member.ModId);
+                if (member.Choices is null && member.PendingPlan is { } plan && !plan.InstanceState.Matches(instance))
+                    throw new InvalidOperationException(Localization.ManualInstallsInstanceChanged);
+                return changed;
+            });
+        }
+        catch (Exception exception) when (exception is IOException or InvalidOperationException or UnauthorizedAccessException)
+        {
+            CancelInstall(member);
+            member.InstallError = exception.Message;
+            return;
+        }
+
+        await ExecutePendingPlanAsync(member);
+        await ReloadInstancesAsync();
     }
 
     [RelayCommand]
@@ -1041,7 +1131,7 @@ public sealed partial class PackItem : ObservableObject, IPlanRow
 /// <summary>
 /// One mod a pack version pins, with what the index says about that exact release.
 /// </summary>
-public sealed partial class PackMemberItem : ObservableObject
+public sealed partial class PackMemberItem : ObservableObject, IInstallRow
 {
     private readonly MainViewModel _owner;
     private readonly DiscoverItem? _listing;
@@ -1072,10 +1162,98 @@ public sealed partial class PackMemberItem : ObservableObject
 
     /// <summary>The newer release of this mod, or null when the pin is the newest one.</summary>
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(NewerVersion))]
     [NotifyPropertyChangedFor(nameof(NewerText))]
-    private string? _newerVersion;
+    [NotifyPropertyChangedFor(nameof(UseNewerText))]
+    [NotifyPropertyChangedFor(nameof(UseNewerConfirmText))]
+    [NotifyPropertyChangedFor(nameof(PinnedInInstanceText))]
+    private ModVersionMetadata? _newerRelease;
+
+    public string? NewerVersion => NewerRelease?.Version.ToString();
 
     public string? NewerText => NewerVersion is null ? null : _owner.Localization.FormatPackMemberNewer(NewerVersion);
+
+    /// <summary>The active instance, while it was made from this pack and holds this mod at the pinned version. Null otherwise.</summary>
+    internal InstanceItem? UseNewerInstance { get; private set; }
+
+    /// <summary>True while <see cref="UseNewerInstance"/> pins this mod, which keeps it at its version.</summary>
+    internal bool IsPinnedInInstance { get; private set; }
+
+    /// <summary>True while <see cref="UseNewerInstance"/> holds this mod detached from the pack already.</summary>
+    internal bool IsDetachedInInstance { get; private set; }
+
+    /// <summary>"Use 1.1.10 in Main" while the row can change the mod in the active instance to the newer release, or null.</summary>
+    public string? UseNewerText => CanUseNewer ? _owner.Localization.FormatPackMemberUseNewer(NewerVersion!, UseNewerInstance!.Name) : null;
+
+    public bool CanUseNewer => NewerVersion is not null && UseNewerInstance is not null && !IsPinnedInInstance && !IsInstalling && !IsConfirmingInstall;
+
+    /// <summary>
+    /// What the confirmation of <see cref="UseNewerText"/> does to the pack, or null while the row offers no change.
+    /// A mod that is detached already only changes its version, which the confirm button says.
+    /// </summary>
+    public string? UseNewerConfirmText => NewerVersion is not null && UseNewerInstance is { } instance && !IsDetachedInInstance
+        ? _owner.Localization.FormatPackMemberUseNewerConfirm(Name, instance.Name, NewerVersion)
+        : null;
+
+    /// <summary>The note that a pin keeps the mod at the pinned version, shown instead of <see cref="UseNewerText"/>.</summary>
+    public string? PinnedInInstanceText => NewerVersion is not null && UseNewerInstance is { } instance && IsPinnedInInstance
+        ? _owner.Localization.FormatPackMemberUseNewerPinned(instance.Name, NewerVersion)
+        : null;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanUseNewer))]
+    [NotifyPropertyChangedFor(nameof(UseNewerText))]
+    private bool _isInstalling;
+
+    [ObservableProperty]
+    private double _progress;
+
+    [ObservableProperty]
+    private string? _progressStatus;
+
+    [ObservableProperty]
+    private string? _progressDetail;
+
+    [ObservableProperty]
+    private InstallRun? _run;
+
+    [ObservableProperty]
+    private string? _installError;
+
+    /// <summary>The planner's warnings while <see cref="PendingPlan"/> waits for a confirmation.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ConfirmInstallText))]
+    private string? _installWarning;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsConfirmingInstall))]
+    [NotifyPropertyChangedFor(nameof(CanUseNewer))]
+    [NotifyPropertyChangedFor(nameof(UseNewerText))]
+    [NotifyPropertyChangedFor(nameof(ConfirmInstallText))]
+    [NotifyPropertyChangedFor(nameof(AddedModsText))]
+    [NotifyPropertyChangedFor(nameof(AddedModsToolTip))]
+    [NotifyPropertyChangedFor(nameof(PlanSteps))]
+    private InstallPlan? _pendingPlan;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsConfirmingInstall))]
+    [NotifyPropertyChangedFor(nameof(CanUseNewer))]
+    [NotifyPropertyChangedFor(nameof(UseNewerText))]
+    [NotifyPropertyChangedFor(nameof(AddedModsText))]
+    [NotifyPropertyChangedFor(nameof(AddedModsToolTip))]
+    private InstallChoices? _choices;
+
+    public bool IsConfirmingInstall => PendingPlan is not null || Choices is not null;
+
+    /// <summary>"Replace 1.1.9", because the files of the pinned version go away.</summary>
+    public string ConfirmInstallText => _owner.ConfirmInstallText(InstallWarning, PendingPlan, Version);
+
+    public string? AddedModsText => _owner.AddedModsText(PendingPlan, Choices);
+
+    public string? AddedModsToolTip => _owner.AddedModsText(PendingPlan, Choices, all: true);
+
+    /// <summary>The install steps of every listing the waiting plan installs, which the confirmation shows.</summary>
+    public IReadOnlyList<StepList> PlanSteps => _owner.InstallStepsOf(PendingPlan);
 
     private readonly ModVersionMetadata? _release;
 
@@ -1113,12 +1291,42 @@ public sealed partial class PackMemberItem : ObservableObject
     [RelayCommand]
     private Task OpenAsync() => _listing is null ? Task.CompletedTask : _owner.OpenContentAsync(_listing);
 
+    [RelayCommand]
+    private Task UseNewerAsync() => _owner.UseNewerMemberAsync(this);
+
+    [RelayCommand]
+    private Task ConfirmUseNewerAsync() => _owner.ConfirmUseNewerMemberAsync(this);
+
+    [RelayCommand]
+    private void CancelUseNewer() => MainViewModel.CancelInstall(this);
+
+    /// <param name="instance">The instance whose copy of the mod the row can change, or null.</param>
+    /// <param name="pinned">True when that instance pins the mod.</param>
+    /// <param name="detached">True when that instance holds the mod detached from the pack.</param>
+    internal void ShowUse(InstanceItem? instance, bool pinned, bool detached)
+    {
+        UseNewerInstance = instance;
+        IsPinnedInInstance = instance is not null && pinned;
+        IsDetachedInInstance = instance is not null && detached;
+        OnPropertyChanged(nameof(CanUseNewer));
+        OnPropertyChanged(nameof(UseNewerText));
+        OnPropertyChanged(nameof(UseNewerConfirmText));
+        OnPropertyChanged(nameof(PinnedInInstanceText));
+    }
+
     internal void RefreshCompatibility(GameVersion? installed)
         => Compatibility = _release is null ? GameCompatibility.Unknown : Borea.Core.Game.Compatibility.Evaluate(_release, installed);
 
     internal void RefreshText()
     {
         OnPropertyChanged(nameof(NewerText));
+        OnPropertyChanged(nameof(UseNewerText));
+        OnPropertyChanged(nameof(UseNewerConfirmText));
+        OnPropertyChanged(nameof(PinnedInInstanceText));
+        OnPropertyChanged(nameof(ConfirmInstallText));
+        OnPropertyChanged(nameof(AddedModsText));
+        OnPropertyChanged(nameof(AddedModsToolTip));
+        OnPropertyChanged(nameof(PlanSteps));
         OnPropertyChanged(nameof(GoneText));
         OnPropertyChanged(nameof(CompatibilityText));
         OnPropertyChanged(nameof(FitText));

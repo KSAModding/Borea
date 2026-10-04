@@ -37,6 +37,7 @@ public partial class MainViewModel
         UpdateAllItem => StartTask(TaskKind.UpdateAll, instanceId: instanceId, state: TaskState.Waiting),
         VersionItem item => StartModInstallTask(item, item.ModId, instanceId),
         DiscoverItem item => StartModInstallTask(item, item.ModId, instanceId),
+        PackMemberItem item => StartModInstallTask(item, item.ModId, instanceId),
         _ => throw new UnreachableException(),
     };
 

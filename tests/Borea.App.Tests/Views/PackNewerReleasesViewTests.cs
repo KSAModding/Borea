@@ -4,6 +4,8 @@ using Avalonia.VisualTree;
 using Borea.App.Tests.ViewModels;
 using Borea.App.Views;
 using Borea.App.Views.Pages;
+using Borea.Core.Instances;
+using Borea.Core.Mods;
 
 namespace Borea.App.Tests.Views;
 
@@ -52,6 +54,35 @@ public sealed class PackNewerReleasesViewTests
                 .. newer.SelectMany(text => Outside(body, Shown(page, text))),
                 .. Outside(panel, Shown(page, harness.Localization.PackCopyForumList)),
             ];
+        });
+
+        Assert.Empty(outside);
+    }
+
+    [Theory]
+    [InlineData(860)]
+    [InlineData(1280)]
+    [InlineData(1920)]
+    public async Task PackPage_ShowsUseNewerAndThePinNoteInsideThePage(double windowWidth)
+    {
+        using var harness = await CreateAsync();
+        var viewModel = harness.ViewModel;
+        var instance = (await harness.Services.Instances.CreateAsync("Starter", new InstanceSource.FromModPack("starter-pack", ModVersion.Parse("1.0.0")))).Instance;
+        instance = await InstalledContent.AddAsync(harness, "AdvancedFlightComputer", activate: true, reason: InstallReason.ModPack, ownership: ModInstallOwnership.Borea, version: "0.7.4", into: instance);
+        await InstalledContent.AddAsync(harness, "MeasureTools", activate: true, reason: InstallReason.ModPack, ownership: ModInstallOwnership.Borea, version: "1.1.9", into: instance);
+        await harness.Services.Instances.UpdateAsync(instance.InstanceId, saved => saved.SetPinned("AdvancedFlightComputer", true));
+        await viewModel.LoadAsync();
+        await viewModel.EnsureDiscoverLoadedAsync();
+        viewModel.ShowDiscoverModpacksCommand.Execute(null);
+        await viewModel.DiscoverPacks.Single().OpenCommand.ExecuteAsync(null);
+        viewModel.ShowPackModsCommand.Execute(null);
+        var use = viewModel.PackMembers.Single(member => member.ModId == "MeasureTools").UseNewerText!;
+        var note = viewModel.PackMembers.Single(member => member.ModId == "AdvancedFlightComputer").PinnedInInstanceText!;
+
+        var outside = await RenderAsync(harness, () => new PackPage(), windowWidth, page =>
+        {
+            var body = page.GetVisualDescendants().OfType<PageBodyPanel>().Single().GetVisualChildren().OfType<StackPanel>().Single();
+            return [.. Outside(body, Shown(page, use)), .. Outside(body, Shown(page, note))];
         });
 
         Assert.Empty(outside);
