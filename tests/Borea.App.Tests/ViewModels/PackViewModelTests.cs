@@ -239,6 +239,28 @@ public sealed class PackViewModelTests
     }
 
     [Fact]
+    public async Task Pack_NewerReleaseCount_IsTheSameInTheStableAndTheTestingChannel()
+    {
+        var packs = WithPacks(Pack("starter-pack", "Starter Pack", Version("1.0.0", Pin("AdvancedFlightComputer", "0.7.5"), Pin("KSArmory", "0.8.44"), Pin("MeasureTools", "1.1.9"))));
+        var testing = SnapshotRelease.Add(new SnapshotRelease("AdvancedFlightComputer", "0.8.0-beta.1", "testing", "2026-09-10T10:00:00Z"));
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: json => testing(packs(json)));
+        var viewModel = harness.ViewModel;
+        await viewModel.EnsureDiscoverLoadedAsync();
+        viewModel.ShowDiscoverModpacksCommand.Execute(null);
+        var stable = Assert.Single(viewModel.DiscoverPacks).NewerReleasesText;
+
+        viewModel.SelectedReleaseChannel = viewModel.OptionFor(ReleaseChannel.Testing);
+        await viewModel.WhenReleaseChannelSavedAsync();
+        Assert.Equal(ReleaseChannel.Testing, harness.Services.Settings.ReleaseChannel);
+        var pack = Assert.Single(viewModel.DiscoverPacks);
+        await pack.OpenCommand.ExecuteAsync(null);
+
+        Assert.Equal(harness.Localization.FormatPackNewerReleases(1, 3), stable);
+        Assert.Equal(stable, pack.NewerReleasesText);
+        Assert.Equal([null, null, "1.1.10"], viewModel.PackMembers.Select(member => member.NewerVersion));
+    }
+
+    [Fact]
     public async Task Versions_InstallRow_PutsThatVersionIntoTheActiveInstance()
     {
         var archive = Archive(("MeasureTools/mod.toml", "name = \"MeasureTools\""));

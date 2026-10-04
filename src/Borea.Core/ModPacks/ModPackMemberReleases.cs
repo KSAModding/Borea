@@ -13,27 +13,19 @@ public sealed record NewerMemberRelease(string ModId, ModVersion Pinned, ModVers
 public static class ModPackMemberReleases
 {
     /// <summary>
-    /// The members that have a newer release, in pack order. A newer release counts when
-    /// <paramref name="channel"/> or the narrowest channel of the pinned release offers it,
-    /// so a stable pin is outdated only by a newer stable release unless the player chose a
-    /// wider channel. A pin that <paramref name="mods"/> does not list is left out.
+    /// The members that have a newer release by <see cref="NewerRelease"/>, in pack order. It reads the snapshot only,
+    /// so every player sees the same members whatever their channel. A pin on an unlisted mod is left out.
     /// </summary>
-    public static async Task<IReadOnlyList<NewerMemberRelease>> FindAsync(ModPackMetadata pack, IModRepository mods, ReleaseChannel channel, CancellationToken cancellationToken = default)
+    public static IReadOnlyList<NewerMemberRelease> Find(ModPackMetadata pack, ContentIndexSnapshot snapshot)
     {
         ArgumentNullException.ThrowIfNull(pack);
-        ArgumentNullException.ThrowIfNull(mods);
+        ArgumentNullException.ThrowIfNull(snapshot);
 
         var newer = new List<NewerMemberRelease>();
         foreach (var pin in pack.Mods)
         {
-            var pinned = await mods.GetReleaseAsync(pin.ContentId, pin.Version, cancellationToken).ConfigureAwait(false);
-            if (pinned is null)
-                continue;
-
-            var pinnedChannel = ReleaseChannels.NarrowestFor(pinned.ReleaseStatus);
-            var latest = await mods.GetLatestReleaseInChannelAsync(pin.ContentId, channel > pinnedChannel ? channel : pinnedChannel, cancellationToken).ConfigureAwait(false);
-            if (latest is not null && latest.Version > pin.Version)
-                newer.Add(new NewerMemberRelease(pin.ContentId, pin.Version, latest));
+            if (NewerRelease(snapshot, pin.ContentId, pin.Version) is { } release)
+                newer.Add(new NewerMemberRelease(pin.ContentId, pin.Version, release));
         }
 
         return newer;

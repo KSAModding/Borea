@@ -459,10 +459,15 @@ public partial class MainViewModel
         foreach (var release in _contentReleases)
             release.RefreshCompatibility(installed);
 
-        foreach (var pack in _packs)
+        if (_packs.Count > 0)
         {
-            pack.ShowCompatibility(await PinnedReleasesAsync(_services.ContentIndex, pack.Metadata), installed, _gameReleases);
-            pack.NewerMembers = await ModPackMemberReleases.FindAsync(pack.Metadata, _services.ContentIndex, _services.Settings.ReleaseChannel);
+            // the newer releases of the members come from the snapshot alone, so every player sees the same count (RFC 0080)
+            var snapshot = await _services.IndexSnapshots.GetSnapshotAsync();
+            foreach (var pack in _packs)
+            {
+                pack.ShowCompatibility(await PinnedReleasesAsync(_services.ContentIndex, pack.Metadata), installed, _gameReleases);
+                pack.NewerMembers = ModPackMemberReleases.Find(pack.Metadata, snapshot);
+            }
         }
 
         foreach (var member in PackMembers)
