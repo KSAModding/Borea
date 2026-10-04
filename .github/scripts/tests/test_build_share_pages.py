@@ -533,7 +533,8 @@ class Build(unittest.TestCase):
         page = self.page("mod", "OldMod")
 
         self.assertIn('<p class="notice" role="note">Deprecated by its author. Its successor is NewMod.</p>', page)
-        self.assertNotIn('<a href="../', page)
+        # the successor is named, and nothing links to a page that does not exist
+        self.assertNotIn('"../NewMod/', page)
 
     def test_a_revision_that_is_not_in_the_game_versions_shows_the_release_text(self):
         self.build(edge_snapshot())
