@@ -1170,12 +1170,13 @@ public sealed class PackViewModelTests
 
         var row = await OpenMeasureToolsMemberAsync(harness);
 
-        Assert.True(row.CanUseNewer);
+        Assert.Equal((true, true), (row.OffersUseNewer, row.CanUseNewer));
+        Assert.Equal(harness.Localization.FormatPackMemberUseNewerChip("1.1.10"), row.UseNewerChipText);
         Assert.Equal(harness.Localization.FormatPackMemberUseNewer("1.1.10", "Tools"), row.UseNewerText);
         Assert.Null(row.PinnedInInstanceText);
         // the instance holds KSArmory at the pin too, but the pin is its newest release
         var armory = harness.ViewModel.PackMembers.Single(member => member.ModId == "KSArmory");
-        Assert.Equal((true, false, null), (armory.IsInstalled, armory.CanUseNewer, armory.UseNewerText));
+        Assert.Equal((true, false, false, null, null), (armory.IsInstalled, armory.OffersUseNewer, armory.CanUseNewer, armory.UseNewerText, armory.UseNewerChipText));
     }
 
     [Fact]
@@ -1195,7 +1196,7 @@ public sealed class PackViewModelTests
 
         await ActivateMeasureToolsPackInstanceAsync(harness, "Older", version: "1.1.8");
         row = await OpenMeasureToolsMemberAsync(harness);
-        Assert.Equal((false, null, null), (row.CanUseNewer, row.UseNewerText, row.PinnedInInstanceText));
+        Assert.Equal((false, false, null, null, null), (row.OffersUseNewer, row.CanUseNewer, row.UseNewerText, row.UseNewerChipText, row.PinnedInInstanceText));
     }
 
     [Fact]
@@ -1221,7 +1222,8 @@ public sealed class PackViewModelTests
         await row.UseNewerCommand.ExecuteAsync(null);
 
         Assert.True(row.IsConfirmingInstall);
-        Assert.False(row.CanUseNewer);
+        // the chip stays in the row while the change waits, but it cannot start the change again
+        Assert.Equal((true, false), (row.OffersUseNewer, row.CanUseNewer));
         Assert.Equal(harness.Localization.FormatPackMemberUseNewerConfirm(row.Name, "Tools", "1.1.10"), row.UseNewerConfirmText);
         var replace = row.InstallWarning is null ? harness.Localization.FormatContentReplaceVersion("1.1.9") : harness.Localization.FormatContentReplaceVersionAnyway("1.1.9");
         Assert.StartsWith(replace, row.ConfirmInstallText);
@@ -1380,13 +1382,13 @@ public sealed class PackViewModelTests
     }
 
     [Fact]
-    public async Task UseNewer_MemberThatTheInstancePins_ShowsTheNoteInsteadOfTheButton()
+    public async Task UseNewer_MemberThatTheInstancePins_ShowsThePinnedChipInsteadOfTheUseChip()
     {
         using var harness = await ViewModelHarness.CreateAsync(editSnapshot: WithPacks(MeasureToolsPinPack()));
         var instance = await ActivateMeasureToolsPackInstanceAsync(harness, pinned: true);
         var row = await OpenMeasureToolsMemberAsync(harness);
 
-        Assert.Equal((false, null), (row.CanUseNewer, row.UseNewerText));
+        Assert.Equal((false, false, null, null), (row.OffersUseNewer, row.CanUseNewer, row.UseNewerText, row.UseNewerChipText));
         Assert.Equal(harness.Localization.FormatPackMemberUseNewerPinned("Tools", "1.1.10"), row.PinnedInInstanceText);
 
         await row.UseNewerCommand.ExecuteAsync(null);
@@ -1395,7 +1397,7 @@ public sealed class PackViewModelTests
         var mod = Assert.Single((await harness.Services.Instances.GetByIdAsync(instance.InstanceId))!.Mods);
         Assert.Equal((ModVersion.Parse("1.1.9"), InstallReason.ModPack, true), (mod.Version, mod.Reason, mod.IsPinned));
 
-        // unpinning on the Content tab brings the button back
+        // unpinning on the Content tab brings the chip back
         await harness.ViewModel.ActiveInstance!.OpenCommand.ExecuteAsync(null);
         await harness.ViewModel.ContentGroups.SelectMany(group => group.Items).Single().UnpinCommand.ExecuteAsync(null);
 

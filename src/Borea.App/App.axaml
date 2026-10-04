@@ -431,6 +431,10 @@
         <Style Selector="Border.chip.positive TextBlock">
             <Setter Property="Foreground" Value="{StaticResource Brush.Positive}" />
         </Style>
+        <!-- a muted chip mutes only its icon, because muted text this small is hard to read -->
+        <Style Selector="Border.chip.muted Path.icon">
+            <Setter Property="Stroke" Value="{StaticResource Brush.TextMuted}" />
+        </Style>
 
         <!-- Compatibility chips show a colored dot, and channel chips color their border instead -->
         <Style Selector="Border.chip Ellipse">
@@ -677,6 +681,18 @@
         </Style>
         <Style Selector="Button.chip-button:pointerover /template/ ContentPresenter">
             <Setter Property="Background" Value="{StaticResource Brush.Surface}" />
+        </Style>
+        <!-- a chip button in a list row, with the mono text of the row chips in the accent color -->
+        <Style Selector="Button.chip-button.chip-action TextBlock">
+            <Setter Property="FontFamily" Value="{StaticResource Font.Mono}" />
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="Foreground" Value="{StaticResource Brush.Accent}" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+        <Style Selector="Button.chip-button.chip-action:disabled /template/ ContentPresenter">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderBrush" Value="{StaticResource Brush.BorderStrong}" />
+            <Setter Property="Opacity" Value="0.4" />
         </Style>
         <!-- the back control before a breadcrumb, in the accent colour like the active item of the rail -->
         <Style Selector="Button.back Path.icon">

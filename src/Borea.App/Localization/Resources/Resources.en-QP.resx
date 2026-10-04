@@ -1875,11 +1875,17 @@
   <data name="PackMemberUseNewerFormat" xml:space="preserve">
     <value>Hoist {0} aboard {1}</value>
   </data>
+  <data name="PackMemberUseNewerChipFormat" xml:space="preserve">
+    <value>Hoist {0}</value>
+  </data>
   <data name="PackMemberUseNewerConfirmFormat" xml:space="preserve">
     <value>Cuts {0} loose from the pack o' barrels aboard {1} and swaps it to {2}. Pack updates then leave it be.</value>
   </data>
   <data name="PackMemberUseNewerPinnedFormat" xml:space="preserve">
     <value>Nailed down aboard {0}. Pull the nail on the Booty tab to hoist {1}.</value>
+  </data>
+  <data name="PackMemberPinned" xml:space="preserve">
+    <value>Nailed down</value>
   </data>
   <data name="PackCopyForumList" xml:space="preserve">
     <value>Copy the tavern list</value>

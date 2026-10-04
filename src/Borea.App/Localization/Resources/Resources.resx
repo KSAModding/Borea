@@ -3447,11 +3447,17 @@
   <data name="PackMemberUseNewerFormat" xml:space="preserve">
     <value>Use {0} in {1}</value>
   </data>
+  <data name="PackMemberUseNewerChipFormat" xml:space="preserve">
+    <value>Use {0}</value>
+  </data>
   <data name="PackMemberUseNewerConfirmFormat" xml:space="preserve">
     <value>Detaches {0} from the modpack in {1} and changes it to {2}. Pack updates then leave it alone.</value>
   </data>
   <data name="PackMemberUseNewerPinnedFormat" xml:space="preserve">
     <value>Pinned in {0}. Unpin it on the Content tab to use {1}.</value>
+  </data>
+  <data name="PackMemberPinned" xml:space="preserve">
+    <value>Pinned</value>
   </data>
   <data name="PackCopyForumList" xml:space="preserve">
     <value>Copy forum list</value>

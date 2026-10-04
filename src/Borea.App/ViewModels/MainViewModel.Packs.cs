@@ -175,7 +175,7 @@ public partial class MainViewModel
     /// <summary>
     /// Offers the newer release of a member while the active instance was made from the open pack and holds the member
     /// at the pinned version in files that Borea owns. A release that does not fit the installed game is not offered.
-    /// A member that the instance pins gets a note instead, because the pin has to go first.
+    /// A member that the instance pins gets the Pinned chip instead, whose tooltip says that the pin has to go first.
     /// </summary>
     private void ShowNewerMemberUse()
     {
@@ -1164,7 +1164,10 @@ public sealed partial class PackMemberItem : ObservableObject, IInstallRow
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(NewerVersion))]
     [NotifyPropertyChangedFor(nameof(NewerText))]
+    [NotifyPropertyChangedFor(nameof(OffersUseNewer))]
+    [NotifyPropertyChangedFor(nameof(CanUseNewer))]
     [NotifyPropertyChangedFor(nameof(UseNewerText))]
+    [NotifyPropertyChangedFor(nameof(UseNewerChipText))]
     [NotifyPropertyChangedFor(nameof(UseNewerConfirmText))]
     [NotifyPropertyChangedFor(nameof(PinnedInInstanceText))]
     private ModVersionMetadata? _newerRelease;
@@ -1182,10 +1185,17 @@ public sealed partial class PackMemberItem : ObservableObject, IInstallRow
     /// <summary>True while <see cref="UseNewerInstance"/> holds this mod detached from the pack already.</summary>
     internal bool IsDetachedInInstance { get; private set; }
 
-    /// <summary>"Use 1.1.10 in Main" while the row can change the mod in the active instance to the newer release, or null.</summary>
-    public string? UseNewerText => CanUseNewer ? _owner.Localization.FormatPackMemberUseNewer(NewerVersion!, UseNewerInstance!.Name) : null;
+    /// <summary>True while the row offers to change the mod in the active instance to the newer release, which its newer chip then does.</summary>
+    public bool OffersUseNewer => NewerVersion is not null && UseNewerInstance is not null && !IsPinnedInInstance;
 
-    public bool CanUseNewer => NewerVersion is not null && UseNewerInstance is not null && !IsPinnedInInstance && !IsInstalling && !IsConfirmingInstall;
+    /// <summary>"Use 1.1.10 in Main", the tooltip and name of the chip that offers the newer release, or null.</summary>
+    public string? UseNewerText => OffersUseNewer ? _owner.Localization.FormatPackMemberUseNewer(NewerVersion!, UseNewerInstance!.Name) : null;
+
+    /// <summary>"Use 1.1.10", the text of the chip that offers the newer release, or null.</summary>
+    public string? UseNewerChipText => OffersUseNewer ? _owner.Localization.FormatPackMemberUseNewerChip(NewerVersion!) : null;
+
+    /// <summary>True while the chip that offers the newer release can start the change, which is not while a change waits or runs.</summary>
+    public bool CanUseNewer => OffersUseNewer && !IsInstalling && !IsConfirmingInstall;
 
     /// <summary>
     /// What the confirmation of <see cref="UseNewerText"/> does to the pack, or null while the row offers no change.
@@ -1195,14 +1205,13 @@ public sealed partial class PackMemberItem : ObservableObject, IInstallRow
         ? _owner.Localization.FormatPackMemberUseNewerConfirm(Name, instance.Name, NewerVersion)
         : null;
 
-    /// <summary>The note that a pin keeps the mod at the pinned version, shown instead of <see cref="UseNewerText"/>.</summary>
+    /// <summary>The tooltip of the Pinned chip, which shows instead of the chip that offers the newer release.</summary>
     public string? PinnedInInstanceText => NewerVersion is not null && UseNewerInstance is { } instance && IsPinnedInInstance
         ? _owner.Localization.FormatPackMemberUseNewerPinned(instance.Name, NewerVersion)
         : null;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CanUseNewer))]
-    [NotifyPropertyChangedFor(nameof(UseNewerText))]
     private bool _isInstalling;
 
     [ObservableProperty]
@@ -1228,7 +1237,6 @@ public sealed partial class PackMemberItem : ObservableObject, IInstallRow
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsConfirmingInstall))]
     [NotifyPropertyChangedFor(nameof(CanUseNewer))]
-    [NotifyPropertyChangedFor(nameof(UseNewerText))]
     [NotifyPropertyChangedFor(nameof(ConfirmInstallText))]
     [NotifyPropertyChangedFor(nameof(AddedModsText))]
     [NotifyPropertyChangedFor(nameof(AddedModsToolTip))]
@@ -1238,7 +1246,6 @@ public sealed partial class PackMemberItem : ObservableObject, IInstallRow
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsConfirmingInstall))]
     [NotifyPropertyChangedFor(nameof(CanUseNewer))]
-    [NotifyPropertyChangedFor(nameof(UseNewerText))]
     [NotifyPropertyChangedFor(nameof(AddedModsText))]
     [NotifyPropertyChangedFor(nameof(AddedModsToolTip))]
     private InstallChoices? _choices;
@@ -1308,8 +1315,10 @@ public sealed partial class PackMemberItem : ObservableObject, IInstallRow
         UseNewerInstance = instance;
         IsPinnedInInstance = instance is not null && pinned;
         IsDetachedInInstance = instance is not null && detached;
+        OnPropertyChanged(nameof(OffersUseNewer));
         OnPropertyChanged(nameof(CanUseNewer));
         OnPropertyChanged(nameof(UseNewerText));
+        OnPropertyChanged(nameof(UseNewerChipText));
         OnPropertyChanged(nameof(UseNewerConfirmText));
         OnPropertyChanged(nameof(PinnedInInstanceText));
     }
@@ -1321,6 +1330,7 @@ public sealed partial class PackMemberItem : ObservableObject, IInstallRow
     {
         OnPropertyChanged(nameof(NewerText));
         OnPropertyChanged(nameof(UseNewerText));
+        OnPropertyChanged(nameof(UseNewerChipText));
         OnPropertyChanged(nameof(UseNewerConfirmText));
         OnPropertyChanged(nameof(PinnedInInstanceText));
         OnPropertyChanged(nameof(ConfirmInstallText));
