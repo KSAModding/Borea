@@ -67,7 +67,7 @@ Put that folder where it can stay, for example `%LocalAppData%\Programs\Borea` o
 | macOS, Apple silicon | `Borea-<version>-macos-arm64.tar.gz` | `Borea-Cli-<version>-macos-arm64.tar.gz` |
 
 The builds are not code signed, so the first start of each update takes an extra step on Windows and macOS.
-Signing will be added at some point and is tracked in [issue #76](https://github.com/KSAModding/Borea/issues/76).
+How releases are built, what will be signed and how to check a download is in the [code signing policy](https://ksamodding.github.io/Borea/code-signing.html), and the work to get there is tracked in [issue #678](https://github.com/KSAModding/Borea/issues/678).
 
 ### Windows
 
