@@ -385,6 +385,12 @@
     return null;
   }
 
+  // False for a yanked release and for one whose download is gone (RFC 0078).
+  function offered(release) {
+    var gone = isObject(release.download) && release.download.unavailable_since !== undefined && release.download.unavailable_since !== null;
+    return release.yanked !== true && !gone;
+  }
+
   // The forum line of one pin and its newer release, the way the share page generator writes them.
   function packMember(pin, snapshot) {
     if (!isObject(pin) || !validId(pin.id) || !text(pin.version)) {
@@ -418,7 +424,7 @@
     var channel = channelOf(releases[index]);
     // The releases are in descending SemVer precedence, so every release before the pinned one is newer.
     var newer = releases.slice(0, index).filter(function (release) {
-      return release.yanked !== true && channelOf(release) <= channel && text(release.version);
+      return offered(release) && channelOf(release) <= channel && text(release.version);
     })[0];
     return { line: line, newer: newer ? name + " " + text(newer.version) : null };
   }
