@@ -3459,6 +3459,12 @@
   <data name="PackMemberPinned" xml:space="preserve">
     <value>Angeheftet</value>
   </data>
+  <data name="PackMemberInUseFormat" xml:space="preserve">
+    <value>{0} in Verwendung</value>
+  </data>
+  <data name="PackMemberInUseDetachedFormat" xml:space="preserve">
+    <value>{0} verwendet {1} {2}. Die Mod ist vom Modpack gelöst. Binde sie im Tab Inhalt wieder an das Modpack.</value>
+  </data>
   <data name="PackCopyForumList" xml:space="preserve">
     <value>Forenliste kopieren</value>
   </data>

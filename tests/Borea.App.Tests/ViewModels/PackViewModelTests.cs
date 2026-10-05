@@ -1406,6 +1406,82 @@ public sealed class PackViewModelTests
     }
 
     [Fact]
+    public async Task InUse_MemberThatThePackInstanceHoldsDetachedAtAnotherVersion_ShowsTheVersionInUse()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: WithPacks(MeasureToolsPinPack()));
+
+        // in the detached set of the source
+        await ActivateMeasureToolsPackInstanceAsync(harness, source: new InstanceSource.FromModPack("tools-pack", ModVersion.Parse("1.0.0")).WithDetached(["MeasureTools"]), version: "1.1.10");
+        var row = await OpenMeasureToolsMemberAsync(harness);
+        Assert.Equal(harness.Localization.FormatPackMemberInUse("1.1.10"), row.InUseChipText);
+        Assert.Equal(harness.Localization.FormatPackMemberInUseDetached("Tools", row.Name, "1.1.10"), row.InUseText);
+        Assert.Equal((false, false), (row.IsInstalled, row.OffersUseNewer));
+
+        // installed for another reason than the pack, at an older version
+        var older = (await harness.Services.Instances.CreateAsync("Older", new InstanceSource.FromModPack("tools-pack", ModVersion.Parse("1.0.0")))).Instance;
+        await InstalledContent.AddAsync(harness, "MeasureTools", activate: true, reason: InstallReason.Manual, ownership: ModInstallOwnership.Borea, version: "1.1.8", into: older);
+        await harness.ViewModel.LoadAsync();
+        row = await OpenMeasureToolsMemberAsync(harness);
+        Assert.Equal(harness.Localization.FormatPackMemberInUse("1.1.8"), row.InUseChipText);
+        Assert.Equal(harness.Localization.FormatPackMemberInUseDetached("Older", row.Name, "1.1.8"), row.InUseText);
+    }
+
+    [Fact]
+    public async Task InUse_MemberAtThePinAttachedNotHeldOrInAnotherInstance_ShowsNoVersionInUse()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: WithPacks(MeasureToolsPinPack()));
+
+        // detached, but at the pinned version
+        var instance = await ActivateMeasureToolsPackInstanceAsync(harness);
+        await harness.Services.Instances.UpdateAsync(instance.InstanceId, saved => saved.DetachFromModPack("MeasureTools"));
+        await harness.ViewModel.LoadAsync();
+        var row = await OpenMeasureToolsMemberAsync(harness);
+        Assert.Equal((true, null, null), (row.CanUseNewer, row.InUseChipText, row.InUseText));
+
+        // another version that still follows the pack
+        await ActivateMeasureToolsPackInstanceAsync(harness, "Attached", version: "1.1.8");
+        Assert.Null((await OpenMeasureToolsMemberAsync(harness)).InUseChipText);
+
+        // the instance of the pack does not hold the mod
+        var empty = (await harness.Services.Instances.CreateAsync("Empty", new InstanceSource.FromModPack("tools-pack", ModVersion.Parse("1.0.0")))).Instance;
+        await InstalledContent.AddAsync(harness, "KSArmory", activate: true, reason: InstallReason.Manual, ownership: ModInstallOwnership.Borea, into: empty);
+        await harness.ViewModel.LoadAsync();
+        Assert.Null((await OpenMeasureToolsMemberAsync(harness)).InUseChipText);
+
+        // instances that were not made from this pack
+        await ActivateMeasureToolsPackInstanceAsync(harness, "Custom", InstanceSource.Custom.Value, version: "1.1.10");
+        Assert.Null((await OpenMeasureToolsMemberAsync(harness)).InUseChipText);
+        await ActivateMeasureToolsPackInstanceAsync(harness, "Other pack", new InstanceSource.FromModPack("other-pack", ModVersion.Parse("1.0.0")).WithDetached(["MeasureTools"]), version: "1.1.10");
+        Assert.Null((await OpenMeasureToolsMemberAsync(harness)).InUseChipText);
+    }
+
+    [Fact]
+    public async Task InUse_FollowsTheInstanceReload()
+    {
+        var archive = Archive(("MeasureTools/mod.toml", "name = \"MeasureTools\""));
+        using var harness = await CreateWithMeasureToolsArchiveAsync(archive, MeasureToolsPinPack());
+        await ActivateMeasureToolsPackInstanceAsync(harness);
+        var row = await OpenMeasureToolsMemberAsync(harness);
+        Assert.Null(row.InUseChipText);
+
+        await row.UseNewerCommand.ExecuteAsync(null);
+        await row.ConfirmUseNewerCommand.ExecuteAsync(null);
+
+        Assert.Null(row.InstallError);
+        Assert.Equal(harness.Localization.FormatPackMemberInUse("1.1.10"), row.InUseChipText);
+        Assert.Equal(harness.Localization.FormatPackMemberInUseDetached("Tools", row.Name, "1.1.10"), row.InUseText);
+
+        // removing the mod on the Content tab takes the chip away
+        await harness.ViewModel.ActiveInstance!.OpenCommand.ExecuteAsync(null);
+        var content = harness.ViewModel.ContentGroups.SelectMany(group => group.Items).Single();
+        content.BeginRemoveCommand.Execute(null);
+        await content.ConfirmRemoveCommand.ExecuteAsync(null);
+
+        Assert.Empty((await harness.Services.Instances.GetByIdAsync(harness.ViewModel.ActiveInstance!.InstanceId))!.Mods);
+        Assert.Equal((null, null), (row.InUseChipText, row.InUseText));
+    }
+
+    [Fact]
     public async Task PackUpdate_FailedDownload_KeepsTheOldSourceTheDroppedModAndTheNotice()
     {
         using var harness = await ViewModelHarness.CreateAsync(editSnapshot: WithPacks(ToolsPackVersions()));

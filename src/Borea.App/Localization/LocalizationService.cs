@@ -2257,6 +2257,12 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string PackMemberPinned => Resources.PackMemberPinned;
 
+    public string FormatPackMemberInUse(string version)
+        => string.Format(CultureInfo.CurrentCulture, Resources.PackMemberInUseFormat, version);
+
+    public string FormatPackMemberInUseDetached(string instance, string name, string version)
+        => string.Format(CultureInfo.CurrentCulture, Resources.PackMemberInUseDetachedFormat, instance, name, version);
+
     public string PackCopyForumList => Resources.PackCopyForumList;
 
     public string PackMakeNextVersion => Resources.PackMakeNextVersion;

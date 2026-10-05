@@ -48,6 +48,8 @@ public sealed class LocalizationSurfaceTests : IDisposable
         Assert.Equal("Replace 0.7.3 in Main", service.FormatContentReplaceVersionIn("0.7.3", "Main"));
         Assert.Equal("Use 1.1.10 in Main", service.FormatPackMemberUseNewer("1.1.10", "Main"));
         Assert.Equal("Use 1.1.10", service.FormatPackMemberUseNewerChip("1.1.10"));
+        Assert.Equal("1.1.10 in use", service.FormatPackMemberInUse("1.1.10"));
+        Assert.Equal("Main uses MeasureTools 1.1.10, detached from the modpack. Attach it again on the Content tab.", service.FormatPackMemberInUseDetached("Main", "MeasureTools", "1.1.10"));
         Assert.Equal("1 of 3 selected", service.FormatGameSaveProfileSelected(1, 3));
         Assert.Equal("1 mod", service.FormatDiscoverModCount(1));
         Assert.Equal("1 modpack", service.FormatDiscoverPackCount(1));

@@ -237,6 +237,13 @@
                                                             <TextBlock Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.PackMemberPinned}" />
                                                         </StackPanel>
                                                     </Border>
+                                                    <!-- the version that the active instance made from this pack uses after it detached the mod -->
+                                                    <Border Classes="chip muted" IsVisible="{Binding InUseChipText, Converter={x:Static ObjectConverters.IsNotNull}}" ToolTip.Tip="{Binding InUseText}" AutomationProperties.Name="{Binding InUseText}">
+                                                        <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                                                            <Path Classes="icon size-16" Data="{StaticResource Icon.ArrowsLeftRight}" VerticalAlignment="Center" />
+                                                            <TextBlock Text="{Binding InUseChipText}" MaxWidth="200" TextTrimming="CharacterEllipsis" />
+                                                        </StackPanel>
+                                                    </Border>
                                                     <Border Classes="chip" Classes.untested="{Binding IsUntested}" Classes.incompatible="{Binding IsIncompatible}" IsVisible="{Binding FitText, Converter={x:Static ObjectConverters.IsNotNull}}" ToolTip.Tip="{Binding FitText}">
                                                         <TextBlock Text="{Binding CompatibilityText}" />
                                                     </Border>

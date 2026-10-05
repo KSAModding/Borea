@@ -3459,6 +3459,12 @@
   <data name="PackMemberPinned" xml:space="preserve">
     <value>Pinned</value>
   </data>
+  <data name="PackMemberInUseFormat" xml:space="preserve">
+    <value>{0} in use</value>
+  </data>
+  <data name="PackMemberInUseDetachedFormat" xml:space="preserve">
+    <value>{0} uses {1} {2}, detached from the modpack. Attach it again on the Content tab.</value>
+  </data>
   <data name="PackCopyForumList" xml:space="preserve">
     <value>Copy forum list</value>
   </data>

@@ -1887,6 +1887,12 @@
   <data name="PackMemberPinned" xml:space="preserve">
     <value>Nailed down</value>
   </data>
+  <data name="PackMemberInUseFormat" xml:space="preserve">
+    <value>{0} aboard</value>
+  </data>
+  <data name="PackMemberInUseDetachedFormat" xml:space="preserve">
+    <value>{0} sails with {1} {2}, cut loose from the pack o' barrels. Lash it back on the Booty tab.</value>
+  </data>
   <data name="PackCopyForumList" xml:space="preserve">
     <value>Copy the tavern list</value>
   </data>

@@ -176,6 +176,7 @@ public partial class MainViewModel
     /// Offers the newer release of a member while the active instance was made from the open pack and holds the member
     /// at the pinned version in files that Borea owns. A release that does not fit the installed game is not offered.
     /// A member that the instance pins gets the Pinned chip instead, whose tooltip says that the pin has to go first.
+    /// A member that the instance holds detached from the pack at another version gets the version it uses.
     /// </summary>
     private void ShowNewerMemberUse()
     {
@@ -183,6 +184,13 @@ public partial class MainViewModel
         var source = instance?.Source is InstanceSource.FromModPack fromPack && SelectedPack is { } pack && ModIds.Equals(fromPack.ModPackId, pack.PackId) ? fromPack : null;
         foreach (var member in PackMembers)
         {
+            var inUse = source is null
+                ? null
+                : instance!.Mods.FirstOrDefault(installed => ModIds.Equals(installed.ModId, member.ModId)
+                    && installed.Version != member.Pin.Version
+                    && (installed.Reason != InstallReason.ModPack || source.Detached.Contains(installed.ModId)));
+            member.ShowInUse(inUse is null ? null : ActiveInstance, inUse?.Version.ToString());
+
             var mod = source is not null && member.NewerRelease is { } newer && Borea.Core.Game.Compatibility.Evaluate(newer, _compatibilityGame) != GameCompatibility.Incompatible
                 ? instance!.Mods.FirstOrDefault(installed => ModIds.Equals(installed.ModId, member.ModId)
                     && installed.Version == member.Pin.Version
@@ -1210,6 +1218,18 @@ public sealed partial class PackMemberItem : ObservableObject, IInstallRow
         ? _owner.Localization.FormatPackMemberUseNewerPinned(instance.Name, NewerVersion)
         : null;
 
+    private InstanceItem? _inUseInstance;
+
+    private string? _inUseVersion;
+
+    /// <summary>"1.1.10 in use" while the active instance made from this pack holds this mod detached at another version, or null.</summary>
+    public string? InUseChipText => _inUseVersion is { } version ? _owner.Localization.FormatPackMemberInUse(version) : null;
+
+    /// <summary>The tooltip and name of the chip with <see cref="InUseChipText"/>, which names the instance and says how to attach the mod again.</summary>
+    public string? InUseText => _inUseInstance is { } instance && _inUseVersion is { } version
+        ? _owner.Localization.FormatPackMemberInUseDetached(instance.Name, Name, version)
+        : null;
+
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CanUseNewer))]
     private bool _isInstalling;
@@ -1323,6 +1343,16 @@ public sealed partial class PackMemberItem : ObservableObject, IInstallRow
         OnPropertyChanged(nameof(PinnedInInstanceText));
     }
 
+    /// <param name="instance">The instance that holds this mod detached from the pack at another version, or null.</param>
+    /// <param name="version">The version that instance holds, or null.</param>
+    internal void ShowInUse(InstanceItem? instance, string? version)
+    {
+        _inUseInstance = instance;
+        _inUseVersion = instance is null ? null : version;
+        OnPropertyChanged(nameof(InUseChipText));
+        OnPropertyChanged(nameof(InUseText));
+    }
+
     internal void RefreshCompatibility(GameVersion? installed)
         => Compatibility = _release is null ? GameCompatibility.Unknown : Borea.Core.Game.Compatibility.Evaluate(_release, installed);
 
@@ -1333,6 +1363,8 @@ public sealed partial class PackMemberItem : ObservableObject, IInstallRow
         OnPropertyChanged(nameof(UseNewerChipText));
         OnPropertyChanged(nameof(UseNewerConfirmText));
         OnPropertyChanged(nameof(PinnedInInstanceText));
+        OnPropertyChanged(nameof(InUseChipText));
+        OnPropertyChanged(nameof(InUseText));
         OnPropertyChanged(nameof(ConfirmInstallText));
         OnPropertyChanged(nameof(AddedModsText));
         OnPropertyChanged(nameof(AddedModsToolTip));

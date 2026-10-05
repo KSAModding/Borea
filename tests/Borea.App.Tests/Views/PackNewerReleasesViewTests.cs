@@ -208,6 +208,79 @@ public sealed class PackNewerReleasesViewTests
         Assert.Empty(after);
     }
 
+    [Theory]
+    [InlineData(860)]
+    [InlineData(1280)]
+    [InlineData(1920)]
+    public async Task PackPage_ShowsTheInUseChipOfADetachedMemberInsideItsRow(double windowWidth)
+    {
+        using var harness = await CreateWithPackInstanceAsync(afcInUse: "0.7.5");
+        var member = harness.ViewModel.PackMembers.Single(member => member.ModId == "AdvancedFlightComputer");
+        Assert.Equal((false, false), (member.IsInstalled, member.OffersUseNewer));
+
+        var problems = await RenderAsync(harness, () => new PackPage(), windowWidth, page =>
+        {
+            var text = Shown(page, member.InUseChipText!);
+            var chip = text.GetVisualAncestors().OfType<Border>().First(border => border.Classes.Contains("chip"));
+            var row = Row(text);
+            var column = row.GetVisualDescendants().OfType<WrapPanel>().First();
+            var chips = row.GetVisualDescendants().OfType<Border>().Where(border => border.IsEffectivelyVisible && border.Classes.Contains("chip")).ToList();
+            // the newer chip stays, and the in use chip looks like the Pinned chip, with its text level with and in the color of the other chip texts
+            var newer = Shown(page, member.NewerText!);
+            var newerChip = newer.GetVisualAncestors().OfType<Border>().First(border => border.Classes.Contains("chip"));
+            var level = Math.Abs(text.TranslatePoint(new Point(0, 0), chip)!.Value.Y - newer.TranslatePoint(new Point(0, 0), newerChip)!.Value.Y) < 0.5;
+            var color = (text.Foreground as ISolidColorBrush)?.Color == (newer.Foreground as ISolidColorBrush)?.Color;
+            var corner = chip.TranslatePoint(new Point(0, 0), column)!.Value;
+            var lines = chips.Select(border => Math.Round(border.TranslatePoint(new Point(0, 0), column)!.Value.Y)).Distinct().Count();
+            var shownInstalled = row.GetVisualDescendants().OfType<TextBlock>().Any(block => block.IsEffectivelyVisible && block.Text == harness.Localization.DiscoverInstalled);
+            var shownUse = row.GetVisualDescendants().OfType<Button>().Any(button => button.IsEffectivelyVisible && button.Classes.Contains("chip-button"));
+            return
+            [
+                .. Outside(row, text),
+                .. corner.X >= -0.5 && corner.X + chip.Bounds.Width <= column.Bounds.Width + 0.5 ? [] : new[] { "the in use chip is outside the chip column" },
+                .. chip.Classes.Contains("muted") ? [] : new[] { "the in use chip is not muted like the Pinned chip" },
+                .. level ? [] : new[] { "the in use text is not level with the text of the other chips" },
+                .. color ? [] : new[] { "the in use text has another color than the text of the other chips" },
+                .. Math.Abs(chip.Bounds.Height - newerChip.Bounds.Height) < 0.5 ? [] : new[] { "the in use chip does not match the chips of its row" },
+                .. windowWidth >= 1280 && lines > 1 ? new[] { "the chips wrap although the window is wide" } : [],
+                .. ToolTip.GetTip(chip) as string == member.InUseText && AutomationProperties.GetName(chip) == member.InUseText ? [] : new[] { "the in use chip does not name the instance" },
+                .. shownInstalled ? new[] { "the row shows Installed" } : [],
+                .. shownUse ? new[] { "the row offers the newer release" } : [],
+                .. page.GetVisualDescendants().OfType<TextBlock>().Where(block => block.IsEffectivelyVisible && block.Text == member.InUseText).Select(block => $"line: {block.Text}"),
+            ];
+        });
+
+        Assert.Empty(problems);
+    }
+
+    [Theory]
+    [InlineData(860)]
+    [InlineData(1280)]
+    [InlineData(1920)]
+    public async Task PackPage_TrimsALongVersionInUseInsideItsChipColumn(double windowWidth)
+    {
+        // 0.7.4 becomes a long pre-release of 0.7.5, so 0.7.5 stays the newer release
+        const string LongVersion = "0.7.5-release-candidate.20261005.build-1234567890";
+        using var harness = await CreateWithPackInstanceAsync(afcInUse: LongVersion, editSnapshot: json => Reversion(json, "AdvancedFlightComputer", "0.7.4", LongVersion));
+        var member = harness.ViewModel.PackMembers.Single(member => member.ModId == "AdvancedFlightComputer");
+
+        var problems = await RenderAsync(harness, () => new PackPage(), windowWidth, page =>
+        {
+            var text = Shown(page, member.InUseChipText!);
+            var chip = text.GetVisualAncestors().OfType<Border>().First(border => border.Classes.Contains("chip"));
+            var column = Row(text).GetVisualDescendants().OfType<WrapPanel>().First();
+            var corner = chip.TranslatePoint(new Point(0, 0), column)!.Value;
+            return
+            [
+                .. corner.X >= -0.5 && corner.X + chip.Bounds.Width <= column.Bounds.Width + 0.5 ? [] : new[] { "the in use chip is outside the chip column" },
+                .. text.TextLayout.TextLines.Any(line => line.HasCollapsed) ? [] : new[] { "the long version in use is not trimmed" },
+                .. (ToolTip.GetTip(chip) as string)?.Contains(LongVersion, StringComparison.Ordinal) == true ? [] : new[] { "the tooltip does not show the full version" },
+            ];
+        });
+
+        Assert.Empty(problems);
+    }
+
     /// <summary>A pack of three mods where two have a newer release.</summary>
     private static async Task<ViewModelHarness> CreateAsync()
     {
@@ -225,16 +298,23 @@ public sealed class PackNewerReleasesViewTests
     /// MeasureTools. The game is 2026.9.7.5402, so the pinned AdvancedFlightComputer 0.7.3 is untested and its row
     /// shows the use chip, Untested and Installed. KSArmory has a long name.
     /// </summary>
-    private static async Task<ViewModelHarness> CreateWithPackInstanceAsync()
+    /// <param name="afcInUse">The version of AdvancedFlightComputer that the instance holds detached from the pack, or null to hold it at the pin.</param>
+    /// <param name="editSnapshot">Changes the index snapshot after the pack is in it.</param>
+    private static async Task<ViewModelHarness> CreateWithPackInstanceAsync(string? afcInUse = null, Func<string, string>? editSnapshot = null)
     {
         var packs = PackViewModelTests.WithPacks(PackViewModelTests.Pack(
             "starter-pack",
             "Starter Pack",
             PackViewModelTests.Version("1.0.0", PackViewModelTests.Pin("AdvancedFlightComputer", "0.7.3"), PackViewModelTests.Pin("KSArmory", "0.8.44"), PackViewModelTests.Pin("MeasureTools", "1.1.9"))));
-        var harness = await ViewModelHarness.CreateAsync(editSnapshot: snapshot => Rename(packs(snapshot), "KSArmory", LongName));
+        var harness = await ViewModelHarness.CreateAsync(editSnapshot: snapshot =>
+        {
+            var edited = Rename(packs(snapshot), "KSArmory", LongName);
+            return editSnapshot?.Invoke(edited) ?? edited;
+        });
         var viewModel = harness.ViewModel;
-        var instance = (await harness.Services.Instances.CreateAsync("Starter", new InstanceSource.FromModPack("starter-pack", ModVersion.Parse("1.0.0")))).Instance;
-        instance = await InstalledContent.AddAsync(harness, "AdvancedFlightComputer", activate: true, reason: InstallReason.ModPack, ownership: ModInstallOwnership.Borea, version: "0.7.3", into: instance);
+        var source = new InstanceSource.FromModPack("starter-pack", ModVersion.Parse("1.0.0"));
+        var instance = (await harness.Services.Instances.CreateAsync("Starter", afcInUse is null ? source : source.WithDetached(["AdvancedFlightComputer"]))).Instance;
+        instance = await InstalledContent.AddAsync(harness, "AdvancedFlightComputer", activate: true, reason: afcInUse is null ? InstallReason.ModPack : InstallReason.Manual, ownership: ModInstallOwnership.Borea, version: afcInUse ?? "0.7.3", into: instance);
         await InstalledContent.AddAsync(harness, "MeasureTools", activate: true, reason: InstallReason.ModPack, ownership: ModInstallOwnership.Borea, version: "1.1.9", into: instance);
         await harness.Services.Instances.UpdateAsync(instance.InstanceId, saved => saved.SetPinned("MeasureTools", true));
         await viewModel.LoadAsync();
@@ -257,6 +337,15 @@ public sealed class PackNewerReleasesViewTests
         listing["authored"]!["name"] = name;
         foreach (var release in listing["releases"]!.AsArray())
             release!["listing"]!["name"] = name;
+        return root.ToJsonString();
+    }
+
+    /// <summary>Gives the release <paramref name="from"/> of <paramref name="modId"/> the version <paramref name="to"/>.</summary>
+    private static string Reversion(string json, string modId, string from, string to)
+    {
+        var root = JsonNode.Parse(json)!;
+        var listing = root["listings"]!.AsArray().Single(node => (string?)node!["id"] == modId)!;
+        listing["releases"]!.AsArray().Single(release => (string?)release!["version"] == from)!["version"] = to;
         return root.ToJsonString();
     }
 
