@@ -620,6 +620,7 @@ jobs:
           ### First start
 
           These builds are not code signed, so the first start might take an extra step on Windows and macOS. The README has the long explanation.
+          Code signing policy: https://ksamodding.github.io/Borea/code-signing.html
 
           **Windows.** Right-click the zip, open Properties and select Unblock.
           Then unpack the App archive and start `borea.exe`, or run `.\borea.exe --help` in PowerShell in the unpacked folder of either archive.
@@ -664,7 +665,8 @@ jobs:
           cat >> body.md <<'EOF'
           ```
 
-          Signing will come in the future and is tracked in https://github.com/KSAModding/Borea/issues/76.
+          Signing is prepared in https://github.com/KSAModding/Borea/issues/678. Until it is in place, the checksums and the attestation above are how a file is checked.
+          Code signing policy: https://ksamodding.github.io/Borea/code-signing.html
 
           EOF
           cat generated.md >> body.md

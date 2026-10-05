@@ -225,7 +225,7 @@ section p {
 @media (min-width: 760px) {
   section {
     display: grid;
-    grid-template-columns: 200px 1fr;
+    grid-template-columns: 200px minmax(0, 1fr);
     column-gap: 40px;
     align-items: baseline;
   }
