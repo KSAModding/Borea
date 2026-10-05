@@ -947,7 +947,7 @@ def render(page: Page, site_url: str = SITE_URL) -> str:
   </main>
 
   <footer class="column">
-    <p class="meta"><a href="https://github.com/KSAModding/Borea/blob/main/LICENSE">MIT licensed</a> &middot; <a href="{root}code-signing.html">Code signing</a> &middot; Community project, not affiliated with RocketWerkz.</p>
+    <p class="meta"><a href="https://github.com/KSAModding/Borea/blob/main/LICENSE">MIT licensed</a> &middot; <a href="{root}code-signing.html">Code signing policy</a> &middot; <a href="{root}privacy.html">Privacy</a> &middot; Community project, not affiliated with RocketWerkz.</p>
   </footer>
 </body>
 </html>

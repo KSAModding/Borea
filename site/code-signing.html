@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Code signing - Borea</title>
+  <title>Code signing policy - Borea</title>
   <meta name="description" content="How Borea release builds are produced, who may approve them, what is signed, and how to verify a download.">
   <meta name="theme-color" content="#171717">
   <meta property="og:title" content="Borea code signing policy">
@@ -21,7 +21,7 @@
   </header>
   <main>
     <div class="hero listing">
-      <h1>Code signing</h1>
+      <h1>Code signing policy</h1>
       <p class="tagline">How a Borea release is built, who approves it, and how you can check the files you downloaded.</p>
     </div>
 
@@ -30,7 +30,8 @@
         <h2>Status</h2>
         <div class="prose">
           <p>Borea releases are <strong>not code signed yet</strong>. Windows and macOS therefore warn on the first start of each version, and the README explains the extra step.</p>
-          <p>This page describes how releases are produced today and the rules signing will follow once a certificate is in place. It is the project's code signing policy, and it is kept current.</p>
+          <p>This page describes how releases are produced today and the rules signing will follow once a certificate is in place.</p>
+          <p>Windows releases will be signed through the open source program of the <a href="https://signpath.org">SignPath Foundation</a>. A signed build then names SignPath Foundation as its publisher, not an individual. Windows can still warn about the first signed versions, because its reputation for a new certificate grows with the number of people who download a build.</p>
         </div>
       </section>
 
@@ -54,7 +55,7 @@
             <li>Pre-releases, meaning any tag with a hyphen such as <code>v0.5.0-beta.1</code>, stay unsigned. They are test builds for developers.</li>
             <li>macOS builds are ad-hoc signed by the SDK during the build and are not notarised.</li>
             <li>Signing happens inside the release workflow, after the tests and before publishing. A release that cannot be signed is either not published or published unsigned and said so in its notes, never published as if it had been signed.</li>
-            <li>No private key exists on any maintainer's computer. Signing is requested by the workflow and performed by the signing service.</li>
+            <li>No private key exists on any maintainer's computer. The release workflow requests the signature and the signing service performs it.</li>
           </ul>
         </div>
       </section>
@@ -64,12 +65,12 @@
         <div class="prose">
           <p>The KSAModding organisation requires two factor authentication for every member.</p>
           <ul>
-            <li><strong>Authors</strong> are the Borea maintainers. They may change the source and merge their own work.</li>
-            <li><strong>Reviewers</strong> are maintainers. A contribution from anyone who is not a maintainer is reviewed by a maintainer before it is merged.</li>
-            <li><strong>Approvers</strong> are the maintainers trusted to decide that a given release may be signed. Every signing request needs the manual approval of an approver, and more than one person holds the role so no release depends on a single account.</li>
+            <li><strong>Authors</strong> may change the source and merge their own work: <a href="https://github.com/averageksp">@averageksp</a>, <a href="https://github.com/Maximilian-Nesslauer">@Maximilian-Nesslauer</a>, <a href="https://github.com/MrJeranimo">@MrJeranimo</a>.</li>
+            <li><strong>Reviewers</strong> review every contribution from someone who is not an author, before it is merged: the authors above.</li>
+            <li><strong>Approvers</strong> decide that a given release may be signed, and every signing request needs the manual approval of one of them: <a href="https://github.com/averageksp">@averageksp</a>, <a href="https://github.com/Maximilian-Nesslauer">@Maximilian-Nesslauer</a>.</li>
           </ul>
-          <p>A signing request is submitted by the release workflow, not by a person, so no one can submit and sign a build on their own.</p>
-          <p>The maintainers are listed in the <a href="https://github.com/KSAModding/Borea/graphs/contributors">repository</a>, and the working rules are in <a href="https://github.com/KSAModding/Borea/blob/main/CONTRIBUTING.md">CONTRIBUTING.md</a>.</p>
+          <p>A release starts when an approver pushes a version tag. The owners of the KSAModding organisation can push one as well, and such a release still reaches nothing signed without the manual approval of an approver. The signing request itself always comes from the release workflow and never from a person.</p>
+          <p>The same rules for contributors are in <a href="https://github.com/KSAModding/Borea/blob/main/CONTRIBUTING.md">CONTRIBUTING.md</a>.</p>
         </div>
       </section>
 
@@ -83,8 +84,17 @@ Get-FileHash .\Borea-0.4.0-win-x64.zip -Algorithm SHA256
 # Linux and macOS
 shasum -a 256 Borea-0.4.0-linux-x64.tar.gz</code></pre>
           <p>Build provenance ties each file to the workflow run that produced it, and the <a href="https://cli.github.com/">GitHub CLI</a> checks it:</p>
-<pre><code>gh attestation verify Borea-0.4.0-win-x64.zip --repo KSAModding/Borea</code></pre>
+<pre><code>gh attestation verify Borea-0.4.0-win-x64.zip --repo KSAModding/Borea \
+  --signer-workflow KSAModding/Borea/.github/workflows/release.yml</code></pre>
+          <p>Without <code>--signer-workflow</code>, an attestation from any workflow of the repository would pass.</p>
           <p>Borea is only released here. A Borea build offered anywhere else is not ours, whatever it is signed with.</p>
+        </div>
+      </section>
+
+      <section>
+        <h2>What Borea contacts</h2>
+        <div class="prose">
+          <p>Borea is a desktop program that keeps its data on your computer. It has no account of its own, it sends no usage data, and what it fetches by itself is listed in the <a href="privacy.html">privacy statement</a>.</p>
         </div>
       </section>
 
@@ -98,7 +108,7 @@ shasum -a 256 Borea-0.4.0-linux-x64.tar.gz</code></pre>
   </main>
 
   <footer class="column">
-    <p class="meta"><a href="https://github.com/KSAModding/Borea/blob/main/LICENSE">MIT licensed</a> &middot; <a href="./">Borea home</a> &middot; Community project, not affiliated with RocketWerkz.</p>
+    <p class="meta"><a href="https://github.com/KSAModding/Borea/blob/main/LICENSE">MIT licensed</a> &middot; <a href="./">Borea home</a> &middot; <a href="privacy.html">Privacy</a> &middot; Community project, not affiliated with RocketWerkz.</p>
   </footer>
 </body>
 </html>

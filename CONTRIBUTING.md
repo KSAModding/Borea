@@ -20,9 +20,9 @@ The continuous-integration checks run on Windows, Linux, and macOS.
 
 A maintainer may merge their own work. A pull request from anyone who is not a maintainer is reviewed by a maintainer before it is merged.
 
-Releases are built only by the `release` workflow, from a tag, and once Borea is code signed every signing request needs the manual approval of a maintainer who holds the approver role. More than one person holds it, so no release waits on a single account. The request itself is submitted by the workflow and not by a person.
+Releases are built only by the `release` workflow, from a tag. Once Borea is code signed, every signing request needs the manual approval of an approver, and the request itself comes from the workflow and not from a person.
 
-The [code signing policy](https://ksamodding.github.io/Borea/code-signing.html) says the same thing for readers outside the project, and it is the page to update when any of this changes.
+The [code signing policy](https://ksamodding.github.io/Borea/code-signing.html) names who holds each role and who may start a release. It is the page to update when any of that changes.
 
 The KSAModding organisation requires two factor authentication for every member.
 

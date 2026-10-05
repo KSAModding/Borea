@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Privacy - Borea</title>
+  <meta name="description" content="What Borea stores on your computer, which servers it contacts, and how to turn each of those off.">
+  <meta name="theme-color" content="#171717">
+  <meta property="og:title" content="Borea privacy statement">
+  <meta property="og:description" content="What Borea stores, which servers it contacts, and how to turn each of those off.">
+  <meta property="og:image" content="https://ksamodding.github.io/Borea/img/icon.png">
+  <meta property="og:type" content="website">
+  <meta name="twitter:card" content="summary">
+  <link rel="icon" href="favicon.ico">
+  <link rel="preload" href="fonts/IBMPlexSans-SemiBold.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="column top">
+    <a class="brand" href="./"><img src="img/icon.png" width="28" height="28" alt="">Borea</a>
+  </header>
+  <main>
+    <div class="hero listing">
+      <h1>Privacy</h1>
+      <p class="tagline">Borea has no account, no analytics and no server of its own. This page lists every server it contacts and how to stop each one.</p>
+    </div>
+
+    <div class="column">
+      <section>
+        <h2>In short</h2>
+        <div class="prose">
+          <ul>
+            <li>Borea collects no usage data, no telemetry and no crash reports, and it sends nothing about you anywhere.</li>
+            <li>Your instances, mods, settings, logs and backups stay in folders on your computer. Nothing is uploaded.</li>
+            <li>The requests below are what a mod manager needs: the list of mods, the files you choose to install, and an update check.</li>
+            <li>Every request carries Borea's name and version as its user agent, for example <code>Borea/0.4.0 (+https://github.com/KSAModding/Borea)</code>, and nothing else that identifies you. Each service sees your IP address, as with any download.</li>
+          </ul>
+        </div>
+      </section>
+
+      <section>
+        <h2>What Borea contacts by itself</h2>
+        <div class="prose">
+          <p>These run without you asking, and most of them can be switched off.</p>
+          <ul>
+            <li><strong>The content index</strong>, served from GitHub Pages (<a href="https://docs.github.com/privacy">privacy</a>). The list of mods, packs and their releases, fetched at start and when you refresh Discover. This is what Borea is for, so it has no switch. Without it the app shows what it downloaded last.</li>
+            <li><strong>Announcements</strong>, from GitHub (<a href="https://docs.github.com/privacy">privacy</a>). Short posts from the KSAModding team on Home. Off with Settings, General, "Show news from the KSAModding team".</li>
+            <li><strong>The Borea releases</strong>, from <a href="https://github.com">GitHub</a> (<a href="https://docs.github.com/privacy">privacy</a>). The update check at start, and the download when you update. Off with Settings, General, "Check for updates at start". Installing an update is always something you confirm.</li>
+            <li><strong>The KSA version list</strong>, from GitHub (<a href="https://docs.github.com/privacy">privacy</a>). The order of game builds, so Borea can tell which mod version fits which build. No switch. It is one small static file and the request says nothing about your install.</li>
+            <li><strong>The KSA master server</strong> of <a href="https://rocketwerkz.com">RocketWerkz</a>. The current public build of the game, so Borea can tell you that your install is behind. Asked once per start, and only when a KSA install was found. No switch yet.</li>
+            <li><strong>Listing images</strong>, from the hosts the mod authors chose. The icons and screenshots on a listing. On by default, and each request tells that host your IP address, which the setting says too. Off with Settings, General, "Load images from author hosts".</li>
+          </ul>
+        </div>
+      </section>
+
+      <section>
+        <h2>What Borea contacts because you asked</h2>
+        <div class="prose">
+          <ul>
+            <li><strong>Mod downloads.</strong> Installing a mod downloads it from the host its listing names, usually GitHub or <a href="https://spacedock.info">SpaceDock</a> (<a href="https://spacedock.info/privacy">privacy</a>). That host sees the download.</li>
+            <li><strong>Signing in to GitHub.</strong> Only if you choose to, for publishing a listing or for the steward tools. Borea uses GitHub's device flow, so your password never reaches Borea, and the token it receives goes into your system's secret store. "Stay signed in on this computer" in Settings, General decides whether it survives a restart, and you can revoke it at any time in your GitHub settings.</li>
+            <li><strong>The listing tool.</strong> Publishing a listing opens a pull request on the content index with the data you entered, which is public. It also reads the prefix of the forum thread you give, from <a href="https://forums.ahwoo.com">forums.ahwoo.com</a>, to suggest a tag.</li>
+            <li><strong>Links.</strong> Opening a link from inside Borea hands it to your browser.</li>
+          </ul>
+        </div>
+      </section>
+
+      <section>
+        <h2>What stays on your computer</h2>
+        <div class="prose">
+          <p>Borea keeps its settings, its instances, the mods it installed, its task history, its logs and its backups in its own folders, next to the game's own data. Nothing in them is sent anywhere. Removing those folders removes everything Borea knows.</p>
+          <p>The CLI behaves the same way as the App, and it reads the same settings.</p>
+        </div>
+      </section>
+
+      <section>
+        <h2>Questions</h2>
+        <div class="prose">
+          <p>If something here does not match what you see, or you find a request that is not listed, open an issue in the <a href="https://github.com/KSAModding/Borea/issues">tracker</a>, or report it privately through <a href="https://github.com/KSAModding/Borea/blob/main/SECURITY.md">SECURITY.md</a> if you would rather not do that in public.</p>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <footer class="column">
+    <p class="meta"><a href="https://github.com/KSAModding/Borea/blob/main/LICENSE">MIT licensed</a> &middot; <a href="./">Borea home</a> &middot; <a href="code-signing.html">Code signing policy</a> &middot; Community project, not affiliated with RocketWerkz.</p>
+  </footer>
+</body>
+</html>
