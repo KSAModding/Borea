@@ -541,6 +541,13 @@ def channel_of(release: dict) -> int:
     return CHANNELS["stable"] if status is None else CHANNELS.get(str(status).lower(), DEV_CHANNEL)
 
 
+def offered(release: dict) -> bool:
+    """False for a yanked release and for one whose download is gone (RFC 0078), as ModVersionMetadata.IsOffered."""
+    download = release.get("download")
+    gone = isinstance(download, dict) and download.get("unavailable_since") is not None
+    return release.get("yanked") is not True and not gone
+
+
 def forum_link(authored: dict) -> str | None:
     links = authored.get("links")
     found = [web_url(value) for key, value in links.items() if str(key).lower() == "forums"] if isinstance(links, dict) else []
@@ -550,8 +557,9 @@ def forum_link(authored: dict) -> str | None:
 def pack_member(pin, snapshot: Snapshot) -> tuple[str, str | None] | None:
     """The forum line of one pin and its newer release, or None for an entry that is no pin.
 
-    ModPackForumList in Borea.Core writes the same line. A newer release counts when the channel of the pinned
-    release offers it, which is what ModPackMemberReleases finds for a player on the stable channel.
+    ModPackForumList in Borea.Core writes the same line. A newer release counts by the "Newer releases" rule of
+    RFC 0080 that ModPackMemberReleases.NewerRelease in Borea.Core uses: it is not yanked, its download is not gone
+    (RFC 0078), and it is at least as stable as the pinned release.
     """
     if not isinstance(pin, dict) or not valid_id(pin.get("id")) or text(pin.get("version")) is None:
         return None
@@ -576,7 +584,7 @@ def pack_member(pin, snapshot: Snapshot) -> tuple[str, str | None] | None:
     channel = channel_of(releases[index])
     # The releases are in descending SemVer precedence, so every release before the pinned one is newer.
     newer = next((release for release in releases[:index]
-                  if release.get("yanked") is not True and channel_of(release) <= channel and text(release.get("version"))), None)
+                  if offered(release) and channel_of(release) <= channel and text(release.get("version"))), None)
     return " - ".join(facts), f"{name} {text(newer['version'])}" if newer else None
 
 

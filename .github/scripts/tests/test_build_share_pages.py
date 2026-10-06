@@ -49,13 +49,16 @@ def edge_snapshot() -> dict:
 
 
 def member_snapshot() -> dict:
-    """The fixture with a pack that pins an outdated, an unlisted and a hostile member."""
+    """The fixture with a pack that pins an outdated, an unlisted and a hostile member, and one whose newer release is gone."""
     document = snapshot()
     listings = {entry["id"]: entry for entry in document["listings"]}
     afc = listings["AdvancedFlightComputer"]["releases"]
     afc[2]["download"] = {"url": "https://example.org/afc/0.7.5.zip"}
     afc.insert(1, {"id": "AdvancedFlightComputer", "version": "0.7.7", "release_status": "stable"})
     listings["StarMap"]["authored"]["links"]["Forums"] = "https://forums.ahwoo.com/threads/starmap.384/"
+    listings["StarMap"]["releases"].insert(0, {
+        "id": "StarMap", "version": "0.4.8", "release_status": "stable",
+        "download": {"url": "https://example.org/starmap/0.4.8.zip", "unavailable_since": "2026-09-23T10:24:00Z"}})
     mods = document["packs"][1]["versions"][1]["authored"]["mods"]
     mods.insert(1, {"id": "Unlisted", "version": "1.0.0"})
     mods.append({"id": "EvilMod", "version": "1.0.0"})
@@ -606,6 +609,7 @@ class Build(unittest.TestCase):
         self.build(member_snapshot())
         page = self.page("pack", "NavigationStarterPack")
 
+        # StarMap 0.4.8 is newer than the pin but its download is gone, so it does not count
         self.assertIn('<p class="newer">1 of 5 mods has a newer release: Advanced Flight Computer 0.7.7.</p>', page)
         lines = self.forum_list("NavigationStarterPack")
         self.assertEqual(5, len(lines))
