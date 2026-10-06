@@ -18,7 +18,7 @@ The continuous-integration checks run on Windows, Linux, and macOS.
 
 ## Who merges, and who approves a release
 
-A maintainer may merge their own work. A pull request from anyone who is not a maintainer is reviewed by a maintainer before it is merged.
+A maintainer may merge their own work. A pull request from anyone else is reviewed before it is merged, by a maintainer or by one of the other reviewers named in the code signing policy, so a review never waits on one person.
 
 Releases are built only by the `release` workflow, from a tag. Once Borea is code signed, every signing request needs the manual approval of an approver, and the request itself comes from the workflow and not from a person.
 
