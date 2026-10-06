@@ -97,6 +97,7 @@ public partial class App : Application
     {
         AvaloniaXamlLoader.Load(this);
         RepeatedToolTip.Register();
+        DropdownAnimation.Register();
     }
 
     public override void OnFrameworkInitializationCompleted()

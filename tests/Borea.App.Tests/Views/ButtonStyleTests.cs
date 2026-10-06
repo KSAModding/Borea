@@ -2,6 +2,8 @@ using System.Xml;
 using System.Xml.Linq;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.Presenters;
+using Avalonia.Media;
 using Avalonia.Headless;
 using Avalonia.Layout;
 using Avalonia.VisualTree;
@@ -42,7 +44,7 @@ public sealed class ButtonStyleTests
     [Fact]
     public async Task PlainTitle_TurnsToTheAccentUnderThePointer_AndARowKeepsTheHoverOfItsCard()
     {
-        var hover = await HeadlessApp.RunAsync(() =>
+        var hover = await HeadlessApp.RunAsync(async () =>
         {
             var title = new TextBlock { Classes = { "label-lg" }, Text = "Library" };
             var plain = new Button { Classes = { "plain" }, Content = title };
@@ -54,12 +56,14 @@ public sealed class ButtonStyleTests
             window.UpdateLayout();
 
             window.MouseMove(Center(plain, window));
+            await HeadlessApp.FramesAsync();
             var titleOver = title.Foreground;
             window.MouseMove(Center(row, window));
+            await HeadlessApp.FramesAsync();
             var result = (TitleOver: titleOver, TitleAfter: title.Foreground, RowTitleOver: rowTitle.Foreground, CardOver: card.Background,
                 Accent: window.FindResource("Brush.Accent"), Raised: window.FindResource("Brush.SurfaceRaised"));
             window.Close();
-            return Task.FromResult(result);
+            return (result);
         });
 
         Assert.Same(hover.Accent, hover.TitleOver);
@@ -67,6 +71,74 @@ public sealed class ButtonStyleTests
         Assert.NotSame(hover.Accent, hover.RowTitleOver);
         Assert.Same(hover.Raised, hover.CardOver);
     }
+
+    [Fact]
+    public async Task AHover_FadesIntoItsColour_AndNotSwitchesToItAtOnce()
+    {
+        var seen = await HeadlessApp.RunAsync(async () =>
+        {
+            var title = new TextBlock { Classes = { "label-lg" }, Text = "Library" };
+            var plain = new Button { Classes = { "plain" }, Content = title, HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top };
+            var window = new Window { Width = 400, Height = 300, Content = plain };
+            window.Show();
+            window.UpdateLayout();
+
+            window.MouseMove(new Point(390, 290));
+            var accent = Colour(window.FindResource("Brush.Accent"));
+            await HeadlessApp.FramesUntilAsync(() => Colour(title.Foreground) != accent);
+            var before = Colour(title.Foreground);
+
+            window.MouseMove(Center(plain, window));
+            var onArrival = Colour(title.Foreground);
+            await HeadlessApp.FramesUntilAsync(() => Colour(title.Foreground) != before && Colour(title.Foreground) != accent);
+            var partWay = Colour(title.Foreground);
+            await HeadlessApp.FramesUntilAsync(() => Colour(title.Foreground) == accent);
+            var settled = Colour(title.Foreground);
+            window.Close();
+            return (before, onArrival, partWay, settled, accent);
+        });
+
+        Assert.NotEqual(seen.accent, seen.before);
+        Assert.NotEqual(seen.accent, seen.onArrival);
+        Assert.NotEqual(seen.before, seen.partWay);
+        Assert.NotEqual(seen.accent, seen.partWay);
+        Assert.Equal(seen.accent, seen.settled);
+    }
+    [Fact]
+    public async Task AFadeInFromNothing_KeepsTheColourItIsFadingTo_AndOnlyCountsTheTransparencyUp()
+    {
+        var seen = await HeadlessApp.RunAsync(async () =>
+        {
+            var button = new Button { Classes = { "icon" }, Content = "Library", HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top };
+            var window = new Window { Width = 400, Height = 300, Content = button };
+            window.Show();
+            window.UpdateLayout();
+            var presenter = button.GetVisualDescendants().OfType<ContentPresenter>().Single();
+            var raised = Colour(window.FindResource("Brush.SurfaceRaised"));
+
+            window.MouseMove(new Point(390, 290));
+            await HeadlessApp.FramesAsync();
+            window.MouseMove(button.TranslatePoint(new Point(5, 5), window)!.Value);
+            var steps = new List<Color>();
+            for (var frame = 0; frame < 12; frame++)
+            {
+                await HeadlessApp.FramesAsync(1);
+                steps.Add(Colour(presenter.Background));
+            }
+
+            window.Close();
+            return (Steps: steps, Raised: raised);
+        });
+
+        Assert.All(seen.Steps, colour =>
+            Assert.True(Near(colour.R, seen.Raised.R) && Near(colour.G, seen.Raised.G) && Near(colour.B, seen.Raised.B),
+                $"The fade passed through {colour} instead of fading {seen.Raised} in from nothing."));
+        Assert.Equal(seen.Steps.Select(step => step.A).Order(), seen.Steps.Select(step => step.A));
+        Assert.Equal(byte.MaxValue, seen.Steps[^1].A);
+    }
+
+    private static Color Colour(object? brush) => brush is ISolidColorBrush solid ? solid.Color : default;
+    private static bool Near(byte mixed, byte target) => Math.Abs(mixed - target) <= 1;
 
     [Fact]
     public async Task Switch_TakesTheSizeOfItsTrackOnly_AndMovesItsKnobWhenOn()
@@ -178,7 +250,6 @@ public sealed class ButtonStyleTests
     private static string[] ClassesOf(XElement element)
         => ((string?)element.Attribute("Classes") ?? "").Split(' ', StringSplitOptions.RemoveEmptyEntries);
 
-    // A property element such as Button.IsVisible is not content.
     private static XElement? FirstContent(XElement element)
         => element.Elements().FirstOrDefault(child => !child.Name.LocalName.Contains('.'));
 

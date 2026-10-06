@@ -142,6 +142,21 @@
             <SolidColorBrush x:Key="ComboBoxBorderBrushPointerOver" Color="{DynamicResource Color.BorderStrong}" />
             <SolidColorBrush x:Key="ComboBoxBorderBrushPressed" Color="{DynamicResource Color.BorderStrong}" />
             <SolidColorBrush x:Key="ComboBoxBorderBrushDisabled" Color="{DynamicResource Color.Window}" />
+
+            <!-- A dropdown, which is whatever the Fluent theme hangs in an overlay, is a panel like any
+                 other and takes the radius of a card and the surface of the app, not the small overlay
+                 look the theme gives it. A combo box reads these through the resources of its own
+                 template, so a flyout and a combo box land on the same panel. -->
+            <CornerRadius x:Key="OverlayCornerRadius">12</CornerRadius>
+            <SolidColorBrush x:Key="MenuFlyoutPresenterBackground" Color="{DynamicResource Color.Surface}" />
+            <SolidColorBrush x:Key="MenuFlyoutPresenterBorderBrush" Color="{DynamicResource Color.BorderStrong}" />
+            <Thickness x:Key="MenuFlyoutPresenterBorderThemeThickness">1</Thickness>
+            <SolidColorBrush x:Key="FlyoutPresenterBackground" Color="{DynamicResource Color.Surface}" />
+            <SolidColorBrush x:Key="FlyoutPresenterBorderBrush" Color="{DynamicResource Color.BorderStrong}" />
+            <Thickness x:Key="FlyoutPresenterBorderThemeThickness">1</Thickness>
+            <SolidColorBrush x:Key="ComboBoxDropDownBackground" Color="{DynamicResource Color.Surface}" />
+            <SolidColorBrush x:Key="ComboBoxDropDownBorderBrush" Color="{DynamicResource Color.BorderStrong}" />
+            <Thickness x:Key="ComboBoxDropdownBorderThickness">1</Thickness>
         </ResourceDictionary>
     </Application.Resources>
 
@@ -157,11 +172,103 @@
         </Style>
         <Style Selector="ScrollViewer">
             <Setter Property="views:MiddleClickScroll.IsEnabled" Value="True" />
+            <!-- A notch moves where the offset is going and the offset eases there over the next frames -->
+            <Setter Property="views:SmoothScroll.IsEnabled" Value="True" />
         </Style>
         <!-- Without these the scrollbar waits half a second before it expands under the pointer and two seconds before it shrinks -->
         <Style Selector="ScrollViewer /template/ ScrollBar">
             <Setter Property="ShowDelay" Value="0:0:0" />
             <Setter Property="HideDelay" Value="0:0:0" />
+        </Style>
+
+        <!-- A hover that changes a colour fades into it and out of it, instead of switching at once.
+             An eighth of a second is long enough to read as a fade and short enough that the pointer
+             never feels like it is waiting. The transitions sit only on the parts that the hover rules
+             below change, and not on every Border, TextBlock and shape of the app: Discover recycles
+             many rows while it scrolls, and a transition on each of them is a cost for every row
+             (#658 took the app-level styles out for the same reason). The text of a button follows the
+             Foreground of its ContentPresenter, so it fades with its background instead of trailing it.
+             They ease in and out rather than out, and they mix with the transparency of each colour
+             counted in, which is what BrushFade is for: most of these surfaces fade in from nothing,
+             and a fade that does not count it passes through a colour of its own on the way. -->
+
+        <!-- hover rules that change the Background of the button -->
+        <Style Selector="Button.nav, Button.add, Button.chip-button, Button.link, Button.dropdown, Button.icon, Button.info, Button.plain">
+            <Style Selector="^ /template/ ContentPresenter">
+                <Setter Property="Transitions">
+                    <Transitions>
+                        <views:BrushFade Property="Background" Duration="0:0:0.12" Easing="CubicEaseInOut" />
+                    </Transitions>
+                </Setter>
+            </Style>
+        </Style>
+        <!-- hover rules that change the Background and the BorderBrush -->
+        <Style Selector="Button.to-top">
+            <Style Selector="^ /template/ ContentPresenter">
+                <Setter Property="Transitions">
+                    <Transitions>
+                        <views:BrushFade Property="Background" Duration="0:0:0.12" Easing="CubicEaseInOut" />
+                        <views:BrushFade Property="BorderBrush" Duration="0:0:0.12" Easing="CubicEaseInOut" />
+                    </Transitions>
+                </Setter>
+            </Style>
+        </Style>
+        <!-- hover and press rules that change the Background, the Foreground and the Opacity -->
+        <Style Selector="Button.text, Button.cta, Button.splitButton, Button.tab, Button.menu, Button.filter">
+            <Style Selector="^ /template/ ContentPresenter">
+                <Setter Property="Transitions">
+                    <Transitions>
+                        <views:BrushFade Property="Background" Duration="0:0:0.12" Easing="CubicEaseInOut" />
+                        <views:BrushFade Property="Foreground" Duration="0:0:0.12" Easing="CubicEaseInOut" />
+                        <DoubleTransition Property="Opacity" Duration="0:0:0.1" Easing="CubicEaseInOut" />
+                    </Transitions>
+                </Setter>
+            </Style>
+        </Style>
+        <!-- the title and the icon of a plain button, which turn to the accent colour on their own -->
+        <Style Selector="Button.plain > TextBlock">
+            <Setter Property="Transitions">
+                <Transitions>
+                    <views:BrushFade Property="Foreground" Duration="0:0:0.12" Easing="CubicEaseInOut" />
+                </Transitions>
+            </Setter>
+        </Style>
+        <Style Selector="Button.plain > Path.icon, Button.filter Path.icon">
+            <Setter Property="Transitions">
+                <Transitions>
+                    <views:BrushFade Property="Stroke" Duration="0:0:0.12" Easing="CubicEaseInOut" />
+                </Transitions>
+            </Setter>
+        </Style>
+        <!-- the card and the row that a card-button lights up -->
+        <Style Selector="Button.card-button Border.card, Button.card-button Border.list-row">
+            <Setter Property="Transitions">
+                <Transitions>
+                    <views:BrushFade Property="Background" Duration="0:0:0.12" Easing="CubicEaseInOut" />
+                </Transitions>
+            </Setter>
+        </Style>
+
+        <!-- Dropdowns: a flyout hangs in its own popup and a combo box keeps its panel inside its own template,
+             so each is reached through the part the Fluent theme names. The radius and the surface come from
+             the resources above, and the panel clips to the radius, so a first or last item in a menu does not
+             square a corner off. -->
+        <Style Selector="MenuFlyoutPresenter, FlyoutPresenter">
+            <Setter Property="Background" Value="{StaticResource Brush.Surface}" />
+            <Setter Property="BorderBrush" Value="{StaticResource Brush.BorderStrong}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="12" />
+            <Style Selector="^ /template/ Border#LayoutRoot">
+                <Setter Property="ClipToBounds" Value="True" />
+            </Style>
+        </Style>
+        <Style Selector="ComboBox /template/ Popup Border#PopupBorder">
+            <Setter Property="ClipToBounds" Value="True" />
+        </Style>
+        <!-- A combo box carries its panel inside its own template, so it is turned on here; a flyout is not a
+             control and has no style to reach it, so DropdownAnimation.Register picks those up. -->
+        <Style Selector="ComboBox">
+            <Setter Property="views:DropdownAnimation.IsEnabled" Value="True" />
         </Style>
 
         <!-- Type scale from the Figma file: label-* are IBM Plex Mono, heading-*/action-* IBM Plex Sans SemiBold -->

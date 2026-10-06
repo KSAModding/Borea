@@ -218,7 +218,7 @@ public sealed class DiscoverPageTests
         viewModel.HideInstalled = true;
         var rows = viewModel.DiscoverItems.ToList();
 
-        var seen = await RenderAsync(harness, 1280, page =>
+        var seen = await RenderAsync(harness, 1280, async page =>
         {
             var (scroller, button) = BackToTop(page);
             var atTop = button.IsEffectivelyVisible;
@@ -227,6 +227,7 @@ public sealed class DiscoverPageTests
             scroller.Offset = new Vector(0, 2 * scroller.Viewport.Height);
             var farDown = (button.IsEffectivelyVisible, scroller.Offset.Y);
             Click(button);
+            await HeadlessApp.FramesAsync();
             return (atTop, nearTop, farDown, AfterClick: button.IsEffectivelyVisible, Offset: scroller.Offset.Y);
         });
 
@@ -249,7 +250,7 @@ public sealed class DiscoverPageTests
         var viewModel = harness.ViewModel;
         await viewModel.EnsureDiscoverLoadedAsync();
 
-        var seen = await RenderAsync(harness, 1280, page =>
+        var seen = await RenderAsync(harness, 1280, async page =>
         {
             var (scroller, button) = BackToTop(page);
             var window = (Window)TopLevel.GetTopLevel(page)!;
@@ -265,6 +266,7 @@ public sealed class DiscoverPageTests
             window.KeyReleaseQwerty(PhysicalKey.Enter, RawInputModifiers.None);
             var refresh = page.GetVisualDescendants().OfType<Button>().Single(candidate => candidate.Command == viewModel.RefreshContentIndexCommand);
             var label = button.GetVisualDescendants().OfType<TextBlock>().Single().Text;
+            await HeadlessApp.FramesAsync();
             return (Tip: ToolTip.GetTip(button), Label: label, Name: AutomationProperties.GetName(button), reached, Offset: scroller.Offset.Y, TopFocused: refresh.IsFocused);
         });
 
@@ -290,6 +292,25 @@ public sealed class DiscoverPageTests
             {
                 window.UpdateLayout();
                 return Task.FromResult(read(page));
+            }
+            finally
+            {
+                window.Close();
+            }
+        });
+
+    private static Task<T> RenderAsync<T>(ViewModelHarness harness, double windowWidth, Func<DiscoverPage, Task<T>> read, double windowHeight = 832) =>
+        HeadlessApp.RunAsync(harness, async () =>
+        {
+            var page = new DiscoverPage { DataContext = harness.ViewModel };
+            Grid.SetColumn(page, 1);
+            var body = new Grid { ColumnDefinitions = new ColumnDefinitions($"{PageBodyPanel.NavigationRailWidth},*"), Children = { page } };
+            var window = new Window { Width = windowWidth, Height = windowHeight, Content = body, DataContext = harness.ViewModel };
+            window.Show();
+            try
+            {
+                window.UpdateLayout();
+                return await read(page);
             }
             finally
             {

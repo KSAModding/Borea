@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Headless;
 using Avalonia.Platform;
+using Avalonia.Threading;
 using Borea.App.Tests.ViewModels;
 
 namespace Borea.App.Tests.Views;
@@ -57,6 +58,30 @@ internal static class HeadlessApp
             await harness.WhenIdleAsync();
             return result;
         });
+
+
+    public static async Task FramesAsync(int count = 60)
+    {
+        for (var frame = 0; frame < count; frame++)
+        {
+            await Task.Delay(16);
+            Dispatcher.UIThread.RunJobs();
+            AvaloniaHeadlessPlatform.ForceRenderTimerTick();
+            Dispatcher.UIThread.RunJobs();
+        }
+    }
+
+
+    public static async Task FramesUntilAsync(Func<bool> settled, int limit = 400)
+    {
+        for (var frame = 0; frame < limit && !settled(); frame++)
+        {
+            await Task.Delay(8);
+            Dispatcher.UIThread.RunJobs();
+            AvaloniaHeadlessPlatform.ForceRenderTimerTick();
+            Dispatcher.UIThread.RunJobs();
+        }
+    }
 
     private static AppBuilder BuildAvaloniaApp() =>
         AppBuilder.Configure<App>()

@@ -50,6 +50,7 @@ public sealed class ScrollToTopButton : Button
 
         // the button hides once the target is at the top, and a hidden button loses the focus, so a keyboard user goes on from the top of the target
         var byKeyboard = IsFocused && PseudoClasses.Contains(":focus-visible");
+
         target.SetCurrentValue(ScrollViewer.OffsetProperty, target.Offset.WithY(0));
         if (byKeyboard)
             FocusManager.FindFirstFocusableElement(target)?.Focus(NavigationMethod.Tab);
