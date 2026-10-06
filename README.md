@@ -14,7 +14,7 @@ Mods and mod packs work today, and vehicles and game saves will follow later.
 Borea installs them from the community content index, keeps them in separate instances, and starts the game with the instance you choose.
 It runs on Windows, Linux and macOS, as a desktop App and as a command line.
 
-Borea is a community project by the [KSA Modding](https://github.com/KSAModding) team.
+Borea is a community project by [KSA Modding](https://github.com/KSAModding), the team behind the [KSA Modding Society Discord](https://discord.gg/nt4fK4QuTz), the [modding wiki](https://modding.kittenspaceagency.wiki/) and the [content index](https://github.com/KSAModding/content-index) that Borea installs from. The Discord is where Kitten Space Agency modding happens, and the same people maintain all three.
 It is not made by RocketWerkz and is not affiliated with or endorsed by them.
 Kitten Space Agency is their game and their trademark.
 
