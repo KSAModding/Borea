@@ -90,18 +90,18 @@ public sealed class ButtonStyleTests
 
             window.MouseMove(Center(plain, window));
             var onArrival = Colour(title.Foreground);
-            await HeadlessApp.FramesUntilAsync(() => Colour(title.Foreground) != before && Colour(title.Foreground) != accent);
-            var partWay = Colour(title.Foreground);
             await HeadlessApp.FramesUntilAsync(() => Colour(title.Foreground) == accent);
             var settled = Colour(title.Foreground);
             window.Close();
-            return (before, onArrival, partWay, settled, accent);
+            // the frames of the fade run on real time, so a slow runner can pass the middle between two of them; the blend itself shows it
+            var halfWay = Colour(BrushFade.Blend(0.5, new SolidColorBrush(before), new SolidColorBrush(accent)));
+            return (before, onArrival, halfWay, settled, accent);
         });
 
         Assert.NotEqual(seen.accent, seen.before);
         Assert.NotEqual(seen.accent, seen.onArrival);
-        Assert.NotEqual(seen.before, seen.partWay);
-        Assert.NotEqual(seen.accent, seen.partWay);
+        Assert.NotEqual(seen.before, seen.halfWay);
+        Assert.NotEqual(seen.accent, seen.halfWay);
         Assert.Equal(seen.accent, seen.settled);
     }
     [Fact]

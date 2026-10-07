@@ -21,17 +21,24 @@ public sealed class SmoothScrollTests
 
             window.MouseWheel(new Point(200, 150), new Vector(0, -3));
             var onTheWheel = scroller.Offset.Y;
-            await HeadlessApp.FramesAsync(3);
-            var partWay = scroller.Offset.Y;
-            await HeadlessApp.FramesAsync();
-            var settled = scroller.Offset.Y;
+            // a frame moves the scroll by at most the longest frame of SmoothScroll, so the offset after each frame
+            // shows the way there however slow the frames come
+            var steps = new List<double>();
+            for (var frame = 0; frame < 60; frame++)
+            {
+                await HeadlessApp.FramesAsync(1);
+                steps.Add(scroller.Offset.Y);
+            }
+
             window.Close();
-            return (before, onTheWheel, partWay, settled, Notch: SmoothScroll.Notch);
+            return (before, onTheWheel, Steps: steps, Notch: SmoothScroll.Notch);
         });
 
-        Assert.True(seen.onTheWheel < seen.before + 3 * seen.Notch, "The offset must still be on its way rather than already there.");
-        Assert.InRange(seen.partWay, seen.before + 1, seen.before + 3 * seen.Notch - 1);
-        Assert.Equal(seen.before + 3 * seen.Notch, seen.settled);
+        var target = seen.before + 3 * seen.Notch;
+        Assert.True(seen.onTheWheel < target, "The offset must still be on its way rather than already there.");
+        Assert.Contains(seen.Steps, offset => offset > seen.before && offset < target);
+        Assert.Equal(seen.Steps.Order(), seen.Steps);
+        Assert.Equal(target, seen.Steps[^1]);
     }
 
     [Fact]
