@@ -130,6 +130,7 @@ public sealed class GitHubAccountViewModelTests
     {
         using var harness = await ViewModelHarness.CreateAsync(gitHub: _session);
         var viewModel = harness.ViewModel;
+        await viewModel.WhenGitHubResumedAsync();
         _session.HoldCancel = true;
         viewModel.SignInToGitHubCommand.Execute(null);
         viewModel.CancelGitHubSignInCommand.Execute(null);
@@ -544,6 +545,7 @@ public sealed class GitHubAccountViewModelTests
         private IProgress<GitHubDeviceCode>? _progress;
         private TaskCompletionSource<GitHubSignInResult>? _heldCancel;
         private int _resumes;
+        private int _signIns;
 
         public bool IsAvailable => true;
 
@@ -557,7 +559,11 @@ public sealed class GitHubAccountViewModelTests
 
         public bool WasCancelled { get; private set; }
 
-        public int SignIns { get; private set; }
+        /// <summary>
+        /// How many sign-ins started.
+        /// A sign-in can start on another thread, so the count goes up last and with a fence, and a test that sees the new count also sees that sign-in and the view model state before it, also on arm64.
+        /// </summary>
+        public int SignIns => Volatile.Read(ref _signIns);
 
         /// <summary>The keepSignedIn argument of every sign-in, in order.</summary>
         public List<bool> KeptSignIns { get; } = [];
@@ -618,7 +624,6 @@ public sealed class GitHubAccountViewModelTests
         {
             _progress = progress;
             var signIn = _signIn = new TaskCompletionSource<GitHubSignInResult>(TaskCreationOptions.RunContinuationsAsynchronously);
-            SignIns++;
             KeptSignIns.Add(keepSignedIn);
             using var registration = cancellationToken.Register(() =>
             {
@@ -628,6 +633,7 @@ public sealed class GitHubAccountViewModelTests
                 else
                     signIn.TrySetCanceled(cancellationToken);
             });
+            Interlocked.Increment(ref _signIns);
 
             var result = await signIn.Task;
             if (result.SignedIn)
