@@ -17,23 +17,23 @@ public sealed class DropdownAnimationTests
         var seen = await HeadlessApp.RunAsync(async () =>
         {
             var (window, button, flyout) = ShowButtonWithMenu();
+            var looks = LooksOnOpen(flyout);
             Click(window, button);
             var panel = PanelOf(flyout);
-            var onArrival = (Opacity: panel.Opacity, Transform: panel.RenderTransform, Open: flyout.IsOpen);
+            var open = flyout.IsOpen;
 
             await HeadlessApp.FramesUntilAsync(() => panel.RenderTransform is null);
             var arrived = (Opacity: panel.Opacity, Transform: panel.RenderTransform);
 
             flyout.Hide();
-            var result = (onArrival, arrived, Closed: !flyout.IsOpen);
+            var result = (onArrival: looks.Single(), open, arrived, Closed: !flyout.IsOpen);
             window.Close();
             return result;
         });
 
-        Assert.True(seen.onArrival.Open);
-        // the click runs the dispatcher, so the first frame of the fade may already have passed
-        Assert.InRange(seen.onArrival.Opacity, 0, 0.1);
-        Assert.NotNull(seen.onArrival.Transform);
+        Assert.True(seen.open);
+        Assert.Equal(0, seen.onArrival.Opacity);
+        Assert.True(seen.onArrival.HasTransform);
         Assert.Equal(1, seen.arrived.Opacity);
         Assert.Null(seen.arrived.Transform);
         Assert.True(seen.Closed, "A flyout must close at once; only the opening is animated.");
@@ -67,18 +67,20 @@ public sealed class DropdownAnimationTests
         var seen = await HeadlessApp.RunAsync(async () =>
         {
             var (window, button, flyout) = ShowButtonWithMenu();
+            var looks = LooksOnOpen(flyout);
             Click(window, button);
             var panel = PanelOf(flyout);
             await HeadlessApp.FramesUntilAsync(() => panel.RenderTransform is null);
             flyout.Hide();
 
             Click(window, button);
-            var reopened = PanelOf(flyout).Opacity;
             window.Close();
-            return (reopened);
+            return looks;
         });
 
-        Assert.InRange(seen, 0, 0.1);
+        Assert.Equal(2, seen.Count);
+        Assert.Equal(0, seen[1].Opacity);
+        Assert.True(seen[1].HasTransform);
     }
 
     [Fact]
@@ -188,6 +190,17 @@ public sealed class DropdownAnimationTests
         var center = control.TranslatePoint(new Point(control.Bounds.Width / 2, control.Bounds.Height / 2), window)!.Value;
         window.MouseDown(center, MouseButton.Left);
         window.MouseUp(center, MouseButton.Left);
+    }
+
+    /// <summary>
+    /// The look of the panel each time the flyout opens. The handler that starts the fade was added when the button
+    /// got its flyout, so this one runs after it and sees the closed look before any frame of the fade moves it.
+    /// </summary>
+    private static List<(double Opacity, bool HasTransform)> LooksOnOpen(MenuFlyout flyout)
+    {
+        var looks = new List<(double Opacity, bool HasTransform)>();
+        flyout.Opened += (_, _) => looks.Add((PanelOf(flyout).Opacity, PanelOf(flyout).RenderTransform is not null));
+        return looks;
     }
 
     private static Control PanelOf(PopupFlyoutBase flyout) => flyout.Popup.Child!;
