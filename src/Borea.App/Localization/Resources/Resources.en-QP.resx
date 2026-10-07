@@ -807,6 +807,9 @@
   <data name="ToastUpdatedFormat" xml:space="preserve">
     <value>The tide brought {0} to {1} in {2}</value>
   </data>
+  <data name="ToastChangedFormat" xml:space="preserve">
+    <value>{0} swapped to {1} aboard {2}</value>
+  </data>
   <data name="ToastUpdatedAllOneFormat" xml:space="preserve">
     <value>1 barrel o' fun got a new tide in {0}</value>
   </data>
@@ -1220,6 +1223,15 @@
   </data>
   <data name="ContentAttachToPack" xml:space="preserve">
     <value>Lash back to the pack o' barrels</value>
+  </data>
+  <data name="ContentDetached" xml:space="preserve">
+    <value>Cut loose</value>
+  </data>
+  <data name="ContentDetachedFromFormat" xml:space="preserve">
+    <value>Cut loose from {0}, which nails down {1}. Lash it back from the row menu.</value>
+  </data>
+  <data name="ContentDetachedFromPackFormat" xml:space="preserve">
+    <value>Cut loose from the pack o' barrels {0}. Lash it back from the row menu.</value>
   </data>
   <data name="ContentAttachVersionFormat" xml:space="preserve">
     <value>Swaps to {0}, the version {1} {2} be nailin' down</value>
@@ -1860,6 +1872,9 @@
   <data name="PackModHeader" xml:space="preserve">
     <value>Barrel o' fun</value>
   </data>
+  <data name="PackMemberInstanceHeaderFormat" xml:space="preserve">
+    <value>Aboard {0}</value>
+  </data>
   <data name="PackMemberYanked" xml:space="preserve">
     <value>Torn asunder</value>
   </data>
@@ -1879,19 +1894,46 @@
     <value>Hoist {0}</value>
   </data>
   <data name="PackMemberUseNewerConfirmFormat" xml:space="preserve">
-    <value>Cuts {0} loose from the pack o' barrels aboard {1} and swaps it to {2}. Pack updates then leave it be.</value>
-  </data>
-  <data name="PackMemberUseNewerPinnedFormat" xml:space="preserve">
-    <value>Nailed down aboard {0}. Pull the nail on the Booty tab to hoist {1}.</value>
+    <value>Cuts {0} loose from the pack o' barrels aboard the ship {1} and swaps it to {2}. Pack updates then leave it be.</value>
   </data>
   <data name="PackMemberPinned" xml:space="preserve">
     <value>Nailed down</value>
   </data>
+  <data name="PackMemberPinnedInFormat" xml:space="preserve">
+    <value>Nailed down aboard {0}. No tide moves this booty off {1}.</value>
+  </data>
+  <data name="PackMemberUseNewerUnpinConfirmFormat" xml:space="preserve">
+    <value>Pulls the nail from {0} aboard the ship {1}, cuts it loose from the pack o' barrels and swaps it to {2}. Pack updates then leave it be.</value>
+  </data>
+  <data name="PackMemberUseNewerUnpinOnlyConfirmFormat" xml:space="preserve">
+    <value>Pulls the nail from {0} aboard the ship {1} and swaps it to {2}.</value>
+  </data>
+  <data name="PackMemberBackToFormat" xml:space="preserve">
+    <value>Haul back to {0} aboard {1}</value>
+  </data>
+  <data name="PackMemberBackToChipFormat" xml:space="preserve">
+    <value>Haul back to {0}</value>
+  </data>
+  <data name="PackMemberBackToConfirmFormat" xml:space="preserve">
+    <value>Lashes {0} back to the pack o' barrels aboard the ship {1} and swaps it back to {2}.</value>
+  </data>
+  <data name="PackMemberBackToUnpinConfirmFormat" xml:space="preserve">
+    <value>Pulls the nail from {0} aboard the ship {1}, lashes it back to the pack o' barrels and swaps it back to {2}.</value>
+  </data>
   <data name="PackMemberInUseFormat" xml:space="preserve">
-    <value>{0} aboard</value>
+    <value>Hauled onboard {0}</value>
   </data>
   <data name="PackMemberInUseDetachedFormat" xml:space="preserve">
     <value>{0} sails with {1} {2}, cut loose from the pack o' barrels. Lash it back on the Booty tab.</value>
+  </data>
+  <data name="PackMemberInUseDetachedBackFormat" xml:space="preserve">
+    <value>{0} sails with {1} {2}, cut loose from the pack o' barrels. "Haul back to {3}" lashes it back.</value>
+  </data>
+  <data name="PackMemberInUseNextUpdateFormat" xml:space="preserve">
+    <value>{0} sails with {1} {2}. The next pack update swaps it back to {3}.</value>
+  </data>
+  <data name="PackMemberInUsePlainFormat" xml:space="preserve">
+    <value>{0} sails with {1} {2}.</value>
   </data>
   <data name="PackCopyForumList" xml:space="preserve">
     <value>Copy the tavern list</value>

@@ -181,6 +181,13 @@
                     <TextBlock Classes="body-sm danger" Text="{Binding InstallError}" ToolTip.Tip="{Binding InstallError}" TextTrimming="CharacterEllipsis" IsVisible="{Binding InstallError, Converter={x:Static ObjectConverters.IsNotNull}}" />
                 </StackPanel>
                 <StackPanel Grid.Column="4" Orientation="Horizontal" Spacing="24" VerticalAlignment="Center">
+                    <!-- a mod of the pack that the player detached, which the row menu attaches again -->
+                    <Border Classes="chip muted" VerticalAlignment="Center" IsVisible="{Binding DetachedText, Converter={x:Static ObjectConverters.IsNotNull}}" ToolTip.Tip="{Binding DetachedText}" AutomationProperties.Name="{Binding DetachedText}">
+                        <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                            <Path Classes="icon size-16" Data="{StaticResource Icon.LinkSimpleBreak}" VerticalAlignment="Center" />
+                            <TextBlock Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ContentDetached}" />
+                        </StackPanel>
+                    </Border>
                     <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center" IsVisible="{Binding SizeText, Converter={x:Static ObjectConverters.IsNotNull}}" ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ContentSizeOnDisk}">
                         <Path Classes="icon size-16" Data="{StaticResource Icon.HardDrive}" />
                         <TextBlock Classes="label-md" Text="{Binding SizeText}" VerticalAlignment="Center" />

@@ -7,6 +7,63 @@
              x:DataType="vm:MainViewModel">
     <UserControl.Styles>
         <StyleInclude Source="avares://Borea.App/Views/PageBodyStyles.axaml" />
+        <!-- the columns of the Mods tab. Styles set the place of a cell, so that a narrow page can move it -->
+        <Style Selector=":is(Control).member-version">
+            <Setter Property="Grid.Column" Value="1" />
+            <Setter Property="Margin" Value="16,0,0,0" />
+        </Style>
+        <Style Selector=":is(Control).member-fit">
+            <Setter Property="Grid.Column" Value="1" />
+        </Style>
+        <!-- a cell narrower than its column starts at the left of the column, as a table cell does -->
+        <Style Selector=":is(Control).member-cell, :is(Control).member-header">
+            <Setter Property="Margin" Value="16,0,0,0" />
+            <Setter Property="MaxWidth" Value="220" />
+            <Setter Property="HorizontalAlignment" Value="Left" />
+        </Style>
+        <!-- a long instance name is trimmed in the header, so that the header does not make its column wider than the chips need -->
+        <Style Selector=":is(Control).member-header">
+            <Setter Property="MaxWidth" Value="150" />
+        </Style>
+        <!-- the text of a chip in a cell stays inside the cell; a chip with an icon has less room for it -->
+        <Style Selector="TextBlock.cell-text">
+            <Setter Property="MaxWidth" Value="170" />
+        </Style>
+        <Style Selector="TextBlock.cell-text.plain">
+            <Setter Property="MaxWidth" Value="190" />
+        </Style>
+        <!-- a narrow page folds each row into two lines: the name, then the version, the state in the instance and the newer release, each in its column. The chips keep their full text and trim it -->
+        <ContainerQuery Name="page-body" Query="max-width:720">
+            <Style Selector=":is(Control).member-name">
+                <Setter Property="Grid.ColumnSpan" Value="4" />
+            </Style>
+            <Style Selector=":is(Control).member-version">
+                <Setter Property="Grid.Row" Value="1" />
+                <Setter Property="Grid.Column" Value="0" />
+                <Setter Property="Margin" Value="0,6,0,0" />
+            </Style>
+            <Style Selector=":is(Control).member-cell">
+                <Setter Property="Grid.Row" Value="1" />
+                <Setter Property="Margin" Value="16,6,0,0" />
+            </Style>
+            <Style Selector=":is(Control).member-cell, :is(Control).member-header">
+                <Setter Property="MaxWidth" Value="140" />
+            </Style>
+            <Style Selector="TextBlock.cell-text">
+                <Setter Property="MaxWidth" Value="104" />
+            </Style>
+            <Style Selector="TextBlock.cell-text.plain">
+                <Setter Property="MaxWidth" Value="124" />
+            </Style>
+        </ContainerQuery>
+        <!-- a small page puts the chips of the pinned release below its version -->
+        <ContainerQuery Name="page-body" Query="max-width:520">
+            <Style Selector=":is(Control).member-fit">
+                <Setter Property="Grid.Row" Value="1" />
+                <Setter Property="Grid.Column" Value="0" />
+                <Setter Property="Margin" Value="0,4,0,0" />
+            </Style>
+        </ContainerQuery>
     </UserControl.Styles>
     <!-- Pack: one modpack, laid out like the content page -->
     <Grid>
@@ -188,89 +245,116 @@
                         </Panel>
                     </Border>
 
-                    <!-- the pinned mods -->
+                    <!-- the pinned mods, as a table whose columns share their widths, so each column starts at the same place in the header and in every row -->
                     <Border BorderBrush="{StaticResource Brush.BorderStrong}" BorderThickness="1" CornerRadius="16" views:RoundedClip.IsEnabled="True" Margin="0,16,0,0" IsVisible="{Binding IsPackModsTab}">
-                        <StackPanel>
+                        <StackPanel Grid.IsSharedSizeScope="True">
                             <Border Background="{StaticResource Brush.Surface}" Padding="16,11">
-                                <!-- the chips get up to 360 px, which holds four chips on one line, and the name gets the rest. So the version lines up in every row next to the chips, and the chips wrap only when the row is narrow -->
                                 <Grid>
                                     <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*" MinWidth="190" />
-                                        <ColumnDefinition Width="Auto" />
-                                        <ColumnDefinition Width="2*" MaxWidth="360" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" SharedSizeGroup="PackMemberVersion" />
+                                        <ColumnDefinition Width="Auto" SharedSizeGroup="PackMemberInstance" />
+                                        <ColumnDefinition Width="Auto" SharedSizeGroup="PackMemberNewer" />
                                     </Grid.ColumnDefinitions>
                                     <TextBlock Classes="body-md secondary" Text="{Binding Localization.PackModHeader}" />
-                                    <TextBlock Grid.Column="1" Classes="body-md secondary hide-small" Width="150" Text="{Binding Localization.ContentVersionHeader}" />
+                                    <!-- only the text hides on a narrow page, because a hidden grid keeps its last width in the shared columns -->
+                                    <Grid Classes="member-version">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" SharedSizeGroup="PackMemberVersionText" />
+                                            <ColumnDefinition Width="Auto" SharedSizeGroup="PackMemberFit" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Classes="body-md secondary hide-narrow" Margin="0,0,8,0" Text="{Binding Localization.ContentVersionHeader}" />
+                                    </Grid>
+                                    <!-- the instance icon tells the instance apart from a pack of the same name -->
+                                    <DockPanel Grid.Column="2" Classes="member-header" ToolTip.Tip="{Binding ActiveInstance.Name}" IsVisible="{Binding PackInstanceHeaderText, Converter={x:Static ObjectConverters.IsNotNull}}">
+                                        <Path DockPanel.Dock="Left" Classes="icon size-16" Margin="0,0,4,0" Data="{StaticResource Icon.Library}" VerticalAlignment="Center" />
+                                        <TextBlock Classes="body-md secondary" Text="{Binding PackInstanceHeaderText}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                    </DockPanel>
                                 </Grid>
                             </Border>
                             <ItemsControl ItemsSource="{Binding PackMembers}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate x:DataType="vm:PackMemberItem">
                                         <Border BorderBrush="{StaticResource Brush.BorderStrong}" BorderThickness="0,1,0,0" Padding="16,8" MinHeight="40">
-                                            <Grid RowDefinitions="Auto,Auto">
+                                            <Grid RowDefinitions="Auto,Auto,Auto">
                                                 <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="*" MinWidth="190" />
-                                                    <ColumnDefinition Width="Auto" />
-                                                    <ColumnDefinition Width="2*" MaxWidth="360" />
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="Auto" SharedSizeGroup="PackMemberVersion" />
+                                                    <ColumnDefinition Width="Auto" SharedSizeGroup="PackMemberInstance" />
+                                                    <ColumnDefinition Width="Auto" SharedSizeGroup="PackMemberNewer" />
                                                 </Grid.ColumnDefinitions>
-                                                <Button Classes="plain" Margin="0,0,8,0" Command="{Binding OpenCommand}" IsEnabled="{Binding CanOpen}" HorizontalAlignment="Left" VerticalAlignment="Center">
+                                                <Button Classes="plain member-name" Margin="0,0,8,0" Command="{Binding OpenCommand}" IsEnabled="{Binding CanOpen}" HorizontalAlignment="Left" VerticalAlignment="Center">
                                                     <TextBlock Classes="heading-sm" Text="{Binding Name}" ToolTip.Tip="{Binding Name}" TextTrimming="CharacterEllipsis" />
                                                 </Button>
-                                                <TextBlock Grid.Column="1" Classes="body-md secondary hide-small" Width="150" Text="{Binding Version}" VerticalAlignment="Center" />
-                                                <WrapPanel Grid.Column="2" ItemsAlignment="End" ItemSpacing="4" LineSpacing="4" Margin="8,0,0,0" VerticalAlignment="Center">
-                                                    <Border Classes="chip">
-                                                        <Border.IsVisible>
-                                                            <MultiBinding Converter="{x:Static BoolConverters.And}">
-                                                                <Binding Path="NewerText" Converter="{x:Static ObjectConverters.IsNotNull}" />
-                                                                <Binding Path="!OffersUseNewer" />
-                                                            </MultiBinding>
-                                                        </Border.IsVisible>
-                                                        <TextBlock Text="{Binding NewerText}" ToolTip.Tip="{Binding NewerText}" MaxWidth="110" TextTrimming="CharacterEllipsis" />
+                                                <!-- the pinned version and what the index says about that release -->
+                                                <Grid Classes="member-version" RowDefinitions="Auto,Auto" VerticalAlignment="Center">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="Auto" SharedSizeGroup="PackMemberVersionText" />
+                                                        <ColumnDefinition Width="Auto" SharedSizeGroup="PackMemberFit" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <TextBlock Classes="body-md secondary" Margin="0,0,8,0" Text="{Binding Version}" VerticalAlignment="Center" />
+                                                    <WrapPanel Classes="member-fit" ItemSpacing="4" LineSpacing="4" VerticalAlignment="Center" IsVisible="{Binding HasFitChips}">
+                                                        <Border Classes="chip" Classes.untested="{Binding IsUntested}" Classes.incompatible="{Binding IsIncompatible}" IsVisible="{Binding FitText, Converter={x:Static ObjectConverters.IsNotNull}}" ToolTip.Tip="{Binding FitText}">
+                                                            <TextBlock Text="{Binding CompatibilityText}" />
+                                                        </Border>
+                                                        <Border Classes="chip incompatible" IsVisible="{Binding IsYanked}" ToolTip.Tip="{Binding YankedReason}">
+                                                            <TextBlock Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.PackMemberYanked}" />
+                                                        </Border>
+                                                        <Border Classes="chip untested" IsVisible="{Binding GoneText, Converter={x:Static ObjectConverters.IsNotNull}}" ToolTip.Tip="{Binding GoneText}">
+                                                            <TextBlock Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.PackMemberGone}" />
+                                                        </Border>
+                                                        <Border Classes="chip untested" IsVisible="{Binding IsUnlisted}">
+                                                            <TextBlock Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.PackMemberUnlisted}" />
+                                                        </Border>
+                                                    </WrapPanel>
+                                                </Grid>
+                                                <!-- the one state of the mod in the active instance, and its pin -->
+                                                <WrapPanel Grid.Column="2" Classes="member-cell" ItemSpacing="4" LineSpacing="4" VerticalAlignment="Center">
+                                                    <Border Classes="chip positive" IsVisible="{Binding IsInstalled}" ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).InstalledInText}">
+                                                        <TextBlock Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.DiscoverInstalled}" />
                                                     </Border>
-                                                    <!-- the newer release for the active instance made from this pack, as a chip that opens the change below the row -->
-                                                    <Button Classes="chip-button chip-action" Command="{Binding UseNewerCommand}" IsVisible="{Binding OffersUseNewer}" IsEnabled="{Binding CanUseNewer}" ToolTip.Tip="{Binding UseNewerText}" AutomationProperties.Name="{Binding UseNewerText}">
-                                                        <TextBlock Text="{Binding UseNewerChipText}" MaxWidth="110" TextTrimming="CharacterEllipsis" />
-                                                    </Button>
+                                                    <Border Classes="chip" Classes.positive="{Binding IsHeldFitting}" Classes.untested="{Binding IsHeldUntested}" Classes.incompatible="{Binding IsHeldIncompatible}" IsVisible="{Binding InUseChipText, Converter={x:Static ObjectConverters.IsNotNull}}" ToolTip.Tip="{Binding InUseText}" AutomationProperties.Name="{Binding InUseText}">
+                                                        <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                                                            <Path Classes="icon size-16" Data="{StaticResource Icon.LinkSimpleBreak}" VerticalAlignment="Center" />
+                                                            <TextBlock Classes="cell-text" Text="{Binding InUseChipText}" TextTrimming="CharacterEllipsis" />
+                                                        </StackPanel>
+                                                    </Border>
                                                     <Border Classes="chip muted" IsVisible="{Binding PinnedInInstanceText, Converter={x:Static ObjectConverters.IsNotNull}}" ToolTip.Tip="{Binding PinnedInInstanceText}" AutomationProperties.Name="{Binding PinnedInInstanceText}">
                                                         <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
                                                             <Path Classes="icon size-16" Data="{StaticResource Icon.PushPin}" VerticalAlignment="Center" />
                                                             <TextBlock Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.PackMemberPinned}" />
                                                         </StackPanel>
                                                     </Border>
-                                                    <!-- the version that the active instance made from this pack uses after it detached the mod -->
-                                                    <Border Classes="chip muted" IsVisible="{Binding InUseChipText, Converter={x:Static ObjectConverters.IsNotNull}}" ToolTip.Tip="{Binding InUseText}" AutomationProperties.Name="{Binding InUseText}">
-                                                        <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
-                                                            <Path Classes="icon size-16" Data="{StaticResource Icon.ArrowsLeftRight}" VerticalAlignment="Center" />
-                                                            <TextBlock Text="{Binding InUseChipText}" MaxWidth="200" TextTrimming="CharacterEllipsis" />
-                                                        </StackPanel>
-                                                    </Border>
-                                                    <Border Classes="chip" Classes.untested="{Binding IsUntested}" Classes.incompatible="{Binding IsIncompatible}" IsVisible="{Binding FitText, Converter={x:Static ObjectConverters.IsNotNull}}" ToolTip.Tip="{Binding FitText}">
-                                                        <TextBlock Text="{Binding CompatibilityText}" />
-                                                    </Border>
-                                                    <Border Classes="chip incompatible" IsVisible="{Binding IsYanked}" ToolTip.Tip="{Binding YankedReason}">
-                                                        <TextBlock Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.PackMemberYanked}" />
-                                                    </Border>
-                                                    <Border Classes="chip untested" IsVisible="{Binding GoneText, Converter={x:Static ObjectConverters.IsNotNull}}" ToolTip.Tip="{Binding GoneText}">
-                                                        <TextBlock Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.PackMemberGone}" />
-                                                    </Border>
-                                                    <Border Classes="chip untested" IsVisible="{Binding IsUnlisted}">
-                                                        <TextBlock Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.PackMemberUnlisted}" />
-                                                    </Border>
-                                                    <Border Classes="chip positive" IsVisible="{Binding IsInstalled}" ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).InstalledInText}">
-                                                        <TextBlock Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.DiscoverInstalled}" />
-                                                    </Border>
                                                 </WrapPanel>
-                                                <!-- the change to the newer release, which opens after a click on its chip as on the Versions tab of a mod. The error can show with a waiting confirmation, so the parts stack -->
-                                                <StackPanel Grid.Row="1" Grid.ColumnSpan="3">
+                                                <!-- the newer release and the changes the row offers in the active instance made from this pack, each as a chip that opens its confirmation below the row -->
+                                                <WrapPanel Grid.Column="3" Classes="member-cell" ItemSpacing="4" LineSpacing="4" VerticalAlignment="Center">
+                                                    <Border Classes="chip" IsVisible="{Binding ShowsNewerAvailable}">
+                                                        <TextBlock Classes="cell-text plain" Text="{Binding NewerText}" ToolTip.Tip="{Binding NewerText}" TextTrimming="CharacterEllipsis" />
+                                                    </Border>
+                                                    <Button Classes="chip-button chip-action" Command="{Binding UseNewerCommand}" IsVisible="{Binding OffersUseNewer}" IsEnabled="{Binding CanUseNewer}" ToolTip.Tip="{Binding UseNewerText}" AutomationProperties.Name="{Binding UseNewerText}">
+                                                        <StackPanel Orientation="Horizontal" Spacing="4">
+                                                            <Path Classes="icon size-16" Data="{StaticResource Icon.ArrowUp}" VerticalAlignment="Center" />
+                                                            <TextBlock Classes="cell-text" Text="{Binding UseNewerChipText}" TextTrimming="CharacterEllipsis" />
+                                                        </StackPanel>
+                                                    </Button>
+                                                    <Button Classes="chip-button chip-action" Command="{Binding BackToPinCommand}" IsVisible="{Binding OffersBackToPin}" IsEnabled="{Binding CanBackToPin}" ToolTip.Tip="{Binding BackToPinText}" AutomationProperties.Name="{Binding BackToPinText}">
+                                                        <StackPanel Orientation="Horizontal" Spacing="4">
+                                                            <Path Classes="icon size-16" Data="{StaticResource Icon.ArrowCounterClockwise}" VerticalAlignment="Center" />
+                                                            <TextBlock Classes="cell-text" Text="{Binding BackToPinChipText}" TextTrimming="CharacterEllipsis" />
+                                                        </StackPanel>
+                                                    </Button>
+                                                </WrapPanel>
+                                                <!-- the confirmation of a change, which opens after a click on its chip as on the Versions tab of a mod. The error can show with a waiting confirmation, so the parts stack -->
+                                                <StackPanel Grid.Row="2" Grid.ColumnSpan="4">
                                                     <StackPanel Spacing="6" Margin="0,6,0,0" IsVisible="{Binding IsConfirmingInstall}">
-                                                        <TextBlock Classes="body-sm secondary" Text="{Binding UseNewerConfirmText}" TextWrapping="Wrap" IsVisible="{Binding UseNewerConfirmText, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                                                        <TextBlock Classes="body-sm secondary" Text="{Binding ChangeConfirmText}" TextWrapping="Wrap" IsVisible="{Binding ChangeConfirmText, Converter={x:Static ObjectConverters.IsNotNull}}" />
                                                         <ContentControl Content="{Binding Choices}" IsVisible="{Binding Choices, Converter={x:Static ObjectConverters.IsNotNull}}" />
                                                         <ItemsControl ItemsSource="{Binding PlanSteps}" ItemTemplate="{StaticResource StepList}" ItemsPanel="{StaticResource StepListsPanel}" IsVisible="{Binding !!PlanSteps.Count}" />
                                                         <WrapPanel ItemSpacing="8" LineSpacing="8">
                                                             <TextBlock Classes="body-sm secondary" Text="{Binding AddedModsText}" ToolTip.Tip="{Binding AddedModsToolTip}" IsVisible="{Binding AddedModsText, Converter={x:Static ObjectConverters.IsNotNull}}" TextWrapping="Wrap" VerticalAlignment="Center" />
                                                             <TextBlock Classes="body-sm secondary" Text="{Binding InstallWarning}" IsVisible="{Binding InstallWarning, Converter={x:Static ObjectConverters.IsNotNull}}" TextWrapping="Wrap" VerticalAlignment="Center" />
-                                                            <Button Classes="text primary" Content="{Binding ConfirmInstallText}" Command="{Binding ConfirmUseNewerCommand}" IsEnabled="{Binding Choices.IsComplete, FallbackValue={x:True}}" />
-                                                            <Button Classes="text" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryCancel}" Command="{Binding CancelUseNewerCommand}" />
+                                                            <Button Classes="text primary" Content="{Binding ConfirmInstallText}" Command="{Binding ConfirmChangeCommand}" IsEnabled="{Binding Choices.IsComplete, FallbackValue={x:True}}" />
+                                                            <Button Classes="text" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryCancel}" Command="{Binding CancelChangeCommand}" />
                                                         </WrapPanel>
                                                     </StackPanel>
                                                     <WrapPanel ItemSpacing="8" LineSpacing="4" Margin="0,6,0,0">

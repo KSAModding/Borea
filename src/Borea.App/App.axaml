@@ -431,6 +431,16 @@
         <Style Selector="Border.chip.positive TextBlock">
             <Setter Property="Foreground" Value="{StaticResource Brush.Positive}" />
         </Style>
+        <!-- an icon in a colored chip takes the color of its text -->
+        <Style Selector="Border.chip.positive Path.icon">
+            <Setter Property="Stroke" Value="{StaticResource Brush.Positive}" />
+        </Style>
+        <Style Selector="Border.chip.untested Path.icon">
+            <Setter Property="Stroke" Value="{StaticResource Brush.Untested}" />
+        </Style>
+        <Style Selector="Border.chip.incompatible Path.icon">
+            <Setter Property="Stroke" Value="{StaticResource Brush.Incompatible}" />
+        </Style>
         <!-- a muted chip mutes only its icon, because muted text this small is hard to read -->
         <Style Selector="Border.chip.muted Path.icon">
             <Setter Property="Stroke" Value="{StaticResource Brush.TextMuted}" />
@@ -688,6 +698,9 @@
             <Setter Property="FontSize" Value="11" />
             <Setter Property="Foreground" Value="{StaticResource Brush.Accent}" />
             <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+        <Style Selector="Button.chip-button.chip-action Path.icon">
+            <Setter Property="Stroke" Value="{StaticResource Brush.Accent}" />
         </Style>
         <Style Selector="Button.chip-button.chip-action:disabled /template/ ContentPresenter">
             <Setter Property="Background" Value="Transparent" />

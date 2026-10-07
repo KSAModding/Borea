@@ -37,9 +37,17 @@ public partial class MainViewModel
         UpdateAllItem => StartTask(TaskKind.UpdateAll, instanceId: instanceId, state: TaskState.Waiting),
         VersionItem item => StartModInstallTask(item, item.ModId, instanceId),
         DiscoverItem item => StartModInstallTask(item, item.ModId, instanceId),
-        PackMemberItem item => StartModInstallTask(item, item.ModId, instanceId),
+        PackMemberItem item => StartPackMemberTask(item, instanceId),
         _ => throw new UnreachableException(),
     };
+
+    /// <summary>A pack member row changes the version of a mod that the instance holds, in either direction.</summary>
+    private TaskItem StartPackMemberTask(PackMemberItem item, Guid? instanceId)
+    {
+        var task = StartModInstallTask(item, item.ModId, instanceId);
+        task.ChangedModName = item.Name;
+        return task;
+    }
 
     private TaskItem StartModInstallTask(IInstallRow row, string modId, Guid? instanceId)
     {

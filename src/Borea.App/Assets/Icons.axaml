@@ -65,6 +65,9 @@
 
     <StreamGeometry x:Key="Icon.ArrowClockwise">M 17.25 9.75 H 21 V 6 M 17.663 18 A 8.25 8.25 0 1 1 17.834 6.166 L 21 9.75</StreamGeometry>
 
+    <!-- Icon.ArrowClockwise mirrored, for a change back -->
+    <StreamGeometry x:Key="Icon.ArrowCounterClockwise">M 6.75 9.75 H 3 V 6 M 6.337 18 A 8.25 8.25 0 1 0 6.166 6.166 L 3 9.75</StreamGeometry>
+
     <StreamGeometry x:Key="Icon.Clock">M 12 7.5 V 12 L 15.75 14.25 M 6.75 9.75 H 3 V 6 M 6.337 18 C 7.517 19.113 8.998 19.853 10.596 20.129 C 12.194 20.405 13.837 20.204 15.322 19.551 C 16.806 18.898 18.065 17.822 18.941 16.458 C 19.817 15.094 20.272 13.501 20.249 11.88 C 20.225 10.259 19.724 8.68 18.809 7.342 C 17.893 6.004 16.604 4.965 15.101 4.355 C 13.599 3.745 11.95 3.592 10.361 3.914 C 8.772 4.236 7.313 5.019 6.166 6.166 C 5.062 7.283 4.151 8.337 3 9.75</StreamGeometry>
 
     <StreamGeometry x:Key="Icon.Search">M 10.5 18 C 14.642 18 18 14.642 18 10.5 C 18 6.358 14.642 3 10.5 3 C 6.358 3 3 6.358 3 10.5 C 3 14.642 6.358 18 10.5 18 Z M 15.803 15.803 L 21 21</StreamGeometry>
@@ -103,6 +106,8 @@
     <StreamGeometry x:Key="Icon.ChatCircle">M 7.493 19.792 a 9 9 0 1 0 -3.281 -3.281 h 0 L 3.039 20.012 a 0.75 0.75 0 0 0 0.949 0.949 l 3.505 -1.169 Z</StreamGeometry>
 
     <StreamGeometry x:Key="Icon.LinkSimple">M 9 15 L 15 9 M 10.5 7.135 l 2.818 -2.812 a 4.5 4.5 0 0 1 6.364 6.364 L 16.864 13.5 M 7.135 10.5 l -2.812 2.818 a 4.5 4.5 0 0 0 6.364 6.364 L 13.5 16.864</StreamGeometry>
+
+    <StreamGeometry x:Key="Icon.LinkSimpleBreak">M 10.5 7.135 l 2.818 -2.812 a 4.5 4.5 0 0 1 6.364 6.364 L 16.864 13.5 M 7.135 10.5 l -2.812 2.818 a 4.5 4.5 0 0 0 6.364 6.364 L 13.5 16.864</StreamGeometry>
 
     <StreamGeometry x:Key="Icon.Copy">M 15.75 15.75 H 20.25 V 3.75 H 8.25 V 8.25 M 3.75 8.25 H 15.75 V 20.25 H 3.75 Z</StreamGeometry>
 

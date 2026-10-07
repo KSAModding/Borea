@@ -334,10 +334,16 @@ public partial class MainViewModel
     /// "Also adds KSP-Redux 1.3.2" for what the plan installs besides the requested mods,
     /// without the mods that the choices show, or null when it installs nothing else.
     /// </summary>
+    /// <param name="plan">The plan that waits for a confirmation.</param>
+    /// <param name="choices">The choices that the row shows, whose mods are named there already.</param>
     /// <param name="all">Names every mod. Otherwise a long list ends in "and 2 more".</param>
-    internal string? AddedModsText(InstallPlan? plan, InstallChoices? choices, bool all = false)
+    /// <param name="ownModId">The mod that the row itself changes, which the plan does not add.</param>
+    internal string? AddedModsText(InstallPlan? plan, InstallChoices? choices, bool all = false, string? ownModId = null)
     {
-        var names = AddedMods(plan, choices).Select(release => $"{ContentName(release.ModId)} {release.Version}").ToList();
+        var names = AddedMods(plan, choices)
+            .Where(release => ownModId is null || !ModIds.Equals(release.ModId, ownModId))
+            .Select(release => $"{ContentName(release.ModId)} {release.Version}")
+            .ToList();
         if (names.Count == 0)
             return null;
 

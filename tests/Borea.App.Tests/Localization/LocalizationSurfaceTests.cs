@@ -48,8 +48,16 @@ public sealed class LocalizationSurfaceTests : IDisposable
         Assert.Equal("Replace 0.7.3 in Main", service.FormatContentReplaceVersionIn("0.7.3", "Main"));
         Assert.Equal("Use 1.1.10 in Main", service.FormatPackMemberUseNewer("1.1.10", "Main"));
         Assert.Equal("Use 1.1.10", service.FormatPackMemberUseNewerChip("1.1.10"));
-        Assert.Equal("1.1.10 in use", service.FormatPackMemberInUse("1.1.10"));
+        Assert.Equal("Installed 1.1.10", service.FormatPackMemberInUse("1.1.10"));
         Assert.Equal("Main uses MeasureTools 1.1.10, detached from the modpack. Attach it again on the Content tab.", service.FormatPackMemberInUseDetached("Main", "MeasureTools", "1.1.10"));
+        Assert.Equal("Main uses MeasureTools 1.1.10. The next pack update changes it back to 1.1.9.", service.FormatPackMemberInUseNextUpdate("Main", "MeasureTools", "1.1.10", "1.1.9"));
+        Assert.Equal("Main uses MeasureTools 1.1.10, detached from the modpack. \"Back to 1.1.9\" attaches it again.", service.FormatPackMemberInUseDetachedBack("Main", "MeasureTools", "1.1.10", "1.1.9"));
+        Assert.Equal("Attaches MeasureTools to the modpack again in the instance Main and changes it back to 1.1.9.", service.FormatPackMemberBackToConfirm("MeasureTools", "Main", "1.1.9"));
+        Assert.Equal("Back to 1.1.9", service.FormatPackMemberBackToChip("1.1.9"));
+        Assert.Equal("Back to 1.1.9 in Main", service.FormatPackMemberBackTo("1.1.9", "Main"));
+        Assert.Equal("In Main", service.FormatPackMemberInstanceHeader("Main"));
+        Assert.Equal("MeasureTools changed to 1.1.10 in Main", service.FormatToastChanged("MeasureTools", "1.1.10", "Main"));
+        Assert.Equal("Detached from Tools Pack, which pins 1.1.9. Attach it again from the row menu.", service.FormatContentDetachedFrom("Tools Pack", "1.1.9"));
         Assert.Equal("1 of 3 selected", service.FormatGameSaveProfileSelected(1, 3));
         Assert.Equal("1 mod", service.FormatDiscoverModCount(1));
         Assert.Equal("1 modpack", service.FormatDiscoverPackCount(1));

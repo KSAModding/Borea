@@ -37,6 +37,9 @@ public sealed partial class TaskItem : ObservableObject
     /// <summary>The version an update or a loader install puts in. It is not saved.</summary>
     internal string? NewVersion { get; set; }
 
+    /// <summary>The name of the mod whose version an install changes in the instance, so its toast does not say "added". It is not saved.</summary>
+    internal string? ChangedModName { get; set; }
+
     /// <summary>How many of its mods a stopped install or update changed. It is not saved.</summary>
     internal (int Completed, int Total) StoppedAfter { get; set; }
 
