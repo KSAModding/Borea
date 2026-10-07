@@ -18,6 +18,9 @@ internal sealed class TestGamePathProvider : IGamePathProvider
         _hasGameDirectory = hasGameDirectory;
     }
 
+    /// <summary>Runs each time the path of an instance record is asked for, so a test can pause a read of the record.</summary>
+    public Action<Guid>? OnInstanceMetadataPath { get; set; }
+
     public string GetIndexPath() => Path.Combine(_root, "index.json");
     public string GetAnnouncementsPath() => Path.Combine(_root, "announcements.toml");
     public string GetListingSchemaPath() => Path.Combine(_root, "authored.schema.json");
@@ -40,7 +43,11 @@ internal sealed class TestGamePathProvider : IGamePathProvider
     public string GetInstanceLaunchLogPath(Guid instanceId) => Path.Combine(GetInstanceRoot(instanceId), "logs", "borea-launch.log");
     public string GetInstancePlaytimePath(Guid instanceId) => Path.Combine(GetInstanceRoot(instanceId), "playtime.toml");
     public string GetInstanceManifestPath(Guid instanceId) => Path.Combine(GetInstanceRoot(instanceId), "manifest.toml");
-    public string GetInstanceMetadataPath(Guid instanceId) => Path.Combine(GetInstanceRoot(instanceId), "instance.toml");
+    public string GetInstanceMetadataPath(Guid instanceId)
+    {
+        OnInstanceMetadataPath?.Invoke(instanceId);
+        return Path.Combine(GetInstanceRoot(instanceId), "instance.toml");
+    }
     public string GetActiveInstancePointerPath() => Path.Combine(_root, "active-instance.toml");
     public string GetModFavoritesPath() => Path.Combine(_root, "mod-favorites.toml");
     public string GetModPackFavoritesPath() => Path.Combine(_root, "modpack-favorites.toml");

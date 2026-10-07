@@ -161,6 +161,28 @@ public sealed class FileInstanceRepositoryTests : IDisposable
     }
 
     [Fact]
+    public async Task GetByIdAsync_WhileAnUpdateRuns_WaitsAndReturnsTheUpdatedRecord()
+    {
+        var instance = (await _repository.CreateAsync("Alpha", new InstanceSource.FromModPack("pack", ModVersion.Parse("1.0.0")).WithDetached(["detached-mod"]))).Instance;
+        var changing = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        using var release = new ManualResetEventSlim();
+
+        var update = Task.Run(() => _repository.UpdateAsync(instance.InstanceId, saved =>
+        {
+            changing.SetResult();
+            release.Wait();
+            return saved.AttachToModPack("detached-mod");
+        }));
+        await changing.Task;
+        // a read that opened the file now would get the old record, and on Windows it would make the write fail
+        var read = _repository.GetByIdAsync(instance.InstanceId);
+        release.Set();
+
+        Assert.True(await update);
+        Assert.Equal(new InstanceSource.FromModPack("pack", ModVersion.Parse("1.0.0")), (await read)!.Source);
+    }
+
+    [Fact]
     public async Task GetByIdAsync_FileWithoutLaunchArguments_LoadsAnEmptyList()
     {
         var instance = (await _repository.CreateAsync("Older", InstanceSource.Custom.Value)).Instance;
@@ -337,6 +359,29 @@ public sealed class FileInstanceRepositoryTests : IDisposable
 
         Assert.False(Directory.Exists(_pathProvider.GetInstanceRoot(instance.InstanceId)));
         Assert.True(File.Exists(Path.Combine(target, "mod.toml")));
+    }
+
+    [Fact]
+    public async Task DeleteAsync_WhileAReadRuns_WaitsAndThenRemovesTheInstance()
+    {
+        var instance = (await _repository.CreateAsync("Alpha", InstanceSource.Custom.Value)).Instance;
+        var reading = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        using var release = new ManualResetEventSlim();
+        _pathProvider.OnInstanceMetadataPath = id =>
+        {
+            if (id == instance.InstanceId && reading.TrySetResult())
+                release.Wait();
+        };
+
+        var read = Task.Run(() => _repository.GetByIdAsync(instance.InstanceId));
+        await reading.Task;
+        // a delete that ran now would remove the record before the read opens it, and on Windows an open record would make the delete fail
+        var delete = _repository.DeleteAsync(instance.InstanceId);
+        release.Set();
+
+        await delete;
+        Assert.Equal("Alpha", (await read)?.Name);
+        Assert.False(Directory.Exists(_pathProvider.GetInstanceRoot(instance.InstanceId)));
     }
 
     [Fact]
