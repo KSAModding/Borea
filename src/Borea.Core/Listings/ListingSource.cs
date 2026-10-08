@@ -35,7 +35,14 @@ public interface IListingHostClient
 /// <param name="ModToml">Whether the root holds a mod.toml.</param>
 /// <param name="EntryAssembly">The assembly StarMap loads: [StarMap] EntryAssembly of the mod.toml, else the root name.</param>
 /// <param name="IsCodeMod">Whether the root holds the <see cref="EntryAssembly"/> DLL.</param>
-public sealed record ListingArchiveFacts(string? Root, IReadOnlyList<string> TopLevelFolders, bool ModToml, string? EntryAssembly, bool IsCodeMod);
+public sealed record ListingArchiveFacts(string? Root, IReadOnlyList<string> TopLevelFolders, bool ModToml, string? EntryAssembly, bool IsCodeMod)
+{
+    /// <summary>
+    /// The [[StarMap.ModDependencies]] of the mod.toml at the install root, which the stamper turns into the derived dependencies
+    /// of the release, or null when there is no install root or no mod.toml there.
+    /// </summary>
+    public IReadOnlyList<LocalModDependency>? ModDependencies { get; init; }
+}
 
 /// <param name="Archive">The facts of the latest release archive, or null when there was none to read.</param>
 /// <param name="ArchiveProblem">Why the archive could not be read, or null.</param>
@@ -47,9 +54,10 @@ public interface IListingSourceReader
     /// <summary>The largest archive the checks of content-index accept.</summary>
     public const long MaxArchiveBytes = 4L * 1024 * 1024 * 1024;
 
+    /// <param name="installRoot">The install root that the listing authors, or null when the stamper derives it.</param>
     /// <exception cref="ListingSourceException">The host has no such repository or mod.</exception>
     /// <exception cref="HttpRequestException">The host did not answer.</exception>
-    Task<ListingSource> ReadAsync(ListingSourceReference source, IProgress<DownloadProgress>? progress = null, CancellationToken cancellationToken = default);
+    Task<ListingSource> ReadAsync(ListingSourceReference source, string? installRoot = null, IProgress<DownloadProgress>? progress = null, CancellationToken cancellationToken = default);
 }
 
 public sealed class ListingSourceException(string message) : Exception(message);

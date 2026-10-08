@@ -329,7 +329,7 @@ public sealed partial class ListingEditor : ObservableObject
                 if (IsReadingSource)
                     SourceProgress = Localization.FormatListingDownloading(SizeText(value.BytesDownloaded));
             });
-            var source = await services.ListingSources.ReadAsync(reference, progress, cancel.Token);
+            var source = await services.ListingSources.ReadAsync(reference, installRoot: null, progress, cancel.Token);
             var draft = ListingPrefill.Apply(NewDraft(), source, _snapshot, services.InstalledVersion.GetInstalledVersion()?.Version);
             if (draft.LinkOf("forums") is { } forums && _snapshot is { } snapshot)
             {
