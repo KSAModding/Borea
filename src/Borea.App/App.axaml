@@ -40,6 +40,7 @@
                     <Color x:Key="Color.Danger">#F07178</Color>
                     <Color x:Key="Color.DangerSoft">#26F07178</Color>
                     <Color x:Key="Color.Compatible">#C1FFB5</Color>
+                    <Color x:Key="Color.OnCompatible">#000000</Color>
                     <Color x:Key="Color.Untested">#F5B35C</Color>
                     <Color x:Key="Color.Incompatible">#F07178</Color>
                     <Color x:Key="Color.CompatibilityUnknown">#8A8A8A</Color>
@@ -70,6 +71,7 @@
                     <Color x:Key="Color.Danger">#A3262F</Color>
                     <Color x:Key="Color.DangerSoft">#26A3262F</Color>
                     <Color x:Key="Color.Compatible">#3C8A25</Color>
+                    <Color x:Key="Color.OnCompatible">#000000</Color>
                     <Color x:Key="Color.Untested">#A76300</Color>
                     <Color x:Key="Color.Incompatible">#C93A43</Color>
                     <Color x:Key="Color.CompatibilityUnknown">#7E7E88</Color>
@@ -102,6 +104,7 @@
             <SolidColorBrush x:Key="Brush.Danger" Color="{DynamicResource Color.Danger}" />
             <SolidColorBrush x:Key="Brush.DangerSoft" Color="{DynamicResource Color.DangerSoft}" />
             <SolidColorBrush x:Key="Brush.Compatible" Color="{DynamicResource Color.Compatible}" />
+            <SolidColorBrush x:Key="Brush.OnCompatible" Color="{DynamicResource Color.OnCompatible}" />
             <SolidColorBrush x:Key="Brush.Untested" Color="{DynamicResource Color.Untested}" />
             <SolidColorBrush x:Key="Brush.Incompatible" Color="{DynamicResource Color.Incompatible}" />
             <SolidColorBrush x:Key="Brush.CompatibilityUnknown" Color="{DynamicResource Color.CompatibilityUnknown}" />
@@ -567,7 +570,7 @@
             <Setter Property="Foreground" Value="{StaticResource Brush.SurfaceHeader}" />
             <Setter Property="Opacity" Value="0.4" />
         </Style>
-        <!-- c/button-icon-add: black disc with a plus -->
+        <!-- c/button-icon-add: black disc with a plus, and a green disc with a black check on an installed row -->
         <Style Selector="Button.add">
             <Setter Property="Width" Value="38" />
             <Setter Property="Height" Value="38" />
@@ -585,8 +588,19 @@
             <Setter Property="Stroke" Value="{StaticResource Brush.Accent}" />
             <Setter Property="StrokeThickness" Value="2" />
         </Style>
+        <Style Selector="Button.add.installed">
+            <Setter Property="Background" Value="{StaticResource Brush.Compatible}" />
+        </Style>
+        <Style Selector="Button.add.installed:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="{StaticResource Brush.Compatible}" />
+            <Setter Property="Opacity" Value="0.9" />
+        </Style>
+        <Style Selector="Button.add.installed:pressed /template/ ContentPresenter">
+            <Setter Property="Background" Value="{StaticResource Brush.Compatible}" />
+            <Setter Property="Opacity" Value="0.8" />
+        </Style>
         <Style Selector="Button.add.installed Path">
-            <Setter Property="Stroke" Value="{StaticResource Brush.Compatible}" />
+            <Setter Property="Stroke" Value="{StaticResource Brush.OnCompatible}" />
         </Style>
         <!-- the back to top pill of a long list: a raised surface with a border and a label, so it does not read as the add disc of a row -->
         <Style Selector="Button.to-top">
