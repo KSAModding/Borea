@@ -10,8 +10,11 @@ using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace Borea.App.ViewModels;
 
-/// <summary>A listed mod that the start step can load to change it or that a pack can pin, or a listed pack to make its next version.</summary>
-public sealed record ListedListing(string Id, string Name, string AuthorsText, bool IsOwn, bool IsPack = false);
+/// <summary>
+/// A listed mod that the start step can load to change it or that a pack can pin, or a listed pack to make its next version.
+/// The dependency search also offers a listed loader, which it marks.
+/// </summary>
+public sealed record ListedListing(string Id, string Name, string AuthorsText, bool IsOwn, bool IsPack = false, bool IsLoader = false);
 
 /// <summary>
 /// The search for a listed mod or pack on the start step. The listings of the signed-in GitHub account come first.

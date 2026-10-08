@@ -1776,6 +1776,30 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string ListingDependencyMax => Resources.ListingDependencyMax;
 
+    public string ListingDependencyKindRequired => Resources.ListingDependencyKindRequired;
+
+    public string ListingDependencyKindOptional => Resources.ListingDependencyKindOptional;
+
+    public string ListingDependencyKindRecommends => Resources.ListingDependencyKindRecommends;
+
+    public string ListingDependencyKindSuggests => Resources.ListingDependencyKindSuggests;
+
+    public string ListingDependencyKindConflict => Resources.ListingDependencyKindConflict;
+
+    public string ListingNeedsNewest => Resources.ListingNeedsNewest;
+
+    public string ListingNeedsNewestHint => Resources.ListingNeedsNewestHint;
+
+    public string ListingSearchDependencies => Resources.ListingSearchDependencies;
+
+    public string ListingAddBounds => Resources.ListingAddBounds;
+
+    public string ListingReadArchive => Resources.ListingReadArchive;
+
+    public string ListingReadArchiveHint => Resources.ListingReadArchiveHint;
+
+    public string ListingDeclaredNeedsHost => Resources.ListingDeclaredNeedsHost;
+
     public string ListingRemove => Resources.ListingRemove;
 
     public string ListingMoreTags => Resources.ListingMoreTags;
@@ -2697,6 +2721,30 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string FormatListingDependencyPreserved(string ids)
         => string.Format(CultureInfo.CurrentCulture, Resources.ListingDependencyPreservedFormat, ids);
+
+    public string FormatListingDependencyNotListed(string id)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ListingDependencyNotListedFormat, id);
+
+    public string FormatListingDeclared(string release)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ListingDeclaredFormat, release);
+
+    public string FormatListingDeclaredNone(string release)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ListingDeclaredNoneFormat, release);
+
+    public string FormatListingDeclaredNoRoot(string release)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ListingDeclaredNoRootFormat, release);
+
+    public string FormatListingDeclaredNoModToml(string release)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ListingDeclaredNoModTomlFormat, release);
+
+    public string FormatListingLoaderSet(string id)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ListingLoaderSetFormat, id);
+
+    public string FormatListingDeclaredRequired(string id)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ListingDeclaredRequiredFormat, id);
+
+    public string FormatListingDeclaredOptional(string id)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ListingDeclaredOptionalFormat, id);
 
     public string FormatListingImageFacts(string width, string height, string size)
         => string.Format(CultureInfo.CurrentCulture, Resources.ListingImageFactsFormat, width, height, size);

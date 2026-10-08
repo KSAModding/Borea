@@ -37,6 +37,15 @@
         </Style>
     </UserControl.Styles>
     <UserControl.Resources>
+        <!-- a stamped release in a list of releases, a release that is not stable with its status -->
+        <DataTemplate x:Key="ReleaseChoiceTemplate" x:DataType="vm:ListingReleaseChoice">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+                <TextBlock Text="{Binding Version}" VerticalAlignment="Center" />
+                <Border Classes="chip" VerticalAlignment="Center" IsVisible="{Binding HasStatus}">
+                    <TextBlock Text="{Binding Status}" />
+                </Border>
+            </StackPanel>
+        </DataTemplate>
         <!-- the icon or one description image -->
         <DataTemplate x:Key="ListingImageTemplate" x:DataType="vm:ListingImageRow">
             <Border Background="{StaticResource Brush.Window}" CornerRadius="12" Padding="16">
@@ -302,18 +311,7 @@
                                                             <TextBlock Classes="heading-sm" Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
                                                             <TextBlock Classes="label-md" Text="{Binding Id}" TextTrimming="CharacterEllipsis" />
                                                         </StackPanel>
-                                                        <ComboBox Grid.Column="2" MinWidth="180" VerticalAlignment="Center" ItemsSource="{Binding Releases}" SelectedItem="{Binding Selected}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ListingMemberRelease}">
-                                                            <ComboBox.ItemTemplate>
-                                                                <DataTemplate x:DataType="vm:ListingReleaseChoice">
-                                                                    <StackPanel Orientation="Horizontal" Spacing="8">
-                                                                        <TextBlock Text="{Binding Version}" VerticalAlignment="Center" />
-                                                                        <Border Classes="chip" VerticalAlignment="Center" IsVisible="{Binding HasStatus}">
-                                                                            <TextBlock Text="{Binding Status}" />
-                                                                        </Border>
-                                                                    </StackPanel>
-                                                                </DataTemplate>
-                                                            </ComboBox.ItemTemplate>
-                                                        </ComboBox>
+                                                        <ComboBox Grid.Column="2" MinWidth="180" VerticalAlignment="Center" ItemsSource="{Binding Releases}" SelectedItem="{Binding Selected}" ItemTemplate="{StaticResource ReleaseChoiceTemplate}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ListingMemberRelease}" />
                                                         <Button Grid.Column="4" Classes="icon" Command="{Binding RemoveCommand}" VerticalAlignment="Center" ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ListingRemove}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ListingRemove}">
                                                             <Path Classes="icon size-16" Data="{StaticResource Icon.Trash}" />
                                                         </Button>
@@ -401,6 +399,44 @@
                             <StackPanel Spacing="8">
                                 <TextBlock Classes="heading-md" Text="{Binding Localization.ListingDependencies}" />
                                 <TextBlock Classes="body-sm secondary" Text="{Binding Localization.ListingDependenciesHint}" TextWrapping="Wrap" />
+                                <Border Background="{StaticResource Brush.Window}" CornerRadius="12" Padding="12" IsVisible="{Binding ListingEditor.HasDeclaredHelp}">
+                                    <StackPanel Spacing="6">
+                                        <TextBlock Classes="body-sm secondary" Text="{Binding ListingEditor.DeclaredText}" TextWrapping="Wrap" IsVisible="{Binding ListingEditor.DeclaredText, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                                        <ItemsControl ItemsSource="{Binding ListingEditor.DeclaredDependencies}">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate>
+                                                    <StackPanel Spacing="4" />
+                                                </ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate x:DataType="vm:ListingDeclaredDependencyRow">
+                                                    <Grid ColumnDefinitions="*,8,Auto,8,Auto">
+                                                        <TextBlock Classes="body-md" Text="{Binding Text}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                                                        <Border Grid.Column="2" Classes="chip" VerticalAlignment="Center" IsVisible="{Binding IsLoader}">
+                                                            <TextBlock Text="{Binding ModLoaderText}" />
+                                                        </Border>
+                                                        <Button Grid.Column="4" Classes="link" Command="{Binding AddBoundsCommand}" VerticalAlignment="Center" IsVisible="{Binding CanAddBounds}">
+                                                            <TextBlock Classes="action-md" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ListingAddBounds}" />
+                                                        </Button>
+                                                    </Grid>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                        <StackPanel Spacing="4" IsVisible="{Binding ListingEditor.HasReleasesHost}">
+                                            <TextBlock Classes="body-sm secondary" Text="{Binding Localization.ListingReadArchiveHint}" TextWrapping="Wrap" />
+                                            <Button Classes="link" Command="{Binding ListingEditor.ReadArchiveDependenciesCommand}" HorizontalAlignment="Left">
+                                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                                    <Path Classes="icon size-16" Data="{StaticResource Icon.Download}" />
+                                                    <TextBlock Classes="action-md" Text="{Binding Localization.ListingReadArchive}" VerticalAlignment="Center" />
+                                                </StackPanel>
+                                            </Button>
+                                        </StackPanel>
+                                        <Grid ColumnDefinitions="*,8,Auto" IsVisible="{Binding ListingEditor.ArchiveReadText, Converter={x:Static ObjectConverters.IsNotNull}}">
+                                            <TextBlock Classes="body-sm secondary" Text="{Binding ListingEditor.ArchiveReadText}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                                            <Button Grid.Column="2" Classes="text" Content="{Binding Localization.LibraryCancel}" Command="{Binding ListingEditor.CancelArchiveReadCommand}" IsVisible="{Binding ListingEditor.IsReadingArchive}" />
+                                        </Grid>
+                                    </StackPanel>
+                                </Border>
                                 <ItemsControl ItemsSource="{Binding ListingEditor.Dependencies}">
                                     <ItemsControl.ItemsPanel>
                                         <ItemsPanelTemplate>
@@ -409,21 +445,65 @@
                                     </ItemsControl.ItemsPanel>
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate x:DataType="vm:ListingDependencyRow">
-                                            <Grid ColumnDefinitions="*,8,Auto">
-                                                <TextBlock Classes="body-md secondary" Text="{Binding PreservedText}" TextWrapping="Wrap" VerticalAlignment="Center" IsVisible="{Binding IsPreserved}" />
-                                                <WrapPanel ItemSpacing="8" LineSpacing="8" IsVisible="{Binding IsEditable}">
-                                                    <TextBox Classes="field" Width="200" Text="{Binding Id}" PlaceholderText="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ListingId}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ListingId}" />
-                                                    <ComboBox Width="150" ItemsSource="{x:Static vm:ListingEditor.DependencyKinds}" SelectedItem="{Binding Kind}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ListingDependencyKind}" />
-                                                    <TextBox Classes="field" Width="120" Text="{Binding Min}" PlaceholderText="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ListingDependencyMin}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ListingDependencyMin}" />
-                                                    <TextBox Classes="field" Width="120" Text="{Binding Max}" PlaceholderText="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ListingDependencyMax}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ListingDependencyMax}" />
-                                                </WrapPanel>
-                                                <Button Grid.Column="2" Classes="icon" Command="{Binding RemoveCommand}" VerticalAlignment="Top" ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ListingRemove}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ListingRemove}">
-                                                    <Path Classes="icon size-16" Data="{StaticResource Icon.Trash}" />
-                                                </Button>
-                                            </Grid>
+                                            <Border Background="{StaticResource Brush.Window}" CornerRadius="12" Padding="12">
+                                                <Grid ColumnDefinitions="*,8,Auto">
+                                                    <StackPanel Spacing="4">
+                                                        <TextBlock Classes="body-md secondary" Text="{Binding PreservedText}" TextWrapping="Wrap" Margin="0,6,0,0" IsVisible="{Binding IsPreserved}" />
+                                                        <WrapPanel ItemSpacing="8" LineSpacing="8" IsVisible="{Binding IsEditable}">
+                                                            <TextBox Classes="field" Width="180" Text="{Binding Id}" PlaceholderText="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ListingId}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ListingId}" />
+                                                            <ComboBox Width="130" MinHeight="35" VerticalAlignment="Center" ItemsSource="{Binding KindChoices}" SelectedItem="{Binding Kind}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ListingDependencyKind}" />
+                                                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                                                <TextBox Classes="field" Width="150" Text="{Binding Min}" PlaceholderText="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ListingDependencyMin}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ListingDependencyMin}" IsVisible="{Binding HasNoVersions}" />
+                                                                <ComboBox Width="150" MinHeight="35" VerticalAlignment="Center" IsEditable="True" ItemsSource="{Binding Versions}" Text="{Binding Min}" ItemTemplate="{StaticResource ReleaseChoiceTemplate}" PlaceholderText="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ListingDependencyMin}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ListingDependencyMin}" IsVisible="{Binding HasVersions}" />
+                                                                <Button Classes="link" Command="{Binding NeedsNewestCommand}" VerticalAlignment="Center" ToolTip.Tip="{Binding NeedsNewestHint}" IsVisible="{Binding CanNeedNewest}">
+                                                                    <TextBlock Classes="action-md" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ListingNeedsNewest}" />
+                                                                </Button>
+                                                            </StackPanel>
+                                                            <Panel>
+                                                                <TextBox Classes="field" Width="150" Text="{Binding Max}" PlaceholderText="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ListingDependencyMax}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ListingDependencyMax}" IsVisible="{Binding HasNoVersions}" />
+                                                                <ComboBox Width="150" MinHeight="35" VerticalAlignment="Center" IsEditable="True" ItemsSource="{Binding Versions}" Text="{Binding Max}" ItemTemplate="{StaticResource ReleaseChoiceTemplate}" PlaceholderText="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ListingDependencyMax}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ListingDependencyMax}" IsVisible="{Binding HasVersions}" />
+                                                            </Panel>
+                                                        </WrapPanel>
+                                                        <TextBlock Classes="body-sm secondary" Text="{Binding KindText}" TextWrapping="Wrap" IsVisible="{Binding HasKindText}" />
+                                                        <TextBlock Classes="body-sm danger" Text="{Binding ErrorText}" TextWrapping="Wrap" IsVisible="{Binding HasErrors}" />
+                                                        <TextBlock Classes="body-sm" Text="{Binding NoteText}" TextWrapping="Wrap" IsVisible="{Binding HasNotes}" />
+                                                    </StackPanel>
+                                                    <Button Grid.Column="2" Classes="icon" Command="{Binding RemoveCommand}" VerticalAlignment="Top" ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ListingRemove}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ListingRemove}">
+                                                        <Path Classes="icon size-16" Data="{StaticResource Icon.Trash}" />
+                                                    </Button>
+                                                </Grid>
+                                            </Border>
                                         </DataTemplate>
                                     </ItemsControl.ItemTemplate>
                                 </ItemsControl>
+                                <Grid ColumnDefinitions="*,8,Auto" Margin="0,4,0,0">
+                                    <TextBox Classes="field search" Text="{Binding ListingEditor.DependencyQuery}" PlaceholderText="{Binding Localization.ListingSearchDependencies}" AutomationProperties.Name="{Binding Localization.ListingSearchDependencies}">
+                                        <TextBox.InnerLeftContent>
+                                            <Path Classes="icon size-16" Data="{StaticResource Icon.Search}" Margin="10,0,0,0" />
+                                        </TextBox.InnerLeftContent>
+                                    </TextBox>
+                                    <Button Grid.Column="2" Classes="text" Content="{Binding Localization.ListingAddMember}" Command="{Binding ListingEditor.AddListedDependencyCommand}" />
+                                </Grid>
+                                <ListBox ItemsSource="{Binding ListingEditor.DependencyMatches}" SelectedItem="{Binding ListingEditor.SelectedDependencyMatch}" MaxHeight="240" AutomationProperties.Name="{Binding Localization.ListingSearchDependencies}" IsVisible="{Binding !!ListingEditor.DependencyMatches.Count}">
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate x:DataType="vm:ListedListing">
+                                            <Grid ColumnDefinitions="*,16,Auto">
+                                                <StackPanel Spacing="2">
+                                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                                        <TextBlock Classes="heading-sm" Text="{Binding Name}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                                        <Border Classes="chip" VerticalAlignment="Center" IsVisible="{Binding IsLoader}">
+                                                            <TextBlock Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ContentTypeModLoader}" />
+                                                        </Border>
+                                                    </StackPanel>
+                                                    <TextBlock Classes="label-md" Text="{Binding Id}" TextTrimming="CharacterEllipsis" />
+                                                </StackPanel>
+                                                <TextBlock Grid.Column="2" Classes="body-sm secondary" Text="{Binding AuthorsText}" MaxWidth="240" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+                                <TextBlock Classes="body-sm secondary" Text="{Binding Localization.ListingNoListedMatch}" IsVisible="{Binding ListingEditor.HasNoDependencyMatch}" />
+                                <TextBlock Classes="body-sm" Text="{Binding ListingEditor.LoaderSetText}" TextWrapping="Wrap" IsVisible="{Binding ListingEditor.LoaderSetText, Converter={x:Static ObjectConverters.IsNotNull}}" />
                                 <Button Classes="link" Command="{Binding ListingEditor.AddDependencyCommand}" HorizontalAlignment="Left">
                                     <StackPanel Orientation="Horizontal" Spacing="6">
                                         <Path Classes="icon size-16" Data="{StaticResource Icon.Plus}" />

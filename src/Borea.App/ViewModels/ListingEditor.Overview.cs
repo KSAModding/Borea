@@ -120,6 +120,7 @@ public sealed partial class ListingEditor
             .Where(issue => !(explained.Contains(issue.Location) && issue.Message.Contains("is not an SPDX license expression", StringComparison.Ordinal)))
             .ToList();
 
+        ShowDependencyIssues(shown);
         MainViewModel.Arrange(VisibleErrors, shown.Where(issue => issue.Severity == ListingIssueSeverity.Error).Select(Line).ToList());
         MainViewModel.Arrange(VisibleNotes, shown.Where(issue => issue.Severity == ListingIssueSeverity.Note).Select(Line).ToList());
         MissingText = missing.Count == 0 ? null : Localization.FormatListingStillMissing(string.Join(", ", missing.Select(entry => entry.Label)));
