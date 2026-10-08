@@ -29,6 +29,8 @@
     <Compile Remove="Fixtures\**" />
     <None Remove="Fixtures\**" />
     <None Update="Index\Fixtures\current-snapshot.json" CopyToOutputDirectory="PreserveNewest" />
+    <!-- A copy of schemas/vectors.json of content-index at 1621b26b8efe, the documents its checks and its listing page run. -->
+    <None Update="Listings\Fixtures\vectors.json" CopyToOutputDirectory="PreserveNewest" />
     <!-- Copies of index-status.toml and its schema from content-index. -->
     <None Update="Stewardship\Fixtures\*" CopyToOutputDirectory="PreserveNewest" />
     <!-- The copies of real game files, which the game check runs against. -->
