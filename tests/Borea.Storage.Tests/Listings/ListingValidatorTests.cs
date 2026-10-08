@@ -348,6 +348,52 @@ public sealed class ListingValidatorTests
     }
 
     [Fact]
+    public void Validate_PackPins_AreCheckedByTheMemberRulesAndAsReferences()
+    {
+        var draft = new ListingDraft
+        {
+            Id = "my-pack",
+            Type = ListingDraft.ModPackType,
+            Version = "1.0.0",
+            Mods = [new ListingPackMember("advancedflightcomputer", "0.8.1"), new ListingPackMember("planning-pack", "1.0.1"), new ListingPackMember("StarMap", "0.4.6")],
+        };
+
+        var errors = Errors(draft).Where(issue => issue.Location.StartsWith("mods[", StringComparison.Ordinal)).Select(issue => issue.ToString());
+
+        Assert.Equal(
+            [
+                "mods[0]: 'advancedflightcomputer' does not use the canonical id spelling 'AdvancedFlightComputer'",
+                "mods[1]: 'planning-pack' is itself a pack, and a pack does not nest in spec_version 1",
+                "mods[0]: 'advancedflightcomputer' has no stamped release 0.8.1",
+                "mods[2]: 'StarMap' is listed as a mod-loader, and a pack pins only mods",
+            ],
+            errors);
+        Assert.DoesNotContain(Check(draft with { Mods = [new ListingPackMember("AdvancedFlightComputer", "0.8.0")] }).Issues, issue => issue.Location.StartsWith("mods", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Validate_PackPins_EachIdOnceAndNeverItself()
+    {
+        var draft = new ListingDraft
+        {
+            Id = "planning-pack",
+            Type = ListingDraft.ModPackType,
+            Version = "1.0.2",
+            Mods = [new ListingPackMember("AdvancedFlightComputer", "0.8.0"), new ListingPackMember("advancedflightcomputer", "0.8.0"), new ListingPackMember("planning-pack", "1.0.1")],
+        };
+
+        var errors = Errors(draft).Where(issue => issue.Location.StartsWith("mods[", StringComparison.Ordinal)).Select(issue => issue.ToString());
+
+        Assert.Equal(
+            [
+                "mods[1]: 'advancedflightcomputer' is pinned by mods[0]",
+                "mods[2]: a pack cannot pin itself",
+                "mods[1]: 'advancedflightcomputer' does not use the canonical id spelling 'AdvancedFlightComputer'",
+            ],
+            errors);
+    }
+
+    [Fact]
     public void Validate_AbstractLength_CountsCodePoints()
     {
         var draft = Valid() with { Abstract = string.Concat(Enumerable.Repeat("\U0001F680", 280)) };
@@ -455,12 +501,15 @@ public sealed class ListingValidatorTests
             new ModVersion(1, 0, 1), DateTimeOffset.UnixEpoch, [new ModPackEntry("AdvancedFlightComputer", new ModVersion(0, 8, 0))]);
         return new ContentIndexSnapshot(
             1,
-            [new ContentIndexListing("AdvancedFlightComputer", afc, Array.Empty<ModVersionMetadata>(), null), new ContentIndexListing("StarMap", starMap, Array.Empty<ModVersionMetadata>(), null)],
+            [new ContentIndexListing("AdvancedFlightComputer", afc, [AfcRelease()], null), new ContentIndexListing("StarMap", starMap, Array.Empty<ModVersionMetadata>(), null)],
             [new ContentIndexPack("planning-pack", [new ContentIndexPackVersion(pack, null)], null)],
             new ContentIndexGameVersions(1, "test", ["2026.8.19.5261", "2026.9.7.5402", "2026.9.10.5438"]),
             [],
             tags);
     }
+
+    private static ModVersionMetadata AfcRelease() => new(1, "AdvancedFlightComputer", new ModVersion(0, 8, 0), ReleaseStatus.Stable, DateTimeOffset.UnixEpoch, "2026.9.10.5438", 5438,
+        new DownloadInfo("https://example.com/AdvancedFlightComputer.zip", new string('a', 64), 1, "application/zip"), 1, []);
 
     private sealed class EmbeddedSchema : IListingSchemaSource
     {

@@ -5,6 +5,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Borea.Composition;
@@ -29,6 +30,9 @@ public sealed partial class ListingEditor
 {
     private IReadOnlyList<ContentIndexListing> _memberCandidates = [];
     private (string InstanceName, IReadOnlyList<ListingLeftOutMod> Mods)? _fromInstance;
+
+    /// <summary>The required dependencies that no member pins, which "Add the missing dependencies" pins.</summary>
+    private ListingPackFix _missing = new([], []);
 
     [ObservableProperty]
     private string _packVersion = string.Empty;
@@ -156,15 +160,12 @@ public sealed partial class ListingEditor
         return LoadListedCoreAsync(packId, isPack: true);
     }
 
-    /// <summary>Pins the chosen mod at its newest stable release, or at its newest release when none is stable.</summary>
+    /// <summary>Pins the chosen mod at its newest stable release that a pack can pin, by the order of <see cref="ListingPackDependencies.DefaultRelease"/>.</summary>
     [RelayCommand(CanExecute = nameof(CanAddMember))]
     private void AddMember()
     {
-        if (SelectedMemberMatch?.Id is not { } id || _snapshot is not { } snapshot || ListingPackMembers.Listing(snapshot, id) is not { } listing)
-            return;
-
-        var offered = ListingPackMembers.Offered(listing);
-        if ((offered.FirstOrDefault(release => release.ReleaseStatus == ReleaseStatus.Stable) ?? offered.FirstOrDefault()) is not { } release)
+        if (SelectedMemberMatch?.Id is not { } id || _snapshot is not { } snapshot || ListingPackMembers.Listing(snapshot, id) is not { } listing
+            || ListingPackDependencies.DefaultRelease(snapshot, listing) is not { } release)
             return;
 
         Members.Add(MemberRow(new ListingPackMember(listing.Id, release.Version.ToString())));
@@ -173,6 +174,38 @@ public sealed partial class ListingEditor
     }
 
     private bool CanAddMember() => SelectedMemberMatch is not null;
+
+    public bool CanAddMissingDependencies => _missing.Pins.Count > 0;
+
+    /// <summary>What "Add the missing dependencies" leaves to the author, such as a member that needs one of several mods.</summary>
+    public ObservableCollection<string> MissingDependencyNotes { get; } = [];
+
+    public bool HasMissingDependencyNotes => MissingDependencyNotes.Count > 0;
+
+    [RelayCommand]
+    private void AddMissingDependencies()
+    {
+        if (_missing.Pins.Count == 0)
+            return;
+
+        foreach (var pin in _missing.Pins)
+            Members.Add(MemberRow(pin));
+        FindMembers();
+        Refresh();
+    }
+
+    private void FillMissing(IReadOnlyList<ListingPackMember> mods)
+    {
+        _missing = IsPack && _snapshot is { } snapshot ? ListingPackDependencies.Missing(snapshot, mods) : new ListingPackFix([], []);
+        MainViewModel.Arrange(MissingDependencyNotes, _missing.Needs.Select(need => need.Reason switch
+        {
+            ListingPackNeedReason.Choose => Localization.FormatListingMissingChoose(need.Text),
+            ListingPackNeedReason.NotListed => Localization.FormatListingMissingNotListed(need.Text),
+            _ => Localization.FormatListingMissingNoRelease(need.Text),
+        }).ToList());
+        OnPropertyChanged(nameof(CanAddMissingDependencies));
+        OnPropertyChanged(nameof(HasMissingDependencyNotes));
+    }
 
     [RelayCommand]
     private void UseGameMinProposal()
@@ -207,20 +240,17 @@ public sealed partial class ListingEditor
         Refresh();
     }
 
-    /// <summary>Why no client can install the pin, or null when it can, or when there is no snapshot to tell.</summary>
+    /// <summary>
+    /// The note for a pin whose download is gone, which the member rules accept. A pin they refuse gets their error instead.
+    /// </summary>
     internal string? MemberNote(ListingPackMember member)
     {
-        if (_snapshot is not { } snapshot)
-            return null;
-        if (ListingPackMembers.Listing(snapshot, member.Id) is null)
-            return Localization.FormatListingMemberNotListed(member.Id);
-
-        if (ListingPackMembers.Release(snapshot, member) is not null)
+        if (_snapshot is not { } snapshot || ListingPackMembers.Release(snapshot, member) is not null)
             return null;
 
         return ListingPackMembers.Pinned(snapshot, member)?.Download.UnavailableSince is { } since
             ? Localization.FormatListingMemberGone(member.Id, member.Version, MainViewModel.DateText(since))
-            : Localization.FormatListingMemberNotOffered(member.Id, member.Version);
+            : null;
     }
 
     /// <summary>The newer release in the list of a row, by the "Newer releases" rule of RFC 0080, or null.</summary>
@@ -233,6 +263,60 @@ public sealed partial class ListingEditor
         var text = newer.Version.ToString();
         return releases.FirstOrDefault(release => release.Version == text);
     }
+
+    /// <summary>Whether the member rules accept the pin of a row at another release, with the pins of the other rows as they are.</summary>
+    internal bool NewerFits(ListingPackMemberRow row, string version)
+    {
+        if (_snapshot is not { } snapshot)
+            return false;
+
+        var pin = new ListingPackMember(row.Id, version);
+        var pins = Members.Where(other => !ReferenceEquals(other, row)).Select(other => other.ToMember()).Append(pin).ToList();
+        return ListingPackDependencies.Fits(snapshot, pins, pin);
+    }
+
+    /// <summary>The note of a row whose mod the index marks as disputed, or null.</summary>
+    internal string? DisputedNote(string id) =>
+        _snapshot is { } snapshot && ListingPackMembers.Listing(snapshot, id) is { IndexStatus: { State: IndexStatusState.Disputed } status }
+            ? Localization.FormatListingMemberDisputed(id, status.Reason)
+            : null;
+
+    /// <summary>Gives each row the errors whose location is its pin.</summary>
+    private void UpdateMemberProblems(IReadOnlyList<ListingIssue> errors)
+    {
+        for (var index = 0; index < Members.Count; index++)
+        {
+            var where = $"mods[{index}]";
+            Members[index].Update(errors
+                .Where(issue => issue.Location == where || issue.Location.StartsWith(where + ".", StringComparison.Ordinal))
+                .Select(issue => issue.Message)
+                .ToList());
+        }
+    }
+
+    /// <summary>
+    /// The issues with those about pins sorted by section and index, in the places those issues held, so the errors of one
+    /// member stand together and the members follow their order. The sort keeps the order of the issues of one pin.
+    /// </summary>
+    internal static List<ListingIssue> InPinOrder(IEnumerable<ListingIssue> issues)
+    {
+        var list = issues.ToList();
+        var places = list.Select((issue, place) => (Place: place, Key: PinKey(issue.Location))).Where(entry => entry.Key is not null).ToList();
+        var sorted = places.OrderBy(entry => entry.Key!.Value).Select(entry => list[entry.Place]).ToList();
+        for (var index = 0; index < places.Count; index++)
+            list[places[index].Place] = sorted[index];
+        return list;
+    }
+
+    private static (int Section, int Index)? PinKey(string location) =>
+        PinLocation().Match(location) is { Success: true } match
+            ? (Array.IndexOf(PinSections, match.Groups[1].Value), int.Parse(match.Groups[2].Value, CultureInfo.InvariantCulture))
+            : null;
+
+    private static readonly string[] PinSections = ["mods", "vehicles", "saves"];
+
+    [GeneratedRegex(@"^(mods|vehicles|saves)\[(\d+)\]")]
+    private static partial Regex PinLocation();
 
     internal string NewerText(string version) => Localization.FormatPackMemberNewer(version);
 
@@ -253,7 +337,7 @@ public sealed partial class ListingEditor
         .OrderByDescending(version => version.Metadata.Version);
 
     /// <summary>
-    /// A note for each pin no client can install, and the game_min the pins need when the form has a lower one.
+    /// A note for each pin whose download is gone, and the game_min the pins need when the form has a lower one.
     /// For the next version of a listed pack also each retracted version with its reason, each pin that a reason names,
     /// and an error for a version or a release time that does not come after the listed versions.
     /// </summary>
@@ -273,6 +357,7 @@ public sealed partial class ListingEditor
         if (ListedPack() is { } pack)
             issues.AddRange(OrderIssues(pack));
         FillLeftOut(mods);
+        FillMissing(mods);
 
         var needed = _snapshot is { } snapshot ? ListingPackMembers.HighestGameMin(snapshot, mods) : null;
         GameMinProposal = needed is not null && !(GameVersion.TryParse(GameMin.Trim(), out var gameMin) && gameMin.Revision >= needed.GameMinRevision)
@@ -411,18 +496,26 @@ public sealed partial class ListingEditor
         FindMembers();
     }
 
-    /// <summary>A row whose release list holds the releases a pin can name, and first the pinned one when it is not among them.</summary>
+    /// <summary>
+    /// A row whose release list holds the releases a pin can name, and first the pinned one when it is not among them.
+    /// A release that requires a mod that is not listed is marked, because no pack can pin it with a complete set.
+    /// </summary>
     private ListingPackMemberRow MemberRow(ListingPackMember member)
     {
         var listing = _snapshot is { } snapshot ? ListingPackMembers.Listing(snapshot, member.Id) : null;
         var releases = (listing is null ? [] : ListingPackMembers.Offered(listing))
-            .Select(release => new ListingReleaseChoice(release.Version.ToString(), _owner.ReleaseStatusText(release.ReleaseStatus)))
+            .Select(release => new ListingReleaseChoice(release.Version.ToString(), _owner.ReleaseStatusText(release.ReleaseStatus)) { Mark = Mark(release) })
             .ToList();
         if (!releases.Any(release => release.Version == member.Version))
             releases.Insert(0, new ListingReleaseChoice(member.Version, string.Empty));
 
         return new ListingPackMemberRow(this, member, listing?.Authored?.Name ?? member.Id, releases);
     }
+
+    private string? Mark(ModVersionMetadata release) =>
+        _snapshot is { } snapshot && ListingPackDependencies.UnlistedNeeds(snapshot, release) is { Count: > 0 } needs
+            ? Localization.FormatListingMemberCannotBePinned(needs)
+            : null;
 
     private void FindMembers()
     {

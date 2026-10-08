@@ -2601,11 +2601,38 @@
   <data name="ListingMemberRelease" xml:space="preserve">
     <value>Release</value>
   </data>
-  <data name="ListingMemberNotListedFormat" xml:space="preserve">
-    <value>{0} is not a mod that the index lists, so no client can install this pin.</value>
+  <data name="ListingMemberCannotBePinnedFormat" xml:space="preserve">
+    <value>Cannot be pinned, because it needs {0}</value>
   </data>
-  <data name="ListingMemberNotOfferedFormat" xml:space="preserve">
-    <value>{0} {1} is yanked or not in the index, so no client can install this pin.</value>
+  <data name="ListingMemberNeedsOneOfFormat" xml:space="preserve">
+    <value>one of {0}</value>
+  </data>
+  <data name="ListingMemberNeedsAnd" xml:space="preserve">
+    <value> and </value>
+  </data>
+  <data name="ListingMemberDisputedFormat" xml:space="preserve">
+    <value>The index marks {0} as disputed, so a client warns before it installs this pin.</value>
+  </data>
+  <data name="ListingMemberRulesHint" xml:space="preserve">
+    <value>The pack pins every required dependency of its members inside their bounds, and no member conflicts with another. A release that needs a mod that is not listed is marked, because no pack can pin it.</value>
+  </data>
+  <data name="ListingAddMissingDependencies" xml:space="preserve">
+    <value>Add the missing dependencies</value>
+  </data>
+  <data name="ListingAddMissingDependenciesHint" xml:space="preserve">
+    <value>Pins each required dependency that no member pins, at its newest stable release inside the bounds. When a member needs one of several mods, you choose it.</value>
+  </data>
+  <data name="ListingMissingDependenciesTitle" xml:space="preserve">
+    <value>Borea cannot add these dependencies:</value>
+  </data>
+  <data name="ListingMissingChooseFormat" xml:space="preserve">
+    <value>{0}, so pin the one you want.</value>
+  </data>
+  <data name="ListingMissingNotListedFormat" xml:space="preserve">
+    <value>{0}, and no listed mod meets this, so no pack can pin this release.</value>
+  </data>
+  <data name="ListingMissingNoReleaseFormat" xml:space="preserve">
+    <value>{0}, and no stable release of it is inside the bounds of every member that requires it.</value>
   </data>
   <data name="ListingMemberGoneFormat" xml:space="preserve">
     <value>{0} {1} is no longer downloadable since {2}, so a client installs this pin only from a mirror or a copy it already has.</value>

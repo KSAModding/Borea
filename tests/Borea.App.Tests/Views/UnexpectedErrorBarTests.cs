@@ -19,7 +19,7 @@ namespace Borea.App.Tests.Views;
 public sealed class UnexpectedErrorBarTests
 {
     /// <summary>The lowest contrast that WCAG AA allows for body text.</summary>
-    private const double ReadableContrast = 4.5;
+    internal const double ReadableContrast = 4.5;
 
     [Theory]
     [InlineData("Dark")]
@@ -143,7 +143,7 @@ public sealed class UnexpectedErrorBarTests
         window.MouseUp(point, MouseButton.Left);
     }
 
-    private static Color Token(StyledElement element, string key)
+    internal static Color Token(StyledElement element, string key)
     {
         Assert.True(element.TryFindResource(key, element.ActualThemeVariant, out var value), $"The theme has no {key}.");
         return (Color)value!;
@@ -166,7 +166,7 @@ public sealed class UnexpectedErrorBarTests
     }
 
     /// <summary>The contrast ratio of two colors as WCAG 2 defines it.</summary>
-    private static double Contrast(Color first, Color second)
+    internal static double Contrast(Color first, Color second)
     {
         static double Channel(byte value)
         {
@@ -180,7 +180,7 @@ public sealed class UnexpectedErrorBarTests
         return (lighter + 0.05) / (darker + 0.05);
     }
 
-    private static Color Pixel(ILockedFramebuffer buffer, Point at)
+    internal static Color Pixel(ILockedFramebuffer buffer, Point at)
     {
         // the headless frame buffer is Rgba8888, see HeadlessApp
         var offset = (int)at.Y * buffer.RowBytes + (int)at.X * 4;

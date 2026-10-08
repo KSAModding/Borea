@@ -2601,11 +2601,38 @@
   <data name="ListingMemberRelease" xml:space="preserve">
     <value>Release</value>
   </data>
-  <data name="ListingMemberNotListedFormat" xml:space="preserve">
-    <value>{0} ist keine Mod, die der Index führt, deshalb kann kein Client diese Festlegung installieren.</value>
+  <data name="ListingMemberCannotBePinnedFormat" xml:space="preserve">
+    <value>Kann nicht festgelegt werden, weil es {0} braucht</value>
   </data>
-  <data name="ListingMemberNotOfferedFormat" xml:space="preserve">
-    <value>{0} {1} ist zurückgezogen oder nicht im Index, deshalb kann kein Client diese Festlegung installieren.</value>
+  <data name="ListingMemberNeedsOneOfFormat" xml:space="preserve">
+    <value>eine von {0}</value>
+  </data>
+  <data name="ListingMemberNeedsAnd" xml:space="preserve">
+    <value> und </value>
+  </data>
+  <data name="ListingMemberDisputedFormat" xml:space="preserve">
+    <value>Der Inhaltsindex markiert {0} als umstritten, deshalb warnt ein Client, bevor er diese Festlegung installiert.</value>
+  </data>
+  <data name="ListingMemberRulesHint" xml:space="preserve">
+    <value>Das Pack legt jede benötigte Abhängigkeit seiner Mods innerhalb ihrer Grenzen fest, und keine Mod im Pack steht im Konflikt mit einer anderen. Ein Release, das eine nicht eingetragene Mod braucht, wird markiert, weil kein Pack es festlegen kann.</value>
+  </data>
+  <data name="ListingAddMissingDependencies" xml:space="preserve">
+    <value>Fehlende Abhängigkeiten hinzufügen</value>
+  </data>
+  <data name="ListingAddMissingDependenciesHint" xml:space="preserve">
+    <value>Legt jede benötigte Abhängigkeit, die keine Mod im Pack festlegt, auf ihr neuestes stabiles Release innerhalb der Grenzen fest. Wenn eine Mod eine von mehreren Mods braucht, wählst du sie selbst.</value>
+  </data>
+  <data name="ListingMissingDependenciesTitle" xml:space="preserve">
+    <value>Diese Abhängigkeiten kann Borea nicht hinzufügen:</value>
+  </data>
+  <data name="ListingMissingChooseFormat" xml:space="preserve">
+    <value>Lege selbst fest, welche Mod du willst: {0}</value>
+  </data>
+  <data name="ListingMissingNotListedFormat" xml:space="preserve">
+    <value>Keine eingetragene Mod erfüllt das, deshalb kann kein Pack dieses Release festlegen: {0}</value>
+  </data>
+  <data name="ListingMissingNoReleaseFormat" xml:space="preserve">
+    <value>Kein stabiles Release liegt innerhalb der Grenzen jeder Mod, die sie braucht: {0}</value>
   </data>
   <data name="ListingMemberGoneFormat" xml:space="preserve">
     <value>{0} {1} ist seit {2} nicht mehr herunterladbar, deshalb installiert ein Client diese Festlegung nur von einem Spiegel oder aus einer Kopie, die er schon hat.</value>

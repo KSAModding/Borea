@@ -448,6 +448,12 @@
         <Style Selector="Border.chip.muted Path.icon">
             <Setter Property="Stroke" Value="{StaticResource Brush.TextMuted}" />
         </Style>
+        <!-- a warning inside a list item, on its own surface, so the danger text stays readable on the selection color -->
+        <Style Selector="Border.mark">
+            <Setter Property="Background" Value="{StaticResource Brush.Surface}" />
+            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="Padding" Value="6,2" />
+        </Style>
 
         <!-- Compatibility chips show a colored dot, and channel chips color their border instead -->
         <Style Selector="Border.chip Ellipse">
