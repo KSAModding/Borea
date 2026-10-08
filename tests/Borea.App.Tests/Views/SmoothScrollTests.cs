@@ -21,8 +21,8 @@ public sealed class SmoothScrollTests
 
             window.MouseWheel(new Point(200, 150), new Vector(0, -3));
             var onTheWheel = scroller.Offset.Y;
-            // a frame moves the scroll by at most the longest frame of SmoothScroll, so the offset after each frame
-            // shows the way there however slow the frames come
+            // the frames run on real time and a slow runner can pass the whole way between two of them, so the way
+            // itself is checked on the curve in TheCurve_EasesFromAllTheWayLeftToNothingLeft
             var steps = new List<double>();
             for (var frame = 0; frame < 60; frame++)
             {
@@ -36,9 +36,19 @@ public sealed class SmoothScrollTests
 
         var target = seen.before + 3 * seen.Notch;
         Assert.True(seen.onTheWheel < target, "The offset must still be on its way rather than already there.");
-        Assert.Contains(seen.Steps, offset => offset > seen.before && offset < target);
         Assert.Equal(seen.Steps.Order(), seen.Steps);
         Assert.Equal(target, seen.Steps[^1]);
+    }
+
+    [Fact]
+    public void TheCurve_EasesFromAllTheWayLeftToNothingLeft()
+    {
+        var left = Enumerable.Range(0, 41).Select(step => SmoothScroll.Left(step * SmoothScroll.ResponseSeconds / 4)).ToList();
+
+        Assert.Equal(1, left[0]);
+        Assert.InRange(SmoothScroll.Left(SmoothScroll.ResponseSeconds), 0.01, 0.99);
+        Assert.True(left.Zip(left.Skip(1)).All(pair => pair.Second < pair.First), "The way left must shrink with every step.");
+        Assert.True(left[^1] * 3 * SmoothScroll.Notch < 0.1, "The scroll must come to rest within ten response times.");
     }
 
     [Fact]
