@@ -600,6 +600,18 @@
   <data name="StewardWatcherForbidden" xml:space="preserve">
     <value>GitHub hat den Zugriff verweigert.</value>
   </data>
+  <data name="StewardWatcherGone" xml:space="preserve">
+    <value>Releases, die von ihrem Host verschwunden sind</value>
+  </data>
+  <data name="StewardWatcherGoneHint" xml:space="preserve">
+    <value>Releases mit download.unavailable_since, weil der Watcher ihr Archiv auf dem Host nicht mehr gefunden hat. Borea bietet sie nicht mehr zur Installation an, und eine installierte Kopie bleibt. Nur der Watcher setzt und entfernt die Markierung, also ändert kein Nachtrag sie. Die Liste stammt aus dem Inhaltsindex, den Borea gelesen hat.</value>
+  </data>
+  <data name="StewardWatcherGoneEmpty" xml:space="preserve">
+    <value>Kein Release ist von seinem Host verschwunden.</value>
+  </data>
+  <data name="StewardWatcherGoneFailedFormat" xml:space="preserve">
+    <value>Der Inhaltsindex ist nicht lesbar. {0}</value>
+  </data>
   <data name="StewardTabStatus" xml:space="preserve">
     <value>Status</value>
   </data>

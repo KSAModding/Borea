@@ -199,6 +199,14 @@ internal sealed class ViewModelHarness : IDisposable
         return root.ToJsonString(new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
     };
 
+    /// <summary>Removes the authored document of one listing after <paramref name="edit"/>, so the snapshot keeps only its releases.</summary>
+    public static Func<string, string> WithoutAuthored(string modId, Func<string, string> edit) => json =>
+    {
+        var root = JsonNode.Parse(edit(json))!;
+        root["listings"]!.AsArray().Single(node => (string?)node!["id"] == modId)!.AsObject().Remove("authored");
+        return root.ToJsonString();
+    };
+
     /// <summary>Adds <paramref name="count"/> copies of one listing to the index snapshot, each with the id and the name of the listing plus a number.</summary>
     public static string WithCopies(string json, string listingId, int count)
     {

@@ -600,6 +600,18 @@
   <data name="StewardWatcherForbidden" xml:space="preserve">
     <value>GitHub refused access.</value>
   </data>
+  <data name="StewardWatcherGone" xml:space="preserve">
+    <value>Releases gone from their host</value>
+  </data>
+  <data name="StewardWatcherGoneHint" xml:space="preserve">
+    <value>Releases that carry download.unavailable_since, because the watcher found their archive gone from its host. Borea does not offer them for a new install, and an installed copy stays. Only the watcher sets and removes the mark, so no amendment changes it. The list comes from the content index that Borea read.</value>
+  </data>
+  <data name="StewardWatcherGoneEmpty" xml:space="preserve">
+    <value>No release is gone from its host.</value>
+  </data>
+  <data name="StewardWatcherGoneFailedFormat" xml:space="preserve">
+    <value>Cannot read the content index. {0}</value>
+  </data>
   <data name="StewardTabStatus" xml:space="preserve">
     <value>Status</value>
   </data>

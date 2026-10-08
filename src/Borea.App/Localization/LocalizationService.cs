@@ -696,6 +696,15 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string StewardWatcherForbidden => Resources.StewardWatcherForbidden;
 
+    public string StewardWatcherGone => Resources.StewardWatcherGone;
+
+    public string StewardWatcherGoneHint => Resources.StewardWatcherGoneHint;
+
+    public string StewardWatcherGoneEmpty => Resources.StewardWatcherGoneEmpty;
+
+    public string FormatStewardWatcherGoneFailed(string reason)
+        => string.Format(CultureInfo.CurrentCulture, Resources.StewardWatcherGoneFailedFormat, reason);
+
     public string StewardTabStatus => Resources.StewardTabStatus;
 
     public string StewardStatusHint => Resources.StewardStatusHint;
