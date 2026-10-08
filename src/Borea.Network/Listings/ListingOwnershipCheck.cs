@@ -212,8 +212,8 @@ public sealed partial class ListingOwnershipCheck : IListingOwnershipCheck
         var repository = GitHubApi.Parse<RepositoryDto>(GitHubApi.Ensure(reply));
         if (!string.Equals(repository.FullName, target, StringComparison.OrdinalIgnoreCase))
             return NotVerified(ListingOwnershipProblem.RepositoryRenamed, target) with { RenamedTo = repository.FullName };
-        if (repository.Fork)
-            return NotVerified(ListingOwnershipProblem.RepositoryFork, target);
+
+        // The owner of a fork is the account that forked it, and GitHub copies no topic to a fork, so both proofs hold on a fork (RFC 0079).
         if (repository.Owner?.Id == author.Id)
             return new ListingOwnership(ListingOwnershipState.Verified, ListingOwnershipProof.Owner, Repository: target);
 
@@ -221,6 +221,10 @@ public sealed partial class ListingOwnershipCheck : IListingOwnershipCheck
         var names = topics.Status == HttpStatusCode.NotFound ? [] : GitHubApi.Parse<TopicsDto>(GitHubApi.Ensure(topics)).Names;
         if (names.Contains(ListingOwnership.TopicFor(author.Login), StringComparer.Ordinal))
             return new ListingOwnership(ListingOwnershipState.Verified, ListingOwnershipProof.Topic, Repository: target);
+
+        // A fork inherits the marker file of its parent, so the marker file proves nothing there.
+        if (repository.Fork)
+            return NotVerified(ListingOwnershipProblem.RepositoryFork, target);
 
         var marker = await _api.ReadFileAsync(target, ListingOwnership.MarkerPath, null, cancellationToken, anonymous: true).ConfigureAwait(false);
         if (marker?.Text is { } text && MarkerNames(text, id, author.Login))
@@ -259,7 +263,7 @@ public sealed partial class ListingOwnershipCheck : IListingOwnershipCheck
                 return (null, ListingOwnership.Unknown);
 
             mod = JsonSerializer.Deserialize<SpaceDockModDto>(await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false), GitHubApi.Json);
-            if (mod is null || (refused && !mod.Error))
+            if (mod is null || (refused && !mod.IsError))
                 return (null, ListingOwnership.Unknown);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -271,14 +275,19 @@ public sealed partial class ListingOwnershipCheck : IListingOwnershipCheck
             return (null, ListingOwnership.Unknown);
         }
 
-        if (mod.Error)
+        if (mod.IsError)
             return (null, unusable);
         if (mod.Id?.ToString() != modId)
             return (null, ListingOwnership.Unknown);
-        if (mod.GameId != SpaceDockGameId)
+        if (!mod.IsGame(SpaceDockGameId))
             return (null, unusable);
 
-        return ListingAuthority.GitHubRepositoryOf(mod.SourceCode) is { } repository
+        // A link that is set but is no text gets no verdict from the checks either.
+        if (IsSet(mod.SourceCode) && mod.SourceCode!.Value.ValueKind != JsonValueKind.String)
+            return (null, ListingOwnership.Unknown);
+
+        var link = IsSet(mod.SourceCode) ? mod.SourceCode!.Value.GetString() : null;
+        return ListingAuthority.GitHubRepositoryOf(link) is { } repository
             ? (repository, null)
             : (null, unusable with { Problem = ListingOwnershipProblem.SpaceDockNoSourceLink });
     }
@@ -294,7 +303,7 @@ public sealed partial class ListingOwnershipCheck : IListingOwnershipCheck
             return false;
 
         var repository = GitHubApi.Parse<RepositoryDto>(GitHubApi.Ensure(reply));
-        return !repository.Fork && string.Equals(repository.FullName, submitted.Target, StringComparison.OrdinalIgnoreCase);
+        return string.Equals(repository.FullName, submitted.Target, StringComparison.OrdinalIgnoreCase);
     }
 
     private bool MarkerNames(string text, string id, string login) =>
@@ -332,6 +341,17 @@ public sealed partial class ListingOwnershipCheck : IListingOwnershipCheck
         _ => true,
     };
 
+    /// <summary>Whether a JSON value is true as Python reads it.</summary>
+    private static bool IsSet(JsonElement? value) => value is { } element && element.ValueKind switch
+    {
+        JsonValueKind.True => true,
+        JsonValueKind.String => element.GetString()!.Length > 0,
+        JsonValueKind.Number => element.GetDouble() != 0,
+        JsonValueKind.Array => element.GetArrayLength() > 0,
+        JsonValueKind.Object => element.EnumerateObject().Any(),
+        _ => false,
+    };
+
     [GeneratedRegex("^(?!.*--)[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?$")]
     private static partial Regex Login();
 
@@ -361,14 +381,19 @@ public sealed partial class ListingOwnershipCheck : IListingOwnershipCheck
         public List<string> Names { get; set; } = [];
     }
 
+    /// <summary>The fields the check reads, kept as JSON so that each reads with the truth and equality of tools/ownership.py.</summary>
     private sealed class SpaceDockModDto
     {
         public JsonElement? Id { get; set; }
 
-        public long? GameId { get; set; }
+        public JsonElement? GameId { get; set; }
 
-        public string? SourceCode { get; set; }
+        public JsonElement? SourceCode { get; set; }
 
-        public bool Error { get; set; }
+        public JsonElement? Error { get; set; }
+
+        public bool IsError => IsSet(Error);
+
+        public bool IsGame(long id) => GameId is { ValueKind: JsonValueKind.Number } game && game.GetDouble() == id;
     }
 }

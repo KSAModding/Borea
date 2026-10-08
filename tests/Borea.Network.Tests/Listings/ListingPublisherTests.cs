@@ -748,16 +748,56 @@ public sealed class ListingPublisherTests
     }
 
     [Fact]
-    public async Task CheckOwnershipAsync_ForkOrMissingRepository_SaysWhichOne()
+    public async Task CheckOwnershipAsync_ForkOfTheSignedInAccount_VerifiesByTheOwnerId()
     {
         On("GET", Api + "/repos/octocat/MyMod", () => Json(Repository("octocat/MyMod", ownerId: 1, fork: true)));
         var (publisher, _) = await SignedInAsync();
 
-        var fork = await publisher.CheckOwnershipAsync(Draft("octocat/MyMod"), null);
+        var ownership = await publisher.CheckOwnershipAsync(Draft("octocat/MyMod"), null);
+
+        Assert.Equal(new ListingOwnership(ListingOwnershipState.Verified, ListingOwnershipProof.Owner, Repository: "octocat/MyMod"), ownership);
+    }
+
+    [Theory]
+    [InlineData("ksa-index-octocat", true)]
+    [InlineData("ksa", false)]
+    public async Task CheckOwnershipAsync_ForkOfAnotherAccount_VerifiesByTheTopicAndNeverByTheMarker(string topic, bool verified)
+    {
+        On("GET", Api + "/repos/Studio/MyMod", () => Json(Repository("Studio/MyMod", ownerId: 99, fork: true)));
+        On("GET", Api + "/repos/Studio/MyMod/topics", () => Json(JsonSerializer.Serialize(new { names = new[] { topic } })));
+        On("GET", Api + "/repos/Studio/MyMod/contents/.github/ksa-content-index.toml", () => Json(Content("login = \"octocat\"\n", "m1")));
+        var (publisher, _) = await SignedInAsync();
+
+        var ownership = await publisher.CheckOwnershipAsync(Draft("Studio/MyMod"), null);
+
+        Assert.Equal(
+            verified
+                ? new ListingOwnership(ListingOwnershipState.Verified, ListingOwnershipProof.Topic, Repository: "Studio/MyMod")
+                : new ListingOwnership(ListingOwnershipState.NotVerified, Problem: ListingOwnershipProblem.RepositoryFork, Repository: "Studio/MyMod"),
+            ownership);
+        Assert.DoesNotContain(_sent, sent => sent.Url.EndsWith("/contents/.github/ksa-content-index.toml", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task CheckOwnershipAsync_MissingRepository_SaysSo()
+    {
+        var (publisher, _) = await SignedInAsync();
+
         var missing = await publisher.CheckOwnershipAsync(Draft("octocat/Gone"), null);
 
-        Assert.Equal(ListingOwnershipProblem.RepositoryFork, fork.Problem);
         Assert.Equal(new ListingOwnership(ListingOwnershipState.NotVerified, Problem: ListingOwnershipProblem.RepositoryMissing, Repository: "octocat/Gone"), missing);
+    }
+
+    [Fact]
+    public async Task CheckOwnershipAsync_SpaceDockModThatLinksToAFork_VerifiesByTheOwnerIdOfTheFork()
+    {
+        On("GET", "https://spacedock.info/api/mod/4253", () => Json("""{"id":4253,"game_id":22409,"source_code":"https://github.com/octocat/MyMod"}"""));
+        On("GET", Api + "/repos/octocat/MyMod", () => Json(Repository("octocat/MyMod", ownerId: 1, fork: true)));
+        var (publisher, _) = await SignedInAsync();
+
+        var ownership = await publisher.CheckOwnershipAsync(Draft(spaceDock: 4253), null);
+
+        Assert.Equal(new ListingOwnership(ListingOwnershipState.Verified, ListingOwnershipProof.Owner, Repository: "octocat/MyMod", SpaceDockMod: "4253"), ownership);
     }
 
     [Fact]
