@@ -18,6 +18,10 @@ public sealed class FileInstanceRepository : IInstanceRepository, IInstanceLocks
     private readonly IGamePathProvider _pathProvider;
     private readonly ModStore _store;
     private readonly System.Collections.Concurrent.ConcurrentDictionary<Guid, SemaphoreSlim> _instanceLocks = new();
+
+    // Windows does not replace or delete a file that a read still holds open, so a read of a record never
+    // overlaps a write or a delete of it. A held instance lock does not stop a read, which is why reads take this lock instead.
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<Guid, SemaphoreSlim> _fileLocks = new();
     private readonly SemaphoreSlim _activeInstanceLock = new(1, 1);
 
     public FileInstanceRepository(IGamePathProvider pathProvider, ModStore? store = null)
@@ -66,7 +70,18 @@ public sealed class FileInstanceRepository : IInstanceRepository, IInstanceLocks
     /// Returns the instance with the given ID, or null if it does not exist.
     /// </summary>
     public async Task<Instance?> GetByIdAsync(Guid instanceId)
-        => await GetByIdCoreAsync(instanceId).ConfigureAwait(false);
+    {
+        var file = GetFileLock(instanceId);
+        await file.WaitAsync().ConfigureAwait(false);
+        try
+        {
+            return await GetByIdCoreAsync(instanceId).ConfigureAwait(false);
+        }
+        finally
+        {
+            file.Release();
+        }
+    }
 
     private async Task<Instance?> GetByIdCoreAsync(Guid instanceId)
     {
@@ -114,7 +129,7 @@ public sealed class FileInstanceRepository : IInstanceRepository, IInstanceLocks
             {
                 var activate = await GetActiveInstanceIdAsync().ConfigureAwait(false) is not { } activeId
                     || !File.Exists(_pathProvider.GetInstanceMetadataPath(activeId));
-                await SaveCoreAsync(instance).ConfigureAwait(false);
+                await SaveFileAsync(instance).ConfigureAwait(false);
                 if (activate)
                     await WriteActiveInstanceAsync(instance.InstanceId).ConfigureAwait(false);
 
@@ -170,7 +185,17 @@ public sealed class FileInstanceRepository : IInstanceRepository, IInstanceLocks
                 var backups = GameSaveBackupFolder.InstanceFolder(_pathProvider, instanceId);
                 DirectoryLinks.DeleteTreeWithoutFollowingLinks(backups);
 
-                DirectoryLinks.DeleteTreeWithoutFollowingLinks(root);
+                // the file lock is released before the active lock is taken, because a change of the active instance takes them the other way round
+                var file = GetFileLock(instanceId);
+                await file.WaitAsync().ConfigureAwait(false);
+                try
+                {
+                    DirectoryLinks.DeleteTreeWithoutFollowingLinks(root);
+                }
+                finally
+                {
+                    file.Release();
+                }
             }
             finally
             {
@@ -213,7 +238,7 @@ public sealed class FileInstanceRepository : IInstanceRepository, IInstanceLocks
         await gate.WaitAsync().ConfigureAwait(false);
         try
         {
-            await SaveCoreAsync(instance).ConfigureAwait(false);
+            await SaveFileAsync(instance).ConfigureAwait(false);
         }
         finally
         {
@@ -221,6 +246,9 @@ public sealed class FileInstanceRepository : IInstanceRepository, IInstanceLocks
         }
     }
 
+    /// <summary>
+    /// A read of the instance waits until the change is saved, so it never gets the record from before the change.
+    /// </summary>
     public async Task<TResult> UpdateAsync<TResult>(
         Guid instanceId,
         Func<Instance, TResult> update,
@@ -232,17 +260,40 @@ public sealed class FileInstanceRepository : IInstanceRepository, IInstanceLocks
         await gate.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
-            var instance = await GetByIdCoreAsync(instanceId).ConfigureAwait(false)
-                ?? throw new InvalidOperationException($"No instance with ID '{instanceId}' exists.");
-            cancellationToken.ThrowIfCancellationRequested();
-            var result = update(instance);
-            cancellationToken.ThrowIfCancellationRequested();
-            await SaveCoreAsync(instance).ConfigureAwait(false);
-            return result;
+            var file = GetFileLock(instanceId);
+            await file.WaitAsync(cancellationToken).ConfigureAwait(false);
+            try
+            {
+                var instance = await GetByIdCoreAsync(instanceId).ConfigureAwait(false)
+                    ?? throw new InvalidOperationException($"No instance with ID '{instanceId}' exists.");
+                cancellationToken.ThrowIfCancellationRequested();
+                var result = update(instance);
+                cancellationToken.ThrowIfCancellationRequested();
+                await SaveCoreAsync(instance).ConfigureAwait(false);
+                return result;
+            }
+            finally
+            {
+                file.Release();
+            }
         }
         finally
         {
             gate.Release();
+        }
+    }
+
+    private async Task SaveFileAsync(Instance instance)
+    {
+        var file = GetFileLock(instance.InstanceId);
+        await file.WaitAsync().ConfigureAwait(false);
+        try
+        {
+            await SaveCoreAsync(instance).ConfigureAwait(false);
+        }
+        finally
+        {
+            file.Release();
         }
     }
 
@@ -255,6 +306,9 @@ public sealed class FileInstanceRepository : IInstanceRepository, IInstanceLocks
 
     private SemaphoreSlim GetInstanceLock(Guid instanceId)
         => _instanceLocks.GetOrAdd(instanceId, static _ => new SemaphoreSlim(1, 1));
+
+    private SemaphoreSlim GetFileLock(Guid instanceId)
+        => _fileLocks.GetOrAdd(instanceId, static _ => new SemaphoreSlim(1, 1));
 
     public IDisposable? TryHold(IEnumerable<Guid> instanceIds)
     {

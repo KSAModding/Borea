@@ -30,6 +30,9 @@ public abstract record InstanceSource
             return this with { Detached = modIds.ToHashSet(ModIds.Comparer) };
         }
 
+        /// <summary>
+        /// Equal when the pack, the version and the detached mods are the same, also when the detached mods are in another set or in another letter case.
+        /// </summary>
         public bool Equals(FromModPack? other)
             => other is not null
                 && string.Equals(ModPackId, other.ModPackId, StringComparison.Ordinal)
@@ -37,6 +40,18 @@ public abstract record InstanceSource
                 && Detached.SetEquals(other.Detached);
 
         public override int GetHashCode() => HashCode.Combine(ModPackId, Version, Detached.Count);
+
+        /// <summary>
+        /// Names the detached mods, so that two sources that differ only in them also print differently.
+        /// </summary>
+        protected override bool PrintMembers(System.Text.StringBuilder builder)
+        {
+            ArgumentNullException.ThrowIfNull(builder);
+            builder.Append("ModPackId = ").Append(ModPackId)
+                .Append(", Version = ").Append(Version.ToString())
+                .Append(", Detached = [").AppendJoin(", ", Detached.Order(ModIds.Comparer)).Append(']');
+            return true;
+        }
     }
 
     /// <summary>
