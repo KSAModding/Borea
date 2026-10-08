@@ -1497,6 +1497,9 @@
   <data name="ToastUpdatedFormat" xml:space="preserve">
     <value>{0} in {2} auf {1} aktualisiert</value>
   </data>
+  <data name="ToastChangedFormat" xml:space="preserve">
+    <value>{0} in {2} auf {1} gewechselt</value>
+  </data>
   <data name="ToastUpdatedAllOneFormat" xml:space="preserve">
     <value>1 Mod in {0} aktualisiert</value>
   </data>
@@ -1961,6 +1964,15 @@
   </data>
   <data name="ContentAttachToPack" xml:space="preserve">
     <value>Wieder an das Modpack binden</value>
+  </data>
+  <data name="ContentDetached" xml:space="preserve">
+    <value>Losgelöst</value>
+  </data>
+  <data name="ContentDetachedFromFormat" xml:space="preserve">
+    <value>Vom Modpack {0} gelöst, das {1} vorgibt. Binde sie im Menü der Zeile wieder an.</value>
+  </data>
+  <data name="ContentDetachedFromPackFormat" xml:space="preserve">
+    <value>Vom Modpack {0} gelöst. Binde sie im Menü der Zeile wieder an.</value>
   </data>
   <data name="ContentAttachVersionFormat" xml:space="preserve">
     <value>Wechselt auf {0}, die Version, die {1} {2} vorgibt</value>
@@ -3540,6 +3552,9 @@
   <data name="PackModHeader" xml:space="preserve">
     <value>Mod</value>
   </data>
+  <data name="PackMemberInstanceHeaderFormat" xml:space="preserve">
+    <value>In {0}</value>
+  </data>
   <data name="PackMemberYanked" xml:space="preserve">
     <value>Zurückgezogen</value>
   </data>
@@ -3551,6 +3566,54 @@
   </data>
   <data name="PackMemberNewerFormat" xml:space="preserve">
     <value>{0} verfügbar</value>
+  </data>
+  <data name="PackMemberUseNewerFormat" xml:space="preserve">
+    <value>{0} in {1} verwenden</value>
+  </data>
+  <data name="PackMemberUseNewerChipFormat" xml:space="preserve">
+    <value>{0} verwenden</value>
+  </data>
+  <data name="PackMemberUseNewerConfirmFormat" xml:space="preserve">
+    <value>Löst die Mod {0} in der Instanz {1} vom Modpack und wechselt sie auf {2}. Modpack-Updates lassen sie dann unverändert.</value>
+  </data>
+  <data name="PackMemberPinned" xml:space="preserve">
+    <value>Angeheftet</value>
+  </data>
+  <data name="PackMemberPinnedInFormat" xml:space="preserve">
+    <value>In {0} angeheftet. Updates lassen diese Mod bei {1}.</value>
+  </data>
+  <data name="PackMemberUseNewerUnpinConfirmFormat" xml:space="preserve">
+    <value>Hebt das Anheften der Mod {0} in der Instanz {1} auf, löst sie vom Modpack und wechselt sie auf {2}. Modpack-Updates lassen sie dann unverändert.</value>
+  </data>
+  <data name="PackMemberUseNewerUnpinOnlyConfirmFormat" xml:space="preserve">
+    <value>Hebt das Anheften der Mod {0} in der Instanz {1} auf und wechselt sie auf {2}.</value>
+  </data>
+  <data name="PackMemberBackToFormat" xml:space="preserve">
+    <value>In {1} zurück auf {0}</value>
+  </data>
+  <data name="PackMemberBackToChipFormat" xml:space="preserve">
+    <value>Zurück auf {0}</value>
+  </data>
+  <data name="PackMemberBackToConfirmFormat" xml:space="preserve">
+    <value>Bindet die Mod {0} in der Instanz {1} wieder an das Modpack und wechselt sie zurück auf {2}.</value>
+  </data>
+  <data name="PackMemberBackToUnpinConfirmFormat" xml:space="preserve">
+    <value>Hebt das Anheften der Mod {0} in der Instanz {1} auf, bindet sie wieder an das Modpack und wechselt sie zurück auf {2}.</value>
+  </data>
+  <data name="PackMemberInUseFormat" xml:space="preserve">
+    <value>Installiert {0}</value>
+  </data>
+  <data name="PackMemberInUseDetachedFormat" xml:space="preserve">
+    <value>{0} verwendet {1} {2}. Die Mod ist vom Modpack gelöst. Binde sie im Tab Inhalt wieder an das Modpack.</value>
+  </data>
+  <data name="PackMemberInUseDetachedBackFormat" xml:space="preserve">
+    <value>{0} verwendet {1} {2}. Die Mod ist vom Modpack gelöst. „Zurück auf {3}“ bindet sie wieder an.</value>
+  </data>
+  <data name="PackMemberInUseNextUpdateFormat" xml:space="preserve">
+    <value>{0} verwendet {1} {2}. Das nächste Modpack-Update wechselt sie zurück auf {3}.</value>
+  </data>
+  <data name="PackMemberInUsePlainFormat" xml:space="preserve">
+    <value>{0} verwendet {1} {2}.</value>
   </data>
   <data name="PackCopyForumList" xml:space="preserve">
     <value>Forenliste kopieren</value>

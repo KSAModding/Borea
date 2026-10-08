@@ -1497,6 +1497,9 @@
   <data name="ToastUpdatedFormat" xml:space="preserve">
     <value>{0} updated to {1} in {2}</value>
   </data>
+  <data name="ToastChangedFormat" xml:space="preserve">
+    <value>{0} changed to {1} in {2}</value>
+  </data>
   <data name="ToastUpdatedAllOneFormat" xml:space="preserve">
     <value>1 mod updated in {0}</value>
   </data>
@@ -1961,6 +1964,15 @@
   </data>
   <data name="ContentAttachToPack" xml:space="preserve">
     <value>Attach to modpack again</value>
+  </data>
+  <data name="ContentDetached" xml:space="preserve">
+    <value>Detached</value>
+  </data>
+  <data name="ContentDetachedFromFormat" xml:space="preserve">
+    <value>Detached from {0}, which pins {1}. Attach it again from the row menu.</value>
+  </data>
+  <data name="ContentDetachedFromPackFormat" xml:space="preserve">
+    <value>Detached from the modpack {0}. Attach it again from the row menu.</value>
   </data>
   <data name="ContentAttachVersionFormat" xml:space="preserve">
     <value>Changes to {0}, the version that {1} {2} pins</value>
@@ -3540,6 +3552,9 @@
   <data name="PackModHeader" xml:space="preserve">
     <value>Mod</value>
   </data>
+  <data name="PackMemberInstanceHeaderFormat" xml:space="preserve">
+    <value>In {0}</value>
+  </data>
   <data name="PackMemberYanked" xml:space="preserve">
     <value>Yanked</value>
   </data>
@@ -3551,6 +3566,54 @@
   </data>
   <data name="PackMemberNewerFormat" xml:space="preserve">
     <value>{0} available</value>
+  </data>
+  <data name="PackMemberUseNewerFormat" xml:space="preserve">
+    <value>Use {0} in {1}</value>
+  </data>
+  <data name="PackMemberUseNewerChipFormat" xml:space="preserve">
+    <value>Use {0}</value>
+  </data>
+  <data name="PackMemberUseNewerConfirmFormat" xml:space="preserve">
+    <value>Detaches {0} from the modpack in the instance {1} and changes it to {2}. Pack updates then leave it alone.</value>
+  </data>
+  <data name="PackMemberPinned" xml:space="preserve">
+    <value>Pinned</value>
+  </data>
+  <data name="PackMemberPinnedInFormat" xml:space="preserve">
+    <value>Pinned in {0}. Updates leave this mod at {1}.</value>
+  </data>
+  <data name="PackMemberUseNewerUnpinConfirmFormat" xml:space="preserve">
+    <value>Unpins {0} in the instance {1}, detaches it from the modpack and changes it to {2}. Pack updates then leave it alone.</value>
+  </data>
+  <data name="PackMemberUseNewerUnpinOnlyConfirmFormat" xml:space="preserve">
+    <value>Unpins {0} in the instance {1} and changes it to {2}.</value>
+  </data>
+  <data name="PackMemberBackToFormat" xml:space="preserve">
+    <value>Back to {0} in {1}</value>
+  </data>
+  <data name="PackMemberBackToChipFormat" xml:space="preserve">
+    <value>Back to {0}</value>
+  </data>
+  <data name="PackMemberBackToConfirmFormat" xml:space="preserve">
+    <value>Attaches {0} to the modpack again in the instance {1} and changes it back to {2}.</value>
+  </data>
+  <data name="PackMemberBackToUnpinConfirmFormat" xml:space="preserve">
+    <value>Unpins {0} in the instance {1}, attaches it to the modpack again and changes it back to {2}.</value>
+  </data>
+  <data name="PackMemberInUseFormat" xml:space="preserve">
+    <value>Installed {0}</value>
+  </data>
+  <data name="PackMemberInUseDetachedFormat" xml:space="preserve">
+    <value>{0} uses {1} {2}, detached from the modpack. Attach it again on the Content tab.</value>
+  </data>
+  <data name="PackMemberInUseDetachedBackFormat" xml:space="preserve">
+    <value>{0} uses {1} {2}, detached from the modpack. "Back to {3}" attaches it again.</value>
+  </data>
+  <data name="PackMemberInUseNextUpdateFormat" xml:space="preserve">
+    <value>{0} uses {1} {2}. The next pack update changes it back to {3}.</value>
+  </data>
+  <data name="PackMemberInUsePlainFormat" xml:space="preserve">
+    <value>{0} uses {1} {2}.</value>
   </data>
   <data name="PackCopyForumList" xml:space="preserve">
     <value>Copy forum list</value>

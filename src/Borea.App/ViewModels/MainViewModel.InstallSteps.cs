@@ -52,6 +52,7 @@ public partial class MainViewModel
         {
             DiscoverItem item => item.ModId,
             VersionItem version => version.ModId,
+            PackMemberItem member => member.ModId,
             _ => null,
         };
         var withSteps = plan.Operations

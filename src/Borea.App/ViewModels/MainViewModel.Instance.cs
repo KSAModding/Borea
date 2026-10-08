@@ -228,6 +228,7 @@ public partial class MainViewModel
             item.RefreshText();
             // a pack version that no longer pins the mod would remove it once it follows the pack again
             item.CanAttach = item.IsDetached && (_contentPack is null || _contentPack.Mods.Any(pin => ModIds.Equals(pin.ContentId, item.ModId)));
+            item.DetachedText = DetachedText(item);
         }
 
         MissingContent?.RefreshText();
@@ -256,6 +257,17 @@ public partial class MainViewModel
             if (list.Count > 0)
                 ContentGroups.Add(new ContentGroup(title, list, isDependencies));
         }
+    }
+
+    /// <summary>The tooltip of the Detached chip, which names the pack and the version it pins, or null for a row that cannot attach.</summary>
+    private string? DetachedText(ContentItem item)
+    {
+        if (!item.CanAttach || _selectedInstanceEntity?.Source is not InstanceSource.FromModPack source)
+            return null;
+
+        return _contentPack?.Mods.FirstOrDefault(pin => ModIds.Equals(pin.ContentId, item.ModId)) is { } pinned
+            ? Localization.FormatContentDetachedFrom(_contentPack.Name, pinned.Version.ToString())
+            : Localization.FormatContentDetachedFromPack(source.ModPackId);
     }
 
     /// <summary>
@@ -911,16 +923,33 @@ public partial class MainViewModel
         if (await services.Mods.GetReleaseAsync(pin.ContentId, pin.Version) is not { } release)
             return;
 
-        await RunUpdateAsync(row, row.InstanceId, () => PlanAndExecuteAsync(
+        await RunUpdateAsync(row, row.InstanceId, () => PlanBackToPackPinAsync(
             row,
             row.InstanceId,
-            _ => Task.FromResult<IReadOnlyList<RequestedMod>>([new RequestedMod(release, InstallReason.ModPack)]),
+            release,
+            _ => { },
+            () => row.PackVersionText = Localization.FormatContentAttachVersion(pin.Version.ToString(), pack.Name, pack.Version.ToString())));
+    }
+
+    /// <summary>
+    /// Plans the release that the pack pins for a mod that follows the pack again, and always waits for a
+    /// confirmation, because the files of the installed version go away. <paramref name="prepare"/> changes the
+    /// in-memory copy of the instance that the plan starts from.
+    /// </summary>
+    private Task<bool> PlanBackToPackPinAsync(IInstallRow row, Guid instanceId, ModVersionMetadata pinned, Action<Instance> prepare, Action waiting)
+        => PlanAndExecuteAsync(
+            row,
+            instanceId,
+            instance =>
+            {
+                prepare(instance);
+                return Task.FromResult<IReadOnlyList<RequestedMod>>([new RequestedMod(pinned, InstallReason.ModPack)]);
+            },
             (_, _) =>
             {
-                row.PackVersionText = Localization.FormatContentAttachVersion(pin.Version.ToString(), pack.Name, pack.Version.ToString());
+                waiting();
                 return Task.FromResult(true);
-            }));
-    }
+            });
 
     /// <summary>
     /// The change alters what an update plans, so it does nothing while an update of the instance runs,
@@ -1298,6 +1327,10 @@ public sealed partial class ContentItem : ObservableObject, IUpdateRow
     /// <summary>Set with the content groups, because it needs the pack version from the index.</summary>
     [ObservableProperty]
     private bool _canAttach;
+
+    /// <summary>The tooltip of the Detached chip while <see cref="CanAttach"/>, which names the pack and the version it pins.</summary>
+    [ObservableProperty]
+    private string? _detachedText;
 
     public string? PinnedText => IsPinned ? _owner.Localization.FormatContentPinned(Version) : null;
 

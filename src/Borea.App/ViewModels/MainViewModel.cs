@@ -943,6 +943,7 @@ public partial class MainViewModel : ViewModelBase
         OnPropertyChanged(nameof(NewerGamePatchNotesCappedText));
         OnPropertyChanged(nameof(SharedProfileImportNotice));
         OnPropertyChanged(nameof(InstalledInText));
+        OnPropertyChanged(nameof(PackInstanceHeaderText));
         OnPropertyChanged(nameof(ActiveInstanceUpdatesText));
         OnPropertyChanged(nameof(HomeLaunchText));
         RefreshInstanceHint();

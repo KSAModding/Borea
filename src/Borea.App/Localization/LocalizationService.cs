@@ -128,6 +128,10 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string FormatToastUpdated(string content, string version, string instanceName)
         => string.Format(CultureInfo.CurrentCulture, Resources.ToastUpdatedFormat, content, version, instanceName);
 
+    /// <summary>"MeasureTools changed to 1.1.10 in Main", for a change of version in either direction.</summary>
+    public string FormatToastChanged(string content, string version, string instanceName)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ToastChangedFormat, content, version, instanceName);
+
     public string FormatToastUpdatedAll(int count, string instanceName)
         => count == 1
             ? string.Format(CultureInfo.CurrentCulture, Resources.ToastUpdatedAllOneFormat, instanceName)
@@ -1436,6 +1440,15 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string ContentAttachToPack => Resources.ContentAttachToPack;
 
+    public string ContentDetached => Resources.ContentDetached;
+
+    /// <summary>"Detached from Tools Pack, which pins 1.1.9. Attach it again from the row menu."</summary>
+    public string FormatContentDetachedFrom(string pack, string version)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ContentDetachedFromFormat, pack, version);
+
+    public string FormatContentDetachedFromPack(string pack)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ContentDetachedFromPackFormat, pack);
+
     /// <summary>"Changes to 0.8.44, the version that Tools Pack 1.0.0 pins"</summary>
     public string FormatContentAttachVersion(string version, string pack, string packVersion)
         => string.Format(CultureInfo.CurrentCulture, Resources.ContentAttachVersionFormat, version, pack, packVersion);
@@ -2308,6 +2321,10 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string PackModHeader => Resources.PackModHeader;
 
+    public string FormatPackMemberInstanceHeader(string instance)
+        => string.Format(CultureInfo.CurrentCulture, Resources.PackMemberInstanceHeaderFormat, instance);
+
+
     public string PackMemberYanked => Resources.PackMemberYanked;
 
     public string PackMemberGone => Resources.PackMemberGone;
@@ -2316,6 +2333,57 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string FormatPackMemberNewer(string version)
         => string.Format(CultureInfo.CurrentCulture, Resources.PackMemberNewerFormat, version);
+
+    public string FormatPackMemberUseNewer(string version, string instance)
+        => string.Format(CultureInfo.CurrentCulture, Resources.PackMemberUseNewerFormat, version, instance);
+
+    public string FormatPackMemberUseNewerChip(string version)
+        => string.Format(CultureInfo.CurrentCulture, Resources.PackMemberUseNewerChipFormat, version);
+
+    public string FormatPackMemberUseNewerConfirm(string name, string instance, string version)
+        => string.Format(CultureInfo.CurrentCulture, Resources.PackMemberUseNewerConfirmFormat, name, instance, version);
+
+    public string PackMemberPinned => Resources.PackMemberPinned;
+
+    /// <summary>"Pinned in Main. Updates leave this mod at 1.1.9."</summary>
+    public string FormatPackMemberPinnedIn(string instance, string version)
+        => string.Format(CultureInfo.CurrentCulture, Resources.PackMemberPinnedInFormat, instance, version);
+
+    public string FormatPackMemberUseNewerUnpinConfirm(string name, string instance, string version)
+        => string.Format(CultureInfo.CurrentCulture, Resources.PackMemberUseNewerUnpinConfirmFormat, name, instance, version);
+
+    public string FormatPackMemberUseNewerUnpinOnlyConfirm(string name, string instance, string version)
+        => string.Format(CultureInfo.CurrentCulture, Resources.PackMemberUseNewerUnpinOnlyConfirmFormat, name, instance, version);
+
+    /// <summary>"Back to 1.1.9 in Main"</summary>
+    public string FormatPackMemberBackTo(string version, string instance)
+        => string.Format(CultureInfo.CurrentCulture, Resources.PackMemberBackToFormat, version, instance);
+
+    public string FormatPackMemberBackToChip(string version)
+        => string.Format(CultureInfo.CurrentCulture, Resources.PackMemberBackToChipFormat, version);
+
+    public string FormatPackMemberBackToConfirm(string name, string instance, string version)
+        => string.Format(CultureInfo.CurrentCulture, Resources.PackMemberBackToConfirmFormat, name, instance, version);
+
+    public string FormatPackMemberBackToUnpinConfirm(string name, string instance, string version)
+        => string.Format(CultureInfo.CurrentCulture, Resources.PackMemberBackToUnpinConfirmFormat, name, instance, version);
+
+    public string FormatPackMemberInUse(string version)
+        => string.Format(CultureInfo.CurrentCulture, Resources.PackMemberInUseFormat, version);
+
+    public string FormatPackMemberInUseDetached(string instance, string name, string version)
+        => string.Format(CultureInfo.CurrentCulture, Resources.PackMemberInUseDetachedFormat, instance, name, version);
+
+    /// <summary>"Main uses MeasureTools 1.1.10, detached from the modpack. "Back to 1.1.9" attaches it again."</summary>
+    public string FormatPackMemberInUseDetachedBack(string instance, string name, string version, string pinned)
+        => string.Format(CultureInfo.CurrentCulture, Resources.PackMemberInUseDetachedBackFormat, instance, name, version, pinned);
+
+    /// <summary>"Main uses MeasureTools 1.1.10. The next pack update changes it back to 1.1.9."</summary>
+    public string FormatPackMemberInUseNextUpdate(string instance, string name, string version, string pinned)
+        => string.Format(CultureInfo.CurrentCulture, Resources.PackMemberInUseNextUpdateFormat, instance, name, version, pinned);
+
+    public string FormatPackMemberInUsePlain(string instance, string name, string version)
+        => string.Format(CultureInfo.CurrentCulture, Resources.PackMemberInUsePlainFormat, instance, name, version);
 
     public string PackCopyForumList => Resources.PackCopyForumList;
 

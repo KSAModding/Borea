@@ -171,6 +171,7 @@ public sealed partial class ToastItem : ObservableObject
     {
         TaskKind.Update or TaskKind.PackUpdate when task.NewVersion is { } version => Localization.FormatToastUpdated(Subject, version, InstanceName),
         TaskKind.Update or TaskKind.UpdateAll => Localization.FormatToastUpdatedAll(task.ModCount, InstanceName),
+        TaskKind.ModInstall when task.ChangedModName is { } name && task.Version is { } version => Localization.FormatToastChanged(name, version, InstanceName),
         TaskKind.ModRemoval => Localization.FormatToastRemoved(Subject, InstanceName),
         TaskKind.LoaderInstall => Localization.FormatToastLoaderInstalled(Subject, task.NewVersion ?? string.Empty),
         TaskKind.ModListImport => Localization.FormatToastInstanceCreated(Subject),
