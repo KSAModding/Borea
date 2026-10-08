@@ -379,7 +379,7 @@
     <value>Der Eintrag nennt unter releases weder ein GitHub-Repository noch eine SpaceDock-Mod.</value>
   </data>
   <data name="StewardReviewProofForkFormat" xml:space="preserve">
-    <value>{0} ist ein Fork und weist nichts nach.</value>
+    <value>{0} besitzt den Fork {1} nicht, und {1} hat das Topic {2} nicht. Eine Markierungsdatei auf einem Fork weist nichts nach, weil ein Fork sie erbt.</value>
   </data>
   <data name="StewardReviewProofRenamedFormat" xml:space="preserve">
     <value>{0} heißt jetzt {1}.</value>
@@ -2695,7 +2695,7 @@
     <value>Pull Request auf GitHub öffnen</value>
   </data>
   <data name="ListingNewPullRequestText" xml:space="preserve">
-    <value>GitHub öffnet eine neue Datei in deiner eigenen Kopie von content-index und danach das Formular für den Pull Request. GitHub füllt diesen Text ein, wenn er in den Link passt. Ist er zu lang, kopiert Borea ihn, und du fügst ihn in die Seite ein. Der Pull Request wird von selbst gemergt, wenn du den Release-Host kontrollierst: Das Repository gehört dir, hat das Topic ksa-index-&lt;dein GitHub-Name&gt; oder enthält .github/ksa-content-index.toml. Eine SpaceDock-Mod beweist das über das GitHub-Repository in ihrem Quellcode-Link.</value>
+    <value>GitHub öffnet eine neue Datei in deiner eigenen Kopie von content-index und danach das Formular für den Pull Request. GitHub füllt diesen Text ein, wenn er in den Link passt. Ist er zu lang, kopiert Borea ihn, und du fügst ihn in die Seite ein. Der Pull Request wird von selbst gemergt, wenn du den Release-Host kontrollierst: Das Repository gehört dir, hat das Topic ksa-index-&lt;dein GitHub-Name&gt; oder enthält, wenn es kein Fork ist, .github/ksa-content-index.toml. Eine SpaceDock-Mod beweist das über das GitHub-Repository in ihrem Quellcode-Link.</value>
   </data>
   <data name="ListingPackPullRequestTextFormat" xml:space="preserve">
     <value>GitHub öffnet die neue Datei {0} in deiner eigenen Kopie von content-index. Eine Pack-Datei ist fast immer zu lang für den Link, deshalb kopiert Borea sie, und du fügst sie in die Seite ein und öffnest den Pull Request. Eine Version von dem Konto, dem das Pack gehört, wird von selbst gemergt.</value>
@@ -2781,11 +2781,14 @@
   <data name="ListingProofMarkerFormat" xml:space="preserve">
     <value>{0} nennt dich in .github/ksa-content-index.toml.</value>
   </data>
+  <data name="ListingProofSpaceDockLinkFormat" xml:space="preserve">
+    <value>Der Quellcode-Link der SpaceDock-Mod {0} nennt {1}.</value>
+  </data>
   <data name="ListingProofPackOwnerFormat" xml:space="preserve">
     <value>{0} auf main nennt dein Konto.</value>
   </data>
   <data name="ListingFixTopicFormat" xml:space="preserve">
-    <value>Damit er sich selbst mergt, füge {0} das Topic {1} hinzu.</value>
+    <value>Damit dein Eintrag sich selbst mergt, füge {0} das Topic {1} hinzu.</value>
   </data>
   <data name="ListingFixNoHost" xml:space="preserve">
     <value>Nenne unter Releases das GitHub-Repository oder die SpaceDock-Mod.</value>
@@ -2794,7 +2797,7 @@
     <value>GitHub hat kein öffentliches Repository {0}.</value>
   </data>
   <data name="ListingFixForkFormat" xml:space="preserve">
-    <value>{0} ist ein Fork. Nenne das ursprüngliche Repository.</value>
+    <value>{0} ist ein Fork, deshalb weist eine Markierungsdatei dort nichts nach. Damit dein Eintrag sich selbst mergt, füge {0} das Topic {1} hinzu.</value>
   </data>
   <data name="ListingFixRenamedFormat" xml:space="preserve">
     <value>{0} heißt jetzt {1}. Nutze den neuen Namen unter Releases.</value>

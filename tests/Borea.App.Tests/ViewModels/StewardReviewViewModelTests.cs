@@ -1,3 +1,4 @@
+using System.Globalization;
 using Borea.App.Localization;
 using Borea.App.ViewModels;
 using Borea.Core.Listings;
@@ -368,13 +369,14 @@ public sealed class StewardReviewViewModelTests
     }
 
     [Theory]
-    [InlineData(ListingOwnershipState.Verified, ListingOwnershipProof.Owner, null, "alice has an ownership proof.", "alice owns Studio/MyMod.")]
-    [InlineData(ListingOwnershipState.Verified, ListingOwnershipProof.Topic, null, "alice has an ownership proof.", "Studio/MyMod has the topic ksa-index-alice.")]
-    [InlineData(ListingOwnershipState.Verified, ListingOwnershipProof.MarkerFile, null, "alice has an ownership proof.", "Studio/MyMod names alice in .github/ksa-content-index.toml.")]
+    [InlineData(ListingOwnershipState.Verified, ListingOwnershipProof.Owner, null, "alice has an ownership proof.", "The source code link of SpaceDock mod 4256 names Studio/MyMod. alice owns Studio/MyMod.")]
+    [InlineData(ListingOwnershipState.Verified, ListingOwnershipProof.Topic, null, "alice has an ownership proof.", "The source code link of SpaceDock mod 4256 names Studio/MyMod. Studio/MyMod has the topic ksa-index-alice.")]
+    [InlineData(ListingOwnershipState.Verified, ListingOwnershipProof.MarkerFile, null, "alice has an ownership proof.", "The source code link of SpaceDock mod 4256 names Studio/MyMod. Studio/MyMod names alice in .github/ksa-content-index.toml.")]
     [InlineData(ListingOwnershipState.NotVerified, null, ListingOwnershipProblem.NoHost, "alice has no ownership proof, so a steward decides.", "The listing names no GitHub repository and no SpaceDock mod under releases.")]
-    [InlineData(ListingOwnershipState.NotVerified, null, ListingOwnershipProblem.RepositoryMissing, "alice has no ownership proof, so a steward decides.", "GitHub has no public repository Studio/MyMod.")]
-    [InlineData(ListingOwnershipState.NotVerified, null, ListingOwnershipProblem.RepositoryFork, "alice has no ownership proof, so a steward decides.", "Studio/MyMod is a fork, which proves nothing.")]
-    [InlineData(ListingOwnershipState.NotVerified, null, ListingOwnershipProblem.RepositoryRenamed, "alice has no ownership proof, so a steward decides.", "Studio/MyMod is now Studio/MyNewMod.")]
+    [InlineData(ListingOwnershipState.NotVerified, null, ListingOwnershipProblem.RepositoryMissing, "alice has no ownership proof, so a steward decides.", "The source code link of SpaceDock mod 4256 names Studio/MyMod. GitHub has no public repository Studio/MyMod.")]
+    [InlineData(ListingOwnershipState.NotVerified, null, ListingOwnershipProblem.RepositoryFork, "alice has no ownership proof, so a steward decides.", "The source code link of SpaceDock mod 4256 names Studio/MyMod. alice does not own the fork Studio/MyMod, and Studio/MyMod does not have the topic ksa-index-alice. A marker file on a fork proves nothing, because a fork inherits it.")]
+    [InlineData(ListingOwnershipState.NotVerified, null, ListingOwnershipProblem.NoProof, "alice has no ownership proof, so a steward decides.", "The source code link of SpaceDock mod 4256 names Studio/MyMod. alice does not own Studio/MyMod, and Studio/MyMod has neither the topic ksa-index-alice nor a marker file that names alice.")]
+    [InlineData(ListingOwnershipState.NotVerified, null, ListingOwnershipProblem.RepositoryRenamed, "alice has no ownership proof, so a steward decides.", "The source code link of SpaceDock mod 4256 names Studio/MyMod. Studio/MyMod is now Studio/MyNewMod.")]
     [InlineData(ListingOwnershipState.NotVerified, null, ListingOwnershipProblem.SpaceDockModUnusable, "alice has no ownership proof, so a steward decides.", "SpaceDock mod 4256 is not a published Kitten Space Agency mod.")]
     [InlineData(ListingOwnershipState.NotVerified, null, ListingOwnershipProblem.SpaceDockNoSourceLink, "alice has no ownership proof, so a steward decides.", "The source code link of SpaceDock mod 4256 names no GitHub repository.")]
     [InlineData(ListingOwnershipState.CouldNotEvaluate, null, null, "Borea could not check the ownership proof of alice.", null)]
@@ -392,6 +394,21 @@ public sealed class StewardReviewViewModelTests
         Assert.Equal(
             ["repository", "spacedock"],
             document.OwnershipLinks.Select(link => link.Key));
+    }
+
+    [Theory]
+    [InlineData("en", "alice does not own the fork alice/Fork, and alice/Fork does not have the topic ksa-index-alice. A marker file on a fork proves nothing, because a fork inherits it.")]
+    [InlineData("de", "alice besitzt den Fork alice/Fork nicht, und alice/Fork hat das Topic ksa-index-alice nicht. Eine Markierungsdatei auf einem Fork weist nichts nach, weil ein Fork sie erbt.")]
+    public void Ownership_ForkOnGitHub_NamesTheMissingOwnerAndTopicWithoutALinkSentence(string culture, string detail)
+    {
+        var viewModel = new MainViewModel(new LocalizationService(CultureInfo.GetCultureInfo(culture)));
+        var review = new StewardReview(viewModel, FakeStewardQueue.Item(5));
+        var ownership = new ListingOwnership(ListingOwnershipState.NotVerified, Problem: ListingOwnershipProblem.RepositoryFork, Repository: "alice/Fork");
+
+        var document = new StewardReviewDocument(viewModel, review, new PullRequestDocument("listings/MyMod.toml", StewardQueueKind.Listing, "id = \"MyMod\"", new AuthoredTable(), null, ownership), "alice");
+
+        Assert.Equal(detail, document.OwnershipDetail);
+        Assert.Equal(["repository"], document.OwnershipLinks.Select(link => link.Key));
     }
 
     private static PullRequestDocument Listing(ViewModelHarness harness, ListingOwnership ownership) =>
