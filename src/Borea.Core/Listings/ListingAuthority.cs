@@ -30,16 +30,20 @@ public sealed partial record ListingAuthority(string Kind, string Target)
         return GitHubRepositoryOf(draft.LinkOf("repository")) is { } repository ? new ListingAuthority(GitHub, repository) : null;
     }
 
-    /// <summary><c>owner/name</c> of a GitHub repository URL, or null.</summary>
+    /// <summary>
+    /// <c>owner/name</c> of a GitHub repository URL, or null. It splits the URL as urlparse of Python does for github_repository
+    /// of tools/ownership.py, so that a source code link on SpaceDock names the same repository here and in the checks.
+    /// </summary>
     public static string? GitHubRepositoryOf(string? url)
     {
-        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri)
-            || !(uri.Host.Equals("github.com", StringComparison.OrdinalIgnoreCase) || uri.Host.Equals("www.github.com", StringComparison.OrdinalIgnoreCase)))
+        if (UrlParts(url ?? string.Empty) is not ({ } netloc, { } path)
+            || !netloc.All(char.IsAscii)
+            || !(netloc.Equals("github.com", StringComparison.OrdinalIgnoreCase) || netloc.Equals("www.github.com", StringComparison.OrdinalIgnoreCase)))
         {
             return null;
         }
 
-        var parts = uri.AbsolutePath.Split('/', StringSplitOptions.RemoveEmptyEntries);
+        var parts = path.Split('/', StringSplitOptions.RemoveEmptyEntries);
         if (parts.Length < 2)
             return null;
 
@@ -47,6 +51,51 @@ public sealed partial record ListingAuthority(string Kind, string Target)
         var name = parts[1].EndsWith(".git", StringComparison.Ordinal) ? parts[1][..^4] : parts[1];
         return GitHubName().IsMatch(owner) && GitHubName().IsMatch(name) ? $"{owner}/{name}" : null;
     }
+
+    /// <summary>The network location and the path that urlparse of Python finds in <paramref name="url"/>, or null where it raises an error.</summary>
+    private static (string Netloc, string Path)? UrlParts(string url)
+    {
+        url = url.TrimStart(ControlOrSpace)
+            .Replace("\t", string.Empty, StringComparison.Ordinal)
+            .Replace("\r", string.Empty, StringComparison.Ordinal)
+            .Replace("\n", string.Empty, StringComparison.Ordinal);
+
+        var scheme = string.Empty;
+        var colon = url.IndexOf(':', StringComparison.Ordinal);
+        if (colon > 0 && char.IsAsciiLetter(url[0]) && url[..colon].All(c => char.IsAsciiLetterOrDigit(c) || c is '+' or '-' or '.'))
+        {
+            scheme = url[..colon].ToLowerInvariant();
+            url = url[(colon + 1)..];
+        }
+
+        var netloc = string.Empty;
+        if (url.StartsWith("//", StringComparison.Ordinal))
+        {
+            var end = url.IndexOfAny(['/', '?', '#'], 2);
+            netloc = end < 0 ? url[2..] : url[2..end];
+            url = end < 0 ? string.Empty : url[end..];
+            if (netloc.Contains('[', StringComparison.Ordinal) != netloc.Contains(']', StringComparison.Ordinal))
+                return null;
+        }
+
+        var cut = url.IndexOfAny(['#', '?']);
+        var path = cut < 0 ? url : url[..cut];
+        if (UrlParamSchemes.Contains(scheme) && path.Contains(';', StringComparison.Ordinal))
+        {
+            var semicolon = path.IndexOf(';', Math.Max(path.LastIndexOf('/'), 0));
+            if (semicolon >= 0)
+                path = path[..semicolon];
+        }
+
+        return (netloc, path);
+    }
+
+    /// <summary>What urlsplit of Python strips from the start of a URL.</summary>
+    private static readonly char[] ControlOrSpace = [.. Enumerable.Range(0, 33).Select(code => (char)code)];
+
+    /// <summary>The schemes whose last path segment urlparse of Python splits at a semicolon.</summary>
+    private static readonly HashSet<string> UrlParamSchemes =
+        ["", "ftp", "hdl", "prospero", "http", "imap", "https", "shttp", "rtsp", "rtsps", "rtspu", "sip", "sips", "mms", "sftp", "tel"];
 
     public bool IsSameHost(ListingAuthority? other) =>
         other is not null

@@ -131,39 +131,27 @@ public sealed partial class ListingEditor
             if (ownership.State == ListingOwnershipState.FirstClaim)
                 return Localization.FormatListingFirstClaimDetail(OwnerFilePath);
 
-            if (ownership.State == ListingOwnershipState.Verified)
-            {
-                return ownership.Proof switch
+            var detail = ownership.State == ListingOwnershipState.Verified
+                ? ownership.Proof switch
                 {
                     ListingOwnershipProof.Owner => Localization.FormatListingProofOwner(repository),
                     ListingOwnershipProof.Topic => Localization.FormatListingProofTopic(repository, ListingOwnership.TopicFor(login)),
                     ListingOwnershipProof.MarkerFile => Localization.FormatListingProofMarker(repository),
                     ListingOwnershipProof.PackOwner => Localization.FormatListingProofPackOwner(OwnerFilePath),
                     _ => null,
-                };
-            }
+                }
+                : ProblemDetail(ownership, repository, login);
 
-            return ownership.Problem switch
-            {
-                ListingOwnershipProblem.NoProof => Localization.FormatListingFixTopic(repository, ListingOwnership.TopicFor(login)),
-                ListingOwnershipProblem.NoHost => Localization.ListingFixNoHost,
-                ListingOwnershipProblem.RepositoryMissing => Localization.FormatListingFixMissing(repository),
-                ListingOwnershipProblem.RepositoryFork => Localization.FormatListingFixFork(repository),
-                ListingOwnershipProblem.RepositoryRenamed => Localization.FormatListingFixRenamed(repository, ownership.RenamedTo ?? string.Empty),
-                ListingOwnershipProblem.SpaceDockModUnusable => Localization.FormatListingFixSpaceDockMod(ownership.SpaceDockMod ?? string.Empty),
-                ListingOwnershipProblem.SpaceDockNoSourceLink => Localization.FormatListingFixSpaceDockLink(ownership.SpaceDockMod ?? string.Empty),
-                ListingOwnershipProblem.PullRequestHasOtherFiles => Localization.FormatListingFixOtherFiles(ownership.PullRequest?.ToString(CultureInfo.InvariantCulture) ?? string.Empty),
-                ListingOwnershipProblem.PackOwnedByOther => Localization.FormatListingFixPackOwnedByOther(OwnerFilePath, ownership.PackOwner ?? string.Empty),
-                ListingOwnershipProblem.PackIdTaken => Localization.FormatListingFixPackIdTaken(ownership.TakenBy ?? string.Empty),
-                _ => null,
-            };
+            return ownership.IsThroughSpaceDockLink && detail is not null
+                ? Localization.FormatListingProofSpaceDockLink(ownership.SpaceDockMod!, repository) + " " + detail
+                : detail;
         }
     }
 
     public string? OwnershipFixUrl => Ownership switch
     {
         { SpaceDockModUrl: { } url } ownership when IsSpaceDockLinkProblem(ownership) => url.AbsoluteUri,
-        { Problem: ListingOwnershipProblem.NoProof, RepositoryUrl: { } url } => url.AbsoluteUri,
+        { Problem: ListingOwnershipProblem.NoProof or ListingOwnershipProblem.RepositoryFork, RepositoryUrl: { } url } => url.AbsoluteUri,
         { Problem: ListingOwnershipProblem.PullRequestHasOtherFiles, PullRequest: { } number } =>
             $"https://github.com/{ListingPullRequestLinks.Repository}/pull/{number.ToString(CultureInfo.InvariantCulture)}",
         _ => null,
@@ -172,7 +160,7 @@ public sealed partial class ListingEditor
     public string? OwnershipFixLabel => Ownership switch
     {
         { } ownership when IsSpaceDockLinkProblem(ownership) => Localization.ListingOpenSpaceDock,
-        { Problem: ListingOwnershipProblem.NoProof } => Localization.ListingOpenRepository,
+        { Problem: ListingOwnershipProblem.NoProof or ListingOwnershipProblem.RepositoryFork } => Localization.ListingOpenRepository,
         { Problem: ListingOwnershipProblem.PullRequestHasOtherFiles } => Localization.ListingOpenYourPullRequest,
         _ => null,
     };
@@ -615,9 +603,25 @@ public sealed partial class ListingEditor
         };
     }
 
+    /// <summary>A linked repository that is missing or renamed needs a new link on SpaceDock. A linked fork can still prove control with the topic.</summary>
     private static bool IsSpaceDockLinkProblem(ListingOwnership ownership) =>
         ownership.SpaceDockMod is not null
-        && ownership.Problem is ListingOwnershipProblem.RepositoryMissing or ListingOwnershipProblem.RepositoryFork or ListingOwnershipProblem.RepositoryRenamed;
+        && ownership.Problem is ListingOwnershipProblem.RepositoryMissing or ListingOwnershipProblem.RepositoryRenamed;
+
+    private string? ProblemDetail(ListingOwnership ownership, string repository, string login) => ownership.Problem switch
+    {
+        ListingOwnershipProblem.NoProof => Localization.FormatListingFixTopic(repository, ListingOwnership.TopicFor(login)),
+        ListingOwnershipProblem.NoHost => Localization.ListingFixNoHost,
+        ListingOwnershipProblem.RepositoryMissing => Localization.FormatListingFixMissing(repository),
+        ListingOwnershipProblem.RepositoryFork => Localization.FormatListingFixFork(repository, ListingOwnership.TopicFor(login)),
+        ListingOwnershipProblem.RepositoryRenamed => Localization.FormatListingFixRenamed(repository, ownership.RenamedTo ?? string.Empty),
+        ListingOwnershipProblem.SpaceDockModUnusable => Localization.FormatListingFixSpaceDockMod(ownership.SpaceDockMod ?? string.Empty),
+        ListingOwnershipProblem.SpaceDockNoSourceLink => Localization.FormatListingFixSpaceDockLink(ownership.SpaceDockMod ?? string.Empty),
+        ListingOwnershipProblem.PullRequestHasOtherFiles => Localization.FormatListingFixOtherFiles(ownership.PullRequest?.ToString(CultureInfo.InvariantCulture) ?? string.Empty),
+        ListingOwnershipProblem.PackOwnedByOther => Localization.FormatListingFixPackOwnedByOther(OwnerFilePath, ownership.PackOwner ?? string.Empty),
+        ListingOwnershipProblem.PackIdTaken => Localization.FormatListingFixPackIdTaken(ownership.TakenBy ?? string.Empty),
+        _ => null,
+    };
 
     private static string Number(ListingPullRequest pullRequest) => pullRequest.Number.ToString(CultureInfo.InvariantCulture);
 }

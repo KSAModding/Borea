@@ -18,6 +18,7 @@ public sealed class ListingOwnershipCheckTests
     private const string ListingPath = "listings/MyMod.toml";
     private const string ListedForums = "https://forums.ahwoo.com/threads/my-mod.783/";
     private const string SubmittedForums = "https://forums.ahwoo.com/threads/my-new-mod.901/";
+    private const string MarkerFile = "/contents/.github/ksa-content-index.toml";
 
     private static readonly GitHubAccount Alice = new("alice", 5);
 
@@ -73,19 +74,16 @@ public sealed class ListingOwnershipCheckTests
     }
 
     [Fact]
-    public async Task CheckAsync_ForkMissingOrRenamedRepository_SaysWhichOne()
+    public async Task CheckAsync_MissingOrRenamedRepository_SaysWhichOne()
     {
-        On("GET", Api + "/repos/alice/Forked", () => Json(Repository("alice/Forked", 5, fork: true)));
         On("GET", Api + "/repos/alice/OldName", () => Redirect(Api + "/repositories/42"));
         On("GET", Api + "/repositories/42", () => Json(Repository("alice/NewName", 5)));
         var check = await SignedInAsync();
 
-        var fork = await check.CheckAsync(Alice, Draft("alice/Forked"), null);
         var missing = await check.CheckAsync(Alice, Draft("alice/Gone"), null);
         var renamed = await check.CheckAsync(Alice, Draft("alice/OldName"), null);
         var noHost = await check.CheckAsync(Alice, new ListingDraft { Id = "MyMod" }, null);
 
-        Assert.Equal(ListingOwnershipProblem.RepositoryFork, fork.Problem);
         Assert.Equal(ListingOwnershipProblem.RepositoryMissing, missing.Problem);
         Assert.Equal(new ListingOwnership(ListingOwnershipState.NotVerified, Problem: ListingOwnershipProblem.RepositoryRenamed, Repository: "alice/OldName", RenamedTo: "alice/NewName"), renamed);
         Assert.Equal(new ListingOwnership(ListingOwnershipState.NotVerified, Problem: ListingOwnershipProblem.NoHost), noHost);
@@ -132,6 +130,242 @@ public sealed class ListingOwnershipCheckTests
         var ownership = await check.CheckAsync(Alice, Draft(spaceDock: 4253), null);
 
         Assert.Equal(new ListingOwnership(ListingOwnershipState.NotVerified, Problem: problem, SpaceDockMod: "4253"), ownership);
+    }
+
+    /// <summary>The fork cases of test_ownership.py in content-index (RFC 0079): the owner id and the topic prove a fork, its marker file never does.</summary>
+    [Theory]
+    [InlineData(5L, false, false, ListingOwnershipProof.Owner)]
+    [InlineData(99L, true, false, ListingOwnershipProof.Topic)]
+    [InlineData(99L, false, true, null)]
+    [InlineData(99L, false, false, null)]
+    public async Task CheckAsync_Fork_ProvesItByTheOwnerOrTheTopicButNotTheMarker(long ownerId, bool topic, bool marker, ListingOwnershipProof? proof)
+    {
+        OnRepository("alice/Forked", ownerId, fork: true, topic ? "ksa-index-alice" : "ksa", marker ? "login = \"alice\"\nid = \"MyMod\"\n" : null);
+        var check = await SignedInAsync();
+
+        var ownership = await check.CheckAsync(Alice, Draft("alice/Forked"), null);
+
+        Assert.Equal(
+            proof is null
+                ? new ListingOwnership(ListingOwnershipState.NotVerified, Problem: ListingOwnershipProblem.RepositoryFork, Repository: "alice/Forked")
+                : new ListingOwnership(ListingOwnershipState.Verified, proof, Repository: "alice/Forked"),
+            ownership);
+        Assert.DoesNotContain(_sent, sent => sent.Url.EndsWith(MarkerFile, StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task CheckAsync_SameMarkerWhereItIsNoFork_Verifies()
+    {
+        OnRepository("alice/Original", 99, fork: false, "ksa", "login = \"alice\"\nid = \"MyMod\"\n");
+        var check = await SignedInAsync();
+
+        var ownership = await check.CheckAsync(Alice, Draft("alice/Original"), null);
+
+        Assert.Equal(new ListingOwnership(ListingOwnershipState.Verified, ListingOwnershipProof.MarkerFile, Repository: "alice/Original"), ownership);
+    }
+
+    [Fact]
+    public async Task CheckAsync_ForkWhoseTopicsCannotBeRead_CouldNotEvaluate()
+    {
+        On("GET", Api + "/repos/alice/Forked", () => Json(Repository("alice/Forked", 99, fork: true)));
+        On("GET", Api + "/repos/alice/Forked/topics", () => Json("""{"message":"Server Error"}""", HttpStatusCode.BadGateway));
+        var check = await SignedInAsync();
+
+        Assert.Equal(ListingOwnership.Unknown, await check.CheckAsync(Alice, Draft("alice/Forked"), null));
+    }
+
+    /// <summary>The SpaceDock cases of test_ownership.py in content-index (RFC 0079): every GitHub proof on the repository the source code link names.</summary>
+    [Theory]
+    [InlineData(5L, false, false, false, ListingOwnershipProof.Owner)]
+    [InlineData(99L, false, true, false, ListingOwnershipProof.Topic)]
+    [InlineData(99L, false, false, true, ListingOwnershipProof.MarkerFile)]
+    [InlineData(99L, false, false, false, null)]
+    [InlineData(5L, true, false, false, ListingOwnershipProof.Owner)]
+    [InlineData(99L, true, true, false, ListingOwnershipProof.Topic)]
+    [InlineData(99L, true, false, true, null)]
+    public async Task CheckAsync_SpaceDockMod_ProvesTheLinkedRepositoryAsAGitHubListing(long ownerId, bool fork, bool topic, bool marker, ListingOwnershipProof? proof)
+    {
+        OnSpaceDock("""{"id":4253,"game_id":22409,"source_code":"https://github.com/Studio/MyMod"}""");
+        OnRepository("Studio/MyMod", ownerId, fork, topic ? "ksa-index-alice" : "ksa", marker ? "login = \"alice\"\nid = \"MyMod\"\n" : null);
+        var check = await SignedInAsync();
+
+        var ownership = await check.CheckAsync(Alice, Draft(spaceDock: 4253), null);
+
+        var problem = fork ? ListingOwnershipProblem.RepositoryFork : ListingOwnershipProblem.NoProof;
+        Assert.Equal(
+            proof is null
+                ? new ListingOwnership(ListingOwnershipState.NotVerified, Problem: problem, Repository: "Studio/MyMod", SpaceDockMod: "4253")
+                : new ListingOwnership(ListingOwnershipState.Verified, proof, Repository: "Studio/MyMod", SpaceDockMod: "4253"),
+            ownership);
+        Assert.Equal(["GET https://spacedock.info/api/mod/4253", "GET " + Api + "/repos/Studio/MyMod"], _sent.Take(2).Select(sent => sent.Line));
+        Assert.All(_sent, sent => Assert.Null(sent.Authorization));
+    }
+
+    [Theory]
+    [InlineData("https://github.com/Studio/MyMod.git")]
+    [InlineData("https://github.com/Studio/MyMod/tree/main")]
+    public async Task CheckAsync_SpaceDockLinkWithAGitSuffixOrADeeperPath_StillNamesTheRepository(string link)
+    {
+        OnSpaceDock(JsonSerializer.Serialize(new { id = 4253, game_id = 22409, source_code = link }));
+        OnRepository("Studio/MyMod", 5, fork: false, "ksa", null);
+        var check = await SignedInAsync();
+
+        var ownership = await check.CheckAsync(Alice, Draft(spaceDock: 4253), null);
+
+        Assert.Equal(new ListingOwnership(ListingOwnershipState.Verified, ListingOwnershipProof.Owner, Repository: "Studio/MyMod", SpaceDockMod: "4253"), ownership);
+    }
+
+    /// <summary>Each answer of SpaceDock that test_ownership.py reads as no usable mod or no usable link, with the truth of Python for the JSON values.</summary>
+    [Theory]
+    [InlineData("""{"id":4253,"game_id":22409}""", ListingOwnershipProblem.SpaceDockNoSourceLink)]
+    [InlineData("""{"id":4253,"game_id":22409,"source_code":null}""", ListingOwnershipProblem.SpaceDockNoSourceLink)]
+    [InlineData("""{"id":4253,"game_id":22409,"source_code":false}""", ListingOwnershipProblem.SpaceDockNoSourceLink)]
+    [InlineData("""{"id":4253,"game_id":22409,"source_code":"https://gitlab.com/Studio/MyMod"}""", ListingOwnershipProblem.SpaceDockNoSourceLink)]
+    [InlineData("""{"id":4253,"game_id":22409,"source_code":"https://github.com:443/Studio/MyMod"}""", ListingOwnershipProblem.SpaceDockNoSourceLink)]
+    [InlineData("""{"id":4253,"game_id":22409,"source_code":"evil\n\n**Validated.** @stewards <!-- https://github.com/Studio/MyMod"}""", ListingOwnershipProblem.SpaceDockNoSourceLink)]
+    [InlineData("""{"id":4253,"game_id":22409.0,"source_code":"https://gitlab.com/Studio/MyMod"}""", ListingOwnershipProblem.SpaceDockNoSourceLink)]
+    [InlineData("""{"id":4253,"game_id":"22409","source_code":"https://github.com/Studio/MyMod"}""", ListingOwnershipProblem.SpaceDockModUnusable)]
+    [InlineData("""{"error":true,"reason":"Mod not published. Authentication needed."}""", ListingOwnershipProblem.SpaceDockModUnusable)]
+    [InlineData("""{"error":"yes","reason":"**Validated.** Not enough rights."}""", ListingOwnershipProblem.SpaceDockModUnusable)]
+    public async Task CheckAsync_SpaceDockModWithoutAUsableLink_NeverAsksGitHub(string mod, ListingOwnershipProblem problem)
+    {
+        OnSpaceDock(mod);
+        var check = await SignedInAsync();
+
+        var ownership = await check.CheckAsync(Alice, Draft(spaceDock: 4253), null);
+
+        Assert.Equal(new ListingOwnership(ListingOwnershipState.NotVerified, Problem: problem, SpaceDockMod: "4253"), ownership);
+        Assert.Equal(["GET https://spacedock.info/api/mod/4253"], _sent.Select(sent => sent.Line));
+    }
+
+    [Fact]
+    public async Task CheckAsync_SpaceDockModThatIsNotThereOrRefusedWithItsErrorDocument_NamesTheMod()
+    {
+        var check = await SignedInAsync();
+        var missing = await check.CheckAsync(Alice, Draft(spaceDock: 4253), null);
+        OnSpaceDock("""{"error":true,"reason":"Mod not published. Authentication needed."}""", HttpStatusCode.Unauthorized);
+        var refused = await check.CheckAsync(Alice, Draft(spaceDock: 4253), null);
+
+        Assert.All([missing, refused], ownership => Assert.Equal(new ListingOwnership(ListingOwnershipState.NotVerified, Problem: ListingOwnershipProblem.SpaceDockModUnusable, SpaceDockMod: "4253"), ownership));
+    }
+
+    /// <summary>An answer that is not the mod's document, or no answer, gets no verdict, as in test_ownership.py.</summary>
+    [Theory]
+    [InlineData("""{"message":"ok"}""", HttpStatusCode.OK)]
+    [InlineData("""{"id":4254,"game_id":22409,"source_code":"https://github.com/Studio/MyMod"}""", HttpStatusCode.OK)]
+    [InlineData("""{"id":"4253.0","game_id":22409,"source_code":"https://github.com/Studio/MyMod"}""", HttpStatusCode.OK)]
+    [InlineData("""{"id":4253,"game_id":22409,"source_code":5}""", HttpStatusCode.OK)]
+    [InlineData("""<html>Bad gateway</html>""", HttpStatusCode.OK)]
+    [InlineData("""[4253]""", HttpStatusCode.OK)]
+    [InlineData("""{"message":"Forbidden"}""", HttpStatusCode.Forbidden)]
+    [InlineData("""{"message":"Server Error"}""", HttpStatusCode.BadGateway)]
+    public async Task CheckAsync_SpaceDockAnswerThatIsNotTheMod_CouldNotEvaluate(string answer, HttpStatusCode status)
+    {
+        OnSpaceDock(answer, status);
+        OnRepository("Studio/MyMod", 5, fork: false, "ksa", null);
+        var check = await SignedInAsync();
+
+        Assert.Equal(ListingOwnership.Unknown, await check.CheckAsync(Alice, Draft(spaceDock: 4253), null));
+    }
+
+    [Fact]
+    public async Task CheckAsync_SpaceDockThatTimesOut_CouldNotEvaluate()
+    {
+        On("GET", "https://spacedock.info/api/mod/4253", () => throw new HttpRequestException("timed out"));
+        var check = await SignedInAsync();
+
+        Assert.Equal(ListingOwnership.Unknown, await check.CheckAsync(Alice, Draft(spaceDock: 4253), null));
+    }
+
+    [Theory]
+    [InlineData("/repos/Studio/MyMod")]
+    [InlineData("/repos/Studio/MyMod/topics")]
+    [InlineData("/repos/Studio/MyMod/contents/.github/ksa-content-index.toml")]
+    public async Task CheckAsync_LinkedRepositoryThatDoesNotAnswer_CouldNotEvaluate(string path)
+    {
+        OnSpaceDock("""{"id":4253,"game_id":22409,"source_code":"https://github.com/Studio/MyMod"}""");
+        OnRepository("Studio/MyMod", 99, fork: false, "ksa", "login = \"alice\"\n");
+        On("GET", Api + path, () => Json("""{"message":"Server Error"}""", HttpStatusCode.BadGateway));
+        var check = await SignedInAsync();
+
+        Assert.Equal(ListingOwnership.Unknown, await check.CheckAsync(Alice, Draft(spaceDock: 4253), null));
+    }
+
+    [Fact]
+    public async Task CheckAsync_LinkedRepositoryThatMoved_MakesTheLinkStale()
+    {
+        OnSpaceDock("""{"id":4253,"game_id":22409,"source_code":"https://github.com/Studio/MyMod"}""");
+        On("GET", Api + "/repos/Studio/MyMod", () => Json(Repository("Studio/Renamed", 5)));
+        var check = await SignedInAsync();
+
+        var ownership = await check.CheckAsync(Alice, Draft(spaceDock: 4253), null);
+
+        Assert.Equal(new ListingOwnership(ListingOwnershipState.NotVerified, Problem: ListingOwnershipProblem.RepositoryRenamed, Repository: "Studio/MyMod", SpaceDockMod: "4253", RenamedTo: "Studio/Renamed"), ownership);
+    }
+
+    /// <summary>The fork and SpaceDock cases of VerifyChange in test_ownership.py: an edit proves the listed host, and the new one when it moves.</summary>
+    [Theory]
+    [InlineData(5L, false, ListingOwnershipState.Verified, null, ListingOwnershipProof.Owner)]
+    [InlineData(99L, true, ListingOwnershipState.NotVerified, ListingOwnershipProblem.RepositoryFork, null)]
+    public async Task CheckAsync_ChangeToTheNewNameOfARenamedFork_ChecksItAsAFork(long ownerId, bool marker, ListingOwnershipState state, ListingOwnershipProblem? problem, ListingOwnershipProof? proof)
+    {
+        On("GET", Api + "/repos/alice/Old", () => Json(Repository("alice/New", ownerId, fork: true)));
+        OnRepository("alice/New", ownerId, fork: true, "ksa", marker ? "login = \"alice\"\nid = \"MyMod\"\n" : null);
+        var check = await SignedInAsync();
+
+        var ownership = await check.CheckAsync(Alice, Draft("alice/New"), Draft("alice/Old"));
+
+        Assert.Equal(new ListingOwnership(state, proof, problem, Repository: "alice/New"), ownership);
+    }
+
+    [Theory]
+    [InlineData(true, 5L, false, ListingOwnershipState.Verified, "alice/MyMod")]
+    [InlineData(false, 5L, false, ListingOwnershipState.NotVerified, "Original/MyMod")]
+    [InlineData(true, 99L, true, ListingOwnershipState.NotVerified, "alice/MyMod")]
+    public async Task CheckAsync_ChangeThatMovesTheListingToAFork_NeedsBothProofs(bool originalProven, long forkOwnerId, bool forkMarker, ListingOwnershipState state, string repository)
+    {
+        OnProof("Original/MyMod", originalProven);
+        OnRepository("alice/MyMod", forkOwnerId, fork: true, "ksa", forkMarker ? "login = \"alice\"\nid = \"MyMod\"\n" : null);
+        var check = await SignedInAsync();
+
+        var ownership = await check.CheckAsync(Alice, Draft("alice/MyMod"), Draft("Original/MyMod"));
+
+        Assert.Equal((state, repository), (ownership.State, ownership.Repository));
+        if (!originalProven)
+            Assert.DoesNotContain(_sent, sent => sent.Url.StartsWith(Api + "/repos/alice/MyMod", StringComparison.Ordinal));
+        if (forkMarker)
+            Assert.Equal(ListingOwnershipProblem.RepositoryFork, ownership.Problem);
+    }
+
+    [Theory]
+    [InlineData("https://github.com/Studio/MyMod", ListingOwnershipState.Verified, "Studio/MyMod")]
+    [InlineData("https://github.com/Someone/MyMod", ListingOwnershipState.NotVerified, "Someone/MyMod")]
+    public async Task CheckAsync_ChangeThatMovesTheAuthorityToSpaceDock_NeedsTheLinkedRepositoryProved(string link, ListingOwnershipState state, string repository)
+    {
+        OnRepository("Studio/MyMod", 5, fork: false, "ksa", null);
+        OnRepository("Someone/MyMod", 99, fork: false, "ksa", null);
+        OnSpaceDock(JsonSerializer.Serialize(new { id = 4253, game_id = 22409, source_code = link }));
+        var check = await SignedInAsync();
+        var listed = Draft("Studio/MyMod") with { Releases = new ListingReleases("Studio/MyMod", 4253, ListingAuthority.GitHub) };
+        var submitted = listed with { Releases = new ListingReleases("Studio/MyMod", 4253, ListingAuthority.SpaceDock) };
+
+        var ownership = await check.CheckAsync(Alice, submitted, listed);
+
+        Assert.Equal((state, repository, "4253"), (ownership.State, ownership.Repository, ownership.SpaceDockMod));
+    }
+
+    [Theory]
+    [InlineData(5L, ListingOwnershipState.Verified)]
+    [InlineData(99L, ListingOwnershipState.NotVerified)]
+    public async Task CheckAsync_EditOfASpaceDockListing_IsCheckedThroughItsLink(long ownerId, ListingOwnershipState state)
+    {
+        OnSpaceDock("""{"id":4253,"game_id":22409,"source_code":"https://github.com/Studio/MyMod"}""");
+        OnRepository("Studio/MyMod", ownerId, fork: false, "ksa", null);
+        var check = await SignedInAsync();
+
+        var ownership = await check.CheckAsync(Alice, Draft(spaceDock: 4253) with { Name = "Edited" }, Draft(spaceDock: 4253));
+
+        Assert.Equal((state, "Studio/MyMod", "4253"), (ownership.State, ownership.Repository, ownership.SpaceDockMod));
     }
 
     [Fact]
@@ -370,6 +604,16 @@ public sealed class ListingOwnershipCheckTests
     }
 
     [Fact]
+    public async Task OwnersAsync_SpaceDockModWithoutALink_NamesNobody()
+    {
+        OnSpaceDock("""{"id":4253,"game_id":22409,"source_code":null}""");
+        var check = await SignedInAsync();
+
+        Assert.Empty(await check.OwnersAsync(Draft(spaceDock: 4253)));
+        Assert.Equal(["GET https://spacedock.info/api/mod/4253"], _sent.Select(sent => sent.Line));
+    }
+
+    [Fact]
     public async Task OwnersAsync_HostThatNamesNobodyOrDoesNotAnswer_NamesNobody()
     {
         On("GET", Api + "/repos/alice/OldName", () => Json(Repository("alice/NewName", 5, ownerType: "User")));
@@ -408,6 +652,16 @@ public sealed class ListingOwnershipCheckTests
         On("GET", $"{Api}/repos/{repository}", () => Json(Repository(repository, 99)));
         On("GET", $"{Api}/repos/{repository}/topics", () => Json(proven ? """{"names":["ksa-index-alice"]}""" : """{"names":[]}"""));
     }
+
+    private void OnRepository(string repository, long ownerId, bool fork, string topic, string? marker)
+    {
+        On("GET", $"{Api}/repos/{repository}", () => Json(Repository(repository, ownerId, fork)));
+        On("GET", $"{Api}/repos/{repository}/topics", () => Json(JsonSerializer.Serialize(new { names = new[] { topic } })));
+        if (marker is not null)
+            On("GET", $"{Api}/repos/{repository}{MarkerFile}", () => Json(Content(marker)));
+    }
+
+    private void OnSpaceDock(string answer, HttpStatusCode status = HttpStatusCode.OK) => On("GET", "https://spacedock.info/api/mod/4253", () => Json(answer, status));
 
     private void OnListing(string reference, string text) => On("GET", ListingUrl(reference), () => Json(Content(text)));
 

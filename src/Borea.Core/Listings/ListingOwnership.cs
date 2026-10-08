@@ -33,6 +33,8 @@ public enum ListingOwnershipProblem
     NoProof,
     NoHost,
     RepositoryMissing,
+
+    /// <summary>The repository is a fork without the owner or the topic proof. Its marker file proves nothing, because a fork inherits it.</summary>
     RepositoryFork,
     RepositoryRenamed,
     SpaceDockModUnusable,
@@ -78,6 +80,19 @@ public sealed record ListingOwnership(
     /// <summary>The SpaceDock page of <see cref="SpaceDockMod"/>, or null when it names no mod.</summary>
     public Uri? SpaceDockModUrl =>
         SpaceDockMod is { Length: > 0 } mod && mod.All(char.IsAsciiDigit) ? new Uri("https://spacedock.info/mod/" + mod) : null;
+
+    /// <summary>
+    /// Whether the proof, or the problem, is on <see cref="Repository"/> because the source code link of
+    /// <see cref="SpaceDockMod"/> names it (RFC 0079).
+    /// </summary>
+    public bool IsThroughSpaceDockLink =>
+        SpaceDockMod is not null
+        && Repository is not null
+        && (State == ListingOwnershipState.Verified
+            || Problem is ListingOwnershipProblem.NoProof
+                or ListingOwnershipProblem.RepositoryFork
+                or ListingOwnershipProblem.RepositoryMissing
+                or ListingOwnershipProblem.RepositoryRenamed);
 
     public static ListingOwnership Unknown { get; } = new(ListingOwnershipState.CouldNotEvaluate);
 

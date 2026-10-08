@@ -527,8 +527,8 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string StewardReviewProofNoHost => Resources.StewardReviewProofNoHost;
 
-    public string FormatStewardReviewProofFork(string repository)
-        => string.Format(CultureInfo.CurrentCulture, Resources.StewardReviewProofForkFormat, repository);
+    public string FormatStewardReviewProofFork(string login, string repository, string topic)
+        => string.Format(CultureInfo.CurrentCulture, Resources.StewardReviewProofForkFormat, login, repository, topic);
 
     public string FormatStewardReviewProofRenamed(string repository, string renamedTo)
         => string.Format(CultureInfo.CurrentCulture, Resources.StewardReviewProofRenamedFormat, repository, renamedTo);
@@ -2736,6 +2736,9 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string FormatListingProofMarker(string repository)
         => string.Format(CultureInfo.CurrentCulture, Resources.ListingProofMarkerFormat, repository);
 
+    public string FormatListingProofSpaceDockLink(string mod, string repository)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ListingProofSpaceDockLinkFormat, mod, repository);
+
     public string FormatListingProofPackOwner(string ownerPath)
         => string.Format(CultureInfo.CurrentCulture, Resources.ListingProofPackOwnerFormat, ownerPath);
 
@@ -2745,8 +2748,8 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string FormatListingFixMissing(string repository)
         => string.Format(CultureInfo.CurrentCulture, Resources.ListingFixMissingFormat, repository);
 
-    public string FormatListingFixFork(string repository)
-        => string.Format(CultureInfo.CurrentCulture, Resources.ListingFixForkFormat, repository);
+    public string FormatListingFixFork(string repository, string topic)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ListingFixForkFormat, repository, topic);
 
     public string FormatListingFixRenamed(string repository, string newName)
         => string.Format(CultureInfo.CurrentCulture, Resources.ListingFixRenamedFormat, repository, newName);

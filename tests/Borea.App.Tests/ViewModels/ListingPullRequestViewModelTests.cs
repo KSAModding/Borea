@@ -232,7 +232,7 @@ public sealed class ListingPullRequestViewModelTests
 
         Assert.False(editor.IsOwnershipVerified);
         Assert.Equal("A steward has to accept it.", editor.OwnershipText);
-        Assert.Equal("To let it merge itself, add the topic ksa-index-octocat to Studio/MyMod.", editor.OwnershipDetail);
+        Assert.Equal("To let your listing merge itself, add the topic ksa-index-octocat to Studio/MyMod.", editor.OwnershipDetail);
         Assert.Equal("Open the repository", editor.OwnershipFixLabel);
         Assert.Equal(["https://github.com/Studio/MyMod"], opened);
     }
@@ -257,9 +257,49 @@ public sealed class ListingPullRequestViewModelTests
         Assert.False(editor.CanCheckOwnershipAgain);
     }
 
+    [Fact]
+    public async Task SignedIn_ForkWithoutProof_SaysTheMarkerFileDoesNotCountAndOpensTheFork()
+    {
+        _session.SignIn();
+        _publisher.Ownership = new ListingOwnership(ListingOwnershipState.NotVerified, Problem: ListingOwnershipProblem.RepositoryFork, Repository: "Studio/MyMod");
+        using var harness = await CreateAsync();
+        var editor = await ValidNewListingAsync(harness);
+        var opened = new List<string>();
+        harness.ViewModel.OpenWithSystem = opened.Add;
+
+        await editor.OwnershipCheck;
+        editor.OpenOwnershipFixCommand.Execute(null);
+
+        Assert.Equal("A steward has to accept it.", editor.OwnershipText);
+        Assert.Equal("Studio/MyMod is a fork, so a marker file there proves nothing. To let your listing merge itself, add the topic ksa-index-octocat to Studio/MyMod.", editor.OwnershipDetail);
+        Assert.Equal("Open the repository", editor.OwnershipFixLabel);
+        Assert.Equal(["https://github.com/Studio/MyMod"], opened);
+        Assert.True(editor.CanCheckOwnershipAgain);
+    }
+
+    /// <summary>A SpaceDock listing names the repository its source code link names, then the proof there or the step that gives one.</summary>
+    [Theory]
+    [InlineData(ListingOwnershipState.Verified, ListingOwnershipProof.Owner, null, "You own Studio/MyMod.", null)]
+    [InlineData(ListingOwnershipState.Verified, ListingOwnershipProof.Topic, null, "Studio/MyMod has the topic ksa-index-octocat.", null)]
+    [InlineData(ListingOwnershipState.Verified, ListingOwnershipProof.MarkerFile, null, "Studio/MyMod names you in .github/ksa-content-index.toml.", null)]
+    [InlineData(ListingOwnershipState.NotVerified, null, ListingOwnershipProblem.NoProof, "To let your listing merge itself, add the topic ksa-index-octocat to Studio/MyMod.", "https://github.com/Studio/MyMod")]
+    [InlineData(ListingOwnershipState.NotVerified, null, ListingOwnershipProblem.RepositoryFork, "Studio/MyMod is a fork, so a marker file there proves nothing. To let your listing merge itself, add the topic ksa-index-octocat to Studio/MyMod.", "https://github.com/Studio/MyMod")]
+    public async Task SpaceDockMod_NamesTheLinkedRepositoryAndTheProofThere(ListingOwnershipState state, ListingOwnershipProof? proof, ListingOwnershipProblem? problem, string detail, string? fixUrl)
+    {
+        _session.SignIn();
+        _publisher.Ownership = new ListingOwnership(state, proof, problem, Repository: "Studio/MyMod", SpaceDockMod: "4253");
+        using var harness = await CreateAsync();
+        var editor = await ValidNewListingAsync(harness);
+
+        await editor.OwnershipCheck;
+
+        Assert.Equal("The source code link of SpaceDock mod 4253 names Studio/MyMod. " + detail, editor.OwnershipDetail);
+        Assert.Equal(fixUrl, editor.OwnershipFixUrl);
+        Assert.Equal(fixUrl is null ? null : "Open the repository", editor.OwnershipFixLabel);
+    }
+
     [Theory]
     [InlineData(ListingOwnershipProblem.RepositoryMissing)]
-    [InlineData(ListingOwnershipProblem.RepositoryFork)]
     [InlineData(ListingOwnershipProblem.RepositoryRenamed)]
     public async Task SpaceDockLinkToAnUnusableRepository_AsksToFixTheLinkOnSpaceDock(ListingOwnershipProblem problem)
     {

@@ -354,28 +354,29 @@ public sealed partial class StewardReviewDocument
                 return null;
 
             var repository = ownership.Repository ?? string.Empty;
-            if (ownership.State == ListingOwnershipState.Verified)
-            {
-                return ownership.Proof switch
+            var detail = ownership.State == ListingOwnershipState.Verified
+                ? ownership.Proof switch
                 {
                     ListingOwnershipProof.Owner => _owner.Localization.FormatStewardReviewProofOwner(login, repository),
                     ListingOwnershipProof.Topic => _owner.Localization.FormatListingProofTopic(repository, ListingOwnership.TopicFor(login)),
                     ListingOwnershipProof.MarkerFile => _owner.Localization.FormatStewardReviewProofMarker(login, repository),
                     _ => null,
+                }
+                : ownership.Problem switch
+                {
+                    ListingOwnershipProblem.NoProof => _owner.Localization.FormatStewardReviewProofNone(login, repository, ListingOwnership.TopicFor(login)),
+                    ListingOwnershipProblem.NoHost => _owner.Localization.StewardReviewProofNoHost,
+                    ListingOwnershipProblem.RepositoryMissing => _owner.Localization.FormatListingFixMissing(repository),
+                    ListingOwnershipProblem.RepositoryFork => _owner.Localization.FormatStewardReviewProofFork(login, repository, ListingOwnership.TopicFor(login)),
+                    ListingOwnershipProblem.RepositoryRenamed => _owner.Localization.FormatStewardReviewProofRenamed(repository, ownership.RenamedTo ?? string.Empty),
+                    ListingOwnershipProblem.SpaceDockModUnusable => _owner.Localization.FormatListingFixSpaceDockMod(ownership.SpaceDockMod ?? string.Empty),
+                    ListingOwnershipProblem.SpaceDockNoSourceLink => _owner.Localization.FormatStewardReviewProofSpaceDockLink(ownership.SpaceDockMod ?? string.Empty),
+                    _ => null,
                 };
-            }
 
-            return ownership.Problem switch
-            {
-                ListingOwnershipProblem.NoProof => _owner.Localization.FormatStewardReviewProofNone(login, repository, ListingOwnership.TopicFor(login)),
-                ListingOwnershipProblem.NoHost => _owner.Localization.StewardReviewProofNoHost,
-                ListingOwnershipProblem.RepositoryMissing => _owner.Localization.FormatListingFixMissing(repository),
-                ListingOwnershipProblem.RepositoryFork => _owner.Localization.FormatStewardReviewProofFork(repository),
-                ListingOwnershipProblem.RepositoryRenamed => _owner.Localization.FormatStewardReviewProofRenamed(repository, ownership.RenamedTo ?? string.Empty),
-                ListingOwnershipProblem.SpaceDockModUnusable => _owner.Localization.FormatListingFixSpaceDockMod(ownership.SpaceDockMod ?? string.Empty),
-                ListingOwnershipProblem.SpaceDockNoSourceLink => _owner.Localization.FormatStewardReviewProofSpaceDockLink(ownership.SpaceDockMod ?? string.Empty),
-                _ => null,
-            };
+            return ownership.IsThroughSpaceDockLink && detail is not null
+                ? _owner.Localization.FormatListingProofSpaceDockLink(ownership.SpaceDockMod!, repository) + " " + detail
+                : detail;
         }
     }
 

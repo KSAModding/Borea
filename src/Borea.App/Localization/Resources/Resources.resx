@@ -379,7 +379,7 @@
     <value>The listing names no GitHub repository and no SpaceDock mod under releases.</value>
   </data>
   <data name="StewardReviewProofForkFormat" xml:space="preserve">
-    <value>{0} is a fork, which proves nothing.</value>
+    <value>{0} does not own the fork {1}, and {1} does not have the topic {2}. A marker file on a fork proves nothing, because a fork inherits it.</value>
   </data>
   <data name="StewardReviewProofRenamedFormat" xml:space="preserve">
     <value>{0} is now {1}.</value>
@@ -2800,7 +2800,7 @@
     <value>Open pull request on GitHub</value>
   </data>
   <data name="ListingNewPullRequestText" xml:space="preserve">
-    <value>GitHub opens a new file in your own copy of content-index, and then the pull request form. GitHub fills in this text when it fits in the link. When it is too long, Borea copies it, and you paste it into the page. The pull request merges itself when you control the release host: the repository is yours, has the topic ksa-index-&lt;your GitHub name&gt;, or contains .github/ksa-content-index.toml. A SpaceDock mod proves this through the GitHub repository in its source code link.</value>
+    <value>GitHub opens a new file in your own copy of content-index, and then the pull request form. GitHub fills in this text when it fits in the link. When it is too long, Borea copies it, and you paste it into the page. The pull request merges itself when you control the release host: the repository is yours, has the topic ksa-index-&lt;your GitHub name&gt;, or, when it is not a fork, contains .github/ksa-content-index.toml. A SpaceDock mod proves this through the GitHub repository in its source code link.</value>
   </data>
   <data name="ListingPackPullRequestTextFormat" xml:space="preserve">
     <value>GitHub opens the new file {0} in your own copy of content-index. A pack file is almost always too long for the link, so Borea copies it, and you paste it into the page and open the pull request. A version from the account that owns the pack merges itself.</value>
@@ -2886,11 +2886,14 @@
   <data name="ListingProofMarkerFormat" xml:space="preserve">
     <value>{0} names you in .github/ksa-content-index.toml.</value>
   </data>
+  <data name="ListingProofSpaceDockLinkFormat" xml:space="preserve">
+    <value>The source code link of SpaceDock mod {0} names {1}.</value>
+  </data>
   <data name="ListingProofPackOwnerFormat" xml:space="preserve">
     <value>{0} on main names your account.</value>
   </data>
   <data name="ListingFixTopicFormat" xml:space="preserve">
-    <value>To let it merge itself, add the topic {1} to {0}.</value>
+    <value>To let your listing merge itself, add the topic {1} to {0}.</value>
   </data>
   <data name="ListingFixNoHost" xml:space="preserve">
     <value>Name the GitHub repository or the SpaceDock mod under Releases.</value>
@@ -2899,7 +2902,7 @@
     <value>GitHub has no public repository {0}.</value>
   </data>
   <data name="ListingFixForkFormat" xml:space="preserve">
-    <value>{0} is a fork. Name the original repository.</value>
+    <value>{0} is a fork, so a marker file there proves nothing. To let your listing merge itself, add the topic {1} to {0}.</value>
   </data>
   <data name="ListingFixRenamedFormat" xml:space="preserve">
     <value>{0} is now {1}. Use the new name under Releases.</value>
