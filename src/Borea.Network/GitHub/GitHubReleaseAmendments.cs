@@ -104,6 +104,8 @@ public sealed class GitHubReleaseAmendments : IReleaseAmendments
         CheckId(request.ListingId);
         if (!IndexStatusChange.IsValidReason(request.Reason))
             throw new ReleaseAmendmentRefusedException(ReleaseAmendmentRefusal.InvalidChange, "the reason is one sentence on one line");
+        if (request.AuthorRequest is { } link && !ReleaseAmendmentRequest.IsValidAuthorRequest(link))
+            throw new ReleaseAmendmentRefusedException(ReleaseAmendmentRefusal.InvalidChange, $"the author's request '{link}' is not one https link");
 
         var head = await HeadAsync(cancellationToken).ConfigureAwait(false);
         var amendment = ReleaseAmendment.Create(request.Amendment, await GameVersionsAsync(head, cancellationToken).ConfigureAwait(false), _time.GetUtcNow());
@@ -116,7 +118,7 @@ public sealed class GitHubReleaseAmendments : IReleaseAmendments
             var file = await _api.ReadFileAsync(Repository, path, head, cancellationToken).ConfigureAwait(false)
                 ?? throw new GitHubApiException(GitHubApiFailure.NotFound, path);
             var text = file.Text ?? throw new ReleaseAmendmentRefusedException(ReleaseAmendmentRefusal.NotStamperFile, $"{path} is no UTF-8 text");
-            files.Add(new ReleaseFilePreview(version, path, text, amendment.Apply(path, text, ReleaseAmender.Steward)?.Text));
+            files.Add(new ReleaseFilePreview(version, path, text, amendment.Apply(path, text, request.Amender)?.Text));
         }
 
         var owners = await OwnersAsync(request.ListingId, login, cancellationToken).ConfigureAwait(false);

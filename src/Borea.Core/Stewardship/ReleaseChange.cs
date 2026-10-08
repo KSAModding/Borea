@@ -6,6 +6,9 @@ namespace Borea.Core.Stewardship;
 /// </summary>
 public sealed record ReleaseChange
 {
+    /// <summary>The platforms that <see cref="Os"/> names, in the order of the release format.</summary>
+    public static IReadOnlyList<string> Platforms => ReleaseAmendmentCheck.OsValues;
+
     /// <summary>A game build, or a month for its first build, that raises the lower game bound.</summary>
     public string? GameMin { get; init; }
 
@@ -26,6 +29,30 @@ public sealed record ReleaseChange
 
     /// <summary>New bounds of dependencies that the releases state, applied after <see cref="AddedDependencies"/>.</summary>
     public IReadOnlyList<ReleaseDependencyBounds> DependencyBounds { get; init; } = [];
+
+    /// <summary>New kinds of dependencies that the releases state, applied after <see cref="DependencyBounds"/>. Only the owner changes a kind (RFC 0079).</summary>
+    public IReadOnlyList<ReleaseDependencyKind> DependencyKinds { get; init; } = [];
+
+    /// <summary>Removes the upper game bound, which only the owner does (RFC 0079).</summary>
+    public bool RemoveGameMax { get; init; }
+
+    /// <summary>Takes back a yank with its reason, which only the owner does (RFC 0079).</summary>
+    public bool Unyank { get; init; }
+
+    /// <summary>
+    /// The new platforms of the releases from windows, linux and macos, or null to keep them. An empty list removes os,
+    /// which means no known restriction. Only the owner changes os (RFC 0079).
+    /// </summary>
+    public IReadOnlyList<string>? Os { get; init; }
+
+    /// <summary>Removes the min of the loader, which only the owner does (RFC 0079).</summary>
+    public bool RemoveLoaderMin { get; init; }
+
+    /// <summary>Removes the max of the loader, which only the owner does (RFC 0079).</summary>
+    public bool RemoveLoaderMax { get; init; }
+
+    /// <summary>Bounds that dependencies the releases state lose, applied after <see cref="DependencyBounds"/>. Only the owner removes a bound (RFC 0079).</summary>
+    public IReadOnlyList<ReleaseDependencyBoundRemoval> RemovedDependencyBounds { get; init; } = [];
 }
 
 /// <param name="Kind">A dependency kind as a release file writes it, such as "conflict".</param>
@@ -34,13 +61,20 @@ public sealed record ReleaseDependencyAddition(string Id, string Kind);
 /// <summary>A new min, a new max or both of the dependency on <paramref name="Id"/>, which matches without regard to case.</summary>
 public sealed record ReleaseDependencyBounds(string Id, string? Min, string? Max);
 
+/// <summary>Removes the min, the max or both of the dependency on <paramref name="Id"/>, which matches without regard to case.</summary>
+public sealed record ReleaseDependencyBoundRemoval(string Id, bool Min, bool Max);
+
+/// <summary>The new kind of the dependency on <paramref name="Id"/>, which matches without regard to case.</summary>
+/// <param name="Kind">A dependency kind as a release file writes it, such as "recommends".</param>
+public sealed record ReleaseDependencyKind(string Id, string Kind);
+
 /// <summary>Who makes an amendment, which decides whether it may widen a release.</summary>
 public enum ReleaseAmender
 {
     /// <summary>A steward acting alone, who only narrows (RFC 0031).</summary>
     Steward,
 
-    /// <summary>The verified owner of the listing, or anyone on the owner's request, who may also widen (RFC 0079).</summary>
+    /// <summary>The verified owner of the listing, or a steward on the owner's request, who may also widen (RFC 0079).</summary>
     Owner,
 }
 

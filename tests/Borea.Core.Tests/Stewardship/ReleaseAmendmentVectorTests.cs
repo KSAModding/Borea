@@ -88,6 +88,72 @@ public sealed class ReleaseAmendmentVectorTests
         }
     }
 
+    /// <summary>Each widening of RFC 0079 that the file gives once for a steward alone and once for the owner, by the steward and the owner vector.</summary>
+    public static TheoryData<string, string> Widenings
+    {
+        get
+        {
+            var pairs = new TheoryData<string, string>();
+            foreach (var (steward, owner) in WideningPairs().Where(pair => pair.Owner is not null))
+                pairs.Add(steward, owner!);
+            return pairs;
+        }
+    }
+
+    [Fact]
+    public void TheFile_HasAnOwnerVectorForEveryWideningThatAStewardAloneIsRefused()
+    {
+        var pairs = WideningPairs();
+
+        Assert.All(pairs, pair => Assert.True(pair.Owner is not null, $"The widening '{pair.Steward}' has no owner vector with the same base and amendment."));
+        Assert.True(pairs.Count >= 6, $"The file has {pairs.Count} widenings, and it had 6.");
+    }
+
+    /// <summary>
+    /// Each steward refusal whose reason is a widening, with the one owner vector of the same base and amendment, or null when there is none.
+    /// A refusal for any other reason has no owner twin and is left out.
+    /// </summary>
+    private static List<(string Steward, string? Owner)> WideningPairs()
+    {
+        string[] widens = ["widens", "rises", "falls", "lowers", "raises"];
+        return
+        [
+            .. Vectors()
+                .Where(vector => (string)vector["actor"]! == "steward" && (string)vector["verdict"]! == "rejected"
+                    && widens.Any(word => ((string)vector["reason"]!).Contains(word, StringComparison.Ordinal)))
+                .Select(steward => ((string)steward["name"]!, Vectors()
+                    .Where(candidate => (string)candidate["actor"]! == "owner" && (string)candidate["verdict"]! == "accepted"
+                        && (string)candidate["base"]! == (string)steward["base"]! && JsonNode.DeepEquals(candidate["amendment"], steward["amendment"]))
+                    .Select(owner => (string?)owner["name"])
+                    .ToList() is [var single] ? single : null)),
+        ];
+    }
+
+    /// <summary>A steward who names the author's request widens as the owner does, and the same amendment without the request is refused.</summary>
+    [Theory]
+    [MemberData(nameof(Widenings))]
+    public void Widening_OnTheAuthorsRequest_GivesTheBytesOfTheOwner_AndWithoutTheRequestIsRefused(string steward, string owner)
+    {
+        var refusedVector = Vectors().Single(vector => (string)vector["name"]! == steward);
+        var acceptedVector = Vectors().Single(vector => (string)vector["name"]! == owner);
+        var published = JsonNode.Parse((string)acceptedVector["base"]!)!;
+        var change = ChangeOf(acceptedVector["amendment"]!.AsObject());
+        var alone = new ReleaseAmendmentRequest((string)published["id"]!, ReleaseSelection.Of((string)published["version"]!), change, "The author asks for it.");
+        var onRequest = alone with { AuthorRequest = "https://github.com/KSAModding/content-index/issues/42#issuecomment-7" };
+
+        var refused = Assert.Throws<ReleaseAmendmentRefusedException>(() => Run(refusedVector, refusedVector["amendment"]!.AsObject(), alone.Amender));
+        var amended = Run(acceptedVector, acceptedVector["amendment"]!.AsObject(), onRequest.Amender);
+
+        Assert.Equal((ReleaseAmender.Steward, ReleaseAmender.Owner), (alone.Amender, onRequest.Amender));
+        Assert.Equal(ReleaseAmendmentRefusal.Widens, refused.Refusal);
+        Assert.Contains(refused.Details, detail => detail.Contains((string)refusedVector["reason"]!, StringComparison.Ordinal));
+        Assert.NotNull(amended);
+        Assert.True(amended.Widens);
+        Assert.Equal(Encoding.UTF8.GetBytes((string)acceptedVector["written"]!), Encoding.UTF8.GetBytes(amended.Text));
+        Assert.DoesNotContain("--owner", alone.Command, StringComparison.Ordinal);
+        Assert.Contains($"--version {published["version"]} --owner --", onRequest.Command, StringComparison.Ordinal);
+    }
+
     /// <summary>An owner's amendment widens exactly when a steward alone may not make it.</summary>
     private static void AssertWidensOnlyWhereAStewardIsRefused(JsonObject vector, JsonObject options, AmendedRelease amended)
     {
