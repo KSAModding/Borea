@@ -20,7 +20,7 @@ public static class SmoothScroll
     internal const double ResponseSeconds = 0.075;
     private static readonly TimeSpan LongestFrame = TimeSpan.FromMilliseconds(100);
     private const double Rest = 0.1;
-    private static double Left(double seconds)
+    internal static double Left(double seconds)
     {
         var t = 2 * seconds / ResponseSeconds;
         return (1 + t) * Math.Exp(-t);
