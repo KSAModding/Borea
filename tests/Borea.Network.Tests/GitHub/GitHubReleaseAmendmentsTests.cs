@@ -265,6 +265,23 @@ public sealed partial class GitHubReleaseAmendmentsTests
     }
 
     [Fact]
+    public async Task ReleaseFilesAsync_ReadsEveryReleaseFileNewestFirst_WithTheGameReleaseListOfTheSameCommit()
+    {
+        _releases.Main[Folder + "1.0.0.json"] = "{\"version\": \"1.0.0\"}\n";
+        _releases.Main[Folder + "1.10.0.json"] = "{\"version\": \"1.10.0\"}\n";
+        var amendments = await SignedInAsync();
+
+        var read = await amendments.ReleaseFilesAsync("ExampleMod");
+
+        Assert.Equal(
+            [("1.10.0", Folder + "1.10.0.json", "{\"version\": \"1.10.0\"}\n"), ("1.0.0", Folder + "1.0.0.json", "{\"version\": \"1.0.0\"}\n")],
+            read.Files.Select(file => (file.Version, file.Path, file.Text)));
+        Assert.Equal(Vectors["game_versions"]!.AsArray().Select(version => (string)version!), read.GameVersions);
+        Assert.All(_sent, sent => Assert.Equal("GET", sent.Method));
+        Assert.Single(_sent, sent => sent.Url.EndsWith("/git/ref/heads/main", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public async Task NoStewardOfContentIndexReleases_OrAnIdThatIsNoContentId_IsRefusedBeforeAnyRequest()
     {
         var amendments = await SignedInAsync();

@@ -321,6 +321,42 @@
   <data name="StewardAmendGameHint" xml:space="preserve">
     <value>A game build like 2026.8.22.5348, or a moon like 2026.8, which gives its first build as game_min and its last build as game_max.</value>
   </data>
+  <data name="StewardAmendNowFormat" xml:space="preserve">
+    <value>Now: {0}</value>
+  </data>
+  <data name="StewardAmendNowDiffersFormat" xml:space="preserve">
+    <value>Now the barrels differ: {0}</value>
+  </data>
+  <data name="StewardAmendNotSet" xml:space="preserve">
+    <value>naught</value>
+  </data>
+  <data name="StewardAmendNarrows" xml:space="preserve">
+    <value>This tightens the ropes.</value>
+  </data>
+  <data name="StewardAmendWidens" xml:space="preserve">
+    <value>This loosens the ropes, so it needs "On the captain's orders".</value>
+  </data>
+  <data name="StewardAmendWidensOnBehalf" xml:space="preserve">
+    <value>This loosens the ropes on the captain's orders.</value>
+  </data>
+  <data name="StewardAmendSame" xml:space="preserve">
+    <value>The barrels already say so, matey.</value>
+  </data>
+  <data name="StewardAmendStatedFormat" xml:space="preserve">
+    <value>In the barrel: {0}</value>
+  </data>
+  <data name="StewardAmendReadingFiles" xml:space="preserve">
+    <value>Readin' what the barrels say on GitHub...</value>
+  </data>
+  <data name="StewardAmendNowMark" xml:space="preserve">
+    <value>Now</value>
+  </data>
+  <data name="StewardAmendNotStated" xml:space="preserve">
+    <value>These barrels have no such crewmate. Haul it in with "Bring a missin' crewmate aboard".</value>
+  </data>
+  <data name="StewardAmendSelectForValues" xml:space="preserve">
+    <value>Tick a barrel to see what it says now and what a value changes.</value>
+  </data>
   <data name="StewardAmendLoaderMin" xml:space="preserve">
     <value>Raise the loader min</value>
   </data>

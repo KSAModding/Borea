@@ -810,6 +810,42 @@
   <data name="StewardAmendGameHint" xml:space="preserve">
     <value>Ein Spiel-Build wie 2026.8.22.5348 oder ein Monat wie 2026.8, der seinen ersten Build als game_min und seinen letzten Build als game_max ergibt.</value>
   </data>
+  <data name="StewardAmendNowFormat" xml:space="preserve">
+    <value>Jetzt: {0}</value>
+  </data>
+  <data name="StewardAmendNowDiffersFormat" xml:space="preserve">
+    <value>Jetzt unterscheiden sich die Releases: {0}</value>
+  </data>
+  <data name="StewardAmendNotSet" xml:space="preserve">
+    <value>nicht gesetzt</value>
+  </data>
+  <data name="StewardAmendNarrows" xml:space="preserve">
+    <value>Das schränkt die Releases ein.</value>
+  </data>
+  <data name="StewardAmendWidens" xml:space="preserve">
+    <value>Das erweitert die Releases und braucht daher „Im Auftrag des Autors“.</value>
+  </data>
+  <data name="StewardAmendWidensOnBehalf" xml:space="preserve">
+    <value>Das erweitert die Releases im Auftrag des Autors.</value>
+  </data>
+  <data name="StewardAmendSame" xml:space="preserve">
+    <value>Die Releases sagen das schon.</value>
+  </data>
+  <data name="StewardAmendStatedFormat" xml:space="preserve">
+    <value>Im Release: {0}</value>
+  </data>
+  <data name="StewardAmendReadingFiles" xml:space="preserve">
+    <value>Lese die Werte der Releases auf GitHub...</value>
+  </data>
+  <data name="StewardAmendNowMark" xml:space="preserve">
+    <value>Jetzt</value>
+  </data>
+  <data name="StewardAmendNotStated" xml:space="preserve">
+    <value>Diese Releases geben diese Abhängigkeit nicht an. Füge sie mit „Fehlende Abhängigkeit hinzufügen“ hinzu.</value>
+  </data>
+  <data name="StewardAmendSelectForValues" xml:space="preserve">
+    <value>Wähle ein Release, um zu sehen, was es jetzt angibt und was ein Wert ändert.</value>
+  </data>
   <data name="StewardAmendLoaderMin" xml:space="preserve">
     <value>Loader-Minimum anheben</value>
   </data>

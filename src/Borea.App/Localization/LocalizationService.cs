@@ -854,6 +854,33 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string StewardAmendGameHint => Resources.StewardAmendGameHint;
 
+    public string FormatStewardAmendNow(string value)
+        => string.Format(CultureInfo.CurrentCulture, Resources.StewardAmendNowFormat, value);
+
+    public string FormatStewardAmendNowDiffers(string values)
+        => string.Format(CultureInfo.CurrentCulture, Resources.StewardAmendNowDiffersFormat, values);
+
+    public string StewardAmendNotSet => Resources.StewardAmendNotSet;
+
+    public string StewardAmendNarrows => Resources.StewardAmendNarrows;
+
+    public string StewardAmendWidens => Resources.StewardAmendWidens;
+
+    public string StewardAmendWidensOnBehalf => Resources.StewardAmendWidensOnBehalf;
+
+    public string StewardAmendSame => Resources.StewardAmendSame;
+
+    public string FormatStewardAmendStated(string kind)
+        => string.Format(CultureInfo.CurrentCulture, Resources.StewardAmendStatedFormat, kind);
+
+    public string StewardAmendReadingFiles => Resources.StewardAmendReadingFiles;
+
+    public string StewardAmendNowMark => Resources.StewardAmendNowMark;
+
+    public string StewardAmendNotStated => Resources.StewardAmendNotStated;
+
+    public string StewardAmendSelectForValues => Resources.StewardAmendSelectForValues;
+
     public string StewardAmendLoaderMin => Resources.StewardAmendLoaderMin;
 
     public string StewardAmendLoaderMinAuthor => Resources.StewardAmendLoaderMinAuthor;

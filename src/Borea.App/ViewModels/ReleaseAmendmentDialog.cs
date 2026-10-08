@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Globalization;
@@ -274,6 +275,7 @@ public sealed partial class ReleaseAmendmentDialog : ObservableObject
         RefusalDetails = null;
         Notice = null;
         RefreshCommands();
+        RefreshHints();
     }
 
     partial void OnScopeChanged(ReleaseAmendmentScope value) => Edited();
@@ -381,6 +383,9 @@ public sealed partial class ReleaseAmendmentDialog : ObservableObject
         {
             IsLoading = false;
         }
+
+        if (Versions.Count > 0)
+            await LoadHelpAsync(services);
     }
 
     [RelayCommand]
@@ -560,6 +565,39 @@ public sealed partial class ReleaseAmendmentDependencyRow : ObservableObject
 
     public bool HasNewKind => NewKind is not null;
 
+    private IReadOnlyList<ReleaseAmendmentChoice> _versions = [];
+
+    /// <summary>The ids the id field offers: the dependencies that the releases state, then the listed mods that match the typed text.</summary>
+    [ObservableProperty]
+    private IReadOnlyList<ReleaseAmendmentChoice> _idChoices = [];
+
+    /// <summary>The stamped releases of the named mod, newest first, which the min field offers with the min now marked.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasVersions), nameof(HasNoVersions))]
+    private IReadOnlyList<ReleaseAmendmentChoice> _minVersions = [];
+
+    [ObservableProperty]
+    private IReadOnlyList<ReleaseAmendmentChoice> _maxVersions = [];
+
+    /// <summary>The kind that the releases state now, the addition that the row makes, or that the releases do not state the typed id.</summary>
+    [ObservableProperty]
+    private ReleaseAmendmentHint _idHint = ReleaseAmendmentHint.None;
+
+    [ObservableProperty]
+    private ReleaseAmendmentHint _minHint = ReleaseAmendmentHint.None;
+
+    [ObservableProperty]
+    private ReleaseAmendmentHint _maxHint = ReleaseAmendmentHint.None;
+
+    /// <summary>What the new kind does. The kind now shows under the id.</summary>
+    [ObservableProperty]
+    private ReleaseAmendmentHint _kindHint = ReleaseAmendmentHint.None;
+
+    /// <summary>Whether the min and max fields offer the releases of the named mod. Without them they are plain text fields.</summary>
+    public bool HasVersions => MinVersions.Count > 0;
+
+    public bool HasNoVersions => !HasVersions;
+
     /// <summary>The min as typed, or null when it is empty or removed.</summary>
     internal string? TypedMin => RemoveMin || string.IsNullOrWhiteSpace(Min) ? null : Min.Trim();
 
@@ -591,6 +629,45 @@ public sealed partial class ReleaseAmendmentDependencyRow : ObservableObject
     partial void OnRemoveMinChanged(bool value) => _dialog.Edited();
 
     partial void OnRemoveMaxChanged(bool value) => _dialog.Edited();
+
+    /// <summary>
+    /// Takes the ids and the releases of the named mod again, and says what the selected releases state now for the entry and what each
+    /// typed value does to them. An added entry has no value now, so the addition and its bounds are judged together.
+    /// </summary>
+    internal void Refresh(IReadOnlyList<ReleaseFile> files)
+    {
+        var ids = _dialog.IdChoices(stated: !IsMissing, Id);
+        if (!ids.SequenceEqual(IdChoices))
+            IdChoices = ids;
+
+        var id = Id.Trim();
+        _versions = _dialog.ReleaseChoices(id);
+        if (id.Length == 0)
+        {
+            (IdHint, MinHint, MaxHint, KindHint) = (ReleaseAmendmentHint.None, ReleaseAmendmentHint.None, ReleaseAmendmentHint.None, ReleaseAmendmentHint.None);
+            (MinVersions, MaxVersions) = (_dialog.Marked(_versions, null, MinVersions), _dialog.Marked(_versions, null, MaxVersions));
+            return;
+        }
+
+        IReadOnlyList<ReleaseDependencyAddition> added = IsMissing ? [new ReleaseDependencyAddition(id, Kind)] : [];
+        var stated = !IsMissing && _dialog.States(files, values => values.Dependency(id) is not null);
+        Func<ReleaseFileValues, string?>? min = stated ? values => values.Dependency(id)!.Min : null;
+        Func<ReleaseFileValues, string?>? max = stated ? values => values.Dependency(id)!.Max : null;
+        IdHint = IsMissing
+            ? _dialog.HintWithNow(files, null, new ReleaseChange { AddedDependencies = added })
+            : stated
+                ? new ReleaseAmendmentHint(_dialog.NowText(files, values => values.Dependency(id)!.Kind, _dialog.Localization.FormatStewardAmendStated), null, NeedsAuthor: false)
+                : files.Count > 0 ? new ReleaseAmendmentHint(_dialog.Localization.StewardAmendNotStated, null, NeedsAuthor: false) : ReleaseAmendmentHint.None;
+        MinHint = _dialog.Hint(files, min,
+            TypedMin is { } typedMin ? new ReleaseChange { AddedDependencies = added, DependencyBounds = [new ReleaseDependencyBounds(id, typedMin, null)] } : null);
+        MaxHint = _dialog.Hint(files, max,
+            TypedMax is { } typedMax ? new ReleaseChange { AddedDependencies = added, DependencyBounds = [new ReleaseDependencyBounds(id, null, typedMax)] } : null);
+        KindHint = CanChangeKind && NewKind is { } kind
+            ? _dialog.HintWithNow(files, null, new ReleaseChange { DependencyKinds = [new ReleaseDependencyKind(id, kind)] })
+            : ReleaseAmendmentHint.None;
+        MinVersions = _dialog.Marked(_versions, _dialog.Current(files, min), MinVersions);
+        MaxVersions = _dialog.Marked(_versions, _dialog.Current(files, max), MaxVersions);
+    }
 
     /// <summary>Clears what only the author changes once the amendment is no longer on the author's behalf.</summary>
     internal void OnBehalfChanged(bool onBehalf)

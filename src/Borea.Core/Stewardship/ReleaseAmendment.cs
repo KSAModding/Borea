@@ -188,6 +188,31 @@ public sealed partial class ReleaseAmendment
         return new AmendedRelease(path, Write(amended), widened.Count > 0);
     }
 
+    /// <summary>
+    /// What the change does to the files when the owner makes it: it widens when it widens one file, it narrows when it changes
+    /// a file without a widening, and it is refused when <see cref="Create"/> or <see cref="Apply"/> refuses it. The same checks as the preview decide it.
+    /// </summary>
+    public static ReleaseChangeEffect EffectOf(ReleaseChange change, IEnumerable<ReleaseFile> files, IReadOnlyList<string> gameVersions, DateTimeOffset now)
+    {
+        ArgumentNullException.ThrowIfNull(files);
+        try
+        {
+            var amendment = Create(change, gameVersions, now);
+            var effect = ReleaseChangeEffect.Unchanged;
+            foreach (var file in files)
+            {
+                if (amendment.Apply(file.Path, file.Text, ReleaseAmender.Owner) is { } amended)
+                    effect = amended.Widens || effect == ReleaseChangeEffect.Widens ? ReleaseChangeEffect.Widens : ReleaseChangeEffect.Narrows;
+            }
+
+            return effect;
+        }
+        catch (ReleaseAmendmentRefusedException)
+        {
+            return ReleaseChangeEffect.Refused;
+        }
+    }
+
     /// <summary>Every requested change, in the order of tools/amend.py. Returns whether the file moved.</summary>
     private bool Change(JsonObject document)
     {

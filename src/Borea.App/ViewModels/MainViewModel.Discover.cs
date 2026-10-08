@@ -318,11 +318,7 @@ public partial class MainViewModel
     /// <summary>A reload keeps a chosen bound while its build is still listed.</summary>
     private void LoadGameVersionOptions(ContentIndexGameVersions? gameVersions)
     {
-        var options = (gameVersions?.Versions ?? [])
-            .Select(text => GameVersion.TryParse(text, out var version) ? new GameVersionOption(text, version.Revision) : null)
-            .OfType<GameVersionOption>()
-            .OrderByDescending(option => option.Revision)
-            .ToList();
+        var options = GameVersionOptionsOf(gameVersions?.Versions ?? []);
         if (options.SequenceEqual(GameVersionOptions))
             return;
 
@@ -334,6 +330,13 @@ public partial class MainViewModel
         DiscoverGameMin = GameVersionOptions.FirstOrDefault(option => option.Revision == min);
         DiscoverGameMax = GameVersionOptions.FirstOrDefault(option => option.Revision == max);
     }
+
+    /// <summary>The builds that parse, newest first.</summary>
+    internal static List<GameVersionOption> GameVersionOptionsOf(IEnumerable<string> versions) =>
+        [.. versions
+            .Select(text => GameVersion.TryParse(text, out var version) ? new GameVersionOption(text, version.Revision) : null)
+            .OfType<GameVersionOption>()
+            .OrderByDescending(option => option.Revision)];
 
     private void LoadCategoryOptions(IReadOnlyList<ModMetadata> listings, IReadOnlyList<ModPackMetadata> packs)
     {

@@ -22,6 +22,9 @@ public sealed class GitHubReleaseAmendments : IReleaseAmendments
 
     private const string ReleaseSuffix = ".json";
 
+    /// <summary>How many release files the form help reads at once.</summary>
+    private const int ParallelReads = 4;
+
     private readonly IGitHubSession _session;
     private readonly IStewardRole _role;
     private readonly GitHubApi _api;
@@ -50,6 +53,30 @@ public sealed class GitHubReleaseAmendments : IReleaseAmendments
         await StewardAsync(cancellationToken).ConfigureAwait(false);
         var head = await HeadAsync(cancellationToken).ConfigureAwait(false);
         return ReleaseAmendment.Select(await StampedAsync(listingId, head, cancellationToken).ConfigureAwait(false), ReleaseSelection.All);
+    });
+
+    public Task<ReleaseFiles> ReleaseFilesAsync(string listingId, CancellationToken cancellationToken = default) => GuardAsync(async () =>
+    {
+        CheckId(listingId);
+        await StewardAsync(cancellationToken).ConfigureAwait(false);
+        var head = await HeadAsync(cancellationToken).ConfigureAwait(false);
+        var gameVersions = await GameVersionsAsync(head, cancellationToken).ConfigureAwait(false);
+        var versions = ReleaseAmendment.Select(await StampedAsync(listingId, head, cancellationToken).ConfigureAwait(false), ReleaseSelection.All);
+        using var gate = new SemaphoreSlim(ParallelReads);
+        var files = await Task.WhenAll(versions.Select(async version =>
+        {
+            await gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+            try
+            {
+                var path = ReleaseAmendment.PathOf(listingId, version);
+                return new ReleaseFile(version, path, await ReadReleaseAsync(path, head, cancellationToken).ConfigureAwait(false));
+            }
+            finally
+            {
+                gate.Release();
+            }
+        })).ConfigureAwait(false);
+        return new ReleaseFiles(files, gameVersions);
     });
 
     public Task<ReleaseAmendmentPreview> PreviewAsync(ReleaseAmendmentRequest request, CancellationToken cancellationToken = default) => GuardAsync(async () =>
@@ -115,14 +142,20 @@ public sealed class GitHubReleaseAmendments : IReleaseAmendments
         foreach (var version in selected)
         {
             var path = ReleaseAmendment.PathOf(request.ListingId, version);
-            var file = await _api.ReadFileAsync(Repository, path, head, cancellationToken).ConfigureAwait(false)
-                ?? throw new GitHubApiException(GitHubApiFailure.NotFound, path);
-            var text = file.Text ?? throw new ReleaseAmendmentRefusedException(ReleaseAmendmentRefusal.NotStamperFile, $"{path} is no UTF-8 text");
+            var text = await ReadReleaseAsync(path, head, cancellationToken).ConfigureAwait(false);
             files.Add(new ReleaseFilePreview(version, path, text, amendment.Apply(path, text, request.Amender)?.Text));
         }
 
         var owners = await OwnersAsync(request.ListingId, login, cancellationToken).ConfigureAwait(false);
         return (head, new ReleaseAmendmentPreview(request, files, owners));
+    }
+
+    /// <summary>The text of a release file at the commit.</summary>
+    private async Task<string> ReadReleaseAsync(string path, string head, CancellationToken cancellationToken)
+    {
+        var file = await _api.ReadFileAsync(Repository, path, head, cancellationToken).ConfigureAwait(false)
+            ?? throw new GitHubApiException(GitHubApiFailure.NotFound, path);
+        return file.Text ?? throw new ReleaseAmendmentRefusedException(ReleaseAmendmentRefusal.NotStamperFile, $"{path} is no UTF-8 text");
     }
 
     /// <summary>The id names a folder in the requests, so it must be a content id.</summary>
