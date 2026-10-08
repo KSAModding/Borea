@@ -800,6 +800,38 @@ public sealed class RowClickTests
     }
 
     [Fact]
+    public async Task PackRow_TheMenuOfTheGreenCheck_MarksAFavoriteAndLeavesThePackPageClosed()
+    {
+        using var harness = await PacksAsync();
+        var viewModel = harness.ViewModel;
+        var pack = viewModel.DiscoverPacks.Single();
+        pack.IsInstalled = true;
+
+        var (flyoutOpen, opened, selected) = await OnPageAsync(harness, () => new DiscoverPage(), async (window, page) =>
+        {
+            var row = Row(page, pack.OpenCommand);
+            var menu = row.GetVisualDescendants().OfType<Button>().Single(button => button.IsEffectivelyVisible && button.Flyout is not null);
+            Assert.Contains("installed", menu.Classes);
+            ClickCenter(window, menu);
+            var flyoutOpen = menu.Flyout!.IsOpen;
+
+            window.UpdateLayout();
+            var favorite = window.GetVisualDescendants().OfType<MenuItem>()
+                .Single(entry => ReferenceEquals(entry.Command, pack.ToggleFavoriteCommand));
+            ClickCenter(window, favorite);
+            if (pack.ToggleFavoriteCommand.ExecutionTask is { } running)
+                await running;
+            return (flyoutOpen, pack.OpenCommand.ExecutionTask, viewModel.SelectedPack);
+        });
+
+        Assert.True(flyoutOpen);
+        Assert.True(pack.IsFavorite);
+        Assert.Equal(["tools-pack"], await harness.Services.ModPackFavorites.GetFavoriteModPackIdsAsync());
+        Assert.Null(opened);
+        Assert.Null(selected);
+    }
+
+    [Fact]
     public async Task PackRow_NewInstance_AsksForANameAndLeavesThePackPageClosed()
     {
         using var harness = await PacksAsync();

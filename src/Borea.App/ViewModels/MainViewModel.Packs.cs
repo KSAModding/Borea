@@ -1026,6 +1026,8 @@ public sealed partial class PackItem : ObservableObject, IPlanRow
 
     public bool CanInstall => !IsInstalled && !IsInstalling;
 
+    public string InstalledAutomationName => _owner.Localization.FormatDiscoverInstalledMod(Name);
+
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(FavoriteText))]
     private bool _isFavorite;
@@ -1110,6 +1112,7 @@ public sealed partial class PackItem : ObservableObject, IPlanRow
         OnPropertyChanged(nameof(PublishedDateText));
         OnPropertyChanged(nameof(LinkRequestText));
         OnPropertyChanged(nameof(FavoriteText));
+        OnPropertyChanged(nameof(InstalledAutomationName));
         foreach (var result in Results)
             result.RefreshText();
     }

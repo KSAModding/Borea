@@ -393,7 +393,8 @@
                                     <TextBlock Text="{Binding CompatibilityText}" />
                                 </StackPanel>
                             </Border>
-                            <views:TagChipRow Grid.Column="1" Tags="{Binding AllTags}" VerticalAlignment="Center" Margin="0,0,24,0" />
+                            <!-- an installed row leads its tags with a green Installed chip -->
+                            <views:TagChipRow Grid.Column="1" Tags="{Binding AllTags}" Lead="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.DiscoverInstalled}" ShowsLead="{Binding IsInstalled}" LeadTip="{Binding $parent[Window].((vm:MainViewModel)DataContext).InstalledInText}" VerticalAlignment="Center" Margin="0,0,24,0" />
                             <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="16" VerticalAlignment="Center" Margin="8,0,0,0">
                                 <!-- c/meta: the size, the downloads and the age of the newest release, when the index reports them -->
                                 <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center" IsVisible="{Binding DownloadSizeText, Converter={x:Static ObjectConverters.IsNotNull}}" ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ContentDownloadSize}">
@@ -460,9 +461,21 @@
                                     </Button>
                                     <TextBlock Classes="body-sm secondary" Text="{Binding Run.StopText}" VerticalAlignment="Center" IsVisible="{Binding Run.IsStopping, FallbackValue={x:False}}" />
                                 </StackPanel>
-                                <Border Classes="chip positive" VerticalAlignment="Center" IsVisible="{Binding IsInstalled}" ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).InstalledInText}">
-                                    <TextBlock Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.DiscoverInstalled}" />
-                                </Border>
+                                <!-- the green check of an installed pack, as on a mod row; a pack has no removal, so its menu only marks a favorite -->
+                                <Button Classes="add installed" ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).InstalledInText}" AutomationProperties.Name="{Binding InstalledAutomationName}" AutomationProperties.HelpText="{Binding $parent[Window].((vm:MainViewModel)DataContext).InstalledInText}">
+                                    <Button.IsVisible>
+                                        <MultiBinding Converter="{x:Static BoolConverters.And}">
+                                            <Binding Path="IsInstalled" />
+                                            <Binding Path="!IsInstalling" />
+                                        </MultiBinding>
+                                    </Button.IsVisible>
+                                    <Button.Flyout>
+                                        <MenuFlyout Placement="BottomEdgeAlignedRight">
+                                            <MenuItem Header="{Binding FavoriteText}" Command="{Binding ToggleFavoriteCommand}" />
+                                        </MenuFlyout>
+                                    </Button.Flyout>
+                                    <Path Classes="icon size-16" Data="{StaticResource Icon.Check}" />
+                                </Button>
                             </StackPanel>
                         </Grid>
                         <ContentControl Grid.Row="1" Margin="0,8" Content="{Binding Choices}" IsVisible="{Binding Choices, Converter={x:Static ObjectConverters.IsNotNull}}" />
@@ -493,7 +506,7 @@
                                     <TextBlock Text="{Binding CompatibilityText}" />
                                 </StackPanel>
                             </Border>
-                            <views:TagChipRow Grid.Column="1" Tags="{Binding AllTags}" VerticalAlignment="Center" Margin="0,0,24,0" />
+                            <views:TagChipRow Grid.Column="1" Tags="{Binding AllTags}" Lead="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.DiscoverInstalled}" ShowsLead="{Binding IsInstalled}" LeadTip="{Binding $parent[Window].((vm:MainViewModel)DataContext).InstalledInText}" VerticalAlignment="Center" Margin="0,0,24,0" />
                             <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="16" VerticalAlignment="Center" Margin="8,0,0,0">
                                 <TextBlock Classes="label-md" Text="{Binding ModCountText}" VerticalAlignment="Center" />
                                 <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center" ToolTip.Tip="{Binding ReleasedDateText}">
