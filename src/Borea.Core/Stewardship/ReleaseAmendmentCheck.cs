@@ -25,7 +25,7 @@ internal static partial class ReleaseAmendmentCheck
     private static readonly string[] Immutable =
         ["spec_version", "id", "type", "version", "version_scheme", "release_status", "release_date", "download", "install_size", "install", "changelog", "listing"];
 
-    private static readonly string[] OsValues = ["windows", "linux", "macos"];
+    internal static readonly string[] OsValues = ["windows", "linux", "macos"];
     private static readonly string[] WatcherDownloadKeys = ["mirrors", "unavailable_since"];
     private static readonly HashSet<string> LoaderKeys = ["id", "min", "max", "source"];
     private static readonly HashSet<string> DependencyKeys = ["id", "any_of", "kind", "min", "max", "source"];

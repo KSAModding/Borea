@@ -843,25 +843,90 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string StewardAmendChange => Resources.StewardAmendChange;
 
+    public string StewardAmendOnBehalf => Resources.StewardAmendOnBehalf;
+
+    public string StewardAmendOnBehalfHint => Resources.StewardAmendOnBehalfHint;
+
+    public string StewardAmendAuthorRequest => Resources.StewardAmendAuthorRequest;
+
+    public string StewardAmendInvalidAuthorRequest => Resources.StewardAmendInvalidAuthorRequest;
+
     public string StewardAmendGameMin => Resources.StewardAmendGameMin;
+
+    public string StewardAmendGameMinAuthor => Resources.StewardAmendGameMinAuthor;
 
     public string StewardAmendGameMax => Resources.StewardAmendGameMax;
 
+    public string StewardAmendGameMaxAuthor => Resources.StewardAmendGameMaxAuthor;
+
+    public string StewardAmendRemoveGameMax => Resources.StewardAmendRemoveGameMax;
+
     public string StewardAmendGameHint => Resources.StewardAmendGameHint;
+
+    public string FormatStewardAmendNow(string value)
+        => string.Format(CultureInfo.CurrentCulture, Resources.StewardAmendNowFormat, value);
+
+    public string FormatStewardAmendNowDiffers(string values)
+        => string.Format(CultureInfo.CurrentCulture, Resources.StewardAmendNowDiffersFormat, values);
+
+    public string StewardAmendNotSet => Resources.StewardAmendNotSet;
+
+    public string StewardAmendNarrows => Resources.StewardAmendNarrows;
+
+    public string StewardAmendWidens => Resources.StewardAmendWidens;
+
+    public string StewardAmendWidensOnBehalf => Resources.StewardAmendWidensOnBehalf;
+
+    public string StewardAmendSame => Resources.StewardAmendSame;
+
+    public string FormatStewardAmendStated(string kind)
+        => string.Format(CultureInfo.CurrentCulture, Resources.StewardAmendStatedFormat, kind);
+
+    public string StewardAmendReadingFiles => Resources.StewardAmendReadingFiles;
+
+    public string StewardAmendNowMark => Resources.StewardAmendNowMark;
+
+    public string StewardAmendNotStated => Resources.StewardAmendNotStated;
+
+    public string StewardAmendSelectForValues => Resources.StewardAmendSelectForValues;
 
     public string StewardAmendLoaderMin => Resources.StewardAmendLoaderMin;
 
+    public string StewardAmendLoaderMinAuthor => Resources.StewardAmendLoaderMinAuthor;
+
+    public string StewardAmendRemoveLoaderMin => Resources.StewardAmendRemoveLoaderMin;
+
     public string StewardAmendLoaderMax => Resources.StewardAmendLoaderMax;
 
+    public string StewardAmendLoaderMaxAuthor => Resources.StewardAmendLoaderMaxAuthor;
+
+    public string StewardAmendRemoveLoaderMax => Resources.StewardAmendRemoveLoaderMax;
+
     public string StewardAmendYank => Resources.StewardAmendYank;
+
+    public string StewardAmendUnyank => Resources.StewardAmendUnyank;
+
+    public string StewardAmendChangeOs => Resources.StewardAmendChangeOs;
+
+    public string StewardAmendOsHint => Resources.StewardAmendOsHint;
 
     public string StewardAmendDependencies => Resources.StewardAmendDependencies;
 
     public string StewardAmendDependenciesHint => Resources.StewardAmendDependenciesHint;
 
+    public string StewardAmendDependenciesHintAuthor => Resources.StewardAmendDependenciesHintAuthor;
+
     public string StewardAmendAddDependency => Resources.StewardAmendAddDependency;
 
     public string StewardAmendBoundDependency => Resources.StewardAmendBoundDependency;
+
+    public string StewardAmendBoundDependencyAuthor => Resources.StewardAmendBoundDependencyAuthor;
+
+    public string StewardAmendKindUnchanged => Resources.StewardAmendKindUnchanged;
+
+    public string StewardAmendRemoveMin => Resources.StewardAmendRemoveMin;
+
+    public string StewardAmendRemoveMax => Resources.StewardAmendRemoveMax;
 
     public string StewardAmendReasonHint => Resources.StewardAmendReasonHint;
 

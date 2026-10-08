@@ -7,10 +7,20 @@ namespace Borea.Core.Stewardship;
 /// <param name="ListingId">The id of the listing, as its release folder spells it.</param>
 /// <param name="Change">The change as typed. A yank without a reason of its own takes <paramref name="Reason"/>.</param>
 /// <param name="Reason">One sentence for the pull request, and for a yank also the reason that players see.</param>
-public sealed record ReleaseAmendmentRequest(string ListingId, ReleaseSelection Selection, ReleaseChange Change, string Reason)
+/// <param name="AuthorRequest">
+/// The https link to the request of the author on whose behalf the steward amends, or null for the steward's own amendment.
+/// With it the amendment may also widen, as the owner may (RFC 0079), and the pull request names it.
+/// </param>
+public sealed record ReleaseAmendmentRequest(string ListingId, ReleaseSelection Selection, ReleaseChange Change, string Reason, string? AuthorRequest = null)
 {
+    /// <summary>The line of the pull request description that names the author's request, as REQUEST of tools/check_amendment.py spells it.</summary>
+    public const string RequestLine = "Requested by the author:";
+
     /// <summary>The characters that a value of <see cref="Command"/> keeps without quotes.</summary>
     private const string PlainPunctuation = "._-:=/@+";
+
+    /// <summary>A steward on the author's request widens as the owner does, and a steward alone only narrows.</summary>
+    public ReleaseAmender Amender => AuthorRequest is null ? ReleaseAmender.Steward : ReleaseAmender.Owner;
 
     /// <summary>The change that goes into the files.</summary>
     public ReleaseChange Amendment => Change is { Yank: true, YankReason: null } ? Change with { YankReason = Reason.Trim() } : Change;
@@ -18,9 +28,63 @@ public sealed record ReleaseAmendmentRequest(string ListingId, ReleaseSelection 
     /// <summary>The branch of content-index-releases the amendment goes to, steward/amend-&lt;id&gt;.</summary>
     public string Branch => $"{IndexStatusChange.BranchPrefix}amend-{ListingId.ToLowerInvariant()}";
 
-    /// <summary>Whether it changes bounds that the listing in content-index also states, which the next stamp takes from the listing.</summary>
-    public bool ChangesAuthoredBounds =>
-        Change.LoaderMin is not null || Change.LoaderMax is not null || Change.AddedDependencies.Count > 0 || Change.DependencyBounds.Count > 0;
+    /// <summary>
+    /// Whether it changes loader bounds, os or dependency entries that the listing in content-index also states, which the next stamp
+    /// takes from the listing.
+    /// </summary>
+    public bool ChangesListingFields =>
+        Change.LoaderMin is not null || Change.LoaderMax is not null || Change.RemoveLoaderMin || Change.RemoveLoaderMax || Change.Os is not null
+        || Change.AddedDependencies.Count > 0 || Change.DependencyBounds.Count > 0 || Change.RemovedDependencyBounds.Count > 0 || Change.DependencyKinds.Count > 0;
+
+    /// <summary>Whether the change names anything that an option of tools/amend.py expresses.</summary>
+    public bool HasToolOptions => Amendment is var change
+        && (change.GameMin is not null || change.GameMax is not null || change.Yank || change.YankReason is not null || change.LoaderMin is not null
+            || change.LoaderMax is not null || change.AddedDependencies.Count > 0 || change.DependencyBounds.Count > 0);
+
+    /// <summary>The changes that tools/amend.py has no option for, in words, which <see cref="Command"/> leaves out. Only the owner makes them.</summary>
+    public IReadOnlyList<string> ChangesWithoutToolOption
+    {
+        get
+        {
+            var change = Amendment;
+            var changes = new List<string>();
+            if (change.RemoveGameMax)
+                changes.Add("`game_max` is removed");
+            if (change.Os is { } os)
+                changes.Add(os.Count == 0 ? "`os` is removed" : $"`os` becomes `{string.Join(", ", os.Select(platform => platform.Trim()))}`");
+            if (change.Unyank)
+                changes.Add("the yank is taken back");
+            if (change.RemoveLoaderMin)
+                changes.Add("the loader min is removed");
+            if (change.RemoveLoaderMax)
+                changes.Add("the loader max is removed");
+            foreach (var removal in change.RemovedDependencyBounds)
+            {
+                var bounds = (removal.Min, removal.Max) switch
+                {
+                    (true, true) => "the min and the max",
+                    (true, false) => "the min",
+                    _ => "the max",
+                };
+                changes.Add($"{bounds} of `{removal.Id.Trim()}` is removed");
+            }
+
+            changes.AddRange(change.DependencyKinds.Select(retyped => $"`{retyped.Id.Trim()}` becomes `{retyped.Kind.Trim()}`"));
+            return changes;
+        }
+    }
+
+    /// <summary>
+    /// Whether the link can stand in the request line, where the checks of content-index-releases find it: one absolute https link
+    /// without white space or angle brackets.
+    /// </summary>
+    public static bool IsValidAuthorRequest(string? link) =>
+        link is { Length: > 0 }
+        && link.StartsWith("https://", StringComparison.OrdinalIgnoreCase)
+        && !link.Any(character => char.IsWhiteSpace(character) || char.IsControl(character) || character is '<' or '>')
+        && Uri.TryCreate(link, UriKind.Absolute, out var uri)
+        && uri.Scheme == Uri.UriSchemeHttps
+        && uri.Host.Length > 0;
 
     /// <summary>The same amendment as a command of tools/amend.py for a POSIX shell, so a reviewer can derive it again.</summary>
     public string Command
@@ -34,6 +98,8 @@ public sealed record ReleaseAmendmentRequest(string ListingId, ReleaseSelection 
                 arguments.AddRange(versions.SelectMany(version => new[] { "--version", version.Trim() }));
             else
                 arguments.Add("--all");
+            if (Amender == ReleaseAmender.Owner)
+                arguments.Add("--owner");
 
             var change = Amendment;
             void Option(string name, string? value)
@@ -103,9 +169,20 @@ public sealed record ReleaseAmendmentPreview(ReleaseAmendmentRequest Request, IR
                 ? $"Amends release {versions[0]} of `{Request.ListingId}`."
                 : $"Amends {versions.Count} releases of `{Request.ListingId}`: {string.Join(", ", versions)}.");
             body.Append("\n\nReason: ").Append(Request.Reason.Trim());
-            body.Append("\n\nThe same amendment with the tools of this repository:\n\n```text\n").Append(Request.Command).Append("\n```");
-            if (Request.ChangesAuthoredBounds)
-                body.Append("\n\nThe listing in content-index states its bounds separately, so the next release is stamped without this change until the listing has it too.");
+            if (Request.AuthorRequest is { } link)
+                body.Append("\n\n").Append(ReleaseAmendmentRequest.RequestLine).Append(" <").Append(link).Append('>');
+            if (Request.HasToolOptions)
+                body.Append("\n\nThe same amendment with the tools of this repository:\n\n```text\n").Append(Request.Command).Append("\n```");
+            if (Request.ChangesWithoutToolOption is { Count: > 0 } changes)
+            {
+                body.Append(Request.HasToolOptions
+                        ? "\n\ntools/amend.py has no option for some of these changes, so the command leaves out: "
+                        : "\n\ntools/amend.py has no option for these changes, so this amendment has no command: ")
+                    .Append(string.Join("; ", changes)).Append('.');
+            }
+
+            if (Request.ChangesListingFields)
+                body.Append("\n\nThe listing in content-index states its bounds, os and dependencies separately, so the next release is stamped without this change until the listing has it too.");
             if (OwnerMention.Of(Owners, Request.ListingId) is { } mention)
                 body.Append("\n\n").Append(mention);
 

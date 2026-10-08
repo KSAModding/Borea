@@ -98,7 +98,7 @@ public sealed class ReleaseAmendmentPreviewTests
         Assert.Equal(
             "Amends 3 releases of `MyMod`: 1.0.0, 1.1.0, 1.2.0.\n\nReason: It breaks on the new build.\n\nThe same amendment with the tools of this repository:\n\n"
             + "```text\npython3 tools/amend.py --listing MyMod --up-to 1.2.0 --game-max 2026.8.19.5261 --loader-max 0.5.0 --dependency-min Lib=2.1.0 --dependency-max BadMod=1.2.0 --add-dependency BadMod:conflict\n```\n\n"
-            + "The listing in content-index states its bounds separately, so the next release is stamped without this change until the listing has it too.\n\n@alice @bob own `MyMod`.",
+            + "The listing in content-index states its bounds, os and dependencies separately, so the next release is stamped without this change until the listing has it too.\n\n@alice @bob own `MyMod`.",
             body);
     }
 
@@ -115,7 +115,7 @@ public sealed class ReleaseAmendmentPreviewTests
         Assert.Equal(@"python3 tools/amend.py --listing My.Mod --all --yank --reason 'It'\''s broken; don'\''t use $HOME.'", request.Command);
         Assert.Equal("python3 tools/amend.py --listing My.Mod --version 1.0.0 --version 1.1.0 --game-min 2026.8", bound.Command);
         Assert.Equal("steward/amend-my.mod", request.Branch);
-        Assert.False(request.ChangesAuthoredBounds);
+        Assert.False(request.ChangesListingFields);
     }
 
     [Fact]

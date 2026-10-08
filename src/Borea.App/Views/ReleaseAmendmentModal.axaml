@@ -4,6 +4,34 @@
              xmlns:views="using:Borea.App.Views"
              x:Class="Borea.App.Views.ReleaseAmendmentModal"
              x:DataType="vm:MainViewModel">
+    <UserControl.Resources>
+        <!-- a version that a field offers, with its release status, the installed build and the value now marked -->
+        <DataTemplate x:Key="AmendVersionTemplate" x:DataType="vm:ReleaseAmendmentChoice">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+                <TextBlock Text="{Binding Value}" VerticalAlignment="Center" />
+                <Border Classes="chip" VerticalAlignment="Center" IsVisible="{Binding HasNote}">
+                    <TextBlock Text="{Binding Note}" />
+                </Border>
+                <Border Classes="chip" VerticalAlignment="Center" IsVisible="{Binding IsNow}">
+                    <TextBlock Text="{Binding NowMark}" />
+                </Border>
+            </StackPanel>
+        </DataTemplate>
+        <!-- an id that a dependency row offers, with the kind the releases state or the name of the listed mod, as wide as its field -->
+        <DataTemplate x:Key="AmendIdTemplate" x:DataType="vm:ReleaseAmendmentChoice">
+            <DockPanel MaxWidth="190">
+                <TextBlock Text="{Binding Value}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                <TextBlock Classes="secondary" Text="{Binding Note}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Margin="8,0,0,0" IsVisible="{Binding HasNote}" />
+            </DockPanel>
+        </DataTemplate>
+        <!-- what the selected releases state now, and whether the typed value narrows or widens them -->
+        <DataTemplate x:Key="AmendHintTemplate" x:DataType="vm:ReleaseAmendmentHint">
+            <StackPanel Spacing="2">
+                <TextBlock Classes="body-sm secondary" Text="{Binding Now}" TextWrapping="Wrap" IsVisible="{Binding HasNow}" />
+                <TextBlock Classes="body-sm secondary" Classes.danger="{Binding NeedsAuthor}" Text="{Binding Effect}" TextWrapping="Wrap" IsVisible="{Binding HasEffect}" />
+            </StackPanel>
+        </DataTemplate>
+    </UserControl.Resources>
     <!-- modal: a steward amendment of release files, which opens a pull request in content-index-releases after a preview -->
     <Panel Background="#99000000" views:ModalBackdrop.CloseButton="{Binding #CloseButton}">
         <Border Classes="modal" MaxWidth="800" HorizontalAlignment="Stretch" Margin="104,32,24,32" DataContext="{Binding StewardAmendment}" x:DataType="vm:ReleaseAmendmentDialog">
@@ -65,27 +93,94 @@
                                 </RadioButton>
                             </StackPanel>
 
+                            <!-- on the author's request the amendment may also widen, and the pull request names the request -->
+                            <StackPanel Spacing="8">
+                                <CheckBox IsChecked="{Binding OnBehalfOfAuthor}">
+                                    <TextBlock Classes="body-sm" Text="{Binding Localization.StewardAmendOnBehalf}" />
+                                </CheckBox>
+                                <TextBlock Classes="body-sm secondary" Text="{Binding Localization.StewardAmendOnBehalfHint}" TextWrapping="Wrap" />
+                                <StackPanel Spacing="6" Margin="28,0,0,0" IsVisible="{Binding OnBehalfOfAuthor}">
+                                    <TextBlock Classes="heading-sm" Text="{Binding Localization.StewardAmendAuthorRequest}" TextWrapping="Wrap" />
+                                    <TextBox Classes="field" Text="{Binding AuthorRequest}" PlaceholderText="https://" MaxLength="500" AutomationProperties.Name="{Binding Localization.StewardAmendAuthorRequest}" />
+                                    <TextBlock Classes="body-sm danger" Text="{Binding InvalidAuthorRequestText}" TextWrapping="Wrap" IsVisible="{Binding InvalidAuthorRequestText, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                                </StackPanel>
+                            </StackPanel>
+
                             <StackPanel Spacing="8">
                                 <TextBlock Classes="heading-md heading" Text="{Binding Localization.StewardAmendChange}" />
+                                <TextBlock Classes="body-sm secondary" Text="{Binding Localization.StewardAmendReadingFiles}" TextWrapping="Wrap" IsVisible="{Binding IsReadingFiles}" />
+                                <TextBlock Classes="body-sm secondary" Text="{Binding Localization.StewardAmendSelectForValues}" TextWrapping="Wrap" IsVisible="{Binding NeedsSelectionForValues}" />
+                                <!-- each version field offers the versions that fit and takes any text, and says under it what the releases state now -->
                                 <Grid ColumnDefinitions="*,16,*" RowDefinitions="Auto,6,Auto,8,Auto,16,Auto,6,Auto">
-                                    <TextBlock Classes="heading-sm" Text="{Binding Localization.StewardAmendGameMin}" TextWrapping="Wrap" />
-                                    <TextBlock Grid.Column="2" Classes="heading-sm" Text="{Binding Localization.StewardAmendGameMax}" TextWrapping="Wrap" />
-                                    <TextBox Grid.Row="2" Classes="field" Text="{Binding GameMin}" PlaceholderText="2026.8.22.5348" AutomationProperties.Name="{Binding Localization.StewardAmendGameMin}" />
-                                    <TextBox Grid.Row="2" Grid.Column="2" Classes="field" Text="{Binding GameMax}" PlaceholderText="2026.8" AutomationProperties.Name="{Binding Localization.StewardAmendGameMax}" />
+                                    <TextBlock Classes="heading-sm" Text="{Binding GameMinLabel}" TextWrapping="Wrap" />
+                                    <TextBlock Grid.Column="2" Classes="heading-sm" Text="{Binding GameMaxLabel}" TextWrapping="Wrap" />
+                                    <StackPanel Grid.Row="2" Spacing="4">
+                                        <TextBox Classes="field" Text="{Binding GameMin}" IsVisible="{Binding !HasGameVersions}" AutomationProperties.Name="{Binding GameMinLabel}" />
+                                        <ComboBox IsEditable="True" Text="{Binding GameMin}" ItemsSource="{Binding GameMinChoices}" ItemTemplate="{StaticResource AmendVersionTemplate}" IsVisible="{Binding HasGameVersions}" HorizontalAlignment="Stretch" MinHeight="35" MaxDropDownHeight="300" AutomationProperties.Name="{Binding GameMinLabel}" />
+                                        <ContentControl Content="{Binding GameMinHint}" ContentTemplate="{StaticResource AmendHintTemplate}" IsVisible="{Binding GameMinHint.IsShown}" />
+                                    </StackPanel>
+                                    <StackPanel Grid.Row="2" Grid.Column="2" Spacing="4">
+                                        <TextBox Classes="field" Text="{Binding GameMax}" IsEnabled="{Binding !RemoveGameMax}" IsVisible="{Binding !HasGameVersions}" AutomationProperties.Name="{Binding GameMaxLabel}" />
+                                        <ComboBox IsEditable="True" Text="{Binding GameMax}" ItemsSource="{Binding GameMaxChoices}" ItemTemplate="{StaticResource AmendVersionTemplate}" IsEnabled="{Binding !RemoveGameMax}" IsVisible="{Binding HasGameVersions}" HorizontalAlignment="Stretch" MinHeight="35" MaxDropDownHeight="300" AutomationProperties.Name="{Binding GameMaxLabel}" />
+                                        <ContentControl Content="{Binding GameMaxHint}" ContentTemplate="{StaticResource AmendHintTemplate}" IsVisible="{Binding GameMaxHint.IsShown}" />
+                                        <CheckBox IsChecked="{Binding RemoveGameMax}" IsVisible="{Binding OnBehalfOfAuthor}">
+                                            <TextBlock Classes="body-sm" Text="{Binding Localization.StewardAmendRemoveGameMax}" />
+                                        </CheckBox>
+                                    </StackPanel>
                                     <TextBlock Grid.Row="4" Grid.ColumnSpan="3" Classes="body-sm secondary" Text="{Binding Localization.StewardAmendGameHint}" TextWrapping="Wrap" />
-                                    <TextBlock Grid.Row="6" Classes="heading-sm" Text="{Binding Localization.StewardAmendLoaderMin}" TextWrapping="Wrap" />
-                                    <TextBlock Grid.Row="6" Grid.Column="2" Classes="heading-sm" Text="{Binding Localization.StewardAmendLoaderMax}" TextWrapping="Wrap" />
-                                    <TextBox Grid.Row="8" Classes="field" Text="{Binding LoaderMin}" AutomationProperties.Name="{Binding Localization.StewardAmendLoaderMin}" />
-                                    <TextBox Grid.Row="8" Grid.Column="2" Classes="field" Text="{Binding LoaderMax}" AutomationProperties.Name="{Binding Localization.StewardAmendLoaderMax}" />
+                                    <TextBlock Grid.Row="6" Classes="heading-sm" Text="{Binding LoaderMinLabel}" TextWrapping="Wrap" />
+                                    <TextBlock Grid.Row="6" Grid.Column="2" Classes="heading-sm" Text="{Binding LoaderMaxLabel}" TextWrapping="Wrap" />
+                                    <StackPanel Grid.Row="8" Spacing="4">
+                                        <TextBox Classes="field" Text="{Binding LoaderMin}" IsEnabled="{Binding !RemoveLoaderMin}" IsVisible="{Binding !HasLoaderVersions}" AutomationProperties.Name="{Binding LoaderMinLabel}" />
+                                        <ComboBox IsEditable="True" Text="{Binding LoaderMin}" ItemsSource="{Binding LoaderMinChoices}" ItemTemplate="{StaticResource AmendVersionTemplate}" IsEnabled="{Binding !RemoveLoaderMin}" IsVisible="{Binding HasLoaderVersions}" HorizontalAlignment="Stretch" MinHeight="35" MaxDropDownHeight="300" AutomationProperties.Name="{Binding LoaderMinLabel}" />
+                                        <ContentControl Content="{Binding LoaderMinHint}" ContentTemplate="{StaticResource AmendHintTemplate}" IsVisible="{Binding LoaderMinHint.IsShown}" />
+                                        <CheckBox IsChecked="{Binding RemoveLoaderMin}" IsVisible="{Binding OnBehalfOfAuthor}">
+                                            <TextBlock Classes="body-sm" Text="{Binding Localization.StewardAmendRemoveLoaderMin}" />
+                                        </CheckBox>
+                                    </StackPanel>
+                                    <StackPanel Grid.Row="8" Grid.Column="2" Spacing="4">
+                                        <TextBox Classes="field" Text="{Binding LoaderMax}" IsEnabled="{Binding !RemoveLoaderMax}" IsVisible="{Binding !HasLoaderVersions}" AutomationProperties.Name="{Binding LoaderMaxLabel}" />
+                                        <ComboBox IsEditable="True" Text="{Binding LoaderMax}" ItemsSource="{Binding LoaderMaxChoices}" ItemTemplate="{StaticResource AmendVersionTemplate}" IsEnabled="{Binding !RemoveLoaderMax}" IsVisible="{Binding HasLoaderVersions}" HorizontalAlignment="Stretch" MinHeight="35" MaxDropDownHeight="300" AutomationProperties.Name="{Binding LoaderMaxLabel}" />
+                                        <ContentControl Content="{Binding LoaderMaxHint}" ContentTemplate="{StaticResource AmendHintTemplate}" IsVisible="{Binding LoaderMaxHint.IsShown}" />
+                                        <CheckBox IsChecked="{Binding RemoveLoaderMax}" IsVisible="{Binding OnBehalfOfAuthor}">
+                                            <TextBlock Classes="body-sm" Text="{Binding Localization.StewardAmendRemoveLoaderMax}" />
+                                        </CheckBox>
+                                    </StackPanel>
                                 </Grid>
                                 <CheckBox IsChecked="{Binding Yank}" Margin="0,8,0,0">
                                     <TextBlock Classes="body-sm" Text="{Binding Localization.StewardAmendYank}" />
                                 </CheckBox>
+                                <CheckBox IsChecked="{Binding Unyank}" IsVisible="{Binding OnBehalfOfAuthor}">
+                                    <TextBlock Classes="body-sm" Text="{Binding Localization.StewardAmendUnyank}" />
+                                </CheckBox>
+                                <!-- a change of os names every platform the releases run on, and none removes the restriction -->
+                                <StackPanel Spacing="6" IsVisible="{Binding OnBehalfOfAuthor}">
+                                    <CheckBox IsChecked="{Binding ChangeOs}">
+                                        <TextBlock Classes="body-sm" Text="{Binding Localization.StewardAmendChangeOs}" />
+                                    </CheckBox>
+                                    <StackPanel Spacing="4" Margin="28,0,0,0" IsVisible="{Binding ChangeOs}">
+                                        <TextBlock Classes="body-sm secondary" Text="{Binding Localization.StewardAmendOsHint}" TextWrapping="Wrap" />
+                                        <ItemsControl ItemsSource="{Binding Platforms}">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate>
+                                                    <WrapPanel ItemSpacing="16" LineSpacing="4" />
+                                                </ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate x:DataType="vm:ReleaseAmendmentPlatform">
+                                                    <CheckBox IsChecked="{Binding IsChecked}" AutomationProperties.Name="{Binding Name}">
+                                                        <TextBlock Classes="body-sm" Text="{Binding Name}" />
+                                                    </CheckBox>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </StackPanel>
+                                </StackPanel>
                             </StackPanel>
 
                             <StackPanel Spacing="8">
                                 <TextBlock Classes="heading-md heading" Text="{Binding Localization.StewardAmendDependencies}" />
-                                <TextBlock Classes="body-sm secondary" Text="{Binding Localization.StewardAmendDependenciesHint}" TextWrapping="Wrap" />
+                                <TextBlock Classes="body-sm secondary" Text="{Binding DependenciesHint}" TextWrapping="Wrap" />
                                 <ItemsControl ItemsSource="{Binding Dependencies}">
                                     <ItemsControl.ItemsPanel>
                                         <ItemsPanelTemplate>
@@ -95,11 +190,38 @@
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate x:DataType="vm:ReleaseAmendmentDependencyRow">
                                             <Grid ColumnDefinitions="*,8,Auto">
+                                                <!-- each field with what the releases state now and what its value does right under it -->
                                                 <WrapPanel ItemSpacing="8" LineSpacing="8">
-                                                    <TextBox Classes="field" Width="200" Text="{Binding Id}" PlaceholderText="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ListingId}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ListingId}" />
-                                                    <ComboBox Width="150" ItemsSource="{x:Static vm:ReleaseAmendmentDependencyRow.Kinds}" SelectedItem="{Binding Kind}" IsVisible="{Binding IsMissing}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ListingDependencyKind}" />
-                                                    <TextBox Classes="field" Width="120" Text="{Binding Min}" PlaceholderText="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ListingDependencyMin}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ListingDependencyMin}" />
-                                                    <TextBox Classes="field" Width="120" Text="{Binding Max}" PlaceholderText="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ListingDependencyMax}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ListingDependencyMax}" />
+                                                    <StackPanel Width="220" Spacing="4">
+                                                        <ComboBox IsEditable="True" HorizontalAlignment="Stretch" MinHeight="35" Text="{Binding Id}" ItemsSource="{Binding IdChoices}" ItemTemplate="{StaticResource AmendIdTemplate}" MaxDropDownHeight="300" PlaceholderText="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ListingId}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ListingId}" />
+                                                        <ContentControl Content="{Binding IdHint}" ContentTemplate="{StaticResource AmendHintTemplate}" IsVisible="{Binding IdHint.IsShown}" />
+                                                    </StackPanel>
+                                                    <ComboBox Width="130" MinHeight="35" VerticalAlignment="Top" ItemsSource="{x:Static vm:ReleaseAmendmentDependencyRow.Kinds}" SelectedItem="{Binding Kind}" IsVisible="{Binding IsMissing}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ListingDependencyKind}" />
+                                                    <StackPanel Width="166" Spacing="4" IsVisible="{Binding CanChangeKind}">
+                                                        <StackPanel Orientation="Horizontal" Spacing="4">
+                                                            <ComboBox Width="130" MinHeight="35" VerticalAlignment="Center" ItemsSource="{x:Static vm:ReleaseAmendmentDependencyRow.Kinds}" SelectedItem="{Binding NewKind}" PlaceholderText="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.StewardAmendKindUnchanged}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ListingDependencyKind}" />
+                                                            <Button Classes="icon" Command="{Binding KeepKindCommand}" IsVisible="{Binding HasNewKind}" VerticalAlignment="Center" ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.StewardAmendKindUnchanged}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.StewardAmendKindUnchanged}">
+                                                                <Path Classes="icon size-16" Data="{StaticResource Icon.Close}" />
+                                                            </Button>
+                                                        </StackPanel>
+                                                        <ContentControl Content="{Binding KindHint}" ContentTemplate="{StaticResource AmendHintTemplate}" IsVisible="{Binding KindHint.IsShown}" />
+                                                    </StackPanel>
+                                                    <StackPanel Width="140" Spacing="4">
+                                                        <TextBox Classes="field" Text="{Binding Min}" IsEnabled="{Binding !RemoveMin}" IsVisible="{Binding HasNoVersions}" PlaceholderText="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ListingDependencyMin}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ListingDependencyMin}" />
+                                                        <ComboBox IsEditable="True" HorizontalAlignment="Stretch" MinHeight="35" Text="{Binding Min}" ItemsSource="{Binding MinVersions}" ItemTemplate="{StaticResource AmendVersionTemplate}" MaxDropDownHeight="300" IsEnabled="{Binding !RemoveMin}" IsVisible="{Binding HasVersions}" PlaceholderText="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ListingDependencyMin}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ListingDependencyMin}" />
+                                                        <ContentControl Content="{Binding MinHint}" ContentTemplate="{StaticResource AmendHintTemplate}" IsVisible="{Binding MinHint.IsShown}" />
+                                                        <CheckBox IsChecked="{Binding RemoveMin}" IsVisible="{Binding CanChangeKind}">
+                                                            <TextBlock Classes="body-sm" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.StewardAmendRemoveMin}" TextWrapping="Wrap" />
+                                                        </CheckBox>
+                                                    </StackPanel>
+                                                    <StackPanel Width="140" Spacing="4">
+                                                        <TextBox Classes="field" Text="{Binding Max}" IsEnabled="{Binding !RemoveMax}" IsVisible="{Binding HasNoVersions}" PlaceholderText="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ListingDependencyMax}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ListingDependencyMax}" />
+                                                        <ComboBox IsEditable="True" HorizontalAlignment="Stretch" MinHeight="35" Text="{Binding Max}" ItemsSource="{Binding MaxVersions}" ItemTemplate="{StaticResource AmendVersionTemplate}" MaxDropDownHeight="300" IsEnabled="{Binding !RemoveMax}" IsVisible="{Binding HasVersions}" PlaceholderText="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ListingDependencyMax}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ListingDependencyMax}" />
+                                                        <ContentControl Content="{Binding MaxHint}" ContentTemplate="{StaticResource AmendHintTemplate}" IsVisible="{Binding MaxHint.IsShown}" />
+                                                        <CheckBox IsChecked="{Binding RemoveMax}" IsVisible="{Binding CanChangeKind}">
+                                                            <TextBlock Classes="body-sm" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.StewardAmendRemoveMax}" TextWrapping="Wrap" />
+                                                        </CheckBox>
+                                                    </StackPanel>
                                                 </WrapPanel>
                                                 <Button Grid.Column="2" Classes="icon" Command="{Binding RemoveCommand}" VerticalAlignment="Top" ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ListingRemove}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ListingRemove}">
                                                     <Path Classes="icon size-16" Data="{StaticResource Icon.Trash}" />
@@ -118,7 +240,7 @@
                                     <Button Classes="link" Command="{Binding BoundDependencyCommand}">
                                         <StackPanel Orientation="Horizontal" Spacing="6">
                                             <Path Classes="icon size-16" Data="{StaticResource Icon.Plus}" />
-                                            <TextBlock Classes="action-md" Text="{Binding Localization.StewardAmendBoundDependency}" VerticalAlignment="Center" />
+                                            <TextBlock Classes="action-md" Text="{Binding BoundDependencyLabel}" VerticalAlignment="Center" />
                                         </StackPanel>
                                     </Button>
                                 </WrapPanel>

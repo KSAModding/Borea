@@ -1,9 +1,11 @@
 using Avalonia;
+using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Headless;
 using Avalonia.Input;
 using Avalonia.VisualTree;
 using Borea.App.Tests.ViewModels;
+using Borea.App.ViewModels;
 using Borea.App.Views;
 using Borea.Core.Listings;
 using Borea.Core.Stewardship;
@@ -350,6 +352,11 @@ public sealed class StewardViewsTests
 
         Assert.Contains("Amend releases of MeasureTools", texts);
         Assert.Contains(harness.Localization.StewardAmendExplanation, texts);
+        Assert.Contains(harness.Localization.StewardAmendOnBehalf, texts);
+        Assert.DoesNotContain(harness.Localization.StewardAmendAuthorRequest, texts);
+        Assert.DoesNotContain(harness.Localization.StewardAmendRemoveGameMax, texts);
+        Assert.DoesNotContain(harness.Localization.StewardAmendUnyank, texts);
+        Assert.DoesNotContain(harness.Localization.StewardAmendChangeOs, texts);
         Assert.Contains(harness.Localization.StewardAmendPreviewHeading, texts);
         Assert.Contains("releases/MeasureTools/1.2.0.json", texts);
         Assert.Contains("+  \"yanked\": true", texts);
@@ -358,6 +365,140 @@ public sealed class StewardViewsTests
         Assert.Contains("The pull request mentions @alice, so the owner is told.", texts);
         Assert.Contains("Pull request #1 is open. It waits for a steward to merge it.", texts);
         Assert.Single(_amendments.Opened);
+    }
+
+    [Fact]
+    public async Task ReleaseAmendmentModal_OnBehalfOfTheAuthor_AsksForTheLinkAndOffersANewKind()
+    {
+        using var harness = await CreateAsync();
+        var viewModel = harness.ViewModel;
+        await viewModel.EnsureDiscoverLoadedAsync();
+        await viewModel.OpenContentAsync(viewModel.DiscoverItems.First(item => item.ModId == "MeasureTools"));
+        viewModel.AmendContentReleasesCommand.Execute(null);
+        var dialog = viewModel.StewardAmendment!;
+        await dialog.WhenDoneAsync();
+        dialog.OnBehalfOfAuthor = true;
+        dialog.AuthorRequest = "github.com/issues/1";
+        dialog.BoundDependencyCommand.Execute(null);
+
+        var (texts, kinds) = await HeadlessApp.RunAsync(harness, () =>
+        {
+            var modal = new ReleaseAmendmentModal();
+            var window = new Window { Width = 1280, Height = 832, Content = modal, DataContext = viewModel };
+            window.Show();
+            try
+            {
+                window.UpdateLayout();
+                var shown = modal.GetVisualDescendants().OfType<TextBlock>().Where(text => text.IsEffectivelyVisible).Select(text => text.Text).ToList();
+                var placeholders = modal.GetVisualDescendants().OfType<ComboBox>().Where(box => box.IsEffectivelyVisible).Select(box => box.PlaceholderText).ToList();
+                return Task.FromResult((shown, placeholders));
+            }
+            finally
+            {
+                window.Close();
+            }
+        });
+
+        Assert.Contains(harness.Localization.StewardAmendAuthorRequest, texts);
+        Assert.Contains(harness.Localization.StewardAmendInvalidAuthorRequest, texts);
+        Assert.Contains(harness.Localization.StewardAmendGameMaxAuthor, texts);
+        Assert.Contains(harness.Localization.StewardAmendBoundDependencyAuthor, texts);
+        Assert.Contains(harness.Localization.StewardAmendKindUnchanged, kinds);
+        Assert.Contains(harness.Localization.StewardAmendRemoveGameMax, texts);
+        Assert.Contains(harness.Localization.StewardAmendRemoveLoaderMin, texts);
+        Assert.Contains(harness.Localization.StewardAmendRemoveLoaderMax, texts);
+        Assert.Contains(harness.Localization.StewardAmendUnyank, texts);
+        Assert.Contains(harness.Localization.StewardAmendChangeOs, texts);
+        Assert.Contains(harness.Localization.StewardAmendRemoveMin, texts);
+        Assert.Contains(harness.Localization.StewardAmendRemoveMax, texts);
+        Assert.DoesNotContain(harness.Localization.StewardAmendOsHint, texts);
+    }
+
+    [Fact]
+    public async Task ReleaseAmendmentModal_APickFromTheGameMaxList_FillsTheField_AndSaysThatItWidens()
+    {
+        _amendments.GameVersions.Add("2026.10.7.5541");
+        _amendments.Texts["1.2.0"] = FakeReleaseAmendments.Stamped("MeasureTools", "1.2.0", "2026.9.7.5402");
+        using var harness = await CreateAsync();
+        var viewModel = harness.ViewModel;
+        await viewModel.EnsureDiscoverLoadedAsync();
+        await viewModel.OpenContentAsync(viewModel.DiscoverItems.First(item => item.ModId == "MeasureTools"));
+        viewModel.AmendContentReleasesCommand.Execute(null);
+        var dialog = viewModel.StewardAmendment!;
+        await dialog.WhenDoneAsync();
+        dialog.Versions[0].IsSelected = true;
+
+        var (texts, picks) = await HeadlessApp.RunAsync(harness, () =>
+        {
+            var modal = new ReleaseAmendmentModal();
+            var window = new Window { Width = 1280, Height = 832, Content = modal, DataContext = viewModel };
+            window.Show();
+            try
+            {
+                window.UpdateLayout();
+                var gameMax = modal.GetVisualDescendants().OfType<ComboBox>().Single(box => AutomationProperties.GetName(box) == dialog.GameMaxLabel);
+                var picks = gameMax.Items.OfType<ReleaseAmendmentChoice>().Select(choice => choice.Value).ToList();
+                gameMax.SelectedIndex = picks.IndexOf("2026.10.7.5541");
+                window.UpdateLayout();
+                var shown = modal.GetVisualDescendants().OfType<TextBlock>().Where(text => text.IsEffectivelyVisible).Select(text => text.Text).ToList();
+                return Task.FromResult((shown, picks));
+            }
+            finally
+            {
+                window.Close();
+            }
+        });
+
+        Assert.Equal("2026.10.7.5541", picks[0]);
+        Assert.Equal("2026.10.7.5541", dialog.GameMax);
+        Assert.Contains("Now: 2026.9.7.5402", texts);
+        Assert.Contains(harness.Localization.StewardAmendWidens, texts);
+        Assert.Contains("Now: 0.4.5", texts);
+    }
+
+    [Fact]
+    public async Task ReleaseAmendmentModal_ADependencyRow_ShowsEachHintUnderItsOwnField()
+    {
+        _amendments.Texts["1.2.0"] = FakeReleaseAmendments.Stamped("MeasureTools", "1.2.0", "2026.9.7.5402");
+        using var harness = await CreateAsync();
+        var localization = harness.Localization;
+        var viewModel = harness.ViewModel;
+        await viewModel.EnsureDiscoverLoadedAsync();
+        await viewModel.OpenContentAsync(viewModel.DiscoverItems.First(item => item.ModId == "MeasureTools"));
+        viewModel.AmendContentReleasesCommand.Execute(null);
+        var dialog = viewModel.StewardAmendment!;
+        await dialog.WhenDoneAsync();
+        dialog.Versions[0].IsSelected = true;
+        dialog.BoundDependencyCommand.Execute(null);
+        dialog.Dependencies[0].Id = "KittenExtensions";
+        dialog.Dependencies[0].Max = "2.0.0";
+
+        var lefts = await HeadlessApp.RunAsync(harness, () =>
+        {
+            var modal = new ReleaseAmendmentModal();
+            var window = new Window { Width = 860, Height = 832, Content = modal, DataContext = viewModel };
+            window.Show();
+            try
+            {
+                window.UpdateLayout();
+                double Left(Control control) => control.TranslatePoint(default, window)!.Value.X;
+                var visible = modal.GetVisualDescendants().OfType<Control>().Where(control => control.IsEffectivelyVisible).ToList();
+                var id = visible.OfType<ComboBox>().Single(box => AutomationProperties.GetName(box) == localization.ListingId);
+                var max = visible.Single(control => control is TextBox or ComboBox && AutomationProperties.GetName(control) == localization.ListingDependencyMax);
+                var stated = visible.OfType<TextBlock>().Single(text => text.Text == "In the release: optional");
+                var narrows = visible.OfType<TextBlock>().Single(text => text.Text == localization.StewardAmendNarrows);
+                return Task.FromResult((Id: Left(id), Stated: Left(stated), Max: Left(max), Narrows: Left(narrows), IdWidth: id.Bounds.Width));
+            }
+            finally
+            {
+                window.Close();
+            }
+        });
+
+        Assert.Equal(lefts.Id, lefts.Stated);
+        Assert.Equal(lefts.Max, lefts.Narrows);
+        Assert.True(lefts.Max > lefts.Id);
+        Assert.Equal(220, lefts.IdWidth);
     }
 
     [Fact]

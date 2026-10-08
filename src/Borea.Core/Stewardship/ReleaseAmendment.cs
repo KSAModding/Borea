@@ -30,9 +30,17 @@ public sealed partial class ReleaseAmendment
     private readonly string? _loaderMax;
     private readonly IReadOnlyList<ReleaseDependencyAddition> _added;
     private readonly IReadOnlyList<ReleaseDependencyBounds> _bounds;
+    private readonly IReadOnlyList<ReleaseDependencyKind> _kinds;
+    private readonly bool _removeGameMax;
+    private readonly bool _unyank;
+    private readonly IReadOnlyList<string>? _os;
+    private readonly bool _removeLoaderMin;
+    private readonly bool _removeLoaderMax;
+    private readonly IReadOnlyList<ReleaseDependencyBoundRemoval> _unbounds;
 
     private ReleaseAmendment(ReleaseChange change, (string, long)? gameMin, (string, long)? gameMax, string? loaderMin, string? loaderMax,
-        IReadOnlyList<ReleaseDependencyAddition> added, IReadOnlyList<ReleaseDependencyBounds> bounds)
+        IReadOnlyList<ReleaseDependencyAddition> added, IReadOnlyList<ReleaseDependencyBounds> bounds, IReadOnlyList<ReleaseDependencyKind> kinds,
+        IReadOnlyList<string>? os, IReadOnlyList<ReleaseDependencyBoundRemoval> unbounds)
     {
         _gameMin = gameMin;
         _gameMax = gameMax;
@@ -42,6 +50,13 @@ public sealed partial class ReleaseAmendment
         _loaderMax = loaderMax;
         _added = added;
         _bounds = bounds;
+        _kinds = kinds;
+        _removeGameMax = change.RemoveGameMax;
+        _unyank = change.Unyank;
+        _os = os;
+        _removeLoaderMin = change.RemoveLoaderMin;
+        _removeLoaderMax = change.RemoveLoaderMax;
+        _unbounds = unbounds;
     }
 
     public static string PathOf(string id, string version)
@@ -68,6 +83,16 @@ public sealed partial class ReleaseAmendment
                 ? new ReleaseDependencyBounds(id, bound.Min is null ? null : Normalize(bound.Min, id), bound.Max is null ? null : Normalize(bound.Max, id))
                 : throw Invalid($"the dependency bound '{bound.Id}' names no dependency or no bound"))
             .ToList();
+        var kinds = change.DependencyKinds.Select(retyped => retyped.Id.Trim() is { Length: > 0 } id && retyped.Kind.Trim() is var kind
+                && ReleaseAmendmentCheck.DependencyKinds.Contains(kind)
+                ? new ReleaseDependencyKind(id, kind)
+                : throw Invalid($"the new kind '{retyped.Id}:{retyped.Kind}' is not a dependency id with one of {string.Join(", ", ReleaseAmendmentCheck.DependencyKinds)}"))
+            .ToList();
+        var unbounds = change.RemovedDependencyBounds.Select(removal => removal.Id.Trim() is { Length: > 0 } id && (removal.Min || removal.Max)
+                ? new ReleaseDependencyBoundRemoval(id, removal.Min, removal.Max)
+                : throw Invalid($"the bound removal '{removal.Id}' names no dependency or no bound"))
+            .ToList();
+        var os = change.Os?.Select(platform => platform.Trim()).ToList();
         var gameMin = Resolve(change.GameMin, "game_min", gameVersions, now);
         var gameMax = Resolve(change.GameMax, "game_max", gameVersions, now);
         var loaderMin = change.LoaderMin is null ? null : Normalize(change.LoaderMin, "loader min");
@@ -75,10 +100,22 @@ public sealed partial class ReleaseAmendment
 
         if (change.YankReason is not null && !change.Yank)
             throw Invalid("a reason says nothing without a yank");
-        if (gameMin is null && gameMax is null && !change.Yank && added.Count == 0 && bounds.Count == 0 && loaderMin is null && loaderMax is null)
+        if (change.Yank && change.Unyank)
+            throw Invalid("a release is either yanked or un-yanked, not both");
+        if (change.RemoveGameMax && gameMax is not null)
+            throw Invalid("game_max is either set or removed, not both");
+        if ((change.RemoveLoaderMin && loaderMin is not null) || (change.RemoveLoaderMax && loaderMax is not null))
+            throw Invalid("a loader bound is either set or removed, not both");
+        if (os is not null && (os.Any(platform => !ReleaseAmendmentCheck.OsValues.Contains(platform)) || os.Distinct().Count() != os.Count))
+            throw Invalid($"os is empty or a list of distinct platforms from {string.Join(", ", ReleaseAmendmentCheck.OsValues)}");
+        if (unbounds.FirstOrDefault(removal => bounds.Any(bound => ModIds.Equals(bound.Id, removal.Id)
+                && ((removal.Min && bound.Min is not null) || (removal.Max && bound.Max is not null)))) is { } conflict)
+            throw Invalid($"a bound of '{conflict.Id}' is either set or removed, not both");
+        if (gameMin is null && gameMax is null && !change.Yank && added.Count == 0 && bounds.Count == 0 && kinds.Count == 0 && loaderMin is null && loaderMax is null
+            && !change.RemoveGameMax && !change.Unyank && os is null && !change.RemoveLoaderMin && !change.RemoveLoaderMax && unbounds.Count == 0)
             throw Invalid("nothing to amend: name at least one change");
 
-        return new ReleaseAmendment(change, gameMin, gameMax, loaderMin, loaderMax, added, bounds);
+        return new ReleaseAmendment(change, gameMin, gameMax, loaderMin, loaderMax, added, bounds, kinds, os, unbounds);
     }
 
     /// <summary>The selected versions: those named in their order, or else the matching ones newest first.</summary>
@@ -144,11 +181,36 @@ public sealed partial class ReleaseAmendment
         ReleaseAmendmentCheck.Check(path, published, amended, errors, widened);
         if (amender == ReleaseAmender.Steward && widened.Count > 0)
             throw new ReleaseAmendmentRefusedException(errors.Count == 0 ? ReleaseAmendmentRefusal.Widens : ReleaseAmendmentRefusal.OutsideClass,
-                [.. errors, .. widened, "only the verified owner of the listing widens a release"]);
+                [.. errors, .. widened, "only the verified owner of the listing widens a release, or a steward who names the author's request"]);
         if (errors.Count > 0)
             throw new ReleaseAmendmentRefusedException(ReleaseAmendmentRefusal.OutsideClass, errors);
 
         return new AmendedRelease(path, Write(amended), widened.Count > 0);
+    }
+
+    /// <summary>
+    /// What the change does to the files when the owner makes it: it widens when it widens one file, it narrows when it changes
+    /// a file without a widening, and it is refused when <see cref="Create"/> or <see cref="Apply"/> refuses it. The same checks as the preview decide it.
+    /// </summary>
+    public static ReleaseChangeEffect EffectOf(ReleaseChange change, IEnumerable<ReleaseFile> files, IReadOnlyList<string> gameVersions, DateTimeOffset now)
+    {
+        ArgumentNullException.ThrowIfNull(files);
+        try
+        {
+            var amendment = Create(change, gameVersions, now);
+            var effect = ReleaseChangeEffect.Unchanged;
+            foreach (var file in files)
+            {
+                if (amendment.Apply(file.Path, file.Text, ReleaseAmender.Owner) is { } amended)
+                    effect = amended.Widens || effect == ReleaseChangeEffect.Widens ? ReleaseChangeEffect.Widens : ReleaseChangeEffect.Narrows;
+            }
+
+            return effect;
+        }
+        catch (ReleaseAmendmentRefusedException)
+        {
+            return ReleaseChangeEffect.Refused;
+        }
     }
 
     /// <summary>Every requested change, in the order of tools/amend.py. Returns whether the file moved.</summary>
@@ -159,15 +221,59 @@ public sealed partial class ReleaseAmendment
             changed |= SetGameBound(document, "game_min", gameMin);
         if (_gameMax is { } gameMax)
             changed |= SetGameBound(document, "game_max", gameMax);
+        if (_removeGameMax)
+            changed |= RemoveKeys(document, "game_max", "game_max_revision");
+        if (_os is not null)
+            changed |= SetOs(document, _os);
         if (_yank)
             changed |= SetYank(document);
+        if (_unyank)
+            changed |= RemoveKeys(document, "yanked", "yanked_reason");
         foreach (var addition in _added)
             changed |= AddDependency(document, addition);
         foreach (var bounds in _bounds)
             changed |= SetDependencyBounds(document, bounds);
-        if (_loaderMin is not null || _loaderMax is not null)
+        foreach (var removal in _unbounds)
+            changed |= RemoveDependencyBounds(document, removal);
+        foreach (var kind in _kinds)
+            changed |= SetDependencyKind(document, kind);
+        if (_loaderMin is not null || _loaderMax is not null || _removeLoaderMin || _removeLoaderMax)
             changed |= SetLoaderBounds(document);
         return changed;
+    }
+
+    /// <summary>Removes the keys that the file has. Every other key keeps its place.</summary>
+    private static bool RemoveKeys(JsonObject document, params ReadOnlySpan<string> keys)
+    {
+        var changed = false;
+        foreach (var key in keys)
+            changed |= document.Remove(key);
+        return changed;
+    }
+
+    /// <summary>Writes the platforms where a fresh stamp puts them, after the game bounds, or removes os for an empty list.</summary>
+    private static bool SetOs(JsonObject document, IReadOnlyList<string> platforms)
+    {
+        if (platforms.Count == 0)
+            return document.Remove("os");
+
+        var value = new JsonArray([.. platforms.Select(platform => (JsonNode?)JsonValue.Create(platform))]);
+        if (JsonNode.DeepEquals(document["os"], value))
+            return false;
+
+        if (document.ContainsKey("os"))
+        {
+            document["os"] = value;
+            return true;
+        }
+
+        var after = document.ContainsKey("game_max_revision") ? "game_max_revision" : AfterGameMin;
+        if (!document.ContainsKey(after))
+            throw new ReleaseAmendmentRefusedException(ReleaseAmendmentRefusal.NotStamperFile,
+                $"the release file carries no {after}, so it was not written by the stamper and there is nowhere to put os");
+
+        InsertAfter(document, after, [KeyValuePair.Create("os", (JsonNode?)value)]);
+        return true;
     }
 
     /// <summary>Writes a resolved game bound where a fresh stamp puts it.</summary>
@@ -188,20 +294,24 @@ public sealed partial class ReleaseAmendment
             throw new ReleaseAmendmentRefusedException(ReleaseAmendmentRefusal.NotStamperFile,
                 $"the release file carries no {AfterGameMin}, so it was not written by the stamper and there is nowhere to put a game bound");
 
-        // A key that follows keeps its place and its value, as a Python dict does when the loop sets it again.
+        InsertAfter(document, AfterGameMin, [KeyValuePair.Create(which, (JsonNode?)bound.Display), KeyValuePair.Create(revisionKey, (JsonNode?)bound.Revision)]);
+        return true;
+    }
+
+    /// <summary>Puts new keys right after <paramref name="after"/>. A key that follows keeps its place and its value, as a Python dict does when the loop sets it again.</summary>
+    private static void InsertAfter(JsonObject document, string after, IReadOnlyList<KeyValuePair<string, JsonNode?>> inserted)
+    {
         var members = document.Select(member => KeyValuePair.Create(member.Key, member.Value?.DeepClone())).ToList();
         document.Clear();
         foreach (var (key, value) in members)
         {
             document[key] = value;
-            if (key == AfterGameMin)
+            if (key == after)
             {
-                document[which] = bound.Display;
-                document[revisionKey] = bound.Revision;
+                foreach (var (newKey, newValue) in inserted)
+                    document[newKey] = newValue;
             }
         }
-
-        return true;
     }
 
     /// <summary>Retracts one build. A new yanked key goes last, as RFC 0031 lists it.</summary>
@@ -227,11 +337,24 @@ public sealed partial class ReleaseAmendment
             _ => throw new ReleaseAmendmentRefusedException(ReleaseAmendmentRefusal.OutsideClass, "loader is not an object"),
         };
 
-        if (WithBounds(loader, _loaderMin, _loaderMax) is not { } updated)
+        var updated = WithBounds(loader, _loaderMin, _loaderMax);
+        var changed = updated is not null;
+        updated ??= (JsonObject)loader.DeepClone();
+        changed |= RemoveKeys(updated, [.. Removed(_removeLoaderMin, _removeLoaderMax)]);
+        if (!changed)
             return false;
 
         document["loader"] = Reorder(updated, LoaderOrder);
         return true;
+    }
+
+    /// <summary>The bound keys that a removal names.</summary>
+    private static IEnumerable<string> Removed(bool min, bool max)
+    {
+        if (min)
+            yield return "min";
+        if (max)
+            yield return "max";
     }
 
     /// <summary>An entry that was missing, which RFC 0031 admits, a conflict included.</summary>
@@ -262,6 +385,52 @@ public sealed partial class ReleaseAmendment
             updated["source"] = "authored";
 
         dependencies[index] = Reorder(updated, EntryOrder);
+        document["dependencies"] = dependencies;
+        return true;
+    }
+
+    /// <summary>A stated entry without the named bounds. A derived entry becomes authored as with a new bound.</summary>
+    private static bool RemoveDependencyBounds(JsonObject document, ReleaseDependencyBoundRemoval removal)
+    {
+        var dependencies = DependenciesOf(document);
+        var index = IndexOf(dependencies, removal.Id);
+        if (index < 0)
+            throw new ReleaseAmendmentRefusedException(ReleaseAmendmentRefusal.NoDependency,
+                $"the release states no dependency on '{removal.Id}'. An entry that was missing is added as a new dependency, and an any_of entry is edited by hand");
+
+        var entry = (JsonObject)dependencies[index]!.DeepClone();
+        if (!RemoveKeys(entry, [.. Removed(removal.Min, removal.Max)]))
+            return false;
+
+        if (StringOf(entry["source"]) == "derived")
+            entry["source"] = "authored";
+
+        dependencies[index] = Reorder(entry, EntryOrder);
+        document["dependencies"] = dependencies;
+        return true;
+    }
+
+    /// <summary>
+    /// A new kind of a stated entry. A derived entry becomes authored as with a bound, so it stays in the release with the new kind,
+    /// because the stamp keeps an authored entry in place of the one that the archive's mod.toml declares.
+    /// </summary>
+    private static bool SetDependencyKind(JsonObject document, ReleaseDependencyKind change)
+    {
+        var dependencies = DependenciesOf(document);
+        var index = IndexOf(dependencies, change.Id);
+        if (index < 0)
+            throw new ReleaseAmendmentRefusedException(ReleaseAmendmentRefusal.NoDependency,
+                $"the release states no dependency on '{change.Id}'. An entry that was missing is added as a new dependency, and an any_of entry is edited by hand");
+
+        var entry = (JsonObject)dependencies[index]!.DeepClone();
+        if (StringOf(entry["kind"]) == change.Kind)
+            return false;
+
+        entry["kind"] = change.Kind;
+        if (StringOf(entry["source"]) == "derived")
+            entry["source"] = "authored";
+
+        dependencies[index] = Reorder(entry, EntryOrder);
         document["dependencies"] = dependencies;
         return true;
     }

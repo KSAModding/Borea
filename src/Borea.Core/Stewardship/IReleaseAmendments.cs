@@ -11,6 +11,11 @@ public interface IReleaseAmendments
     /// <exception cref="StewardException">GitHub could not be read, or the account is no steward of content-index-releases.</exception>
     Task<IReadOnlyList<string>> ReleasesAsync(string listingId, CancellationToken cancellationToken = default);
 
+    /// <summary>Every stamped release file of the listing on the base branch, newest first, with the game release list. It writes nothing.</summary>
+    /// <exception cref="ReleaseAmendmentRefusedException">The listing has no stamped release, a file name is no version, or a file is no UTF-8 text.</exception>
+    /// <exception cref="StewardException">GitHub could not be read, or the account is no steward of content-index-releases.</exception>
+    Task<ReleaseFiles> ReleaseFilesAsync(string listingId, CancellationToken cancellationToken = default);
+
     /// <summary>Reads the selected release files at the tip of the base branch and amends them as tools/amend.py would. It writes nothing.</summary>
     /// <exception cref="ReleaseAmendmentRefusedException">The amendment is refused, as tools/amend.py or the checks would refuse it.</exception>
     /// <exception cref="StewardException">GitHub could not be read, or the account is no steward of content-index-releases.</exception>

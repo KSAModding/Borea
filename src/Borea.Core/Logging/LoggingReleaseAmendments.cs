@@ -17,6 +17,9 @@ public sealed class LoggingReleaseAmendments : IReleaseAmendments
     public Task<IReadOnlyList<string>> ReleasesAsync(string listingId, CancellationToken cancellationToken = default) =>
         Inner.ReleasesAsync(listingId, cancellationToken);
 
+    public Task<ReleaseFiles> ReleaseFilesAsync(string listingId, CancellationToken cancellationToken = default) =>
+        Inner.ReleaseFilesAsync(listingId, cancellationToken);
+
     public Task<ReleaseAmendmentPreview> PreviewAsync(ReleaseAmendmentRequest request, CancellationToken cancellationToken = default) =>
         Inner.PreviewAsync(request, cancellationToken);
 

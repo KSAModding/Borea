@@ -128,6 +128,78 @@ public sealed partial class GitHubReleaseAmendmentsTests
         Assert.Empty(_releases.Pulls);
     }
 
+    /// <summary>The widenings of RFC 0079 in tools/amendment-vectors.json, each refused to a steward alone and written for the owner.</summary>
+    [Theory]
+    [InlineData("the owner lowers a game_min")]
+    [InlineData("the owner raises a game_max")]
+    [InlineData("the owner lowers a loader min")]
+    [InlineData("the owner raises a loader max")]
+    [InlineData("the owner lowers a dependency min")]
+    [InlineData("the owner raises a dependency max")]
+    public async Task OpenAsync_AWideningOnTheAuthorsRequest_CommitsTheBytesOfTheOwner_AndNamesTheRequest(string name)
+    {
+        const string Link = "https://github.com/KSAModding/content-index/issues/42#issuecomment-7";
+        var vector = Vector(name);
+        _releases.Main[Folder + "1.2.0.json"] = (string)vector["base"]!;
+        var amendments = await SignedInAsync();
+        var alone = new ReleaseAmendmentRequest("ExampleMod", ReleaseSelection.Of("1.2.0"), ChangeOf(vector["amendment"]!.AsObject()), "The author tested it.");
+
+        var refused = await Assert.ThrowsAsync<ReleaseAmendmentRefusedException>(() => amendments.PreviewAsync(alone));
+        var preview = await amendments.PreviewAsync(alone with { AuthorRequest = Link });
+        await amendments.OpenAsync(preview);
+
+        Assert.Equal(ReleaseAmendmentRefusal.Widens, refused.Refusal);
+        Assert.Equal((string)vector["written"]!, _releases.Branches["steward/amend-examplemod"].Files[Folder + "1.2.0.json"]);
+        var body = _releases.Pulls.Single().Body;
+        Assert.Contains($"\n\nReason: The author tested it.\n\nRequested by the author: <{Link}>\n\n", body, StringComparison.Ordinal);
+        Assert.Contains("python3 tools/amend.py --listing ExampleMod --version 1.2.0 --owner --", body, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task OpenAsync_ANewKindOfADerivedDependencyOnTheAuthorsRequest_KeepsTheEntry_AndALinkThatIsNoHttpsLinkIsRefused()
+    {
+        var vector = Vector("the owner raises a game_max");
+        _releases.Main[Folder + "1.2.0.json"] = (string)vector["base"]!;
+        var amendments = await SignedInAsync();
+        var change = new ReleaseChange { DependencyKinds = [new ReleaseDependencyKind("KittenExtensions", "required")] };
+        var request = new ReleaseAmendmentRequest("ExampleMod", ReleaseSelection.Of("1.2.0"), change, "The author needs it.", "https://forums.ahwoo.com/threads/example-mod.123/post-9");
+
+        var link = await Assert.ThrowsAsync<ReleaseAmendmentRefusedException>(() => amendments.PreviewAsync(request with { AuthorRequest = "forums.ahwoo.com/threads/example-mod.123" }));
+        var alone = await Assert.ThrowsAsync<ReleaseAmendmentRefusedException>(() => amendments.PreviewAsync(request with { AuthorRequest = null }));
+        Assert.All(_sent, sent => Assert.Equal("GET", sent.Method));
+        var preview = await amendments.PreviewAsync(request);
+        await amendments.OpenAsync(preview);
+
+        Assert.Equal((ReleaseAmendmentRefusal.InvalidChange, ReleaseAmendmentRefusal.Widens), (link.Refusal, alone.Refusal));
+        var written = JsonNode.Parse(_releases.Branches["steward/amend-examplemod"].Files[Folder + "1.2.0.json"])!;
+        Assert.Equal(
+            """[{"id":"KittenExtensions","kind":"required","source":"authored"},{"id":"ExampleLibrary","kind":"required","min":"2.0.0","max":"2.9.0","source":"authored"}]""",
+            written["dependencies"]!.ToJsonString());
+        Assert.Contains("so this amendment has no command: `KittenExtensions` becomes `required`.", _releases.Pulls.Single().Body, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task OpenAsync_ARemovedGameMaxOnTheAuthorsRequest_CommitsTheFileWithoutIt_AndNamesTheChangeThatTheToolHasNoOptionFor()
+    {
+        const string Link = "https://github.com/KSAModding/content-index/issues/42#issuecomment-7";
+        var published = (string)Vector("the owner raises a game_max")["base"]!;
+        _releases.Main[Folder + "1.2.0.json"] = published;
+        var amendments = await SignedInAsync();
+        var alone = new ReleaseAmendmentRequest("ExampleMod", ReleaseSelection.Of("1.2.0"), new ReleaseChange { RemoveGameMax = true }, "The author tested it.");
+
+        var refused = await Assert.ThrowsAsync<ReleaseAmendmentRefusedException>(() => amendments.PreviewAsync(alone));
+        var preview = await amendments.PreviewAsync(alone with { AuthorRequest = Link });
+        await amendments.OpenAsync(preview);
+
+        Assert.Equal(ReleaseAmendmentRefusal.Widens, refused.Refusal);
+        Assert.Equal(
+            published.Replace("  \"game_max\": \"2026.8.19.5261\",\n  \"game_max_revision\": 5261,\n", string.Empty, StringComparison.Ordinal),
+            _releases.Branches["steward/amend-examplemod"].Files[Folder + "1.2.0.json"]);
+        var body = _releases.Pulls.Single().Body;
+        Assert.Contains($"Requested by the author: <{Link}>\n\ntools/amend.py has no option for these changes, so this amendment has no command: `game_max` is removed.", body, StringComparison.Ordinal);
+        Assert.DoesNotContain("```", body, StringComparison.Ordinal);
+    }
+
     [Fact]
     public async Task OpenAsync_AReleaseFileThatChangedOnMainSinceThePreview_WritesNothingAndGivesTheNewPreview()
     {
@@ -193,6 +265,23 @@ public sealed partial class GitHubReleaseAmendmentsTests
     }
 
     [Fact]
+    public async Task ReleaseFilesAsync_ReadsEveryReleaseFileNewestFirst_WithTheGameReleaseListOfTheSameCommit()
+    {
+        _releases.Main[Folder + "1.0.0.json"] = "{\"version\": \"1.0.0\"}\n";
+        _releases.Main[Folder + "1.10.0.json"] = "{\"version\": \"1.10.0\"}\n";
+        var amendments = await SignedInAsync();
+
+        var read = await amendments.ReleaseFilesAsync("ExampleMod");
+
+        Assert.Equal(
+            [("1.10.0", Folder + "1.10.0.json", "{\"version\": \"1.10.0\"}\n"), ("1.0.0", Folder + "1.0.0.json", "{\"version\": \"1.0.0\"}\n")],
+            read.Files.Select(file => (file.Version, file.Path, file.Text)));
+        Assert.Equal(Vectors["game_versions"]!.AsArray().Select(version => (string)version!), read.GameVersions);
+        Assert.All(_sent, sent => Assert.Equal("GET", sent.Method));
+        Assert.Single(_sent, sent => sent.Url.EndsWith("/git/ref/heads/main", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public async Task NoStewardOfContentIndexReleases_OrAnIdThatIsNoContentId_IsRefusedBeforeAnyRequest()
     {
         var amendments = await SignedInAsync();
@@ -223,6 +312,23 @@ public sealed partial class GitHubReleaseAmendmentsTests
 
     private static JsonObject Vector(string name) =>
         Vectors["vectors"]!.AsArray().Single(vector => (string)vector!["name"]! == name)!.AsObject();
+
+    /// <summary>The options of a vector that bound a game version, the loader or a dependency, as a change.</summary>
+    private static ReleaseChange ChangeOf(JsonObject options)
+    {
+        Assert.All(options, option => Assert.Contains(option.Key, (string[])["game-min", "game-max", "loader-min", "loader-max", "dependency-min", "dependency-max"]));
+        IEnumerable<ReleaseDependencyBounds> Bounds(string option, bool min) => options[option]?.AsArray().Select(bound => ((string)bound!).Split('='))
+            .Select(pair => new ReleaseDependencyBounds(pair[0], min ? pair[1] : null, min ? null : pair[1])) ?? [];
+
+        return new ReleaseChange
+        {
+            GameMin = (string?)options["game-min"],
+            GameMax = (string?)options["game-max"],
+            LoaderMin = (string?)options["loader-min"],
+            LoaderMax = (string?)options["loader-max"],
+            DependencyBounds = [.. Bounds("dependency-min", min: true), .. Bounds("dependency-max", min: false)],
+        };
+    }
 
     /// <summary>The same release file for another version.</summary>
     private static string Version(string text, string version) =>

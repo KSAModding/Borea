@@ -1,4 +1,6 @@
 using Borea.App.ViewModels;
+using Borea.Composition;
+using Borea.Core.Game;
 using Borea.Core.Stewardship;
 
 namespace Borea.App.Tests.ViewModels;
@@ -99,6 +101,166 @@ public sealed class ReleaseAmendmentViewModelTests
         Assert.False(dialog.CanOpen);
         await dialog.PreviewCommand.ExecuteAsync(null);
         Assert.Same(ReleaseSelection.All, _amendments.Previewed[^1].Selection);
+    }
+
+    [Fact]
+    public async Task OnBehalfOfTheAuthor_AsksForTheLinkToTheRequest_WhichTheRequestCarriesWithTheNewKinds()
+    {
+        const string Link = "https://github.com/KSAModding/content-index/issues/42#issuecomment-7";
+        using var harness = await CreateAsync();
+        var localization = harness.Localization;
+        var dialog = await OpenDialogAsync(harness.ViewModel);
+        dialog.Versions[0].IsSelected = true;
+        dialog.GameMax = "2026.9.22.5482";
+        dialog.BoundDependencyCommand.Execute(null);
+        var row = dialog.Dependencies[0];
+        row.Id = "KittenExtensions";
+        dialog.Reason = "The author tested the new build.";
+        Assert.True(dialog.CanPreview);
+        Assert.Equal((localization.StewardAmendGameMax, localization.StewardAmendBoundDependency, false), (dialog.GameMaxLabel, dialog.BoundDependencyLabel, row.CanChangeKind));
+
+        dialog.OnBehalfOfAuthor = true;
+
+        Assert.False(dialog.CanPreview);
+        Assert.Null(dialog.InvalidAuthorRequestText);
+        Assert.Equal((localization.StewardAmendGameMaxAuthor, localization.StewardAmendBoundDependencyAuthor, true), (dialog.GameMaxLabel, dialog.BoundDependencyLabel, row.CanChangeKind));
+        Assert.Equal((localization.StewardAmendGameMinAuthor, localization.StewardAmendLoaderMinAuthor, localization.StewardAmendLoaderMaxAuthor), (dialog.GameMinLabel, dialog.LoaderMinLabel, dialog.LoaderMaxLabel));
+        Assert.Equal(localization.StewardAmendDependenciesHintAuthor, dialog.DependenciesHint);
+
+        dialog.AuthorRequest = "github.com/KSAModding/content-index/issues/42";
+
+        Assert.Equal(localization.StewardAmendInvalidAuthorRequest, dialog.InvalidAuthorRequestText);
+        Assert.False(dialog.CanPreview);
+
+        dialog.AuthorRequest = $" {Link} ";
+        row.NewKind = "required";
+        await dialog.PreviewCommand.ExecuteAsync(null);
+
+        var request = Assert.Single(_amendments.Previewed);
+        Assert.Null(dialog.InvalidAuthorRequestText);
+        Assert.Equal((Link, ReleaseAmender.Owner), (request.AuthorRequest, request.Amender));
+        Assert.Equal([new ReleaseDependencyKind("KittenExtensions", "required")], request.Change.DependencyKinds);
+        Assert.Empty(request.Change.DependencyBounds);
+        Assert.True(dialog.CanOpen);
+
+        dialog.OnBehalfOfAuthor = false;
+
+        Assert.Null(dialog.Preview);
+        Assert.False(row.CanChangeKind);
+        Assert.Equal(localization.StewardAmendGameMax, dialog.GameMaxLabel);
+        await dialog.PreviewCommand.ExecuteAsync(null);
+        Assert.Equal((null, ReleaseAmender.Steward), (_amendments.Previewed[^1].AuthorRequest, _amendments.Previewed[^1].Amender));
+        Assert.Empty(_amendments.Previewed[^1].Change.DependencyKinds);
+    }
+
+    /// <summary>
+    /// A row of a stated dependency changes its bounds or its kind and never takes it out of the release, so a dependency that the
+    /// archive's mod.toml declares stays. Removing the row only takes the change out of the form.
+    /// </summary>
+    [Fact]
+    public async Task ADerivedDependency_IsNotRemovedByTheForm_AndKeepsItsEntryWithTheNewKind()
+    {
+        const string Release = "{\n  \"spec_version\": 1,\n  \"id\": \"MeasureTools\",\n  \"type\": \"mod\",\n  \"version\": \"1.2.0\",\n  \"game_min\": \"2026.8.3.5117\",\n  \"game_min_revision\": 5117,\n"
+            + "  \"dependencies\": [\n    {\n      \"id\": \"KittenExtensions\",\n      \"kind\": \"optional\",\n      \"source\": \"derived\"\n    }\n  ]\n}\n";
+        using var harness = await CreateAsync();
+        var dialog = await OpenDialogAsync(harness.ViewModel);
+        dialog.Versions[0].IsSelected = true;
+        dialog.OnBehalfOfAuthor = true;
+        dialog.AuthorRequest = "https://github.com/KSAModding/content-index/issues/42";
+        dialog.BoundDependencyCommand.Execute(null);
+        dialog.BoundDependencyCommand.Execute(null);
+        dialog.Dependencies[0].Id = "KittenExtensions";
+        dialog.Dependencies[0].NewKind = "recommends";
+        dialog.Dependencies[1].Id = "KittenExtensions";
+        dialog.Dependencies[1].Max = "0.9.0";
+        dialog.Reason = "The author asks for it.";
+
+        dialog.Dependencies[1].RemoveCommand.Execute(null);
+        var request = dialog.Request;
+        var amended = ReleaseAmendment.Create(request.Amendment, ["2026.8.3.5117"], DateTimeOffset.UtcNow)
+            .Apply(ReleaseAmendment.PathOf("MeasureTools", "1.2.0"), Release, request.Amender);
+
+        Assert.Single(dialog.Dependencies);
+        Assert.Empty(request.Change.DependencyBounds);
+        Assert.Contains("\"id\": \"KittenExtensions\",\n      \"kind\": \"recommends\",\n      \"source\": \"authored\"", amended?.Text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task OnBehalfOfTheAuthor_TheOtherRowsOfTheTable_GoIntoTheRequest_AndEndWithIt()
+    {
+        using var harness = await CreateAsync();
+        var dialog = await OpenDialogAsync(harness.ViewModel);
+        dialog.Versions[0].IsSelected = true;
+        dialog.OnBehalfOfAuthor = true;
+        dialog.AuthorRequest = "https://github.com/KSAModding/content-index/issues/42";
+        dialog.Reason = "The author asks for it.";
+        dialog.GameMax = "2026.9.22.5482";
+        dialog.LoaderMin = "0.4.6";
+        dialog.Yank = true;
+        dialog.BoundDependencyCommand.Execute(null);
+        var row = dialog.Dependencies[0];
+        row.Id = "Lib";
+        row.Min = "2.1.0";
+        row.Max = "3.0.0";
+
+        dialog.RemoveGameMax = true;
+        dialog.RemoveLoaderMin = true;
+        dialog.RemoveLoaderMax = true;
+        dialog.Unyank = true;
+        dialog.ChangeOs = true;
+        dialog.Platforms.Single(platform => platform.Name == "linux").IsChecked = true;
+        row.RemoveMax = true;
+        await dialog.PreviewCommand.ExecuteAsync(null);
+
+        Assert.Equal(["windows", "linux", "macos"], dialog.Platforms.Select(platform => platform.Name));
+        Assert.False(dialog.Yank);
+        var change = Assert.Single(_amendments.Previewed).Change;
+        Assert.Equal((true, null, true, false), (change.RemoveGameMax, change.GameMax, change.Unyank, change.Yank));
+        Assert.Equal((true, null, true), (change.RemoveLoaderMin, change.LoaderMin, change.RemoveLoaderMax));
+        Assert.Equal(["linux"], change.Os!);
+        Assert.Equal([new ReleaseDependencyBounds("Lib", "2.1.0", null)], change.DependencyBounds);
+        Assert.Equal([new ReleaseDependencyBoundRemoval("Lib", false, true)], change.RemovedDependencyBounds);
+
+        dialog.Platforms.Single(platform => platform.Name == "linux").IsChecked = false;
+        await dialog.PreviewCommand.ExecuteAsync(null);
+
+        Assert.Empty(_amendments.Previewed[^1].Change.Os!);
+
+        dialog.OnBehalfOfAuthor = false;
+
+        Assert.Equal((false, false, false, false, false), (dialog.RemoveGameMax, dialog.Unyank, dialog.ChangeOs, dialog.RemoveLoaderMin, dialog.RemoveLoaderMax));
+        Assert.Equal((false, false), (row.RemoveMin, row.RemoveMax));
+        await dialog.PreviewCommand.ExecuteAsync(null);
+        change = _amendments.Previewed[^1].Change;
+        Assert.Equal((false, "2026.9.22.5482", false, null, "0.4.6"), (change.RemoveGameMax, change.GameMax, change.Unyank, change.Os, change.LoaderMin));
+        Assert.Empty(change.RemovedDependencyBounds);
+        Assert.Equal([new ReleaseDependencyBounds("Lib", "2.1.0", "3.0.0")], change.DependencyBounds);
+    }
+
+    [Fact]
+    public async Task ANewKind_GoesBackToTheKindThatTheReleasesState()
+    {
+        using var harness = await CreateAsync();
+        var dialog = await OpenDialogAsync(harness.ViewModel);
+        dialog.Versions[0].IsSelected = true;
+        dialog.OnBehalfOfAuthor = true;
+        dialog.AuthorRequest = "https://github.com/KSAModding/content-index/issues/42";
+        dialog.Reason = "The author asks for it.";
+        dialog.BoundDependencyCommand.Execute(null);
+        var row = dialog.Dependencies[0];
+        row.Id = "KittenExtensions";
+        row.Max = "0.9.0";
+        row.NewKind = "required";
+        Assert.True(row.HasNewKind);
+
+        row.KeepKindCommand.Execute(null);
+        await dialog.PreviewCommand.ExecuteAsync(null);
+
+        Assert.Null(row.NewKind);
+        Assert.False(row.HasNewKind);
+        var change = Assert.Single(_amendments.Previewed).Change;
+        Assert.Empty(change.DependencyKinds);
+        Assert.Equal([new ReleaseDependencyBounds("KittenExtensions", null, "0.9.0")], change.DependencyBounds);
     }
 
     [Fact]
@@ -238,6 +400,213 @@ public sealed class ReleaseAmendmentViewModelTests
         Assert.False(viewModel.CanAmendContentReleases);
     }
 
+    [Fact]
+    public async Task TheGameFields_OfferTheKnownBuildsNewestFirst_TheInstalledOneMarked_AndTheLoaderFieldsItsReleases()
+    {
+        _amendments.GameVersions.AddRange(["2026.9.7.5402", "2026.10.7.5541"]);
+        using var harness = await CreateAsync(installedGame: true);
+        var dialog = await OpenDialogAsync(harness.ViewModel);
+
+        var revisions = dialog.GameMinChoices.Select(choice => GameVersion.TryParse(choice.Value, out var build) ? build.Revision : -1).ToList();
+        Assert.Equal(["2026.10.7.5541", "2026.9.7.5402", "2026.8.22.5348"], dialog.GameMinChoices.Take(3).Select(choice => choice.Value));
+        Assert.Equal(revisions.Distinct().OrderDescending(), revisions);
+        Assert.Equal(dialog.GameMinChoices, dialog.GameMaxChoices);
+        var installed = Assert.Single(dialog.GameMinChoices, choice => choice.HasNote);
+        Assert.Equal(("2026.8.3.5117", harness.Localization.DiscoverInstalled), (installed.Value, installed.Note));
+        Assert.Equal(["0.4.6"], dialog.LoaderMinChoices.Select(choice => choice.Value));
+        Assert.Equal(dialog.LoaderMinChoices, dialog.LoaderMaxChoices);
+        Assert.True(dialog.HasGameVersions && dialog.HasLoaderVersions);
+        Assert.DoesNotContain(dialog.GameMinChoices, choice => choice.IsNow);
+        Assert.Equal("2026.10.7.5541", dialog.GameMinChoices[0].ToString());
+    }
+
+    [Fact]
+    public async Task ADependencyRow_OffersTheStatedIdsFirst_ThenTheListedModsThatMatch_AndTheReleasesOfTheNamedMod()
+    {
+        _amendments.Texts["1.2.0"] = FakeReleaseAmendments.Stamped("MeasureTools", "1.2.0", "2026.9.7.5402");
+        using var harness = await CreateAsync();
+        var dialog = await OpenDialogAsync(harness.ViewModel);
+        dialog.Versions[0].IsSelected = true;
+        dialog.BoundDependencyCommand.Execute(null);
+        var row = dialog.Dependencies[0];
+
+        Assert.Equal(["KittenExtensions", "AdvancedFlightComputer", "KSArmory"], row.IdChoices.Select(choice => choice.Value));
+        Assert.Equal(
+            [harness.Localization.FormatStewardAmendStated("optional"), "Advanced Flight Computer", string.Empty],
+            row.IdChoices.Select(choice => choice.Note));
+        Assert.Empty(row.MinVersions);
+        Assert.False(row.HasVersions);
+
+        row.Id = "ksa";
+
+        Assert.Equal(["KittenExtensions", "KSArmory"], row.IdChoices.Select(choice => choice.Value));
+
+        row.Id = "AdvancedFlightComputer";
+
+        Assert.Equal(["KittenExtensions", "AdvancedFlightComputer", "KSArmory"], row.IdChoices.Select(choice => choice.Value));
+        Assert.Equal(["0.7.5", "0.7.4", "0.7.3", "0.7.2"], row.MinVersions.Select(choice => choice.Value));
+        Assert.Equal(row.MinVersions, row.MaxVersions);
+        Assert.True(row.HasVersions);
+
+        dialog.AddMissingDependencyCommand.Execute(null);
+
+        Assert.Equal(["AdvancedFlightComputer", "KSArmory"], dialog.Dependencies[1].IdChoices.Select(choice => choice.Value));
+    }
+
+    [Fact]
+    public async Task EachField_SaysWhatTheCheckedReleasesStateNow_AndWhenTheyDiffer()
+    {
+        _amendments.Texts["1.2.0"] = FakeReleaseAmendments.Stamped("MeasureTools", "1.2.0", "2026.9.7.5402");
+        _amendments.Texts["1.1.0"] = FakeReleaseAmendments.Stamped("MeasureTools", "1.1.0", "2026.9.7.5402");
+        _amendments.Texts["1.0.0"] = FakeReleaseAmendments.Stamped("MeasureTools", "1.0.0", null);
+        _amendments.GameVersions.Add("2026.9.7.5402");
+        using var harness = await CreateAsync();
+        var dialog = await OpenDialogAsync(harness.ViewModel);
+        dialog.BoundDependencyCommand.Execute(null);
+        var row = dialog.Dependencies[0];
+        row.Id = "kittenextensions";
+
+        Assert.False(dialog.GameMaxHint.HasNow);
+        Assert.False(row.IdHint.HasNow);
+        Assert.True(dialog.NeedsSelectionForValues);
+
+        dialog.Versions[0].IsSelected = true;
+
+        Assert.False(dialog.NeedsSelectionForValues);
+        Assert.Equal(("Now: 2026.8.19.5261", "Now: 2026.9.7.5402"), (dialog.GameMinHint.Now, dialog.GameMaxHint.Now));
+        Assert.Equal(("Now: 0.4.5", "Now: not set"), (dialog.LoaderMinHint.Now, dialog.LoaderMaxHint.Now));
+        Assert.Equal(("In the release: optional", "Now: not set", "Now: not set"), (row.IdHint.Now, row.MinHint.Now, row.MaxHint.Now));
+        var marked = Assert.Single(dialog.GameMaxChoices, choice => choice.IsNow);
+        Assert.Equal(("2026.9.7.5402", "Now"), (marked.Value, marked.NowMark));
+        Assert.DoesNotContain(dialog.GameMinChoices, choice => choice.Value == "2026.9.7.5402" && choice.IsNow);
+
+        dialog.Versions[1].IsSelected = true;
+
+        Assert.Equal("Now: 2026.9.7.5402", dialog.GameMaxHint.Now);
+        Assert.Single(dialog.GameMaxChoices, choice => choice.IsNow);
+
+        dialog.Versions[2].IsSelected = true;
+
+        Assert.Equal("Now the releases differ: 2026.9.7.5402 (1.2.0, 1.1.0); not set (1.0.0)", dialog.GameMaxHint.Now);
+        Assert.Equal("Now: 2026.8.19.5261", dialog.GameMinHint.Now);
+        Assert.DoesNotContain(dialog.GameMaxChoices, choice => choice.IsNow);
+
+        dialog.IsScopeUpTo = true;
+        dialog.UpTo = "1.0.0";
+
+        Assert.Equal("Now: not set", dialog.GameMaxHint.Now);
+        Assert.False(dialog.GameMaxHint.HasEffect);
+    }
+
+    [Fact]
+    public async Task ATypedValue_SaysAtOnceWhetherItNarrowsOrWidens_WithTheChecksOfThePreview()
+    {
+        _amendments.Texts["1.2.0"] = FakeReleaseAmendments.Stamped("MeasureTools", "1.2.0", "2026.9.7.5402");
+        using var harness = await CreateAsync();
+        var localization = harness.Localization;
+        var dialog = await OpenDialogAsync(harness.ViewModel);
+        dialog.Versions[0].IsSelected = true;
+
+        dialog.GameMax = "2026.8.22.5348";
+
+        Assert.Equal((localization.StewardAmendNarrows, false), (dialog.GameMaxHint.Effect, dialog.GameMaxHint.NeedsAuthor));
+
+        dialog.GameMax = "2026.10.7.5541";
+
+        Assert.Equal((localization.StewardAmendWidens, true), (dialog.GameMaxHint.Effect, dialog.GameMaxHint.NeedsAuthor));
+        Assert.Equal("Now: 2026.9.7.5402", dialog.GameMaxHint.Now);
+
+        dialog.OnBehalfOfAuthor = true;
+
+        Assert.Equal((localization.StewardAmendWidensOnBehalf, false), (dialog.GameMaxHint.Effect, dialog.GameMaxHint.NeedsAuthor));
+
+        dialog.GameMax = "2026.9.7.5402";
+
+        Assert.Equal(localization.StewardAmendSame, dialog.GameMaxHint.Effect);
+
+        dialog.GameMax = "soon";
+
+        Assert.False(dialog.GameMaxHint.HasEffect);
+
+        dialog.GameMax = "2026.10.7.5541";
+        dialog.RemoveGameMax = true;
+
+        Assert.False(dialog.GameMaxHint.HasEffect);
+
+        dialog.LoaderMin = "0.4.6";
+        dialog.LoaderMax = "0.5.0";
+        dialog.BoundDependencyCommand.Execute(null);
+        var row = dialog.Dependencies[0];
+        row.Id = "KittenExtensions";
+        row.Min = "1.0.0";
+        row.NewKind = "required";
+
+        Assert.Equal(localization.StewardAmendNarrows, dialog.LoaderMinHint.Effect);
+        Assert.Equal(localization.StewardAmendNarrows, dialog.LoaderMaxHint.Effect);
+        Assert.Equal(localization.StewardAmendNarrows, row.MinHint.Effect);
+        Assert.Equal(localization.StewardAmendWidensOnBehalf, row.KindHint.Effect);
+
+        dialog.LoaderMin = "0.4.0";
+
+        Assert.Equal(localization.StewardAmendWidensOnBehalf, dialog.LoaderMinHint.Effect);
+
+        dialog.AddMissingDependencyCommand.Execute(null);
+        var missing = dialog.Dependencies[1];
+        missing.Id = "KSArmory";
+
+        Assert.Equal((null, localization.StewardAmendNarrows), (missing.IdHint.Now, missing.IdHint.Effect));
+
+        missing.Id = "KittenExtensions";
+
+        Assert.Equal(localization.StewardAmendSame, missing.IdHint.Effect);
+        Assert.Empty(_amendments.Previewed);
+    }
+
+    [Fact]
+    public async Task AnEntryThatTheReleasesDoNotState_SaysSo_InPlaceOfNotSet()
+    {
+        _amendments.Texts["1.2.0"] = FakeReleaseAmendments.Stamped("MeasureTools", "1.2.0", "2026.9.7.5402");
+        using var harness = await CreateAsync();
+        var localization = harness.Localization;
+        var dialog = await OpenDialogAsync(harness.ViewModel);
+        dialog.Versions[1].IsSelected = true;
+        dialog.BoundDependencyCommand.Execute(null);
+        var row = dialog.Dependencies[0];
+        row.Id = "KittenExtensions";
+        row.Min = "1.0.0";
+        dialog.LoaderMin = "0.4.6";
+
+        Assert.Equal("Now: not set", dialog.GameMaxHint.Now);
+        Assert.Equal((false, false), (dialog.LoaderMinHint.HasNow, dialog.LoaderMinHint.HasEffect));
+        Assert.Equal(localization.StewardAmendNotStated, row.IdHint.Now);
+        Assert.Equal((false, false), (row.MinHint.HasNow, row.MinHint.HasEffect));
+
+        dialog.Versions[1].IsSelected = false;
+        dialog.Versions[0].IsSelected = true;
+
+        Assert.Equal(("Now: 0.4.5", localization.StewardAmendNarrows), (dialog.LoaderMinHint.Now, dialog.LoaderMinHint.Effect));
+        Assert.Equal("In the release: optional", row.IdHint.Now);
+        Assert.Equal(("Now: not set", localization.StewardAmendNarrows), (row.MinHint.Now, row.MinHint.Effect));
+    }
+
+    [Fact]
+    public async Task ReleaseFilesThatCannotBeRead_LeaveTheFormAsTyped()
+    {
+        _amendments.FilesFailure = new StewardException(StewardFailure.NetworkError);
+        using var harness = await CreateAsync();
+        var dialog = await OpenDialogAsync(harness.ViewModel);
+        dialog.Versions[0].IsSelected = true;
+        dialog.GameMax = "2026.10.7.5541";
+        dialog.Reason = "The author tested the new build.";
+
+        Assert.Equal((false, false), (dialog.GameMaxHint.HasNow, dialog.GameMaxHint.HasEffect));
+        Assert.Null(dialog.Error);
+        Assert.False(dialog.IsReadingFiles);
+        Assert.True(dialog.CanPreview);
+        Assert.NotEmpty(dialog.GameMinChoices);
+        Assert.False(dialog.NeedsSelectionForValues);
+    }
+
     private static async Task PreviewYankAsync(ReleaseAmendmentDialog dialog, params string[] versions)
     {
         foreach (var version in dialog.Versions.Where(version => versions.Length == 0 ? version.Version == "1.2.0" : versions.Contains(version.Version)))
@@ -255,12 +624,20 @@ public sealed class ReleaseAmendmentViewModelTests
         return viewModel.StewardAmendment;
     }
 
-    private async Task<ViewModelHarness> CreateAsync()
+    /// <param name="installedGame">Whether a game of build 2026.8.3.5117 is set up.</param>
+    private async Task<ViewModelHarness> CreateAsync(bool installedGame = false)
     {
         _session.SignInDirectly();
-        var harness = await ViewModelHarness.CreateAsync(gitHub: _session, releaseAmendments: _amendments);
+        var harness = await ViewModelHarness.CreateAsync(installedGame ? SetUpGameAsync : null, gitHub: _session, releaseAmendments: _amendments);
         await harness.ViewModel.WhenStewardRoleCheckedAsync();
         return harness;
+    }
+
+    private static async Task SetUpGameAsync(BoreaServices services)
+    {
+        var game = Directory.CreateDirectory(Path.Combine(Path.GetDirectoryName(services.Paths.GetBoreaSettingsPath())!, "Game")).FullName;
+        File.Copy(Path.Combine(AppContext.BaseDirectory, "GameVersionFixture.dll"), Path.Combine(game, "KSA.dll"));
+        await services.SettingsRepository.SaveAsync(services.Settings.WithGameDirectory(game));
     }
 
     private static async Task OpenListingAsync(MainViewModel viewModel, string id)

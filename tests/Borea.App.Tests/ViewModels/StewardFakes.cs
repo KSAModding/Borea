@@ -103,6 +103,14 @@ internal sealed class FakeReleaseAmendments : IReleaseAmendments
 
     public Exception? ReleasesFailure { get; set; }
 
+    /// <summary>The text of a release file by version, in place of the one that only says its version.</summary>
+    public Dictionary<string, string> Texts { get; } = [];
+
+    /// <summary>The game release list of the base branch that the release files come with.</summary>
+    public List<string> GameVersions { get; } = [];
+
+    public Exception? FilesFailure { get; set; }
+
     public Exception? PreviewFailure { get; set; }
 
     /// <summary>Thrown by the next open only, as when main changed once.</summary>
@@ -112,6 +120,13 @@ internal sealed class FakeReleaseAmendments : IReleaseAmendments
 
     public Task<IReadOnlyList<string>> ReleasesAsync(string listingId, CancellationToken cancellationToken = default) =>
         ReleasesFailure is { } failure ? Task.FromException<IReadOnlyList<string>>(failure) : Task.FromResult<IReadOnlyList<string>>([.. Releases]);
+
+    public Task<ReleaseFiles> ReleaseFilesAsync(string listingId, CancellationToken cancellationToken = default) =>
+        FilesFailure is { } failure
+            ? Task.FromException<ReleaseFiles>(failure)
+            : Task.FromResult(new ReleaseFiles(
+                [.. Releases.Select(version => new ReleaseFile(version, $"releases/{listingId}/{version}.json", Texts.GetValueOrDefault(version) ?? Text(version, Yanked.Contains(version))))],
+                [.. GameVersions]));
 
     public Task<ReleaseAmendmentPreview> PreviewAsync(ReleaseAmendmentRequest request, CancellationToken cancellationToken = default)
     {
@@ -142,6 +157,33 @@ internal sealed class FakeReleaseAmendments : IReleaseAmendments
             Text(version, Yanked.Contains(version)),
             Yanked.Contains(version) ? null : Text(version, yanked: true))).ToList();
         return new ReleaseAmendmentPreview(request, files, [.. Owners]);
+    }
+
+    /// <summary>A release file as the stamper writes its bounds: StarMap from 0.4.5 and the derived optional KittenExtensions, and game_max only when given.</summary>
+    public static string Stamped(string id, string version, string? gameMax)
+    {
+        var max = gameMax is null ? string.Empty : $"\n  \"game_max\": \"{gameMax}\",\n  \"game_max_revision\": {gameMax[(gameMax.LastIndexOf('.') + 1)..]},";
+        return $$"""
+            {
+              "id": "{{id}}",
+              "version": "{{version}}",
+              "game_min": "2026.8.19.5261",
+              "game_min_revision": 5261,{{max}}
+              "loader": {
+                "id": "StarMap",
+                "min": "0.4.5",
+                "source": "authored"
+              },
+              "dependencies": [
+                {
+                  "id": "KittenExtensions",
+                  "kind": "optional",
+                  "source": "derived"
+                }
+              ]
+            }
+
+            """;
     }
 
     private static string Text(string version, bool yanked) =>
