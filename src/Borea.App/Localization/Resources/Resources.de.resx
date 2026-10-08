@@ -760,7 +760,7 @@
     <value>Releases von {0} ändern</value>
   </data>
   <data name="StewardAmendExplanation" xml:space="preserve">
-    <value>Borea ändert nur, was die gewählten Releases angeben, und öffnet einen Pull Request in KSAModding/content-index-releases. Ein Steward schränkt ein Release nur ein. Der Pull Request wartet in der Warteschlange, bis validate besteht, und ein Steward mergt ihn.</value>
+    <value>Borea ändert nur, was die gewählten Releases angeben, und öffnet einen Pull Request in KSAModding/content-index-releases. Der Pull Request wartet in der Warteschlange, bis validate besteht, und ein Steward mergt ihn.</value>
   </data>
   <data name="StewardAmendLoading" xml:space="preserve">
     <value>Lese die Releases auf GitHub...</value>
@@ -780,11 +780,32 @@
   <data name="StewardAmendChange" xml:space="preserve">
     <value>Änderung</value>
   </data>
+  <data name="StewardAmendOnBehalf" xml:space="preserve">
+    <value>Im Auftrag des Autors</value>
+  </data>
+  <data name="StewardAmendOnBehalfHint" xml:space="preserve">
+    <value>Ein Steward allein schränkt ein Release nur ein. Auf Wunsch des Autors kann die Änderung es auch erweitern, wie der Autor es darf. Der Pull Request nennt den Wunsch, und ein Steward mergt ihn nur, wenn der Wunsch vom Autor kommt.</value>
+  </data>
+  <data name="StewardAmendAuthorRequest" xml:space="preserve">
+    <value>Link zum Wunsch des Autors</value>
+  </data>
+  <data name="StewardAmendInvalidAuthorRequest" xml:space="preserve">
+    <value>Gib einen https-Link zum Wunsch des Autors an, etwa ein Issue oder einen Forenbeitrag.</value>
+  </data>
   <data name="StewardAmendGameMin" xml:space="preserve">
     <value>Niedrigste Spielversion anheben (game_min)</value>
   </data>
+  <data name="StewardAmendGameMinAuthor" xml:space="preserve">
+    <value>Niedrigste Spielversion anheben oder senken (game_min)</value>
+  </data>
   <data name="StewardAmendGameMax" xml:space="preserve">
     <value>Höchste Spielversion setzen oder senken (game_max)</value>
+  </data>
+  <data name="StewardAmendGameMaxAuthor" xml:space="preserve">
+    <value>Höchste Spielversion setzen, anheben oder senken (game_max)</value>
+  </data>
+  <data name="StewardAmendRemoveGameMax" xml:space="preserve">
+    <value>game_max entfernen</value>
   </data>
   <data name="StewardAmendGameHint" xml:space="preserve">
     <value>Ein Spiel-Build wie 2026.8.22.5348 oder ein Monat wie 2026.8, der seinen ersten Build als game_min und seinen letzten Build als game_max ergibt.</value>
@@ -792,11 +813,32 @@
   <data name="StewardAmendLoaderMin" xml:space="preserve">
     <value>Loader-Minimum anheben</value>
   </data>
+  <data name="StewardAmendLoaderMinAuthor" xml:space="preserve">
+    <value>Loader-Minimum anheben oder senken</value>
+  </data>
+  <data name="StewardAmendRemoveLoaderMin" xml:space="preserve">
+    <value>Loader-Minimum entfernen</value>
+  </data>
   <data name="StewardAmendLoaderMax" xml:space="preserve">
     <value>Loader-Maximum setzen oder senken</value>
   </data>
+  <data name="StewardAmendLoaderMaxAuthor" xml:space="preserve">
+    <value>Loader-Maximum setzen, anheben oder senken</value>
+  </data>
+  <data name="StewardAmendRemoveLoaderMax" xml:space="preserve">
+    <value>Loader-Maximum entfernen</value>
+  </data>
   <data name="StewardAmendYank" xml:space="preserve">
     <value>Diese Releases zurückziehen</value>
+  </data>
+  <data name="StewardAmendUnyank" xml:space="preserve">
+    <value>Zurückziehen aufheben</value>
+  </data>
+  <data name="StewardAmendChangeOs" xml:space="preserve">
+    <value>Plattformen ändern (os)</value>
+  </data>
+  <data name="StewardAmendOsHint" xml:space="preserve">
+    <value>Hake jede Plattform an, auf der die Releases laufen. Ohne Haken geben die Releases keine Einschränkung an.</value>
   </data>
   <data name="StewardAmendDependencies" xml:space="preserve">
     <value>Abhängigkeiten</value>
@@ -804,11 +846,26 @@
   <data name="StewardAmendDependenciesHint" xml:space="preserve">
     <value>Eine fehlende Abhängigkeit kommt mit ihrer Art dazu. Eine Abhängigkeit, die die Releases angeben, bekommt ein engeres Minimum oder Maximum.</value>
   </data>
+  <data name="StewardAmendDependenciesHintAuthor" xml:space="preserve">
+    <value>Eine fehlende Abhängigkeit kommt mit ihrer Art dazu. Eine Abhängigkeit, die die Releases angeben, bekommt ein neues Minimum, ein neues Maximum oder eine neue Art oder verliert ihr Minimum oder Maximum und bleibt in den Releases.</value>
+  </data>
   <data name="StewardAmendAddDependency" xml:space="preserve">
     <value>Fehlende Abhängigkeit hinzufügen</value>
   </data>
   <data name="StewardAmendBoundDependency" xml:space="preserve">
     <value>Abhängigkeit einschränken</value>
+  </data>
+  <data name="StewardAmendBoundDependencyAuthor" xml:space="preserve">
+    <value>Abhängigkeit ändern</value>
+  </data>
+  <data name="StewardAmendKindUnchanged" xml:space="preserve">
+    <value>Gleiche Art</value>
+  </data>
+  <data name="StewardAmendRemoveMin" xml:space="preserve">
+    <value>Minimum entfernen</value>
+  </data>
+  <data name="StewardAmendRemoveMax" xml:space="preserve">
+    <value>Maximum entfernen</value>
   </data>
   <data name="StewardAmendReasonHint" xml:space="preserve">
     <value>Ein Satz für den Pull Request. Bei einem Zurückziehen sehen ihn auch Spieler.</value>
@@ -856,7 +913,7 @@
     <value>Ein Release gibt diese Abhängigkeit nicht an. Füge sie als fehlende Abhängigkeit hinzu.</value>
   </data>
   <data name="StewardAmendRefusedWidens" xml:space="preserve">
-    <value>Das erweitert ein Release. Ein Steward schränkt ein Release nur ein, und eine Erweiterung kommt vom Besitzer des Eintrags.</value>
+    <value>Das erweitert ein Release. Ein Steward allein schränkt ein Release nur ein. Um es für den Autor zu erweitern, hake Im Auftrag des Autors an und gib den Link zum Wunsch des Autors an.</value>
   </data>
   <data name="StewardAmendRefusedOutsideClass" xml:space="preserve">
     <value>Die Prüfungen von content-index-releases würden diese Änderung ablehnen.</value>

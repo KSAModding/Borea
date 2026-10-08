@@ -65,27 +65,81 @@
                                 </RadioButton>
                             </StackPanel>
 
+                            <!-- on the author's request the amendment may also widen, and the pull request names the request -->
+                            <StackPanel Spacing="8">
+                                <CheckBox IsChecked="{Binding OnBehalfOfAuthor}">
+                                    <TextBlock Classes="body-sm" Text="{Binding Localization.StewardAmendOnBehalf}" />
+                                </CheckBox>
+                                <TextBlock Classes="body-sm secondary" Text="{Binding Localization.StewardAmendOnBehalfHint}" TextWrapping="Wrap" />
+                                <StackPanel Spacing="6" Margin="28,0,0,0" IsVisible="{Binding OnBehalfOfAuthor}">
+                                    <TextBlock Classes="heading-sm" Text="{Binding Localization.StewardAmendAuthorRequest}" TextWrapping="Wrap" />
+                                    <TextBox Classes="field" Text="{Binding AuthorRequest}" PlaceholderText="https://" MaxLength="500" AutomationProperties.Name="{Binding Localization.StewardAmendAuthorRequest}" />
+                                    <TextBlock Classes="body-sm danger" Text="{Binding InvalidAuthorRequestText}" TextWrapping="Wrap" IsVisible="{Binding InvalidAuthorRequestText, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                                </StackPanel>
+                            </StackPanel>
+
                             <StackPanel Spacing="8">
                                 <TextBlock Classes="heading-md heading" Text="{Binding Localization.StewardAmendChange}" />
                                 <Grid ColumnDefinitions="*,16,*" RowDefinitions="Auto,6,Auto,8,Auto,16,Auto,6,Auto">
-                                    <TextBlock Classes="heading-sm" Text="{Binding Localization.StewardAmendGameMin}" TextWrapping="Wrap" />
-                                    <TextBlock Grid.Column="2" Classes="heading-sm" Text="{Binding Localization.StewardAmendGameMax}" TextWrapping="Wrap" />
-                                    <TextBox Grid.Row="2" Classes="field" Text="{Binding GameMin}" PlaceholderText="2026.8.22.5348" AutomationProperties.Name="{Binding Localization.StewardAmendGameMin}" />
-                                    <TextBox Grid.Row="2" Grid.Column="2" Classes="field" Text="{Binding GameMax}" PlaceholderText="2026.8" AutomationProperties.Name="{Binding Localization.StewardAmendGameMax}" />
+                                    <TextBlock Classes="heading-sm" Text="{Binding GameMinLabel}" TextWrapping="Wrap" />
+                                    <TextBlock Grid.Column="2" Classes="heading-sm" Text="{Binding GameMaxLabel}" TextWrapping="Wrap" />
+                                    <TextBox Grid.Row="2" Classes="field" Text="{Binding GameMin}" PlaceholderText="2026.8.22.5348" AutomationProperties.Name="{Binding GameMinLabel}" />
+                                    <StackPanel Grid.Row="2" Grid.Column="2" Spacing="4">
+                                        <TextBox Classes="field" Text="{Binding GameMax}" PlaceholderText="2026.8" IsEnabled="{Binding !RemoveGameMax}" AutomationProperties.Name="{Binding GameMaxLabel}" />
+                                        <CheckBox IsChecked="{Binding RemoveGameMax}" IsVisible="{Binding OnBehalfOfAuthor}">
+                                            <TextBlock Classes="body-sm" Text="{Binding Localization.StewardAmendRemoveGameMax}" />
+                                        </CheckBox>
+                                    </StackPanel>
                                     <TextBlock Grid.Row="4" Grid.ColumnSpan="3" Classes="body-sm secondary" Text="{Binding Localization.StewardAmendGameHint}" TextWrapping="Wrap" />
-                                    <TextBlock Grid.Row="6" Classes="heading-sm" Text="{Binding Localization.StewardAmendLoaderMin}" TextWrapping="Wrap" />
-                                    <TextBlock Grid.Row="6" Grid.Column="2" Classes="heading-sm" Text="{Binding Localization.StewardAmendLoaderMax}" TextWrapping="Wrap" />
-                                    <TextBox Grid.Row="8" Classes="field" Text="{Binding LoaderMin}" AutomationProperties.Name="{Binding Localization.StewardAmendLoaderMin}" />
-                                    <TextBox Grid.Row="8" Grid.Column="2" Classes="field" Text="{Binding LoaderMax}" AutomationProperties.Name="{Binding Localization.StewardAmendLoaderMax}" />
+                                    <TextBlock Grid.Row="6" Classes="heading-sm" Text="{Binding LoaderMinLabel}" TextWrapping="Wrap" />
+                                    <TextBlock Grid.Row="6" Grid.Column="2" Classes="heading-sm" Text="{Binding LoaderMaxLabel}" TextWrapping="Wrap" />
+                                    <StackPanel Grid.Row="8" Spacing="4">
+                                        <TextBox Classes="field" Text="{Binding LoaderMin}" IsEnabled="{Binding !RemoveLoaderMin}" AutomationProperties.Name="{Binding LoaderMinLabel}" />
+                                        <CheckBox IsChecked="{Binding RemoveLoaderMin}" IsVisible="{Binding OnBehalfOfAuthor}">
+                                            <TextBlock Classes="body-sm" Text="{Binding Localization.StewardAmendRemoveLoaderMin}" />
+                                        </CheckBox>
+                                    </StackPanel>
+                                    <StackPanel Grid.Row="8" Grid.Column="2" Spacing="4">
+                                        <TextBox Classes="field" Text="{Binding LoaderMax}" IsEnabled="{Binding !RemoveLoaderMax}" AutomationProperties.Name="{Binding LoaderMaxLabel}" />
+                                        <CheckBox IsChecked="{Binding RemoveLoaderMax}" IsVisible="{Binding OnBehalfOfAuthor}">
+                                            <TextBlock Classes="body-sm" Text="{Binding Localization.StewardAmendRemoveLoaderMax}" />
+                                        </CheckBox>
+                                    </StackPanel>
                                 </Grid>
                                 <CheckBox IsChecked="{Binding Yank}" Margin="0,8,0,0">
                                     <TextBlock Classes="body-sm" Text="{Binding Localization.StewardAmendYank}" />
                                 </CheckBox>
+                                <CheckBox IsChecked="{Binding Unyank}" IsVisible="{Binding OnBehalfOfAuthor}">
+                                    <TextBlock Classes="body-sm" Text="{Binding Localization.StewardAmendUnyank}" />
+                                </CheckBox>
+                                <!-- a change of os names every platform the releases run on, and none removes the restriction -->
+                                <StackPanel Spacing="6" IsVisible="{Binding OnBehalfOfAuthor}">
+                                    <CheckBox IsChecked="{Binding ChangeOs}">
+                                        <TextBlock Classes="body-sm" Text="{Binding Localization.StewardAmendChangeOs}" />
+                                    </CheckBox>
+                                    <StackPanel Spacing="4" Margin="28,0,0,0" IsVisible="{Binding ChangeOs}">
+                                        <TextBlock Classes="body-sm secondary" Text="{Binding Localization.StewardAmendOsHint}" TextWrapping="Wrap" />
+                                        <ItemsControl ItemsSource="{Binding Platforms}">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate>
+                                                    <WrapPanel ItemSpacing="16" LineSpacing="4" />
+                                                </ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate x:DataType="vm:ReleaseAmendmentPlatform">
+                                                    <CheckBox IsChecked="{Binding IsChecked}" AutomationProperties.Name="{Binding Name}">
+                                                        <TextBlock Classes="body-sm" Text="{Binding Name}" />
+                                                    </CheckBox>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </StackPanel>
+                                </StackPanel>
                             </StackPanel>
 
                             <StackPanel Spacing="8">
                                 <TextBlock Classes="heading-md heading" Text="{Binding Localization.StewardAmendDependencies}" />
-                                <TextBlock Classes="body-sm secondary" Text="{Binding Localization.StewardAmendDependenciesHint}" TextWrapping="Wrap" />
+                                <TextBlock Classes="body-sm secondary" Text="{Binding DependenciesHint}" TextWrapping="Wrap" />
                                 <ItemsControl ItemsSource="{Binding Dependencies}">
                                     <ItemsControl.ItemsPanel>
                                         <ItemsPanelTemplate>
@@ -98,8 +152,20 @@
                                                 <WrapPanel ItemSpacing="8" LineSpacing="8">
                                                     <TextBox Classes="field" Width="200" Text="{Binding Id}" PlaceholderText="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ListingId}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ListingId}" />
                                                     <ComboBox Width="150" ItemsSource="{x:Static vm:ReleaseAmendmentDependencyRow.Kinds}" SelectedItem="{Binding Kind}" IsVisible="{Binding IsMissing}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ListingDependencyKind}" />
-                                                    <TextBox Classes="field" Width="120" Text="{Binding Min}" PlaceholderText="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ListingDependencyMin}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ListingDependencyMin}" />
-                                                    <TextBox Classes="field" Width="120" Text="{Binding Max}" PlaceholderText="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ListingDependencyMax}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ListingDependencyMax}" />
+                                                    <StackPanel Orientation="Horizontal" Spacing="4" IsVisible="{Binding CanChangeKind}">
+                                                        <ComboBox Width="150" ItemsSource="{x:Static vm:ReleaseAmendmentDependencyRow.Kinds}" SelectedItem="{Binding NewKind}" PlaceholderText="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.StewardAmendKindUnchanged}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ListingDependencyKind}" />
+                                                        <Button Classes="icon" Command="{Binding KeepKindCommand}" IsVisible="{Binding HasNewKind}" VerticalAlignment="Center" ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.StewardAmendKindUnchanged}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.StewardAmendKindUnchanged}">
+                                                            <Path Classes="icon size-16" Data="{StaticResource Icon.Close}" />
+                                                        </Button>
+                                                    </StackPanel>
+                                                    <TextBox Classes="field" Width="120" Text="{Binding Min}" IsEnabled="{Binding !RemoveMin}" PlaceholderText="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ListingDependencyMin}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ListingDependencyMin}" />
+                                                    <TextBox Classes="field" Width="120" Text="{Binding Max}" IsEnabled="{Binding !RemoveMax}" PlaceholderText="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ListingDependencyMax}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ListingDependencyMax}" />
+                                                    <CheckBox IsChecked="{Binding RemoveMin}" IsVisible="{Binding CanChangeKind}" VerticalAlignment="Center">
+                                                        <TextBlock Classes="body-sm" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.StewardAmendRemoveMin}" />
+                                                    </CheckBox>
+                                                    <CheckBox IsChecked="{Binding RemoveMax}" IsVisible="{Binding CanChangeKind}" VerticalAlignment="Center">
+                                                        <TextBlock Classes="body-sm" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.StewardAmendRemoveMax}" />
+                                                    </CheckBox>
                                                 </WrapPanel>
                                                 <Button Grid.Column="2" Classes="icon" Command="{Binding RemoveCommand}" VerticalAlignment="Top" ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ListingRemove}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ListingRemove}">
                                                     <Path Classes="icon size-16" Data="{StaticResource Icon.Trash}" />
@@ -118,7 +184,7 @@
                                     <Button Classes="link" Command="{Binding BoundDependencyCommand}">
                                         <StackPanel Orientation="Horizontal" Spacing="6">
                                             <Path Classes="icon size-16" Data="{StaticResource Icon.Plus}" />
-                                            <TextBlock Classes="action-md" Text="{Binding Localization.StewardAmendBoundDependency}" VerticalAlignment="Center" />
+                                            <TextBlock Classes="action-md" Text="{Binding BoundDependencyLabel}" VerticalAlignment="Center" />
                                         </StackPanel>
                                     </Button>
                                 </WrapPanel>

@@ -282,6 +282,11 @@ public sealed class StewardViewsTests
 
         Assert.Contains("Amend releases of MeasureTools", texts);
         Assert.Contains(harness.Localization.StewardAmendExplanation, texts);
+        Assert.Contains(harness.Localization.StewardAmendOnBehalf, texts);
+        Assert.DoesNotContain(harness.Localization.StewardAmendAuthorRequest, texts);
+        Assert.DoesNotContain(harness.Localization.StewardAmendRemoveGameMax, texts);
+        Assert.DoesNotContain(harness.Localization.StewardAmendUnyank, texts);
+        Assert.DoesNotContain(harness.Localization.StewardAmendChangeOs, texts);
         Assert.Contains(harness.Localization.StewardAmendPreviewHeading, texts);
         Assert.Contains("releases/MeasureTools/1.2.0.json", texts);
         Assert.Contains("+  \"yanked\": true", texts);
@@ -290,6 +295,53 @@ public sealed class StewardViewsTests
         Assert.Contains("The pull request mentions @alice, so the owner is told.", texts);
         Assert.Contains("Pull request #1 is open. It waits for a steward to merge it.", texts);
         Assert.Single(_amendments.Opened);
+    }
+
+    [Fact]
+    public async Task ReleaseAmendmentModal_OnBehalfOfTheAuthor_AsksForTheLinkAndOffersANewKind()
+    {
+        using var harness = await CreateAsync();
+        var viewModel = harness.ViewModel;
+        await viewModel.EnsureDiscoverLoadedAsync();
+        await viewModel.OpenContentAsync(viewModel.DiscoverItems.First(item => item.ModId == "MeasureTools"));
+        viewModel.AmendContentReleasesCommand.Execute(null);
+        var dialog = viewModel.StewardAmendment!;
+        await dialog.WhenDoneAsync();
+        dialog.OnBehalfOfAuthor = true;
+        dialog.AuthorRequest = "github.com/issues/1";
+        dialog.BoundDependencyCommand.Execute(null);
+
+        var (texts, kinds) = await HeadlessApp.RunAsync(harness, () =>
+        {
+            var modal = new ReleaseAmendmentModal();
+            var window = new Window { Width = 1280, Height = 832, Content = modal, DataContext = viewModel };
+            window.Show();
+            try
+            {
+                window.UpdateLayout();
+                var shown = modal.GetVisualDescendants().OfType<TextBlock>().Where(text => text.IsEffectivelyVisible).Select(text => text.Text).ToList();
+                var placeholders = modal.GetVisualDescendants().OfType<ComboBox>().Where(box => box.IsEffectivelyVisible).Select(box => box.PlaceholderText).ToList();
+                return Task.FromResult((shown, placeholders));
+            }
+            finally
+            {
+                window.Close();
+            }
+        });
+
+        Assert.Contains(harness.Localization.StewardAmendAuthorRequest, texts);
+        Assert.Contains(harness.Localization.StewardAmendInvalidAuthorRequest, texts);
+        Assert.Contains(harness.Localization.StewardAmendGameMaxAuthor, texts);
+        Assert.Contains(harness.Localization.StewardAmendBoundDependencyAuthor, texts);
+        Assert.Contains(harness.Localization.StewardAmendKindUnchanged, kinds);
+        Assert.Contains(harness.Localization.StewardAmendRemoveGameMax, texts);
+        Assert.Contains(harness.Localization.StewardAmendRemoveLoaderMin, texts);
+        Assert.Contains(harness.Localization.StewardAmendRemoveLoaderMax, texts);
+        Assert.Contains(harness.Localization.StewardAmendUnyank, texts);
+        Assert.Contains(harness.Localization.StewardAmendChangeOs, texts);
+        Assert.Contains(harness.Localization.StewardAmendRemoveMin, texts);
+        Assert.Contains(harness.Localization.StewardAmendRemoveMax, texts);
+        Assert.DoesNotContain(harness.Localization.StewardAmendOsHint, texts);
     }
 
     [Fact]

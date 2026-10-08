@@ -30,6 +30,7 @@ public sealed partial class ReleaseAmendmentDialog : ObservableObject
     {
         _owner = owner;
         ListingId = listingId;
+        Platforms = [.. ReleaseChange.Platforms.Select(platform => new ReleaseAmendmentPlatform(this, platform))];
     }
 
     public string ListingId { get; }
@@ -42,6 +43,9 @@ public sealed partial class ReleaseAmendmentDialog : ObservableObject
     public ObservableCollection<ReleaseAmendmentVersion> Versions { get; } = [];
 
     public ObservableCollection<ReleaseAmendmentDependencyRow> Dependencies { get; } = [];
+
+    /// <summary>The platforms that a change of os can name, on the author's behalf only.</summary>
+    public IReadOnlyList<ReleaseAmendmentPlatform> Platforms { get; }
 
     /// <summary>The changed files of the preview, and the ones that already say this.</summary>
     public ObservableCollection<ReleaseAmendmentFile> Files { get; } = [];
@@ -77,6 +81,38 @@ public sealed partial class ReleaseAmendmentDialog : ObservableObject
 
     [ObservableProperty]
     private bool _yank;
+
+    /// <summary>Whether the steward amends on the author's request, which may also widen the releases (RFC 0079).</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(GameMinLabel))]
+    [NotifyPropertyChangedFor(nameof(GameMaxLabel))]
+    [NotifyPropertyChangedFor(nameof(LoaderMinLabel))]
+    [NotifyPropertyChangedFor(nameof(LoaderMaxLabel))]
+    [NotifyPropertyChangedFor(nameof(DependenciesHint))]
+    [NotifyPropertyChangedFor(nameof(BoundDependencyLabel))]
+    [NotifyPropertyChangedFor(nameof(InvalidAuthorRequestText))]
+    private bool _onBehalfOfAuthor;
+
+    /// <summary>The link to the author's request, which the pull request names.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(InvalidAuthorRequestText))]
+    private string _authorRequest = string.Empty;
+
+    // The changes below widen a release, so the form offers them on the author's behalf only and clears them when that ends.
+    [ObservableProperty]
+    private bool _removeGameMax;
+
+    [ObservableProperty]
+    private bool _unyank;
+
+    [ObservableProperty]
+    private bool _changeOs;
+
+    [ObservableProperty]
+    private bool _removeLoaderMin;
+
+    [ObservableProperty]
+    private bool _removeLoaderMax;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(InvalidReasonText))]
@@ -143,8 +179,26 @@ public sealed partial class ReleaseAmendmentDialog : ObservableObject
 
     public bool CanEdit => !IsPreviewing && !IsOpening && Opened is null;
 
-    /// <summary>A preview needs the releases, a selection, a change and a reason that fits on one line.</summary>
-    public bool CanPreview => CanEdit && !IsLoading && Versions.Count > 0 && Preview is null && HasSelection && HasChange && IndexStatusChange.IsValidReason(Reason);
+    /// <summary>A preview needs the releases, a selection, a change, a reason that fits on one line, and on the author's behalf the link to the request.</summary>
+    public bool CanPreview => CanEdit && !IsLoading && Versions.Count > 0 && Preview is null && HasSelection && HasChange && IndexStatusChange.IsValidReason(Reason)
+        && (!OnBehalfOfAuthor || ReleaseAmendmentRequest.IsValidAuthorRequest(AuthorRequest.Trim()));
+
+    public string GameMinLabel => OnBehalfOfAuthor ? _owner.Localization.StewardAmendGameMinAuthor : _owner.Localization.StewardAmendGameMin;
+
+    public string GameMaxLabel => OnBehalfOfAuthor ? _owner.Localization.StewardAmendGameMaxAuthor : _owner.Localization.StewardAmendGameMax;
+
+    public string LoaderMinLabel => OnBehalfOfAuthor ? _owner.Localization.StewardAmendLoaderMinAuthor : _owner.Localization.StewardAmendLoaderMin;
+
+    public string LoaderMaxLabel => OnBehalfOfAuthor ? _owner.Localization.StewardAmendLoaderMaxAuthor : _owner.Localization.StewardAmendLoaderMax;
+
+    public string DependenciesHint => OnBehalfOfAuthor ? _owner.Localization.StewardAmendDependenciesHintAuthor : _owner.Localization.StewardAmendDependenciesHint;
+
+    public string BoundDependencyLabel => OnBehalfOfAuthor ? _owner.Localization.StewardAmendBoundDependencyAuthor : _owner.Localization.StewardAmendBoundDependency;
+
+    public string? InvalidAuthorRequestText =>
+        OnBehalfOfAuthor && AuthorRequest.Trim().Length > 0 && !ReleaseAmendmentRequest.IsValidAuthorRequest(AuthorRequest.Trim())
+            ? _owner.Localization.StewardAmendInvalidAuthorRequest
+            : null;
 
     public bool CanOpen => CanEdit && Preview is { Changed.Count: > 0 };
 
@@ -166,7 +220,7 @@ public sealed partial class ReleaseAmendmentDialog : ObservableObject
 
     public string? OpenedText => Opened is { } pull ? _owner.Localization.FormatStewardOpened(pull.Number.ToString(CultureInfo.InvariantCulture)) : null;
 
-    internal ReleaseAmendmentRequest Request => new(ListingId, Selection, Change, Reason);
+    internal ReleaseAmendmentRequest Request => new(ListingId, Selection, Change, Reason, OnBehalfOfAuthor ? AuthorRequest.Trim() : null);
 
     private bool HasSelection => Scope switch
     {
@@ -176,7 +230,8 @@ public sealed partial class ReleaseAmendmentDialog : ObservableObject
     };
 
     private bool HasChange =>
-        Yank || Dependencies.Count > 0 || new[] { GameMin, GameMax, LoaderMin, LoaderMax }.Any(value => !string.IsNullOrWhiteSpace(value));
+        Yank || Dependencies.Count > 0 || new[] { GameMin, GameMax, LoaderMin, LoaderMax }.Any(value => !string.IsNullOrWhiteSpace(value))
+        || RemoveGameMax || Unyank || ChangeOs || RemoveLoaderMin || RemoveLoaderMax;
 
     private ReleaseSelection Selection => Scope switch
     {
@@ -185,15 +240,25 @@ public sealed partial class ReleaseAmendmentDialog : ObservableObject
         _ => ReleaseSelection.Of(Versions.Where(version => version.IsSelected).Select(version => version.Version)),
     };
 
+    /// <summary>The change as typed. A bound that is removed ignores the value typed for it, because its field is disabled.</summary>
     private ReleaseChange Change => new()
     {
         GameMin = Typed(GameMin),
-        GameMax = Typed(GameMax),
+        GameMax = RemoveGameMax ? null : Typed(GameMax),
         Yank = Yank,
-        LoaderMin = Typed(LoaderMin),
-        LoaderMax = Typed(LoaderMax),
+        LoaderMin = RemoveLoaderMin ? null : Typed(LoaderMin),
+        LoaderMax = RemoveLoaderMax ? null : Typed(LoaderMax),
         AddedDependencies = [.. Dependencies.Where(row => row.IsMissing).Select(row => new ReleaseDependencyAddition(row.Id, row.Kind))],
-        DependencyBounds = [.. Dependencies.Where(row => Typed(row.Min) is not null || Typed(row.Max) is not null).Select(row => new ReleaseDependencyBounds(row.Id, Typed(row.Min), Typed(row.Max)))],
+        DependencyBounds = [.. Dependencies.Where(row => row.TypedMin is not null || row.TypedMax is not null).Select(row => new ReleaseDependencyBounds(row.Id, row.TypedMin, row.TypedMax))],
+        DependencyKinds = OnBehalfOfAuthor
+            ? [.. Dependencies.Where(row => !row.IsMissing && row.NewKind is not null).Select(row => new ReleaseDependencyKind(row.Id, row.NewKind!))]
+            : [],
+        RemoveGameMax = RemoveGameMax,
+        Unyank = Unyank,
+        Os = ChangeOs ? [.. Platforms.Where(platform => platform.IsChecked).Select(platform => platform.Name)] : null,
+        RemoveLoaderMin = RemoveLoaderMin,
+        RemoveLoaderMax = RemoveLoaderMax,
+        RemovedDependencyBounds = [.. Dependencies.Where(row => !row.IsMissing && (row.RemoveMin || row.RemoveMax)).Select(row => new ReleaseDependencyBoundRemoval(row.Id, row.RemoveMin, row.RemoveMax))],
     };
 
     internal Task WhenDoneAsync() => _run;
@@ -223,7 +288,45 @@ public sealed partial class ReleaseAmendmentDialog : ObservableObject
 
     partial void OnLoaderMaxChanged(string value) => Edited();
 
-    partial void OnYankChanged(bool value) => Edited();
+    partial void OnYankChanged(bool value)
+    {
+        if (value)
+            Unyank = false;
+        Edited();
+    }
+
+    partial void OnUnyankChanged(bool value)
+    {
+        if (value)
+            Yank = false;
+        Edited();
+    }
+
+    partial void OnRemoveGameMaxChanged(bool value) => Edited();
+
+    partial void OnChangeOsChanged(bool value) => Edited();
+
+    partial void OnRemoveLoaderMinChanged(bool value) => Edited();
+
+    partial void OnRemoveLoaderMaxChanged(bool value) => Edited();
+
+    partial void OnOnBehalfOfAuthorChanged(bool value)
+    {
+        if (!value)
+        {
+            RemoveGameMax = false;
+            Unyank = false;
+            ChangeOs = false;
+            RemoveLoaderMin = false;
+            RemoveLoaderMax = false;
+        }
+
+        foreach (var row in Dependencies)
+            row.OnBehalfChanged(value);
+        Edited();
+    }
+
+    partial void OnAuthorRequestChanged(string value) => Edited();
 
     partial void OnReasonChanged(string value) => Edited();
 
@@ -422,7 +525,10 @@ public sealed partial class ReleaseAmendmentVersion(ReleaseAmendmentDialog dialo
     partial void OnIsSelectedChanged(bool value) => dialog.Edited();
 }
 
-/// <summary>A dependency that was missing, with its kind, or a dependency that the releases state, with tighter bounds.</summary>
+/// <summary>
+/// A dependency that was missing, with its kind, or a dependency that the releases state, with new bounds, and on the author's behalf a new kind or a removed bound.
+/// No row removes a stated dependency, because one that the archive's mod.toml declares stays in the release.
+/// </summary>
 public sealed partial class ReleaseAmendmentDependencyRow : ObservableObject
 {
     private readonly ReleaseAmendmentDialog _dialog;
@@ -437,6 +543,28 @@ public sealed partial class ReleaseAmendmentDependencyRow : ObservableObject
 
     /// <summary>Whether the row adds an entry that the releases do not state, which needs a kind.</summary>
     public bool IsMissing { get; }
+
+    /// <summary>Whether the row offers a new kind and the removal of a bound for a stated entry, which only the author makes.</summary>
+    public bool CanChangeKind => !IsMissing && _dialog.OnBehalfOfAuthor;
+
+    /// <summary>The new kind of a stated entry, or null to keep its kind.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasNewKind))]
+    private string? _newKind;
+
+    [ObservableProperty]
+    private bool _removeMin;
+
+    [ObservableProperty]
+    private bool _removeMax;
+
+    public bool HasNewKind => NewKind is not null;
+
+    /// <summary>The min as typed, or null when it is empty or removed.</summary>
+    internal string? TypedMin => RemoveMin || string.IsNullOrWhiteSpace(Min) ? null : Min.Trim();
+
+    /// <summary>The max as typed, or null when it is empty or removed.</summary>
+    internal string? TypedMax => RemoveMax || string.IsNullOrWhiteSpace(Max) ? null : Max.Trim();
 
     [ObservableProperty]
     private string _id = string.Empty;
@@ -458,8 +586,43 @@ public sealed partial class ReleaseAmendmentDependencyRow : ObservableObject
 
     partial void OnMaxChanged(string value) => _dialog.Edited();
 
+    partial void OnNewKindChanged(string? value) => _dialog.Edited();
+
+    partial void OnRemoveMinChanged(bool value) => _dialog.Edited();
+
+    partial void OnRemoveMaxChanged(bool value) => _dialog.Edited();
+
+    /// <summary>Clears what only the author changes once the amendment is no longer on the author's behalf.</summary>
+    internal void OnBehalfChanged(bool onBehalf)
+    {
+        if (!onBehalf)
+        {
+            NewKind = null;
+            RemoveMin = false;
+            RemoveMax = false;
+        }
+
+        OnPropertyChanged(nameof(CanChangeKind));
+    }
+
+    /// <summary>Goes back to the kind that the releases state.</summary>
+    [RelayCommand]
+    private void KeepKind() => NewKind = null;
+
     [RelayCommand]
     private void Remove() => _dialog.Remove(this);
+}
+
+/// <summary>One platform of a change of os, which the steward checks when the releases run on it.</summary>
+public sealed partial class ReleaseAmendmentPlatform(ReleaseAmendmentDialog dialog, string name) : ObservableObject
+{
+    /// <summary>The platform as a release file writes it, such as "linux".</summary>
+    public string Name { get; } = name;
+
+    [ObservableProperty]
+    private bool _isChecked;
+
+    partial void OnIsCheckedChanged(bool value) => dialog.Edited();
 }
 
 /// <summary>One selected release file of the preview, with its diff, or the note that it already says this.</summary>
