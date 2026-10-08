@@ -231,6 +231,12 @@
   <data name="StewardWatcherListingsEmpty" xml:space="preserve">
     <value>The lookout spies no trouble on any bounty.</value>
   </data>
+  <data name="StewardWatcherGone" xml:space="preserve">
+    <value>Bounties lost at sea</value>
+  </data>
+  <data name="StewardWatcherGoneEmpty" xml:space="preserve">
+    <value>No bounty be lost at sea.</value>
+  </data>
   <data name="StewardTabStatus" xml:space="preserve">
     <value>Flags</value>
   </data>

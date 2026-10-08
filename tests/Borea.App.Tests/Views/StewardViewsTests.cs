@@ -152,7 +152,75 @@ public sealed class StewardViewsTests
         Assert.Contains(harness.Localization.StewardWatcherUnknownListing, texts);
         Assert.Contains(viewModel.StewardWatcherFailureText(_watcher.Failures[0]), texts);
         Assert.DoesNotContain(harness.Localization.StewardWatcherListingsEmpty, texts);
+        Assert.Contains(harness.Localization.StewardWatcherGone, texts);
+        Assert.Contains(harness.Localization.StewardWatcherGoneEmpty, texts);
         Assert.DoesNotContain(harness.Localization.StewardQueueHint, texts);
+    }
+
+    [Fact]
+    public async Task WatcherTab_ShowsEachReleaseGoneFromItsHost_WithItsListingAndDate()
+    {
+        using var harness = await CreateAsync(ViewModelHarness.MarkGone("MeasureTools", "1.1.9"));
+        var viewModel = harness.ViewModel;
+        viewModel.OpenStewardPageCommand.Execute(null);
+        await viewModel.StewardPage.Queue.WhenLoadedAsync();
+        await viewModel.StewardPage.ShowWatcherCommand.ExecuteAsync(null);
+        var name = viewModel.DiscoverItems.First(item => item.ModId == "MeasureTools").Name;
+
+        var texts = await HeadlessApp.RunAsync(harness, () =>
+        {
+            var window = new Window { Width = 1280, Height = 832, Content = new StewardPageView(), DataContext = viewModel };
+            window.Show();
+            try
+            {
+                window.UpdateLayout();
+                return Task.FromResult(window.GetVisualDescendants().OfType<TextBlock>().Where(text => text.IsEffectivelyVisible).Select(text => text.Text).ToList());
+            }
+            finally
+            {
+                window.Close();
+            }
+        });
+
+        Assert.Contains(harness.Localization.StewardWatcherGone, texts);
+        Assert.Contains(harness.Localization.StewardWatcherGoneHint, texts);
+        Assert.Contains(name, texts);
+        Assert.Contains("1.1.9", texts);
+        Assert.Contains(harness.Localization.FormatContentVersionGone(Borea.App.ViewModels.MainViewModel.DateText(ViewModelHarness.GoneSince)), texts);
+        Assert.DoesNotContain("1.1.10", texts);
+        Assert.DoesNotContain(harness.Localization.StewardWatcherGoneEmpty, texts);
+    }
+
+    [Fact]
+    public async Task WatcherTab_ShowsAGoneListingWithoutAContentPage_ByItsIdWithoutALink()
+    {
+        using var harness = await CreateAsync(ViewModelHarness.WithoutAuthored("MeasureTools", ViewModelHarness.MarkGone("MeasureTools", "1.1.9")));
+        var viewModel = harness.ViewModel;
+        viewModel.OpenStewardPageCommand.Execute(null);
+        await viewModel.StewardPage.Queue.WhenLoadedAsync();
+        await viewModel.StewardPage.ShowWatcherCommand.ExecuteAsync(null);
+
+        var (texts, linked) = await HeadlessApp.RunAsync(harness, () =>
+        {
+            var window = new Window { Width = 1280, Height = 832, Content = new StewardPageView(), DataContext = viewModel };
+            window.Show();
+            try
+            {
+                window.UpdateLayout();
+                var visible = window.GetVisualDescendants().OfType<TextBlock>().Where(text => text.IsEffectivelyVisible).ToList();
+                return Task.FromResult((
+                    visible.Select(text => text.Text).ToList(),
+                    visible.Where(text => text.FindAncestorOfType<Button>() is not null).Select(text => text.Text).ToList()));
+            }
+            finally
+            {
+                window.Close();
+            }
+        });
+
+        Assert.Contains("MeasureTools", texts);
+        Assert.DoesNotContain("MeasureTools", linked);
+        Assert.Contains("1.1.9", texts);
     }
 
     [Fact]
@@ -479,10 +547,10 @@ public sealed class StewardViewsTests
         Assert.Equal(("Comment", "Is MyMod the right id?"), (Assert.Single(_actions.Sent).Action, _actions.Sent[0].Text));
     }
 
-    private async Task<ViewModelHarness> CreateAsync()
+    private async Task<ViewModelHarness> CreateAsync(Func<string, string>? editSnapshot = null)
     {
         _session.SignInDirectly();
-        var harness = await ViewModelHarness.CreateAsync(gitHub: _session, indexStatusEditor: _editor, stewardQueue: _queue, watcherIssues: _watcher, pullRequestReviews: _reviews, pullRequestActions: _actions, indexReports: _reports, releaseAmendments: _amendments);
+        var harness = await ViewModelHarness.CreateAsync(editSnapshot: editSnapshot, gitHub: _session, indexStatusEditor: _editor, stewardQueue: _queue, watcherIssues: _watcher, pullRequestReviews: _reviews, pullRequestActions: _actions, indexReports: _reports, releaseAmendments: _amendments);
         await harness.ViewModel.WhenStewardRoleCheckedAsync();
         return harness;
     }

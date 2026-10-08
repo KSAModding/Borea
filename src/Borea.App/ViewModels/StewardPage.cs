@@ -13,7 +13,7 @@ namespace Borea.App.ViewModels;
 /// The Steward page, opened from the GitHub account in Settings. Its Queue tab lists the pull requests that wait for a steward,
 /// and each one opens its review in place of the tabs. Its Reports tab lists the takedown and id dispute reports.
 /// Its Status tab lists the states of index-status.toml on the base branch with Lift on each, which is the only way back
-/// for a delisted listing, because it has no content page. Its Watcher tab lists the issues of the watcher and its watchdog.
+/// for a delisted listing, because it has no content page. Its Watcher tab lists the issues of the watcher and its watchdog, and the releases gone from their host.
 /// A tab reads GitHub when it shows for the first time.
 /// </summary>
 public sealed partial class StewardPage : ObservableObject

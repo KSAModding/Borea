@@ -277,7 +277,7 @@
                         </StackPanel>
                     </StackPanel>
 
-                    <!-- Watcher: the listing issues of the watcher in content-index and the watchdog issue in content-index-releases -->
+                    <!-- Watcher: the listing issues of the watcher in content-index, the watchdog issue in content-index-releases, and the releases gone from their host -->
                     <Panel IsVisible="{Binding IsWatcherTab}">
                         <StackPanel DataContext="{Binding Watcher}" x:DataType="vm:StewardWatcherTab">
                             <TextBlock Classes="body-md secondary" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.StewardWatcherHint}" TextWrapping="Wrap" Margin="0,16,0,0" />
@@ -354,6 +354,45 @@
                                                     </Button>
                                                 </WrapPanel>
                                                 <TextBlock Classes="body-sm secondary" Text="{Binding UpdatedText}" />
+                                            </StackPanel>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+
+                            <!-- the releases that carry download.unavailable_since, by listing and date -->
+                            <TextBlock Classes="heading-sm heading" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.StewardWatcherGone}" Margin="0,32,0,0" />
+                            <TextBlock Classes="body-md secondary" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.StewardWatcherGoneHint}" TextWrapping="Wrap" Margin="0,8,0,0" />
+                            <TextBlock Classes="body-md muted" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.StewardWatcherGoneEmpty}" Margin="0,16,0,0" IsVisible="{Binding IsGoneEmpty}" />
+                            <ItemsControl ItemsSource="{Binding Gone}" Margin="0,16,0,0">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <StackPanel Spacing="8" />
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:StewardGoneListing">
+                                        <Border Classes="card" Padding="24,16">
+                                            <StackPanel Spacing="6">
+                                                <Button Classes="link" Command="{Binding OpenListingCommand}" IsVisible="{Binding CanOpenListing}">
+                                                    <TextBlock Classes="heading-md" Text="{Binding Name}" />
+                                                </Button>
+                                                <TextBlock Classes="heading-md" Text="{Binding Name}" IsVisible="{Binding IsListingUnknown}" />
+                                                <ItemsControl ItemsSource="{Binding Releases}">
+                                                    <ItemsControl.ItemsPanel>
+                                                        <ItemsPanelTemplate>
+                                                            <StackPanel Spacing="4" />
+                                                        </ItemsPanelTemplate>
+                                                    </ItemsControl.ItemsPanel>
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate x:DataType="vm:StewardGoneRelease">
+                                                            <WrapPanel ItemSpacing="12" LineSpacing="4">
+                                                                <TextBlock Classes="body-md" Text="{Binding Version}" VerticalAlignment="Center" />
+                                                                <TextBlock Classes="body-sm secondary" Text="{Binding SinceText}" VerticalAlignment="Center" />
+                                                            </WrapPanel>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
                                             </StackPanel>
                                         </Border>
                                     </DataTemplate>
