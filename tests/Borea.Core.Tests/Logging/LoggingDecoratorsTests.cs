@@ -449,6 +449,8 @@ public sealed class LoggingDecoratorsTests
 
         public Task<ReleaseFiles> ReleaseFilesAsync(string listingId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
 
+        public Task<IReadOnlyList<LocalModDependency>> DeclaredDependenciesAsync(ReleaseFile file, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+
         public Task<ReleaseAmendmentPreview> PreviewAsync(ReleaseAmendmentRequest request, CancellationToken cancellationToken = default) => throw new NotSupportedException();
 
         public Task<ReleaseAmendmentPullRequest> OpenAsync(ReleaseAmendmentPreview preview, CancellationToken cancellationToken = default) =>

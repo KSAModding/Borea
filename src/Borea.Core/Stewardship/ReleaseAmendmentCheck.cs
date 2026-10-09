@@ -8,8 +8,9 @@ namespace Borea.Core.Stewardship;
 
 /// <summary>
 /// The invariant of tools/check_amendment.py for one release file, the published version against the amended one, as
-/// tools/amend.py runs it: without the archive and without the listing. So a change of the release notes, or the removal of an
-/// authored dependency entry, is always refused here. The messages use the words of the Python checks.
+/// tools/amend.py runs it: without the listing, so a change of the release notes is always refused here. The removal of an authored
+/// dependency entry needs what the archive's mod.toml declares, and without it the removal is refused too. The messages use the words
+/// of the Python checks.
 /// </summary>
 internal static partial class ReleaseAmendmentCheck
 {
@@ -36,7 +37,8 @@ internal static partial class ReleaseAmendmentCheck
     /// <param name="path">The path of the file, releases/&lt;id&gt;/&lt;version&gt;.json.</param>
     /// <param name="errors">What the checks reject.</param>
     /// <param name="ownerOnly">What only the verified owner of the listing may change, because it widens the release.</param>
-    public static void Check(string path, JsonObject published, JsonObject amended, List<string> errors, List<string> ownerOnly)
+    /// <param name="derived">The dependency entries that the archive's mod.toml declares, as the stamper derives them, or null when the archive was not read.</param>
+    public static void Check(string path, JsonObject published, JsonObject amended, List<string> errors, List<string> ownerOnly, IReadOnlyList<JsonObject>? derived = null)
     {
         Unknown(amended, TopLevel, path, errors);
         CheckPath(path, amended, errors);
@@ -46,7 +48,7 @@ internal static partial class ReleaseAmendmentCheck
         CheckGameBounds(published, amended, errors, ownerOnly);
         CheckYank(published, amended, errors, ownerOnly);
         CheckLoader(published, amended, errors, ownerOnly);
-        CheckDependencies(published, amended, errors, ownerOnly);
+        CheckDependencies(published, amended, errors, ownerOnly, derived);
     }
 
     private static void Unknown(JsonObject mapping, HashSet<string> allowed, string what, List<string> errors)
@@ -319,7 +321,7 @@ internal static partial class ReleaseAmendmentCheck
             errors.Add($"{what} ends up with max '{Show(max)}' below min '{Show(min)}'");
     }
 
-    private static void CheckDependencies(JsonObject published, JsonObject amended, List<string> errors, List<string> ownerOnly)
+    private static void CheckDependencies(JsonObject published, JsonObject amended, List<string> errors, List<string> ownerOnly, IReadOnlyList<JsonObject>? derived)
     {
         if (amended["dependencies"] is not JsonArray amendedList)
         {
@@ -352,13 +354,18 @@ internal static partial class ReleaseAmendmentCheck
             publishedEntries[EntryKey.Of(entry)] = entry;
 
         var alternatives = amendedEntries.Keys.Where(key => key.AnyOf).SelectMany(key => key.Names).ToHashSet(StringComparer.Ordinal);
-        foreach (var key in publishedEntries.Keys.Where(key => !amendedEntries.ContainsKey(key)).OrderBy(key => key.Sort, StringComparer.Ordinal))
+        var ids = amendedEntries.Keys.Where(key => !key.AnyOf).Select(key => key.Names[0]).ToHashSet(StringComparer.Ordinal);
+        var removed = publishedEntries.Keys.Where(key => !amendedEntries.ContainsKey(key)).ToList();
+
+        // The names of a removed authored any_of entry, whose declared entries come back as derived.
+        var freed = removed.Where(key => key.AnyOf && StringOf(publishedEntries[key]["source"]) == "authored").SelectMany(key => key.Names).ToHashSet(StringComparer.Ordinal);
+        foreach (var key in removed.OrderBy(key => key.Sort, StringComparer.Ordinal))
         {
             var before = publishedEntries[key];
             if (StringOf(before["source"]) != "derived")
             {
                 ownerOnly.Add($"{key.Describe()} is removed, which widens the release");
-                errors.Add($"{key.Describe()} is removed, and the archive was not read, so nothing shows that its mod.toml does not declare it");
+                CheckDeclared(key, ids, alternatives, derived, errors);
             }
             else if (StringOf(before["kind"]) != "optional" || key.AnyOf || !alternatives.Contains(key.Names[0]))
             {
@@ -374,7 +381,8 @@ internal static partial class ReleaseAmendmentCheck
 
             if (!publishedEntries.TryGetValue(key, out var before))
             {
-                if (StringOf(entry["source"]) != "authored")
+                var restored = !key.AnyOf && freed.Contains(key.Names[0]) && derived is not null && derived.Any(declared => JsonNode.DeepEquals(declared, entry));
+                if (StringOf(entry["source"]) != "authored" && !restored)
                     errors.Add($"{what} is added with source '{Show(entry["source"])}', and an added entry is authored");
                 CheckAddedBounds(entry, what, errors);
                 continue;
@@ -385,11 +393,36 @@ internal static partial class ReleaseAmendmentCheck
             if (!entry.ContainsKey("any_of") && !JsonNode.DeepEquals(entry["id"], before["id"]))
                 errors.Add($"{what} is renamed, and an id is not rewritten after publish");
 
-            CheckSource(before, entry, what, errors, ownerOnly);
+            CheckSource(before, entry, what, errors, ownerOnly, derived);
             CompareMin(before["min"], entry["min"], what, errors, ownerOnly);
             CompareMax(before["max"], entry["max"], what, errors, ownerOnly);
             if (entry.ContainsKey("any_of") && before.ContainsKey("any_of"))
                 CheckMembers(before, entry, what, errors, ownerOnly);
+        }
+    }
+
+    /// <summary>
+    /// A removed authored entry may have stood in for one that the archive's mod.toml declares, which stays. An entry of its id keeps it,
+    /// and an any_of entry that names it keeps it only when it is optional, as in the merge of the stamper.
+    /// </summary>
+    private static void CheckDeclared(EntryKey key, HashSet<string> ids, HashSet<string> alternatives, IReadOnlyList<JsonObject>? derived, List<string> errors)
+    {
+        var what = key.Describe();
+        if (derived is null)
+        {
+            errors.Add($"{what} is removed, and the archive was not read, so nothing shows that its mod.toml does not declare it");
+            return;
+        }
+
+        var declared = new Dictionary<string, string?>(StringComparer.Ordinal);
+        foreach (var entry in derived)
+            declared[(StringOf(entry["id"]) ?? string.Empty).ToLowerInvariant()] = StringOf(entry["kind"]);
+        foreach (var name in key.Names.Where(name => declared.ContainsKey(name) && !ids.Contains(name)))
+        {
+            if (!alternatives.Contains(name))
+                errors.Add($"{what} is removed, and the archive's mod.toml declares '{name}', so the release keeps it as a derived entry");
+            else if (declared[name] != "optional")
+                errors.Add($"{what} is removed, and the archive's mod.toml declares '{name}' as required, so an any_of entry cannot take its place");
         }
     }
 
@@ -488,7 +521,7 @@ internal static partial class ReleaseAmendmentCheck
     /// From derived to authored records a bound or a kind that is authored onto the entry. The way back is the owner making it derived again,
     /// exactly as the archive's mod.toml declares it, which needs the archive.
     /// </summary>
-    private static void CheckSource(JsonObject published, JsonObject amended, string what, List<string> errors, List<string> ownerOnly)
+    private static void CheckSource(JsonObject published, JsonObject amended, string what, List<string> errors, List<string> ownerOnly, IReadOnlyList<JsonObject>? derived)
     {
         var before = StringOf(published["source"]);
         var after = StringOf(amended["source"]);
@@ -506,7 +539,10 @@ internal static partial class ReleaseAmendmentCheck
         if (before == "authored" && after == "derived")
         {
             ownerOnly.Add($"{what} changes back to what the archive's mod.toml declares");
-            errors.Add($"{what} turns derived, and the archive was not read to confirm it");
+            if (derived is null)
+                errors.Add($"{what} turns derived, and the archive was not read to confirm it");
+            else if (!derived.Any(declared => JsonNode.DeepEquals(declared, amended)))
+                errors.Add($"{what} turns derived, and the archive's mod.toml does not declare it so");
             return;
         }
 

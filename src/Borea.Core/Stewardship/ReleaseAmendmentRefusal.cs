@@ -29,6 +29,9 @@ public enum ReleaseAmendmentRefusal
 
     /// <summary>The checks of content-index-releases would reject the file, because the change is outside the amendment class of RFC 0031.</summary>
     OutsideClass,
+
+    /// <summary>The change removes an authored dependency entry, and the release archive could not be read to show that its mod.toml does not declare it.</summary>
+    UnreadableArchive,
 }
 
 /// <param name="details">What is wrong, in the words of the checks of content-index-releases where they find it.</param>

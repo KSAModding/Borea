@@ -580,7 +580,7 @@ public sealed class BoreaServices : IDisposable
             ListingOwnership = listingOwnership,
             StewardRole = stewardRole,
             IndexStatusEditor = new LoggingIndexStatusEditor(indexStatusEditor ?? new GitHubIndexStatusEditor(gitHubSession, stewardRole, http, listingFormat), log),
-            ReleaseAmendments = new LoggingReleaseAmendments(releaseAmendments ?? new GitHubReleaseAmendments(gitHubSession, stewardRole, http, listingFormat), log),
+            ReleaseAmendments = new LoggingReleaseAmendments(releaseAmendments ?? new GitHubReleaseAmendments(gitHubSession, stewardRole, http, listingFormat, archives: new ReleaseArchiveReader(downloader)), log),
             StewardQueue = stewardQueue ?? new GitHubStewardQueue(gitHubSession, http),
             PullRequestReviews = pullRequestReviews ?? gitHubPullRequests,
             PullRequestActions = new LoggingPullRequestActions(pullRequestActions ?? gitHubPullRequests, log),

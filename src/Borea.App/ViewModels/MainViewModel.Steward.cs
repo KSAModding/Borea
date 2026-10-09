@@ -224,6 +224,7 @@ public partial class MainViewModel
         ReleaseAmendmentRefusal.NoDependency => Localization.StewardAmendRefusedNoDependency,
         ReleaseAmendmentRefusal.Widens => Localization.StewardAmendRefusedWidens,
         ReleaseAmendmentRefusal.OutsideClass => Localization.StewardAmendRefusedOutsideClass,
+        ReleaseAmendmentRefusal.UnreadableArchive => Localization.StewardAmendRefusedUnreadableArchive,
         _ => Localization.StewardAmendRefusedInvalidChange,
     };
 

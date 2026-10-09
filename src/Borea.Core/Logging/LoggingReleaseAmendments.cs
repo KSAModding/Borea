@@ -1,3 +1,4 @@
+using Borea.Core.Mods;
 using Borea.Core.Stewardship;
 
 namespace Borea.Core.Logging;
@@ -19,6 +20,9 @@ public sealed class LoggingReleaseAmendments : IReleaseAmendments
 
     public Task<ReleaseFiles> ReleaseFilesAsync(string listingId, CancellationToken cancellationToken = default) =>
         Inner.ReleaseFilesAsync(listingId, cancellationToken);
+
+    public Task<IReadOnlyList<LocalModDependency>> DeclaredDependenciesAsync(ReleaseFile file, CancellationToken cancellationToken = default) =>
+        Inner.DeclaredDependenciesAsync(file, cancellationToken);
 
     public Task<ReleaseAmendmentPreview> PreviewAsync(ReleaseAmendmentRequest request, CancellationToken cancellationToken = default) =>
         Inner.PreviewAsync(request, cancellationToken);

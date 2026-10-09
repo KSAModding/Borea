@@ -53,6 +53,12 @@ public sealed record ReleaseChange
 
     /// <summary>Bounds that dependencies the releases state lose, applied after <see cref="DependencyBounds"/>. Only the owner removes a bound (RFC 0079).</summary>
     public IReadOnlyList<ReleaseDependencyBoundRemoval> RemovedDependencyBounds { get; init; } = [];
+
+    /// <summary>
+    /// The ids of dependencies that the listing declared by mistake, which match without regard to case. Only the owner removes one (RFC 0079),
+    /// and only an authored entry, because a dependency that the archive's mod.toml declares stays. A release that does not state it stays as it is.
+    /// </summary>
+    public IReadOnlyList<string> RemovedDependencies { get; init; } = [];
 }
 
 /// <param name="Kind">A dependency kind as a release file writes it, such as "conflict".</param>

@@ -55,7 +55,8 @@ public sealed record ReleaseFileValues(string? GameMin, string? GameMax, Release
         var dependencies = document["dependencies"] is JsonArray list
             ? list.OfType<JsonObject>()
                 .Where(dependency => StringOf(dependency["id"]) is not null)
-                .Select(dependency => new ReleaseFileDependency(StringOf(dependency["id"])!, StringOf(dependency["kind"]) ?? string.Empty, StringOf(dependency["min"]), StringOf(dependency["max"])))
+                .Select(dependency => new ReleaseFileDependency(StringOf(dependency["id"])!, StringOf(dependency["kind"]) ?? string.Empty, StringOf(dependency["min"]), StringOf(dependency["max"]),
+                    StringOf(dependency["source"])))
                 .ToList()
             : [];
         return new ReleaseFileValues(StringOf(document["game_min"]), StringOf(document["game_max"]), loader, dependencies);
@@ -68,4 +69,9 @@ public sealed record ReleaseFileValues(string? GameMin, string? GameMax, Release
 public sealed record ReleaseFileLoader(string Id, string? Min, string? Max);
 
 /// <param name="Kind">The kind as the file writes it, such as "optional".</param>
-public sealed record ReleaseFileDependency(string Id, string Kind, string? Min, string? Max);
+/// <param name="Source">"authored" when the listing declared the entry, "derived" when the stamper took it from the archive's mod.toml.</param>
+public sealed record ReleaseFileDependency(string Id, string Kind, string? Min, string? Max, string? Source = null)
+{
+    /// <summary>Whether the listing declared the entry.</summary>
+    public bool IsAuthored => Source == "authored";
+}

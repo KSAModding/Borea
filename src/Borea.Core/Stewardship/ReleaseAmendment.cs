@@ -37,10 +37,11 @@ public sealed partial class ReleaseAmendment
     private readonly bool _removeLoaderMin;
     private readonly bool _removeLoaderMax;
     private readonly IReadOnlyList<ReleaseDependencyBoundRemoval> _unbounds;
+    private readonly IReadOnlyList<string> _removed;
 
     private ReleaseAmendment(ReleaseChange change, (string, long)? gameMin, (string, long)? gameMax, string? loaderMin, string? loaderMax,
         IReadOnlyList<ReleaseDependencyAddition> added, IReadOnlyList<ReleaseDependencyBounds> bounds, IReadOnlyList<ReleaseDependencyKind> kinds,
-        IReadOnlyList<string>? os, IReadOnlyList<ReleaseDependencyBoundRemoval> unbounds)
+        IReadOnlyList<string>? os, IReadOnlyList<ReleaseDependencyBoundRemoval> unbounds, IReadOnlyList<string> removed)
     {
         _gameMin = gameMin;
         _gameMax = gameMax;
@@ -57,6 +58,7 @@ public sealed partial class ReleaseAmendment
         _removeLoaderMin = change.RemoveLoaderMin;
         _removeLoaderMax = change.RemoveLoaderMax;
         _unbounds = unbounds;
+        _removed = removed;
     }
 
     public static string PathOf(string id, string version)
@@ -92,6 +94,9 @@ public sealed partial class ReleaseAmendment
                 ? new ReleaseDependencyBoundRemoval(id, removal.Min, removal.Max)
                 : throw Invalid($"the bound removal '{removal.Id}' names no dependency or no bound"))
             .ToList();
+        var removed = change.RemovedDependencies.Select(id => id.Trim() is { Length: > 0 } trimmed ? trimmed : throw Invalid("a dependency removal names no dependency"))
+            .Distinct(ModIds.Comparer)
+            .ToList();
         var os = change.Os?.Select(platform => platform.Trim()).ToList();
         var gameMin = Resolve(change.GameMin, "game_min", gameVersions, now);
         var gameMax = Resolve(change.GameMax, "game_max", gameVersions, now);
@@ -111,11 +116,15 @@ public sealed partial class ReleaseAmendment
         if (unbounds.FirstOrDefault(removal => bounds.Any(bound => ModIds.Equals(bound.Id, removal.Id)
                 && ((removal.Min && bound.Min is not null) || (removal.Max && bound.Max is not null)))) is { } conflict)
             throw Invalid($"a bound of '{conflict.Id}' is either set or removed, not both");
+        string[] changedIds = [.. added.Select(addition => addition.Id), .. bounds.Select(bound => bound.Id), .. kinds.Select(retyped => retyped.Id), .. unbounds.Select(removal => removal.Id)];
+        if (removed.FirstOrDefault(id => changedIds.Any(changed => ModIds.Equals(changed, id))) is { } both)
+            throw Invalid($"the dependency '{both}' is either removed or changed, not both");
         if (gameMin is null && gameMax is null && !change.Yank && added.Count == 0 && bounds.Count == 0 && kinds.Count == 0 && loaderMin is null && loaderMax is null
-            && !change.RemoveGameMax && !change.Unyank && os is null && !change.RemoveLoaderMin && !change.RemoveLoaderMax && unbounds.Count == 0)
+            && !change.RemoveGameMax && !change.Unyank && os is null && !change.RemoveLoaderMin && !change.RemoveLoaderMax && unbounds.Count == 0
+            && removed.Count == 0)
             throw Invalid("nothing to amend: name at least one change");
 
-        return new ReleaseAmendment(change, gameMin, gameMax, loaderMin, loaderMax, added, bounds, kinds, os, unbounds);
+        return new ReleaseAmendment(change, gameMin, gameMax, loaderMin, loaderMax, added, bounds, kinds, os, unbounds, removed);
     }
 
     /// <summary>The selected versions: those named in their order, or else the matching ones newest first.</summary>
@@ -153,8 +162,12 @@ public sealed partial class ReleaseAmendment
     /// <summary>The amended file, or null when the release already says this.</summary>
     /// <param name="path">The path of the file, <see cref="PathOf"/> its id and version.</param>
     /// <param name="text">The text of the file on the base branch.</param>
+    /// <param name="declared">
+    /// What the mod.toml of the release archive declares, or null when the archive was not read. The checks need it when the change removes
+    /// an authored entry, see <see cref="ReadsArchive"/>, and without it they refuse the removal.
+    /// </param>
     /// <exception cref="ReleaseAmendmentRefusedException">The file is not one that the stamper writes, or the checks of content-index-releases would reject the amended file.</exception>
-    public AmendedRelease? Apply(string path, string text, ReleaseAmender amender)
+    public AmendedRelease? Apply(string path, string text, ReleaseAmender amender, IReadOnlyList<LocalModDependency>? declared = null)
     {
         ArgumentNullException.ThrowIfNull(path);
         ArgumentNullException.ThrowIfNull(text);
@@ -178,7 +191,7 @@ public sealed partial class ReleaseAmendment
 
         var errors = new List<string>();
         var widened = new List<string>();
-        ReleaseAmendmentCheck.Check(path, published, amended, errors, widened);
+        ReleaseAmendmentCheck.Check(path, published, amended, errors, widened, declared is null ? null : Derived(declared));
         if (amender == ReleaseAmender.Steward && widened.Count > 0)
             throw new ReleaseAmendmentRefusedException(errors.Count == 0 ? ReleaseAmendmentRefusal.Widens : ReleaseAmendmentRefusal.OutsideClass,
                 [.. errors, .. widened, "only the verified owner of the listing widens a release, or a steward who names the author's request"]);
@@ -189,10 +202,34 @@ public sealed partial class ReleaseAmendment
     }
 
     /// <summary>
+    /// Whether the change removes an authored entry of the file, so that the checks of content-index-releases read the archive's mod.toml
+    /// for it, as reads_archive of tools/check_amendment.py finds it. Pass what it declares to <see cref="Apply"/>.
+    /// </summary>
+    public bool ReadsArchive(string text)
+    {
+        ArgumentNullException.ThrowIfNull(text);
+        if (_removed.Count == 0)
+            return false;
+
+        try
+        {
+            return Parse(text) is JsonObject { } document && document["dependencies"] is JsonArray dependencies
+                && dependencies.OfType<JsonObject>().Any(entry => StringOf(entry["source"]) == "authored"
+                    && _removed.Any(id => ModIds.Equals(StringOf(entry["id"]) ?? string.Empty, id)));
+        }
+        catch (FormatException)
+        {
+            return false;
+        }
+    }
+
+    /// <summary>
     /// What the change does to the files when the owner makes it: it widens when it widens one file, it narrows when it changes
     /// a file without a widening, and it is refused when <see cref="Create"/> or <see cref="Apply"/> refuses it. The same checks as the preview decide it.
     /// </summary>
-    public static ReleaseChangeEffect EffectOf(ReleaseChange change, IEnumerable<ReleaseFile> files, IReadOnlyList<string> gameVersions, DateTimeOffset now)
+    /// <param name="declared">What the mod.toml of each release archive declares, by the path of the file, for the files whose archive was read.</param>
+    public static ReleaseChangeEffect EffectOf(ReleaseChange change, IEnumerable<ReleaseFile> files, IReadOnlyList<string> gameVersions, DateTimeOffset now,
+        IReadOnlyDictionary<string, IReadOnlyList<LocalModDependency>>? declared = null)
     {
         ArgumentNullException.ThrowIfNull(files);
         try
@@ -201,7 +238,7 @@ public sealed partial class ReleaseAmendment
             var effect = ReleaseChangeEffect.Unchanged;
             foreach (var file in files)
             {
-                if (amendment.Apply(file.Path, file.Text, ReleaseAmender.Owner) is { } amended)
+                if (amendment.Apply(file.Path, file.Text, ReleaseAmender.Owner, declared?.GetValueOrDefault(file.Path)) is { } amended)
                     effect = amended.Widens || effect == ReleaseChangeEffect.Widens ? ReleaseChangeEffect.Widens : ReleaseChangeEffect.Narrows;
             }
 
@@ -237,6 +274,8 @@ public sealed partial class ReleaseAmendment
             changed |= RemoveDependencyBounds(document, removal);
         foreach (var kind in _kinds)
             changed |= SetDependencyKind(document, kind);
+        foreach (var id in _removed)
+            changed |= RemoveDependency(document, id);
         if (_loaderMin is not null || _loaderMax is not null || _removeLoaderMin || _removeLoaderMax)
             changed |= SetLoaderBounds(document);
         return changed;
@@ -434,6 +473,23 @@ public sealed partial class ReleaseAmendment
         document["dependencies"] = dependencies;
         return true;
     }
+
+    /// <summary>Takes out the entry of a dependency that the listing declared. A release that does not state it stays as it is.</summary>
+    private static bool RemoveDependency(JsonObject document, string id)
+    {
+        var dependencies = DependenciesOf(document);
+        var index = IndexOf(dependencies, id);
+        if (index < 0)
+            return false;
+
+        dependencies.RemoveAt(index);
+        document["dependencies"] = dependencies;
+        return true;
+    }
+
+    /// <summary>The dependency entries that the stamper derives from what the mod.toml declares, as derived_dependencies of stamp_release.py writes them.</summary>
+    private static List<JsonObject> Derived(IReadOnlyList<LocalModDependency> declared) =>
+        [.. declared.Select(dependency => new JsonObject { ["id"] = dependency.ModId, ["kind"] = dependency.Optional ? "optional" : "required", ["source"] = "derived" })];
 
     /// <summary>A copy of the entry with the bounds, or null when it already has them.</summary>
     private static JsonObject? WithBounds(JsonObject entry, string? min, string? max)

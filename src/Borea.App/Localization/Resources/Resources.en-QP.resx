@@ -400,7 +400,7 @@
     <value>A missin' crewmate comes aboard with its kind. A crewmate the barrels name gets a tighter min or max.</value>
   </data>
   <data name="StewardAmendDependenciesHintAuthor" xml:space="preserve">
-    <value>A missin' crewmate comes aboard with its kind. A crewmate the barrels name gets a new min, a new max or a new kind, or loses its min or max, and stays aboard.</value>
+    <value>A missin' crewmate comes aboard with its kind. A crewmate the barrels name gets a new min, a new max or a new kind, or loses its min or max. A crewmate the listing signed on can walk the plank when the barrel's mod.toml don't name it, and Borea peeks inside first.</value>
   </data>
   <data name="StewardAmendAddDependency" xml:space="preserve">
     <value>Bring a missin' crewmate aboard</value>
@@ -419,6 +419,18 @@
   </data>
   <data name="StewardAmendRemoveMax" xml:space="preserve">
     <value>Cut the max</value>
+  </data>
+  <data name="StewardAmendRemoveDependency" xml:space="preserve">
+    <value>Make this crewmate walk the plank</value>
+  </data>
+  <data name="StewardAmendReadingArchive" xml:space="preserve">
+    <value>Peekin' inside the barrel to see if its mod.toml names this crewmate.</value>
+  </data>
+  <data name="StewardAmendDeclaredByArchive" xml:space="preserve">
+    <value>The barrel's mod.toml names this crewmate, so it stays aboard.</value>
+  </data>
+  <data name="StewardAmendArchiveUnreadable" xml:space="preserve">
+    <value>The barrel won't open, so this crewmate can't walk the plank.</value>
   </data>
   <data name="StewardAmendReasonHint" xml:space="preserve">
     <value>One sentence for the pull request. When barrels go overboard, every sailor reads it too.</value>
@@ -470,6 +482,9 @@
   </data>
   <data name="StewardAmendRefusedOutsideClass" xml:space="preserve">
     <value>The lookouts of content-index-releases would turn these orders away.</value>
+  </data>
+  <data name="StewardAmendRefusedUnreadableArchive" xml:space="preserve">
+    <value>The barrel won't open, so nothin' shows its mod.toml don't name the crewmate that walks the plank.</value>
   </data>
   <data name="StewardAmendErrorNotSteward" xml:space="preserve">
     <value>GitHub does not let this sailor slip past the rules of content-index-releases, so it cannot do this.</value>

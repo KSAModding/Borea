@@ -1,6 +1,7 @@
 using System.Text;
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
+using Borea.Core.Mods;
 using Borea.Core.Stewardship;
 
 namespace Borea.Core.Tests.Stewardship;
@@ -13,6 +14,9 @@ public sealed partial class ReleaseAmendmentOnRequestTests
 {
     private const string Link = "https://github.com/KSAModding/content-index/issues/42#issuecomment-7";
 
+    /// <summary>The authored ExampleLibrary entry of <see cref="Base"/>, with the comma before it.</summary>
+    private const string DeclaredEntry = ",\n    {\n      \"id\": \"ExampleLibrary\",\n      \"kind\": \"required\",\n      \"min\": \"2.0.0\",\n      \"max\": \"2.9.0\",\n      \"source\": \"authored\"\n    }";
+
     private static readonly JsonObject File = JsonNode.Parse(System.IO.File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Stewardship", "Fixtures", "amendment-vectors.json")))!.AsObject();
 
     private static readonly IReadOnlyList<string> GameVersions = [.. File["game_versions"]!.AsArray().Select(version => (string)version!)];
@@ -21,6 +25,9 @@ public sealed partial class ReleaseAmendmentOnRequestTests
     private static readonly string Base = (string)File["vectors"]!.AsArray().Single(vector => (string)vector!["name"]! == "the owner raises a game_max")!["base"]!;
 
     private static readonly string Path120 = ReleaseAmendment.PathOf("ExampleMod", "1.2.0");
+
+    /// <summary>What the mod.toml of the archive of <see cref="Base"/> declares: the optional KittenExtensions that the stamper derived.</summary>
+    private static readonly IReadOnlyList<LocalModDependency> ModToml = [new("KittenExtensions", optional: true)];
 
     [Fact]
     public void NewKind_OfADerivedDependency_OnTheAuthorsRequest_MakesItAuthoredAndKeepsIt()
@@ -72,7 +79,7 @@ public sealed partial class ReleaseAmendmentOnRequestTests
 
     /// <summary>
     /// What the index answers when a dependency is removed or changes kind, as tools/check_amendment.py gives it without the archive.
-    /// No change of the form removes an entry, and the check refuses a file that lost one, so a derived entry always stays.
+    /// Without what the archive's mod.toml declares, the check refuses a file that lost an entry, so a derived entry always stays.
     /// </summary>
     [Theory]
     [InlineData("KittenExtensions", null, null, "the dependency 'kittenextensions' is removed, and a derived entry stays, because the loader acts on it", null)]
@@ -107,6 +114,138 @@ public sealed partial class ReleaseAmendmentOnRequestTests
         string[] expectedWidened = ownerOnly is null ? [] : [ownerOnly];
         Assert.Equal(expectedErrors, errors);
         Assert.Equal(expectedWidened, widened);
+    }
+
+    /// <summary>
+    /// What the index answers for a removed entry once it read the archive's mod.toml, which declares KittenExtensions and here maybe ExampleLibrary.
+    /// A derived entry stays, and so does an authored entry that stands in for a dependency that the mod.toml declares.
+    /// </summary>
+    [Theory]
+    [InlineData("ExampleLibrary", false, null, "the dependency 'examplelibrary' is removed, which widens the release")]
+    [InlineData("ExampleLibrary", true,
+        "the dependency 'examplelibrary' is removed, and the archive's mod.toml declares 'examplelibrary', so the release keeps it as a derived entry",
+        "the dependency 'examplelibrary' is removed, which widens the release")]
+    [InlineData("KittenExtensions", false, "the dependency 'kittenextensions' is removed, and a derived entry stays, because the loader acts on it", null)]
+    public void Check_OfARemoval_WithWhatTheModTomlDeclares_GivesTheAnswerOfTheIndex(string id, bool declaresIt, string? error, string? ownerOnly)
+    {
+        var published = JsonNode.Parse(Base)!.AsObject();
+        var amended = (JsonObject)published.DeepClone();
+        var dependencies = amended["dependencies"]!.AsArray();
+        dependencies.Remove(dependencies.OfType<JsonObject>().Single(entry => (string)entry["id"]! == id));
+        List<JsonObject> derived = [new() { ["id"] = "KittenExtensions", ["kind"] = "optional", ["source"] = "derived" }];
+        if (declaresIt)
+            derived.Add(new() { ["id"] = "ExampleLibrary", ["kind"] = "required", ["source"] = "derived" });
+
+        var errors = new List<string>();
+        var widened = new List<string>();
+        ReleaseAmendmentCheck.Check(Path120, published, amended, errors, widened, derived);
+
+        string[] expectedErrors = error is null ? [] : [error];
+        string[] expectedWidened = ownerOnly is null ? [] : [ownerOnly];
+        Assert.Equal(expectedErrors, errors);
+        Assert.Equal(expectedWidened, widened);
+    }
+
+    /// <summary>The other answers of tools/check_amendment.py that depend on what the archive's mod.toml declares, null when it was not read.</summary>
+    [Theory]
+    [InlineData("turns derived", "required", null)]
+    [InlineData("turns derived", "optional", "the dependency 'examplelibrary' turns derived, and the archive's mod.toml does not declare it so")]
+    [InlineData("turns derived", null, "the dependency 'examplelibrary' turns derived, and the archive was not read to confirm it")]
+    [InlineData("comes back after an any_of", "optional", null)]
+    [InlineData("comes back after an any_of", null,
+        "the any_of dependency on kittenextensions, otherextensions is removed, and the archive was not read, so nothing shows that its mod.toml does not declare it",
+        "the dependency 'kittenextensions' is added with source 'derived', and an added entry is authored")]
+    public void Check_WithWhatTheModTomlDeclares_GivesTheOtherAnswersOfTheIndex(string name, string? declaredKind, string? error, string? secondError = null)
+    {
+        var published = JsonNode.Parse(Base)!.AsObject();
+        var amended = (JsonObject)published.DeepClone();
+        JsonObject Entry(string id, string kind) => new() { ["id"] = id, ["kind"] = kind, ["source"] = "derived" };
+        string[] widened;
+        List<JsonObject>? derived;
+        if (name == "turns derived")
+        {
+            amended["dependencies"]![1] = Entry("ExampleLibrary", "required");
+            derived = declaredKind is null ? null : [Entry("KittenExtensions", "optional"), Entry("ExampleLibrary", declaredKind)];
+            widened =
+            [
+                "the dependency 'examplelibrary' changes back to what the archive's mod.toml declares",
+                "the dependency 'examplelibrary' removes its min '2.0.0', which widens the release",
+                "the dependency 'examplelibrary' removes its max '2.9.0', which widens the release",
+            ];
+        }
+        else
+        {
+            published["dependencies"] = new JsonArray(new JsonObject
+            {
+                ["any_of"] = new JsonArray(new JsonObject { ["id"] = "KittenExtensions" }, new JsonObject { ["id"] = "OtherExtensions" }),
+                ["kind"] = "required",
+                ["source"] = "authored",
+            });
+            amended["dependencies"] = new JsonArray(Entry("KittenExtensions", "optional"));
+            derived = declaredKind is null ? null : [Entry("KittenExtensions", declaredKind)];
+            widened = ["the any_of dependency on kittenextensions, otherextensions is removed, which widens the release"];
+        }
+
+        var errors = new List<string>();
+        var ownerOnly = new List<string>();
+        ReleaseAmendmentCheck.Check(Path120, published, amended, errors, ownerOnly, derived);
+
+        Assert.Equal(new[] { error, secondError }.OfType<string>(), errors);
+        Assert.Equal(widened, ownerOnly);
+    }
+
+    [Fact]
+    public void Removal_OfADerivedDependency_IsRefusedEvenOnTheAuthorsRequest()
+    {
+        var amendment = ReleaseAmendment.Create(new ReleaseChange { RemovedDependencies = ["KittenExtensions"] }, GameVersions, DateTimeOffset.UtcNow);
+
+        var refused = Assert.Throws<ReleaseAmendmentRefusedException>(() => amendment.Apply(Path120, Base, ReleaseAmender.Owner));
+
+        Assert.Equal(ReleaseAmendmentRefusal.OutsideClass, refused.Refusal);
+        Assert.Equal(["the dependency 'kittenextensions' is removed, and a derived entry stays, because the loader acts on it"], refused.Details);
+        Assert.False(amendment.ReadsArchive(Base));
+    }
+
+    /// <summary>
+    /// An authored entry can stand in for a dependency of the mod.toml, which the release file does not show, so the removal needs what the mod.toml declares.
+    /// Without it, or when the mod.toml declares the dependency, the index refuses the removal.
+    /// </summary>
+    [Theory]
+    [InlineData(false, false, "the dependency 'examplelibrary' is removed, and the archive was not read, so nothing shows that its mod.toml does not declare it")]
+    [InlineData(true, true, "the dependency 'examplelibrary' is removed, and the archive's mod.toml declares 'examplelibrary', so the release keeps it as a derived entry")]
+    public void Removal_OfADeclaredDependency_NeedsTheModTomlThatDoesNotDeclareIt(bool read, bool declaresIt, string error)
+    {
+        var amendment = ReleaseAmendment.Create(new ReleaseChange { RemovedDependencies = ["ExampleLibrary"] }, GameVersions, DateTimeOffset.UtcNow);
+        IReadOnlyList<LocalModDependency>? declared = read ? [.. ModToml, .. declaresIt ? new[] { new LocalModDependency("examplelibrary", optional: false) } : []] : null;
+
+        var refused = Assert.Throws<ReleaseAmendmentRefusedException>(() => amendment.Apply(Path120, Base, ReleaseAmender.Owner, declared));
+
+        Assert.True(amendment.ReadsArchive(Base));
+        Assert.Equal(ReleaseAmendmentRefusal.OutsideClass, refused.Refusal);
+        Assert.Equal([error], refused.Details);
+        Assert.NotNull(amendment.Apply(Path120, Base, ReleaseAmender.Owner, ModToml));
+    }
+
+    [Fact]
+    public void Removal_WithoutTheLinkToTheRequest_IsRefused_AndOnTheRequestThePullRequestNamesTheDependency()
+    {
+        var change = new ReleaseChange { RemovedDependencies = ["ExampleLibrary"] };
+        var alone = new ReleaseAmendmentRequest("ExampleMod", ReleaseSelection.Of("1.2.0"), change, "The author declared it by mistake.");
+        var onRequest = alone with { AuthorRequest = Link };
+        var amendment = ReleaseAmendment.Create(onRequest.Amendment, GameVersions, DateTimeOffset.UtcNow);
+
+        var refused = Assert.Throws<ReleaseAmendmentRefusedException>(() => amendment.Apply(Path120, Base, alone.Amender, ModToml));
+        var amended = amendment.Apply(Path120, Base, onRequest.Amender, ModToml);
+        var body = new ReleaseAmendmentPreview(onRequest, [new ReleaseFilePreview("1.2.0", Path120, Base, amended?.Text)], []).Body;
+
+        Assert.Equal(ReleaseAmendmentRefusal.Widens, refused.Refusal);
+        Assert.Contains("the dependency 'examplelibrary' is removed, which widens the release", refused.Details);
+        Assert.Equal((false, true), (onRequest.HasToolOptions, onRequest.ChangesListingFields));
+        Assert.Equal(
+            "Amends release 1.2.0 of `ExampleMod`.\n\nReason: The author declared it by mistake.\n\nRequested by the author: <" + Link + ">\n\n"
+            + "tools/amend.py has no option for these changes, so this amendment has no command: the dependency `ExampleLibrary` is removed.\n\n"
+            + "The listing in content-index states its bounds, os and dependencies separately, so the next release is stamped without this change until the listing has it too.",
+            body);
     }
 
     [Fact]
@@ -205,6 +344,8 @@ public sealed partial class ReleaseAmendmentOnRequestTests
             "remove the min of a derived dependency" => (derivedWithMin, new ReleaseChange { RemovedDependencyBounds = [new ReleaseDependencyBoundRemoval("kittenextensions", true, false)] },
                 Base.Replace(derived, "\"id\": \"KittenExtensions\",\n      \"kind\": \"optional\",\n      \"source\": \"authored\"", StringComparison.Ordinal),
                 ["the dependency 'kittenextensions' removes its min '1.0.0', which widens the release"]),
+            "remove a declared dependency" => (Base, new ReleaseChange { RemovedDependencies = ["examplelibrary"] }, Base.Replace(DeclaredEntry, string.Empty, StringComparison.Ordinal),
+                ["the dependency 'examplelibrary' is removed, which widens the release"]),
             _ => throw new ArgumentOutOfRangeException(nameof(name), name, null),
         };
     }
@@ -212,7 +353,7 @@ public sealed partial class ReleaseAmendmentOnRequestTests
     public static TheoryData<string> OwnerRows =>
     [
         "remove game_max", "add os", "change os", "remove os", "take back a yank", "remove the loader min", "remove the loader max",
-        "remove a dependency max", "remove the min of a derived dependency",
+        "remove a dependency max", "remove the min of a derived dependency", "remove a declared dependency",
     ];
 
     [Theory]
@@ -222,8 +363,8 @@ public sealed partial class ReleaseAmendmentOnRequestTests
         var (published, change, written, ownerOnly) = OwnerRow(name);
         var amendment = ReleaseAmendment.Create(change, GameVersions, DateTimeOffset.UtcNow);
 
-        var refused = Assert.Throws<ReleaseAmendmentRefusedException>(() => amendment.Apply(Path120, published, ReleaseAmender.Steward));
-        var amended = amendment.Apply(Path120, published, ReleaseAmender.Owner);
+        var refused = Assert.Throws<ReleaseAmendmentRefusedException>(() => amendment.Apply(Path120, published, ReleaseAmender.Steward, ModToml));
+        var amended = amendment.Apply(Path120, published, ReleaseAmender.Owner, ModToml);
 
         Assert.Equal(ReleaseAmendmentRefusal.Widens, refused.Refusal);
         string[] details = [.. ownerOnly, "only the verified owner of the listing widens a release, or a steward who names the author's request"];
@@ -231,13 +372,14 @@ public sealed partial class ReleaseAmendmentOnRequestTests
         Assert.NotNull(amended);
         Assert.True(amended.Widens);
         Assert.Equal(Encoding.UTF8.GetBytes(written), Encoding.UTF8.GetBytes(amended.Text));
-        Assert.Null(amendment.Apply(Path120, written, ReleaseAmender.Owner));
+        Assert.Null(amendment.Apply(Path120, written, ReleaseAmender.Owner, ModToml));
     }
 
     public static TheoryData<string> ContradictoryChanges =>
     [
         "yank and un-yank", "set and remove game_max", "set and remove the loader min", "set and remove the loader max", "an unknown platform",
-        "a platform twice", "a bound set and removed", "a removal of no bound", "a removal of no dependency",
+        "a platform twice", "a bound set and removed", "a removal of no bound", "a removal of no dependency", "a dependency removed and retyped",
+        "a dependency removed and bounded", "a dependency removal without an id",
     ];
 
     [Theory]
@@ -259,6 +401,17 @@ public sealed partial class ReleaseAmendmentOnRequestTests
             },
             "a removal of no bound" => new ReleaseChange { RemovedDependencyBounds = [new ReleaseDependencyBoundRemoval("ExampleLibrary", false, false)] },
             "a removal of no dependency" => new ReleaseChange { RemovedDependencyBounds = [new ReleaseDependencyBoundRemoval(" ", true, false)] },
+            "a dependency removed and retyped" => new ReleaseChange
+            {
+                DependencyKinds = [new ReleaseDependencyKind("ExampleLibrary", "optional")],
+                RemovedDependencies = ["examplelibrary"],
+            },
+            "a dependency removed and bounded" => new ReleaseChange
+            {
+                DependencyBounds = [new ReleaseDependencyBounds("ExampleLibrary", "2.1.0", null)],
+                RemovedDependencies = ["ExampleLibrary"],
+            },
+            "a dependency removal without an id" => new ReleaseChange { RemovedDependencies = [" "] },
             _ => throw new ArgumentOutOfRangeException(nameof(name), name, null),
         };
 

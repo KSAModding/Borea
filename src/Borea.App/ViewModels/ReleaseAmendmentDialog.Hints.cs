@@ -22,6 +22,11 @@ public sealed partial class ReleaseAmendmentDialog
     private ContentIndexSnapshot? _snapshot;
     private ReleaseFiles? _files;
     private Dictionary<string, ReleaseFileValues?> _values = new(StringComparer.Ordinal);
+
+    /// <summary>What the mod.toml of each read release archive declares by the path of the file, null for an archive that could not be read.</summary>
+    private readonly Dictionary<string, IReadOnlyList<LocalModDependency>?> _declared = new(StringComparer.Ordinal);
+    private readonly HashSet<string> _readingArchives = new(StringComparer.Ordinal);
+    private readonly List<Task> _archiveReads = [];
     private GameVersionOption? _installed;
     private IReadOnlyList<ReleaseAmendmentChoice> _gameChoices = [];
     private IReadOnlyList<ReleaseAmendmentChoice> _loaderChoices = [];
@@ -136,13 +141,15 @@ public sealed partial class ReleaseAmendmentDialog
     internal ReleaseAmendmentHint Hint(IReadOnlyList<ReleaseFile> files, Func<ReleaseFileValues, string?>? value, ReleaseChange? change) =>
         HintWithNow(files, value is null ? null : NowText(files, value, _owner.Localization.FormatStewardAmendNow), change);
 
-    internal ReleaseAmendmentHint HintWithNow(IReadOnlyList<ReleaseFile> files, string? now, ReleaseChange? change)
+    /// <param name="declared">What the mod.toml of each read release archive declares, by the path of the file, which a removed dependency needs.</param>
+    internal ReleaseAmendmentHint HintWithNow(IReadOnlyList<ReleaseFile> files, string? now, ReleaseChange? change,
+        IReadOnlyDictionary<string, IReadOnlyList<LocalModDependency>>? declared = null)
     {
         if (change is null || files.Count == 0 || _files is null)
             return new ReleaseAmendmentHint(now, null, NeedsAuthor: false);
 
         var localization = _owner.Localization;
-        return ReleaseAmendment.EffectOf(change, files, _files.GameVersions, DateTimeOffset.UtcNow) switch
+        return EffectOf(files, change, declared) switch
         {
             ReleaseChangeEffect.Unchanged => new ReleaseAmendmentHint(now, localization.StewardAmendSame, NeedsAuthor: false),
             ReleaseChangeEffect.Narrows => new ReleaseAmendmentHint(now, localization.StewardAmendNarrows, NeedsAuthor: false),
@@ -151,6 +158,10 @@ public sealed partial class ReleaseAmendmentDialog
             _ => new ReleaseAmendmentHint(now, null, NeedsAuthor: false),
         };
     }
+
+    /// <summary>What the change does to the files with the checks of the preview, or Refused before the files are read.</summary>
+    internal ReleaseChangeEffect EffectOf(IReadOnlyList<ReleaseFile> files, ReleaseChange change, IReadOnlyDictionary<string, IReadOnlyList<LocalModDependency>>? declared) =>
+        _files is null ? ReleaseChangeEffect.Refused : ReleaseAmendment.EffectOf(change, files, _files.GameVersions, DateTimeOffset.UtcNow, declared);
 
     /// <summary>
     /// "Now: 0.4.5", or each value with the releases that state it when they differ, such as "2026.9.7.5402 (1.2.0, 1.1.0); not set (1.0.0)".
@@ -181,6 +192,82 @@ public sealed partial class ReleaseAmendmentDialog
     /// <summary>Whether every selected release was read and has the entry, such as a loader. A missing entry has no value now that a field could change.</summary>
     internal bool States(IReadOnlyList<ReleaseFile> files, Func<ReleaseFileValues, bool> has) =>
         files.Count > 0 && files.All(file => _values.GetValueOrDefault(file.Path) is { } read && has(read));
+
+    /// <summary>
+    /// Whether every selected release was read, one of them states the dependency, and each one that states it marks it authored.
+    /// The stamper marks an entry that it takes from the archive's mod.toml derived, and that one stays in the release.
+    /// </summary>
+    internal bool StatesAuthoredOnly(IReadOnlyList<ReleaseFile> files, string id)
+    {
+        var values = files.Select(file => _values.GetValueOrDefault(file.Path)).ToList();
+        if (values.Count == 0 || values.Any(read => read is null))
+            return false;
+
+        var stated = values.Select(read => read!.Dependency(id)).OfType<ReleaseFileDependency>().ToList();
+        return stated.Count > 0 && stated.All(dependency => dependency.IsAuthored);
+    }
+
+    internal bool StatesDependency(ReleaseFile file, string id) => _values.GetValueOrDefault(file.Path)?.Dependency(id) is not null;
+
+    /// <summary>
+    /// What the mod.toml of the archive of each file declares. An authored entry can also stand in for a dependency of the mod.toml, which the
+    /// release file does not show, so the form reads the archives before it offers a removal, as the checks of content-index-releases do.
+    /// A read that is missing starts here, and the hints refresh when it ends.
+    /// </summary>
+    internal ReleaseArchives Archives(IReadOnlyList<ReleaseFile> files)
+    {
+        foreach (var file in files.Where(file => !_declared.ContainsKey(file.Path) && !_readingArchives.Contains(file.Path)))
+            ReadArchive(file);
+
+        if (files.Any(file => !_declared.ContainsKey(file.Path)))
+            return new ReleaseArchives(ReleaseArchiveState.Reading, null);
+        if (files.Any(file => _declared[file.Path] is null))
+            return new ReleaseArchives(ReleaseArchiveState.Unreadable, null);
+
+        return new ReleaseArchives(ReleaseArchiveState.Read, files.ToDictionary(file => file.Path, file => _declared[file.Path]!, StringComparer.Ordinal));
+    }
+
+    /// <summary>Ends when every archive read that started so far has ended.</summary>
+    internal Task WhenArchivesReadAsync() => Task.WhenAll(_archiveReads);
+
+    private void ReadArchive(ReleaseFile file)
+    {
+        if (_owner.Services is not { } services)
+        {
+            _declared[file.Path] = null;
+            return;
+        }
+
+        var read = DeclaredAsync(services, file);
+        if (read.IsCompleted)
+        {
+            _declared[file.Path] = read.GetAwaiter().GetResult();
+            return;
+        }
+
+        _readingArchives.Add(file.Path);
+        _archiveReads.Add(FinishArchiveReadAsync(file.Path, read));
+    }
+
+    private async Task FinishArchiveReadAsync(string path, Task<IReadOnlyList<LocalModDependency>?> read)
+    {
+        _declared[path] = await read;
+        _readingArchives.Remove(path);
+        RefreshHints();
+    }
+
+    /// <summary>What the archive's mod.toml declares, or null when the archive could not be read.</summary>
+    private static async Task<IReadOnlyList<LocalModDependency>?> DeclaredAsync(BoreaServices services, ReleaseFile file)
+    {
+        try
+        {
+            return await services.ReleaseAmendments.DeclaredDependenciesAsync(file);
+        }
+        catch (Exception exception) when (exception is ReleaseAmendmentRefusedException or StewardException)
+        {
+            return null;
+        }
+    }
 
     /// <summary>The choices with the value now marked. A list that stays the same is kept, so an open list stays as it is.</summary>
     internal IReadOnlyList<ReleaseAmendmentChoice> Marked(IReadOnlyList<ReleaseAmendmentChoice> choices, string? now, IReadOnlyList<ReleaseAmendmentChoice> shown)
@@ -267,6 +354,16 @@ public sealed record ReleaseAmendmentChoice(string Value, string Note, string No
 
     public override string ToString() => Value;
 }
+
+internal enum ReleaseArchiveState
+{
+    Reading,
+    Unreadable,
+    Read,
+}
+
+/// <param name="Declared">What the mod.toml of each archive declares, by the path of the release file, once every archive was read.</param>
+internal sealed record ReleaseArchives(ReleaseArchiveState State, IReadOnlyDictionary<string, IReadOnlyList<LocalModDependency>>? Declared);
 
 /// <summary>What a field of the form says under it.</summary>
 /// <param name="Now">What the selected releases state now, or null before they are read or while nothing is selected.</param>

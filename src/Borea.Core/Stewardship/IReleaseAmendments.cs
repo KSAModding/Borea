@@ -1,3 +1,5 @@
+using Borea.Core.Mods;
+
 namespace Borea.Core.Stewardship;
 
 /// <summary>
@@ -15,6 +17,13 @@ public interface IReleaseAmendments
     /// <exception cref="ReleaseAmendmentRefusedException">The listing has no stamped release, a file name is no version, or a file is no UTF-8 text.</exception>
     /// <exception cref="StewardException">GitHub could not be read, or the account is no steward of content-index-releases.</exception>
     Task<ReleaseFiles> ReleaseFilesAsync(string listingId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// What the mod.toml of the release archive declares, read from the download URL or a mirror whose bytes match the stamped sha256, as the
+    /// checks of content-index-releases read it before they accept the removal of an authored dependency entry. It writes nothing.
+    /// </summary>
+    /// <exception cref="ReleaseAmendmentRefusedException">The archive could not be downloaded or read (<see cref="ReleaseAmendmentRefusal.UnreadableArchive"/>).</exception>
+    Task<IReadOnlyList<LocalModDependency>> DeclaredDependenciesAsync(ReleaseFile file, CancellationToken cancellationToken = default);
 
     /// <summary>Reads the selected release files at the tip of the base branch and amends them as tools/amend.py would. It writes nothing.</summary>
     /// <exception cref="ReleaseAmendmentRefusedException">The amendment is refused, as tools/amend.py or the checks would refuse it.</exception>
