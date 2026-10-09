@@ -1,4 +1,5 @@
 using System.Text.Json.Nodes;
+using Borea.Core.Mods;
 using Borea.Core.Stewardship;
 
 namespace Borea.Core.Tests.Stewardship;
@@ -46,6 +47,24 @@ public sealed class ReleaseChangeEffectTests
         Assert.Equal(effect == ReleaseChangeEffect.Widens, ReleaseAmendment.Create(change, GameVersions, DateTimeOffset.UtcNow).Apply(File120.Path, File120.Text, ReleaseAmender.Owner)!.Widens);
     }
 
+    /// <summary>
+    /// The removal of a declared dependency widens once the mod.toml of each archive was read and does not declare it. A derived one stays, and a release
+    /// that does not state it stays as it is.
+    /// </summary>
+    [Theory]
+    [InlineData("ExampleLibrary", "KittenExtensions", ReleaseChangeEffect.Widens)]
+    [InlineData("ExampleLibrary", "KittenExtensions,ExampleLibrary", ReleaseChangeEffect.Refused)]
+    [InlineData("ExampleLibrary", null, ReleaseChangeEffect.Refused)]
+    [InlineData("KittenExtensions", "KittenExtensions", ReleaseChangeEffect.Refused)]
+    [InlineData("Nothing", "KittenExtensions", ReleaseChangeEffect.Unchanged)]
+    public void ARemovedDependency_UsesTheSameChecksAsThePreview(string id, string? modToml, ReleaseChangeEffect effect)
+    {
+        IReadOnlyList<LocalModDependency> declared = modToml is null ? [] : [.. modToml.Split(',').Select(name => new LocalModDependency(name, name == "KittenExtensions"))];
+        var read = modToml is null ? null : new Dictionary<string, IReadOnlyList<LocalModDependency>> { [File120.Path] = declared, [File110.Path] = declared };
+
+        Assert.Equal(effect, ReleaseAmendment.EffectOf(new ReleaseChange { RemovedDependencies = [id] }, [File120, File110], GameVersions, DateTimeOffset.UtcNow, read));
+    }
+
     [Fact]
     public void Values_AreTheBoundsTheFileStates_AndNoJsonGivesNone()
     {
@@ -53,8 +72,9 @@ public sealed class ReleaseChangeEffectTests
 
         Assert.Equal(("2026.8.3.5117", "2026.8.19.5261"), (values.GameMin, values.GameMax));
         Assert.Equal(new ReleaseFileLoader("StarMap", "0.4.5", null), values.Loader);
-        Assert.Equal(new ReleaseFileDependency("ExampleLibrary", "required", "2.0.0", "2.9.0"), values.Dependency("examplelibrary"));
-        Assert.Equal(new ReleaseFileDependency("KittenExtensions", "optional", null, null), values.Dependency("KittenExtensions"));
+        Assert.Equal(new ReleaseFileDependency("ExampleLibrary", "required", "2.0.0", "2.9.0", "authored"), values.Dependency("examplelibrary"));
+        Assert.Equal(new ReleaseFileDependency("KittenExtensions", "optional", null, null, "derived"), values.Dependency("KittenExtensions"));
+        Assert.Equal((true, false), (values.Dependency("ExampleLibrary")!.IsAuthored, values.Dependency("KittenExtensions")!.IsAuthored));
         Assert.Null(values.Dependency("Nothing"));
         Assert.Null(ReleaseFileValues.Read("not json"));
         Assert.Null(ReleaseFileValues.Read("[1]"));

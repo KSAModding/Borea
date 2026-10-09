@@ -4,6 +4,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 using Borea.Core.GitHub;
+using Borea.Core.Mods;
 using Borea.Core.Stewardship;
 using Borea.Network.GitHub;
 using Borea.Network.Tests.Listings;
@@ -200,6 +201,38 @@ public sealed partial class GitHubReleaseAmendmentsTests
         Assert.DoesNotContain("```", body, StringComparison.Ordinal);
     }
 
+    /// <summary>
+    /// The removal of an authored entry reads the archive's mod.toml, as validate.py does, because the entry can stand in for a dependency of the mod.toml.
+    /// A change that removes nothing reads no archive.
+    /// </summary>
+    [Fact]
+    public async Task PreviewAsync_ARemovedDeclaredDependency_ReadsTheArchive_AndIsRefusedWhenItsModTomlDeclaresItOrCannotBeRead()
+    {
+        var published = (string)Vector("the owner raises a game_max")["base"]!;
+        _releases.Main[Folder + "1.2.0.json"] = published;
+        var archives = new FakeArchives();
+        var amendments = await SignedInAsync(archives);
+        var removal = new ReleaseAmendmentRequest("ExampleMod", ReleaseSelection.Of("1.2.0"), new ReleaseChange { RemovedDependencies = ["ExampleLibrary"] },
+            "The author declared it by mistake.", "https://github.com/KSAModding/content-index/issues/42");
+
+        await amendments.PreviewAsync(removal with { Change = new ReleaseChange { GameMax = "2026.8.5.5168" }, AuthorRequest = null });
+        Assert.Empty(archives.Read);
+        var preview = await amendments.PreviewAsync(removal);
+        archives.Declared.Add(new LocalModDependency("ExampleLibrary", optional: false));
+        var declared = await Assert.ThrowsAsync<ReleaseAmendmentRefusedException>(() => amendments.PreviewAsync(removal));
+        archives.Failure = new ReleaseArchiveException("the archive at https://example.com/ExampleMod.zip is gone (HTTP 404)");
+        var unreadable = await Assert.ThrowsAsync<ReleaseAmendmentRefusedException>(() => amendments.PreviewAsync(removal));
+        var withoutReader = await Assert.ThrowsAsync<ReleaseAmendmentRefusedException>(async () => await (await SignedInAsync()).PreviewAsync(removal));
+
+        Assert.Equal([published, published, published], archives.Read);
+        Assert.DoesNotContain("ExampleLibrary", Assert.Single(preview.Changed).After, StringComparison.Ordinal);
+        Assert.Equal(ReleaseAmendmentRefusal.OutsideClass, declared.Refusal);
+        Assert.Equal(["the dependency 'examplelibrary' is removed, and the archive's mod.toml declares 'examplelibrary', so the release keeps it as a derived entry"], declared.Details);
+        Assert.Equal((ReleaseAmendmentRefusal.UnreadableArchive, ReleaseAmendmentRefusal.UnreadableArchive), (unreadable.Refusal, withoutReader.Refusal));
+        Assert.Equal(["releases/ExampleMod/1.2.0.json: the archive at https://example.com/ExampleMod.zip is gone (HTTP 404)"], unreadable.Details);
+        Assert.Equal(["releases/ExampleMod/1.2.0.json: the archive was not read"], withoutReader.Details);
+    }
+
     [Fact]
     public async Task OpenAsync_AReleaseFileThatChangedOnMainSinceThePreview_WritesNothingAndGivesTheNewPreview()
     {
@@ -338,14 +371,14 @@ public sealed partial class GitHubReleaseAmendmentsTests
         _hosts[Api + "/repos/KSAModding/content-index/contents/listings/ExampleMod.toml?ref=main"] = () =>
             Json(JsonSerializer.Serialize(new { sha = "abc", encoding = "base64", content = Convert.ToBase64String(Encoding.UTF8.GetBytes($"id = \"ExampleMod\"\nname = \"Example Mod\"\n[releases]\ngithub = \"{repository}\"\n")) }));
 
-    private async Task<GitHubReleaseAmendments> SignedInAsync()
+    private async Task<GitHubReleaseAmendments> SignedInAsync(IReleaseArchiveReader? archives = null)
     {
         _hosts.TryAdd(Api + "/user", () => Json("""{"login":"octocat","id":1}"""));
         var session = new GitHubSession(Http(), "Iv1.testclient", "borea-test", new FixedTime(Now));
         Assert.True((await session.SignInAsync()).SignedIn);
         lock (_sent)
             _sent.Clear();
-        return new GitHubReleaseAmendments(session, _role, Http(), new TableFormat(), new FixedTime(Now));
+        return new GitHubReleaseAmendments(session, _role, Http(), new TableFormat(), new FixedTime(Now), archives: archives);
     }
 
     private HttpClient Http() => new(new FakeHttpMessageHandler(async request => Respond(request, request.Content is null ? null : await request.Content.ReadAsStringAsync())));
@@ -498,6 +531,22 @@ public sealed partial class GitHubReleaseAmendmentsTests
 
         [GeneratedRegex(@"^contents/(?<path>[^?]+)\?ref=(?<ref>[0-9a-f]+)$")]
         private static partial Regex ContentPath();
+    }
+
+    /// <summary>An archive whose mod.toml declares <see cref="Declared"/>, and which records each release file that it was read for.</summary>
+    private sealed class FakeArchives : IReleaseArchiveReader
+    {
+        public List<LocalModDependency> Declared { get; } = [];
+
+        public List<string> Read { get; } = [];
+
+        public ReleaseArchiveException? Failure { get; set; }
+
+        public Task<IReadOnlyList<LocalModDependency>> DeclaredDependenciesAsync(string releaseFileText, CancellationToken cancellationToken = default)
+        {
+            Read.Add(releaseFileText);
+            return Failure is { } failure ? Task.FromException<IReadOnlyList<LocalModDependency>>(failure) : Task.FromResult<IReadOnlyList<LocalModDependency>>([.. Declared]);
+        }
     }
 
     private sealed class FakeRole(StewardAccess access) : IStewardRole

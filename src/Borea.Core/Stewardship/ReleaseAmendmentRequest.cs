@@ -34,7 +34,8 @@ public sealed record ReleaseAmendmentRequest(string ListingId, ReleaseSelection 
     /// </summary>
     public bool ChangesListingFields =>
         Change.LoaderMin is not null || Change.LoaderMax is not null || Change.RemoveLoaderMin || Change.RemoveLoaderMax || Change.Os is not null
-        || Change.AddedDependencies.Count > 0 || Change.DependencyBounds.Count > 0 || Change.RemovedDependencyBounds.Count > 0 || Change.DependencyKinds.Count > 0;
+        || Change.AddedDependencies.Count > 0 || Change.DependencyBounds.Count > 0 || Change.RemovedDependencyBounds.Count > 0 || Change.DependencyKinds.Count > 0
+        || Change.RemovedDependencies.Count > 0;
 
     /// <summary>Whether the change names anything that an option of tools/amend.py expresses.</summary>
     public bool HasToolOptions => Amendment is var change
@@ -70,6 +71,7 @@ public sealed record ReleaseAmendmentRequest(string ListingId, ReleaseSelection 
             }
 
             changes.AddRange(change.DependencyKinds.Select(retyped => $"`{retyped.Id.Trim()}` becomes `{retyped.Kind.Trim()}`"));
+            changes.AddRange(change.RemovedDependencies.Select(id => $"the dependency `{id.Trim()}` is removed"));
             return changes;
         }
     }

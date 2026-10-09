@@ -57,6 +57,32 @@ public static class ListingArchive
         }
     }
 
+    /// <summary>
+    /// What the mod.toml at the stamped install root declares, as _declared_dependencies of hosts.py in content-index-releases reads it
+    /// with read_mod_toml and derived_dependencies. An archive without a mod.toml there declares nothing.
+    /// </summary>
+    /// <param name="root">The install root of the release file, empty for the archive root.</param>
+    /// <exception cref="InvalidDataException">The archive is not a readable zip, or the mod.toml is not valid TOML or has dependencies the stamper cannot read.</exception>
+    public static IReadOnlyList<LocalModDependency> DeclaredDependencies(string archivePath, string root)
+    {
+        ArgumentNullException.ThrowIfNull(root);
+        ZipArchive archive;
+        try
+        {
+            archive = ZipFile.OpenRead(archivePath);
+        }
+        catch (InvalidDataException exception)
+        {
+            throw new InvalidDataException($"the archive is not a readable zip, {exception.Message}", exception);
+        }
+
+        using (archive)
+        {
+            var modToml = archive.GetEntry(root.Length == 0 ? ModTomlName : $"{root}/{ModTomlName}");
+            return modToml is null ? [] : ModDependencies(ReadModToml(modToml));
+        }
+    }
+
     /// <summary>The folders at the root of the archive in archive order. A file at the root names none.</summary>
     public static IReadOnlyList<string> TopLevelFolders(IEnumerable<string> entryNames)
     {

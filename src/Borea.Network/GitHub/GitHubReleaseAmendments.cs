@@ -32,17 +32,21 @@ public sealed class GitHubReleaseAmendments : IReleaseAmendments
     private readonly ListingOwnershipCheck _ownership;
     private readonly TimeProvider _time;
     private readonly string _base;
+    private readonly IReleaseArchiveReader? _archives;
 
     /// <param name="http">Reads the release hosts that name the owner of a listing.</param>
     /// <param name="format">Reads the listing documents of content-index.</param>
     /// <param name="baseBranch">The branch of content-index-releases that the amendments start from and go to. Null takes main.</param>
-    public GitHubReleaseAmendments(IGitHubSession session, IStewardRole role, HttpClient http, IListingFormat format, TimeProvider? time = null, string? baseBranch = null)
+    /// <param name="archives">Reads what the mod.toml of a release archive declares. Without it the removal of an authored dependency is refused.</param>
+    public GitHubReleaseAmendments(IGitHubSession session, IStewardRole role, HttpClient http, IListingFormat format, TimeProvider? time = null, string? baseBranch = null,
+        IReleaseArchiveReader? archives = null)
     {
         _session = session ?? throw new ArgumentNullException(nameof(session));
         _role = role ?? throw new ArgumentNullException(nameof(role));
         _format = format ?? throw new ArgumentNullException(nameof(format));
         _time = time ?? TimeProvider.System;
         _base = baseBranch ?? ListingPullRequestLinks.DefaultBranch;
+        _archives = archives;
         _api = new GitHubApi(session, http, time, _base);
         _ownership = new ListingOwnershipCheck(_api, http, format);
     }
@@ -78,6 +82,12 @@ public sealed class GitHubReleaseAmendments : IReleaseAmendments
         })).ConfigureAwait(false);
         return new ReleaseFiles(files, gameVersions);
     });
+
+    public Task<IReadOnlyList<LocalModDependency>> DeclaredDependenciesAsync(ReleaseFile file, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(file);
+        return DeclaredAsync(file.Path, file.Text, cancellationToken);
+    }
 
     public Task<ReleaseAmendmentPreview> PreviewAsync(ReleaseAmendmentRequest request, CancellationToken cancellationToken = default) => GuardAsync(async () =>
     {
@@ -143,11 +153,28 @@ public sealed class GitHubReleaseAmendments : IReleaseAmendments
         {
             var path = ReleaseAmendment.PathOf(request.ListingId, version);
             var text = await ReadReleaseAsync(path, head, cancellationToken).ConfigureAwait(false);
-            files.Add(new ReleaseFilePreview(version, path, text, amendment.Apply(path, text, request.Amender)?.Text));
+            var declared = amendment.ReadsArchive(text) ? await DeclaredAsync(path, text, cancellationToken).ConfigureAwait(false) : null;
+            files.Add(new ReleaseFilePreview(version, path, text, amendment.Apply(path, text, request.Amender, declared)?.Text));
         }
 
         var owners = await OwnersAsync(request.ListingId, login, cancellationToken).ConfigureAwait(false);
         return (head, new ReleaseAmendmentPreview(request, files, owners));
+    }
+
+    /// <summary>What the mod.toml of the archive of a release file declares, as validate.py reads it before it accepts a removed authored entry.</summary>
+    private async Task<IReadOnlyList<LocalModDependency>> DeclaredAsync(string path, string text, CancellationToken cancellationToken)
+    {
+        if (_archives is null)
+            throw new ReleaseAmendmentRefusedException(ReleaseAmendmentRefusal.UnreadableArchive, $"{path}: the archive was not read");
+
+        try
+        {
+            return await _archives.DeclaredDependenciesAsync(text, cancellationToken).ConfigureAwait(false);
+        }
+        catch (ReleaseArchiveException exception)
+        {
+            throw new ReleaseAmendmentRefusedException(ReleaseAmendmentRefusal.UnreadableArchive, $"{path}: {exception.Message}");
+        }
     }
 
     /// <summary>The text of a release file at the commit.</summary>

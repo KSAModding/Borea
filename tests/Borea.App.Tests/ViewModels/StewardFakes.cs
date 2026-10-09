@@ -1,6 +1,8 @@
 using System.Net;
 using System.Text;
+using System.Text.Json.Nodes;
 using Borea.Core.GitHub;
+using Borea.Core.Mods;
 using Borea.Core.Secrets;
 using Borea.Core.Stewardship;
 
@@ -128,6 +130,29 @@ internal sealed class FakeReleaseAmendments : IReleaseAmendments
                 [.. Releases.Select(version => new ReleaseFile(version, $"releases/{listingId}/{version}.json", Texts.GetValueOrDefault(version) ?? Text(version, Yanked.Contains(version))))],
                 [.. GameVersions]));
 
+    /// <summary>What the mod.toml of the archive of a release declares, by version. A release that is not here declares nothing.</summary>
+    public Dictionary<string, List<LocalModDependency>> Declared { get; } = [];
+
+    /// <summary>The versions whose archive cannot be read.</summary>
+    public HashSet<string> UnreadableArchives { get; } = [];
+
+    /// <summary>Holds every archive read until it is set, as a slow download does.</summary>
+    public TaskCompletionSource? HoldArchives { get; set; }
+
+    /// <summary>The versions whose archive was read, in order.</summary>
+    public List<string> ArchivesRead { get; } = [];
+
+    public async Task<IReadOnlyList<LocalModDependency>> DeclaredDependenciesAsync(ReleaseFile file, CancellationToken cancellationToken = default)
+    {
+        ArchivesRead.Add(file.Version);
+        if (HoldArchives is { } hold)
+            await hold.Task;
+
+        return UnreadableArchives.Contains(file.Version)
+            ? throw new ReleaseAmendmentRefusedException(ReleaseAmendmentRefusal.UnreadableArchive, $"{file.Path}: the archive at https://example.com/{file.Version}.zip is gone (HTTP 404)")
+            : [.. Declared.GetValueOrDefault(file.Version) ?? []];
+    }
+
     public Task<ReleaseAmendmentPreview> PreviewAsync(ReleaseAmendmentRequest request, CancellationToken cancellationToken = default)
     {
         Previewed.Add(request);
@@ -184,6 +209,18 @@ internal sealed class FakeReleaseAmendments : IReleaseAmendments
             }
 
             """;
+    }
+
+    /// <summary>The release file with one more required dependency: an authored one from 0.2.2, or a derived one as the archive's mod.toml declares it.</summary>
+    public static string WithDependency(string text, string id, string source)
+    {
+        var document = JsonNode.Parse(text)!.AsObject();
+        var entry = new JsonObject { ["id"] = id, ["kind"] = "required" };
+        if (source == "authored")
+            entry["min"] = "0.2.2";
+        entry["source"] = source;
+        document["dependencies"]!.AsArray().Add(entry);
+        return document.ToJsonString();
     }
 
     private static string Text(string version, bool yanked) =>
