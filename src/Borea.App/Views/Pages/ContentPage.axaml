@@ -88,165 +88,161 @@
                     </Border>
                     <TextBlock Classes="body-sm secondary" Text="{Binding Localization.ContentInactiveInstance}" TextWrapping="Wrap" HorizontalAlignment="Center" Margin="0,8,0,0" IsVisible="{Binding !CanActOnSelectedContent}" />
 
-                    <!-- c/content-header -->
-                    <Grid ColumnDefinitions="170,32,*" Margin="0,24,0,0">
+                    <!-- c/content-header: the image, the text, the actions and the meta row. The actions go below the text when the title would be too narrow beside them -->
+                    <views:ContentHeaderPanel Margin="0,24,0,0">
                         <Border Classes="thumbnail" Width="170" Height="170">
                             <views:ListingImageView Image="{Binding SelectedContent.Icon}" Background="{StaticResource Brush.Surface}">
                                 <Path Classes="icon" Data="{StaticResource Icon.PuzzlePiece}" RenderTransform="scale(2.5)" StrokeThickness="0.8" />
                             </views:ListingImageView>
                         </Border>
-                        <Grid Grid.Column="2" RowDefinitions="Auto,*,Auto">
-                            <Grid ColumnDefinitions="*,24,Auto" RowDefinitions="Auto,Auto">
-                                <StackPanel Classes="content-text" Spacing="4">
-                                    <TextBlock Classes="heading-lg" Text="{Binding SelectedContent.Name}" TextWrapping="Wrap" />
-                                    <TextBlock Classes="body-md secondary" Text="{Binding SelectedContent.Abstract}" TextWrapping="Wrap" LineHeight="18" />
-                                    <ContentControl Margin="0,8,0,0" Content="{Binding SelectedContent.Choices}" IsVisible="{Binding SelectedContent.Choices, Converter={x:Static ObjectConverters.IsNotNull}}" />
-                                    <ItemsControl Margin="0,8,0,0" ItemsSource="{Binding SelectedContent.PlanSteps}" ItemTemplate="{StaticResource StepList}" ItemsPanel="{StaticResource StepListsPanel}" IsVisible="{Binding !!SelectedContent.PlanSteps.Count, FallbackValue={x:False}}" />
-                                    <WrapPanel ItemSpacing="8" LineSpacing="8" Margin="0,8,0,0" IsVisible="{Binding SelectedContent.IsConfirmingInstall}">
-                                        <TextBlock Classes="body-sm" Text="{Binding SelectedContent.LinkRequestText}" IsVisible="{Binding SelectedContent.LinkRequestText, Converter={x:Static ObjectConverters.IsNotNull}}" TextWrapping="Wrap" VerticalAlignment="Center" />
-                                        <TextBlock Classes="body-sm secondary" Text="{Binding SelectedContent.AddedModsText}" ToolTip.Tip="{Binding SelectedContent.AddedModsToolTip}" IsVisible="{Binding SelectedContent.AddedModsText, Converter={x:Static ObjectConverters.IsNotNull}}" TextWrapping="Wrap" VerticalAlignment="Center" />
-                                        <TextBlock Classes="body-sm secondary" Text="{Binding SelectedContent.InstallWarning}" IsVisible="{Binding SelectedContent.InstallWarning, Converter={x:Static ObjectConverters.IsNotNull}}" TextWrapping="Wrap" VerticalAlignment="Center" />
-                                        <Button Classes="text primary" Content="{Binding SelectedContent.ConfirmInstallText}" Command="{Binding SelectedContent.ConfirmInstallCommand}" IsEnabled="{Binding SelectedContent.Choices.IsComplete, FallbackValue={x:True}}" />
-                                        <Button Classes="text" Content="{Binding Localization.LibraryCancel}" Command="{Binding SelectedContent.CancelInstallCommand}" />
-                                    </WrapPanel>
-                                    <WrapPanel ItemSpacing="8" LineSpacing="8" Margin="0,8,0,0" IsVisible="{Binding SelectedContent.IsConfirmingRemove}">
-                                        <TextBlock Classes="body-sm danger" Text="{Binding Localization.ContentRemoveConfirm}" TextWrapping="Wrap" VerticalAlignment="Center" />
-                                        <Button Classes="text danger" Content="{Binding Localization.ContentRemove}" Command="{Binding SelectedContent.ConfirmRemoveCommand}" />
-                                        <Button Classes="text" Content="{Binding Localization.LibraryCancel}" Command="{Binding SelectedContent.CancelRemoveCommand}" />
-                                    </WrapPanel>
-                                    <ContentControl Margin="0,8,0,0" Content="{Binding SelectedContent.RemoveSteps}" ContentTemplate="{StaticResource StepList}">
-                                        <ContentControl.IsVisible>
-                                            <MultiBinding Converter="{x:Static BoolConverters.And}">
-                                                <Binding Path="SelectedContent.IsConfirmingRemove" FallbackValue="{x:False}" />
-                                                <Binding Path="SelectedContent.RemoveSteps" Converter="{x:Static ObjectConverters.IsNotNull}" />
-                                            </MultiBinding>
-                                        </ContentControl.IsVisible>
-                                    </ContentControl>
-                                    <WrapPanel ItemSpacing="8" LineSpacing="8" Margin="0,8,0,0" IsVisible="{Binding SelectedContent.ProgressStatus, Converter={x:Static ObjectConverters.IsNotNull}}">
-                                        <TextBlock Classes="body-sm secondary" Text="{Binding SelectedContent.ProgressStatus}" TextWrapping="Wrap" VerticalAlignment="Center" />
-                                        <TextBlock Classes="label-md" Text="{Binding SelectedContent.ProgressDetail}" VerticalAlignment="Center" IsVisible="{Binding SelectedContent.ProgressDetail, Converter={x:Static ObjectConverters.IsNotNull}}" />
-                                    </WrapPanel>
-                                    <TextBlock Classes="body-sm danger" Text="{Binding SelectedContent.InstallError}" TextWrapping="Wrap" Margin="0,8,0,0" IsVisible="{Binding SelectedContent.InstallError, Converter={x:Static ObjectConverters.IsNotNull}}" />
-                                    <!-- what the author still asks for after an install, until the player dismisses it -->
-                                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8" Margin="0,8,0,0" IsVisible="{Binding SelectedContent.HasInstallStepsNotice, FallbackValue={x:False}}">
-                                        <ItemsControl ItemsSource="{Binding SelectedContent.InstallStepsNotice}" ItemTemplate="{StaticResource StepList}" ItemsPanel="{StaticResource StepListsPanel}" />
-                                        <Button Grid.Column="1" Classes="text" VerticalAlignment="Top" Content="{Binding Localization.InstallStepsDismiss}" Command="{Binding SelectedContent.DismissInstallStepsNoticeCommand}" />
-                                    </Grid>
-                                </StackPanel>
-                                <StackPanel Classes="content-actions" Orientation="Horizontal" Spacing="8" VerticalAlignment="Top">
-                                    <!-- Add and Remove act on the active instance, so a page from another instance does not offer them -->
-                                    <Panel VerticalAlignment="Center" IsVisible="{Binding CanActOnSelectedContent}">
-                                        <Button Classes="cta with-icon" Command="{Binding SelectedContent.InstallCommand}" IsVisible="{Binding SelectedContent.CanInstall}" ToolTip.Tip="{Binding AddToText}" AutomationProperties.Name="{Binding AddToText}">
-                                            <StackPanel Orientation="Horizontal" Spacing="6">
-                                                <Path Classes="icon size-16" Data="{StaticResource Icon.Plus}" Stroke="{StaticResource Brush.SurfaceHeader}" StrokeThickness="2" VerticalAlignment="Center" />
-                                                <TextBlock Classes="action-lg" Text="{Binding Localization.ContentAdd}" VerticalAlignment="Center" />
-                                            </StackPanel>
-                                        </Button>
-                                        <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center" IsVisible="{Binding SelectedContent.IsInstalling}">
-                                            <ProgressBar Width="96" Height="6" VerticalAlignment="Center" Value="{Binding SelectedContent.Progress}" Maximum="100" Foreground="{StaticResource Brush.Accent}" />
-                                            <Button Classes="text" Content="{Binding SelectedContent.Run.PauseText}" Command="{Binding SelectedContent.Run.TogglePauseCommand}" />
-                                            <Button Classes="text" Content="{Binding SelectedContent.Run.StopText}" Command="{Binding SelectedContent.Run.StopCommand}" />
-                                        </StackPanel>
-                                        <ProgressBar Width="96" Height="6" VerticalAlignment="Center" IsVisible="{Binding SelectedContent.IsRemoving}" IsIndeterminate="True" Foreground="{StaticResource Brush.Accent}" />
-                                        <!-- an installed mod: the chip names the instance, Remove sits where Add was and is disabled with the reason when the mod has to stay. Opened from an instance, the chip leads the meta row instead. -->
-                                        <WrapPanel ItemSpacing="8" LineSpacing="8" VerticalAlignment="Center">
-                                            <WrapPanel.IsVisible>
-                                                <MultiBinding Converter="{x:Static BoolConverters.And}">
-                                                    <Binding Path="SelectedContent.IsInstalled" />
-                                                    <Binding Path="!SelectedContent.IsRemoving" />
-                                                </MultiBinding>
-                                            </WrapPanel.IsVisible>
-                                            <Border Classes="chip positive" VerticalAlignment="Center" ToolTip.Tip="{Binding InstalledInText}" IsVisible="{Binding !IsContentFromInstance}">
-                                                <TextBlock Text="{Binding Localization.DiscoverInstalled}" />
-                                            </Border>
-                                            <Button Classes="text danger" Height="38" Padding="16,0,20,0" Command="{Binding SelectedContent.BeginRemoveCommand}" IsEnabled="{Binding SelectedContent.CanRemove}" IsVisible="{Binding !SelectedContent.IsConfirmingRemove}" ToolTip.Tip="{Binding SelectedContent.RemoveToolTip}" ToolTip.ShowOnDisabled="True" AutomationProperties.HelpText="{Binding SelectedContent.RemoveToolTip}">
-                                                <StackPanel Orientation="Horizontal" Spacing="6">
-                                                    <Path Classes="icon size-16" Data="{StaticResource Icon.Trash}" Stroke="{StaticResource Brush.Danger}" VerticalAlignment="Center" />
-                                                    <TextBlock Text="{Binding Localization.ContentRemove}" FontWeight="SemiBold" VerticalAlignment="Center" />
-                                                </StackPanel>
-                                            </Button>
-                                        </WrapPanel>
-                                    </Panel>
-                                    <Button Classes="icon" VerticalAlignment="Center" AutomationProperties.Name="{Binding Localization.LibraryMoreActions}">
-                                        <Button.Flyout>
-                                            <MenuFlyout Placement="BottomEdgeAlignedRight">
-                                                <MenuItem Header="{Binding SelectedContent.FavoriteText}" Command="{Binding SelectedContent.ToggleFavoriteCommand}" />
-                                                <MenuItem Header="{Binding Localization.ContentCopyShareLink}" Command="{Binding CopyContentShareLinkCommand}" IsVisible="{Binding ContentShareUrl, Converter={x:Static ObjectConverters.IsNotNull}}" />
-                                                <MenuItem Header="{Binding Localization.ContentReport}" IsVisible="{Binding CanReportContent}">
-                                                    <MenuItem Command="{Binding ReportContentCommand}" CommandParameter="{x:Static stewardship:IndexReportKind.Takedown}" AutomationProperties.Name="{Binding Localization.ContentReportTakedown}" AutomationProperties.HelpText="{Binding Localization.ContentReportTakedownHint}">
-                                                        <MenuItem.Header>
-                                                            <StackPanel Spacing="2">
-                                                                <TextBlock Text="{Binding Localization.ContentReportTakedown}" />
-                                                                <TextBlock Classes="body-sm secondary" Text="{Binding Localization.ContentReportTakedownHint}" />
-                                                            </StackPanel>
-                                                        </MenuItem.Header>
-                                                    </MenuItem>
-                                                    <MenuItem Command="{Binding ReportContentCommand}" CommandParameter="{x:Static stewardship:IndexReportKind.Dispute}" AutomationProperties.Name="{Binding Localization.ContentReportDispute}" AutomationProperties.HelpText="{Binding Localization.ContentReportDisputeHint}">
-                                                        <MenuItem.Header>
-                                                            <StackPanel Spacing="2">
-                                                                <TextBlock Text="{Binding Localization.ContentReportDispute}" />
-                                                                <TextBlock Classes="body-sm secondary" Text="{Binding Localization.ContentReportDisputeHint}" />
-                                                            </StackPanel>
-                                                        </MenuItem.Header>
-                                                    </MenuItem>
-                                                </MenuItem>
-                                                <MenuItem Header="{Binding Localization.StewardDispute}" Command="{Binding DisputeContentCommand}" IsVisible="{Binding CanEditContentStatus}" />
-                                                <MenuItem Header="{Binding Localization.StewardDelist}" Command="{Binding DelistContentCommand}" IsVisible="{Binding CanEditContentStatus}" />
-                                                <MenuItem Header="{Binding Localization.StewardAmend}" Command="{Binding AmendContentReleasesCommand}" IsVisible="{Binding CanAmendContentReleases}" />
-                                            </MenuFlyout>
-                                        </Button.Flyout>
-                                        <Path Classes="icon-filled" Data="{StaticResource Icon.More}" />
-                                    </Button>
-                                </StackPanel>
+                        <StackPanel Spacing="4">
+                            <TextBlock Classes="heading-lg" Text="{Binding SelectedContent.Name}" TextWrapping="Wrap" />
+                            <TextBlock Classes="body-md secondary" Text="{Binding SelectedContent.Abstract}" TextWrapping="Wrap" LineHeight="18" />
+                            <ContentControl Margin="0,8,0,0" Content="{Binding SelectedContent.Choices}" IsVisible="{Binding SelectedContent.Choices, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                            <ItemsControl Margin="0,8,0,0" ItemsSource="{Binding SelectedContent.PlanSteps}" ItemTemplate="{StaticResource StepList}" ItemsPanel="{StaticResource StepListsPanel}" IsVisible="{Binding !!SelectedContent.PlanSteps.Count, FallbackValue={x:False}}" />
+                            <WrapPanel ItemSpacing="8" LineSpacing="8" Margin="0,8,0,0" IsVisible="{Binding SelectedContent.IsConfirmingInstall}">
+                                <TextBlock Classes="body-sm" Text="{Binding SelectedContent.LinkRequestText}" IsVisible="{Binding SelectedContent.LinkRequestText, Converter={x:Static ObjectConverters.IsNotNull}}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                                <TextBlock Classes="body-sm secondary" Text="{Binding SelectedContent.AddedModsText}" ToolTip.Tip="{Binding SelectedContent.AddedModsToolTip}" IsVisible="{Binding SelectedContent.AddedModsText, Converter={x:Static ObjectConverters.IsNotNull}}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                                <TextBlock Classes="body-sm secondary" Text="{Binding SelectedContent.InstallWarning}" IsVisible="{Binding SelectedContent.InstallWarning, Converter={x:Static ObjectConverters.IsNotNull}}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                                <Button Classes="text primary" Content="{Binding SelectedContent.ConfirmInstallText}" Command="{Binding SelectedContent.ConfirmInstallCommand}" IsEnabled="{Binding SelectedContent.Choices.IsComplete, FallbackValue={x:True}}" />
+                                <Button Classes="text" Content="{Binding Localization.LibraryCancel}" Command="{Binding SelectedContent.CancelInstallCommand}" />
+                            </WrapPanel>
+                            <WrapPanel ItemSpacing="8" LineSpacing="8" Margin="0,8,0,0" IsVisible="{Binding SelectedContent.IsConfirmingRemove}">
+                                <TextBlock Classes="body-sm danger" Text="{Binding Localization.ContentRemoveConfirm}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                                <Button Classes="text danger" Content="{Binding Localization.ContentRemove}" Command="{Binding SelectedContent.ConfirmRemoveCommand}" />
+                                <Button Classes="text" Content="{Binding Localization.LibraryCancel}" Command="{Binding SelectedContent.CancelRemoveCommand}" />
+                            </WrapPanel>
+                            <ContentControl Margin="0,8,0,0" Content="{Binding SelectedContent.RemoveSteps}" ContentTemplate="{StaticResource StepList}">
+                                <ContentControl.IsVisible>
+                                    <MultiBinding Converter="{x:Static BoolConverters.And}">
+                                        <Binding Path="SelectedContent.IsConfirmingRemove" FallbackValue="{x:False}" />
+                                        <Binding Path="SelectedContent.RemoveSteps" Converter="{x:Static ObjectConverters.IsNotNull}" />
+                                    </MultiBinding>
+                                </ContentControl.IsVisible>
+                            </ContentControl>
+                            <WrapPanel ItemSpacing="8" LineSpacing="8" Margin="0,8,0,0" IsVisible="{Binding SelectedContent.ProgressStatus, Converter={x:Static ObjectConverters.IsNotNull}}">
+                                <TextBlock Classes="body-sm secondary" Text="{Binding SelectedContent.ProgressStatus}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                                <TextBlock Classes="label-md" Text="{Binding SelectedContent.ProgressDetail}" VerticalAlignment="Center" IsVisible="{Binding SelectedContent.ProgressDetail, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                            </WrapPanel>
+                            <TextBlock Classes="body-sm danger" Text="{Binding SelectedContent.InstallError}" TextWrapping="Wrap" Margin="0,8,0,0" IsVisible="{Binding SelectedContent.InstallError, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                            <!-- what the author still asks for after an install, until the player dismisses it -->
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8" Margin="0,8,0,0" IsVisible="{Binding SelectedContent.HasInstallStepsNotice, FallbackValue={x:False}}">
+                                <ItemsControl ItemsSource="{Binding SelectedContent.InstallStepsNotice}" ItemTemplate="{StaticResource StepList}" ItemsPanel="{StaticResource StepListsPanel}" />
+                                <Button Grid.Column="1" Classes="text" VerticalAlignment="Top" Content="{Binding Localization.InstallStepsDismiss}" Command="{Binding SelectedContent.DismissInstallStepsNoticeCommand}" />
                             </Grid>
-                            <WrapPanel Grid.Row="2" ItemSpacing="24" LineSpacing="8" Margin="0,16,0,0">
-                                <Border Classes="chip positive" VerticalAlignment="Center" ToolTip.Tip="{Binding InstalledInText}">
-                                    <Border.IsVisible>
+                        </StackPanel>
+                        <WrapPanel ItemSpacing="8" LineSpacing="8" VerticalAlignment="Top">
+                            <!-- Add and Remove act on the active instance, so a page from another instance does not offer them -->
+                            <Panel VerticalAlignment="Center" IsVisible="{Binding CanActOnSelectedContent}">
+                                <Button Classes="cta with-icon" Command="{Binding SelectedContent.InstallCommand}" IsVisible="{Binding SelectedContent.CanInstall}" ToolTip.Tip="{Binding AddToText}" AutomationProperties.Name="{Binding AddToText}">
+                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                        <Path Classes="icon size-16" Data="{StaticResource Icon.Plus}" Stroke="{StaticResource Brush.SurfaceHeader}" StrokeThickness="2" VerticalAlignment="Center" />
+                                        <TextBlock Classes="action-lg" Text="{Binding Localization.ContentAdd}" VerticalAlignment="Center" />
+                                    </StackPanel>
+                                </Button>
+                                <WrapPanel ItemSpacing="8" LineSpacing="8" VerticalAlignment="Center" IsVisible="{Binding SelectedContent.IsInstalling}">
+                                    <ProgressBar Width="96" MinWidth="0" Height="6" VerticalAlignment="Center" Value="{Binding SelectedContent.Progress}" Maximum="100" Foreground="{StaticResource Brush.Accent}" />
+                                    <Button Classes="text" Content="{Binding SelectedContent.Run.PauseText}" Command="{Binding SelectedContent.Run.TogglePauseCommand}" />
+                                    <Button Classes="text" Content="{Binding SelectedContent.Run.StopText}" Command="{Binding SelectedContent.Run.StopCommand}" />
+                                </WrapPanel>
+                                <ProgressBar Width="96" MinWidth="0" Height="6" VerticalAlignment="Center" IsVisible="{Binding SelectedContent.IsRemoving}" IsIndeterminate="True" Foreground="{StaticResource Brush.Accent}" />
+                                <!-- an installed mod: the chip names the instance, Remove sits where Add was and is disabled with the reason when the mod has to stay. Opened from an instance, the chip leads the meta row instead. -->
+                                <WrapPanel ItemSpacing="8" LineSpacing="8" VerticalAlignment="Center">
+                                    <WrapPanel.IsVisible>
                                         <MultiBinding Converter="{x:Static BoolConverters.And}">
-                                            <Binding Path="IsContentFromInstance" />
-                                            <Binding Path="CanActOnSelectedContent" />
                                             <Binding Path="SelectedContent.IsInstalled" />
                                             <Binding Path="!SelectedContent.IsRemoving" />
                                         </MultiBinding>
-                                    </Border.IsVisible>
-                                    <TextBlock Text="{Binding Localization.DiscoverInstalled}" />
-                                </Border>
-                                <ItemsControl ItemsSource="{Binding SelectedContent.AllTags}" VerticalAlignment="Center" IsVisible="{Binding HasContentTags}">
-                                    <ItemsControl.ItemsPanel>
-                                        <ItemsPanelTemplate>
-                                            <WrapPanel ItemSpacing="4" LineSpacing="4" />
-                                        </ItemsPanelTemplate>
-                                    </ItemsControl.ItemsPanel>
-                                    <ItemsControl.ItemTemplate>
-                                        <DataTemplate x:DataType="x:String">
-                                            <Border Classes="chip">
-                                                <TextBlock Text="{Binding}" />
-                                            </Border>
-                                        </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                </ItemsControl>
-                                <!-- c/meta: the newest version, its size, the downloads and how long ago the version came out -->
-                                <WrapPanel ItemSpacing="16" LineSpacing="8" VerticalAlignment="Center">
-                                    <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center" IsVisible="{Binding LatestVersion, Converter={x:Static ObjectConverters.IsNotNull}}">
-                                        <Path Classes="icon size-16" Data="{StaticResource Icon.GitCommit}" />
-                                        <TextBlock Classes="label-md" Text="{Binding LatestVersion.Version}" VerticalAlignment="Center" />
-                                    </StackPanel>
-                                    <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center" IsVisible="{Binding LatestVersion.DownloadSizeText, Converter={x:Static ObjectConverters.IsNotNull}, FallbackValue=False}" ToolTip.Tip="{Binding Localization.ContentDownloadSize}">
-                                        <Path Classes="icon size-16" Data="{StaticResource Icon.HardDrive}" />
-                                        <TextBlock Classes="label-md" Text="{Binding LatestVersion.DownloadSizeText}" VerticalAlignment="Center" />
-                                    </StackPanel>
-                                    <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center" IsVisible="{Binding SelectedContent.DownloadsText, Converter={x:Static ObjectConverters.IsNotNull}}" ToolTip.Tip="{Binding SelectedContent.DownloadsExactText}">
-                                        <Path Classes="icon size-16" Data="{StaticResource Icon.Download}" />
-                                        <TextBlock Classes="label-md" Text="{Binding SelectedContent.DownloadsText}" VerticalAlignment="Center" />
-                                    </StackPanel>
-                                    <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center" IsVisible="{Binding LatestVersion, Converter={x:Static ObjectConverters.IsNotNull}}" ToolTip.Tip="{Binding LatestVersion.PublishedDateText}">
-                                        <Path Classes="icon size-16" Data="{StaticResource Icon.Clock}" />
-                                        <TextBlock Classes="label-md" Text="{Binding LatestVersion.PublishedText}" VerticalAlignment="Center" />
-                                    </StackPanel>
+                                    </WrapPanel.IsVisible>
+                                    <Border Classes="chip positive" VerticalAlignment="Center" ToolTip.Tip="{Binding InstalledInText}" IsVisible="{Binding !IsContentFromInstance}">
+                                        <TextBlock Text="{Binding Localization.DiscoverInstalled}" />
+                                    </Border>
+                                    <Button Classes="text danger" Height="38" Padding="16,0,20,0" Command="{Binding SelectedContent.BeginRemoveCommand}" IsEnabled="{Binding SelectedContent.CanRemove}" IsVisible="{Binding !SelectedContent.IsConfirmingRemove}" ToolTip.Tip="{Binding SelectedContent.RemoveToolTip}" ToolTip.ShowOnDisabled="True" AutomationProperties.HelpText="{Binding SelectedContent.RemoveToolTip}">
+                                        <StackPanel Orientation="Horizontal" Spacing="6">
+                                            <Path Classes="icon size-16" Data="{StaticResource Icon.Trash}" Stroke="{StaticResource Brush.Danger}" VerticalAlignment="Center" />
+                                            <TextBlock Text="{Binding Localization.ContentRemove}" FontWeight="SemiBold" VerticalAlignment="Center" />
+                                        </StackPanel>
+                                    </Button>
                                 </WrapPanel>
+                            </Panel>
+                            <Button Classes="icon" VerticalAlignment="Center" AutomationProperties.Name="{Binding Localization.LibraryMoreActions}">
+                                <Button.Flyout>
+                                    <MenuFlyout Placement="BottomEdgeAlignedRight">
+                                        <MenuItem Header="{Binding SelectedContent.FavoriteText}" Command="{Binding SelectedContent.ToggleFavoriteCommand}" />
+                                        <MenuItem Header="{Binding Localization.ContentCopyShareLink}" Command="{Binding CopyContentShareLinkCommand}" IsVisible="{Binding ContentShareUrl, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                                        <MenuItem Header="{Binding Localization.ContentReport}" IsVisible="{Binding CanReportContent}">
+                                            <MenuItem Command="{Binding ReportContentCommand}" CommandParameter="{x:Static stewardship:IndexReportKind.Takedown}" AutomationProperties.Name="{Binding Localization.ContentReportTakedown}" AutomationProperties.HelpText="{Binding Localization.ContentReportTakedownHint}">
+                                                <MenuItem.Header>
+                                                    <StackPanel Spacing="2">
+                                                        <TextBlock Text="{Binding Localization.ContentReportTakedown}" />
+                                                        <TextBlock Classes="body-sm secondary" Text="{Binding Localization.ContentReportTakedownHint}" />
+                                                    </StackPanel>
+                                                </MenuItem.Header>
+                                            </MenuItem>
+                                            <MenuItem Command="{Binding ReportContentCommand}" CommandParameter="{x:Static stewardship:IndexReportKind.Dispute}" AutomationProperties.Name="{Binding Localization.ContentReportDispute}" AutomationProperties.HelpText="{Binding Localization.ContentReportDisputeHint}">
+                                                <MenuItem.Header>
+                                                    <StackPanel Spacing="2">
+                                                        <TextBlock Text="{Binding Localization.ContentReportDispute}" />
+                                                        <TextBlock Classes="body-sm secondary" Text="{Binding Localization.ContentReportDisputeHint}" />
+                                                    </StackPanel>
+                                                </MenuItem.Header>
+                                            </MenuItem>
+                                        </MenuItem>
+                                        <MenuItem Header="{Binding Localization.StewardDispute}" Command="{Binding DisputeContentCommand}" IsVisible="{Binding CanEditContentStatus}" />
+                                        <MenuItem Header="{Binding Localization.StewardDelist}" Command="{Binding DelistContentCommand}" IsVisible="{Binding CanEditContentStatus}" />
+                                        <MenuItem Header="{Binding Localization.StewardAmend}" Command="{Binding AmendContentReleasesCommand}" IsVisible="{Binding CanAmendContentReleases}" />
+                                    </MenuFlyout>
+                                </Button.Flyout>
+                                <Path Classes="icon-filled" Data="{StaticResource Icon.More}" />
+                            </Button>
+                        </WrapPanel>
+                        <WrapPanel ItemSpacing="24" LineSpacing="8" Margin="0,16,0,0">
+                            <Border Classes="chip positive" VerticalAlignment="Center" ToolTip.Tip="{Binding InstalledInText}">
+                                <Border.IsVisible>
+                                    <MultiBinding Converter="{x:Static BoolConverters.And}">
+                                        <Binding Path="IsContentFromInstance" />
+                                        <Binding Path="CanActOnSelectedContent" />
+                                        <Binding Path="SelectedContent.IsInstalled" />
+                                        <Binding Path="!SelectedContent.IsRemoving" />
+                                    </MultiBinding>
+                                </Border.IsVisible>
+                                <TextBlock Text="{Binding Localization.DiscoverInstalled}" />
+                            </Border>
+                            <ItemsControl ItemsSource="{Binding SelectedContent.AllTags}" VerticalAlignment="Center" IsVisible="{Binding HasContentTags}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <WrapPanel ItemSpacing="4" LineSpacing="4" />
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="x:String">
+                                        <Border Classes="chip">
+                                            <TextBlock Text="{Binding}" />
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                            <!-- c/meta: the newest version, its size, the downloads and how long ago the version came out -->
+                            <WrapPanel ItemSpacing="16" LineSpacing="8" VerticalAlignment="Center">
+                                <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center" IsVisible="{Binding LatestVersion, Converter={x:Static ObjectConverters.IsNotNull}}">
+                                    <Path Classes="icon size-16" Data="{StaticResource Icon.GitCommit}" />
+                                    <TextBlock Classes="label-md" Text="{Binding LatestVersion.Version}" VerticalAlignment="Center" />
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center" IsVisible="{Binding LatestVersion.DownloadSizeText, Converter={x:Static ObjectConverters.IsNotNull}, FallbackValue=False}" ToolTip.Tip="{Binding Localization.ContentDownloadSize}">
+                                    <Path Classes="icon size-16" Data="{StaticResource Icon.HardDrive}" />
+                                    <TextBlock Classes="label-md" Text="{Binding LatestVersion.DownloadSizeText}" VerticalAlignment="Center" />
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center" IsVisible="{Binding SelectedContent.DownloadsText, Converter={x:Static ObjectConverters.IsNotNull}}" ToolTip.Tip="{Binding SelectedContent.DownloadsExactText}">
+                                    <Path Classes="icon size-16" Data="{StaticResource Icon.Download}" />
+                                    <TextBlock Classes="label-md" Text="{Binding SelectedContent.DownloadsText}" VerticalAlignment="Center" />
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center" IsVisible="{Binding LatestVersion, Converter={x:Static ObjectConverters.IsNotNull}}" ToolTip.Tip="{Binding LatestVersion.PublishedDateText}">
+                                    <Path Classes="icon size-16" Data="{StaticResource Icon.Clock}" />
+                                    <TextBlock Classes="label-md" Text="{Binding LatestVersion.PublishedText}" VerticalAlignment="Center" />
+                                </StackPanel>
                             </WrapPanel>
-                        </Grid>
-                    </Grid>
+                        </WrapPanel>
+                    </views:ContentHeaderPanel>
 
                     <ContentControl Content="{Binding}" ContentTemplate="{StaticResource InstanceHint}" Margin="0,16,0,0">
                         <ContentControl.IsVisible>
