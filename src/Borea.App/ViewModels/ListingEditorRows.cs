@@ -166,8 +166,9 @@ public sealed partial class ListingDependencyRow : ObservableObject
 }
 
 /// <summary>
-/// One [[mods]] entry of a pack: a listed mod and the release it pins. A pin no client can install shows why, a pin whose mod
-/// has a newer release offers it, and a pin that a retraction of the listed pack names shows what the retraction says.
+/// One [[mods]] entry of a pack: a listed mod and the release it pins. A pin the checks refuse shows their errors, a pin whose mod
+/// has a newer release names it and offers it when the other pins accept it, and a pin that a retraction of the listed pack names
+/// shows what the retraction says.
 /// </summary>
 public sealed partial class ListingPackMemberRow : ObservableObject
 {
@@ -182,6 +183,7 @@ public sealed partial class ListingPackMemberRow : ObservableObject
         Releases = releases;
         _selected = releases.FirstOrDefault(release => release.Version == member.Version);
         RetractionNote = owner.RetractionNotes(member.Id) is { Count: > 0 } notes ? string.Join("\n", notes) : null;
+        DisputedNote = owner.DisputedNote(member.Id);
     }
 
     public string Id => _member.Id;
@@ -192,12 +194,30 @@ public sealed partial class ListingPackMemberRow : ObservableObject
     public IReadOnlyList<ListingReleaseChoice> Releases { get; }
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(Note), nameof(HasNote), nameof(Newer), nameof(NewerText), nameof(UseNewerText), nameof(HasNewer))]
+    [NotifyPropertyChangedFor(nameof(Note), nameof(HasNote), nameof(Newer), nameof(NewerText), nameof(UseNewerText), nameof(HasNewer), nameof(CanUseNewer),
+        nameof(SelectedMark), nameof(HasSelectedMark))]
     private ListingReleaseChoice? _selected;
+
+    /// <summary>The errors of the checks about this pin, in their words.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasProblems))]
+    private IReadOnlyList<string> _problems = [];
+
+    public bool HasProblems => Problems.Count > 0;
+
+    /// <summary>Why no pack can pin the chosen release, which the closed release list does not show.</summary>
+    public string? SelectedMark => Selected?.Mark;
+
+    public bool HasSelectedMark => SelectedMark is not null;
 
     public string? Note => _owner.MemberNote(ToMember());
 
     public bool HasNote => Note is not null;
+
+    /// <summary>What a client says about a disputed mod, with the reason the index gives.</summary>
+    public string? DisputedNote { get; }
+
+    public bool IsDisputed => DisputedNote is not null;
 
     /// <summary>The newest release that is newer than the pin and at least as stable. A hint for the author, the pin stays until they move it.</summary>
     public ListingReleaseChoice? Newer => _owner.NewerChoice(Id, ToMember().Version, Releases);
@@ -208,17 +228,28 @@ public sealed partial class ListingPackMemberRow : ObservableObject
 
     public bool HasNewer => Newer is not null;
 
+    /// <summary>Whether the member rules accept the newer release with the other pins, so the row offers to move the pin.</summary>
+    public bool CanUseNewer => Newer is { } newer && _owner.NewerFits(this, newer.Version);
+
     public string? RetractionNote { get; }
 
     public bool IsNamedInRetraction => RetractionNote is not null;
 
     internal ListingPackMember ToMember() => _member with { Version = Selected?.Version ?? _member.Version };
 
+    /// <summary>Takes the errors of the last check, after which the other pins may also accept a newer release or not.</summary>
+    internal void Update(IReadOnlyList<string> problems)
+    {
+        if (!problems.SequenceEqual(Problems))
+            Problems = problems;
+        OnPropertyChanged(nameof(CanUseNewer));
+    }
+
     [RelayCommand]
     private void UseNewer()
     {
-        if (Newer is { } newer)
-            Selected = newer;
+        if (CanUseNewer)
+            Selected = Newer;
     }
 
     [RelayCommand]
@@ -234,6 +265,11 @@ public sealed record ListingReleaseChoice(string Version, string Status)
 
     /// <summary>The version, which an editable list writes into its field when the author picks the release.</summary>
     public override string ToString() => Version;
+
+    /// <summary>Why no pack can pin the release, or null.</summary>
+    public string? Mark { get; init; }
+
+    public bool HasMark => Mark is not null;
 }
 
 /// <summary>A dependency that the mod.toml of the author's release declares, which the index derives by itself. It is shown read only.</summary>

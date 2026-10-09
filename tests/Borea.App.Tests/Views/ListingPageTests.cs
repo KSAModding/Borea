@@ -1,10 +1,12 @@
 using System.Net;
+using System.Text.Json.Nodes;
 using Avalonia;
 using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Headless;
 using Avalonia.Input;
 using Avalonia.LogicalTree;
+using Avalonia.Styling;
 using Avalonia.VisualTree;
 using Borea.App.Tests.ViewModels;
 using Borea.App.ViewModels;
@@ -446,6 +448,125 @@ public sealed class ListingPageTests
         Assert.Contains(verdict, texts);
         Assert.DoesNotContain(localization.ListingSignIn, texts);
     }
+
+    [Theory]
+    [InlineData(860)]
+    [InlineData(1280)]
+    public async Task MemberRow_ChosenReleaseWithAMark_KeepsTheNameTheBoxAndTheRemoveButtonInTheCard(double windowWidth)
+    {
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: MarkedMeasureTools);
+        var editor = harness.ViewModel.ListingEditor;
+        await harness.ViewModel.OpenListingAsync();
+        LoadMarkedPack(editor);
+
+        var layout = await HeadlessApp.RunAsync(harness, async () =>
+        {
+            var page = new ListingPage { DataContext = harness.ViewModel };
+            Grid.SetColumn(page, 1);
+            var body = new Grid { ColumnDefinitions = new ColumnDefinitions($"{PageBodyPanel.NavigationRailWidth},*"), Children = { page } };
+            var window = new Window { Width = windowWidth, Height = 1080, Content = body, DataContext = harness.ViewModel };
+            window.Show();
+            try
+            {
+                window.UpdateLayout();
+                var card = page.GetVisualDescendants().OfType<Border>().First(border => Equals(border.Tag, "members"));
+                var box = card.GetVisualDescendants().OfType<ComboBox>().Single(box => box.DataContext is ListingPackMemberRow { Id: "MeasureTools" });
+                var header = (Grid)box.GetVisualParent()!;
+                var texts = header.Children.OfType<StackPanel>().Single().Children.OfType<TextBlock>().ToList();
+                var remove = header.Children.OfType<Button>().Single();
+                var mark = card.GetVisualDescendants().OfType<TextBlock>()
+                    .Single(text => text.Text == ((ListingPackMemberRow)box.DataContext!).SelectedMark && text.IsEffectivelyVisible && !text.GetVisualAncestors().OfType<ComboBox>().Any());
+
+                box.IsDropDownOpen = true;
+                await HeadlessApp.FramesAsync(5);
+                var item = (Control)box.ContainerFromIndex(0)!;
+                var result = new MemberRowLayout(
+                    texts[0].Bounds.Width,
+                    texts[1].TextLayout.TextLines.Any(line => line.HasCollapsed),
+                    new Control[] { box, remove, mark }.Where(control => !Fits(control, card)).Select(control => control.ToString() ?? string.Empty).ToList(),
+                    item.Bounds.Width);
+                box.IsDropDownOpen = false;
+                return result;
+            }
+            finally
+            {
+                window.Close();
+            }
+        });
+
+        Assert.True(layout.NameWidth >= 60, $"The name is {layout.NameWidth:F0} px wide.");
+        Assert.False(layout.IdCut);
+        Assert.Equal([], layout.Outside);
+        Assert.True(layout.ItemWidth <= 400, $"The release list is {layout.ItemWidth:F0} px wide.");
+    }
+
+    [Theory]
+    [InlineData("Dark")]
+    [InlineData("Light")]
+    public async Task ReleaseList_MarkOfTheSelectedRelease_IsReadable(string theme)
+    {
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: MarkedMeasureTools);
+        var editor = harness.ViewModel.ListingEditor;
+        await harness.ViewModel.OpenListingAsync();
+        LoadMarkedPack(editor);
+
+        var (danger, behind) = await HeadlessApp.RunAsync(harness, async () =>
+        {
+            var before = Application.Current!.RequestedThemeVariant;
+            Application.Current.RequestedThemeVariant = theme == "Light" ? ThemeVariant.Light : ThemeVariant.Dark;
+            var page = new ListingPage { DataContext = harness.ViewModel };
+            var window = new Window { Width = 1280, Height = 1080, Content = page, DataContext = harness.ViewModel };
+            window.Show();
+            try
+            {
+                window.UpdateLayout();
+                var box = page.GetVisualDescendants().OfType<ComboBox>().Single(box => box.DataContext is ListingPackMemberRow { Id: "MeasureTools" });
+                box.IsDropDownOpen = true;
+                await HeadlessApp.FramesAsync(5);
+                var item = (ComboBoxItem)box.ContainerFromIndex(0)!;
+                Assert.True(item.IsSelected);
+                var mark = item.GetVisualDescendants().OfType<TextBlock>().Single(text => text.Classes.Contains("danger"));
+                var host = TopLevel.GetTopLevel(mark)!;
+                using var frame = host.CaptureRenderedFrame()!;
+                using var buffer = frame.Lock();
+                // a point just left of the text, where no glyph is drawn
+                var point = mark.TranslatePoint(new Point(-3, mark.Bounds.Height / 2), host)!.Value;
+                var colors = (UnexpectedErrorBarTests.Token(mark, "Color.Danger"), UnexpectedErrorBarTests.Pixel(buffer, point));
+                box.IsDropDownOpen = false;
+                return colors;
+            }
+            finally
+            {
+                window.Close();
+                Application.Current.RequestedThemeVariant = before;
+            }
+        });
+
+        var contrast = UnexpectedErrorBarTests.Contrast(danger, behind);
+        Assert.True(contrast >= UnexpectedErrorBarTests.ReadableContrast, $"The mark has a contrast of {contrast:F2} on {behind} in the {theme} theme.");
+    }
+
+    /// <summary>MeasureTools 1.1.10 needs a mod and one of two mods that are not listed, so its mark is long.</summary>
+    private static string MarkedMeasureTools(string json)
+    {
+        var root = JsonNode.Parse(json)!;
+        var release = root["listings"]!.AsArray().Single(listing => (string?)listing!["id"] == "MeasureTools")!["releases"]!.AsArray()
+            .Single(release => (string?)release!["version"] == "1.1.10")!;
+        var dependencies = (release["dependencies"] ??= new JsonArray()).AsArray();
+        dependencies.Add(new JsonObject { ["id"] = "KittenExtensions", ["kind"] = "required" });
+        dependencies.Add(new JsonObject { ["any_of"] = new JsonArray(new JsonObject { ["id"] = "ShaderExtensions" }, new JsonObject { ["id"] = "KittenExtensionsContinued" }), ["kind"] = "required" });
+        return root.ToJsonString();
+    }
+
+    private static void LoadMarkedPack(ListingEditor editor) => editor.Load(new ListingDraft
+    {
+        Type = ListingDraft.ModPackType,
+        Id = "my-pack",
+        Version = "1.0.0",
+        Mods = [new ListingPackMember("AdvancedFlightComputer", "0.7.5"), new ListingPackMember("MeasureTools", "1.1.10")],
+    });
+
+    private sealed record MemberRowLayout(double NameWidth, bool IdCut, List<string> Outside, double ItemWidth);
 
     private static void FillValidListing(ListingEditor editor)
     {

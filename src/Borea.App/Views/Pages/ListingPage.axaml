@@ -281,6 +281,7 @@
                             <StackPanel Spacing="8">
                                 <TextBlock Classes="heading-md" Text="{Binding Localization.ListingMembers}" />
                                 <TextBlock Classes="body-sm secondary" Text="{Binding Localization.ListingMembersHint}" TextWrapping="Wrap" />
+                                <TextBlock Classes="body-sm secondary" Text="{Binding Localization.ListingMemberRulesHint}" TextWrapping="Wrap" />
                                 <StackPanel Spacing="4" IsVisible="{Binding ListingEditor.HasLeftOut}">
                                     <TextBlock Classes="body-sm" Text="{Binding ListingEditor.LeftOutTitle}" TextWrapping="Wrap" />
                                     <ItemsControl ItemsSource="{Binding ListingEditor.LeftOut}">
@@ -311,18 +312,60 @@
                                                             <TextBlock Classes="heading-sm" Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
                                                             <TextBlock Classes="label-md" Text="{Binding Id}" TextTrimming="CharacterEllipsis" />
                                                         </StackPanel>
-                                                        <ComboBox Grid.Column="2" MinWidth="180" VerticalAlignment="Center" ItemsSource="{Binding Releases}" SelectedItem="{Binding Selected}" ItemTemplate="{StaticResource ReleaseChoiceTemplate}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ListingMemberRelease}" />
+                                                        <ComboBox Grid.Column="2" MinWidth="180" VerticalAlignment="Center" ItemsSource="{Binding Releases}" SelectedItem="{Binding Selected}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ListingMemberRelease}">
+                                                            <ComboBox.ItemTemplate>
+                                                                <DataTemplate x:DataType="vm:ListingReleaseChoice">
+                                                                    <StackPanel Spacing="4">
+                                                                        <StackPanel Orientation="Horizontal" Spacing="8">
+                                                                            <TextBlock Text="{Binding Version}" VerticalAlignment="Center" />
+                                                                            <Border Classes="chip" VerticalAlignment="Center" IsVisible="{Binding HasStatus}">
+                                                                                <TextBlock Text="{Binding Status}" />
+                                                                            </Border>
+                                                                        </StackPanel>
+                                                                        <!-- the mark wraps on its own line, so a long one keeps the list close to the width of the box -->
+                                                                        <Border Classes="mark" HorizontalAlignment="Left" MaxWidth="320" IsVisible="{Binding HasMark}">
+                                                                            <TextBlock Classes="body-sm danger" Text="{Binding Mark}" TextWrapping="Wrap" />
+                                                                        </Border>
+                                                                    </StackPanel>
+                                                                </DataTemplate>
+                                                            </ComboBox.ItemTemplate>
+                                                            <!-- the closed box shows no mark, the row shows the mark of the chosen release under it -->
+                                                            <ComboBox.SelectionBoxItemTemplate>
+                                                                <DataTemplate x:DataType="vm:ListingReleaseChoice">
+                                                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                                                        <TextBlock Text="{Binding Version}" VerticalAlignment="Center" />
+                                                                        <Border Classes="chip" VerticalAlignment="Center" IsVisible="{Binding HasStatus}">
+                                                                            <TextBlock Text="{Binding Status}" />
+                                                                        </Border>
+                                                                    </StackPanel>
+                                                                </DataTemplate>
+                                                            </ComboBox.SelectionBoxItemTemplate>
+                                                        </ComboBox>
                                                         <Button Grid.Column="4" Classes="icon" Command="{Binding RemoveCommand}" VerticalAlignment="Center" ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ListingRemove}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ListingRemove}">
                                                             <Path Classes="icon size-16" Data="{StaticResource Icon.Trash}" />
                                                         </Button>
                                                     </Grid>
+                                                    <TextBlock Classes="body-sm danger" Text="{Binding SelectedMark}" TextWrapping="Wrap" IsVisible="{Binding HasSelectedMark}" />
+                                                    <ItemsControl ItemsSource="{Binding Problems}" IsVisible="{Binding HasProblems}">
+                                                        <ItemsControl.ItemsPanel>
+                                                            <ItemsPanelTemplate>
+                                                                <StackPanel Spacing="4" />
+                                                            </ItemsPanelTemplate>
+                                                        </ItemsControl.ItemsPanel>
+                                                        <ItemsControl.ItemTemplate>
+                                                            <DataTemplate x:DataType="x:String">
+                                                                <TextBlock Classes="body-sm danger" Text="{Binding}" TextWrapping="Wrap" />
+                                                            </DataTemplate>
+                                                        </ItemsControl.ItemTemplate>
+                                                    </ItemsControl>
                                                     <TextBlock Classes="body-sm secondary" Text="{Binding Note}" TextWrapping="Wrap" IsVisible="{Binding HasNote}" />
+                                                    <TextBlock Classes="body-sm" Text="{Binding DisputedNote}" TextWrapping="Wrap" IsVisible="{Binding IsDisputed}" />
                                                     <TextBlock Classes="body-sm danger" Text="{Binding RetractionNote}" TextWrapping="Wrap" IsVisible="{Binding IsNamedInRetraction}" />
                                                     <WrapPanel ItemSpacing="8" LineSpacing="4" IsVisible="{Binding HasNewer}">
                                                         <Border Classes="chip" VerticalAlignment="Center">
                                                             <TextBlock Text="{Binding NewerText}" />
                                                         </Border>
-                                                        <Button Classes="link" Command="{Binding UseNewerCommand}" VerticalAlignment="Center">
+                                                        <Button Classes="link" Command="{Binding UseNewerCommand}" VerticalAlignment="Center" IsVisible="{Binding CanUseNewer}">
                                                             <TextBlock Classes="action-md" Text="{Binding UseNewerText}" />
                                                         </Button>
                                                     </WrapPanel>
@@ -331,6 +374,27 @@
                                         </DataTemplate>
                                     </ItemsControl.ItemTemplate>
                                 </ItemsControl>
+                                <StackPanel Spacing="4" IsVisible="{Binding ListingEditor.CanAddMissingDependencies}">
+                                    <Button Classes="link" Command="{Binding ListingEditor.AddMissingDependenciesCommand}" HorizontalAlignment="Left">
+                                        <TextBlock Classes="action-md" Text="{Binding Localization.ListingAddMissingDependencies}" />
+                                    </Button>
+                                    <TextBlock Classes="body-sm secondary" Text="{Binding Localization.ListingAddMissingDependenciesHint}" TextWrapping="Wrap" />
+                                </StackPanel>
+                                <StackPanel Spacing="4" IsVisible="{Binding ListingEditor.HasMissingDependencyNotes}">
+                                    <TextBlock Classes="body-sm" Text="{Binding Localization.ListingMissingDependenciesTitle}" TextWrapping="Wrap" />
+                                    <ItemsControl ItemsSource="{Binding ListingEditor.MissingDependencyNotes}">
+                                        <ItemsControl.ItemsPanel>
+                                            <ItemsPanelTemplate>
+                                                <StackPanel Spacing="4" />
+                                            </ItemsPanelTemplate>
+                                        </ItemsControl.ItemsPanel>
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate x:DataType="x:String">
+                                                <TextBlock Classes="body-sm" Text="{Binding}" TextWrapping="Wrap" Margin="12,0,0,0" />
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
                                 <Grid ColumnDefinitions="*,8,Auto" Margin="0,4,0,0">
                                     <TextBox Classes="field search" Text="{Binding ListingEditor.MemberQuery}" PlaceholderText="{Binding Localization.ListingSearchMembers}" AutomationProperties.Name="{Binding Localization.ListingSearchMembers}">
                                         <TextBox.InnerLeftContent>

@@ -733,9 +733,10 @@ public sealed partial class ListingEditor : ObservableObject
         var document = draft.ToDocument();
         DocumentText = services.ListingFormat.Write(document, _listedText);
         var result = services.ListingValidator.Validate(document, new ListingCheckContext(_snapshot, HasFixedId ? _base.Id : null, _readArchive ?? _archive));
-        var issues = pageIssues.Concat(result.Issues).Distinct().ToList();
+        var issues = InPinOrder(pageIssues.Concat(result.Issues).Distinct());
 
         MainViewModel.Arrange(Errors, issues.Where(issue => issue.Severity == ListingIssueSeverity.Error).ToList());
+        UpdateMemberProblems(Errors);
         MainViewModel.Arrange(Notes, issues.Where(issue => issue.Severity == ListingIssueSeverity.Note).ToList());
         SchemaText = services.ListingValidator.SchemaOrigin switch
         {
@@ -830,9 +831,14 @@ public sealed partial class ListingEditor : ObservableObject
         var mods = Members.Select(row => row.ToMember()).ToList();
         var dependencies = IsPack ? new List<ListingDependency>() : Dependencies.Select(row => row.ToDependency()).ToList();
         if (IsPack)
+        {
             pageIssues.AddRange(PackIssues(mods));
+        }
         else
+        {
             GameMinProposal = null;
+            FillMissing(mods);
+        }
         pageIssues.AddRange(DependencyIssues(dependencies));
 
         return _base with

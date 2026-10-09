@@ -29,10 +29,12 @@ internal static partial class ListingRules
             issues.Add(Error("superseded_by", "a listing cannot supersede itself"));
         CheckLoader(document, own, issues);
         CheckDependencies(document, own, issues);
+        CheckPins(document, own, issues);
         CheckImages(document, issues);
         if (context.Snapshot is { } snapshot)
         {
             CheckIndex(document, own, context.ListedId, snapshot, issues);
+            issues.AddRange(PackMemberRules.Check(document, snapshot));
             CheckTags(document, snapshot, issues);
         }
 
@@ -157,6 +159,28 @@ internal static partial class ListingRules
         }
     }
 
+    /// <summary>A pack pins each id once across mods, vehicles and saves, and never itself, as check_pins in check_schema.py.</summary>
+    private static void CheckPins(AuthoredTable document, string? own, List<ListingIssue> issues)
+    {
+        var pinned = new Dictionary<string, string>(ModIds.Comparer);
+        foreach (var section in new[] { "mods", "vehicles", "saves" })
+        {
+            var entries = document.GetList(section) ?? [];
+            for (var index = 0; index < entries.Count; index++)
+            {
+                if ((entries[index] as AuthoredTable)?.GetString("id") is not { } id)
+                    continue;
+
+                var where = $"{section}[{index}]";
+                if (own is not null && ModIds.Equals(id, own))
+                    issues.Add(Error(where, "a pack cannot pin itself"));
+                else if (pinned.TryGetValue(id, out var first))
+                    issues.Add(Error(where, $"'{id}' is pinned by {first}"));
+                pinned.TryAdd(id, where);
+            }
+        }
+    }
+
     private static void CheckBounds(string where, AuthoredTable bounds, List<ListingIssue> issues)
     {
         var min = bounds.GetString("min");
@@ -254,6 +278,17 @@ internal static partial class ListingRules
             }
         }
 
+        foreach (var section in new[] { "mods", "vehicles", "saves" })
+        {
+            var pins = document.GetList(section) ?? [];
+            for (var index = 0; index < pins.Count; index++)
+            {
+                var id = (pins[index] as AuthoredTable)?.GetString("id");
+                if (Reference($"{section}[{index}]", id, null, targets, issues) == ContentType.ModPack)
+                    issues.Add(Error($"{section}[{index}]", $"'{id}' is itself a pack, and a pack does not nest in spec_version 1"));
+            }
+        }
+
         if (ForumsThreadLink.ThreadOf(document.GetTable("links")?.GetString("forums")) is { } thread)
         {
             var others = holders.Where(holder => ForumsThreadLink.ThreadOf(holder.Forums) == thread).Select(holder => holder.Where).Distinct().Order(StringComparer.Ordinal).ToList();
@@ -262,10 +297,11 @@ internal static partial class ListingRules
         }
     }
 
-    private static void Reference(string where, string? value, ContentType? required, List<Holder> targets, List<ListingIssue> issues)
+    /// <summary>Checks the spelling and the type of a reference, and returns the type of the listing it names.</summary>
+    private static ContentType? Reference(string where, string? value, ContentType? required, List<Holder> targets, List<ListingIssue> issues)
     {
         if (value is null || targets.FirstOrDefault(target => ModIds.Equals(target.Id, value)) is not { } target)
-            return;
+            return null;
 
         if (!string.Equals(value, target.Id, StringComparison.Ordinal))
             issues.Add(Error(where, $"'{value}' does not use the canonical id spelling '{target.Id}'"));
@@ -275,6 +311,8 @@ internal static partial class ListingRules
             var what = where == "loader" ? "a loader" : "a dependency";
             issues.Add(Error(where, $"'{value}' is listed as a {TypeName(found)}, and {what} has to be a {TypeName(type)}"));
         }
+
+        return target.Type;
     }
 
     private static void CheckTags(AuthoredTable document, ContentIndexSnapshot snapshot, List<ListingIssue> issues)

@@ -907,7 +907,7 @@ public sealed class ListingEditorTests
     }
 
     [Fact]
-    public async Task LoadedPinThatTheSnapshotDoesNotOffer_StaysInTheFileWithANote()
+    public async Task LoadedPinThatTheSnapshotDoesNotOffer_StaysInTheFileWithTheErrorOfTheMemberRules()
     {
         using var harness = await ViewModelHarness.CreateAsync(editSnapshot: YankAndDelist);
         var editor = harness.ViewModel.ListingEditor;
@@ -924,12 +924,216 @@ public sealed class ListingEditorTests
 
         Assert.Contains("[[mods]]\nid = \"Unlisted\"\nversion = \"1.0.0\"\n", editor.DocumentText, StringComparison.Ordinal);
         Assert.Contains("[[mods]]\nid = \"MeasureTools\"\nversion = \"1.1.10\"\n", editor.DocumentText, StringComparison.Ordinal);
-        Assert.Equal(
-            [localization.FormatListingMemberNotListed("Unlisted"), localization.FormatListingMemberNotOffered("MeasureTools", "1.1.10"), null],
-            editor.Members.Select(row => row.Note));
+        Assert.Equal([null, null, null], editor.Members.Select(row => row.Note));
         Assert.Equal(new ListingReleaseChoice("1.1.10", string.Empty), editor.Members[1].Selected);
-        Assert.Contains($"{localization.ListingMembers}: {localization.FormatListingMemberNotListed("Unlisted")}", editor.VisibleNotes);
-        Assert.Contains($"{localization.ListingMembers}: {localization.FormatListingMemberNotOffered("MeasureTools", "1.1.10")}", editor.VisibleNotes);
+        Assert.Equal(
+            ["mods[0]: 'Unlisted' is not a listed mod, and a pack pins only listed mods", "mods[1]: 'MeasureTools' 1.1.10 is yanked"],
+            editor.Errors.Where(issue => issue.Location.StartsWith("mods", StringComparison.Ordinal)).Select(issue => issue.ToString()));
+        Assert.Contains($"{localization.ListingMembers}: 'Unlisted' is not a listed mod, and a pack pins only listed mods", editor.VisibleErrors);
+        Assert.False(editor.CanOpenPullRequest);
+    }
+
+    [Fact]
+    public async Task MemberPicker_MarksAReleaseThatNeedsAModThatIsNotListed_AndAddsTheNewestThatCanBePinned()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: snapshot => Require(snapshot, "MeasureTools", "1.1.10", new JsonObject { ["id"] = "KittenExtensions", ["kind"] = "required" }));
+        var editor = harness.ViewModel.ListingEditor;
+        var localization = harness.Localization;
+        await harness.ViewModel.OpenListingAsync();
+        editor.StartPackCommand.Execute(null);
+
+        editor.MemberQuery = "measure";
+        editor.AddMemberCommand.Execute(null);
+        var row = Assert.Single(editor.Members);
+
+        Assert.Equal("1.1.9", row.Selected?.Version);
+        Assert.Equal([localization.FormatListingMemberCannotBePinned([["KittenExtensions"]]), null, null, null], row.Releases.Select(release => release.Mark));
+        Assert.DoesNotContain(editor.Errors, issue => issue.Location.StartsWith("mods", StringComparison.Ordinal));
+
+        row.Selected = row.Releases[0];
+
+        Assert.Contains(editor.Errors, issue => issue.ToString() == "mods[0]: 'MeasureTools' 1.1.10 requires 'KittenExtensions', and the pack does not pin it");
+        Assert.False(editor.CanAddMissingDependencies);
+        Assert.Equal([localization.FormatListingMissingNotListed("'MeasureTools' 1.1.10 requires 'KittenExtensions'")], editor.MissingDependencyNotes);
+    }
+
+    [Fact]
+    public async Task AddMissingDependencies_PinsTheNewestStableReleaseInsideTheBoundsOfEveryMember()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: snapshot => Require(
+            Require(snapshot, "KSArmory", "0.8.44", new JsonObject { ["id"] = "MeasureTools", ["kind"] = "required", ["max"] = "1.1.9" }),
+            "AdvancedFlightComputer", "0.7.5", new JsonObject { ["id"] = "MeasureTools", ["kind"] = "required", ["min"] = "1.1.8" }));
+        var editor = harness.ViewModel.ListingEditor;
+        await harness.ViewModel.OpenListingAsync();
+        editor.Load(new ListingDraft
+        {
+            Type = ListingDraft.ModPackType,
+            Id = "my-pack",
+            Version = "1.0.0",
+            Mods = [new ListingPackMember("KSArmory", "0.8.44"), new ListingPackMember("AdvancedFlightComputer", "0.7.5")],
+        });
+
+        Assert.Equal(
+            [
+                "mods[0]: 'KSArmory' 0.8.44 requires 'MeasureTools' 1.1.9 or older, and the pack does not pin it",
+                "mods[1]: 'AdvancedFlightComputer' 0.7.5 requires 'MeasureTools' 1.1.8 or newer, and the pack does not pin it",
+            ],
+            editor.Errors.Where(issue => issue.Location.StartsWith("mods", StringComparison.Ordinal)).Select(issue => issue.ToString()));
+        Assert.True(editor.CanAddMissingDependencies);
+        Assert.Empty(editor.MissingDependencyNotes);
+
+        editor.AddMissingDependenciesCommand.Execute(null);
+
+        Assert.Equal(["KSArmory 0.8.44", "AdvancedFlightComputer 0.7.5", "MeasureTools 1.1.9"], editor.Members.Select(row => $"{row.Id} {row.Selected?.Version}"));
+        Assert.Equal("MeasureTools", editor.Draft.Mods[2].Id);
+        Assert.DoesNotContain(editor.Errors, issue => issue.Location.StartsWith("mods", StringComparison.Ordinal));
+        Assert.False(editor.CanAddMissingDependencies);
+    }
+
+    [Fact]
+    public async Task MemberPicker_MarkNamesEachNeedOnce_AndTheRowShowsTheMarkOfTheChosenRelease()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: snapshot => Require(
+            Require(snapshot, "MeasureTools", "1.1.10", new JsonObject { ["id"] = "KittenExtensions", ["kind"] = "required" }),
+            "MeasureTools", "1.1.10", new JsonObject { ["any_of"] = new JsonArray(new JsonObject { ["id"] = "ShaderExtensions" }, new JsonObject { ["id"] = "KittenExtensionsContinued" }), ["kind"] = "required" }));
+        var editor = harness.ViewModel.ListingEditor;
+        await harness.ViewModel.OpenListingAsync();
+        editor.Load(new ListingDraft { Type = ListingDraft.ModPackType, Id = "my-pack", Version = "1.0.0", Mods = [new ListingPackMember("MeasureTools", "1.1.10")] });
+        var row = Assert.Single(editor.Members);
+
+        const string Mark = "Cannot be pinned, because it needs 'KittenExtensions' and one of 'ShaderExtensions', 'KittenExtensionsContinued'";
+        Assert.Equal(Mark, row.Releases[0].Mark);
+        Assert.Equal(Mark, row.SelectedMark);
+
+        row.Selected = row.Releases[1];
+
+        Assert.False(row.HasSelectedMark);
+    }
+
+    [Fact]
+    public async Task MemberErrors_ShowUnderTheirRow_AndTheSidePanelListsThemInMemberOrder()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: snapshot => Require(snapshot, "AdvancedFlightComputer", "0.7.5", new JsonObject { ["id"] = "KSArmory", ["kind"] = "required" }));
+        var editor = harness.ViewModel.ListingEditor;
+        await harness.ViewModel.OpenListingAsync();
+        editor.Load(new ListingDraft
+        {
+            Type = ListingDraft.ModPackType,
+            Id = "my-pack",
+            Version = "1.0.0",
+            Mods = [new ListingPackMember("AdvancedFlightComputer", "0.7.5"), new ListingPackMember("measuretools", "1.1.9")],
+        });
+        const string Requires = "'AdvancedFlightComputer' 0.7.5 requires 'KSArmory', and the pack does not pin it";
+        const string Spelling = "'measuretools' does not use the canonical id spelling 'MeasureTools'";
+
+        // the reference check runs before the member rules, so without the sort the error of mods[1] comes first
+        Assert.Equal([$"mods[0]: {Requires}", $"mods[1]: {Spelling}"], editor.Errors.Where(issue => issue.Location.StartsWith("mods", StringComparison.Ordinal)).Select(issue => issue.ToString()));
+        Assert.Equal([Requires], editor.Members[0].Problems);
+        Assert.Equal([Spelling], editor.Members[1].Problems);
+
+        editor.AddMissingDependenciesCommand.Execute(null);
+
+        Assert.Empty(editor.Members[0].Problems);
+        Assert.False(editor.Members[2].HasProblems);
+    }
+
+    [Fact]
+    public async Task UseNewer_IsOfferedOnlyForAReleaseThatTheOtherPinsAccept()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: snapshot => Require(
+            Require(WithOrbitLib(snapshot), "AdvancedFlightComputer", "0.7.5", new JsonObject { ["id"] = "OrbitLib", ["kind"] = "required", ["max"] = "1.9.0" }),
+            "MeasureTools", "1.1.10", new JsonObject { ["id"] = "KittenExtensions", ["kind"] = "required" }));
+        var editor = harness.ViewModel.ListingEditor;
+        await harness.ViewModel.OpenListingAsync();
+        editor.Load(new ListingDraft
+        {
+            Type = ListingDraft.ModPackType,
+            Id = "my-pack",
+            Version = "1.0.0",
+            Mods = [new ListingPackMember("AdvancedFlightComputer", "0.7.5"), new ListingPackMember("MeasureTools", "1.1.9"), new ListingPackMember("OrbitLib", "1.5.0")],
+        });
+        var (flight, measure, orbit) = (editor.Members[0], editor.Members[1], editor.Members[2]);
+
+        Assert.Equal(["1.1.10", "2.0.0"], new[] { measure, orbit }.Select(row => row.Newer?.Version));
+        Assert.False(measure.CanUseNewer);
+        Assert.False(orbit.CanUseNewer);
+        orbit.UseNewerCommand.Execute(null);
+        Assert.Equal("1.5.0", orbit.Selected?.Version);
+
+        flight.RemoveCommand.Execute(null);
+
+        Assert.True(orbit.CanUseNewer);
+        orbit.UseNewerCommand.Execute(null);
+        Assert.Equal("2.0.0", orbit.Selected?.Version);
+    }
+
+    [Fact]
+    public async Task DisputedMember_ItsRowNamesTheReason_AndTheSidePanelKeepsTheNoteOfTheChecks()
+    {
+        const string Reason = "The license of the bundled models is unclear.";
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: snapshot =>
+        {
+            var root = JsonNode.Parse(snapshot)!;
+            root["listings"]!.AsArray().Single(listing => (string?)listing!["id"] == "KSArmory")!["index_status"] =
+                new JsonObject { ["state"] = "disputed", ["since"] = "2026-10-01T00:00:00Z", ["reason"] = Reason };
+            return root.ToJsonString();
+        });
+        var editor = harness.ViewModel.ListingEditor;
+        await harness.ViewModel.OpenListingAsync();
+        editor.Load(new ListingDraft
+        {
+            Type = ListingDraft.ModPackType,
+            Id = "my-pack",
+            Version = "1.0.0",
+            Mods = [new ListingPackMember("AdvancedFlightComputer", "0.7.5"), new ListingPackMember("KSArmory", "0.8.44")],
+        });
+
+        Assert.Equal([null, harness.Localization.FormatListingMemberDisputed("KSArmory", Reason)], editor.Members.Select(row => row.DisputedNote));
+        Assert.EndsWith(Reason, editor.Members[1].DisputedNote, StringComparison.Ordinal);
+        Assert.Contains(editor.Notes, issue => issue.ToString() == "mods[1]: 'KSArmory' is disputed, and a client warns about it");
+    }
+
+    /// <summary>A listed mod OrbitLib with the stable releases 2.0.0, 1.5.0 and 1.0.0.</summary>
+    private static string WithOrbitLib(string json)
+    {
+        var root = JsonNode.Parse(json)!;
+        var listings = root["listings"]!.AsArray();
+        var listing = listings.Single(entry => (string?)entry!["id"] == "MeasureTools")!.DeepClone();
+        listing["id"] = "OrbitLib";
+        listing["authored"]!["id"] = "OrbitLib";
+        listing["authored"]!["name"] = "Orbit Lib";
+        var template = listing["releases"]![0]!;
+        var releases = new JsonArray();
+        foreach (var version in new[] { "2.0.0", "1.5.0", "1.0.0" })
+        {
+            var release = template.DeepClone();
+            release["id"] = "OrbitLib";
+            release["version"] = version;
+            release["dependencies"] = new JsonArray();
+            releases.Add(release);
+        }
+
+        listing["releases"] = releases;
+        listings.Add(listing);
+        return root.ToJsonString();
+    }
+
+    /// <summary>Adds a dependency to one release of a listing.</summary>
+    private static string Require(string json, string id, string version, JsonObject dependency)
+    {
+        var root = JsonNode.Parse(json)!;
+        foreach (var listing in root["listings"]!.AsArray())
+        {
+            if ((string?)listing!["id"] != id)
+                continue;
+            foreach (var release in listing["releases"]!.AsArray())
+            {
+                if ((string?)release!["version"] == version)
+                    (release["dependencies"] ??= new JsonArray()).AsArray().Add(dependency);
+            }
+        }
+
+        return root.ToJsonString();
     }
 
     [Fact]
@@ -1136,7 +1340,7 @@ public sealed class ListingEditorTests
     public async Task LoadListedPack_ThePackOfContentIndex117_ProposesTheNextVersionWithThePinsOfTheNewestOne()
     {
         var main = new Dictionary<string, string> { [$"{Pack117Id}/1.0.1.toml"] = Pack117 };
-        using var harness = await ViewModelHarness.CreateAsync(respond: MainBranch(main), editSnapshot: PackViewModelTests.WithPacks(Pack117Entry()));
+        using var harness = await ViewModelHarness.CreateAsync(respond: MainBranch(main), editSnapshot: Pack117Snapshot);
         var editor = harness.ViewModel.ListingEditor;
         await harness.ViewModel.OpenListingAsync();
         var before = DateTimeOffset.UtcNow.AddSeconds(-1);
@@ -1157,13 +1361,15 @@ public sealed class ListingEditorTests
         Assert.Contains("repository = \"https://github.com/renancamm/ksa-beiks-flight-planning-essentials-pack/\"\n", editor.DocumentText, StringComparison.Ordinal);
         Assert.Equal(harness.Localization.FormatListingNextVersion(Pack117Id, "1.0.1"), editor.NextVersionText);
         Assert.Null(editor.OutputMessage);
+        Assert.DoesNotContain(editor.Errors, issue => issue.Location.StartsWith("mods", StringComparison.Ordinal));
+        Assert.False(editor.CanAddMissingDependencies);
     }
 
     [Fact]
     public async Task LoadListedPack_OwnId_GivesNoIdError()
     {
         var main = new Dictionary<string, string> { [$"{Pack117Id}/1.0.1.toml"] = Pack117 };
-        using var harness = await ViewModelHarness.CreateAsync(respond: MainBranch(main), editSnapshot: PackViewModelTests.WithPacks(Pack117Entry()));
+        using var harness = await ViewModelHarness.CreateAsync(respond: MainBranch(main), editSnapshot: Pack117Snapshot);
         var editor = harness.ViewModel.ListingEditor;
         await harness.ViewModel.OpenListingAsync();
 
@@ -1202,7 +1408,7 @@ public sealed class ListingEditorTests
     {
         var newer = Pack117.Replace("version = \"1.0.1\"", "version = \"1.0.2\"", StringComparison.Ordinal).Replace("\"0.9.13\"", "\"0.9.14\"", StringComparison.Ordinal);
         var main = new Dictionary<string, string> { [$"{Pack117Id}/1.0.1.toml"] = Pack117, [$"{Pack117Id}/1.0.2.toml"] = newer };
-        using var harness = await ViewModelHarness.CreateAsync(respond: MainBranch(main), editSnapshot: PackViewModelTests.WithPacks(Pack117Entry()));
+        using var harness = await ViewModelHarness.CreateAsync(respond: MainBranch(main), editSnapshot: Pack117Snapshot);
         var editor = harness.ViewModel.ListingEditor;
         await harness.ViewModel.OpenListingAsync();
 
@@ -1220,7 +1426,7 @@ public sealed class ListingEditorTests
     public async Task OpenPullRequest_NextVersionThatMainGainedAfterTheLoad_IsRaisedAgain()
     {
         var main = new Dictionary<string, string> { [$"{Pack117Id}/1.0.1.toml"] = Pack117 };
-        using var harness = await ViewModelHarness.CreateAsync(respond: MainBranch(main), editSnapshot: PackViewModelTests.WithPacks(Pack117Entry()));
+        using var harness = await ViewModelHarness.CreateAsync(respond: MainBranch(main), editSnapshot: Pack117Snapshot);
         var editor = harness.ViewModel.ListingEditor;
         var opened = new List<string>();
         harness.ViewModel.OpenWithSystem = opened.Add;
@@ -1244,7 +1450,7 @@ public sealed class ListingEditorTests
         var session = new ListingPullRequestViewModelTests.FakeSession();
         session.SignIn();
         var publisher = new ListingPullRequestViewModelTests.FakePublisher();
-        using var harness = await ViewModelHarness.CreateAsync(respond: MainBranch(main), editSnapshot: PackViewModelTests.WithPacks(Pack117Entry()), gitHub: session, listingPublisher: publisher);
+        using var harness = await ViewModelHarness.CreateAsync(respond: MainBranch(main), editSnapshot: Pack117Snapshot, gitHub: session, listingPublisher: publisher);
         var editor = harness.ViewModel.ListingEditor;
         await harness.ViewModel.OpenListingAsync();
         await editor.MakeNextVersionAsync(Pack117Id);
@@ -1303,7 +1509,7 @@ public sealed class ListingEditorTests
         var serve = MainBranch(main);
         using var harness = await ViewModelHarness.CreateAsync(
             respond: request => down && request.RequestUri!.AbsoluteUri.StartsWith(RawPacks, StringComparison.Ordinal) ? new HttpResponseMessage(HttpStatusCode.ServiceUnavailable) : serve(request),
-            editSnapshot: PackViewModelTests.WithPacks(Pack117Entry()));
+            editSnapshot: Pack117Snapshot);
         var editor = harness.ViewModel.ListingEditor;
         var opened = new List<string>();
         harness.ViewModel.OpenWithSystem = opened.Add;
@@ -1321,7 +1527,7 @@ public sealed class ListingEditorTests
     public async Task NextVersion_VersionOrReleaseTimeNotAfterTheListedOnes_IsAnError()
     {
         var main = new Dictionary<string, string> { [$"{Pack117Id}/1.0.1.toml"] = Pack117 };
-        using var harness = await ViewModelHarness.CreateAsync(respond: MainBranch(main), editSnapshot: PackViewModelTests.WithPacks(Pack117Entry()));
+        using var harness = await ViewModelHarness.CreateAsync(respond: MainBranch(main), editSnapshot: Pack117Snapshot);
         var editor = harness.ViewModel.ListingEditor;
         var localization = harness.Localization;
         await harness.ViewModel.OpenListingAsync();
@@ -1387,7 +1593,7 @@ public sealed class ListingEditorTests
     public async Task MakeNextPackVersion_OnThePackPage_OpensTheListingPageWithThatPack()
     {
         var main = new Dictionary<string, string> { [$"{Pack117Id}/1.0.1.toml"] = Pack117 };
-        using var harness = await ViewModelHarness.CreateAsync(respond: MainBranch(main), editSnapshot: PackViewModelTests.WithPacks(Pack117Entry()));
+        using var harness = await ViewModelHarness.CreateAsync(respond: MainBranch(main), editSnapshot: Pack117Snapshot);
         var viewModel = harness.ViewModel;
         await viewModel.EnsureDiscoverLoadedAsync();
         viewModel.ShowDiscoverModpacksCommand.Execute(null);
@@ -1451,6 +1657,33 @@ public sealed class ListingEditorTests
         id = "Compendium"
         version = "0.9.13"
         """";
+
+    /// <summary>The pack of content-index#117, with its members listed at the releases it pins, so the member rules accept it.</summary>
+    private static string Pack117Snapshot(string json)
+    {
+        var root = JsonNode.Parse(PackViewModelTests.WithPacks(Pack117Entry())(json))!;
+        var listings = root["listings"]!.AsArray();
+        var flight = listings.Single(listing => (string?)listing!["id"] == "AdvancedFlightComputer")!;
+        var release = flight["releases"]![0]!.DeepClone();
+        release["version"] = "0.8.0";
+        flight["releases"]!.AsArray().Insert(0, release);
+
+        var template = listings.Single(listing => (string?)listing!["id"] == "MeasureTools")!;
+        foreach (var (id, version) in new[] { ("DeltaVMap", "1.2.6"), ("Compendium", "0.9.13") })
+        {
+            var listing = template.DeepClone();
+            listing["id"] = id;
+            listing["authored"]!["id"] = id;
+            listing["authored"]!["name"] = id;
+            var member = listing["releases"]![0]!.DeepClone();
+            member["id"] = id;
+            member["version"] = version;
+            listing["releases"] = new JsonArray(member);
+            listings.Add(listing);
+        }
+
+        return root.ToJsonString();
+    }
 
     /// <summary>The snapshot entry of that pack, with its versions 1.0.0 and 1.0.1.</summary>
     private static string Pack117Entry()

@@ -1983,6 +1983,39 @@
   <data name="PackMemberUnlisted" xml:space="preserve">
     <value>Ain't be listed</value>
   </data>
+  <data name="ListingMemberCannotBePinnedFormat" xml:space="preserve">
+    <value>Can't be nailed down, fer it needs {0}</value>
+  </data>
+  <data name="ListingMemberNeedsOneOfFormat" xml:space="preserve">
+    <value>one o' {0}</value>
+  </data>
+  <data name="ListingMemberNeedsAnd" xml:space="preserve">
+    <value> an' </value>
+  </data>
+  <data name="ListingMemberDisputedFormat" xml:space="preserve">
+    <value>The bulletin board marks {0} as troubled waters, so a client hollers before it hauls this pin aboard.</value>
+  </data>
+  <data name="ListingMemberRulesHint" xml:space="preserve">
+    <value>The pack nails down every barrel its crew can't sail without, inside their bounds, an' no barrel be feudin' with another. A release that needs a barrel not on the chart gets a mark, fer no pack can nail it down.</value>
+  </data>
+  <data name="ListingAddMissingDependencies" xml:space="preserve">
+    <value>Haul aboard the missin' barrels</value>
+  </data>
+  <data name="ListingAddMissingDependenciesHint" xml:space="preserve">
+    <value>Nails down every barrel the crew needs an' no one nailed, at its newest steady release inside the bounds. When a barrel needs one o' several, ye pick it.</value>
+  </data>
+  <data name="ListingMissingDependenciesTitle" xml:space="preserve">
+    <value>Borea can't haul these barrels aboard:</value>
+  </data>
+  <data name="ListingMissingChooseFormat" xml:space="preserve">
+    <value>{0}, so nail down the one ye fancy.</value>
+  </data>
+  <data name="ListingMissingNotListedFormat" xml:space="preserve">
+    <value>{0}, an' no barrel on the chart fits, so no pack can nail down this release.</value>
+  </data>
+  <data name="ListingMissingNoReleaseFormat" xml:space="preserve">
+    <value>{0}, an' no steady release of it sits inside the bounds o' every barrel that needs it.</value>
+  </data>
   <data name="PackMemberNewerFormat" xml:space="preserve">
     <value>{0} be in port</value>
   </data>

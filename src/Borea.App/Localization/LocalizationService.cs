@@ -1764,6 +1764,14 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string ListingMemberRelease => Resources.ListingMemberRelease;
 
+    public string ListingMemberRulesHint => Resources.ListingMemberRulesHint;
+
+    public string ListingAddMissingDependencies => Resources.ListingAddMissingDependencies;
+
+    public string ListingAddMissingDependenciesHint => Resources.ListingAddMissingDependenciesHint;
+
+    public string ListingMissingDependenciesTitle => Resources.ListingMissingDependenciesTitle;
+
     public string ListingCopyForumList => Resources.ListingCopyForumList;
 
     public string ListingDependenciesHint => Resources.ListingDependenciesHint;
@@ -2755,11 +2763,31 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string FormatListingGameMinProposal(string gameMin)
         => string.Format(CultureInfo.CurrentCulture, Resources.ListingGameMinProposalFormat, gameMin);
 
-    public string FormatListingMemberNotListed(string id)
-        => string.Format(CultureInfo.CurrentCulture, Resources.ListingMemberNotListedFormat, id);
+    /// <summary>
+    /// The mark of a release that needs mods that are not listed, such as "needs 'A' and one of 'B', 'C'".
+    /// Each entry holds the ids of which one is enough.
+    /// </summary>
+    public string FormatListingMemberCannotBePinned(IReadOnlyList<IReadOnlyList<string>> needs)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ListingMemberCannotBePinnedFormat, string.Join(Resources.ListingMemberNeedsAnd, needs.Select(ids =>
+        {
+            var quoted = string.Join(", ", ids.Select(id => $"'{id}'"));
+            return ids.Count == 1 ? quoted : string.Format(CultureInfo.CurrentCulture, Resources.ListingMemberNeedsOneOfFormat, quoted);
+        })));
 
-    public string FormatListingMemberNotOffered(string id, string version)
-        => string.Format(CultureInfo.CurrentCulture, Resources.ListingMemberNotOfferedFormat, id, version);
+    public string FormatListingMemberDisputed(string id, string? reason)
+    {
+        var text = string.Format(CultureInfo.CurrentCulture, Resources.ListingMemberDisputedFormat, id);
+        return string.IsNullOrWhiteSpace(reason) ? text : $"{text} {reason}";
+    }
+
+    public string FormatListingMissingChoose(string need)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ListingMissingChooseFormat, need);
+
+    public string FormatListingMissingNotListed(string need)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ListingMissingNotListedFormat, need);
+
+    public string FormatListingMissingNoRelease(string need)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ListingMissingNoReleaseFormat, need);
 
     public string FormatListingMemberGone(string id, string version, string date)
         => string.Format(CultureInfo.CurrentCulture, Resources.ListingMemberGoneFormat, id, version, date);

@@ -1,0 +1,1488 @@
+{
+  "vectors": [
+    {
+      "name": "listed mods at stamped releases pass",
+      "snapshot": {
+        "listings": [
+          {
+            "id": "Alpha",
+            "type": "mod",
+            "releases": [
+              {
+                "version": "1.0.0",
+                "release_status": "stable"
+              }
+            ]
+          },
+          {
+            "id": "Beta",
+            "type": "mod",
+            "releases": [
+              {
+                "version": "0.4.0",
+                "release_status": "testing"
+              }
+            ]
+          }
+        ]
+      },
+      "pack": "spec_version = 1\nid = \"ExamplePack\"\ntype = \"modpack\"\nname = \"Example Pack\"\nauthors = [\"Example Author\"]\nabstract = \"A pack of example mods.\"\nlicense = \"MIT\"\nversion = \"1.0.0\"\nreleased_at = \"2026-10-01T12:00:00Z\"\n\n[links]\nforums = \"https://forums.ahwoo.com/threads/example-pack.125/\"\n\n[compatibility]\ngame_min = \"2026.9.10.5438\"\n\n[[mods]]\nid = \"Alpha\"\nversion = \"1.0.0\"\n\n[[mods]]\nid = \"Beta\"\nversion = \"0.4.0\"\n",
+      "accepted": true,
+      "errors": [],
+      "notes": []
+    },
+    {
+      "name": "a pin in another case resolves to the listing",
+      "snapshot": {
+        "listings": [
+          {
+            "id": "Alpha",
+            "type": "mod",
+            "releases": [
+              {
+                "version": "1.0.0",
+                "release_status": "stable"
+              }
+            ]
+          }
+        ]
+      },
+      "pack": "spec_version = 1\nid = \"ExamplePack\"\ntype = \"modpack\"\nname = \"Example Pack\"\nauthors = [\"Example Author\"]\nabstract = \"A pack of example mods.\"\nlicense = \"MIT\"\nversion = \"1.0.0\"\nreleased_at = \"2026-10-01T12:00:00Z\"\n\n[links]\nforums = \"https://forums.ahwoo.com/threads/example-pack.125/\"\n\n[compatibility]\ngame_min = \"2026.9.10.5438\"\n\n[[mods]]\nid = \"alpha\"\nversion = \"1.0.0\"\n",
+      "accepted": true,
+      "errors": [],
+      "notes": []
+    },
+    {
+      "name": "the Flight Planning Essentials pack of content-index#117 passes",
+      "snapshot": {
+        "listings": [
+          {
+            "id": "DeltaVMap",
+            "type": "mod",
+            "releases": [
+              {
+                "version": "1.2.6",
+                "release_status": "stable",
+                "dependencies": []
+              }
+            ]
+          },
+          {
+            "id": "AdvancedFlightComputer",
+            "type": "mod",
+            "releases": [
+              {
+                "version": "0.8.0",
+                "release_status": "stable",
+                "dependencies": [
+                  {
+                    "id": "KittenExtensions",
+                    "kind": "optional",
+                    "source": "derived"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "Compendium",
+            "type": "mod",
+            "releases": [
+              {
+                "version": "0.9.13",
+                "release_status": "stable",
+                "dependencies": []
+              }
+            ]
+          }
+        ]
+      },
+      "pack": "spec_version = 1\nid = \"beiks-flight-planning-essentials-pack\"\ntype = \"modpack\"\nname = \"Flight Planning Essentials\"\nauthors = [\"Beik\"]\nversion = \"1.0.0\"\nreleased_at = \"2026-09-23T20:00:00Z\"\nabstract = \"This is a small pack of three mods for mission planning: one for looking up bodies in the solar system, one for delta-v budgets and transfer windows, and one for executing maneuvers.\"\ndescription = \"\"\"\nIncluded mods:\n\nCompendium v0.9.13 by nanonestor\nAdds a window, toggled through ModMenu, that lists the bodies in the loaded solar system.\n\n* Bodies are grouped by category, with moons listed under their parent body\n* Orbit lines can be toggled for a single body, a group or a whole category\n* Each body has a page of stats\n\nForum: https://forums.ahwoo.com/forums/kitten-space-agency/mod-releases/compendium.647/\nSpaceDock: https://spacedock.info/mod/4074/Compendium\n(MIT license)\n\n\nDeltaVMap v1.2.6 by Maxi\nAn interactive delta-v subway map and transfer-window planner. The map is built from the loaded solar system, so it works with stock and modded systems without setup.\n\n* The map is centered on your current body, and transfers use Hohmann calculations\n* Route planning shows the delta-v for each leg and compares the total with your vehicle's delta-v\n* Transfer windows show the optimal phase angle, the current phase and time to the next window\n* Open it from View \u2192 Delta-V Map in flight, or from its tab in the editor\n\nForum: https://forums.ahwoo.com/threads/deltavmap.978/\nSpaceDock: https://spacedock.info/mod/4294/DeltaVMap\n(MIT license)\n\n\nAdvanced Flight Computer v0.8.0 by Maxi\nManeuver planning, burn execution and closed-loop guidance.\n\n* Quick tools for common maneuvers, plus flyby targeting (hyperbolic orbits supported)\n* Burns can be split across multiple passes, or run on RCS only\n* Automatic staging, including spent boosters\n* Powered guidance for ascent, boostback and landing\n\nForum: https://forums.ahwoo.com/threads/advanced-flight-computer.783/\nSpaceDock: https://spacedock.info/mod/4253/AdvancedFlightComputer\n(MIT license)\n\n\nRequirements\n* KSA 2026.9.10.5438 or newer\n* StarMap loader 0.4.6 or newer\n* Recommended: ModMenu\n* Optional: KittenExtensions (enables some AFC features)\n\nInstallation\n1. Open Borea Mod Manager\n2. Find Flight Planning Essentials under Mod Packs\n3. Install. Borea installs the three mods and their dependencies.\n\nCredits and support\u2028All credit goes to the mod authors. Report bugs in a mod on its own tracker, and problems with the pack in this thread.\n\"\"\"\n\nlicense = \"MIT\"\ntags = [\"user-interface\"]\n\n[links]\nforums = \"https://forums.ahwoo.com/forums/kitten-space-agency/mod-releases/flight-planning-essentials.1281/\"\nrepository = \"https://github.com/renancamm/ksa-beiks-flight-planning-essentials-pack/\"\n\n[compatibility]\ngame_min = \"2026.9.10.5438\"\n\n[images.icon]\nurl = \"https://raw.githubusercontent.com/renancamm/ksa-beiks-skycharts-modpack/refs/heads/main/listing/pack-icon.jpg\"\nsha256 = \"bf6a99215b07588315ed80dbaca70910f6876a86e82d9f1297f8c2f6a1b05a5e\"\nwidth = 500\nheight = 500\nsize = 202704\n\n[[mods]]\nid = \"DeltaVMap\"\nversion = \"1.2.6\"\n\n[[mods]]\nid = \"AdvancedFlightComputer\"\nversion = \"0.8.0\"\n\n[[mods]]\nid = \"Compendium\"\nversion = \"0.9.13\"\n",
+      "accepted": true,
+      "errors": [],
+      "notes": []
+    },
+    {
+      "name": "a mod that is not listed is refused",
+      "snapshot": {
+        "listings": [
+          {
+            "id": "Alpha",
+            "type": "mod",
+            "releases": [
+              {
+                "version": "1.0.0",
+                "release_status": "stable"
+              }
+            ]
+          }
+        ]
+      },
+      "pack": "spec_version = 1\nid = \"ExamplePack\"\ntype = \"modpack\"\nname = \"Example Pack\"\nauthors = [\"Example Author\"]\nabstract = \"A pack of example mods.\"\nlicense = \"MIT\"\nversion = \"1.0.0\"\nreleased_at = \"2026-10-01T12:00:00Z\"\n\n[links]\nforums = \"https://forums.ahwoo.com/threads/example-pack.125/\"\n\n[compatibility]\ngame_min = \"2026.9.10.5438\"\n\n[[mods]]\nid = \"Alpha\"\nversion = \"1.0.0\"\n\n[[mods]]\nid = \"NotListed\"\nversion = \"1.0.0\"\n",
+      "accepted": false,
+      "errors": [
+        "mods[1]: 'NotListed' is not a listed mod, and a pack pins only listed mods"
+      ],
+      "notes": []
+    },
+    {
+      "name": "a mod loader is refused",
+      "snapshot": {
+        "listings": [
+          {
+            "id": "StarMap",
+            "type": "mod-loader",
+            "releases": [
+              {
+                "version": "0.4.7",
+                "release_status": "stable"
+              }
+            ]
+          }
+        ]
+      },
+      "pack": "spec_version = 1\nid = \"ExamplePack\"\ntype = \"modpack\"\nname = \"Example Pack\"\nauthors = [\"Example Author\"]\nabstract = \"A pack of example mods.\"\nlicense = \"MIT\"\nversion = \"1.0.0\"\nreleased_at = \"2026-10-01T12:00:00Z\"\n\n[links]\nforums = \"https://forums.ahwoo.com/threads/example-pack.125/\"\n\n[compatibility]\ngame_min = \"2026.9.10.5438\"\n\n[[mods]]\nid = \"StarMap\"\nversion = \"0.4.7\"\n",
+      "accepted": false,
+      "errors": [
+        "mods[0]: 'StarMap' is listed as a mod-loader, and a pack pins only mods"
+      ],
+      "notes": []
+    },
+    {
+      "name": "a delisted mod is refused",
+      "snapshot": {
+        "listings": [
+          {
+            "id": "Alpha",
+            "type": "mod",
+            "releases": [
+              {
+                "version": "1.0.0",
+                "release_status": "stable"
+              }
+            ]
+          }
+        ],
+        "delisted": [
+          "Alpha"
+        ]
+      },
+      "pack": "spec_version = 1\nid = \"ExamplePack\"\ntype = \"modpack\"\nname = \"Example Pack\"\nauthors = [\"Example Author\"]\nabstract = \"A pack of example mods.\"\nlicense = \"MIT\"\nversion = \"1.0.0\"\nreleased_at = \"2026-10-01T12:00:00Z\"\n\n[links]\nforums = \"https://forums.ahwoo.com/threads/example-pack.125/\"\n\n[compatibility]\ngame_min = \"2026.9.10.5438\"\n\n[[mods]]\nid = \"Alpha\"\nversion = \"1.0.0\"\n",
+      "accepted": false,
+      "errors": [
+        "mods[0]: 'Alpha' is delisted, and a pack pins only listed mods"
+      ],
+      "notes": []
+    },
+    {
+      "name": "a delisted mod loader is refused as delisted",
+      "snapshot": {
+        "listings": [
+          {
+            "id": "StarMap",
+            "type": "mod-loader",
+            "releases": [
+              {
+                "version": "0.4.0",
+                "release_status": "stable"
+              }
+            ]
+          }
+        ],
+        "delisted": [
+          "StarMap"
+        ]
+      },
+      "pack": "spec_version = 1\nid = \"ExamplePack\"\ntype = \"modpack\"\nname = \"Example Pack\"\nauthors = [\"Example Author\"]\nabstract = \"A pack of example mods.\"\nlicense = \"MIT\"\nversion = \"1.0.0\"\nreleased_at = \"2026-10-01T12:00:00Z\"\n\n[links]\nforums = \"https://forums.ahwoo.com/threads/example-pack.125/\"\n\n[compatibility]\ngame_min = \"2026.9.10.5438\"\n\n[[mods]]\nid = \"StarMap\"\nversion = \"0.4.0\"\n",
+      "accepted": false,
+      "errors": [
+        "mods[0]: 'StarMap' is delisted, and a pack pins only listed mods"
+      ],
+      "notes": []
+    },
+    {
+      "name": "a version with no stamped release is refused",
+      "snapshot": {
+        "listings": [
+          {
+            "id": "Alpha",
+            "type": "mod",
+            "releases": [
+              {
+                "version": "1.0.0",
+                "release_status": "stable"
+              }
+            ]
+          }
+        ]
+      },
+      "pack": "spec_version = 1\nid = \"ExamplePack\"\ntype = \"modpack\"\nname = \"Example Pack\"\nauthors = [\"Example Author\"]\nabstract = \"A pack of example mods.\"\nlicense = \"MIT\"\nversion = \"1.0.0\"\nreleased_at = \"2026-10-01T12:00:00Z\"\n\n[links]\nforums = \"https://forums.ahwoo.com/threads/example-pack.125/\"\n\n[compatibility]\ngame_min = \"2026.9.10.5438\"\n\n[[mods]]\nid = \"Alpha\"\nversion = \"1.1.0\"\n",
+      "accepted": false,
+      "errors": [
+        "mods[0]: 'Alpha' has no stamped release 1.1.0"
+      ],
+      "notes": []
+    },
+    {
+      "name": "a yanked release is refused",
+      "snapshot": {
+        "listings": [
+          {
+            "id": "Alpha",
+            "type": "mod",
+            "releases": [
+              {
+                "version": "1.0.0",
+                "release_status": "stable",
+                "yanked": true,
+                "yanked_reason": "It deletes saves."
+              }
+            ]
+          }
+        ]
+      },
+      "pack": "spec_version = 1\nid = \"ExamplePack\"\ntype = \"modpack\"\nname = \"Example Pack\"\nauthors = [\"Example Author\"]\nabstract = \"A pack of example mods.\"\nlicense = \"MIT\"\nversion = \"1.0.0\"\nreleased_at = \"2026-10-01T12:00:00Z\"\n\n[links]\nforums = \"https://forums.ahwoo.com/threads/example-pack.125/\"\n\n[compatibility]\ngame_min = \"2026.9.10.5438\"\n\n[[mods]]\nid = \"Alpha\"\nversion = \"1.0.0\"\n",
+      "accepted": false,
+      "errors": [
+        "mods[0]: 'Alpha' 1.0.0 is yanked"
+      ],
+      "notes": []
+    },
+    {
+      "name": "every refused pin is named",
+      "snapshot": {
+        "listings": [
+          {
+            "id": "Alpha",
+            "type": "mod",
+            "releases": [
+              {
+                "version": "1.0.0",
+                "release_status": "stable"
+              }
+            ]
+          }
+        ]
+      },
+      "pack": "spec_version = 1\nid = \"ExamplePack\"\ntype = \"modpack\"\nname = \"Example Pack\"\nauthors = [\"Example Author\"]\nabstract = \"A pack of example mods.\"\nlicense = \"MIT\"\nversion = \"1.0.0\"\nreleased_at = \"2026-10-01T12:00:00Z\"\n\n[links]\nforums = \"https://forums.ahwoo.com/threads/example-pack.125/\"\n\n[compatibility]\ngame_min = \"2026.9.10.5438\"\n\n[[mods]]\nid = \"Missing\"\nversion = \"1.0.0\"\n\n[[mods]]\nid = \"Alpha\"\nversion = \"1.0.0\"\n\n[[mods]]\nid = \"Gone\"\nversion = \"2.0.0\"\n",
+      "accepted": false,
+      "errors": [
+        "mods[0]: 'Missing' is not a listed mod, and a pack pins only listed mods",
+        "mods[2]: 'Gone' is not a listed mod, and a pack pins only listed mods"
+      ],
+      "notes": []
+    },
+    {
+      "name": "a vehicle cannot be pinned until its content type exists",
+      "snapshot": {
+        "listings": []
+      },
+      "pack": "spec_version = 1\nid = \"ExamplePack\"\ntype = \"modpack\"\nname = \"Example Pack\"\nauthors = [\"Example Author\"]\nabstract = \"A pack of example mods.\"\nlicense = \"MIT\"\nversion = \"1.0.0\"\nreleased_at = \"2026-10-01T12:00:00Z\"\n\n[links]\nforums = \"https://forums.ahwoo.com/threads/example-pack.125/\"\n\n[compatibility]\ngame_min = \"2026.9.10.5438\"\n\n[[vehicles]]\nid = \"Craft\"\nversion = \"1.0.0\"\n",
+      "accepted": false,
+      "errors": [
+        "vehicles[0]: 'Craft' cannot be pinned, because no content type for vehicles is defined yet"
+      ],
+      "notes": []
+    },
+    {
+      "name": "a disputed mod passes with a warning",
+      "snapshot": {
+        "listings": [
+          {
+            "id": "Alpha",
+            "type": "mod",
+            "releases": [
+              {
+                "version": "1.0.0",
+                "release_status": "stable"
+              }
+            ]
+          }
+        ],
+        "disputed": [
+          "Alpha"
+        ]
+      },
+      "pack": "spec_version = 1\nid = \"ExamplePack\"\ntype = \"modpack\"\nname = \"Example Pack\"\nauthors = [\"Example Author\"]\nabstract = \"A pack of example mods.\"\nlicense = \"MIT\"\nversion = \"1.0.0\"\nreleased_at = \"2026-10-01T12:00:00Z\"\n\n[links]\nforums = \"https://forums.ahwoo.com/threads/example-pack.125/\"\n\n[compatibility]\ngame_min = \"2026.9.10.5438\"\n\n[[mods]]\nid = \"Alpha\"\nversion = \"1.0.0\"\n",
+      "accepted": true,
+      "errors": [],
+      "notes": [
+        "mods[0]: 'Alpha' is disputed, and a client warns about it"
+      ]
+    },
+    {
+      "name": "a release whose download is gone still passes",
+      "snapshot": {
+        "listings": [
+          {
+            "id": "Alpha",
+            "type": "mod",
+            "releases": [
+              {
+                "version": "1.0.0",
+                "release_status": "stable",
+                "download": {
+                  "unavailable_since": "2026-09-23T10:24:00Z"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "pack": "spec_version = 1\nid = \"ExamplePack\"\ntype = \"modpack\"\nname = \"Example Pack\"\nauthors = [\"Example Author\"]\nabstract = \"A pack of example mods.\"\nlicense = \"MIT\"\nversion = \"1.0.0\"\nreleased_at = \"2026-10-01T12:00:00Z\"\n\n[links]\nforums = \"https://forums.ahwoo.com/threads/example-pack.125/\"\n\n[compatibility]\ngame_min = \"2026.9.10.5438\"\n\n[[mods]]\nid = \"Alpha\"\nversion = \"1.0.0\"\n",
+      "accepted": true,
+      "errors": [],
+      "notes": []
+    },
+    {
+      "name": "a version that is not SemVer is left to the schema",
+      "snapshot": {
+        "listings": [
+          {
+            "id": "Alpha",
+            "type": "mod",
+            "releases": [
+              {
+                "version": "1.0.0",
+                "release_status": "stable"
+              }
+            ]
+          }
+        ]
+      },
+      "pack": "spec_version = 1\nid = \"ExamplePack\"\ntype = \"modpack\"\nname = \"Example Pack\"\nauthors = [\"Example Author\"]\nabstract = \"A pack of example mods.\"\nlicense = \"MIT\"\nversion = \"1.0.0\"\nreleased_at = \"2026-10-01T12:00:00Z\"\n\n[links]\nforums = \"https://forums.ahwoo.com/threads/example-pack.125/\"\n\n[compatibility]\ngame_min = \"2026.9.10.5438\"\n\n[[mods]]\nid = \"Alpha\"\nversion = \"1.0\"\n",
+      "accepted": true,
+      "errors": [],
+      "notes": []
+    },
+    {
+      "name": "a required dependency that is not a listed mod is refused, as ShaderExtensions 1.0.3 needs KittenExtensions",
+      "snapshot": {
+        "listings": [
+          {
+            "id": "ShaderExtensions",
+            "type": "mod",
+            "releases": [
+              {
+                "version": "1.0.3",
+                "release_status": "stable",
+                "dependencies": [
+                  {
+                    "id": "KittenExtensions",
+                    "kind": "required",
+                    "min": "0.5.0",
+                    "source": "authored"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "KittenExtensionsContinued",
+            "type": "mod",
+            "releases": [
+              {
+                "version": "0.5.2",
+                "release_status": "stable",
+                "dependencies": []
+              }
+            ]
+          }
+        ]
+      },
+      "pack": "spec_version = 1\nid = \"ExamplePack\"\ntype = \"modpack\"\nname = \"Example Pack\"\nauthors = [\"Example Author\"]\nabstract = \"A pack of example mods.\"\nlicense = \"MIT\"\nversion = \"1.0.0\"\nreleased_at = \"2026-10-01T12:00:00Z\"\n\n[links]\nforums = \"https://forums.ahwoo.com/threads/example-pack.125/\"\n\n[compatibility]\ngame_min = \"2026.9.10.5438\"\n\n[[mods]]\nid = \"ShaderExtensions\"\nversion = \"1.0.3\"\n\n[[mods]]\nid = \"KittenExtensionsContinued\"\nversion = \"0.5.2\"\n",
+      "accepted": false,
+      "errors": [
+        "mods[0]: 'ShaderExtensions' 1.0.3 requires 'KittenExtensions' 0.5.0 or newer, and the pack does not pin it"
+      ],
+      "notes": []
+    },
+    {
+      "name": "a required dependency pinned inside its bounds passes",
+      "snapshot": {
+        "listings": [
+          {
+            "id": "Alpha",
+            "type": "mod",
+            "releases": [
+              {
+                "version": "1.0.0",
+                "release_status": "stable",
+                "dependencies": [
+                  {
+                    "id": "Beta",
+                    "kind": "required",
+                    "min": "1.0.0",
+                    "max": "2.0.0",
+                    "source": "authored"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "Beta",
+            "type": "mod",
+            "releases": [
+              {
+                "version": "3.0.0",
+                "release_status": "stable"
+              },
+              {
+                "version": "2.1.0-rc.1",
+                "release_status": "testing"
+              },
+              {
+                "version": "2.0.0",
+                "release_status": "stable"
+              },
+              {
+                "version": "1.5.0",
+                "release_status": "stable"
+              },
+              {
+                "version": "1.0.0",
+                "release_status": "stable"
+              }
+            ]
+          }
+        ]
+      },
+      "pack": "spec_version = 1\nid = \"ExamplePack\"\ntype = \"modpack\"\nname = \"Example Pack\"\nauthors = [\"Example Author\"]\nabstract = \"A pack of example mods.\"\nlicense = \"MIT\"\nversion = \"1.0.0\"\nreleased_at = \"2026-10-01T12:00:00Z\"\n\n[links]\nforums = \"https://forums.ahwoo.com/threads/example-pack.125/\"\n\n[compatibility]\ngame_min = \"2026.9.10.5438\"\n\n[[mods]]\nid = \"Alpha\"\nversion = \"1.0.0\"\n\n[[mods]]\nid = \"Beta\"\nversion = \"2.0.0\"\n",
+      "accepted": true,
+      "errors": [],
+      "notes": []
+    },
+    {
+      "name": "a missing required dependency is refused, and the newest stable release inside its bounds is added",
+      "snapshot": {
+        "listings": [
+          {
+            "id": "Alpha",
+            "type": "mod",
+            "releases": [
+              {
+                "version": "1.0.0",
+                "release_status": "stable",
+                "dependencies": [
+                  {
+                    "id": "Beta",
+                    "kind": "required",
+                    "min": "1.0.0",
+                    "max": "2.0.0",
+                    "source": "authored"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "Beta",
+            "type": "mod",
+            "releases": [
+              {
+                "version": "3.0.0",
+                "release_status": "stable"
+              },
+              {
+                "version": "2.1.0-rc.1",
+                "release_status": "testing"
+              },
+              {
+                "version": "2.0.0",
+                "release_status": "stable"
+              },
+              {
+                "version": "1.5.0",
+                "release_status": "stable"
+              },
+              {
+                "version": "1.0.0",
+                "release_status": "stable"
+              }
+            ]
+          }
+        ]
+      },
+      "pack": "spec_version = 1\nid = \"ExamplePack\"\ntype = \"modpack\"\nname = \"Example Pack\"\nauthors = [\"Example Author\"]\nabstract = \"A pack of example mods.\"\nlicense = \"MIT\"\nversion = \"1.0.0\"\nreleased_at = \"2026-10-01T12:00:00Z\"\n\n[links]\nforums = \"https://forums.ahwoo.com/threads/example-pack.125/\"\n\n[compatibility]\ngame_min = \"2026.9.10.5438\"\n\n[[mods]]\nid = \"Alpha\"\nversion = \"1.0.0\"\n",
+      "accepted": false,
+      "errors": [
+        "mods[0]: 'Alpha' 1.0.0 requires 'Beta' 1.0.0 to 2.0.0, and the pack does not pin it"
+      ],
+      "notes": [],
+      "adds": [
+        {
+          "id": "Beta",
+          "version": "2.0.0"
+        }
+      ]
+    },
+    {
+      "name": "a required dependency pinned above its bounds is refused",
+      "snapshot": {
+        "listings": [
+          {
+            "id": "Alpha",
+            "type": "mod",
+            "releases": [
+              {
+                "version": "1.0.0",
+                "release_status": "stable",
+                "dependencies": [
+                  {
+                    "id": "Beta",
+                    "kind": "required",
+                    "min": "1.0.0",
+                    "max": "2.0.0",
+                    "source": "authored"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "Beta",
+            "type": "mod",
+            "releases": [
+              {
+                "version": "3.0.0",
+                "release_status": "stable"
+              },
+              {
+                "version": "2.1.0-rc.1",
+                "release_status": "testing"
+              },
+              {
+                "version": "2.0.0",
+                "release_status": "stable"
+              },
+              {
+                "version": "1.5.0",
+                "release_status": "stable"
+              },
+              {
+                "version": "1.0.0",
+                "release_status": "stable"
+              }
+            ]
+          }
+        ]
+      },
+      "pack": "spec_version = 1\nid = \"ExamplePack\"\ntype = \"modpack\"\nname = \"Example Pack\"\nauthors = [\"Example Author\"]\nabstract = \"A pack of example mods.\"\nlicense = \"MIT\"\nversion = \"1.0.0\"\nreleased_at = \"2026-10-01T12:00:00Z\"\n\n[links]\nforums = \"https://forums.ahwoo.com/threads/example-pack.125/\"\n\n[compatibility]\ngame_min = \"2026.9.10.5438\"\n\n[[mods]]\nid = \"Alpha\"\nversion = \"1.0.0\"\n\n[[mods]]\nid = \"Beta\"\nversion = \"3.0.0\"\n",
+      "accepted": false,
+      "errors": [
+        "mods[0]: 'Alpha' 1.0.0 requires 'Beta' 1.0.0 to 2.0.0, and the pack pins 'Beta' 3.0.0"
+      ],
+      "notes": []
+    },
+    {
+      "name": "a pre-release is below the release of the same version",
+      "snapshot": {
+        "listings": [
+          {
+            "id": "Alpha",
+            "type": "mod",
+            "releases": [
+              {
+                "version": "1.0.0",
+                "release_status": "stable",
+                "dependencies": [
+                  {
+                    "id": "Beta",
+                    "kind": "required",
+                    "min": "2.1.0",
+                    "source": "authored"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "Beta",
+            "type": "mod",
+            "releases": [
+              {
+                "version": "3.0.0",
+                "release_status": "stable"
+              },
+              {
+                "version": "2.1.0-rc.1",
+                "release_status": "testing"
+              },
+              {
+                "version": "2.0.0",
+                "release_status": "stable"
+              },
+              {
+                "version": "1.5.0",
+                "release_status": "stable"
+              },
+              {
+                "version": "1.0.0",
+                "release_status": "stable"
+              }
+            ]
+          }
+        ]
+      },
+      "pack": "spec_version = 1\nid = \"ExamplePack\"\ntype = \"modpack\"\nname = \"Example Pack\"\nauthors = [\"Example Author\"]\nabstract = \"A pack of example mods.\"\nlicense = \"MIT\"\nversion = \"1.0.0\"\nreleased_at = \"2026-10-01T12:00:00Z\"\n\n[links]\nforums = \"https://forums.ahwoo.com/threads/example-pack.125/\"\n\n[compatibility]\ngame_min = \"2026.9.10.5438\"\n\n[[mods]]\nid = \"Alpha\"\nversion = \"1.0.0\"\n\n[[mods]]\nid = \"Beta\"\nversion = \"2.1.0-rc.1\"\n",
+      "accepted": false,
+      "errors": [
+        "mods[0]: 'Alpha' 1.0.0 requires 'Beta' 2.1.0 or newer, and the pack pins 'Beta' 2.1.0-rc.1"
+      ],
+      "notes": []
+    },
+    {
+      "name": "a dependency below its upper bound passes, and one above it is refused",
+      "snapshot": {
+        "listings": [
+          {
+            "id": "Alpha",
+            "type": "mod",
+            "releases": [
+              {
+                "version": "1.0.0",
+                "release_status": "stable",
+                "dependencies": [
+                  {
+                    "id": "Beta",
+                    "kind": "required",
+                    "max": "1.5.0",
+                    "source": "authored"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "Beta",
+            "type": "mod",
+            "releases": [
+              {
+                "version": "3.0.0",
+                "release_status": "stable"
+              },
+              {
+                "version": "2.1.0-rc.1",
+                "release_status": "testing"
+              },
+              {
+                "version": "2.0.0",
+                "release_status": "stable"
+              },
+              {
+                "version": "1.5.0",
+                "release_status": "stable"
+              },
+              {
+                "version": "1.0.0",
+                "release_status": "stable"
+              }
+            ]
+          }
+        ]
+      },
+      "pack": "spec_version = 1\nid = \"ExamplePack\"\ntype = \"modpack\"\nname = \"Example Pack\"\nauthors = [\"Example Author\"]\nabstract = \"A pack of example mods.\"\nlicense = \"MIT\"\nversion = \"1.0.0\"\nreleased_at = \"2026-10-01T12:00:00Z\"\n\n[links]\nforums = \"https://forums.ahwoo.com/threads/example-pack.125/\"\n\n[compatibility]\ngame_min = \"2026.9.10.5438\"\n\n[[mods]]\nid = \"Alpha\"\nversion = \"1.0.0\"\n\n[[mods]]\nid = \"Beta\"\nversion = \"2.0.0\"\n",
+      "accepted": false,
+      "errors": [
+        "mods[0]: 'Alpha' 1.0.0 requires 'Beta' 1.5.0 or older, and the pack pins 'Beta' 2.0.0"
+      ],
+      "notes": []
+    },
+    {
+      "name": "a derived dependency counts like an authored one",
+      "snapshot": {
+        "listings": [
+          {
+            "id": "Alpha",
+            "type": "mod",
+            "releases": [
+              {
+                "version": "1.0.0",
+                "release_status": "stable",
+                "dependencies": [
+                  {
+                    "id": "Beta",
+                    "kind": "required",
+                    "source": "derived"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "Beta",
+            "type": "mod",
+            "releases": [
+              {
+                "version": "3.0.0",
+                "release_status": "stable"
+              },
+              {
+                "version": "2.1.0-rc.1",
+                "release_status": "testing"
+              },
+              {
+                "version": "2.0.0",
+                "release_status": "stable"
+              },
+              {
+                "version": "1.5.0",
+                "release_status": "stable"
+              },
+              {
+                "version": "1.0.0",
+                "release_status": "stable"
+              }
+            ]
+          }
+        ]
+      },
+      "pack": "spec_version = 1\nid = \"ExamplePack\"\ntype = \"modpack\"\nname = \"Example Pack\"\nauthors = [\"Example Author\"]\nabstract = \"A pack of example mods.\"\nlicense = \"MIT\"\nversion = \"1.0.0\"\nreleased_at = \"2026-10-01T12:00:00Z\"\n\n[links]\nforums = \"https://forums.ahwoo.com/threads/example-pack.125/\"\n\n[compatibility]\ngame_min = \"2026.9.10.5438\"\n\n[[mods]]\nid = \"Alpha\"\nversion = \"1.0.0\"\n",
+      "accepted": false,
+      "errors": [
+        "mods[0]: 'Alpha' 1.0.0 requires 'Beta', and the pack does not pin it"
+      ],
+      "notes": [],
+      "adds": [
+        {
+          "id": "Beta",
+          "version": "3.0.0"
+        }
+      ]
+    },
+    {
+      "name": "one member of an any_of is enough",
+      "snapshot": {
+        "listings": [
+          {
+            "id": "Alpha",
+            "type": "mod",
+            "releases": [
+              {
+                "version": "1.0.0",
+                "release_status": "stable",
+                "dependencies": [
+                  {
+                    "kind": "required",
+                    "any_of": [
+                      {
+                        "id": "Beta",
+                        "min": "2.0.0"
+                      },
+                      {
+                        "id": "Gamma"
+                      }
+                    ],
+                    "source": "authored"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "Beta",
+            "type": "mod",
+            "releases": [
+              {
+                "version": "3.0.0",
+                "release_status": "stable"
+              },
+              {
+                "version": "2.1.0-rc.1",
+                "release_status": "testing"
+              },
+              {
+                "version": "2.0.0",
+                "release_status": "stable"
+              },
+              {
+                "version": "1.5.0",
+                "release_status": "stable"
+              },
+              {
+                "version": "1.0.0",
+                "release_status": "stable"
+              }
+            ]
+          },
+          {
+            "id": "Gamma",
+            "type": "mod",
+            "releases": [
+              {
+                "version": "1.1.0",
+                "release_status": "testing"
+              },
+              {
+                "version": "1.0.0",
+                "release_status": "stable"
+              }
+            ]
+          }
+        ]
+      },
+      "pack": "spec_version = 1\nid = \"ExamplePack\"\ntype = \"modpack\"\nname = \"Example Pack\"\nauthors = [\"Example Author\"]\nabstract = \"A pack of example mods.\"\nlicense = \"MIT\"\nversion = \"1.0.0\"\nreleased_at = \"2026-10-01T12:00:00Z\"\n\n[links]\nforums = \"https://forums.ahwoo.com/threads/example-pack.125/\"\n\n[compatibility]\ngame_min = \"2026.9.10.5438\"\n\n[[mods]]\nid = \"Alpha\"\nversion = \"1.0.0\"\n\n[[mods]]\nid = \"Gamma\"\nversion = \"1.0.0\"\n",
+      "accepted": true,
+      "errors": [],
+      "notes": []
+    },
+    {
+      "name": "an any_of with no member inside its bounds names every choice",
+      "snapshot": {
+        "listings": [
+          {
+            "id": "Alpha",
+            "type": "mod",
+            "releases": [
+              {
+                "version": "1.0.0",
+                "release_status": "stable",
+                "dependencies": [
+                  {
+                    "kind": "required",
+                    "any_of": [
+                      {
+                        "id": "Beta",
+                        "min": "2.0.0"
+                      },
+                      {
+                        "id": "Gamma"
+                      }
+                    ],
+                    "source": "authored"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "Beta",
+            "type": "mod",
+            "releases": [
+              {
+                "version": "3.0.0",
+                "release_status": "stable"
+              },
+              {
+                "version": "2.1.0-rc.1",
+                "release_status": "testing"
+              },
+              {
+                "version": "2.0.0",
+                "release_status": "stable"
+              },
+              {
+                "version": "1.5.0",
+                "release_status": "stable"
+              },
+              {
+                "version": "1.0.0",
+                "release_status": "stable"
+              }
+            ]
+          },
+          {
+            "id": "Gamma",
+            "type": "mod",
+            "releases": [
+              {
+                "version": "1.1.0",
+                "release_status": "testing"
+              },
+              {
+                "version": "1.0.0",
+                "release_status": "stable"
+              }
+            ]
+          }
+        ]
+      },
+      "pack": "spec_version = 1\nid = \"ExamplePack\"\ntype = \"modpack\"\nname = \"Example Pack\"\nauthors = [\"Example Author\"]\nabstract = \"A pack of example mods.\"\nlicense = \"MIT\"\nversion = \"1.0.0\"\nreleased_at = \"2026-10-01T12:00:00Z\"\n\n[links]\nforums = \"https://forums.ahwoo.com/threads/example-pack.125/\"\n\n[compatibility]\ngame_min = \"2026.9.10.5438\"\n\n[[mods]]\nid = \"Alpha\"\nversion = \"1.0.0\"\n\n[[mods]]\nid = \"Beta\"\nversion = \"1.0.0\"\n",
+      "accepted": false,
+      "errors": [
+        "mods[0]: 'Alpha' 1.0.0 requires one of 'Beta' 2.0.0 or newer, 'Gamma', and the pack pins 'Beta' 1.0.0"
+      ],
+      "notes": []
+    },
+    {
+      "name": "an any_of with no member pinned is left to the author",
+      "snapshot": {
+        "listings": [
+          {
+            "id": "Alpha",
+            "type": "mod",
+            "releases": [
+              {
+                "version": "1.0.0",
+                "release_status": "stable",
+                "dependencies": [
+                  {
+                    "kind": "required",
+                    "any_of": [
+                      {
+                        "id": "Beta",
+                        "min": "2.0.0"
+                      },
+                      {
+                        "id": "Gamma"
+                      }
+                    ],
+                    "source": "authored"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "Beta",
+            "type": "mod",
+            "releases": [
+              {
+                "version": "3.0.0",
+                "release_status": "stable"
+              },
+              {
+                "version": "2.1.0-rc.1",
+                "release_status": "testing"
+              },
+              {
+                "version": "2.0.0",
+                "release_status": "stable"
+              },
+              {
+                "version": "1.5.0",
+                "release_status": "stable"
+              },
+              {
+                "version": "1.0.0",
+                "release_status": "stable"
+              }
+            ]
+          },
+          {
+            "id": "Gamma",
+            "type": "mod",
+            "releases": [
+              {
+                "version": "1.1.0",
+                "release_status": "testing"
+              },
+              {
+                "version": "1.0.0",
+                "release_status": "stable"
+              }
+            ]
+          }
+        ]
+      },
+      "pack": "spec_version = 1\nid = \"ExamplePack\"\ntype = \"modpack\"\nname = \"Example Pack\"\nauthors = [\"Example Author\"]\nabstract = \"A pack of example mods.\"\nlicense = \"MIT\"\nversion = \"1.0.0\"\nreleased_at = \"2026-10-01T12:00:00Z\"\n\n[links]\nforums = \"https://forums.ahwoo.com/threads/example-pack.125/\"\n\n[compatibility]\ngame_min = \"2026.9.10.5438\"\n\n[[mods]]\nid = \"Alpha\"\nversion = \"1.0.0\"\n",
+      "accepted": false,
+      "errors": [
+        "mods[0]: 'Alpha' 1.0.0 requires one of 'Beta' 2.0.0 or newer, 'Gamma', and the pack pins none of them"
+      ],
+      "notes": []
+    },
+    {
+      "name": "a conflict with another member is refused",
+      "snapshot": {
+        "listings": [
+          {
+            "id": "Alpha",
+            "type": "mod",
+            "releases": [
+              {
+                "version": "1.0.0",
+                "release_status": "stable",
+                "dependencies": [
+                  {
+                    "id": "Beta",
+                    "kind": "conflict",
+                    "source": "authored"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "Beta",
+            "type": "mod",
+            "releases": [
+              {
+                "version": "3.0.0",
+                "release_status": "stable"
+              },
+              {
+                "version": "2.1.0-rc.1",
+                "release_status": "testing"
+              },
+              {
+                "version": "2.0.0",
+                "release_status": "stable"
+              },
+              {
+                "version": "1.5.0",
+                "release_status": "stable"
+              },
+              {
+                "version": "1.0.0",
+                "release_status": "stable"
+              }
+            ]
+          }
+        ]
+      },
+      "pack": "spec_version = 1\nid = \"ExamplePack\"\ntype = \"modpack\"\nname = \"Example Pack\"\nauthors = [\"Example Author\"]\nabstract = \"A pack of example mods.\"\nlicense = \"MIT\"\nversion = \"1.0.0\"\nreleased_at = \"2026-10-01T12:00:00Z\"\n\n[links]\nforums = \"https://forums.ahwoo.com/threads/example-pack.125/\"\n\n[compatibility]\ngame_min = \"2026.9.10.5438\"\n\n[[mods]]\nid = \"Alpha\"\nversion = \"1.0.0\"\n\n[[mods]]\nid = \"Beta\"\nversion = \"1.0.0\"\n",
+      "accepted": false,
+      "errors": [
+        "mods[0]: 'Alpha' 1.0.0 conflicts with 'Beta', and the pack pins 'Beta' 1.0.0"
+      ],
+      "notes": []
+    },
+    {
+      "name": "a conflict outside its bounds passes",
+      "snapshot": {
+        "listings": [
+          {
+            "id": "Alpha",
+            "type": "mod",
+            "releases": [
+              {
+                "version": "1.0.0",
+                "release_status": "stable",
+                "dependencies": [
+                  {
+                    "id": "Beta",
+                    "kind": "conflict",
+                    "max": "1.0.0",
+                    "source": "authored"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "Beta",
+            "type": "mod",
+            "releases": [
+              {
+                "version": "3.0.0",
+                "release_status": "stable"
+              },
+              {
+                "version": "2.1.0-rc.1",
+                "release_status": "testing"
+              },
+              {
+                "version": "2.0.0",
+                "release_status": "stable"
+              },
+              {
+                "version": "1.5.0",
+                "release_status": "stable"
+              },
+              {
+                "version": "1.0.0",
+                "release_status": "stable"
+              }
+            ]
+          }
+        ]
+      },
+      "pack": "spec_version = 1\nid = \"ExamplePack\"\ntype = \"modpack\"\nname = \"Example Pack\"\nauthors = [\"Example Author\"]\nabstract = \"A pack of example mods.\"\nlicense = \"MIT\"\nversion = \"1.0.0\"\nreleased_at = \"2026-10-01T12:00:00Z\"\n\n[links]\nforums = \"https://forums.ahwoo.com/threads/example-pack.125/\"\n\n[compatibility]\ngame_min = \"2026.9.10.5438\"\n\n[[mods]]\nid = \"Alpha\"\nversion = \"1.0.0\"\n\n[[mods]]\nid = \"Beta\"\nversion = \"2.0.0\"\n",
+      "accepted": true,
+      "errors": [],
+      "notes": []
+    },
+    {
+      "name": "a conflict with the member itself is not another member",
+      "snapshot": {
+        "listings": [
+          {
+            "id": "Alpha",
+            "type": "mod",
+            "releases": [
+              {
+                "version": "1.0.0",
+                "release_status": "stable",
+                "dependencies": [
+                  {
+                    "id": "Alpha",
+                    "kind": "conflict",
+                    "source": "authored"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "pack": "spec_version = 1\nid = \"ExamplePack\"\ntype = \"modpack\"\nname = \"Example Pack\"\nauthors = [\"Example Author\"]\nabstract = \"A pack of example mods.\"\nlicense = \"MIT\"\nversion = \"1.0.0\"\nreleased_at = \"2026-10-01T12:00:00Z\"\n\n[links]\nforums = \"https://forums.ahwoo.com/threads/example-pack.125/\"\n\n[compatibility]\ngame_min = \"2026.9.10.5438\"\n\n[[mods]]\nid = \"Alpha\"\nversion = \"1.0.0\"\n",
+      "accepted": true,
+      "errors": [],
+      "notes": []
+    },
+    {
+      "name": "only required dependencies have to be pinned",
+      "snapshot": {
+        "listings": [
+          {
+            "id": "Alpha",
+            "type": "mod",
+            "releases": [
+              {
+                "version": "1.0.0",
+                "release_status": "stable",
+                "dependencies": [
+                  {
+                    "id": "Beta",
+                    "kind": "optional",
+                    "source": "authored"
+                  },
+                  {
+                    "id": "Beta",
+                    "kind": "recommends",
+                    "source": "authored"
+                  },
+                  {
+                    "id": "Beta",
+                    "kind": "suggests",
+                    "source": "authored"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "Beta",
+            "type": "mod",
+            "releases": [
+              {
+                "version": "3.0.0",
+                "release_status": "stable"
+              },
+              {
+                "version": "2.1.0-rc.1",
+                "release_status": "testing"
+              },
+              {
+                "version": "2.0.0",
+                "release_status": "stable"
+              },
+              {
+                "version": "1.5.0",
+                "release_status": "stable"
+              },
+              {
+                "version": "1.0.0",
+                "release_status": "stable"
+              }
+            ]
+          }
+        ]
+      },
+      "pack": "spec_version = 1\nid = \"ExamplePack\"\ntype = \"modpack\"\nname = \"Example Pack\"\nauthors = [\"Example Author\"]\nabstract = \"A pack of example mods.\"\nlicense = \"MIT\"\nversion = \"1.0.0\"\nreleased_at = \"2026-10-01T12:00:00Z\"\n\n[links]\nforums = \"https://forums.ahwoo.com/threads/example-pack.125/\"\n\n[compatibility]\ngame_min = \"2026.9.10.5438\"\n\n[[mods]]\nid = \"Alpha\"\nversion = \"1.0.0\"\n",
+      "accepted": true,
+      "errors": [],
+      "notes": []
+    },
+    {
+      "name": "a refused pin still counts as pinned",
+      "snapshot": {
+        "listings": [
+          {
+            "id": "Alpha",
+            "type": "mod",
+            "releases": [
+              {
+                "version": "1.0.0",
+                "release_status": "stable",
+                "dependencies": [
+                  {
+                    "id": "Beta",
+                    "kind": "required",
+                    "min": "3.0.0",
+                    "source": "authored"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "Beta",
+            "type": "mod",
+            "releases": [
+              {
+                "version": "3.0.0",
+                "release_status": "stable"
+              },
+              {
+                "version": "2.1.0-rc.1",
+                "release_status": "testing"
+              },
+              {
+                "version": "2.0.0",
+                "release_status": "stable"
+              },
+              {
+                "version": "1.5.0",
+                "release_status": "stable"
+              },
+              {
+                "version": "1.0.0",
+                "release_status": "stable"
+              }
+            ]
+          }
+        ]
+      },
+      "pack": "spec_version = 1\nid = \"ExamplePack\"\ntype = \"modpack\"\nname = \"Example Pack\"\nauthors = [\"Example Author\"]\nabstract = \"A pack of example mods.\"\nlicense = \"MIT\"\nversion = \"1.0.0\"\nreleased_at = \"2026-10-01T12:00:00Z\"\n\n[links]\nforums = \"https://forums.ahwoo.com/threads/example-pack.125/\"\n\n[compatibility]\ngame_min = \"2026.9.10.5438\"\n\n[[mods]]\nid = \"Alpha\"\nversion = \"1.0.0\"\n\n[[mods]]\nid = \"Beta\"\nversion = \"3.1.0\"\n",
+      "accepted": false,
+      "errors": [
+        "mods[1]: 'Beta' has no stamped release 3.1.0"
+      ],
+      "notes": []
+    },
+    {
+      "name": "the dependencies of an added release are added too",
+      "snapshot": {
+        "listings": [
+          {
+            "id": "Alpha",
+            "type": "mod",
+            "releases": [
+              {
+                "version": "1.0.0",
+                "release_status": "stable",
+                "dependencies": [
+                  {
+                    "id": "Beta",
+                    "kind": "required",
+                    "min": "2.0.0",
+                    "source": "authored"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "Beta",
+            "type": "mod",
+            "releases": [
+              {
+                "version": "2.0.0",
+                "release_status": "stable",
+                "dependencies": [
+                  {
+                    "id": "Gamma",
+                    "kind": "required",
+                    "source": "authored"
+                  }
+                ]
+              },
+              {
+                "version": "1.0.0",
+                "release_status": "stable"
+              }
+            ]
+          },
+          {
+            "id": "Gamma",
+            "type": "mod",
+            "releases": [
+              {
+                "version": "1.1.0",
+                "release_status": "testing"
+              },
+              {
+                "version": "1.0.0",
+                "release_status": "stable"
+              }
+            ]
+          }
+        ]
+      },
+      "pack": "spec_version = 1\nid = \"ExamplePack\"\ntype = \"modpack\"\nname = \"Example Pack\"\nauthors = [\"Example Author\"]\nabstract = \"A pack of example mods.\"\nlicense = \"MIT\"\nversion = \"1.0.0\"\nreleased_at = \"2026-10-01T12:00:00Z\"\n\n[links]\nforums = \"https://forums.ahwoo.com/threads/example-pack.125/\"\n\n[compatibility]\ngame_min = \"2026.9.10.5438\"\n\n[[mods]]\nid = \"Alpha\"\nversion = \"1.0.0\"\n",
+      "accepted": false,
+      "errors": [
+        "mods[0]: 'Alpha' 1.0.0 requires 'Beta' 2.0.0 or newer, and the pack does not pin it"
+      ],
+      "notes": [],
+      "adds": [
+        {
+          "id": "Beta",
+          "version": "2.0.0"
+        },
+        {
+          "id": "Gamma",
+          "version": "1.0.0"
+        }
+      ]
+    },
+    {
+      "name": "a dependency that two members require is added inside both bounds",
+      "snapshot": {
+        "listings": [
+          {
+            "id": "Alpha",
+            "type": "mod",
+            "releases": [
+              {
+                "version": "1.0.0",
+                "release_status": "stable",
+                "dependencies": [
+                  {
+                    "id": "Beta",
+                    "kind": "required",
+                    "min": "1.5.0",
+                    "source": "authored"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "Delta",
+            "type": "mod",
+            "releases": [
+              {
+                "version": "1.0.0",
+                "release_status": "stable",
+                "dependencies": [
+                  {
+                    "id": "Beta",
+                    "kind": "required",
+                    "max": "2.0.0",
+                    "source": "authored"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "Beta",
+            "type": "mod",
+            "releases": [
+              {
+                "version": "3.0.0",
+                "release_status": "stable"
+              },
+              {
+                "version": "2.1.0-rc.1",
+                "release_status": "testing"
+              },
+              {
+                "version": "2.0.0",
+                "release_status": "stable"
+              },
+              {
+                "version": "1.5.0",
+                "release_status": "stable"
+              },
+              {
+                "version": "1.0.0",
+                "release_status": "stable"
+              }
+            ]
+          }
+        ]
+      },
+      "pack": "spec_version = 1\nid = \"ExamplePack\"\ntype = \"modpack\"\nname = \"Example Pack\"\nauthors = [\"Example Author\"]\nabstract = \"A pack of example mods.\"\nlicense = \"MIT\"\nversion = \"1.0.0\"\nreleased_at = \"2026-10-01T12:00:00Z\"\n\n[links]\nforums = \"https://forums.ahwoo.com/threads/example-pack.125/\"\n\n[compatibility]\ngame_min = \"2026.9.10.5438\"\n\n[[mods]]\nid = \"Alpha\"\nversion = \"1.0.0\"\n\n[[mods]]\nid = \"Delta\"\nversion = \"1.0.0\"\n",
+      "accepted": false,
+      "errors": [
+        "mods[0]: 'Alpha' 1.0.0 requires 'Beta' 1.5.0 or newer, and the pack does not pin it",
+        "mods[1]: 'Delta' 1.0.0 requires 'Beta' 2.0.0 or older, and the pack does not pin it"
+      ],
+      "notes": [],
+      "adds": [
+        {
+          "id": "Beta",
+          "version": "2.0.0"
+        }
+      ]
+    },
+    {
+      "name": "a release added later narrows the bounds of a mod added earlier",
+      "snapshot": {
+        "listings": [
+          {
+            "id": "Alpha",
+            "type": "mod",
+            "releases": [
+              {
+                "version": "1.0.0",
+                "release_status": "stable",
+                "dependencies": [
+                  {
+                    "id": "Beta",
+                    "kind": "required"
+                  },
+                  {
+                    "id": "Gamma",
+                    "kind": "required",
+                    "min": "1.0.0"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "Beta",
+            "type": "mod",
+            "releases": [
+              {
+                "version": "1.0.0",
+                "release_status": "stable",
+                "dependencies": [
+                  {
+                    "id": "Gamma",
+                    "kind": "required",
+                    "max": "1.5.0"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "Gamma",
+            "type": "mod",
+            "releases": [
+              {
+                "version": "2.0.0",
+                "release_status": "stable",
+                "dependencies": []
+              },
+              {
+                "version": "1.5.0",
+                "release_status": "stable",
+                "dependencies": []
+              },
+              {
+                "version": "1.0.0",
+                "release_status": "stable",
+                "dependencies": []
+              }
+            ]
+          }
+        ]
+      },
+      "pack": "spec_version = 1\nid = \"ExamplePack\"\ntype = \"modpack\"\nname = \"Example Pack\"\nauthors = [\"Example Author\"]\nabstract = \"A pack of example mods.\"\nlicense = \"MIT\"\nversion = \"1.0.0\"\nreleased_at = \"2026-10-01T12:00:00Z\"\n\n[links]\nforums = \"https://forums.ahwoo.com/threads/example-pack.125/\"\n\n[compatibility]\ngame_min = \"2026.9.10.5438\"\n\n[[mods]]\nid = \"Alpha\"\nversion = \"1.0.0\"\n",
+      "accepted": false,
+      "errors": [
+        "mods[0]: 'Alpha' 1.0.0 requires 'Beta', and the pack does not pin it",
+        "mods[0]: 'Alpha' 1.0.0 requires 'Gamma' 1.0.0 or newer, and the pack does not pin it"
+      ],
+      "notes": [],
+      "adds": [
+        {
+          "id": "Beta",
+          "version": "1.0.0"
+        },
+        {
+          "id": "Gamma",
+          "version": "1.5.0"
+        }
+      ]
+    }
+  ]
+}
