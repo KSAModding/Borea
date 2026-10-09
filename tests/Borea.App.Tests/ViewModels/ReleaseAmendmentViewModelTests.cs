@@ -1,6 +1,7 @@
 using Borea.App.ViewModels;
 using Borea.Composition;
 using Borea.Core.Game;
+using Borea.Core.Mods;
 using Borea.Core.Stewardship;
 
 namespace Borea.App.Tests.ViewModels;
@@ -183,6 +184,115 @@ public sealed class ReleaseAmendmentViewModelTests
         Assert.Single(dialog.Dependencies);
         Assert.Empty(request.Change.DependencyBounds);
         Assert.Contains("\"id\": \"KittenExtensions\",\n      \"kind\": \"recommends\",\n      \"source\": \"authored\"", amended?.Text, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// On the author's behalf a row offers the removal only when each selected release that states the entry marks it authored, so a dependency
+    /// from the archive's mod.toml stays. The removal says that it widens, and the other values of the row stay out of the request.
+    /// </summary>
+    [Fact]
+    public async Task OnBehalfOfTheAuthor_ADeclaredDependency_CanBeRemoved_AndADerivedOneCannot()
+    {
+        _amendments.Texts["1.2.0"] = FakeReleaseAmendments.WithDependency(FakeReleaseAmendments.Stamped("MeasureTools", "1.2.0", "2026.9.7.5402"), "ModMenu", "authored");
+        _amendments.Texts["1.1.0"] = FakeReleaseAmendments.Stamped("MeasureTools", "1.1.0", null);
+        _amendments.Texts["1.0.0"] = FakeReleaseAmendments.WithDependency(FakeReleaseAmendments.Stamped("MeasureTools", "1.0.0", null), "ModMenu", "derived");
+        using var harness = await CreateAsync();
+        var localization = harness.Localization;
+        var dialog = await OpenDialogAsync(harness.ViewModel);
+        dialog.Versions[0].IsSelected = true;
+        dialog.Versions[1].IsSelected = true;
+        dialog.BoundDependencyCommand.Execute(null);
+        dialog.BoundDependencyCommand.Execute(null);
+        var declared = dialog.Dependencies[0];
+        var derived = dialog.Dependencies[1];
+        declared.Id = "ModMenu";
+        derived.Id = "KittenExtensions";
+
+        Assert.Equal((false, false), (declared.CanRemoveDependency, derived.CanRemoveDependency));
+
+        dialog.OnBehalfOfAuthor = true;
+        dialog.AuthorRequest = "https://github.com/KSAModding/content-index/issues/42";
+        dialog.Reason = "The author declared it by mistake.";
+
+        Assert.Equal((true, false), (declared.CanRemoveDependency, derived.CanRemoveDependency));
+
+        dialog.Versions[2].IsSelected = true;
+
+        Assert.False(declared.CanRemoveDependency);
+
+        dialog.Versions[2].IsSelected = false;
+        declared.Max = "0.3.0";
+        declared.NewKind = "optional";
+        declared.RemoveDependency = true;
+        derived.RemoveDependency = true;
+
+        Assert.Equal((localization.StewardAmendWidensOnBehalf, false), (declared.RemovalHint.Effect, declared.RemovalHint.NeedsAuthor));
+        Assert.Equal((false, false, false), (declared.KeepsDependency, declared.IsMinEnabled, declared.IsMaxEnabled));
+        Assert.Equal((false, false), (declared.KindHint.IsShown, declared.MaxHint.HasEffect));
+        Assert.Equal((false, false), (derived.RemovesDependency, derived.RemovalHint.IsShown));
+        await dialog.PreviewCommand.ExecuteAsync(null);
+
+        var change = Assert.Single(_amendments.Previewed).Change;
+        Assert.Equal(["ModMenu"], change.RemovedDependencies);
+        Assert.Empty(change.DependencyBounds);
+        Assert.Empty(change.DependencyKinds);
+
+        dialog.OnBehalfOfAuthor = false;
+        await dialog.PreviewCommand.ExecuteAsync(null);
+
+        Assert.Equal((false, false), (declared.RemoveDependency, declared.CanRemoveDependency));
+        Assert.Empty(_amendments.Previewed[^1].Change.RemovedDependencies);
+        Assert.Equal([new ReleaseDependencyBounds("ModMenu", null, "0.3.0")], _amendments.Previewed[^1].Change.DependencyBounds);
+        Assert.Equal(["1.2.0"], _amendments.ArchivesRead);
+    }
+
+    /// <summary>
+    /// An authored entry can also stand in for a dependency of the archive's mod.toml, which the index keeps, so the row reads each archive that states
+    /// the entry before it offers the removal, and says why it does not offer it.
+    /// </summary>
+    [Fact]
+    public async Task OnBehalfOfTheAuthor_ADeclaredDependency_IsOfferedOnlyWhenNoArchiveDeclaresIt()
+    {
+        foreach (var version in _amendments.Releases)
+            _amendments.Texts[version] = FakeReleaseAmendments.WithDependency(FakeReleaseAmendments.Stamped("MeasureTools", version, null), "ModMenu", "authored");
+        _amendments.Declared["1.1.0"] = [new LocalModDependency("modmenu", optional: false)];
+        _amendments.UnreadableArchives.Add("1.0.0");
+        var hold = _amendments.HoldArchives = new TaskCompletionSource();
+        using var harness = await CreateAsync();
+        var localization = harness.Localization;
+        var dialog = await OpenDialogAsync(harness.ViewModel);
+        dialog.OnBehalfOfAuthor = true;
+        dialog.Versions[0].IsSelected = true;
+        dialog.BoundDependencyCommand.Execute(null);
+        var row = dialog.Dependencies[0];
+        row.Id = "ModMenu";
+
+        Assert.Equal((false, localization.StewardAmendReadingArchive), (row.CanRemoveDependency, row.RemovalNote));
+
+        hold.SetResult();
+        await dialog.WhenArchivesReadAsync();
+
+        Assert.Equal((true, null), (row.CanRemoveDependency, row.RemovalNote));
+
+        _amendments.HoldArchives = null;
+        dialog.Versions[1].IsSelected = true;
+
+        Assert.Equal((false, localization.StewardAmendDeclaredByArchive), (row.CanRemoveDependency, row.RemovalNote));
+
+        dialog.Versions[1].IsSelected = false;
+        dialog.Versions[2].IsSelected = true;
+
+        Assert.Equal((false, localization.StewardAmendArchiveUnreadable), (row.CanRemoveDependency, row.RemovalNote));
+
+        dialog.Versions[2].IsSelected = false;
+        row.RemoveDependency = true;
+
+        Assert.Equal((true, localization.StewardAmendWidensOnBehalf), (row.RemovesDependency, row.RemovalHint.Effect));
+        Assert.Equal(["1.2.0", "1.1.0", "1.0.0"], _amendments.ArchivesRead);
+
+        dialog.OnBehalfOfAuthor = false;
+
+        Assert.Equal((false, null), (row.CanRemoveDependency, row.RemovalNote));
     }
 
     [Fact]

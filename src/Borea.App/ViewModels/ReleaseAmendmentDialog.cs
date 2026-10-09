@@ -252,14 +252,16 @@ public sealed partial class ReleaseAmendmentDialog : ObservableObject
         AddedDependencies = [.. Dependencies.Where(row => row.IsMissing).Select(row => new ReleaseDependencyAddition(row.Id, row.Kind))],
         DependencyBounds = [.. Dependencies.Where(row => row.TypedMin is not null || row.TypedMax is not null).Select(row => new ReleaseDependencyBounds(row.Id, row.TypedMin, row.TypedMax))],
         DependencyKinds = OnBehalfOfAuthor
-            ? [.. Dependencies.Where(row => !row.IsMissing && row.NewKind is not null).Select(row => new ReleaseDependencyKind(row.Id, row.NewKind!))]
+            ? [.. Dependencies.Where(row => !row.IsMissing && !row.RemovesDependency && row.NewKind is not null).Select(row => new ReleaseDependencyKind(row.Id, row.NewKind!))]
             : [],
         RemoveGameMax = RemoveGameMax,
         Unyank = Unyank,
         Os = ChangeOs ? [.. Platforms.Where(platform => platform.IsChecked).Select(platform => platform.Name)] : null,
         RemoveLoaderMin = RemoveLoaderMin,
         RemoveLoaderMax = RemoveLoaderMax,
-        RemovedDependencyBounds = [.. Dependencies.Where(row => !row.IsMissing && (row.RemoveMin || row.RemoveMax)).Select(row => new ReleaseDependencyBoundRemoval(row.Id, row.RemoveMin, row.RemoveMax))],
+        RemovedDependencyBounds = [.. Dependencies.Where(row => !row.IsMissing && !row.RemovesDependency && (row.RemoveMin || row.RemoveMax))
+            .Select(row => new ReleaseDependencyBoundRemoval(row.Id, row.RemoveMin, row.RemoveMax))],
+        RemovedDependencies = [.. Dependencies.Where(row => row.RemovesDependency).Select(row => row.Id)],
     };
 
     internal Task WhenDoneAsync() => _run;
@@ -531,8 +533,9 @@ public sealed partial class ReleaseAmendmentVersion(ReleaseAmendmentDialog dialo
 }
 
 /// <summary>
-/// A dependency that was missing, with its kind, or a dependency that the releases state, with new bounds, and on the author's behalf a new kind or a removed bound.
-/// No row removes a stated dependency, because one that the archive's mod.toml declares stays in the release.
+/// A dependency that was missing, with its kind, or a dependency that the releases state, with new bounds, and on the author's behalf a new kind, a removed bound,
+/// or its removal. The row offers the removal only for an entry that the listing declared and that the mod.toml of no selected release archive declares,
+/// because the checks of content-index-releases keep a dependency from the mod.toml in the release.
 /// </summary>
 public sealed partial class ReleaseAmendmentDependencyRow : ObservableObject
 {
@@ -558,10 +561,45 @@ public sealed partial class ReleaseAmendmentDependencyRow : ObservableObject
     private string? _newKind;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsMinEnabled))]
     private bool _removeMin;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsMaxEnabled))]
     private bool _removeMax;
+
+    /// <summary>Whether the steward asks to remove the stated entry, which counts only while <see cref="CanRemoveDependency"/> holds.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(RemovesDependency), nameof(KeepsDependency), nameof(IsMinEnabled), nameof(IsMaxEnabled))]
+    private bool _removeDependency;
+
+    /// <summary>
+    /// Whether a selected release states the entry, every one that states it marks it authored, and the mod.toml of each of their archives was read
+    /// and does not declare it, so the checks accept the removal on the author's behalf.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(RemovesDependency), nameof(KeepsDependency), nameof(IsMinEnabled), nameof(IsMaxEnabled))]
+    private bool _canRemoveDependency;
+
+    /// <summary>Why a declared entry is not offered for removal: its archive is being read, cannot be read, or its mod.toml declares the entry.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasRemovalNote))]
+    private string? _removalNote;
+
+    /// <summary>What the removal does to the selected releases.</summary>
+    [ObservableProperty]
+    private ReleaseAmendmentHint _removalHint = ReleaseAmendmentHint.None;
+
+    /// <summary>Whether the row removes the entry, so every other value of the row is left out.</summary>
+    public bool RemovesDependency => RemoveDependency && CanRemoveDependency;
+
+    public bool KeepsDependency => !RemovesDependency;
+
+    public bool HasRemovalNote => RemovalNote is not null;
+
+    public bool IsMinEnabled => !RemoveMin && !RemovesDependency;
+
+    public bool IsMaxEnabled => !RemoveMax && !RemovesDependency;
 
     public bool HasNewKind => NewKind is not null;
 
@@ -598,11 +636,11 @@ public sealed partial class ReleaseAmendmentDependencyRow : ObservableObject
 
     public bool HasNoVersions => !HasVersions;
 
-    /// <summary>The min as typed, or null when it is empty or removed.</summary>
-    internal string? TypedMin => RemoveMin || string.IsNullOrWhiteSpace(Min) ? null : Min.Trim();
+    /// <summary>The min as typed, or null when it is empty or removed, or the row removes the entry.</summary>
+    internal string? TypedMin => RemoveMin || RemovesDependency || string.IsNullOrWhiteSpace(Min) ? null : Min.Trim();
 
-    /// <summary>The max as typed, or null when it is empty or removed.</summary>
-    internal string? TypedMax => RemoveMax || string.IsNullOrWhiteSpace(Max) ? null : Max.Trim();
+    /// <summary>The max as typed, or null when it is empty or removed, or the row removes the entry.</summary>
+    internal string? TypedMax => RemoveMax || RemovesDependency || string.IsNullOrWhiteSpace(Max) ? null : Max.Trim();
 
     [ObservableProperty]
     private string _id = string.Empty;
@@ -630,6 +668,8 @@ public sealed partial class ReleaseAmendmentDependencyRow : ObservableObject
 
     partial void OnRemoveMaxChanged(bool value) => _dialog.Edited();
 
+    partial void OnRemoveDependencyChanged(bool value) => _dialog.Edited();
+
     /// <summary>
     /// Takes the ids and the releases of the named mod again, and says what the selected releases state now for the entry and what each
     /// typed value does to them. An added entry has no value now, so the addition and its bounds are judged together.
@@ -644,10 +684,23 @@ public sealed partial class ReleaseAmendmentDependencyRow : ObservableObject
         _versions = _dialog.ReleaseChoices(id);
         if (id.Length == 0)
         {
-            (IdHint, MinHint, MaxHint, KindHint) = (ReleaseAmendmentHint.None, ReleaseAmendmentHint.None, ReleaseAmendmentHint.None, ReleaseAmendmentHint.None);
+            (IdHint, MinHint, MaxHint, KindHint, RemovalHint) = (ReleaseAmendmentHint.None, ReleaseAmendmentHint.None, ReleaseAmendmentHint.None, ReleaseAmendmentHint.None, ReleaseAmendmentHint.None);
             (MinVersions, MaxVersions) = (_dialog.Marked(_versions, null, MinVersions), _dialog.Marked(_versions, null, MaxVersions));
+            CanRemoveDependency = false;
+            RemovalNote = null;
             return;
         }
+
+        var removal = new ReleaseChange { RemovedDependencies = [id] };
+        var archives = CanChangeKind && _dialog.StatesAuthoredOnly(files, id) ? _dialog.Archives([.. files.Where(file => _dialog.StatesDependency(file, id))]) : null;
+        CanRemoveDependency = archives is { State: ReleaseArchiveState.Read } && _dialog.EffectOf(files, removal, archives.Declared) == ReleaseChangeEffect.Widens;
+        RemovalNote = archives?.State switch
+        {
+            ReleaseArchiveState.Reading => _dialog.Localization.StewardAmendReadingArchive,
+            ReleaseArchiveState.Unreadable => _dialog.Localization.StewardAmendArchiveUnreadable,
+            ReleaseArchiveState.Read when !CanRemoveDependency => _dialog.Localization.StewardAmendDeclaredByArchive,
+            _ => null,
+        };
 
         IReadOnlyList<ReleaseDependencyAddition> added = IsMissing ? [new ReleaseDependencyAddition(id, Kind)] : [];
         var stated = !IsMissing && _dialog.States(files, values => values.Dependency(id) is not null);
@@ -662,8 +715,11 @@ public sealed partial class ReleaseAmendmentDependencyRow : ObservableObject
             TypedMin is { } typedMin ? new ReleaseChange { AddedDependencies = added, DependencyBounds = [new ReleaseDependencyBounds(id, typedMin, null)] } : null);
         MaxHint = _dialog.Hint(files, max,
             TypedMax is { } typedMax ? new ReleaseChange { AddedDependencies = added, DependencyBounds = [new ReleaseDependencyBounds(id, null, typedMax)] } : null);
-        KindHint = CanChangeKind && NewKind is { } kind
+        KindHint = CanChangeKind && !RemovesDependency && NewKind is { } kind
             ? _dialog.HintWithNow(files, null, new ReleaseChange { DependencyKinds = [new ReleaseDependencyKind(id, kind)] })
+            : ReleaseAmendmentHint.None;
+        RemovalHint = RemovesDependency
+            ? _dialog.HintWithNow(files, null, removal, archives!.Declared)
             : ReleaseAmendmentHint.None;
         MinVersions = _dialog.Marked(_versions, _dialog.Current(files, min), MinVersions);
         MaxVersions = _dialog.Marked(_versions, _dialog.Current(files, max), MaxVersions);
@@ -677,6 +733,9 @@ public sealed partial class ReleaseAmendmentDependencyRow : ObservableObject
             NewKind = null;
             RemoveMin = false;
             RemoveMax = false;
+            RemoveDependency = false;
+            CanRemoveDependency = false;
+            RemovalNote = null;
         }
 
         OnPropertyChanged(nameof(CanChangeKind));

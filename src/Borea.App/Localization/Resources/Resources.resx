@@ -895,7 +895,7 @@
     <value>A missing dependency is added with its kind. A dependency that the releases state gets a tighter min or max.</value>
   </data>
   <data name="StewardAmendDependenciesHintAuthor" xml:space="preserve">
-    <value>A missing dependency is added with its kind. A dependency that the releases state gets a new min, a new max or a new kind, or loses its min or max, and it stays in the releases.</value>
+    <value>A missing dependency is added with its kind. A dependency that the releases state gets a new min, a new max or a new kind, or loses its min or max. A dependency that the listing declared can be removed when the mod.toml of the release archive does not declare it, which Borea reads first.</value>
   </data>
   <data name="StewardAmendAddDependency" xml:space="preserve">
     <value>Add a missing dependency</value>
@@ -914,6 +914,18 @@
   </data>
   <data name="StewardAmendRemoveMax" xml:space="preserve">
     <value>Remove max</value>
+  </data>
+  <data name="StewardAmendRemoveDependency" xml:space="preserve">
+    <value>Remove this dependency</value>
+  </data>
+  <data name="StewardAmendReadingArchive" xml:space="preserve">
+    <value>Reading the release archive to see whether its mod.toml declares this dependency.</value>
+  </data>
+  <data name="StewardAmendDeclaredByArchive" xml:space="preserve">
+    <value>The mod.toml of the release archive declares this dependency, so it stays.</value>
+  </data>
+  <data name="StewardAmendArchiveUnreadable" xml:space="preserve">
+    <value>The release archive could not be read, so this dependency cannot be removed.</value>
   </data>
   <data name="StewardAmendReasonHint" xml:space="preserve">
     <value>One sentence for the pull request. With a yank, players see it too.</value>
@@ -965,6 +977,9 @@
   </data>
   <data name="StewardAmendRefusedOutsideClass" xml:space="preserve">
     <value>The checks of content-index-releases would refuse this change.</value>
+  </data>
+  <data name="StewardAmendRefusedUnreadableArchive" xml:space="preserve">
+    <value>The release archive could not be read, so nothing shows that its mod.toml does not declare the removed dependency.</value>
   </data>
   <data name="StewardAmendErrorNotSteward" xml:space="preserve">
     <value>GitHub does not let this account bypass the rules of content-index-releases, so it cannot do this.</value>

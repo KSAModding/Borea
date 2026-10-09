@@ -415,6 +415,54 @@ public sealed class StewardViewsTests
     }
 
     [Fact]
+    public async Task ReleaseAmendmentModal_OnBehalfOfTheAuthor_OffersTheRemovalOfADeclaredDependency_AndSaysThatItWidens()
+    {
+        _amendments.Texts["1.2.0"] = FakeReleaseAmendments.WithDependency(FakeReleaseAmendments.Stamped("MeasureTools", "1.2.0", "2026.9.7.5402"), "ModMenu", "authored");
+        using var harness = await CreateAsync();
+        var viewModel = harness.ViewModel;
+        await viewModel.EnsureDiscoverLoadedAsync();
+        await viewModel.OpenContentAsync(viewModel.DiscoverItems.First(item => item.ModId == "MeasureTools"));
+        viewModel.AmendContentReleasesCommand.Execute(null);
+        var dialog = viewModel.StewardAmendment!;
+        await dialog.WhenDoneAsync();
+        dialog.Versions[0].IsSelected = true;
+        dialog.OnBehalfOfAuthor = true;
+        dialog.BoundDependencyCommand.Execute(null);
+        dialog.BoundDependencyCommand.Execute(null);
+        dialog.Dependencies[0].Id = "ModMenu";
+        dialog.Dependencies[1].Id = "KittenExtensions";
+
+        var (removals, texts, enabledMins) = await HeadlessApp.RunAsync(harness, () =>
+        {
+            var modal = new ReleaseAmendmentModal();
+            var window = new Window { Width = 1280, Height = 832, Content = modal, DataContext = viewModel };
+            window.Show();
+            try
+            {
+                window.UpdateLayout();
+                var boxes = modal.GetVisualDescendants().OfType<CheckBox>()
+                    .Where(box => box.IsEffectivelyVisible && box.Content is TextBlock { Text: var text } && text == harness.Localization.StewardAmendRemoveDependency)
+                    .ToList();
+                boxes.Single().IsChecked = true;
+                window.UpdateLayout();
+                var shown = modal.GetVisualDescendants().OfType<TextBlock>().Where(text => text.IsEffectivelyVisible).Select(text => text.Text).ToList();
+                var mins = modal.GetVisualDescendants().OfType<Control>()
+                    .Count(control => control.IsEffectivelyVisible && control.IsEffectivelyEnabled && AutomationProperties.GetName(control) == harness.Localization.ListingDependencyMin);
+                return Task.FromResult((boxes.Count, shown, mins));
+            }
+            finally
+            {
+                window.Close();
+            }
+        });
+
+        Assert.Equal(1, removals);
+        Assert.True(dialog.Dependencies[0].RemovesDependency);
+        Assert.Contains(harness.Localization.StewardAmendWidensOnBehalf, texts);
+        Assert.Equal(1, enabledMins);
+    }
+
+    [Fact]
     public async Task ReleaseAmendmentModal_APickFromTheGameMaxList_FillsTheField_AndSaysThatItWidens()
     {
         _amendments.GameVersions.Add("2026.10.7.5541");

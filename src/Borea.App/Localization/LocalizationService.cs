@@ -932,6 +932,14 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string StewardAmendRemoveMax => Resources.StewardAmendRemoveMax;
 
+    public string StewardAmendRemoveDependency => Resources.StewardAmendRemoveDependency;
+
+    public string StewardAmendReadingArchive => Resources.StewardAmendReadingArchive;
+
+    public string StewardAmendDeclaredByArchive => Resources.StewardAmendDeclaredByArchive;
+
+    public string StewardAmendArchiveUnreadable => Resources.StewardAmendArchiveUnreadable;
+
     public string StewardAmendReasonHint => Resources.StewardAmendReasonHint;
 
     public string StewardAmendPreview => Resources.StewardAmendPreview;
@@ -965,6 +973,8 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string StewardAmendRefusedWidens => Resources.StewardAmendRefusedWidens;
 
     public string StewardAmendRefusedOutsideClass => Resources.StewardAmendRefusedOutsideClass;
+
+    public string StewardAmendRefusedUnreadableArchive => Resources.StewardAmendRefusedUnreadableArchive;
 
     public string StewardAmendErrorNotSteward => Resources.StewardAmendErrorNotSteward;
 

@@ -895,7 +895,7 @@
     <value>Eine fehlende Abhängigkeit kommt mit ihrer Art dazu. Eine Abhängigkeit, die die Releases angeben, bekommt ein engeres Minimum oder Maximum.</value>
   </data>
   <data name="StewardAmendDependenciesHintAuthor" xml:space="preserve">
-    <value>Eine fehlende Abhängigkeit kommt mit ihrer Art dazu. Eine Abhängigkeit, die die Releases angeben, bekommt ein neues Minimum, ein neues Maximum oder eine neue Art oder verliert ihr Minimum oder Maximum und bleibt in den Releases.</value>
+    <value>Eine fehlende Abhängigkeit kommt mit ihrer Art dazu. Eine Abhängigkeit, die die Releases angeben, bekommt ein neues Minimum, ein neues Maximum oder eine neue Art oder verliert ihr Minimum oder Maximum. Eine Abhängigkeit, die das Listing angegeben hat, lässt sich entfernen, wenn die mod.toml des Release-Archivs sie nicht angibt. Das liest Borea vorher.</value>
   </data>
   <data name="StewardAmendAddDependency" xml:space="preserve">
     <value>Fehlende Abhängigkeit hinzufügen</value>
@@ -914,6 +914,18 @@
   </data>
   <data name="StewardAmendRemoveMax" xml:space="preserve">
     <value>Maximum entfernen</value>
+  </data>
+  <data name="StewardAmendRemoveDependency" xml:space="preserve">
+    <value>Diese Abhängigkeit entfernen</value>
+  </data>
+  <data name="StewardAmendReadingArchive" xml:space="preserve">
+    <value>Borea liest das Release-Archiv, um zu sehen, ob seine mod.toml diese Abhängigkeit angibt.</value>
+  </data>
+  <data name="StewardAmendDeclaredByArchive" xml:space="preserve">
+    <value>Die mod.toml des Release-Archivs gibt diese Abhängigkeit an, deshalb bleibt sie.</value>
+  </data>
+  <data name="StewardAmendArchiveUnreadable" xml:space="preserve">
+    <value>Das Release-Archiv ließ sich nicht lesen, deshalb lässt sich diese Abhängigkeit nicht entfernen.</value>
   </data>
   <data name="StewardAmendReasonHint" xml:space="preserve">
     <value>Ein Satz für den Pull Request. Bei einem Zurückziehen sehen ihn auch Spieler.</value>
@@ -965,6 +977,9 @@
   </data>
   <data name="StewardAmendRefusedOutsideClass" xml:space="preserve">
     <value>Die Prüfungen von content-index-releases würden diese Änderung ablehnen.</value>
+  </data>
+  <data name="StewardAmendRefusedUnreadableArchive" xml:space="preserve">
+    <value>Das Release-Archiv ließ sich nicht lesen, deshalb zeigt nichts, dass seine mod.toml die entfernte Abhängigkeit nicht angibt.</value>
   </data>
   <data name="StewardAmendErrorNotSteward" xml:space="preserve">
     <value>GitHub lässt dieses Konto die Regeln von content-index-releases nicht umgehen, deshalb kann es das nicht tun.</value>
