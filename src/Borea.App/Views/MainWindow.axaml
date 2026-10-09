@@ -43,18 +43,24 @@
                         <Path Classes="icon size-32" Data="{StaticResource Icon.Settings}" />
                     </Button>
                 </StackPanel>
-                <StackPanel VerticalAlignment="Center" Spacing="16">
-                    <Button Classes="nav" Classes.active="{Binding IsHomeSection}" Command="{Binding SetMainWindowHome}" ToolTip.Tip="{Binding Localization.NavigationHome}" AutomationProperties.Name="{Binding Localization.NavigationHome}">
-                        <Path Classes="icon size-32 optical-lift" Data="{StaticResource Icon.Home}" />
+                <!-- the steward entry sits just above Tasks but outside the bottom stack, so no other entry moves when it appears after the steward check -->
+                <Panel>
+                    <StackPanel VerticalAlignment="Center" Spacing="16">
+                        <Button Classes="nav" Classes.active="{Binding IsHomeSection}" Command="{Binding SetMainWindowHome}" ToolTip.Tip="{Binding Localization.NavigationHome}" AutomationProperties.Name="{Binding Localization.NavigationHome}">
+                            <Path Classes="icon size-32 optical-lift" Data="{StaticResource Icon.Home}" />
+                        </Button>
+                        <Button Classes="nav" Classes.active="{Binding IsDiscoverSection}" Command="{Binding SetMainWindowDiscover}" ToolTip.Tip="{Binding Localization.NavigationDiscover}" AutomationProperties.Name="{Binding Localization.NavigationDiscover}">
+                            <Path Classes="icon size-32" Data="{StaticResource Icon.Compass}" />
+                        </Button>
+                        <!-- the library stays lit while an instance page is open -->
+                        <Button Classes="nav" Classes.active="{Binding IsLibrarySection}" Command="{Binding SetMainWindowLibrary}" ToolTip.Tip="{Binding Localization.NavigationLibrary}" AutomationProperties.Name="{Binding Localization.NavigationLibrary}">
+                            <Path Classes="icon size-32" Data="{StaticResource Icon.Library}" />
+                        </Button>
+                    </StackPanel>
+                    <Button x:Name="StewardButton" Classes="nav" Classes.active="{Binding CurrentWindowSteward}" IsVisible="{Binding IsGitHubSteward}" Command="{Binding OpenStewardPageCommand}" ToolTip.Tip="{Binding Localization.NavigationSteward}" AutomationProperties.Name="{Binding Localization.NavigationSteward}" VerticalAlignment="Bottom" Margin="0,0,0,8">
+                        <Path Classes="icon size-32" Data="{StaticResource Icon.ShieldCheck}" />
                     </Button>
-                    <Button Classes="nav" Classes.active="{Binding IsDiscoverSection}" Command="{Binding SetMainWindowDiscover}" ToolTip.Tip="{Binding Localization.NavigationDiscover}" AutomationProperties.Name="{Binding Localization.NavigationDiscover}">
-                        <Path Classes="icon size-32" Data="{StaticResource Icon.Compass}" />
-                    </Button>
-                    <!-- the library stays lit while an instance page is open -->
-                    <Button Classes="nav" Classes.active="{Binding IsLibrarySection}" Command="{Binding SetMainWindowLibrary}" ToolTip.Tip="{Binding Localization.NavigationLibrary}" AutomationProperties.Name="{Binding Localization.NavigationLibrary}">
-                        <Path Classes="icon size-32" Data="{StaticResource Icon.Library}" />
-                    </Button>
-                </StackPanel>
+                </Panel>
             </DockPanel>
         </Border>
 
@@ -79,7 +85,7 @@
         <!-- List or change your mod: a listing for content-index, with its checks on the right -->
         <pages:ListingPage Grid.Column="1" IsVisible="{Binding CurrentWindowListing}" />
 
-        <!-- Steward tools: opened from the GitHub account in Settings -->
+        <!-- Steward tools: opened from the rail or from the GitHub account in Settings -->
         <pages:StewardPage Grid.Column="1" IsVisible="{Binding CurrentWindowSteward}" />
 
         <!-- Tasks: a drawer over the current page, which stays open behind it -->

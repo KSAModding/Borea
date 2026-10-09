@@ -67,6 +67,8 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string NavigationTasks => Resources.NavigationTasks;
 
+    public string NavigationSteward => Resources.NavigationSteward;
+
     public string NavigationBack => Resources.NavigationBack;
 
     public string TasksEmpty => Resources.TasksEmpty;

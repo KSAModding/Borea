@@ -1443,6 +1443,9 @@
   <data name="NavigationTasks" xml:space="preserve">
     <value>Tasks</value>
   </data>
+  <data name="NavigationSteward" xml:space="preserve">
+    <value>Steward tools</value>
+  </data>
   <data name="TasksEmpty" xml:space="preserve">
     <value>No tasks yet.</value>
   </data>
