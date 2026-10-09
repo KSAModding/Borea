@@ -1428,6 +1428,9 @@
   <data name="NavigationTasks" xml:space="preserve">
     <value>Aufgaben</value>
   </data>
+  <data name="NavigationSteward" xml:space="preserve">
+    <value>Steward-Werkzeuge</value>
+  </data>
   <data name="TasksEmpty" xml:space="preserve">
     <value>Noch keine Aufgaben.</value>
   </data>
