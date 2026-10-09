@@ -117,7 +117,7 @@ public sealed partial class ListingEditor : ObservableObject
     public string? NextVersionText => IsNextVersion ? Localization.FormatListingNextVersion(_base.Id, _base.Original?.GetString("version") ?? string.Empty) : null;
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(CanUseLoader), nameof(IsPack), nameof(IsNewPack), nameof(NewTitle), nameof(PullRequestText))]
+    [NotifyPropertyChangedFor(nameof(CanUseLoader), nameof(IsPack), nameof(IsNewPack), nameof(NewTitle), nameof(PullRequestText), nameof(HasDeclaredHelp))]
     private string _type = ListingDraft.ModType;
 
     /// <summary>A mod-loader carries no [loader].</summary>
@@ -165,11 +165,11 @@ public sealed partial class ListingEditor : ObservableObject
     private string _discussions = string.Empty;
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(NeedsAuthority), nameof(HasReleasesHost))]
+    [NotifyPropertyChangedFor(nameof(NeedsAuthority), nameof(HasReleasesHost), nameof(HasDeclaredHelp))]
     private string _releasesGitHub = string.Empty;
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(NeedsAuthority), nameof(HasReleasesHost))]
+    [NotifyPropertyChangedFor(nameof(NeedsAuthority), nameof(HasReleasesHost), nameof(HasDeclaredHelp))]
     private string _releasesSpaceDock = string.Empty;
 
     [ObservableProperty]
@@ -289,6 +289,9 @@ public sealed partial class ListingEditor : ObservableObject
         SetListedMods(_snapshot);
         FillCuratedTags(Draft.Tags);
         FillMembers(Draft.Mods);
+        FindDependencies();
+        FillDeclared();
+        RefreshDependencyHelp();
 
         if (services.ListingValidator.SchemaOrigin != ListingSchemaOrigin.Downloaded)
         {
@@ -329,7 +332,7 @@ public sealed partial class ListingEditor : ObservableObject
                 if (IsReadingSource)
                     SourceProgress = Localization.FormatListingDownloading(SizeText(value.BytesDownloaded));
             });
-            var source = await services.ListingSources.ReadAsync(reference, progress, cancel.Token);
+            var source = await services.ListingSources.ReadAsync(reference, installRoot: null, progress, cancel.Token);
             var draft = ListingPrefill.Apply(NewDraft(), source, _snapshot, services.InstalledVersion.GetInstalledVersion()?.Version);
             if (draft.LinkOf("forums") is { } forums && _snapshot is { } snapshot)
             {
@@ -342,6 +345,10 @@ public sealed partial class ListingEditor : ObservableObject
             _archive = source.Archive;
             ArchiveText = DescribeArchive(source);
             Load(draft);
+
+            // The reading of the source has the archive already, so its mod.toml shows without a second download.
+            if (source.Archive is { } archive && source.Host.Latest is { } latest && CanUseLoader)
+                ShowArchive(latest.Tag, archive, authoredRoot: false);
         }
         catch (OperationCanceledException) when (cancel.IsCancellationRequested)
         {
@@ -433,6 +440,7 @@ public sealed partial class ListingEditor : ObservableObject
     {
         _busy?.Cancel();
         _tagProposal?.Cancel();
+        _archiveRead?.Cancel();
     }
 
     /// <summary>Drops the draft and goes back to the choice of a source.</summary>
@@ -471,6 +479,7 @@ public sealed partial class ListingEditor : ObservableObject
     internal void Remove(ListingDependencyRow row)
     {
         Dependencies.Remove(row);
+        FindDependencies();
         Refresh();
     }
 
@@ -601,6 +610,7 @@ public sealed partial class ListingEditor : ObservableObject
     internal void Load(ListingDraft draft, string? listedText = null, (string InstanceName, IReadOnlyList<ListingLeftOutMod> Mods)? fromInstance = null)
     {
         _tagProposal?.Cancel();
+        ForgetDeclared();
         _loading = true;
         try
         {
@@ -647,6 +657,9 @@ public sealed partial class ListingEditor : ObservableObject
             Dependencies.Clear();
             foreach (var dependency in draft.Dependencies)
                 Dependencies.Add(new ListingDependencyRow(this, dependency));
+            DependencyQuery = string.Empty;
+            FindDependencies();
+            FillDeclared();
 
             Icon = draft.Icon is { } icon ? new ListingImageRow(this, ListingImageRole.Icon, icon) : null;
             DescriptionImages.Clear();
@@ -719,7 +732,7 @@ public sealed partial class ListingEditor : ObservableObject
 
         var document = draft.ToDocument();
         DocumentText = services.ListingFormat.Write(document, _listedText);
-        var result = services.ListingValidator.Validate(document, new ListingCheckContext(_snapshot, HasFixedId ? _base.Id : null, _archive));
+        var result = services.ListingValidator.Validate(document, new ListingCheckContext(_snapshot, HasFixedId ? _base.Id : null, _readArchive ?? _archive));
         var issues = pageIssues.Concat(result.Issues).Distinct().ToList();
 
         MainViewModel.Arrange(Errors, issues.Where(issue => issue.Severity == ListingIssueSeverity.Error).ToList());
@@ -735,6 +748,8 @@ public sealed partial class ListingEditor : ObservableObject
         OnPropertyChanged(nameof(HasNoIssues));
         OnPropertyChanged(nameof(CanOpenPullRequest));
         RefreshOverview(issues);
+        foreach (var row in DeclaredDependencies)
+            row.RefreshText();
         OnPropertyChanged(nameof(CanPublish));
         ScheduleOwnershipCheck();
     }
@@ -767,6 +782,9 @@ public sealed partial class ListingEditor : ObservableObject
         RefreshPullRequestText();
         FindListed();
         FillMembers(Draft.Mods);
+        FindDependencies();
+        FillDeclared();
+        RefreshDependencyHelp();
         Refresh();
     }
 
@@ -810,10 +828,12 @@ public sealed partial class ListingEditor : ObservableObject
         var tags = CuratedTags.Where(chip => chip.IsSelected).Select(chip => chip.Tag).Concat(free).ToList();
 
         var mods = Members.Select(row => row.ToMember()).ToList();
+        var dependencies = IsPack ? new List<ListingDependency>() : Dependencies.Select(row => row.ToDependency()).ToList();
         if (IsPack)
             pageIssues.AddRange(PackIssues(mods));
         else
             GameMinProposal = null;
+        pageIssues.AddRange(DependencyIssues(dependencies));
 
         return _base with
         {
@@ -832,7 +852,7 @@ public sealed partial class ListingEditor : ObservableObject
             GameMin = GameMin.Trim(),
             GameMax = Empty(GameMax),
             Loader = CanUseLoader && UsesLoader ? new ListingLoader(LoaderId.Trim(), LoaderMin.Trim(), Empty(LoaderMax)) : null,
-            Dependencies = IsPack ? [] : Dependencies.Select(row => row.ToDependency()).ToList(),
+            Dependencies = dependencies,
             Icon = Icon?.ToRecord(),
             DescriptionImages = DescriptionImages.Select(row => row.ToRecord()).ToList(),
             Version = PackVersion.Trim(),
@@ -922,11 +942,23 @@ public sealed partial class ListingEditor : ObservableObject
 
     partial void OnDiscussionsChanged(string value) => Refresh();
 
-    partial void OnReleasesGitHubChanged(string value) => Refresh();
+    partial void OnReleasesGitHubChanged(string value)
+    {
+        ReleasesHostChanged();
+        Refresh();
+    }
 
-    partial void OnReleasesSpaceDockChanged(string value) => Refresh();
+    partial void OnReleasesSpaceDockChanged(string value)
+    {
+        ReleasesHostChanged();
+        Refresh();
+    }
 
-    partial void OnReleasesAuthorityChanged(string? value) => Refresh();
+    partial void OnReleasesAuthorityChanged(string? value)
+    {
+        ReleasesHostChanged();
+        Refresh();
+    }
 
     partial void OnReleasesSinceChanged(string value) => Refresh();
 

@@ -26,7 +26,7 @@ public sealed partial class ListingSourceReader : IListingSourceReader
         _maxArchiveBytes = maxArchiveBytes;
     }
 
-    public async Task<ListingSource> ReadAsync(ListingSourceReference source, IProgress<DownloadProgress>? progress = null, CancellationToken cancellationToken = default)
+    public async Task<ListingSource> ReadAsync(ListingSourceReference source, string? installRoot = null, IProgress<DownloadProgress>? progress = null, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(source);
 
@@ -53,7 +53,7 @@ public sealed partial class ListingSourceReader : IListingSourceReader
             await _downloader.DownloadAsync(Release(host, latest), archivePath, limit, stop.Token).ConfigureAwait(false);
             return limit.Exceeded is { } received
                 ? new ListingSource(host, null, TooLarge(received))
-                : new ListingSource(host, ListingArchive.Read(archivePath), null);
+                : new ListingSource(host, ListingArchive.Read(archivePath, installRoot), null);
         }
         catch (OperationCanceledException) when (limit.Exceeded is { } received && !cancellationToken.IsCancellationRequested)
         {

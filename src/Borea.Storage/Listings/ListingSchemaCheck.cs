@@ -72,7 +72,7 @@ internal sealed class ListingSchemaCheck
         {
             "" when path.Count > 0 => $"'{path[^1]}' is not a known key here",
             "type" => $"{Show(instance)} is not {Article(value?.ToString() ?? "value")}",
-            "enum" => $"{Show(instance)} is not one of {string.Join(", ", (value as JsonArray ?? []).Select(Show))}",
+            "enum" => $"{Show(instance)} is not one of [{string.Join(", ", (value as JsonArray ?? []).Select(Show))}]",
             "const" => $"{Show(instance)} must be {Show(value)}",
             "pattern" => Pattern(schema, instance),
             "minLength" => Number(value) == 1 ? "cannot be empty" : $"is shorter than {Number(value)} characters",

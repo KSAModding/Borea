@@ -37,7 +37,10 @@ public sealed partial class ListingTagChip : ObservableObject
     partial void OnIsSelectedChanged(bool value) => _owner.TagChipChanged(Tag, value);
 }
 
-/// <summary>One [[dependencies]] entry. An entry the page cannot edit, such as one with any_of, is shown and kept as it is.</summary>
+/// <summary>
+/// One [[dependencies]] entry. An entry the page cannot edit, such as one with any_of, is shown and kept as it is.
+/// The versions offer the stamped releases of the named mod, and the mistakes the checks find in the entry show under it.
+/// </summary>
 public sealed partial class ListingDependencyRow : ObservableObject
 {
     private readonly ListingEditor _owner;
@@ -51,6 +54,8 @@ public sealed partial class ListingDependencyRow : ObservableObject
         _kind = dependency.Kind;
         _min = dependency.Min ?? string.Empty;
         _max = dependency.Max ?? string.Empty;
+        _versions = owner.DependencyVersions(dependency.Id.Trim());
+        KindChoices = ListingEditor.DependencyKinds.Contains(dependency.Kind, StringComparer.Ordinal) ? ListingEditor.DependencyKinds : [dependency.Kind, .. ListingEditor.DependencyKinds];
     }
 
     public bool IsEditable => _preserved is null;
@@ -65,6 +70,7 @@ public sealed partial class ListingDependencyRow : ObservableObject
     private string _id;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(KindText), nameof(HasKindText), nameof(CanNeedNewest))]
     private string _kind;
 
     [ObservableProperty]
@@ -73,12 +79,82 @@ public sealed partial class ListingDependencyRow : ObservableObject
     [ObservableProperty]
     private string _max;
 
+    /// <summary>The stamped releases of the named mod, newest first, which the version fields offer. The fields still take any text.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasVersions), nameof(HasNoVersions), nameof(CanNeedNewest))]
+    private IReadOnlyList<ListingReleaseChoice> _versions;
+
+    public bool HasVersions => IsEditable && Versions.Count > 0;
+
+    /// <summary>Whether the version fields are plain text fields, because the named mod has no stamped release to offer.</summary>
+    public bool HasNoVersions => IsEditable && Versions.Count == 0;
+
+    /// <summary>Whether "needs the newest" fits: the named mod has releases, and the entry does not name versions that conflict.</summary>
+    public bool CanNeedNewest => HasVersions && Kind != "conflict";
+
+    public string NeedsNewestHint => _owner.NeedsNewestHint;
+
+    /// <summary>The kinds the index knows, and first a kind it does not know when the entry came with one, so the list can show it.</summary>
+    public IReadOnlyList<string> KindChoices { get; }
+
+    /// <summary>What a client does with the entry of the chosen kind.</summary>
+    public string? KindText => _owner.DependencyKindText(Kind);
+
+    public bool HasKindText => IsEditable && KindText is not null;
+
+    /// <summary>The ids the entry names: its id, or each id of its alternatives.</summary>
+    internal IEnumerable<string> NamedIds => _preserved?.GetList("any_of") is { } alternatives
+        ? alternatives.OfType<AuthoredTable>().Select(alternative => alternative.GetString("id")).OfType<string>()
+        : [Id];
+
+    /// <summary>The errors that the checks give for the entry, one per line, or null.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasErrors))]
+    private string? _errorText;
+
+    public bool HasErrors => ErrorText is not null;
+
+    /// <summary>The notes for the entry, such as an id the index does not list, one per line, or null.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasNotes))]
+    private string? _noteText;
+
+    public bool HasNotes => NoteText is not null;
+
     internal ListingDependency ToDependency() => new(Id.Trim(), Kind, Empty(Min), Empty(Max)) { Preserved = _preserved };
+
+    internal void RefreshText()
+    {
+        RefreshVersions();
+        OnPropertyChanged(nameof(KindText));
+        OnPropertyChanged(nameof(HasKindText));
+        OnPropertyChanged(nameof(NeedsNewestHint));
+    }
+
+    /// <summary>Takes the releases of the named mod again, and keeps the list when they are the same, so an open list stays as it is.</summary>
+    private void RefreshVersions()
+    {
+        var versions = _owner.DependencyVersions(Id.Trim());
+        if (!versions.SequenceEqual(Versions))
+            Versions = versions;
+    }
 
     [RelayCommand]
     private void Remove() => _owner.Remove(this);
 
-    partial void OnIdChanged(string value) => _owner.Refresh();
+    /// <summary>Sets the oldest version to the newest stable release of the named mod, or its newest release when none is stable.</summary>
+    [RelayCommand]
+    private void NeedsNewest()
+    {
+        if (_owner.NewestDependencyVersion(Id.Trim()) is { } newest)
+            Min = newest;
+    }
+
+    partial void OnIdChanged(string value)
+    {
+        RefreshVersions();
+        _owner.Refresh();
+    }
 
     partial void OnKindChanged(string value) => _owner.Refresh();
 
@@ -151,10 +227,53 @@ public sealed partial class ListingPackMemberRow : ObservableObject
     partial void OnSelectedChanged(ListingReleaseChoice? value) => _owner.Refresh();
 }
 
-/// <param name="Status">The release status, or empty for a pinned release that the index does not offer.</param>
+/// <param name="Status">The release status, or empty for a pinned release that the index does not offer or a release that needs no mark.</param>
 public sealed record ListingReleaseChoice(string Version, string Status)
 {
     public bool HasStatus => Status.Length > 0;
+
+    /// <summary>The version, which an editable list writes into its field when the author picks the release.</summary>
+    public override string ToString() => Version;
+}
+
+/// <summary>A dependency that the mod.toml of the author's release declares, which the index derives by itself. It is shown read only.</summary>
+public sealed partial class ListingDeclaredDependencyRow : ObservableObject
+{
+    private readonly ListingEditor _owner;
+
+    public ListingDeclaredDependencyRow(ListingEditor owner, ListingDeclaredDependency dependency)
+    {
+        _owner = owner;
+        Dependency = dependency;
+    }
+
+    public ListingDeclaredDependency Dependency { get; }
+
+    /// <summary>Such as "Required by your mod.toml: StarMap".</summary>
+    public string Text => _owner.DeclaredDependencyText(Dependency);
+
+    /// <summary>Whether the index lists the id as a loader, whose bounds go into [loader].</summary>
+    public bool IsLoader => _owner.IsListedLoader(Dependency.Id);
+
+    public string ModLoaderText => _owner.ModLoaderText;
+
+    /// <summary>Whether no entry of the form and not [loader] names the id yet, so bounds can be added.</summary>
+    public bool CanAddBounds => !_owner.HasDependencyEntry(Dependency.Id) && !_owner.IsLoaderSet(Dependency.Id);
+
+    internal void RefreshText()
+    {
+        OnPropertyChanged(nameof(Text));
+        OnPropertyChanged(nameof(IsLoader));
+        OnPropertyChanged(nameof(ModLoaderText));
+        OnPropertyChanged(nameof(CanAddBounds));
+    }
+
+    /// <summary>
+    /// Adds an editable entry with the id and the kind, which then replaces the derived one in each release. For a loader it
+    /// turns on [loader] instead.
+    /// </summary>
+    [RelayCommand]
+    private void AddBounds() => _owner.AddDependencyEntry(Dependency.Id, Dependency.Kind);
 }
 
 /// <summary>

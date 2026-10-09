@@ -34,6 +34,102 @@ public sealed class ListingArchiveTests : IDisposable
     }
 
     [Fact]
+    public void Read_ModDependencies_GiveWhatTheStamperDerives()
+    {
+        const string modToml = """
+            name = "MyMod"
+
+            [[StarMap.ModDependencies]]
+            ModId = " Lib "
+
+            [[StarMap.ModDependencies]]
+            ModId = "Extra"
+            Optional = true
+
+            [[StarMap.ModDependencies]]
+            ModId = "Odd"
+            Optional = "false"
+            """;
+
+        var facts = Read(("MyMod/mod.toml", modToml));
+
+        Assert.Equal([new LocalModDependency("Lib", false), new LocalModDependency("Extra", true), new LocalModDependency("Odd", true)], facts.ModDependencies);
+        Assert.Equal([], Read(("Other/mod.toml", "name = \"Other\"\n")).ModDependencies);
+        Assert.Null(Read(("MyMod/data.xml", "<x/>")).ModDependencies);
+    }
+
+    /// <summary>The answers are what derived_dependencies of the stamper in content-index-releases gives for the same mod.toml.</summary>
+    [Theory]
+    [InlineData("[StarMap.ModDependencies]\n")]
+    [InlineData("[StarMap]\nModDependencies = false\n")]
+    [InlineData("StarMap = \"\"\n")]
+    public void Read_EmptyModDependencies_DeclareNone(string modToml)
+    {
+        Assert.Equal([], Read(("MyMod/mod.toml", modToml)).ModDependencies);
+    }
+
+    /// <summary>The stamper stops on each of these, so it stamps no release from the archive.</summary>
+    [Theory]
+    [InlineData("[StarMap.ModDependencies]\nModId = \"A\"\n", "StarMap.ModDependencies of the mod.toml is not a list of [[StarMap.ModDependencies]] blocks")]
+    [InlineData("[StarMap]\nModDependencies = 5\n", "StarMap.ModDependencies of the mod.toml is not a list of [[StarMap.ModDependencies]] blocks")]
+    [InlineData("[StarMap]\nModDependencies = [\"A\"]\n", "a [[StarMap.ModDependencies]] block is not a table")]
+    [InlineData("StarMap = \"x\"\n", "[StarMap] of the mod.toml is not a table")]
+    [InlineData("[[StarMap.ModDependencies]]\nModId = 5\n", "a [[StarMap.ModDependencies]] block has a ModId that is not text")]
+    [InlineData("[[StarMap.ModDependencies]]\nModId = 0\n", "a [[StarMap.ModDependencies]] block carries no ModId")]
+    public void Read_ModDependenciesTheStamperCannotRead_AreRefused(string modToml, string message)
+    {
+        var exception = Assert.Throws<InvalidDataException>(() => Read(("MyMod/mod.toml", modToml)));
+
+        Assert.Equal(message, exception.Message);
+    }
+
+    [Fact]
+    public void Read_ModTomlAtTheArchiveRoot_GivesNoRootAndNoModToml()
+    {
+        var facts = Read(("mod.toml", "[[StarMap.ModDependencies]]\nModId = \"Lib\"\n"), ("MyMod.dll", "binary"));
+
+        Assert.Null(facts.Root);
+        Assert.Null(facts.ModDependencies);
+    }
+
+    [Theory]
+    [InlineData("GameData/MyMod")]
+    [InlineData("./GameData/Other/../MyMod/")]
+    public void Read_AuthoredInstallRoot_ReadsTheModTomlThere(string installRoot)
+    {
+        var facts = Read(installRoot, ("GameData/MyMod/mod.toml", "[[StarMap.ModDependencies]]\nModId = \"Lib\"\n"), ("Docs/readme.txt", "text"));
+
+        Assert.Equal([new LocalModDependency("Lib", false)], facts.ModDependencies);
+    }
+
+    [Fact]
+    public void Read_AuthoredArchiveRoot_ReadsTheModTomlAtTheTop()
+    {
+        var facts = Read(".", ("mod.toml", "[[StarMap.ModDependencies]]\nModId = \"Lib\"\nOptional = true\n"), ("MyMod.dll", "binary"));
+
+        Assert.Equal([new LocalModDependency("Lib", true)], facts.ModDependencies);
+    }
+
+    [Theory]
+    [InlineData("Other", "the authored install root 'Other' is not in the archive")]
+    [InlineData("../MyMod", "the authored install root '../MyMod' escapes its anchor")]
+    [InlineData("/MyMod", "the authored install root '/MyMod' is not a relative path with '/' separators")]
+    public void Read_AuthoredInstallRootTheStamperRefuses_IsRefused(string installRoot, string message)
+    {
+        var exception = Assert.Throws<InvalidDataException>(() => Read(installRoot, ("MyMod/mod.toml", "name = \"MyMod\"\n")));
+
+        Assert.Equal(message, exception.Message);
+    }
+
+    [Fact]
+    public void Read_ModDependencyWithoutModId_IsRefusedAsTheStamperRefusesIt()
+    {
+        var exception = Assert.Throws<InvalidDataException>(() => Read(("MyMod/mod.toml", "[[StarMap.ModDependencies]]\nModId = \" \"\n")));
+
+        Assert.Equal("a [[StarMap.ModDependencies]] block carries no ModId", exception.Message);
+    }
+
+    [Fact]
     public void Read_ContentModWithoutDll_IsNoCodeMod()
     {
         var facts = Read(("KSP-Redux/mod.toml", "name = \"KSP-Redux\"\n"), ("KSP-Redux/Planets/Kerbin.xml", "<x/>"), ("KSP-Redux/Sub/KSP-Redux.dll", "not at the root"));
@@ -101,6 +197,19 @@ public sealed class ListingArchiveTests : IDisposable
         Assert.True(source.Archive.IsCodeMod);
         Assert.StartsWith(_folder, downloader.ArchivePaths.Single(), StringComparison.Ordinal);
         Assert.Empty(Directory.GetFiles(_folder));
+    }
+
+    [Fact]
+    public async Task ReadAsync_AuthoredInstallRoot_GivesTheDependenciesOfTheModTomlThere()
+    {
+        var downloader = new FakeModDownloader { Bytes = TestArchives.Build(("GameData/MyMod/mod.toml", "[[StarMap.ModDependencies]]\nModId = \"Lib\"\n"), ("Docs/readme.txt", "text")) };
+        var reader = new ListingSourceReader(new FakeHosts(Latest("https://example.com/MyMod.zip", 100)), downloader, _folder, IListingSourceReader.MaxArchiveBytes);
+
+        var derived = await reader.ReadAsync(new ListingSourceReference.GitHub("owner", "MyMod"));
+        var authored = await reader.ReadAsync(new ListingSourceReference.GitHub("owner", "MyMod"), "GameData/MyMod");
+
+        Assert.Null(derived.Archive!.ModDependencies);
+        Assert.Equal([new LocalModDependency("Lib", false)], authored.Archive!.ModDependencies);
     }
 
     [Fact]
@@ -173,11 +282,13 @@ public sealed class ListingArchiveTests : IDisposable
         Assert.Equal(expected, downloaded);
     }
 
-    private ListingArchiveFacts Read(params (string Path, string Content)[] entries)
+    private ListingArchiveFacts Read(params (string Path, string Content)[] entries) => Read(null, entries);
+
+    private ListingArchiveFacts Read(string? installRoot, params (string Path, string Content)[] entries)
     {
         var path = Path.Combine(_folder, Guid.NewGuid().ToString("N") + ".zip");
         File.WriteAllBytes(path, TestArchives.Build(entries));
-        return ListingArchive.Read(path);
+        return ListingArchive.Read(path, installRoot);
     }
 
     private static ListingHostRelease Latest(string url, long? size) => new("v1.0.0", "1.0.0", url, size, []);

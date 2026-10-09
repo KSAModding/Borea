@@ -194,6 +194,44 @@ public sealed class ListingPageTests
     }
 
     [Fact]
+    public async Task DependencyCard_ShowsTheDeclaredDependencies_AndTheVersionFieldsKeepTheirText()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(respond: request =>
+            request.RequestUri!.AbsolutePath.EndsWith("/listings/AdvancedFlightComputer.toml", StringComparison.Ordinal)
+                ? new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(ListingDependencyHelpTests.AdvancedFlightComputerListing) }
+                : null);
+        var editor = harness.ViewModel.ListingEditor;
+        await harness.ViewModel.OpenListingAsync();
+        editor.ListedQuery = "advanced";
+        await editor.LoadListedCommand.ExecuteAsync(null);
+        editor.AddDependencyEntry("MeasureTools", "conflict");
+        var row = editor.Dependencies.Single();
+        row.Min = "0.5";
+
+        var (texts, versionTexts) = await HeadlessApp.RunAsync(harness, () =>
+        {
+            var page = new ListingPage { DataContext = harness.ViewModel };
+            var window = new Window { Width = 1280, Height = 832, Content = page, DataContext = harness.ViewModel };
+            window.Show();
+            window.UpdateLayout();
+            var texts = page.GetVisualDescendants().OfType<TextBlock>().Where(text => text.IsEffectivelyVisible).Select(text => text.Text).ToList();
+            var versionTexts = page.GetVisualDescendants().OfType<ComboBox>().Where(box => box.IsEditable).Select(box => box.Text).ToList();
+            window.Close();
+            return Task.FromResult((texts, versionTexts));
+        });
+
+        var localization = harness.Localization;
+        Assert.Contains(localization.FormatListingDeclared("0.7.5"), texts);
+        Assert.Contains(localization.FormatListingDeclaredOptional("KittenExtensions"), texts);
+        Assert.Contains(localization.ListingAddBounds, texts);
+        Assert.Contains(localization.ListingReadArchive, texts);
+        Assert.Contains(localization.ListingDependencyKindConflict, texts);
+        Assert.DoesNotContain(localization.ListingNeedsNewest, texts);
+        Assert.Equal(["0.5", ""], versionTexts);
+        Assert.Equal(("conflict", "0.5", ""), (row.Kind, row.Min, row.Max));
+    }
+
+    [Fact]
     public async Task DescriptionPreview_DrawsTheDescriptionAsTheModPageDoes()
     {
         const string images = @"![The settings window](ksa-image:settings-window)\n\n![The old map](ksa-image:map-view) and ![Gone](ksa-image:gone)\n\n";

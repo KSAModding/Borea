@@ -236,6 +236,49 @@ public sealed class ListingValidatorTests
         Assert.Contains(errors, issue => issue.Location == "dependencies[2]" && issue.Message == "'other' already has a dependency entry");
     }
 
+    /// <summary>
+    /// The answers are what check_schema.py of content-index at 1621b26b8efe prints for the same documents. Its version key
+    /// reads numbers of any size and leading zeros, so a bound the schema refuses can still be compared.
+    /// </summary>
+    [Theory]
+    [InlineData("[[dependencies]]\nid = \"MeasureTools\"\nkind = \"required\"\nmin = \"1.1\"\nmax = \"1.0.9\"\n", "dependencies[0]: max '1.0.9' is below min '1.1'")]
+    [InlineData("[[dependencies]]\nid = \"mymod\"\nkind = \"required\"\n", "dependencies[0]: a listing cannot depend on itself")]
+    [InlineData("[[dependencies]]\nid = \"MeasureTools\"\nkind = \"required\"\n\n[[dependencies]]\nid = \"measuretools\"\nkind = \"conflict\"\n", "dependencies[1]: 'measuretools' already has a dependency entry")]
+    [InlineData("[[dependencies]]\nid = \"MeasureTools\"\nkind = \"needs\"\n", "dependencies[0].kind: 'needs' is not one of ['required', 'optional', 'recommends', 'suggests', 'conflict']")]
+    [InlineData("[[dependencies]]\nid = \"MeasureTools\"\nkind = \"required\"\nmin = \"0.5\"\nmax = \"0.5.0\"\n")]
+    [InlineData("[[dependencies]]\nid = \"MeasureTools\"\nkind = \"required\"\nmin = \"3000000000\"\nmax = \"1.0\"\n", "dependencies[0]: max '1.0' is below min '3000000000'")]
+    [InlineData("[[dependencies]]\nid = \"MeasureTools\"\nkind = \"required\"\nmin = \"99999999999999999999.0.0\"\nmax = \"1\"\n", "dependencies[0]: max '1' is below min '99999999999999999999.0.0'")]
+    [InlineData("[[dependencies]]\nid = \"MeasureTools\"\nkind = \"required\"\nmin = \"v2.0\"\nmax = \"1.0\"\n", "dependencies[0].min: 'v2.0' is not a version such as 1.2.3, 0.5 or 2.0.0-rc.1, with one to three numbers and no leading v")]
+    [InlineData("[[dependencies]]\nid = \"MeasureTools\"\nkind = \"required\"\nmin = \"2.0\"\nmax = \"v1.0\"\n", "dependencies[0].max: 'v1.0' is not a version such as 1.2.3, 0.5 or 2.0.0-rc.1, with one to three numbers and no leading v")]
+    [InlineData("[[dependencies]]\nid = \"MeasureTools\"\nkind = \"required\"\nmin = \"02.0\"\nmax = \"1.0\"\n", "dependencies[0].min: '02.0' is not a version such as 1.2.3, 0.5 or 2.0.0-rc.1, with one to three numbers and no leading v", "dependencies[0]: max '1.0' is below min '02.0'")]
+    [InlineData("[[dependencies]]\nid = \"MeasureTools\"\nkind = \"required\"\nmin = \"1.0.0-01\"\nmax = \"0.9\"\n", "dependencies[0].min: '1.0.0-01' is not a version such as 1.2.3, 0.5 or 2.0.0-rc.1, with one to three numbers and no leading v", "dependencies[0]: max '0.9' is below min '1.0.0-01'")]
+    [InlineData("[[dependencies]]\nid = \"MeasureTools\"\nkind = \"required\"\nmin = \"1.0.0-rc.1\"\nmax = \"1.0.0-rc\"\n", "dependencies[0]: max '1.0.0-rc' is below min '1.0.0-rc.1'")]
+    [InlineData("[[dependencies]]\nid = \"MeasureTools\"\nkind = \"required\"\nmin = \"1.0.0-alpha\"\nmax = \"1.0.0-1\"\n", "dependencies[0]: max '1.0.0-1' is below min '1.0.0-alpha'")]
+    [InlineData("[[dependencies]]\nid = \"MeasureTools\"\nkind = \"required\"\nmin = \"1.0\"\nmax = \"1.0.0+build\"\n")]
+    public void Validate_DependencyMistakes_GiveTheAnswersOfCheckSchema(string dependencies, params string[] answers)
+    {
+        const string listing = """
+            spec_version = 1
+            id = "MyMod"
+            type = "mod"
+            name = "My Mod"
+            authors = ["Maxi"]
+            abstract = "Does a thing."
+            license = "MIT"
+
+            [links]
+            forums = "https://forums.ahwoo.com/threads/my-mod.42/"
+
+            [compatibility]
+            game_min = "2026.9.7.5402"
+
+            """;
+
+        var result = _validator.Validate(_format.Read(listing + dependencies), new ListingCheckContext(null));
+
+        Assert.Equal(answers, result.Issues.Select(issue => $"{issue.Location}: {issue.Message}"));
+    }
+
     [Fact]
     public void Validate_EmptyDependencyIdWithoutAListingId_IsNotADependencyOnItself()
     {

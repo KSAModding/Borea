@@ -2664,6 +2664,66 @@
   <data name="ListingDependencyPreservedFormat" xml:space="preserve">
     <value>Bleibt unverändert: {0}</value>
   </data>
+  <data name="ListingDependencyKindRequired" xml:space="preserve">
+    <value>Deine Mod funktioniert nicht ohne sie, deshalb installiert ein Client sie immer mit.</value>
+  </data>
+  <data name="ListingDependencyKindOptional" xml:space="preserve">
+    <value>Deine Mod nutzt sie, wenn sie da ist. Ein Client installiert sie nicht von selbst.</value>
+  </data>
+  <data name="ListingDependencyKindRecommends" xml:space="preserve">
+    <value>Ein Client wählt sie für die Installation aus, und der Spieler kann sie abwählen.</value>
+  </data>
+  <data name="ListingDependencyKindSuggests" xml:space="preserve">
+    <value>Ein Client nennt sie, und der Spieler entscheidet, ob er sie installiert.</value>
+  </data>
+  <data name="ListingDependencyKindConflict" xml:space="preserve">
+    <value>Deine Mod darf nicht zusammen mit ihr installiert sein. Gib die Versionen, die in Konflikt stehen, als älteste und neueste Version an, oder lass beide leer, wenn jede Version in Konflikt steht.</value>
+  </data>
+  <data name="ListingNeedsNewest" xml:space="preserve">
+    <value>Braucht die neueste</value>
+  </data>
+  <data name="ListingNeedsNewestHint" xml:space="preserve">
+    <value>Setzt die älteste Version auf das neueste stabile Release der Mod.</value>
+  </data>
+  <data name="ListingDependencyNotListedFormat" xml:space="preserve">
+    <value>{0} ist nicht im Index eingetragen, deshalb können Spieler sie nicht installieren.</value>
+  </data>
+  <data name="ListingSearchDependencies" xml:space="preserve">
+    <value>Nach Name, ID oder Autor suchen</value>
+  </data>
+  <data name="ListingDeclaredFormat" xml:space="preserve">
+    <value>Die mod.toml von Release {0} gibt diese Abhängigkeiten an. Der Index fügt sie jedem Release selbst hinzu, füge also nur für Versionsgrenzen oder einen Konflikt einen Eintrag hinzu.</value>
+  </data>
+  <data name="ListingDeclaredNoneFormat" xml:space="preserve">
+    <value>Die mod.toml von Release {0} gibt keine Abhängigkeiten an.</value>
+  </data>
+  <data name="ListingDeclaredNoRootFormat" xml:space="preserve">
+    <value>Borea findet im Archiv von Release {0} keinen Installationsordner, deshalb liest der Index keine mod.toml daraus. Das übliche Layout ist ein Ordner auf oberster Ebene, der die mod.toml enthält und die ID als Namen hat.</value>
+  </data>
+  <data name="ListingDeclaredNoModTomlFormat" xml:space="preserve">
+    <value>Das Archiv von Release {0} hat keine mod.toml in seinem Installationsordner, deshalb leitet der Index keine Abhängigkeiten daraus ab.</value>
+  </data>
+  <data name="ListingDeclaredRequiredFormat" xml:space="preserve">
+    <value>Von deiner mod.toml verlangt: {0}</value>
+  </data>
+  <data name="ListingDeclaredOptionalFormat" xml:space="preserve">
+    <value>In deiner mod.toml optional: {0}</value>
+  </data>
+  <data name="ListingAddBounds" xml:space="preserve">
+    <value>Grenzen hinzufügen</value>
+  </data>
+  <data name="ListingReadArchive" xml:space="preserve">
+    <value>Aus meinem Archiv lesen</value>
+  </data>
+  <data name="ListingReadArchiveHint" xml:space="preserve">
+    <value>Lädt das Archiv deines neuesten Releases herunter und zeigt die Abhängigkeiten, die seine mod.toml angibt.</value>
+  </data>
+  <data name="ListingDeclaredNeedsHost" xml:space="preserve">
+    <value>Gib zuerst unter Releases dein GitHub-Repository oder deine SpaceDock-Mod an. Wenn du beide angibst, wähle auch das aus, das entscheidet, welche Releases es gibt.</value>
+  </data>
+  <data name="ListingLoaderSetFormat" xml:space="preserve">
+    <value>{0} ist ein Mod-Loader, deshalb ist er jetzt der Loader unter Kompatibilität. Gib seine Versionen dort an.</value>
+  </data>
   <data name="ListingRemove" xml:space="preserve">
     <value>Entfernen</value>
   </data>

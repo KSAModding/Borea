@@ -2664,6 +2664,66 @@
   <data name="ListingDependencyPreservedFormat" xml:space="preserve">
     <value>Kept as it is: {0}</value>
   </data>
+  <data name="ListingDependencyKindRequired" xml:space="preserve">
+    <value>Your mod does not work without it, so a client always installs it too.</value>
+  </data>
+  <data name="ListingDependencyKindOptional" xml:space="preserve">
+    <value>Your mod uses it when it is there. A client does not install it by itself.</value>
+  </data>
+  <data name="ListingDependencyKindRecommends" xml:space="preserve">
+    <value>A client selects it for the install, and the player can deselect it.</value>
+  </data>
+  <data name="ListingDependencyKindSuggests" xml:space="preserve">
+    <value>A client names it, and the player decides whether to install it.</value>
+  </data>
+  <data name="ListingDependencyKindConflict" xml:space="preserve">
+    <value>Your mod must not be installed together with it. Give the versions that conflict as the oldest and the newest version, or leave both empty when every version conflicts.</value>
+  </data>
+  <data name="ListingNeedsNewest" xml:space="preserve">
+    <value>Needs the newest</value>
+  </data>
+  <data name="ListingNeedsNewestHint" xml:space="preserve">
+    <value>Sets the oldest version to the newest stable release of the mod.</value>
+  </data>
+  <data name="ListingDependencyNotListedFormat" xml:space="preserve">
+    <value>{0} is not listed in the index, so players cannot install it.</value>
+  </data>
+  <data name="ListingSearchDependencies" xml:space="preserve">
+    <value>Search by name, id or author</value>
+  </data>
+  <data name="ListingDeclaredFormat" xml:space="preserve">
+    <value>The mod.toml of release {0} declares these dependencies. The index adds them to each release by itself, so add an entry only for bounds or a conflict.</value>
+  </data>
+  <data name="ListingDeclaredNoneFormat" xml:space="preserve">
+    <value>The mod.toml of release {0} declares no dependencies.</value>
+  </data>
+  <data name="ListingDeclaredNoRootFormat" xml:space="preserve">
+    <value>Borea cannot find the install root in the archive of release {0}, so the index reads no mod.toml from it. The usual layout is one top-level folder that holds mod.toml and has the id as its name.</value>
+  </data>
+  <data name="ListingDeclaredNoModTomlFormat" xml:space="preserve">
+    <value>The archive of release {0} has no mod.toml in its install root, so the index derives no dependencies from it.</value>
+  </data>
+  <data name="ListingDeclaredRequiredFormat" xml:space="preserve">
+    <value>Required by your mod.toml: {0}</value>
+  </data>
+  <data name="ListingDeclaredOptionalFormat" xml:space="preserve">
+    <value>Optional in your mod.toml: {0}</value>
+  </data>
+  <data name="ListingAddBounds" xml:space="preserve">
+    <value>Add bounds</value>
+  </data>
+  <data name="ListingReadArchive" xml:space="preserve">
+    <value>Read from my archive</value>
+  </data>
+  <data name="ListingReadArchiveHint" xml:space="preserve">
+    <value>Downloads the archive of your newest release and shows the dependencies that its mod.toml declares.</value>
+  </data>
+  <data name="ListingDeclaredNeedsHost" xml:space="preserve">
+    <value>Name your GitHub repository or your SpaceDock mod under Releases first. When you name both, also choose the one that decides which releases exist.</value>
+  </data>
+  <data name="ListingLoaderSetFormat" xml:space="preserve">
+    <value>{0} is a mod loader, so it is now the loader under Compatibility. Set its versions there.</value>
+  </data>
   <data name="ListingRemove" xml:space="preserve">
     <value>Remove</value>
   </data>
