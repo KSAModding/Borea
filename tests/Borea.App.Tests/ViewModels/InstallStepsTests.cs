@@ -68,8 +68,9 @@ public sealed class InstallStepsTests
         await viewModel.EnsureDiscoverLoadedAsync();
         await OpenAsync(viewModel, "MeasureTools");
         var english = viewModel.SelectedContent!.InstallSteps!.Heading;
-        var changed = new List<string?>();
-        viewModel.SelectedContent.PropertyChanged += (_, e) => changed.Add(e.PropertyName);
+        // the install reports its progress through Progress<T>, which the test context runs on pool threads, so the events can come from two threads at once
+        var changed = new ConcurrentQueue<string?>();
+        viewModel.SelectedContent.PropertyChanged += (_, e) => changed.Enqueue(e.PropertyName);
 
         harness.Localization.TrySetCulture("de");
 
@@ -145,8 +146,9 @@ public sealed class InstallStepsTests
         Assert.Null(item.AddedModsText);
         Assert.Empty(await ModIdsAsync(harness, instance));
         Assert.False(item.HasInstallStepsNotice);
-        var changed = new List<string?>();
-        item.PropertyChanged += (_, e) => changed.Add(e.PropertyName);
+        // the install reports its progress through Progress<T>, which the test context runs on pool threads, so the events can come from two threads at once
+        var changed = new ConcurrentQueue<string?>();
+        item.PropertyChanged += (_, e) => changed.Enqueue(e.PropertyName);
 
         await item.ConfirmInstallCommand.ExecuteAsync(null);
 
@@ -239,8 +241,9 @@ public sealed class InstallStepsTests
         var tools = viewModel.DiscoverPacks.Single(pack => pack.PackId == "tools-pack");
         await tools.InstallCommand.ExecuteAsync(null);
         Assert.False(tools.HasInstallStepsNotice);
-        var changed = new List<string?>();
-        tools.PropertyChanged += (_, e) => changed.Add(e.PropertyName);
+        // the install reports its progress through Progress<T>, which the test context runs on pool threads, so the events can come from two threads at once
+        var changed = new ConcurrentQueue<string?>();
+        tools.PropertyChanged += (_, e) => changed.Enqueue(e.PropertyName);
 
         await tools.ConfirmInstallCommand.ExecuteAsync(null);
 
