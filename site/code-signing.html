@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Code signing policy - Borea</title>
+  <meta name="description" content="How Borea release builds are produced, who may approve them, what is signed, and how to verify a download.">
+  <meta name="theme-color" content="#171717">
+  <meta property="og:title" content="Borea code signing policy">
+  <meta property="og:description" content="How Borea release builds are produced, who may approve them, and how to verify a download.">
+  <meta property="og:image" content="https://ksamodding.github.io/Borea/img/icon.png">
+  <meta property="og:type" content="website">
+  <meta name="twitter:card" content="summary">
+  <link rel="icon" href="favicon.ico">
+  <link rel="preload" href="fonts/IBMPlexSans-SemiBold.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="column top">
+    <a class="brand" href="./"><img src="img/icon.png" width="28" height="28" alt="">Borea</a>
+  </header>
+  <main>
+    <div class="hero listing">
+      <h1>Code signing policy</h1>
+      <p class="tagline">How a Borea release is built, who approves it, and how you can check the files you downloaded.</p>
+    </div>
+
+    <div class="column">
+      <section>
+        <h2>Status</h2>
+        <div class="prose">
+          <p>Borea releases are <strong>not code signed yet</strong>. Windows and macOS therefore warn on the first start of each version, and the README explains the extra step.</p>
+          <p>This page describes how releases are produced today and the rules signing will follow once a certificate is in place.</p>
+          <p>Windows releases will be signed through the open source program of the <a href="https://signpath.org">SignPath Foundation</a>. A signed build then names SignPath Foundation as its publisher, not an individual. Windows can still warn about the first signed versions, because its reputation for a new certificate grows with the number of people who download a build.</p>
+        </div>
+      </section>
+
+      <section>
+        <h2>How a release is built</h2>
+        <div class="prose">
+          <ul>
+            <li>Every published file is built by the <code>release</code> workflow in GitHub Actions, from a tag on <code>main</code> in <a href="https://github.com/KSAModding/Borea">KSAModding/Borea</a>. Nothing is built on a maintainer's computer.</li>
+            <li>The test suites run first and a failure stops the release.</li>
+            <li>Each release carries a CycloneDX SBOM, build provenance attestations, and a <code>SHA256SUMS.txt</code> whose contents are also printed in the release notes.</li>
+            <li>The workflow is part of the repository, so any change to how releases are built goes through a pull request like any other change.</li>
+          </ul>
+        </div>
+      </section>
+
+      <section>
+        <h2>What will be signed</h2>
+        <div class="prose">
+          <ul>
+            <li>The Windows programs in the archives of a <strong>stable</strong> release.</li>
+            <li>Pre-releases, meaning any tag with a hyphen such as <code>v0.5.0-beta.1</code>, stay unsigned. They are test builds for developers.</li>
+            <li>macOS builds are ad-hoc signed by the SDK during the build and are not notarised.</li>
+            <li>Signing happens inside the release workflow, after the tests and before publishing. A release that cannot be signed is either not published or published unsigned and said so in its notes, never published as if it had been signed.</li>
+            <li>No private key exists on any maintainer's computer. The release workflow requests the signature and the signing service performs it.</li>
+          </ul>
+        </div>
+      </section>
+
+      <section>
+        <h2>Who may do what</h2>
+        <div class="prose">
+          <p>The KSAModding organisation requires two factor authentication for every member.</p>
+          <ul>
+            <li><strong>Authors</strong> may change the source and merge their own work: <a href="https://github.com/averageksp">@averageksp</a>, <a href="https://github.com/Maximilian-Nesslauer">@Maximilian-Nesslauer</a>, <a href="https://github.com/MrJeranimo">@MrJeranimo</a>.</li>
+            <li><strong>Reviewers</strong> review every contribution from someone who is not an author, before it is merged: the authors above, and <a href="https://github.com/PlazmaBoltz">@PlazmaBoltz</a> and <a href="https://github.com/renancamm">@renancamm</a>, who also have write access.</li>
+            <li><strong>Approvers</strong> decide that a given release may be signed, and every signing request needs the manual approval of one of them: the three authors above.</li>
+          </ul>
+          <p>A release starts when an approver pushes a version tag. The signing request itself always comes from the release workflow and never from a person.</p>
+          <p>The same rules for contributors are in <a href="https://github.com/KSAModding/Borea/blob/main/CONTRIBUTING.md">CONTRIBUTING.md</a>.</p>
+        </div>
+      </section>
+
+      <section>
+        <h2>Check a download</h2>
+        <div class="prose">
+          <p>Compare the checksum of the file you downloaded with the table in the release notes, or with <code>SHA256SUMS.txt</code> from the same release.</p>
+<pre><code># Windows, PowerShell
+Get-FileHash .\Borea-0.4.0-win-x64.zip -Algorithm SHA256
+
+# Linux and macOS
+shasum -a 256 Borea-0.4.0-linux-x64.tar.gz</code></pre>
+          <p>Build provenance ties each file to the workflow run that produced it, and the <a href="https://cli.github.com/">GitHub CLI</a> checks it:</p>
+<pre><code>gh attestation verify Borea-0.4.0-win-x64.zip --repo KSAModding/Borea \
+  --signer-workflow KSAModding/Borea/.github/workflows/release.yml</code></pre>
+          <p>Without <code>--signer-workflow</code>, an attestation from any workflow of the repository would pass.</p>
+          <p>Borea is only released here. A Borea build offered anywhere else is not ours, whatever it is signed with.</p>
+        </div>
+      </section>
+
+      <section>
+        <h2>What Borea contacts</h2>
+        <div class="prose">
+          <p>Borea is a desktop program that keeps its data on your computer. It has no account of its own, it sends no usage data, and what it fetches by itself is listed in the <a href="privacy.html">privacy statement</a>.</p>
+        </div>
+      </section>
+
+      <section>
+        <h2>Report a suspicious build</h2>
+        <div class="prose">
+          <p>If a file claims to be Borea and its checksum does not match, or a signed build behaves in a way a mod manager should not, report it through the private path in <a href="https://github.com/KSAModding/Borea/blob/main/SECURITY.md">SECURITY.md</a>. Please do not open a public issue for it.</p>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <footer class="column">
+    <p class="meta"><a href="https://github.com/KSAModding/Borea/blob/main/LICENSE">MIT licensed</a> &middot; <a href="./">Borea home</a> &middot; <a href="privacy.html">Privacy</a> &middot; Community project, not affiliated with RocketWerkz.</p>
+  </footer>
+</body>
+</html>
