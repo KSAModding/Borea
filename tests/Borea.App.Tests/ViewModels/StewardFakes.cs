@@ -341,6 +341,11 @@ internal sealed class FakeIndexReports : IIndexReports
 
     public List<IndexReport> Reports { get; } = [];
 
+    /// <summary>The reports that <see cref="IndexReportFilter.RecentlyClosed"/> answers.</summary>
+    public List<IndexReport> Closed { get; } = [];
+
+    public List<IndexReportFilter> Filters { get; } = [];
+
     public StewardException? Failure { get; set; }
 
     public int Reads { get; private set; }
@@ -354,10 +359,56 @@ internal sealed class FakeIndexReports : IIndexReports
     public static IndexReport Report(int number, string title, string body, string author = "alice") =>
         IndexReport.FromIssue(number, new Uri($"https://github.com/{IndexReport.Repository}/issues/{number}"), title, author, DateTimeOffset.UtcNow.AddDays(-2), body)!;
 
-    public Task<IReadOnlyList<IndexReport>> ListAsync(CancellationToken cancellationToken = default)
+    /// <summary>The report closed with the reason a day ago.</summary>
+    public static IndexReport ClosedReport(IndexReport report, IndexReportCloseReason? reason) =>
+        report with { IsClosed = true, CloseReason = reason, Closed = DateTimeOffset.UtcNow.AddDays(-1) };
+
+    public Task<IReadOnlyList<IndexReport>> ListAsync(IndexReportFilter filter = IndexReportFilter.Open, CancellationToken cancellationToken = default)
     {
         Reads++;
-        return Failure is { } failure ? Task.FromException<IReadOnlyList<IndexReport>>(failure) : Task.FromResult<IReadOnlyList<IndexReport>>([.. Reports]);
+        Filters.Add(filter);
+        return Failure is { } failure
+            ? Task.FromException<IReadOnlyList<IndexReport>>(failure)
+            : Task.FromResult<IReadOnlyList<IndexReport>>(filter == IndexReportFilter.RecentlyClosed ? [.. Closed] : [.. Reports]);
+    }
+}
+
+/// <summary>Records every report action it was sent, and answers each with the next of <see cref="Failures"/> or a success.</summary>
+internal sealed class FakeReportActions : IReportActions
+{
+    public List<(string Action, int Number, string Text)> Sent { get; } = [];
+
+    public Queue<Exception> Failures { get; } = [];
+
+    public TaskCompletionSource? Hold { get; set; }
+
+    /// <summary>What <see cref="CanActAsync"/> answers, which is whether the Borea App has the Issues permission.</summary>
+    public bool CanAct { get; set; } = true;
+
+    public int Checks { get; private set; }
+
+    public Task<bool> CanActAsync(CancellationToken cancellationToken = default)
+    {
+        Checks++;
+        return Task.FromResult(CanAct);
+    }
+
+    public Task CommentAsync(IndexReport report, string comment, CancellationToken cancellationToken = default) =>
+        RunAsync("Comment", report, comment);
+
+    public Task CloseAsync(IndexReport report, IndexReportCloseReason reason, string comment, CancellationToken cancellationToken = default) =>
+        RunAsync("Close " + reason, report, comment);
+
+    public Task ReopenAsync(IndexReport report, string comment, CancellationToken cancellationToken = default) =>
+        RunAsync("Reopen", report, comment);
+
+    private async Task RunAsync(string action, IndexReport report, string text)
+    {
+        Sent.Add((action, report.Number, text));
+        if (Hold is { } hold)
+            await hold.Task;
+        if (Failures.TryDequeue(out var failure))
+            throw failure;
     }
 }
 

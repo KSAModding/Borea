@@ -286,7 +286,7 @@ internal sealed class GitHubApi
 
     /// <summary>
     /// The open issues of a public repository without the token, oldest first, and without the pull requests that the endpoint lists too.
-    /// An anonymous read does not depend on a permission of the App, which has no Issues permission.
+    /// An anonymous read does not depend on a permission of the App.
     /// </summary>
     /// <param name="query">More of the query, such as labels=watcher, or null.</param>
     /// <exception cref="GitHubApiException">The request failed, or GitHub answered with an issue that has no https link.</exception>
@@ -295,14 +295,56 @@ internal sealed class GitHubApi
         var url = $"{Root}/repos/{repository}/issues?state=open&sort=created&direction=asc" + (query is null ? string.Empty : "&" + query);
         await foreach (var issue in GetPagesAsync<IssueDto>(url, cancellationToken, anonymous: true).ConfigureAwait(false))
         {
-            if (issue.PullRequest is not null)
-                continue;
-
-            if (!Uri.TryCreate(issue.HtmlUrl, UriKind.Absolute, out var link) || link.Scheme != Uri.UriSchemeHttps || issue.Number <= 0)
-                throw new GitHubApiException(GitHubApiFailure.UnexpectedResponse);
-
-            yield return new GitHubIssue(issue.Number, link, issue.Title, issue.Body, issue.User?.Login, issue.User?.Type, issue.CreatedAt, issue.UpdatedAt);
+            if (issue.PullRequest is null)
+                yield return IssueOf(issue);
         }
+    }
+
+    /// <summary>
+    /// The <see cref="PageSize"/> closed issues of a public repository that changed last, the last changed first, without the token.
+    /// The search leaves out the pull requests, which the issues endpoint lists too. It reads one page only, because an older issue is rarely acted on
+    /// and the anonymous search allows few requests. The search index can lag some seconds behind a change.
+    /// </summary>
+    /// <param name="query">More search terms joined with +, such as in:title+Takedown, or null.</param>
+    /// <exception cref="GitHubApiException">The request failed, or GitHub answered with an issue that has no https link.</exception>
+    public async Task<IReadOnlyList<GitHubIssue>> GetRecentlyClosedIssuesAsync(string repository, string? query, CancellationToken cancellationToken)
+    {
+        var terms = $"repo:{repository}+is:issue+is:closed" + (query is null ? string.Empty : "+" + query);
+        var url = $"{Root}/search/issues?q={terms}&sort=updated&order=desc&per_page={PageSize}&page=1";
+        var found = await GetAsync<SearchIssuesDto>(url, cancellationToken, anonymous: true).ConfigureAwait(false);
+        return found.Items.Where(issue => issue.PullRequest is null).Select(IssueOf).ToList();
+    }
+
+    /// <summary>
+    /// The issue as GitHub has it now, read with the token and again without it when GitHub refuses the token, because the App can lack the Issues permission.
+    /// A moved issue comes back with its new link.
+    /// </summary>
+    /// <exception cref="GitHubApiException">The request failed, the issue is gone, it is a pull request, or it has no https link.</exception>
+    public async Task<GitHubIssue> GetIssueAsync(string repository, int number, CancellationToken cancellationToken)
+    {
+        var url = $"{Root}/repos/{repository}/issues/{number.ToString(CultureInfo.InvariantCulture)}";
+        var reply = await SendAsync(HttpMethod.Get, url, null, cancellationToken).ConfigureAwait(false);
+        if (reply is { Status: HttpStatusCode.Forbidden, RetryAt: null })
+            reply = await SendAsync(HttpMethod.Get, url, null, cancellationToken, anonymous: true).ConfigureAwait(false);
+        if (reply.Status == HttpStatusCode.Gone)
+            throw new GitHubApiException(GitHubApiFailure.NotFound, reply.Message, status: reply.Status);
+
+        var issue = Parse<IssueDto>(Ensure(reply));
+        return issue.PullRequest is null ? IssueOf(issue) : throw new GitHubApiException(GitHubApiFailure.NotFound);
+    }
+
+    private static GitHubIssue IssueOf(IssueDto issue)
+    {
+        if (!Uri.TryCreate(issue.HtmlUrl, UriKind.Absolute, out var link) || link.Scheme != Uri.UriSchemeHttps || issue.Number <= 0)
+            throw new GitHubApiException(GitHubApiFailure.UnexpectedResponse);
+
+        return new GitHubIssue(issue.Number, link, issue.Title, issue.Body, issue.User?.Login, issue.User?.Type, issue.CreatedAt, issue.UpdatedAt)
+        {
+            IsClosed = issue.State == "closed",
+            StateReason = issue.StateReason,
+            Closed = issue.ClosedAt,
+            Comments = issue.Comments,
+        };
     }
 
     /// <summary>The body of a success.</summary>
@@ -528,9 +570,22 @@ internal sealed class GitHubApi
 
         public DateTimeOffset UpdatedAt { get; set; }
 
+        public string? State { get; set; }
+
+        public string? StateReason { get; set; }
+
+        public DateTimeOffset? ClosedAt { get; set; }
+
+        public int Comments { get; set; }
+
         public IssueUserDto? User { get; set; }
 
         public JsonElement? PullRequest { get; set; }
+    }
+
+    private sealed class SearchIssuesDto
+    {
+        public List<IssueDto> Items { get; set; } = [];
     }
 
     private sealed class IssueUserDto
@@ -546,7 +601,18 @@ internal sealed record GitHubFile(string Sha, string? Text);
 
 /// <param name="Author">The login that opened the issue, or null.</param>
 /// <param name="AuthorType">The account type of the author, such as User or Bot, or null.</param>
-internal sealed record GitHubIssue(int Number, Uri Url, string Title, string? Body, string? Author, string? AuthorType, DateTimeOffset Created, DateTimeOffset Updated);
+internal sealed record GitHubIssue(int Number, Uri Url, string Title, string? Body, string? Author, string? AuthorType, DateTimeOffset Created, DateTimeOffset Updated)
+{
+    public bool IsClosed { get; init; }
+
+    /// <summary>Why GitHub has the issue closed or reopened, such as completed, not_planned or reopened, or null.</summary>
+    public string? StateReason { get; init; }
+
+    public DateTimeOffset? Closed { get; init; }
+
+    /// <summary>How many comments the issue has.</summary>
+    public int Comments { get; init; }
+}
 
 /// <param name="Message">GitHub's error message with its details, or null.</param>
 /// <param name="RetryAt">When GitHub accepts requests again after a rate limit, or null.</param>

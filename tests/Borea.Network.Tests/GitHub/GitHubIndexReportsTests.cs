@@ -6,8 +6,8 @@ using Borea.Network.GitHub;
 
 namespace Borea.Network.Tests.GitHub;
 
-/// <summary>content-index answers its open issues from a list this test keeps in memory.</summary>
-public sealed class GitHubIndexReportsTests
+/// <summary>content-index answers its open issues from a list this test keeps in memory, and the requests of the other tests from their routes.</summary>
+public sealed partial class GitHubIndexReportsTests
 {
     private const string Api = "https://api.github.com";
     private const string Index = "KSAModding/content-index";
@@ -20,6 +20,7 @@ public sealed class GitHubIndexReportsTests
 
     private readonly List<Sent> _sent = [];
     private readonly List<object> _issues = [];
+    private readonly Dictionary<string, Func<HttpResponseMessage>> _routes = [];
     private HttpStatusCode? _failing;
 
     [Fact]
@@ -121,13 +122,13 @@ public sealed class GitHubIndexReportsTests
     }
 
     private HttpClient Http(Func<HttpRequestMessage, HttpResponseMessage?>? respond = null) =>
-        new(new FakeHttpMessageHandler(request => Task.FromResult(respond?.Invoke(request) ?? Respond(request))));
+        new(new FakeHttpMessageHandler(async request => respond?.Invoke(request) ?? Respond(request, request.Content is null ? null : await request.Content.ReadAsStringAsync())));
 
-    private HttpResponseMessage Respond(HttpRequestMessage request)
+    private HttpResponseMessage Respond(HttpRequestMessage request, string? body)
     {
         var url = request.RequestUri!.AbsoluteUri;
         lock (_sent)
-            _sent.Add(new Sent(request.Method.Method, url, request.Headers.Authorization?.ToString()));
+            _sent.Add(new Sent(request.Method.Method, url, request.Headers.Authorization?.ToString(), body));
 
         if (url == "https://github.com/login/device/code")
             return Json("""{"device_code":"d","user_code":"WDJB-MJHT","verification_uri":"https://github.com/login/device","expires_in":900,"interval":5}""");
@@ -135,6 +136,10 @@ public sealed class GitHubIndexReportsTests
             return Json($$"""{"access_token":"{{Token}}","token_type":"bearer"}""");
         if (url == Api + "/user")
             return Json("""{"login":"octocat","id":1}""");
+        // a route that ends with " anonymous" answers only the request without the token
+        if ((request.Headers.Authorization is null && _routes.TryGetValue($"{request.Method.Method} {url} anonymous", out var route))
+            || _routes.TryGetValue($"{request.Method.Method} {url}", out route))
+            return route();
         if (url != IssuesUrl)
             return Json("""{"message":"Not Found"}""", HttpStatusCode.NotFound);
 
@@ -154,7 +159,7 @@ public sealed class GitHubIndexReportsTests
         Content = new StringContent(json, Encoding.UTF8, "application/json"),
     };
 
-    private sealed record Sent(string Method, string Url, string? Authorization);
+    private sealed record Sent(string Method, string Url, string? Authorization, string? Body = null);
 
     /// <summary>Fires every delay at once, so the sign-in does not wait for its poll interval.</summary>
     private sealed class InstantTimeProvider : TimeProvider

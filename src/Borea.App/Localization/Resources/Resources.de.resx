@@ -499,7 +499,13 @@
     <value>Meldungen</value>
   </data>
   <data name="StewardReportsHint" xml:space="preserve">
-    <value>Takedown-Anfragen und ID-Streitfälle, die Leute mit den Formularen von KSAModding/content-index einreichen, die ältesten zuerst. Borea liest sie ohne deine Anmeldung, daher beantwortest du eine Meldung auf GitHub, schließt sie dort oder öffnest sie wieder.</value>
+    <value>Takedown-Anfragen und ID-Streitfälle, die Leute mit den Formularen von KSAModding/content-index einreichen. Borea liest sie ohne deine Anmeldung.</value>
+  </data>
+  <data name="StewardReportsWriteHint" xml:space="preserve">
+    <value>Als Steward von content-index beantwortest du sie hier, schließt sie oder öffnest sie wieder.</value>
+  </data>
+  <data name="StewardReportsGitHubHint" xml:space="preserve">
+    <value>Du beantwortest eine Meldung auf GitHub, schließt sie dort oder öffnest sie wieder.</value>
   </data>
   <data name="StewardReportsLoading" xml:space="preserve">
     <value>Lese die Meldungen von GitHub...</value>
@@ -557,6 +563,75 @@
   </data>
   <data name="StewardReportStaysOpenFormat" xml:space="preserve">
     <value>Der Pull Request nennt die Meldung #{0}, die offen bleibt, bis ein Steward entscheidet.</value>
+  </data>
+  <data name="StewardReportsShowClosed" xml:space="preserve">
+    <value>Die zuletzt geschlossenen Meldungen zeigen</value>
+  </data>
+  <data name="StewardReportsClosedEmpty" xml:space="preserve">
+    <value>Zuletzt wurde keine Meldung geschlossen.</value>
+  </data>
+  <data name="StewardReportClosedCompletedFormat" xml:space="preserve">
+    <value>als erledigt geschlossen, {0}</value>
+  </data>
+  <data name="StewardReportClosedNotPlannedFormat" xml:space="preserve">
+    <value>als nicht geplant geschlossen, {0}</value>
+  </data>
+  <data name="StewardReportClosedFormat" xml:space="preserve">
+    <value>geschlossen, {0}</value>
+  </data>
+  <data name="StewardReportCloseCompleted" xml:space="preserve">
+    <value>Als erledigt schließen</value>
+  </data>
+  <data name="StewardReportCloseNotPlanned" xml:space="preserve">
+    <value>Als nicht geplant schließen</value>
+  </data>
+  <data name="StewardReportReopen" xml:space="preserve">
+    <value>Wieder öffnen</value>
+  </data>
+  <data name="StewardReportCloseCompletedTitleFormat" xml:space="preserve">
+    <value>{0} als erledigt schließen</value>
+  </data>
+  <data name="StewardReportCloseNotPlannedTitleFormat" xml:space="preserve">
+    <value>{0} als nicht geplant schließen</value>
+  </data>
+  <data name="StewardReportReopenTitleFormat" xml:space="preserve">
+    <value>{0} wieder öffnen</value>
+  </data>
+  <data name="StewardReportCommentEffect" xml:space="preserve">
+    <value>Borea postet deinen Text als Kommentar zur Meldung.</value>
+  </data>
+  <data name="StewardReportCloseCompletedEffect" xml:space="preserve">
+    <value>Borea postet deinen Text als Kommentar und schließt die Meldung als erledigt.</value>
+  </data>
+  <data name="StewardReportCloseNotPlannedEffect" xml:space="preserve">
+    <value>Borea postet deinen Text als Kommentar und schließt die Meldung als nicht geplant.</value>
+  </data>
+  <data name="StewardReportReopenEffect" xml:space="preserve">
+    <value>Borea postet deinen Text als Kommentar und öffnet die Meldung wieder. Laut POLICY.md öffnet ein Steward eine Meldung bei neuen Belegen wieder, also nenne die Belege.</value>
+  </data>
+  <data name="StewardReportTextHint" xml:space="preserve">
+    <value>Die meldende Person und alle, die der Meldung folgen, sehen diesen Text auf GitHub.</value>
+  </data>
+  <data name="StewardReportCommented" xml:space="preserve">
+    <value>GitHub hat den Kommentar.</value>
+  </data>
+  <data name="StewardReportClosed" xml:space="preserve">
+    <value>Die Meldung ist geschlossen.</value>
+  </data>
+  <data name="StewardReportReopened" xml:space="preserve">
+    <value>Die Meldung ist wieder offen.</value>
+  </data>
+  <data name="StewardReportRefusedClosed" xml:space="preserve">
+    <value>Jemand hat die Meldung geschlossen, seit Borea sie gelesen hat. Borea liest die Meldungen erneut.</value>
+  </data>
+  <data name="StewardReportRefusedOpen" xml:space="preserve">
+    <value>Jemand hat die Meldung wieder geöffnet, seit Borea sie gelesen hat. Borea liest die Meldungen erneut.</value>
+  </data>
+  <data name="StewardReportNotFound" xml:space="preserve">
+    <value>GitHub hat diese Meldung in KSAModding/content-index nicht gefunden. Jemand hat sie verschoben oder gelöscht.</value>
+  </data>
+  <data name="StewardReportNoIssuesPermission" xml:space="preserve">
+    <value>GitHub hat die Änderung abgelehnt, vielleicht weil die Borea App noch keine Issues-Berechtigung hat. Antworte stattdessen auf GitHub. Dein Text bleibt hier, damit du ihn kopieren kannst.</value>
   </data>
   <data name="StewardTabWatcher" xml:space="preserve">
     <value>Watcher</value>

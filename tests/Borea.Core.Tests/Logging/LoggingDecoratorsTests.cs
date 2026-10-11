@@ -405,6 +405,28 @@ public sealed class LoggingDecoratorsTests
     }
 
     [Fact]
+    public async Task ReportActions_WriteEachActionWithTheReport_AndAFailure()
+    {
+        var report = IndexReport.FromIssue(10, new Uri("https://github.com/KSAModding/content-index/issues/10"), "[Takedown] MyMod", "alice", DateTimeOffset.UnixEpoch, "### Listing id\n\nMyMod")!;
+        var failure = new StewardException(StewardFailure.Forbidden, "Resource not accessible by integration");
+
+        await new LoggingReportActions(new FakeReportActions(), _log).CommentAsync(report, "Please answer.");
+        await new LoggingReportActions(new FakeReportActions(), _log).CloseAsync(report, IndexReportCloseReason.NotPlanned, "It holds no ground.");
+        await new LoggingReportActions(new FakeReportActions(), _log).ReopenAsync(report, "New evidence.");
+        var thrown = await Assert.ThrowsAsync<StewardException>(() => new LoggingReportActions(new FakeReportActions { Failure = failure }, _log).CloseAsync(report, IndexReportCloseReason.Completed, "Done."));
+
+        Assert.Same(failure, thrown);
+        Assert.Equal(
+            [
+                "Comment of report KSAModding/content-index #10 done.",
+                "Close as not planned of report KSAModding/content-index #10 done.",
+                "Reopen of report KSAModding/content-index #10 done.",
+                "Close as completed of report KSAModding/content-index #10 failed. Forbidden, Resource not accessible by integration",
+            ],
+            _log.Messages);
+    }
+
+    [Fact]
     public async Task ReleaseAmendments_WriteTheOpenedPullRequest_AndAFailureWithTheTitle()
     {
         var preview = new ReleaseAmendmentPreview(
@@ -437,6 +459,21 @@ public sealed class LoggingDecoratorsTests
         public Task MergeAsync(PullRequestReview pullRequest, bool skipRequiredReview, CancellationToken cancellationToken = default) => Answer();
 
         public Task CloseAsync(PullRequestReview pullRequest, string comment, CancellationToken cancellationToken = default) => Answer();
+
+        private Task Answer() => Failure is null ? Task.CompletedTask : Task.FromException(Failure);
+    }
+
+    private sealed class FakeReportActions : IReportActions
+    {
+        public Exception? Failure { get; init; }
+
+        public Task<bool> CanActAsync(CancellationToken cancellationToken = default) => Task.FromResult(true);
+
+        public Task CommentAsync(IndexReport report, string comment, CancellationToken cancellationToken = default) => Answer();
+
+        public Task CloseAsync(IndexReport report, IndexReportCloseReason reason, string comment, CancellationToken cancellationToken = default) => Answer();
+
+        public Task ReopenAsync(IndexReport report, string comment, CancellationToken cancellationToken = default) => Answer();
 
         private Task Answer() => Failure is null ? Task.CompletedTask : Task.FromException(Failure);
     }

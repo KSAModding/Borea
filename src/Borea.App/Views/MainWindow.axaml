@@ -145,6 +145,9 @@
     <!-- modal: a steward action on the pull request of the review -->
     <views:PullRequestActionModal IsVisible="{Binding IsStewardActionOpen}" />
 
+    <!-- modal: a steward action on a report of the Reports tab -->
+    <views:ReportActionModal IsVisible="{Binding IsStewardReportActionOpen}" />
+
     <!-- modal: settings -->
     <settings:SettingsModal IsVisible="{Binding IsSettingsOpen}" />
 
