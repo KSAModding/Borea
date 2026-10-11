@@ -602,14 +602,14 @@ public sealed class UpdateNoticeViewModelTests
         var task = Assert.Single(viewModel.Tasks.Running);
         Assert.Equal(localization.FormatTaskSelfUpdate("999.0.0"), task.Title);
 
-        await ViewModelHarness.WaitUntilAsync(() => task.Progress == 40);
+        // a report sets the step, the percent and HasProgress one after another on another thread, so wait for all of them
+        await ViewModelHarness.WaitUntilAsync(() => task.Progress == 40 && task.HasProgress);
         Assert.Equal(localization.FormatInstallDownloading("Borea 999.0.0"), task.Step);
         Assert.True(task.HasProgress);
         Assert.True(viewModel.Tasks.HasProgress);
         updater.Next();
 
-        await ViewModelHarness.WaitUntilAsync(() => task.Step == localization.FormatSelfUpdateVerifying("999.0.0"));
-        Assert.False(task.HasProgress);
+        await ViewModelHarness.WaitUntilAsync(() => task.Step == localization.FormatSelfUpdateVerifying("999.0.0") && !task.HasProgress);
         updater.Next();
 
         await ViewModelHarness.WaitUntilAsync(() => task.Step == localization.FormatSelfUpdateUnpacking("999.0.0"));
