@@ -278,8 +278,11 @@ public sealed class BoreaServices : IDisposable
     /// <summary>The open issues of the watcher and its watchdog in both index repositories.</summary>
     public required IWatcherIssues WatcherIssues { get; init; }
 
-    /// <summary>The open takedown and id dispute reports of content-index.</summary>
+    /// <summary>The takedown and id dispute reports of content-index.</summary>
     public required IIndexReports IndexReports { get; init; }
+
+    /// <summary>Comments on, closes and reopens one report of content-index.</summary>
+    public required IReportActions ReportActions { get; init; }
 
     /// <summary>The games this process started, which every graph built by a public overload shares.</summary>
     private static readonly RunningLaunches ProcessLaunches = new();
@@ -343,6 +346,7 @@ public sealed class BoreaServices : IDisposable
     /// <param name="stewardQueue">Lists the pull requests that wait for a steward. Null builds one on the GitHub session.</param>
     /// <param name="watcherIssues">Lists the issues of the watcher and its watchdog. Null builds one that reads GitHub without the token.</param>
     /// <param name="indexReports">Lists the takedown and id dispute reports. Null builds one that reads GitHub without the token.</param>
+    /// <param name="reportActions">Acts on one report for a steward. Null builds one on the GitHub session.</param>
     /// <param name="pullRequestReviews">Reads one pull request for a steward. Null builds one on the GitHub session.</param>
     /// <param name="pullRequestActions">Acts on one pull request for a steward. Null builds one on the GitHub session.</param>
     /// <param name="releaseCheck">Finds the published Borea releases. Null asks GitHub.</param>
@@ -374,6 +378,7 @@ public sealed class BoreaServices : IDisposable
         IPullRequestReviews? pullRequestReviews = null,
         IPullRequestActions? pullRequestActions = null,
         IIndexReports? indexReports = null,
+        IReportActions? reportActions = null,
         IReleaseAmendments? releaseAmendments = null,
         IGamePlatform? gamePlatform = null,
         ILauncher? loaderLauncher = null,
@@ -385,7 +390,7 @@ public sealed class BoreaServices : IDisposable
         ArgumentNullException.ThrowIfNull(httpHandler);
         ArgumentNullException.ThrowIfNull(fallbackRepository);
         ArgumentNullException.ThrowIfNull(installCandidates);
-        return BuildCoreAsync(boreaRoot, BoreaLogSource.App, httpHandler, fallbackRepository, installCandidates, new RunningLaunches(), cancellationToken, processStarter, images, sharedProfileRoot, isGameProcessRunning, isOtherBoreaRunning, gitHub, listingPublisher, releaseCheck, selfUpdater, indexStatusEditor, stewardQueue, watcherIssues, pullRequestReviews, pullRequestActions, indexReports, releaseAmendments, gamePlatform, loaderLauncher, sharedProfileLauncher, loaderConfigurator, wrapInstallPlanner, listingImageHandler);
+        return BuildCoreAsync(boreaRoot, BoreaLogSource.App, httpHandler, fallbackRepository, installCandidates, new RunningLaunches(), cancellationToken, processStarter, images, sharedProfileRoot, isGameProcessRunning, isOtherBoreaRunning, gitHub, listingPublisher, releaseCheck, selfUpdater, indexStatusEditor, stewardQueue, watcherIssues, pullRequestReviews, pullRequestActions, indexReports, reportActions, releaseAmendments, gamePlatform, loaderLauncher, sharedProfileLauncher, loaderConfigurator, wrapInstallPlanner, listingImageHandler);
     }
 
     private static async Task<BoreaServices> BuildCoreAsync(
@@ -411,6 +416,7 @@ public sealed class BoreaServices : IDisposable
         IPullRequestReviews? pullRequestReviews = null,
         IPullRequestActions? pullRequestActions = null,
         IIndexReports? indexReports = null,
+        IReportActions? reportActions = null,
         IReleaseAmendments? releaseAmendments = null,
         IGamePlatform? gamePlatform = null,
         ILauncher? loaderLauncher = null,
@@ -502,6 +508,7 @@ public sealed class BoreaServices : IDisposable
         var stewardRole = new GitHubStewardRole(gitHubSession, http);
         var listingOwnership = new ListingOwnershipCheck(gitHubSession, http, listingFormat);
         var gitHubPullRequests = new GitHubPullRequestReviews(gitHubSession, http, listingFormat, listingOwnership);
+        var gitHubReports = new GitHubIndexReports(gitHubSession, http);
 
         return new BoreaServices(http)
         {
@@ -588,7 +595,8 @@ public sealed class BoreaServices : IDisposable
             PullRequestReviews = pullRequestReviews ?? gitHubPullRequests,
             PullRequestActions = new LoggingPullRequestActions(pullRequestActions ?? gitHubPullRequests, log),
             WatcherIssues = watcherIssues ?? new GitHubWatcherIssues(gitHubSession, http),
-            IndexReports = indexReports ?? new GitHubIndexReports(gitHubSession, http),
+            IndexReports = indexReports ?? gitHubReports,
+            ReportActions = new LoggingReportActions(reportActions ?? gitHubReports, log),
         };
     }
 

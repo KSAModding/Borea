@@ -1,0 +1,52 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Borea.App.ViewModels"
+             xmlns:views="using:Borea.App.Views"
+             x:Class="Borea.App.Views.ReportActionModal"
+             x:DataType="vm:MainViewModel">
+    <!-- modal: a steward comments on, closes or reopens a report, and answers on GitHub when GitHub refuses that -->
+    <Panel Background="#99000000" views:ModalBackdrop.CloseButton="{Binding #CloseButton}">
+        <Border Classes="modal" Width="561" Margin="80,0,0,0" DataContext="{Binding StewardReportAction}" x:DataType="vm:ReportActionDialog">
+            <StackPanel>
+                <Grid ColumnDefinitions="*,Auto" Margin="24,24,24,0">
+                    <TextBlock Classes="heading-lg" Text="{Binding Title}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                    <Button x:Name="CloseButton" Grid.Column="1" Classes="icon" Command="{Binding CloseCommand}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ModalClose}">
+                        <Path Classes="icon" Data="{StaticResource Icon.Close}" />
+                    </Button>
+                </Grid>
+                <Border Height="1" Background="{StaticResource Brush.Window}" Margin="0,24,0,0" />
+                <StackPanel Margin="36,32,24,32" Spacing="16">
+                    <TextBlock Classes="heading-md" Text="{Binding ReportTitle}" TextWrapping="Wrap" />
+                    <TextBlock Classes="body-md" Text="{Binding Effect}" TextWrapping="Wrap" />
+                    <TextBlock Classes="body-md" Text="{Binding ReporterWarning}" TextWrapping="Wrap" IsVisible="{Binding ReporterWarning, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                    <TextBlock Classes="body-md" Text="{Binding OwnerWarning}" TextWrapping="Wrap" IsVisible="{Binding OwnerWarning, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                    <StackPanel Spacing="6">
+                        <TextBlock Classes="heading-md heading" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.StewardActionText}" />
+                        <TextBlock Classes="body-sm secondary" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.StewardReportTextHint}" TextWrapping="Wrap" />
+                        <TextBox Classes="field" Text="{Binding Text}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="96" MaxLength="10000" IsReadOnly="{Binding IsDone}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.StewardActionText}">
+                            <TextBox.KeyBindings>
+                                <KeyBinding Gesture="Escape" Command="{Binding CloseCommand}" />
+                            </TextBox.KeyBindings>
+                        </TextBox>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Spacing="12" IsVisible="{Binding IsSending}">
+                        <ProgressBar Width="38" Height="6" VerticalAlignment="Center" IsIndeterminate="True" Foreground="{StaticResource Brush.Accent}" />
+                        <TextBlock Classes="body-md" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.StewardActionSending}" VerticalAlignment="Center" />
+                    </StackPanel>
+                    <TextBlock Classes="body-md" Text="{Binding DoneText}" TextWrapping="Wrap" IsVisible="{Binding IsDone}" />
+                    <TextBlock Classes="body-md danger" Text="{Binding Error}" TextWrapping="Wrap" IsVisible="{Binding Error, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+                        <Button Classes="text tall" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryCancel}" Command="{Binding CloseCommand}" VerticalAlignment="Center" IsVisible="{Binding !IsDone}" />
+                        <Button Classes="cta" Command="{Binding SendCommand}" IsVisible="{Binding IsSendShown}">
+                            <TextBlock Classes="action-lg" Text="{Binding SendText}" VerticalAlignment="Center" />
+                        </Button>
+                        <Button Classes="cta" Command="{Binding AnswerCommand}" IsVisible="{Binding IsRefused}">
+                            <TextBlock Classes="action-lg" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.StewardReportAnswer}" VerticalAlignment="Center" />
+                        </Button>
+                        <Button Classes="text tall" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ModalClose}" Command="{Binding CloseCommand}" VerticalAlignment="Center" IsVisible="{Binding IsDone}" />
+                    </StackPanel>
+                </StackPanel>
+            </StackPanel>
+        </Border>
+    </Panel>
+</UserControl>

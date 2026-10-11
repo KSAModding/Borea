@@ -629,6 +629,10 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string StewardReportsHint => Resources.StewardReportsHint;
 
+    public string StewardReportsWriteHint => Resources.StewardReportsWriteHint;
+
+    public string StewardReportsGitHubHint => Resources.StewardReportsGitHubHint;
+
     public string StewardReportsLoading => Resources.StewardReportsLoading;
 
     public string StewardReportsEmpty => Resources.StewardReportsEmpty;
@@ -671,6 +675,58 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string FormatStewardReportStaysOpen(string number)
         => string.Format(CultureInfo.CurrentCulture, Resources.StewardReportStaysOpenFormat, number);
+
+    public string StewardReportsShowClosed => Resources.StewardReportsShowClosed;
+
+    public string StewardReportsClosedEmpty => Resources.StewardReportsClosedEmpty;
+
+    public string FormatStewardReportClosedCompleted(string age)
+        => string.Format(CultureInfo.CurrentCulture, Resources.StewardReportClosedCompletedFormat, age);
+
+    public string FormatStewardReportClosedNotPlanned(string age)
+        => string.Format(CultureInfo.CurrentCulture, Resources.StewardReportClosedNotPlannedFormat, age);
+
+    public string FormatStewardReportClosed(string age)
+        => string.Format(CultureInfo.CurrentCulture, Resources.StewardReportClosedFormat, age);
+
+    public string StewardReportCloseCompleted => Resources.StewardReportCloseCompleted;
+
+    public string StewardReportCloseNotPlanned => Resources.StewardReportCloseNotPlanned;
+
+    public string StewardReportReopen => Resources.StewardReportReopen;
+
+    public string FormatStewardReportCloseCompletedTitle(string report)
+        => string.Format(CultureInfo.CurrentCulture, Resources.StewardReportCloseCompletedTitleFormat, report);
+
+    public string FormatStewardReportCloseNotPlannedTitle(string report)
+        => string.Format(CultureInfo.CurrentCulture, Resources.StewardReportCloseNotPlannedTitleFormat, report);
+
+    public string FormatStewardReportReopenTitle(string report)
+        => string.Format(CultureInfo.CurrentCulture, Resources.StewardReportReopenTitleFormat, report);
+
+    public string StewardReportCommentEffect => Resources.StewardReportCommentEffect;
+
+    public string StewardReportCloseCompletedEffect => Resources.StewardReportCloseCompletedEffect;
+
+    public string StewardReportCloseNotPlannedEffect => Resources.StewardReportCloseNotPlannedEffect;
+
+    public string StewardReportReopenEffect => Resources.StewardReportReopenEffect;
+
+    public string StewardReportTextHint => Resources.StewardReportTextHint;
+
+    public string StewardReportCommented => Resources.StewardReportCommented;
+
+    public string StewardReportClosed => Resources.StewardReportClosed;
+
+    public string StewardReportReopened => Resources.StewardReportReopened;
+
+    public string StewardReportRefusedClosed => Resources.StewardReportRefusedClosed;
+
+    public string StewardReportRefusedOpen => Resources.StewardReportRefusedOpen;
+
+    public string StewardReportNotFound => Resources.StewardReportNotFound;
+
+    public string StewardReportNoIssuesPermission => Resources.StewardReportNoIssuesPermission;
 
     public string StewardTabWatcher => Resources.StewardTabWatcher;
 

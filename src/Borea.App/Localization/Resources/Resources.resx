@@ -499,7 +499,13 @@
     <value>Reports</value>
   </data>
   <data name="StewardReportsHint" xml:space="preserve">
-    <value>Takedown requests and id disputes that people file with the forms of KSAModding/content-index, the oldest first. Borea reads them without your sign-in, so you answer, close and reopen a report on GitHub.</value>
+    <value>Takedown requests and id disputes that people file with the forms of KSAModding/content-index. Borea reads them without your sign-in.</value>
+  </data>
+  <data name="StewardReportsWriteHint" xml:space="preserve">
+    <value>As a steward of content-index, you answer, close and reopen them here.</value>
+  </data>
+  <data name="StewardReportsGitHubHint" xml:space="preserve">
+    <value>You answer, close and reopen a report on GitHub.</value>
   </data>
   <data name="StewardReportsLoading" xml:space="preserve">
     <value>Reading the reports from GitHub...</value>
@@ -557,6 +563,75 @@
   </data>
   <data name="StewardReportStaysOpenFormat" xml:space="preserve">
     <value>The pull request names report #{0}, which stays open until a steward decides.</value>
+  </data>
+  <data name="StewardReportsShowClosed" xml:space="preserve">
+    <value>Show the reports closed lately</value>
+  </data>
+  <data name="StewardReportsClosedEmpty" xml:space="preserve">
+    <value>No report was closed lately.</value>
+  </data>
+  <data name="StewardReportClosedCompletedFormat" xml:space="preserve">
+    <value>closed as completed, {0}</value>
+  </data>
+  <data name="StewardReportClosedNotPlannedFormat" xml:space="preserve">
+    <value>closed as not planned, {0}</value>
+  </data>
+  <data name="StewardReportClosedFormat" xml:space="preserve">
+    <value>closed, {0}</value>
+  </data>
+  <data name="StewardReportCloseCompleted" xml:space="preserve">
+    <value>Close as completed</value>
+  </data>
+  <data name="StewardReportCloseNotPlanned" xml:space="preserve">
+    <value>Close as not planned</value>
+  </data>
+  <data name="StewardReportReopen" xml:space="preserve">
+    <value>Reopen</value>
+  </data>
+  <data name="StewardReportCloseCompletedTitleFormat" xml:space="preserve">
+    <value>Close {0} as completed</value>
+  </data>
+  <data name="StewardReportCloseNotPlannedTitleFormat" xml:space="preserve">
+    <value>Close {0} as not planned</value>
+  </data>
+  <data name="StewardReportReopenTitleFormat" xml:space="preserve">
+    <value>Reopen {0}</value>
+  </data>
+  <data name="StewardReportCommentEffect" xml:space="preserve">
+    <value>Borea posts your text as a comment on the report.</value>
+  </data>
+  <data name="StewardReportCloseCompletedEffect" xml:space="preserve">
+    <value>Borea posts your text as a comment and closes the report as completed.</value>
+  </data>
+  <data name="StewardReportCloseNotPlannedEffect" xml:space="preserve">
+    <value>Borea posts your text as a comment and closes the report as not planned.</value>
+  </data>
+  <data name="StewardReportReopenEffect" xml:space="preserve">
+    <value>Borea posts your text as a comment and reopens the report. POLICY.md lets a steward reopen a report on new evidence, so name the evidence.</value>
+  </data>
+  <data name="StewardReportTextHint" xml:space="preserve">
+    <value>The reporter and everyone who follows the report see this text on GitHub.</value>
+  </data>
+  <data name="StewardReportCommented" xml:space="preserve">
+    <value>GitHub has the comment.</value>
+  </data>
+  <data name="StewardReportClosed" xml:space="preserve">
+    <value>The report is closed.</value>
+  </data>
+  <data name="StewardReportReopened" xml:space="preserve">
+    <value>The report is open again.</value>
+  </data>
+  <data name="StewardReportRefusedClosed" xml:space="preserve">
+    <value>Somebody closed the report since Borea read it. Borea reads the reports again.</value>
+  </data>
+  <data name="StewardReportRefusedOpen" xml:space="preserve">
+    <value>Somebody reopened the report since Borea read it. Borea reads the reports again.</value>
+  </data>
+  <data name="StewardReportNotFound" xml:space="preserve">
+    <value>GitHub did not find this report in KSAModding/content-index. Somebody moved or deleted it.</value>
+  </data>
+  <data name="StewardReportNoIssuesPermission" xml:space="preserve">
+    <value>GitHub refused the change, maybe because the Borea App has no Issues permission yet. Answer on GitHub instead. Your text stays here, so you can copy it.</value>
   </data>
   <data name="StewardTabWatcher" xml:space="preserve">
     <value>Watcher</value>

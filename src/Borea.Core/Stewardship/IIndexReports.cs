@@ -6,13 +6,32 @@ namespace Borea.Core.Stewardship;
 
 /// <summary>
 /// The takedown requests and id disputes of content-index, which people file with the issue forms of that repository.
-/// A steward answers, closes and reopens them on GitHub, because the Borea App has no Issues permission.
+/// <see cref="IReportActions"/> answers, closes and reopens them.
 /// </summary>
 public interface IIndexReports
 {
-    /// <summary>Reads the open reports without the token, because the issues are public, oldest first.</summary>
+    /// <summary>Reads the reports without the token, because the issues are public.</summary>
     /// <exception cref="StewardException">GitHub could not be read.</exception>
-    Task<IReadOnlyList<IndexReport>> ListAsync(CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<IndexReport>> ListAsync(IndexReportFilter filter = IndexReportFilter.Open, CancellationToken cancellationToken = default);
+}
+
+public enum IndexReportFilter
+{
+    /// <summary>The open reports, oldest first.</summary>
+    Open,
+
+    /// <summary>
+    /// The 100 closed reports that changed last, found by the tag in the title, the last changed first.
+    /// A new comment changes an issue, so a closed report with new evidence comes first.
+    /// </summary>
+    RecentlyClosed,
+}
+
+/// <summary>Why a report was closed, as GitHub names it.</summary>
+public enum IndexReportCloseReason
+{
+    Completed,
+    NotPlanned,
 }
 
 public enum IndexReportKind
@@ -64,6 +83,14 @@ public sealed record IndexReport(int Number, Uri Url, string Title, string? Auth
     private static readonly string[] TakedownLabels = [ListingLabel, GroundLabel, WhatIsWrongLabel, ReporterLabel];
 
     private static readonly string[] DisputeLabels = [ListingLabel, DisputedLabel, ForumsLabel, ClaimLabel, OtherPartyLabel];
+
+    public bool IsClosed { get; init; }
+
+    /// <summary>Why the report was closed, or null when it is open or GitHub names another reason, such as a duplicate.</summary>
+    public IndexReportCloseReason? CloseReason { get; init; }
+
+    /// <summary>When the report was closed, or null when it is open.</summary>
+    public DateTimeOffset? Closed { get; init; }
 
     /// <summary>The listing id field as the reporter typed it.</summary>
     public string? ListingText { get; init; }

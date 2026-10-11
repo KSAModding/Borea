@@ -129,16 +129,20 @@
                         </StackPanel>
                     </Panel>
 
-                    <!-- Reports: the open takedown and id dispute reports of content-index, oldest first, with the sections of their forms -->
+                    <!-- Reports: the open takedown and id dispute reports of content-index, oldest first, or the reports closed lately, with the sections of their forms -->
                     <Panel IsVisible="{Binding IsReportsTab}">
                         <StackPanel DataContext="{Binding Reports}" x:DataType="vm:StewardReportsTab">
-                            <TextBlock Classes="body-md secondary" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.StewardReportsHint}" TextWrapping="Wrap" Margin="0,16,0,0" />
+                            <TextBlock Classes="body-md secondary" Text="{Binding HintText}" TextWrapping="Wrap" Margin="0,16,0,0" />
+                            <StackPanel Orientation="Horizontal" Spacing="12" Margin="0,16,0,0">
+                                <TextBlock Classes="body-md" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.StewardReportsShowClosed}" VerticalAlignment="Center" />
+                                <ToggleSwitch Classes="switch" IsChecked="{Binding ShowClosed}" VerticalAlignment="Center" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.StewardReportsShowClosed}" />
+                            </StackPanel>
                             <StackPanel Orientation="Horizontal" Spacing="12" Margin="0,16,0,0" IsVisible="{Binding IsLoading}">
                                 <ProgressBar Width="38" Height="6" VerticalAlignment="Center" IsIndeterminate="True" Foreground="{StaticResource Brush.Accent}" />
                                 <TextBlock Classes="body-md" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.StewardReportsLoading}" VerticalAlignment="Center" />
                             </StackPanel>
                             <TextBlock Classes="body-md danger" Text="{Binding Error}" TextWrapping="Wrap" Margin="0,16,0,0" IsVisible="{Binding Error, Converter={x:Static ObjectConverters.IsNotNull}}" />
-                            <TextBlock Classes="body-md muted" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.StewardReportsEmpty}" Margin="0,16,0,0" IsVisible="{Binding IsEmpty}" />
+                            <TextBlock Classes="body-md muted" Text="{Binding EmptyText}" Margin="0,16,0,0" IsVisible="{Binding IsEmpty}" />
 
                             <ItemsControl ItemsSource="{Binding Reports}" Margin="0,16,0,0">
                                 <ItemsControl.ItemsPanel>
@@ -170,6 +174,7 @@
                                                     </Button>
                                                 </WrapPanel>
                                                 <TextBlock Classes="body-sm secondary" Text="{Binding ByText}" TextWrapping="Wrap" />
+                                                <TextBlock Classes="body-sm secondary" Text="{Binding ClosedText}" TextWrapping="Wrap" IsVisible="{Binding !IsOpen}" />
                                                 <TextBlock Classes="body-md" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.StewardReporterWarning}" TextWrapping="Wrap" IsVisible="{Binding IsReporter}" />
                                                 <TextBlock Classes="body-md" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.StewardOwnerWarning}" TextWrapping="Wrap" IsVisible="{Binding IsOwner}" />
 
@@ -197,12 +202,20 @@
                                                     </ItemsControl.ItemTemplate>
                                                 </ItemsControl>
 
-                                                <!-- Answer on GitHub for everyone, the status actions for a steward of content-index -->
+                                                <!-- the report actions for a steward of content-index while GitHub lets Borea write to issues, else Answer on GitHub, and the status actions on an open report -->
                                                 <WrapPanel ItemSpacing="8" LineSpacing="4" Margin="0,6,0,0">
-                                                    <Button Classes="text" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.StewardReportAnswer}" Command="{Binding AnswerCommand}" />
+                                                    <WrapPanel ItemSpacing="8" LineSpacing="4" IsVisible="{Binding $parent[Window].((vm:MainViewModel)DataContext).StewardPage.Reports.CanWriteIssues}">
+                                                        <Button Classes="text" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.StewardActionComment}" Command="{Binding CommentCommand}" />
+                                                        <WrapPanel ItemSpacing="8" LineSpacing="4" IsVisible="{Binding IsOpen}">
+                                                            <Button Classes="text" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.StewardReportCloseCompleted}" Command="{Binding CloseCompletedCommand}" />
+                                                            <Button Classes="text" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.StewardReportCloseNotPlanned}" Command="{Binding CloseNotPlannedCommand}" />
+                                                        </WrapPanel>
+                                                        <Button Classes="text" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.StewardReportReopen}" Command="{Binding ReopenCommand}" IsVisible="{Binding !IsOpen}" />
+                                                    </WrapPanel>
+                                                    <Button Classes="text" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.StewardReportAnswer}" Command="{Binding AnswerCommand}" IsVisible="{Binding !$parent[Window].((vm:MainViewModel)DataContext).StewardPage.Reports.CanWriteIssues}" />
                                                     <Button Classes="text" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.StewardReportOpenForums}" Command="{Binding OpenForumsCommand}" IsVisible="{Binding CanOpenForums}" />
                                                     <WrapPanel ItemSpacing="8" LineSpacing="4" IsVisible="{Binding $parent[Window].((vm:MainViewModel)DataContext).CanEditIndexStatus}">
-                                                        <WrapPanel ItemSpacing="8" LineSpacing="4" IsVisible="{Binding HasId}">
+                                                        <WrapPanel ItemSpacing="8" LineSpacing="4" IsVisible="{Binding CanChangeStatus}">
                                                             <Button Classes="text" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.StewardDispute}" Command="{Binding DisputeCommand}" />
                                                             <Button Classes="text" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.StewardDelist}" Command="{Binding DelistCommand}" />
                                                             <Button Classes="text" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.StewardRetract}" Command="{Binding RetractCommand}" IsVisible="{Binding HasVersion}" />

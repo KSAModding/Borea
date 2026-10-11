@@ -24,6 +24,7 @@ public sealed class StewardViewsTests
     private readonly FakePullRequestReviews _reviews = new();
     private readonly FakePullRequestActions _actions = new();
     private readonly FakeReleaseAmendments _amendments = new();
+    private readonly FakeReportActions _reportActions = new();
 
     [Fact]
     public async Task StewardPage_ShowsEachStateWithLiftAndTheOpenPullRequests()
@@ -257,7 +258,7 @@ public sealed class StewardViewsTests
         });
 
         Assert.Contains(harness.Localization.StewardTabReports, buttons);
-        Assert.Contains(harness.Localization.StewardReportsHint, texts);
+        Assert.Contains($"{harness.Localization.StewardReportsHint} {harness.Localization.StewardReportsWriteHint}", texts);
         Assert.Contains(name, texts);
         Assert.Contains("[Takedown] MeasureTools", texts);
         Assert.Contains("Ground", texts);
@@ -269,7 +270,12 @@ public sealed class StewardViewsTests
         Assert.Contains("I announced it first.", texts);
         Assert.Contains("Borea cannot read an id in \"the flight mod of bob\", so the status actions are off.", texts);
         Assert.Contains("The report has no section \"Ground\". Somebody changed its text by hand.", texts);
-        Assert.Equal(3, buttons.Count(button => button == harness.Localization.StewardReportAnswer));
+        Assert.Equal(3, buttons.Count(button => button == harness.Localization.StewardActionComment));
+        Assert.Equal(3, buttons.Count(button => button == harness.Localization.StewardReportCloseCompleted));
+        Assert.Equal(3, buttons.Count(button => button == harness.Localization.StewardReportCloseNotPlanned));
+        Assert.DoesNotContain(harness.Localization.StewardReportAnswer, buttons);
+        Assert.DoesNotContain(harness.Localization.StewardReportReopen, buttons);
+        Assert.Contains(harness.Localization.StewardReportsShowClosed, texts);
         Assert.Equal(1, buttons.Count(button => button == harness.Localization.StewardReportOpenForums));
         Assert.Equal(2, buttons.Count(button => button == harness.Localization.StewardDelist));
         Assert.DoesNotContain(harness.Localization.StewardRetract, buttons);
@@ -736,10 +742,96 @@ public sealed class StewardViewsTests
         Assert.Equal(("Comment", "Is MyMod the right id?"), (Assert.Single(_actions.Sent).Action, _actions.Sent[0].Text));
     }
 
+    [Fact]
+    public async Task ReportsTab_ClosedReports_ShowWhyTheyClosed_AndReopen()
+    {
+        _reports.Closed.Add(FakeIndexReports.ClosedReport(FakeIndexReports.Takedown(10, "MeasureTools"), IndexReportCloseReason.Completed));
+        using var harness = await CreateAsync();
+        var viewModel = harness.ViewModel;
+        viewModel.OpenStewardPageCommand.Execute(null);
+        await viewModel.StewardPage.ShowReportsCommand.ExecuteAsync(null);
+        viewModel.StewardPage.Reports.ShowClosed = true;
+        await viewModel.StewardPage.Reports.WhenLoadedAsync();
+        var closedText = viewModel.StewardPage.Reports.Reports[0].ClosedText;
+
+        var (texts, buttons) = await HeadlessApp.RunAsync(harness, () =>
+        {
+            var window = new Window { Width = 1280, Height = 832, Content = new StewardPageView(), DataContext = viewModel };
+            window.Show();
+            try
+            {
+                window.UpdateLayout();
+                var shown = window.GetVisualDescendants().OfType<TextBlock>().Where(text => text.IsEffectivelyVisible).Select(text => text.Text).ToList();
+                var visible = window.GetVisualDescendants().OfType<Button>().Where(button => button.IsEffectivelyVisible).Select(button => button.Content as string).ToList();
+                return Task.FromResult((shown, visible));
+            }
+            finally
+            {
+                window.Close();
+            }
+        });
+
+        Assert.Contains(closedText, texts);
+        Assert.Contains(harness.Localization.StewardReportReopen, buttons);
+        Assert.Contains(harness.Localization.StewardActionComment, buttons);
+        Assert.DoesNotContain(harness.Localization.StewardReportCloseCompleted, buttons);
+        Assert.DoesNotContain(harness.Localization.StewardDelist, buttons);
+    }
+
+    [Fact]
+    public async Task ReportActionModal_RefusedByGitHub_OffersAnswerOnGitHub_InPlaceOfTheSendButton()
+    {
+        _reports.Reports.Add(FakeIndexReports.Takedown(10, "MeasureTools"));
+        _reportActions.Failures.Enqueue(new StewardException(StewardFailure.Forbidden));
+        using var harness = await CreateAsync();
+        var viewModel = harness.ViewModel;
+        viewModel.OpenStewardPageCommand.Execute(null);
+        await viewModel.StewardPage.ShowReportsCommand.ExecuteAsync(null);
+        viewModel.StewardPage.Reports.Reports[0].CloseNotPlannedCommand.Execute(null);
+        var dialog = viewModel.StewardReportAction!;
+        dialog.Text = "The takedown does not hold.";
+
+        var (before, after) = await HeadlessApp.RunAsync(harness, async () =>
+        {
+            var modal = new ReportActionModal();
+            var window = new Window { Width = 1280, Height = 832, Content = modal, DataContext = viewModel };
+            window.Show();
+            try
+            {
+                window.UpdateLayout();
+                var shown = Shown(modal);
+                var send = modal.GetVisualDescendants().OfType<Button>().Single(button => button.IsEffectivelyVisible && (button.Content as TextBlock)?.Text == harness.Localization.StewardReportCloseNotPlanned);
+                var point = send.TranslatePoint(new Point(send.Bounds.Width / 2, send.Bounds.Height / 2), window)!.Value;
+                window.MouseDown(point, MouseButton.Left);
+                window.MouseUp(point, MouseButton.Left);
+                await dialog.WhenDoneAsync();
+                window.UpdateLayout();
+                return (shown, Shown(modal));
+            }
+            finally
+            {
+                window.Close();
+            }
+        });
+
+        Assert.Contains("Close KSAModding/content-index #10 as not planned", before);
+        Assert.Contains("[Takedown] MeasureTools", before);
+        Assert.Contains(harness.Localization.StewardReportCloseNotPlannedEffect, before);
+        Assert.Contains(harness.Localization.StewardReportCloseNotPlanned, before);
+        Assert.DoesNotContain(harness.Localization.StewardReportAnswer, before);
+        Assert.Contains(harness.Localization.StewardReportNoIssuesPermission, after);
+        Assert.Contains(harness.Localization.StewardReportAnswer, after);
+        Assert.DoesNotContain(harness.Localization.StewardReportCloseNotPlanned, after);
+        Assert.Single(_reportActions.Sent);
+
+        static List<string?> Shown(Control modal) =>
+            modal.GetVisualDescendants().OfType<TextBlock>().Where(text => text.IsEffectivelyVisible).Select(text => text.Text).ToList();
+    }
+
     private async Task<ViewModelHarness> CreateAsync(Func<string, string>? editSnapshot = null)
     {
         _session.SignInDirectly();
-        var harness = await ViewModelHarness.CreateAsync(editSnapshot: editSnapshot, gitHub: _session, indexStatusEditor: _editor, stewardQueue: _queue, watcherIssues: _watcher, pullRequestReviews: _reviews, pullRequestActions: _actions, indexReports: _reports, releaseAmendments: _amendments);
+        var harness = await ViewModelHarness.CreateAsync(editSnapshot: editSnapshot, gitHub: _session, indexStatusEditor: _editor, stewardQueue: _queue, watcherIssues: _watcher, pullRequestReviews: _reviews, pullRequestActions: _actions, indexReports: _reports, reportActions: _reportActions, releaseAmendments: _amendments);
         await harness.ViewModel.WhenStewardRoleCheckedAsync();
         return harness;
     }

@@ -213,6 +213,12 @@
   <data name="StewardTabReports" xml:space="preserve">
     <value>Grievances</value>
   </data>
+  <data name="StewardReportsWriteHint" xml:space="preserve">
+    <value>As a steward o' content-index, ye holler back, settle and haul them back up right here.</value>
+  </data>
+  <data name="StewardReportsGitHubHint" xml:space="preserve">
+    <value>Ye holler back, settle and haul up a grievance on GitHub.</value>
+  </data>
   <data name="StewardReportsEmpty" xml:space="preserve">
     <value>Nary a grievance be nailed to the mast.</value>
   </data>
@@ -221,6 +227,75 @@
   </data>
   <data name="StewardReporterWarning" xml:space="preserve">
     <value>Ye nailed this grievance to the mast yerself. POLICY.md asks a steward with a stake in a quarrel to leave it to another steward.</value>
+  </data>
+  <data name="StewardReportsShowClosed" xml:space="preserve">
+    <value>Show the grievances settled of late</value>
+  </data>
+  <data name="StewardReportsClosedEmpty" xml:space="preserve">
+    <value>No grievance be settled of late.</value>
+  </data>
+  <data name="StewardReportClosedCompletedFormat" xml:space="preserve">
+    <value>settled fair and square, {0}</value>
+  </data>
+  <data name="StewardReportClosedNotPlannedFormat" xml:space="preserve">
+    <value>tossed overboard, {0}</value>
+  </data>
+  <data name="StewardReportClosedFormat" xml:space="preserve">
+    <value>settled, {0}</value>
+  </data>
+  <data name="StewardReportCloseCompleted" xml:space="preserve">
+    <value>Settle it fair and square</value>
+  </data>
+  <data name="StewardReportCloseNotPlanned" xml:space="preserve">
+    <value>Toss it overboard</value>
+  </data>
+  <data name="StewardReportReopen" xml:space="preserve">
+    <value>Haul it back up</value>
+  </data>
+  <data name="StewardReportCloseCompletedTitleFormat" xml:space="preserve">
+    <value>Settle {0} fair and square</value>
+  </data>
+  <data name="StewardReportCloseNotPlannedTitleFormat" xml:space="preserve">
+    <value>Toss {0} overboard</value>
+  </data>
+  <data name="StewardReportReopenTitleFormat" xml:space="preserve">
+    <value>Haul {0} back up</value>
+  </data>
+  <data name="StewardReportCommentEffect" xml:space="preserve">
+    <value>Borea nails yer words to the grievance.</value>
+  </data>
+  <data name="StewardReportCloseCompletedEffect" xml:space="preserve">
+    <value>Borea nails yer words to the grievance and settles it fair and square.</value>
+  </data>
+  <data name="StewardReportCloseNotPlannedEffect" xml:space="preserve">
+    <value>Borea nails yer words to the grievance and tosses it overboard.</value>
+  </data>
+  <data name="StewardReportReopenEffect" xml:space="preserve">
+    <value>Borea nails yer words to the grievance and hauls it back up. POLICY.md lets a steward haul a grievance back up on fresh evidence, so name it.</value>
+  </data>
+  <data name="StewardReportTextHint" xml:space="preserve">
+    <value>The one who raised the grievance and every crew member who follows it see these words on GitHub.</value>
+  </data>
+  <data name="StewardReportCommented" xml:space="preserve">
+    <value>GitHub has yer words.</value>
+  </data>
+  <data name="StewardReportClosed" xml:space="preserve">
+    <value>The grievance be settled.</value>
+  </data>
+  <data name="StewardReportReopened" xml:space="preserve">
+    <value>The grievance be back on deck.</value>
+  </data>
+  <data name="StewardReportRefusedClosed" xml:space="preserve">
+    <value>Some scallywag settled the grievance since Borea read it. Borea reads the grievances again.</value>
+  </data>
+  <data name="StewardReportRefusedOpen" xml:space="preserve">
+    <value>Some scallywag hauled the grievance back up since Borea read it. Borea reads the grievances again.</value>
+  </data>
+  <data name="StewardReportNotFound" xml:space="preserve">
+    <value>GitHub found no such grievance in KSAModding/content-index. Somebody moved or sank it.</value>
+  </data>
+  <data name="StewardReportNoIssuesPermission" xml:space="preserve">
+    <value>GitHub refused, maybe because the Borea App may not touch issues yet. Holler back on GitHub instead. Yer words stay here, so ye can copy them.</value>
   </data>
   <data name="StewardTabWatcher" xml:space="preserve">
     <value>Crow's nest</value>

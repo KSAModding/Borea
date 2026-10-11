@@ -33,7 +33,14 @@ public partial class MainViewModel
     [NotifyPropertyChangedFor(nameof(IsStewardActionOpen))]
     private PullRequestActionDialog? _stewardAction;
 
+    /// <summary>The open confirmation of an action on a report of the Reports tab, or null.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsStewardReportActionOpen))]
+    private ReportActionDialog? _stewardReportAction;
+
     public StewardPage StewardPage => _stewardPage ??= new StewardPage(this);
+
+    public bool IsStewardReportActionOpen => StewardReportAction is not null;
 
     public bool IsStewardChangeOpen => StewardChange is not null;
 
@@ -182,6 +189,30 @@ public partial class MainViewModel
             StewardAction = null;
     }
 
+    /// <summary>
+    /// Opens the confirmation of the action on the report. A close needs an open report and a reopen a closed one.
+    /// Another open confirmation stays until it is closed.
+    /// </summary>
+    internal void BeginReportAction(StewardReport report, ReportAction action)
+    {
+        var fits = action switch
+        {
+            ReportAction.Comment => true,
+            ReportAction.Reopen => report.Report.IsClosed,
+            _ => !report.Report.IsClosed,
+        };
+        if (StewardReportAction is not null || !StewardPage.Reports.CanWriteIssues || !fits)
+            return;
+
+        StewardReportAction = new ReportActionDialog(this, report, action);
+    }
+
+    internal void CloseReportAction(ReportActionDialog dialog)
+    {
+        if (ReferenceEquals(StewardReportAction, dialog))
+            StewardReportAction = null;
+    }
+
     /// <summary>The Status tab shows the new pull request, and its list conflicts once one of them merges.</summary>
     internal void OnIndexStatusPullRequestOpened()
     {
@@ -290,6 +321,13 @@ public partial class MainViewModel
         PullRequestRefusal.Verdict => Localization.StewardMergeNeedsVerdict,
         _ => Localization.StewardActionSkipReview,
     };
+
+    internal string ReportRefusalText(ReportRefusal refusal) =>
+        refusal == ReportRefusal.Closed ? Localization.StewardReportRefusedClosed : Localization.StewardReportRefusedOpen;
+
+    /// <summary>Why a comment, a close or a reopen of a report failed. A refusal of GitHub falls back to "Answer on GitHub" before this.</summary>
+    internal string StewardReportErrorText(StewardException exception) =>
+        exception.Failure == StewardFailure.NotFound ? Localization.StewardReportNotFound : StewardErrorText(exception);
 
     /// <summary>The repository without its owner and the number, such as "content-index #5".</summary>
     internal static string RepositoryNumberText(string repository, int number) =>
