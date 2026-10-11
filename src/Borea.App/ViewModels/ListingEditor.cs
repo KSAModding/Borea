@@ -292,6 +292,7 @@ public sealed partial class ListingEditor : ObservableObject
         FindDependencies();
         FillDeclared();
         RefreshDependencyHelp();
+        ResumeImageCheck();
 
         if (services.ListingValidator.SchemaOrigin != ListingSchemaOrigin.Downloaded)
         {
@@ -411,6 +412,7 @@ public sealed partial class ListingEditor : ObservableObject
             ArchiveText = null;
             Load(draft, text);
             OutputMessage = message;
+            CheckListedImages();
         }
         catch (OperationCanceledException) when (cancel.IsCancellationRequested)
         {
@@ -448,6 +450,7 @@ public sealed partial class ListingEditor : ObservableObject
     private void StartOver()
     {
         Cancel();
+        DropImageCheck();
         ForgetPullRequest();
         OutputMessage = null;
         SourceError = null;
@@ -583,22 +586,6 @@ public sealed partial class ListingEditor : ObservableObject
             row.Apply(ListingImageMeasurement.Of(file.Bytes, row.Role));
     }
 
-    internal async Task MeasureImageAsync(ListingImageRow row)
-    {
-        if (_owner.Services is not { } services)
-            return;
-
-        row.IsMeasuring = true;
-        try
-        {
-            row.Apply(await services.ListingImages.MeasureAsync(row.Url.Trim(), row.Role));
-        }
-        finally
-        {
-            row.IsMeasuring = false;
-        }
-    }
-
     private ListingDraft NewDraft() => new()
     {
         GameMin = ListingPrefill.DefaultGameMin(_owner.Services?.InstalledVersion.GetInstalledVersion()?.Version, _snapshot) ?? string.Empty,
@@ -610,6 +597,7 @@ public sealed partial class ListingEditor : ObservableObject
     internal void Load(ListingDraft draft, string? listedText = null, (string InstanceName, IReadOnlyList<ListingLeftOutMod> Mods)? fromInstance = null)
     {
         _tagProposal?.Cancel();
+        StopImageCheck();
         ForgetDeclared();
         _loading = true;
         try

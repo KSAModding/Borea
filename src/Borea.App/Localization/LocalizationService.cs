@@ -1850,6 +1850,18 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string ListingMeasure => Resources.ListingMeasure;
 
+    public string ListingMeasureHint => Resources.ListingMeasureHint;
+
+    public string ListingImageChangedOnlySha => Resources.ListingImageChangedOnlySha;
+
+    public string ListingImageUseNew => Resources.ListingImageUseNew;
+
+    public string ListingImageUseNewHint => Resources.ListingImageUseNewHint;
+
+    public string ListingImageUseCommit => Resources.ListingImageUseCommit;
+
+    public string ListingImageBranchUnnamed => Resources.ListingImageBranchUnnamed;
+
     public string ListingImageFileType => Resources.ListingImageFileType;
 
     public string ListingImageLicense => Resources.ListingImageLicense;
@@ -2770,6 +2782,27 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string FormatListingImageFacts(string width, string height, string size)
         => string.Format(CultureInfo.CurrentCulture, Resources.ListingImageFactsFormat, width, height, size);
+
+    public string FormatListingImageChanged(string changes)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ListingImageChangedFormat, changes);
+
+    public string FormatListingImageChangedPixels(string width, string height, string newWidth, string newHeight)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ListingImageChangedPixelsFormat, width, height, newWidth, newHeight);
+
+    public string FormatListingImageChangedBytes(string size, string newSize)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ListingImageChangedBytesFormat, size, newSize);
+
+    public string FormatListingImageCheckFailed(string problem)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ListingImageCheckFailedFormat, problem);
+
+    public string FormatListingImageNoLongerFits(string problem)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ListingImageNoLongerFitsFormat, problem);
+
+    public string FormatListingImageBranch(string branch)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ListingImageBranchFormat, branch);
+
+    public string FormatListingImageCommitAddress(string url)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ListingImageCommitAddressFormat, url);
 
     public string FormatListingSpaceDockNotNumber(string value)
         => string.Format(CultureInfo.CurrentCulture, Resources.ListingSpaceDockNotNumberFormat, value);

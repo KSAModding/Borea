@@ -67,7 +67,24 @@
                         <Button Classes="text" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ListingChooseFile}" Command="{Binding ChooseFileCommand}" />
                         <Button Classes="text" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ListingMeasure}" Command="{Binding MeasureCommand}" />
                     </WrapPanel>
+                    <TextBlock Classes="body-sm secondary" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ListingMeasureHint}" TextWrapping="Wrap" />
                     <TextBlock Classes="body-sm danger" Text="{Binding Problem}" TextWrapping="Wrap" IsVisible="{Binding Problem, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                    <!-- what the check of a listed listing found at the address -->
+                    <StackPanel Spacing="4" IsVisible="{Binding HasChange}">
+                        <TextBlock Classes="body-sm danger" Text="{Binding ChangeText}" TextWrapping="Wrap" />
+                        <Button Classes="link" Command="{Binding UseNewImageCommand}" HorizontalAlignment="Left" ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ListingImageUseNewHint}">
+                            <TextBlock Classes="action-md" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ListingImageUseNew}" />
+                        </Button>
+                    </StackPanel>
+                    <TextBlock Classes="body-sm danger" Text="{Binding NoLongerFitsText}" TextWrapping="Wrap" IsVisible="{Binding HasNoLongerFits}" />
+                    <TextBlock Classes="body-sm secondary" Text="{Binding CheckProblemText}" TextWrapping="Wrap" IsVisible="{Binding HasCheckProblem}" />
+                    <StackPanel Spacing="4" IsVisible="{Binding HasBranchNote}">
+                        <TextBlock Classes="body-sm secondary" Text="{Binding BranchNote}" TextWrapping="Wrap" />
+                        <TextBlock Classes="body-sm secondary" Text="{Binding CommitText}" TextWrapping="Wrap" IsVisible="{Binding HasCommitUrl}" />
+                        <Button Classes="link" Command="{Binding UseCommitAddressCommand}" HorizontalAlignment="Left" IsVisible="{Binding HasCommitUrl}">
+                            <TextBlock Classes="action-md" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ListingImageUseCommit}" />
+                        </Button>
+                    </StackPanel>
                     <TextBlock Classes="heading-sm" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ListingImageLicense}" Margin="0,6,0,0" />
                     <TextBox Classes="field" Text="{Binding License}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ListingImageLicense}" />
                     <TextBlock Classes="heading-sm" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ListingImageAttribution}" />

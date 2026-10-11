@@ -314,7 +314,8 @@ public sealed partial class ListingDeclaredDependencyRow : ObservableObject
 
 /// <summary>
 /// The icon or one description image. Measuring a local file or the hosted image fills in the facts of the record;
-/// for a local file the author gives the HTTPS address where it is or will be hosted.
+/// for a local file the author gives the HTTPS address where it is or will be hosted. For a listed listing, the row also shows
+/// whether the image at the address still has the facts of the record, and an address on a branch offers its commit address.
 /// </summary>
 public sealed partial class ListingImageRow : ObservableObject
 {
@@ -343,6 +344,7 @@ public sealed partial class ListingImageRow : ObservableObject
     private string _id;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(BranchNote), nameof(HasBranchNote))]
     private string _url;
 
     [ObservableProperty]
@@ -380,14 +382,83 @@ public sealed partial class ListingImageRow : ObservableObject
 
     public bool IsMeasured => Sha256 is not null;
 
+    /// <summary>The address whose check result the row shows, or null.</summary>
+    private string? _checkedUrl;
+
+    /// <summary>The address the branch was found for, or null.</summary>
+    private string? _branchUrl;
+
+    /// <summary>Whether the check of a listed listing still has to read the image.</summary>
+    internal bool AwaitsCheck { get; set; }
+
+    /// <summary>What the image at the address measured when it differs from the record, or null.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ChangeText), nameof(HasChange))]
+    [NotifyCanExecuteChangedFor(nameof(UseNewImageCommand))]
+    private ListingImageMeasurement? _found;
+
+    /// <summary>What changed, such as "1920 x 1080 px is now 1280 x 720 px".</summary>
+    public string? ChangeText => Found is { } found ? _owner.ImageChangeText(this, found) : null;
+
+    public bool HasChange => Found is not null;
+
+    /// <summary>The failed read of the check, or null. Neither kind of failure blocks the listing.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CheckProblemText), nameof(HasCheckProblem), nameof(NoLongerFitsText), nameof(HasNoLongerFits))]
+    private ListingImageMeasurement? _checkFailure;
+
+    /// <summary>Why the check could not read the image, such as a host that did not answer, so a later try can work.</summary>
+    public string? CheckProblemText => CheckFailure is { IsUnavailable: true, Problem: { } problem } ? _owner.ImageCheckProblemText(problem) : null;
+
+    public bool HasCheckProblem => CheckProblemText is not null;
+
+    /// <summary>Why the checks of the index would now reject the image at the address, such as a missing file or a size above the cap.</summary>
+    public string? NoLongerFitsText => CheckFailure is { IsUnavailable: false, Problem: { } problem } ? _owner.ImageNoLongerFitsText(problem) : null;
+
+    public bool HasNoLongerFits => NoLongerFitsText is not null;
+
+    /// <summary>The branch that GitHub confirmed for the address, with the commit address when Borea found one.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(BranchNote), nameof(HasBranchNote), nameof(CommitUrl), nameof(CommitText), nameof(HasCommitUrl))]
+    [NotifyCanExecuteChangedFor(nameof(UseCommitAddressCommand))]
+    private ListingImageBranch? _branch;
+
+    /// <summary>
+    /// The note that the file at a branch address can change. A refs/heads/ address gets it before GitHub answers, and names the branch
+    /// only when the address can name one branch.
+    /// </summary>
+    public string? BranchNote => Branch is { } branch
+        ? _owner.ImageBranchNote(branch.Branch)
+        : GitHubBranchAddress.Of(Url) is { IsSure: true } address ? _owner.ImageBranchNote(address.CertainBranch) : null;
+
+    public bool HasBranchNote => BranchNote is not null;
+
+    /// <summary>The address of the same bytes at the commit the branch points to, or null.</summary>
+    public string? CommitUrl => Branch?.CommitUrl;
+
+    public string? CommitText => CommitUrl is { } url ? _owner.ImageCommitText(url) : null;
+
+    public bool HasCommitUrl => CommitUrl is not null;
+
     /// <summary>The pixel size and the byte size, such as "512 x 512 px, 150,604 bytes".</summary>
     public string FactsText => IsMeasured ? _owner.ImageFacts(Width, Height, Size) : _owner.ImageNotMeasured;
 
-    internal void RefreshText() => OnPropertyChanged(nameof(FactsText));
+    internal void RefreshText()
+    {
+        OnPropertyChanged(nameof(FactsText));
+        OnPropertyChanged(nameof(ChangeText));
+        OnPropertyChanged(nameof(CheckProblemText));
+        OnPropertyChanged(nameof(NoLongerFitsText));
+        OnPropertyChanged(nameof(BranchNote));
+        OnPropertyChanged(nameof(CommitText));
+    }
 
     internal void Apply(ListingImageMeasurement measurement)
     {
         var measured = measurement.IsMeasured;
+        AwaitsCheck = false;
+        Found = null;
+        CheckFailure = null;
         Problem = measurement.Problem;
         Width = measured ? measurement.Width : null;
         Height = measured ? measurement.Height : null;
@@ -407,6 +478,53 @@ public sealed partial class ListingImageRow : ObservableObject
         Source = Empty(Source),
     };
 
+    /// <summary>Takes what the check read at <paramref name="url"/>, unless the author changed the address since.</summary>
+    internal void Checked(string url, ListingImageMeasurement measurement)
+    {
+        if (Url.Trim() != url)
+            return;
+
+        AwaitsCheck = false;
+        _checkedUrl = url;
+        CheckFailure = measurement.IsMeasured ? null : measurement;
+        Found = measurement.IsMeasured && !Matches(measurement) ? measurement : null;
+    }
+
+    /// <summary>Takes the branch that GitHub confirmed for <paramref name="url"/>, unless the author changed the address since.</summary>
+    internal void FoundBranch(string url, ListingImageBranch? branch)
+    {
+        if (Url.Trim() != url)
+            return;
+
+        _branchUrl = url;
+        Branch = branch;
+    }
+
+    private bool Matches(ListingImageMeasurement measurement) =>
+        string.Equals(Sha256, measurement.Sha256, StringComparison.OrdinalIgnoreCase)
+        && Width == measurement.Width
+        && Height == measurement.Height
+        && Size == measurement.Size;
+
+    [RelayCommand(CanExecute = nameof(HasChange))]
+    private void UseNewImage()
+    {
+        if (Found is { } found)
+            Apply(found);
+    }
+
+    /// <summary>Writes the commit address into the field. The file there has the bytes the check read, so its result stays.</summary>
+    [RelayCommand(CanExecute = nameof(HasCommitUrl))]
+    private void UseCommitAddress()
+    {
+        if (CommitUrl is not { } commit)
+            return;
+
+        if (_checkedUrl is not null)
+            _checkedUrl = commit;
+        Url = commit;
+    }
+
     [RelayCommand]
     private Task ChooseFileAsync() => _owner.PickImageFileAsync(this);
 
@@ -420,7 +538,25 @@ public sealed partial class ListingImageRow : ObservableObject
 
     partial void OnIdChanged(string value) => _owner.Refresh();
 
-    partial void OnUrlChanged(string value) => _owner.Refresh();
+    partial void OnUrlChanged(string value)
+    {
+        var url = value.Trim();
+        if (_checkedUrl is not null && url != _checkedUrl)
+        {
+            _checkedUrl = null;
+            Found = null;
+            CheckFailure = null;
+        }
+
+        if (_branchUrl is not null && url != _branchUrl)
+        {
+            _branchUrl = null;
+            Branch = null;
+        }
+
+        AwaitsCheck = false;
+        _owner.Refresh();
+    }
 
     partial void OnSha256Changed(string? value) => _owner.Refresh();
 

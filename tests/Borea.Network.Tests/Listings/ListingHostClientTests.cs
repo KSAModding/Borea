@@ -2,6 +2,7 @@ using System.Buffers.Binary;
 using System.Net;
 using System.Text;
 using Borea.Core.Listings;
+using Borea.Network.GitHub;
 using Borea.Network.Listings;
 
 namespace Borea.Network.Tests.Listings;
@@ -321,7 +322,7 @@ public sealed class ListingHostClientTests
     public async Task MeasureAsync_HostedImage_IsMeasuredFromItsBytes()
     {
         var bytes = Png(512, 512);
-        using var measurer = new ListingImageMeasurer(new FakeHttpMessageHandler(_ => Task.FromResult(FakeHttpMessageHandler.ByteResponse(bytes))), TimeSpan.FromSeconds(30));
+        using var measurer = Measurer(_ => FakeHttpMessageHandler.ByteResponse(bytes), out _);
 
         var measurement = await measurer.MeasureAsync("https://example.com/icon.png", ListingImageRole.Icon);
 
@@ -335,12 +336,233 @@ public sealed class ListingHostClientTests
     [InlineData("https://example.com/missing.png", "answered HTTP 404")]
     public async Task MeasureAsync_UrlThatGivesNoImage_SaysWhy(string url, string expected)
     {
-        using var measurer = new ListingImageMeasurer(new FakeHttpMessageHandler(_ => Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound))), TimeSpan.FromSeconds(30));
+        using var measurer = Measurer(_ => new HttpResponseMessage(HttpStatusCode.NotFound), out _);
 
         var measurement = await measurer.MeasureAsync(url, ListingImageRole.Icon);
 
         Assert.False(measurement.IsMeasured);
+        Assert.False(measurement.IsUnavailable);
         Assert.Contains(expected, measurement.Problem);
+    }
+
+    [Fact]
+    public async Task MeasureAsync_HostThatFails_IsUnavailable()
+    {
+        using var measurer = Measurer(_ => new HttpResponseMessage(HttpStatusCode.ServiceUnavailable), out _);
+
+        var measurement = await measurer.MeasureAsync("https://example.com/icon.png", ListingImageRole.Icon);
+
+        Assert.True(measurement.IsUnavailable);
+        Assert.Contains("answered HTTP 503", measurement.Problem);
+    }
+
+    [Theory]
+    [InlineData("https://raw.githubusercontent.com/alice/KSA-Mod/refs/heads/main/images/hero.png")]
+    [InlineData("https://raw.githubusercontent.com/alice/KSA-Mod/main/images/hero.png")]
+    public async Task CheckAsync_BranchAddress_ReadsOnlyTheFilesAtTheCommitAndAsksForTheBranchOnce(string url)
+    {
+        var bytes = Png(1280, 720);
+        var otherUrl = url.Replace("hero.png", "other.png", StringComparison.Ordinal);
+        var otherCommitImage = CommitImage.Replace("hero.png", "other.png", StringComparison.Ordinal);
+        using var measurer = Measurer(request => request.RequestUri!.AbsoluteUri switch
+        {
+            BranchApi => FakeHttpMessageHandler.JsonResponse($$$"""{"name":"main","commit":{"sha":"{{{Commit}}}"}}"""),
+            CommitImage => FakeHttpMessageHandler.ByteResponse(bytes),
+            _ when request.RequestUri!.AbsoluteUri == otherCommitImage => FakeHttpMessageHandler.ByteResponse(bytes),
+            _ => new HttpResponseMessage(HttpStatusCode.NotFound),
+        }, out var sent);
+
+        var hero = await measurer.CheckAsync(url, ListingImageRole.Description);
+        var other = await measurer.CheckAsync(otherUrl, ListingImageRole.Description);
+
+        Assert.Equal(ListingImageMeasurement.Of(bytes, ListingImageRole.Description), hero.Measurement);
+        Assert.Equal(new ListingImageBranch("main", CommitImage), hero.Branch);
+        Assert.Equal(new ListingImageBranch("main", otherCommitImage), other.Branch);
+        Assert.Equal([BranchApi, CommitImage, otherCommitImage], sent.Select(request => request.Url));
+        Assert.All(sent, request => Assert.Null(request.Authorization));
+    }
+
+    [Theory]
+    [InlineData("https://raw.githubusercontent.com/alice/KSA-Mod/main/images/hero.png", false)]
+    [InlineData("https://raw.githubusercontent.com/alice/KSA-Mod/refs/heads/main/hero.png", true)]
+    public async Task CheckAsync_BranchThatGitHubDoesNotConfirm_ReadsTheAddressItself(string url, bool isSure)
+    {
+        var bytes = Png(1280, 720);
+        using var measurer = Measurer(request => request.RequestUri!.AbsoluteUri == url
+            ? FakeHttpMessageHandler.ByteResponse(bytes)
+            : new HttpResponseMessage(HttpStatusCode.NotFound), out var sent);
+
+        var check = await measurer.CheckAsync(url, ListingImageRole.Description);
+
+        Assert.True(check.Measurement.IsMeasured);
+        Assert.Equal(isSure ? new ListingImageBranch("main", null) : null, check.Branch);
+        Assert.Equal([BranchApi, url], sent.Select(request => request.Url));
+    }
+
+    [Fact]
+    public async Task CheckAsync_AddressOnNoBranch_ReadsOnlyTheAddress()
+    {
+        const string Url = "https://example.com/images/hero.png";
+        using var measurer = Measurer(_ => new HttpResponseMessage(HttpStatusCode.NotFound), out var sent);
+
+        var check = await measurer.CheckAsync(Url, ListingImageRole.Description);
+
+        Assert.Null(check.Branch);
+        Assert.False(check.Measurement.IsUnavailable);
+        Assert.Equal([Url], sent.Select(request => request.Url));
+    }
+
+    [Fact]
+    public async Task FindCommitAddressAsync_BranchMovedWithinTheMinuteOfACheck_FindsTheNewCommit()
+    {
+        const string NewCommit = "fedcba9876543210fedcba9876543210fedcba98";
+        var newCommitImage = CommitImage.Replace(Commit, NewCommit, StringComparison.Ordinal);
+        var oldBytes = Png(1920, 1080);
+        var newBytes = Png(1280, 720);
+        var pushed = false;
+        using var measurer = Measurer(request => request.RequestUri!.AbsoluteUri switch
+        {
+            BranchApi => FakeHttpMessageHandler.JsonResponse($$$"""{"name":"main","commit":{"sha":"{{{(pushed ? NewCommit : Commit)}}}"}}"""),
+            CommitImage => FakeHttpMessageHandler.ByteResponse(oldBytes),
+            _ when request.RequestUri!.AbsoluteUri == newCommitImage => FakeHttpMessageHandler.ByteResponse(newBytes),
+            _ => new HttpResponseMessage(HttpStatusCode.NotFound),
+        }, out var sent, new FakeTimeProvider());
+
+        await measurer.CheckAsync(BranchImage, ListingImageRole.Description);
+        pushed = true;
+        var branch = await measurer.FindCommitAddressAsync(BranchImage, ListingImageRole.Description, ListingImageMeasurement.Of(newBytes, ListingImageRole.Description).Sha256!);
+
+        Assert.Equal(new ListingImageBranch("main", newCommitImage), branch);
+        Assert.Equal([BranchApi, CommitImage, BranchApi, newCommitImage], sent.Select(request => request.Url));
+    }
+
+    [Theory]
+    [InlineData("https://raw.githubusercontent.com/alice/KSA-Mod/refs/heads/main/images/hero.png")]
+    [InlineData("https://raw.githubusercontent.com/alice/KSA-Mod/main/images/hero.png")]
+    public async Task FindCommitAddressAsync_BranchAddress_GivesTheCommitAddressOfTheSameBytes(string url)
+    {
+        var bytes = Png(1280, 720);
+        var sha256 = ListingImageMeasurement.Of(bytes, ListingImageRole.Description).Sha256!;
+        using var measurer = Measurer(request => request.RequestUri!.AbsoluteUri switch
+        {
+            BranchApi => FakeHttpMessageHandler.JsonResponse($$$"""{"name":"main","commit":{"sha":"{{{Commit}}}"}}"""),
+            CommitImage => FakeHttpMessageHandler.ByteResponse(bytes),
+            _ => new HttpResponseMessage(HttpStatusCode.NotFound),
+        }, out var sent);
+
+        var first = await measurer.FindCommitAddressAsync(url, ListingImageRole.Description, sha256);
+        var second = await measurer.FindCommitAddressAsync(url, ListingImageRole.Description, sha256.ToUpperInvariant());
+
+        Assert.Equal(new ListingImageBranch("main", CommitImage), first);
+        Assert.Equal(first, second);
+        Assert.Equal([BranchApi, CommitImage, BranchApi, CommitImage], sent.Select(request => request.Url));
+        Assert.All(sent, request => Assert.Null(request.Authorization));
+    }
+
+    [Fact]
+    public async Task FindCommitAddressAsync_OtherBytesAtTheCommit_NamesTheBranchWithoutAnAddress()
+    {
+        using var measurer = Measurer(request => request.RequestUri!.AbsoluteUri == BranchApi
+            ? FakeHttpMessageHandler.JsonResponse($$$"""{"name":"main","commit":{"sha":"{{{Commit}}}"}}""")
+            : FakeHttpMessageHandler.ByteResponse(Png(1920, 1080)), out _);
+
+        var branch = await measurer.FindCommitAddressAsync(BranchImage, ListingImageRole.Description, ListingImageMeasurement.Of(Png(1280, 720), ListingImageRole.Description).Sha256!);
+
+        Assert.Equal(new ListingImageBranch("main", null), branch);
+    }
+
+    [Theory]
+    [InlineData("https://raw.githubusercontent.com/alice/KSA-Mod/v1.0/images/hero.png", false, null, new[] { "v1.0" })]
+    [InlineData("https://raw.githubusercontent.com/alice/KSA-Mod/refs/heads/v1.0/hero.png", true, "v1.0", new[] { "v1.0" })]
+    [InlineData("https://raw.githubusercontent.com/alice/KSA-Mod/refs/heads/v1.0/images/hero.png", true, null, new[] { "v1.0", "v1.0/images" })]
+    [InlineData("https://raw.githubusercontent.com/alice/KSA-Mod/refs/heads/a/b/c/d/e/hero.png", true, null, new[] { "a", "a/b", "a/b/c" })]
+    public async Task FindCommitAddressAsync_NoSuchBranch_NamesOnlyACertainBranch(string url, bool isBranch, string? branch, string[] asked)
+    {
+        using var measurer = Measurer(_ => new HttpResponseMessage(HttpStatusCode.NotFound), out var sent);
+
+        var found = await measurer.FindCommitAddressAsync(url, ListingImageRole.Description, new string('a', 64));
+
+        Assert.Equal(isBranch ? new ListingImageBranch(branch, null) : null, found);
+        Assert.Equal(asked.Select(name => $"https://api.github.com/repos/alice/KSA-Mod/branches/{name}"), sent.Select(request => request.Url));
+    }
+
+    [Fact]
+    public async Task FindCommitAddressAsync_BranchNameWithASlash_IsFoundByTheLongerName()
+    {
+        const string Url = "https://raw.githubusercontent.com/alice/KSA-Mod/refs/heads/release/1.0/images/hero.png";
+        const string ReleaseApi = "https://api.github.com/repos/alice/KSA-Mod/branches/release/1.0";
+        var bytes = Png(1280, 720);
+        using var measurer = Measurer(request => request.RequestUri!.AbsoluteUri switch
+        {
+            ReleaseApi => FakeHttpMessageHandler.JsonResponse($$$"""{"name":"release/1.0","commit":{"sha":"{{{Commit}}}"}}"""),
+            CommitImage => FakeHttpMessageHandler.ByteResponse(bytes),
+            _ => new HttpResponseMessage(HttpStatusCode.NotFound),
+        }, out var sent);
+
+        var found = await measurer.FindCommitAddressAsync(Url, ListingImageRole.Description, ListingImageMeasurement.Of(bytes, ListingImageRole.Description).Sha256!);
+
+        Assert.Equal(new ListingImageBranch("release/1.0", CommitImage), found);
+        Assert.Equal(["https://api.github.com/repos/alice/KSA-Mod/branches/release", ReleaseApi, CommitImage], sent.Select(request => request.Url));
+    }
+
+    [Fact]
+    public async Task FindCommitAddressAsync_RateLimited_AsksGitHubAgainOnlyAfterTheReset()
+    {
+        var time = new FakeTimeProvider();
+        var reset = time.UtcNow.AddMinutes(10);
+        using var measurer = Measurer(_ =>
+        {
+            var response = new HttpResponseMessage(HttpStatusCode.Forbidden) { Content = new StringContent("""{"message":"API rate limit exceeded."}""") };
+            response.Headers.Add("x-ratelimit-remaining", "0");
+            response.Headers.Add("x-ratelimit-reset", reset.ToUnixTimeSeconds().ToString(System.Globalization.CultureInfo.InvariantCulture));
+            return response;
+        }, out var sent, time);
+
+        var first = await measurer.FindCommitAddressAsync(BranchImage, ListingImageRole.Description, new string('a', 64));
+        time.UtcNow = time.UtcNow.AddMinutes(5);
+        var second = await measurer.FindCommitAddressAsync(BranchImage.Replace("/main/", "/dev/", StringComparison.Ordinal), ListingImageRole.Description, new string('a', 64));
+        time.UtcNow = reset.AddSeconds(1);
+        await measurer.FindCommitAddressAsync(BranchImage, ListingImageRole.Description, new string('a', 64));
+
+        Assert.Equal(new ListingImageBranch(null, null), first);
+        Assert.Equal(new ListingImageBranch(null, null), second);
+        Assert.Equal([BranchApi, BranchApi], sent.Select(request => request.Url));
+    }
+
+    [Theory]
+    [InlineData("https://example.com/images/hero.png")]
+    [InlineData("https://raw.githubusercontent.com/alice/KSA-Mod/0123456789abcdef0123456789abcdef01234567/images/hero.png")]
+    [InlineData("https://raw.githubusercontent.com/alice/KSA-Mod/refs/tags/v1.0/images/hero.png")]
+    public async Task FindCommitAddressAsync_AddressOnNoBranch_AsksNothing(string url)
+    {
+        using var measurer = Measurer(_ => new HttpResponseMessage(HttpStatusCode.NotFound), out var sent);
+
+        Assert.Null(await measurer.FindCommitAddressAsync(url, ListingImageRole.Description, new string('a', 64)));
+        Assert.Empty(sent);
+    }
+
+    private const string Commit = "0123456789abcdef0123456789abcdef01234567";
+
+    private const string BranchImage = "https://raw.githubusercontent.com/alice/KSA-Mod/refs/heads/main/images/hero.png";
+
+    private const string BranchApi = "https://api.github.com/repos/alice/KSA-Mod/branches/main";
+
+    private const string CommitImage = $"https://raw.githubusercontent.com/alice/KSA-Mod/{Commit}/images/hero.png";
+
+    /// <summary>A measurer whose image fetches and GitHub requests both go to <paramref name="respond"/>, which records them.</summary>
+    private static ListingImageMeasurer Measurer(Func<HttpRequestMessage, HttpResponseMessage> respond, out List<(string Url, string? Authorization)> sent, TimeProvider? time = null)
+    {
+        var requests = new List<(string Url, string? Authorization)>();
+        sent = requests;
+        HttpResponseMessage Record(HttpRequestMessage request)
+        {
+            lock (requests)
+                requests.Add((request.RequestUri!.AbsoluteUri, request.Headers.Authorization?.ToString()));
+            return respond(request);
+        }
+
+        var api = FakeHttpMessageHandler.BuildClient(Record, out _);
+        return new ListingImageMeasurer(new FakeHttpMessageHandler(request => Task.FromResult(Record(request))), TimeSpan.FromSeconds(30), new GitHubSession(api, "client", "slug"), api, time);
     }
 
     private static byte[] Png(int width, int height)

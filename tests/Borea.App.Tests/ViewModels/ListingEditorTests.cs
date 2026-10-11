@@ -1798,7 +1798,7 @@ public sealed class ListingEditorTests
         return stream.ToArray();
     }
 
-    private static byte[] Png(int width, int height)
+    internal static byte[] Png(int width, int height)
     {
         var header = new byte[13];
         BinaryPrimitives.WriteUInt32BigEndian(header, (uint)width);

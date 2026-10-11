@@ -351,6 +351,7 @@ public sealed partial class ListingEditor
     internal void Leave()
     {
         Cancel();
+        StopImageCheck();
         StopFollowing();
         StopOwnershipCheck();
         DropDescriptionPreviewImages();
