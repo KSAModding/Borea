@@ -1,3 +1,4 @@
+using System.Globalization;
 using Borea.App.ViewModels;
 using Borea.Core.Game;
 using Borea.Core.Instances;
@@ -370,5 +371,57 @@ public sealed class ContentViewModelTests
         var labels = viewModel.ContentLinks.Select(link => link.Label).ToList();
         Assert.Contains(harness.Localization.LinkHomepage, labels);
         Assert.Contains("Wiki", labels);
+    }
+
+    [Fact]
+    public async Task Versions_ShowTheDownloadsOfEachRelease_SplitByHostInTheToolTip()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: WithReleaseDownloads);
+        var viewModel = harness.ViewModel;
+        await viewModel.EnsureDiscoverLoadedAsync();
+        await viewModel.DiscoverItems.Single(item => item.ModId == "AdvancedFlightComputer").OpenCommand.ExecuteAsync(null);
+
+        await viewModel.ShowContentVersionsCommand.ExecuteAsync(null);
+
+        var rows = viewModel.ContentVersions.ToDictionary(row => row.Version);
+        Assert.Equal("58", rows["0.7.5"].DownloadsText);
+        Assert.Equal("GitHub 49, SpaceDock 9", rows["0.7.5"].DownloadsToolTip);
+        Assert.Equal(MainViewModel.CompactCount(1503), rows["0.7.4"].DownloadsText);
+        Assert.Equal($"Codeberg 3, GitHub {1500.ToString("N0", CultureInfo.CurrentCulture)}", rows["0.7.4"].DownloadsToolTip);
+        Assert.Equal("58", viewModel.LatestVersion!.DownloadsText);
+    }
+
+    [Fact]
+    public async Task Versions_ReleaseWithoutACount_ShowsNoDownloadsAndNotZero()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: WithReleaseDownloads);
+        var viewModel = harness.ViewModel;
+        await viewModel.EnsureDiscoverLoadedAsync();
+        await viewModel.DiscoverItems.Single(item => item.ModId == "AdvancedFlightComputer").OpenCommand.ExecuteAsync(null);
+        await viewModel.ShowContentVersionsCommand.ExecuteAsync(null);
+        var afcUnknown = viewModel.ContentVersions.Where(row => row.Version is "0.7.3" or "0.7.2").ToList();
+
+        await viewModel.DiscoverItems.Single(item => item.ModId == "MeasureTools").OpenCommand.ExecuteAsync(null);
+        await viewModel.ShowContentVersionsCommand.ExecuteAsync(null);
+
+        Assert.Equal(2, afcUnknown.Count);
+        Assert.NotEmpty(viewModel.ContentVersions);
+        Assert.All(afcUnknown.Concat(viewModel.ContentVersions), row =>
+        {
+            Assert.Null(row.DownloadsText);
+            Assert.Null(row.DownloadsToolTip);
+        });
+    }
+
+    /// <summary>Gives two releases of AdvancedFlightComputer a download count; 0.7.3 and 0.7.2 and every other listing keep none.</summary>
+    internal static string WithReleaseDownloads(string json)
+    {
+        const string marker = "\"id\": \"AdvancedFlightComputer\",";
+        var at = json.IndexOf(marker, StringComparison.Ordinal) + marker.Length;
+        return json.Insert(at, """
+             "downloads": { "total": 1561, "hosts": { "codeberg": 3, "github": 1549, "spacedock": 9 }, "releases": [
+               { "version": "0.7.5", "total": 58, "hosts": { "github": 49, "spacedock": 9 } },
+               { "version": "0.7.4", "total": 1503, "hosts": { "codeberg": 3, "github": 1500 } } ] },
+            """);
     }
 }

@@ -752,7 +752,10 @@ public sealed partial class DiscoverItem : ObservableObject, IInstallRow
     internal ContentImages? Images { get; }
 
     /// <summary>The download count the content index reports, or null when it reports none.</summary>
-    public long? Downloads { get; }
+    public long? Downloads => DownloadCounts?.Total;
+
+    /// <summary>The download counts of the listing and its releases, or null when the index reports none.</summary>
+    internal ListingDownloadCounts? DownloadCounts { get; }
 
     /// <summary>The count as the row shows it, "1.2k". The exact number is <see cref="DownloadsExactText"/>.</summary>
     public string? DownloadsText => Downloads is { } count ? MainViewModel.CompactCount(count) : null;
@@ -928,7 +931,7 @@ public sealed partial class DiscoverItem : ObservableObject, IInstallRow
         AllTags = DisplayTags(owner, listing.Type, listing.Tags);
         Images = indexEntry?.Images;
         Icon = owner.IconFor(Images?.Icon);
-        Downloads = indexEntry?.Downloads?.Total;
+        DownloadCounts = indexEntry?.Downloads;
         PublishedAt = indexEntry?.PublishedAt;
         _isFavorite = owner.IsFavoriteMod(listing.ModId);
     }

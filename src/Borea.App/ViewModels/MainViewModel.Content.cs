@@ -1,11 +1,13 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Borea.Core.Game;
+using Borea.Core.Index;
 using Borea.Core.Mods;
 using Borea.Core.Planning;
 using Borea.Core.Stewardship;
@@ -108,6 +110,9 @@ public partial class MainViewModel
     private ReleaseChannelOption? _versionFilter;
 
     public string ContentVersionsEmptyText => _contentReleases.Count > 0 ? Localization.ContentNoVersionsInChannel : Localization.ContentNoVersions;
+
+    /// <summary>True when the index reports a count for any release of the listing. The Versions table shows its Downloads column only then.</summary>
+    public bool HasVersionDownloads => _contentReleases.Any(release => release.HasDownloads);
 
     public bool HasContentLinks => ContentLinks.Count > 0;
 
@@ -305,7 +310,7 @@ public partial class MainViewModel
 
             var release = await _services.Mods.GetLatestReleaseAsync(item.ModId);
             if (ReferenceEquals(SelectedContent, item))
-                LatestVersion = release is null ? null : new VersionItem(this, release);
+                LatestVersion = release is null ? null : new VersionItem(this, release, item.DownloadCounts?.FindRelease(release.Version));
         }
         catch (Exception exception) when (exception is HttpRequestException or IOException or InvalidOperationException or TaskCanceledException)
         {
@@ -331,6 +336,14 @@ public partial class MainViewModel
         "homepage" => Localization.LinkHomepage,
         "discussions" => Localization.LinkDiscussions,
         _ => key.Length == 0 ? key : char.ToUpperInvariant(key[0]) + key[1..],
+    };
+
+    /// <summary>The name of a download host key of RFC 0052; a key that Borea does not know gets a capital first letter.</summary>
+    internal static string DownloadHostName(string key) => key.ToLowerInvariant() switch
+    {
+        "github" => "GitHub",
+        "spacedock" => "SpaceDock",
+        _ => char.ToUpperInvariant(key[0]) + key[1..],
     };
 
     /// <summary>Fills the links of a detail panel in the order of #8.</summary>
@@ -374,6 +387,7 @@ public partial class MainViewModel
         foreach (var release in _contentReleases.Where(release => VersionFilter is null || VersionFilter.Channel.Includes(release.Status)))
             ContentVersions.Add(release);
         OnPropertyChanged(nameof(ContentVersionsEmptyText));
+        OnPropertyChanged(nameof(HasVersionDownloads));
     }
 
     [RelayCommand]
@@ -398,7 +412,7 @@ public partial class MainViewModel
         IsLoadingVersions = true;
         try
         {
-            var releases = (await _services.Mods.GetReleaseHistoryAsync(item.ModId)).Select(release => new VersionItem(this, release)).ToList();
+            var releases = (await _services.Mods.GetReleaseHistoryAsync(item.ModId)).Select(release => new VersionItem(this, release, item.DownloadCounts?.FindRelease(release.Version))).ToList();
 
             if (ReferenceEquals(SelectedContent, item))
             {
@@ -548,6 +562,7 @@ public sealed partial class VersionItem : ObservableObject, IInstallRow
 {
     private readonly MainViewModel _owner;
     private readonly ModVersionMetadata _release;
+    private readonly ReleaseDownloadCounts? _downloads;
 
     internal string ModId => _release.ModId;
 
@@ -609,6 +624,16 @@ public sealed partial class VersionItem : ObservableObject, IInstallRow
     public string? DownloadSizeText => _release.Download.SizeBytes is { } size ? MainViewModel.SizeText(size) : null;
 
     public string PublishedDateText => MainViewModel.DateText(_release.ReleaseDate);
+
+    internal bool HasDownloads => _downloads is not null;
+
+    /// <summary>The download count as the row shows it, "1.2k", or null when the index reports none, which means unknown and not zero.</summary>
+    public string? DownloadsText => _downloads is { } counts ? MainViewModel.CompactCount(counts.Total) : null;
+
+    /// <summary>The exact count of each host, for example "GitHub 49, SpaceDock 9", or null when the index reports none.</summary>
+    public string? DownloadsToolTip => _downloads is { } counts
+        ? string.Join(", ", counts.Hosts.Select(host => $"{MainViewModel.DownloadHostName(host.Key)} {host.Value.ToString("N0", CultureInfo.CurrentCulture)}"))
+        : null;
 
     [ObservableProperty]
     private bool _isInstalling;
@@ -674,10 +699,12 @@ public sealed partial class VersionItem : ObservableObject, IInstallRow
     [ObservableProperty]
     private bool _isChangelogExpanded;
 
-    public VersionItem(MainViewModel owner, ModVersionMetadata release)
+    /// <param name="downloads">The download counts the index reports for this release, or null when they are unknown.</param>
+    public VersionItem(MainViewModel owner, ModVersionMetadata release, ReleaseDownloadCounts? downloads = null)
     {
         _owner = owner;
         _release = release;
+        _downloads = downloads;
         Changelog = ReleaseChangelog.From(release, Version, owner.Localization.ContentChangelog);
     }
 
@@ -699,6 +726,8 @@ public sealed partial class VersionItem : ObservableObject, IInstallRow
         OnPropertyChanged(nameof(CompatibilityText));
         OnPropertyChanged(nameof(PublishedText));
         OnPropertyChanged(nameof(PublishedDateText));
+        OnPropertyChanged(nameof(DownloadsText));
+        OnPropertyChanged(nameof(DownloadsToolTip));
         OnPropertyChanged(nameof(GoneText));
         OnPropertyChanged(nameof(ConfirmInstallText));
         OnPropertyChanged(nameof(AddedModsText));

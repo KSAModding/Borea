@@ -3525,6 +3525,9 @@
   <data name="ContentSizeHeader" xml:space="preserve">
     <value>Größe</value>
   </data>
+  <data name="ContentDownloadsHeader" xml:space="preserve">
+    <value>Downloads</value>
+  </data>
   <data name="ContentSizeOnDisk" xml:space="preserve">
     <value>Größe auf der Festplatte</value>
   </data>

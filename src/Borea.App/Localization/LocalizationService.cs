@@ -2253,6 +2253,8 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string ContentSizeHeader => Resources.ContentSizeHeader;
 
+    public string ContentDownloadsHeader => Resources.ContentDownloadsHeader;
+
     public string ContentSizeOnDisk => Resources.ContentSizeOnDisk;
 
     public string InstanceSizeToolTip => Resources.InstanceSizeToolTip;
