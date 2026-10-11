@@ -1944,6 +1944,9 @@
   <data name="ContentSizeHeader" xml:space="preserve">
     <value>Heft</value>
   </data>
+  <data name="ContentDownloadsHeader" xml:space="preserve">
+    <value>Hauls</value>
+  </data>
   <data name="ContentSizeOnDisk" xml:space="preserve">
     <value>Heft in the hold</value>
   </data>
