@@ -2809,7 +2809,46 @@
     <value>Datei wählen</value>
   </data>
   <data name="ListingMeasure" xml:space="preserve">
-    <value>Adresse messen</value>
+    <value>Bild an der Adresse lesen und Angaben aktualisieren</value>
+  </data>
+  <data name="ListingMeasureHint" xml:space="preserve">
+    <value>Trägt Abmessungen, Größe und SHA-256 des Bildes an der Adresse ein. Mach das erneut, wenn du das Bild ersetzt.</value>
+  </data>
+  <data name="ListingImageChangedFormat" xml:space="preserve">
+    <value>Das Bild an der Adresse hat sich geändert: {0}.</value>
+  </data>
+  <data name="ListingImageChangedPixelsFormat" xml:space="preserve">
+    <value>{0} x {1} px sind jetzt {2} x {3} px</value>
+  </data>
+  <data name="ListingImageChangedBytesFormat" xml:space="preserve">
+    <value>{0} Bytes sind jetzt {1} Bytes</value>
+  </data>
+  <data name="ListingImageChangedOnlySha" xml:space="preserve">
+    <value>Abmessungen und Größe sind gleich, aber die Bytes und ihr SHA-256 sind anders</value>
+  </data>
+  <data name="ListingImageUseNew" xml:space="preserve">
+    <value>Neues Bild übernehmen</value>
+  </data>
+  <data name="ListingImageUseNewHint" xml:space="preserve">
+    <value>Schreibt Abmessungen, Größe und SHA-256 des Bildes an der Adresse in das Listing.</value>
+  </data>
+  <data name="ListingImageCheckFailedFormat" xml:space="preserve">
+    <value>Borea konnte das Bild an der Adresse nicht prüfen: {0}. Das Listing behält seine Angaben.</value>
+  </data>
+  <data name="ListingImageNoLongerFitsFormat" xml:space="preserve">
+    <value>Das Bild an der Adresse besteht die Prüfungen nicht mehr: {0}. Ersetze das Bild oder seine Adresse.</value>
+  </data>
+  <data name="ListingImageBranchFormat" xml:space="preserve">
+    <value>Diese Adresse folgt dem Branch {0}, daher kann sich die Datei dort nach dem Merge ändern. Eine Commit-Adresse hält die Datei fest, die das Listing beschreibt.</value>
+  </data>
+  <data name="ListingImageBranchUnnamed" xml:space="preserve">
+    <value>Diese Adresse folgt einem Branch, daher kann sich die Datei dort nach dem Merge ändern. Eine Commit-Adresse hält die Datei fest, die das Listing beschreibt.</value>
+  </data>
+  <data name="ListingImageCommitAddressFormat" xml:space="preserve">
+    <value>Die aktuelle Datei an ihrem Commit: {0}</value>
+  </data>
+  <data name="ListingImageUseCommit" xml:space="preserve">
+    <value>Commit-Adresse verwenden</value>
   </data>
   <data name="ListingImageFileType" xml:space="preserve">
     <value>Bilder</value>

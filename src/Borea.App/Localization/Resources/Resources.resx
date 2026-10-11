@@ -2809,7 +2809,46 @@
     <value>Choose file</value>
   </data>
   <data name="ListingMeasure" xml:space="preserve">
-    <value>Measure address</value>
+    <value>Read the image at the address and update its facts</value>
+  </data>
+  <data name="ListingMeasureHint" xml:space="preserve">
+    <value>This fills in the dimensions, size and SHA-256 from the image at the address. Do it again after you replace the image.</value>
+  </data>
+  <data name="ListingImageChangedFormat" xml:space="preserve">
+    <value>The image at the address changed: {0}.</value>
+  </data>
+  <data name="ListingImageChangedPixelsFormat" xml:space="preserve">
+    <value>{0} x {1} px is now {2} x {3} px</value>
+  </data>
+  <data name="ListingImageChangedBytesFormat" xml:space="preserve">
+    <value>{0} bytes is now {1} bytes</value>
+  </data>
+  <data name="ListingImageChangedOnlySha" xml:space="preserve">
+    <value>the dimensions and the size are the same, but the bytes and their SHA-256 are different</value>
+  </data>
+  <data name="ListingImageUseNew" xml:space="preserve">
+    <value>Use the new image</value>
+  </data>
+  <data name="ListingImageUseNewHint" xml:space="preserve">
+    <value>Writes the dimensions, size and SHA-256 of the image at the address into the listing.</value>
+  </data>
+  <data name="ListingImageCheckFailedFormat" xml:space="preserve">
+    <value>Borea could not check the image at the address: {0}. The listing keeps the facts it has.</value>
+  </data>
+  <data name="ListingImageNoLongerFitsFormat" xml:space="preserve">
+    <value>The image at the address no longer passes the checks: {0}. Replace the image or its address.</value>
+  </data>
+  <data name="ListingImageBranchFormat" xml:space="preserve">
+    <value>This address follows the branch {0}, so the file there can change after the listing merges. A commit address keeps the file that the listing describes.</value>
+  </data>
+  <data name="ListingImageBranchUnnamed" xml:space="preserve">
+    <value>This address follows a branch, so the file there can change after the listing merges. A commit address keeps the file that the listing describes.</value>
+  </data>
+  <data name="ListingImageCommitAddressFormat" xml:space="preserve">
+    <value>The current file at its commit: {0}</value>
+  </data>
+  <data name="ListingImageUseCommit" xml:space="preserve">
+    <value>Use the commit address</value>
   </data>
   <data name="ListingImageFileType" xml:space="preserve">
     <value>Images</value>
