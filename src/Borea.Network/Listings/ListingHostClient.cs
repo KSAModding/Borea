@@ -28,14 +28,14 @@ public sealed class ListingHostClient : IListingHostClient
         _http = http ?? throw new ArgumentNullException(nameof(http));
     }
 
-    public Task<ListingHostFacts> ReadAsync(ListingSourceReference source, CancellationToken cancellationToken = default) => source switch
+    public Task<ListingHostFacts> ReadAsync(ListingSourceReference source, string? listingId = null, CancellationToken cancellationToken = default) => source switch
     {
-        ListingSourceReference.GitHub github => ReadGitHubAsync(github, cancellationToken),
+        ListingSourceReference.GitHub github => ReadGitHubAsync(github, listingId, cancellationToken),
         ListingSourceReference.SpaceDock spaceDock => ReadSpaceDockAsync(spaceDock, cancellationToken),
         _ => throw new ArgumentException("The source names no host Borea reads.", nameof(source)),
     };
 
-    private async Task<ListingHostFacts> ReadGitHubAsync(ListingSourceReference.GitHub source, CancellationToken cancellationToken)
+    private async Task<ListingHostFacts> ReadGitHubAsync(ListingSourceReference.GitHub source, string? listingId, CancellationToken cancellationToken)
     {
         var repository = await GetGitHubAsync<GitHubRepositoryDto>($"{GitHubApi}/repos/{source.FullName}", cancellationToken).ConfigureAwait(false)
             ?? throw new ListingSourceException($"GitHub has no repository '{source.FullName}' that Borea can read.");
@@ -62,7 +62,7 @@ public sealed class ListingHostClient : IListingHostClient
             repository.Owner?.Type == "User" && !string.IsNullOrWhiteSpace(repository.Owner.Login) ? [repository.Owner.Login] : [],
             links,
             new ListingReleases(repository.FullName, null),
-            latest is null ? null : GitHubRelease(latest, repository.Name));
+            latest is null ? null : GitHubRelease(latest, listingId ?? repository.Name));
     }
 
     /// <summary>One zip archive is the release. Of several, the one named after the listing wins, and otherwise none does.</summary>

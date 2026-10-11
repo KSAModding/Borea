@@ -222,6 +222,7 @@ public sealed class ListingArchiveTests : IDisposable
 
         Assert.Null(source.Archive);
         Assert.Contains("above the limit of 1000 bytes", source.ArchiveProblem);
+        Assert.True(source.ArchiveRejected);
         Assert.Empty(downloader.ArchivePaths);
     }
 
@@ -243,9 +244,23 @@ public sealed class ListingArchiveTests : IDisposable
         var hosts = new FakeHosts(new ListingHostRelease("v1.0.0", "1.0.0", null, null, ["a.zip", "b.zip"]));
         var reader = new ListingSourceReader(hosts, new FakeModDownloader(), _folder, 1000);
 
-        var source = await reader.ReadAsync(new ListingSourceReference.GitHub("owner", "MyMod"));
+        var source = await reader.ReadAsync(new ListingSourceReference.GitHub("owner", "MyMod"), listingId: "MyMod");
 
         Assert.Contains("carries 2 archives", source.ArchiveProblem);
+        Assert.True(source.ArchiveRejected);
+        Assert.Equal("MyMod", hosts.ListingId);
+    }
+
+    [Fact]
+    public async Task ReadAsync_FileThatIsNoZip_IsRejected()
+    {
+        var downloader = new FakeModDownloader { Bytes = "no zip"u8.ToArray() };
+        var reader = new ListingSourceReader(new FakeHosts(Latest("https://example.com/MyMod.zip", 6)), downloader, _folder, 1000);
+
+        var source = await reader.ReadAsync(new ListingSourceReference.GitHub("owner", "MyMod"));
+
+        Assert.StartsWith("the archive is not a readable zip", source.ArchiveProblem, StringComparison.Ordinal);
+        Assert.True(source.ArchiveRejected);
     }
 
     [Fact]
@@ -257,6 +272,7 @@ public sealed class ListingArchiveTests : IDisposable
         var source = await reader.ReadAsync(new ListingSourceReference.GitHub("owner", "MyMod"));
 
         Assert.Equal("No source served the archive.", source.ArchiveProblem);
+        Assert.False(source.ArchiveRejected);
         Assert.Equal("MyMod", source.Host.Name);
     }
 
@@ -295,7 +311,12 @@ public sealed class ListingArchiveTests : IDisposable
 
     private sealed class FakeHosts(ListingHostRelease? latest, string name = "MyMod") : IListingHostClient
     {
-        public Task<ListingHostFacts> ReadAsync(ListingSourceReference source, CancellationToken cancellationToken = default) =>
-            Task.FromResult(new ListingHostFacts(source, name, null, null, [], [], new ListingReleases("owner/MyMod", null), latest));
+        public string? ListingId { get; private set; }
+
+        public Task<ListingHostFacts> ReadAsync(ListingSourceReference source, string? listingId = null, CancellationToken cancellationToken = default)
+        {
+            ListingId = listingId;
+            return Task.FromResult(new ListingHostFacts(source, name, null, null, [], [], new ListingReleases("owner/MyMod", null), latest));
+        }
     }
 }

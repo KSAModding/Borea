@@ -2079,6 +2079,9 @@
   <data name="ListingMissingNoReleaseFormat" xml:space="preserve">
     <value>{0}, an' no steady release of it sits inside the bounds o' every barrel that needs it.</value>
   </data>
+  <data name="ListingArchiveNotCheckedFormat" xml:space="preserve">
+    <value>Borea couldn't peek inside the barrel o' the latest release, an' the index peeks inside it too: {0}. Patch up the release, then hit Read from my archive under Dependencies.</value>
+  </data>
   <data name="PackMemberNewerFormat" xml:space="preserve">
     <value>{0} be in port</value>
   </data>

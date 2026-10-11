@@ -2753,6 +2753,9 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string FormatListingArchiveProblem(string reason)
         => string.Format(CultureInfo.CurrentCulture, Resources.ListingArchiveProblemFormat, reason);
 
+    public string FormatListingArchiveNotChecked(string reason)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ListingArchiveNotCheckedFormat, reason.TrimEnd('.'));
+
     public string FormatListingDependencyPreserved(string ids)
         => string.Format(CultureInfo.CurrentCulture, Resources.ListingDependencyPreservedFormat, ids);
 

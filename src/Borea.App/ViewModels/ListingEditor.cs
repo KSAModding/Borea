@@ -333,7 +333,7 @@ public sealed partial class ListingEditor : ObservableObject
                 if (IsReadingSource)
                     SourceProgress = Localization.FormatListingDownloading(SizeText(value.BytesDownloaded));
             });
-            var source = await services.ListingSources.ReadAsync(reference, installRoot: null, progress, cancel.Token);
+            var source = await services.ListingSources.ReadAsync(reference, installRoot: null, listingId: null, progress, cancel.Token);
             var draft = ListingPrefill.Apply(NewDraft(), source, _snapshot, services.InstalledVersion.GetInstalledVersion()?.Version);
             if (draft.LinkOf("forums") is { } forums && _snapshot is { } snapshot)
             {
@@ -599,6 +599,7 @@ public sealed partial class ListingEditor : ObservableObject
         _tagProposal?.Cancel();
         StopImageCheck();
         ForgetDeclared();
+        _releasesHostChanged = false;
         _loading = true;
         try
         {
@@ -720,7 +721,9 @@ public sealed partial class ListingEditor : ObservableObject
 
         var document = draft.ToDocument();
         DocumentText = services.ListingFormat.Write(document, _listedText);
-        var result = services.ListingValidator.Validate(document, new ListingCheckContext(_snapshot, HasFixedId ? _base.Id : null, _readArchive ?? _archive));
+        var result = services.ListingValidator.Validate(document, new ListingCheckContext(_snapshot, HasFixedId ? _base.Id : null, CheckedArchive));
+        if (UncheckedArchiveIssue() is { } archiveIssue)
+            pageIssues.Add(archiveIssue);
         var issues = InPinOrder(pageIssues.Concat(result.Issues).Distinct());
 
         MainViewModel.Arrange(Errors, issues.Where(issue => issue.Severity == ListingIssueSeverity.Error).ToList());
