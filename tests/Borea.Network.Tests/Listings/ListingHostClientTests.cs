@@ -88,6 +88,23 @@ public sealed class ListingHostClientTests
         Assert.Equal(chosen is null ? [named, "Sources.zip"] : [], latest.Candidates);
     }
 
+    [Fact]
+    public async Task ReadAsync_SeveralArchivesAndAListingId_TakesTheOneNamedAfterTheId()
+    {
+        const string releases = """
+            [ { "tag_name": "v1.0.0", "draft": false, "published_at": "2026-09-08T00:00:00Z", "assets": [
+              { "name": "MyMod-source.zip", "state": "uploaded", "size": 1, "browser_download_url": "https://example.com/MyMod-source.zip" },
+              { "name": "MyMod.zip", "state": "uploaded", "size": 1, "browser_download_url": "https://example.com/MyMod.zip" }
+            ] } ]
+            """;
+        var client = new ListingHostClient(FakeHttpMessageHandler.BuildClient(request =>
+            FakeHttpMessageHandler.JsonResponse(request.RequestUri!.AbsolutePath.EndsWith("/releases", StringComparison.Ordinal) ? releases : Repository), out _));
+        var reference = new ListingSourceReference.GitHub("Owner", "KSA-MyMod");
+
+        Assert.Null((await client.ReadAsync(reference)).Latest!.DownloadUrl);
+        Assert.Equal("https://example.com/MyMod.zip", (await client.ReadAsync(reference, "MyMod")).Latest!.DownloadUrl);
+    }
+
     [Theory]
     [InlineData("0.5", "0.5.0")]
     [InlineData("v1-rc.1", "1.0.0-rc.1")]

@@ -37,7 +37,7 @@ public static class ListingPrefill
 
         return draft with
         {
-            Id = root is not null && ModIds.IsValid(root) ? root : draft.Id,
+            Id = root is not null ? ProposedId(root, host.Latest) ?? draft.Id : draft.Id,
             Name = Pick(host.Name, draft.Name),
             Authors = host.Authors.Count > 0 ? host.Authors : draft.Authors,
             Abstract = Pick(host.Abstract, draft.Abstract),
@@ -90,6 +90,26 @@ public static class ListingPrefill
                 : string.Equals(found.Text.Trim(), text, StringComparison.OrdinalIgnoreCase)))
             .Select(tag => tag.Tag)
             .ToList();
+    }
+
+    /// <summary>
+    /// The id that the folder of the archive proposes, or null. A folder that ends with the version of the release, such as
+    /// LonelyPlanets-1.2.2, proposes the name in front of the version, because the id stays the same for every release.
+    /// The checks then show that the folder does not match the id.
+    /// </summary>
+    private static string? ProposedId(string root, ListingHostRelease? latest)
+    {
+        if (latest is not null)
+        {
+            var versions = new[] { latest.Tag, latest.Tag.TrimStart('v', 'V'), latest.Version }.Where(version => version.Length > 0).Distinct(StringComparer.OrdinalIgnoreCase);
+            foreach (var suffix in versions.SelectMany(version => new[] { $"-{version}", $"_{version}" }))
+            {
+                if (root.Length > suffix.Length && root.EndsWith(suffix, StringComparison.OrdinalIgnoreCase) && ModIds.IsValid(root[..^suffix.Length]))
+                    return root[..^suffix.Length];
+            }
+        }
+
+        return ModIds.IsValid(root) ? root : null;
     }
 
     private static string Bound(GameVersion version) => $"{version.Year}.{version.Month}.{version.BuildNumber}.{version.Revision}";

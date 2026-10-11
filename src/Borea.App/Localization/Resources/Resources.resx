@@ -2436,6 +2436,9 @@
   <data name="ListingArchiveProblemFormat" xml:space="preserve">
     <value>Borea could not read the latest release: {0}</value>
   </data>
+  <data name="ListingArchiveNotCheckedFormat" xml:space="preserve">
+    <value>Borea could not check the archive of the latest release, which the index reads too: {0}. Fix the release, then choose Read from my archive under Dependencies.</value>
+  </data>
   <data name="ListingNoRelease" xml:space="preserve">
     <value>The release host has no release yet.</value>
   </data>

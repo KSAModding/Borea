@@ -71,6 +71,25 @@ public sealed class ListingSourceTests
         Assert.Equal("2026.9.10.5438", draft.GameMin);
     }
 
+    [Theory]
+    [InlineData("v1.2", "1.2.0", "LonelyPlanets-1.2", "LonelyPlanets")]
+    [InlineData("v1.2.2", "1.2.2", "LonelyPlanets-1.2.2", "LonelyPlanets")]
+    [InlineData("v1.2.2", "1.2.2", "LonelyPlanets_v1.2.2", "LonelyPlanets")]
+    [InlineData("v1.2.2", "1.2.2", "LonelyPlanets-V1.2.2", "LonelyPlanets")]
+    [InlineData("v1.2.2", "1.2.2", "LonelyPlanets-1.2", "LonelyPlanets-1.2")]
+    [InlineData("v1.2.2", "1.2.2", "1.2.2", "1.2.2")]
+    public void Apply_FolderThatEndsWithTheVersion_ProposesTheNameInFrontOfIt(string tag, string version, string root, string id)
+    {
+        var host = new ListingHostFacts(
+            new ListingSourceReference.GitHub("owner", "LonelyPlanets"), null, null, null, [], [], new ListingReleases("owner/LonelyPlanets", null),
+            new ListingHostRelease(tag, version, "https://example.com/LonelyPlanets.zip", 100, []));
+        var archive = new ListingArchiveFacts(root, [root], ModToml: true, EntryAssembly: null, IsCodeMod: false);
+
+        var draft = ListingPrefill.Apply(new ListingDraft(), new ListingSource(host, archive, null), null, null);
+
+        Assert.Equal(id, draft.Id);
+    }
+
     [Fact]
     public void Apply_ArchiveWithoutCodeOrRoot_KeepsTheIdAndAddsNoLoader()
     {

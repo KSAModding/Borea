@@ -29,6 +29,12 @@ public sealed partial class ListingEditor
     /// <summary>The facts of the archive that "Read from my archive" read, which the checks then use as the stamper would.</summary>
     private ListingArchiveFacts? _readArchive;
 
+    /// <summary>Why "Read from my archive" found no archive that the stamper accepts, or null.</summary>
+    private string? _readArchiveProblem;
+
+    /// <summary>Whether the author changed the release host after the form was loaded, which makes the source read stale.</summary>
+    private bool _releasesHostChanged;
+
     private CancellationTokenSource? _archiveRead;
 
     public ObservableCollection<ListingDeclaredDependencyRow> DeclaredDependencies { get; } = [];
@@ -97,17 +103,31 @@ public sealed partial class ListingEditor
                     ArchiveReadText = Localization.FormatListingDownloading(SizeText(value.BytesDownloaded));
             });
             var installRoot = AuthoredInstallRoot();
-            var source = await services.ListingSources.ReadAsync(reference, installRoot, progress, cancel.Token);
+            var listingId = ModIds.IsValid(Draft.Id) ? Draft.Id : null;
+            var source = await services.ListingSources.ReadAsync(reference, installRoot, listingId, progress, cancel.Token);
             cancel.Token.ThrowIfCancellationRequested();
             if (source.Archive is { } archive && source.Host.Latest is { } latest)
             {
                 _readArchive = archive;
+                _readArchiveProblem = null;
                 ShowArchive(latest.Tag, archive, installRoot is not null);
+                Refresh();
+            }
+            else if (source.ArchiveProblem is { } problem)
+            {
+                // A failed download says nothing about the release, so the facts of an older read stay.
+                if (source.ArchiveRejected)
+                {
+                    _readArchive = null;
+                    _readArchiveProblem = problem;
+                }
+
+                ArchiveReadText = Localization.FormatListingArchiveProblem(problem);
                 Refresh();
             }
             else
             {
-                ArchiveReadText = source.ArchiveProblem is { } problem ? Localization.FormatListingArchiveProblem(problem) : Localization.ListingNoRelease;
+                ArchiveReadText = Localization.ListingNoRelease;
             }
         }
         catch (OperationCanceledException) when (cancel.IsCancellationRequested)
@@ -139,6 +159,25 @@ public sealed partial class ListingEditor
     /// <summary>The release host that decides which releases exist, by the rule of the ownership check, or null.</summary>
     private ListingSourceReference? ReleasesSource() =>
         Draft.Releases is not null && ListingAuthority.Of(Draft) is { } host && ListingSourceReference.TryParse(host.Target, out var reference) ? reference : null;
+
+    /// <summary>
+    /// The facts of the newest read of the archive, which the checks use, or null when that read found no archive. The source
+    /// read stops counting once the author changes the release host, because it read the release of another host.
+    /// </summary>
+    private ListingArchiveFacts? CheckedArchive => _readArchiveProblem is null ? _readArchive ?? (_releasesHostChanged ? null : _archive) : null;
+
+    /// <summary>
+    /// An error when the newest read of a mod's release found no archive that the stamper accepts. The checks then cannot see
+    /// the folder in it, and the stamper refuses the same release, so the pull request waits until a new read finds one.
+    /// </summary>
+    private ListingIssue? UncheckedArchiveIssue()
+    {
+        if (!CanUseLoader || Draft.Releases is null || CheckedArchive is not null)
+            return null;
+
+        var problem = _readArchiveProblem ?? (_source is { ArchiveRejected: true } && !_releasesHostChanged ? _source.ArchiveProblem : null);
+        return problem is null ? null : new ListingIssue(ListingIssueSeverity.Error, "releases", Localization.FormatListingArchiveNotChecked(problem));
+    }
 
     /// <summary>The install root that the listing authors in [install], which the stamper then reads the mod.toml from.</summary>
     private string? AuthoredInstallRoot() => _base.Original?.GetTable("install")?.GetString("root");
@@ -305,6 +344,7 @@ public sealed partial class ListingEditor
         _archiveRead?.Cancel();
         _declaredFromArchive = null;
         _readArchive = null;
+        _readArchiveProblem = null;
         ArchiveReadText = null;
         LoaderSetText = null;
     }
@@ -315,6 +355,7 @@ public sealed partial class ListingEditor
         if (_loading)
             return;
 
+        _releasesHostChanged = true;
         ForgetDeclared();
         FillDeclared();
     }

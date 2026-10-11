@@ -26,11 +26,16 @@ public sealed partial class ListingSourceReader : IListingSourceReader
         _maxArchiveBytes = maxArchiveBytes;
     }
 
-    public async Task<ListingSource> ReadAsync(ListingSourceReference source, string? installRoot = null, IProgress<DownloadProgress>? progress = null, CancellationToken cancellationToken = default)
+    public async Task<ListingSource> ReadAsync(
+        ListingSourceReference source,
+        string? installRoot = null,
+        string? listingId = null,
+        IProgress<DownloadProgress>? progress = null,
+        CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(source);
 
-        var host = await _hosts.ReadAsync(source, cancellationToken).ConfigureAwait(false);
+        var host = await _hosts.ReadAsync(source, listingId, cancellationToken).ConfigureAwait(false);
         if (host.Latest is not { } latest)
             return new ListingSource(host, null, null);
 
@@ -39,11 +44,11 @@ public sealed partial class ListingSourceReader : IListingSourceReader
             var problem = latest.Candidates.Count == 0
                 ? $"the release {latest.Tag} carries no zip archive"
                 : $"the release {latest.Tag} carries {latest.Candidates.Count} archives and none of them is named after the listing ({string.Join(", ", latest.Candidates)})";
-            return new ListingSource(host, null, problem);
+            return Rejected(host, problem);
         }
 
         if (latest.SizeBytes > _maxArchiveBytes)
-            return new ListingSource(host, null, TooLarge(latest.SizeBytes.Value));
+            return Rejected(host, TooLarge(latest.SizeBytes.Value));
 
         var archivePath = Path.Combine(_temporaryFolder, $"borea-listing-{Guid.NewGuid():N}.zip");
         using var stop = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
@@ -52,14 +57,18 @@ public sealed partial class ListingSourceReader : IListingSourceReader
         {
             await _downloader.DownloadAsync(Release(host, latest), archivePath, limit, stop.Token).ConfigureAwait(false);
             return limit.Exceeded is { } received
-                ? new ListingSource(host, null, TooLarge(received))
+                ? Rejected(host, TooLarge(received))
                 : new ListingSource(host, ListingArchive.Read(archivePath, installRoot), null);
         }
         catch (OperationCanceledException) when (limit.Exceeded is { } received && !cancellationToken.IsCancellationRequested)
         {
-            return new ListingSource(host, null, TooLarge(received));
+            return Rejected(host, TooLarge(received));
         }
-        catch (Exception exception) when (exception is DownloadFailedException or InvalidDataException or IOException or UnauthorizedAccessException)
+        catch (InvalidDataException exception)
+        {
+            return Rejected(host, exception.Message);
+        }
+        catch (Exception exception) when (exception is DownloadFailedException or IOException or UnauthorizedAccessException)
         {
             return new ListingSource(host, null, exception.Message);
         }
@@ -68,6 +77,8 @@ public sealed partial class ListingSourceReader : IListingSourceReader
             TryDeleteFile(archivePath);
         }
     }
+
+    private static ListingSource Rejected(ListingHostFacts host, string problem) => new(host, null, problem) { ArchiveRejected = true };
 
     private string TooLarge(long bytes) =>
         string.Create(CultureInfo.InvariantCulture, $"the release archive is {bytes} bytes, above the limit of {_maxArchiveBytes} bytes");

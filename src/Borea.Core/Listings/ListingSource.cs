@@ -24,9 +24,13 @@ public sealed record ListingHostRelease(string Tag, string Version, string? Down
 /// <summary>Reads a release host's API.</summary>
 public interface IListingHostClient
 {
+    /// <param name="listingId">
+    /// The id of the listing, which picks the archive of a release with several zips as the stamper does. When it is null,
+    /// the name of the GitHub repository picks it.
+    /// </param>
     /// <exception cref="ListingSourceException">The host has no such repository or mod.</exception>
     /// <exception cref="HttpRequestException">The host did not answer.</exception>
-    Task<ListingHostFacts> ReadAsync(ListingSourceReference source, CancellationToken cancellationToken = default);
+    Task<ListingHostFacts> ReadAsync(ListingSourceReference source, string? listingId = null, CancellationToken cancellationToken = default);
 }
 
 /// <summary>What the latest release archive shows, read with the rules the stamper of content-index-releases uses.</summary>
@@ -46,7 +50,14 @@ public sealed record ListingArchiveFacts(string? Root, IReadOnlyList<string> Top
 
 /// <param name="Archive">The facts of the latest release archive, or null when there was none to read.</param>
 /// <param name="ArchiveProblem">Why the archive could not be read, or null.</param>
-public sealed record ListingSource(ListingHostFacts Host, ListingArchiveFacts? Archive, string? ArchiveProblem);
+public sealed record ListingSource(ListingHostFacts Host, ListingArchiveFacts? Archive, string? ArchiveProblem)
+{
+    /// <summary>
+    /// Whether the stamper rejects the release for the same <see cref="ArchiveProblem"/>: no zip, several zips and none named
+    /// after the listing, a zip above the limit, or a file that is no zip. A failed download says nothing about the release.
+    /// </summary>
+    public bool ArchiveRejected { get; init; }
+}
 
 /// <summary>Reads a release host and the archive of its latest release, which it downloads into a temporary file and deletes again.</summary>
 public interface IListingSourceReader
@@ -55,9 +66,15 @@ public interface IListingSourceReader
     public const long MaxArchiveBytes = 4L * 1024 * 1024 * 1024;
 
     /// <param name="installRoot">The install root that the listing authors, or null when the stamper derives it.</param>
+    /// <param name="listingId">The id of the listing, which picks the archive among several zips, or null for the repository name.</param>
     /// <exception cref="ListingSourceException">The host has no such repository or mod.</exception>
     /// <exception cref="HttpRequestException">The host did not answer.</exception>
-    Task<ListingSource> ReadAsync(ListingSourceReference source, string? installRoot = null, IProgress<DownloadProgress>? progress = null, CancellationToken cancellationToken = default);
+    Task<ListingSource> ReadAsync(
+        ListingSourceReference source,
+        string? installRoot = null,
+        string? listingId = null,
+        IProgress<DownloadProgress>? progress = null,
+        CancellationToken cancellationToken = default);
 }
 
 public sealed class ListingSourceException(string message) : Exception(message);
