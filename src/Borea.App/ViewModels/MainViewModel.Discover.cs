@@ -137,6 +137,7 @@ public partial class MainViewModel
     {
         DiscoverSortOrder.RecentlyUpdated => Localization.DiscoverSortRecentlyUpdated,
         DiscoverSortOrder.Name => Localization.DiscoverSortName,
+        DiscoverSortOrder.RecentlyListed => Localization.DiscoverSortRecentlyListed,
         _ => Localization.DiscoverSortPopularity,
     };
 
@@ -312,6 +313,7 @@ public partial class MainViewModel
     {
         DiscoverSortOrder.Popularity => items.OrderBy(item => item.Downloads is null).ThenByDescending(item => item.Downloads).ThenBy(item => item.Name, StringComparer.CurrentCultureIgnoreCase),
         DiscoverSortOrder.RecentlyUpdated => items.OrderBy(item => item.UpdatedAt is null).ThenByDescending(item => item.UpdatedAt).ThenBy(item => item.Name, StringComparer.CurrentCultureIgnoreCase),
+        DiscoverSortOrder.RecentlyListed => items.OrderBy(item => item.ListedAt is null).ThenByDescending(item => item.ListedAt).ThenBy(item => item.Name, StringComparer.CurrentCultureIgnoreCase),
         _ => items.OrderBy(item => item.Name, StringComparer.CurrentCultureIgnoreCase),
     };
 
@@ -769,6 +771,9 @@ public sealed partial class DiscoverItem : ObservableObject, IInstallRow
 
     public string? PublishedDateText => PublishedAt is { } at ? MainViewModel.DateText(at) : null;
 
+    /// <summary>When the listing came into the index, or null when the index does not say.</summary>
+    public DateTimeOffset? ListedAt { get; }
+
     /// <summary>The date of the newest release in the saved release channel, the one Add installs. Null when the channel has none.</summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(UpdatedText))]
@@ -923,7 +928,7 @@ public sealed partial class DiscoverItem : ObservableObject, IInstallRow
     /// <summary>What the favorite toggle does, as its label and tooltip.</summary>
     public string FavoriteText => _owner.FavoriteText(IsFavorite);
 
-    /// <param name="indexEntry">The snapshot entry of an index listing, for its download count and the date of its first release. Null for any other listing.</param>
+    /// <param name="indexEntry">The snapshot entry of an index listing, for its download count and its dates. Null for any other listing.</param>
     public DiscoverItem(MainViewModel owner, ModMetadata listing, ContentIndexListing? indexEntry = null)
     {
         _owner = owner;
@@ -933,6 +938,7 @@ public sealed partial class DiscoverItem : ObservableObject, IInstallRow
         Icon = owner.IconFor(Images?.Icon);
         DownloadCounts = indexEntry?.Downloads;
         PublishedAt = indexEntry?.PublishedAt;
+        ListedAt = indexEntry?.ListedAt;
         _isFavorite = owner.IsFavoriteMod(listing.ModId);
     }
 

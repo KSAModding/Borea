@@ -1638,6 +1638,8 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string DiscoverSortRecentlyUpdated => Resources.DiscoverSortRecentlyUpdated;
 
+    public string DiscoverSortRecentlyListed => Resources.DiscoverSortRecentlyListed;
+
     public string DiscoverSortName => Resources.DiscoverSortName;
 
     public string DiscoverAll => Resources.DiscoverAll;

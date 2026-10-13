@@ -54,6 +54,7 @@
                                 <MenuFlyout Placement="BottomEdgeAlignedRight">
                                     <MenuItem Header="{Binding Localization.DiscoverSortPopularity}" Command="{Binding SelectDiscoverSortCommand}" CommandParameter="{x:Static prefs:DiscoverSortOrder.Popularity}" />
                                     <MenuItem Header="{Binding Localization.DiscoverSortRecentlyUpdated}" Command="{Binding SelectDiscoverSortCommand}" CommandParameter="{x:Static prefs:DiscoverSortOrder.RecentlyUpdated}" />
+                                    <MenuItem Header="{Binding Localization.DiscoverSortRecentlyListed}" Command="{Binding SelectDiscoverSortCommand}" CommandParameter="{x:Static prefs:DiscoverSortOrder.RecentlyListed}" />
                                     <MenuItem Header="{Binding Localization.DiscoverSortName}" Command="{Binding SelectDiscoverSortCommand}" CommandParameter="{x:Static prefs:DiscoverSortOrder.Name}" />
                                 </MenuFlyout>
                             </Button.Flyout>

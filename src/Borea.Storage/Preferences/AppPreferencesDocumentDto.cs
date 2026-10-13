@@ -28,7 +28,7 @@ internal sealed class AppPreferencesDocumentDto
     /// <summary>"active-instance" or "without-mod-loader". Null or an unknown name reads as the active instance.</summary>
     public string? HomeLaunch { get; set; }
 
-    /// <summary>"popularity", "recently-updated" or "name". Null or an unknown name reads as popularity.</summary>
+    /// <summary>"popularity", "recently-updated", "recently-listed" or "name". Null or an unknown name reads as popularity.</summary>
     public string? DiscoverSortOrder { get; set; }
 
     public bool? SharedProfileBannerDismissed { get; set; }

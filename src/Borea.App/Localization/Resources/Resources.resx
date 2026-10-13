@@ -2277,6 +2277,9 @@
   <data name="DiscoverSortRecentlyUpdated" xml:space="preserve">
     <value>Recently updated</value>
   </data>
+  <data name="DiscoverSortRecentlyListed" xml:space="preserve">
+    <value>Recently listed</value>
+  </data>
   <data name="DiscoverSortName" xml:space="preserve">
     <value>Name</value>
   </data>
