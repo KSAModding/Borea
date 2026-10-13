@@ -540,7 +540,7 @@ public partial class MainViewModel
             var instance = instanceId is { } existing
                 ? await services.Instances.GetByIdAsync(existing) ?? throw new InvalidOperationException(Localization.InstallInstanceMissing)
                 : NewPackInstance(newInstanceName!, metadata);
-            var reasons = PackWarnings(selected, metadata, compatibility, pinned, installed);
+            var reasons = PackWarnings(selected, metadata, compatibility);
             var yanked = new HashSet<string>(ModIds.Comparer);
             var requested = new List<RequestedMod>();
             foreach (var release in pinned)
@@ -577,7 +577,7 @@ public partial class MainViewModel
             {
                 stopped = StoppedText(pack);
             }
-            else if (confirm || reasons.Count > 0 || choices is not null || (plan is { IsReady: true } && (PackPlanWarnings(plan, metadata).Count > 0 || InstallStepsOf(plan).Count > 0)))
+            else if (confirm || reasons.Count > 0 || choices is not null || (plan is { IsReady: true } && (PackPlanWarnings(plan).Count > 0 || InstallStepsOf(plan).Count > 0)))
             {
                 pack.PendingInstall = request;
                 pack.PendingInstanceName = newInstanceName;
@@ -636,26 +636,31 @@ public partial class MainViewModel
     /// <param name="compatibility">The state the pack's own bounds put the installed game in.</param>
     private void ThrowIfIncompatible(ModPackMetadata metadata, GameCompatibility compatibility, IEnumerable<ModVersionMetadata> pinned, GameVersion? installed)
     {
-        var reasons = PinFitTexts(pinned, installed, GameCompatibility.Incompatible);
+        var reasons = pinned.Select(release => PinFitText(release, installed)).OfType<string>().ToList();
         if (compatibility == GameCompatibility.Incompatible)
-            reasons.Insert(0, Localization.FormatPackIncompatible(metadata.GameMin));
+        {
+            reasons.Insert(0, Borea.Core.Game.Compatibility.IsAboveUpperBound(metadata, installed, _gameReleases)
+                ? Localization.FormatPackAboveGameMax(metadata.GameMax!)
+                : Localization.FormatPackIncompatible(metadata.GameMin));
+        }
+
         if (reasons.Count > 0)
             throw new InvalidOperationException(string.Join(" ", reasons));
     }
 
     /// <summary>Names a pinned release with the bound that keeps it from fitting the installed game, or returns null when it fits.</summary>
-    internal string? PinFitText(ModVersionMetadata release, GameCompatibility compatibility) => compatibility switch
+    internal string? PinFitText(ModVersionMetadata release, GameVersion? installed)
     {
-        GameCompatibility.Incompatible => Localization.FormatPackMemberIncompatible(release.ModId, release.Version.ToString(), release.GameMin),
-        GameCompatibility.Untested when release.GameMax is { } max => Localization.FormatPackMemberUntested(release.ModId, release.Version.ToString(), max),
-        _ => null,
-    };
+        if (Borea.Core.Game.Compatibility.Evaluate(release, installed) != GameCompatibility.Incompatible)
+            return null;
 
-    private List<string> PinFitTexts(IEnumerable<ModVersionMetadata> pinned, GameVersion? installed, GameCompatibility compatibility)
-        => pinned.Select(release => Borea.Core.Game.Compatibility.Evaluate(release, installed) == compatibility ? PinFitText(release, compatibility) : null).OfType<string>().ToList();
+        return Borea.Core.Game.Compatibility.IsAboveUpperBound(release, installed)
+            ? Localization.FormatPackMemberAboveGameMax(release.ModId, release.Version.ToString(), release.GameMax!)
+            : Localization.FormatPackMemberIncompatible(release.ModId, release.Version.ToString(), release.GameMin);
+    }
 
-    /// <param name="compatibility">The state the pack's own bounds put the installed game in. The untested pins are named one by one.</param>
-    private List<string> PackWarnings(ModPackResult selected, ModPackMetadata metadata, GameCompatibility compatibility, IEnumerable<ModVersionMetadata> pinned, GameVersion? installed)
+    /// <param name="compatibility">The state the pack's own bounds put the installed game in.</param>
+    private List<string> PackWarnings(ModPackResult selected, ModPackMetadata metadata, GameCompatibility compatibility)
     {
         var warnings = new List<string>();
         foreach (var status in new[] { selected.PackStatus, selected.VersionStatus })
@@ -671,12 +676,9 @@ public partial class MainViewModel
         else if (metadata.Status == ModStatus.Unknown)
             warnings.Add(Localization.PackStatusUnknown);
 
-        if (compatibility == GameCompatibility.Untested)
-            warnings.Add(Localization.FormatPackUntested(metadata.GameMax ?? metadata.GameMin));
-        else if (compatibility == GameCompatibility.Unknown)
+        if (compatibility == GameCompatibility.Unknown)
             warnings.Add(Localization.PackCompatibilityUnknown);
 
-        warnings.AddRange(PinFitTexts(pinned, installed, GameCompatibility.Untested));
         return warnings;
     }
 
@@ -684,7 +686,7 @@ public partial class MainViewModel
     private void HoldPack(PackItem pack, InstallPlan? plan)
     {
         var reasons = pack.PendingReasons.ToList();
-        if (plan is not null && (plan.IsReady || pack.Choices is not null) && PackPlanWarnings(plan, pack.PendingInstall?.Pack.Metadata ?? pack.Metadata) is { Count: > 0 } warnings)
+        if (plan is not null && (plan.IsReady || pack.Choices is not null) && PackPlanWarnings(plan) is { Count: > 0 } warnings)
             reasons.Add(Describe(warnings));
         if (reasons.Count > 0 && pack.PendingInstanceName is { } name)
             reasons.Insert(0, Localization.FormatPackCreatesInstance(name));
@@ -695,13 +697,9 @@ public partial class MainViewModel
             choices.BlockedText = BlockedText(plan);
     }
 
-    /// <summary>The pack names its yanked members and its untested pins itself.</summary>
-    private static List<PlanningMessage> PackPlanWarnings(InstallPlan plan, ModPackMetadata metadata)
-        => plan.Warnings.Where(warning => warning.Kind != PlanningMessageKind.Yanked && !IsUntestedPin(warning, metadata)).ToList();
-
-    private static bool IsUntestedPin(PlanningMessage warning, ModPackMetadata metadata)
-        => warning is { Kind: PlanningMessageKind.Compatibility, Compatibility: GameCompatibility.Untested }
-            && metadata.Mods.Any(pin => ModIds.Equals(pin.ContentId, warning.ModId));
+    /// <summary>The pack names its yanked members itself.</summary>
+    private static List<PlanningMessage> PackPlanWarnings(InstallPlan plan)
+        => plan.Warnings.Where(warning => warning.Kind != PlanningMessageKind.Yanked).ToList();
 
     /// <summary>Installs the pack the row holds, unless the plan with its choices asks something new, cannot run, or has a new warning.</summary>
     internal async Task ConfirmPackInstallAsync(PackItem pack)
@@ -911,21 +909,12 @@ public sealed partial class PackItem : ObservableObject, IPlanRow
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CompatibilityText))]
     [NotifyPropertyChangedFor(nameof(IsCompatible))]
-    [NotifyPropertyChangedFor(nameof(IsUntested))]
     [NotifyPropertyChangedFor(nameof(IsIncompatible))]
     private GameCompatibility _compatibility = GameCompatibility.Unknown;
 
-    public string CompatibilityText => Compatibility switch
-    {
-        GameCompatibility.Compatible => _owner.Localization.CompatibilityCompatible,
-        GameCompatibility.Untested => _owner.Localization.CompatibilityUntested,
-        GameCompatibility.Incompatible => _owner.Localization.CompatibilityIncompatible,
-        _ => _owner.Localization.CompatibilityUnknown,
-    };
+    public string CompatibilityText => _owner.CompatibilityText(Compatibility);
 
     public bool IsCompatible => Compatibility == GameCompatibility.Compatible;
-
-    public bool IsUntested => Compatibility == GameCompatibility.Untested;
 
     public bool IsIncompatible => Compatibility == GameCompatibility.Incompatible;
 
@@ -936,7 +925,7 @@ public sealed partial class PackItem : ObservableObject, IPlanRow
 
     /// <summary>Each pinned release that does not fit the installed game, with its bound, in pack order.</summary>
     public IReadOnlyList<string> UnfitPinTexts => Pinned
-        .Select(release => _owner.PinFitText(release, Borea.Core.Game.Compatibility.Evaluate(release, _game)))
+        .Select(release => _owner.PinFitText(release, _game))
         .OfType<string>()
         .ToList();
 
@@ -1365,7 +1354,7 @@ public sealed partial class PackMemberItem : ObservableObject, IInstallRow
             _ => _owner.Localization.FormatPackMemberInUsePlain(instance.Name, Name, HeldVersion!),
         });
 
-    private string JoinFit(string text) => HeldRelease is { } release && _owner.PinFitText(release, HeldCompatibility) is { } fit ? $"{text} {fit}" : text;
+    private string JoinFit(string text) => HeldRelease is { } release && _owner.PinFitText(release, _game) is { } fit ? $"{text} {fit}" : text;
 
     /// <summary>The releases of this mod, newest first, which give the fit of the version that the active instance holds.</summary>
     internal IReadOnlyList<ModVersionMetadata> History { get; init; } = [];
@@ -1378,10 +1367,8 @@ public sealed partial class PackMemberItem : ObservableObject, IInstallRow
     /// <summary>How the version in <see cref="InUseChipText"/> fits the installed game. The pinned release has its own chip in the Version column.</summary>
     public GameCompatibility HeldCompatibility => HeldRelease is { } release ? Borea.Core.Game.Compatibility.Evaluate(release, _game) : GameCompatibility.Unknown;
 
-    /// <summary>True while the chip with <see cref="InUseChipText"/> shows as installed and fitting, which is when the release is neither untested nor incompatible.</summary>
-    public bool IsHeldFitting => InUseChipText is not null && !IsHeldUntested && !IsHeldIncompatible;
-
-    public bool IsHeldUntested => HeldCompatibility == GameCompatibility.Untested;
+    /// <summary>True while the chip with <see cref="InUseChipText"/> shows as installed and fitting, which is when the release is not incompatible.</summary>
+    public bool IsHeldFitting => InUseChipText is not null && !IsHeldIncompatible;
 
     public bool IsHeldIncompatible => HeldCompatibility == GameCompatibility.Incompatible;
 
@@ -1449,7 +1436,6 @@ public sealed partial class PackMemberItem : ObservableObject, IInstallRow
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CompatibilityText))]
     [NotifyPropertyChangedFor(nameof(FitText))]
-    [NotifyPropertyChangedFor(nameof(IsUntested))]
     [NotifyPropertyChangedFor(nameof(IsIncompatible))]
     [NotifyPropertyChangedFor(nameof(HasFitChips))]
     private GameCompatibility _compatibility = GameCompatibility.Unknown;
@@ -1457,12 +1443,10 @@ public sealed partial class PackMemberItem : ObservableObject, IInstallRow
     public string CompatibilityText => _owner.CompatibilityText(Compatibility);
 
     /// <summary>The pinned release with the bound that keeps it from fitting the installed game, or null when it fits.</summary>
-    public string? FitText => _release is null ? null : _owner.PinFitText(_release, Compatibility);
+    public string? FitText => _release is null ? null : _owner.PinFitText(_release, _game);
 
     /// <summary>True while the row shows a chip about the pinned release, so that an empty chip line takes no room.</summary>
     public bool HasFitChips => FitText is not null || IsYanked || GoneText is not null || IsUnlisted;
-
-    public bool IsUntested => Compatibility == GameCompatibility.Untested;
 
     public bool IsIncompatible => Compatibility == GameCompatibility.Incompatible;
 
@@ -1543,7 +1527,6 @@ public sealed partial class PackMemberItem : ObservableObject, IInstallRow
         OnPropertyChanged(nameof(InUseText));
         OnPropertyChanged(nameof(HeldCompatibility));
         OnPropertyChanged(nameof(IsHeldFitting));
-        OnPropertyChanged(nameof(IsHeldUntested));
         OnPropertyChanged(nameof(IsHeldIncompatible));
     }
 
@@ -1551,6 +1534,7 @@ public sealed partial class PackMemberItem : ObservableObject, IInstallRow
     {
         _game = installed;
         Compatibility = _release is null ? GameCompatibility.Unknown : Borea.Core.Game.Compatibility.Evaluate(_release, installed);
+        OnPropertyChanged(nameof(FitText));
         NotifyInstanceState();
     }
 

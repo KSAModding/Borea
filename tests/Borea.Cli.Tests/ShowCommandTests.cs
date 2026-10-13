@@ -440,7 +440,7 @@ public sealed class ShowCommandTests : IDisposable
         Assert.Equal("known", run.Json.GetProperty("state").GetString());
         Assert.Equal("Flight Tools", run.Json.GetProperty("listing").GetProperty("name").GetString());
         var shown = run.Json.GetProperty("releases")[0];
-        Assert.Equal("untested", shown.GetProperty("compatibility").GetString());
+        Assert.Equal("incompatible", shown.GetProperty("compatibility").GetString());
         Assert.True(shown.GetProperty("yanked").GetBoolean());
         Assert.Equal("Broken on newer games.", shown.GetProperty("yankedReason").GetString());
         Assert.Equal("required", shown.GetProperty("dependencies")[0].GetProperty("kind").GetString());

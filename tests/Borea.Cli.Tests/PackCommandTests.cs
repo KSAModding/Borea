@@ -109,6 +109,36 @@ public sealed class PackCommandTests : IDisposable
     }
 
     [Fact]
+    public async Task PackSearch_PinAboveItsGameMax_PrintsIncompatible()
+    {
+        _host.IndexReader.Snapshot = Snapshot(Pack(ContentCommandFixtures.PackVersion()));
+        _host.Mods.Releases.Add(ContentCommandFixtures.Release(gameMaxRevision: 5348));
+        _host.InstalledVersion = Installed("2026.9.7.5402");
+
+        var run = await _host.RunAsync("pack", "search", "Navigation", "--json");
+
+        Assert.Equal(0, run.ExitCode);
+        var result = Assert.Single(run.Json.GetProperty("results").EnumerateArray());
+        Assert.Equal("incompatible", result.GetProperty("compatibility").GetString());
+    }
+
+    [Fact]
+    public async Task PackShow_PinAboveItsGameMax_PrintsIncompatible()
+    {
+        _host.IndexReader.Snapshot = Snapshot(Pack(ContentCommandFixtures.PackVersion()));
+        _host.Mods.Releases.Add(ContentCommandFixtures.Release(gameMaxRevision: 5348));
+        _host.InstalledVersion = Installed("2026.9.7.5402");
+
+        var all = await _host.RunAsync("pack", "show", "navigation-pack");
+        var exact = await _host.RunAsync("pack", "show", "navigation-pack", "--version", "1.0.0");
+
+        Assert.Equal(0, all.ExitCode);
+        Assert.Contains("  1.0.0  incompatible", all.Output);
+        Assert.Equal(0, exact.ExitCode);
+        Assert.Contains("  1.0.0  incompatible", exact.Output);
+    }
+
+    [Fact]
     public async Task PackSearch_Json_CarriesKnownAndUnknownResultsAndDiagnostics()
     {
         _host.IndexReader.Snapshot = Snapshot(
@@ -473,7 +503,7 @@ public sealed class PackCommandTests : IDisposable
     }
 
     [Fact]
-    public async Task PackInstall_UntestedPack_WarnsAndInstalls()
+    public async Task PackInstall_PackAboveItsGameMax_FailsAndNamesTheBound()
     {
         _host.IndexReader.Snapshot = Snapshot(Pack(ContentCommandFixtures.PackVersion(gameMax: "2026.8.22.5348")));
         _host.Mods.Releases.Add(ContentCommandFixtures.Release());
@@ -482,9 +512,9 @@ public sealed class PackCommandTests : IDisposable
 
         var run = await _host.RunAsync("pack", "install", "navigation-pack", "--instance", "Alpha");
 
-        Assert.Equal(0, run.ExitCode);
-        Assert.Contains("warning: Pack 'navigation-pack' 1.0.0 is untested with the installed game, because the game is newer than 2026.8.22.5348.", run.Output);
-        Assert.Single(_host.ModPackInstaller.Requests);
+        Assert.Equal(1, run.ExitCode);
+        Assert.Contains("error: Pack 'navigation-pack' 1.0.0 is incompatible with the installed game 2026.9.7.5402, because it supports game 2026.8.22.5348 or older.", run.Error);
+        Assert.Empty(_host.ModPackInstaller.Requests);
     }
 
     [Fact]

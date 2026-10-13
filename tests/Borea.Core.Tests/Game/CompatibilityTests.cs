@@ -91,9 +91,18 @@ public sealed class CompatibilityTests
     }
 
     [Fact]
-    public void Evaluate_AboveTheUpperBound_IsUntested()
+    public void Evaluate_AboveTheUpperBound_IsIncompatible()
     {
-        Assert.Equal(GameCompatibility.Untested, Compatibility.Evaluate(2131, 5117, Installed(5118)));
+        Assert.Equal(GameCompatibility.Incompatible, Compatibility.Evaluate(2131, 5117, Installed(5118)));
+    }
+
+    [Fact]
+    public void Evaluate_NoStateOfTheBounds_IsUntestedAnyMore()
+    {
+        var states = new[] { 1, 2130, 2131, 5117, 5118, int.MaxValue }.Select(revision => Compatibility.Evaluate(2131, 5117, Installed(revision))).Distinct().Order();
+
+        Assert.Equal([GameCompatibility.Compatible, GameCompatibility.Incompatible], states);
+        Assert.False(Enum.IsDefined(typeof(GameCompatibility), 1));
     }
 
     [Fact]
@@ -101,7 +110,30 @@ public sealed class CompatibilityTests
     {
         Assert.Equal(GameCompatibility.Compatible, Compatibility.Evaluate(5117, 5117, Installed(5117)));
         Assert.Equal(GameCompatibility.Incompatible, Compatibility.Evaluate(5117, 5117, Installed(5116)));
-        Assert.Equal(GameCompatibility.Untested, Compatibility.Evaluate(5117, 5117, Installed(5118)));
+        Assert.Equal(GameCompatibility.Incompatible, Compatibility.Evaluate(5117, 5117, Installed(5118)));
+    }
+
+    [Fact]
+    public void IsAboveUpperBound_Release_IsTrueOnlyAboveAStatedGameMax()
+    {
+        var bounded = Release(gameMax: "2026.8.3.5117", gameMaxRevision: 5117);
+
+        Assert.True(Compatibility.IsAboveUpperBound(bounded, Installed(5118)));
+        Assert.False(Compatibility.IsAboveUpperBound(bounded, Installed(5117)));
+        Assert.False(Compatibility.IsAboveUpperBound(bounded, Installed(2130)));
+        Assert.False(Compatibility.IsAboveUpperBound(bounded, null));
+        Assert.False(Compatibility.IsAboveUpperBound(Release(), Installed(int.MaxValue)));
+    }
+
+    [Fact]
+    public void IsAboveUpperBound_Pack_ResolvesAMonthBound()
+    {
+        var releases = new GameReleaseList(["2026.7.2.4824", "2026.7.10.5056", "2026.8.3.5117"]);
+
+        Assert.True(Compatibility.IsAboveUpperBound(Pack("2026.7", "2026.7"), Installed(5057), releases));
+        Assert.False(Compatibility.IsAboveUpperBound(Pack("2026.7", "2026.7"), Installed(5056), releases));
+        Assert.False(Compatibility.IsAboveUpperBound(Pack("2026.7", "2026.7"), Installed(4823), releases));
+        Assert.False(Compatibility.IsAboveUpperBound(Pack("2026.7"), Installed(9999), releases));
     }
 
     [Fact]
@@ -119,7 +151,7 @@ public sealed class CompatibilityTests
 
         Assert.Equal(GameCompatibility.Incompatible, Compatibility.Evaluate(release, Installed(2130)));
         Assert.Equal(GameCompatibility.Compatible, Compatibility.Evaluate(release, Installed(2131)));
-        Assert.Equal(GameCompatibility.Untested, Compatibility.Evaluate(release, Installed(5118)));
+        Assert.Equal(GameCompatibility.Incompatible, Compatibility.Evaluate(release, Installed(5118)));
     }
 
     [Fact]
@@ -143,7 +175,7 @@ public sealed class CompatibilityTests
 
         Assert.Equal(GameCompatibility.Incompatible, Compatibility.Evaluate(pack, Installed(2130), GameReleaseList.Empty));
         Assert.Equal(GameCompatibility.Compatible, Compatibility.Evaluate(pack, Installed(2131), GameReleaseList.Empty));
-        Assert.Equal(GameCompatibility.Untested, Compatibility.Evaluate(pack, Installed(5118), GameReleaseList.Empty));
+        Assert.Equal(GameCompatibility.Incompatible, Compatibility.Evaluate(pack, Installed(5118), GameReleaseList.Empty));
         Assert.Equal(GameCompatibility.Unknown, Compatibility.Evaluate(pack, null, GameReleaseList.Empty));
     }
 
@@ -156,7 +188,7 @@ public sealed class CompatibilityTests
         Assert.Equal(GameCompatibility.Incompatible, Compatibility.Evaluate(pack, Installed(4823), releases));
         Assert.Equal(GameCompatibility.Compatible, Compatibility.Evaluate(pack, Installed(4824), releases));
         Assert.Equal(GameCompatibility.Compatible, Compatibility.Evaluate(pack, Installed(5056), releases));
-        Assert.Equal(GameCompatibility.Untested, Compatibility.Evaluate(pack, Installed(5057), releases));
+        Assert.Equal(GameCompatibility.Incompatible, Compatibility.Evaluate(pack, Installed(5057), releases));
     }
 
     [Fact]
@@ -172,7 +204,7 @@ public sealed class CompatibilityTests
     {
         var releases = new GameReleaseList(["2026.8.3.5117"]);
 
-        Assert.Equal(GameCompatibility.Untested, Compatibility.Evaluate(Pack("2026.8", "2026.8"), new GameVersion(2026, 9, 7, 5402), releases));
+        Assert.Equal(GameCompatibility.Incompatible, Compatibility.Evaluate(Pack("2026.8", "2026.8"), new GameVersion(2026, 9, 7, 5402), releases));
     }
 
     [Fact]
@@ -190,23 +222,26 @@ public sealed class CompatibilityTests
     {
         var pack = Pack("2026.7.4.2131");
         var fits = Release();
-        var untested = Release(gameMax: "2026.8.1.5100", gameMaxRevision: 5100);
-        var incompatible = Release(gameMin: "2026.8.4.5200", gameMinRevision: 5200);
+        var aboveMax = Release(gameMax: "2026.8.1.5100", gameMaxRevision: 5100);
+        var belowMin = Release(gameMin: "2026.8.4.5200", gameMinRevision: 5200);
 
         Assert.Equal(GameCompatibility.Compatible, Compatibility.Evaluate(pack, [fits, fits], Installed(5117), GameReleaseList.Empty));
-        Assert.Equal(GameCompatibility.Untested, Compatibility.Evaluate(pack, [fits, untested], Installed(5117), GameReleaseList.Empty));
-        Assert.Equal(GameCompatibility.Incompatible, Compatibility.Evaluate(pack, [incompatible, untested], Installed(5117), GameReleaseList.Empty));
+        Assert.Equal(GameCompatibility.Incompatible, Compatibility.Evaluate(pack, [fits, aboveMax], Installed(5117), GameReleaseList.Empty));
+        Assert.Equal(GameCompatibility.Incompatible, Compatibility.Evaluate(pack, [belowMin, fits], Installed(5117), GameReleaseList.Empty));
+        Assert.Equal(GameCompatibility.Compatible, Compatibility.Evaluate(pack, [fits, aboveMax], Installed(5100), GameReleaseList.Empty));
         Assert.Equal(GameCompatibility.Unknown, Compatibility.Evaluate(pack, [fits], null, GameReleaseList.Empty));
     }
 
     [Fact]
-    public void Evaluate_PackWithPinnedReleases_KeepsAnIncompatibleOrUnknownPackBound()
+    public void Evaluate_PackWithPinnedReleases_KeepsAnIncompatiblePackBound_AndAnIncompatiblePinRanksAboveAnUnknownOne()
     {
-        var untested = Release(gameMax: "2026.8.1.5100", gameMaxRevision: 5100);
+        var fits = Release();
+        var aboveMax = Release(gameMax: "2026.8.1.5100", gameMaxRevision: 5100);
         var releases = new GameReleaseList(["2026.8.3.5117"]);
 
-        Assert.Equal(GameCompatibility.Incompatible, Compatibility.Evaluate(Pack("2026.8.4.5200"), [untested], Installed(5117), releases));
-        Assert.Equal(GameCompatibility.Unknown, Compatibility.Evaluate(Pack("2026.7"), [untested], Installed(5117), releases));
+        Assert.Equal(GameCompatibility.Incompatible, Compatibility.Evaluate(Pack("2026.8.4.5200"), [fits], Installed(5117), releases));
+        Assert.Equal(GameCompatibility.Unknown, Compatibility.Evaluate(Pack("2026.7"), [fits], Installed(5117), releases));
+        Assert.Equal(GameCompatibility.Incompatible, Compatibility.Evaluate(Pack("2026.7"), [aboveMax], Installed(5117), releases));
     }
 
     [Fact]

@@ -584,15 +584,12 @@ public sealed partial class VersionItem : ObservableObject, IInstallRow
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CompatibilityText))]
     [NotifyPropertyChangedFor(nameof(IsCompatible))]
-    [NotifyPropertyChangedFor(nameof(IsUntested))]
     [NotifyPropertyChangedFor(nameof(IsIncompatible))]
     private GameCompatibility _compatibility = GameCompatibility.Unknown;
 
     public string CompatibilityText => _owner.CompatibilityText(Compatibility);
 
     public bool IsCompatible => Compatibility == GameCompatibility.Compatible;
-
-    public bool IsUntested => Compatibility == GameCompatibility.Untested;
 
     public bool IsIncompatible => Compatibility == GameCompatibility.Incompatible;
 

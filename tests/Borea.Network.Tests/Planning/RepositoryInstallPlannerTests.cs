@@ -422,6 +422,48 @@ public sealed class RepositoryInstallPlannerTests
         Assert.DoesNotContain(plan.Conflicts, value => value.Code == "unsatisfied-dependency");
     }
 
+    [Fact]
+    public async Task PlanAsync_RequestAboveItsGameMax_IsAConflictThatNamesTheBound()
+    {
+        var a = Release("A", gameMaxRevision: 5000);
+        var plan = await new RepositoryInstallPlanner(new ModDependencyResolver()).PlanAsync(new InstallPlanningRequest(new Instance("Test", InstanceSource.Custom.Value), [new RequestedMod(a, InstallReason.Manual)], new FakeRepository([a]), Game));
+        Assert.False(plan.IsReady);
+        var conflict = Assert.Single(plan.Conflicts);
+        Assert.Equal(("A", "above-game-max", "2026.8.0.5000"), (conflict.ModId, conflict.Code, conflict.Value));
+        Assert.Empty(plan.Warnings);
+    }
+
+    [Fact]
+    public async Task PlanAsync_DependencyAboveItsGameMax_PicksTheReleaseThatFits()
+    {
+        var a = Release("A", dependencies: [Required("B")]);
+        var b1 = Release("B");
+        var b2 = Release("B", "2.0.0", gameMaxRevision: 5000);
+        var plan = await new RepositoryInstallPlanner(new ModDependencyResolver()).PlanAsync(new InstallPlanningRequest(new Instance("Test", InstanceSource.Custom.Value), [new RequestedMod(a, InstallReason.Manual)], new FakeRepository([a, b1, b2]), Game));
+        Assert.True(plan.IsReady);
+        Assert.Equal(ModVersion.Parse("1.0.0"), Assert.Single(plan.Selections, value => value.Release.ModId == "B").Release.Version);
+        Assert.Empty(plan.Warnings);
+    }
+
+    [Fact]
+    public async Task PlanAsync_InstalledReleaseAboveItsGameMax_OnlyWarnsUnlessItIsRequestedExactly()
+    {
+        var bounded = Release("B", gameMaxRevision: 5000);
+        var held = new InstalledMod("B", bounded.Version, InstallReason.Manual, DateTimeOffset.UtcNow, bounded);
+        var instance = Instance.FromExisting(Guid.NewGuid(), "Test", InstanceSource.Custom.Value, DateTimeOffset.UtcNow, [held], false);
+        var a = Release("A", dependencies: [Required("B")]);
+        var planner = new RepositoryInstallPlanner(new ModDependencyResolver());
+
+        var plan = await planner.PlanAsync(new InstallPlanningRequest(instance, [new RequestedMod(a, InstallReason.Manual)], new FakeRepository([a]), Game));
+        Assert.True(plan.IsReady);
+        Assert.Contains(plan.Warnings, value => value.Code == "above-game-max" && value.ModId == "B");
+        Assert.Equal(["A"], plan.Operations.Select(value => value.Release.ModId));
+
+        var exact = await planner.PlanAsync(new InstallPlanningRequest(instance, [new RequestedMod(bounded, InstallReason.ModPack)], new FakeRepository([bounded]), Game));
+        Assert.False(exact.IsReady);
+        Assert.Contains(exact.Conflicts, value => value.Code == "above-game-max" && value.ModId == "B");
+    }
+
     [Theory]
     [InlineData(true, "1.0.0")]
     [InlineData(false, "2.0.0")]
@@ -923,7 +965,8 @@ public sealed class RepositoryInstallPlannerTests
     private static InstalledMod Owned(string id, string version = "1.0.0", bool pinned = false) => new(id, ModVersion.Parse(version), InstallReason.Manual, DateTimeOffset.UtcNow, Release(id, version), ownership: ModInstallOwnership.Borea, ownershipToken: "token", isPinned: pinned);
     private static RequestedMod Update(InstalledMod mod) => new(mod.Metadata, mod.Reason, Exact: false);
     private static readonly DateTimeOffset GoneSince = new(2026, 9, 23, 10, 24, 0, TimeSpan.Zero);
-    private static ModVersionMetadata Release(string id, string version = "1.0.0", IReadOnlyList<ModDependency>? dependencies = null, bool yanked = false, int gameMinRevision = 2131, IReadOnlyList<string>? os = null, ReleaseStatus status = ReleaseStatus.Stable, DateTimeOffset? unavailableSince = null) => new(1, id, ModVersion.Parse(version), status, DateTimeOffset.UnixEpoch, gameMinRevision == 2131 ? "2026.7.4.2131" : $"2026.7.4.{gameMinRevision}", gameMinRevision, new DownloadInfo("https://example.com/mod.zip", new string('A', 64), 1, "application/zip", unavailableSince: unavailableSince), 1, dependencies ?? [], os: os, yanked: yanked);
+    private static readonly Borea.Core.Game.GameVersion Game = new(2026, 8, 3, 5117);
+    private static ModVersionMetadata Release(string id, string version = "1.0.0", IReadOnlyList<ModDependency>? dependencies = null, bool yanked = false, int gameMinRevision = 2131, IReadOnlyList<string>? os = null, ReleaseStatus status = ReleaseStatus.Stable, DateTimeOffset? unavailableSince = null, int? gameMaxRevision = null) => new(1, id, ModVersion.Parse(version), status, DateTimeOffset.UnixEpoch, gameMinRevision == 2131 ? "2026.7.4.2131" : $"2026.7.4.{gameMinRevision}", gameMinRevision, new DownloadInfo("https://example.com/mod.zip", new string('A', 64), 1, "application/zip", unavailableSince: unavailableSince), 1, dependencies ?? [], gameMax: gameMaxRevision is { } max ? $"2026.8.0.{max}" : null, gameMaxRevision: gameMaxRevision, os: os, yanked: yanked);
 
     private sealed class FakeRepository(IReadOnlyList<ModVersionMetadata> releases) : IModRepository
     {

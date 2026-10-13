@@ -10,7 +10,6 @@ internal static class ContentOutput
     public static string Name(GameCompatibility compatibility) => compatibility switch
     {
         GameCompatibility.Compatible => "compatible",
-        GameCompatibility.Untested => "untested",
         GameCompatibility.Incompatible => "incompatible",
         GameCompatibility.Unknown => "unknown",
         _ => throw new ArgumentOutOfRangeException(nameof(compatibility), compatibility, null),

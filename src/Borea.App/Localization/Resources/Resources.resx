@@ -2608,7 +2608,7 @@
     <value>Last working game version</value>
   </data>
   <data name="ListingGameMaxHint" xml:space="preserve">
-    <value>Leave this empty unless the mod stops working on newer game builds. Players on a newer build then get a warning before they install. Every release stamped while this is set keeps the limit, because a release can only get stricter later.</value>
+    <value>Leave this empty unless the mod stops working on newer game builds. Players on a newer build then cannot install it, so do not enter the newest build you tested with. Every release stamped while this is set keeps the limit, because a release can only get stricter later.</value>
   </data>
   <data name="ListingGameHint" xml:space="preserve">
     <value>As the game shows it, such as 2026.9.10.5438, or a month such as 2026.9.</value>
@@ -3339,8 +3339,8 @@
   <data name="InstallMessageIncompatibleFormat" xml:space="preserve">
     <value>This release needs game {0} or newer.</value>
   </data>
-  <data name="InstallMessageUntested" xml:space="preserve">
-    <value>This release is not tested with the installed game.</value>
+  <data name="InstallMessageAboveGameMaxFormat" xml:space="preserve">
+    <value>This release supports game {0} or older.</value>
   </data>
   <data name="InstallMessageCompatibilityUnknown" xml:space="preserve">
     <value>The compatibility of this release with the installed game is unknown.</value>
@@ -3545,9 +3545,6 @@
   </data>
   <data name="CompatibilityCompatible" xml:space="preserve">
     <value>Compatible</value>
-  </data>
-  <data name="CompatibilityUntested" xml:space="preserve">
-    <value>Untested</value>
   </data>
   <data name="CompatibilityIncompatible" xml:space="preserve">
     <value>Incompatible</value>
@@ -4167,13 +4164,16 @@
   <data name="PackIncompatibleFormat" xml:space="preserve">
     <value>This pack needs game {0} or newer.</value>
   </data>
+  <data name="PackAboveGameMaxFormat" xml:space="preserve">
+    <value>This pack supports game {0} or older.</value>
+  </data>
   <data name="PackMemberYankedFormat" xml:space="preserve">
     <value>{0} {1} is yanked.</value>
   </data>
   <data name="PackMemberIncompatibleFormat" xml:space="preserve">
     <value>{0} {1} needs KSA {2} or newer.</value>
   </data>
-  <data name="PackMemberUntestedFormat" xml:space="preserve">
+  <data name="PackMemberAboveGameMaxFormat" xml:space="preserve">
     <value>{0} {1} supports KSA up to {2}.</value>
   </data>
   <data name="PackIncompleteFormat" xml:space="preserve">
@@ -4196,9 +4196,6 @@
   </data>
   <data name="PackNothingInstalled" xml:space="preserve">
     <value>Nothing was installed.</value>
-  </data>
-  <data name="PackUntestedFormat" xml:space="preserve">
-    <value>This pack is not tested with the installed game, which is newer than {0}.</value>
   </data>
   <data name="PackSupersededFormat" xml:space="preserve">
     <value>The author no longer maintains this pack and recommends {0}.</value>

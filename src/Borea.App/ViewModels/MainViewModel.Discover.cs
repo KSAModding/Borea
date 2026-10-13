@@ -483,7 +483,6 @@ public partial class MainViewModel
     internal string CompatibilityText(GameCompatibility compatibility) => compatibility switch
     {
         GameCompatibility.Compatible => Localization.CompatibilityCompatible,
-        GameCompatibility.Untested => Localization.CompatibilityUntested,
         GameCompatibility.Incompatible => Localization.CompatibilityIncompatible,
         _ => Localization.CompatibilityUnknown,
     };
@@ -785,15 +784,12 @@ public sealed partial class DiscoverItem : ObservableObject, IInstallRow
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CompatibilityText))]
     [NotifyPropertyChangedFor(nameof(IsCompatible))]
-    [NotifyPropertyChangedFor(nameof(IsUntested))]
     [NotifyPropertyChangedFor(nameof(IsIncompatible))]
     private GameCompatibility _compatibility = GameCompatibility.Unknown;
 
     public string CompatibilityText => _owner.CompatibilityText(Compatibility);
 
     public bool IsCompatible => Compatibility == GameCompatibility.Compatible;
-
-    public bool IsUntested => Compatibility == GameCompatibility.Untested;
 
     public bool IsIncompatible => Compatibility == GameCompatibility.Incompatible;
 

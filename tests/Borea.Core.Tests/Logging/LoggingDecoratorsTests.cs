@@ -86,7 +86,7 @@ public sealed class LoggingDecoratorsTests
         var instance = new Instance("Main", InstanceSource.Custom.Value);
         var release = TestFixtures.SampleVersionMetadata("Example", "1.2.0");
         var request = new InstallPlanningRequest(instance, [new RequestedMod(release, InstallReason.Manual)], new EmptyRepository());
-        var warning = new PlanningMessage("Example", PlanningMessageKind.Compatibility) { Compatibility = Borea.Core.Game.GameCompatibility.Untested };
+        var warning = new PlanningMessage("Example", PlanningMessageKind.Compatibility) { Compatibility = Borea.Core.Game.GameCompatibility.Unknown };
         var planner = new LoggingInstallPlanner(new FixedPlanner(new InstallPlan(instance.InstanceId, InstallPlanningState.Capture(instance), [], [], [warning], [], [], [])), _log);
 
         await planner.PlanAsync(request);
@@ -94,7 +94,7 @@ public sealed class LoggingDecoratorsTests
         Assert.Equal(
             [
                 $"Plan for instance {instance.InstanceId}: ready. Requested: Example 1.2.0 (Manual). Operations: none.",
-                "Plan warning Example (compatibility): Game compatibility is Untested.",
+                "Plan warning Example (compatibility): Game compatibility is Unknown.",
             ],
             _log.Messages);
     }

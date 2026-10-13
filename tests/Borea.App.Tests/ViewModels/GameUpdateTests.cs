@@ -50,12 +50,12 @@ public sealed class GameUpdateTests
         await viewModel.LoadAsync();
         await viewModel.EnsureDiscoverLoadedAsync();
         var afc = viewModel.DiscoverItems.Single(item => item.ModId == "AdvancedFlightComputer");
-        afc.Compatibility = GameCompatibility.Untested;
+        afc.Compatibility = GameCompatibility.Unknown;
 
         await viewModel.RefreshInstalledGameAsync();
 
-        // a real refresh would have evaluated the row again
-        Assert.Equal(GameCompatibility.Untested, afc.Compatibility);
+        // a real refresh would have evaluated the row again, and a release with a known game is never Unknown
+        Assert.Equal(GameCompatibility.Unknown, afc.Compatibility);
     }
 
     [Fact]

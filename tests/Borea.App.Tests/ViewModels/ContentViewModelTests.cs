@@ -134,13 +134,13 @@ public sealed class ContentViewModelTests
         await viewModel.ShowContentVersionsCommand.ExecuteAsync(null);
 
         Assert.Equal(
-            new[] { ("0.7.5", GameCompatibility.Incompatible), ("0.7.4", GameCompatibility.Incompatible), ("0.7.3", GameCompatibility.Compatible), ("0.7.2", GameCompatibility.Untested) },
+            new[] { ("0.7.5", GameCompatibility.Incompatible), ("0.7.4", GameCompatibility.Incompatible), ("0.7.3", GameCompatibility.Compatible), ("0.7.2", GameCompatibility.Incompatible) },
             viewModel.ContentVersions.Select(version => (version.Version, version.Compatibility)));
 
         await viewModel.RefreshCompatibilityAsync(newer);
 
         Assert.Equal(
-            new[] { ("0.7.5", GameCompatibility.Compatible), ("0.7.4", GameCompatibility.Compatible), ("0.7.3", GameCompatibility.Untested), ("0.7.2", GameCompatibility.Untested) },
+            new[] { ("0.7.5", GameCompatibility.Compatible), ("0.7.4", GameCompatibility.Compatible), ("0.7.3", GameCompatibility.Incompatible), ("0.7.2", GameCompatibility.Incompatible) },
             viewModel.ContentVersions.Select(version => (version.Version, version.Compatibility)));
     }
 
