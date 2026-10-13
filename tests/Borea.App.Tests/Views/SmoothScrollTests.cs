@@ -52,6 +52,57 @@ public sealed class SmoothScrollTests
     }
 
     [Fact]
+    public void TheStep_FromRest_FollowsTheCurve()
+    {
+        var (gap, velocity) = (-3 * SmoothScroll.Notch, 0.0);
+        for (var frame = 1; frame <= 30; frame++)
+        {
+            (gap, velocity) = SmoothScroll.Step(gap, velocity, 1 / 60.0);
+            Assert.Equal(-3 * SmoothScroll.Notch * SmoothScroll.Left(frame / 60.0), gap, 9);
+        }
+    }
+
+    [Fact]
+    public void TheStep_KeepsTheSpeed_WhenANotchComesOnTheWay()
+    {
+        var (gap, velocity, moved) = (-SmoothScroll.Notch, 0.0, 0.0);
+        for (var frame = 0; frame < 5; frame++)
+        {
+            var next = SmoothScroll.Step(gap, velocity, 1 / 60.0);
+            (moved, gap, velocity) = (next.Gap - gap, next.Gap, next.Velocity);
+        }
+
+        gap -= SmoothScroll.Notch;
+        var movedAfter = SmoothScroll.Step(gap, velocity, 1 / 60.0).Gap - gap;
+
+        Assert.InRange(movedAfter, moved, 1.5 * moved);
+    }
+
+    [Fact]
+    public async Task TheWheelOverATextBox_EasesThePageAroundIt()
+    {
+        var seen = await HeadlessApp.RunAsync(async () =>
+        {
+            var box = new TextBox { Text = "one line", Width = 200 };
+            var page = new ScrollViewer { Content = new StackPanel { Children = { box, new Border { Height = 5000 } } } };
+            var window = new Window { Width = 400, Height = 300, Content = page };
+            window.Show();
+            window.UpdateLayout();
+            var before = page.Offset.Y;
+
+            window.MouseWheel(box.TranslatePoint(new Point(20, box.Bounds.Height / 2), window)!.Value, new Vector(0, -1));
+            var onTheWheel = page.Offset.Y;
+            await HeadlessApp.FramesAsync();
+            var after = page.Offset.Y;
+            window.Close();
+            return (before, onTheWheel, after);
+        });
+
+        Assert.True(seen.onTheWheel < seen.before + SmoothScroll.Notch, "The page must ease rather than jump one notch at once.");
+        Assert.Equal(seen.before + SmoothScroll.Notch, seen.after);
+    }
+
+    [Fact]
     public async Task NotchesTakenApart_ArriveWhereAllOfThemInOneWheelArrive()
     {
         var apart = await WheelTo(new Vector(0, -1), new Vector(0, -1), new Vector(0, -1), new Vector(0, -1));

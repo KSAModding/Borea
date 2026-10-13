@@ -17,13 +17,29 @@ namespace Borea.App.Views;
 public static class SmoothScroll
 {
     internal const double Notch = 50;
-    internal const double ResponseSeconds = 0.075;
+    internal const double ResponseSeconds = 0.12;
     private static readonly TimeSpan LongestFrame = TimeSpan.FromMilliseconds(100);
     private const double Rest = 0.1;
     internal static double Left(double seconds)
     {
         var t = 2 * seconds / ResponseSeconds;
         return (1 + t) * Math.Exp(-t);
+    }
+
+    /// <summary>
+    /// Moves one axis on a critically damped spring, where <paramref name="gap"/> is the offset minus the target. The
+    /// speed carries over to the next notch. From rest the gap follows <see cref="Left"/>, and it never passes zero.
+    /// </summary>
+    internal static (double Gap, double Velocity) Step(double gap, double velocity, double seconds)
+    {
+        if (velocity * gap > 0)
+            velocity = 0;
+
+        var omega = 2 / ResponseSeconds;
+        var fade = Math.Exp(-omega * seconds);
+        var pull = velocity + omega * gap;
+        var next = (gap + pull * seconds) * fade;
+        return next * gap <= 0 ? (0, 0) : (next, (velocity - omega * pull * seconds) * fade);
     }
 
     public static readonly AttachedProperty<bool> IsEnabledProperty =
@@ -68,7 +84,7 @@ public static class SmoothScroll
             || args.Handled
             || TopLevel.GetTopLevel(viewer) is null
             || viewer.Content is ILogicalScrollable { IsLogicalScrollEnabled: true }
-            || WheelBelongsToAnother(viewer, args.Source))
+            || WheelBelongsToAnother(viewer, args))
         {
             return;
         }
@@ -82,14 +98,16 @@ public static class SmoothScroll
     }
 
     /// <summary>
-    /// True when the wheel is not for this viewer: it is over a viewer inside it, or over a combo
-    /// box that is focused or open, which uses the wheel to change or scroll its selection.
+    /// True when the wheel is not for this viewer: it is over a viewer inside it that can move that way, or over a
+    /// combo box that is focused or open, which uses the wheel to change or scroll its selection. A viewer inside that
+    /// cannot move, such as the one in a single line text box, leaves the wheel to this viewer.
     /// </summary>
-    private static bool WheelBelongsToAnother(ScrollViewer viewer, object? source)
+    private static bool WheelBelongsToAnother(ScrollViewer viewer, PointerWheelEventArgs args)
     {
-        for (var node = source as Visual; node is not null && node != viewer; node = ParentOf(node))
+        for (var node = args.Source as Visual; node is not null && node != viewer; node = ParentOf(node))
         {
-            if (node is ScrollViewer)
+            if (node is ScrollViewer inner
+                && Clamp(inner, inner.Offset - ReadDelta(inner, args) * Notch) != Clamp(inner, inner.Offset))
                 return true;
 
             if (node is ComboBox box && (box.IsDropDownOpen || box.IsFocused))
@@ -132,9 +150,7 @@ public static class SmoothScroll
 
         private TimeSpan? _lastFrame;
 
-        private TimeSpan _since;
-
-        private double _left = 1;
+        private Vector _velocity;
 
         private bool _running;
 
@@ -167,8 +183,6 @@ public static class SmoothScroll
             {
                 _running = true;
                 _lastFrame = null;
-                _since = TimeSpan.Zero;
-                _left = 1;
                 _topLevel = topLevel;
                 topLevel.RequestAnimationFrame(OnFrame);
             }
@@ -179,6 +193,7 @@ public static class SmoothScroll
             _running = false;
             _lastFrame = null;
             _topLevel = null;
+            _velocity = default;
             _target = _viewer.Offset;
         }
 
@@ -190,19 +205,17 @@ public static class SmoothScroll
 
             var last = _lastFrame;
             var running = last is not null;
-            if (running)
-                _since += now - last!.Value > LongestFrame ? LongestFrame : now - last.Value;
-
+            var seconds = running ? Math.Min((now - last!.Value).TotalSeconds, LongestFrame.TotalSeconds) : 0;
             _lastFrame = now;
-            var left = Left(_since.TotalSeconds);
-            var share = running && _left > 0 ? 1 - left / _left : 0;
-            _left = left;
 
             _target = Clamp(_viewer, _target);
 
             var offset = _viewer.Offset;
             var gap = (_target - offset).Length;
-            if (_topLevel is null || (running && (offset - _moved).Length > gap * share + Rest))
+            var x = Step(offset.X - _target.X, _velocity.X, seconds);
+            var y = Step(offset.Y - _target.Y, _velocity.Y, seconds);
+            var next = _target + new Vector(x.Gap, y.Gap);
+            if (_topLevel is null || (running && (offset - _moved).Length > (next - offset).Length + Rest))
             {
                 Stop();
                 return;
@@ -216,7 +229,8 @@ public static class SmoothScroll
                 return;
             }
 
-            _viewer.SetCurrentValue(ScrollViewer.OffsetProperty, offset + (_target - offset) * share);
+            _velocity = new Vector(x.Velocity, y.Velocity);
+            _viewer.SetCurrentValue(ScrollViewer.OffsetProperty, next);
             _moved = _viewer.Offset;
             _topLevel.RequestAnimationFrame(OnFrame);
         }
