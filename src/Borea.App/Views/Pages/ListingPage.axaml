@@ -276,6 +276,11 @@
                                     <TextBlock Classes="body-sm secondary" Text="{Binding Localization.ListingReleasesSinceHint}" TextWrapping="Wrap" />
                                     <TextBox Classes="field" Text="{Binding ListingEditor.ReleasesSince}" PlaceholderText="1.0.0" AutomationProperties.Name="{Binding Localization.ListingReleasesSince}" />
                                 </StackPanel>
+                                <StackPanel Spacing="6" Margin="0,10,0,0" IsVisible="{Binding ListingEditor.ShowsTagPrefix}">
+                                    <TextBlock Classes="heading-sm" Text="{Binding Localization.ListingReleasesTagPrefix}" />
+                                    <TextBlock Classes="body-sm secondary" Text="{Binding Localization.ListingReleasesTagPrefixHint}" TextWrapping="Wrap" />
+                                    <TextBox Classes="field" Text="{Binding ListingEditor.ReleasesTagPrefix}" PlaceholderText="mymod-v" AutomationProperties.Name="{Binding Localization.ListingReleasesTagPrefix}" />
+                                </StackPanel>
                             </StackPanel>
                         </Border>
 

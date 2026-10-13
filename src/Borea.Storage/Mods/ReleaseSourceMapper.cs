@@ -9,10 +9,12 @@ public static class ReleaseSourceMapper
         Hosts = source.Hosts.Select(h => new ReleaseHostDto { Host = h.Host, Reference = h.Reference }).ToList(),
         Authority = source.Authority,
         Since = source.Since?.ToString(),
+        TagPrefix = source.TagPrefix,
     };
 
     public static ReleaseSource FromDto(ReleaseSourceDto dto) => new(
         dto.Hosts.Select(h => new ReleaseHost(h.Host, h.Reference)).ToList(),
         dto.Authority,
-        MetadataEnumMapper.ParseVersion(dto.Since));
+        MetadataEnumMapper.ParseVersion(dto.Since),
+        dto.TagPrefix);
 }

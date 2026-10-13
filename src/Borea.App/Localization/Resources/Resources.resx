@@ -2598,6 +2598,12 @@
   <data name="ListingReleasesSinceHint" xml:space="preserve">
     <value>Leave this empty to list only new releases. With a version, the index also stamps every older release from that version on. Those releases get the listing facts of today, such as the game versions and the dependencies.</value>
   </data>
+  <data name="ListingReleasesTagPrefix" xml:space="preserve">
+    <value>Tag prefix of the mod releases</value>
+  </data>
+  <data name="ListingReleasesTagPrefixHint" xml:space="preserve">
+    <value>Leave this empty when every release of the repository is a mod release. With a prefix, the index takes only the GitHub releases whose tag starts with it, with the same letter case, and reads the version from the rest of the tag. For example, with mymod- the tag mymod-v1.2.0 is version 1.2.0.</value>
+  </data>
   <data name="ListingReleasesHint" xml:space="preserve">
     <value>New releases are listed from here on their own.</value>
   </data>

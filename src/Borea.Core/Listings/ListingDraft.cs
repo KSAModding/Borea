@@ -188,7 +188,7 @@ public sealed record ListingDraft
         if (table is null)
             return null;
 
-        return new ListingReleases(table.GetString("github"), table["spacedock"] as long?, table.GetString("authority"), table.GetString("since"));
+        return new ListingReleases(table.GetString("github"), table["spacedock"] as long?, table.GetString("authority"), table.GetString("since"), table.GetString("tag_prefix"));
     }
 
     private static AuthoredTable? WriteReleases(ListingReleases? releases, AuthoredTable? original)
@@ -201,6 +201,7 @@ public sealed record ListingDraft
         SetOrRemove(table, "spacedock", releases.SpaceDock);
         SetOrRemove(table, "authority", string.IsNullOrEmpty(releases.Authority) ? null : releases.Authority);
         SetOrRemove(table, "since", string.IsNullOrEmpty(releases.Since) ? null : releases.Since);
+        SetOrRemove(table, "tag_prefix", string.IsNullOrEmpty(releases.TagPrefix) ? null : releases.TagPrefix);
         return table;
     }
 
@@ -285,10 +286,11 @@ public sealed record ListingDraft
 public sealed record ListingLink(string Key, string Url);
 
 /// <summary>
-/// The [releases] table: the hosts the watcher reads, which of them decides when both are named, and the version
-/// from which the watcher also stamps the older releases (RFC 0079).
+/// The [releases] table: the hosts the watcher reads, which of them decides when both are named, the version
+/// from which the watcher also stamps the older releases (RFC 0079), and the text that the tag of every mod release
+/// on GitHub starts with (RFC 0096).
 /// </summary>
-public sealed record ListingReleases(string? GitHub, long? SpaceDock, string? Authority = null, string? Since = null);
+public sealed record ListingReleases(string? GitHub, long? SpaceDock, string? Authority = null, string? Since = null, string? TagPrefix = null);
 
 public sealed record ListingLoader(string Id, string Min, string? Max = null);
 

@@ -145,8 +145,15 @@
         "since": {
           "description": "The version from which the watcher also stamps the older releases of the authority, per RFC 0079. They get the listing facts that stand when they are stamped.",
           "$ref": "#/$defs/versionBound"
+        },
+        "tag_prefix": {
+          "description": "Per RFC 0096, the text that the tag of every mod release on the github repository starts with. The watcher takes only the GitHub releases whose tag starts with it, compared case-sensitively, and reads the version from the rest of the tag. It filters github as the authority and as a mirror, and SpaceDock, which has no tags, ignores it. It is not a host.",
+          "title": "a non-empty ASCII string without whitespace",
+          "type": "string",
+          "pattern": "^[!-~]+(?![\\s\\S])"
         }
       },
+      "dependentRequired": { "tag_prefix": ["github"] },
       "anyOf": [
         { "required": ["github"] },
         { "required": ["spacedock"] }

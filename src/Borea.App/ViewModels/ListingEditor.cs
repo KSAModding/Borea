@@ -165,11 +165,11 @@ public sealed partial class ListingEditor : ObservableObject
     private string _discussions = string.Empty;
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(NeedsAuthority), nameof(HasReleasesHost), nameof(HasDeclaredHelp))]
+    [NotifyPropertyChangedFor(nameof(NeedsAuthority), nameof(HasReleasesHost), nameof(HasDeclaredHelp), nameof(ShowsTagPrefix))]
     private string _releasesGitHub = string.Empty;
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(NeedsAuthority), nameof(HasReleasesHost), nameof(HasDeclaredHelp))]
+    [NotifyPropertyChangedFor(nameof(NeedsAuthority), nameof(HasReleasesHost), nameof(HasDeclaredHelp), nameof(ShowsTagPrefix))]
     private string _releasesSpaceDock = string.Empty;
 
     [ObservableProperty]
@@ -178,10 +178,20 @@ public sealed partial class ListingEditor : ObservableObject
     [ObservableProperty]
     private string _releasesSince = string.Empty;
 
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowsTagPrefix))]
+    private string _releasesTagPrefix = string.Empty;
+
     public bool NeedsAuthority => ReleasesGitHub.Trim().Length > 0 && ReleasesSpaceDock.Trim().Length > 0;
 
     /// <summary>Whether [releases] is written, which since needs.</summary>
     public bool HasReleasesHost => ReleasesGitHub.Trim().Length > 0 || ReleasesSpaceDock.Trim().Length > 0;
+
+    /// <summary>
+    /// Whether the tag prefix field shows. It needs a GitHub repository, and it stays in view while [releases] keeps a
+    /// prefix without one, so the error that names it can be fixed there.
+    /// </summary>
+    public bool ShowsTagPrefix => ReleasesGitHub.Trim().Length > 0 || (HasReleasesHost && ReleasesTagPrefix.Trim().Length > 0);
 
     [ObservableProperty]
     private string _gameMin = string.Empty;
@@ -626,6 +636,7 @@ public sealed partial class ListingEditor : ObservableObject
             ReleasesSpaceDock = draft.Releases?.SpaceDock?.ToString(CultureInfo.InvariantCulture) ?? string.Empty;
             ReleasesAuthority = draft.Releases?.Authority;
             ReleasesSince = draft.Releases?.Since ?? string.Empty;
+            ReleasesTagPrefix = draft.Releases?.TagPrefix ?? string.Empty;
             GameMin = draft.GameMin;
             GameMax = draft.GameMax ?? string.Empty;
             UsesLoader = draft.Loader is not null;
@@ -802,7 +813,7 @@ public sealed partial class ListingEditor : ObservableObject
         }
 
         var releases = !IsPack && (ReleasesGitHub.Trim().Length > 0 || spaceDock is not null)
-            ? new ListingReleases(Empty(ReleasesGitHub), spaceDock, NeedsAuthority ? ReleasesAuthority : null, Empty(ReleasesSince))
+            ? new ListingReleases(Empty(ReleasesGitHub), spaceDock, NeedsAuthority ? ReleasesAuthority : null, Empty(ReleasesSince), Empty(ReleasesTagPrefix))
             : null;
 
         // a curated tag comes from its chip only, so a deselected chip is not stored again through the free field
@@ -958,6 +969,8 @@ public sealed partial class ListingEditor : ObservableObject
     }
 
     partial void OnReleasesSinceChanged(string value) => Refresh();
+
+    partial void OnReleasesTagPrefixChanged(string value) => Refresh();
 
     partial void OnGameMinChanged(string value) => Refresh();
 

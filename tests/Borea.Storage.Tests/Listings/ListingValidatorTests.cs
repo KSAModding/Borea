@@ -209,6 +209,39 @@ public sealed class ListingValidatorTests
     }
 
     [Theory]
+    [InlineData("gatos-")]
+    [InlineData("release/v")]
+    [InlineData("V")]
+    public void Validate_TagPrefix_PassesNextToGitHub(string prefix)
+    {
+        Assert.Empty(Errors(Valid() with { Releases = new ListingReleases("owner/MyMod", null, TagPrefix: prefix) }));
+        Assert.Empty(Errors(Valid() with { Releases = new ListingReleases("owner/MyMod", 4253, "spacedock", TagPrefix: prefix) }));
+    }
+
+    [Theory]
+    [InlineData("my mod-")]
+    [InlineData("mod-\t")]
+    [InlineData("caf\u00e9-")]
+    [InlineData("")]
+    public void Validate_TagPrefix_NotAnAsciiStringWithoutWhitespace_IsRefused(string prefix)
+    {
+        var document = Valid().ToDocument();
+        document.GetTable("releases")!.Set("tag_prefix", prefix);
+
+        var errors = _validator.Validate(document, new ListingCheckContext(Snapshot())).Issues.Where(issue => issue.Severity == ListingIssueSeverity.Error).ToList();
+
+        Assert.Contains(errors, issue => issue.Location == "releases.tag_prefix" && issue.Message == $"'{prefix}' is not a non-empty ASCII string without whitespace");
+    }
+
+    [Fact]
+    public void Validate_TagPrefix_WithoutGitHub_IsRefused()
+    {
+        var errors = Errors(Valid() with { Releases = new ListingReleases(null, 4253, TagPrefix: "mymod-") });
+
+        Assert.Contains(errors, issue => issue.Location == "releases" && issue.Message == "'github' is required when 'tag_prefix' is set");
+    }
+
+    [Theory]
     [InlineData("2026.99999999999", "2026.99999999998")]
     [InlineData("2026.1.1.123456789012345678901", "2026.1.1.123456789012345678900")]
     public void Validate_BoundsBeyondLong_CompareWithoutThrowing(string min, string max)

@@ -19,7 +19,7 @@ public sealed class TomlListingFormatTests
             Description = "# My Mod\n\nIt's here.\n",
             License = "MIT",
             Tags = ["gameplay"],
-            Releases = new ListingReleases("owner/MyMod", 4253, "github", "1.2"),
+            Releases = new ListingReleases("owner/MyMod", 4253, "github", "1.2", "mymod-v"),
             Links = [new ListingLink("forums", "https://forums.ahwoo.com/threads/my-mod.1/"), new ListingLink("repository", "https://github.com/owner/MyMod")],
             GameMin = "2026.9.10.5438",
             Loader = new ListingLoader("StarMap", "0.4.6"),
@@ -50,6 +50,7 @@ public sealed class TomlListingFormatTests
             github = "owner/MyMod"
             spacedock = 4253
             authority = "github"
+            tag_prefix = "mymod-v"
             since = "1.2"
 
             [links]

@@ -8,6 +8,7 @@ public sealed class ReleaseSourceDto
     public List<ReleaseHostDto> Hosts { get; set; } = new();
     public string? Authority { get; set; }
     public string? Since { get; set; }
+    public string? TagPrefix { get; set; }
 }
 
 /// <summary>
