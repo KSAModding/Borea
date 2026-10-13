@@ -78,7 +78,7 @@ public static class ListingParser
             var (images, imagesErrors) = element.TryGetProperty("authored", out var authoredElement)
                 ? ContentImagesParser.Parse(authoredElement, listing.Id)
                 : (null, Array.Empty<RejectedIndexEntry>());
-            var (publishedAt, updatedAt, datesErrors) = ContentDatesParser.Parse(element, listing.Id);
+            var (publishedAt, updatedAt, listedAt, datesErrors) = ContentDatesParser.Parse(element, listing.Id);
 
             var validReleases = new List<ModVersionMetadata>();
             var rejectedReleases = new List<RejectedIndexEntry>();
@@ -119,7 +119,7 @@ public static class ListingParser
 
             return ParseOutcome<ParsedListing>.Valid(new ParsedListing(
                 listing.Id, authored, validReleases, rejectedReleases, unknownReleases, indexStatus, indexStatusError,
-                downloads, downloadsErrors, images, imagesErrors, publishedAt, updatedAt, datesErrors, changelogTextErrors));
+                downloads, downloadsErrors, images, imagesErrors, publishedAt, updatedAt, datesErrors, changelogTextErrors, listedAt));
         }
         catch (Exception ex) when (IndexJsonHelpers.IsInputFailure(ex))
         {

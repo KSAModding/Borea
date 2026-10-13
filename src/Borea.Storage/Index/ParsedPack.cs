@@ -27,6 +27,9 @@ public sealed class ParsedPack
 
     public DateTimeOffset? UpdatedAt { get; }
 
+    /// <summary>When the entry came into the index (RFC 0092). Null when the snapshot does not say.</summary>
+    public DateTimeOffset? ListedAt { get; }
+
     /// <summary>The dates that cannot be read. The pack stays usable.</summary>
     public IReadOnlyList<RejectedIndexEntry> DatesErrors { get; }
 
@@ -39,7 +42,8 @@ public sealed class ParsedPack
         RejectedIndexEntry? indexStatusError = null,
         DateTimeOffset? publishedAt = null,
         DateTimeOffset? updatedAt = null,
-        IReadOnlyList<RejectedIndexEntry>? datesErrors = null)
+        IReadOnlyList<RejectedIndexEntry>? datesErrors = null,
+        DateTimeOffset? listedAt = null)
     {
         ModIds.Validate(id, nameof(id));
 
@@ -51,6 +55,7 @@ public sealed class ParsedPack
         IndexStatusError = indexStatusError;
         PublishedAt = publishedAt;
         UpdatedAt = updatedAt;
+        ListedAt = listedAt;
         DatesErrors = datesErrors ?? Array.Empty<RejectedIndexEntry>();
     }
 }

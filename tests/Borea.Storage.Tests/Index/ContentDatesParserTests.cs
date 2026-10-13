@@ -10,8 +10,12 @@ public sealed class ContentDatesParserTests : IDisposable
         "published_at": "2026-08-02T13:18:41Z", "updated_at": "2026-09-02T10:14:05Z"
         """;
 
+    private const string ListedAt = "\"listed_at\": \"2026-09-20T08:30:00Z\"";
+
     private static readonly DateTimeOffset Published = new(2026, 8, 2, 13, 18, 41, TimeSpan.Zero);
     private static readonly DateTimeOffset Updated = new(2026, 9, 2, 10, 14, 5, TimeSpan.Zero);
+
+    private static readonly DateTimeOffset Listed = new(2026, 9, 20, 8, 30, 0, TimeSpan.Zero);
 
     private readonly string _tempRoot = Path.Combine(Path.GetTempPath(), "BoreaTest_" + Guid.NewGuid());
     private readonly TestGamePathProvider _paths;
@@ -41,7 +45,49 @@ public sealed class ContentDatesParserTests : IDisposable
         var listing = Assert.Single(result.ValidListings);
         Assert.Null(listing.PublishedAt);
         Assert.Null(listing.UpdatedAt);
+        Assert.Null(listing.ListedAt);
         Assert.Empty(listing.DatesErrors);
+    }
+
+    [Fact]
+    public void Parse_ListedAt_ReadsItOnTheListingAndThePack()
+    {
+        var result = SnapshotParser.Parse(Snapshot(Listing("test-mod", ListedAt), Pack(ListedAt)));
+
+        var listing = Assert.Single(result.ValidListings);
+        Assert.Equal(Listed, listing.ListedAt);
+        Assert.Null(listing.PublishedAt);
+        Assert.Empty(listing.DatesErrors);
+        var pack = Assert.Single(result.ValidPacks);
+        Assert.Equal(Listed, pack.ListedAt);
+        Assert.Empty(pack.DatesErrors);
+    }
+
+    [Fact]
+    public void Parse_InvalidListedAt_DropsOnlyThatDate()
+    {
+        var result = SnapshotParser.Parse(Snapshot(Listing("test-mod", BothDates + ", \"listed_at\": \"2026-09-20\"")));
+
+        var listing = Assert.Single(result.ValidListings);
+        Assert.Single(listing.ValidReleases);
+        Assert.Equal(Published, listing.PublishedAt);
+        Assert.Equal(Updated, listing.UpdatedAt);
+        Assert.Null(listing.ListedAt);
+        Assert.Contains("The listed_at value is unreadable.", Assert.Single(listing.DatesErrors).Reason);
+    }
+
+    [Fact]
+    public void Parse_UpdatedBeforePublished_KeepsListedAt()
+    {
+        var dates = "\"published_at\": \"2026-09-02T10:14:05Z\", \"updated_at\": \"2026-08-02T13:18:41Z\", " + ListedAt;
+
+        var result = SnapshotParser.Parse(Snapshot(Listing("test-mod", dates)));
+
+        var listing = Assert.Single(result.ValidListings);
+        Assert.Null(listing.PublishedAt);
+        Assert.Null(listing.UpdatedAt);
+        Assert.Equal(Listed, listing.ListedAt);
+        Assert.Single(listing.DatesErrors);
     }
 
     [Fact]
@@ -133,18 +179,20 @@ public sealed class ContentDatesParserTests : IDisposable
     [Fact]
     public void Parse_Tombstones_CarryNoDates()
     {
-        var listing = $$"""{ "id": "removed-mod", "index_status": { "state": "delisted" }, {{BothDates}} }""";
-        var pack = $$"""{ "id": "removed-pack", "index_status": { "state": "delisted" }, {{BothDates}} }""";
+        var listing = $$"""{ "id": "removed-mod", "index_status": { "state": "delisted" }, {{BothDates}}, {{ListedAt}} }""";
+        var pack = $$"""{ "id": "removed-pack", "index_status": { "state": "delisted" }, {{BothDates}}, {{ListedAt}} }""";
 
         var result = SnapshotParser.Parse(Snapshot(listing, pack));
 
         var tombstone = Assert.Single(result.ValidListings);
         Assert.Null(tombstone.PublishedAt);
         Assert.Null(tombstone.UpdatedAt);
+        Assert.Null(tombstone.ListedAt);
         Assert.Empty(tombstone.DatesErrors);
         var packTombstone = Assert.Single(result.ValidPacks);
         Assert.Null(packTombstone.PublishedAt);
         Assert.Null(packTombstone.UpdatedAt);
+        Assert.Null(packTombstone.ListedAt);
         Assert.Empty(packTombstone.DatesErrors);
     }
 
@@ -182,9 +230,23 @@ public sealed class ContentDatesParserTests : IDisposable
         var listing = Assert.Single(snapshot.Listings);
         Assert.Equal(Published, listing.PublishedAt);
         Assert.Equal(Updated, listing.UpdatedAt);
+        Assert.Null(listing.ListedAt);
         var pack = Assert.Single(snapshot.Packs);
         Assert.Equal(Published, pack.PublishedAt);
         Assert.Null(pack.UpdatedAt);
+        Assert.Null(pack.ListedAt);
+        Assert.Empty(snapshot.Diagnostics);
+    }
+
+    [Fact]
+    public async Task ReadAsync_ListedAt_AttachesToTheListingAndThePack()
+    {
+        await WriteIndexAsync(Snapshot(Listing("test-mod", BothDates + ", " + ListedAt), Pack(ListedAt)));
+
+        var snapshot = await new ContentIndexReader(_paths).ReadAsync();
+
+        Assert.Equal(Listed, Assert.Single(snapshot.Listings).ListedAt);
+        Assert.Equal(Listed, Assert.Single(snapshot.Packs).ListedAt);
         Assert.Empty(snapshot.Diagnostics);
     }
 
