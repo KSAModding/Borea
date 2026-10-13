@@ -14,6 +14,10 @@ concurrency:
   group: release-${{ github.ref }}
   cancel-in-progress: false
 
+# Restore only what the lock files hold. It is set here and not in Directory.Build.props, because the Dependabot job also runs on GitHub Actions and has to be able to update the lock files.
+env:
+  RestoreLockedMode: true
+
 jobs:
   test:
     name: test
