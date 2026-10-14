@@ -191,7 +191,7 @@ jobs:
             tar -czf "dist/Cli/$CLI.tar.gz" -C folders/Cli Borea-Cli
           fi
 
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: archive-App-${{ matrix.platform }}
           path: dist/App/*
@@ -199,7 +199,7 @@ jobs:
           # Already compressed.
           compression-level: 0
 
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: archive-Cli-${{ matrix.platform }}
           path: dist/Cli/*
@@ -288,7 +288,7 @@ jobs:
           fi
           echo "$(wc -l <<< "$names") packages."
 
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: sbom-${{ matrix.product.name }}
           path: dist/*.cdx.json
