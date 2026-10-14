@@ -4,9 +4,9 @@
     "net10.0": {
       "System.CommandLine": {
         "type": "Direct",
-        "requested": "[2.0.11, )",
-        "resolved": "2.0.11",
-        "contentHash": "Pmg3/T0M37ZS3ovwPHtfBNTCdqNpnxo+tnZMg8JDHVR0qD8KwcPUKlheEiZysb1En8IyH7yDoa9QDq97Ny/vhQ=="
+        "requested": "[2.0.13, )",
+        "resolved": "2.0.13",
+        "contentHash": "TIO2lMV+sSP7WW7pD/oCRHD9ENWY+jqwXmYzgks3R46cEdDzwjQOAhsiBn+M3EegfGjgTpa2h+eIrcU+AM2k6A=="
       },
       "Humanizer.Core": {
         "type": "Transitive",
@@ -20,8 +20,8 @@
       },
       "JsonPointer.Net": {
         "type": "Transitive",
-        "resolved": "7.0.2",
-        "contentHash": "oClYHv2ooeRrtPZyC9sb/Za/ie5pGhjTbNHlAyFg4XOCyU+606FdoZKS7UdaWvtsPlrF+U2w0Ja3TRvn5+spyA==",
+        "resolved": "7.0.3",
+        "contentHash": "It/10weZ3oA+BGL+Gqyw9M6wsi4Tc16vWwU+u7x6LBwty57Y3aUh7bfcn2VWAzgVTAfGuCPb5KUpsH6IFjR08A==",
         "dependencies": {
           "Humanizer.Core": "3.0.10",
           "Json.More.Net": "3.0.1"
@@ -29,10 +29,10 @@
       },
       "JsonSchema.Net": {
         "type": "Transitive",
-        "resolved": "9.4.0",
-        "contentHash": "muE4nPuzbD9x5XA1mkXJNqX4mhz47oF3EY8qFLY1pyUY7lhXFKq65t/dSKIHeNSLBV17zwZuq24MD1em90rMNg==",
+        "resolved": "9.4.1",
+        "contentHash": "7Nh0XyIse3a5nsc1nJJTECZVjxqHVE5jANGEPpQc2H+/M7u2sLueL93X6ZUuJLkLYy/pYzFmJhKYEpVIctaUZw==",
         "dependencies": {
-          "JsonPointer.Net": "7.0.2"
+          "JsonPointer.Net": "7.0.3"
         }
       },
       "Markdig": {
@@ -69,7 +69,7 @@
         "type": "Project",
         "dependencies": {
           "Borea.Core": "[1.0.0, )",
-          "JsonSchema.Net": "[9.4.0, )",
+          "JsonSchema.Net": "[9.4.1, )",
           "Tomlyn": "[2.10.1, )"
         }
       }
