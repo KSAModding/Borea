@@ -108,6 +108,29 @@ internal static class ReleaseArchiveBuilder
         return bytes.ToArray();
     }
 
+    /// <summary>A gzip-compressed tar that holds one macOS app bundle, with the program and the license under Contents/MacOS.</summary>
+    public static byte[] BundleTarGz(string bundleName, string programContent, string programName = "borea")
+    {
+        using var bytes = new MemoryStream();
+        using (var compressed = new GZipStream(bytes, CompressionMode.Compress, leaveOpen: true))
+        using (var archive = new TarWriter(compressed, TarEntryFormat.Pax, leaveOpen: true))
+        {
+            archive.WriteEntry(new PaxTarEntry(TarEntryType.Directory, bundleName + "/"));
+            archive.WriteEntry(new PaxTarEntry(TarEntryType.Directory, bundleName + "/Contents/"));
+            archive.WriteEntry(File(bundleName + "/Contents/Info.plist", "the plist of the new build"));
+            archive.WriteEntry(new PaxTarEntry(TarEntryType.Directory, bundleName + "/Contents/MacOS/"));
+            var program = File($"{bundleName}/Contents/MacOS/{programName}", programContent);
+            program.Mode |= UnixFileMode.UserExecute;
+            archive.WriteEntry(program);
+            archive.WriteEntry(File(bundleName + "/Contents/MacOS/LICENSE", "MIT"));
+        }
+
+        return bytes.ToArray();
+    }
+
+    private static PaxTarEntry File(string name, string content)
+        => new(TarEntryType.RegularFile, name) { DataStream = new MemoryStream(Encoding.UTF8.GetBytes(content)) };
+
     /// <summary>A checksums file in the format of the sha256sum program.</summary>
     public static string Checksums(params (string Name, byte[] Content)[] files)
         => string.Concat(files.Select(file => $"{Convert.ToHexStringLower(SHA256.HashData(file.Content))}  {file.Name}\n"));
