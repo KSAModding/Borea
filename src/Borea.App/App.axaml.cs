@@ -125,6 +125,9 @@ public partial class App : Application
             var window = new MainWindow { DataContext = viewModel };
             desktop.MainWindow = window;
             _windowFront = new WindowFront(window);
+            // macOS passes a borea:// link to the running App instead of starting it with the link
+            if (OperatingSystem.IsMacOS() && _startArguments is { } startArguments)
+                ProtocolActivation.Listen(TryGetFeature(typeof(IActivatableLifetime)) as IActivatableLifetime, startArguments, Services?.Log);
             window.Opened += OnMainWindowOpened;
             window.Opened += async (_, _) => await viewModel.LoadAsync();
             window.Closing += OnMainWindowClosing;
