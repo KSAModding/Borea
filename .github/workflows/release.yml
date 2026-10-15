@@ -75,18 +75,22 @@ jobs:
   publish:
     name: publish (${{ matrix.platform }})
     needs: [test, sbom]
-    runs-on: ubuntu-24.04
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         # The platform names the archives and artifacts, the runtime identifier goes to dotnet.
+        # The macOS App goes into an app bundle that codesign seals, and codesign runs only on macOS.
         include:
           - rid: win-x64
             platform: win-x64
+            os: ubuntu-24.04
           - rid: linux-x64
             platform: linux-x64
+            os: ubuntu-24.04
           - rid: osx-arm64
             platform: macos-arm64
+            os: macos-26
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
@@ -103,7 +107,7 @@ jobs:
           echo "cli=Borea-Cli-$VERSION-$PLATFORM" >> "$GITHUB_OUTPUT"
 
       # Self-contained, so nobody needs a .NET runtime.
-      # Each target builds on a Linux runner, and the SDK signs the macOS single files ad hoc there too.
+      # The SDK signs the macOS single files ad hoc on every runner.
       # The project files make each publish one single file, and the App project names its file borea.
       - name: Publish
         env:
@@ -172,8 +176,30 @@ jobs:
           CLI: ${{ steps.name.outputs.cli }}
         run: chmod +x "publish/$APP/borea" "publish/$CLI/borea"
 
+      # On macOS the App is an app bundle, Borea.app, which Finder opens and Launch Services calls for
+      # borea:// links. The text files go under Contents/Resources, where the signature seals them by hash.
+      # A file under Contents/MacOS is sealed through extended attributes instead, which the archive drops.
+      # The signature is ad hoc, like the one the SDK puts on the single file, until issue #76 brings a real one.
+      - name: Put the App in an app bundle
+        if: matrix.rid == 'osx-arm64'
+        env:
+          VERSION: ${{ needs.test.outputs.version }}
+          APP: ${{ steps.name.outputs.app }}
+        run: |
+          mkdir -p folders/App
+          python3 .github/scripts/build_macos_bundle.py \
+            --program "publish/$APP/borea" --version "$VERSION" --icon assets/borea.icns \
+            --resource "publish/$APP/LICENSE" --resource "publish/$APP/THIRD-PARTY-NOTICES.txt" \
+            --resource "publish/$APP/BRANDING.md" \
+            --output folders/App/Borea.app
+          rm -r "publish/$APP"
+          codesign --force --deep --sign - folders/App/Borea.app
+          codesign --verify --strict --deep --verbose=2 folders/App/Borea.app
+
       # The archive names carry the version, and the folder inside does not, because Borea updates
       # itself into the folder it runs from, and a version in that name would stay there for good.
+      # The macOS tar leaves extended attributes and resource forks out, because the unpacker in
+      # Borea's self-update reads their entries as files beside the bundle.
       - name: Archive
         env:
           APP: ${{ steps.name.outputs.app }}
@@ -181,15 +207,20 @@ jobs:
           RID: ${{ matrix.rid }}
         run: |
           mkdir -p dist/App dist/Cli folders/App folders/Cli
-          mv "publish/$APP" folders/App/Borea
+          # On macOS the bundle step already put Borea.app under folders/App.
+          if [ "$RID" != osx-arm64 ]; then mv "publish/$APP" folders/App/Borea; fi
           mv "publish/$CLI" folders/Cli/Borea-Cli
-          if [ "$RID" = win-x64 ]; then
-            (cd folders/App && zip -qr "$GITHUB_WORKSPACE/dist/App/$APP.zip" Borea)
-            (cd folders/Cli && zip -qr "$GITHUB_WORKSPACE/dist/Cli/$CLI.zip" Borea-Cli)
-          else
-            tar -czf "dist/App/$APP.tar.gz" -C folders/App Borea
-            tar -czf "dist/Cli/$CLI.tar.gz" -C folders/Cli Borea-Cli
-          fi
+          case "$RID" in
+            win-x64)
+              (cd folders/App && zip -qr "$GITHUB_WORKSPACE/dist/App/$APP.zip" Borea)
+              (cd folders/Cli && zip -qr "$GITHUB_WORKSPACE/dist/Cli/$CLI.zip" Borea-Cli) ;;
+            osx-arm64)
+              tar --no-xattrs --no-mac-metadata -czf "dist/App/$APP.tar.gz" -C folders/App Borea.app
+              tar --no-xattrs --no-mac-metadata -czf "dist/Cli/$CLI.tar.gz" -C folders/Cli Borea-Cli ;;
+            *)
+              tar -czf "dist/App/$APP.tar.gz" -C folders/App Borea
+              tar -czf "dist/Cli/$CLI.tar.gz" -C folders/Cli Borea-Cli ;;
+          esac
 
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
@@ -306,9 +337,13 @@ jobs:
       - name: Report what macOS says about the build
         run: |
           tar -xzf dist/*.tar.gz
-          app=$(find . -mindepth 2 -maxdepth 2 -type f -name borea | head -1)
+          app=$(find . -mindepth 1 -maxdepth 1 -type d -name '*.app' | head -1)
+          test -n "$app"
+          plutil -lint "$app/Contents/Info.plist"
+          test "$(plutil -extract CFBundleURLTypes.0.CFBundleURLSchemes.0 raw "$app/Contents/Info.plist")" = borea
           codesign --display --verbose=4 "$app"
-          codesign --verify --strict --verbose=2 "$app"
+          codesign --verify --strict --deep --verbose=2 "$app"
+          "$app/Contents/MacOS/borea" --version
           # Mark it the way a browser download would, then ask Gatekeeper.
           xattr -w com.apple.quarantine '0083;00000000;Safari;' "$app"
           spctl --assess --type execute --verbose=4 "$app" || true
@@ -316,17 +351,18 @@ jobs:
         run: |
           mkdir update-test
           tar -xzf dist/*.tar.gz -C update-test
-          folder=$(find update-test -mindepth 1 -maxdepth 1 -type d | head -1)
-          cp "$folder/borea" "$folder/borea.new"
-          # An update moves the program that runs aside and puts the new one in its place.
-          mv "$folder/borea" "$folder/borea.old"
-          mv "$folder/borea.new" "$folder/borea"
-          codesign --verify --strict --verbose=2 "$folder/borea"
-          "$folder/borea" --version
-          # A step that fails puts the program that ran back, over the one that took its place.
-          mv "$folder/borea.old" "$folder/borea"
-          codesign --verify --strict --verbose=2 "$folder/borea"
-          "$folder/borea" --version
+          bundle=$(find update-test -mindepth 1 -maxdepth 1 -type d -name '*.app' | head -1)
+          cp -R "$bundle" "$bundle.new"
+          # An update moves the bundle that runs aside and puts the new one in its place.
+          mv "$bundle" "$bundle.old"
+          mv "$bundle.new" "$bundle"
+          codesign --verify --strict --deep --verbose=2 "$bundle"
+          "$bundle/Contents/MacOS/borea" --version
+          # A step that fails puts the bundle that ran back, over the one that took its place.
+          rm -r "$bundle"
+          mv "$bundle.old" "$bundle"
+          codesign --verify --strict --deep --verbose=2 "$bundle"
+          "$bundle/Contents/MacOS/borea" --version
 
   # Both archives of each platform, on a runner that can start their programs.
   # No App window opens, because that needs a desktop session.
@@ -421,6 +457,18 @@ jobs:
         run: |
           cli_expected=$(printf '%s\n' LICENSE THIRD-PARTY-NOTICES.txt borea | LC_ALL=C sort)
           app_expected=$(printf '%s\n' BRANDING.md LICENSE THIRD-PARTY-NOTICES.txt borea | LC_ALL=C sort)
+          # The program and the text files, relative to the folder the archive unpacks into.
+          app_program=borea
+          app_texts=.
+          if [ "$PLATFORM" = macos-arm64 ]; then
+            # The macOS App is an app bundle, and codesign adds the seal under _CodeSignature.
+            app_expected=$(printf '%s\n' Contents Contents/Info.plist Contents/MacOS Contents/MacOS/borea \
+              Contents/Resources Contents/Resources/BRANDING.md Contents/Resources/LICENSE \
+              Contents/Resources/THIRD-PARTY-NOTICES.txt Contents/Resources/borea.icns \
+              Contents/_CodeSignature Contents/_CodeSignature/CodeResources | LC_ALL=C sort)
+            app_program=Contents/MacOS/borea
+            app_texts=Contents/Resources
+          fi
           for kind in App Cli; do
             mkdir -p "unpacked/$kind"
             tar -xzf "dist/$kind/"*.tar.gz -C "unpacked/$kind"
@@ -433,8 +481,12 @@ jobs:
           cli=$(find unpacked/Cli -mindepth 1 -maxdepth 1 -type d -print -quit)
           test -n "$app"
           test -n "$cli"
+          if [ "$PLATFORM" = macos-arm64 ] && [ "$(basename "$app")" != Borea.app ]; then
+            echo "The App archive unpacks into $(basename "$app") instead of Borea.app." >&2
+            exit 1
+          fi
           for root in "$cli" "$app"; do
-            if [ "$root" = "$app" ]; then expected=$app_expected; else expected=$cli_expected; fi
+            if [ "$root" = "$app" ]; then expected=$app_expected; program=$app_program; texts=$app_texts; else expected=$cli_expected; program=borea; texts=.; fi
             found=$(cd "$root" && find . -mindepth 1 | sed 's|^\./||' | LC_ALL=C sort)
             if [ "$found" != "$expected" ]; then
               echo "$root holds these files:" >&2
@@ -443,30 +495,30 @@ jobs:
               echo "$expected" >&2
               exit 1
             fi
-            test -x "$root/borea"
-            test -s "$root/THIRD-PARTY-NOTICES.txt"
-            reported=$("$root/borea" --version)
+            test -x "$root/$program"
+            test -s "$root/$texts/THIRD-PARTY-NOTICES.txt"
+            reported=$("$root/$program" --version)
             if [ "$reported" != "$VERSION" ] && [[ "$reported" != "$VERSION+"* ]]; then
               echo "borea in $root reports version $reported." >&2
               exit 1
             fi
             status=0
-            "$root/borea" no-such-command || status=$?
+            "$root/$program" no-such-command || status=$?
             if [ "$status" -ne 2 ]; then
               echo "borea no-such-command in $root exited with $status instead of 2." >&2
               exit 1
             fi
           done
-          test -s "$app/BRANDING.md"
-          grep -qx 'IBM Plex' "$app/THIRD-PARTY-NOTICES.txt"
+          test -s "$app/$app_texts/BRANDING.md"
+          grep -qx 'IBM Plex' "$app/$app_texts/THIRD-PARTY-NOTICES.txt"
           if grep -q '^Avalonia ' "$cli/THIRD-PARTY-NOTICES.txt"; then
             echo "The notices in the CLI archive name Avalonia." >&2
             exit 1
           fi
           cli_help=$("$cli/borea" --help)
-          app_help=$("$app/borea" --help)
+          app_help=$("$app/$app_program" --help)
           cli_settings=$("$cli/borea" settings show --json)
-          app_settings=$("$app/borea" settings show --json)
+          app_settings=$("$app/$app_program" settings show --json)
           printf '%s\n%s\n' "$app_help" "$app_settings"
           if [ "$app_help" != "$cli_help" ]; then
             echo "borea --help prints different text from the two archives." >&2
@@ -487,7 +539,7 @@ jobs:
           fi
           for start in $(seq 1 "$starts"); do
             status=0
-            "$app/borea" index refresh || status=$?
+            "$app/$app_program" index refresh || status=$?
             if [ "$status" -gt 1 ]; then
               echo "borea index refresh crashed with exit code $status on start $start." >&2
               exit 1
@@ -619,7 +671,8 @@ jobs:
 
           Each archive contains `borea` (`borea.exe` on Windows), `LICENSE` and `THIRD-PARTY-NOTICES.txt`, in a folder named `Borea`, or `Borea-Cli` for the CLI archive.
           The App archive also contains `BRANDING.md`, because the Borea logo in the App is not covered by the MIT License.
-          Put that folder where it can stay, for example `%LocalAppData%\Programs\Borea` on Windows or `~/.local/share/Borea` on Linux, because Borea updates itself into the folder it runs from.
+          On macOS, the App archive unpacks into `Borea.app` instead, with the same files inside.
+          Put that folder where it can stay, for example `%LocalAppData%\Programs\Borea` on Windows, `~/.local/share/Borea` on Linux or Applications on macOS, because Borea updates itself into the folder it runs from.
 
           ### First start
 
@@ -633,7 +686,9 @@ jobs:
           After the App has started once, Borea is in the application menu and starts from there without a terminal.
           Both need the ICU and OpenSSL libraries of your distribution, and only the App also needs the X11, ICE, SM and fontconfig libraries. Most desktop installs already have them. See Readme.
 
-          **macOS.** Unpack and start Borea from Terminal, not from Finder: `tar -xzf <file>`, then run `./borea` inside the new folder of the App archive for the App, or `./borea --help` inside the new folder of either archive.
+          **macOS.** Double-click the App archive to unpack it, drag `Borea.app` into Applications and open it.
+          macOS says that Apple could not verify Borea. Select Done, then open System Settings, Privacy & Security, and select "Open Anyway" there.
+          For the command line, run `/Applications/Borea.app/Contents/MacOS/borea --help`, or unpack the CLI archive and run `./borea --help` in the new folder.
           The macOS builds are for Apple silicon. Intel Macs are not supported.
 
           ### Provenance

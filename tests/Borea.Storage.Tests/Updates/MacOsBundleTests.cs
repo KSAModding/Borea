@@ -20,6 +20,7 @@ public sealed class MacOsBundleTests
         Assert.Equal(Bundle, bundle.BundlePath);
         Assert.Equal(Applications, bundle.Folder);
         Assert.Equal(Bundle + ".old", bundle.ReplacedPath);
+        Assert.Equal(Path.Combine(Bundle, "Contents", "Resources"), bundle.ResourcesPath);
     }
 
     [Fact]

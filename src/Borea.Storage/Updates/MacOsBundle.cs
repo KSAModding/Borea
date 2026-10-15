@@ -11,6 +11,8 @@ public sealed class MacOsBundle
 
     private const string ProgramsFolderName = "MacOS";
 
+    private const string ResourcesFolderName = "Resources";
+
     private const string Extension = ".app";
 
     private MacOsBundle(string programPath, string bundlePath, string folder)
@@ -28,6 +30,9 @@ public sealed class MacOsBundle
 
     /// <summary>The folder that holds the bundle, where an update unpacks the new one.</summary>
     public string Folder { get; }
+
+    /// <summary>The folder for the files beside the program, such as the license and the notices.</summary>
+    public string ResourcesPath => Path.Combine(BundlePath, ContentsFolderName, ResourcesFolderName);
 
     /// <summary>Where the bundle is moved to while a new one takes its place.</summary>
     public string ReplacedPath => SelfUpdateCleanup.ReplacedPath(BundlePath);
