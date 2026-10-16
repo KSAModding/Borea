@@ -1,7 +1,7 @@
 namespace Borea.Core.Game;
 
 /// <summary>
-/// How a release fits the installed game (RFC 0017).
+/// How a release fits the installed game (RFC 0017, amended by RFC 0091).
 /// </summary>
 public enum GameCompatibility
 {
@@ -11,12 +11,7 @@ public enum GameCompatibility
     Compatible = 0,
 
     /// <summary>
-    /// The installed revision is above the stated upper bound.
-    /// </summary>
-    Untested = 1,
-
-    /// <summary>
-    /// The installed revision is below the lower bound.
+    /// The installed revision is below the lower bound or above a stated upper bound.
     /// </summary>
     Incompatible = 2,
 

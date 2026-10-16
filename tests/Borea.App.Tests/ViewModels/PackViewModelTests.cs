@@ -756,20 +756,19 @@ public sealed class PackViewModelTests
     }
 
     [Fact]
-    public async Task Install_UntestedDeprecatedPack_WaitsForConfirmation()
+    public async Task Install_DeprecatedPack_WaitsForConfirmation()
     {
         var pack = Pack("armory-pack", "Armory Pack", Version("1.0.0", Pin("KSArmory", "0.8.44")))
-            .Replace("\"game_min\": \"2026.8.19.5261\" }", "\"game_min\": \"2026.8.0.1\", \"game_max\": \"2026.8.1.1\" }, \"status\": \"deprecated\", \"superseded_by\": \"new-armory-pack\"", StringComparison.Ordinal);
+            .Replace("\"game_min\": \"2026.8.19.5261\" }", "\"game_min\": \"2026.8.0.1\" }, \"status\": \"deprecated\", \"superseded_by\": \"new-armory-pack\"", StringComparison.Ordinal);
         using var harness = await CreateWithGameAsync(snapshot => Bounds(WithPacks(pack)(snapshot), "KSArmory", "0.8.44", "2026.8.3.5117"));
         var viewModel = harness.ViewModel;
         var instance = await ActivateInstanceAsync(harness);
         viewModel.ShowDiscoverModpacksCommand.Execute(null);
         var row = Assert.Single(viewModel.DiscoverPacks);
-        Assert.Equal(GameCompatibility.Untested, row.Compatibility);
+        Assert.Equal(GameCompatibility.Compatible, row.Compatibility);
 
         await row.InstallCommand.ExecuteAsync(null);
 
-        Assert.Contains(harness.Localization.FormatPackUntested("2026.8.1.1"), row.InstallWarning);
         Assert.Contains(harness.Localization.FormatPackSuperseded("new-armory-pack"), row.InstallWarning);
         Assert.Null(row.InstallError);
         Assert.Empty(row.Results);
@@ -778,6 +777,28 @@ public sealed class PackViewModelTests
         row.CancelInstallCommand.Execute(null);
         Assert.Null(row.InstallWarning);
         Assert.Empty((await harness.Services.Instances.GetByIdAsync(instance.InstanceId))!.Mods);
+    }
+
+    [Fact]
+    public async Task Install_PackAboveItsGameMax_IsBlocked_AndNamesTheBound()
+    {
+        var pack = Pack("armory-pack", "Armory Pack", Version("1.0.0", Pin("KSArmory", "0.8.44")))
+            .Replace("\"game_min\": \"2026.8.19.5261\" }", "\"game_min\": \"2026.8.0.1\", \"game_max\": \"2026.8.1.1\" }", StringComparison.Ordinal);
+        using var harness = await CreateWithGameAsync(snapshot => Bounds(WithPacks(pack)(snapshot), "KSArmory", "0.8.44", "2026.8.3.5117"));
+        var viewModel = harness.ViewModel;
+        var instance = await ActivateInstanceAsync(harness);
+        viewModel.ShowDiscoverModpacksCommand.Execute(null);
+        var row = Assert.Single(viewModel.DiscoverPacks);
+        Assert.Equal(GameCompatibility.Incompatible, row.Compatibility);
+
+        await row.InstallCommand.ExecuteAsync(null);
+
+        Assert.Equal(harness.Localization.FormatPackAboveGameMax("2026.8.1.1"), row.InstallError);
+        Assert.Null(row.InstallWarning);
+        Assert.Empty((await harness.Services.Instances.GetByIdAsync(instance.InstanceId))!.Mods);
+
+        viewModel.HideIncompatible = true;
+        Assert.Empty(viewModel.DiscoverPacks);
     }
 
     [Fact]
@@ -824,7 +845,7 @@ public sealed class PackViewModelTests
     }
 
     [Fact]
-    public async Task Pack_PinWithALowerGameMax_IsUntested_AndThePageNamesThePinWithItsBound()
+    public async Task Pack_PinWithALowerGameMax_IsIncompatible_AndThePageNamesThePinWithItsBound()
     {
         using var harness = await ViewModelHarness.CreateAsync(editSnapshot: WithPacks(
             Pack("flight-pack", "Flight Pack", Version("1.0.0", Pin("AdvancedFlightComputer", "0.7.3"), Pin("KSArmory", "0.8.44")))));
@@ -835,16 +856,44 @@ public sealed class PackViewModelTests
         viewModel.ShowDiscoverModpacksCommand.Execute(null);
         var pack = Assert.Single(viewModel.DiscoverPacks);
 
-        Assert.Equal(GameCompatibility.Untested, pack.Compatibility);
+        Assert.Equal(GameCompatibility.Incompatible, pack.Compatibility);
         Assert.Equal(["AdvancedFlightComputer 0.7.3 supports KSA up to 2026.8.22.5348."], pack.UnfitPinTexts);
 
         await pack.OpenCommand.ExecuteAsync(null);
 
         var afc = viewModel.PackMembers.Single(member => member.ModId == "AdvancedFlightComputer");
-        Assert.True(afc.IsUntested);
-        Assert.Equal(harness.Localization.CompatibilityUntested, afc.CompatibilityText);
-        Assert.Equal(harness.Localization.FormatPackMemberUntested("AdvancedFlightComputer", "0.7.3", "2026.8.22.5348"), afc.FitText);
+        Assert.True(afc.IsIncompatible);
+        Assert.Equal(harness.Localization.CompatibilityIncompatible, afc.CompatibilityText);
+        Assert.Equal(harness.Localization.FormatPackMemberAboveGameMax("AdvancedFlightComputer", "0.7.3", "2026.8.22.5348"), afc.FitText);
         Assert.Null(viewModel.PackMembers.Single(member => member.ModId == "KSArmory").FitText);
+    }
+
+    [Fact]
+    public async Task PackMember_GameMovesPastTheOtherBound_RaisesTheNewFitText()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: WithPacks(
+            Pack("flight-pack", "Flight Pack", Version("1.0.0", Pin("AdvancedFlightComputer", "0.7.2")))));
+        var viewModel = harness.ViewModel;
+        await viewModel.EnsureDiscoverLoadedAsync();
+        Assert.True(GameVersion.TryParse("2026.8.18.5200", out var older));
+        Assert.True(GameVersion.TryParse("2026.9.7.5402", out var newer));
+        await viewModel.RefreshCompatibilityAsync(older);
+        viewModel.ShowDiscoverModpacksCommand.Execute(null);
+        await Assert.Single(viewModel.DiscoverPacks).OpenCommand.ExecuteAsync(null);
+        var afc = Assert.Single(viewModel.PackMembers);
+        Assert.Equal(harness.Localization.FormatPackMemberIncompatible("AdvancedFlightComputer", "0.7.2", "2026.8.19.5261"), afc.FitText);
+        var raised = 0;
+        afc.PropertyChanged += (_, args) =>
+        {
+            if (args.PropertyName == nameof(PackMemberItem.FitText))
+                Interlocked.Increment(ref raised);
+        };
+
+        await viewModel.RefreshCompatibilityAsync(newer);
+
+        Assert.True(afc.IsIncompatible);
+        Assert.True(Volatile.Read(ref raised) > 0);
+        Assert.Equal(harness.Localization.FormatPackMemberAboveGameMax("AdvancedFlightComputer", "0.7.2", "2026.8.19.5261"), afc.FitText);
     }
 
     [Fact]
@@ -909,7 +958,7 @@ public sealed class PackViewModelTests
     }
 
     [Fact]
-    public async Task Install_UntestedPin_WaitsForConfirmation_AndNamesThePinWithItsBound()
+    public async Task Install_PinAboveItsGameMax_IsBlocked_AndNamesThePinWithItsBound()
     {
         var pack = Pack("armory-pack", "Armory Pack", Version("1.0.0", Pin("KSArmory", "0.8.44")))
             .Replace("\"game_min\": \"2026.8.19.5261\"", "\"game_min\": \"2026.8.3.5117\"", StringComparison.Ordinal);
@@ -918,12 +967,12 @@ public sealed class PackViewModelTests
         var instance = await ActivateInstanceAsync(harness);
         viewModel.ShowDiscoverModpacksCommand.Execute(null);
         var row = Assert.Single(viewModel.DiscoverPacks);
-        Assert.Equal(GameCompatibility.Untested, row.Compatibility);
+        Assert.Equal(GameCompatibility.Incompatible, row.Compatibility);
 
         await row.InstallCommand.ExecuteAsync(null);
 
-        Assert.Equal(harness.Localization.FormatPackMemberUntested("KSArmory", "0.8.44", "2026.8.3.5116"), row.InstallWarning);
-        Assert.Null(row.InstallError);
+        Assert.Equal(harness.Localization.FormatPackMemberAboveGameMax("KSArmory", "0.8.44", "2026.8.3.5116"), row.InstallError);
+        Assert.Null(row.InstallWarning);
         Assert.Empty((await harness.Services.Instances.GetByIdAsync(instance.InstanceId))!.Mods);
     }
 
@@ -1507,16 +1556,16 @@ public sealed class PackViewModelTests
         await ActivateMeasureToolsPackInstanceAsync(harness, source: new InstanceSource.FromModPack("tools-pack", ModVersion.Parse("1.0.0")).WithDetached(["MeasureTools"]), version: "1.1.10", reason: InstallReason.Manual);
         await harness.ViewModel.RefreshCompatibilityAsync(installed);
         var row = await OpenMeasureToolsMemberAsync(harness);
-        Assert.Equal((true, false, false), (row.IsHeldFitting, row.IsHeldUntested, row.IsHeldIncompatible));
+        Assert.Equal((true, false), (row.IsHeldFitting, row.IsHeldIncompatible));
         Assert.Equal(harness.Localization.FormatPackMemberInUseDetachedBack("Tools", row.Name, "1.1.10", "1.1.9"), row.InUseText);
 
-        // an older release with a lower game_max is untested, which the chip and its tooltip say
+        // an older release with a lower game_max is incompatible, which the chip and its tooltip say
         await ActivateMeasureToolsPackInstanceAsync(harness, "Older", version: "1.1.8");
         await harness.ViewModel.RefreshCompatibilityAsync(installed);
         row = await OpenMeasureToolsMemberAsync(harness);
-        Assert.Equal((false, true, false), (row.IsHeldFitting, row.IsHeldUntested, row.IsHeldIncompatible));
+        Assert.Equal((false, true), (row.IsHeldFitting, row.IsHeldIncompatible));
         Assert.Equal(
-            harness.Localization.FormatPackMemberInUsePlain("Older", row.Name, "1.1.8") + " " + harness.Localization.FormatPackMemberUntested("MeasureTools", "1.1.8", "2026.8.22.5348"),
+            harness.Localization.FormatPackMemberInUsePlain("Older", row.Name, "1.1.8") + " " + harness.Localization.FormatPackMemberAboveGameMax("MeasureTools", "1.1.8", "2026.8.22.5348"),
             row.InUseText);
     }
 

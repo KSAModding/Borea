@@ -56,6 +56,16 @@ public sealed class PlanningTextTests : IDisposable
     }
 
     [Fact]
+    public void AboveGameMax_NamesTheNewestGameTheReleaseSupports()
+    {
+        var message = new PlanningMessage("flight-tools", PlanningMessageKind.AboveGameMax) { Value = "2026.8.22.5348" };
+
+        Assert.Equal("This release supports game 2026.8.22.5348 or older.", Format("en", message));
+        Assert.StartsWith("Diese Version unterst", Format("de", message));
+        Assert.Contains(" die Spielversion 2026.8.22.5348 oder ", Format("de", message));
+    }
+
+    [Fact]
     public void ReleaseChannel_UsesTheStatusOfTheDisplayLanguage()
     {
         var message = new PlanningMessage("flight-tools", PlanningMessageKind.ReleaseChannel) { Version = ModVersion.Parse("2.0.0-dev.1"), Status = ReleaseStatus.Dev, Channel = ReleaseChannel.Stable };
@@ -87,11 +97,11 @@ public sealed class PlanningTextTests : IDisposable
             OtherVersion = ModVersion.Parse("2.1.0"),
             Status = ReleaseStatus.Dev,
             Channel = ReleaseChannel.Stable,
-            Compatibility = GameCompatibility.Untested,
+            Compatibility = GameCompatibility.Unknown,
             Platform = OsPlatform.Linux,
             Value = kind switch
             {
-                PlanningMessageKind.Incompatible => "2026.9.4.5400",
+                PlanningMessageKind.Incompatible or PlanningMessageKind.AboveGameMax => "2026.9.4.5400",
                 PlanningMessageKind.PlatformUnknown => "amiga",
                 _ when alternative => "second",
                 _ => "Broken build.",

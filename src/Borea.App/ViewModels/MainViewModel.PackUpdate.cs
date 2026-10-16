@@ -88,7 +88,7 @@ public partial class MainViewModel
 
             var request = new ModPackUpdateRequest(item.InstanceId, item.Pack, services.Mods, installed, services.GamePlatform.Current, ProceedWithYankedMembers: yanked.Count == 0 ? null : yanked.Keys.ToHashSet(ModIds.Comparer));
             var (pending, result) = await PlanPackUpdateWithChoicesAsync(services, request, null);
-            var reasons = PackWarnings(item.Pack, metadata, compatibility, pinned, installed);
+            var reasons = PackWarnings(item.Pack, metadata, compatibility);
             foreach (var change in result.Changes.Where(change => change.Kind is ModPackChangeKind.Add or ModPackChangeKind.Change))
             {
                 if (yanked.TryGetValue(change.ModId, out var release))
@@ -143,7 +143,7 @@ public partial class MainViewModel
     private void HoldPackUpdate(PackUpdateItem item, ModPackUpdateRequest request, ModPackUpdateResult result)
     {
         var reasons = item.PendingReasons.ToList();
-        if (result.Plan is { } plan && PackPlanWarnings(plan, item.Pack.Metadata!) is { Count: > 0 } warnings)
+        if (result.Plan is { } plan && PackPlanWarnings(plan) is { Count: > 0 } warnings)
             reasons.Add(Describe(warnings));
 
         item.PendingRequest = request;

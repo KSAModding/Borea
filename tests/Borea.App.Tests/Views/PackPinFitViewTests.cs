@@ -15,7 +15,7 @@ public sealed class PackPinFitViewTests
     [InlineData(860)]
     [InlineData(1280)]
     [InlineData(1920)]
-    public async Task PackPage_NamesTheUntestedPinInTheSidePanel_AndMarksItsRow(double windowWidth)
+    public async Task PackPage_NamesThePinAboveItsGameMaxInTheSidePanel_AndMarksItsRow(double windowWidth)
     {
         using var harness = await ViewModelHarness.CreateAsync(editSnapshot: PackViewModelTests.WithPacks(PackViewModelTests.Pack(
             "flight-pack",
@@ -28,7 +28,7 @@ public sealed class PackPinFitViewTests
         viewModel.ShowDiscoverModpacksCommand.Execute(null);
         await viewModel.DiscoverPacks.Single().OpenCommand.ExecuteAsync(null);
         viewModel.ShowPackModsCommand.Execute(null);
-        var fit = harness.Localization.FormatPackMemberUntested("AdvancedFlightComputer", "0.7.3", "2026.8.22.5348");
+        var fit = harness.Localization.FormatPackMemberAboveGameMax("AdvancedFlightComputer", "0.7.3", "2026.8.22.5348");
 
         var outside = await HeadlessApp.RunAsync(harness, () =>
         {
@@ -47,7 +47,7 @@ public sealed class PackPinFitViewTests
             {
                 var body = page.GetVisualDescendants().OfType<PageBodyPanel>().Single().GetVisualChildren().OfType<StackPanel>().Single();
                 var panel = page.GetVisualDescendants().OfType<Border>().Single(border => border.Classes.Contains("side-panel"));
-                var chip = Assert.Single(Shown(body, harness.Localization.CompatibilityUntested));
+                var chip = Assert.Single(Shown(body, harness.Localization.CompatibilityIncompatible));
                 Assert.Equal(fit, ToolTip.GetTip(chip.GetVisualAncestors().OfType<Border>().First()));
                 return Task.FromResult<List<string>>([.. Outside(panel, Assert.Single(Shown(panel, fit))), .. Outside(body, chip)]);
             }

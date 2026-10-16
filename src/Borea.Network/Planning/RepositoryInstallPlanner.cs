@@ -180,7 +180,10 @@ public sealed class RepositoryInstallPlanner : IInstallPlanner
         // only an exact request reaches this
         if (!channel.Includes(release.ReleaseStatus) && !IsInstalled(request, release)) warnings.Add(new PlanningMessage(release.ModId, PlanningMessageKind.ReleaseChannel) { Version = release.Version, Status = release.ReleaseStatus, Channel = channel });
         var compatibility = Compatibility.Evaluate(release, request.GameVersion);
-        if (compatibility == GameCompatibility.Incompatible) conflicts.Add(new PlanningMessage(release.ModId, PlanningMessageKind.Incompatible) { Value = release.GameMin });
+        // a stated game_max blocks an install (RFC 0091), but a copy the instance already holds only warns unless it is asked for by its exact version, so it does not block every other change
+        var keeps = IsInstalled(request, release) && !(selected.TryGetValue(release.ModId, out var exactRequest) && exactRequest.Exact);
+        if (Compatibility.IsAboveUpperBound(release, request.GameVersion)) (keeps ? warnings : conflicts).Add(new PlanningMessage(release.ModId, PlanningMessageKind.AboveGameMax) { Value = release.GameMax });
+        else if (compatibility == GameCompatibility.Incompatible) conflicts.Add(new PlanningMessage(release.ModId, PlanningMessageKind.Incompatible) { Value = release.GameMin });
         else if (compatibility != GameCompatibility.Compatible) warnings.Add(new PlanningMessage(release.ModId, PlanningMessageKind.Compatibility) { Compatibility = compatibility });
         if (request.TargetPlatform is { } target)
         {

@@ -60,7 +60,7 @@ public sealed class MissingContentTests
         await viewModel.ActiveInstance!.OpenCommand.ExecuteAsync(null);
 
         await Row(viewModel, "HudCore").InstallAgainCommand.ExecuteAsync(null);
-        // no game is installed, so the planner warns that the release is untested
+        // no game is installed, so the planner warns that the compatibility of the release is unknown
         Assert.True(Row(viewModel, "HudCore").IsConfirmingUpdate);
         await Row(viewModel, "HudCore").ConfirmUpdateCommand.ExecuteAsync(null);
 

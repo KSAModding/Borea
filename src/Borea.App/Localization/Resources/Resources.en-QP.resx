@@ -1806,8 +1806,8 @@
   <data name="InstallMessageIncompatibleFormat" xml:space="preserve">
     <value>This bounty be needin' game {0} or fresher.</value>
   </data>
-  <data name="InstallMessageUntested" xml:space="preserve">
-    <value>This bounty ain't be tested with the game hauled onboard.</value>
+  <data name="InstallMessageAboveGameMaxFormat" xml:space="preserve">
+    <value>This bounty be sailin' with game {0} or elder.</value>
   </data>
   <data name="InstallMessageCompatibilityUnknown" xml:space="preserve">
     <value>The compatibility o' this bounty with the game hauled onboard be a dead man's tale.</value>
@@ -1928,9 +1928,6 @@
   </data>
   <data name="CompatibilityCompatible" xml:space="preserve">
     <value>Compatible</value>
-  </data>
-  <data name="CompatibilityUntested" xml:space="preserve">
-    <value>Untest'd</value>
   </data>
   <data name="CompatibilityIncompatible" xml:space="preserve">
     <value>Incompatible</value>
@@ -2535,13 +2532,16 @@
   <data name="PackIncompatibleFormat" xml:space="preserve">
     <value>This pack be needin' game {0} or fresher.</value>
   </data>
+  <data name="PackAboveGameMaxFormat" xml:space="preserve">
+    <value>This pack be sailin' with game {0} or elder.</value>
+  </data>
   <data name="PackMemberYankedFormat" xml:space="preserve">
     <value>{0} {1} is torn asunder.</value>
   </data>
   <data name="PackMemberIncompatibleFormat" xml:space="preserve">
     <value>{0} {1} be needin' KSA {2} or fresher.</value>
   </data>
-  <data name="PackMemberUntestedFormat" xml:space="preserve">
+  <data name="PackMemberAboveGameMaxFormat" xml:space="preserve">
     <value>{0} {1} be sailin' with KSA up to {2}.</value>
   </data>
   <data name="PackIncompleteFormat" xml:space="preserve">
@@ -2549,9 +2549,6 @@
   </data>
   <data name="PackUpdateStillInstalledFormat" xml:space="preserve">
     <value>The ship still be carryin' {0}.</value>
-  </data>
-  <data name="PackUntestedFormat" xml:space="preserve">
-    <value>This pack ain't be tested with the game onboard, which be fresher than {0}.</value>
   </data>
   <data name="PackSupersededFormat" xml:space="preserve">
     <value>The captain no longer commands this pack and suggests ye' charter {0}.</value>

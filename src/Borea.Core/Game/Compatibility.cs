@@ -9,20 +9,44 @@ namespace Borea.Core.Game;
 public static class Compatibility
 {
     /// <summary>
-    /// The state the revision bounds put the installed game in (RFC 0017).
+    /// The state the revision bounds put the installed game in (RFC 0017, amended by RFC 0091).
+    /// A game below the lower bound or above a stated upper bound is incompatible, and an absent upper bound is open.
     /// </summary>
     public static GameCompatibility Evaluate(int? minRevision, int? maxRevision, GameVersion? installed)
     {
         if (installed is not { } version || minRevision is not { } min)
             return GameCompatibility.Unknown;
 
-        if (version.Revision < min)
-            return GameCompatibility.Incompatible;
-
-        return maxRevision is { } max && version.Revision > max
-            ? GameCompatibility.Untested
+        return version.Revision < min || IsAbove(maxRevision, version)
+            ? GameCompatibility.Incompatible
             : GameCompatibility.Compatible;
     }
+
+    /// <summary>
+    /// True when the release fits the installed game only by its upper bound, so the game is newer than its game_max and not older than its game_min.
+    /// </summary>
+    public static bool IsAboveUpperBound(ModVersionMetadata release, GameVersion? installed)
+    {
+        ArgumentNullException.ThrowIfNull(release);
+
+        return installed is { } game && game.Revision >= release.GameMinRevision && IsAbove(release.GameMaxRevision, game);
+    }
+
+    /// <summary>
+    /// The same check for the authored bounds of a pack version, with a month bound resolved as <see cref="Evaluate(ModPackMetadata, GameVersion?, GameReleaseList)"/> resolves it.
+    /// </summary>
+    public static bool IsAboveUpperBound(ModPackMetadata pack, GameVersion? installed, GameReleaseList releases)
+    {
+        ArgumentNullException.ThrowIfNull(pack);
+        ArgumentNullException.ThrowIfNull(releases);
+
+        if (installed is not { } game || pack.GameMax is null || Evaluate(pack, installed, releases) != GameCompatibility.Incompatible)
+            return false;
+
+        return releases.WithBuild(game).TryResolveUpperBound(pack.GameMax, out var max) && IsAbove(max, game);
+    }
+
+    private static bool IsAbove(int? maxRevision, GameVersion installed) => maxRevision is { } max && installed.Revision > max;
 
     /// <summary>
     /// Whether the bounds support at least one build from <paramref name="fromRevision"/> to <paramref name="toRevision"/>, both included, where an absent bound is open.
@@ -70,7 +94,7 @@ public static class Compatibility
 
     /// <summary>
     /// The state a pack version and the releases it pins put the installed game in.
-    /// The least compatible one decides, so one incompatible pin makes the pack incompatible and one untested pin makes it untested.
+    /// The least compatible one decides, so a pin below its game_min or above its game_max makes the pack incompatible (RFC 0091).
     /// </summary>
     public static GameCompatibility Evaluate(ModPackMetadata pack, IEnumerable<ModVersionMetadata> pinned, GameVersion? installed, GameReleaseList releases)
     {
@@ -133,16 +157,15 @@ public static class Compatibility
         return new OsSupport(supported, unrecognized);
     }
 
-    /// <summary>Incompatible blocks, and Unknown says less than Untested, so they rank above it.</summary>
+    /// <summary>Incompatible blocks, so it ranks above Unknown, which only warns.</summary>
     private static GameCompatibility Least(GameCompatibility first, GameCompatibility second)
         => Rank(first) >= Rank(second) ? first : second;
 
     private static int Rank(GameCompatibility compatibility) => compatibility switch
     {
         GameCompatibility.Compatible => 0,
-        GameCompatibility.Untested => 1,
-        GameCompatibility.Unknown => 2,
-        _ => 3,
+        GameCompatibility.Unknown => 1,
+        _ => 2,
     };
 
     private static OsPlatform? Parse(string value) => value.ToLowerInvariant() switch

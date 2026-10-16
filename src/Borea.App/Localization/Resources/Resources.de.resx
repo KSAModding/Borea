@@ -2608,7 +2608,7 @@
     <value>Letzte funktionierende Spielversion</value>
   </data>
   <data name="ListingGameMaxHint" xml:space="preserve">
-    <value>Lass das leer, außer die Mod funktioniert mit neueren Spielversionen nicht mehr. Spieler mit einer neueren Version bekommen dann vor dem Installieren eine Warnung. Jedes Release, das mit dieser Grenze gestempelt wird, behält sie, weil ein Release später nur strenger werden kann.</value>
+    <value>Lass das leer, außer die Mod funktioniert mit neueren Spielversionen nicht mehr. Spieler mit einer neueren Version können sie dann nicht installieren, also trag nicht die neueste Version ein, mit der du getestet hast. Jedes Release, das mit dieser Grenze gestempelt wird, behält sie, weil ein Release später nur strenger werden kann.</value>
   </data>
   <data name="ListingGameHint" xml:space="preserve">
     <value>So, wie das Spiel sie anzeigt, zum Beispiel 2026.9.10.5438, oder ein Monat wie 2026.9.</value>
@@ -3339,8 +3339,8 @@
   <data name="InstallMessageIncompatibleFormat" xml:space="preserve">
     <value>Diese Version braucht die Spielversion {0} oder neuer.</value>
   </data>
-  <data name="InstallMessageUntested" xml:space="preserve">
-    <value>Diese Version ist nicht mit dem installierten Spiel getestet.</value>
+  <data name="InstallMessageAboveGameMaxFormat" xml:space="preserve">
+    <value>Diese Version unterstützt die Spielversion {0} oder älter.</value>
   </data>
   <data name="InstallMessageCompatibilityUnknown" xml:space="preserve">
     <value>Die Kompatibilität dieser Version mit dem installierten Spiel ist unbekannt.</value>
@@ -3545,9 +3545,6 @@
   </data>
   <data name="CompatibilityCompatible" xml:space="preserve">
     <value>Kompatibel</value>
-  </data>
-  <data name="CompatibilityUntested" xml:space="preserve">
-    <value>Nicht getestet</value>
   </data>
   <data name="CompatibilityIncompatible" xml:space="preserve">
     <value>Inkompatibel</value>
@@ -4167,13 +4164,16 @@
   <data name="PackIncompatibleFormat" xml:space="preserve">
     <value>Dieses Modpack braucht die Spielversion {0} oder neuer.</value>
   </data>
+  <data name="PackAboveGameMaxFormat" xml:space="preserve">
+    <value>Dieses Modpack unterstützt die Spielversion {0} oder älter.</value>
+  </data>
   <data name="PackMemberYankedFormat" xml:space="preserve">
     <value>{0} {1} wurde zurückgezogen.</value>
   </data>
   <data name="PackMemberIncompatibleFormat" xml:space="preserve">
     <value>{0} {1} braucht KSA {2} oder neuer.</value>
   </data>
-  <data name="PackMemberUntestedFormat" xml:space="preserve">
+  <data name="PackMemberAboveGameMaxFormat" xml:space="preserve">
     <value>{0} {1} unterstützt KSA bis {2}.</value>
   </data>
   <data name="PackIncompleteFormat" xml:space="preserve">
@@ -4196,9 +4196,6 @@
   </data>
   <data name="PackNothingInstalled" xml:space="preserve">
     <value>Es wurde nichts installiert.</value>
-  </data>
-  <data name="PackUntestedFormat" xml:space="preserve">
-    <value>Dieses Modpack ist nicht mit dem installierten Spiel getestet, das neuer als {0} ist.</value>
   </data>
   <data name="PackSupersededFormat" xml:space="preserve">
     <value>Der Autor pflegt dieses Modpack nicht mehr und empfiehlt {0}.</value>

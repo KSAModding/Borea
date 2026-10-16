@@ -145,9 +145,9 @@ public sealed class PackNewerReleasesViewTests
         using var harness = await CreateWithPackInstanceAsync();
         var viewModel = harness.ViewModel;
         var members = viewModel.PackMembers.ToList();
-        // the row of the report, with the use chip, Untested and Installed
+        // the row of the report, with the use chip, Incompatible and Installed
         var crowded = members.Single(member => member.ModId == "AdvancedFlightComputer");
-        Assert.Equal((true, true, true), (crowded.OffersUseNewer, crowded.IsUntested, crowded.IsInstalled));
+        Assert.Equal((true, true, true), (crowded.OffersUseNewer, crowded.IsIncompatible, crowded.IsInstalled));
         Assert.Contains(members, member => member.Name == LongName);
         Assert.NotNull(viewModel.PackInstanceHeaderText);
 
@@ -367,8 +367,8 @@ public sealed class PackNewerReleasesViewTests
 
     /// <summary>
     /// A pack on its Mods tab with an active instance made from it that holds two members at their pins and pins
-    /// MeasureTools. The game is 2026.9.7.5402, so the pinned AdvancedFlightComputer 0.7.3 is untested and its row
-    /// shows the use chip, Untested and Installed. KSArmory has a long name.
+    /// MeasureTools. The game is 2026.9.7.5402, so the pinned AdvancedFlightComputer 0.7.3 is incompatible and its row
+    /// shows the use chip, Incompatible and Installed. KSArmory has a long name.
     /// </summary>
     /// <param name="afcInUse">The version of AdvancedFlightComputer that the instance holds detached from the pack, or null to hold it at the pin.</param>
     /// <param name="editSnapshot">Changes the index snapshot after the pack is in it.</param>

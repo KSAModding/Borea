@@ -290,7 +290,7 @@
                                                     </Grid.ColumnDefinitions>
                                                     <TextBlock Classes="body-md secondary" Margin="0,0,8,0" Text="{Binding Version}" VerticalAlignment="Center" />
                                                     <WrapPanel Classes="member-fit" ItemSpacing="4" LineSpacing="4" VerticalAlignment="Center" IsVisible="{Binding HasFitChips}">
-                                                        <Border Classes="chip" Classes.untested="{Binding IsUntested}" Classes.incompatible="{Binding IsIncompatible}" IsVisible="{Binding FitText, Converter={x:Static ObjectConverters.IsNotNull}}" ToolTip.Tip="{Binding FitText}">
+                                                        <Border Classes="chip" Classes.incompatible="{Binding IsIncompatible}" IsVisible="{Binding FitText, Converter={x:Static ObjectConverters.IsNotNull}}" ToolTip.Tip="{Binding FitText}">
                                                             <TextBlock Text="{Binding CompatibilityText}" />
                                                         </Border>
                                                         <Border Classes="chip incompatible" IsVisible="{Binding IsYanked}" ToolTip.Tip="{Binding YankedReason}">
@@ -309,7 +309,7 @@
                                                     <Border Classes="chip positive" IsVisible="{Binding IsInstalled}" ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).InstalledInText}">
                                                         <TextBlock Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.DiscoverInstalled}" />
                                                     </Border>
-                                                    <Border Classes="chip" Classes.positive="{Binding IsHeldFitting}" Classes.untested="{Binding IsHeldUntested}" Classes.incompatible="{Binding IsHeldIncompatible}" IsVisible="{Binding InUseChipText, Converter={x:Static ObjectConverters.IsNotNull}}" ToolTip.Tip="{Binding InUseText}" AutomationProperties.Name="{Binding InUseText}">
+                                                    <Border Classes="chip" Classes.positive="{Binding IsHeldFitting}" Classes.incompatible="{Binding IsHeldIncompatible}" IsVisible="{Binding InUseChipText, Converter={x:Static ObjectConverters.IsNotNull}}" ToolTip.Tip="{Binding InUseText}" AutomationProperties.Name="{Binding InUseText}">
                                                         <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
                                                             <Path Classes="icon size-16" Data="{StaticResource Icon.LinkSimpleBreak}" VerticalAlignment="Center" />
                                                             <TextBlock Classes="cell-text" Text="{Binding InUseChipText}" TextTrimming="CharacterEllipsis" />
@@ -430,7 +430,7 @@
                         <Border Classes="chip" HorizontalAlignment="Left">
                             <TextBlock Text="{Binding SelectedPack.GameVersionText}" />
                         </Border>
-                        <Border Classes="chip" HorizontalAlignment="Left" Classes.compatible="{Binding SelectedPack.IsCompatible}" Classes.untested="{Binding SelectedPack.IsUntested}" Classes.incompatible="{Binding SelectedPack.IsIncompatible}">
+                        <Border Classes="chip" HorizontalAlignment="Left" Classes.compatible="{Binding SelectedPack.IsCompatible}" Classes.incompatible="{Binding SelectedPack.IsIncompatible}">
                             <StackPanel Orientation="Horizontal" Spacing="6">
                                 <Ellipse />
                                 <TextBlock Text="{Binding SelectedPack.CompatibilityText}" />

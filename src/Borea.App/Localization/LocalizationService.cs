@@ -2271,8 +2271,6 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string CompatibilityCompatible => Resources.CompatibilityCompatible;
 
-    public string CompatibilityUntested => Resources.CompatibilityUntested;
-
     public string CompatibilityIncompatible => Resources.CompatibilityIncompatible;
 
     public string CompatibilityUnknown => Resources.CompatibilityUnknown;
@@ -3168,6 +3166,9 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string FormatPackIncompatible(string gameMin)
         => string.Format(CultureInfo.CurrentCulture, Resources.PackIncompatibleFormat, gameMin);
 
+    public string FormatPackAboveGameMax(string gameMax)
+        => string.Format(CultureInfo.CurrentCulture, Resources.PackAboveGameMaxFormat, gameMax);
+
     public string FormatPackMemberYanked(string modId, string version, string? reason)
     {
         var text = string.Format(CultureInfo.CurrentCulture, Resources.PackMemberYankedFormat, modId, version);
@@ -3177,8 +3178,8 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string FormatPackMemberIncompatible(string modId, string version, string gameMin)
         => string.Format(CultureInfo.CurrentCulture, Resources.PackMemberIncompatibleFormat, modId, version, gameMin);
 
-    public string FormatPackMemberUntested(string modId, string version, string gameMax)
-        => string.Format(CultureInfo.CurrentCulture, Resources.PackMemberUntestedFormat, modId, version, gameMax);
+    public string FormatPackMemberAboveGameMax(string modId, string version, string gameMax)
+        => string.Format(CultureInfo.CurrentCulture, Resources.PackMemberAboveGameMaxFormat, modId, version, gameMax);
 
     public string FormatPackIncomplete(int failed, int total)
         => string.Format(CultureInfo.CurrentCulture, Resources.PackIncompleteFormat, failed, total);
@@ -3197,9 +3198,6 @@ public sealed class LocalizationService : INotifyPropertyChanged
         var text = string.Format(CultureInfo.CurrentCulture, Resources.PackMemberFailedFormat, modId, version);
         return string.IsNullOrWhiteSpace(reason) ? text : $"{text} {reason}";
     }
-
-    public string FormatPackUntested(string gameMax)
-        => string.Format(CultureInfo.CurrentCulture, Resources.PackUntestedFormat, gameMax);
 
     public string FormatPackSuperseded(string packId)
         => string.Format(CultureInfo.CurrentCulture, Resources.PackSupersededFormat, packId);

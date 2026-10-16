@@ -387,7 +387,7 @@
                             </Grid>
                         </StackPanel>
                         <Grid Grid.Row="3" ColumnDefinitions="Auto,*,Auto" Margin="0,0,4,0">
-                            <Border Classes="chip" Classes.compatible="{Binding IsCompatible}" Classes.untested="{Binding IsUntested}" Classes.incompatible="{Binding IsIncompatible}" IsVisible="{Binding ShowsCompatibility}" VerticalAlignment="Center" Margin="0,0,8,0">
+                            <Border Classes="chip" Classes.compatible="{Binding IsCompatible}" Classes.incompatible="{Binding IsIncompatible}" IsVisible="{Binding ShowsCompatibility}" VerticalAlignment="Center" Margin="0,0,8,0">
                                 <StackPanel Orientation="Horizontal" Spacing="6">
                                     <Ellipse />
                                     <TextBlock Text="{Binding CompatibilityText}" />
@@ -500,7 +500,7 @@
                             </Grid>
                         </StackPanel>
                         <Grid Grid.Row="3" ColumnDefinitions="Auto,*,Auto" Margin="0,0,4,0">
-                            <Border Classes="chip" Classes.compatible="{Binding IsCompatible}" Classes.untested="{Binding IsUntested}" Classes.incompatible="{Binding IsIncompatible}" IsVisible="{Binding ShowsCompatibility}" VerticalAlignment="Center" Margin="0,0,8,0">
+                            <Border Classes="chip" Classes.compatible="{Binding IsCompatible}" Classes.incompatible="{Binding IsIncompatible}" IsVisible="{Binding ShowsCompatibility}" VerticalAlignment="Center" Margin="0,0,8,0">
                                 <StackPanel Orientation="Horizontal" Spacing="6">
                                     <Ellipse />
                                     <TextBlock Text="{Binding CompatibilityText}" />

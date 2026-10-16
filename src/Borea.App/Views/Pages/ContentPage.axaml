@@ -390,7 +390,7 @@
                                                     <Border Grid.Column="2" Classes="chip hide-small" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="0,0,8,0" ToolTip.Tip="{Binding GameVersionText}">
                                                         <TextBlock Text="{Binding GameVersionText}" TextTrimming="CharacterEllipsis" />
                                                     </Border>
-                                                    <Border Grid.Column="3" Classes="chip" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="0,0,8,0" Classes.compatible="{Binding IsCompatible}" Classes.untested="{Binding IsUntested}" Classes.incompatible="{Binding IsIncompatible}" ToolTip.Tip="{Binding CompatibilityText}">
+                                                    <Border Grid.Column="3" Classes="chip" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="0,0,8,0" Classes.compatible="{Binding IsCompatible}" Classes.incompatible="{Binding IsIncompatible}" ToolTip.Tip="{Binding CompatibilityText}">
                                                         <DockPanel>
                                                             <Ellipse DockPanel.Dock="Left" Margin="0,0,6,0" />
                                                             <TextBlock Text="{Binding CompatibilityText}" TextTrimming="CharacterEllipsis" />
@@ -464,7 +464,7 @@
                         <Border Classes="chip" HorizontalAlignment="Left">
                             <TextBlock Text="{Binding SelectedContent.GameVersionText}" />
                         </Border>
-                        <Border Classes="chip" HorizontalAlignment="Left" Classes.compatible="{Binding SelectedContent.IsCompatible}" Classes.untested="{Binding SelectedContent.IsUntested}" Classes.incompatible="{Binding SelectedContent.IsIncompatible}">
+                        <Border Classes="chip" HorizontalAlignment="Left" Classes.compatible="{Binding SelectedContent.IsCompatible}" Classes.incompatible="{Binding SelectedContent.IsIncompatible}">
                             <StackPanel Orientation="Horizontal" Spacing="6">
                                 <Ellipse />
                                 <TextBlock Text="{Binding SelectedContent.CompatibilityText}" />

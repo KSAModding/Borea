@@ -39,6 +39,7 @@ public enum PlanningMessageKind
     SearchLimit,
     RetractedPack,
     UnlistedPin,
+    AboveGameMax,
 }
 
 /// <summary>
@@ -60,7 +61,7 @@ public sealed record PlanningMessage(string ModId, PlanningMessageKind Kind)
 
     public OsPlatform? Platform { get; init; }
 
-    /// <summary>The author's reason for a yank or a retraction, an unknown platform, an alternative's mod id, the game build a release needs, or the pinned mod a release needs.</summary>
+    /// <summary>The author's reason for a yank or a retraction, an unknown platform, an alternative's mod id, the game build a release needs, the newest game build a release supports, or the pinned mod a release needs.</summary>
     public string? Value { get; init; }
 
     public int? Limit { get; init; }
@@ -82,6 +83,7 @@ public sealed record PlanningMessage(string ModId, PlanningMessageKind Kind)
         PlanningMessageKind.Unavailable => "unavailable",
         PlanningMessageKind.ReleaseChannel => "release-channel",
         PlanningMessageKind.Incompatible => "incompatible",
+        PlanningMessageKind.AboveGameMax => "above-game-max",
         PlanningMessageKind.Compatibility => "compatibility",
         PlanningMessageKind.Platform => "platform",
         PlanningMessageKind.PlatformUnknown => "platform-unknown",
@@ -120,6 +122,7 @@ public sealed record PlanningMessage(string ModId, PlanningMessageKind Kind)
         PlanningMessageKind.Unavailable => $"The download of {ModId} {Version} is gone from its host since {Since:yyyy-MM-dd}, so Borea can install it only from a mirror or a copy it already has.",
         PlanningMessageKind.ReleaseChannel => $"Release {Version} has the release status {StatusName(Status)}, which the {Channel?.ToName()} channel does not offer.",
         PlanningMessageKind.Incompatible => "The release is incompatible with the target game.",
+        PlanningMessageKind.AboveGameMax => $"The release supports the game only up to {Value}, and the target game is newer.",
         PlanningMessageKind.Compatibility => $"Game compatibility is {Compatibility}.",
         PlanningMessageKind.Platform => $"The release does not list {Platform} as a supported platform.",
         PlanningMessageKind.PlatformUnknown => $"The release contains the unknown platform '{Value}'.",
