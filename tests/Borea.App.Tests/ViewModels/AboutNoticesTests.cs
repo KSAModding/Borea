@@ -18,6 +18,23 @@ public sealed class AboutNoticesTests
     }
 
     [Fact]
+    public void DefaultNoticesDirectory_InsideAnAppBundle_IsItsResources()
+    {
+        var bundle = Path.Combine(Path.GetTempPath(), "Applications", "Borea.app");
+
+        var directory = MainViewModel.DefaultNoticesDirectory(Path.Combine(bundle, "Contents", "MacOS", "borea"), "base");
+
+        Assert.Equal(Path.Combine(bundle, "Contents", "Resources"), directory);
+    }
+
+    [Fact]
+    public void DefaultNoticesDirectory_OutsideABundle_IsTheProgramFolder()
+    {
+        Assert.Equal("base", MainViewModel.DefaultNoticesDirectory(Path.Combine(Path.GetTempPath(), "Borea", "borea"), "base"));
+        Assert.Equal("base", MainViewModel.DefaultNoticesDirectory(null, "base"));
+    }
+
+    [Fact]
     public async Task OpenNotices_LocalBuildWithoutTheFile_SaysSoInsteadOfStarting()
     {
         using var harness = await ViewModelHarness.CreateAsync();

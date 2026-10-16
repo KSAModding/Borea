@@ -4,18 +4,18 @@ using Borea.Core.Updates;
 namespace Borea.Storage.Updates;
 
 /// <summary>
-/// A new build removes the program file of the build it replaced, once it has shown that it runs.
-/// The only file that can be deleted is the one beside this program that carries its own name and
-/// the replaced ending, and only when the receipt in this build's folder names it, so an argument
-/// alone deletes nothing. A start also sweeps the unpacked builds that an update which never
-/// finished left in the folder.
+/// A new build removes the build it replaced, once it has shown that it runs. The only thing that
+/// can be deleted is the build beside this one, a program file or a folder, that carries its own
+/// name and the replaced ending, and only when the receipt in this build's folder names it, so an
+/// argument alone deletes nothing. A start also sweeps the unpacked builds that an update which
+/// never finished left in the folder.
 /// </summary>
 public static class SelfUpdateCleanup
 {
     /// <summary>How long the new build waits for the old one to end.</summary>
     public static readonly TimeSpan Wait = TimeSpan.FromSeconds(30);
 
-    /// <summary>What an update adds to the program name of the build it replaces.</summary>
+    /// <summary>What an update adds to the name of the build it replaces.</summary>
     public const string ReplacedEnding = ".old";
 
     /// <summary>The start of the name of the folder an update unpacks the new build into.</summary>
@@ -40,8 +40,8 @@ public static class SelfUpdateCleanup
     }
 
     /// <summary>
-    /// Waits for the replaced build to end and deletes its program file. It never throws, and it
-    /// returns one line for the log that says what happened.
+    /// Waits for the replaced build to end and deletes it. It never throws, and it returns one line
+    /// for the log that says what happened.
     /// </summary>
     /// <param name="programPath">The running program. Null reads it from the process.</param>
     public static string Run(SelfUpdateHandover handover, string? programPath = null)
@@ -56,7 +56,7 @@ public static class SelfUpdateCleanup
                 return $"Self-update: the replaced build at {previous} was left alone, because {refusal}";
 
             WaitForExit(handover.PreviousProcessId, Path.GetFileNameWithoutExtension(running!));
-            var folder = Path.GetDirectoryName(Path.GetFullPath(running!))!;
+            var folder = InstalledBuild(Path.GetFullPath(running!)).Folder!;
 
             // An update that runs owns this file as its way back, so the claim keeps this delete off it.
             using var claim = SelfUpdateLock.TryTake(folder);
@@ -108,7 +108,7 @@ public static class SelfUpdateCleanup
     {
         try
         {
-            var install = folder ?? Path.GetDirectoryName(Environment.ProcessPath);
+            var install = folder ?? (Environment.ProcessPath is { } running ? InstalledBuild(running).Folder : null);
             if (install is null || !Directory.Exists(install))
                 return null;
 
@@ -135,17 +135,27 @@ public static class SelfUpdateCleanup
         }
     }
 
-    /// <summary>Why the named file is not the program this build took the place of, or null when it is that program.</summary>
+    /// <summary>
+    /// The build this program belongs to, a single program file or the folder that holds it, and
+    /// the folder an update changes. The folder is null when the program has none of its own.
+    /// </summary>
+    private static (string Path, string? Folder) InstalledBuild(string running)
+        => MacOsBundle.ForProgram(running) is { } bundle
+            ? (bundle.BundlePath, bundle.Folder)
+            : (running, Path.GetDirectoryName(running));
+
+    /// <summary>Why the named build is not the one this build took the place of, or null when it is that build.</summary>
     private static string? Refusal(string previous, string? running, SelfUpdateHandover handover)
     {
         if (running is null)
             return "this process has no program file.";
 
         running = Path.GetFullPath(running);
-        if (!string.Equals(previous, ReplacedPath(running), PathComparison))
-            return "it is not the program file this build took the place of.";
+        var build = InstalledBuild(running);
+        if (!string.Equals(previous, ReplacedPath(build.Path), PathComparison))
+            return "it is not the build this build took the place of.";
 
-        var folder = Path.GetDirectoryName(running);
+        var folder = build.Folder;
         if (folder is null)
             return "this build has no folder of its own.";
 
@@ -190,8 +200,8 @@ public static class SelfUpdateCleanup
     }
 
     /// <summary>
-    /// Deletes one file, and tries again for a while because Windows keeps a program file open until
-    /// the last handle of the ended process is gone.
+    /// Deletes one build, a program file or a folder with everything in it, and tries again for a
+    /// while because Windows keeps a program file open until the last handle of the ended process is gone.
     /// </summary>
     private static bool Delete(string path)
     {
@@ -199,7 +209,11 @@ public static class SelfUpdateCleanup
         {
             try
             {
-                File.Delete(path);
+                if (Directory.Exists(path))
+                    Directory.Delete(path, recursive: true);
+                else
+                    File.Delete(path);
+
                 return true;
             }
             catch (DirectoryNotFoundException)

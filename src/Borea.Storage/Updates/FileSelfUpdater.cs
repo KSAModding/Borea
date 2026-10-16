@@ -101,14 +101,14 @@ public sealed class FileSelfUpdater : ISelfUpdater
         if (SelfUpdateCleanup.SweepStaging(folder) is { } swept)
             _log.Write(swept);
 
-        var expected = await ReadChecksumAsync(release, archive, cancellationToken).ConfigureAwait(false);
+        var expected = await ReadChecksumAsync(_files, release, archive, cancellationToken).ConfigureAwait(false);
         var archivePath = Path.Combine(Path.GetTempPath(), $"borea-update-{Guid.NewGuid():N}{ArchiveExtension(archive.Name)}");
         var staging = Path.Combine(folder, $"{SelfUpdateCleanup.StagingPrefix}{Guid.NewGuid():N}");
         _log.Write($"Self-update: downloading {archive.Name} of Borea {release.Version}.");
 
         try
         {
-            await DownloadAsync(archive, archivePath, expected, progress, cancellationToken).ConfigureAwait(false);
+            await DownloadAsync(_files, archive, archivePath, expected, progress, cancellationToken).ConfigureAwait(false);
 
             progress?.Report(new SelfUpdateProgress(SelfUpdatePhase.Unpacking));
             var (unpacked, programHash) = Unpack(archivePath, archive.Name, expected, staging, programName);
@@ -137,7 +137,7 @@ public sealed class FileSelfUpdater : ISelfUpdater
         }
     }
 
-    private async Task<string> ReadChecksumAsync(BoreaRelease release, BoreaReleaseAsset archive, CancellationToken cancellationToken)
+    internal static async Task<string> ReadChecksumAsync(IBoreaReleaseFiles files, BoreaRelease release, BoreaReleaseAsset archive, CancellationToken cancellationToken)
     {
         var checksums = BoreaArchive.FindChecksums(release)
             ?? throw new SelfUpdateFailedException(
@@ -145,7 +145,7 @@ public sealed class FileSelfUpdater : ISelfUpdater
                 $"Borea {release.Version} publishes no {BoreaArchive.ChecksumsFileName}, so the download cannot be checked.");
 
         // A listing that did not arrive is a failed download, and not an archive that does not match.
-        var listing = await _files.ReadTextAsync(checksums.Url, cancellationToken).ConfigureAwait(false)
+        var listing = await files.ReadTextAsync(checksums.Url, cancellationToken).ConfigureAwait(false)
             ?? throw new SelfUpdateFailedException(
                 SelfUpdateFailure.Download,
                 $"The {BoreaArchive.ChecksumsFileName} of Borea {release.Version} could not be downloaded, so the archive cannot be checked.");
@@ -156,7 +156,8 @@ public sealed class FileSelfUpdater : ISelfUpdater
                 $"The {BoreaArchive.ChecksumsFileName} of Borea {release.Version} does not record {archive.Name}, so the download cannot be checked.");
     }
 
-    private async Task DownloadAsync(
+    internal static async Task DownloadAsync(
+        IBoreaReleaseFiles files,
         BoreaReleaseAsset archive,
         string archivePath,
         string expected,
@@ -166,7 +167,7 @@ public sealed class FileSelfUpdater : ISelfUpdater
         string hash;
         try
         {
-            hash = await _files.DownloadAsync(archive.Url, archivePath, new DownloadReport(progress), cancellationToken).ConfigureAwait(false);
+            hash = await files.DownloadAsync(archive.Url, archivePath, new DownloadReport(progress), cancellationToken).ConfigureAwait(false);
         }
         catch (Exception exception) when (exception is HttpRequestException or IOException)
         {
@@ -190,25 +191,7 @@ public sealed class FileSelfUpdater : ISelfUpdater
         string staging,
         string programName)
     {
-        string unpacked;
-        try
-        {
-            using var file = new FileStream(archivePath, FileMode.Open, FileAccess.Read, FileShare.None);
-
-            // One open file is checked and unpacked, so nothing can put other bytes between the two steps.
-            var hash = Convert.ToHexString(SHA256.HashData(file));
-            if (!string.Equals(hash, expected, StringComparison.OrdinalIgnoreCase))
-                throw new SelfUpdateFailedException(SelfUpdateFailure.Checksum, $"{archiveName} holds SHA-256 {hash} where the release records {expected}.");
-
-            file.Position = 0;
-            CreateStaging(staging);
-            unpacked = ReleaseArchive.Unpack(file, archiveName, staging);
-        }
-        catch (Exception exception) when (exception is not SelfUpdateFailedException
-            && exception is IOException or InvalidDataException or InvalidOperationException or UnauthorizedAccessException or NotSupportedException)
-        {
-            throw new SelfUpdateFailedException(SelfUpdateFailure.Unpack, $"The downloaded archive could not be unpacked. {exception.Message}", exception);
-        }
+        var unpacked = UnpackChecked(archivePath, archiveName, expected, staging);
 
         var program = Path.Combine(unpacked, programName);
         if (!File.Exists(program))
@@ -220,6 +203,33 @@ public sealed class FileSelfUpdater : ISelfUpdater
 
         MakeRunnable(program);
         return (unpacked, FileHash(program));
+    }
+
+    /// <summary>
+    /// Checks the downloaded archive once more and unpacks it into <paramref name="staging"/>, which
+    /// is created for it. One open file is checked and unpacked, so nothing can put other bytes
+    /// between the two steps.
+    /// </summary>
+    /// <returns>The one folder the archive holds.</returns>
+    internal static string UnpackChecked(string archivePath, string archiveName, string expected, string staging)
+    {
+        try
+        {
+            using var file = new FileStream(archivePath, FileMode.Open, FileAccess.Read, FileShare.None);
+
+            var hash = Convert.ToHexString(SHA256.HashData(file));
+            if (!string.Equals(hash, expected, StringComparison.OrdinalIgnoreCase))
+                throw new SelfUpdateFailedException(SelfUpdateFailure.Checksum, $"{archiveName} holds SHA-256 {hash} where the release records {expected}.");
+
+            file.Position = 0;
+            CreateStaging(staging);
+            return ReleaseArchive.Unpack(file, archiveName, staging);
+        }
+        catch (Exception exception) when (exception is not SelfUpdateFailedException
+            && exception is IOException or InvalidDataException or InvalidOperationException or UnauthorizedAccessException or NotSupportedException)
+        {
+            throw new SelfUpdateFailedException(SelfUpdateFailure.Unpack, $"The downloaded archive could not be unpacked. {exception.Message}", exception);
+        }
     }
 
     /// <summary>
@@ -404,7 +414,7 @@ public sealed class FileSelfUpdater : ISelfUpdater
     }
 
     /// <summary>The SHA-256 of one file, read through a handle that nobody else may write to.</summary>
-    private static string FileHash(string path)
+    internal static string FileHash(string path)
     {
         using var file = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
         return Convert.ToHexString(SHA256.HashData(file));
@@ -418,7 +428,7 @@ public sealed class FileSelfUpdater : ISelfUpdater
     }
 
     /// <summary>The package manager the marker names, an empty string when it names none, or null when there is no marker.</summary>
-    private static string? ReadPackageManager(string folder)
+    internal static string? ReadPackageManager(string folder)
     {
         var marker = Path.Combine(folder, PackageMarkerFileName);
         if (!File.Exists(marker))
@@ -437,7 +447,7 @@ public sealed class FileSelfUpdater : ISelfUpdater
         }
     }
 
-    private static bool IsWritable(string folder)
+    internal static bool IsWritable(string folder)
     {
         var probe = Path.Combine(folder, $".borea-write-test-{Guid.NewGuid():N}");
         try
@@ -451,15 +461,15 @@ public sealed class FileSelfUpdater : ISelfUpdater
         }
     }
 
-    private static bool IsFileFailure(Exception exception)
+    internal static bool IsFileFailure(Exception exception)
         => exception is IOException or UnauthorizedAccessException or NotSupportedException;
 
     /// <summary>The ".tar.gz" of a tar archive, which Path.GetExtension shortens to ".gz".</summary>
-    private static string ArchiveExtension(string assetName)
+    internal static string ArchiveExtension(string assetName)
         => assetName.EndsWith(".tar.gz", StringComparison.OrdinalIgnoreCase) ? ".tar.gz" : Path.GetExtension(assetName);
 
     /// <summary>A zip archive carries no file mode, and a tar archive is unpacked with its own, so this only makes sure.</summary>
-    private static void MakeRunnable(string programPath)
+    internal static void MakeRunnable(string programPath)
     {
         if (OperatingSystem.IsWindows())
             return;
@@ -501,7 +511,7 @@ public sealed class FileSelfUpdater : ISelfUpdater
         }
     }
 
-    private static void TryDeleteFile(string path)
+    internal static void TryDeleteFile(string path)
     {
         try
         {
@@ -512,7 +522,7 @@ public sealed class FileSelfUpdater : ISelfUpdater
         }
     }
 
-    private static void TryDeleteFolder(string path)
+    internal static void TryDeleteFolder(string path)
     {
         try
         {

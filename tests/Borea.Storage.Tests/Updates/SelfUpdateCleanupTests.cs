@@ -52,6 +52,60 @@ public sealed class SelfUpdateCleanupTests : IDisposable
             ? ("cmd.exe", "cmd.exe", ["/c", "ping", "-n", "2", "127.0.0.1"])
             : ("sleep", "/bin/sleep", ["1"]);
 
+    /// <summary>A macOS app bundle with the program under Contents/MacOS, and the path of that program.</summary>
+    private string Bundle(string bundleName)
+    {
+        var programs = Path.Combine(_root, "Applications", bundleName, "Contents", "MacOS");
+        Directory.CreateDirectory(programs);
+        File.WriteAllText(Path.Combine(programs, "borea"), bundleName);
+        File.WriteAllText(Path.Combine(_root, "Applications", bundleName, "Contents", "Info.plist"), "a plist");
+        return Path.Combine(programs, "borea");
+    }
+
+    [Fact]
+    public void Run_ABundleThisBuildTookThePlaceOf_IsRemovedAsAWhole()
+    {
+        var running = Bundle("Borea.app");
+        Bundle("Borea.app.old");
+        var previous = Path.Combine(_root, "Applications", "Borea.app.old");
+        var handover = new SelfUpdateHandover(previous, int.MaxValue, Token);
+        SelfUpdateReceipt.Write(Path.Combine(_root, "Applications"), previous, Token);
+
+        var message = SelfUpdateCleanup.Run(handover, running);
+
+        Assert.False(Directory.Exists(previous));
+        Assert.True(File.Exists(running));
+        Assert.False(File.Exists(Path.Combine(_root, "Applications", SelfUpdateReceipt.FileName)));
+        Assert.Contains("was removed", message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Run_ABundleWithoutAReceiptBesideIt_IsLeftAlone()
+    {
+        var running = Bundle("Borea.app");
+        Bundle("Borea.app.old");
+        var previous = Path.Combine(_root, "Applications", "Borea.app.old");
+
+        var message = SelfUpdateCleanup.Run(new SelfUpdateHandover(previous, int.MaxValue, Token), running);
+
+        Assert.True(Directory.Exists(previous));
+        Assert.Contains("no receipt", message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Run_AProgramFileBesideABundle_IsNotTheBuildItTookThePlaceOf()
+    {
+        var running = Bundle("Borea.app");
+        var previous = Path.Combine(_root, "Applications", "Borea.app", "Contents", "MacOS", "borea.old");
+        File.WriteAllText(previous, "a file inside the bundle");
+        SelfUpdateReceipt.Write(Path.Combine(_root, "Applications"), previous, Token);
+
+        var message = SelfUpdateCleanup.Run(new SelfUpdateHandover(previous, int.MaxValue, Token), running);
+
+        Assert.True(File.Exists(previous));
+        Assert.Contains("took the place of", message, StringComparison.Ordinal);
+    }
+
     [Fact]
     public void Run_RemovesTheProgramFileThisBuildTookThePlaceOf()
     {

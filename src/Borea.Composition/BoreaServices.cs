@@ -565,7 +565,7 @@ public sealed class BoreaServices : IDisposable
             SharedProfileLauncher = new LoggingSharedProfileLauncher(sharedProfileLauncher ?? new SharedProfileLauncher(paths, processStarter ?? new ProcessStarter(), launches), log),
             LatestVersion = new LatestVersionPing(http),
             ReleaseCheck = releaseCheck ?? new BoreaReleaseCheck(http),
-            SelfUpdater = selfUpdater ?? new FileSelfUpdater(new BoreaReleaseFiles(http), log, RunningProduct(), platform: BoreaArchive.RunningPlatform, fromCommandLine: logSource == BoreaLogSource.Cli),
+            SelfUpdater = selfUpdater ?? BuildSelfUpdater(new BoreaReleaseFiles(http), log, fromCommandLine: logSource == BoreaLogSource.Cli),
             Announcements = new AnnouncementFeed(new AnnouncementFetcher(http, AnnouncementFetcher.DefaultUri, announcementReader), announcementReader, paths, log),
             InstalledVersion = installedVersion,
             GamePlatform = gamePlatform ?? new Borea.Storage.Game.GamePlatform(paths),
@@ -608,6 +608,12 @@ public sealed class BoreaServices : IDisposable
         => string.Equals(Assembly.GetEntryAssembly()?.GetName().Name, "borea", StringComparison.Ordinal)
             ? BoreaProduct.Cli
             : BoreaProduct.App;
+
+    /// <summary>A build inside a macOS app bundle is replaced as a whole, every other build file by file.</summary>
+    private static ISelfUpdater BuildSelfUpdater(IBoreaReleaseFiles files, IBoreaLog log, bool fromCommandLine)
+        => OperatingSystem.IsMacOS() && MacOsBundle.ForProgram(Environment.ProcessPath) is not null
+            ? new MacOsBundleSelfUpdater(files, log, platform: BoreaArchive.RunningPlatform, fromCommandLine: fromCommandLine)
+            : new FileSelfUpdater(files, log, RunningProduct(), platform: BoreaArchive.RunningPlatform, fromCommandLine: fromCommandLine);
 
     /// <summary>The client of the process GitHub session, which does not follow redirects.</summary>
     internal static HttpClient BuildGitHubHttpClient()

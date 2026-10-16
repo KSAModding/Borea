@@ -49,7 +49,7 @@ The App archive contains one program, `borea` (`borea.exe` on Windows).
 Started without arguments, it opens the desktop App.
 Only one App runs for each user, so a second start brings the open window to the front.
 Started with arguments, it runs a command, for example `borea --help`.
-Started with one `borea://` link, such as `borea://mod/<id>`, it opens that page in the App, and on Windows and Linux the App registers itself for these links.
+Started with one `borea://` link, such as `borea://mod/<id>`, it opens that page in the App, and the App registers itself for these links.
 Most users want this archive.
 The CLI archive contains only the command line.
 It is a smaller download for scripts and for computers without a desktop.
@@ -57,8 +57,9 @@ It is a smaller download for scripts and for computers without a desktop.
 The builds include the .NET runtime and are self-contained, so there is nothing you need to install first.
 
 Each archive also contains `LICENSE` and `THIRD-PARTY-NOTICES.txt` with the licenses of the third-party software in it.
-The App archive unpacks into a folder named `Borea`, and the CLI archive into `Borea-Cli`.
-Put that folder where it can stay, for example `%LocalAppData%\Programs\Borea` on Windows or `~/.local/share/Borea` on Linux, because Borea updates itself into the folder it runs from.
+The App archive unpacks into a folder named `Borea`, or `Borea.app` on macOS, and the CLI archive into `Borea-Cli`.
+Put that folder where it can stay, for example `%LocalAppData%\Programs\Borea` on Windows, `~/.local/share/Borea` on Linux or `/Applications` on macOS, because Borea updates itself into the folder it runs from.
+On a Mac account without administrator rights, put `Borea.app` in `~/Applications` instead, because Borea cannot update itself in `/Applications` there.
 
 | Platform | App and CLI | CLI only |
 | --- | --- | --- |
@@ -105,36 +106,27 @@ The build needs glibc, so musl-based distributions such as Alpine are not suppor
 
 Intel Macs are not supported.
 
-Unpack the archive and start Borea from Terminal:
-
-```sh
-tar -xzf Borea-<version>-macos-arm64.tar.gz
-cd Borea-<version>-macos-arm64
-./borea
-```
+Double-click the App archive in Finder to unpack it, drag `Borea.app` into your **Applications** folder and open it from there.
 
 macOS might block that first start, because the build is not signed with an Apple developer account.
-It says that Apple could not verify that `borea` is free of malware.
+It says that Apple could not verify that Borea is free of malware.
 The full source code of Borea is in this repository, so you can check it yourself.
 
-1. Select **Done**. Never select **Move to Trash**, because that deletes `borea`.
-2. Open **System Settings**, go to **Privacy & Security** and scroll down to **Security**. It names `borea` there and offers **Open Anyway**.
-3. Confirm with your password or Touch ID, then run `./borea` again. It starts.
+1. Select **Done**. Never select **Move to Trash**, because that deletes Borea.
+2. Open **System Settings**, go to **Privacy & Security** and scroll down to **Security**. It names Borea there and offers **Open Anyway**.
+3. Confirm with your password or Touch ID, then open Borea again. It starts.
 
-Instead of the three steps you can remove the download mark in Terminal: `xattr -dr com.apple.quarantine Borea-<version>-macos-arm64`.
+Instead of the three steps you can remove the download mark in Terminal: `xattr -dr com.apple.quarantine /Applications/Borea.app`.
 Either way, you do this once per version.
 
-For the command line, run `./borea --help` in the same directory.
-The matching `Borea-Cli-` archive contains only the command line.
-
-Do not unpack the archive by double-clicking it in Finder, and do not start `borea` from Finder.
-
-Once it runs, Borea behaves like any other Mac program.
+The command line is `Borea.app/Contents/MacOS/borea`.
+The `Borea-Cli-` archive unpacks with `tar -xzf` into `Borea-Cli`, and its `borea` takes the same first-start steps, or `xattr -dr com.apple.quarantine Borea-Cli`.
 
 ### Updating Borea
 
 **Update now** on the Home banner, or `borea update-self`, installs the newest release of your update channel into the same folder, so shortcuts keep working.
-If Borea does not start after an update, rename `borea.exe.old` (`borea.old` on Linux and macOS) to `borea.exe` to get the build you had back.
+On macOS, a build from before the app bundle cannot update to a bundle release, so download the App archive once by hand, drag `Borea.app` into Applications and delete the old `Borea` folder.
+If Borea does not start after an update, rename `borea.exe.old` (`borea.old` on Linux, `Borea.app.old` on macOS) back to its old name to get the build you had back.
 
 ### Checksums and provenance
 
