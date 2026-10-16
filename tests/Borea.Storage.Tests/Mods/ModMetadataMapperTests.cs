@@ -53,6 +53,7 @@ public sealed class ModMetadataMapperTests : IDisposable
         Assert.Equal(2, reloaded.Releases.Hosts.Count);
         Assert.Equal("owner/repo", reloaded.Releases.AuthorityHost.Reference);
         Assert.Equal(original.Releases!.Since, reloaded.Releases.Since);
+        Assert.Equal("release/v", reloaded.Releases.TagPrefix);
 
         Assert.NotNull(reloaded.Loader);
         Assert.Equal(original.Loader!.LoaderId, reloaded.Loader!.LoaderId);

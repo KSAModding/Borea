@@ -199,6 +199,19 @@ public sealed class SnapshotParserTests
     }
 
     [Fact]
+    public void Parse_AuthoredListingWithGitHubAndTagPrefix_HasOneHostAndReadsThePrefix()
+    {
+        var authored = ValidAuthoredJson.Replace("\"links\":", "\"releases\": { \"github\": \"owner/repo\", \"tag_prefix\": \"release/v\" }, \"links\":");
+        var listing = $$"""{ "id": "test-mod", "authored": {{authored}}, "releases": [] }""";
+
+        var result = SnapshotParser.Parse(Snapshot(listing, ""));
+
+        var releases = Assert.Single(result.ValidListings).Authored!.Releases!;
+        Assert.Equal("owner/repo", Assert.Single(releases.Hosts).Reference);
+        Assert.Equal("release/v", releases.TagPrefix);
+    }
+
+    [Fact]
     public void Parse_AuthoredListingWithAnUnknownKeyUnderReleases_KeepsItsHosts()
     {
         var authored = ValidAuthoredJson.Replace("\"links\":", "\"releases\": { \"github\": \"owner/repo\", \"until\": \"2.0\", \"notify\": true }, \"links\":");

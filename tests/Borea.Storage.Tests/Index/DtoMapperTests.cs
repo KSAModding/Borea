@@ -256,6 +256,51 @@ public sealed class DtoMapperTests
     }
 
     [Theory]
+    [InlineData("gatos-")]
+    [InlineData("release/v")]
+    public void MapAuthored_ReleaseSource_TagPrefix_IsReadAndNamesNoHost(string prefix)
+    {
+        var dto = MinimalAuthoredDto();
+        dto.Releases = new ReleasesInfoDto
+        {
+            TagPrefix = JsonSerializer.SerializeToElement(prefix),
+            Hosts = new Dictionary<string, JsonElement>
+            {
+                ["github"] = JsonSerializer.SerializeToElement("owner/repo"),
+            },
+        };
+
+        var result = DtoMapper.MapAuthored(dto, "source");
+
+        Assert.Equal("owner/repo", Assert.Single(result.Releases!.Hosts).Reference);
+        Assert.Equal(prefix, result.Releases.TagPrefix);
+    }
+
+    [Theory]
+    [InlineData("\"\"")]
+    [InlineData("\"my mod-\"")]
+    [InlineData("\"caf\u00e9-\"")]
+    [InlineData("1")]
+    [InlineData("[\"v\"]")]
+    public void MapAuthored_ReleaseSource_TagPrefixNotAnAsciiStringWithoutWhitespace_IsIgnored(string prefix)
+    {
+        var dto = MinimalAuthoredDto();
+        dto.Releases = new ReleasesInfoDto
+        {
+            TagPrefix = JsonDocument.Parse(prefix).RootElement.Clone(),
+            Hosts = new Dictionary<string, JsonElement>
+            {
+                ["github"] = JsonSerializer.SerializeToElement("owner/repo"),
+            },
+        };
+
+        var result = DtoMapper.MapAuthored(dto, "source");
+
+        Assert.Null(result.Releases!.TagPrefix);
+        Assert.Single(result.Releases.Hosts);
+    }
+
+    [Theory]
     [InlineData("\"2.0\"")]
     [InlineData("true")]
     [InlineData("1.5")]

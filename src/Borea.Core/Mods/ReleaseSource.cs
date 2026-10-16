@@ -22,7 +22,12 @@ public sealed class ReleaseSource
     /// </summary>
     public ModVersion? Since { get; }
 
-    public ReleaseSource(IReadOnlyList<ReleaseHost> hosts, string? authority = null, ModVersion? since = null)
+    /// <summary>
+    /// The text that the tag of every mod release on GitHub starts with (RFC 0096), or null when every release counts.
+    /// </summary>
+    public string? TagPrefix { get; }
+
+    public ReleaseSource(IReadOnlyList<ReleaseHost> hosts, string? authority = null, ModVersion? since = null, string? tagPrefix = null)
     {
         if (hosts is null || hosts.Count == 0)
             throw new ArgumentException("A release source needs at least one host.", nameof(hosts));
@@ -48,6 +53,7 @@ public sealed class ReleaseSource
 
         Hosts = new ReadOnlyCollection<ReleaseHost>(hosts.ToArray());
         Since = since;
+        TagPrefix = tagPrefix;
     }
 
     /// <summary>

@@ -244,6 +244,7 @@ public sealed partial class ListingEditor
             "releases.spacedock" => Localization.ListingReleasesSpaceDock,
             "releases.authority" => Localization.ListingReleasesAuthority,
             "releases.since" => Localization.ListingReleasesSince,
+            "releases.tag_prefix" => Localization.ListingReleasesTagPrefix,
             "compatibility" => Localization.ListingCompatibility,
             "compatibility.game_min" => Localization.ListingGameMin,
             "compatibility.game_max" => Localization.ListingGameMax,

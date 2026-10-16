@@ -2601,6 +2601,12 @@
   <data name="ListingReleasesSinceHint" xml:space="preserve">
     <value>Lass das leer, damit nur neue Releases eingetragen werden. Mit einer Version stempelt der Index auch jedes ältere Release ab dieser Version. Diese Releases bekommen die Angaben des Listings von heute, zum Beispiel die Spielversionen und die Abhängigkeiten.</value>
   </data>
+  <data name="ListingReleasesTagPrefix" xml:space="preserve">
+    <value>Tag-Präfix der Mod-Releases</value>
+  </data>
+  <data name="ListingReleasesTagPrefixHint" xml:space="preserve">
+    <value>Lass das leer, wenn jedes Release des Repositorys ein Mod-Release ist. Mit einem Präfix nimmt der Index nur die GitHub-Releases, deren Tag damit anfängt, mit derselben Groß- und Kleinschreibung, und liest die Version aus dem Rest des Tags. Mit mymod- ist zum Beispiel der Tag mymod-v1.2.0 die Version 1.2.0.</value>
+  </data>
   <data name="ListingReleasesHint" xml:space="preserve">
     <value>Neue Releases werden von hier aus automatisch eingetragen.</value>
   </data>

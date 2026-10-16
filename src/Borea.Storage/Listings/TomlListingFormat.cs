@@ -25,7 +25,7 @@ public sealed partial class TomlListingFormat : IListingFormat
             "version", "released_at", "changelog",
             "releases", "links", "compatibility", "loader", "dependencies", "install", "provides", "images", "mods", "vehicles", "saves",
         ],
-        ["releases"] = ["github", "spacedock", "authority", "since"],
+        ["releases"] = ["github", "spacedock", "authority", "tag_prefix", "since"],
         ["links"] = ["forums"],
         ["compatibility"] = ["game_min", "game_max", "os"],
         ["loader"] = ["id", "min", "max"],

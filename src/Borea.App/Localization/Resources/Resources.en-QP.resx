@@ -2157,6 +2157,12 @@
   <data name="ListingArchiveNotCheckedFormat" xml:space="preserve">
     <value>Borea couldn't peek inside the barrel o' the latest release, an' the index peeks inside it too: {0}. Patch up the release, then hit Read from my archive under Dependencies.</value>
   </data>
+  <data name="ListingReleasesTagPrefix" xml:space="preserve">
+    <value>Tag prefix o' the mod releases</value>
+  </data>
+  <data name="ListingReleasesTagPrefixHint" xml:space="preserve">
+    <value>Leave this empty when every release o' the repository be a mod release. With a prefix, the index takes only the GitHub releases whose tag starts with it, letter case an' all, an' reads the version from the rest o' the tag. Fer example, with mymod- the tag mymod-v1.2.0 be version 1.2.0.</value>
+  </data>
   <data name="PackMemberNewerFormat" xml:space="preserve">
     <value>{0} be in port</value>
   </data>

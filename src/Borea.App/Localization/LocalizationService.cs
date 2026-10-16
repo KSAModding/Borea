@@ -1788,6 +1788,10 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string ListingReleasesSinceHint => Resources.ListingReleasesSinceHint;
 
+    public string ListingReleasesTagPrefix => Resources.ListingReleasesTagPrefix;
+
+    public string ListingReleasesTagPrefixHint => Resources.ListingReleasesTagPrefixHint;
+
     public string ListingReleasesHint => Resources.ListingReleasesHint;
 
     public string ListingGameMin => Resources.ListingGameMin;

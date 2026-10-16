@@ -12,6 +12,10 @@ public sealed class ReleasesInfoDto
     [JsonPropertyName("since")]
     public JsonElement? Since { get; set; }
 
+    // Named here, because a prefix such as "release/v" has a slash and would otherwise read as a repository.
+    [JsonPropertyName("tag_prefix")]
+    public JsonElement? TagPrefix { get; set; }
+
     /// <summary>Every other key. Only the ones whose value is a host reference are release hosts.</summary>
     [JsonExtensionData]
     public Dictionary<string, JsonElement>? Hosts { get; set; }

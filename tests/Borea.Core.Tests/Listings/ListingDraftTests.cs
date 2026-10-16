@@ -66,6 +66,26 @@ public sealed class ListingDraftTests
     }
 
     [Fact]
+    public void FromDocument_TagPrefix_IsReadAndWrittenBackWithTheOtherReleasesKeys()
+    {
+        var document = Listed();
+        document.GetTable("releases")!.Set("tag_prefix", "starmap-v");
+        document.GetTable("releases")!.Set("x_future", "kept");
+
+        var draft = ListingDraft.FromDocument(document);
+        var unchanged = draft.ToDocument().GetTable("releases")!;
+        var written = (draft with { Releases = draft.Releases! with { TagPrefix = "release/" } }).ToDocument().GetTable("releases")!;
+        var cleared = (draft with { Releases = draft.Releases! with { TagPrefix = null } }).ToDocument().GetTable("releases")!;
+
+        Assert.Equal(new ListingReleases("StarMapLoader/StarMap", null, TagPrefix: "starmap-v"), draft.Releases);
+        Assert.Equal("starmap-v", unchanged.GetString("tag_prefix"));
+        Assert.Equal(["github", "tag_prefix", "x_future"], written.Entries.Select(entry => entry.Key));
+        Assert.Equal("release/", written.GetString("tag_prefix"));
+        Assert.Equal("kept", written.GetString("x_future"));
+        Assert.False(cleared.Contains("tag_prefix"));
+    }
+
+    [Fact]
     public void FromDocument_DependencyWithAlternatives_IsWrittenBackUnchanged()
     {
         var alternatives = new AuthoredTable();

@@ -230,7 +230,7 @@ public static class DtoMapper
             .Select(host => new ReleaseHost(host.Key, host.Reference!))
             .ToList();
 
-        return new ReleaseSource(hosts, dto.Authority, MapSince(dto.Since));
+        return new ReleaseSource(hosts, dto.Authority, MapSince(dto.Since), MapTagPrefix(dto.TagPrefix));
     }
 
     // "owner/repo" on GitHub and the numeric mod id on SpaceDock.
@@ -244,6 +244,10 @@ public static class DtoMapper
     // The watcher stamps as if since were absent when it is not a version, so Borea reads it the same way.
     private static ModVersion? MapSince(JsonElement? value) =>
         value is { ValueKind: JsonValueKind.String } text && ModVersion.TryParseAuthored(text.GetString(), out var since) ? since : null;
+
+    // The schema takes a non-empty ASCII string without whitespace, and Borea reads nothing else as a prefix.
+    private static string? MapTagPrefix(JsonElement? value) =>
+        value is { ValueKind: JsonValueKind.String } text && text.GetString() is { Length: > 0 } prefix && prefix.All(c => c is > ' ' and <= '~') ? prefix : null;
 
     // A release file carries its bounds in full, while an authored listing reaches Borea verbatim and may write them shorter.
     private static ModDependency MapDependency(DependencyEntryDto dto, Func<string, ModVersion> parseBound)

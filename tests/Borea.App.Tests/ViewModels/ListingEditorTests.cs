@@ -546,6 +546,65 @@ public sealed class ListingEditorTests
         Assert.DoesNotContain("since", editor.DocumentText, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public async Task LoadListed_TagPrefix_IsReadIntoItsFieldAndKeptOnAnEdit()
+    {
+        var listed = StarMapListing.Replace("github = \"StarMapLoader/StarMap\"", "github = \"StarMapLoader/StarMap\"\ntag_prefix = \"starmap-v\"", StringComparison.Ordinal);
+        using var harness = await ViewModelHarness.CreateAsync(respond: request =>
+            request.RequestUri!.AbsoluteUri == "https://raw.githubusercontent.com/KSAModding/content-index/main/listings/StarMap.toml"
+                ? new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(listed) }
+                : null);
+        var editor = harness.ViewModel.ListingEditor;
+        await harness.ViewModel.OpenListingAsync();
+        editor.ListedQuery = "starm";
+
+        await editor.LoadListedCommand.ExecuteAsync(null);
+        editor.Abstract = "Runs code mods.";
+
+        Assert.Equal("starmap-v", editor.ReleasesTagPrefix);
+        Assert.True(editor.ShowsTagPrefix);
+        Assert.Contains("[releases]\ngithub = \"StarMapLoader/StarMap\"\ntag_prefix = \"starmap-v\"\n", editor.DocumentText, StringComparison.Ordinal);
+
+        editor.ReleasesTagPrefix = "release/";
+
+        Assert.Contains("[releases]\ngithub = \"StarMapLoader/StarMap\"\ntag_prefix = \"release/\"\n", editor.DocumentText, StringComparison.Ordinal);
+        Assert.DoesNotContain(editor.Errors, issue => issue.Location.StartsWith("releases", StringComparison.Ordinal));
+
+        editor.ReleasesTagPrefix = string.Empty;
+
+        Assert.DoesNotContain("tag_prefix", editor.DocumentText, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task TagPrefix_NewListing_IsWrittenNextToGitHubAndCheckedAsAnAsciiStringWithoutWhitespace()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var (editor, _, _) = await ValidNewListingAsync(harness);
+
+        editor.ReleasesTagPrefix = " mymod- ";
+
+        Assert.True(editor.ShowsTagPrefix);
+        Assert.Contains("[releases]\ngithub = \"owner/MyMod\"\ntag_prefix = \"mymod-\"\n", editor.DocumentText, StringComparison.Ordinal);
+        Assert.False(editor.HasErrors, string.Join("\n", editor.Errors));
+
+        editor.ReleasesTagPrefix = "my mod-";
+
+        Assert.Contains(editor.Errors, issue => issue.Location == "releases.tag_prefix");
+        Assert.Contains(editor.VisibleErrors, error => error.StartsWith(harness.Localization.ListingReleasesTagPrefix + ": ", StringComparison.Ordinal));
+
+        editor.ReleasesTagPrefix = "mymod-";
+        editor.ReleasesSpaceDock = "4253";
+        editor.ReleasesGitHub = string.Empty;
+
+        Assert.True(editor.ShowsTagPrefix);
+        Assert.Contains(editor.Errors, issue => issue.Location == "releases" && issue.Message.Contains("'github' is required when 'tag_prefix' is set", StringComparison.Ordinal));
+
+        editor.ReleasesTagPrefix = string.Empty;
+
+        Assert.False(editor.ShowsTagPrefix);
+        Assert.DoesNotContain(editor.Errors, issue => issue.Location.StartsWith("releases", StringComparison.Ordinal));
+    }
+
     [Theory]
     [InlineData("flight com", "AdvancedFlightComputer")]
     [InlineData("MEASURE", "MeasureTools")]
