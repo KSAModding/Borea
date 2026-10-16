@@ -59,6 +59,7 @@ The builds include the .NET runtime and are self-contained, so there is nothing 
 Each archive also contains `LICENSE` and `THIRD-PARTY-NOTICES.txt` with the licenses of the third-party software in it.
 The App archive unpacks into a folder named `Borea`, or `Borea.app` on macOS, and the CLI archive into `Borea-Cli`.
 Put that folder where it can stay, for example `%LocalAppData%\Programs\Borea` on Windows, `~/.local/share/Borea` on Linux or `/Applications` on macOS, because Borea updates itself into the folder it runs from.
+On a Mac account without administrator rights, put `Borea.app` in `~/Applications` instead, because Borea cannot update itself in `/Applications` there.
 
 | Platform | App and CLI | CLI only |
 | --- | --- | --- |
