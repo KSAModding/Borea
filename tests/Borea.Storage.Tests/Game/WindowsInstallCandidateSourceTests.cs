@@ -22,6 +22,35 @@ public sealed class WindowsInstallCandidateSourceTests : IDisposable
         Assert.Equal([@"C:\Games\KSA\"], source.GetGameDirectories());
     }
 
+    [Theory]
+    [InlineData("Ahwoo App 019f01fc-623a-773f-8d70-f0177b16a20c")]
+    [InlineData("AHWOO APP 019F01FC-623A-773F-8D70-F0177B16A20C")]
+    public void GetGameDirectories_ReadsTheInstallLocationOfTheAhwooGamePackageOnly(string keyName)
+    {
+        UninstallEntry[] registry =
+        [
+            new("Ahwoo App 019fab3e-7ac8-7228-ba27-aca60c741e91", "Gruntz", @"F:\Games\Ahwoo\Games\Gruntz"),
+            new(keyName, "Kitten Space Agency", @"F:\Games\Ahwoo\Games\Kitten Space Agency"),
+            new("Ahwoo App 00000000-0000-0000-0000-000000000000", "Kitten Space Agency Dedicated Server", @"F:\Games\Ahwoo\Games\KSA Server"),
+        ];
+        var source = new WindowsInstallCandidateSource(() => registry, [], modsFolder: null);
+
+        Assert.Equal([@"F:\Games\Ahwoo\Games\Kitten Space Agency"], source.GetGameDirectories());
+    }
+
+    [Fact]
+    public void GetGameDirectories_InstallerAndAhwooEntry_ReadsBothFolders()
+    {
+        UninstallEntry[] registry =
+        [
+            .. Registry,
+            new("Ahwoo App 019f01fc-623a-773f-8d70-f0177b16a20c", "Kitten Space Agency", @"F:\Games\Ahwoo\Games\Kitten Space Agency"),
+        ];
+        var source = new WindowsInstallCandidateSource(() => registry, [], modsFolder: null);
+
+        Assert.Equal([@"C:\Games\KSA\", @"F:\Games\Ahwoo\Games\Kitten Space Agency"], source.GetGameDirectories());
+    }
+
     [Fact]
     public void GetLoaderDirectories_ReadsStarMapEntriesTheFixedFolderAndEveryModsSubfolder()
     {
