@@ -13,6 +13,9 @@ public sealed class WindowsInstallCandidateSource : IInstallCandidateSource
 {
     internal const string GameUninstallKeyName = "{BA65F5AF-CD20-48A4-A957-410CB9660FF7}_is1";
 
+    // The Ahwoo client writes one entry per package, named after its package id.
+    internal const string AhwooGameUninstallKeyName = "Ahwoo App 019f01fc-623a-773f-8d70-f0177b16a20c";
+
     internal const string LoaderDisplayNamePrefix = "StarMap version";
 
     private const string UninstallKeyPath = @"Software\Microsoft\Windows\CurrentVersion\Uninstall";
@@ -45,7 +48,8 @@ public sealed class WindowsInstallCandidateSource : IInstallCandidateSource
 
     public IReadOnlyList<string> GetGameDirectories() =>
         _uninstallEntries()
-            .Where(entry => string.Equals(entry.KeyName, GameUninstallKeyName, StringComparison.OrdinalIgnoreCase))
+            .Where(entry => string.Equals(entry.KeyName, GameUninstallKeyName, StringComparison.OrdinalIgnoreCase)
+                || string.Equals(entry.KeyName, AhwooGameUninstallKeyName, StringComparison.OrdinalIgnoreCase))
             .Select(entry => entry.InstallLocation)
             .OfType<string>()
             .ToList();
