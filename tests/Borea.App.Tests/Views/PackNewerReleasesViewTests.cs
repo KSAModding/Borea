@@ -402,7 +402,7 @@ public sealed class PackNewerReleasesViewTests
     private const string LongName = "KSArmory Extended Arsenal for Orbital Science Missions";
 
     /// <summary>Gives the listing <paramref name="modId"/> and its releases the name <paramref name="name"/>.</summary>
-    private static string Rename(string json, string modId, string name)
+    internal static string Rename(string json, string modId, string name)
     {
         var root = JsonNode.Parse(json)!;
         var listing = root["listings"]!.AsArray().Single(node => (string?)node!["id"] == modId)!;
