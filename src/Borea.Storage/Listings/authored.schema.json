@@ -111,7 +111,7 @@
           "$ref": "#/$defs/gameVersionBound"
         },
         "game_max": {
-          "description": "Newest tested game version. Absent means no known upper limit, which is the recommended default.",
+          "description": "Newest game version the content works with. Above it, clients block the content. Absent means no known upper limit, which is the recommended default.",
           "$ref": "#/$defs/gameVersionBound"
         },
         "os": {
@@ -143,7 +143,7 @@
           "enum": ["github", "spacedock"]
         },
         "since": {
-          "description": "The version from which the watcher also stamps the older releases of the authority, per RFC 0079. They get the listing facts that stand when they are stamped.",
+          "description": "The oldest version the watcher stamps, per RFC 0079. Every release of the authority at or above it is stamped with the listing facts that stand at stamp time. Absent means the watcher starts at the newest release of a new listing. It is not a host.",
           "$ref": "#/$defs/versionBound"
         },
         "tag_prefix": {
@@ -365,7 +365,7 @@
 
   "allOf": [
     {
-      "$comment": "A mod: the game decides where it goes, so target is pinned and path is not the author's to set.",
+      "$comment": "A mod: the game decides where it goes, so RFC 0035 states the location as a default and neither target nor path is the author's to set.",
       "if": { "required": ["type"], "properties": { "type": { "const": "mod" } } },
       "then": {
         "properties": {
@@ -378,7 +378,7 @@
           "saves": { "not": {} },
           "install": {
             "properties": {
-              "target": { "const": "mods" },
+              "target": { "not": {} },
               "path": { "not": {} }
             }
           }
@@ -476,6 +476,7 @@
   "$defs": {
     "contentId": {
       "$comment": "The trailing lookahead is a true end-of-input anchor. A bare $ would also match before a trailing newline, which would let an id carry one into a folder name.",
+      "title": "1 to 64 ASCII letters, digits, '.', '_' or '-', starting and ending with a letter or digit",
       "type": "string",
       "pattern": "^[A-Za-z0-9](?:[A-Za-z0-9._-]{0,62}[A-Za-z0-9])?(?![\\s\\S])",
       "not": {
@@ -494,12 +495,14 @@
 
     "semver": {
       "$comment": "SemVer 2.0.0 with all three numbers, because a pack version and a pin name a release as the index stores it. No leading v: these are authored versions, not release tags, and only a tag gets its v stripped at stamp time.",
+      "title": "a version with all three numbers, such as 1.2.0 or 2.0.0-rc.1, and no leading v",
       "type": "string",
       "pattern": "^(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)(?:-(?:0|[1-9][0-9]*|[0-9]*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9][0-9]*|[0-9]*[a-zA-Z-][0-9a-zA-Z-]*))*)?(?:\\+[0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*)?(?![\\s\\S])"
     },
 
     "gameVersionBound": {
       "$comment": "The full form the game displays, or a whole month. Year.Month.Build as a prefix is deliberately not offered (RFC 0017), and a build carrying a suffix is out of scope for compatibility.",
+      "title": "a game version as the game shows it, such as 2026.10.10.5554, or a month such as 2026.10",
       "type": "string",
       "pattern": "^[0-9]{4}\\.(?:1[0-2]|[1-9])(?:\\.(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*))?(?![\\s\\S])"
     },
@@ -532,6 +535,7 @@
     },
 
     "url": {
+      "title": "an http or https URL, such as https://github.com/me/MyMod",
       "type": "string",
       "pattern": "^https?://[A-Za-z0-9](?:[A-Za-z0-9.-]*[A-Za-z0-9])?(?::[0-9]{1,5})?(?:[/?#][^\\s\\u0000-\\u001f]*)?(?![\\s\\S])"
     },
@@ -598,17 +602,20 @@
     },
 
     "tag": {
+      "title": "lowercase letters and digits, with single - between words, such as parts or life-support",
       "type": "string",
       "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*(?![\\s\\S])"
     },
 
     "utcTimestamp": {
+      "title": "a UTC date and time such as 2026-08-05T12:00:00Z",
       "type": "string",
       "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(?:\\.[0-9]+)?Z(?![\\s\\S])"
     },
 
     "configKeyPath": {
       "$comment": "Dot-separated from the document root. A configuration key whose own name contains a dot cannot be addressed in spec_version 1.",
+      "title": "key names joined by single dots, such as paths.game",
       "type": "string",
       "pattern": "^[^.\\u0000-\\u001f]+(?:\\.[^.\\u0000-\\u001f]+)*(?![\\s\\S])"
     },

@@ -43,10 +43,10 @@ public sealed class ListingValidatorTests
 
     [Theory]
     [InlineData("id", "CON", "id", "'CON' is a reserved name, compared up to the first dot")]
-    [InlineData("id", "-bad", "id", "'-bad' does not have the right form")]
+    [InlineData("id", "-bad", "id", "'-bad' is not 1 to 64 ASCII letters, digits, '.', '_' or '-', starting and ending with a letter or digit")]
     [InlineData("forums", "https://example.com/thread", "links.forums", "'https://example.com/thread' is not an https link to a thread on forums.ahwoo.com")]
     [InlineData("license", "MIT, GPL", "license", "'MIT, GPL' is not an SPDX license expression")]
-    [InlineData("game_min", "2026.13", "compatibility.game_min", "'2026.13' does not have the right form")]
+    [InlineData("game_min", "2026.13", "compatibility.game_min", "'2026.13' is not a game version as the game shows it, such as 2026.10.10.5554, or a month such as 2026.10")]
     [InlineData("name", "", "name", "cannot be empty")]
     [InlineData("github", "not a repo", "releases.github", "'not a repo' does not have the right form; for example, use 'owner/repository'")]
     public void Validate_SchemaRejection_SaysItInWords(string field, string value, string location, string message)
@@ -88,6 +88,21 @@ public sealed class ListingValidatorTests
         Assert.Contains(new ListingIssue(ListingIssueSeverity.Error, "releases", "'authority' is a required property"), errors);
     }
 
+    [Theory]
+    [InlineData("mods")]
+    [InlineData("game-root")]
+    public void Validate_ModWithAnInstallTarget_IsRefused(string target)
+    {
+        var document = Valid().ToDocument();
+        var install = new AuthoredTable();
+        install.Set("target", target);
+        document.Set("install", install);
+
+        var errors = _validator.Validate(document, new ListingCheckContext(null)).Issues;
+
+        Assert.Contains(new ListingIssue(ListingIssueSeverity.Error, "install.target", "this key is not allowed here"), errors);
+    }
+
     [Fact]
     public void Validate_ReleasesWithoutAHost_NeedsOne()
     {
@@ -110,6 +125,18 @@ public sealed class ListingValidatorTests
     [InlineData("MIT WITH GPL-3.0-only", "'MIT WITH GPL-3.0-only' names GPL-3.0-only, which is not on the SPDX license list; the identifiers are at https://spdx.org/licenses/")]
     [InlineData("LicenseRef-a AND licenseref-a", "'LicenseRef-a AND licenseref-a' names licenseref-a, which is not on the SPDX license list; the identifiers are at https://spdx.org/licenses/")]
     [InlineData("Foo AND foo", "'Foo AND foo' names Foo, foo, which is not on the SPDX license list; the identifiers are at https://spdx.org/licenses/")]
+    [InlineData("GPL-2.0-only WITH Nokia-Qt-exception-1.1", null)]
+    [InlineData("GPL", "'GPL' names GPL, which is not on the SPDX license list; ids close to GPL are GPL-1.0-only, GPL-2.0-only, GPL-3.0-only, GPL-1.0-or-later, GPL-2.0-or-later and GPL-3.0-or-later; the identifiers are at https://spdx.org/licenses/")]
+    [InlineData("CC0", "'CC0' names CC0, which is not on the SPDX license list; the id close to CC0 is CC0-1.0; the identifiers are at https://spdx.org/licenses/")]
+    [InlineData("GPLv3", "'GPLv3' names GPLv3, which is not on the SPDX license list; ids close to GPLv3 are GPL-1.0-only, GPL-2.0-only, GPL-3.0-only, GPL-1.0-or-later, GPL-2.0-or-later and GPL-3.0-or-later; the identifiers are at https://spdx.org/licenses/")]
+    [InlineData("Apache2", "'Apache2' names Apache2, which is not on the SPDX license list; ids close to Apache2 are Apache-1.0, Apache-1.1 and Apache-2.0; the identifiers are at https://spdx.org/licenses/")]
+    [InlineData("MIT+", "'MIT+' names MIT+, which is not on the SPDX license list; ids close to MIT+ are MIT, MIT-0, MIT-Wu, MIT-CMU, MIT-feh and MIT-enna; the identifiers are at https://spdx.org/licenses/")]
+    [InlineData("BSD", "'BSD' names BSD, which is not on the SPDX license list; ids close to BSD are BSD-4.3RENO, BSD-1-Clause, BSD-2-Clause, BSD-3-Clause, BSD-4-Clause and BSD-4.3TAHOE; the identifiers are at https://spdx.org/licenses/")]
+    [InlineData("MPL", "'MPL' names MPL, which is not on the SPDX license list; ids close to MPL are MPL-1.0, MPL-1.1 and MPL-2.0; the identifiers are at https://spdx.org/licenses/")]
+    [InlineData("Verbatim-man-pages", "'Verbatim-man-pages' names Verbatim-man-pages, which is not on the SPDX license list; the identifiers are at https://spdx.org/licenses/")]
+    [InlineData("LLVM", "'LLVM' names LLVM, which is not on the SPDX license list; the identifiers are at https://spdx.org/licenses/")]
+    [InlineData("GPL-2.0-only with LLVM", "'GPL-2.0-only with LLVM' names LLVM, which is not on the SPDX license list; the id close to LLVM is LLVM-exception; the identifiers are at https://spdx.org/licenses/")]
+    [InlineData("GPL-2.0-only WITH Classpath", "'GPL-2.0-only WITH Classpath' names Classpath, which is not on the SPDX license list; the id close to Classpath is Classpath-exception-2.0; the identifiers are at https://spdx.org/licenses/")]
     public void Validate_LicenseExpression_ResolvesAgainstTheSpdxList(string license, string? message)
     {
         var errors = Errors(Valid() with { License = license }).Where(issue => issue.Location == "license").ToList();

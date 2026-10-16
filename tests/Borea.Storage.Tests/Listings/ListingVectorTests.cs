@@ -6,11 +6,22 @@ namespace Borea.Storage.Tests.Listings;
 
 /// <summary>
 /// The test documents of content-index that its checks and its listing page run too, so the editor gives the answers of
-/// check_schema.py. Only the rules the editor checks in full without the snapshot run here.
+/// check_schema.py. The rules the editor checks in full without the snapshot run here, and the vectors of
+/// <see cref="Named"/> of the schema and license rules, which the editor also says in the words of the checks.
 /// </summary>
 public sealed class ListingVectorTests
 {
     private static readonly string[] Rules = ["bounds"];
+
+    private static readonly string[] Named =
+    [
+        "a mod does not name the mods folder as its target",
+        "a license without a version is not an SPDX id",
+        "a name with one close id names that id",
+        "a v before the version still finds the close ids",
+        "a short name that only the license library reads is not an SPDX id",
+        "a name after WITH gets exceptions as close ids",
+    ];
 
     /// <summary>
     /// Vectors whose rejection Borea words in its own way. The page names the keys of a oneOf, where check_schema.py
@@ -26,10 +37,18 @@ public sealed class ListingVectorTests
         get
         {
             var data = new TheoryData<string>();
-            foreach (var vector in Read().Where(vector => Rules.Contains((string?)vector["rule"])))
+            foreach (var vector in Read().Where(vector => Rules.Contains((string?)vector["rule"]) || Named.Contains((string?)vector["name"])))
                 data.Add((string)vector["name"]!);
             return data;
         }
+    }
+
+    [Fact]
+    public void NamedVectors_AreInTheCopy()
+    {
+        var names = Read().Select(vector => (string?)vector["name"]).ToHashSet();
+
+        Assert.All(Named.Concat(OwnWords), name => Assert.Contains(name, names));
     }
 
     [Theory]
