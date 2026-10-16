@@ -16,6 +16,16 @@ Explain the user-visible change, the tests you ran, and any work that remains ou
 Run the relevant tests and formatting checks before you open a pull request.
 The continuous-integration checks run on Windows, Linux, and macOS.
 
+## Who merges, and who approves a release
+
+A maintainer may merge their own work. A pull request from anyone else is reviewed before it is merged, by a maintainer or by one of the other reviewers named in the code signing policy, so a review never waits on one person.
+
+Releases are built only by the `release` workflow, from a tag. Once Borea is code signed, every signing request needs the manual approval of an approver, and the request itself comes from the workflow and not from a person.
+
+The [code signing policy](https://ksamodding.github.io/Borea/code-signing.html) names who holds each role and who may start a release. It is the page to update when any of that changes.
+
+The KSAModding organisation requires two factor authentication for every member.
+
 ## Translations
 
 Only the neutral English `Resources.resx` must be complete. When you add an English text, a German text in `Resources.de.resx` is welcome, but it is not required.
