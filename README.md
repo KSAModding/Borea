@@ -124,6 +124,7 @@ The `Borea-Cli-` archive unpacks with `tar -xzf` into `Borea-Cli`, and its `bore
 ### Updating Borea
 
 **Update now** on the Home banner, or `borea update-self`, installs the newest release of your update channel into the same folder, so shortcuts keep working.
+On macOS, a build from before the app bundle cannot update to a bundle release, so download the App archive once by hand, drag `Borea.app` into Applications and delete the old `Borea` folder.
 If Borea does not start after an update, rename `borea.exe.old` (`borea.old` on Linux, `Borea.app.old` on macOS) back to its old name to get the build you had back.
 
 ### Checksums and provenance
