@@ -23,6 +23,8 @@ internal static class AppPreferencesMapper
 
     private const string NameSortName = "name";
 
+    private const string RecentlyListedSortName = "recently-listed";
+
     public static AppPreferencesDocumentDto ToDto(AppPreferences preferences) => new()
     {
         FormatVersion = FileAppPreferencesRepository.CurrentFormatVersion,
@@ -44,6 +46,7 @@ internal static class AppPreferencesMapper
         {
             DiscoverSortOrder.RecentlyUpdated => RecentlyUpdatedSortName,
             DiscoverSortOrder.Name => NameSortName,
+            DiscoverSortOrder.RecentlyListed => RecentlyListedSortName,
             _ => PopularitySortName,
         },
         SharedProfileBannerDismissed = preferences.SharedProfileBannerDismissed,
@@ -77,6 +80,7 @@ internal static class AppPreferencesMapper
         {
             RecentlyUpdatedSortName => DiscoverSortOrder.RecentlyUpdated,
             NameSortName => DiscoverSortOrder.Name,
+            RecentlyListedSortName => DiscoverSortOrder.RecentlyListed,
             _ => DiscoverSortOrder.Popularity,
         };
 

@@ -123,6 +123,28 @@ public sealed class PackViewModelTests
     }
 
     [Fact]
+    public async Task ModpacksTab_RecentlyListed_PutsTheNewestFirstAndTheUnlistedLast()
+    {
+        // the starter pack has the newest release and published_at but no listed_at
+        var starter = Pack("starter-pack", "Starter Pack", Version("1.0.0", Pin("MeasureTools", "1.1.10")))
+            .Replace("\"released_at\": \"2026-09-01T12:00:00Z\"", "\"released_at\": \"2026-10-05T12:00:00Z\"", StringComparison.Ordinal);
+        starter = $"{{ \"published_at\": \"2026-10-05T12:00:00Z\",{starter[1..]}";
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: WithPacks(
+            starter,
+            ListedAt(Pack("armory-pack", "Armory Pack", Version("1.0.0", Pin("KSArmory", "0.8.44"))), "2026-09-01T12:00:00Z"),
+            ListedAt(Pack("tools-pack", "Tools Pack", Version("1.0.0", Pin("MeasureTools", "1.1.10"))), "2026-10-01T12:00:00Z"),
+            ListedAt(Pack("crew-pack", "Crew Pack", Version("1.0.0", Pin("KSArmory", "0.8.44"))), "2026-09-01T12:00:00Z")));
+        var viewModel = harness.ViewModel;
+        await viewModel.EnsureDiscoverLoadedAsync();
+        viewModel.ShowDiscoverModpacksCommand.Execute(null);
+
+        viewModel.SelectDiscoverSortCommand.Execute(DiscoverSortOrder.RecentlyListed);
+
+        Assert.NotNull(viewModel.DiscoverPacks.Single(pack => pack.PackId == "starter-pack").PublishedAt);
+        Assert.Equal(["tools-pack", "armory-pack", "crew-pack", "starter-pack"], viewModel.DiscoverPacks.Select(pack => pack.PackId));
+    }
+
+    [Fact]
     public async Task ModpacksTab_FiltersThatKeepThePacks_LeaveTheRowsAlone()
     {
         using var harness = await ViewModelHarness.CreateAsync(editSnapshot: WithPacks(
@@ -2053,6 +2075,8 @@ public sealed class PackViewModelTests
 
     internal static string Pack(string id, string name, params Func<string, string, string>[] versions) =>
         $$"""{ "id": "{{id}}", "versions": [{{string.Join(", ", versions.Select(version => version(id, name)))}}] }""";
+
+    private static string ListedAt(string pack, string listedAt) => $"{{ \"listed_at\": \"{listedAt}\",{pack[1..]}";
 
     internal static Func<string, string, string> Version(string version, params string[] pins) => (id, name) =>
         $$"""{ "authored": { "spec_version": 1, "id": "{{id}}", "type": "modpack", "name": "{{name}}", "authors": ["Maxi"], "abstract": "{{name}} abstract.", "description": "## {{name}}", "license": "MIT", "tags": ["starter"], "version": "{{version}}", "released_at": "2026-09-01T12:00:00Z", "links": { "forums": "https://forums.example.com/{{id}}" }, "compatibility": { "game_min": "2026.8.19.5261" }, "mods": [{{string.Join(", ", pins)}}] } }""";

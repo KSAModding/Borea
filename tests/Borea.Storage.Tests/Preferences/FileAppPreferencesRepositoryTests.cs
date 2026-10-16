@@ -333,6 +333,7 @@ public sealed class FileAppPreferencesRepositoryTests : IDisposable
     [Theory]
     [InlineData(DiscoverSortOrder.RecentlyUpdated, "recently-updated")]
     [InlineData(DiscoverSortOrder.Name, "name")]
+    [InlineData(DiscoverSortOrder.RecentlyListed, "recently-listed")]
     public async Task SaveThenGet_DiscoverSortOrder_RestoresTheChoice(DiscoverSortOrder order, string name)
     {
         await _repository.SaveAsync(AppPreferences.Empty.WithDiscoverSortOrder(order), BundledThemeNames);

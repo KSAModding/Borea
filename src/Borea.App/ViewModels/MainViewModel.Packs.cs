@@ -121,9 +121,12 @@ public partial class MainViewModel
     }
 
     /// <summary>A pack carries no download counts, so Popularity keeps the name order.</summary>
-    private IEnumerable<PackItem> SortPacks(IEnumerable<PackItem> packs) => DiscoverSort == DiscoverSortOrder.RecentlyUpdated
-        ? packs.OrderByDescending(pack => pack.Metadata.ReleasedAt).ThenBy(pack => pack.Name, StringComparer.CurrentCultureIgnoreCase)
-        : packs.OrderBy(pack => pack.Name, StringComparer.CurrentCultureIgnoreCase);
+    private IEnumerable<PackItem> SortPacks(IEnumerable<PackItem> packs) => DiscoverSort switch
+    {
+        DiscoverSortOrder.RecentlyUpdated => packs.OrderByDescending(pack => pack.Metadata.ReleasedAt).ThenBy(pack => pack.Name, StringComparer.CurrentCultureIgnoreCase),
+        DiscoverSortOrder.RecentlyListed => packs.OrderBy(pack => pack.ListedAt is null).ThenByDescending(pack => pack.ListedAt).ThenBy(pack => pack.Name, StringComparer.CurrentCultureIgnoreCase),
+        _ => packs.OrderBy(pack => pack.Name, StringComparer.CurrentCultureIgnoreCase),
+    };
 
     /// <summary>
     /// A pack counts as installed when the active instance holds every mod it pins, in the pinned version.
@@ -900,6 +903,9 @@ public sealed partial class PackItem : ObservableObject, IPlanRow
 
     public string? PublishedDateText => PublishedAt is { } at ? MainViewModel.DateText(at) : null;
 
+    /// <summary>When the pack came into the index, or null when the index does not say.</summary>
+    public DateTimeOffset? ListedAt { get; }
+
     public string TypeText => _owner.Localization.ContentTypeModPack;
 
     public string AuthorNames => string.Join(", ", Metadata.Authors);
@@ -1033,6 +1039,7 @@ public sealed partial class PackItem : ObservableObject, IPlanRow
         Icon = owner.IconFor(Images?.Icon);
         AllTags = DiscoverItem.DisplayTags(owner, ContentType.ModPack, metadata.Tags);
         PublishedAt = indexEntry?.PublishedAt;
+        ListedAt = indexEntry?.ListedAt;
         _isFavorite = owner.IsFavoritePack(metadata.ModPackId);
     }
 

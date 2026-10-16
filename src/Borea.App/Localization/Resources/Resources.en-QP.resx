@@ -1632,6 +1632,9 @@
   <data name="DiscoverSortRecentlyUpdated" xml:space="preserve">
     <value>Tides changed not too long ago</value>
   </data>
+  <data name="DiscoverSortRecentlyListed" xml:space="preserve">
+    <value>Freshly signed aboard</value>
+  </data>
   <data name="DiscoverSortName" xml:space="preserve">
     <value>Name</value>
   </data>

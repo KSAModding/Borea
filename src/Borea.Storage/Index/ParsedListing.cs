@@ -41,6 +41,9 @@ public sealed class ParsedListing
 
     public DateTimeOffset? UpdatedAt { get; }
 
+    /// <summary>When the entry came into the index (RFC 0092). Null when the snapshot does not say.</summary>
+    public DateTimeOffset? ListedAt { get; }
+
     /// <summary>The dates that cannot be read. The listing stays usable.</summary>
     public IReadOnlyList<RejectedIndexEntry> DatesErrors { get; }
 
@@ -62,7 +65,8 @@ public sealed class ParsedListing
         DateTimeOffset? publishedAt = null,
         DateTimeOffset? updatedAt = null,
         IReadOnlyList<RejectedIndexEntry>? datesErrors = null,
-        IReadOnlyList<RejectedIndexEntry>? changelogTextErrors = null)
+        IReadOnlyList<RejectedIndexEntry>? changelogTextErrors = null,
+        DateTimeOffset? listedAt = null)
     {
         ModIds.Validate(id, nameof(id));
 
@@ -79,6 +83,7 @@ public sealed class ParsedListing
         ImagesErrors = imagesErrors ?? Array.Empty<RejectedIndexEntry>();
         PublishedAt = publishedAt;
         UpdatedAt = updatedAt;
+        ListedAt = listedAt;
         DatesErrors = datesErrors ?? Array.Empty<RejectedIndexEntry>();
         ChangelogTextErrors = changelogTextErrors ?? Array.Empty<RejectedIndexEntry>();
     }

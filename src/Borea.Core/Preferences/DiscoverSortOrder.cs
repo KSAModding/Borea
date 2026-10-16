@@ -9,4 +9,7 @@ public enum DiscoverSortOrder
     RecentlyUpdated = 1,
 
     Name = 2,
+
+    /// <summary>The entry that came into the index last first, and entries without that time last.</summary>
+    RecentlyListed = 3,
 }

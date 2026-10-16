@@ -52,7 +52,7 @@ internal static class PackParser
                         Array.Empty<UnknownIndexVersionEntry>(), indexStatus, indexStatusError));
             }
 
-            var (publishedAt, updatedAt, datesErrors) = ContentDatesParser.Parse(element, pack.Id);
+            var (publishedAt, updatedAt, listedAt, datesErrors) = ContentDatesParser.Parse(element, pack.Id);
             var validVersions = new List<ParsedPackVersion>();
             var rejectedVersions = new List<RejectedIndexEntry>();
             var unknownVersions = new List<UnknownIndexVersionEntry>();
@@ -88,7 +88,7 @@ internal static class PackParser
 
             return ParseOutcome<ParsedPack>.Valid(new ParsedPack(
                 pack.Id, validVersions, rejectedVersions, unknownVersions, indexStatus, indexStatusError,
-                publishedAt, updatedAt, datesErrors));
+                publishedAt, updatedAt, datesErrors, listedAt));
         }
         catch (Exception ex) when (IndexJsonHelpers.IsInputFailure(ex))
         {

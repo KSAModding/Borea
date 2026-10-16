@@ -1018,6 +1018,31 @@ public sealed class DiscoverViewModelTests
         Assert.Equal(expected, viewModel.DiscoverItems.Select(item => item.ModId));
     }
 
+    [Theory]
+    [InlineData("2026-10-01T00:00:00Z", "2026-09-01T00:00:00Z", new[] { "KSArmory", "MeasureTools", "AdvancedFlightComputer" })]
+    [InlineData("2026-09-01T00:00:00Z", "2026-10-01T00:00:00Z", new[] { "MeasureTools", "KSArmory", "AdvancedFlightComputer" })]
+    [InlineData("2026-09-01T00:00:00Z", "2026-09-01T00:00:00Z", new[] { "KSArmory", "MeasureTools", "AdvancedFlightComputer" })]
+    [InlineData(null, "2026-09-01T00:00:00Z", new[] { "MeasureTools", "AdvancedFlightComputer", "KSArmory" })]
+    [InlineData(null, null, new[] { "AdvancedFlightComputer", "KSArmory", "MeasureTools" })]
+    public async Task Sort_RecentlyListed_PutsTheNewestFirstAndTheUnlistedLast(string? armoryListedAt, string? measureToolsListedAt, string[] expected)
+    {
+        // AdvancedFlightComputer has no listed_at, so its newer published_at must not move it up
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: json =>
+            WithListedAt(WithListedAt(WithDownloadsAndDates(json, "AdvancedFlightComputer"), "KSArmory", armoryListedAt), "MeasureTools", measureToolsListedAt)
+                .Replace(
+                    "\"published_at\": \"2026-08-01T00:00:00Z\", \"updated_at\": \"2026-09-14T00:00:00Z\"",
+                    "\"published_at\": \"2026-10-05T00:00:00Z\", \"updated_at\": \"2026-10-06T00:00:00Z\"",
+                    StringComparison.Ordinal));
+        var viewModel = harness.ViewModel;
+        await viewModel.EnsureDiscoverLoadedAsync();
+
+        viewModel.SelectDiscoverSortCommand.Execute(DiscoverSortOrder.RecentlyListed);
+
+        Assert.Equal(new DateTimeOffset(2026, 10, 5, 0, 0, 0, TimeSpan.Zero), viewModel.DiscoverItems.Single(item => item.ModId == "AdvancedFlightComputer").PublishedAt);
+        Assert.Equal(harness.Localization.DiscoverSortRecentlyListed, viewModel.DiscoverSortText);
+        Assert.Equal(expected, viewModel.DiscoverItems.Select(item => item.ModId));
+    }
+
     [Fact]
     public async Task Sort_Change_MovesTheSameRows()
     {
@@ -1112,6 +1137,16 @@ public sealed class DiscoverViewModelTests
         var marker = $"\"id\": \"{listingId}\",";
         var at = json.IndexOf(marker, StringComparison.Ordinal) + marker.Length;
         return json.Insert(at, $$""" "downloads": { "total": {{total}}, "hosts": { "github": {{total}} } },""");
+    }
+
+    private static string WithListedAt(string json, string listingId, string? listedAt)
+    {
+        if (listedAt is null)
+            return json;
+
+        var marker = $"\"id\": \"{listingId}\",";
+        var at = json.IndexOf(marker, StringComparison.Ordinal) + marker.Length;
+        return json.Insert(at, $$""" "listed_at": "{{listedAt}}",""");
     }
 }
 

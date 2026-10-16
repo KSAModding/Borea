@@ -68,6 +68,9 @@ public sealed class ContentIndexListing
     /// <summary>The latest release date the index reports for a release that is not yanked.</summary>
     public DateTimeOffset? UpdatedAt { get; }
 
+    /// <summary>When the entry came into the index, which no release date stands in for (RFC 0092). Null when the index does not say.</summary>
+    public DateTimeOffset? ListedAt { get; }
+
     public ContentIndexListing(
         string id,
         ModMetadata? authored,
@@ -76,7 +79,8 @@ public sealed class ContentIndexListing
         ListingDownloadCounts? downloads = null,
         ContentImages? images = null,
         DateTimeOffset? publishedAt = null,
-        DateTimeOffset? updatedAt = null)
+        DateTimeOffset? updatedAt = null,
+        DateTimeOffset? listedAt = null)
     {
         ContentIndexDates.Validate(publishedAt, updatedAt);
         ModIds.Validate(id, nameof(id));
@@ -95,6 +99,7 @@ public sealed class ContentIndexListing
         Images = images;
         PublishedAt = publishedAt;
         UpdatedAt = updatedAt;
+        ListedAt = listedAt;
     }
 
     private static IReadOnlyList<T> Copy<T>(IReadOnlyList<T> values, string parameterName)
@@ -118,12 +123,16 @@ public sealed class ContentIndexPack
     /// <summary>The latest release date the index reports for a version that is not retracted.</summary>
     public DateTimeOffset? UpdatedAt { get; }
 
+    /// <summary>When the entry came into the index, which no release date stands in for (RFC 0092). Null when the index does not say.</summary>
+    public DateTimeOffset? ListedAt { get; }
+
     public ContentIndexPack(
         string id,
         IReadOnlyList<ContentIndexPackVersion> versions,
         IndexStatus? indexStatus,
         DateTimeOffset? publishedAt = null,
-        DateTimeOffset? updatedAt = null)
+        DateTimeOffset? updatedAt = null,
+        DateTimeOffset? listedAt = null)
     {
         ModIds.Validate(id, nameof(id));
         ContentIndexDates.Validate(publishedAt, updatedAt);
@@ -136,6 +145,7 @@ public sealed class ContentIndexPack
         IndexStatus = indexStatus;
         PublishedAt = publishedAt;
         UpdatedAt = updatedAt;
+        ListedAt = listedAt;
     }
 
     private static IReadOnlyList<T> Copy<T>(IReadOnlyList<T> values, string parameterName)
