@@ -118,6 +118,35 @@ public sealed class MacOsBundleSelfUpdaterTests : IDisposable
     }
 
     [Fact]
+    public async Task Install_ALeftoverThatCannotBeDeleted_IsMovedAside()
+    {
+        if (OperatingSystem.IsWindows())
+            return;
+
+        var contents = Path.Combine(_replacedPath, "Contents");
+        Directory.CreateDirectory(Path.Combine(contents, "MacOS"));
+        File.WriteAllText(Path.Combine(contents, "MacOS", "borea"), "a build of last year");
+        File.SetUnixFileMode(contents, UnixFileMode.UserRead | UnixFileMode.UserExecute);
+        try
+        {
+            var staged = await Updater().StageAsync(ServeMacRelease());
+
+            staged.Install();
+
+            Assert.Equal("the running build", File.ReadAllText(ReplacedProgram()));
+            Assert.Equal("the new build", File.ReadAllText(_programPath));
+            // the delete removed what it could before it stopped, and the rest waits under a staging name for the sweep
+            var movedAside = Directory.GetDirectories(_folder, ".borea-update-*").Single(folder => Directory.Exists(Path.Combine(folder, "Contents")));
+            Assert.True(Directory.Exists(Path.Combine(movedAside, "Contents", "MacOS")));
+        }
+        finally
+        {
+            foreach (var moved in Directory.GetDirectories(_folder, ".borea-update-*").Select(folder => Path.Combine(folder, "Contents")).Where(Directory.Exists))
+                File.SetUnixFileMode(moved, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+        }
+    }
+
+    [Fact]
     public async Task Install_ANewBuildThatChangedAfterTheCheck_LeavesTheInstalledBundleInPlace()
     {
         var staged = await Updater().StageAsync(ServeMacRelease());
@@ -202,6 +231,22 @@ public sealed class MacOsBundleSelfUpdaterTests : IDisposable
         AssertTheInstalledBundleIsBack();
     }
 
+    [Fact]
+    public async Task HandOver_WhenTheReplacedBundleIsGone_KeepsTheNewBuild()
+    {
+        _starter.Failure = new InvalidOperationException("No process was started.");
+        var staged = await Updater().StageAsync(ServeMacRelease());
+        staged.Install();
+        Directory.Delete(_replacedPath, recursive: true);
+
+        var failure = Assert.Throws<SelfUpdateFailedException>(staged.HandOver);
+
+        Assert.Equal(SelfUpdateFailure.Restore, failure.Reason);
+        Assert.Equal("the new build", File.ReadAllText(_programPath));
+        Assert.Equal([BundleName], Bundles());
+        Assert.False(File.Exists(Path.Combine(_folder, SelfUpdateReceipt.FileName)));
+    }
+
     private void AssertTheInstalledBundleIsBack()
     {
         Assert.Equal("the running build", File.ReadAllText(_programPath));
@@ -252,9 +297,10 @@ public sealed class MacOsBundleSelfUpdaterTests : IDisposable
     }
 
     [Fact]
-    public void GetReadiness_APackageMarkerBesideTheProgram_NamesTheManagerAndStopsTheUpdate()
+    public void GetReadiness_APackageMarkerInTheResources_NamesTheManagerAndStopsTheUpdate()
     {
-        File.WriteAllText(Path.Combine(Path.GetDirectoryName(_programPath)!, FileSelfUpdater.PackageMarkerFileName), "brew\n");
+        var resources = Directory.CreateDirectory(Path.Combine(_bundlePath, "Contents", "Resources"));
+        File.WriteAllText(Path.Combine(resources.FullName, FileSelfUpdater.PackageMarkerFileName), "brew\n");
 
         Assert.Equal(new SelfUpdateReadiness(SelfUpdateBlock.PackageManaged, "brew"), Updater().GetReadiness());
     }

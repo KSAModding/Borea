@@ -52,7 +52,7 @@ public sealed class MacOsBundleSelfUpdater : ISelfUpdater
         if (!_isReleaseBuild || _bundle is null)
             return new SelfUpdateReadiness(SelfUpdateBlock.NotAReleaseBuild);
 
-        if (FileSelfUpdater.ReadPackageManager(Path.GetDirectoryName(_bundle.ProgramPath)!) is { } manager)
+        if (FileSelfUpdater.ReadPackageManager(_bundle.ResourcesPath) is { } manager)
             return new SelfUpdateReadiness(SelfUpdateBlock.PackageManaged, manager.Length == 0 ? null : manager);
 
         if (_platform is null)
@@ -162,10 +162,7 @@ public sealed class MacOsBundleSelfUpdater : ISelfUpdater
                 if (!string.Equals(hash, programHash, StringComparison.OrdinalIgnoreCase))
                     throw new SelfUpdateFailedException(SelfUpdateFailure.Install, "The new build changed after it was checked, so Borea kept the build that runs.");
 
-                // an update whose new build never started left this bundle, and only this one
-                if (Directory.Exists(bundle.ReplacedPath))
-                    Directory.Delete(bundle.ReplacedPath, recursive: true);
-
+                MakeRoom(bundle);
                 Directory.Move(bundle.BundlePath, bundle.ReplacedPath);
                 bundleIsAside = true;
                 Directory.Move(unpacked, bundle.BundlePath);
@@ -195,9 +192,30 @@ public sealed class MacOsBundleSelfUpdater : ISelfUpdater
     }
 
     /// <summary>
+    /// Removes the bundle that an update whose new build never started left aside. One that cannot
+    /// be deleted, for example because another user owns it, is moved out of the way under a staging
+    /// name, which the next sweep removes, so that it stops no update.
+    /// </summary>
+    private static void MakeRoom(MacOsBundle bundle)
+    {
+        if (!Directory.Exists(bundle.ReplacedPath))
+            return;
+
+        try
+        {
+            Directory.Delete(bundle.ReplacedPath, recursive: true);
+        }
+        catch (Exception exception) when (FileSelfUpdater.IsFileFailure(exception))
+        {
+            Directory.Move(bundle.ReplacedPath, Path.Combine(bundle.Folder, $"{SelfUpdateCleanup.StagingPrefix}{Guid.NewGuid():N}"));
+        }
+    }
+
+    /// <summary>
     /// Starts the new build. The folder is open to everything this user runs, so the program in the
     /// new bundle is checked once more, as late as that can be done, and the replaced bundle is put
-    /// back when the new one is not the build that was checked or does not start.
+    /// back when the new one is not the build that was checked or does not start. The new bundle
+    /// stays when the replaced one cannot be put back, so that a build which starts is always there.
     /// </summary>
     private void HandOver(string staging, MacOsBundle bundle, string programHash)
     {
@@ -214,12 +232,12 @@ public sealed class MacOsBundleSelfUpdater : ISelfUpdater
         }
         catch (SelfUpdateFailedException)
         {
-            Undo(bundle);
+            Undo(staging, bundle);
             throw;
         }
         catch (Exception exception) when (FileSelfUpdater.IsFileFailure(exception) || exception is InvalidOperationException or Win32Exception)
         {
-            Undo(bundle);
+            Undo(staging, bundle);
             throw new SelfUpdateFailedException(
                 SelfUpdateFailure.Start,
                 $"The new build in {bundle.BundlePath} did not start, so Borea put the build that ran back. {exception.Message}",
@@ -233,12 +251,26 @@ public sealed class MacOsBundleSelfUpdater : ISelfUpdater
         _log.Write($"Self-update: {bundle.ProgramPath} was started and takes over from process {handover.PreviousProcessId}.");
     }
 
-    /// <summary>Takes back an update whose new build did not start, so that the build which ran runs again.</summary>
-    private static void Undo(MacOsBundle bundle)
+    /// <summary>
+    /// Takes back an update whose new build did not start, so that the build which ran runs again.
+    /// The new bundle goes back to the staging folder with one rename, so that it can be handed
+    /// back when the replaced bundle cannot be put in its place.
+    /// </summary>
+    private static void Undo(string staging, MacOsBundle bundle)
     {
         SelfUpdateReceipt.Delete(bundle.Folder);
-        FileSelfUpdater.TryDeleteFolder(bundle.BundlePath);
-        PutBack(bundle);
+
+        var newBundle = Path.Combine(staging, Path.GetFileName(bundle.BundlePath));
+        Directory.Move(bundle.BundlePath, newBundle);
+        try
+        {
+            PutBack(bundle);
+        }
+        catch (SelfUpdateFailedException)
+        {
+            Directory.Move(newBundle, bundle.BundlePath);
+            throw;
+        }
     }
 
     /// <summary>Gives the replaced bundle its path back, which is the whole undo of an update that did not finish.</summary>
