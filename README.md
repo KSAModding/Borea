@@ -3,6 +3,7 @@
 ![License](https://img.shields.io/badge/License-MIT-green.svg)
 ![Last commit](https://img.shields.io/github/last-commit/KSAModding/Borea/main.svg)
 ![GitHub release (latest by date)](https://img.shields.io/github/v/release/KSAModding/Borea)
+[![Translation status](https://hosted.weblate.org/widget/borea/svg-badge.svg)](https://hosted.weblate.org/engage/borea/)
 
 
 <img src="assets/borea.png" alt="The Borea icon, an aurora over a dark planet" width="128" height="128">
@@ -224,7 +225,7 @@ dotnet run --project src/Borea.App
 
 Read [CONTRIBUTING.md](CONTRIBUTING.md) first. Bugs go to the issue tracker, larger ideas to the [content-manager-design discussions](https://github.com/KSAModding/content-manager-design/discussions).
 
-You do not need to write C# to improve a translation. The [localization guide](docs/localization.md) explains how to correct text or propose a new language from the GitHub website.
+Borea is translated on [Hosted Weblate](https://hosted.weblate.org/engage/borea/), in the browser and without git or C#. The [localization guide](docs/localization.md) explains how, and how to correct a text or propose a new language on the GitHub website instead.
 
 ## Credits
 

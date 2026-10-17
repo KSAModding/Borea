@@ -1,6 +1,14 @@
 # Help translate Borea
 
-You do not need to write C# to improve an existing Borea translation. You can edit a resource file through the GitHub website and submit the change for review.
+You do not need to write C# to translate Borea. The easiest way is [Hosted Weblate](https://hosted.weblate.org/engage/borea/) in your browser. You can also edit a resource file through the GitHub website and submit the change for review.
+
+## Translate on Weblate
+
+1. Open the [Borea project on Hosted Weblate](https://hosted.weblate.org/projects/borea/borea-app/) and sign in.
+2. Select your language, or start a new one. Weblate shows how much of each language is translated.
+3. Translate the texts that you can. A text that you do not translate shows in English in Borea.
+
+Weblate sends the changes to Borea as a pull request, which a maintainer reviews like every other change, so they reach Borea with the next release. Weblate checks the placeholders, see [Preserve placeholders](#preserve-placeholders). A new language also needs the small code change of [Propose a new language](#propose-a-new-language), which a maintainer makes.
 
 ## Find the language files
 
