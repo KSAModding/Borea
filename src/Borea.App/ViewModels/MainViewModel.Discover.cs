@@ -708,21 +708,8 @@ public sealed partial class DiscoverItem : ObservableObject, IInstallRow
 
     internal ModMetadata Listing => _listing;
 
-    private ModVersionMetadata? _latestInChannel;
-
-    /// <summary>The release Add installs, which the size and the age on the row belong to.</summary>
-    internal ModVersionMetadata? LatestInChannel
-    {
-        get => _latestInChannel;
-        set
-        {
-            _latestInChannel = value;
-            OnPropertyChanged(nameof(DownloadSizeText));
-        }
-    }
-
-    /// <summary>The archive size of <see cref="LatestInChannel"/>, or null when the index states none.</summary>
-    public string? DownloadSizeText => LatestInChannel?.Download.SizeBytes is { } size ? MainViewModel.SizeText(size) : null;
+    /// <summary>The release Add installs, which the age on the row belongs to.</summary>
+    internal ModVersionMetadata? LatestInChannel { get; set; }
 
     public string? Description => _listing.Description;
 
