@@ -135,11 +135,12 @@ public sealed class SmoothScrollTests
         var seen = await HeadlessApp.RunAsync(async () =>
         {
             var (window, scroller) = ShowLongList();
-            window.MouseWheel(new Point(200, 150), new Vector(0, -20));
+            window.MouseWheel(new Point(200, 150), new Vector(0, -1));
             var eased = scroller.Offset.Y;
             await HeadlessApp.FramesAsync(2);
 
-            var takenOver = scroller.Offset.Y + 300;
+            // A jump past the target is larger than any step back to it, however long the frames on the runner are.
+            var takenOver = scroller.Offset.Y + 8 * SmoothScroll.Notch;
             scroller.Offset = new Vector(0, takenOver);
             await HeadlessApp.FramesAsync();
             var after = scroller.Offset.Y;
@@ -147,7 +148,7 @@ public sealed class SmoothScrollTests
             return (eased, takenOver, after);
         });
 
-        Assert.InRange(seen.eased, 0, 20 * SmoothScroll.Notch);
+        Assert.InRange(seen.eased, 0, SmoothScroll.Notch);
         Assert.Equal(seen.takenOver, seen.after);
     }
 
