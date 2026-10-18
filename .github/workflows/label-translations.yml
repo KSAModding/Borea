@@ -1,0 +1,41 @@
+name: label-translations
+
+# Weblate opens its pull requests from a fork, and only pull_request_target gives such a pull request a token that may label it.
+# The job reads only the list of changed files through the API and never checks out or runs anything from the pull request.
+on:
+  pull_request_target:
+    types: [opened, reopened, synchronize]
+
+permissions: {}
+
+jobs:
+  label:
+    name: label
+    if: github.event.pull_request.user.login == 'weblate'
+    runs-on: ubuntu-24.04
+    permissions:
+      issues: write
+      pull-requests: write
+    steps:
+      - name: Label the pull request with translation and each changed language
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          labels=(translation)
+          gh label create translation --repo "$REPO" --color 1d76db --description "Translations from Weblate" --force
+          files=$(gh api --paginate "repos/$REPO/pulls/$NUMBER/files" --jq '.[].filename')
+          while read -r path; do
+            # A culture name is letters, digits and hyphens, so nothing else from a file name reaches a command.
+            if [[ "$path" =~ ^src/Borea\.App/Localization/Resources/Resources\.([A-Za-z0-9-]+)\.resx$ ]]; then
+              culture="${BASH_REMATCH[1]}"
+              gh label create "lang:$culture" --repo "$REPO" --color c5def5 --description "Changes the $culture translation" --force
+              labels+=("lang:$culture")
+            fi
+          done <<< "$files"
+          args=()
+          for label in "${labels[@]}"; do
+            args+=(-f "labels[]=$label")
+          done
+          gh api -X POST "repos/$REPO/issues/$NUMBER/labels" "${args[@]}" > /dev/null
