@@ -2781,4 +2781,7 @@
   <data name="SettingsPresetsTitle" xml:space="preserve">
     <value>Game rigging presets</value>
   </data>
+  <data name="SettingsLinksLabel" xml:space="preserve">
+    <value>Charts</value>
+  </data>
 </root>
