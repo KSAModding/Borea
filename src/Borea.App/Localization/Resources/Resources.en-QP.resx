@@ -2748,4 +2748,40 @@
   <data name="LaunchGameCrashedByFormat" xml:space="preserve">
     <value>The game sank without warnin', sprung a leak in {0}</value>
   </data>
+  <data name="SharedModStoreTurningOff" xml:space="preserve">
+    <value>The Borea be giving' every sea its own parroting of its barrels o' fun.</value>
+  </data>
+  <data name="StewardQueueKindRelease" xml:space="preserve">
+    <value>Bounty</value>
+  </data>
+  <data name="SettingsPresetsDeleteConfirm" xml:space="preserve">
+    <value>Have this preset walk the plank?</value>
+  </data>
+  <data name="ToastPresetSavedFormat" xml:space="preserve">
+    <value>Bottled up the preset {0}</value>
+  </data>
+  <data name="ModalSettingsPresetNoGameVersion" xml:space="preserve">
+    <value>Nary a version o' KSA detected</value>
+  </data>
+  <data name="PackCreatesInstanceFormat" xml:space="preserve">
+    <value>Pieces togett'er the sea {0}.</value>
+  </data>
+  <data name="PackUpdate" xml:space="preserve">
+    <value>Bring in new tide o' the pack</value>
+  </data>
+  <data name="PackUpdateAvailableFormat" xml:space="preserve">
+    <value>A new version o' {0} awaits ye: {1}.</value>
+  </data>
+  <data name="NoPreset" xml:space="preserve">
+    <value>Nary a preset</value>
+  </data>
+  <data name="PresetModalTitle" xml:space="preserve">
+    <value>Bottle up the game rigging as a preset</value>
+  </data>
+  <data name="SettingsPresetsTitle" xml:space="preserve">
+    <value>Game rigging presets</value>
+  </data>
+  <data name="SettingsLinksLabel" xml:space="preserve">
+    <value>Charts</value>
+  </data>
 </root>
