@@ -149,15 +149,17 @@ public sealed class GitHubReleaseAmendments : IReleaseAmendments
         var selected = ReleaseAmendment.Select(await StampedAsync(request.ListingId, head, cancellationToken).ConfigureAwait(false), request.Selection);
 
         var files = new List<ReleaseFilePreview>();
+        string? type = null;
         foreach (var version in selected)
         {
             var path = ReleaseAmendment.PathOf(request.ListingId, version);
             var text = await ReadReleaseAsync(path, head, cancellationToken).ConfigureAwait(false);
+            type ??= ReleaseFileValues.Read(text)?.Type;
             var declared = amendment.ReadsArchive(text) ? await DeclaredAsync(path, text, cancellationToken).ConfigureAwait(false) : null;
             files.Add(new ReleaseFilePreview(version, path, text, amendment.Apply(path, text, request.Amender, declared)?.Text));
         }
 
-        var owners = await OwnersAsync(request.ListingId, login, cancellationToken).ConfigureAwait(false);
+        var owners = await OwnersAsync(request.ListingId, type, login, cancellationToken).ConfigureAwait(false);
         return (head, new ReleaseAmendmentPreview(request, files, owners));
     }
 
@@ -231,12 +233,15 @@ public sealed class GitHubReleaseAmendments : IReleaseAmendments
             .Select(item => item.Name[..^ReleaseSuffix.Length])];
     }
 
-    /// <summary>The owners of the listing on the base branch of content-index, without the steward. An owner that cannot be read names nobody.</summary>
-    private async Task<IReadOnlyList<string>> OwnersAsync(string listingId, string login, CancellationToken cancellationToken)
+    /// <summary>
+    /// The owners of the listing on the base branch of content-index, without the steward. An owner that cannot be read names nobody.
+    /// The stamper copies the type of the listing into each release, so the type of a release file names the folder of its listing.
+    /// </summary>
+    private async Task<IReadOnlyList<string>> OwnersAsync(string listingId, string? type, string login, CancellationToken cancellationToken)
     {
         try
         {
-            var path = $"{ListingDraft.ListingsFolder}/{listingId}.toml";
+            var path = $"{ListingFolders.Of(type)}/{listingId}.toml";
             if (await _api.ReadFileAsync(ListingPullRequestLinks.Repository, path, ListingPullRequestLinks.Branch, cancellationToken).ConfigureAwait(false) is not { Text: { } text })
                 return [];
 
