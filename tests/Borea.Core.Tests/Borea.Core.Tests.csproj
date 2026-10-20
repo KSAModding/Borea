@@ -23,7 +23,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!-- Copies of tools/amendment-vectors.json and releases/ of content-index-releases at 6d9fd24f913a, releases/ as release-files/ because .gitignore leaves out every folder named releases. -->
+    <!-- Copies of tools/amendment-vectors.json of content-index-releases at c0ecab64834f and of releases/ at 6d9fd24f913a, releases/ as release-files/ because .gitignore leaves out every folder named releases. -->
     <!-- vehicle/ holds a release that tools/stamp_release.py of content-index-releases at 8f71531af141 stamped, and the same file after tools/amend.py added a game_max. -->
     <None Update="Stewardship\Fixtures\**\*.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
