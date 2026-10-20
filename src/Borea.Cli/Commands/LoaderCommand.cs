@@ -85,11 +85,11 @@ internal static class LoaderCommand
             var listing = await LoaderLookup.GetListingAsync(cli.Mods, id, ct).ConfigureAwait(false);
             var rawVersion = parseResult.GetValue(version);
             var channel = cli.Settings.ReleaseChannel;
+            var game = cli.InstalledVersion.GetInstalledVersion()?.Version;
             ModVersionMetadata? release;
             if (rawVersion is null)
             {
                 // the newest release the index does not rate incompatible with the installed game
-                var game = cli.InstalledVersion.GetInstalledVersion()?.Version;
                 var newest = await cli.Mods.GetLatestReleaseInChannelAsync(listing.ModId, channel, ct).ConfigureAwait(false);
                 release = (await LoaderUpdate.FindAsync(cli.Mods, channel, listing.ModId, installation: null, game, ct).ConfigureAwait(false)).Offer;
                 if (newest is not null && release?.Version != newest.Version)
@@ -123,7 +123,7 @@ internal static class LoaderCommand
                 && installedVersion.CompareTo(release.Version) > 0
                 && await cli.Mods.GetReleaseAsync(listing.ModId, installedVersion, ct).ConfigureAwait(false) is { } installedRelease
                 && !channel.Includes(installedRelease.ReleaseStatus))
-                throw new InvalidOperationException($"{listing.ModId} {installedVersion} is installed, which is newer than {release.Version}, the newest release in the {channel.ToName()} channel. Use --version to install an older release.");
+                throw new InvalidOperationException($"{listing.ModId} {installedVersion} is installed, which is newer than {release.Version}, the newest release in the {channel.ToName()} channel{(game is null ? "" : $" that supports KSA {game}")}. Use --version to install an older release.");
 
             var rawDirectory = parseResult.GetValue(directory);
             var destination = rawDirectory is null ? null : Path.GetFullPath(rawDirectory);
