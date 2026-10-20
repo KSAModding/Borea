@@ -463,4 +463,83 @@ public sealed class ContentIndexReaderTests : IDisposable
         if (Directory.Exists(_tempRoot))
             Directory.Delete(_tempRoot, recursive: true);
     }
+    private async Task WriteTypeFileAsync(ContentIndexTypeFile file, string content)
+    {
+        Directory.CreateDirectory(Path.GetDirectoryName(IndexPath)!);
+        await File.WriteAllTextAsync(file.CachePathFrom(IndexPath), content);
+    }
+
+    [Fact]
+    public async Task ReadAsync_NoTypeFiles_GivesTheMainDocumentWithNoVehiclesOrSaves()
+    {
+        await WriteIndexAsync(Snapshot(Listing("test-mod", ValidAuthoredJson)));
+
+        var result = await _reader.ReadAsync();
+
+        Assert.Equal("test-mod", Assert.Single(result.Listings).Id);
+        Assert.Empty(result.Vehicles);
+        Assert.Empty(result.Saves);
+        Assert.Empty(result.Diagnostics);
+    }
+
+    [Fact]
+    public async Task ReadAsync_TypeFilesNextToTheIndex_FillVehiclesAndSaves()
+    {
+        await WriteIndexAsync(Snapshot(Listing("test-mod", ValidAuthoredJson)));
+        await WriteTypeFileAsync(ContentIndexTypeFiles.Vehicles, TypeFileJson.File("vehicles", TypeFileJson.Entry()));
+        await WriteTypeFileAsync(ContentIndexTypeFiles.Saves, TypeFileJson.File("saves", TypeFileJson.Entry("ExampleSave", "save", TypeFileJson.Release("ExampleSave", "save"))));
+
+        var result = await _reader.ReadAsync();
+
+        Assert.Equal("test-mod", Assert.Single(result.Listings).Id);
+        Assert.Equal("Example Rover", Assert.Single(Assert.Single(result.Vehicles).Releases).Install!.Folder);
+        Assert.Equal("ExampleSave", Assert.Single(result.Saves).Id);
+        Assert.Empty(result.Diagnostics);
+    }
+
+    [Theory]
+    [InlineData("""{ "snapshot_version": 1, "vehicles": {} }""")]
+    [InlineData("not json")]
+    [InlineData("""{ "snapshot_version": 2, "vehicles": [] }""")]
+    public async Task ReadAsync_UnusableVehicleFile_KeepsListingsAndPacksAndAddsOneDiagnostic(string vehicles)
+    {
+        await WriteIndexAsync(Snapshot(Listing("test-mod", ValidAuthoredJson)));
+        await WriteTypeFileAsync(ContentIndexTypeFiles.Vehicles, vehicles);
+        await WriteTypeFileAsync(ContentIndexTypeFiles.Saves, TypeFileJson.File("saves", TypeFileJson.Entry("ExampleSave", "save", TypeFileJson.Release("ExampleSave", "save"))));
+
+        var result = await _reader.ReadAsync();
+
+        Assert.Equal("test-mod", Assert.Single(result.Listings).Id);
+        Assert.Empty(result.Vehicles);
+        Assert.Equal("ExampleSave", Assert.Single(result.Saves).Id);
+        var diagnostic = Assert.Single(result.Diagnostics);
+        Assert.Equal(ContentIndexDiagnosticScope.Listing, diagnostic.Scope);
+        Assert.Contains("snapshot-vehicles.json", diagnostic.Reason, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ReadAsync_RejectedVehicleRelease_IsAReleaseDiagnostic()
+    {
+        await WriteIndexAsync(Snapshot(""));
+        var releases = TypeFileJson.Release(install: """{ "derived": true, "folder": "CON" }""", version: "2.0.0") + "," + TypeFileJson.Release();
+        await WriteTypeFileAsync(ContentIndexTypeFiles.Vehicles, TypeFileJson.File("vehicles", TypeFileJson.Entry(releases: releases)));
+
+        var result = await _reader.ReadAsync();
+
+        Assert.Single(Assert.Single(result.Vehicles).Releases);
+        var diagnostic = Assert.Single(result.Diagnostics);
+        Assert.Equal(ContentIndexDiagnosticScope.Release, diagnostic.Scope);
+        Assert.Equal("2.0.0", diagnostic.Version);
+    }
+
+    [Fact]
+    public async Task ValidateAsync_ReadsOnlyTheCandidate()
+    {
+        var candidatePath = Path.Combine(_tempRoot, "index.json.tmp");
+        Directory.CreateDirectory(_tempRoot);
+        await File.WriteAllTextAsync(candidatePath, Snapshot(Listing("test-mod", ValidAuthoredJson)));
+        await WriteTypeFileAsync(ContentIndexTypeFiles.Vehicles, "not json");
+
+        await _reader.ValidateAsync(candidatePath);
+    }
 }

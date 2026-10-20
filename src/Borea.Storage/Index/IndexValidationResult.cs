@@ -31,6 +31,14 @@ public sealed class IndexValidationResult
 
     public UnknownIndexVersionEntry? UnknownTags { get; }
 
+    /// <summary>
+    /// The valid entries of the type files. Their rejected and unknown entries are in
+    /// <see cref="MalformedListings"/> and <see cref="UnknownListings"/>.
+    /// </summary>
+    public IReadOnlyList<ParsedListing> ValidVehicles { get; }
+
+    public IReadOnlyList<ParsedListing> ValidSaves { get; }
+
     public IndexValidationResult(
         int snapshotVersion,
         IReadOnlyList<ParsedListing> validListings,
@@ -44,7 +52,9 @@ public sealed class IndexValidationResult
         RejectedIndexEntry? gameVersionsError = null,
         CuratedTagVocabulary? tags = null,
         RejectedIndexEntry? tagsError = null,
-        UnknownIndexVersionEntry? unknownTags = null)
+        UnknownIndexVersionEntry? unknownTags = null,
+        IReadOnlyList<ParsedListing>? validVehicles = null,
+        IReadOnlyList<ParsedListing>? validSaves = null)
     {
         SnapshotVersion = snapshotVersion;
         ValidListings = validListings ?? throw new ArgumentNullException(nameof(validListings));
@@ -59,5 +69,7 @@ public sealed class IndexValidationResult
         Tags = tags ?? CuratedTagVocabulary.Empty;
         TagsError = tagsError;
         UnknownTags = unknownTags;
+        ValidVehicles = validVehicles ?? [];
+        ValidSaves = validSaves ?? [];
     }
 }
