@@ -1860,6 +1860,34 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string ListingShareArchiveFileType => Resources.ListingShareArchiveFileType;
 
+    public string ListingShareHostHint => Resources.ListingShareHostHint;
+
+    public string ListingShareHostWriting => Resources.ListingShareHostWriting;
+
+    public string ListingShareHostCopyCode => Resources.ListingShareHostCopyCode;
+
+    public string ListingShareHostUploading => Resources.ListingShareHostUploading;
+
+    public string ListingShareHostPublishing => Resources.ListingShareHostPublishing;
+
+    public string ListingShareHostChecksFailed => Resources.ListingShareHostChecksFailed;
+
+    public string ListingShareHostListing => Resources.ListingShareHostListing;
+
+    public string ListingShareHostVersion => Resources.ListingShareHostVersion;
+
+    public string ListingShareHostStatus => Resources.ListingShareHostStatus;
+
+    public string ListingShareHostPublish => Resources.ListingShareHostPublish;
+
+    public string ListingShareHostOpenPullRequest => Resources.ListingShareHostOpenPullRequest;
+
+    public string ListingShareHostSignedOut => Resources.ListingShareHostSignedOut;
+
+    public string ListingShareHostSignInRefused => Resources.ListingShareHostSignInRefused;
+
+    public string ListingShareHostNetwork => Resources.ListingShareHostNetwork;
+
     public string ListingShareKindPart => Resources.ListingShareKindPart;
 
     public string ListingShareKindSubstance => Resources.ListingShareKindSubstance;
@@ -3053,6 +3081,30 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string FormatListingShareArchiveSaved(string fileName, string sha256, long size)
         => string.Format(CultureInfo.CurrentCulture, Resources.ListingShareArchiveSavedFormat, fileName, sha256, size);
+
+    public string FormatListingShareOnHost(string host)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ListingShareOnHostFormat, host);
+
+    public string FormatListingShareHostSigningIn(string host)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ListingShareHostSigningInFormat, host);
+
+    public string FormatListingShareHostCode(string page, string code)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ListingShareHostCodeFormat, page, code);
+
+    public string FormatListingShareHostTooLarge(string size, string host, string max)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ListingShareHostTooLargeFormat, size, host, max);
+
+    public string FormatListingShareCheckPassed(string check)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ListingShareCheckPassedFormat, check);
+
+    public string FormatListingShareCheckFailed(string check, string message)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ListingShareCheckFailedFormat, check, message);
+
+    public string FormatListingShareHostPublished(string id, string version)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ListingShareHostPublishedFormat, id, version);
+
+    public string FormatListingShareHostUnexpected(string host)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ListingShareHostUnexpectedFormat, host);
 
     public string FormatListingShareContentId(string kind, string id)
         => string.Format(CultureInfo.CurrentCulture, Resources.ListingShareContentIdFormat, kind, id);

@@ -3153,6 +3153,72 @@
   <data name="ListingShareArchiveSavedFormat" xml:space="preserve">
     <value>{0} gespeichert. SHA-256 {1}, {2} Bytes.</value>
   </data>
+  <data name="ListingShareHostHint" xml:space="preserve">
+    <value>Ein Share-Host speichert das Archiv und öffnet den Pull Request für dich. Du meldest dich mit dem Konto an, das der Host anbietet, und der Host prüft das Archiv, bevor etwas veröffentlicht wird.</value>
+  </data>
+  <data name="ListingShareOnHostFormat" xml:space="preserve">
+    <value>Auf {0} teilen</value>
+  </data>
+  <data name="ListingShareHostWriting" xml:space="preserve">
+    <value>Das Archiv wird geschrieben...</value>
+  </data>
+  <data name="ListingShareHostSigningInFormat" xml:space="preserve">
+    <value>Warte auf die Anmeldung bei {0}...</value>
+  </data>
+  <data name="ListingShareHostCodeFormat" xml:space="preserve">
+    <value>Öffne {0} und gib den Code {1} ein.</value>
+  </data>
+  <data name="ListingShareHostCopyCode" xml:space="preserve">
+    <value>Code kopieren und Seite öffnen</value>
+  </data>
+  <data name="ListingShareHostUploading" xml:space="preserve">
+    <value>Wird hochgeladen, und der Host prüft das Archiv...</value>
+  </data>
+  <data name="ListingShareHostPublishing" xml:space="preserve">
+    <value>Wird veröffentlicht...</value>
+  </data>
+  <data name="ListingShareHostTooLargeFormat" xml:space="preserve">
+    <value>Das Archiv hat {0} Bytes, und {1} nimmt für diesen Typ höchstens {2} Bytes. Es wurde nichts gesendet.</value>
+  </data>
+  <data name="ListingShareCheckPassedFormat" xml:space="preserve">
+    <value>{0}: bestanden</value>
+  </data>
+  <data name="ListingShareCheckFailedFormat" xml:space="preserve">
+    <value>{0}: {1}</value>
+  </data>
+  <data name="ListingShareHostChecksFailed" xml:space="preserve">
+    <value>Behebe, was der Host gefunden hat, und teile dann erneut.</value>
+  </data>
+  <data name="ListingShareHostListing" xml:space="preserve">
+    <value>Der Eintragstext, den der Host zeigt</value>
+  </data>
+  <data name="ListingShareHostVersion" xml:space="preserve">
+    <value>Version</value>
+  </data>
+  <data name="ListingShareHostStatus" xml:space="preserve">
+    <value>Release-Status</value>
+  </data>
+  <data name="ListingShareHostPublish" xml:space="preserve">
+    <value>Veröffentlichen</value>
+  </data>
+  <data name="ListingShareHostPublishedFormat" xml:space="preserve">
+    <value>{0} {1} ist veröffentlicht. Der Host hat den Pull Request geöffnet.</value>
+  </data>
+  <data name="ListingShareHostOpenPullRequest" xml:space="preserve">
+    <value>Pull Request öffnen</value>
+  </data>
+  <data name="ListingShareHostSignedOut" xml:space="preserve">
+    <value>Der Share-Host nimmt die Anmeldung nicht mehr an. Teile erneut, um dich anzumelden.</value>
+  </data>
+  <data name="ListingShareHostSignInRefused" xml:space="preserve">
+    <value>Die Anmeldung wurde abgelehnt, oder ihr Code ist abgelaufen.</value>
+  </data>
+  <data name="ListingShareHostNetwork" xml:space="preserve">
+    <value>Der Share-Host war nicht erreichbar.</value>
+  </data>
+  <data name="ListingShareHostUnexpectedFormat" xml:space="preserve">
+    <value>{0} hat so geantwortet, dass Borea es nicht versteht.</value>
+  </data>
   <data name="ListingShareContentIdFormat" xml:space="preserve">
     <value>{0} {1}</value>
   </data>

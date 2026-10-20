@@ -69,6 +69,7 @@ public sealed partial class ListingEditor
         });
         _share = share;
         RefreshShare();
+        StartShareHosts();
         Refresh();
     }
 
@@ -76,6 +77,7 @@ public sealed partial class ListingEditor
     {
         _share = null;
         _savedArchive = null;
+        ForgetShareHostRun();
         RefreshShare();
     }
 
@@ -86,6 +88,7 @@ public sealed partial class ListingEditor
         OnPropertyChanged(nameof(ShareExtraFiles));
         OnPropertyChanged(nameof(HasShareExtraFiles));
         OnPropertyChanged(nameof(ShareArchiveText));
+        RefreshShareHostRows();
     }
 
     [RelayCommand]

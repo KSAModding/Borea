@@ -175,6 +175,54 @@ public partial class MainViewModel
         }
     }
 
+    /// <summary>
+    /// Writes the archive of the shared item into a new file in the temporary folder, which the caller deletes. Null when
+    /// nothing was written, and a toast says why.
+    /// </summary>
+    internal async Task<(string File, GameSaveArchive Archive)?> WriteShareArchiveToTempAsync(GameSaveShareStart share)
+    {
+        if (_services is not { } services)
+            return null;
+
+        var name = share.Content.Name;
+        using var libraryUse = TryUseLibrary();
+        if (libraryUse is null)
+        {
+            ShowErrorToast(() => Localization.FormatToastShareFailed(name), Localization.LibraryFolderBusy);
+            return null;
+        }
+
+        if (services.Launcher.IsRunning(share.InstanceId))
+        {
+            ShowErrorToast(() => Localization.FormatToastShareFailed(name), Localization.GameSaveCloseGame);
+            return null;
+        }
+
+        var file = Path.Combine(Path.GetTempPath(), "Borea-share-" + Guid.NewGuid().ToString("N") + ".zip");
+        try
+        {
+            await using var stream = new FileStream(file, FileMode.CreateNew, FileAccess.Write, FileShare.None);
+            return (file, await services.GameSaves.WriteShareArchiveAsync(share.InstanceId, share.Entry, name, stream));
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or InvalidOperationException or ArgumentException)
+        {
+            TryDeleteFile(file);
+            ShowErrorToast(() => Localization.FormatToastShareFailed(name), exception.Message);
+            return null;
+        }
+    }
+
+    internal static void TryDeleteFile(string file)
+    {
+        try
+        {
+            File.Delete(file);
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+        }
+    }
+
     private async Task RefreshInstanceStartsEmptyAsync()
     {
         var sections = new List<GameSaveSection>();
