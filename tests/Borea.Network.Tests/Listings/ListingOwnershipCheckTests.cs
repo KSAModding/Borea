@@ -98,7 +98,7 @@ public sealed class ListingOwnershipCheckTests
 
         var ownership = await check.CheckAsync(Alice, draft, null);
 
-        Assert.Equal(new ListingOwnership(ListingOwnershipState.NotVerified, Problem: ListingOwnershipProblem.ShareHost), ownership);
+        Assert.Equal(new ListingOwnership(ListingOwnershipState.CouldNotEvaluate, Problem: ListingOwnershipProblem.ShareHost), ownership);
         Assert.Empty(_sent);
     }
 

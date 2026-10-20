@@ -104,8 +104,11 @@ public sealed partial class ListingEditor
 
     public bool IsOwnershipVerified => Ownership?.State == ListingOwnershipState.Verified;
 
-    /// <summary>A fork step has its own Check again, which runs the whole publish. A first claim has nothing to fix.</summary>
-    public bool CanCheckOwnershipAgain => Ownership is { State: not (ListingOwnershipState.Verified or ListingOwnershipState.FirstClaim) } && !HasForkStep;
+    /// <summary>
+    /// A fork step has its own Check again, which runs the whole publish. A first claim has nothing to fix, and Borea cannot read
+    /// the proof of a share host, so a second check gives the same answer.
+    /// </summary>
+    public bool CanCheckOwnershipAgain => Ownership is { State: not (ListingOwnershipState.Verified or ListingOwnershipState.FirstClaim), Problem: not ListingOwnershipProblem.ShareHost } && !HasForkStep;
 
     public string? OwnershipText => Ownership?.State switch
     {
