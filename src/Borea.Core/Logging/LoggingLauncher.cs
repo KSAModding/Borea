@@ -54,6 +54,8 @@ public sealed class LoggingLauncher : ILauncher, IDisposable
                 (_, null) => "no mod named",
                 (_, var modId) => $"blames {modId}",
             };
+            if (result.OtherBlamedModIds.Count > 0)
+                blamed += $", the missing assembly is also needed by {string.Join(", ", result.OtherBlamedModIds)}";
             var exitCode = result.ExitCode is { } code ? LoaderExitCode.Describe(code, OperatingSystem.IsWindows()) : "unknown";
             _log.Write($"Launch of instance {instance.InstanceId} stopped early with exit code {exitCode}, {blamed}. Last output:{Environment.NewLine}{string.Join(Environment.NewLine, result.Output)}");
         }

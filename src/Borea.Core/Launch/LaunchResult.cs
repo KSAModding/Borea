@@ -29,6 +29,12 @@ public sealed class LaunchResult
     /// </summary>
     public string? BlamedModId { get; private init; }
 
+    /// <summary>
+    /// The other enabled mods that need the same missing assembly as the blamed
+    /// mod, in load order. The loader would stop at them next.
+    /// </summary>
+    public IReadOnlyList<string> OtherBlamedModIds { get; private init; } = [];
+
     /// <summary>What the output of a loader that stopped early shows about the cause.</summary>
     public LoaderCrashCause CrashCause { get; private init; }
 
@@ -72,7 +78,7 @@ public sealed class LaunchResult
     /// Wine wrapper of <paramref name="wine"/> that stopped before the game
     /// wrote its log.
     /// </summary>
-    public static LaunchResult ExitedEarly(LaunchPlan plan, int exitCode, IReadOnlyList<string> output, string? blamedModId, string message, LoaderCrashCause crashCause = LoaderCrashCause.Unknown, WineInstall? wine = null)
+    public static LaunchResult ExitedEarly(LaunchPlan plan, int exitCode, IReadOnlyList<string> output, string? blamedModId, string message, LoaderCrashCause crashCause = LoaderCrashCause.Unknown, WineInstall? wine = null, IReadOnlyList<string>? otherBlamedModIds = null)
     {
         ArgumentNullException.ThrowIfNull(plan);
         ArgumentNullException.ThrowIfNull(output);
@@ -84,6 +90,7 @@ public sealed class LaunchResult
             BlamedModId = blamedModId,
             CrashCause = crashCause,
             Wine = wine,
+            OtherBlamedModIds = otherBlamedModIds?.ToArray() ?? [],
         };
     }
 

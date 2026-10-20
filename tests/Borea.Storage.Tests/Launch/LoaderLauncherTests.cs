@@ -1217,6 +1217,124 @@ public sealed class LoaderLauncherTests : IDisposable
         Assert.Equal(LoaderCrashCause.ModLoading, result.CrashCause);
     }
 
+    private const string MissingNumerics = "Could not load file or assembly 'Brutal.Core.Numerics, Version=2026.9.0.0, Culture=neutral, PublicKeyToken=null'. The system cannot find the file specified.";
+
+    // what StarMap 0.4.8 wrote on KSA 2026.10.19.5638 when GetTypes failed on a mod built for an older build
+    private static readonly string[] StaleModCrash =
+    [
+        "StarMap - Using Instance Path: C:\\Instances\\Main",
+        "StarMap - Delaying load of mod: AdvancedFlightComputer due to missing dependencies: KittenExtensions",
+        "Unhandled exception. System.Reflection.ReflectionTypeLoadException: Unable to load one or more of the requested types.",
+        MissingNumerics,
+        MissingNumerics,
+        "   at System.Reflection.RuntimeModule.GetDefinedTypes()",
+        "   at System.Reflection.RuntimeModule.GetTypes()",
+        "   at StarMap.Core.ModRepository.RuntimeMod.InitializeMod(ModRegistry modRegistry)",
+        "   at StarMap.Core.ModRepository.ModLoader.PrepareMods()",
+        "   at StarMap.Core.ModRepository.ModLoader.Init()",
+        "   at StarMap.Core.StarMapCore.Init()",
+        "   at StarMap.GameSurveyer.TryLoadCoreAndGame()",
+        "   at StarMap.Program.Main(String[] args)",
+        "System.IO.FileNotFoundException: " + MissingNumerics,
+        "File name: 'Brutal.Core.Numerics, Version=2026.9.0.0, Culture=neutral, PublicKeyToken=null'",
+    ];
+
+    // the last 200 lines of the same error for a mod with many types, which hold no frame and no StarMap line
+    private static readonly string[] CutStaleModCrash = Enumerable.Range(0, 100)
+        .SelectMany(_ => new[] { "System.IO.FileNotFoundException: " + MissingNumerics, "File name: 'Brutal.Core.Numerics, Version=2026.9.0.0, Culture=neutral, PublicKeyToken=null'" })
+        .ToArray();
+
+    /// <summary>Places a mod whose entry assembly references the named assemblies, and the manifest that enables the mods in this order.</summary>
+    private void PlaceCodeMods(Instance instance, params (string ModId, string[] References)[] mods)
+    {
+        foreach (var (modId, references) in mods)
+        {
+            PlaceMod(instance, modId, $"name = \"{modId}\"");
+            ReferencingAssembly.Write(Path.Combine(_paths.GetInstanceModsFolder(instance.InstanceId), modId, modId + ".dll"), references);
+        }
+
+        WriteManifest(instance, string.Join("\n\n", mods.Select(mod => $"[[mods]]\nid = \"{mod.ModId}\"")));
+    }
+
+    [Fact]
+    public async Task WatchStart_CutErrorOfAModThatNeedsAMissingGameAssembly_BlamesThatModAndNotTheLoader()
+    {
+        PlaceStarMap();
+        ReferencingAssembly.Write(Path.Combine(StarMapDirectory, "StarMap.Core.dll"), "KSA", "Brutal.Numerics");
+        var instance = InstanceWith("ModMenu", "KSArmory");
+        PlaceCodeMods(instance, ("ModMenu", ["KSA", "Brutal.Core.Logging"]), ("KSArmory", ["KSA", "Brutal.Core.Numerics"]));
+
+        var result = await CrashAsync(instance, -532462766, CutStaleModCrash);
+
+        Assert.Equal(LoaderCrashCause.ModAssembly, result.CrashCause);
+        Assert.Equal("KSArmory", result.BlamedModId);
+        Assert.Empty(result.OtherBlamedModIds);
+        Assert.Contains("KSArmory 0.8.44 stopped StarMap from starting.", result.Message);
+    }
+
+    [Fact]
+    public async Task WatchStart_MissingGameAssemblyThatTheLoaderNeeds_SaysItWasMadeForAnotherBuild()
+    {
+        PlaceStarMap();
+        ReferencingAssembly.Write(Path.Combine(StarMapDirectory, "StarMap.Core.dll"), "KSA", "Brutal.Core.Numerics");
+        var instance = InstanceWith("KSArmory");
+        PlaceCodeMods(instance, ("KSArmory", ["KSA", "Brutal.Core.Numerics"]));
+
+        var result = await CrashAsync(instance, -532462766, CutStaleModCrash);
+
+        Assert.Equal(LoaderCrashCause.GameAssembly, result.CrashCause);
+        Assert.Null(result.BlamedModId);
+        Assert.Empty(result.OtherBlamedModIds);
+    }
+
+    [Fact]
+    public async Task WatchStart_GameAssemblyNamedWithoutAFrame_BlamesNeitherTheLoaderNorAMod()
+    {
+        PlaceStarMap();
+        var instance = InstanceWith("MeasureTools");
+        PlaceCodeMods(instance, ("MeasureTools", ["KSA", "Brutal.Numerics"]));
+
+        var result = await CrashAsync(instance, -532462766, CutStaleModCrash);
+
+        Assert.Equal(LoaderCrashCause.Unknown, result.CrashCause);
+        Assert.Null(result.BlamedModId);
+        Assert.Contains("StarMap stopped right after starting", result.Message);
+    }
+
+    [Fact]
+    public async Task WatchStart_ModsThatNeedAMissingAssemblyWhileLoadingMods_BlamesTheLoadingModAndNamesTheOthers()
+    {
+        PlaceStarMap();
+        var instance = InstanceWith("AdvancedFlightComputer", "Compendium", "DeltaVMap", "ModMenu");
+        PlaceCodeMods(
+            instance,
+            ("AdvancedFlightComputer", ["KSA", "Brutal.Core.Numerics"]),
+            ("Compendium", ["KSA", "Brutal.Core.Numerics"]),
+            ("ModMenu", ["KSA", "Brutal.Core.Logging"]),
+            ("DeltaVMap", ["KSA", "Brutal.Core.Numerics"]));
+
+        var result = await CrashAsync(instance, -532462766, StaleModCrash);
+
+        Assert.Equal(LoaderCrashCause.ModLoading, result.CrashCause);
+        Assert.Equal("Compendium", result.BlamedModId);
+        Assert.Equal(["AdvancedFlightComputer", "DeltaVMap"], result.OtherBlamedModIds);
+        Assert.Contains("These mods also need an assembly that this KSA build does not have: AdvancedFlightComputer, DeltaVMap.", result.Message);
+    }
+
+    [Fact]
+    public async Task WatchStart_LoadingFrameWithoutTheInstancePath_BlamesTheFirstModThatNeedsTheMissingAssembly()
+    {
+        PlaceStarMap();
+        var instance = InstanceWith("ModMenu", "DeltaVMap", "KSArmory");
+        PlaceCodeMods(instance, ("ModMenu", ["KSA", "Brutal.Core.Logging"]), ("DeltaVMap", ["KSA", "Brutal.Core.Numerics"]), ("KSArmory", ["KSA", "Brutal.Core.Numerics"]));
+
+        var result = await CrashAsync(instance, -532462766, [.. StaleModCrash.Skip(2)]);
+
+        Assert.Equal(LoaderCrashCause.ModLoading, result.CrashCause);
+        Assert.Equal("DeltaVMap", result.BlamedModId);
+        Assert.Equal(["KSArmory"], result.OtherBlamedModIds);
+    }
+
     [Fact]
     public async Task WatchStart_CrashInTryCreateModAfterAnInvalidModToml_BlamesThatMod()
     {

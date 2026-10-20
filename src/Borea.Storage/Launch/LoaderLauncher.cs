@@ -384,19 +384,40 @@ public sealed class LoaderLauncher : ILauncher, IDisposable
                 $"{start.LoaderName} stopped without starting the game. The details show what it wrote.");
         }
 
-        var blamed = ModBlame.Find(instance, _pathProvider.GetInstanceModsFolder(instance.InstanceId), LoaderCrashReport.AssemblyNames(output));
+        var modsFolder = _pathProvider.GetInstanceModsFolder(instance.InstanceId);
+        var missing = LoaderCrashReport.MissingAssemblyNames(output);
+        IReadOnlyList<InstalledMod> needMissing = [];
+        var blamed = ModBlame.Find(instance, modsFolder, LoaderCrashReport.AssemblyNames(output));
         var cause = blamed is null ? LoaderCrashCause.Unknown : LoaderCrashCause.ModAssembly;
         if (blamed is null && LoaderCrashReport.StoppedWhileLoadingMods(output))
         {
             cause = LoaderCrashCause.ModLoading;
             var loadOrder = await LoadOrderReader.ReadAsync(_pathProvider, instance.InstanceId, cancellationToken).ConfigureAwait(false);
             var likely = LoaderCrashReport.LikelyLoadingMod(output, loadOrder);
-            blamed = likely is null ? null : instance.Mods.FirstOrDefault(mod => ModIds.Equals(mod.ModId, likely));
+            needMissing = AssemblyReferences.Mods(instance, modsFolder, loadOrder, missing);
+            blamed = (likely is null ? null : instance.Mods.FirstOrDefault(mod => ModIds.Equals(mod.ModId, likely))) ?? needMissing.FirstOrDefault();
         }
-        else if (blamed is null && LoaderCrashReport.NamesGameAssembly(output))
+        else if (blamed is null && missing.Count > 0)
         {
-            cause = LoaderCrashCause.GameAssembly;
+            // GameSurveyer.TryLoadCoreAndGame loads StarMap.Core before any mod,
+            // so a missing assembly that the loader needs stopped it first
+            if (AssemblyReferences.Referencing(started.Plan.WorkingDirectory, missing))
+            {
+                cause = LoaderCrashCause.GameAssembly;
+            }
+            else
+            {
+                var loadOrder = await LoadOrderReader.ReadAsync(_pathProvider, instance.InstanceId, cancellationToken).ConfigureAwait(false);
+                needMissing = AssemblyReferences.Mods(instance, modsFolder, loadOrder, missing);
+                blamed = needMissing.FirstOrDefault();
+                cause = blamed is null ? LoaderCrashCause.Unknown : LoaderCrashCause.ModAssembly;
+            }
         }
+
+        if (blamed is null && cause == LoaderCrashCause.Unknown && LoaderCrashReport.StoppedWhileLoaderStarted(output) && LoaderCrashReport.NamesGameAssembly(output))
+            cause = LoaderCrashCause.GameAssembly;
+
+        var others = needMissing.Where(mod => mod != blamed).ToList();
 
         var build = cause == LoaderCrashCause.GameAssembly ? InstalledGameVersionProvider.Read(_pathProvider.GetGameDirectoryPath())?.RawVersion : null;
         var message = (blamed, cause) switch
@@ -406,7 +427,10 @@ public sealed class LoaderLauncher : ILauncher, IDisposable
             (_, LoaderCrashCause.ModLoading) => $"{start.LoaderName} stopped while it loaded {blamed.Metadata.Listing?.Name ?? blamed.ModId} {blamed.Version}, so that mod is the likely cause. Disable it and try again, or look for an update.",
             _ => $"{blamed.Metadata.Listing?.Name ?? blamed.ModId} {blamed.Version} stopped {start.LoaderName} from starting. It may not work with this version of KSA. Disable it and try again, or look for an update.",
         };
-        return LaunchResult.ExitedEarly(started.Plan, exitCode.Value, output, blamed?.ModId, message, cause);
+        if (blamed is not null && others.Count > 0)
+            message += $" These mods also need an assembly that this KSA build does not have: {string.Join(", ", others.Select(mod => mod.Metadata.Listing?.Name ?? mod.ModId))}. Disable them too, or look for updates.";
+
+        return LaunchResult.ExitedEarly(started.Plan, exitCode.Value, output, blamed?.ModId, message, cause, otherBlamedModIds: others.Select(mod => mod.ModId).ToList());
     }
 
     public async Task<GameExit> WatchExitAsync(Instance instance, LaunchResult started, CancellationToken cancellationToken = default)
