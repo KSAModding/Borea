@@ -771,7 +771,7 @@ public partial class MainViewModel
                 if (revision != choices.Revision)
                     return;
 
-                if (choices.Apply(plan) || !plan.IsReady || !plan.Warnings.All(shown.Contains))
+                if (choices.Apply(plan) || !plan.IsReady || !WereShown(plan.Warnings, shown))
                 {
                     HoldPack(pack, plan);
                     return;

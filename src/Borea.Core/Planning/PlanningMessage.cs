@@ -158,6 +158,33 @@ public sealed record PlanningMessage(string ModId, PlanningMessageKind Kind)
         _ => $"{Dependency}",
     };
 
+    /// <summary>
+    /// Whether <paramref name="other"/> says the same. The dependency entry counts by its values, because a later plan
+    /// reads the entry again, for example from the record file of a vehicle, and so holds a new object.
+    /// </summary>
+    public bool SameAs(PlanningMessage other)
+    {
+        ArgumentNullException.ThrowIfNull(other);
+        return this with { Dependency = null } == other with { Dependency = null } && SameEntry(Dependency, other.Dependency);
+    }
+
+    private static bool SameEntry(ModDependency? left, ModDependency? right)
+    {
+        if (ReferenceEquals(left, right))
+            return true;
+        if (left is null || right is null || left.Kind != right.Kind || !ModIds.Equals(left.ModId, right.ModId)
+            || left.MinVersion != right.MinVersion || left.MaxVersion != right.MaxVersion)
+            return false;
+
+        return (left.AnyOf, right.AnyOf) switch
+        {
+            (null, null) => true,
+            ({ } first, { } second) => first.Count == second.Count && first.Zip(second).All(pair =>
+                ModIds.Equals(pair.First.ModId, pair.Second.ModId) && pair.First.MinVersion == pair.Second.MinVersion && pair.First.MaxVersion == pair.Second.MaxVersion),
+            _ => false,
+        };
+    }
+
     private static string StatusName(ReleaseStatus? status) => status switch
     {
         ReleaseStatus.Stable => "stable",

@@ -115,7 +115,7 @@ public partial class MainViewModel
             }
 
             var asksMore = row.Choices?.Apply(plan.Mods) == true;
-            if (plan.Check.Outcome != UserContentOutcome.Ready || !plan.Mods.IsReady || asksMore || !plan.Mods.Warnings.All(shown.Mods.Warnings.Contains))
+            if (plan.Check.Outcome != UserContentOutcome.Ready || !plan.Mods.IsReady || asksMore || !WereShown(plan.Mods.Warnings, shown.Mods.Warnings))
             {
                 if (plan.Check.Outcome is UserContentOutcome.Ready or UserContentOutcome.Changed)
                     HoldContentPlan(row, plan);

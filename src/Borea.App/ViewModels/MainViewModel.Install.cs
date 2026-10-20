@@ -551,13 +551,17 @@ public partial class MainViewModel
         if (revision != choices.Revision)
             return null;
 
-        if (!choices.Apply(plan) && plan.IsReady && plan.Warnings.All(shown.Contains)
+        if (!choices.Apply(plan) && plan.IsReady && WereShown(plan.Warnings, shown)
             && (row is IUpdateRow || plan.Operations.All(operation => named.Contains(operation.Release.ModId))))
             return plan;
 
         HoldPlan(row, plan);
         return null;
     }
+
+    /// <summary>Whether the player saw each of <paramref name="warnings"/> in <paramref name="shown"/>.</summary>
+    internal static bool WereShown(IEnumerable<PlanningMessage> warnings, IReadOnlyList<PlanningMessage> shown)
+        => warnings.All(warning => shown.Any(warning.SameAs));
 
     internal static void CancelInstall(IInstallRow row)
     {

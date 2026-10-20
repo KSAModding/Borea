@@ -70,4 +70,20 @@ public sealed class PlanningMessageTests
 
         Assert.Equal(Enum.GetValues<PlanningMessageKind>().ToHashSet(), covered);
     }
+
+    [Fact]
+    public void SameAs_ComparesTheDependencyByItsValues()
+    {
+        var message = new PlanningMessage("library", PlanningMessageKind.BreaksSave) { Version = ModVersion.Parse("2.0.0"), Dependency = Library, Value = "Career" };
+        var read = new ModDependency("library", ModDependencyKind.Required, ModVersion.Parse("1.0.0"));
+        var choice = new PlanningMessage("A", PlanningMessageKind.AlternativeChoice) { Dependency = Alternatives };
+        var again = ModDependency.OfAlternatives(ModDependencyKind.Required, [new ModDependencyAlternative("first"), new ModDependencyAlternative("second")]);
+
+        Assert.True(message.SameAs(message with { Dependency = read }));
+        Assert.True(choice.SameAs(choice with { Dependency = again }));
+        Assert.False(message.SameAs(message with { Dependency = new ModDependency("library", ModDependencyKind.Required, ModVersion.Parse("1.1.0")) }));
+        Assert.False(message.SameAs(message with { Value = "Other" }));
+        Assert.False(message.SameAs(message with { Dependency = null }));
+        Assert.False(choice.SameAs(choice with { Dependency = ModDependency.OfAlternatives(ModDependencyKind.Required, [new ModDependencyAlternative("first"), new ModDependencyAlternative("third")]) }));
+    }
 }

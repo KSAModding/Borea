@@ -304,6 +304,31 @@ public sealed class ContentUpdateTests
     }
 
     [Fact]
+    public async Task Update_WithChoicesPastARecordedSave_RunsOnTheFirstGo()
+    {
+        var save = UserContentFixtures.SaveArchive("<Universe />");
+        using var harness = await ViewModelHarness.CreateAsync(
+            respond: request => request.RequestUri?.AbsoluteUri == UserContentFixtures.SaveUrl ? UserContentFixtures.ArchiveResponse(save) : ServeArchive(request),
+            typeFiles: UserContentFixtures.TypeFiles(Borea.Core.Index.ContentIndexTypeFiles.Saves, UserContentFixtures.EntryNeeding("CampaignSave", "save", "Campaign", UserContentFixtures.SaveUrl, save, UserContentFixtures.Required(OwnId, null, "1.0.0"), ["1.0.0"])));
+        harness.SpaceDock.Releases.AddRange([Release("1.0.0"), Release("1.1.0", dependencies: [new ModDependency("kept", ModDependencyKind.Recommends)]), Release("1.0.0", modId: "kept")]);
+        var viewModel = harness.ViewModel;
+        var instance = await InstalledContent.AddAsync(harness, OwnId, activate: true, ownership: ModInstallOwnership.Borea, version: "1.0.0");
+        var release = (await harness.Services.UserContent.GetReleaseAsync("CampaignSave", ModVersion.Parse("1.0.0")))!;
+        Assert.True((await harness.Services.UserContentInstaller.InstallAsync(instance.InstanceId, release, name: null)).IsDone);
+        await viewModel.LoadAsync();
+        await viewModel.ActiveInstance!.OpenCommand.ExecuteAsync(null);
+        var row = viewModel.ContentGroups.Single().Items.Single();
+        await row.UpdateCommand.ExecuteAsync(null);
+        Assert.NotNull(row.Choices);
+        Assert.Contains("Campaign", row.InstallWarning, StringComparison.Ordinal);
+
+        // the go plans again with the choices and reads the save's record again
+        await row.ConfirmUpdateCommand.ExecuteAsync(null);
+
+        Assert.Equal(ModVersion.Parse("1.1.0"), (await harness.Services.Instances.GetByIdAsync(instance.InstanceId))!.Mods.Single(mod => mod.ModId == OwnId).Version);
+    }
+
+    [Fact]
     public async Task Update_NewRecommendation_WaitsOnTheRowAndInstallsWithTheUpdate()
     {
         using var harness = await ViewModelHarness.CreateAsync(respond: ServeArchive);
