@@ -202,6 +202,23 @@ public sealed class UserContentCommandTests : IDisposable
         Assert.Contains("parts-lib", run.Output);
     }
 
+    [Fact]
+    public async Task InstanceShow_ListsTheRecordedVehicles_AndWhetherTheyChanged()
+    {
+        var instance = await CreateAsync();
+        await _host.RunAsync("install", "rover", "--instance", "Alpha");
+        File.WriteAllText(Path.Combine(_host.Paths.GetInstanceVehiclesFolder(instance), "Rover", "added.txt"), "mine");
+
+        var text = await _host.RunAsync("instance", "show", "Alpha");
+        var json = await _host.RunAsync("instance", "show", "Alpha", "--json");
+
+        Assert.Contains("Vehicles Borea installed:", text.Output);
+        Assert.Contains("  rover 1.0.0  Rover  changed", text.Output);
+        var vehicle = Assert.Single(json.Json.GetProperty("vehicles").EnumerateArray());
+        Assert.Equal(("rover", "Rover", true), (vehicle.GetProperty("id").GetString(), vehicle.GetProperty("folder").GetString(), vehicle.GetProperty("changed").GetBoolean()));
+        Assert.Empty(json.Json.GetProperty("saves").EnumerateArray());
+    }
+
     private async Task<Guid> CreateAsync()
     {
         await _host.RunAsync("instance", "create", "Alpha");
