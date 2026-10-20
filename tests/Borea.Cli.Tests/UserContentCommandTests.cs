@@ -57,6 +57,22 @@ public sealed class UserContentCommandTests : IDisposable
     }
 
     [Fact]
+    public async Task Install_AnyOfWhoseInstalledAlternativeIsDisabled_EnablesIt()
+    {
+        Index(Vehicle("1.0.0", [ModDependency.OfAlternatives(ModDependencyKind.Required, [new ModDependencyAlternative("wheels"), new ModDependencyAlternative("parts-lib")])]));
+        var instance = await CreateAsync();
+        await _host.RunAsync("install", "parts-lib", "--instance", "Alpha");
+        await _host.RunAsync("disable", "parts-lib", "--instance", "Alpha");
+
+        var run = await _host.RunAsync("install", "rover", "--instance", "Alpha");
+
+        Assert.Equal(0, run.ExitCode);
+        Assert.Contains("Enable parts-lib.", run.Output);
+        Assert.DoesNotContain("wheels", run.Output);
+        Assert.True((await Entries(instance)).Single(entry => entry.ModId == "parts-lib").Enabled);
+    }
+
+    [Fact]
     public async Task Install_TakenName_StopsBeforeAnythingChanges_AndNamesTheOption()
     {
         var instance = await CreateAsync();

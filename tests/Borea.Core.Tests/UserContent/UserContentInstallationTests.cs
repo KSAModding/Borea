@@ -53,6 +53,21 @@ public sealed class UserContentInstallationTests
     }
 
     [Fact]
+    public async Task Plan_TwoInstalledAlternatives_EnablesTheOneThePlanResolved()
+    {
+        var instance = Instance.FromExisting(_instance.InstanceId, "Test", InstanceSource.Custom.Value, DateTimeOffset.UnixEpoch, [], [new ForeignMod("first"), new ForeignMod("second")], false);
+        _modState.Entries.Add(new ModManifestEntry("first", false));
+        _modState.Entries.Add(new ModManifestEntry("second", false));
+        var dependency = ModDependency.OfAlternatives(ModDependencyKind.Required, [new ModDependencyAlternative("first"), new ModDependencyAlternative("second")]);
+        var choice = new PlanningChoice("rover:dependency:0:alternative", "rover", PlanningChoiceKind.Alternative, ["first", "second"], "second", dependency);
+        var mods = new InstallPlan(instance.InstanceId, InstallPlanningState.Capture(instance), [], [], [], [], [], [choice]);
+
+        var plan = await Installation(mods).PlanInstallAsync(Request(Vehicle([dependency])) with { Instance = instance });
+
+        Assert.Equal(["second"], plan.Enables);
+    }
+
+    [Fact]
     public async Task Execute_MissingMod_StopsUnlessThePlayerGoesOn()
     {
         var missing = new PlanningMessage("rover", PlanningMessageKind.MissingForVehicle) { Dependency = Required("gone"), Value = "unsatisfied-dependency" };

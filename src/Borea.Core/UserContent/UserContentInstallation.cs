@@ -107,8 +107,9 @@ public sealed class UserContentInstallation
     }
 
     /// <summary>
-    /// Every mod the plan selects, and every foreign mod that a required dependency of the item or of a selected mod
-    /// names, because the game treats a mod that is not enabled as missing (ModLibrary.PrepareAll).
+    /// Every mod the plan selects, and every installed mod that a required dependency of the item or of a selected mod
+    /// names, because the game treats a mod that is not enabled as missing (ModLibrary.PrepareAll). For an any_of the
+    /// alternative the plan resolved comes first, because the planner does not select an installed alternative.
     /// </summary>
     private static List<string> Needed(Instance instance, ModVersionMetadata release, InstallPlan mods)
     {
@@ -118,9 +119,11 @@ public sealed class UserContentInstallation
             foreach (var dependency in owner.Dependencies.Where(value => value.Kind == ModDependencyKind.Required))
             {
                 var targets = dependency.IsAnyOf ? dependency.AnyOf.Select(value => value.ModId) : [dependency.ModId!];
-                var present = targets.Where(id => needed.Contains(id, ModIds.Comparer) || instance.ForeignMods.Any(foreign => ModIds.Equals(foreign.ModId, id))).ToList();
-                if (present.Count > 0 && !present.Any(id => needed.Contains(id, ModIds.Comparer)))
-                    needed.Add(present[0]);
+                var present = targets.Where(id => needed.Contains(id, ModIds.Comparer) || IsInstalled(instance, id)).ToList();
+                if (present.Count == 0 || present.Any(id => needed.Contains(id, ModIds.Comparer)))
+                    continue;
+                var resolved = mods.Choices.FirstOrDefault(choice => choice.Kind == PlanningChoiceKind.Alternative && choice.Dependency == dependency && ModIds.Equals(choice.OwnerModId, owner.ModId))?.Selected;
+                needed.Add(present.FirstOrDefault(id => ModIds.Equals(id, resolved)) ?? present[0]);
             }
         }
 
