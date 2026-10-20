@@ -123,6 +123,9 @@ public sealed class BoreaServices : IDisposable
     /// <summary>Installs, updates and removes one vehicle or save folder, on the same records as <see cref="InstalledContent"/>.</summary>
     public required IUserContentInstaller UserContentInstaller { get; init; }
 
+    /// <summary>Installs or updates a vehicle or save with the mods it needs.</summary>
+    public required UserContentInstallation UserContentInstallation { get; init; }
+
     public required IGameLogReader GameLog { get; init; }
 
     public required IGameCrashReader GameCrashes { get; init; }
@@ -513,6 +516,7 @@ public sealed class BoreaServices : IDisposable
         if (wrapInstallPlanner is not null)
             installPlanner = wrapInstallPlanner(installPlanner);
         isGameProcessRunning ??= RunningProcesses.IsGameRunning;
+        var userContentInstaller = new LoggingUserContentInstaller(new FileUserContentInstaller(paths, downloader, installedContent, isGameProcessRunning), log);
         var launcher = new LoggingLauncher(new LastPlayedLauncher(loaderLauncher ?? new LoaderLauncher(paths, processStarter ?? new ProcessStarter(), launches, isGameProcessRunning), instances), log);
         var defaultLibraryFolder = Path.GetDirectoryName(bootstrapPaths.GetInstancesRoot())!;
         var announcementReader = new AnnouncementReader();
@@ -540,7 +544,8 @@ public sealed class BoreaServices : IDisposable
             GameSaves = new FileGameSaveStore(paths, records: installedContent),
             GameSaveBackups = new FileGameSaveBackupStore(paths),
             InstalledContent = installedContent,
-            UserContentInstaller = new LoggingUserContentInstaller(new FileUserContentInstaller(paths, downloader, installedContent, isGameProcessRunning), log),
+            UserContentInstaller = userContentInstaller,
+            UserContentInstallation = new UserContentInstallation(installPlanner, new InstallPlanExecutor(instances, modInstaller, modReplacer, spaceCheck), checkedModState, userContentInstaller),
             GameLog = new FileGameLogReader(paths),
             GameCrashes = new FileGameCrashReader(paths),
             Playtime = new FilePlaytimeService(paths),
