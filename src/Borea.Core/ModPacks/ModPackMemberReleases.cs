@@ -1,4 +1,5 @@
 using Borea.Core.Index;
+using Borea.Core.Listings;
 using Borea.Core.Mods;
 
 namespace Borea.Core.ModPacks;
@@ -42,14 +43,7 @@ public static class ModPackMemberReleases
     /// <param name="type">The type of the pack section, which says in which list of the snapshot the id is.</param>
     public static ModVersionMetadata? NewerRelease(ContentIndexSnapshot snapshot, string modId, ModVersion pinned, ContentType type = ContentType.Mod)
     {
-        ArgumentNullException.ThrowIfNull(snapshot);
-        var listings = type switch
-        {
-            ContentType.Vehicle => snapshot.Vehicles,
-            ContentType.Save => snapshot.Saves,
-            _ => snapshot.Listings,
-        };
-        if (listings.FirstOrDefault(listing => ModIds.Equals(listing.Id, modId)) is not { } listing)
+        if (ListingPackMembers.Of(snapshot, type).FirstOrDefault(listing => ModIds.Equals(listing.Id, modId)) is not { } listing)
             return null;
 
         var status = listing.Releases.FirstOrDefault(release => release.Version == pinned)?.ReleaseStatus ?? ReleaseStatus.Stable;
