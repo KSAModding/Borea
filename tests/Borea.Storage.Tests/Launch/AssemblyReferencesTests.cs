@@ -27,6 +27,27 @@ public sealed class AssemblyReferencesTests : IDisposable
     }
 
     [Fact]
+    public void Referencing_DllInASubfolderWithoutRecurse_IsFalse()
+    {
+        ReferencingAssembly.Write(Path.Combine(_root, "StarMap.Core.dll"), "KSA", "Brutal.Numerics");
+        ReferencingAssembly.Write(Path.Combine(_root, "Content", "KSArmory", "KSArmory.dll"), "KSA", "Brutal.Core.Numerics");
+
+        Assert.False(AssemblyReferences.Referencing(_root, ["Brutal.Core.Numerics"], recurse: false));
+        Assert.True(AssemblyReferences.Referencing(_root, ["Brutal.Numerics"], recurse: false));
+    }
+
+    [Fact]
+    public void Held_GivesTheDllNamesWithoutTheExtension()
+    {
+        ReferencingAssembly.Write(Path.Combine(_root, "KSA.dll"));
+        ReferencingAssembly.Write(Path.Combine(_root, "bin", "Brutal.Numerics.dll"));
+
+        Assert.Equal(["KSA"], AssemblyReferences.Held(_root, recurse: false));
+        Assert.True(AssemblyReferences.Held(_root, recurse: true).SetEquals(["ksa", "brutal.numerics"]));
+        Assert.Empty(AssemblyReferences.Held(Path.Combine(_root, "gone"), recurse: true));
+    }
+
+    [Fact]
     public void Referencing_OtherNames_IsFalse()
     {
         ReferencingAssembly.Write(Path.Combine(_root, "KSArmory.dll"), "KSA", "Brutal.Core.Numerics");
@@ -89,7 +110,7 @@ public sealed class AssemblyReferencesTests : IDisposable
             new("LonelyPlanets", IsCodeMod: false),
         ];
 
-        var mods = AssemblyReferences.Mods(instance, _root, loadOrder, ["Brutal.Core.Numerics"]);
+        var mods = AssemblyReferences.Mods(instance, _root, loadOrder, name => name == "Brutal.Core.Numerics");
 
         Assert.Equal(["DeltaVMap", "Compendium"], mods.Select(mod => mod.ModId));
     }

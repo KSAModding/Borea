@@ -189,7 +189,7 @@ public sealed class LoggingDecoratorsTests
 
         var exitCode = LoaderExitCode.Describe(-532462766, OperatingSystem.IsWindows());
         Assert.Equal(
-            [$"Launch of instance {instance.InstanceId} stopped early with exit code {exitCode}, blames KSArmory, the missing assembly is also needed by DeltaVMap, Compendium. Last output:{Environment.NewLine}File name: 'Brutal.Core.Numerics'"],
+            [$"Launch of instance {instance.InstanceId} stopped early with exit code {exitCode}, blames KSArmory, game assemblies that this build does not have are also needed by DeltaVMap, Compendium. Last output:{Environment.NewLine}File name: 'Brutal.Core.Numerics'"],
             _log.Messages);
     }
 

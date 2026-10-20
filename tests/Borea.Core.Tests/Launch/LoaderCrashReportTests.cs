@@ -56,6 +56,18 @@ public sealed class LoaderCrashReportTests
         Assert.Equal(expected, LoaderCrashReport.NamesGameAssembly([line]));
     }
 
+    [Theory]
+    [InlineData("KSA", true)]
+    [InlineData("Brutal.Core.Numerics", true)]
+    [InlineData("brutal.numerics", true)]
+    [InlineData("KSArmory", false)]
+    [InlineData("0Harmony", false)]
+    [InlineData("StarMap.Core", false)]
+    public void IsGameAssembly_TakesKsaAndBrutalAssemblies(string name, bool expected)
+    {
+        Assert.Equal(expected, LoaderCrashReport.IsGameAssembly(name));
+    }
+
     [Fact]
     public void MissingAssemblyNames_TakesOnlyTheAssembliesThatCouldNotLoad()
     {

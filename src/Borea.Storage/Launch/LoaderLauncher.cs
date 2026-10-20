@@ -385,31 +385,32 @@ public sealed class LoaderLauncher : ILauncher, IDisposable
         }
 
         var modsFolder = _pathProvider.GetInstanceModsFolder(instance.InstanceId);
-        var missing = LoaderCrashReport.MissingAssemblyNames(output);
-        IReadOnlyList<InstalledMod> needMissing = [];
+        // only a missing game assembly shows a mod or a loader made for another KSA build
+        var missing = LoaderCrashReport.MissingAssemblyNames(output).Where(LoaderCrashReport.IsGameAssembly).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        IReadOnlyList<LoadOrderMod>? loadOrder = null;
         var blamed = ModBlame.Find(instance, modsFolder, LoaderCrashReport.AssemblyNames(output));
         var cause = blamed is null ? LoaderCrashCause.Unknown : LoaderCrashCause.ModAssembly;
         if (blamed is null && LoaderCrashReport.StoppedWhileLoadingMods(output))
         {
             cause = LoaderCrashCause.ModLoading;
-            var loadOrder = await LoadOrderReader.ReadAsync(_pathProvider, instance.InstanceId, cancellationToken).ConfigureAwait(false);
+            loadOrder = await LoadOrderReader.ReadAsync(_pathProvider, instance.InstanceId, cancellationToken).ConfigureAwait(false);
             var likely = LoaderCrashReport.LikelyLoadingMod(output, loadOrder);
-            needMissing = AssemblyReferences.Mods(instance, modsFolder, loadOrder, missing);
-            blamed = (likely is null ? null : instance.Mods.FirstOrDefault(mod => ModIds.Equals(mod.ModId, likely))) ?? needMissing.FirstOrDefault();
+            blamed = (likely is null ? null : instance.Mods.FirstOrDefault(mod => ModIds.Equals(mod.ModId, likely)))
+                ?? (missing.Count > 0 ? AssemblyReferences.Mods(instance, modsFolder, loadOrder, missing.Contains).FirstOrDefault() : null);
         }
         else if (blamed is null && missing.Count > 0)
         {
-            // GameSurveyer.TryLoadCoreAndGame loads StarMap.Core before any mod,
-            // so a missing assembly that the loader needs stopped it first
-            if (AssemblyReferences.Referencing(started.Plan.WorkingDirectory, missing))
+            // GameSurveyer.TryLoadCoreAndGame loads ./StarMap.Core.dll before any
+            // mod, so a missing assembly that a DLL in the loader folder needs
+            // stopped it first. Subfolders do not count, they can hold mods.
+            if (AssemblyReferences.Referencing(started.Plan.WorkingDirectory, missing, recurse: false))
             {
                 cause = LoaderCrashCause.GameAssembly;
             }
             else
             {
-                var loadOrder = await LoadOrderReader.ReadAsync(_pathProvider, instance.InstanceId, cancellationToken).ConfigureAwait(false);
-                needMissing = AssemblyReferences.Mods(instance, modsFolder, loadOrder, missing);
-                blamed = needMissing.FirstOrDefault();
+                loadOrder = await LoadOrderReader.ReadAsync(_pathProvider, instance.InstanceId, cancellationToken).ConfigureAwait(false);
+                blamed = AssemblyReferences.Mods(instance, modsFolder, loadOrder, missing.Contains).FirstOrDefault();
                 cause = blamed is null ? LoaderCrashCause.Unknown : LoaderCrashCause.ModAssembly;
             }
         }
@@ -417,7 +418,13 @@ public sealed class LoaderLauncher : ILauncher, IDisposable
         if (blamed is null && cause == LoaderCrashCause.Unknown && LoaderCrashReport.StoppedWhileLoaderStarted(output) && LoaderCrashReport.NamesGameAssembly(output))
             cause = LoaderCrashCause.GameAssembly;
 
-        var others = needMissing.Where(mod => mod != blamed).ToList();
+        IReadOnlyList<InstalledMod> others = [];
+        if (blamed is not null && missing.Count > 0)
+        {
+            loadOrder ??= await LoadOrderReader.ReadAsync(_pathProvider, instance.InstanceId, cancellationToken).ConfigureAwait(false);
+            var notInGame = GameAssemblyNotInGame(modsFolder);
+            others = AssemblyReferences.Mods(instance, modsFolder, loadOrder, name => missing.Contains(name) || notInGame(name)).Where(mod => mod != blamed).ToList();
+        }
 
         var build = cause == LoaderCrashCause.GameAssembly ? InstalledGameVersionProvider.Read(_pathProvider.GetGameDirectoryPath())?.RawVersion : null;
         var message = (blamed, cause) switch
@@ -428,9 +435,24 @@ public sealed class LoaderLauncher : ILauncher, IDisposable
             _ => $"{blamed.Metadata.Listing?.Name ?? blamed.ModId} {blamed.Version} stopped {start.LoaderName} from starting. It may not work with this version of KSA. Disable it and try again, or look for an update.",
         };
         if (blamed is not null && others.Count > 0)
-            message += $" These mods also need an assembly that this KSA build does not have: {string.Join(", ", others.Select(mod => mod.Metadata.Listing?.Name ?? mod.ModId))}. Disable them too, or look for updates.";
+            message += $" These mods need parts of KSA that this version does not have, so they will likely fail too: {string.Join(", ", others.Select(mod => mod.Metadata.Listing?.Name ?? mod.ModId))}.";
 
         return LaunchResult.ExitedEarly(started.Plan, exitCode.Value, output, blamed?.ModId, message, cause, otherBlamedModIds: others.Select(mod => mod.ModId).ToList());
+    }
+
+    /// <summary>
+    /// Whether an assembly name is one of the game that neither the game folder
+    /// nor a mod folder holds, which a mod made for another KSA build references.
+    /// Always false when the game folder holds no KSA.dll.
+    /// </summary>
+    private Func<string, bool> GameAssemblyNotInGame(string modsFolder)
+    {
+        var held = AssemblyReferences.Held(_pathProvider.GetGameDirectoryPath() ?? string.Empty, recurse: false);
+        if (!held.Contains("KSA"))
+            return _ => false;
+
+        held.UnionWith(AssemblyReferences.Held(modsFolder, recurse: true));
+        return name => LoaderCrashReport.IsGameAssembly(name) && !held.Contains(name);
     }
 
     public async Task<GameExit> WatchExitAsync(Instance instance, LaunchResult started, CancellationToken cancellationToken = default)

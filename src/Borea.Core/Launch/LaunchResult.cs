@@ -30,8 +30,9 @@ public sealed class LaunchResult
     public string? BlamedModId { get; private init; }
 
     /// <summary>
-    /// The other enabled mods that need the same missing assembly as the blamed
-    /// mod, in load order. The loader would stop at them next.
+    /// The other enabled code mods, in load order, that reference the missing
+    /// game assembly of the error or another game assembly that the installed
+    /// KSA does not have. They were likely made for another KSA build too.
     /// </summary>
     public IReadOnlyList<string> OtherBlamedModIds { get; private init; } = [];
 

@@ -1318,7 +1318,7 @@ public sealed class LoaderLauncherTests : IDisposable
         Assert.Equal(LoaderCrashCause.ModLoading, result.CrashCause);
         Assert.Equal("Compendium", result.BlamedModId);
         Assert.Equal(["AdvancedFlightComputer", "DeltaVMap"], result.OtherBlamedModIds);
-        Assert.Contains("These mods also need an assembly that this KSA build does not have: AdvancedFlightComputer, DeltaVMap.", result.Message);
+        Assert.Contains("These mods need parts of KSA that this version does not have, so they will likely fail too: AdvancedFlightComputer, DeltaVMap.", result.Message);
     }
 
     [Fact]
@@ -1333,6 +1333,74 @@ public sealed class LoaderLauncherTests : IDisposable
         Assert.Equal(LoaderCrashCause.ModLoading, result.CrashCause);
         Assert.Equal("DeltaVMap", result.BlamedModId);
         Assert.Equal(["KSArmory"], result.OtherBlamedModIds);
+    }
+
+    [Fact]
+    public async Task WatchStart_CutErrorWithModsMadeForAnotherBuild_NamesEveryModThatNeedsAGameAssemblyTheGameLacks()
+    {
+        PlaceStarMap();
+        var game = Directory.CreateDirectory(_paths.GetGameDirectoryPath()!).FullName;
+        foreach (var assembly in new[] { "KSA", "Brutal.Numerics", "Brutal.Logging" })
+            ReferencingAssembly.Write(Path.Combine(game, assembly + ".dll"));
+        var instance = InstanceWith("KSArmory", "ModMenu", "MeasureTools", "Helper");
+        PlaceCodeMods(
+            instance,
+            ("KSArmory", ["KSA", "Brutal.Core.Numerics"]),
+            ("ModMenu", ["KSA", "Brutal.Core.Logging"]),
+            ("MeasureTools", ["KSA", "Brutal.Numerics", "KSA.Helper"]),
+            ("Helper", ["KSA"]));
+        ReferencingAssembly.Write(Path.Combine(_paths.GetInstanceModsFolder(instance.InstanceId), "Helper", "KSA.Helper.dll"));
+
+        var result = await CrashAsync(instance, -532462766, CutStaleModCrash);
+
+        Assert.Equal(LoaderCrashCause.ModAssembly, result.CrashCause);
+        Assert.Equal("KSArmory", result.BlamedModId);
+        Assert.Equal(["ModMenu"], result.OtherBlamedModIds);
+        Assert.EndsWith("These mods need parts of KSA that this version does not have, so they will likely fail too: ModMenu.", result.Message);
+    }
+
+    [Fact]
+    public async Task WatchStart_CutErrorThatNamesAMissingAssemblyOfNoGame_BlamesNoMod()
+    {
+        PlaceStarMap();
+        ReferencingAssembly.Write(Path.Combine(StarMapDirectory, "0Harmony.dll"));
+        var instance = InstanceWith("ModMenu", "KSArmory");
+        PlaceCodeMods(instance, ("ModMenu", ["KSA", "0Harmony"]), ("KSArmory", ["KSA", "0Harmony"]));
+        const string missingHarmony = "Could not load file or assembly '0Harmony, Version=2.4.0.0, Culture=neutral, PublicKeyToken=null'.";
+
+        var result = await CrashAsync(instance, -532462766, [.. Enumerable.Repeat("System.IO.FileLoadException: " + missingHarmony, 100)]);
+
+        Assert.Equal(LoaderCrashCause.Unknown, result.CrashCause);
+        Assert.Null(result.BlamedModId);
+        Assert.Empty(result.OtherBlamedModIds);
+    }
+
+    [Fact]
+    public async Task WatchStart_CutErrorThatNamesAMissingAssemblyOfTheLoaderItself_DoesNotSayItWasMadeForAnotherBuild()
+    {
+        PlaceStarMap();
+        ReferencingAssembly.Write(Path.Combine(StarMapDirectory, "StarMap.Core.dll"), "KSA", "StarMap.API");
+        var instance = InstanceWith("KSArmory");
+
+        var result = await CrashAsync(instance, -532462766, ["Could not load file or assembly 'StarMap.API, Version=0.4.8.0, Culture=neutral, PublicKeyToken=null'. The system cannot find the file specified."]);
+
+        Assert.Equal(LoaderCrashCause.Unknown, result.CrashCause);
+        Assert.Null(result.BlamedModId);
+    }
+
+    [Fact]
+    public async Task WatchStart_LoaderSubfolderReferencesTheMissingAssembly_BlamesTheModAndNotTheLoader()
+    {
+        PlaceStarMap();
+        ReferencingAssembly.Write(Path.Combine(StarMapDirectory, "StarMap.Core.dll"), "KSA", "Brutal.Numerics");
+        ReferencingAssembly.Write(Path.Combine(StarMapDirectory, "Content", "OldMod", "OldMod.dll"), "KSA", "Brutal.Core.Numerics");
+        var instance = InstanceWith("KSArmory");
+        PlaceCodeMods(instance, ("KSArmory", ["KSA", "Brutal.Core.Numerics"]));
+
+        var result = await CrashAsync(instance, -532462766, CutStaleModCrash);
+
+        Assert.Equal(LoaderCrashCause.ModAssembly, result.CrashCause);
+        Assert.Equal("KSArmory", result.BlamedModId);
     }
 
     [Fact]

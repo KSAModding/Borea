@@ -69,9 +69,15 @@ public static partial class LoaderCrashReport
     /// assembly. Only when the loader also stopped while it started itself, see
     /// <see cref="StoppedWhileLoaderStarted"/>, was it made for another game build.
     /// </summary>
-    public static bool NamesGameAssembly(IEnumerable<string> output) =>
-        AssemblyNames(output).Any(name => name.Split('.')[0] is var root
-            && (root.Equals("KSA", StringComparison.OrdinalIgnoreCase) || root.Equals("Brutal", StringComparison.OrdinalIgnoreCase)));
+    public static bool NamesGameAssembly(IEnumerable<string> output) => AssemblyNames(output).Any(IsGameAssembly);
+
+    /// <summary>Whether the assembly name is one of the game, which is KSA or a name whose first part is KSA or Brutal.</summary>
+    public static bool IsGameAssembly(string name)
+    {
+        ArgumentNullException.ThrowIfNull(name);
+        var root = name.Split('.')[0];
+        return root.Equals("KSA", StringComparison.OrdinalIgnoreCase) || root.Equals("Brutal", StringComparison.OrdinalIgnoreCase);
+    }
 
     /// <summary>The releases page of a loader on GitHub, or else its forum thread.</summary>
     public static string ReleasesPage(ModMetadata loader)
