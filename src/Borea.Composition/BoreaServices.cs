@@ -116,6 +116,9 @@ public sealed class BoreaServices : IDisposable
 
     public required IGameSaveBackupStore GameSaveBackups { get; init; }
 
+    /// <summary>The vehicles and saves Borea installed. One instance, so one store writes each file.</summary>
+    public required IInstalledContentRecords InstalledContent { get; init; }
+
     public required IGameLogReader GameLog { get; init; }
 
     public required IGameCrashReader GameCrashes { get; init; }
@@ -525,6 +528,7 @@ public sealed class BoreaServices : IDisposable
             GameData = new FileGameDataReader(paths),
             GameSaves = new FileGameSaveStore(paths),
             GameSaveBackups = new FileGameSaveBackupStore(paths),
+            InstalledContent = new FileInstalledContentRecords(paths),
             GameLog = new FileGameLogReader(paths),
             GameCrashes = new FileGameCrashReader(paths),
             Playtime = new FilePlaytimeService(paths),
