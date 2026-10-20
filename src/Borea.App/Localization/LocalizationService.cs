@@ -435,6 +435,10 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string StewardQueueKindPack => Resources.StewardQueueKindPack;
 
+    public string StewardQueueKindVehicle => Resources.StewardQueueKindVehicle;
+
+    public string StewardQueueKindSave => Resources.StewardQueueKindSave;
+
     public string StewardQueueKindRelease => Resources.StewardQueueKindRelease;
 
     public string StewardQueueKindAmendment => Resources.StewardQueueKindAmendment;

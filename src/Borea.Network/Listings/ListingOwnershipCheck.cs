@@ -143,12 +143,7 @@ public sealed partial class ListingOwnershipCheck : IListingOwnershipCheck
     }
 
     /// <summary>Whether <paramref name="path"/> is a listing document that <see cref="CheckPullRequestAsync"/> takes, which needs a lower-case .toml as the checks do.</summary>
-    internal static bool IsListingPath(string? path)
-    {
-        var folder = ListingDraft.ListingsFolder + "/";
-        var name = path is not null && path.StartsWith(folder, StringComparison.Ordinal) ? path[folder.Length..] : null;
-        return name is { Length: > 5 } && name.EndsWith(".toml", StringComparison.Ordinal) && !name.Contains('/', StringComparison.Ordinal);
-    }
+    internal static bool IsListingPath(string? path) => ListingFolders.IsDocumentPath(path);
 
     /// <summary>The listing at <paramref name="reference"/> of content-index, or null when it is not there.</summary>
     /// <exception cref="GitHubApiException">It could not be read, or it does not parse.</exception>

@@ -149,7 +149,7 @@ public sealed partial class GitHubPullRequestReviews : IPullRequestReviews
         }
 
         // The checks refuse a listing name without a lower-case .toml, and the proof reads no such listing, so it cannot be checked.
-        var ownership = kind != StewardQueueKind.Listing ? null
+        var ownership = kind is not (StewardQueueKind.Listing or StewardQueueKind.Vehicle or StewardQueueKind.Save) ? null
             : author is null || !ListingOwnershipCheck.IsListingPath(path) ? ListingOwnership.Unknown
             : await _ownership.CheckPullRequestAsync(author, path, baseBranch, head, cancellationToken).ConfigureAwait(false);
         return new PullRequestDocument(path, kind, file.Text, document, null, ownership);

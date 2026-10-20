@@ -192,6 +192,12 @@
   <data name="StewardQueueKindPack" xml:space="preserve">
     <value>Fleet</value>
   </data>
+  <data name="StewardQueueKindVehicle" xml:space="preserve">
+    <value>Ship</value>
+  </data>
+  <data name="StewardQueueKindSave" xml:space="preserve">
+    <value>Tale</value>
+  </data>
   <data name="StewardReviewLoading" xml:space="preserve">
     <value>Haulin' the pull request aboard from GitHub...</value>
   </data>

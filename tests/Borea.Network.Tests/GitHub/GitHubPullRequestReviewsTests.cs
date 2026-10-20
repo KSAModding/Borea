@@ -25,6 +25,7 @@ public sealed partial class GitHubPullRequestReviewsTests
     private const string IndexMarker = "<!-- content-index:verdict -->";
     private const string ReleasesMarker = "<!-- content-index-releases:verdict -->";
     private const string Listing = "id = \"MyMod\"\nname = \"My Mod\"\n[releases]\ngithub = \"alice/MyMod\"\n";
+    private const string VehicleListing = "id = \"ExampleRover\"\ntype = \"vehicle\"\nname = \"Example Rover\"\n[releases]\ngithub = \"alice/ExampleRover\"\n";
 
     private readonly List<Sent> _sent = [];
     private readonly Dictionary<string, Func<HttpResponseMessage>> _routes = new(StringComparer.Ordinal);
@@ -64,6 +65,25 @@ public sealed partial class GitHubPullRequestReviewsTests
         Assert.DoesNotContain(_sent, sent => sent.Url.Contains("/repos/alice/", StringComparison.Ordinal));
         Assert.All(_sent, sent => Assert.Equal(sent.Url.Contains("/status", StringComparison.Ordinal) ? null : "Bearer " + Token, sent.Authorization));
         Assert.All(_sent, sent => Assert.Equal("GET", sent.Method));
+    }
+
+    [Theory]
+    [InlineData("vehicles/ExampleRover.toml", StewardQueueKind.Vehicle)]
+    [InlineData("saves/ExampleSave.toml", StewardQueueKind.Save)]
+    public async Task ReadAsync_VehicleOrSave_IsADocumentWhoseAuthorIsCheckedAsForAListing(string path, StewardQueueKind kind)
+    {
+        Pull(Index, 9, First, "alice/content-index", labels: [kind.ToString().ToLowerInvariant(), "needs-steward"]);
+        Files(Index, 9, File(path, "added", "@@"));
+        Status(Index, First, ("validate", "success", "validated, a steward decides"));
+        Content(Index, path, First, VehicleListing);
+        var reviews = await SignedInAsync();
+
+        var review = await reviews.ReadAsync(Index, 9);
+
+        var document = Assert.Single(review.Documents);
+        Assert.Equal((path, kind, "Example Rover"), (document.Path, document.Kind, document.Document?.GetString("name")));
+        Assert.Same(_ownership.Result, document.Ownership);
+        Assert.Equal([(new GitHubAccount("alice", 5), path, "main", First)], _ownership.Calls);
     }
 
     [Fact]

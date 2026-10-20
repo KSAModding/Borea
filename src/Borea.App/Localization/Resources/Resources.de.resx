@@ -249,6 +249,12 @@
   <data name="StewardQueueKindPack" xml:space="preserve">
     <value>Modpack</value>
   </data>
+  <data name="StewardQueueKindVehicle" xml:space="preserve">
+    <value>Fahrzeug</value>
+  </data>
+  <data name="StewardQueueKindSave" xml:space="preserve">
+    <value>Spielstand</value>
+  </data>
   <data name="StewardQueueKindRelease" xml:space="preserve">
     <value>Release</value>
   </data>
