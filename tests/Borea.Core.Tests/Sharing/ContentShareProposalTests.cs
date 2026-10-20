@@ -56,7 +56,7 @@ public sealed class ContentShareProposalTests
     [Fact]
     public void Of_IdThatNothingOrOnlyADisabledModDefines_IsNamed()
     {
-        var used = Ids((ContentIdKind.SubstancePhase, "Unobtainium(l)"), (ContentIdKind.Part, "RoverWheel"));
+        var used = Ids((ContentIdKind.SubstancePhase, "Unobtainium(l)"), (ContentIdKind.Part, "RoverWheel"), (ContentIdKind.Part, "UnknownAntenna"));
         var providers = Providers(Mod("Wheels", "RoverWheel") with { Enabled = false });
 
         var share = ContentShareProposal.Of(used, providers, []);
@@ -64,7 +64,7 @@ public sealed class ContentShareProposalTests
         Assert.Empty(share.Dependencies);
         Assert.Collection(
             share.Notes,
-            note => Assert.Equal((ContentShareNoteKind.NotProvided, "Unobtainium(l)"), (note.Kind, note.Ids.Single().Id)),
+            note => Assert.Equal((ContentShareNoteKind.NotProvided, "Unobtainium(l), UnknownAntenna"), (note.Kind, string.Join(", ", note.Ids.Select(id => id.Id)))),
             note => Assert.Equal((ContentShareNoteKind.DisabledProvider, "Wheels"), (note.Kind, note.Mods.Single())));
     }
 

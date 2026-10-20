@@ -5,7 +5,7 @@ namespace Borea.Core.Sharing;
 
 public enum ContentShareNoteKind
 {
-    /// <summary>No mod folder of the instance defines the id.</summary>
+    /// <summary>No mod folder of the instance defines the ids. One note holds all of them.</summary>
     NotProvided,
 
     /// <summary>Only a mod the game does not load defines the id.</summary>
@@ -44,6 +44,7 @@ public static class ContentShareProposal
 
         var needed = new HashSet<ContentProvider>(ReferenceEqualityComparer.Instance);
         var notes = new List<ContentShareNote>();
+        var notProvided = new List<ContentId>();
         var disabled = new Dictionary<ContentProvider, List<ContentId>>(ReferenceEqualityComparer.Instance);
         var invalid = new Dictionary<ContentProvider, List<ContentId>>(ReferenceEqualityComparer.Instance);
         foreach (var id in used)
@@ -58,7 +59,7 @@ public static class ContentShareProposal
             if (loaded.Count == 0)
             {
                 if (definers.Count == 0)
-                    notes.Add(new ContentShareNote(ContentShareNoteKind.NotProvided, [id], []));
+                    notProvided.Add(id);
                 foreach (var mod in definers)
                     Add(disabled, mod, id);
                 continue;
@@ -75,6 +76,8 @@ public static class ContentShareProposal
             }
         }
 
+        if (notProvided.Count > 0)
+            notes.Insert(0, new ContentShareNote(ContentShareNoteKind.NotProvided, notProvided, []));
         notes.AddRange(Grouped(ContentShareNoteKind.DisabledProvider, disabled, providers));
         notes.AddRange(Grouped(ContentShareNoteKind.InvalidFolder, invalid, providers));
         notes.AddRange(providers.UnreadableFiles.Select(path => new ContentShareNote(ContentShareNoteKind.UnreadableFile, [], [], path)));
