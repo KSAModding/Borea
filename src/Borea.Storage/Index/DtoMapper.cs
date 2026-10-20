@@ -32,16 +32,16 @@ public static class DtoMapper
             authors: RequireItems(dto.Authors, "authors")!,
             abstractText: dto.Abstract,
             license: dto.License,
-            links: MapLinks(dto.Links),
-            gameMin: dto.Compatibility.GameMin,
+            links: dto.Links is null ? new Dictionary<string, string>() : MapLinks(dto.Links),
+            gameMin: dto.Compatibility?.GameMin,
             type: MapContentType(dto.Type),
             tags: RequireItems(dto.Tags, "tags"),
             description: dto.Description,
             status: MapModStatus(dto.Status),
             supersededBy: dto.SupersededBy,
             releases: dto.Releases is null ? null : MapReleaseSource(dto.Releases),
-            gameMax: dto.Compatibility.GameMax,
-            os: RequireItems(dto.Compatibility.Os, "compatibility.os"),
+            gameMax: dto.Compatibility?.GameMax,
+            os: RequireItems(dto.Compatibility?.Os, "compatibility.os"),
             loader: dto.Loader is null ? null : MapLoaderRequirement(dto.Loader, ModVersion.ParseAuthored),
             dependencies: MapItems(dto.Dependencies, dependency => MapDependency(dependency, ModVersion.ParseAuthored), "dependencies")!,
             install: dto.Install is null ? null : MapInstallDescriptor(dto.Install),
@@ -52,6 +52,7 @@ public static class DtoMapper
     public static ModVersionMetadata MapRelease(ReleasesEntryDto dto, string? source, ModMetadata? authored, string? changelogText = null)
     {
         ArgumentNullException.ThrowIfNull(dto);
+        var type = MapContentType(dto.Type);
 
         return MapInput(() => new ModVersionMetadata(
             specVersion: dto.SpecVersion,
@@ -64,7 +65,7 @@ public static class DtoMapper
             download: MapDownloadInfo(dto.Download),
             installSizeBytes: dto.InstallSize,
             dependencies: MapItems(dto.Dependencies, dependency => MapDependency(dependency, ModVersion.Parse), "dependencies")!,
-            type: MapContentType(dto.Type),
+            type: type,
             versionScheme: dto.VersionScheme,
             gameMax: dto.GameMax,
             gameMaxRevision: dto.GameMaxRevision,
@@ -75,7 +76,7 @@ public static class DtoMapper
             changelogText: changelogText,
             // Absent "listing" key entirely -> no snapshot to merge, leave null.
             // Present but incomplete -> merge with the live authored data.
-            listing: dto.Listing is { } listingElement ? MapListingSnapshot(listingElement, authored) : null,
+            listing: dto.Listing is { } listingElement ? MapListingSnapshot(listingElement, authored, type) : null,
             yanked: dto.Yanked ?? false,
             yankedReason: dto.YankedReason,
             source: source,
@@ -96,7 +97,7 @@ public static class DtoMapper
             abstractText: dto.Abstract,
             license: dto.License,
             links: MapLinks(dto.Links),
-            gameMin: dto.Compatibility.GameMin,
+            gameMin: dto.Compatibility.GameMin ?? string.Empty,
             version: ModVersion.Parse(dto.Version),
             releasedAt: DateTimeOffset.Parse(dto.ReleasedAt, System.Globalization.CultureInfo.InvariantCulture),
             mods: MapItems(dto.Mods, MapPackEntry, "mods")!,
@@ -195,10 +196,9 @@ public static class DtoMapper
 
     private static IReadOnlyDictionary<string, string> MapLinks(LinksDto dto)
     {
-        var links = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-        {
-            ["forums"] = dto.Forums,
-        };
+        var links = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        if (dto.Forums is not null)
+            links["forums"] = dto.Forums;
 
         if (dto.OtherLinks is not null)
         {
@@ -386,7 +386,7 @@ public static class DtoMapper
     /// release's own "listing" JSON provides with the live authored metadata,
     /// field by field. Only a missing field falls back to the authored value.
     /// </summary>
-    private static ListingSnapshot? MapListingSnapshot(JsonElement element, ModMetadata? authored)
+    private static ListingSnapshot? MapListingSnapshot(JsonElement element, ModMetadata? authored, ContentType type)
     {
         if (element.ValueKind != JsonValueKind.Object)
             throw new FormatException("The release listing field must be an object.");
@@ -401,6 +401,9 @@ public static class DtoMapper
 
         var dto = element.Deserialize<ReleaseListingDto>(IndexJsonOptions.Value)
             ?? throw new JsonException("The release listing deserialized to null.");
+
+        if (dto.Links is { Forums: null } && !type.IsVehicleOrSave())
+            throw new FormatException("The release listing links must contain a forums entry.");
 
         if (authored is null)
         {

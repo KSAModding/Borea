@@ -30,7 +30,7 @@ public sealed class ModMetadataDto
     public string? SupersededBy { get; set; }
     public Dictionary<string, string> Links { get; set; } = new();
     public ReleaseSourceDto? Releases { get; set; }
-    public string GameMin { get; set; } = string.Empty;
+    public string? GameMin { get; set; }
     public string? GameMax { get; set; }
 
     /// <summary>Null means no known platform restriction.</summary>
