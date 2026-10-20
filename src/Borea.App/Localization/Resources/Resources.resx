@@ -4356,6 +4356,9 @@
   <data name="LaunchStoppedLoadingModsFormat" xml:space="preserve">
     <value>{0} stopped while it loaded mods (exit code {1}). A mod of this instance is the likely cause. The details show what it wrote.</value>
   </data>
+  <data name="LaunchLoaderTooOldFormat" xml:space="preserve">
+    <value>{0} was made for another KSA build than the installed {1} and cannot load the game. Wait for a {0} update, then install it under Settings &gt; Game &gt; Mod loader. {0} releases: {2}</value>
+  </data>
   <data name="LaunchExitCodeFormat" xml:space="preserve">
     <value>Exit code {0}</value>
   </data>

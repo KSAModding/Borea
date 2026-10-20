@@ -47,7 +47,7 @@ public sealed class LoaderLauncherTests : IDisposable
         return executable;
     }
 
-    internal static ModMetadata LoaderListing(string modId = "StarMap", LoaderProvides? provides = null, bool standalone = true) => new(
+    internal static ModMetadata LoaderListing(string modId = "StarMap", LoaderProvides? provides = null, bool standalone = true, ReleaseSource? releases = null) => new(
         specVersion: 1,
         modId: modId,
         source: "TestSource",
@@ -59,6 +59,7 @@ public sealed class LoaderLauncherTests : IDisposable
         gameMin: "2026.8.3.5117",
         type: ContentType.ModLoader,
         install: standalone ? new InstallDescriptor(target: InstallAnchor.Standalone) : null,
+        releases: releases,
         provides: provides);
 
     internal static LoaderProvides StarMapProvides(string launch = "StarMap.exe", InstanceHandover? instance = null, Dictionary<OsPlatform, LoaderPlatformLaunch>? platforms = null) => new(
@@ -1086,7 +1087,7 @@ public sealed class LoaderLauncherTests : IDisposable
         var instance = InstanceWith("MeasureTools");
         var started = _launcher.Launch(instance, LoaderListing(provides: StarMapProvides()));
         var process = Assert.Single(_starter.Processes);
-        process.Output.Add("Could not load file or assembly 'Brutal.Core.Common, Version=1.0.0.0'.");
+        process.Output.Add("Could not load file or assembly '0Harmony, Version=2.3.0.0'.");
         process.HasExited = true;
         process.ExitCode = 3;
 
@@ -1095,6 +1096,37 @@ public sealed class LoaderLauncherTests : IDisposable
         Assert.Equal(LaunchOutcome.ExitedEarly, result.Outcome);
         Assert.Null(result.BlamedModId);
         Assert.Contains("exit code 3", result.Message);
+    }
+
+    private static readonly string[] StarMap5638Crash =
+    [
+        "Unhandled exception. System.Reflection.ReflectionTypeLoadException: Unable to load one or more of the requested types.",
+        "Could not load file or assembly 'Brutal.Core.Numerics, Version=2026.9.0.0, Culture=neutral, PublicKeyToken=null'. The system cannot find the file specified.",
+        "   at System.Reflection.RuntimeModule.GetDefinedTypes()",
+        "   at StarMap.GameSurveyer.TryLoadCoreAndGame()",
+        "   at StarMap.Program.Main(String[] args)",
+    ];
+
+    [Fact]
+    public async Task WatchStart_LoaderCannotLoadAGameAssembly_SaysItWasMadeForAnotherBuild()
+    {
+        PlaceStarMap();
+        var game = Directory.CreateDirectory(_paths.GetGameDirectoryPath()!).FullName;
+        File.Copy(Path.Combine(AppContext.BaseDirectory, "GameVersionFixture.dll"), Path.Combine(game, "KSA.dll"));
+        var instance = InstanceWith("MeasureTools");
+        var releases = new ReleaseSource([new ReleaseHost("github", "StarMapLoader/StarMap")]);
+        var started = _launcher.Launch(instance, LoaderListing(provides: StarMapProvides(), releases: releases));
+        var process = Assert.Single(_starter.Processes);
+        process.Output.AddRange(StarMap5638Crash);
+        process.HasExited = true;
+        process.ExitCode = -532462766;
+
+        var result = await _launcher.WatchStartAsync(instance, started);
+
+        Assert.Equal(LoaderCrashCause.GameAssembly, result.CrashCause);
+        Assert.Null(result.BlamedModId);
+        Assert.Contains("2026.8.3.5117", result.Message);
+        Assert.Contains("https://github.com/StarMapLoader/StarMap/releases", result.Message);
     }
 
     private static readonly string[] ClrCrash =
@@ -1172,6 +1204,17 @@ public sealed class LoaderLauncherTests : IDisposable
         Assert.Equal("KSArmory", result.BlamedModId);
         Assert.Equal(LoaderCrashCause.ModLoading, result.CrashCause);
         Assert.Contains("StarMap stopped while it loaded KSArmory 0.8.44, so that mod is the likely cause.", result.Message);
+    }
+
+    [Fact]
+    public async Task WatchStart_GameAssemblyNamedWhileLoadingMods_KeepsTheModLoadingCause()
+    {
+        PlaceStarMap();
+        var instance = InstanceWith("KSArmory");
+
+        var result = await CrashAsync(instance, -532462766, ["Could not load file or assembly 'Brutal.Core.Numerics, Version=2026.9.0.0'.", .. ClrCrash]);
+
+        Assert.Equal(LoaderCrashCause.ModLoading, result.CrashCause);
     }
 
     [Fact]

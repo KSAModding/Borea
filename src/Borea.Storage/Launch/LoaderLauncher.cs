@@ -29,7 +29,7 @@ public sealed class LoaderLauncher : ILauncher, IDisposable
     private readonly RunningLaunches _launches;
     private readonly object _gate;
     private readonly Dictionary<Guid, IStartedProcess> _running;
-    private readonly Dictionary<Guid, (DateTime? GameLogAtLaunch, DateTime? CrashLogAtLaunch, string LoaderName)> _starts;
+    private readonly Dictionary<Guid, (DateTime? GameLogAtLaunch, DateTime? CrashLogAtLaunch, string LoaderName, string LoaderReleases)> _starts;
     private readonly Dictionary<Guid, (IStartedProcess Process, DateTime? CrashLogAtLaunch)> _ended;
     private readonly Dictionary<Guid, WineInstall> _wrappers;
     private readonly bool _ownsLaunches;
@@ -279,7 +279,7 @@ public sealed class LoaderLauncher : ILauncher, IDisposable
 
             var gameLog = _pathProvider.GetInstanceGameLogPath(instance.InstanceId);
             _running[instance.InstanceId] = process;
-            _starts[instance.InstanceId] = (LastWrite(gameLog), LastCrashLogWrite(gameLog), loader.Name);
+            _starts[instance.InstanceId] = (LastWrite(gameLog), LastCrashLogWrite(gameLog), loader.Name, LoaderCrashReport.ReleasesPage(loader));
             _ended.Remove(instance.InstanceId);
             if (wrapped is not null)
                 _wrappers[instance.InstanceId] = wrapped;
@@ -299,7 +299,7 @@ public sealed class LoaderLauncher : ILauncher, IDisposable
             return started;
 
         IStartedProcess? process;
-        (DateTime? GameLogAtLaunch, DateTime? CrashLogAtLaunch, string LoaderName) start;
+        (DateTime? GameLogAtLaunch, DateTime? CrashLogAtLaunch, string LoaderName, string LoaderReleases) start;
         WineInstall? wrapped;
         lock (_gate)
         {
@@ -393,9 +393,15 @@ public sealed class LoaderLauncher : ILauncher, IDisposable
             var likely = LoaderCrashReport.LikelyLoadingMod(output, loadOrder);
             blamed = likely is null ? null : instance.Mods.FirstOrDefault(mod => ModIds.Equals(mod.ModId, likely));
         }
+        else if (blamed is null && LoaderCrashReport.NamesGameAssembly(output))
+        {
+            cause = LoaderCrashCause.GameAssembly;
+        }
 
+        var build = cause == LoaderCrashCause.GameAssembly ? InstalledGameVersionProvider.Read(_pathProvider.GetGameDirectoryPath())?.RawVersion : null;
         var message = (blamed, cause) switch
         {
+            (null, LoaderCrashCause.GameAssembly) when build is not null => $"{start.LoaderName} was made for another KSA build than the installed {build} and cannot load the game. Wait for a {start.LoaderName} update and install it when it is out. {start.LoaderName} releases: {start.LoaderReleases}",
             (null, _) => $"{start.LoaderName} stopped right after starting (exit code {exitCode}). The details show what it wrote.",
             (_, LoaderCrashCause.ModLoading) => $"{start.LoaderName} stopped while it loaded {blamed.Metadata.Listing?.Name ?? blamed.ModId} {blamed.Version}, so that mod is the likely cause. Disable it and try again, or look for an update.",
             _ => $"{blamed.Metadata.Listing?.Name ?? blamed.ModId} {blamed.Version} stopped {start.LoaderName} from starting. It may not work with this version of KSA. Disable it and try again, or look for an update.",

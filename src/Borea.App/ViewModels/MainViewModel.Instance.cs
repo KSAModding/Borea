@@ -781,9 +781,11 @@ public partial class MainViewModel
         }
         else if (blamed is null)
         {
-            LaunchMessage = loadingMods
-                ? Localization.FormatLaunchStoppedLoadingMods(loaderName, result.ExitCode ?? 0)
-                : Localization.FormatLaunchExitedEarly(loaderName, result.ExitCode ?? 0);
+            LaunchMessage = result.CrashCause == LoaderCrashCause.GameAssembly && InstalledVersionText is { } build && loader is not null
+                ? Localization.FormatLaunchLoaderTooOld(loaderName, build, LoaderCrashReport.ReleasesPage(loader))
+                : loadingMods
+                    ? Localization.FormatLaunchStoppedLoadingMods(loaderName, result.ExitCode ?? 0)
+                    : Localization.FormatLaunchExitedEarly(loaderName, result.ExitCode ?? 0);
         }
         else
         {

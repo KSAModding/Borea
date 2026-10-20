@@ -2685,6 +2685,9 @@
   <data name="LaunchExitedEarlyFormat" xml:space="preserve">
     <value>{0} keeled over right after takin' off (exit code {1}). The d'tails show what it scribbled down.</value>
   </data>
+  <data name="LaunchLoaderTooOldFormat" xml:space="preserve">
+    <value>{0} were rigged fer another KSA build than yer {1} an' can't haul the game aboard. Wait fer a new tide o' {0}, then haul it aboard under Rigging &gt; Game &gt; Loader o' barrels o' fun. {0} releases: {2}</value>
+  </data>
   <data name="LaunchStoppedTitleFormat" xml:space="preserve">
     <value>{0} keeled over</value>
   </data>

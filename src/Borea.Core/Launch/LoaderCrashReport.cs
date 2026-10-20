@@ -55,6 +55,22 @@ public static partial class LoaderCrashReport
     }
 
     /// <summary>
+    /// Whether the output names an assembly of the game, which is KSA or a Brutal
+    /// assembly. A loader that cannot load one was made for another game build.
+    /// </summary>
+    public static bool NamesGameAssembly(IEnumerable<string> output) =>
+        AssemblyNames(output).Any(name => name.Split('.')[0] is var root
+            && (root.Equals("KSA", StringComparison.OrdinalIgnoreCase) || root.Equals("Brutal", StringComparison.OrdinalIgnoreCase)));
+
+    /// <summary>The releases page of a loader on GitHub, or else its forum thread.</summary>
+    public static string ReleasesPage(ModMetadata loader)
+    {
+        ArgumentNullException.ThrowIfNull(loader);
+        var github = loader.Releases?.Hosts.FirstOrDefault(host => string.Equals(host.Host, "github", StringComparison.OrdinalIgnoreCase));
+        return github is null ? loader.ForumUrl : $"https://github.com/{github.Reference}/releases";
+    }
+
+    /// <summary>
     /// Whether a stack frame in the output lies in StarMap's mod loading, which
     /// is ModLoader.PrepareMods, RuntimeMod.TryCreateMod or RuntimeMod.InitializeMod,
     /// after the game prepared the manifest.
