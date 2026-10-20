@@ -123,6 +123,9 @@ public sealed class BoreaServices : IDisposable
     /// <summary>The ids a vehicle or a save names, for sharing it.</summary>
     public required IContentIdReader ContentIds { get; init; }
 
+    /// <summary>Which mod of an instance defines which ids, for sharing a vehicle or a save.</summary>
+    public required IContentProviderMap ContentProviders { get; init; }
+
     public required IGameLogReader GameLog { get; init; }
 
     public required IGameCrashReader GameCrashes { get; init; }
@@ -535,6 +538,7 @@ public sealed class BoreaServices : IDisposable
             GameSaveBackups = new FileGameSaveBackupStore(paths),
             InstalledContent = installedContent,
             ContentIds = new XmlContentIdReader(),
+            ContentProviders = new FileContentProviderMap(paths),
             GameLog = new FileGameLogReader(paths),
             GameCrashes = new FileGameCrashReader(paths),
             Playtime = new FilePlaytimeService(paths),
