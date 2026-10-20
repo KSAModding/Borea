@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Borea.Core.Instances;
 using Borea.Core.Launch;
 using Borea.Core.ModLoaders;
 using Borea.Core.Mods;
@@ -13,6 +14,7 @@ namespace Borea.App.ViewModels;
 /// <summary>
 /// The modal that installs the mod loader a launch needs, or updates the
 /// installed one when it does not support the game, then starts the launch again.
+/// When no release fits, it only warns before the launch.
 /// </summary>
 public partial class MainViewModel
 {
@@ -26,20 +28,29 @@ public partial class MainViewModel
     [NotifyPropertyChangedFor(nameof(IsLoaderPromptOpen), nameof(LoaderPromptText))]
     private ModMetadata? _promptedLoader;
 
-    /// <summary>The update the modal offers in place of an install. Null when the loader is not installed.</summary>
+    /// <summary>
+    /// The installed loader the modal warns about. With an offer the modal updates it,
+    /// without one it only warns. Null when the loader is not installed.
+    /// </summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsLoaderUpdatePrompt), nameof(LoaderPromptText), nameof(LoaderPromptActionText))]
+    [NotifyPropertyChangedFor(nameof(IsLoaderUpdatePrompt), nameof(LoaderPromptText), nameof(LoaderPromptActionText), nameof(ShowLoaderPromptAction))]
     private LoaderUpdate? _promptedLoaderUpdate;
 
     public bool IsLoaderPromptOpen => PromptedLoader is not null;
 
     public bool IsLoaderUpdatePrompt => PromptedLoaderUpdate is not null;
 
+    /// <summary>False when the game is not set up, or when the modal only warns, because no release fits the game and the mods.</summary>
+    public bool ShowLoaderPromptAction => !NeedsGameSetup && PromptedLoaderUpdate is not { Offer: null };
+
     public string? LoaderPromptText => PromptedLoader is not { } loader
         ? null
-        : PromptedLoaderUpdate is { InstalledVersion: { } installed, Offer: { } offer }
-            ? Localization.FormatLaunchLoaderUpdate(loader.Name, installed.ToString(), InstalledVersionText ?? string.Empty, offer.Version.ToString())
-            : NeedsGameSetup ? Localization.FormatLaunchSetUpGameFirst(loader.Name) : Localization.FormatLaunchInstallLoader(loader.Name);
+        : PromptedLoaderUpdate switch
+        {
+            { InstalledVersion: { } installed, Offer: { } offer } => Localization.FormatLaunchLoaderUpdate(loader.Name, installed.ToString(), InstalledVersionText ?? string.Empty, offer.Version.ToString()),
+            { InstalledVersion: { } installed } => Localization.FormatLaunchLoaderIncompatible(loader.Name, installed.ToString(), InstalledVersionText ?? string.Empty),
+            _ => NeedsGameSetup ? Localization.FormatLaunchSetUpGameFirst(loader.Name) : Localization.FormatLaunchInstallLoader(loader.Name),
+        };
 
     public string LoaderPromptActionText => IsLoaderUpdatePrompt ? Localization.LaunchUpdateAndPlay : Localization.SetupInstallLoader;
 
@@ -65,13 +76,20 @@ public partial class MainViewModel
     }
 
     /// <summary>
-    /// The update a launch through <paramref name="loader"/> asks about first: one
-    /// whose installed release does not support the game while a newer one does.
+    /// What a launch of <paramref name="instance"/> through <paramref name="loader"/> asks
+    /// about first: an installed release that does not support the game. The offer stays
+    /// only when the mods of the instance accept it, else the modal only warns.
     /// </summary>
-    private LoaderUpdate? LoaderUpdateBeforeLaunch(ModMetadata loader) =>
-        LoaderUpdateFor(loader.ModId) is { IsUrgent: true } update && !string.Equals(PlayAnywayKey(update), _playedAnywayLoaderUpdate, StringComparison.Ordinal)
-            ? update
-            : null;
+    private LoaderUpdate? LoaderUpdateBeforeLaunch(Instance instance, ModMetadata loader)
+    {
+        if (LoaderUpdateFor(loader.ModId) is not { } update || !IsBroken(update))
+            return null;
+
+        var prompt = update.Offer is { } offer && !AcceptsLoader(instance, loader.ModId, offer.Version)
+            ? update with { Offer = null }
+            : update;
+        return string.Equals(PlayAnywayKey(prompt), _playedAnywayLoaderUpdate, StringComparison.Ordinal) ? null : prompt;
+    }
 
     private void OpenLoaderPrompt(Guid instanceId, ModMetadata loader, LoaderUpdate? update = null)
     {
@@ -89,9 +107,9 @@ public partial class MainViewModel
         if (PromptedLoader is not { } loader || _loaderPromptInstanceId is not { } instanceId || IsSetupBusy)
             return;
 
-        if (PromptedLoaderUpdate is { Offer: { } offer })
+        if (PromptedLoaderUpdate is { } update)
         {
-            if (!await UpdateLoaderToAsync(loader.ModId, offer))
+            if (update.Offer is not { } offer || !await UpdateLoaderToAsync(loader.ModId, offer))
                 return;
         }
         else

@@ -107,6 +107,7 @@ public sealed partial class InstanceLoaderRow
     private readonly Func<string, string> _nameOf;
     private readonly ModVersion? _version;
     private readonly ModVersionMetadata? _offer;
+    private readonly LoaderUpdate? _update;
 
     /// <param name="update">The last loader update check's answer for this loader, or null before it answered.</param>
     /// <param name="nameOf">The display name of a mod id, as its row on the page shows it.</param>
@@ -116,6 +117,7 @@ public sealed partial class InstanceLoaderRow
         _loader = loader;
         _listing = listing;
         _nameOf = nameOf;
+        _update = update;
         _version = installation is null ? null : installation.Version ?? update?.InstalledVersion;
         Name = listing?.Name ?? loader.LoaderId;
         Icon = listing?.Icon;
@@ -170,7 +172,12 @@ public sealed partial class InstanceLoaderRow
     };
 
     /// <summary>The sentence behind a short chip. Null where the chip says it all.</summary>
-    public string? StatusToolTip => IsConflict ? _owner.Localization.InstanceLoaderConflict : null;
+    public string? StatusToolTip => State switch
+    {
+        InstanceLoaderState.Conflict => _owner.Localization.InstanceLoaderConflict,
+        InstanceLoaderState.GameIncompatible when _update is not null => _owner.LoaderIncompatibleText(Name, _update),
+        _ => null,
+    };
 
     private string Bounds(ModVersion min, ModVersion? max) => max is { } upper
         ? _owner.Localization.FormatInstanceLoaderBoundsRange(min.ToString(), upper.ToString())
@@ -190,8 +197,12 @@ public sealed partial class InstanceLoaderRow
 
     public bool CanUpdate => _offer is not null;
 
-    /// <summary>A loader that is missing, in the wrong version, or not for the game is fixed in the Game settings when no update shows in place.</summary>
-    public bool CanFix => !CanUpdate && (IsWarning || State == InstanceLoaderState.GameIncompatible);
+    /// <summary>
+    /// A loader that is missing or in the wrong version is fixed in the Game settings.
+    /// A release that does not support the game has no fix there: it updates in place
+    /// when the mods accept the offer, and otherwise the tooltip names the next step.
+    /// </summary>
+    public bool CanFix => !CanUpdate && IsWarning;
 
     [RelayCommand]
     private async Task UpdateAsync()

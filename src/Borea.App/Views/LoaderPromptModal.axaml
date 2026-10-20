@@ -36,7 +36,7 @@
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
                         <Button Classes="text tall" Content="{Binding Localization.LibraryCancel}" Command="{Binding CancelLoaderPromptCommand}" IsEnabled="{Binding !IsSetupBusy}" VerticalAlignment="Center" />
                         <Button Classes="text tall" Content="{Binding Localization.LaunchPlayAnyway}" Command="{Binding PlayAnywayCommand}" IsEnabled="{Binding !IsSetupBusy}" IsVisible="{Binding IsLoaderUpdatePrompt}" VerticalAlignment="Center" />
-                        <Button Classes="cta" Command="{Binding InstallPromptedLoaderCommand}" IsVisible="{Binding !NeedsGameSetup}">
+                        <Button Classes="cta" Command="{Binding InstallPromptedLoaderCommand}" IsVisible="{Binding ShowLoaderPromptAction}">
                             <TextBlock Classes="action-lg" Text="{Binding LoaderPromptActionText}" VerticalAlignment="Center" />
                         </Button>
                         <Button Classes="cta" Command="{Binding SetUpGameForLoaderCommand}" IsVisible="{Binding NeedsGameSetup}">

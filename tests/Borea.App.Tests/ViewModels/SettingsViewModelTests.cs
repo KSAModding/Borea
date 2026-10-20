@@ -130,9 +130,8 @@ public sealed class SettingsViewModelTests
         await viewModel.ShowGameSettingsCommand.ExecuteAsync(null);
 
         Assert.Equal(harness.Localization.FormatSetupLoaderInstalledVersion(recorded), viewModel.InstalledLoaderText);
+        Assert.Equal(harness.Localization.FormatSetupUpdateLoader("0.4.6"), viewModel.LoaderInstallActionText);
         Assert.Equal(canUpdate, viewModel.CanInstallLoader);
-        if (canUpdate)
-            Assert.Equal(harness.Localization.FormatSetupUpdateLoader("0.4.6"), viewModel.LoaderInstallActionText);
     }
 
     [Fact]
@@ -146,7 +145,8 @@ public sealed class SettingsViewModelTests
         await viewModel.ShowGameSettingsCommand.ExecuteAsync(null);
 
         Assert.Equal(harness.Localization.FormatSetupLoaderInstalledVersion("0.5.0-dev.1"), viewModel.InstalledLoaderText);
-        Assert.Equal(harness.Localization.SetupInstallLoader, viewModel.LoaderInstallActionText);
+        // the disabled button names the installed release, so it reads as up to date
+        Assert.Equal(harness.Localization.FormatSetupUpdateLoader("0.5.0-dev.1"), viewModel.LoaderInstallActionText);
         Assert.False(viewModel.CanInstallLoader);
     }
 

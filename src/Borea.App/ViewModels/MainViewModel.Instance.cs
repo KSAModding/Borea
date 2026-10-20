@@ -685,9 +685,11 @@ public partial class MainViewModel
             }
 
             var loader = choice.Loader;
-            if (LoaderUpdateBeforeLaunch(loader) is { } update)
+            if (LoaderUpdateBeforeLaunch(instance, loader) is { } update)
             {
-                services.Log.Write($"Launch of instance {instance.InstanceId} waits, {loader.ModId} {update.InstalledVersion} does not support the game and {update.Offer!.Version} does.");
+                services.Log.Write(update.Offer is { } offer
+                    ? $"Launch of instance {instance.InstanceId} waits, {loader.ModId} {update.InstalledVersion} does not support the game and {offer.Version} does."
+                    : $"Launch of instance {instance.InstanceId} waits, {loader.ModId} {update.InstalledVersion} does not support the game and no release fits the game and the mods.");
                 OpenLoaderPrompt(instanceId, loader, update);
                 return;
             }

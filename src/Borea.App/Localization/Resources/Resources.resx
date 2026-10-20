@@ -1293,6 +1293,12 @@
   <data name="LoaderUpdateUrgentFormat" xml:space="preserve">
     <value>{0} {1} does not support KSA {2}. {0} {3} does.</value>
   </data>
+  <data name="LoaderUpdateNoneFormat" xml:space="preserve">
+    <value>{0} {1} does not support KSA {2}, and no newer release of {0} does yet.</value>
+  </data>
+  <data name="LoaderNeedsNewerGameFormat" xml:space="preserve">
+    <value>{0} {1} needs a newer KSA build than {2}. Update KSA before you play.</value>
+  </data>
   <data name="LoaderUpdateAvailableFormat" xml:space="preserve">
     <value>{0} {1} is available.</value>
   </data>
@@ -4331,6 +4337,9 @@
   </data>
   <data name="LaunchLoaderUpdateFormat" xml:space="preserve">
     <value>{0} {1} does not support KSA {2}. Update it to {3} before you play?</value>
+  </data>
+  <data name="LaunchLoaderIncompatibleFormat" xml:space="preserve">
+    <value>{0} {1} does not support KSA {2}, so the game may not start. Play anyway?</value>
   </data>
   <data name="LaunchUpdateAndPlay" xml:space="preserve">
     <value>Update and play</value>

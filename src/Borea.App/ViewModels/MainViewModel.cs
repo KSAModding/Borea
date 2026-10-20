@@ -396,8 +396,9 @@ public partial class MainViewModel : ViewModelBase
         // the content page shows the same rows, so its chip follows too
         await RefreshCompatibilityAsync(installed?.Version);
 
-        // a loader release can end before the new build, so it is rated again
+        // a loader release can end before the new build, so it is rated again, on Home and in the settings
         StartLoaderUpdateCheck();
+        await RefreshLoaderStateAsync();
     }
 
     /// <summary>Refreshes the content index once per start. Later refreshes go through the index check.</summary>

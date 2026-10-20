@@ -6,6 +6,8 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using Borea.Composition;
 using Borea.Core.Game;
+using Borea.Core.Instances;
+using Borea.Core.Launch;
 using Borea.Core.ModLoaders;
 using Borea.Core.Mods;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -30,26 +32,65 @@ public partial class MainViewModel
 
     private string? _dismissedLoaderUpdate;
 
-    /// <summary>The update the Home banner shows: the first urgent one by loader id, else the first offer. Null shows no banner.</summary>
+    /// <summary>
+    /// The update the Home banner shows: the first loader by id whose installed release
+    /// does not support the game, else the first offer that every instance accepts.
+    /// Null shows no banner.
+    /// </summary>
     [ObservableProperty]
     private LoaderUpdate? _loaderUpdate;
 
-    public bool ShowUrgentLoaderUpdateBanner => LoaderUpdate is { IsUrgent: true };
+    /// <summary>The banners hide while a setup task runs, because the task already shows its progress.</summary>
+    public bool ShowUrgentLoaderUpdateBanner => !IsSetupBusy && IsBroken(LoaderUpdate);
 
-    public bool ShowLoaderUpdateBanner => LoaderUpdate is { IsUrgent: false, InstalledVersion: not null, Offer: not null } update
+    public bool ShowLoaderUpdateBanner => !IsSetupBusy
+        && !IsBroken(LoaderUpdate)
+        && LoaderUpdate is { InstalledVersion: not null, Offer: not null } update
         && !string.Equals(DismissKey(update), _dismissedLoaderUpdate ?? _appPreferences.DismissedLoaderUpdate, StringComparison.Ordinal);
 
-    public string? LoaderUpdateBannerText => LoaderUpdate is not { InstalledVersion: { } installed, Offer: { } offer } update
-        ? null
-        : update.IsUrgent
-            ? Localization.FormatLoaderUpdateUrgent(_loaderUpdateName, installed.ToString(), InstalledVersionText ?? string.Empty, offer.Version.ToString())
-            : Localization.FormatLoaderUpdateAvailable(_loaderUpdateName, offer.Version.ToString());
+    public string? LoaderUpdateBannerText => LoaderUpdate switch
+    {
+        { } update when IsBroken(update) => LoaderIncompatibleText(_loaderUpdateName, update),
+        { InstalledVersion: not null, Offer: { } offer } => Localization.FormatLoaderUpdateAvailable(_loaderUpdateName, offer.Version.ToString()),
+        _ => null,
+    };
 
     public string? LoaderUpdateActionText => LoaderUpdate?.Offer is { } release
         ? Localization.FormatLoaderUpdateAction(_loaderUpdateName, release.Version.ToString())
         : null;
 
     partial void OnLoaderUpdateChanged(LoaderUpdate? value) => RefreshLoaderUpdateText();
+
+    partial void OnIsSetupBusyChanged(bool value) => RefreshLoaderUpdateText();
+
+    /// <summary>True when the index says the installed release does not support the game, with or without a release to update to.</summary>
+    private static bool IsBroken(LoaderUpdate? update) =>
+        update is { InstalledCompatibility: GameCompatibility.Incompatible, InstalledVersion: not null };
+
+    /// <summary>
+    /// Why the installed release does not fit the game, and the next step: the
+    /// release to update to, a KSA update, or no step yet.
+    /// </summary>
+    internal string LoaderIncompatibleText(string loaderName, LoaderUpdate update)
+    {
+        var installed = update.InstalledVersion?.ToString() ?? string.Empty;
+        var game = InstalledVersionText ?? string.Empty;
+        return update.Offer is { } offer
+            ? Localization.FormatLoaderUpdateUrgent(loaderName, installed, game, offer.Version.ToString())
+            : update.InstalledNeedsNewerGame
+                ? Localization.FormatLoaderNeedsNewerGame(loaderName, installed, game)
+                : Localization.FormatLoaderUpdateNone(loaderName, installed, game);
+    }
+
+    /// <summary>True when the mods of <paramref name="instance"/> accept <paramref name="version"/> of the loader, or do not ask for that loader.</summary>
+    private static bool AcceptsLoader(Instance instance, string loaderId, ModVersion version) =>
+        LoaderNeed.For(instance).Loaders.FirstOrDefault(loader => ModIds.Equals(loader.LoaderId, loaderId)) is not { } needed
+        || needed.HasConflict
+        || needed.Accepts(version);
+
+    /// <summary>True while the game or an instance runs, when the loader folder is in use and a replace would fail halfway.</summary>
+    private bool IsGameRunning(BoreaServices services) =>
+        services.IsGameProcessRunning() || Instances.Any(instance => services.Launcher.IsRunning(instance.InstanceId));
 
     private void RefreshLoaderUpdateText()
     {
@@ -91,8 +132,15 @@ public partial class MainViewModel
             foreach (var (loaderId, installation) in services.Settings.LoaderInstallations.OrderBy(entry => entry.Key, ModIds.Comparer))
                 found[loaderId] = await FindLoaderUpdateAsync(services, loaderId, installation);
 
-            shown = found.Values.FirstOrDefault(update => update.IsUrgent)
-                ?? found.Values.FirstOrDefault(update => update is { InstalledVersion: not null, Offer: not null });
+            shown = found.Values.FirstOrDefault(IsBroken);
+            if (shown is null && found.Values.Any(update => update is { InstalledVersion: not null, Offer: not null }))
+            {
+                // one loader starts every instance, so a plain update shows only when no instance rejects it
+                var instances = await services.Instances.GetAllAsync();
+                shown = found.Values.FirstOrDefault(update => update is { InstalledVersion: not null, Offer: { } offer }
+                    && instances.All(instance => AcceptsLoader(instance, update.LoaderId, offer.Version)));
+            }
+
             if (shown is not null)
                 name = (await services.Mods.GetListingAsync(shown.LoaderId))?.Name ?? shown.LoaderId;
         }
@@ -166,11 +214,13 @@ public partial class MainViewModel
         if (_services is not { } services || IsSetupBusy)
             return false;
 
-        // the loader folder is in use while the game runs, so the replace would fail halfway
-        if (services.IsGameProcessRunning() || Instances.Any(instance => services.Launcher.IsRunning(instance.InstanceId)))
+        if (IsGameRunning(services))
         {
             SetupError = Localization.LoaderUpdateGameRunning;
-            ShowErrorToast(() => Localization.LoaderUpdateGameRunning);
+
+            // the open prompt shows the error itself
+            if (!IsLoaderPromptOpen)
+                ShowErrorToast(() => Localization.LoaderUpdateGameRunning);
             return false;
         }
 
@@ -179,9 +229,13 @@ public partial class MainViewModel
             && _services?.Settings.LoaderInstallations.FirstOrDefault(entry => ModIds.Equals(entry.Key, loaderId)).Value?.Version == release.Version;
     }
 
-    /// <summary>Drops the answer for a loader that was just installed, until the next check rates the new release.</summary>
+    /// <summary>
+    /// Drops the answer for a loader that was just installed, until the next check
+    /// rates the new release. A check that is still running rated the old one, so its answer is dropped too.
+    /// </summary>
     private void ForgetLoaderUpdate(string loaderId)
     {
+        ++_loaderUpdateCheckGeneration;
         _loaderUpdates = _loaderUpdates.Where(entry => !ModIds.Equals(entry.Key, loaderId)).ToDictionary(entry => entry.Key, entry => entry.Value, ModIds.Comparer);
         if (LoaderUpdate is { } shown && ModIds.Equals(shown.LoaderId, loaderId))
             LoaderUpdate = null;

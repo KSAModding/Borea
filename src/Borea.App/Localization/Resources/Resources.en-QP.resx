@@ -726,6 +726,12 @@
   <data name="LoaderUpdateUrgentFormat" xml:space="preserve">
     <value>{0} {1} won't sail with KSA {2}. {0} {3} will.</value>
   </data>
+  <data name="LoaderUpdateNoneFormat" xml:space="preserve">
+    <value>{0} {1} won't sail with KSA {2}, and no newer {0} will yet.</value>
+  </data>
+  <data name="LoaderNeedsNewerGameFormat" xml:space="preserve">
+    <value>{0} {1} needs a newer KSA build than {2}. Refit KSA afore ye sail.</value>
+  </data>
   <data name="LoaderUpdateAvailableFormat" xml:space="preserve">
     <value>{0} {1} be ready fer haulin'.</value>
   </data>
@@ -2666,6 +2672,9 @@
   </data>
   <data name="LaunchLoaderUpdateFormat" xml:space="preserve">
     <value>{0} {1} won't sail with KSA {2}. Refit it to {3} afore ye play?</value>
+  </data>
+  <data name="LaunchLoaderIncompatibleFormat" xml:space="preserve">
+    <value>{0} {1} won't sail with KSA {2}, so the game may not leave port. Sail anyway?</value>
   </data>
   <data name="LaunchUpdateAndPlay" xml:space="preserve">
     <value>Refit and sail</value>

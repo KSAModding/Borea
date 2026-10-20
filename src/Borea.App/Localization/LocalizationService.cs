@@ -1217,6 +1217,12 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string FormatLoaderUpdateUrgent(string loader, string installed, string game, string offer)
         => string.Format(CultureInfo.CurrentCulture, Resources.LoaderUpdateUrgentFormat, loader, installed, game, offer);
 
+    public string FormatLoaderUpdateNone(string loader, string installed, string game)
+        => string.Format(CultureInfo.CurrentCulture, Resources.LoaderUpdateNoneFormat, loader, installed, game);
+
+    public string FormatLoaderNeedsNewerGame(string loader, string installed, string game)
+        => string.Format(CultureInfo.CurrentCulture, Resources.LoaderNeedsNewerGameFormat, loader, installed, game);
+
     public string FormatLoaderUpdateAvailable(string loader, string offer)
         => string.Format(CultureInfo.CurrentCulture, Resources.LoaderUpdateAvailableFormat, loader, offer);
 
@@ -2681,6 +2687,9 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string FormatLaunchLoaderUpdate(string loader, string installed, string game, string offer)
         => string.Format(CultureInfo.CurrentCulture, Resources.LaunchLoaderUpdateFormat, loader, installed, game, offer);
+
+    public string FormatLaunchLoaderIncompatible(string loader, string installed, string game)
+        => string.Format(CultureInfo.CurrentCulture, Resources.LaunchLoaderIncompatibleFormat, loader, installed, game);
 
     public string LaunchUpdateAndPlay => Resources.LaunchUpdateAndPlay;
 
