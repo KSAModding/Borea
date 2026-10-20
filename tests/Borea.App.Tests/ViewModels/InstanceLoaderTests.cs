@@ -107,7 +107,7 @@ public sealed class InstanceLoaderTests
             NeedsLoader("new-mod", "StarMap", "0.4.5"))).Loaders);
         var names = new Dictionary<string, string> { ["old-mod"] = "Old Mod", ["new-mod"] = "New Mod" };
 
-        var row = new InstanceLoaderRow(harness.ViewModel, need, listing: null, installation: null, id => names[id]);
+        var row = new InstanceLoaderRow(harness.ViewModel, need, listing: null, installation: null, update: null, id => names[id]);
 
         var localization = harness.Localization;
         Assert.Equal(InstanceLoaderState.Conflict, row.State);
@@ -128,7 +128,7 @@ public sealed class InstanceLoaderTests
         using var harness = await CreateAsync(starMap: null);
         var need = Assert.Single(LoaderNeed.For(InstanceWith(NeedsLoader("other-mod", "OtherLoader", "1.0.0"))).Loaders);
 
-        var row = new InstanceLoaderRow(harness.ViewModel, need, listing: null, installation: null, id => id);
+        var row = new InstanceLoaderRow(harness.ViewModel, need, listing: null, installation: null, update: null, id => id);
 
         Assert.False(row.CanOpen);
         Assert.Equal("OtherLoader", row.Name);

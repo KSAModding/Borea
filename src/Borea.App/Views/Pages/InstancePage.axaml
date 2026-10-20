@@ -194,7 +194,7 @@
                                             <TextBlock Classes="body-sm secondary" Text="{Binding RangeText}" TextWrapping="Wrap" />
                                             <TextBlock Classes="body-sm secondary" Text="{Binding NeededByText}" TextWrapping="Wrap" IsVisible="{Binding NeededByText, Converter={x:Static ObjectConverters.IsNotNull}}" />
                                         </StackPanel>
-                                        <Border Grid.Column="3" Classes="chip" Classes.compatible="{Binding IsInstalled}" Classes.untested="{Binding IsWarning}" Classes.incompatible="{Binding IsConflict}" Margin="16,0,0,0" HorizontalAlignment="Left" VerticalAlignment="Center" ToolTip.Tip="{Binding StatusToolTip}">
+                                        <Border Grid.Column="3" Classes="chip" Classes.compatible="{Binding IsInstalled}" Classes.untested="{Binding IsWarning}" Classes.incompatible="{Binding IsDanger}" Margin="16,0,0,0" HorizontalAlignment="Left" VerticalAlignment="Center" ToolTip.Tip="{Binding StatusToolTip}">
                                             <StackPanel Orientation="Horizontal" Spacing="6">
                                                 <Ellipse />
                                                 <TextBlock Text="{Binding StatusText}" />
@@ -202,6 +202,9 @@
                                         </Border>
                                         <Button Grid.Column="4" Classes="link" Margin="12,0,0,0" Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).OpenLoaderSettingsCommand}" IsVisible="{Binding CanFix}" HorizontalAlignment="Left" VerticalAlignment="Center">
                                             <TextBlock Classes="action-md" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.InstanceLoaderOpenSettings}" />
+                                        </Button>
+                                        <Button Grid.Column="4" Classes="link" Margin="12,0,0,0" Command="{Binding UpdateCommand}" IsVisible="{Binding CanUpdate}" IsEnabled="{Binding !$parent[Window].((vm:MainViewModel)DataContext).IsSetupBusy}" HorizontalAlignment="Left" VerticalAlignment="Center">
+                                            <TextBlock Classes="action-md" Text="{Binding UpdateText}" />
                                         </Button>
                                     </Grid>
                                 </Border>

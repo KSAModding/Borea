@@ -366,6 +366,7 @@ public partial class MainViewModel : ViewModelBase
         await ReloadInstancesAsync();
         StartCrashCheck();
         await RefreshContentIndexAtStartAsync();
+        StartLoaderUpdateCheck();
         await LoadRecentItemsAsync();
         UpdateIndexRefreshStatus();
         RefreshGameSetup();
@@ -394,6 +395,9 @@ public partial class MainViewModel : ViewModelBase
 
         // the content page shows the same rows, so its chip follows too
         await RefreshCompatibilityAsync(installed?.Version);
+
+        // a loader release can end before the new build, so it is rated again
+        StartLoaderUpdateCheck();
     }
 
     /// <summary>Refreshes the content index once per start. Later refreshes go through the index check.</summary>
@@ -855,6 +859,7 @@ public partial class MainViewModel : ViewModelBase
             && left.BackupRetentionDays == right.BackupRetentionDays
             && left.DismissedUntestedGameRevision == right.DismissedUntestedGameRevision
             && left.StaySignedInToGitHub == right.StaySignedInToGitHub
+            && string.Equals(left.DismissedLoaderUpdate, right.DismissedLoaderUpdate, StringComparison.Ordinal)
             && left.DismissedAnnouncements.SequenceEqual(right.DismissedAnnouncements, StringComparer.Ordinal);
 
     private void OnRegionalFormatChanged(object? sender, PropertyChangedEventArgs e)
@@ -926,6 +931,7 @@ public partial class MainViewModel : ViewModelBase
         RefreshGameDataItems();
         RefreshGameSaveText();
         RefreshLoaderText();
+        RefreshLoaderUpdateText();
         RefreshGitHubAccount();
         RefreshIndexStatusText();
         _stewardPage?.RefreshText();

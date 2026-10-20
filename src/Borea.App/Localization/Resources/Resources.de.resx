@@ -1290,6 +1290,18 @@
   <data name="GameBuildAvailable" xml:space="preserve">
     <value>Ein neuerer KSA-Build ist verfügbar:</value>
   </data>
+  <data name="LoaderUpdateUrgentFormat" xml:space="preserve">
+    <value>{0} {1} unterstützt KSA {2} nicht. {0} {3} unterstützt es.</value>
+  </data>
+  <data name="LoaderUpdateAvailableFormat" xml:space="preserve">
+    <value>{0} {1} ist verfügbar.</value>
+  </data>
+  <data name="LoaderUpdateActionFormat" xml:space="preserve">
+    <value>{0} auf {1} aktualisieren</value>
+  </data>
+  <data name="LoaderUpdateGameRunning" xml:space="preserve">
+    <value>Schließe zuerst KSA. Borea kann den Mod-Loader nicht aktualisieren, während das Spiel läuft.</value>
+  </data>
   <data name="GameBuildDownload" xml:space="preserve">
     <value>Herunterladen</value>
   </data>
@@ -3714,6 +3726,9 @@
   <data name="InstanceLoaderWrongVersionFormat" xml:space="preserve">
     <value>{0} installiert</value>
   </data>
+  <data name="InstanceLoaderIncompatibleFormat" xml:space="preserve">
+    <value>{0}, nicht für diesen KSA-Build</value>
+  </data>
   <data name="ContentShowVersions" xml:space="preserve">
     <value>Anzeigen</value>
   </data>
@@ -3986,6 +4001,9 @@
   </data>
   <data name="SetupLoaderInstalledVersionFormat" xml:space="preserve">
     <value>{0} installiert</value>
+  </data>
+  <data name="SetupLoaderIncompatibleFormat" xml:space="preserve">
+    <value>{0} installiert, unterstützt KSA {1} nicht</value>
   </data>
   <data name="SetupLoaderInstalledUnknownVersion" xml:space="preserve">
     <value>Installiert, Version unbekannt</value>
@@ -4310,6 +4328,15 @@
   </data>
   <data name="LaunchInstallLoaderFormat" xml:space="preserve">
     <value>Diese Instanz braucht {0}. Jetzt installieren?</value>
+  </data>
+  <data name="LaunchLoaderUpdateFormat" xml:space="preserve">
+    <value>{0} {1} unterstützt KSA {2} nicht. Vor dem Spielen auf {3} aktualisieren?</value>
+  </data>
+  <data name="LaunchUpdateAndPlay" xml:space="preserve">
+    <value>Aktualisieren und spielen</value>
+  </data>
+  <data name="LaunchPlayAnyway" xml:space="preserve">
+    <value>Trotzdem spielen</value>
   </data>
   <data name="LaunchSetUpGameFirstFormat" xml:space="preserve">
     <value>Diese Instanz braucht {0}. Richte zuerst den Spielordner ein.</value>

@@ -172,24 +172,28 @@ public partial class MainViewModel
     [ObservableProperty]
     private string? _installedLoaderText;
 
+    /// <summary>True when the index says the installed release of the selected loader does not support the game.</summary>
+    [ObservableProperty]
+    private bool _isInstalledLoaderIncompatible;
+
     /// <summary>
     /// The label of the install button. It installs a loader Borea does not
-    /// know, updates one to the newest release, or reinstalls one whose
+    /// know, updates one to the offered release, or reinstalls one whose
     /// version is unknown.
     /// </summary>
     [ObservableProperty]
     private string _loaderInstallActionText = string.Empty;
 
     /// <summary>
-    /// False when the recorded loader is already the newest release, because
-    /// the button would then only download the same files again.
+    /// False when no release is offered above the recorded one, because the
+    /// button would then only download the same files again.
     /// </summary>
     [ObservableProperty]
     private bool _canInstallLoader = true;
 
     private LoaderInstallation? _selectedLoaderInstallation;
 
-    private ModVersion? _selectedLoaderLatest;
+    private LoaderUpdate? _selectedLoaderUpdate;
 
     [RelayCommand]
     private void ShowGeneralSettings() => SettingsTab = SettingsTab.General;
@@ -320,20 +324,20 @@ public partial class MainViewModel
 
     /// <summary>
     /// Reads what the settings record for the selected loader and which release
-    /// is the newest, then updates the chip and the install button.
+    /// Borea offers for the installed game, then updates the chip and the install button.
     /// </summary>
     internal async Task RefreshLoaderStateAsync()
     {
         var loader = SelectedLoader;
         LoaderInstallation? installation = null;
-        ModVersion? latest = null;
-        if (_services is not null && loader is not null)
+        LoaderUpdate? update = null;
+        if (_services is { } services && loader is not null)
         {
-            installation = _services.Settings.LoaderInstallations
+            installation = services.Settings.LoaderInstallations
                 .FirstOrDefault(pair => ModIds.Equals(pair.Key, loader.ModId)).Value;
             try
             {
-                latest = (await _services.Mods.GetLatestReleaseAsync(loader.ModId))?.Version;
+                update = await FindLoaderUpdateAsync(services, loader.ModId, installation);
             }
             catch (Exception exception) when (exception is HttpRequestException or IOException or InvalidOperationException or TaskCanceledException)
             {
@@ -346,14 +350,15 @@ public partial class MainViewModel
             return;
 
         _selectedLoaderInstallation = installation;
-        _selectedLoaderLatest = latest;
+        _selectedLoaderUpdate = update;
         RefreshLoaderText();
     }
 
     private void RefreshLoaderText()
     {
         var installation = _selectedLoaderInstallation;
-        var latest = _selectedLoaderLatest;
+        var update = _selectedLoaderUpdate;
+        IsInstalledLoaderIncompatible = installation is not null && update?.InstalledCompatibility == GameCompatibility.Incompatible;
 
         if (installation is null)
         {
@@ -361,17 +366,19 @@ public partial class MainViewModel
             LoaderInstallActionText = Localization.SetupInstallLoader;
             CanInstallLoader = true;
         }
-        else if (installation.Version is not { } installed)
+        else if ((installation.Version ?? update?.InstalledVersion) is not { } installed)
         {
             InstalledLoaderText = Localization.SetupLoaderInstalledUnknownVersion;
             LoaderInstallActionText = Localization.SetupReinstallLoader;
-            CanInstallLoader = latest is not null;
+            CanInstallLoader = update?.Offer is not null;
         }
         else
         {
-            InstalledLoaderText = Localization.FormatSetupLoaderInstalledVersion(installed.ToString());
-            LoaderInstallActionText = latest is { } newest && newest >= installed ? Localization.FormatSetupUpdateLoader(newest.ToString()) : Localization.SetupInstallLoader;
-            CanInstallLoader = latest is { } candidate && candidate > installed;
+            InstalledLoaderText = IsInstalledLoaderIncompatible
+                ? Localization.FormatSetupLoaderIncompatible(installed.ToString(), InstalledVersionText ?? string.Empty)
+                : Localization.FormatSetupLoaderInstalledVersion(installed.ToString());
+            LoaderInstallActionText = update?.Offer is { } offer ? Localization.FormatSetupUpdateLoader(offer.Version.ToString()) : Localization.SetupInstallLoader;
+            CanInstallLoader = update?.Offer is not null;
         }
     }
 
@@ -403,25 +410,29 @@ public partial class MainViewModel
             return Localization.SetupNoLoaderSelected;
 
         var directory = Path.GetFullPath(LoaderDirectoryInput.Trim());
-        var installation = new LoaderInstallation(directory, version: null, rawVersion: null, isAdopted: true);
+
+        // the release its files match, so that Borea can rate it and offer an update
+        var inspected = await InspectLoaderAsync(services, SelectedLoader.ModId, directory);
+        var installation = new LoaderInstallation(directory, inspected?.Version, inspected?.RawVersion, isAdopted: true);
         await services.SettingsRepository.SaveAsync((await ReadSavedSettingsAsync(services)).WithLoaderInstallation(SelectedLoader.ModId, installation));
         return Directory.Exists(directory) ? Localization.SetupSaved : Localization.SetupDirectoryMissing;
     });
 
     /// <summary>
-    /// Downloads the loader's latest release and installs it. An empty
-    /// directory lets the installer pick its default.
+    /// Downloads the release Borea offers for the installed game and installs
+    /// it. An empty directory lets the installer pick its default.
     /// </summary>
     [RelayCommand]
     private Task InstallLoaderAsync() => RunSetupAsync(services => SelectedLoader is null
         ? Task.FromResult(Localization.SetupNoLoaderSelected)
-        : InstallNewestLoaderAsync(services, SelectedLoader.ModId, LoaderDirectoryInput.Trim()));
+        : InstallLoaderReleaseAsync(services, SelectedLoader.ModId, _selectedLoaderUpdate?.Offer, LoaderDirectoryInput.Trim()));
 
-    private async Task<string> InstallNewestLoaderAsync(BoreaServices services, string loaderId, string directory)
+    /// <param name="release">The release to install. Null installs the newest release of the channel that the index does not rate incompatible with the game.</param>
+    private async Task<string> InstallLoaderReleaseAsync(BoreaServices services, string loaderId, ModVersionMetadata? release, string directory)
     {
         var listing = await services.Mods.GetListingAsync(loaderId)
             ?? throw new InvalidOperationException(Localization.DiscoverNoRelease);
-        var release = await services.Mods.GetLatestReleaseAsync(loaderId)
+        release ??= (await FindLoaderUpdateAsync(services, loaderId, installation: null)).Offer
             ?? throw new InvalidOperationException(Localization.DiscoverNoRelease);
         var version = release.Version.ToString();
         var run = LoaderInstallRun = StartInstallRun(StartTask(TaskKind.LoaderInstall, listing.Name, version: version));
@@ -453,6 +464,7 @@ public partial class MainViewModel
                 (reports, token) => services.LoaderInstaller.InstallAsync(listing, release, directory.Length == 0 ? null : Path.GetFullPath(directory), reports, token),
                 progress);
             completed = true;
+            ForgetLoaderUpdate(loaderId);
             LoaderDirectoryInput = result.Directory;
             return Localization.FormatSetupLoaderInstalled(listing.Name, result.Version.ToString(), result.Directory);
         }

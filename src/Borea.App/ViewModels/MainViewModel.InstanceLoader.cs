@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Borea.Core.Game;
 using Borea.Core.Instances;
 using Borea.Core.Launch;
 using Borea.Core.ModLoaders;
@@ -36,6 +37,7 @@ public partial class MainViewModel
             loader,
             _listings.FirstOrDefault(listing => listing.Type == ContentType.ModLoader && ModIds.Equals(listing.ModId, loader.LoaderId)),
             _services.Settings.LoaderInstallations.FirstOrDefault(entry => ModIds.Equals(entry.Key, loader.LoaderId)).Value,
+            LoaderUpdateFor(loader.LoaderId),
             id => names.TryGetValue(id, out var name) ? name : id)).ToList();
 
         InstanceLoader = new InstanceLoaderSection(this, need, rows);
@@ -83,6 +85,9 @@ public enum InstanceLoaderState
     /// <summary>Installed, and Borea does not know which version it is.</summary>
     VersionUnknown,
 
+    /// <summary>Installed, in a release that the index says does not support the game.</summary>
+    GameIncompatible,
+
     /// <summary>Installed, in a version outside what the mods accept.</summary>
     WrongVersion,
 
@@ -99,20 +104,26 @@ public sealed partial class InstanceLoaderRow
     private readonly MainViewModel _owner;
     private readonly NeededLoader _loader;
     private readonly DiscoverItem? _listing;
-    private readonly LoaderInstallation? _installation;
     private readonly Func<string, string> _nameOf;
+    private readonly ModVersion? _version;
+    private readonly ModVersionMetadata? _offer;
 
+    /// <param name="update">The last loader update check's answer for this loader, or null before it answered.</param>
     /// <param name="nameOf">The display name of a mod id, as its row on the page shows it.</param>
-    public InstanceLoaderRow(MainViewModel owner, NeededLoader loader, DiscoverItem? listing, LoaderInstallation? installation, Func<string, string> nameOf)
+    public InstanceLoaderRow(MainViewModel owner, NeededLoader loader, DiscoverItem? listing, LoaderInstallation? installation, LoaderUpdate? update, Func<string, string> nameOf)
     {
         _owner = owner;
         _loader = loader;
         _listing = listing;
-        _installation = installation;
         _nameOf = nameOf;
+        _version = installation is null ? null : installation.Version ?? update?.InstalledVersion;
         Name = listing?.Name ?? loader.LoaderId;
         Icon = listing?.Icon;
-        State = StateOf(loader, installation);
+        State = StateOf(loader, installation, _version, update);
+
+        // like a mod row, an update shows in place when the mods accept the new release
+        if (State is InstanceLoaderState.Installed or InstanceLoaderState.GameIncompatible && update?.Offer is { } offer && loader.Accepts(offer.Version))
+            _offer = offer;
     }
 
     public string Name { get; }
@@ -150,9 +161,10 @@ public sealed partial class InstanceLoaderRow
     /// <summary>A short label, so the chip keeps the size of the other chips on the page.</summary>
     public string StatusText => State switch
     {
-        InstanceLoaderState.Installed => _owner.Localization.FormatInstanceLoaderInstalled(_installation!.Version!.Value.ToString()),
+        InstanceLoaderState.Installed => _owner.Localization.FormatInstanceLoaderInstalled(_version!.Value.ToString()),
         InstanceLoaderState.VersionUnknown => _owner.Localization.InstanceLoaderVersionUnknown,
-        InstanceLoaderState.WrongVersion => _owner.Localization.FormatInstanceLoaderWrongVersion(_installation!.Version!.Value.ToString()),
+        InstanceLoaderState.GameIncompatible => _owner.Localization.FormatInstanceLoaderIncompatible(_version!.Value.ToString()),
+        InstanceLoaderState.WrongVersion => _owner.Localization.FormatInstanceLoaderWrongVersion(_version!.Value.ToString()),
         InstanceLoaderState.NotInstalled => _owner.Localization.InstanceLoaderNotInstalled,
         _ => _owner.Localization.InstanceLoaderConflictShort,
     };
@@ -170,17 +182,34 @@ public sealed partial class InstanceLoaderRow
 
     public bool IsConflict => State == InstanceLoaderState.Conflict;
 
-    /// <summary>A loader that is missing or in the wrong version is fixed in the Game settings.</summary>
-    public bool CanFix => IsWarning;
+    /// <summary>A conflict or a release that does not support the game shows as a danger.</summary>
+    public bool IsDanger => State is InstanceLoaderState.Conflict or InstanceLoaderState.GameIncompatible;
 
-    private static InstanceLoaderState StateOf(NeededLoader loader, LoaderInstallation? installation)
+    /// <summary>"Update to 0.4.8" when a newer release is offered for the game, else null.</summary>
+    public string? UpdateText => _offer is { } offer ? _owner.Localization.FormatSetupUpdateLoader(offer.Version.ToString()) : null;
+
+    public bool CanUpdate => _offer is not null;
+
+    /// <summary>A loader that is missing, in the wrong version, or not for the game is fixed in the Game settings when no update shows in place.</summary>
+    public bool CanFix => !CanUpdate && (IsWarning || State == InstanceLoaderState.GameIncompatible);
+
+    [RelayCommand]
+    private async Task UpdateAsync()
+    {
+        if (_offer is { } offer)
+            await _owner.UpdateLoaderToAsync(_loader.LoaderId, offer);
+    }
+
+    private static InstanceLoaderState StateOf(NeededLoader loader, LoaderInstallation? installation, ModVersion? version, LoaderUpdate? update)
     {
         if (loader.HasConflict)
             return InstanceLoaderState.Conflict;
         if (installation is null)
             return InstanceLoaderState.NotInstalled;
-        if (installation.Version is not { } version)
+        if (version is not { } known)
             return InstanceLoaderState.VersionUnknown;
-        return loader.Accepts(version) ? InstanceLoaderState.Installed : InstanceLoaderState.WrongVersion;
+        if (update?.InstalledCompatibility == GameCompatibility.Incompatible)
+            return InstanceLoaderState.GameIncompatible;
+        return loader.Accepts(known) ? InstanceLoaderState.Installed : InstanceLoaderState.WrongVersion;
     }
 }

@@ -130,8 +130,9 @@ public sealed class SettingsViewModelTests
         await viewModel.ShowGameSettingsCommand.ExecuteAsync(null);
 
         Assert.Equal(harness.Localization.FormatSetupLoaderInstalledVersion(recorded), viewModel.InstalledLoaderText);
-        Assert.Equal(harness.Localization.FormatSetupUpdateLoader("0.4.6"), viewModel.LoaderInstallActionText);
         Assert.Equal(canUpdate, viewModel.CanInstallLoader);
+        if (canUpdate)
+            Assert.Equal(harness.Localization.FormatSetupUpdateLoader("0.4.6"), viewModel.LoaderInstallActionText);
     }
 
     [Fact]

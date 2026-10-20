@@ -1290,6 +1290,18 @@
   <data name="GameBuildAvailable" xml:space="preserve">
     <value>A newer KSA build is available:</value>
   </data>
+  <data name="LoaderUpdateUrgentFormat" xml:space="preserve">
+    <value>{0} {1} does not support KSA {2}. {0} {3} does.</value>
+  </data>
+  <data name="LoaderUpdateAvailableFormat" xml:space="preserve">
+    <value>{0} {1} is available.</value>
+  </data>
+  <data name="LoaderUpdateActionFormat" xml:space="preserve">
+    <value>Update {0} to {1}</value>
+  </data>
+  <data name="LoaderUpdateGameRunning" xml:space="preserve">
+    <value>Close KSA first. Borea cannot update the mod loader while the game runs.</value>
+  </data>
   <data name="GameBuildDownload" xml:space="preserve">
     <value>Download</value>
   </data>
@@ -3714,6 +3726,9 @@
   <data name="InstanceLoaderWrongVersionFormat" xml:space="preserve">
     <value>{0} installed</value>
   </data>
+  <data name="InstanceLoaderIncompatibleFormat" xml:space="preserve">
+    <value>{0}, not for this KSA build</value>
+  </data>
   <data name="ContentShowVersions" xml:space="preserve">
     <value>Show</value>
   </data>
@@ -3986,6 +4001,9 @@
   </data>
   <data name="SetupLoaderInstalledVersionFormat" xml:space="preserve">
     <value>Installed {0}</value>
+  </data>
+  <data name="SetupLoaderIncompatibleFormat" xml:space="preserve">
+    <value>Installed {0}, does not support KSA {1}</value>
   </data>
   <data name="SetupLoaderInstalledUnknownVersion" xml:space="preserve">
     <value>Installed, version unknown</value>
@@ -4310,6 +4328,15 @@
   </data>
   <data name="LaunchInstallLoaderFormat" xml:space="preserve">
     <value>This instance needs {0}. Install it now?</value>
+  </data>
+  <data name="LaunchLoaderUpdateFormat" xml:space="preserve">
+    <value>{0} {1} does not support KSA {2}. Update it to {3} before you play?</value>
+  </data>
+  <data name="LaunchUpdateAndPlay" xml:space="preserve">
+    <value>Update and play</value>
+  </data>
+  <data name="LaunchPlayAnyway" xml:space="preserve">
+    <value>Play anyway</value>
   </data>
   <data name="LaunchSetUpGameFirstFormat" xml:space="preserve">
     <value>This instance needs {0}. Set up the game folder first.</value>

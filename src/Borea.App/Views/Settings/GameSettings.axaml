@@ -50,7 +50,7 @@
                     </DataTemplate>
                 </ComboBox.ItemTemplate>
             </ComboBox>
-            <Border Classes="chip positive" HorizontalAlignment="Left" Margin="0,6,0,0" IsVisible="{Binding InstalledLoaderText, Converter={x:Static ObjectConverters.IsNotNull}}">
+            <Border Classes="chip" Classes.positive="{Binding !IsInstalledLoaderIncompatible}" Classes.incompatible="{Binding IsInstalledLoaderIncompatible}" HorizontalAlignment="Left" Margin="0,6,0,0" IsVisible="{Binding InstalledLoaderText, Converter={x:Static ObjectConverters.IsNotNull}}">
                 <TextBlock Text="{Binding InstalledLoaderText}" />
             </Border>
             <TextBlock Classes="heading-sm" Text="{Binding Localization.SetupLoaderDirectory}" Margin="0,16,0,0" />
