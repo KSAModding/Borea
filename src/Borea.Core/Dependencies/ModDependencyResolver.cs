@@ -1,5 +1,6 @@
 using Borea.Core.Instances;
 using Borea.Core.Mods;
+using Borea.Core.UserContent;
 
 namespace Borea.Core.Dependencies;
 
@@ -56,7 +57,8 @@ public sealed class ModDependencyResolver
     /// <summary>
     /// Checks if a mod can be uninstalled from an instance, returning the list of dependent mods that would be affected.
     /// </summary>
-    public UninstallCheck CheckUninstall(Instance instance, string modId, ModVersion version, bool isActive)
+    /// <param name="content">The recorded vehicles and saves of the instance, which the check names when they need the mod.</param>
+    public UninstallCheck CheckUninstall(Instance instance, string modId, ModVersion version, bool isActive, IReadOnlyList<InstalledContentRecord>? content = null)
     {
         if (instance is null) throw new ArgumentNullException(nameof(instance));
         if (string.IsNullOrWhiteSpace(modId)) throw new ArgumentException("Mod ID cannot be null or whitespace.", nameof(modId));
@@ -72,7 +74,13 @@ public sealed class ModDependencyResolver
             .Where(mod => mod.Dependencies.Any(dependency => !dependency.Optional && ModIds.Equals(dependency.ModId, modId)))
             .Select(mod => mod.ModId));
 
-        return new UninstallCheck(instance.InstanceId, modId, version, dependents, isActive);
+        var view = RecordedContentNeeds.InstanceView(instance);
+        var dependentContent = RecordedContentNeeds.Broken(content ?? [], view, RecordedContentNeeds.Without(view, modId))
+            .Select(broken => broken.Record)
+            .Distinct()
+            .ToList();
+
+        return new UninstallCheck(instance.InstanceId, modId, version, dependents, isActive, dependentContent);
     }
 
     private static DependencyEvaluation EvaluateDeclared(Instance instance, ModDependency dependency)
