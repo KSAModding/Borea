@@ -45,16 +45,26 @@ internal sealed class WindowServices(TopLevel topLevel) : IWindowServices
         if (file is null)
             return null;
 
+        var stream = await file.OpenWriteAsync();
         try
         {
-            await using var stream = await file.OpenWriteAsync();
-            stream.SetLength(0);
-            await write(stream);
+            await using (stream)
+            {
+                stream.SetLength(0);
+                await write(stream);
+            }
         }
         catch
         {
             // a file that stops half way is no archive
-            await file.DeleteAsync();
+            try
+            {
+                await file.DeleteAsync();
+            }
+            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+            {
+            }
+
             throw;
         }
 
