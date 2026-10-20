@@ -359,6 +359,30 @@ public sealed class UserContentViewModelTests
     }
 
     [Fact]
+    public async Task InstancePage_FileChangedAfterTheRowsShowed_RemoveAsksAgainWithTheFiles()
+    {
+        using var harness = await VehicleHarnessAsync();
+        var viewModel = harness.ViewModel;
+        var instance = await ActiveInstanceWithRoverAsync(harness);
+        await viewModel.ActiveInstance!.OpenCommand.ExecuteAsync(null);
+        var row = Assert.Single(viewModel.VehiclesSection.Items);
+        Assert.False(row.IsChanged);
+        var folder = Path.Combine(harness.Services.Paths.GetInstanceVehiclesFolder(instance.InstanceId), "Example Rover");
+        File.WriteAllText(Path.Combine(folder, "vehicle.xml"), "<Vehicle edited=\"yes\" />");
+
+        row.BeginDeleteCommand.Execute(null);
+        await row.ConfirmDeleteCommand.ExecuteAsync(null);
+
+        Assert.True(row.IsConfirmingDelete);
+        Assert.Equal(harness.Localization.FormatContentRemoveChanged("Example Rover", "vehicle.xml"), row.DeleteConfirmText);
+        Assert.True(Directory.Exists(folder));
+
+        await row.ConfirmDeleteCommand.ExecuteAsync(null);
+
+        Assert.False(Directory.Exists(folder));
+    }
+
+    [Fact]
     public async Task InstancePage_OwnFolder_HasNoRecordAndKeepsTheDeleteText()
     {
         using var harness = await VehicleHarnessAsync();
