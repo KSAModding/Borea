@@ -1971,6 +1971,9 @@
   <data name="ContentLinks" xml:space="preserve">
     <value>Compass headin's</value>
   </data>
+  <data name="ContentSharedOnFormat" xml:space="preserve">
+    <value>Moored at {0}</value>
+  </data>
   <data name="ContentCopyShareLink" xml:space="preserve">
     <value>Copy th' link fer yer mateys</value>
   </data>

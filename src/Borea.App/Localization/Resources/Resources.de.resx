@@ -3681,6 +3681,9 @@
   <data name="ContentLinks" xml:space="preserve">
     <value>Links</value>
   </data>
+  <data name="ContentSharedOnFormat" xml:space="preserve">
+    <value>Geteilt auf {0}</value>
+  </data>
   <data name="ContentCopyLink" xml:space="preserve">
     <value>Link kopieren</value>
   </data>
