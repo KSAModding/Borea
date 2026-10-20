@@ -1,0 +1,29 @@
+{
+  "vectors": [
+    {"name": "plain name", "value": "Example Rover", "accepted": true, "why": "Letters and a single space."},
+    {"name": "64 code units", "value": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", "accepted": true, "why": "The limit is 64 UTF-16 code units."},
+    {"name": "65 code units", "value": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", "accepted": false, "why": "One code unit over the limit."},
+    {"name": "empty", "value": "", "accepted": false, "why": "A name needs at least one code unit."},
+    {"name": "leading space", "value": " Rover", "accepted": false, "why": "No space at the start."},
+    {"name": "trailing space", "value": "Rover ", "accepted": false, "why": "No space at the end."},
+    {"name": "two spaces together", "value": "Example  Rover", "accepted": false, "why": "No two spaces together."},
+    {"name": "tab", "value": "Example\tRover", "accepted": false, "why": "Only the space is allowed as white space."},
+    {"name": "dot", "value": "Rover.1", "accepted": false, "why": "A dot is not a letter, digit, space, - or _."},
+    {"name": "slash", "value": "Rover/1", "accepted": false, "why": "A slash is not a letter, digit, space, - or _."},
+    {"name": "device name CON", "value": "CON", "accepted": false, "why": "A Windows device name."},
+    {"name": "device name con", "value": "con", "accepted": false, "why": "Device names compare without case."},
+    {"name": "device name Com1", "value": "Com1", "accepted": false, "why": "Device names compare without case."},
+    {"name": "device name LPT9", "value": "LPT9", "accepted": false, "why": "A Windows device name."},
+    {"name": "CON_", "value": "CON_", "accepted": true, "why": "Not a device name, it is what Sanitize makes of CON."},
+    {"name": "COM0", "value": "COM0", "accepted": true, "why": "Only COM1 to COM9 are device names."},
+    {"name": "CON1", "value": "CON1", "accepted": true, "why": "Not a device name."},
+    {"name": "hyphen and underscore", "value": "a-b_c", "accepted": true, "why": "- and _ are allowed."},
+    {"name": "precomposed letter", "value": "Caf\u00e9", "accepted": true, "why": "U+00E9 is Ll."},
+    {"name": "combining mark", "value": "Cafe\u0301", "accepted": false, "why": "U+0301 is Mn, not a letter."},
+    {"name": "Arabic-Indic digit", "value": "Rover \u0661", "accepted": true, "why": "U+0661 is Nd."},
+    {"name": "fullwidth digit", "value": "Rover \uff11", "accepted": true, "why": "U+FF11 is Nd."},
+    {"name": "superscript two", "value": "Rover\u00b2", "accepted": false, "why": "U+00B2 is No, which Python's str.isalnum accepts and char.IsLetterOrDigit does not."},
+    {"name": "Roman numeral one", "value": "Rover \u2160", "accepted": false, "why": "U+2160 is Nl, which Python's str.isalnum accepts and char.IsLetterOrDigit does not."},
+    {"name": "letter outside the BMP", "value": "Rover \ud835\udc00", "accepted": false, "why": "U+1D400 is two surrogates, and neither is a letter."}
+  ]
+}
