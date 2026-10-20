@@ -74,7 +74,7 @@ public sealed class ContentViewModelTests
 
         await viewModel.DiscoverItems.Single(item => item.ModId == "AdvancedFlightComputer").OpenCommand.ExecuteAsync(null);
 
-        Assert.Contains(new ContentLink("ksamods.gg", "https://ksamods.gg/", "homepage"), viewModel.ContentLinks);
+        Assert.Contains(new ContentLink(harness.Localization.FormatContentSharedOn("ksamods.gg"), "https://ksamods.gg/", "share-host"), viewModel.ContentLinks);
         Assert.Null(viewModel.ContentShareHostText);
     }
 

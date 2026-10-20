@@ -23,8 +23,14 @@ public sealed class ShareHostStore : IShareHostSource
         _paths = paths ?? throw new ArgumentNullException(nameof(paths));
     }
 
+    /// <summary>The answer of content-index, which holds for the rest of the run. A cached copy is read again on the next call.</summary>
+    private IReadOnlyList<ShareHost>? _downloaded;
+
     public async Task<IReadOnlyList<ShareHost>> GetAsync(CancellationToken cancellationToken = default)
     {
+        if (_downloaded is { } known)
+            return known;
+
         var path = _paths.GetShareHostsPath();
         try
         {
@@ -32,16 +38,16 @@ public sealed class ShareHostStore : IShareHostSource
             if (downloaded is null)
             {
                 TryDelete(path);
-                return [];
+                return _downloaded = [];
             }
 
             if (Parse(downloaded) is { } hosts)
             {
                 await TryWriteAsync(path, downloaded, cancellationToken).ConfigureAwait(false);
-                return hosts;
+                return _downloaded = hosts;
             }
         }
-        catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException && !cancellationToken.IsCancellationRequested)
+        catch (Exception exception) when (exception is HttpRequestException or IOException or TaskCanceledException && !cancellationToken.IsCancellationRequested)
         {
         }
 

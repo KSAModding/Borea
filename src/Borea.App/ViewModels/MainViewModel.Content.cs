@@ -323,7 +323,6 @@ public partial class MainViewModel
                 OnPropertyChanged(nameof(HasContentTags));
             }
 
-            await LinkShareHostAsync(item);
             var release = await _services.Mods.GetLatestReleaseAsync(item.ModId);
             if (ReferenceEquals(SelectedContent, item))
                 LatestVersion = release is null ? null : new VersionItem(this, release, item.DownloadCounts?.FindRelease(release.Version));
@@ -332,20 +331,31 @@ public partial class MainViewModel
         {
             ContentDetailError = exception.Message;
         }
+
+        await LinkShareHostAsync(item);
     }
 
-    /// <summary>Links the page of the share host that the listing names, once hosts.toml registers that host.</summary>
+    /// <summary>Links the page of the share host that the listing names, once hosts.toml registers that host. A failure only loses the link.</summary>
     private async Task LinkShareHostAsync(DiscoverItem item)
     {
         if (_services is null || ContentShareHostKey(item) is not { } key)
             return;
 
-        var hosts = await _services.ShareHosts.GetAsync();
+        IReadOnlyList<ShareHost> hosts;
+        try
+        {
+            hosts = await _services.ShareHosts.GetAsync();
+        }
+        catch (Exception exception) when (exception is HttpRequestException or IOException or TaskCanceledException)
+        {
+            return;
+        }
+
         if (!ReferenceEquals(SelectedContent, item) || hosts.FirstOrDefault(host => host.Key == key) is not { } host)
             return;
 
         _contentShareHost = host;
-        var link = new ContentLink(host.Name, host.Page.AbsoluteUri, "homepage");
+        var link = new ContentLink(Localization.FormatContentSharedOn(host.Name), host.Page.AbsoluteUri, "share-host");
         if (!ContentLinks.Contains(link))
             ContentLinks.Add(link);
         OnPropertyChanged(nameof(HasContentLinks));

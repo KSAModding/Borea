@@ -57,6 +57,42 @@ public sealed class ShareHostStoreTests : IDisposable
     }
 
     [Fact]
+    public async Task GetAsync_BodyReadFails_UsesTheCache()
+    {
+        await File.WriteAllTextAsync(_paths.GetShareHostsPath(), Example);
+
+        var hosts = await new ShareHostStore(new Fetcher(() => throw new HttpIOException(HttpRequestError.ResponseEnded)), _paths).GetAsync();
+
+        Assert.Equal("ksamods", Assert.Single(hosts).Key);
+    }
+
+    [Fact]
+    public async Task GetAsync_SecondCall_DownloadsOnlyOnce()
+    {
+        var downloads = 0;
+        var store = new ShareHostStore(new Fetcher(() => { downloads++; return Example; }), _paths);
+
+        await store.GetAsync();
+        var hosts = await store.GetAsync();
+
+        Assert.Equal(1, downloads);
+        Assert.Equal("ksamods", Assert.Single(hosts).Key);
+    }
+
+    [Fact]
+    public async Task GetAsync_AfterTheCache_DownloadsAgain()
+    {
+        await File.WriteAllTextAsync(_paths.GetShareHostsPath(), Example);
+        var offline = true;
+        var store = new ShareHostStore(new Fetcher(() => offline ? throw new HttpRequestException("offline") : null), _paths);
+
+        await store.GetAsync();
+        offline = false;
+
+        Assert.Empty(await store.GetAsync());
+    }
+
+    [Fact]
     public async Task GetAsync_NoFileInContentIndex_RegistersNoHostAndDropsTheCache()
     {
         await File.WriteAllTextAsync(_paths.GetShareHostsPath(), Example);
