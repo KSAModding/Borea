@@ -299,7 +299,8 @@ public partial class MainViewModel
         try
         {
             // the catalog leaves out per-mod fields such as the description
-            var full = await _services.Mods.GetListingAsync(item.ModId);
+            var content = item.Type.IsVehicleOrSave();
+            var full = content ? await _services.UserContent.FindAsync(item.ModId) : await _services.Mods.GetListingAsync(item.ModId);
             if (full is not null)
             {
                 item.Update(full);
@@ -308,7 +309,10 @@ public partial class MainViewModel
                 OnPropertyChanged(nameof(HasContentTags));
             }
 
-            var release = await _services.Mods.GetLatestReleaseAsync(item.ModId);
+            // a vehicle or save installs the newest release of the saved channel, as its Discover row does
+            var release = content
+                ? await _services.UserContent.GetLatestReleaseAsync(item.ModId, _services.Settings.ReleaseChannel)
+                : await _services.Mods.GetLatestReleaseAsync(item.ModId);
             if (ReferenceEquals(SelectedContent, item))
                 LatestVersion = release is null ? null : new VersionItem(this, release, item.DownloadCounts?.FindRelease(release.Version));
         }
@@ -412,7 +416,8 @@ public partial class MainViewModel
         IsLoadingVersions = true;
         try
         {
-            var releases = (await _services.Mods.GetReleaseHistoryAsync(item.ModId)).Select(release => new VersionItem(this, release, item.DownloadCounts?.FindRelease(release.Version))).ToList();
+            var history = item.Type.IsVehicleOrSave() ? await _services.UserContent.GetReleaseHistoryAsync(item.ModId) : await _services.Mods.GetReleaseHistoryAsync(item.ModId);
+            var releases = history.Select(release => new VersionItem(this, release, item.DownloadCounts?.FindRelease(release.Version))).ToList();
 
             if (ReferenceEquals(SelectedContent, item))
             {

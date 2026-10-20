@@ -275,7 +275,7 @@
                     <Border Background="{StaticResource Brush.SurfaceHeader}" CornerRadius="100" Padding="6" Margin="0,32,0,0">
                         <StackPanel Orientation="Horizontal" Spacing="16">
                             <Button Classes="tab quiet" Classes.active="{Binding IsDescriptionTab}" Content="{Binding Localization.ContentTabDescription}" Command="{Binding ShowContentDescriptionCommand}" />
-                            <Button Classes="tab quiet" Classes.active="{Binding IsDependenciesTab}" Content="{Binding Localization.ContentTabDependencies}" Command="{Binding ShowContentDependenciesCommand}" IsVisible="{Binding HasContentDependenciesTab}" />
+                            <Button Classes="tab quiet" Classes.active="{Binding IsDependenciesTab}" Content="{Binding ContentDependenciesTabText}" Command="{Binding ShowContentDependenciesCommand}" IsVisible="{Binding HasContentDependenciesTab}" />
                             <Button Classes="tab quiet" Classes.active="{Binding IsVersionsTab}" Content="{Binding Localization.ContentTabVersions}" Command="{Binding ShowContentVersionsCommand}" />
                         </StackPanel>
                     </Border>
@@ -470,6 +470,7 @@
                                 <TextBlock Text="{Binding SelectedContent.CompatibilityText}" />
                             </StackPanel>
                         </Border>
+                        <TextBlock Classes="body-sm secondary" Text="{Binding ContentFileBuildText}" TextWrapping="Wrap" IsVisible="{Binding ContentFileBuildText, Converter={x:Static ObjectConverters.IsNotNull}}" />
                     </StackPanel>
                     <Border Height="1" Background="{StaticResource Brush.BorderStrong}">
                         <Border.IsVisible>

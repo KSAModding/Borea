@@ -30,6 +30,12 @@ public partial class MainViewModel
     /// <summary>A loader page shows the tab only when its release has dependencies.</summary>
     public bool HasContentDependenciesTab => !IsLoaderContent || ContentDependencyGroups.Count > 0;
 
+    /// <summary>A vehicle or save depends only on mods, so its tab says so.</summary>
+    public string ContentDependenciesTabText => SelectedContent?.Type.IsVehicleOrSave() == true ? Localization.ContentTabNeedsMods : Localization.ContentTabDependencies;
+
+    /// <summary>The game build the file of a vehicle or save was saved in, from the release in the header. Null for any other type.</summary>
+    public string? ContentFileBuildText => SelectedContent?.Type.IsVehicleOrSave() == true && LatestVersion?.Release.GameMin is { } build ? Localization.FormatContentFileBuild(build) : null;
+
     [RelayCommand]
     private void ShowContentDependencies() => ContentTab = ContentPageTab.Dependencies;
 
@@ -51,6 +57,8 @@ public partial class MainViewModel
         OnPropertyChanged(nameof(ContentDependenciesHeading));
         OnPropertyChanged(nameof(ContentDependenciesEmptyText));
         OnPropertyChanged(nameof(HasContentDependenciesTab));
+        OnPropertyChanged(nameof(ContentDependenciesTabText));
+        OnPropertyChanged(nameof(ContentFileBuildText));
     }
 
     /// <summary>The groups in the order of #392, each only when it has entries.</summary>

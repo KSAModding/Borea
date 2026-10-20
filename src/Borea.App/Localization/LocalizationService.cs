@@ -2241,6 +2241,8 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string ContentTabDependencies => Resources.ContentTabDependencies;
 
+    public string ContentTabNeedsMods => Resources.ContentTabNeedsMods;
+
     public string ContentTabVersions => Resources.ContentTabVersions;
 
     public string FormatContentDependenciesOf(string version)
@@ -2300,6 +2302,9 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string ContentDependencyNotInIndex => Resources.ContentDependencyNotInIndex;
 
     public string ContentCompatibility => Resources.ContentCompatibility;
+
+    public string FormatContentFileBuild(string build)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ContentFileBuildFormat, build);
 
     public string CompatibilityCompatible => Resources.CompatibilityCompatible;
 

@@ -1,3 +1,4 @@
+using Borea.App.ViewModels;
 using Borea.Core.Index;
 using Borea.Core.Instances;
 using Borea.Core.Mods;
@@ -126,6 +127,61 @@ public sealed class UserContentViewModelTests
 
         Assert.Same(row, Assert.Single(viewModel.DiscoverItems));
         Assert.True(row.IsFavorite);
+    }
+
+    [Fact]
+    public async Task Page_VehicleWithTwoRequiredMods_ListsThemAndMarksTheInstalledOne()
+    {
+        using var harness = await VehicleHarnessAsync(dependencies: Required("AdvancedFlightComputer", "0.7.0") + ", " + Required("MeasureTools"));
+        var viewModel = harness.ViewModel;
+        await InstalledContent.AddAsync(harness, "AdvancedFlightComputer", activate: true, ownership: ModInstallOwnership.Borea, version: "0.7.4");
+        await viewModel.LoadAsync();
+        await viewModel.EnsureDiscoverLoadedAsync();
+        viewModel.ShowDiscoverVehiclesCommand.Execute(null);
+
+        await Assert.Single(viewModel.DiscoverItems).OpenCommand.ExecuteAsync(null);
+        viewModel.ShowContentDependenciesCommand.Execute(null);
+
+        Assert.Equal(harness.Localization.ContentTabNeedsMods, viewModel.ContentDependenciesTabText);
+        Assert.Equal(harness.Localization.FormatContentFileBuild("2026.8.19.5261"), viewModel.ContentFileBuildText);
+        Assert.Equal("1.1.0", viewModel.LatestVersion!.Version);
+        var group = Assert.Single(viewModel.ContentDependencyGroups);
+        Assert.Equal(DependencyGroupKind.Required, group.Kind);
+        var members = group.Entries.Select(entry => Assert.Single(entry.Members)).ToList();
+        Assert.Equal(["AdvancedFlightComputer", "MeasureTools"], members.Select(member => member.ModId));
+        Assert.True(members[0].IsInstalled);
+        Assert.Equal(harness.Localization.FormatContentDependencyInstalled("0.7.4"), members[0].StateText);
+        Assert.False(members[1].IsInstalled);
+        Assert.Equal(harness.Localization.ContentDependencyNotInstalled, members[1].StateText);
+        Assert.Null(viewModel.ContentShareUrl);
+    }
+
+    [Fact]
+    public async Task Page_VersionsTab_ListsTheReleasesOfTheVehicle()
+    {
+        using var harness = await VehicleHarnessAsync();
+        var viewModel = harness.ViewModel;
+        await viewModel.EnsureDiscoverLoadedAsync();
+        viewModel.ShowDiscoverVehiclesCommand.Execute(null);
+        await Assert.Single(viewModel.DiscoverItems).OpenCommand.ExecuteAsync(null);
+
+        await viewModel.ShowContentVersionsCommand.ExecuteAsync(null);
+
+        Assert.Equal(["1.1.0", "1.0.0"], viewModel.ContentVersions.Select(version => version.Version));
+    }
+
+    [Fact]
+    public async Task Page_Mod_KeepsTheDependenciesTabNameAndNoFileBuild()
+    {
+        using var harness = await VehicleHarnessAsync();
+        var viewModel = harness.ViewModel;
+        await viewModel.EnsureDiscoverLoadedAsync();
+
+        await viewModel.DiscoverItems.Single(item => item.ModId == "MeasureTools").OpenCommand.ExecuteAsync(null);
+
+        Assert.Equal(harness.Localization.ContentTabDependencies, viewModel.ContentDependenciesTabText);
+        Assert.Null(viewModel.ContentFileBuildText);
+        Assert.NotNull(viewModel.ContentShareUrl);
     }
 
     /// <summary>The vehicle Example Rover with releases 1.0.0 and 1.1.0, served, with 42 downloads.</summary>

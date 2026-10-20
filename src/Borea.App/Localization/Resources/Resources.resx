@@ -3537,6 +3537,9 @@
   <data name="ContentTabDependencies" xml:space="preserve">
     <value>Dependencies</value>
   </data>
+  <data name="ContentTabNeedsMods" xml:space="preserve">
+    <value>Needs these mods</value>
+  </data>
   <data name="ContentTabVersions" xml:space="preserve">
     <value>Versions</value>
   </data>
@@ -3626,6 +3629,9 @@
   </data>
   <data name="ContentCompatibility" xml:space="preserve">
     <value>Compatibility</value>
+  </data>
+  <data name="ContentFileBuildFormat" xml:space="preserve">
+    <value>Saved in KSA {0}</value>
   </data>
   <data name="ContentLinks" xml:space="preserve">
     <value>Links</value>
