@@ -24,6 +24,9 @@ public sealed class GitHubSession : IGitHubSession
 
     private const string ApiHost = "api.github.com";
 
+    /// <summary>Serves the upload of a release asset, the one write that the API host does not take.</summary>
+    private const string UploadsHost = "uploads.github.com";
+
     private const string DeviceCodeGrantType = "urn:ietf:params:oauth:grant-type:device_code";
 
     private const string RefreshTokenGrantType = "refresh_token";
@@ -242,7 +245,7 @@ public sealed class GitHubSession : IGitHubSession
     {
         ArgumentNullException.ThrowIfNull(request);
         if (!IsApiUri(request.RequestUri))
-            throw new ArgumentException("The GitHub token goes only to https://api.github.com.", nameof(request));
+            throw new ArgumentException("The GitHub token goes only to https://api.github.com and https://uploads.github.com.", nameof(request));
 
         string token;
         lock (_gate)
@@ -615,7 +618,7 @@ public sealed class GitHubSession : IGitHubSession
         && uri.Scheme == Uri.UriSchemeHttps
         && uri.IsDefaultPort
         && uri.UserInfo.Length == 0
-        && string.Equals(uri.Host, ApiHost, StringComparison.OrdinalIgnoreCase);
+        && (string.Equals(uri.Host, ApiHost, StringComparison.OrdinalIgnoreCase) || string.Equals(uri.Host, UploadsHost, StringComparison.OrdinalIgnoreCase));
 
     private static void AddApiHeaders(HttpRequestMessage request, string token)
     {

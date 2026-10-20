@@ -353,8 +353,21 @@ public sealed class GitHubSessionTests
         Assert.Equal(BoreaReleaseCheck.ApiVersion, sent.ApiVersion);
     }
 
+    [Fact]
+    public async Task SendAsync_AssetUpload_CarriesTheToken()
+    {
+        var session = await SignedInSessionAsync();
+        _otherAnswer = _ => Json("{}");
+
+        using var response = await session.SendAsync(new HttpRequestMessage(HttpMethod.Post, "https://uploads.github.com/repos/octocat/ksa-shares/releases/1/assets?name=a.zip"));
+
+        Assert.Equal("Bearer " + Token, _sent.Last().Authorization);
+    }
+
     [Theory]
     [InlineData("https://github.com/KSAModding/content-index")]
+    [InlineData("https://uploads.github.com.example.com/repos")]
+    [InlineData("http://uploads.github.com/repos")]
     [InlineData("https://raw.githubusercontent.com/KSAModding/content-index/main/README.md")]
     [InlineData("http://api.github.com/user")]
     [InlineData("https://api.github.com.example.com/user")]
