@@ -99,6 +99,8 @@ public sealed class CliServicesTests : IDisposable
             Mods = graph.Mods,
             ReadOnlyMods = graph.ReadOnlyMods,
             OfflineContentIndex = graph.OfflineContentIndex,
+            UserContent = graph.UserContent,
+            ReadOnlyUserContent = graph.ReadOnlyUserContent,
             InstallPlanner = graph.InstallPlanner,
             SpaceCheck = graph.SpaceCheck,
             Installer = graph.Installer,

@@ -19,6 +19,7 @@ using Borea.Core.Settings;
 using Borea.Core.State;
 using Borea.Core.Stewardship;
 using Borea.Core.Updates;
+using Borea.Core.UserContent;
 using Borea.Network;
 using Borea.Network.Announcements;
 using Borea.Network.Downloads;
@@ -234,6 +235,12 @@ public sealed class BoreaServices : IDisposable
     public required IContentIndexRefresh IndexRefresh { get; init; }
 
     public required IContentIndexRepository ContentIndex { get; init; }
+
+    /// <summary>The listed vehicles and saves, from the same snapshots as <see cref="ContentIndex"/>.</summary>
+    public required IUserContentRepository UserContent { get; init; }
+
+    /// <summary>The listed vehicles and saves of the content index that Borea holds, read without a request.</summary>
+    public required IUserContentRepository ReadOnlyUserContent { get; init; }
 
     /// <summary>Listing images, verified against their records, from the cache or the author hosts.</summary>
     public required IContentImageSource Images { get; init; }
@@ -583,6 +590,8 @@ public sealed class BoreaServices : IDisposable
             IndexSnapshots = indexSnapshots,
             IndexRefresh = indexSnapshots,
             ContentIndex = contentIndex,
+            UserContent = contentIndex,
+            ReadOnlyUserContent = readOnlyContentIndex,
             Images = images ?? new ContentImageSource(new FileContentImageCache(paths)),
             GitHub = gitHubSession,
             ListingSources = new ListingSourceReader(new ListingHostClient(http), downloader),
