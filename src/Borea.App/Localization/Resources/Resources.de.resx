@@ -3411,6 +3411,12 @@
   <data name="InstallMessageUnlistedPin" xml:space="preserve">
     <value>Die festgelegte Version ist nicht gelistet, deshalb kann Borea sie nicht installieren.</value>
   </data>
+  <data name="InstallMessageMissingForVehicleFormat" xml:space="preserve">
+    <value>Borea kann {0} nicht installieren oder aktivieren, deshalb lädt das Spiel dieses Fahrzeug nicht.</value>
+  </data>
+  <data name="InstallMessageMissingForSaveFormat" xml:space="preserve">
+    <value>Borea kann {0} nicht installieren oder aktivieren, deshalb lässt das Spiel jedes Fahrzeug dieses Spielstands weg, das es braucht, und beim nächsten Speichern gehen diese Fahrzeuge verloren.</value>
+  </data>
   <data name="InstallDependencyAlternativesFormat" xml:space="preserve">
     <value>{0} oder {1}</value>
   </data>

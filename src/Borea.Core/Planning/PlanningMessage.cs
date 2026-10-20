@@ -40,6 +40,12 @@ public enum PlanningMessageKind
     RetractedPack,
     UnlistedPin,
     AboveGameMax,
+
+    /// <summary>A required mod of a vehicle that Borea cannot install or enable. A warning, so the player can go on without it.</summary>
+    MissingForVehicle,
+
+    /// <summary>A required mod of a save that Borea cannot install or enable. A warning, so the player can go on without it.</summary>
+    MissingForSave,
 }
 
 /// <summary>
@@ -61,7 +67,7 @@ public sealed record PlanningMessage(string ModId, PlanningMessageKind Kind)
 
     public OsPlatform? Platform { get; init; }
 
-    /// <summary>The author's reason for a yank or a retraction, an unknown platform, an alternative's mod id, the game build a release needs, the newest game build a release supports, or the pinned mod a release needs.</summary>
+    /// <summary>The author's reason for a yank or a retraction, an unknown platform, an alternative's mod id, the game build a release needs, the newest game build a release supports, the pinned mod a release needs, or the code of the reason a required mod of a vehicle or save is missing.</summary>
     public string? Value { get; init; }
 
     public int? Limit { get; init; }
@@ -104,6 +110,8 @@ public sealed record PlanningMessage(string ModId, PlanningMessageKind Kind)
         PlanningMessageKind.SearchLimit => "search-limit",
         PlanningMessageKind.RetractedPack => "retracted-pack",
         PlanningMessageKind.UnlistedPin => "unlisted-pin",
+        PlanningMessageKind.MissingForVehicle => "missing-for-vehicle",
+        PlanningMessageKind.MissingForSave => "missing-for-save",
         _ => throw new ArgumentOutOfRangeException(nameof(Kind), Kind, "The planning message kind is not defined."),
     };
 
@@ -132,6 +140,8 @@ public sealed record PlanningMessage(string ModId, PlanningMessageKind Kind)
         PlanningMessageKind.SearchLimit => $"Planning exceeded the deterministic limit of {Limit} candidate states.",
         PlanningMessageKind.RetractedPack => Value ?? "The selected pack version is retracted.",
         PlanningMessageKind.UnlistedPin => "The exact pinned release is not listed and cannot be installed by Borea.",
+        PlanningMessageKind.MissingForVehicle => $"{Dependency} cannot be installed or enabled, so the game refuses the vehicle file.",
+        PlanningMessageKind.MissingForSave => $"{Dependency} cannot be installed or enabled, so the game leaves out every vehicle that needs it, and saving again loses those vehicles.",
         _ => $"{Dependency}",
     };
 

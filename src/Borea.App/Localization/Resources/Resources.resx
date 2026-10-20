@@ -3411,6 +3411,12 @@
   <data name="InstallMessageUnlistedPin" xml:space="preserve">
     <value>The pinned release is not listed, so Borea cannot install it.</value>
   </data>
+  <data name="InstallMessageMissingForVehicleFormat" xml:space="preserve">
+    <value>Borea cannot install or enable {0}, so the game refuses this vehicle.</value>
+  </data>
+  <data name="InstallMessageMissingForSaveFormat" xml:space="preserve">
+    <value>Borea cannot install or enable {0}, so the game leaves out every vehicle of this save that needs it, and saving again loses those vehicles.</value>
+  </data>
   <data name="InstallDependencyAlternativesFormat" xml:space="preserve">
     <value>{0} or {1}</value>
   </data>

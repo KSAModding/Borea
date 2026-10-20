@@ -1872,6 +1872,12 @@
   <data name="InstallMessageUnlistedPin" xml:space="preserve">
     <value>The pinned bounty ain't be listed, so The Borea ain't able to haul it onboard.</value>
   </data>
+  <data name="InstallMessageMissingForVehicleFormat" xml:space="preserve">
+    <value>The Borea ain't able to haul {0} onboard or wake it, so the game be refusin' this vessel.</value>
+  </data>
+  <data name="InstallMessageMissingForSaveFormat" xml:space="preserve">
+    <value>The Borea ain't able to haul {0} onboard or wake it, so the game be leavin' out every vessel o' this log that be needin' it, and savin' again sends them vessels to Davy Jones.</value>
+  </data>
   <data name="InstallDependencyAlternativesFormat" xml:space="preserve">
     <value>{0} or {1}</value>
   </data>

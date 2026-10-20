@@ -49,6 +49,8 @@ public sealed class PlanningMessageTests
         { new("pack", PlanningMessageKind.RetractedPack), "retracted-pack", "The selected pack version is retracted." },
         { new("pack", PlanningMessageKind.RetractedPack) { Value = "Broken pack." }, "retracted-pack", "Broken pack." },
         { new("A", PlanningMessageKind.UnlistedPin), "unlisted-pin", "The exact pinned release is not listed and cannot be installed by Borea." },
+        { new("rover", PlanningMessageKind.MissingForVehicle) { Dependency = Library, Value = "unsatisfied-dependency" }, "missing-for-vehicle", "Required dependency on mod 'library' >= 1.0.0 cannot be installed or enabled, so the game refuses the vehicle file." },
+        { new("campaign", PlanningMessageKind.MissingForSave) { Dependency = Library, Value = "unsatisfied-dependency" }, "missing-for-save", "Required dependency on mod 'library' >= 1.0.0 cannot be installed or enabled, so the game leaves out every vehicle that needs it, and saving again loses those vehicles." },
     };
 
     [Theory]
