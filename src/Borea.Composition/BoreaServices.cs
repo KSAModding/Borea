@@ -651,12 +651,13 @@ public sealed class BoreaServices : IDisposable
     }
 
     /// <summary>
-    /// The registry on Windows and the wrapper apps on macOS. Linux has no
-    /// place where installers record the game, so it offers no candidates.
+    /// The registry on Windows, the wrapper apps on macOS and the manifests of
+    /// the Ahwoo client on Linux.
     /// </summary>
     internal static IInstallCandidateSource HostInstallCandidates() =>
         OperatingSystem.IsWindows() ? new WindowsInstallCandidateSource()
             : OperatingSystem.IsMacOS() ? new WrapperInstallCandidateSource()
+            : OperatingSystem.IsLinux() ? new AhwooInstallCandidateSource()
             : new NoInstallCandidates();
 
     private sealed class NoInstallCandidates : IInstallCandidateSource

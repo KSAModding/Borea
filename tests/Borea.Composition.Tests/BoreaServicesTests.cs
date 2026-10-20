@@ -59,11 +59,10 @@ public sealed class BoreaServicesTests : IDisposable
             Assert.IsType<WindowsInstallCandidateSource>(candidates);
         else if (OperatingSystem.IsMacOS())
             Assert.IsType<WrapperInstallCandidateSource>(candidates);
+        else if (OperatingSystem.IsLinux())
+            Assert.IsType<AhwooInstallCandidateSource>(candidates);
         else
-        {
-            Assert.IsNotType<WrapperInstallCandidateSource>(candidates);
             Assert.Empty(candidates.GetGameDirectories());
-        }
     }
 
     [Fact]
