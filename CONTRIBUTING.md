@@ -54,6 +54,7 @@ The testing channel reports beta releases, and only the dev channel reports othe
 
 A feature that is not ready for the dev builds grows on a branch `feature/<name>`, where pull requests go instead of `main`, and `main` is merged into it regularly.
 Its test builds are named `-preview.<name>.N`, for example `v0.6.0-preview.vehicles-saves.1`, and are tagged on that branch.
+The version before `-preview` is the next minor version above the newest release at the time of the build, not a promise of the release the feature lands in, because a preview below the newest release would be offered that release as an update.
 No update channel reports a preview build, so its testers download it by hand, and the release workflow refuses a preview tag that is not on a `feature/` branch and any other tag that is not on `main` or a `release/` branch.
 Only the maintainers can create a `feature/` branch or a release tag.
 
