@@ -393,6 +393,78 @@ public sealed class DtoMapperTests
         Assert.ThrowsAny<ArgumentException>(() => DtoMapper.MapAuthored(dto, "source"));
     }
 
+    [Fact]
+    public void MapAuthored_ReleaseSource_ShareHostAlone_IsTheAuthority()
+    {
+        var dto = MinimalAuthoredDto(type: "vehicle");
+        dto.Releases = new ReleasesInfoDto
+        {
+            Hosts = new Dictionary<string, JsonElement> { ["ksamods"] = JsonSerializer.SerializeToElement("ExampleRover") },
+        };
+
+        var host = Assert.Single(DtoMapper.MapAuthored(dto, "source").Releases!.Hosts);
+
+        Assert.Equal(("ksamods", "ExampleRover", ReleaseHostKind.Share), (host.Host, host.Reference, host.Kind));
+    }
+
+    [Fact]
+    public void MapAuthored_ReleaseSource_AuthorityNamesTheShareHost()
+    {
+        var dto = MinimalAuthoredDto(type: "vehicle");
+        dto.Releases = new ReleasesInfoDto
+        {
+            Authority = "ksamods",
+            Hosts = new Dictionary<string, JsonElement>
+            {
+                ["github"] = JsonSerializer.SerializeToElement("owner/repo"),
+                ["ksamods"] = JsonSerializer.SerializeToElement("ExampleRover"),
+            },
+        };
+
+        var releases = DtoMapper.MapAuthored(dto, "source").Releases!;
+
+        Assert.Equal(2, releases.Hosts.Count);
+        Assert.Equal(ReleaseHostKind.Share, releases.AuthorityHost.Kind);
+    }
+
+    [Theory]
+    [InlineData("\"My Rover\"")]
+    [InlineData("\"-x\"")]
+    [InlineData("\"CON\"")]
+    [InlineData("\"\"")]
+    [InlineData("{ \"id\": \"ExampleRover\" }")]
+    public void MapAuthored_ReleaseSource_ShareKeyWithoutAValidId_IsDropped(string value)
+    {
+        var dto = MinimalAuthoredDto();
+        dto.Releases = new ReleasesInfoDto
+        {
+            Authority = "github",
+            Hosts = new Dictionary<string, JsonElement>
+            {
+                ["github"] = JsonSerializer.SerializeToElement("owner/repo"),
+                ["ksamods"] = JsonDocument.Parse(value).RootElement.Clone(),
+            },
+        };
+
+        Assert.Equal("github", Assert.Single(DtoMapper.MapAuthored(dto, "source").Releases!.Hosts).Host);
+    }
+
+    [Fact]
+    public void MapAuthored_ReleaseSource_ShareHostNextToGitHubWithoutAuthority_KeepsGitHubAlone()
+    {
+        var dto = MinimalAuthoredDto();
+        dto.Releases = new ReleasesInfoDto
+        {
+            Hosts = new Dictionary<string, JsonElement>
+            {
+                ["github"] = JsonSerializer.SerializeToElement("owner/repo"),
+                ["ksamods"] = JsonSerializer.SerializeToElement("ExampleRover"),
+            },
+        };
+
+        Assert.Equal("github", Assert.Single(DtoMapper.MapAuthored(dto, "source").Releases!.Hosts).Host);
+    }
+
     [Theory]
     [InlineData("required", ModDependencyKind.Required)]
     [InlineData("optional", ModDependencyKind.Optional)]

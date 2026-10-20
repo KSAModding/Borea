@@ -224,11 +224,21 @@ public static class DtoMapper
     // repository or a mod counts as one, and a listing with a new key keeps the hosts it had.
     private static ReleaseSource MapReleaseSource(ReleasesInfoDto dto)
     {
-        var hosts = (dto.Hosts ?? new Dictionary<string, JsonElement>())
+        var entries = dto.Hosts ?? new Dictionary<string, JsonElement>();
+        var hosts = entries
             .Select(kvp => (kvp.Key, Reference: MapHostReference(kvp.Value)))
             .Where(host => host.Reference is not null)
             .Select(host => new ReleaseHost(host.Key, host.Reference!))
             .ToList();
+
+        // A share host names the listing id (RFC 0094). Without an authority it counts only alone, because an id can look like
+        // a version, and a key such as until = "2.0" next to github must not make two hosts without an authority.
+        var shares = entries
+            .Where(kvp => ReleaseHost.IsShareKey(kvp.Key) && kvp.Value.ValueKind == JsonValueKind.String && ModIds.IsValid(kvp.Value.GetString()))
+            .Select(kvp => new ReleaseHost(kvp.Key, kvp.Value.GetString()!))
+            .ToList();
+        if (dto.Authority is not null || (hosts.Count == 0 && shares.Count == 1))
+            hosts.AddRange(shares);
 
         return new ReleaseSource(hosts, dto.Authority, MapSince(dto.Since), MapTagPrefix(dto.TagPrefix));
     }
