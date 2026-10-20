@@ -3,6 +3,7 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Security.Cryptography;
 using System.Text;
+using Borea.Core.Index;
 using Borea.Core.Instances;
 using Borea.Core.ModPacks;
 using Borea.Core.Mods;
@@ -24,7 +25,7 @@ public sealed class PackContentViewModelTests
         var rover = Archive(("Example Rover/meta.toml", "name = \"Example Rover\"\n"), ("Example Rover/vehicle.xml", "<Vehicle />"));
         using var harness = await ViewModelHarness.CreateAsync(
             editSnapshot: WithPacks(PackWithContent("rover-pack", "Rover Pack", "1.0.0", Pin("KSArmory", "0.8.44"), vehicles: [Pin("ExampleRover", "1.0.0")])),
-            typeFiles: new Dictionary<string, string> { ["snapshot-vehicles.json"] = TypeFile("vehicles", Entry("ExampleRover", "vehicle", "Example Rover", RoverUrl, rover, "1.0.0", "1.1.0")) });
+            typeFiles: TypeFiles(ContentIndexTypeFiles.Vehicles, Entry("ExampleRover", "vehicle", "Example Rover", RoverUrl, rover, "1.0.0", "1.1.0")));
         var viewModel = harness.ViewModel;
         await viewModel.EnsureDiscoverLoadedAsync();
         viewModel.ShowDiscoverModpacksCommand.Execute(null);
@@ -54,7 +55,7 @@ public sealed class PackContentViewModelTests
             editSnapshot: snapshot => WithPacks(PackWithContent("rover-pack", "Rover Pack", "1.0.0", Pin("MeasureTools", "1.1.10"), vehicles: [Pin("ExampleRover", "1.0.0")]))(
                 snapshot.Replace(MeasureToolsSha256, Convert.ToHexString(SHA256.HashData(tools)), StringComparison.Ordinal)
                     .Replace("\"size\": 41782", $"\"size\": {tools.Length}", StringComparison.Ordinal)),
-            typeFiles: new Dictionary<string, string> { ["snapshot-vehicles.json"] = TypeFile("vehicles", Entry("ExampleRover", "vehicle", "Example Rover", RoverUrl, rover, "1.0.0")) });
+            typeFiles: TypeFiles(ContentIndexTypeFiles.Vehicles, Entry("ExampleRover", "vehicle", "Example Rover", RoverUrl, rover, "1.0.0")));
         var viewModel = harness.ViewModel;
         var instance = await ActivateAsync(harness);
         var mine = Directory.CreateDirectory(Path.Combine(harness.Services.Paths.GetInstanceVehiclesFolder(instance.InstanceId), "Example Rover")).FullName;
@@ -100,7 +101,7 @@ public sealed class PackContentViewModelTests
         using var harness = await ViewModelHarness.CreateAsync(
             respond: request => request.RequestUri?.AbsoluteUri == SaveUrl ? ArchiveResponse(served) : null,
             editSnapshot: WithPacks(packs),
-            typeFiles: new Dictionary<string, string> { ["snapshot-saves.json"] = TypeFile("saves", SaveEntry(("1.0.0", first), ("2.0.0", second))) });
+            typeFiles: TypeFiles(ContentIndexTypeFiles.Saves, SaveEntry(("1.0.0", first), ("2.0.0", second))));
         var viewModel = harness.ViewModel;
         var instance = await OpenPackInstanceAsync(harness);
         var oldRelease = (await harness.Services.UserContent.GetReleaseAsync("CampaignSave", ModVersion.Parse("1.0.0")))!;
@@ -128,7 +129,7 @@ public sealed class PackContentViewModelTests
         var rover = Archive(("Example Rover/meta.toml", "name = \"Example Rover\"\n"), ("Example Rover/vehicle.xml", "<Vehicle />"));
         using var harness = await ViewModelHarness.CreateAsync(
             respond: request => request.RequestUri?.AbsoluteUri == RoverUrl ? ArchiveResponse(rover) : null,
-            typeFiles: new Dictionary<string, string> { ["snapshot-vehicles.json"] = TypeFile("vehicles", Entry("ExampleRover", "vehicle", "Example Rover", RoverUrl, rover, "1.0.0", "1.1.0")) });
+            typeFiles: TypeFiles(ContentIndexTypeFiles.Vehicles, Entry("ExampleRover", "vehicle", "Example Rover", RoverUrl, rover, "1.0.0", "1.1.0")));
         var viewModel = harness.ViewModel;
         var instance = await InstalledContent.AddAsync(harness, "AdvancedFlightComputer", activate: true, ownership: ModInstallOwnership.Borea, version: "0.7.4");
         var release = (await harness.Services.UserContent.GetReleaseAsync("ExampleRover", ModVersion.Parse("1.0.0")))!;
@@ -154,10 +155,7 @@ public sealed class PackContentViewModelTests
                 BuggyUrl => ArchiveResponse(buggy),
                 _ => null,
             },
-            typeFiles: new Dictionary<string, string>
-            {
-                ["snapshot-vehicles.json"] = TypeFile("vehicles", Entry("ExampleRover", "vehicle", "Example Rover", RoverUrl, rover, "1.0.0") + ", " + Entry("Buggy", "vehicle", "Buggy", BuggyUrl, buggy, "1.0.0")),
-            });
+            typeFiles: TypeFiles(ContentIndexTypeFiles.Vehicles, Entry("ExampleRover", "vehicle", "Example Rover", RoverUrl, rover, "1.0.0") + ", " + Entry("Buggy", "vehicle", "Buggy", BuggyUrl, buggy, "1.0.0")));
         var viewModel = harness.ViewModel;
         var instance = await InstalledContent.AddAsync(harness, "AdvancedFlightComputer", activate: true, ownership: ModInstallOwnership.Borea);
         foreach (var id in new[] { "ExampleRover", "Buggy" })
@@ -179,7 +177,7 @@ public sealed class PackContentViewModelTests
     {
         var rover = Archive(("Example Rover/meta.toml", "name = \"Example Rover\"\n"), ("Example Rover/vehicle.xml", "<Vehicle />"));
         using var harness = await ViewModelHarness.CreateAsync(
-            typeFiles: new Dictionary<string, string> { ["snapshot-vehicles.json"] = TypeFile("vehicles", Entry("ExampleRover", "vehicle", "Example Rover", RoverUrl, rover, "1.0.0")) });
+            typeFiles: TypeFiles(ContentIndexTypeFiles.Vehicles, Entry("ExampleRover", "vehicle", "Example Rover", RoverUrl, rover, "1.0.0")));
         var viewModel = harness.ViewModel;
         await viewModel.OpenListingAsync();
         var editor = viewModel.ListingEditor;
@@ -225,7 +223,8 @@ public sealed class PackContentViewModelTests
         Pack(id, name, Version(version, mod))
             .Replace("\"mods\": [", $"\"vehicles\": [{string.Join(", ", vehicles)}], \"mods\": [", StringComparison.Ordinal);
 
-    private static string TypeFile(string key, string entries) => $$"""{ "snapshot_version": 1, "{{key}}": [{{entries}}] }""";
+    private static Dictionary<string, string> TypeFiles(ContentIndexTypeFile file, string entries) =>
+        new() { [file.FileName] = $$"""{ "snapshot_version": 1, "{{file.ArrayKey}}": [{{entries}}] }""" };
 
     private static string Entry(string id, string type, string folder, string url, byte[] archive, params string[] versions) =>
         $$"""{ "id": "{{id}}", "authored": {{Authored(id, type, folder)}}, "releases": [{{string.Join(", ", versions.Select(version => Release(id, type, folder, url, archive, version)))}}] }""";
