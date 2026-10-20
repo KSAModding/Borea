@@ -4182,6 +4182,24 @@
   <data name="PackNewerReleasesFormat" xml:space="preserve">
     <value>{0} von {1} Mods haben neuere Versionen</value>
   </data>
+  <data name="PackNewerItemsOneFormat" xml:space="preserve">
+    <value>1 von {0} Mods, Fahrzeugen und Spielständen hat eine neuere Version</value>
+  </data>
+  <data name="PackNewerItemsFormat" xml:space="preserve">
+    <value>{0} von {1} Mods, Fahrzeugen und Spielständen haben neuere Versionen</value>
+  </data>
+  <data name="PackContentNameTakenFormat" xml:space="preserve">
+    <value>Ein Eintrag namens '{1}' ist {0} im Weg. Wähle einen anderen Namen oder mache ohne {0} weiter.</value>
+  </data>
+  <data name="PackContentChangedFormat" xml:space="preserve">
+    <value>Du hast {0} geändert, seit Borea es installiert hat: {1}. Weitermachen ersetzt es, und der alte Ordner bleibt in den Sicherungen.</value>
+  </data>
+  <data name="PackContentNameTitleFormat" xml:space="preserve">
+    <value>Neuer Name für {0}</value>
+  </data>
+  <data name="PackContentNotInstalledFormat" xml:space="preserve">
+    <value>{0} {1} wurde nicht installiert: {2}</value>
+  </data>
   <data name="PackIncompatibleFormat" xml:space="preserve">
     <value>Dieses Modpack braucht die Spielversion {0} oder neuer.</value>
   </data>

@@ -375,6 +375,66 @@
                         </StackPanel>
                     </Border>
 
+                    <!-- the pinned vehicles, then the pinned saves, each a table of its own -->
+                    <Border BorderBrush="{StaticResource Brush.BorderStrong}" BorderThickness="1" CornerRadius="16" views:RoundedClip.IsEnabled="True" Margin="0,16,0,0">
+                        <Border.IsVisible>
+                            <MultiBinding Converter="{x:Static BoolConverters.And}">
+                                <Binding Path="IsPackModsTab" />
+                                <Binding Path="!!PackVehicles.Count" />
+                            </MultiBinding>
+                        </Border.IsVisible>
+                        <StackPanel>
+                            <Border Background="{StaticResource Brush.Surface}" Padding="16,11">
+                                <TextBlock Classes="body-md secondary" Text="{Binding Localization.InstanceGroupVehicles}" />
+                            </Border>
+                            <ItemsControl ItemsSource="{Binding PackVehicles}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:PackContentItem">
+                                        <Border BorderBrush="{StaticResource Brush.BorderStrong}" BorderThickness="0,1,0,0" Padding="16,8" MinHeight="40">
+                                            <Grid ColumnDefinitions="*,Auto,Auto,Auto">
+                                                <TextBlock Classes="heading-sm" Margin="0,0,8,0" Text="{Binding Name}" ToolTip.Tip="{Binding ContentId}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                                <TextBlock Grid.Column="1" Classes="body-md secondary" Margin="0,0,8,0" Text="{Binding Version}" VerticalAlignment="Center" />
+                                                <Border Grid.Column="2" Classes="chip" Margin="0,0,8,0" IsVisible="{Binding IsInstalled}" VerticalAlignment="Center">
+                                                    <TextBlock Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.UpdateInstalled}" />
+                                                </Border>
+                                                <TextBlock Grid.Column="3" Classes="body-sm secondary" Text="{Binding NewerText}" VerticalAlignment="Center" IsVisible="{Binding NewerText, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </Border>
+                    <Border BorderBrush="{StaticResource Brush.BorderStrong}" BorderThickness="1" CornerRadius="16" views:RoundedClip.IsEnabled="True" Margin="0,16,0,0">
+                        <Border.IsVisible>
+                            <MultiBinding Converter="{x:Static BoolConverters.And}">
+                                <Binding Path="IsPackModsTab" />
+                                <Binding Path="!!PackSaves.Count" />
+                            </MultiBinding>
+                        </Border.IsVisible>
+                        <StackPanel>
+                            <Border Background="{StaticResource Brush.Surface}" Padding="16,11">
+                                <TextBlock Classes="body-md secondary" Text="{Binding Localization.InstanceGroupSaves}" />
+                            </Border>
+                            <ItemsControl ItemsSource="{Binding PackSaves}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:PackContentItem">
+                                        <Border BorderBrush="{StaticResource Brush.BorderStrong}" BorderThickness="0,1,0,0" Padding="16,8" MinHeight="40">
+                                            <Grid ColumnDefinitions="*,Auto,Auto,Auto">
+                                                <TextBlock Classes="heading-sm" Margin="0,0,8,0" Text="{Binding Name}" ToolTip.Tip="{Binding ContentId}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                                <TextBlock Grid.Column="1" Classes="body-md secondary" Margin="0,0,8,0" Text="{Binding Version}" VerticalAlignment="Center" />
+                                                <Border Grid.Column="2" Classes="chip" Margin="0,0,8,0" IsVisible="{Binding IsInstalled}" VerticalAlignment="Center">
+                                                    <TextBlock Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.UpdateInstalled}" />
+                                                </Border>
+                                                <TextBlock Grid.Column="3" Classes="body-sm secondary" Text="{Binding NewerText}" VerticalAlignment="Center" IsVisible="{Binding NewerText, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </Border>
+
                     <!-- c/table-versions -->
                     <Border BorderBrush="{StaticResource Brush.BorderStrong}" BorderThickness="1" CornerRadius="16" views:RoundedClip.IsEnabled="True" Margin="0,16,0,0" IsVisible="{Binding IsPackVersionsTab}">
                         <StackPanel>

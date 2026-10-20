@@ -86,9 +86,10 @@ public partial class MainViewModel
             foreach (var release in pinned.Where(release => release.Yanked))
                 yanked[release.ModId] = release;
 
-            var request = new ModPackUpdateRequest(item.InstanceId, item.Pack, services.Mods, installed, services.GamePlatform.Current, ProceedWithYankedMembers: yanked.Count == 0 ? null : yanked.Keys.ToHashSet(ModIds.Comparer));
+            var request = new ModPackUpdateRequest(item.InstanceId, item.Pack, services.Mods, installed, services.GamePlatform.Current, ProceedWithYankedMembers: yanked.Count == 0 ? null : yanked.Keys.ToHashSet(ModIds.Comparer), UserContent: services.UserContent, ContentNames: item.ContentNames);
             var (pending, result) = await PlanPackUpdateWithChoicesAsync(services, request, null);
             var reasons = PackWarnings(item.Pack, metadata, compatibility);
+            reasons.AddRange(ContentQuestions(result.Content));
             foreach (var change in result.Changes.Where(change => change.Kind is ModPackChangeKind.Add or ModPackChangeKind.Change))
             {
                 if (yanked.TryGetValue(change.ModId, out var release))
@@ -106,6 +107,7 @@ public partial class MainViewModel
                 item.PendingReasons = reasons;
                 item.Choices = choices;
                 HoldPackUpdate(item, pending, result);
+                AskContentName(result.Content, item.ContentNames, () => UpdatePackAsync(item));
             }
         }
         catch (Exception exception) when (IsInstallFailure(exception))
@@ -182,6 +184,9 @@ public partial class MainViewModel
         try
         {
             var planned = item.PendingResult;
+
+            // the confirmation named the changed files of these items, so going on replaces them
+            request = request with { DiscardChangesOf = ChangedContent(planned?.Content ?? []) };
             if (item.Choices is { } choices)
             {
                 var shown = planned?.Warnings ?? [];
@@ -212,6 +217,10 @@ public partial class MainViewModel
                 var summary = Localization.FormatPackIncomplete(steps.Count - done, steps.Count);
                 var details = result.Plan is null ? null : Describe(result.Plan.Conflicts.Concat(result.Plan.UnresolvedChoices));
                 error = item.InstallError = Sentences(summary, details, kept);
+            }
+            else if (NotInstalledContent(result.Content) is { } notInstalled)
+            {
+                item.InstallError = notInstalled;
             }
 
             completed = true;
@@ -299,12 +308,27 @@ public sealed partial class PackUpdateItem : ObservableObject, IInstallRow
     /// <summary>The warnings about the pack itself, without those of <see cref="PendingPlan"/>.</summary>
     internal IReadOnlyList<string> PendingReasons { get; set; } = [];
 
+    /// <summary>The names the player chose for pinned vehicles and saves whose own name is taken, by listing id.</summary>
+    internal Dictionary<string, string> ContentNames { get; } = new(ModIds.Comparer);
+
     public bool IsConfirming => PendingResult is not null;
 
-    /// <summary>What the confirmation lists: the mods the update adds, changes, removes and keeps, and the detached mods it leaves alone.</summary>
+    /// <summary>
+    /// What the confirmation lists: the mods the update adds, changes, removes and keeps, the detached mods it leaves alone,
+    /// and the pinned vehicles and saves it installs or updates.
+    /// </summary>
     public IReadOnlyList<string> ChangeTexts => PendingResult is not { } result ? []
-        : result.Changes.Count == 0 ? [_owner.Localization.PackUpdateNoModChanges]
-        : result.Changes.Select(ChangeText).ToList();
+        : (result.Changes.Count == 0 ? [_owner.Localization.PackUpdateNoModChanges] : result.Changes.Select(ChangeText))
+            .Concat(result.Content.Where(content => content.Status is ModPackContentStatus.NotAttempted or ModPackContentStatus.Changed).Select(ContentText))
+            .ToList();
+
+    private string ContentText(ModPackContentResult content)
+    {
+        var name = _owner.ContentName(content.ContentId);
+        return content.InstalledVersion is { } from
+            ? _owner.Localization.FormatPackUpdateChange(name, from.ToString(), content.Version.ToString())
+            : _owner.Localization.FormatPackUpdateAdd(name, content.Version.ToString());
+    }
 
     /// <summary>"Update pack" or "Update anyway", with the download size when the index states one.</summary>
     public string ConfirmText

@@ -114,6 +114,7 @@ internal sealed class ModPackUserContent(IUserContentInstaller? installer)
             if (installed.Version == pin.Version)
                 return new Step(planned with { Status = ModPackContentStatus.AlreadyInstalled, FolderName = installed.FolderName }, null, installed);
 
+            planned = planned with { InstalledVersion = installed.Version };
             check = await installer.CheckUpdateAsync(instanceId, installed, release!, name, Discards(discard, pin.ContentId), cancellationToken).ConfigureAwait(false);
         }
 

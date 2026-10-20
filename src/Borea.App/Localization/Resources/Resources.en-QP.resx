@@ -2550,6 +2550,24 @@
   <data name="PackNewerReleasesFormat" xml:space="preserve">
     <value>{0} o' {1} barrels have fresher hauls</value>
   </data>
+  <data name="PackNewerItemsOneFormat" xml:space="preserve">
+    <value>1 o' {0} barrels, ships and logs has a fresher haul</value>
+  </data>
+  <data name="PackNewerItemsFormat" xml:space="preserve">
+    <value>{0} o' {1} barrels, ships and logs have fresher hauls</value>
+  </data>
+  <data name="PackContentNameTakenFormat" xml:space="preserve">
+    <value>A haul named '{1}' be blockin' {0}. Pick another name, or sail on without {0}.</value>
+  </data>
+  <data name="PackContentChangedFormat" xml:space="preserve">
+    <value>Ye changed {0} since The Borea hauled it onboard: {1}. Sailin' on swaps it out, and the old chest stays in the stash.</value>
+  </data>
+  <data name="PackContentNameTitleFormat" xml:space="preserve">
+    <value>New name fer {0}</value>
+  </data>
+  <data name="PackContentNotInstalledFormat" xml:space="preserve">
+    <value>{0} {1} weren't hauled onboard: {2}</value>
+  </data>
   <data name="PackIncompatibleFormat" xml:space="preserve">
     <value>This pack be needin' game {0} or fresher.</value>
   </data>

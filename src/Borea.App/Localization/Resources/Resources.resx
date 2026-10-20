@@ -4182,6 +4182,24 @@
   <data name="PackNewerReleasesFormat" xml:space="preserve">
     <value>{0} of {1} mods have newer releases</value>
   </data>
+  <data name="PackNewerItemsOneFormat" xml:space="preserve">
+    <value>1 of {0} mods, vehicles and saves has a newer release</value>
+  </data>
+  <data name="PackNewerItemsFormat" xml:space="preserve">
+    <value>{0} of {1} mods, vehicles and saves have newer releases</value>
+  </data>
+  <data name="PackContentNameTakenFormat" xml:space="preserve">
+    <value>An item named '{1}' is in the way of {0}. Choose another name, or go on without {0}.</value>
+  </data>
+  <data name="PackContentChangedFormat" xml:space="preserve">
+    <value>You changed {0} since Borea installed it: {1}. Going on replaces it, and the old folder stays in the backups.</value>
+  </data>
+  <data name="PackContentNameTitleFormat" xml:space="preserve">
+    <value>New name for {0}</value>
+  </data>
+  <data name="PackContentNotInstalledFormat" xml:space="preserve">
+    <value>{0} {1} was not installed: {2}</value>
+  </data>
   <data name="PackIncompatibleFormat" xml:space="preserve">
     <value>This pack needs game {0} or newer.</value>
   </data>

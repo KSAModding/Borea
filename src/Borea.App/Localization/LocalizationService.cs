@@ -3179,6 +3179,24 @@ public sealed class LocalizationService : INotifyPropertyChanged
             ? string.Format(CultureInfo.CurrentCulture, Resources.PackNewerReleasesOneFormat, total)
             : string.Format(CultureInfo.CurrentCulture, Resources.PackNewerReleasesFormat, newer, total);
 
+    /// <summary>The count of a pack that pins vehicles or saves besides its mods.</summary>
+    public string FormatPackNewerItems(int newer, int total)
+        => newer == 1
+            ? string.Format(CultureInfo.CurrentCulture, Resources.PackNewerItemsOneFormat, total)
+            : string.Format(CultureInfo.CurrentCulture, Resources.PackNewerItemsFormat, newer, total);
+
+    public string FormatPackContentNameTaken(string name, string folder)
+        => string.Format(CultureInfo.CurrentCulture, Resources.PackContentNameTakenFormat, name, folder);
+
+    public string FormatPackContentChanged(string name, string files)
+        => string.Format(CultureInfo.CurrentCulture, Resources.PackContentChangedFormat, name, files);
+
+    public string FormatPackContentNameTitle(string name)
+        => string.Format(CultureInfo.CurrentCulture, Resources.PackContentNameTitleFormat, name);
+
+    public string FormatPackContentNotInstalled(string name, string version, string? reason)
+        => string.Format(CultureInfo.CurrentCulture, Resources.PackContentNotInstalledFormat, name, version, reason);
+
     public string FormatPackIncompatible(string gameMin)
         => string.Format(CultureInfo.CurrentCulture, Resources.PackIncompatibleFormat, gameMin);
 

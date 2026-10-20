@@ -98,6 +98,7 @@ public enum ModPackContentStatus
 /// <param name="FolderName">The folder under Vehicles or saves it uses or would use.</param>
 /// <param name="Changes">The changed files for <see cref="ModPackContentStatus.Changed"/>.</param>
 /// <param name="Warning">Why a skipped pin is skipped.</param>
+/// <param name="InstalledVersion">The recorded version an update replaces, or null for an install.</param>
 public sealed record ModPackContentResult(
     ContentType Type,
     string ContentId,
@@ -106,7 +107,8 @@ public sealed record ModPackContentResult(
     string? Message = null,
     string? FolderName = null,
     InstalledContentChanges? Changes = null,
-    PlanningMessage? Warning = null);
+    PlanningMessage? Warning = null,
+    ModVersion? InstalledVersion = null);
 
 public sealed class ModPackInstallResult
 {

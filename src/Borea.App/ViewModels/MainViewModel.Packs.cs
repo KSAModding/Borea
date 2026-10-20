@@ -166,6 +166,8 @@ public partial class MainViewModel
             version.RefreshText();
         foreach (var member in PackMembers)
             member.RefreshText();
+        foreach (var item in PackVehicles.Concat(PackSaves))
+            item.RefreshText();
         PackUpdate?.RefreshText();
     }
 
@@ -173,8 +175,9 @@ public partial class MainViewModel
     private void ShowNewerMembers()
     {
         foreach (var member in PackMembers)
-            member.NewerRelease = SelectedPack?.NewerMembers.FirstOrDefault(newer => ModIds.Equals(newer.ModId, member.ModId))?.Newer;
+            member.NewerRelease = SelectedPack?.NewerMembers.FirstOrDefault(newer => newer.Type == ContentType.Mod && ModIds.Equals(newer.ModId, member.ModId))?.Newer;
         ShowNewerMemberUse();
+        ShowNewerContent();
     }
 
     /// <summary>The header of the column that shows the state of each member in the active instance, or null without one.</summary>
@@ -325,6 +328,8 @@ public partial class MainViewModel
         PackTab = PackPageTab.Description;
         PackDetailError = null;
         PackMembers.Clear();
+        PackVehicles.Clear();
+        PackSaves.Clear();
         PackVersions.Clear();
 
         FillLinks(PackLinks, pack.Links);
@@ -369,6 +374,7 @@ public partial class MainViewModel
                 PackVersions.Add(new PackVersionItem(this, pack, version.Metadata!));
             ShowNewerMembers();
             RefreshInstalledFlags();
+            await LoadPackContentAsync(pack);
         }
         catch (Exception exception) when (exception is HttpRequestException or IOException or InvalidOperationException or TaskCanceledException)
         {
@@ -450,7 +456,11 @@ public partial class MainViewModel
     internal Task InstallPackAsync(PackItem pack, Guid? targetInstanceId = null, ModVersion? version = null, bool confirm = false)
     {
         if ((targetInstanceId ?? ActiveInstance?.InstanceId) is { } instanceId)
+        {
+            if (!pack.IsInstalling)
+                pack.ContentNames.Clear();
             return PlanPackInstallAsync(pack, instanceId, newInstanceName: null, version, confirm);
+        }
 
         ShowInstanceHintToast();
         return Task.CompletedTask;
@@ -576,7 +586,15 @@ public partial class MainViewModel
                 services.Mods,
                 installed,
                 services.GamePlatform.Current,
-                ProceedWithYankedMembers: yanked.Count == 0 ? null : yanked);
+                ProceedWithYankedMembers: yanked.Count == 0 ? null : yanked,
+                UserContent: services.UserContent,
+                ContentNames: pack.ContentNames);
+
+            // a new instance holds no vehicle or save yet, so only an existing one can have a name in the way or a changed item
+            var content = instanceId is not null && metadata.Vehicles.Count + metadata.Saves.Count > 0
+                ? (await services.ModPackInstaller.PlanAsync(request)).Content
+                : [];
+            reasons.AddRange(ContentQuestions(content));
 
             if (run.InstallStop.IsRequested)
             {
@@ -587,10 +605,12 @@ public partial class MainViewModel
                 pack.PendingInstall = request;
                 pack.PendingInstanceName = newInstanceName;
                 pack.PendingReasons = reasons;
+                pack.PendingContent = content;
                 pack.Choices = choices;
                 HoldPack(pack, plan);
                 if (choices is not null)
                     ReplanOnChange(pack, choices, replanned => HoldPack(pack, replanned));
+                AskContentName(content, pack.ContentNames, () => PlanPackInstallAsync(pack, instanceId, newInstanceName, version, confirm: true));
             }
             else
             {
@@ -620,6 +640,7 @@ public partial class MainViewModel
     private async Task ReloadAfterPackInstallAsync(InstallRun run, string? newInstanceName)
     {
         await ReloadInstancesAsync();
+        await ShowPackContentStateAsync();
         if (newInstanceName is not null && run.TaskItem.InstanceId is { } created && ActiveInstance?.InstanceId == created)
             ShowSuccessToast(() => Localization.FormatLibraryNowActive(newInstanceName));
     }
@@ -757,6 +778,8 @@ public partial class MainViewModel
                 request = request with { Recommended = choices.SelectedRecommendations, Alternatives = choices.SelectedAlternatives };
             }
 
+            // the confirmation named the changed files of these items, so going on replaces them
+            request = request with { DiscardChangesOf = ChangedContent(pack.PendingContent) };
             pack.CancelInstall();
             executed = true;
             stopped = await ExecutePackInstallAsync(services, pack, request, run, newInstanceName);
@@ -792,7 +815,7 @@ public partial class MainViewModel
             : await services.ModPackInstaller.CreateAndInstallAsync(newInstanceName, request, ProgressOf(pack), run.InstallStop);
         if (newInstanceName is not null && result.InstanceId != Guid.Empty)
             run.TaskItem.SetInstance(result.InstanceId, newInstanceName);
-        pack.ShowResults(result.Members.Select(member => new PackResultItem(this, member)));
+        pack.ShowResults(result.Members.Concat(result.Content.Select(AsMember)).Select(member => new PackResultItem(this, member)));
         LeavePackInstallStepsNotice(pack, result);
         if (result.IsStopped)
         {
@@ -802,8 +825,13 @@ public partial class MainViewModel
             return StoppedText(pack, installed, total);
         }
 
+        // the mods of a pack are complete without its vehicles and saves, so an item that did not install is named on its own
         if (result.IsComplete)
+        {
+            if (NotInstalledContent(result.Content) is { } notInstalled)
+                pack.InstallError = notInstalled;
             return null;
+        }
 
         pack.InstallError = IncompleteText(result);
         return null;
@@ -889,7 +917,9 @@ public sealed partial class PackItem : ObservableObject, IPlanRow
 
     public bool HasNewerReleases => NewerMembers.Count > 0;
 
-    public string? NewerReleasesText => HasNewerReleases ? _owner.Localization.FormatPackNewerReleases(NewerMembers.Count, ModCount) : null;
+    public string? NewerReleasesText => !HasNewerReleases ? null
+        : Metadata.Vehicles.Count + Metadata.Saves.Count == 0 ? _owner.Localization.FormatPackNewerReleases(NewerMembers.Count, ModCount)
+        : _owner.Localization.FormatPackNewerItems(NewerMembers.Count, ModCount + Metadata.Vehicles.Count + Metadata.Saves.Count);
 
     public string GameVersionText => GameVersion(Metadata);
 
@@ -1008,6 +1038,12 @@ public sealed partial class PackItem : ObservableObject, IPlanRow
 
     /// <summary>The warnings about the pack itself, without those of <see cref="PendingPlan"/>.</summary>
     internal IReadOnlyList<string> PendingReasons { get; set; } = [];
+
+    /// <summary>The checks of the pinned vehicles and saves while <see cref="PendingInstall"/> waits.</summary>
+    internal IReadOnlyList<ModPackContentResult> PendingContent { get; set; } = [];
+
+    /// <summary>The names the player chose for pinned vehicles and saves whose own name is taken, by listing id.</summary>
+    internal Dictionary<string, string> ContentNames { get; } = new(ModIds.Comparer);
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ConfirmInstallText))]
@@ -1169,6 +1205,7 @@ public sealed partial class PackItem : ObservableObject, IPlanRow
         PendingInstall = null;
         PendingInstanceName = null;
         PendingReasons = [];
+        PendingContent = [];
         PendingPlan = null;
         InstallWarning = null;
         Choices = null;
