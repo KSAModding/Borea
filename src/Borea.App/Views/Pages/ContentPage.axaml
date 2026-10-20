@@ -537,7 +537,14 @@
                             <Border Classes="avatar">
                                 <Path Classes="icon size-18" Data="{StaticResource Icon.User}" />
                             </Border>
-                            <TextBlock Grid.Column="2" Classes="body-sm secondary" FontWeight="SemiBold" Text="{Binding SelectedContent.AuthorNames}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                            <ItemsControl Grid.Column="2" ItemsSource="{Binding SelectedContent.AuthorLinks}" ItemTemplate="{StaticResource AuthorLink}" ItemsPanel="{StaticResource AuthorLinksPanel}" VerticalAlignment="Center">
+                                <ItemsControl.Styles>
+                                    <Style Selector="TextBlock">
+                                        <Setter Property="FontWeight" Value="SemiBold" />
+                                        <Setter Property="TextWrapping" Value="Wrap" />
+                                    </Style>
+                                </ItemsControl.Styles>
+                            </ItemsControl>
                         </Grid>
                     </StackPanel>
                     <Border Height="1" Background="{StaticResource Brush.BorderStrong}" />
