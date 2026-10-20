@@ -217,6 +217,10 @@ public sealed class ContentIndexModRepositoryTests : IDisposable
         Assert.DoesNotContain(await repository.SearchAsync("rov"), listing => listing.ModId == "rover");
         Assert.Contains("old-rover", await repository.GetClaimedModIdsAsync(), ModIds.Comparer);
         Assert.Contains("campaign", await repository.GetClaimedModIdsAsync(), ModIds.Comparer);
+        Assert.Equal(["rover", "campaign"], (await content.GetAvailableAsync()).Select(listing => listing.ModId));
+        Assert.Equal(["2.0.0", "1.0.0"], (await content.GetReleaseHistoryAsync("rover")).Select(release => release.Version.ToString()));
+        Assert.Empty(await content.GetReleaseHistoryAsync("old-rover"));
+        Assert.Empty(await repository.GetReleaseHistoryAsync("rover"));
     }
 
     [Fact]

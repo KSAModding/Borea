@@ -178,6 +178,10 @@ public sealed class ModPackUserContentTests
 
         public Task<ModVersionMetadata?> GetLatestReleaseAsync(string id, ReleaseChannel channel, CancellationToken cancellationToken = default) => throw new NotSupportedException();
 
+        public Task<IReadOnlyList<ModMetadata>> GetAvailableAsync(CancellationToken cancellationToken = default) => throw new NotSupportedException();
+
+        public Task<IReadOnlyList<ModVersionMetadata>> GetReleaseHistoryAsync(string id, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+
         public Task<IReadOnlyList<ModMetadata>> SearchAsync(ContentType type, string query, CancellationToken cancellationToken = default) => throw new NotSupportedException();
     }
 
