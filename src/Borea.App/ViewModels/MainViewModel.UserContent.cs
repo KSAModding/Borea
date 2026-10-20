@@ -96,7 +96,7 @@ public partial class MainViewModel
             return;
 
         var plan = shown;
-        if (row.Choices is { } choices || shown.Check.Outcome == UserContentOutcome.Changed)
+        if (row.Choices is not null || shown.Check.Outcome == UserContentOutcome.Changed)
         {
             var instanceId = shown.Mods.InstanceId;
             try
