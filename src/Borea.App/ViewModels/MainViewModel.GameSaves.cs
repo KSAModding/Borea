@@ -314,7 +314,7 @@ public partial class MainViewModel
         }
 
         // the game opens a save file only while it writes it, so the change itself does not notice a running game
-        if (instanceIds.Any(services.Launcher.IsRunning))
+        if (instanceIds.Any(services.Launcher.IsRunning) || services.IsGameProcessRunning())
         {
             ShowErrorToast(failed, Localization.GameSaveCloseGame);
             return false;

@@ -423,6 +423,26 @@ public sealed class GameSavesViewModelTests
     }
 
     [Fact]
+    public async Task Delete_WhileAGameRunsOutsideBorea_RefusesWithCloseTheGame()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(WithStarMap);
+        var viewModel = harness.ViewModel;
+        var instance = (await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value)).Instance;
+        var saves = harness.Services.Paths.GetInstanceSavesFolder(instance.InstanceId);
+        WriteItem(saves, "Orbit", "2026-08-01T14:34:32.4054896", "v2026.8.3.5117", 10);
+        await OpenAsync(harness, "Main");
+        harness.IsGameProcessRunning = () => true;
+        var row = Assert.Single(viewModel.SavesSection.Items);
+
+        row.BeginDeleteCommand.Execute(null);
+        await row.ConfirmDeleteCommand.ExecuteAsync(null);
+
+        Assert.Equal(harness.Localization.GameSaveCloseGame, viewModel.Toasts.Items[^1].Detail);
+        Assert.True(Directory.Exists(Path.Combine(saves, "Orbit")));
+        Assert.False(Directory.Exists(harness.Services.Paths.GetBackupsRoot()));
+    }
+
+    [Fact]
     public async Task Rename_WritesTheNameAndRenamesTheFolder()
     {
         using var harness = await ViewModelHarness.CreateAsync();
