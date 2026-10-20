@@ -1,11 +1,12 @@
 using System.Net;
 using System.Text;
 using Borea.Core.Listings;
+using Borea.Core.Sharing;
 
 namespace Borea.Network.Listings;
 
-/// <summary>Reads the listed documents and the authored schema of content-index from its main branch.</summary>
-public sealed class ListedDocumentFetcher : IListedDocumentSource, IListingSchemaFetcher
+/// <summary>Reads the listed documents, the authored schema and the share hosts of content-index from its main branch.</summary>
+public sealed class ListedDocumentFetcher : IListedDocumentSource, IListingSchemaFetcher, IShareHostFetcher
 {
     internal const string ContentIndexUrl = "https://raw.githubusercontent.com/KSAModding/content-index/main/";
 
@@ -46,6 +47,18 @@ public sealed class ListedDocumentFetcher : IListedDocumentSource, IListingSchem
     }
 
     public Task<string> FetchAsync(CancellationToken cancellationToken = default) => GetAsync("schemas/authored.schema.json", cancellationToken);
+
+    public async Task<string?> FetchHostsAsync(CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            return await GetAsync("hosts.toml", cancellationToken).ConfigureAwait(false);
+        }
+        catch (HttpRequestException exception) when (exception.StatusCode == HttpStatusCode.NotFound)
+        {
+            return null;
+        }
+    }
 
     private static string PackVersionPath(string id, string version)
     {

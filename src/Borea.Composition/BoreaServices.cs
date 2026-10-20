@@ -261,6 +261,9 @@ public sealed class BoreaServices : IDisposable
 
     public required IListingValidator ListingValidator { get; init; }
 
+    /// <summary>The share hosts that hosts.toml of content-index registers (RFC 0094).</summary>
+    public required IShareHostSource ShareHosts { get; init; }
+
     /// <summary>Opens and follows the listing pull request from the signed-in account.</summary>
     public required IListingPublisher ListingPublisher { get; init; }
 
@@ -600,6 +603,7 @@ public sealed class BoreaServices : IDisposable
             ListedDocuments = listedDocuments,
             ListingFormat = listingFormat,
             ListingValidator = new ListingValidator(new ListingSchemaStore(listedDocuments, paths)),
+            ShareHosts = new ShareHostStore(listedDocuments, paths),
             ListingPublisher = new LoggingListingPublisher(listingPublisher ?? new ListingPublisher(gitHubSession, http, listingFormat), log),
             ListingOwnership = listingOwnership,
             StewardRole = stewardRole,

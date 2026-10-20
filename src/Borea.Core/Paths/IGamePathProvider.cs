@@ -22,6 +22,11 @@ public interface IGamePathProvider
     string GetListingSchemaPath();
 
     /// <summary>
+    /// Path to the cached hosts.toml of content-index, which registers the share hosts (RFC 0094).
+    /// </summary>
+    string GetShareHostsPath();
+
+    /// <summary>
     /// Folder of the listing images Borea verified, one file per SHA-256.
     /// </summary>
     string GetImageCacheFolder();
