@@ -513,6 +513,17 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string FormatStewardReviewParseError(string error)
         => string.Format(CultureInfo.CurrentCulture, Resources.StewardReviewParseErrorFormat, error);
 
+    public string FormatStewardReviewNewestRelease(string version, string folder)
+        => string.Format(CultureInfo.CurrentCulture, Resources.StewardReviewNewestReleaseFormat, version, folder);
+
+    public string FormatStewardReviewNewestReleaseNoFolder(string version)
+        => string.Format(CultureInfo.CurrentCulture, Resources.StewardReviewNewestReleaseNoFolderFormat, version);
+
+    public string StewardReviewNoRelease => Resources.StewardReviewNoRelease;
+
+    public string FormatStewardReviewReleaseUnreadable(string error)
+        => string.Format(CultureInfo.CurrentCulture, Resources.StewardReviewReleaseUnreadableFormat, error);
+
     public string StewardReviewOwnership => Resources.StewardReviewOwnership;
 
     public string FormatStewardReviewOwnershipVerified(string login)

@@ -605,6 +605,21 @@
                                                             </ItemsControl.ItemTemplate>
                                                         </ItemsControl>
                                                     </StackPanel>
+
+                                                    <!-- a vehicle or save: what it depends on, and the folder that its newest release already installs as -->
+                                                    <StackPanel Spacing="10" IsVisible="{Binding IsVehicleOrSave}">
+                                                        <StackPanel Spacing="10" IsVisible="{Binding !!Dependencies.Count}">
+                                                            <TextBlock Classes="heading-md" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ListingDependencies}" />
+                                                            <ItemsControl ItemsSource="{Binding Dependencies}">
+                                                                <ItemsControl.ItemTemplate>
+                                                                    <DataTemplate x:DataType="x:String">
+                                                                        <TextBlock Classes="label-md" Text="{Binding}" Margin="0,2" />
+                                                                    </DataTemplate>
+                                                                </ItemsControl.ItemTemplate>
+                                                            </ItemsControl>
+                                                        </StackPanel>
+                                                        <TextBlock Classes="body-sm secondary" Text="{Binding ReleaseText}" TextWrapping="Wrap" />
+                                                    </StackPanel>
                                                 </StackPanel>
 
                                                 <!-- the ownership proof of the pull request author against the listing on the base branch -->

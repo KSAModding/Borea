@@ -609,6 +609,50 @@ public sealed class StewardViewsTests
         Assert.Contains("+id = \"MyMod\"", texts);
         Assert.Contains(harness.Localization.StewardReviewNoPatch, texts);
         Assert.DoesNotContain(harness.Localization.StewardQueueHint, texts);
+        Assert.DoesNotContain(harness.Localization.ListingDependencies, texts);
+        Assert.DoesNotContain(harness.Localization.StewardReviewNoRelease, texts);
+    }
+
+    [Fact]
+    public async Task ReviewPage_Vehicle_ShowsItsDependenciesAndTheFolderOfItsNewestRelease()
+    {
+        const string Vehicle = "spec_version = 1\nid = \"ExampleRover\"\ntype = \"vehicle\"\nname = \"Example Rover\"\n\n[[dependencies]]\nid = \"ExampleParts\"\nkind = \"required\"\n";
+        _queue.Items.Add(FakeStewardQueue.Item(9) with { Kinds = [StewardQueueKind.Vehicle] });
+        using var harness = await CreateAsync();
+        var pull = FakePullRequestReviews.Review(9);
+        _reviews.Reviews[("KSAModding/content-index", 9)] = pull with
+        {
+            Files = [FakePullRequestReviews.File(pull, "vehicles/ExampleRover.toml", "@@ -0,0 +1,2 @@\n+id = \"ExampleRover\"")],
+            Documents =
+            [
+                new PullRequestDocument("vehicles/ExampleRover.toml", StewardQueueKind.Vehicle, Vehicle, harness.Services.ListingFormat.Read(Vehicle), null, ListingOwnership.Unknown,
+                    new PullRequestRelease("1.0.0", "Example Rover")),
+            ],
+        };
+        var viewModel = harness.ViewModel;
+        viewModel.OpenStewardPageCommand.Execute(null);
+        await viewModel.StewardPage.Queue.WhenLoadedAsync();
+        await viewModel.StewardPage.Queue.Items[0].OpenCommand.ExecuteAsync(null);
+
+        var texts = await HeadlessApp.RunAsync(harness, () =>
+        {
+            var window = new Window { Width = 1280, Height = 832, Content = new StewardPageView(), DataContext = viewModel };
+            window.Show();
+            try
+            {
+                window.UpdateLayout();
+                return Task.FromResult(window.GetVisualDescendants().OfType<TextBlock>().Where(text => text.IsEffectivelyVisible).Select(text => text.Text).ToList());
+            }
+            finally
+            {
+                window.Close();
+            }
+        });
+
+        Assert.Contains("Example Rover", texts);
+        Assert.Contains(harness.Localization.ListingDependencies, texts);
+        Assert.Contains("required: ExampleParts", texts);
+        Assert.Contains("The newest release 1.0.0 installs into the folder Example Rover.", texts);
     }
 
     [Fact]

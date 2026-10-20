@@ -217,10 +217,14 @@ public sealed class GitHubReleaseAmendments : IReleaseAmendments
     }
 
     /// <summary>The versions of the release files of the listing at the commit, as their file names spell them, as tools/amend.py finds them.</summary>
-    private async Task<IReadOnlyList<string>> StampedAsync(string listingId, string head, CancellationToken cancellationToken)
+    private Task<IReadOnlyList<string>> StampedAsync(string listingId, string head, CancellationToken cancellationToken) =>
+        StampedAsync(_api, listingId, head, cancellationToken);
+
+    /// <param name="reference">A commit or a branch of content-index-releases.</param>
+    internal static async Task<IReadOnlyList<string>> StampedAsync(GitHubApi api, string listingId, string reference, CancellationToken cancellationToken)
     {
-        var folder = $"{Api}/repos/{Repository}/contents/{ReleaseAmendment.Folder}/{Uri.EscapeDataString(listingId)}?ref={Uri.EscapeDataString(head)}";
-        var reply = await _api.SendAsync(HttpMethod.Get, folder, null, cancellationToken).ConfigureAwait(false);
+        var folder = $"{Api}/repos/{Repository}/contents/{ReleaseAmendment.Folder}/{Uri.EscapeDataString(listingId)}?ref={Uri.EscapeDataString(reference)}";
+        var reply = await api.SendAsync(HttpMethod.Get, folder, null, cancellationToken).ConfigureAwait(false);
         if (reply.Status == HttpStatusCode.NotFound)
             return [];
 
