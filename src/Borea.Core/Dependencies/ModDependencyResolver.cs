@@ -74,13 +74,7 @@ public sealed class ModDependencyResolver
             .Where(mod => mod.Dependencies.Any(dependency => !dependency.Optional && ModIds.Equals(dependency.ModId, modId)))
             .Select(mod => mod.ModId));
 
-        var view = RecordedContentNeeds.InstanceView(instance);
-        var dependentContent = RecordedContentNeeds.Broken(content ?? [], view, RecordedContentNeeds.Without(view, modId))
-            .Select(broken => broken.Record)
-            .Distinct()
-            .ToList();
-
-        return new UninstallCheck(instance.InstanceId, modId, version, dependents, isActive, dependentContent);
+        return new UninstallCheck(instance.InstanceId, modId, version, dependents, isActive, RecordedContentNeeds.Needing(content ?? [], instance, modId));
     }
 
     private static DependencyEvaluation EvaluateDeclared(Instance instance, ModDependency dependency)

@@ -20,6 +20,17 @@ internal static class UserContentCommands
     public static async Task<InstalledContentRecord?> FindRecordAsync(CliServices cli, Instance instance, string id, CancellationToken cancellationToken) =>
         (await cli.InstalledContent.ListAsync(instance.InstanceId, cancellationToken).ConfigureAwait(false)).FirstOrDefault(record => ModIds.Equals(record.ListingId, id));
 
+    /// <summary>Names each recorded vehicle or save that the game no longer loads in full without <paramref name="modId"/>. It only warns, because only an incompatible release blocks.</summary>
+    public static void WriteNeeding(TextWriter error, string modId, IEnumerable<InstalledContentRecord> content)
+    {
+        foreach (var record in content)
+        {
+            error.WriteLine(record.Type == ContentType.Save
+                ? $"warning: The save {record.FolderName} needs {modId}, so the game leaves out every vehicle of that save that needs it, and saving again loses those vehicles."
+                : $"warning: The vehicle {record.FolderName} needs {modId}, so the game refuses that vehicle.");
+        }
+    }
+
     public static async Task<int> InstallAsync(CliServices cli, Instance instance, ModMetadata listing, Options options, TextWriter output, TextWriter error, CancellationToken cancellationToken)
     {
         var repository = options.DryRun ? cli.ReadOnlyUserContent : cli.UserContent;

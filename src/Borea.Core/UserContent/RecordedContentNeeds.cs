@@ -64,6 +64,13 @@ public static class RecordedContentNeeds
             .ToList();
     }
 
+    /// <summary>The records that the game no longer loads in full when <paramref name="modId"/> is removed or disabled, each one once.</summary>
+    public static IReadOnlyList<InstalledContentRecord> Needing(IEnumerable<InstalledContentRecord> records, Instance instance, string modId)
+    {
+        var view = InstanceView(instance);
+        return Broken(records, view, Without(view, modId)).Select(broken => broken.Record).Distinct().ToList();
+    }
+
     // The same rule as the planner: a version inside the bounds, or a foreign mod when the entry has no bounds.
     private static bool IsMet(ModDependency dependency, IReadOnlyDictionary<string, ModVersion?> view) =>
         dependency.IsAnyOf
