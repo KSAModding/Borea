@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -18,14 +17,21 @@ namespace Borea.App.ViewModels;
 /// <summary>A share host that takes the type of the shared item, as a button of the share card.</summary>
 public sealed record ShareHostRow(ShareHost Host, string Label);
 
+/// <summary>One check that the host ran on the upload.</summary>
+public sealed record ShareCheckRow(string Text, bool Passed)
+{
+    public bool Failed => !Passed;
+}
+
+/// <summary>A release status that the host takes, with the name the App shows for it.</summary>
+public sealed record ShareStatusChoice(string Value, string Label);
+
 /// <summary>
 /// A share on a host of RFC 0094: Borea writes the archive, signs in, uploads it with the dependencies, shows what the host
 /// checked, and publishes the version and status the player chose. The host opens the listing pull request.
 /// </summary>
 public sealed partial class ListingEditor
 {
-    public static IReadOnlyList<string> ShareStatuses { get; } = ["stable", "testing", "dev"];
-
     private IReadOnlyList<ShareHost> _shareHosts = [];
     private CancellationTokenSource? _shareHostRun;
     private (ShareHost Host, ShareUpload Upload, string? ListingId)? _shareUpload;
@@ -38,10 +44,23 @@ public sealed partial class ListingEditor
 
     public bool HasShareHosts => HasShare && ShareHostRows.Count > 0;
 
-    public ObservableCollection<string> ShareHostChecks { get; } = [];
+    public ObservableCollection<ShareCheckRow> ShareHostChecks { get; } = [];
+
+    public IReadOnlyList<ShareStatusChoice> ShareStatusChoices =>
+        [new("stable", Localization.ReleaseStable), new("testing", Localization.ReleaseTesting), new("dev", Localization.ReleaseDev)];
+
+    public ShareStatusChoice? SelectedShareStatus
+    {
+        get => ShareStatusChoices.FirstOrDefault(choice => choice.Value == ShareHostStatus);
+        set
+        {
+            if (value is not null)
+                ShareHostStatus = value.Value;
+        }
+    }
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(CanPublishToShareHost), nameof(CanUploadToShareHost))]
+    [NotifyPropertyChangedFor(nameof(CanPublishToShareHost), nameof(CanUploadToShareHost), nameof(IsSharing))]
     private string? _shareHostProgress;
 
     [ObservableProperty]
@@ -55,7 +74,8 @@ public sealed partial class ListingEditor
     private string _shareHostVersion = string.Empty;
 
     [ObservableProperty]
-    private string _shareHostStatus = ShareStatuses[0];
+    [NotifyPropertyChangedFor(nameof(SelectedShareStatus))]
+    private string _shareHostStatus = "stable";
 
     [ObservableProperty]
     private string? _shareHostOutcome;
@@ -63,14 +83,19 @@ public sealed partial class ListingEditor
     [ObservableProperty]
     private Uri? _sharePullRequest;
 
-    public string? ShareHostCodeText => _shareHostCode is { } code ? Localization.FormatListingShareHostCode(code.Page, code.Code) : null;
+    public string? ShareHostCodeText => _shareHostCode is { } code ? Localization.FormatListingShareHostCode(code.Page) : null;
+
+    public string? ShareHostUserCode => _shareHostCode?.Code;
 
     public bool HasShareUpload => _shareUpload is not null;
 
-    public bool CanUploadToShareHost => ShareHostProgress is null;
+    /// <summary>A share on a host runs.</summary>
+    public bool IsSharing => ShareHostProgress is not null;
+
+    public bool CanUploadToShareHost => !IsSharing;
 
     /// <summary>A check that failed means the host refuses to publish, so the player shares again after a fix.</summary>
-    public bool CanPublishToShareHost => _shareUpload is { } upload && upload.Upload.Checks.All(check => check.Passed) && ShareHostVersion.Trim().Length > 0 && ShareHostProgress is null;
+    public bool CanPublishToShareHost => _shareUpload is { } upload && upload.Upload.Checks.All(check => check.Passed) && ShareHostVersion.Trim().Length > 0 && !IsSharing;
 
     private void StartShareHosts()
     {
@@ -97,9 +122,10 @@ public sealed partial class ListingEditor
         var rows = _share is null ? [] : _shareHosts.Where(host => host.Accepts(Type)).Select(host => new ShareHostRow(host, Localization.FormatListingShareOnHost(host.Name))).ToList();
         MainViewModel.Arrange(ShareHostRows, rows);
         if (_shareUpload is { } shared)
-            MainViewModel.Arrange(ShareHostChecks, shared.Upload.Checks.Select(CheckText).ToList());
+            MainViewModel.Arrange(ShareHostChecks, shared.Upload.Checks.Select(CheckRow).ToList());
         OnPropertyChanged(nameof(HasShareHosts));
         OnPropertyChanged(nameof(ShareHostCodeText));
+        OnPropertyChanged(nameof(ShareHostUserCode));
     }
 
     /// <summary>Drops a running share and its result, because they belong to the item before.</summary>
@@ -118,6 +144,7 @@ public sealed partial class ListingEditor
         OnPropertyChanged(nameof(HasShareUpload));
         OnPropertyChanged(nameof(CanPublishToShareHost));
         OnPropertyChanged(nameof(ShareHostCodeText));
+        OnPropertyChanged(nameof(ShareHostUserCode));
     }
 
     /// <summary>
@@ -138,13 +165,16 @@ public sealed partial class ListingEditor
         string? file = null;
         try
         {
-            if (await _owner.WriteShareArchiveToTempAsync(share) is not { } written || _shareHostRun != cancel)
+            if (await _owner.WriteShareArchiveToTempAsync(share) is not { } written)
                 return;
 
             file = written.File;
+            if (_shareHostRun != cancel)
+                return;
+
             if (host.MaxBytesFor(Type) is { } max && written.Archive.Size > max)
             {
-                ShareHostError = Localization.FormatListingShareHostTooLarge(written.Archive.Size.ToString("N0", CultureInfo.CurrentCulture), host.Name, max.ToString("N0", CultureInfo.CurrentCulture));
+                ShareHostError = Localization.FormatListingShareHostTooLarge(MainViewModel.SizeText(written.Archive.Size), host.Name, MainViewModel.SizeText(max));
                 return;
             }
 
@@ -158,10 +188,12 @@ public sealed partial class ListingEditor
 
                     _shareHostCode = (code.VerificationUri, code.UserCode);
                     OnPropertyChanged(nameof(ShareHostCodeText));
+                    OnPropertyChanged(nameof(ShareHostUserCode));
                 });
                 await services.ShareHostClient.SignInAsync(host, progress, _owner.StaySignedInToGitHub, cancel.Token);
                 _shareHostCode = null;
                 OnPropertyChanged(nameof(ShareHostCodeText));
+                OnPropertyChanged(nameof(ShareHostUserCode));
             }
 
             ShareHostProgress = Localization.ListingShareHostUploading;
@@ -174,7 +206,7 @@ public sealed partial class ListingEditor
                 return;
 
             _shareUpload = (host, upload, listingId);
-            MainViewModel.Arrange(ShareHostChecks, upload.Checks.Select(CheckText).ToList());
+            MainViewModel.Arrange(ShareHostChecks, upload.Checks.Select(CheckRow).ToList());
             ShareHostListingText = upload.ListingText;
             ShareHostVersion = upload.ProposedVersion ?? string.Empty;
             if (upload.Checks.Any(check => !check.Passed))
@@ -202,6 +234,7 @@ public sealed partial class ListingEditor
                 _shareHostCode = null;
                 ShareHostProgress = null;
                 OnPropertyChanged(nameof(ShareHostCodeText));
+                OnPropertyChanged(nameof(ShareHostUserCode));
             }
         }
     }
@@ -260,6 +293,7 @@ public sealed partial class ListingEditor
         _shareHostCode = null;
         ShareHostProgress = null;
         OnPropertyChanged(nameof(ShareHostCodeText));
+        OnPropertyChanged(nameof(ShareHostUserCode));
     }
 
     [RelayCommand]
@@ -289,13 +323,13 @@ public sealed partial class ListingEditor
             .FirstOrDefault(entry => entry.Kind == ReleaseHostKind.Share && entry.Host == host.Key)?.Reference;
     }
 
-    private string CheckText(ShareCheck check) => check.Passed
-        ? Localization.FormatListingShareCheckPassed(check.Name)
-        : Localization.FormatListingShareCheckFailed(check.Name, check.Message ?? string.Empty);
+    private ShareCheckRow CheckRow(ShareCheck check) => new(
+        check.Passed ? Localization.FormatListingShareCheckPassed(check.Name) : Localization.FormatListingShareCheckFailed(check.Name, check.Message ?? string.Empty),
+        check.Passed);
 
     private string ShareHostErrorText(ShareHost host, ShareHostException exception) => exception.Failure switch
     {
-        ShareHostFailure.Host => exception.Message,
+        ShareHostFailure.Host => Localization.FormatListingShareHostSaid(host.Name, exception.Message),
         ShareHostFailure.SignedOut => Localization.ListingShareHostSignedOut,
         ShareHostFailure.SignInRefused => Localization.ListingShareHostSignInRefused,
         ShareHostFailure.NetworkError => Localization.ListingShareHostNetwork,

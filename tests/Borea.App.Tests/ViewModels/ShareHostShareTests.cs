@@ -45,11 +45,12 @@ public sealed class ShareHostShareTests
         Assert.Equal(("Example Rover.zip", null), (upload.FileName, upload.ListingId));
         Assert.True(upload.Size > 0);
         Assert.Equal(("ExamplePartsMod", "required"), (upload.Dependencies[0].Id, upload.Dependencies[0].Kind));
-        Assert.Equal([harness.Localization.FormatListingShareCheckPassed("meta.toml"), harness.Localization.FormatListingShareCheckPassed("install.folder")], editor.ShareHostChecks);
+        Assert.Equal([new ShareCheckRow(harness.Localization.FormatListingShareCheckPassed("meta.toml"), true), new ShareCheckRow(harness.Localization.FormatListingShareCheckPassed("install.folder"), true)], editor.ShareHostChecks);
         Assert.Equal(("1.0.0", "id = \"ExampleRover\"\n"), (editor.ShareHostVersion, editor.ShareHostListingText));
         Assert.True(editor.CanPublishToShareHost);
 
-        editor.ShareHostStatus = "testing";
+        Assert.Equal([harness.Localization.ReleaseStable, harness.Localization.ReleaseTesting, harness.Localization.ReleaseDev], editor.ShareStatusChoices.Select(choice => choice.Label));
+        editor.SelectedShareStatus = editor.ShareStatusChoices[1];
         await editor.PublishToShareHostCommand.ExecuteAsync(null);
 
         var publish = Assert.Single(host.Publishes);
@@ -68,7 +69,7 @@ public sealed class ShareHostShareTests
 
         await editor.UploadToShareHostCommand.ExecuteAsync(Assert.Single(editor.ShareHostRows));
 
-        Assert.Equal("ExampleRover belongs to another account.", editor.ShareHostError);
+        Assert.Equal(harness.Localization.FormatListingShareHostSaid("ksamods.gg", "ExampleRover belongs to another account."), editor.ShareHostError);
         Assert.False(editor.HasShareUpload);
         Assert.Null(editor.ShareHostProgress);
     }
@@ -82,9 +83,26 @@ public sealed class ShareHostShareTests
 
         await editor.UploadToShareHostCommand.ExecuteAsync(Assert.Single(editor.ShareHostRows));
 
-        var size = editor.ShareHostError!.Split(' ')[3];
-        Assert.Equal(harness.Localization.FormatListingShareHostTooLarge(size, "ksamods.gg", "10"), editor.ShareHostError);
+        var parts = harness.Localization.FormatListingShareHostTooLarge("<size>", "ksamods.gg", MainViewModel.SizeText(10)).Split("<size>");
+        Assert.StartsWith(parts[0], editor.ShareHostError, StringComparison.Ordinal);
+        Assert.EndsWith(parts[1], editor.ShareHostError, StringComparison.Ordinal);
         Assert.Equal((0, 0), (host.SignIns, host.Uploads.Count));
+    }
+
+    [Fact]
+    public async Task FailedCheck_IsMarkedAndBlocksThePublish()
+    {
+        var host = new FakeHost { Upload = new ShareUpload("u42", [new ShareCheck("meta.toml", true, null), new ShareCheck("install.folder", false, "Taken by OtherRover.")], "1.0.0", null) };
+        using var harness = await ViewModelHarness.CreateAsync(respond: Serve(Hosts), shareHostClient: host);
+        var editor = await ShareAsync(harness);
+
+        await editor.UploadToShareHostCommand.ExecuteAsync(Assert.Single(editor.ShareHostRows));
+
+        var failed = editor.ShareHostChecks[1];
+        Assert.Equal((harness.Localization.FormatListingShareCheckFailed("install.folder", "Taken by OtherRover."), true), (failed.Text, failed.Failed));
+        Assert.False(editor.ShareHostChecks[0].Failed);
+        Assert.False(editor.CanPublishToShareHost);
+        Assert.Equal(harness.Localization.ListingShareHostChecksFailed, editor.ShareHostError);
     }
 
     [Fact]
@@ -159,6 +177,8 @@ public sealed class ShareHostShareTests
 
         public ShareHostException? UploadFailure { get; init; }
 
+        public ShareUpload Upload { get; init; } = Checked;
+
         public bool IsSignedIn(ShareHost host) => _signedIn;
 
         public Task SignInAsync(ShareHost host, IProgress<GitHubDeviceCode>? progress = null, bool keepSignedIn = false, CancellationToken cancellationToken = default)
@@ -174,7 +194,7 @@ public sealed class ShareHostShareTests
         public Task<ShareUpload> UploadAsync(ShareHost host, Stream archive, string fileName, IReadOnlyList<ListingDependency> dependencies, string? listingId, CancellationToken cancellationToken = default)
         {
             Uploads.Enqueue(new Upload(fileName, archive.Length, dependencies, listingId));
-            return UploadFailure is { } failure ? Task.FromException<ShareUpload>(failure) : Task.FromResult(Checked);
+            return UploadFailure is { } failure ? Task.FromException<ShareUpload>(failure) : Task.FromResult(Upload);
         }
 
         public Task<SharePublished> PublishAsync(ShareHost host, string uploadId, string version, string status, string? listingText, CancellationToken cancellationToken = default)

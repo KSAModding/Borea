@@ -1854,6 +1854,10 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string ListingShareHint => Resources.ListingShareHint;
 
+    public string ListingShareArchiveHeading => Resources.ListingShareArchiveHeading;
+
+    public string ListingShareArchiveHint => Resources.ListingShareArchiveHint;
+
     public string ListingShareExtraFiles => Resources.ListingShareExtraFiles;
 
     public string ListingShareSaveArchive => Resources.ListingShareSaveArchive;
@@ -1861,6 +1865,8 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string ListingShareArchiveFileType => Resources.ListingShareArchiveFileType;
 
     public string ListingShareHostHint => Resources.ListingShareHostHint;
+
+    public string ListingShareHostHeading => Resources.ListingShareHostHeading;
 
     public string ListingShareHostWriting => Resources.ListingShareHostWriting;
 
@@ -1879,8 +1885,6 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string ListingShareHostStatus => Resources.ListingShareHostStatus;
 
     public string ListingShareHostPublish => Resources.ListingShareHostPublish;
-
-    public string ListingShareHostOpenPullRequest => Resources.ListingShareHostOpenPullRequest;
 
     public string ListingShareHostSignedOut => Resources.ListingShareHostSignedOut;
 
@@ -3090,8 +3094,8 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string FormatListingShareHostSigningIn(string host)
         => string.Format(CultureInfo.CurrentCulture, Resources.ListingShareHostSigningInFormat, host);
 
-    public string FormatListingShareHostCode(string page, string code)
-        => string.Format(CultureInfo.CurrentCulture, Resources.ListingShareHostCodeFormat, page, code);
+    public string FormatListingShareHostCode(string page)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ListingShareHostCodeFormat, page);
 
     public string FormatListingShareHostTooLarge(string size, string host, string max)
         => string.Format(CultureInfo.CurrentCulture, Resources.ListingShareHostTooLargeFormat, size, host, max);
@@ -3107,6 +3111,9 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string FormatListingShareHostUnexpected(string host)
         => string.Format(CultureInfo.CurrentCulture, Resources.ListingShareHostUnexpectedFormat, host);
+
+    public string FormatListingShareHostSaid(string host, string message)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ListingShareHostSaidFormat, host, message);
 
     public string FormatListingShareContentId(string kind, string id)
         => string.Format(CultureInfo.CurrentCulture, Resources.ListingShareContentIdFormat, kind, id);

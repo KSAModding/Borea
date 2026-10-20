@@ -3139,7 +3139,13 @@
     <value>Dein Fahrzeug oder Spielstand darf nicht zusammen mit ihr installiert sein. Gib die Versionen, die in Konflikt stehen, als älteste und neueste Version an, oder lass beide leer, wenn jede Version in Konflikt steht.</value>
   </data>
   <data name="ListingShareHint" xml:space="preserve">
-    <value>Borea hat die Datei gelesen und für jede Mod dieser Instanz, die ein Teil, einen Stoff, einen Charakter oder einen Himmelskörper aus der Datei definiert, eine erforderliche Abhängigkeit vorgeschlagen. Prüfe die Liste: Entferne, was die Datei nicht braucht, und füge eine Mod, die nur das Verhalten von Teilen ändert, als recommends hinzu. Speichere dann das Archiv und hänge es an ein Release.</value>
+    <value>Borea hat die Datei gelesen und für jede Mod dieser Instanz, die ein Teil, einen Stoff, einen Charakter oder einen Himmelskörper aus der Datei definiert, eine erforderliche Abhängigkeit vorgeschlagen. Prüfe die Liste: Entferne, was die Datei nicht braucht, und füge eine Mod, die nur das Verhalten von Teilen ändert, als recommends hinzu.</value>
+  </data>
+  <data name="ListingShareArchiveHeading" xml:space="preserve">
+    <value>Archiv speichern</value>
+  </data>
+  <data name="ListingShareArchiveHint" xml:space="preserve">
+    <value>Hänge das gespeicherte Archiv an ein eigenes Release, und nenne dieses Release unter Releases.</value>
   </data>
   <data name="ListingShareExtraFiles" xml:space="preserve">
     <value>Diese Dateien schreibt nicht das Spiel, sondern eine Mod. Füge die Mod, die sie schreibt, als Abhängigkeit hinzu:</value>
@@ -3156,6 +3162,9 @@
   <data name="ListingShareHostHint" xml:space="preserve">
     <value>Ein Share-Host speichert das Archiv und öffnet den Pull Request für dich. Du meldest dich mit dem Konto an, das der Host anbietet, und der Host prüft das Archiv, bevor etwas veröffentlicht wird.</value>
   </data>
+  <data name="ListingShareHostHeading" xml:space="preserve">
+    <value>Auf einem Share-Host teilen</value>
+  </data>
   <data name="ListingShareOnHostFormat" xml:space="preserve">
     <value>Auf {0} teilen</value>
   </data>
@@ -3166,7 +3175,7 @@
     <value>Warte auf die Anmeldung bei {0}...</value>
   </data>
   <data name="ListingShareHostCodeFormat" xml:space="preserve">
-    <value>Öffne {0} und gib den Code {1} ein.</value>
+    <value>Öffne {0} und gib diesen Code ein.</value>
   </data>
   <data name="ListingShareHostCopyCode" xml:space="preserve">
     <value>Code kopieren und Seite öffnen</value>
@@ -3178,13 +3187,13 @@
     <value>Wird veröffentlicht...</value>
   </data>
   <data name="ListingShareHostTooLargeFormat" xml:space="preserve">
-    <value>Das Archiv hat {0} Bytes, und {1} nimmt für diesen Typ höchstens {2} Bytes. Es wurde nichts gesendet.</value>
+    <value>Das Archiv ist {0} groß, und {1} nimmt höchstens {2} an. Es wurde nichts gesendet.</value>
   </data>
   <data name="ListingShareCheckPassedFormat" xml:space="preserve">
     <value>{0}: bestanden</value>
   </data>
   <data name="ListingShareCheckFailedFormat" xml:space="preserve">
-    <value>{0}: {1}</value>
+    <value>{0}: nicht bestanden. {1}</value>
   </data>
   <data name="ListingShareHostChecksFailed" xml:space="preserve">
     <value>Behebe, was der Host gefunden hat, und teile dann erneut.</value>
@@ -3204,9 +3213,6 @@
   <data name="ListingShareHostPublishedFormat" xml:space="preserve">
     <value>{0} {1} ist veröffentlicht. Der Host hat den Pull Request geöffnet.</value>
   </data>
-  <data name="ListingShareHostOpenPullRequest" xml:space="preserve">
-    <value>Pull Request öffnen</value>
-  </data>
   <data name="ListingShareHostSignedOut" xml:space="preserve">
     <value>Der Share-Host nimmt die Anmeldung nicht mehr an. Teile erneut, um dich anzumelden.</value>
   </data>
@@ -3218,6 +3224,9 @@
   </data>
   <data name="ListingShareHostUnexpectedFormat" xml:space="preserve">
     <value>{0} hat so geantwortet, dass Borea es nicht versteht.</value>
+  </data>
+  <data name="ListingShareHostSaidFormat" xml:space="preserve">
+    <value>{0}: {1}</value>
   </data>
   <data name="ListingShareContentIdFormat" xml:space="preserve">
     <value>{0} {1}</value>

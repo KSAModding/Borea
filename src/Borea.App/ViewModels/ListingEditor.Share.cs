@@ -88,6 +88,8 @@ public sealed partial class ListingEditor
         OnPropertyChanged(nameof(ShareExtraFiles));
         OnPropertyChanged(nameof(HasShareExtraFiles));
         OnPropertyChanged(nameof(ShareArchiveText));
+        OnPropertyChanged(nameof(ShareStatusChoices));
+        OnPropertyChanged(nameof(SelectedShareStatus));
         RefreshShareHostRows();
     }
 

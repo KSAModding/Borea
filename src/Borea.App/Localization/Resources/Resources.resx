@@ -3139,7 +3139,13 @@
     <value>Your vehicle or save must not be installed together with it. Give the versions that conflict as the oldest and the newest version, or leave both empty when every version conflicts.</value>
   </data>
   <data name="ListingShareHint" xml:space="preserve">
-    <value>Borea read the file and proposed one required dependency for each mod of this instance that defines a part, substance, character or body that the file names. Check the list: remove what the file does not need, and add a mod that only changes how parts behave as recommends. Then save the archive and attach it to a release.</value>
+    <value>Borea read the file and proposed one required dependency for each mod of this instance that defines a part, substance, character or body that the file names. Check the list: remove what the file does not need, and add a mod that only changes how parts behave as recommends.</value>
+  </data>
+  <data name="ListingShareArchiveHeading" xml:space="preserve">
+    <value>Save the archive</value>
+  </data>
+  <data name="ListingShareArchiveHint" xml:space="preserve">
+    <value>Attach the saved archive to a release of your own, and name that release under Releases.</value>
   </data>
   <data name="ListingShareExtraFiles" xml:space="preserve">
     <value>The game does not write these files, so a mod did. Add the mod that writes them as a dependency:</value>
@@ -3156,6 +3162,9 @@
   <data name="ListingShareHostHint" xml:space="preserve">
     <value>A share host keeps the archive and opens the listing pull request for you. You sign in with the account that the host offers, and the host checks the archive before anything is published.</value>
   </data>
+  <data name="ListingShareHostHeading" xml:space="preserve">
+    <value>Share on a share host</value>
+  </data>
   <data name="ListingShareOnHostFormat" xml:space="preserve">
     <value>Share on {0}</value>
   </data>
@@ -3166,7 +3175,7 @@
     <value>Waiting for the sign-in on {0}...</value>
   </data>
   <data name="ListingShareHostCodeFormat" xml:space="preserve">
-    <value>Open {0} and enter the code {1}.</value>
+    <value>Open {0} and enter this code.</value>
   </data>
   <data name="ListingShareHostCopyCode" xml:space="preserve">
     <value>Copy the code and open the page</value>
@@ -3178,13 +3187,13 @@
     <value>Publishing...</value>
   </data>
   <data name="ListingShareHostTooLargeFormat" xml:space="preserve">
-    <value>The archive has {0} bytes, and {1} takes at most {2} bytes for this type. Nothing was sent.</value>
+    <value>The archive is {0}, and {1} takes at most {2}. Nothing was sent.</value>
   </data>
   <data name="ListingShareCheckPassedFormat" xml:space="preserve">
     <value>{0}: passed</value>
   </data>
   <data name="ListingShareCheckFailedFormat" xml:space="preserve">
-    <value>{0}: {1}</value>
+    <value>{0}: failed. {1}</value>
   </data>
   <data name="ListingShareHostChecksFailed" xml:space="preserve">
     <value>Fix what the host found, then share again.</value>
@@ -3204,9 +3213,6 @@
   <data name="ListingShareHostPublishedFormat" xml:space="preserve">
     <value>{0} {1} is published. The host opened the listing pull request.</value>
   </data>
-  <data name="ListingShareHostOpenPullRequest" xml:space="preserve">
-    <value>Open the pull request</value>
-  </data>
   <data name="ListingShareHostSignedOut" xml:space="preserve">
     <value>The share host no longer takes the sign-in. Share again to sign in.</value>
   </data>
@@ -3218,6 +3224,9 @@
   </data>
   <data name="ListingShareHostUnexpectedFormat" xml:space="preserve">
     <value>{0} answered in a way that Borea does not understand.</value>
+  </data>
+  <data name="ListingShareHostSaidFormat" xml:space="preserve">
+    <value>{0}: {1}</value>
   </data>
   <data name="ListingShareContentIdFormat" xml:space="preserve">
     <value>{0} {1}</value>
