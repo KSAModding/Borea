@@ -25,14 +25,24 @@ public static partial class LoaderCrashReport
     /// by its file name without ".dll". A name that is not a plain file name
     /// after that is left out, because callers search mod folders for it.
     /// </summary>
-    public static IReadOnlyList<string> AssemblyNames(IEnumerable<string> output)
+    public static IReadOnlyList<string> AssemblyNames(IEnumerable<string> output) => Names(output, AssemblyPattern());
+
+    /// <summary>
+    /// The assemblies that .NET could not find or load, from messages such as
+    /// "Could not load file or assembly 'Brutal.Core.Numerics, Version=...'",
+    /// read the way <see cref="AssemblyNames"/> reads them. An assembly named in
+    /// "from assembly 'X'" exists, so it is left out.
+    /// </summary>
+    public static IReadOnlyList<string> MissingAssemblyNames(IEnumerable<string> output) => Names(output, MissingAssemblyPattern());
+
+    private static List<string> Names(IEnumerable<string> output, Regex pattern)
     {
         ArgumentNullException.ThrowIfNull(output);
 
         var names = new List<string>();
         foreach (var line in output)
         {
-            foreach (Match match in AssemblyPattern().Matches(line ?? string.Empty))
+            foreach (Match match in pattern.Matches(line ?? string.Empty))
             {
                 var name = AssemblyFileName(match.Groups["name"].Value);
                 if (name is not null && !names.Contains(name, StringComparer.OrdinalIgnoreCase))
@@ -56,7 +66,8 @@ public static partial class LoaderCrashReport
 
     /// <summary>
     /// Whether the output names an assembly of the game, which is KSA or a Brutal
-    /// assembly. A loader that cannot load one was made for another game build.
+    /// assembly. Only when the loader also stopped while it started itself, see
+    /// <see cref="StoppedWhileLoaderStarted"/>, was it made for another game build.
     /// </summary>
     public static bool NamesGameAssembly(IEnumerable<string> output) =>
         AssemblyNames(output).Any(name => name.Split('.')[0] is var root
@@ -72,8 +83,8 @@ public static partial class LoaderCrashReport
 
     /// <summary>
     /// Whether a stack frame in the output lies in StarMap's mod loading, which
-    /// is ModLoader.PrepareMods, RuntimeMod.TryCreateMod or RuntimeMod.InitializeMod,
-    /// after the game prepared the manifest.
+    /// is ModLoader.PrepareMods (ModsLoader in newer StarMap), RuntimeMod.TryCreateMod
+    /// or RuntimeMod.InitializeMod, after the game prepared the manifest.
     /// </summary>
     public static bool StoppedWhileLoadingMods(IEnumerable<string> output)
     {
@@ -88,6 +99,28 @@ public static partial class LoaderCrashReport
         }
 
         return loadingMods;
+    }
+
+    /// <summary>
+    /// Whether StarMap stopped while it started itself, before it loaded a mod.
+    /// GameSurveyer.TryLoadCoreAndGame loads StarMap.Core and the game and then
+    /// loads the mods, so its frame without a frame of the mod loading shows that.
+    /// Output without frames, which a long error can push out of the buffer,
+    /// shows nothing.
+    /// </summary>
+    public static bool StoppedWhileLoaderStarted(IEnumerable<string> output)
+    {
+        ArgumentNullException.ThrowIfNull(output);
+
+        var starting = false;
+        foreach (var line in output)
+        {
+            if (ModLoadingFramePattern().IsMatch(line ?? string.Empty))
+                return false;
+            starting |= LoaderStartFramePattern().IsMatch(line ?? string.Empty);
+        }
+
+        return starting;
     }
 
     /// <summary>
@@ -160,8 +193,11 @@ public static partial class LoaderCrashReport
     private static LoadOrderMod? ManifestMod(IReadOnlyList<LoadOrderMod> enabledMods, string modId) =>
         enabledMods.FirstOrDefault(mod => ModIds.Equals(mod.ModId, modId));
 
-    [GeneratedRegex(@"^\s*at\s+StarMap\.Core\.ModRepository\.(?:RuntimeMod\.(?:InitializeMod|TryCreateMod)|ModLoader\.PrepareMods)\b")]
+    [GeneratedRegex(@"^\s*at\s+StarMap\.Core\.ModRepository\.(?:RuntimeMod\.(?:InitializeMod|TryCreateMod)|Mods?Loader\.PrepareMods)\b")]
     private static partial Regex ModLoadingFramePattern();
+
+    [GeneratedRegex(@"^\s*at\s+StarMap\.GameSurveyer\.TryLoadCoreAndGame\b")]
+    private static partial Regex LoaderStartFramePattern();
 
     [GeneratedRegex(@"^\s*at\s+StarMap\.Core\.ModRepository\.RuntimeMod\.TryCreateMod\b")]
     private static partial Regex TryCreateModFramePattern();
@@ -174,4 +210,7 @@ public static partial class LoaderCrashReport
 
     [GeneratedRegex(@"assembly '(?<name>[^',]+)(,|')", RegexOptions.IgnoreCase)]
     private static partial Regex AssemblyPattern();
+
+    [GeneratedRegex(@"Could not load file or assembly '(?<name>[^',]+)(,|')", RegexOptions.IgnoreCase)]
+    private static partial Regex MissingAssemblyPattern();
 }
