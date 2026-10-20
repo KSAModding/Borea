@@ -40,10 +40,14 @@ public sealed class XmlContentIdReader : IContentIdReader
 
     private static async Task<GameFolderContent> ReadCoreAsync(string folder, GameSaveKind kind, CancellationToken cancellationToken)
     {
-        var (name, build) = await ReadMetadataAsync(Path.Combine(folder, FileGameSaveStore.MetadataFileName), cancellationToken).ConfigureAwait(false);
+        var metadata = Path.Combine(folder, FileGameSaveStore.MetadataFileName);
+        if (!HasFile(folder, FileGameSaveStore.MetadataFileName))
+            throw new GameFolderException(GameFolderProblem.MetadataMissing, metadata);
+
+        var (name, build) = await ReadMetadataAsync(metadata, cancellationToken).ConfigureAwait(false);
 
         var gameFile = Path.Combine(folder, GameFileName(kind));
-        if (!File.Exists(gameFile))
+        if (!HasFile(folder, GameFileName(kind)))
             throw new GameFolderException(GameFolderProblem.GameFileMissing, gameFile);
 
         var ids = new ContentIds();
@@ -158,7 +162,11 @@ public sealed class XmlContentIdReader : IContentIdReader
     private static List<string> ExtraFiles(string folder, string gameFile) =>
         new DirectoryInfo(folder).EnumerateFiles("*", EveryFile)
             .Select(file => Path.GetRelativePath(folder, file.FullName).Replace(Path.DirectorySeparatorChar, '/'))
-            .Where(path => !FileGameSaveStore.PathComparer.Equals(path, FileGameSaveStore.MetadataFileName) && !FileGameSaveStore.PathComparer.Equals(path, gameFile))
+            .Where(path => path != FileGameSaveStore.MetadataFileName && path != gameFile)
             .Order(StringComparer.Ordinal)
             .ToList();
+
+    /// <summary>The exact name, because the release checks compare the names in the archive exactly.</summary>
+    private static bool HasFile(string folder, string name) =>
+        Directory.Exists(folder) && new DirectoryInfo(folder).EnumerateFiles().Any(file => string.Equals(file.Name, name, StringComparison.Ordinal));
 }

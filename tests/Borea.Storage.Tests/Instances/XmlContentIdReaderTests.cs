@@ -137,6 +137,20 @@ public sealed class XmlContentIdReaderTests : IDisposable
         Assert.Equal(Path.Combine(folder, "universe.xml"), exception.Path);
     }
 
+    [Theory]
+    [InlineData("Vehicle.xml", "meta.toml", GameFolderProblem.GameFileMissing)]
+    [InlineData("vehicle.xml", "Meta.toml", GameFolderProblem.MetadataMissing)]
+    public async Task ReadAsync_FileInOtherLetterCase_IsMissing(string gameFile, string metadata, GameFolderProblem problem)
+    {
+        var folder = Write("Example Rover", gameFile, Vehicle);
+        File.Move(Path.Combine(folder, "meta.toml"), Path.Combine(folder, "meta.tmp"));
+        File.Move(Path.Combine(folder, "meta.tmp"), Path.Combine(folder, metadata));
+
+        var exception = await Assert.ThrowsAsync<GameFolderException>(() => _reader.ReadAsync(folder, GameSaveKind.Vehicle));
+
+        Assert.Equal(problem, exception.Problem);
+    }
+
     private string Write(string name, string gameFile, string xml)
     {
         var folder = Directory.CreateDirectory(Path.Combine(_root, name)).FullName;
