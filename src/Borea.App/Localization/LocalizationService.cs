@@ -1894,6 +1894,14 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string ListingShareOwnHint => Resources.ListingShareOwnHint;
 
+    public string ListingShareOwnHeading => Resources.ListingShareOwnHeading;
+
+    public string ListingShareOwnDependenciesDiffer => Resources.ListingShareOwnDependenciesDiffer;
+
+    public string ListingShareOwnEditListing => Resources.ListingShareOwnEditListing;
+
+    public string ListingShareOwnOtherHost => Resources.ListingShareOwnOtherHost;
+
     public string ListingShareOwnPublish => Resources.ListingShareOwnPublish;
 
     public string ListingShareOwnMayNotCreate => Resources.ListingShareOwnMayNotCreate;
@@ -3133,6 +3141,9 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string FormatListingShareOwnReleased(string tag, string repository)
         => string.Format(CultureInfo.CurrentCulture, Resources.ListingShareOwnReleasedFormat, tag, repository);
+
+    public string FormatListingShareOwnNextVersion(string tag, string repository)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ListingShareOwnNextVersionFormat, tag, repository);
 
     public string FormatListingShareOwnAppNotOnRepository(string repository)
         => string.Format(CultureInfo.CurrentCulture, Resources.ListingShareOwnAppNotOnRepositoryFormat, repository);

@@ -60,7 +60,7 @@ public sealed partial class ListingEditor
     }
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(CanPublishToShareHost), nameof(CanUploadToShareHost), nameof(IsSharing))]
+    [NotifyPropertyChangedFor(nameof(CanPublishToShareHost), nameof(CanUploadToShareHost), nameof(IsSharing), nameof(CanPublishFromOwnRepository))]
     private string? _shareHostProgress;
 
     [ObservableProperty]
@@ -89,8 +89,8 @@ public sealed partial class ListingEditor
 
     public bool HasShareUpload => _shareUpload is not null;
 
-    /// <summary>A share on a host runs.</summary>
-    public bool IsSharing => ShareHostProgress is not null;
+    /// <summary>A share on a host or from the own repository runs, and each path waits for the other.</summary>
+    public bool IsSharing => ShareHostProgress is not null || OwnRepositoryProgress is not null;
 
     public bool CanUploadToShareHost => !IsSharing;
 
@@ -320,8 +320,7 @@ public sealed partial class ListingEditor
     /// <summary>The id of the listed vehicle or save on <paramref name="host"/> that the draft names, for a new version of it, or null for a new listing.</summary>
     private string? ListingOnHost(ShareHost host)
     {
-        var listings = Type == ListingFolders.SaveType ? _snapshot?.Saves : _snapshot?.Vehicles;
-        return listings?.FirstOrDefault(listing => ModIds.Equals(listing.Id, Id.Trim()))?.Authored?.Releases?.Hosts
+        return ListedShare()?.Authored?.Releases?.Hosts
             .FirstOrDefault(entry => entry.Kind == ReleaseHostKind.Share && entry.Host == host.Key)?.Reference;
     }
 

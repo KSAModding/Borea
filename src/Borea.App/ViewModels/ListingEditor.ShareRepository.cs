@@ -1,7 +1,10 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using Borea.Core.Dependencies;
+using Borea.Core.Index;
 using Borea.Core.Listings;
 using Borea.Core.Mods;
 using Borea.Core.Sharing;
@@ -20,16 +23,25 @@ public sealed partial class ListingEditor
 
     private long? _ownRepositoryId;
 
-    public bool OffersOwnRepository => HasShare && CanSignIn;
+    public bool OffersOwnRepository => HasShare && CanSignIn && FitsOwnRepository(_owner.GitHubLogin);
+
+    /// <summary>A release is made once per share, so after it the player shares again from the instance page.</summary>
+    public bool CanPublishFromOwnRepository => !IsSharing && OwnRepositoryOutcome is null;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsSharing), nameof(CanUploadToShareHost), nameof(CanPublishToShareHost), nameof(CanPublishFromOwnRepository))]
     private string? _ownRepositoryProgress;
 
     [ObservableProperty]
     private string? _ownRepositoryError;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanPublishFromOwnRepository))]
     private string? _ownRepositoryOutcome;
+
+    /// <summary>The listing keeps dependencies that differ from the proposed ones, which only an edit of the listing changes.</summary>
+    [ObservableProperty]
+    private bool _ownListingNeedsEdit;
 
     /// <summary>What the player has to do on GitHub first: a repository the App may not create, or a repository it is not allowed on.</summary>
     [ObservableProperty]
@@ -46,13 +58,16 @@ public sealed partial class ListingEditor
     [RelayCommand]
     private async Task PublishFromOwnRepositoryAsync()
     {
-        if (_share is not { } share || _owner.Services is not { } services || OwnRepositoryProgress is not null || IsPublishing)
+        if (_share is not { } share || _owner.Services is not { } services || !CanPublishFromOwnRepository || IsPublishing)
             return;
 
         OwnRepositoryError = null;
-        OwnRepositoryOutcome = null;
         OwnRepositoryStep = null;
-        if (!CanOpenPullRequest)
+        OwnListingNeedsEdit = false;
+
+        // A listed share gets a new release, which the watcher stamps, so only a new listing needs a valid document.
+        var listed = ListedShare() is not null;
+        if (!listed && !CanOpenPullRequest)
         {
             OwnRepositoryError = Localization.ListingFixErrors;
             return;
@@ -61,31 +76,64 @@ public sealed partial class ListingEditor
         if (!IsSignedIn && !await _owner.SignInToGitHubAsync(forListing: true))
             return;
 
+        if (_share != share)
+            return;
+
+        if (_owner.GitHubLogin is not { } login || !FitsOwnRepository(login))
+        {
+            OwnRepositoryError = Localization.ListingShareOwnOtherHost;
+            return;
+        }
+
+        // The draft must be valid with the repository and the prefix before the release exists, because a release whose
+        // pull request cannot open would hold its version.
+        var prefix = OwnTagPrefix;
+        var (gitHub, tagPrefix) = (ReleasesGitHub, ReleasesTagPrefix);
+        if (!listed)
+        {
+            ReleasesGitHub = login + "/" + ShareRepository.Name;
+            ReleasesTagPrefix = prefix;
+            if (!CanOpenPullRequest)
+            {
+                (ReleasesGitHub, ReleasesTagPrefix) = (gitHub, tagPrefix);
+                OwnRepositoryError = Localization.ListingFixErrors;
+                return;
+            }
+        }
+
         OwnRepositoryProgress = Localization.ListingShareHostWriting;
         string? file = null;
+        var released = false;
         try
         {
-            if (await _owner.WriteShareArchiveToTempAsync(share) is not { } written || _share != share)
+            if (await _owner.WriteShareArchiveToTempAsync(share) is not { } written)
                 return;
 
             file = written.File;
+            if (_share != share)
+                return;
+
             var repository = await services.ShareRepository.EnsureAsync();
-            var prefix = OwnTagPrefix;
             var version = await services.ShareRepository.NextVersionAsync(repository, prefix);
             OwnRepositoryProgress = Localization.FormatListingShareOwnReleasing(prefix + version);
             await using (var archive = File.OpenRead(file))
                 await services.ShareRepository.PublishAsync(repository, prefix, version, $"{Id.Trim()}-{version}.zip", archive);
 
+            released = true;
             if (_share != share)
                 return;
 
+            if (listed)
+            {
+                OwnRepositoryOutcome = Localization.FormatListingShareOwnNextVersion(prefix + version, repository.FullName);
+                OwnListingNeedsEdit = !SameDependencies(ListedShare()?.Authored?.Dependencies ?? [], Draft.Dependencies);
+                return;
+            }
+
             OwnRepositoryOutcome = Localization.FormatListingShareOwnReleased(prefix + version, repository.FullName);
             ReleasesGitHub = repository.FullName;
-            ReleasesTagPrefix = prefix;
-
-            // A listing that already names this repository takes the new release from the watcher, so it needs no pull request.
-            if (!IsListedFrom(repository))
-                await PublishCommand.ExecuteAsync(null);
+            CheckOwnershipAgain();
+            await PublishCommand.ExecuteAsync(null);
         }
         catch (ShareRepositoryException exception) when (_share == share)
         {
@@ -94,7 +142,7 @@ public sealed partial class ListingEditor
             OwnRepositoryError = exception.Failure switch
             {
                 ShareRepositoryFailure.MayNotCreateRepository => Localization.ListingShareOwnMayNotCreate,
-                ShareRepositoryFailure.AppNotOnRepository => Localization.FormatListingShareOwnAppNotOnRepository(_owner.GitHubLogin + "/" + ShareRepository.Name),
+                ShareRepositoryFailure.AppNotOnRepository => Localization.FormatListingShareOwnAppNotOnRepository(login + "/" + ShareRepository.Name),
                 ShareRepositoryFailure.SignedOut => Localization.ListingErrorSignedOut,
                 ShareRepositoryFailure.RateLimited or ShareRepositoryFailure.NetworkError => Localization.ListingErrorNetwork,
                 _ => Localization.FormatListingShareOwnRefused(exception.Detail ?? exception.Failure.ToString()),
@@ -108,6 +156,8 @@ public sealed partial class ListingEditor
         {
             if (file is not null)
                 MainViewModel.TryDeleteFile(file);
+            if (!released && !listed && _share == share)
+                (ReleasesGitHub, ReleasesTagPrefix) = (gitHub, tagPrefix);
             OwnRepositoryProgress = null;
         }
     }
@@ -127,19 +177,73 @@ public sealed partial class ListingEditor
             OwnRepositoryError = Localization.FormatListingOpenFailed(error);
     }
 
+    /// <summary>Opens the listed document of the share, whose dependencies only a pull request changes.</summary>
+    [RelayCommand]
+    private async Task EditOwnListingAsync()
+    {
+        if (ListedShare() is not { } listing)
+            return;
+
+        SelectedListed = new ListedListing(listing.Id, listing.Authored?.Name ?? listing.Id, string.Empty, IsOwn: true, Type: Type);
+        await LoadListedCommand.ExecuteAsync(null);
+    }
+
     private void ForgetOwnRepositoryRun()
     {
         _ownRepositoryId = null;
         OwnRepositoryError = null;
         OwnRepositoryOutcome = null;
         OwnRepositoryStep = null;
+        OwnListingNeedsEdit = false;
         OnPropertyChanged(nameof(OffersOwnRepository));
     }
 
-    private bool IsListedFrom(ShareRepository repository)
+    /// <summary>The snapshot entry of a vehicle or save with the id of the draft, or null for a new listing.</summary>
+    private ContentIndexListing? ListedShare()
     {
         var listings = Type == ListingFolders.SaveType ? _snapshot?.Saves : _snapshot?.Vehicles;
-        return listings?.FirstOrDefault(listing => ModIds.Equals(listing.Id, Id.Trim()))?.Authored?.Releases?.Hosts
-            .Any(host => host.Kind == ReleaseHostKind.GitHub && string.Equals(host.Reference, repository.FullName, StringComparison.OrdinalIgnoreCase)) == true;
+        return listings?.FirstOrDefault(listing => ModIds.Equals(listing.Id, Id.Trim()));
     }
+
+    /// <summary>
+    /// Whether the share can live in ksa-shares of <paramref name="login"/>: the draft and the listed document name no other
+    /// release host, and a listed document names that repository with the prefix of this listing. A null login checks the name only.
+    /// </summary>
+    private bool FitsOwnRepository(string? login)
+    {
+        if (ShareHost is not null || ReleasesSpaceDock.Trim().Length > 0
+            || (ReleasesGitHub.Trim().Length > 0 && !IsShareRepository(ReleasesGitHub.Trim(), login))
+            || (ReleasesTagPrefix.Trim().Length > 0 && ReleasesTagPrefix.Trim() != OwnTagPrefix))
+        {
+            return false;
+        }
+
+        if (ListedShare() is not { } listing)
+            return true;
+
+        var releases = listing.Authored?.Releases;
+        return releases is not null
+            && releases.Hosts.Count == 1
+            && releases.Hosts[0].Kind == ReleaseHostKind.GitHub
+            && IsShareRepository(releases.Hosts[0].Reference, login)
+            && releases.TagPrefix == OwnTagPrefix;
+    }
+
+    private static bool IsShareRepository(string repository, string? login) =>
+        repository.Split('/') is [var owner, var name]
+        && string.Equals(name, ShareRepository.Name, StringComparison.OrdinalIgnoreCase)
+        && (login is null || string.Equals(owner, login, StringComparison.OrdinalIgnoreCase));
+
+    /// <summary>The same entries in any order. An entry with alternatives never counts as the same, so the player checks it.</summary>
+    private static bool SameDependencies(IReadOnlyList<ModDependency> listed, IReadOnlyList<ListingDependency> proposed) =>
+        listed.Count == proposed.Count
+        && listed.All(entry => !entry.IsAnyOf && entry.ModId is not null)
+        && proposed.All(entry => entry.Preserved is null)
+        && listed.Select(entry => Key(entry.ModId!, entry.Kind.ToString(), entry.MinVersion?.ToString(), entry.MaxVersion?.ToString())).Order(StringComparer.Ordinal)
+            .SequenceEqual(proposed.Select(entry => Key(entry.Id, entry.Kind, Normalized(entry.Min), Normalized(entry.Max))).Order(StringComparer.Ordinal));
+
+    private static string Key(string id, string kind, string? min, string? max) => $"{id.ToLowerInvariant()} {kind.ToLowerInvariant()} {min} {max}";
+
+    private static string? Normalized(string? version) =>
+        string.IsNullOrWhiteSpace(version) ? null : ModVersion.TryParseAuthored(version, out var parsed) ? parsed.ToString() : version;
 }
