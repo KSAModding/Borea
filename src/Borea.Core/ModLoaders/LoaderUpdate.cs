@@ -13,7 +13,8 @@ namespace Borea.Core.ModLoaders;
 /// The newest offered release of the channel that the index does not rate incompatible
 /// with the game, and only when it is above the installed version. Null when there is none.
 /// </param>
-public sealed record LoaderUpdate(string LoaderId, ModVersion? InstalledVersion, GameCompatibility InstalledCompatibility, ModVersionMetadata? Offer)
+/// <param name="InstalledNeedsNewerGame">True when the installed release starts after the installed game, so a KSA update fixes it.</param>
+public sealed record LoaderUpdate(string LoaderId, ModVersion? InstalledVersion, GameCompatibility InstalledCompatibility, ModVersionMetadata? Offer, bool InstalledNeedsNewerGame = false)
 {
     /// <summary>True when the installed release does not support the game and a newer release does.</summary>
     public bool IsUrgent => InstalledCompatibility == GameCompatibility.Incompatible && Offer is not null;
@@ -36,8 +37,12 @@ public sealed record LoaderUpdate(string LoaderId, ModVersion? InstalledVersion,
 
         var installedVersion = installation?.Version;
         var compatibility = GameCompatibility.Unknown;
+        var needsNewerGame = false;
         if (installedVersion is { } version && await mods.GetReleaseAsync(loaderId, version, cancellationToken).ConfigureAwait(false) is { } installed)
+        {
             compatibility = Compatibility.Evaluate(installed, game);
+            needsNewerGame = compatibility == GameCompatibility.Incompatible && !Compatibility.IsAboveUpperBound(installed, game);
+        }
 
         ModVersionMetadata? offer = null;
         foreach (var candidate in (await mods.GetAvailableVersionsAsync(loaderId, cancellationToken).ConfigureAwait(false)).OrderByDescending(value => value))
@@ -56,6 +61,6 @@ public sealed record LoaderUpdate(string LoaderId, ModVersion? InstalledVersion,
             }
         }
 
-        return new LoaderUpdate(loaderId, installedVersion, compatibility, offer);
+        return new LoaderUpdate(loaderId, installedVersion, compatibility, offer, needsNewerGame);
     }
 }

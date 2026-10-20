@@ -21,6 +21,7 @@ public sealed class LoaderUpdateTests
         Assert.Equal(GameCompatibility.Incompatible, update.InstalledCompatibility);
         Assert.Equal(ModVersion.Parse("0.4.8"), update.Offer!.Version);
         Assert.True(update.IsUrgent);
+        Assert.False(update.InstalledNeedsNewerGame);
     }
 
     [Fact]
@@ -68,6 +69,7 @@ public sealed class LoaderUpdateTests
         Assert.Equal(GameCompatibility.Incompatible, update.InstalledCompatibility);
         Assert.Null(update.Offer);
         Assert.False(update.IsUrgent);
+        Assert.True(update.InstalledNeedsNewerGame);
     }
 
     [Fact]
@@ -142,7 +144,7 @@ public sealed class LoaderUpdateTests
         gameMaxRevision: max is null ? null : GameVersion.Parse(max).Revision,
         yanked: yanked);
 
-    /// <summary>Lists every release that is not yanked, and reads any release by its exact version.</summary>
+    /// <summary>Lists every release, yanked or not, and reads any release by its exact version.</summary>
     private sealed class FakeRepository(params ModVersionMetadata[] releases) : IModRepository
     {
         public Task<IReadOnlyList<ModMetadata>> GetAvailableModsAsync(CancellationToken cancellationToken = default)
@@ -155,7 +157,7 @@ public sealed class LoaderUpdateTests
             => Task.FromResult(releases.FirstOrDefault(value => value.Version == version));
 
         public Task<IReadOnlyList<ModVersion>> GetAvailableVersionsAsync(string modId, CancellationToken cancellationToken = default)
-            => Task.FromResult<IReadOnlyList<ModVersion>>(releases.Where(value => !value.Yanked).Select(value => value.Version).OrderByDescending(value => value).ToList());
+            => Task.FromResult<IReadOnlyList<ModVersion>>(releases.Select(value => value.Version).OrderByDescending(value => value).ToList());
 
         public Task<IReadOnlyList<ModMetadata>> SearchAsync(string query, CancellationToken cancellationToken = default)
             => Task.FromResult<IReadOnlyList<ModMetadata>>([]);
