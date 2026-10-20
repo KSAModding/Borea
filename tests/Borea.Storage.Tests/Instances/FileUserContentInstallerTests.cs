@@ -323,6 +323,21 @@ public sealed class FileUserContentInstallerTests : IDisposable
     }
 
     [Fact]
+    public async Task Update_ToTheNameOfARecordWhoseFolderIsGone_DropsThatRecord()
+    {
+        var installed = await InstallAsync();
+        _downloader.Bytes = Archive(ContentType.Vehicle, "Rover Mk2", "Rover Mk2/");
+        await Installer().InstallAsync(_instanceId, Release(id: "OtherRover", folder: "Rover Mk2"), name: null);
+        Directory.Delete(VehicleFolder("Rover Mk2"), recursive: true);
+
+        var result = await Installer().UpdateAsync(_instanceId, installed, Release(version: "2.0.0", folder: "Rover Mk2"), name: null, discardChanges: false);
+
+        Assert.Equal((UserContentOutcome.Updated, "Rover Mk2"), (result.Outcome, result.FolderName));
+        var record = Assert.Single(await _records.ListAsync(_instanceId));
+        Assert.Equal(("ExampleRover", "Rover Mk2"), (record.ListingId, record.FolderName));
+    }
+
+    [Fact]
     public async Task UpdateAndRemove_FolderWithoutARecord_IsNotInstalled()
     {
         var installed = await InstallAsync();

@@ -112,7 +112,11 @@ public sealed class FileUserContentInstaller : IUserContentInstaller
             if (again.Result.Outcome != UserContentOutcome.Ready)
                 return again.Result;
 
-            var oldFolder = FileGameSaveStore.FindFolder(Path.Combine(kindFolder, current!.FolderName));
+            // No folder has the new name, so a record of it has lost its folder.
+            if (!string.Equals(folderName, current!.FolderName, StringComparison.OrdinalIgnoreCase))
+                await _records.RemoveAsync(instanceId, release.Type, folderName, cancellationToken).ConfigureAwait(false);
+
+            var oldFolder = FileGameSaveStore.FindFolder(Path.Combine(kindFolder, current.FolderName));
             var target = Path.Combine(kindFolder, folderName);
             var record = new InstalledContentRecord(release, folderName, _time.GetUtcNow(), files);
             var backup = await _backups.MoveInAsync(instanceId, UserContentFolder.Kind(release.Type), oldFolder, GameSaveBackupReason.Replaced).ConfigureAwait(false);
