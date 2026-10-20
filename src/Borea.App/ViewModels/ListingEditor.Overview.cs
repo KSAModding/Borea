@@ -142,7 +142,7 @@ public sealed partial class ListingEditor
         }
         else
         {
-            steps.Add(Step("releases", Localization.ListingReleases, Filled(ReleasesGitHub, ReleasesSpaceDock), recommended: true));
+            steps.Add(Step("releases", Localization.ListingReleases, Filled(ReleasesGitHub, ReleasesSpaceDock) || ShareHost is not null, recommended: true));
             steps.Add(Step("compatibility", Localization.ListingCompatibility, Filled(GameMin, GameMax) || UsesLoader));
             steps.Add(Step("dependencies", Localization.ListingDependencies, Dependencies.Count > 0));
         }

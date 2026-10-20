@@ -2943,6 +2943,9 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string FormatListingSpaceDockNotNumber(string value)
         => string.Format(CultureInfo.CurrentCulture, Resources.ListingSpaceDockNotNumberFormat, value);
 
+    public string FormatListingReleasesShareHost(string host, string id)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ListingReleasesShareHostFormat, host, id);
+
     public string FormatListingGameMinProposal(string gameMin)
         => string.Format(CultureInfo.CurrentCulture, Resources.ListingGameMinProposalFormat, gameMin);
 

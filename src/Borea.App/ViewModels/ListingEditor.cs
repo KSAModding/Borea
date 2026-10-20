@@ -190,10 +190,18 @@ public sealed partial class ListingEditor : ObservableObject
     [NotifyPropertyChangedFor(nameof(ShowsTagPrefix))]
     private string _releasesTagPrefix = string.Empty;
 
-    public bool NeedsAuthority => ReleasesGitHub.Trim().Length > 0 && ReleasesSpaceDock.Trim().Length > 0;
+    public bool NeedsAuthority => (ReleasesGitHub.Trim().Length > 0 ? 1 : 0) + (ReleasesSpaceDock.Trim().Length > 0 ? 1 : 0) + (ShareHost is null ? 0 : 1) > 1;
 
     /// <summary>Whether [releases] is written, which since needs.</summary>
-    public bool HasReleasesHost => ReleasesGitHub.Trim().Length > 0 || ReleasesSpaceDock.Trim().Length > 0;
+    public bool HasReleasesHost => ReleasesGitHub.Trim().Length > 0 || ReleasesSpaceDock.Trim().Length > 0 || ShareHost is not null;
+
+    /// <summary>The share host of the listed document (RFC 0094). Only the host writes it, so the page shows it and keeps it.</summary>
+    private ListingShareHost? ShareHost => _base.Releases?.Share;
+
+    public string? ShareHostText => ShareHost is { } share ? Localization.FormatListingReleasesShareHost(share.Key, share.Id) : null;
+
+    /// <summary>The hosts that [releases].authority can name.</summary>
+    public IReadOnlyList<string> AuthorityChoices => ShareHost is { } share ? [.. Authorities, share.Key] : Authorities;
 
     /// <summary>
     /// Whether the tag prefix field shows. It needs a GitHub repository, and it stays in view while [releases] keeps a
@@ -648,6 +656,8 @@ public sealed partial class ListingEditor : ObservableObject
             ReleasesAuthority = draft.Releases?.Authority;
             ReleasesSince = draft.Releases?.Since ?? string.Empty;
             ReleasesTagPrefix = draft.Releases?.TagPrefix ?? string.Empty;
+            OnPropertyChanged(nameof(ShareHostText));
+            OnPropertyChanged(nameof(AuthorityChoices));
             GameMin = draft.GameMin;
             GameMax = draft.GameMax ?? string.Empty;
             UsesLoader = draft.Loader is not null;
@@ -798,6 +808,7 @@ public sealed partial class ListingEditor : ObservableObject
         OnPropertyChanged(nameof(IdHint));
         OnPropertyChanged(nameof(GameMaxHint));
         OnPropertyChanged(nameof(DependenciesHint));
+        OnPropertyChanged(nameof(ShareHostText));
         RefreshShare();
         // the proposal keeps its value, so its setter does not raise the text again
         OnPropertyChanged(nameof(GameMinProposalText));
@@ -831,8 +842,8 @@ public sealed partial class ListingEditor : ObservableObject
                 pageIssues.Add(new ListingIssue(ListingIssueSeverity.Error, "releases.spacedock", Localization.FormatListingSpaceDockNotNumber(ReleasesSpaceDock.Trim())));
         }
 
-        var releases = !IsPack && (ReleasesGitHub.Trim().Length > 0 || spaceDock is not null)
-            ? new ListingReleases(Empty(ReleasesGitHub), spaceDock, NeedsAuthority ? ReleasesAuthority : null, Empty(ReleasesSince), Empty(ReleasesTagPrefix))
+        var releases = !IsPack && (ReleasesGitHub.Trim().Length > 0 || spaceDock is not null || ShareHost is not null)
+            ? new ListingReleases(Empty(ReleasesGitHub), spaceDock, NeedsAuthority ? ReleasesAuthority : null, Empty(ReleasesSince), Empty(ReleasesTagPrefix), ShareHost)
             : null;
 
         // a curated tag comes from its chip only, so a deselected chip is not stored again through the free field
