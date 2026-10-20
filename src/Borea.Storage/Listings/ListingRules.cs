@@ -338,7 +338,8 @@ internal static partial class ListingRules
 
     /// <summary>
     /// The checks of a release refuse a vehicle or a save whose folder is the install folder of another listing of the same type,
-    /// because both would install into one folder. The client says so before the first release.
+    /// because both would install into one folder. The client says so before the first release. The snapshot carries no
+    /// releases of a delisted listing, so a folder that only such a listing holds gets no note here.
     /// </summary>
     private static void CheckInstallFolder(AuthoredTable document, string? own, string? folder, ContentIndexSnapshot snapshot, List<ListingIssue> issues)
     {
