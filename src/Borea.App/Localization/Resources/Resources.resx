@@ -357,8 +357,11 @@
   <data name="StewardReviewParseErrorFormat" xml:space="preserve">
     <value>The document does not parse: {0}</value>
   </data>
+  <data name="StewardReviewNewestRelease" xml:space="preserve">
+    <value>Newest release</value>
+  </data>
   <data name="StewardReviewNewestReleaseFormat" xml:space="preserve">
-    <value>The newest release {0} installs into the folder {1}.</value>
+    <value>The newest release {0} installs into the folder "{1}".</value>
   </data>
   <data name="StewardReviewNewestReleaseNoFolderFormat" xml:space="preserve">
     <value>The newest release {0} names no install folder.</value>
@@ -367,7 +370,7 @@
     <value>No release is stamped yet. The checks read the folder from the archive.</value>
   </data>
   <data name="StewardReviewReleaseUnreadableFormat" xml:space="preserve">
-    <value>The newest release could not be read: {0}</value>
+    <value>The newest release could not be read from KSAModding/content-index-releases: {0}</value>
   </data>
   <data name="StewardReviewOwnership" xml:space="preserve">
     <value>Ownership proof</value>

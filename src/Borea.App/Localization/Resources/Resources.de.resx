@@ -357,8 +357,11 @@
   <data name="StewardReviewParseErrorFormat" xml:space="preserve">
     <value>Das Dokument lässt sich nicht lesen: {0}</value>
   </data>
+  <data name="StewardReviewNewestRelease" xml:space="preserve">
+    <value>Neuestes Release</value>
+  </data>
   <data name="StewardReviewNewestReleaseFormat" xml:space="preserve">
-    <value>Das neueste Release {0} installiert sich in den Ordner {1}.</value>
+    <value>Das neueste Release {0} wird in den Ordner "{1}" installiert.</value>
   </data>
   <data name="StewardReviewNewestReleaseNoFolderFormat" xml:space="preserve">
     <value>Das neueste Release {0} nennt keinen Installationsordner.</value>
@@ -367,7 +370,7 @@
     <value>Noch ist kein Release gestempelt. Die Prüfungen lesen den Ordner aus dem Archiv.</value>
   </data>
   <data name="StewardReviewReleaseUnreadableFormat" xml:space="preserve">
-    <value>Das neueste Release ließ sich nicht lesen: {0}</value>
+    <value>Das neueste Release ließ sich nicht aus KSAModding/content-index-releases lesen: {0}</value>
   </data>
   <data name="StewardReviewOwnership" xml:space="preserve">
     <value>Eigentumsnachweis</value>

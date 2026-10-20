@@ -334,10 +334,12 @@ public sealed partial class StewardReviewDocument
 
     /// <summary>The newest stamped release of a vehicle or save with its install folder, that none is stamped yet, or why it could not be read.</summary>
     public string? ReleaseText => !IsVehicleOrSave || _draft is null ? null
-        : Document.NewestReleaseFailure is { } failure ? _owner.Localization.FormatStewardReviewReleaseUnreadable(_owner.StewardErrorText(failure))
+        : Document.NewestReleaseFailure is { } failure ? _owner.Localization.FormatStewardReviewReleaseUnreadable(_owner.ReleaseAmendmentErrorText(failure))
         : Document.NewestRelease is not { } release ? _owner.Localization.StewardReviewNoRelease
         : release.Folder is { } folder ? _owner.Localization.FormatStewardReviewNewestRelease(release.Version, folder)
         : _owner.Localization.FormatStewardReviewNewestReleaseNoFolder(release.Version);
+
+    public bool IsReleaseUnreadable => ReleaseText is not null && Document.NewestReleaseFailure is not null;
 
     public string? License => _draft?.License is { Length: > 0 } license ? license : null;
 
@@ -411,15 +413,8 @@ public sealed partial class StewardReviewDocument
     private static string DependencyText(AuthoredTable entry)
     {
         var alternatives = entry.GetList("any_of") is { } anyOf ? anyOf.OfType<AuthoredTable>().ToList() : [entry];
-        var named = PlanningText.OneOf([.. alternatives.Select(BoundsText)]);
+        var named = PlanningText.OneOf([.. alternatives.Select(alternative =>
+            PlanningText.Bounds(alternative.GetString("id") ?? string.Empty, alternative.GetString("min"), alternative.GetString("max")))]);
         return entry.GetString("kind") is { } kind ? $"{kind}: {named}" : named;
     }
-
-    private static string BoundsText(AuthoredTable entry) => (entry.GetString("id") ?? string.Empty, entry.GetString("min"), entry.GetString("max")) switch
-    {
-        (var id, null, null) => id,
-        (var id, { } min, null) => $"{id} >= {min}",
-        (var id, null, { } max) => $"{id} <= {max}",
-        (var id, { } min, { } max) => $"{id} {min} - {max}",
-    };
 }

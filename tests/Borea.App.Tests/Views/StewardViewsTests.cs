@@ -3,6 +3,7 @@ using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Headless;
 using Avalonia.Input;
+using Avalonia.Media;
 using Avalonia.VisualTree;
 using Borea.App.Tests.ViewModels;
 using Borea.App.ViewModels;
@@ -641,7 +642,7 @@ public sealed class StewardViewsTests
             try
             {
                 window.UpdateLayout();
-                return Task.FromResult(window.GetVisualDescendants().OfType<TextBlock>().Where(text => text.IsEffectivelyVisible).Select(text => text.Text).ToList());
+                return Task.FromResult(window.GetVisualDescendants().OfType<TextBlock>().Where(text => text.IsEffectivelyVisible).Select(text => (text.Text, text.TextWrapping)).ToList());
             }
             finally
             {
@@ -649,10 +650,12 @@ public sealed class StewardViewsTests
             }
         });
 
-        Assert.Contains("Example Rover", texts);
-        Assert.Contains(harness.Localization.ListingDependencies, texts);
-        Assert.Contains("required: ExampleParts", texts);
-        Assert.Contains("The newest release 1.0.0 installs into the folder Example Rover.", texts);
+        Assert.Contains("Example Rover", texts.Select(text => text.Text));
+        Assert.Contains(harness.Localization.ListingDependencies, texts.Select(text => text.Text));
+        // an any_of entry can name many alternatives, so its line wraps
+        Assert.Contains(("required: ExampleParts", TextWrapping.Wrap), texts);
+        Assert.Contains(harness.Localization.StewardReviewNewestRelease, texts.Select(text => text.Text));
+        Assert.Contains("The newest release 1.0.0 installs into the folder \"Example Rover\".", texts.Select(text => text.Text));
     }
 
     [Fact]

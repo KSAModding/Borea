@@ -449,10 +449,13 @@ public sealed class StewardReviewViewModelTests
         Assert.Equal("Vehicle", stamped.KindText);
         Assert.Equal(["Moon Rover", "Weapons"], stamped.Tags);
         Assert.Equal(["required: ExampleParts >= 1.0.0", "recommends: LightA <= 2.0.0 or LightB 1.1.0 - 1.9.0"], stamped.Dependencies);
-        Assert.Equal("The newest release 1.2.0 installs into the folder Example Rover.", stamped.ReleaseText);
+        Assert.Equal("The newest release 1.2.0 installs into the folder \"Example Rover\".", stamped.ReleaseText);
         Assert.Equal("The newest release 1.2.0 names no install folder.", noFolder.ReleaseText);
         Assert.Equal(viewModel.Localization.StewardReviewNoRelease, none.ReleaseText);
-        Assert.Equal(viewModel.Localization.FormatStewardReviewReleaseUnreadable(viewModel.StewardErrorText(new StewardException(StewardFailure.Forbidden))), unreadable.ReleaseText);
+        Assert.Equal(
+            "The newest release could not be read from KSAModding/content-index-releases: " + viewModel.Localization.StewardQueueForbidden,
+            unreadable.ReleaseText);
+        Assert.Equal((false, false, false, true), (stamped.IsReleaseUnreadable, noFolder.IsReleaseUnreadable, none.IsReleaseUnreadable, unreadable.IsReleaseUnreadable));
         Assert.True(stamped.HasOwnership);
     }
 

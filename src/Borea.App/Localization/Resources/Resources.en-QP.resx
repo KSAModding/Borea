@@ -207,8 +207,11 @@
   <data name="StewardReviewVerdict" xml:space="preserve">
     <value>What the lookouts say</value>
   </data>
+  <data name="StewardReviewNewestRelease" xml:space="preserve">
+    <value>Newest haul</value>
+  </data>
   <data name="StewardReviewNewestReleaseFormat" xml:space="preserve">
-    <value>The newest haul {0} docks in the berth {1}.</value>
+    <value>The newest haul {0} docks in the berth "{1}".</value>
   </data>
   <data name="StewardReviewNewestReleaseNoFolderFormat" xml:space="preserve">
     <value>The newest haul {0} names nary a berth.</value>
@@ -217,7 +220,7 @@
     <value>Nary a haul be stamped yet. The lookouts read the berth from the chest.</value>
   </data>
   <data name="StewardReviewReleaseUnreadableFormat" xml:space="preserve">
-    <value>The newest haul couldn't be read: {0}</value>
+    <value>The newest haul couldn't be read from KSAModding/content-index-releases: {0}</value>
   </data>
   <data name="StewardActionApprove" xml:space="preserve">
     <value>Give it the nod</value>
