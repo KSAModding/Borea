@@ -33,6 +33,21 @@ public partial class MainViewModel
     }
 
     /// <summary>
+    /// What the game does to each recorded vehicle and save of the instance that needs the mod, when the mod is removed
+    /// or disabled, or null when none needs it. It only warns, because only an incompatible release blocks.
+    /// </summary>
+    internal string? ContentNeededByText(Instance instance, string modId)
+    {
+        var content = Instances.FirstOrDefault(item => item.InstanceId == instance.InstanceId)?.Content ?? [];
+        var needing = RecordedContentNeeds.Needing(content, instance, modId);
+        return needing.Count == 0
+            ? null
+            : string.Join(" ", needing.Select(record => record.Type == ContentType.Save
+                ? Localization.FormatContentNeededBySave(record.FolderName)
+                : Localization.FormatContentNeededByVehicle(record.FolderName)));
+    }
+
+    /// <summary>
     /// Shows on each row whose folder Borea installed what the record says: the listing, the installed version and a
     /// newer release. The files are compared after that, because a large save takes a while to read.
     /// </summary>

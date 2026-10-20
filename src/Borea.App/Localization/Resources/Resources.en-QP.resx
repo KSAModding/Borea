@@ -1467,6 +1467,18 @@
   <data name="ContentRemoveRequiredFormat" xml:space="preserve">
     <value>{0} stows away 'cause {1} be needin' it.</value>
   </data>
+  <data name="ContentNeededByVehicleFormat" xml:space="preserve">
+    <value>The ship {0} be needin' it, so the game be refusin' that ship.</value>
+  </data>
+  <data name="ContentNeededBySaveFormat" xml:space="preserve">
+    <value>The tale {0} be needin' it, so the game be leavin' out every ship o' that tale that be needin' it, and savin' again sends them ships to Davy Jones.</value>
+  </data>
+  <data name="ContentDisableConfirm" xml:space="preserve">
+    <value>Put it to sleep anyway?</value>
+  </data>
+  <data name="ContentDisable" xml:space="preserve">
+    <value>Put to sleep</value>
+  </data>
   <data name="ContentNotOnDisk" xml:space="preserve">
     <value>Not in the hold</value>
   </data>

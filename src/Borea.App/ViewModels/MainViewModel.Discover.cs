@@ -441,6 +441,7 @@ public partial class MainViewModel
             item.IsInstalled = installed.Contains(item.ModId);
             var mod = _activeInstanceEntity?.Mods.FirstOrDefault(entry => ModIds.Equals(entry.ModId, item.ModId));
             item.RemoveBlockedText = item.IsInstalled ? RemoveBlockedReason(_activeInstanceEntity, mod) : null;
+            item.NeededByText = mod is not null && _activeInstanceEntity is { } entity ? ContentNeededByText(entity, mod.ModId) : null;
             var inOtherInstance = installedElsewhere.Contains(item.ModId);
             elsewhereChanged |= item.IsInOtherInstance != inOtherInstance;
             item.IsInOtherInstance = inOtherInstance;
@@ -1000,7 +1001,14 @@ public sealed partial class DiscoverItem : ObservableObject, IContentPlanRow
     [NotifyPropertyChangedFor(nameof(RemoveConfirmText))]
     private string? _removeChanges;
 
-    public string RemoveConfirmText => RemoveChanges is { } files ? _owner.Localization.FormatContentRemoveChanged(Name, files) : _owner.Localization.ContentRemoveConfirm;
+    /// <summary>What the game does to the recorded vehicles and saves of the active instance that need the mod, or null.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(RemoveConfirmText))]
+    private string? _neededByText;
+
+    public string RemoveConfirmText => RemoveChanges is { } files ? _owner.Localization.FormatContentRemoveChanged(Name, files)
+        : NeededByText is { } needed ? $"{_owner.Localization.ContentRemoveConfirm} {needed}"
+        : _owner.Localization.ContentRemoveConfirm;
 
     public bool CanRemove => IsInstalled && !IsRemoving && RemoveBlockedText is null;
 

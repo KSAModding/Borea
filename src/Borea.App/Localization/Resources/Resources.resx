@@ -2109,6 +2109,18 @@
   <data name="ContentRemoveRequiredFormat" xml:space="preserve">
     <value>{0} stays because {1} requires it.</value>
   </data>
+  <data name="ContentNeededByVehicleFormat" xml:space="preserve">
+    <value>The vehicle {0} needs it, so the game refuses that vehicle.</value>
+  </data>
+  <data name="ContentNeededBySaveFormat" xml:space="preserve">
+    <value>The save {0} needs it, so the game leaves out every vehicle of that save that needs it, and saving again loses those vehicles.</value>
+  </data>
+  <data name="ContentDisableConfirm" xml:space="preserve">
+    <value>Disable it anyway?</value>
+  </data>
+  <data name="ContentDisable" xml:space="preserve">
+    <value>Disable</value>
+  </data>
   <data name="ContentNotOnDisk" xml:space="preserve">
     <value>Not on disk</value>
   </data>

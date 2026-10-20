@@ -2109,6 +2109,18 @@
   <data name="ContentRemoveRequiredFormat" xml:space="preserve">
     <value>{0} bleibt, weil {1} es braucht.</value>
   </data>
+  <data name="ContentNeededByVehicleFormat" xml:space="preserve">
+    <value>Das Fahrzeug {0} braucht sie, deshalb lädt das Spiel dieses Fahrzeug nicht.</value>
+  </data>
+  <data name="ContentNeededBySaveFormat" xml:space="preserve">
+    <value>Der Spielstand {0} braucht sie, deshalb lässt das Spiel jedes Fahrzeug dieses Spielstands weg, das sie braucht, und beim nächsten Speichern gehen diese Fahrzeuge verloren.</value>
+  </data>
+  <data name="ContentDisableConfirm" xml:space="preserve">
+    <value>Trotzdem deaktivieren?</value>
+  </data>
+  <data name="ContentDisable" xml:space="preserve">
+    <value>Deaktivieren</value>
+  </data>
   <data name="ContentNotOnDisk" xml:space="preserve">
     <value>Nicht auf der Festplatte</value>
   </data>

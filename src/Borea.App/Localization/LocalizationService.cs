@@ -3534,6 +3534,16 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string FormatContentRemoveRequired(string modId, string dependents)
         => string.Format(CultureInfo.CurrentCulture, Resources.ContentRemoveRequiredFormat, modId, dependents);
 
+    public string FormatContentNeededByVehicle(string folder)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ContentNeededByVehicleFormat, folder);
+
+    public string FormatContentNeededBySave(string folder)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ContentNeededBySaveFormat, folder);
+
+    public string ContentDisableConfirm => Resources.ContentDisableConfirm;
+
+    public string ContentDisable => Resources.ContentDisable;
+
     public string FormatContentManageConfirm(string name, string version)
         => string.Format(CultureInfo.CurrentCulture, Resources.ContentManageConfirmFormat, name, version);
 

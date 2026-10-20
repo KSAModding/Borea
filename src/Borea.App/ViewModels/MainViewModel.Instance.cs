@@ -1358,7 +1358,16 @@ public sealed partial class ContentItem : ObservableObject, IUpdateRow
 
     public string RemoveConfirmText => IsMissing
         ? _owner.Localization.ContentRemoveFromListConfirm
-        : _owner.Localization.ContentRemoveConfirm;
+        : NeededByText is { } needed ? $"{_owner.Localization.ContentRemoveConfirm} {needed}" : _owner.Localization.ContentRemoveConfirm;
+
+    /// <summary>What the game does to the recorded vehicles and saves that need the mod, or null when none does.</summary>
+    public string? NeededByText => _owner.ContentNeededByText(_instance, ModId);
+
+    /// <summary>True while the switch asks before it disables a mod that a recorded vehicle or save needs.</summary>
+    [ObservableProperty]
+    private bool _isConfirmingDisable;
+
+    public string? DisableConfirmText => NeededByText is { } needed ? $"{needed} {_owner.Localization.ContentDisableConfirm}" : null;
 
     public string RemoveActionText => IsMissing ? _owner.Localization.ContentRemoveFromList : _owner.Localization.ContentRemove;
 
@@ -1524,8 +1533,32 @@ public sealed partial class ContentItem : ObservableObject, IUpdateRow
         _isEnabled = enabled;
     }
 
+    /// <summary>A mod that a recorded vehicle or save needs stays on until the player confirms below the row.</summary>
     [RelayCommand]
-    private Task ToggleEnabledAsync() => _owner.SetContentEnabledAsync(InstanceId, ModId, Name, IsEnabled);
+    private Task ToggleEnabledAsync()
+    {
+        IsConfirmingDisable = false;
+        if (!IsEnabled && NeededByText is not null)
+        {
+            IsEnabled = true;
+            IsConfirmingRemove = false;
+            IsConfirmingDisable = true;
+            return Task.CompletedTask;
+        }
+
+        return _owner.SetContentEnabledAsync(InstanceId, ModId, Name, IsEnabled);
+    }
+
+    [RelayCommand]
+    private Task ConfirmDisableAsync()
+    {
+        IsConfirmingDisable = false;
+        IsEnabled = false;
+        return _owner.SetContentEnabledAsync(InstanceId, ModId, Name, enabled: false);
+    }
+
+    [RelayCommand]
+    private void CancelDisable() => IsConfirmingDisable = false;
 
     [RelayCommand]
     private Task PinAsync() => _owner.SetContentPinnedAsync(this, pinned: true);
@@ -1568,6 +1601,8 @@ public sealed partial class ContentItem : ObservableObject, IUpdateRow
         OnPropertyChanged(nameof(NoPageText));
         OnPropertyChanged(nameof(RemoveBlockedText));
         OnPropertyChanged(nameof(RemoveConfirmText));
+        OnPropertyChanged(nameof(NeededByText));
+        OnPropertyChanged(nameof(DisableConfirmText));
         OnPropertyChanged(nameof(RemoveActionText));
         OnPropertyChanged(nameof(RemoveSteps));
         OnPropertyChanged(nameof(UpdateText));
@@ -1583,6 +1618,7 @@ public sealed partial class ContentItem : ObservableObject, IUpdateRow
     private void BeginRemove()
     {
         CancelUpdate();
+        IsConfirmingDisable = false;
         IsConfirmingRemove = true;
     }
 

@@ -438,6 +438,82 @@ public sealed class UserContentViewModelTests
         Assert.Equal("ExampleRover", viewModel.SelectedContent!.ModId);
     }
 
+    [Fact]
+    public async Task RemoveMod_ARecordedVehicleRequires_NamesTheVehicle_AndStillRemovesOnConfirm()
+    {
+        using var harness = await VehicleHarnessAsync(dependencies: Required("AdvancedFlightComputer"));
+        var viewModel = harness.ViewModel;
+        var instance = await InstanceWithAfcAndRoverAsync(harness);
+        await viewModel.ActiveInstance!.OpenCommand.ExecuteAsync(null);
+        var row = viewModel.ContentGroups.SelectMany(group => group.Items).Single(item => item.ModId == "AdvancedFlightComputer");
+        var needed = harness.Localization.FormatContentNeededByVehicle("Example Rover");
+
+        Assert.True(row.CanRemove);
+        Assert.Equal($"{harness.Localization.ContentRemoveConfirm} {needed}", row.RemoveConfirmText);
+        viewModel.ShowDiscoverModsCommand.Execute(null);
+        Assert.Contains(needed, viewModel.DiscoverItems.Single(item => item.ModId == "AdvancedFlightComputer").RemoveConfirmText, StringComparison.Ordinal);
+        Assert.Null(viewModel.DiscoverItems.Single(item => item.ModId == "MeasureTools").NeededByText);
+
+        row.BeginRemoveCommand.Execute(null);
+        await row.ConfirmRemoveCommand.ExecuteAsync(null);
+
+        Assert.Empty((await harness.Services.Instances.GetByIdAsync(instance.InstanceId))!.Mods);
+        Assert.Single(await harness.Services.InstalledContent.ListAsync(instance.InstanceId));
+    }
+
+    [Fact]
+    public async Task DisableMod_ARecordedVehicleRequires_AsksFirst_AndDisablesOnConfirm()
+    {
+        using var harness = await VehicleHarnessAsync(dependencies: Required("AdvancedFlightComputer"));
+        var viewModel = harness.ViewModel;
+        var instance = await InstanceWithAfcAndRoverAsync(harness);
+        await viewModel.ActiveInstance!.OpenCommand.ExecuteAsync(null);
+        var row = viewModel.ContentGroups.SelectMany(group => group.Items).Single(item => item.ModId == "AdvancedFlightComputer");
+
+        row.IsEnabled = false;
+        await row.ToggleEnabledCommand.ExecuteAsync(null);
+
+        Assert.True(row.IsConfirmingDisable);
+        Assert.True(row.IsEnabled);
+        Assert.Equal($"{harness.Localization.FormatContentNeededByVehicle("Example Rover")} {harness.Localization.ContentDisableConfirm}", row.DisableConfirmText);
+        Assert.True(await harness.Services.ModState.IsActiveAsync(instance.InstanceId, "AdvancedFlightComputer"));
+
+        await row.ConfirmDisableCommand.ExecuteAsync(null);
+
+        Assert.False(row.IsConfirmingDisable);
+        Assert.False(await harness.Services.ModState.IsActiveAsync(instance.InstanceId, "AdvancedFlightComputer"));
+    }
+
+    [Fact]
+    public async Task DisableMod_NoRecordedItemNeeds_DisablesAtOnce()
+    {
+        using var harness = await VehicleHarnessAsync(dependencies: Required("AdvancedFlightComputer"));
+        var viewModel = harness.ViewModel;
+        var instance = await InstanceWithAfcAndRoverAsync(harness);
+        await InstalledContent.AddAsync(harness, "MeasureTools", activate: true, ownership: ModInstallOwnership.Borea, into: (await harness.Services.Instances.GetByIdAsync(instance.InstanceId))!);
+        await viewModel.LoadAsync();
+        await viewModel.ActiveInstance!.OpenCommand.ExecuteAsync(null);
+        var row = viewModel.ContentGroups.SelectMany(group => group.Items).Single(item => item.ModId == "MeasureTools");
+
+        row.IsEnabled = false;
+        await row.ToggleEnabledCommand.ExecuteAsync(null);
+
+        Assert.False(row.IsConfirmingDisable);
+        Assert.Null(row.NeededByText);
+        Assert.False(await harness.Services.ModState.IsActiveAsync(instance.InstanceId, "MeasureTools"));
+    }
+
+    /// <summary>An active instance with AdvancedFlightComputer 0.7.5 from Borea and the recorded Example Rover 1.0.0.</summary>
+    private static async Task<Instance> InstanceWithAfcAndRoverAsync(ViewModelHarness harness)
+    {
+        var instance = await InstalledContent.AddAsync(harness, "AdvancedFlightComputer", activate: true, ownership: ModInstallOwnership.Borea);
+        var release = (await harness.Services.UserContent.GetReleaseAsync("ExampleRover", ModVersion.Parse("1.0.0")))!;
+        Assert.True((await harness.Services.UserContentInstaller.InstallAsync(instance.InstanceId, release, name: null)).IsDone);
+        await harness.ViewModel.LoadAsync();
+        await harness.ViewModel.EnsureDiscoverLoadedAsync();
+        return instance;
+    }
+
     private static async Task<Instance> ActiveInstanceAsync(ViewModelHarness harness)
     {
         var instance = (await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value)).Instance;
