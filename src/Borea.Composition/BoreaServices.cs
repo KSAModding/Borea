@@ -451,6 +451,7 @@ public sealed class BoreaServices : IDisposable
         // host of its own.
         var http = BuildHttpClient(httpHandler);
         var resolver = new SpaceDockResolver();
+        var installedContent = new FileInstalledContentRecords(paths);
         var indexReader = new ContentIndexReader(paths, ContentIndexModRepository.SourceName);
         var indexFetcher = new LoggingContentIndexFetcher(new ContentIndexFetcher(http, ContentIndexUri, indexReader, ContentIndexTypeFiles.All, log), log);
         var indexSnapshots = new ContentIndexSnapshotProvider(indexFetcher, indexReader, paths);
@@ -526,9 +527,9 @@ public sealed class BoreaServices : IDisposable
             TaskHistory = new FileTaskHistoryRepository(paths),
             Instances = instances,
             GameData = new FileGameDataReader(paths),
-            GameSaves = new FileGameSaveStore(paths),
+            GameSaves = new FileGameSaveStore(paths, records: installedContent),
             GameSaveBackups = new FileGameSaveBackupStore(paths),
-            InstalledContent = new FileInstalledContentRecords(paths),
+            InstalledContent = installedContent,
             GameLog = new FileGameLogReader(paths),
             GameCrashes = new FileGameCrashReader(paths),
             Playtime = new FilePlaytimeService(paths),

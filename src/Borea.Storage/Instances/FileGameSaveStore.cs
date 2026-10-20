@@ -1,6 +1,7 @@
 using System.IO.Compression;
 using System.Text.RegularExpressions;
 using Borea.Core.Instances;
+using Borea.Core.Mods;
 using Borea.Core.Paths;
 using Borea.Storage.Files;
 using Tomlyn;
@@ -9,7 +10,9 @@ using Tomlyn.Model;
 namespace Borea.Storage.Instances;
 
 /// <summary>
-/// Reads each folder the way SaveMetaData.FromDirectory does.
+/// Reads each folder the way SaveMetaData.FromDirectory does. Keeps the install records of
+/// <see cref="IInstalledContentRecords"/> true: a renamed folder keeps its record, and a folder
+/// that is copied over or deleted loses it, because a folder without a record is the player's own.
 /// </summary>
 public sealed partial class FileGameSaveStore : IGameSaveStore
 {
@@ -33,11 +36,14 @@ public sealed partial class FileGameSaveStore : IGameSaveStore
 
     private readonly IGamePathProvider _paths;
     private readonly GameSaveBackupFolder _backups;
+    private readonly IInstalledContentRecords _records;
 
-    public FileGameSaveStore(IGamePathProvider paths, TimeProvider? time = null)
+    /// <param name="records">Pass the one store of the app, so two stores never write one file.</param>
+    public FileGameSaveStore(IGamePathProvider paths, TimeProvider? time = null, IInstalledContentRecords? records = null)
     {
         _paths = paths ?? throw new ArgumentNullException(nameof(paths));
         _backups = new GameSaveBackupFolder(paths, time ?? TimeProvider.System);
+        _records = records ?? new FileInstalledContentRecords(paths);
     }
 
     public string GetFolder(Guid instanceId, GameSaveKind kind)
@@ -87,14 +93,17 @@ public sealed partial class FileGameSaveStore : IGameSaveStore
         => Task.Run(() => CopyCoreAsync(entry, targetInstanceId, replace, cancellationToken), cancellationToken);
 
     public Task<string> DeleteAsync(Guid instanceId, GameSaveEntry entry, CancellationToken cancellationToken = default)
-        => Task.Run(() =>
+        => Task.Run(async () =>
         {
             RequireInInstance(instanceId, entry);
-            return _backups.MoveInAsync(instanceId, entry.Kind, entry.Path, GameSaveBackupReason.Deleted);
+            await _records.RemoveAsync(instanceId, ContentTypeOf(entry.Kind), entry.FolderName, cancellationToken).ConfigureAwait(false);
+            return await _backups.MoveInAsync(instanceId, entry.Kind, entry.Path, GameSaveBackupReason.Deleted).ConfigureAwait(false);
         }, cancellationToken);
 
     public Task<GameSaveRenameOutcome> RenameAsync(Guid instanceId, GameSaveEntry entry, string newName, CancellationToken cancellationToken = default)
-        => Task.Run(() => RenameCoreAsync(RequireInInstance(instanceId, entry), newName, cancellationToken), cancellationToken);
+        => Task.Run(() => RenameCoreAsync(instanceId, RequireInInstance(instanceId, entry), newName, cancellationToken), cancellationToken);
+
+    private static ContentType ContentTypeOf(GameSaveKind kind) => kind == GameSaveKind.Save ? ContentType.Save : ContentType.Vehicle;
 
     private string GetSharedProfileFolder(GameSaveKind kind) => FindFolder(Path.Combine(_paths.GetSharedProfileRoot(), FolderName(kind)));
 
@@ -261,6 +270,9 @@ public sealed partial class FileGameSaveStore : IGameSaveStore
         try
         {
             CopyFolder(source, staging, cancellationToken);
+
+            // The record goes first: a folder that loses it only makes Borea more careful, and the copy is the player's own.
+            await _records.RemoveAsync(targetInstanceId, ContentTypeOf(entry.Kind), source.Name, cancellationToken).ConfigureAwait(false);
             Directory.CreateDirectory(folder);
             var replaced = exists ? await _backups.MoveInAsync(targetInstanceId, entry.Kind, target, GameSaveBackupReason.Replaced).ConfigureAwait(false) : null;
             try
@@ -285,10 +297,11 @@ public sealed partial class FileGameSaveStore : IGameSaveStore
 
     /// <summary>
     /// Writes meta.toml first and moves the folder second, because the move is the
-    /// step that fails when a file in the folder is open. A failed move writes the
-    /// old meta.toml back.
+    /// step that fails when a file in the folder is open. The install record follows
+    /// last. A failed move or record write moves the folder back and writes the old
+    /// meta.toml back.
     /// </summary>
-    private static async Task<GameSaveRenameOutcome> RenameCoreAsync(GameSaveEntry entry, string newName, CancellationToken cancellationToken)
+    private async Task<GameSaveRenameOutcome> RenameCoreAsync(Guid instanceId, GameSaveEntry entry, string newName, CancellationToken cancellationToken)
     {
         if (!GameSaveName.IsValid(newName))
             return GameSaveRenameOutcome.InvalidName;
@@ -319,13 +332,24 @@ public sealed partial class FileGameSaveStore : IGameSaveStore
 
         cancellationToken.ThrowIfCancellationRequested();
         await AtomicFile.WriteAllTextAsync(metadataPath, renamed, cancellationToken).ConfigureAwait(false);
+        var target = Path.Combine(folder, newName);
+        var moved = false;
         try
         {
             if (!string.Equals(source.Name, newName, StringComparison.Ordinal))
-                Directory.Move(source.FullName, Path.Combine(folder, newName));
+            {
+                Directory.Move(source.FullName, target);
+                moved = true;
+            }
+
+            // The hashes stay, so the renamed item counts as changed since the install.
+            await _records.RenameFolderAsync(instanceId, ContentTypeOf(entry.Kind), source.Name, newName, cancellationToken).ConfigureAwait(false);
         }
         catch
         {
+            if (moved)
+                Directory.Move(target, source.FullName);
+
             await AtomicFile.WriteAllBytesAsync(metadataPath, original).ConfigureAwait(false);
             throw;
         }

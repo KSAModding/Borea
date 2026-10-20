@@ -1,5 +1,6 @@
 using System.IO.Compression;
 using Borea.Core.Instances;
+using Borea.Core.Mods;
 using Borea.Storage.Instances;
 using Borea.Storage.Tests.Launch;
 using Borea.Storage.Tests.Paths;
@@ -13,13 +14,15 @@ public sealed class FileGameSaveStoreTests : IDisposable
     private readonly string _tempRoot = Path.Combine(Path.GetTempPath(), "BoreaTest_" + Guid.NewGuid());
     private readonly TestGamePathProvider _paths;
     private readonly FileGameSaveStore _store;
+    private readonly FileInstalledContentRecords _records;
     private readonly Guid _instanceId = Guid.NewGuid();
     private readonly Guid _otherInstanceId = Guid.NewGuid();
 
     public FileGameSaveStoreTests()
     {
         _paths = new TestGamePathProvider(_tempRoot);
-        _store = new FileGameSaveStore(_paths, new FixedTime(new DateTimeOffset(2026, 9, 15, 12, 30, 5, TimeSpan.Zero)));
+        _records = new FileInstalledContentRecords(_paths);
+        _store = new FileGameSaveStore(_paths, new FixedTime(new DateTimeOffset(2026, 9, 15, 12, 30, 5, TimeSpan.Zero)), _records);
         Directory.CreateDirectory(_paths.GetInstanceRoot(_instanceId));
         Directory.CreateDirectory(_paths.GetInstanceRoot(_otherInstanceId));
     }
@@ -467,6 +470,93 @@ public sealed class FileGameSaveStoreTests : IDisposable
     public void WithName_TextBoreaCannotEdit_ReturnsNull(string text)
     {
         Assert.Null(FileGameSaveStore.WithName(text, "Mun"));
+    }
+
+    [Fact]
+    public async Task RenameAsync_RecordedVehicle_MovesTheRecordAndKeepsTheHashes()
+    {
+        var record = await AddRecordedVehicleAsync(_instanceId, "Rover");
+        var entry = Assert.Single(await _store.ListAsync(_instanceId, GameSaveKind.Vehicle));
+
+        Assert.Equal(GameSaveRenameOutcome.Renamed, await _store.RenameAsync(_instanceId, entry, "Rover Two"));
+
+        var renamed = Assert.Single(await _records.ListAsync(_instanceId));
+        Assert.Equal("Rover Two", renamed.FolderName);
+        Assert.Equal(record.Files, renamed.Files);
+        Assert.Equal(["meta.toml"], (await _records.CompareAsync(_instanceId, renamed)).Changed);
+    }
+
+    [Fact]
+    public async Task RenameAsync_RecordWriteFails_PutsTheFolderAndMetaTomlBack()
+    {
+        await AddRecordedVehicleAsync(_instanceId, "Rover");
+        var entry = Assert.Single(await _store.ListAsync(_instanceId, GameSaveKind.Vehicle));
+        var metadata = Path.Combine(entry.Path, "meta.toml");
+        var before = File.ReadAllBytes(metadata);
+        await File.WriteAllTextAsync(_paths.GetInstanceInstalledContentPath(_instanceId), "[[Items]\nType = ");
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => _store.RenameAsync(_instanceId, entry, "Rover Two"));
+
+        Assert.Equal(before, File.ReadAllBytes(metadata));
+        Assert.Equal(["Rover"], Directory.GetDirectories(_paths.GetInstanceVehiclesFolder(_instanceId)).Select(Path.GetFileName));
+    }
+
+    [Fact]
+    public async Task CopyAsync_OverARecordedFolder_RemovesItsRecord_BecauseTheCopyIsThePlayersOwn()
+    {
+        var entry = await AddSaveAsync(_instanceId, "Orbit");
+        await AddRecordedSaveAsync(_otherInstanceId, "Orbit");
+
+        Assert.Equal(GameSaveCopyOutcome.Copied, await _store.CopyAsync(entry, _otherInstanceId, replace: true));
+
+        Assert.Empty(await _records.ListAsync(_otherInstanceId));
+    }
+
+    [Fact]
+    public async Task CopyAsync_NameExistsAndNoReplace_KeepsTheRecord()
+    {
+        var entry = await AddSaveAsync(_instanceId, "Orbit");
+        await AddRecordedSaveAsync(_otherInstanceId, "Orbit");
+
+        Assert.Equal(GameSaveCopyOutcome.Exists, await _store.CopyAsync(entry, _otherInstanceId, replace: false));
+
+        Assert.Single(await _records.ListAsync(_otherInstanceId));
+    }
+
+    [Fact]
+    public async Task DeleteAsync_RecordedFolder_RemovesItsRecord()
+    {
+        await AddRecordedSaveAsync(_instanceId, "Orbit");
+        await AddRecordedSaveAsync(_instanceId, "Moon");
+        var entry = (await _store.ListAsync(_instanceId, GameSaveKind.Save)).Single(item => item.FolderName == "Orbit");
+
+        await _store.DeleteAsync(_instanceId, entry);
+
+        Assert.Equal("Moon", Assert.Single(await _records.ListAsync(_instanceId)).FolderName);
+    }
+
+    private async Task<InstalledContentRecord> AddRecordedVehicleAsync(Guid instanceId, string name)
+    {
+        WriteItem(_paths.GetInstanceVehiclesFolder(instanceId), name, name, "2026-08-01T14:34:32.4054896", "v2026.8.3.5117", 10, "vehicle.xml");
+        return await AddRecordAsync(instanceId, ContentType.Vehicle, Path.Combine(_paths.GetInstanceVehiclesFolder(instanceId), name));
+    }
+
+    private async Task<InstalledContentRecord> AddRecordedSaveAsync(Guid instanceId, string name)
+    {
+        await AddSaveAsync(instanceId, name);
+        return await AddRecordAsync(instanceId, ContentType.Save, Path.Combine(_paths.GetInstanceSavesFolder(instanceId), name));
+    }
+
+    private async Task<InstalledContentRecord> AddRecordAsync(Guid instanceId, ContentType type, string folder)
+    {
+        var name = Path.GetFileName(folder);
+        var record = new InstalledContentRecord(
+            FileInstalledContentRecordsTests.Release(type, folder: name),
+            name,
+            DateTimeOffset.UnixEpoch,
+            await InstalledContentHashes.ComputeAsync(folder));
+        await _records.AddAsync(instanceId, record);
+        return record;
     }
 
     private async Task<GameSaveEntry> AddSaveAsync(Guid instanceId, string name, int universeBytes = 100)
