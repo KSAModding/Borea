@@ -4350,6 +4350,9 @@
   <data name="LaunchModLikelyBrokeFormat" xml:space="preserve">
     <value>{2} wurde beim Laden von {0} {1} beendet. Wahrscheinlich ist diese Mod die Ursache. Deaktiviere sie und versuche es erneut, oder suche nach einem Update.</value>
   </data>
+  <data name="LaunchOtherModsNeedMissingFormat" xml:space="preserve">
+    <value>Diese Mods brauchen auch eine Assembly, die dieser KSA-Build nicht hat: {0}. Deaktiviere sie ebenfalls, oder suche nach Updates.</value>
+  </data>
   <data name="LaunchExitedEarlyFormat" xml:space="preserve">
     <value>{0} wurde direkt nach dem Start beendet (Exit-Code {1}). Die Details zeigen, was ausgegeben wurde.</value>
   </data>

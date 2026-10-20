@@ -801,6 +801,16 @@ public partial class MainViewModel
             LaunchMessage = loadingMods
                 ? Localization.FormatLaunchModLikelyBroke(_launchBlamedModName, blamed.Version.ToString(), loaderName)
                 : Localization.FormatLaunchModBroke(_launchBlamedModName, blamed.Version.ToString(), loaderName);
+
+            var others = new List<string>();
+            foreach (var modId in result.OtherBlamedModIds)
+            {
+                var other = instance.Mods.FirstOrDefault(mod => ModIds.Equals(mod.ModId, modId));
+                others.Add(other?.Metadata.Listing?.Name ?? (await ResolveListingAsync(modId))?.Name ?? modId);
+            }
+
+            if (others.Count > 0)
+                LaunchMessage += " " + Localization.FormatLaunchOtherModsNeedMissing(string.Join(", ", others));
         }
 
         IReadOnlyList<string> output = result.Output.Count == 0 ? [Localization.LaunchNoOutput] : result.Output;
