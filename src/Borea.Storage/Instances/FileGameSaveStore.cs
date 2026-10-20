@@ -16,7 +16,7 @@ namespace Borea.Storage.Instances;
 /// </summary>
 public sealed partial class FileGameSaveStore : IGameSaveStore
 {
-    private const string MetadataFileName = "meta.toml";
+    internal const string MetadataFileName = "meta.toml";
 
     private static readonly EnumerationOptions SizeOptions = new()
     {
@@ -32,7 +32,7 @@ public sealed partial class FileGameSaveStore : IGameSaveStore
         AttributesToSkip = FileAttributes.ReparsePoint,
     };
 
-    private static readonly StringComparer PathComparer = OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
+    internal static readonly StringComparer PathComparer = OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
 
     private readonly IGamePathProvider _paths;
     private readonly GameSaveBackupFolder _backups;
