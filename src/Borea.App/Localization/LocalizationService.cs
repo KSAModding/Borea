@@ -1397,6 +1397,8 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string GameSaveOlderBuild => Resources.GameSaveOlderBuild;
 
+    public string GameSaveChangedSinceInstall => Resources.GameSaveChangedSinceInstall;
+
     public string GameSaveBackUp => Resources.GameSaveBackUp;
 
     public string GameSaveCopyToInstance => Resources.GameSaveCopyToInstance;

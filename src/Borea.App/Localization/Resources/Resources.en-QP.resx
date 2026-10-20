@@ -1239,6 +1239,9 @@
   <data name="GameSaveOlderBuild" xml:space="preserve">
     <value>Build o' the past</value>
   </data>
+  <data name="GameSaveChangedSinceInstall" xml:space="preserve">
+    <value>Tampered with since boardin'</value>
+  </data>
   <data name="GameSaveBuildFormat" xml:space="preserve">
     <value>Put t'getter with build {0}</value>
   </data>

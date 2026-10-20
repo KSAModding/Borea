@@ -38,6 +38,7 @@ public partial class MainViewModel
         VersionItem item => StartModInstallTask(item, item.ModId, instanceId),
         DiscoverItem item => StartModInstallTask(item, item.ModId, instanceId),
         PackMemberItem item => StartPackMemberTask(item, instanceId),
+        GameSaveItem item => StartTask(TaskKind.Update, item.Name, instanceId, item.Record?.ListingId, state: TaskState.Waiting),
         _ => throw new UnreachableException(),
     };
 
@@ -163,6 +164,10 @@ public partial class MainViewModel
         else if (_content.FirstOrDefault(content => ModIds.Equals(content.ModId, task.ContentId)) is { } row)
         {
             await UpdateContentAsync(row);
+        }
+        else if (VehiclesSection.Items.Concat(SavesSection.Items).FirstOrDefault(item => item.CanUpdate && ModIds.Equals(item.Record?.ListingId, task.ContentId)) is { } recorded)
+        {
+            await UpdateRecordedContentAsync(recorded);
         }
         else
         {

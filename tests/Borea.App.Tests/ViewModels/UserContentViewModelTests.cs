@@ -327,6 +327,117 @@ public sealed class UserContentViewModelTests
         Assert.False(viewModel.DiscoverItems.Single().IsInstalled);
     }
 
+    [Fact]
+    public async Task InstancePage_RecordedAndChangedVehicle_ShowsTheMark_AndRemoveAsksFirst()
+    {
+        using var harness = await VehicleHarnessAsync();
+        var viewModel = harness.ViewModel;
+        var instance = await ActiveInstanceWithRoverAsync(harness);
+        var folder = Path.Combine(harness.Services.Paths.GetInstanceVehiclesFolder(instance.InstanceId), "Example Rover");
+        File.WriteAllText(Path.Combine(folder, "vehicle.xml"), "<Vehicle edited=\"yes\" />");
+
+        await viewModel.ActiveInstance!.OpenCommand.ExecuteAsync(null);
+
+        var row = Assert.Single(viewModel.VehiclesSection.Items);
+        Assert.True(row.HasRecord);
+        Assert.Equal("Example Rover", row.ListingName);
+        Assert.Equal(harness.Localization.FormatContentDependencyInstalled("1.0.0"), row.InstalledVersionText);
+        Assert.Equal(harness.Localization.FormatPackMemberNewer("1.1.0"), row.NewerText);
+        Assert.True(row.IsChanged);
+        Assert.Equal("vehicle.xml", row.ChangedFilesText);
+
+        row.BeginDeleteCommand.Execute(null);
+
+        Assert.Equal(harness.Localization.FormatContentRemoveChanged("Example Rover", "vehicle.xml"), row.DeleteConfirmText);
+        Assert.True(Directory.Exists(folder));
+
+        await row.ConfirmDeleteCommand.ExecuteAsync(null);
+
+        Assert.False(Directory.Exists(folder));
+        Assert.Empty(await harness.Services.InstalledContent.ListAsync(instance.InstanceId));
+        Assert.Empty(viewModel.VehiclesSection.Items);
+    }
+
+    [Fact]
+    public async Task InstancePage_OwnFolder_HasNoRecordAndKeepsTheDeleteText()
+    {
+        using var harness = await VehicleHarnessAsync();
+        var viewModel = harness.ViewModel;
+        var instance = await ActiveInstanceAsync(harness);
+        var folder = Directory.CreateDirectory(Path.Combine(harness.Services.Paths.GetInstanceVehiclesFolder(instance.InstanceId), "Mine")).FullName;
+        File.WriteAllText(Path.Combine(folder, "meta.toml"), "name = \"Mine\"\n");
+
+        await viewModel.ActiveInstance!.OpenCommand.ExecuteAsync(null);
+
+        var row = Assert.Single(viewModel.VehiclesSection.Items);
+        Assert.False(row.HasRecord);
+        Assert.False(row.CanUpdate);
+        Assert.Equal(harness.Localization.GameSaveDeleteConfirm, row.DeleteConfirmText);
+    }
+
+    [Fact]
+    public async Task InstancePage_UpdateOfARecordedVehicle_WaitsForTheGo_AndInstallsTheNewerRelease()
+    {
+        using var harness = await VehicleHarnessAsync();
+        var viewModel = harness.ViewModel;
+        var instance = await ActiveInstanceWithRoverAsync(harness);
+        await viewModel.ActiveInstance!.OpenCommand.ExecuteAsync(null);
+        var row = Assert.Single(viewModel.VehiclesSection.Items);
+        Assert.True(row.CanUpdate);
+        Assert.Equal(harness.Localization.FormatContentUpdateTo("1.1.0"), row.UpdateText);
+
+        await row.UpdateCommand.ExecuteAsync(null);
+
+        Assert.True(row.IsConfirmingInstall);
+        Assert.False(row.IsIdle);
+        Assert.Equal(ModVersion.Parse("1.0.0"), Assert.Single(await harness.Services.InstalledContent.ListAsync(instance.InstanceId)).Version);
+
+        await row.ConfirmInstallCommand.ExecuteAsync(null);
+
+        Assert.Equal(ModVersion.Parse("1.1.0"), Assert.Single(await harness.Services.InstalledContent.ListAsync(instance.InstanceId)).Version);
+        var updated = Assert.Single(viewModel.VehiclesSection.Items);
+        Assert.Equal(harness.Localization.FormatContentDependencyInstalled("1.1.0"), updated.InstalledVersionText);
+        Assert.False(updated.CanUpdate);
+        Assert.Contains(viewModel.Tasks.History, task => task.Kind == Borea.Core.History.TaskKind.Update && task.ContentId == "ExampleRover");
+    }
+
+    [Fact]
+    public async Task InstancePage_UpdateOfAChangedVehicle_NamesTheFiles_AndTheGoReplacesIt()
+    {
+        using var harness = await VehicleHarnessAsync();
+        var viewModel = harness.ViewModel;
+        var instance = await ActiveInstanceWithRoverAsync(harness);
+        var file = Path.Combine(harness.Services.Paths.GetInstanceVehiclesFolder(instance.InstanceId), "Example Rover", "vehicle.xml");
+        File.WriteAllText(file, "<Vehicle edited=\"yes\" />");
+        await viewModel.ActiveInstance!.OpenCommand.ExecuteAsync(null);
+        var row = Assert.Single(viewModel.VehiclesSection.Items);
+
+        await row.UpdateCommand.ExecuteAsync(null);
+
+        Assert.Contains(harness.Localization.FormatPackContentChanged("Example Rover", "vehicle.xml"), row.InstallWarning, StringComparison.Ordinal);
+        Assert.Equal("<Vehicle edited=\"yes\" />", File.ReadAllText(file));
+
+        await row.ConfirmInstallCommand.ExecuteAsync(null);
+
+        Assert.Equal("<Vehicle />", File.ReadAllText(file));
+        Assert.Equal(ModVersion.Parse("1.1.0"), Assert.Single(await harness.Services.InstalledContent.ListAsync(instance.InstanceId)).Version);
+    }
+
+    [Fact]
+    public async Task InstancePage_RecordedRow_OpensThePageOfItsListing()
+    {
+        using var harness = await VehicleHarnessAsync();
+        var viewModel = harness.ViewModel;
+        await ActiveInstanceWithRoverAsync(harness);
+        await viewModel.ActiveInstance!.OpenCommand.ExecuteAsync(null);
+
+        await Assert.Single(viewModel.VehiclesSection.Items).OpenPageCommand.ExecuteAsync(null);
+
+        Assert.True(viewModel.CurrentWindowContent);
+        Assert.True(viewModel.IsContentFromInstance);
+        Assert.Equal("ExampleRover", viewModel.SelectedContent!.ModId);
+    }
+
     private static async Task<Instance> ActiveInstanceAsync(ViewModelHarness harness)
     {
         var instance = (await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value)).Instance;

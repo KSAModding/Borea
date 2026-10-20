@@ -1845,6 +1845,9 @@
   <data name="GameSaveOlderBuild" xml:space="preserve">
     <value>Älterer Build</value>
   </data>
+  <data name="GameSaveChangedSinceInstall" xml:space="preserve">
+    <value>Seit der Installation geändert</value>
+  </data>
   <data name="GameSaveBuildFormat" xml:space="preserve">
     <value>Mit dem Spiel-Build {0} erstellt</value>
   </data>
