@@ -120,6 +120,9 @@ public sealed class BoreaServices : IDisposable
     /// <summary>The vehicles and saves Borea installed. One instance, so one store writes each file.</summary>
     public required IInstalledContentRecords InstalledContent { get; init; }
 
+    /// <summary>Installs, updates and removes one vehicle or save folder, on the same records as <see cref="InstalledContent"/>.</summary>
+    public required IUserContentInstaller UserContentInstaller { get; init; }
+
     public required IGameLogReader GameLog { get; init; }
 
     public required IGameCrashReader GameCrashes { get; init; }
@@ -537,6 +540,7 @@ public sealed class BoreaServices : IDisposable
             GameSaves = new FileGameSaveStore(paths, records: installedContent),
             GameSaveBackups = new FileGameSaveBackupStore(paths),
             InstalledContent = installedContent,
+            UserContentInstaller = new LoggingUserContentInstaller(new FileUserContentInstaller(paths, downloader, installedContent, isGameProcessRunning), log),
             GameLog = new FileGameLogReader(paths),
             GameCrashes = new FileGameCrashReader(paths),
             Playtime = new FilePlaytimeService(paths),

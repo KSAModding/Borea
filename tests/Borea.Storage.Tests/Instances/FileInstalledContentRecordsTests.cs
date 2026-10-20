@@ -105,13 +105,27 @@ public sealed class FileInstalledContentRecordsTests : IDisposable
         await InstallVehicleAsync("Second Rover");
         var replacement = new InstalledContentRecord(record.Metadata, record.FolderName, record.InstalledAt.AddDays(1), record.Files);
 
-        await _records.ReplaceAsync(_instanceId, replacement);
+        await _records.ReplaceAsync(_instanceId, "Example Rover", replacement);
         Assert.Equal(record.InstalledAt.AddDays(1), (await _records.FindAsync(_instanceId, ContentType.Vehicle, "Example Rover"))!.InstalledAt);
 
         Assert.True(await _records.RemoveAsync(_instanceId, ContentType.Vehicle, "Example Rover"));
         Assert.False(await _records.RemoveAsync(_instanceId, ContentType.Vehicle, "Example Rover"));
         Assert.Equal("Second Rover", Assert.Single(await _records.ListAsync(_instanceId)).FolderName);
-        await Assert.ThrowsAsync<InvalidOperationException>(() => _records.ReplaceAsync(_instanceId, replacement));
+        await Assert.ThrowsAsync<InvalidOperationException>(() => _records.ReplaceAsync(_instanceId, "Example Rover", replacement));
+    }
+
+    [Fact]
+    public async Task Replace_UnderAnotherFolderName_MovesTheRecordAndRefusesTheNameOfAnother()
+    {
+        var record = await InstallVehicleAsync();
+        await InstallVehicleAsync("Second Rover");
+
+        await _records.ReplaceAsync(_instanceId, "Example Rover", record.WithFolderName("Third Rover"));
+
+        Assert.Null(await _records.FindAsync(_instanceId, ContentType.Vehicle, "Example Rover"));
+        Assert.NotNull(await _records.FindAsync(_instanceId, ContentType.Vehicle, "Third Rover"));
+        await Assert.ThrowsAsync<InvalidOperationException>(() => _records.ReplaceAsync(_instanceId, "Third Rover", record.WithFolderName("second rover")));
+        Assert.NotNull(await _records.FindAsync(_instanceId, ContentType.Vehicle, "Third Rover"));
     }
 
     [Fact]

@@ -171,6 +171,14 @@ public sealed partial class FileGameSaveStore : IGameSaveStore
     internal static (string? Name, DateTimeOffset? Updated, string? Build) ParseMetadata(string text)
         => ParseTable(text) is { } table ? (Text(table, "name"), Updated(table), Text(table, "version")) : default;
 
+    /// <summary>The "name" of a meta.toml, which is null when the file has none. False when the text is not TOML.</summary>
+    internal static bool TryReadName(string text, out string? name)
+    {
+        var table = ParseTable(text);
+        name = table is null ? null : Text(table, "name");
+        return table is not null;
+    }
+
     private static TomlTable? ParseTable(string text)
     {
         try
