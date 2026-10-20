@@ -149,7 +149,8 @@ public sealed class LaunchFailureTests
         await viewModel.PlayActiveInstanceCommand.ExecuteAsync(null);
 
         Assert.True(viewModel.IsLaunchFailureOpen);
-        Assert.Equal(harness.Localization.FormatLaunchLoaderTooOld("StarMap", "2026.8.3.5117", "https://github.com/StarMapLoader/StarMap/releases"), viewModel.LaunchMessage);
+        Assert.Equal(harness.Localization.FormatLaunchLoaderTooOld("StarMap", "2026.8.3.5117"), viewModel.LaunchMessage);
+        Assert.Equal("https://github.com/StarMapLoader/StarMap/releases", viewModel.LaunchLoaderReleases?.Url);
         Assert.False(viewModel.CanDisableBlamedMod);
     }
 

@@ -401,7 +401,7 @@ public sealed class LoaderLauncher : ILauncher, IDisposable
         var build = cause == LoaderCrashCause.GameAssembly ? InstalledGameVersionProvider.Read(_pathProvider.GetGameDirectoryPath())?.RawVersion : null;
         var message = (blamed, cause) switch
         {
-            (null, LoaderCrashCause.GameAssembly) when build is not null => $"{start.LoaderName} was made for another KSA build than the installed {build} and cannot load the game. Wait for a {start.LoaderName} update and install it when it is out. {start.LoaderName} releases: {start.LoaderReleases}",
+            (null, LoaderCrashCause.GameAssembly) when build is not null => $"{start.LoaderName} was made for another KSA build than the installed {build} and cannot load the game. When a {start.LoaderName} release for {build} is out, install that release. If {build} is older than the build that {start.LoaderName} was made for, update KSA instead. {start.LoaderName} releases: {start.LoaderReleases}",
             (null, _) => $"{start.LoaderName} stopped right after starting (exit code {exitCode}). The details show what it wrote.",
             (_, LoaderCrashCause.ModLoading) => $"{start.LoaderName} stopped while it loaded {blamed.Metadata.Listing?.Name ?? blamed.ModId} {blamed.Version}, so that mod is the likely cause. Disable it and try again, or look for an update.",
             _ => $"{blamed.Metadata.Listing?.Name ?? blamed.ModId} {blamed.Version} stopped {start.LoaderName} from starting. It may not work with this version of KSA. Disable it and try again, or look for an update.",

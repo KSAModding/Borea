@@ -133,6 +133,10 @@ public partial class MainViewModel
     [ObservableProperty]
     private string? _launchFailureError;
 
+    /// <summary>The releases page of the loader, offered when the loader was made for another KSA build.</summary>
+    [ObservableProperty]
+    private ContentLink? _launchLoaderReleases;
+
     [RelayCommand]
     internal async Task OpenInstanceAsync(InstanceItem item)
     {
@@ -779,13 +783,16 @@ public partial class MainViewModel
         {
             LaunchMessage = Localization.FormatLaunchWrapperStopped(wrapper.BundlePath, loaderName);
         }
+        else if (result.CrashCause == LoaderCrashCause.GameAssembly && blamed is null && InstalledVersionText is { } build && loader is not null)
+        {
+            LaunchMessage = Localization.FormatLaunchLoaderTooOld(loaderName, build);
+            LaunchLoaderReleases = new ContentLink(Localization.FormatLaunchLoaderReleases(loaderName), LoaderCrashReport.ReleasesPage(loader));
+        }
         else if (blamed is null)
         {
-            LaunchMessage = result.CrashCause == LoaderCrashCause.GameAssembly && InstalledVersionText is { } build && loader is not null
-                ? Localization.FormatLaunchLoaderTooOld(loaderName, build, LoaderCrashReport.ReleasesPage(loader))
-                : loadingMods
-                    ? Localization.FormatLaunchStoppedLoadingMods(loaderName, result.ExitCode ?? 0)
-                    : Localization.FormatLaunchExitedEarly(loaderName, result.ExitCode ?? 0);
+            LaunchMessage = loadingMods
+                ? Localization.FormatLaunchStoppedLoadingMods(loaderName, result.ExitCode ?? 0)
+                : Localization.FormatLaunchExitedEarly(loaderName, result.ExitCode ?? 0);
         }
         else
         {
@@ -814,6 +821,7 @@ public partial class MainViewModel
         LaunchOutputText = null;
         IsLaunchOutputShown = false;
         LaunchBlamedModId = null;
+        LaunchLoaderReleases = null;
         _launchBlamedModName = null;
         _launchLoaderName = null;
         OnPropertyChanged(nameof(DisableBlamedModText));
@@ -850,6 +858,13 @@ public partial class MainViewModel
             await OpenInstanceAsync(shown);
         ClearLaunchFailure();
         LaunchMessage = Localization.FormatLaunchModDisabled(name);
+    }
+
+    [RelayCommand]
+    private void OpenLaunchLoaderReleases()
+    {
+        if (LaunchLoaderReleases is { } link)
+            LaunchFailureError = TryOpenWithSystem(link.Url);
     }
 
     [RelayCommand]
