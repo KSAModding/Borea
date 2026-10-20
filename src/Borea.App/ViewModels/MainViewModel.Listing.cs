@@ -1,8 +1,13 @@
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using Borea.Composition;
+using Borea.Core.Instances;
+using Borea.Core.Listings;
+using Borea.Core.Mods;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -59,8 +64,9 @@ public partial class MainViewModel
             }
 
             var manifest = await services.ModState.GetEntriesAsync(instanceId);
+            var content = await InstalledContentOfAsync(services, instanceId);
             await OpenListingAsync();
-            if (!ListingEditor.StartPackFromInstance(instance, manifest, services.Settings.LoaderInstallations))
+            if (!ListingEditor.StartPackFromInstance(instance, manifest, services.Settings.LoaderInstallations, content))
                 ShowErrorToast(() => Localization.FormatToastMakePackFailed(instance.Name), Localization.ToastMakePackNoIndex);
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or InvalidOperationException)
@@ -68,6 +74,24 @@ public partial class MainViewModel
             var instanceName = InstanceName(instanceId);
             ShowErrorToast(() => Localization.FormatToastMakePackFailed(instanceName), exception.Message);
         }
+    }
+
+    /// <summary>Each vehicle and save folder of the instance, with its install record and whether the player changed it since.</summary>
+    private static async Task<List<ListingInstalledContent>> InstalledContentOfAsync(BoreaServices services, Guid instanceId)
+    {
+        var records = await services.InstalledContent.ListAsync(instanceId);
+        var content = new List<ListingInstalledContent>();
+        foreach (var (kind, type) in new[] { (GameSaveKind.Vehicle, ContentType.Vehicle), (GameSaveKind.Save, ContentType.Save) })
+        {
+            foreach (var entry in await services.GameSaves.ListAsync(instanceId, kind))
+            {
+                var record = records.FirstOrDefault(item => item.Type == type && string.Equals(item.FolderName, entry.FolderName, StringComparison.OrdinalIgnoreCase));
+                var changed = record is not null && !(await services.InstalledContent.CompareAsync(instanceId, record)).IsUnchanged;
+                content.Add(new ListingInstalledContent(type, entry.FolderName, record, changed));
+            }
+        }
+
+        return content;
     }
 
     /// <summary>Opens a GitHub page, and returns why it could not, or null. The message leaves out the URL, which can carry the whole file.</summary>

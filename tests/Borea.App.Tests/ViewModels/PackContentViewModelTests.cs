@@ -141,6 +141,62 @@ public sealed class PackContentViewModelTests
         Assert.Equal(ModVersion.Parse("1.0.0"), Assert.Single(await harness.Services.InstalledContent.ListAsync(instance.InstanceId)).Version);
     }
 
+    [Fact]
+    public async Task MakePack_TakesAnUnchangedRecordedVehicle_AndNamesAChangedOne()
+    {
+        const string BuggyUrl = "https://example.test/buggy.zip";
+        var rover = Archive(("Example Rover/meta.toml", "name = \"Example Rover\"\n"), ("Example Rover/vehicle.xml", "<Vehicle />"));
+        var buggy = Archive(("Buggy/meta.toml", "name = \"Buggy\"\n"), ("Buggy/vehicle.xml", "<Vehicle />"));
+        using var harness = await ViewModelHarness.CreateAsync(
+            respond: request => request.RequestUri?.AbsoluteUri switch
+            {
+                RoverUrl => ArchiveResponse(rover),
+                BuggyUrl => ArchiveResponse(buggy),
+                _ => null,
+            },
+            typeFiles: new Dictionary<string, string>
+            {
+                ["snapshot-vehicles.json"] = TypeFile("vehicles", Entry("ExampleRover", "vehicle", "Example Rover", RoverUrl, rover, "1.0.0") + ", " + Entry("Buggy", "vehicle", "Buggy", BuggyUrl, buggy, "1.0.0")),
+            });
+        var viewModel = harness.ViewModel;
+        var instance = await InstalledContent.AddAsync(harness, "AdvancedFlightComputer", activate: true, ownership: ModInstallOwnership.Borea);
+        foreach (var id in new[] { "ExampleRover", "Buggy" })
+            await harness.Services.UserContentInstaller.InstallAsync(instance.InstanceId, (await harness.Services.UserContent.GetReleaseAsync(id, ModVersion.Parse("1.0.0")))!, name: null);
+        File.WriteAllText(Path.Combine(harness.Services.Paths.GetInstanceVehiclesFolder(instance.InstanceId), "Buggy", "vehicle.xml"), "<Vehicle edited=\"yes\" />");
+        await viewModel.LoadAsync();
+
+        await viewModel.Instances.Single().MakePackCommand.ExecuteAsync(null);
+
+        var editor = viewModel.ListingEditor;
+        Assert.Equal(["AdvancedFlightComputer"], editor.Draft.Mods.Select(member => member.Id));
+        Assert.Equal([new Borea.Core.Listings.ListingPackMember("ExampleRover", "1.0.0") { Type = ContentType.Vehicle }], editor.Draft.Vehicles);
+        Assert.Contains(harness.Localization.FormatListingLeftOutChanged("Buggy", "1.0.0"), editor.LeftOut);
+        Assert.Equal(harness.Localization.ListingMemberVehicle, editor.Members.Single(row => row.Id == "ExampleRover").TypeText);
+    }
+
+    [Fact]
+    public async Task PackEditor_VehicleType_OffersListedVehicles_AndPinsThemUnderVehicles()
+    {
+        var rover = Archive(("Example Rover/meta.toml", "name = \"Example Rover\"\n"), ("Example Rover/vehicle.xml", "<Vehicle />"));
+        using var harness = await ViewModelHarness.CreateAsync(
+            typeFiles: new Dictionary<string, string> { ["snapshot-vehicles.json"] = TypeFile("vehicles", Entry("ExampleRover", "vehicle", "Example Rover", RoverUrl, rover, "1.0.0")) });
+        var viewModel = harness.ViewModel;
+        await viewModel.OpenListingAsync();
+        var editor = viewModel.ListingEditor;
+        editor.StartPackCommand.Execute(null);
+
+        editor.MemberQuery = "rover";
+        Assert.Empty(editor.MemberMatches);
+        editor.ShowMemberTypeCommand.Execute(ContentType.Vehicle);
+        Assert.Equal(["ExampleRover"], editor.MemberMatches.Select(match => match.Id));
+        editor.AddMemberCommand.Execute(null);
+
+        Assert.True(editor.IsMemberTypeVehicles);
+        Assert.Empty(editor.Draft.Mods);
+        Assert.Equal("ExampleRover", Assert.Single(editor.Draft.Vehicles).Id);
+        Assert.Equal("ExampleRover", ((Borea.Core.Listings.AuthoredTable)editor.Draft.ToDocument().GetList("vehicles")![0]).GetString("id"));
+    }
+
     private static async Task<Instance> ActivateAsync(ViewModelHarness harness)
     {
         var instance = (await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value)).Instance;

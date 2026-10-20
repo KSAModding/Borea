@@ -1842,6 +1842,16 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string ListingAddMember => Resources.ListingAddMember;
 
+    public string ListingMemberTypeMods => Resources.ListingMemberTypeMods;
+
+    public string ListingMemberTypeVehicles => Resources.ListingMemberTypeVehicles;
+
+    public string ListingMemberTypeSaves => Resources.ListingMemberTypeSaves;
+
+    public string ListingMemberVehicle => Resources.ListingMemberVehicle;
+
+    public string ListingMemberSave => Resources.ListingMemberSave;
+
     public string ListingMemberRelease => Resources.ListingMemberRelease;
 
     public string ListingMemberRulesHint => Resources.ListingMemberRulesHint;
@@ -2944,6 +2954,9 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string FormatListingLeftOutReleaseNotListed(string id, string version)
         => string.Format(CultureInfo.CurrentCulture, Resources.ListingLeftOutReleaseNotListedFormat, id, version);
+
+    public string FormatListingLeftOutChanged(string id, string version)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ListingLeftOutChangedFormat, id, version);
 
     public string FormatListingNextVersion(string id, string version)
         => string.Format(CultureInfo.CurrentCulture, Resources.ListingNextVersionFormat, id, version);

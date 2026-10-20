@@ -2814,4 +2814,22 @@
   <data name="SettingsLinksLabel" xml:space="preserve">
     <value>Charts</value>
   </data>
+  <data name="ListingLeftOutChangedFormat" xml:space="preserve">
+    <value>Ye changed {0} {1} since The Borea hauled it onboard, so pinnin' {1} wouldn't haul what ye tested.</value>
+  </data>
+  <data name="ListingMemberTypeMods" xml:space="preserve">
+    <value>Barrels</value>
+  </data>
+  <data name="ListingMemberTypeVehicles" xml:space="preserve">
+    <value>Ships</value>
+  </data>
+  <data name="ListingMemberTypeSaves" xml:space="preserve">
+    <value>Logs</value>
+  </data>
+  <data name="ListingMemberVehicle" xml:space="preserve">
+    <value>Ship</value>
+  </data>
+  <data name="ListingMemberSave" xml:space="preserve">
+    <value>Log</value>
+  </data>
 </root>

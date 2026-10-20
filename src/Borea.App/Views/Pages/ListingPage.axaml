@@ -3,6 +3,7 @@
              xmlns:vm="using:Borea.App.ViewModels"
              xmlns:views="using:Borea.App.Views"
              xmlns:listings="using:Borea.Core.Listings"
+             xmlns:mods="using:Borea.Core.Mods"
              x:Class="Borea.App.Views.Pages.ListingPage"
              x:DataType="vm:MainViewModel">
     <UserControl.Styles>
@@ -333,6 +334,8 @@
                                                         <StackPanel Spacing="2" VerticalAlignment="Center">
                                                             <TextBlock Classes="heading-sm" Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
                                                             <TextBlock Classes="label-md" Text="{Binding Id}" TextTrimming="CharacterEllipsis" />
+                                                            <!-- a vehicle or save pin names its section, a mod pin does not -->
+                                                            <TextBlock Classes="label-md" Text="{Binding TypeText}" IsVisible="{Binding TypeText, Converter={x:Static ObjectConverters.IsNotNull}}" />
                                                         </StackPanel>
                                                         <ComboBox Grid.Column="2" MinWidth="180" VerticalAlignment="Center" ItemsSource="{Binding Releases}" SelectedItem="{Binding Selected}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ListingMemberRelease}">
                                                             <ComboBox.ItemTemplate>
@@ -417,7 +420,13 @@
                                         </ItemsControl.ItemTemplate>
                                     </ItemsControl>
                                 </StackPanel>
-                                <Grid ColumnDefinitions="*,8,Auto" Margin="0,4,0,0">
+                                <!-- the type decides the section a new pin goes to, [[mods]], [[vehicles]] or [[saves]] -->
+                                <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,4,0,0">
+                                    <Button Classes="tab" Classes.active="{Binding ListingEditor.IsMemberTypeMods}" Content="{Binding Localization.ListingMemberTypeMods}" Command="{Binding ListingEditor.ShowMemberTypeCommand}" CommandParameter="{x:Static mods:ContentType.Mod}" />
+                                    <Button Classes="tab" Classes.active="{Binding ListingEditor.IsMemberTypeVehicles}" Content="{Binding Localization.ListingMemberTypeVehicles}" Command="{Binding ListingEditor.ShowMemberTypeCommand}" CommandParameter="{x:Static mods:ContentType.Vehicle}" />
+                                    <Button Classes="tab" Classes.active="{Binding ListingEditor.IsMemberTypeSaves}" Content="{Binding Localization.ListingMemberTypeSaves}" Command="{Binding ListingEditor.ShowMemberTypeCommand}" CommandParameter="{x:Static mods:ContentType.Save}" />
+                                </StackPanel>
+                                <Grid ColumnDefinitions="*,8,Auto">
                                     <TextBox Classes="field search" Text="{Binding ListingEditor.MemberQuery}" PlaceholderText="{Binding Localization.ListingSearchMembers}" AutomationProperties.Name="{Binding Localization.ListingSearchMembers}">
                                         <TextBox.InnerLeftContent>
                                             <Path Classes="icon size-16" Data="{StaticResource Icon.Search}" Margin="10,0,0,0" />

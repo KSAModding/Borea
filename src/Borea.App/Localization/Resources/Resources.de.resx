@@ -2703,6 +2703,24 @@
   <data name="ListingLeftOutReleaseNotListedFormat" xml:space="preserve">
     <value>Der Index führt kein Release {1} von {0}.</value>
   </data>
+  <data name="ListingLeftOutChangedFormat" xml:space="preserve">
+    <value>Du hast {0} {1} geändert, seit Borea es installiert hat, deshalb würde eine Festlegung auf {1} nicht das installieren, was du getestet hast.</value>
+  </data>
+  <data name="ListingMemberTypeMods" xml:space="preserve">
+    <value>Mods</value>
+  </data>
+  <data name="ListingMemberTypeVehicles" xml:space="preserve">
+    <value>Fahrzeuge</value>
+  </data>
+  <data name="ListingMemberTypeSaves" xml:space="preserve">
+    <value>Spielstände</value>
+  </data>
+  <data name="ListingMemberVehicle" xml:space="preserve">
+    <value>Fahrzeug</value>
+  </data>
+  <data name="ListingMemberSave" xml:space="preserve">
+    <value>Spielstand</value>
+  </data>
   <data name="ListingSearchMembers" xml:space="preserve">
     <value>Eingetragene Mods nach Name, ID oder Autor suchen</value>
   </data>

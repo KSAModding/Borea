@@ -2703,6 +2703,24 @@
   <data name="ListingLeftOutReleaseNotListedFormat" xml:space="preserve">
     <value>The index has no release {1} of {0}.</value>
   </data>
+  <data name="ListingLeftOutChangedFormat" xml:space="preserve">
+    <value>You changed {0} {1} since Borea installed it, so a pin of {1} would not install what you tested.</value>
+  </data>
+  <data name="ListingMemberTypeMods" xml:space="preserve">
+    <value>Mods</value>
+  </data>
+  <data name="ListingMemberTypeVehicles" xml:space="preserve">
+    <value>Vehicles</value>
+  </data>
+  <data name="ListingMemberTypeSaves" xml:space="preserve">
+    <value>Saves</value>
+  </data>
+  <data name="ListingMemberVehicle" xml:space="preserve">
+    <value>Vehicle</value>
+  </data>
+  <data name="ListingMemberSave" xml:space="preserve">
+    <value>Save</value>
+  </data>
   <data name="ListingSearchMembers" xml:space="preserve">
     <value>Search listed mods by name, id or author</value>
   </data>
