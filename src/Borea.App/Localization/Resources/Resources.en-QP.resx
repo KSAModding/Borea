@@ -2247,6 +2247,9 @@
   <data name="ListingShareHostUnexpectedFormat" xml:space="preserve">
     <value>{0} answered in a tongue the Borea don't speak.</value>
   </data>
+  <data name="ListingFixShareHost" xml:space="preserve">
+    <value>The harbor proves who owns this chart, so change it through the harbor.</value>
+  </data>
   <data name="ListingShareContentIdFormat" xml:space="preserve">
     <value>{0} {1}</value>
   </data>

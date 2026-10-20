@@ -31,6 +31,16 @@ public sealed class ListingAuthorityTests
         Assert.Null(ListingAuthority.Of(draft));
     }
 
+    [Theory]
+    [InlineData(null, null)]
+    [InlineData("owner/repo", "ksamods")]
+    public void Of_ShareHost_BindsToItsKeyAndTheListingId(string? github, string? authority)
+    {
+        var draft = new ListingDraft { Releases = new ListingReleases(github, null, authority, Share: new ListingShareHost("ksamods", "ExampleRover")) };
+
+        Assert.Equal(new ListingAuthority("ksamods", "ExampleRover"), ListingAuthority.Of(draft));
+    }
+
     [Fact]
     public void Of_NoReleases_BindsToTheRepositoryLink()
     {

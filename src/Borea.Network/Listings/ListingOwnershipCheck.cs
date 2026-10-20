@@ -194,6 +194,7 @@ public sealed partial class ListingOwnershipCheck : IListingOwnershipCheck
         {
             { Kind: ListingAuthority.GitHub } github => await VerifyRepositoryAsync(github.Target, draft.Id, author, cancellationToken).ConfigureAwait(false),
             { Kind: ListingAuthority.SpaceDock } spaceDock => await VerifySpaceDockAsync(spaceDock.Target, draft.Id, author, cancellationToken).ConfigureAwait(false),
+            { } share when draft.Releases?.Share?.Key == share.Kind => new ListingOwnership(ListingOwnershipState.NotVerified, Problem: ListingOwnershipProblem.ShareHost),
             _ => new ListingOwnership(ListingOwnershipState.NotVerified, Problem: ListingOwnershipProblem.NoHost),
         };
     }

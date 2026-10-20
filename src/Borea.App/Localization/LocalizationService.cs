@@ -2118,6 +2118,8 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string ListingFixNoHost => Resources.ListingFixNoHost;
 
+    public string ListingFixShareHost => Resources.ListingFixShareHost;
+
     public string ListingOpenRepository => Resources.ListingOpenRepository;
 
     public string ListingOpenSpaceDock => Resources.ListingOpenSpaceDock;

@@ -613,6 +613,7 @@ public sealed partial class ListingEditor
     {
         ListingOwnershipProblem.NoProof => Localization.FormatListingFixTopic(repository, ListingOwnership.TopicFor(login)),
         ListingOwnershipProblem.NoHost => Localization.ListingFixNoHost,
+        ListingOwnershipProblem.ShareHost => Localization.ListingFixShareHost,
         ListingOwnershipProblem.RepositoryMissing => Localization.FormatListingFixMissing(repository),
         ListingOwnershipProblem.RepositoryFork => Localization.FormatListingFixFork(repository, ListingOwnership.TopicFor(login)),
         ListingOwnershipProblem.RepositoryRenamed => Localization.FormatListingFixRenamed(repository, ownership.RenamedTo ?? string.Empty),

@@ -10,6 +10,7 @@ using Borea.Core.Game;
 using Borea.Core.Index;
 using Borea.Core.Mods;
 using Borea.Core.Planning;
+using Borea.Core.Sharing;
 using Borea.Core.Stewardship;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -117,10 +118,16 @@ public partial class MainViewModel
 
     public bool HasContentLinks => ContentLinks.Count > 0;
 
-    /// <summary>The share host that the listing names under [releases] (RFC 0094), or null.</summary>
-    public string? ContentShareHostText => SelectedContent?.Listing.Releases?.Hosts.FirstOrDefault(host => host.Kind == ReleaseHostKind.Share) is { } host
-        ? Localization.FormatContentSharedOn(host.Host)
+    /// <summary>The share host of hosts.toml that the open listing names, whose page the links show.</summary>
+    private ShareHost? _contentShareHost;
+
+    /// <summary>The share host that the listing names under [releases] (RFC 0094), while hosts.toml does not register it, or null.</summary>
+    public string? ContentShareHostText => _contentShareHost is null && ContentShareHostKey(SelectedContent) is { } key
+        ? Localization.FormatContentSharedOn(key)
         : null;
+
+    private static string? ContentShareHostKey(DiscoverItem? item) =>
+        item?.Listing.Releases?.Hosts.FirstOrDefault(host => host.Kind == ReleaseHostKind.Share)?.Host;
 
     /// <summary>The share page of the listing on the landing site, or null when it has none.</summary>
     public string? ContentShareUrl => SelectedContent is { } item ? ShareLinks.For(item.Listing) : null;
@@ -265,6 +272,7 @@ public partial class MainViewModel
         ApplyVersionFilter();
         VersionFilter = OptionFor(SavedReleaseChannel);
 
+        _contentShareHost = null;
         FillLinks(ContentLinks, item.Links);
         OnPropertyChanged(nameof(HasContentLinks));
 
@@ -315,6 +323,7 @@ public partial class MainViewModel
                 OnPropertyChanged(nameof(HasContentTags));
             }
 
+            await LinkShareHostAsync(item);
             var release = await _services.Mods.GetLatestReleaseAsync(item.ModId);
             if (ReferenceEquals(SelectedContent, item))
                 LatestVersion = release is null ? null : new VersionItem(this, release, item.DownloadCounts?.FindRelease(release.Version));
@@ -323,6 +332,24 @@ public partial class MainViewModel
         {
             ContentDetailError = exception.Message;
         }
+    }
+
+    /// <summary>Links the page of the share host that the listing names, once hosts.toml registers that host.</summary>
+    private async Task LinkShareHostAsync(DiscoverItem item)
+    {
+        if (_services is null || ContentShareHostKey(item) is not { } key)
+            return;
+
+        var hosts = await _services.ShareHosts.GetAsync();
+        if (!ReferenceEquals(SelectedContent, item) || hosts.FirstOrDefault(host => host.Key == key) is not { } host)
+            return;
+
+        _contentShareHost = host;
+        var link = new ContentLink(host.Name, host.Page.AbsoluteUri, "homepage");
+        if (!ContentLinks.Contains(link))
+            ContentLinks.Add(link);
+        OnPropertyChanged(nameof(HasContentLinks));
+        OnPropertyChanged(nameof(ContentShareHostText));
     }
 
     // the order and names of the detail panel in #8; unknown keys follow with a capital first letter

@@ -3321,6 +3321,9 @@
   <data name="ListingFixNoHost" xml:space="preserve">
     <value>Nenne unter Releases das GitHub-Repository oder die SpaceDock-Mod.</value>
   </data>
+  <data name="ListingFixShareHost" xml:space="preserve">
+    <value>Der Share-Host weist nach, wem dieser Eintrag gehört, also ändere ihn über den Host.</value>
+  </data>
   <data name="ListingFixMissingFormat" xml:space="preserve">
     <value>GitHub hat kein öffentliches Repository {0}.</value>
   </data>

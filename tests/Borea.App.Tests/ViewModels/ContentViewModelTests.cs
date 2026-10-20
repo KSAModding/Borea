@@ -55,6 +55,30 @@ public sealed class ContentViewModelTests
     }
 
     [Fact]
+    public async Task Open_ListingOnARegisteredShareHost_LinksTheHostPage()
+    {
+        const string hosts = "[ksamods]\nkind = \"share\"\nname = \"ksamods.gg\"\napi = \"https://ksamods.gg/api/share/v1/\"\ntypes = [\"vehicle\", \"mod\"]\n";
+        using var harness = await ViewModelHarness.CreateAsync(
+            editSnapshot: json =>
+            {
+                var root = System.Text.Json.Nodes.JsonNode.Parse(json)!;
+                var listing = root["listings"]!.AsArray().Single(node => (string?)node!["id"] == "AdvancedFlightComputer")!;
+                listing["authored"]!["releases"] = new System.Text.Json.Nodes.JsonObject { ["ksamods"] = "AdvancedFlightComputer" };
+                return root.ToJsonString();
+            },
+            respond: request => request.RequestUri?.AbsoluteUri == "https://raw.githubusercontent.com/KSAModding/content-index/main/hosts.toml"
+                ? new HttpResponseMessage(System.Net.HttpStatusCode.OK) { Content = new StringContent(hosts) }
+                : null);
+        var viewModel = harness.ViewModel;
+        await viewModel.EnsureDiscoverLoadedAsync();
+
+        await viewModel.DiscoverItems.Single(item => item.ModId == "AdvancedFlightComputer").OpenCommand.ExecuteAsync(null);
+
+        Assert.Contains(new ContentLink("ksamods.gg", "https://ksamods.gg/", "homepage"), viewModel.ContentLinks);
+        Assert.Null(viewModel.ContentShareHostText);
+    }
+
+    [Fact]
     public async Task Open_ShowsCuratedTagsFirstInTheVocabularyWords()
     {
         var tags = ViewModelHarness.CuratedTags(("parts", "Parts"), ("physics", "Physics"));
