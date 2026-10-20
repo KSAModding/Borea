@@ -28,6 +28,7 @@ public sealed class GitHubShareRepositoryTests
     public async Task FirstShare_CreatesTheRepositoryTheReleaseAndTheAsset()
     {
         On("POST", Api + "/user/repos", () => Json(RepositoryJson, HttpStatusCode.Created));
+        On("PUT", Repository + "/topics", () => Json("""{"names":["ksa-index-octocat"]}"""));
         On("GET", Repository + "/releases?per_page=100&page=1", () => Json("[]"));
         On("POST", Repository + "/releases", () => Json(ReleaseJson, HttpStatusCode.Created));
         On("POST", "https://uploads.github.com/repos/octocat/ksa-shares/releases/9/assets?name=ExampleRover-1.0.0.zip", () => Json("{}", HttpStatusCode.Created));
@@ -41,9 +42,10 @@ public sealed class GitHubShareRepositoryTests
         Assert.Equal("1.0.0", version);
         Assert.Equal("https://github.com/octocat/ksa-shares/releases/tag/ExampleRover/v1.0.0", page.AbsoluteUri);
         var sent = _sent.ToArray();
-        Assert.Equal(["GET " + Repository, "POST " + Api + "/user/repos", "GET " + Repository + "/releases?per_page=100&page=1", "POST " + Repository + "/releases", "POST https://uploads.github.com/repos/octocat/ksa-shares/releases/9/assets?name=ExampleRover-1.0.0.zip"], sent.Select(request => request.Method + " " + request.Url));
+        Assert.Equal(["GET " + Repository, "POST " + Api + "/user/repos", "PUT " + Repository + "/topics", "GET " + Repository + "/releases?per_page=100&page=1", "POST " + Repository + "/releases", "POST https://uploads.github.com/repos/octocat/ksa-shares/releases/9/assets?name=ExampleRover-1.0.0.zip"], sent.Select(request => request.Method + " " + request.Url));
         Assert.Contains("\"auto_init\":true", sent[1].Body, StringComparison.Ordinal);
-        Assert.Equal("""{"tag_name":"ExampleRover/v1.0.0","name":"ExampleRover/v1.0.0"}""", sent[3].Body);
+        Assert.Equal("""{"names":["ksa-index-octocat"]}""", sent[2].Body);
+        Assert.Equal("""{"tag_name":"ExampleRover/v1.0.0","name":"ExampleRover/v1.0.0"}""", sent[4].Body);
         Assert.All(sent, request => Assert.Equal("Bearer ghu_secret", request.Authorization));
     }
 
@@ -58,6 +60,29 @@ public sealed class GitHubShareRepositoryTests
 
         Assert.Equal("1.0.0", await shares.NextVersionAsync(repository, "MoonBase/v"));
         Assert.DoesNotContain(_sent, request => request.Method == "POST");
+    }
+
+    [Theory]
+    [InlineData("""["ksa-index-octocat"]""", null)]
+    [InlineData("""["rover"]""", """{"names":["rover","ksa-index-octocat"]}""")]
+    public async Task ExistingRepository_GetsTheOwnershipTopicNextToItsOwn(string topics, string? put)
+    {
+        On("GET", Repository, () => Json($$"""{"id":77,"full_name":"octocat/ksa-shares","topics":{{topics}}}"""));
+        var shares = await SignedInAsync();
+
+        await shares.EnsureAsync();
+
+        Assert.Equal(put, _sent.SingleOrDefault(request => request.Method == "PUT")?.Body);
+    }
+
+    [Fact]
+    public async Task TopicRefused_StillGivesTheRepository()
+    {
+        On("GET", Repository, () => Json(RepositoryJson));
+        On("PUT", Repository + "/topics", () => Json("""{"message":"Resource not accessible by integration"}""", HttpStatusCode.Forbidden));
+        var shares = await SignedInAsync();
+
+        Assert.Equal(new ShareRepository("octocat/ksa-shares", 77), await shares.EnsureAsync());
     }
 
     [Fact]
@@ -101,6 +126,20 @@ public sealed class GitHubShareRepositoryTests
 
         await Assert.ThrowsAsync<ShareRepositoryException>(() => shares.PublishAsync(new ShareRepository("octocat/ksa-shares", 77), "ExampleRover/v", "1.0.0", "a.zip", new MemoryStream([1])));
 
+        Assert.Equal("DELETE " + Repository + "/releases/9", _sent.Last().Method + " " + _sent.Last().Url);
+    }
+
+    [Fact]
+    public async Task AssetUploadNotReached_IsANetworkErrorAndDeletesTheRelease()
+    {
+        On("POST", Repository + "/releases", () => Json(ReleaseJson, HttpStatusCode.Created));
+        On("POST", "https://uploads.github.com/repos/octocat/ksa-shares/releases/9/assets?name=a.zip", () => throw new HttpRequestException("connection reset"));
+        On("DELETE", Repository + "/releases/9", () => new HttpResponseMessage(HttpStatusCode.NoContent));
+        var shares = await SignedInAsync();
+
+        var exception = await Assert.ThrowsAsync<ShareRepositoryException>(() => shares.PublishAsync(new ShareRepository("octocat/ksa-shares", 77), "ExampleRover/v", "1.0.0", "a.zip", new MemoryStream([1])));
+
+        Assert.Equal(ShareRepositoryFailure.NetworkError, exception.Failure);
         Assert.Equal("DELETE " + Repository + "/releases/9", _sent.Last().Method + " " + _sent.Last().Url);
     }
 

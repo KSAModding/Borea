@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Net;
 using System.Net.Http.Headers;
 using Borea.Core.GitHub;
+using Borea.Core.Listings;
 using Borea.Core.Mods;
 using Borea.Core.Sharing;
 
@@ -34,17 +35,44 @@ public sealed class GitHubShareRepository : IShareRepository
         return await RunAsync(null, async () =>
         {
             var existing = await _api.SendAsync(HttpMethod.Get, $"{Api}/repos/{login}/{RepositoryName}", null, cancellationToken).ConfigureAwait(false);
+            RepositoryDto repository;
             if (existing.Status != HttpStatusCode.NotFound)
-                return Repository(GitHubApi.Parse<RepositoryDto>(GitHubApi.Ensure(existing)));
+            {
+                repository = GitHubApi.Parse<RepositoryDto>(GitHubApi.Ensure(existing));
+            }
+            else
+            {
+                // A release needs a commit to tag, so the repository starts with one.
+                var body = new { name = RepositoryName, description = "Vehicles and saves shared from Borea.", auto_init = true };
+                var created = await _api.SendAsync(HttpMethod.Post, $"{Api}/user/repos", body, cancellationToken).ConfigureAwait(false);
+                if (created.Status is HttpStatusCode.Forbidden or HttpStatusCode.NotFound && created.RetryAt is null)
+                    throw new ShareRepositoryException(ShareRepositoryFailure.MayNotCreateRepository, created.Message);
 
-            // A release needs a commit to tag, so the repository starts with one.
-            var body = new { name = RepositoryName, description = "Vehicles and saves shared from Borea.", auto_init = true };
-            var created = await _api.SendAsync(HttpMethod.Post, $"{Api}/user/repos", body, cancellationToken).ConfigureAwait(false);
-            if (created.Status is HttpStatusCode.Forbidden or HttpStatusCode.NotFound && created.RetryAt is null)
-                throw new ShareRepositoryException(ShareRepositoryFailure.MayNotCreateRepository, created.Message);
+                repository = GitHubApi.Parse<RepositoryDto>(GitHubApi.Ensure(created));
+            }
 
-            return Repository(GitHubApi.Parse<RepositoryDto>(GitHubApi.Ensure(created)));
+            await AddTopicAsync(repository, ListingOwnership.TopicFor(login), cancellationToken).ConfigureAwait(false);
+            return Repository(repository);
         }).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Gives the repository the topic that proves ownership of its listings (RFC 0038). GitHub refuses it without the
+    /// Administration permission, and then the listing editor shows the topic as the step to do by hand.
+    /// </summary>
+    private async Task AddTopicAsync(RepositoryDto repository, string topic, CancellationToken cancellationToken)
+    {
+        var topics = repository.Topics ?? [];
+        if (repository.FullName is not { Length: > 0 } name || topics.Contains(topic, StringComparer.Ordinal))
+            return;
+
+        try
+        {
+            await _api.SendAsync(HttpMethod.Put, $"{Api}/repos/{name}/topics", new { names = topics.Append(topic).ToList() }, cancellationToken).ConfigureAwait(false);
+        }
+        catch (GitHubApiException exception) when (exception.Failure is not GitHubApiFailure.SignedOut)
+        {
+        }
     }
 
     public Task<string> NextVersionAsync(ShareRepository repository, string tagPrefix, CancellationToken cancellationToken = default)
@@ -94,11 +122,16 @@ public sealed class GitHubShareRepository : IShareRepository
                 if (!response.IsSuccessStatusCode)
                     throw new ShareRepositoryException(response.StatusCode == HttpStatusCode.Unauthorized ? ShareRepositoryFailure.SignedOut : ShareRepositoryFailure.UnexpectedResponse, $"HTTP {(int)response.StatusCode}");
             }
-            catch (Exception exception) when (exception is ShareRepositoryException or HttpRequestException or OperationCanceledException)
+            catch (Exception exception) when (exception is ShareRepositoryException or HttpRequestException or OperationCanceledException or InvalidOperationException)
             {
                 // The watcher rejects a release without its one asset, and the tag would block the version.
                 await DeleteReleaseAsync(repository, release.Id).ConfigureAwait(false);
-                throw;
+                if (exception is ShareRepositoryException || (exception is OperationCanceledException && cancellationToken.IsCancellationRequested))
+                    throw;
+
+                // The session throws InvalidOperationException when it was signed out after the release was made.
+                var failure = exception is InvalidOperationException ? ShareRepositoryFailure.SignedOut : ShareRepositoryFailure.NetworkError;
+                throw new ShareRepositoryException(failure, exception.Message, innerException: exception);
             }
 
             return new Uri(page);
@@ -147,6 +180,8 @@ public sealed class GitHubShareRepository : IShareRepository
         public long Id { get; set; }
 
         public string? FullName { get; set; }
+
+        public List<string>? Topics { get; set; }
     }
 
     private sealed class ReleaseDto
