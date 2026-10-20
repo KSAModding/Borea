@@ -153,6 +153,29 @@ public sealed class ListingDraftTests
     }
 
     [Fact]
+    public void FromDocument_IdShapedKeyNextToGitHubWithoutAuthority_IsNoShareHost()
+    {
+        var document = Listed();
+        document.GetTable("releases")!.Set("until", "2.0");
+
+        var draft = ListingDraft.FromDocument(document);
+
+        Assert.Null(draft.Releases!.Share);
+        Assert.Equal("2.0", draft.ToDocument().GetTable("releases")!.GetString("until"));
+    }
+
+    [Fact]
+    public void FromDocument_AuthorityNamesTheSecondShareKey_ReadsThatKey()
+    {
+        var document = Listed();
+        document.GetTable("releases")!.Set("until", "2.0");
+        document.GetTable("releases")!.Set("ksamods", "ExampleRover");
+        document.GetTable("releases")!.Set("authority", "ksamods");
+
+        Assert.Equal(new ListingShareHost("ksamods", "ExampleRover"), ListingDraft.FromDocument(document).Releases!.Share);
+    }
+
+    [Fact]
     public void FromDocument_DependencyWithAlternatives_IsWrittenBackUnchanged()
     {
         var alternatives = new AuthoredTable();

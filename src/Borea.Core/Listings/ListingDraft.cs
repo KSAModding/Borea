@@ -194,11 +194,18 @@ public sealed record ListingDraft
         if (table is null)
             return null;
 
-        var share = table.Entries
+        var github = table.GetString("github");
+        var spaceDock = table["spacedock"] as long?;
+        var authority = table.GetString("authority");
+
+        // The rule of DtoMapper.MapReleaseSource: a share host counts with an authority, or as the only host.
+        var shares = table.Entries
             .Where(entry => ReleaseHost.IsShareKey(entry.Key) && entry.Value is string id && ModIds.IsValid(id))
             .Select(entry => new ListingShareHost(entry.Key, (string)entry.Value))
-            .FirstOrDefault();
-        return new ListingReleases(table.GetString("github"), table["spacedock"] as long?, table.GetString("authority"), table.GetString("since"), table.GetString("tag_prefix"), share);
+            .ToList();
+        var share = shares.FirstOrDefault(entry => entry.Key == authority)
+            ?? (authority is not null || (github is null && spaceDock is null && shares.Count == 1) ? shares.FirstOrDefault() : null);
+        return new ListingReleases(github, spaceDock, authority, table.GetString("since"), table.GetString("tag_prefix"), share);
     }
 
     private static AuthoredTable? WriteReleases(ListingReleases? releases, AuthoredTable? original)
