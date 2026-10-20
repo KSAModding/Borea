@@ -176,6 +176,32 @@ public sealed class UserContentCommandTests : IDisposable
         Assert.Contains("--allow-missing apply only to a vehicle or a save", run.Error);
     }
 
+    [Fact]
+    public async Task Search_FindsAVehicleOnlyWithTheVehicleType()
+    {
+        var plain = await _host.RunAsync("search", "rov");
+        var vehicles = await _host.RunAsync("search", "rov", "--type", "vehicle");
+        var saves = await _host.RunAsync("search", "rov", "--type", "save");
+        var wrong = await _host.RunAsync("search", "rov", "--type", "spaceship");
+
+        Assert.Equal(0, plain.ExitCode);
+        Assert.DoesNotContain("rover", plain.Output);
+        Assert.Contains("rover  Rover  1.0.0", vehicles.Output);
+        Assert.Contains("No listings match 'rov'.", saves.Output);
+        Assert.NotEqual(0, wrong.ExitCode);
+    }
+
+    [Fact]
+    public async Task Show_Vehicle_PrintsTheFolderTheGameMinAndTheDependencies()
+    {
+        var run = await _host.RunAsync("show", "rover", "--version", "1.0.0");
+
+        Assert.Equal(0, run.ExitCode);
+        Assert.Contains("    Folder: Rover", run.Output);
+        Assert.Contains("    Game: 2026.8.22.5348 to open", run.Output);
+        Assert.Contains("parts-lib", run.Output);
+    }
+
     private async Task<Guid> CreateAsync()
     {
         await _host.RunAsync("instance", "create", "Alpha");
