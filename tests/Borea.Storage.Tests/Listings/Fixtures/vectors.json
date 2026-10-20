@@ -908,6 +908,23 @@
       "toml": "spec_version = 1\nid = \"ExampleMod\"\ntype = \"mod\"\nname = \"Example Mod\"\nauthors = [\"Example Author\"]\nabstract = \"Adds an example to Kitten Space Agency.\"\nlicense = \"MIT\"\ntags = [\"user_interface\"]\n\n[releases]\ngithub = \"example/ExampleMod\"\n\n[links]\nforums = \"https://forums.ahwoo.com/threads/example-mod.123/\"\n\n[compatibility]\ngame_min = \"2026.9.10.5438\"\n"
     },
     {
+      "name": "a vehicle tag outside the curated list gives no note",
+      "rule": "tags",
+      "accepted": true,
+      "noted": false,
+      "gated": "vehicle",
+      "toml": "spec_version = 1\nid = \"ExampleRover\"\ntype = \"vehicle\"\nname = \"Example Rover\"\nauthors = [\"Example Author\"]\nabstract = \"A six-wheel rover for the Moon.\"\nlicense = \"CC-BY-4.0\"\ntags = [\"rover\"]\n"
+    },
+    {
+      "name": "a vehicle tag in upper case",
+      "rule": "tags",
+      "accepted": false,
+      "noted": false,
+      "says": "tags[0]: 'Rover' is not lowercase letters and digits",
+      "gated": "vehicle",
+      "toml": "spec_version = 1\nid = \"ExampleRover\"\ntype = \"vehicle\"\nname = \"Example Rover\"\nauthors = [\"Example Author\"]\nabstract = \"A six-wheel rover for the Moon.\"\nlicense = \"CC-BY-4.0\"\ntags = [\"Rover\"]\n"
+    },
+    {
       "name": "a square icon",
       "rule": "images",
       "accepted": true,
@@ -1133,6 +1150,109 @@
       "accepted": true,
       "noted": false,
       "toml": "spec_version = 1\nid = \"ExamplePack\"\ntype = \"modpack\"\nname = \"Example Pack\"\nauthors = [\"Example Author\"]\nabstract = \"Two mods for mission planning.\"\nlicense = \"MIT\"\ntags = [\"user-interface\"]\nversion = \"1.0.0\"\nreleased_at = \"2028-02-29T23:59:59.5Z\"\n\n[links]\nforums = \"https://forums.ahwoo.com/threads/example-pack.1/\"\n\n[compatibility]\ngame_min = \"2026.9.22.5482\"\n\n[[mods]]\nid = \"DeltaVMap\"\nversion = \"1.0.0\"\n"
+    },
+    {
+      "name": "a minimal vehicle",
+      "rule": "schema",
+      "accepted": true,
+      "noted": false,
+      "gated": "vehicle",
+      "toml": "spec_version = 1\nid = \"ExampleRover\"\ntype = \"vehicle\"\nname = \"Example Rover\"\nauthors = [\"Example Author\"]\nabstract = \"A six-wheel rover for the Moon.\"\nlicense = \"CC-BY-4.0\"\n"
+    },
+    {
+      "name": "the example vehicle of RFC 0085",
+      "rule": "schema",
+      "accepted": true,
+      "noted": false,
+      "gated": "vehicle",
+      "toml": "spec_version = 1\nid = \"ExampleRover\"\ntype = \"vehicle\"\nname = \"Example Rover\"\nauthors = [\"Example Author\"]\nabstract = \"A six-wheel rover for the Moon.\"\nlicense = \"CC-BY-4.0\"\n\n[links]\nforums = \"https://forums.ahwoo.com/threads/example-rover.1000/\"\n\n[[dependencies]]\nid = \"ExamplePartsMod\"\nkind = \"required\"\nmin = \"1.4.0\"\n"
+    },
+    {
+      "name": "a vehicle with only game_max",
+      "rule": "schema",
+      "accepted": true,
+      "noted": false,
+      "gated": "vehicle",
+      "toml": "spec_version = 1\nid = \"ExampleRover\"\ntype = \"vehicle\"\nname = \"Example Rover\"\nauthors = [\"Example Author\"]\nabstract = \"A six-wheel rover for the Moon.\"\nlicense = \"CC-BY-4.0\"\n\n[compatibility]\ngame_max = \"2026.10.13.5602\"\n"
+    },
+    {
+      "name": "a vehicle with a loader",
+      "rule": "schema",
+      "accepted": false,
+      "noted": false,
+      "says": "loader: this key is not allowed here",
+      "gated": "vehicle",
+      "toml": "spec_version = 1\nid = \"ExampleRover\"\ntype = \"vehicle\"\nname = \"Example Rover\"\nauthors = [\"Example Author\"]\nabstract = \"A six-wheel rover for the Moon.\"\nlicense = \"CC-BY-4.0\"\n\n[loader]\nid = \"StarMap\"\nmin = \"0.4\"\n"
+    },
+    {
+      "name": "a vehicle with an install target",
+      "rule": "schema",
+      "accepted": false,
+      "noted": false,
+      "says": "install.target: this key is not allowed here",
+      "gated": "vehicle",
+      "toml": "spec_version = 1\nid = \"ExampleRover\"\ntype = \"vehicle\"\nname = \"Example Rover\"\nauthors = [\"Example Author\"]\nabstract = \"A six-wheel rover for the Moon.\"\nlicense = \"CC-BY-4.0\"\n\n[install]\ntarget = \"user-data\"\n"
+    },
+    {
+      "name": "a vehicle with an install path",
+      "rule": "schema",
+      "accepted": false,
+      "noted": false,
+      "says": "install.path: this key is not allowed here",
+      "gated": "vehicle",
+      "toml": "spec_version = 1\nid = \"ExampleRover\"\ntype = \"vehicle\"\nname = \"Example Rover\"\nauthors = [\"Example Author\"]\nabstract = \"A six-wheel rover for the Moon.\"\nlicense = \"CC-BY-4.0\"\n\n[install]\npath = \"Vehicles/Example Rover\"\n"
+    },
+    {
+      "name": "a vehicle with install manages",
+      "rule": "schema",
+      "accepted": false,
+      "noted": false,
+      "says": "install.manages: this key is not allowed here",
+      "gated": "vehicle",
+      "toml": "spec_version = 1\nid = \"ExampleRover\"\ntype = \"vehicle\"\nname = \"Example Rover\"\nauthors = [\"Example Author\"]\nabstract = \"A six-wheel rover for the Moon.\"\nlicense = \"CC-BY-4.0\"\n\n[install]\nmanages = [\"vehicle.xml\"]\n"
+    },
+    {
+      "name": "a vehicle with an install folder",
+      "rule": "schema",
+      "accepted": false,
+      "noted": false,
+      "says": "install: Additional properties are not allowed ('folder' was unexpected)",
+      "gated": "vehicle",
+      "toml": "spec_version = 1\nid = \"ExampleRover\"\ntype = \"vehicle\"\nname = \"Example Rover\"\nauthors = [\"Example Author\"]\nabstract = \"A six-wheel rover for the Moon.\"\nlicense = \"CC-BY-4.0\"\n\n[install]\nfolder = \"Example Rover\"\n"
+    },
+    {
+      "name": "a vehicle that provides something",
+      "rule": "schema",
+      "accepted": false,
+      "noted": false,
+      "says": "provides: this key is not allowed here",
+      "gated": "vehicle",
+      "toml": "spec_version = 1\nid = \"ExampleRover\"\ntype = \"vehicle\"\nname = \"Example Rover\"\nauthors = [\"Example Author\"]\nabstract = \"A six-wheel rover for the Moon.\"\nlicense = \"CC-BY-4.0\"\n\n[provides]\nlaunch = \"x.exe\"\n"
+    },
+    {
+      "name": "a vehicle with the keys of a pack",
+      "rule": "schema",
+      "accepted": false,
+      "noted": false,
+      "says": "mods: this key is not allowed here",
+      "gated": "vehicle",
+      "toml": "spec_version = 1\nid = \"ExampleRover\"\ntype = \"vehicle\"\nname = \"Example Rover\"\nauthors = [\"Example Author\"]\nabstract = \"A six-wheel rover for the Moon.\"\nlicense = \"CC-BY-4.0\"\nversion = \"1.0.0\"\nreleased_at = \"2026-10-01T00:00:00Z\"\n\n[[mods]]\nid = \"ExamplePartsMod\"\nversion = \"1.4.0\"\n"
+    },
+    {
+      "name": "a minimal save",
+      "rule": "schema",
+      "accepted": true,
+      "noted": false,
+      "gated": "save",
+      "toml": "spec_version = 1\nid = \"ExampleMoonBase\"\ntype = \"save\"\nname = \"Example Moon Base\"\nauthors = [\"Example Author\"]\nabstract = \"A career save with a base on the Moon.\"\nlicense = \"CC-BY-4.0\"\n"
+    },
+    {
+      "name": "a mod without links and compatibility",
+      "rule": "schema",
+      "accepted": false,
+      "noted": false,
+      "says": "the document: 'links' is a required property",
+      "toml": "spec_version = 1\nid = \"ExampleMod\"\ntype = \"mod\"\nname = \"Example Mod\"\nauthors = [\"Example Author\"]\nabstract = \"Adds an example to Kitten Space Agency.\"\nlicense = \"MIT\"\ntags = [\"gameplay\"]\n\n[releases]\ngithub = \"example/ExampleMod\"\n"
     },
     {
       "name": "a game_max at the newest build of the game release list",
