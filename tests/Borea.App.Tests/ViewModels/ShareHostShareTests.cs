@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using System.Net;
 using Borea.App.ViewModels;
 using Borea.Core.GitHub;
+using Borea.Core.Index;
 using Borea.Core.Listings;
 using Borea.Core.Sharing;
 
@@ -12,7 +13,7 @@ public sealed class ShareHostShareTests
 {
     private const string HostsUrl = "https://raw.githubusercontent.com/KSAModding/content-index/main/hosts.toml";
 
-    private const string VehiclesUrl = "https://ksamodding.github.io/content-index-releases/v1/snapshot-vehicles.json";
+    private static readonly string VehiclesUrl = ContentIndexTypeFiles.Vehicles.AddressFrom(new Uri("https://ksamodding.github.io/content-index-releases/v1/index.json")).AbsoluteUri;
 
     private const string Hosts = """
         [ksamods]
@@ -124,12 +125,12 @@ public sealed class ShareHostShareTests
     private static Func<HttpRequestMessage, HttpResponseMessage?> Serve(string? hosts, string? vehicles = null) => request => request.RequestUri?.AbsoluteUri switch
     {
         HostsUrl => hosts is null ? new HttpResponseMessage(HttpStatusCode.NotFound) : new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(hosts) },
-        VehiclesUrl when vehicles is not null => new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(vehicles) },
+        { } uri when uri == VehiclesUrl && vehicles is not null => new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(vehicles) },
         _ => GameSaveShareTests.Ungated(request),
     };
 
-    private const string ListedRover = """
-        { "snapshot_version": 1, "vehicles": [{
+    private static readonly string ListedRover = $$"""
+        { "snapshot_version": 1, "{{ContentIndexTypeFiles.Vehicles.ArrayKey}}": [{
             "id": "ExampleRover",
             "authored": { "spec_version": 1, "id": "ExampleRover", "type": "vehicle", "name": "Example Rover", "authors": ["Maxi"], "abstract": "A small rover.", "license": "CC0-1.0", "releases": { "ksamods": "ExampleRover" } },
             "releases": [{

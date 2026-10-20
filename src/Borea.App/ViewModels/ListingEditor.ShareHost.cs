@@ -89,6 +89,7 @@ public sealed partial class ListingEditor
 
         _shareHosts = hosts;
         RefreshShareHostRows();
+        OnPropertyChanged(nameof(ShareHostText));
     }
 
     private void RefreshShareHostRows()
