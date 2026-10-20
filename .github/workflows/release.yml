@@ -44,17 +44,22 @@ jobs:
 
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
-      # A release tag on a commit that is not on main or a release branch is a mistake,
-      # so the run stops before it builds anything. The tag ruleset decides who may tag.
+      # A preview tag (a version whose pre-release starts with "preview") must be on a feature
+      # branch, and every other tag on main or a release branch, so the run stops before it
+      # builds anything when a tag is on the wrong line. The tag ruleset decides who may tag.
       # The compare API answers "ahead" or "identical" when the branch contains the tagged
       # commit, and it needs no history in the shallow checkout.
-      - name: Check that the tag is on main or a release branch
+      - name: Check that the tag is on a branch of its kind
         if: github.ref_type == 'tag'
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
-          branches=$(gh api "repos/$GH_REPO/branches" --paginate --jq '.[].name | select(. == "main" or startswith("release/"))')
+          case "$GITHUB_REF_NAME" in
+            v*-preview.*) kind="a feature branch"; filter='startswith("feature/")' ;;
+            *) kind="main or a release branch"; filter='. == "main" or startswith("release/")' ;;
+          esac
+          branches=$(gh api "repos/$GH_REPO/branches" --paginate --jq ".[].name | select($filter)")
           for branch in $branches; do
             status=$(gh api "repos/$GH_REPO/compare/$GITHUB_SHA...$branch" --jq .status)
             if [ "$status" = ahead ] || [ "$status" = identical ]; then
@@ -62,7 +67,7 @@ jobs:
               exit 0
             fi
           done
-          echo "$GITHUB_REF_NAME points at $GITHUB_SHA, which is not on main or a release branch." >&2
+          echo "$GITHUB_REF_NAME points at $GITHUB_SHA, which is not on $kind." >&2
           exit 1
 
       - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6

@@ -52,6 +52,11 @@ A release starts from a tag such as `v0.5.0`, and a tag with a hyphen is publish
 Name a testing build `-beta.N`, for example `v0.5.0-beta.1`, and a dev build `-dev.N`, because the update channel in the App reads that name.
 The testing channel reports beta releases, and only the dev channel reports other pre-releases.
 
+A feature that is not ready for the dev builds grows on a branch `feature/<name>`, where pull requests go instead of `main`, and `main` is merged into it regularly.
+Its test builds are named `-preview.<name>.N`, for example `v0.6.0-preview.vehicles-saves.1`, and are tagged on that branch.
+No update channel reports a preview build, so its testers download it by hand, and the release workflow refuses a preview tag that is not on a `feature/` branch and any other tag that is not on `main` or a `release/` branch.
+Only the maintainers can create a `feature/` branch or a release tag.
+
 To put a text of your own at the top of the release notes, add `.github/release-notes/<version>.md`, for example `.github/release-notes/0.5.0.md`, in the commit that you tag.
 The list of changes of a stable release starts at the previous stable release, so it also covers the dev and beta builds in between.
 

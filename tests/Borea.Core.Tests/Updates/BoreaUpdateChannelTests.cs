@@ -17,6 +17,9 @@ public sealed class BoreaUpdateChannelTests
     [InlineData(BoreaUpdateChannel.Dev, "1.0.0", true)]
     [InlineData(BoreaUpdateChannel.Dev, "1.0.0-dev.1", true)]
     [InlineData(BoreaUpdateChannel.Dev, "1.0.0-rc.1", true)]
+    [InlineData(BoreaUpdateChannel.Dev, "1.0.0-preview.vehicles-saves.1", false)]
+    [InlineData(BoreaUpdateChannel.Testing, "1.0.0-preview.vehicles-saves.1", false)]
+    [InlineData(BoreaUpdateChannel.Stable, "1.0.0-preview.vehicles-saves.1", false)]
     public void Includes_FollowsTheTagName(BoreaUpdateChannel channel, string version, bool expected)
         => Assert.Equal(expected, channel.Includes(ModVersion.Parse(version)));
 }
