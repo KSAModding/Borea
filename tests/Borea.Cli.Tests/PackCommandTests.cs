@@ -703,7 +703,7 @@ public sealed class PackCommandTests : IDisposable
 
         Assert.Equal(0, run.ExitCode);
         Assert.Contains("  installed  flight-tools 2.0.0  modpack", run.Output);
-        Assert.Contains("  name-taken  vehicle rover 1.0.0: An item named 'Rover' is in the way. Run 'borea install rover --name <new name>' to install it under another name.", run.Output);
+        Assert.Contains("  name-taken  vehicle rover 1.0.0: An item named 'Rover' is in the way. Run 'borea install rover --version 1.0.0 --name <new name>' to install it under another name.", run.Output);
         Assert.Contains("  skipped  save apollo-save 1.0.0: The exact pinned release is not listed and cannot be installed by Borea.", run.Output);
         Assert.DoesNotContain("yet", run.Output);
         var skipped = json.Json.GetProperty("skipped").EnumerateArray().ToList();

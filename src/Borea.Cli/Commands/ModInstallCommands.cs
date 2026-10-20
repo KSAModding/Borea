@@ -128,12 +128,14 @@ internal static class ModInstallCommands
         var alternatives = new Option<string[]>("--alternative") { Description = "Select a required alternative as choice-key=mod-id." };
         var dryRun = new Option<bool>("--dry-run") { Description = "Print the plan from the cached index without writing files." };
         var channel = ArgumentRules.Channel();
+        var version = new Option<string?>("--version") { Description = "Change a vehicle or save to this exact version, for example the one a pack pins." };
         var name = NameOption();
         var allowMissing = AllowMissingOption();
         var discardChanges = DiscardChangesOption();
         var json = ArgumentRules.Json();
         var command = new Command("update", "Update one mod or all managed mods, or one vehicle or save.");
         command.Arguments.Add(id);
+        command.Options.Add(version);
         command.Options.Add(instance);
         command.Options.Add(recommended);
         command.Options.Add(alternatives);
@@ -152,11 +154,11 @@ internal static class ModInstallCommands
                 var dry = parse.GetValue(dryRun);
                 if (dry)
                     await RequireCachedIndexAsync(cli, ct).ConfigureAwait(false);
-                var options = new UserContentCommands.Options(parse.GetValue(name), null, ArgumentRules.ChannelOrSaved(parse.GetValue(channel), cli.Settings.ReleaseChannel), parse.GetValue(recommended), ParseAlternatives(parse.GetValue(alternatives)), parse.GetValue(allowMissing), parse.GetValue(discardChanges), dry, parse.GetValue(json));
+                var options = new UserContentCommands.Options(parse.GetValue(name), parse.GetValue(version), ArgumentRules.ChannelOrSaved(parse.GetValue(channel), cli.Settings.ReleaseChannel), parse.GetValue(recommended), ParseAlternatives(parse.GetValue(alternatives)), parse.GetValue(allowMissing), parse.GetValue(discardChanges), dry, parse.GetValue(json));
                 return await UserContentCommands.UpdateAsync(cli, target, record, options, output, error, ct).ConfigureAwait(false);
             }
 
-            RequireModOptions(parse, selectedId, name, allowMissing, discardChanges, json);
+            RequireModOptions(parse, selectedId, version, name, allowMissing, discardChanges, json);
             var selected = selectedId is null
                 ? target.Mods.Where(mod => mod.Ownership == ModInstallOwnership.Borea).ToList()
                 : target.Mods.Where(mod => ModIds.Equals(mod.ModId, selectedId)).ToList();

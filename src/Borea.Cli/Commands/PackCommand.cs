@@ -941,8 +941,8 @@ internal static class PackCommand
             output.WriteLine(item.Status switch
             {
                 "not-attempted" when dryRun && item.Message is null => $"Install {item.Section} {item.Id} {item.Version}{folder}.",
-                "name-taken" => $"  name-taken  {item.Section} {item.Id} {item.Version}: {item.Message} Run 'borea install {item.Id} --name <new name>' to install it under another name.",
-                "changed" => $"  changed  {item.Section} {item.Id} {item.Version}: {item.Message} Run 'borea update {item.Id} --discard-changes' to replace it; the old folder stays in the backups.",
+                "name-taken" => $"  name-taken  {item.Section} {item.Id} {item.Version}: {item.Message} Run 'borea install {item.Id} --version {item.Version} --name <new name>' to install it under another name.",
+                "changed" => $"  changed  {item.Section} {item.Id} {item.Version}: {item.Message} Run 'borea update {item.Id} --version {item.Version} --discard-changes' to replace it; the old folder stays in the backups.",
                 _ => $"  {item.Status}  {item.Section} {item.Id} {item.Version}{folder}{(item.Message is null ? string.Empty : $": {item.Message}")}",
             });
         }

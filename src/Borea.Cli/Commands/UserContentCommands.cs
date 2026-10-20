@@ -37,11 +37,24 @@ internal static class UserContentCommands
     public static async Task<int> UpdateAsync(CliServices cli, Instance instance, InstalledContentRecord installed, Options options, TextWriter output, TextWriter error, CancellationToken cancellationToken)
     {
         var repository = options.DryRun ? cli.ReadOnlyUserContent : cli.UserContent;
-        var release = await repository.GetLatestReleaseAsync(installed.ListingId, options.Channel, cancellationToken).ConfigureAwait(false);
-        if (release is null || release.Version <= installed.Version)
+        ModVersionMetadata? release;
+        if (options.Version is { } version)
+        {
+            // An exact version may be older, because a pack can pin an older release than the installed one.
+            release = await repository.GetReleaseAsync(installed.ListingId, ModVersion.Parse(version), cancellationToken).ConfigureAwait(false)
+                ?? throw new InvalidOperationException($"Release {version} of '{installed.ListingId}' is not available.");
+        }
+        else
+        {
+            release = await repository.GetLatestReleaseAsync(installed.ListingId, options.Channel, cancellationToken).ConfigureAwait(false);
+        }
+
+        if (release is null || (options.Version is null ? release.Version <= installed.Version : release.Version == installed.Version))
         {
             if (options.Json)
                 JsonOutput.Write(output, new UserContentView(installed.ListingId, ContentOutput.Name(installed.Type), installed.Version.ToString(), installed.FolderName, "up-to-date", [], [], [], [], [], null));
+            else if (options.Version is not null)
+                output.WriteLine($"{installed.ListingId} {installed.Version} is installed. Nothing to do.");
             else
                 output.WriteLine($"{installed.ListingId} {installed.Version} is the newest release in the {options.Channel.ToName()} channel. Nothing to do.");
             return ExitCodes.Done;

@@ -168,6 +168,21 @@ public sealed class UserContentCommandTests : IDisposable
     }
 
     [Fact]
+    public async Task Update_WithVersion_ChangesToThatExactRelease()
+    {
+        var instance = await CreateAsync();
+        Index(Vehicle("1.0.0", []), Vehicle("1.1.0", []), Vehicle("2.0.0", []));
+        await _host.RunAsync("install", "rover", "--instance", "Alpha", "--version", "2.0.0");
+
+        var older = await _host.RunAsync("update", "rover", "--instance", "Alpha", "--version", "1.1.0");
+        var same = await _host.RunAsync("update", "rover", "--instance", "Alpha", "--version", "1.1.0");
+
+        Assert.Equal(0, older.ExitCode);
+        Assert.Equal(ModVersion.Parse("1.1.0"), Assert.Single(await new FileInstalledContentRecords(_host.Paths).ListAsync(instance)).Version);
+        Assert.Contains("rover 1.1.0 is installed. Nothing to do.", same.Output);
+    }
+
+    [Fact]
     public async Task UpdateWithoutAnId_LeavesAVehicleWithANewerReleaseAlone()
     {
         var instance = await CreateAsync();
@@ -187,9 +202,13 @@ public sealed class UserContentCommandTests : IDisposable
         await CreateAsync();
 
         var run = await _host.RunAsync("install", "wheels", "--instance", "Alpha", "--allow-missing");
+        await _host.RunAsync("install", "wheels", "--instance", "Alpha");
+        var update = await _host.RunAsync("update", "wheels", "--instance", "Alpha", "--version", "1.0.0");
 
         Assert.Equal(1, run.ExitCode);
         Assert.Contains("--allow-missing apply only to a vehicle or a save", run.Error);
+        Assert.Equal(1, update.ExitCode);
+        Assert.Contains("--version apply only to a vehicle or a save", update.Error);
     }
 
     [Fact]
