@@ -13,7 +13,7 @@ namespace Borea.Network.GitHub;
 /// </summary>
 public sealed class GitHubShareRepository : IShareRepository
 {
-    public const string RepositoryName = "ksa-shares";
+    private const string RepositoryName = ShareRepository.Name;
 
     private const string Api = GitHubApi.Root;
 

@@ -308,6 +308,23 @@
                                         <TextBlock Classes="action-md" Text="{Binding Localization.ListingOpenYourPullRequest}" />
                                     </Button>
                                 </StackPanel>
+
+                                <!-- the player's own GitHub repository, which needs no share host -->
+                                <StackPanel Spacing="8" Margin="0,8,0,0" IsVisible="{Binding ListingEditor.OffersOwnRepository}">
+                                    <TextBlock Classes="body-sm secondary" Text="{Binding Localization.ListingShareOwnHint}" TextWrapping="Wrap" />
+                                    <Button Classes="text" Content="{Binding Localization.ListingShareOwnPublish}" Command="{Binding ListingEditor.PublishFromOwnRepositoryCommand}" HorizontalAlignment="Left" />
+                                    <TextBlock Classes="body-sm secondary" Text="{Binding ListingEditor.OwnRepositoryProgress}" TextWrapping="Wrap" IsVisible="{Binding ListingEditor.OwnRepositoryProgress, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                                    <TextBlock Classes="body-sm danger" Text="{Binding ListingEditor.OwnRepositoryError}" TextWrapping="Wrap" IsVisible="{Binding ListingEditor.OwnRepositoryError, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                                    <WrapPanel ItemSpacing="8" LineSpacing="8" IsVisible="{Binding ListingEditor.NeedsAppOnShareRepository}">
+                                        <Button Classes="link" Command="{Binding ListingEditor.OpenNewShareRepositoryCommand}" IsVisible="{Binding ListingEditor.NeedsShareRepository}">
+                                            <TextBlock Classes="action-md" Text="{Binding Localization.ListingShareOwnCreateRepository}" />
+                                        </Button>
+                                        <Button Classes="link" Command="{Binding ListingEditor.AllowAppOnShareRepositoryCommand}">
+                                            <TextBlock Classes="action-md" Text="{Binding Localization.ListingShareOwnAllowApp}" />
+                                        </Button>
+                                    </WrapPanel>
+                                    <TextBlock Classes="body-sm" Text="{Binding ListingEditor.OwnRepositoryOutcome}" TextWrapping="Wrap" IsVisible="{Binding ListingEditor.OwnRepositoryOutcome, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                                </StackPanel>
                             </StackPanel>
                         </Border>
 

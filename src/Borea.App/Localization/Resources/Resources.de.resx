@@ -3231,6 +3231,33 @@
   <data name="ListingShareHostSaidFormat" xml:space="preserve">
     <value>{0}: {1}</value>
   </data>
+  <data name="ListingShareOwnHint" xml:space="preserve">
+    <value>Mit einem GitHub-Konto brauchst du keinen Share-Host. Borea legt das Archiv als Release im Repository ksa-shares deines Kontos ab und öffnet den Pull Request von deinem Konto aus.</value>
+  </data>
+  <data name="ListingShareOwnPublish" xml:space="preserve">
+    <value>Von meinem GitHub-Konto veröffentlichen</value>
+  </data>
+  <data name="ListingShareOwnReleasingFormat" xml:space="preserve">
+    <value>Das Release {0} wird erstellt...</value>
+  </data>
+  <data name="ListingShareOwnReleasedFormat" xml:space="preserve">
+    <value>{0} ist ein Release von {1}.</value>
+  </data>
+  <data name="ListingShareOwnMayNotCreate" xml:space="preserve">
+    <value>Die Borea-App darf in deinem Konto kein Repository erstellen. Erstelle das öffentliche Repository ksa-shares selbst auf GitHub, oder erlaube es der App, und teile dann erneut.</value>
+  </data>
+  <data name="ListingShareOwnCreateRepository" xml:space="preserve">
+    <value>ksa-shares auf GitHub erstellen</value>
+  </data>
+  <data name="ListingShareOwnAllowApp" xml:space="preserve">
+    <value>Borea-App erlauben</value>
+  </data>
+  <data name="ListingShareOwnAppNotOnRepositoryFormat" xml:space="preserve">
+    <value>Die Borea-App ist für {0} nicht erlaubt. Erlaube sie dort, und teile dann erneut.</value>
+  </data>
+  <data name="ListingShareOwnRefusedFormat" xml:space="preserve">
+    <value>GitHub hat das Teilen abgelehnt: {0}</value>
+  </data>
   <data name="ListingShareContentIdFormat" xml:space="preserve">
     <value>{0} {1}</value>
   </data>

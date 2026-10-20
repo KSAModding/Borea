@@ -22,7 +22,11 @@ public interface IShareRepository
 
 /// <param name="FullName">owner/name.</param>
 /// <param name="Id">The GitHub id, which the install page of the App takes.</param>
-public sealed record ShareRepository(string FullName, long Id);
+public sealed record ShareRepository(string FullName, long Id)
+{
+    /// <summary>The name of the share repository in the player's account.</summary>
+    public const string Name = "ksa-shares";
+}
 
 public enum ShareRepositoryFailure
 {

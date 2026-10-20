@@ -537,6 +537,7 @@ public sealed partial class ListingEditor
         OnPropertyChanged(nameof(NeedsSignInToFollow));
         OnPropertyChanged(nameof(UsesBrowserOnly));
         OnPropertyChanged(nameof(OffersSignedInPublish));
+        OnPropertyChanged(nameof(OffersOwnRepository));
         OnPropertyChanged(nameof(CanPublish));
         OnPropertyChanged(nameof(PublishText));
         OnPropertyChanged(nameof(OwnerFile));

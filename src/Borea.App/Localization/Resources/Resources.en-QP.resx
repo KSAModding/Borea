@@ -2259,6 +2259,33 @@
   <data name="ListingShareHostSaidFormat" xml:space="preserve">
     <value>{0}: {1}</value>
   </data>
+  <data name="ListingShareOwnHint" xml:space="preserve">
+    <value>With a GitHub flag ye need no harbor. The Borea stows the chest as a release in the ksa-shares hold o' yer own ship, an' opens the pull request under yer own flag.</value>
+  </data>
+  <data name="ListingShareOwnPublish" xml:space="preserve">
+    <value>Set sail under me own GitHub flag</value>
+  </data>
+  <data name="ListingShareOwnReleasingFormat" xml:space="preserve">
+    <value>Rigging the release {0}...</value>
+  </data>
+  <data name="ListingShareOwnReleasedFormat" xml:space="preserve">
+    <value>{0} be a release o' {1}.</value>
+  </data>
+  <data name="ListingShareOwnMayNotCreate" xml:space="preserve">
+    <value>The Borea App may not build a hold on yer ship. Build the open hold ksa-shares on GitHub yerself, or let the App do it, then share again.</value>
+  </data>
+  <data name="ListingShareOwnCreateRepository" xml:space="preserve">
+    <value>Build ksa-shares on GitHub</value>
+  </data>
+  <data name="ListingShareOwnAllowApp" xml:space="preserve">
+    <value>Let the Borea App aboard</value>
+  </data>
+  <data name="ListingShareOwnAppNotOnRepositoryFormat" xml:space="preserve">
+    <value>The Borea App be not allowed aboard {0}. Let it aboard, then share again.</value>
+  </data>
+  <data name="ListingShareOwnRefusedFormat" xml:space="preserve">
+    <value>GitHub turned the share away: {0}</value>
+  </data>
   <data name="ListingFixShareHost" xml:space="preserve">
     <value>The Borea cannot read the papers o' a harbor. The checks take a pull request from the GitHub flag ye linked at the harbor, or one the harbor opens fer ye.</value>
   </data>

@@ -78,6 +78,7 @@ public sealed partial class ListingEditor
         _share = null;
         _savedArchive = null;
         ForgetShareHostRun();
+        ForgetOwnRepositoryRun();
         RefreshShare();
     }
 
@@ -88,6 +89,7 @@ public sealed partial class ListingEditor
         OnPropertyChanged(nameof(ShareExtraFiles));
         OnPropertyChanged(nameof(HasShareExtraFiles));
         OnPropertyChanged(nameof(ShareArchiveText));
+        OnPropertyChanged(nameof(OffersOwnRepository));
         OnPropertyChanged(nameof(ShareStatusChoices));
         OnPropertyChanged(nameof(SelectedShareStatus));
         RefreshShareHostRows();
