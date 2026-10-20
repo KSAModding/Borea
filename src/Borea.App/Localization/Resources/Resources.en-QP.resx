@@ -1878,6 +1878,12 @@
   <data name="InstallMessageMissingForSaveFormat" xml:space="preserve">
     <value>The Borea ain't able to haul {0} onboard or wake it, so the game be leavin' out every ship o' this tale that be needin' that barrel, and savin' again sends them ships to Davy Jones.</value>
   </data>
+  <data name="InstallMessageBreaksVehicleFormat" xml:space="preserve">
+    <value>{0} {1} be outside the range {2} that the vessel {3} be needin', so the game be refusin' that vessel.</value>
+  </data>
+  <data name="InstallMessageBreaksSaveFormat" xml:space="preserve">
+    <value>{0} {1} be outside the range {2} that the tale {3} be needin', so the game be leavin' out every ship o' that tale that be needin' it, and savin' again sends them ships to Davy Jones.</value>
+  </data>
   <data name="InstallDependencyAlternativesFormat" xml:space="preserve">
     <value>{0} or {1}</value>
   </data>

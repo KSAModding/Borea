@@ -3450,6 +3450,12 @@
   <data name="InstallMessageMissingForSaveFormat" xml:space="preserve">
     <value>Borea cannot install or enable {0}, so the game leaves out every vehicle of this save that needs it, and saving again loses those vehicles.</value>
   </data>
+  <data name="InstallMessageBreaksVehicleFormat" xml:space="preserve">
+    <value>{0} {1} is outside the range {2} that the vehicle {3} needs, so the game refuses that vehicle.</value>
+  </data>
+  <data name="InstallMessageBreaksSaveFormat" xml:space="preserve">
+    <value>{0} {1} is outside the range {2} that the save {3} needs, so the game leaves out every vehicle of that save that needs it, and saving again loses those vehicles.</value>
+  </data>
   <data name="InstallDependencyAlternativesFormat" xml:space="preserve">
     <value>{0} or {1}</value>
   </data>

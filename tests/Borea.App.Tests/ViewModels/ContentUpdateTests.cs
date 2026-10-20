@@ -212,6 +212,28 @@ public sealed class ContentUpdateTests
     }
 
     [Fact]
+    public async Task Update_PastTheMaxOfARecordedSave_WaitsAndNamesTheSave()
+    {
+        var save = UserContentFixtures.SaveArchive("<Universe />");
+        using var harness = await ViewModelHarness.CreateAsync(
+            respond: request => request.RequestUri?.AbsoluteUri == UserContentFixtures.SaveUrl ? UserContentFixtures.ArchiveResponse(save) : null,
+            typeFiles: UserContentFixtures.TypeFiles(Borea.Core.Index.ContentIndexTypeFiles.Saves, UserContentFixtures.EntryNeeding("CampaignSave", "save", "Campaign", UserContentFixtures.SaveUrl, save, UserContentFixtures.Required("AdvancedFlightComputer", "0.7.0", "0.7.4"), ["1.0.0"])));
+        var viewModel = harness.ViewModel;
+        var instance = await InstalledContent.AddAsync(harness, "AdvancedFlightComputer", activate: true, ownership: ModInstallOwnership.Borea, version: "0.7.4");
+        var release = (await harness.Services.UserContent.GetReleaseAsync("CampaignSave", ModVersion.Parse("1.0.0")))!;
+        Assert.True((await harness.Services.UserContentInstaller.InstallAsync(instance.InstanceId, release, name: null)).IsDone);
+        await viewModel.LoadAsync();
+        await viewModel.ActiveInstance!.OpenCommand.ExecuteAsync(null);
+        var row = viewModel.ContentGroups.Single().Items.Single();
+
+        await row.UpdateCommand.ExecuteAsync(null);
+
+        Assert.True(row.IsConfirmingUpdate);
+        Assert.Contains("AdvancedFlightComputer 0.7.5 is outside the range AdvancedFlightComputer 0.7.0 - 0.7.4 that the save Campaign needs", row.InstallWarning, StringComparison.Ordinal);
+        Assert.Equal(ModVersion.Parse("0.7.4"), Assert.Single((await harness.Services.Instances.GetByIdAsync(instance.InstanceId))!.Mods).Version);
+    }
+
+    [Fact]
     public async Task Update_ReplacesTheModAndClearsTheUpdate()
     {
         using var harness = await ViewModelHarness.CreateAsync(respond: ServeArchive);

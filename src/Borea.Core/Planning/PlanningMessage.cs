@@ -46,6 +46,15 @@ public enum PlanningMessageKind
 
     /// <summary>A required mod of a save that Borea cannot install or enable. A warning, so the player can go on without it.</summary>
     MissingForSave,
+
+    /// <summary>
+    /// The plan takes a mod out of the range that a recorded vehicle needs. <see cref="PlanningMessage.Value"/> is the folder of the vehicle.
+    /// A warning only, because the game refuses the vehicle and changes nothing else.
+    /// </summary>
+    BreaksVehicle,
+
+    /// <summary>The plan takes a mod out of the range that a recorded save needs. <see cref="PlanningMessage.Value"/> is the folder of the save.</summary>
+    BreaksSave,
 }
 
 /// <summary>
@@ -67,7 +76,7 @@ public sealed record PlanningMessage(string ModId, PlanningMessageKind Kind)
 
     public OsPlatform? Platform { get; init; }
 
-    /// <summary>The author's reason for a yank or a retraction, an unknown platform, an alternative's mod id, the game build a release needs, the newest game build a release supports, the pinned mod a release needs, or the code of the reason a required mod of a vehicle or save is missing.</summary>
+    /// <summary>The author's reason for a yank or a retraction, an unknown platform, an alternative's mod id, the game build a release needs, the newest game build a release supports, the pinned mod a release needs, the code of the reason a required mod of a vehicle or save is missing, or the folder of a vehicle or save a plan breaks.</summary>
     public string? Value { get; init; }
 
     public int? Limit { get; init; }
@@ -112,6 +121,8 @@ public sealed record PlanningMessage(string ModId, PlanningMessageKind Kind)
         PlanningMessageKind.UnlistedPin => "unlisted-pin",
         PlanningMessageKind.MissingForVehicle => "missing-for-vehicle",
         PlanningMessageKind.MissingForSave => "missing-for-save",
+        PlanningMessageKind.BreaksVehicle => "breaks-vehicle",
+        PlanningMessageKind.BreaksSave => "breaks-save",
         _ => throw new ArgumentOutOfRangeException(nameof(Kind), Kind, "The planning message kind is not defined."),
     };
 
@@ -142,6 +153,8 @@ public sealed record PlanningMessage(string ModId, PlanningMessageKind Kind)
         PlanningMessageKind.UnlistedPin => "The exact pinned release is not listed and cannot be installed by Borea.",
         PlanningMessageKind.MissingForVehicle => $"{Dependency} cannot be installed or enabled, so the game refuses the vehicle file.",
         PlanningMessageKind.MissingForSave => $"{Dependency} cannot be installed or enabled, so the game leaves out every vehicle that needs it, and saving again loses those vehicles.",
+        PlanningMessageKind.BreaksVehicle => $"{ModId} {Version} does not meet the {Dependency} of the vehicle {Value}, so the game refuses that vehicle.",
+        PlanningMessageKind.BreaksSave => $"{ModId} {Version} does not meet the {Dependency} of the save {Value}, so the game leaves out every vehicle of that save that needs it, and saving again loses those vehicles.",
         _ => $"{Dependency}",
     };
 

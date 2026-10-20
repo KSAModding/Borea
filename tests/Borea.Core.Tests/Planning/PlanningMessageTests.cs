@@ -51,6 +51,8 @@ public sealed class PlanningMessageTests
         { new("A", PlanningMessageKind.UnlistedPin), "unlisted-pin", "The exact pinned release is not listed and cannot be installed by Borea." },
         { new("rover", PlanningMessageKind.MissingForVehicle) { Dependency = Library, Value = "unsatisfied-dependency" }, "missing-for-vehicle", "Required dependency on mod 'library' >= 1.0.0 cannot be installed or enabled, so the game refuses the vehicle file." },
         { new("campaign", PlanningMessageKind.MissingForSave) { Dependency = Library, Value = "unsatisfied-dependency" }, "missing-for-save", "Required dependency on mod 'library' >= 1.0.0 cannot be installed or enabled, so the game leaves out every vehicle that needs it, and saving again loses those vehicles." },
+        { new("library", PlanningMessageKind.BreaksVehicle) { Version = ModVersion.Parse("2.0.0"), Dependency = Library, Value = "Rover" }, "breaks-vehicle", "library 2.0.0 does not meet the Required dependency on mod 'library' >= 1.0.0 of the vehicle Rover, so the game refuses that vehicle." },
+        { new("library", PlanningMessageKind.BreaksSave) { Version = ModVersion.Parse("2.0.0"), Dependency = Library, Value = "Career" }, "breaks-save", "library 2.0.0 does not meet the Required dependency on mod 'library' >= 1.0.0 of the save Career, so the game leaves out every vehicle of that save that needs it, and saving again loses those vehicles." },
     };
 
     [Theory]

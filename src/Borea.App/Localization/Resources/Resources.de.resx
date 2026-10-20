@@ -3450,6 +3450,12 @@
   <data name="InstallMessageMissingForSaveFormat" xml:space="preserve">
     <value>Borea kann {0} nicht installieren oder aktivieren, deshalb lässt das Spiel jedes Fahrzeug dieses Spielstands weg, das diesen Mod braucht, und beim nächsten Speichern gehen diese Fahrzeuge verloren.</value>
   </data>
+  <data name="InstallMessageBreaksVehicleFormat" xml:space="preserve">
+    <value>{0} {1} liegt außerhalb des Bereichs {2}, den das Fahrzeug {3} braucht, deshalb lädt das Spiel dieses Fahrzeug nicht.</value>
+  </data>
+  <data name="InstallMessageBreaksSaveFormat" xml:space="preserve">
+    <value>{0} {1} liegt außerhalb des Bereichs {2}, den der Spielstand {3} braucht, deshalb lässt das Spiel jedes Fahrzeug dieses Spielstands weg, das diesen Mod braucht, und beim nächsten Speichern gehen diese Fahrzeuge verloren.</value>
+  </data>
   <data name="InstallDependencyAlternativesFormat" xml:space="preserve">
     <value>{0} oder {1}</value>
   </data>

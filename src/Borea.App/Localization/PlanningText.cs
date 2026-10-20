@@ -56,6 +56,8 @@ internal static class PlanningText
             PlanningMessageKind.UnlistedPin => Resources.InstallMessageUnlistedPin,
             PlanningMessageKind.MissingForVehicle => Fill(Resources.InstallMessageMissingForVehicleFormat, dependency),
             PlanningMessageKind.MissingForSave => Fill(Resources.InstallMessageMissingForSaveFormat, dependency),
+            PlanningMessageKind.BreaksVehicle => Fill(Resources.InstallMessageBreaksVehicleFormat, message.ModId, message.Version, dependency, message.Value),
+            PlanningMessageKind.BreaksSave => Fill(Resources.InstallMessageBreaksSaveFormat, message.ModId, message.Version, dependency, message.Value),
             _ => message.Message,
         };
     }

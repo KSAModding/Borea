@@ -512,7 +512,7 @@ public sealed class BoreaServices : IDisposable
         var foreignModReleaseMatcher = new FileForeignModReleaseMatcher(paths, downloader, foreignModAdopter, indexSnapshots);
         var spaceCheck = new DriveInstallSpaceCheck(paths);
         var foreignModHandover = new LoggingForeignModHandover(new FileForeignModHandover(paths, downloader, instances, checkedModState, store: modStore), log);
-        IInstallPlanner installPlanner = new LoggingInstallPlanner(new RepositoryInstallPlanner(new ModDependencyResolver(), settings.ReleaseChannel), log);
+        IInstallPlanner installPlanner = new LoggingInstallPlanner(new RecordedContentPlanner(new RepositoryInstallPlanner(new ModDependencyResolver(), settings.ReleaseChannel), installedContent), log);
         if (wrapInstallPlanner is not null)
             installPlanner = wrapInstallPlanner(installPlanner);
         isGameProcessRunning ??= RunningProcesses.IsGameRunning;
