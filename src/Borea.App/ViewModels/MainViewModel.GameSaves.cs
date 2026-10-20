@@ -79,29 +79,66 @@ public partial class MainViewModel
             return;
         }
 
-        // the index checks the name the way the game names a new save, which an item from an older build can fail
-        if (!GameSaveName.IsValid(item.Name))
-        {
-            BeginRenameGameSave(item);
-            if (GameSaveName.Sanitize(item.Name) is { Length: > 0 } sanitized)
-                ModalInstanceName = sanitized;
-            InstanceError = Localization.FormatGameSaveShareRename(item.Name);
-            return;
-        }
-
         try
         {
             var content = await services.ContentIds.ReadAsync(item.Entry.Path, item.Entry.Kind);
+
+            // the index checks the name the way the game names a new save, which an item from an older build can fail
+            if (!GameSaveName.IsValid(content.Name))
+            {
+                BeginRenameGameSave(item);
+                if (GameSaveName.Sanitize(content.Name) is { Length: > 0 } sanitized)
+                    ModalInstanceName = sanitized;
+                GameSaveRenameReason = Localization.FormatGameSaveShareRename(content.Name);
+                return;
+            }
+
             var providers = await services.ContentProviders.ReadAsync(item.InstanceId);
             var installed = (await services.Instances.GetByIdAsync(item.InstanceId))?.Mods ?? [];
             var share = new GameSaveShareStart(item.InstanceId, item.Entry, content, ContentShareProposal.Of(content.Ids, providers, installed));
             await OpenListingAsync();
             ListingEditor.StartShare(share);
         }
-        catch (Exception exception) when (exception is GameFolderException or IOException or UnauthorizedAccessException)
+        catch (GameFolderException exception)
+        {
+            // the file name first, because the toast cuts a long text, and the full path in the details
+            ShowErrorToast(() => Localization.FormatToastShareFailed(item.Name), $"{FolderProblemText(exception)}\n{exception.Message}");
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {
             ShowErrorToast(() => Localization.FormatToastShareFailed(item.Name), exception.Message);
         }
+    }
+
+    private string FolderProblemText(GameFolderException exception)
+    {
+        var file = Path.GetFileName(exception.Path);
+        return exception.Problem switch
+        {
+            GameFolderProblem.MetadataMissing or GameFolderProblem.GameFileMissing => Localization.FormatShareFolderFileMissing(file),
+            GameFolderProblem.MetadataUnreadable => Localization.FormatShareFolderNotToml(file),
+            GameFolderProblem.NameMissing => Localization.FormatShareFolderNoName(file),
+            _ => Localization.FormatShareFolderNotXml(file),
+        };
+    }
+
+    /// <summary>The path relative to the instance or the game folder, because a full path fills several lines of a note.</summary>
+    internal string ShortSharePath(Guid instanceId, string path)
+    {
+        if (_services is not { } services)
+            return path;
+
+        foreach (var root in new[] { services.Paths.GetInstanceRoot(instanceId), services.Paths.GetGameDirectoryPath() })
+        {
+            if (root is null)
+                continue;
+
+            var relative = Path.GetRelativePath(root, path);
+            if (!Path.IsPathRooted(relative) && relative != ".." && !relative.StartsWith(".." + Path.DirectorySeparatorChar, StringComparison.Ordinal))
+                return relative.Replace(Path.DirectorySeparatorChar, '/');
+        }
+
+        return path;
     }
 
     /// <summary>Lets the player pick the file, and writes the archive of the shared item into it. Null when nothing was saved.</summary>
@@ -231,6 +268,7 @@ public partial class MainViewModel
     {
         item.CloseEdits();
         InstanceError = null;
+        GameSaveRenameReason = null;
         ModalInstanceName = item.Name;
         RenamingGameSave = item;
     }
@@ -239,7 +277,8 @@ public partial class MainViewModel
     private async Task RenameGameSaveFromModalAsync(GameSaveItem item)
     {
         var name = ModalInstanceName.Trim();
-        if (name == item.Name && name == item.FolderName)
+        // a share reads meta.toml again, so its name can differ from the name of the list
+        if (name == item.Name && name == item.FolderName && GameSaveRenameReason is null)
         {
             RenamingGameSave = null;
             return;

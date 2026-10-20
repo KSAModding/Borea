@@ -1737,6 +1737,18 @@
   <data name="ToastShareFailedFormat" xml:space="preserve">
     <value>{0} konnte nicht geteilt werden</value>
   </data>
+  <data name="ShareFolderFileMissingFormat" xml:space="preserve">
+    <value>Im Ordner fehlt {0}.</value>
+  </data>
+  <data name="ShareFolderNotTomlFormat" xml:space="preserve">
+    <value>{0} ist kein gültiges TOML.</value>
+  </data>
+  <data name="ShareFolderNoNameFormat" xml:space="preserve">
+    <value>{0} enthält keinen Namen.</value>
+  </data>
+  <data name="ShareFolderNotXmlFormat" xml:space="preserve">
+    <value>{0} ist kein gültiges XML.</value>
+  </data>
   <data name="ToastBackUpAllFailed" xml:space="preserve">
     <value>Die Spielstände konnten nicht gesichert werden</value>
   </data>
@@ -1861,7 +1873,7 @@
     <value>Teilen</value>
   </data>
   <data name="GameSaveShareRenameFormat" xml:space="preserve">
-    <value>Das Spiel nimmt {0} nicht mehr als Namen an, und der Index prüft Namen genauso. Benenne es zuerst um und teile es dann.</value>
+    <value>Das Spiel nimmt den Namen "{0}" nicht mehr an, und der Index prüft Namen genauso. Benenne den Eintrag nach den Regeln unten um und teile ihn dann.</value>
   </data>
   <data name="GameSaveBackedUpFormat" xml:space="preserve">
     <value>{0} nach {1} gesichert.</value>
@@ -2485,10 +2497,10 @@
     <value>Modpack beginnen</value>
   </data>
   <data name="ListingChangeTitle" xml:space="preserve">
-    <value>Eingetragene Mod oder Pack ändern</value>
+    <value>Eingetragenen Inhalt ändern</value>
   </data>
   <data name="ListingChangeHint" xml:space="preserve">
-    <value>Lade einen Eintrag des Inhaltsindex, zum Beispiel um ein Icon hinzuzufügen, oder ein Pack, um seine nächste Version zu erstellen.</value>
+    <value>Lade einen Eintrag des Inhaltsindex, zum Beispiel um einer Mod, einem Fahrzeug oder einem Spielstand ein Icon hinzuzufügen, oder ein Pack, um seine nächste Version zu erstellen.</value>
   </data>
   <data name="ListingSearchListed" xml:space="preserve">
     <value>Nach Name, ID oder Autor suchen</value>
@@ -2647,7 +2659,7 @@
     <value>So, wie das Spiel sie anzeigt, zum Beispiel 2026.9.10.5438, oder ein Monat wie 2026.9.</value>
   </data>
   <data name="ListingGameMinFromArchiveHint" xml:space="preserve">
-    <value>Optional. Ohne game_min nimmt der Index den Build, der die Datei geschrieben hat, aus der meta.toml im Archiv. Trage eine ältere Version nur ein, wenn du weißt, dass sie die Datei lädt.</value>
+    <value>Optional. Wenn das Feld leer ist, nimmt der Index den Build, der die Datei geschrieben hat, aus der meta.toml im Archiv. Trage eine ältere Version nur ein, wenn du weißt, dass sie die Datei lädt.</value>
   </data>
   <data name="ListingGameMinProposalFormat" xml:space="preserve">
     <value>Die festgelegten Releases brauchen das Spiel ab {0}, deshalb schlägt Borea {0} als älteste Spielversion vor.</value>
@@ -3102,11 +3114,32 @@
   <data name="ListingShareHeading" xml:space="preserve">
     <value>Was du teilst</value>
   </data>
+  <data name="ListingShareIntro" xml:space="preserve">
+    <value>Borea schreibt die Datei, die dein Fahrzeug oder deinen Spielstand im Inhaltsindex einträgt, und prüft sie, bevor du den Pull Request öffnest.</value>
+  </data>
+  <data name="ListingShareIdHint" xml:space="preserve">
+    <value>Sie lässt sich später nicht ändern. Ein Fahrzeug oder Spielstand wird unter dem Namen aus seiner meta.toml installiert, nicht unter dieser ID.</value>
+  </data>
+  <data name="ListingShareDependenciesHint" xml:space="preserve">
+    <value>Das Archiv hat keine mod.toml, deshalb kennt ein Client nur diese Liste. Nenne jede Mod, die die Datei braucht.</value>
+  </data>
+  <data name="ListingShareGameMaxHint" xml:space="preserve">
+    <value>Lass das leer, außer neuere Spielversionen laden die Datei nicht mehr. Spieler mit einer neueren Version können sie dann nicht installieren. Jedes Release, das mit dieser Grenze gestempelt wird, behält sie, weil ein Release später nur strenger werden kann.</value>
+  </data>
+  <data name="ListingShareDependencyRequired" xml:space="preserve">
+    <value>Dein Fahrzeug oder Spielstand lädt ohne sie nicht, deshalb installiert ein Client sie immer mit.</value>
+  </data>
+  <data name="ListingShareDependencyOptional" xml:space="preserve">
+    <value>Dein Fahrzeug oder Spielstand nutzt sie, wenn sie da ist. Ein Client installiert sie nicht von selbst.</value>
+  </data>
+  <data name="ListingShareDependencyConflict" xml:space="preserve">
+    <value>Dein Fahrzeug oder Spielstand darf nicht zusammen mit ihr installiert sein. Gib die Versionen, die in Konflikt stehen, als älteste und neueste Version an, oder lass beide leer, wenn jede Version in Konflikt steht.</value>
+  </data>
   <data name="ListingShareHint" xml:space="preserve">
     <value>Borea hat die Datei gelesen und für jede Mod dieser Instanz, die ein Teil, einen Stoff, einen Charakter oder einen Himmelskörper aus der Datei definiert, eine erforderliche Abhängigkeit vorgeschlagen. Prüfe die Liste: Entferne, was die Datei nicht braucht, und füge eine Mod, die nur das Verhalten von Teilen ändert, als recommends hinzu. Speichere dann das Archiv und hänge es an ein Release.</value>
   </data>
   <data name="ListingShareExtraFiles" xml:space="preserve">
-    <value>Diese Dateien schreibt nicht das Spiel, sondern eine Mod. Füge diese Mod als Abhängigkeit hinzu:</value>
+    <value>Diese Dateien schreibt nicht das Spiel, sondern eine Mod. Füge die Mod, die sie schreibt, als Abhängigkeit hinzu:</value>
   </data>
   <data name="ListingShareSaveArchive" xml:space="preserve">
     <value>Archiv speichern</value>

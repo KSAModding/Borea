@@ -22,6 +22,7 @@
                         <TextBlock Classes="body-md secondary" Text="{Binding Localization.SharedProfileModalUnchanged}" TextWrapping="Wrap" />
                     </StackPanel>
                 </StackPanel>
+                <TextBlock Classes="body-md" Text="{Binding GameSaveRenameReason}" TextWrapping="Wrap" Margin="36,24,24,0" IsVisible="{Binding GameSaveRenameReason, Converter={x:Static ObjectConverters.IsNotNull}}" />
                 <TextBlock Classes="body-md secondary" Text="{Binding Localization.GameSaveNameRules}" TextWrapping="Wrap" Margin="36,24,24,0" IsVisible="{Binding RenamingGameSave, Converter={x:Static ObjectConverters.IsNotNull}}" />
                 <Grid RowDefinitions="Auto,Auto,Auto" Margin="36,32,24,32">
                     <!-- Instance Name -->

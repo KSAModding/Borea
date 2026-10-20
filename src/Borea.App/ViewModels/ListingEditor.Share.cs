@@ -30,6 +30,18 @@ public sealed partial class ListingEditor
 
     public string GameHint => IsVehicleOrSave ? Localization.ListingGameMinFromArchiveHint : Localization.ListingGameHint;
 
+    public bool IsVehicle => Type == ListingFolders.VehicleType;
+
+    public bool IsSave => Type == ListingFolders.SaveType;
+
+    public string IntroText => IsVehicleOrSave ? Localization.ListingShareIntro : Localization.ListingIntro;
+
+    public string IdHint => IsVehicleOrSave ? Localization.ListingShareIdHint : Localization.ListingIdHint;
+
+    public string GameMaxHint => IsVehicleOrSave ? Localization.ListingShareGameMaxHint : Localization.ListingGameMaxHint;
+
+    public string DependenciesHint => IsVehicleOrSave ? Localization.ListingShareDependenciesHint : Localization.ListingDependenciesHint;
+
     /// <summary>What Borea could not map to one loaded mod with a valid id, one line each.</summary>
     public ObservableCollection<string> ShareNotes { get; } = [];
 
@@ -95,7 +107,7 @@ public sealed partial class ListingEditor
         ContentShareNoteKind.DisabledProvider => Localization.FormatListingShareDisabledProvider(note.Mods[0], IdsText(note.Ids)),
         ContentShareNoteKind.InvalidFolder => Localization.FormatListingShareInvalidFolder(note.Mods[0], IdsText(note.Ids)),
         ContentShareNoteKind.SharedId => Localization.FormatListingShareSharedId(IdsText(note.Ids), string.Join(", ", note.Mods)),
-        _ => Localization.FormatListingShareUnreadableFile(note.Path ?? string.Empty),
+        _ => Localization.FormatListingShareUnreadableFile(_share is { } share && note.Path is { } path ? _owner.ShortSharePath(share.InstanceId, path) : string.Empty),
     };
 
     private string IdsText(IEnumerable<ContentId> ids) => string.Join(", ", ids.Select(id => Localization.FormatListingShareContentId(KindName(id.Kind), id.Id)));

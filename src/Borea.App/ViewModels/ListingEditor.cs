@@ -118,7 +118,8 @@ public sealed partial class ListingEditor : ObservableObject
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CanUseLoader), nameof(IsPack), nameof(IsNewPack), nameof(NewTitle), nameof(PullRequestText), nameof(HasDeclaredHelp))]
-    [NotifyPropertyChangedFor(nameof(IsVehicleOrSave), nameof(ForumsHint), nameof(GameHint))]
+    [NotifyPropertyChangedFor(nameof(IsVehicleOrSave), nameof(ForumsHint), nameof(GameHint), nameof(IsVehicle), nameof(IsSave))]
+    [NotifyPropertyChangedFor(nameof(IntroText), nameof(IdHint), nameof(GameMaxHint), nameof(DependenciesHint))]
     private string _type = ListingDraft.ModType;
 
     /// <summary>A mod-loader carries no [loader].</summary>
@@ -793,6 +794,10 @@ public sealed partial class ListingEditor : ObservableObject
         OnPropertyChanged(nameof(NextVersionText));
         OnPropertyChanged(nameof(ForumsHint));
         OnPropertyChanged(nameof(GameHint));
+        OnPropertyChanged(nameof(IntroText));
+        OnPropertyChanged(nameof(IdHint));
+        OnPropertyChanged(nameof(GameMaxHint));
+        OnPropertyChanged(nameof(DependenciesHint));
         RefreshShare();
         // the proposal keeps its value, so its setter does not raise the text again
         OnPropertyChanged(nameof(GameMinProposalText));

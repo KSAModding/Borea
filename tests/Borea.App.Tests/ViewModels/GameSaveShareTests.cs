@@ -64,9 +64,72 @@ public sealed class GameSaveShareTests
 
         Assert.Same(item, viewModel.RenamingGameSave);
         Assert.Equal("Example Rover", viewModel.ModalInstanceName);
-        Assert.Equal(harness.Localization.FormatGameSaveShareRename("Example  Rover"), viewModel.InstanceError);
+        Assert.Equal(harness.Localization.FormatGameSaveShareRename("Example  Rover"), viewModel.GameSaveRenameReason);
+        Assert.Null(viewModel.InstanceError);
         Assert.False(viewModel.CurrentWindowListing);
         Assert.False(viewModel.ListingEditor.HasShare);
+
+        viewModel.CancelNameModalCommand.Execute(null);
+
+        Assert.Null(viewModel.GameSaveRenameReason);
+    }
+
+    [Fact]
+    public async Task CutOffVehicleFile_NamesTheFileFirstInTheToast()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(respond: Ungated);
+        await CreateInstanceAsync(harness, "Example Rover");
+        await OpenAsync(harness);
+        var item = Assert.Single(harness.ViewModel.VehiclesSection.Items);
+        var gameFile = Path.Combine(item.Entry.Path, "vehicle.xml");
+        File.WriteAllText(gameFile, Vehicle[..40]);
+
+        await item.ShareCommand.ExecuteAsync(null);
+
+        var toast = harness.ViewModel.Toasts.Items[^1];
+        Assert.Equal(harness.Localization.FormatToastShareFailed("Example Rover"), toast.Message);
+        Assert.StartsWith(harness.Localization.FormatShareFolderNotXml("vehicle.xml") + "\n", toast.Detail, StringComparison.Ordinal);
+        Assert.Contains(gameFile, toast.Detail, StringComparison.Ordinal);
+        Assert.False(harness.ViewModel.ListingEditor.HasShare);
+    }
+
+    [Fact]
+    public async Task UnreadableModFile_IsNamedRelativeToTheInstance()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(respond: Ungated);
+        var instance = await CreateInstanceAsync(harness, "Example Rover");
+        var mods = harness.Services.Paths.GetInstanceModsFolder(instance);
+        File.WriteAllText(Path.Combine(mods, "ExamplePartsMod", "Parts.xml"), "<Assets><Part");
+        await OpenAsync(harness);
+
+        await Assert.Single(harness.ViewModel.VehiclesSection.Items).ShareCommand.ExecuteAsync(null);
+
+        var relative = Path.GetRelativePath(harness.Services.Paths.GetInstanceRoot(instance), Path.Combine(mods, "ExamplePartsMod", "Parts.xml")).Replace('\\', '/');
+        Assert.Contains(harness.Localization.FormatListingShareUnreadableFile(relative), harness.ViewModel.ListingEditor.ShareNotes);
+        Assert.DoesNotContain(':', relative);
+    }
+
+    [Fact]
+    public async Task NameChangedToAnInvalidNameAfterTheListLoaded_AsksForARenameFirst()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(respond: Ungated);
+        await CreateInstanceAsync(harness, "Example Rover");
+        await OpenAsync(harness);
+        var viewModel = harness.ViewModel;
+        var item = Assert.Single(viewModel.VehiclesSection.Items);
+        File.WriteAllText(Path.Combine(item.Entry.Path, "meta.toml"), "name = \"Example  Rover\"\nversion = \"v2026.10.19.5638\"\n");
+
+        await item.ShareCommand.ExecuteAsync(null);
+
+        Assert.Same(item, viewModel.RenamingGameSave);
+        Assert.Equal("Example Rover", viewModel.ModalInstanceName);
+        Assert.Equal(harness.Localization.FormatGameSaveShareRename("Example  Rover"), viewModel.GameSaveRenameReason);
+        Assert.False(viewModel.ListingEditor.HasShare);
+
+        await viewModel.ConfirmNameModalCommand.ExecuteAsync(null);
+
+        Assert.Null(viewModel.RenamingGameSave);
+        Assert.Contains("name = \"Example Rover\"", File.ReadAllText(Path.Combine(item.Entry.Path, "meta.toml")), StringComparison.Ordinal);
     }
 
     [Fact]
@@ -86,6 +149,11 @@ public sealed class GameSaveShareTests
         Assert.Equal(harness.Localization.ListingShareVehicleTitle, editor.NewTitle);
         var row = Assert.Single(editor.Dependencies);
         Assert.Equal(("ExamplePartsMod", "required", "1.4.0"), (row.Id, row.Kind, row.Min));
+        Assert.Equal(harness.Localization.ListingShareDependencyRequired, row.KindText);
+        Assert.Equal(
+            (harness.Localization.ListingShareIdHint, harness.Localization.ListingShareDependenciesHint, harness.Localization.ListingShareGameMaxHint),
+            (editor.IdHint, editor.DependenciesHint, editor.GameMaxHint));
+        Assert.True(editor.IsVehicle);
         Assert.Contains(
             harness.Localization.FormatListingShareNotProvided(harness.Localization.FormatListingShareContentId(harness.Localization.ListingShareKindPart, "UnknownAntenna")),
             editor.ShareNotes);

@@ -1131,6 +1131,18 @@
   <data name="ToastShareFailedFormat" xml:space="preserve">
     <value>Couldn't share {0}</value>
   </data>
+  <data name="ShareFolderFileMissingFormat" xml:space="preserve">
+    <value>The hold has no {0}.</value>
+  </data>
+  <data name="ShareFolderNotTomlFormat" xml:space="preserve">
+    <value>{0} ain't TOML.</value>
+  </data>
+  <data name="ShareFolderNoNameFormat" xml:space="preserve">
+    <value>{0} has no name on it.</value>
+  </data>
+  <data name="ShareFolderNotXmlFormat" xml:space="preserve">
+    <value>{0} be broken XML.</value>
+  </data>
   <data name="ToastBackUpAllFailed" xml:space="preserve">
     <value>Couldn't salvage the tales</value>
   </data>
@@ -1255,7 +1267,7 @@
     <value>Share wi' the fleet</value>
   </data>
   <data name="GameSaveShareRenameFormat" xml:space="preserve">
-    <value>The game won't take {0} fer a name no more, an' the index be checkin' names the same. Rename it first, then share it.</value>
+    <value>The game won't take the name "{0}" no more, an' the index be checkin' names the same. Rename the thing by the rules below, then share it.</value>
   </data>
   <data name="GameSaveBackedUpFormat" xml:space="preserve">
     <value>{0} salvaged to {1}.</value>
@@ -2125,16 +2137,37 @@
     <value>If ye fancy: a thread about it on forums.ahwoo.com.</value>
   </data>
   <data name="ListingGameMinFromArchiveHint" xml:space="preserve">
-    <value>If ye fancy. Without game_min, the index takes the build that wrote the file from meta.toml in the chest. Set an older one only when ye know it loads the file.</value>
+    <value>If ye fancy. When this be empty, the index takes the build that wrote the file from meta.toml in the chest. Set an older one only when ye know it loads the file.</value>
   </data>
   <data name="ListingShareHeading" xml:space="preserve">
     <value>What ye be sharin'</value>
+  </data>
+  <data name="ListingShareIntro" xml:space="preserve">
+    <value>The Borea writes the scroll that puts yer ship or logbook on the chart, an' checks it 'fore ye open the pull request.</value>
+  </data>
+  <data name="ListingShareIdHint" xml:space="preserve">
+    <value>It can't change later. A ship or logbook docks under the name in its meta.toml, not under this id.</value>
+  </data>
+  <data name="ListingShareDependenciesHint" xml:space="preserve">
+    <value>The chest has no mod.toml, so a client knows only this list. Name every barrel o' fun the file needs.</value>
+  </data>
+  <data name="ListingShareGameMaxHint" xml:space="preserve">
+    <value>Leave this empty unless newer builds o' the game won't load the file no more. Sailors on a newer build then can't take it aboard. Every release stamped while this be set keeps the limit, fer a release can only get stricter later.</value>
+  </data>
+  <data name="ListingShareDependencyRequired" xml:space="preserve">
+    <value>Yer ship or logbook won't load without it, so a client always brings it aboard too.</value>
+  </data>
+  <data name="ListingShareDependencyOptional" xml:space="preserve">
+    <value>Yer ship or logbook uses it when it be there. A client won't bring it aboard by itself.</value>
+  </data>
+  <data name="ListingShareDependencyConflict" xml:space="preserve">
+    <value>Yer ship or logbook must not sail together with it. Give the versions that feud as the oldest an' the newest, or leave both empty when every version feuds.</value>
   </data>
   <data name="ListingShareHint" xml:space="preserve">
     <value>The Borea read the file an' proposed one required barrel fer each barrel o' fun in this sea that makes a plank, grog, crewmate or isle the file names. Check the list: toss what the file don't need, an' add a barrel that only changes how planks behave as recommends. Then stow the chest an' nail it to a release.</value>
   </data>
   <data name="ListingShareExtraFiles" xml:space="preserve">
-    <value>The game don't write these scrolls, so a barrel o' fun did. Add that barrel as a dependency:</value>
+    <value>The game don't write these scrolls, so a barrel o' fun did. Add the barrel that writes them as a dependency:</value>
   </data>
   <data name="ListingShareSaveArchive" xml:space="preserve">
     <value>Stow the chest</value>

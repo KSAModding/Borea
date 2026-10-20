@@ -283,6 +283,18 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string FormatToastShareFailed(string name)
         => string.Format(CultureInfo.CurrentCulture, Resources.ToastShareFailedFormat, name);
 
+    public string FormatShareFolderFileMissing(string file)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ShareFolderFileMissingFormat, file);
+
+    public string FormatShareFolderNotToml(string file)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ShareFolderNotTomlFormat, file);
+
+    public string FormatShareFolderNoName(string file)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ShareFolderNoNameFormat, file);
+
+    public string FormatShareFolderNotXml(string file)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ShareFolderNotXmlFormat, file);
+
     public string ToastBackUpAllFailed => Resources.ToastBackUpAllFailed;
 
     public string FormatToastCopyFailed(string name)
@@ -1822,6 +1834,20 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string ListingGameMinFromArchiveHint => Resources.ListingGameMinFromArchiveHint;
 
     public string ListingShareHeading => Resources.ListingShareHeading;
+
+    public string ListingShareIntro => Resources.ListingShareIntro;
+
+    public string ListingShareIdHint => Resources.ListingShareIdHint;
+
+    public string ListingShareDependenciesHint => Resources.ListingShareDependenciesHint;
+
+    public string ListingShareGameMaxHint => Resources.ListingShareGameMaxHint;
+
+    public string ListingShareDependencyRequired => Resources.ListingShareDependencyRequired;
+
+    public string ListingShareDependencyOptional => Resources.ListingShareDependencyOptional;
+
+    public string ListingShareDependencyConflict => Resources.ListingShareDependencyConflict;
 
     public string ListingShareHint => Resources.ListingShareHint;
 

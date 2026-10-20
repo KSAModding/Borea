@@ -112,7 +112,7 @@
                         <TextBlock Classes="label-lg" Text="/" VerticalAlignment="Center" />
                         <TextBlock Classes="label-lg" Text="{Binding Localization.DiscoverListYourMod}" VerticalAlignment="Center" />
                     </StackPanel>
-                    <TextBlock Classes="body-md secondary" Text="{Binding Localization.ListingIntro}" TextWrapping="Wrap" Margin="0,24,0,0" />
+                    <TextBlock Classes="body-md secondary" Text="{Binding ListingEditor.IntroText}" TextWrapping="Wrap" Margin="0,24,0,0" />
 
                     <!-- start: a new listing from its release host, or a listed one to change -->
                     <StackPanel Spacing="16" Margin="0,24,0,0" IsVisible="{Binding ListingEditor.IsStartStep}">
@@ -206,12 +206,12 @@
                                 <ItemsControl ItemsSource="{Binding ListingEditor.ShareNotes}" IsVisible="{Binding !!ListingEditor.ShareNotes.Count}">
                                     <ItemsControl.ItemsPanel>
                                         <ItemsPanelTemplate>
-                                            <StackPanel Spacing="4" />
+                                            <StackPanel Spacing="8" />
                                         </ItemsPanelTemplate>
                                     </ItemsControl.ItemsPanel>
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate x:DataType="x:String">
-                                            <TextBlock Classes="body-sm" Text="{Binding}" TextWrapping="Wrap" />
+                                            <TextBlock Classes="body-sm" Text="{Binding}" TextWrapping="Wrap" Margin="12,0,0,0" />
                                         </DataTemplate>
                                     </ItemsControl.ItemTemplate>
                                 </ItemsControl>
@@ -239,7 +239,7 @@
                             <StackPanel Spacing="6">
                                 <TextBlock Classes="heading-md" Text="{Binding Localization.ListingAbout}" Margin="0,0,0,6" />
                                 <TextBlock Classes="heading-sm" Text="{Binding Localization.ListingId}" />
-                                <TextBlock Classes="body-sm secondary" Text="{Binding Localization.ListingIdHint}" TextWrapping="Wrap" IsVisible="{Binding !ListingEditor.IsPack}" />
+                                <TextBlock Classes="body-sm secondary" Text="{Binding ListingEditor.IdHint}" TextWrapping="Wrap" IsVisible="{Binding !ListingEditor.IsPack}" />
                                 <TextBlock Classes="body-sm secondary" Text="{Binding Localization.ListingPackIdHint}" TextWrapping="Wrap" IsVisible="{Binding ListingEditor.IsPack}" />
                                 <TextBox Classes="field" Text="{Binding ListingEditor.Id}" IsReadOnly="{Binding ListingEditor.HasFixedId}" AutomationProperties.Name="{Binding Localization.ListingId}" />
                                 <TextBlock Classes="heading-sm" Text="{Binding Localization.ListingName}" Margin="0,10,0,0" />
@@ -505,7 +505,7 @@
                                 </StackPanel>
                                 <TextBlock Classes="heading-sm" Text="{Binding Localization.ListingGameMax}" Margin="0,10,0,0" />
                                 <TextBox Classes="field" Text="{Binding ListingEditor.GameMax}" AutomationProperties.Name="{Binding Localization.ListingGameMax}" />
-                                <TextBlock Classes="body-sm secondary" Text="{Binding Localization.ListingGameMaxHint}" TextWrapping="Wrap" />
+                                <TextBlock Classes="body-sm secondary" Text="{Binding ListingEditor.GameMaxHint}" TextWrapping="Wrap" />
                                 <StackPanel Spacing="6" Margin="0,16,0,0" IsVisible="{Binding ListingEditor.CanUseLoader}">
                                     <Grid ColumnDefinitions="*,16,Auto">
                                         <TextBlock Classes="heading-sm" Text="{Binding Localization.ListingUsesLoader}" TextWrapping="Wrap" VerticalAlignment="Center" />
@@ -527,7 +527,7 @@
                         <Border Classes="card" Padding="24" Tag="dependencies" IsVisible="{Binding !ListingEditor.IsPack}">
                             <StackPanel Spacing="8">
                                 <TextBlock Classes="heading-md" Text="{Binding Localization.ListingDependencies}" />
-                                <TextBlock Classes="body-sm secondary" Text="{Binding Localization.ListingDependenciesHint}" TextWrapping="Wrap" />
+                                <TextBlock Classes="body-sm secondary" Text="{Binding ListingEditor.DependenciesHint}" TextWrapping="Wrap" />
                                 <Border Background="{StaticResource Brush.Window}" CornerRadius="12" Padding="12" IsVisible="{Binding ListingEditor.HasDeclaredHelp}">
                                     <StackPanel Spacing="6">
                                         <TextBlock Classes="body-sm secondary" Text="{Binding ListingEditor.DeclaredText}" TextWrapping="Wrap" IsVisible="{Binding ListingEditor.DeclaredText, Converter={x:Static ObjectConverters.IsNotNull}}" />
@@ -662,7 +662,7 @@
                                         </DataTemplate>
                                     </ItemsControl.ItemTemplate>
                                 </ItemsControl>
-                                <TextBlock Classes="heading-sm" Text="{Binding Localization.ListingMoreTags}" Margin="0,8,0,0" />
+                                <TextBlock Classes="heading-sm" Text="{Binding Localization.ListingMoreTags}" Margin="0,8,0,0" IsVisible="{Binding !ListingEditor.IsVehicleOrSave}" />
                                 <TextBlock Classes="body-sm secondary" Text="{Binding Localization.ListingMoreTagsHint}" TextWrapping="Wrap" />
                                 <TextBox Classes="field" Text="{Binding ListingEditor.FreeTags}" AutomationProperties.Name="{Binding Localization.ListingMoreTags}" />
                                 <TextBlock Classes="body-sm secondary" Text="{Binding ListingEditor.FreeTagsStoredText}" TextWrapping="Wrap" IsVisible="{Binding ListingEditor.FreeTagsStoredText, Converter={x:Static ObjectConverters.IsNotNull}}" />
@@ -822,7 +822,11 @@
                     <Border Background="{StaticResource Brush.Window}" CornerRadius="12" Padding="12">
                         <Grid ColumnDefinitions="56,12,*">
                             <Border Classes="thumbnail" Width="56" Height="56" VerticalAlignment="Top">
-                                <Path Classes="icon" Data="{StaticResource Icon.PuzzlePiece}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                <Panel>
+                                    <Path Classes="icon" Data="{StaticResource Icon.PuzzlePiece}" HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="{Binding !ListingEditor.IsVehicleOrSave}" />
+                                    <Path Classes="icon" Data="{StaticResource Icon.Cylinder}" HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="{Binding ListingEditor.IsVehicle}" />
+                                    <Path Classes="icon" Data="{StaticResource Icon.Planet}" HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="{Binding ListingEditor.IsSave}" />
+                                </Panel>
                             </Border>
                             <StackPanel Grid.Column="2" Spacing="4">
                                 <TextBlock Classes="heading-sm" Text="{Binding ListingEditor.PreviewName}" TextTrimming="CharacterEllipsis" />
