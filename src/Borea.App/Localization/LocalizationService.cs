@@ -1630,6 +1630,12 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string DiscoverLicense => Resources.DiscoverLicense;
 
+    public string FormatDiscoverAuthorFilter(string author)
+        => string.Format(CultureInfo.CurrentCulture, Resources.DiscoverAuthorFilterFormat, author);
+
+    public string FormatDiscoverAuthorLink(string author)
+        => string.Format(CultureInfo.CurrentCulture, Resources.DiscoverAuthorLinkFormat, author);
+
     public string DiscoverClearAll => Resources.DiscoverClearAll;
 
     public string DiscoverSortBy => Resources.DiscoverSortBy;
@@ -2766,9 +2772,13 @@ public sealed class LocalizationService : INotifyPropertyChanged
         => string.Format(CultureInfo.CurrentCulture, Resources.DiscoverAddingToFormat, instance);
 
     /// <summary>The text before and after the instance name of <see cref="FormatDiscoverAddingTo"/>, so a page can style the name.</summary>
-    public (string Before, string After) SplitDiscoverAddingTo()
+    public (string Before, string After) SplitDiscoverAddingTo() => SplitAroundValue(Resources.DiscoverAddingToFormat);
+
+    /// <summary>The text before and after the names of <see cref="FormatContentByAuthor"/>, so a row can show each name as a link.</summary>
+    public (string Before, string After) SplitContentByAuthor() => SplitAroundValue(Resources.ContentByAuthorFormat);
+
+    private static (string Before, string After) SplitAroundValue(string format)
     {
-        var format = Resources.DiscoverAddingToFormat;
         var parts = format.Split("{0}");
         return parts.Length == 2 ? (parts[0], parts[1]) : (format, "");
     }

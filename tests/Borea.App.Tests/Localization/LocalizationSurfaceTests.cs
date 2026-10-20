@@ -33,6 +33,17 @@ public sealed class LocalizationSurfaceTests : IDisposable
         Assert.Equal(service.FormatDiscoverAddingTo("Alpha"), before + "Alpha" + after);
     }
 
+    [Theory]
+    [MemberData(nameof(Cultures))]
+    public void SplitContentByAuthor_PutsTheNamesWhereTheFormatHasThem(string culture)
+    {
+        var service = new LocalizationService(CultureInfo.GetCultureInfo(culture));
+
+        var (before, after) = service.SplitContentByAuthor();
+
+        Assert.Equal(service.FormatContentByAuthor("Alpha"), before + "Alpha" + after);
+    }
+
     [Fact]
     public void FormatMethods_FillTheirPlaceholders()
     {

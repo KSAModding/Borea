@@ -2265,6 +2265,12 @@
   <data name="DiscoverLicense" xml:space="preserve">
     <value>Lizenz</value>
   </data>
+  <data name="DiscoverAuthorFilterFormat" xml:space="preserve">
+    <value>Von {0}</value>
+  </data>
+  <data name="DiscoverAuthorLinkFormat" xml:space="preserve">
+    <value>Alle Inhalte von {0} anzeigen</value>
+  </data>
   <data name="DiscoverClearAll" xml:space="preserve">
     <value>Alle zurücksetzen</value>
   </data>

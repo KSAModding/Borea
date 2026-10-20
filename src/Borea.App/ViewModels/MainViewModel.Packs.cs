@@ -98,6 +98,8 @@ public partial class MainViewModel
             filtered = filtered.Where(pack => pack.IsInOtherInstance);
         if (SelectedOs is not null)
             filtered = filtered.Where(pack => pack.SupportsOs(SelectedOs));
+        if (SelectedAuthor is { } author)
+            filtered = filtered.Where(pack => pack.Metadata.Authors.Contains(author, StringComparer.OrdinalIgnoreCase));
         if (SelectedLicenses.Count > 0)
             filtered = filtered.Where(pack => LicenseFilter.Matches(pack.License, SelectedLicenses));
         if (HasGameVersionRange)
@@ -908,9 +910,7 @@ public sealed partial class PackItem : ObservableObject, IPlanRow
 
     public string TypeText => _owner.Localization.ContentTypeModPack;
 
-    public string AuthorNames => string.Join(", ", Metadata.Authors);
-
-    public string AuthorsText => _owner.Localization.FormatContentByAuthor(AuthorNames);
+    public IReadOnlyList<AuthorLink> AuthorLinks => AuthorLink.Of(Metadata.Authors, ContentType.ModPack, _owner.Localization);
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CompatibilityText))]
@@ -1093,7 +1093,7 @@ public sealed partial class PackItem : ObservableObject, IPlanRow
     {
         AllTags = DiscoverItem.DisplayTags(_owner, ContentType.ModPack, Metadata.Tags);
         OnPropertyChanged(nameof(AllTags));
-        OnPropertyChanged(nameof(AuthorsText));
+        OnPropertyChanged(nameof(AuthorLinks));
         OnPropertyChanged(nameof(TypeText));
         OnPropertyChanged(nameof(CompatibilityText));
         OnPropertyChanged(nameof(UnfitPinTexts));

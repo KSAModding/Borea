@@ -72,6 +72,12 @@
                                     <TextBlock Classes="label-sm" Text="{Binding Localization.DiscoverClearAll}" VerticalAlignment="Center" />
                                 </StackPanel>
                             </Button>
+                            <Button Classes="chip-button" Command="{Binding ClearSelectedAuthorCommand}" IsVisible="{Binding SelectedAuthor, Converter={x:Static ObjectConverters.IsNotNull}}" ToolTip.Tip="{Binding SelectedAuthorText}">
+                                <StackPanel Orientation="Horizontal" Spacing="4">
+                                    <Path Classes="icon size-16" Data="{StaticResource Icon.Close}" />
+                                    <TextBlock Classes="label-sm" Text="{Binding SelectedAuthorText}" MaxWidth="140" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                </StackPanel>
+                            </Button>
                             <Button Classes="chip-button" Command="{Binding ClearHideInstalledCommand}" IsVisible="{Binding HideInstalled}">
                                 <StackPanel Orientation="Horizontal" Spacing="4">
                                     <Path Classes="icon size-16" Data="{StaticResource Icon.Close}" />

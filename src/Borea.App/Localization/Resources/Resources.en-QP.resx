@@ -1620,6 +1620,12 @@
   <data name="DiscoverLicense" xml:space="preserve">
     <value>Deed</value>
   </data>
+  <data name="DiscoverAuthorFilterFormat" xml:space="preserve">
+    <value>Forged by {0}</value>
+  </data>
+  <data name="DiscoverAuthorLinkFormat" xml:space="preserve">
+    <value>Show all loot forged by {0}</value>
+  </data>
   <data name="DiscoverClearAll" xml:space="preserve">
     <value>Clear all</value>
   </data>

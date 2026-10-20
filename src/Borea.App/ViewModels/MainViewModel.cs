@@ -953,6 +953,9 @@ public partial class MainViewModel : ViewModelBase
         OnPropertyChanged(nameof(DeleteModalText));
         OnPropertyChanged(nameof(ContentVersionsEmptyText));
         OnPropertyChanged(nameof(DiscoverSortText));
+        OnPropertyChanged(nameof(SelectedAuthorText));
+        OnPropertyChanged(nameof(ByAuthorBefore));
+        OnPropertyChanged(nameof(ByAuthorAfter));
 
         if (Localization.SelectedCultureName != _shownCultureName)
         {

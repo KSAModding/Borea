@@ -303,6 +303,20 @@
         </Panel>
     </DataTemplate>
 
+    <!-- an author name, which shows Discover with only the content of that author -->
+    <DataTemplate x:Key="AuthorLink" x:DataType="vm:AuthorLink">
+        <Button Classes="plain" VerticalAlignment="Center" Command="{Binding $parent[Window].((vm:MainViewModel)DataContext).FilterByAuthorCommand}" CommandParameter="{Binding}" ToolTip.Tip="{Binding Hint}" AutomationProperties.Name="{Binding Name}" AutomationProperties.HelpText="{Binding Hint}">
+            <!-- the comma is in the same text as the name, so it trims with the name and never stays alone -->
+            <TextBlock Classes="body-sm secondary" TextTrimming="CharacterEllipsis">
+                <Run Text="{Binding Name}" /><Run Text="{Binding Separator}" Foreground="{StaticResource Brush.TextSecondary}" />
+            </TextBlock>
+        </Button>
+    </DataTemplate>
+
+    <ItemsPanelTemplate x:Key="AuthorLinksPanel">
+        <WrapPanel ItemSpacing="4" />
+    </ItemsPanelTemplate>
+
     <!-- c/content-row on Discover -->
     <DataTemplate x:Key="DiscoverRow" x:DataType="vm:DiscoverItem">
         <Button Classes="plain card-button" views:RowButton.IgnoresDisabled="True" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Command="{Binding OpenCommand}" AutomationProperties.Name="{Binding Name}">
@@ -319,7 +333,12 @@
                                 <DockPanel>
                                     <TextBlock Classes="heading-md" Text="{Binding Name}" TextTrimming="CharacterEllipsis" DockPanel.Dock="Left" VerticalAlignment="Center" />
                                     <Path Classes="icon size-16 favorite" Data="{StaticResource Icon.Star}" DockPanel.Dock="Left" Margin="8,0,0,0" VerticalAlignment="Center" IsVisible="{Binding IsFavorite}" ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.DiscoverFavorite}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.DiscoverFavorite}" />
-                                    <TextBlock Classes="body-sm secondary" Text="{Binding AuthorsText}" TextTrimming="CharacterEllipsis" Margin="8,0,0,0" VerticalAlignment="Center" />
+                                    <DockPanel Margin="8,0,0,0" VerticalAlignment="Center">
+                                        <TextBlock Classes="body-sm secondary" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).ByAuthorBefore}" TextTrimming="CharacterEllipsis" DockPanel.Dock="Left" Margin="0,0,3,0" VerticalAlignment="Center" />
+                                        <!-- one line of 16 px, so an author that does not fit on it drops out whole -->
+                                        <ItemsControl ItemsSource="{Binding AuthorLinks}" ItemTemplate="{StaticResource AuthorLink}" ItemsPanel="{StaticResource AuthorLinksPanel}" DockPanel.Dock="Left" MaxHeight="16" ClipToBounds="True" VerticalAlignment="Center" />
+                                        <TextBlock Classes="body-sm secondary" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).ByAuthorAfter}" TextTrimming="CharacterEllipsis" Margin="3,0,0,0" VerticalAlignment="Center" />
+                                    </DockPanel>
                                 </DockPanel>
                                 <TextBlock Classes="body-md secondary" Text="{Binding Abstract}" TextWrapping="Wrap" TextTrimming="CharacterEllipsis" MaxLines="2" LineHeight="18" />
                             </StackPanel>
@@ -453,7 +472,12 @@
                                 <DockPanel>
                                     <TextBlock Classes="heading-md" Text="{Binding Name}" TextTrimming="CharacterEllipsis" DockPanel.Dock="Left" VerticalAlignment="Center" />
                                     <Path Classes="icon size-16 favorite" Data="{StaticResource Icon.Star}" DockPanel.Dock="Left" Margin="8,0,0,0" VerticalAlignment="Center" IsVisible="{Binding IsFavorite}" ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.DiscoverFavorite}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.DiscoverFavorite}" />
-                                    <TextBlock Classes="body-sm secondary" Text="{Binding AuthorsText}" TextTrimming="CharacterEllipsis" Margin="8,0,0,0" VerticalAlignment="Center" />
+                                    <DockPanel Margin="8,0,0,0" VerticalAlignment="Center">
+                                        <TextBlock Classes="body-sm secondary" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).ByAuthorBefore}" TextTrimming="CharacterEllipsis" DockPanel.Dock="Left" Margin="0,0,3,0" VerticalAlignment="Center" />
+                                        <!-- one line of 16 px, so an author that does not fit on it drops out whole -->
+                                        <ItemsControl ItemsSource="{Binding AuthorLinks}" ItemTemplate="{StaticResource AuthorLink}" ItemsPanel="{StaticResource AuthorLinksPanel}" DockPanel.Dock="Left" MaxHeight="16" ClipToBounds="True" VerticalAlignment="Center" />
+                                        <TextBlock Classes="body-sm secondary" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).ByAuthorAfter}" TextTrimming="CharacterEllipsis" Margin="3,0,0,0" VerticalAlignment="Center" />
+                                    </DockPanel>
                                 </DockPanel>
                                 <TextBlock Classes="body-md secondary" Text="{Binding Abstract}" TextWrapping="Wrap" TextTrimming="CharacterEllipsis" MaxLines="2" LineHeight="18" />
                                 <Grid ColumnDefinitions="Auto,4,*" IsVisible="{Binding HasNewerReleases}">

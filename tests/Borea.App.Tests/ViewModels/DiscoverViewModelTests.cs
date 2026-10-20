@@ -750,12 +750,12 @@ public sealed class DiscoverViewModelTests
         var viewModel = harness.ViewModel;
         await viewModel.EnsureDiscoverLoadedAsync();
         var item = viewModel.DiscoverItems.Single(row => row.ModId == "KSArmory");
-        var english = item.AuthorsText;
+        Assert.Equal("by", viewModel.ByAuthorBefore);
 
         harness.Localization.TrySetCulture("de");
 
-        Assert.NotEqual(english, item.AuthorsText);
-        Assert.Contains("Laurens", item.AuthorsText);
+        Assert.Equal("von", viewModel.ByAuthorBefore);
+        Assert.Equal(("Laurens", "Alle Inhalte von Laurens anzeigen"), item.AuthorLinks.Select(link => (link.Name, link.Hint)).Single());
     }
 
     [Fact]
@@ -850,6 +850,35 @@ public sealed class DiscoverViewModelTests
         Assert.False(viewModel.InstalledInOtherInstances);
         Assert.False(viewModel.HasDiscoverFilters);
         Assert.Equal(["AdvancedFlightComputer", "KSArmory", "MeasureTools"], viewModel.DiscoverItems.Select(item => item.ModId));
+    }
+
+    [Fact]
+    public async Task AuthorFilter_KeepsTheListingsAndPacksOfThatAuthorUntilClearAll()
+    {
+        var packs = PackViewModelTests.WithPacks(
+            PackViewModelTests.Pack("starter-pack", "Starter Pack", PackViewModelTests.Version("1.0.0", PackViewModelTests.Pin("MeasureTools", "1.1.9"))),
+            PackViewModelTests.Pack("armory-pack", "Armory Pack", PackViewModelTests.Version("1.0.0", PackViewModelTests.Pin("KSArmory", "0.8.44"))).Replace("\"Maxi\"", "\"Laurens\"", StringComparison.Ordinal));
+        using var harness = await ViewModelHarness.CreateAsync(editSnapshot: packs);
+        var viewModel = harness.ViewModel;
+        await viewModel.EnsureDiscoverLoadedAsync();
+        var laurens = Assert.Single(viewModel.DiscoverItems.Single(item => item.ModId == "KSArmory").AuthorLinks);
+
+        viewModel.FilterByAuthorCommand.Execute(laurens with { Name = "laurens" });
+        Assert.True(viewModel.CurrentWindowDiscover);
+        Assert.True(viewModel.HasDiscoverFilters);
+        Assert.Equal(["KSArmory"], viewModel.DiscoverItems.Select(item => item.ModId));
+        viewModel.ShowDiscoverModpacksCommand.Execute(null);
+        var packLink = viewModel.DiscoverPacks.Single().AuthorLinks.Single();
+        viewModel.ShowDiscoverModsCommand.Execute(null);
+
+        viewModel.FilterByAuthorCommand.Execute(packLink);
+        Assert.True(viewModel.IsModpacksTab);
+        Assert.Equal(["armory-pack"], viewModel.DiscoverPacks.Select(pack => pack.PackId));
+
+        viewModel.ClearDiscoverFiltersCommand.Execute(null);
+        Assert.Null(viewModel.SelectedAuthor);
+        Assert.False(viewModel.HasDiscoverFilters);
+        Assert.Equal(["armory-pack", "starter-pack"], viewModel.DiscoverPacks.Select(pack => pack.PackId));
     }
 
     [Fact]

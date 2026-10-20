@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
+using Borea.App.Localization;
 using Borea.Composition;
 using Borea.Core.Game;
 using Borea.Core.History;
@@ -104,6 +105,19 @@ public partial class MainViewModel
     [NotifyPropertyChangedFor(nameof(HasDiscoverFilters))]
     private string? _selectedOs;
 
+    /// <summary>The author whose content Discover shows, chosen from an author name on a row or a side panel.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasDiscoverFilters))]
+    [NotifyPropertyChangedFor(nameof(SelectedAuthorText))]
+    private string? _selectedAuthor;
+
+    public string? SelectedAuthorText => SelectedAuthor is { } author ? Localization.FormatDiscoverAuthorFilter(author) : null;
+
+    /// <summary>The text before the author links of a row, "by" in English.</summary>
+    public string ByAuthorBefore => Localization.SplitContentByAuthor().Before.Trim();
+
+    public string ByAuthorAfter => Localization.SplitContentByAuthor().After.Trim();
+
     /// <summary>The public builds of the snapshot, newest first, for the Game version filter.</summary>
     public ObservableCollection<GameVersionOption> GameVersionOptions { get; } = [];
 
@@ -128,7 +142,7 @@ public partial class MainViewModel
         ({ } min, { } max) => $"{min.Text} - {max.Text}",
     };
 
-    public bool HasDiscoverFilters => HideInstalled || HideIncompatible || FavoritesOnly || InstalledInOtherInstances || SelectedOs is not null || SelectedLicenses.Count > 0 || SelectedCategories.Count > 0 || HasGameVersionRange;
+    public bool HasDiscoverFilters => HideInstalled || HideIncompatible || FavoritesOnly || InstalledInOtherInstances || SelectedOs is not null || SelectedAuthor is not null || SelectedLicenses.Count > 0 || SelectedCategories.Count > 0 || HasGameVersionRange;
 
     /// <summary>The saved Sort by choice of the Mods and Modpacks tabs.</summary>
     public DiscoverSortOrder DiscoverSort => _discoverSort ?? _appPreferences.DiscoverSortOrder;
@@ -270,6 +284,8 @@ public partial class MainViewModel
             filtered = filtered.Where(item => item.IsInOtherInstance);
         if (SelectedOs is not null)
             filtered = filtered.Where(item => item.SupportsOs(SelectedOs));
+        if (SelectedAuthor is { } author)
+            filtered = filtered.Where(item => item.Listing.Authors.Contains(author, StringComparer.OrdinalIgnoreCase));
         if (SelectedLicenses.Count > 0)
             filtered = filtered.Where(item => LicenseFilter.Matches(item.License, SelectedLicenses));
         if (HasGameVersionRange)
@@ -495,6 +511,8 @@ public partial class MainViewModel
         ApplyDiscoverFilters();
     }
 
+    partial void OnSelectedAuthorChanged(string? value) => ApplyDiscoverFilters();
+
     private static void MarkChoice(IEnumerable<DiscoverChoice> choices, string? selected)
     {
         foreach (var choice in choices)
@@ -534,6 +552,21 @@ public partial class MainViewModel
     // choosing the chosen one again, or null from its chip, clears the filter
     [RelayCommand]
     private void SelectOs(string? os) => SelectedOs = string.Equals(os, SelectedOs, StringComparison.OrdinalIgnoreCase) ? null : os;
+
+    /// <summary>Shows Discover with only the content of the author, on the tab of the row or page that names the author.</summary>
+    [RelayCommand]
+    private void FilterByAuthor(AuthorLink? link)
+    {
+        if (link is null)
+            return;
+
+        SelectedAuthor = link.Name;
+        DiscoverType = link.Type;
+        SetMainWindowDiscover();
+    }
+
+    [RelayCommand]
+    private void ClearSelectedAuthor() => SelectedAuthor = null;
 
     [RelayCommand]
     private void ToggleLicense(string? license)
@@ -613,6 +646,7 @@ public partial class MainViewModel
         FavoritesOnly = false;
         InstalledInOtherInstances = false;
         SelectedOs = null;
+        SelectedAuthor = null;
         SelectedLicenses.Clear();
         MarkLicenses();
         DiscoverGameMin = null;
@@ -739,9 +773,7 @@ public sealed partial class DiscoverItem : ObservableObject, IInstallRow
         _ => _owner.Localization.ContentTypeMod,
     };
 
-    public string AuthorNames => string.Join(", ", _listing.Authors);
-
-    public string AuthorsText => _owner.Localization.FormatContentByAuthor(AuthorNames);
+    public IReadOnlyList<AuthorLink> AuthorLinks => AuthorLink.Of(_listing.Authors, Type, _owner.Localization);
 
     public ListingImage? Icon { get; }
 
@@ -987,7 +1019,7 @@ public sealed partial class DiscoverItem : ObservableObject, IInstallRow
     {
         AllTags = DisplayTags(_owner, _listing.Type, _listing.Tags);
         OnPropertyChanged(nameof(AllTags));
-        OnPropertyChanged(nameof(AuthorsText));
+        OnPropertyChanged(nameof(AuthorLinks));
         OnPropertyChanged(nameof(TypeText));
         OnPropertyChanged(nameof(CompatibilityText));
         OnPropertyChanged(nameof(DownloadsText));
@@ -1125,3 +1157,10 @@ public sealed partial class DiscoverChoice(string value) : ObservableObject
 }
 
 public sealed record GameVersionOption(string Text, int Revision);
+
+/// <summary>One author name on a row or a side panel, with the comma that follows it in a list of authors and the hint that tells what a click does.</summary>
+public sealed record AuthorLink(string Name, string Separator, ContentType Type, string Hint)
+{
+    internal static IReadOnlyList<AuthorLink> Of(IReadOnlyList<string> authors, ContentType type, LocalizationService localization) =>
+        [.. authors.Select((name, index) => new AuthorLink(name, index < authors.Count - 1 ? "," : string.Empty, type, localization.FormatDiscoverAuthorLink(name)))];
+}
