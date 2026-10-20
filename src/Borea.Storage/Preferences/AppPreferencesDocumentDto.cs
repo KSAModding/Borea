@@ -62,6 +62,9 @@ internal sealed class AppPreferencesDocumentDto
     /// <summary>Null in an older file, which reads as on.</summary>
     public bool? StaySignedInToGitHub { get; set; }
 
+    /// <summary>The loader release whose update banner was closed, as "id version".</summary>
+    public string? DismissedLoaderUpdate { get; set; }
+
     public List<CustomThemePreferenceDto?>? CustomThemes { get; set; }
 }
 
