@@ -782,6 +782,8 @@ public sealed partial class ListingEditor : ObservableObject
         OnPropertyChanged(nameof(NextVersionText));
         // the proposal keeps its value, so its setter does not raise the text again
         OnPropertyChanged(nameof(GameMinProposalText));
+        OnPropertyChanged(nameof(MemberSearchText));
+        OnPropertyChanged(nameof(MemberNoMatchText));
         RefreshPullRequestText();
         FindListed();
         FillMembers(Draft.Pins);

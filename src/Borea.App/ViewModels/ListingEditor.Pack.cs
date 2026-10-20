@@ -59,7 +59,7 @@ public sealed partial class ListingEditor
 
     /// <summary>The type the picker offers, which decides the section a new pin goes to (RFC 0085).</summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsMemberTypeMods), nameof(IsMemberTypeVehicles), nameof(IsMemberTypeSaves))]
+    [NotifyPropertyChangedFor(nameof(IsMemberTypeMods), nameof(IsMemberTypeVehicles), nameof(IsMemberTypeSaves), nameof(MemberSearchText), nameof(MemberNoMatchText))]
     private ContentType _memberType = ContentType.Mod;
 
     public bool IsMemberTypeMods => MemberType == ContentType.Mod;
@@ -67,6 +67,20 @@ public sealed partial class ListingEditor
     public bool IsMemberTypeVehicles => MemberType == ContentType.Vehicle;
 
     public bool IsMemberTypeSaves => MemberType == ContentType.Save;
+
+    public string MemberSearchText => MemberType switch
+    {
+        ContentType.Vehicle => Localization.ListingSearchVehicles,
+        ContentType.Save => Localization.ListingSearchSaves,
+        _ => Localization.ListingSearchMembers,
+    };
+
+    public string MemberNoMatchText => MemberType switch
+    {
+        ContentType.Vehicle => Localization.ListingNoListedVehicleMatch,
+        ContentType.Save => Localization.ListingNoListedSaveMatch,
+        _ => Localization.ListingNoListedMatch,
+    };
 
     [RelayCommand]
     private void ShowMemberType(ContentType type) => MemberType = type;
