@@ -2313,6 +2313,18 @@
   <data name="DiscoverCountPacksFormat" xml:space="preserve">
     <value>{0} modpacks</value>
   </data>
+  <data name="DiscoverCountVehicleOne" xml:space="preserve">
+    <value>1 vehicle</value>
+  </data>
+  <data name="DiscoverCountVehiclesFormat" xml:space="preserve">
+    <value>{0} vehicles</value>
+  </data>
+  <data name="DiscoverCountSaveOne" xml:space="preserve">
+    <value>1 save</value>
+  </data>
+  <data name="DiscoverCountSavesFormat" xml:space="preserve">
+    <value>{0} saves</value>
+  </data>
   <data name="DiscoverCountShownFormat" xml:space="preserve">
     <value>{0} of {1}</value>
   </data>
@@ -3791,6 +3803,12 @@
   </data>
   <data name="ContentTypeModPack" xml:space="preserve">
     <value>Modpack</value>
+  </data>
+  <data name="ContentTypeVehicle" xml:space="preserve">
+    <value>Vehicle</value>
+  </data>
+  <data name="ContentTypeSave" xml:space="preserve">
+    <value>Save</value>
   </data>
   <data name="PackMods" xml:space="preserve">
     <value>Mods</value>

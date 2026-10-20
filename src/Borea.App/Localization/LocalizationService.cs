@@ -2423,6 +2423,10 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string ContentTypeModPack => Resources.ContentTypeModPack;
 
+    public string ContentTypeVehicle => Resources.ContentTypeVehicle;
+
+    public string ContentTypeSave => Resources.ContentTypeSave;
+
     public string PackMods => Resources.PackMods;
 
     public string PackNewInstance => Resources.PackNewInstance;
@@ -2819,6 +2823,12 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string FormatDiscoverPackCount(int count)
         => FormatCount(count, Resources.DiscoverCountPackOne, Resources.DiscoverCountPacksFormat);
+
+    public string FormatDiscoverVehicleCount(int count)
+        => FormatCount(count, Resources.DiscoverCountVehicleOne, Resources.DiscoverCountVehiclesFormat);
+
+    public string FormatDiscoverSaveCount(int count)
+        => FormatCount(count, Resources.DiscoverCountSaveOne, Resources.DiscoverCountSavesFormat);
 
     /// <summary>"5 of 12 mods", where <paramref name="total"/> is the count as the unfiltered list names it.</summary>
     public string FormatDiscoverCountShown(int shown, string total)

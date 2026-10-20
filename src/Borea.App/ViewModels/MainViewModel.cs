@@ -477,7 +477,7 @@ public partial class MainViewModel : ViewModelBase
         var all = await _instances.GetAllAsync();
         var rows = new List<InstanceItem>();
         foreach (var instance in all)
-            rows.Add(new InstanceItem(this, instance, instance.InstanceId == activeId, await LastPlayedAsync(instance)));
+            rows.Add(new InstanceItem(this, instance, instance.InstanceId == activeId, await LastPlayedAsync(instance), await InstalledContentOfAsync(instance.InstanceId)));
 
         Instances.Clear();
         foreach (var row in Sorted(rows))
@@ -1035,6 +1035,12 @@ public sealed partial class InstanceItem : ObservableObject
 
     internal IReadOnlyList<InstalledMod> Mods { get; }
 
+    /// <summary>The vehicles and saves Borea installed in the instance (RFC 0085).</summary>
+    internal IReadOnlyList<InstalledContentRecord> Content { get; }
+
+    /// <summary>The listing ids of <see cref="Content"/>.</summary>
+    internal IReadOnlyList<string> ContentIds => Content.Select(record => record.ListingId).ToList();
+
     internal IReadOnlyList<string> LaunchArguments { get; }
 
     public bool IsActive { get; }
@@ -1057,8 +1063,9 @@ public sealed partial class InstanceItem : ObservableObject
 
     private bool _isOpening;
 
-    public InstanceItem(MainViewModel owner, Instance instance, bool isActive, DateTimeOffset? lastPlayedAt = null)
+    public InstanceItem(MainViewModel owner, Instance instance, bool isActive, DateTimeOffset? lastPlayedAt = null, IReadOnlyList<InstalledContentRecord>? content = null)
     {
+        Content = content ?? [];
         _owner = owner;
         _source = instance.Source;
         InstanceId = instance.InstanceId;
@@ -1081,8 +1088,11 @@ public sealed partial class InstanceItem : ObservableObject
         OnPropertyChanged(nameof(ModCountToolTip));
     }
 
+    /// <summary>The installed version of a mod, or of a recorded vehicle or save, because the ids are one namespace.</summary>
     internal ModVersion? InstalledVersionOf(string modId)
-        => _modVersions.TryGetValue(modId, out var version) ? version : null;
+        => _modVersions.TryGetValue(modId, out var version)
+            ? version
+            : Content.FirstOrDefault(record => Borea.Core.Mods.ModIds.Equals(record.ListingId, modId))?.Version;
 
     [RelayCommand]
     private Task ActivateAsync() => _owner.ActivateInstanceAsync(InstanceId);

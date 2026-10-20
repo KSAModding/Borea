@@ -1668,6 +1668,18 @@
   <data name="DiscoverCountPacksFormat" xml:space="preserve">
     <value>{0} packs o' barrels o' fun</value>
   </data>
+  <data name="DiscoverCountVehicleOne" xml:space="preserve">
+    <value>1 ship</value>
+  </data>
+  <data name="DiscoverCountVehiclesFormat" xml:space="preserve">
+    <value>{0} ships</value>
+  </data>
+  <data name="DiscoverCountSaveOne" xml:space="preserve">
+    <value>1 tale</value>
+  </data>
+  <data name="DiscoverCountSavesFormat" xml:space="preserve">
+    <value>{0} tales</value>
+  </data>
   <data name="DiscoverCountShownFormat" xml:space="preserve">
     <value>{0} o' {1}</value>
   </data>
@@ -2078,6 +2090,12 @@
   </data>
   <data name="ContentTypeModPack" xml:space="preserve">
     <value>Collection o' barrels o' fun</value>
+  </data>
+  <data name="ContentTypeVehicle" xml:space="preserve">
+    <value>Ship</value>
+  </data>
+  <data name="ContentTypeSave" xml:space="preserve">
+    <value>Tale</value>
   </data>
   <data name="PackMods" xml:space="preserve">
     <value>Barrels o' fun</value>

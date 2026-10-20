@@ -34,8 +34,8 @@
                             <Button Classes="tab" Classes.active="{Binding IsModsTab}" Content="{Binding Localization.DiscoverTabMods}" Command="{Binding ShowDiscoverModsCommand}" />
                             <Button Classes="tab" Classes.active="{Binding IsLoadersTab}" Content="{Binding Localization.DiscoverTabLoaders}" Command="{Binding ShowDiscoverLoadersCommand}" />
                             <Button Classes="tab" Classes.active="{Binding IsModpacksTab}" Content="{Binding Localization.DiscoverTabModpacks}" Command="{Binding ShowDiscoverModpacksCommand}" />
-                            <Button Classes="tab" Content="{Binding Localization.DiscoverTabVehicles}" IsEnabled="False" />
-                            <Button Classes="tab" Content="{Binding Localization.DiscoverTabSaves}" IsEnabled="False" />
+                            <Button Classes="tab" Classes.active="{Binding IsVehiclesTab}" Content="{Binding Localization.DiscoverTabVehicles}" Command="{Binding ShowDiscoverVehiclesCommand}" IsEnabled="{Binding HasDiscoverVehicles}" />
+                            <Button Classes="tab" Classes.active="{Binding IsSavesTab}" Content="{Binding Localization.DiscoverTabSaves}" Command="{Binding ShowDiscoverSavesCommand}" IsEnabled="{Binding HasDiscoverSaves}" />
                         </WrapPanel>
                     </Border>
 
@@ -102,7 +102,13 @@
                                     <TextBlock Classes="label-sm" Text="{Binding Localization.DiscoverInstalledInOtherInstances}" VerticalAlignment="Center" />
                                 </StackPanel>
                             </Button>
-                            <ItemsControl ItemsSource="{Binding SelectedCategories}" IsVisible="{Binding !!SelectedCategories.Count}">
+                            <ItemsControl ItemsSource="{Binding SelectedCategories}">
+                                <ItemsControl.IsVisible>
+                                    <MultiBinding Converter="{x:Static BoolConverters.And}">
+                                        <Binding Path="ShowsCategories" />
+                                        <Binding Path="!!SelectedCategories.Count" />
+                                    </MultiBinding>
+                                </ItemsControl.IsVisible>
                                 <ItemsControl.ItemsPanel>
                                     <ItemsPanelTemplate>
                                         <WrapPanel ItemSpacing="8" LineSpacing="8" />
@@ -246,8 +252,21 @@
                                 <ToggleSwitch Grid.Column="2" Classes="switch" IsChecked="{Binding InstalledInOtherInstances}" AutomationProperties.Name="{Binding Localization.DiscoverInstalledInOtherInstances}" />
                             </Grid>
                         </StackPanel>
-                        <Border Height="1" Background="{StaticResource Brush.BorderStrong}" IsVisible="{Binding !!CategoryOptions.Count}" />
-                        <StackPanel Spacing="10" IsVisible="{Binding !!CategoryOptions.Count}">
+                        <Border Height="1" Background="{StaticResource Brush.BorderStrong}">
+                            <Border.IsVisible>
+                                <MultiBinding Converter="{x:Static BoolConverters.And}">
+                                    <Binding Path="ShowsCategories" />
+                                    <Binding Path="!!CategoryOptions.Count" />
+                                </MultiBinding>
+                            </Border.IsVisible>
+                        </Border>
+                        <StackPanel Spacing="10">
+                            <StackPanel.IsVisible>
+                                <MultiBinding Converter="{x:Static BoolConverters.And}">
+                                    <Binding Path="ShowsCategories" />
+                                    <Binding Path="!!CategoryOptions.Count" />
+                                </MultiBinding>
+                            </StackPanel.IsVisible>
                             <TextBlock Classes="heading-md" Text="{Binding Localization.DiscoverCategory}" />
                             <ItemsControl ItemsSource="{Binding CategoryOptions}">
                                 <ItemsControl.ItemsPanel>

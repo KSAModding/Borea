@@ -76,11 +76,27 @@ public partial class MainViewModel
     [NotifyPropertyChangedFor(nameof(IsModsTab))]
     [NotifyPropertyChangedFor(nameof(IsLoadersTab))]
     [NotifyPropertyChangedFor(nameof(IsModpacksTab))]
+    [NotifyPropertyChangedFor(nameof(IsVehiclesTab))]
+    [NotifyPropertyChangedFor(nameof(IsSavesTab))]
+    [NotifyPropertyChangedFor(nameof(ShowsCategories))]
+    [NotifyPropertyChangedFor(nameof(HasDiscoverFilters))]
     private ContentType _discoverType = ContentType.Mod;
 
     public bool IsModsTab => DiscoverType == ContentType.Mod;
 
     public bool IsLoadersTab => DiscoverType == ContentType.ModLoader;
+
+    public bool IsVehiclesTab => DiscoverType == ContentType.Vehicle;
+
+    public bool IsSavesTab => DiscoverType == ContentType.Save;
+
+    /// <summary>Vehicles and saves have free-form tags only, so their tabs show no categories.</summary>
+    public bool ShowsCategories => !DiscoverType.IsVehicleOrSave();
+
+    /// <summary>Whether the snapshot lists a vehicle, which enables the Vehicles tab.</summary>
+    public bool HasDiscoverVehicles => _listings.Any(item => item.Type == ContentType.Vehicle);
+
+    public bool HasDiscoverSaves => _listings.Any(item => item.Type == ContentType.Save);
 
     [ObservableProperty]
     private string _searchText = string.Empty;
@@ -142,7 +158,7 @@ public partial class MainViewModel
         ({ } min, { } max) => $"{min.Text} - {max.Text}",
     };
 
-    public bool HasDiscoverFilters => HideInstalled || HideIncompatible || FavoritesOnly || InstalledInOtherInstances || SelectedOs is not null || SelectedAuthor is not null || SelectedLicenses.Count > 0 || SelectedCategories.Count > 0 || HasGameVersionRange;
+    public bool HasDiscoverFilters => HideInstalled || HideIncompatible || FavoritesOnly || InstalledInOtherInstances || SelectedOs is not null || SelectedAuthor is not null || SelectedLicenses.Count > 0 || (ShowsCategories && SelectedCategories.Count > 0) || HasGameVersionRange;
 
     /// <summary>The saved Sort by choice of the Mods and Modpacks tabs.</summary>
     public DiscoverSortOrder DiscoverSort => _discoverSort ?? _appPreferences.DiscoverSortOrder;
@@ -186,6 +202,8 @@ public partial class MainViewModel
             {
                 ContentType.ModLoader => Localization.FormatDiscoverLoaderCount(total),
                 ContentType.ModPack => Localization.FormatDiscoverPackCount(total),
+                ContentType.Vehicle => Localization.FormatDiscoverVehicleCount(total),
+                ContentType.Save => Localization.FormatDiscoverSaveCount(total),
                 _ => Localization.FormatDiscoverModCount(total),
             };
         }
@@ -214,7 +232,7 @@ public partial class MainViewModel
 
             // the download counts and the first release dates sit next to a listing in the snapshot, not inside it
             var listingEntries = new Dictionary<string, ContentIndexListing>(ModIds.Comparer);
-            foreach (var entry in snapshot.Listings)
+            foreach (var entry in snapshot.Listings.Concat(snapshot.Vehicles).Concat(snapshot.Saves))
                 listingEntries.TryAdd(entry.Id, entry);
             var packEntries = new Dictionary<string, ContentIndexPack>(ModIds.Comparer);
             foreach (var entry in snapshot.Packs)
@@ -222,7 +240,8 @@ public partial class MainViewModel
 
             await EnsureFavoritesLoadedAsync(services);
             var listings = await services.ContentIndex.GetAvailableModsAsync();
-            _listings = listings
+            var content = await services.UserContent.GetAvailableAsync();
+            _listings = listings.Concat(content)
                 .Select(listing => new DiscoverItem(this, listing, listing.Source == "index" ? listingEntries.GetValueOrDefault(listing.ModId) : null))
                 .OrderBy(item => item.Name, StringComparer.CurrentCultureIgnoreCase)
                 .ToList();
@@ -241,7 +260,7 @@ public partial class MainViewModel
             MarkChoice(OsOptions, SelectedOs);
 
             LicenseOptions.Clear();
-            foreach (var license in LicenseFilter.Options(listings.Select(listing => listing.License).Concat(packs.Select(pack => pack.License))))
+            foreach (var license in LicenseFilter.Options(listings.Concat(content).Select(listing => listing.License).Concat(packs.Select(pack => pack.License))))
                 LicenseOptions.Add(new DiscoverChoice(license));
             MarkLicenses();
 
@@ -265,6 +284,8 @@ public partial class MainViewModel
         UpdateIndexRefreshStatus();
         RefreshInstalledFlags();
         ApplyDiscoverFilters();
+        OnPropertyChanged(nameof(HasDiscoverVehicles));
+        OnPropertyChanged(nameof(HasDiscoverSaves));
     }
 
     private void ApplyDiscoverFilters()
@@ -291,7 +312,7 @@ public partial class MainViewModel
         if (HasGameVersionRange)
             filtered = filtered.Where(item => item.LatestInChannel is { } release
                 && Borea.Core.Game.Compatibility.SupportsAnyBuild(release.GameMinRevision, release.GameMaxRevision, DiscoverGameMin?.Revision, DiscoverGameMax?.Revision));
-        if (SelectedCategories.Count > 0)
+        if (ShowsCategories && SelectedCategories.Count > 0)
         {
             var matching = ContentTagFilter.Filter(
                 filtered.Select(item => item.Listing),
@@ -412,8 +433,8 @@ public partial class MainViewModel
     /// </summary>
     private void RefreshInstalledFlags()
     {
-        var installed = new HashSet<string>(ActiveInstance?.ModIds ?? [], ModIds.Comparer);
-        var installedElsewhere = new HashSet<string>(OtherInstances.SelectMany(instance => instance.ModIds), ModIds.Comparer);
+        var installed = new HashSet<string>(ActiveInstance is { } active ? active.ModIds.Concat(active.ContentIds) : [], ModIds.Comparer);
+        var installedElsewhere = new HashSet<string>(OtherInstances.SelectMany(instance => instance.ModIds.Concat(instance.ContentIds)), ModIds.Comparer);
         var elsewhereChanged = false;
         foreach (var item in _listings)
         {
@@ -469,7 +490,9 @@ public partial class MainViewModel
         _compatibilityGame = installed;
         foreach (var item in _listings)
         {
-            var latest = item.Source == "index" ? await _services.ContentIndex.GetLatestReleaseInChannelAsync(item.ModId, _services.Settings.ReleaseChannel) : null;
+            var latest = item.Source != "index" ? null
+                : item.Type.IsVehicleOrSave() ? await _services.UserContent.GetLatestReleaseAsync(item.ModId, _services.Settings.ReleaseChannel)
+                : await _services.ContentIndex.GetLatestReleaseInChannelAsync(item.ModId, _services.Settings.ReleaseChannel);
             item.Compatibility = latest is null ? GameCompatibility.Unknown : Borea.Core.Game.Compatibility.Evaluate(latest, installed);
 
             // the age on the row belongs to the same release as the chip and Add, so a newer release in another channel does not show there
@@ -548,6 +571,12 @@ public partial class MainViewModel
 
     [RelayCommand]
     private void ShowDiscoverModpacks() => DiscoverType = ContentType.ModPack;
+
+    [RelayCommand]
+    private void ShowDiscoverVehicles() => DiscoverType = ContentType.Vehicle;
+
+    [RelayCommand]
+    private void ShowDiscoverSaves() => DiscoverType = ContentType.Save;
 
     // choosing the chosen one again, or null from its chip, clears the filter
     [RelayCommand]
@@ -752,6 +781,7 @@ public sealed partial class DiscoverItem : ObservableObject, IInstallRow
         {
             _latestInChannel = value;
             OnPropertyChanged(nameof(DownloadSizeText));
+            OnPropertyChanged(nameof(GameVersionText));
         }
     }
 
@@ -764,12 +794,17 @@ public sealed partial class DiscoverItem : ObservableObject, IInstallRow
 
     public IReadOnlyDictionary<string, string> Links => _listing.Links;
 
-    /// <summary>">= min" or "min - max", as the compatibility chip shows it.</summary>
-    public string GameVersionText => _listing.GameMax is null ? $">= {_listing.GameMin}" : $"{_listing.GameMin} - {_listing.GameMax}";
+    /// <summary>
+    /// ">= min" or "min - max", as the compatibility chip shows it. A vehicle or save states no range of
+    /// its own, so it shows the game build its file was saved in.
+    /// </summary>
+    public string GameVersionText => _listing.GameMax is null ? $">= {_listing.GameMin ?? LatestInChannel?.GameMin}" : $"{_listing.GameMin} - {_listing.GameMax}";
 
     public string TypeText => Type switch
     {
         ContentType.ModLoader => _owner.Localization.ContentTypeModLoader,
+        ContentType.Vehicle => _owner.Localization.ContentTypeVehicle,
+        ContentType.Save => _owner.Localization.ContentTypeSave,
         _ => _owner.Localization.ContentTypeMod,
     };
 
