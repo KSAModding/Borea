@@ -489,6 +489,22 @@ public sealed class FileGameSaveStoreTests : IDisposable
     [Fact]
     public async Task RenameAsync_RecordWriteFails_PutsTheFolderAndMetaTomlBack()
     {
+        var store = new FileGameSaveStore(_paths, records: new RenameFails(_records));
+        await AddRecordedVehicleAsync(_instanceId, "Rover");
+        var entry = Assert.Single(await store.ListAsync(_instanceId, GameSaveKind.Vehicle));
+        var metadata = Path.Combine(entry.Path, "meta.toml");
+        var before = File.ReadAllBytes(metadata);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => store.RenameAsync(_instanceId, entry, "Rover Two"));
+
+        Assert.Equal(before, File.ReadAllBytes(metadata));
+        Assert.Equal(["Rover"], Directory.GetDirectories(_paths.GetInstanceVehiclesFolder(_instanceId)).Select(Path.GetFileName));
+        Assert.Equal("Rover", Assert.Single(await _records.ListAsync(_instanceId)).FolderName);
+    }
+
+    [Fact]
+    public async Task RenameAsync_UnreadableRecords_RefusesBeforeItChangesAnything()
+    {
         await AddRecordedVehicleAsync(_instanceId, "Rover");
         var entry = Assert.Single(await _store.ListAsync(_instanceId, GameSaveKind.Vehicle));
         var metadata = Path.Combine(entry.Path, "meta.toml");
@@ -499,6 +515,32 @@ public sealed class FileGameSaveStoreTests : IDisposable
 
         Assert.Equal(before, File.ReadAllBytes(metadata));
         Assert.Equal(["Rover"], Directory.GetDirectories(_paths.GetInstanceVehiclesFolder(_instanceId)).Select(Path.GetFileName));
+    }
+
+    [Fact]
+    public async Task RenameAsync_RecordedVehicleOnlyTheLetterCase_KeepsItsRecord()
+    {
+        await AddRecordedVehicleAsync(_instanceId, "Rover");
+        var entry = Assert.Single(await _store.ListAsync(_instanceId, GameSaveKind.Vehicle));
+
+        Assert.Equal(GameSaveRenameOutcome.Renamed, await _store.RenameAsync(_instanceId, entry, "ROVER"));
+
+        Assert.Equal("ROVER", Assert.Single(await _records.ListAsync(_instanceId)).FolderName);
+    }
+
+    [Fact]
+    public async Task RenameAsync_NameOfARecordWhoseFolderIsGone_RenamesAndDropsThatRecord()
+    {
+        var rover = await AddRecordedVehicleAsync(_instanceId, "Rover");
+        await AddRecordedVehicleAsync(_instanceId, "Lander");
+        Directory.Delete(Path.Combine(_paths.GetInstanceVehiclesFolder(_instanceId), "Lander"), recursive: true);
+        var entry = Assert.Single(await _store.ListAsync(_instanceId, GameSaveKind.Vehicle));
+
+        Assert.Equal(GameSaveRenameOutcome.Renamed, await _store.RenameAsync(_instanceId, entry, "Lander"));
+
+        var renamed = Assert.Single(await _records.ListAsync(_instanceId));
+        Assert.Equal("Lander", renamed.FolderName);
+        Assert.Equal(rover.Files, renamed.Files);
     }
 
     [Fact]
@@ -591,5 +633,26 @@ public sealed class FileGameSaveStoreTests : IDisposable
     private sealed class FixedTime(DateTimeOffset now) : TimeProvider
     {
         public override DateTimeOffset GetUtcNow() => now;
+    }
+
+    /// <summary>Fails the record write of a rename after the folder has moved.</summary>
+    private sealed class RenameFails(IInstalledContentRecords inner) : IInstalledContentRecords
+    {
+        public Task<IReadOnlyList<InstalledContentRecord>> ListAsync(Guid instanceId, CancellationToken cancellationToken = default) => inner.ListAsync(instanceId, cancellationToken);
+
+        public Task<InstalledContentRecord?> FindAsync(Guid instanceId, ContentType type, string folderName, CancellationToken cancellationToken = default) => inner.FindAsync(instanceId, type, folderName, cancellationToken);
+
+        public Task AddAsync(Guid instanceId, InstalledContentRecord record, CancellationToken cancellationToken = default) => inner.AddAsync(instanceId, record, cancellationToken);
+
+        public Task ReplaceAsync(Guid instanceId, InstalledContentRecord record, CancellationToken cancellationToken = default) => inner.ReplaceAsync(instanceId, record, cancellationToken);
+
+        public Task<bool> RemoveAsync(Guid instanceId, ContentType type, string folderName, CancellationToken cancellationToken = default) => inner.RemoveAsync(instanceId, type, folderName, cancellationToken);
+
+        public Task<bool> RenameFolderAsync(Guid instanceId, ContentType type, string oldFolderName, string newFolderName, CancellationToken cancellationToken = default) =>
+            throw new InvalidOperationException("The record write failed.");
+
+        public Task<InstalledContentChanges> CompareAsync(Guid instanceId, InstalledContentRecord record, CancellationToken cancellationToken = default) => inner.CompareAsync(instanceId, record, cancellationToken);
+
+        public Task<IReadOnlyList<InstalledContentRecord>> DropMissingAsync(Guid instanceId, CancellationToken cancellationToken = default) => inner.DropMissingAsync(instanceId, cancellationToken);
     }
 }

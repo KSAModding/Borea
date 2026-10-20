@@ -312,6 +312,10 @@ public sealed partial class FileGameSaveStore : IGameSaveStore
         if (others.Any(other => string.Equals(other.Name, newName, StringComparison.OrdinalIgnoreCase) || string.Equals(other.FolderName, newName, StringComparison.OrdinalIgnoreCase)))
             return GameSaveRenameOutcome.NameTaken;
 
+        // No folder has the new name, so a record of it belongs to a folder the player deleted in the game.
+        if (!string.Equals(source.Name, newName, StringComparison.OrdinalIgnoreCase))
+            await _records.RemoveAsync(instanceId, ContentTypeOf(entry.Kind), newName, cancellationToken).ConfigureAwait(false);
+
         var metadataPath = Path.Combine(source.FullName, MetadataFileName);
         byte[] original;
         try
