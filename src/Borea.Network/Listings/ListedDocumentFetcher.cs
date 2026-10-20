@@ -20,10 +20,13 @@ public sealed class ListedDocumentFetcher : IListedDocumentSource, IListingSchem
         _http = http ?? throw new ArgumentNullException(nameof(http));
     }
 
-    public Task<string> GetListingAsync(string id, CancellationToken cancellationToken = default)
+    public Task<string> GetListingAsync(string id, CancellationToken cancellationToken = default) =>
+        GetListingAsync(id, ListingDraft.ModType, cancellationToken);
+
+    public Task<string> GetListingAsync(string id, string type, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrEmpty(id);
-        return GetAsync($"{ListingDraft.ListingsFolder}/{Uri.EscapeDataString(id)}.toml", cancellationToken);
+        return GetAsync($"{ListingFolders.Of(type)}/{Uri.EscapeDataString(id)}.toml", cancellationToken);
     }
 
     public Task<string> GetPackVersionAsync(string id, string version, CancellationToken cancellationToken = default) =>
