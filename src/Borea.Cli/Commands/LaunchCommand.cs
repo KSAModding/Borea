@@ -73,6 +73,9 @@ internal static class LaunchCommand
             if (!result.Started)
             {
                 error.WriteLine($"error: {result.Message}");
+                if (result.CrashCause == LoaderCrashCause.GameAssembly)
+                    error.WriteLine($"Install a new release of {loader.Name} with 'borea loader install {loader.ModId}'.");
+
                 if (result.Outcome == LaunchOutcome.ExitedEarly)
                 {
                     error.WriteLine($"{loader.Name} wrote:");
