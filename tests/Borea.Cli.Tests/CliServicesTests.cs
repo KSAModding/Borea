@@ -101,6 +101,8 @@ public sealed class CliServicesTests : IDisposable
             OfflineContentIndex = graph.OfflineContentIndex,
             UserContent = graph.UserContent,
             ReadOnlyUserContent = graph.ReadOnlyUserContent,
+            InstalledContent = graph.InstalledContent,
+            UserContentInstaller = graph.UserContentInstaller,
             InstallPlanner = graph.InstallPlanner,
             SpaceCheck = graph.SpaceCheck,
             Installer = graph.Installer,
