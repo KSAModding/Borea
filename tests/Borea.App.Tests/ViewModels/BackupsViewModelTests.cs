@@ -130,6 +130,24 @@ public sealed class BackupsViewModelTests
     }
 
     [Fact]
+    public async Task Restore_WhileAGameRunsOutsideBorea_RefusesAndChangesNothing()
+    {
+        using var harness = await ViewModelHarness.CreateAsync();
+        var instance = (await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value)).Instance;
+        var backups = Path.Combine(harness.Services.Paths.GetBackupsRoot(), instance.InstanceId.ToString(), "saves");
+        WriteItem(backups, "Orbit-2026-09-01T080000Z", "Orbit", 10);
+        await OpenGameDataAsync(harness, "Main");
+        harness.IsGameProcessRunning = () => true;
+
+        await Assert.Single(harness.ViewModel.BackupItems).RestoreCommand.ExecuteAsync(null);
+
+        Assert.Equal(TaskState.Failed, Assert.Single(harness.ViewModel.Tasks.History, task => task.Kind == TaskKind.BackupRestore).State);
+        Assert.Equal(harness.Localization.GameSaveCloseGame, harness.ViewModel.Toasts.Items[^1].Detail);
+        Assert.True(Directory.Exists(Path.Combine(backups, "Orbit-2026-09-01T080000Z")));
+        Assert.False(Directory.Exists(harness.Services.Paths.GetInstanceSavesFolder(instance.InstanceId)));
+    }
+
+    [Fact]
     public async Task Restore_BackupGoneMeanwhile_FailsAndDropsTheRow()
     {
         using var harness = await ViewModelHarness.CreateAsync();
