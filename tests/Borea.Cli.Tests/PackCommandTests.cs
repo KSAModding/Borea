@@ -682,26 +682,40 @@ public sealed class PackCommandTests : IDisposable
     }
 
     [Fact]
-    public async Task PackInstall_VehiclesAndSaves_WarnsThatTheyAreSkipped()
+    public async Task PackInstall_PinnedVehicleWhoseNameIsTaken_IsSkippedWithTheNameOption_AndTheModsStay()
     {
-        _host.IndexReader.Snapshot = Snapshot(Pack(ContentCommandFixtures.PackVersion(
-            vehicles: new[] { new ModPackEntry("booster-demo", ModVersion.Parse("1.2.0")) },
+        var pack = Snapshot(Pack(ContentCommandFixtures.PackVersion(
+            vehicles: new[] { new ModPackEntry("rover", ModVersion.Parse("1.0.0")) },
             saves: new[] { new ModPackEntry("apollo-save", ModVersion.Parse("1.0.0")) })));
+        _host.IndexReader.Snapshot = new ContentIndexSnapshot(1, [], pack.Packs, null, [], vehicles:
+        [
+            new ContentIndexListing("rover", new ModMetadata(1, "rover", "index", "Rover", ["Author"], "A small rover.", "MIT", new Dictionary<string, string>(), null, ContentType.Vehicle), [UserContentCommandTests.Vehicle("1.0.0", [])], null),
+        ]);
         _host.Mods.Releases.Add(ContentCommandFixtures.Release());
+        var downloader = new UserContentCommandTests.ZipDownloader { Bytes = UserContentCommandTests.VehicleArchive("Rover", "<Vehicle />") };
+        _host.ModPackInstallerFactory = graph => new ModPackInstaller(graph.Instances, graph.InstallPlanner, new FolderInstaller(graph), graph.Replacer, userContent: new FileUserContentInstaller(graph.Paths, downloader, graph.InstalledContent, () => false));
         await _host.RunAsync("instance", "create", "Alpha");
+        var instance = Assert.Single(await new FileInstanceRepository(_host.Paths).GetAllAsync());
+        Directory.CreateDirectory(Path.Combine(_host.Paths.GetInstanceVehiclesFolder(instance.InstanceId), "Rover"));
 
         var run = await _host.RunAsync("pack", "install", "navigation-pack", "--instance", "Alpha");
+        var json = await _host.RunAsync("pack", "install", "navigation-pack", "--instance", "Alpha", "--json");
 
         Assert.Equal(0, run.ExitCode);
-        Assert.Contains("warning: Borea does not install pinned vehicles and saves yet, so it skipped booster-demo 1.2.0, apollo-save 1.0.0.", run.Output);
+        Assert.Contains("  installed  flight-tools 2.0.0  modpack", run.Output);
+        Assert.Contains("  name-taken  vehicle rover 1.0.0: An item named 'Rover' is in the way. Run 'borea install rover --name <new name>' to install it under another name.", run.Output);
+        Assert.Contains("  skipped  save apollo-save 1.0.0: The exact pinned release is not listed and cannot be installed by Borea.", run.Output);
+        Assert.DoesNotContain("yet", run.Output);
+        var skipped = json.Json.GetProperty("skipped").EnumerateArray().ToList();
+        Assert.Equal(["rover", "apollo-save"], skipped.Select(entry => entry.GetProperty("id").GetString()));
+        Assert.Equal("An item named 'Rover' is in the way.", skipped[0].GetProperty("reason").GetString());
+        Assert.Equal("name-taken", json.Json.GetProperty("content")[0].GetProperty("status").GetString());
     }
 
     [Fact]
-    public async Task PackInstall_Json_CarriesMembersWarningsAndSkippedContent()
+    public async Task PackInstall_Json_CarriesMembersAndWarnings()
     {
-        _host.IndexReader.Snapshot = Snapshot(Pack(ContentCommandFixtures.Retracted(ContentCommandFixtures.PackVersion(
-            version: "2.0.0",
-            saves: new[] { new ModPackEntry("apollo-save", ModVersion.Parse("1.0.0")) }))));
+        _host.IndexReader.Snapshot = Snapshot(Pack(ContentCommandFixtures.Retracted(ContentCommandFixtures.PackVersion(version: "2.0.0"))));
         _host.Mods.Releases.Add(ContentCommandFixtures.Release());
         _host.InstalledVersion = Installed("2026.9.7.5402");
         await _host.RunAsync("instance", "create", "Alpha");
@@ -719,9 +733,6 @@ public sealed class PackCommandTests : IDisposable
         var member = Assert.Single(accepted.Json.GetProperty("members").EnumerateArray());
         Assert.Equal("installed", member.GetProperty("status").GetString());
         Assert.Equal("modpack", member.GetProperty("reason").GetString());
-        var skipped = Assert.Single(accepted.Json.GetProperty("skipped").EnumerateArray());
-        Assert.Equal("save", skipped.GetProperty("section").GetString());
-        Assert.Equal("apollo-save", skipped.GetProperty("id").GetString());
     }
 
     [Fact]

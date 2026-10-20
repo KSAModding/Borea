@@ -3,6 +3,7 @@ using Borea.Core.Instances;
 using Borea.Core.ModPacks;
 using Borea.Core.Mods;
 using Borea.Core.Planning;
+using Borea.Core.UserContent;
 
 namespace Borea.Storage.ModPacks;
 
@@ -15,13 +16,16 @@ public sealed class ModPackUpdater : IModPackUpdater
     private readonly IInstallPlanner _planner;
     private readonly IInstallPlanExecutor _executor;
     private readonly IModUninstaller _uninstaller;
+    private readonly ModPackUserContent _content;
 
-    public ModPackUpdater(IInstanceRepository instances, IInstallPlanner planner, IInstallPlanExecutor executor, IModUninstaller uninstaller)
+    /// <param name="userContent">Installs and updates the pinned vehicles and saves. Null skips each of them with a message.</param>
+    public ModPackUpdater(IInstanceRepository instances, IInstallPlanner planner, IInstallPlanExecutor executor, IModUninstaller uninstaller, IUserContentInstaller? userContent = null)
     {
         _instances = instances ?? throw new ArgumentNullException(nameof(instances));
         _planner = planner ?? throw new ArgumentNullException(nameof(planner));
         _executor = executor ?? throw new ArgumentNullException(nameof(executor));
         _uninstaller = uninstaller ?? throw new ArgumentNullException(nameof(uninstaller));
+        _content = new ModPackUserContent(userContent);
     }
 
     public async Task<ModPackUpdateResult> PlanAsync(ModPackUpdateRequest request, CancellationToken cancellationToken = default)
@@ -29,9 +33,12 @@ public sealed class ModPackUpdater : IModPackUpdater
 
     public async Task<ModPackUpdateResult> UpdateAsync(ModPackUpdateRequest request, IProgress<InstallProgress>? progress = null, InstallStop? stop = null, CancellationToken cancellationToken = default)
     {
-        var (instance, planned) = await PlanCoreAsync(request, stop, cancellationToken).ConfigureAwait(false);
+        var (instance, planned, content) = await PlanCoreAsync(request, stop, cancellationToken).ConfigureAwait(false);
         if (!planned.CanRun || planned.IsStopped)
             return planned;
+
+        var stepCount = planned.Plan!.Operations.Count + ModPackUserContent.Count(content);
+        var modProgress = progress is null ? null : new SynchronousProgress<InstallProgress>(value => progress.Report(value with { StepCount = stepCount }));
 
         var plan = planned.Plan!;
         var draft = ModPackUpdates.Draft(instance, planned.Changes);
@@ -48,7 +55,7 @@ public sealed class ModPackUpdater : IModPackUpdater
                 if (current is null || !InstallPlanningState.Capture(instance).Matches(current))
                     throw new InvalidOperationException("The instance changed after planning.");
 
-                await _executor.ExecuteAsync(plan, request.Enable, progress, stop, cancellationToken).ConfigureAwait(false);
+                await _executor.ExecuteAsync(plan, request.Enable, modProgress, stop, cancellationToken).ConfigureAwait(false);
 
                 // The removals are the last step, so a stop or a failure before them keeps the mods.
                 // Once they start they all run, because they are the step that commits the update.
@@ -116,10 +123,14 @@ public sealed class ModPackUpdater : IModPackUpdater
             }, cancellationToken).ConfigureAwait(false);
         }
 
-        return new ModPackUpdateResult(instance.InstanceId, planned.CurrentVersion, planned.Target, planned.Changes, plan, Ordered(members), planned.Warnings, complete, stopped);
+        // The vehicles and saves come last, because the mods they need are members of the pack.
+        var contentResults = failure is not null || stopped
+            ? ModPackUserContent.NotReached(content, stopped ? StoppedMessage : EarlierStepFailedMessage)
+            : await _content.RunAsync(instance.InstanceId, content, request.ContentNames, request.DiscardChangesOf, progress, plan.Operations.Count + 1, stepCount, stop, cancellationToken).ConfigureAwait(false);
+        return new ModPackUpdateResult(instance.InstanceId, planned.CurrentVersion, planned.Target, planned.Changes, plan, Ordered(members), planned.Warnings, complete, stopped) { Content = contentResults };
     }
 
-    private async Task<(Instance Instance, ModPackUpdateResult Result)> PlanCoreAsync(ModPackUpdateRequest request, InstallStop? stop, CancellationToken cancellationToken)
+    private async Task<(Instance Instance, ModPackUpdateResult Result, IReadOnlyList<ModPackUserContent.Step> Content)> PlanCoreAsync(ModPackUpdateRequest request, InstallStop? stop, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
         ArgumentNullException.ThrowIfNull(request.Pack);
@@ -140,13 +151,15 @@ public sealed class ModPackUpdater : IModPackUpdater
         var pins = target.Mods.Where(pin => !ModPackUpdates.IsDetached(current, pin.ContentId)).ToList();
         var warnings = new List<PlanningMessage>();
         var members = new List<ModPackMemberResult>();
-        ModPackUpdateResult Result(InstallPlan? plan, bool stopped = false) => new(instance.InstanceId, current.Version, target, changes, plan, Ordered(members), warnings, false, stopped);
+        IReadOnlyList<ModPackUserContent.Step> content = [];
+        (Instance, ModPackUpdateResult, IReadOnlyList<ModPackUserContent.Step>) Result(InstallPlan? plan, bool stopped = false) =>
+            (instance, new(instance.InstanceId, current.Version, target, changes, plan, Ordered(members), warnings, false, stopped) { Content = content.Select(item => item.Planned).ToList() }, content);
 
         if (request.Pack.VersionStatus?.State == IndexStatusState.Retracted)
         {
             warnings.Add(new PlanningMessage(target.ModPackId, PlanningMessageKind.RetractedPack) { Value = request.Pack.VersionStatus.Reason });
             members.AddRange(pins.Select(pin => Member(pin, ModPackMemberStatus.Unresolved, "The pack version is retracted.")));
-            return (instance, Result(null));
+            return Result(null);
         }
 
         var requested = new List<RequestedMod>();
@@ -156,6 +169,7 @@ public sealed class ModPackUpdater : IModPackUpdater
         {
             try
             {
+                content = await _content.PlanAsync(instance.InstanceId, target, request.UserContent, request.GameVersion, request.ContentNames, request.DiscardChangesOf, warnings, planning.Token).ConfigureAwait(false);
                 foreach (var pin in pins.Where(pin => !changes.Any(change => change.Kind == ModPackChangeKind.Pinned && ModIds.Equals(change.ModId, pin.ContentId))))
                 {
                     var installed = instance.Mods.FirstOrDefault(mod => ModIds.Equals(mod.ModId, pin.ContentId) && mod.Version == pin.Version);
@@ -181,7 +195,7 @@ public sealed class ModPackUpdater : IModPackUpdater
                     members.AddRange(pins
                         .Where(pin => members.All(member => !ModIds.Equals(member.ModId, pin.ContentId)))
                         .Select(pin => Member(pin, ModPackMemberStatus.NotAttempted, "Another pack member needs caller action.")));
-                    return (instance, Result(null));
+                    return Result(null);
                 }
 
                 while (true)
@@ -201,7 +215,7 @@ public sealed class ModPackUpdater : IModPackUpdater
             {
                 members.Clear();
                 members.AddRange(pins.Select(pin => Member(pin, ModPackMemberStatus.NotAttempted, StoppedMessage)));
-                return (instance, Result(null, stopped: true));
+                return Result(null, stopped: true);
             }
         }
 
@@ -215,7 +229,7 @@ public sealed class ModPackUpdater : IModPackUpdater
                 .Where(pin => !plan.Selections.Any(selection => selection.IsAlreadyInstalled && ModIds.Equals(selection.Release.ModId, pin.ContentId)))
                 .Select(pin => Member(pin, ModPackMemberStatus.Unresolved, "The shared install plan is not ready.")));
             members.AddRange(AlreadyInstalled(changes, draft, plan));
-            return (instance, Result(plan));
+            return Result(plan);
         }
 
         members.AddRange(changes
@@ -227,7 +241,7 @@ public sealed class ModPackUpdater : IModPackUpdater
             ReasonAfter(changes, draft, operation.Release.ModId, operation.Reason),
             ModPackMemberStatus.NotAttempted)));
         members.AddRange(AlreadyInstalled(changes, draft, plan));
-        return (instance, Result(plan));
+        return Result(plan);
     }
 
     /// <summary>
