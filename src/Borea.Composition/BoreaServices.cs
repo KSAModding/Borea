@@ -318,14 +318,15 @@ public sealed class BoreaServices : IDisposable
         BuildGitHubHttpClient(),
         BoreaGitHubApp.ClientId,
         BoreaGitHubApp.Slug,
-        secrets: SecretStores.ForCurrentUser(new GamePathProvider(gameDirectory: null))));
+        secrets: SecretStores.ForCurrentUser(new GamePathProvider(gameDirectory: null)),
+        uploadHttpClient: BuildUploadHttpClient()));
 
     /// <summary>
     /// The share host sessions of this process, which keep a sign-in like <see cref="ProcessGitHub"/>. The client does not
     /// follow redirects, which would drop the token, and gives an upload of a large save more time than a page load.
     /// </summary>
     private static readonly Lazy<ShareHostClient> ProcessShareHosts = new(() => new ShareHostClient(
-        BuildShareHostHttpClient(),
+        BuildUploadHttpClient(),
         secrets: SecretStores.ForCurrentUser(new GamePathProvider(gameDirectory: null))));
 
     private BoreaServices(HttpClient http)
@@ -660,7 +661,8 @@ public sealed class BoreaServices : IDisposable
     internal static HttpClient BuildGitHubHttpClient()
         => BuildHttpClient(new SocketsHttpHandler { PooledConnectionLifetime = ConnectionLifetime, AllowAutoRedirect = false });
 
-    private static HttpClient BuildShareHostHttpClient()
+    /// <summary>Like <see cref="BuildGitHubHttpClient"/>, with time for the upload of a large archive.</summary>
+    private static HttpClient BuildUploadHttpClient()
     {
         var http = BuildHttpClient(new SocketsHttpHandler { PooledConnectionLifetime = ConnectionLifetime, AllowAutoRedirect = false });
         http.Timeout = TimeSpan.FromMinutes(30);

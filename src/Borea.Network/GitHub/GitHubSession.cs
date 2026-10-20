@@ -42,6 +42,7 @@ public sealed class GitHubSession : IGitHubSession
     private const int MaxFailedPolls = 3;
 
     private readonly HttpClient _http;
+    private readonly HttpClient _uploadHttp;
     private readonly string _clientId;
     private readonly string _slug;
     private readonly TimeProvider _time;
@@ -57,9 +58,11 @@ public sealed class GitHubSession : IGitHubSession
     private Task _secretWork = Task.CompletedTask;
 
     /// <param name="secrets">Keeps the refresh token between starts. Null keeps every session in memory only.</param>
-    public GitHubSession(HttpClient httpClient, string clientId, string slug, TimeProvider? time = null, ISecretStore? secrets = null)
+    /// <param name="uploadHttpClient">Sends to https://uploads.github.com, with a timeout that a large release asset needs. Null uses <paramref name="httpClient"/>.</param>
+    public GitHubSession(HttpClient httpClient, string clientId, string slug, TimeProvider? time = null, ISecretStore? secrets = null, HttpClient? uploadHttpClient = null)
     {
         _http = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
+        _uploadHttp = uploadHttpClient ?? httpClient;
         _clientId = clientId ?? throw new ArgumentNullException(nameof(clientId));
         _slug = slug ?? throw new ArgumentNullException(nameof(slug));
         _time = time ?? TimeProvider.System;
@@ -252,7 +255,8 @@ public sealed class GitHubSession : IGitHubSession
             token = _token ?? throw new InvalidOperationException("Not signed in to GitHub.");
 
         AddApiHeaders(request, token);
-        var response = await _http.SendAsync(request, cancellationToken).ConfigureAwait(false);
+        var http = string.Equals(request.RequestUri!.Host, UploadsHost, StringComparison.OrdinalIgnoreCase) ? _uploadHttp : _http;
+        var response = await http.SendAsync(request, cancellationToken).ConfigureAwait(false);
 
         // A followed redirect drops the Authorization header, so only a 401 to the token itself counts.
         if (response.StatusCode == HttpStatusCode.Unauthorized && request.Headers.Authorization is not null)
