@@ -1,8 +1,10 @@
+using Borea.Core.Dependencies;
 using Borea.Core.Game;
 using Borea.Core.Instances;
 using Borea.Core.ModPacks;
 using Borea.Core.Mods;
 using Borea.Core.Planning;
+using Borea.Core.State;
 using Borea.Core.UserContent;
 
 namespace Borea.Storage.ModPacks;
@@ -11,8 +13,9 @@ namespace Borea.Storage.ModPacks;
 /// The pinned vehicles and saves of a pack install or update (RFC 0085). Each one installs at its exact version
 /// after the mods, without planning its dependencies, because the pack makes the mods it needs members (RFC 0080).
 /// A pin that cannot install is skipped with a warning, and a taken name or a changed item waits for the player.
+/// A member it needs that the player disabled is enabled right before the item moves into place.
 /// </summary>
-internal sealed class ModPackUserContent(IUserContentInstaller? installer)
+internal sealed class ModPackUserContent(IUserContentInstaller? installer, IModStateRepository? modState)
 {
     private const string StoppedMessage = "The pack stopped before this step.";
 
@@ -27,6 +30,38 @@ internal sealed class ModPackUserContent(IUserContentInstaller? installer)
             steps.Add(await PlanAsync(instanceId, type, pin, repository, gameVersion, names, discard, warnings, cancellationToken).ConfigureAwait(false));
 
         return steps;
+    }
+
+    /// <summary>
+    /// Names on each pin that will install the mods it needs that the instance holds disabled, and warns about each
+    /// required mod that neither the plan of the mods nor the instance has.
+    /// </summary>
+    /// <param name="enable">Whether the run enables mods, as it does for the members it installs.</param>
+    public async Task<IReadOnlyList<Step>> WithModsAsync(Instance instance, InstallPlan plan, bool enable, IReadOnlyList<Step> steps, List<PlanningMessage> warnings, CancellationToken cancellationToken)
+    {
+        if (!steps.Any(Runs))
+            return steps;
+
+        var entries = modState is not null && enable ? await modState.GetEntriesAsync(instance.InstanceId, cancellationToken).ConfigureAwait(false) : null;
+        var result = new List<Step>();
+        foreach (var item in steps)
+        {
+            if (!Runs(item))
+            {
+                result.Add(item);
+                continue;
+            }
+
+            var missing = new List<ModDependency>();
+            var needed = UserContentMods.Needed(instance, [item.Release!], plan, missing);
+            foreach (var dependency in missing)
+                warnings.Add(new PlanningMessage(item.Planned.ContentId, item.Planned.Type == ContentType.Save ? PlanningMessageKind.MissingForSave : PlanningMessageKind.MissingForVehicle) { Dependency = dependency, Value = new PlanningMessage(item.Planned.ContentId, PlanningMessageKind.UnsatisfiedDependency).Code });
+
+            var enables = entries is null ? [] : UserContentMods.Enables(instance, needed, entries);
+            result.Add(enables.Count == 0 ? item : item with { Planned = item.Planned with { Enables = enables } });
+        }
+
+        return result;
     }
 
     /// <summary>Runs every step that can run, one after another. A failure stops only its own step.</summary>
@@ -50,12 +85,15 @@ internal sealed class ModPackUserContent(IUserContentInstaller? installer)
 
             var name = Name(names, item.Planned.ContentId);
             var reports = progress.ForStep(step++, stepCount);
+            UserContentStep? enable = item.Planned.Enables is { Count: > 0 } ids && modState is not null
+                ? (_, token) => UserContentMods.EnableAsync(modState, instanceId, ids, token)
+                : null;
             try
             {
                 var result = await stop.RunAsync(
                     (relay, token) => item.Installed is { } installed
-                        ? installer!.UpdateAsync(instanceId, installed, item.Release, name, Discards(discard, item.Planned.ContentId), progress: relay, cancellationToken: token)
-                        : installer!.InstallAsync(instanceId, item.Release, name, progress: relay, cancellationToken: token),
+                        ? installer!.UpdateAsync(instanceId, installed, item.Release, name, Discards(discard, item.Planned.ContentId), enable, relay, token)
+                        : installer!.InstallAsync(instanceId, item.Release, name, enable, relay, token),
                     reports,
                     cancellationToken).ConfigureAwait(false);
                 results.Add(From(item.Planned, result));
@@ -78,7 +116,9 @@ internal sealed class ModPackUserContent(IUserContentInstaller? installer)
         steps.Select(item => item.Planned.Status == ModPackContentStatus.NotAttempted ? item.Planned with { Message = message } : item.Planned).ToList();
 
     /// <summary>How many steps a run installs or updates.</summary>
-    public static int Count(IReadOnlyList<Step> steps) => steps.Count(item => item.Planned.Status == ModPackContentStatus.NotAttempted && item.Release is not null);
+    public static int Count(IReadOnlyList<Step> steps) => steps.Count(Runs);
+
+    private static bool Runs(Step item) => item.Planned.Status == ModPackContentStatus.NotAttempted && item.Release is not null;
 
     private async Task<Step> PlanAsync(Guid instanceId, ContentType type, ModPackEntry pin, IUserContentRepository? repository, GameVersion? gameVersion, IReadOnlyDictionary<string, string>? names, IReadOnlySet<string>? discard, List<PlanningMessage> warnings, CancellationToken cancellationToken)
     {

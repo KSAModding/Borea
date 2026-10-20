@@ -99,6 +99,7 @@ public enum ModPackContentStatus
 /// <param name="Changes">The changed files for <see cref="ModPackContentStatus.Changed"/>.</param>
 /// <param name="Warning">Why a skipped pin is skipped.</param>
 /// <param name="InstalledVersion">The recorded version an update replaces, or null for an install.</param>
+/// <param name="Enables">The mods the item needs that the instance holds disabled, which the run enables right before the item moves into place.</param>
 public sealed record ModPackContentResult(
     ContentType Type,
     string ContentId,
@@ -108,7 +109,8 @@ public sealed record ModPackContentResult(
     string? FolderName = null,
     InstalledContentChanges? Changes = null,
     PlanningMessage? Warning = null,
-    ModVersion? InstalledVersion = null);
+    ModVersion? InstalledVersion = null,
+    IReadOnlyList<string>? Enables = null);
 
 public sealed class ModPackInstallResult
 {

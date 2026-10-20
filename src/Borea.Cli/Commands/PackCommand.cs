@@ -938,6 +938,12 @@ internal static class PackCommand
         foreach (var item in content)
         {
             var folder = item.Folder is null ? string.Empty : $" ({(item.Section == "save" ? "saves" : "Vehicles")}/{item.Folder})";
+            if (item.Status is "not-attempted" or "installed" or "updated")
+            {
+                foreach (var id in item.Enables ?? [])
+                    output.WriteLine($"Enable {id} for {item.Section} {item.Id}.");
+            }
+
             output.WriteLine(item.Status switch
             {
                 "not-attempted" when dryRun && item.Message is null => $"Install {item.Section} {item.Id} {item.Version}{folder}.",
@@ -1334,7 +1340,7 @@ internal static class PackCommand
     }
 
     /// <param name="Folder">The folder under Vehicles or saves it uses or would use.</param>
-    private sealed record ContentResultView(string Section, string Id, string Version, string Status, string? Folder, string? Message, IReadOnlyList<string>? ChangedFiles)
+    private sealed record ContentResultView(string Section, string Id, string Version, string Status, string? Folder, string? Message, IReadOnlyList<string>? ChangedFiles, IReadOnlyList<string>? Enables)
     {
         public static ContentResultView From(ModPackContentResult item) => new(
             ContentOutput.Name(item.Type),
@@ -1349,6 +1355,7 @@ internal static class PackCommand
             },
             item.FolderName,
             item.Message,
-            item.Changes is { } changes ? [.. changes.Added, .. changes.Removed, .. changes.Changed] : null);
+            item.Changes is { } changes ? [.. changes.Added, .. changes.Removed, .. changes.Changed] : null,
+            item.Enables);
     }
 }

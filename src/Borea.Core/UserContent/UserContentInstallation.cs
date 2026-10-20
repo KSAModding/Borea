@@ -1,4 +1,3 @@
-using Borea.Core.Dependencies;
 using Borea.Core.Instances;
 using Borea.Core.Mods;
 using Borea.Core.Planning;
@@ -67,7 +66,7 @@ public sealed class UserContentInstallation
         async Task InstallModsAsync(IProgress<InstallProgress>? reports, CancellationToken token)
         {
             await _executor.ExecuteAsync(plan.Mods, enable: true, Renumbered(progress, stepCount), stop, token).ConfigureAwait(false);
-            await EnableAsync(instanceId, plan.Needed, token).ConfigureAwait(false);
+            await UserContentMods.EnableAsync(_modState, instanceId, plan.Needed, token).ConfigureAwait(false);
             modsDone = true;
         }
 
@@ -97,53 +96,14 @@ public sealed class UserContentInstallation
         var mods = await _planner.PlanAsync(
             new InstallPlanningRequest(request.Instance, [new RequestedMod(request.Release, InstallReason.Manual, Exact: true)], request.Repository, request.GameVersion, request.TargetPlatform, request.Recommended, request.Alternatives, request.Channel),
             cancellationToken).ConfigureAwait(false);
-        var needed = Needed(request.Instance, request.Release, mods);
-        var entries = await _modState.GetEntriesAsync(request.Instance.InstanceId, cancellationToken).ConfigureAwait(false);
-        var enables = needed
-            .Where(id => IsInstalled(request.Instance, id))
-            .Where(id => !entries.Any(entry => entry.Enabled && ModIds.Equals(entry.ModId, id)))
+        // Every selection is needed too, so a recommendation the player chose is enabled as well.
+        var selections = mods.Selections.Select(selection => selection.Release).ToList();
+        var needed = selections.Select(release => release.ModId)
+            .Concat(UserContentMods.Needed(request.Instance, [request.Release, .. selections], mods))
+            .Distinct(ModIds.Comparer)
             .ToList();
-        return new UserContentPlan(request.Release, installed, mods, needed, enables, check, discardChanges);
-    }
-
-    /// <summary>
-    /// Every mod the plan selects, and every installed mod that a required dependency of the item or of a selected mod
-    /// names, because the game treats a mod that is not enabled as missing (ModLibrary.PrepareAll). For an any_of the
-    /// alternative the plan resolved comes first, because the planner does not select an installed alternative.
-    /// </summary>
-    private static List<string> Needed(Instance instance, ModVersionMetadata release, InstallPlan mods)
-    {
-        var needed = mods.Selections.Select(selection => selection.Release.ModId).ToList();
-        foreach (var owner in mods.Selections.Select(selection => selection.Release).Prepend(release))
-        {
-            foreach (var dependency in owner.Dependencies.Where(value => value.Kind == ModDependencyKind.Required))
-            {
-                var targets = dependency.IsAnyOf ? dependency.AnyOf.Select(value => value.ModId) : [dependency.ModId!];
-                var present = targets.Where(id => needed.Contains(id, ModIds.Comparer) || IsInstalled(instance, id)).ToList();
-                if (present.Count == 0 || present.Any(id => needed.Contains(id, ModIds.Comparer)))
-                    continue;
-                var resolved = mods.Choices.FirstOrDefault(choice => choice.Kind == PlanningChoiceKind.Alternative && choice.Dependency == dependency && ModIds.Equals(choice.OwnerModId, owner.ModId))?.Selected;
-                needed.Add(present.FirstOrDefault(id => ModIds.Equals(id, resolved)) ?? present[0]);
-            }
-        }
-
-        return needed.Distinct(ModIds.Comparer).ToList();
-    }
-
-    private static bool IsInstalled(Instance instance, string id) =>
-        instance.Mods.Any(mod => ModIds.Equals(mod.ModId, id)) || instance.ForeignMods.Any(mod => ModIds.Equals(mod.ModId, id));
-
-    /// <summary>A new entry goes in enabled, and an entry that exists is enabled, because <see cref="IModStateRepository.AddEntryAsync"/> keeps a disabled one.</summary>
-    private async Task EnableAsync(Guid instanceId, IReadOnlyList<string> needed, CancellationToken cancellationToken)
-    {
-        var entries = await _modState.GetEntriesAsync(instanceId, cancellationToken).ConfigureAwait(false);
-        foreach (var id in needed)
-        {
-            if (!entries.Any(entry => ModIds.Equals(entry.ModId, id)))
-                await _modState.AddEntryAsync(instanceId, id, enabled: true, cancellationToken).ConfigureAwait(false);
-            else if (!entries.Any(entry => entry.Enabled && ModIds.Equals(entry.ModId, id)))
-                await _modState.SetActiveAsync(instanceId, id, cancellationToken).ConfigureAwait(false);
-        }
+        var entries = await _modState.GetEntriesAsync(request.Instance.InstanceId, cancellationToken).ConfigureAwait(false);
+        return new UserContentPlan(request.Release, installed, mods, needed, UserContentMods.Enables(request.Instance, needed, entries), check, discardChanges);
     }
 
     /// <summary>The mods are steps 2 and on, after the folder of the item.</summary>

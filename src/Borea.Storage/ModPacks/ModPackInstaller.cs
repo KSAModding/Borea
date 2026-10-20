@@ -3,6 +3,7 @@ using Borea.Core.Instances;
 using Borea.Core.ModPacks;
 using Borea.Core.Mods;
 using Borea.Core.Planning;
+using Borea.Core.State;
 using Borea.Core.UserContent;
 
 namespace Borea.Storage.ModPacks;
@@ -19,14 +20,15 @@ public sealed class ModPackInstaller : IModPackInstaller
     private readonly ModPackUserContent _content;
 
     /// <param name="userContent">Installs the pinned vehicles and saves. Null skips each of them with a message.</param>
-    public ModPackInstaller(IInstanceRepository instances, IInstallPlanner planner, IModInstaller installer, IModReplacer replacer, IInstallSpaceCheck? space = null, IUserContentInstaller? userContent = null)
+    /// <param name="modState">Enables the members a pinned vehicle or save needs. Null leaves them as they are.</param>
+    public ModPackInstaller(IInstanceRepository instances, IInstallPlanner planner, IModInstaller installer, IModReplacer replacer, IInstallSpaceCheck? space = null, IUserContentInstaller? userContent = null, IModStateRepository? modState = null)
     {
         _instances = instances ?? throw new ArgumentNullException(nameof(instances));
         _planner = planner ?? throw new ArgumentNullException(nameof(planner));
         _installer = installer ?? throw new ArgumentNullException(nameof(installer));
         _replacer = replacer ?? throw new ArgumentNullException(nameof(replacer));
         _space = space;
-        _content = new ModPackUserContent(userContent);
+        _content = new ModPackUserContent(userContent, modState);
     }
 
     public async Task<ModPackInstallResult> CreateAndInstallAsync(string instanceName, ModPackInstallRequest request, IProgress<InstallProgress>? progress = null, InstallStop? stop = null, CancellationToken cancellationToken = default)
@@ -123,6 +125,7 @@ public sealed class ModPackInstaller : IModPackInstaller
                 plan = await _planner.PlanAsync(
                     new InstallPlanningRequest(instance, releases, request.Repository, request.GameVersion, request.TargetPlatform, request.Recommended, request.Alternatives),
                     planning.Token).ConfigureAwait(false);
+                content = await _content.WithModsAsync(instance, plan, request.Enable, content, warnings, planning.Token).ConfigureAwait(false);
             }
             catch (OperationCanceledException) when (stop is { IsRequested: true } && !cancellationToken.IsCancellationRequested)
             {

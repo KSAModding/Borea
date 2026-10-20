@@ -3,6 +3,7 @@ using Borea.Core.Instances;
 using Borea.Core.ModPacks;
 using Borea.Core.Mods;
 using Borea.Core.Planning;
+using Borea.Core.State;
 using Borea.Core.UserContent;
 
 namespace Borea.Storage.ModPacks;
@@ -19,13 +20,14 @@ public sealed class ModPackUpdater : IModPackUpdater
     private readonly ModPackUserContent _content;
 
     /// <param name="userContent">Installs and updates the pinned vehicles and saves. Null skips each of them with a message.</param>
-    public ModPackUpdater(IInstanceRepository instances, IInstallPlanner planner, IInstallPlanExecutor executor, IModUninstaller uninstaller, IUserContentInstaller? userContent = null)
+    /// <param name="modState">Enables the members a pinned vehicle or save needs. Null leaves them as they are.</param>
+    public ModPackUpdater(IInstanceRepository instances, IInstallPlanner planner, IInstallPlanExecutor executor, IModUninstaller uninstaller, IUserContentInstaller? userContent = null, IModStateRepository? modState = null)
     {
         _instances = instances ?? throw new ArgumentNullException(nameof(instances));
         _planner = planner ?? throw new ArgumentNullException(nameof(planner));
         _executor = executor ?? throw new ArgumentNullException(nameof(executor));
         _uninstaller = uninstaller ?? throw new ArgumentNullException(nameof(uninstaller));
-        _content = new ModPackUserContent(userContent);
+        _content = new ModPackUserContent(userContent, modState);
     }
 
     public async Task<ModPackUpdateResult> PlanAsync(ModPackUpdateRequest request, CancellationToken cancellationToken = default)
@@ -210,6 +212,8 @@ public sealed class ModPackUpdater : IModPackUpdater
 
                     changes = next;
                 }
+
+                content = await _content.WithModsAsync(draft, plan, request.Enable, content, warnings, planning.Token).ConfigureAwait(false);
             }
             catch (OperationCanceledException) when (stop is { IsRequested: true } && !cancellationToken.IsCancellationRequested)
             {

@@ -10,6 +10,7 @@ using Borea.Core.Mods;
 using Borea.Core.Planning;
 using Borea.Storage.Instances;
 using Borea.Storage.ModPacks;
+using Borea.Storage.State;
 
 namespace Borea.Cli.Tests;
 
@@ -710,6 +711,32 @@ public sealed class PackCommandTests : IDisposable
         Assert.Equal(["rover", "apollo-save"], skipped.Select(entry => entry.GetProperty("id").GetString()));
         Assert.Equal("An item named 'Rover' is in the way.", skipped[0].GetProperty("reason").GetString());
         Assert.Equal("name-taken", json.Json.GetProperty("content")[0].GetProperty("status").GetString());
+    }
+
+    [Fact]
+    public async Task PackInstall_PinnedVehicleWhoseMemberIsDisabled_EnablesTheMember()
+    {
+        var pack = Snapshot(Pack(ContentCommandFixtures.PackVersion(vehicles: new[] { new ModPackEntry("rover", ModVersion.Parse("1.0.0")) })));
+        _host.IndexReader.Snapshot = new ContentIndexSnapshot(1, [], pack.Packs, null, [], vehicles:
+        [
+            new ContentIndexListing("rover", new ModMetadata(1, "rover", "index", "Rover", ["Author"], "A small rover.", "MIT", new Dictionary<string, string>(), null, ContentType.Vehicle), [UserContentCommandTests.Vehicle("1.0.0", [new ModDependency("flight-tools", ModDependencyKind.Required)])], null),
+        ]);
+        _host.Mods.Releases.Add(ContentCommandFixtures.Release());
+        var downloader = new UserContentCommandTests.ZipDownloader { Bytes = UserContentCommandTests.VehicleArchive("Rover", "<Vehicle />") };
+        _host.InstallerFactory = graph => new FolderInstaller(graph);
+        _host.ModPackInstallerFactory = graph => new ModPackInstaller(graph.Instances, graph.InstallPlanner, new FolderInstaller(graph), graph.Replacer, userContent: new FileUserContentInstaller(graph.Paths, downloader, graph.InstalledContent, () => false), modState: graph.ModState);
+        await _host.RunAsync("instance", "create", "Alpha");
+        await _host.RunAsync("install", "flight-tools", "--instance", "Alpha");
+        await _host.RunAsync("disable", "flight-tools", "--instance", "Alpha");
+        var instance = Assert.Single(await new FileInstanceRepository(_host.Paths).GetAllAsync());
+
+        var dryRun = await _host.RunAsync("pack", "install", "navigation-pack", "--instance", "Alpha", "--dry-run");
+        var run = await _host.RunAsync("pack", "install", "navigation-pack", "--instance", "Alpha");
+
+        Assert.Contains("Enable flight-tools for vehicle rover.", dryRun.Output);
+        Assert.Equal(0, run.ExitCode);
+        Assert.Contains("  installed  vehicle rover 1.0.0 (Vehicles/Rover)", run.Output);
+        Assert.True((await new FileModStateRepository(_host.Paths).GetEntriesAsync(instance.InstanceId)).Single(entry => entry.ModId == "flight-tools").Enabled);
     }
 
     [Fact]
