@@ -1,5 +1,6 @@
 ﻿using Borea.Core.Dependencies;
 using Borea.Core.Game;
+using Borea.Core.Instances;
 using Borea.Core.ModLoaders;
 using System.Collections.ObjectModel;
 using System.Text;
@@ -177,6 +178,19 @@ public sealed class ModVersionMetadata
 
         if (loader is not null && type != ContentType.Mod)
             throw new ArgumentException("Only a mod can declare a loader requirement.", nameof(loader));
+
+        if (type.IsVehicleOrSave())
+        {
+            // The game shows the item by this name and writes it back into a folder of this name, so only a name it keeps works.
+            if (!GameSaveName.IsValid(install?.Folder))
+                throw new ArgumentException($"A vehicle or save needs an install folder that the game keeps as it is, not '{install?.Folder}'.", nameof(install));
+
+            if (install!.Target is not null || install.Path is not null)
+                throw new ArgumentException("A vehicle or save has no install target or path, because the type default places it.", nameof(install));
+
+            if (manages is not null)
+                throw new ArgumentException("A vehicle or save manages no paths.", nameof(manages));
+        }
 
         if (string.IsNullOrWhiteSpace(versionScheme))
             throw new ArgumentException("Version scheme cannot be null or whitespace.", nameof(versionScheme));

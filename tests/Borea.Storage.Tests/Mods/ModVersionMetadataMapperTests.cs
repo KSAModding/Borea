@@ -185,6 +185,31 @@ public sealed class ModVersionMetadataMapperTests : IDisposable
         Assert.Null(reloaded.Install.Target);
         Assert.Null(reloaded.Install.Path);
         Assert.DoesNotContain("Target", tomlText);
+        Assert.DoesNotContain("Folder", tomlText);
+    }
+
+    [Fact]
+    public async Task RoundTrip_VehicleInstallShape_KeepsTheFolder()
+    {
+        var original = new ModVersionMetadata(
+            specVersion: 1,
+            modId: "ExampleRover",
+            version: ModVersion.Parse("1.0.0"),
+            releaseStatus: ReleaseStatus.Stable,
+            releaseDate: MetadataFixtures.SampleTimestamp(),
+            gameMin: "2026.10.19.5638",
+            gameMinRevision: 5638,
+            download: MetadataFixtures.SampleDownload(),
+            installSizeBytes: 4096,
+            dependencies: Array.Empty<ModDependency>(),
+            type: ContentType.Vehicle,
+            install: new InstallInfo(null, derived: true, folder: "Example Rover"));
+
+        var (reloaded, _, tomlText) = await RoundTripAsync(original);
+
+        Assert.Equal(ContentType.Vehicle, reloaded.Type);
+        Assert.Equal("Example Rover", reloaded.Install!.Folder);
+        Assert.Contains("Folder = \"Example Rover\"", tomlText);
     }
 
     [Fact]

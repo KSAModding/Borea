@@ -70,7 +70,7 @@ public static class DtoMapper
             gameMax: dto.GameMax,
             gameMaxRevision: dto.GameMaxRevision,
             os: RequireItems(dto.Os, "os"),
-            install: dto.Install is null ? null : MapInstallInfo(dto.Install),
+            install: dto.Install is null ? null : MapInstallInfo(dto.Install, type),
             loader: dto.Loader is null ? null : MapLoaderRequirement(dto.Loader, ModVersion.Parse),
             changelog: dto.Changelog,
             changelogText: changelogText,
@@ -309,12 +309,14 @@ public static class DtoMapper
             steps: RequireItems(dto.Steps, "install.steps"),
             uninstall: RequireItems(dto.Uninstall, "install.uninstall"));
 
-    private static InstallInfo MapInstallInfo(InstallInfoDto dto) =>
+    // A mod release ignores folder, which only vehicles and saves have.
+    private static InstallInfo MapInstallInfo(InstallInfoDto dto, ContentType type) =>
         new(
             root: dto.Root,
             derived: dto.Derived,
             target: dto.Target is null ? null : MapInstallAnchor(dto.Target),
-            path: dto.Path);
+            path: dto.Path,
+            folder: type.IsVehicleOrSave() ? dto.Folder : null);
 
     private static LoaderProvides MapProvides(ProvidesDto dto) =>
         new(

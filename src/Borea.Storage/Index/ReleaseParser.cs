@@ -1,5 +1,6 @@
 using Borea.Core.Mods;
 using Borea.Storage.Index.Dtos;
+using MetadataEnumMapper = Borea.Storage.Mods.MetadataEnumMapper;
 using System.Text.Json;
 
 namespace Borea.Storage.Index;
@@ -48,6 +49,16 @@ public static class ReleaseParser
                     id,
                     version,
                     $"Release id '{release.Id}' does not agree with listing id '{listingId}'."));
+            }
+
+            // Only vehicles and saves are compared, so every mod and loader release keeps the verdict it had before they existed.
+            var type = MetadataEnumMapper.ParseContentType(release.Type);
+            if ((type.IsVehicleOrSave() || authored?.Type.IsVehicleOrSave() == true) && type != authored?.Type)
+            {
+                return ParseOutcome<ModVersionMetadata>.NewMalformed(new RejectedIndexEntry(
+                    id,
+                    version,
+                    $"Release type '{release.Type}' does not agree with the type of listing '{listingId}'."));
             }
 
             return ParseOutcome<ModVersionMetadata>.Valid(DtoMapper.MapRelease(release, source, authored, changelogText));

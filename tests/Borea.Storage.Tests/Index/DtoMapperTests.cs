@@ -914,6 +914,7 @@ public sealed class DtoMapperTests
     {
         var dto = MinimalReleaseDto();
         dto.Type = "vehicle";
+        dto.Install = new InstallInfoDto { Derived = true, Folder = "Example Rover" };
         dto.Listing = JsonSerializer.SerializeToElement(new { links = new { discord = "https://discord.example/invite" } });
         var authoredDto = MinimalAuthoredDto(type: "vehicle");
         authoredDto.Links = null;
@@ -922,6 +923,31 @@ public sealed class DtoMapperTests
         var result = DtoMapper.MapRelease(dto, null, authored);
 
         Assert.Equal("https://discord.example/invite", Assert.Single(result.Listing!.Links).Value);
+    }
+
+    [Theory]
+    [InlineData("vehicle", "Example Rover")]
+    [InlineData("save", "Example Rover")]
+    [InlineData("mod", null)]
+    public void MapRelease_InstallFolder_IsReadOnlyOnVehiclesAndSaves(string type, string? expected)
+    {
+        var dto = MinimalReleaseDto();
+        dto.Type = type;
+        dto.Install = new InstallInfoDto { Derived = true, Folder = "Example Rover" };
+
+        var result = DtoMapper.MapRelease(dto, null, authored: null);
+
+        Assert.Equal(expected, result.Install!.Folder);
+    }
+
+    [Fact]
+    public void MapRelease_VehicleWithAFolderTheGameChanges_Throws()
+    {
+        var dto = MinimalReleaseDto();
+        dto.Type = "vehicle";
+        dto.Install = new InstallInfoDto { Derived = true, Folder = "CON" };
+
+        Assert.ThrowsAny<ArgumentException>(() => DtoMapper.MapRelease(dto, null, authored: null));
     }
 
     [Fact]

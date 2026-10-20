@@ -23,11 +23,18 @@ public sealed class InstallInfo
     /// <summary>The path below the anchor. Null means the anchor itself.</summary>
     public string? Path { get; }
 
-    public InstallInfo(string? root, bool derived, InstallAnchor? target = null, string? path = null)
+    /// <summary>
+    /// The folder a vehicle or save installs as, the name from its meta.toml (RFC 0085).
+    /// Null on every other type.
+    /// </summary>
+    public string? Folder { get; }
+
+    public InstallInfo(string? root, bool derived, InstallAnchor? target = null, string? path = null, string? folder = null)
     {
         Root = RelativePaths.Contained(root, nameof(root));
         Derived = derived;
         Target = target;
         Path = RelativePaths.Contained(path, nameof(path));
+        Folder = folder;
     }
 }

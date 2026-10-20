@@ -15,4 +15,7 @@ public sealed class InstallInfoDto
 
     /// <summary>Null means the anchor itself.</summary>
     public string? Path { get; set; }
+
+    /// <summary>Only on a vehicle or save.</summary>
+    public string? Folder { get; set; }
 }
