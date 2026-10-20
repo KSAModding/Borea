@@ -256,7 +256,8 @@ public partial class MainViewModel : ViewModelBase
         ? save.IsVehicle ? Localization.GameSaveRenameVehicleTitle : Localization.GameSaveRenameSaveTitle
         : RenamingInstance is not null ? Localization.ModalRenameInstanceTitle : IsImportingSharedProfile ? Localization.SharedProfileModalTitle : Localization.ModalCreateInstanceTitle;
 
-    public string NameModalConfirmText => RenamingInstance is null && RenamingGameSave is null && NamingPackContent is null ? Localization.LibraryCreate : Localization.LibrarySave;
+    public string NameModalConfirmText => NamingPackContent is not null ? Localization.PackContentNameConfirm
+        : RenamingInstance is null && RenamingGameSave is null ? Localization.LibraryCreate : Localization.LibrarySave;
 
     public string? NameModalPlaceholder => RenamingGameSave is null && NamingPackContent is null ? Localization.LibraryNewInstancePlaceholder : null;
 
@@ -953,6 +954,7 @@ public partial class MainViewModel : ViewModelBase
         OnPropertyChanged(nameof(NameModalTitle));
         OnPropertyChanged(nameof(NameModalConfirmText));
         OnPropertyChanged(nameof(NameModalPlaceholder));
+        OnPropertyChanged(nameof(NameModalSkipText));
         OnPropertyChanged(nameof(DeleteModalText));
         OnPropertyChanged(nameof(ContentVersionsEmptyText));
         OnPropertyChanged(nameof(DiscoverSortText));

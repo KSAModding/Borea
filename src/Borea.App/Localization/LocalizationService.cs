@@ -1728,6 +1728,10 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string ListingNoListedMatch => Resources.ListingNoListedMatch;
 
+    public string ListingNoListedVehicleMatch => Resources.ListingNoListedVehicleMatch;
+
+    public string ListingNoListedSaveMatch => Resources.ListingNoListedSaveMatch;
+
     public string ListingNoListedOrPackMatch => Resources.ListingNoListedOrPackMatch;
 
     public string ListingLoad => Resources.ListingLoad;
@@ -1839,6 +1843,12 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string ListingMembersHint => Resources.ListingMembersHint;
 
     public string ListingSearchMembers => Resources.ListingSearchMembers;
+
+    public string ListingSearchVehicles => Resources.ListingSearchVehicles;
+
+    public string ListingSearchSaves => Resources.ListingSearchSaves;
+
+    public string ListingMemberTypeAdd => Resources.ListingMemberTypeAdd;
 
     public string ListingAddMember => Resources.ListingAddMember;
 
@@ -2545,6 +2555,8 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string PackResultNotAttempted => Resources.PackResultNotAttempted;
 
+    public string PackResultSkipped => Resources.PackResultSkipped;
+
     public string PackInstanceChanged => Resources.PackInstanceChanged;
 
     public string PackNothingInstalled => Resources.PackNothingInstalled;
@@ -3198,8 +3210,31 @@ public sealed class LocalizationService : INotifyPropertyChanged
             ? string.Format(CultureInfo.CurrentCulture, Resources.PackNewerItemsOneFormat, total)
             : string.Format(CultureInfo.CurrentCulture, Resources.PackNewerItemsFormat, newer, total);
 
-    public string FormatPackContentNameTaken(string name, string folder)
-        => string.Format(CultureInfo.CurrentCulture, Resources.PackContentNameTakenFormat, name, folder);
+    /// <param name="kindFolder">The shown name of the folder of all vehicles or all saves.</param>
+    public string FormatPackContentNameTaken(string name, string folder, string kindFolder)
+        => string.Format(CultureInfo.CurrentCulture, Resources.PackContentNameTakenFormat, name, folder, kindFolder);
+
+    public string FormatPackContentNameTakenShort(string folder)
+        => string.Format(CultureInfo.CurrentCulture, Resources.PackContentNameTakenShortFormat, folder);
+
+    public string PackContentChangedShort => Resources.PackContentChangedShort;
+
+    public string PackContentNotReached => Resources.PackContentNotReached;
+
+    public string PackContentFailed => Resources.PackContentFailed;
+
+    public string FormatPackContentSkipped(string name, string version, string reason)
+        => string.Format(CultureInfo.CurrentCulture, Resources.PackContentSkippedFormat, name, version, reason);
+
+    public string FormatPackContentSkip(string name)
+        => string.Format(CultureInfo.CurrentCulture, Resources.PackContentSkipFormat, name);
+
+    public string PackContentNameConfirm => Resources.PackContentNameConfirm;
+
+    public string PackContentChooseName => Resources.PackContentChooseName;
+
+    public string FormatPackContentEnables(string mods, string name)
+        => string.Format(CultureInfo.CurrentCulture, Resources.PackContentEnablesFormat, mods, name);
 
     public string FormatPackContentChanged(string name, string files)
         => string.Format(CultureInfo.CurrentCulture, Resources.PackContentChangedFormat, name, files);

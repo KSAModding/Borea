@@ -3,6 +3,7 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Security.Cryptography;
 using System.Text;
+using Borea.App.ViewModels;
 using Borea.Core.Index;
 using Borea.Core.Instances;
 using Borea.Core.ModPacks;
@@ -43,19 +44,7 @@ public sealed class PackContentViewModelTests
     [Fact]
     public async Task PackInstall_PinnedVehicleWhoseNameIsTaken_AsksForANameAndInstallsUnderIt()
     {
-        var rover = Archive(("Example Rover/meta.toml", "name = \"Example Rover\"\n"), ("Example Rover/vehicle.xml", "<Vehicle />"));
-        var tools = Archive(("MeasureTools/mod.toml", "name = \"MeasureTools\""));
-        using var harness = await ViewModelHarness.CreateAsync(
-            respond: request => request.RequestUri?.AbsoluteUri switch
-            {
-                RoverUrl => ArchiveResponse(rover),
-                MeasureToolsUrl => ArchiveResponse(tools),
-                _ => null,
-            },
-            editSnapshot: snapshot => WithPacks(PackWithContent("rover-pack", "Rover Pack", "1.0.0", Pin("MeasureTools", "1.1.10"), vehicles: [Pin("ExampleRover", "1.0.0")]))(
-                snapshot.Replace(MeasureToolsSha256, Convert.ToHexString(SHA256.HashData(tools)), StringComparison.Ordinal)
-                    .Replace("\"size\": 41782", $"\"size\": {tools.Length}", StringComparison.Ordinal)),
-            typeFiles: TypeFiles(ContentIndexTypeFiles.Vehicles, Entry("ExampleRover", "vehicle", "Example Rover", RoverUrl, rover, "1.0.0")));
+        using var harness = await RoverPackHarnessAsync();
         var viewModel = harness.ViewModel;
         var instance = await ActivateAsync(harness);
         var mine = Directory.CreateDirectory(Path.Combine(harness.Services.Paths.GetInstanceVehiclesFolder(instance.InstanceId), "Example Rover")).FullName;
@@ -64,10 +53,15 @@ public sealed class PackContentViewModelTests
 
         await pack.InstallCommand.ExecuteAsync(null);
 
+        var taken = harness.Localization.FormatPackContentNameTaken("Example Rover", "Example Rover", harness.Localization.InstanceGroupVehicles);
         Assert.True(viewModel.IsNameModalOpen);
         Assert.True(viewModel.ShowsGameSaveNameRules);
-        Assert.Equal(harness.Localization.FormatPackContentNameTitle("ExampleRover"), viewModel.NameModalTitle);
-        Assert.Contains(harness.Localization.FormatPackContentNameTaken("ExampleRover", "Example Rover"), pack.InstallWarning);
+        Assert.Equal(harness.Localization.FormatPackContentNameTitle("Example Rover"), viewModel.NameModalTitle);
+        Assert.Equal(taken, viewModel.NameModalExplanation);
+        Assert.Equal(harness.Localization.FormatPackContentSkip("Example Rover"), viewModel.NameModalSkipText);
+        Assert.Equal(harness.Localization.PackContentNameConfirm, viewModel.NameModalConfirmText);
+        Assert.Equal("Example Rover 2", viewModel.ModalInstanceName);
+        Assert.Contains(taken, pack.InstallWarning);
 
         viewModel.ModalInstanceName = "Rover/2";
         await viewModel.ConfirmNameModalCommand.ExecuteAsync(null);
@@ -78,7 +72,7 @@ public sealed class PackContentViewModelTests
         await viewModel.ConfirmNameModalCommand.ExecuteAsync(null);
 
         Assert.False(viewModel.IsNameModalOpen);
-        Assert.DoesNotContain(harness.Localization.FormatPackContentNameTaken("ExampleRover", "Example Rover"), pack.InstallWarning ?? string.Empty);
+        Assert.DoesNotContain(taken, pack.InstallWarning ?? string.Empty);
         await pack.ConfirmInstallCommand.ExecuteAsync(null);
 
         Assert.Null(pack.InstallError);
@@ -88,6 +82,43 @@ public sealed class PackContentViewModelTests
         Assert.StartsWith("name = \"Rover 2\"", File.ReadAllText(Path.Combine(installed, "meta.toml")), StringComparison.Ordinal);
         Assert.Empty(Directory.EnumerateFileSystemEntries(mine));
     }
+
+    [Fact]
+    public async Task PackInstall_GoingOnWithoutATakenItem_IsASkipAndNoError_AndTheNameCanBeChosenAgain()
+    {
+        using var harness = await RoverPackHarnessAsync();
+        var viewModel = harness.ViewModel;
+        var instance = await ActivateAsync(harness);
+        Directory.CreateDirectory(Path.Combine(harness.Services.Paths.GetInstanceVehiclesFolder(instance.InstanceId), "Example Rover"));
+        viewModel.ShowDiscoverModpacksCommand.Execute(null);
+        var pack = Assert.Single(viewModel.DiscoverPacks);
+
+        await pack.InstallCommand.ExecuteAsync(null);
+        viewModel.CancelNameModalCommand.Execute(null);
+
+        Assert.False(viewModel.IsNameModalOpen);
+        Assert.True(pack.IsConfirmingInstall);
+        Assert.True(pack.CanChooseContentName);
+        pack.ChooseContentNameCommand.Execute(null);
+        Assert.True(viewModel.IsNameModalOpen);
+        viewModel.CancelNameModalCommand.Execute(null);
+
+        await pack.ConfirmInstallCommand.ExecuteAsync(null);
+
+        var shortReason = harness.Localization.FormatPackContentNameTakenShort("Example Rover");
+        Assert.Null(pack.InstallError);
+        Assert.Equal(harness.Localization.FormatPackContentSkipped("Example Rover", "1.0.0", shortReason), pack.InstallNote);
+        var skipped = Assert.Single(pack.Results, result => result.ModId == "ExampleRover");
+        Assert.Equal((true, false, harness.Localization.PackResultSkipped, shortReason), (skipped.IsSkipped, skipped.IsProblem, skipped.StatusText, skipped.Message));
+        Assert.Equal(ModPackMemberStatus.Installed, Assert.Single(pack.Results, result => result.ModId == "MeasureTools").Status);
+    }
+
+    [Theory]
+    [InlineData("Campaign", "Campaign 2")]
+    [InlineData("Campaign 2", "Campaign 3")]
+    [InlineData("Apollo 11", "Apollo 12")]
+    public void FreeNameSuggestion_CountsOn(string taken, string suggestion) =>
+        Assert.Equal(suggestion, MainViewModel.FreeNameSuggestion(taken));
 
     [Fact]
     public async Task PackUpdate_ChangedPinnedSave_NamesTheFilesFirst_AndReplacesItOnlyAfterTheGo()
@@ -113,8 +144,10 @@ public sealed class PackContentViewModelTests
         await viewModel.PackUpdate!.UpdateCommand.ExecuteAsync(null);
 
         var update = viewModel.PackUpdate!;
-        Assert.Contains(harness.Localization.FormatPackContentChanged("CampaignSave", "universe.xml"), update.InstallWarning);
-        Assert.Contains(harness.Localization.FormatPackUpdateChange("CampaignSave", "1.0.0", "2.0.0"), update.ChangeTexts);
+        Assert.Equal([harness.Localization.FormatPackContentChanged("Campaign", "universe.xml")], update.PendingQuestions);
+        Assert.DoesNotContain(harness.Localization.FormatPackContentChanged("Campaign", "universe.xml"), update.InstallWarning ?? string.Empty);
+        Assert.Equal([harness.Localization.FormatPackUpdateChange("Campaign", "1.0.0", "2.0.0")], update.ChangeTexts);
+        Assert.StartsWith(harness.Localization.UpdateAnyway, update.ConfirmText, StringComparison.Ordinal);
         Assert.Equal("<Universe played=\"yes\" />", File.ReadAllText(universe));
 
         await update.ConfirmUpdateCommand.ExecuteAsync(null);
@@ -187,12 +220,31 @@ public sealed class PackContentViewModelTests
         Assert.Empty(editor.MemberMatches);
         editor.ShowMemberTypeCommand.Execute(ContentType.Vehicle);
         Assert.Equal(["ExampleRover"], editor.MemberMatches.Select(match => match.Id));
+        Assert.Equal((harness.Localization.ListingSearchVehicles, harness.Localization.ListingNoListedVehicleMatch), (editor.MemberSearchText, editor.MemberNoMatchText));
         editor.AddMemberCommand.Execute(null);
 
         Assert.True(editor.IsMemberTypeVehicles);
         Assert.Empty(editor.Draft.Mods);
         Assert.Equal("ExampleRover", Assert.Single(editor.Draft.Vehicles).Id);
         Assert.Equal("ExampleRover", ((Borea.Core.Listings.AuthoredTable)editor.Draft.ToDocument().GetList("vehicles")![0]).GetString("id"));
+    }
+
+    /// <summary>A pack with one mod and the vehicle Example Rover, both served.</summary>
+    private static Task<ViewModelHarness> RoverPackHarnessAsync()
+    {
+        var rover = Archive(("Example Rover/meta.toml", "name = \"Example Rover\"\n"), ("Example Rover/vehicle.xml", "<Vehicle />"));
+        var tools = Archive(("MeasureTools/mod.toml", "name = \"MeasureTools\""));
+        return ViewModelHarness.CreateAsync(
+            respond: request => request.RequestUri?.AbsoluteUri switch
+            {
+                RoverUrl => ArchiveResponse(rover),
+                MeasureToolsUrl => ArchiveResponse(tools),
+                _ => null,
+            },
+            editSnapshot: snapshot => WithPacks(PackWithContent("rover-pack", "Rover Pack", "1.0.0", Pin("MeasureTools", "1.1.10"), vehicles: [Pin("ExampleRover", "1.0.0")]))(
+                snapshot.Replace(MeasureToolsSha256, Convert.ToHexString(SHA256.HashData(tools)), StringComparison.Ordinal)
+                    .Replace("\"size\": 41782", $"\"size\": {tools.Length}", StringComparison.Ordinal)),
+            typeFiles: TypeFiles(ContentIndexTypeFiles.Vehicles, Entry("ExampleRover", "vehicle", "Example Rover", RoverUrl, rover, "1.0.0")));
     }
 
     private static async Task<Instance> ActivateAsync(ViewModelHarness harness)

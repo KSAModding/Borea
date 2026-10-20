@@ -89,7 +89,8 @@ public partial class MainViewModel
             var request = new ModPackUpdateRequest(item.InstanceId, item.Pack, services.Mods, installed, services.GamePlatform.Current, ProceedWithYankedMembers: yanked.Count == 0 ? null : yanked.Keys.ToHashSet(ModIds.Comparer), UserContent: services.UserContent, ContentNames: item.ContentNames);
             var (pending, result) = await PlanPackUpdateWithChoicesAsync(services, request, null);
             var reasons = PackWarnings(item.Pack, metadata, compatibility);
-            reasons.AddRange(ContentQuestions(result.Content));
+            await LearnContentNamesAsync(services, result.Content);
+            item.PendingQuestions = ContentQuestions(result.Content, result.Warnings);
             foreach (var change in result.Changes.Where(change => change.Kind is ModPackChangeKind.Add or ModPackChangeKind.Change))
             {
                 if (yanked.TryGetValue(change.ModId, out var release))
@@ -107,7 +108,7 @@ public partial class MainViewModel
                 item.PendingReasons = reasons;
                 item.Choices = choices;
                 HoldPackUpdate(item, pending, result);
-                AskContentName(result.Content, item.ContentNames, () => UpdatePackAsync(item));
+                item.ReopenContentName = AskContentName(result.Content, item.ContentNames, () => UpdatePackAsync(item));
             }
         }
         catch (Exception exception) when (IsInstallFailure(exception))
@@ -218,7 +219,7 @@ public partial class MainViewModel
                 var details = result.Plan is null ? null : Describe(result.Plan.Conflicts.Concat(result.Plan.UnresolvedChoices));
                 error = item.InstallError = Sentences(summary, details, kept);
             }
-            else if (NotInstalledContent(result.Content) is { } notInstalled)
+            else if (ContentProblems(result.Content) is { } notInstalled)
             {
                 item.InstallError = notInstalled;
             }
@@ -308,6 +309,21 @@ public sealed partial class PackUpdateItem : ObservableObject, IInstallRow
     /// <summary>The warnings about the pack itself, without those of <see cref="PendingPlan"/>.</summary>
     internal IReadOnlyList<string> PendingReasons { get; set; } = [];
 
+    /// <summary>
+    /// What the confirmation asks about the pinned vehicles and saves, each on a line of its own before the warnings,
+    /// because going on can replace an item the player changed.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ConfirmText))]
+    private IReadOnlyList<string> _pendingQuestions = [];
+
+    /// <summary>Opens the name modal again for a pinned item whose name is taken, while the confirmation waits.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanChooseContentName))]
+    private Action? _reopenContentName;
+
+    public bool CanChooseContentName => ReopenContentName is not null;
+
     /// <summary>The names the player chose for pinned vehicles and saves whose own name is taken, by listing id.</summary>
     internal Dictionary<string, string> ContentNames { get; } = new(ModIds.Comparer);
 
@@ -317,14 +333,23 @@ public sealed partial class PackUpdateItem : ObservableObject, IInstallRow
     /// What the confirmation lists: the mods the update adds, changes, removes and keeps, the detached mods it leaves alone,
     /// and the pinned vehicles and saves it installs or updates.
     /// </summary>
-    public IReadOnlyList<string> ChangeTexts => PendingResult is not { } result ? []
-        : (result.Changes.Count == 0 ? [_owner.Localization.PackUpdateNoModChanges] : result.Changes.Select(ChangeText))
-            .Concat(result.Content.Where(content => content.Status is ModPackContentStatus.NotAttempted or ModPackContentStatus.Changed).Select(ContentText))
-            .ToList();
+    public IReadOnlyList<string> ChangeTexts
+    {
+        get
+        {
+            if (PendingResult is not { } result)
+                return [];
+
+            var texts = result.Changes.Select(ChangeText)
+                .Concat(result.Content.Where(content => content.Status is ModPackContentStatus.NotAttempted or ModPackContentStatus.Changed).Select(ContentText))
+                .ToList();
+            return texts.Count == 0 ? [_owner.Localization.PackUpdateNoModChanges] : texts;
+        }
+    }
 
     private string ContentText(ModPackContentResult content)
     {
-        var name = _owner.ContentName(content.ContentId);
+        var name = _owner.UserContentName(content.ContentId);
         return content.InstalledVersion is { } from
             ? _owner.Localization.FormatPackUpdateChange(name, from.ToString(), content.Version.ToString())
             : _owner.Localization.FormatPackUpdateAdd(name, content.Version.ToString());
@@ -335,7 +360,7 @@ public sealed partial class PackUpdateItem : ObservableObject, IInstallRow
     {
         get
         {
-            var text = InstallWarning is null ? _owner.Localization.PackUpdate : _owner.Localization.UpdateAnyway;
+            var text = InstallWarning is null && PendingQuestions.Count == 0 ? _owner.Localization.PackUpdate : _owner.Localization.UpdateAnyway;
             return MainViewModel.PlanSizeText(PendingPlan) is { } size ? $"{text} ({size})" : text;
         }
     }
@@ -393,11 +418,16 @@ public sealed partial class PackUpdateItem : ObservableObject, IInstallRow
     private Task ConfirmUpdateAsync() => _owner.ConfirmPackUpdateAsync(this);
 
     [RelayCommand]
+    private void ChooseContentName() => ReopenContentName?.Invoke();
+
+    [RelayCommand]
     internal void CancelUpdate()
     {
         PendingRequest = null;
         PendingResult = null;
         PendingReasons = [];
+        PendingQuestions = [];
+        ReopenContentName = null;
         PendingPlan = null;
         InstallWarning = null;
         Choices = null;

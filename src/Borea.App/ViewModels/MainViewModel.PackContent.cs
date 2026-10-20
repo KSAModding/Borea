@@ -3,11 +3,14 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Borea.App.Localization;
+using Borea.Composition;
 using Borea.Core.Instances;
 using Borea.Core.ModPacks;
 using Borea.Core.Mods;
+using Borea.Core.Planning;
 using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace Borea.App.ViewModels;
@@ -19,6 +22,9 @@ namespace Borea.App.ViewModels;
 /// </summary>
 public partial class MainViewModel
 {
+    /// <summary>The names of the vehicle and save listings a pack plan named, by listing id.</summary>
+    private readonly Dictionary<string, string> _userContentNames = new(ModIds.Comparer);
+
     /// <summary>The vehicles the open pack pins.</summary>
     public ObservableCollection<PackContentItem> PackVehicles { get; } = [];
 
@@ -27,11 +33,17 @@ public partial class MainViewModel
 
     /// <summary>The pinned vehicle or save the name modal asks a new name for. Null while the modal is for something else or closed.</summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsNameModalOpen), nameof(NameModalTitle), nameof(NameModalConfirmText), nameof(NameModalPlaceholder), nameof(ShowsGameSaveNameRules))]
+    [NotifyPropertyChangedFor(nameof(IsNameModalOpen), nameof(NameModalTitle), nameof(NameModalConfirmText), nameof(NameModalPlaceholder), nameof(ShowsGameSaveNameRules), nameof(NameModalExplanation), nameof(NameModalSkipText))]
     private PackContentNaming? _namingPackContent;
 
     /// <summary>The modal names a vehicle or a save, so it shows the rule of the game for those names.</summary>
     public bool ShowsGameSaveNameRules => RenamingGameSave is not null || NamingPackContent is not null;
+
+    /// <summary>Why the modal asks for a name of a pinned vehicle or save.</summary>
+    public string? NameModalExplanation => NamingPackContent?.Explanation;
+
+    /// <summary>The button that closes the modal and lets the pack go on without the item.</summary>
+    public string? NameModalSkipText => NamingPackContent is { } naming ? Localization.FormatPackContentSkip(naming.Name) : null;
 
     /// <summary>Fills the vehicle and save rows of the open pack.</summary>
     private async Task LoadPackContentAsync(PackItem pack)
@@ -81,20 +93,39 @@ public partial class MainViewModel
             row.IsInstalled = records.Any(record => record.Type == row.Type && ModIds.Equals(record.ListingId, row.ContentId) && record.Version == row.Pin.Version);
     }
 
-    /// <summary>What the confirmation of a pack says about a pinned item whose name is taken or that the player changed.</summary>
-    private List<string> ContentQuestions(IReadOnlyList<ModPackContentResult> content)
+    /// <summary>Learns the names of the items a pack plan names, so the questions and results do not show bare ids.</summary>
+    private async Task LearnContentNamesAsync(BoreaServices services, IReadOnlyList<ModPackContentResult> content)
+    {
+        foreach (var item in content.Where(item => !_userContentNames.ContainsKey(item.ContentId)))
+        {
+            if ((await services.UserContent.FindAsync(item.ContentId))?.Name is { } name)
+                _userContentNames[item.ContentId] = name;
+        }
+    }
+
+    /// <summary>
+    /// What the confirmation of a pack says about its pinned items: a name in the way, an item the player changed, the
+    /// mods it enables for an item, and each required mod that an item misses.
+    /// </summary>
+    private List<string> ContentQuestions(IReadOnlyList<ModPackContentResult> content, IReadOnlyList<PlanningMessage> warnings)
     {
         var questions = new List<string>();
         foreach (var item in content)
         {
             if (item.Status == ModPackContentStatus.NameTaken)
-                questions.Add(Localization.FormatPackContentNameTaken(UserContentName(item.ContentId), item.FolderName ?? item.ContentId));
+                questions.Add(NameTakenText(item));
             else if (item.Status == ModPackContentStatus.Changed && item.Changes is { } changes)
                 questions.Add(Localization.FormatPackContentChanged(UserContentName(item.ContentId), string.Join(", ", changes.Added.Concat(changes.Removed).Concat(changes.Changed))));
+            if (item.Enables is { Count: > 0 } enables)
+                questions.Add(Localization.FormatPackContentEnables(string.Join(", ", enables.Select(ContentName)), UserContentName(item.ContentId)));
         }
 
+        questions.AddRange(warnings.Where(warning => warning.Kind is PlanningMessageKind.MissingForVehicle or PlanningMessageKind.MissingForSave).Select(PlanningText.Message));
         return questions;
     }
+
+    private string NameTakenText(ModPackContentResult item) =>
+        Localization.FormatPackContentNameTaken(UserContentName(item.ContentId), item.FolderName ?? item.ContentId, item.Type == ContentType.Save ? Localization.InstanceGroupSaves : Localization.InstanceGroupVehicles);
 
     private static HashSet<string>? ChangedContent(IReadOnlyList<ModPackContentResult> content)
     {
@@ -102,18 +133,36 @@ public partial class MainViewModel
         return changed.Count == 0 ? null : changed;
     }
 
-    /// <summary>Opens the name modal for the first pinned item whose name is taken. Its new name goes into <paramref name="names"/>, and <paramref name="replan"/> checks again.</summary>
-    private void AskContentName(IReadOnlyList<ModPackContentResult> content, Dictionary<string, string> names, Func<Task> replan)
+    /// <summary>
+    /// Opens the name modal for the first pinned item whose name is taken. Its new name goes into <paramref name="names"/>,
+    /// and <paramref name="replan"/> checks again.
+    /// </summary>
+    /// <returns>What opens the modal again after the player closed it, or null when no name is taken.</returns>
+    private Action? AskContentName(IReadOnlyList<ModPackContentResult> content, Dictionary<string, string> names, Func<Task> replan)
     {
         if (content.FirstOrDefault(item => item.Status == ModPackContentStatus.NameTaken) is not { } taken)
-            return;
+            return null;
 
-        InstanceError = null;
-        IsCreatingInstance = false;
-        RenamingInstance = null;
-        RenamingGameSave = null;
-        ModalInstanceName = names.GetValueOrDefault(taken.ContentId) ?? taken.FolderName ?? string.Empty;
-        NamingPackContent = new PackContentNaming(taken.ContentId, UserContentName(taken.ContentId), names, replan);
+        void Open()
+        {
+            InstanceError = null;
+            IsCreatingInstance = false;
+            RenamingInstance = null;
+            RenamingGameSave = null;
+            ModalInstanceName = FreeNameSuggestion(names.GetValueOrDefault(taken.ContentId) ?? taken.FolderName ?? taken.ContentId);
+            NamingPackContent = new PackContentNaming(taken.ContentId, UserContentName(taken.ContentId), NameTakenText(taken), names, replan);
+        }
+
+        Open();
+        return Open;
+    }
+
+    /// <summary>The taken name with a number after it, or the next number when it has one, so the field starts with a name that may be free.</summary>
+    internal static string FreeNameSuggestion(string taken)
+    {
+        var numbered = Regex.Match(taken, @"^(.*) (\d{1,6})$");
+        var suggestion = numbered.Success ? $"{numbered.Groups[1].Value} {int.Parse(numbered.Groups[2].Value, System.Globalization.CultureInfo.InvariantCulture) + 1}" : $"{taken} 2";
+        return GameSaveName.IsValid(suggestion) ? suggestion : taken;
     }
 
     /// <summary>Keeps the modal open while the game would change the name, and otherwise checks the pack again with it.</summary>
@@ -134,41 +183,76 @@ public partial class MainViewModel
         await naming.Replan();
     }
 
-    /// <summary>A pinned item as a member result, so the result list of a pack shows it next to the mods.</summary>
-    private static ModPackMemberResult AsMember(ModPackContentResult item) => new(
-        item.ContentId,
-        item.Version,
-        InstallReason.ModPack,
-        item.Status switch
-        {
-            ModPackContentStatus.Installed => ModPackMemberStatus.Installed,
-            ModPackContentStatus.Updated => ModPackMemberStatus.Replaced,
-            ModPackContentStatus.AlreadyInstalled => ModPackMemberStatus.AlreadyInstalled,
-            ModPackContentStatus.Failed => ModPackMemberStatus.Failed,
-            ModPackContentStatus.NotAttempted => ModPackMemberStatus.NotAttempted,
-            _ => ModPackMemberStatus.Unresolved,
-        },
-        item.Message);
+    /// <summary>A pinned item as a row of the results. An item the player went on without is skipped, not a failure.</summary>
+    private PackResultItem ContentResult(ModPackContentResult item) => new(
+        this,
+        new ModPackMemberResult(
+            item.ContentId,
+            item.Version,
+            InstallReason.ModPack,
+            item.Status switch
+            {
+                ModPackContentStatus.Installed => ModPackMemberStatus.Installed,
+                ModPackContentStatus.Updated => ModPackMemberStatus.Replaced,
+                ModPackContentStatus.AlreadyInstalled => ModPackMemberStatus.AlreadyInstalled,
+                ModPackContentStatus.Failed => ModPackMemberStatus.Failed,
+                ModPackContentStatus.Skipped => ModPackMemberStatus.Unresolved,
+                _ => ModPackMemberStatus.NotAttempted,
+            },
+            ContentMessage(item)),
+        isSkipped: IsSkippedByChoice(item));
 
-    /// <summary>Names each pinned item that did not install and why, or null when every one did.</summary>
-    private string? NotInstalledContent(IReadOnlyList<ModPackContentResult> content)
+    /// <summary>The player went on without the item, because its name is taken or the player changed it.</summary>
+    private static bool IsSkippedByChoice(ModPackContentResult item) => item.Status is ModPackContentStatus.NameTaken or ModPackContentStatus.Changed;
+
+    private static bool IsInPlace(ModPackContentResult item) => item.Status is ModPackContentStatus.Installed or ModPackContentStatus.Updated or ModPackContentStatus.AlreadyInstalled;
+
+    /// <summary>Why an item is not in place, in the language of the App. The text of a failure goes to the log only.</summary>
+    private string? ContentMessage(ModPackContentResult item) => item.Status switch
     {
+        ModPackContentStatus.Installed or ModPackContentStatus.Updated or ModPackContentStatus.AlreadyInstalled => null,
+        ModPackContentStatus.NameTaken => Localization.FormatPackContentNameTakenShort(item.FolderName ?? item.ContentId),
+        ModPackContentStatus.Changed => Localization.PackContentChangedShort,
+        ModPackContentStatus.Skipped when item.Warning is { } warning => PlanningText.Message(warning),
+        ModPackContentStatus.Failed => Localization.PackContentFailed,
+        _ => Localization.PackContentNotReached,
+    };
+
+    /// <summary>Names each pinned item that did not install for another reason than the choice of the player, or null when there is none.</summary>
+    private string? ContentProblems(IReadOnlyList<ModPackContentResult> content)
+    {
+        foreach (var item in content.Where(item => item.Status == ModPackContentStatus.Failed))
+            _services?.Log.Write($"Pack item {item.ContentId} {item.Version} did not install. {item.Message}");
+
         var missed = content
-            .Where(item => item.Status is not (ModPackContentStatus.Installed or ModPackContentStatus.Updated or ModPackContentStatus.AlreadyInstalled))
-            .Select(item => Localization.FormatPackContentNotInstalled(UserContentName(item.ContentId), item.Version.ToString(), item.Warning is { } warning ? PlanningText.Message(warning) : item.Message))
+            .Where(item => !IsInPlace(item) && !IsSkippedByChoice(item))
+            .Select(item => Localization.FormatPackContentNotInstalled(UserContentName(item.ContentId), item.Version.ToString(), ContentMessage(item)))
             .ToList();
         return missed.Count == 0 ? null : string.Join(" ", missed);
     }
 
-    /// <summary>The name of a pinned vehicle or save as the open pack page shows it, else its id.</summary>
-    private string UserContentName(string id) =>
-        PackVehicles.Concat(PackSaves).FirstOrDefault(row => ModIds.Equals(row.ContentId, id))?.Name ?? id;
+    /// <summary>Names each pinned item the player went on without, or null when there is none.</summary>
+    private string? SkippedContent(IReadOnlyList<ModPackContentResult> content)
+    {
+        var skipped = content
+            .Where(IsSkippedByChoice)
+            .Select(item => Localization.FormatPackContentSkipped(UserContentName(item.ContentId), item.Version.ToString(), ContentMessage(item)!))
+            .ToList();
+        return skipped.Count == 0 ? null : string.Join(" ", skipped);
+    }
+
+    /// <summary>The name of a pinned vehicle or save as the index lists it, else its id.</summary>
+    internal string UserContentName(string id) =>
+        _userContentNames.GetValueOrDefault(id)
+        ?? PackVehicles.Concat(PackSaves).FirstOrDefault(row => ModIds.Equals(row.ContentId, id))?.Name
+        ?? id;
 }
 
 /// <summary>A pinned vehicle or save whose name is taken, which the name modal asks a new name for.</summary>
+/// <param name="Explanation">Which item is in the way, and that the pack can go on without this one.</param>
 /// <param name="Names">Where the new name goes, by listing id.</param>
 /// <param name="Replan">Checks the pack again with the new name.</param>
-public sealed record PackContentNaming(string ContentId, string Name, Dictionary<string, string> Names, Func<Task> Replan);
+public sealed record PackContentNaming(string ContentId, string Name, string Explanation, Dictionary<string, string> Names, Func<Task> Replan);
 
 /// <summary>One vehicle or save a pack version pins.</summary>
 public sealed partial class PackContentItem : ObservableObject

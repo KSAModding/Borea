@@ -591,10 +591,12 @@ public partial class MainViewModel
                 ContentNames: pack.ContentNames);
 
             // a new instance holds no vehicle or save yet, so only an existing one can have a name in the way or a changed item
-            var content = instanceId is not null && metadata.Vehicles.Count + metadata.Saves.Count > 0
-                ? (await services.ModPackInstaller.PlanAsync(request)).Content
-                : [];
-            reasons.AddRange(ContentQuestions(content));
+            var contentPlan = instanceId is not null && metadata.Vehicles.Count + metadata.Saves.Count > 0
+                ? await services.ModPackInstaller.PlanAsync(request)
+                : null;
+            var content = contentPlan?.Content ?? [];
+            await LearnContentNamesAsync(services, content);
+            reasons.AddRange(ContentQuestions(content, contentPlan?.Warnings ?? []));
 
             if (run.InstallStop.IsRequested)
             {
@@ -610,7 +612,7 @@ public partial class MainViewModel
                 HoldPack(pack, plan);
                 if (choices is not null)
                     ReplanOnChange(pack, choices, replanned => HoldPack(pack, replanned));
-                AskContentName(content, pack.ContentNames, () => PlanPackInstallAsync(pack, instanceId, newInstanceName, version, confirm: true));
+                pack.ReopenContentName = AskContentName(content, pack.ContentNames, () => PlanPackInstallAsync(pack, instanceId, newInstanceName, version, confirm: true));
             }
             else
             {
@@ -815,7 +817,7 @@ public partial class MainViewModel
             : await services.ModPackInstaller.CreateAndInstallAsync(newInstanceName, request, ProgressOf(pack), run.InstallStop);
         if (newInstanceName is not null && result.InstanceId != Guid.Empty)
             run.TaskItem.SetInstance(result.InstanceId, newInstanceName);
-        pack.ShowResults(result.Members.Concat(result.Content.Select(AsMember)).Select(member => new PackResultItem(this, member)));
+        pack.ShowResults(result.Members.Select(member => new PackResultItem(this, member)).Concat(result.Content.Select(ContentResult)));
         LeavePackInstallStepsNotice(pack, result);
         if (result.IsStopped)
         {
@@ -828,8 +830,8 @@ public partial class MainViewModel
         // the mods of a pack are complete without its vehicles and saves, so an item that did not install is named on its own
         if (result.IsComplete)
         {
-            if (NotInstalledContent(result.Content) is { } notInstalled)
-                pack.InstallError = notInstalled;
+            pack.InstallError = ContentProblems(result.Content);
+            pack.InstallNote = SkippedContent(result.Content);
             return null;
         }
 
@@ -995,6 +997,17 @@ public sealed partial class PackItem : ObservableObject, IPlanRow
     [ObservableProperty]
     private string? _installError;
 
+    /// <summary>The pinned vehicles and saves the player went on without in the last install.</summary>
+    [ObservableProperty]
+    private string? _installNote;
+
+    /// <summary>Opens the name modal again for a pinned item whose name is taken, while the confirmation waits.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanChooseContentName))]
+    private Action? _reopenContentName;
+
+    public bool CanChooseContentName => ReopenContentName is not null;
+
     private bool _isOpening;
 
     /// <summary>
@@ -1110,6 +1123,7 @@ public sealed partial class PackItem : ObservableObject, IPlanRow
     internal void ClearOutcome()
     {
         InstallError = null;
+        InstallNote = null;
         ProgressStatus = null;
         CancelInstall();
         ShowResults([]);
@@ -1200,12 +1214,16 @@ public sealed partial class PackItem : ObservableObject, IPlanRow
     private Task ToggleFavoriteAsync() => _owner.ToggleFavoriteAsync(this);
 
     [RelayCommand]
+    private void ChooseContentName() => ReopenContentName?.Invoke();
+
+    [RelayCommand]
     internal void CancelInstall()
     {
         PendingInstall = null;
         PendingInstanceName = null;
         PendingReasons = [];
         PendingContent = [];
+        ReopenContentName = null;
         PendingPlan = null;
         InstallWarning = null;
         Choices = null;
@@ -1664,7 +1682,12 @@ public sealed partial class PackResultItem : ObservableObject
 
     public bool IsSuccess => IsDone(Status);
 
-    public string StatusText => Status switch
+    /// <summary>The player went on without this item, so its row is neither a success nor a problem.</summary>
+    public bool IsSkipped { get; }
+
+    public bool IsProblem => !IsSuccess && !IsSkipped;
+
+    public string StatusText => IsSkipped ? _owner.Localization.PackResultSkipped : Status switch
     {
         ModPackMemberStatus.Installed => _owner.Localization.PackResultInstalled,
         ModPackMemberStatus.Replaced => _owner.Localization.PackResultReplaced,
@@ -1674,10 +1697,11 @@ public sealed partial class PackResultItem : ObservableObject
         _ => _owner.Localization.PackResultNotAttempted,
     };
 
-    public PackResultItem(MainViewModel owner, ModPackMemberResult member)
+    public PackResultItem(MainViewModel owner, ModPackMemberResult member, bool isSkipped = false)
     {
         _owner = owner;
         _member = member;
+        IsSkipped = isSkipped;
     }
 
     internal static bool IsDone(ModPackMemberStatus status)
