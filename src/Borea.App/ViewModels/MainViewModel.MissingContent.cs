@@ -42,6 +42,8 @@ public partial class MainViewModel
         if (_services is not { } services)
             return;
 
+        await DropMissingRecordsAsync(services, instanceId);
+
         IReadOnlyList<string> missing;
         try
         {
@@ -61,6 +63,22 @@ public partial class MainViewModel
 
         if (missing.Count > 0)
             MissingContent = new MissingContentItem(this, instanceId, missing);
+    }
+
+    /// <summary>
+    /// A record of a vehicle or save whose folder is gone would claim a folder that the player
+    /// makes later under that name. Nothing shows these records yet, so a failure is only logged.
+    /// </summary>
+    private static async Task DropMissingRecordsAsync(BoreaServices services, Guid instanceId)
+    {
+        try
+        {
+            await services.InstalledContent.DropMissingAsync(instanceId);
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or InvalidOperationException)
+        {
+            services.Log.Write($"The install records of instance '{instanceId}' were not checked against its folders.", exception);
+        }
     }
 
     /// <summary>Whether the mod of the shown instance has no folder any more.</summary>

@@ -232,6 +232,56 @@ public sealed class MissingContentTests
         Assert.Empty(saved!.Mods);
     }
 
+    [Fact]
+    public async Task OpenInstance_RecordOfAVehicleWhoseFolderIsGone_IsDropped()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(respond: ServeArchive);
+        var instance = await SeedAsync(harness);
+        Directory.CreateDirectory(Path.Combine(harness.Services.Paths.GetInstanceVehiclesFolder(instance.InstanceId), "Kept Rover"));
+        await harness.Services.InstalledContent.AddAsync(instance.InstanceId, VehicleRecord("Kept Rover"));
+        await harness.Services.InstalledContent.AddAsync(instance.InstanceId, VehicleRecord("Gone Rover"));
+        var viewModel = harness.ViewModel;
+        await viewModel.LoadAsync();
+
+        await viewModel.ActiveInstance!.OpenCommand.ExecuteAsync(null);
+
+        Assert.Equal("Kept Rover", Assert.Single(await harness.Services.InstalledContent.ListAsync(instance.InstanceId)).FolderName);
+    }
+
+    [Fact]
+    public async Task OpenInstance_UnreadableInstallRecords_StillOpensAndLogs()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(respond: ServeArchive);
+        var instance = await SeedAsync(harness);
+        DeleteFolder(harness, instance.InstanceId, "HudCore");
+        await File.WriteAllTextAsync(harness.Services.Paths.GetInstanceInstalledContentPath(instance.InstanceId), "[[Items]\nType = ");
+        var viewModel = harness.ViewModel;
+        await viewModel.LoadAsync();
+
+        await viewModel.ActiveInstance!.OpenCommand.ExecuteAsync(null);
+
+        Assert.True(Row(viewModel, "HudCore").IsMissing);
+        Assert.Contains(harness.Services.Log.ReadRecentLines(50), line => line.Contains("install records", StringComparison.Ordinal));
+    }
+
+    private static InstalledContentRecord VehicleRecord(string folder) => new(
+        new ModVersionMetadata(
+            specVersion: 1,
+            modId: folder.Replace(" ", "", StringComparison.Ordinal),
+            version: ModVersion.Parse("1.0.0"),
+            releaseStatus: ReleaseStatus.Stable,
+            releaseDate: DateTimeOffset.UnixEpoch,
+            gameMin: "2026.10.19.5638",
+            gameMinRevision: 5638,
+            download: new DownloadInfo("https://archives.test/rover.zip", new string('A', 64), 1, "application/zip"),
+            installSizeBytes: 1,
+            dependencies: [],
+            type: ContentType.Vehicle,
+            install: new InstallInfo(null, true, folder: folder)),
+        folder,
+        DateTimeOffset.UnixEpoch,
+        new Dictionary<string, string>());
+
     private static async Task<Instance> SeedAsync(ViewModelHarness harness)
     {
         harness.SpaceDock.Releases.AddRange(
