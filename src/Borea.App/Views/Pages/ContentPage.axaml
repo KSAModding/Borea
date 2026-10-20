@@ -118,7 +118,7 @@
                                 <Button Classes="text" Content="{Binding Localization.LibraryCancel}" Command="{Binding SelectedContent.CancelInstallCommand}" />
                             </WrapPanel>
                             <WrapPanel ItemSpacing="8" LineSpacing="8" Margin="0,8,0,0" IsVisible="{Binding SelectedContent.IsConfirmingRemove}">
-                                <TextBlock Classes="body-sm danger" Text="{Binding Localization.ContentRemoveConfirm}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                                <TextBlock Classes="body-sm danger" Text="{Binding SelectedContent.RemoveConfirmText}" TextWrapping="Wrap" VerticalAlignment="Center" />
                                 <Button Classes="text danger" Content="{Binding Localization.ContentRemove}" Command="{Binding SelectedContent.ConfirmRemoveCommand}" />
                                 <Button Classes="text" Content="{Binding Localization.LibraryCancel}" Command="{Binding SelectedContent.CancelRemoveCommand}" />
                             </WrapPanel>

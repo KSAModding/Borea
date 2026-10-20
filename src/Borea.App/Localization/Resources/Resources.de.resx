@@ -2091,6 +2091,12 @@
   <data name="ContentRemoveConfirm" xml:space="preserve">
     <value>Diesen Inhalt aus der Instanz entfernen?</value>
   </data>
+  <data name="ContentRemoveChangedFormat" xml:space="preserve">
+    <value>Du hast {0} geändert, seit Borea es installiert hat: {1}. Trotzdem entfernen? Borea verschiebt den Ordner in den Ordner Backups.</value>
+  </data>
+  <data name="ContentGoneFromInstance" xml:space="preserve">
+    <value>Dieses Fahrzeug oder dieser Spielstand ist nicht mehr in der Instanz.</value>
+  </data>
   <data name="ContentRemoveSteps" xml:space="preserve">
     <value>Borea entfernt die Dateien, die es installiert hat. Der Autor bittet dich, auch diese Schritte zu machen:</value>
   </data>
@@ -4256,6 +4262,9 @@
   </data>
   <data name="PackContentNameTakenFormat" xml:space="preserve">
     <value>Im Ordner {2} gibt es schon einen Eintrag namens '{1}', der {0} im Weg steht. Wähle einen anderen Namen oder mache ohne {0} weiter.</value>
+  </data>
+  <data name="ContentNameTakenFormat" xml:space="preserve">
+    <value>Im Ordner {2} gibt es schon einen Eintrag namens '{1}', der {0} im Weg steht. Wähle einen anderen Namen.</value>
   </data>
   <data name="PackContentChangedFormat" xml:space="preserve">
     <value>Du hast {0} geändert, seit Borea es installiert hat: {1}. Weitermachen ersetzt es, und der alte Ordner bleibt in den Sicherungen.</value>

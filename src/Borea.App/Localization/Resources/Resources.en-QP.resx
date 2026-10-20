@@ -1449,6 +1449,12 @@
   <data name="ContentRemoveConfirm" xml:space="preserve">
     <value>Toss the booty from this sea overboard?</value>
   </data>
+  <data name="ContentRemoveChangedFormat" xml:space="preserve">
+    <value>Ye changed {0} since The Borea hauled it onboard: {1}. Toss it overboard anyway? The Borea hauls the chest into the Backups treasure chest.</value>
+  </data>
+  <data name="ContentGoneFromInstance" xml:space="preserve">
+    <value>This ship or tale ain't in the sea any longer.</value>
+  </data>
   <data name="ContentRemoveSteps" xml:space="preserve">
     <value>The Borea tosses overboard the planks it hauled aboard. The cap'n who made this booty also bids ye do these deeds:</value>
   </data>
@@ -2621,6 +2627,9 @@
   </data>
   <data name="PackContentNameTakenFormat" xml:space="preserve">
     <value>The {2} chest already holds a haul named '{1}', blockin' {0}. Pick another name, or sail on without {0}.</value>
+  </data>
+  <data name="ContentNameTakenFormat" xml:space="preserve">
+    <value>The {2} chest already holds a haul named '{1}', blockin' {0}. Pick another name.</value>
   </data>
   <data name="PackContentChangedFormat" xml:space="preserve">
     <value>Ye changed {0} since The Borea hauled it onboard: {1}. Sailin' on swaps it out, and the old chest stays in the stash.</value>

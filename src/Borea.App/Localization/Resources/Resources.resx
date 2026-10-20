@@ -2091,6 +2091,12 @@
   <data name="ContentRemoveConfirm" xml:space="preserve">
     <value>Remove this content from the instance?</value>
   </data>
+  <data name="ContentRemoveChangedFormat" xml:space="preserve">
+    <value>You changed {0} since Borea installed it: {1}. Remove it anyway? Borea moves the folder into the Backups folder.</value>
+  </data>
+  <data name="ContentGoneFromInstance" xml:space="preserve">
+    <value>This vehicle or save is no longer in the instance.</value>
+  </data>
   <data name="ContentRemoveSteps" xml:space="preserve">
     <value>Borea removes the files that it installed. The author also asks you to do these steps:</value>
   </data>
@@ -4256,6 +4262,9 @@
   </data>
   <data name="PackContentNameTakenFormat" xml:space="preserve">
     <value>The {2} folder already has an item named '{1}', which is in the way of {0}. Choose another name, or go on without {0}.</value>
+  </data>
+  <data name="ContentNameTakenFormat" xml:space="preserve">
+    <value>The {2} folder already has an item named '{1}', which is in the way of {0}. Choose another name.</value>
   </data>
   <data name="PackContentChangedFormat" xml:space="preserve">
     <value>You changed {0} since Borea installed it: {1}. Going on replaces it, and the old folder stays in the backups.</value>

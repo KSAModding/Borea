@@ -184,6 +184,158 @@ public sealed class UserContentViewModelTests
         Assert.NotNull(viewModel.ContentShareUrl);
     }
 
+    [Fact]
+    public async Task Install_TakenName_OpensTheNameModal_AndAValidNameInstalls()
+    {
+        using var harness = await VehicleHarnessAsync();
+        var viewModel = harness.ViewModel;
+        var instance = await ActiveInstanceAsync(harness);
+        var vehicles = harness.Services.Paths.GetInstanceVehiclesFolder(instance.InstanceId);
+        var mine = Directory.CreateDirectory(Path.Combine(vehicles, "Example Rover")).FullName;
+        File.WriteAllText(Path.Combine(mine, "vehicle.xml"), "<Vehicle mine=\"yes\" />");
+        viewModel.ShowDiscoverVehiclesCommand.Execute(null);
+        var row = Assert.Single(viewModel.DiscoverItems);
+
+        await row.InstallCommand.ExecuteAsync(null);
+
+        Assert.True(viewModel.IsNameModalOpen);
+        Assert.True(viewModel.ShowsGameSaveNameRules);
+        Assert.Null(viewModel.NameModalSkipText);
+        Assert.Equal(harness.Localization.FormatContentNameTaken("Example Rover", "Example Rover", harness.Localization.InstanceGroupVehicles), viewModel.NameModalExplanation);
+        Assert.Equal("Example Rover 2", viewModel.ModalInstanceName);
+        Assert.DoesNotContain(harness.Requests, uri => uri.AbsoluteUri == RoverUrl);
+
+        await viewModel.ConfirmNameModalCommand.ExecuteAsync(null);
+
+        // without a game the compatibility is unknown, so the install waits for a go, as a mod does
+        Assert.False(viewModel.IsNameModalOpen);
+        Assert.True(row.IsConfirmingInstall);
+        await row.ConfirmInstallCommand.ExecuteAsync(null);
+        Assert.Null(row.InstallError);
+        var installed = Path.Combine(vehicles, "Example Rover 2");
+        Assert.StartsWith("name = \"Example Rover 2\"", File.ReadAllText(Path.Combine(installed, "meta.toml")), StringComparison.Ordinal);
+        Assert.Equal("<Vehicle mine=\"yes\" />", File.ReadAllText(Path.Combine(mine, "vehicle.xml")));
+        var record = Assert.Single(await harness.Services.InstalledContent.ListAsync(instance.InstanceId));
+        Assert.Equal(("Example Rover 2", ModVersion.Parse("1.1.0")), (record.FolderName, record.Version));
+        Assert.True(viewModel.DiscoverItems.Single().IsInstalled);
+    }
+
+    [Fact]
+    public async Task Install_DisabledRequiredMod_WaitsWithTheEnable_AndTheGoInstallsAndEnablesIt()
+    {
+        using var harness = await VehicleHarnessAsync(dependencies: Required("MeasureTools"));
+        var viewModel = harness.ViewModel;
+        var instance = await InstalledContent.AddAsync(harness, "MeasureTools", activate: true, ownership: ModInstallOwnership.Borea);
+        await harness.Services.ModState.SetInactiveAsync(instance.InstanceId, "MeasureTools");
+        await viewModel.LoadAsync();
+        await viewModel.EnsureDiscoverLoadedAsync();
+        viewModel.ShowDiscoverVehiclesCommand.Execute(null);
+        var row = Assert.Single(viewModel.DiscoverItems);
+
+        await row.InstallCommand.ExecuteAsync(null);
+
+        Assert.True(row.IsConfirmingInstall);
+        Assert.Contains(harness.Localization.FormatPackContentEnables("MeasureTools", "Example Rover"), row.InstallWarning, StringComparison.Ordinal);
+        Assert.Empty(await harness.Services.InstalledContent.ListAsync(instance.InstanceId));
+
+        await row.ConfirmInstallCommand.ExecuteAsync(null);
+
+        Assert.Null(row.InstallError);
+        Assert.False(row.IsConfirmingInstall);
+        Assert.Single(await harness.Services.InstalledContent.ListAsync(instance.InstanceId));
+        Assert.True(await harness.Services.ModState.IsActiveAsync(instance.InstanceId, "MeasureTools"));
+    }
+
+    [Fact]
+    public async Task Install_RequiredModThatIsNotListed_NamesWhatTheGameDoes_AndTheGoInstallsWithoutIt()
+    {
+        using var harness = await VehicleHarnessAsync(dependencies: Required("NotListedParts"));
+        var viewModel = harness.ViewModel;
+        var instance = await ActiveInstanceAsync(harness);
+        viewModel.ShowDiscoverVehiclesCommand.Execute(null);
+        var row = Assert.Single(viewModel.DiscoverItems);
+
+        await row.InstallCommand.ExecuteAsync(null);
+
+        Assert.Contains("so the game refuses this vehicle", row.InstallWarning, StringComparison.Ordinal);
+        await row.ConfirmInstallCommand.ExecuteAsync(null);
+
+        Assert.Null(row.InstallError);
+        Assert.Single(await harness.Services.InstalledContent.ListAsync(instance.InstanceId));
+    }
+
+    [Fact]
+    public async Task Install_WhileTheGameRuns_SaysCloseTheGameFirstAndChangesNothing()
+    {
+        using var harness = await VehicleHarnessAsync();
+        var viewModel = harness.ViewModel;
+        var instance = await ActiveInstanceAsync(harness);
+        harness.IsGameProcessRunning = () => true;
+        viewModel.ShowDiscoverVehiclesCommand.Execute(null);
+        var row = Assert.Single(viewModel.DiscoverItems);
+
+        await row.InstallCommand.ExecuteAsync(null);
+
+        Assert.Equal(harness.Localization.GameSaveCloseGame, row.InstallError);
+        Assert.Empty(await harness.Services.InstalledContent.ListAsync(instance.InstanceId));
+    }
+
+    [Fact]
+    public async Task VersionRow_OfARecordedVehicle_UpdatesItToThatRelease()
+    {
+        using var harness = await VehicleHarnessAsync();
+        var viewModel = harness.ViewModel;
+        var instance = await ActiveInstanceWithRoverAsync(harness);
+        viewModel.ShowDiscoverVehiclesCommand.Execute(null);
+        await Assert.Single(viewModel.DiscoverItems).OpenCommand.ExecuteAsync(null);
+        await viewModel.ShowContentVersionsCommand.ExecuteAsync(null);
+        var newer = viewModel.ContentVersions.Single(version => version.Version == "1.1.0");
+        Assert.True(viewModel.ContentVersions.Single(version => version.Version == "1.0.0").IsInstalled);
+        Assert.Equal("1.0.0", newer.ReplacedVersion);
+
+        await newer.InstallCommand.ExecuteAsync(null);
+        Assert.True(newer.IsConfirmingInstall);
+        await newer.ConfirmInstallCommand.ExecuteAsync(null);
+
+        Assert.Null(newer.InstallError);
+        Assert.Equal(ModVersion.Parse("1.1.0"), Assert.Single(await harness.Services.InstalledContent.ListAsync(instance.InstanceId)).Version);
+    }
+
+    [Fact]
+    public async Task DiscoverRemove_ChangedVehicle_NamesTheFilesFirst_AndTheSecondGoRemovesIt()
+    {
+        using var harness = await VehicleHarnessAsync();
+        var viewModel = harness.ViewModel;
+        var instance = await ActiveInstanceWithRoverAsync(harness);
+        var folder = Path.Combine(harness.Services.Paths.GetInstanceVehiclesFolder(instance.InstanceId), "Example Rover");
+        File.WriteAllText(Path.Combine(folder, "vehicle.xml"), "<Vehicle edited=\"yes\" />");
+        viewModel.ShowDiscoverVehiclesCommand.Execute(null);
+        var row = Assert.Single(viewModel.DiscoverItems);
+        Assert.True(row.CanRemove);
+
+        row.BeginRemoveCommand.Execute(null);
+        await row.ConfirmRemoveCommand.ExecuteAsync(null);
+
+        Assert.True(row.IsConfirmingRemove);
+        Assert.Equal(harness.Localization.FormatContentRemoveChanged("Example Rover", "vehicle.xml"), row.RemoveConfirmText);
+        Assert.True(Directory.Exists(folder));
+
+        await row.ConfirmRemoveCommand.ExecuteAsync(null);
+
+        Assert.False(Directory.Exists(folder));
+        Assert.Empty(await harness.Services.InstalledContent.ListAsync(instance.InstanceId));
+        Assert.False(viewModel.DiscoverItems.Single().IsInstalled);
+    }
+
+    private static async Task<Instance> ActiveInstanceAsync(ViewModelHarness harness)
+    {
+        var instance = (await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value)).Instance;
+        await harness.Services.Instances.SetActiveInstanceAsync(instance.InstanceId);
+        await harness.ViewModel.LoadAsync();
+        await harness.ViewModel.EnsureDiscoverLoadedAsync();
+        return instance;
+    }
+
     /// <summary>The vehicle Example Rover with releases 1.0.0 and 1.1.0, served, with 42 downloads.</summary>
     internal static Task<ViewModelHarness> VehicleHarnessAsync(Func<string, string>? editSnapshot = null, string dependencies = "")
     {

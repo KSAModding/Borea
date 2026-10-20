@@ -43,7 +43,7 @@ public partial class MainViewModel
     public string? NameModalExplanation => NamingPackContent?.Explanation;
 
     /// <summary>The button that closes the modal and lets the pack go on without the item.</summary>
-    public string? NameModalSkipText => NamingPackContent is { } naming ? Localization.FormatPackContentSkip(naming.Name) : null;
+    public string? NameModalSkipText => NamingPackContent is { IsPackMember: true } naming ? Localization.FormatPackContentSkip(naming.Name) : null;
 
     /// <summary>Fills the vehicle and save rows of the open pack.</summary>
     private async Task LoadPackContentAsync(PackItem pack)
@@ -248,11 +248,12 @@ public partial class MainViewModel
         ?? id;
 }
 
-/// <summary>A pinned vehicle or save whose name is taken, which the name modal asks a new name for.</summary>
+/// <summary>A vehicle or save whose name is taken, pinned by a pack or installed alone, which the name modal asks a new name for.</summary>
 /// <param name="Explanation">Which item is in the way, and that the pack can go on without this one.</param>
 /// <param name="Names">Where the new name goes, by listing id.</param>
 /// <param name="Replan">Checks the pack again with the new name.</param>
-public sealed record PackContentNaming(string ContentId, string Name, string Explanation, Dictionary<string, string> Names, Func<Task> Replan);
+/// <param name="IsPackMember">False for one vehicle or save installed alone, which has nothing to go on without.</param>
+public sealed record PackContentNaming(string ContentId, string Name, string Explanation, Dictionary<string, string> Names, Func<Task> Replan, bool IsPackMember = true);
 
 /// <summary>One vehicle or save a pack version pins.</summary>
 public sealed partial class PackContentItem : ObservableObject

@@ -690,12 +690,28 @@ public partial class MainViewModel
     /// <summary>
     /// Plans the install of the newest release into the active instance.
     /// </summary>
-    internal Task InstallAsync(DiscoverItem item)
+    internal async Task InstallAsync(DiscoverItem item)
     {
-        var services = _services;
-        return services is null
-            ? Task.CompletedTask
-            : PlanInstallAsync(item, () => services.Mods.GetLatestReleaseAsync(item.ModId), exactVersion: null);
+        if (_services is not { } services)
+            return;
+
+        if (!item.Type.IsVehicleOrSave())
+        {
+            await PlanInstallAsync(item, () => services.Mods.GetLatestReleaseAsync(item.ModId), exactVersion: null);
+            return;
+        }
+
+        if (ActiveInstance is not { } instance)
+        {
+            ShowInstanceHintToast();
+            return;
+        }
+
+        // the row offers the release of the saved channel, so Add installs that one
+        if ((item.LatestInChannel ?? await services.UserContent.GetLatestReleaseAsync(item.ModId, services.Settings.ReleaseChannel)) is { } release)
+            await PlanContentAsync(item, instance.InstanceId, release);
+        else
+            item.InstallError = Localization.DiscoverNoRelease;
     }
 
     /// <summary>
@@ -719,6 +735,12 @@ public partial class MainViewModel
         if (libraryUse is null)
         {
             item.InstallError = Localization.LibraryFolderBusy;
+            return;
+        }
+
+        if (item.Type.IsVehicleOrSave())
+        {
+            await RemoveRecordedContentAsync(item, instance);
             return;
         }
 
@@ -751,7 +773,7 @@ public partial class MainViewModel
 /// <summary>
 /// One row of the Discover list (c/content-row in #8).
 /// </summary>
-public sealed partial class DiscoverItem : ObservableObject, IInstallRow
+public sealed partial class DiscoverItem : ObservableObject, IContentPlanRow
 {
     private readonly MainViewModel _owner;
     private ModMetadata _listing;
@@ -929,6 +951,9 @@ public sealed partial class DiscoverItem : ObservableObject, IInstallRow
     [NotifyPropertyChangedFor(nameof(ConfirmInstallText))]
     private InstallChoices? _choices;
 
+    /// <summary>The vehicle or save install that waits for a confirmation, see <see cref="IContentPlanRow"/>.</summary>
+    public Borea.Core.UserContent.UserContentPlan? PendingContentPlan { get; set; }
+
     public bool IsConfirmingInstall => PendingPlan is not null || Choices is not null;
 
     /// <summary>The button of the confirmation, with what the plan downloads: "Add (38.0 MB)".</summary>
@@ -961,15 +986,21 @@ public sealed partial class DiscoverItem : ObservableObject, IInstallRow
     public string? LinkRequestText => _linkRequest?.Invoke();
 
     /// <summary>
-    /// Mods install into an instance; a loader is set up from the settings.
+    /// Mods, vehicles and saves install into an instance; a loader is set up from the settings.
     /// </summary>
-    public bool CanInstall => !IsInstalled && !IsInstalling && Type == ContentType.Mod;
+    public bool CanInstall => !IsInstalled && !IsInstalling && (Type == ContentType.Mod || Type.IsVehicleOrSave());
 
     /// <summary>
-    /// Only a mod has a version to pick, because the Versions table of a
-    /// loader offers no install button.
+    /// A loader has no version to pick, because its Versions table offers no install button.
     /// </summary>
-    public bool CanChangeVersion => Type == ContentType.Mod;
+    public bool CanChangeVersion => Type == ContentType.Mod || Type.IsVehicleOrSave();
+
+    /// <summary>The files the player changed in a recorded vehicle or save, which a remove found and names before the second go.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(RemoveConfirmText))]
+    private string? _removeChanges;
+
+    public string RemoveConfirmText => RemoveChanges is { } files ? _owner.Localization.FormatContentRemoveChanged(Name, files) : _owner.Localization.ContentRemoveConfirm;
 
     public bool CanRemove => IsInstalled && !IsRemoving && RemoveBlockedText is null;
 
@@ -1046,8 +1077,10 @@ public sealed partial class DiscoverItem : ObservableObject, IInstallRow
         InstallError = null;
         InstallWarning = null;
         PendingPlan = null;
+        PendingContentPlan = null;
         Choices = null;
         IsConfirmingRemove = false;
+        RemoveChanges = null;
     }
 
     internal void RefreshText()
@@ -1071,6 +1104,7 @@ public sealed partial class DiscoverItem : ObservableObject, IInstallRow
         OnPropertyChanged(nameof(InstallSteps));
         OnPropertyChanged(nameof(UninstallSteps));
         OnPropertyChanged(nameof(RemoveSteps));
+        OnPropertyChanged(nameof(RemoveConfirmText));
         OnPropertyChanged(nameof(InstalledAutomationName));
         OnPropertyChanged(nameof(LinkRequestText));
         OnPropertyChanged(nameof(FavoriteText));
@@ -1139,11 +1173,16 @@ public sealed partial class DiscoverItem : ObservableObject, IInstallRow
     private void BeginRemove()
     {
         InstallError = null;
+        RemoveChanges = null;
         IsConfirmingRemove = true;
     }
 
     [RelayCommand]
-    private void CancelRemove() => IsConfirmingRemove = false;
+    private void CancelRemove()
+    {
+        IsConfirmingRemove = false;
+        RemoveChanges = null;
+    }
 
     [RelayCommand]
     private Task ConfirmRemoveAsync() => _owner.RemoveAsync(this);

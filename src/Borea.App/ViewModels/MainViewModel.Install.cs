@@ -449,6 +449,12 @@ public partial class MainViewModel
     /// </summary>
     internal async Task ConfirmInstallAsync(IInstallRow row)
     {
+        if (row is IContentPlanRow { PendingContentPlan: not null } content)
+        {
+            await ConfirmContentAsync(content);
+            return;
+        }
+
         if (await ExecutePendingPlanAsync(row))
             await ReloadInstancesAsync();
     }
@@ -555,6 +561,8 @@ public partial class MainViewModel
 
     internal static void CancelInstall(IInstallRow row)
     {
+        if (row is IContentPlanRow content)
+            content.PendingContentPlan = null;
         row.PendingPlan = null;
         row.InstallWarning = null;
         row.Choices = null;

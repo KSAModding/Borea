@@ -124,6 +124,16 @@ public partial class MainViewModel
         }
 
         await OpenContentAsync(row);
+        if (row.Type.IsVehicleOrSave())
+        {
+            var release = version is { } exactRelease ? await services.UserContent.GetReleaseAsync(modId, exactRelease) : await services.UserContent.GetLatestReleaseAsync(modId, services.Settings.ReleaseChannel);
+            if (release is null)
+                FailRetry(task, Localization.DiscoverNoRelease);
+            else
+                await PlanContentAsync(row, instance.InstanceId, release);
+            return;
+        }
+
         await PlanInstallAsync(row, () => version is { } pinned ? services.Mods.GetReleaseAsync(modId, pinned) : services.Mods.GetLatestReleaseAsync(modId), version, instance.InstanceId);
     }
 

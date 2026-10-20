@@ -1496,6 +1496,11 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string ContentRemoveConfirm => Resources.ContentRemoveConfirm;
 
+    public string FormatContentRemoveChanged(string name, string files)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ContentRemoveChangedFormat, name, files);
+
+    public string ContentGoneFromInstance => Resources.ContentGoneFromInstance;
+
     public string ContentRemoveSteps => Resources.ContentRemoveSteps;
 
     public string ContentChangeVersion => Resources.ContentChangeVersion;
@@ -3228,6 +3233,9 @@ public sealed class LocalizationService : INotifyPropertyChanged
     /// <param name="kindFolder">The shown name of the folder of all vehicles or all saves.</param>
     public string FormatPackContentNameTaken(string name, string folder, string kindFolder)
         => string.Format(CultureInfo.CurrentCulture, Resources.PackContentNameTakenFormat, name, folder, kindFolder);
+
+    public string FormatContentNameTaken(string name, string folder, string kindFolder)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ContentNameTakenFormat, name, folder, kindFolder);
 
     public string FormatPackContentNameTakenShort(string folder)
         => string.Format(CultureInfo.CurrentCulture, Resources.PackContentNameTakenShortFormat, folder);

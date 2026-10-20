@@ -517,11 +517,19 @@ public partial class MainViewModel
     /// installed version go away with it.
     /// </summary>
     internal Task InstallVersionAsync(ModVersionMetadata release, VersionItem row)
-        => PlanInstallAsync(
-            row,
-            () => Task.FromResult<ModVersionMetadata?>(release),
-            release.Version,
-            confirm: row.ReplacedVersion is not null);
+    {
+        if (!release.Type.IsVehicleOrSave())
+            return PlanInstallAsync(row, () => Task.FromResult<ModVersionMetadata?>(release), release.Version, confirm: row.ReplacedVersion is not null);
+
+        // an instance with a record of the listing updates it to this release
+        if (ActiveInstance is not { } instance)
+        {
+            ShowInstanceHintToast();
+            return Task.CompletedTask;
+        }
+
+        return PlanContentAsync(row, instance.InstanceId, release);
+    }
 }
 
 /// <summary>Where a content or pack page was opened from.</summary>
@@ -563,7 +571,7 @@ public sealed record ReleaseChangelog(string Title, string? Text, ContentLink? L
 /// <summary>
 /// One release of a listing (c/table-version-row in #8).
 /// </summary>
-public sealed partial class VersionItem : ObservableObject, IInstallRow
+public sealed partial class VersionItem : ObservableObject, IContentPlanRow
 {
     private readonly MainViewModel _owner;
     private readonly ModVersionMetadata _release;
@@ -676,6 +684,9 @@ public sealed partial class VersionItem : ObservableObject, IInstallRow
     [NotifyPropertyChangedFor(nameof(ConfirmInstallText))]
     private InstallChoices? _choices;
 
+    /// <summary>The vehicle or save install that waits for a confirmation, see <see cref="IContentPlanRow"/>.</summary>
+    public Borea.Core.UserContent.UserContentPlan? PendingContentPlan { get; set; }
+
     public bool IsConfirmingInstall => PendingPlan is not null || Choices is not null;
 
     public string ConfirmInstallText => _owner.ConfirmInstallText(InstallWarning, PendingPlan, ReplacedVersion);
@@ -688,10 +699,10 @@ public sealed partial class VersionItem : ObservableObject, IInstallRow
     public IReadOnlyList<StepList> PlanSteps => _owner.InstallStepsOf(PendingPlan);
 
     /// <summary>
-    /// Mods install into an instance; a loader is set up from the settings. The installed version has nothing to add,
-    /// and a release whose download is gone can only come from a mirror.
+    /// Mods, vehicles and saves install into an instance; a loader is set up from the settings. The installed version
+    /// has nothing to add, and a release whose download is gone can only come from a mirror.
     /// </summary>
-    public bool CanInstall => _release.Type == ContentType.Mod && !IsInstalled && (_release.Download.UnavailableSince is null || _release.Download.Mirrors.Count > 0);
+    public bool CanInstall => (_release.Type == ContentType.Mod || _release.Type.IsVehicleOrSave()) && !IsInstalled && (_release.Download.UnavailableSince is null || _release.Download.Mirrors.Count > 0);
 
     /// <summary>Since when the download of the release is gone from its host, or null while it downloads.</summary>
     public string? GoneText => _release.Download.UnavailableSince is { } since ? _owner.Localization.FormatContentVersionGone(MainViewModel.DateText(since)) : null;
