@@ -654,6 +654,21 @@ public sealed class FileGameSaveStoreTests : IDisposable
     }
 
     [Fact]
+    public async Task WriteShareArchiveAsync_FileTimeBefore1980_IsWritten()
+    {
+        var vehicles = _paths.GetInstanceVehiclesFolder(_instanceId);
+        WriteItem(vehicles, "Example Rover", "Example Rover", "2026-10-01T10:00:00", "v2026.10.19.5638", 10, "vehicle.xml");
+        File.SetLastWriteTime(Path.Combine(vehicles, "Example Rover", "meta.toml"), new DateTime(1970, 1, 1));
+        var entry = Assert.Single(await _store.ListAsync(_instanceId, GameSaveKind.Vehicle));
+        using var destination = new MemoryStream();
+
+        await _store.WriteShareArchiveAsync(_instanceId, entry, "Example Rover", destination);
+
+        using var zip = new ZipArchive(new MemoryStream(destination.ToArray()), ZipArchiveMode.Read);
+        Assert.Equal(1980, zip.GetEntry("Example Rover/meta.toml")!.LastWriteTime.Year);
+    }
+
+    [Fact]
     public async Task WriteShareArchiveAsync_NameChangedSinceTheCheck_IsRefused()
     {
         WriteItem(_paths.GetInstanceVehiclesFolder(_instanceId), "Example Rover", "Example Rover 2", "2026-10-01T10:00:00", "v2026.10.19.5638", 10, "vehicle.xml");

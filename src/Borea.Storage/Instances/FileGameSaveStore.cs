@@ -130,11 +130,8 @@ public sealed partial class FileGameSaveStore : IGameSaveStore
                 var path = $"{name}/{Path.GetRelativePath(source.FullName, item.FullName).Replace(Path.DirectorySeparatorChar, '/')}";
                 if (item is FileInfo file)
                 {
-                    var archived = zip.CreateEntry(path, CompressionLevel.Optimal);
-                    archived.LastWriteTime = file.LastWriteTime;
-                    using var input = file.Open(FileMode.Open, FileAccess.Read, FileShare.Read);
-                    using var output = archived.Open();
-                    input.CopyTo(output);
+                    // Sets a time the zip format cannot hold to 1980-01-01, as a backup does.
+                    zip.CreateEntryFromFile(file.FullName, path, CompressionLevel.Optimal);
                 }
                 else if (item is DirectoryInfo directory && !directory.EnumerateFileSystemInfos().Any())
                 {
