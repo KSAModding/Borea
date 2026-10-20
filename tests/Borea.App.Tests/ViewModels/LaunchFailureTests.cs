@@ -155,7 +155,7 @@ public sealed class LaunchFailureTests
     }
 
     [Fact]
-    public async Task PlayActiveInstance_OtherModsNeedTheMissingAssembly_NamesThemAndDisablesOnlyTheBlamedMod()
+    public async Task PlayActiveInstance_OtherModsNeedMissingGameParts_NamesThemAndDisablesThemWithTheBlamedMod()
     {
         var started = LaunchResult.Success(WrapperPlan, 4244, "Started.");
         var stopped = LaunchResult.ExitedEarly(WrapperPlan, UnhandledException, ["File name: 'Brutal.Core.Numerics, Version=2026.9.0.0'"], "KSArmory", "English text.", LoaderCrashCause.ModAssembly, otherBlamedModIds: ["MeasureTools"]);
@@ -169,12 +169,14 @@ public sealed class LaunchFailureTests
 
         var localization = harness.Localization;
         Assert.Equal(localization.FormatLaunchModBroke("KSArmory", "0.8.44", "StarMap") + " " + localization.FormatLaunchOtherModsNeedMissing("MeasureTools"), viewModel.LaunchMessage);
-        Assert.Equal(localization.FormatLaunchDisableMod("KSArmory"), viewModel.DisableBlamedModText);
+        Assert.Equal(localization.FormatLaunchDisableMods(2), viewModel.DisableBlamedModText);
 
         await viewModel.DisableBlamedModCommand.ExecuteAsync(null);
 
         Assert.False(await harness.Services.ModState.IsActiveAsync(instance.InstanceId, "KSArmory"));
-        Assert.True(await harness.Services.ModState.IsActiveAsync(instance.InstanceId, "MeasureTools"));
+        Assert.False(await harness.Services.ModState.IsActiveAsync(instance.InstanceId, "MeasureTools"));
+        Assert.Equal(localization.FormatLaunchModsDisabled(2), viewModel.LaunchMessage);
+        Assert.Null(viewModel.DisableBlamedModText);
     }
 
     private const int AccessViolation = -1073741819;

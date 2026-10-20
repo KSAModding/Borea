@@ -3385,8 +3385,14 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string FormatLaunchDisableMod(string mod)
         => string.Format(CultureInfo.CurrentCulture, Resources.LaunchDisableModFormat, mod);
 
+    public string FormatLaunchDisableMods(int count)
+        => string.Format(CultureInfo.CurrentCulture, Resources.LaunchDisableModsFormat, count);
+
     public string FormatLaunchModDisabled(string mod)
         => string.Format(CultureInfo.CurrentCulture, Resources.LaunchModDisabledFormat, mod);
+
+    public string FormatLaunchModsDisabled(int count)
+        => string.Format(CultureInfo.CurrentCulture, Resources.LaunchModsDisabledFormat, count);
 
     public string FormatLaunchArgumentsHandoverFlag(string loader, string flag)
         => string.Format(CultureInfo.CurrentCulture, Resources.LaunchArgumentsHandoverFlagFormat, loader, flag);
