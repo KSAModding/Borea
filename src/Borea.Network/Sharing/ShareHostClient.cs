@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Headers;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -41,13 +42,20 @@ public sealed class ShareHostClient : IShareHostClient
         _secrets = secrets;
     }
 
-    internal static string SecretName(ShareHost host) => "share-host-" + host.Key;
+    /// <summary>
+    /// The secret of a host for its api. A successor operator keeps the key of the host but can have a new api, and the
+    /// token of the old api must not go there.
+    /// </summary>
+    internal static string SecretName(ShareHost host) =>
+        "share-host-" + host.Key + "-" + Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(host.Api.AbsoluteUri)))[..16];
+
+    private static string TokenKey(ShareHost host) => host.Key + " " + host.Api.AbsoluteUri;
 
     public bool IsSignedIn(ShareHost host)
     {
         ArgumentNullException.ThrowIfNull(host);
         lock (_tokens)
-            return _tokens.ContainsKey(host.Key);
+            return _tokens.ContainsKey(TokenKey(host));
     }
 
     public async Task SignInAsync(ShareHost host, IProgress<GitHubDeviceCode>? progress = null, bool keepSignedIn = false, CancellationToken cancellationToken = default)
@@ -113,7 +121,7 @@ public sealed class ShareHostClient : IShareHostClient
     {
         ArgumentNullException.ThrowIfNull(host);
         lock (_tokens)
-            _tokens.Remove(host.Key);
+            _tokens.Remove(TokenKey(host));
         Forget(host);
     }
 
@@ -213,7 +221,7 @@ public sealed class ShareHostClient : IShareHostClient
     private void Enter(ShareHost host, string token, string? refreshToken, bool keep)
     {
         lock (_tokens)
-            _tokens[host.Key] = token;
+            _tokens[TokenKey(host)] = token;
 
         if (keep)
             Keep(host, refreshToken is { Length: > 0 } refresh ? ShareHostApi.RefreshPrefix + refresh : ShareHostApi.AccessPrefix + token);
@@ -243,7 +251,7 @@ public sealed class ShareHostClient : IShareHostClient
         string token;
         lock (_tokens)
         {
-            if (!_tokens.TryGetValue(host.Key, out var current))
+            if (!_tokens.TryGetValue(TokenKey(host), out var current))
                 throw new ShareHostException(ShareHostFailure.SignedOut, $"Not signed in to {host.Name}.");
             token = current;
         }
@@ -256,8 +264,8 @@ public sealed class ShareHostClient : IShareHostClient
         {
             lock (_tokens)
             {
-                if (_tokens.TryGetValue(host.Key, out var current) && current == token)
-                    _tokens.Remove(host.Key);
+                if (_tokens.TryGetValue(TokenKey(host), out var current) && current == token)
+                    _tokens.Remove(TokenKey(host));
             }
 
             Forget(host);

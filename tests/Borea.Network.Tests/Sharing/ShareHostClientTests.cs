@@ -46,7 +46,7 @@ public sealed class ShareHostClientTests
         Assert.Equal("client_id=borea", sent[0].Body);
         Assert.Equal("grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Adevice_code&device_code=dc1&client_id=borea", sent[1].Body);
         Assert.All(sent, request => Assert.Null(request.Authorization));
-        Assert.Equal("refresh:rt1", _secrets.Read("share-host-ksamods"));
+        Assert.Equal("refresh:rt1", _secrets.Read(ShareHostClient.SecretName(Host)));
     }
 
     [Fact]
@@ -62,7 +62,7 @@ public sealed class ShareHostClientTests
     [Fact]
     public async Task SignInAsync_KeptRefreshToken_SignsInWithoutACode()
     {
-        _secrets.Write("share-host-ksamods", "refresh:rt0");
+        _secrets.Write(ShareHostClient.SecretName(Host), "refresh:rt0");
         _tokenAnswers.Enqueue(Json(TokenJson));
         var client = Client();
 
@@ -70,13 +70,41 @@ public sealed class ShareHostClientTests
 
         Assert.True(client.IsSignedIn(Host));
         Assert.Equal("grant_type=refresh_token&refresh_token=rt0&client_id=borea", Assert.Single(_sent).Body);
-        Assert.Equal("refresh:rt1", _secrets.Read("share-host-ksamods"));
+        Assert.Equal("refresh:rt1", _secrets.Read(ShareHostClient.SecretName(Host)));
+    }
+
+    [Fact]
+    public async Task SignInAsync_ApiOfTheKeyChanged_SendsNoKeptToken()
+    {
+        var moved = Host with { Api = new Uri("https://successor.example/api/share/v1/") };
+        _secrets.Write(ShareHostClient.SecretName(Host), "refresh:rt0");
+        var client = await SignedInAsync();
+
+        await Assert.ThrowsAsync<ShareHostException>(() => client.SignInAsync(moved, keepSignedIn: true));
+
+        Assert.False(client.IsSignedIn(moved));
+        var toMoved = _sent.Where(request => request.Url.StartsWith("https://successor.example/", StringComparison.Ordinal)).ToList();
+        Assert.Equal(["client_id=borea"], toMoved.Select(request => request.Body));
+        Assert.All(toMoved, request => Assert.Null(request.Authorization));
+    }
+
+    [Fact]
+    public async Task UploadAsync_ApiOfTheKeyChanged_SendsNoToken()
+    {
+        var moved = Host with { Api = new Uri("https://successor.example/api/share/v1/") };
+        var client = await SignedInAsync();
+        var sent = _sent.Count;
+
+        var exception = await Assert.ThrowsAsync<ShareHostException>(() => client.UploadAsync(moved, new MemoryStream([1]), "a.zip", [], null));
+
+        Assert.Equal(ShareHostFailure.SignedOut, exception.Failure);
+        Assert.Equal(sent, _sent.Count);
     }
 
     [Fact]
     public async Task SignInAsync_KeptTokenRefused_IsDeletedAndTheCodeIsAsked()
     {
-        _secrets.Write("share-host-ksamods", "refresh:rt0");
+        _secrets.Write(ShareHostClient.SecretName(Host), "refresh:rt0");
         _tokenAnswers.Enqueue(Json("""{"error":"invalid_grant"}""", HttpStatusCode.BadRequest));
         _tokenAnswers.Enqueue(Json("""{"access_token":"at2"}"""));
         var client = Client();
@@ -84,7 +112,7 @@ public sealed class ShareHostClientTests
         await client.SignInAsync(Host, keepSignedIn: true);
 
         Assert.Equal(Api + "oauth/device_authorization", _sent.ToArray()[1].Url);
-        Assert.Equal("access:at2", _secrets.Read("share-host-ksamods"));
+        Assert.Equal("access:at2", _secrets.Read(ShareHostClient.SecretName(Host)));
     }
 
     [Theory]
@@ -191,7 +219,7 @@ public sealed class ShareHostClientTests
 
         Assert.Equal(ShareHostFailure.SignedOut, exception.Failure);
         Assert.False(client.IsSignedIn(Host));
-        Assert.Null(_secrets.Read("share-host-ksamods"));
+        Assert.Null(_secrets.Read(ShareHostClient.SecretName(Host)));
     }
 
     [Fact]
