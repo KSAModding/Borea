@@ -21,7 +21,13 @@ internal sealed class ListingSchemaCheck
     {
         _schema = schema;
         _schemaNode = schemaNode;
+        var type = Member(Member(schemaNode, "properties"), "type");
+        var gated = Strings(Member(Member(type, "not"), "enum"));
+        AcceptedTypes = Strings(Member(type, "enum")).Where(name => !gated.Contains(name, StringComparer.Ordinal)).ToList();
     }
+
+    /// <summary>The types in properties.type.enum that the rollout gate properties.type.not.enum does not hold.</summary>
+    public IReadOnlyList<string> AcceptedTypes { get; }
 
     /// <exception cref="JsonException">The text is not JSON.</exception>
     /// <exception cref="JsonSchemaException">The text is not a schema of draft 2020-12 that loads.</exception>
@@ -231,6 +237,8 @@ internal sealed class ListingSchemaCheck
     private static JsonNode? Member(JsonNode? node, string key) => node is JsonObject table && table.TryGetPropertyValue(key, out var value) ? value : null;
 
     private static string? Text(JsonNode? node) => node is JsonValue value && value.TryGetValue<string>(out var text) ? text : null;
+
+    private static List<string> Strings(JsonNode? node) => (node as JsonArray ?? []).Select(Text).OfType<string>().ToList();
 
     private static long? Number(JsonNode? value) => value is JsonValue number && number.TryGetValue<long>(out var result) ? result : null;
 

@@ -36,6 +36,7 @@ internal static partial class ListingRules
             CheckIndex(document, own, context.ListedId, snapshot, issues);
             issues.AddRange(PackMemberRules.Check(document, snapshot));
             CheckTags(document, snapshot, issues);
+            CheckInstallFolder(document, own, context.InstallFolder, snapshot, issues);
         }
 
         if (document.GetString("abstract") is { } text && text.EnumerateRunes().Count() is > AbstractLimit and var length)
@@ -250,6 +251,8 @@ internal static partial class ListingRules
     {
         // A pack holds its id through every version file, and each version names its own forums thread.
         var holders = snapshot.Listings.Select(listing => new Holder(listing.Id, listing.Authored?.Type, listing.Authored?.Links.GetValueOrDefault("forums"), $"listings/{listing.Id}.toml"))
+            .Concat(snapshot.Vehicles.Select(vehicle => new Holder(vehicle.Id, ContentType.Vehicle, vehicle.Authored?.Links.GetValueOrDefault("forums"), $"{ListingFolders.Vehicles}/{vehicle.Id}.toml")))
+            .Concat(snapshot.Saves.Select(save => new Holder(save.Id, ContentType.Save, save.Authored?.Links.GetValueOrDefault("forums"), $"{ListingFolders.Saves}/{save.Id}.toml")))
             .Concat(snapshot.Packs.SelectMany(pack => pack.Versions.Count == 0
                 ? [new Holder(pack.Id, ContentType.ModPack, null, $"packs/{pack.Id}/")]
                 : pack.Versions.Select(version => new Holder(pack.Id, ContentType.ModPack, version.Metadata.Links.GetValueOrDefault("forums"), $"packs/{pack.Id}/{version.Metadata.Version}.toml"))))
@@ -317,6 +320,10 @@ internal static partial class ListingRules
 
     private static void CheckTags(AuthoredTable document, ContentIndexSnapshot snapshot, List<ListingIssue> issues)
     {
+        // The tags of a vehicle or a save are free, as spec/tags.md says, so no curated list applies to them.
+        if (IsVehicleOrSave(document))
+            return;
+
         var curated = snapshot.Tags.GetTags(ContentType.Mod).Select(tag => tag.Tag).ToHashSet(StringComparer.Ordinal);
         if (curated.Count == 0)
             return;
@@ -328,6 +335,28 @@ internal static partial class ListingRules
         if (!tags.Any(curated.Contains))
             issues.Add(Note("tags", $"the document has no curated tag, so no client can include it through a curated filter; the list is at {TagsSpecUrl}"));
     }
+
+    /// <summary>
+    /// The checks of a release refuse a vehicle or a save whose folder is the install folder of another listing of the same type,
+    /// because both would install into one folder. The client says so before the first release.
+    /// </summary>
+    private static void CheckInstallFolder(AuthoredTable document, string? own, string? folder, ContentIndexSnapshot snapshot, List<ListingIssue> issues)
+    {
+        if (string.IsNullOrEmpty(folder) || !IsVehicleOrSave(document))
+            return;
+
+        var vehicle = document.GetString("type") == ListingFolders.VehicleType;
+        var holder = (vehicle ? snapshot.Vehicles : snapshot.Saves)
+            .Where(listing => own is null || !ModIds.Equals(listing.Id, own))
+            .FirstOrDefault(listing => listing.Releases.Any(release => string.Equals(release.Install?.Folder, folder, StringComparison.OrdinalIgnoreCase)));
+        if (holder is not null)
+        {
+            var file = $"{(vehicle ? ListingFolders.Vehicles : ListingFolders.Saves)}/{holder.Id}.toml";
+            issues.Add(Note("name", $"a release of {file} already installs into the folder '{folder}', and the release checks refuse a second {document.GetString("type")} in the same folder, so rename it first"));
+        }
+    }
+
+    private static bool IsVehicleOrSave(AuthoredTable document) => document.GetString("type") is ListingFolders.VehicleType or ListingFolders.SaveType;
 
     private static void CheckArchive(AuthoredTable document, string own, ListingArchiveFacts archive, List<ListingIssue> issues)
     {
@@ -372,6 +401,8 @@ internal static partial class ListingRules
     {
         ContentType.ModLoader => ListingDraft.ModLoaderType,
         ContentType.ModPack => "modpack",
+        ContentType.Vehicle => ListingFolders.VehicleType,
+        ContentType.Save => ListingFolders.SaveType,
         _ => ListingDraft.ModType,
     };
 
