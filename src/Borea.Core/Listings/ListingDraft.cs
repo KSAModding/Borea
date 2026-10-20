@@ -1,3 +1,5 @@
+using Borea.Core.Mods;
+
 namespace Borea.Core.Listings;
 
 /// <summary>
@@ -76,6 +78,15 @@ public sealed record ListingDraft
     /// <summary>The mods of a pack, each pinned to one release.</summary>
     public IReadOnlyList<ListingPackMember> Mods { get; init; } = [];
 
+    /// <summary>The vehicles of a pack, each pinned to one release (RFC 0085).</summary>
+    public IReadOnlyList<ListingPackMember> Vehicles { get; init; } = [];
+
+    /// <summary>The saves of a pack, each pinned to one release (RFC 0085).</summary>
+    public IReadOnlyList<ListingPackMember> Saves { get; init; } = [];
+
+    /// <summary>Every pin of a pack: the mods, then the vehicles, then the saves.</summary>
+    public IReadOnlyList<ListingPackMember> Pins => [.. Mods, .. Vehicles, .. Saves];
+
     /// <summary>Where the document lives in content-index. Each pack version is a file of its own.</summary>
     public string Path => IsPack ? $"{PacksFolder}/{Id}/{Version}.toml" : $"{ListingsFolder}/{Id}.toml";
 
@@ -118,7 +129,9 @@ public sealed record ListingDraft
             Version = document.GetString("version") ?? string.Empty,
             ReleasedAt = document.GetString("released_at"),
             Changelog = document.GetString("changelog"),
-            Mods = document.GetList("mods")?.OfType<AuthoredTable>().Select(ReadMember).ToList() ?? [],
+            Mods = ReadMembers(document, ContentType.Mod),
+            Vehicles = ReadMembers(document, ContentType.Vehicle),
+            Saves = ReadMembers(document, ContentType.Save),
         };
     }
 
@@ -168,6 +181,8 @@ public sealed record ListingDraft
             SetOrRemove(document, "released_at", string.IsNullOrEmpty(ReleasedAt) ? null : ReleasedAt);
             SetOrRemove(document, "changelog", string.IsNullOrEmpty(Changelog) ? null : Changelog);
             SetOrRemove(document, "mods", Mods.Count == 0 ? null : Mods.Select(WriteMember).Cast<object>().ToList());
+            SetOrRemove(document, "vehicles", Vehicles.Count == 0 ? null : Vehicles.Select(WriteMember).Cast<object>().ToList());
+            SetOrRemove(document, "saves", Saves.Count == 0 ? null : Saves.Select(WriteMember).Cast<object>().ToList());
         }
 
         return document;
@@ -244,6 +259,17 @@ public sealed record ListingDraft
         return table;
     }
 
+    /// <summary>The section of a pack that pins content of one type.</summary>
+    public static string Section(ContentType type) => type switch
+    {
+        ContentType.Vehicle => "vehicles",
+        ContentType.Save => "saves",
+        _ => "mods",
+    };
+
+    private static List<ListingPackMember> ReadMembers(AuthoredTable document, ContentType type) =>
+        document.GetList(Section(type))?.OfType<AuthoredTable>().Select(table => ReadMember(table) with { Type = type }).ToList() ?? [];
+
     private static ListingPackMember ReadMember(AuthoredTable table) =>
         new(table.GetString("id") ?? string.Empty, table.GetString("version") ?? string.Empty) { Original = table.Clone() };
 
@@ -300,10 +326,13 @@ public sealed record ListingDependency(string Id, string Kind, string? Min = nul
     public AuthoredTable? Preserved { get; init; }
 }
 
-/// <summary>One [[mods]] entry of a pack. <see cref="Original"/> holds the entry as it was read, so a key the page does not name stays.</summary>
+/// <summary>One [[mods]], [[vehicles]] or [[saves]] entry of a pack. <see cref="Original"/> holds the entry as it was read, so a key the page does not name stays.</summary>
 public sealed record ListingPackMember(string Id, string Version)
 {
     public AuthoredTable? Original { get; init; }
+
+    /// <summary>The type the section of the pin says, which the pinned listing must have.</summary>
+    public ContentType Type { get; init; } = ContentType.Mod;
 }
 
 /// <summary>An image record of RFC 0058. The facts stay null until the image is measured.</summary>
