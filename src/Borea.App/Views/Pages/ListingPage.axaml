@@ -170,6 +170,12 @@
                                                 <Border Grid.Column="4" Classes="chip" VerticalAlignment="Center" IsVisible="{Binding IsPack}">
                                                     <TextBlock Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ContentTypeModPack}" />
                                                 </Border>
+                                                <Border Grid.Column="4" Classes="chip" VerticalAlignment="Center" IsVisible="{Binding IsVehicle}">
+                                                    <TextBlock Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ContentTypeVehicle}" />
+                                                </Border>
+                                                <Border Grid.Column="4" Classes="chip" VerticalAlignment="Center" IsVisible="{Binding IsSave}">
+                                                    <TextBlock Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ContentTypeSave}" />
+                                                </Border>
                                             </Grid>
                                         </DataTemplate>
                                     </ListBox.ItemTemplate>
@@ -191,6 +197,43 @@
                         </Grid>
                         <TextBlock Classes="body-sm secondary" Text="{Binding ListingEditor.NextVersionText}" TextWrapping="Wrap" IsVisible="{Binding ListingEditor.IsNextVersion}" />
                         <TextBlock Classes="body-sm secondary" Text="{Binding ListingEditor.ArchiveText}" TextWrapping="Wrap" IsVisible="{Binding ListingEditor.ArchiveText, Converter={x:Static ObjectConverters.IsNotNull}}" />
+
+                        <!-- a vehicle or save shared from the instance page: what Borea could not map, and its archive -->
+                        <Border Classes="card" Padding="24" Tag="share" IsVisible="{Binding ListingEditor.HasShare}">
+                            <StackPanel Spacing="8">
+                                <TextBlock Classes="heading-md" Text="{Binding Localization.ListingShareHeading}" />
+                                <TextBlock Classes="body-sm secondary" Text="{Binding Localization.ListingShareHint}" TextWrapping="Wrap" />
+                                <ItemsControl ItemsSource="{Binding ListingEditor.ShareNotes}" IsVisible="{Binding !!ListingEditor.ShareNotes.Count}">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <StackPanel Spacing="4" />
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate x:DataType="x:String">
+                                            <TextBlock Classes="body-sm" Text="{Binding}" TextWrapping="Wrap" />
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                                <StackPanel Spacing="4" IsVisible="{Binding ListingEditor.HasShareExtraFiles}">
+                                    <TextBlock Classes="body-sm" Text="{Binding Localization.ListingShareExtraFiles}" TextWrapping="Wrap" />
+                                    <ItemsControl ItemsSource="{Binding ListingEditor.ShareExtraFiles}">
+                                        <ItemsControl.ItemsPanel>
+                                            <ItemsPanelTemplate>
+                                                <StackPanel Spacing="4" />
+                                            </ItemsPanelTemplate>
+                                        </ItemsControl.ItemsPanel>
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate x:DataType="x:String">
+                                                <TextBlock Classes="body-sm secondary" Text="{Binding}" TextWrapping="Wrap" Margin="12,0,0,0" />
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
+                                <Button Classes="text" Content="{Binding Localization.ListingShareSaveArchive}" Command="{Binding ListingEditor.SaveShareArchiveCommand}" HorizontalAlignment="Left" />
+                                <SelectableTextBlock Classes="body-sm secondary" Text="{Binding ListingEditor.ShareArchiveText}" TextWrapping="Wrap" IsVisible="{Binding ListingEditor.ShareArchiveText, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                            </StackPanel>
+                        </Border>
 
                         <Border Classes="card" Padding="24" Tag="about">
                             <StackPanel Spacing="6">
@@ -244,7 +287,7 @@
                             <StackPanel Spacing="6">
                                 <TextBlock Classes="heading-md" Text="{Binding Localization.ListingLinks}" Margin="0,0,0,6" />
                                 <TextBlock Classes="heading-sm" Text="{Binding Localization.LinkForum}" />
-                                <TextBlock Classes="body-sm secondary" Text="{Binding Localization.ListingForumsHint}" TextWrapping="Wrap" />
+                                <TextBlock Classes="body-sm secondary" Text="{Binding ListingEditor.ForumsHint}" TextWrapping="Wrap" />
                                 <TextBox Classes="field" Text="{Binding ListingEditor.Forums}" PlaceholderText="https://forums.ahwoo.com/threads/" AutomationProperties.Name="{Binding Localization.LinkForum}" />
                                 <TextBlock Classes="heading-sm" Text="{Binding Localization.LinkHomepage}" Margin="0,10,0,0" />
                                 <TextBox Classes="field" Text="{Binding ListingEditor.Homepage}" AutomationProperties.Name="{Binding Localization.LinkHomepage}" />
@@ -451,7 +494,7 @@
                         <Border Classes="card" Padding="24" Tag="compatibility">
                             <StackPanel Spacing="6">
                                 <TextBlock Classes="heading-md" Text="{Binding Localization.ListingCompatibility}" />
-                                <TextBlock Classes="body-sm secondary" Text="{Binding Localization.ListingGameHint}" TextWrapping="Wrap" Margin="0,0,0,6" />
+                                <TextBlock Classes="body-sm secondary" Text="{Binding ListingEditor.GameHint}" TextWrapping="Wrap" Margin="0,0,0,6" />
                                 <TextBlock Classes="heading-sm" Text="{Binding Localization.ListingGameMin}" />
                                 <TextBox Classes="field" Text="{Binding ListingEditor.GameMin}" AutomationProperties.Name="{Binding Localization.ListingGameMin}" />
                                 <StackPanel Spacing="4" IsVisible="{Binding ListingEditor.GameMinProposal, Converter={x:Static ObjectConverters.IsNotNull}}">
