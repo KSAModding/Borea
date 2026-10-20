@@ -249,6 +249,21 @@ public sealed class MissingContentTests
     }
 
     [Fact]
+    public async Task OpenInstance_GameRunning_KeepsRecordOfAVehicleWhoseFolderIsGone()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(respond: ServeArchive);
+        var instance = await SeedAsync(harness);
+        await harness.Services.InstalledContent.AddAsync(instance.InstanceId, VehicleRecord("Gone Rover"));
+        harness.IsGameProcessRunning = () => true;
+        var viewModel = harness.ViewModel;
+        await viewModel.LoadAsync();
+
+        await viewModel.ActiveInstance!.OpenCommand.ExecuteAsync(null);
+
+        Assert.Equal("Gone Rover", Assert.Single(await harness.Services.InstalledContent.ListAsync(instance.InstanceId)).FolderName);
+    }
+
+    [Fact]
     public async Task OpenInstance_UnreadableInstallRecords_StillOpensAndLogs()
     {
         using var harness = await ViewModelHarness.CreateAsync(respond: ServeArchive);

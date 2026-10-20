@@ -71,6 +71,10 @@ public partial class MainViewModel
     /// </summary>
     private static async Task DropMissingRecordsAsync(BoreaServices services, Guid instanceId)
     {
+        // the game deletes a folder before it writes it again, so a running game can make a folder look gone
+        if (services.Launcher.IsRunning(instanceId) || services.IsGameProcessRunning())
+            return;
+
         try
         {
             await services.InstalledContent.DropMissingAsync(instanceId);
