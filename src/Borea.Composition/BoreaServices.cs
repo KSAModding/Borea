@@ -449,7 +449,7 @@ public sealed class BoreaServices : IDisposable
         var http = BuildHttpClient(httpHandler);
         var resolver = new SpaceDockResolver();
         var indexReader = new ContentIndexReader(paths, ContentIndexModRepository.SourceName);
-        var indexFetcher = new LoggingContentIndexFetcher(new ContentIndexFetcher(http, ContentIndexUri, indexReader), log);
+        var indexFetcher = new LoggingContentIndexFetcher(new ContentIndexFetcher(http, ContentIndexUri, indexReader, ContentIndexTypeFiles.All, log), log);
         var indexSnapshots = new ContentIndexSnapshotProvider(indexFetcher, indexReader, paths);
         var contentIndex = new ContentIndexModRepository(indexSnapshots);
         var readOnlyContentIndex = new ContentIndexModRepository(new ReaderSnapshotProvider(indexReader));
