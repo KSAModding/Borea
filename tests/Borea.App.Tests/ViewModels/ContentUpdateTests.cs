@@ -229,7 +229,7 @@ public sealed class ContentUpdateTests
         await row.UpdateCommand.ExecuteAsync(null);
 
         Assert.True(row.IsConfirmingUpdate);
-        Assert.Contains("AdvancedFlightComputer 0.7.5 is outside the range AdvancedFlightComputer 0.7.0 - 0.7.4 that the save Campaign needs", row.InstallWarning, StringComparison.Ordinal);
+        Assert.StartsWith("The save Campaign needs AdvancedFlightComputer 0.7.0 - 0.7.4, so after this change", row.InstallWarning, StringComparison.Ordinal);
         Assert.Equal(ModVersion.Parse("0.7.4"), Assert.Single((await harness.Services.Instances.GetByIdAsync(instance.InstanceId))!.Mods).Version);
     }
 

@@ -33,7 +33,7 @@ public partial class MainViewModel
     /// <summary>A vehicle or save depends only on mods, so its tab says so.</summary>
     public string ContentDependenciesTabText => SelectedContent?.Type.IsVehicleOrSave() == true ? Localization.ContentTabNeedsMods : Localization.ContentTabDependencies;
 
-    /// <summary>The game build the file of a vehicle or save was saved in, from the release in the header. Null for any other type.</summary>
+    /// <summary>The oldest game build that loads the file of a vehicle or save, from the release in the header. Null for any other type.</summary>
     public string? ContentFileBuildText => SelectedContent?.Type.IsVehicleOrSave() == true && LatestVersion?.Release.GameMin is { } build ? Localization.FormatContentFileBuild(build) : null;
 
     [RelayCommand]
@@ -65,12 +65,16 @@ public partial class MainViewModel
     internal IReadOnlyList<DependencyGroup> BuildDependencyGroups(ModVersionMetadata release)
     {
         var instance = ActiveInstance;
+        var isItem = release.Type.IsVehicleOrSave();
+
+        // the game loads no disabled mod, so a vehicle or save says when one it needs is off
+        var inactive = isItem && instance is not null ? InactiveModIds(instance).ToHashSet(ModIds.Comparer) : null;
         return Enum.GetValues<DependencyGroupKind>()
             .Select(kind => new DependencyGroup(
                 kind,
                 GroupHeading(kind),
-                GroupHint(kind),
-                release.Dependencies.Where(dependency => GroupOf(dependency) == kind).Select(dependency => Entry(dependency, instance)).ToList()))
+                GroupHint(kind, isItem),
+                release.Dependencies.Where(dependency => GroupOf(dependency) == kind).Select(dependency => Entry(dependency, instance, inactive)).ToList()))
             .Where(group => group.Entries.Count > 0)
             .ToList();
     }
@@ -96,26 +100,28 @@ public partial class MainViewModel
         _ => Localization.ContentDependencyOther,
     };
 
-    private string GroupHint(DependencyGroupKind kind) => kind switch
+    /// <param name="isItem">A vehicle or save, whose hints do not call it a mod.</param>
+    private string GroupHint(DependencyGroupKind kind, bool isItem) => kind switch
     {
-        DependencyGroupKind.Required => Localization.ContentDependencyRequiredHint,
-        DependencyGroupKind.AnyOf => Localization.ContentDependencyAnyOfHint,
+        DependencyGroupKind.Required => isItem ? Localization.ContentDependencyRequiredItemHint : Localization.ContentDependencyRequiredHint,
+        DependencyGroupKind.AnyOf => isItem ? Localization.ContentDependencyAnyOfItemHint : Localization.ContentDependencyAnyOfHint,
         DependencyGroupKind.Conflicts => Localization.ContentDependencyConflictsHint,
-        DependencyGroupKind.Recommended => Localization.ContentDependencyRecommendedHint,
+        DependencyGroupKind.Recommended => isItem ? Localization.ContentDependencyRecommendedItemHint : Localization.ContentDependencyRecommendedHint,
         DependencyGroupKind.Suggested => Localization.ContentDependencySuggestedHint,
-        DependencyGroupKind.Optional => Localization.ContentDependencyOptionalHint,
+        DependencyGroupKind.Optional => isItem ? Localization.ContentDependencyOptionalItemHint : Localization.ContentDependencyOptionalHint,
         _ => Localization.ContentDependencyOtherHint,
     };
 
-    private DependencyEntry Entry(ModDependency dependency, InstanceItem? instance) => dependency.IsAnyOf
-        ? new DependencyEntry(true, GroupOf(dependency) != DependencyGroupKind.AnyOf, dependency.AnyOf.Select(member => Member(member.ModId, member.MinVersion, member.MaxVersion, instance)).ToList())
-        : new DependencyEntry(false, false, [Member(dependency.ModId, dependency.MinVersion, dependency.MaxVersion, instance, dependency.Kind == ModDependencyKind.Conflict ? dependency : null)]);
+    private DependencyEntry Entry(ModDependency dependency, InstanceItem? instance, IReadOnlySet<string>? inactive) => dependency.IsAnyOf
+        ? new DependencyEntry(true, GroupOf(dependency) != DependencyGroupKind.AnyOf, dependency.AnyOf.Select(member => Member(member.ModId, member.MinVersion, member.MaxVersion, instance, inactive)).ToList())
+        : new DependencyEntry(false, false, [Member(dependency.ModId, dependency.MinVersion, dependency.MaxVersion, instance, inactive, dependency.Kind == ModDependencyKind.Conflict ? dependency : null)]);
 
-    private DependencyMember Member(string modId, ModVersion? min, ModVersion? max, InstanceItem? instance, ModDependency? conflict = null)
+    private DependencyMember Member(string modId, ModVersion? min, ModVersion? max, InstanceItem? instance, IReadOnlySet<string>? inactive, ModDependency? conflict = null)
     {
         var installed = instance?.InstalledVersionOf(modId);
         var conflicting = installed is { } version && conflict is not null && conflict.BoundsContain(version);
         var state = instance is null ? null
+            : installed is { } off && inactive?.Contains(modId) == true ? Localization.FormatContentDependencyDisabled(off.ToString())
             : installed is { } present ? Localization.FormatContentDependencyInstalled(present.ToString())
             : Localization.ContentDependencyNotInstalled;
         return new DependencyMember(this, modId, IndexListing(modId), BoundsText(min, max), state, installed is not null, conflicting);

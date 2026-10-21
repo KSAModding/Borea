@@ -362,8 +362,8 @@
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
                         </StackPanel>
-                        <Border Height="1" Background="{StaticResource Brush.BorderStrong}" />
-                        <StackPanel Spacing="10">
+                        <Border Height="1" Background="{StaticResource Brush.BorderStrong}" IsVisible="{Binding ShowsModAuthors}" />
+                        <StackPanel Spacing="10" IsVisible="{Binding ShowsModAuthors}">
                             <TextBlock Classes="heading-md" Text="{Binding Localization.DiscoverForModAuthors}" />
                             <TextBlock Classes="body-sm secondary" TextWrapping="Wrap" Text="{Binding Localization.DiscoverForModAuthorsText}" />
                             <!-- the padding keeps the text inside the hover background, and the margin lines the text up with the one above -->

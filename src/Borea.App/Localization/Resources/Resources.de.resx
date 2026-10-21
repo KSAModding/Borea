@@ -1884,6 +1884,9 @@
   <data name="GameSaveDeleteConfirm" xml:space="preserve">
     <value>Löschen? Borea verschiebt den Ordner in den Ordner Backups, und Wiederherstellen holt ihn zurück.</value>
   </data>
+  <data name="GameSaveDeleteChangedFormat" xml:space="preserve">
+    <value>Du hast {0} geändert, seit Borea es installiert hat: {1}. Trotzdem löschen? Borea verschiebt den Ordner in den Ordner Backups, und Wiederherstellen holt ihn zurück.</value>
+  </data>
   <data name="GameSaveDeletedFormat" xml:space="preserve">
     <value>{0} in den Ordner Backups verschoben. Unter Backups wiederherstellen.</value>
   </data>
@@ -2110,10 +2113,10 @@
     <value>{0} bleibt, weil {1} es braucht.</value>
   </data>
   <data name="ContentNeededByVehicleFormat" xml:space="preserve">
-    <value>Das Fahrzeug {0} braucht sie, deshalb lädt das Spiel dieses Fahrzeug nicht.</value>
+    <value>Das Fahrzeug {0} braucht diesen Mod, deshalb lädt das Spiel dieses Fahrzeug nicht.</value>
   </data>
   <data name="ContentNeededBySaveFormat" xml:space="preserve">
-    <value>Der Spielstand {0} braucht sie, deshalb lässt das Spiel jedes Fahrzeug dieses Spielstands weg, das sie braucht, und beim nächsten Speichern gehen diese Fahrzeuge verloren.</value>
+    <value>Der Spielstand {0} braucht diesen Mod, deshalb lässt das Spiel jedes Fahrzeug dieses Spielstands weg, das ihn braucht, und beim nächsten Speichern gehen diese Fahrzeuge verloren.</value>
   </data>
   <data name="ContentDisableConfirm" xml:space="preserve">
     <value>Trotzdem deaktivieren?</value>
@@ -3484,10 +3487,10 @@
     <value>Borea kann {0} nicht installieren oder aktivieren, deshalb lässt das Spiel jedes Fahrzeug dieses Spielstands weg, das diesen Mod braucht, und beim nächsten Speichern gehen diese Fahrzeuge verloren.</value>
   </data>
   <data name="InstallMessageBreaksVehicleFormat" xml:space="preserve">
-    <value>{0} {1} liegt außerhalb des Bereichs {2}, den das Fahrzeug {3} braucht, deshalb lädt das Spiel dieses Fahrzeug nicht.</value>
+    <value>Das Fahrzeug {1} braucht {0}, deshalb lädt das Spiel dieses Fahrzeug nach dieser Änderung nicht.</value>
   </data>
   <data name="InstallMessageBreaksSaveFormat" xml:space="preserve">
-    <value>{0} {1} liegt außerhalb des Bereichs {2}, den der Spielstand {3} braucht, deshalb lässt das Spiel jedes Fahrzeug dieses Spielstands weg, das diesen Mod braucht, und beim nächsten Speichern gehen diese Fahrzeuge verloren.</value>
+    <value>Der Spielstand {1} braucht {0}, deshalb lässt das Spiel nach dieser Änderung jedes Fahrzeug dieses Spielstands weg, das diesen Mod braucht, und beim nächsten Speichern gehen diese Fahrzeuge verloren.</value>
   </data>
   <data name="InstallDependencyAlternativesFormat" xml:space="preserve">
     <value>{0} oder {1}</value>
@@ -3582,11 +3585,17 @@
   <data name="ContentDependencyRequiredHint" xml:space="preserve">
     <value>Wird mit dieser Mod installiert</value>
   </data>
+  <data name="ContentDependencyRequiredItemHint" xml:space="preserve">
+    <value>Wird mitinstalliert</value>
+  </data>
   <data name="ContentDependencyAnyOf" xml:space="preserve">
     <value>Alternativen</value>
   </data>
   <data name="ContentDependencyAnyOfHint" xml:space="preserve">
     <value>Aus jeder Gruppe wird eine mit dieser Mod installiert</value>
+  </data>
+  <data name="ContentDependencyAnyOfItemHint" xml:space="preserve">
+    <value>Aus jeder Gruppe wird eine mitinstalliert</value>
   </data>
   <data name="ContentDependencyConflicts" xml:space="preserve">
     <value>Konflikte</value>
@@ -3600,6 +3609,9 @@
   <data name="ContentDependencyRecommendedHint" xml:space="preserve">
     <value>Beim Hinzufügen ausgewählt</value>
   </data>
+  <data name="ContentDependencyRecommendedItemHint" xml:space="preserve">
+    <value>Beim Hinzufügen ausgewählt</value>
+  </data>
   <data name="ContentDependencySuggested" xml:space="preserve">
     <value>Vorgeschlagen</value>
   </data>
@@ -3610,6 +3622,9 @@
     <value>Optional</value>
   </data>
   <data name="ContentDependencyOptionalHint" xml:space="preserve">
+    <value>Wird genutzt, wenn vorhanden, aber nicht mitinstalliert</value>
+  </data>
+  <data name="ContentDependencyOptionalItemHint" xml:space="preserve">
     <value>Wird genutzt, wenn vorhanden, aber nicht mitinstalliert</value>
   </data>
   <data name="ContentDependencyOther" xml:space="preserve">
@@ -3633,6 +3648,9 @@
   <data name="ContentDependencyInstalledFormat" xml:space="preserve">
     <value>Installiert {0}</value>
   </data>
+  <data name="ContentDependencyDisabledFormat" xml:space="preserve">
+    <value>Installiert {0}, deaktiviert</value>
+  </data>
   <data name="ContentDependencyNotInstalled" xml:space="preserve">
     <value>Nicht installiert</value>
   </data>
@@ -3652,7 +3670,7 @@
     <value>Kompatibilität</value>
   </data>
   <data name="ContentFileBuildFormat" xml:space="preserve">
-    <value>Gespeichert in KSA {0}</value>
+    <value>Braucht KSA {0} oder neuer</value>
   </data>
   <data name="ContentLinks" xml:space="preserve">
     <value>Links</value>
@@ -4279,10 +4297,10 @@
     <value>Im Ordner {2} gibt es schon einen Eintrag namens '{1}', der {0} im Weg steht. Wähle einen anderen Namen oder mache ohne {0} weiter.</value>
   </data>
   <data name="ContentNameTakenFormat" xml:space="preserve">
-    <value>Im Ordner {2} gibt es schon einen Eintrag namens '{1}', der {0} im Weg steht. Wähle einen anderen Namen.</value>
+    <value>Im Ordner {1} gibt es schon einen Eintrag namens '{0}'. Wähle einen anderen Namen.</value>
   </data>
   <data name="PackContentChangedFormat" xml:space="preserve">
-    <value>Du hast {0} geändert, seit Borea es installiert hat: {1}. Weitermachen ersetzt es, und der alte Ordner bleibt in den Sicherungen.</value>
+    <value>Du hast {0} geändert, seit Borea es installiert hat: {1}. Weitermachen ersetzt es, und Borea verschiebt den alten Ordner in den Ordner Backups.</value>
   </data>
   <data name="PackContentNameTitleFormat" xml:space="preserve">
     <value>Neuer Name für {0}</value>

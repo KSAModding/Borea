@@ -153,7 +153,25 @@ public sealed class UserContentViewModelTests
         Assert.Equal(harness.Localization.FormatContentDependencyInstalled("0.7.4"), members[0].StateText);
         Assert.False(members[1].IsInstalled);
         Assert.Equal(harness.Localization.ContentDependencyNotInstalled, members[1].StateText);
+        Assert.Equal(harness.Localization.ContentDependencyRequiredItemHint, group.Hint);
         Assert.Null(viewModel.ContentShareUrl);
+    }
+
+    [Fact]
+    public async Task Page_VehicleNeedingADisabledMod_SaysTheModIsDisabled()
+    {
+        using var harness = await VehicleHarnessAsync(dependencies: Required("MeasureTools"));
+        var viewModel = harness.ViewModel;
+        var instance = await InstalledContent.AddAsync(harness, "MeasureTools", activate: true, ownership: ModInstallOwnership.Borea);
+        await harness.Services.ModState.SetInactiveAsync(instance.InstanceId, "MeasureTools");
+        await viewModel.LoadAsync();
+        await viewModel.EnsureDiscoverLoadedAsync();
+        viewModel.ShowDiscoverVehiclesCommand.Execute(null);
+
+        await Assert.Single(viewModel.DiscoverItems).OpenCommand.ExecuteAsync(null);
+
+        var member = Assert.Single(Assert.Single(Assert.Single(viewModel.ContentDependencyGroups).Entries).Members);
+        Assert.Equal(harness.Localization.FormatContentDependencyDisabled(Assert.Single(instance.Mods).Version.ToString()), member.StateText);
     }
 
     [Fact]
@@ -201,7 +219,7 @@ public sealed class UserContentViewModelTests
         Assert.True(viewModel.IsNameModalOpen);
         Assert.True(viewModel.ShowsGameSaveNameRules);
         Assert.Null(viewModel.NameModalSkipText);
-        Assert.Equal(harness.Localization.FormatContentNameTaken("Example Rover", "Example Rover", harness.Localization.InstanceGroupVehicles), viewModel.NameModalExplanation);
+        Assert.Equal(harness.Localization.FormatContentNameTaken("Example Rover", harness.Localization.InstanceGroupVehicles), viewModel.NameModalExplanation);
         Assert.Equal("Example Rover 2", viewModel.ModalInstanceName);
         Assert.DoesNotContain(harness.Requests, uri => uri.AbsoluteUri == RoverUrl);
 
@@ -337,6 +355,7 @@ public sealed class UserContentViewModelTests
         File.WriteAllText(Path.Combine(folder, "vehicle.xml"), "<Vehicle edited=\"yes\" />");
 
         await viewModel.ActiveInstance!.OpenCommand.ExecuteAsync(null);
+        await viewModel.WhenRecordedContentComparedAsync();
 
         var row = Assert.Single(viewModel.VehiclesSection.Items);
         Assert.True(row.HasRecord);
@@ -348,7 +367,7 @@ public sealed class UserContentViewModelTests
 
         row.BeginDeleteCommand.Execute(null);
 
-        Assert.Equal(harness.Localization.FormatContentRemoveChanged("Example Rover", "vehicle.xml"), row.DeleteConfirmText);
+        Assert.Equal(harness.Localization.FormatGameSaveDeleteChanged("Example Rover", "vehicle.xml"), row.DeleteConfirmText);
         Assert.True(Directory.Exists(folder));
 
         await row.ConfirmDeleteCommand.ExecuteAsync(null);
@@ -365,6 +384,7 @@ public sealed class UserContentViewModelTests
         var viewModel = harness.ViewModel;
         var instance = await ActiveInstanceWithRoverAsync(harness);
         await viewModel.ActiveInstance!.OpenCommand.ExecuteAsync(null);
+        await viewModel.WhenRecordedContentComparedAsync();
         var row = Assert.Single(viewModel.VehiclesSection.Items);
         Assert.False(row.IsChanged);
         var folder = Path.Combine(harness.Services.Paths.GetInstanceVehiclesFolder(instance.InstanceId), "Example Rover");
@@ -374,7 +394,7 @@ public sealed class UserContentViewModelTests
         await row.ConfirmDeleteCommand.ExecuteAsync(null);
 
         Assert.True(row.IsConfirmingDelete);
-        Assert.Equal(harness.Localization.FormatContentRemoveChanged("Example Rover", "vehicle.xml"), row.DeleteConfirmText);
+        Assert.Equal(harness.Localization.FormatGameSaveDeleteChanged("Example Rover", "vehicle.xml"), row.DeleteConfirmText);
         Assert.True(Directory.Exists(folder));
 
         await row.ConfirmDeleteCommand.ExecuteAsync(null);
@@ -473,7 +493,7 @@ public sealed class UserContentViewModelTests
         var needed = harness.Localization.FormatContentNeededByVehicle("Example Rover");
 
         Assert.True(row.CanRemove);
-        Assert.Equal($"{harness.Localization.ContentRemoveConfirm} {needed}", row.RemoveConfirmText);
+        Assert.Equal($"{needed} {harness.Localization.ContentRemoveConfirm}", row.RemoveConfirmText);
         viewModel.ShowDiscoverModsCommand.Execute(null);
         Assert.Contains(needed, viewModel.DiscoverItems.Single(item => item.ModId == "AdvancedFlightComputer").RemoveConfirmText, StringComparison.Ordinal);
         Assert.Null(viewModel.DiscoverItems.Single(item => item.ModId == "MeasureTools").NeededByText);

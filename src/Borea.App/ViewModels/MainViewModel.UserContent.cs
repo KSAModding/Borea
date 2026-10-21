@@ -234,7 +234,7 @@ public partial class MainViewModel
         RenamingInstance = null;
         RenamingGameSave = null;
         ModalInstanceName = FreeNameSuggestion(taken);
-        var explanation = Localization.FormatContentNameTaken(name, taken, release.Type == ContentType.Save ? Localization.InstanceGroupSaves : Localization.InstanceGroupVehicles);
+        var explanation = Localization.FormatContentNameTaken(taken, release.Type == ContentType.Save ? Localization.InstanceGroupSaves : Localization.InstanceGroupVehicles);
         NamingPackContent = new PackContentNaming(release.ModId, name, explanation, names, () => PlanContentAsync(row, instanceId, release, names[release.ModId], discardChanges), IsPackMember: false);
     }
 

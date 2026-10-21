@@ -1358,7 +1358,7 @@ public sealed partial class ContentItem : ObservableObject, IUpdateRow
 
     public string RemoveConfirmText => IsMissing
         ? _owner.Localization.ContentRemoveFromListConfirm
-        : NeededByText is { } needed ? $"{_owner.Localization.ContentRemoveConfirm} {needed}" : _owner.Localization.ContentRemoveConfirm;
+        : NeededByText is { } needed ? $"{needed} {_owner.Localization.ContentRemoveConfirm}" : _owner.Localization.ContentRemoveConfirm;
 
     /// <summary>What the game does to the recorded vehicles and saves that need the mod, or null when none does.</summary>
     public string? NeededByText => _owner.ContentNeededByText(_instance, ModId);

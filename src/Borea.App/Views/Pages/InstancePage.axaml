@@ -94,7 +94,7 @@
                         <TextBlock Classes="heading-sm" Text="{Binding Name}" ToolTip.Tip="{Binding FolderName}" TextTrimming="CharacterEllipsis" />
                         <TextBlock Classes="body-sm secondary" Text="{Binding UpdatedText}" ToolTip.Tip="{Binding UpdatedText}" TextTrimming="CharacterEllipsis" />
                         <WrapPanel ItemSpacing="8" LineSpacing="4" IsVisible="{Binding HasRecord}">
-                            <Button Classes="link" Command="{Binding OpenPageCommand}" IsVisible="{Binding ListingName, Converter={x:Static ObjectConverters.IsNotNull}}" ToolTip.Tip="{Binding ListingName}">
+                            <Button Classes="link" Margin="-8,0,0,0" Command="{Binding OpenPageCommand}" IsVisible="{Binding ListingName, Converter={x:Static ObjectConverters.IsNotNull}}" ToolTip.Tip="{Binding ListingName}">
                                 <TextBlock Classes="action-md" Text="{Binding ListingName}" />
                             </Button>
                             <TextBlock Classes="body-sm secondary" Text="{Binding InstalledVersionText}" VerticalAlignment="Center" />
@@ -107,7 +107,7 @@
                             </Border>
                         </WrapPanel>
                         <TextBlock Classes="body-sm danger" Text="{Binding DeleteConfirmText}" TextWrapping="Wrap" IsVisible="{Binding IsConfirmingDelete}" />
-                        <TextBlock Classes="body-sm danger" Text="{Binding InstallWarning}" TextWrapping="Wrap" IsVisible="{Binding InstallWarning, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                        <TextBlock Classes="body-sm secondary" Text="{Binding InstallWarning}" ToolTip.Tip="{Binding InstallWarning}" TextWrapping="Wrap" MaxLines="3" TextTrimming="CharacterEllipsis" IsVisible="{Binding InstallWarning, Converter={x:Static ObjectConverters.IsNotNull}}" />
                         <TextBlock Classes="body-sm secondary" Text="{Binding AddedModsText}" TextWrapping="Wrap" IsVisible="{Binding AddedModsText, Converter={x:Static ObjectConverters.IsNotNull}}" />
                         <TextBlock Classes="body-sm danger" Text="{Binding InstallError}" TextWrapping="Wrap" IsVisible="{Binding InstallError, Converter={x:Static ObjectConverters.IsNotNull}}" />
                         <TextBlock Classes="body-sm secondary" Text="{Binding ProgressStatus}" TextWrapping="Wrap" IsVisible="{Binding ProgressStatus, Converter={x:Static ObjectConverters.IsNotNull}}" />

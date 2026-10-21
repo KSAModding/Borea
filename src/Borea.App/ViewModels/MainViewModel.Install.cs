@@ -620,6 +620,14 @@ public partial class MainViewModel
     /// <summary>
     /// The planner's messages on one line, each named by its mod.
     /// </summary>
+    /// <summary>
+    /// The messages after the id of their mod. A message about a recorded vehicle or save comes first and names the mod
+    /// itself, so it stays visible where a row shows only the start of the text.
+    /// </summary>
     private static string Describe(IEnumerable<PlanningMessage> messages)
-        => string.Join(" ", messages.Select(message => $"{message.ModId}: {PlanningText.Message(message)}"));
+        => string.Join(" ", messages
+            .OrderBy(message => !BreaksContent(message))
+            .Select(message => BreaksContent(message) ? PlanningText.Message(message) : $"{message.ModId}: {PlanningText.Message(message)}"));
+
+    private static bool BreaksContent(PlanningMessage message) => message.Kind is PlanningMessageKind.BreaksVehicle or PlanningMessageKind.BreaksSave;
 }

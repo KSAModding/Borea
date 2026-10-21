@@ -1884,6 +1884,9 @@
   <data name="GameSaveDeleteConfirm" xml:space="preserve">
     <value>Delete it? Borea moves the folder into the Backups folder, and Restore brings it back.</value>
   </data>
+  <data name="GameSaveDeleteChangedFormat" xml:space="preserve">
+    <value>You changed {0} since Borea installed it: {1}. Delete it anyway? Borea moves the folder into the Backups folder, and Restore brings it back.</value>
+  </data>
   <data name="GameSaveDeletedFormat" xml:space="preserve">
     <value>Moved {0} into the Backups folder. Restore it under Backups.</value>
   </data>
@@ -2110,10 +2113,10 @@
     <value>{0} stays because {1} requires it.</value>
   </data>
   <data name="ContentNeededByVehicleFormat" xml:space="preserve">
-    <value>The vehicle {0} needs it, so the game refuses that vehicle.</value>
+    <value>The vehicle {0} needs this mod, so the game refuses that vehicle.</value>
   </data>
   <data name="ContentNeededBySaveFormat" xml:space="preserve">
-    <value>The save {0} needs it, so the game leaves out every vehicle of that save that needs it, and saving again loses those vehicles.</value>
+    <value>The save {0} needs this mod, so the game leaves out every vehicle of that save that needs it, and saving again loses those vehicles.</value>
   </data>
   <data name="ContentDisableConfirm" xml:space="preserve">
     <value>Disable it anyway?</value>
@@ -3484,10 +3487,10 @@
     <value>Borea cannot install or enable {0}, so the game leaves out every vehicle of this save that needs it, and saving again loses those vehicles.</value>
   </data>
   <data name="InstallMessageBreaksVehicleFormat" xml:space="preserve">
-    <value>{0} {1} is outside the range {2} that the vehicle {3} needs, so the game refuses that vehicle.</value>
+    <value>The vehicle {1} needs {0}, so after this change the game refuses that vehicle.</value>
   </data>
   <data name="InstallMessageBreaksSaveFormat" xml:space="preserve">
-    <value>{0} {1} is outside the range {2} that the save {3} needs, so the game leaves out every vehicle of that save that needs it, and saving again loses those vehicles.</value>
+    <value>The save {1} needs {0}, so after this change the game leaves out every vehicle of that save that needs it, and saving again loses those vehicles.</value>
   </data>
   <data name="InstallDependencyAlternativesFormat" xml:space="preserve">
     <value>{0} or {1}</value>
@@ -3582,11 +3585,17 @@
   <data name="ContentDependencyRequiredHint" xml:space="preserve">
     <value>Installed with this mod</value>
   </data>
+  <data name="ContentDependencyRequiredItemHint" xml:space="preserve">
+    <value>Installed with it</value>
+  </data>
   <data name="ContentDependencyAnyOf" xml:space="preserve">
     <value>Any of</value>
   </data>
   <data name="ContentDependencyAnyOfHint" xml:space="preserve">
     <value>One of each set is installed with this mod</value>
+  </data>
+  <data name="ContentDependencyAnyOfItemHint" xml:space="preserve">
+    <value>One of each set is installed with it</value>
   </data>
   <data name="ContentDependencyConflicts" xml:space="preserve">
     <value>Conflicts</value>
@@ -3600,6 +3609,9 @@
   <data name="ContentDependencyRecommendedHint" xml:space="preserve">
     <value>Selected when you add this mod</value>
   </data>
+  <data name="ContentDependencyRecommendedItemHint" xml:space="preserve">
+    <value>Selected when you add it</value>
+  </data>
   <data name="ContentDependencySuggested" xml:space="preserve">
     <value>Suggested</value>
   </data>
@@ -3611,6 +3623,9 @@
   </data>
   <data name="ContentDependencyOptionalHint" xml:space="preserve">
     <value>Used when installed, not added with this mod</value>
+  </data>
+  <data name="ContentDependencyOptionalItemHint" xml:space="preserve">
+    <value>Used when installed, not added with it</value>
   </data>
   <data name="ContentDependencyOther" xml:space="preserve">
     <value>Other</value>
@@ -3633,6 +3648,9 @@
   <data name="ContentDependencyInstalledFormat" xml:space="preserve">
     <value>Installed {0}</value>
   </data>
+  <data name="ContentDependencyDisabledFormat" xml:space="preserve">
+    <value>Installed {0}, disabled</value>
+  </data>
   <data name="ContentDependencyNotInstalled" xml:space="preserve">
     <value>Not installed</value>
   </data>
@@ -3652,7 +3670,7 @@
     <value>Compatibility</value>
   </data>
   <data name="ContentFileBuildFormat" xml:space="preserve">
-    <value>Saved in KSA {0}</value>
+    <value>Needs KSA {0} or newer</value>
   </data>
   <data name="ContentLinks" xml:space="preserve">
     <value>Links</value>
@@ -4279,10 +4297,10 @@
     <value>The {2} folder already has an item named '{1}', which is in the way of {0}. Choose another name, or go on without {0}.</value>
   </data>
   <data name="ContentNameTakenFormat" xml:space="preserve">
-    <value>The {2} folder already has an item named '{1}', which is in the way of {0}. Choose another name.</value>
+    <value>The {1} folder already has an item named '{0}'. Choose another name.</value>
   </data>
   <data name="PackContentChangedFormat" xml:space="preserve">
-    <value>You changed {0} since Borea installed it: {1}. Going on replaces it, and the old folder stays in the backups.</value>
+    <value>You changed {0} since Borea installed it: {1}. Going on replaces it, and Borea moves the old folder into the Backups folder.</value>
   </data>
   <data name="PackContentNameTitleFormat" xml:space="preserve">
     <value>New name for {0}</value>

@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
+using Borea.Composition;
 using Borea.Core.Instances;
 using Borea.Core.Mods;
 using Borea.Core.Planning;
@@ -32,14 +33,42 @@ public partial class MainViewModel
         }
     }
 
+    /// <summary>The mods that the manifest of an instance disables. A manifest Borea cannot read gives none.</summary>
+    private async Task<IReadOnlyList<string>> InactiveModIdsAsync(Guid instanceId)
+    {
+        if (_services is null)
+            return [];
+
+        try
+        {
+            return (await _services.ModState.GetEntriesAsync(instanceId)).Where(entry => !entry.Enabled).Select(entry => entry.ModId).ToList();
+        }
+        catch (Exception exception) when (exception is IOException or InvalidOperationException or UnauthorizedAccessException)
+        {
+            return [];
+        }
+    }
+
+    /// <summary>The mods of an instance that the game does not load. The rows of the open instance hold the switches as the player set them.</summary>
+    internal IReadOnlyList<string> InactiveModIds(InstanceItem instance)
+    {
+        var rows = _content.Where(row => row.InstanceId == instance.InstanceId).ToList();
+        return rows.Count > 0 ? rows.Where(row => !row.IsEnabled).Select(row => row.ModId).ToList() : instance.InactiveModIds;
+    }
+
     /// <summary>
     /// What the game does to each recorded vehicle and save of the instance that needs the mod, when the mod is removed
     /// or disabled, or null when none needs it. It only warns, because only an incompatible release blocks.
     /// </summary>
     internal string? ContentNeededByText(Instance instance, string modId)
     {
-        var content = Instances.FirstOrDefault(item => item.InstanceId == instance.InstanceId)?.Content ?? [];
-        var needing = RecordedContentNeeds.Needing(content, instance, modId);
+        var item = Instances.FirstOrDefault(item => item.InstanceId == instance.InstanceId);
+        if (item is null || item.Content.Count == 0)
+            return null;
+
+        // the row of the mod itself may already show the switch off while it asks
+        var inactive = InactiveModIds(item).Where(id => !ModIds.Equals(id, modId));
+        var needing = RecordedContentNeeds.Needing(item.Content, instance, modId, inactive);
         return needing.Count == 0
             ? null
             : string.Join(" ", needing.Select(record => record.Type == ContentType.Save
@@ -49,7 +78,7 @@ public partial class MainViewModel
 
     /// <summary>
     /// Shows on each row whose folder Borea installed what the record says: the listing, the installed version and a
-    /// newer release. The files are compared after that, because a large save takes a while to read.
+    /// newer release. The files are compared in a task that this does not wait for, because a large save takes a while to read.
     /// </summary>
     private async Task ShowRecordedContentAsync(GameSaveSection section, Guid instanceId)
     {
@@ -83,6 +112,18 @@ public partial class MainViewModel
             recorded.Add(item);
         }
 
+        var previous = _recordedContentCompare;
+        var compare = CompareRecordedContentAsync(services, recorded, instanceId);
+        _recordedContentCompare = previous.IsCompleted ? compare : Task.WhenAll(previous, compare);
+    }
+
+    private Task _recordedContentCompare = Task.CompletedTask;
+
+    internal Task WhenRecordedContentComparedAsync() => _recordedContentCompare;
+
+    /// <summary>Started without being awaited, so that the page and the next section do not wait for every file to be read.</summary>
+    private async Task CompareRecordedContentAsync(BoreaServices services, IReadOnlyList<GameSaveItem> recorded, Guid instanceId)
+    {
         foreach (var item in recorded)
         {
             InstalledContentChanges changes;
@@ -186,7 +227,7 @@ public sealed partial class GameSaveItem : IContentPlanRow
     public string? ChangedFilesText => Changes is { } changes ? MainViewModel.ChangedFilesText(changes) : null;
 
     /// <summary>A recorded folder the player changed names the files before it goes into the backups.</summary>
-    public string DeleteConfirmText => ChangedFilesText is { } files ? _owner.Localization.FormatContentRemoveChanged(Name, files) : _owner.Localization.GameSaveDeleteConfirm;
+    public string DeleteConfirmText => ChangedFilesText is { } files ? _owner.Localization.FormatGameSaveDeleteChanged(Name, files) : _owner.Localization.GameSaveDeleteConfirm;
 
     public UserContentPlan? PendingContentPlan { get; set; }
 

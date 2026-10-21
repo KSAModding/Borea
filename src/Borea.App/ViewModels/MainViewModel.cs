@@ -477,7 +477,12 @@ public partial class MainViewModel : ViewModelBase
         var all = await _instances.GetAllAsync();
         var rows = new List<InstanceItem>();
         foreach (var instance in all)
-            rows.Add(new InstanceItem(this, instance, instance.InstanceId == activeId, await LastPlayedAsync(instance), await InstalledContentOfAsync(instance.InstanceId)));
+        {
+            var content = await InstalledContentOfAsync(instance.InstanceId);
+            // the active instance shows the state of the mods a vehicle or save page needs
+            IReadOnlyList<string> inactive = content.Count == 0 && instance.InstanceId != activeId ? [] : await InactiveModIdsAsync(instance.InstanceId);
+            rows.Add(new InstanceItem(this, instance, instance.InstanceId == activeId, await LastPlayedAsync(instance), content, inactive));
+        }
 
         Instances.Clear();
         foreach (var row in Sorted(rows))
@@ -1041,6 +1046,9 @@ public sealed partial class InstanceItem : ObservableObject
     /// <summary>The listing ids of <see cref="Content"/>.</summary>
     internal IReadOnlyList<string> ContentIds => Content.Select(record => record.ListingId).ToList();
 
+    /// <summary>The mods that the manifest disabled when the list was read, which meet no need of <see cref="Content"/>.</summary>
+    internal IReadOnlyList<string> InactiveModIds { get; }
+
     internal IReadOnlyList<string> LaunchArguments { get; }
 
     public bool IsActive { get; }
@@ -1063,9 +1071,10 @@ public sealed partial class InstanceItem : ObservableObject
 
     private bool _isOpening;
 
-    public InstanceItem(MainViewModel owner, Instance instance, bool isActive, DateTimeOffset? lastPlayedAt = null, IReadOnlyList<InstalledContentRecord>? content = null)
+    public InstanceItem(MainViewModel owner, Instance instance, bool isActive, DateTimeOffset? lastPlayedAt = null, IReadOnlyList<InstalledContentRecord>? content = null, IReadOnlyList<string>? inactive = null)
     {
         Content = content ?? [];
+        InactiveModIds = inactive ?? [];
         _owner = owner;
         _source = instance.Source;
         InstanceId = instance.InstanceId;

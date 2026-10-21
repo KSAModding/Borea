@@ -1278,6 +1278,9 @@
   <data name="GameSaveDeleteConfirm" xml:space="preserve">
     <value>Send to Davy Jones' locker? The Borea hauls the treasure chest into the Backups treasure chest, and Restore fetches it back.</value>
   </data>
+  <data name="GameSaveDeleteChangedFormat" xml:space="preserve">
+    <value>Ye changed {0} since The Borea hauled it onboard: {1}. Send it to Davy Jones' locker anyway? The Borea hauls the treasure chest into the Backups treasure chest, and Restore fetches it back.</value>
+  </data>
   <data name="GameSaveDeletedFormat" xml:space="preserve">
     <value>Hauled {0} into the Backups treasure chest. Fetch it back under Backups.</value>
   </data>
@@ -1468,10 +1471,10 @@
     <value>{0} stows away 'cause {1} be needin' it.</value>
   </data>
   <data name="ContentNeededByVehicleFormat" xml:space="preserve">
-    <value>The ship {0} be needin' it, so the game be refusin' that ship.</value>
+    <value>The ship {0} be needin' this barrel, so the game be refusin' that ship.</value>
   </data>
   <data name="ContentNeededBySaveFormat" xml:space="preserve">
-    <value>The tale {0} be needin' it, so the game be leavin' out every ship o' that tale that be needin' it, and savin' again sends them ships to Davy Jones.</value>
+    <value>The tale {0} be needin' this barrel, so the game be leavin' out every ship o' that tale that be needin' it, and savin' again sends them ships to Davy Jones.</value>
   </data>
   <data name="ContentDisableConfirm" xml:space="preserve">
     <value>Put it to sleep anyway?</value>
@@ -1912,10 +1915,10 @@
     <value>The Borea ain't able to haul {0} onboard or wake it, so the game be leavin' out every ship o' this tale that be needin' that barrel, and savin' again sends them ships to Davy Jones.</value>
   </data>
   <data name="InstallMessageBreaksVehicleFormat" xml:space="preserve">
-    <value>{0} {1} be outside the range {2} that the vessel {3} be needin', so the game be refusin' that vessel.</value>
+    <value>The vessel {1} be needin' {0}, so after this change the game be refusin' that vessel.</value>
   </data>
   <data name="InstallMessageBreaksSaveFormat" xml:space="preserve">
-    <value>{0} {1} be outside the range {2} that the tale {3} be needin', so the game be leavin' out every ship o' that tale that be needin' it, and savin' again sends them ships to Davy Jones.</value>
+    <value>The tale {1} be needin' {0}, so after this change the game be leavin' out every ship o' that tale that be needin' it, and savin' again sends them ships to Davy Jones.</value>
   </data>
   <data name="InstallDependencyAlternativesFormat" xml:space="preserve">
     <value>{0} or {1}</value>
@@ -1980,6 +1983,24 @@
   <data name="ContentTabVersions" xml:space="preserve">
     <value>Versions</value>
   </data>
+  <data name="ContentTabNeedsMods" xml:space="preserve">
+    <value>Barrels it be needin'</value>
+  </data>
+  <data name="ContentDependencyRequiredItemHint" xml:space="preserve">
+    <value>Hauled aboard with it</value>
+  </data>
+  <data name="ContentDependencyAnyOfItemHint" xml:space="preserve">
+    <value>One o' each set be hauled aboard with it</value>
+  </data>
+  <data name="ContentDependencyRecommendedItemHint" xml:space="preserve">
+    <value>Picked when ye add it</value>
+  </data>
+  <data name="ContentDependencyOptionalItemHint" xml:space="preserve">
+    <value>Used when aboard, not hauled with it</value>
+  </data>
+  <data name="ContentDependencyDisabledFormat" xml:space="preserve">
+    <value>Aboard {0}, but asleep</value>
+  </data>
   <data name="CompatibilityCompatible" xml:space="preserve">
     <value>Compatible</value>
   </data>
@@ -1993,7 +2014,7 @@
     <value>Compatibility</value>
   </data>
   <data name="ContentFileBuildFormat" xml:space="preserve">
-    <value>Penned in KSA {0}</value>
+    <value>Be needin' KSA {0} or newer</value>
   </data>
   <data name="ContentLinks" xml:space="preserve">
     <value>Compass headin's</value>
@@ -2644,7 +2665,7 @@
     <value>The {2} chest already holds a haul named '{1}', blockin' {0}. Pick another name, or sail on without {0}.</value>
   </data>
   <data name="ContentNameTakenFormat" xml:space="preserve">
-    <value>The {2} chest already holds a haul named '{1}', blockin' {0}. Pick another name.</value>
+    <value>The {1} chest already holds a haul named '{0}'. Pick another name.</value>
   </data>
   <data name="PackContentChangedFormat" xml:space="preserve">
     <value>Ye changed {0} since The Borea hauled it onboard: {1}. Sailin' on swaps it out, and the old chest stays in the stash.</value>
@@ -2927,8 +2948,5 @@
   </data>
   <data name="SettingsLinksLabel" xml:space="preserve">
     <value>Charts</value>
-  </data>
-  <data name="ContentTabNeedsMods" xml:space="preserve">
-    <value>Barrels it be needin'</value>
   </data>
 </root>

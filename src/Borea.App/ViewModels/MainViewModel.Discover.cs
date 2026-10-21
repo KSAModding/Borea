@@ -79,6 +79,7 @@ public partial class MainViewModel
     [NotifyPropertyChangedFor(nameof(IsVehiclesTab))]
     [NotifyPropertyChangedFor(nameof(IsSavesTab))]
     [NotifyPropertyChangedFor(nameof(ShowsCategories))]
+    [NotifyPropertyChangedFor(nameof(ShowsModAuthors))]
     [NotifyPropertyChangedFor(nameof(HasDiscoverFilters))]
     private ContentType _discoverType = ContentType.Mod;
 
@@ -92,6 +93,9 @@ public partial class MainViewModel
 
     /// <summary>Vehicles and saves have free-form tags only, so their tabs show no categories.</summary>
     public bool ShowsCategories => !DiscoverType.IsVehicleOrSave();
+
+    /// <summary>The panel for mod authors asks for a mod, so the vehicle and save tabs leave it out.</summary>
+    public bool ShowsModAuthors => !DiscoverType.IsVehicleOrSave();
 
     /// <summary>Whether the snapshot lists a vehicle, which enables the Vehicles tab.</summary>
     public bool HasDiscoverVehicles => _listings.Any(item => item.Type == ContentType.Vehicle);
@@ -821,7 +825,10 @@ public sealed partial class DiscoverItem : ObservableObject, IContentPlanRow
     /// ">= min" or "min - max", as the compatibility chip shows it. A vehicle or save states no range of
     /// its own, so it shows the game build its file was saved in.
     /// </summary>
-    public string GameVersionText => _listing.GameMax is null ? $">= {_listing.GameMin ?? LatestInChannel?.GameMin}" : $"{_listing.GameMin} - {_listing.GameMax}";
+    public string GameVersionText => _listing.GameMax is null ? $">= {GameMin}" : $"{GameMin} - {_listing.GameMax}";
+
+    // A vehicle or save may author only game_max, and then its release gives the lower bound.
+    private string? GameMin => _listing.GameMin ?? LatestInChannel?.GameMin;
 
     public string TypeText => Type switch
     {
@@ -1007,7 +1014,7 @@ public sealed partial class DiscoverItem : ObservableObject, IContentPlanRow
     private string? _neededByText;
 
     public string RemoveConfirmText => RemoveChanges is { } files ? _owner.Localization.FormatContentRemoveChanged(Name, files)
-        : NeededByText is { } needed ? $"{_owner.Localization.ContentRemoveConfirm} {needed}"
+        : NeededByText is { } needed ? $"{needed} {_owner.Localization.ContentRemoveConfirm}"
         : _owner.Localization.ContentRemoveConfirm;
 
     public bool CanRemove => IsInstalled && !IsRemoving && RemoveBlockedText is null;

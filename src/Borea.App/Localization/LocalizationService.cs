@@ -1501,6 +1501,9 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string FormatContentRemoveChanged(string name, string files)
         => string.Format(CultureInfo.CurrentCulture, Resources.ContentRemoveChangedFormat, name, files);
 
+    public string FormatGameSaveDeleteChanged(string name, string files)
+        => string.Format(CultureInfo.CurrentCulture, Resources.GameSaveDeleteChangedFormat, name, files);
+
     public string ContentGoneFromInstance => Resources.ContentGoneFromInstance;
 
     public string ContentRemoveSteps => Resources.ContentRemoveSteps;
@@ -2266,9 +2269,13 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string ContentDependencyRequiredHint => Resources.ContentDependencyRequiredHint;
 
+    public string ContentDependencyRequiredItemHint => Resources.ContentDependencyRequiredItemHint;
+
     public string ContentDependencyAnyOf => Resources.ContentDependencyAnyOf;
 
     public string ContentDependencyAnyOfHint => Resources.ContentDependencyAnyOfHint;
+
+    public string ContentDependencyAnyOfItemHint => Resources.ContentDependencyAnyOfItemHint;
 
     public string ContentDependencyConflicts => Resources.ContentDependencyConflicts;
 
@@ -2278,6 +2285,8 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string ContentDependencyRecommendedHint => Resources.ContentDependencyRecommendedHint;
 
+    public string ContentDependencyRecommendedItemHint => Resources.ContentDependencyRecommendedItemHint;
+
     public string ContentDependencySuggested => Resources.ContentDependencySuggested;
 
     public string ContentDependencySuggestedHint => Resources.ContentDependencySuggestedHint;
@@ -2285,6 +2294,8 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string ContentDependencyOptional => Resources.ContentDependencyOptional;
 
     public string ContentDependencyOptionalHint => Resources.ContentDependencyOptionalHint;
+
+    public string ContentDependencyOptionalItemHint => Resources.ContentDependencyOptionalItemHint;
 
     public string ContentDependencyOther => Resources.ContentDependencyOther;
 
@@ -2303,6 +2314,9 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string FormatContentDependencyInstalled(string version)
         => string.Format(CultureInfo.CurrentCulture, Resources.ContentDependencyInstalledFormat, version);
+
+    public string FormatContentDependencyDisabled(string version)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ContentDependencyDisabledFormat, version);
 
     public string ContentDependencyNotInstalled => Resources.ContentDependencyNotInstalled;
 
@@ -3236,8 +3250,8 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string FormatPackContentNameTaken(string name, string folder, string kindFolder)
         => string.Format(CultureInfo.CurrentCulture, Resources.PackContentNameTakenFormat, name, folder, kindFolder);
 
-    public string FormatContentNameTaken(string name, string folder, string kindFolder)
-        => string.Format(CultureInfo.CurrentCulture, Resources.ContentNameTakenFormat, name, folder, kindFolder);
+    public string FormatContentNameTaken(string folder, string kindFolder)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ContentNameTakenFormat, folder, kindFolder);
 
     public string FormatPackContentNameTakenShort(string folder)
         => string.Format(CultureInfo.CurrentCulture, Resources.PackContentNameTakenShortFormat, folder);
