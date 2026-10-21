@@ -149,6 +149,28 @@ public sealed class GlbMeshDecoderTests
         Assert.All(stream.Reads, read => Assert.Contains(allowed, range => read.Start >= range.Start && read.End <= range.End));
     }
 
+    [Theory]
+    [InlineData(0, 0, 4, 1, 4, 2)]
+    [InlineData(0, 3, 3, 1, 4, 1)]
+    [InlineData(1, 4, 900_000_000, GlbMeshDecoder.DefaultMaxTriangles, 900_000_000, 300_000_000)]
+    public void AMeshAboveTheLimit_ThrowsBeforeAnyAccessorIsRead(int meshIndex, int accessor, int count, int maxTriangles, int vertices, int triangles)
+    {
+        // The rows are too many triangles, more than three vertices per allowed triangle, and a declared count that
+        // would need gigabytes of arrays while the BIN chunk holds only a few bytes.
+        var file = InterleavedQuad(json => json["accessors"]![accessor]!["count"] = count);
+        using var stream = new RecordingStream(file);
+        var container = GlbContainer.Read(stream);
+        stream.Reads.Clear();
+
+        var size = GlbMeshDecoder.Measure(container, meshIndex);
+        var exception = Record.Exception(() => GlbMeshDecoder.Decode(stream, container, meshIndex, maxTriangles));
+
+        Assert.Equal(new GlbMeshSize(vertices, triangles), size);
+        Assert.IsType<GlbFormatException>(exception);
+        Assert.Contains("limit", exception.Message, StringComparison.Ordinal);
+        Assert.All(stream.Reads, read => Assert.True(read.Start >= container.BinOffset - 8 && read.End <= container.BinOffset));
+    }
+
     [GameDirFact]
     public void MeshZeroOfEveryCoreMeshAtlas_HasTriangles()
     {

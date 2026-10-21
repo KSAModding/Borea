@@ -31,18 +31,40 @@ public static class GlbMeshDecoder
     /// <summary>The largest byteStride that glTF allows for a vertex attribute.</summary>
     private const int MaxStride = 252;
 
+    /// <summary>
+    /// The triangle limit that <see cref="Decode"/> uses when the caller gives none. It is the larger triangle budget
+    /// of the whole preview, so one mesh can never need more than the whole scene may hold.
+    /// </summary>
+    public const int DefaultMaxTriangles = 2_000_000;
+
+    /// <summary>
+    /// Gives the vertex and triangle counts of primitive 0 of the mesh at <paramref name="meshIndex"/> from the JSON
+    /// chunk only. It reads no stream, so the scene builder can apply its triangle budget before it decodes a mesh.
+    /// </summary>
+    /// <exception cref="GlbFormatException">The mesh does not exist, uses a required extension or a mode other than triangles, or an accessor count is missing.</exception>
+    public static GlbMeshSize Measure(GlbContainer container, int meshIndex)
+    {
+        ArgumentNullException.ThrowIfNull(container);
+        return WithJson(container, root => MeasurePrimitive(root, meshIndex, out _));
+    }
+
     /// <summary>Decodes primitive 0 of the mesh at <paramref name="meshIndex"/>.</summary>
     /// <param name="stream">A seekable stream over the whole GLB file. Its position changes.</param>
     /// <param name="container">The container read from the same file. Its BIN chunk is checked here when it was not checked before.</param>
+    /// <param name="maxTriangles">
+    /// The most triangles the mesh may have. The mesh may also have at most three vertices per allowed triangle. Both
+    /// counts are checked from the JSON before any array is allocated or any accessor byte is read.
+    /// </param>
     /// <exception cref="GlbFormatException">
-    /// The mesh does not exist, uses an external buffer, a sparse accessor, a required extension, a mode other than
-    /// triangles or a component type the preview does not read, or one of its counts, offsets, strides or indices
-    /// does not fit the data.
+    /// The mesh does not exist, is larger than <paramref name="maxTriangles"/> allows, uses an external buffer, a
+    /// sparse accessor, a required extension, a mode other than triangles or a component type the preview does not
+    /// read, or one of its counts, offsets, strides or indices does not fit the data.
     /// </exception>
-    public static PreviewMesh Decode(Stream stream, GlbContainer container, int meshIndex)
+    public static PreviewMesh Decode(Stream stream, GlbContainer container, int meshIndex, int maxTriangles = DefaultMaxTriangles)
     {
         ArgumentNullException.ThrowIfNull(stream);
         ArgumentNullException.ThrowIfNull(container);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(maxTriangles);
         if (!stream.CanSeek)
         {
             throw new ArgumentException("The stream must be able to seek.", nameof(stream));
@@ -53,11 +75,15 @@ public static class GlbMeshDecoder
             container = container.WithCheckedBin(stream);
         }
 
+        return WithJson(container, root => Decode(stream, root, container.BinOffset, container.BinLength!.Value, meshIndex, maxTriangles));
+    }
+
+    private static T WithJson<T>(GlbContainer container, Func<JsonElement, T> read)
+    {
         try
         {
             using var document = JsonDocument.Parse(container.Json);
-            var root = document.RootElement;
-            return Decode(stream, root, container.BinOffset, container.BinLength!.Value, meshIndex);
+            return read(document.RootElement);
         }
         catch (JsonException exception)
         {
@@ -71,40 +97,21 @@ public static class GlbMeshDecoder
         }
     }
 
-    private static PreviewMesh Decode(Stream stream, JsonElement root, long binOffset, long binLength, int meshIndex)
+    private static PreviewMesh Decode(Stream stream, JsonElement root, long binOffset, long binLength, int meshIndex, int maxTriangles)
     {
-        if (root.TryGetProperty("extensionsRequired", out var required) && required.ValueKind == JsonValueKind.Array && required.GetArrayLength() > 0)
+        // The arrays below grow with these counts, and with u8 indices or the flat-normal pass they grow much faster
+        // than the file. The counts are therefore limited before anything is allocated, so a large or hostile mesh
+        // fails as one asset instead of with an OutOfMemoryException. A byte range that is read is bounded by the
+        // checked BIN chunk, so it never needs more memory than the file has.
+        var size = MeasurePrimitive(root, meshIndex, out var primitive);
+        if (size.TriangleCount > maxTriangles || size.VertexCount > 3L * maxTriangles)
         {
-            throw new GlbFormatException($"The file requires the glTF extension {required[0]}, which the preview does not read.");
-        }
-
-        var meshes = GetArray(root, "meshes");
-        if (meshIndex < 0 || meshIndex >= meshes.GetArrayLength())
-        {
-            throw new GlbFormatException($"The file has no mesh {meshIndex}.");
-        }
-
-        var primitives = GetArray(meshes[meshIndex], "primitives");
-        if (primitives.GetArrayLength() == 0)
-        {
-            throw new GlbFormatException($"Mesh {meshIndex} has no primitive.");
-        }
-
-        var primitive = primitives[0];
-        var mode = GetInt(primitive, "mode", TrianglesMode);
-        if (mode != TrianglesMode)
-        {
-            throw new GlbFormatException($"Primitive 0 of mesh {meshIndex} uses mode {mode}, and the preview reads only triangles (mode 4).");
+            throw new GlbFormatException($"Mesh {meshIndex} has {size.TriangleCount} triangles and {size.VertexCount} vertices, more than the limit of {maxTriangles} triangles allows.");
         }
 
         var reader = new AccessorReader(stream, root, binOffset, binLength);
         var attributes = primitive.GetProperty("attributes");
-        if (!attributes.TryGetProperty("POSITION", out var positionIndex))
-        {
-            throw new GlbFormatException($"Primitive 0 of mesh {meshIndex} has no POSITION attribute.");
-        }
-
-        var positions = reader.ReadFloats(ToIndex(positionIndex), "VEC3", out var vertexCount);
+        var positions = reader.ReadFloats(ToIndex(attributes.GetProperty("POSITION")), "VEC3", out var vertexCount);
         float[]? normals = null;
         if (attributes.TryGetProperty("NORMAL", out var normalIndex))
         {
@@ -151,6 +158,57 @@ public static class GlbMeshDecoder
         {
             throw new GlbFormatException($"Mesh {meshIndex} has a value that is not finite.", exception);
         }
+    }
+
+    /// <summary>
+    /// Finds primitive 0 of the mesh and gives the counts that its POSITION and index accessors declare. The triangle
+    /// count is the index count, or the vertex count of a non-indexed mesh, divided by 3.
+    /// </summary>
+    private static GlbMeshSize MeasurePrimitive(JsonElement root, int meshIndex, out JsonElement primitive)
+    {
+        if (root.TryGetProperty("extensionsRequired", out var required) && required.ValueKind == JsonValueKind.Array && required.GetArrayLength() > 0)
+        {
+            throw new GlbFormatException($"The file requires the glTF extension {required[0]}, which the preview does not read.");
+        }
+
+        var meshes = GetArray(root, "meshes");
+        if (meshIndex < 0 || meshIndex >= meshes.GetArrayLength())
+        {
+            throw new GlbFormatException($"The file has no mesh {meshIndex}.");
+        }
+
+        var primitives = GetArray(meshes[meshIndex], "primitives");
+        if (primitives.GetArrayLength() == 0)
+        {
+            throw new GlbFormatException($"Mesh {meshIndex} has no primitive.");
+        }
+
+        primitive = primitives[0];
+        var mode = GetInt(primitive, "mode", TrianglesMode);
+        if (mode != TrianglesMode)
+        {
+            throw new GlbFormatException($"Primitive 0 of mesh {meshIndex} uses mode {mode}, and the preview reads only triangles (mode 4).");
+        }
+
+        if (!primitive.GetProperty("attributes").TryGetProperty("POSITION", out var positionIndex))
+        {
+            throw new GlbFormatException($"Primitive 0 of mesh {meshIndex} has no POSITION attribute.");
+        }
+
+        var accessors = GetArray(root, "accessors");
+        var vertexCount = GetCount(accessors, ToIndex(positionIndex));
+        var cornerCount = primitive.TryGetProperty("indices", out var indicesIndex) ? GetCount(accessors, ToIndex(indicesIndex)) : vertexCount;
+        return new GlbMeshSize(vertexCount, cornerCount / 3);
+    }
+
+    private static int GetCount(JsonElement accessors, int accessorIndex)
+    {
+        if (accessorIndex >= accessors.GetArrayLength())
+        {
+            throw new GlbFormatException($"The file has no accessor {accessorIndex}.");
+        }
+
+        return GetInt(accessors[accessorIndex], "count", 0);
     }
 
     /// <summary>
