@@ -32,8 +32,18 @@ public sealed record RenderOptions
 
     public float SunIntensity { get; init; } = 0.85f;
 
-    /// <summary>The light that reaches every face, also a face that turns away from the sun.</summary>
+    /// <summary>
+    /// The light that reaches every face, also a face that turns away from the sun. The ambient occlusion
+    /// of the material scales it, and only it, as the simple ambient of ThumbnailMesh.frag does.
+    /// </summary>
     public float Ambient { get; init; } = 0.2f;
+
+    /// <summary>
+    /// The exposure of the Reinhard tone map, in the form of tonemapReinhardSimple in the game shader
+    /// Tonemapping.glsl. The default makes a mid-gray diffuse under the full sun come out near mid-gray.
+    /// Values that are not positive and finite count as 1.
+    /// </summary>
+    public float Exposure { get; init; } = 1.15f;
 }
 
 /// <summary>What one render call did, so tests and the viewer can see the culling work.</summary>
