@@ -5,8 +5,8 @@ namespace Borea.Storage.Preview.Ksa;
 /// </summary>
 /// <remarks>
 /// <para>
-/// This is the one place that /update-game checks again after a game update. The names were verified against the
-/// decompiled KSA build 2026.10.19.5638, in the XmlRoot, XmlElement, XmlAttribute and XmlType attributes of
+/// These names are the one place to check again after a game update. They match KSA build 2026.10.19.5638, in the
+/// XmlRoot, XmlElement, XmlAttribute and XmlType attributes of
 /// AssetBundle, PartTemplate, PartInstance, PartModelModule.Template, PartModelDynamicModule, PartModelGlassModule,
 /// PbrMaterialReference, MeshAtlasFileReference, MeshFileReference, FileReference, TransformReference,
 /// Vector3Reference and VehicleSaveData.
@@ -14,9 +14,18 @@ namespace Borea.Storage.Preview.Ksa;
 /// <para>
 /// The game compares Ids without case. SerializedId.SetHash stores KeyHash.Make(Id), SerializedCollection.Register
 /// adds an item with TryAdd on that hash so the first registration wins, and ModLibrary.Find hashes the requested Id
-/// the same way. KSA.KeyHash is in Planet.Render.Core.dll, not in KSA.dll. KeyHash.Make (decompiled from that file
-/// for build 2026.10.19.5638) lowercases the Id with ToLowerInvariant and then takes Crc32.HashToUInt32 of its UTF-8
-/// bytes, so <see cref="KsaIdComparer.Registry"/> uses an ordinal comparison that ignores case.
+/// the same way. KSA.KeyHash is in Planet.Render.Core.dll, not in KSA.dll. In build 2026.10.19.5638, KeyHash.Make
+/// lowercases the Id with ToLowerInvariant and then takes Crc32.HashToUInt32 of its UTF-8 bytes, so
+/// <see cref="KsaIdComparer.Registry"/> uses an ordinal comparison that ignores case.
+/// </para>
+/// <para>
+/// Some kinds share one registry. Part and SubPart templates both go into ModLibrary.AllParts, because
+/// SubPartTemplate derives from PartTemplate and PartTemplate.OnDataLoad calls ModLibrary.Register(this). PartGameData
+/// and SubPartGameData both go into ModLibrary.AllPartGameDataReferences, because SubPartGameDataReference derives
+/// from PartGameDataReference. The first registration wins across the two kinds of each pair, so a SubPart "X" drops
+/// a later Part "x", and a SubPartGameData folds into a PartGameData with the same Id (PartGameDataReference.OnDataLoad
+/// calls ApplyGameData on the one that Find returns). ModLibrary.AttachGameData then walks AllParts, which holds both
+/// template kinds, and applies each GameData to the first template whose Id matches.
 /// </para>
 /// <para>
 /// Element and attribute names are case-sensitive, as XmlSerializer reads them.
