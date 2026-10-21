@@ -1,3 +1,4 @@
+using Borea.Core.Game;
 using Borea.Core.Index;
 using Borea.Core.Instances;
 using Borea.Core.ModLoaders;
@@ -42,6 +43,33 @@ public sealed class LaunchCommandTests : IDisposable
         var run = await _host.RunAsync("launch", "Flight Test").WaitAsync(TimeSpan.FromSeconds(30));
 
         Assert.Equal(0, run.ExitCode);
+        Assert.Single(_host.ProcessStarter.Plans);
+    }
+
+    [Fact]
+    public async Task Launch_InstalledLoaderDoesNotSupportTheGame_WarnsAndStillStarts()
+    {
+        _host.Mods.Listings.Add(LoaderFixtures.Listing());
+        var loaderDirectory = LoaderCommandTests.CreateLoaderDirectory("StarMap", "not a program", _host.Root);
+        await File.WriteAllTextAsync(_host.Paths.GetBoreaSettingsPath(), $"""
+            [LoaderInstallations.StarMap]
+            DirectoryPath = '{loaderDirectory}'
+            Version = '0.4.7'
+            IsAdopted = false
+            """);
+        await _host.RunAsync("instance", "create", "Flight Test");
+        _host.InstalledVersion = new FakeInstalledGameVersionProvider { Installed = new InstalledGameVersion(GameVersion.Parse("2026.10.19.5638"), "2026.10.19.5638") };
+        _host.IndexReader.Snapshot = new ContentIndexSnapshot(
+            1,
+            [new ContentIndexListing("StarMap", LoaderFixtures.Listing(), [LoaderFixtures.Release(version: "0.4.7", gameMax: "2026.10.13.5602"), LoaderFixtures.Release(version: "0.4.8", gameMin: "2026.10.19.5638")], null)],
+            [],
+            null,
+            []);
+
+        var run = await _host.RunAsync("launch", "Flight Test", "StarMap");
+
+        Assert.Equal(0, run.ExitCode);
+        Assert.Contains("warning: StarMap 0.4.7 does not support KSA 2026.10.19.5638. Run 'borea loader install StarMap' to install 0.4.8.", run.Error);
         Assert.Single(_host.ProcessStarter.Plans);
     }
 

@@ -255,6 +255,18 @@ public sealed class FileAppPreferencesRepositoryTests : IDisposable
     }
 
     [Fact]
+    public async Task SaveThenGet_DismissedLoaderUpdate_RestoresTheRelease()
+    {
+        Assert.Null(AppPreferences.Empty.DismissedLoaderUpdate);
+
+        await _repository.SaveAsync(AppPreferences.Empty.WithDismissedLoaderUpdate("StarMap 0.4.8").WithStaySignedInToGitHub(false), BundledThemeNames);
+        var result = await _repository.GetAsync(BundledThemeNames);
+
+        Assert.Equal("StarMap 0.4.8", result.Preferences.DismissedLoaderUpdate);
+        Assert.Equal("StarMap 0.4.8", result.Preferences.WithSelectedThemeName("Light").WithDismissedUntestedGameRevision(5482).DismissedLoaderUpdate);
+    }
+
+    [Fact]
     public void With_OtherPreferenceChanges_KeepTheDismissedGameRevision()
     {
         var preferences = AppPreferences.Empty.WithDismissedGameRevision(5438)

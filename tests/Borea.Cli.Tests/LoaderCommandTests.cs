@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Borea.Core.Game;
 using Borea.Core.ModLoaders;
 using Borea.Core.Mods;
 
@@ -68,6 +69,42 @@ public sealed class LoaderCommandTests : IDisposable
         Assert.Contains("Use --version", refused.Error);
         Assert.Equal(0, exact.ExitCode);
         Assert.Equal("0.4.6", Assert.Single(installer.Calls).Release.Version.ToString());
+    }
+
+    [Fact]
+    public async Task Install_WithoutVersion_SkipsANewerReleaseThatDoesNotSupportTheGame()
+    {
+        var installer = new FakeLoaderInstaller();
+        _host.LoaderInstaller = installer;
+        _host.InstalledVersion = new FakeInstalledGameVersionProvider { Installed = new InstalledGameVersion(GameVersion.Parse("2026.10.13.5602"), "2026.10.13.5602") };
+        _host.Mods.Listings.Add(LoaderFixtures.Listing());
+        _host.Mods.Releases.Add(LoaderFixtures.Release(version: "0.4.7", gameMax: "2026.10.13.5602"));
+        _host.Mods.Releases.Add(LoaderFixtures.Release(version: "0.4.8", gameMin: "2026.10.19.5638"));
+
+        var run = await _host.RunAsync("loader", "install", "StarMap");
+
+        Assert.Equal(0, run.ExitCode);
+        Assert.Equal("0.4.7", Assert.Single(installer.Calls).Release.Version.ToString());
+        Assert.Contains("warning: StarMap 0.4.8 does not support KSA 2026.10.13.5602; installing 0.4.7.", run.Error);
+    }
+
+    [Fact]
+    public async Task Install_WithoutVersion_NoReleaseSupportsTheGame_FailsAndLeavesTheVersionOption()
+    {
+        var installer = new FakeLoaderInstaller();
+        _host.LoaderInstaller = installer;
+        _host.InstalledVersion = new FakeInstalledGameVersionProvider { Installed = new InstalledGameVersion(GameVersion.Parse("2026.10.13.5602"), "2026.10.13.5602") };
+        _host.Mods.Listings.Add(LoaderFixtures.Listing());
+        _host.Mods.Releases.Add(LoaderFixtures.Release(version: "0.4.8", gameMin: "2026.10.19.5638"));
+
+        var refused = await _host.RunAsync("loader", "install", "StarMap");
+        var exact = await _host.RunAsync("loader", "install", "StarMap", "--version", "0.4.8");
+
+        Assert.Equal(1, refused.ExitCode);
+        Assert.Contains("supports KSA 2026.10.13.5602", refused.Error);
+        Assert.Contains("Use --version", refused.Error);
+        Assert.Equal(0, exact.ExitCode);
+        Assert.Equal("0.4.8", Assert.Single(installer.Calls).Release.Version.ToString());
     }
 
     [Fact]

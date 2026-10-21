@@ -1214,6 +1214,23 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string GameBuildAvailable => Resources.GameBuildAvailable;
 
+    public string FormatLoaderUpdateUrgent(string loader, string installed, string game, string offer)
+        => string.Format(CultureInfo.CurrentCulture, Resources.LoaderUpdateUrgentFormat, loader, installed, game, offer);
+
+    public string FormatLoaderUpdateNone(string loader, string installed, string game)
+        => string.Format(CultureInfo.CurrentCulture, Resources.LoaderUpdateNoneFormat, loader, installed, game);
+
+    public string FormatLoaderNeedsNewerGame(string loader, string installed, string game)
+        => string.Format(CultureInfo.CurrentCulture, Resources.LoaderNeedsNewerGameFormat, loader, installed, game);
+
+    public string FormatLoaderUpdateAvailable(string loader, string offer)
+        => string.Format(CultureInfo.CurrentCulture, Resources.LoaderUpdateAvailableFormat, loader, offer);
+
+    public string FormatLoaderUpdateAction(string loader, string offer)
+        => string.Format(CultureInfo.CurrentCulture, Resources.LoaderUpdateActionFormat, loader, offer);
+
+    public string LoaderUpdateGameRunning => Resources.LoaderUpdateGameRunning;
+
     public string GameBuildDownload => Resources.GameBuildDownload;
 
     public string GamePatchNotesTitle => Resources.GamePatchNotesTitle;
@@ -2380,6 +2397,9 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string FormatInstanceLoaderWrongVersion(string version)
         => string.Format(CultureInfo.CurrentCulture, Resources.InstanceLoaderWrongVersionFormat, version);
 
+    public string FormatInstanceLoaderIncompatible(string version)
+        => string.Format(CultureInfo.CurrentCulture, Resources.InstanceLoaderIncompatibleFormat, version);
+
     public string ContentShowVersions => Resources.ContentShowVersions;
 
     public string ContentNoDescription => Resources.ContentNoDescription;
@@ -2665,6 +2685,16 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string FormatLaunchInstallLoader(string loader)
         => string.Format(CultureInfo.CurrentCulture, Resources.LaunchInstallLoaderFormat, loader);
 
+    public string FormatLaunchLoaderUpdate(string loader, string installed, string game, string offer)
+        => string.Format(CultureInfo.CurrentCulture, Resources.LaunchLoaderUpdateFormat, loader, installed, game, offer);
+
+    public string FormatLaunchLoaderIncompatible(string loader, string installed, string game)
+        => string.Format(CultureInfo.CurrentCulture, Resources.LaunchLoaderIncompatibleFormat, loader, installed, game);
+
+    public string LaunchUpdateAndPlay => Resources.LaunchUpdateAndPlay;
+
+    public string LaunchPlayAnyway => Resources.LaunchPlayAnyway;
+
     public string FormatLaunchSetUpGameFirst(string loader)
         => string.Format(CultureInfo.CurrentCulture, Resources.LaunchSetUpGameFirstFormat, loader);
 
@@ -2740,6 +2770,9 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string FormatSetupLoaderInstalledVersion(string version)
         => string.Format(CultureInfo.CurrentCulture, Resources.SetupLoaderInstalledVersionFormat, version);
+
+    public string FormatSetupLoaderIncompatible(string version, string game)
+        => string.Format(CultureInfo.CurrentCulture, Resources.SetupLoaderIncompatibleFormat, version, game);
 
     public string FormatSetupUpdateLoader(string version)
         => string.Format(CultureInfo.CurrentCulture, Resources.SetupUpdateLoaderFormat, version);

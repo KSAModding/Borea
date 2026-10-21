@@ -1,7 +1,10 @@
 using System.CommandLine;
 using Borea.Cli.Output;
+using Borea.Core.Game;
 using Borea.Core.Instances;
 using Borea.Core.Launch;
+using Borea.Core.ModLoaders;
+using Borea.Core.Mods;
 
 namespace Borea.Cli.Commands;
 
@@ -43,6 +46,8 @@ internal static class LaunchCommand
                     ? $"The mods in '{target.Name}' need {loader.ModId}."
                     : $"No mod in '{target.Name}' needs a mod loader. Using {loader.ModId}, which takes an instance.");
             }
+
+            await WriteLoaderWarningAsync(cli, loader, error, ct).ConfigureAwait(false);
 
             var shape = await cli.GameShape.GetForInstanceAsync(target.InstanceId, ct).ConfigureAwait(false);
             GameShapeOutput.WriteWarning(shape, error);
@@ -114,6 +119,31 @@ internal static class LaunchCommand
             $"No mod in '{instance.Name}' needs a mod loader, and no installed mod loader takes an instance. The game reads no instance path on its own. To start the game without a loader, use 'borea game launch', which uses the shared profile and not this instance.",
         _ => throw new ArgumentOutOfRangeException(nameof(choice), choice.Failure, null),
     };
+
+    /// <summary>Warns when the index says the installed loader release does not support the game. The launch still starts, because the bounds can be wrong.</summary>
+    private static async Task WriteLoaderWarningAsync(CliServices cli, ModMetadata loader, TextWriter error, CancellationToken cancellationToken)
+    {
+        if (!cli.Settings.LoaderInstallations.TryGetValue(loader.ModId, out var installation) || installation.Version is not { } installed)
+            return;
+
+        var game = cli.InstalledVersion.GetInstalledVersion();
+        LoaderUpdate update;
+        try
+        {
+            update = await LoaderUpdate.FindAsync(cli.OfflineContentIndex, cli.Settings.ReleaseChannel, loader.ModId, installation, game?.Version, cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception exception) when (exception is InvalidOperationException or IOException)
+        {
+            return;
+        }
+
+        if (update.InstalledCompatibility != GameCompatibility.Incompatible)
+            return;
+
+        error.WriteLine(update.Offer is { } offer
+            ? $"warning: {loader.Name} {installed} does not support KSA {game?.RawVersion}. Run 'borea loader install {loader.ModId}' to install {offer.Version}."
+            : $"warning: {loader.Name} {installed} does not support KSA {game?.RawVersion}.");
+    }
 
     private static string InstallHint(string loaderId) =>
         $"Install it with 'borea loader install {loaderId}', or record an existing copy with 'borea loader adopt {loaderId} <directory>'.";

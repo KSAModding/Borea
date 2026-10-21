@@ -685,6 +685,14 @@ public partial class MainViewModel
             }
 
             var loader = choice.Loader;
+            if (LoaderUpdateBeforeLaunch(instance, loader) is { } update)
+            {
+                services.Log.Write(update.Offer is { } offer
+                    ? $"Launch of instance {instance.InstanceId} waits, {loader.ModId} {update.InstalledVersion} does not support the game and {offer.Version} does."
+                    : $"Launch of instance {instance.InstanceId} waits, {loader.ModId} {update.InstalledVersion} does not support the game and no release fits the game and the mods.");
+                OpenLoaderPrompt(instanceId, loader, update);
+                return;
+            }
 
             // The load order is a write, so it waits for a shape Borea trusts.
             // This is the shape of the instance that starts, which is not the

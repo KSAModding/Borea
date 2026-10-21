@@ -723,6 +723,24 @@
   <data name="GameBuildAvailable" xml:space="preserve">
     <value>A fresher game build awaits ye:</value>
   </data>
+  <data name="LoaderUpdateUrgentFormat" xml:space="preserve">
+    <value>{0} {1} won't sail with KSA {2}. {0} {3} will.</value>
+  </data>
+  <data name="LoaderUpdateNoneFormat" xml:space="preserve">
+    <value>{0} {1} won't sail with KSA {2}, and no newer {0} will yet.</value>
+  </data>
+  <data name="LoaderNeedsNewerGameFormat" xml:space="preserve">
+    <value>{0} {1} needs a newer KSA build than {2}. Refit KSA afore ye sail.</value>
+  </data>
+  <data name="LoaderUpdateAvailableFormat" xml:space="preserve">
+    <value>{0} {1} be ready fer haulin'.</value>
+  </data>
+  <data name="LoaderUpdateActionFormat" xml:space="preserve">
+    <value>Refit {0} to {1}</value>
+  </data>
+  <data name="LoaderUpdateGameRunning" xml:space="preserve">
+    <value>Drop anchor on KSA first. The Borea can't refit the mod loader while the game be sailin'.</value>
+  </data>
   <data name="GameBuildDownload" xml:space="preserve">
     <value>Haul it in</value>
   </data>
@@ -2355,6 +2373,12 @@
   <data name="SetupLoaderInstalledVersionFormat" xml:space="preserve">
     <value>Hauled aboard {0}</value>
   </data>
+  <data name="SetupLoaderIncompatibleFormat" xml:space="preserve">
+    <value>Hauled aboard {0}, won't sail with KSA {1}</value>
+  </data>
+  <data name="InstanceLoaderIncompatibleFormat" xml:space="preserve">
+    <value>{0}, not fit fer this KSA build</value>
+  </data>
   <data name="SetupLoaderInstalledUnknownVersion" xml:space="preserve">
     <value>Hauled aboard, version a dead man's tale</value>
   </data>
@@ -2645,6 +2669,18 @@
   </data>
   <data name="LaunchInstallLoaderFormat" xml:space="preserve">
     <value>This sea be needin' {0}. Haul it onboard now?</value>
+  </data>
+  <data name="LaunchLoaderUpdateFormat" xml:space="preserve">
+    <value>{0} {1} won't sail with KSA {2}. Refit it to {3} afore ye play?</value>
+  </data>
+  <data name="LaunchLoaderIncompatibleFormat" xml:space="preserve">
+    <value>{0} {1} won't sail with KSA {2}, so the game may not leave port. Sail anyway?</value>
+  </data>
+  <data name="LaunchUpdateAndPlay" xml:space="preserve">
+    <value>Refit and sail</value>
+  </data>
+  <data name="LaunchPlayAnyway" xml:space="preserve">
+    <value>Sail anyway</value>
   </data>
   <data name="LaunchSetUpGameFirstFormat" xml:space="preserve">
     <value>This sea be needin' {0}. Draw up the game treasure chest first.</value>
