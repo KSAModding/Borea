@@ -178,6 +178,22 @@ public sealed class LoggingDecoratorsTests
     }
 
     [Fact]
+    public async Task WatchStart_OtherModsNeedTheMissingAssembly_WritesThem()
+    {
+        var loader = Path.GetFullPath(Path.Combine(Path.GetTempPath(), "StarMap"));
+        var plan = new LaunchPlan(Path.Combine(loader, "StarMap.exe"), [], loader, new Dictionary<string, string>());
+        var instance = new Instance("Main", InstanceSource.Custom.Value);
+        var launcher = new LoggingLauncher(new FixedLauncher(LaunchResult.Success(plan, 42, "Started.")), _log);
+
+        await launcher.WatchStartAsync(instance, LaunchResult.ExitedEarly(plan, -532462766, ["File name: 'Brutal.Core.Numerics'"], "KSArmory", "Stopped.", LoaderCrashCause.ModAssembly, otherBlamedModIds: ["DeltaVMap", "Compendium"]));
+
+        var exitCode = LoaderExitCode.Describe(-532462766, OperatingSystem.IsWindows());
+        Assert.Equal(
+            [$"Launch of instance {instance.InstanceId} stopped early with exit code {exitCode}, blames KSArmory, game assemblies that this build does not have are also needed by DeltaVMap, Compendium. Last output:{Environment.NewLine}File name: 'Brutal.Core.Numerics'"],
+            _log.Messages);
+    }
+
+    [Fact]
     public async Task WatchStart_StoppedWhileLoadingMods_WritesTheLikelyModAndTheExitCode()
     {
         var loader = Path.GetFullPath(Path.Combine(Path.GetTempPath(), "StarMap"));

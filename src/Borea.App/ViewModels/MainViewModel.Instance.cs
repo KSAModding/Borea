@@ -42,6 +42,7 @@ public partial class MainViewModel
     private int _contentUpdateCheckGeneration;
     private Guid? _launchInstanceId;
     private string? _launchBlamedModName;
+    private IReadOnlyList<string> _launchOtherModIds = [];
     private string? _launchLoaderName;
     private HomeLaunchOption? _homeLaunch;
 
@@ -121,7 +122,9 @@ public partial class MainViewModel
 
     public bool CanDisableBlamedMod => LaunchBlamedModId is not null;
 
-    public string? DisableBlamedModText => _launchBlamedModName is null ? null : Localization.FormatLaunchDisableMod(_launchBlamedModName);
+    public string? DisableBlamedModText => _launchBlamedModName is null ? null
+        : _launchOtherModIds.Count > 0 ? Localization.FormatLaunchDisableMods(_launchOtherModIds.Count + 1)
+        : Localization.FormatLaunchDisableMod(_launchBlamedModName);
 
     /// <summary>The modal that shows why the loader stopped, with the way out.</summary>
     [ObservableProperty]
@@ -779,6 +782,7 @@ public partial class MainViewModel
         var loaderName = _launchLoaderName = loader?.Name ?? string.Empty;
         var blamed = result.BlamedModId is null ? null : instance.Mods.FirstOrDefault(mod => ModIds.Equals(mod.ModId, result.BlamedModId));
         var loadingMods = result.CrashCause == LoaderCrashCause.ModLoading;
+        _launchOtherModIds = blamed is null ? [] : result.OtherBlamedModIds;
         if (result.Wine?.Wrapper is { } wrapper)
         {
             LaunchMessage = Localization.FormatLaunchWrapperStopped(wrapper.BundlePath, loaderName);
@@ -801,6 +805,16 @@ public partial class MainViewModel
             LaunchMessage = loadingMods
                 ? Localization.FormatLaunchModLikelyBroke(_launchBlamedModName, blamed.Version.ToString(), loaderName)
                 : Localization.FormatLaunchModBroke(_launchBlamedModName, blamed.Version.ToString(), loaderName);
+
+            var others = new List<string>();
+            foreach (var modId in result.OtherBlamedModIds)
+            {
+                var other = instance.Mods.FirstOrDefault(mod => ModIds.Equals(mod.ModId, modId));
+                others.Add(other?.Metadata.Listing?.Name ?? (await ResolveListingAsync(modId))?.Name ?? modId);
+            }
+
+            if (others.Count > 0)
+                LaunchMessage += " " + Localization.FormatLaunchOtherModsNeedMissing(string.Join(", ", others));
         }
 
         IReadOnlyList<string> output = result.Output.Count == 0 ? [Localization.LaunchNoOutput] : result.Output;
@@ -823,6 +837,7 @@ public partial class MainViewModel
         LaunchBlamedModId = null;
         LaunchLoaderReleases = null;
         _launchBlamedModName = null;
+        _launchOtherModIds = [];
         _launchLoaderName = null;
         OnPropertyChanged(nameof(DisableBlamedModText));
         OnPropertyChanged(nameof(LaunchFailureTitle));
@@ -850,14 +865,19 @@ public partial class MainViewModel
         if (_launchInstanceId is not { } instanceId || LaunchBlamedModId is not { } modId || _launchBlamedModName is not { } name)
             return;
 
-        LaunchFailureError = await TrySetContentEnabledAsync(instanceId, modId, enabled: false);
-        if (LaunchFailureError is not null)
-            return;
+        // the mods that the message says will likely fail too go with the blamed mod, so one launch shows if that was all
+        string[] modIds = [modId, .. _launchOtherModIds];
+        foreach (var id in modIds)
+        {
+            LaunchFailureError = await TrySetContentEnabledAsync(instanceId, id, enabled: false);
+            if (LaunchFailureError is not null)
+                return;
+        }
 
         if (CurrentWindowInstance && SelectedInstance is { } shown && shown.InstanceId == instanceId)
             await OpenInstanceAsync(shown);
         ClearLaunchFailure();
-        LaunchMessage = Localization.FormatLaunchModDisabled(name);
+        LaunchMessage = modIds.Length > 1 ? Localization.FormatLaunchModsDisabled(modIds.Length) : Localization.FormatLaunchModDisabled(name);
     }
 
     [RelayCommand]

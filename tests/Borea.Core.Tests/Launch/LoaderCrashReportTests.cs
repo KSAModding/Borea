@@ -56,6 +56,64 @@ public sealed class LoaderCrashReportTests
         Assert.Equal(expected, LoaderCrashReport.NamesGameAssembly([line]));
     }
 
+    [Theory]
+    [InlineData("KSA", true)]
+    [InlineData("Brutal.Core.Numerics", true)]
+    [InlineData("brutal.numerics", true)]
+    [InlineData("KSArmory", false)]
+    [InlineData("0Harmony", false)]
+    [InlineData("StarMap.Core", false)]
+    public void IsGameAssembly_TakesKsaAndBrutalAssemblies(string name, bool expected)
+    {
+        Assert.Equal(expected, LoaderCrashReport.IsGameAssembly(name));
+    }
+
+    [Fact]
+    public void MissingAssemblyNames_TakesOnlyTheAssembliesThatCouldNotLoad()
+    {
+        string[] output =
+        [
+            "Method 'DrawAxes' in type 'KSArmory.RoundFollowable' from assembly 'KSArmory, Version=0.8.44.0' does not have an implementation.",
+            "System.IO.FileNotFoundException: Could not load file or assembly 'Brutal.Core.Numerics, Version=2026.9.0.0, Culture=neutral, PublicKeyToken=null'. The system cannot find the file specified.",
+            "File name: 'Brutal.Core.Numerics, Version=2026.9.0.0, Culture=neutral, PublicKeyToken=null'",
+            "System.IO.FileLoadException: Could not load file or assembly '0Harmony, Version=2.3.0.0'. The located assembly's manifest definition does not match the assembly reference.",
+            "Could not load file or assembly 'brutal.core.numerics, Version=2026.9.0.0'.",
+        ];
+
+        Assert.Equal(["Brutal.Core.Numerics", "0Harmony"], LoaderCrashReport.MissingAssemblyNames(output));
+    }
+
+    private static readonly string[] LoaderStartFrames =
+    [
+        "   at System.Reflection.RuntimeModule.GetDefinedTypes()",
+        "   at System.Reflection.RuntimeModule.GetTypes()",
+        "   at StarMap.GameSurveyer.TryLoadCoreAndGame()",
+        "   at StarMap.Program.Main(String[] args)",
+    ];
+
+    public static TheoryData<string[], bool> LoaderStartOutputs => new()
+    {
+        { ["Could not load file or assembly 'Brutal.Core.Numerics, Version=2026.9.0.0'.", .. LoaderStartFrames], true },
+        { ["   at StarMap.Core.ModRepository.ModLoader..ctor(AssemblyLoadContext coreAssemblyLoadContext)", "   at StarMap.Core.StarMapCore..ctor(AssemblyLoadContext coreAssemblyLoadContext)", .. LoaderStartFrames], true },
+        { ["   at StarMap.Core.ModRepository.RuntimeMod.InitializeMod(ModRegistry modRegistry)", "   at StarMap.Core.ModRepository.ModLoader.PrepareMods()", "   at StarMap.Core.StarMapCore.Init()", .. LoaderStartFrames], false },
+        { ["   at StarMap.Core.ModRepository.ModsLoader.PrepareMods()", .. LoaderStartFrames], false },
+        { ["Could not load file or assembly 'Brutal.Core.Numerics, Version=2026.9.0.0'.", "File name: 'Brutal.Core.Numerics, Version=2026.9.0.0'"], false },
+        { ["   at KSA.Program.Main(String[] args)", "   at StarMap.GameSurveyer.RunGame()", "   at StarMap.Program.Main(String[] args)"], false },
+    };
+
+    [Theory]
+    [MemberData(nameof(LoaderStartOutputs))]
+    public void StoppedWhileLoaderStarted_NeedsTheStartFrameAndNoModLoadingFrame(string[] output, bool expected)
+    {
+        Assert.Equal(expected, LoaderCrashReport.StoppedWhileLoaderStarted(output));
+    }
+
+    [Fact]
+    public void StoppedWhileLoadingMods_FrameOfTheRenamedModsLoader_Counts()
+    {
+        Assert.True(LoaderCrashReport.StoppedWhileLoadingMods(["   at StarMap.Core.ModRepository.ModsLoader.PrepareMods()"]));
+    }
+
     private static readonly string[] ClrCrash =
     [
         "Fatal error.",

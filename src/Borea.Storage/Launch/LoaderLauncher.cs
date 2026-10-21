@@ -384,18 +384,46 @@ public sealed class LoaderLauncher : ILauncher, IDisposable
                 $"{start.LoaderName} stopped without starting the game. The details show what it wrote.");
         }
 
-        var blamed = ModBlame.Find(instance, _pathProvider.GetInstanceModsFolder(instance.InstanceId), LoaderCrashReport.AssemblyNames(output));
+        var modsFolder = _pathProvider.GetInstanceModsFolder(instance.InstanceId);
+        // only a missing game assembly shows a mod or a loader made for another KSA build
+        var missing = LoaderCrashReport.MissingAssemblyNames(output).Where(LoaderCrashReport.IsGameAssembly).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        IReadOnlyList<LoadOrderMod>? loadOrder = null;
+        var blamed = ModBlame.Find(instance, modsFolder, LoaderCrashReport.AssemblyNames(output));
         var cause = blamed is null ? LoaderCrashCause.Unknown : LoaderCrashCause.ModAssembly;
         if (blamed is null && LoaderCrashReport.StoppedWhileLoadingMods(output))
         {
             cause = LoaderCrashCause.ModLoading;
-            var loadOrder = await LoadOrderReader.ReadAsync(_pathProvider, instance.InstanceId, cancellationToken).ConfigureAwait(false);
+            loadOrder = await LoadOrderReader.ReadAsync(_pathProvider, instance.InstanceId, cancellationToken).ConfigureAwait(false);
             var likely = LoaderCrashReport.LikelyLoadingMod(output, loadOrder);
-            blamed = likely is null ? null : instance.Mods.FirstOrDefault(mod => ModIds.Equals(mod.ModId, likely));
+            blamed = (likely is null ? null : instance.Mods.FirstOrDefault(mod => ModIds.Equals(mod.ModId, likely)))
+                ?? (missing.Count > 0 ? AssemblyReferences.Mods(instance, modsFolder, loadOrder, missing.Contains).FirstOrDefault() : null);
         }
-        else if (blamed is null && LoaderCrashReport.NamesGameAssembly(output))
+        else if (blamed is null && missing.Count > 0)
         {
+            // GameSurveyer.TryLoadCoreAndGame loads ./StarMap.Core.dll before any
+            // mod, so a missing assembly that a DLL in the loader folder needs
+            // stopped it first. Subfolders do not count, they can hold mods.
+            if (AssemblyReferences.Referencing(started.Plan.WorkingDirectory, missing, recurse: false))
+            {
+                cause = LoaderCrashCause.GameAssembly;
+            }
+            else
+            {
+                loadOrder = await LoadOrderReader.ReadAsync(_pathProvider, instance.InstanceId, cancellationToken).ConfigureAwait(false);
+                blamed = AssemblyReferences.Mods(instance, modsFolder, loadOrder, missing.Contains).FirstOrDefault();
+                cause = blamed is null ? LoaderCrashCause.Unknown : LoaderCrashCause.ModAssembly;
+            }
+        }
+
+        if (blamed is null && cause == LoaderCrashCause.Unknown && LoaderCrashReport.StoppedWhileLoaderStarted(output) && LoaderCrashReport.NamesGameAssembly(output))
             cause = LoaderCrashCause.GameAssembly;
+
+        IReadOnlyList<InstalledMod> others = [];
+        if (blamed is not null && missing.Count > 0)
+        {
+            loadOrder ??= await LoadOrderReader.ReadAsync(_pathProvider, instance.InstanceId, cancellationToken).ConfigureAwait(false);
+            var notInGame = GameAssemblyNotInGame(modsFolder);
+            others = AssemblyReferences.Mods(instance, modsFolder, loadOrder, name => missing.Contains(name) || notInGame(name)).Where(mod => mod != blamed).ToList();
         }
 
         var build = cause == LoaderCrashCause.GameAssembly ? InstalledGameVersionProvider.Read(_pathProvider.GetGameDirectoryPath())?.RawVersion : null;
@@ -406,7 +434,25 @@ public sealed class LoaderLauncher : ILauncher, IDisposable
             (_, LoaderCrashCause.ModLoading) => $"{start.LoaderName} stopped while it loaded {blamed.Metadata.Listing?.Name ?? blamed.ModId} {blamed.Version}, so that mod is the likely cause. Disable it and try again, or look for an update.",
             _ => $"{blamed.Metadata.Listing?.Name ?? blamed.ModId} {blamed.Version} stopped {start.LoaderName} from starting. It may not work with this version of KSA. Disable it and try again, or look for an update.",
         };
-        return LaunchResult.ExitedEarly(started.Plan, exitCode.Value, output, blamed?.ModId, message, cause);
+        if (blamed is not null && others.Count > 0)
+            message += $" These mods need parts of KSA that this version does not have, so they will likely fail too: {string.Join(", ", others.Select(mod => mod.Metadata.Listing?.Name ?? mod.ModId))}.";
+
+        return LaunchResult.ExitedEarly(started.Plan, exitCode.Value, output, blamed?.ModId, message, cause, otherBlamedModIds: others.Select(mod => mod.ModId).ToList());
+    }
+
+    /// <summary>
+    /// Whether an assembly name is one of the game that neither the game folder
+    /// nor a mod folder holds, which a mod made for another KSA build references.
+    /// Always false when the game folder holds no KSA.dll.
+    /// </summary>
+    private Func<string, bool> GameAssemblyNotInGame(string modsFolder)
+    {
+        var held = AssemblyReferences.Held(_pathProvider.GetGameDirectoryPath() ?? string.Empty, recurse: false);
+        if (!held.Contains("KSA"))
+            return _ => false;
+
+        held.UnionWith(AssemblyReferences.Held(modsFolder, recurse: true));
+        return name => LoaderCrashReport.IsGameAssembly(name) && !held.Contains(name);
     }
 
     public async Task<GameExit> WatchExitAsync(Instance instance, LaunchResult started, CancellationToken cancellationToken = default)

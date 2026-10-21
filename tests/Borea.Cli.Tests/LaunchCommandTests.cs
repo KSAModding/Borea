@@ -93,11 +93,29 @@ public sealed class LaunchCommandTests : IDisposable
         await _host.RunAsync("instance", "create", "Flight Test");
         _host.ProcessStarter.CrashExitCode = -532462766;
         _host.ProcessStarter.CrashOutput.Add("Could not load file or assembly 'Brutal.Core.Numerics, Version=2026.9.0.0, Culture=neutral, PublicKeyToken=null'. The system cannot find the file specified.");
+        _host.ProcessStarter.CrashOutput.Add("   at StarMap.GameSurveyer.TryLoadCoreAndGame()");
 
         var run = await _host.RunAsync("launch", "Flight Test", "StarMap");
 
         Assert.Equal(1, run.ExitCode);
         Assert.Contains("'borea loader install StarMap'", run.Error);
+    }
+
+    [Fact]
+    public async Task Launch_GameAssemblyNamedWithoutALoaderFrame_NamesNoInstallCommand()
+    {
+        _host.Mods.Listings.Add(LoaderFixtures.Listing());
+        var loaderDirectory = LoaderCommandTests.CreateLoaderDirectory("StarMap", "not a program", _host.Root);
+        await _host.RunAsync("settings", "set", "loader", "StarMap", loaderDirectory);
+        await _host.RunAsync("instance", "create", "Flight Test");
+        _host.ProcessStarter.CrashExitCode = -532462766;
+        _host.ProcessStarter.CrashOutput.Add("File name: 'Brutal.Core.Numerics, Version=2026.9.0.0, Culture=neutral, PublicKeyToken=null'");
+        _host.ProcessStarter.CrashOutput.Add("System.IO.FileNotFoundException: Could not load file or assembly 'Brutal.Core.Numerics, Version=2026.9.0.0, Culture=neutral, PublicKeyToken=null'. The system cannot find the file specified.");
+
+        var run = await _host.RunAsync("launch", "Flight Test", "StarMap");
+
+        Assert.Equal(1, run.ExitCode);
+        Assert.DoesNotContain("borea loader install", run.Error);
     }
 
     [Fact]

@@ -3308,6 +3308,9 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string FormatLaunchModLikelyBroke(string mod, string version, string loader)
         => string.Format(CultureInfo.CurrentCulture, Resources.LaunchModLikelyBrokeFormat, mod, version, loader);
 
+    public string FormatLaunchOtherModsNeedMissing(string mods)
+        => string.Format(CultureInfo.CurrentCulture, Resources.LaunchOtherModsNeedMissingFormat, mods);
+
     public string FormatLaunchExitedEarly(string loader, int exitCode)
         => string.Format(CultureInfo.CurrentCulture, Resources.LaunchExitedEarlyFormat, loader, exitCode);
 
@@ -3382,8 +3385,14 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string FormatLaunchDisableMod(string mod)
         => string.Format(CultureInfo.CurrentCulture, Resources.LaunchDisableModFormat, mod);
 
+    public string FormatLaunchDisableMods(int count)
+        => string.Format(CultureInfo.CurrentCulture, Resources.LaunchDisableModsFormat, count);
+
     public string FormatLaunchModDisabled(string mod)
         => string.Format(CultureInfo.CurrentCulture, Resources.LaunchModDisabledFormat, mod);
+
+    public string FormatLaunchModsDisabled(int count)
+        => string.Format(CultureInfo.CurrentCulture, Resources.LaunchModsDisabledFormat, count);
 
     public string FormatLaunchArgumentsHandoverFlag(string loader, string flag)
         => string.Format(CultureInfo.CurrentCulture, Resources.LaunchArgumentsHandoverFlagFormat, loader, flag);
