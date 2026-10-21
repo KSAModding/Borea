@@ -3,6 +3,7 @@ using System.Net;
 using System.Text;
 using Borea.App.ViewModels;
 using Borea.Core.Dependencies;
+using Borea.Core.Game;
 using Borea.Core.Instances;
 using Borea.Core.Mods;
 
@@ -43,6 +44,21 @@ public sealed class ModListViewModelTests
         Assert.Contains(viewModel.Instances, row => row.Name == "Main (copy)");
         Assert.DoesNotContain(viewModel.Toasts.Items, toast => toast.Message == harness.Localization.FormatLibraryNowActive("Main (copy)"));
         Assert.Equal("Main", viewModel.ActiveInstance?.Name);
+    }
+
+    [Fact]
+    public async Task Duplicate_KeepsTheGameBuild()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(respond: ServeArchive);
+        await KeepGameBuildAsync(harness, await SeedMainAsync(harness));
+        var viewModel = harness.ViewModel;
+        await viewModel.LoadAsync();
+
+        await viewModel.Instances.Single().DuplicateCommand.ExecuteAsync(null);
+        await viewModel.ModListImport!.ConfirmCommand.ExecuteAsync(null);
+
+        var copy = (await harness.Services.Instances.GetAllAsync()).Single(instance => instance.Name == "Main (copy)");
+        Assert.Equal(GameVersion.Parse("2026.10.13.5602"), copy.GameBuild);
     }
 
     [Fact]
@@ -112,6 +128,32 @@ public sealed class ModListViewModelTests
         Assert.Equal(InstanceSource.Custom.Value, imported.Source);
         Assert.Equal(["HudCore 1.0.0 Dependency", "HudExtras 2.0.0 Manual"], Describe(imported));
         Assert.Equal(await EntriesAsync(harness, source.InstanceId), await EntriesAsync(harness, imported.InstanceId));
+    }
+
+    [Fact]
+    public async Task ExportThenImport_DoesNotTakeTheGameBuildOver()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(
+            services =>
+            {
+                var game = Directory.CreateDirectory(Path.Combine(Path.GetDirectoryName(services.Paths.GetBoreaSettingsPath())!, "Game")).FullName;
+                File.Copy(Path.Combine(AppContext.BaseDirectory, "GameVersionFixture.dll"), Path.Combine(game, "KSA.dll"));
+                return services.SettingsRepository.SaveAsync(services.Settings.WithGameDirectory(game));
+            },
+            respond: ServeArchive);
+        await KeepGameBuildAsync(harness, await SeedMainAsync(harness));
+        var window = new FakeWindowServices();
+        var viewModel = harness.ViewModel;
+        viewModel.WindowServices = window;
+        await viewModel.LoadAsync();
+        await viewModel.Instances.Single().ExportModListCommand.ExecuteAsync(null);
+        window.FileToOpen = new PickedTextFile("Main.toml", window.SavedText!);
+
+        await viewModel.ImportModListCommand.ExecuteAsync(null);
+        await viewModel.ModListImport!.ConfirmCommand.ExecuteAsync(null);
+
+        var imported = (await harness.Services.Instances.GetAllAsync()).Single(instance => instance.Name == "Main (2)");
+        Assert.Null(imported.GameBuild);
     }
 
     [Fact]
@@ -252,6 +294,13 @@ public sealed class ModListViewModelTests
         await InstalledContent.AddAsync(harness, "HudExtras", activate: true, ownership: ModInstallOwnership.Borea, version: "2.0.0");
         await harness.Services.ModState.SetInactiveAsync(source.InstanceId, "HudExtras");
         return source;
+    }
+
+    private static async Task KeepGameBuildAsync(ViewModelHarness harness, Instance seeded)
+    {
+        var instance = (await harness.Services.Instances.GetByIdAsync(seeded.InstanceId))!;
+        instance.SetGameBuild(GameVersion.Parse("2026.10.13.5602"));
+        await harness.Services.Instances.SaveAsync(instance);
     }
 
     private static void AddReleases(ViewModelHarness harness) => harness.SpaceDock.Releases.AddRange(
