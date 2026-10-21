@@ -420,7 +420,7 @@ internal sealed class PartCatalog
         private static bool ReadRaytracingMode(string text) => text.Trim() switch
         {
             KsaPartSchema.ShadowProxy => true,
-            "Disabled" or "Enabled" => false,
+            KsaPartSchema.RayTracingDisabled or KsaPartSchema.RayTracingEnabled => false,
             _ => throw new FormatException($"'{text}' is not a RayTracing mode."),
         };
 

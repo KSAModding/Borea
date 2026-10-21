@@ -56,7 +56,12 @@ internal static class KsaPartSchema
     public const string Internal = "Internal";
     public const string RayTracing = "RayTracing";
 
-    /// <summary>The PartModelModule.RaytracingMode value of a model that the game does not draw.</summary>
+    /// <summary>
+    /// The PartModelModule.RaytracingMode values. These three are all the names of the enum, and the game does not
+    /// draw a model with ShadowProxy.
+    /// </summary>
+    public const string RayTracingDisabled = "Disabled";
+    public const string RayTracingEnabled = "Enabled";
     public const string ShadowProxy = "ShadowProxy";
 
     public const string Connector = "Connector";

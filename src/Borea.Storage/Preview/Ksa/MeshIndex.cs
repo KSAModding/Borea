@@ -95,7 +95,9 @@ internal sealed class MeshIndex
 
             return GlbContainer.Read(stream).MeshNames;
         }
-        catch (Exception exception) when (exception is GlbFormatException or IOException)
+        // A zipped entry with broken deflate data throws InvalidDataException on a read, not on the open, and that
+        // exception is not an IOException.
+        catch (Exception exception) when (exception is GlbFormatException or IOException or InvalidDataException)
         {
             notices.Add(new PreviewNotice(PreviewNoticeKind.AssetFailed, Subject(file), exception.Message));
             return null;

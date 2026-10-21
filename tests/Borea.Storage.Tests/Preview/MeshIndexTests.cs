@@ -1,3 +1,6 @@
+using System.Buffers.Binary;
+using System.IO.Compression;
+using System.Text;
 using Borea.Core.Preview;
 using Borea.Storage.Preview.Ksa;
 using Borea.Storage.Preview.Sources;
@@ -59,6 +62,40 @@ public sealed class MeshIndexTests : IDisposable
         var binOffset = GlbContainer.Read(new MemoryStream(good)).BinOffset;
         Assert.InRange(counting.HeadBytes["Good.glb"], 1, binOffset - 8);
         Assert.DoesNotContain("Good.glb", counting.Opened);
+    }
+
+    [Fact]
+    public void ABrokenDeflateGlbInAZip_GivesANotice_AndTheNextAtlasStillLoads()
+    {
+        var zip = Path.Combine(_mods.Root, "mod.zip");
+        using (var archive = ZipFile.Open(zip, ZipArchiveMode.Create))
+        {
+            void Entry(string name, byte[] bytes)
+            {
+                using var stream = archive.CreateEntry(name).Open();
+                stream.Write(bytes);
+            }
+
+            Entry("Bad.glb", Glb(new byte[4096], "Bad"));
+            Entry("Good.glb", Glb("Good"));
+            Entry("mod.toml", Encoding.UTF8.GetBytes("name = \"Core\"\nassets = [\"A.xml\"]\n"));
+            Entry("A.xml", Encoding.UTF8.GetBytes(CatalogTestMods.Assets("<MeshAtlas Path=\"Bad.glb\" /><MeshAtlas Path=\"Good.glb\" />")));
+        }
+
+        // The first entry starts at offset 0. Its data follows the 30 byte local header, the name and the extra field,
+        // and a first byte of 0xFF is a deflate block of the reserved type, which the inflater rejects on the first read.
+        var bytes = File.ReadAllBytes(zip);
+        var data = 30 + BinaryPrimitives.ReadUInt16LittleEndian(bytes.AsSpan(26)) + BinaryPrimitives.ReadUInt16LittleEndian(bytes.AsSpan(28));
+        bytes.AsSpan(data, 4).Fill(0xFF);
+        File.WriteAllBytes(zip, bytes);
+        var core = _mods.Add("Core", new ZipPreviewFiles(zip, null, null, null, new PreviewEntryCache()));
+
+        var catalog = PartCatalog.Build([core], CancellationToken.None);
+        var index = MeshIndex.Build([core], catalog.MeshFiles, CancellationToken.None);
+
+        Assert.Contains(index.Notices, notice => notice is { Kind: PreviewNoticeKind.AssetFailed, Subject: "Core/Bad.glb" });
+        Assert.False(index.TryFind("Bad", out _));
+        Assert.True(index.TryFind("Good", out _));
     }
 
     private static PreviewMeshRef Find(MeshIndex index, string id)
