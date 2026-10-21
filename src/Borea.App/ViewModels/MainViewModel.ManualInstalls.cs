@@ -233,7 +233,7 @@ public partial class MainViewModel
                 WithoutForeignFolder(instance, row.FolderName),
                 [new RequestedMod(release, InstallReason.Manual, false)],
                 services.Mods,
-                services.InstalledVersion.GetInstalledVersion()?.Version,
+                PlanningGameVersion(services, instance),
                 services.GamePlatform.Current);
             var planned = await services.InstallPlanner.PlanAsync(request);
 
