@@ -8,6 +8,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="ZstdSharp.Port" Version="0.8.8" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\Borea.Core\Borea.Core.csproj" />
     <InternalsVisibleTo Include="Borea.Preview.Tests" />
     <InternalsVisibleTo Include="Borea.App.Tests" />

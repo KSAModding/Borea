@@ -98,6 +98,11 @@
           "xunit.extensibility.core": "[2.9.3]"
         }
       },
+      "ZstdSharp.Port": {
+        "type": "Transitive",
+        "resolved": "0.8.8",
+        "contentHash": "UIDFkA5DC3en3tOJ3Mof11yBx9kUQLsaeo/oFdvN6Bbkr9E9+VCqfIadHci8cu+I51K2Sl7XYWVl2R/mA75NBQ=="
+      },
       "borea.core": {
         "type": "Project",
         "dependencies": {
@@ -107,7 +112,8 @@
       "borea.preview": {
         "type": "Project",
         "dependencies": {
-          "Borea.Core": "[1.0.0, )"
+          "Borea.Core": "[1.0.0, )",
+          "ZstdSharp.Port": "[0.8.8, )"
         }
       }
     }

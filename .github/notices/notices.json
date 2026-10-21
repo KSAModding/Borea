@@ -22,7 +22,7 @@
   },
   "products": {
     "App": {
-      "required": ["Avalonia", "CommunityToolkit.Mvvm", "Tomlyn", "SkiaSharp", "System.CommandLine"],
+      "required": ["Avalonia", "CommunityToolkit.Mvvm", "Tomlyn", "SkiaSharp", "System.CommandLine", "ZstdSharp.Port"],
       "excluded": [],
       "extras": [
         {
