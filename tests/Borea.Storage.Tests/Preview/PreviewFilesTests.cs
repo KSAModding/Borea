@@ -292,7 +292,7 @@ public sealed class PreviewFilesTests : IDisposable
         }
     }
 
-    private static byte[] Glb(string json, byte[] bin)
+    internal static byte[] Glb(string json, byte[] bin)
     {
         var jsonBytes = Encoding.UTF8.GetBytes(json);
         var jsonPadded = (jsonBytes.Length + 3) & ~3;
