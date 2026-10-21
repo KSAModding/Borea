@@ -37,7 +37,7 @@ internal sealed class ZipPreviewFiles : IPreviewFiles
     private readonly long _totalCap;
     private readonly string _sha256;
     private long _decompressedBytes;
-    private bool _disposed;
+    private int _disposed;
 
     /// <param name="root">The folder inside the archive that becomes the mod folder, or null for the archive root.</param>
     /// <param name="archiveSha256">The SHA-256 of the archive when the caller knows it, such as the download hash of the release. Else the source hashes the file once.</param>
@@ -95,6 +95,9 @@ internal sealed class ZipPreviewFiles : IPreviewFiles
 
     /// <summary>The decompressed bytes this source has read from the archive so far, counted as they arrive.</summary>
     public long DecompressedBytes => Interlocked.Read(ref _decompressedBytes);
+
+    /// <summary>Runs on the reading thread before each chunk of an entry, so a test can act between two chunks without a timer.</summary>
+    internal Action? BeforeChunk { get; set; }
 
     public bool Exists(string path)
     {
@@ -156,16 +159,17 @@ internal sealed class ZipPreviewFiles : IPreviewFiles
         }
     }
 
+    /// <remarks>
+    /// The flag is set before the lock is taken, so a read in progress stops with <see cref="ObjectDisposedException"/>
+    /// at its next chunk and releases the lock. Dispose therefore waits for at most one chunk, not for a whole entry.
+    /// </remarks>
     public void Dispose()
     {
-        lock (_gate)
-        {
-            if (_disposed)
-                return;
+        if (Interlocked.Exchange(ref _disposed, 1) != 0)
+            return;
 
-            _disposed = true;
+        lock (_gate)
             _archive.Dispose();
-        }
     }
 
     private static MemoryStream Wrap(byte[] bytes) => new(bytes, 0, bytes.Length, writable: false, publiclyVisible: true);
@@ -231,7 +235,7 @@ internal sealed class ZipPreviewFiles : IPreviewFiles
 
     private void Count(int bytes) => Interlocked.Add(ref _decompressedBytes, bytes);
 
-    private void ThrowIfDisposed() => ObjectDisposedException.ThrowIf(_disposed, this);
+    private void ThrowIfDisposed() => ObjectDisposedException.ThrowIf(Volatile.Read(ref _disposed) != 0, this);
 
     /// <summary>
     /// Takes the archive lock for every read, refuses a read after the source is disposed, and ends the stream when
@@ -259,6 +263,7 @@ internal sealed class ZipPreviewFiles : IPreviewFiles
 
         public override int Read(Span<byte> buffer)
         {
+            owner.BeforeChunk?.Invoke();
             lock (owner._gate)
             {
                 owner.ThrowIfDisposed();

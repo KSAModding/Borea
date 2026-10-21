@@ -157,6 +157,26 @@ public sealed class PreviewFilesTests : IDisposable
     }
 
     [Fact]
+    public async Task Dispose_DuringALargeRead_StopsTheReadAtItsNextChunk_AndDoesNotWaitForTheWholeEntry()
+    {
+        var size = 64 * OneMiB;
+        var zip = WriteZip("big.zip", ("Meshes/Big.glb", new byte[size]));
+        var files = new ZipPreviewFiles(zip, null, null, null, new PreviewEntryCache());
+        var chunks = 0;
+        files.BeforeChunk = () =>
+        {
+            // Dispose between the first and the second chunk. The archive lock is reentrant, so this thread may take it.
+            if (Interlocked.Increment(ref chunks) == 2)
+                files.Dispose();
+        };
+
+        var read = Task.Run(() => files.TryOpen("Meshes/Big.glb"));
+
+        await Assert.ThrowsAsync<ObjectDisposedException>(() => read);
+        Assert.InRange(files.DecompressedBytes, 1, size - 1);
+    }
+
+    [Fact]
     public void TheEntryCache_EvictsTheLeastRecentlyUsedEntryAboveItsCapacity()
     {
         var cache = new PreviewEntryCache(capacityBytes: 10);
