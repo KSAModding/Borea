@@ -62,6 +62,37 @@ public sealed class ModListViewModelTests
     }
 
     [Fact]
+    public async Task Duplicate_KeptBuild_IsCheckedAgainstTheBuildOfTheSource()
+    {
+        // the settings point at build 5117, and the source keeps build 0.4.6.0, which the only release of OldTools supports
+        var kept = GameVersion.Parse("0.4.6.0");
+        using var harness = await ViewModelHarness.CreateAsync(
+            services =>
+            {
+                var game = Directory.CreateDirectory(Path.Combine(Path.GetDirectoryName(services.Paths.GetBoreaSettingsPath())!, "Game")).FullName;
+                File.Copy(Path.Combine(AppContext.BaseDirectory, "GameVersionFixture.dll"), Path.Combine(game, "KSA.dll"));
+                var folder = Directory.CreateDirectory(services.Paths.GetGameBuildFolder(kept)).FullName;
+                File.Copy(Path.Combine(AppContext.BaseDirectory, "LoaderVersionFixture.dll"), Path.Combine(folder, "KSA.dll"));
+                return services.SettingsRepository.SaveAsync(services.Settings.WithGameDirectory(game));
+            },
+            respond: ServeArchive);
+        harness.SpaceDock.Releases.Add(Release("OldTools", "1.0.0", gameMin: "0.4.6.0", gameMinRevision: 0, gameMax: "2026.1.1.5000", gameMaxRevision: 5000));
+        var source = await InstalledContent.AddAsync(harness, "OldTools", activate: true, ownership: ModInstallOwnership.Borea, version: "1.0.0");
+        var instance = (await harness.Services.Instances.GetByIdAsync(source.InstanceId))!;
+        instance.SetGameBuild(kept);
+        await harness.Services.Instances.SaveAsync(instance);
+        var viewModel = harness.ViewModel;
+        await viewModel.LoadAsync();
+
+        await viewModel.Instances.Single().DuplicateCommand.ExecuteAsync(null);
+        await viewModel.ModListImport!.ConfirmCommand.ExecuteAsync(null);
+
+        var copy = (await harness.Services.Instances.GetAllAsync()).Single(candidate => candidate.Name == "Main (copy)");
+        Assert.Equal(kept, copy.GameBuild);
+        Assert.Equal(["OldTools 1.0.0 Manual"], Describe(copy));
+    }
+
+    [Fact]
     public async Task Duplicate_SeveralFoldersBoreaDidNotInstall_AreOneNote()
     {
         using var harness = await ViewModelHarness.CreateAsync(respond: ServeArchive);
@@ -318,17 +349,19 @@ public sealed class ModListViewModelTests
     private static async Task<IReadOnlyList<string>> EntriesAsync(ViewModelHarness harness, Guid instanceId) =>
         (await harness.Services.ModState.GetEntriesAsync(instanceId)).Select(entry => $"{entry.ModId} {entry.Enabled}").ToList();
 
-    private static ModVersionMetadata Release(string modId, string version, IReadOnlyList<ModDependency>? dependencies = null, string? yankedReason = null) => new(
+    private static ModVersionMetadata Release(string modId, string version, IReadOnlyList<ModDependency>? dependencies = null, string? yankedReason = null, string gameMin = "2026.1.1.1", int gameMinRevision = 1, string? gameMax = null, int? gameMaxRevision = null) => new(
         specVersion: 1,
         modId: modId,
         version: ModVersion.Parse(version),
         releaseStatus: ReleaseStatus.Stable,
         releaseDate: DateTimeOffset.UnixEpoch,
-        gameMin: "2026.1.1.1",
-        gameMinRevision: 1,
+        gameMin: gameMin,
+        gameMinRevision: gameMinRevision,
         download: new DownloadInfo($"https://{ArchiveHost}/{modId}/{version}.zip", sha256: null, sizeBytes: null, contentType: "application/zip"),
         installSizeBytes: null,
         dependencies: dependencies ?? [],
+        gameMax: gameMax,
+        gameMaxRevision: gameMaxRevision,
         yanked: yankedReason is not null,
         yankedReason: yankedReason);
 

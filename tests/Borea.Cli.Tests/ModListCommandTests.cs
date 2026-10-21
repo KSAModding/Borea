@@ -212,6 +212,24 @@ public sealed class ModListCommandTests : IDisposable
     }
 
     [Fact]
+    public async Task Duplicate_KeptBuild_IsCheckedAgainstTheBuildOfTheSource()
+    {
+        _host.Mods.Releases.Add(ContentCommandFixtures.Release(id: "old-tools", version: "1.0.0", gameMinRevision: 5000, gameMaxRevision: 5200));
+        await _host.RunAsync("instance", "create", "Beta");
+        Assert.Equal(0, (await _host.RunAsync("install", "old-tools", "--version", "1.0.0", "--instance", "Beta")).ExitCode);
+        var kept = new GameVersion(2026, 8, 3, 5117);
+        var folder = Directory.CreateDirectory(_host.Paths.GetGameBuildFolder(kept)).FullName;
+        File.Copy(Path.Combine(AppContext.BaseDirectory, "GameVersionFixture.dll"), Path.Combine(folder, "KSA.dll"));
+        await KeepGameBuildAsync("Beta", kept.ToString());
+        _host.InstalledVersion = new FakeInstalledGameVersionProvider { Installed = new InstalledGameVersion(new GameVersion(2026, 9, 7, 5402), "2026.9.7.5402") };
+
+        var run = await _host.RunAsync("instance", "duplicate", "Beta");
+
+        Assert.Equal(0, run.ExitCode);
+        Assert.Equal(kept, (await InstanceNamedAsync("Beta (copy)")).GameBuild);
+    }
+
+    [Fact]
     public async Task Duplicate_InstallFails_RemovesTheNewInstance()
     {
         await SeedAlphaAsync();
