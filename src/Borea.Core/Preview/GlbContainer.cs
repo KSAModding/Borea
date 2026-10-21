@@ -19,7 +19,7 @@ public sealed class GlbContainer
     private const int HeaderLength = 12;
     private const int ChunkHeaderLength = 8;
 
-    private GlbContainer(ReadOnlyMemory<byte> json, IReadOnlyList<string?> meshNames, long declaredLength, long binOffset, long binLength)
+    private GlbContainer(ReadOnlyMemory<byte> json, IReadOnlyList<string?> meshNames, long declaredLength, long binOffset, long? binLength)
     {
         Json = json;
         MeshNames = meshNames;
@@ -41,11 +41,11 @@ public sealed class GlbContainer
     public long BinOffset { get; }
 
     /// <summary>
-    /// The length of the BIN chunk data. After <see cref="Read"/> it is only the upper bound that the declared total
-    /// length leaves, because the forward pass stops before the BIN chunk header. <see cref="WithCheckedBin"/> gives
-    /// the exact length.
+    /// The exact length of the BIN chunk data, or null until <see cref="WithCheckedBin"/> reads the BIN chunk header.
+    /// <see cref="Read"/> always gives null, because its forward pass stops before that header. A file without a BIN
+    /// chunk gives 0 after <see cref="WithCheckedBin"/>.
     /// </summary>
-    public long BinLength { get; }
+    public long? BinLength { get; }
 
     /// <summary>
     /// Reads the 12-byte header and the JSON chunk and stops there, so it works on a stream that cannot seek and reads
@@ -80,13 +80,11 @@ public sealed class GlbContainer
         var json = new byte[jsonLength];
         ReadExactly(stream, json, "JSON chunk");
 
-        var binOffset = jsonEnd + ChunkHeaderLength;
-        var binLength = Math.Max(0, declaredLength - binOffset);
-        return new GlbContainer(json, ReadMeshNames(json), declaredLength, binOffset, binLength);
+        return new GlbContainer(json, ReadMeshNames(json), declaredLength, jsonEnd + ChunkHeaderLength, binLength: null);
     }
 
     /// <summary>
-    /// Reads the BIN chunk header from a stream that can seek and gives a copy with the exact <see cref="BinLength"/>.
+    /// Reads the BIN chunk header from a stream that can seek and gives a copy whose <see cref="BinLength"/> is set.
     /// A file without a BIN chunk gives a length of 0. The stream position is left after the chunk header.
     /// </summary>
     /// <exception cref="GlbFormatException">The second chunk is not a BIN chunk, or it extends past the declared length or the end of the stream.</exception>

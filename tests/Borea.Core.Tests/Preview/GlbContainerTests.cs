@@ -17,7 +17,7 @@ public sealed class GlbContainerTests
         var container = GlbContainer.Read(stream).WithCheckedBin(stream);
 
         Assert.Equal(["Tank_A", "Nozzle_B"], container.MeshNames);
-        Assert.Equal(24, container.BinLength);
+        Assert.Equal(24L, container.BinLength);
         Assert.Equal(glb.Length - 24, container.BinOffset);
     }
 
@@ -31,6 +31,7 @@ public sealed class GlbContainerTests
         var container = GlbContainer.Read(stream);
 
         Assert.Equal(["Tank_A", "Nozzle_B"], container.MeshNames);
+        Assert.Null(container.BinLength);
     }
 
     [Fact]
