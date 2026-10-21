@@ -118,7 +118,7 @@ public sealed class TexturedRenderTests
     private static FrameBuffer Render(PreviewScene scene, OrbitCamera camera, int width, int height, RenderOptions options)
     {
         var frame = new FrameBuffer(width, height);
-        SoftwareRenderer.Render(scene, camera, frame, options, CancellationToken.None);
+        new SoftwareRenderer().Render(scene, camera, frame, options, CancellationToken.None);
         return frame;
     }
 

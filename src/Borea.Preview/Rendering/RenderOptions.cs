@@ -44,6 +44,55 @@ public sealed record RenderOptions
     /// Values that are not positive and finite count as 1.
     /// </summary>
     public float Exposure { get; init; } = 1.15f;
+
+    /// <summary>
+    /// The most bytes of vehicle frame positions and normals that one <see cref="SoftwareRenderer"/> keeps
+    /// for its scene, 96 MiB. A draw that does not fit is transformed again on each frame.
+    /// </summary>
+    public long WorldCacheBytes { get; init; } = 96L * 1024 * 1024;
+
+    /// <summary>
+    /// When true, a draw whose bounding sphere shows smaller than one pixel is not drawn. A viewer turns it
+    /// on for the frames of a drag, which have a low resolution and show for a short time only.
+    /// </summary>
+    public bool SkipSubPixelDraws { get; init; }
+
+    /// <summary>The fraction of the full resolution that a viewer renders the frames of a drag at.</summary>
+    public double DragScale { get; init; } = 0.5;
+
+    /// <summary>The lower fraction that a viewer uses when a drag frame at <see cref="DragScale"/> was too slow.</summary>
+    public double SlowDragScale { get; init; } = 0.25;
+
+    /// <summary>A drag frame that takes longer than this many milliseconds makes the next drag frame use <see cref="SlowDragScale"/>.</summary>
+    public double SlowDragThresholdMs { get; init; } = 60;
+
+    /// <summary>
+    /// The scale of the next drag frame after a drag frame at <paramref name="lastScale"/> that took
+    /// <paramref name="lastFrameMs"/> milliseconds. A frame above <see cref="SlowDragThresholdMs"/> gives
+    /// <see cref="SlowDragScale"/>. A frame at the slow scale goes back to <see cref="DragScale"/> only when it
+    /// would stay below the threshold also with the pixel count of <see cref="DragScale"/>, so the scale does
+    /// not change on every frame. A time that is not finite keeps the last scale.
+    /// </summary>
+    public double NextDragScale(double lastScale, double lastFrameMs)
+    {
+        if (!double.IsFinite(lastFrameMs))
+        {
+            return lastScale;
+        }
+
+        if (lastFrameMs > SlowDragThresholdMs)
+        {
+            return SlowDragScale;
+        }
+
+        if (lastScale >= DragScale || SlowDragScale <= 0)
+        {
+            return DragScale;
+        }
+
+        var pixelRatio = DragScale / lastScale * (DragScale / lastScale);
+        return lastFrameMs * pixelRatio <= SlowDragThresholdMs ? DragScale : lastScale;
+    }
 }
 
 /// <summary>What one render call did, so tests and the viewer can see the culling work.</summary>

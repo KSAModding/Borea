@@ -11,8 +11,12 @@ namespace Borea.Preview.Rendering;
 /// occlusion scales, a Reinhard tone map and an sRGB output. There are no normal maps and no emissive.
 /// The frame is the same byte for byte for any worker count, because each pixel row belongs to exactly one
 /// band and every band fills its triangles in scene order with math that does not depend on the band.
+/// One instance keeps the vertices of each draw in the vehicle frame while the scene stays the same, and it
+/// keeps its triangle and band buffers from frame to frame, so a frame that only moves the camera transforms
+/// no cached vertex again and allocates nothing that grows with the scene. An instance renders one frame at a
+/// time, so the caller must not call <see cref="Render"/> again before the last call returned.
 /// </summary>
-public static class SoftwareRenderer
+public sealed class SoftwareRenderer
 {
     /// <summary>The pixel rows in one unit of parallel work.</summary>
     public const int BandHeight = 16;
@@ -61,6 +65,47 @@ public static class SoftwareRenderer
 
     private static readonly byte[] SrgbTable = BuildSrgbTable();
 
+    private readonly Vector4[] _planes = new Vector4[6];
+    private PreviewScene? _scene;
+    private long _cacheLimit = -1;
+    private DrawState[] _states = [];
+    private DrawJob[] _jobs = [];
+    private int[] _bandStarts = [];
+    private int[] _bandCursors = [];
+    private TriangleRef[] _bandItems = [];
+    private int[] _nearest = [];
+    private long _transformedVertexCount;
+    private long _cachedBytes;
+
+    /// <summary>
+    /// How many vertices this renderer moved from the frame of their mesh to the vehicle frame since it was
+    /// made. A frame that only moves the camera adds only the vertices of the draws that are not cached.
+    /// </summary>
+    public long TransformedVertexCount => Interlocked.Read(ref _transformedVertexCount);
+
+    /// <summary>
+    /// The bytes of the vehicle frame positions and normals that the renderer keeps for the current scene. It
+    /// stays at or below <see cref="RenderOptions.WorldCacheBytes"/>.
+    /// </summary>
+    public long CachedBytes => Interlocked.Read(ref _cachedBytes);
+
+    /// <summary>
+    /// Drops the cached vertices and the buffers, for example when the viewer leaves the screen. The next
+    /// frame builds them again.
+    /// </summary>
+    public void Release()
+    {
+        _scene = null;
+        _cacheLimit = -1;
+        _states = [];
+        _jobs = [];
+        _bandStarts = [];
+        _bandCursors = [];
+        _bandItems = [];
+        _nearest = [];
+        Interlocked.Exchange(ref _cachedBytes, 0);
+    }
+
     /// <summary>
     /// Clears <paramref name="target"/> to the background and draws the opaque draws with a depth test. The
     /// placeholders follow as translucent boxes that test against the depth of the opaque draws but do not
@@ -68,7 +113,7 @@ public static class SoftwareRenderer
     /// it show through.
     /// </summary>
     /// <exception cref="OperationCanceledException">The token was cancelled before or between the bands.</exception>
-    public static RenderStats Render(PreviewScene scene, OrbitCamera camera, FrameBuffer target, RenderOptions options, CancellationToken cancellationToken)
+    public RenderStats Render(PreviewScene scene, OrbitCamera camera, FrameBuffer target, RenderOptions options, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(scene);
         ArgumentNullException.ThrowIfNull(camera);
@@ -76,32 +121,41 @@ public static class SoftwareRenderer
         ArgumentNullException.ThrowIfNull(options);
         cancellationToken.ThrowIfCancellationRequested();
 
+        Prepare(scene, Math.Max(0, options.WorldCacheBytes));
         target.Clear(options.Background);
 
         var view = camera.View;
-        var frame = new FrameSetup(view, view * camera.Projection((float)target.Width / target.Height), target.Width, target.Height, options);
-        var planes = FrustumPlanes(frame.ViewProjection);
+        var projection = camera.Projection((float)target.Width / target.Height);
+        var frame = new FrameSetup(view, view * projection, target.Width, target.Height, options);
+        FrustumPlanes(frame.ViewProjection, _planes);
+
+        // The pixels that one meter covers at a depth of one meter, for the test of draws below one pixel.
+        var pixelsPerMeter = options.SkipSubPixelDraws ? projection.M22 * target.Height * 0.5f : 0f;
 
         // The opaque jobs come first, so every band meets its opaque triangles before its translucent ones.
-        var jobs = new List<DrawJob>(scene.Draws.Count + scene.Placeholders.Count);
+        EnsureLength(ref _jobs, scene.Draws.Count + scene.Placeholders.Count);
+        var jobCount = 0;
         var drawsVisited = 0;
-        foreach (var draw in scene.Draws)
+        for (var i = 0; i < scene.Draws.Count; i++)
         {
-            if (IsVisible(draw.Mesh, draw.Transform, planes))
+            var draw = scene.Draws[i];
+            if (IsVisible(draw.Mesh, draw.Transform, _planes, view, pixelsPerMeter))
             {
-                jobs.Add(new DrawJob(draw.Mesh, draw.Transform, Surface.From(draw.Material, draw.Mesh.Uvs is not null), 255));
+                _jobs[jobCount++] = new DrawJob(draw.Mesh, draw.Transform, Surface.From(draw.Material, draw.Mesh.Uvs is not null), 255, _states[i]);
                 drawsVisited++;
             }
         }
 
         var placeholdersVisited = 0;
-        foreach (var placeholder in scene.Placeholders)
+        for (var i = 0; i < scene.Placeholders.Count; i++)
         {
+            var placeholder = scene.Placeholders[i];
             var size = Vector3.Max(placeholder.HalfSize * 2f, new Vector3(MinPlaceholderSide));
             var model = Matrix4x4.CreateScale(size) * placeholder.Transform;
-            if (IsVisible(UnitBox, model, planes))
+            if (IsVisible(UnitBox, model, _planes, view, 0f))
             {
-                jobs.Add(new DrawJob(UnitBox, model, new Surface(PlaceholderColor, Vector3.One, null, null), PlaceholderAlpha));
+                var surface = new Surface(PlaceholderColor, Vector3.One, null, null);
+                _jobs[jobCount++] = new DrawJob(UnitBox, model, surface, PlaceholderAlpha, _states[scene.Draws.Count + i]);
                 placeholdersVisited++;
             }
         }
@@ -112,45 +166,103 @@ public static class SoftwareRenderer
             CancellationToken = cancellationToken,
         };
 
-        var jobArray = jobs.ToArray();
-        var perJob = new ScreenTriangle[jobArray.Length][];
-        Parallel.For(0, jobArray.Length, parallel, index => perJob[index] = SetupDraw(jobArray[index], index, frame));
+        var jobs = _jobs;
+        Parallel.For(0, jobCount, parallel, index => SetupDraw(jobs[index], index, frame));
 
-        var triangles = perJob.SelectMany(list => list).ToArray();
-        var bands = BinIntoBands(triangles, target.Height);
+        var bandCount = (target.Height + BandHeight - 1) / BandHeight;
+        var triangleCount = BinIntoBands(jobs, jobCount, bandCount);
+        var bandStarts = _bandStarts;
+        var bandItems = _bandItems;
+        EnsureLength(ref _nearest, target.Width * target.Height);
+        var nearest = _nearest;
 
-        Parallel.For(0, bands.Length, parallel, band =>
+        Parallel.For(0, bandCount, parallel, band =>
         {
             if (!cancellationToken.IsCancellationRequested)
             {
-                FillBand(band, bands[band], triangles, jobArray, frame, target);
+                FillBand(band, bandStarts[band], bandStarts[band + 1], bandItems, jobs, frame, target, nearest);
             }
         });
         cancellationToken.ThrowIfCancellationRequested();
 
-        return new RenderStats(drawsVisited, placeholdersVisited, triangles.Length);
+        return new RenderStats(drawsVisited, placeholdersVisited, triangleCount);
+    }
+
+    /// <summary>
+    /// Makes one state for each draw and each placeholder of a new scene, and decides which of them may keep
+    /// their vehicle frame vertices. The draws are taken in scene order, and each one that still fits under
+    /// <paramref name="cacheLimit"/> gets its cache, so a large draw past the limit does not stop a small one
+    /// after it. The other draws are transformed again on each frame.
+    /// </summary>
+    private void Prepare(PreviewScene scene, long cacheLimit)
+    {
+        if (ReferenceEquals(scene, _scene) && cacheLimit == _cacheLimit)
+        {
+            return;
+        }
+
+        var states = new DrawState[scene.Draws.Count + scene.Placeholders.Count];
+        var reserved = 0L;
+        for (var i = 0; i < states.Length; i++)
+        {
+            var mesh = i < scene.Draws.Count ? scene.Draws[i].Mesh : UnitBox;
+            var bytes = WorldBytes(mesh);
+            var cacheable = bytes <= cacheLimit - reserved;
+            if (cacheable)
+            {
+                reserved += bytes;
+            }
+
+            states[i] = new DrawState(cacheable);
+        }
+
+        _states = states;
+        _scene = scene;
+        _cacheLimit = cacheLimit;
+        Interlocked.Exchange(ref _cachedBytes, 0);
+    }
+
+    /// <summary>The bytes of the vehicle frame positions and normals of one draw of <paramref name="mesh"/>.</summary>
+    private static long WorldBytes(PreviewMesh mesh) => sizeof(float) * ((long)mesh.Positions.Length + mesh.Normals.Length);
+
+    private static void EnsureLength<T>(ref T[] array, int length)
+    {
+        if (array.Length < length)
+        {
+            array = new T[Math.Max(length, array.Length + array.Length / 2)];
+        }
     }
 
     /// <summary>
     /// The six frustum planes of a row-vector view projection, each with a unit normal that points inside,
     /// so the plane value of a point is its signed distance in meters.
     /// </summary>
-    private static Vector4[] FrustumPlanes(Matrix4x4 m)
+    private static void FrustumPlanes(Matrix4x4 m, Vector4[] planes)
     {
         var column0 = new Vector4(m.M11, m.M21, m.M31, m.M41);
         var column1 = new Vector4(m.M12, m.M22, m.M32, m.M42);
         var column2 = new Vector4(m.M13, m.M23, m.M33, m.M43);
         var column3 = new Vector4(m.M14, m.M24, m.M34, m.M44);
-        Vector4[] planes = [column3 + column0, column3 - column0, column3 + column1, column3 - column1, column2, column3 - column2];
+        planes[0] = column3 + column0;
+        planes[1] = column3 - column0;
+        planes[2] = column3 + column1;
+        planes[3] = column3 - column1;
+        planes[4] = column2;
+        planes[5] = column3 - column2;
         for (var i = 0; i < planes.Length; i++)
         {
             planes[i] /= new Vector3(planes[i].X, planes[i].Y, planes[i].Z).Length();
         }
-
-        return planes;
     }
 
-    private static bool IsVisible(PreviewMesh mesh, Matrix4x4 model, Vector4[] planes)
+    /// <summary>
+    /// Whether the bounding sphere of the draw reaches into the view. When <paramref name="pixelsPerMeter"/>
+    /// is positive, a sphere whose nearest point shows smaller than one pixel counts as not visible too. That
+    /// leaves out a whole small part at once, which costs at most about one pixel of it. Single triangles
+    /// below one pixel are not left out, because a dense mesh has many of them in each pixel, and a pixel
+    /// whose triangles were all left out would show the background.
+    /// </summary>
+    private static bool IsVisible(PreviewMesh mesh, Matrix4x4 model, Vector4[] planes, Matrix4x4 view, float pixelsPerMeter)
     {
         var center = Vector3.Transform(mesh.SphereCenter, model);
         var radius = mesh.SphereRadius * MaxStretch(model);
@@ -162,6 +274,16 @@ public static class SoftwareRenderer
         foreach (var plane in planes)
         {
             if (plane.X * center.X + plane.Y * center.Y + plane.Z * center.Z + plane.W < -radius)
+            {
+                return false;
+            }
+        }
+
+        if (pixelsPerMeter > 0f)
+        {
+            // The camera looks along -Z, so the depth of the nearest point of the sphere is -z minus the radius.
+            var nearest = -Vector3.Transform(center, view).Z - radius;
+            if (nearest > 0f && 2f * radius * pixelsPerMeter < nearest)
             {
                 return false;
             }
@@ -187,38 +309,124 @@ public static class SoftwareRenderer
         return MathF.Sqrt(bound);
     }
 
-    private static ScreenTriangle[] SetupDraw(DrawJob job, int jobIndex, FrameSetup frame)
+    /// <summary>
+    /// Turns the triangles of one job into screen triangles in the buffer of its state. The vertices go to
+    /// the vehicle frame first, from the cache of the state when it has one, and then to clip space with the
+    /// view projection of the frame. A cached and an uncached draw use the same two steps, so the frame does
+    /// not depend on what the cache holds.
+    /// </summary>
+    private void SetupDraw(DrawJob job, int jobIndex, FrameSetup frame)
     {
+        var state = job.State;
+        state.TriangleCount = 0;
+
         // A singular transform flattens the mesh to zero area, so nothing of it can be seen.
-        if (!Matrix4x4.Invert(job.Model * frame.View, out var modelViewInverse))
+        if (!Matrix4x4.Invert(job.Model, out var modelInverse))
         {
-            return [];
+            return;
         }
 
-        // The inverse transpose moves a normal to camera space and also keeps it pointing out of a mirrored draw.
-        var normalMatrix = Matrix4x4.Transpose(modelViewInverse);
+        // The inverse transpose moves a normal to the vehicle frame and also keeps it pointing out of a
+        // mirrored draw. The view only turns and moves, so it moves a normal on to camera space unchanged in length.
+        var normalMatrix = Matrix4x4.Transpose(modelInverse);
         var mirrored = job.Model.GetDeterminant() < 0f;
         var translucent = job.Alpha < 255;
 
         // A translucent box must not blend its back faces too, so placeholders always cull them.
         var cull = frame.CullBackFaces || translucent;
-        var toClip = job.Model * frame.ViewProjection;
 
         var mesh = job.Mesh;
-        var positions = mesh.Positions;
-        var clip = new Vector4[mesh.VertexCount];
-        for (var v = 0; v < clip.Length; v++)
+        var vertexCount = mesh.VertexCount;
+        var hasNormals = mesh.Normals.Length != 0;
+        float[]? rentedPositions = null;
+        float[]? rentedNormals = null;
+        var clip = ArrayPool<Vector4>.Shared.Rent(vertexCount);
+        var viewNormals = ArrayPool<Vector3>.Shared.Rent(hasNormals ? vertexCount : 0);
+        try
         {
-            clip[v] = Vector4.Transform(new Vector3(positions[3 * v], positions[3 * v + 1], positions[3 * v + 2]), toClip);
+            var worldPositions = state.WorldPositions;
+            var worldNormals = state.WorldNormals;
+            if (worldPositions is null || worldNormals is null)
+            {
+                if (state.Cacheable)
+                {
+                    worldPositions = new float[mesh.Positions.Length];
+                    worldNormals = new float[mesh.Normals.Length];
+                }
+                else
+                {
+                    worldPositions = rentedPositions = ArrayPool<float>.Shared.Rent(mesh.Positions.Length);
+                    worldNormals = rentedNormals = ArrayPool<float>.Shared.Rent(mesh.Normals.Length);
+                }
+
+                ToWorld(mesh, job.Model, normalMatrix, worldPositions, worldNormals);
+                Interlocked.Add(ref _transformedVertexCount, vertexCount);
+
+                // The state takes the arrays only when they are full, so a cancelled frame leaves no half cache.
+                if (state.Cacheable)
+                {
+                    state.WorldPositions = worldPositions;
+                    state.WorldNormals = worldNormals;
+                    Interlocked.Add(ref _cachedBytes, WorldBytes(mesh));
+                }
+            }
+
+            for (var v = 0; v < vertexCount; v++)
+            {
+                clip[v] = Vector4.Transform(Read3(worldPositions, v), frame.ViewProjection);
+            }
+
+            if (hasNormals)
+            {
+                for (var v = 0; v < vertexCount; v++)
+                {
+                    viewNormals[v] = Normalized(Vector3.TransformNormal(Read3(worldNormals, v), frame.View));
+                }
+            }
+
+            SetupTriangles(job, jobIndex, frame, clip, viewNormals, hasNormals, normalMatrix, mirrored, cull);
+        }
+        finally
+        {
+            ArrayPool<Vector4>.Shared.Return(clip);
+            ArrayPool<Vector3>.Shared.Return(viewNormals);
+            if (rentedPositions is not null)
+            {
+                ArrayPool<float>.Shared.Return(rentedPositions);
+            }
+
+            if (rentedNormals is not null)
+            {
+                ArrayPool<float>.Shared.Return(rentedNormals);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Moves the positions and the unit normals of <paramref name="mesh"/> to the vehicle frame. A normal
+    /// without a finite direction stays zero, and the triangle then gets its geometric normal.
+    /// </summary>
+    private static void ToWorld(PreviewMesh mesh, Matrix4x4 model, Matrix4x4 normalMatrix, float[] positions, float[] normals)
+    {
+        for (var v = 0; v < mesh.VertexCount; v++)
+        {
+            Write3(positions, v, Vector3.Transform(Read3(mesh.Positions, v), model));
         }
 
-        var viewNormals = new Vector3[mesh.Normals.Length == 0 ? 0 : mesh.VertexCount];
-        for (var v = 0; v < viewNormals.Length; v++)
+        if (mesh.Normals.Length != 0)
         {
-            viewNormals[v] = Normalized(Vector3.TransformNormal(Read3(mesh.Normals, v), normalMatrix));
+            for (var v = 0; v < mesh.VertexCount; v++)
+            {
+                Write3(normals, v, Normalized(Vector3.TransformNormal(Read3(mesh.Normals, v), normalMatrix)));
+            }
         }
+    }
 
-        var output = new List<ScreenTriangle>();
+    private static void SetupTriangles(DrawJob job, int jobIndex, FrameSetup frame, Vector4[] clip, Vector3[] viewNormals, bool hasNormals, Matrix4x4 normalMatrix, bool mirrored, bool cull)
+    {
+        var state = job.State;
+        var mesh = job.Mesh;
+        var translucent = job.Alpha < 255;
         Span<ClipVertex> polygon = stackalloc ClipVertex[MaxPolygon];
         Span<ClipVertex> scratch = stackalloc ClipVertex[MaxPolygon];
         Span<Corner> corners = stackalloc Corner[MaxPolygon];
@@ -230,9 +438,9 @@ public static class SoftwareRenderer
             var i1 = (int)indices[t + 1];
             var i2 = (int)indices[t + 2];
             var count = ClipTriangle(
-                Vertex(clip, viewNormals, mesh, i0, i1, i2, 0, normalMatrix),
-                Vertex(clip, viewNormals, mesh, i0, i1, i2, 1, normalMatrix),
-                Vertex(clip, viewNormals, mesh, i0, i1, i2, 2, normalMatrix),
+                Vertex(clip, viewNormals, hasNormals, mesh, i0, i1, i2, 0, normalMatrix, frame.View),
+                Vertex(clip, viewNormals, hasNormals, mesh, i0, i1, i2, 1, normalMatrix, frame.View),
+                Vertex(clip, viewNormals, hasNormals, mesh, i0, i1, i2, 2, normalMatrix, frame.View),
                 polygon,
                 scratch);
             if (count < 3 || !Project(polygon[..count], frame, corners))
@@ -274,22 +482,25 @@ public static class SoftwareRenderer
             {
                 // The rasterizer wants a positive area, so a negative polygon is walked the other way round.
                 var (b, c) = doubleArea > 0 ? (k, k + 1) : (k + 1, k);
-                if (TryMakeTriangle(corners[0], corners[b], corners[c], color, jobIndex, frame, out var triangle))
+                if (state.TriangleCount == state.Triangles.Length)
                 {
-                    output.Add(triangle);
+                    state.Grow(mesh.TriangleCount);
+                }
+
+                if (TryMakeTriangle(corners[0], corners[b], corners[c], color, jobIndex, frame, out state.Triangles[state.TriangleCount]))
+                {
+                    state.TriangleCount++;
                 }
             }
         }
-
-        return [.. output];
     }
 
     /// <summary>
     /// Corner <paramref name="corner"/> of the triangle i0, i1, i2 in clip space with its UV and its unit
     /// normal in camera space. A mesh without normals, or a vertex whose normal has no direction, gets the
-    /// geometric normal of the triangle.
+    /// geometric normal of the triangle, which goes to camera space in the same two steps as a vertex normal.
     /// </summary>
-    private static ClipVertex Vertex(Vector4[] clip, Vector3[] viewNormals, PreviewMesh mesh, int i0, int i1, int i2, int corner, Matrix4x4 normalMatrix)
+    private static ClipVertex Vertex(Vector4[] clip, Vector3[] viewNormals, bool hasNormals, PreviewMesh mesh, int i0, int i1, int i2, int corner, Matrix4x4 normalMatrix, Matrix4x4 view)
     {
         var index = corner switch
         {
@@ -298,12 +509,12 @@ public static class SoftwareRenderer
             _ => i2,
         };
 
-        var normal = viewNormals.Length == 0 ? Vector3.Zero : viewNormals[index];
+        var normal = hasNormals ? viewNormals[index] : Vector3.Zero;
         if (normal == Vector3.Zero)
         {
             var p0 = Read3(mesh.Positions, i0);
             var face = Vector3.Cross(Read3(mesh.Positions, i1) - p0, Read3(mesh.Positions, i2) - p0);
-            normal = Normalized(Vector3.TransformNormal(face, normalMatrix));
+            normal = Normalized(Vector3.TransformNormal(Normalized(Vector3.TransformNormal(face, normalMatrix)), view));
         }
 
         var uvs = mesh.Uvs;
@@ -567,6 +778,13 @@ public static class SoftwareRenderer
 
     private static Vector3 Read3(float[] values, int vertex) => new(values[3 * vertex], values[3 * vertex + 1], values[3 * vertex + 2]);
 
+    private static void Write3(float[] values, int vertex, Vector3 value)
+    {
+        values[3 * vertex] = value.X;
+        values[3 * vertex + 1] = value.Y;
+        values[3 * vertex + 2] = value.Z;
+    }
+
     /// <summary>The unit vector of <paramref name="value"/>, or zero when it has no finite direction.</summary>
     private static Vector3 Normalized(Vector3 value)
     {
@@ -636,80 +854,99 @@ public static class SoftwareRenderer
     }
 
     /// <summary>
-    /// Lists, for each band of <see cref="BandHeight"/> rows, the triangles that reach it, in scene order.
-    /// The lists are built in one pass so they do not depend on the worker count.
+    /// Lists, for each band of <see cref="BandHeight"/> rows, the triangles that reach it, in scene order, and
+    /// gives the count of all triangles. Band b holds the items from _bandStarts[b] up to _bandStarts[b + 1].
+    /// The lists are built in one pass so they do not depend on the worker count, and the buffers are kept for
+    /// the next frame.
     /// </summary>
-    private static int[][] BinIntoBands(ScreenTriangle[] triangles, int height)
+    private long BinIntoBands(DrawJob[] jobs, int jobCount, int bandCount)
     {
-        var bandCount = (height + BandHeight - 1) / BandHeight;
-        var counts = new int[bandCount];
-        foreach (var triangle in triangles)
+        EnsureLength(ref _bandStarts, bandCount + 1);
+        EnsureLength(ref _bandCursors, bandCount);
+        var starts = _bandStarts;
+        Array.Clear(starts, 0, bandCount + 1);
+
+        long triangleCount = 0;
+        for (var job = 0; job < jobCount; job++)
         {
-            for (var band = triangle.MinY / BandHeight; band <= triangle.MaxY / BandHeight; band++)
+            var state = jobs[job].State;
+            for (var i = 0; i < state.TriangleCount; i++)
             {
-                counts[band]++;
+                ref readonly var triangle = ref state.Triangles[i];
+                for (var band = triangle.MinY / BandHeight; band <= triangle.MaxY / BandHeight; band++)
+                {
+                    starts[band + 1]++;
+                }
             }
+
+            triangleCount += state.TriangleCount;
         }
 
-        var bands = new int[bandCount][];
         for (var band = 0; band < bandCount; band++)
         {
-            bands[band] = new int[counts[band]];
-            counts[band] = 0;
+            starts[band + 1] += starts[band];
         }
 
-        for (var index = 0; index < triangles.Length; index++)
+        EnsureLength(ref _bandItems, starts[bandCount]);
+        var items = _bandItems;
+        var cursors = _bandCursors;
+        Array.Copy(starts, cursors, bandCount);
+        for (var job = 0; job < jobCount; job++)
         {
-            for (var band = triangles[index].MinY / BandHeight; band <= triangles[index].MaxY / BandHeight; band++)
+            var state = jobs[job].State;
+            for (var i = 0; i < state.TriangleCount; i++)
             {
-                bands[band][counts[band]++] = index;
+                ref readonly var triangle = ref state.Triangles[i];
+                for (var band = triangle.MinY / BandHeight; band <= triangle.MaxY / BandHeight; band++)
+                {
+                    items[cursors[band]++] = new TriangleRef(job, i);
+                }
             }
         }
 
-        return bands;
+        return triangleCount;
     }
 
     /// <summary>
-    /// Fills one band in two steps. The opaque triangles only write the depth and the index of the nearest
+    /// Fills one band in two steps. The opaque triangles only write the depth and the item of the nearest
     /// triangle per pixel, and the visible pixels are shaded once after that, so the shading cost does not
-    /// grow with the overdraw. The translucent triangles follow and blend over the shaded pixels.
+    /// grow with the overdraw. The translucent triangles follow and blend over the shaded pixels. The rows
+    /// of the band in <paramref name="nearest"/> belong to this band only, so the bands do not share memory.
     /// </summary>
-    private static void FillBand(int band, int[] triangleIndices, ScreenTriangle[] triangles, DrawJob[] jobs, FrameSetup frame, FrameBuffer target)
+    private static void FillBand(int band, int start, int end, TriangleRef[] items, DrawJob[] jobs, FrameSetup frame, FrameBuffer target, int[] nearest)
     {
         var top = band * BandHeight;
         var bottom = Math.Min(top + BandHeight, target.Height) - 1;
         var width = target.Width;
-        var pixelCount = (bottom - top + 1) * width;
-        var nearest = ArrayPool<int>.Shared.Rent(pixelCount);
-        try
+        var bandNearest = nearest.AsSpan(top * width, (bottom - top + 1) * width);
+        bandNearest.Fill(-1);
+        var shaded = false;
+        for (var item = start; item < end; item++)
         {
-            nearest.AsSpan(0, pixelCount).Fill(-1);
-            var shaded = false;
-            foreach (var index in triangleIndices)
+            ref readonly var t = ref Triangle(items, jobs, item);
+            var opaque = t.Color.A == 255;
+            if (!opaque && !shaded)
             {
-                ref readonly var t = ref triangles[index];
-                var opaque = t.Color.A == 255;
-                if (!opaque && !shaded)
-                {
-                    ShadeBand(top, bottom, nearest, triangles, jobs, frame, target);
-                    shaded = true;
-                }
-
-                Rasterize(in t, index, opaque, top, bottom, nearest, target);
+                ShadeBand(top, bottom, bandNearest, items, jobs, frame, target);
+                shaded = true;
             }
 
-            if (!shaded)
-            {
-                ShadeBand(top, bottom, nearest, triangles, jobs, frame, target);
-            }
+            Rasterize(in t, item, opaque, top, bottom, bandNearest, target);
         }
-        finally
+
+        if (!shaded)
         {
-            ArrayPool<int>.Shared.Return(nearest);
+            ShadeBand(top, bottom, bandNearest, items, jobs, frame, target);
         }
     }
 
-    private static void Rasterize(in ScreenTriangle t, int index, bool opaque, int top, int bottom, int[] nearest, FrameBuffer target)
+    private static ref readonly ScreenTriangle Triangle(TriangleRef[] items, DrawJob[] jobs, int item)
+    {
+        var reference = items[item];
+        return ref jobs[reference.Job].State.Triangles[reference.Index];
+    }
+
+    private static void Rasterize(in ScreenTriangle t, int item, bool opaque, int top, int bottom, Span<int> nearest, FrameBuffer target)
     {
         var width = target.Width;
         var depth = target.Depth;
@@ -751,7 +988,7 @@ public static class SoftwareRenderer
                 if (opaque)
                 {
                     depth[pixel] = z;
-                    nearest[local] = index;
+                    nearest[local] = item;
                 }
                 else
                 {
@@ -761,7 +998,7 @@ public static class SoftwareRenderer
         }
     }
 
-    private static void ShadeBand(int top, int bottom, int[] nearest, ScreenTriangle[] triangles, DrawJob[] jobs, FrameSetup frame, FrameBuffer target)
+    private static void ShadeBand(int top, int bottom, Span<int> nearest, TriangleRef[] items, DrawJob[] jobs, FrameSetup frame, FrameBuffer target)
     {
         var width = target.Width;
         for (var y = top; y <= bottom; y++)
@@ -769,10 +1006,10 @@ public static class SoftwareRenderer
             var local = (y - top) * width;
             for (var x = 0; x < width; x++, local++)
             {
-                var index = nearest[local];
-                if (index >= 0)
+                var item = nearest[local];
+                if (item >= 0)
                 {
-                    ref readonly var t = ref triangles[index];
+                    ref readonly var t = ref Triangle(items, jobs, item);
                     Write(target.Rgba, y * width + x, ShadePixel(in t, jobs[t.Job], x, y, frame));
                 }
             }
@@ -855,7 +1092,41 @@ public static class SoftwareRenderer
         }
     }
 
-    private readonly record struct DrawJob(PreviewMesh Mesh, Matrix4x4 Model, Surface Surface, byte Alpha);
+    private readonly record struct DrawJob(PreviewMesh Mesh, Matrix4x4 Model, Surface Surface, byte Alpha, DrawState State);
+
+    /// <summary>A triangle in the list of a band, by its job and its place in the buffer of the state of that job.</summary>
+    private readonly record struct TriangleRef(int Job, int Index);
+
+    /// <summary>
+    /// What the renderer keeps for one draw or placeholder of the current scene. The vehicle frame positions
+    /// and normals are filled on the first frame that shows the draw when <see cref="Cacheable"/> is true. The
+    /// triangle buffer holds the screen triangles of the last frame, and only the job of this state writes it.
+    /// </summary>
+    private sealed class DrawState(bool cacheable)
+    {
+        public bool Cacheable { get; } = cacheable;
+
+        public float[]? WorldPositions { get; set; }
+
+        public float[]? WorldNormals { get; set; }
+
+        public ScreenTriangle[] Triangles { get; private set; } = [];
+
+        public int TriangleCount { get; set; }
+
+        /// <summary>
+        /// Makes the buffer larger. It grows by doubling up to the triangle count of the mesh, which is the most
+        /// that a frame without clipped triangles can need, so a large draw does not get a buffer of twice its size.
+        /// </summary>
+        public void Grow(int meshTriangles)
+        {
+            var length = Triangles.Length;
+            var next = Math.Max(16, Math.Min(length * 2, meshTriangles + 16));
+            var triangles = Triangles;
+            Array.Resize(ref triangles, next > length ? next : length * 2);
+            Triangles = triangles;
+        }
+    }
 
     /// <summary>A polygon corner in clip space, with its UV and its normal in camera space.</summary>
     private readonly record struct ClipVertex(Vector4 Position, Vector2 Uv, Vector3 Normal);
