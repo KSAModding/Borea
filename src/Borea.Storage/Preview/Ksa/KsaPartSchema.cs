@@ -46,6 +46,7 @@ internal static class KsaPartSchema
 
     public const string Material = "Material";
     public const string Diffuse = "Diffuse";
+    public const string Normal = "Normal";
     public const string AoRoughMetal = "AoRoughMetal";
 
     public const string PartModel = "PartModel";
