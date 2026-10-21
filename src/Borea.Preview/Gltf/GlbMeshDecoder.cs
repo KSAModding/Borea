@@ -196,9 +196,44 @@ public static class GlbMeshDecoder
         }
 
         var accessors = GetArray(root, "accessors");
-        var vertexCount = GetCount(accessors, ToIndex(positionIndex));
+        var positionAccessor = ToIndex(positionIndex);
+        var vertexCount = GetCount(accessors, positionAccessor);
         var cornerCount = primitive.TryGetProperty("indices", out var indicesIndex) ? GetCount(accessors, ToIndex(indicesIndex)) : vertexCount;
-        return new GlbMeshSize(vertexCount, cornerCount / 3);
+        return new GlbMeshSize(vertexCount, cornerCount / 3) { Bounds = ReadDeclaredBounds(accessors[positionAccessor]) };
+    }
+
+    private static PreviewBounds? ReadDeclaredBounds(JsonElement accessor)
+    {
+        if (accessor.ValueKind != JsonValueKind.Object
+            || !TryReadVector(accessor, "min", out var min)
+            || !TryReadVector(accessor, "max", out var max))
+        {
+            return null;
+        }
+
+        var bounds = new PreviewBounds(min, max);
+        return bounds.IsFinite ? bounds : null;
+    }
+
+    private static bool TryReadVector(JsonElement accessor, string name, out Vector3 vector)
+    {
+        vector = default;
+        if (!accessor.TryGetProperty(name, out var array) || array.ValueKind != JsonValueKind.Array || array.GetArrayLength() != 3)
+        {
+            return false;
+        }
+
+        Span<float> values = stackalloc float[3];
+        for (var i = 0; i < 3; i++)
+        {
+            if (array[i].ValueKind != JsonValueKind.Number || !array[i].TryGetSingle(out values[i]))
+            {
+                return false;
+            }
+        }
+
+        vector = new Vector3(values[0], values[1], values[2]);
+        return true;
     }
 
     private static int GetCount(JsonElement accessors, int accessorIndex)
