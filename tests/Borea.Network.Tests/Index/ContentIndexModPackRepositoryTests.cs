@@ -1,3 +1,4 @@
+using Borea.Core.Game;
 using Borea.Core.Index;
 using Borea.Core.ModPacks;
 using Borea.Core.Mods;
@@ -231,6 +232,7 @@ public sealed class ContentIndexModPackRepositoryTests
         public string GetSecretsFolder() => throw new NotSupportedException();
         public string GetInstancesRoot() => throw new NotSupportedException();
         public string GetStaticModFilesRoot() => throw new NotSupportedException();
+        public string GetGameBuildFolder(GameVersion version) => throw new NotSupportedException();
         public string GetLoadersRoot() => throw new NotSupportedException();
         public string GetPresetsRoot() => throw new NotSupportedException();
         public string GetGameSettingsPresetsRoot() => throw new NotSupportedException();

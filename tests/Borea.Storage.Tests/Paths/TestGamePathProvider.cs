@@ -1,3 +1,5 @@
+using System.Globalization;
+using Borea.Core.Game;
 using Borea.Core.Mods;
 using Borea.Core.Paths;
 
@@ -28,6 +30,8 @@ internal sealed class TestGamePathProvider : IGamePathProvider
     public string GetGamePatchNotesFolder() => Path.Combine(_root, "GamePatchNotes");
     public string GetInstancesRoot() => Path.Combine(_root, "Instances");
     public string GetStaticModFilesRoot() => Path.Combine(_root, "Static Mod Files");
+    public string GetGameBuildFolder(GameVersion version)
+        => Path.Combine(_root, "Game Builds", string.Create(CultureInfo.InvariantCulture, $"{version.Year}.{version.Month}.{version.BuildNumber}.{version.Revision}"));
     public string GetLoadersRoot() => Path.Combine(_root, "Loaders");
     public string GetPresetsRoot() => Path.Combine(_root, "Presets");
     public string GetGameSettingsPresetsRoot() => Path.Combine(GetPresetsRoot(), "GameSettings");

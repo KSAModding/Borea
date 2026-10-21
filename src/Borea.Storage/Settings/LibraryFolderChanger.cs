@@ -14,6 +14,7 @@ public sealed class LibraryFolderChanger : ILibraryFolderChanger
     private const string InstancesFolderName = "Instances";
     private const string BackupsFolderName = "Backups";
     private const string StaticModFilesFolderName = "Static Mod Files";
+    private const string GameBuildsFolderName = "Game Builds";
     private const int CopyBufferSize = 1 << 20;
     private const int MaxLinkDepth = 32;
 
@@ -173,11 +174,11 @@ public sealed class LibraryFolderChanger : ILibraryFolderChanger
         }
 
         // the store goes first, so a copied link to it has its target already
-        var moves = new[] { StaticModFilesFolderName, InstancesFolderName, BackupsFolderName }
+        var moves = new[] { StaticModFilesFolderName, InstancesFolderName, BackupsFolderName, GameBuildsFolderName }
             .Select(name => new FolderMove(Path.Combine(previous, name), Path.Combine(target, name)))
             .ToList();
         if (moves.Any(move => HasEntries(move.To)))
-            return Refused(LibraryFolderChangeOutcome.TargetNotEmpty, target, previous, $"{target} already has an Instances, Backups or Static Mod Files folder without a Borea instance. Choose another folder.");
+            return Refused(LibraryFolderChangeOutcome.TargetNotEmpty, target, previous, $"{target} already has an Instances, Backups, Static Mod Files or Game Builds folder without a Borea instance. Choose another folder.");
 
         moves.RemoveAll(move => !Directory.Exists(move.From));
         var instanceIds = InstanceFolderIds(previous);
@@ -376,6 +377,11 @@ public sealed class LibraryFolderChanger : ILibraryFolderChanger
 
         // the last played time falls back to when the game last wrote its log
         File.SetLastWriteTimeUtc(destination, File.GetLastWriteTimeUtc(source));
+
+        // a new file gets the mode the umask allows, so the app host of a kept Linux build would lose its execute bit
+        if (!OperatingSystem.IsWindows())
+            File.SetUnixFileMode(destination, File.GetUnixFileMode(source));
+
         report.AddFile();
     }
 
