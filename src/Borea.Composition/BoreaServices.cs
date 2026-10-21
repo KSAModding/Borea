@@ -46,6 +46,7 @@ using Borea.Storage.ModPacks;
 using Borea.Storage.Mods;
 using Borea.Storage.Paths;
 using Borea.Storage.Preferences;
+using Borea.Storage.Preview;
 using Borea.Storage.Secrets;
 using Borea.Storage.Settings;
 using Borea.Storage.State;
@@ -489,7 +490,9 @@ public sealed class BoreaServices : IDisposable
             [ContentIndexModRepository.SourceName] = offlineContentIndex,
             [SpaceDockModRepository.SourceName] = new OfflineSpaceDockModRepository(resolver),
         });
-        var downloader = new HttpModDownloader(http);
+        // An install after a vehicle preview takes the verified archive from the preview cache. Nothing here
+        // touches the disk, and the cache sweep runs only when the App starts it.
+        var downloader = new CachingModDownloader(new HttpModDownloader(http), new PreviewArchiveCache(paths, log), log);
         var settingsRepository = new FileBoreaSettingsRepository(paths);
         var loaderConfiguration = new LoaderConfigurator();
         var modStore = new ModStore(paths, new DirectoryLinker(), settings.SharedModStore);

@@ -145,6 +145,16 @@ public sealed class PreviewArchiveCache
     }
 
     /// <summary>
+    /// Deletes the cached archive with this hash, for a file whose bytes no longer match its name. A file that
+    /// another reader holds open stays, and the failure is logged. Returns true when no such file is left.
+    /// </summary>
+    public bool Remove(string sha256)
+    {
+        var path = ArchivePath(Key(sha256));
+        return !File.Exists(path) || TryDelete(path);
+    }
+
+    /// <summary>
     /// Keeps the archive with this hash through every <see cref="Sweep"/> until the returned handle is disposed.
     /// Pins count, so two holders of one hash keep it until both let go.
     /// </summary>
@@ -304,11 +314,15 @@ public sealed class PreviewArchiveCache
     /// <summary>The hash as the file name holds it, so that no other text can become a path.</summary>
     private static string Key(string sha256)
     {
-        if (sha256 is null || sha256.Length != HashLength || !sha256.All(char.IsAsciiHexDigit))
+        if (!IsHash(sha256))
             throw new ArgumentException("The SHA-256 must be 64 hex characters.", nameof(sha256));
 
         return sha256.ToLowerInvariant();
     }
+
+    /// <summary>True when the text is a SHA-256 in hex that can name a cached archive.</summary>
+    internal static bool IsHash(string? sha256)
+        => sha256 is not null && sha256.Length == HashLength && sha256.All(char.IsAsciiHexDigit);
 
     private static bool IsArchiveName(string name)
         => name.Length == HashLength + ArchiveExtension.Length

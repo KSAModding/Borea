@@ -26,6 +26,7 @@ using Borea.Storage.ModLoaders;
 using Borea.Storage.Mods;
 using Borea.Storage.Paths;
 using Borea.Storage.Preferences;
+using Borea.Storage.Preview;
 using Borea.Storage.State;
 using Borea.Storage.Settings;
 
@@ -71,6 +72,17 @@ public sealed class BoreaServicesTests : IDisposable
         using var services = await BoreaServices.BuildAsync(_tempRoot);
 
         Assert.False(Directory.Exists(_tempRoot));
+    }
+
+    [Fact]
+    public async Task BuildAsync_DownloaderReusesThePreviewCache_AndCreatesNoPreviewFolder()
+    {
+        await SaveAsync(new BoreaSettings(GamePath));
+
+        using var services = await BoreaServices.BuildAsync(_tempRoot);
+
+        Assert.IsType<CachingModDownloader>(services.Downloader);
+        Assert.False(Directory.Exists(Path.Combine(_tempRoot, "PreviewCache")));
     }
 
     [Fact]
