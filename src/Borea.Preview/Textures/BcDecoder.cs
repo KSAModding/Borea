@@ -4,7 +4,8 @@ namespace Borea.Preview.Textures;
 /// Decodes block-compressed texture levels to RGBA8, four bytes per pixel with the top row first.
 /// The block layouts follow the BC1, BC4 and BC5 sections of the Khronos Data Format
 /// Specification. Interpolated values are rounded to the nearest integer. GPUs may differ from this
-/// by one step, which does not matter for a preview.
+/// by one step, which does not matter for a preview. BC7 blocks go to <see cref="Bc7Decoder"/>,
+/// whose interpolation the specification defines exactly.
 /// </summary>
 public static class BcDecoder
 {
@@ -39,6 +40,9 @@ public static class BcDecoder
                 return true;
             case Ktx2PixelFormat.Bc5:
                 rgba = DecodeBlocks(data, width, height, 16, DecodeBc5Block);
+                return true;
+            case Ktx2PixelFormat.Bc7:
+                rgba = DecodeBlocks(data, width, height, 16, Bc7Decoder.DecodeBlock);
                 return true;
             default:
                 return false;

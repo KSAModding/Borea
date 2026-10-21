@@ -4,7 +4,9 @@
     "xunit",
     "Microsoft.NET.Test.Sdk",
     "coverlet.collector",
-    "AvaloniaUI.DiagnosticsSupport"
+    "AvaloniaUI.DiagnosticsSupport",
+    "BCnEncoder.Net",
+    "CommunityToolkit.HighPerformance"
   ],
   "spdx": {
     "list": "SPDX License List 3.28.0",
