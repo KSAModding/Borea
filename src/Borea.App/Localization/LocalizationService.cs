@@ -3109,6 +3109,9 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string FormatListingShareHostPublished(string id, string version)
         => string.Format(CultureInfo.CurrentCulture, Resources.ListingShareHostPublishedFormat, id, version);
 
+    public string FormatListingShareHostReleased(string id, string version)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ListingShareHostReleasedFormat, id, version);
+
     public string FormatListingShareHostUnexpected(string host)
         => string.Format(CultureInfo.CurrentCulture, Resources.ListingShareHostUnexpectedFormat, host);
 

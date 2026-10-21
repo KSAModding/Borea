@@ -25,7 +25,7 @@ public interface IShareHostClient
     /// <exception cref="ShareHostException">The host refused the upload, or it could not be reached.</exception>
     Task<ShareUpload> UploadAsync(ShareHost host, Stream archive, string fileName, IReadOnlyList<ListingDependency> dependencies, string? listingId, CancellationToken cancellationToken = default);
 
-    /// <summary>Publishes an upload as a release, and for a new listing opens its pull request with <paramref name="listingText"/>.</summary>
+    /// <summary>Publishes an upload as a release, and for a new listing sends <paramref name="listingText"/> for its pull request.</summary>
     /// <param name="status">stable, testing or dev.</param>
     /// <exception cref="ShareHostException">The host refused it, or it could not be reached.</exception>
     Task<SharePublished> PublishAsync(ShareHost host, string uploadId, string version, string status, string? listingText, CancellationToken cancellationToken = default);
@@ -39,8 +39,11 @@ public sealed record ShareUpload(string Id, IReadOnlyList<ShareCheck> Checks, st
 
 public sealed record ShareCheck(string Name, bool Passed, string? Message);
 
-/// <param name="PullRequest">The listing pull request the host opened on GitHub.</param>
-public sealed record SharePublished(string Id, string Version, Uri PullRequest);
+/// <param name="PullRequest">
+/// The listing pull request the host opened on GitHub, or null. A new version whose dependency list did not change needs none,
+/// and a host may open the pull request of a new listing later, together with others.
+/// </param>
+public sealed record SharePublished(string Id, string Version, Uri? PullRequest);
 
 public enum ShareHostFailure
 {

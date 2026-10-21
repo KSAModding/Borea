@@ -199,6 +199,30 @@ public sealed class ShareHostClientTests
     }
 
     [Fact]
+    public async Task PublishAsync_NewVersionWithoutPullRequest_GivesTheRelease()
+    {
+        _apiAnswer = _ => Json("""{"id":"ExampleRover","version":"1.1.0"}""");
+        var client = await SignedInAsync();
+
+        var published = await client.PublishAsync(Host, "u42", "1.1.0", "stable", null);
+
+        Assert.Equal(new SharePublished("ExampleRover", "1.1.0", null), published);
+    }
+
+    [Theory]
+    [InlineData("""{"version":"1.1.0"}""")]
+    [InlineData("""{"id":"ExampleRover"}""")]
+    public async Task PublishAsync_WithoutIdOrVersion_IsUnexpected(string body)
+    {
+        _apiAnswer = _ => Json(body);
+        var client = await SignedInAsync();
+
+        var exception = await Assert.ThrowsAsync<ShareHostException>(() => client.PublishAsync(Host, "u42", "1.1.0", "stable", null));
+
+        Assert.Equal(ShareHostFailure.UnexpectedResponse, exception.Failure);
+    }
+
+    [Fact]
     public async Task PublishAsync_PullRequestOutsideGitHub_IsUnexpected()
     {
         _apiAnswer = _ => Json(PublishedJson.Replace("https://github.com/", "https://evil.example/", StringComparison.Ordinal));

@@ -3213,6 +3213,9 @@
   <data name="ListingShareHostPublishedFormat" xml:space="preserve">
     <value>{0} {1} ist veröffentlicht. Der Host hat den Pull Request geöffnet.</value>
   </data>
+  <data name="ListingShareHostReleasedFormat" xml:space="preserve">
+    <value>{0} {1} ist auf dem Host veröffentlicht.</value>
+  </data>
   <data name="ListingShareHostSignedOut" xml:space="preserve">
     <value>Der Share-Host nimmt die Anmeldung nicht mehr an. Teile erneut, um dich anzumelden.</value>
   </data>

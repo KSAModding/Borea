@@ -159,12 +159,15 @@ public sealed class ShareHostClient : IShareHostClient
         var reply = await SendAsync(host, HttpMethod.Post, $"{ShareHostApi.UploadsPath}/{Uri.EscapeDataString(uploadId)}/{ShareHostApi.PublishPath}", content, cancellationToken).ConfigureAwait(false);
         var published = Parse<ShareHostJson.Published>(reply.Body);
 
+        if (published?.Id is not { Length: > 0 } id || published.Version is not { Length: > 0 } released)
+            throw Unexpected(host, reply);
+
         // Borea opens this page in the browser, and the host opens every listing pull request on GitHub.
-        if (published?.Id is not { Length: > 0 } id
-            || published.Version is not { Length: > 0 } released
-            || !Uri.TryCreate(published.PullRequest, UriKind.Absolute, out var pullRequest)
-            || pullRequest.Scheme != Uri.UriSchemeHttps
-            || !string.Equals(pullRequest.Host, "github.com", StringComparison.OrdinalIgnoreCase))
+        Uri? pullRequest = null;
+        if (published.PullRequest is not null
+            && (!Uri.TryCreate(published.PullRequest, UriKind.Absolute, out pullRequest)
+                || pullRequest.Scheme != Uri.UriSchemeHttps
+                || !string.Equals(pullRequest.Host, "github.com", StringComparison.OrdinalIgnoreCase)))
         {
             throw Unexpected(host, reply);
         }

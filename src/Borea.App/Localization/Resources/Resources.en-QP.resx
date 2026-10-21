@@ -2241,6 +2241,9 @@
   <data name="ListingShareHostPublishedFormat" xml:space="preserve">
     <value>{0} {1} has set sail. The harbor opened the pull request.</value>
   </data>
+  <data name="ListingShareHostReleasedFormat" xml:space="preserve">
+    <value>{0} {1} has set sail from the harbor.</value>
+  </data>
   <data name="ListingShareHostSignedOut" xml:space="preserve">
     <value>The harbor no longer takes yer papers. Moor again to sign in.</value>
   </data>

@@ -266,7 +266,9 @@ public sealed partial class ListingEditor
             _shareUpload = null;
             OnPropertyChanged(nameof(HasShareUpload));
             SharePullRequest = published.PullRequest;
-            ShareHostOutcome = Localization.FormatListingShareHostPublished(published.Id, published.Version);
+            ShareHostOutcome = published.PullRequest is null
+                ? Localization.FormatListingShareHostReleased(published.Id, published.Version)
+                : Localization.FormatListingShareHostPublished(published.Id, published.Version);
         }
         catch (OperationCanceledException) when (cancel.IsCancellationRequested)
         {

@@ -108,7 +108,8 @@ public sealed class ShareHostShareTests
     [Fact]
     public async Task VehicleListedOnTheHost_UploadsAsANewVersionOfItsListing()
     {
-        var host = new FakeHost();
+        // The dependency list did not change, so the host publishes the release without a listing pull request.
+        var host = new FakeHost { PullRequest = null };
         using var harness = await ViewModelHarness.CreateAsync(respond: Serve(Hosts, vehicles: ListedRover), shareHostClient: host);
         var editor = await ShareAsync(harness);
 
@@ -117,6 +118,10 @@ public sealed class ShareHostShareTests
 
         Assert.Equal("ExampleRover", Assert.Single(host.Uploads).ListingId);
         Assert.Null(Assert.Single(host.Publishes).ListingText);
+        Assert.Equal(harness.Localization.FormatListingShareHostReleased("ExampleRover", "1.0.0"), editor.ShareHostOutcome);
+        Assert.Null(editor.SharePullRequest);
+        Assert.Null(editor.ShareHostError);
+        Assert.False(editor.HasShareUpload);
     }
 
     [Fact]
@@ -179,6 +184,8 @@ public sealed class ShareHostShareTests
 
         public ShareUpload Upload { get; init; } = Checked;
 
+        public Uri? PullRequest { get; init; } = new("https://github.com/KSAModding/content-index/pull/250");
+
         public bool IsSignedIn(ShareHost host) => _signedIn;
 
         public Task SignInAsync(ShareHost host, IProgress<GitHubDeviceCode>? progress = null, bool keepSignedIn = false, CancellationToken cancellationToken = default)
@@ -200,7 +207,7 @@ public sealed class ShareHostShareTests
         public Task<SharePublished> PublishAsync(ShareHost host, string uploadId, string version, string status, string? listingText, CancellationToken cancellationToken = default)
         {
             Publishes.Enqueue(new Publish(uploadId, version, status, listingText));
-            return Task.FromResult(new SharePublished("ExampleRover", version, new Uri("https://github.com/KSAModding/content-index/pull/250")));
+            return Task.FromResult(new SharePublished("ExampleRover", version, PullRequest));
         }
     }
 }

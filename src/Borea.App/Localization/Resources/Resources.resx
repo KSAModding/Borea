@@ -3213,6 +3213,9 @@
   <data name="ListingShareHostPublishedFormat" xml:space="preserve">
     <value>{0} {1} is published. The host opened the listing pull request.</value>
   </data>
+  <data name="ListingShareHostReleasedFormat" xml:space="preserve">
+    <value>{0} {1} is published on the host.</value>
+  </data>
   <data name="ListingShareHostSignedOut" xml:space="preserve">
     <value>The share host no longer takes the sign-in. Share again to sign in.</value>
   </data>
