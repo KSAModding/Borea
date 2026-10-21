@@ -18,6 +18,43 @@ public interface IGameBuildKeeper
     /// </summary>
     /// <param name="expected">The build the player confirmed. Another build in the game folder is refused as <see cref="GameBuildKeepRefusal.BuildChanged"/>.</param>
     Task<GameBuildKeepCheck> KeepAsync(Guid instanceId, GameVersion expected, IProgress<LibraryMoveProgress>? progress, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Clears the build of the instance, so it starts on the game folder of the settings again. The saves stay in the
+    /// instance, and the kept build stays in the Game Builds folder.
+    /// </summary>
+    Task<GameBuildChangeRefusal> UseCurrentBuildAsync(Guid instanceId, CancellationToken cancellationToken);
+
+    /// <summary>The kept builds in the Game Builds folder, newest first, each with its size and the instances that use it.</summary>
+    Task<IReadOnlyList<KeptGameBuild>> ListKeptAsync(CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Deletes the folder of a kept build that no instance uses and that is not the game folder of the settings.
+    /// </summary>
+    Task<GameBuildChangeRefusal> RemoveAsync(GameVersion build, CancellationToken cancellationToken);
+}
+
+/// <param name="InstanceNames">The names of the instances that keep this build, empty when no instance keeps it.</param>
+/// <param name="IsGameFolderOfSettings">Whether the game folder of the settings is this folder, so every instance without a kept build starts on it too.</param>
+public sealed record KeptGameBuild(GameVersion Version, string Folder, long Bytes, IReadOnlyList<string> InstanceNames, bool IsGameFolderOfSettings);
+
+public enum GameBuildChangeRefusal
+{
+    None = 0,
+
+    GameRunning = 1,
+
+    /// <summary>An instance starts on the build.</summary>
+    InUse = 2,
+
+    /// <summary>An instance record cannot be read, so it could use the build.</summary>
+    InstanceUnreadable = 3,
+
+    /// <summary>The game folder of the settings is the folder of the build.</summary>
+    GameFolderOfSettings = 4,
+
+    /// <summary>Another keep, clear or remove holds the Game Builds folder, and a keep can copy for minutes.</summary>
+    Busy = 5,
 }
 
 /// <param name="Version">The build in the game folder of the settings, or the build the instance already keeps.</param>

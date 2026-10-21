@@ -143,7 +143,111 @@ public sealed class GameBuildKeeperTests : IDisposable
         Assert.Null((await _instances.GetByIdAsync(instance.InstanceId))?.GameBuild);
     }
 
-    private GameBuildKeeper Keeper() => new(_paths, _instances, () => false, _ => false, new FakeWineProbe(new WineInstall(Path.GetFullPath(Path.Combine(_tempRoot, "Elsewhere")), WineFixtures.Drives(new Dictionary<char, string>()), null)), new UnknownFreeSpace());
+    [Fact]
+    public async Task UseCurrentBuildAsync_ClearsTheBuildAndKeepsTheSaves()
+    {
+        var instance = await CreateInstanceAsync("Career");
+        var keeper = Keeper();
+        await keeper.KeepAsync(instance.InstanceId, FixtureVersion, null, CancellationToken.None);
+        var save = Path.Combine(_paths.GetInstanceSavesFolder(instance.InstanceId), "Orbit", "meta.toml");
+        Directory.CreateDirectory(Path.GetDirectoryName(save)!);
+        File.WriteAllText(save, "Version = \"2026.8.3.5117\"");
+
+        var result = await keeper.UseCurrentBuildAsync(instance.InstanceId, CancellationToken.None);
+
+        Assert.Equal(GameBuildChangeRefusal.None, result);
+        Assert.Null((await _instances.GetByIdAsync(instance.InstanceId))?.GameBuild);
+        Assert.Equal("Version = \"2026.8.3.5117\"", File.ReadAllText(save));
+        Assert.Equal(FixtureVersion, InstalledGameVersionProvider.Read(Path.Combine(GameBuilds, "2026.8.3.5117"))?.Version);
+    }
+
+    [Fact]
+    public async Task RemoveAsync_RemovesOnlyABuildNoInstanceUses()
+    {
+        var instance = await CreateInstanceAsync("Career");
+        var keeper = Keeper();
+        await keeper.KeepAsync(instance.InstanceId, FixtureVersion, null, CancellationToken.None);
+        var folder = Path.Combine(GameBuilds, "2026.8.3.5117");
+        var settingsBytes = new DirectoryInfo(SettingsGame).EnumerateFiles("*", SearchOption.AllDirectories).Sum(file => file.Length);
+
+        var listed = Assert.Single(await keeper.ListKeptAsync(CancellationToken.None));
+        var inUse = await keeper.RemoveAsync(FixtureVersion, CancellationToken.None);
+
+        Assert.Equal(FixtureVersion, listed.Version);
+        Assert.Equal(folder, listed.Folder);
+        Assert.Equal(settingsBytes, listed.Bytes);
+        Assert.Equal(["Career"], listed.InstanceNames);
+        Assert.False(listed.IsGameFolderOfSettings);
+        Assert.Equal(GameBuildChangeRefusal.InUse, inUse);
+        Assert.Equal(FixtureVersion, InstalledGameVersionProvider.Read(folder)?.Version);
+
+        await keeper.UseCurrentBuildAsync(instance.InstanceId, CancellationToken.None);
+        var unused = Assert.Single(await keeper.ListKeptAsync(CancellationToken.None));
+        var removed = await keeper.RemoveAsync(FixtureVersion, CancellationToken.None);
+
+        Assert.Empty(unused.InstanceNames);
+        Assert.Equal(GameBuildChangeRefusal.None, removed);
+        Assert.Empty(Directory.GetFileSystemEntries(GameBuilds));
+        Assert.Empty(await keeper.ListKeptAsync(CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task RemoveAsync_GameFolderOfTheSettings_KeepsTheBuild()
+    {
+        var instance = await CreateInstanceAsync("Career");
+        await Keeper().KeepAsync(instance.InstanceId, FixtureVersion, null, CancellationToken.None);
+        await Keeper().UseCurrentBuildAsync(instance.InstanceId, CancellationToken.None);
+        var folder = Path.Combine(GameBuilds, "2026.8.3.5117");
+        var keeper = Keeper(new GamePathProvider(folder, boreaRoot: Path.Combine(_tempRoot, "Borea"), libraryFolder: Path.Combine(_tempRoot, "Library")));
+
+        var listed = Assert.Single(await keeper.ListKeptAsync(CancellationToken.None));
+        var result = await keeper.RemoveAsync(FixtureVersion, CancellationToken.None);
+
+        Assert.Empty(listed.InstanceNames);
+        Assert.True(listed.IsGameFolderOfSettings);
+        Assert.Equal(GameBuildChangeRefusal.GameFolderOfSettings, result);
+        Assert.Equal(FixtureVersion, InstalledGameVersionProvider.Read(folder)?.Version);
+    }
+
+    [Fact]
+    public async Task UseCurrentBuildAsyncAndRemoveAsync_WhileACopyRuns_AreBusy()
+    {
+        var copying = await CreateInstanceAsync("Career");
+        var other = await CreateInstanceAsync("Sandbox");
+        var keeper = Keeper();
+        using var copyStarted = new ManualResetEventSlim();
+        using var copyMayGoOn = new ManualResetEventSlim();
+        var progress = new SynchronousProgress<LibraryMoveProgress>(value =>
+        {
+            if (value.Files == 1)
+            {
+                copyStarted.Set();
+                copyMayGoOn.Wait();
+            }
+        });
+
+        var keep = Task.Run(() => keeper.KeepAsync(copying.InstanceId, FixtureVersion, progress, CancellationToken.None));
+        GameBuildChangeRefusal cleared;
+        GameBuildChangeRefusal removed;
+        try
+        {
+            Assert.True(copyStarted.Wait(TimeSpan.FromSeconds(30)));
+            cleared = await keeper.UseCurrentBuildAsync(other.InstanceId, CancellationToken.None).WaitAsync(TimeSpan.FromSeconds(10));
+            removed = await keeper.RemoveAsync(FixtureVersion, CancellationToken.None).WaitAsync(TimeSpan.FromSeconds(10));
+        }
+        finally
+        {
+            copyMayGoOn.Set();
+        }
+
+        Assert.Equal(GameBuildChangeRefusal.Busy, cleared);
+        Assert.Equal(GameBuildChangeRefusal.Busy, removed);
+        Assert.Equal(GameBuildKeepRefusal.None, (await keep).Refusal);
+    }
+
+    private GameBuildKeeper Keeper() => Keeper(_paths);
+
+    private GameBuildKeeper Keeper(GamePathProvider paths) => new(paths, _instances, () => false, _ => false, new FakeWineProbe(new WineInstall(Path.GetFullPath(Path.Combine(_tempRoot, "Elsewhere")), WineFixtures.Drives(new Dictionary<char, string>()), null)), new UnknownFreeSpace());
 
     private async Task<Instance> CreateInstanceAsync(string name)
     {
