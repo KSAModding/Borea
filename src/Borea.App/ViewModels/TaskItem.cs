@@ -113,6 +113,7 @@ public sealed partial class TaskItem : ObservableObject
         TaskKind.BackupDelete => Localization.FormatTaskBackupDelete(Subject ?? string.Empty),
         TaskKind.LoaderInstall => Localization.FormatTaskInstall(LoaderInstallName),
         TaskKind.BoreaUpdate => Localization.FormatTaskSelfUpdate(Version ?? string.Empty),
+        TaskKind.GameBuildKeep => Localization.FormatTaskKeepGameBuild(Subject ?? string.Empty),
         _ => Localization.FormatTaskInstall(Subject ?? string.Empty),
     };
 

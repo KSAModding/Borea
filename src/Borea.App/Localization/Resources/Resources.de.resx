@@ -1578,6 +1578,9 @@
   <data name="TaskBackupDeleteFormat" xml:space="preserve">
     <value>Backup {0} löschen</value>
   </data>
+  <data name="TaskKeepGameBuildFormat" xml:space="preserve">
+    <value>KSA {0} behalten</value>
+  </data>
   <data name="TaskWaiting" xml:space="preserve">
     <value>Wartet</value>
   </data>
@@ -1641,11 +1644,17 @@
   <data name="ToastBackupDeletedFormat" xml:space="preserve">
     <value>Backup {0} gelöscht</value>
   </data>
+  <data name="ToastGameBuildKeptFormat" xml:space="preserve">
+    <value>KSA {0} für {1} behalten</value>
+  </data>
   <data name="ToastInstallStoppedFormat" xml:space="preserve">
     <value>Installation von {0} gestoppt</value>
   </data>
   <data name="ToastLibraryFolderStopped" xml:space="preserve">
     <value>Verschieben der Bibliothek gestoppt</value>
+  </data>
+  <data name="ToastGameBuildKeepStoppedFormat" xml:space="preserve">
+    <value>Kopie von KSA {0} gestoppt</value>
   </data>
   <data name="ToastUpdateStoppedFormat" xml:space="preserve">
     <value>Aktualisierung von {0} gestoppt</value>
@@ -1700,6 +1709,9 @@
   </data>
   <data name="ToastBackupDeleteFailedFormat" xml:space="preserve">
     <value>Backup {0} konnte nicht gelöscht werden</value>
+  </data>
+  <data name="ToastGameBuildKeepFailedFormat" xml:space="preserve">
+    <value>KSA {0} konnte nicht behalten werden</value>
   </data>
   <data name="ToastActivateFailedFormat" xml:space="preserve">
     <value>{0} konnte nicht aktiviert werden</value>
@@ -3465,6 +3477,45 @@
   <data name="ModalDeleteInstanceTextFormat" xml:space="preserve">
     <value>{0} mit Ordner und Backups löschen? Das lässt sich nicht rückgängig machen.</value>
   </data>
+  <data name="ModalKeepGameBuildTitle" xml:space="preserve">
+    <value>Diesen Spiel-Build behalten</value>
+  </data>
+  <data name="ModalKeepGameBuildTextFormat" xml:space="preserve">
+    <value>Borea kopiert KSA {0} ({1}) einmal nach {2}. Die Instanz {3} startet danach immer mit diesem Build. Tu das, bevor der Spiel-Client aktualisiert, denn ein Update ändert den Spielordner auf den neuen Build.</value>
+  </data>
+  <data name="ModalKeepGameBuildSharedFormat" xml:space="preserve">
+    <value>KSA {0} ist schon in {1} behalten. Die Instanz {2} nutzt diese Kopie, also kopiert Borea nichts.</value>
+  </data>
+  <data name="ModalKeepGameBuildFreeSpaceFormat" xml:space="preserve">
+    <value>Freier Platz auf dem Laufwerk: {0}</value>
+  </data>
+  <data name="ModalKeepGameBuildPopupNote" xml:space="preserve">
+    <value>Wenn ein neuerer Build verfügbar ist, zeigt das Spiel bei jedem Start mit Internetverbindung sein Update-Fenster. Wähle dort Cancel, denn GET schließt das Spiel.</value>
+  </data>
+  <data name="ModalKeepGameBuildConfirm" xml:space="preserve">
+    <value>Build behalten</value>
+  </data>
+  <data name="KeepGameBuildAlreadyKeptFormat" xml:space="preserve">
+    <value>Diese Instanz behält schon KSA {0}.</value>
+  </data>
+  <data name="KeepGameBuildNoGame" xml:space="preserve">
+    <value>Borea kann den Spiel-Build im Spielordner nicht lesen. Lege zuerst den Spielordner in den Einstellungen fest.</value>
+  </data>
+  <data name="KeepGameBuildWineWrapper" xml:space="preserve">
+    <value>Das Spiel liegt in einer Wine-Wrapper-App, die keine Kopie außerhalb des Wrappers starten kann. Borea behält diesen Build nicht.</value>
+  </data>
+  <data name="KeepGameBuildFolderTakenFormat" xml:space="preserve">
+    <value>{0} enthält schon einen anderen Build oder keinen. Borea ändert diesen Ordner nicht.</value>
+  </data>
+  <data name="KeepGameBuildLibraryInsideGame" xml:space="preserve">
+    <value>Der Bibliotheksordner liegt im Spielordner, also würde eine Kopie des Spiels die Bibliothek enthalten. Verschiebe zuerst den Bibliotheksordner.</value>
+  </data>
+  <data name="KeepGameBuildNotEnoughSpaceFormat" xml:space="preserve">
+    <value>Die Kopie braucht {0}, und auf dem Laufwerk sind {1} frei.</value>
+  </data>
+  <data name="KeepGameBuildBuildChangedFormat" xml:space="preserve">
+    <value>Der Spielordner hat vor dem Kopieren zu KSA {0} gewechselt, also hat Borea nichts kopiert. Um KSA {0} zu behalten, wähle noch einmal „Diesen Spiel-Build behalten“.</value>
+  </data>
   <data name="ModalInstanceExplanation" xml:space="preserve">
     <value>Instanzen sind Pakete aus Mods und Spielinhalten, die Borea zusätzlich zu deiner vorhandenen Spielinstallation verwaltet. Du kannst mehrere Instanzen erstellen und für verschiedene Spielerlebnisse jeweils eine davon aktivieren.</value>
   </data>
@@ -4529,6 +4580,15 @@
   </data>
   <data name="InstanceSaveSettingsPreset" xml:space="preserve">
     <value>Einstellungen als Vorlage speichern</value>
+  </data>
+  <data name="InstanceKeepGameBuild" xml:space="preserve">
+    <value>Diesen Spiel-Build behalten</value>
+  </data>
+  <data name="InstanceGameBuildFormat" xml:space="preserve">
+    <value>KSA {0}</value>
+  </data>
+  <data name="InstanceGameBuildToolTipFormat" xml:space="preserve">
+    <value>Diese Instanz behält KSA {0} und startet immer mit dieser Kopie.</value>
   </data>
   <data name="SettingsPresetsTitle" xml:space="preserve">
     <value>Vorlagen für Spieleinstellungen</value>

@@ -84,6 +84,23 @@ public sealed class InstanceGameBuildTests
         Assert.Equal(["KeptContent"], (await harness.Services.ModState.GetEntriesAsync(kept.InstanceId)).Select(entry => entry.ModId));
     }
 
+    [Fact]
+    public async Task InstancePage_OfAKeptBuild_NotesTheUpdatePopup()
+    {
+        using var harness = await CreateWithKeptBuildAsync();
+        var kept = await CreateInstanceAsync(harness, "Kept", KeptBuild);
+        var current = await CreateInstanceAsync(harness, "Current", null);
+        await harness.ViewModel.LoadAsync();
+
+        await harness.ViewModel.OpenInstanceAsync(harness.ViewModel.Instances.Single(item => item.InstanceId == kept.InstanceId));
+
+        Assert.Contains(harness.Localization.ModalKeepGameBuildPopupNote, harness.ViewModel.SelectedInstance!.GameBuildToolTip);
+
+        await harness.ViewModel.OpenInstanceAsync(harness.ViewModel.Instances.Single(item => item.InstanceId == current.InstanceId));
+
+        Assert.Null(harness.ViewModel.SelectedInstance!.GameBuildToolTip);
+    }
+
     private static async Task<Instance> CreateInstanceAsync(ViewModelHarness harness, string name, GameVersion? build)
     {
         var instance = (await harness.Services.Instances.CreateAsync(name, InstanceSource.Custom.Value)).Instance;
