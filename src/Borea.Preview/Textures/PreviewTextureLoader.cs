@@ -21,6 +21,14 @@ public sealed class PreviewTextureLoader
     /// <summary>The largest width or height of a level or image that the loader decodes.</summary>
     public const int MaxImageSide = 8192;
 
+    /// <summary>
+    /// The largest pixel count of a level or image that the loader decodes, which is 64 MB of RGBA. The platform
+    /// decoder can decode a PNG at its full size before it scales it, and a KTX2 level without a smaller mip expands
+    /// to RGBA before the box downscale, so this count limits the memory of each decode while it runs and not only the
+    /// size of its result. With <see cref="MaxParallelLoads"/> decodes at a time, the loads use at most 256 MB.
+    /// </summary>
+    public const long MaxImagePixels = 4096L * 4096;
+
     public const long DefaultCacheBytes = 64L * 1024 * 1024;
 
     public const int MaxParallelLoads = 4;
@@ -66,7 +74,7 @@ public sealed class PreviewTextureLoader
         {
             key = source.GetCacheKey(asset) + "#" + target.ToString(CultureInfo.InvariantCulture);
         }
-        catch (IOException exception)
+        catch (Exception exception) when (IsAssetFailure(exception))
         {
             return Failed(asset, exception.Message);
         }
@@ -126,11 +134,17 @@ public sealed class PreviewTextureLoader
 
             return Unsupported(asset, "The file is not KTX2, PNG or JPEG.");
         }
-        catch (Exception exception) when (exception is IOException or InvalidDataException or FormatException)
+        catch (Exception exception) when (IsAssetFailure(exception))
         {
             return Failed(asset, exception.Message);
         }
     }
+
+    // Any exception of one asset, also an OutOfMemoryException of a large allocation or an error of a block decoder
+    // on author data, becomes a notice, so that one bad texture keeps its flat color and the rest of the scene still
+    // loads. Only a cancellation and a disposed source reach the caller.
+    internal static bool IsAssetFailure(Exception exception) =>
+        exception is not (OperationCanceledException or ObjectDisposedException);
 
     private static ReadOnlySpan<byte> Ktx2Magic => [0xAB, 0x4B, 0x54, 0x58, 0x20, 0x32, 0x30, 0xBB, 0x0D, 0x0A, 0x1A, 0x0A];
 
@@ -149,7 +163,7 @@ public sealed class PreviewTextureLoader
         var level = Ktx2Reader.ChooseLevel(ktx, target);
         var width = ktx.LevelWidth(level);
         var height = ktx.LevelHeight(level);
-        if (width > MaxImageSide || height > MaxImageSide)
+        if (IsTooLarge(width, height))
         {
             return TooLarge(asset, width, height);
         }
@@ -183,7 +197,7 @@ public sealed class PreviewTextureLoader
             return Failed(asset, "The image header could not be read.");
         }
 
-        if (width > MaxImageSide || height > MaxImageSide)
+        if (IsTooLarge(width, height))
         {
             return TooLarge(asset, width, height);
         }
@@ -252,8 +266,11 @@ public sealed class PreviewTextureLoader
     private static (PreviewImage?, PreviewNotice?) FromKtx2Status(PreviewAssetRef asset, Ktx2Status status, string problem) =>
         status == Ktx2Status.Unsupported ? Unsupported(asset, problem) : Failed(asset, problem);
 
+    private static bool IsTooLarge(int width, int height) =>
+        width > MaxImageSide || height > MaxImageSide || (long)width * height > MaxImagePixels;
+
     private static (PreviewImage?, PreviewNotice?) TooLarge(PreviewAssetRef asset, int width, int height) =>
-        Unsupported(asset, $"The size {width}x{height} is larger than {MaxImageSide} pixels.");
+        Unsupported(asset, $"The size {width}x{height} is larger than {MaxImageSide} pixels per side or {MaxImagePixels} pixels in total.");
 
     private static (PreviewImage?, PreviewNotice?) Unsupported(PreviewAssetRef asset, string detail) =>
         (null, new PreviewNotice(PreviewNoticeKind.UnsupportedTexture, Subject(asset), detail));

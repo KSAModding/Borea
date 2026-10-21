@@ -40,10 +40,12 @@ public sealed class PreviewTextureLoaderTests
         Assert.Equal((16, 8), (image!.Width, image.Height));
     }
 
-    [Fact]
-    public async Task AnImageThatReportsAHugeSize_IsRefusedBeforeItDecodes()
+    [Theory]
+    [InlineData(20000, 20000)]
+    [InlineData(8192, 8192)]
+    public async Task AnImageThatReportsAHugeSize_IsRefusedBeforeItDecodes(int width, int height)
     {
-        var decoder = new FakeDecoder(20000, 20000);
+        var decoder = new FakeDecoder(width, height);
         var source = new FakeSource { Files = { [Texture.Path] = [0xFF, 0xD8, 0xFF, 0xE0] } };
 
         var (image, notice) = await new PreviewTextureLoader(decoder).LoadAsync(source, Texture, 512, CancellationToken.None);
@@ -73,6 +75,18 @@ public sealed class PreviewTextureLoaderTests
 
         Assert.Null(image);
         Assert.Equal(PreviewNoticeKind.AssetFailed, notice!.Kind);
+    }
+
+    [Fact]
+    public async Task ADecoderThatThrowsAnyOtherException_GivesAssetFailed()
+    {
+        var decoder = new FakeDecoder(64, 64) { DecodeException = new IndexOutOfRangeException("A bug in a decoder.") };
+        var source = new FakeSource { Files = { [Texture.Path] = [0xFF, 0xD8, 0xFF, 0xE0] } };
+
+        var (image, notice) = await new PreviewTextureLoader(decoder).LoadAsync(source, Texture, 512, CancellationToken.None);
+
+        Assert.Null(image);
+        Assert.Equal(new PreviewNotice(PreviewNoticeKind.AssetFailed, "Core/Textures/A.ktx2", "A bug in a decoder."), notice);
     }
 
     [Fact]
@@ -156,6 +170,8 @@ public sealed class PreviewTextureLoaderTests
     {
         public Action? OnReadSize { get; init; }
 
+        public Exception? DecodeException { get; init; }
+
         public int DecodeCount { get; private set; }
 
         public int DecodedWidth { get; private set; }
@@ -171,6 +187,11 @@ public sealed class PreviewTextureLoaderTests
         {
             Assert.Equal(0, stream.Position);
             DecodeCount++;
+            if (DecodeException is not null)
+            {
+                throw DecodeException;
+            }
+
             DecodedWidth = decodeWidth;
             var decodeHeight = Math.Max(1, height * decodeWidth / width);
             return new PreviewImage(decodeWidth, decodeHeight, new byte[decodeWidth * decodeHeight * 4]);
