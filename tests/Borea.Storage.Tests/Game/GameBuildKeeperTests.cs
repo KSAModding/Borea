@@ -28,13 +28,12 @@ public sealed class GameBuildKeeperTests : IDisposable
     {
         _paths = new GamePathProvider(SettingsGame, new Dictionary<string, string> { ["StarMap"] = LoaderDirectory }, Path.Combine(_tempRoot, "Borea"), libraryFolder: Path.Combine(_tempRoot, "Library"));
         _instances = new FileInstanceRepository(_paths);
-        Directory.CreateDirectory(Path.Combine(SettingsGame, "Content", "Core"));
-        File.Copy(Path.Combine(AppContext.BaseDirectory, RealBuildFixture), Path.Combine(SettingsGame, "KSA.dll"));
-        File.WriteAllText(Path.Combine(SettingsGame, "Content", "Core", "Astronomicals.xml"), "<Astronomicals />");
-        File.WriteAllText(Path.Combine(SettingsGame, "KSA.exe"), "app host");
+        WriteGame(SettingsGame);
     }
 
     private string SettingsGame => Path.Combine(_tempRoot, "Game");
+
+    private string PlayerFolder => Path.Combine(_tempRoot, "Old");
 
     private string LoaderDirectory => Path.Combine(_tempRoot, "StarMap");
 
@@ -142,7 +141,8 @@ public sealed class GameBuildKeeperTests : IDisposable
             () => refusal == GameBuildKeepRefusal.GameRunning && !startedByBorea,
             id => startedByBorea && id == running.InstanceId,
             wine,
-            new UnknownFreeSpace());
+            new UnknownFreeSpace(),
+            OsPlatform.Windows);
 
         var result = await keeper.KeepAsync(instance.InstanceId, FixtureVersion, null, CancellationToken.None);
 
@@ -332,7 +332,70 @@ public sealed class GameBuildKeeperTests : IDisposable
         Assert.Equal(GameBuildKeepRefusal.None, (await keep).Refusal);
     }
 
-    private GameBuildKeeper Keeper(GamePathProvider? paths = null, bool gameRunning = false, IModRepository? listings = null) => new(paths ?? _paths, _instances, listings ?? Loaders(), () => gameRunning, _ => false, new FakeWineProbe(new WineInstall(Path.GetFullPath(Path.Combine(_tempRoot, "Elsewhere")), WineFixtures.Drives(new Dictionary<char, string>()), null)), new UnknownFreeSpace());
+    // Linux cannot start the Windows build that WriteGame writes, and macOS starts no copy
+    [Theory]
+    [InlineData(OsPlatform.Windows, "KSA.exe")]
+    [InlineData(OsPlatform.Windows, "KSA.dll")]
+    [InlineData(OsPlatform.Linux, null)]
+    [InlineData(OsPlatform.MacOs, null)]
+    public async Task KeepFolderAsync_FolderWithoutTheHostExecutableOrVersion_IsRefused(OsPlatform host, string? brokenFile)
+    {
+        WriteGame(PlayerFolder);
+        if (brokenFile == "KSA.exe")
+            File.Delete(Path.Combine(PlayerFolder, "KSA.exe"));
+        else if (brokenFile == "KSA.dll")
+            File.WriteAllText(Path.Combine(PlayerFolder, "KSA.dll"), "not an assembly");
+        var keeper = Keeper(host: host);
+
+        var check = keeper.CheckFolder(PlayerFolder);
+        var result = await keeper.KeepFolderAsync(PlayerFolder, FixtureVersion, null, CancellationToken.None);
+
+        Assert.Equal(GameBuildKeepRefusal.NotAGame, check.Refusal);
+        Assert.Equal(GameBuildKeepRefusal.NotAGame, result.Refusal);
+        Assert.False(Directory.Exists(GameBuilds));
+    }
+
+    [Fact]
+    public async Task KeepFolderAsync_BuildAlreadyKept_DoesNotCopyAgain()
+    {
+        WriteGame(PlayerFolder);
+        var keeper = Keeper();
+        await keeper.KeepFolderAsync(PlayerFolder, FixtureVersion, null, CancellationToken.None);
+        File.WriteAllText(Path.Combine(PlayerFolder, "KSA.exe"), "patched app host");
+
+        var check = keeper.CheckFolder(PlayerFolder);
+        var result = await keeper.KeepFolderAsync(PlayerFolder, FixtureVersion, null, CancellationToken.None);
+
+        var kept = Path.Combine(GameBuilds, "2026.8.3.5117");
+        Assert.Equal(GameBuildKeepRefusal.None, result.Refusal);
+        Assert.Equal(0, check.BytesToCopy);
+        Assert.Equal("app host", File.ReadAllText(Path.Combine(kept, "KSA.exe")));
+        Assert.Equal([kept], Directory.GetFileSystemEntries(GameBuilds));
+        Assert.Equal([FixtureVersion], keeper.ListKept());
+    }
+
+    [Fact]
+    public void CheckFolder_LinuxBuildOnLinux_CanBeKept()
+    {
+        WriteGame(PlayerFolder);
+        File.Move(Path.Combine(PlayerFolder, "KSA.exe"), Path.Combine(PlayerFolder, "KSA"));
+
+        var check = Keeper(host: OsPlatform.Linux).CheckFolder(PlayerFolder);
+
+        Assert.Equal(GameBuildKeepRefusal.None, check.Refusal);
+        Assert.Equal(FixtureVersion, check.Version);
+        Assert.True(check.BytesToCopy > 0);
+    }
+
+    private static void WriteGame(string folder)
+    {
+        Directory.CreateDirectory(Path.Combine(folder, "Content", "Core"));
+        File.Copy(Path.Combine(AppContext.BaseDirectory, RealBuildFixture), Path.Combine(folder, "KSA.dll"));
+        File.WriteAllText(Path.Combine(folder, "Content", "Core", "Astronomicals.xml"), "<Astronomicals />");
+        File.WriteAllText(Path.Combine(folder, "KSA.exe"), "app host");
+    }
+
+    private GameBuildKeeper Keeper(GamePathProvider? paths = null, bool gameRunning = false, IModRepository? listings = null, OsPlatform host = OsPlatform.Windows) => new(paths ?? _paths, _instances, listings ?? Loaders(), () => gameRunning, _ => false, new FakeWineProbe(new WineInstall(Path.GetFullPath(Path.Combine(_tempRoot, "Elsewhere")), WineFixtures.Drives(new Dictionary<char, string>()), null)), new UnknownFreeSpace(), host);
 
     private static ModPackInstallerTests.FakeModRepository Loaders() => new([], [LoaderLauncherTests.LoaderListing(provides: LoaderLauncherTests.StarMapProvides())]);
 

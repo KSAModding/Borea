@@ -4,8 +4,8 @@ using Borea.Core.Settings;
 namespace Borea.Core.Game;
 
 /// <summary>
-/// Keeps the build in the game folder of the settings for an instance, as a copy in the Game Builds folder of the
-/// library that the instance then always starts on.
+/// Keeps the build in the game folder of the settings for an instance, or the build in a folder the player chose,
+/// as a copy in the Game Builds folder of the library that instances can start on.
 /// </summary>
 public interface IGameBuildKeeper
 {
@@ -33,6 +33,19 @@ public interface IGameBuildKeeper
     /// Before that, a loader whose game path names the folder gets the game folder of the settings.
     /// </summary>
     Task<GameBuildChangeRefusal> RemoveAsync(GameVersion build, CancellationToken cancellationToken);
+
+    /// <summary>What keeping the build in <paramref name="folder"/> would do, or why it is refused. It only reads.</summary>
+    GameBuildKeepCheck CheckFolder(string folder);
+
+    /// <summary>
+    /// Copies the build in <paramref name="folder"/> once, for new instances to pick, and sets the build of no
+    /// instance. Refusals, cancels and failures work as in <see cref="KeepAsync"/>.
+    /// </summary>
+    /// <param name="expected">The build the player confirmed. Another build in the folder is refused as <see cref="GameBuildKeepRefusal.BuildChanged"/>.</param>
+    Task<GameBuildKeepCheck> KeepFolderAsync(string folder, GameVersion expected, IProgress<LibraryMoveProgress>? progress, CancellationToken cancellationToken);
+
+    /// <summary>The kept builds whose KSA.dll reads the build their folder names, newest first.</summary>
+    IReadOnlyList<GameVersion> ListKept();
 }
 
 /// <param name="InstanceNames">The names of the instances that keep this build, empty when no instance keeps it.</param>
@@ -58,9 +71,9 @@ public enum GameBuildChangeRefusal
     Busy = 5,
 }
 
-/// <param name="Version">The build in the game folder of the settings, or the build the instance already keeps.</param>
+/// <param name="Version">The build in the game folder of the settings or in the folder the player chose, or the build the instance already keeps.</param>
 /// <param name="Folder">The folder of that build in the Game Builds folder.</param>
-/// <param name="BytesToCopy">0 when the folder already holds this build, so the instance uses that copy.</param>
+/// <param name="BytesToCopy">0 when the folder already holds this build, so nothing is copied.</param>
 /// <param name="FreeBytes">The free space where the copy goes, or null when it could not be read or nothing is copied.</param>
 public sealed record GameBuildKeepCheck(GameBuildKeepRefusal Refusal, GameVersion? Version, string? Folder, long BytesToCopy, long? FreeBytes);
 
@@ -87,6 +100,12 @@ public enum GameBuildKeepRefusal
 
     NotEnoughSpace = 7,
 
-    /// <summary>The game folder holds another build than the one the player confirmed, for example after a client update.</summary>
+    /// <summary>The source folder holds another build than the one the player confirmed, for example after a client update.</summary>
     BuildChanged = 8,
+
+    /// <summary>
+    /// The folder the player chose holds no executable that this system starts, KSA.exe on Windows and the app host
+    /// KSA on Linux, or its KSA.dll gives no version. On macOS every folder is refused.
+    /// </summary>
+    NotAGame = 9,
 }
