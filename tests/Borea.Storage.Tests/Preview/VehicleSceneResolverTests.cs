@@ -110,6 +110,29 @@ public sealed class VehicleSceneResolverTests : IDisposable
         Assert.Contains(scene.Notices, notice => notice is { Kind: PreviewNoticeKind.Cycle, Subject: "Loop" });
     }
 
+    [Fact]
+    public void ASubPartTransformThatIsNotFinite_IsLeftOutWithANotice_AndTheOtherSubPartIsDrawn()
+    {
+        const string assets = """
+            <SubPart Id="Bolt"><PartModel Id="m"><Mesh Id="BoltMesh" /></PartModel></SubPart>
+            <SubPart Id="Broken"><PartModel Id="m"><Mesh Id="BoltMesh" /></PartModel></SubPart>
+            <Part Id="Body">
+              <SubPart Id="bad" InstanceOf="Broken"><Transform><Position X="NaN" /></Transform></SubPart>
+              <SubPart Id="good" InstanceOf="Bolt"><Transform><Position X="1" /></Transform></SubPart>
+            </Part>
+            """;
+        var (catalog, meshes) = Build(assets, "BoltMesh");
+
+        var scene = VehicleSceneResolver.Resolve(
+            VehicleXmlReader.Read(VehicleXmlReaderTests.Vehicle("""<RootPartRef InstanceOf="Body" LocalInstanceId="1" />""")).Parts, catalog, meshes, null);
+
+        var draw = Assert.Single(scene.Draws);
+        Assert.True(KsaTransform.IsFinite(draw.Transform));
+        AssertNear(new Vector3(1, 0, 0), Origin(draw));
+        Assert.Empty(scene.Placeholders);
+        Assert.Single(scene.Notices, notice => notice is { Kind: PreviewNoticeKind.AssetFailed, Subject: "Broken" });
+    }
+
     private (PartCatalog Catalog, MeshIndex Meshes) Build(string assets, params string[] meshNames)
     {
         var core = _mods.Mod("Core", ["Parts.xml"], ("Parts.xml", CatalogTestMods.Assets(MeshAtlas + assets)));

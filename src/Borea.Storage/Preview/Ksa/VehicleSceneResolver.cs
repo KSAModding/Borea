@@ -15,7 +15,8 @@ namespace Borea.Storage.Preview.Ksa;
 /// subpart does the same with the subpart instances of its own template. A subpart instance without a Transform has
 /// the identity matrix. Each PartModel, PartModelDynamic and PartModelGlass of a template gives one draw with the
 /// matrix of its part. The game does not draw an Internal model outside the IVA view or a ShadowProxy model at all
-/// (PartModel.AddInstance), so they are only counted.
+/// (PartModel.AddInstance), so they are only counted. A subpart whose composed matrix is not finite is left out with
+/// an AssetFailed notice, so one bad Transform in a mod does not make the bounds of the whole scene NaN.
 /// </para>
 /// <para>
 /// The game has no guard against a template that contains itself, so the preview stops a branch that repeats an Id
@@ -120,6 +121,13 @@ internal static class VehicleSceneResolver
                     return;
 
                 var subMatrix = (instance.Transform ?? KsaTransform.Identity).ToMatrix() * matrix;
+                if (!KsaTransform.IsFinite(subMatrix))
+                {
+                    // A placeholder also needs a finite matrix, so only this branch is left out.
+                    AddNotice(PreviewNoticeKind.AssetFailed, instance.InstanceOf, "A subpart Transform is not a finite number, so the subpart is left out.");
+                    continue;
+                }
+
                 if (!catalog.TryGetTemplate(instance.InstanceOf, out var subTemplate))
                 {
                     AddPlaceholder(subMatrix, null, instance.InstanceOf, PlaceholderReason.UnknownSubPart);

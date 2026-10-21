@@ -144,27 +144,13 @@ internal static class VehicleXmlReader
         foreach (var part in parts)
         {
             var matrix = (part.Transform ?? KsaTransform.Identity).ToMatrix();
-            if (IsFinite(matrix))
+            if (KsaTransform.IsFinite(matrix))
                 result.Add(new VehiclePartRef(part.InstanceOf, part.LocalInstanceId, matrix));
             else
                 problems.Add(new PreviewNotice(PreviewNoticeKind.AssetFailed, FileName, $"Part {part.LocalInstanceId} ({part.InstanceOf}) has a Transform that is not a finite number, so it is left out."));
         }
 
         return result;
-    }
-
-    private static bool IsFinite(Matrix4x4 matrix)
-    {
-        for (var row = 0; row < 4; row++)
-        {
-            for (var column = 0; column < 4; column++)
-            {
-                if (!float.IsFinite(matrix[row, column]))
-                    return false;
-            }
-        }
-
-        return true;
     }
 
     private sealed class PartBuilder(string instanceOf, uint localInstanceId)
