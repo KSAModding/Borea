@@ -1,7 +1,9 @@
+using Borea.Core.Dependencies;
 using Borea.Core.Game;
 using Borea.Core.Instances;
 using Borea.Core.Mods;
 using Borea.Core.Planning;
+using Borea.Core.State;
 using Borea.Core.Tests.ModPacks;
 using Borea.Core.Tests.Mods;
 using Borea.Core.UserContent;
@@ -75,6 +77,48 @@ public sealed class RecordedContentPlannerTests
     }
 
     [Fact]
+    public async Task Plan_RunThatRemovesTheMod_WarnsAndNamesTheModWithoutAVersion()
+    {
+        var rover = Record(ContentType.Vehicle, "rover", "Rover", Required("parts"));
+        var draft = new Instance("Test", InstanceSource.Custom.Value);
+        var request = new InstallPlanningRequest(draft, [], new PackMemberRepository([], [])) { Current = _instance };
+
+        var plan = await new RecordedContentPlanner(new FixedPlanner(), new Records([rover])).PlanAsync(request);
+
+        var warning = Assert.Single(plan.Warnings);
+        Assert.Equal(PlanningMessageKind.BreaksVehicle, warning.Kind);
+        Assert.Equal("parts", warning.ModId);
+        Assert.Null(warning.Version);
+        Assert.Equal("Removing parts does not meet the Required dependency on mod 'parts' of the vehicle Rover, so the game refuses that vehicle.", warning.Message);
+    }
+
+    [Fact]
+    public async Task Plan_ItemTheSameRunReplaces_LeavesItsRecordOut()
+    {
+        var save = Record(ContentType.Save, "career", "Career", Required("parts", "1.0.0", "1.9.0"));
+        var request = Request("parts", "2.0.0") with { ReplacedContent = new HashSet<string>(["career"], ModIds.Comparer) };
+
+        var plan = await Planner([save]).PlanAsync(request);
+
+        Assert.Empty(plan.Warnings);
+    }
+
+    [Fact]
+    public async Task Plan_UpdateWhileTheOtherAlternativeIsDisabled_WarnsAboutTheSave()
+    {
+        _instance.AddMod(TestFixtures.SampleInstalledMod("other-parts", "1.0.0"));
+        var dependency = ModDependency.OfAlternatives(ModDependencyKind.Required, [new ModDependencyAlternative("parts", maxVersion: ModVersion.Parse("1.9.0")), new ModDependencyAlternative("other-parts")]);
+        var save = Record(ContentType.Save, "career", "Career", dependency);
+        var manifest = new Manifest([new ModManifestEntry("parts", true), new ModManifestEntry("other-parts", false)]);
+
+        var plan = await new RecordedContentPlanner(new FixedPlanner(), new Records([save]), manifest).PlanAsync(Request("parts", "2.0.0"));
+        var withoutManifest = await Planner([save]).PlanAsync(Request("parts", "2.0.0"));
+
+        Assert.Equal(PlanningMessageKind.BreaksSave, Assert.Single(plan.Warnings).Kind);
+        Assert.Empty(withoutManifest.Warnings);
+    }
+
+    [Fact]
     public async Task Plan_RecordFileThatCannotBeRead_AddsNoWarningAndKeepsThePlan()
     {
         var plan = await new RecordedContentPlanner(new FixedPlanner(Update("parts", "2.0.0")), new Records(null)).PlanAsync(Request("parts", "2.0.0"));
@@ -102,6 +146,18 @@ public sealed class RecordedContentPlannerTests
                 : [operation];
             return Task.FromResult(new InstallPlan(request.Instance.InstanceId, InstallPlanningState.Capture(request.Instance), [], operations, [], [], [], []));
         }
+    }
+
+    private sealed class Manifest(IReadOnlyList<ModManifestEntry> entries) : IModStateRepository
+    {
+        public Task<IReadOnlyList<ModManifestEntry>> GetEntriesAsync(Guid instanceId, CancellationToken cancellationToken = default) => Task.FromResult(entries);
+        public Task<bool> IsActiveAsync(Guid instanceId, string modId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<IReadOnlyList<string>> GetAllActiveModIdsAsync(Guid instanceId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<ModEntryAddResult> AddEntryAsync(Guid instanceId, string modId, bool enabled, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<bool> SetActiveAsync(Guid instanceId, string modId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<bool> SetInactiveAsync(Guid instanceId, string modId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<bool> ReorderAsync(Guid instanceId, IReadOnlyList<string> modIds, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<bool> PutGameContentFirstAsync(Guid instanceId, string gameDirectory, CancellationToken cancellationToken = default) => throw new NotSupportedException();
     }
 
     // A null list stands for a record file that cannot be read.

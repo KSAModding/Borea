@@ -58,7 +58,8 @@ public sealed class ModDependencyResolver
     /// Checks if a mod can be uninstalled from an instance, returning the list of dependent mods that would be affected.
     /// </summary>
     /// <param name="content">The recorded vehicles and saves of the instance, which the check names when they need the mod.</param>
-    public UninstallCheck CheckUninstall(Instance instance, string modId, ModVersion version, bool isActive, IReadOnlyList<InstalledContentRecord>? content = null)
+    /// <param name="inactive">The mods that the manifest of the instance disables, which meet no need of <paramref name="content"/>.</param>
+    public UninstallCheck CheckUninstall(Instance instance, string modId, ModVersion version, bool isActive, IReadOnlyList<InstalledContentRecord>? content = null, IEnumerable<string>? inactive = null)
     {
         if (instance is null) throw new ArgumentNullException(nameof(instance));
         if (string.IsNullOrWhiteSpace(modId)) throw new ArgumentException("Mod ID cannot be null or whitespace.", nameof(modId));
@@ -74,7 +75,7 @@ public sealed class ModDependencyResolver
             .Where(mod => mod.Dependencies.Any(dependency => !dependency.Optional && ModIds.Equals(dependency.ModId, modId)))
             .Select(mod => mod.ModId));
 
-        return new UninstallCheck(instance.InstanceId, modId, version, dependents, isActive, RecordedContentNeeds.Needing(content ?? [], instance, modId));
+        return new UninstallCheck(instance.InstanceId, modId, version, dependents, isActive, RecordedContentNeeds.Needing(content ?? [], instance, modId, inactive));
     }
 
     private static DependencyEvaluation EvaluateDeclared(Instance instance, ModDependency dependency)

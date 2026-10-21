@@ -16,8 +16,11 @@ public sealed record BrokenContent(InstalledContentRecord Record, ModDependency 
 /// </summary>
 public static class RecordedContentNeeds
 {
-    /// <summary>The mods of an instance, by id. A foreign mod has a null version, because Borea cannot read it.</summary>
-    public static IReadOnlyDictionary<string, ModVersion?> InstanceView(Instance instance)
+    /// <summary>
+    /// The mods of an instance that the game loads, by id. A foreign mod has a null version, because Borea cannot read it.
+    /// </summary>
+    /// <param name="inactive">The mods that the manifest of the instance disables. The game loads none of them (<c>ModLibrary.PrepareAll</c>), so they count as missing.</param>
+    public static IReadOnlyDictionary<string, ModVersion?> InstanceView(Instance instance, IEnumerable<string>? inactive = null)
     {
         ArgumentNullException.ThrowIfNull(instance);
 
@@ -26,6 +29,8 @@ public static class RecordedContentNeeds
             view[foreign.ModId] = null;
         foreach (var mod in instance.Mods)
             view[mod.ModId] = mod.Version;
+        foreach (var modId in inactive ?? [])
+            view.Remove(modId);
         return view;
     }
 
@@ -65,9 +70,9 @@ public static class RecordedContentNeeds
     }
 
     /// <summary>The records that the game no longer loads in full when <paramref name="modId"/> is removed or disabled, each one once.</summary>
-    public static IReadOnlyList<InstalledContentRecord> Needing(IEnumerable<InstalledContentRecord> records, Instance instance, string modId)
+    public static IReadOnlyList<InstalledContentRecord> Needing(IEnumerable<InstalledContentRecord> records, Instance instance, string modId, IEnumerable<string>? inactive = null)
     {
-        var view = InstanceView(instance);
+        var view = InstanceView(instance, inactive);
         return Broken(records, view, Without(view, modId)).Select(broken => broken.Record).Distinct().ToList();
     }
 

@@ -123,7 +123,10 @@ public sealed class ModPackInstaller : IModPackInstaller
                 }
 
                 plan = await _planner.PlanAsync(
-                    new InstallPlanningRequest(instance, releases, request.Repository, request.GameVersion, request.TargetPlatform, request.Recommended, request.Alternatives),
+                    new InstallPlanningRequest(instance, releases, request.Repository, request.GameVersion, request.TargetPlatform, request.Recommended, request.Alternatives)
+                    {
+                        ReplacedContent = ModPackUserContent.Replaced(content),
+                    },
                     planning.Token).ConfigureAwait(false);
                 content = await _content.WithModsAsync(instance, plan, request.Enable, content, warnings, planning.Token).ConfigureAwait(false);
             }

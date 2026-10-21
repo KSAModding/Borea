@@ -48,7 +48,8 @@ public enum PlanningMessageKind
     MissingForSave,
 
     /// <summary>
-    /// The plan takes a mod out of the range that a recorded vehicle needs. <see cref="PlanningMessage.Value"/> is the folder of the vehicle.
+    /// The plan takes a mod out of the range that a recorded vehicle needs, or removes it. <see cref="PlanningMessage.Value"/> is the folder of the vehicle,
+    /// and <see cref="PlanningMessage.Version"/> is null for a removal.
     /// A warning only, because the game refuses the vehicle and changes nothing else.
     /// </summary>
     BreaksVehicle,
@@ -153,10 +154,13 @@ public sealed record PlanningMessage(string ModId, PlanningMessageKind Kind)
         PlanningMessageKind.UnlistedPin => "The exact pinned release is not listed and cannot be installed by Borea.",
         PlanningMessageKind.MissingForVehicle => $"{Dependency} cannot be installed or enabled, so the game refuses the vehicle file.",
         PlanningMessageKind.MissingForSave => $"{Dependency} cannot be installed or enabled, so the game leaves out every vehicle that needs it, and saving again loses those vehicles.",
-        PlanningMessageKind.BreaksVehicle => $"{ModId} {Version} does not meet the {Dependency} of the vehicle {Value}, so the game refuses that vehicle.",
-        PlanningMessageKind.BreaksSave => $"{ModId} {Version} does not meet the {Dependency} of the save {Value}, so the game leaves out every vehicle of that save that needs it, and saving again loses those vehicles.",
+        PlanningMessageKind.BreaksVehicle => $"{Change} does not meet the {Dependency} of the vehicle {Value}, so the game refuses that vehicle.",
+        PlanningMessageKind.BreaksSave => $"{Change} does not meet the {Dependency} of the save {Value}, so the game leaves out every vehicle of that save that needs it, and saving again loses those vehicles.",
         _ => $"{Dependency}",
     };
+
+    // A plan that removes the mod, as a pack update can, has no version for it.
+    private string Change => Version is { } version ? $"{ModId} {version}" : $"Removing {ModId}";
 
     /// <summary>
     /// Whether <paramref name="other"/> says the same. The dependency entry counts by its values, because a later plan

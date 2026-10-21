@@ -46,6 +46,27 @@ public sealed class RecordedContentNeedsTests
     }
 
     [Fact]
+    public void CheckUninstall_AnyOfWhoseOtherAlternativeIsDisabled_NamesTheSave()
+    {
+        var instance = InstanceWith(("parts", "1.0.0"), ("other-parts", "1.0.0"));
+        var dependency = ModDependency.OfAlternatives(ModDependencyKind.Required, [new ModDependencyAlternative("parts"), new ModDependencyAlternative("other-parts")]);
+        var save = Record(ContentType.Save, "career", "Career", dependency);
+
+        var check = _resolver.CheckUninstall(instance, "parts", ModVersion.Parse("1.0.0"), isActive: true, [save], inactive: ["other-parts"]);
+
+        Assert.Same(save, Assert.Single(check.DependentContent));
+    }
+
+    [Fact]
+    public void Needing_ModThatIsDisabledAlready_NamesNothing()
+    {
+        var instance = InstanceWith(("parts", "1.0.0"));
+        var rover = Record(ContentType.Vehicle, "rover", "Rover", Required("parts"));
+
+        Assert.Empty(RecordedContentNeeds.Needing([rover], instance, "parts", inactive: ["parts"]));
+    }
+
+    [Fact]
     public void CheckUninstall_LastAlternativeOfAnyOf_NamesTheSave()
     {
         var instance = InstanceWith(("parts", "1.0.0"));

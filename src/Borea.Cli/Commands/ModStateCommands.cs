@@ -68,8 +68,8 @@ internal static class ModStateCommands
         {
             var id = parseResult.GetRequiredValue(modId);
             var target = await InstanceLookup.ResolveTargetAsync(cli.Instances, parseResult.GetValue(instance)).ConfigureAwait(false);
-            var content = await cli.InstalledContent.ListAsync(target.InstanceId, ct).ConfigureAwait(false);
-            UserContentCommands.WriteNeeding(error, id, RecordedContentNeeds.Needing(content, target, id));
+            var (content, inactive) = await UserContentCommands.RecordedStateAsync(cli, target, ct).ConfigureAwait(false);
+            UserContentCommands.WriteNeeding(error, id, RecordedContentNeeds.Needing(content, target, id, inactive));
             await cli.ModState.SetInactiveAsync(target.InstanceId, id, ct).ConfigureAwait(false);
 
             output.WriteLine($"Disabled {id} in '{target.Name}'.");

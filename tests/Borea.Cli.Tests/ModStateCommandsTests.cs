@@ -181,6 +181,20 @@ public sealed class ModStateCommandsTests : IDisposable
     }
 
     [Fact]
+    public async Task Disable_RecordFileThatCannotBeRead_StillDisables()
+    {
+        var instanceId = await CreateAsync("Alpha");
+        CreateModFolder(instanceId, "SomeMod");
+        await _host.RunAsync("enable", "SomeMod", "--instance", "Alpha");
+        await File.WriteAllTextAsync(_host.Paths.GetInstanceInstalledContentPath(instanceId), "not = [toml");
+
+        var run = await _host.RunAsync("disable", "SomeMod", "--instance", "Alpha");
+
+        Assert.Equal(0, run.ExitCode);
+        Assert.False(await ModState.IsActiveAsync(instanceId, "SomeMod"));
+    }
+
+    [Fact]
     public async Task Disable_ModTheGameNamedByItsFolder_Works()
     {
         // The game writes the folder name as the id, and a folder name is not bound by the content id rules.
