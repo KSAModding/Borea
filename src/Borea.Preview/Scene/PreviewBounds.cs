@@ -12,6 +12,13 @@ public readonly record struct PreviewBounds(Vector3 Min, Vector3 Max)
 
     public bool IsEmpty => Min.X > Max.X || Min.Y > Max.Y || Min.Z > Max.Z;
 
+    /// <summary>
+    /// True when the box holds at least one point and every corner, the center and the radius are finite.
+    /// A NaN or an infinite corner, or a box so large that its radius overflows, gives false.
+    /// </summary>
+    public bool IsFinite => !IsEmpty && float.IsFinite(Min.X) && float.IsFinite(Min.Y) && float.IsFinite(Min.Z)
+        && float.IsFinite(Max.X) && float.IsFinite(Max.Y) && float.IsFinite(Max.Z) && float.IsFinite(Radius);
+
     public Vector3 Center => IsEmpty ? Vector3.Zero : (Min + Max) * 0.5f;
 
     /// <summary>The radius of the sphere around <see cref="Center"/> that holds the whole box, 0 when empty.</summary>

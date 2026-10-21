@@ -49,6 +49,23 @@ public sealed class OrbitCameraTests
         Assert.InRange(clip.X / clip.W, -1e-4f, 1e-4f);
     }
 
+    [Theory]
+    [InlineData(20f, 0f)]
+    [InlineData(0f, 20f)]
+    public void TheNearSideFollowsTheDrag(float dragX, float dragY)
+    {
+        var camera = new OrbitCamera();
+        camera.Frame(Rocket, 1.5f);
+        var front = camera.Target + Vector3.Normalize(camera.Eye - camera.Target) * camera.Radius;
+
+        camera.Orbit(dragX, dragY);
+        var clip = Vector4.Transform(new Vector4(front, 1f), camera.ViewProjection(1.5f));
+
+        // The point starts at the screen center. Screen y is down and NDC y is up, so a drag down gives NDC y below 0.
+        Assert.Equal(dragX > 0f, clip.X / clip.W > 0.01f);
+        Assert.Equal(dragY > 0f, clip.Y / clip.W < -0.01f);
+    }
+
     [Fact]
     public void ZoomChangesTheDistance_AndResetRestoresTheFrame()
     {

@@ -10,7 +10,10 @@ namespace Borea.Preview.Scene;
 /// </summary>
 public sealed class PreviewMesh
 {
-    /// <exception cref="ArgumentException">An array length does not match the vertex count, or an index is out of range.</exception>
+    /// <exception cref="ArgumentException">
+    /// An array length does not match the vertex count, an index is out of range, or a position, normal or UV
+    /// is not finite. The scene builder catches this for each mesh, so one bad mesh becomes a placeholder.
+    /// </exception>
     public PreviewMesh(float[] positions, float[] normals, float[]? uvs, uint[] indices)
     {
         ArgumentNullException.ThrowIfNull(positions);
@@ -36,6 +39,13 @@ public sealed class PreviewMesh
         if (indices.Length % 3 != 0)
         {
             throw new ArgumentException("The index count is not a multiple of 3.", nameof(indices));
+        }
+
+        RequireFinite(positions, nameof(positions));
+        RequireFinite(normals, nameof(normals));
+        if (uvs is not null)
+        {
+            RequireFinite(uvs, nameof(uvs));
         }
 
         foreach (var index in indices)
@@ -90,4 +100,15 @@ public sealed class PreviewMesh
     public Vector3 SphereCenter { get; }
 
     public float SphereRadius { get; }
+
+    private static void RequireFinite(float[] values, string name)
+    {
+        foreach (var value in values)
+        {
+            if (!float.IsFinite(value))
+            {
+                throw new ArgumentException("A value is NaN or infinite.", name);
+            }
+        }
+    }
 }

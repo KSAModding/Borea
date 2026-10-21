@@ -72,12 +72,14 @@ public sealed class OrbitCamera
 
     /// <summary>
     /// Aims at the center of <paramref name="bounds"/> from the default angles, at the distance where the
-    /// bounding sphere fits inside the narrower of the two fields of view with a small margin.
+    /// bounding sphere fits inside the narrower of the two fields of view with a small margin. Bounds that
+    /// are empty or not finite give a sphere of 1 m around the origin, so the matrices always stay finite.
     /// </summary>
     public void Frame(PreviewBounds bounds, float aspect)
     {
-        Target = bounds.Center;
-        Radius = bounds.IsEmpty ? 1f : MathF.Max(bounds.Radius, 0.01f);
+        var valid = bounds.IsFinite;
+        Target = valid ? bounds.Center : Vector3.Zero;
+        Radius = valid ? MathF.Max(bounds.Radius, 0.01f) : 1f;
 
         var halfVertical = FieldOfViewY * 0.5f;
         var halfHorizontal = MathF.Atan(MathF.Tan(halfVertical) * ValidAspect(aspect));
@@ -95,12 +97,12 @@ public sealed class OrbitCamera
     }
 
     /// <summary>
-    /// Turns the camera by a drag in pixels with screen y down, so the vehicle follows the pointer: a drag
-    /// down shows more of the top.
+    /// Turns the camera by a drag in pixels with screen y down, so the near side of the vehicle follows the
+    /// pointer. A drag to the right turns the near side to the right, and a drag down shows more of the top.
     /// </summary>
     public void Orbit(float dx, float dy)
     {
-        var yaw = Yaw - dx * RadiansPerPixel;
+        var yaw = Yaw + dx * RadiansPerPixel;
         Yaw = MathF.IEEERemainder(yaw, 2f * MathF.PI);
         Pitch = Math.Clamp(Pitch + dy * RadiansPerPixel, -MaxPitch, MaxPitch);
     }
