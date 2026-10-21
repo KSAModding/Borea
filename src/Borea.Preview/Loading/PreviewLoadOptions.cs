@@ -13,6 +13,8 @@ public sealed record PreviewLoadOptions
 
     public const long DefaultMaxRgbaBytes = 128L * 1024 * 1024;
 
+    public const long DefaultMaxMeshBytes = 256L * 1024 * 1024;
+
     public const int DefaultTextureTarget = 512;
 
     /// <summary>The texture target that the build drops to when the textures at the full target do not fit the RGBA budget.</summary>
@@ -30,7 +32,11 @@ public sealed record PreviewLoadOptions
         MaxTriangles = processorCount <= 4 ? SmallMachineTriangles : LargeMachineTriangles;
     }
 
-    /// <summary>The most triangles that the draws of the scene may have together. A draw counts the triangles of its mesh each time.</summary>
+    /// <summary>
+    /// The most triangles that the draws of the scene may have together. A draw counts the triangles of its mesh each
+    /// time, and a mesh with more than three vertices per triangle counts a third of its vertices instead, so a mesh
+    /// with few triangles over a large vertex array cannot pass the budget.
+    /// </summary>
     public int MaxTriangles
     {
         get;
@@ -40,6 +46,20 @@ public sealed record PreviewLoadOptions
             field = value;
         }
     }
+
+    /// <summary>
+    /// The most bytes of decoded vertex and index arrays that the distinct meshes of the scene may hold together. Each
+    /// mesh counts once, also when several draws use it.
+    /// </summary>
+    public long MaxMeshBytes
+    {
+        get;
+        init
+        {
+            ArgumentOutOfRangeException.ThrowIfNegative(value);
+            field = value;
+        }
+    } = DefaultMaxMeshBytes;
 
     /// <summary>The most bytes of decoded RGBA texture levels that the scene may hold.</summary>
     public long MaxRgbaBytes

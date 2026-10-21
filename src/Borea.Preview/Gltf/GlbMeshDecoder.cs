@@ -199,7 +199,11 @@ public static class GlbMeshDecoder
         var positionAccessor = ToIndex(positionIndex);
         var vertexCount = GetCount(accessors, positionAccessor);
         var cornerCount = primitive.TryGetProperty("indices", out var indicesIndex) ? GetCount(accessors, ToIndex(indicesIndex)) : vertexCount;
-        return new GlbMeshSize(vertexCount, cornerCount / 3) { Bounds = ReadDeclaredBounds(accessors[positionAccessor]) };
+        return new GlbMeshSize(vertexCount, cornerCount / 3)
+        {
+            Bounds = ReadDeclaredBounds(accessors[positionAccessor]),
+            HasNormals = primitive.GetProperty("attributes").TryGetProperty("NORMAL", out _),
+        };
     }
 
     private static PreviewBounds? ReadDeclaredBounds(JsonElement accessor)

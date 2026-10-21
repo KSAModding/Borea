@@ -39,7 +39,8 @@ public sealed class PreviewSceneBuilder
     /// Decodes the meshes that the draws use and gives a scene with flat colors. The mesh decodes are grouped by GLB
     /// file, and each file is opened once and its container read once. When the draws have more triangles together
     /// than <see cref="PreviewLoadOptions.MaxTriangles"/>, the largest draws become <see cref="PreviewPlaceholderReason.Budget"/>
-    /// boxes until the rest fit, and these meshes are not decoded.
+    /// boxes until the rest fit, and these meshes are not decoded. The distinct meshes that are left must also fit
+    /// <see cref="PreviewLoadOptions.MaxMeshBytes"/>, and the largest of them become boxes until they do.
     /// </summary>
     /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was cancelled.</exception>
     /// <exception cref="ObjectDisposedException">The source was disposed, which the caller treats as a cancellation.</exception>
@@ -210,6 +211,8 @@ public sealed class PreviewSceneBuilder
             {
                 state.Mesh = cached;
                 state.Triangles = cached.TriangleCount;
+                state.Vertices = cached.VertexCount;
+                state.Bytes = PreviewMeshCache.SizeOf(cached);
                 state.Bounds = cached.LocalBounds;
                 continue;
             }
@@ -263,12 +266,13 @@ public sealed class PreviewSceneBuilder
             }
 
             ApplyTriangleBudget(vehicle, meshes, kept, placeholders, notices, options.MaxTriangles);
+            ApplyMeshByteBudget(vehicle, meshes, kept, placeholders, notices, options.MaxMeshBytes);
 
             var needed = new HashSet<MeshState>(kept.Select(i => meshes[vehicle.Draws[i].Mesh]));
             foreach (var file in files)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                Decode(file, needed, notices, options.MaxTriangles);
+                Decode(file, needed, notices);
             }
 
             var materials = new Dictionary<(int Index, bool Glass), PreviewMaterial>();
@@ -326,7 +330,16 @@ public sealed class PreviewSceneBuilder
             {
                 var size = GlbMeshDecoder.Measure(container, state.Ref.MeshIndex);
                 state.Triangles = size.TriangleCount;
+                state.Vertices = size.VertexCount;
+                state.Bytes = size.DecodedBytes;
                 state.Bounds = size.Bounds;
+
+                // A mesh without triangles draws nothing, so it is not decoded, and its vertices can then cost nothing.
+                if (size.TriangleCount == 0)
+                {
+                    state.Failed = true;
+                    notices.Add(Failed(state.Ref, "The mesh has no triangles."));
+                }
             }
             catch (Exception exception) when (PreviewTextureLoader.IsAssetFailure(exception))
             {
@@ -336,7 +349,7 @@ public sealed class PreviewSceneBuilder
         }
     }
 
-    private void Decode(FileJob file, HashSet<MeshState> needed, List<PreviewNotice> notices, int maxTriangles)
+    private void Decode(FileJob file, HashSet<MeshState> needed, List<PreviewNotice> notices)
     {
         if (file.Stream is null || file.Container is null)
         {
@@ -361,7 +374,10 @@ public sealed class PreviewSceneBuilder
 
             try
             {
-                var mesh = GlbMeshDecoder.Decode(file.Stream, file.Container, state.Ref.MeshIndex, maxTriangles);
+                // The limit is the weight that the budget counted, so the decode can never allocate more than the
+                // budget allowed for this mesh, even when the file would claim other counts on a second read.
+                var limit = (int)Math.Clamp(state.Weight, 1, int.MaxValue);
+                var mesh = GlbMeshDecoder.Decode(file.Stream, file.Container, state.Ref.MeshIndex, limit);
                 state.Mesh = mesh;
                 decoded.Add(state.Ref.MeshIndex, mesh);
                 _meshes.Add(file.Key, state.Ref.MeshIndex, mesh);
@@ -385,9 +401,9 @@ public sealed class PreviewSceneBuilder
         List<PreviewNotice> notices,
         int maxTriangles)
     {
-        long Triangles(int draw) => meshes[vehicle.Draws[draw].Mesh].Triangles;
+        long Weight(int draw) => meshes[vehicle.Draws[draw].Mesh].Weight;
 
-        var total = kept.Sum(Triangles);
+        var total = kept.Sum(Weight);
         if (total <= maxTriangles)
         {
             return;
@@ -395,7 +411,7 @@ public sealed class PreviewSceneBuilder
 
         var sceneTotal = total;
         var dropped = new HashSet<int>();
-        foreach (var draw in kept.OrderByDescending(Triangles).ThenBy(draw => draw))
+        foreach (var draw in kept.OrderByDescending(Weight).ThenBy(draw => draw))
         {
             if (total <= maxTriangles)
             {
@@ -403,7 +419,7 @@ public sealed class PreviewSceneBuilder
             }
 
             dropped.Add(draw);
-            total -= Triangles(draw);
+            total -= Weight(draw);
         }
 
         foreach (var draw in kept.Where(dropped.Contains))
@@ -418,6 +434,56 @@ public sealed class PreviewSceneBuilder
             PreviewNoticeKind.Budget,
             "Triangles",
             $"The models have {sceneTotal} triangles and the budget is {maxTriangles}, so the {dropped.Count} largest show as boxes."));
+    }
+
+    /// <summary>
+    /// Keeps the decoded arrays of the distinct meshes inside <paramref name="maxBytes"/>. The triangle budget counts
+    /// draws, so many meshes that each pass it can still need much memory together, for example when each mesh has
+    /// its own copy of one large vertex array. The largest meshes become boxes for all their draws until the rest fit.
+    /// </summary>
+    private static void ApplyMeshByteBudget(
+        ResolvedVehicle vehicle,
+        MeshState[] meshes,
+        List<int> kept,
+        List<PreviewPlaceholder> placeholders,
+        List<PreviewNotice> notices,
+        long maxBytes)
+    {
+        var distinct = kept.Select(draw => meshes[vehicle.Draws[draw].Mesh]).Distinct().ToList();
+        var total = distinct.Sum(state => state.Bytes);
+        if (total <= maxBytes)
+        {
+            return;
+        }
+
+        var sceneTotal = total;
+        var dropped = new HashSet<MeshState>();
+        foreach (var state in distinct.OrderByDescending(state => state.Bytes))
+        {
+            if (total <= maxBytes)
+            {
+                break;
+            }
+
+            dropped.Add(state);
+            total -= state.Bytes;
+        }
+
+        foreach (var draw in kept)
+        {
+            var resolved = vehicle.Draws[draw];
+            var state = meshes[resolved.Mesh];
+            if (dropped.Contains(state))
+            {
+                placeholders.Add(Box(resolved.Transform, state.Bounds, state.Ref.Name, PreviewPlaceholderReason.Budget));
+            }
+        }
+
+        kept.RemoveAll(draw => dropped.Contains(meshes[vehicle.Draws[draw].Mesh]));
+        notices.Add(new PreviewNotice(
+            PreviewNoticeKind.Budget,
+            "Meshes",
+            $"The models need {sceneTotal} bytes of mesh data and the budget is {maxBytes}, so the {dropped.Count} largest meshes show as boxes."));
     }
 
     private static (int Target, int Allowed) FitTextureBudget(int count, PreviewLoadOptions options, List<PreviewNotice> notices)
@@ -510,6 +576,17 @@ public sealed class PreviewSceneBuilder
         public PreviewMesh? Mesh { get; set; }
 
         public long Triangles { get; set; }
+
+        public long Vertices { get; set; }
+
+        /// <summary>The bytes of the decoded arrays, as <see cref="GlbMeshSize.DecodedBytes"/> estimates them or as the cached mesh has them.</summary>
+        public long Bytes { get; set; }
+
+        /// <summary>
+        /// The triangles that the budget counts for one draw. The decoded arrays grow with the vertices too, so a mesh
+        /// with more than three vertices per triangle counts a third of its vertices.
+        /// </summary>
+        public long Weight => Math.Max(Triangles, (Vertices + 2) / 3);
 
         public PreviewBounds? Bounds { get; set; }
 

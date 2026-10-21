@@ -79,6 +79,28 @@ public sealed class PreviewSceneBuilderTests
         Assert.Contains(notices, notice => notice.Kind == PreviewNoticeKind.Budget);
     }
 
+    [Theory]
+    [InlineData(2_500, PreviewLoadOptions.DefaultMaxMeshBytes, "Triangles")]
+    [InlineData(PreviewLoadOptions.LargeMachineTriangles, 200_000, "Meshes")]
+    public async Task MeshesWithOneTriangleOverALargeSharedVertexArray_BecomeBudgetBoxes(int maxTriangles, long maxMeshBytes, string subject)
+    {
+        // Each of the ten meshes decodes 3000 vertices for one triangle, which counts as 1000 triangles and 96012 bytes.
+        var file = new PreviewAssetRef("Mod", "Meshes/Shared.glb");
+        var vehicle = Vehicle(
+            [.. Enumerable.Range(0, 10).Select(index => Mesh(file, index))],
+            [],
+            [.. Enumerable.Range(0, 10).Select(index => Draw(index, -1, index))]);
+        var source = Source();
+        source.Files[file.Path] = OneTriangleMeshesOverSharedVertices(10, 3000);
+        var options = Options with { MaxTriangles = maxTriangles, MaxMeshBytes = maxMeshBytes };
+
+        var (scene, notices) = await Builder().BuildGeometryAsync(vehicle, source, options, CancellationToken.None);
+
+        Assert.Equal(2, scene.Draws.Count);
+        Assert.Equal(8, scene.Placeholders.Count(box => box.Reason == PreviewPlaceholderReason.Budget));
+        Assert.Contains(notices, notice => notice.Kind == PreviewNoticeKind.Budget && notice.Subject == subject);
+    }
+
     [Fact]
     public async Task EachGlbFile_IsOpenedOncePerBuild_AndASecondBuildComesFromTheMeshCache()
     {
@@ -176,6 +198,29 @@ public sealed class PreviewSceneBuilderTests
                 new JsonObject { ["name"] = "Mesh0", ["primitives"] = new JsonArray { primitive.DeepClone() } },
                 new JsonObject { ["name"] = "Mesh1", ["primitives"] = new JsonArray { primitive.DeepClone() } },
             },
+        };
+        return GlbTestWriter.Pack(json, bin);
+    }
+
+    /// <summary>
+    /// A GLB whose meshes all read one POSITION and NORMAL accessor of <paramref name="vertices"/> zero vectors, and
+    /// one index accessor of a single triangle, so the BIN holds the large array only once.
+    /// </summary>
+    private static byte[] OneTriangleMeshesOverSharedVertices(int meshes, int vertices)
+    {
+        byte[] bin = [.. GlbTestWriter.Floats(new float[vertices * 3]), .. GlbTestWriter.Indices(GlbTestWriter.UnsignedIntComponent, 0, 1, 2)];
+        var primitive = new JsonObject { ["attributes"] = new JsonObject { ["POSITION"] = 0, ["NORMAL"] = 0 }, ["indices"] = 1 };
+        var json = new JsonObject
+        {
+            ["asset"] = new JsonObject { ["version"] = "2.0" },
+            ["buffers"] = new JsonArray { new JsonObject { ["byteLength"] = bin.Length } },
+            ["bufferViews"] = new JsonArray { View(0, vertices * 12), View(vertices * 12, 12) },
+            ["accessors"] = new JsonArray
+            {
+                new JsonObject { ["bufferView"] = 0, ["componentType"] = GlbTestWriter.FloatComponent, ["count"] = vertices, ["type"] = "VEC3" },
+                new JsonObject { ["bufferView"] = 1, ["componentType"] = GlbTestWriter.UnsignedIntComponent, ["count"] = 3, ["type"] = "SCALAR" },
+            },
+            ["meshes"] = new JsonArray([.. Enumerable.Range(0, meshes).Select(_ => (JsonNode)new JsonObject { ["primitives"] = new JsonArray { primitive.DeepClone() } })]),
         };
         return GlbTestWriter.Pack(json, bin);
     }

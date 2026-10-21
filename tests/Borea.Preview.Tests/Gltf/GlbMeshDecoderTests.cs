@@ -165,7 +165,7 @@ public sealed class GlbMeshDecoderTests
         var size = GlbMeshDecoder.Measure(container, meshIndex);
         var exception = Record.Exception(() => GlbMeshDecoder.Decode(stream, container, meshIndex, maxTriangles));
 
-        Assert.Equal(new GlbMeshSize(vertices, triangles), size);
+        Assert.Equal((vertices, triangles), (size.VertexCount, size.TriangleCount));
         Assert.IsType<GlbFormatException>(exception);
         Assert.Contains("limit", exception.Message, StringComparison.Ordinal);
         Assert.All(stream.Reads, read => Assert.True(read.Start >= container.BinOffset - 8 && read.End <= container.BinOffset));

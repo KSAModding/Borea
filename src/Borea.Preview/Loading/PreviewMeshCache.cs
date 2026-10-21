@@ -84,6 +84,7 @@ public sealed class PreviewMeshCache
 
     private static string Key(string fileKey, int meshIndex) => fileKey + "#" + meshIndex.ToString(CultureInfo.InvariantCulture);
 
-    private static long SizeOf(PreviewMesh mesh) =>
+    /// <summary>The bytes of the arrays of a decoded mesh, which is what the cache and the scene byte budget count.</summary>
+    internal static long SizeOf(PreviewMesh mesh) =>
         4L * (mesh.Positions.Length + mesh.Normals.Length + (mesh.Uvs?.Length ?? 0) + mesh.Indices.Length);
 }
