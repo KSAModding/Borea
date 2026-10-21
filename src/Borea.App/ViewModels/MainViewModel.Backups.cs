@@ -186,7 +186,7 @@ public partial class MainViewModel
         try
         {
             // the game opens a save file only while it writes it, so the change itself does not notice a running game
-            if (kind == TaskKind.BackupRestore && services.Launcher.IsRunning(item.Backup.InstanceId))
+            if (kind == TaskKind.BackupRestore && (services.Launcher.IsRunning(item.Backup.InstanceId) || services.IsGameProcessRunning()))
                 error = Localization.GameSaveCloseGame;
             else
                 completed = await action(services);
