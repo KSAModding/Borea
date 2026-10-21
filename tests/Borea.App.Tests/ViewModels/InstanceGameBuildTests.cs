@@ -122,6 +122,34 @@ public sealed class InstanceGameBuildTests
         Assert.Equal(harness.Localization.SettingsGameBuildIsGameFolder, row.GameFolderText);
     }
 
+    [Fact]
+    public async Task NewInstance_OnAKeptBuild_StartsAgainstIt()
+    {
+        var starter = new GameSavesViewModelTests.RunningGameStarter();
+        using var harness = await CreateWithKeptBuildAsync(starter);
+        var viewModel = harness.ViewModel;
+        await viewModel.LoadAsync();
+
+        viewModel.BeginCreateInstanceCommand.Execute(null);
+        await viewModel.WhenGameBuildChoicesLoadedAsync();
+        Assert.Equal([null, KeptBuild], viewModel.GameBuildChoices.Select(choice => choice.Build));
+        Assert.True(viewModel.CanPickGameBuild);
+        viewModel.SelectedGameBuildChoice = viewModel.GameBuildChoices[1];
+        viewModel.ModalInstanceName = "Kept";
+        await viewModel.ConfirmNameModalCommand.ExecuteAsync(null);
+
+        var created = (await harness.Services.Instances.GetAllAsync()).Single(item => item.Name == "Kept");
+        Assert.Equal(KeptBuild, created.GameBuild);
+        starter.GameLogPath = harness.Services.Paths.GetInstanceGameLogPath(created.InstanceId);
+        await harness.Services.Instances.SetActiveInstanceAsync(created.InstanceId);
+        await viewModel.LoadAsync();
+
+        await viewModel.LaunchActiveInstanceAsync();
+
+        Assert.True(harness.Services.Launcher.IsRunning(created.InstanceId));
+        Assert.Equal(["KeptContent"], (await harness.Services.ModState.GetEntriesAsync(created.InstanceId)).Select(entry => entry.ModId));
+    }
+
     private static async Task<Instance> CreateInstanceAsync(ViewModelHarness harness, string name, GameVersion? build)
     {
         var instance = (await harness.Services.Instances.CreateAsync(name, InstanceSource.Custom.Value)).Instance;

@@ -1647,6 +1647,9 @@
   <data name="ToastGameBuildKeptFormat" xml:space="preserve">
     <value>KSA {0} kept for {1}</value>
   </data>
+  <data name="ToastGameBuildAddedFormat" xml:space="preserve">
+    <value>KSA {0} kept in Game Builds</value>
+  </data>
   <data name="ToastInstallStoppedFormat" xml:space="preserve">
     <value>Install of {0} stopped</value>
   </data>
@@ -3486,6 +3489,12 @@
   <data name="ModalKeepGameBuildSharedFormat" xml:space="preserve">
     <value>KSA {0} is already kept in {1}. The instance {2} uses that copy, so Borea copies nothing.</value>
   </data>
+  <data name="ModalAddGameBuildTextFormat" xml:space="preserve">
+    <value>Borea copies KSA {0} ({1}) from {2} to {3} once. New instances can then start on this build.</value>
+  </data>
+  <data name="ModalAddGameBuildSharedFormat" xml:space="preserve">
+    <value>KSA {0} is already kept in {1}, so Borea copies nothing.</value>
+  </data>
   <data name="ModalKeepGameBuildFreeSpaceFormat" xml:space="preserve">
     <value>Free space on the drive: {0}</value>
   </data>
@@ -3500,6 +3509,9 @@
   </data>
   <data name="KeepGameBuildNoGame" xml:space="preserve">
     <value>Borea cannot read the game build in the game folder. Set the game folder in the settings first.</value>
+  </data>
+  <data name="KeepGameBuildNotAGame" xml:space="preserve">
+    <value>This folder holds no game that Borea can start on this system, or Borea cannot read the version of its KSA.dll. Borea starts KSA.exe on Windows and the app host KSA on Linux.</value>
   </data>
   <data name="KeepGameBuildWineWrapper" xml:space="preserve">
     <value>The game is in a Wine wrapper app, which cannot start a copy outside the wrapper. Borea does not keep this build.</value>
@@ -3539,6 +3551,9 @@
   </data>
   <data name="ToastUsesCurrentGameBuildFormat" xml:space="preserve">
     <value>{0} now starts on KSA {1}</value>
+  </data>
+  <data name="KeepGameBuildFolderChangedFormat" xml:space="preserve">
+    <value>The folder changed to KSA {0} before the copy started, so Borea copied nothing.</value>
   </data>
   <data name="ModalInstanceExplanation" xml:space="preserve">
     <value>Instances are packages of mods and game content that Borea manages on top of your existing game install. You can create multiple instances and activate one at a time for different play experiences.</value>
@@ -4643,6 +4658,18 @@
   </data>
   <data name="KeptGameBuildBusy" xml:space="preserve">
     <value>Borea is copying or deleting a game build. Try again when that is done.</value>
+  </data>
+  <data name="SetupAddGameBuild" xml:space="preserve">
+    <value>Keep a build from a folder</value>
+  </data>
+  <data name="SetupAddGameBuildHint" xml:space="preserve">
+    <value>Select the folder of another KSA build, for example an old install or an unpacked archive. Borea copies it to Game Builds in the library, and new instances can start on it.</value>
+  </data>
+  <data name="ModalGameBuildLabel" xml:space="preserve">
+    <value>Game build</value>
+  </data>
+  <data name="ModalGameBuildSettings" xml:space="preserve">
+    <value>Game folder of the settings</value>
   </data>
   <data name="SettingsPresetsTitle" xml:space="preserve">
     <value>Game settings presets</value>

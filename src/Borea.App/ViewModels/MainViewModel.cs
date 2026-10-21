@@ -236,7 +236,7 @@ public partial class MainViewModel : ViewModelBase
     public ObservableCollection<InstanceItem> Instances { get; } = [];
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsNameModalOpen), nameof(CanPickGameSettingsPreset))]
+    [NotifyPropertyChangedFor(nameof(IsNameModalOpen), nameof(CanPickGameSettingsPreset), nameof(CanPickGameBuild))]
     private bool _isCreatingInstance;
 
     /// <summary>The row the name modal renames. Null while the modal creates an instance or is closed.</summary>
@@ -581,6 +581,7 @@ public partial class MainViewModel : ViewModelBase
         RenamingInstance = null;
         IsCreatingInstance = true;
         StartGameSettingsPresetLoad();
+        StartGameBuildChoicesLoad();
     }
 
     /// <summary>Opens the name modal to rename <paramref name="item"/>.</summary>
@@ -633,12 +634,15 @@ public partial class MainViewModel : ViewModelBase
             return CreatePackInstanceAsync(pack, name);
 
         var presetId = SelectedGameSettingsPreset?.Id;
+        var build = SelectedGameBuildChoice?.Build;
         return IsImportingSharedProfile ? ImportSharedProfileAsync(name) : RunModalInstanceOperationAsync(async instances =>
         {
             if (!await instances.IsNameAvailableAsync(name))
                 throw new InvalidOperationException(Localization.ModalNameTaken);
 
-            var created = await instances.CreateAsync(name, InstanceSource.Custom.Value);
+            var instance = new Instance(name, InstanceSource.Custom.Value);
+            instance.SetGameBuild(build);
+            var created = await instances.CreateAsync(instance);
             if (presetId is { } id && _services is { } services)
             {
                 try

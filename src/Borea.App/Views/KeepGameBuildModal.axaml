@@ -4,7 +4,7 @@
              xmlns:views="using:Borea.App.Views"
              x:Class="Borea.App.Views.KeepGameBuildModal"
              x:DataType="vm:MainViewModel">
-    <!-- modal: keep the game build for an instance -->
+    <!-- modal: keep the game build for an instance, or from a folder that the Game settings chose -->
     <Panel Background="#99000000" views:ModalBackdrop.CloseButton="{Binding #CloseButton}">
         <Border Classes="modal" Width="561" Margin="80,0,0,0">
             <StackPanel>
