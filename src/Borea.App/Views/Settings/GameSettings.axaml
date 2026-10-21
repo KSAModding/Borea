@@ -78,6 +78,35 @@
             <TextBlock Classes="body-md secondary" Text="{Binding SetupMessage}" TextWrapping="Wrap" Margin="0,12,0,0" IsVisible="{Binding SetupMessage, Converter={x:Static ObjectConverters.IsNotNull}}" />
             <TextBlock Classes="body-md danger" Text="{Binding SetupError}" TextWrapping="Wrap" Margin="0,12,0,0" IsVisible="{Binding SetupError, Converter={x:Static ObjectConverters.IsNotNull}}" />
 
+            <StackPanel Spacing="6" IsVisible="{Binding ShowsKeptGameBuilds}">
+                <Border Height="1" Background="{StaticResource Brush.BorderStrong}" Margin="0,24,0,16" />
+                <TextBlock Classes="heading-md" Text="{Binding Localization.SettingsGameBuildsTitle}" />
+                <TextBlock Classes="body-sm secondary" Text="{Binding Localization.SettingsGameBuildsHint}" TextWrapping="Wrap" />
+                <ItemsControl ItemsSource="{Binding KeptGameBuilds}" Margin="0,12,0,0">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:KeptGameBuildItem">
+                            <!-- the question gets a row of its own, so a long translation does not squeeze the version -->
+                            <Grid ColumnDefinitions="*,16,Auto" RowDefinitions="Auto,Auto" Margin="0,0,0,8">
+                                <StackPanel Spacing="2" VerticalAlignment="Center">
+                                    <StackPanel Orientation="Horizontal" Spacing="16">
+                                        <TextBlock Classes="heading-sm" Text="{Binding VersionText}" ToolTip.Tip="{Binding Folder}" VerticalAlignment="Center" />
+                                        <TextBlock Classes="label-md" Text="{Binding SizeText}" VerticalAlignment="Center" />
+                                    </StackPanel>
+                                    <TextBlock Classes="body-sm secondary" Text="{Binding UsedByText}" TextWrapping="Wrap" IsVisible="{Binding UsedByText, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                                    <TextBlock Classes="body-sm secondary" Text="{Binding GameFolderText}" TextWrapping="Wrap" IsVisible="{Binding GameFolderText, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center" IsVisible="{Binding CanRemove}">
+                                    <Button Classes="text danger" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryDelete}" Command="{Binding RemoveCommand}" />
+                                    <Button Classes="text" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryCancel}" Command="{Binding CancelRemoveCommand}" IsVisible="{Binding IsConfirmingRemove}" />
+                                </StackPanel>
+                                <TextBlock Grid.Row="1" Grid.ColumnSpan="3" Classes="body-sm danger" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.SettingsGameBuildRemoveConfirm}" TextWrapping="Wrap" TextAlignment="Right" HorizontalAlignment="Right" Margin="0,4,0,0" IsVisible="{Binding IsConfirmingRemove}" />
+                            </Grid>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <TextBlock Classes="body-md danger" Text="{Binding KeptGameBuildError}" TextWrapping="Wrap" Margin="0,8,0,0" IsVisible="{Binding KeptGameBuildError, Converter={x:Static ObjectConverters.IsNotNull}}" />
+            </StackPanel>
+
             <Border Height="1" Background="{StaticResource Brush.BorderStrong}" Margin="0,24,0,16" />
 
             <TextBlock Classes="heading-md" Text="{Binding Localization.SettingsPresetsTitle}" />

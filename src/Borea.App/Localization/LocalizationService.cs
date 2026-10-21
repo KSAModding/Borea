@@ -2189,6 +2189,28 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string FormatKeepGameBuildBuildChanged(string build)
         => string.Format(CultureInfo.CurrentCulture, Resources.KeepGameBuildBuildChangedFormat, build);
 
+    public string ModalUseCurrentGameBuildTitle => Resources.ModalUseCurrentGameBuildTitle;
+
+    public string FormatModalUseCurrentGameBuildText(string instanceName, string build, string keptBuild)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ModalUseCurrentGameBuildTextFormat, instanceName, build, keptBuild);
+
+    public string FormatModalUseCurrentGameBuildFit(int fitting, int total, string build)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ModalUseCurrentGameBuildFitFormat, fitting, total, build);
+
+    public string FormatModalUseCurrentGameBuildIncompatible(string names)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ModalUseCurrentGameBuildIncompatibleFormat, names);
+
+    public string FormatModalUseCurrentGameBuildUnknown(string names)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ModalUseCurrentGameBuildUnknownFormat, names);
+
+    public string FormatModalUseCurrentGameBuildOlder(string build, string keptBuild)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ModalUseCurrentGameBuildOlderFormat, build, keptBuild);
+
+    public string ModalUseCurrentGameBuildConfirm => Resources.ModalUseCurrentGameBuildConfirm;
+
+    public string FormatToastUsesCurrentGameBuild(string instanceName, string build)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ToastUsesCurrentGameBuildFormat, instanceName, build);
+
     public string ModalInstanceExplanation => Resources.ModalInstanceExplanation;
 
     public string ModalNameRequired => Resources.ModalNameRequired;
@@ -2712,11 +2734,32 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string InstanceKeepGameBuild => Resources.InstanceKeepGameBuild;
 
+    public string InstanceUseCurrentGameBuild => Resources.InstanceUseCurrentGameBuild;
+
     public string FormatInstanceGameBuild(string build)
         => string.Format(CultureInfo.CurrentCulture, Resources.InstanceGameBuildFormat, build);
 
     public string FormatInstanceGameBuildToolTip(string build)
         => string.Format(CultureInfo.CurrentCulture, Resources.InstanceGameBuildToolTipFormat, build);
+
+    public string SettingsGameBuildsTitle => Resources.SettingsGameBuildsTitle;
+
+    public string SettingsGameBuildsHint => Resources.SettingsGameBuildsHint;
+
+    public string FormatSettingsGameBuildUsedBy(string instanceNames)
+        => string.Format(CultureInfo.CurrentCulture, Resources.SettingsGameBuildUsedByFormat, instanceNames);
+
+    public string SettingsGameBuildUnused => Resources.SettingsGameBuildUnused;
+
+    public string SettingsGameBuildRemoveConfirm => Resources.SettingsGameBuildRemoveConfirm;
+
+    public string SettingsGameBuildInUse => Resources.SettingsGameBuildInUse;
+
+    public string SettingsGameBuildInstanceUnreadable => Resources.SettingsGameBuildInstanceUnreadable;
+
+    public string SettingsGameBuildIsGameFolder => Resources.SettingsGameBuildIsGameFolder;
+
+    public string KeptGameBuildBusy => Resources.KeptGameBuildBusy;
 
     public string SettingsPresetsTitle => Resources.SettingsPresetsTitle;
 

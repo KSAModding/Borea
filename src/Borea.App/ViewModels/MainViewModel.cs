@@ -181,6 +181,10 @@ public partial class MainViewModel : ViewModelBase
     {
         IsTasksOpen = false;
         IsSettingsOpen = true;
+
+        // Settings open again on the tab they closed on, and an instance can have kept, cleared or gone since then
+        if (IsGameTab)
+            _ = StartKeptGameBuildLoad();
     }
 
     [RelayCommand]
@@ -1169,6 +1173,9 @@ public sealed partial class InstanceItem : ObservableObject
 
     [RelayCommand]
     private Task BeginKeepGameBuildAsync() => _owner.BeginKeepGameBuildAsync(this);
+
+    [RelayCommand]
+    private Task BeginUseCurrentGameBuildAsync() => _owner.BeginUseCurrentGameBuildAsync(this);
 
     [RelayCommand]
     private void BeginDelete() => _owner.BeginDeleteInstance(this);

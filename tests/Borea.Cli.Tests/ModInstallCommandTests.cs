@@ -710,6 +710,7 @@ public sealed class ModInstallCommandTests : IDisposable
         Assert.Equal(1, run.ExitCode);
         Assert.Contains("2026.8.3.5117", run.Error);
         Assert.Contains("is gone", run.Error);
+        Assert.Contains("\"Use the current game build\"", run.Error);
         Assert.DoesNotContain("Install flight-tools", run.Output);
     }
 
