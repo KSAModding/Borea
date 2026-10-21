@@ -4431,6 +4431,18 @@
   <data name="LaunchWrapperBusyFormat" xml:space="preserve">
     <value>A game that Borea started through the Wine wrapper '{0}' is still running. The wrapper runs one game at a time, so close that game first.</value>
   </data>
+  <data name="LaunchGameBuildMissing" xml:space="preserve">
+    <value>This instance runs on a kept KSA build, and the folder of that build is gone or holds another build. Borea starts nothing, so the instance does not start on another build.</value>
+  </data>
+  <data name="LaunchOtherBuildRunningFormat" xml:space="preserve">
+    <value>A game is running, and {0} reads another game folder for it. If Borea changed that folder now, a restart of the running game would load the wrong build. Borea starts nothing. Close the game first.</value>
+  </data>
+  <data name="LaunchLoaderTakesNoGamePathFormat" xml:space="preserve">
+    <value>This instance runs on a kept KSA build, and the listing of {0} names no game path that Borea can write. Borea starts nothing. The loader author can add a [provides.configure] table to the listing.</value>
+  </data>
+  <data name="LaunchLoaderConfigurationUnreadableFormat" xml:space="preserve">
+    <value>Borea cannot read the game folder from '{0}', so Borea starts nothing, and {1} cannot start with this file either. Repair or delete the file. Without it, Borea writes a new one at the next start.</value>
+  </data>
   <data name="LaunchWrapperNeedsVariableFormat" xml:space="preserve">
     <value>{0} takes the instance folder only after '{1}', and the Wine wrapper '{2}' passes no arguments to it. Borea starts nothing. The loader author can add a variable to the [provides.instance] table of the listing.</value>
   </data>

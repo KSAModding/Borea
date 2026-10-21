@@ -534,6 +534,30 @@ public sealed class LaunchFailureTests
         Assert.NotEqual("English text.", harness.ViewModel.LaunchMessage);
     }
 
+    [Theory]
+    [InlineData(LaunchOutcome.GameBuildMissing)]
+    [InlineData(LaunchOutcome.OtherBuildRunning)]
+    [InlineData(LaunchOutcome.LoaderTakesNoGamePath)]
+    [InlineData(LaunchOutcome.LoaderConfigurationUnreadable)]
+    public async Task PlayActiveInstance_GameBuildRefusesTheLaunch_SaysWhyInTheDisplayLanguage(LaunchOutcome outcome)
+    {
+        var file = Path.Combine(Path.GetTempPath(), "StarMap", "StarMapConfig.json");
+        using var harness = await CreateWithLauncherAsync(new FixedLauncher(LaunchResult.Failed(outcome, "English text.", configurationFile: file)));
+        harness.Localization.TrySetCulture("de");
+
+        await PlayActiveInstanceAsync(harness);
+
+        var expected = outcome switch
+        {
+            LaunchOutcome.GameBuildMissing => harness.Localization.LaunchGameBuildMissing,
+            LaunchOutcome.LoaderTakesNoGamePath => harness.Localization.FormatLaunchLoaderTakesNoGamePath("StarMap"),
+            LaunchOutcome.LoaderConfigurationUnreadable => harness.Localization.FormatLaunchLoaderConfigurationUnreadable(file, "StarMap"),
+            _ => harness.Localization.FormatLaunchOtherBuildRunning("StarMap"),
+        };
+        Assert.Equal(expected, harness.ViewModel.LaunchMessage);
+        Assert.NotEqual("English text.", harness.ViewModel.LaunchMessage);
+    }
+
     [Fact]
     public async Task PlayActiveInstance_WrapperStopsBeforeTheGame_OpensTheModalThatNamesTheWrapper()
     {

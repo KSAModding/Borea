@@ -3385,6 +3385,17 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string FormatLaunchWrapperBusy(string wrapper)
         => string.Format(CultureInfo.CurrentCulture, Resources.LaunchWrapperBusyFormat, wrapper);
 
+    public string LaunchGameBuildMissing => Resources.LaunchGameBuildMissing;
+
+    public string FormatLaunchOtherBuildRunning(string loader)
+        => string.Format(CultureInfo.CurrentCulture, Resources.LaunchOtherBuildRunningFormat, loader);
+
+    public string FormatLaunchLoaderTakesNoGamePath(string loader)
+        => string.Format(CultureInfo.CurrentCulture, Resources.LaunchLoaderTakesNoGamePathFormat, loader);
+
+    public string FormatLaunchLoaderConfigurationUnreadable(string file, string loader)
+        => string.Format(CultureInfo.CurrentCulture, Resources.LaunchLoaderConfigurationUnreadableFormat, file, loader);
+
     public string FormatLaunchWrapperNeedsVariable(string loader, string flag, string wrapper)
         => string.Format(CultureInfo.CurrentCulture, Resources.LaunchWrapperNeedsVariableFormat, loader, flag, wrapper);
 
