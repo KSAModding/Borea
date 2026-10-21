@@ -160,6 +160,7 @@ internal sealed class PreviewSources
         var pins = new List<IDisposable>();
         var mods = new List<CatalogMod>();
         var sources = new List<PreviewModSource>();
+        var found = new List<Found>();
         try
         {
             var core = GameCoreFiles.Open(_paths.GetGameDirectoryPath());
@@ -169,10 +170,10 @@ internal sealed class PreviewSources
                 sources.Add(new PreviewModSource(id, null, PreviewModLocation.Game, files.Root));
             }
 
-            var found = new List<Found>();
             var missing = new List<PreviewModNeed>();
             foreach (var id in needed)
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 var modRelease = Selected(plan, id) ?? instance.Mods.FirstOrDefault(mod => ModIds.Equals(mod.ModId, id))?.Metadata;
                 if (Locate(id, modRelease, instance, others, cache, pins, notices) is { } located)
                     found.Add(located);
@@ -180,7 +181,13 @@ internal sealed class PreviewSources
                     missing.Add(new PreviewModNeed(id, modRelease));
             }
 
-            missing.AddRange(unsatisfied.Select(dependency => new PreviewModNeed(dependency.ModId ?? dependency.AnyOf!.First().ModId, null, dependency)));
+            missing.AddRange(unsatisfied.Select(dependency => new PreviewModNeed(FirstId(dependency), null, dependency)));
+            foreach (var dependency in UnsatisfiedBelow(needed, plan, instance))
+            {
+                if (!missing.Any(need => ModIds.Equals(need.ModId, FirstId(dependency))))
+                    missing.Add(new PreviewModNeed(FirstId(dependency), null, dependency));
+            }
+
             notices.AddRange(missing.Select(need => new PreviewNotice(PreviewNoticeKind.MissingSource, need.ModId)));
 
             var manifest = target is null ? [] : await ManifestAsync(target.InstanceId, cancellationToken).ConfigureAwait(false);
@@ -194,8 +201,11 @@ internal sealed class PreviewSources
         }
         catch
         {
+            // A mod that Locate opened goes into the result list only after the load order, so the found list closes it here.
             foreach (var mod in mods)
                 mod.Files.Dispose();
+            foreach (var item in found.Where(item => !mods.Any(mod => ReferenceEquals(mod.Files, item.Files))))
+                item.Files.Dispose();
             foreach (var pin in pins)
                 pin.Dispose();
             throw;
@@ -380,6 +390,34 @@ internal sealed class PreviewSources
             return [];
         }
     }
+
+    /// <summary>
+    /// The required dependencies of the needed mods that no needed, selected or installed mod satisfies.
+    /// <see cref="UserContentMods.Needed"/> reports these only for the vehicle itself, and without them a part that a
+    /// needed mod takes from such a mod would have no mod to name.
+    /// </summary>
+    private static IEnumerable<ModDependency> UnsatisfiedBelow(IReadOnlyList<string> needed, InstallPlan plan, Instance instance)
+    {
+        foreach (var id in needed)
+        {
+            var release = Selected(plan, id) ?? instance.Mods.FirstOrDefault(mod => ModIds.Equals(mod.ModId, id))?.Metadata;
+            foreach (var dependency in release?.Dependencies ?? [])
+            {
+                if (dependency.Kind != ModDependencyKind.Required)
+                    continue;
+
+                var targets = dependency.IsAnyOf ? dependency.AnyOf!.Select(option => option.ModId) : [dependency.ModId!];
+                if (!targets.Any(target => needed.Contains(target, ModIds.Comparer) || Selected(plan, target) is not null || IsInstalled(instance, target)))
+                    yield return dependency;
+            }
+        }
+    }
+
+    private static bool IsInstalled(Instance instance, string modId) =>
+        instance.Mods.Any(mod => ModIds.Equals(mod.ModId, modId)) || instance.ForeignMods.Any(mod => ModIds.Equals(mod.ModId, modId));
+
+    /// <summary>The id a missing dependency is listed by, which is the first option of an any_of.</summary>
+    private static string FirstId(ModDependency dependency) => dependency.ModId ?? dependency.AnyOf!.First().ModId;
 
     private static ModVersionMetadata? Selected(InstallPlan plan, string modId) =>
         plan.Selections.FirstOrDefault(selection => ModIds.Equals(selection.Release.ModId, modId))?.Release;

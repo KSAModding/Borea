@@ -5,6 +5,7 @@ using Borea.Core.Instances;
 using Borea.Core.Mods;
 using Borea.Core.Planning;
 using Borea.Core.Preview;
+using Borea.Core.State;
 using Borea.Storage.Files;
 using Borea.Storage.Instances;
 using Borea.Storage.Mods;
@@ -102,6 +103,32 @@ public sealed class PreviewSourcesTests : IDisposable
     }
 
     [Fact]
+    public async Task PlanMods_ListsADependencyOfANeededModThatNothingHas()
+    {
+        var c = Mod("C", Sha('3'), dependencies: "F");
+
+        using var result = await Sources(offline: new FakeModRepository([c])).PlanModsAsync(Vehicle(Sha('9'), ["C"]), Target());
+
+        Assert.Equal(["C", "F"], result.Missing.Select(need => need.ModId));
+    }
+
+    [Fact]
+    public async Task PlanMods_CancelledAfterTheModsAreFound_ClosesTheCachedZip()
+    {
+        var cZip = Zip(("mod.toml", "name = \"C\""));
+        var c = Mod("C", Hash(cZip));
+        var zip = CacheArchive(cZip);
+        var sources = Sources(offline: new FakeModRepository([c]), modState: new CancellingModState());
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => sources.PlanModsAsync(Vehicle(Sha('9'), ["C"]), Target()));
+
+        // FileShare.None fails while any other handle is open, on Windows and through the file lock of .NET on Unix.
+        using (File.Open(zip, FileMode.Open, FileAccess.Read, FileShare.None))
+        {
+        }
+    }
+
+    [Fact]
     public async Task FindVehicle_InstalledAndUnchanged_ReadsTheFolder()
     {
         var vehicle = Vehicle(Sha('9'));
@@ -135,8 +162,8 @@ public sealed class PreviewSourcesTests : IDisposable
         Assert.Equal(before, Snapshot());
     }
 
-    private PreviewSources Sources(IInstallPlanner? planner = null, IModRepository? offline = null, IInstanceRepository? instances = null) =>
-        new(_paths, planner ?? new FakePlanner(), offline ?? new FakeModRepository([]), instances ?? new MemoryInstanceRepository(), new FileModStateRepository(_paths), _records, _store, _archives, new NoGameVersion(), new WindowsPlatform());
+    private PreviewSources Sources(IInstallPlanner? planner = null, IModRepository? offline = null, IInstanceRepository? instances = null, IModStateRepository? modState = null) =>
+        new(_paths, planner ?? new FakePlanner(), offline ?? new FakeModRepository([]), instances ?? new MemoryInstanceRepository(), modState ?? new FileModStateRepository(_paths), _records, _store, _archives, new NoGameVersion(), new WindowsPlatform());
 
     private Instance Target(params InstalledMod[] mods) =>
         Instance.FromExisting(_targetId, "Target", InstanceSource.Custom.Value, DateTimeOffset.UnixEpoch, mods, false);
@@ -209,6 +236,26 @@ public sealed class PreviewSourcesTests : IDisposable
     {
         public Task<InstallPlan> PlanAsync(InstallPlanningRequest request, CancellationToken cancellationToken = default) =>
             throw new InvalidOperationException("The index snapshot cannot be read.");
+    }
+
+    /// <summary>A manifest read that sees a cancelled token, which is the last step before the found mods go into the result.</summary>
+    private sealed class CancellingModState : IModStateRepository
+    {
+        public Task<IReadOnlyList<ModManifestEntry>> GetEntriesAsync(Guid instanceId, CancellationToken cancellationToken = default) => throw new OperationCanceledException();
+
+        public Task<bool> IsActiveAsync(Guid instanceId, string modId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+
+        public Task<IReadOnlyList<string>> GetAllActiveModIdsAsync(Guid instanceId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+
+        public Task<ModEntryAddResult> AddEntryAsync(Guid instanceId, string modId, bool enabled, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+
+        public Task<bool> SetActiveAsync(Guid instanceId, string modId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+
+        public Task<bool> SetInactiveAsync(Guid instanceId, string modId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+
+        public Task<bool> ReorderAsync(Guid instanceId, IReadOnlyList<string> modIds, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+
+        public Task<bool> PutGameContentFirstAsync(Guid instanceId, string gameDirectory, CancellationToken cancellationToken = default) => throw new NotSupportedException();
     }
 
     private sealed class NoGameVersion : IInstalledGameVersionProvider
