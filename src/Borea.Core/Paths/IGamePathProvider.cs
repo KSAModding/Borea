@@ -44,6 +44,11 @@ public interface IGamePathProvider
     string GetStaticModFilesRoot();
 
     /// <summary>
+    /// The Game Builds folder of the library, which holds one folder per kept game build.
+    /// </summary>
+    string GetGameBuildsRoot();
+
+    /// <summary>
     /// Folder of one kept game build, below the Game Builds folder of the library.
     /// Only Year.Month.BuildNumber.Revision name the folder, without the suffix, so two builds that differ only by their suffix share one folder.
     /// </summary>

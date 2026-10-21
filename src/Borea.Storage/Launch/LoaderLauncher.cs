@@ -8,6 +8,7 @@ using Borea.Core.Mods;
 using Borea.Core.Paths;
 using Borea.Storage.Game;
 using Borea.Storage.Instances;
+using Borea.Storage.ModLoaders;
 
 namespace Borea.Storage.Launch;
 
@@ -26,6 +27,8 @@ public sealed class LoaderLauncher : ILauncher, IDisposable
     private readonly Func<string?> _findDotnet;
     private readonly Func<bool> _isGameRunning;
     private readonly IWinePrefixProbe _wine;
+    private readonly LoaderConfigurator _configurator;
+    private readonly IInstanceGameResolver _games;
     private readonly RunningLaunches _launches;
     private readonly object _gate;
     private readonly Dictionary<Guid, IStartedProcess> _running;
@@ -61,8 +64,9 @@ public sealed class LoaderLauncher : ILauncher, IDisposable
 
     /// <param name="launches">The launches this launcher shares with others. Disposing the launcher keeps them.</param>
     /// <param name="isGameRunning">Whether a KSA or StarMap process runs. Null looks for one.</param>
-    public LoaderLauncher(IGamePathProvider pathProvider, IProcessStarter starter, RunningLaunches launches, Func<bool>? isGameRunning = null)
-        : this(pathProvider, starter, SharedProfileLauncher.CurrentPlatform(), () => DotnetHost.Find(SharedProfileLauncher.CurrentPlatform()), DefaultStartupWindow, launches ?? throw new ArgumentNullException(nameof(launches)), isGameRunning)
+    /// <param name="games">The game folder of each instance. Null resolves it over <paramref name="pathProvider"/>.</param>
+    public LoaderLauncher(IGamePathProvider pathProvider, IProcessStarter starter, RunningLaunches launches, Func<bool>? isGameRunning = null, IInstanceGameResolver? games = null)
+        : this(pathProvider, starter, SharedProfileLauncher.CurrentPlatform(), () => DotnetHost.Find(SharedProfileLauncher.CurrentPlatform()), DefaultStartupWindow, launches ?? throw new ArgumentNullException(nameof(launches)), isGameRunning, games: games)
     {
     }
 
@@ -71,7 +75,7 @@ public sealed class LoaderLauncher : ILauncher, IDisposable
     {
     }
 
-    internal LoaderLauncher(IGamePathProvider pathProvider, IProcessStarter starter, OsPlatform? platform, Func<string?> findDotnet, TimeSpan startupWindow, RunningLaunches? launches = null, Func<bool>? isGameRunning = null, TimeSpan? crashLogWait = null, IWinePrefixProbe? wine = null)
+    internal LoaderLauncher(IGamePathProvider pathProvider, IProcessStarter starter, OsPlatform? platform, Func<string?> findDotnet, TimeSpan startupWindow, RunningLaunches? launches = null, Func<bool>? isGameRunning = null, TimeSpan? crashLogWait = null, IWinePrefixProbe? wine = null, IInstanceGameResolver? games = null)
     {
         _pathProvider = pathProvider ?? throw new ArgumentNullException(nameof(pathProvider));
         _starter = starter ?? throw new ArgumentNullException(nameof(starter));
@@ -79,6 +83,8 @@ public sealed class LoaderLauncher : ILauncher, IDisposable
         _findDotnet = findDotnet ?? throw new ArgumentNullException(nameof(findDotnet));
         _isGameRunning = isGameRunning ?? RunningProcesses.IsGameRunning;
         _wine = wine ?? new WinePrefixProbe(platform);
+        _configurator = new LoaderConfigurator(_wine);
+        _games = games ?? new InstanceGameResolver(pathProvider, new InstalledGameVersionProvider(pathProvider));
         if (startupWindow < TimeSpan.Zero)
             throw new ArgumentOutOfRangeException(nameof(startupWindow), "The startup window cannot be negative.");
 
@@ -119,7 +125,15 @@ public sealed class LoaderLauncher : ILauncher, IDisposable
                     $"Instance '{instance.Name}' is already running from a launch Borea started. Close the game first.");
             }
 
-            var gameDirectory = _pathProvider.GetGameDirectoryPath();
+            var game = _games.Resolve(instance);
+            if (game is { Problem: not KeptBuildProblem.None, KeptBuild: { } missing })
+            {
+                return LaunchResult.Failed(
+                    LaunchOutcome.GameBuildMissing,
+                    $"Instance '{instance.Name}' runs on KSA {missing}, and '{_pathProvider.GetGameBuildFolder(missing)}' is gone or holds another build. Borea starts nothing, so the instance does not start on another build.");
+            }
+
+            var gameDirectory = game.GameDirectory;
             var hostStart = WindowsBuildOnHost.Check(_platform, gameDirectory, _wine);
             if (hostStart.Refusal is { } refusal)
                 return LaunchResult.Failed(LaunchOutcome.WindowsBuild, refusal, wine: hostStart.Wine);
@@ -264,6 +278,9 @@ public sealed class LoaderLauncher : ILauncher, IDisposable
                 plan = plan.ThroughWrapper(wrapped.Wrapper!.LauncherPath, new Dictionary<string, string> { [handover.Variable!] = windowsRoot! });
             }
 
+            if (UseGameFolder(instance, loader, game, Path.GetFullPath(loaderDirectory), plan) is { } refused)
+                return refused;
+
             IStartedProcess process;
             try
             {
@@ -290,6 +307,84 @@ public sealed class LoaderLauncher : ILauncher, IDisposable
                 $"Started {loader.Name} for instance '{instance.Name}'.");
         }
     }
+
+    /// <summary>
+    /// Writes the game folder of the instance to the loader's configuration
+    /// when it holds another value, or says why the start cannot go on. The
+    /// loader reads the file again when it restarts a running game, so the file
+    /// does not change under a running game.
+    /// </summary>
+    private LaunchResult? UseGameFolder(Instance instance, ModMetadata loader, InstanceGame game, string loaderDirectory, LaunchPlan plan)
+    {
+        if (!LoaderConfigurator.TakesGamePath(loader))
+        {
+            return game.KeptBuild is { } kept
+                ? LaunchResult.Failed(
+                    LaunchOutcome.LoaderTakesNoGamePath,
+                    $"The listing of {loader.Name} names no game path that Borea can write, so Borea cannot start instance '{instance.Name}' on KSA {kept}. Borea starts nothing. The loader author can add a [provides.configure] table to the listing.",
+                    plan)
+                : null;
+        }
+
+        // a game folder that is not absolute gives the loader no usable value, so Borea writes nothing, the same as the Wine refresh
+        if (game.GameDirectory is not { } gameDirectory || !Path.IsPathFullyQualified(gameDirectory))
+            return null;
+
+        string wanted;
+        try
+        {
+            wanted = _configurator.GamePathValue(gameDirectory);
+        }
+        catch (InvalidOperationException) when (_wine.Find(Path.GetFullPath(gameDirectory)) is { } prefix)
+        {
+            var unmapped = Path.GetFullPath(gameDirectory);
+            return LaunchResult.Failed(LaunchOutcome.PathOutsidePrefix, WindowsBuildOnHost.OutsidePrefix(prefix, unmapped), plan, wine: prefix, unmappedPath: unmapped);
+        }
+
+        string? held;
+        try
+        {
+            held = LoaderConfigurator.ReadGamePath(loader, loaderDirectory);
+        }
+        catch (Exception exception) when (exception is InvalidOperationException or IOException or UnauthorizedAccessException)
+        {
+            var file = LoaderConfigurator.GamePathFile(loader, loaderDirectory);
+            return LaunchResult.Failed(
+                LaunchOutcome.LoaderConfigurationUnreadable,
+                $"Borea cannot read the game folder from '{file}', so Borea starts nothing, and {loader.Name} cannot start with this file either. Repair or delete the file. Without it, Borea writes a new one at the next start. {exception.Message}",
+                plan,
+                configurationFile: file);
+        }
+
+        if (SameGamePath(held, wanted))
+            return null;
+
+        // a loader starts no game from a missing or empty game path, so only a value can belong to a running game
+        if (!string.IsNullOrWhiteSpace(held) && _isGameRunning())
+        {
+            return LaunchResult.Failed(
+                LaunchOutcome.OtherBuildRunning,
+                $"A game is running, and {loader.Name} reads the game folder '{held}' for it. If Borea wrote the game folder of instance '{instance.Name}' now, a restart of the running game would load the wrong build. Borea starts nothing. Close the game first.",
+                plan);
+        }
+
+        LoaderConfigurator.WriteGamePath(loader, loaderDirectory, wanted);
+        return null;
+    }
+
+    private static bool SameGamePath(string? held, string wanted) =>
+        held is not null && string.Equals(GameFolderOf(held), GameFolderOf(wanted), PathComparison);
+
+    // StarMap accepts the path of KSA.dll as well as the game folder, and a
+    // Windows path of a Wine prefix is not a full path on the host
+    private static string GameFolderOf(string path)
+    {
+        var folder = (Path.IsPathFullyQualified(path) ? Path.GetFullPath(path) : path.Replace('/', '\\')).TrimEnd('/', '\\');
+        var name = folder[(folder.LastIndexOfAny(['/', '\\']) + 1)..];
+        return string.Equals(name, "KSA.dll", PathComparison) ? folder[..^name.Length].TrimEnd('/', '\\') : folder;
+    }
+
+    private static StringComparison PathComparison => OperatingSystem.IsLinux() ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase;
 
     public async Task<LaunchResult> WatchStartAsync(Instance instance, LaunchResult started, CancellationToken cancellationToken = default)
     {
@@ -385,6 +480,7 @@ public sealed class LoaderLauncher : ILauncher, IDisposable
         }
 
         var modsFolder = _pathProvider.GetInstanceModsFolder(instance.InstanceId);
+        var gameDirectory = _games.Resolve(instance).GameDirectory;
         // only a missing game assembly shows a mod or a loader made for another KSA build
         var missing = LoaderCrashReport.MissingAssemblyNames(output).Where(LoaderCrashReport.IsGameAssembly).ToHashSet(StringComparer.OrdinalIgnoreCase);
         IReadOnlyList<LoadOrderMod>? loadOrder = null;
@@ -422,11 +518,11 @@ public sealed class LoaderLauncher : ILauncher, IDisposable
         if (blamed is not null && missing.Count > 0)
         {
             loadOrder ??= await LoadOrderReader.ReadAsync(_pathProvider, instance.InstanceId, cancellationToken).ConfigureAwait(false);
-            var notInGame = GameAssemblyNotInGame(modsFolder);
+            var notInGame = GameAssemblyNotInGame(gameDirectory, modsFolder);
             others = AssemblyReferences.Mods(instance, modsFolder, loadOrder, name => missing.Contains(name) || notInGame(name)).Where(mod => mod != blamed).ToList();
         }
 
-        var build = cause == LoaderCrashCause.GameAssembly ? InstalledGameVersionProvider.Read(_pathProvider.GetGameDirectoryPath())?.RawVersion : null;
+        var build = cause == LoaderCrashCause.GameAssembly ? InstalledGameVersionProvider.Read(gameDirectory)?.RawVersion : null;
         var message = (blamed, cause) switch
         {
             (null, LoaderCrashCause.GameAssembly) when build is not null => $"{start.LoaderName} was made for another KSA build than the installed {build} and cannot load the game. When a {start.LoaderName} release for {build} is out, install that release. If {build} is older than the build that {start.LoaderName} was made for, update KSA instead. {start.LoaderName} releases: {start.LoaderReleases}",
@@ -445,9 +541,9 @@ public sealed class LoaderLauncher : ILauncher, IDisposable
     /// nor a mod folder holds, which a mod made for another KSA build references.
     /// Always false when the game folder holds no KSA.dll.
     /// </summary>
-    private Func<string, bool> GameAssemblyNotInGame(string modsFolder)
+    private static Func<string, bool> GameAssemblyNotInGame(string? gameDirectory, string modsFolder)
     {
-        var held = AssemblyReferences.Held(_pathProvider.GetGameDirectoryPath() ?? string.Empty, recurse: false);
+        var held = AssemblyReferences.Held(gameDirectory ?? string.Empty, recurse: false);
         if (!held.Contains("KSA"))
             return _ => false;
 

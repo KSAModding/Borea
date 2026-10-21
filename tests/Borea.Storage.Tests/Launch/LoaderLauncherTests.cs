@@ -1,4 +1,6 @@
 using System.ComponentModel;
+using System.Text.Json;
+using System.Text.Json.Nodes;
 using Borea.Core.Game;
 using Borea.Core.Instances;
 using Borea.Core.Launch;
@@ -320,6 +322,7 @@ public sealed class LoaderLauncherTests : IDisposable
         Assert.Equal(OnDriveZ(_paths.GetInstanceRoot(_instance.InstanceId)), variable.Value);
         Assert.StartsWith(@"Z:", variable.Value);
         Assert.EndsWith(@"\Instances\" + _instance.InstanceId, variable.Value);
+        Assert.Equal(OnDriveZ(SettingsGame), JsonNode.Parse(File.ReadAllText(ConfigFile))!["GameLocation"]!.GetValue<string>());
         Assert.True(launcher.IsRunning(_instance.InstanceId));
     }
 
@@ -372,23 +375,33 @@ public sealed class LoaderLauncherTests : IDisposable
     }
 
     [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public void Launch_WrapperAndAPathOnNoDrive_StartsNothingAndNamesThePath(bool loaderOnADrive)
+    [InlineData("")]
+    [InlineData("loader")]
+    [InlineData("loader instance")]
+    public void Launch_WrapperAndAPathOnNoDrive_StartsNothingAndNamesThePath(string onADrive)
     {
         var executable = PlaceStarMap();
+        var instanceRoot = Path.GetFullPath(_paths.GetInstanceRoot(_instance.InstanceId));
         var drives = new Dictionary<char, string> { ['c'] = Directory.CreateDirectory(Path.Combine(_tempRoot, "drive_c")).FullName };
-        if (loaderOnADrive)
+        if (onADrive.Contains("loader"))
             drives['d'] = Path.GetFullPath(StarMapDirectory);
+        if (onADrive.Contains("instance"))
+            drives['e'] = Directory.CreateDirectory(_paths.GetInstancesRoot()).FullName;
         using var launcher = WrapperLauncher(PlaceWrapper(drives));
 
         var result = launcher.Launch(_instance, LoaderListing(provides: StarMapProvides()));
 
-        var unmapped = loaderOnADrive ? Path.GetFullPath(_paths.GetInstanceRoot(_instance.InstanceId)) : executable;
+        var unmapped = onADrive switch
+        {
+            "" => executable,
+            "loader" => instanceRoot,
+            _ => SettingsGame,
+        };
         Assert.Equal(LaunchOutcome.PathOutsidePrefix, result.Outcome);
         Assert.Equal(unmapped, result.UnmappedPath);
         Assert.Contains($"'{unmapped}'", result.Message);
         Assert.Empty(_starter.Plans);
+        Assert.False(File.Exists(ConfigFile));
         Assert.False(launcher.IsRunning(_instance.InstanceId));
     }
 
@@ -851,6 +864,189 @@ public sealed class LoaderLauncherTests : IDisposable
         Assert.False(_launcher.IsRunning(_instance.InstanceId));
     }
 
+    private static readonly GameVersion KeptVersion = GameVersion.Parse("2026.8.3.5117");
+
+    private string ConfigFile => Path.Combine(StarMapDirectory, "StarMapConfig.json");
+
+    private string SettingsGame => Path.GetFullPath(_paths.GetGameDirectoryPath()!);
+
+    /// <summary>A real game assembly as KSA.dll in <paramref name="folder"/>, which reads as <see cref="KeptVersion"/>.</summary>
+    private static string PlaceGameAssembly(string folder)
+    {
+        Directory.CreateDirectory(folder);
+        File.Copy(Path.Combine(AppContext.BaseDirectory, "GameVersionFixture.dll"), Path.Combine(folder, "KSA.dll"));
+        return Path.GetFullPath(folder);
+    }
+
+    /// <summary>Puts <see cref="KeptVersion"/> into its folder in the library and lets the instance run on it.</summary>
+    private string KeepBuild()
+    {
+        var folder = PlaceGameAssembly(_paths.GetGameBuildFolder(KeptVersion));
+        _instance.SetGameBuild(KeptVersion);
+        return folder;
+    }
+
+    private void WriteConfig(object content) => File.WriteAllText(ConfigFile, JsonSerializer.Serialize(content));
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void Launch_FileNamesAnotherFolder_WritesTheFolderOfTheInstance(bool keptBuild)
+    {
+        PlaceStarMap();
+        WriteConfig(new { GameLocation = Path.Combine(_tempRoot, "Other Game"), Other = "kept" });
+        var expected = keptBuild ? KeepBuild() : SettingsGame;
+        using var launcher = LauncherSeeingGame(() => false);
+
+        var result = launcher.Launch(_instance, LoaderListing(provides: StarMapProvides()));
+
+        Assert.True(result.Started);
+        var config = JsonNode.Parse(File.ReadAllText(ConfigFile))!;
+        Assert.Equal(expected, config["GameLocation"]!.GetValue<string>());
+        Assert.Equal("kept", config["Other"]!.GetValue<string>());
+    }
+
+    [Fact]
+    public void Launch_FileAlreadyNamesTheFolder_WritesNothingAndStartsWhileAGameRuns()
+    {
+        PlaceStarMap();
+        // a write would indent the compact text
+        WriteConfig(new { GameLocation = SettingsGame + Path.DirectorySeparatorChar, Other = "kept" });
+        var before = File.ReadAllBytes(ConfigFile);
+        using var launcher = LauncherSeeingGame(() => true);
+
+        var result = launcher.Launch(_instance, LoaderListing(provides: StarMapProvides()));
+
+        Assert.True(result.Started);
+        Assert.Equal(before, File.ReadAllBytes(ConfigFile));
+    }
+
+    [Fact]
+    public void Launch_GameRunsAndTheFileNamesAnotherFolder_IsRefusedAndWritesNothing()
+    {
+        PlaceStarMap();
+        var other = Path.Combine(_tempRoot, "Other Game");
+        WriteConfig(new { GameLocation = other });
+        var before = File.ReadAllBytes(ConfigFile);
+        KeepBuild();
+        using var launcher = LauncherSeeingGame(() => true);
+
+        var result = launcher.Launch(_instance, LoaderListing(provides: StarMapProvides()));
+
+        Assert.Equal(LaunchOutcome.OtherBuildRunning, result.Outcome);
+        Assert.Contains($"'{other}'", result.Message);
+        Assert.Empty(_starter.Plans);
+        Assert.Equal(before, File.ReadAllBytes(ConfigFile));
+        Assert.False(launcher.IsRunning(_instance.InstanceId));
+    }
+
+    [Theory]
+    [InlineData("letter case")]
+    [InlineData("separators")]
+    [InlineData("KSA.dll")]
+    public void Launch_GameRunsAndTheFileNamesTheFolderInAnotherForm_StartsAndWritesNothing(string form)
+    {
+        PlaceStarMap();
+        var held = form switch
+        {
+            "letter case" => SettingsGame.ToUpperInvariant(),
+            "separators" => Path.Combine(Path.GetDirectoryName(SettingsGame)!, ".", Path.GetFileName(SettingsGame)).Replace(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) + Path.AltDirectorySeparatorChar,
+            _ => Path.Combine(SettingsGame, "KSA.dll"),
+        };
+        WriteConfig(new { GameLocation = held });
+        var before = File.ReadAllBytes(ConfigFile);
+        using var launcher = LauncherSeeingGame(() => true);
+
+        var result = launcher.Launch(_instance, LoaderListing(provides: StarMapProvides()));
+
+        // the file systems of Linux tell letter case apart
+        if (form == "letter case" && OperatingSystem.IsLinux())
+        {
+            Assert.Equal(LaunchOutcome.OtherBuildRunning, result.Outcome);
+        }
+        else
+        {
+            Assert.True(result.Started, result.Message);
+        }
+
+        Assert.Equal(before, File.ReadAllBytes(ConfigFile));
+    }
+
+    [Fact]
+    public void Launch_FileThatIsNoJson_IsRefusedByNameAndStartsNothing()
+    {
+        PlaceStarMap();
+        File.WriteAllText(ConfigFile, "{ \"GameLocation\": ");
+        using var launcher = LauncherSeeingGame(() => false);
+
+        var result = launcher.Launch(_instance, LoaderListing(provides: StarMapProvides()));
+
+        Assert.Equal(LaunchOutcome.LoaderConfigurationUnreadable, result.Outcome);
+        Assert.Contains($"'{ConfigFile}'", result.Message);
+        Assert.Contains("Repair or delete the file", result.Message);
+        Assert.Equal(ConfigFile, result.ConfigurationFile);
+        Assert.Empty(_starter.Plans);
+        Assert.Equal("{ \"GameLocation\": ", File.ReadAllText(ConfigFile));
+        Assert.False(launcher.IsRunning(_instance.InstanceId));
+    }
+
+    [Theory]
+    [InlineData(LaunchOutcome.GameBuildMissing)]
+    [InlineData(LaunchOutcome.LoaderTakesNoGamePath)]
+    public void Launch_KeptBuildTheLoaderCannotStart_StartsNothingAndWritesNothing(LaunchOutcome expected)
+    {
+        PlaceStarMap();
+        // the settings folder holds a good build, so a fallback to it would start
+        PlaceGameAssembly(SettingsGame);
+        var provides = StarMapProvides();
+        if (expected == LaunchOutcome.GameBuildMissing)
+        {
+            _instance.SetGameBuild(KeptVersion);
+        }
+        else
+        {
+            KeepBuild();
+            provides = new LoaderProvides(launch: "StarMap.exe", contentDir: InstallAnchor.Mods, instance: provides.Instance);
+        }
+
+        using var launcher = LauncherSeeingGame(() => false);
+
+        var result = launcher.Launch(_instance, LoaderListing(provides: provides));
+
+        Assert.Equal(expected, result.Outcome);
+        Assert.Contains(KeptVersion.ToString(), result.Message);
+        Assert.Empty(_starter.Plans);
+        Assert.False(File.Exists(ConfigFile));
+        Assert.False(launcher.IsRunning(_instance.InstanceId));
+    }
+
+    [Fact]
+    public void Launch_LoaderWithoutAGamePath_StillStartsAnInstanceWithoutAKeptBuild()
+    {
+        PlaceStarMap();
+        var provides = new LoaderProvides(launch: "StarMap.exe", contentDir: InstallAnchor.Mods, instance: new InstanceHandover("-InstancePath", null));
+        using var launcher = LauncherSeeingGame(() => false);
+
+        var result = launcher.Launch(_instance, LoaderListing(provides: provides));
+
+        Assert.True(result.Started);
+        Assert.False(File.Exists(ConfigFile));
+    }
+
+    [Fact]
+    public void Launch_RelativeGameFolderInTheSettings_StartsAndWritesNothing()
+    {
+        PlaceStarMap();
+        // a hand-edited settings file can hold a relative game folder
+        var paths = new GamePathProvider("KSA", new Dictionary<string, string> { ["StarMap"] = StarMapDirectory }, boreaRoot: _tempRoot);
+        using var launcher = new LoaderLauncher(paths, _starter, SharedProfileLauncher.CurrentPlatform(), NoDotnetNeeded, LoaderLauncher.DefaultStartupWindow, isGameRunning: () => false);
+
+        var result = launcher.Launch(_instance, LoaderListing(provides: StarMapProvides()));
+
+        Assert.True(result.Started);
+        Assert.False(File.Exists(ConfigFile));
+    }
+
     [Fact]
     public void Launch_SecondLaunchWhileTheFirstRuns_IsRefused()
     {
@@ -1127,6 +1323,27 @@ public sealed class LoaderLauncherTests : IDisposable
         Assert.Null(result.BlamedModId);
         Assert.Contains("2026.8.3.5117", result.Message);
         Assert.Contains("https://github.com/StarMapLoader/StarMap/releases", result.Message);
+    }
+
+    [Fact]
+    public async Task WatchStart_KeptBuildCannotBeLoaded_NamesTheKeptBuild()
+    {
+        PlaceStarMap();
+        // the settings folder holds another build, which the text must not name
+        var game = Directory.CreateDirectory(_paths.GetGameDirectoryPath()!).FullName;
+        File.Copy(Path.Combine(AppContext.BaseDirectory, "LoaderVersionFixture.dll"), Path.Combine(game, "KSA.dll"));
+        KeepBuild();
+        var started = _launcher.Launch(_instance, LoaderListing(provides: StarMapProvides()));
+        var process = Assert.Single(_starter.Processes);
+        process.Output.AddRange(StarMap5638Crash);
+        process.HasExited = true;
+        process.ExitCode = -532462766;
+
+        var result = await _launcher.WatchStartAsync(_instance, started);
+
+        Assert.Equal(LoaderCrashCause.GameAssembly, result.CrashCause);
+        Assert.Contains(KeptVersion.ToString(), result.Message);
+        Assert.DoesNotContain("0.4.6.0", result.Message);
     }
 
     private static readonly string[] ClrCrash =

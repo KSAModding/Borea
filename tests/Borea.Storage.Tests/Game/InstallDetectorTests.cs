@@ -27,7 +27,7 @@ public sealed class InstallDetectorTests : IDisposable
         var paths = new TestGamePathProvider(_tempRoot);
         _loadersRoot = paths.GetLoadersRoot();
         _settings = new FileBoreaSettingsRepository(paths);
-        _detector = new InstallDetector(_candidates, new FileLoaderAdopter(_settings, new LoaderConfigurator()), _loadersRoot);
+        _detector = new InstallDetector(_candidates, new FileLoaderAdopter(_settings, new LoaderConfigurator()), _loadersRoot, paths.GetGameBuildsRoot());
     }
 
     [Fact]
@@ -131,6 +131,19 @@ public sealed class InstallDetectorTests : IDisposable
         var detection = await _detector.DetectAsync([StarMap()]);
 
         Assert.Equal(game, Assert.Single(detection.Games).Directory);
+    }
+
+    [Fact]
+    public async Task DetectAsync_StarMapConfiguredWithAKeptBuild_OffersNoGame()
+    {
+        // the launcher writes the folder of a kept build when an instance on it starts
+        var kept = PlaceGame(Path.Combine("Game Builds", "2026.8.3.5117"), RealBuildFixture);
+        var loader = PlaceStarMap(Path.Combine(_loadersRoot, "StarMap"), kept);
+
+        var detection = await _detector.DetectAsync([StarMap()]);
+
+        Assert.Equal(loader, Assert.Single(detection.Loaders).Directory);
+        Assert.Empty(detection.Games);
     }
 
     private string PlaceGame(string name, string fixture)

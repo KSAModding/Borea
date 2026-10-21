@@ -16,8 +16,15 @@ public interface ILauncher
     /// the instance only through the variable of the handover, because the
     /// wrapper passes no arguments. It refuses launch arguments there, and it
     /// refuses a loader whose runtimeconfig.json names a .NET runtime that
-    /// the prefix does not have.
+    /// the prefix does not have. Right before the start, it writes the game
+    /// folder of the instance to the game path of the loader's configuration
+    /// when the file holds another value. While a game runs and the file names
+    /// another folder, it refuses the start, because the loader reads the file
+    /// again when it restarts that game. A configuration that it cannot read
+    /// or parse refuses the start.
     /// </summary>
+    /// <exception cref="InvalidOperationException">The loader's configuration cannot be written.</exception>
+    /// <exception cref="IOException">The loader's configuration cannot be replaced.</exception>
     LaunchResult Launch(Instance instance, ModMetadata? loader, IReadOnlyList<string>? arguments = null);
 
     /// <summary>
