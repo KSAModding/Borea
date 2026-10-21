@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RuntimeIdentifiers>win-x64;linux-x64;osx-arm64</RuntimeIdentifiers>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Borea.Core\Borea.Core.csproj" />
+    <InternalsVisibleTo Include="Borea.Preview.Tests" />
+    <InternalsVisibleTo Include="Borea.App.Tests" />
+  </ItemGroup>
+
+</Project>
