@@ -3314,6 +3314,12 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string FormatLaunchStoppedLoadingMods(string loader, int exitCode)
         => string.Format(CultureInfo.CurrentCulture, Resources.LaunchStoppedLoadingModsFormat, loader, exitCode);
 
+    public string FormatLaunchLoaderTooOld(string loader, string build)
+        => string.Format(CultureInfo.CurrentCulture, Resources.LaunchLoaderTooOldFormat, loader, build);
+
+    public string FormatLaunchLoaderReleases(string loader)
+        => string.Format(CultureInfo.CurrentCulture, Resources.LaunchLoaderReleasesFormat, loader);
+
     public string FormatLaunchExitCode(string exitCode)
         => string.Format(CultureInfo.CurrentCulture, Resources.LaunchExitCodeFormat, exitCode);
 

@@ -11,4 +11,7 @@ public enum LoaderCrashCause
 
     /// <summary>The loader stopped while it loaded mods. The blamed mod, if any, is the one it was likely loading.</summary>
     ModLoading = 2,
+
+    /// <summary>The error names an assembly of the game and no mod, so the loader was made for another game build.</summary>
+    GameAssembly = 3,
 }

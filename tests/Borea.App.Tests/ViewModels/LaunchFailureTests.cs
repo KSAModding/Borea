@@ -125,6 +125,35 @@ public sealed class LaunchFailureTests
         Assert.False(viewModel.CanDisableBlamedMod);
     }
 
+    [Fact]
+    public async Task Play_LoaderCannotLoadAGameAssembly_SaysTheLoaderNeedsAnUpdate()
+    {
+        string[] starMap5638Crash =
+        [
+            "Unhandled exception. System.Reflection.ReflectionTypeLoadException: Unable to load one or more of the requested types.",
+            "Could not load file or assembly 'Brutal.Core.Numerics, Version=2026.9.0.0, Culture=neutral, PublicKeyToken=null'. The system cannot find the file specified.",
+            "   at StarMap.GameSurveyer.TryLoadCoreAndGame()",
+        ];
+        using var harness = await ViewModelHarness.CreateAsync(
+            services =>
+            {
+                var game = Directory.CreateDirectory(Path.Combine(Path.GetDirectoryName(services.Paths.GetBoreaSettingsPath())!, "Game")).FullName;
+                File.Copy(Path.Combine(AppContext.BaseDirectory, "GameVersionFixture.dll"), Path.Combine(game, "KSA.dll"));
+                return services.SettingsRepository.SaveAsync(services.Settings.WithGameDirectory(game).WithLoaderInstallation("StarMap", CreateLoader(services, "StarMap")));
+            },
+            processStarter: new CrashingStarter(UnhandledException, starMap5638Crash));
+        var viewModel = harness.ViewModel;
+        await InstalledContent.AddAsync(harness, "MeasureTools", activate: true, ownership: ModInstallOwnership.Borea);
+        await viewModel.LoadAsync();
+
+        await viewModel.PlayActiveInstanceCommand.ExecuteAsync(null);
+
+        Assert.True(viewModel.IsLaunchFailureOpen);
+        Assert.Equal(harness.Localization.FormatLaunchLoaderTooOld("StarMap", "2026.8.3.5117"), viewModel.LaunchMessage);
+        Assert.Equal("https://github.com/StarMapLoader/StarMap/releases", viewModel.LaunchLoaderReleases?.Url);
+        Assert.False(viewModel.CanDisableBlamedMod);
+    }
+
     private const int AccessViolation = -1073741819;
 
     private static readonly string[] ModLoadingCrash =

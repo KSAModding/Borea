@@ -48,6 +48,7 @@ public sealed class LoggingLauncher : ILauncher, IDisposable
         {
             var blamed = (result.CrashCause, result.BlamedModId) switch
             {
+                (LoaderCrashCause.GameAssembly, _) => "cannot load a game assembly, so the loader was made for another game build",
                 (LoaderCrashCause.ModLoading, null) => "stopped while loading mods, no mod found",
                 (LoaderCrashCause.ModLoading, var modId) => $"stopped while loading mods, likely {modId}",
                 (_, null) => "no mod named",

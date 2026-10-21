@@ -2685,6 +2685,12 @@
   <data name="LaunchExitedEarlyFormat" xml:space="preserve">
     <value>{0} keeled over right after takin' off (exit code {1}). The d'tails show what it scribbled down.</value>
   </data>
+  <data name="LaunchLoaderTooOldFormat" xml:space="preserve">
+    <value>{0} were rigged fer another KSA build than yer {1} an' can't haul the game aboard. When a {0} release fer {1} makes port, haul it aboard under Rigging &gt; Game &gt; Loader o' barrels o' fun. If yer {1} be older than the build {0} were rigged fer, refit KSA instead.</value>
+  </data>
+  <data name="LaunchLoaderReleasesFormat" xml:space="preserve">
+    <value>{0} releases o' the seven seas</value>
+  </data>
   <data name="LaunchStoppedTitleFormat" xml:space="preserve">
     <value>{0} keeled over</value>
   </data>

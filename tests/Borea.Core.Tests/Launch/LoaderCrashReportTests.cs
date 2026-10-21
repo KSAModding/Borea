@@ -46,6 +46,16 @@ public sealed class LoaderCrashReportTests
         Assert.Empty(LoaderCrashReport.AssemblyNames(["Unhandled exception. System.NullReferenceException", ""]));
     }
 
+    [Theory]
+    [InlineData("Could not load file or assembly 'Brutal.Core.Numerics, Version=2026.9.0.0, Culture=neutral, PublicKeyToken=null'. The system cannot find the file specified.", true)]
+    [InlineData("Could not load type 'KSA.Vehicle' from assembly 'KSA, Version=2026.10.19.5638'.", true)]
+    [InlineData("Could not load file or assembly 'KSArmory, Version=0.8.44.0'.", false)]
+    [InlineData("Unhandled exception. System.NullReferenceException", false)]
+    public void NamesGameAssembly_TellsGameAssembliesFromOthers(string line, bool expected)
+    {
+        Assert.Equal(expected, LoaderCrashReport.NamesGameAssembly([line]));
+    }
+
     private static readonly string[] ClrCrash =
     [
         "Fatal error.",
