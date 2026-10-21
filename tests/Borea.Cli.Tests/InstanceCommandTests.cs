@@ -136,6 +136,25 @@ public sealed class InstanceCommandTests : IDisposable
         Assert.Equal(0, run.ExitCode);
         Assert.Contains("Last played: never", run.Output);
         Assert.Contains("Launch arguments: none", run.Output);
+        Assert.Contains("Game build: from the game folder of the settings", run.Output);
+    }
+
+    [Fact]
+    public async Task Show_InstanceOnAKeptBuild_NamesTheBuild()
+    {
+        await _host.RunAsync("instance", "create", "Alpha");
+        await _host.KeepGameBuildAsync("Alpha");
+
+        var text = await _host.RunAsync("instance", "show", "Alpha");
+        var json = await _host.RunAsync("instance", "show", "Alpha", "--json");
+
+        Assert.Equal(0, text.ExitCode);
+        Assert.Contains("Game build: 2026.8.3.5117, kept for this instance", text.Output);
+        Assert.Equal(0, json.ExitCode);
+        var gameBuild = json.Json.GetProperty("gameBuild");
+        Assert.Equal("2026.8.3.5117", gameBuild.GetProperty("kept").GetString());
+        Assert.Equal("2026.8.3.5117", gameBuild.GetProperty("version").GetString());
+        Assert.Equal("none", gameBuild.GetProperty("problem").GetString());
     }
 
     [Fact]
@@ -821,6 +840,22 @@ public sealed class InstanceCommandTests : IDisposable
         var mods = (await new FileInstanceRepository(_host.Paths).GetByIdAsync(instanceId))!.Mods;
         Assert.Equal(ModInstallOwnership.Borea, mods.Single(mod => mod.ModId == "flight-tools").Ownership);
         Assert.Equal(InstallReason.Dependency, mods.Single(mod => mod.ModId == "library").Reason);
+    }
+
+    [Fact]
+    public async Task TakeOwnership_WithDependenciesOnAKeptBuildThatIsGone_FailsAndNamesTheBuild()
+    {
+        var instanceId = await RecordForeignAsync(new ModDependency("library", ModDependencyKind.Required));
+        _host.Mods.Releases.Add(ContentCommandFixtures.Release(id: "library", version: "1.0.0"));
+        _host.InstallerFactory = graph => new FolderInstaller(graph);
+        await _host.KeepGameBuildAsync("Alpha", withFolder: false);
+
+        var run = await _host.RunAsync("instance", "take-ownership", "Alpha", "flight-tools", "--with-dependencies");
+
+        Assert.Equal(1, run.ExitCode);
+        Assert.Contains("keeps game build 2026.8.3.5117", run.Error);
+        var mod = Assert.Single((await new FileInstanceRepository(_host.Paths).GetByIdAsync(instanceId))!.Mods);
+        Assert.Equal(ModInstallOwnership.Foreign, mod.Ownership);
     }
 
     [Fact]
