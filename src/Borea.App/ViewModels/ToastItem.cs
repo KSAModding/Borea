@@ -180,6 +180,7 @@ public sealed partial class ToastItem : ObservableObject
         TaskKind.LibraryFolderChange => Localization.FormatToastLibraryFolderChanged(Subject),
         TaskKind.BackupRestore => Localization.FormatToastBackupRestored(Subject, InstanceName),
         TaskKind.BackupDelete => Localization.FormatToastBackupDeleted(Subject),
+        TaskKind.GameBuildKeep => Localization.FormatToastGameBuildKept(Subject, InstanceName),
         _ => Localization.FormatToastAdded(Subject, InstanceName),
     };
 
@@ -188,6 +189,7 @@ public sealed partial class ToastItem : ObservableObject
         TaskKind.Update or TaskKind.PackUpdate => Localization.FormatToastUpdateStopped(Subject),
         TaskKind.UpdateAll => Localization.FormatToastUpdateAllStopped(InstanceName),
         TaskKind.LibraryFolderChange => Localization.ToastLibraryFolderStopped,
+        TaskKind.GameBuildKeep => Localization.FormatToastGameBuildKeepStopped(Subject),
         _ => Localization.FormatToastInstallStopped(Subject),
     };
 
@@ -203,6 +205,7 @@ public sealed partial class ToastItem : ObservableObject
         TaskKind.LibraryFolderChange => Localization.FormatToastLibraryFolderFailed(Subject),
         TaskKind.BackupRestore => Localization.FormatToastBackupRestoreFailed(Subject),
         TaskKind.BackupDelete => Localization.FormatToastBackupDeleteFailed(Subject),
+        TaskKind.GameBuildKeep => Localization.FormatToastGameBuildKeepFailed(Subject),
         TaskKind.BoreaUpdate => Localization.FormatToastSelfUpdateFailed(task.Version ?? string.Empty),
         _ => Localization.FormatToastInstallFailed(Subject),
     };

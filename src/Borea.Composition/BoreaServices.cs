@@ -209,6 +209,9 @@ public sealed class BoreaServices : IDisposable
     /// <summary>The game folder and the installed version of one instance, which can keep its own game build.</summary>
     public required IInstanceGameResolver InstanceGames { get; init; }
 
+    /// <summary>Copies the game build of the settings for an instance, so the instance keeps it after a game update.</summary>
+    public required IGameBuildKeeper GameBuilds { get; init; }
+
     /// <summary>The platform whose code the game build runs, which the planner checks releases against.</summary>
     public required IGamePlatform GamePlatform { get; init; }
 
@@ -573,6 +576,7 @@ public sealed class BoreaServices : IDisposable
             Announcements = new AnnouncementFeed(new AnnouncementFetcher(http, AnnouncementFetcher.DefaultUri, announcementReader), announcementReader, paths, log),
             InstalledVersion = installedVersion,
             InstanceGames = instanceGames,
+            GameBuilds = new GameBuildKeeper(paths, instances, isGameProcessRunning, launcher.IsRunning),
             GamePlatform = gamePlatform ?? new Borea.Storage.Game.GamePlatform(paths),
             GameShape = gameShape,
             GamePatchNotes = new FileGamePatchNotesReader(paths),

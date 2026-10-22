@@ -1,0 +1,33 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Borea.App.ViewModels"
+             xmlns:views="using:Borea.App.Views"
+             x:Class="Borea.App.Views.KeepGameBuildModal"
+             x:DataType="vm:MainViewModel">
+    <!-- modal: keep the game build for an instance -->
+    <Panel Background="#99000000" views:ModalBackdrop.CloseButton="{Binding #CloseButton}">
+        <Border Classes="modal" Width="561" Margin="80,0,0,0">
+            <StackPanel>
+                <Grid ColumnDefinitions="*,Auto" Margin="24,24,24,0">
+                    <TextBlock Classes="heading-lg" Text="{Binding Localization.ModalKeepGameBuildTitle}" VerticalAlignment="Center" />
+                    <Button x:Name="CloseButton" Grid.Column="1" Classes="icon" Command="{Binding CancelKeepGameBuildCommand}" AutomationProperties.Name="{Binding Localization.ModalClose}">
+                        <Path Classes="icon" Data="{StaticResource Icon.Close}" />
+                    </Button>
+                </Grid>
+                <Border Height="1" Background="{StaticResource Brush.Window}" Margin="0,24,0,0" />
+                <StackPanel Margin="36,32,24,32" Spacing="24">
+                    <StackPanel Spacing="8">
+                        <TextBlock Classes="body-md" Text="{Binding KeepGameBuildText}" TextWrapping="Wrap" IsVisible="{Binding KeepGameBuildText, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                        <TextBlock Classes="body-md secondary" Text="{Binding KeepGameBuildFreeSpaceText}" TextWrapping="Wrap" IsVisible="{Binding KeepGameBuildFreeSpaceText, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                        <TextBlock Classes="body-md secondary" Text="{Binding Localization.ModalKeepGameBuildPopupNote}" TextWrapping="Wrap" IsVisible="{Binding CanConfirmKeepGameBuild}" />
+                        <TextBlock Classes="body-md danger" Text="{Binding KeepGameBuildRefusalText}" TextWrapping="Wrap" IsVisible="{Binding KeepGameBuildRefusalText, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+                        <Button Classes="text" Content="{Binding Localization.LibraryCancel}" Command="{Binding CancelKeepGameBuildCommand}" />
+                        <Button Classes="text primary" Content="{Binding Localization.ModalKeepGameBuildConfirm}" Command="{Binding ConfirmKeepGameBuildCommand}" IsVisible="{Binding CanConfirmKeepGameBuild}" />
+                    </StackPanel>
+                </StackPanel>
+            </StackPanel>
+        </Border>
+    </Panel>
+</UserControl>

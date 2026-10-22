@@ -19,4 +19,7 @@ public enum TaskKind
 
     /// <summary>Borea replaces itself with a newer release.</summary>
     BoreaUpdate,
+
+    /// <summary>The game build of the settings is copied for an instance.</summary>
+    GameBuildKeep,
 }
