@@ -500,6 +500,7 @@ public sealed class BoreaServices : IDisposable
         var loaderAdopter = new FileLoaderAdopter(settingsRepository, loaderConfiguration, paths.GetLoadersRoot());
         installCandidates ??= HostInstallCandidates();
 
+        var loaderVersions = new FileLoaderVersionStore(settingsRepository, paths);
         var installedVersion = new InstalledGameVersionProvider(paths);
         var gameShape = new GameShapeCheck(paths, installedVersion);
 
@@ -535,7 +536,7 @@ public sealed class BoreaServices : IDisposable
             Paths = paths,
             Log = log,
             SettingsRepository = settingsRepository,
-            GameDirectoryChanger = new GameDirectoryChanger(settingsRepository, mods, loaderConfiguration),
+            GameDirectoryChanger = new GameDirectoryChanger(settingsRepository, mods, loaderConfiguration, loaderVersions),
             LibraryFolderChanger = new LoggingLibraryFolderChanger(new LibraryFolderChanger(settingsRepository, paths, defaultLibraryFolder, launcher, fileInstances, isGameProcessRunning, isOtherBoreaRunning), log),
             IsGameProcessRunning = isGameProcessRunning,
             AppPreferences = new FileAppPreferencesRepository(paths),
@@ -580,7 +581,7 @@ public sealed class BoreaServices : IDisposable
             LoaderAdopter = loaderAdopter,
             LoaderConfiguration = loaderConfigurator ?? loaderConfiguration,
             LoaderUninstaller = new FileLoaderUninstaller(settingsRepository),
-            LoaderVersions = new FileLoaderVersionStore(settingsRepository, paths),
+            LoaderVersions = loaderVersions,
             Launcher = launcher,
             SharedProfileLauncher = new LoggingSharedProfileLauncher(sharedProfileLauncher ?? new SharedProfileLauncher(paths, processStarter ?? new ProcessStarter(), launches), log),
             LatestVersion = new LatestVersionPing(http),
