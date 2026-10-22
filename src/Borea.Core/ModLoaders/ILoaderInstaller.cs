@@ -14,8 +14,14 @@ public interface ILoaderInstaller
     /// stamps <c>[provides]</c>. A standalone loader without a given directory
     /// goes into its own version folder beside the installed versions, and a
     /// new version starts with the configuration file of the recorded one. The
-    /// record moves to the new version unless it is a prerelease beside a
-    /// release, a lower version, or a folder outside Borea's Loaders root.
+    /// record names the version that an older Borea starts for every instance,
+    /// so it moves to the new version only when that version is not lower, when
+    /// the recorded version is a prerelease and the new one is a release, when
+    /// the recorded folder is gone, or when the caller says that the recorded
+    /// version does not fit the game. It never moves from a release to a
+    /// prerelease outside a prerelease channel, and never from a folder outside
+    /// Borea's Loaders root, so the install of an older version for a pin
+    /// changes nothing for the other instances.
     /// Reinstalling an installed version replaces its folder in place, keeps
     /// its configuration file, and restores the old folder when that fails.
     /// A failed new install removes what it wrote.
@@ -24,6 +30,11 @@ public interface ILoaderInstaller
     /// Where a standalone loader goes. Null means Borea's own version folder.
     /// A given directory keeps the single recorded install. Invalid for any
     /// other anchor.
+    /// </param>
+    /// <param name="replacesUnfitRecord">
+    /// True when the index rates the recorded version incompatible with the
+    /// game and does not rate this release so. The record then moves to this
+    /// release also when it is lower. See <see cref="LoaderUpdate.ReplacesUnfitRecordAsync"/>.
     /// </param>
     /// <exception cref="ArgumentException">
     /// The listing is not a mod loader, the release does not belong to it, or
@@ -45,6 +56,7 @@ public interface ILoaderInstaller
         ModMetadata loader,
         ModVersionMetadata release,
         string? directory = null,
+        bool replacesUnfitRecord = false,
         IProgress<InstallProgress>? progress = null,
         CancellationToken cancellationToken = default);
 }
