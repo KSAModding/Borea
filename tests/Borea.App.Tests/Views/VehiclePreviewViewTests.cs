@@ -156,6 +156,84 @@ public sealed class VehiclePreviewViewTests
         Assert.Equal((true, 0, (int?)null), result);
     }
 
+    [Fact]
+    public async Task AFullFrameAtRest_IsRefinedToHigh()
+    {
+        var result = await HeadlessApp.RunAsync(async () =>
+        {
+            var (_, view) = Show(PreviewTestScenes.StackedBoxes());
+            view.RefineDelay = TimeSpan.FromMilliseconds(20);
+            await HeadlessApp.FramesUntilAsync(() => view.IsIdle && view.ShownQuality == RenderQuality.High);
+            return (view.ShownQuality, view.FramesShown, view.HighFramesShown, view.BitmapWidth);
+        });
+
+        Assert.Equal((RenderQuality.High, 1, 1, (int?)Width), result);
+    }
+
+    [Fact]
+    public async Task APressBeforeTheRefine_KeepsStandard_AndInputAfterAHighFrameShowsStandardFrames()
+    {
+        var result = await HeadlessApp.RunAsync(async () =>
+        {
+            var (window, view) = Show(PreviewTestScenes.StackedBoxes());
+            view.RefineDelay = TimeSpan.FromMilliseconds(30);
+            await IdleAsync(view, 1);
+
+            // Nothing runs the dispatcher between the first frame and the press, so the timer cannot fire before it.
+            window.MouseDown(Center, MouseButton.Left);
+            window.MouseMove(Center + new Point(20, 0));
+            await IdleAsync(view, 2);
+            await HeadlessApp.FramesAsync(10);
+            var held = (view.ShownQuality, view.HighFramesShown, view.BitmapWidth);
+
+            window.MouseUp(Center + new Point(20, 0), MouseButton.Left);
+            await HeadlessApp.FramesUntilAsync(() => view.IsIdle && view.ShownQuality == RenderQuality.High);
+            var refined = view.ShownQuality;
+            var shown = view.FramesShown;
+
+            // The press is away from the first one, so it is not a double click, which would reset the view.
+            var from = Center + new Point(-30, -10);
+            window.MouseDown(from, MouseButton.Left);
+            window.MouseMove(from + new Point(-20, 5));
+            window.MouseWheel(from, new Avalonia.Vector(0, 1));
+            await IdleAsync(view, shown + 1);
+            return (Held: held, Refined: refined, After: (view.ShownQuality, view.BitmapWidth));
+        });
+
+        Assert.Equal((RenderQuality.Standard, 0, (int?)(Width / 2)), result.Held);
+        Assert.Equal(RenderQuality.High, result.Refined);
+        Assert.Equal((RenderQuality.Standard, (int?)(Width / 2)), result.After);
+    }
+
+    [Fact]
+    public async Task ADragThatKeepsMoving_ShowsFrames_AndRecordsEachOne()
+    {
+        var result = await HeadlessApp.RunAsync(async () =>
+        {
+            var (window, view) = Show(PreviewTestScenes.StackedBoxes());
+            view.RefineDelay = TimeSpan.FromMilliseconds(10);
+            await IdleAsync(view, 1);
+            var before = view.FramesShown;
+
+            // Each move makes a new camera, most of them while the frame of the last one still renders.
+            window.MouseDown(Center, MouseButton.Left);
+            for (var step = 1; step <= 30; step++)
+            {
+                window.MouseMove(Center + new Point(step, 0));
+                await HeadlessApp.FramesAsync(1);
+            }
+
+            await HeadlessApp.FramesUntilAsync(() => view.IsIdle);
+            var during = view.FramesShown - before;
+            var recorded = view.DragFramesRecorded;
+            return (During: during, Recorded: recorded, view.ShownQuality);
+        });
+
+        Assert.True(result.During > 1, $"The drag showed {result.During} frames.");
+        Assert.Equal(result.During, result.Recorded);
+        Assert.Equal(RenderQuality.Standard, result.ShownQuality);
+    }
+
     private static (Window Window, VehiclePreviewView View) Show(PreviewScene scene)
     {
         var view = new VehiclePreviewView { Scene = scene, Background = Brushes.Black };

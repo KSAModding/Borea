@@ -9,6 +9,7 @@ using Avalonia.Input;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
+using Avalonia.Threading;
 using Borea.Preview.Rendering;
 using Borea.Preview.Scene;
 using PreviewRenderOptions = Borea.Preview.Rendering.RenderOptions;
@@ -21,7 +22,9 @@ namespace Borea.App.Views.Preview;
 /// control stretches over its bounds, and it draws only when the scene, the size or the camera changes.
 /// While a drag holds the pointer, the frames render at <see cref="PreviewRenderOptions.DragScale"/> of the
 /// full resolution, or at <see cref="PreviewRenderOptions.SlowDragScale"/> when <see cref="DragScaleController"/>
-/// finds the drag frames too slow. Each new drag starts at the normal drag scale again.
+/// finds the drag frames too slow. Each new drag starts at the normal drag scale again. When a full frame shows
+/// and no input follows for <see cref="RefineDelay"/>, the view renders the same camera once more at
+/// <see cref="RenderQuality.High"/>, and any input cancels that frame at once.
 /// </summary>
 public sealed class VehiclePreviewView : Control
 {
@@ -43,6 +46,9 @@ public sealed class VehiclePreviewView : Control
 
     // A drag frame shows for a short time only, so it leaves out the parts that are smaller than one of its pixels.
     private static readonly PreviewRenderOptions DragOptions = Options with { SkipSubPixelDraws = true };
+
+    // The view renders this level only for a camera at rest, because a frame costs more for each covered pixel.
+    private static readonly PreviewRenderOptions HighOptions = Options with { Quality = RenderQuality.High };
 
     // The pitch in drag pixels stays inside the clamp of OrbitCamera.Orbit, so a drag back responds at once.
     private static readonly float MinOrbitY = (-OrbitCamera.MaxPitch - OrbitCamera.DefaultPitch) / OrbitCamera.RadiansPerPixel;
@@ -67,6 +73,8 @@ public sealed class VehiclePreviewView : Control
     private bool _rendering;
     private int _generation;
     private CancellationTokenSource _cancellation = new();
+    private IDisposable? _refineTimer;
+    private CancellationTokenSource? _refine;
 
     static VehiclePreviewView()
     {
@@ -96,7 +104,21 @@ public sealed class VehiclePreviewView : Control
 
     internal float CameraYaw => _camera.Yaw;
 
+    /// <summary>
+    /// The number of Standard frames that showed. A High frame only refines the frame that shows, so it counts in
+    /// <see cref="HighFramesShown"/> and not here.
+    /// </summary>
     internal int FramesShown { get; private set; }
+
+    internal int HighFramesShown { get; private set; }
+
+    internal RenderQuality ShownQuality { get; private set; }
+
+    /// <summary>The number of drag frames whose time went to the <see cref="DragScaleController"/>.</summary>
+    internal int DragFramesRecorded { get; private set; }
+
+    /// <summary>How long a full frame shows without input before the view renders it again at High quality.</summary>
+    internal TimeSpan RefineDelay { get; set; } = TimeSpan.FromMilliseconds(180);
 
     /// <summary>The scene of the frame that shows now, or null when only the background shows.</summary>
     internal PreviewScene? ShownScene { get; private set; }
@@ -188,6 +210,8 @@ public sealed class VehiclePreviewView : Control
         if (!point.Properties.IsLeftButtonPressed)
             return;
 
+        // A press can start a drag that moves the camera, so the High frame of the old camera stops before it.
+        CancelRefine();
         Focus(NavigationMethod.Pointer);
         e.Handled = true;
         if (e.ClickCount == 2)
@@ -281,6 +305,7 @@ public sealed class VehiclePreviewView : Control
     /// </summary>
     private void RequestRender(bool full)
     {
+        CancelRefine();
         var size = Bounds.Size;
         var aspect = size.Width > 0 && size.Height > 0 ? (float)(size.Width / size.Height) : 1f;
         var scene = Scene;
@@ -314,9 +339,11 @@ public sealed class VehiclePreviewView : Control
                 var elapsedMs = double.NaN;
                 try
                 {
-                    var token = request.Cancellation.Token;
+                    // A High frame stops on its own token, which a new generation also cancels because it is linked to it.
+                    var high = request.Quality == RenderQuality.High;
+                    var token = high ? request.RefineToken : request.Cancellation.Token;
                     var reused = TakeFrameBuffer(request);
-                    var options = request.DragScale is null ? Options : DragOptions;
+                    var options = high ? HighOptions : request.DragScale is null ? Options : DragOptions;
                     (frame, elapsedMs) = await Task.Run(() =>
                     {
                         var buffer = reused ?? new FrameBuffer(request.Width, request.Height);
@@ -337,12 +364,21 @@ public sealed class VehiclePreviewView : Control
                 if (request.Cancellation != _cancellation)
                     request.Cancellation.Dispose();
 
-                if (frame is not null && request.Generation == _generation)
+                // A Standard frame of an older camera still shows, so a drag that keeps moving keeps showing frames. A
+                // High frame only refines the frame that shows, so it shows only while no input followed it.
+                if (frame is not null && request.Generation == _generation && (request.Quality != RenderQuality.High || IsRefineCurrent(request)))
                 {
-                    Show(frame, request.Scene);
+                    Show(frame, request.Scene, request.Quality);
                     KeepFrameBuffer(request, frame);
                     if (request.DragScale is { } dragScale)
+                    {
                         _dragScales.Record(dragScale, elapsedMs);
+                        DragFramesRecorded++;
+                    }
+                    else if (request.Quality == RenderQuality.Standard && _queued is null && _dragFrom is null)
+                    {
+                        StartRefine(request);
+                    }
                 }
             }
         }
@@ -388,7 +424,51 @@ public sealed class VehiclePreviewView : Control
         _dragFrame = null;
     }
 
-    private void Show(FrameBuffer frame, PreviewScene scene)
+    private bool IsRefineCurrent(RenderRequest request) =>
+        request.Camera == _camera && _refine is { } refine && refine.Token == request.RefineToken && !refine.IsCancellationRequested;
+
+    /// <summary>Waits <see cref="RefineDelay"/> after the full frame of <paramref name="shown"/> and then queues it at High quality.</summary>
+    private void StartRefine(RenderRequest shown)
+    {
+        CancelRefine();
+        if (VisualRoot is null)
+            return;
+
+        _refineTimer = DispatcherTimer.RunOnce(
+            () =>
+            {
+                _refineTimer = null;
+                if (VisualRoot is null || shown.Generation != _generation || shown.Camera != _camera)
+                    return;
+
+                // The refine source is linked to the generation source, so a scene change or a detach also stops it.
+                _refine = CancellationTokenSource.CreateLinkedTokenSource(_cancellation.Token);
+                _queued = shown with { Quality = RenderQuality.High, RefineToken = _refine.Token };
+                if (!_rendering)
+                    _ = RenderQueuedAsync();
+            },
+            RefineDelay);
+    }
+
+    /// <summary>
+    /// Stops the timer and the High frame. The view is the only owner of the refine source, and only this method
+    /// cancels and disposes it, so a render that still holds its token sees a cancelled token and never a call on a
+    /// disposed source.
+    /// </summary>
+    private void CancelRefine()
+    {
+        _refineTimer?.Dispose();
+        _refineTimer = null;
+        var refine = _refine;
+        _refine = null;
+        if (refine is not null)
+        {
+            refine.Cancel();
+            refine.Dispose();
+        }
+    }
+
+    private void Show(FrameBuffer frame, PreviewScene scene, RenderQuality quality)
     {
         var size = new PixelSize(frame.Width, frame.Height);
         if (_bitmap is null || _bitmap.PixelSize != size)
@@ -405,13 +485,18 @@ public sealed class VehiclePreviewView : Control
         }
 
         ShownScene = scene;
-        FramesShown++;
+        ShownQuality = quality;
+        if (quality == RenderQuality.High)
+            HighFramesShown++;
+        else
+            FramesShown++;
         InvalidateVisual();
     }
 
     /// <summary>Makes every running and queued frame stale, so a frame of the old scene or of a detached view never shows.</summary>
     private void StartGeneration()
     {
+        CancelRefine();
         _generation++;
         _queued = null;
         _cancellation.Cancel();
@@ -426,9 +511,21 @@ public sealed class VehiclePreviewView : Control
         _bitmap?.Dispose();
         _bitmap = null;
         ShownScene = null;
+        ShownQuality = RenderQuality.Standard;
         InvalidateVisual();
     }
 
     /// <param name="DragScale">The scale of a drag frame, or null for a frame at the full resolution.</param>
-    private sealed record RenderRequest(PreviewScene Scene, OrbitCamera Camera, int Width, int Height, double? DragScale, int Generation, CancellationTokenSource Cancellation);
+    /// <param name="Cancellation">The source of the generation. A render of an older generation disposes it.</param>
+    /// <param name="RefineToken">The token of the refine source that a High frame stops on. The render never disposes that source.</param>
+    private sealed record RenderRequest(
+        PreviewScene Scene,
+        OrbitCamera Camera,
+        int Width,
+        int Height,
+        double? DragScale,
+        int Generation,
+        CancellationTokenSource Cancellation,
+        RenderQuality Quality = RenderQuality.Standard,
+        CancellationToken RefineToken = default);
 }
