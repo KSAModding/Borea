@@ -171,6 +171,12 @@ internal static class LoaderCommand
                 .UninstallAsync(parseResult.GetRequiredValue(loaderId), ct)
                 .ConfigureAwait(false);
 
+            // the uninstaller refuses while a game runs and keeps the record, so this must not read as "not recorded"
+            if (result.Failure == LoaderUninstallFailure.GameRunning)
+            {
+                throw new InvalidOperationException($"Close the game before you remove {result.LoaderId}.");
+            }
+
             if (!result.RecordRemoved)
             {
                 output.WriteLine($"Loader {result.LoaderId} was not recorded.");

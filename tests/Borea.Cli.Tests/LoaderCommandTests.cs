@@ -271,6 +271,29 @@ public sealed class LoaderCommandTests : IDisposable
     }
 
     [Fact]
+    public async Task Uninstall_WhileTheGameRuns_FailsAndKeepsTheRecordAndFolder()
+    {
+        var directory = Directory.CreateDirectory(Path.Combine(_host.Paths.GetLoadersRoot(), "StarMap")).FullName;
+        await File.WriteAllTextAsync(Path.Combine(directory, "StarMap.exe"), "loader");
+        var settings = $"""
+            [LoaderInstallations.StarMap]
+            DirectoryPath = '{directory}'
+            Version = '0.4.7'
+            IsAdopted = false
+            """;
+        await File.WriteAllTextAsync(_host.Paths.GetBoreaSettingsPath(), settings);
+        _host.GameRunning = true;
+
+        var run = await _host.RunAsync("loader", "uninstall", "StarMap");
+
+        Assert.Equal(1, run.ExitCode);
+        Assert.Contains("Close the game before you remove StarMap.", run.Error);
+        Assert.DoesNotContain("was not recorded", run.Output);
+        Assert.True(File.Exists(Path.Combine(directory, "StarMap.exe")));
+        Assert.Equal(settings, await File.ReadAllTextAsync(_host.Paths.GetBoreaSettingsPath()));
+    }
+
+    [Fact]
     public async Task Install_PrintsTheInstallStepsOfTheLoaderAfterTheResult()
     {
         _host.LoaderInstaller = new FakeLoaderInstaller();
