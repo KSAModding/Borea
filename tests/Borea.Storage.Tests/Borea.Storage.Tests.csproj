@@ -29,7 +29,7 @@
     <Compile Remove="Fixtures\**" />
     <None Remove="Fixtures\**" />
     <None Update="Index\Fixtures\current-snapshot.json" CopyToOutputDirectory="PreserveNewest" />
-    <!-- A copy of schemas/vectors.json of content-index at e352cfdd4c19, after content-index #207 and #204, the documents its checks and its listing page run. -->
+    <!-- A copy of schemas/vectors.json of content-index at b41be3d54440, the merge of content-index #213 (sha256 526ca58d), the documents its checks and its listing page run. -->
     <None Update="Listings\Fixtures\vectors.json" CopyToOutputDirectory="PreserveNewest" />
     <!-- Copies of index-status.toml and its schema from content-index. -->
     <None Update="Stewardship\Fixtures\*" CopyToOutputDirectory="PreserveNewest" />

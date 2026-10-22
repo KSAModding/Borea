@@ -36,7 +36,19 @@ public interface IGameSaveStore
     /// second copy.
     /// </summary>
     Task<GameSaveRenameOutcome> RenameAsync(Guid instanceId, GameSaveEntry entry, string newName, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Writes the zip a vehicle or a save is shared as (RFC 0085): the folder as it is, under one top-level directory named
+    /// <paramref name="name"/>. Changes nothing in the folder.
+    /// </summary>
+    /// <param name="name">The name in meta.toml that the share was checked with.</param>
+    /// <exception cref="InvalidOperationException">meta.toml no longer holds <paramref name="name"/>.</exception>
+    Task<GameSaveArchive> WriteShareArchiveAsync(Guid instanceId, GameSaveEntry entry, string name, Stream destination, CancellationToken cancellationToken = default);
 }
+
+/// <param name="Sha256">The SHA-256 of the zip, in lower-case hex.</param>
+/// <param name="Size">The size of the zip in bytes.</param>
+public sealed record GameSaveArchive(string Sha256, long Size);
 
 public enum GameSaveCopyOutcome
 {

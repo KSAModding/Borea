@@ -245,6 +245,16 @@ public partial class MainViewModel : ViewModelBase
     [NotifyPropertyChangedFor(nameof(IsNameModalOpen), nameof(NameModalTitle), nameof(NameModalConfirmText), nameof(NameModalPlaceholder))]
     private GameSaveItem? _renamingGameSave;
 
+    /// <summary>Why the name modal asks for a rename before a share. Null when the player opened the rename.</summary>
+    [ObservableProperty]
+    private string? _gameSaveRenameReason;
+
+    partial void OnRenamingGameSaveChanged(GameSaveItem? value)
+    {
+        if (value is null)
+            GameSaveRenameReason = null;
+    }
+
     /// <summary>The name the modal creates or renames an instance, a save or a vehicle with.</summary>
     [ObservableProperty]
     private string _modalInstanceName = string.Empty;

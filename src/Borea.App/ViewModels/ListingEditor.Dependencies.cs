@@ -268,11 +268,11 @@ public sealed partial class ListingEditor
 
     internal string? DependencyKindText(string kind) => kind switch
     {
-        "required" => Localization.ListingDependencyKindRequired,
-        "optional" => Localization.ListingDependencyKindOptional,
+        "required" => IsVehicleOrSave ? Localization.ListingShareDependencyRequired : Localization.ListingDependencyKindRequired,
+        "optional" => IsVehicleOrSave ? Localization.ListingShareDependencyOptional : Localization.ListingDependencyKindOptional,
         "recommends" => Localization.ListingDependencyKindRecommends,
         "suggests" => Localization.ListingDependencyKindSuggests,
-        "conflict" => Localization.ListingDependencyKindConflict,
+        "conflict" => IsVehicleOrSave ? Localization.ListingShareDependencyConflict : Localization.ListingDependencyKindConflict,
         _ => null,
     };
 

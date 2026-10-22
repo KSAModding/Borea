@@ -28,6 +28,47 @@ public sealed class ListingDraftTests
         Assert.False(draft.IsEdit);
     }
 
+    [Theory]
+    [InlineData("vehicle", "vehicles/ExampleRover.toml")]
+    [InlineData("save", "saves/ExampleRover.toml")]
+    public void ToDocument_VehicleOrSaveWithoutForumsAndGameMin_WritesNeitherTableIntoItsFolder(string type, string path)
+    {
+        var draft = new ListingDraft
+        {
+            Id = "ExampleRover",
+            Type = type,
+            Name = "Example Rover",
+            Authors = ["Maxi"],
+            Abstract = "A rover.",
+            License = "CC-BY-4.0",
+        };
+
+        var document = draft.ToDocument();
+
+        Assert.Equal(["spec_version", "id", "type", "name", "authors", "abstract", "license"], document.Entries.Select(entry => entry.Key));
+        Assert.Equal(path, draft.Path);
+        Assert.True(draft.IsVehicleOrSave);
+    }
+
+    [Fact]
+    public void ToDocument_VehicleWithGameMaxOnly_KeepsCompatibilityWithoutGameMin()
+    {
+        var draft = new ListingDraft { Id = "ExampleRover", Type = "vehicle", GameMax = "2026.10.13.5602" };
+
+        var compatibility = draft.ToDocument().GetTable("compatibility")!;
+
+        Assert.Equal(["game_max"], compatibility.Entries.Select(entry => entry.Key));
+    }
+
+    [Fact]
+    public void ToDocument_ModWithoutForumsAndGameMin_StillWritesBothTables()
+    {
+        var document = new ListingDraft { Id = "MyMod" }.ToDocument();
+
+        Assert.NotNull(document.GetTable("links"));
+        Assert.Equal(string.Empty, document.GetTable("compatibility")!.GetString("game_min"));
+    }
+
     [Fact]
     public void FromDocument_ThenToDocument_KeepsWhatThePageDoesNotEdit()
     {

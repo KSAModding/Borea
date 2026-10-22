@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://raw.githubusercontent.com/KSAModding/content-index/main/schemas/authored.schema.json",
   "title": "KSA content index: authored document",
-  "description": "One authored TOML document per listing or pack version, per RFC 0031, RFC 0035, RFC 0049, RFC 0058, RFC 0067, RFC 0072 and RFC 0079. Validate the parsed document.",
+  "description": "One authored TOML document per listing or pack version, per RFC 0031, RFC 0035, RFC 0049, RFC 0058, RFC 0067, RFC 0072, RFC 0079 and RFC 0085. Validate the parsed document.",
   "type": "object",
   "additionalProperties": false,
 
@@ -17,7 +17,12 @@
     },
     "type": {
       "description": "The content type. New types arrive by RFC and extend this enum.",
-      "enum": ["mod", "mod-loader", "modpack"]
+      "$comment": "The not is the rollout gate of RFC 0085: the index accepts a type in it only once a release host for it exists. A steward lifts the gate for one type by removing it from the enum of the not, and removes the whole not when its enum is empty (KSAModding/content-index#210, first vehicle, then save).",
+      "enum": ["mod", "mod-loader", "modpack", "vehicle", "save"],
+      "not": {
+        "title": "a type that the index does not accept yet, because no release host for it exists (RFC 0085 Rollout)",
+        "enum": ["vehicle", "save"]
+      }
     },
     "name": {
       "description": "The display name. Free choice of characters and length.",
@@ -59,9 +64,8 @@
     },
 
     "links": {
-      "description": "Listing links. The forums thread is required: it ties the listing to an Ahwoo account, is the tiebreaker in id disputes, and is the takedown tripwire.",
+      "description": "Listing links. The forums thread is required for a mod, a loader and a pack: it ties the listing to an Ahwoo account, is the tiebreaker in id disputes, and is the takedown tripwire.",
       "type": "object",
-      "required": ["forums"],
       "properties": {
         "forums": { "$ref": "#/$defs/forumsUrl" }
       },
@@ -104,7 +108,6 @@
       "description": "Game compatibility bounds, per RFC 0017. Ordering is by revision alone.",
       "type": "object",
       "additionalProperties": false,
-      "required": ["game_min"],
       "properties": {
         "game_min": {
           "description": "Oldest game version known to work, written as the game displays it, or as a month such as 2026.7.",
@@ -358,9 +361,7 @@
     "name",
     "authors",
     "abstract",
-    "license",
-    "links",
-    "compatibility"
+    "license"
   ],
 
   "allOf": [
@@ -412,6 +413,36 @@
           "dependencies": { "not": {} },
           "install": { "not": {} },
           "provides": { "not": {} }
+        }
+      }
+    },
+    {
+      "$comment": "RFC 0085: a vehicle or a save carries no code and installs into a folder that the game names after name in its meta.toml, so it has no loader, nothing to provide, no pack keys and no place to choose. Its forums thread and game_min are optional, and every other type keeps them required (RFC 0079). A document without type takes the else.",
+      "if": { "required": ["type"], "properties": { "type": { "enum": ["vehicle", "save"] } } },
+      "then": {
+        "properties": {
+          "loader": { "not": {} },
+          "provides": { "not": {} },
+          "version": { "not": {} },
+          "released_at": { "not": {} },
+          "changelog": { "not": {} },
+          "mods": { "not": {} },
+          "vehicles": { "not": {} },
+          "saves": { "not": {} },
+          "install": {
+            "properties": {
+              "target": { "not": {} },
+              "path": { "not": {} },
+              "manages": { "not": {} }
+            }
+          }
+        }
+      },
+      "else": {
+        "required": ["links", "compatibility"],
+        "properties": {
+          "links": { "required": ["forums"] },
+          "compatibility": { "required": ["game_min"] }
         }
       }
     },

@@ -65,6 +65,9 @@ public sealed record ListingDraft
 
     public bool IsPack => Type == ModPackType;
 
+    /// <summary>Whether the draft is a vehicle or a save (RFC 0085), whose forums thread and compatibility are optional.</summary>
+    public bool IsVehicleOrSave => Type is ListingFolders.VehicleType or ListingFolders.SaveType;
+
     /// <summary>The version of a pack. A pack document is its own release, so only a pack has one.</summary>
     public string Version { get; init; } = string.Empty;
 
@@ -77,7 +80,7 @@ public sealed record ListingDraft
     public IReadOnlyList<ListingPackMember> Mods { get; init; } = [];
 
     /// <summary>Where the document lives in content-index. Each pack version is a file of its own.</summary>
-    public string Path => IsPack ? $"{PacksFolder}/{Id}/{Version}.toml" : $"{ListingsFolder}/{Id}.toml";
+    public string Path => IsPack ? $"{PacksFolder}/{Id}/{Version}.toml" : $"{ListingFolders.Of(Type)}/{Id}.toml";
 
     public string? LinkOf(string key) => Links.FirstOrDefault(link => string.Equals(link.Key, key, StringComparison.OrdinalIgnoreCase))?.Url;
 
@@ -144,12 +147,13 @@ public sealed record ListingDraft
         var links = new AuthoredTable();
         foreach (var link in Links)
             links.Set(link.Key, link.Url);
-        document.Set("links", links);
+        // A mod keeps writing both tables, so its checks still name a missing forums link or game_min.
+        SetOrRemove(document, "links", IsVehicleOrSave && links.Count == 0 ? null : links);
 
         var compatibility = document.GetTable("compatibility")?.Clone() ?? new AuthoredTable();
-        compatibility.Set("game_min", GameMin);
+        SetOrRemove(compatibility, "game_min", IsVehicleOrSave && GameMin.Length == 0 ? null : GameMin);
         SetOrRemove(compatibility, "game_max", GameMax);
-        document.Set("compatibility", compatibility);
+        SetOrRemove(document, "compatibility", IsVehicleOrSave && compatibility.Count == 0 ? null : compatibility);
 
         SetOrRemove(document, "loader", Loader is null ? null : WriteLoader(Loader));
         SetOrRemove(document, "dependencies", Dependencies.Count == 0 ? null : Dependencies.Select(WriteDependency).Cast<object>().ToList());
