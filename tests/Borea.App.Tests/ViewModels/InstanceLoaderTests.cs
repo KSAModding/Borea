@@ -195,6 +195,33 @@ public sealed class InstanceLoaderTests
         Assert.Equal(harness.Localization.FormatInstanceLoaderPinned("0.4.7"), row.ModeText);
     }
 
+    [Fact]
+    public async Task OpenLoaderSetting_PinnedToAMissingVersionOutsideTheChannel_SelectsThatPinAndSaveKeepsIt()
+    {
+        using var harness = await CreateWithReleasesAsync(starMap: null, testing: "0.4.7");
+        var created = (await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value)).Instance;
+        await harness.Services.Instances.UpdateAsync(created.InstanceId, instance =>
+        {
+            instance.SetLoader(LoaderSetting.Pinned("StarMap", ModVersion.Parse("0.4.7")));
+            return true;
+        });
+        await harness.ViewModel.LoadAsync();
+        await harness.ViewModel.Instances.Single().OpenCommand.ExecuteAsync(null);
+        var viewModel = harness.ViewModel;
+
+        await viewModel.SelectedInstance!.BeginEditLoaderSettingCommand.ExecuteAsync(null);
+
+        Assert.True(viewModel.IsLoaderSettingPinned);
+        Assert.Equal("0.4.7", viewModel.SelectedLoaderSettingRelease?.VersionText);
+        Assert.Equal(harness.Localization.InstanceLoaderSaveAndInstall, viewModel.LoaderSettingActionText);
+
+        await viewModel.SaveLoaderSettingCommand.ExecuteAsync(null);
+
+        Assert.Null(viewModel.SetupError);
+        var saved = await harness.Services.Instances.GetByIdAsync(created.InstanceId);
+        Assert.Equal(LoaderSetting.Pinned("StarMap", ModVersion.Parse("0.4.7")), saved!.Loader);
+    }
+
     private static Instance InstanceWith(params InstalledMod[] mods) =>
         Instance.FromExisting(Guid.NewGuid(), "Main", InstanceSource.Custom.Value, DateTimeOffset.UtcNow, mods, [], isFavorite: false);
 
@@ -229,8 +256,11 @@ public sealed class InstanceLoaderTests
 
     private static string DownloadUrl(string version) => $"https://github.com/StarMapLoader/StarMap/releases/download/{version}/StarMap-{version}.zip";
 
-    /// <summary>A game folder, StarMap 0.4.6 to 0.4.8 in the index with their downloads, and <paramref name="starMap"/> recorded with its launch file.</summary>
-    private static Task<ViewModelHarness> CreateWithReleasesAsync(string? starMap) =>
+    /// <summary>
+    /// A game folder, StarMap 0.4.6 to 0.4.8 in the index with their downloads, and <paramref name="starMap"/> recorded
+    /// with its launch file. The release <paramref name="testing"/>, when given, is a testing release.
+    /// </summary>
+    private static Task<ViewModelHarness> CreateWithReleasesAsync(string? starMap, string? testing = null) =>
         ViewModelHarness.CreateAsync(
             async services =>
             {
@@ -248,10 +278,10 @@ public sealed class InstanceLoaderTests
             respond: request => request.RequestUri?.AbsoluteUri is { } uri && (uri == DownloadUrl("0.4.7") || uri == DownloadUrl("0.4.8"))
                 ? new HttpResponseMessage(System.Net.HttpStatusCode.OK) { Content = new ByteArrayContent(StarMapArchive) }
                 : null,
-            editSnapshot: WithStarMapReleases);
+            editSnapshot: json => WithStarMapReleases(json, testing));
 
     /// <summary>Adds StarMap 0.4.7 and 0.4.8 beside 0.4.6, for the same game builds.</summary>
-    private static string WithStarMapReleases(string json)
+    private static string WithStarMapReleases(string json, string? testing)
     {
         var root = JsonNode.Parse(json)!;
         var releases = root["listings"]!.AsArray().Single(node => (string?)node!["id"] == "StarMap")!["releases"]!.AsArray();
@@ -263,6 +293,8 @@ public sealed class InstanceLoaderTests
             release["download"]!["url"] = DownloadUrl(version);
             release["download"]!["sha256"] = Convert.ToHexString(SHA256.HashData(StarMapArchive));
             release["download"]!["size"] = StarMapArchive.Length;
+            if (version == testing)
+                release["release_status"] = "testing";
             releases.Add(release);
         }
 
