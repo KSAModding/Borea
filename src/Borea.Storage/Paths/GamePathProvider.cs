@@ -63,8 +63,10 @@ public sealed class GamePathProvider : IGamePathProvider
     public string GetStaticModFilesRoot() => Path.Combine(_libraryFolder, "Static Mod Files");
 
     // only the numbers name the folder, so a suffix in a hand-edited instance.toml cannot put a separator into the path
+    public string GetGameBuildsRoot() => Path.Combine(_libraryFolder, "Game Builds");
+
     public string GetGameBuildFolder(GameVersion version)
-        => Path.Combine(_libraryFolder, "Game Builds", string.Create(CultureInfo.InvariantCulture, $"{version.Year}.{version.Month}.{version.BuildNumber}.{version.Revision}"));
+        => Path.Combine(GetGameBuildsRoot(), string.Create(CultureInfo.InvariantCulture, $"{version.Year}.{version.Month}.{version.BuildNumber}.{version.Revision}"));
 
     public string GetLoadersRoot() => Path.Combine(_boreaRoot, "Loaders");
     public string GetPresetsRoot() => Path.Combine(_boreaRoot, "Presets");

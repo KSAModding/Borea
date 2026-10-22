@@ -914,6 +914,10 @@ public partial class MainViewModel
         LaunchOutcome.WrapperNeedsVariable => Localization.FormatLaunchWrapperNeedsVariable(loader.Name, loader.Provides!.Instance!.Flag!, result.Wine!.Wrapper!.BundlePath),
         LaunchOutcome.WrapperArguments => Localization.FormatLaunchWrapperArguments(result.Wine!.Wrapper!.BundlePath, loader.Name),
         LaunchOutcome.WrapperRuntime => Localization.FormatLaunchWrapperRuntime(loader.Name, result.Wine!.Wrapper!.BundlePath),
+        LaunchOutcome.GameBuildMissing => Localization.LaunchGameBuildMissing,
+        LaunchOutcome.OtherBuildRunning => Localization.FormatLaunchOtherBuildRunning(loader.Name),
+        LaunchOutcome.LoaderTakesNoGamePath => Localization.FormatLaunchLoaderTakesNoGamePath(loader.Name),
+        LaunchOutcome.LoaderConfigurationUnreadable when result.ConfigurationFile is { } file => Localization.FormatLaunchLoaderConfigurationUnreadable(file, loader.Name),
         _ => result.Message,
     };
 

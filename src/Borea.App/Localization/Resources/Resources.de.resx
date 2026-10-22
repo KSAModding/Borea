@@ -4431,6 +4431,18 @@
   <data name="LaunchWrapperBusyFormat" xml:space="preserve">
     <value>Ein Spiel, das Borea über den Wine-Wrapper '{0}' gestartet hat, läuft noch. Der Wrapper führt immer nur ein Spiel aus, also schließe dieses Spiel zuerst.</value>
   </data>
+  <data name="LaunchGameBuildMissing" xml:space="preserve">
+    <value>Diese Instanz läuft auf einem behaltenen KSA-Build, und der Ordner dieses Builds fehlt oder enthält einen anderen Build. Borea startet nichts, damit die Instanz nicht auf einem anderen Build startet.</value>
+  </data>
+  <data name="LaunchOtherBuildRunningFormat" xml:space="preserve">
+    <value>Ein Spiel läuft, und {0} liest dafür einen anderen Spielordner. Wenn Borea diesen Ordner jetzt ändert, würde ein Neustart des laufenden Spiels den falschen Build laden. Borea startet nichts. Schließe das Spiel zuerst.</value>
+  </data>
+  <data name="LaunchLoaderTakesNoGamePathFormat" xml:space="preserve">
+    <value>Diese Instanz läuft auf einem behaltenen KSA-Build, und das Listing von {0} nennt keinen Spielpfad, den Borea schreiben kann. Borea startet nichts. Der Autor des Loaders kann dem Listing eine Tabelle [provides.configure] hinzufügen.</value>
+  </data>
+  <data name="LaunchLoaderConfigurationUnreadableFormat" xml:space="preserve">
+    <value>Borea kann den Spielordner nicht aus '{0}' lesen, daher startet Borea nichts, und auch {1} kann mit dieser Datei nicht starten. Repariere oder lösche die Datei. Ohne sie schreibt Borea beim nächsten Start eine neue.</value>
+  </data>
   <data name="LaunchWrapperNeedsVariableFormat" xml:space="preserve">
     <value>{0} nimmt den Instanzordner nur nach '{1}' entgegen, und der Wine-Wrapper '{2}' gibt ihm keine Argumente weiter. Borea startet nichts. Der Autor des Loaders kann der Tabelle [provides.instance] im Listing eine Variable hinzufügen.</value>
   </data>

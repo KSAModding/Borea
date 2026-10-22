@@ -33,14 +33,13 @@ public interface ILoaderConfigurator
     /// path of the game, which an older Borea wrote and the loader in the
     /// prefix cannot open. Any other value stays, so a path the player set is
     /// kept. Returns the file it wrote, or null when it wrote nothing, which is
-    /// always so outside a prefix, for a format it cannot write and for a
-    /// directory that is not absolute.
+    /// always so outside a prefix, for a format it cannot write, for a file it
+    /// cannot read and for a directory that is not absolute.
     /// </summary>
     /// <exception cref="ArgumentException">The listing is not a mod loader.</exception>
     /// <exception cref="InvalidOperationException">
-    /// The file cannot be read as its stated format or cannot be written, or
-    /// no drive of the Wine prefix around the game holds it. Nothing is
-    /// written then.
+    /// The file cannot be written, or no drive of the Wine prefix around the
+    /// game holds it. Nothing is written then.
     /// </exception>
     Task<string?> RefreshForWineAsync(
         ModMetadata loader,

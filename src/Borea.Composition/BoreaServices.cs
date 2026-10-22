@@ -486,6 +486,7 @@ public sealed class BoreaServices : IDisposable
 
         var installedVersion = new InstalledGameVersionProvider(paths);
         var gameShape = new GameShapeCheck(paths, installedVersion);
+        var instanceGames = new InstanceGameResolver(paths, installedVersion);
 
         // The file repository stays unguarded, because the installer and the
         // replacer own it and are guarded themselves.
@@ -502,7 +503,7 @@ public sealed class BoreaServices : IDisposable
         if (wrapInstallPlanner is not null)
             installPlanner = wrapInstallPlanner(installPlanner);
         isGameProcessRunning ??= RunningProcesses.IsGameRunning;
-        var launcher = new LoggingLauncher(new LastPlayedLauncher(loaderLauncher ?? new LoaderLauncher(paths, processStarter ?? new ProcessStarter(), launches, isGameProcessRunning), instances), log);
+        var launcher = new LoggingLauncher(new LastPlayedLauncher(loaderLauncher ?? new LoaderLauncher(paths, processStarter ?? new ProcessStarter(), launches, isGameProcessRunning, instanceGames, log), instances), log);
         var defaultLibraryFolder = Path.GetDirectoryName(bootstrapPaths.GetInstancesRoot())!;
         var announcementReader = new AnnouncementReader();
         var listedDocuments = new ListedDocumentFetcher(http);
@@ -571,12 +572,12 @@ public sealed class BoreaServices : IDisposable
             SelfUpdater = selfUpdater ?? BuildSelfUpdater(new BoreaReleaseFiles(http), log, fromCommandLine: logSource == BoreaLogSource.Cli),
             Announcements = new AnnouncementFeed(new AnnouncementFetcher(http, AnnouncementFetcher.DefaultUri, announcementReader), announcementReader, paths, log),
             InstalledVersion = installedVersion,
-            InstanceGames = new InstanceGameResolver(paths, installedVersion),
+            InstanceGames = instanceGames,
             GamePlatform = gamePlatform ?? new Borea.Storage.Game.GamePlatform(paths),
             GameShape = gameShape,
             GamePatchNotes = new FileGamePatchNotesReader(paths),
             GamePatchNotesFetcher = new GamePatchNotesFetcher(http, new FileGamePatchNotesCache(paths)),
-            InstallDetector = new InstallDetector(installCandidates, loaderAdopter, paths.GetLoadersRoot()),
+            InstallDetector = new InstallDetector(installCandidates, loaderAdopter, paths.GetLoadersRoot(), paths.GetGameBuildsRoot()),
             IndexFetcher = indexFetcher,
             IndexReader = indexReader,
             IndexSnapshots = indexSnapshots,

@@ -451,6 +451,18 @@ public sealed class LoaderConfiguratorTests : IDisposable
     }
 
     [Fact]
+    public async Task RefreshForWineAsync_FileThatIsNoJson_LeavesTheFileForTheLaunchToRefuse()
+    {
+        const string text = """{ "GameLocation": """;
+        await WriteConfigAsync(text);
+
+        var written = await WineConfigurator().RefreshForWineAsync(Loader(Json()), _loaderDirectory, GameInPrefix);
+
+        Assert.Null(written);
+        Assert.Equal(text, await File.ReadAllTextAsync(ConfigPath()));
+    }
+
+    [Fact]
     public async Task RefreshForWineAsync_GameOutsideAPrefix_LeavesTheHostPath()
     {
         var text = new JsonObject { ["GameLocation"] = _gameDirectory }.ToJsonString();

@@ -11,14 +11,18 @@ public sealed class InstallDetector : IInstallDetector
     private readonly IInstallCandidateSource _candidates;
     private readonly ILoaderAdopter _loaderAdopter;
     private readonly string _loadersRoot;
+    private readonly string _gameBuildsRoot;
 
     /// <param name="loadersRoot">The folder Borea installs loaders into. Each loader's own folder there is a candidate too.</param>
-    public InstallDetector(IInstallCandidateSource candidates, ILoaderAdopter loaderAdopter, string loadersRoot)
+    /// <param name="gameBuildsRoot">The folder of the game builds that instances keep. A loader names a kept build there while an instance on it runs, and such a copy is never offered as an install.</param>
+    public InstallDetector(IInstallCandidateSource candidates, ILoaderAdopter loaderAdopter, string loadersRoot, string gameBuildsRoot)
     {
         _candidates = candidates ?? throw new ArgumentNullException(nameof(candidates));
         _loaderAdopter = loaderAdopter ?? throw new ArgumentNullException(nameof(loaderAdopter));
         ArgumentException.ThrowIfNullOrWhiteSpace(loadersRoot);
+        ArgumentException.ThrowIfNullOrWhiteSpace(gameBuildsRoot);
         _loadersRoot = loadersRoot;
+        _gameBuildsRoot = Path.TrimEndingDirectorySeparator(Path.GetFullPath(gameBuildsRoot));
     }
 
     public async Task<InstallDetection> DetectAsync(IReadOnlyList<ModMetadata> loaders, CancellationToken cancellationToken = default)
@@ -61,7 +65,7 @@ public sealed class InstallDetector : IInstallDetector
         var games = new List<DetectedGame>();
         foreach (var directory in ExistingDirectories(gameDirectories))
         {
-            if (!File.Exists(Path.Combine(directory, GameExecutableFileName)))
+            if (IsSameOrInside(directory, _gameBuildsRoot) || !File.Exists(Path.Combine(directory, GameExecutableFileName)))
                 continue;
 
             if (InstalledGameVersionProvider.Read(directory) is { } version)
@@ -75,9 +79,20 @@ public sealed class InstallDetector : IInstallDetector
     private static string GameDirectoryOf(string configured) =>
         File.Exists(configured) ? Path.GetDirectoryName(configured) ?? configured : configured;
 
+    private static bool IsSameOrInside(string path, string folder)
+    {
+        if (string.Equals(path, folder, PathComparison))
+            return true;
+
+        var prefix = folder + Path.DirectorySeparatorChar;
+        return path.Length > prefix.Length && path.StartsWith(prefix, PathComparison);
+    }
+
+    private static StringComparison PathComparison => OperatingSystem.IsLinux() ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase;
+
     private static List<string> ExistingDirectories(IEnumerable<string> candidates)
     {
-        var comparer = OperatingSystem.IsLinux() ? StringComparer.Ordinal : StringComparer.OrdinalIgnoreCase;
+        var comparer = StringComparer.FromComparison(PathComparison);
         var seen = new HashSet<string>(comparer);
         var directories = new List<string>();
         foreach (var candidate in candidates)
