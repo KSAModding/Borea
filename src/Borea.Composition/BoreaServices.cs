@@ -192,6 +192,9 @@ public sealed class BoreaServices : IDisposable
     /// </summary>
     public required IVehiclePreview VehiclePreview { get; init; }
 
+    /// <summary>The still images that a vehicle page stores after a complete preview and that Discover shows.</summary>
+    public required IPreviewThumbnails PreviewThumbnails { get; init; }
+
     public required IInstallPlanner InstallPlanner { get; init; }
 
     public required IInstallPlanExecutor PlanExecutor { get; init; }
@@ -531,7 +534,8 @@ public sealed class BoreaServices : IDisposable
         var gamePlatformValue = gamePlatform ?? new Borea.Storage.Game.GamePlatform(paths);
 
         // The preview plans over the offline repository only, so opening a vehicle page never sends a request.
-        var vehiclePreview = new VehiclePreview(paths, installPlanner, channelOfflineMods, instances, modState, installedContent, modStore, previewArchives, installedVersion, gamePlatformValue, downloader, new DriveFreeSpaceProbe(), log);
+        var previewThumbnails = new PreviewThumbnailCache(paths, log);
+        var vehiclePreview = new VehiclePreview(paths, installPlanner, channelOfflineMods, instances, modState, installedContent, modStore, previewArchives, installedVersion, gamePlatformValue, downloader, new DriveFreeSpaceProbe(), log, previewThumbnails);
         var userContentInstaller = new LoggingUserContentInstaller(new FileUserContentInstaller(paths, downloader, installedContent, isGameProcessRunning), log);
         var launcher = new LoggingLauncher(new LastPlayedLauncher(loaderLauncher ?? new LoaderLauncher(paths, processStarter ?? new ProcessStarter(), launches, isGameProcessRunning), instances), log);
         var defaultLibraryFolder = Path.GetDirectoryName(bootstrapPaths.GetInstancesRoot())!;
@@ -637,6 +641,7 @@ public sealed class BoreaServices : IDisposable
             IndexReports = indexReports ?? gitHubReports,
             ReportActions = new LoggingReportActions(reportActions ?? gitHubReports, log),
             VehiclePreview = vehiclePreview,
+            PreviewThumbnails = previewThumbnails,
         };
     }
 

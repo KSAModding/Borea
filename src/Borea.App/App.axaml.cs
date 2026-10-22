@@ -120,6 +120,7 @@ public partial class App : Application
                 EndApp = () => desktop.Shutdown(),
                 PendingHandover = _pendingHandover,
                 VehiclePreviewBuilderOf = () => new PreviewSceneBuilder(new PreviewTextureLoader(new AvaloniaRgbaImageDecoder())),
+                VehiclePreviewEncoder = new AvaloniaPngEncoder(),
             };
             _viewModel = viewModel;
 

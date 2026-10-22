@@ -14,6 +14,7 @@ using Borea.Core.Planning;
 using Borea.Core.Preview;
 using Borea.Core.Stewardship;
 using Borea.Preview.Loading;
+using Borea.Preview.Rendering;
 using Borea.Preview.Textures;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -180,6 +181,12 @@ public partial class MainViewModel
     /// </summary>
     internal Func<PreviewSceneBuilder> VehiclePreviewBuilderOf { get; set; } = () => new PreviewSceneBuilder(new PreviewTextureLoader(null));
 
+    /// <summary>
+    /// Encodes the still that a complete preview stores for Discover. The App gives one backed by Avalonia, and without
+    /// one the preview stores no still.
+    /// </summary>
+    internal IPngEncoder? VehiclePreviewEncoder { get; set; }
+
     /// <summary>The instance and its content that the open preview was made for, so a change to them makes it again.</summary>
     private string? _vehiclePreviewTarget;
 
@@ -204,7 +211,16 @@ public partial class MainViewModel
         {
             var target = VehiclePreviewTarget;
             _vehiclePreviewTarget = TargetKey(target);
-            next = new VehiclePreviewViewModel(VehiclePreviewServiceOf(services), latest.Release, target?.InstanceId, Localization, SetMainWindowSettings, VehiclePreviewBuilderOf());
+            next = new VehiclePreviewViewModel(
+                VehiclePreviewServiceOf(services),
+                latest.Release,
+                target?.InstanceId,
+                Localization,
+                SetMainWindowSettings,
+                VehiclePreviewBuilderOf(),
+                thumbnails: services.PreviewThumbnails,
+                encoder: VehiclePreviewEncoder,
+                stillStored: ShowPreviewStill);
         }
 
         VehiclePreview = next;

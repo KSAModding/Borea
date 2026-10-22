@@ -1,11 +1,15 @@
 using System.Collections.Concurrent;
 using System.Globalization;
+using System.Numerics;
+using System.Text.Json.Nodes;
 using Borea.App.Localization;
 using Borea.App.ViewModels;
 using Borea.Core.Instances;
 using Borea.Core.Mods;
 using Borea.Core.Preview;
 using Borea.Preview.Loading;
+using Borea.Preview.Rendering;
+using Borea.Preview.Tests.Gltf;
 using Borea.Preview.Textures;
 using static Borea.App.Tests.ViewModels.UserContentViewModelTests;
 
@@ -232,6 +236,42 @@ public sealed class VehiclePreviewViewModelTests
         Assert.Equal(["1.1.0", "1.0.0"], viewModel.ContentVersions.Select(version => version.Version));
     }
 
+    [Fact]
+    public async Task OnlyACompleteScene_StoresAStill_OncePerSceneKey()
+    {
+        var thumbnails = new FakeThumbnails();
+        var stored = new List<string>();
+        var box = new ResolvedPlaceholder(Matrix4x4.Identity, Vector3.One, "Wing", PlaceholderReason.UnknownPart, null);
+        var missing = new VehiclePreviewMissingMod("Wings", null, null, null, CanFetch: false);
+
+        foreach (var service in new[]
+        {
+            new FakeVehiclePreview { Vehicle = TriangleVehicle(box), Files = TriangleFiles },
+            new FakeVehiclePreview { Vehicle = TriangleVehicle(), Files = TriangleFiles, Missing = [missing] },
+            new FakeVehiclePreview(),
+        })
+        {
+            using var incomplete = Start(service, thumbnails: thumbnails, stillStored: stored.Add);
+            await incomplete.Loading;
+            Assert.NotNull(incomplete.Scene);
+        }
+
+        Assert.Empty(thumbnails.Stores);
+
+        for (var i = 0; i < 2; i++)
+        {
+            using var complete = Start(new FakeVehiclePreview { Vehicle = TriangleVehicle(), Files = TriangleFiles }, thumbnails: thumbnails, stillStored: stored.Add);
+            await complete.Loading;
+            Assert.Equal(VehiclePreviewState.Ready, complete.State);
+        }
+
+        var still = Assert.Single(thumbnails.Stores);
+        Assert.Equal((new string('a', 64), "2026.10.19.5638", "scene"), (still.Sha256, still.GameBuild, still.SceneKey));
+        Assert.Equal((VehiclePreviewViewModel.StillWidth, VehiclePreviewViewModel.StillHeight), (still.Width, still.Height));
+        Assert.True(still.CoveredPixels > 0);
+        Assert.Equal([new string('a', 64)], stored);
+    }
+
     internal static async Task OpenRoverAsync(MainViewModel viewModel)
     {
         await viewModel.EnsureDiscoverLoadedAsync();
@@ -240,12 +280,104 @@ public sealed class VehiclePreviewViewModelTests
         await viewModel.WhenVehiclePreviewLoadedAsync();
     }
 
-    private static VehiclePreviewViewModel Start(FakeVehiclePreview service, Action? openSettings = null)
+    private static VehiclePreviewViewModel Start(FakeVehiclePreview service, Action? openSettings = null, FakeThumbnails? thumbnails = null, Action<string>? stillStored = null)
     {
-        var preview = new VehiclePreviewViewModel(service, Rover, null, Localization, openSettings ?? (() => { }), new PreviewSceneBuilder(new PreviewTextureLoader(null)));
+        var preview = new VehiclePreviewViewModel(
+            service,
+            Rover,
+            null,
+            Localization,
+            openSettings ?? (() => { }),
+            new PreviewSceneBuilder(new PreviewTextureLoader(null)),
+            thumbnails: thumbnails,
+            encoder: thumbnails,
+            stillStored: stillStored);
         preview.Start();
         return preview;
     }
+
+    private static readonly PreviewAssetRef TriangleFile = new("Core", "Triangle.glb");
+
+    private static readonly IReadOnlyDictionary<string, byte[]> TriangleFiles = new Dictionary<string, byte[]> { [TriangleFile.Path] = TriangleGlb() };
+
+    /// <summary>A vehicle of one triangle part, and the given boxes where parts did not resolve.</summary>
+    private static ResolvedVehicle TriangleVehicle(params ResolvedPlaceholder[] boxes) => new(
+        [new PreviewMeshRef(TriangleFile, 0, "Triangle")],
+        [],
+        [new ResolvedDraw(0, -1, Matrix4x4.Identity, "Body", PreviewModelKind.Model)],
+        boxes,
+        [],
+        1 + boxes.Length,
+        0);
+
+    /// <summary>A GLB with one triangle and 16-bit indices, the smallest mesh that gives a scene a draw.</summary>
+    private static byte[] TriangleGlb()
+    {
+        byte[] bin = [.. GlbTestWriter.Floats(0, 0, 0, 1, 0, 0, 0, 1, 0), .. GlbTestWriter.Indices(GlbTestWriter.UnsignedShortComponent, 0, 1, 2)];
+        var json = new JsonObject
+        {
+            ["asset"] = new JsonObject { ["version"] = "2.0" },
+            ["buffers"] = new JsonArray { new JsonObject { ["byteLength"] = bin.Length } },
+            ["bufferViews"] = new JsonArray
+            {
+                new JsonObject { ["buffer"] = 0, ["byteOffset"] = 0, ["byteLength"] = 36 },
+                new JsonObject { ["buffer"] = 0, ["byteOffset"] = 36, ["byteLength"] = 6 },
+            },
+            ["accessors"] = new JsonArray
+            {
+                new JsonObject
+                {
+                    ["bufferView"] = 0, ["componentType"] = GlbTestWriter.FloatComponent, ["count"] = 3, ["type"] = "VEC3",
+                    ["min"] = new JsonArray(0, 0, 0), ["max"] = new JsonArray(1, 1, 0),
+                },
+                new JsonObject { ["bufferView"] = 1, ["componentType"] = GlbTestWriter.UnsignedShortComponent, ["count"] = 3, ["type"] = "SCALAR" },
+            },
+            ["meshes"] = new JsonArray
+            {
+                new JsonObject { ["primitives"] = new JsonArray { new JsonObject { ["attributes"] = new JsonObject { ["POSITION"] = 0 }, ["indices"] = 1 } } },
+            },
+        };
+        return GlbTestWriter.Pack(json, bin);
+    }
+}
+
+/// <summary>
+/// Stills in memory, with the scene key of each, and an encoder that records the size and the covered pixels of the
+/// frame instead of a PNG.
+/// </summary>
+internal sealed class FakeThumbnails : IPreviewThumbnails, IPngEncoder
+{
+    private readonly ConcurrentDictionary<(string, string), string> _keys = new();
+    private readonly ConcurrentQueue<Still> _stores = new();
+    private (int Width, int Height, int Covered) _lastFrame;
+
+    public IReadOnlyList<Still> Stores => [.. _stores];
+
+    public string? TryGetPath(string? vehicleSha256, string? gameBuild) => null;
+
+    public bool NeedsUpdate(string? vehicleSha256, string? gameBuild, string? sceneKey) =>
+        vehicleSha256 is not null && gameBuild is not null && (!_keys.TryGetValue((vehicleSha256, gameBuild), out var key) || key != sceneKey);
+
+    public void Store(string vehicleSha256, string gameBuild, string sceneKey, byte[] pngBytes)
+    {
+        _keys[(vehicleSha256, gameBuild)] = sceneKey;
+        _stores.Enqueue(new Still(vehicleSha256, gameBuild, sceneKey, _lastFrame.Width, _lastFrame.Height, _lastFrame.Covered));
+    }
+
+    public byte[] Encode(FrameBuffer frame)
+    {
+        var covered = 0;
+        for (var i = 3; i < frame.Rgba.Length; i += 4)
+        {
+            if (frame.Rgba[i] != 0)
+                covered++;
+        }
+
+        _lastFrame = (frame.Width, frame.Height, covered);
+        return [1];
+    }
+
+    public sealed record Still(string Sha256, string GameBuild, string SceneKey, int Width, int Height, int CoveredPixels);
 }
 
 /// <summary>
@@ -264,6 +396,12 @@ internal sealed class FakeVehiclePreview : IVehiclePreview
     public Exception? PrepareFailure { get; init; }
 
     public IReadOnlyList<VehiclePreviewMissingMod> Missing { get; init; } = [];
+
+    /// <summary>The vehicle of a ready result, which has no part unless a test gives one.</summary>
+    public ResolvedVehicle Vehicle { get; init; } = new([], [], [], [], [], 0, 0);
+
+    /// <summary>The asset files of a ready result, by path.</summary>
+    public IReadOnlyDictionary<string, byte[]>? Files { get; init; }
 
     /// <summary>Gives a task for a load of the release that the test completes itself, or null to answer at once.</summary>
     public Func<ModVersionMetadata, Task<VehiclePreviewResult>?>? HoldLoad { get; init; }
@@ -294,12 +432,12 @@ internal sealed class FakeVehiclePreview : IVehiclePreview
         _loadTokens.Enqueue((plan.Release.Version, cancellationToken));
         LastProgress = progress;
         progress?.Report(VehiclePreviewStage.ReadingParts);
-        return HoldLoad?.Invoke(plan.Release) ?? Task.FromResult(Ready(new FakeAssets(), fetchMods ? [] : Missing));
+        return HoldLoad?.Invoke(plan.Release) ?? Task.FromResult(Ready(new FakeAssets(Files), fetchMods ? [] : Missing));
     }
 
     public VehiclePreviewResult Ready(IPreviewAssetSource assets, IReadOnlyList<VehiclePreviewMissingMod>? missing = null) => new(
         VehiclePreviewLoadState.Ready,
-        new ResolvedVehicle([], [], [], [], [], 0, 0),
+        Vehicle,
         assets,
         missing ?? Missing,
         [],
@@ -314,14 +452,14 @@ internal sealed class FakeVehiclePreview : IVehiclePreview
     }
 }
 
-/// <summary>An asset source without files that records its dispose.</summary>
-internal sealed class FakeAssets : IPreviewAssetSource
+/// <summary>An asset source over files in memory, or without files, that records its dispose.</summary>
+internal sealed class FakeAssets(IReadOnlyDictionary<string, byte[]>? files = null) : IPreviewAssetSource
 {
     public bool Disposed { get; private set; }
 
-    public Stream? TryOpenRead(PreviewAssetRef asset) => null;
+    public Stream? TryOpenRead(PreviewAssetRef asset) => files?.GetValueOrDefault(asset.Path) is { } bytes ? new MemoryStream(bytes, writable: false) : null;
 
-    public Stream? TryOpenHead(PreviewAssetRef asset) => null;
+    public Stream? TryOpenHead(PreviewAssetRef asset) => TryOpenRead(asset);
 
     public string GetCacheKey(PreviewAssetRef asset) => asset.ToString();
 

@@ -8,6 +8,7 @@ using Borea.App.Localization;
 using Borea.Core.Mods;
 using Borea.Core.Preview;
 using Borea.Preview.Loading;
+using Borea.Preview.Rendering;
 using Borea.Preview.Scene;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -51,6 +52,11 @@ public sealed partial class VehiclePreviewViewModel : ObservableObject, IDisposa
     /// <summary>A missing mod above this size gets a warning line, because its download takes a while.</summary>
     internal const long LargeModBytes = 100L * 1024 * 1024;
 
+    /// <summary>The size of the still that Discover shows, 16 by 9 like the panel of the page.</summary>
+    internal const int StillWidth = 384;
+
+    internal const int StillHeight = 216;
+
     private readonly IVehiclePreview _service;
     private readonly ModVersionMetadata _release;
     private readonly Guid? _targetInstanceId;
@@ -58,6 +64,9 @@ public sealed partial class VehiclePreviewViewModel : ObservableObject, IDisposa
     private readonly Action _openSettings;
     private readonly PreviewSceneBuilder _builder;
     private readonly PreviewLoadOptions _options;
+    private readonly IPreviewThumbnails? _thumbnails;
+    private readonly IPngEncoder? _encoder;
+    private readonly Action<string>? _stillStored;
     private readonly CancellationTokenSource _lifetime = new();
     private CancellationTokenSource? _run;
     private VehiclePreviewPlan? _plan;
@@ -72,6 +81,9 @@ public sealed partial class VehiclePreviewViewModel : ObservableObject, IDisposa
     /// <param name="targetInstanceId">The instance the player would install into, or null when there is none.</param>
     /// <param name="openSettings">Opens the settings, where the player sets the game folder.</param>
     /// <param name="builder">Turns the resolved vehicle into a scene. This instance clears its mesh cache when it is disposed.</param>
+    /// <param name="thumbnails">Where a complete preview stores its still for Discover, or null to store none.</param>
+    /// <param name="encoder">Encodes the still as a PNG, or null to store none.</param>
+    /// <param name="stillStored">Gets the vehicle hash after a new still was stored, on the thread that started the load.</param>
     public VehiclePreviewViewModel(
         IVehiclePreview service,
         ModVersionMetadata release,
@@ -79,7 +91,9 @@ public sealed partial class VehiclePreviewViewModel : ObservableObject, IDisposa
         LocalizationService localization,
         Action openSettings,
         PreviewSceneBuilder builder,
-        PreviewLoadOptions? options = null)
+        IPreviewThumbnails? thumbnails = null,
+        IPngEncoder? encoder = null,
+        Action<string>? stillStored = null)
     {
         _service = service ?? throw new ArgumentNullException(nameof(service));
         _release = release ?? throw new ArgumentNullException(nameof(release));
@@ -87,7 +101,10 @@ public sealed partial class VehiclePreviewViewModel : ObservableObject, IDisposa
         _localization = localization ?? throw new ArgumentNullException(nameof(localization));
         _openSettings = openSettings ?? throw new ArgumentNullException(nameof(openSettings));
         _builder = builder ?? throw new ArgumentNullException(nameof(builder));
-        _options = options ?? new PreviewLoadOptions();
+        _options = new PreviewLoadOptions();
+        _thumbnails = thumbnails;
+        _encoder = encoder;
+        _stillStored = stillStored;
     }
 
     internal ModVersionMetadata Release => _release;
@@ -353,6 +370,55 @@ public sealed partial class VehiclePreviewViewModel : ObservableObject, IDisposa
         Scene = textured;
         ShowNotices();
         SetState(result.MissingMods.Count > 0 ? VehiclePreviewState.NeedsMods : VehiclePreviewState.Ready);
+        await StoreStillAsync(textured, result, token);
+    }
+
+    /// <summary>
+    /// Stores a still of the scene for Discover when the scene shows the whole vehicle and the stored still, if any,
+    /// was made from another scene key. A scene with a box, a missing mod or no draw gets no still, because Discover
+    /// would show it as the vehicle. A failure only means that Discover keeps the icon, so it never changes the panel.
+    /// </summary>
+    private async Task StoreStillAsync(PreviewScene scene, VehiclePreviewResult result, CancellationToken token)
+    {
+        if (_thumbnails is not { } thumbnails
+            || _encoder is not { } encoder
+            || State != VehiclePreviewState.Ready
+            || scene.Draws.Count == 0
+            || scene.Placeholders.Count > 0
+            || result is not { VehicleSha256: { } sha256, GameBuild: { } gameBuild, SceneKey: { } sceneKey })
+            return;
+
+        try
+        {
+            var stored = await Task.Run(
+                () =>
+                {
+                    if (!thumbnails.NeedsUpdate(sha256, gameBuild, sceneKey))
+                        return false;
+
+                    thumbnails.Store(sha256, gameBuild, sceneKey, encoder.Encode(RenderStill(scene, token)));
+                    return true;
+                },
+                token);
+            if (stored && !_disposed)
+                _stillStored?.Invoke(sha256);
+        }
+        catch (Exception exception) when (exception is not OutOfMemoryException)
+        {
+            // A cancel, a dispose or a failed encode leaves the old still or none, and the next complete preview tries again.
+        }
+    }
+
+    /// <summary>Renders the scene from the default camera angles, framed as the page frames it, on a renderer of its own.</summary>
+    internal static FrameBuffer RenderStill(PreviewScene scene, CancellationToken token)
+    {
+        var camera = new OrbitCamera();
+        camera.Frame(scene.Bounds, (float)StillWidth / StillHeight);
+        var frame = new FrameBuffer(StillWidth, StillHeight);
+
+        // The renderer is dropped after this one frame, so it keeps no vertex cache and no work buffers.
+        new SoftwareRenderer().Render(scene, camera, frame, new RenderOptions { WorldCacheBytes = 0, WorkBufferBytes = 0 }, token);
+        return frame;
     }
 
     private void ThrowWhenStale(CancellationToken token)

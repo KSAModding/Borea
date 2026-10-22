@@ -16,6 +16,7 @@ using Borea.Core.ModPacks;
 using Borea.Core.Mods;
 using Borea.Core.Planning;
 using Borea.Core.Preferences;
+using Borea.Core.Preview;
 using Borea.Core.Tags;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -493,6 +494,7 @@ public partial class MainViewModel
             return;
 
         _compatibilityGame = installed;
+        var previewBuild = PreviewGameBuild.Of(_services.InstalledVersion.GetInstalledVersion());
         foreach (var item in _listings)
         {
             var latest = item.Source != "index" ? null
@@ -503,6 +505,9 @@ public partial class MainViewModel
             // the age on the row belongs to the same release as the chip and Add, so a newer release in another channel does not show there
             item.UpdatedAt = latest?.ReleaseDate;
             item.LatestInChannel = latest;
+
+            // only a lookup of a stored file, so Discover never fetches, reads parts or plans for a vehicle
+            item.PreviewStillPath = item.Type == ContentType.Vehicle ? _services.PreviewThumbnails.TryGetPath(latest?.Download.Sha256, previewBuild) : null;
         }
 
         foreach (var release in _contentReleases)
@@ -524,6 +529,24 @@ public partial class MainViewModel
 
         ShowNewerMembers();
         ApplyDiscoverFilters();
+    }
+
+    /// <summary>Shows the still that the vehicle page just stored on every Discover row of that vehicle archive.</summary>
+    private void ShowPreviewStill(string vehicleSha256)
+    {
+        if (_services is not { } services)
+            return;
+
+        var path = services.PreviewThumbnails.TryGetPath(vehicleSha256, PreviewGameBuild.Of(services.InstalledVersion.GetInstalledVersion()));
+        foreach (var item in _listings)
+        {
+            if (item.Type != ContentType.Vehicle || !string.Equals(item.LatestInChannel?.Download.Sha256, vehicleSha256, StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            // a new still has the path of the old one, so the row lets go of the old bitmap first
+            item.PreviewStillPath = null;
+            item.PreviewStillPath = path;
+        }
     }
 
     internal string CompatibilityText(GameCompatibility compatibility) => compatibility switch
@@ -841,6 +864,13 @@ public sealed partial class DiscoverItem : ObservableObject, IContentPlanRow
     public IReadOnlyList<AuthorLink> AuthorLinks => AuthorLink.Of(_listing.Authors, Type, _owner.Localization);
 
     public ListingImage? Icon { get; }
+
+    /// <summary>
+    /// The still of the last complete preview of a vehicle, which the row shows in place of the icon. Null for other
+    /// content and when no still is stored for the latest release and the installed game build.
+    /// </summary>
+    [ObservableProperty]
+    private string? _previewStillPath;
 
     public string? IconAttribution => Icon?.Attribution;
 

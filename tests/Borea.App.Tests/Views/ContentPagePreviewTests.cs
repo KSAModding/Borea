@@ -160,9 +160,10 @@ public sealed class ContentPagePreviewTests
         return (window, page, view);
     }
 
-    private static Rect BoundsIn(Visual window, Visual control) => new(control.TranslatePoint(default, window)!.Value, control.Bounds.Size);
+    internal static Rect BoundsIn(Visual window, Visual control) => new(control.TranslatePoint(default, window)!.Value, control.Bounds.Size);
 
-    private static void ReadFrame(Window window, Action<int, int, Color> pixel)
+    /// <param name="shotName">The start of the PNG file name when BOREA_PREVIEW_SHOTS is set.</param>
+    internal static void ReadFrame(Window window, Action<int, int, Color> pixel, string shotName = "content-page")
     {
         Dispatcher.UIThread.RunJobs();
         AvaloniaHeadlessPlatform.ForceRenderTimerTick();
@@ -172,7 +173,7 @@ public sealed class ContentPagePreviewTests
         if (Environment.GetEnvironmentVariable("BOREA_PREVIEW_SHOTS") is { Length: > 0 } shots)
         {
             Directory.CreateDirectory(shots);
-            frame.Save(Path.Combine(shots, $"content-page-{window.Height:0}.png"), PngBitmapEncoderOptions.Default);
+            frame.Save(Path.Combine(shots, $"{shotName}-{window.Height:0}.png"), PngBitmapEncoderOptions.Default);
         }
 
         using var buffer = frame.Lock();

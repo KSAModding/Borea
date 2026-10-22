@@ -90,6 +90,7 @@ public sealed class BoreaServicesTests : IDisposable
     {
         var services = await BoreaServices.BuildAsync(_tempRoot);
         Assert.IsType<VehiclePreview>(services.VehiclePreview);
+        Assert.IsType<PreviewThumbnailCache>(services.PreviewThumbnails);
 
         services.Dispose();
 

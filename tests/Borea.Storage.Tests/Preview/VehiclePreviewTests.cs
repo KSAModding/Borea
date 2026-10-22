@@ -62,6 +62,9 @@ public sealed class VehiclePreviewTests : IDisposable
         var stale = Path.Combine(Path.GetDirectoryName(cached)!, $"{new string('e', 64)}.abc.part");
         File.WriteAllBytes(stale, [1]);
         File.SetLastWriteTimeUtc(stale, DateTime.UtcNow.AddHours(-25));
+        var staleStill = Path.Combine(Directory.CreateDirectory(Path.Combine(_paths.GetPreviewCacheFolder(), "thumbs")).FullName, "still.png.abc.part");
+        File.WriteAllBytes(staleStill, [1]);
+        File.SetLastWriteTimeUtc(staleStill, DateTime.UtcNow.AddHours(-25));
         var release = Vehicle(zip);
         var before = Snapshot();
         using var preview = Preview();
@@ -96,6 +99,7 @@ public sealed class VehiclePreviewTests : IDisposable
         Assert.Same(maintenance, preview.StartMaintenance());
         await maintenance;
         Assert.False(File.Exists(stale));
+        Assert.False(File.Exists(staleStill));
     }
 
     [Fact]
@@ -265,7 +269,8 @@ public sealed class VehiclePreviewTests : IDisposable
             new WindowsPlatform(),
             _downloader,
             new PlentyOfSpace(),
-            new RecordingLog());
+            new RecordingLog(),
+            new PreviewThumbnailCache(paths, new RecordingLog()));
     }
 
     private static byte[] VehicleZip() => Zip(("meta.toml", "name = \"Rover\""), ("vehicle.xml", Rover));
