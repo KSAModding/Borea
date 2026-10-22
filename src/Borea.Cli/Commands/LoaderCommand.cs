@@ -196,7 +196,8 @@ internal static class LoaderCommand
 
             var rawDirectory = parseResult.GetValue(directory);
             var destination = rawDirectory is null ? null : Path.GetFullPath(rawDirectory);
-            var result = await cli.LoaderInstaller.InstallAsync(listing, release, destination, new InstallProgressOutput(error), ct).ConfigureAwait(false);
+            var replacesUnfitRecord = await LoaderUpdate.ReplacesUnfitRecordAsync(cli.Mods, cli.Settings.LoaderInstallations.GetValueOrDefault(listing.ModId), release, game, ct).ConfigureAwait(false);
+            var result = await cli.LoaderInstaller.InstallAsync(listing, release, destination, replacesUnfitRecord, new InstallProgressOutput(error), ct).ConfigureAwait(false);
 
             output.WriteLine($"Installed {result.LoaderId} {result.Version} in '{result.Directory}'.");
             if (result.ConfigurationFile is not null)

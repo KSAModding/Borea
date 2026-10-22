@@ -517,17 +517,19 @@ public sealed class FileLoaderInstallerTests : IDisposable
         Assert.Equal(VersionDirectory(recorded), await RecordedDirectoryAsync());
     }
 
-    [Fact]
-    public async Task InstallAsync_OlderReleaseBesideTheRecordedOne_MovesTheRecord()
+    [Theory]
+    [InlineData(false, "0.4.7")]
+    [InlineData(true, "0.4.6")]
+    public async Task InstallAsync_OlderReleaseBesideTheRecordedOne_MovesTheRecordOnlyFromAnUnfitVersion(bool replacesUnfitRecord, string recorded)
     {
         await SaveGameDirectoryAsync();
         _downloader.Bytes = StarMapZip();
         await InstallAsync(release: StarMapRelease("0.4.7"));
 
-        await InstallAsync(release: StarMapRelease("0.4.6"));
+        await _installer.InstallAsync(StarMap(), StarMapRelease("0.4.6"), replacesUnfitRecord: replacesUnfitRecord);
 
-        Assert.True(File.Exists(Path.Combine(VersionDirectory("0.4.7"), "StarMap.exe")));
-        Assert.Equal(VersionDirectory("0.4.6"), await RecordedDirectoryAsync());
+        Assert.True(File.Exists(Path.Combine(VersionDirectory("0.4.6"), "StarMap.exe")));
+        Assert.Equal(VersionDirectory(recorded), await RecordedDirectoryAsync());
     }
 
     [Fact]
@@ -1047,7 +1049,7 @@ public sealed class FileLoaderInstallerTests : IDisposable
         var progress = new RecordingProgress<InstallProgress>();
         using var cancellation = new CancellationTokenSource();
 
-        await _installer.InstallAsync(StarMap(), StarMapRelease(), null, progress, cancellation.Token);
+        await _installer.InstallAsync(StarMap(), StarMapRelease(), null, progress: progress, cancellationToken: cancellation.Token);
 
         Assert.Equal(cancellation.Token, _downloader.LastToken);
         var phases = progress.Reports.Select(report => report.Phase).ToList();

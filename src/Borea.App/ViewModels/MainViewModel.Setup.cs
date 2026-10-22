@@ -556,6 +556,13 @@ public partial class MainViewModel
 
         var listing = await services.Mods.GetListingAsync(loaderId)
             ?? throw new InvalidOperationException(Localization.DiscoverNoRelease);
+
+        // the record is what an older Borea starts with the game in the settings, so it is rated with that game
+        var replacesUnfitRecord = await LoaderUpdate.ReplacesUnfitRecordAsync(
+            services.Mods,
+            services.Settings.LoaderInstallations.GetValueOrDefault(loaderId),
+            release,
+            services.InstalledVersion.GetInstalledVersion()?.Version);
         var version = release.Version.ToString();
         var run = LoaderInstallRun = StartInstallRun(StartTask(TaskKind.LoaderInstall, listing.Name, version: version));
         run.TaskItem.NewVersion = version;
@@ -583,7 +590,7 @@ public partial class MainViewModel
         try
         {
             var result = await run.InstallStop.RunAsync(
-                (reports, token) => services.LoaderInstaller.InstallAsync(listing, release, directory: null, reports, token),
+                (reports, token) => services.LoaderInstaller.InstallAsync(listing, release, directory: null, replacesUnfitRecord, reports, token),
                 progress);
             completed = true;
             ForgetLoaderUpdate(loaderId);
