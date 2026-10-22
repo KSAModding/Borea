@@ -201,7 +201,10 @@ public partial class MainViewModel
 
     /// <summary>
     /// Makes a new preview for the open vehicle page against the services that are current now, and disposes the
-    /// old one, which stops its work and drops a result that arrives later. Any other page gets none.
+    /// old one, which stops its work and drops a result that arrives later. Any other page gets none. A busy preview
+    /// of the same release and target stays, so a page that is read again, such as after an index refresh, does not
+    /// send a second download. After the player cancelled the same release, the new preview waits for a click,
+    /// because every fetch raises the public download count of the host (RFC 0052).
     /// </summary>
     private void RefreshVehiclePreview()
     {
@@ -210,6 +213,9 @@ public partial class MainViewModel
         if (_services is { } services && CurrentWindowContent && SelectedContent is { Type: ContentType.Vehicle } && LatestVersion is { } latest)
         {
             var target = VehiclePreviewTarget;
+            if (old is { IsBusy: true } && SameRelease(old.Release, latest.Release) && TargetKey(target) == _vehiclePreviewTarget)
+                return;
+
             _vehiclePreviewTarget = TargetKey(target);
             next = new VehiclePreviewViewModel(
                 VehiclePreviewServiceOf(services),
@@ -220,7 +226,8 @@ public partial class MainViewModel
                 VehiclePreviewBuilderOf(),
                 thumbnails: services.PreviewThumbnails,
                 encoder: VehiclePreviewEncoder,
-                stillStored: ShowPreviewStill);
+                stillStored: ShowPreviewStill,
+                autoFetch: !(old is { State: VehiclePreviewState.Cancelled } && SameRelease(old.Release, latest.Release)));
         }
 
         VehiclePreview = next;
@@ -238,6 +245,10 @@ public partial class MainViewModel
         if (VehiclePreview is { IsBusy: false } && TargetKey(VehiclePreviewTarget) != _vehiclePreviewTarget)
             RefreshVehiclePreview();
     }
+
+    /// <summary>True when both are the same release with the same archive, so a preview of one serves the other.</summary>
+    private static bool SameRelease(ModVersionMetadata a, ModVersionMetadata b) =>
+        a.ModId == b.ModId && a.Version == b.Version && string.Equals(a.Download.Sha256, b.Download.Sha256, StringComparison.OrdinalIgnoreCase);
 
     private static string? TargetKey(InstanceItem? instance) => instance is null
         ? null

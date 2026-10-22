@@ -227,6 +227,70 @@ public sealed class VehiclePreviewViewModelTests
     }
 
     [Fact]
+    public async Task Page_MadeAgainForTheSameRelease_KeepsARunningAutoFetch()
+    {
+        var (harness, service, held) = await OpenRoverWithHeldAutoFetchAsync();
+        using var _ = harness;
+        var viewModel = harness.ViewModel;
+        var first = viewModel.VehiclePreview!;
+
+        viewModel.LatestVersion = new VersionItem(viewModel, viewModel.LatestVersion!.Release);
+
+        Assert.Same(first, viewModel.VehiclePreview);
+        Assert.False(Assert.Single(service.LoadTokens).Token.IsCancellationRequested);
+        held.SetResult(service.Ready(new FakeAssets()));
+        await viewModel.WhenVehiclePreviewLoadedAsync();
+        Assert.Equal([(true, false)], service.Loads);
+        Assert.Equal(VehiclePreviewState.Ready, first.State);
+    }
+
+    [Fact]
+    public async Task Page_MadeAgainAfterACancel_WaitsForTheClick()
+    {
+        var (harness, service, held) = await OpenRoverWithHeldAutoFetchAsync();
+        using var _ = harness;
+        var viewModel = harness.ViewModel;
+        var first = viewModel.VehiclePreview!;
+        first.CancelCommand.Execute(null);
+        held.SetResult(service.Ready(new FakeAssets()));
+        await first.Loading;
+        Assert.Equal(VehiclePreviewState.Cancelled, first.State);
+
+        viewModel.LatestVersion = new VersionItem(viewModel, viewModel.LatestVersion!.Release);
+        await viewModel.WhenVehiclePreviewLoadedAsync();
+
+        Assert.NotSame(first, viewModel.VehiclePreview);
+        Assert.Equal(VehiclePreviewState.Idle, viewModel.VehiclePreview!.State);
+        Assert.Single(service.Loads);
+    }
+
+    /// <summary>
+    /// Opens the rover page over a service that needs the small vehicle file, and waits until the fetch that the page
+    /// starts on its own is held by the test.
+    /// </summary>
+    private static async Task<(ViewModelHarness Harness, FakeVehiclePreview Service, TaskCompletionSource<VehiclePreviewResult> Held)> OpenRoverWithHeldAutoFetchAsync()
+    {
+        var held = new TaskCompletionSource<VehiclePreviewResult>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var started = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var service = new FakeVehiclePreview
+        {
+            PlanState = VehiclePreviewPlanState.NeedsVehicleFile,
+            HoldLoad = _ =>
+            {
+                started.TrySetResult();
+                return held.Task;
+            },
+        };
+        var harness = await VehicleHarnessAsync();
+        harness.ViewModel.VehiclePreviewServiceOf = _ => service;
+        await harness.ViewModel.EnsureDiscoverLoadedAsync();
+        harness.ViewModel.ShowDiscoverVehiclesCommand.Execute(null);
+        await Assert.Single(harness.ViewModel.DiscoverItems).OpenCommand.ExecuteAsync(null);
+        await started.Task.WaitAsync(TimeSpan.FromSeconds(10));
+        return (harness, service, held);
+    }
+
+    [Fact]
     public async Task NoGameFolder_ThenARebuildWithAGameFolder_BuildsOnTheNewService()
     {
         var noGame = new FakeVehiclePreview { PlanState = VehiclePreviewPlanState.NoGameFolder };

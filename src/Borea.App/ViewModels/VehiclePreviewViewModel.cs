@@ -83,6 +83,7 @@ public sealed partial class VehiclePreviewViewModel : ObservableObject, IDisposa
     private readonly IPngEncoder? _encoder;
     private readonly Action<string>? _stillStored;
     private readonly TimeSpan _autoFetchDelay;
+    private readonly bool _autoFetch;
     private readonly CancellationTokenSource _lifetime = new();
     private CancellationTokenSource? _run;
     private VehiclePreviewPlan? _plan;
@@ -101,6 +102,7 @@ public sealed partial class VehiclePreviewViewModel : ObservableObject, IDisposa
     /// <param name="encoder">Encodes the still as a PNG, or null to store none.</param>
     /// <param name="stillStored">Gets the vehicle hash after a new still was stored, on the thread that started the load.</param>
     /// <param name="autoFetchDelay">The wait before a small vehicle file downloads on its own, or null for <see cref="DefaultAutoFetchDelay"/>.</param>
+    /// <param name="autoFetch">False when a small vehicle file must also wait for the click, such as after the player cancelled this release.</param>
     public VehiclePreviewViewModel(
         IVehiclePreview service,
         ModVersionMetadata release,
@@ -111,7 +113,8 @@ public sealed partial class VehiclePreviewViewModel : ObservableObject, IDisposa
         IPreviewThumbnails? thumbnails = null,
         IPngEncoder? encoder = null,
         Action<string>? stillStored = null,
-        TimeSpan? autoFetchDelay = null)
+        TimeSpan? autoFetchDelay = null,
+        bool autoFetch = true)
     {
         _service = service ?? throw new ArgumentNullException(nameof(service));
         _release = release ?? throw new ArgumentNullException(nameof(release));
@@ -124,6 +127,7 @@ public sealed partial class VehiclePreviewViewModel : ObservableObject, IDisposa
         _encoder = encoder;
         _stillStored = stillStored;
         _autoFetchDelay = autoFetchDelay ?? DefaultAutoFetchDelay;
+        _autoFetch = autoFetch;
     }
 
     internal ModVersionMetadata Release => _release;
@@ -317,7 +321,7 @@ public sealed partial class VehiclePreviewViewModel : ObservableObject, IDisposa
             case VehiclePreviewPlanState.CanBuildLocally:
                 await LoadAsync(fetchVehicle: false, fetchMods: false, token);
                 break;
-            case VehiclePreviewPlanState.NeedsVehicleFile when plan.VehicleSizeBytes is { } size && size <= AutoFetchVehicleBytes:
+            case VehiclePreviewPlanState.NeedsVehicleFile when _autoFetch && plan.VehicleSizeBytes is { } size && size <= AutoFetchVehicleBytes:
                 // The Fetching step shows the Cancel button during the delay, and a cancel or a dispose ends the delay before any download.
                 Step(PreviewStep.FetchingVehicle);
                 await Task.Delay(_autoFetchDelay, token);
