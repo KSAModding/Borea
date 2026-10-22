@@ -196,7 +196,7 @@ public partial class MainViewModel
         _contentPack = await ResolveSourcePackAsync(_selectedInstanceEntity?.Source);
         ShowPackUpdate(item.InstanceId, await FindPackUpdateAsync(_selectedInstanceEntity));
         RefreshContentGroups();
-        RefreshInstanceLoader();
+        await LoadInstanceLoaderAsync();
         OnPropertyChanged(nameof(HasUpdates));
         await LoadGameSavesAsync();
         await LoadManualInstallsAsync();

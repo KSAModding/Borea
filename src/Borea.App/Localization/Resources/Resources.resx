@@ -1722,6 +1722,9 @@
   <data name="ToastLaunchArgumentsFailedFormat" xml:space="preserve">
     <value>Could not save the launch arguments of {0}</value>
   </data>
+  <data name="ToastInstanceLoaderFailedFormat" xml:space="preserve">
+    <value>Could not save the mod loader of {0}</value>
+  </data>
   <data name="ToastEnableFailedFormat" xml:space="preserve">
     <value>Could not enable {0}</value>
   </data>
@@ -3696,9 +3699,6 @@
   <data name="InstanceLoaderConflict" xml:space="preserve">
     <value>The mods need versions that do not overlap</value>
   </data>
-  <data name="InstanceLoaderOpenSettings" xml:space="preserve">
-    <value>Game settings</value>
-  </data>
   <data name="InstanceLoaderConflictShort" xml:space="preserve">
     <value>No version fits</value>
   </data>
@@ -3734,6 +3734,45 @@
   </data>
   <data name="InstanceLoaderIncompatibleFormat" xml:space="preserve">
     <value>{0}, not for this KSA build</value>
+  </data>
+  <data name="InstanceLoaderChange" xml:space="preserve">
+    <value>Change</value>
+  </data>
+  <data name="InstanceLoaderInfo" xml:space="preserve">
+    <value>The mod loader starts the game with the mods of this instance. Automatic starts the newest installed version that fits the game and the mods. A pinned version stays until you change it, also when a newer version fits.</value>
+  </data>
+  <data name="InstanceLoaderAutomaticFormat" xml:space="preserve">
+    <value>Automatic: {0}</value>
+  </data>
+  <data name="InstanceLoaderPinnedFormat" xml:space="preserve">
+    <value>Pinned at {0}</value>
+  </data>
+  <data name="InstanceLoaderInstallFormat" xml:space="preserve">
+    <value>Install {0}</value>
+  </data>
+  <data name="InstanceLoaderModalHintFormat" xml:space="preserve">
+    <value>Choose which version of the mod loader starts {0}. Other instances keep their own setting.</value>
+  </data>
+  <data name="InstanceLoaderAutomatic" xml:space="preserve">
+    <value>Automatic (recommended)</value>
+  </data>
+  <data name="InstanceLoaderAutomaticTargetFormat" xml:space="preserve">
+    <value>Starts {0} {1}, the newest installed version that fits the game and the mods.</value>
+  </data>
+  <data name="InstanceLoaderAutomaticNotInstalledFormat" xml:space="preserve">
+    <value>{0} {1} fits the game and the mods, but it is not installed. Borea installs it when you save.</value>
+  </data>
+  <data name="InstanceLoaderAutomaticNoneFormat" xml:space="preserve">
+    <value>No release of {0} fits this game build and the mods.</value>
+  </data>
+  <data name="InstanceLoaderPinChoice" xml:space="preserve">
+    <value>Always use this version</value>
+  </data>
+  <data name="InstanceLoaderSaveAndInstall" xml:space="preserve">
+    <value>Install and save</value>
+  </data>
+  <data name="InstanceLoaderMenu" xml:space="preserve">
+    <value>Mod loader</value>
   </data>
   <data name="ContentShowVersions" xml:space="preserve">
     <value>Show</value>

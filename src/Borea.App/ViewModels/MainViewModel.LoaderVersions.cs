@@ -34,16 +34,6 @@ public partial class MainViewModel
     private static async Task<InstanceLoaderResolution> ResolveLaunchLoaderAsync(BoreaServices services, Instance instance)
     {
         var installed = await services.LoaderVersions.ListAsync();
-        IModRepository? releases = services.OfflineContentIndex;
-        try
-        {
-            await services.OfflineContentIndex.GetAvailableModsAsync();
-        }
-        catch (Exception exception) when (exception is InvalidOperationException or IOException)
-        {
-            // Borea holds no index it can read, so nothing is rated or offered, as when it is offline
-            releases = null;
-        }
 
         // only the index lists mod loaders, so SpaceDock cannot change the choice and is not asked
         return await InstanceLoaderResolver.ResolveAsync(
@@ -51,8 +41,23 @@ public partial class MainViewModel
             installed,
             services.OfflineContentIndex,
             services.ContentIndex,
-            releases,
+            await HeldLoaderReleasesAsync(services),
             services.Settings.ReleaseChannel,
             LoaderGameOf(services, instance).Version);
+    }
+
+    /// <summary>The releases that rate and offer loader versions without a request, or null when Borea holds no index it can read.</summary>
+    private static async Task<IModRepository?> HeldLoaderReleasesAsync(BoreaServices services)
+    {
+        try
+        {
+            await services.OfflineContentIndex.GetAvailableModsAsync();
+            return services.OfflineContentIndex;
+        }
+        catch (Exception exception) when (exception is InvalidOperationException or IOException)
+        {
+            // nothing is rated or offered then, as when Borea is offline
+            return null;
+        }
     }
 }

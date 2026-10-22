@@ -1722,6 +1722,9 @@
   <data name="ToastLaunchArgumentsFailedFormat" xml:space="preserve">
     <value>Die Startargumente von {0} konnten nicht gespeichert werden</value>
   </data>
+  <data name="ToastInstanceLoaderFailedFormat" xml:space="preserve">
+    <value>Der Mod-Loader von {0} konnte nicht gespeichert werden</value>
+  </data>
   <data name="ToastEnableFailedFormat" xml:space="preserve">
     <value>{0} konnte nicht aktiviert werden</value>
   </data>
@@ -3696,9 +3699,6 @@
   <data name="InstanceLoaderConflict" xml:space="preserve">
     <value>Die Mods brauchen Versionen, die sich nicht überschneiden</value>
   </data>
-  <data name="InstanceLoaderOpenSettings" xml:space="preserve">
-    <value>Spieleinstellungen</value>
-  </data>
   <data name="InstanceLoaderConflictShort" xml:space="preserve">
     <value>Keine Version passt</value>
   </data>
@@ -3734,6 +3734,45 @@
   </data>
   <data name="InstanceLoaderIncompatibleFormat" xml:space="preserve">
     <value>{0}, nicht für diesen KSA-Build</value>
+  </data>
+  <data name="InstanceLoaderChange" xml:space="preserve">
+    <value>Ändern</value>
+  </data>
+  <data name="InstanceLoaderInfo" xml:space="preserve">
+    <value>Der Mod-Loader startet das Spiel mit den Mods dieser Instanz. Automatisch startet die neueste installierte Version, die zum Spiel und zu den Mods passt. Eine angeheftete Version bleibt, bis du sie änderst, auch wenn eine neuere Version passt.</value>
+  </data>
+  <data name="InstanceLoaderAutomaticFormat" xml:space="preserve">
+    <value>Automatisch: {0}</value>
+  </data>
+  <data name="InstanceLoaderPinnedFormat" xml:space="preserve">
+    <value>Bei {0} angeheftet</value>
+  </data>
+  <data name="InstanceLoaderInstallFormat" xml:space="preserve">
+    <value>{0} installieren</value>
+  </data>
+  <data name="InstanceLoaderModalHintFormat" xml:space="preserve">
+    <value>Wähle, welche Version des Mod-Loaders {0} startet. Andere Instanzen behalten ihre eigene Einstellung.</value>
+  </data>
+  <data name="InstanceLoaderAutomatic" xml:space="preserve">
+    <value>Automatisch (empfohlen)</value>
+  </data>
+  <data name="InstanceLoaderAutomaticTargetFormat" xml:space="preserve">
+    <value>Startet {0} {1}, die neueste installierte Version, die zum Spiel und zu den Mods passt.</value>
+  </data>
+  <data name="InstanceLoaderAutomaticNotInstalledFormat" xml:space="preserve">
+    <value>{0} {1} passt zum Spiel und zu den Mods, ist aber nicht installiert. Borea installiert die Version beim Speichern.</value>
+  </data>
+  <data name="InstanceLoaderAutomaticNoneFormat" xml:space="preserve">
+    <value>Keine Version von {0} passt zu diesem Spiel-Build und zu den Mods.</value>
+  </data>
+  <data name="InstanceLoaderPinChoice" xml:space="preserve">
+    <value>Immer diese Version verwenden</value>
+  </data>
+  <data name="InstanceLoaderSaveAndInstall" xml:space="preserve">
+    <value>Installieren und speichern</value>
+  </data>
+  <data name="InstanceLoaderMenu" xml:space="preserve">
+    <value>Mod-Loader</value>
   </data>
   <data name="ContentShowVersions" xml:space="preserve">
     <value>Anzeigen</value>

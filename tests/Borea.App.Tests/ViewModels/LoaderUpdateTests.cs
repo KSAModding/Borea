@@ -273,7 +273,7 @@ public sealed class LoaderUpdateTests
         Assert.True(row.IsDanger);
         Assert.Equal(harness.Localization.FormatLoaderUpdateUrgent("StarMap", "0.4.6", GameBuild, "0.4.7"), row.StatusToolTip);
         Assert.True(row.CanUpdate);
-        Assert.False(row.CanFix);
+        Assert.False(row.CanInstall);
         Assert.Equal(harness.Localization.FormatSetupUpdateLoader("0.4.7"), row.UpdateText);
 
         await row.UpdateCommand.ExecuteAsync(null);
@@ -416,7 +416,7 @@ public sealed class LoaderUpdateTests
         var row = Assert.Single(viewModel.InstanceLoader!.Rows);
         Assert.Equal(InstanceLoaderState.GameIncompatible, row.State);
         Assert.False(row.CanUpdate);
-        Assert.False(row.CanFix);
+        Assert.False(row.CanInstall);
         Assert.Equal(harness.Localization.FormatLoaderUpdateNone("StarMap", "0.4.6", GameBuild), row.StatusToolTip);
     }
 
