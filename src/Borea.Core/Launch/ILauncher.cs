@@ -36,7 +36,9 @@ public interface ILauncher
     /// log decides, because the exit code of the wrapper says nothing about the
     /// game. A wrapper that stops before the log appears gives
     /// <see cref="LaunchOutcome.ExitedEarly"/> with <see cref="LaunchResult.Wine"/>
-    /// set and no mod blamed. Any other result is returned as it is.
+    /// set and no mod blamed. Any other result is returned as it is. A start
+    /// that stopped early writes the game folder of the settings back the way
+    /// <see cref="WatchExitAsync"/> does.
     /// </summary>
     Task<LaunchResult> WatchStartAsync(Instance instance, LaunchResult started, CancellationToken cancellationToken = default);
 
@@ -46,7 +48,12 @@ public interface ILauncher
     /// ends with an error can be <see cref="GameExitKind.Crashed"/>, and only
     /// with a crash log of its own run, so a quit and a restart that exit with
     /// 0 are <see cref="GameExitKind.Closed"/>, and so is the crash of a new
-    /// process that a restart started.
+    /// process that a restart started. When the launch started a kept build,
+    /// no KSA or StarMap process runs any more, and the loader's game path
+    /// still names the kept folder, it writes the game folder of the settings
+    /// back, so a Borea that does not write the file before each start does
+    /// not start the kept build. A write that fails is logged and changes no
+    /// result.
     /// </summary>
     Task<GameExit> WatchExitAsync(Instance instance, LaunchResult started, CancellationToken cancellationToken = default);
 
