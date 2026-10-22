@@ -74,6 +74,25 @@ public sealed class LoaderCommandTests : IDisposable
     }
 
     [Fact]
+    public async Task Install_WithoutVersion_AnUnrecordedVersionOutsideTheChannel_DoesNotBlockTheUpdate()
+    {
+        var installer = new FakeLoaderInstaller();
+        _host.LoaderInstaller = installer;
+        _host.Mods.Listings.Add(LoaderFixtures.Listing());
+        _host.Mods.Releases.Add(LoaderFixtures.Release(version: "0.4.7"));
+        _host.Mods.Releases.Add(LoaderFixtures.Release(version: "0.4.8"));
+        _host.Mods.Releases.Add(LoaderFixtures.Release(version: "0.5.0-dev.1", releaseStatus: ReleaseStatus.Dev));
+        var recorded = CreateVersionFolder(_host, "0.4.7");
+        CreateVersionFolder(_host, "0.5.0-dev.1");
+        await File.WriteAllTextAsync(_host.Paths.GetBoreaSettingsPath(), $"[LoaderInstallations.StarMap]\nDirectoryPath = '{recorded}'\nVersion = '0.4.7'\nIsAdopted = false\n");
+
+        var run = await _host.RunAsync("loader", "install", "StarMap");
+
+        Assert.Equal(0, run.ExitCode);
+        Assert.Equal("0.4.8", Assert.Single(installer.Calls).Release.Version.ToString());
+    }
+
+    [Fact]
     public async Task Install_WithoutVersion_SkipsANewerReleaseThatDoesNotSupportTheGame()
     {
         var installer = new FakeLoaderInstaller();
@@ -390,6 +409,32 @@ public sealed class LoaderCommandTests : IDisposable
         Assert.True(Directory.Exists(pinned));
         var version = Assert.Single(show.Json.GetProperty("loaderVersions").EnumerateArray());
         Assert.Equal("0.4.7", version.GetProperty("version").GetString());
+    }
+
+    [Fact]
+    public async Task UninstallUnused_KeepsTheVersionThatAnAutomaticInstanceStarts()
+    {
+        _host.IndexReader.Snapshot = LaunchCommandTests.StarMapIndex();
+        _host.InstalledVersion = new FakeInstalledGameVersionProvider { Installed = new InstalledGameVersion(GameVersion.Parse("2026.10.19.5638"), "2026.10.19.5638") };
+        var older = CreateVersionFolder(_host, "0.4.7");
+        var started = CreateVersionFolder(_host, "0.4.8");
+
+        // the record is on the version that goes, so the loop must read the uses again after the record moves
+        await File.WriteAllTextAsync(_host.Paths.GetBoreaSettingsPath(), $"[LoaderInstallations.StarMap]\nDirectoryPath = '{older}'\nVersion = '0.4.7'\nIsAdopted = false\n");
+        var mod = ContentCommandFixtures.Release("flight-tools", loader: new LoaderRequirement("StarMap", ModVersion.Parse("0.4.0"), null));
+        var instance = Instance.FromExisting(Guid.NewGuid(), "Flight Test", InstanceSource.Custom.Value, DateTimeOffset.UtcNow, [new InstalledMod(mod.ModId, mod.Version, InstallReason.Manual, DateTimeOffset.UtcNow, mod)], isFavorite: false);
+        await new FileInstanceRepository(_host.Paths).SaveAsync(instance);
+
+        var refused = await _host.RunAsync("loader", "uninstall", "StarMap", "--version", "0.4.8");
+        var run = await _host.RunAsync("loader", "uninstall", "StarMap", "--unused");
+
+        Assert.Equal(1, refused.ExitCode);
+        Assert.Contains("'Flight Test' (automatic)", refused.Error);
+        Assert.Equal(0, run.ExitCode);
+        Assert.Contains("Removed StarMap 0.4.7", run.Output);
+        Assert.Contains("Kept StarMap 0.4.8, because 'Flight Test' (automatic) starts it.", run.Output);
+        Assert.False(Directory.Exists(older));
+        Assert.True(Directory.Exists(started));
     }
 
     [Fact]
