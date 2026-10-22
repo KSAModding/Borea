@@ -93,7 +93,10 @@ public sealed class LoaderLauncher : ILauncher, IDisposable
         _wrappers = _launches.Wrappers;
     }
 
-    public LaunchResult Launch(Instance instance, ModMetadata? loader, IReadOnlyList<string>? arguments = null)
+    public LaunchResult Launch(Instance instance, ModMetadata? loader, IReadOnlyList<string>? arguments = null) =>
+        Launch(instance, loader, loaderDirectory: null, arguments);
+
+    public LaunchResult Launch(Instance instance, ModMetadata? loader, string? loaderDirectory, IReadOnlyList<string>? arguments)
     {
         if (instance is null)
             throw new ArgumentNullException(nameof(instance));
@@ -197,7 +200,15 @@ public sealed class LoaderLauncher : ILauncher, IDisposable
                     $"{loader.Name} takes the instance folder after '{flag}', and Borea passes that on every launch. A second one could make {loader.Name} use another folder, so remove '{flag}' from the launch arguments.");
             }
 
-            var loaderDirectory = _pathProvider.GetLoaderDirectoryPath(loader.ModId);
+            // a given folder is the version the instance uses, and a missing one is not replaced by another version
+            if (loaderDirectory is not null && !Directory.Exists(loaderDirectory))
+            {
+                return LaunchResult.Failed(
+                    LaunchOutcome.NoLoaderDirectory,
+                    $"The folder '{loaderDirectory}' of {loader.Name} is not there. Install that version of {loader.Name} again.");
+            }
+
+            loaderDirectory ??= _pathProvider.GetLoaderDirectoryPath(loader.ModId);
             if (loaderDirectory is null)
             {
                 return LaunchResult.Failed(

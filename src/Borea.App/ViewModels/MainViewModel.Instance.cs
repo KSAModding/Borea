@@ -637,7 +637,7 @@ public partial class MainViewModel
     [RelayCommand]
     private Task PlayHomeAsync() => IsHomeLaunchActiveInstance ? PlayActiveInstanceAsync() : PlayWithoutModLoader();
 
-    /// <summary>Starts the instance through the loader that <see cref="LaunchLoaderChoice"/> picks and watches the start.</summary>
+    /// <summary>Starts the instance through the loader version that <see cref="InstanceLoaderResolver"/> picks and watches the start.</summary>
     private async Task LaunchAsync(Guid instanceId)
     {
         if (_services is not { } services || IsLaunching)
@@ -657,12 +657,10 @@ public partial class MainViewModel
         {
             var instance = await services.Instances.GetByIdAsync(instanceId)
                 ?? throw new InvalidOperationException(Localization.LaunchInstanceMissing);
-            LaunchLoaderChoice choice;
-            IReadOnlyList<ModMetadata> listings;
+            InstanceLoaderResolution resolution;
             try
             {
-                // only the index lists mod loaders, so SpaceDock cannot change the choice and is not asked
-                (choice, listings) = await LaunchLoaderChoice.ChooseAsync(instance, services.Settings.LoaderInstallations, services.OfflineContentIndex, services.ContentIndex);
+                resolution = await ResolveLaunchLoaderAsync(services, instance);
             }
             catch (Exception exception) when (exception is InvalidOperationException or IOException)
             {
@@ -673,19 +671,30 @@ public partial class MainViewModel
                 return;
             }
 
-            if (!choice.Succeeded)
+            var choice = resolution.Choice;
+            if (resolution.Start is not { } start)
             {
                 var loaderIds = choice.LoaderIds.Count == 0 ? "" : ": " + string.Join(", ", choice.LoaderIds);
-                services.Log.Write($"Launch of instance {instance.InstanceId} did not start, {choice.Failure}{loaderIds}.");
-                if (LoaderToInstall(choice, listings) is { } missing)
+                services.Log.Write(choice.Succeeded
+                    ? $"Launch of instance {instance.InstanceId} did not start, no installed version of {choice.Loader.ModId} starts it: {resolution.Version?.Problem}."
+                    : $"Launch of instance {instance.InstanceId} did not start, {choice.Failure}{loaderIds}.");
+
+                // the prompt installs the exact release that the setting or the mods of the instance ask for
+                if (resolution.Version?.Missing is { } release && resolution.Loader is { } missingLoader)
+                    OpenLoaderPrompt(instanceId, missingLoader, release: release);
+                else if (!choice.Succeeded && LoaderToInstall(choice, resolution.Listings) is { } missing)
                     OpenLoaderPrompt(instanceId, missing);
-                else
+                else if (!choice.Succeeded)
                     LaunchMessage = LaunchLoaderFailureText(choice);
+                else
+                    LaunchMessage = Localization.FormatLaunchLoaderNotInstalled(instance.Loader.IsPinned ? $"{choice.Loader.Name} {instance.Loader.Version}" : choice.Loader.Name);
                 return;
             }
 
-            var loader = choice.Loader;
-            if (LoaderUpdateBeforeLaunch(instance, loader) is { } update)
+            var loader = choice.Loader!;
+
+            // the update check rates the recorded version, so it says nothing about another version that starts
+            if (start.IsRecorded && LoaderUpdateBeforeLaunch(instance, loader) is { } update)
             {
                 services.Log.Write(update.Offer is { } offer
                     ? $"Launch of instance {instance.InstanceId} waits, {loader.ModId} {update.InstalledVersion} does not support the game and {offer.Version} does."
@@ -708,15 +717,14 @@ public partial class MainViewModel
                 services.Log.Write($"Instance {instance.InstanceId}: the game's own content now loads before the mods.");
             }
 
-            // an older Borea wrote the host path of the game, which a loader in a Wine prefix cannot open
-            if (services.Paths.GetGameDirectoryPath() is { } game
-                && services.Paths.GetLoaderDirectoryPath(loader.ModId) is { } loaderDirectory
-                && await services.LoaderConfiguration.RefreshForWineAsync(loader, loaderDirectory, game) is { } refreshed)
+            // each version folder keeps its own game path, and a loader in a Wine prefix needs the path of the prefix
+            if (LoaderGameOf(services, instance).Directory is { } game
+                && await services.LoaderConfiguration.PrepareForLaunchAsync(loader, start.DirectoryPath, game, start.IsAdopted) is { } prepared)
             {
-                services.Log.Write($"Wrote the game path of the Wine prefix to '{refreshed}' before the launch.");
+                services.Log.Write($"Wrote the game path to '{prepared}' before the launch.");
             }
 
-            var result = services.Launcher.Launch(instance, loader);
+            var result = services.Launcher.Launch(instance, loader, start.DirectoryPath, arguments: null);
             if (result.Outcome == LaunchOutcome.WrapperRuntimeMissing)
             {
                 OpenRuntimePrompt(instanceId, result, loader);

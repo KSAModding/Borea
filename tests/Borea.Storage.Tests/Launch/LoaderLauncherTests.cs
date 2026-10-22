@@ -838,6 +838,35 @@ public sealed class LoaderLauncherTests : IDisposable
     }
 
     [Fact]
+    public void Launch_GivenVersionFolder_StartsTheLoaderFromItAndNotFromTheRecordedFolder()
+    {
+        PlaceStarMap();
+        var version = Path.Combine(_tempRoot, "Loaders", "StarMap", "0.4.7");
+        Directory.CreateDirectory(version);
+        File.WriteAllBytes(Path.Combine(version, "StarMap.exe"), []);
+
+        var result = _launcher.Launch(_instance, LoaderListing(provides: StarMapProvides()), version, arguments: null);
+
+        Assert.True(result.Started);
+        var plan = Assert.Single(_starter.Plans);
+        Assert.Equal(Path.Combine(Path.GetFullPath(version), "StarMap.exe"), plan.Executable);
+        Assert.Equal(Path.GetFullPath(version), plan.WorkingDirectory);
+    }
+
+    [Fact]
+    public void Launch_GivenVersionFolderMissing_StartsNothingEvenWithARecordedFolder()
+    {
+        PlaceStarMap();
+        var version = Path.Combine(_tempRoot, "Loaders", "StarMap", "0.4.7");
+
+        var result = _launcher.Launch(_instance, LoaderListing(provides: StarMapProvides()), version, arguments: null);
+
+        Assert.Equal(LaunchOutcome.NoLoaderDirectory, result.Outcome);
+        Assert.Contains(version, result.Message);
+        Assert.Empty(_starter.Plans);
+    }
+
+    [Fact]
     public void Launch_ExecutableMissing_ReportsIt()
     {
         Directory.CreateDirectory(StarMapDirectory);

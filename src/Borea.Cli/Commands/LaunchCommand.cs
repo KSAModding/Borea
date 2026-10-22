@@ -27,19 +27,24 @@ internal static class LaunchCommand
                 .ResolveAsync(cli.Instances, parseResult.GetRequiredValue(instance))
                 .ConfigureAwait(false);
             var givenLoaderId = parseResult.GetValue(loaderId);
-            var (choice, listings) = await LaunchLoaderChoice
-                .ChooseAsync(target, cli.Settings.LoaderInstallations, cli.OfflineContentIndex, cli.Mods, givenLoaderId, ct)
+            var game = LoaderLookup.LoaderGameOf(cli, target);
+            var installed = await cli.LoaderVersions.ListAsync(ct).ConfigureAwait(false);
+            var releases = await LoaderLookup.HeldReleasesAsync(cli.OfflineContentIndex, ct).ConfigureAwait(false);
+            var resolution = await InstanceLoaderResolver
+                .ResolveAsync(target, installed, cli.OfflineContentIndex, cli.Mods, releases, cli.Settings.ReleaseChannel, game.Version, givenLoaderId, ct)
                 .ConfigureAwait(false);
-            if (!choice.Succeeded)
+            var choice = resolution.Choice;
+            if (resolution.Start is not { } start)
             {
                 // an id that names no mod loader gets that answer, not advice to install it
                 if (choice.Failure == LaunchLoaderFailure.GivenLoaderNotInstalled)
-                    _ = LoaderLookup.GetListing(listings, choice.LoaderIds[0]);
+                    _ = LoaderLookup.GetListing(resolution.Listings, choice.LoaderIds[0]);
 
-                throw new InvalidOperationException(FailureMessage(target, choice));
+                throw new InvalidOperationException(MissingMessage(target, resolution) ?? FailureMessage(target, choice));
             }
 
-            var loader = choice.Loader;
+            var loader = choice.Loader!;
+            var version = resolution.Version!;
             if (givenLoaderId is null && !parseResult.GetValue(json))
             {
                 output.WriteLine(choice.RequiredByMods
@@ -47,7 +52,7 @@ internal static class LaunchCommand
                     : $"No mod in '{target.Name}' needs a mod loader. Using {loader.ModId}, which takes an instance.");
             }
 
-            await WriteLoaderWarningAsync(cli, loader, error, ct).ConfigureAwait(false);
+            WriteLoaderWarning(loader, version, game.Version, error);
 
             var shape = await cli.GameShape.GetForInstanceAsync(target.InstanceId, ct).ConfigureAwait(false);
             GameShapeOutput.WriteWarning(shape, error);
@@ -60,16 +65,15 @@ internal static class LaunchCommand
                 cli.Log.Write($"Instance {target.InstanceId}: the game's own content now loads before the mods.");
             }
 
-            // an older Borea wrote the host path of the game, which a loader in a Wine prefix cannot open
-            if (cli.Paths.GetGameDirectoryPath() is { } game
-                && cli.Paths.GetLoaderDirectoryPath(loader.ModId) is { } loaderDirectory
-                && await cli.LoaderConfiguration.RefreshForWineAsync(loader, loaderDirectory, game, ct).ConfigureAwait(false) is { } refreshed)
+            // each version folder keeps its own game path, and a loader in a Wine prefix needs the path of the prefix
+            if (game.Directory is { } gamePath
+                && await cli.LoaderConfiguration.PrepareForLaunchAsync(loader, start.DirectoryPath, gamePath, start.IsAdopted, ct).ConfigureAwait(false) is { } prepared)
             {
-                cli.Log.Write($"Wrote the game path of the Wine prefix to '{refreshed}' before the launch.");
+                cli.Log.Write($"Wrote the game path to '{prepared}' before the launch.");
             }
 
             ct.ThrowIfCancellationRequested();
-            var result = cli.Launcher.Launch(target, loader, passThrough.Values);
+            var result = cli.Launcher.Launch(target, loader, start.DirectoryPath, passThrough.Values);
 
             // a loader that stops with an error while the game loads is reported, not left to vanish
             if (result.Started)
@@ -79,7 +83,7 @@ internal static class LaunchCommand
             {
                 error.WriteLine($"error: {result.Message}");
                 if (result.CrashCause == LoaderCrashCause.GameAssembly)
-                    error.WriteLine($"Install a new release of {loader.Name} with 'borea loader install {loader.ModId}'.");
+                    error.WriteLine(GameAssemblyHint(target, loader, version));
 
                 if (result.Outcome == LaunchOutcome.ExitedEarly)
                 {
@@ -93,7 +97,7 @@ internal static class LaunchCommand
 
             if (parseResult.GetValue(json))
             {
-                JsonOutput.Write(output, new LaunchView(loader.ModId, choice.RequiredByMods, result.Plan!.Executable, result.Plan.Arguments, result.Plan.WorkingDirectory, result.ProcessId!.Value));
+                JsonOutput.Write(output, new LaunchView(loader.ModId, start.Version?.ToString(), choice.RequiredByMods, result.Plan!.Executable, result.Plan.Arguments, result.Plan.WorkingDirectory, result.ProcessId!.Value));
                 return ExitCodes.Done;
             }
 
@@ -120,34 +124,54 @@ internal static class LaunchCommand
         _ => throw new ArgumentOutOfRangeException(nameof(choice), choice.Failure, null),
     };
 
-    /// <summary>Warns when the index says the installed loader release does not support the game. The launch still starts, because the bounds can be wrong.</summary>
-    private static async Task WriteLoaderWarningAsync(CliServices cli, ModMetadata loader, TextWriter error, CancellationToken cancellationToken)
+    /// <summary>
+    /// Why no installed version starts the instance when the resolver names the missing version, with the command
+    /// that installs it. Null when the failure of the loader choice says more.
+    /// </summary>
+    private static string? MissingMessage(Instance instance, InstanceLoaderResolution resolution)
     {
-        if (!cli.Settings.LoaderInstallations.TryGetValue(loader.ModId, out var installation) || installation.Version is not { } installed)
-            return;
+        if (resolution.Version is not { } version)
+            return null;
 
-        var game = cli.InstalledVersion.GetInstalledVersion();
-        LoaderUpdate update;
-        try
+        var id = version.LoaderId;
+        if (version.IsPinned && instance.Loader.Version is { } pin)
         {
-            update = await LoaderUpdate.FindAsync(cli.OfflineContentIndex, cli.Settings.ReleaseChannel, loader.ModId, installation, game?.Version, cancellationToken).ConfigureAwait(false);
-        }
-        catch (Exception exception) when (exception is InvalidOperationException or IOException)
-        {
-            return;
+            return version.Problem == LoaderVersionProblem.NotInstallable
+                ? $"Instance '{instance.Name}' is set to {id} {pin}, which is not installed, and the index does not offer it. Let Borea choose the version that fits the game with 'borea instance set-loader \"{instance.Name}\" auto'."
+                : $"Instance '{instance.Name}' is set to {id} {pin}, which is not installed. Install it with 'borea loader install {id} --version {pin}'.";
         }
 
-        if (update.InstalledCompatibility != GameCompatibility.Incompatible)
+        return version.Missing is { } missing
+            ? $"Instance '{instance.Name}' needs {id} {missing.Version}, and it is not installed. Install it with 'borea loader install {id} --version {missing.Version}'."
+            : null;
+    }
+
+    /// <summary>
+    /// What to do when the loader cannot load the game. An instance that is set to one version keeps it after an
+    /// install, so it also gets the command that lets Borea choose the version again.
+    /// </summary>
+    private static string GameAssemblyHint(Instance instance, ModMetadata loader, LoaderVersionResolution version) => version.IsPinned
+        ? $"Instance '{instance.Name}' is set to {loader.Name} {version.Start?.Version}. Install a {loader.Name} release for this KSA build with 'borea loader install {loader.ModId}', then let Borea choose it with 'borea instance set-loader \"{instance.Name}\" auto'."
+        : $"Install a {loader.Name} release for this KSA build with 'borea loader install {loader.ModId}'. The instance then starts the newest installed release that fits the game.";
+
+    /// <summary>
+    /// Warns when the index says the loader version that starts the instance does not support the game. The launch
+    /// still starts, because the bounds can be wrong. An instance that is set to one version gets no install advice,
+    /// because another installed version does not change what it starts.
+    /// </summary>
+    private static void WriteLoaderWarning(ModMetadata loader, LoaderVersionResolution version, GameVersion? game, TextWriter error)
+    {
+        if (version.StartCompatibility != GameCompatibility.Incompatible || version.Start?.Version is not { } started)
             return;
 
-        error.WriteLine(update.Offer is { } offer
-            ? $"warning: {loader.Name} {installed} does not support KSA {game?.RawVersion}. Run 'borea loader install {loader.ModId}' to install {offer.Version}."
-            : $"warning: {loader.Name} {installed} does not support KSA {game?.RawVersion}.");
+        error.WriteLine(version.Offer is { } offer
+            ? $"warning: {loader.Name} {started} does not support KSA {game}. Run 'borea loader install {loader.ModId}' to install {offer.Version}."
+            : $"warning: {loader.Name} {started} does not support KSA {game}.");
     }
 
     private static string InstallHint(string loaderId) =>
         $"Install it with 'borea loader install {loaderId}', or record an existing copy with 'borea loader adopt {loaderId} <directory>'.";
 
     /// <summary>The JSON shape of <c>launch</c>.</summary>
-    private sealed record LaunchView(string LoaderId, bool RequiredByMods, string Executable, IReadOnlyList<string> Arguments, string WorkingDirectory, int ProcessId);
+    private sealed record LaunchView(string LoaderId, string? LoaderVersion, bool RequiredByMods, string Executable, IReadOnlyList<string> Arguments, string WorkingDirectory, int ProcessId);
 }
