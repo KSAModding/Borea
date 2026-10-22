@@ -483,6 +483,40 @@ public sealed class LoaderUpdateTests
     }
 
     [Fact]
+    public async Task UpdateLoader_AnotherInstancePinsTheOldVersion_KeepsItAndThatInstanceStillStartsIt()
+    {
+        var starter = new RunningStarter();
+        using var harness = await CreateAsync(starter: starter);
+        await InstalledContent.AddAsync(harness, "KSArmory", activate: true);
+        var pinned = (await harness.Services.Instances.CreateAsync("Pinned", InstanceSource.Custom.Value)).Instance;
+        await InstalledContent.AddAsync(harness, "KSArmory", activate: false, into: pinned);
+        await PinAsync(harness, pinned, "0.4.6");
+        starter.GameLog = harness.Services.Paths.GetInstanceGameLogPath(pinned.InstanceId);
+        var viewModel = harness.ViewModel;
+        await viewModel.LoadAsync();
+        await viewModel.WhenLoaderUpdatesCheckedAsync();
+        var directory = harness.Services.Settings.LoaderInstallations["StarMap"].DirectoryPath;
+
+        await viewModel.UpdateLoaderCommand.ExecuteAsync(null);
+        await viewModel.WhenLoaderUpdatesCheckedAsync();
+
+        // the pinned instance still starts 0.4.6, so the update keeps that version folder
+        var old = Path.Combine(directory, "0.4.6");
+        Assert.True(Directory.Exists(old));
+        var installed = await harness.Services.LoaderVersions.ListAsync();
+        Assert.NotNull(InstalledLoaderVersion.Find(installed, "StarMap", ModVersion.Parse("0.4.6")));
+        Assert.NotNull(InstalledLoaderVersion.Find(installed, "StarMap", ModVersion.Parse("0.4.7")));
+        Assert.DoesNotContain(harness.Services.Log.ReadRecentLines(200), line => line.Contains("Removed StarMap 0.4.6", StringComparison.Ordinal));
+
+        await viewModel.Instances.Single(item => item.InstanceId == pinned.InstanceId).OpenCommand.ExecuteAsync(null);
+        await viewModel.PlayCommand.ExecuteAsync(null);
+        await viewModel.PlayAnywayCommand.ExecuteAsync(null);
+
+        Assert.True(harness.Services.Launcher.IsRunning(pinned.InstanceId));
+        Assert.Equal(old, starter.Plan?.WorkingDirectory);
+    }
+
+    [Fact]
     public async Task ActiveInstancePinsAMissingVersion_ShowsTheErrorBannerAndPlayOffersToInstallThePin()
     {
         var starter = new RunningStarter();
