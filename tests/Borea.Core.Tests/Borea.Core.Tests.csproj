@@ -25,7 +25,7 @@
   <ItemGroup>
     <!-- Copies of tools/amendment-vectors.json and releases/ of content-index-releases at 6d9fd24f913a, releases/ as release-files/ because .gitignore leaves out every folder named releases. -->
     <None Update="Stewardship\Fixtures\**\*.json" CopyToOutputDirectory="PreserveNewest" />
-    <!-- A copy of schemas/save-names.json of content-index at 2c1409f304a7, on the branch of content-index #208 (sha256 037c57e8). Refresh it from the merge commit of #208. -->
+    <!-- A copy of schemas/save-names.json of content-index at b41be3d54440, the merge of content-index #213 (sha256 037c57e8). -->
     <None Update="Instances\Fixtures\save-names.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
