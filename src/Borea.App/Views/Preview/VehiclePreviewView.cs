@@ -174,7 +174,10 @@ public sealed class VehiclePreviewView : Control
                 _zoomSteps = 0;
             }
 
-            RequestRender(full: _dragFrom is null);
+            // When a High frame of the same vehicle shows, the new scene renders at High at once. The old High frame
+            // then stays until the new one replaces it, and the view does not step back to Standard and refine again.
+            var keepHigh = ShownQuality == RenderQuality.High && _dragFrom is null;
+            RequestRender(full: _dragFrom is null, high: keepHigh);
         }
         else if (change.Property == ResetCountProperty)
         {
@@ -224,6 +227,10 @@ public sealed class VehiclePreviewView : Control
         _dragFrom = point.Position;
         _dragScales.Reset();
         e.Pointer.Capture(this);
+
+        // The press can stop the High frame of a new scene, which then needs a frame of its own before the drag moves.
+        if (Scene is not null && ShownScene is not null && ShownScene != Scene)
+            RequestRender(full: false);
     }
 
     protected override void OnPointerMoved(PointerEventArgs e)
@@ -302,8 +309,9 @@ public sealed class VehiclePreviewView : Control
     /// Builds a new camera for the current scene, size and pose, and queues a frame for it. A frame that
     /// waits in the queue is replaced, so only the newest camera renders. Each camera is new and is not
     /// changed after this, so the background task can read it while the player keeps turning the view.
+    /// With <paramref name="high"/>, the full frame renders at High quality without a Standard frame first.
     /// </summary>
-    private void RequestRender(bool full)
+    private void RequestRender(bool full, bool high = false)
     {
         CancelRefine();
         var size = Bounds.Size;
@@ -322,7 +330,16 @@ public sealed class VehiclePreviewView : Control
         var scale = (TopLevel.GetTopLevel(this)?.RenderScaling ?? 1) * frameScale;
         var width = Math.Clamp((int)Math.Ceiling(size.Width * scale), 1, FrameBuffer.MaxSize);
         var height = Math.Clamp((int)Math.Ceiling(size.Height * scale), 1, FrameBuffer.MaxSize);
-        _queued = new RenderRequest(scene, camera, width, height, full ? null : frameScale, _generation, _cancellation);
+        var request = new RenderRequest(scene, camera, width, height, full ? null : frameScale, _generation, _cancellation);
+        if (high && full)
+            QueueRefine(request);
+        else
+            Queue(request);
+    }
+
+    private void Queue(RenderRequest request)
+    {
+        _queued = request;
         if (!_rendering)
             _ = RenderQueuedAsync();
     }
@@ -441,13 +458,17 @@ public sealed class VehiclePreviewView : Control
                 if (VisualRoot is null || shown.Generation != _generation || shown.Camera != _camera)
                     return;
 
-                // The refine source is linked to the generation source, so a scene change or a detach also stops it.
-                _refine = CancellationTokenSource.CreateLinkedTokenSource(_cancellation.Token);
-                _queued = shown with { Quality = RenderQuality.High, RefineToken = _refine.Token };
-                if (!_rendering)
-                    _ = RenderQueuedAsync();
+                QueueRefine(shown);
             },
             RefineDelay);
+    }
+
+    /// <summary>Queues <paramref name="request"/> at High quality with a new refine source.</summary>
+    private void QueueRefine(RenderRequest request)
+    {
+        // The refine source is linked to the generation source, so a scene change or a detach also stops it.
+        _refine = CancellationTokenSource.CreateLinkedTokenSource(_cancellation.Token);
+        Queue(request with { Quality = RenderQuality.High, RefineToken = _refine.Token });
     }
 
     /// <summary>

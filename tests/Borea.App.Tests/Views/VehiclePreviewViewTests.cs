@@ -142,6 +142,28 @@ public sealed class VehiclePreviewViewTests
     }
 
     [Fact]
+    public async Task ATexturedCopyAfterAHighFrame_ShowsNoStandardFrame_AndEndsAtHigh()
+    {
+        var textured = Box(new Vector3(0f, 0f, 1f));
+        var result = await HeadlessApp.RunAsync(async () =>
+        {
+            var (window, view) = Show(Box(new Vector3(1f, 0f, 0f)));
+            view.RefineDelay = TimeSpan.FromMilliseconds(20);
+            await HeadlessApp.FramesUntilAsync(() => view.IsIdle && view.ShownQuality == RenderQuality.High);
+            var (shown, high) = (view.FramesShown, view.HighFramesShown);
+
+            view.Scene = textured;
+            await HeadlessApp.FramesUntilAsync(() => view.IsIdle && view.ShownScene == textured);
+            await HeadlessApp.FramesAsync(5);
+            return (Standard: view.FramesShown - shown, High: view.HighFramesShown - high, view.ShownQuality, view.ShownScene, Center: Pixel(Capture(window), Center));
+        });
+
+        Assert.Equal((0, 1, RenderQuality.High), (result.Standard, result.High, result.ShownQuality));
+        Assert.Same(textured, result.ShownScene);
+        Assert.True(result.Center.B > result.Center.R);
+    }
+
+    [Fact]
     public async Task DetachDuringARender_ShowsNothingAndThrowsNothing()
     {
         var result = await HeadlessApp.RunAsync(async () =>
