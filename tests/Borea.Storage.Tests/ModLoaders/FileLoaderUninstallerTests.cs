@@ -184,7 +184,7 @@ public sealed class FileLoaderUninstallerTests : IDisposable
     }
 
     [Fact]
-    public async Task UninstallAsync_RecordAtTheLoaderFolderThatHoldsVersions_KeepsTheLoaderFolder()
+    public async Task UninstallAsync_RecordAtTheLoaderFolderThatHoldsVersions_KeepsTheLoaderFolderAndMovesTheRecord()
     {
         await RecordAsync(Folder(LoaderFolder), "0.4.6");
         var older = Folder(Path.Combine(LoaderFolder, "0.4.7"));
@@ -192,8 +192,9 @@ public sealed class FileLoaderUninstallerTests : IDisposable
 
         var result = await _uninstaller.UninstallAsync("StarMap");
 
-        Assert.True(result.RecordRemoved);
+        Assert.False(result.RecordRemoved);
         Assert.False(result.DirectoryRemoved);
+        Assert.Equal(newer, (await _settings.GetAsync())!.LoaderInstallations["StarMap"].DirectoryPath);
         Assert.True(File.Exists(Path.Combine(LoaderFolder, "StarMap.exe")));
         Assert.True(Directory.Exists(older));
         Assert.True(Directory.Exists(newer));
