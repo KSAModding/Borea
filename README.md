@@ -173,7 +173,7 @@ The exit code is 0 when the command completed, 1 when the operation failed and t
 | `borea game version` | Print the installed build and the current public build the master server reports. |
 | `borea game check` | Check the game installation against what Borea assumes about it. Exits 1 when an assumption is broken. |
 | `borea instance list` | Print every instance and mark the active one. |
-| `borea instance show <instance>` | Print one instance, the mod loader its mods need, its launch arguments, when it was last played, and how long it was played. |
+| `borea instance show <instance>` | Print one instance, the mod loader its mods need and the version it starts, its launch arguments, when it was last played, and how long it was played. |
 | `borea instance create <name>` | Create an empty instance. |
 | `borea instance duplicate <instance> [--name <name>]` | Create an instance with the same mods, versions, and enabled flags. |
 | `borea instance export <instance> [file]` | Write the mods of an instance, with their versions and enabled flags, as a modlist. |
@@ -182,6 +182,7 @@ The exit code is 0 when the command completed, 1 when the operation failed and t
 | `borea instance arguments <instance>` | Print the launch arguments that every launch of an instance passes to the mod loader and the game. |
 | `borea instance set-arguments <instance> -- <arguments>` | Save the arguments after `--` as the launch arguments of an instance, in place of the saved ones. |
 | `borea instance clear-arguments <instance>` | Remove the launch arguments of an instance. |
+| `borea instance set-loader <instance> <loader-id\|auto> [--version <version>\|auto]` | Set the mod loader that an instance starts. A `--version` pins that exact release, also when the game changes. `auto` lets Borea choose the newest release that fits the game and the mods, which is the default. |
 | `borea instance delete <instance>` | Delete an instance, its folder, and the backups of its saves and vehicles. |
 | `borea instance activate <instance>` | Make an instance the active one. |
 | `borea instance deactivate` | Leave no instance active. |

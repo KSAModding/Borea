@@ -639,7 +639,7 @@ public sealed class LaunchCommandTests : IDisposable
         Assert.Empty(_host.ProcessStarter.Plans);
     }
 
-    private static ContentIndexSnapshot StarMapIndex() => new(
+    internal static ContentIndexSnapshot StarMapIndex() => new(
         1,
         [new ContentIndexListing("StarMap", LoaderFixtures.Listing(), [LoaderFixtures.Release(version: "0.4.7", gameMax: "2026.10.13.5602"), LoaderFixtures.Release(version: "0.4.8", gameMin: "2026.10.19.5638")], null)],
         [],
