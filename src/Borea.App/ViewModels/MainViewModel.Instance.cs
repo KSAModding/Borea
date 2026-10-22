@@ -693,8 +693,9 @@ public partial class MainViewModel
 
             var loader = choice.Loader!;
 
-            // the update check rates the recorded version, so it says nothing about another version that starts
-            if (start.IsRecorded && LoaderUpdateBeforeLaunch(instance, loader) is { } update)
+            // the update check rates the recorded version, so it says nothing about another version that starts,
+            // and an update cannot change the version of a pinned instance
+            if (start.IsRecorded && resolution.Version is { IsPinned: false } && LoaderUpdateBeforeLaunch(instance, loader) is { } update)
             {
                 services.Log.Write(update.Offer is { } offer
                     ? $"Launch of instance {instance.InstanceId} waits, {loader.ModId} {update.InstalledVersion} does not support the game and {offer.Version} does."

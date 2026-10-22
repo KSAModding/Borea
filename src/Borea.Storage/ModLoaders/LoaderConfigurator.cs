@@ -156,7 +156,11 @@ public sealed class LoaderConfigurator : ILoaderConfigurator, ILoaderConfigurati
             return null;
         }
 
+        // a write would make the folder again with only the configuration file in it, and the launcher reports the missing folder
         var directory = Path.GetFullPath(loaderDirectory);
+        if (!Directory.Exists(directory))
+            return null;
+
         var game = Path.TrimEndingDirectorySeparator(Path.GetFullPath(gameDirectory));
         var configured = await ReadConfiguredGamePathAsync(loader, directory, game, cancellationToken).ConfigureAwait(false);
         var assembly = GameAssemblyOf(configured, directory);
