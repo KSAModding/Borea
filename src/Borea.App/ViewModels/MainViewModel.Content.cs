@@ -190,6 +190,12 @@ public partial class MainViewModel
     /// <summary>The instance and its content that the open preview was made for, so a change to them makes it again.</summary>
     private string? _vehiclePreviewTarget;
 
+    /// <summary>
+    /// The release whose fetch the player cancelled on the open page, or null. Every preview of this release that the
+    /// page makes again waits for the click, until the player opens a page again.
+    /// </summary>
+    private ModVersionMetadata? _vehiclePreviewDeclined;
+
     /// <summary>Completes when the preview of the open vehicle page has prepared or built what it can without a click.</summary>
     internal Task WhenVehiclePreviewLoadedAsync() => VehiclePreview?.Loading ?? Task.CompletedTask;
 
@@ -203,12 +209,13 @@ public partial class MainViewModel
     /// Makes a new preview for the open vehicle page against the services that are current now, and disposes the
     /// old one, which stops its work and drops a result that arrives later. Any other page gets none. A busy preview
     /// of the same release and target stays, so a page that is read again, such as after an index refresh, does not
-    /// send a second download. After the player cancelled the same release, the new preview waits for a click,
+    /// send a second download. After the player cancelled the same release, every new preview of it waits for a click,
     /// because every fetch raises the public download count of the host (RFC 0052).
     /// </summary>
     private void RefreshVehiclePreview()
     {
         var old = VehiclePreview;
+        RememberDeclinedPreview(old);
         VehiclePreviewViewModel? next = null;
         if (_services is { } services && CurrentWindowContent && SelectedContent is { Type: ContentType.Vehicle } && LatestVersion is { } latest)
         {
@@ -227,7 +234,7 @@ public partial class MainViewModel
                 thumbnails: services.PreviewThumbnails,
                 encoder: VehiclePreviewEncoder,
                 stillStored: ShowPreviewStill,
-                autoFetch: !(old is { State: VehiclePreviewState.Cancelled } && SameRelease(old.Release, latest.Release)));
+                autoFetch: !(_vehiclePreviewDeclined is { } declined && SameRelease(declined, latest.Release)));
         }
 
         VehiclePreview = next;
@@ -246,6 +253,13 @@ public partial class MainViewModel
             RefreshVehiclePreview();
     }
 
+    /// <summary>Keeps the release of a preview that the player cancelled, so the next previews of it do not fetch on their own.</summary>
+    private void RememberDeclinedPreview(VehiclePreviewViewModel? preview)
+    {
+        if (preview is { State: VehiclePreviewState.Cancelled })
+            _vehiclePreviewDeclined = preview.Release;
+    }
+
     /// <summary>True when both are the same release with the same archive, so a preview of one serves the other.</summary>
     private static bool SameRelease(ModVersionMetadata a, ModVersionMetadata b) =>
         a.ModId == b.ModId && a.Version == b.Version && string.Equals(a.Download.Sha256, b.Download.Sha256, StringComparison.OrdinalIgnoreCase);
@@ -261,6 +275,7 @@ public partial class MainViewModel
     private void ClearVehiclePreview()
     {
         var old = VehiclePreview;
+        RememberDeclinedPreview(old);
         VehiclePreview = null;
         old?.Dispose();
     }
@@ -364,6 +379,9 @@ public partial class MainViewModel
         ContentTab = ContentPageTab.Description;
         ContentDetailError = null;
         LatestVersion = null;
+
+        // a page that the player opens again loads a small vehicle file on its own again, also after an earlier cancel
+        _vehiclePreviewDeclined = null;
         _contentReleases.Clear();
         ApplyVersionFilter();
         VersionFilter = OptionFor(SavedReleaseChannel);

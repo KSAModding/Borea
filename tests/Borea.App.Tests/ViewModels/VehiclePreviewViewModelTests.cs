@@ -262,6 +262,16 @@ public sealed class VehiclePreviewViewModelTests
         Assert.NotSame(first, viewModel.VehiclePreview);
         Assert.Equal(VehiclePreviewState.Idle, viewModel.VehiclePreview!.State);
         Assert.Single(service.Loads);
+
+        // the cancel also holds for the next page refresh and for a rebuild of the services
+        viewModel.LatestVersion = new VersionItem(viewModel, viewModel.LatestVersion!.Release);
+        await viewModel.WhenVehiclePreviewLoadedAsync();
+        Assert.Equal(VehiclePreviewState.Idle, viewModel.VehiclePreview!.State);
+        viewModel.SelectedReleaseChannel = viewModel.OptionFor(ReleaseChannel.Testing);
+        await viewModel.WhenReleaseChannelSavedAsync();
+        await viewModel.WhenVehiclePreviewLoadedAsync();
+        Assert.Equal(VehiclePreviewState.Idle, viewModel.VehiclePreview!.State);
+        Assert.Single(service.Loads);
     }
 
     /// <summary>
