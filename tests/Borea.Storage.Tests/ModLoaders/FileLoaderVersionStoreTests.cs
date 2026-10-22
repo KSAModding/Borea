@@ -3,6 +3,7 @@ using Borea.Core.Mods;
 using Borea.Core.Settings;
 using Borea.Storage.ModLoaders;
 using Borea.Storage.Settings;
+using Borea.Storage.Tests.Launch;
 using Borea.Storage.Tests.Paths;
 
 namespace Borea.Storage.Tests.ModLoaders;
@@ -98,6 +99,27 @@ public sealed class FileLoaderVersionStoreTests : IDisposable
         await RecordAsync(Folder(Path.Combine(_tempRoot, "Elsewhere", "StarMap")), "0.4.7");
 
         Assert.Equal(ModVersion.Parse("0.4.7"), Assert.Single(await _store.ListAsync()).Version);
+    }
+
+    [UnixFact("Windows needs an access rule to keep a folder from being read.")]
+    public async Task ListAsync_FolderThatCannotBeRead_IsSkipped()
+    {
+        if (OperatingSystem.IsWindows())
+            return;
+
+        Folder(Path.Combine(LoaderFolder, "0.4.7"));
+        var denied = Folder(Path.Combine(LoaderFolder, "0.4.8"));
+        File.SetUnixFileMode(denied, UnixFileMode.None);
+        try
+        {
+            var listed = await _store.ListAsync();
+
+            Assert.Contains(listed, v => v.Version == ModVersion.Parse("0.4.7"));
+        }
+        finally
+        {
+            File.SetUnixFileMode(denied, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+        }
     }
 
     private static string Folder(string path)

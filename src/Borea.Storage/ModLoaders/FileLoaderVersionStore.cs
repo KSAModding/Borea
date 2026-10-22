@@ -59,7 +59,7 @@ public sealed class FileLoaderVersionStore : ILoaderVersionStore
                     continue;
 
                 var directory = Path.Combine(loaderFolder, name);
-                if (byPath.ContainsKey(Key(directory)) || !Directory.EnumerateFileSystemEntries(directory).Any())
+                if (byPath.ContainsKey(Key(directory)) || !HasEntries(directory))
                     continue;
 
                 found.Add(new InstalledLoaderVersion(loaderId, version, RawVersion: null, directory, IsAdopted: false, IsRecorded: false));
@@ -85,15 +85,36 @@ public sealed class FileLoaderVersionStore : ILoaderVersionStore
 
     private static string Key(string directory) => Path.TrimEndingDirectorySeparator(Path.GetFullPath(directory));
 
+    // A folder can disappear while the list runs, for example when a version is removed, and a broken junction or a denied
+    // folder throws as well. Such a folder is skipped, so one bad folder never hides the other loaders and versions.
     private static IEnumerable<string> FolderNames(string folder)
     {
-        if (!Directory.Exists(folder))
-            return [];
+        try
+        {
+            if (!Directory.Exists(folder))
+                return [];
 
-        return Directory.EnumerateDirectories(folder)
-            .Select(Path.GetFileName)
-            .OfType<string>()
-            .Where(name => !name.StartsWith('.'))
-            .ToList();
+            return Directory.EnumerateDirectories(folder)
+                .Select(Path.GetFileName)
+                .OfType<string>()
+                .Where(name => !name.StartsWith('.'))
+                .ToList();
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return [];
+        }
+    }
+
+    private static bool HasEntries(string directory)
+    {
+        try
+        {
+            return Directory.EnumerateFileSystemEntries(directory).Any();
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return false;
+        }
     }
 }
