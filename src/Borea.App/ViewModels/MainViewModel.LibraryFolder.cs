@@ -81,12 +81,12 @@ public partial class MainViewModel
         _libraryFolderChangeEnded = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         IsChangingLibraryFolder = true;
 
-        // the update check and the two loads of the instance page read the files
-        // this moves, and they are started without being awaited, so the move
-        // waits for the ones in flight. A read that starts later is not fenced
-        // out, which a rename does not mind and a copy reports as old files that
-        // stayed behind.
-        await Task.WhenAll(_contentUpdateCheck, _playtimeLoad, _instanceSizeLoad).ConfigureAwait(true);
+        // the update check, the two loads of the instance page and the list of
+        // kept game builds read the files this moves, and they are started
+        // without being awaited, so the move waits for the ones in flight. A read
+        // that starts later is not fenced out, which a rename does not mind and a
+        // copy reports as old files that stayed behind.
+        await Task.WhenAll(_contentUpdateCheck, _playtimeLoad, _instanceSizeLoad, _keptGameBuildLoad).ConfigureAwait(true);
         LibraryFolderProgressText = Localization.LibraryFolderMoving;
         task.Report(LibraryFolderProgressText, null);
         var progress = new Progress<LibraryMoveProgress>(value => ShowLibraryMoveProgress(value, task));

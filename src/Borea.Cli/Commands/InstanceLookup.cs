@@ -67,7 +67,7 @@ internal static class InstanceLookup
 
         throw new InvalidOperationException(
             $"Instance '{instance.Name}' keeps game build {game.KeptBuild}, but {DescribeKeptBuildProblem(cli, game)}. " +
-            "Copy that build back into the folder, or remove GameBuild from the instance.toml of the instance to use the game folder of the settings.");
+            "Copy that build back into the folder. To use the game folder of the settings instead, select \"Use the current game build\" in the instance menu of the desktop App, or remove GameBuild from the instance.toml of the instance.");
     }
 
     /// <summary>Why the kept build of <paramref name="game"/> cannot be used, for a game that has a problem.</summary>

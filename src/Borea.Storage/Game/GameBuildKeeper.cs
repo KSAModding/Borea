@@ -1,8 +1,11 @@
 using Borea.Core.Game;
 using Borea.Core.Instances;
+using Borea.Core.Mods;
 using Borea.Core.Paths;
 using Borea.Core.Settings;
 using Borea.Storage.Files;
+using Borea.Storage.Launch;
+using Borea.Storage.ModLoaders;
 
 namespace Borea.Storage.Game;
 
@@ -13,6 +16,8 @@ namespace Borea.Storage.Game;
 public sealed class GameBuildKeeper : IGameBuildKeeper
 {
     private const string TemporarySuffix = ".copying";
+
+    private const string RemovingSuffix = ".removing";
 
     private static readonly EnumerationOptions EveryEntry = new()
     {
@@ -26,21 +31,24 @@ public sealed class GameBuildKeeper : IGameBuildKeeper
 
     private readonly IGamePathProvider _paths;
     private readonly IInstanceRepository _instances;
+    private readonly IModRepository _listings;
     private readonly Func<bool> _isGameProcessRunning;
     private readonly Func<Guid, bool> _isLaunched;
     private readonly IWinePrefixProbe _wine;
     private readonly IFreeSpaceProbe _freeSpace;
 
+    /// <param name="listings">The listings of the installed loaders, which name the file that holds the game path.</param>
     /// <param name="isLaunched">Whether a launch by Borea still runs for the instance. The process probe does not see every one of them.</param>
-    public GameBuildKeeper(IGamePathProvider paths, IInstanceRepository instances, Func<bool> isGameProcessRunning, Func<Guid, bool> isLaunched)
-        : this(paths, instances, isGameProcessRunning, isLaunched, new WinePrefixProbe(), new DriveFreeSpaceProbe())
+    public GameBuildKeeper(IGamePathProvider paths, IInstanceRepository instances, IModRepository listings, Func<bool> isGameProcessRunning, Func<Guid, bool> isLaunched)
+        : this(paths, instances, listings, isGameProcessRunning, isLaunched, new WinePrefixProbe(), new DriveFreeSpaceProbe())
     {
     }
 
-    internal GameBuildKeeper(IGamePathProvider paths, IInstanceRepository instances, Func<bool> isGameProcessRunning, Func<Guid, bool> isLaunched, IWinePrefixProbe wine, IFreeSpaceProbe freeSpace)
+    internal GameBuildKeeper(IGamePathProvider paths, IInstanceRepository instances, IModRepository listings, Func<bool> isGameProcessRunning, Func<Guid, bool> isLaunched, IWinePrefixProbe wine, IFreeSpaceProbe freeSpace)
     {
         _paths = paths ?? throw new ArgumentNullException(nameof(paths));
         _instances = instances ?? throw new ArgumentNullException(nameof(instances));
+        _listings = listings ?? throw new ArgumentNullException(nameof(listings));
         _isGameProcessRunning = isGameProcessRunning ?? throw new ArgumentNullException(nameof(isGameProcessRunning));
         _isLaunched = isLaunched ?? throw new ArgumentNullException(nameof(isLaunched));
         _wine = wine ?? throw new ArgumentNullException(nameof(wine));
@@ -102,7 +110,7 @@ public sealed class GameBuildKeeper : IGameBuildKeeper
         if (_wine.Find(gameDirectory)?.Wrapper is not null)
             return Refused(GameBuildKeepRefusal.WineWrapper, version, folder);
 
-        if (_isGameProcessRunning() || InstanceIds().Any(_isLaunched))
+        if (IsGameRunning())
             return Refused(GameBuildKeepRefusal.GameRunning, version, folder);
 
         if (Directory.Exists(folder) || File.Exists(folder))
@@ -122,6 +130,250 @@ public sealed class GameBuildKeeper : IGameBuildKeeper
         return new KeepPlan(new GameBuildKeepCheck(refusal, version, folder, bytes, free), gameDirectory, directories, files);
     }
 
+    public async Task<GameBuildChangeRefusal> UseCurrentBuildAsync(Guid instanceId, CancellationToken cancellationToken)
+    {
+        // a keep holds the gate for its whole copy, so the player gets an answer now instead of a silent wait
+        if (!await Keeping.WaitAsync(0, cancellationToken).ConfigureAwait(false))
+            return GameBuildChangeRefusal.Busy;
+
+        try
+        {
+            if (IsGameRunning())
+                return GameBuildChangeRefusal.GameRunning;
+
+            await _instances.UpdateAsync(
+                instanceId,
+                saved =>
+                {
+                    saved.SetGameBuild(null);
+                    return true;
+                },
+                cancellationToken).ConfigureAwait(false);
+            return GameBuildChangeRefusal.None;
+        }
+        finally
+        {
+            Keeping.Release();
+        }
+    }
+
+    public async Task<IReadOnlyList<KeptGameBuild>> ListKeptAsync(CancellationToken cancellationToken)
+    {
+        var kept = KeptVersions();
+        if (kept.Count == 0)
+            return [];
+
+        var instances = await _instances.GetAllAsync().ConfigureAwait(false);
+        var settingsFolders = SettingsGameFolders();
+        var builds = new List<KeptGameBuild>();
+        foreach (var version in kept)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var folder = _paths.GetGameBuildFolder(version);
+            long bytes;
+            try
+            {
+                bytes = FolderBytes(folder);
+            }
+            catch (DirectoryNotFoundException)
+            {
+                // a remove took the folder after it was listed
+                continue;
+            }
+
+            var names = instances
+                .Where(instance => instance.GameBuild is { } build && IsFolderOf(folder, build))
+                .Select(instance => instance.Name)
+                .Order(StringComparer.CurrentCultureIgnoreCase)
+                .ToList();
+            builds.Add(new KeptGameBuild(version, folder, bytes, names, IsSettingsGameFolder(settingsFolders, folder)));
+        }
+
+        return builds;
+    }
+
+    public async Task<GameBuildChangeRefusal> RemoveAsync(GameVersion build, CancellationToken cancellationToken)
+    {
+        // under the gate, so no keep sets this build for an instance while its folder goes, and without a wait,
+        // because a keep holds the gate for its whole copy
+        if (!await Keeping.WaitAsync(0, cancellationToken).ConfigureAwait(false))
+            return GameBuildChangeRefusal.Busy;
+
+        try
+        {
+            DeleteUnfinishedCopies();
+            if (IsGameRunning())
+                return GameBuildChangeRefusal.GameRunning;
+
+            // every instance without a kept build starts from the game folder of the settings
+            var folder = _paths.GetGameBuildFolder(build);
+            if (IsSettingsGameFolder(SettingsGameFolders(), folder))
+                return GameBuildChangeRefusal.GameFolderOfSettings;
+
+            foreach (var id in InstanceIds())
+            {
+                Instance? instance;
+                try
+                {
+                    instance = await _instances.GetByIdAsync(id).ConfigureAwait(false);
+                }
+                catch (Exception exception) when (exception is not OperationCanceledException)
+                {
+                    // a kept build cannot be fetched again, so a record that may name it keeps it
+                    return GameBuildChangeRefusal.InstanceUnreadable;
+                }
+
+                if (instance?.GameBuild is { } used && IsFolderOf(folder, used))
+                    return GameBuildChangeRefusal.InUse;
+            }
+
+            await MoveLoadersToSettingsGameFolderAsync(folder, cancellationToken).ConfigureAwait(false);
+            if (!Directory.Exists(folder))
+                return GameBuildChangeRefusal.None;
+
+            cancellationToken.ThrowIfCancellationRequested();
+
+            // on Windows an open file fails the move and leaves the build whole, and on every system a delete that
+            // stops halfway leaves only a dot folder, which no listing reads and the next keep or remove deletes
+            var removing = Path.Combine(Path.GetDirectoryName(folder)!, "." + Path.GetFileName(folder) + RemovingSuffix);
+            DirectoryLinks.DeleteTreeWithoutFollowingLinks(removing);
+            Directory.Move(folder, removing);
+            TryDelete(removing);
+            return GameBuildChangeRefusal.None;
+        }
+        finally
+        {
+            Keeping.Release();
+        }
+    }
+
+    /// <summary>
+    /// Writes the game folder of the settings to each loader whose game path names <paramref name="folder"/>, so
+    /// that no later start, also not one by an older Borea, starts a build that is gone. Without a game folder in
+    /// the settings, the files stay as they are.
+    /// </summary>
+    private async Task MoveLoadersToSettingsGameFolderAsync(string folder, CancellationToken cancellationToken)
+    {
+        var gameDirectory = _paths.GetGameDirectoryPath();
+        if (string.IsNullOrWhiteSpace(gameDirectory) || !Path.IsPathFullyQualified(gameDirectory))
+            return;
+
+        var configurator = new LoaderConfigurator(_wine);
+        string kept;
+        try
+        {
+            kept = configurator.GamePathValue(folder);
+        }
+        catch (InvalidOperationException)
+        {
+            // a start refuses a kept build that no drive of its Wine prefix holds, so no file names it that way
+            kept = folder;
+        }
+
+        IReadOnlyList<ModMetadata> listings;
+        try
+        {
+            listings = await _listings.GetAvailableModsAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception exception) when (exception is InvalidOperationException or IOException)
+        {
+            // without the listings Borea knows no loader file, and that must not keep a build the player removes
+            return;
+        }
+
+        foreach (var loader in listings)
+        {
+            if (loader.Type != ContentType.ModLoader || !LoaderConfigurator.TakesGamePath(loader)
+                || _paths.GetLoaderDirectoryPath(loader.ModId) is not { } loaderDirectory || !Path.IsPathFullyQualified(loaderDirectory))
+                continue;
+
+            string? held;
+            try
+            {
+                held = LoaderConfigurator.ReadGamePath(loader, loaderDirectory);
+            }
+            catch (Exception exception) when (exception is InvalidOperationException or IOException or UnauthorizedAccessException)
+            {
+                // the loader cannot start from a file that cannot be read, and a start by Borea refuses it
+                continue;
+            }
+
+            if (!LoaderLauncher.SameGamePath(held, kept))
+                continue;
+
+            try
+            {
+                LoaderConfigurator.WriteGamePath(loader, loaderDirectory, configurator.GamePathValue(gameDirectory));
+            }
+            catch (InvalidOperationException exception) when (exception.InnerException is UnauthorizedAccessException denied)
+            {
+                throw new InvalidOperationException($"Borea could not write the game folder of the settings to the configuration of {loader.Name} in '{loaderDirectory}', so Borea removed nothing. {denied.Message}", denied);
+            }
+        }
+    }
+
+    private bool IsGameRunning() => _isGameProcessRunning() || InstanceIds().Any(_isLaunched);
+
+    private bool IsFolderOf(string folder, GameVersion build)
+        => string.Equals(_paths.GetGameBuildFolder(build), folder, StringComparison.Ordinal);
+
+    /// <summary>
+    /// The full game folder of the settings, and the folder it links to when it is a link. Empty when the settings
+    /// name no absolute folder.
+    /// </summary>
+    private List<string> SettingsGameFolders()
+    {
+        var configured = _paths.GetGameDirectoryPath();
+        if (string.IsNullOrWhiteSpace(configured) || !Path.IsPathFullyQualified(configured))
+            return [];
+
+        var gameDirectory = Path.GetFullPath(configured);
+        try
+        {
+            if (new DirectoryInfo(gameDirectory).ResolveLinkTarget(returnFinalTarget: true) is { } target)
+                return [gameDirectory, target.FullName];
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            // a link that Borea cannot read leaves only the folder name to compare
+        }
+
+        return [gameDirectory];
+    }
+
+    private static bool IsSettingsGameFolder(List<string> settingsFolders, string folder)
+        => settingsFolders.Exists(path => IsSameOrInside(path, folder));
+
+    /// <summary>
+    /// The builds whose folder is named the way <see cref="IGamePathProvider.GetGameBuildFolder"/> names it, so an
+    /// instance on such a build starts from that folder. Dot folders are copies or removals that did not finish.
+    /// </summary>
+    private List<GameVersion> KeptVersions()
+    {
+        var root = _paths.GetGameBuildsRoot();
+        if (!Directory.Exists(root))
+            return [];
+
+        var versions = new List<GameVersion>();
+        foreach (var folder in Directory.EnumerateDirectories(root))
+        {
+            var name = Path.GetFileName(folder);
+            if (name.StartsWith('.'))
+                continue;
+
+            if (InstalledGameVersionProvider.Read(folder)?.Version is { } version
+                && string.Equals(Path.GetFileName(_paths.GetGameBuildFolder(version)), name, StringComparison.Ordinal))
+                versions.Add(version);
+        }
+
+        return versions.OrderDescending().ToList();
+    }
+
+    private static long FolderBytes(string folder)
+        => new DirectoryInfo(folder)
+            .EnumerateFiles("*", new EnumerationOptions { RecurseSubdirectories = true, IgnoreInaccessible = true, AttributesToSkip = FileAttributes.ReparsePoint })
+            .Sum(file => file.Length);
+
     private static KeepPlan Refused(GameBuildKeepRefusal refusal, GameVersion? version, string? folder)
         => new(new GameBuildKeepCheck(refusal, version, folder, 0, null), string.Empty, [], []);
 
@@ -139,8 +391,8 @@ public sealed class GameBuildKeeper : IGameBuildKeeper
     }
 
     /// <summary>
-    /// Deletes the temporary folders that a crash or a kill left behind. The gate is held, so no copy writes to one
-    /// of them now. The build of such a folder is usually gone from the game folder after the next client update,
+    /// Deletes the temporary folders that a crash or a kill left behind. The gate is held, so no copy or removal uses
+    /// one of them now. The build of such a folder is usually gone from the game folder after the next client update,
     /// so a later keep of the same build cannot be the one that deletes it.
     /// </summary>
     private void DeleteUnfinishedCopies()
@@ -149,7 +401,7 @@ public sealed class GameBuildKeeper : IGameBuildKeeper
         if (!Directory.Exists(root))
             return;
 
-        foreach (var folder in Directory.EnumerateDirectories(root, ".*" + TemporarySuffix))
+        foreach (var folder in Directory.EnumerateDirectories(root, ".*" + TemporarySuffix).Concat(Directory.EnumerateDirectories(root, ".*" + RemovingSuffix)))
             TryDelete(folder);
     }
 
@@ -235,7 +487,7 @@ public sealed class GameBuildKeeper : IGameBuildKeeper
         }
     }
 
-    // a folder that stays is a dot folder, which no kept build reads, and the next keep deletes it
+    // a folder that stays is a dot folder, which no kept build reads, and the next keep or remove deletes it
     private static void TryDelete(string folder)
     {
         try

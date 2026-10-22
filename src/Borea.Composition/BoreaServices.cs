@@ -576,7 +576,7 @@ public sealed class BoreaServices : IDisposable
             Announcements = new AnnouncementFeed(new AnnouncementFetcher(http, AnnouncementFetcher.DefaultUri, announcementReader), announcementReader, paths, log),
             InstalledVersion = installedVersion,
             InstanceGames = instanceGames,
-            GameBuilds = new GameBuildKeeper(paths, instances, isGameProcessRunning, launcher.IsRunning),
+            GameBuilds = new GameBuildKeeper(paths, instances, offlineMods, isGameProcessRunning, launcher.IsRunning),
             GamePlatform = gamePlatform ?? new Borea.Storage.Game.GamePlatform(paths),
             GameShape = gameShape,
             GamePatchNotes = new FileGamePatchNotesReader(paths),

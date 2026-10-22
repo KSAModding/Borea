@@ -1,0 +1,40 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Borea.App.ViewModels"
+             xmlns:views="using:Borea.App.Views"
+             x:Class="Borea.App.Views.UseCurrentGameBuildModal"
+             x:DataType="vm:MainViewModel">
+    <!-- modal: move an instance from its kept build back to the game build of the settings -->
+    <Panel Background="#99000000" views:ModalBackdrop.CloseButton="{Binding #CloseButton}">
+        <Border Classes="modal" Width="561" Margin="80,0,0,0">
+            <StackPanel>
+                <Grid ColumnDefinitions="*,Auto" Margin="24,24,24,0">
+                    <TextBlock Classes="heading-lg" Text="{Binding Localization.ModalUseCurrentGameBuildTitle}" VerticalAlignment="Center" TextWrapping="Wrap" />
+                    <Button x:Name="CloseButton" Grid.Column="1" Classes="icon" Command="{Binding CancelUseCurrentGameBuildCommand}" AutomationProperties.Name="{Binding Localization.ModalClose}">
+                        <Path Classes="icon" Data="{StaticResource Icon.Close}" />
+                    </Button>
+                </Grid>
+                <Border Height="1" Background="{StaticResource Brush.Window}" Margin="0,24,0,0" />
+                <StackPanel Margin="36,32,24,32" Spacing="24">
+                    <StackPanel Spacing="8">
+                        <TextBlock Classes="body-md" Text="{Binding UseCurrentGameBuildText}" TextWrapping="Wrap" IsVisible="{Binding UseCurrentGameBuildText, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                        <TextBlock Classes="body-md" Text="{Binding UseCurrentGameBuildFitText}" TextWrapping="Wrap" IsVisible="{Binding UseCurrentGameBuildFitText, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                        <!-- low enough that the warning and the buttons stay in a window at its minimum height -->
+                        <ScrollViewer MaxHeight="120" IsVisible="{Binding ShowsUseCurrentGameBuildModNames}">
+                            <StackPanel Spacing="8">
+                                <TextBlock Classes="body-md secondary" Text="{Binding UseCurrentGameBuildIncompatibleText}" TextWrapping="Wrap" IsVisible="{Binding UseCurrentGameBuildIncompatibleText, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                                <TextBlock Classes="body-md secondary" Text="{Binding UseCurrentGameBuildUnknownText}" TextWrapping="Wrap" IsVisible="{Binding UseCurrentGameBuildUnknownText, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                            </StackPanel>
+                        </ScrollViewer>
+                        <TextBlock Classes="body-md danger" Text="{Binding UseCurrentGameBuildOlderText}" TextWrapping="Wrap" IsVisible="{Binding UseCurrentGameBuildOlderText, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                        <TextBlock Classes="body-md danger" Text="{Binding UseCurrentGameBuildNoGameText}" TextWrapping="Wrap" IsVisible="{Binding UseCurrentGameBuildNoGameText, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+                        <Button Classes="text" Content="{Binding Localization.LibraryCancel}" Command="{Binding CancelUseCurrentGameBuildCommand}" />
+                        <Button Classes="text primary" Content="{Binding Localization.ModalUseCurrentGameBuildConfirm}" Command="{Binding ConfirmUseCurrentGameBuildCommand}" IsVisible="{Binding CanConfirmUseCurrentGameBuild}" />
+                    </StackPanel>
+                </StackPanel>
+            </StackPanel>
+        </Border>
+    </Panel>
+</UserControl>

@@ -213,6 +213,7 @@ public partial class MainViewModel
         GameDirectoryInput = _services.Settings.GameDirectoryPath ?? string.Empty;
         var loaderId = _services.Settings.LoaderInstallations.Keys.FirstOrDefault();
         LoaderDirectoryInput = loaderId is null ? string.Empty : _services.Settings.LoaderInstallations[loaderId].DirectoryPath;
+        _ = StartKeptGameBuildLoad();
 
         await EnsureDiscoverLoadedAsync();
         Loaders.Clear();
@@ -516,6 +517,7 @@ public partial class MainViewModel
         {
             SetupMessage = await operation(_services);
             await RebuildServicesAsync();
+            RefreshKeptGameBuildsIfShown();
             if (_services.Settings.GameDirectoryPath is { } game && Directory.Exists(game))
                 ClearDetectedGames();
             if (_services.Settings.LoaderInstallations.Count > 0)
