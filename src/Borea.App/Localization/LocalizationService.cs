@@ -1546,6 +1546,9 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string FormatContentPinned(string version)
         => string.Format(CultureInfo.CurrentCulture, Resources.ContentPinnedFormat, version);
 
+    public string FormatContentSharedOn(string host)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ContentSharedOnFormat, host);
+
     /// <summary>"2.0.0 needs Library >= 1.1.0, which is pinned at 1.0.0."</summary>
     public string FormatContentHeldByPin(string version, string dependency, string pinnedVersion)
         => string.Format(CultureInfo.CurrentCulture, Resources.ContentHeldByPinFormat, version, dependency, pinnedVersion);
@@ -2942,6 +2945,9 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string FormatListingSpaceDockNotNumber(string value)
         => string.Format(CultureInfo.CurrentCulture, Resources.ListingSpaceDockNotNumberFormat, value);
+
+    public string FormatListingReleasesShareHost(string host, string id)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ListingReleasesShareHostFormat, host, id);
 
     public string FormatListingGameMinProposal(string gameMin)
         => string.Format(CultureInfo.CurrentCulture, Resources.ListingGameMinProposalFormat, gameMin);

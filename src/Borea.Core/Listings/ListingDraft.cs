@@ -1,3 +1,5 @@
+using Borea.Core.Mods;
+
 namespace Borea.Core.Listings;
 
 /// <summary>
@@ -192,12 +194,23 @@ public sealed record ListingDraft
         if (table is null)
             return null;
 
-        return new ListingReleases(table.GetString("github"), table["spacedock"] as long?, table.GetString("authority"), table.GetString("since"), table.GetString("tag_prefix"));
+        var github = table.GetString("github");
+        var spaceDock = table["spacedock"] as long?;
+        var authority = table.GetString("authority");
+
+        // The rule of DtoMapper.MapReleaseSource: a share host counts with an authority, or as the only host.
+        var shares = table.Entries
+            .Where(entry => ReleaseHost.IsShareKey(entry.Key) && entry.Value is string id && ModIds.IsValid(id))
+            .Select(entry => new ListingShareHost(entry.Key, (string)entry.Value))
+            .ToList();
+        var share = shares.FirstOrDefault(entry => entry.Key == authority)
+            ?? (authority is not null || (github is null && spaceDock is null && shares.Count == 1) ? shares.FirstOrDefault() : null);
+        return new ListingReleases(github, spaceDock, authority, table.GetString("since"), table.GetString("tag_prefix"), share);
     }
 
     private static AuthoredTable? WriteReleases(ListingReleases? releases, AuthoredTable? original)
     {
-        if (releases is null || (string.IsNullOrEmpty(releases.GitHub) && releases.SpaceDock is null))
+        if (releases is null || (string.IsNullOrEmpty(releases.GitHub) && releases.SpaceDock is null && releases.Share is null))
             return null;
 
         var table = original?.Clone() ?? new AuthoredTable();
@@ -206,6 +219,8 @@ public sealed record ListingDraft
         SetOrRemove(table, "authority", string.IsNullOrEmpty(releases.Authority) ? null : releases.Authority);
         SetOrRemove(table, "since", string.IsNullOrEmpty(releases.Since) ? null : releases.Since);
         SetOrRemove(table, "tag_prefix", string.IsNullOrEmpty(releases.TagPrefix) ? null : releases.TagPrefix);
+        if (releases.Share is { } share)
+            table.Set(share.Key, share.Id);
         return table;
     }
 
@@ -290,11 +305,14 @@ public sealed record ListingDraft
 public sealed record ListingLink(string Key, string Url);
 
 /// <summary>
-/// The [releases] table: the hosts the watcher reads, which of them decides when both are named, the version
-/// from which the watcher also stamps the older releases (RFC 0079), and the text that the tag of every mod release
-/// on GitHub starts with (RFC 0096).
+/// The [releases] table: the hosts the watcher reads, which of them decides when more than one is named, the version
+/// from which the watcher also stamps the older releases (RFC 0079), the text that the tag of every mod release
+/// on GitHub starts with (RFC 0096), and the share host of a vehicle or a save (RFC 0094).
 /// </summary>
-public sealed record ListingReleases(string? GitHub, long? SpaceDock, string? Authority = null, string? Since = null, string? TagPrefix = null);
+public sealed record ListingReleases(string? GitHub, long? SpaceDock, string? Authority = null, string? Since = null, string? TagPrefix = null, ListingShareHost? Share = null);
+
+/// <summary>A share host under [releases], such as ksamods = "ExampleRover": the key of the host in hosts.toml and the listing id there.</summary>
+public sealed record ListingShareHost(string Key, string Id);
 
 public sealed record ListingLoader(string Id, string Min, string? Max = null);
 

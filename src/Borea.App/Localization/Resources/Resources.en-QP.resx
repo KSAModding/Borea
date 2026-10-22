@@ -1971,6 +1971,9 @@
   <data name="ContentLinks" xml:space="preserve">
     <value>Compass headin's</value>
   </data>
+  <data name="ContentSharedOnFormat" xml:space="preserve">
+    <value>Moored at {0}</value>
+  </data>
   <data name="ContentCopyShareLink" xml:space="preserve">
     <value>Copy th' link fer yer mateys</value>
   </data>
@@ -2279,6 +2282,9 @@
   </data>
   <data name="ListingReleasesTagPrefixHint" xml:space="preserve">
     <value>Leave this empty when every release o' the repository be a mod release. With a prefix, the index takes only the GitHub releases whose tag starts with it, letter case an' all, an' reads the version from the rest o' the tag. Fer example, with mymod- the tag mymod-v1.2.0 be version 1.2.0.</value>
+  </data>
+  <data name="ListingReleasesShareHostFormat" xml:space="preserve">
+    <value>Moored at {0} as {1}. Only that harbor changes this, so let it be.</value>
   </data>
   <data name="PackMemberNewerFormat" xml:space="preserve">
     <value>{0} be in port</value>

@@ -310,9 +310,10 @@
                                 <TextBox Classes="field" Text="{Binding ListingEditor.ReleasesGitHub}" PlaceholderText="owner/repository" AutomationProperties.Name="{Binding Localization.ListingReleasesGitHub}" />
                                 <TextBlock Classes="heading-sm" Text="{Binding Localization.ListingReleasesSpaceDock}" Margin="0,10,0,0" />
                                 <TextBox Classes="field" Text="{Binding ListingEditor.ReleasesSpaceDock}" AutomationProperties.Name="{Binding Localization.ListingReleasesSpaceDock}" />
+                                <TextBlock Classes="body-sm" Text="{Binding ListingEditor.ShareHostText}" TextWrapping="Wrap" Margin="0,10,0,0" IsVisible="{Binding ListingEditor.ShareHostText, Converter={x:Static ObjectConverters.IsNotNull}}" />
                                 <StackPanel Spacing="6" Margin="0,10,0,0" IsVisible="{Binding ListingEditor.NeedsAuthority}">
                                     <TextBlock Classes="heading-sm" Text="{Binding Localization.ListingReleasesAuthority}" />
-                                    <ComboBox ItemsSource="{x:Static vm:ListingEditor.Authorities}" SelectedItem="{Binding ListingEditor.ReleasesAuthority}" AutomationProperties.Name="{Binding Localization.ListingReleasesAuthority}" MinWidth="200" />
+                                    <ComboBox ItemsSource="{Binding ListingEditor.AuthorityChoices}" SelectedItem="{Binding ListingEditor.ReleasesAuthority}" AutomationProperties.Name="{Binding Localization.ListingReleasesAuthority}" MinWidth="200" />
                                 </StackPanel>
                                 <StackPanel Spacing="6" Margin="0,10,0,0" IsVisible="{Binding ListingEditor.HasReleasesHost}">
                                     <TextBlock Classes="heading-sm" Text="{Binding Localization.ListingReleasesSince}" />

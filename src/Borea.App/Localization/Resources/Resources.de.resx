@@ -2643,6 +2643,9 @@
   <data name="ListingReleasesTagPrefixHint" xml:space="preserve">
     <value>Lass das leer, wenn jedes Release des Repositorys ein Mod-Release ist. Mit einem Präfix nimmt der Index nur die GitHub-Releases, deren Tag damit anfängt, mit derselben Groß- und Kleinschreibung, und liest die Version aus dem Rest des Tags. Mit mymod- ist zum Beispiel der Tag mymod-v1.2.0 die Version 1.2.0.</value>
   </data>
+  <data name="ListingReleasesShareHostFormat" xml:space="preserve">
+    <value>Geteilt auf {0} als {1}. Nur der Share-Host ändert das.</value>
+  </data>
   <data name="ListingReleasesHint" xml:space="preserve">
     <value>Neue Releases werden von hier aus automatisch eingetragen.</value>
   </data>
@@ -3677,6 +3680,9 @@
   </data>
   <data name="ContentLinks" xml:space="preserve">
     <value>Links</value>
+  </data>
+  <data name="ContentSharedOnFormat" xml:space="preserve">
+    <value>Geteilt auf {0}</value>
   </data>
   <data name="ContentCopyLink" xml:space="preserve">
     <value>Link kopieren</value>
