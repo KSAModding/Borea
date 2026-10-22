@@ -25,6 +25,9 @@ public sealed class PreviewStillView : Decorator
     public static readonly StyledProperty<IBrush?> BackgroundProperty =
         Border.BackgroundProperty.AddOwner<PreviewStillView>();
 
+    public static readonly StyledProperty<CornerRadius> CornerRadiusProperty =
+        Border.CornerRadiusProperty.AddOwner<PreviewStillView>();
+
     private Bitmap? _bitmap;
     private int _generation;
     private bool _failed;
@@ -45,6 +48,13 @@ public sealed class PreviewStillView : Decorator
     {
         get => GetValue(BackgroundProperty);
         set => SetValue(BackgroundProperty, value);
+    }
+
+    /// <summary>Rounds the corners of the still and of the icon, so both stay inside a rounded thumbnail border.</summary>
+    public CornerRadius CornerRadius
+    {
+        get => GetValue(CornerRadiusProperty);
+        set => SetValue(CornerRadiusProperty, value);
     }
 
     internal bool HasStill => _bitmap is not null;
@@ -71,6 +81,14 @@ public sealed class PreviewStillView : Decorator
             Load();
         else if (change.Property == ChildProperty)
             UpdateChild();
+        else if (change.Property == CornerRadiusProperty)
+            UpdateClip();
+    }
+
+    protected override void OnSizeChanged(SizeChangedEventArgs e)
+    {
+        base.OnSizeChanged(e);
+        UpdateClip();
     }
 
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
@@ -151,6 +169,12 @@ public sealed class PreviewStillView : Decorator
         _bitmap?.Dispose();
         _bitmap = null;
         InvalidateVisual();
+    }
+
+    private void UpdateClip()
+    {
+        var radius = CornerRadius.TopLeft;
+        Clip = radius > 0 ? new RectangleGeometry(new Rect(Bounds.Size), radius, radius) : null;
     }
 
     /// <summary>The icon stays hidden while a still loads or shows, so a row with a still never loads its icon.</summary>

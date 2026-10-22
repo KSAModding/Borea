@@ -65,13 +65,21 @@ public sealed class DiscoverPreviewStillTests
                 if (Math.Max(Math.Abs(color.R - background.R), Math.Max(Math.Abs(color.G - background.G), Math.Abs(color.B - background.B))) > 16)
                     changed++;
             }, shotName: "discover-vehicle-row");
-            var result = (still.HasStill, IconVisible: still.Child!.IsVisible, Changed: changed, Total: total);
+            var result = (
+                still.HasStill,
+                IconVisible: still.Child!.IsVisible,
+                Changed: changed,
+                Total: total,
+                Radii: (still.CornerRadius.TopLeft, ((ListingImageView)still.Child).CornerRadius.TopLeft),
+                Clipped: still.Clip is not null);
             window.Close();
             return result;
         });
 
         Assert.True(shown.HasStill);
         Assert.False(shown.IconVisible);
+        Assert.Equal((7.5, 7.5), shown.Radii);
+        Assert.True(shown.Clipped);
         Assert.True(shown.Changed > shown.Total / 10, $"Only {shown.Changed} of {shown.Total} pixels of the thumbnail show the still.");
         Assert.Empty(service.Prepares);
         Assert.Empty(service.Loads);

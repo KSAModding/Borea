@@ -9,6 +9,7 @@ using Borea.Core.Mods;
 using Borea.Core.Preview;
 using Borea.Preview.Loading;
 using Borea.Preview.Rendering;
+using Borea.Preview.Scene;
 using Borea.Preview.Tests.Gltf;
 using Borea.Preview.Textures;
 using static Borea.App.Tests.ViewModels.UserContentViewModelTests;
@@ -272,6 +273,30 @@ public sealed class VehiclePreviewViewModelTests
         Assert.Equal([new string('a', 64)], stored);
     }
 
+    [Fact]
+    public async Task AStillWithAFailedTexture_IsPartial_UntilATexturedLoadReplacesIt()
+    {
+        var thumbnails = new FakeThumbnails();
+        var hull = new PreviewAssetRef("Core", "Hull.png");
+        var vehicle = TriangleVehicle() with
+        {
+            Materials = [new PreviewMaterialRef("Hull", hull, null, false)],
+            Draws = [new ResolvedDraw(0, 0, Matrix4x4.Identity, "Body", PreviewModelKind.Model)],
+        };
+        var withoutHull = new Dictionary<string, byte[]> { [TriangleFile.Path] = TriangleGlb(uvs: true) };
+        var withHull = new Dictionary<string, byte[]>(withoutHull) { [hull.Path] = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A] };
+
+        // The texture fails, then it loads, then it fails again, which must not replace the complete still.
+        foreach (var files in new[] { withoutHull, withHull, withoutHull })
+        {
+            using var preview = Start(new FakeVehiclePreview { Vehicle = vehicle, Files = files }, thumbnails: thumbnails, decoder: new FlatDecoder());
+            await preview.Loading;
+            Assert.Equal(VehiclePreviewState.Ready, preview.State);
+        }
+
+        Assert.Equal(["scene" + VehiclePreviewViewModel.PartialKeySuffix, "scene"], thumbnails.Stores.Select(still => still.SceneKey));
+    }
+
     internal static async Task OpenRoverAsync(MainViewModel viewModel)
     {
         await viewModel.EnsureDiscoverLoadedAsync();
@@ -280,7 +305,12 @@ public sealed class VehiclePreviewViewModelTests
         await viewModel.WhenVehiclePreviewLoadedAsync();
     }
 
-    private static VehiclePreviewViewModel Start(FakeVehiclePreview service, Action? openSettings = null, FakeThumbnails? thumbnails = null, Action<string>? stillStored = null)
+    private static VehiclePreviewViewModel Start(
+        FakeVehiclePreview service,
+        Action? openSettings = null,
+        FakeThumbnails? thumbnails = null,
+        Action<string>? stillStored = null,
+        IRgbaImageDecoder? decoder = null)
     {
         var preview = new VehiclePreviewViewModel(
             service,
@@ -288,7 +318,7 @@ public sealed class VehiclePreviewViewModelTests
             null,
             Localization,
             openSettings ?? (() => { }),
-            new PreviewSceneBuilder(new PreviewTextureLoader(null)),
+            new PreviewSceneBuilder(new PreviewTextureLoader(decoder)),
             thumbnails: thumbnails,
             encoder: thumbnails,
             stillStored: stillStored);
@@ -310,34 +340,65 @@ public sealed class VehiclePreviewViewModelTests
         1 + boxes.Length,
         0);
 
-    /// <summary>A GLB with one triangle and 16-bit indices, the smallest mesh that gives a scene a draw.</summary>
-    private static byte[] TriangleGlb()
+    /// <summary>
+    /// A GLB with one triangle and 16-bit indices, the smallest mesh that gives a scene a draw, and with UVs when
+    /// <paramref name="uvs"/> is true, so its material can load a texture.
+    /// </summary>
+    private static byte[] TriangleGlb(bool uvs = false)
     {
-        byte[] bin = [.. GlbTestWriter.Floats(0, 0, 0, 1, 0, 0, 0, 1, 0), .. GlbTestWriter.Indices(GlbTestWriter.UnsignedShortComponent, 0, 1, 2)];
+        byte[] bin =
+        [
+            .. GlbTestWriter.Floats(0, 0, 0, 1, 0, 0, 0, 1, 0),
+            .. GlbTestWriter.Indices(GlbTestWriter.UnsignedShortComponent, 0, 1, 2, 0),
+            .. uvs ? GlbTestWriter.Floats(0, 0, 1, 0, 0, 1) : [],
+        ];
+        var attributes = new JsonObject { ["POSITION"] = 0 };
+        var views = new JsonArray
+        {
+            new JsonObject { ["buffer"] = 0, ["byteOffset"] = 0, ["byteLength"] = 36 },
+            new JsonObject { ["buffer"] = 0, ["byteOffset"] = 36, ["byteLength"] = 6 },
+        };
+        var accessors = new JsonArray
+        {
+            new JsonObject
+            {
+                ["bufferView"] = 0, ["componentType"] = GlbTestWriter.FloatComponent, ["count"] = 3, ["type"] = "VEC3",
+                ["min"] = new JsonArray(0, 0, 0), ["max"] = new JsonArray(1, 1, 0),
+            },
+            new JsonObject { ["bufferView"] = 1, ["componentType"] = GlbTestWriter.UnsignedShortComponent, ["count"] = 3, ["type"] = "SCALAR" },
+        };
+        if (uvs)
+        {
+            // The UVs start after a padding index, because a float accessor must start on 4 bytes.
+            views.Add(new JsonObject { ["buffer"] = 0, ["byteOffset"] = 44, ["byteLength"] = 24 });
+            accessors.Add(new JsonObject { ["bufferView"] = 2, ["componentType"] = GlbTestWriter.FloatComponent, ["count"] = 3, ["type"] = "VEC2" });
+            attributes["TEXCOORD_0"] = 2;
+        }
+
         var json = new JsonObject
         {
             ["asset"] = new JsonObject { ["version"] = "2.0" },
             ["buffers"] = new JsonArray { new JsonObject { ["byteLength"] = bin.Length } },
-            ["bufferViews"] = new JsonArray
-            {
-                new JsonObject { ["buffer"] = 0, ["byteOffset"] = 0, ["byteLength"] = 36 },
-                new JsonObject { ["buffer"] = 0, ["byteOffset"] = 36, ["byteLength"] = 6 },
-            },
-            ["accessors"] = new JsonArray
-            {
-                new JsonObject
-                {
-                    ["bufferView"] = 0, ["componentType"] = GlbTestWriter.FloatComponent, ["count"] = 3, ["type"] = "VEC3",
-                    ["min"] = new JsonArray(0, 0, 0), ["max"] = new JsonArray(1, 1, 0),
-                },
-                new JsonObject { ["bufferView"] = 1, ["componentType"] = GlbTestWriter.UnsignedShortComponent, ["count"] = 3, ["type"] = "SCALAR" },
-            },
+            ["bufferViews"] = views,
+            ["accessors"] = accessors,
             ["meshes"] = new JsonArray
             {
-                new JsonObject { ["primitives"] = new JsonArray { new JsonObject { ["attributes"] = new JsonObject { ["POSITION"] = 0 }, ["indices"] = 1 } } },
+                new JsonObject { ["primitives"] = new JsonArray { new JsonObject { ["attributes"] = attributes, ["indices"] = 1 } } },
             },
         };
         return GlbTestWriter.Pack(json, bin);
+    }
+
+    /// <summary>Decodes any image to one gray pixel, so a texture loads without a real PNG decoder.</summary>
+    private sealed class FlatDecoder : IRgbaImageDecoder
+    {
+        public bool TryReadSize(Stream stream, out int width, out int height)
+        {
+            (width, height) = (1, 1);
+            return true;
+        }
+
+        public PreviewImage Decode(Stream stream, int width) => new(1, 1, [128, 128, 128, 255]);
     }
 }
 

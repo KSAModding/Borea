@@ -57,6 +57,9 @@ public sealed partial class VehiclePreviewViewModel : ObservableObject, IDisposa
 
     internal const int StillHeight = 216;
 
+    /// <summary>Goes after the scene key of a still with a texture that failed, so a complete preview of the same scene replaces it.</summary>
+    internal const string PartialKeySuffix = "p";
+
     private readonly IVehiclePreview _service;
     private readonly ModVersionMetadata _release;
     private readonly Guid? _targetInstanceId;
@@ -370,7 +373,7 @@ public sealed partial class VehiclePreviewViewModel : ObservableObject, IDisposa
         Scene = textured;
         ShowNotices();
         SetState(result.MissingMods.Count > 0 ? VehiclePreviewState.NeedsMods : VehiclePreviewState.Ready);
-        await StoreStillAsync(textured, result, token);
+        await StoreStillAsync(textured, result, textureNotices.Any(notice => notice.Kind == PreviewNoticeKind.AssetFailed), token);
     }
 
     /// <summary>
@@ -378,7 +381,13 @@ public sealed partial class VehiclePreviewViewModel : ObservableObject, IDisposa
     /// was made from another scene key. A scene with a box, a missing mod or no draw gets no still, because Discover
     /// would show it as the vehicle. A failure only means that Discover keeps the icon, so it never changes the panel.
     /// </summary>
-    private async Task StoreStillAsync(PreviewScene scene, VehiclePreviewResult result, CancellationToken token)
+    /// <param name="partial">
+    /// True when a texture failed to read or decode and keeps its flat color. That can be a failure of this one read,
+    /// so the still goes under the scene key with <see cref="PartialKeySuffix"/>. It never replaces a complete still of
+    /// the same scene, and the next complete preview replaces it, while a vehicle whose texture always fails still
+    /// gets a still.
+    /// </param>
+    private async Task StoreStillAsync(PreviewScene scene, VehiclePreviewResult result, bool partial, CancellationToken token)
     {
         if (_thumbnails is not { } thumbnails
             || _encoder is not { } encoder
@@ -393,10 +402,11 @@ public sealed partial class VehiclePreviewViewModel : ObservableObject, IDisposa
             var stored = await Task.Run(
                 () =>
                 {
-                    if (!thumbnails.NeedsUpdate(sha256, gameBuild, sceneKey))
+                    var key = partial ? sceneKey + PartialKeySuffix : sceneKey;
+                    if (!thumbnails.NeedsUpdate(sha256, gameBuild, key) || (partial && !thumbnails.NeedsUpdate(sha256, gameBuild, sceneKey)))
                         return false;
 
-                    thumbnails.Store(sha256, gameBuild, sceneKey, encoder.Encode(RenderStill(scene, token)));
+                    thumbnails.Store(sha256, gameBuild, key, encoder.Encode(RenderStill(scene, token)));
                     return true;
                 },
                 token);

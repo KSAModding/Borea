@@ -415,6 +415,13 @@
         <Style Selector="Border.thumbnail > views|ListingImageView">
             <Setter Property="CornerRadius" Value="7.5" />
         </Style>
+        <!-- a vehicle row wraps its icon in the preview still, which takes the same radius and gives it to the icon -->
+        <Style Selector="Border.thumbnail > views|PreviewStillView">
+            <Setter Property="CornerRadius" Value="7.5" />
+        </Style>
+        <Style Selector="Border.thumbnail > views|PreviewStillView > views|ListingImageView">
+            <Setter Property="CornerRadius" Value="7.5" />
+        </Style>
         <Style Selector="Border.chip">
             <Setter Property="BorderBrush" Value="{StaticResource Brush.BorderStrong}" />
             <Setter Property="BorderThickness" Value="1" />
