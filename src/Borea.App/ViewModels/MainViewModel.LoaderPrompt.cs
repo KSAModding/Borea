@@ -1,9 +1,8 @@
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Borea.Core.Game;
 using Borea.Core.Instances;
-using Borea.Core.Launch;
 using Borea.Core.ModLoaders;
 using Borea.Core.Mods;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -12,18 +11,18 @@ using CommunityToolkit.Mvvm.Input;
 namespace Borea.App.ViewModels;
 
 /// <summary>
-/// The modal that installs the mod loader a launch needs, or updates the
-/// installed one when it does not support the game, then starts the launch again.
-/// When no release fits, it only warns before the launch.
+/// The modal that installs the loader version a launch needs, or updates the version that starts
+/// when it does not support the game, then starts the launch again. When no release fits, or the
+/// instance pins that version, it only warns before the launch.
 /// </summary>
 public partial class MainViewModel
 {
     private Guid? _loaderPromptInstanceId;
 
-    /// <summary>The release the modal installs, or null for the newest release that fits the game.</summary>
+    /// <summary>The release the modal installs when the version is missing, as the setting and the mods of the instance ask for it.</summary>
     private ModVersionMetadata? _promptedLoaderRelease;
 
-    /// <summary>The update a launch skipped with "Play anyway", which no later launch asks about again.</summary>
+    /// <summary>The update a launch skipped with "Play anyway", which no later launch of that instance asks about again.</summary>
     private string? _playedAnywayLoaderUpdate;
 
     /// <summary>The listed loader the launch needs. Null while the modal is closed.</summary>
@@ -32,19 +31,33 @@ public partial class MainViewModel
     private ModMetadata? _promptedLoader;
 
     /// <summary>
-    /// The installed loader the modal warns about. With an offer the modal updates it,
-    /// without one it only warns. Null when the loader is not installed.
+    /// The installed version the modal warns about. With an offer the modal updates it,
+    /// without one it only warns. Null when the version is not installed.
     /// </summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsLoaderUpdatePrompt), nameof(LoaderPromptText), nameof(LoaderPromptActionText), nameof(ShowLoaderPromptAction))]
+    [NotifyPropertyChangedFor(nameof(IsLoaderUpdatePrompt), nameof(LoaderPromptText), nameof(LoaderPromptActionText), nameof(ShowLoaderPromptAction), nameof(ShowChangeLoaderPromptAction), nameof(ShowUseAutomaticLoaderAction))]
     private LoaderUpdate? _promptedLoaderUpdate;
+
+    /// <summary>
+    /// The version that the instance pins, when the modal warns about it or when Borea cannot install it.
+    /// Null for an instance that chooses its version automatically, and for a pin that the modal installs.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(LoaderPromptText), nameof(ShowLoaderPromptAction), nameof(ShowChangeLoaderPromptAction), nameof(ShowUseAutomaticLoaderAction))]
+    private ModVersion? _promptedLoaderPin;
 
     public bool IsLoaderPromptOpen => PromptedLoader is not null;
 
     public bool IsLoaderUpdatePrompt => PromptedLoaderUpdate is not null;
 
-    /// <summary>False when the game is not set up, or when the modal only warns, because no release fits the game and the mods.</summary>
-    public bool ShowLoaderPromptAction => !NeedsGameSetup && PromptedLoaderUpdate is not { Offer: null };
+    /// <summary>False when the game is not set up, when the modal only warns because no release fits the game and the mods, and for a pin that Borea cannot install.</summary>
+    public bool ShowLoaderPromptAction => !NeedsGameSetup && PromptedLoaderUpdate is not { Offer: null } && !ShowUseAutomaticLoaderAction;
+
+    /// <summary>True when the modal warns about a pinned version, which only the player can change.</summary>
+    public bool ShowChangeLoaderPromptAction => PromptedLoaderPin is not null && PromptedLoaderUpdate is not null;
+
+    /// <summary>True when the pinned version is not installed and the index no longer offers it.</summary>
+    public bool ShowUseAutomaticLoaderAction => PromptedLoaderPin is not null && PromptedLoaderUpdate is null;
 
     public string? LoaderPromptText => PromptedLoader is not { } loader
         ? null
@@ -52,57 +65,63 @@ public partial class MainViewModel
         {
             { InstalledVersion: { } installed, Offer: { } offer } => Localization.FormatLaunchLoaderUpdate(loader.Name, installed.ToString(), InstalledVersionText ?? string.Empty, offer.Version.ToString()),
             { InstalledVersion: { } installed } => Localization.FormatLaunchLoaderIncompatible(loader.Name, installed.ToString(), InstalledVersionText ?? string.Empty),
-            _ => NeedsGameSetup ? Localization.FormatLaunchSetUpGameFirst(loader.Name) : Localization.FormatLaunchInstallLoader(loader.Name),
+            _ when PromptedLoaderPin is { } pin => Localization.FormatLaunchPinnedLoaderNotInstallable(loader.Name, pin.ToString()),
+            _ => NeedsGameSetup
+                ? Localization.FormatLaunchSetUpGameFirst(loader.Name)
+                : Localization.FormatLaunchInstallLoader(_promptedLoaderRelease is { } release ? $"{loader.Name} {release.Version}" : loader.Name),
         };
 
     public string LoaderPromptActionText => IsLoaderUpdatePrompt ? Localization.LaunchUpdateAndPlay : Localization.SetupInstallLoader;
 
     partial void OnPromptedLoaderChanged(ModMetadata? value)
     {
-        if (value is null)
-            PromptedLoaderUpdate = null;
+        if (value is not null)
+            return;
+
+        PromptedLoaderUpdate = null;
+        PromptedLoaderPin = null;
     }
 
     /// <summary>
-    /// The needed loader, or else the first loader by id whose listing takes an
-    /// instance. Null when installing a listed loader would not let the launch start.
+    /// What a launch of <paramref name="instance"/> asks about first: a version that starts and that the index rates
+    /// incompatible with the game. An Automatic instance gets the newest release that fits the game and its mods, or
+    /// only a warning when none does. A pinned instance gets only a warning, because an update cannot change its version.
+    /// Null when the launch starts without a question, also after "Play anyway" for the same instance and update.
     /// </summary>
-    private static ModMetadata? LoaderToInstall(LaunchLoaderChoice choice, IReadOnlyList<ModMetadata> listings)
+    private LoaderUpdate? LoaderUpdateBeforeLaunch(Instance instance, ModMetadata loader, LoaderVersionResolution version, InstalledLoaderVersion start)
     {
-        var loaders = listings.Where(listing => listing.Type == ContentType.ModLoader).OrderBy(listing => listing.ModId, ModIds.Comparer);
-        return choice.Failure switch
+        LoaderUpdate update;
+        if (version.StartCompatibility == GameCompatibility.Incompatible && start.Version is { } known)
         {
-            LaunchLoaderFailure.NeededLoaderNotInstalled => loaders.FirstOrDefault(listing => ModIds.Equals(listing.ModId, choice.LoaderIds[0])),
-            LaunchLoaderFailure.NoLoaderTakesInstance => loaders.FirstOrDefault(listing => listing.Provides?.Instance is not null),
-            _ => null,
-        };
-    }
-
-    /// <summary>
-    /// What a launch of <paramref name="instance"/> through <paramref name="loader"/> asks
-    /// about first: an installed release that does not support the game. The offer stays
-    /// only when the mods of the instance accept it, else the modal only warns.
-    /// </summary>
-    private LoaderUpdate? LoaderUpdateBeforeLaunch(Instance instance, ModMetadata loader)
-    {
-        if (LoaderUpdateFor(loader.ModId) is not { } update || !IsBroken(update))
+            update = new LoaderUpdate(loader.ModId, known, GameCompatibility.Incompatible, version.IsPinned ? null : version.Offer);
+        }
+        else if (!version.IsPinned && start.IsRecorded && version.StartCompatibility == GameCompatibility.Unknown
+            && LoaderUpdateFor(loader.ModId) is { } recorded && IsBroken(recorded))
+        {
+            // Without held releases, or for a version that only its files name, the update check of the recorded folder
+            // still knows the rating. Its offer stays only when the mods of the instance accept it.
+            update = recorded.Offer is { } offer && !AcceptsLoader(instance, loader.ModId, offer.Version)
+                ? recorded with { Offer = null }
+                : recorded;
+        }
+        else
+        {
             return null;
+        }
 
-        var prompt = update.Offer is { } offer && !AcceptsLoader(instance, loader.ModId, offer.Version)
-            ? update with { Offer = null }
-            : update;
-        return string.Equals(PlayAnywayKey(prompt), _playedAnywayLoaderUpdate, StringComparison.Ordinal) ? null : prompt;
+        return string.Equals(PlayAnywayKey(instance.InstanceId, update), _playedAnywayLoaderUpdate, StringComparison.Ordinal) ? null : update;
     }
 
-    private void OpenLoaderPrompt(Guid instanceId, ModMetadata loader, LoaderUpdate? update = null, ModVersionMetadata? release = null)
+    private void OpenLoaderPrompt(Guid instanceId, ModMetadata loader, LoaderUpdate? update = null, ModVersionMetadata? release = null, ModVersion? pin = null)
     {
         _loaderPromptInstanceId = instanceId;
         _promptedLoaderRelease = release;
         LaunchMessage = null;
         SetupMessage = null;
         SetupError = null;
-        PromptedLoader = loader;
         PromptedLoaderUpdate = update;
+        PromptedLoaderPin = pin;
+        PromptedLoader = loader;
     }
 
     [RelayCommand]
@@ -113,32 +132,65 @@ public partial class MainViewModel
 
         if (PromptedLoaderUpdate is { } update)
         {
-            if (update.Offer is not { } offer || !await UpdateLoaderToAsync(loader.ModId, offer))
+            if (update.Offer is not { } offer || !await UpdateLoaderToAsync(loader.ModId, offer, update.InstalledVersion))
                 return;
         }
-        else
+        else if (_promptedLoaderRelease is not { } release || !await UpdateLoaderToAsync(loader.ModId, release))
         {
-            var release = _promptedLoaderRelease;
-            await RunSetupAsync(services => InstallLoaderReleaseAsync(services, loader.ModId, release, directory: string.Empty));
-            if (SetupError is not null || _services?.Settings.LoaderInstallations.Keys.Any(id => ModIds.Equals(id, loader.ModId)) != true)
-                return;
+            return;
         }
 
         PromptedLoader = null;
         await LaunchAsync(instanceId);
     }
 
-    /// <summary>Starts the launch with the installed loader, because the bounds in the index can be wrong.</summary>
+    /// <summary>Starts the launch with the installed version, because the bounds in the index can be wrong.</summary>
     [RelayCommand]
     private async Task PlayAnywayAsync()
     {
         if (PromptedLoaderUpdate is not { } update || _loaderPromptInstanceId is not { } instanceId || IsSetupBusy)
             return;
 
-        _playedAnywayLoaderUpdate = PlayAnywayKey(update);
+        _playedAnywayLoaderUpdate = PlayAnywayKey(instanceId, update);
         PromptedLoader = null;
         await LaunchAsync(instanceId);
     }
+
+    /// <summary>Lets the instance choose its version again, because Borea cannot install the version it pins, then starts it.</summary>
+    [RelayCommand]
+    private async Task UseAutomaticLoaderAsync()
+    {
+        if (PromptedLoaderPin is null || _loaderPromptInstanceId is not { } instanceId || IsSetupBusy)
+            return;
+
+        SetupError = await TryInstanceOperationAsync(instances => instances.UpdateAsync(instanceId, instance =>
+        {
+            instance.SetLoader(LoaderSetting.Automatic);
+            return true;
+        }));
+        if (SetupError is not null)
+            return;
+
+        PromptedLoader = null;
+        await LaunchAsync(instanceId);
+    }
+
+    /// <summary>Opens the modal that changes the loader version of the prompted instance.</summary>
+    [RelayCommand]
+    private Task ChangeLoaderFromPromptAsync()
+    {
+        if (_loaderPromptInstanceId is not { } instanceId || IsSetupBusy)
+            return Task.CompletedTask;
+
+        PromptedLoader = null;
+        return ChangeLoaderOfAsync(instanceId);
+    }
+
+    /// <summary>Opens the modal that changes the loader version of one instance, when that instance is still in the list.</summary>
+    private Task ChangeLoaderOfAsync(Guid instanceId) =>
+        Instances.FirstOrDefault(instance => instance.InstanceId == instanceId) is { } item
+            ? BeginEditLoaderSettingAsync(item)
+            : Task.CompletedTask;
 
     [RelayCommand]
     private Task SetUpGameForLoaderAsync()
