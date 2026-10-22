@@ -269,8 +269,9 @@ internal static class PackCommand
             }
 
             // Only an incompatible game blocks, like a mod release (RFC 0017, RFC 0091). The pack's
-            // own bounds are checked here, because the planner evaluates only the members.
-            var installed = cli.InstalledVersion.GetInstalledVersion()?.Version;
+            // own bounds are checked here, because the planner evaluates only the members. A new instance keeps no
+            // game build, so it runs on the game folder of the settings.
+            var installed = target is null ? cli.InstalledVersion.GetInstalledVersion()?.Version : InstanceLookup.GameVersionOf(cli, target);
             var compatibility = ThrowIfIncompatible(metadata, installed, GameReleaseList.From(snapshot.GameVersions));
 
             var yanked = parseResult.GetValue(proceedWithYanked) ?? [];
@@ -382,7 +383,7 @@ internal static class PackCommand
             var snapshot = isDryRun
                 ? await cli.IndexReader.ReadAsync(ct).ConfigureAwait(false)
                 : await cli.IndexSnapshots.GetSnapshotAsync(ct).ConfigureAwait(false);
-            var installed = cli.InstalledVersion.GetInstalledVersion()?.Version;
+            var installed = InstanceLookup.GameVersionOf(cli, target);
             var compatibility = ThrowIfIncompatible(metadata, installed, GameReleaseList.From(snapshot.GameVersions));
 
             var chosenAlternatives = ModInstallCommands.ParseAlternatives(parseResult.GetValue(alternatives));

@@ -52,16 +52,20 @@ internal static class LaunchCommand
             var shape = await cli.GameShape.GetForInstanceAsync(target.InstanceId, ct).ConfigureAwait(false);
             GameShapeOutput.WriteWarning(shape, error);
 
+            // the folder the instance starts, the same installation the shape check read, so a kept build with a problem
+            // gives none and the launcher refuses it
+            var game = cli.InstanceGames.Resolve(target).GameDirectory;
+
             // The load order is a write, so it waits for a shape Borea trusts.
             if (shape.AllowsWrites
-                && cli.Settings.GameDirectoryPath is { } gameDirectory
+                && game is { } gameDirectory
                 && await cli.ModState.PutGameContentFirstAsync(target.InstanceId, gameDirectory, ct).ConfigureAwait(false))
             {
                 cli.Log.Write($"Instance {target.InstanceId}: the game's own content now loads before the mods.");
             }
 
             // an older Borea wrote the host path of the game, which a loader in a Wine prefix cannot open
-            if (cli.Paths.GetGameDirectoryPath() is { } game
+            if (game is not null
                 && cli.Paths.GetLoaderDirectoryPath(loader.ModId) is { } loaderDirectory
                 && await cli.LoaderConfiguration.RefreshForWineAsync(loader, loaderDirectory, game, ct).ConfigureAwait(false) is { } refreshed)
             {

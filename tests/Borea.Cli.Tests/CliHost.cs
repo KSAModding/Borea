@@ -181,6 +181,31 @@ internal sealed class CliHost : IDisposable
             loaderConfiguration: LoaderConfiguration);
     }
 
+    /// <summary>The version of GameVersionFixture.dll, which <see cref="KeepGameBuildAsync"/> keeps.</summary>
+    public static readonly GameVersion KeptBuild = new(2026, 8, 3, 5117);
+
+    /// <summary>
+    /// Lets the instance keep <see cref="KeptBuild"/>. Without <paramref name="withFolder"/> the instance names the
+    /// build, but its folder is gone.
+    /// </summary>
+    public async Task KeepGameBuildAsync(string instanceName, bool withFolder = true)
+    {
+        if (withFolder)
+        {
+            var folder = Paths.GetGameBuildFolder(KeptBuild);
+            Directory.CreateDirectory(folder);
+            File.Copy(Path.Combine(AppContext.BaseDirectory, "GameVersionFixture.dll"), Path.Combine(folder, "KSA.dll"));
+        }
+
+        var repository = new FileInstanceRepository(Paths);
+        var instance = (await repository.GetAllAsync()).Single(candidate => candidate.Name == instanceName);
+        await repository.UpdateAsync(instance.InstanceId, saved =>
+        {
+            saved.SetGameBuild(KeptBuild);
+            return true;
+        });
+    }
+
     private FileSharedProfileImporter BuildSharedProfileImporter(BoreaServices graph)
     {
         var snapshots = IndexSnapshots ?? new ReaderSnapshotProvider(IndexReader);

@@ -533,6 +533,23 @@ public sealed class PackCommandTests : IDisposable
     }
 
     [Fact]
+    public async Task PackInstall_ActiveInstanceOnAKeptBuild_ChecksThePackAgainstThatBuild()
+    {
+        _host.IndexReader.Snapshot = Snapshot(Pack(ContentCommandFixtures.PackVersion()));
+        _host.Mods.Releases.Add(ContentCommandFixtures.Release());
+        _host.InstalledVersion = Installed("2026.9.7.5402");
+        await _host.RunAsync("instance", "create", "Alpha");
+        await _host.RunAsync("instance", "activate", "Alpha");
+        await _host.KeepGameBuildAsync("Alpha");
+
+        var run = await _host.RunAsync("pack", "install", "navigation-pack");
+
+        Assert.Equal(1, run.ExitCode);
+        Assert.Contains("error: Pack 'navigation-pack' 1.0.0 is incompatible with the installed game 2026.8.3.5117, because it needs game 2026.8.22.5348 or newer.", run.Error);
+        Assert.Empty(_host.ModPackInstaller.Requests);
+    }
+
+    [Fact]
     public async Task PackInstall_RetractedVersionsAndANewerFormatVersion_NamesTheVersionOption()
     {
         _host.IndexReader.Snapshot = Snapshot(
@@ -972,6 +989,20 @@ public sealed class PackCommandTests : IDisposable
         Assert.Contains("Remove flight-tools 2.0.0.", run.Output);
         Assert.Equal(string.Empty, run.Error);
         Assert.Equal(before, FileHashes());
+    }
+
+    [Fact]
+    public async Task PackUpdateDryRun_InstanceOnAKeptBuild_ChecksTheNewVersionAgainstThatBuild()
+    {
+        _host.InstalledVersion = Installed("2026.9.7.5402");
+        await CreateNavigationInstanceAsync();
+        await _host.KeepGameBuildAsync("Navigation");
+        _host.IndexReader.Snapshot = Snapshot(Pack(ContentCommandFixtures.PackVersion(), NewerNavigationPack()));
+
+        var run = await _host.RunAsync("pack", "update", "Navigation", "--dry-run");
+
+        Assert.Equal(1, run.ExitCode);
+        Assert.Contains("error: Pack 'navigation-pack' 1.1.0 is incompatible with the installed game 2026.8.3.5117, because it needs game 2026.8.22.5348 or newer.", run.Error);
     }
 
     [Fact]

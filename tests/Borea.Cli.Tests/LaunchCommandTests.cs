@@ -94,6 +94,60 @@ public sealed class LaunchCommandTests : IDisposable
         Assert.Equal(new[] { "Core", "KSArmory" }, entries.Select(entry => entry.ModId));
     }
 
+    [Theory]
+    [InlineData(true, "KeptContent")]
+    [InlineData(false, "SettingsContent")]
+    public async Task Launch_PutsTheContentOfTheBuildTheInstanceStartsFirst(bool kept, string expected)
+    {
+        _host.Mods.Listings.Add(LoaderFixtures.Listing());
+        var loaderDirectory = LoaderCommandTests.CreateLoaderDirectory("StarMap", "not a program", _host.Root);
+        var game = Path.Combine(_host.Root, "Game");
+        await WriteContentAsync(game, "SettingsContent");
+        await _host.RunAsync("settings", "set", "game", game);
+        await _host.RunAsync("settings", "set", "loader", "StarMap", loaderDirectory);
+        await _host.RunAsync("instance", "create", "Flight Test");
+        if (kept)
+        {
+            await _host.KeepGameBuildAsync("Flight Test");
+            await WriteContentAsync(_host.Paths.GetGameBuildFolder(CliHost.KeptBuild), "KeptContent");
+        }
+
+        var instance = Assert.Single(await new FileInstanceRepository(_host.Paths).GetAllAsync());
+        await File.WriteAllTextAsync(_host.Paths.GetInstanceManifestPath(instance.InstanceId), "[[mods]]\nid = \"KSArmory\"\nenabled = true\n");
+
+        var run = await _host.RunAsync("launch", "Flight Test", "StarMap");
+
+        Assert.Equal(0, run.ExitCode);
+        var entries = await new FileModStateRepository(_host.Paths).GetEntriesAsync(instance.InstanceId);
+        Assert.Equal(new[] { expected, "KSArmory" }, entries.Select(entry => entry.ModId));
+    }
+
+    [Fact]
+    public async Task Launch_KeptBuildIsGone_StartsNothingAndUsesNoOtherGameFolder()
+    {
+        var configurator = new RefreshRecorder(_host.ProcessStarter);
+        _host.LoaderConfiguration = configurator;
+        _host.Mods.Listings.Add(LoaderFixtures.Listing());
+        var loaderDirectory = LoaderCommandTests.CreateLoaderDirectory("StarMap", "not a program", _host.Root);
+        var game = Path.Combine(_host.Root, "Game");
+        await WriteContentAsync(game, "SettingsContent");
+        await _host.RunAsync("settings", "set", "game", game);
+        await _host.RunAsync("settings", "set", "loader", "StarMap", loaderDirectory);
+        await _host.RunAsync("instance", "create", "Flight Test");
+        await _host.KeepGameBuildAsync("Flight Test", withFolder: false);
+        var instance = Assert.Single(await new FileInstanceRepository(_host.Paths).GetAllAsync());
+        await File.WriteAllTextAsync(_host.Paths.GetInstanceManifestPath(instance.InstanceId), "[[mods]]\nid = \"KSArmory\"\nenabled = true\n");
+
+        var run = await _host.RunAsync("launch", "Flight Test", "StarMap");
+
+        Assert.Equal(1, run.ExitCode);
+        Assert.Contains(CliHost.KeptBuild.ToString(), run.Error);
+        Assert.Empty(configurator.Refreshes);
+        Assert.Empty(_host.ProcessStarter.Plans);
+        var entries = await new FileModStateRepository(_host.Paths).GetEntriesAsync(instance.InstanceId);
+        Assert.Equal(new[] { "KSArmory" }, entries.Select(entry => entry.ModId));
+    }
+
     [Fact]
     public async Task Launch_LoaderStopsRightAway_FailsWithWhatItWrote()
     {
@@ -593,6 +647,12 @@ public sealed class LaunchCommandTests : IDisposable
             .ToList();
         var instance = Instance.FromExisting(Guid.NewGuid(), "Flight Test", InstanceSource.Custom.Value, DateTimeOffset.UtcNow, mods, isFavorite: false);
         await new FileInstanceRepository(_host.Paths).SaveAsync(instance);
+    }
+
+    private static Task WriteContentAsync(string gameDirectory, string contentId)
+    {
+        var content = Directory.CreateDirectory(Path.Combine(gameDirectory, "Content")).FullName;
+        return File.WriteAllTextAsync(Path.Combine(content, "manifest.toml"), $"[[mods]]\nid = \"{contentId}\"\nenabled = true\n");
     }
 
     private static ModVersionMetadata NeedsLoader(string id, string loaderId) =>
