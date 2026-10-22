@@ -1,6 +1,7 @@
 using Borea.Core.Index;
 using Borea.Core.Game;
 using Borea.Core.Mods;
+using Borea.Core.Sharing;
 using Borea.Core.Tags;
 using Borea.Storage.Index.Dtos;
 using System.Text.Json;
@@ -116,8 +117,79 @@ public static class SnapshotParser
             snapshot.SnapshotVersion, validListings, unknownListings,
             malformedListings, validPacks, unknownPacks, malformedPacks,
             gameVersions, snapshot.Sources, gameVersionsError, tags, tagsError, unknownTags,
-            validVehicles, validSaves);
+            validVehicles, validSaves, ParseHosts(snapshot.Hosts));
     }
+
+    /// <summary>
+    /// The usable share hosts of the hosts field, which is hosts.toml of content-index as JSON (RFC 0104), by key.
+    /// A table that Borea cannot use is skipped and not the whole field, as in <c>ShareHostStore</c>. A host without
+    /// storage and pages is usable too, because Borea reads only the members below and ignores the others.
+    /// </summary>
+    private static IReadOnlyList<ShareHost> ParseHosts(JsonElement? element)
+    {
+        if (element is not { ValueKind: JsonValueKind.Object } root)
+            return [];
+
+        var hosts = new List<ShareHost>();
+        foreach (var table in root.EnumerateObject())
+        {
+            if (TryReadHost(table) is { } host)
+                hosts.Add(host);
+        }
+
+        return hosts.OrderBy(host => host.Key, StringComparer.Ordinal).ToList();
+    }
+
+    // An escaped lone surrogate in a key or a value makes JsonElement throw, and without this catch one such table fails the whole snapshot.
+    private static ShareHost? TryReadHost(JsonProperty table)
+    {
+        try
+        {
+            return ReadHost(table.Name, table.Value);
+        }
+        catch (InvalidOperationException)
+        {
+            return null;
+        }
+    }
+
+    // The token of a player goes to api, so only an https address is taken.
+    private static ShareHost? ReadHost(string key, JsonElement table)
+    {
+        if (table.ValueKind != JsonValueKind.Object || !ReleaseHost.IsShareKey(key) || StringMember(table, "kind") != "share")
+            return null;
+        if (HttpsUri(StringMember(table, "api")) is not { } api)
+            return null;
+        if (!table.TryGetProperty("types", out var typeArray) || typeArray.ValueKind != JsonValueKind.Array
+            || typeArray.EnumerateArray().Any(type => type.ValueKind != JsonValueKind.String))
+            return null;
+
+        var maxBytes = new Dictionary<string, long>(StringComparer.Ordinal);
+        if (table.TryGetProperty("max_bytes", out var limits))
+        {
+            if (limits.ValueKind != JsonValueKind.Object)
+                return null;
+
+            foreach (var limit in limits.EnumerateObject())
+            {
+                if (limit.Value.ValueKind != JsonValueKind.Number || !limit.Value.TryGetInt64(out var bytes) || bytes <= 0)
+                    return null;
+
+                maxBytes[limit.Name] = bytes;
+            }
+        }
+
+        var name = StringMember(table, "name") is { Length: > 0 } text ? text : key;
+        var apiBase = api.AbsoluteUri.EndsWith('/') ? api : new Uri(api.AbsoluteUri + "/");
+        var types = typeArray.EnumerateArray().Select(type => type.GetString()!).ToList();
+        return new ShareHost(key, name, apiBase, types, maxBytes, HttpsUri(StringMember(table, "policy")));
+    }
+
+    private static string? StringMember(JsonElement table, string name) =>
+        table.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.String ? value.GetString() : null;
+
+    private static Uri? HttpsUri(string? text) =>
+        Uri.TryCreate(text, UriKind.Absolute, out var uri) && uri.Scheme == Uri.UriSchemeHttps && uri.UserInfo.Length == 0 ? uri : null;
 
     private static List<JsonElement> ReadTypeFile(ContentIndexTypeFile file, string json)
     {
