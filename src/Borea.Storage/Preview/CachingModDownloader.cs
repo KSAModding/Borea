@@ -31,6 +31,9 @@ public sealed class CachingModDownloader : IModDownloader
         _log = log ?? throw new ArgumentNullException(nameof(log));
     }
 
+    /// <summary>The downloader that serves every request the cache cannot serve.</summary>
+    internal IModDownloader Inner => _inner;
+
     public async Task<DownloadResult> DownloadAsync(
         ModVersionMetadata release,
         string archivePath,

@@ -115,6 +115,12 @@ public sealed class PreviewArchiveCache
         if (release.Download.Sha256 is not { } sha256)
             throw new ArgumentException($"The release {release.ModId} {release.Version} has no SHA-256, so the preview does not keep its archive.", nameof(release));
 
+        // A caching downloader over this cache would wait for the gate that this fetch holds, and a SemaphoreSlim is not
+        // reentrant, so the fetch uses the downloader under it. The cache lookup of the wrapper adds nothing here,
+        // because the fetch looks in the cache itself.
+        while (downloader is CachingModDownloader caching)
+            downloader = caching.Inner;
+
         var key = Key(sha256);
         var gate = _fetchGates.GetOrAdd(key, _ => new SemaphoreSlim(1, 1));
         await gate.WaitAsync(cancellationToken).ConfigureAwait(false);

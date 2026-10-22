@@ -84,16 +84,27 @@ public sealed class CachingModDownloaderTests : IDisposable
             await hold.Task;
         };
 
-        var preview = _cache.FetchAsync(release, _inner, new NoVolume());
+        var preview = _cache.FetchAsync(release, _downloader, new NoVolume());
         await started.Task;
         var install = _downloader.DownloadAsync(release, Target);
         hold.SetResult();
-        await preview;
-        var result = await install;
+        await preview.WaitAsync(TimeSpan.FromSeconds(5));
+        var result = await install.WaitAsync(TimeSpan.FromSeconds(5));
 
         Assert.Single(_inner.ArchivePaths);
         Assert.Equal(_inner.Bytes, await File.ReadAllBytesAsync(Target));
         Assert.Equal(new DownloadResult(release.Download.Url, _inner.Bytes.Length, Sha(_inner.Bytes)), result);
+    }
+
+    [Fact]
+    public async Task Fetch_ThroughTheCachingDownloader_DoesNotWaitForItsOwnGate()
+    {
+        var release = Release(Sha(_inner.Bytes));
+
+        var path = await _cache.FetchAsync(release, _downloader, new NoVolume()).WaitAsync(TimeSpan.FromSeconds(5));
+
+        Assert.Single(_inner.ArchivePaths);
+        Assert.Equal(_inner.Bytes, await File.ReadAllBytesAsync(path));
     }
 
     private string PutInCache(ModVersionMetadata release, byte[] bytes)
