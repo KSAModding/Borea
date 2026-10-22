@@ -18,6 +18,12 @@ public interface IUserContentRepository
     /// <summary>The newest release that Borea may pick by itself and that the channel offers, or null.</summary>
     Task<ModVersionMetadata?> GetLatestReleaseAsync(string id, ReleaseChannel channel, CancellationToken cancellationToken = default);
 
+    /// <summary>Every listed vehicle and save.</summary>
+    Task<IReadOnlyList<ModMetadata>> GetAvailableAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>The releases a player can pick by hand, newest first: one per version and none that is yanked, as <see cref="IModRepository.GetReleaseHistoryAsync"/>.</summary>
+    Task<IReadOnlyList<ModVersionMetadata>> GetReleaseHistoryAsync(string id, CancellationToken cancellationToken = default);
+
     /// <summary>The listings of one type that match the query, as a mod search matches.</summary>
     Task<IReadOnlyList<ModMetadata>> SearchAsync(ContentType type, string query, CancellationToken cancellationToken = default);
 }

@@ -1,6 +1,7 @@
 using System.CommandLine;
 using Borea.Core.Mods;
 using Borea.Core.State;
+using Borea.Core.UserContent;
 
 namespace Borea.Cli.Commands;
 
@@ -63,10 +64,12 @@ internal static class ModStateCommands
         disable.Arguments.Add(modId);
         disable.Options.Add(instance);
 
-        disable.SetAction((parseResult, cancellationToken) => CommandRunner.RunAsync(parseResult, services, cancellationToken, async (cli, output, _, ct) =>
+        disable.SetAction((parseResult, cancellationToken) => CommandRunner.RunAsync(parseResult, services, cancellationToken, async (cli, output, error, ct) =>
         {
             var id = parseResult.GetRequiredValue(modId);
             var target = await InstanceLookup.ResolveTargetAsync(cli.Instances, parseResult.GetValue(instance)).ConfigureAwait(false);
+            var (content, inactive) = await UserContentCommands.RecordedStateAsync(cli, target, ct).ConfigureAwait(false);
+            UserContentCommands.WriteNeeding(error, id, RecordedContentNeeds.Needing(content, target, id, inactive));
             await cli.ModState.SetInactiveAsync(target.InstanceId, id, ct).ConfigureAwait(false);
 
             output.WriteLine($"Disabled {id} in '{target.Name}'.");

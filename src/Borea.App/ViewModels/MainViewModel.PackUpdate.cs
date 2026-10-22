@@ -192,7 +192,7 @@ public partial class MainViewModel
             {
                 var shown = planned?.Warnings ?? [];
                 (request, planned) = await PlanPackUpdateWithChoicesAsync(services, request, choices);
-                if ((planned.Plan is { } plan && choices.Apply(plan)) || !planned.CanRun || !planned.Warnings.All(shown.Contains))
+                if ((planned.Plan is { } plan && choices.Apply(plan)) || !planned.CanRun || !WereShown(planned.Warnings, shown))
                 {
                     HoldPackUpdate(item, request, planned);
                     return false;

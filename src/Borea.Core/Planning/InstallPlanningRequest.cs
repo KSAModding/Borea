@@ -13,4 +13,14 @@ public sealed record InstallPlanningRequest(
     OsPlatform? TargetPlatform = null,
     IReadOnlySet<string>? Recommended = null,
     IReadOnlyDictionary<string, string>? Alternatives = null,
-    ReleaseChannel? Channel = null);
+    ReleaseChannel? Channel = null)
+{
+    /// <summary>
+    /// The instance before a run whose <see cref="Instance"/> is a draft without the mods the run removes, as a pack
+    /// update plans. Null when the run removes nothing.
+    /// </summary>
+    public Instance? Current { get; init; }
+
+    /// <summary>The listings of the vehicles and saves that the same run replaces, so their records do not count.</summary>
+    public IReadOnlySet<string>? ReplacedContent { get; init; }
+}

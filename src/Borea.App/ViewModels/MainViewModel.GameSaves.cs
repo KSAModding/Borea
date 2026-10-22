@@ -89,6 +89,7 @@ public partial class MainViewModel
 
             var installed = services.InstalledVersion.GetInstalledVersion()?.Version;
             section.SetItems(entries.Select(entry => new GameSaveItem(this, section, instance.InstanceId, entry, installed)));
+            await ShowRecordedContentAsync(section, instance.InstanceId);
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {
@@ -117,6 +118,12 @@ public partial class MainViewModel
     internal async Task DeleteGameSaveAsync(GameSaveItem item)
     {
         item.CloseEdits();
+        if (item.Record is { } record)
+        {
+            await RemoveRecordedGameSaveAsync(item, record);
+            return;
+        }
+
         var deleted = await RunGameSaveActionAsync([item.InstanceId], () => Localization.FormatToastDeleteFailed(item.Name), async services =>
         {
             await services.GameSaves.DeleteAsync(item.InstanceId, item.Entry);
@@ -548,7 +555,7 @@ public sealed partial class GameSaveItem : ObservableObject
 
     public string? ReplaceText => CopyTarget is null ? null : _owner.Localization.FormatGameSaveReplace(Name, CopyTarget.Name);
 
-    public bool IsIdle => !IsConfirmingDelete && !IsChoosingTarget && !IsConfirmingReplace;
+    public bool IsIdle => !IsConfirmingDelete && !IsChoosingTarget && !IsConfirmingReplace && !IsConfirmingInstall && !IsInstalling;
 
     internal void CloseEdits()
     {
@@ -565,6 +572,7 @@ public sealed partial class GameSaveItem : ObservableObject
         OnPropertyChanged(nameof(SizeText));
         OnPropertyChanged(nameof(CopyNoteText));
         OnPropertyChanged(nameof(ReplaceText));
+        RefreshRecordText();
     }
 
     [RelayCommand]

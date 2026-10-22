@@ -20,6 +20,38 @@ internal static class UserContentCommands
     public static async Task<InstalledContentRecord?> FindRecordAsync(CliServices cli, Instance instance, string id, CancellationToken cancellationToken) =>
         (await cli.InstalledContent.ListAsync(instance.InstanceId, cancellationToken).ConfigureAwait(false)).FirstOrDefault(record => ModIds.Equals(record.ListingId, id));
 
+    /// <summary>
+    /// The recorded vehicles and saves of the instance and the mods its manifest disables. A record or manifest file
+    /// Borea cannot read gives neither, so it never stops a mod change that only warns about them.
+    /// </summary>
+    public static async Task<(IReadOnlyList<InstalledContentRecord> Records, IReadOnlyList<string> Inactive)> RecordedStateAsync(CliServices cli, Instance instance, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var records = await cli.InstalledContent.ListAsync(instance.InstanceId, cancellationToken).ConfigureAwait(false);
+            if (records.Count == 0)
+                return ([], []);
+
+            var entries = await cli.ModState.GetEntriesAsync(instance.InstanceId, cancellationToken).ConfigureAwait(false);
+            return (records, entries.Where(entry => !entry.Enabled).Select(entry => entry.ModId).ToList());
+        }
+        catch (Exception exception) when (exception is IOException or InvalidOperationException or UnauthorizedAccessException)
+        {
+            return ([], []);
+        }
+    }
+
+    /// <summary>Names each recorded vehicle or save that the game no longer loads in full without <paramref name="modId"/>. It only warns, because only an incompatible release blocks.</summary>
+    public static void WriteNeeding(TextWriter error, string modId, IEnumerable<InstalledContentRecord> content)
+    {
+        foreach (var record in content)
+        {
+            error.WriteLine(record.Type == ContentType.Save
+                ? $"warning: The save {record.FolderName} needs {modId}, so the game leaves out every vehicle of that save that needs it, and saving again loses those vehicles."
+                : $"warning: The vehicle {record.FolderName} needs {modId}, so the game refuses that vehicle.");
+        }
+    }
+
     public static async Task<int> InstallAsync(CliServices cli, Instance instance, ModMetadata listing, Options options, TextWriter output, TextWriter error, CancellationToken cancellationToken)
     {
         var repository = options.DryRun ? cli.ReadOnlyUserContent : cli.UserContent;

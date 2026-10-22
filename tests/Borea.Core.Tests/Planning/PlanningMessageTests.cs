@@ -51,6 +51,8 @@ public sealed class PlanningMessageTests
         { new("A", PlanningMessageKind.UnlistedPin), "unlisted-pin", "The exact pinned release is not listed and cannot be installed by Borea." },
         { new("rover", PlanningMessageKind.MissingForVehicle) { Dependency = Library, Value = "unsatisfied-dependency" }, "missing-for-vehicle", "Required dependency on mod 'library' >= 1.0.0 cannot be installed or enabled, so the game refuses the vehicle file." },
         { new("campaign", PlanningMessageKind.MissingForSave) { Dependency = Library, Value = "unsatisfied-dependency" }, "missing-for-save", "Required dependency on mod 'library' >= 1.0.0 cannot be installed or enabled, so the game leaves out every vehicle that needs it, and saving again loses those vehicles." },
+        { new("library", PlanningMessageKind.BreaksVehicle) { Version = ModVersion.Parse("2.0.0"), Dependency = Library, Value = "Rover" }, "breaks-vehicle", "library 2.0.0 does not meet the Required dependency on mod 'library' >= 1.0.0 of the vehicle Rover, so the game refuses that vehicle." },
+        { new("library", PlanningMessageKind.BreaksSave) { Version = ModVersion.Parse("2.0.0"), Dependency = Library, Value = "Career" }, "breaks-save", "library 2.0.0 does not meet the Required dependency on mod 'library' >= 1.0.0 of the save Career, so the game leaves out every vehicle of that save that needs it, and saving again loses those vehicles." },
     };
 
     [Theory]
@@ -67,5 +69,21 @@ public sealed class PlanningMessageTests
         var covered = Messages.Select(row => ((PlanningMessage)row[0]).Kind).ToHashSet();
 
         Assert.Equal(Enum.GetValues<PlanningMessageKind>().ToHashSet(), covered);
+    }
+
+    [Fact]
+    public void SameAs_ComparesTheDependencyByItsValues()
+    {
+        var message = new PlanningMessage("library", PlanningMessageKind.BreaksSave) { Version = ModVersion.Parse("2.0.0"), Dependency = Library, Value = "Career" };
+        var read = new ModDependency("library", ModDependencyKind.Required, ModVersion.Parse("1.0.0"));
+        var choice = new PlanningMessage("A", PlanningMessageKind.AlternativeChoice) { Dependency = Alternatives };
+        var again = ModDependency.OfAlternatives(ModDependencyKind.Required, [new ModDependencyAlternative("first"), new ModDependencyAlternative("second")]);
+
+        Assert.True(message.SameAs(message with { Dependency = read }));
+        Assert.True(choice.SameAs(choice with { Dependency = again }));
+        Assert.False(message.SameAs(message with { Dependency = new ModDependency("library", ModDependencyKind.Required, ModVersion.Parse("1.1.0")) }));
+        Assert.False(message.SameAs(message with { Value = "Other" }));
+        Assert.False(message.SameAs(message with { Dependency = null }));
+        Assert.False(choice.SameAs(choice with { Dependency = ModDependency.OfAlternatives(ModDependencyKind.Required, [new ModDependencyAlternative("first"), new ModDependencyAlternative("third")]) }));
     }
 }

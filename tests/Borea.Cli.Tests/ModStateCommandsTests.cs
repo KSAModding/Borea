@@ -1,3 +1,5 @@
+using Borea.Core.Dependencies;
+using Borea.Core.Instances;
 using Borea.Core.Mods;
 using Borea.Storage.Instances;
 using Borea.Storage.State;
@@ -158,6 +160,37 @@ public sealed class ModStateCommandsTests : IDisposable
 
         Assert.Equal(0, run.ExitCode);
         Assert.Contains("Disabled somemod in 'Alpha'.", run.Output);
+        Assert.False(await ModState.IsActiveAsync(instanceId, "SomeMod"));
+    }
+
+    [Fact]
+    public async Task Disable_ModARecordedSaveRequires_NamesTheSaveAndStillDisables()
+    {
+        var instanceId = await CreateAsync("Alpha");
+        CreateModFolder(instanceId, "SomeMod");
+        await RecordModAsync(instanceId, "SomeMod");
+        await _host.RunAsync("enable", "SomeMod", "--instance", "Alpha");
+        var save = new ModVersionMetadata(1, "career", ModVersion.Parse("1.0.0"), ReleaseStatus.Stable, DateTimeOffset.UnixEpoch, "2026.8.22.5348", 5348, new DownloadInfo("https://example.com/career.zip", new string('A', 64), 1, "application/zip"), 1, [new ModDependency("SomeMod", ModDependencyKind.Required)], ContentType.Save, install: new InstallInfo(null, derived: false, folder: "Career"));
+        await new FileInstalledContentRecords(_host.Paths).AddAsync(instanceId, new InstalledContentRecord(save, "Career", DateTimeOffset.UnixEpoch, new Dictionary<string, string>()));
+
+        var run = await _host.RunAsync("disable", "SomeMod", "--instance", "Alpha");
+
+        Assert.Equal(0, run.ExitCode);
+        Assert.Contains("warning: The save Career needs SomeMod, so the game leaves out every vehicle of that save that needs it", run.Error);
+        Assert.False(await ModState.IsActiveAsync(instanceId, "SomeMod"));
+    }
+
+    [Fact]
+    public async Task Disable_RecordFileThatCannotBeRead_StillDisables()
+    {
+        var instanceId = await CreateAsync("Alpha");
+        CreateModFolder(instanceId, "SomeMod");
+        await _host.RunAsync("enable", "SomeMod", "--instance", "Alpha");
+        await File.WriteAllTextAsync(_host.Paths.GetInstanceInstalledContentPath(instanceId), "not = [toml");
+
+        var run = await _host.RunAsync("disable", "SomeMod", "--instance", "Alpha");
+
+        Assert.Equal(0, run.ExitCode);
         Assert.False(await ModState.IsActiveAsync(instanceId, "SomeMod"));
     }
 

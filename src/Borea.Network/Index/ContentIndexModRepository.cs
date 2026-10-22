@@ -75,13 +75,16 @@ public sealed class ContentIndexModRepository : IContentIndexRepository, IModIdC
         CancellationToken cancellationToken = default)
     {
         var listing = await FindListingAsync(modId, cancellationToken).ConfigureAwait(false);
-        return listing?.Releases
+        return ReleaseHistory(listing);
+    }
+
+    private static ModVersionMetadata[] ReleaseHistory(ContentIndexListing? listing) =>
+        listing?.Releases
             .Where(release => !release.Yanked)
             .DistinctBy(release => release.Version)
             .OrderByDescending(release => release.Version)
             .ToArray()
-            ?? Array.Empty<ModVersionMetadata>();
-    }
+        ?? [];
 
     public async Task<IReadOnlyList<ModMetadata>> SearchAsync(
         string query,
@@ -150,6 +153,18 @@ public sealed class ContentIndexModRepository : IContentIndexRepository, IModIdC
         return listing?.Releases
             .Where(release => release.IsOffered && channel.Includes(release.ReleaseStatus))
             .MaxBy(release => release.Version);
+    }
+
+    public async Task<IReadOnlyList<ModMetadata>> GetAvailableAsync(CancellationToken cancellationToken = default)
+    {
+        var snapshot = await GetSnapshotAsync(cancellationToken).ConfigureAwait(false);
+        return AvailableContent(snapshot).Select(listing => listing.Authored!).ToArray();
+    }
+
+    async Task<IReadOnlyList<ModVersionMetadata>> IUserContentRepository.GetReleaseHistoryAsync(string id, CancellationToken cancellationToken)
+    {
+        var listing = await FindContentAsync(id, cancellationToken).ConfigureAwait(false);
+        return ReleaseHistory(listing);
     }
 
     public async Task<IReadOnlyList<ModMetadata>> SearchAsync(ContentType type, string query, CancellationToken cancellationToken = default)

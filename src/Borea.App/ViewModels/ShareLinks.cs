@@ -10,8 +10,8 @@ public static class ShareLinks
 
     private const string IndexSource = "index";
 
-    /// <summary>Null for a listing that is not from the index, because only those have a share page.</summary>
-    public static string? For(ModMetadata listing) => For("mod", listing.Source, listing.ModId);
+    /// <summary>Null for a listing that is not from the index, and for a vehicle or save, because only mods and loaders have a share page yet.</summary>
+    public static string? For(ModMetadata listing) => listing.Type.IsVehicleOrSave() ? null : For("mod", listing.Source, listing.ModId);
 
     /// <summary>Null for a pack that is not from the index.</summary>
     public static string? For(ModPackMetadata pack) => For("pack", pack.Source, pack.ModPackId);

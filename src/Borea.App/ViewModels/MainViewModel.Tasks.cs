@@ -38,6 +38,7 @@ public partial class MainViewModel
         VersionItem item => StartModInstallTask(item, item.ModId, instanceId),
         DiscoverItem item => StartModInstallTask(item, item.ModId, instanceId),
         PackMemberItem item => StartPackMemberTask(item, instanceId),
+        GameSaveItem item => StartTask(TaskKind.Update, item.Name, instanceId, item.Record?.ListingId, state: TaskState.Waiting),
         _ => throw new UnreachableException(),
     };
 
@@ -124,6 +125,16 @@ public partial class MainViewModel
         }
 
         await OpenContentAsync(row);
+        if (row.Type.IsVehicleOrSave())
+        {
+            var release = version is { } exactRelease ? await services.UserContent.GetReleaseAsync(modId, exactRelease) : await services.UserContent.GetLatestReleaseAsync(modId, services.Settings.ReleaseChannel);
+            if (release is null)
+                FailRetry(task, Localization.DiscoverNoRelease);
+            else
+                await PlanContentAsync(row, instance.InstanceId, release);
+            return;
+        }
+
         await PlanInstallAsync(row, () => version is { } pinned ? services.Mods.GetReleaseAsync(modId, pinned) : services.Mods.GetLatestReleaseAsync(modId), version, instance.InstanceId);
     }
 
@@ -153,6 +164,10 @@ public partial class MainViewModel
         else if (_content.FirstOrDefault(content => ModIds.Equals(content.ModId, task.ContentId)) is { } row)
         {
             await UpdateContentAsync(row);
+        }
+        else if (VehiclesSection.Items.Concat(SavesSection.Items).FirstOrDefault(item => item.CanUpdate && ModIds.Equals(item.Record?.ListingId, task.ContentId)) is { } recorded)
+        {
+            await UpdateRecordedContentAsync(recorded);
         }
         else
         {

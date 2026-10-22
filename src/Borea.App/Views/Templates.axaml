@@ -171,6 +171,7 @@
                     <TextBlock Classes="body-sm secondary" Text="{Binding HeldText}" TextWrapping="Wrap" IsVisible="{Binding HeldText, Converter={x:Static ObjectConverters.IsNotNull}}" />
                     <TextBlock Classes="body-sm danger" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ContentNotOnDisk}" ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ContentNotOnDiskDetail}" IsVisible="{Binding IsMissing}" />
                     <TextBlock Classes="body-sm danger" Text="{Binding RemoveConfirmText}" TextWrapping="Wrap" IsVisible="{Binding IsConfirmingRemove}" />
+                    <TextBlock Classes="body-sm danger" Text="{Binding DisableConfirmText}" TextWrapping="Wrap" IsVisible="{Binding IsConfirmingDisable}" />
                     <ContentControl Margin="0,4,0,0" Content="{Binding RemoveSteps}" ContentTemplate="{StaticResource StepList}">
                         <ContentControl.IsVisible>
                             <MultiBinding Converter="{x:Static BoolConverters.And}">
@@ -187,7 +188,7 @@
                     <TextBlock Classes="body-sm secondary" Text="{Binding ManageNotInstalledText}" TextWrapping="Wrap" IsVisible="{Binding ManageNotInstalledText, Converter={x:Static ObjectConverters.IsNotNull}}" />
                     <TextBlock Classes="body-sm secondary" Text="{Binding ProgressStatus}" ToolTip.Tip="{Binding ProgressStatus}" TextTrimming="CharacterEllipsis" IsVisible="{Binding ProgressStatus, Converter={x:Static ObjectConverters.IsNotNull}}" />
                     <TextBlock Classes="body-sm secondary" Text="{Binding PackVersionText}" TextWrapping="Wrap" IsVisible="{Binding PackVersionText, Converter={x:Static ObjectConverters.IsNotNull}}" />
-                    <TextBlock Classes="body-sm secondary" Text="{Binding InstallWarning}" ToolTip.Tip="{Binding InstallWarning}" TextTrimming="CharacterEllipsis" IsVisible="{Binding IsConfirmingUpdate}" />
+                    <TextBlock Classes="body-sm secondary" Text="{Binding InstallWarning}" ToolTip.Tip="{Binding InstallWarning}" TextWrapping="Wrap" MaxLines="3" TextTrimming="CharacterEllipsis" IsVisible="{Binding IsConfirmingUpdate}" />
                     <TextBlock Classes="body-sm danger" Text="{Binding InstallError}" ToolTip.Tip="{Binding InstallError}" TextTrimming="CharacterEllipsis" IsVisible="{Binding InstallError, Converter={x:Static ObjectConverters.IsNotNull}}" />
                 </StackPanel>
                 <!-- a mod of the pack that the player detached, which the row menu attaches again -->
@@ -268,8 +269,13 @@
                             <Binding Path="IsConfirmingRemove" />
                             <Binding Path="IsConfirmingUpdate" />
                             <Binding Path="IsConfirmingManage" />
+                            <Binding Path="IsConfirmingDisable" />
                         </MultiBinding>
                     </StackPanel.IsVisible>
+                    <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding IsConfirmingDisable}">
+                        <Button Classes="text danger" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ContentDisable}" Command="{Binding ConfirmDisableCommand}" />
+                        <Button Classes="text" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryCancel}" Command="{Binding CancelDisableCommand}" />
+                    </StackPanel>
                     <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding IsConfirmingRemove}">
                         <Button Classes="text danger" Content="{Binding RemoveActionText}" Command="{Binding ConfirmRemoveCommand}" />
                         <Button Classes="text" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryCancel}" Command="{Binding CancelRemoveCommand}" />
@@ -389,7 +395,7 @@
                         <StackPanel Grid.Row="2">
                             <!-- the question and the two buttons keep one line while they fit, and the buttons take the next line when they do not -->
                             <WrapPanel HorizontalAlignment="Right" ItemsAlignment="End" ItemSpacing="8" LineSpacing="8" Margin="0,0,4,8" IsVisible="{Binding IsConfirmingRemove}">
-                                <TextBlock Classes="body-sm danger" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ContentRemoveConfirm}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                                <TextBlock Classes="body-sm danger" Text="{Binding RemoveConfirmText}" TextWrapping="Wrap" VerticalAlignment="Center" />
                                 <StackPanel Orientation="Horizontal" Spacing="8">
                                     <Button Classes="text danger" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ContentRemove}" Command="{Binding ConfirmRemoveCommand}" />
                                     <Button Classes="text" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryCancel}" Command="{Binding CancelRemoveCommand}" />
@@ -408,16 +414,17 @@
                                 <TextBlock Grid.Column="1" Classes="label-md" Text="{Binding ProgressDetail}" VerticalAlignment="Center" IsVisible="{Binding ProgressDetail, Converter={x:Static ObjectConverters.IsNotNull}}" />
                             </Grid>
                             <ItemsControl Margin="0,0,4,8" ItemsSource="{Binding PlanSteps}" ItemTemplate="{StaticResource StepList}" ItemsPanel="{StaticResource StepListsPanel}" IsVisible="{Binding !!PlanSteps.Count}" />
-                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8" Margin="0,0,4,8" IsVisible="{Binding IsConfirmingInstall}">
-                                <StackPanel HorizontalAlignment="Right" VerticalAlignment="Center">
-                                    <TextBlock Classes="body-sm secondary" Text="{Binding AddedModsText}" ToolTip.Tip="{Binding AddedModsToolTip}" IsVisible="{Binding AddedModsText, Converter={x:Static ObjectConverters.IsNotNull}}" TextTrimming="CharacterEllipsis" />
-                                    <TextBlock Classes="body-sm secondary" Text="{Binding InstallWarning}" ToolTip.Tip="{Binding InstallWarning}" IsVisible="{Binding InstallWarning, Converter={x:Static ObjectConverters.IsNotNull}}" TextTrimming="CharacterEllipsis" />
+                            <!-- as the remove question: the buttons take the next line when the texts need the width -->
+                            <WrapPanel HorizontalAlignment="Right" ItemsAlignment="End" ItemSpacing="8" LineSpacing="8" Margin="0,0,4,8" IsVisible="{Binding IsConfirmingInstall}">
+                                <StackPanel VerticalAlignment="Center">
+                                    <TextBlock Classes="body-sm secondary" Text="{Binding AddedModsText}" ToolTip.Tip="{Binding AddedModsToolTip}" IsVisible="{Binding AddedModsText, Converter={x:Static ObjectConverters.IsNotNull}}" TextWrapping="Wrap" MaxLines="3" TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Classes="body-sm secondary" Text="{Binding InstallWarning}" ToolTip.Tip="{Binding InstallWarning}" IsVisible="{Binding InstallWarning, Converter={x:Static ObjectConverters.IsNotNull}}" TextWrapping="Wrap" MaxLines="3" TextTrimming="CharacterEllipsis" />
                                 </StackPanel>
-                                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
                                     <Button Classes="text primary" Content="{Binding ConfirmInstallText}" Command="{Binding ConfirmInstallCommand}" IsEnabled="{Binding Choices.IsComplete, FallbackValue={x:True}}" />
                                     <Button Classes="text" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryCancel}" Command="{Binding CancelInstallCommand}" />
                                 </StackPanel>
-                            </Grid>
+                            </WrapPanel>
                             <TextBlock Classes="body-sm danger" Text="{Binding InstallError}" ToolTip.Tip="{Binding InstallError}" IsVisible="{Binding InstallError, Converter={x:Static ObjectConverters.IsNotNull}}" TextTrimming="CharacterEllipsis" HorizontalAlignment="Right" Margin="0,0,4,8" />
                             <!-- what the author still asks for after an install, until the player dismisses it -->
                             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8" Margin="0,0,4,8" IsVisible="{Binding HasInstallStepsNotice}">

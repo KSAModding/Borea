@@ -115,6 +115,12 @@ internal sealed class ModPackUserContent(IUserContentInstaller? installer, IModS
     public static IReadOnlyList<ModPackContentResult> NotReached(IReadOnlyList<Step> steps, string message) =>
         steps.Select(item => item.Planned.Status == ModPackContentStatus.NotAttempted ? item.Planned with { Message = message } : item.Planned).ToList();
 
+    /// <summary>The listings of the recorded items that the steps update, also those that wait for the player to discard a change.</summary>
+    public static IReadOnlySet<string> Replaced(IReadOnlyList<Step> steps) =>
+        steps.Where(item => item.Installed is not null && item.Release is not null && item.Planned.Status is ModPackContentStatus.NotAttempted or ModPackContentStatus.Changed)
+            .Select(item => item.Installed!.ListingId)
+            .ToHashSet(ModIds.Comparer);
+
     /// <summary>How many steps a run installs or updates.</summary>
     public static int Count(IReadOnlyList<Step> steps) => steps.Count(Runs);
 

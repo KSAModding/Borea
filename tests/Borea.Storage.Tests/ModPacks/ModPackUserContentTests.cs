@@ -137,6 +137,42 @@ public sealed class ModPackUserContentTests
         Assert.Equal(["update Campaign discard"], _log);
     }
 
+    [Fact]
+    public async Task Update_PlansWithTheInstanceBeforeItsRemovals_AndTheItemsItReplaces()
+    {
+        var parts = Release("Parts");
+        var old = Release("Old");
+        var newSave = Vehicle("Campaign", "2.0.0", type: ContentType.Save);
+        var content = new FakeContentInstaller(_log) { Recorded = { ["Campaign"] = new InstalledContentRecord(Vehicle("Campaign", type: ContentType.Save), "Campaign", DateTimeOffset.UnixEpoch, new Dictionary<string, string>()) } };
+        var instance = Instance.FromExisting(Guid.NewGuid(), "Target", new InstanceSource.FromModPack("Pack", ModVersion.Parse("1.0.0")), DateTimeOffset.UnixEpoch, [Member(parts), Member(old)], false);
+        var instances = new MemoryInstanceRepository(instance);
+        var planner = new RecordingPlanner();
+        var updater = new ModPackUpdater(instances, planner, new InstallPlanExecutor(instances, new FakeInstaller(instances), new FakeReplacer(instances)), new NoUninstaller(), content);
+
+        await updater.PlanAsync(new ModPackUpdateRequest(instance.InstanceId, Pack([parts], saves: [newSave], version: "2.0.0"), new FakeModRepository([parts]), UserContent: new FakeContentRepository([newSave])));
+
+        var request = Assert.Single(planner.Requests);
+        Assert.DoesNotContain(request.Instance.Mods, mod => mod.ModId == "Old");
+        Assert.Contains(request.Current!.Mods, mod => mod.ModId == "Old");
+        Assert.Equal(["Campaign"], request.ReplacedContent!);
+    }
+
+    private static InstalledMod Member(ModVersionMetadata release) => new(release.ModId, release.Version, InstallReason.ModPack, DateTimeOffset.UnixEpoch, release, ownershipToken: "token");
+
+    // The recorded vehicles and saves are the planner's business, so the update only has to hand it the right request.
+    private sealed class RecordingPlanner : IInstallPlanner
+    {
+        private readonly FakePlanner _inner = new();
+
+        public List<InstallPlanningRequest> Requests { get; } = [];
+
+        public Task<InstallPlan> PlanAsync(InstallPlanningRequest request, CancellationToken cancellationToken = default)
+        {
+            Requests.Add(request);
+            return _inner.PlanAsync(request, cancellationToken);
+        }
+    }
+
     private static async Task<(MemoryInstanceRepository Instances, Instance Instance)> TargetAsync()
     {
         var instances = new MemoryInstanceRepository();
@@ -177,6 +213,10 @@ public sealed class ModPackUserContentTests
             Task.FromResult(releases.FirstOrDefault(release => ModIds.Equals(release.ModId, id) && release.Version == version));
 
         public Task<ModVersionMetadata?> GetLatestReleaseAsync(string id, ReleaseChannel channel, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+
+        public Task<IReadOnlyList<ModMetadata>> GetAvailableAsync(CancellationToken cancellationToken = default) => throw new NotSupportedException();
+
+        public Task<IReadOnlyList<ModVersionMetadata>> GetReleaseHistoryAsync(string id, CancellationToken cancellationToken = default) => throw new NotSupportedException();
 
         public Task<IReadOnlyList<ModMetadata>> SearchAsync(ContentType type, string query, CancellationToken cancellationToken = default) => throw new NotSupportedException();
     }
