@@ -497,6 +497,7 @@ public partial class MainViewModel : ViewModelBase
         OnPropertyChanged(nameof(CanActOnSelectedContent));
         RefreshInstalledFlags();
         OnPropertyChanged(nameof(InstalledInText));
+        RefreshVehiclePreviewWhenTargetChanged();
 
         // the instance page shows fresh rows after a change; any other page
         // stays where the user is instead of jumping to that instance

@@ -527,13 +527,16 @@ public partial class MainViewModel
         AttachGitHubSession(previous, _services);
 
         // the preview of an open vehicle page uses the old preview service, which the old graph disposes
-        if (VehiclePreview is not null)
-            RefreshVehiclePreview();
-
+        ClearVehiclePreview();
         previous.Dispose();
         OnPropertyChanged(nameof(SelectedReleaseChannel));
         OnPropertyChanged(nameof(UseSharedModStore));
         await LoadAsync();
+
+        // the new graph can have other instances, so the preview is made again only after they are read
+        if (VehiclePreview is null)
+            RefreshVehiclePreview();
+
         await RefreshCompatibilityAsync();
     }
 }

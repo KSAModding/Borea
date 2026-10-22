@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using System.Globalization;
 using Borea.App.Localization;
 using Borea.App.ViewModels;
+using Borea.Core.Instances;
 using Borea.Core.Mods;
 using Borea.Core.Preview;
 using Borea.Preview.Loading;
@@ -192,6 +193,32 @@ public sealed class VehiclePreviewViewModelTests
     }
 
     [Fact]
+    public async Task AnInstallIntoTheTargetInstance_MakesThePreviewAgain_AndAReloadWithoutAChangeKeepsIt()
+    {
+        var service = new FakeVehiclePreview();
+        using var harness = await VehicleHarnessAsync();
+        var viewModel = harness.ViewModel;
+        viewModel.VehiclePreviewServiceOf = _ => service;
+        var instance = (await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value)).Instance;
+        await harness.Services.Instances.SetActiveInstanceAsync(instance.InstanceId);
+        await viewModel.LoadAsync();
+        await OpenRoverAsync(viewModel);
+        var first = viewModel.VehiclePreview!;
+
+        await viewModel.LoadAsync();
+        Assert.Same(first, viewModel.VehiclePreview);
+
+        var release = (await harness.Services.UserContent.GetReleaseAsync("ExampleRover", ModVersion.Parse("1.0.0")))!;
+        Assert.True((await harness.Services.UserContentInstaller.InstallAsync(instance.InstanceId, release, name: null)).IsDone);
+        await viewModel.LoadAsync();
+        await viewModel.WhenVehiclePreviewLoadedAsync();
+
+        Assert.NotSame(first, viewModel.VehiclePreview);
+        Assert.Null(first.Scene);
+        Assert.Equal([instance.InstanceId, instance.InstanceId], service.Targets);
+    }
+
+    [Fact]
     public async Task AServiceException_LeavesThePageUsable()
     {
         var service = new FakeVehiclePreview { PrepareFailure = new IOException("The disk is gone.") };
@@ -228,6 +255,7 @@ public sealed class VehiclePreviewViewModelTests
 internal sealed class FakeVehiclePreview : IVehiclePreview
 {
     private readonly ConcurrentQueue<ModVersionMetadata> _prepares = new();
+    private readonly ConcurrentQueue<Guid?> _targets = new();
     private readonly ConcurrentQueue<(bool FetchVehicle, bool FetchMods)> _loads = new();
     private readonly ConcurrentQueue<(ModVersion Release, CancellationToken Token)> _loadTokens = new();
 
@@ -242,6 +270,8 @@ internal sealed class FakeVehiclePreview : IVehiclePreview
 
     public IReadOnlyList<ModVersionMetadata> Prepares => [.. _prepares];
 
+    public IReadOnlyList<Guid?> Targets => [.. _targets];
+
     public IReadOnlyList<(bool FetchVehicle, bool FetchMods)> Loads => [.. _loads];
 
     public IReadOnlyList<(ModVersion Release, CancellationToken Token)> LoadTokens => [.. _loadTokens];
@@ -252,6 +282,7 @@ internal sealed class FakeVehiclePreview : IVehiclePreview
     public Task<VehiclePreviewPlan> PrepareAsync(ModVersionMetadata release, Guid? targetInstanceId, CancellationToken cancellationToken = default)
     {
         _prepares.Enqueue(release);
+        _targets.Enqueue(targetInstanceId);
         return PrepareFailure is { } failure
             ? Task.FromException<VehiclePreviewPlan>(failure)
             : Task.FromResult(new VehiclePreviewPlan(PlanState, release, targetInstanceId, release.Download.SizeBytes, Missing, "2026.10.19.5638"));

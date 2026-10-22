@@ -9,7 +9,9 @@ using Avalonia.Threading;
 using Avalonia.VisualTree;
 using Borea.App.Tests.ViewModels;
 using ContentPage = Borea.App.Views.Pages.ContentPage;
+using Borea.App.ViewModels;
 using Borea.App.Views.Preview;
+using Borea.Core.Preview;
 using Borea.Preview.Scene;
 using static Borea.App.Tests.ViewModels.UserContentViewModelTests;
 
@@ -101,6 +103,39 @@ public sealed class ContentPagePreviewTests
         Assert.True(seen.Offset, "The wheel over the panel must leave the page where it is.");
         Assert.True(seen.Before > 0);
         Assert.True(seen.After < seen.Before, $"The wheel over the description must scroll the page, but the offset stayed at {seen.After}.");
+    }
+
+    [Fact]
+    public async Task TheWheel_OverThePanelWithoutAScene_ScrollsThePage()
+    {
+        using var harness = await VehicleHarnessAsync();
+        harness.ViewModel.VehiclePreviewServiceOf = _ => new FakeVehiclePreview { PlanState = VehiclePreviewPlanState.NoGameFolder };
+        await VehiclePreviewViewModelTests.OpenRoverAsync(harness.ViewModel);
+        Assert.Equal(VehiclePreviewState.NoGameFolder, harness.ViewModel.VehiclePreview!.State);
+
+        var offsets = await HeadlessApp.RunAsync(harness, async () =>
+        {
+            var page = new ContentPage();
+            var window = new Window { Width = WindowWidth, Height = 700, DataContext = harness.ViewModel, Content = page };
+            window.Show();
+            page.UpdateLayout();
+            var view = page.GetVisualDescendants().OfType<VehiclePreviewView>().Single();
+            var scroller = view.GetVisualAncestors().OfType<ScrollViewer>().First();
+            scroller.Offset = new Vector(0, Math.Max(0, BoundsIn(window, view).Y - 40));
+            await HeadlessApp.FramesAsync(2);
+            var before = scroller.Offset.Y;
+
+            // a corner of the panel, away from the status text and the buttons in its middle
+            var area = BoundsIn(window, view);
+            window.MouseWheel(new Point(area.X + 20, area.Y + 20), new Vector(0, 1));
+            await HeadlessApp.FramesAsync(40);
+            var after = scroller.Offset.Y;
+            window.Close();
+            return (Before: before, After: after);
+        });
+
+        Assert.True(offsets.Before > 0);
+        Assert.True(offsets.After < offsets.Before, $"The wheel over the empty panel must scroll the page, but the offset stayed at {offsets.After}.");
     }
 
     /// <summary>The page of Example Rover, whose preview builds an empty scene that the test then replaces with boxes.</summary>

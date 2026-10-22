@@ -6,7 +6,6 @@ using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
-using Borea.App.Views.Preview;
 using Borea.Composition;
 using Borea.Core.Game;
 using Borea.Core.Index;
@@ -175,8 +174,23 @@ public partial class MainViewModel
     /// <summary>Gives the preview service of a service graph. Tests replace it with a fake.</summary>
     internal Func<BoreaServices, IVehiclePreview> VehiclePreviewServiceOf { get; set; } = services => services.VehiclePreview;
 
+    /// <summary>
+    /// Makes the scene builder of a new preview. Without an image decoder, PNG and JPEG textures show as flat colors,
+    /// so the App gives a builder that decodes them with Avalonia.
+    /// </summary>
+    internal Func<PreviewSceneBuilder> VehiclePreviewBuilderOf { get; set; } = () => new PreviewSceneBuilder(new PreviewTextureLoader(null));
+
+    /// <summary>The instance and its content that the open preview was made for, so a change to them makes it again.</summary>
+    private string? _vehiclePreviewTarget;
+
     /// <summary>Completes when the preview of the open vehicle page has prepared or built what it can without a click.</summary>
     internal Task WhenVehiclePreviewLoadedAsync() => VehiclePreview?.Loading ?? Task.CompletedTask;
+
+    /// <summary>
+    /// The instance whose files the preview reads. A page opened from an instance reads that instance, where the
+    /// vehicle can be installed, and any other page reads the active instance.
+    /// </summary>
+    private InstanceItem? VehiclePreviewTarget => (IsContentFromInstance ? CurrentReturnInstance : null) ?? ActiveInstance;
 
     /// <summary>
     /// Makes a new preview for the open vehicle page against the services that are current now, and disposes the
@@ -188,14 +202,34 @@ public partial class MainViewModel
         VehiclePreviewViewModel? next = null;
         if (_services is { } services && CurrentWindowContent && SelectedContent is { Type: ContentType.Vehicle } && LatestVersion is { } latest)
         {
-            var builder = new PreviewSceneBuilder(new PreviewTextureLoader(new AvaloniaRgbaImageDecoder()));
-            next = new VehiclePreviewViewModel(VehiclePreviewServiceOf(services), latest.Release, ActiveInstance?.InstanceId, Localization, SetMainWindowSettings, builder);
+            var target = VehiclePreviewTarget;
+            _vehiclePreviewTarget = TargetKey(target);
+            next = new VehiclePreviewViewModel(VehiclePreviewServiceOf(services), latest.Release, target?.InstanceId, Localization, SetMainWindowSettings, VehiclePreviewBuilderOf());
         }
 
         VehiclePreview = next;
         old?.Dispose();
         next?.Start();
     }
+
+    /// <summary>
+    /// Makes the preview again when its target instance is now another one or holds other mods or content, such as
+    /// after the player installed the vehicle or its mods. A preview that is busy keeps its work, so a running
+    /// download is not lost.
+    /// </summary>
+    private void RefreshVehiclePreviewWhenTargetChanged()
+    {
+        if (VehiclePreview is { IsBusy: false } && TargetKey(VehiclePreviewTarget) != _vehiclePreviewTarget)
+            RefreshVehiclePreview();
+    }
+
+    private static string? TargetKey(InstanceItem? instance) => instance is null
+        ? null
+        : string.Join('|', [
+            instance.InstanceId.ToString(),
+            .. instance.Mods.Select(mod => $"{mod.ModId}@{mod.Version}"),
+            .. instance.Content.Select(record => $"{record.ListingId}@{record.Metadata.Version}"),
+        ]);
 
     private void ClearVehiclePreview()
     {

@@ -68,9 +68,6 @@ public sealed class VehiclePreviewView : Control
     private int _generation;
     private CancellationTokenSource _cancellation = new();
 
-    // The wheel zooms the view, so a page that scrolls around it leaves the wheel to it.
-    public VehiclePreviewView() => SmoothScroll.SetOwnsWheel(this, true);
-
     static VehiclePreviewView()
     {
         AffectsRender<VehiclePreviewView>(BackgroundProperty);
@@ -96,6 +93,8 @@ public sealed class VehiclePreviewView : Control
     }
 
     internal float CameraDistance => _camera.Distance;
+
+    internal float CameraYaw => _camera.Yaw;
 
     internal int FramesShown { get; private set; }
 
@@ -133,14 +132,27 @@ public sealed class VehiclePreviewView : Control
         base.OnPropertyChanged(change);
         if (change.Property == SceneProperty)
         {
+            var old = change.GetOldValue<PreviewScene?>();
+            var scene = change.GetNewValue<PreviewScene?>();
+
+            // The wheel zooms only a scene, so without one a page that scrolls around the view gets the wheel.
+            SmoothScroll.SetOwnsWheel(this, scene is not null);
             StartGeneration();
-            ReleaseBitmap();
             ReleaseRenderState();
-            _dragScales.Reset();
-            _orbitX = 0;
-            _orbitY = 0;
-            _zoomSteps = 0;
-            RequestRender(full: true);
+
+            // A scene with the same bounds is the same vehicle with other materials, such as the textured scene
+            // that follows the flat one. It keeps the pose of the player and the frame that shows until its own
+            // frame is ready, so the view does not jump back or flash.
+            if (old is null || scene is null || old.Bounds != scene.Bounds)
+            {
+                ReleaseBitmap();
+                _dragScales.Reset();
+                _orbitX = 0;
+                _orbitY = 0;
+                _zoomSteps = 0;
+            }
+
+            RequestRender(full: _dragFrom is null);
         }
         else if (change.Property == ResetCountProperty)
         {
@@ -228,6 +240,9 @@ public sealed class VehiclePreviewView : Control
     protected override void OnPointerWheelChanged(PointerWheelEventArgs e)
     {
         base.OnPointerWheelChanged(e);
+        if (Scene is null)
+            return;
+
         _zoomSteps = Math.Clamp(_zoomSteps + (float)e.Delta.Y, MinZoomSteps, MaxZoomSteps);
         e.Handled = true;
         RequestRender(full: _dragFrom is null);

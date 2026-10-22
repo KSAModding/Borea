@@ -13,11 +13,14 @@ using Borea.App.Localization;
 using Borea.App.SingleInstance;
 using Borea.App.ViewModels;
 using Borea.App.Views;
+using Borea.App.Views.Preview;
 using Borea.Composition;
 using Borea.Core.Links;
 using Borea.Core.Logging;
 using Borea.Core.Preferences;
 using Borea.Core.Updates;
+using Borea.Preview.Loading;
+using Borea.Preview.Textures;
 using Borea.Storage.Updates;
 
 namespace Borea.App;
@@ -116,6 +119,7 @@ public partial class App : Application
                 LinkHandler = Services is null ? null : LinkHandler.ForThisProcess(),
                 EndApp = () => desktop.Shutdown(),
                 PendingHandover = _pendingHandover,
+                VehiclePreviewBuilderOf = () => new PreviewSceneBuilder(new PreviewTextureLoader(new AvaloniaRgbaImageDecoder())),
             };
             _viewModel = viewModel;
 
