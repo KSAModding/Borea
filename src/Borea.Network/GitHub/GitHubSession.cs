@@ -24,6 +24,9 @@ public sealed class GitHubSession : IGitHubSession
 
     private const string ApiHost = "api.github.com";
 
+    /// <summary>Serves the upload of a release asset, the one write that the API host does not take.</summary>
+    private const string UploadsHost = "uploads.github.com";
+
     private const string DeviceCodeGrantType = "urn:ietf:params:oauth:grant-type:device_code";
 
     private const string RefreshTokenGrantType = "refresh_token";
@@ -39,6 +42,7 @@ public sealed class GitHubSession : IGitHubSession
     private const int MaxFailedPolls = 3;
 
     private readonly HttpClient _http;
+    private readonly HttpClient _uploadHttp;
     private readonly string _clientId;
     private readonly string _slug;
     private readonly TimeProvider _time;
@@ -54,9 +58,11 @@ public sealed class GitHubSession : IGitHubSession
     private Task _secretWork = Task.CompletedTask;
 
     /// <param name="secrets">Keeps the refresh token between starts. Null keeps every session in memory only.</param>
-    public GitHubSession(HttpClient httpClient, string clientId, string slug, TimeProvider? time = null, ISecretStore? secrets = null)
+    /// <param name="uploadHttpClient">Sends to https://uploads.github.com, with a timeout that a large release asset needs. Null uses <paramref name="httpClient"/>.</param>
+    public GitHubSession(HttpClient httpClient, string clientId, string slug, TimeProvider? time = null, ISecretStore? secrets = null, HttpClient? uploadHttpClient = null)
     {
         _http = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
+        _uploadHttp = uploadHttpClient ?? httpClient;
         _clientId = clientId ?? throw new ArgumentNullException(nameof(clientId));
         _slug = slug ?? throw new ArgumentNullException(nameof(slug));
         _time = time ?? TimeProvider.System;
@@ -242,14 +248,15 @@ public sealed class GitHubSession : IGitHubSession
     {
         ArgumentNullException.ThrowIfNull(request);
         if (!IsApiUri(request.RequestUri))
-            throw new ArgumentException("The GitHub token goes only to https://api.github.com.", nameof(request));
+            throw new ArgumentException("The GitHub token goes only to https://api.github.com and https://uploads.github.com.", nameof(request));
 
         string token;
         lock (_gate)
             token = _token ?? throw new InvalidOperationException("Not signed in to GitHub.");
 
         AddApiHeaders(request, token);
-        var response = await _http.SendAsync(request, cancellationToken).ConfigureAwait(false);
+        var http = string.Equals(request.RequestUri!.Host, UploadsHost, StringComparison.OrdinalIgnoreCase) ? _uploadHttp : _http;
+        var response = await http.SendAsync(request, cancellationToken).ConfigureAwait(false);
 
         // A followed redirect drops the Authorization header, so only a 401 to the token itself counts.
         if (response.StatusCode == HttpStatusCode.Unauthorized && request.Headers.Authorization is not null)
@@ -615,7 +622,7 @@ public sealed class GitHubSession : IGitHubSession
         && uri.Scheme == Uri.UriSchemeHttps
         && uri.IsDefaultPort
         && uri.UserInfo.Length == 0
-        && string.Equals(uri.Host, ApiHost, StringComparison.OrdinalIgnoreCase);
+        && (string.Equals(uri.Host, ApiHost, StringComparison.OrdinalIgnoreCase) || string.Equals(uri.Host, UploadsHost, StringComparison.OrdinalIgnoreCase));
 
     private static void AddApiHeaders(HttpRequestMessage request, string token)
     {

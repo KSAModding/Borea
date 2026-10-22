@@ -1892,6 +1892,24 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string ListingShareHostNetwork => Resources.ListingShareHostNetwork;
 
+    public string ListingShareOwnHint => Resources.ListingShareOwnHint;
+
+    public string ListingShareOwnHeading => Resources.ListingShareOwnHeading;
+
+    public string ListingShareOwnDependenciesDiffer => Resources.ListingShareOwnDependenciesDiffer;
+
+    public string ListingShareOwnEditListing => Resources.ListingShareOwnEditListing;
+
+    public string ListingShareOwnOtherHost => Resources.ListingShareOwnOtherHost;
+
+    public string ListingShareOwnPublish => Resources.ListingShareOwnPublish;
+
+    public string ListingShareOwnMayNotCreate => Resources.ListingShareOwnMayNotCreate;
+
+    public string ListingShareOwnCreateRepository => Resources.ListingShareOwnCreateRepository;
+
+    public string ListingShareOwnAllowApp => Resources.ListingShareOwnAllowApp;
+
     public string ListingShareKindPart => Resources.ListingShareKindPart;
 
     public string ListingShareKindSubstance => Resources.ListingShareKindSubstance;
@@ -3117,6 +3135,21 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string FormatListingShareHostSaid(string host, string message)
         => string.Format(CultureInfo.CurrentCulture, Resources.ListingShareHostSaidFormat, host, message);
+
+    public string FormatListingShareOwnReleasing(string tag)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ListingShareOwnReleasingFormat, tag);
+
+    public string FormatListingShareOwnReleased(string tag, string repository)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ListingShareOwnReleasedFormat, tag, repository);
+
+    public string FormatListingShareOwnNextVersion(string tag, string repository)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ListingShareOwnNextVersionFormat, tag, repository);
+
+    public string FormatListingShareOwnAppNotOnRepository(string repository)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ListingShareOwnAppNotOnRepositoryFormat, repository);
+
+    public string FormatListingShareOwnRefused(string message)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ListingShareOwnRefusedFormat, message);
 
     public string FormatListingShareContentId(string kind, string id)
         => string.Format(CultureInfo.CurrentCulture, Resources.ListingShareContentIdFormat, kind, id);

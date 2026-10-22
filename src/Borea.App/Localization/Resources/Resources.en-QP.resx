@@ -2259,6 +2259,48 @@
   <data name="ListingShareHostSaidFormat" xml:space="preserve">
     <value>{0}: {1}</value>
   </data>
+  <data name="ListingShareOwnHint" xml:space="preserve">
+    <value>With a GitHub flag ye need no harbor. The Borea stows the chest as a release in the ksa-shares hold o' yer own ship, an' opens the pull request under yer own flag.</value>
+  </data>
+  <data name="ListingShareOwnHeading" xml:space="preserve">
+    <value>Sail from yer own GitHub flag</value>
+  </data>
+  <data name="ListingShareOwnPublish" xml:space="preserve">
+    <value>Set sail under me own GitHub flag</value>
+  </data>
+  <data name="ListingShareOwnReleasingFormat" xml:space="preserve">
+    <value>Rigging the release {0}...</value>
+  </data>
+  <data name="ListingShareOwnReleasedFormat" xml:space="preserve">
+    <value>{0} be a release o' {1}. The chart card below shows the pull request.</value>
+  </data>
+  <data name="ListingShareOwnNextVersionFormat" xml:space="preserve">
+    <value>{0} be a release o' {1}. The index adds it to the chart as its next voyage.</value>
+  </data>
+  <data name="ListingShareOwnMayNotCreate" xml:space="preserve">
+    <value>The Borea App may not build a hold on yer ship. First build the open hold ksa-shares on GitHub yerself. Then let Borea aboard it. On GitHub, pick Only select repositories an' then ksa-shares. Then share again.</value>
+  </data>
+  <data name="ListingShareOwnCreateRepository" xml:space="preserve">
+    <value>Build ksa-shares on GitHub</value>
+  </data>
+  <data name="ListingShareOwnAllowApp" xml:space="preserve">
+    <value>Let Borea aboard ksa-shares</value>
+  </data>
+  <data name="ListingShareOwnAppNotOnRepositoryFormat" xml:space="preserve">
+    <value>Let Borea aboard {0}. On GitHub, pick Only select repositories an' then {0}. Then share again.</value>
+  </data>
+  <data name="ListingShareOwnRefusedFormat" xml:space="preserve">
+    <value>GitHub turned the share away: {0}</value>
+  </data>
+  <data name="ListingShareOwnDependenciesDiffer" xml:space="preserve">
+    <value>The chart keeps its barrels, which differ from the list above. To change 'em, edit the chart.</value>
+  </data>
+  <data name="ListingShareOwnEditListing" xml:space="preserve">
+    <value>Edit the chart</value>
+  </data>
+  <data name="ListingShareOwnOtherHost" xml:space="preserve">
+    <value>This chart already names another harbor, so the Borea cannot sail it from ksa-shares.</value>
+  </data>
   <data name="ListingFixShareHost" xml:space="preserve">
     <value>The Borea cannot read the papers o' a harbor. The checks take a pull request from the GitHub flag ye linked at the harbor, or one the harbor opens fer ye.</value>
   </data>

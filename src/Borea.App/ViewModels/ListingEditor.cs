@@ -781,6 +781,7 @@ public sealed partial class ListingEditor : ObservableObject
         foreach (var row in DeclaredDependencies)
             row.RefreshText();
         OnPropertyChanged(nameof(CanPublish));
+        OnPropertyChanged(nameof(OffersOwnRepository));
         ScheduleOwnershipCheck();
     }
 

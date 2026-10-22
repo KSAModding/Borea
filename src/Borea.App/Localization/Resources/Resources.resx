@@ -3231,6 +3231,48 @@
   <data name="ListingShareHostSaidFormat" xml:space="preserve">
     <value>{0}: {1}</value>
   </data>
+  <data name="ListingShareOwnHint" xml:space="preserve">
+    <value>With a GitHub account you need no share host. Borea keeps the archive as a release in the repository ksa-shares of your account, and opens the listing pull request from your account.</value>
+  </data>
+  <data name="ListingShareOwnHeading" xml:space="preserve">
+    <value>Publish from your GitHub account</value>
+  </data>
+  <data name="ListingShareOwnPublish" xml:space="preserve">
+    <value>Publish from my GitHub account</value>
+  </data>
+  <data name="ListingShareOwnReleasingFormat" xml:space="preserve">
+    <value>Making the release {0}...</value>
+  </data>
+  <data name="ListingShareOwnReleasedFormat" xml:space="preserve">
+    <value>{0} is a release of {1}. The Listing file card below shows the pull request.</value>
+  </data>
+  <data name="ListingShareOwnNextVersionFormat" xml:space="preserve">
+    <value>{0} is a release of {1}. The index adds it to the listing as its next version.</value>
+  </data>
+  <data name="ListingShareOwnMayNotCreate" xml:space="preserve">
+    <value>The Borea App may not create a repository in your account. First create the public repository ksa-shares on GitHub. Then allow Borea on it. On GitHub, choose Only select repositories and pick ksa-shares. Then share again.</value>
+  </data>
+  <data name="ListingShareOwnCreateRepository" xml:space="preserve">
+    <value>Create ksa-shares on GitHub</value>
+  </data>
+  <data name="ListingShareOwnAllowApp" xml:space="preserve">
+    <value>Allow Borea on ksa-shares</value>
+  </data>
+  <data name="ListingShareOwnAppNotOnRepositoryFormat" xml:space="preserve">
+    <value>Allow Borea on {0}. On GitHub, choose Only select repositories and pick {0}. Then share again.</value>
+  </data>
+  <data name="ListingShareOwnRefusedFormat" xml:space="preserve">
+    <value>GitHub refused the share: {0}</value>
+  </data>
+  <data name="ListingShareOwnDependenciesDiffer" xml:space="preserve">
+    <value>The listing keeps its dependencies, which differ from the list above. To change them, edit the listing.</value>
+  </data>
+  <data name="ListingShareOwnEditListing" xml:space="preserve">
+    <value>Edit the listing</value>
+  </data>
+  <data name="ListingShareOwnOtherHost" xml:space="preserve">
+    <value>This listing already names another release host, so Borea cannot publish it from ksa-shares.</value>
+  </data>
   <data name="ListingShareContentIdFormat" xml:space="preserve">
     <value>{0} {1}</value>
   </data>

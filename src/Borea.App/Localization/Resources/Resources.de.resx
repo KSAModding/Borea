@@ -3231,6 +3231,48 @@
   <data name="ListingShareHostSaidFormat" xml:space="preserve">
     <value>{0}: {1}</value>
   </data>
+  <data name="ListingShareOwnHint" xml:space="preserve">
+    <value>Mit einem GitHub-Konto brauchst du keinen Share-Host. Borea legt das Archiv als Release im Repository ksa-shares deines Kontos ab und öffnet den Pull Request von deinem Konto aus.</value>
+  </data>
+  <data name="ListingShareOwnHeading" xml:space="preserve">
+    <value>Von deinem GitHub-Konto veröffentlichen</value>
+  </data>
+  <data name="ListingShareOwnPublish" xml:space="preserve">
+    <value>Von meinem GitHub-Konto veröffentlichen</value>
+  </data>
+  <data name="ListingShareOwnReleasingFormat" xml:space="preserve">
+    <value>Das Release {0} wird erstellt...</value>
+  </data>
+  <data name="ListingShareOwnReleasedFormat" xml:space="preserve">
+    <value>{0} ist ein Release von {1}. Die Karte Eintragsdatei unten zeigt den Pull Request.</value>
+  </data>
+  <data name="ListingShareOwnNextVersionFormat" xml:space="preserve">
+    <value>{0} ist ein Release von {1}. Der Index fügt es dem Eintrag als nächste Version hinzu.</value>
+  </data>
+  <data name="ListingShareOwnMayNotCreate" xml:space="preserve">
+    <value>Die Borea-App darf in deinem Konto kein Repository erstellen. Erstelle zuerst das öffentliche Repository ksa-shares auf GitHub. Erlaube Borea dann den Zugriff darauf. Wähle auf GitHub Only select repositories und dann ksa-shares. Teile danach erneut.</value>
+  </data>
+  <data name="ListingShareOwnCreateRepository" xml:space="preserve">
+    <value>ksa-shares auf GitHub erstellen</value>
+  </data>
+  <data name="ListingShareOwnAllowApp" xml:space="preserve">
+    <value>Borea für ksa-shares erlauben</value>
+  </data>
+  <data name="ListingShareOwnAppNotOnRepositoryFormat" xml:space="preserve">
+    <value>Erlaube Borea den Zugriff auf {0}. Wähle auf GitHub Only select repositories und dann {0}. Teile danach erneut.</value>
+  </data>
+  <data name="ListingShareOwnRefusedFormat" xml:space="preserve">
+    <value>GitHub hat das Teilen abgelehnt: {0}</value>
+  </data>
+  <data name="ListingShareOwnDependenciesDiffer" xml:space="preserve">
+    <value>Der Eintrag behält seine Abhängigkeiten, die sich von der Liste oben unterscheiden. Um sie zu ändern, bearbeite den Eintrag.</value>
+  </data>
+  <data name="ListingShareOwnEditListing" xml:space="preserve">
+    <value>Eintrag bearbeiten</value>
+  </data>
+  <data name="ListingShareOwnOtherHost" xml:space="preserve">
+    <value>Dieser Eintrag nennt schon einen anderen Release-Host, also kann Borea ihn nicht aus ksa-shares veröffentlichen.</value>
+  </data>
   <data name="ListingShareContentIdFormat" xml:space="preserve">
     <value>{0} {1}</value>
   </data>

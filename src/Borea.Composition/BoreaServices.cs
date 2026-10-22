@@ -268,6 +268,9 @@ public sealed class BoreaServices : IDisposable
     /// <summary>Signs in to a share host, and uploads and publishes a vehicle or a save there.</summary>
     public required IShareHostClient ShareHostClient { get; init; }
 
+    /// <summary>The repository of the signed-in GitHub account that holds the player's own shares.</summary>
+    public required IShareRepository ShareRepository { get; init; }
+
     /// <summary>Opens and follows the listing pull request from the signed-in account.</summary>
     public required IListingPublisher ListingPublisher { get; init; }
 
@@ -315,14 +318,15 @@ public sealed class BoreaServices : IDisposable
         BuildGitHubHttpClient(),
         BoreaGitHubApp.ClientId,
         BoreaGitHubApp.Slug,
-        secrets: SecretStores.ForCurrentUser(new GamePathProvider(gameDirectory: null))));
+        secrets: SecretStores.ForCurrentUser(new GamePathProvider(gameDirectory: null)),
+        uploadHttpClient: BuildUploadHttpClient()));
 
     /// <summary>
     /// The share host sessions of this process, which keep a sign-in like <see cref="ProcessGitHub"/>. The client does not
     /// follow redirects, which would drop the token, and gives an upload of a large save more time than a page load.
     /// </summary>
     private static readonly Lazy<ShareHostClient> ProcessShareHosts = new(() => new ShareHostClient(
-        BuildShareHostHttpClient(),
+        BuildUploadHttpClient(),
         secrets: SecretStores.ForCurrentUser(new GamePathProvider(gameDirectory: null))));
 
     private BoreaServices(HttpClient http)
@@ -383,6 +387,7 @@ public sealed class BoreaServices : IDisposable
     /// <param name="wrapInstallPlanner">Wraps the planner that every service of the graph plans with. Null uses it as it is.</param>
     /// <param name="listingImageHandler">Fetches the images that the listing editor measures. Null fetches them from the author hosts.</param>
     /// <param name="shareHostClient">Signs in and uploads to a share host. Null builds one that keeps no sign-in.</param>
+    /// <param name="shareRepository">Shares into the player's own GitHub repository. Null builds one on the GitHub session.</param>
     internal static Task<BoreaServices> BuildAsync(
         string? boreaRoot,
         HttpMessageHandler httpHandler,
@@ -412,12 +417,13 @@ public sealed class BoreaServices : IDisposable
         ILoaderConfigurator? loaderConfigurator = null,
         Func<IInstallPlanner, IInstallPlanner>? wrapInstallPlanner = null,
         HttpMessageHandler? listingImageHandler = null,
-        IShareHostClient? shareHostClient = null)
+        IShareHostClient? shareHostClient = null,
+        IShareRepository? shareRepository = null)
     {
         ArgumentNullException.ThrowIfNull(httpHandler);
         ArgumentNullException.ThrowIfNull(fallbackRepository);
         ArgumentNullException.ThrowIfNull(installCandidates);
-        return BuildCoreAsync(boreaRoot, BoreaLogSource.App, httpHandler, fallbackRepository, installCandidates, new RunningLaunches(), cancellationToken, processStarter, images, sharedProfileRoot, isGameProcessRunning, isOtherBoreaRunning, gitHub, listingPublisher, releaseCheck, selfUpdater, indexStatusEditor, stewardQueue, watcherIssues, pullRequestReviews, pullRequestActions, indexReports, reportActions, releaseAmendments, gamePlatform, loaderLauncher, sharedProfileLauncher, loaderConfigurator, wrapInstallPlanner, listingImageHandler, shareHostClient);
+        return BuildCoreAsync(boreaRoot, BoreaLogSource.App, httpHandler, fallbackRepository, installCandidates, new RunningLaunches(), cancellationToken, processStarter, images, sharedProfileRoot, isGameProcessRunning, isOtherBoreaRunning, gitHub, listingPublisher, releaseCheck, selfUpdater, indexStatusEditor, stewardQueue, watcherIssues, pullRequestReviews, pullRequestActions, indexReports, reportActions, releaseAmendments, gamePlatform, loaderLauncher, sharedProfileLauncher, loaderConfigurator, wrapInstallPlanner, listingImageHandler, shareHostClient, shareRepository);
     }
 
     private static async Task<BoreaServices> BuildCoreAsync(
@@ -451,7 +457,8 @@ public sealed class BoreaServices : IDisposable
         ILoaderConfigurator? loaderConfigurator = null,
         Func<IInstallPlanner, IInstallPlanner>? wrapInstallPlanner = null,
         HttpMessageHandler? listingImageHandler = null,
-        IShareHostClient? shareHostClient = null)
+        IShareHostClient? shareHostClient = null,
+        IShareRepository? shareRepository = null)
     {
         // the settings file lives under Borea's own root and needs no
         // game path to be found, so a provider without one reads it.
@@ -620,6 +627,7 @@ public sealed class BoreaServices : IDisposable
             ListingValidator = new ListingValidator(new ListingSchemaStore(listedDocuments, paths)),
             ShareHosts = new ShareHostStore(listedDocuments, paths),
             ShareHostClient = shareHostClient ?? new ShareHostClient(http),
+            ShareRepository = shareRepository ?? new GitHubShareRepository(gitHubSession, http),
             ListingPublisher = new LoggingListingPublisher(listingPublisher ?? new ListingPublisher(gitHubSession, http, listingFormat), log),
             ListingOwnership = listingOwnership,
             StewardRole = stewardRole,
@@ -653,7 +661,8 @@ public sealed class BoreaServices : IDisposable
     internal static HttpClient BuildGitHubHttpClient()
         => BuildHttpClient(new SocketsHttpHandler { PooledConnectionLifetime = ConnectionLifetime, AllowAutoRedirect = false });
 
-    private static HttpClient BuildShareHostHttpClient()
+    /// <summary>Like <see cref="BuildGitHubHttpClient"/>, with time for the upload of a large archive.</summary>
+    private static HttpClient BuildUploadHttpClient()
     {
         var http = BuildHttpClient(new SocketsHttpHandler { PooledConnectionLifetime = ConnectionLifetime, AllowAutoRedirect = false });
         http.Timeout = TimeSpan.FromMinutes(30);
