@@ -148,6 +148,59 @@ public sealed class TexturedRenderTests
         Assert.InRange(mirrored1 - plain1, -1, 1);
     }
 
+    [Fact]
+    public void WithoutSun_AHighFaceTowardVehiclePlusX_IsBrighterThanOneTowardMinusX()
+    {
+        // Each face is seen from 60 degrees on its own side, so the two views are mirror images of each other.
+        var material = new PreviewMaterial(Vector3.Zero, Solid(128, 128, 128), null, false);
+        var options = new RenderOptions { SunIntensity = 0f, Quality = RenderQuality.High };
+        var up = Pixel(RenderFaceAlongX(material, options, 1f), Center, Center);
+        var down = Pixel(RenderFaceAlongX(material, options, -1f), Center, Center);
+
+        Assert.True(up.R > down.R + 10, $"the face toward +X gives {up.R} and the face toward -X gives {down.R}");
+    }
+
+    [Fact]
+    public void ARoughMidGray_LitAt45Degrees_LooksTheSameInHighAndStandard()
+    {
+        var material = new PreviewMaterial(Vector3.Zero, Solid(128, 128, 128), Solid(255, 255, 0), false);
+        var standard = new RenderOptions { SunDirection = Vector3.Normalize(new Vector3(1f, 0f, 1f)) };
+        var high = Pixel(RenderQuad(material, standard with { Quality = RenderQuality.High }), Center, Center);
+        var low = Pixel(RenderQuad(material, standard), Center, Center);
+
+        Assert.InRange(high.R - low.R, -6, 6);
+    }
+
+    [Fact]
+    public void ASmoothMetal_LitAt45Degrees_IsBrighterInHighThanInStandard()
+    {
+        // At 45 degrees the sun highlight of a smooth face misses the viewer, so only the ambient lights it.
+        var material = new PreviewMaterial(Vector3.Zero, Solid(200, 200, 200), Solid(255, 0, 255), false);
+        var standard = new RenderOptions { SunDirection = Vector3.Normalize(new Vector3(1f, 0f, 1f)) };
+        var high = Pixel(RenderQuad(material, standard with { Quality = RenderQuality.High }), Center, Center);
+        var low = Pixel(RenderQuad(material, standard), Center, Center);
+
+        Assert.True(high.R > low.R + 4, $"High gives {high.R} and Standard gives {low.R}");
+    }
+
+    /// <summary>
+    /// Renders a square of 2 m in the vehicle plane x = 0 whose front face and normals point along
+    /// <paramref name="side"/> times vehicle +X, seen from 60 degrees above that side.
+    /// </summary>
+    private static FrameBuffer RenderFaceAlongX(PreviewMaterial material, RenderOptions options, float side)
+    {
+        var mesh = new PreviewMesh(
+            [0, -1, -1, 0, side, -side, 0, 1, 1, 0, -side, side],
+            [side, 0, 0, side, 0, 0, side, 0, 0, side, 0, 0],
+            [0, 0, 1, 0, 1, 1, 0, 1],
+            [0, 1, 2, 0, 2, 3]);
+        var scene = new PreviewScene([new PreviewDraw(mesh, material, Matrix4x4.Identity)], []);
+        var camera = new OrbitCamera();
+        camera.Frame(scene.Bounds, 1f);
+        camera.Orbit(0f, (side * 60f - 15f) * MathF.PI / 180f / OrbitCamera.RadiansPerPixel);
+        return Render(scene, camera, Size, Size, options);
+    }
+
     /// <summary>
     /// Renders a square that faces the camera and fills the square frame exactly, with v = 0 at its top
     /// edge and u = 0 at its left edge. Its transform is the inverse of the view, so it is built in camera

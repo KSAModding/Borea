@@ -62,6 +62,13 @@ public sealed record RenderOptions
     public float Exposure { get; init; } = 1.15f;
 
     /// <summary>
+    /// The factor on <see cref="SunIntensity"/> for a <see cref="RenderQuality.High"/> frame. The PBR model of the
+    /// game divides the diffuse by pi and the Standard quality does not, so a factor of about pi makes the sun of
+    /// both qualities equally bright on a rough face.
+    /// </summary>
+    public float HighSunScale { get; init; } = MathF.PI;
+
+    /// <summary>
     /// The most bytes of vehicle frame positions and normals that one <see cref="SoftwareRenderer"/> keeps
     /// for its scene, 96 MiB. A draw that does not fit is transformed again on each frame.
     /// </summary>

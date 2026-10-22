@@ -9,7 +9,8 @@ namespace Borea.Preview.Rendering;
 /// form of the game shader ThumbnailMesh.frag: a linear diffuse from the texture or the base color, a
 /// Lambert sun with a Blinn-Phong highlight from roughness and metalness, an ambient that the ambient
 /// occlusion scales, a Reinhard tone map and an sRGB output. There is no emissive, and only
-/// <see cref="RenderQuality.High"/> applies the normal maps. The frame is the same byte for byte for any
+/// <see cref="RenderQuality.High"/> applies the normal maps and the PBR light of the game with a sky and
+/// ground ambient. The frame is the same byte for byte for any
 /// worker count, because each pixel row belongs to exactly one band and every band fills its triangles in scene order with math that does not depend on the band.
 /// One instance keeps the vertices of each draw in the vehicle frame while the scene stays the same, and it
 /// keeps its triangle, band and scratch buffers from frame to frame up to <see cref="RenderOptions.WorkBufferBytes"/>,
@@ -57,6 +58,11 @@ public sealed class SoftwareRenderer
 
     /// <summary>The steps of the linear to sRGB table, fine enough that a step is below 0.25 of one byte also near black.</summary>
     private const int SrgbTableSteps = 16384;
+
+    // The linear ambient light from vehicle +X, which is up, and from vehicle -X, which is down. The game takes its
+    // ambient from runtime data, so these two colors are Borea's choice.
+    private static readonly Vector3 SkyColor = new(0.27f, 0.28f, 0.31f);
+    private static readonly Vector3 GroundColor = new(0.15f, 0.14f, 0.13f);
 
     /// <summary>The linear color of every placeholder, an orange that no stock part has.</summary>
     private static readonly Vector3 PlaceholderColor = new(1f, 0.42f, 0f);
@@ -861,6 +867,93 @@ public sealed class SoftwareRenderer
     }
 
     /// <summary>
+    /// The linear color of a surface point at the High quality, with <paramref name="toEye"/> the unit vector
+    /// from the point toward the eye. The sun is getPBRLightingDirect of the game shader Common/Lighting.glsl,
+    /// a Cook-Torrance term with D_GGX, G_SchlicksmithGGX and F_Schlick, and the ambient has the form of
+    /// getPBRLightingAmbient there, with F_SchlickR at the view angle, a diffuse ambient along the normal and a
+    /// reflection along reflect(-V, N) that the roughness mixes toward the diffuse ambient. The ambient
+    /// occlusion scales all of the ambient and none of the sun, as in that function and in ThumbnailMesh.frag.
+    /// </summary>
+    /// <remarks>
+    /// The light that the game puts into that form is runtime and GPU data, because GetAmbient and
+    /// GetSkyColorFromLuts read the atmosphere LUTs of the current planet, the stars come from a prefiltered
+    /// cubemap, and the split sum comes from the Brdf.dds texture (GlobalShaderBindings sets BrdfHandle from the
+    /// "Brdf" texture). So the
+    /// sky and ground colors of the hemisphere are Borea's choice, and the Karis EnvBRDFApprox fit takes the
+    /// place of Brdf.dds. The hemisphere mixes <see cref="GroundColor"/> into <see cref="SkyColor"/>
+    /// by 0.5 + 0.5 * dot(dir, up), where getPBRLightingAmbient only darkens the ambient by 0.5 + 0.5 *
+    /// saturate(dot(N, up)), so the bottom of a vehicle gets the ground color. The constants of the thumbnail
+    /// pass are not copied either. Its flat ambient of 0.03 in ThumbnailMesh.frag and the sun that
+    /// Program.UpdateShaderData sets from Universe.SunlightColor go with the tone map and the exposure of the
+    /// game, and with the Reinhard tone map and the exposure here they clip lit paint and make the step from
+    /// the Standard quality visible. D_GGX uses roughness squared as its alpha, and the floor
+    /// <see cref="MinAlpha"/> is Borea's, because a fully smooth surface would otherwise divide by zero.
+    /// </remarks>
+    private static Vector3 LightHigh(Vector3 albedo, float ambientOcclusion, float roughness, float metalness, Vector3 normal, Vector3 toEye, FrameSetup frame)
+    {
+        var f0 = Vector3.Lerp(new Vector3(DielectricF0), albedo, metalness);
+        var nDotV = Math.Clamp(Vector3.Dot(normal, toEye), 0f, 1f);
+
+        // F_SchlickR and the ambient of getPBRLightingAmbient.
+        var grazing = Pow5(1f - nDotV);
+        var fresnelAmbient = f0 + (Vector3.Max(new Vector3(1f - roughness), f0) - f0) * grazing;
+        var diffuseAmbient = Hemisphere(normal, frame);
+        var reflected = 2f * Vector3.Dot(normal, toEye) * normal - toEye;
+        var prefiltered = Vector3.Lerp(Hemisphere(reflected, frame), diffuseAmbient, roughness);
+        var (scale, bias) = EnvBrdfApprox(nDotV, roughness);
+        var color = ((Vector3.One - fresnelAmbient) * (1f - metalness) * diffuseAmbient * albedo + prefiltered * (fresnelAmbient * scale + new Vector3(bias))) * ambientOcclusion;
+
+        var nDotL = Math.Clamp(Vector3.Dot(normal, frame.Sun), 0f, 1f);
+        if (nDotL > 0f)
+        {
+            // getPBRLightingDirect.
+            var half = Normalized(toEye + frame.Sun);
+            var nDotH = Math.Clamp(Vector3.Dot(normal, half), 0f, 1f);
+            var hDotV = Math.Clamp(Vector3.Dot(half, toEye), 0f, 1f);
+
+            var alpha = MathF.Max(roughness * roughness, MinAlpha);
+            var alpha2 = alpha * alpha;
+            var denominator = nDotH * nDotH * (alpha2 - 1f) + 1f;
+            var distribution = alpha2 / (MathF.PI * denominator * denominator);
+
+            var r = roughness + 1f;
+            var k = r * r / 8f;
+            var geometry = nDotL / (nDotL * (1f - k) + k) * (nDotV / (nDotV * (1f - k) + k));
+
+            var fresnel = f0 + (Vector3.One - f0) * Pow5(1f - hDotV);
+            var specular = fresnel * (distribution * geometry / (4f * nDotL * nDotV + 0.001f));
+            var diffuse = (Vector3.One - fresnel) * (1f - metalness) * albedo / MathF.PI;
+            color += (diffuse + specular) * (nDotL * frame.HighSun);
+        }
+
+        return color;
+    }
+
+    /// <summary>The ambient light from <paramref name="direction"/>, the ground color below and the sky color above.</summary>
+    private static Vector3 Hemisphere(Vector3 direction, FrameSetup frame) =>
+        Vector3.Lerp(GroundColor, SkyColor, Math.Clamp(0.5f + 0.5f * Vector3.Dot(direction, frame.Up), 0f, 1f));
+
+    /// <summary>
+    /// The split sum scale and bias of the Karis EnvBRDFApprox fit, which stands in for the Brdf.dds lookup of
+    /// getPBRLightingAmbient at the same coordinates, the view angle and the roughness.
+    /// </summary>
+    private static (float Scale, float Bias) EnvBrdfApprox(float nDotV, float roughness)
+    {
+        var r0 = roughness * -1f + 1f;
+        var r1 = roughness * -0.0275f + 0.0425f;
+        var r2 = roughness * -0.572f + 1.04f;
+        var r3 = roughness * 0.022f - 0.04f;
+        var a004 = MathF.Min(r0 * r0, float.Exp2(-9.28f * nDotV)) * r0 + r1;
+        return (-1.04f * a004 + r2, 1.04f * a004 + r3);
+    }
+
+    private static float Pow5(float value)
+    {
+        var square = value * value;
+        return square * square * value;
+    }
+
+    /// <summary>
     /// The Reinhard tone map of tonemapReinhardSimple in the game shader Tonemapping.glsl, then the sRGB
     /// encoding through a table.
     /// </summary>
@@ -1224,6 +1317,7 @@ public sealed class SoftwareRenderer
     /// of the triangle crossed with the interpolated normal of the pixel. The net mapping is red along +grad(u)
     /// and green along -grad(v), which is image up, for the reason that <see cref="SurfaceAxes"/> gives. The
     /// plain normal stays when the surface has no normal map or the UVs of the triangle give no direction.
+    /// <see cref="LightHigh"/> then lights the pixel with the view direction of its own pixel ray.
     /// </summary>
     private static Rgba8 ShadePixelHigh(in ScreenTriangle t, in DrawJob job, in SurfaceAxes axes, int x, int y, FrameSetup frame)
     {
@@ -1274,7 +1368,10 @@ public sealed class SoftwareRenderer
             (ambientOcclusion, roughness, metalness) = (data.X, data.Y, data.Z);
         }
 
-        return Encode(Light(albedo, ambientOcclusion, roughness, metalness, normal, frame), frame, 255);
+        // The unit vector from the surface point toward the eye is the pixel ray turned around, which goes
+        // through the pixel center at a depth of one meter in front of the camera.
+        var toEye = Normalized(new Vector3((1f - 2f * (x + 0.5f) / frame.Width) / frame.ProjectionX, (2f * (y + 0.5f) / frame.Height - 1f) / frame.ProjectionY, 1f));
+        return Encode(LightHigh(albedo, ambientOcclusion, roughness, metalness, normal, toEye, frame), frame, 255);
     }
 
     private static void Write(byte[] rgba, int pixel, Rgba8 color)
@@ -1470,6 +1567,8 @@ public sealed class SoftwareRenderer
             SunIntensity = options.SunIntensity;
             Ambient = options.Ambient;
             Exposure = float.IsFinite(options.Exposure) && options.Exposure > 0f ? options.Exposure : 1f;
+            Up = Normalized(Vector3.TransformNormal(Vector3.UnitX, view)) is var up && up != Vector3.Zero ? up : Vector3.UnitY;
+            HighSun = options.SunIntensity * options.HighSunScale;
         }
 
         public Matrix4x4 View { get; }
@@ -1503,6 +1602,12 @@ public sealed class SoftwareRenderer
         public float Ambient { get; }
 
         public float Exposure { get; }
+
+        /// <summary>The unit vector of vehicle +X in camera space, which is up for the hemisphere ambient of the High quality.</summary>
+        public Vector3 Up { get; }
+
+        /// <summary>The sun light of the High quality, <see cref="RenderOptions.SunIntensity"/> times <see cref="RenderOptions.HighSunScale"/>.</summary>
+        public float HighSun { get; }
     }
 
     /// <summary>
