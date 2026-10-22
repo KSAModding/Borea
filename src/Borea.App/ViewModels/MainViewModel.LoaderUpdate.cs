@@ -206,8 +206,8 @@ public partial class MainViewModel
     }
 
     /// <summary>
-    /// Installs <paramref name="release"/> over the recorded loader, as the usual
-    /// loader install task. False when it did not install.
+    /// Installs <paramref name="release"/> beside the installed versions of the loader,
+    /// as the usual loader install task. False when it did not install.
     /// </summary>
     internal async Task<bool> UpdateLoaderToAsync(string loaderId, ModVersionMetadata release)
     {
@@ -218,15 +218,18 @@ public partial class MainViewModel
         {
             SetupError = Localization.LoaderUpdateGameRunning;
 
-            // the open prompt shows the error itself
-            if (!IsLoaderPromptOpen)
+            // an open modal shows the error itself
+            if (!IsLoaderPromptOpen && !IsLoaderSettingModalOpen)
                 ShowErrorToast(() => Localization.LoaderUpdateGameRunning);
             return false;
         }
 
         await RunSetupAsync(current => InstallLoaderReleaseAsync(current, loaderId, release, directory: string.Empty));
+
+        // the version goes beside the others, and the record moves to it only by the record rule, so the store says whether it is there
         return SetupError is null
-            && _services?.Settings.LoaderInstallations.FirstOrDefault(entry => ModIds.Equals(entry.Key, loaderId)).Value?.Version == release.Version;
+            && _services is { } installed
+            && InstalledLoaderVersion.Find(await installed.LoaderVersions.ListAsync(), loaderId, release.Version) is not null;
     }
 
     /// <summary>

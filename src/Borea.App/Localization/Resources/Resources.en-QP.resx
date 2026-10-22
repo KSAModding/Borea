@@ -1116,6 +1116,9 @@
   <data name="ToastLaunchArgumentsFailedFormat" xml:space="preserve">
     <value>Couldn't stow the orders fer settin' sail o' {0}</value>
   </data>
+  <data name="ToastInstanceLoaderFailedFormat" xml:space="preserve">
+    <value>Couldn't bottle up the mod loader o' {0}</value>
+  </data>
   <data name="ToastEnableFailedFormat" xml:space="preserve">
     <value>Couldn't bring {0} back from the island</value>
   </data>
@@ -2378,6 +2381,45 @@
   </data>
   <data name="InstanceLoaderIncompatibleFormat" xml:space="preserve">
     <value>{0}, not fit fer this KSA build</value>
+  </data>
+  <data name="InstanceLoaderChange" xml:space="preserve">
+    <value>Swap</value>
+  </data>
+  <data name="InstanceLoaderInfo" xml:space="preserve">
+    <value>The mod loader hoists the game with the mods o' this crew. Automatic hoists the newest stowed version that fits the game an' the mods. A nailed-down version stays put till ye change it, even when a newer one fits.</value>
+  </data>
+  <data name="InstanceLoaderAutomaticFormat" xml:space="preserve">
+    <value>Automatic: {0}</value>
+  </data>
+  <data name="InstanceLoaderPinnedFormat" xml:space="preserve">
+    <value>Nailed down at {0}</value>
+  </data>
+  <data name="InstanceLoaderInstallFormat" xml:space="preserve">
+    <value>Haul aboard {0}</value>
+  </data>
+  <data name="InstanceLoaderModalHintFormat" xml:space="preserve">
+    <value>Pick which version o' the mod loader hoists {0}. Other crews keep their own say.</value>
+  </data>
+  <data name="InstanceLoaderAutomatic" xml:space="preserve">
+    <value>Automatic (the wise choice)</value>
+  </data>
+  <data name="InstanceLoaderAutomaticTargetFormat" xml:space="preserve">
+    <value>Hoists {0} {1}, the newest stowed version that fits the game an' the mods.</value>
+  </data>
+  <data name="InstanceLoaderAutomaticNotInstalledFormat" xml:space="preserve">
+    <value>{0} {1} fits the game an' the mods, but it ain't aboard. Borea hauls it aboard when ye bottle up.</value>
+  </data>
+  <data name="InstanceLoaderAutomaticNoneFormat" xml:space="preserve">
+    <value>No release o' {0} fits this game build an' the mods.</value>
+  </data>
+  <data name="InstanceLoaderPinChoice" xml:space="preserve">
+    <value>Always sail with this version</value>
+  </data>
+  <data name="InstanceLoaderSaveAndInstall" xml:space="preserve">
+    <value>Haul aboard an' bottle up</value>
+  </data>
+  <data name="InstanceLoaderMenu" xml:space="preserve">
+    <value>Mod loader</value>
   </data>
   <data name="SetupLoaderInstalledUnknownVersion" xml:space="preserve">
     <value>Hauled aboard, version a dead man's tale</value>

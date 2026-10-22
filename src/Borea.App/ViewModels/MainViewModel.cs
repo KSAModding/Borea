@@ -929,6 +929,7 @@ public partial class MainViewModel : ViewModelBase
             category.RefreshText();
         RefreshContentGroups();
         RefreshInstanceLoader();
+        RefreshLoaderSettingText();
         RefreshModListText();
         foreach (var item in ManualInstallItems)
             item.RefreshText();
@@ -1134,6 +1135,9 @@ public sealed partial class InstanceItem : ObservableObject
 
     [RelayCommand]
     private void BeginEditLaunchArguments() => _owner.BeginEditLaunchArguments(this);
+
+    [RelayCommand]
+    private Task BeginEditLoaderSettingAsync() => _owner.BeginEditLoaderSettingAsync(this);
 
     [RelayCommand]
     private void OpenFolder() => _owner.OpenInstanceFolder(InstanceId);
