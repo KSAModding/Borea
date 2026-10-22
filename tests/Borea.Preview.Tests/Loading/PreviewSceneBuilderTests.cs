@@ -65,8 +65,11 @@ public sealed class PreviewSceneBuilderTests
         var source = Source();
         var geometry = await builder.BuildGeometryAsync(vehicle, source, exact, CancellationToken.None);
 
-        var (scene, notices) = await builder.AddTexturesAsync(geometry.Scene, vehicle, source, exact, CancellationToken.None);
-        var roomy = await builder.AddTexturesAsync(geometry.Scene, vehicle, source, exact with { MaxRgbaBytes = 3 * level }, CancellationToken.None);
+        var (textured, notices) = await builder.AddTexturesAsync(geometry.Scene, vehicle, source, exact, CancellationToken.None);
+        var scene = await builder.AddNormalsAsync(textured, vehicle, source, exact, CancellationToken.None);
+        var roomyOptions = exact with { MaxRgbaBytes = 3 * level };
+        var roomy = await builder.AddTexturesAsync(geometry.Scene, vehicle, source, roomyOptions, CancellationToken.None);
+        var roomyScene = await builder.AddNormalsAsync(roomy.Scene, vehicle, source, roomyOptions, CancellationToken.None);
 
         Assert.Empty(notices);
         var material = Assert.Single(scene.Draws).Material;
@@ -74,7 +77,8 @@ public sealed class PreviewSceneBuilderTests
         Assert.NotNull(material.AoRoughMetal);
         Assert.Null(material.Normal);
         Assert.Empty(roomy.Notices);
-        Assert.NotNull(Assert.Single(roomy.Scene.Draws).Material.Normal);
+        Assert.Null(Assert.Single(roomy.Scene.Draws).Material.Normal);
+        Assert.NotNull(Assert.Single(roomyScene.Draws).Material.Normal);
     }
 
     [Fact]
@@ -85,9 +89,11 @@ public sealed class PreviewSceneBuilderTests
         var source = Source();
         var geometry = await builder.BuildGeometryAsync(vehicle, source, Options, CancellationToken.None);
 
-        var (scene, notices) = await builder.AddTexturesAsync(geometry.Scene, vehicle, source, Options, CancellationToken.None);
+        var (textured, notices) = await builder.AddTexturesAsync(geometry.Scene, vehicle, source, Options, CancellationToken.None);
+        var scene = await builder.AddNormalsAsync(textured, vehicle, source, Options, CancellationToken.None);
 
         Assert.Empty(notices);
+        Assert.Same(textured, scene);
         var material = Assert.Single(scene.Draws).Material;
         Assert.NotNull(material.Diffuse);
         Assert.Null(material.Normal);
