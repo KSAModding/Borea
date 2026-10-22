@@ -60,8 +60,8 @@ public interface ILoaderConfigurator
     /// that exists, because the loader would refuse that value anyway. In every
     /// other case it does what <see cref="RefreshForWineAsync"/> does. Returns
     /// the file it wrote, or null when it wrote nothing, which is always so for
-    /// a listing without a game path key, a format it cannot write and a
-    /// directory that is not absolute.
+    /// a listing without a game path key, a format it cannot write, a
+    /// directory that is not absolute and a loader folder that is not there.
     /// </summary>
     /// <exception cref="ArgumentException">The listing is not a mod loader.</exception>
     /// <exception cref="InvalidOperationException">

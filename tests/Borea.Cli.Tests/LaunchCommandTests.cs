@@ -570,6 +570,24 @@ public sealed class LaunchCommandTests : IDisposable
     }
 
     [Fact]
+    public async Task Launch_RecordedFolderWasDeleted_ReportsItAndMakesNoFolder()
+    {
+        _host.Mods.Listings.Add(LoaderFixtures.Listing());
+        var loaderDirectory = LoaderCommandTests.CreateLoaderDirectory("StarMap", "not a program", _host.Root);
+        await _host.RunAsync("settings", "set", "game", Directory.CreateDirectory(Path.Combine(_host.Root, "Game")).FullName);
+        await _host.RunAsync("settings", "set", "loader", "StarMap", loaderDirectory);
+        await _host.RunAsync("instance", "create", "Flight Test");
+        Directory.Delete(loaderDirectory, recursive: true);
+
+        var run = await _host.RunAsync("launch", "Flight Test", "StarMap");
+
+        Assert.Equal(1, run.ExitCode);
+        Assert.Contains($"The folder '{loaderDirectory}' of StarMap is not there.", run.Error);
+        Assert.False(Directory.Exists(loaderDirectory));
+        Assert.Empty(_host.ProcessStarter.Plans);
+    }
+
+    [Fact]
     public async Task Launch_PinnedVersionBesideTheRecordedOne_StartsThePinnedFolder()
     {
         _host.Mods.Listings.Add(LoaderFixtures.Listing());
