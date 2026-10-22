@@ -180,6 +180,7 @@ public sealed partial class ToastItem : ObservableObject
         TaskKind.LibraryFolderChange => Localization.FormatToastLibraryFolderChanged(Subject),
         TaskKind.BackupRestore => Localization.FormatToastBackupRestored(Subject, InstanceName),
         TaskKind.BackupDelete => Localization.FormatToastBackupDeleted(Subject),
+        TaskKind.GameBuildKeep when task.InstanceId is null => Localization.FormatToastGameBuildAdded(Subject),
         TaskKind.GameBuildKeep => Localization.FormatToastGameBuildKept(Subject, InstanceName),
         _ => Localization.FormatToastAdded(Subject, InstanceName),
     };

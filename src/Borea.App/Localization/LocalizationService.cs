@@ -169,6 +169,9 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string FormatToastGameBuildKept(string build, string instanceName)
         => string.Format(CultureInfo.CurrentCulture, Resources.ToastGameBuildKeptFormat, build, instanceName);
 
+    public string FormatToastGameBuildAdded(string build)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ToastGameBuildAddedFormat, build);
+
     public string FormatToastInstallStopped(string content)
         => string.Format(CultureInfo.CurrentCulture, Resources.ToastInstallStoppedFormat, content);
 
@@ -2164,6 +2167,12 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string FormatModalKeepGameBuildShared(string build, string folder, string instanceName)
         => string.Format(CultureInfo.CurrentCulture, Resources.ModalKeepGameBuildSharedFormat, build, folder, instanceName);
 
+    public string FormatModalAddGameBuildText(string build, string size, string source, string folder)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ModalAddGameBuildTextFormat, build, size, source, folder);
+
+    public string FormatModalAddGameBuildShared(string build, string folder)
+        => string.Format(CultureInfo.CurrentCulture, Resources.ModalAddGameBuildSharedFormat, build, folder);
+
     public string FormatModalKeepGameBuildFreeSpace(string size)
         => string.Format(CultureInfo.CurrentCulture, Resources.ModalKeepGameBuildFreeSpaceFormat, size);
 
@@ -2175,6 +2184,8 @@ public sealed class LocalizationService : INotifyPropertyChanged
         => string.Format(CultureInfo.CurrentCulture, Resources.KeepGameBuildAlreadyKeptFormat, build);
 
     public string KeepGameBuildNoGame => Resources.KeepGameBuildNoGame;
+
+    public string KeepGameBuildNotAGame => Resources.KeepGameBuildNotAGame;
 
     public string KeepGameBuildWineWrapper => Resources.KeepGameBuildWineWrapper;
 
@@ -2210,6 +2221,9 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string FormatToastUsesCurrentGameBuild(string instanceName, string build)
         => string.Format(CultureInfo.CurrentCulture, Resources.ToastUsesCurrentGameBuildFormat, instanceName, build);
+
+    public string FormatKeepGameBuildFolderChanged(string build)
+        => string.Format(CultureInfo.CurrentCulture, Resources.KeepGameBuildFolderChangedFormat, build);
 
     public string ModalInstanceExplanation => Resources.ModalInstanceExplanation;
 
@@ -2760,6 +2774,14 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string SettingsGameBuildIsGameFolder => Resources.SettingsGameBuildIsGameFolder;
 
     public string KeptGameBuildBusy => Resources.KeptGameBuildBusy;
+
+    public string SetupAddGameBuild => Resources.SetupAddGameBuild;
+
+    public string SetupAddGameBuildHint => Resources.SetupAddGameBuildHint;
+
+    public string ModalGameBuildLabel => Resources.ModalGameBuildLabel;
+
+    public string ModalGameBuildSettings => Resources.ModalGameBuildSettings;
 
     public string SettingsPresetsTitle => Resources.SettingsPresetsTitle;
 

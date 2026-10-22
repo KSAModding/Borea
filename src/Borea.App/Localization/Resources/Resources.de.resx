@@ -1647,6 +1647,9 @@
   <data name="ToastGameBuildKeptFormat" xml:space="preserve">
     <value>KSA {0} für {1} behalten</value>
   </data>
+  <data name="ToastGameBuildAddedFormat" xml:space="preserve">
+    <value>KSA {0} in Game Builds behalten</value>
+  </data>
   <data name="ToastInstallStoppedFormat" xml:space="preserve">
     <value>Installation von {0} gestoppt</value>
   </data>
@@ -3486,6 +3489,12 @@
   <data name="ModalKeepGameBuildSharedFormat" xml:space="preserve">
     <value>KSA {0} ist schon in {1} behalten. Die Instanz {2} nutzt diese Kopie, also kopiert Borea nichts.</value>
   </data>
+  <data name="ModalAddGameBuildTextFormat" xml:space="preserve">
+    <value>Borea kopiert KSA {0} ({1}) einmal von {2} nach {3}. Neue Instanzen können danach mit diesem Build starten.</value>
+  </data>
+  <data name="ModalAddGameBuildSharedFormat" xml:space="preserve">
+    <value>KSA {0} ist schon in {1} behalten, also kopiert Borea nichts.</value>
+  </data>
   <data name="ModalKeepGameBuildFreeSpaceFormat" xml:space="preserve">
     <value>Freier Platz auf dem Laufwerk: {0}</value>
   </data>
@@ -3500,6 +3509,9 @@
   </data>
   <data name="KeepGameBuildNoGame" xml:space="preserve">
     <value>Borea kann den Spiel-Build im Spielordner nicht lesen. Lege zuerst den Spielordner in den Einstellungen fest.</value>
+  </data>
+  <data name="KeepGameBuildNotAGame" xml:space="preserve">
+    <value>Dieser Ordner enthält kein Spiel, das Borea auf diesem System starten kann, oder Borea kann die Version seiner KSA.dll nicht lesen. Borea startet unter Windows die KSA.exe und unter Linux den App-Host KSA.</value>
   </data>
   <data name="KeepGameBuildWineWrapper" xml:space="preserve">
     <value>Das Spiel liegt in einer Wine-Wrapper-App, die keine Kopie außerhalb des Wrappers starten kann. Borea behält diesen Build nicht.</value>
@@ -3539,6 +3551,9 @@
   </data>
   <data name="ToastUsesCurrentGameBuildFormat" xml:space="preserve">
     <value>{0} startet jetzt mit KSA {1}</value>
+  </data>
+  <data name="KeepGameBuildFolderChangedFormat" xml:space="preserve">
+    <value>Der Ordner hat vor dem Kopieren zu KSA {0} gewechselt, also hat Borea nichts kopiert.</value>
   </data>
   <data name="ModalInstanceExplanation" xml:space="preserve">
     <value>Instanzen sind Pakete aus Mods und Spielinhalten, die Borea zusätzlich zu deiner vorhandenen Spielinstallation verwaltet. Du kannst mehrere Instanzen erstellen und für verschiedene Spielerlebnisse jeweils eine davon aktivieren.</value>
@@ -4643,6 +4658,18 @@
   </data>
   <data name="KeptGameBuildBusy" xml:space="preserve">
     <value>Borea kopiert oder löscht gerade einen Spiel-Build. Versuche es erneut, wenn das fertig ist.</value>
+  </data>
+  <data name="SetupAddGameBuild" xml:space="preserve">
+    <value>Build aus einem Ordner behalten</value>
+  </data>
+  <data name="SetupAddGameBuildHint" xml:space="preserve">
+    <value>Wähle den Ordner eines anderen KSA-Builds, zum Beispiel eine alte Installation oder ein entpacktes Archiv. Borea kopiert ihn nach Game Builds in der Bibliothek, und neue Instanzen können damit starten.</value>
+  </data>
+  <data name="ModalGameBuildLabel" xml:space="preserve">
+    <value>Spiel-Build</value>
+  </data>
+  <data name="ModalGameBuildSettings" xml:space="preserve">
+    <value>Spielordner der Einstellungen</value>
   </data>
   <data name="SettingsPresetsTitle" xml:space="preserve">
     <value>Vorlagen für Spieleinstellungen</value>

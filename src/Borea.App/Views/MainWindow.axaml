@@ -106,9 +106,6 @@
     <!-- modal: delete instance -->
     <views:DeleteInstanceModal IsVisible="{Binding IsDeleteModalOpen}" />
 
-    <!-- modal: keep the game build for an instance -->
-    <views:KeepGameBuildModal IsVisible="{Binding IsKeepGameBuildModalOpen}" />
-
     <!-- modal: move an instance back to the game build of the settings -->
     <views:UseCurrentGameBuildModal IsVisible="{Binding IsUseCurrentGameBuildModalOpen}" />
 
@@ -156,6 +153,9 @@
 
     <!-- modal: settings -->
     <settings:SettingsModal IsVisible="{Binding IsSettingsOpen}" />
+
+    <!-- modal: keep the game build for an instance, or from a folder that the Game settings chose -->
+    <views:KeepGameBuildModal IsVisible="{Binding IsKeepGameBuildModalOpen}" />
 
     <!-- modal: the code of a GitHub sign-in, over the settings and the pages -->
     <views:GitHubSignInModal IsVisible="{Binding IsGitHubSignInOpen}" />
