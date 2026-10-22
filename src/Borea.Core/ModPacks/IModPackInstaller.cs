@@ -2,6 +2,7 @@ using Borea.Core.Game;
 using Borea.Core.Instances;
 using Borea.Core.Mods;
 using Borea.Core.Planning;
+using Borea.Core.UserContent;
 
 namespace Borea.Core.ModPacks;
 
@@ -45,7 +46,10 @@ public sealed record ModPackInstallRequest(
     IReadOnlyDictionary<string, string>? Alternatives = null,
     bool ProceedWithRetractedPack = false,
     IReadOnlySet<string>? ProceedWithYankedMembers = null,
-    bool Enable = true);
+    bool Enable = true,
+    IUserContentRepository? UserContent = null,
+    IReadOnlyDictionary<string, string>? ContentNames = null,
+    IReadOnlySet<string>? DiscardChangesOf = null);
 
 public enum ModPackMemberStatus
 {
@@ -66,13 +70,60 @@ public sealed record ModPackMemberResult(
     string? Message = null,
     string? Location = null);
 
+/// <summary>
+/// The pinned vehicles and saves of a pack (RFC 0085). The request carries the names and the go of the player,
+/// because the pack install runs as one task and cannot ask in between.
+/// </summary>
+public enum ModPackContentStatus
+{
+    Installed,
+    Updated,
+    AlreadyInstalled,
+
+    /// <summary>The name is taken. The item installs when the request names a new one in <see cref="ModPackInstallRequest.ContentNames"/>.</summary>
+    NameTaken,
+
+    /// <summary>The player changed the item since the install. It updates when the request holds it in <see cref="ModPackInstallRequest.DiscardChangesOf"/>.</summary>
+    Changed,
+
+    /// <summary>The pin cannot install, see the warning.</summary>
+    Skipped,
+
+    Failed,
+
+    /// <summary>A plan that does not write, or a step before it that failed or stopped.</summary>
+    NotAttempted,
+}
+
+/// <param name="FolderName">The folder under Vehicles or saves it uses or would use.</param>
+/// <param name="Changes">The changed files for <see cref="ModPackContentStatus.Changed"/>.</param>
+/// <param name="Warning">Why a skipped pin is skipped.</param>
+/// <param name="InstalledVersion">The recorded version an update replaces, or null for an install.</param>
+/// <param name="Enables">The mods the item needs that the instance holds disabled, which the run enables right before the item moves into place.</param>
+public sealed record ModPackContentResult(
+    ContentType Type,
+    string ContentId,
+    ModVersion Version,
+    ModPackContentStatus Status,
+    string? Message = null,
+    string? FolderName = null,
+    InstalledContentChanges? Changes = null,
+    PlanningMessage? Warning = null,
+    ModVersion? InstalledVersion = null,
+    IReadOnlyList<string>? Enables = null);
+
 public sealed class ModPackInstallResult
 {
     public Guid InstanceId { get; }
     public InstallPlan? Plan { get; }
     public IReadOnlyList<ModPackMemberResult> Members { get; }
     public IReadOnlyList<PlanningMessage> Warnings { get; }
+
+    /// <summary>Whether every mod of the pack is in place. The pinned vehicles and saves of <see cref="Content"/> do not count.</summary>
     public bool IsComplete { get; }
+
+    /// <summary>The pinned vehicles and saves, in pack order. They run after the mods.</summary>
+    public IReadOnlyList<ModPackContentResult> Content { get; init; } = [];
 
     /// <summary>A stop kept at least one member from running.</summary>
     public bool IsStopped { get; }

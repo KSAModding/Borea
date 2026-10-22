@@ -24,7 +24,7 @@ namespace Borea.App.ViewModels;
 
 /// <summary>
 /// A pack version: its own version, and the members it pins. Members come only from the snapshot, so a new pin
-/// always names a listed mod at a release that no client refuses to install.
+/// always names a listed mod, vehicle or save at a release that no client refuses to install.
 /// </summary>
 public sealed partial class ListingEditor
 {
@@ -56,6 +56,34 @@ public sealed partial class ListingEditor
     private ListedListing? _selectedMemberMatch;
 
     public bool HasNoMemberMatch => MemberMatches.Count == 0 && _memberCandidates.Count > 0;
+
+    /// <summary>The type the picker offers, which decides the section a new pin goes to (RFC 0085).</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsMemberTypeMods), nameof(IsMemberTypeVehicles), nameof(IsMemberTypeSaves), nameof(MemberSearchText), nameof(MemberNoMatchText))]
+    private ContentType _memberType = ContentType.Mod;
+
+    public bool IsMemberTypeMods => MemberType == ContentType.Mod;
+
+    public bool IsMemberTypeVehicles => MemberType == ContentType.Vehicle;
+
+    public bool IsMemberTypeSaves => MemberType == ContentType.Save;
+
+    public string MemberSearchText => MemberType switch
+    {
+        ContentType.Vehicle => Localization.ListingSearchVehicles,
+        ContentType.Save => Localization.ListingSearchSaves,
+        _ => Localization.ListingSearchMembers,
+    };
+
+    public string MemberNoMatchText => MemberType switch
+    {
+        ContentType.Vehicle => Localization.ListingNoListedVehicleMatch,
+        ContentType.Save => Localization.ListingNoListedSaveMatch,
+        _ => Localization.ListingNoListedMatch,
+    };
+
+    [RelayCommand]
+    private void ShowMemberType(ContentType type) => MemberType = type;
 
     /// <summary>The game_min that the pinned releases need, while the form has a lower or no game_min.</summary>
     [ObservableProperty]
@@ -118,21 +146,24 @@ public sealed partial class ListingEditor
 
     /// <summary>
     /// Opens a new pack of the enabled mods that Borea installed from the index in an instance, at their installed versions,
-    /// named after the instance. Returns false, and opens nothing, when there is no snapshot to tell which mods a pack can pin.
+    /// and of the vehicles and saves that Borea installed and the player did not change, named after the instance. Returns
+    /// false, and opens nothing, when there is no snapshot to tell which mods a pack can pin.
     /// </summary>
-    internal bool StartPackFromInstance(Instance instance, IReadOnlyList<ModManifestEntry> manifest, IReadOnlyDictionary<string, LoaderInstallation> loaderInstallations)
+    internal bool StartPackFromInstance(Instance instance, IReadOnlyList<ModManifestEntry> manifest, IReadOnlyDictionary<string, LoaderInstallation> loaderInstallations, IReadOnlyList<ListingInstalledContent>? content = null)
     {
         StartOver();
         if (_snapshot is not { } snapshot)
             return false;
 
-        var pack = ListingPackFromInstance.Of(snapshot, instance, manifest, loaderInstallations);
+        var pack = ListingPackFromInstance.Of(snapshot, instance, manifest, loaderInstallations, content);
         StartNewPack(
             NewPack() with
             {
                 Name = instance.Name,
-                GameMin = ListingPackMembers.HighestGameMin(snapshot, pack.Members)?.GameMin ?? string.Empty,
+                GameMin = ListingPackMembers.HighestGameMin(snapshot, [.. pack.Members, .. pack.Vehicles, .. pack.Saves])?.GameMin ?? string.Empty,
                 Mods = pack.Members,
+                Vehicles = pack.Vehicles,
+                Saves = pack.Saves,
             },
             (instance.Name, pack.LeftOut));
         return true;
@@ -164,11 +195,11 @@ public sealed partial class ListingEditor
     [RelayCommand(CanExecute = nameof(CanAddMember))]
     private void AddMember()
     {
-        if (SelectedMemberMatch?.Id is not { } id || _snapshot is not { } snapshot || ListingPackMembers.Listing(snapshot, id) is not { } listing
+        if (SelectedMemberMatch?.Id is not { } id || _snapshot is not { } snapshot || ListingPackMembers.Listing(snapshot, id, MemberType) is not { } listing
             || ListingPackDependencies.DefaultRelease(snapshot, listing) is not { } release)
             return;
 
-        Members.Add(MemberRow(new ListingPackMember(listing.Id, release.Version.ToString())));
+        Members.Add(MemberRow(new ListingPackMember(listing.Id, release.Version.ToString()) { Type = MemberType }));
         FindMembers();
         Refresh();
     }
@@ -222,7 +253,7 @@ public sealed partial class ListingEditor
             return Task.CompletedTask;
 
         var pins = Members.Select(row => row.ToMember())
-            .Where(member => ModIds.IsValid(member.Id) && ModVersion.TryParse(member.Version, out _))
+            .Where(member => member.Type == ContentType.Mod && ModIds.IsValid(member.Id) && ModVersion.TryParse(member.Version, out _))
             .Select(member => new ModPackEntry(member.Id, ModVersion.Parse(member.Version)))
             .ToList();
         return _owner.CopyTextAsync(
@@ -254,10 +285,10 @@ public sealed partial class ListingEditor
     }
 
     /// <summary>The newer release in the list of a row, by the "Newer releases" rule of RFC 0080, or null.</summary>
-    internal ListingReleaseChoice? NewerChoice(string id, string pinned, IReadOnlyList<ListingReleaseChoice> releases)
+    internal ListingReleaseChoice? NewerChoice(string id, ContentType type, string pinned, IReadOnlyList<ListingReleaseChoice> releases)
     {
         if (_snapshot is not { } snapshot || !ModVersion.TryParse(pinned, out var version)
-            || ModPackMemberReleases.NewerRelease(snapshot, id, version) is not { } newer)
+            || ModPackMemberReleases.NewerRelease(snapshot, id, version, type) is not { } newer)
             return null;
 
         var text = newer.Version.ToString();
@@ -270,24 +301,23 @@ public sealed partial class ListingEditor
         if (_snapshot is not { } snapshot)
             return false;
 
-        var pin = new ListingPackMember(row.Id, version);
+        var pin = new ListingPackMember(row.Id, version) { Type = row.Type };
         var pins = Members.Where(other => !ReferenceEquals(other, row)).Select(other => other.ToMember()).Append(pin).ToList();
         return ListingPackDependencies.Fits(snapshot, pins, pin);
     }
 
-    /// <summary>The note of a row whose mod the index marks as disputed, or null.</summary>
-    internal string? DisputedNote(string id) =>
-        _snapshot is { } snapshot && ListingPackMembers.Listing(snapshot, id) is { IndexStatus: { State: IndexStatusState.Disputed } status }
+    /// <summary>The note of a row whose listing the index marks as disputed, or null.</summary>
+    internal string? DisputedNote(string id, ContentType type) =>
+        _snapshot is { } snapshot && ListingPackMembers.Listing(snapshot, id, type) is { IndexStatus: { State: IndexStatusState.Disputed } status }
             ? Localization.FormatListingMemberDisputed(id, status.Reason)
             : null;
 
     /// <summary>Gives each row the errors whose location is its pin.</summary>
     private void UpdateMemberProblems(IReadOnlyList<ListingIssue> errors)
     {
-        for (var index = 0; index < Members.Count; index++)
+        foreach (var (row, where) in Members.Select(row => (row, PinPlace(row.Type, Members.Where(other => other.Type == row.Type).ToList().IndexOf(row)))))
         {
-            var where = $"mods[{index}]";
-            Members[index].Update(errors
+            row.Update(errors
                 .Where(issue => issue.Location == where || issue.Location.StartsWith(where + ".", StringComparison.Ordinal))
                 .Select(issue => issue.Message)
                 .ToList());
@@ -315,10 +345,21 @@ public sealed partial class ListingEditor
 
     private static readonly string[] PinSections = ["mods", "vehicles", "saves"];
 
+    /// <summary>Where the checks name a pin, by the section of its type and its place in that section.</summary>
+    private static string PinPlace(ContentType type, int index) => $"{ListingDraft.Section(type)}[{index}]";
+
     [GeneratedRegex(@"^(mods|vehicles|saves)\[(\d+)\]")]
     private static partial Regex PinLocation();
 
     internal string NewerText(string version) => Localization.FormatPackMemberNewer(version);
+
+    /// <summary>Names a vehicle or save pin on its row. A mod pin needs no name, because most pins are mods.</summary>
+    internal string? MemberTypeText(ContentType type) => type switch
+    {
+        ContentType.Vehicle => Localization.ListingMemberVehicle,
+        ContentType.Save => Localization.ListingMemberSave,
+        _ => null,
+    };
 
     internal string UseNewerText(string version) => Localization.FormatListingMemberUseNewer(version);
 
@@ -344,12 +385,16 @@ public sealed partial class ListingEditor
     private List<ListingIssue> PackIssues(IReadOnlyList<ListingPackMember> mods)
     {
         var issues = new List<ListingIssue>();
-        for (var index = 0; index < mods.Count; index++)
+        foreach (var type in new[] { ContentType.Mod, ContentType.Vehicle, ContentType.Save })
         {
-            if (MemberNote(mods[index]) is { } note)
-                issues.Add(new ListingIssue(ListingIssueSeverity.Note, $"mods[{index}]", note));
-            foreach (var retraction in RetractionNotes(mods[index].Id))
-                issues.Add(new ListingIssue(ListingIssueSeverity.Note, $"mods[{index}]", retraction));
+            var section = mods.Where(pin => pin.Type == type).ToList();
+            for (var index = 0; index < section.Count; index++)
+            {
+                if (MemberNote(section[index]) is { } note)
+                    issues.Add(new ListingIssue(ListingIssueSeverity.Note, PinPlace(type, index), note));
+                foreach (var retraction in RetractionNotes(section[index].Id))
+                    issues.Add(new ListingIssue(ListingIssueSeverity.Note, PinPlace(type, index), retraction));
+            }
         }
 
         foreach (var version in Retracted())
@@ -480,6 +525,7 @@ public sealed partial class ListingEditor
         ListingLeftOutReason.NotListed => Localization.FormatListingLeftOutNotListed(mod.Id, mod.Version ?? string.Empty),
         ListingLeftOutReason.Yanked => Localization.FormatListingLeftOutYanked(mod.Id, mod.Version ?? string.Empty),
         ListingLeftOutReason.DownloadGone => Localization.FormatListingLeftOutDownloadGone(mod.Id, mod.Version ?? string.Empty, mod.GoneSince is { } since ? MainViewModel.DateText(since) : string.Empty),
+        ListingLeftOutReason.ChangedSinceInstall => Localization.FormatListingLeftOutChanged(mod.Id, mod.Version ?? string.Empty),
         _ => Localization.FormatListingLeftOutReleaseNotListed(mod.Id, mod.Version ?? string.Empty),
     };
 
@@ -492,7 +538,14 @@ public sealed partial class ListingEditor
         foreach (var member in members)
             Members.Add(MemberRow(member));
 
-        _memberCandidates = _snapshot is { } snapshot ? ListingPackMembers.Candidates(snapshot) : [];
+        _memberCandidates = _snapshot is { } snapshot ? ListingPackMembers.Candidates(snapshot, MemberType) : [];
+        FindMembers();
+    }
+
+    partial void OnMemberTypeChanged(ContentType value)
+    {
+        _memberCandidates = _snapshot is { } snapshot ? ListingPackMembers.Candidates(snapshot, value) : [];
+        SelectedMemberMatch = null;
         FindMembers();
     }
 
@@ -502,7 +555,7 @@ public sealed partial class ListingEditor
     /// </summary>
     private ListingPackMemberRow MemberRow(ListingPackMember member)
     {
-        var listing = _snapshot is { } snapshot ? ListingPackMembers.Listing(snapshot, member.Id) : null;
+        var listing = _snapshot is { } snapshot ? ListingPackMembers.Listing(snapshot, member.Id, member.Type) : null;
         var releases = (listing is null ? [] : ListingPackMembers.Offered(listing))
             .Select(release => new ListingReleaseChoice(release.Version.ToString(), _owner.ReleaseStatusText(release.ReleaseStatus)) { Mark = Mark(release) })
             .ToList();

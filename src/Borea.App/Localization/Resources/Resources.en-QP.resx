@@ -1872,6 +1872,12 @@
   <data name="InstallMessageUnlistedPin" xml:space="preserve">
     <value>The pinned bounty ain't be listed, so The Borea ain't able to haul it onboard.</value>
   </data>
+  <data name="InstallMessageMissingForVehicleFormat" xml:space="preserve">
+    <value>The Borea ain't able to haul {0} onboard or wake it, so the game be refusin' this vessel.</value>
+  </data>
+  <data name="InstallMessageMissingForSaveFormat" xml:space="preserve">
+    <value>The Borea ain't able to haul {0} onboard or wake it, so the game be leavin' out every ship o' this tale that be needin' that barrel, and savin' again sends them ships to Davy Jones.</value>
+  </data>
   <data name="InstallDependencyAlternativesFormat" xml:space="preserve">
     <value>{0} or {1}</value>
   </data>
@@ -2100,6 +2106,39 @@
   <data name="ListingMemberRulesHint" xml:space="preserve">
     <value>The pack nails down every barrel its crew can't sail without, inside their bounds, an' no barrel be feudin' with another. A release that needs a barrel not on the chart gets a mark, fer no pack can nail it down.</value>
   </data>
+  <data name="ListingNoListedVehicleMatch" xml:space="preserve">
+    <value>No listed ship matches.</value>
+  </data>
+  <data name="ListingNoListedSaveMatch" xml:space="preserve">
+    <value>No listed tale matches.</value>
+  </data>
+  <data name="ListingSearchVehicles" xml:space="preserve">
+    <value>Search listed ships by name, id or captain</value>
+  </data>
+  <data name="ListingSearchSaves" xml:space="preserve">
+    <value>Search listed tales by name, id or captain</value>
+  </data>
+  <data name="ListingMemberTypeAdd" xml:space="preserve">
+    <value>Haul from:</value>
+  </data>
+  <data name="ListingLeftOutChangedFormat" xml:space="preserve">
+    <value>Ye changed {0} {1} since The Borea hauled it onboard, so pinnin' {1} wouldn't haul what ye tested.</value>
+  </data>
+  <data name="ListingMemberTypeMods" xml:space="preserve">
+    <value>Barrels</value>
+  </data>
+  <data name="ListingMemberTypeVehicles" xml:space="preserve">
+    <value>Ships</value>
+  </data>
+  <data name="ListingMemberTypeSaves" xml:space="preserve">
+    <value>Tales</value>
+  </data>
+  <data name="ListingMemberVehicle" xml:space="preserve">
+    <value>Ship</value>
+  </data>
+  <data name="ListingMemberSave" xml:space="preserve">
+    <value>Tale</value>
+  </data>
   <data name="ListingAddMissingDependencies" xml:space="preserve">
     <value>Haul aboard the missin' barrels</value>
   </data>
@@ -2264,6 +2303,9 @@
   </data>
   <data name="PackResultNotAttempted" xml:space="preserve">
     <value>Ain't be attempted</value>
+  </data>
+  <data name="PackResultSkipped" xml:space="preserve">
+    <value>Left ashore</value>
   </data>
   <data name="ReleaseStable" xml:space="preserve">
     <value>seaworthy</value>
@@ -2543,6 +2585,51 @@
   </data>
   <data name="PackNewerReleasesFormat" xml:space="preserve">
     <value>{0} o' {1} barrels have fresher hauls</value>
+  </data>
+  <data name="PackNewerItemsOneFormat" xml:space="preserve">
+    <value>1 o' {0} barrels, ships and tales has a fresher haul</value>
+  </data>
+  <data name="PackNewerItemsFormat" xml:space="preserve">
+    <value>{0} o' {1} barrels, ships and tales have fresher hauls</value>
+  </data>
+  <data name="PackContentNameTakenFormat" xml:space="preserve">
+    <value>The {2} chest already holds a haul named '{1}', blockin' {0}. Pick another name, or sail on without {0}.</value>
+  </data>
+  <data name="PackContentChangedFormat" xml:space="preserve">
+    <value>Ye changed {0} since The Borea hauled it onboard: {1}. Sailin' on swaps it out, and the old chest stays in the stash.</value>
+  </data>
+  <data name="PackContentNameTitleFormat" xml:space="preserve">
+    <value>New name fer {0}</value>
+  </data>
+  <data name="PackContentNotInstalledFormat" xml:space="preserve">
+    <value>{0} {1} weren't hauled onboard: {2}</value>
+  </data>
+  <data name="PackContentNameTakenShortFormat" xml:space="preserve">
+    <value>A haul named '{0}' be blockin' the way.</value>
+  </data>
+  <data name="PackContentChangedShort" xml:space="preserve">
+    <value>Ye changed it since The Borea hauled it onboard.</value>
+  </data>
+  <data name="PackContentNotReached" xml:space="preserve">
+    <value>The Borea never got 'round to it.</value>
+  </data>
+  <data name="PackContentFailed" xml:space="preserve">
+    <value>The Borea couldn't haul it onboard.</value>
+  </data>
+  <data name="PackContentSkippedFormat" xml:space="preserve">
+    <value>{0} {1} were left ashore: {2}</value>
+  </data>
+  <data name="PackContentSkipFormat" xml:space="preserve">
+    <value>Sail on without {0}</value>
+  </data>
+  <data name="PackContentNameConfirm" xml:space="preserve">
+    <value>Use this name</value>
+  </data>
+  <data name="PackContentChooseName" xml:space="preserve">
+    <value>Pick a name</value>
+  </data>
+  <data name="PackContentEnablesFormat" xml:space="preserve">
+    <value>The Borea wakes {0} fer {1}.</value>
   </data>
   <data name="PackIncompatibleFormat" xml:space="preserve">
     <value>This pack be needin' game {0} or fresher.</value>

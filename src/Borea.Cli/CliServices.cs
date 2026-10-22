@@ -13,6 +13,7 @@ using Borea.Core.Preferences;
 using Borea.Core.Settings;
 using Borea.Core.State;
 using Borea.Core.Updates;
+using Borea.Core.UserContent;
 
 namespace Borea.Cli;
 
@@ -78,6 +79,17 @@ internal sealed class CliServices : IDisposable
 
     /// <summary>The content index that Borea holds, read without a request.</summary>
     public required IModRepository OfflineContentIndex { get; init; }
+
+    /// <summary>The listed vehicles and saves.</summary>
+    public required IUserContentRepository UserContent { get; init; }
+
+    /// <summary>The listed vehicles and saves of the cached index, read without a request.</summary>
+    public required IUserContentRepository ReadOnlyUserContent { get; init; }
+
+    /// <summary>The vehicles and saves Borea installed.</summary>
+    public required IInstalledContentRecords InstalledContent { get; init; }
+
+    public required IUserContentInstaller UserContentInstaller { get; init; }
 
     public required IInstallPlanner InstallPlanner { get; init; }
 
@@ -153,6 +165,9 @@ internal sealed class CliServices : IDisposable
         IModRepository? mods = null,
         IModRepository? readOnlyMods = null,
         IModRepository? offlineContentIndex = null,
+        IUserContentRepository? userContent = null,
+        IUserContentRepository? readOnlyUserContent = null,
+        IUserContentInstaller? userContentInstaller = null,
         IInstallPlanner? installPlanner = null,
         IInstallSpaceCheck? spaceCheck = null,
         IModInstaller? installer = null,
@@ -209,6 +224,10 @@ internal sealed class CliServices : IDisposable
             Mods = mods ?? services.Mods,
             ReadOnlyMods = readOnlyMods ?? services.ReadOnlyMods,
             OfflineContentIndex = offlineContentIndex ?? services.OfflineContentIndex,
+            UserContent = userContent ?? services.UserContent,
+            ReadOnlyUserContent = readOnlyUserContent ?? services.ReadOnlyUserContent,
+            InstalledContent = services.InstalledContent,
+            UserContentInstaller = userContentInstaller ?? services.UserContentInstaller,
             InstallPlanner = installPlanner ?? services.InstallPlanner,
             SpaceCheck = spaceCheck ?? services.SpaceCheck,
             Installer = installer ?? services.Installer,

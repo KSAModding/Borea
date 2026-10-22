@@ -430,6 +430,13 @@
                                     <Button Classes="text" Content="{Binding PackUpdate.Run.PauseText}" Command="{Binding PackUpdate.Run.TogglePauseCommand}" />
                                     <Button Classes="text" Content="{Binding PackUpdate.Run.StopText}" Command="{Binding PackUpdate.Run.StopCommand}" />
                                 </StackPanel>
+                                <!-- the confirmation keeps its buttons on the line of the notice, so a long list below does not push them out of the area -->
+                                <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding PackUpdate.IsConfirming, FallbackValue={x:False}}">
+                                    <Panel IsEnabled="{Binding CanChangeContent}">
+                                        <Button Classes="text primary" Content="{Binding PackUpdate.ConfirmText}" Command="{Binding PackUpdate.ConfirmUpdateCommand}" IsEnabled="{Binding PackUpdate.Choices.IsComplete, FallbackValue={x:True}}" />
+                                    </Panel>
+                                    <Button Classes="text" Content="{Binding Localization.LibraryCancel}" Command="{Binding PackUpdate.CancelUpdateCommand}" />
+                                </StackPanel>
                             </StackPanel>
                         </Grid>
                         <TextBlock Classes="body-md secondary" Text="{Binding PackUpdate.ProgressStatus}" TextWrapping="Wrap" Margin="0,8,0,0" IsVisible="{Binding PackUpdate.ProgressStatus, Converter={x:Static ObjectConverters.IsNotNull}}" />
@@ -441,15 +448,18 @@
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
-                            <Grid ColumnDefinitions="*,Auto" Margin="0,8,0,0">
-                                <TextBlock Classes="body-md secondary" Text="{Binding PackUpdate.InstallWarning}" TextWrapping="Wrap" VerticalAlignment="Center" />
-                                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" Margin="16,0,0,0" VerticalAlignment="Center">
-                                    <Panel IsEnabled="{Binding CanChangeContent}">
-                                        <Button Classes="text primary" Content="{Binding PackUpdate.ConfirmText}" Command="{Binding PackUpdate.ConfirmUpdateCommand}" IsEnabled="{Binding PackUpdate.Choices.IsComplete, FallbackValue={x:True}}" />
-                                    </Panel>
-                                    <Button Classes="text" Content="{Binding Localization.LibraryCancel}" Command="{Binding PackUpdate.CancelUpdateCommand}" />
-                                </StackPanel>
-                            </Grid>
+                            <!-- the questions about pinned vehicles and saves, each on its own line, because going on can replace an item the player changed -->
+                            <ItemsControl Margin="0,8,0,0" ItemsSource="{Binding PackUpdate.PendingQuestions}" IsVisible="{Binding !!PackUpdate.PendingQuestions.Count, FallbackValue={x:False}}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="x:String">
+                                        <TextBlock Classes="body-md" Text="{Binding}" TextWrapping="Wrap" Margin="0,0,0,4" />
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                            <Button Classes="link" HorizontalAlignment="Left" Command="{Binding PackUpdate.ChooseContentNameCommand}" IsVisible="{Binding PackUpdate.CanChooseContentName, FallbackValue={x:False}}">
+                                <TextBlock Classes="action-md" Text="{Binding Localization.PackContentChooseName}" />
+                            </Button>
+                            <TextBlock Classes="body-md secondary" Margin="0,8,0,0" Text="{Binding PackUpdate.InstallWarning}" TextWrapping="Wrap" IsVisible="{Binding PackUpdate.InstallWarning, Converter={x:Static ObjectConverters.IsNotNull}}" />
                         </StackPanel>
                         <ContentControl Margin="0,12,0,0" Content="{Binding PackUpdate.Choices}" IsVisible="{Binding PackUpdate.Choices, Converter={x:Static ObjectConverters.IsNotNull}}" />
                         <TextBlock Classes="body-md danger" Text="{Binding PackUpdate.InstallError}" TextWrapping="Wrap" Margin="0,8,0,0" IsVisible="{Binding PackUpdate.InstallError, Converter={x:Static ObjectConverters.IsNotNull}}" />

@@ -65,12 +65,70 @@
             </Style>
         </ContainerQuery>
     </UserControl.Styles>
+    <UserControl.Resources>
+        <!-- the header of the vehicles or the saves table, with the columns of the mods table and the name of the active instance -->
+        <DataTemplate x:Key="PackContentHeader" x:DataType="x:String">
+            <Border Background="{StaticResource Brush.Surface}" Padding="16,11">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" SharedSizeGroup="PackMemberVersion" />
+                        <ColumnDefinition Width="Auto" SharedSizeGroup="PackMemberInstance" />
+                        <ColumnDefinition Width="Auto" SharedSizeGroup="PackMemberNewer" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Classes="body-md secondary" Text="{Binding}" />
+                    <Grid Classes="member-version">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" SharedSizeGroup="PackMemberVersionText" />
+                            <ColumnDefinition Width="Auto" SharedSizeGroup="PackMemberFit" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Classes="body-md secondary hide-narrow" Margin="0,0,8,0" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.ContentVersionHeader}" />
+                    </Grid>
+                    <DockPanel Grid.Column="2" Classes="member-header" ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).ActiveInstance.Name}" IsVisible="{Binding $parent[Window].((vm:MainViewModel)DataContext).PackInstanceHeaderText, Converter={x:Static ObjectConverters.IsNotNull}}">
+                        <Path DockPanel.Dock="Left" Classes="icon size-16" Margin="0,0,4,0" Data="{StaticResource Icon.Library}" VerticalAlignment="Center" />
+                        <TextBlock Classes="body-md secondary" Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).PackInstanceHeaderText}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                    </DockPanel>
+                </Grid>
+            </Border>
+        </DataTemplate>
+        <!-- one pinned vehicle or save, in the columns of a mod row: the name, the pinned version, the state in the active instance and the newer release -->
+        <DataTemplate x:Key="PackContentRow" x:DataType="vm:PackContentItem">
+            <Border BorderBrush="{StaticResource Brush.BorderStrong}" BorderThickness="0,1,0,0" Padding="16,8" MinHeight="40">
+                <Grid RowDefinitions="Auto,Auto">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" SharedSizeGroup="PackMemberVersion" />
+                        <ColumnDefinition Width="Auto" SharedSizeGroup="PackMemberInstance" />
+                        <ColumnDefinition Width="Auto" SharedSizeGroup="PackMemberNewer" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Classes="heading-sm member-name" Margin="0,0,8,0" Text="{Binding Name}" ToolTip.Tip="{Binding Name}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                    <Grid Classes="member-version" VerticalAlignment="Center">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" SharedSizeGroup="PackMemberVersionText" />
+                            <ColumnDefinition Width="Auto" SharedSizeGroup="PackMemberFit" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Classes="body-md secondary" Margin="0,0,8,0" Text="{Binding Version}" VerticalAlignment="Center" />
+                    </Grid>
+                    <WrapPanel Grid.Column="2" Classes="member-cell" ItemSpacing="4" LineSpacing="4" VerticalAlignment="Center">
+                        <Border Classes="chip positive" IsVisible="{Binding IsInstalled}" ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).InstalledInText}">
+                            <TextBlock Text="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.DiscoverInstalled}" />
+                        </Border>
+                    </WrapPanel>
+                    <WrapPanel Grid.Column="3" Classes="member-cell" ItemSpacing="4" LineSpacing="4" VerticalAlignment="Center">
+                        <Border Classes="chip" IsVisible="{Binding NewerText, Converter={x:Static ObjectConverters.IsNotNull}}">
+                            <TextBlock Classes="cell-text plain" Text="{Binding NewerText}" ToolTip.Tip="{Binding NewerText}" TextTrimming="CharacterEllipsis" />
+                        </Border>
+                    </WrapPanel>
+                </Grid>
+            </Border>
+        </DataTemplate>
+    </UserControl.Resources>
     <!-- Pack: one modpack, laid out like the content page -->
     <Grid>
         <ScrollViewer>
             <!-- laid out like Discover, so the page does not move sideways when a row opens -->
             <views:PageBodyPanel HasSidePanel="True">
-                <StackPanel Container.Name="page-body" Container.Sizing="Width">
+                <StackPanel Container.Name="page-body" Container.Sizing="Width" Grid.IsSharedSizeScope="True">
                     <DockPanel Height="24">
                         <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" Spacing="4">
                             <Button Classes="plain back" Command="{Binding GoBackCommand}" VerticalAlignment="Center" ToolTip.Tip="{Binding Localization.NavigationBack}" AutomationProperties.Name="{Binding Localization.NavigationBack}">
@@ -108,6 +166,9 @@
                             <WrapPanel ItemSpacing="8" LineSpacing="8" Margin="0,8,0,0" IsVisible="{Binding SelectedPack.IsConfirmingInstall}">
                                 <TextBlock Classes="body-sm" Text="{Binding SelectedPack.LinkRequestText}" IsVisible="{Binding SelectedPack.LinkRequestText, Converter={x:Static ObjectConverters.IsNotNull}}" TextWrapping="Wrap" VerticalAlignment="Center" />
                                 <TextBlock Classes="body-sm secondary" Text="{Binding SelectedPack.InstallWarning}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                                <Button Classes="link" Command="{Binding SelectedPack.ChooseContentNameCommand}" IsVisible="{Binding SelectedPack.CanChooseContentName, FallbackValue={x:False}}" VerticalAlignment="Center">
+                                    <TextBlock Classes="action-md" Text="{Binding Localization.PackContentChooseName}" />
+                                </Button>
                                 <Button Classes="text primary" Content="{Binding SelectedPack.ConfirmInstallText}" Command="{Binding SelectedPack.ConfirmInstallCommand}" IsEnabled="{Binding SelectedPack.Choices.IsComplete, FallbackValue={x:True}}" />
                                 <Button Classes="text" Content="{Binding Localization.LibraryCancel}" Command="{Binding SelectedPack.CancelInstallCommand}" />
                             </WrapPanel>
@@ -116,6 +177,7 @@
                                 <TextBlock Classes="label-md" Text="{Binding SelectedPack.ProgressDetail}" VerticalAlignment="Center" IsVisible="{Binding SelectedPack.ProgressDetail, Converter={x:Static ObjectConverters.IsNotNull}}" />
                             </WrapPanel>
                             <TextBlock Classes="body-sm danger" Text="{Binding SelectedPack.InstallError}" TextWrapping="Wrap" Margin="0,8,0,0" IsVisible="{Binding SelectedPack.InstallError, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                            <TextBlock Classes="body-sm secondary" Text="{Binding SelectedPack.InstallNote}" TextWrapping="Wrap" Margin="0,8,0,0" IsVisible="{Binding SelectedPack.InstallNote, Converter={x:Static ObjectConverters.IsNotNull}}" />
                             <!-- what the authors of the members still ask for after an install, until the player dismisses it -->
                             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8" Margin="0,8,0,0" IsVisible="{Binding SelectedPack.HasInstallStepsNotice, FallbackValue={x:False}}">
                                 <ItemsControl ItemsSource="{Binding SelectedPack.InstallStepsNotice}" ItemTemplate="{StaticResource StepList}" ItemsPanel="{StaticResource StepListsPanel}" />
@@ -210,7 +272,7 @@
                                             <TextBlock Classes="heading-sm" Text="{Binding ModId}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
                                             <TextBlock Grid.Column="1" Classes="body-md secondary hide-small" Width="120" Text="{Binding Version}" VerticalAlignment="Center" />
                                             <WrapPanel Grid.Column="2" ItemSpacing="8" LineSpacing="4" VerticalAlignment="Center">
-                                                <Border Classes="chip" Classes.positive="{Binding IsSuccess}" Classes.incompatible="{Binding !IsSuccess}" VerticalAlignment="Center">
+                                                <Border Classes="chip" Classes.positive="{Binding IsSuccess}" Classes.incompatible="{Binding IsProblem}" VerticalAlignment="Center">
                                                     <TextBlock Text="{Binding StatusText}" />
                                                 </Border>
                                                 <TextBlock Classes="body-sm secondary" Text="{Binding Message}" TextWrapping="Wrap" MaxWidth="260" VerticalAlignment="Center" IsVisible="{Binding Message, Converter={x:Static ObjectConverters.IsNotNull}}" />
@@ -228,7 +290,7 @@
                     <Border Background="{StaticResource Brush.SurfaceHeader}" CornerRadius="100" Padding="6" Margin="0,32,0,0">
                         <StackPanel Orientation="Horizontal" Spacing="16">
                             <Button Classes="tab quiet" Classes.active="{Binding IsPackDescriptionTab}" Content="{Binding Localization.ContentTabDescription}" Command="{Binding ShowPackDescriptionCommand}" />
-                            <Button Classes="tab quiet" Classes.active="{Binding IsPackModsTab}" Content="{Binding Localization.PackMods}" Command="{Binding ShowPackModsCommand}" />
+                            <Button Classes="tab quiet" Classes.active="{Binding IsPackModsTab}" Content="{Binding Localization.InstanceTabContent}" Command="{Binding ShowPackModsCommand}" />
                             <Button Classes="tab quiet" Classes.active="{Binding IsPackVersionsTab}" Content="{Binding Localization.ContentTabVersions}" Command="{Binding ShowPackVersionsCommand}" />
                         </StackPanel>
                     </Border>
@@ -241,9 +303,9 @@
                         </Panel>
                     </Border>
 
-                    <!-- the pinned mods, as a table whose columns share their widths, so each column starts at the same place in the header and in every row -->
+                    <!-- the pinned mods, as a table whose columns share their widths with each other table of the tab, so each column starts at the same place in the header and in every row -->
                     <Border BorderBrush="{StaticResource Brush.BorderStrong}" BorderThickness="1" CornerRadius="16" views:RoundedClip.IsEnabled="True" Margin="0,16,0,0" IsVisible="{Binding IsPackModsTab}">
-                        <StackPanel Grid.IsSharedSizeScope="True">
+                        <StackPanel>
                             <Border Background="{StaticResource Brush.Surface}" Padding="16,11">
                                 <Grid>
                                     <Grid.ColumnDefinitions>
@@ -372,6 +434,32 @@
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- the pinned vehicles, then the pinned saves, each a table of its own whose columns line up with those of the mods -->
+                    <Border BorderBrush="{StaticResource Brush.BorderStrong}" BorderThickness="1" CornerRadius="16" views:RoundedClip.IsEnabled="True" Margin="0,16,0,0">
+                        <Border.IsVisible>
+                            <MultiBinding Converter="{x:Static BoolConverters.And}">
+                                <Binding Path="IsPackModsTab" />
+                                <Binding Path="!!PackVehicles.Count" />
+                            </MultiBinding>
+                        </Border.IsVisible>
+                        <StackPanel>
+                            <ContentControl Content="{Binding Localization.InstanceGroupVehicles}" ContentTemplate="{StaticResource PackContentHeader}" />
+                            <ItemsControl ItemsSource="{Binding PackVehicles}" ItemTemplate="{StaticResource PackContentRow}" />
+                        </StackPanel>
+                    </Border>
+                    <Border BorderBrush="{StaticResource Brush.BorderStrong}" BorderThickness="1" CornerRadius="16" views:RoundedClip.IsEnabled="True" Margin="0,16,0,0">
+                        <Border.IsVisible>
+                            <MultiBinding Converter="{x:Static BoolConverters.And}">
+                                <Binding Path="IsPackModsTab" />
+                                <Binding Path="!!PackSaves.Count" />
+                            </MultiBinding>
+                        </Border.IsVisible>
+                        <StackPanel>
+                            <ContentControl Content="{Binding Localization.InstanceGroupSaves}" ContentTemplate="{StaticResource PackContentHeader}" />
+                            <ItemsControl ItemsSource="{Binding PackSaves}" ItemTemplate="{StaticResource PackContentRow}" />
                         </StackPanel>
                     </Border>
 

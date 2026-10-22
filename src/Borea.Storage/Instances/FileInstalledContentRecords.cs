@@ -42,15 +42,18 @@ public sealed class FileInstalledContentRecords : IInstalledContentRecords
         }, cancellationToken);
     }
 
-    public Task ReplaceAsync(Guid instanceId, InstalledContentRecord record, CancellationToken cancellationToken = default)
+    public Task ReplaceAsync(Guid instanceId, string oldFolderName, InstalledContentRecord record, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(record);
         return LockedAsync(instanceId, async () =>
         {
             var records = await ReadAsync(instanceId, cancellationToken).ConfigureAwait(false);
-            var index = records.FindIndex(item => Matches(item, record.Type, record.FolderName));
+            var index = records.FindIndex(item => Matches(item, record.Type, oldFolderName));
             if (index < 0)
-                throw new InvalidOperationException($"Instance '{instanceId}' has no record of the {MetadataEnumMapper.ToDto(record.Type)} folder '{record.FolderName}'.");
+                throw new InvalidOperationException($"Instance '{instanceId}' has no record of the {MetadataEnumMapper.ToDto(record.Type)} folder '{oldFolderName}'.");
+
+            if (records.Where((_, position) => position != index).Any(item => Matches(item, record.Type, record.FolderName)))
+                throw new InvalidOperationException($"Instance '{instanceId}' already has a record of the {MetadataEnumMapper.ToDto(record.Type)} folder '{record.FolderName}'.");
 
             records[index] = record;
             await WriteAsync(instanceId, records, cancellationToken).ConfigureAwait(false);

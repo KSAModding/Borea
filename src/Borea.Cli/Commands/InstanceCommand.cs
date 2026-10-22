@@ -104,7 +104,14 @@ internal static class InstanceCommand
             var lastPlayedAt = await LastPlayedAsync(cli, target, ct).ConfigureAwait(false);
             var playtime = await cli.Playtime.GetPlaytimeAsync(target.InstanceId, ct).ConfigureAwait(false);
             var loaderNeed = LoaderNeed.For(target);
-            var view = InstanceDetailsView.From(target, target.InstanceId == activeId, lastPlayedAt, playtime, loaderNeed, cli.Settings.LoaderInstallations);
+            var content = new List<InstalledContentView>();
+            foreach (var record in await cli.InstalledContent.ListAsync(target.InstanceId, ct).ConfigureAwait(false))
+                content.Add(InstalledContentView.From(record, await cli.InstalledContent.CompareAsync(target.InstanceId, record, ct).ConfigureAwait(false)));
+            var view = InstanceDetailsView.From(target, target.InstanceId == activeId, lastPlayedAt, playtime, loaderNeed, cli.Settings.LoaderInstallations) with
+            {
+                Vehicles = content.Where(item => item.Type == ContentType.Vehicle).ToList(),
+                Saves = content.Where(item => item.Type == ContentType.Save).ToList(),
+            };
 
             if (parseResult.GetValue(json))
             {
@@ -122,6 +129,16 @@ internal static class InstanceCommand
             output.WriteLine($"Last played: {(view.LastPlayedAt is { } lastPlayed ? Timestamp(lastPlayed) : "never")}");
             output.WriteLine($"Playtime: {DescribePlaytime(playtime)}");
             output.WriteLine($"Sessions: {playtime.Sessions}");
+            foreach (var (label, items) in new[] { ("Vehicles", view.Vehicles), ("Saves", view.Saves) })
+            {
+                if (items.Count == 0)
+                    continue;
+
+                output.WriteLine($"{label} Borea installed:");
+                foreach (var item in items)
+                    output.WriteLine($"  {item.Id} {item.Version}  {item.Folder}{(item.Changed ? "  changed" : string.Empty)}");
+            }
+
             return ExitCodes.Done;
         }));
 
@@ -757,6 +774,21 @@ internal static class InstanceCommand
                 instance.LaunchArguments,
                 lastPlayedAt,
                 PlaytimeView.From(playtime));
+
+        /// <summary>The vehicles Borea installed, with whether the player changed them since.</summary>
+        public IReadOnlyList<InstalledContentView> Vehicles { get; init; } = [];
+
+        public IReadOnlyList<InstalledContentView> Saves { get; init; } = [];
+    }
+
+    /// <summary>One vehicle or save Borea installed, for <c>instance show</c>.</summary>
+    private sealed record InstalledContentView(string Id, string Version, string Folder, bool Changed)
+    {
+        [System.Text.Json.Serialization.JsonIgnore]
+        public ContentType Type { get; init; }
+
+        public static InstalledContentView From(InstalledContentRecord record, InstalledContentChanges changes) =>
+            new(record.ListingId, record.Version.ToString(), record.FolderName, !changes.IsUnchanged) { Type = record.Type };
     }
 
     /// <summary>One loader the mods of an instance need, for <c>instance show</c>.</summary>

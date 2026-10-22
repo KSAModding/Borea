@@ -19,6 +19,7 @@ using Borea.Core.Settings;
 using Borea.Core.State;
 using Borea.Core.Stewardship;
 using Borea.Core.Updates;
+using Borea.Core.UserContent;
 using Borea.Network;
 using Borea.Network.Announcements;
 using Borea.Network.Downloads;
@@ -118,6 +119,12 @@ public sealed class BoreaServices : IDisposable
 
     /// <summary>The vehicles and saves Borea installed. One instance, so one store writes each file.</summary>
     public required IInstalledContentRecords InstalledContent { get; init; }
+
+    /// <summary>Installs, updates and removes one vehicle or save folder, on the same records as <see cref="InstalledContent"/>.</summary>
+    public required IUserContentInstaller UserContentInstaller { get; init; }
+
+    /// <summary>Installs or updates a vehicle or save with the mods it needs.</summary>
+    public required UserContentInstallation UserContentInstallation { get; init; }
 
     public required IGameLogReader GameLog { get; init; }
 
@@ -234,6 +241,12 @@ public sealed class BoreaServices : IDisposable
     public required IContentIndexRefresh IndexRefresh { get; init; }
 
     public required IContentIndexRepository ContentIndex { get; init; }
+
+    /// <summary>The listed vehicles and saves, from the same snapshots as <see cref="ContentIndex"/>.</summary>
+    public required IUserContentRepository UserContent { get; init; }
+
+    /// <summary>The listed vehicles and saves of the content index that Borea holds, read without a request.</summary>
+    public required IUserContentRepository ReadOnlyUserContent { get; init; }
 
     /// <summary>Listing images, verified against their records, from the cache or the author hosts.</summary>
     public required IContentImageSource Images { get; init; }
@@ -503,6 +516,7 @@ public sealed class BoreaServices : IDisposable
         if (wrapInstallPlanner is not null)
             installPlanner = wrapInstallPlanner(installPlanner);
         isGameProcessRunning ??= RunningProcesses.IsGameRunning;
+        var userContentInstaller = new LoggingUserContentInstaller(new FileUserContentInstaller(paths, downloader, installedContent, isGameProcessRunning), log);
         var launcher = new LoggingLauncher(new LastPlayedLauncher(loaderLauncher ?? new LoaderLauncher(paths, processStarter ?? new ProcessStarter(), launches, isGameProcessRunning), instances), log);
         var defaultLibraryFolder = Path.GetDirectoryName(bootstrapPaths.GetInstancesRoot())!;
         var announcementReader = new AnnouncementReader();
@@ -530,6 +544,8 @@ public sealed class BoreaServices : IDisposable
             GameSaves = new FileGameSaveStore(paths, records: installedContent),
             GameSaveBackups = new FileGameSaveBackupStore(paths),
             InstalledContent = installedContent,
+            UserContentInstaller = userContentInstaller,
+            UserContentInstallation = new UserContentInstallation(installPlanner, new InstallPlanExecutor(instances, modInstaller, modReplacer, spaceCheck), checkedModState, userContentInstaller),
             GameLog = new FileGameLogReader(paths),
             GameCrashes = new FileGameCrashReader(paths),
             Playtime = new FilePlaytimeService(paths),
@@ -556,8 +572,8 @@ public sealed class BoreaServices : IDisposable
             OfflineContentIndex = offlineContentIndex,
             ModPacks = modPacks,
             ReadOnlyModPacks = new ContentIndexModPackRepository(new ReaderSnapshotProvider(indexReader)),
-            ModPackInstaller = new LoggingModPackInstaller(new ModPackInstaller(instances, installPlanner, modInstaller, modReplacer, spaceCheck), log),
-            ModPackUpdater = new ModPackUpdater(instances, installPlanner, new InstallPlanExecutor(instances, modInstaller, modReplacer, spaceCheck), new LoggingModUninstaller(new FileModUninstaller(paths, instances, modStore), log)),
+            ModPackInstaller = new LoggingModPackInstaller(new ModPackInstaller(instances, installPlanner, modInstaller, modReplacer, spaceCheck, userContentInstaller, checkedModState), log),
+            ModPackUpdater = new ModPackUpdater(instances, installPlanner, new InstallPlanExecutor(instances, modInstaller, modReplacer, spaceCheck), new LoggingModUninstaller(new FileModUninstaller(paths, instances, modStore), log), userContentInstaller, checkedModState),
             Downloader = downloader,
             InstallPlanner = installPlanner,
             PlanExecutor = new InstallPlanExecutor(instances, modInstaller, modReplacer, spaceCheck),
@@ -583,6 +599,8 @@ public sealed class BoreaServices : IDisposable
             IndexSnapshots = indexSnapshots,
             IndexRefresh = indexSnapshots,
             ContentIndex = contentIndex,
+            UserContent = contentIndex,
+            ReadOnlyUserContent = readOnlyContentIndex,
             Images = images ?? new ContentImageSource(new FileContentImageCache(paths)),
             GitHub = gitHubSession,
             ListingSources = new ListingSourceReader(new ListingHostClient(http), downloader),

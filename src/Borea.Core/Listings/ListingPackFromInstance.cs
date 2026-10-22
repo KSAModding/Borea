@@ -30,28 +30,41 @@ public enum ListingLeftOutReason
 
     /// <summary>The download of the installed release is gone from its host (RFC 0078), so another player could not install the pin.</summary>
     DownloadGone = 6,
+
+    /// <summary>The player changed the vehicle or save since Borea installed it, so the pinned release is not what the instance holds.</summary>
+    ChangedSinceInstall = 7,
 }
 
 /// <summary>
-/// A mod of the instance that the pack leaves out. <see cref="Version"/> is null for a folder Borea did not install,
-/// and for a loader whose installed version Borea does not know.
+/// A mod, vehicle or save of the instance that the pack leaves out. <see cref="Version"/> is null for a folder Borea did not install,
+/// and for a loader whose installed version Borea does not know. <see cref="Id"/> is the folder name of such a folder.
 /// <see cref="GoneSince"/> is the time the download went away, for <see cref="ListingLeftOutReason.DownloadGone"/>.
 /// </summary>
-public sealed record ListingLeftOutMod(string Id, string? Version, ListingLeftOutReason Reason, DateTimeOffset? GoneSince = null);
+public sealed record ListingLeftOutMod(string Id, string? Version, ListingLeftOutReason Reason, DateTimeOffset? GoneSince = null, ContentType Type = ContentType.Mod);
+
+/// <summary>A vehicle or save folder of the instance: its record and whether the player changed it, or no record for a folder Borea did not install.</summary>
+public sealed record ListingInstalledContent(ContentType Type, string FolderName, InstalledContentRecord? Record, bool Changed);
 
 /// <summary>
 /// The members of a new pack made from an instance: the enabled mods that Borea installed from the index, at their
-/// installed versions, in load order. Every other mod of the instance is left out with its reason, and so is every loader
-/// that its mods need, because Borea installs a loader outside the instance.
+/// installed versions, in load order, and the vehicles and saves that Borea installed and the player did not change.
+/// Every other mod of the instance is left out with its reason, and so is every loader that its mods need, because Borea
+/// installs a loader outside the instance, and every vehicle or save folder that is not such a member.
 /// </summary>
 public sealed record ListingPackFromInstance(IReadOnlyList<ListingPackMember> Members, IReadOnlyList<ListingLeftOutMod> LeftOut)
 {
+    public IReadOnlyList<ListingPackMember> Vehicles { get; init; } = [];
+
+    public IReadOnlyList<ListingPackMember> Saves { get; init; } = [];
+
     /// <param name="loaderInstallations">The loaders Borea set up, by id, which give the version of a needed loader.</param>
+    /// <param name="content">The vehicle and save folders of the instance. Null leaves vehicles and saves out of the pack.</param>
     public static ListingPackFromInstance Of(
         ContentIndexSnapshot snapshot,
         Instance instance,
         IReadOnlyList<ModManifestEntry> manifest,
-        IReadOnlyDictionary<string, LoaderInstallation>? loaderInstallations = null)
+        IReadOnlyDictionary<string, LoaderInstallation>? loaderInstallations = null,
+        IReadOnlyList<ListingInstalledContent>? content = null)
     {
         ArgumentNullException.ThrowIfNull(snapshot);
         ArgumentNullException.ThrowIfNull(instance);
@@ -88,7 +101,37 @@ public sealed record ListingPackFromInstance(IReadOnlyList<ListingPackMember> Me
         }
 
         leftOut.AddRange(instance.ForeignMods.Select(mod => new ListingLeftOutMod(mod.FolderName, null, ListingLeftOutReason.NotInstalledByBorea)));
-        return new ListingPackFromInstance(members, leftOut);
+
+        var pinned = new List<ListingPackMember>();
+        foreach (var item in content ?? [])
+        {
+            if (item.Record is not { } record)
+            {
+                leftOut.Add(new ListingLeftOutMod(item.FolderName, null, ListingLeftOutReason.NotInstalledByBorea, Type: item.Type));
+                continue;
+            }
+
+            var version = record.Version.ToString();
+            var listing = ListingPackMembers.Listing(snapshot, record.ListingId, record.Type);
+            var release = listing?.Releases.FirstOrDefault(listed => listed.Version == record.Version);
+            ListingLeftOutReason? reason = item.Changed ? ListingLeftOutReason.ChangedSinceInstall
+                : listing is null ? ListingLeftOutReason.NotListed
+                : release is null ? ListingLeftOutReason.ReleaseNotListed
+                : release.Yanked ? ListingLeftOutReason.Yanked
+                : release.Download.UnavailableSince is not null ? ListingLeftOutReason.DownloadGone
+                : null;
+
+            if (reason is { } found)
+                leftOut.Add(new ListingLeftOutMod(record.ListingId, version, found, found == ListingLeftOutReason.DownloadGone ? release!.Download.UnavailableSince : null, record.Type));
+            else if (!pinned.Any(pin => ModIds.Equals(pin.Id, listing!.Id)))
+                pinned.Add(new ListingPackMember(listing!.Id, version) { Type = record.Type });
+        }
+
+        return new ListingPackFromInstance(members, leftOut)
+        {
+            Vehicles = pinned.Where(pin => pin.Type == ContentType.Vehicle).ToList(),
+            Saves = pinned.Where(pin => pin.Type == ContentType.Save).ToList(),
+        };
     }
 
     private static bool IsModLoader(ContentIndexSnapshot snapshot, InstalledMod mod) =>

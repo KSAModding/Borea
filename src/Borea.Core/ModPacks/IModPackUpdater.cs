@@ -1,6 +1,7 @@
 using Borea.Core.Game;
 using Borea.Core.Mods;
 using Borea.Core.Planning;
+using Borea.Core.UserContent;
 
 namespace Borea.Core.ModPacks;
 
@@ -29,7 +30,10 @@ public sealed record ModPackUpdateRequest(
     IReadOnlySet<string>? Recommended = null,
     IReadOnlyDictionary<string, string>? Alternatives = null,
     IReadOnlySet<string>? ProceedWithYankedMembers = null,
-    bool Enable = true);
+    bool Enable = true,
+    IUserContentRepository? UserContent = null,
+    IReadOnlyDictionary<string, string>? ContentNames = null,
+    IReadOnlySet<string>? DiscardChangesOf = null);
 
 public enum ModPackChangeKind
 {
@@ -70,8 +74,14 @@ public sealed class ModPackUpdateResult
 
     public IReadOnlyList<PlanningMessage> Warnings { get; }
 
-    /// <summary>Every step completed, and the instance source names <see cref="Target"/>.</summary>
+    /// <summary>Every step completed, and the instance source names <see cref="Target"/>. The pinned vehicles and saves do not count.</summary>
     public bool IsComplete { get; }
+
+    /// <summary>
+    /// The pinned vehicles and saves of <see cref="Target"/>, which update by the rule of a single item, after the mods.
+    /// A pin that the new version drops stays as it is, because Borea never removes a vehicle or save by itself.
+    /// </summary>
+    public IReadOnlyList<ModPackContentResult> Content { get; init; } = [];
 
     public bool IsStopped { get; }
 
