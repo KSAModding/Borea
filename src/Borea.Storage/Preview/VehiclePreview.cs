@@ -94,6 +94,10 @@ public sealed class VehiclePreview : IVehiclePreview
         CheckVehicle(release);
         ThrowIfDisposed();
 
+        // The awaits below often complete at once, so without this yield the file reads, the catalog build and the
+        // resolve would run on the thread of the caller, which is the UI thread of the vehicle page.
+        await Task.CompletedTask.ConfigureAwait(ConfigureAwaitOptions.ForceYielding);
+
         var gameBuild = GameBuild();
         VehiclePreviewPlan Plan(VehiclePreviewPlanState state, IReadOnlyList<VehiclePreviewMissingMod>? missing = null, string? message = null) =>
             new(state, release, targetInstanceId, release.Download.SizeBytes, missing ?? [], gameBuild, message);
@@ -143,6 +147,9 @@ public sealed class VehiclePreview : IVehiclePreview
         var release = plan.Release;
         CheckVehicle(release);
         ThrowIfDisposed();
+
+        // The same yield as in PrepareAsync, because a load of a local vehicle can also complete every await at once.
+        await Task.CompletedTask.ConfigureAwait(ConfigureAwaitOptions.ForceYielding);
 
         var gameBuild = GameBuild();
         var sha256 = release.Download.Sha256?.Trim().ToLowerInvariant();
