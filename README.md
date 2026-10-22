@@ -163,7 +163,7 @@ The exit code is 0 when the command completed, 1 when the operation failed and t
 
 | Command | Does |
 | --- | --- |
-| `borea settings show` | Print where the game, the mod loaders and the library are, the release channel and whether the shared mod store is on. |
+| `borea settings show` | Print where the game, the mod loaders and the library are, every installed mod loader version, the release channel and whether the shared mod store is on. |
 | `borea settings set game <directory>` | Point Borea at the game installation. |
 | `borea settings set loader <loader-id> <directory>` | Point Borea at an installed mod loader. |
 | `borea settings set channel <channel>` | Choose which release statuses install and update offer: `stable` (the default), `testing` or `dev`. |
