@@ -184,10 +184,11 @@ internal static class LoaderCommand
             if (release.Download.UnavailableSince is { } since)
                 error.WriteLine($"warning: {new PlanningMessage(listing.ModId, PlanningMessageKind.Unavailable) { Version = release.Version, Since = since }.Message}");
 
-            // no silent downgrade from an installed release outside the channel, and the store lists the newest version first
+            // No silent downgrade from a recorded release outside the channel, because the recorded version is the one that
+            // an older Borea starts. A version that only a pin uses stays beside the new one, so it does not block the install.
             if (rawVersion is null
                 && InstalledLoaderVersion.Of(await cli.LoaderVersions.ListAsync(ct).ConfigureAwait(false), listing.ModId)
-                    .FirstOrDefault(installed => installed.Version is not null)?.Version is { } installedVersion
+                    .FirstOrDefault(installed => installed.IsRecorded)?.Version is { } installedVersion
                 && installedVersion.CompareTo(release.Version) > 0
                 && await cli.Mods.GetReleaseAsync(listing.ModId, installedVersion, ct).ConfigureAwait(false) is { } installedRelease
                 && !channel.Includes(installedRelease.ReleaseStatus))
