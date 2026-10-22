@@ -30,6 +30,19 @@ public sealed class InstanceLoaderResolverTests
     }
 
     [Fact]
+    public async Task PinnedVersionBesideAnotherInstalledVersion_SucceedsButDoesNotStart()
+    {
+        var instance = InstanceWith();
+        instance.SetLoader(LoaderSetting.Pinned("StarMap", ModVersion.Parse("0.4.7")));
+
+        var resolution = await ResolveAsync(instance, Installed(("0.4.8", true)));
+
+        Assert.True(resolution.Choice.Succeeded);
+        Assert.Null(resolution.Start);
+        Assert.Equal(ModVersion.Parse("0.4.7"), resolution.Version!.Missing?.Version);
+    }
+
+    [Fact]
     public async Task AutomaticInstanceWithoutModsAndNothingInstalled_MissesTheNewestReleaseThatFits()
     {
         var resolution = await ResolveAsync(InstanceWith(), []);
@@ -85,6 +98,18 @@ public sealed class InstanceLoaderResolverTests
 
         Assert.Equal(new LoaderVersionUser(automatic, IsPinned: false), Assert.Single(uses[0].Users));
         Assert.Equal(new LoaderVersionUser(pinned, IsPinned: true), Assert.Single(uses[1].Users));
+    }
+
+    [Fact]
+    public async Task UsedBy_KeepsThePinnedUserWhenTheLoaderIsNotListed()
+    {
+        var pinned = InstanceWith();
+        pinned.SetLoader(LoaderSetting.Pinned("StarMap", ModVersion.Parse("0.4.7")));
+        var unlisted = new ListingsRepository(() => []);
+
+        var uses = await LoaderVersionUse.UsedByAsync([pinned], Installed(("0.4.7", true)), unlisted, unlisted, Releases, ReleaseChannel.Stable, _ => Build5602);
+
+        Assert.Equal(new LoaderVersionUser(pinned, IsPinned: true), Assert.Single(Assert.Single(uses).Users));
     }
 
     private static Task<InstanceLoaderResolution> ResolveAsync(Instance instance, IReadOnlyList<InstalledLoaderVersion> installed)
