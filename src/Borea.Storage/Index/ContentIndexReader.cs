@@ -4,7 +4,10 @@ using Borea.Core.Tags;
 
 namespace Borea.Storage.Index;
 
-/// <summary>Reads and maps the cached snapshot through the shared envelope validator.</summary>
+/// <summary>
+/// Reads and maps the cached snapshot through the shared envelope validator, with the type
+/// files of <see cref="ContentIndexTypeFiles"/> next to it. A type file that is not there is empty.
+/// </summary>
 public sealed class ContentIndexReader : IContentIndexReader, IContentIndexCandidateValidator
 {
     private readonly IGamePathProvider _paths;
@@ -17,15 +20,42 @@ public sealed class ContentIndexReader : IContentIndexReader, IContentIndexCandi
         _source = source;
     }
 
-    public Task<ContentIndexSnapshot> ReadAsync(CancellationToken cancellationToken = default) =>
-        ReadAsync(_paths.GetIndexPath(), cancellationToken);
-
-    public async Task ValidateAsync(string candidatePath, CancellationToken cancellationToken = default)
+    public async Task<ContentIndexSnapshot> ReadAsync(CancellationToken cancellationToken = default)
     {
-        await ReadAsync(candidatePath, cancellationToken).ConfigureAwait(false);
+        var path = _paths.GetIndexPath();
+        var content = await ReadIndexAsync(path, cancellationToken).ConfigureAwait(false);
+        var typeFiles = new List<(ContentIndexTypeFile File, string Json)>();
+        var diagnostics = new List<ContentIndexDiagnostic>();
+        foreach (var file in ContentIndexTypeFiles.All)
+        {
+            var typePath = file.CachePathFrom(path);
+            try
+            {
+                if (File.Exists(typePath))
+                    typeFiles.Add((file, await File.ReadAllTextAsync(typePath, cancellationToken).ConfigureAwait(false)));
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                diagnostics.Add(new ContentIndexDiagnostic(
+                    ContentIndexDiagnosticKind.Malformed,
+                    ContentIndexDiagnosticScope.Listing,
+                    $"{file.FileName} cannot be read. {ex.Message}"));
+            }
+        }
+
+        cancellationToken.ThrowIfCancellationRequested();
+        return Map(SnapshotParser.Parse(content, typeFiles, _source, cancellationToken), diagnostics, cancellationToken);
     }
 
-    private async Task<ContentIndexSnapshot> ReadAsync(string path, CancellationToken cancellationToken)
+    /// <summary>Checks the main document only, because a type file never fails the main refresh.</summary>
+    public async Task ValidateAsync(string candidatePath, CancellationToken cancellationToken = default)
+    {
+        var content = await ReadIndexAsync(candidatePath, cancellationToken).ConfigureAwait(false);
+        cancellationToken.ThrowIfCancellationRequested();
+        Map(SnapshotParser.Parse(content, _source, cancellationToken), [], cancellationToken);
+    }
+
+    private static async Task<string> ReadIndexAsync(string path, CancellationToken cancellationToken)
     {
         if (!File.Exists(path))
             throw new InvalidOperationException($"Index does not exist at {path}");
@@ -34,37 +64,14 @@ public sealed class ContentIndexReader : IContentIndexReader, IContentIndexCandi
         if (string.IsNullOrEmpty(content))
             throw new InvalidOperationException($"Index file is empty at {path}");
 
-        cancellationToken.ThrowIfCancellationRequested();
-        return Map(SnapshotParser.Parse(content, _source, cancellationToken), cancellationToken);
+        return content;
     }
 
-    private static ContentIndexSnapshot Map(IndexValidationResult result, CancellationToken cancellationToken)
+    private static ContentIndexSnapshot Map(IndexValidationResult result, List<ContentIndexDiagnostic> diagnostics, CancellationToken cancellationToken)
     {
-        var diagnostics = new List<ContentIndexDiagnostic>();
-        var listings = new List<ContentIndexListing>(result.ValidListings.Count);
-        foreach (var listing in result.ValidListings)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            listings.Add(new ContentIndexListing(
-                listing.Id,
-                listing.Authored,
-                listing.ValidReleases.ToArray(),
-                listing.IndexStatus,
-                listing.Downloads,
-                listing.Images,
-                listing.PublishedAt,
-                listing.UpdatedAt,
-                listing.ListedAt));
-
-            AddMalformed(diagnostics, listing.IndexStatusError, ContentIndexDiagnosticScope.IndexStatus);
-            AddUnsupportedStatus(diagnostics, listing.IndexStatus, listing.Id);
-            AddMalformed(diagnostics, listing.DownloadsErrors, ContentIndexDiagnosticScope.Downloads);
-            AddMalformed(diagnostics, listing.ImagesErrors, ContentIndexDiagnosticScope.Images);
-            AddMalformed(diagnostics, listing.DatesErrors, ContentIndexDiagnosticScope.Dates);
-            AddMalformed(diagnostics, listing.ChangelogTextErrors, ContentIndexDiagnosticScope.ChangelogText);
-            AddMalformed(diagnostics, listing.RejectedReleases, ContentIndexDiagnosticScope.Release);
-            AddUnknown(diagnostics, listing.UnknownReleases, ContentIndexDiagnosticScope.Release);
-        }
+        var listings = MapListings(result.ValidListings, diagnostics, cancellationToken);
+        var vehicles = MapListings(result.ValidVehicles, diagnostics, cancellationToken);
+        var saves = MapListings(result.ValidSaves, diagnostics, cancellationToken);
 
         AddMalformed(diagnostics, result.MalformedListings, ContentIndexDiagnosticScope.Listing);
         AddUnknown(diagnostics, result.UnknownListings, ContentIndexDiagnosticScope.Listing);
@@ -117,7 +124,40 @@ public sealed class ContentIndexReader : IContentIndexReader, IContentIndexCandi
                 SpecVersion: result.UnknownTags.SpecVersion));
         }
 
-        return new ContentIndexSnapshot(result.SnapshotVersion, listings, packs, gameVersions, diagnostics, result.Tags);
+        return new ContentIndexSnapshot(result.SnapshotVersion, listings, packs, gameVersions, diagnostics, result.Tags, vehicles, saves);
+    }
+
+    private static List<ContentIndexListing> MapListings(
+        IReadOnlyList<ParsedListing> parsed,
+        List<ContentIndexDiagnostic> diagnostics,
+        CancellationToken cancellationToken)
+    {
+        var listings = new List<ContentIndexListing>(parsed.Count);
+        foreach (var listing in parsed)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            listings.Add(new ContentIndexListing(
+                listing.Id,
+                listing.Authored,
+                listing.ValidReleases.ToArray(),
+                listing.IndexStatus,
+                listing.Downloads,
+                listing.Images,
+                listing.PublishedAt,
+                listing.UpdatedAt,
+                listing.ListedAt));
+
+            AddMalformed(diagnostics, listing.IndexStatusError, ContentIndexDiagnosticScope.IndexStatus);
+            AddUnsupportedStatus(diagnostics, listing.IndexStatus, listing.Id);
+            AddMalformed(diagnostics, listing.DownloadsErrors, ContentIndexDiagnosticScope.Downloads);
+            AddMalformed(diagnostics, listing.ImagesErrors, ContentIndexDiagnosticScope.Images);
+            AddMalformed(diagnostics, listing.DatesErrors, ContentIndexDiagnosticScope.Dates);
+            AddMalformed(diagnostics, listing.ChangelogTextErrors, ContentIndexDiagnosticScope.ChangelogText);
+            AddMalformed(diagnostics, listing.RejectedReleases, ContentIndexDiagnosticScope.Release);
+            AddUnknown(diagnostics, listing.UnknownReleases, ContentIndexDiagnosticScope.Release);
+        }
+
+        return listings;
     }
 
     private static void AddUnsupportedStatus(

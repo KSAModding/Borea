@@ -75,6 +75,11 @@ public sealed class LoaderIntegrationTests : IDisposable
             HttpRequestMessage request,
             CancellationToken cancellationToken)
         {
+            // The type files answer 404 until the index publishes them.
+            if (request.RequestUri?.AbsoluteUri is "https://ksamodding.github.io/content-index-releases/v1/snapshot-vehicles.json"
+                or "https://ksamodding.github.io/content-index-releases/v1/snapshot-saves.json")
+                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
+
             if (request.RequestUri?.AbsoluteUri != "https://ksamodding.github.io/content-index-releases/v1/index.json")
                 throw new InvalidOperationException($"Unexpected request to {request.RequestUri}.");
 

@@ -5,8 +5,9 @@ namespace Borea.Storage.Index.Dtos;
 
 public class LinksDto
 {
+    /// <summary>Absent only on a vehicle or save, which the domain types check.</summary>
     [JsonPropertyName("forums")]
-    public required string Forums { get; set; }
+    public string? Forums { get; set; }
 
     /// <summary>
     /// Uses JsonExtensionData to catch any other objects/links in this objects.

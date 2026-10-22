@@ -17,6 +17,8 @@ public static class MetadataEnumMapper
         ContentType.Mod => "mod",
         ContentType.ModPack => "modpack",
         ContentType.ModLoader => "mod-loader",
+        ContentType.Vehicle => "vehicle",
+        ContentType.Save => "save",
         _ => "unknown",
     };
 
@@ -25,6 +27,8 @@ public static class MetadataEnumMapper
         "mod" => ContentType.Mod,
         "modpack" => ContentType.ModPack,
         "mod-loader" => ContentType.ModLoader,
+        "vehicle" => ContentType.Vehicle,
+        "save" => ContentType.Save,
         _ => ContentType.Unknown,
     };
 

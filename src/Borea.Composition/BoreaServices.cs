@@ -116,6 +116,9 @@ public sealed class BoreaServices : IDisposable
 
     public required IGameSaveBackupStore GameSaveBackups { get; init; }
 
+    /// <summary>The vehicles and saves Borea installed. One instance, so one store writes each file.</summary>
+    public required IInstalledContentRecords InstalledContent { get; init; }
+
     public required IGameLogReader GameLog { get; init; }
 
     public required IGameCrashReader GameCrashes { get; init; }
@@ -448,8 +451,9 @@ public sealed class BoreaServices : IDisposable
         // host of its own.
         var http = BuildHttpClient(httpHandler);
         var resolver = new SpaceDockResolver();
+        var installedContent = new FileInstalledContentRecords(paths);
         var indexReader = new ContentIndexReader(paths, ContentIndexModRepository.SourceName);
-        var indexFetcher = new LoggingContentIndexFetcher(new ContentIndexFetcher(http, ContentIndexUri, indexReader), log);
+        var indexFetcher = new LoggingContentIndexFetcher(new ContentIndexFetcher(http, ContentIndexUri, indexReader, ContentIndexTypeFiles.All, log), log);
         var indexSnapshots = new ContentIndexSnapshotProvider(indexFetcher, indexReader, paths);
         var contentIndex = new ContentIndexModRepository(indexSnapshots);
         var readOnlyContentIndex = new ContentIndexModRepository(new ReaderSnapshotProvider(indexReader));
@@ -523,8 +527,9 @@ public sealed class BoreaServices : IDisposable
             TaskHistory = new FileTaskHistoryRepository(paths),
             Instances = instances,
             GameData = new FileGameDataReader(paths),
-            GameSaves = new FileGameSaveStore(paths),
+            GameSaves = new FileGameSaveStore(paths, records: installedContent),
             GameSaveBackups = new FileGameSaveBackupStore(paths),
+            InstalledContent = installedContent,
             GameLog = new FileGameLogReader(paths),
             GameCrashes = new FileGameCrashReader(paths),
             Playtime = new FilePlaytimeService(paths),

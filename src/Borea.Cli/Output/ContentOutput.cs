@@ -20,6 +20,8 @@ internal static class ContentOutput
         ContentType.Mod => "mod",
         ContentType.ModLoader => "mod-loader",
         ContentType.ModPack => "modpack",
+        ContentType.Vehicle => "vehicle",
+        ContentType.Save => "save",
         ContentType.Unknown => "unknown",
         _ => throw new ArgumentOutOfRangeException(nameof(type), type, null),
     };
