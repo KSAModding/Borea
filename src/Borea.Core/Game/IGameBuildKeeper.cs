@@ -30,6 +30,7 @@ public interface IGameBuildKeeper
 
     /// <summary>
     /// Deletes the folder of a kept build that no instance uses and that is not the game folder of the settings.
+    /// Before that, a loader whose game path names the folder gets the game folder of the settings.
     /// </summary>
     Task<GameBuildChangeRefusal> RemoveAsync(GameVersion build, CancellationToken cancellationToken);
 }

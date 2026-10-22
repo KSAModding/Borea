@@ -402,7 +402,7 @@ public partial class MainViewModel
                 };
                 services.Log.Write(refusal == GameBuildChangeRefusal.None ? $"Removed the kept KSA {build}." : $"The kept KSA {build} was not removed, refused as {refusal}.");
             }
-            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or InvalidOperationException)
             {
                 error = exception.Message;
                 services.Log.Write($"The kept KSA {build} was not removed. {exception.Message}");

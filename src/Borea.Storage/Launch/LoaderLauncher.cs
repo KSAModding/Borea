@@ -421,7 +421,7 @@ public sealed class LoaderLauncher : ILauncher, IDisposable
         }
     }
 
-    private static bool SameGamePath(string? held, string wanted) =>
+    internal static bool SameGamePath(string? held, string wanted) =>
         held is not null && string.Equals(GameFolderOf(held), GameFolderOf(wanted), PathComparison);
 
     // StarMap accepts the path of KSA.dll as well as the game folder, and a

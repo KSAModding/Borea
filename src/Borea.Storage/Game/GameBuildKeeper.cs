@@ -1,8 +1,11 @@
 using Borea.Core.Game;
 using Borea.Core.Instances;
+using Borea.Core.Mods;
 using Borea.Core.Paths;
 using Borea.Core.Settings;
 using Borea.Storage.Files;
+using Borea.Storage.Launch;
+using Borea.Storage.ModLoaders;
 
 namespace Borea.Storage.Game;
 
@@ -28,21 +31,24 @@ public sealed class GameBuildKeeper : IGameBuildKeeper
 
     private readonly IGamePathProvider _paths;
     private readonly IInstanceRepository _instances;
+    private readonly IModRepository _listings;
     private readonly Func<bool> _isGameProcessRunning;
     private readonly Func<Guid, bool> _isLaunched;
     private readonly IWinePrefixProbe _wine;
     private readonly IFreeSpaceProbe _freeSpace;
 
+    /// <param name="listings">The listings of the installed loaders, which name the file that holds the game path.</param>
     /// <param name="isLaunched">Whether a launch by Borea still runs for the instance. The process probe does not see every one of them.</param>
-    public GameBuildKeeper(IGamePathProvider paths, IInstanceRepository instances, Func<bool> isGameProcessRunning, Func<Guid, bool> isLaunched)
-        : this(paths, instances, isGameProcessRunning, isLaunched, new WinePrefixProbe(), new DriveFreeSpaceProbe())
+    public GameBuildKeeper(IGamePathProvider paths, IInstanceRepository instances, IModRepository listings, Func<bool> isGameProcessRunning, Func<Guid, bool> isLaunched)
+        : this(paths, instances, listings, isGameProcessRunning, isLaunched, new WinePrefixProbe(), new DriveFreeSpaceProbe())
     {
     }
 
-    internal GameBuildKeeper(IGamePathProvider paths, IInstanceRepository instances, Func<bool> isGameProcessRunning, Func<Guid, bool> isLaunched, IWinePrefixProbe wine, IFreeSpaceProbe freeSpace)
+    internal GameBuildKeeper(IGamePathProvider paths, IInstanceRepository instances, IModRepository listings, Func<bool> isGameProcessRunning, Func<Guid, bool> isLaunched, IWinePrefixProbe wine, IFreeSpaceProbe freeSpace)
     {
         _paths = paths ?? throw new ArgumentNullException(nameof(paths));
         _instances = instances ?? throw new ArgumentNullException(nameof(instances));
+        _listings = listings ?? throw new ArgumentNullException(nameof(listings));
         _isGameProcessRunning = isGameProcessRunning ?? throw new ArgumentNullException(nameof(isGameProcessRunning));
         _isLaunched = isLaunched ?? throw new ArgumentNullException(nameof(isLaunched));
         _wine = wine ?? throw new ArgumentNullException(nameof(wine));
@@ -221,6 +227,7 @@ public sealed class GameBuildKeeper : IGameBuildKeeper
                     return GameBuildChangeRefusal.InUse;
             }
 
+            await MoveLoadersToSettingsGameFolderAsync(folder, cancellationToken).ConfigureAwait(false);
             if (!Directory.Exists(folder))
                 return GameBuildChangeRefusal.None;
 
@@ -237,6 +244,71 @@ public sealed class GameBuildKeeper : IGameBuildKeeper
         finally
         {
             Keeping.Release();
+        }
+    }
+
+    /// <summary>
+    /// Writes the game folder of the settings to each loader whose game path names <paramref name="folder"/>, so
+    /// that no later start, also not one by an older Borea, starts a build that is gone. Without a game folder in
+    /// the settings, the files stay as they are.
+    /// </summary>
+    private async Task MoveLoadersToSettingsGameFolderAsync(string folder, CancellationToken cancellationToken)
+    {
+        var gameDirectory = _paths.GetGameDirectoryPath();
+        if (string.IsNullOrWhiteSpace(gameDirectory) || !Path.IsPathFullyQualified(gameDirectory))
+            return;
+
+        var configurator = new LoaderConfigurator(_wine);
+        string kept;
+        try
+        {
+            kept = configurator.GamePathValue(folder);
+        }
+        catch (InvalidOperationException)
+        {
+            // a start refuses a kept build that no drive of its Wine prefix holds, so no file names it that way
+            kept = folder;
+        }
+
+        IReadOnlyList<ModMetadata> listings;
+        try
+        {
+            listings = await _listings.GetAvailableModsAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception exception) when (exception is InvalidOperationException or IOException)
+        {
+            // without the listings Borea knows no loader file, and that must not keep a build the player removes
+            return;
+        }
+
+        foreach (var loader in listings)
+        {
+            if (loader.Type != ContentType.ModLoader || !LoaderConfigurator.TakesGamePath(loader)
+                || _paths.GetLoaderDirectoryPath(loader.ModId) is not { } loaderDirectory || !Path.IsPathFullyQualified(loaderDirectory))
+                continue;
+
+            string? held;
+            try
+            {
+                held = LoaderConfigurator.ReadGamePath(loader, loaderDirectory);
+            }
+            catch (Exception exception) when (exception is InvalidOperationException or IOException or UnauthorizedAccessException)
+            {
+                // the loader cannot start from a file that cannot be read, and a start by Borea refuses it
+                continue;
+            }
+
+            if (!LoaderLauncher.SameGamePath(held, kept))
+                continue;
+
+            try
+            {
+                LoaderConfigurator.WriteGamePath(loader, loaderDirectory, configurator.GamePathValue(gameDirectory));
+            }
+            catch (InvalidOperationException exception) when (exception.InnerException is UnauthorizedAccessException denied)
+            {
+                throw new InvalidOperationException($"Borea could not write the game folder of the settings to the configuration of {loader.Name} in '{loaderDirectory}', so Borea removed nothing. {denied.Message}", denied);
+            }
         }
     }
 

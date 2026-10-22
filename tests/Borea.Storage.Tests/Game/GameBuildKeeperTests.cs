@@ -1,3 +1,4 @@
+using System.Text.Json.Nodes;
 using Borea.Core.Game;
 using Borea.Core.Instances;
 using Borea.Core.Mods;
@@ -6,6 +7,8 @@ using Borea.Storage.Files;
 using Borea.Storage.Game;
 using Borea.Storage.Instances;
 using Borea.Storage.Paths;
+using Borea.Storage.Tests.Launch;
+using Borea.Storage.Tests.ModPacks;
 
 namespace Borea.Storage.Tests.Game;
 
@@ -23,7 +26,7 @@ public sealed class GameBuildKeeperTests : IDisposable
 
     public GameBuildKeeperTests()
     {
-        _paths = new GamePathProvider(SettingsGame, boreaRoot: Path.Combine(_tempRoot, "Borea"), libraryFolder: Path.Combine(_tempRoot, "Library"));
+        _paths = new GamePathProvider(SettingsGame, new Dictionary<string, string> { ["StarMap"] = LoaderDirectory }, Path.Combine(_tempRoot, "Borea"), libraryFolder: Path.Combine(_tempRoot, "Library"));
         _instances = new FileInstanceRepository(_paths);
         Directory.CreateDirectory(Path.Combine(SettingsGame, "Content", "Core"));
         File.Copy(Path.Combine(AppContext.BaseDirectory, RealBuildFixture), Path.Combine(SettingsGame, "KSA.dll"));
@@ -32,6 +35,10 @@ public sealed class GameBuildKeeperTests : IDisposable
     }
 
     private string SettingsGame => Path.Combine(_tempRoot, "Game");
+
+    private string LoaderDirectory => Path.Combine(_tempRoot, "StarMap");
+
+    private string LoaderConfig => Path.Combine(LoaderDirectory, "StarMapConfig.json");
 
     private string GameBuilds => _paths.GetGameBuildsRoot();
 
@@ -131,6 +138,7 @@ public sealed class GameBuildKeeperTests : IDisposable
         var keeper = new GameBuildKeeper(
             _paths,
             _instances,
+            Loaders(),
             () => refusal == GameBuildKeepRefusal.GameRunning && !startedByBorea,
             id => startedByBorea && id == running.InstanceId,
             wine,
@@ -210,6 +218,85 @@ public sealed class GameBuildKeeperTests : IDisposable
     }
 
     [Fact]
+    public async Task RemoveAsync_LoaderOnTheBuild_GetsTheGameFolderOfTheSettings()
+    {
+        var folder = await KeepUnusedBuildAsync();
+        WriteLoaderConfig(folder);
+
+        var result = await Keeper().RemoveAsync(FixtureVersion, CancellationToken.None);
+
+        var json = JsonNode.Parse(File.ReadAllText(LoaderConfig))!;
+        Assert.Equal(GameBuildChangeRefusal.None, result);
+        Assert.Equal(SettingsGame, json["GameLocation"]!.GetValue<string>());
+        Assert.True(json["Keep"]!.GetValue<bool>());
+        Assert.False(Directory.Exists(folder));
+    }
+
+    [Fact]
+    public async Task RemoveAsync_LoaderOnAnotherFolder_LeavesItsFile()
+    {
+        var folder = await KeepUnusedBuildAsync();
+        var original = WriteLoaderConfig(Path.Combine(_tempRoot, "Other Game"));
+
+        var result = await Keeper().RemoveAsync(FixtureVersion, CancellationToken.None);
+
+        Assert.Equal(GameBuildChangeRefusal.None, result);
+        Assert.Equal(original, File.ReadAllText(LoaderConfig));
+        Assert.False(Directory.Exists(folder));
+    }
+
+    [Theory]
+    [InlineData(GameBuildChangeRefusal.InUse)]
+    [InlineData(GameBuildChangeRefusal.GameRunning)]
+    public async Task RemoveAsync_Refused_LeavesTheLoaderAndTheBuild(GameBuildChangeRefusal refusal)
+    {
+        var instance = await CreateInstanceAsync("Career");
+        await Keeper().KeepAsync(instance.InstanceId, FixtureVersion, null, CancellationToken.None);
+        if (refusal == GameBuildChangeRefusal.GameRunning)
+            await Keeper().UseCurrentBuildAsync(instance.InstanceId, CancellationToken.None);
+
+        var folder = Path.Combine(GameBuilds, "2026.8.3.5117");
+        var original = WriteLoaderConfig(folder);
+
+        var result = await Keeper(gameRunning: refusal == GameBuildChangeRefusal.GameRunning).RemoveAsync(FixtureVersion, CancellationToken.None);
+
+        Assert.Equal(refusal, result);
+        Assert.Equal(original, File.ReadAllText(LoaderConfig));
+        Assert.Equal(FixtureVersion, InstalledGameVersionProvider.Read(folder)?.Version);
+    }
+
+    [Fact]
+    public async Task RemoveAsync_ListingsUnreadable_RemovesTheBuild()
+    {
+        var folder = await KeepUnusedBuildAsync();
+
+        var result = await Keeper(listings: new UnreadableListings()).RemoveAsync(FixtureVersion, CancellationToken.None);
+
+        Assert.Equal(GameBuildChangeRefusal.None, result);
+        Assert.False(Directory.Exists(folder));
+    }
+
+    [WindowsFact("A read-only file refuses a replacement only on Windows.")]
+    public async Task RemoveAsync_LoaderFileReadOnly_NamesTheRemovalAndKeepsTheBuild()
+    {
+        var folder = await KeepUnusedBuildAsync();
+        var original = WriteLoaderConfig(folder);
+        File.SetAttributes(LoaderConfig, FileAttributes.ReadOnly);
+        try
+        {
+            var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => Keeper().RemoveAsync(FixtureVersion, CancellationToken.None));
+
+            Assert.Contains("so Borea removed nothing", exception.Message);
+            Assert.Equal(original, File.ReadAllText(LoaderConfig));
+            Assert.Equal(FixtureVersion, InstalledGameVersionProvider.Read(folder)?.Version);
+        }
+        finally
+        {
+            File.SetAttributes(LoaderConfig, FileAttributes.Normal);
+        }
+    }
+
+    [Fact]
     public async Task UseCurrentBuildAsyncAndRemoveAsync_WhileACopyRuns_AreBusy()
     {
         var copying = await CreateInstanceAsync("Career");
@@ -245,9 +332,25 @@ public sealed class GameBuildKeeperTests : IDisposable
         Assert.Equal(GameBuildKeepRefusal.None, (await keep).Refusal);
     }
 
-    private GameBuildKeeper Keeper() => Keeper(_paths);
+    private GameBuildKeeper Keeper(GamePathProvider? paths = null, bool gameRunning = false, IModRepository? listings = null) => new(paths ?? _paths, _instances, listings ?? Loaders(), () => gameRunning, _ => false, new FakeWineProbe(new WineInstall(Path.GetFullPath(Path.Combine(_tempRoot, "Elsewhere")), WineFixtures.Drives(new Dictionary<char, string>()), null)), new UnknownFreeSpace());
 
-    private GameBuildKeeper Keeper(GamePathProvider paths) => new(paths, _instances, () => false, _ => false, new FakeWineProbe(new WineInstall(Path.GetFullPath(Path.Combine(_tempRoot, "Elsewhere")), WineFixtures.Drives(new Dictionary<char, string>()), null)), new UnknownFreeSpace());
+    private static ModPackInstallerTests.FakeModRepository Loaders() => new([], [LoaderLauncherTests.LoaderListing(provides: LoaderLauncherTests.StarMapProvides())]);
+
+    private async Task<string> KeepUnusedBuildAsync()
+    {
+        var instance = await CreateInstanceAsync("Career");
+        await Keeper().KeepAsync(instance.InstanceId, FixtureVersion, null, CancellationToken.None);
+        await Keeper().UseCurrentBuildAsync(instance.InstanceId, CancellationToken.None);
+        return Path.Combine(GameBuilds, "2026.8.3.5117");
+    }
+
+    private string WriteLoaderConfig(string gameLocation)
+    {
+        var text = new JsonObject { ["GameLocation"] = gameLocation, ["Keep"] = true }.ToJsonString();
+        Directory.CreateDirectory(LoaderDirectory);
+        File.WriteAllText(LoaderConfig, text);
+        return text;
+    }
 
     private async Task<Instance> CreateInstanceAsync(string name)
     {
@@ -261,5 +364,14 @@ public sealed class GameBuildKeeperTests : IDisposable
     private sealed class UnknownFreeSpace : IFreeSpaceProbe
     {
         public FreeSpace? Measure(string path) => null;
+    }
+
+    private sealed class UnreadableListings : IModRepository
+    {
+        public Task<IReadOnlyList<ModMetadata>> GetAvailableModsAsync(CancellationToken cancellationToken = default) => throw new InvalidOperationException("The index does not exist.");
+        public Task<ModVersionMetadata?> GetLatestReleaseAsync(string modId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<ModVersionMetadata?> GetReleaseAsync(string modId, ModVersion version, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<IReadOnlyList<ModVersion>> GetAvailableVersionsAsync(string modId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+        public Task<IReadOnlyList<ModMetadata>> SearchAsync(string query, CancellationToken cancellationToken = default) => throw new NotSupportedException();
     }
 }
