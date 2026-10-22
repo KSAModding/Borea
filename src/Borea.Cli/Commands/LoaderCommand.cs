@@ -131,7 +131,7 @@ internal static class LoaderCommand
         var version = VersionOption("The release to install. The newest usable release in the saved release channel when absent.");
         var directory = new Option<string?>("--directory")
         {
-            Description = "The standalone install directory. Borea chooses one when this option is absent.",
+            Description = "A folder outside the Loaders folder of Borea for a single install that each later install replaces. Borea puts each version in its own folder when this option is absent.",
         };
         directory.Validators.Add(result =>
         {
@@ -233,7 +233,7 @@ internal static class LoaderCommand
         var loaderId = ArgumentRules.ContentId("loader-id", "The mod loader's content id.");
         var version = VersionOption("Remove only this installed version. Borea refuses a version that an instance starts.");
         var unused = new Option<bool>("--unused") { Description = "Remove every version that Borea installed and no instance starts." };
-        var uninstall = new Command("uninstall", "Remove a mod loader record and delete its directory when Borea owns it, or remove one version or the unused versions.");
+        var uninstall = new Command("uninstall", "Remove the recorded version of a mod loader and delete its directory when Borea owns it, or remove one version or the unused versions. Without an option, the other versions stay.");
         uninstall.Arguments.Add(loaderId);
         uninstall.Options.Add(version);
         uninstall.Options.Add(unused);
