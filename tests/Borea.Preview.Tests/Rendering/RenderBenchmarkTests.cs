@@ -40,7 +40,8 @@ public sealed class RenderBenchmarkTests(ITestOutputHelper output)
     /// <summary>
     /// The first frame fills the cache of the renderer, one full turn follows, and the measured frames after
     /// it turn the camera a little each, as a drag does. The text gives the first frame, the median of the
-    /// measured frames and the bytes that one measured frame allocates on all threads.
+    /// measured frames, the bytes that one measured frame allocates on all threads and the work buffers that
+    /// the renderer keeps after the last frame.
     /// </summary>
     private static string Median(PreviewScene scene, RenderOptions options, double scale)
     {
@@ -75,7 +76,7 @@ public sealed class RenderBenchmarkTests(ITestOutputHelper output)
 
         var perFrame = (GC.GetTotalAllocatedBytes(precise: true) - allocated) / times.Length;
         Array.Sort(times);
-        return $"{width}x{height}: first {first,6:0.0} ms, median {times[times.Length / 2],6:0.0} ms, {perFrame / 1024.0,8:0.0} KiB allocated per frame";
+        return $"{width}x{height}: first {first,6:0.0} ms, median {times[times.Length / 2],6:0.0} ms, {perFrame / 1024.0,8:0.0} KiB allocated per frame, {renderer.RetainedWorkBytes / 1048576.0,5:0.0} MiB of work buffers kept";
     }
 
     /// <summary>

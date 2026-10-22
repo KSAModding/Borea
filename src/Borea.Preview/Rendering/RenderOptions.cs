@@ -52,6 +52,16 @@ public sealed record RenderOptions
     public long WorldCacheBytes { get; init; } = 96L * 1024 * 1024;
 
     /// <summary>
+    /// The most bytes of screen triangle, band list and vertex scratch buffers that one
+    /// <see cref="SoftwareRenderer"/> keeps after a frame, 64 MiB, which holds a vehicle of about 450k
+    /// triangles. A frame uses what it needs while it runs. After it, the renderer frees the slack of each
+    /// buffer and then the largest buffers until the rest fits, so a larger scene allocates the freed buffers
+    /// again on the next frame. The per-pixel buffer grows with the frame size, as the
+    /// <see cref="FrameBuffer"/> does, and is not part of this cap.
+    /// </summary>
+    public long WorkBufferBytes { get; init; } = 64L * 1024 * 1024;
+
+    /// <summary>
     /// When true, a draw whose bounding sphere shows smaller than one pixel is not drawn. A viewer turns it
     /// on for the frames of a drag, which have a low resolution and show for a short time only.
     /// </summary>
@@ -63,36 +73,11 @@ public sealed record RenderOptions
     /// <summary>The lower fraction that a viewer uses when a drag frame at <see cref="DragScale"/> was too slow.</summary>
     public double SlowDragScale { get; init; } = 0.25;
 
-    /// <summary>A drag frame that takes longer than this many milliseconds makes the next drag frame use <see cref="SlowDragScale"/>.</summary>
-    public double SlowDragThresholdMs { get; init; } = 60;
-
     /// <summary>
-    /// The scale of the next drag frame after a drag frame at <paramref name="lastScale"/> that took
-    /// <paramref name="lastFrameMs"/> milliseconds. A frame above <see cref="SlowDragThresholdMs"/> gives
-    /// <see cref="SlowDragScale"/>. A frame at the slow scale goes back to <see cref="DragScale"/> only when it
-    /// would stay below the threshold also with the pixel count of <see cref="DragScale"/>, so the scale does
-    /// not change on every frame. A time that is not finite keeps the last scale.
+    /// Drag frames that take longer than this many milliseconds make the next drag frames use
+    /// <see cref="SlowDragScale"/>, as <see cref="DragScaleController"/> decides.
     /// </summary>
-    public double NextDragScale(double lastScale, double lastFrameMs)
-    {
-        if (!double.IsFinite(lastFrameMs))
-        {
-            return lastScale;
-        }
-
-        if (lastFrameMs > SlowDragThresholdMs)
-        {
-            return SlowDragScale;
-        }
-
-        if (lastScale >= DragScale || SlowDragScale <= 0)
-        {
-            return DragScale;
-        }
-
-        var pixelRatio = DragScale / lastScale * (DragScale / lastScale);
-        return lastFrameMs * pixelRatio <= SlowDragThresholdMs ? DragScale : lastScale;
-    }
+    public double SlowDragThresholdMs { get; init; } = 60;
 }
 
 /// <summary>What one render call did, so tests and the viewer can see the culling work.</summary>

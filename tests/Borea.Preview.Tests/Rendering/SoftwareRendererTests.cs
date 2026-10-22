@@ -166,6 +166,36 @@ public sealed class SoftwareRendererTests
     }
 
     [Fact]
+    public void ASmallWorkBufferCap_BoundsTheRetainedBytes_AndGivesTheSameFrames()
+    {
+        var scene = PreviewTestScenes.StackedBoxes();
+        var cameras = new[] { Framed(scene.Bounds, 96, 64), Framed(scene.Bounds, 96, 64) };
+        cameras[0].Zoom(-10f);
+        cameras[1].Zoom(20f);
+
+        var uncapped = new SoftwareRenderer();
+        var uncappedFrames = cameras.Select(camera =>
+        {
+            var frame = new FrameBuffer(96, 64);
+            uncapped.Render(scene, camera, frame, Options, CancellationToken.None);
+            return frame;
+        }).ToArray();
+
+        // Half of what the uncapped renderer keeps, so the trim must free some buffers but not all.
+        var cap = uncapped.RetainedWorkBytes / 2;
+        var capped = new SoftwareRenderer();
+        for (var i = 0; i < cameras.Length; i++)
+        {
+            var frame = new FrameBuffer(96, 64);
+            capped.Render(scene, cameras[i], frame, Options with { WorkBufferBytes = cap }, CancellationToken.None);
+
+            Assert.InRange(capped.RetainedWorkBytes, 1, cap);
+            Assert.Equal(uncappedFrames[i].Rgba, frame.Rgba);
+            Assert.Equal(uncappedFrames[i].Depth, frame.Depth);
+        }
+    }
+
+    [Fact]
     public void SkipSubPixelDraws_LeavesOutOnlyADrawBelowOnePixel()
     {
         var large = Box(Matrix4x4.Identity, new Vector3(0.8f));

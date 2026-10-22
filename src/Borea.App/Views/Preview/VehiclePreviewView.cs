@@ -20,7 +20,8 @@ namespace Borea.App.Views.Preview;
 /// with the wheel. The software renderer draws each frame on a background task into a bitmap that this
 /// control stretches over its bounds, and it draws only when the scene, the size or the camera changes.
 /// While a drag holds the pointer, the frames render at <see cref="PreviewRenderOptions.DragScale"/> of the
-/// full resolution, or at <see cref="PreviewRenderOptions.SlowDragScale"/> after a drag frame that was too slow.
+/// full resolution, or at <see cref="PreviewRenderOptions.SlowDragScale"/> when <see cref="DragScaleController"/>
+/// finds the drag frames too slow. Each new drag starts at the normal drag scale again.
 /// </summary>
 public sealed class VehiclePreviewView : Control
 {
@@ -50,7 +51,7 @@ public sealed class VehiclePreviewView : Control
     // The renderer keeps the vertices of the scene between frames, and only one frame renders at a time.
     private readonly SoftwareRenderer _renderer = new();
     private OrbitCamera _camera = new();
-    private double _dragScale = Options.DragScale;
+    private readonly DragScaleController _dragScales = new(Options);
     private FrameBuffer? _fullFrame;
     private FrameBuffer? _dragFrame;
     private float _orbitX;
@@ -93,7 +94,7 @@ public sealed class VehiclePreviewView : Control
     internal int? BitmapWidth => _bitmap?.PixelSize.Width;
 
     /// <summary>The scale that the next drag frame renders at.</summary>
-    internal double DragScale => _dragScale;
+    internal double DragScale => _dragScales.Scale;
 
     /// <summary>Frames the whole scene again from the default angles.</summary>
     public void ResetView()
@@ -122,7 +123,7 @@ public sealed class VehiclePreviewView : Control
             StartGeneration();
             ReleaseBitmap();
             ReleaseRenderState();
-            _dragScale = Options.DragScale;
+            _dragScales.Reset();
             _orbitX = 0;
             _orbitY = 0;
             _zoomSteps = 0;
@@ -168,6 +169,7 @@ public sealed class VehiclePreviewView : Control
         }
 
         _dragFrom = point.Position;
+        _dragScales.Reset();
         e.Pointer.Capture(this);
     }
 
@@ -259,7 +261,7 @@ public sealed class VehiclePreviewView : Control
         if (VisualRoot is null || scene is null || size.Width <= 0 || size.Height <= 0)
             return;
 
-        var frameScale = full ? 1 : _dragScale;
+        var frameScale = full ? 1 : _dragScales.Scale;
         var scale = (TopLevel.GetTopLevel(this)?.RenderScaling ?? 1) * frameScale;
         var width = Math.Clamp((int)Math.Ceiling(size.Width * scale), 1, FrameBuffer.MaxSize);
         var height = Math.Clamp((int)Math.Ceiling(size.Height * scale), 1, FrameBuffer.MaxSize);
@@ -308,7 +310,7 @@ public sealed class VehiclePreviewView : Control
                     Show(frame, request.Scene);
                     KeepFrameBuffer(request, frame);
                     if (request.DragScale is { } dragScale)
-                        _dragScale = Options.NextDragScale(dragScale, elapsedMs);
+                        _dragScales.Record(dragScale, elapsedMs);
                 }
             }
         }

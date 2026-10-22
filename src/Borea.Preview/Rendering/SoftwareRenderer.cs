@@ -1,5 +1,5 @@
-using System.Buffers;
 using System.Numerics;
+using System.Runtime.CompilerServices;
 using Borea.Preview.Scene;
 
 namespace Borea.Preview.Rendering;
@@ -12,9 +12,10 @@ namespace Borea.Preview.Rendering;
 /// The frame is the same byte for byte for any worker count, because each pixel row belongs to exactly one
 /// band and every band fills its triangles in scene order with math that does not depend on the band.
 /// One instance keeps the vertices of each draw in the vehicle frame while the scene stays the same, and it
-/// keeps its triangle and band buffers from frame to frame, so a frame that only moves the camera transforms
-/// no cached vertex again and allocates nothing that grows with the scene. An instance renders one frame at a
-/// time, so the caller must not call <see cref="Render"/> again before the last call returned.
+/// keeps its triangle, band and scratch buffers from frame to frame up to <see cref="RenderOptions.WorkBufferBytes"/>,
+/// so a frame that only moves the camera transforms no cached vertex again and, below that cap, allocates
+/// nothing that grows with the scene. An instance renders one frame at a time, so the caller must not call
+/// <see cref="Render"/> again before the last call returned.
 /// </summary>
 public sealed class SoftwareRenderer
 {
@@ -39,6 +40,9 @@ public sealed class SoftwareRenderer
 
     private const byte PlaceholderAlpha = 115;
     private const float MinPlaceholderSide = 0.01f;
+
+    /// <summary>The spare screen triangles that a buffer may keep above twice the count of its last frame.</summary>
+    private const int SlackTriangles = 64;
 
     /// <summary>The reflectance at normal incidence of a dielectric, the F0 of the PBR shaders of the game.</summary>
     private const float DielectricF0 = 0.04f;
@@ -74,8 +78,10 @@ public sealed class SoftwareRenderer
     private int[] _bandCursors = [];
     private TriangleRef[] _bandItems = [];
     private int[] _nearest = [];
+    private readonly Stack<Scratch> _scratch = new();
     private long _transformedVertexCount;
     private long _cachedBytes;
+    private long _retainedWorkBytes;
 
     /// <summary>
     /// How many vertices this renderer moved from the frame of their mesh to the vehicle frame since it was
@@ -88,6 +94,12 @@ public sealed class SoftwareRenderer
     /// stays at or below <see cref="RenderOptions.WorldCacheBytes"/>.
     /// </summary>
     public long CachedBytes => Interlocked.Read(ref _cachedBytes);
+
+    /// <summary>
+    /// The bytes of the screen triangle, band list and vertex scratch buffers that the renderer kept after the
+    /// last frame. It stays at or below <see cref="RenderOptions.WorkBufferBytes"/> of that frame.
+    /// </summary>
+    public long RetainedWorkBytes => Interlocked.Read(ref _retainedWorkBytes);
 
     /// <summary>
     /// Drops the cached vertices and the buffers, for example when the viewer leaves the screen. The next
@@ -103,7 +115,13 @@ public sealed class SoftwareRenderer
         _bandCursors = [];
         _bandItems = [];
         _nearest = [];
+        lock (_scratch)
+        {
+            _scratch.Clear();
+        }
+
         Interlocked.Exchange(ref _cachedBytes, 0);
+        Interlocked.Exchange(ref _retainedWorkBytes, 0);
     }
 
     /// <summary>
@@ -123,6 +141,12 @@ public sealed class SoftwareRenderer
 
         Prepare(scene, Math.Max(0, options.WorldCacheBytes));
         target.Clear(options.Background);
+
+        // A state that is not visible in this frame holds no triangles, so the trim after the frame can free its buffer.
+        foreach (var state in _states)
+        {
+            state.TriangleCount = 0;
+        }
 
         var view = camera.View;
         var projection = camera.Projection((float)target.Width / target.Height);
@@ -167,26 +191,133 @@ public sealed class SoftwareRenderer
         };
 
         var jobs = _jobs;
-        Parallel.For(0, jobCount, parallel, index => SetupDraw(jobs[index], index, frame));
-
-        var bandCount = (target.Height + BandHeight - 1) / BandHeight;
-        var triangleCount = BinIntoBands(jobs, jobCount, bandCount);
-        var bandStarts = _bandStarts;
-        var bandItems = _bandItems;
-        EnsureLength(ref _nearest, target.Width * target.Height);
-        var nearest = _nearest;
-
-        Parallel.For(0, bandCount, parallel, band =>
+        long triangleCount;
+        try
         {
-            if (!cancellationToken.IsCancellationRequested)
+            // Each worker takes one scratch from the renderer for all the draws it sets up, so the scratch count
+            // stays at the worker count and the trim below can free it.
+            Parallel.For(
+                0,
+                jobCount,
+                parallel,
+                TakeScratch,
+                (index, _, scratch) =>
+                {
+                    SetupDraw(jobs[index], index, frame, scratch);
+                    return scratch;
+                },
+                ReturnScratch);
+
+            var bandCount = (target.Height + BandHeight - 1) / BandHeight;
+            triangleCount = BinIntoBands(jobs, jobCount, bandCount);
+            var bandStarts = _bandStarts;
+            var bandItems = _bandItems;
+            EnsureLength(ref _nearest, target.Width * target.Height);
+            var nearest = _nearest;
+
+            Parallel.For(0, bandCount, parallel, band =>
             {
-                FillBand(band, bandStarts[band], bandStarts[band + 1], bandItems, jobs, frame, target, nearest);
-            }
-        });
-        cancellationToken.ThrowIfCancellationRequested();
+                if (!cancellationToken.IsCancellationRequested)
+                {
+                    FillBand(band, bandStarts[band], bandStarts[band + 1], bandItems, jobs, frame, target, nearest);
+                }
+            });
+            cancellationToken.ThrowIfCancellationRequested();
+        }
+        finally
+        {
+            TrimWorkBuffers(Math.Max(0, options.WorkBufferBytes));
+        }
 
         return new RenderStats(drawsVisited, placeholdersVisited, triangleCount);
     }
+
+    private Scratch TakeScratch()
+    {
+        lock (_scratch)
+        {
+            return _scratch.TryPop(out var scratch) ? scratch : new Scratch();
+        }
+    }
+
+    private void ReturnScratch(Scratch scratch)
+    {
+        lock (_scratch)
+        {
+            _scratch.Push(scratch);
+        }
+    }
+
+    /// <summary>
+    /// Runs after each frame, when no worker uses the buffers any more. Each triangle buffer first gives back
+    /// its slack, so a draw that is now culled or smaller on screen does not keep the buffer of its largest
+    /// frame. When the rest is still above <paramref name="cap"/>, the largest buffers are freed until it
+    /// fits, and the next frame allocates them again.
+    /// </summary>
+    private void TrimWorkBuffers(long cap)
+    {
+        var total = 0L;
+        foreach (var state in _states)
+        {
+            state.TrimSlack();
+            total += state.TriangleBytes;
+        }
+
+        total += BandBytes();
+        lock (_scratch)
+        {
+            var scratchBytes = 0L;
+            foreach (var scratch in _scratch)
+            {
+                scratchBytes += scratch.Bytes;
+            }
+
+            total += scratchBytes;
+            if (total > cap)
+            {
+                const int BandLists = -1;
+                const int AllScratch = -2;
+                var buffers = new List<(long Bytes, int Index)> { (BandBytes(), BandLists), (scratchBytes, AllScratch) };
+                for (var i = 0; i < _states.Length; i++)
+                {
+                    if (_states[i].TriangleBytes > 0)
+                    {
+                        buffers.Add((_states[i].TriangleBytes, i));
+                    }
+                }
+
+                buffers.Sort((a, b) => b.Bytes.CompareTo(a.Bytes));
+                foreach (var (bytes, index) in buffers)
+                {
+                    if (total <= cap)
+                    {
+                        break;
+                    }
+
+                    total -= bytes;
+                    if (index == BandLists)
+                    {
+                        _bandStarts = [];
+                        _bandCursors = [];
+                        _bandItems = [];
+                    }
+                    else if (index == AllScratch)
+                    {
+                        _scratch.Clear();
+                    }
+                    else
+                    {
+                        _states[index].FreeTriangles();
+                    }
+                }
+            }
+        }
+
+        Interlocked.Exchange(ref _retainedWorkBytes, total);
+    }
+
+    private long BandBytes() =>
+        sizeof(int) * ((long)_bandStarts.Length + _bandCursors.Length) + (long)Unsafe.SizeOf<TriangleRef>() * _bandItems.Length;
 
     /// <summary>
     /// Makes one state for each draw and each placeholder of a new scene, and decides which of them may keep
@@ -315,7 +446,7 @@ public sealed class SoftwareRenderer
     /// view projection of the frame. A cached and an uncached draw use the same two steps, so the frame does
     /// not depend on what the cache holds.
     /// </summary>
-    private void SetupDraw(DrawJob job, int jobIndex, FrameSetup frame)
+    private void SetupDraw(DrawJob job, int jobIndex, FrameSetup frame, Scratch scratch)
     {
         var state = job.State;
         state.TriangleCount = 0;
@@ -338,68 +469,54 @@ public sealed class SoftwareRenderer
         var mesh = job.Mesh;
         var vertexCount = mesh.VertexCount;
         var hasNormals = mesh.Normals.Length != 0;
-        float[]? rentedPositions = null;
-        float[]? rentedNormals = null;
-        var clip = ArrayPool<Vector4>.Shared.Rent(vertexCount);
-        var viewNormals = ArrayPool<Vector3>.Shared.Rent(hasNormals ? vertexCount : 0);
-        try
+        EnsureLength(ref scratch.Clip, vertexCount);
+        EnsureLength(ref scratch.ViewNormals, hasNormals ? vertexCount : 0);
+        var clip = scratch.Clip;
+        var viewNormals = scratch.ViewNormals;
+
+        var worldPositions = state.WorldPositions;
+        var worldNormals = state.WorldNormals;
+        if (worldPositions is null || worldNormals is null)
         {
-            var worldPositions = state.WorldPositions;
-            var worldNormals = state.WorldNormals;
-            if (worldPositions is null || worldNormals is null)
+            if (state.Cacheable)
             {
-                if (state.Cacheable)
-                {
-                    worldPositions = new float[mesh.Positions.Length];
-                    worldNormals = new float[mesh.Normals.Length];
-                }
-                else
-                {
-                    worldPositions = rentedPositions = ArrayPool<float>.Shared.Rent(mesh.Positions.Length);
-                    worldNormals = rentedNormals = ArrayPool<float>.Shared.Rent(mesh.Normals.Length);
-                }
-
-                ToWorld(mesh, job.Model, normalMatrix, worldPositions, worldNormals);
-                Interlocked.Add(ref _transformedVertexCount, vertexCount);
-
-                // The state takes the arrays only when they are full, so a cancelled frame leaves no half cache.
-                if (state.Cacheable)
-                {
-                    state.WorldPositions = worldPositions;
-                    state.WorldNormals = worldNormals;
-                    Interlocked.Add(ref _cachedBytes, WorldBytes(mesh));
-                }
+                worldPositions = new float[mesh.Positions.Length];
+                worldNormals = new float[mesh.Normals.Length];
+            }
+            else
+            {
+                EnsureLength(ref scratch.Positions, mesh.Positions.Length);
+                EnsureLength(ref scratch.Normals, mesh.Normals.Length);
+                worldPositions = scratch.Positions;
+                worldNormals = scratch.Normals;
             }
 
+            ToWorld(mesh, job.Model, normalMatrix, worldPositions, worldNormals);
+            Interlocked.Add(ref _transformedVertexCount, vertexCount);
+
+            // The state takes the arrays only when they are full, so a cancelled frame leaves no half cache.
+            if (state.Cacheable)
+            {
+                state.WorldPositions = worldPositions;
+                state.WorldNormals = worldNormals;
+                Interlocked.Add(ref _cachedBytes, WorldBytes(mesh));
+            }
+        }
+
+        for (var v = 0; v < vertexCount; v++)
+        {
+            clip[v] = Vector4.Transform(Read3(worldPositions, v), frame.ViewProjection);
+        }
+
+        if (hasNormals)
+        {
             for (var v = 0; v < vertexCount; v++)
             {
-                clip[v] = Vector4.Transform(Read3(worldPositions, v), frame.ViewProjection);
-            }
-
-            if (hasNormals)
-            {
-                for (var v = 0; v < vertexCount; v++)
-                {
-                    viewNormals[v] = Normalized(Vector3.TransformNormal(Read3(worldNormals, v), frame.View));
-                }
-            }
-
-            SetupTriangles(job, jobIndex, frame, clip, viewNormals, hasNormals, normalMatrix, mirrored, cull);
-        }
-        finally
-        {
-            ArrayPool<Vector4>.Shared.Return(clip);
-            ArrayPool<Vector3>.Shared.Return(viewNormals);
-            if (rentedPositions is not null)
-            {
-                ArrayPool<float>.Shared.Return(rentedPositions);
-            }
-
-            if (rentedNormals is not null)
-            {
-                ArrayPool<float>.Shared.Return(rentedNormals);
+                viewNormals[v] = Normalized(Vector3.TransformNormal(Read3(worldNormals, v), frame.View));
             }
         }
+
+        SetupTriangles(job, jobIndex, frame, clip, viewNormals, hasNormals, normalMatrix, mirrored, cull);
     }
 
     /// <summary>
@@ -1126,6 +1243,55 @@ public sealed class SoftwareRenderer
             Array.Resize(ref triangles, next > length ? next : length * 2);
             Triangles = triangles;
         }
+
+        public long TriangleBytes => (long)Unsafe.SizeOf<ScreenTriangle>() * Triangles.Length;
+
+        /// <summary>
+        /// Shrinks a buffer that is more than twice as long as the triangles of the last frame need, to one and
+        /// a half times that, so a draw that is now culled or smaller on screen gives back its memory and a
+        /// small change of the count on the next frame does not make it grow at once.
+        /// </summary>
+        public void TrimSlack()
+        {
+            var count = TriangleCount;
+            if (Triangles.Length <= 2L * count + SlackTriangles)
+            {
+                return;
+            }
+
+            if (count == 0)
+            {
+                Triangles = [];
+                return;
+            }
+
+            var triangles = Triangles;
+            Array.Resize(ref triangles, count + count / 2);
+            Triangles = triangles;
+        }
+
+        public void FreeTriangles()
+        {
+            Triangles = [];
+            TriangleCount = 0;
+        }
+    }
+
+    /// <summary>
+    /// The vertex buffers that one worker uses for the draws it sets up: the clip positions and camera space
+    /// normals of the draw, and the vehicle frame vertices of a draw that the world cache does not hold.
+    /// </summary>
+    private sealed class Scratch
+    {
+        public Vector4[] Clip = [];
+        public Vector3[] ViewNormals = [];
+        public float[] Positions = [];
+        public float[] Normals = [];
+
+        public long Bytes =>
+            (long)Unsafe.SizeOf<Vector4>() * Clip.Length
+            + (long)Unsafe.SizeOf<Vector3>() * ViewNormals.Length
+            + sizeof(float) * ((long)Positions.Length + Normals.Length);
     }
 
     /// <summary>A polygon corner in clip space, with its UV and its normal in camera space.</summary>
