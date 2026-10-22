@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using Borea.Core.ModLoaders;
 using Borea.Core.Paths;
 using Borea.Core.Updates;
+using Borea.Storage.ModLoaders;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -125,7 +126,7 @@ public partial class MainViewModel
 
                 // one line per installed version, and the record alone until the versions were listed
                 var versions = _listedLoaderVersions ?? _services.Settings.LoaderInstallations
-                    .Select(entry => new InstalledLoaderVersion(entry.Key, entry.Value.Version, entry.Value.RawVersion, entry.Value.DirectoryPath, entry.Value.IsAdopted, IsRecorded: true))
+                    .Select(entry => new InstalledLoaderVersion(entry.Key, entry.Value.Version, entry.Value.RawVersion, entry.Value.DirectoryPath, LoaderLayoutMigration.IsPlayerFolder(_services.Paths.GetLoadersRoot(), entry.Value.DirectoryPath, entry.Value.IsAdopted), IsRecorded: true))
                     .ToList();
                 foreach (var installed in versions)
                 {
