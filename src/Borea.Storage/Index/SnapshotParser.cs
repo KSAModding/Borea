@@ -122,7 +122,7 @@ public static class SnapshotParser
 
     /// <summary>
     /// The usable share hosts of the hosts field, which is hosts.toml of content-index as JSON (RFC 0104), by key.
-    /// A table that Borea cannot use is skipped and not the whole field, as in <c>ShareHostStore</c>. A host without
+    /// A table that Borea cannot use is skipped and not the whole field. A host without
     /// storage and pages is usable too, because Borea reads only the members below and ignores the others.
     /// </summary>
     private static IReadOnlyList<ShareHost> ParseHosts(JsonElement? element)
