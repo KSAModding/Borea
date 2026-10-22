@@ -4033,7 +4033,7 @@
     <value>Loader directory</value>
   </data>
   <data name="SetupLoaderDirectoryHint" xml:space="preserve">
-    <value>Leave empty to let Borea pick a folder when installing.</value>
+    <value>A folder that already holds the mod loader. Use existing makes Borea start it from there.</value>
   </data>
   <data name="SetupInstallLoader" xml:space="preserve">
     <value>Install</value>
@@ -4056,23 +4056,44 @@
   <data name="SetupLoaderInstalledFormat" xml:space="preserve">
     <value>Installed {0} {1} to {2}.</value>
   </data>
-  <data name="SetupLoaderInstalledVersionFormat" xml:space="preserve">
-    <value>Installed {0}</value>
-  </data>
-  <data name="SetupLoaderIncompatibleFormat" xml:space="preserve">
-    <value>Installed {0}, does not support KSA {1}</value>
-  </data>
   <data name="SetupLoaderInstalledUnknownVersion" xml:space="preserve">
     <value>Installed, version unknown</value>
   </data>
   <data name="SetupUpdateLoaderFormat" xml:space="preserve">
     <value>Update to {0}</value>
   </data>
-  <data name="SetupReinstallLoader" xml:space="preserve">
-    <value>Reinstall</value>
+  <data name="SettingsLoadersTitle" xml:space="preserve">
+    <value>Mod loaders</value>
+  </data>
+  <data name="SettingsLoadersHint" xml:space="preserve">
+    <value>Borea keeps each installed version in its own folder. Every instance starts the version that the Mod loader row of its page names, so one instance can stay on an older version.</value>
+  </data>
+  <data name="SettingsLoaderUsedByFormat" xml:space="preserve">
+    <value>Used by {0}</value>
+  </data>
+  <data name="SettingsLoaderUnused" xml:space="preserve">
+    <value>Not used</value>
+  </data>
+  <data name="SettingsLoaderInUseFormat" xml:space="preserve">
+    <value>Used by {0}. Set these instances to another version first.</value>
+  </data>
+  <data name="SettingsLoaderYourFolderFormat" xml:space="preserve">
+    <value>{0}, your folder</value>
+  </data>
+  <data name="SettingsLoaderForget" xml:space="preserve">
+    <value>Forget</value>
+  </data>
+  <data name="SettingsLoaderInstallAnother" xml:space="preserve">
+    <value>Install another version</value>
+  </data>
+  <data name="SettingsLoaderRemoveConfirm" xml:space="preserve">
+    <value>Delete this version from the disk?</value>
+  </data>
+  <data name="SettingsLoaderRemovedFormat" xml:space="preserve">
+    <value>Removed {0} {1}.</value>
   </data>
   <data name="ContentLoaderHint" xml:space="preserve">
-    <value>Mod loaders are set up from the Game settings.</value>
+    <value>Each instance chooses its mod loader version in the Mod loader row of its page. The settings list the installed versions.</value>
   </data>
   <data name="LinkForum" xml:space="preserve">
     <value>Forum</value>
@@ -4378,10 +4399,10 @@
     <value>This instance no longer exists.</value>
   </data>
   <data name="LaunchLoaderNotInstalledFormat" xml:space="preserve">
-    <value>The mod loader {0} is not installed. Mod loaders are set up from the Game settings.</value>
+    <value>The mod loader {0} is not installed. Install it in the Mod loader row of the instance page.</value>
   </data>
   <data name="LaunchNeededLoaderNotInstalledFormat" xml:space="preserve">
-    <value>The mods in this instance need the mod loader {0}, and it is not installed. Mod loaders are set up from the Game settings.</value>
+    <value>The mods in this instance need the mod loader {0}, and it is not installed. Install it in the Mod loader row of the instance page.</value>
   </data>
   <data name="LaunchInstallLoaderFormat" xml:space="preserve">
     <value>This instance needs {0}. Install it now?</value>
@@ -4453,7 +4474,7 @@
     <value>{0} stopped while it loaded mods (exit code {1}). A mod of this instance is the likely cause. The details show what it wrote.</value>
   </data>
   <data name="LaunchLoaderTooOldFormat" xml:space="preserve">
-    <value>{0} was made for another KSA build than the installed {1} and cannot load the game. When a {0} release for {1} is out, install it under Settings &gt; Game &gt; Mod loader. If {1} is older than the build that {0} was made for, update KSA instead.</value>
+    <value>{0} was made for another KSA build than the installed {1} and cannot load the game. When a {0} release for {1} is out, install it in the Mod loader row of the instance page. If {1} is older than the build that {0} was made for, update KSA instead.</value>
   </data>
   <data name="LaunchLoaderReleasesFormat" xml:space="preserve">
     <value>{0} releases</value>

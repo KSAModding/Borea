@@ -4033,7 +4033,7 @@
     <value>Loader-Verzeichnis</value>
   </data>
   <data name="SetupLoaderDirectoryHint" xml:space="preserve">
-    <value>Leer lassen, damit Borea beim Installieren einen Ordner wählt.</value>
+    <value>Ein Ordner, der den Mod-Loader schon enthält. Mit Vorhandenen verwenden startet Borea ihn von dort.</value>
   </data>
   <data name="SetupInstallLoader" xml:space="preserve">
     <value>Installieren</value>
@@ -4056,23 +4056,44 @@
   <data name="SetupLoaderInstalledFormat" xml:space="preserve">
     <value>{0} {1} nach {2} installiert.</value>
   </data>
-  <data name="SetupLoaderInstalledVersionFormat" xml:space="preserve">
-    <value>{0} installiert</value>
-  </data>
-  <data name="SetupLoaderIncompatibleFormat" xml:space="preserve">
-    <value>{0} installiert, unterstützt KSA {1} nicht</value>
-  </data>
   <data name="SetupLoaderInstalledUnknownVersion" xml:space="preserve">
     <value>Installiert, Version unbekannt</value>
   </data>
   <data name="SetupUpdateLoaderFormat" xml:space="preserve">
     <value>Auf {0} aktualisieren</value>
   </data>
-  <data name="SetupReinstallLoader" xml:space="preserve">
-    <value>Neu installieren</value>
+  <data name="SettingsLoadersTitle" xml:space="preserve">
+    <value>Mod-Loader</value>
+  </data>
+  <data name="SettingsLoadersHint" xml:space="preserve">
+    <value>Borea legt jede installierte Version in einen eigenen Ordner. Jede Instanz startet die Version, die in der Zeile Mod-Loader auf ihrer Seite steht, so kann eine Instanz bei einer älteren Version bleiben.</value>
+  </data>
+  <data name="SettingsLoaderUsedByFormat" xml:space="preserve">
+    <value>Verwendet von {0}</value>
+  </data>
+  <data name="SettingsLoaderUnused" xml:space="preserve">
+    <value>Nicht verwendet</value>
+  </data>
+  <data name="SettingsLoaderInUseFormat" xml:space="preserve">
+    <value>Verwendet von {0}. Stelle diese Instanzen zuerst auf eine andere Version um.</value>
+  </data>
+  <data name="SettingsLoaderYourFolderFormat" xml:space="preserve">
+    <value>{0}, dein Ordner</value>
+  </data>
+  <data name="SettingsLoaderForget" xml:space="preserve">
+    <value>Vergessen</value>
+  </data>
+  <data name="SettingsLoaderInstallAnother" xml:space="preserve">
+    <value>Weitere Version installieren</value>
+  </data>
+  <data name="SettingsLoaderRemoveConfirm" xml:space="preserve">
+    <value>Diese Version von der Festplatte löschen?</value>
+  </data>
+  <data name="SettingsLoaderRemovedFormat" xml:space="preserve">
+    <value>{0} {1} entfernt.</value>
   </data>
   <data name="ContentLoaderHint" xml:space="preserve">
-    <value>Mod-Loader werden in den Spieleinstellungen eingerichtet.</value>
+    <value>Jede Instanz wählt ihre Version des Mod-Loaders in der Zeile Mod-Loader auf ihrer Seite. Die Einstellungen listen die installierten Versionen.</value>
   </data>
   <data name="LinkForum" xml:space="preserve">
     <value>Forum</value>
@@ -4378,10 +4399,10 @@
     <value>Diese Instanz existiert nicht mehr.</value>
   </data>
   <data name="LaunchLoaderNotInstalledFormat" xml:space="preserve">
-    <value>Der Mod-Loader {0} ist nicht installiert. Mod-Loader werden in den Spieleinstellungen eingerichtet.</value>
+    <value>Der Mod-Loader {0} ist nicht installiert. Installiere ihn in der Zeile Mod-Loader auf der Seite der Instanz.</value>
   </data>
   <data name="LaunchNeededLoaderNotInstalledFormat" xml:space="preserve">
-    <value>Die Mods in dieser Instanz brauchen den Mod-Loader {0}, der nicht installiert ist. Mod-Loader werden in den Spieleinstellungen eingerichtet.</value>
+    <value>Die Mods in dieser Instanz brauchen den Mod-Loader {0}, der nicht installiert ist. Installiere ihn in der Zeile Mod-Loader auf der Seite der Instanz.</value>
   </data>
   <data name="LaunchInstallLoaderFormat" xml:space="preserve">
     <value>Diese Instanz braucht {0}. Jetzt installieren?</value>
@@ -4453,7 +4474,7 @@
     <value>{0} wurde beim Laden der Mods beendet (Exit-Code {1}). Wahrscheinlich ist eine Mod dieser Instanz die Ursache. Die Details zeigen, was ausgegeben wurde.</value>
   </data>
   <data name="LaunchLoaderTooOldFormat" xml:space="preserve">
-    <value>{0} wurde für einen anderen KSA-Build als den installierten {1} gebaut und kann das Spiel nicht laden. Sobald ein Release von {0} für {1} erscheint, installiere es unter Einstellungen &gt; Spiel &gt; Mod-Loader. Ist {1} älter als der Build, für den {0} gebaut wurde, aktualisiere stattdessen KSA.</value>
+    <value>{0} wurde für einen anderen KSA-Build als den installierten {1} gebaut und kann das Spiel nicht laden. Sobald ein Release von {0} für {1} erscheint, installiere es in der Zeile Mod-Loader auf der Seite der Instanz. Ist {1} älter als der Build, für den {0} gebaut wurde, aktualisiere stattdessen KSA.</value>
   </data>
   <data name="LaunchLoaderReleasesFormat" xml:space="preserve">
     <value>Releases von {0}</value>
