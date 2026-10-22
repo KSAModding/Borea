@@ -78,6 +78,21 @@ public sealed class PreviewArchiveCache
     }
 
     /// <summary>
+    /// Like <see cref="TryGet"/>, but first waits for a fetch of this hash that runs in this process, so a caller
+    /// that would download the same file gets the bytes of that fetch instead of sending a second request.
+    /// </summary>
+    internal async Task<string?> TryGetAfterFetchAsync(string sha256, CancellationToken token)
+    {
+        if (_fetchGates.TryGetValue(Key(sha256), out var gate))
+        {
+            await gate.WaitAsync(token).ConfigureAwait(false);
+            gate.Release();
+        }
+
+        return TryGet(sha256);
+    }
+
+    /// <summary>
     /// Returns the cached archive of the release, and downloads it first when the cache does not have it.
     /// Before a download the volume must hold the archive size plus the margin of <see cref="DriveInstallSpaceCheck"/>.
     /// The bytes are hashed again after the download, and a mismatch keeps no file. Fetches of one hash in this
@@ -113,12 +128,27 @@ public sealed class PreviewArchiveCache
 
             var target = ArchivePath(key);
             var part = Path.Combine(_archivesFolder, $"{key}.{Guid.NewGuid():N}{PartExtension}");
+
+            // HttpModDownloader does not cap the size of a hashed release, because the hash decides. Every fetch raises
+            // the public download count of the host (RFC 0052), so the preview stops a host that sends more than the
+            // stated size. The index stamps the size from the same file as the hash, so a correct listing never trips the cap.
+            using var fetch = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            var cap = release.Download.SizeBytes is { } stated ? new SizeCap(stated, progress, fetch) : null;
             try
             {
-                await downloader.DownloadAsync(release, part, progress, cancellationToken).ConfigureAwait(false);
+                string actual;
+                try
+                {
+                    await downloader.DownloadAsync(release, part, (IProgress<DownloadProgress>?)cap ?? progress, fetch.Token).ConfigureAwait(false);
 
-                // The downloader verifies too, but the file name is the promise that the bytes match, so the cache checks it itself.
-                var actual = await HashAsync(part, cancellationToken).ConfigureAwait(false);
+                    // The downloader verifies too, but the file name is the promise that the bytes match, so the cache checks it itself.
+                    actual = await HashAsync(part, fetch.Token).ConfigureAwait(false);
+                }
+                catch (OperationCanceledException exception) when (cap is { Exceeded: true } && !cancellationToken.IsCancellationRequested)
+                {
+                    throw new DownloadFailedException($"The host of {release.ModId} {release.Version} sent more than the {cap.StatedBytes} bytes that the release states.", exception);
+                }
+
                 if (!string.Equals(actual, key, StringComparison.Ordinal))
                     throw new DownloadFailedException($"The archive of {release.ModId} {release.Version} has the SHA-256 {actual}, and the release names {key}.");
 
@@ -331,6 +361,29 @@ public sealed class PreviewArchiveCache
 
     private static bool IsVersionName(string name)
         => name.Length > 1 && name[0] == 'v' && !name.AsSpan(1).ContainsAnyExceptInRange('0', '9');
+
+    /// <summary>
+    /// Passes each report on to the progress of the caller, and cancels the fetch when the downloader reports more
+    /// bytes than the release states.
+    /// </summary>
+    private sealed class SizeCap(long statedBytes, IProgress<DownloadProgress>? inner, CancellationTokenSource fetch) : IProgress<DownloadProgress>
+    {
+        private volatile bool _exceeded;
+
+        public long StatedBytes => statedBytes;
+
+        public bool Exceeded => _exceeded;
+
+        public void Report(DownloadProgress value)
+        {
+            inner?.Report(value);
+            if (_exceeded || (value.BytesDownloaded <= statedBytes && value.TotalBytes <= statedBytes))
+                return;
+
+            _exceeded = true;
+            fetch.Cancel();
+        }
+    }
 
     private sealed class PinHandle(PreviewArchiveCache cache, string key) : IDisposable
     {
