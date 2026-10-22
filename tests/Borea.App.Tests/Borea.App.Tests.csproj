@@ -27,6 +27,7 @@
 
   <ItemGroup>
     <Compile Include="..\Borea.Preview.Tests\Gltf\GlbTestWriter.cs" Link="ViewModels\GlbTestWriter.cs" />
+    <Compile Include="..\Borea.Preview.Tests\GameDirFactAttribute.cs" Link="Preview\GameDirFactAttribute.cs" />
   </ItemGroup>
 
   <ItemGroup>

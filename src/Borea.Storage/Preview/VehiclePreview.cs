@@ -93,6 +93,12 @@ public sealed class VehiclePreview : IVehiclePreview
     /// <summary>How many times a catalog was read from the mod files, so a test can show that a second load reuses it.</summary>
     internal int CatalogBuilds => Volatile.Read(ref _catalogBuilds);
 
+    /// <summary>
+    /// The decompressed archive bytes that the entry cache of a ready result holds now, or 0 for assets that this
+    /// service did not give, so a test can print the cache size of a real vehicle.
+    /// </summary>
+    internal static long EntryCacheBytesOf(IPreviewAssetSource? assets) => assets is OwnedAssets owned ? owned.EntryCacheBytes : 0;
+
     public async Task<VehiclePreviewPlan> PrepareAsync(ModVersionMetadata release, Guid? targetInstanceId, CancellationToken cancellationToken = default)
     {
         CheckVehicle(release);
@@ -438,6 +444,8 @@ public sealed class VehiclePreview : IVehiclePreview
         public Stream? TryOpenHead(PreviewAssetRef asset) => set.TryOpenHead(asset);
 
         public string GetCacheKey(PreviewAssetRef asset) => set.GetCacheKey(asset);
+
+        public long EntryCacheBytes => set.Cache.TotalBytes;
 
         public void Dispose()
         {
