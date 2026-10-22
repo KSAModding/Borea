@@ -1,4 +1,5 @@
 using Borea.Core.Game;
+using Borea.Core.Launch;
 using Borea.Core.Mods;
 
 namespace Borea.Core.ModLoaders;
@@ -21,13 +22,18 @@ public sealed record LoaderUpdate(string LoaderId, ModVersion? InstalledVersion,
 
     /// <param name="installation">The recorded loader, or null when it is not installed.</param>
     /// <param name="game">The installed game. Null rates nothing and offers the newest release of the channel.</param>
+    /// <param name="need">
+    /// What the mods of an instance accept. A release outside that range is never offered, and a range that
+    /// is empty limits nothing. Null offers without that limit.
+    /// </param>
     public static async Task<LoaderUpdate> FindAsync(
         IModRepository mods,
         ReleaseChannel channel,
         string loaderId,
         LoaderInstallation? installation,
         GameVersion? game,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        NeededLoader? need = null)
     {
         ArgumentNullException.ThrowIfNull(mods);
 
@@ -54,6 +60,7 @@ public sealed record LoaderUpdate(string LoaderId, ModVersion? InstalledVersion,
             var release = await mods.GetReleaseAsync(loaderId, candidate, cancellationToken).ConfigureAwait(false);
             if (release is { IsOffered: true }
                 && channel.Includes(release.ReleaseStatus)
+                && (need is null || need.HasConflict || need.Accepts(candidate))
                 && Compatibility.Evaluate(release, game) != GameCompatibility.Incompatible)
             {
                 offer = release;
