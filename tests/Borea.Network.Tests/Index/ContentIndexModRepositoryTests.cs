@@ -429,7 +429,6 @@ public sealed class ContentIndexModRepositoryTests : IDisposable
         public string GetAnnouncementsPath() => throw new NotSupportedException();
         public string GetListingSchemaPath() => throw new NotSupportedException();
 
-        public string GetShareHostsPath() => throw new NotSupportedException();
         public string GetImageCacheFolder() => throw new NotSupportedException();
         public string GetGamePatchNotesFolder() => throw new NotSupportedException();
         public string GetAppPreferencesPath() => "app-preferences.json";

@@ -57,18 +57,15 @@ public sealed class ContentViewModelTests
     [Fact]
     public async Task Open_ListingOnARegisteredShareHost_LinksTheHostPage()
     {
-        const string hosts = "[ksamods]\nkind = \"share\"\nname = \"ksamods.gg\"\napi = \"https://ksamods.gg/api/share/v1/\"\ntypes = [\"vehicle\", \"mod\"]\n";
+        var hosts = ViewModelHarness.ShareHosts("""{ "ksamods": { "kind": "share", "name": "ksamods.gg", "api": "https://ksamods.gg/api/share/v1/", "types": ["vehicle", "mod"] } }""");
         using var harness = await ViewModelHarness.CreateAsync(
             editSnapshot: json =>
             {
                 var root = System.Text.Json.Nodes.JsonNode.Parse(json)!;
                 var listing = root["listings"]!.AsArray().Single(node => (string?)node!["id"] == "AdvancedFlightComputer")!;
                 listing["authored"]!["releases"] = new System.Text.Json.Nodes.JsonObject { ["ksamods"] = "AdvancedFlightComputer" };
-                return root.ToJsonString();
-            },
-            respond: request => request.RequestUri?.AbsoluteUri == "https://raw.githubusercontent.com/KSAModding/content-index/main/hosts.toml"
-                ? new HttpResponseMessage(System.Net.HttpStatusCode.OK) { Content = new StringContent(hosts) }
-                : null);
+                return hosts(root.ToJsonString());
+            });
         var viewModel = harness.ViewModel;
         await viewModel.EnsureDiscoverLoadedAsync();
 
