@@ -61,6 +61,22 @@ public sealed class ContentIndexReaderTests : IDisposable
         }
         """;
 
+    /// <summary>The share host example of RFC 0094 as the snapshot carries it.</summary>
+    private const string StorageHost = """
+        {
+            "kind": "share",
+            "name": "ksamods.gg",
+            "storage": "ksamods-content/share",
+            "bot": 98765432,
+            "api": "https://ksamods.gg/api/share/v1/",
+            "pages": "https://ksamods-content.github.io/share/",
+            "types": ["vehicle", "save"],
+            "max_bytes": { "vehicle": 10485760, "save": 104857600 },
+            "new_listings_per_day": 5,
+            "policy": "https://ksamods.gg/policy"
+        }
+        """;
+
     private readonly string _tempRoot = Path.Combine(Path.GetTempPath(), "BoreaTest_" + Guid.NewGuid());
     private readonly TestGamePathProvider _paths;
     private readonly ContentIndexReader _reader;
@@ -194,6 +210,80 @@ public sealed class ContentIndexReaderTests : IDisposable
         var diagnostic = Assert.Single(result.Diagnostics);
         Assert.Equal(ContentIndexDiagnosticKind.Malformed, diagnostic.Kind);
         Assert.Equal(ContentIndexDiagnosticScope.Tags, diagnostic.Scope);
+    }
+
+    [Fact]
+    public async Task ReadAsync_Hosts_ReadsAStorageHostAndAHostWithoutStorage()
+    {
+        await WriteIndexAsync(Snapshot(Listing("test-mod", ValidAuthoredJson), prefix: $$"""
+            "hosts": {
+                "ksamods": {{StorageHost}},
+                "ownhost": {
+                    "kind": "share",
+                    "api": "https://own.example/api",
+                    "data": "https://data.own.example/share/",
+                    "downloads": ["https://cdn.own.example/"],
+                    "key": "MCowBQYDK2VwAyEAGb9ECWmEzf6FQbrBZ9w7lshQhqowtrbLDFw4rXAxZuE=",
+                    "retired_keys": [],
+                    "types": ["vehicle"]
+                }
+            },
+            """));
+
+        var result = await _reader.ReadAsync();
+
+        Assert.Single(result.Listings);
+        Assert.Equal(["ksamods", "ownhost"], result.ShareHosts.Select(host => host.Key));
+        var storage = result.ShareHosts[0];
+        Assert.Equal(("ksamods.gg", "https://ksamods.gg/api/share/v1/"), (storage.Name, storage.Api.AbsoluteUri));
+        Assert.Equal(["vehicle", "save"], storage.Types);
+        Assert.Equal(10485760, storage.MaxBytesFor("vehicle"));
+        Assert.Equal("https://ksamods.gg/", storage.Page.AbsoluteUri);
+        var own = result.ShareHosts[1];
+        Assert.Equal(("ownhost", "https://own.example/api/"), (own.Name, own.Api.AbsoluteUri));
+        Assert.Equal(["vehicle"], own.Types);
+        Assert.Null(own.MaxBytesFor("vehicle"));
+        Assert.Equal("https://own.example/", own.Page.AbsoluteUri);
+    }
+
+    [Theory]
+    [InlineData("\"ksamods\":", "\"github\":")]
+    [InlineData("\"ksamods\":", "\"KSAmods\":")]
+    [InlineData("\"kind\": \"share\"", "\"kind\": \"mirror\"")]
+    [InlineData("https://ksamods.gg/api/share/v1/", "http://ksamods.gg/api/share/v1/")]
+    [InlineData("\"types\": [\"vehicle\", \"save\"]", "\"types\": \"vehicle\"")]
+    [InlineData("\"vehicle\": 10485760", "\"vehicle\": 0")]
+    [InlineData("\"vehicle\": 10485760", "\"vehicle\": 10485760.5")]
+    public async Task ReadAsync_HostTableBoreaCannotUse_IsSkippedAndTheOthersStay(string from, string to)
+    {
+        var hosts = $$"""
+            "hosts": {
+                "ksamods": {{StorageHost}},
+                "other": {{StorageHost}}
+            },
+            """;
+        // Only the first table changes, so the other one stays usable.
+        var at = hosts.IndexOf(from, StringComparison.Ordinal);
+        await WriteIndexAsync(Snapshot(Listing("test-mod", ValidAuthoredJson), prefix: hosts[..at] + to + hosts[(at + from.Length)..]));
+
+        var result = await _reader.ReadAsync();
+
+        Assert.Equal("other", Assert.Single(result.ShareHosts).Key);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("\"hosts\": {},")]
+    [InlineData("\"hosts\": \"ksamods\",")]
+    public async Task ReadAsync_NoHostTables_GivesNoHostsAndKeepsTheRest(string hosts)
+    {
+        await WriteIndexAsync(Snapshot(Listing("test-mod", ValidAuthoredJson), prefix: hosts));
+
+        var result = await _reader.ReadAsync();
+
+        Assert.Empty(result.ShareHosts);
+        Assert.Single(result.Listings);
+        Assert.Empty(result.Diagnostics);
     }
 
     [Fact]

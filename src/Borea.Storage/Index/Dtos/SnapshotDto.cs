@@ -14,6 +14,10 @@ public sealed class SnapshotDto
     [JsonPropertyName("tags")]
     public JsonElement? Tags { get; set; }
 
+    /// <summary>The hosts.toml of content-index as JSON (RFC 0104), stored raw so a bad table skips only that host.</summary>
+    [JsonPropertyName("hosts")]
+    public JsonElement? Hosts { get; set; }
+
     /// <summary>
     /// Stores <see cref="JsonElement"/> instead of <see cref="ListingEntryDto"/>
     /// because storing <see cref="ListingEntryDto"/> here would cause any unparseable

@@ -193,6 +193,10 @@ internal sealed class ViewModelHarness : IDisposable
     public static Func<string, string> CuratedTags(params (string Tag, string Name)[] tags) =>
         json => "{ \"tags\": " + $$"""{ "spec_version": 1, "mod": [{{string.Join(", ", tags.Select(tag => $$"""{ "tag": "{{tag.Tag}}", "name": "{{tag.Name}}", "meaning": "{{tag.Name}} content." }"""))}}] }""" + "," + json.TrimStart()[1..];
 
+    /// <summary>Adds the share hosts of <paramref name="hosts"/>, a JSON object by key as hosts.toml holds them, to the snapshot.</summary>
+    public static Func<string, string> ShareHosts(string hosts) =>
+        json => "{ \"hosts\": " + hosts + "," + json.TrimStart()[1..];
+
     /// <summary>When <see cref="MarkGone"/> says the download went from its host.</summary>
     public static readonly DateTimeOffset GoneSince = new(2026, 9, 23, 10, 24, 0, TimeSpan.Zero);
 
