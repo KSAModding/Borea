@@ -87,7 +87,7 @@ public partial class MainViewModel
             if (SelectedInstance?.InstanceId != instance.InstanceId)
                 return;
 
-            var installed = services.InstalledVersion.GetInstalledVersion()?.Version;
+            var installed = GameVersionOf(services, instance.Instance);
             section.SetItems(entries.Select(entry => new GameSaveItem(this, section, instance.InstanceId, entry, installed)));
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
@@ -236,7 +236,8 @@ public partial class MainViewModel
         try
         {
             var entries = await services.GameSaves.ListSharedProfileAsync(section.Kind);
-            var installed = services.InstalledVersion.GetInstalledVersion()?.Version;
+            // the profile items are offered for a copy into the shown instance, so they are compared with its build
+            var installed = GameVersionOf(services, SelectedInstance?.Instance);
             section.ShowProfile(entries.Select(entry => new GameSaveItem(this, section, Guid.Empty, entry, installed)
             {
                 ExistsInInstance = section.Items.Any(item => string.Equals(item.FolderName, entry.FolderName, StringComparison.OrdinalIgnoreCase)),

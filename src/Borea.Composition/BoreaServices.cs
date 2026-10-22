@@ -485,8 +485,8 @@ public sealed class BoreaServices : IDisposable
         installCandidates ??= HostInstallCandidates();
 
         var installedVersion = new InstalledGameVersionProvider(paths);
-        var gameShape = new GameShapeCheck(paths, installedVersion);
         var instanceGames = new InstanceGameResolver(paths, installedVersion);
+        var gameShape = new GameShapeCheck(paths, installedVersion, instances, instanceGames);
 
         // The file repository stays unguarded, because the installer and the
         // replacer own it and are guarded themselves.

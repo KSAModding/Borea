@@ -2132,6 +2132,9 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string InstallInstanceMissing => Resources.InstallInstanceMissing;
 
+    public string FormatInstallKeptBuildUnavailable(string build, string folder)
+        => string.Format(CultureInfo.CurrentCulture, Resources.InstallKeptBuildUnavailableFormat, build, folder);
+
     public string ModalCreateInstanceTitle => Resources.ModalCreateInstanceTitle;
 
     public string ModalRenameInstanceTitle => Resources.ModalRenameInstanceTitle;

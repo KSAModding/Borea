@@ -394,7 +394,7 @@ public partial class MainViewModel : ViewModelBase
         await RefreshGameShapeAsync();
 
         // the content page shows the same rows, so its chip follows too
-        await RefreshCompatibilityAsync(installed?.Version);
+        await RefreshCompatibilityAsync();
 
         // a loader release can end before the new build, so it is rated again, on Home and in the settings
         StartLoaderUpdateCheck();
@@ -495,6 +495,11 @@ public partial class MainViewModel : ViewModelBase
         OnPropertyChanged(nameof(CanActOnSelectedContent));
         RefreshInstalledFlags();
         OnPropertyChanged(nameof(InstalledInText));
+
+        // the chips follow the build of the active instance, so they are checked again only when that build changes
+        var game = _services is null ? null : GameVersionOf(_services, _activeInstanceEntity);
+        if (game != _compatibilityGame)
+            await RefreshCompatibilityAsync(game);
 
         // the instance page shows fresh rows after a change; any other page
         // stays where the user is instead of jumping to that instance
@@ -1029,6 +1034,8 @@ public sealed partial class InstanceItem : ObservableObject
 
     public Guid InstanceId { get; }
 
+    internal Instance Instance { get; }
+
     public string Name { get; }
 
     public int ModCount { get; }
@@ -1063,6 +1070,7 @@ public sealed partial class InstanceItem : ObservableObject
     {
         _owner = owner;
         _source = instance.Source;
+        Instance = instance;
         InstanceId = instance.InstanceId;
         Name = instance.Name;
         CreatedAt = instance.CreatedAt;
@@ -1147,7 +1155,7 @@ public sealed partial class InstanceItem : ObservableObject
     private Task BackUpAllSavesAsync() => _owner.BackUpAllSavesAsync(this);
 
     [RelayCommand]
-    private void SaveSettingsPreset() => _owner.BeginCreateGameSettingsPreset(InstanceId);
+    private void SaveSettingsPreset() => _owner.BeginCreateGameSettingsPreset(Instance);
 
     [RelayCommand]
     private void BeginDelete() => _owner.BeginDeleteInstance(this);
