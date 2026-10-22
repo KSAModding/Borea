@@ -42,7 +42,7 @@ public sealed class LoaderPromptTests
         await viewModel.PlayCommand.ExecuteAsync(null);
 
         Assert.True(viewModel.IsLoaderPromptOpen);
-        Assert.Equal(harness.Localization.FormatLaunchInstallLoader("StarMap"), viewModel.LoaderPromptText);
+        Assert.Equal(harness.Localization.FormatLaunchInstallLoader("StarMap 0.4.6"), viewModel.LoaderPromptText);
         Assert.Null(viewModel.LaunchMessage);
         Assert.False(viewModel.IsSettingsOpen);
         Assert.False(starter.Started);
@@ -130,7 +130,7 @@ public sealed class LoaderPromptTests
 
         await viewModel.PlayActiveInstanceCommand.ExecuteAsync(null);
 
-        Assert.Equal(harness.Localization.FormatLaunchInstallLoader("StarMap"), viewModel.LoaderPromptText);
+        Assert.Equal(harness.Localization.FormatLaunchInstallLoader("StarMap 0.4.6"), viewModel.LoaderPromptText);
         Assert.Contains(harness.Services.Log.ReadRecentLines(20), line => line.EndsWith("did not start, NoLoaderTakesInstance.", StringComparison.Ordinal));
 
         await viewModel.InstallPromptedLoaderCommand.ExecuteAsync(null);

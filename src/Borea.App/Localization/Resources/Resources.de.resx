@@ -1308,6 +1308,18 @@
   <data name="LoaderUpdateGameRunning" xml:space="preserve">
     <value>Schließe zuerst KSA. Borea kann den Mod-Loader nicht aktualisieren, während das Spiel läuft.</value>
   </data>
+  <data name="LoaderPinnedMissingFormat" xml:space="preserve">
+    <value>Die Instanz {2} ist bei {0} {1} angeheftet, und diese Version ist nicht installiert.</value>
+  </data>
+  <data name="LoaderPinnedIncompatibleFormat" xml:space="preserve">
+    <value>Die Instanz {2} ist bei {0} {1} angeheftet, und diese Version unterstützt KSA {3} nicht.</value>
+  </data>
+  <data name="LoaderInstallActionFormat" xml:space="preserve">
+    <value>{0} {1} installieren</value>
+  </data>
+  <data name="LoaderChangeAction" xml:space="preserve">
+    <value>Mod-Loader ändern</value>
+  </data>
   <data name="GameBuildDownload" xml:space="preserve">
     <value>Herunterladen</value>
   </data>
@@ -4385,6 +4397,12 @@
   </data>
   <data name="LaunchPlayAnyway" xml:space="preserve">
     <value>Trotzdem spielen</value>
+  </data>
+  <data name="LaunchPinnedLoaderNotInstallableFormat" xml:space="preserve">
+    <value>Diese Instanz ist bei {0} {1} angeheftet. Diese Version ist nicht installiert, und der Index bietet sie nicht mehr an. Automatisch verwenden, um die neueste passende Version zu starten?</value>
+  </data>
+  <data name="LaunchUseAutomaticLoader" xml:space="preserve">
+    <value>Automatisch verwenden</value>
   </data>
   <data name="LaunchSetUpGameFirstFormat" xml:space="preserve">
     <value>Diese Instanz braucht {0}. Richte zuerst den Spielordner ein.</value>

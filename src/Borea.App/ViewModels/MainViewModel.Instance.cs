@@ -12,6 +12,7 @@ using Borea.Core.History;
 using Borea.Core.Index;
 using Borea.Core.Instances;
 using Borea.Core.Launch;
+using Borea.Core.ModLoaders;
 using Borea.Core.ModPacks;
 using Borea.Core.Mods;
 using Borea.Core.Preferences;
@@ -682,8 +683,8 @@ public partial class MainViewModel
                 // the prompt installs the exact release that the setting or the mods of the instance ask for
                 if (resolution.Version?.Missing is { } release && resolution.Loader is { } missingLoader)
                     OpenLoaderPrompt(instanceId, missingLoader, release: release);
-                else if (!choice.Succeeded && LoaderToInstall(choice, resolution.Listings) is { } missing)
-                    OpenLoaderPrompt(instanceId, missing);
+                else if (resolution.Version is { Problem: LoaderVersionProblem.NotInstallable } && instance.Loader.Version is { } pin && resolution.Loader is { } pinnedLoader)
+                    OpenLoaderPrompt(instanceId, pinnedLoader, pin: pin);
                 else if (!choice.Succeeded)
                     LaunchMessage = LaunchLoaderFailureText(choice);
                 else
@@ -692,15 +693,15 @@ public partial class MainViewModel
             }
 
             var loader = choice.Loader!;
-
-            // the update check rates the recorded version, so it says nothing about another version that starts,
-            // and an update cannot change the version of a pinned instance
-            if (start.IsRecorded && resolution.Version is { IsPinned: false } && LoaderUpdateBeforeLaunch(instance, loader) is { } update)
+            var version = resolution.Version!;
+            if (LoaderUpdateBeforeLaunch(instance, loader, version, start) is { } update)
             {
                 services.Log.Write(update.Offer is { } offer
                     ? $"Launch of instance {instance.InstanceId} waits, {loader.ModId} {update.InstalledVersion} does not support the game and {offer.Version} does."
-                    : $"Launch of instance {instance.InstanceId} waits, {loader.ModId} {update.InstalledVersion} does not support the game and no release fits the game and the mods.");
-                OpenLoaderPrompt(instanceId, loader, update);
+                    : version.IsPinned
+                        ? $"Launch of instance {instance.InstanceId} waits, the pinned {loader.ModId} {update.InstalledVersion} does not support the game."
+                        : $"Launch of instance {instance.InstanceId} waits, {loader.ModId} {update.InstalledVersion} does not support the game and no release fits the game and the mods.");
+                OpenLoaderPrompt(instanceId, loader, update, pin: version.IsPinned ? instance.Loader.Version : null);
                 return;
             }
 

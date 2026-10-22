@@ -1234,6 +1234,17 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string LoaderUpdateGameRunning => Resources.LoaderUpdateGameRunning;
 
+    public string FormatLoaderPinnedMissing(string loader, string version, string instance)
+        => string.Format(CultureInfo.CurrentCulture, Resources.LoaderPinnedMissingFormat, loader, version, instance);
+
+    public string FormatLoaderPinnedIncompatible(string loader, string version, string instance, string game)
+        => string.Format(CultureInfo.CurrentCulture, Resources.LoaderPinnedIncompatibleFormat, loader, version, instance, game);
+
+    public string FormatLoaderInstallAction(string loader, string version)
+        => string.Format(CultureInfo.CurrentCulture, Resources.LoaderInstallActionFormat, loader, version);
+
+    public string LoaderChangeAction => Resources.LoaderChangeAction;
+
     public string GameBuildDownload => Resources.GameBuildDownload;
 
     public string GamePatchNotesTitle => Resources.GamePatchNotesTitle;
@@ -2728,6 +2739,11 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string LaunchUpdateAndPlay => Resources.LaunchUpdateAndPlay;
 
     public string LaunchPlayAnyway => Resources.LaunchPlayAnyway;
+
+    public string FormatLaunchPinnedLoaderNotInstallable(string loader, string version)
+        => string.Format(CultureInfo.CurrentCulture, Resources.LaunchPinnedLoaderNotInstallableFormat, loader, version);
+
+    public string LaunchUseAutomaticLoader => Resources.LaunchUseAutomaticLoader;
 
     public string FormatLaunchSetUpGameFirst(string loader)
         => string.Format(CultureInfo.CurrentCulture, Resources.LaunchSetUpGameFirstFormat, loader);

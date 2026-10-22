@@ -100,9 +100,10 @@ public partial class MainViewModel
     /// Installs one release of a loader beside the installed versions, as the usual loader install task, and tells the
     /// player when it fails. False when it did not install.
     /// </summary>
-    internal async Task<bool> InstallLoaderVersionAsync(string loaderId, ModVersionMetadata release)
+    /// <param name="replaced">The version that an update replaces, which Borea removes when no instance starts it, or null for an install.</param>
+    internal async Task<bool> InstallLoaderVersionAsync(string loaderId, ModVersionMetadata release, ModVersion? replaced = null)
     {
-        if (await UpdateLoaderToAsync(loaderId, release))
+        if (await UpdateLoaderToAsync(loaderId, release, replaced))
             return true;
 
         // the modal shows the error itself, and a row has no place for it
@@ -352,22 +353,22 @@ public sealed partial class InstanceLoaderRow : ObservableObject
     private async Task UpdateAsync()
     {
         if (_offer is { } offer)
-            await InstallAsync(offer);
+            await InstallAsync(offer, _version);
     }
 
     [RelayCommand]
     private async Task InstallMissingAsync()
     {
         if (_missing is { } missing)
-            await InstallAsync(missing);
+            await InstallAsync(missing, replaced: null);
     }
 
-    private async Task InstallAsync(ModVersionMetadata release)
+    private async Task InstallAsync(ModVersionMetadata release, ModVersion? replaced)
     {
         IsInstalling = true;
         try
         {
-            await _owner.InstallLoaderVersionAsync(_loaderId, release);
+            await _owner.InstallLoaderVersionAsync(_loaderId, release, replaced);
         }
         finally
         {

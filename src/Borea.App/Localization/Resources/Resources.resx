@@ -1308,6 +1308,18 @@
   <data name="LoaderUpdateGameRunning" xml:space="preserve">
     <value>Close KSA first. Borea cannot update the mod loader while the game runs.</value>
   </data>
+  <data name="LoaderPinnedMissingFormat" xml:space="preserve">
+    <value>The instance {2} is pinned to {0} {1}, and that version is not installed.</value>
+  </data>
+  <data name="LoaderPinnedIncompatibleFormat" xml:space="preserve">
+    <value>The instance {2} is pinned to {0} {1}, which does not support KSA {3}.</value>
+  </data>
+  <data name="LoaderInstallActionFormat" xml:space="preserve">
+    <value>Install {0} {1}</value>
+  </data>
+  <data name="LoaderChangeAction" xml:space="preserve">
+    <value>Change mod loader</value>
+  </data>
   <data name="GameBuildDownload" xml:space="preserve">
     <value>Download</value>
   </data>
@@ -4385,6 +4397,12 @@
   </data>
   <data name="LaunchPlayAnyway" xml:space="preserve">
     <value>Play anyway</value>
+  </data>
+  <data name="LaunchPinnedLoaderNotInstallableFormat" xml:space="preserve">
+    <value>This instance is pinned to {0} {1}. That version is not installed, and the index no longer offers it. Use Automatic to start the newest version that fits?</value>
+  </data>
+  <data name="LaunchUseAutomaticLoader" xml:space="preserve">
+    <value>Use Automatic</value>
   </data>
   <data name="LaunchSetUpGameFirstFormat" xml:space="preserve">
     <value>This instance needs {0}. Set up the game folder first.</value>
