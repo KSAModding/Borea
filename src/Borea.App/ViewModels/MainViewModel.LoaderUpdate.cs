@@ -215,7 +215,7 @@ public partial class MainViewModel
             services.Settings.ReleaseChannel,
             loaderId,
             new LoaderInstallation(start.DirectoryPath, version, start.RawVersion, start.IsAdopted),
-            LoaderGameOf(services, instance).Version,
+            services.InstanceGames.Resolve(instance).Version?.Version,
             need: need);
         return IsBroken(update) || update is { InstalledVersion: not null, Offer: not null } ? update : null;
     }
@@ -340,7 +340,7 @@ public partial class MainViewModel
                 services.ContentIndex,
                 await HeldLoaderReleasesAsync(services),
                 services.Settings.ReleaseChannel,
-                instance => LoaderGameOf(services, instance).Version);
+                instance => services.InstanceGames.Resolve(instance).Version?.Version);
             if (uses.Any(use => ReferenceEquals(use.Version, old) && use.IsUsed))
                 return;
 

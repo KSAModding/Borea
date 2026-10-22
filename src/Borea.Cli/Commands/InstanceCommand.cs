@@ -140,8 +140,8 @@ internal static class InstanceCommand
     {
         try
         {
-            var game = LoaderLookup.LoaderGameOf(cli, instance);
-            return await LoaderLookup.ResolveAsync(cli, instance, installed, game.Version, givenLoaderId: null, cancellationToken).ConfigureAwait(false);
+            var game = cli.InstanceGames.Resolve(instance);
+            return await LoaderLookup.ResolveAsync(cli, instance, installed, game.Version?.Version, givenLoaderId: null, cancellationToken).ConfigureAwait(false);
         }
         catch (Exception exception) when (exception is InvalidOperationException or IOException or HttpRequestException)
         {

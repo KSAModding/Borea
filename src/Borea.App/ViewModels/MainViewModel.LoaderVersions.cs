@@ -15,16 +15,6 @@ namespace Borea.App.ViewModels;
 public partial class MainViewModel
 {
     /// <summary>
-    /// The game build that the loader of <paramref name="instance"/> starts, and its folder. Every instance uses the
-    /// game in the settings today, and per-instance game builds replace the body of this method.
-    /// </summary>
-    private static (GameVersion? Version, string? Directory) LoaderGameOf(BoreaServices services, Instance instance)
-    {
-        ArgumentNullException.ThrowIfNull(instance);
-        return (services.InstalledVersion.GetInstalledVersion()?.Version, services.Paths.GetGameDirectoryPath());
-    }
-
-    /// <summary>
     /// The loader and its version for a launch of <paramref name="instance"/>. The listings come from the index that
     /// Borea holds and only else from the live index, and the versions are rated only with the held releases, so a
     /// launch never asks the network for a release.
@@ -43,7 +33,7 @@ public partial class MainViewModel
             services.ContentIndex,
             await HeldLoaderReleasesAsync(services),
             services.Settings.ReleaseChannel,
-            LoaderGameOf(services, instance).Version);
+            services.InstanceGames.Resolve(instance).Version?.Version);
     }
 
     /// <summary>The releases that rate and offer loader versions without a request, or null when Borea holds no index it can read.</summary>

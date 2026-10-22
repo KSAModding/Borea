@@ -27,9 +27,9 @@ internal static class LaunchCommand
                 .ResolveAsync(cli.Instances, parseResult.GetRequiredValue(instance))
                 .ConfigureAwait(false);
             var givenLoaderId = parseResult.GetValue(loaderId);
-            var game = LoaderLookup.LoaderGameOf(cli, target);
+            var game = cli.InstanceGames.Resolve(target);
             var installed = await cli.LoaderVersions.ListAsync(ct).ConfigureAwait(false);
-            var resolution = await LoaderLookup.ResolveAsync(cli, target, installed, game.Version, givenLoaderId, ct).ConfigureAwait(false);
+            var resolution = await LoaderLookup.ResolveAsync(cli, target, installed, game.Version?.Version, givenLoaderId, ct).ConfigureAwait(false);
             var choice = resolution.Choice;
             if (resolution.Start is not { } start)
             {
@@ -49,7 +49,7 @@ internal static class LaunchCommand
                     : $"No mod in '{target.Name}' needs a mod loader. Using {loader.ModId}, which takes an instance.");
             }
 
-            WriteLoaderWarning(loader, version, game.Version, error);
+            WriteLoaderWarning(loader, version, game.Version?.Version, error);
 
             var shape = await cli.GameShape.GetForInstanceAsync(target.InstanceId, ct).ConfigureAwait(false);
             GameShapeOutput.WriteWarning(shape, error);
@@ -63,7 +63,7 @@ internal static class LaunchCommand
             }
 
             // each version folder keeps its own game path, and a loader in a Wine prefix needs the path of the prefix
-            if (game.Directory is { } gamePath
+            if (game.GameDirectory is { } gamePath
                 && await cli.LoaderConfiguration.PrepareForLaunchAsync(loader, start.DirectoryPath, gamePath, start.IsAdopted, ct).ConfigureAwait(false) is { } prepared)
             {
                 cli.Log.Write($"Wrote the game path to '{prepared}' before the launch.");
