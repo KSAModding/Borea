@@ -46,17 +46,38 @@ public sealed class VehiclePreviewViewModelTests
         Assert.False(preview.HasMissingMods);
     }
 
-    [Fact]
-    public async Task NeedsVehicleFile_LoadsNothingBeforeTheClick_AndTheClickFetchesOnlyTheVehicle()
+    [Theory]
+    [InlineData(2_500_000L)]
+    [InlineData(VehiclePreviewViewModel.AutoFetchVehicleBytes)]
+    public async Task NeedsASmallVehicleFile_FetchesOnlyTheVehicle_WithoutAClick(long size)
     {
         var service = new FakeVehiclePreview { PlanState = VehiclePreviewPlanState.NeedsVehicleFile };
-        using var preview = Start(service);
+        using var preview = Start(service, release: RoverOfSize(size), autoFetchDelay: TimeSpan.Zero);
+        await preview.Loading;
+
+        Assert.Equal([(true, false)], service.Loads);
+        Assert.Equal(VehiclePreviewState.Ready, preview.State);
+    }
+
+    public static TheoryData<long?, string> LargeOrUnsizedFiles => new()
+    {
+        { VehiclePreviewViewModel.AutoFetchVehicleBytes + 1, Localization.FormatPreviewShowSize(MainViewModel.SizeText(VehiclePreviewViewModel.AutoFetchVehicleBytes + 1)) },
+        { null, Localization.PreviewShow },
+    };
+
+    // The rows read the shared resource culture, so they are made when the test runs and not at discovery.
+    [Theory]
+    [MemberData(nameof(LargeOrUnsizedFiles), DisableDiscoveryEnumeration = true)]
+    public async Task NeedsALargeOrUnsizedVehicleFile_LoadsNothingBeforeTheClick_AndTheClickFetchesOnlyTheVehicle(long? size, string showText)
+    {
+        var service = new FakeVehiclePreview { PlanState = VehiclePreviewPlanState.NeedsVehicleFile };
+        using var preview = Start(service, release: RoverOfSize(size), autoFetchDelay: TimeSpan.Zero);
         await preview.Loading;
 
         Assert.Equal(VehiclePreviewState.Idle, preview.State);
         Assert.Empty(service.Loads);
         Assert.True(preview.ShowCommand.CanExecute(null));
-        Assert.Equal(Localization.FormatPreviewShowSize(MainViewModel.SizeText(2_500_000)), preview.ShowText);
+        Assert.Equal(showText, preview.ShowText);
 
         await preview.ShowCommand.ExecuteAsync(null);
 
@@ -77,6 +98,20 @@ public sealed class VehiclePreviewViewModelTests
         service.LastProgress!.Report(VehiclePreviewStage.ReadingParts);
 
         Assert.Equal(VehiclePreviewState.Ready, preview.State);
+    }
+
+    [Fact]
+    public async Task LeavingThePageDuringTheDelay_DownloadsNothing()
+    {
+        var service = new FakeVehiclePreview { PlanState = VehiclePreviewPlanState.NeedsVehicleFile };
+        var preview = Start(service, autoFetchDelay: TimeSpan.FromMinutes(5));
+        Assert.Equal(VehiclePreviewState.Fetching, preview.State);
+        Assert.True(preview.CancelCommand.CanExecute(null));
+
+        preview.Dispose();
+        await preview.Loading.WaitAsync(TimeSpan.FromSeconds(5));
+
+        Assert.Empty(service.Loads);
     }
 
     [Fact]
@@ -327,21 +362,37 @@ public sealed class VehiclePreviewViewModelTests
         Action? openSettings = null,
         FakeThumbnails? thumbnails = null,
         Action<string>? stillStored = null,
-        IRgbaImageDecoder? decoder = null)
+        IRgbaImageDecoder? decoder = null,
+        ModVersionMetadata? release = null,
+        TimeSpan? autoFetchDelay = null)
     {
         var preview = new VehiclePreviewViewModel(
             service,
-            Rover,
+            release ?? Rover,
             null,
             Localization,
             openSettings ?? (() => { }),
             new PreviewSceneBuilder(new PreviewTextureLoader(decoder)),
             thumbnails: thumbnails,
             encoder: thumbnails,
-            stillStored: stillStored);
+            stillStored: stillStored,
+            autoFetchDelay: autoFetchDelay);
         preview.Start();
         return preview;
     }
+
+    /// <summary>The Rover release with another stated size of its download, or with none.</summary>
+    private static ModVersionMetadata RoverOfSize(long? size) => new(
+        specVersion: 1,
+        modId: Rover.ModId,
+        version: Rover.Version,
+        releaseStatus: Rover.ReleaseStatus,
+        releaseDate: Rover.ReleaseDate,
+        gameMin: Rover.GameMin,
+        gameMinRevision: Rover.GameMinRevision,
+        download: new DownloadInfo(Rover.Download.Url, Rover.Download.Sha256, size, Rover.Download.ContentType),
+        installSizeBytes: null,
+        dependencies: []);
 
     private static readonly PreviewAssetRef TriangleFile = new("Core", "Triangle.glb");
 
