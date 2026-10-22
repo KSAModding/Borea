@@ -6,11 +6,16 @@ using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
+using Borea.App.Views.Preview;
+using Borea.Composition;
 using Borea.Core.Game;
 using Borea.Core.Index;
 using Borea.Core.Mods;
 using Borea.Core.Planning;
+using Borea.Core.Preview;
 using Borea.Core.Stewardship;
+using Borea.Preview.Loading;
+using Borea.Preview.Textures;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -154,7 +159,50 @@ public partial class MainViewModel
     [ObservableProperty]
     private VersionItem? _latestVersion;
 
-    partial void OnLatestVersionChanged(VersionItem? value) => RefreshContentDependencies();
+    partial void OnLatestVersionChanged(VersionItem? value)
+    {
+        RefreshContentDependencies();
+        RefreshVehiclePreview();
+    }
+
+    /// <summary>
+    /// The 3D preview of the open vehicle page (RFC 0085), or null on any other page. It belongs to
+    /// <see cref="LatestVersion"/> and is made again whenever that release or the service graph changes.
+    /// </summary>
+    [ObservableProperty]
+    private VehiclePreviewViewModel? _vehiclePreview;
+
+    /// <summary>Gives the preview service of a service graph. Tests replace it with a fake.</summary>
+    internal Func<BoreaServices, IVehiclePreview> VehiclePreviewServiceOf { get; set; } = services => services.VehiclePreview;
+
+    /// <summary>Completes when the preview of the open vehicle page has prepared or built what it can without a click.</summary>
+    internal Task WhenVehiclePreviewLoadedAsync() => VehiclePreview?.Loading ?? Task.CompletedTask;
+
+    /// <summary>
+    /// Makes a new preview for the open vehicle page against the services that are current now, and disposes the
+    /// old one, which stops its work and drops a result that arrives later. Any other page gets none.
+    /// </summary>
+    private void RefreshVehiclePreview()
+    {
+        var old = VehiclePreview;
+        VehiclePreviewViewModel? next = null;
+        if (_services is { } services && CurrentWindowContent && SelectedContent is { Type: ContentType.Vehicle } && LatestVersion is { } latest)
+        {
+            var builder = new PreviewSceneBuilder(new PreviewTextureLoader(new AvaloniaRgbaImageDecoder()));
+            next = new VehiclePreviewViewModel(VehiclePreviewServiceOf(services), latest.Release, ActiveInstance?.InstanceId, Localization, SetMainWindowSettings, builder);
+        }
+
+        VehiclePreview = next;
+        old?.Dispose();
+        next?.Start();
+    }
+
+    private void ClearVehiclePreview()
+    {
+        var old = VehiclePreview;
+        VehiclePreview = null;
+        old?.Dispose();
+    }
 
     [RelayCommand]
     internal Task OpenContentAsync(DiscoverItem item) => OpenContentAsync(item, PageOrigin.Discover);

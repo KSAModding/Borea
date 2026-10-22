@@ -525,6 +525,11 @@ public partial class MainViewModel
         _services = await _rebuildServices();
         _instances = _services.Instances;
         AttachGitHubSession(previous, _services);
+
+        // the preview of an open vehicle page uses the old preview service, which the old graph disposes
+        if (VehiclePreview is not null)
+            RefreshVehiclePreview();
+
         previous.Dispose();
         OnPropertyChanged(nameof(SelectedReleaseChannel));
         OnPropertyChanged(nameof(UseSharedModStore));

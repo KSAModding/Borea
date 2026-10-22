@@ -924,6 +924,7 @@ public partial class MainViewModel : ViewModelBase
         foreach (var category in CategoryOptions)
             category.RefreshText();
         RefreshContentGroups();
+        VehiclePreview?.RefreshText();
         RefreshInstanceLoader();
         RefreshModListText();
         foreach (var item in ManualInstallItems)

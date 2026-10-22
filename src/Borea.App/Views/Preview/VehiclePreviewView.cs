@@ -34,6 +34,10 @@ public sealed class VehiclePreviewView : Control
     public static readonly StyledProperty<IBrush?> BackgroundProperty =
         Border.BackgroundProperty.AddOwner<VehiclePreviewView>();
 
+    /// <summary>A count that a view model raises to ask for <see cref="ResetView"/>. Each change frames the scene again.</summary>
+    public static readonly StyledProperty<int> ResetCountProperty =
+        AvaloniaProperty.Register<VehiclePreviewView, int>(nameof(ResetCount));
+
     // The renderer clears to transparent and the Background brush shows through, so the bitmap uses straight alpha.
     private static readonly PreviewRenderOptions Options = new();
 
@@ -64,6 +68,9 @@ public sealed class VehiclePreviewView : Control
     private int _generation;
     private CancellationTokenSource _cancellation = new();
 
+    // The wheel zooms the view, so a page that scrolls around it leaves the wheel to it.
+    public VehiclePreviewView() => SmoothScroll.SetOwnsWheel(this, true);
+
     static VehiclePreviewView()
     {
         AffectsRender<VehiclePreviewView>(BackgroundProperty);
@@ -80,6 +87,12 @@ public sealed class VehiclePreviewView : Control
     {
         get => GetValue(BackgroundProperty);
         set => SetValue(BackgroundProperty, value);
+    }
+
+    public int ResetCount
+    {
+        get => GetValue(ResetCountProperty);
+        set => SetValue(ResetCountProperty, value);
     }
 
     internal float CameraDistance => _camera.Distance;
@@ -128,6 +141,10 @@ public sealed class VehiclePreviewView : Control
             _orbitY = 0;
             _zoomSteps = 0;
             RequestRender(full: true);
+        }
+        else if (change.Property == ResetCountProperty)
+        {
+            ResetView();
         }
     }
 

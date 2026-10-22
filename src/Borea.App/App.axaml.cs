@@ -134,6 +134,7 @@ public partial class App : Application
             if (Services is { } services)
             {
                 window.Opened += (_, _) => ExtractionFolderCleanup.StartForThisProcess(services.Log);
+                window.Opened += (_, _) => _ = services.VehiclePreview.StartMaintenance();
                 window.Opened += (_, _) => SweepUpdateLeftovers(services.Log);
                 if (_selfUpdateHandover is { } selfUpdateHandover)
                     window.Opened += (_, _) => RemoveReplacedBuild(selfUpdateHandover, services.Log);
