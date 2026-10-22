@@ -192,6 +192,12 @@
   <data name="StewardQueueKindPack" xml:space="preserve">
     <value>Fleet</value>
   </data>
+  <data name="StewardQueueKindVehicle" xml:space="preserve">
+    <value>Ship</value>
+  </data>
+  <data name="StewardQueueKindSave" xml:space="preserve">
+    <value>Tale</value>
+  </data>
   <data name="StewardReviewLoading" xml:space="preserve">
     <value>Haulin' the pull request aboard from GitHub...</value>
   </data>
@@ -200,6 +206,21 @@
   </data>
   <data name="StewardReviewVerdict" xml:space="preserve">
     <value>What the lookouts say</value>
+  </data>
+  <data name="StewardReviewNewestRelease" xml:space="preserve">
+    <value>Newest haul</value>
+  </data>
+  <data name="StewardReviewNewestReleaseFormat" xml:space="preserve">
+    <value>The newest haul {0} docks in the berth "{1}".</value>
+  </data>
+  <data name="StewardReviewNewestReleaseNoFolderFormat" xml:space="preserve">
+    <value>The newest haul {0} names nary a berth.</value>
+  </data>
+  <data name="StewardReviewNoRelease" xml:space="preserve">
+    <value>Nary a haul be stamped yet. The lookouts read the berth from the chest.</value>
+  </data>
+  <data name="StewardReviewReleaseUnreadableFormat" xml:space="preserve">
+    <value>The newest haul couldn't be read from KSAModding/content-index-releases: {0}</value>
   </data>
   <data name="StewardActionApprove" xml:space="preserve">
     <value>Give it the nod</value>
