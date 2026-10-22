@@ -11,6 +11,7 @@ using Borea.Core.History;
 using Borea.Core.ModLoaders;
 using Borea.Core.Mods;
 using Borea.Core.Planning;
+using Borea.Storage.ModLoaders;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -414,7 +415,9 @@ public partial class MainViewModel
 
         // the release its files match, so that Borea can rate it and offer an update
         var inspected = await InspectLoaderAsync(services, SelectedLoader.ModId, directory);
-        var installation = new LoaderInstallation(directory, inspected?.Version, inspected?.RawVersion, isAdopted: true);
+        // The Loaders root is Borea's own data, so a loader below it is Borea-owned even when the player names it here.
+        var isAdopted = !LoaderLayoutMigration.IsBelowLoadersRoot(services.Paths.GetLoadersRoot(), directory);
+        var installation = new LoaderInstallation(directory, inspected?.Version, inspected?.RawVersion, isAdopted);
         await services.SettingsRepository.SaveAsync((await ReadSavedSettingsAsync(services)).WithLoaderInstallation(SelectedLoader.ModId, installation));
         return Directory.Exists(directory) ? Localization.SetupSaved : Localization.SetupDirectoryMissing;
     });

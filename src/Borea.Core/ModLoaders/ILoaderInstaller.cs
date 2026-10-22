@@ -11,20 +11,28 @@ public interface ILoaderInstaller
     /// <summary>
     /// The stamped install decides where the loader goes; the live listing
     /// decides what to launch and what to configure, because RFC 0035 never
-    /// stamps <c>[provides]</c>. A recorded loader keeps its configuration
-    /// file, and its old directory is restored when replacement fails. A
-    /// failed first install removes what it wrote.
+    /// stamps <c>[provides]</c>. A standalone loader without a given directory
+    /// goes into its own version folder beside the installed versions, and a
+    /// new version starts with the configuration file of the recorded one. The
+    /// record moves to the new version unless it is a prerelease beside a
+    /// release, a lower version, or a folder outside Borea's Loaders root.
+    /// Reinstalling an installed version replaces its folder in place, keeps
+    /// its configuration file, and restores the old folder when that fails.
+    /// A failed new install removes what it wrote.
     /// </summary>
     /// <param name="directory">
-    /// Where a standalone loader goes. Null means the recorded directory, or
-    /// Borea's own choice for a first install. Invalid for any other anchor.
+    /// Where a standalone loader goes. Null means Borea's own version folder.
+    /// A given directory keeps the single recorded install. Invalid for any
+    /// other anchor.
     /// </param>
     /// <exception cref="ArgumentException">
     /// The listing is not a mod loader, the release does not belong to it, or
     /// the directory does not fit the anchor.
     /// </exception>
     /// <exception cref="InvalidOperationException">
-    /// The destination holds foreign files, the loader is recorded elsewhere,
+    /// The destination holds foreign files or another version, the loader is
+    /// recorded elsewhere, the version of the loader in the folder of an older
+    /// Borea is unknown, a game runs while a folder must be replaced or moved,
     /// the game directory is not set, the archive is empty where the release
     /// says, or the launch target is missing.
     /// </exception>

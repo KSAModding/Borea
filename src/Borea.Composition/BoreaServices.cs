@@ -431,7 +431,21 @@ public sealed class BoreaServices : IDisposable
         // the settings file lives under Borea's own root and needs no
         // game path to be found, so a provider without one reads it.
         var bootstrapPaths = new GamePathProvider(gameDirectory: null, boreaRoot: boreaRoot);
-        var saved = await new FileBoreaSettingsRepository(bootstrapPaths).GetAsync(cancellationToken).ConfigureAwait(false);
+        var bootstrapSettings = new FileBoreaSettingsRepository(bootstrapPaths);
+
+        // A loader move that a crash interrupted is repaired before the paths are fixed, because the provider below keeps the
+        // loader folders it reads now. A repair that fails is logged and never stops the start.
+        Exception? loaderRecovery = null;
+        try
+        {
+            await new LoaderLayoutMigration(bootstrapSettings, bootstrapPaths).RecoverAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            loaderRecovery = exception;
+        }
+
+        var saved = await bootstrapSettings.GetAsync(cancellationToken).ConfigureAwait(false);
         var settings = saved ?? new BoreaSettings(gameDirectoryPath: null);
 
         // every other service resolves its paths through the provider
@@ -442,6 +456,8 @@ public sealed class BoreaServices : IDisposable
             ModIds.Comparer);
         var paths = new GamePathProvider(settings.GameDirectoryPath, loaderDirectories, boreaRoot, sharedProfileRoot, settings.LibraryFolderPath);
         var log = new FileBoreaLog(paths, logSource);
+        if (loaderRecovery is not null)
+            log.Write("Borea could not repair the loader folders.", loaderRecovery);
 
         // Network. Every service that talks to a remote host is built here on the
         // one client, except the image source, which needs a handler of its own,
@@ -481,7 +497,7 @@ public sealed class BoreaServices : IDisposable
         var modStore = new ModStore(paths, new DirectoryLinker(), settings.SharedModStore);
         var fileInstances = new FileInstanceRepository(paths, modStore);
         var instances = new LoggingInstanceRepository(fileInstances, paths, log);
-        var loaderAdopter = new FileLoaderAdopter(settingsRepository, loaderConfiguration);
+        var loaderAdopter = new FileLoaderAdopter(settingsRepository, loaderConfiguration, paths.GetLoadersRoot());
         installCandidates ??= HostInstallCandidates();
 
         var installedVersion = new InstalledGameVersionProvider(paths);
@@ -560,7 +576,7 @@ public sealed class BoreaServices : IDisposable
             InstallPlanner = installPlanner,
             PlanExecutor = new InstallPlanExecutor(instances, modInstaller, modReplacer, spaceCheck),
             SpaceCheck = spaceCheck,
-            LoaderInstaller = new FileLoaderInstaller(paths, downloader, settingsRepository, loaderConfiguration),
+            LoaderInstaller = new FileLoaderInstaller(paths, downloader, settingsRepository, loaderConfiguration, isGameProcessRunning),
             LoaderAdopter = loaderAdopter,
             LoaderConfiguration = loaderConfigurator ?? loaderConfiguration,
             LoaderUninstaller = new FileLoaderUninstaller(settingsRepository),
