@@ -13,6 +13,7 @@ using Borea.Core.Preferences;
 using Borea.Core.Settings;
 using Borea.Core.State;
 using Borea.Core.Updates;
+using Borea.Storage.ModLoaders;
 
 namespace Borea.Cli;
 
@@ -225,7 +226,10 @@ internal sealed class CliServices : IDisposable
             LoaderInstaller = loaderInstaller ?? services.LoaderInstaller,
             LoaderAdopter = loaderAdopter ?? services.LoaderAdopter,
             LoaderConfiguration = loaderConfiguration ?? services.LoaderConfiguration,
-            LoaderUninstaller = loaderUninstaller ?? services.LoaderUninstaller,
+            // The uninstaller refuses on its own while a game runs, so it uses the same game check as the commands.
+            LoaderUninstaller = loaderUninstaller ?? (isGameProcessRunning is null
+                ? services.LoaderUninstaller
+                : new FileLoaderUninstaller(services.SettingsRepository, services.Paths, loaderVersions ?? services.LoaderVersions, isGameProcessRunning)),
             LoaderVersions = loaderVersions ?? services.LoaderVersions,
             Launcher = launcher ?? services.Launcher,
             ModPacks = modPacks ?? services.ModPacks,

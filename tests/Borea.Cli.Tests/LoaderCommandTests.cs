@@ -391,5 +391,8 @@ public sealed class LoaderCommandTests : IDisposable
             LoaderIds.Add(loaderId);
             return Task.FromResult(Result);
         }
+
+        public Task<LoaderUninstallResult> UninstallVersionAsync(string loaderId, ModVersion version, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
     }
 }
