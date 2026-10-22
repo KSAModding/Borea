@@ -16,6 +16,8 @@ public sealed class PreviewSceneBuilderTests
     private static readonly PreviewAssetRef BadGlb = new("Core", "Meshes/Bad.glb");
     private static readonly PreviewAssetRef GoodTexture = new("Core", "Textures/Good.ktx2");
     private static readonly PreviewAssetRef MissingTexture = new("Core", "Textures/Missing.ktx2");
+    private static readonly PreviewAssetRef PbrTexture = new("Core", "Textures/Pbr.ktx2");
+    private static readonly PreviewAssetRef NormalTexture = new("Core", "Textures/Normal.ktx2");
     private static readonly PreviewLoadOptions Options = new(16);
 
     [Fact]
@@ -51,6 +53,44 @@ public sealed class PreviewSceneBuilderTests
         Assert.Equal(PreviewPlaceholderReason.AssetFailed, Assert.Single(textured.Scene.Placeholders).Reason);
         Assert.Contains(geometry.Notices, notice => notice.Kind == PreviewNoticeKind.AssetFailed && notice.Subject == "Core/Meshes/Bad.glb");
         Assert.Contains(textured.Notices, notice => notice.Kind == PreviewNoticeKind.AssetFailed && notice.Subject == "Core/Textures/Missing.ktx2");
+    }
+
+    [Fact]
+    public async Task ABudgetThatFitsOnlyDiffuseAndAoRoughMetal_LeavesTheNormalOut_WithoutANotice()
+    {
+        var vehicle = Vehicle([Mesh(GoodGlb, 0)], [new PreviewMaterialRef("Mat", GoodTexture, PbrTexture, false, NormalTexture)], [Draw(0, 0)]);
+        var level = 4L * PreviewLoadOptions.DefaultTextureTarget * PreviewLoadOptions.DefaultTextureTarget;
+        var exact = Options with { MaxRgbaBytes = 2 * level };
+        var builder = Builder();
+        var source = Source();
+        var geometry = await builder.BuildGeometryAsync(vehicle, source, exact, CancellationToken.None);
+
+        var (scene, notices) = await builder.AddTexturesAsync(geometry.Scene, vehicle, source, exact, CancellationToken.None);
+        var roomy = await builder.AddTexturesAsync(geometry.Scene, vehicle, source, exact with { MaxRgbaBytes = 3 * level }, CancellationToken.None);
+
+        Assert.Empty(notices);
+        var material = Assert.Single(scene.Draws).Material;
+        Assert.NotNull(material.Diffuse);
+        Assert.NotNull(material.AoRoughMetal);
+        Assert.Null(material.Normal);
+        Assert.Empty(roomy.Notices);
+        Assert.NotNull(Assert.Single(roomy.Scene.Draws).Material.Normal);
+    }
+
+    [Fact]
+    public async Task ANormalTextureThatCannotBeRead_GivesNoNotice_AndTheDiffuseStillLoads()
+    {
+        var vehicle = Vehicle([Mesh(GoodGlb, 0)], [new PreviewMaterialRef("Mat", GoodTexture, null, false, MissingTexture)], [Draw(0, 0)]);
+        var builder = Builder();
+        var source = Source();
+        var geometry = await builder.BuildGeometryAsync(vehicle, source, Options, CancellationToken.None);
+
+        var (scene, notices) = await builder.AddTexturesAsync(geometry.Scene, vehicle, source, Options, CancellationToken.None);
+
+        Assert.Empty(notices);
+        var material = Assert.Single(scene.Draws).Material;
+        Assert.NotNull(material.Diffuse);
+        Assert.Null(material.Normal);
     }
 
     [Theory]
@@ -154,6 +194,8 @@ public sealed class PreviewSceneBuilderTests
             [GoodGlb.Path] = TwoQuadMeshes(),
             [BadGlb.Path] = "not a GLB file at all"u8.ToArray(),
             [GoodTexture.Path] = Ktx2TestWriter.Write(37, 2, 2, [new byte[16]]),
+            [PbrTexture.Path] = Ktx2TestWriter.Write(37, 2, 2, [new byte[16]]),
+            [NormalTexture.Path] = Ktx2TestWriter.Write(37, 2, 2, [new byte[16]]),
         },
     };
 

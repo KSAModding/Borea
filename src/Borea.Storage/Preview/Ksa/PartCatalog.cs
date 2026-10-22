@@ -193,7 +193,7 @@ internal sealed class PartCatalog
                     continue;
 
                 var first = _materials[material.Key];
-                if (first.Diffuse != material.Diffuse || first.AoRoughMetal != material.AoRoughMetal)
+                if (first.Diffuse != material.Diffuse || first.AoRoughMetal != material.AoRoughMetal || first.Normal != material.Normal)
                     _notices.Add(new PreviewNotice(PreviewNoticeKind.DuplicateId, material.Key, $"A material in {subject} is left out, because a material with this Id comes first."));
             }
 
@@ -387,6 +387,7 @@ internal sealed class PartCatalog
             var textured = false;
             string? diffuse = null;
             string? aoRoughMetal = null;
+            string? normal = null;
 
             ForEachChild(element, child =>
             {
@@ -397,6 +398,7 @@ internal sealed class PartCatalog
                         textured = true;
                         break;
                     case KsaPartSchema.Normal:
+                        normal ??= child.GetAttribute(KsaPartSchema.Path) ?? string.Empty;
                         textured = true;
                         break;
                     case KsaPartSchema.AoRoughMetal:
@@ -408,7 +410,7 @@ internal sealed class PartCatalog
 
             var key = id ?? $"anon:{modId}/{filePath}#{++_anonymousMaterials}";
             if (textured)
-                Materials.Add(new MaterialData(key, Resolve(diffuse), Resolve(aoRoughMetal)));
+                Materials.Add(new MaterialData(key, Resolve(diffuse), Resolve(aoRoughMetal), Resolve(normal)));
 
             return key;
         }

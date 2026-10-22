@@ -206,7 +206,7 @@ internal static class VehicleSceneResolver
             if (!_materialIndices.TryGetValue((material, glass), out var index))
             {
                 index = _materials.Count;
-                _materials.Add(new PreviewMaterialRef(material.Key, material.Diffuse, material.AoRoughMetal, glass));
+                _materials.Add(new PreviewMaterialRef(material.Key, material.Diffuse, material.AoRoughMetal, glass, material.Normal));
                 _materialIndices.Add((material, glass), index);
             }
 

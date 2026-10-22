@@ -122,9 +122,10 @@ internal readonly record struct PartExtents(Vector3 Min, Vector3 Max);
 
 /// <summary>
 /// One PbrMaterial with textures, from the top level of an asset file or inline in a render model. A texture is null
-/// when the material does not name it by a path.
+/// when the material does not name it by a path. <paramref name="Normal"/> is the path of the Normal element, which
+/// PbrMaterialReference.NormalReference reads as a TexturePowerReference.
 /// </summary>
-internal sealed record MaterialData(string Key, PreviewAssetRef? Diffuse, PreviewAssetRef? AoRoughMetal);
+internal sealed record MaterialData(string Key, PreviewAssetRef? Diffuse, PreviewAssetRef? AoRoughMetal, PreviewAssetRef? Normal);
 
 /// <summary>Whether a mesh file declaration is a MeshAtlas, whose meshes register under their glTF names, or a MeshFile.</summary>
 internal enum MeshFileKind

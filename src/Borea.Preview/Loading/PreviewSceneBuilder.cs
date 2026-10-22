@@ -62,7 +62,8 @@ public sealed class PreviewSceneBuilder
     /// must come from <see cref="BuildGeometryAsync"/> for the same <paramref name="vehicle"/>. When the textures at
     /// <see cref="PreviewLoadOptions.TextureTarget"/> could need more than <see cref="PreviewLoadOptions.MaxRgbaBytes"/>,
     /// the target drops to <see cref="PreviewLoadOptions.ReducedTextureTarget"/>, and the textures that still do not
-    /// fit keep the flat color. Diffuse textures come first, because they change the look most.
+    /// fit keep the flat color. Diffuse textures come first, because they change the look most. The Normal textures
+    /// load last and only into the room that the budget has left, and a Normal texture that fails gives no notice.
     /// </summary>
     /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was cancelled.</exception>
     /// <exception cref="ObjectDisposedException">The source was disposed, which the caller treats as a cancellation.</exception>
@@ -135,6 +136,8 @@ public sealed class PreviewSceneBuilder
             }
         }
 
+        await AddNormalsAsync(used, vehicle, source, options, target, distinct, images, cancellationToken).ConfigureAwait(false);
+
         var textured = new Dictionary<PreviewMaterial, PreviewMaterial>(ReferenceEqualityComparer.Instance);
         foreach (var material in used)
         {
@@ -143,6 +146,7 @@ public sealed class PreviewSceneBuilder
             {
                 Diffuse = reference.Diffuse is { } diffuse ? images.GetValueOrDefault(diffuse) : null,
                 AoRoughMetal = reference.AoRoughMetal is { } aoRoughMetal ? images.GetValueOrDefault(aoRoughMetal) : null,
+                Normal = reference.Normal is { } normal ? images.GetValueOrDefault(normal) : null,
             };
         }
 
@@ -486,12 +490,72 @@ public sealed class PreviewSceneBuilder
             $"The models need {sceneTotal} bytes of mesh data and the budget is {maxBytes}, so the {dropped.Count} largest meshes show as boxes."));
     }
 
+    /// <summary>
+    /// Loads the Normal textures of <paramref name="used"/> at <paramref name="target"/> while the Diffuse and
+    /// AoRoughMetal textures in <paramref name="colorTextures"/> and the normals fit
+    /// <see cref="PreviewLoadOptions.MaxRgbaBytes"/> together, and puts them into <paramref name="images"/>. A Normal
+    /// path that is also a Diffuse or AoRoughMetal path is not loaded a second time.
+    /// </summary>
+    /// <remarks>
+    /// A normal map only adds detail, so it never takes room from a Diffuse or AoRoughMetal texture and never lowers
+    /// the target. Its notices are dropped, so the notices of the stage and the partial state that the caller derives
+    /// from them stay those of the Diffuse and AoRoughMetal textures. The texture loads as data, because the gamma
+    /// curve belongs to the sampler of the Diffuse texture and not to the loader. Most Normal textures of the game are
+    /// BC5, but T_LightPack_2_Normal is BC1 with an sRGB format. The preview decodes its bytes as they are stored, and
+    /// how the game reads it through an sRGB view is not verified in the decompiled source.
+    /// </remarks>
+    private async Task AddNormalsAsync(
+        List<PreviewMaterial> used,
+        ResolvedVehicle vehicle,
+        IPreviewAssetSource source,
+        PreviewLoadOptions options,
+        int target,
+        HashSet<PreviewAssetRef> colorTextures,
+        Dictionary<PreviewAssetRef, PreviewImage> images,
+        CancellationToken cancellationToken)
+    {
+        var room = Math.Max(0L, (options.MaxRgbaBytes / LevelBytes(target)) - colorTextures.Count);
+        var normals = new List<PreviewAssetRef>();
+        var distinct = new HashSet<PreviewAssetRef>();
+        foreach (var material in used)
+        {
+            if (normals.Count >= room)
+            {
+                break;
+            }
+
+            if (vehicle.Materials[material.SourceMaterial].Normal is { } normal && !colorTextures.Contains(normal) && distinct.Add(normal))
+            {
+                normals.Add(normal);
+            }
+        }
+
+        var loads = new Task<(PreviewImage? Image, PreviewNotice? Notice)>[normals.Count];
+        for (var i = 0; i < loads.Length; i++)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            loads[i] = _textures.LoadAsync(source, normals[i], target, cancellationToken);
+        }
+
+        var results = await Task.WhenAll(loads).ConfigureAwait(false);
+        cancellationToken.ThrowIfCancellationRequested();
+        for (var i = 0; i < results.Length; i++)
+        {
+            if (results[i].Image is { } image)
+            {
+                images[normals[i]] = image;
+            }
+        }
+    }
+
+    /// <summary>
+    /// The bytes that the budget counts for one texture, those of the largest level that the target allows, a square
+    /// one, so the decoded bytes can only be smaller than this estimate.
+    /// </summary>
+    private static long LevelBytes(int target) => 4L * target * target;
+
     private static (int Target, int Allowed) FitTextureBudget(int count, PreviewLoadOptions options, List<PreviewNotice> notices)
     {
-        // The budget counts the largest level that the target allows, a square one, so the decoded bytes can only be
-        // smaller than this estimate.
-        static long LevelBytes(int target) => 4L * target * target;
-
         var target = options.TextureTarget;
         if (count * LevelBytes(target) <= options.MaxRgbaBytes)
         {
