@@ -8,7 +8,7 @@ namespace Borea.Core.Launch;
 /// <summary>
 /// The loader and the loader version that start an instance.
 /// </summary>
-/// <param name="Choice">The choice of the loader id. It fails also when the loader is only not installed, and then <paramref name="Version"/> says what to install.</param>
+/// <param name="Choice">The choice of the loader id. It fails also when the loader is only not installed, and then <paramref name="Version"/> says what to install. A choice that succeeds does not mean that the instance can start, because the version that the setting asks for can still be missing, so callers use <see cref="Start"/>.</param>
 /// <param name="Listings">The listings the choice was made from.</param>
 /// <param name="FromSetting">True when the loader id came from the setting of the instance and not from the caller.</param>
 /// <param name="Version">The version that starts or is missing, or null when no loader could be chosen.</param>
@@ -18,6 +18,13 @@ public sealed record InstanceLoaderResolution(
     bool FromSetting,
     LoaderVersionResolution? Version)
 {
+    /// <summary>
+    /// The installed version that starts the instance, or null when the instance cannot start. It is null also when the choice
+    /// succeeds but the version is not installed, for example a pin while another version of the loader is installed, and then
+    /// <see cref="LoaderVersionResolution.Missing"/> or <see cref="LoaderVersionResolution.Problem"/> of <see cref="Version"/> says why.
+    /// </summary>
+    public InstalledLoaderVersion? Start => Choice.Succeeded ? Version?.Start : null;
+
     /// <summary>The live listing of the loader, also when it is not installed. Null when no loader could be chosen.</summary>
     public ModMetadata? Loader => Choice.Loader
         ?? (Version is null ? null : Listings.FirstOrDefault(listing => listing.Type == ContentType.ModLoader && ModIds.Equals(listing.ModId, Version.LoaderId)));

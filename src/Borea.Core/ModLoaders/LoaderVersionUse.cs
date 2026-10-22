@@ -18,7 +18,9 @@ public sealed record LoaderVersionUse(InstalledLoaderVersion Version, IReadOnlyL
     /// <summary>
     /// Every installed version with the instances that start it, in the order of <paramref name="installed"/>. Each instance is
     /// resolved with <see cref="InstanceLoaderResolver"/> and the same inputs as its launch, so a version that a launch would
-    /// start is never reported as unused. An instance whose loader is only missing uses no installed version.
+    /// start is never reported as unused. A pinned version is used by its instance also when no launch could start it, for
+    /// example while the loader is not listed, because the pin is the choice of the player and the index may not offer that
+    /// version again. An instance whose loader is only missing uses no installed version.
     /// </summary>
     /// <param name="gameOf">The game build of an instance.</param>
     public static async Task<IReadOnlyList<LoaderVersionUse>> UsedByAsync(
@@ -41,6 +43,13 @@ public sealed record LoaderVersionUse(InstalledLoaderVersion Version, IReadOnlyL
 
         foreach (var instance in instances)
         {
+            var setting = instance.Loader;
+            if (setting.IsPinned && InstalledLoaderVersion.Find(installed, setting.LoaderId!, setting.Version!.Value) is { } pinned)
+            {
+                users[pinned].Add(new LoaderVersionUser(instance, IsPinned: true));
+                continue;
+            }
+
             var resolution = await InstanceLoaderResolver.ResolveAsync(instance, installed, held, sources, channelMods, channel, gameOf(instance), givenLoaderId: null, cancellationToken).ConfigureAwait(false);
             if (resolution.Version is { Start: { } start } version && users.TryGetValue(start, out var list))
                 list.Add(new LoaderVersionUser(instance, version.IsPinned));
