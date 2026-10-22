@@ -1,9 +1,39 @@
+using Borea.Core.Game;
+using Borea.Core.Instances;
 using Borea.Core.Mods;
 
 namespace Borea.Cli.Commands;
 
 internal static class LoaderLookup
 {
+    /// <summary>
+    /// The game build that the loader of <paramref name="instance"/> starts, and its folder. Every instance uses the
+    /// game in the settings today, and per-instance game builds replace the body of this method.
+    /// </summary>
+    public static (GameVersion? Version, string? Directory) LoaderGameOf(CliServices cli, Instance instance)
+    {
+        ArgumentNullException.ThrowIfNull(cli);
+        ArgumentNullException.ThrowIfNull(instance);
+        return (cli.InstalledVersion.GetInstalledVersion()?.Version, cli.Paths.GetGameDirectoryPath());
+    }
+
+    /// <summary>
+    /// The releases that Borea holds without a request, or null when it holds no index it can read. The launch rates
+    /// and offers loader versions from them, so it never asks the network for a release.
+    /// </summary>
+    public static async Task<IModRepository?> HeldReleasesAsync(IModRepository held, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await held.GetAvailableModsAsync(cancellationToken).ConfigureAwait(false);
+            return held;
+        }
+        catch (Exception exception) when (exception is InvalidOperationException or IOException)
+        {
+            return null;
+        }
+    }
+
     public static async Task<ModMetadata> GetListingAsync(
         IModRepository repository,
         string loaderId,
