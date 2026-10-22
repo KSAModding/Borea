@@ -3139,7 +3139,13 @@
     <value>Your vehicle or save must not be installed together with it. Give the versions that conflict as the oldest and the newest version, or leave both empty when every version conflicts.</value>
   </data>
   <data name="ListingShareHint" xml:space="preserve">
-    <value>Borea read the file and proposed one required dependency for each mod of this instance that defines a part, substance, character or body that the file names. Check the list: remove what the file does not need, and add a mod that only changes how parts behave as recommends. Then save the archive and attach it to a release.</value>
+    <value>Borea read the file and proposed one required dependency for each mod of this instance that defines a part, substance, character or body that the file names. Check the list: remove what the file does not need, and add a mod that only changes how parts behave as recommends.</value>
+  </data>
+  <data name="ListingShareArchiveHeading" xml:space="preserve">
+    <value>Save the archive</value>
+  </data>
+  <data name="ListingShareArchiveHint" xml:space="preserve">
+    <value>Attach the saved archive to a release of your own, and name that release under Releases.</value>
   </data>
   <data name="ListingShareExtraFiles" xml:space="preserve">
     <value>The game does not write these files, so a mod did. Add the mod that writes them as a dependency:</value>
@@ -3152,6 +3158,78 @@
   </data>
   <data name="ListingShareArchiveSavedFormat" xml:space="preserve">
     <value>Saved {0}. SHA-256 {1}, {2} bytes.</value>
+  </data>
+  <data name="ListingShareHostHint" xml:space="preserve">
+    <value>A share host keeps the archive and opens the listing pull request for you. You sign in with the account that the host offers, and the host checks the archive before anything is published.</value>
+  </data>
+  <data name="ListingShareHostHeading" xml:space="preserve">
+    <value>Share on a share host</value>
+  </data>
+  <data name="ListingShareOnHostFormat" xml:space="preserve">
+    <value>Share on {0}</value>
+  </data>
+  <data name="ListingShareHostWriting" xml:space="preserve">
+    <value>Writing the archive...</value>
+  </data>
+  <data name="ListingShareHostSigningInFormat" xml:space="preserve">
+    <value>Waiting for the sign-in on {0}...</value>
+  </data>
+  <data name="ListingShareHostCodeFormat" xml:space="preserve">
+    <value>Open {0} and enter this code.</value>
+  </data>
+  <data name="ListingShareHostCopyCode" xml:space="preserve">
+    <value>Copy the code and open the page</value>
+  </data>
+  <data name="ListingShareHostUploading" xml:space="preserve">
+    <value>Uploading, and the host checks the archive...</value>
+  </data>
+  <data name="ListingShareHostPublishing" xml:space="preserve">
+    <value>Publishing...</value>
+  </data>
+  <data name="ListingShareHostTooLargeFormat" xml:space="preserve">
+    <value>The archive is {0}, and {1} takes at most {2}. Nothing was sent.</value>
+  </data>
+  <data name="ListingShareCheckPassedFormat" xml:space="preserve">
+    <value>{0}: passed</value>
+  </data>
+  <data name="ListingShareCheckFailedFormat" xml:space="preserve">
+    <value>{0}: failed. {1}</value>
+  </data>
+  <data name="ListingShareHostChecksFailed" xml:space="preserve">
+    <value>Fix what the host found, then share again.</value>
+  </data>
+  <data name="ListingShareHostListing" xml:space="preserve">
+    <value>The listing text that the host shows</value>
+  </data>
+  <data name="ListingShareHostVersion" xml:space="preserve">
+    <value>Version</value>
+  </data>
+  <data name="ListingShareHostStatus" xml:space="preserve">
+    <value>Release status</value>
+  </data>
+  <data name="ListingShareHostPublish" xml:space="preserve">
+    <value>Publish</value>
+  </data>
+  <data name="ListingShareHostPublishedFormat" xml:space="preserve">
+    <value>{0} {1} is published. The host opened the listing pull request.</value>
+  </data>
+  <data name="ListingShareHostReleasedFormat" xml:space="preserve">
+    <value>{0} {1} is published on the host.</value>
+  </data>
+  <data name="ListingShareHostSignedOut" xml:space="preserve">
+    <value>The share host no longer takes the sign-in. Share again to sign in.</value>
+  </data>
+  <data name="ListingShareHostSignInRefused" xml:space="preserve">
+    <value>The sign-in was refused, or its code expired.</value>
+  </data>
+  <data name="ListingShareHostNetwork" xml:space="preserve">
+    <value>The share host could not be reached.</value>
+  </data>
+  <data name="ListingShareHostUnexpectedFormat" xml:space="preserve">
+    <value>{0} answered in a way that Borea does not understand.</value>
+  </data>
+  <data name="ListingShareHostSaidFormat" xml:space="preserve">
+    <value>{0}: {1}</value>
   </data>
   <data name="ListingShareContentIdFormat" xml:space="preserve">
     <value>{0} {1}</value>
@@ -3254,6 +3332,9 @@
   </data>
   <data name="ListingFixNoHost" xml:space="preserve">
     <value>Name the GitHub repository or the SpaceDock mod under Releases.</value>
+  </data>
+  <data name="ListingFixShareHost" xml:space="preserve">
+    <value>Borea cannot read the proof of a share host. The checks accept a pull request from the GitHub account that you linked on the host, or one that the host opens for you.</value>
   </data>
   <data name="ListingFixMissingFormat" xml:space="preserve">
     <value>GitHub has no public repository {0}.</value>

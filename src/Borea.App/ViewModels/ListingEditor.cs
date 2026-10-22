@@ -198,7 +198,10 @@ public sealed partial class ListingEditor : ObservableObject
     /// <summary>The share host of the listed document (RFC 0094). Only the host writes it, so the page shows it and keeps it.</summary>
     private ListingShareHost? ShareHost => _base.Releases?.Share;
 
-    public string? ShareHostText => ShareHost is { } share ? Localization.FormatListingReleasesShareHost(share.Key, share.Id) : null;
+    /// <summary>Names the host as hosts.toml does, or by its key while hosts.toml is not read or does not register it.</summary>
+    public string? ShareHostText => ShareHost is { } share
+        ? Localization.FormatListingReleasesShareHost(_shareHosts.FirstOrDefault(host => host.Key == share.Key)?.Name ?? share.Key, share.Id)
+        : null;
 
     /// <summary>The hosts that [releases].authority can name.</summary>
     public IReadOnlyList<string> AuthorityChoices => ShareHost is { } share ? [.. Authorities, share.Key] : Authorities;
@@ -658,6 +661,8 @@ public sealed partial class ListingEditor : ObservableObject
             ReleasesTagPrefix = draft.Releases?.TagPrefix ?? string.Empty;
             OnPropertyChanged(nameof(ShareHostText));
             OnPropertyChanged(nameof(AuthorityChoices));
+            if (ShareHost is not null && _owner.Services is { } services)
+                ShareHostsLoad = LoadShareHostsAsync(services.ShareHosts, null);
             GameMin = draft.GameMin;
             GameMax = draft.GameMax ?? string.Empty;
             UsesLoader = draft.Loader is not null;

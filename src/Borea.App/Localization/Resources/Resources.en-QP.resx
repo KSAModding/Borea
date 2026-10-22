@@ -2167,7 +2167,13 @@
     <value>Yer ship or logbook must not sail together with it. Give the versions that feud as the oldest an' the newest, or leave both empty when every version feuds.</value>
   </data>
   <data name="ListingShareHint" xml:space="preserve">
-    <value>The Borea read the file an' proposed one required barrel fer each barrel o' fun in this sea that makes a plank, grog, crewmate or isle the file names. Check the list: toss what the file don't need, an' add a barrel that only changes how planks behave as recommends. Then stow the chest an' nail it to a release.</value>
+    <value>The Borea read the file an' proposed one required barrel fer each barrel o' fun in this sea that makes a plank, grog, crewmate or isle the file names. Check the list: toss what the file don't need, an' add a barrel that only changes how planks behave as recommends.</value>
+  </data>
+  <data name="ListingShareArchiveHeading" xml:space="preserve">
+    <value>Stow the chest</value>
+  </data>
+  <data name="ListingShareArchiveHint" xml:space="preserve">
+    <value>Nail the stowed chest to a release o' yer own, an' name that release under Releases.</value>
   </data>
   <data name="ListingShareExtraFiles" xml:space="preserve">
     <value>The game don't write these scrolls, so a barrel o' fun did. Add the barrel that writes them as a dependency:</value>
@@ -2180,6 +2186,81 @@
   </data>
   <data name="ListingShareArchiveSavedFormat" xml:space="preserve">
     <value>Stowed {0}. SHA-256 {1}, {2} bytes.</value>
+  </data>
+  <data name="ListingShareHostHint" xml:space="preserve">
+    <value>A harbor keeps the chest an' opens the pull request fer ye. Ye sign in with whatever papers the harbor takes, an' the harbor checks the chest 'fore anything sets sail.</value>
+  </data>
+  <data name="ListingShareHostHeading" xml:space="preserve">
+    <value>Moor at a harbor</value>
+  </data>
+  <data name="ListingShareOnHostFormat" xml:space="preserve">
+    <value>Moor at {0}</value>
+  </data>
+  <data name="ListingShareHostWriting" xml:space="preserve">
+    <value>Packin' the chest...</value>
+  </data>
+  <data name="ListingShareHostSigningInFormat" xml:space="preserve">
+    <value>Waitin' fer yer papers at {0}...</value>
+  </data>
+  <data name="ListingShareHostCodeFormat" xml:space="preserve">
+    <value>Sail to {0} an' give this password.</value>
+  </data>
+  <data name="ListingShareHostCopyCode" xml:space="preserve">
+    <value>Copy the password an' sail there</value>
+  </data>
+  <data name="ListingShareHostUploading" xml:space="preserve">
+    <value>Haulin' the chest ashore, an' the harbor checks it...</value>
+  </data>
+  <data name="ListingShareHostPublishing" xml:space="preserve">
+    <value>Settin' sail...</value>
+  </data>
+  <data name="ListingShareHostTooLargeFormat" xml:space="preserve">
+    <value>The chest weighs {0}, an' {1} takes no more than {2}. Nothin' was sent.</value>
+  </data>
+  <data name="ListingShareCheckPassedFormat" xml:space="preserve">
+    <value>{0}: shipshape</value>
+  </data>
+  <data name="ListingShareCheckFailedFormat" xml:space="preserve">
+    <value>{0}: sunk. {1}</value>
+  </data>
+  <data name="ListingShareHostChecksFailed" xml:space="preserve">
+    <value>Mend what the harbor found, then moor again.</value>
+  </data>
+  <data name="ListingShareHostListing" xml:space="preserve">
+    <value>The chart scroll the harbor shows</value>
+  </data>
+  <data name="ListingShareHostVersion" xml:space="preserve">
+    <value>Version</value>
+  </data>
+  <data name="ListingShareHostStatus" xml:space="preserve">
+    <value>Release status</value>
+  </data>
+  <data name="ListingShareHostPublish" xml:space="preserve">
+    <value>Set sail</value>
+  </data>
+  <data name="ListingShareHostPublishedFormat" xml:space="preserve">
+    <value>{0} {1} has set sail. The harbor opened the pull request.</value>
+  </data>
+  <data name="ListingShareHostReleasedFormat" xml:space="preserve">
+    <value>{0} {1} has set sail from the harbor.</value>
+  </data>
+  <data name="ListingShareHostSignedOut" xml:space="preserve">
+    <value>The harbor no longer takes yer papers. Moor again to sign in.</value>
+  </data>
+  <data name="ListingShareHostSignInRefused" xml:space="preserve">
+    <value>The papers were refused, or the password went stale.</value>
+  </data>
+  <data name="ListingShareHostNetwork" xml:space="preserve">
+    <value>The harbor could not be reached.</value>
+  </data>
+  <data name="ListingShareHostUnexpectedFormat" xml:space="preserve">
+    <value>{0} answered in a tongue the Borea don't speak.</value>
+  </data>
+  <data name="ListingShareHostSaidFormat" xml:space="preserve">
+    <value>{0}: {1}</value>
+  </data>
+  <data name="ListingFixShareHost" xml:space="preserve">
+    <value>The Borea cannot read the papers o' a harbor. The checks take a pull request from the GitHub flag ye linked at the harbor, or one the harbor opens fer ye.</value>
   </data>
   <data name="ListingShareContentIdFormat" xml:space="preserve">
     <value>{0} {1}</value>
