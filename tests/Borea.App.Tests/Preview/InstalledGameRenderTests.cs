@@ -27,9 +27,11 @@ namespace Borea.App.Tests.Preview;
 /// folder for the PNG files, and BOREA_PREVIEW_VEHICLES to more vehicle folders, separated by the path separator.
 /// </summary>
 /// <remarks>
-/// The winding of the game meshes is not in the decompiled source, so the test compares the depth of each frame with
-/// back-face culling on and off. A mesh whose front faces the renderer takes for back faces loses its near side to
-/// the culling, and the frame then shows the far inner faces, whose depth is larger.
+/// The game draws parts with back-face culling and counter-clockwise front faces (PartModelRenderer), but whether a
+/// triangle is counter-clockwise on screen depends on the projection, so the test checks the winding of this renderer
+/// directly. It compares the depth of each frame with back-face culling on and off. If the renderer takes the front
+/// faces of a mesh for back faces, the culling removes the near side of the mesh, and the frame then shows the far
+/// inner faces, which have a larger depth.
 /// </remarks>
 [Collection(HeadlessCollection.Name)]
 public sealed class InstalledGameRenderTests(ITestOutputHelper output) : IDisposable
@@ -100,22 +102,29 @@ public sealed class InstalledGameRenderTests(ITestOutputHelper output) : IDispos
         watch.Restart();
         var (geometry, geometryNotices) = await builder.BuildGeometryAsync(result.Vehicle, result.Assets, options, CancellationToken.None);
         var geometryMs = watch.Elapsed.TotalMilliseconds;
-        var entryPeak = VehiclePreview.EntryCacheBytesOf(result.Assets);
         watch.Restart();
         var (scene, textureNotices) = await builder.AddTexturesAsync(geometry, result.Vehicle, result.Assets, options, CancellationToken.None);
         var texturesMs = watch.Elapsed.TotalMilliseconds;
-        entryPeak = Math.Max(entryPeak, VehiclePreview.EntryCacheBytesOf(result.Assets));
 
         output.WriteLine($"{name}: {result.Vehicle.PartCount} parts, {scene.Draws.Count} draws, {scene.TriangleCount} triangles, {result.Vehicle.Meshes.Count} meshes, {result.Vehicle.Materials.Count} materials, {result.Vehicle.SkippedInternalCount} internal models left out");
-        output.WriteLine($"  load: prepare and resolve {resolveMs:0} ms, geometry {geometryMs:0} ms, textures {texturesMs:0} ms, entry cache peak {entryPeak} bytes");
+        output.WriteLine($"  load: prepare and resolve {resolveMs:0} ms, geometry {geometryMs:0} ms, textures {texturesMs:0} ms");
         foreach (var notice in result.Notices.Concat(geometryNotices).Concat(textureNotices))
             output.WriteLine($"  notice {notice.Kind} {notice.Subject} {notice.Detail}");
 
         Assert.Empty(result.Vehicle.Placeholders);
         Assert.Empty(scene.Placeholders);
-        Assert.DoesNotContain(textureNotices, notice => notice.Kind == PreviewNoticeKind.AssetFailed);
         if (triangles is { } expected)
+        {
+            // A stock vehicle needs only Core, so any notice means that a part, mesh or texture took a fallback.
+            Assert.Empty(result.Notices);
+            Assert.Empty(geometryNotices);
+            Assert.Empty(textureNotices);
             Assert.InRange(scene.TriangleCount, expected * 9 / 10, expected * 11 / 10);
+        }
+        else
+        {
+            Assert.DoesNotContain(textureNotices, notice => notice.Kind == PreviewNoticeKind.AssetFailed);
+        }
 
         long worldPeak = 0;
         foreach (var workers in new[] { 1, 4 })
