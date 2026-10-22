@@ -1,8 +1,11 @@
 using System;
 using System.ComponentModel;
 using System.IO;
+using System.Net.Http;
 using System.Threading.Tasks;
 using Borea.Composition;
+using Borea.Core.Instances;
+using Borea.Core.ModLoaders;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -59,14 +62,31 @@ public partial class MainViewModel
             }
 
             var manifest = await services.ModState.GetEntriesAsync(instanceId);
+            var loaderStart = await LoaderStartOrNullAsync(services, instance);
             await OpenListingAsync();
-            if (!ListingEditor.StartPackFromInstance(instance, manifest, services.Settings.LoaderInstallations))
+            if (!ListingEditor.StartPackFromInstance(instance, manifest, loaderStart))
                 ShowErrorToast(() => Localization.FormatToastMakePackFailed(instance.Name), Localization.ToastMakePackNoIndex);
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or InvalidOperationException)
         {
             var instanceName = InstanceName(instanceId);
             ShowErrorToast(() => Localization.FormatToastMakePackFailed(instanceName), exception.Message);
+        }
+    }
+
+    /// <summary>
+    /// The loader version that starts <paramref name="instance"/>, chosen as Play chooses it, or null when Borea cannot
+    /// read the listings. The pack then names the loader without a version.
+    /// </summary>
+    private static async Task<InstalledLoaderVersion?> LoaderStartOrNullAsync(BoreaServices services, Instance instance)
+    {
+        try
+        {
+            return (await ResolveLaunchLoaderAsync(services, instance)).Start;
+        }
+        catch (Exception exception) when (exception is InvalidOperationException or IOException or HttpRequestException or TaskCanceledException)
+        {
+            return null;
         }
     }
 

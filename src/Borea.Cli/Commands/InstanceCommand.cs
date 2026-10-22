@@ -438,13 +438,15 @@ internal static class InstanceCommand
         }, cancellationToken);
 
     /// <summary>
-    /// Refuses an argument that the listing of a configured mod loader reads as
+    /// Refuses an argument that the listing of an installed mod loader reads as
     /// its instance flag, from the cached index. The launch checks the listing
     /// it uses again, so a listing that cannot be read now only gives a warning.
     /// </summary>
     private static async Task RefuseHandoverFlagAsync(CliServices cli, IReadOnlyList<string> arguments, TextWriter error, CancellationToken cancellationToken)
     {
-        foreach (var loaderId in cli.Settings.LoaderInstallations.Keys)
+        // the listing names one flag for every version of a loader, so a loader with several versions is read once
+        var installed = await cli.LoaderVersions.ListAsync(cancellationToken).ConfigureAwait(false);
+        foreach (var loaderId in installed.Select(version => version.LoaderId).Distinct(ModIds.Comparer))
         {
             ModMetadata? listing;
             try
