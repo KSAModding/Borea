@@ -206,8 +206,10 @@ public partial class MainViewModel
         var loaderId = _services.Settings.LoaderInstallations.Keys.FirstOrDefault();
 
         // the field only points Borea at a folder of the player, so it shows the one that is used and never a folder of Borea
-        LoaderDirectoryInput = loaderId is not null && _services.Settings.LoaderInstallations[loaderId] is { IsAdopted: true } adopted
-            ? adopted.DirectoryPath
+        LoaderDirectoryInput = loaderId is not null
+            && _services.Settings.LoaderInstallations[loaderId] is { } recorded
+            && LoaderLayoutMigration.IsPlayerFolder(_services.Paths.GetLoadersRoot(), recorded.DirectoryPath, recorded.IsAdopted)
+            ? recorded.DirectoryPath
             : string.Empty;
 
         await EnsureDiscoverLoadedAsync();

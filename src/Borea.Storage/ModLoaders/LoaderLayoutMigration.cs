@@ -40,6 +40,14 @@ public sealed class LoaderLayoutMigration
     }
 
     /// <summary>
+    /// True when a recorded loader folder belongs to the player, so that Borea only forgets it and never deletes it. This is
+    /// the rule the uninstaller applies. A folder inside the Loaders root is Borea-owned even when its record says adopted,
+    /// because Borea 0.5.1 recorded its own Loaders/&lt;id&gt; folder as adopted when "Use existing" confirmed it.
+    /// </summary>
+    public static bool IsPlayerFolder(string loadersRoot, string directory, bool isAdopted) =>
+        isAdopted && !(Path.IsPathFullyQualified(directory) && IsBelowLoadersRoot(loadersRoot, directory));
+
+    /// <summary>
     /// Finishes or rolls back each move that a crash interrupted, and points a record that still names the flat folder at the
     /// version folder that the move made. A record at the flat folder would otherwise let an uninstall delete every version.
     /// </summary>

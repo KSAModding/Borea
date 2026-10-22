@@ -489,6 +489,25 @@ public sealed class LoaderUpdateTests
     }
 
     [Fact]
+    public async Task GameSettings_BoreaFolderRecordedAsAdopted_OffersRemoveWithAConfirmNotForget()
+    {
+        // Borea 0.5.1 recorded its own Loaders/StarMap as adopted after "Use existing", and the uninstaller deletes that folder
+        using var harness = await CreateAsync(knownVersion: false);
+        var viewModel = harness.ViewModel;
+        await viewModel.ShowGameSettingsCommand.ExecuteAsync(null);
+        var row = Assert.Single(viewModel.LoaderVersionItems);
+
+        Assert.False(row.IsAdopted);
+        Assert.Equal(harness.Localization.ContentRemove, row.RemoveText);
+        Assert.Equal(string.Empty, viewModel.LoaderDirectoryInput);
+
+        await row.RemoveCommand.ExecuteAsync(null);
+
+        Assert.True(row.IsConfirmingRemove);
+        Assert.True(Directory.Exists(row.Version.DirectoryPath));
+    }
+
+    [Fact]
     public async Task GameSettings_RemoveWhileTheGameRuns_SaysSoAndKeepsTheFolder()
     {
         var (harness, viewModel, _) = await CreateWithTwoVersionsAsync();
