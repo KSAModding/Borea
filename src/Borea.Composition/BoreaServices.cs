@@ -189,6 +189,9 @@ public sealed class BoreaServices : IDisposable
 
     public required ILoaderUninstaller LoaderUninstaller { get; init; }
 
+    /// <summary>The loader versions on disk, read again on each call.</summary>
+    public required ILoaderVersionStore LoaderVersions { get; init; }
+
     public required ILauncher Launcher { get; init; }
 
     public required ISharedProfileLauncher SharedProfileLauncher { get; init; }
@@ -561,6 +564,7 @@ public sealed class BoreaServices : IDisposable
             LoaderAdopter = loaderAdopter,
             LoaderConfiguration = loaderConfigurator ?? loaderConfiguration,
             LoaderUninstaller = new FileLoaderUninstaller(settingsRepository),
+            LoaderVersions = new FileLoaderVersionStore(settingsRepository, paths),
             Launcher = launcher,
             SharedProfileLauncher = new LoggingSharedProfileLauncher(sharedProfileLauncher ?? new SharedProfileLauncher(paths, processStarter ?? new ProcessStarter(), launches), log),
             LatestVersion = new LatestVersionPing(http),
