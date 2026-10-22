@@ -98,10 +98,10 @@ public partial class MainViewModel
         }
     }
 
-    /// <summary>True when the chosen version is not installed, so a save installs it first.</summary>
+    /// <summary>True when the chosen version is not installed and Borea can install it, so a save installs it first.</summary>
     public bool LoaderSettingNeedsInstall => IsLoaderSettingAutomatic
         ? _loaderSettingAutomaticMissing is not null
-        : SelectedLoaderSettingRelease is { IsInstalled: false };
+        : SelectedLoaderSettingRelease is { CanInstall: true };
 
     public string LoaderSettingActionText => LoaderSettingNeedsInstall ? Localization.InstanceLoaderSaveAndInstall : Localization.LibrarySave;
 
@@ -202,19 +202,23 @@ public partial class MainViewModel
         OnPropertyChanged(nameof(LoaderSettingAutomaticText));
 
         // an installed copy can always be pinned, but Borea never installs a yanked release or one whose download is gone
+        ModVersion? pin = instance.Loader.Version is { } pinned && ModIds.Equals(instance.Loader.LoaderId, loader.ModId) ? pinned : null;
         var installed = InstalledLoaderVersion.Of(context.Installed, loader.ModId).Select(version => version.Version).OfType<ModVersion>().ToHashSet();
         var choices = installed
             .Select(version => Choice(version, history.FirstOrDefault(release => release.Version == version), isInstalled: true))
             .Concat(history
-                .Where(release => release.IsOffered && context.Channel.Includes(release.ReleaseStatus) && !installed.Contains(release.Version))
+                .Where(release => !installed.Contains(release.Version) && (release.Version == pin || release.IsOffered && context.Channel.Includes(release.ReleaseStatus)))
                 .Select(release => Choice(release.Version, release, isInstalled: false)))
-            .OrderByDescending(choice => choice.Version)
             .ToList();
+
+        // the current pin stays a choice also when it is outside the channel or the index no longer lists it,
+        // so that a save without a change keeps it and does not move it to another version
+        if (pin is { } kept && !choices.Any(choice => choice.Version == kept))
+            choices.Add(Choice(kept, null, isInstalled: false));
+        choices = [.. choices.OrderByDescending(choice => choice.Version)];
         LoaderSettingReleases = choices;
 
-        var chosen = instance.Loader.Version is { } pin && ModIds.Equals(instance.Loader.LoaderId, loader.ModId)
-            ? pin
-            : automatic.Start?.Version ?? automatic.Missing?.Version;
+        var chosen = pin ?? automatic.Start?.Version ?? automatic.Missing?.Version;
         SelectedLoaderSettingRelease = choices.FirstOrDefault(choice => choice.Version == chosen) ?? choices.FirstOrDefault();
         OnPropertyChanged(nameof(LoaderSettingNeedsInstall));
         OnPropertyChanged(nameof(LoaderSettingActionText));
@@ -288,7 +292,8 @@ public partial class MainViewModel
                 return;
 
             setting = LoaderSetting.Pinned(loader.ModId, choice.Version);
-            install = choice.IsInstalled ? null : choice.Release;
+            // a pin that Borea cannot install stays as it is, and the launch says that it is missing
+            install = choice.CanInstall ? choice.Release : null;
         }
 
         if (install is not null && !await InstallLoaderVersionAsync(loader.ModId, install))
@@ -348,6 +353,12 @@ public sealed class LoaderReleaseChoice : ObservableObject
     public ModVersionMetadata? Release { get; }
 
     public bool IsInstalled { get; }
+
+    /// <summary>
+    /// True when a save installs this version first. A pin that is not installed and is yanked, gone or not in the
+    /// index cannot install, so a save keeps it without an install.
+    /// </summary>
+    public bool CanInstall => !IsInstalled && Release is { IsOffered: true };
 
     public GameCompatibility Compatibility { get; }
 
