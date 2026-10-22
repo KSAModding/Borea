@@ -23,6 +23,8 @@ public static class InstanceMapper
             IsFavorite = instance.IsFavorite,
             LastPlayedAt = instance.LastPlayedAt,
             LaunchArguments = instance.LaunchArguments.ToList(),
+            LoaderId = instance.Loader.LoaderId,
+            LoaderVersion = instance.Loader.Version?.ToString(),
             SourceType = sourceType,
             SourceModPackId = modPackId,
             SourceModPackVersion = modPackVersion,
@@ -53,6 +55,22 @@ public static class InstanceMapper
         var mods = dto.Mods.Select(InstalledModMapper.FromDto).ToList();
         var foreignMods = dto.ForeignMods.Select(ForeignModMapper.FromDto).ToList();
 
-        return Instance.FromExisting(instanceId, dto.Name, source, dto.CreatedAt, mods, foreignMods, dto.IsFavorite, dto.LastPlayedAt, dto.LaunchArguments);
+        var instance = Instance.FromExisting(instanceId, dto.Name, source, dto.CreatedAt, mods, foreignMods, dto.IsFavorite, dto.LastPlayedAt, dto.LaunchArguments);
+        instance.SetLoader(LoaderFrom(dto));
+        return instance;
+    }
+
+    // a hand-edited loader that does not parse falls back to the default, because a start can still choose a loader then
+    private static LoaderSetting LoaderFrom(InstanceDto dto)
+    {
+        if (!ModIds.IsValid(dto.LoaderId))
+            return LoaderSetting.Automatic;
+
+        if (dto.LoaderVersion is null)
+            return LoaderSetting.ForLoader(dto.LoaderId!);
+
+        return ModVersion.TryParse(dto.LoaderVersion, out var version)
+            ? LoaderSetting.Pinned(dto.LoaderId!, version)
+            : LoaderSetting.Automatic;
     }
 }
