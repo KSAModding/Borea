@@ -8,9 +8,9 @@ namespace Borea.Preview.Rendering;
 /// Draws a <see cref="PreviewScene"/> into a <see cref="FrameBuffer"/> on the CPU. The shading is a simple
 /// form of the game shader ThumbnailMesh.frag: a linear diffuse from the texture or the base color, a
 /// Lambert sun with a Blinn-Phong highlight from roughness and metalness, an ambient that the ambient
-/// occlusion scales, a Reinhard tone map and an sRGB output. There are no normal maps and no emissive.
-/// The frame is the same byte for byte for any worker count, because each pixel row belongs to exactly one
-/// band and every band fills its triangles in scene order with math that does not depend on the band.
+/// occlusion scales, a Reinhard tone map and an sRGB output. There is no emissive, and only
+/// <see cref="RenderQuality.High"/> applies the normal maps. The frame is the same byte for byte for any
+/// worker count, because each pixel row belongs to exactly one band and every band fills its triangles in scene order with math that does not depend on the band.
 /// One instance keeps the vertices of each draw in the vehicle frame while the scene stays the same, and it
 /// keeps its triangle, band and scratch buffers from frame to frame up to <see cref="RenderOptions.WorkBufferBytes"/>,
 /// so a frame that only moves the camera transforms no cached vertex again and, below that cap, allocates
@@ -150,7 +150,8 @@ public sealed class SoftwareRenderer
 
         var view = camera.View;
         var projection = camera.Projection((float)target.Width / target.Height);
-        var frame = new FrameSetup(view, view * projection, target.Width, target.Height, options);
+        var frame = new FrameSetup(view, view * projection, projection, target.Width, target.Height, options);
+        var normalMaps = frame.Quality == RenderQuality.High;
         FrustumPlanes(frame.ViewProjection, _planes);
 
         // The pixels that one meter covers at a depth of one meter, for the test of draws below one pixel.
@@ -165,7 +166,7 @@ public sealed class SoftwareRenderer
             var draw = scene.Draws[i];
             if (IsVisible(draw.Mesh, draw.Transform, _planes, view, pixelsPerMeter))
             {
-                _jobs[jobCount++] = new DrawJob(draw.Mesh, draw.Transform, Surface.From(draw.Material, draw.Mesh.Uvs is not null), 255, _states[i]);
+                _jobs[jobCount++] = new DrawJob(draw.Mesh, draw.Transform, Surface.From(draw.Material, draw.Mesh.Uvs is not null, normalMaps), 255, _states[i]);
                 drawsVisited++;
             }
         }
@@ -178,7 +179,7 @@ public sealed class SoftwareRenderer
             var model = Matrix4x4.CreateScale(size) * placeholder.Transform;
             if (IsVisible(UnitBox, model, _planes, view, 0f))
             {
-                var surface = new Surface(PlaceholderColor, Vector3.One, null, null);
+                var surface = new Surface(PlaceholderColor, Vector3.One, null, null, null);
                 _jobs[jobCount++] = new DrawJob(UnitBox, model, surface, PlaceholderAlpha, _states[scene.Draws.Count + i]);
                 placeholdersVisited++;
             }
@@ -1115,8 +1116,18 @@ public sealed class SoftwareRenderer
         }
     }
 
+    /// <summary>
+    /// Shades the visible pixels of one band. The quality is chosen once for the band, so the Standard loop
+    /// has no branch for the High quality in it.
+    /// </summary>
     private static void ShadeBand(int top, int bottom, Span<int> nearest, TriangleRef[] items, DrawJob[] jobs, FrameSetup frame, FrameBuffer target)
     {
+        if (frame.Quality == RenderQuality.High)
+        {
+            ShadeBandHigh(top, bottom, nearest, items, jobs, frame, target);
+            return;
+        }
+
         var width = target.Width;
         for (var y = top; y <= bottom; y++)
         {
@@ -1127,7 +1138,39 @@ public sealed class SoftwareRenderer
                 if (item >= 0)
                 {
                     ref readonly var t = ref Triangle(items, jobs, item);
-                    Write(target.Rgba, y * width + x, ShadePixel(in t, jobs[t.Job], x, y, frame));
+                    ref readonly var job = ref jobs[t.Job];
+                    Write(target.Rgba, y * width + x, ShadePixel(in t, in job, x, y, frame));
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// The High form of <see cref="ShadeBand"/>. Neighboring pixels mostly belong to the same triangle, so
+    /// the surface axes of the last triangle are kept and only built again when the triangle changes.
+    /// </summary>
+    private static void ShadeBandHigh(int top, int bottom, Span<int> nearest, TriangleRef[] items, DrawJob[] jobs, FrameSetup frame, FrameBuffer target)
+    {
+        var width = target.Width;
+        var lastItem = -1;
+        var axes = default(SurfaceAxes);
+        for (var y = top; y <= bottom; y++)
+        {
+            var local = (y - top) * width;
+            for (var x = 0; x < width; x++, local++)
+            {
+                var item = nearest[local];
+                if (item >= 0)
+                {
+                    ref readonly var t = ref Triangle(items, jobs, item);
+                    ref readonly var job = ref jobs[t.Job];
+                    if (item != lastItem)
+                    {
+                        lastItem = item;
+                        axes = job.Surface.Normal is null ? default : SurfaceAxes.Of(in t, frame);
+                    }
+
+                    Write(target.Rgba, y * width + x, ShadePixelHigh(in t, in job, in axes, x, y, frame));
                 }
             }
         }
@@ -1138,7 +1181,7 @@ public sealed class SoftwareRenderer
     /// weights of the corners, and dividing each by its w gives the weights in the plane of the triangle,
     /// which makes the UV and the normal correct under perspective.
     /// </summary>
-    private static Rgba8 ShadePixel(in ScreenTriangle t, DrawJob job, int x, int y, FrameSetup frame)
+    private static Rgba8 ShadePixel(in ScreenTriangle t, in DrawJob job, int x, int y, FrameSetup frame)
     {
         var px = (long)x * SubPixel + HalfSubPixel;
         var py = (long)y * SubPixel + HalfSubPixel;
@@ -1162,6 +1205,67 @@ public sealed class SoftwareRenderer
         }
 
         var surface = job.Surface;
+        var albedo = surface.Diffuse is null ? surface.BaseColor : TextureSampler.SampleDiffuse(surface.Diffuse, uv.X, uv.Y) * surface.Tint;
+        var (ambientOcclusion, roughness, metalness) = (1f, 1f, 0f);
+        if (surface.AoRoughMetal is not null)
+        {
+            var data = TextureSampler.SampleData(surface.AoRoughMetal, uv.X, uv.Y);
+            (ambientOcclusion, roughness, metalness) = (data.X, data.Y, data.Z);
+        }
+
+        return Encode(Light(albedo, ambientOcclusion, roughness, metalness, normal, frame), frame, 255);
+    }
+
+    /// <summary>
+    /// The color of one pixel of an opaque triangle at the High quality. The UV, the normal and the material
+    /// values come as in <see cref="ShadePixel"/>. A normal map then bends the normal as getNormalFromMap_ShaderX
+    /// in the game shader Common/SharedFrag.glsl does: it takes x and y from the red and green channels, rebuilds
+    /// z, and turns them with the frame of cotangent_frame, whose tangent and bitangent are the in-plane axes
+    /// of the triangle crossed with the interpolated normal of the pixel. The net mapping is red along +grad(u)
+    /// and green along -grad(v), which is image up, for the reason that <see cref="SurfaceAxes"/> gives. The
+    /// plain normal stays when the surface has no normal map or the UVs of the triangle give no direction.
+    /// </summary>
+    private static Rgba8 ShadePixelHigh(in ScreenTriangle t, in DrawJob job, in SurfaceAxes axes, int x, int y, FrameSetup frame)
+    {
+        var px = (long)x * SubPixel + HalfSubPixel;
+        var py = (long)y * SubPixel + HalfSubPixel;
+        var w0 = Edge(t.C1.X, t.C1.Y, t.C2.X, t.C2.Y, px, py) * t.C0.InverseW;
+        var w1 = Edge(t.C2.X, t.C2.Y, t.C0.X, t.C0.Y, px, py) * t.C1.InverseW;
+        var w2 = Edge(t.C0.X, t.C0.Y, t.C1.X, t.C1.Y, px, py) * t.C2.InverseW;
+        var sum = w0 + w1 + w2;
+        if (!(sum > 0f))
+        {
+            (w0, w1, w2, sum) = (1f, 1f, 1f, 3f);
+        }
+
+        var l0 = w0 / sum;
+        var l1 = w1 / sum;
+        var l2 = w2 / sum;
+        var uv = t.C0.Uv * l0 + t.C1.Uv * l1 + t.C2.Uv * l2;
+        var normal = Normalized(t.C0.Normal * l0 + t.C1.Normal * l1 + t.C2.Normal * l2);
+        if (normal == Vector3.Zero)
+        {
+            normal = Vector3.UnitZ;
+        }
+
+        var surface = job.Surface;
+        if (surface.Normal is not null)
+        {
+            // The scale-invariant frame of cotangent_frame, which divides both axes by the longer one.
+            var tangent = Vector3.Cross(normal, axes.U);
+            var bitangent = Vector3.Cross(normal, axes.V);
+            var scale = 1f / MathF.Sqrt(MathF.Max(tangent.LengthSquared(), bitangent.LengthSquared()));
+            if (float.IsFinite(scale))
+            {
+                var map = TextureSampler.SampleNormal(surface.Normal, uv.X, uv.Y);
+                var mapped = Normalized(map.X * scale * tangent - map.Y * scale * bitangent + map.Z * normal);
+                if (mapped != Vector3.Zero)
+                {
+                    normal = mapped;
+                }
+            }
+        }
+
         var albedo = surface.Diffuse is null ? surface.BaseColor : TextureSampler.SampleDiffuse(surface.Diffuse, uv.X, uv.Y) * surface.Tint;
         var (ambientOcclusion, roughness, metalness) = (1f, 1f, 0f);
         if (surface.AoRoughMetal is not null)
@@ -1198,18 +1302,70 @@ public sealed class SoftwareRenderer
     /// <summary>
     /// What a draw is shaded with. <see cref="BaseColor"/> already holds the glass tint, and
     /// <see cref="Tint"/> is the factor for the diffuse texture. The textures are null when the mesh has no
-    /// UVs, because there is nothing to sample them with.
+    /// UVs, because there is nothing to sample them with. <see cref="Normal"/> is set only for a frame that
+    /// applies normal maps, and never for glass, which keeps the shading of the Standard quality.
     /// </summary>
-    private readonly record struct Surface(Vector3 BaseColor, Vector3 Tint, PreviewImage? Diffuse, PreviewImage? AoRoughMetal)
+    private readonly record struct Surface(Vector3 BaseColor, Vector3 Tint, PreviewImage? Diffuse, PreviewImage? AoRoughMetal, PreviewImage? Normal)
     {
-        public static Surface From(PreviewMaterial material, bool hasUvs)
+        public static Surface From(PreviewMaterial material, bool hasUvs, bool normalMaps)
         {
             var tint = material.Glass ? GlassTint : Vector3.One;
-            return new Surface(material.BaseColor * tint, tint, hasUvs ? material.Diffuse : null, hasUvs ? material.AoRoughMetal : null);
+            var normal = hasUvs && normalMaps && !material.Glass ? material.Normal : null;
+            return new Surface(material.BaseColor * tint, tint, hasUvs ? material.Diffuse : null, hasUvs ? material.AoRoughMetal : null, normal);
         }
     }
 
     private readonly record struct DrawJob(PreviewMesh Mesh, Matrix4x4 Model, Surface Surface, byte Alpha, DrawState State);
+
+    /// <summary>
+    /// The two in-plane vectors of one screen triangle in camera space that the normal of a pixel is crossed
+    /// with to give the tangent and the bitangent of cotangent_frame in Common/SharedFrag.glsl. That function
+    /// solves the screen derivatives of the position and the UV, and its tangent cross(dp2, N) * du1 +
+    /// cross(N, dp1) * du2 is the same as cross(N, dp1 * du2 - dp2 * du1). With the edges e1 and e2 of the
+    /// triangle in place of the derivatives, this is grad(u) times det = dot(N, cross(e1, e2)) when N is the
+    /// face normal, and the bitangent is the same for v.
+    /// </summary>
+    /// <remarks>
+    /// The sign of det decides whether the relief shows raised or pushed in. The corners are read in their
+    /// stored order, which always has a positive screen area because SetupTriangles walks a negative polygon
+    /// the other way round, and their normals are the ones after the back face flip. So cross(e1, e2) points
+    /// away from the viewer and N toward it, and det is negative for every drawn pixel, also on a mirrored draw
+    /// and on a back face that is drawn. The mesh index order would not give this, because a mirrored draw
+    /// turns it around. The game has the same fixed sign, because the derivatives follow the screen and
+    /// ThumbnailRenderer culls back faces. The axes here are the negated sums, so cross(N, U) points along
+    /// +grad(u) and cross(N, V) along +grad(v). getNormalFromMap_ShaderX sets normalMap.x = -normalMap.x, and
+    /// that flip is not copied, because it cancels against the negative det of a visible face. The net mapping
+    /// of the game is red = +grad(u) and green = -grad(v), which ShadePixelHigh applies directly. The game
+    /// ignores the GLB TANGENT of a part mesh, because MeshReference.Load imports only
+    /// VertexImportFlags.Normals | UVs, so this renderer does not read it either. The import axes of
+    /// GltfUtils.LoadMeshAssetForPrim (Brutal.Gltf) and the view handedness of the game camera are not in the
+    /// decompiled source, so it is not verified that the game maps a part to the screen with the same
+    /// orientation as this renderer.
+    /// </remarks>
+    private readonly record struct SurfaceAxes(Vector3 U, Vector3 V)
+    {
+        public static SurfaceAxes Of(in ScreenTriangle t, FrameSetup frame)
+        {
+            var p0 = CameraPoint(in t.C0, frame);
+            var e1 = CameraPoint(in t.C1, frame) - p0;
+            var e2 = CameraPoint(in t.C2, frame) - p0;
+            var step1 = t.C1.Uv - t.C0.Uv;
+            var step2 = t.C2.Uv - t.C0.Uv;
+            return new SurfaceAxes(e2 * step1.X - e1 * step2.X, e2 * step1.Y - e1 * step2.Y);
+        }
+
+        /// <summary>
+        /// A projected corner back in camera space, where the camera looks along -Z, so w is the depth -z and
+        /// the clip x and y are the camera x and y times the projection scales.
+        /// </summary>
+        private static Vector3 CameraPoint(in Corner corner, FrameSetup frame)
+        {
+            var w = 1f / corner.InverseW;
+            var ndcX = 2f * corner.X / (frame.Width * SubPixel) - 1f;
+            var ndcY = 1f - 2f * corner.Y / (frame.Height * SubPixel);
+            return new Vector3(ndcX * w / frame.ProjectionX, ndcY * w / frame.ProjectionY, -w);
+        }
+    }
 
     /// <summary>A triangle in the list of a band, by its job and its place in the buffer of the state of that job.</summary>
     private readonly record struct TriangleRef(int Job, int Index);
@@ -1299,13 +1455,16 @@ public sealed class SoftwareRenderer
 
     private sealed class FrameSetup
     {
-        public FrameSetup(Matrix4x4 view, Matrix4x4 viewProjection, int width, int height, RenderOptions options)
+        public FrameSetup(Matrix4x4 view, Matrix4x4 viewProjection, Matrix4x4 projection, int width, int height, RenderOptions options)
         {
             View = view;
             ViewProjection = viewProjection;
+            ProjectionX = projection.M11;
+            ProjectionY = projection.M22;
             Width = width;
             Height = height;
             CullBackFaces = options.CullBackFaces;
+            Quality = options.Quality;
             Sun = Normalized(options.SunDirection) is var sun && sun != Vector3.Zero ? sun : Vector3.UnitZ;
             Half = Normalized(Sun + Vector3.UnitZ) is var half && half != Vector3.Zero ? half : Vector3.UnitZ;
             SunIntensity = options.SunIntensity;
@@ -1317,11 +1476,21 @@ public sealed class SoftwareRenderer
 
         public Matrix4x4 ViewProjection { get; }
 
+        /// <summary>
+        /// The M11 and M22 of the perspective projection, which take camera space x and y to clip space. With
+        /// them and w a screen corner goes back to camera space.
+        /// </summary>
+        public float ProjectionX { get; }
+
+        public float ProjectionY { get; }
+
         public int Width { get; }
 
         public int Height { get; }
 
         public bool CullBackFaces { get; }
+
+        public RenderQuality Quality { get; }
 
         /// <summary>The unit vector toward the sun in camera space.</summary>
         public Vector3 Sun { get; }

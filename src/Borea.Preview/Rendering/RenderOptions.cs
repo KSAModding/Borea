@@ -5,6 +5,19 @@ namespace Borea.Preview.Rendering;
 /// <summary>An sRGB color with straight alpha, one byte per channel.</summary>
 public readonly record struct Rgba8(byte R, byte G, byte B, byte A);
 
+/// <summary>How much work <see cref="SoftwareRenderer"/> spends on each visible pixel.</summary>
+public enum RenderQuality
+{
+    /// <summary>The fast shading that every frame uses unless it asks for more, also the frames of a drag.</summary>
+    Standard,
+
+    /// <summary>
+    /// The shading for a view at rest. It also applies the normal map of a material, so a frame costs more
+    /// for each covered pixel.
+    /// </summary>
+    High,
+}
+
 /// <summary>The settings of one <see cref="SoftwareRenderer.Render"/> call.</summary>
 public sealed record RenderOptions
 {
@@ -31,6 +44,9 @@ public sealed record RenderOptions
     public Vector3 SunDirection { get; init; } = Vector3.Normalize(new Vector3(-0.4f, 0.6f, 0.7f));
 
     public float SunIntensity { get; init; } = 0.85f;
+
+    /// <summary>The shading level of the frame. The default is <see cref="RenderQuality.Standard"/>.</summary>
+    public RenderQuality Quality { get; init; } = RenderQuality.Standard;
 
     /// <summary>
     /// The light that reaches every face, also a face that turns away from the sun. The ambient occlusion
