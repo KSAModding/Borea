@@ -43,13 +43,14 @@ internal static class VehicleSceneResolver
     /// <param name="parts">The full parts from <see cref="VehicleXmlReader"/>.</param>
     /// <param name="modByMissingId">
     /// For an Id that a needed mod would give and that is not on disk, the Id of that mod. A placeholder for such an
-    /// Id gets <see cref="PlaceholderReason.ModNotLoaded"/>. The keys should use <see cref="KsaIdComparer.Registry"/>.
+    /// Id gets <see cref="PlaceholderReason.ModNotLoaded"/>. A null value means that a needed mod is missing and it is
+    /// not known which one. The keys should use <see cref="KsaIdComparer.Registry"/>.
     /// </param>
     public static ResolvedVehicle Resolve(
         IReadOnlyList<VehiclePartRef> parts,
         PartCatalog catalog,
         MeshIndex meshes,
-        IReadOnlyDictionary<string, string>? modByMissingId)
+        IReadOnlyDictionary<string, string?>? modByMissingId)
     {
         ArgumentNullException.ThrowIfNull(catalog);
         ArgumentNullException.ThrowIfNull(meshes);
@@ -65,7 +66,7 @@ internal static class VehicleSceneResolver
         return walk.Finish(parts.Count);
     }
 
-    private sealed class Walk(PartCatalog catalog, MeshIndex meshIndex, IReadOnlyDictionary<string, string>? modByMissingId)
+    private sealed class Walk(PartCatalog catalog, MeshIndex meshIndex, IReadOnlyDictionary<string, string?>? modByMissingId)
     {
         private readonly List<PreviewMeshRef> _meshes = [];
         private readonly Dictionary<PreviewMeshRef, int> _meshIndices = [];

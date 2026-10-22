@@ -83,7 +83,7 @@ public sealed class VehicleSceneResolverTests : IDisposable
             </RootPartRef>
             """;
         var (catalog, meshes) = Build(assets, "BodyMesh");
-        var hint = new Dictionary<string, string>(KsaIdComparer.Registry) { ["modsubpart"] = "SomeMod" };
+        var hint = new Dictionary<string, string?>(KsaIdComparer.Registry) { ["modsubpart"] = "SomeMod" };
 
         var scene = VehicleSceneResolver.Resolve(VehicleXmlReader.Read(VehicleXmlReaderTests.Vehicle(body)).Parts, catalog, meshes, hint);
 
