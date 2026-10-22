@@ -255,6 +255,16 @@ internal static class LoaderCommand
             if (parseResult.GetValue(unused))
                 return await UninstallUnusedAsync(cli, id, output, ct).ConfigureAwait(false);
 
+            // the recorded version gets the same check as one version, so no instance loses the version that it starts
+            var installed = await cli.LoaderVersions.ListAsync(ct).ConfigureAwait(false);
+            if (InstalledLoaderVersion.Of(installed, id).Any(v => v.IsRecorded)
+                && (await UsesAsync(cli, installed, ct).ConfigureAwait(false))
+                    .FirstOrDefault(use => use.IsUsed && use.Version.IsRecorded && ModIds.Equals(use.Version.LoaderId, id)) is { } used)
+            {
+                throw new InvalidOperationException(
+                    $"Borea keeps {used.Version.LoaderId} {VersionText(used.Version)}, because {DescribeUsers(used.Users)} {Starts(used)} it. Change their mod loader setting with 'borea instance set-loader' first.");
+            }
+
             var result = await cli.LoaderUninstaller
                 .UninstallAsync(id, ct)
                 .ConfigureAwait(false);
@@ -265,7 +275,7 @@ internal static class LoaderCommand
                 throw new InvalidOperationException($"Close the game before you remove {result.LoaderId}.");
             }
 
-            if (!result.RecordRemoved)
+            if (result.Failure == LoaderUninstallFailure.NotInstalled)
             {
                 output.WriteLine($"Loader {result.LoaderId} was not recorded.");
                 return ExitCodes.Done;
@@ -274,8 +284,14 @@ internal static class LoaderCommand
             output.WriteLine(result.DirectoryRemoved
                 ? $"Removed loader {result.LoaderId} and its directory '{result.Directory}'."
                 : $"Removed loader {result.LoaderId} from Borea. Its directory '{result.Directory}' remains.");
-            var listing = await ModInstallCommands.FindCachedListingAsync(cli, result.LoaderId, ct).ConfigureAwait(false);
-            ContentOutput.WriteSteps(output, $"Uninstall steps for {result.LoaderId}:", listing?.Install?.Uninstall);
+
+            // the steps of the listing are for the whole loader, so they matter only when no version of it remains
+            if (result.RecordRemoved)
+            {
+                var listing = await ModInstallCommands.FindCachedListingAsync(cli, result.LoaderId, ct).ConfigureAwait(false);
+                ContentOutput.WriteSteps(output, $"Uninstall steps for {result.LoaderId}:", listing?.Install?.Uninstall);
+            }
+
             return ExitCodes.Done;
         }));
 

@@ -393,6 +393,28 @@ public sealed class LoaderCommandTests : IDisposable
     }
 
     [Fact]
+    public async Task Uninstall_OtherVersionStays_MovesTheRecordThereAndThenRefusesItsPinnedUser()
+    {
+        var pinned = CreateVersionFolder(_host, "0.4.7");
+        var recorded = CreateVersionFolder(_host, "0.4.8");
+        await File.WriteAllTextAsync(_host.Paths.GetBoreaSettingsPath(), $"[LoaderInstallations.StarMap]\nDirectoryPath = '{recorded}'\nVersion = '0.4.8'\nIsAdopted = false\n");
+        await SavePinnedInstanceAsync(_host, "Flight Test", "0.4.7");
+
+        var removed = await _host.RunAsync("loader", "uninstall", "StarMap");
+        var refused = await _host.RunAsync("loader", "uninstall", "StarMap");
+        var show = await _host.RunAsync("settings", "show", "--json");
+
+        Assert.Equal(0, removed.ExitCode);
+        Assert.False(Directory.Exists(recorded));
+        Assert.Equal(1, refused.ExitCode);
+        Assert.Contains("Borea keeps StarMap 0.4.7, because 'Flight Test' (pinned) starts it.", refused.Error);
+        Assert.True(Directory.Exists(pinned));
+        var version = Assert.Single(show.Json.GetProperty("loaderVersions").EnumerateArray());
+        Assert.Equal("0.4.7", version.GetProperty("version").GetString());
+        Assert.True(version.GetProperty("recorded").GetBoolean());
+    }
+
+    [Fact]
     public async Task UninstallUnused_RemovesTheUnusedVersionAndKeepsThePinnedOne()
     {
         var pinned = CreateVersionFolder(_host, "0.4.7");
