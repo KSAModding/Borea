@@ -9,17 +9,6 @@ namespace Borea.Cli.Commands;
 internal static class LoaderLookup
 {
     /// <summary>
-    /// The game build that the loader of <paramref name="instance"/> starts, and its folder. Every instance uses the
-    /// game in the settings today, and per-instance game builds replace the body of this method.
-    /// </summary>
-    public static (GameVersion? Version, string? Directory) LoaderGameOf(CliServices cli, Instance instance)
-    {
-        ArgumentNullException.ThrowIfNull(cli);
-        ArgumentNullException.ThrowIfNull(instance);
-        return (cli.InstalledVersion.GetInstalledVersion()?.Version, cli.Paths.GetGameDirectoryPath());
-    }
-
-    /// <summary>
     /// The loader and the loader version that start <paramref name="instance"/>, from the same inputs for the launch and
     /// for <c>instance show</c>: the held listings before the live ones, and the held releases to rate and offer.
     /// </summary>

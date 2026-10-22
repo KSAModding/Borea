@@ -439,7 +439,7 @@ public partial class MainViewModel
             services.ContentIndex,
             await HeldLoaderReleasesAsync(services),
             services.Settings.ReleaseChannel,
-            instance => LoaderGameOf(services, instance).Version);
+            instance => services.InstanceGames.Resolve(instance).Version?.Version);
 
     private void RefreshLoaderText()
     {

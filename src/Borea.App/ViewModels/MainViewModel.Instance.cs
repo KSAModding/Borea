@@ -720,7 +720,7 @@ public partial class MainViewModel
             }
 
             // each version folder keeps its own game path, and a loader in a Wine prefix needs the path of the prefix
-            if (LoaderGameOf(services, instance).Directory is { } game
+            if (services.InstanceGames.Resolve(instance).GameDirectory is { } game
                 && await services.LoaderConfiguration.PrepareForLaunchAsync(loader, start.DirectoryPath, game, start.IsAdopted) is { } prepared)
             {
                 services.Log.Write($"Wrote the game path to '{prepared}' before the launch.");

@@ -110,7 +110,7 @@ internal static class LoaderCommand
         var instances = await cli.Instances.GetAllAsync().ConfigureAwait(false);
         var releases = await LoaderLookup.HeldReleasesAsync(cli.OfflineContentIndex, cancellationToken).ConfigureAwait(false);
         return await LoaderVersionUse
-            .UsedByAsync(instances, installed, cli.OfflineContentIndex, cli.Mods, releases, cli.Settings.ReleaseChannel, instance => LoaderLookup.LoaderGameOf(cli, instance).Version, cancellationToken)
+            .UsedByAsync(instances, installed, cli.OfflineContentIndex, cli.Mods, releases, cli.Settings.ReleaseChannel, instance => cli.InstanceGames.Resolve(instance).Version?.Version, cancellationToken)
             .ConfigureAwait(false);
     }
 

@@ -13,6 +13,7 @@ using Borea.Core.Preferences;
 using Borea.Core.Settings;
 using Borea.Core.State;
 using Borea.Core.Updates;
+using Borea.Storage.Game;
 using Borea.Storage.ModLoaders;
 
 namespace Borea.Cli;
@@ -55,6 +56,9 @@ internal sealed class CliServices : IDisposable
     public required ILatestVersionPing LatestVersion { get; init; }
 
     public required IInstalledGameVersionProvider InstalledVersion { get; init; }
+
+    /// <summary>The game folder and the installed version of one instance.</summary>
+    public required IInstanceGameResolver InstanceGames { get; init; }
 
     /// <summary>The platform whose code the game build runs, which the planner checks releases against.</summary>
     public required IGamePlatform GamePlatform { get; init; }
@@ -138,7 +142,8 @@ internal sealed class CliServices : IDisposable
     /// <summary>
     /// The graph's services. <paramref name="latestVersion"/> replaces the
     /// graph's master-server ping and <paramref name="installedVersion"/> its
-    /// reader of the installed build, which is what a test needs.
+    /// reader of the installed build, which is what a test needs. The replaced
+    /// reader also answers for the game of an instance.
     /// <paramref name="spaceCheck"/> replaces the check against the real
     /// volumes, so a test does not depend on the free space of the machine it
     /// runs on.
@@ -202,6 +207,7 @@ internal sealed class CliServices : IDisposable
             ModListFormat = services.ModListFormat,
             LatestVersion = latestVersion ?? services.LatestVersion,
             InstalledVersion = installedVersion ?? services.InstalledVersion,
+            InstanceGames = installedVersion is null ? services.InstanceGames : new InstanceGameResolver(services.Paths, installedVersion),
             GamePlatform = gamePlatform ?? services.GamePlatform,
             GameShape = gameShape ?? services.GameShape,
             IndexFetcher = indexFetcher ?? services.IndexFetcher,

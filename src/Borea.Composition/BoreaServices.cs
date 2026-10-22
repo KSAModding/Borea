@@ -209,6 +209,9 @@ public sealed class BoreaServices : IDisposable
 
     public required IInstalledGameVersionProvider InstalledVersion { get; init; }
 
+    /// <summary>The game folder and the installed version of one instance.</summary>
+    public required IInstanceGameResolver InstanceGames { get; init; }
+
     /// <summary>The platform whose code the game build runs, which the planner checks releases against.</summary>
     public required IGamePlatform GamePlatform { get; init; }
 
@@ -589,6 +592,7 @@ public sealed class BoreaServices : IDisposable
             SelfUpdater = selfUpdater ?? BuildSelfUpdater(new BoreaReleaseFiles(http), log, fromCommandLine: logSource == BoreaLogSource.Cli),
             Announcements = new AnnouncementFeed(new AnnouncementFetcher(http, AnnouncementFetcher.DefaultUri, announcementReader), announcementReader, paths, log),
             InstalledVersion = installedVersion,
+            InstanceGames = new InstanceGameResolver(paths, installedVersion),
             GamePlatform = gamePlatform ?? new Borea.Storage.Game.GamePlatform(paths),
             GameShape = gameShape,
             GamePatchNotes = new FileGamePatchNotesReader(paths),
