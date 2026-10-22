@@ -1,7 +1,9 @@
 using System.Text.Json;
 using Borea.Core.Game;
+using Borea.Core.Instances;
 using Borea.Core.ModLoaders;
 using Borea.Core.Mods;
+using Borea.Storage.Instances;
 
 namespace Borea.Cli.Tests;
 
@@ -343,6 +345,82 @@ public sealed class LoaderCommandTests : IDisposable
         Assert.Equal(string.Empty, run.Error);
         Assert.Contains("Removed loader StarMap", run.Output);
         Assert.DoesNotContain("steps", run.Output, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task UninstallVersion_WhileTheGameRuns_KeepsTheFolder()
+    {
+        var folder = CreateVersionFolder(_host, "0.4.7");
+        _host.GameRunning = true;
+
+        var run = await _host.RunAsync("loader", "uninstall", "StarMap", "--version", "0.4.7");
+
+        Assert.Equal(1, run.ExitCode);
+        Assert.Contains("Close the game before you remove StarMap.", run.Error);
+        Assert.True(Directory.Exists(folder));
+    }
+
+    [Fact]
+    public async Task UninstallVersion_PinnedByAnInstance_IsRefusedAndNamesTheInstance()
+    {
+        var folder = CreateVersionFolder(_host, "0.4.7");
+        await SavePinnedInstanceAsync(_host, "Flight Test", "0.4.7");
+
+        var run = await _host.RunAsync("loader", "uninstall", "StarMap", "--version", "0.4.7");
+
+        Assert.Equal(1, run.ExitCode);
+        Assert.Contains("'Flight Test' (pinned)", run.Error);
+        Assert.True(Directory.Exists(folder));
+    }
+
+    [Fact]
+    public async Task UninstallUnused_RemovesTheUnusedVersionAndKeepsThePinnedOne()
+    {
+        var pinned = CreateVersionFolder(_host, "0.4.7");
+        var unused = CreateVersionFolder(_host, "0.4.8");
+        await SavePinnedInstanceAsync(_host, "Flight Test", "0.4.7");
+
+        var run = await _host.RunAsync("loader", "uninstall", "StarMap", "--unused");
+        var show = await _host.RunAsync("settings", "show", "--json");
+
+        Assert.Equal(0, run.ExitCode);
+        Assert.Contains("Removed StarMap 0.4.8", run.Output);
+        Assert.Contains("Kept StarMap 0.4.7, because 'Flight Test' (pinned) starts it.", run.Output);
+        Assert.False(Directory.Exists(unused));
+        Assert.True(Directory.Exists(pinned));
+        var version = Assert.Single(show.Json.GetProperty("loaderVersions").EnumerateArray());
+        Assert.Equal("0.4.7", version.GetProperty("version").GetString());
+    }
+
+    [Fact]
+    public async Task Install_WhileTheGameRuns_IsRefusedBeforeTheInstallerRuns()
+    {
+        var installer = new FakeLoaderInstaller();
+        _host.LoaderInstaller = installer;
+        _host.Mods.Listings.Add(LoaderFixtures.Listing());
+        _host.Mods.Releases.Add(LoaderFixtures.Release());
+        _host.GameRunning = true;
+
+        var run = await _host.RunAsync("loader", "install", "StarMap");
+
+        Assert.Equal(1, run.ExitCode);
+        Assert.Contains("Close the game before you install StarMap.", run.Error);
+        Assert.Empty(installer.Calls);
+    }
+
+    /// <summary>A Borea-owned version folder Loaders/StarMap/&lt;version&gt; that the store lists.</summary>
+    internal static string CreateVersionFolder(CliHost host, string version)
+    {
+        var folder = Directory.CreateDirectory(host.Paths.GetLoaderVersionDirectoryPath("StarMap", ModVersion.Parse(version))).FullName;
+        File.WriteAllText(Path.Combine(folder, "StarMap.exe"), "loader");
+        return folder;
+    }
+
+    internal static async Task SavePinnedInstanceAsync(CliHost host, string name, string version)
+    {
+        var instance = new Instance(name, InstanceSource.Custom.Value);
+        instance.SetLoader(LoaderSetting.Pinned("StarMap", ModVersion.Parse(version)));
+        await new FileInstanceRepository(host.Paths).SaveAsync(instance);
     }
 
     internal static string CreateLoaderDirectory(string loaderId, string executableContents, string root, string? gameDirectory = null)
