@@ -302,7 +302,7 @@ public partial class MainViewModel
 
         await RunSetupAsync(async current =>
         {
-            var message = await InstallLoaderReleaseAsync(current, loaderId, release, directory: string.Empty);
+            var message = await InstallLoaderReleaseAsync(current, loaderId, release);
 
             // the removal runs inside the task, so the services that the task builds again already see it
             if (replaced is { } old && old != release.Version)
