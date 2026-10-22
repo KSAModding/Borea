@@ -8,8 +8,9 @@ namespace Borea.Storage.ModLoaders;
 
 /// <summary>
 /// File-backed <see cref="ILoaderInstaller"/>. A standalone loader without a given directory goes into its own version folder,
-/// Loaders/&lt;id&gt;/&lt;version&gt;, beside the versions that are already installed. A given directory and a loader below the
-/// game folder keep one recorded install that is replaced in place.
+/// Loaders/&lt;id&gt;/&lt;version&gt;, beside the versions that are already installed, and so does one with a given directory
+/// inside the Loaders root. A given directory outside that root and a loader below the game folder keep one recorded
+/// install that is replaced in place.
 /// </summary>
 public sealed class FileLoaderInstaller : ILoaderInstaller
 {
@@ -71,6 +72,9 @@ public sealed class FileLoaderInstaller : ILoaderInstaller
         var recorded = recordedInstallation is null ? null : Path.GetFullPath(recordedInstallation.DirectoryPath);
 
         var (target, path, root) = Describe(loader, release);
+        if (target == InstallAnchor.Standalone && directory is not null)
+            directory = OutsideLoadersRoot(loader, directory, recorded);
+
         if (target == InstallAnchor.Standalone && directory is null)
             return await InstallVersionAsync(loader, release, path, root, settings, progress, cancellationToken).ConfigureAwait(false);
 
@@ -103,6 +107,31 @@ public sealed class FileLoaderInstaller : ILoaderInstaller
             settings,
             progress,
             cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// The Loaders root is Borea's own data, so Borea chooses the version folder there and a given directory inside it only
+    /// names the loader. Settings > Game fills in the recorded folder, which is a version folder, and an install into it would
+    /// put another version into the folder that names the old one. Any other folder inside the root is refused.
+    /// </summary>
+    /// <returns>Null when Borea chooses the version folder, else the given directory.</returns>
+    private string? OutsideLoadersRoot(ModMetadata loader, string directory, string? recorded)
+    {
+        var given = Absolute(directory, nameof(directory));
+        if (!IsBelowLoadersRoot(given))
+            return directory;
+
+        var loaderFolder = Path.Combine(_pathProvider.GetLoadersRoot(), loader.ModId);
+        var isLoaderFolder = (recorded is not null && SamePath(given, recorded))
+            || SamePath(given, loaderFolder)
+            || (Path.GetDirectoryName(given) is { } parent && SamePath(parent, loaderFolder) && ModVersion.TryParse(Path.GetFileName(given), out _));
+        if (!isLoaderFolder)
+        {
+            throw new InvalidOperationException(
+                $"'{given}' is inside the Loaders folder of Borea, where Borea chooses the folder of each version. Install {loader.Name} without a directory, or choose a folder outside '{_pathProvider.GetLoadersRoot()}'.");
+        }
+
+        return null;
     }
 
     /// <summary>
@@ -229,10 +258,11 @@ public sealed class FileLoaderInstaller : ILoaderInstaller
             cancellationToken);
 
     /// <summary>
-    /// The record names the version that an older Borea starts, so it moves only to a version that ranks at least as high,
-    /// which is a release above a prerelease and else the higher version. A record outside the Loaders root belongs to the
-    /// player and never moves. A record at the flat folder of a moved loader always moves, because an uninstall of that
-    /// folder would delete every version.
+    /// The record names the version that an older Borea starts, so it follows each install of a release, also of an older
+    /// one, because the player chose it. It moves to a prerelease only when the record is a prerelease too or the channel of
+    /// the player takes prereleases, so that a prerelease installed for one instance does not start every instance. A record
+    /// outside the Loaders root belongs to the player and never moves. A record at the flat folder of a moved loader always
+    /// moves, because an uninstall of that folder would delete every version.
     /// </summary>
     /// <returns>The settings to save, or null when the record stays.</returns>
     private BoreaSettings? Repoint(BoreaSettings current, string loaderId, ModVersion version, string destination, string loaderFolder)
@@ -247,8 +277,8 @@ public sealed class FileLoaderInstaller : ILoaderInstaller
         if (SamePath(record.DirectoryPath, loaderFolder) || record.Version is not { } recordedVersion)
             return current.WithLoaderInstallation(loaderId, installation);
 
-        var rank = (version.PreRelease is null, version).CompareTo((recordedVersion.PreRelease is null, recordedVersion));
-        return rank >= 0 ? current.WithLoaderInstallation(loaderId, installation) : null;
+        var moves = version.PreRelease is null || recordedVersion.PreRelease is not null || current.ReleaseChannel != ReleaseChannel.Stable;
+        return moves ? current.WithLoaderInstallation(loaderId, installation) : null;
     }
 
     /// <param name="folder">The folder that is created or swapped as a whole.</param>
