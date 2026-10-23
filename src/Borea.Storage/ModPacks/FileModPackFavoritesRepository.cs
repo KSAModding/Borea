@@ -1,4 +1,5 @@
 ﻿using Borea.Core.ModPacks;
+using Borea.Core.Mods;
 using Borea.Core.Paths;
 using Borea.Storage.Toml;
 
@@ -22,14 +23,14 @@ public sealed class FileModPackFavoritesRepository : IModPackFavoritesRepository
     public async Task<bool> IsFavoriteAsync(string modPackId, CancellationToken cancellationToken = default)
     {
         var dto = await ReadAsync(cancellationToken).ConfigureAwait(false);
-        return dto.ModPackIds.Contains(modPackId, Borea.Core.Mods.ModIds.Comparer);
+        return dto.ModPackIds.Contains(modPackId, ModIds.Comparer);
     }
 
     public async Task AddFavoriteAsync(string modPackId, CancellationToken cancellationToken = default)
     {
         var dto = await ReadAsync(cancellationToken).ConfigureAwait(false);
 
-        if (dto.ModPackIds.Contains(modPackId, Borea.Core.Mods.ModIds.Comparer))
+        if (dto.ModPackIds.Contains(modPackId, ModIds.Comparer))
             return;
 
         dto.ModPackIds.Add(modPackId);
@@ -40,7 +41,7 @@ public sealed class FileModPackFavoritesRepository : IModPackFavoritesRepository
     {
         var dto = await ReadAsync(cancellationToken).ConfigureAwait(false);
 
-        if (dto.ModPackIds.RemoveAll(id => Borea.Core.Mods.ModIds.Equals(id, modPackId)) > 0)
+        if (dto.ModPackIds.RemoveAll(id => ModIds.Equals(id, modPackId)) > 0)
             await WriteAsync(dto, cancellationToken).ConfigureAwait(false);
     }
 
