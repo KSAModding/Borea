@@ -26,6 +26,7 @@ using Borea.Storage.ModLoaders;
 using Borea.Storage.Mods;
 using Borea.Storage.Paths;
 using Borea.Storage.Preferences;
+using Borea.Storage.Preview;
 using Borea.Storage.State;
 using Borea.Storage.Settings;
 
@@ -71,6 +72,80 @@ public sealed class BoreaServicesTests : IDisposable
         using var services = await BoreaServices.BuildAsync(_tempRoot);
 
         Assert.False(Directory.Exists(_tempRoot));
+    }
+
+    [Fact]
+    public async Task BuildAsync_DownloaderReusesThePreviewCache_AndCreatesNoPreviewFolder()
+    {
+        await SaveAsync(new BoreaSettings(GamePath));
+
+        using var services = await BoreaServices.BuildAsync(_tempRoot);
+
+        Assert.IsType<CachingModDownloader>(services.Downloader);
+        Assert.False(Directory.Exists(Path.Combine(_tempRoot, "PreviewCache")));
+    }
+
+    [Fact]
+    public async Task VehiclePreview_IsTheStorageService_AndTheServicesDisposeIt()
+    {
+        var services = await BoreaServices.BuildAsync(_tempRoot);
+        Assert.IsType<VehiclePreview>(services.VehiclePreview);
+
+        services.Dispose();
+
+        await Assert.ThrowsAsync<ObjectDisposedException>(() => services.VehiclePreview.PrepareAsync(PreviewVehicle(new string('a', 64)), null));
+    }
+
+    [Fact]
+    public async Task VehiclePreview_Prepare_SendsNoRequest()
+    {
+        var game = Path.Combine(_tempRoot, "Game");
+        Directory.CreateDirectory(Path.Combine(game, "Content", "Core"));
+        File.WriteAllText(Path.Combine(game, "Content", "Core", "mod.toml"), "name = \"Core\"");
+        await SaveAsync(new BoreaSettings(game));
+        var handler = new RefusingHandler();
+        using var services = await BoreaServices.BuildAsync(_tempRoot, handler, new ReleaseListRepository([]), new NoCandidates(), isGameProcessRunning: () => false);
+        byte[] zip;
+        using (var buffer = new MemoryStream())
+        {
+            using (var archive = new System.IO.Compression.ZipArchive(buffer, System.IO.Compression.ZipArchiveMode.Create, leaveOpen: true))
+            {
+                using (var meta = new StreamWriter(archive.CreateEntry("meta.toml").Open()))
+                    meta.Write("name = \"Rover\"");
+                using (var vehicle = new StreamWriter(archive.CreateEntry("vehicle.xml").Open()))
+                    vehicle.Write("<VehicleSaveData Id=\"Rover\"><RootPartRef InstanceOf=\"Body\" LocalInstanceId=\"1\" /></VehicleSaveData>");
+            }
+
+            zip = buffer.ToArray();
+        }
+
+        var sha256 = Convert.ToHexStringLower(SHA256.HashData(zip));
+        var cached = Path.Combine(services.Paths.GetPreviewCacheFolder(), "archives", sha256 + ".zip");
+        Directory.CreateDirectory(Path.GetDirectoryName(cached)!);
+        await File.WriteAllBytesAsync(cached, zip);
+
+        var plan = await services.VehiclePreview.PrepareAsync(PreviewVehicle(sha256, "Wings"), null);
+
+        Assert.True(plan.State == Borea.Core.Preview.VehiclePreviewPlanState.CanBuildLocally, plan.Message);
+        Assert.Equal("Wings", Assert.Single(plan.MissingMods).ModId);
+        Assert.Equal(0, handler.Requests);
+    }
+
+    private static ModVersionMetadata PreviewVehicle(string sha256, params string[] dependencies) =>
+        new(1, "Rover", ModVersion.Parse("1.0.0"), ReleaseStatus.Stable, DateTimeOffset.UnixEpoch, "2026.10.19.5638", 5638, new DownloadInfo("https://example.com/rover.zip", sha256, 1, "application/zip"), null, dependencies.Select(id => new ModDependency(id, ModDependencyKind.Required)).ToList(), ContentType.Vehicle, install: new InstallInfo(null, derived: false, folder: "Rover"));
+
+    /// <summary>Counts each request and fails it, so a service that would reach a host shows up in the count.</summary>
+    private sealed class RefusingHandler : HttpMessageHandler
+    {
+        private int _requests;
+
+        public int Requests => Volatile.Read(ref _requests);
+
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            Interlocked.Increment(ref _requests);
+            throw new HttpRequestException($"The test sends no request, and {request.RequestUri} was asked for.");
+        }
     }
 
     [Fact]

@@ -81,6 +81,7 @@ public sealed class GamePathProviderTests
         Assert.StartsWith(@"D:\Portable\Borea", provider.GetSecretsFolder());
         Assert.StartsWith(@"D:\Portable\Borea", provider.GetImageCacheFolder());
         Assert.StartsWith(@"D:\Portable\Borea", provider.GetIndexPath());
+        Assert.Equal(Path.Combine(@"D:\Portable\Borea", "PreviewCache", "v1"), provider.GetPreviewCacheFolder());
     }
 
     [Theory]

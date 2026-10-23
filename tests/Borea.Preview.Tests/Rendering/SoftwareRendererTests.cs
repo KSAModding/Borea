@@ -103,7 +103,7 @@ public sealed class SoftwareRendererTests
         var camera = Framed(scene.Bounds, 32, 32);
 
         Assert.Throws<OperationCanceledException>(() =>
-            SoftwareRenderer.Render(scene, camera, new FrameBuffer(32, 32), Options, new CancellationToken(canceled: true)));
+            new SoftwareRenderer().Render(scene, camera, new FrameBuffer(32, 32), Options, new CancellationToken(canceled: true)));
     }
 
     [Fact]
@@ -116,6 +116,98 @@ public sealed class SoftwareRendererTests
         var topRow = MeanCoveredRow(Render(Scene(scene.Draws[2]), camera, 80, 120, Options, out _));
 
         Assert.True(topRow < bottomRow, $"The top box is at row {topRow} and the bottom box at row {bottomRow}.");
+    }
+
+    [Fact]
+    public void ASecondFrameWithOnlyACameraChange_TransformsNoCachedDrawAgain()
+    {
+        var scene = PreviewTestScenes.StackedBoxes();
+        var camera = Framed(scene.Bounds, 64, 64);
+        var renderer = new SoftwareRenderer();
+
+        renderer.Render(scene, camera, new FrameBuffer(64, 64), Options, CancellationToken.None);
+        var afterFirst = renderer.TransformedVertexCount;
+        camera.Orbit(30f, 10f);
+        renderer.Render(scene, camera, new FrameBuffer(64, 64), Options, CancellationToken.None);
+
+        // Three boxes and one placeholder box of 24 vertices each.
+        Assert.Equal(4 * 24, afterFirst);
+        Assert.Equal(afterFirst, renderer.TransformedVertexCount);
+    }
+
+    [Fact]
+    public void ASmallWorldCache_StaysUnderItsCap_AndGivesTheSameFrame()
+    {
+        var scene = PreviewTestScenes.StackedBoxes();
+        var camera = Framed(scene.Bounds, 96, 64);
+        camera.Orbit(25f, 15f);
+
+        // One box holds 24 positions and 24 normals of 12 bytes each, so the cap fits two of the four boxes.
+        var capped = new SoftwareRenderer();
+        var cappedOptions = Options with { WorldCacheBytes = 2 * 576 + 100 };
+        var cappedFrames = new[] { new FrameBuffer(96, 64), new FrameBuffer(96, 64) };
+        var uncappedFrames = new[] { new FrameBuffer(96, 64), new FrameBuffer(96, 64) };
+        var uncapped = new SoftwareRenderer();
+        for (var frame = 0; frame < 2; frame++)
+        {
+            capped.Render(scene, camera, cappedFrames[frame], cappedOptions, CancellationToken.None);
+            uncapped.Render(scene, camera, uncappedFrames[frame], Options, CancellationToken.None);
+            camera.Orbit(40f, 0f);
+        }
+
+        Assert.Equal(2 * 576, capped.CachedBytes);
+        Assert.Equal(4 * 576, uncapped.CachedBytes);
+        Assert.Equal(4 * 24 + 2 * 24, capped.TransformedVertexCount);
+        for (var frame = 0; frame < 2; frame++)
+        {
+            Assert.Equal(uncappedFrames[frame].Rgba, cappedFrames[frame].Rgba);
+            Assert.Equal(uncappedFrames[frame].Depth, cappedFrames[frame].Depth);
+        }
+    }
+
+    [Fact]
+    public void ASmallWorkBufferCap_BoundsTheRetainedBytes_AndGivesTheSameFrames()
+    {
+        var scene = PreviewTestScenes.StackedBoxes();
+        var cameras = new[] { Framed(scene.Bounds, 96, 64), Framed(scene.Bounds, 96, 64) };
+        cameras[0].Zoom(-10f);
+        cameras[1].Zoom(20f);
+
+        var uncapped = new SoftwareRenderer();
+        var uncappedFrames = cameras.Select(camera =>
+        {
+            var frame = new FrameBuffer(96, 64);
+            uncapped.Render(scene, camera, frame, Options, CancellationToken.None);
+            return frame;
+        }).ToArray();
+
+        // Half of what the uncapped renderer keeps, so the trim must free some buffers but not all.
+        var cap = uncapped.RetainedWorkBytes / 2;
+        var capped = new SoftwareRenderer();
+        for (var i = 0; i < cameras.Length; i++)
+        {
+            var frame = new FrameBuffer(96, 64);
+            capped.Render(scene, cameras[i], frame, Options with { WorkBufferBytes = cap }, CancellationToken.None);
+
+            Assert.InRange(capped.RetainedWorkBytes, 1, cap);
+            Assert.Equal(uncappedFrames[i].Rgba, frame.Rgba);
+            Assert.Equal(uncappedFrames[i].Depth, frame.Depth);
+        }
+    }
+
+    [Fact]
+    public void SkipSubPixelDraws_LeavesOutOnlyADrawBelowOnePixel()
+    {
+        var large = Box(Matrix4x4.Identity, new Vector3(0.8f));
+        var tiny = Box(Matrix4x4.CreateScale(0.001f) * Matrix4x4.CreateTranslation(0.6f, 0f, 0f), new Vector3(0.2f));
+        var scene = Scene(large, tiny);
+        var camera = Framed(scene.Bounds, 32, 32);
+
+        Render(scene, camera, 32, 32, Options, out var all);
+        Render(scene, camera, 32, 32, Options with { SkipSubPixelDraws = true }, out var skipped);
+
+        Assert.Equal(2, all.DrawsVisited);
+        Assert.Equal(1, skipped.DrawsVisited);
     }
 
     private static PreviewDraw Box(Matrix4x4 transform, Vector3 color) =>
@@ -133,7 +225,7 @@ public sealed class SoftwareRendererTests
     private static FrameBuffer Render(PreviewScene scene, OrbitCamera camera, int width, int height, RenderOptions options, out RenderStats stats)
     {
         var frame = new FrameBuffer(width, height);
-        stats = SoftwareRenderer.Render(scene, camera, frame, options, CancellationToken.None);
+        stats = new SoftwareRenderer().Render(scene, camera, frame, options, CancellationToken.None);
         return frame;
     }
 

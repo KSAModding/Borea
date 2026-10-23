@@ -92,6 +92,25 @@ internal readonly record struct KsaTransform(Vector3? Position, Vector3? Rotatio
         * Matrix4x4.CreateTranslation(Position ?? Vector3.Zero);
 
     /// <summary>
+    /// Tells if every element of the matrix is a finite number. XmlConvert.ToDouble accepts NaN and INF, a value
+    /// above the float range becomes infinite in the cast, and two large scales can overflow when they compose, so a
+    /// matrix from author XML must pass this check before it goes into the scene.
+    /// </summary>
+    public static bool IsFinite(Matrix4x4 matrix)
+    {
+        for (var row = 0; row < 4; row++)
+        {
+            for (var column = 0; column < 4; column++)
+            {
+                if (!float.IsFinite(matrix[row, column]))
+                    return false;
+            }
+        }
+
+        return true;
+    }
+
+    /// <summary>
     /// Replaces only the components that <paramref name="other"/> has, as TransformReference.Apply does. The caller
     /// keeps the game rule that PartInstance.ApplyGameData drops the override when the instance has no Transform.
     /// </summary>

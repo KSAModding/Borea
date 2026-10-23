@@ -32,8 +32,52 @@ public sealed record RenderOptions
 
     public float SunIntensity { get; init; } = 0.85f;
 
-    /// <summary>The light that reaches every face, also a face that turns away from the sun.</summary>
+    /// <summary>
+    /// The light that reaches every face, also a face that turns away from the sun. The ambient occlusion
+    /// of the material scales it, and only it, as the simple ambient of ThumbnailMesh.frag does.
+    /// </summary>
     public float Ambient { get; init; } = 0.2f;
+
+    /// <summary>
+    /// The exposure of the Reinhard tone map, in the form of tonemapReinhardSimple in the game shader
+    /// Tonemapping.glsl. The default makes a mid-gray diffuse under the full sun come out near mid-gray.
+    /// Values that are not positive and finite count as 1.
+    /// </summary>
+    public float Exposure { get; init; } = 1.15f;
+
+    /// <summary>
+    /// The most bytes of vehicle frame positions and normals that one <see cref="SoftwareRenderer"/> keeps
+    /// for its scene, 96 MiB. A draw that does not fit is transformed again on each frame.
+    /// </summary>
+    public long WorldCacheBytes { get; init; } = 96L * 1024 * 1024;
+
+    /// <summary>
+    /// The most bytes of screen triangle, band list and vertex scratch buffers that one
+    /// <see cref="SoftwareRenderer"/> keeps after a frame, 64 MiB, which holds a vehicle of about 450k
+    /// triangles. A frame uses what it needs while it runs. After it, the renderer frees the slack of each
+    /// buffer and then the largest buffers until the rest fits, so a larger scene allocates the freed buffers
+    /// again on the next frame. The per-pixel buffer grows with the frame size, as the
+    /// <see cref="FrameBuffer"/> does, and is not part of this cap.
+    /// </summary>
+    public long WorkBufferBytes { get; init; } = 64L * 1024 * 1024;
+
+    /// <summary>
+    /// When true, a draw whose bounding sphere shows smaller than one pixel is not drawn. A viewer turns it
+    /// on for the frames of a drag, which have a low resolution and show for a short time only.
+    /// </summary>
+    public bool SkipSubPixelDraws { get; init; }
+
+    /// <summary>The fraction of the full resolution that a viewer renders the frames of a drag at.</summary>
+    public double DragScale { get; init; } = 0.5;
+
+    /// <summary>The lower fraction that a viewer uses when a drag frame at <see cref="DragScale"/> was too slow.</summary>
+    public double SlowDragScale { get; init; } = 0.25;
+
+    /// <summary>
+    /// Drag frames that take longer than this many milliseconds make the next drag frames use
+    /// <see cref="SlowDragScale"/>, as <see cref="DragScaleController"/> decides.
+    /// </summary>
+    public double SlowDragThresholdMs { get; init; } = 60;
 }
 
 /// <summary>What one render call did, so tests and the viewer can see the culling work.</summary>

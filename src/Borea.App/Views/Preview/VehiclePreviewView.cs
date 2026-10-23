@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
@@ -18,12 +19,12 @@ namespace Borea.App.Views.Preview;
 /// Shows a <see cref="PreviewScene"/> that the player can turn with a drag or the arrow keys and zoom
 /// with the wheel. The software renderer draws each frame on a background task into a bitmap that this
 /// control stretches over its bounds, and it draws only when the scene, the size or the camera changes.
+/// While a drag holds the pointer, the frames render at <see cref="PreviewRenderOptions.DragScale"/> of the
+/// full resolution, or at <see cref="PreviewRenderOptions.SlowDragScale"/> when <see cref="DragScaleController"/>
+/// finds the drag frames too slow. Each new drag starts at the normal drag scale again.
 /// </summary>
 public sealed class VehiclePreviewView : Control
 {
-    /// <summary>The fraction of the full resolution that frames render at while a drag holds the pointer.</summary>
-    internal const double DragScale = 0.5;
-
     /// <summary>How far one arrow key press turns the camera, 10 degrees.</summary>
     internal const float KeyStepPixels = 10f * MathF.PI / 180f / OrbitCamera.RadiansPerPixel;
 
@@ -36,6 +37,9 @@ public sealed class VehiclePreviewView : Control
     // The renderer clears to transparent and the Background brush shows through, so the bitmap uses straight alpha.
     private static readonly PreviewRenderOptions Options = new();
 
+    // A drag frame shows for a short time only, so it leaves out the parts that are smaller than one of its pixels.
+    private static readonly PreviewRenderOptions DragOptions = Options with { SkipSubPixelDraws = true };
+
     // The pitch in drag pixels stays inside the clamp of OrbitCamera.Orbit, so a drag back responds at once.
     private static readonly float MinOrbitY = (-OrbitCamera.MaxPitch - OrbitCamera.DefaultPitch) / OrbitCamera.RadiansPerPixel;
     private static readonly float MaxOrbitY = (OrbitCamera.MaxPitch - OrbitCamera.DefaultPitch) / OrbitCamera.RadiansPerPixel;
@@ -44,7 +48,12 @@ public sealed class VehiclePreviewView : Control
     private static readonly float MinZoomSteps = MathF.Log(4f) / MathF.Log(OrbitCamera.ZoomStepFactor);
     private static readonly float MaxZoomSteps = MathF.Log(0.15f) / MathF.Log(OrbitCamera.ZoomStepFactor);
 
+    // The renderer keeps the vertices of the scene between frames, and only one frame renders at a time.
+    private readonly SoftwareRenderer _renderer = new();
     private OrbitCamera _camera = new();
+    private readonly DragScaleController _dragScales = new(Options);
+    private FrameBuffer? _fullFrame;
+    private FrameBuffer? _dragFrame;
     private float _orbitX;
     private float _orbitY;
     private float _zoomSteps;
@@ -84,6 +93,9 @@ public sealed class VehiclePreviewView : Control
 
     internal int? BitmapWidth => _bitmap?.PixelSize.Width;
 
+    /// <summary>The scale that the next drag frame renders at.</summary>
+    internal double DragScale => _dragScales.Scale;
+
     /// <summary>Frames the whole scene again from the default angles.</summary>
     public void ResetView()
     {
@@ -110,6 +122,8 @@ public sealed class VehiclePreviewView : Control
         {
             StartGeneration();
             ReleaseBitmap();
+            ReleaseRenderState();
+            _dragScales.Reset();
             _orbitX = 0;
             _orbitY = 0;
             _zoomSteps = 0;
@@ -128,6 +142,7 @@ public sealed class VehiclePreviewView : Control
         StartGeneration();
         _dragFrom = null;
         ReleaseBitmap();
+        ReleaseRenderState();
         base.OnDetachedFromVisualTree(e);
     }
 
@@ -154,6 +169,7 @@ public sealed class VehiclePreviewView : Control
         }
 
         _dragFrom = point.Position;
+        _dragScales.Reset();
         e.Pointer.Capture(this);
     }
 
@@ -245,10 +261,11 @@ public sealed class VehiclePreviewView : Control
         if (VisualRoot is null || scene is null || size.Width <= 0 || size.Height <= 0)
             return;
 
-        var scale = (TopLevel.GetTopLevel(this)?.RenderScaling ?? 1) * (full ? 1 : DragScale);
+        var frameScale = full ? 1 : _dragScales.Scale;
+        var scale = (TopLevel.GetTopLevel(this)?.RenderScaling ?? 1) * frameScale;
         var width = Math.Clamp((int)Math.Ceiling(size.Width * scale), 1, FrameBuffer.MaxSize);
         var height = Math.Clamp((int)Math.Ceiling(size.Height * scale), 1, FrameBuffer.MaxSize);
-        _queued = new RenderRequest(scene, camera, width, height, _generation, _cancellation);
+        _queued = new RenderRequest(scene, camera, width, height, full ? null : frameScale, _generation, _cancellation);
         if (!_rendering)
             _ = RenderQueuedAsync();
     }
@@ -262,14 +279,18 @@ public sealed class VehiclePreviewView : Control
             {
                 _queued = null;
                 FrameBuffer? frame = null;
+                var elapsedMs = double.NaN;
                 try
                 {
                     var token = request.Cancellation.Token;
-                    frame = await Task.Run(() =>
+                    var reused = TakeFrameBuffer(request);
+                    var options = request.DragScale is null ? Options : DragOptions;
+                    (frame, elapsedMs) = await Task.Run(() =>
                     {
-                        var buffer = new FrameBuffer(request.Width, request.Height);
-                        SoftwareRenderer.Render(request.Scene, request.Camera, buffer, Options, token);
-                        return buffer;
+                        var buffer = reused ?? new FrameBuffer(request.Width, request.Height);
+                        var watch = Stopwatch.StartNew();
+                        _renderer.Render(request.Scene, request.Camera, buffer, options, token);
+                        return (buffer, watch.Elapsed.TotalMilliseconds);
                     }, token);
                 }
                 catch (OperationCanceledException)
@@ -285,13 +306,54 @@ public sealed class VehiclePreviewView : Control
                     request.Cancellation.Dispose();
 
                 if (frame is not null && request.Generation == _generation)
+                {
                     Show(frame, request.Scene);
+                    KeepFrameBuffer(request, frame);
+                    if (request.DragScale is { } dragScale)
+                        _dragScales.Record(dragScale, elapsedMs);
+                }
             }
         }
         finally
         {
             _rendering = false;
+
+            // A detach or a scene change during the render could not release what the render still used.
+            if (VisualRoot is null || Scene is null)
+                ReleaseRenderState();
         }
+    }
+
+    /// <summary>
+    /// The buffer of the last frame of the same kind when it has the size of <paramref name="request"/>.
+    /// Show copies a frame into the bitmap before the next render starts, so the buffer is free again.
+    /// </summary>
+    private FrameBuffer? TakeFrameBuffer(RenderRequest request)
+    {
+        var buffer = request.DragScale is null ? _fullFrame : _dragFrame;
+        return buffer is not null && buffer.Width == request.Width && buffer.Height == request.Height ? buffer : null;
+    }
+
+    private void KeepFrameBuffer(RenderRequest request, FrameBuffer frame)
+    {
+        if (request.DragScale is null)
+            _fullFrame = frame;
+        else
+            _dragFrame = frame;
+    }
+
+    /// <summary>
+    /// Drops the cached vertices of the renderer and the frame buffers. A running render still uses them, so
+    /// it waits for the render to end, which calls this again.
+    /// </summary>
+    private void ReleaseRenderState()
+    {
+        if (_rendering)
+            return;
+
+        _renderer.Release();
+        _fullFrame = null;
+        _dragFrame = null;
     }
 
     private void Show(FrameBuffer frame, PreviewScene scene)
@@ -335,5 +397,6 @@ public sealed class VehiclePreviewView : Control
         InvalidateVisual();
     }
 
-    private sealed record RenderRequest(PreviewScene Scene, OrbitCamera Camera, int Width, int Height, int Generation, CancellationTokenSource Cancellation);
+    /// <param name="DragScale">The scale of a drag frame, or null for a frame at the full resolution.</param>
+    private sealed record RenderRequest(PreviewScene Scene, OrbitCamera Camera, int Width, int Height, double? DragScale, int Generation, CancellationTokenSource Cancellation);
 }
