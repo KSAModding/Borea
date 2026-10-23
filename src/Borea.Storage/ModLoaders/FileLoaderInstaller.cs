@@ -7,7 +7,7 @@ using Borea.Storage.Mods;
 namespace Borea.Storage.ModLoaders;
 
 /// <summary>
-/// File-backed <see cref="ILoaderInstaller"/>. A standalone loader without a given directory goes into its own version folder,
+/// A standalone loader without a given directory goes into its own version folder,
 /// Loaders/&lt;id&gt;/&lt;version&gt;, beside the versions that are already installed, and so does one with a given directory
 /// inside the Loaders root. A given directory outside that root and a loader below the game folder keep one recorded
 /// install that is replaced in place.
