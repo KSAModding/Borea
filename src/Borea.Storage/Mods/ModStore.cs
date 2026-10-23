@@ -81,48 +81,59 @@ public sealed class ModStore
                 return await MarkPrivateAsync(stagingFolder, download, cancellationToken).ConfigureAwait(false);
             }
 
-            // Without a published hash only the bytes can name the entry.
-            DownloadResult? downloaded = release.Download.Sha256 is null
-                ? await downloader.DownloadAsync(release, archivePath, progress.ForDownload(release), cancellationToken).ConfigureAwait(false)
-                : null;
-            var sha256 = downloaded?.Sha256 ?? release.Download.Sha256!;
-            var entry = EntryPath(release.ModId, release.Version, sha256);
-
-            var gate = ModLock(entry);
-            await gate.WaitAsync(cancellationToken).ConfigureAwait(false);
-            try
-            {
-                if (!Directory.Exists(entry))
-                {
-                    downloaded ??= await downloader.DownloadAsync(release, archivePath, progress.ForDownload(release), cancellationToken).ConfigureAwait(false);
-                    progress.Report(release, InstallPhase.Extracting);
-                    await AddAsync(archivePath, release, entry, cancellationToken).ConfigureAwait(false);
-                }
-
-                progress.Report(release, InstallPhase.Finishing);
-                var result = downloaded ?? new DownloadResult(release.Download.Url, 0, sha256);
-                if (_linker.TryCreate(stagingFolder, entry).Linked)
-                    return new StagedRelease(result, ModStorage.Linked, null);
-
-                try
-                {
-                    ModFolders.CopyWithoutMarker(entry, stagingFolder, cancellationToken);
-                }
-                finally
-                {
-                    DeleteIfUnused(entry);
-                }
-
-                return await MarkPrivateAsync(stagingFolder, result, cancellationToken).ConfigureAwait(false);
-            }
-            finally
-            {
-                gate.Release();
-            }
+            return await StageFromStoreAsync(downloader, release, archivePath, stagingFolder, progress, cancellationToken).ConfigureAwait(false);
         }
         finally
         {
             LeftoverCleanup.TryDeleteFile(archivePath);
+        }
+    }
+
+    private async Task<StagedRelease> StageFromStoreAsync(
+        IModDownloader downloader,
+        ModVersionMetadata release,
+        string archivePath,
+        string stagingFolder,
+        IProgress<InstallProgress>? progress,
+        CancellationToken cancellationToken)
+    {
+        // Without a published hash only the bytes can name the entry.
+        DownloadResult? downloaded = release.Download.Sha256 is null
+            ? await downloader.DownloadAsync(release, archivePath, progress.ForDownload(release), cancellationToken).ConfigureAwait(false)
+            : null;
+        var sha256 = downloaded?.Sha256 ?? release.Download.Sha256!;
+        var entry = EntryPath(release.ModId, release.Version, sha256);
+
+        var gate = ModLock(entry);
+        await gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            if (!Directory.Exists(entry))
+            {
+                downloaded ??= await downloader.DownloadAsync(release, archivePath, progress.ForDownload(release), cancellationToken).ConfigureAwait(false);
+                progress.Report(release, InstallPhase.Extracting);
+                await AddAsync(archivePath, release, entry, cancellationToken).ConfigureAwait(false);
+            }
+
+            progress.Report(release, InstallPhase.Finishing);
+            var result = downloaded ?? new DownloadResult(release.Download.Url, 0, sha256);
+            if (_linker.TryCreate(stagingFolder, entry).Linked)
+                return new StagedRelease(result, ModStorage.Linked, null);
+
+            try
+            {
+                ModFolders.CopyWithoutMarker(entry, stagingFolder, cancellationToken);
+            }
+            finally
+            {
+                DeleteIfUnused(entry);
+            }
+
+            return await MarkPrivateAsync(stagingFolder, result, cancellationToken).ConfigureAwait(false);
+        }
+        finally
+        {
+            gate.Release();
         }
     }
 
@@ -269,7 +280,7 @@ public sealed class ModStore
     {
         try
         {
-            if (!IsEntry(entry) || !Directory.Exists(entry) || InstanceIds().Any(id => LinkTargets(id).Any(target => SamePath(target, entry))))
+            if (!IsEntry(entry) || !Directory.Exists(entry) || IsLinkedFromAnyInstance(entry))
                 return;
 
             var trash = Path.Combine(_paths.GetStaticModFilesRoot(), TrashPrefix + Guid.NewGuid().ToString("N"));
@@ -305,6 +316,9 @@ public sealed class ModStore
         => Children(_paths.GetInstancesRoot())
             .Select(folder => Guid.TryParse(Path.GetFileName(folder), out var id) ? id : (Guid?)null)
             .OfType<Guid>();
+
+    private bool IsLinkedFromAnyInstance(string entry)
+        => InstanceIds().Any(id => LinkTargets(id).Any(target => SamePath(target, entry)));
 
     /// <summary>
     /// Installs of different releases of one mod share a lock, so the folder of

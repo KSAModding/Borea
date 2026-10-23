@@ -59,31 +59,15 @@ public sealed class FileAppPreferencesRepository : IAppPreferencesRepository
         {
             throw;
         }
-        catch (FileNotFoundException)
+        catch (Exception exception) when (exception is FileNotFoundException or DirectoryNotFoundException)
         {
             return new(AppPreferencesLoadStatus.NotFound, AppPreferences.Empty);
         }
-        catch (DirectoryNotFoundException)
-        {
-            return new(AppPreferencesLoadStatus.NotFound, AppPreferences.Empty);
-        }
-        catch (JsonException exception)
+        catch (Exception exception) when (exception is JsonException or NotSupportedException or ArgumentException)
         {
             return Invalid(path, exception.Message);
         }
-        catch (NotSupportedException exception)
-        {
-            return Invalid(path, exception.Message);
-        }
-        catch (ArgumentException exception)
-        {
-            return Invalid(path, exception.Message);
-        }
-        catch (IOException exception)
-        {
-            return Unavailable(path, exception.Message);
-        }
-        catch (UnauthorizedAccessException exception)
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {
             return Unavailable(path, exception.Message);
         }
@@ -131,10 +115,7 @@ public sealed class FileAppPreferencesRepository : IAppPreferencesRepository
         {
             await SaveAsync(preferences, bundledThemeNames, cancellationToken).ConfigureAwait(false);
         }
-        catch (IOException)
-        {
-        }
-        catch (UnauthorizedAccessException)
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {
         }
     }

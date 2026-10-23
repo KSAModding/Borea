@@ -61,8 +61,28 @@ internal static class AppPreferencesMapper
         CustomThemes = preferences.CustomThemes.Select(theme => (CustomThemePreferenceDto?)ToDto(theme)).ToList(),
     };
 
-    public static AppPreferences FromDto(AppPreferencesDocumentDto dto)
-        => new(dto.SelectedTheme, dto.CustomThemes?.Select(FromDto), NormalizeRegionalCulture(dto.RegionalCulture), NormalizeUiCulture(dto.UiCulture), dto.CheckForUpdatesAtStart ?? true, ReadUpdateChannel(dto.UpdateChannel), dto.ForeignFolderDeletionConfirmed ?? false, dto.LoadImagesFromAuthorHosts ?? true, ReadHomeLaunch(dto.HomeLaunch), ReadDiscoverSortOrder(dto.DiscoverSortOrder), dto.SharedProfileBannerDismissed ?? false, dto.DismissedGameRevision is >= 0 ? dto.DismissedGameRevision : null, ReadFirstStartedAt(dto.FirstStartedAt), dto.FetchAnnouncements ?? true, dto.DismissedAnnouncements?.OfType<string>(), dto.OpenBoreaLinks ?? true, dto.BackupRetentionDays is > 0 ? dto.BackupRetentionDays : null, dto.DismissedUntestedGameRevision is >= 0 ? dto.DismissedUntestedGameRevision : null, dto.MarkUntranslatedTexts ?? false, dto.StaySignedInToGitHub ?? true, dto.DismissedLoaderUpdate);
+    public static AppPreferences FromDto(AppPreferencesDocumentDto dto) => new(
+        selectedThemeName: dto.SelectedTheme,
+        customThemes: dto.CustomThemes?.Select(FromDto),
+        regionalCultureName: NormalizeRegionalCulture(dto.RegionalCulture),
+        uiCultureName: NormalizeUiCulture(dto.UiCulture),
+        checkForUpdatesAtStart: dto.CheckForUpdatesAtStart ?? true,
+        updateChannel: ReadUpdateChannel(dto.UpdateChannel),
+        foreignFolderDeletionConfirmed: dto.ForeignFolderDeletionConfirmed ?? false,
+        loadImagesFromAuthorHosts: dto.LoadImagesFromAuthorHosts ?? true,
+        homeLaunch: ReadHomeLaunch(dto.HomeLaunch),
+        discoverSortOrder: ReadDiscoverSortOrder(dto.DiscoverSortOrder),
+        sharedProfileBannerDismissed: dto.SharedProfileBannerDismissed ?? false,
+        dismissedGameRevision: dto.DismissedGameRevision is >= 0 ? dto.DismissedGameRevision : null,
+        firstStartedAt: ReadFirstStartedAt(dto.FirstStartedAt),
+        fetchAnnouncements: dto.FetchAnnouncements ?? true,
+        dismissedAnnouncements: dto.DismissedAnnouncements?.OfType<string>(),
+        openBoreaLinks: dto.OpenBoreaLinks ?? true,
+        backupRetentionDays: dto.BackupRetentionDays is > 0 ? dto.BackupRetentionDays : null,
+        dismissedUntestedGameRevision: dto.DismissedUntestedGameRevision is >= 0 ? dto.DismissedUntestedGameRevision : null,
+        markUntranslatedTexts: dto.MarkUntranslatedTexts ?? false,
+        staySignedInToGitHub: dto.StaySignedInToGitHub ?? true,
+        dismissedLoaderUpdate: dto.DismissedLoaderUpdate);
 
     private static DateTimeOffset? ReadFirstStartedAt(string? text)
         => DateTimeOffset.TryParse(text, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var at) ? at : null;
