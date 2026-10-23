@@ -1,5 +1,3 @@
-using Borea.Core.Mods;
-
 namespace Borea.Core.Dependencies;
 
 public sealed class DependencyEvaluation

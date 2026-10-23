@@ -75,9 +75,6 @@ public readonly partial record struct GameVersion : IComparable<GameVersion>
         return true;
     }
 
-    /// <summary>
-    /// Newer means a higher revision, nothing else is compared.
-    /// </summary>
     public int CompareTo(GameVersion other) => Revision.CompareTo(other.Revision);
 
     public static bool operator <(GameVersion left, GameVersion right) => left.CompareTo(right) < 0;

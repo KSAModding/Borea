@@ -47,10 +47,6 @@ public sealed class WineDriveMap
     /// <summary>The host folder of each drive, by its lowercase letter.</summary>
     public IReadOnlyDictionary<char, string> Drives { get; }
 
-    /// <summary>
-    /// Whether <paramref name="path"/> starts with a drive letter, a colon and
-    /// a separator, as an absolute Windows path on a drive does.
-    /// </summary>
     public static bool IsDrivePath(string? path) =>
         path is { Length: >= 3 } && char.IsAsciiLetter(path[0]) && path[1] == ':' && path[2] is '\\' or '/';
 

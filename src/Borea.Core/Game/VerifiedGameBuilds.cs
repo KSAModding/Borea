@@ -21,7 +21,6 @@ public sealed class VerifiedGameBuilds
     /// <summary>Every verified build, oldest first.</summary>
     public IReadOnlyList<GameVersion> Builds { get; }
 
-    /// <summary>The newest build anybody checked.</summary>
     public GameVersion Newest => Builds[^1];
 
     private VerifiedGameBuilds(IReadOnlyList<GameVersion> builds)
@@ -29,7 +28,6 @@ public sealed class VerifiedGameBuilds
         Builds = builds;
     }
 
-    /// <summary>Whether the installed build is past everything that was checked.</summary>
     public bool IsPastNewest(GameVersion build) => build > Newest;
 
     private static VerifiedGameBuilds Load()
