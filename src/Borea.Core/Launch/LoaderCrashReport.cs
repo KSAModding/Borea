@@ -140,11 +140,39 @@ public static partial class LoaderCrashReport
         ArgumentNullException.ThrowIfNull(output);
         ArgumentNullException.ThrowIfNull(enabledMods);
 
-        // StarMap prints the instance path right before it loads the mods, so
-        // without it the reports of the first mods may have left the output buffer
-        if (!StoppedWhileLoadingMods(output) || !output.Any(line => line?.TrimStart().StartsWith(InstancePathReport, StringComparison.Ordinal) == true))
+        if (!StoppedWhileLoadingMods(output))
             return null;
 
+        // StarMap prints the instance path right before it loads the mods, so
+        // without it the reports of the first mods may have left the output buffer
+        if (!output.Any(line => line?.TrimStart().StartsWith(InstancePathReport, StringComparison.Ordinal) == true))
+            return null;
+
+        var (reported, settled, loadedFromManifest, delayed) = ReadModReports(output);
+
+        var waiting = delayed
+            .Where(mod => !settled.Contains(mod.ModId))
+            .Select(mod => (Mod: ManifestMod(enabledMods, mod.ModId), Missing: mod.Missing.Where(id => !loadedFromManifest.Contains(id)).ToList()))
+            .Where(mod => mod.Mod is not null)
+            .ToList();
+
+        // RuntimeMod.CheckForDependentMods loads a delayed mod right after the
+        // last of its dependencies loaded from the manifest, before the next mod
+        if (waiting.FirstOrDefault(mod => mod.Missing.Count == 0).Mod is { } dependent)
+            return dependent.ModId;
+
+        var inTryCreateMod = output.Any(line => TryCreateModFramePattern().IsMatch(line ?? string.Empty));
+        var next = enabledMods.FirstOrDefault(mod => (mod.IsCodeMod || (inTryCreateMod && mod.HasInvalidDefinition)) && !reported.Contains(mod.ModId));
+        if (next is not null)
+            return next.ModId;
+
+        // ModLoader.TryLoadWaitingMods loads a waiting mod only when every
+        // dependency still missing is optional
+        return waiting.FirstOrDefault(mod => mod.Missing.All(id => mod.Mod!.OptionalDependencies.Contains(id, StringComparer.Ordinal))).Mod?.ModId;
+    }
+
+    private static ModReports ReadModReports(IReadOnlyList<string> output)
+    {
         var reported = new HashSet<string>(ModIds.Comparer);
         var settled = new HashSet<string>(ModIds.Comparer);
 
@@ -175,29 +203,13 @@ public static partial class LoaderCrashReport
             }
         }
 
-        var waiting = delayed
-            .Where(mod => !settled.Contains(mod.ModId))
-            .Select(mod => (Mod: ManifestMod(enabledMods, mod.ModId), Missing: mod.Missing.Where(id => !loadedFromManifest.Contains(id)).ToList()))
-            .Where(mod => mod.Mod is not null)
-            .ToList();
-
-        // RuntimeMod.CheckForDependentMods loads a delayed mod right after the
-        // last of its dependencies loaded from the manifest, before the next mod
-        if (waiting.FirstOrDefault(mod => mod.Missing.Count == 0).Mod is { } dependent)
-            return dependent.ModId;
-
-        var inTryCreateMod = output.Any(line => TryCreateModFramePattern().IsMatch(line ?? string.Empty));
-        var next = enabledMods.FirstOrDefault(mod => (mod.IsCodeMod || (inTryCreateMod && mod.HasInvalidDefinition)) && !reported.Contains(mod.ModId));
-        if (next is not null)
-            return next.ModId;
-
-        // ModLoader.TryLoadWaitingMods loads a waiting mod only when every
-        // dependency still missing is optional
-        return waiting.FirstOrDefault(mod => mod.Missing.All(id => mod.Mod!.OptionalDependencies.Contains(id, StringComparer.Ordinal))).Mod?.ModId;
+        return new ModReports(reported, settled, loadedFromManifest, delayed);
     }
 
     private static LoadOrderMod? ManifestMod(IReadOnlyList<LoadOrderMod> enabledMods, string modId) =>
         enabledMods.FirstOrDefault(mod => ModIds.Equals(mod.ModId, modId));
+
+    private sealed record ModReports(HashSet<string> Reported, HashSet<string> Settled, HashSet<string> LoadedFromManifest, List<(string ModId, string[] Missing)> Delayed);
 
     [GeneratedRegex(@"^\s*at\s+StarMap\.Core\.ModRepository\.(?:RuntimeMod\.(?:InitializeMod|TryCreateMod)|Mods?Loader\.PrepareMods)\b")]
     private static partial Regex ModLoadingFramePattern();
