@@ -125,4 +125,24 @@ public sealed class FileGameCrashReaderTests : IDisposable
         Assert.Equal("KSArmory", crash?.BlamedModId);
         Assert.Equal("System.MissingMethodException: Method not found: 'Void KSA.Vehicle.Stage()'.", crash?.Exception);
     }
+
+    [Fact]
+    public async Task GetUnreported_ExceptionFromAnAssemblyInAModFolderSpelledInOtherCase_BlamesThatMod()
+    {
+        var release = MetadataFixtures.MinimalRelease("ExampleMod", "1.0.0");
+        _instance.AddMod(new InstalledMod("ExampleMod", release.Version, InstallReason.Manual, DateTimeOffset.UtcNow, release));
+        var folder = Path.Combine(_paths.GetInstanceModsFolder(_instance.InstanceId), "examplemod");
+        Directory.CreateDirectory(folder);
+        File.WriteAllBytes(Path.Combine(folder, "ExampleHelper.dll"), []);
+        Write(
+            "KittenSpaceAgency.260926-122536.43512.previous-crash.log",
+            LastLaunch.AddMinutes(1),
+            "Unhandled exception System.NullReferenceException: Object reference not set to an instance of an object.",
+            "   at ExampleHelper.Patches.Apply()",
+            "   at KSA.Program.Main(String[] inArgs).");
+
+        var crash = await _reader.GetUnreportedAsync(_instance, LastLaunch);
+
+        Assert.Equal("ExampleMod", crash?.BlamedModId);
+    }
 }
