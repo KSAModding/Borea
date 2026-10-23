@@ -61,8 +61,7 @@ public static class Compatibility
     /// </summary>
     public static GameCompatibility Evaluate(ModVersionMetadata release, GameVersion? installed)
     {
-        if (release is null)
-            throw new ArgumentNullException(nameof(release));
+        ArgumentNullException.ThrowIfNull(release);
 
         return Evaluate(release.GameMinRevision, release.GameMaxRevision, installed);
     }
