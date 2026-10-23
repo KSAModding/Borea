@@ -27,8 +27,7 @@ public sealed class SpaceDockModRepositoryTests
     [Fact]
     public async Task SearchAsync_RealMpfxResponse_MapsTheListing()
     {
-        var client = FakeHttpMessageHandler.BuildClient(_ => FakeHttpMessageHandler.JsonResponse(RealMpfxSearchJson), out _);
-        var repository = new SpaceDockModRepository(client, new SpaceDockResolver());
+        var repository = RepositoryAnswering(RealMpfxSearchJson);
 
         var results = await repository.SearchAsync("MPFX");
 
@@ -53,8 +52,7 @@ public sealed class SpaceDockModRepositoryTests
     [Fact]
     public async Task SearchAsync_WebsiteOnKsaForums_BecomesTheForumsLink()
     {
-        var client = FakeHttpMessageHandler.BuildClient(_ => FakeHttpMessageHandler.JsonResponse(RealMpfxSearchJson), out _);
-        var repository = new SpaceDockModRepository(client, new SpaceDockResolver());
+        var repository = RepositoryAnswering(RealMpfxSearchJson);
 
         var results = await repository.SearchAsync("MPFX");
 
@@ -70,8 +68,7 @@ public sealed class SpaceDockModRepositoryTests
               "versions":[{"friendly_version":"1.0.0","game_version":"2026.1.1.1","id":1,
                            "created":"2026-01-01T00:00:00+00:00","download_path":"/mod/7/Mod/download/1.0.0"}]}]
             """;
-        var client = FakeHttpMessageHandler.BuildClient(_ => FakeHttpMessageHandler.JsonResponse(json), out _);
-        var repository = new SpaceDockModRepository(client, new SpaceDockResolver());
+        var repository = RepositoryAnswering(json);
 
         var results = await repository.SearchAsync("Mod");
 
@@ -86,8 +83,7 @@ public sealed class SpaceDockModRepositoryTests
             [{"name":"Mod","id":7,"game_id":22409,"author":"a","default_version_id":1,
               "versions":[{"friendly_version":"1.0.0","game_version":"2026.1.1.1","id":1}]}]
             """;
-        var client = FakeHttpMessageHandler.BuildClient(_ => FakeHttpMessageHandler.JsonResponse(json), out _);
-        var repository = new SpaceDockModRepository(client, new SpaceDockResolver());
+        var repository = RepositoryAnswering(json);
 
         var results = await repository.SearchAsync("Mod");
 
@@ -97,13 +93,11 @@ public sealed class SpaceDockModRepositoryTests
     [Fact]
     public async Task SearchAsync_UnparseableVersionData_StillSurfacesTheListing()
     {
-        // A mod whose version data does not parse must survive as a listing.
         var json = """
             [{"name":"Weird Mod","id":9,"game_id":22409,"author":"a","default_version_id":1,
               "versions":[{"friendly_version":"not-a-version","game_version":"garbage","id":1}]}]
             """;
-        var client = FakeHttpMessageHandler.BuildClient(_ => FakeHttpMessageHandler.JsonResponse(json), out _);
-        var repository = new SpaceDockModRepository(client, new SpaceDockResolver());
+        var repository = RepositoryAnswering(json);
 
         var results = await repository.SearchAsync("Weird");
 
@@ -120,8 +114,7 @@ public sealed class SpaceDockModRepositoryTests
         var json = """
             [{"name":"Empty Mod","id":11,"game_id":22409,"author":"a","default_version_id":0,"versions":[]}]
             """;
-        var client = FakeHttpMessageHandler.BuildClient(_ => FakeHttpMessageHandler.JsonResponse(json), out _);
-        var repository = new SpaceDockModRepository(client, new SpaceDockResolver());
+        var repository = RepositoryAnswering(json);
 
         var results = await repository.SearchAsync("Empty");
 
@@ -139,8 +132,7 @@ public sealed class SpaceDockModRepositoryTests
                "versions":[{"friendly_version":"1.0.0","game_version":"2026.1.1.1","id":2}]}
             ]
             """;
-        var client = FakeHttpMessageHandler.BuildClient(_ => FakeHttpMessageHandler.JsonResponse(json), out _);
-        var repository = new SpaceDockModRepository(client, new SpaceDockResolver());
+        var repository = RepositoryAnswering(json);
 
         var results = await repository.SearchAsync("query");
 
@@ -164,12 +156,10 @@ public sealed class SpaceDockModRepositoryTests
     [Fact]
     public async Task GetLatestReleaseAsync_MapsTheNewestRelease()
     {
-        var client = FakeHttpMessageHandler.BuildClient(_ => FakeHttpMessageHandler.JsonResponse(RealMpfxModJson), out _);
-        var repository = new SpaceDockModRepository(client, new SpaceDockResolver());
+        var repository = RepositoryAnswering(RealMpfxModJson);
 
         var release = await repository.GetLatestReleaseAsync("4165");
 
-        Assert.NotNull(release);
         Assert.Equal("4165", release!.ModId);
         Assert.Equal("spacedock", release.Source);
         Assert.Equal(ModVersion.Parse("0.3.1"), release.Version);
@@ -198,8 +188,7 @@ public sealed class SpaceDockModRepositoryTests
                 "created":"2026-01-01T00:00:00+00:00","download_path":"/d/1"}
              ]}
             """;
-        var client = FakeHttpMessageHandler.BuildClient(_ => FakeHttpMessageHandler.JsonResponse(json), out _);
-        var repository = new SpaceDockModRepository(client, new SpaceDockResolver());
+        var repository = RepositoryAnswering(json);
 
         var release = await repository.GetLatestReleaseAsync("1");
 
@@ -219,8 +208,7 @@ public sealed class SpaceDockModRepositoryTests
                 "created":"2026-01-01T00:00:00+00:00","download_path":"/d/1"}
              ]}
             """;
-        var client = FakeHttpMessageHandler.BuildClient(_ => FakeHttpMessageHandler.JsonResponse(json), out _);
-        var repository = new SpaceDockModRepository(client, new SpaceDockResolver());
+        var repository = RepositoryAnswering(json);
 
         var release = await repository.GetLatestReleaseAsync("1");
 
@@ -235,8 +223,7 @@ public sealed class SpaceDockModRepositoryTests
              "versions":[{"friendly_version":"v1.2.0-beta.1","game_version":"2026.1.1.1","id":1,
                           "created":"2026-01-01T00:00:00+00:00","download_path":"/d/1"}]}
             """;
-        var client = FakeHttpMessageHandler.BuildClient(_ => FakeHttpMessageHandler.JsonResponse(json), out _);
-        var repository = new SpaceDockModRepository(client, new SpaceDockResolver());
+        var repository = RepositoryAnswering(json);
 
         var release = await repository.GetLatestReleaseAsync("1");
 
@@ -258,7 +245,7 @@ public sealed class SpaceDockModRepositoryTests
         var result = await repository.GetLatestReleaseAsync("some-true-modid-never-registered");
 
         Assert.Null(result);
-        Assert.False(called); // No resolver entry: short-circuit, do not hit the network.
+        Assert.False(called);
     }
 
     [Fact]
@@ -291,12 +278,10 @@ public sealed class SpaceDockModRepositoryTests
                 "created":"2026-01-01T00:00:00+00:00","download_path":"/d/11"}
              ]}
             """;
-        var client = FakeHttpMessageHandler.BuildClient(_ => FakeHttpMessageHandler.JsonResponse(json), out _);
-        var repository = new SpaceDockModRepository(client, new SpaceDockResolver());
+        var repository = RepositoryAnswering(json);
 
         var result = await repository.GetReleaseAsync("1", ModVersion.Parse("1.0.0"));
 
-        Assert.NotNull(result);
         Assert.Equal(ModVersion.Parse("1.0.0"), result!.Version);
         Assert.Equal("https://spacedock.info/d/11", result.Download.Url);
     }
@@ -309,8 +294,7 @@ public sealed class SpaceDockModRepositoryTests
              "versions":[{"friendly_version":"1.0.0","game_version":"2026.1.1.1","id":10,
                           "created":"2026-01-01T00:00:00+00:00","download_path":"/d/10"}]}
             """;
-        var client = FakeHttpMessageHandler.BuildClient(_ => FakeHttpMessageHandler.JsonResponse(json), out _);
-        var repository = new SpaceDockModRepository(client, new SpaceDockResolver());
+        var repository = RepositoryAnswering(json);
 
         var result = await repository.GetReleaseAsync("1", ModVersion.Parse("9.9.9"));
 
@@ -331,12 +315,10 @@ public sealed class SpaceDockModRepositoryTests
                 "created":"2026-01-01T00:00:00+00:00","download_path":"/d/2"}
              ]}
             """;
-        var client = FakeHttpMessageHandler.BuildClient(_ => FakeHttpMessageHandler.JsonResponse(json), out _);
-        var repository = new SpaceDockModRepository(client, new SpaceDockResolver());
+        var repository = RepositoryAnswering(json);
 
         var result = await repository.GetReleaseAsync("1", ModVersion.Parse("1.0.0"));
 
-        Assert.NotNull(result);
         Assert.Equal("https://spacedock.info/d/2", result!.Download.Url);
     }
 
@@ -352,8 +334,7 @@ public sealed class SpaceDockModRepositoryTests
                 "created":"2026-01-01T00:00:00+00:00","download_path":"/d/2"}
              ]}
             """;
-        var client = FakeHttpMessageHandler.BuildClient(_ => FakeHttpMessageHandler.JsonResponse(json), out _);
-        var repository = new SpaceDockModRepository(client, new SpaceDockResolver());
+        var repository = RepositoryAnswering(json);
 
         var versions = await repository.GetAvailableVersionsAsync("1");
 
@@ -363,7 +344,6 @@ public sealed class SpaceDockModRepositoryTests
     [Fact]
     public async Task ReleaseAccessors_UnknownId_ReturnNullOn404()
     {
-        // 404 means not available, not an exception.
         var client = FakeHttpMessageHandler.BuildClient(
             _ => new HttpResponseMessage(System.Net.HttpStatusCode.NotFound), out _);
         var repository = new SpaceDockModRepository(client, new SpaceDockResolver());
@@ -382,8 +362,7 @@ public sealed class SpaceDockModRepositoryTests
              "versions":[{"friendly_version":"1.0.0","game_version":"0.24.2","id":10,
                           "created":"2026-01-01T00:00:00+00:00","download_path":"/d/10"}]}
             """;
-        var client = FakeHttpMessageHandler.BuildClient(_ => FakeHttpMessageHandler.JsonResponse(json), out _);
-        var repository = new SpaceDockModRepository(client, new SpaceDockResolver());
+        var repository = RepositoryAnswering(json);
 
         var result = await repository.GetReleaseAsync("1", ModVersion.Parse("1.0.0"));
 
@@ -406,8 +385,7 @@ public sealed class SpaceDockModRepositoryTests
                 "created":"2026-01-04T00:00:00+00:00","download_path":"/d/4"}
              ]}
             """;
-        var client = FakeHttpMessageHandler.BuildClient(_ => FakeHttpMessageHandler.JsonResponse(json), out _);
-        var repository = new SpaceDockModRepository(client, new SpaceDockResolver());
+        var repository = RepositoryAnswering(json);
 
         var versions = await repository.GetAvailableVersionsAsync("1");
 
@@ -435,8 +413,7 @@ public sealed class SpaceDockModRepositoryTests
              "versions":[{"friendly_version":"{{friendlyVersion}}","game_version":"2026.1.1.1","id":1,
                           "created":"2026-01-01T00:00:00+00:00","download_path":"/d/1"}]}
             """;
-        var client = FakeHttpMessageHandler.BuildClient(_ => FakeHttpMessageHandler.JsonResponse(json), out _);
-        var repository = new SpaceDockModRepository(client, new SpaceDockResolver());
+        var repository = RepositoryAnswering(json);
 
         var release = await repository.GetLatestReleaseAsync("1");
 
@@ -456,22 +433,22 @@ public sealed class SpaceDockModRepositoryTests
     public async Task GetListingAsync_ModEndpoint_CarriesTheDescription()
     {
         var json = RealMpfxModJson.Replace("\"short_description\"", "\"description\":\"# MPFX\\nPost processing.\",\"short_description\"");
-        var client = FakeHttpMessageHandler.BuildClient(_ => FakeHttpMessageHandler.JsonResponse(json), out _);
-        var repository = new SpaceDockModRepository(client, new SpaceDockResolver());
+        var repository = RepositoryAnswering(json);
 
         var listing = await repository.GetListingAsync("4165");
 
-        Assert.NotNull(listing);
-        Assert.Equal("MPFX", listing.Name);
+        Assert.Equal("MPFX", listing!.Name);
         Assert.Equal("# MPFX\nPost processing.", listing.Description);
     }
 
     [Fact]
     public async Task GetListingAsync_UnknownId_ReturnsNull()
     {
-        var client = FakeHttpMessageHandler.BuildClient(_ => FakeHttpMessageHandler.JsonResponse("{}"), out _);
-        var repository = new SpaceDockModRepository(client, new SpaceDockResolver());
+        var repository = RepositoryAnswering("{}");
 
         Assert.Null(await repository.GetListingAsync("not-a-spacedock-id"));
     }
+
+    private static SpaceDockModRepository RepositoryAnswering(string json) =>
+        new(FakeHttpMessageHandler.BuildClient(_ => FakeHttpMessageHandler.JsonResponse(json), out _), new SpaceDockResolver());
 }
