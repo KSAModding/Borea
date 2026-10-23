@@ -363,10 +363,11 @@ public sealed class InstallStopTests
         var viewModel = harness.ViewModel;
         var (_, install) = await HangingInstallAsync(harness);
         var closed = 0;
+        var windowClosed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var endedApp = false;
         viewModel.EndApp = () => endedApp = true;
-        viewModel.RequestClose(() => closed++);
-        viewModel.RequestClose(() => closed++);
+        viewModel.RequestClose(() => { closed++; windowClosed.TrySetResult(); });
+        viewModel.RequestClose(() => { closed++; windowClosed.TrySetResult(); });
 
         viewModel.KeepWaitingCommand.Execute(null);
 
@@ -374,7 +375,7 @@ public sealed class InstallStopTests
         Assert.True(viewModel.HasRunningInstalls);
         _hang.SetResult();
         await install;
-        await WaitUntilAsync(() => closed > 0);
+        await windowClosed.Task.WaitAsync(Timeout);
         Assert.Equal(1, closed);
         Assert.False(endedApp);
     }
