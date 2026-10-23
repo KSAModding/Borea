@@ -9,10 +9,12 @@ public sealed class LocalizationServiceTests : IDisposable
     private readonly CultureInfo _originalCulture = CultureInfo.CurrentCulture;
     private readonly CultureInfo _originalUiCulture = CultureInfo.CurrentUICulture;
 
-    [Fact]
-    public void Constructor_EnglishCulture_UsesNeutralEnglishResources()
+    [Theory]
+    [InlineData("en-US")]
+    [InlineData("en-GB")]
+    public void Constructor_EnglishRegionalCulture_UsesNeutralEnglishAndNotPirate(string systemCulture)
     {
-        var service = new LocalizationService(CultureInfo.GetCultureInfo("en-US"));
+        var service = new LocalizationService(CultureInfo.GetCultureInfo(systemCulture));
 
         Assert.Equal("en", service.SelectedCultureName);
         Assert.Equal("Home", service.NavigationHome);
@@ -104,14 +106,6 @@ public sealed class LocalizationServiceTests : IDisposable
         Assert.Equal("fr-FR", CultureInfo.CurrentCulture.Name);
         Assert.Equal("Port", service.NavigationHome);
         Assert.Equal("Ain't able to take a gander at: Borea.App.Views.UnknownView", service.FormatViewNotFound("Borea.App.Views.UnknownView"));
-    }
-
-    [Fact]
-    public void Constructor_EnglishSystemCulture_DoesNotChoosePirate()
-    {
-        var service = new LocalizationService(CultureInfo.GetCultureInfo("en-GB"));
-
-        Assert.Equal("en", service.SelectedCultureName);
     }
 
     [Theory]
