@@ -107,6 +107,23 @@ public sealed class VehiclePreviewViewModelTests
     }
 
     [Fact]
+    public async Task NeedsMods_WithAFetchableModOfUnknownSize_ShowsNoSizeOnLoadParts()
+    {
+        var service = new FakeVehiclePreview
+        {
+            Missing =
+            [
+                new VehiclePreviewMissingMod("Wings", null, null, 12_000_000, true),
+                new VehiclePreviewMissingMod("Engines", null, null, null, true),
+            ],
+        };
+        using var preview = Start(service);
+        await preview.Loading;
+
+        Assert.Equal(Localization.PreviewLoadParts, preview.FetchModsText);
+    }
+
+    [Fact]
     public async Task NoGameFolder_OffersTheSettings()
     {
         var opened = 0;

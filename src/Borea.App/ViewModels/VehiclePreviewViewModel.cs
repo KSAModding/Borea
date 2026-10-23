@@ -170,13 +170,18 @@ public sealed partial class VehiclePreviewViewModel : ObservableObject, IDisposa
 
     public bool CanFetchMods => _missingMods.Any(mod => mod.CanFetch);
 
-    /// <summary>"Load parts (12 MB)" with the summed size of the mods that a click downloads.</summary>
+    /// <summary>
+    /// "Load parts (12 MB)" with the summed size of the mods that a click downloads, or "Load parts" when one of
+    /// them has no stated size, because a sum of only the known sizes would understate the download.
+    /// </summary>
     public string FetchModsText
     {
         get
         {
-            var sizes = _missingMods.Where(mod => mod.CanFetch && mod.SizeBytes is not null).Select(mod => mod.SizeBytes!.Value).ToList();
-            return sizes.Count > 0 ? _localization.FormatPreviewLoadPartsSize(MainViewModel.SizeText(sizes.Sum())) : _localization.PreviewLoadParts;
+            var fetched = _missingMods.Where(mod => mod.CanFetch).ToList();
+            return fetched.Count > 0 && fetched.All(mod => mod.SizeBytes is not null)
+                ? _localization.FormatPreviewLoadPartsSize(MainViewModel.SizeText(fetched.Sum(mod => mod.SizeBytes!.Value)))
+                : _localization.PreviewLoadParts;
         }
     }
 
