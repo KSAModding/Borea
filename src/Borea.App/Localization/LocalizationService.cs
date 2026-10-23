@@ -2377,6 +2377,36 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string PreviewPanelName => Resources.PreviewPanelName;
 
+    public string PreviewControlsTitle => Resources.PreviewControlsTitle;
+
+    public string PreviewControlTurn => Resources.PreviewControlTurn;
+
+    public string PreviewControlZoom => Resources.PreviewControlZoom;
+
+    public string PreviewControlMove => Resources.PreviewControlMove;
+
+    public string PreviewControlFrame => Resources.PreviewControlFrame;
+
+    public string PreviewInputLeftRightDrag => Resources.PreviewInputLeftRightDrag;
+
+    public string PreviewInputArrowKeys => Resources.PreviewInputArrowKeys;
+
+    public string PreviewInputMiddleDrag => Resources.PreviewInputMiddleDrag;
+
+    public string PreviewInputShiftWheel => Resources.PreviewInputShiftWheel;
+
+    public string PreviewInputZoomKeys => Resources.PreviewInputZoomKeys;
+
+    public string PreviewInputWheel => Resources.PreviewInputWheel;
+
+    public string PreviewInputMoveKeys => Resources.PreviewInputMoveKeys;
+
+    public string PreviewInputFrameKey => Resources.PreviewInputFrameKey;
+
+    public string PreviewInputHome => Resources.PreviewInputHome;
+
+    public string PreviewInputDoubleClick => Resources.PreviewInputDoubleClick;
+
     public string PreviewShow => Resources.PreviewShow;
 
     public string FormatPreviewShowSize(string size)
