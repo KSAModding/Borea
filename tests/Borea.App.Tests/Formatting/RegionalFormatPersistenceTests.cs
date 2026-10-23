@@ -60,6 +60,34 @@ public sealed class RegionalFormatPersistenceTests : IDisposable
         Assert.Null(viewModel.PreferenceSaveError);
     }
 
+    [Fact]
+    public async Task SelectedRegionalFormat_WriteFailure_TheNextSaveOfAnotherPreferenceWritesItToo()
+    {
+        var localization = new LocalizationService(CultureInfo.GetCultureInfo("en"));
+        var formatService = new RegionalFormatService(
+            localization,
+            CultureInfo.GetCultureInfo("fr-FR"),
+            selectedCultureName: null);
+        var repository = new RecordingAppPreferencesRepository
+        {
+            SaveException = new IOException("Disk unavailable."),
+        };
+        var viewModel = new MainViewModel(localization, formatService, repository, AppPreferences.Empty);
+        viewModel.SelectedRegionalFormat = Assert.Single(
+            formatService.SupportedFormats,
+            format => format.CultureName == "de-DE");
+        await viewModel.WhenPreferencesSavedAsync();
+
+        repository.SaveException = null;
+        viewModel.MarkUntranslatedTexts = true;
+        await viewModel.WhenPreferencesSavedAsync();
+
+        Assert.NotNull(repository.SavedPreferences);
+        Assert.Equal("de-DE", repository.SavedPreferences.RegionalCultureName);
+        Assert.True(repository.SavedPreferences.MarkUntranslatedTexts);
+        Assert.Null(viewModel.PreferenceSaveError);
+    }
+
     public void Dispose()
     {
         CultureInfo.CurrentCulture = _originalCulture;
