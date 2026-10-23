@@ -1,6 +1,7 @@
 using Borea.Core.Game;
 using Borea.Core.Instances;
 using Borea.Core.Launch;
+using Borea.Core.ModLoaders;
 using Borea.Core.Mods;
 using Borea.Core.Paths;
 using Borea.Core.Settings;
@@ -34,6 +35,7 @@ public sealed class GameBuildKeeper : IGameBuildKeeper
     private readonly IGamePathProvider _paths;
     private readonly IInstanceRepository _instances;
     private readonly IModRepository _listings;
+    private readonly ILoaderVersionStore _versions;
     private readonly Func<bool> _isGameProcessRunning;
     private readonly Func<Guid, bool> _isLaunched;
     private readonly IWinePrefixProbe _wine;
@@ -41,19 +43,21 @@ public sealed class GameBuildKeeper : IGameBuildKeeper
     private readonly OsPlatform _host;
 
     /// <param name="listings">The listings of the installed loaders, which name the file that holds the game path.</param>
+    /// <param name="versions">The installed version folders of the loaders, each with a game path of its own.</param>
     /// <param name="isLaunched">Whether a launch by Borea still runs for the instance. The process probe does not see every one of them.</param>
-    public GameBuildKeeper(IGamePathProvider paths, IInstanceRepository instances, IModRepository listings, Func<bool> isGameProcessRunning, Func<Guid, bool> isLaunched)
-        : this(paths, instances, listings, isGameProcessRunning, isLaunched, new WinePrefixProbe(), new DriveFreeSpaceProbe(), SharedProfileLauncher.CurrentPlatform() ?? OsPlatform.MacOs)
+    public GameBuildKeeper(IGamePathProvider paths, IInstanceRepository instances, IModRepository listings, ILoaderVersionStore versions, Func<bool> isGameProcessRunning, Func<Guid, bool> isLaunched)
+        : this(paths, instances, listings, versions, isGameProcessRunning, isLaunched, new WinePrefixProbe(), new DriveFreeSpaceProbe(), SharedProfileLauncher.CurrentPlatform() ?? OsPlatform.MacOs)
     {
     }
 
     /// <param name="host">The system Borea runs on. A folder the player chose must hold the executable this system starts.</param>
-    internal GameBuildKeeper(IGamePathProvider paths, IInstanceRepository instances, IModRepository listings, Func<bool> isGameProcessRunning, Func<Guid, bool> isLaunched, IWinePrefixProbe wine, IFreeSpaceProbe freeSpace, OsPlatform host)
+    internal GameBuildKeeper(IGamePathProvider paths, IInstanceRepository instances, IModRepository listings, ILoaderVersionStore versions, Func<bool> isGameProcessRunning, Func<Guid, bool> isLaunched, IWinePrefixProbe wine, IFreeSpaceProbe freeSpace, OsPlatform host)
     {
         _host = host;
         _paths = paths ?? throw new ArgumentNullException(nameof(paths));
         _instances = instances ?? throw new ArgumentNullException(nameof(instances));
         _listings = listings ?? throw new ArgumentNullException(nameof(listings));
+        _versions = versions ?? throw new ArgumentNullException(nameof(versions));
         _isGameProcessRunning = isGameProcessRunning ?? throw new ArgumentNullException(nameof(isGameProcessRunning));
         _isLaunched = isLaunched ?? throw new ArgumentNullException(nameof(isLaunched));
         _wine = wine ?? throw new ArgumentNullException(nameof(wine));
@@ -289,9 +293,10 @@ public sealed class GameBuildKeeper : IGameBuildKeeper
     }
 
     /// <summary>
-    /// Writes the game folder of the settings to each loader whose game path names <paramref name="folder"/>, so
-    /// that no later start, also not one by an older Borea, starts a build that is gone. Without a game folder in
-    /// the settings, the files stay as they are.
+    /// Writes the game folder of the settings to each loader folder whose game path names <paramref name="folder"/>,
+    /// so that no later start, also not one by an older Borea, starts a build that is gone. That is the folder the
+    /// settings record for each loader and every installed version folder, because a start writes the kept folder to
+    /// the version that started it. Without a game folder in the settings, the files stay as they are.
     /// </summary>
     private async Task MoveLoadersToSettingsGameFolderAsync(string folder, CancellationToken cancellationToken)
     {
@@ -322,12 +327,37 @@ public sealed class GameBuildKeeper : IGameBuildKeeper
             return;
         }
 
+        IReadOnlyList<InstalledLoaderVersion> versions;
+        try
+        {
+            versions = await _versions.ListAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception exception) when (exception is InvalidOperationException or IOException or UnauthorizedAccessException)
+        {
+            // the same as for the listings, the folder that the settings record for each loader is still written
+            versions = [];
+        }
+
+        var loaderFolders = new List<(ModMetadata Loader, string Directory)>();
+        var seen = new HashSet<string>(OperatingSystem.IsLinux() ? StringComparer.Ordinal : StringComparer.OrdinalIgnoreCase);
         foreach (var loader in listings)
         {
-            if (loader.Type != ContentType.ModLoader || !LoaderConfigurator.TakesGamePath(loader)
-                || _paths.GetLoaderDirectoryPath(loader.ModId) is not { } loaderDirectory || !Path.IsPathFullyQualified(loaderDirectory))
+            if (loader.Type != ContentType.ModLoader || !LoaderConfigurator.TakesGamePath(loader))
                 continue;
 
+            var directories = versions
+                .Where(version => ModIds.Equals(version.LoaderId, loader.ModId))
+                .Select(version => version.DirectoryPath)
+                .Prepend(_paths.GetLoaderDirectoryPath(loader.ModId));
+            foreach (var directory in directories)
+            {
+                if (directory is not null && Path.IsPathFullyQualified(directory) && seen.Add(Path.GetFullPath(directory)))
+                    loaderFolders.Add((loader, Path.GetFullPath(directory)));
+            }
+        }
+
+        foreach (var (loader, loaderDirectory) in loaderFolders)
+        {
             string? held;
             try
             {

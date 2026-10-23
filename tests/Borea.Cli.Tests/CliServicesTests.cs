@@ -113,7 +113,6 @@ public sealed class CliServicesTests : IDisposable
             SharedProfileImporter = graph.SharedProfileImporter,
             LoaderInstaller = graph.LoaderInstaller,
             LoaderAdopter = graph.LoaderAdopter,
-            LoaderConfiguration = graph.LoaderConfiguration,
             LoaderUninstaller = graph.LoaderUninstaller,
             LoaderVersions = graph.LoaderVersions,
             Launcher = graph.Launcher,

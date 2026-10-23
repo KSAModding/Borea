@@ -720,14 +720,7 @@ public partial class MainViewModel
                 services.Log.Write($"Instance {instance.InstanceId}: the game's own content now loads before the mods.");
             }
 
-            // each version folder keeps its own game path, and a loader in a Wine prefix needs the path of the prefix
-            if (services.InstanceGames.Resolve(instance).GameDirectory is { } game
-                && await services.LoaderConfiguration.PrepareForLaunchAsync(loader, start.DirectoryPath, game, start.IsAdopted) is { } prepared)
-            {
-                services.Log.Write($"Wrote the game path to '{prepared}' before the launch.");
-            }
-
-            var result = services.Launcher.Launch(instance, loader, start.DirectoryPath, arguments: null);
+            var result = services.Launcher.Launch(instance, loader, start.DirectoryPath, arguments: null, start.IsAdopted);
             if (result.Outcome == LaunchOutcome.WrapperRuntimeMissing)
             {
                 OpenRuntimePrompt(instanceId, result, loader);

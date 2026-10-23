@@ -2,6 +2,7 @@ using System.Text.Json.Nodes;
 using Borea.Core.Game;
 using Borea.Core.ModLoaders;
 using Borea.Core.Mods;
+using Borea.Storage.Game;
 using Borea.Storage.ModLoaders;
 using Borea.Storage.Tests.Game;
 using Borea.Storage.Tests.Launch;
@@ -419,61 +420,6 @@ public sealed class LoaderConfiguratorTests : IDisposable
         Assert.Equal(GameInPrefix, configured);
     }
 
-    [Theory]
-    [InlineData(true)]
-    [InlineData(false)]
-    public async Task RefreshForWineAsync_HostPathAnOlderBoreaWroteOrNoValue_WritesTheWindowsPath(bool hostPathWritten)
-    {
-        await WriteConfigAsync(hostPathWritten
-            ? new JsonObject { ["GameLocation"] = GameInPrefix + Path.DirectorySeparatorChar, ["Other"] = "kept" }.ToJsonString()
-            : new JsonObject { ["Other"] = "kept" }.ToJsonString());
-
-        var written = await WineConfigurator().RefreshForWineAsync(Loader(Json()), _loaderDirectory, GameInPrefix);
-
-        Assert.Equal(ConfigPath(), written);
-        var json = await ReadJsonAsync();
-        Assert.Equal(@"C:\Program Files\Kitten Space Agency", (string?)json["GameLocation"]);
-        Assert.Equal("kept", (string?)json["Other"]);
-    }
-
-    [Theory]
-    [InlineData(@"C:\\Program Files\\Kitten Space Agency")]
-    [InlineData(@"D:\\Games\\KSA")]
-    public async Task RefreshForWineAsync_ValueInTheFormOfThePrefix_LeavesTheFile(string configured)
-    {
-        var text = $$"""{ "GameLocation": "{{configured}}" }""";
-        await WriteConfigAsync(text);
-
-        var written = await WineConfigurator().RefreshForWineAsync(Loader(Json()), _loaderDirectory, GameInPrefix);
-
-        Assert.Null(written);
-        Assert.Equal(text, await File.ReadAllTextAsync(ConfigPath()));
-    }
-
-    [Fact]
-    public async Task RefreshForWineAsync_FileThatIsNoJson_LeavesTheFileForTheLaunchToRefuse()
-    {
-        const string text = """{ "GameLocation": """;
-        await WriteConfigAsync(text);
-
-        var written = await WineConfigurator().RefreshForWineAsync(Loader(Json()), _loaderDirectory, GameInPrefix);
-
-        Assert.Null(written);
-        Assert.Equal(text, await File.ReadAllTextAsync(ConfigPath()));
-    }
-
-    [Fact]
-    public async Task RefreshForWineAsync_GameOutsideAPrefix_LeavesTheHostPath()
-    {
-        var text = new JsonObject { ["GameLocation"] = _gameDirectory }.ToJsonString();
-        await WriteConfigAsync(text);
-
-        var written = await WineConfigurator().RefreshForWineAsync(Loader(Json()), _loaderDirectory, _gameDirectory);
-
-        Assert.Null(written);
-        Assert.Equal(text, await File.ReadAllTextAsync(ConfigPath()));
-    }
-
     [UnixFact("Windows cannot name a file 'c:', so the drive links exist only on Linux and macOS.")]
     public async Task ConfigureAsync_GameInARealPrefix_WritesTheWindowsPathAndReadsTheGameDirectoryBack()
     {
@@ -486,67 +432,6 @@ public sealed class LoaderConfiguratorTests : IDisposable
 
         Assert.Equal(@"C:\Program Files\Kitten Space Agency", (string?)(await ReadJsonAsync())["GameLocation"]);
         Assert.Equal(GameInPrefix, await _configurator.ReadConfiguredGamePathAsync(Loader(Json()), _loaderDirectory, GameInPrefix));
-    }
-
-    #endregion
-
-    #region Launch preparation
-
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public async Task PrepareForLaunchAsync_NoFile_WritesTheGamePath(bool isAdopted)
-    {
-        var written = await _configurator.PrepareForLaunchAsync(Loader(Json()), _loaderDirectory, _gameDirectory, isAdopted);
-
-        Assert.Equal(ConfigPath(), written);
-        Assert.Equal(_gameDirectory, (string?)(await ReadJsonAsync())["GameLocation"]);
-    }
-
-    [Fact]
-    public async Task PrepareForLaunchAsync_BoreaFolderPointsAtAnotherGame_WritesTheGameOfTheInstance()
-    {
-        await WriteConfigAsync(new JsonObject { ["GameLocation"] = PlaceGame("Other game"), ["Other"] = "kept" }.ToJsonString());
-
-        var written = await _configurator.PrepareForLaunchAsync(Loader(Json()), _loaderDirectory, _gameDirectory, isAdopted: false);
-
-        Assert.Equal(ConfigPath(), written);
-        var json = await ReadJsonAsync();
-        Assert.Equal(_gameDirectory, (string?)json["GameLocation"]);
-        Assert.Equal("kept", (string?)json["Other"]);
-    }
-
-    [Fact]
-    public async Task PrepareForLaunchAsync_AdoptedFolderPointsAtAFolderWithoutTheGame_WritesTheGameOfTheInstance()
-    {
-        await WriteConfigAsync(new JsonObject { ["GameLocation"] = Directory.CreateDirectory(Path.Combine(_tempRoot, "Empty")).FullName }.ToJsonString());
-
-        var written = await _configurator.PrepareForLaunchAsync(Loader(Json()), _loaderDirectory, _gameDirectory, isAdopted: true);
-
-        Assert.Equal(ConfigPath(), written);
-        Assert.Equal(_gameDirectory, (string?)(await ReadJsonAsync())["GameLocation"]);
-    }
-
-    [Theory]
-    [InlineData(false, "Game")]
-    [InlineData(true, "Other game")]
-    public async Task PrepareForLaunchAsync_ValueTheFolderKeeps_LeavesTheFile(bool isAdopted, string configuredGame)
-    {
-        PlaceGame("Game");
-        var text = new JsonObject { ["GameLocation"] = PlaceGame(configuredGame) }.ToJsonString();
-        await WriteConfigAsync(text);
-
-        var written = await _configurator.PrepareForLaunchAsync(Loader(Json()), _loaderDirectory, _gameDirectory, isAdopted);
-
-        Assert.Null(written);
-        Assert.Equal(text, await File.ReadAllTextAsync(ConfigPath()));
-    }
-
-    private string PlaceGame(string name)
-    {
-        var directory = Directory.CreateDirectory(Path.Combine(_tempRoot, name)).FullName;
-        File.WriteAllText(Path.Combine(directory, "KSA.dll"), "game");
-        return directory;
     }
 
     #endregion

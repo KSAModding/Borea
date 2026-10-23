@@ -40,9 +40,6 @@ internal sealed class CliHost : IDisposable
     /// <summary>The platform of the game build. Null reads it from the game folder on this system.</summary>
     public IGamePlatform? GamePlatform { get; set; }
 
-    /// <summary>The configurator a launch refreshes the loader's game path with. Null uses the one of the graph.</summary>
-    public ILoaderConfigurator? LoaderConfiguration { get; set; }
-
     public FakeContentIndexFetcher IndexFetcher { get; } = new();
 
     public FakeContentIndexReader IndexReader { get; } = new();
@@ -164,7 +161,7 @@ internal sealed class CliHost : IDisposable
             loaderAdopter: LoaderAdopter,
             loaderUninstaller: LoaderUninstaller,
             // the fake processes answer at once, so the startup watch needs no real time
-            launcher: new LastPlayedLauncher(new LoaderLauncher(graph.Paths, ProcessStarter, TimeSpan.Zero), instances ?? graph.Instances),
+            launcher: new LastPlayedLauncher(new LoaderLauncher(graph.Paths, ProcessStarter, TimeSpan.Zero, () => GameRunning), instances ?? graph.Instances),
             modPacks: ModPacks ?? new ContentIndexModPackRepository(IndexSnapshots ?? new ReaderSnapshotProvider(IndexReader)),
             readOnlyModPacks: ModPacks ?? new ContentIndexModPackRepository(new ReaderSnapshotProvider(IndexReader)),
             modPackInstaller: ModPackInstallerFactory?.Invoke(graph) ?? ModPackInstaller,
@@ -177,8 +174,7 @@ internal sealed class CliHost : IDisposable
             // a game or a Borea the developer runs next to the tests must not refuse the move
             libraryFolderChanger: LibraryChanger ?? new LibraryFolderChanger(graph.SettingsRepository, graph.Paths, Root, graph.Launcher, (FileInstanceRepository)((LoggingInstanceRepository)graph.Instances).Inner, isGameProcessRunning: () => false, isOtherBoreaRunning: () => false, isSameVolume: LibraryOnSameVolume),
             isGameProcessRunning: () => GameRunning,
-            sharedModStore: new FileSharedModStore(graph.Paths, new ModStore(graph.Paths, new DirectoryLinker(), graph.Settings.SharedModStore), graph.Instances, graph.SettingsRepository, graph.Launcher, () => GameRunning, () => OtherBoreaRunning),
-            loaderConfiguration: LoaderConfiguration);
+            sharedModStore: new FileSharedModStore(graph.Paths, new ModStore(graph.Paths, new DirectoryLinker(), graph.Settings.SharedModStore), graph.Instances, graph.SettingsRepository, graph.Launcher, () => GameRunning, () => OtherBoreaRunning));
     }
 
     /// <summary>The version of GameVersionFixture.dll, which <see cref="KeepGameBuildAsync"/> keeps.</summary>

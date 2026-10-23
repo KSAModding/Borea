@@ -31,11 +31,18 @@ public interface ILauncher
     /// Starts the loader from <paramref name="loaderDirectory"/>, the folder of
     /// the loader version that the instance uses, and otherwise does what
     /// <see cref="Launch(Instance, ModMetadata?, IReadOnlyList{string}?)"/> does.
-    /// Null starts the folder that the settings record for the loader. This
-    /// default ignores the folder, so every launcher that starts a process or
-    /// passes a launch on must implement it.
+    /// Null starts the folder that the settings record for the loader.
+    /// <paramref name="isAdopted"/> says that the player made the folder, so
+    /// a game path that the player set there stays while it names a KSA.dll
+    /// that exists. A value that names a kept build does not stay, and
+    /// neither does a host path of the game of the instance that a loader in
+    /// a Wine prefix cannot open. An instance on a kept build
+    /// still gets the folder of its build, and the game path of the player
+    /// comes back when that game ends. This default ignores the
+    /// folder, so every launcher that starts a process or passes a launch on
+    /// must implement it.
     /// </summary>
-    LaunchResult Launch(Instance instance, ModMetadata? loader, string? loaderDirectory, IReadOnlyList<string>? arguments) =>
+    LaunchResult Launch(Instance instance, ModMetadata? loader, string? loaderDirectory, IReadOnlyList<string>? arguments, bool isAdopted = false) =>
         Launch(instance, loader, arguments);
 
     /// <summary>
@@ -48,7 +55,7 @@ public interface ILauncher
     /// game. A wrapper that stops before the log appears gives
     /// <see cref="LaunchOutcome.ExitedEarly"/> with <see cref="LaunchResult.Wine"/>
     /// set and no mod blamed. Any other result is returned as it is. A start
-    /// that stopped early writes the game folder of the settings back the way
+    /// that stopped early writes the game path back the way
     /// <see cref="WatchExitAsync"/> does.
     /// </summary>
     Task<LaunchResult> WatchStartAsync(Instance instance, LaunchResult started, CancellationToken cancellationToken = default);
@@ -62,7 +69,8 @@ public interface ILauncher
     /// process that a restart started. When the launch started a kept build,
     /// no KSA or StarMap process runs any more, and the loader's game path
     /// still names the kept folder, it writes the game folder of the settings
-    /// back, so a Borea that does not write the file before each start does
+    /// back, or in a folder that the player made the game path that the
+    /// player had set there, so a Borea that does not write the file before each start does
     /// not start the kept build. A write that fails is logged and changes no
     /// result.
     /// </summary>

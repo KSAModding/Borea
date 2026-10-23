@@ -711,44 +711,6 @@ public sealed class LaunchFailureTests
         Assert.False(viewModel.IsRuntimePromptOpen);
     }
 
-    /// <summary>A harness with a game directory and StarMap recorded, whose launches go to <paramref name="launcher"/> and whose refreshes to <paramref name="configurator"/>.</summary>
-    private static Task<ViewModelHarness> CreateWithConfiguratorAsync(ILauncher launcher, RefreshRecorder configurator) =>
-        ViewModelHarness.CreateAsync(
-            services => services.SettingsRepository.SaveAsync(services.Settings
-                .WithGameDirectory(Directory.CreateDirectory(Path.Combine(Path.GetDirectoryName(services.Paths.GetBoreaSettingsPath())!, "Game")).FullName)
-                .WithLoaderInstallation("StarMap", CreateLoader(services, "StarMap"))),
-            loaderLauncher: launcher,
-            loaderConfigurator: configurator);
-
-    [Fact]
-    public async Task PlayActiveInstance_RefreshesTheGamePathOfTheLoaderBeforeItStarts()
-    {
-        var launcher = new FixedLauncher(LaunchResult.Failed(LaunchOutcome.NoLaunchTarget, "Not started."));
-        var configurator = new RefreshRecorder(launcher);
-        using var harness = await CreateWithConfiguratorAsync(launcher, configurator);
-
-        await PlayActiveInstanceAsync(harness);
-
-        var refresh = Assert.Single(configurator.Refreshes);
-        Assert.Equal("StarMap", refresh.LoaderId);
-        Assert.Equal(harness.Services.Paths.GetLoaderDirectoryPath("StarMap"), refresh.LoaderDirectory);
-        Assert.Equal(harness.Services.Paths.GetGameDirectoryPath(), refresh.GameDirectory);
-        Assert.Equal(0, refresh.LaunchesBefore);
-        Assert.Equal(1, launcher.Launches);
-    }
-
-    [Fact]
-    public async Task PlayActiveInstance_GamePathCannotBeRefreshed_StartsNothingAndSaysWhy()
-    {
-        var launcher = new FixedLauncher(LaunchResult.Failed(LaunchOutcome.NoLaunchTarget, "Not started."));
-        using var harness = await CreateWithConfiguratorAsync(launcher, new RefreshRecorder(launcher, new InvalidOperationException("No drive of the Wine prefix holds the game.")));
-
-        await PlayActiveInstanceAsync(harness);
-
-        Assert.Equal("No drive of the Wine prefix holds the game.", harness.ViewModel.LaunchMessage);
-        Assert.Equal(0, launcher.Launches);
-    }
-
     [Fact]
     public async Task PlayWithoutModLoader_PassesNoSavedLaunchArguments()
     {
@@ -1041,26 +1003,6 @@ public sealed class LaunchFailureTests
     private sealed class FixedSharedProfileLauncher(SharedProfileLaunchResult result) : ISharedProfileLauncher
     {
         public SharedProfileLaunchResult Launch(IReadOnlyList<string>? arguments = null) => result;
-    }
-
-    /// <summary>Records each refresh with the launches before it, and throws <paramref name="failure"/> when set.</summary>
-    private sealed class RefreshRecorder(FixedLauncher launcher, Exception? failure = null) : ILoaderConfigurator
-    {
-        public List<(string LoaderId, string LoaderDirectory, string GameDirectory, int LaunchesBefore)> Refreshes { get; } = [];
-
-        public Task<string?> ConfigureAsync(ModMetadata loader, string loaderDirectory, string gameDirectory, CancellationToken cancellationToken = default) =>
-            Task.FromResult<string?>(null);
-
-        public Task<string?> RefreshForWineAsync(ModMetadata loader, string loaderDirectory, string gameDirectory, CancellationToken cancellationToken = default)
-        {
-            Refreshes.Add((loader.ModId, loaderDirectory, gameDirectory, launcher.Launches));
-            return failure is null ? Task.FromResult<string?>(null) : Task.FromException<string?>(failure);
-        }
-
-        public Task<string?> PrepareForLaunchAsync(ModMetadata loader, string loaderDirectory, string gameDirectory, bool isAdopted, CancellationToken cancellationToken = default) =>
-            RefreshForWineAsync(loader, loaderDirectory, gameDirectory, cancellationToken);
-
-        public string GamePathValue(string gameDirectory) => gameDirectory;
     }
 
     /// <summary>Hands out a loader process that has already exited with the given code and output.</summary>

@@ -63,15 +63,8 @@ internal static class LaunchCommand
                 cli.Log.Write($"Instance {target.InstanceId}: the game's own content now loads before the mods.");
             }
 
-            // each version folder keeps its own game path, and a loader in a Wine prefix needs the path of the prefix
-            if (game.GameDirectory is { } gamePath
-                && await cli.LoaderConfiguration.PrepareForLaunchAsync(loader, start.DirectoryPath, gamePath, start.IsAdopted, ct).ConfigureAwait(false) is { } prepared)
-            {
-                cli.Log.Write($"Wrote the game path to '{prepared}' before the launch.");
-            }
-
             ct.ThrowIfCancellationRequested();
-            var result = cli.Launcher.Launch(target, loader, start.DirectoryPath, passThrough.Values);
+            var result = cli.Launcher.Launch(target, loader, start.DirectoryPath, passThrough.Values, start.IsAdopted);
 
             // a loader that stops with an error while the game loads is reported, not left to vanish
             if (result.Started)
