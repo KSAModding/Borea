@@ -137,17 +137,7 @@ internal static class ReleaseJson
         if (value == 0)
             return double.IsNegative(value) ? "-0.0" : "0.0";
 
-        // The shortest digits that read back as the same double, as repr() uses them, with the decimal point after `point` digits.
-        var shortest = Math.Abs(value).ToString("R", CultureInfo.InvariantCulture);
-        var exponentAt = shortest.IndexOf('E', StringComparison.Ordinal);
-        var mantissa = exponentAt < 0 ? shortest : shortest[..exponentAt];
-        var exponent = exponentAt < 0 ? 0 : int.Parse(shortest[(exponentAt + 1)..], NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture);
-        var dot = mantissa.IndexOf('.', StringComparison.Ordinal);
-        var whole = dot < 0 ? mantissa : mantissa[..dot];
-        var all = whole + (dot < 0 ? string.Empty : mantissa[(dot + 1)..]);
-        var digits = all.TrimStart('0');
-        var point = whole.Length - (all.Length - digits.Length) + exponent;
-        digits = digits.TrimEnd('0');
+        var (digits, point) = ShortestDigits(value);
 
         var sign = value < 0 ? "-" : string.Empty;
         if (point is > -4 and <= 16)
@@ -160,5 +150,21 @@ internal static class ReleaseJson
         var power = point - 1;
         return sign + digits[..1] + (digits.Length > 1 ? "." + digits[1..] : string.Empty)
             + (power < 0 ? "e-" : "e+") + Math.Abs(power).ToString("00", CultureInfo.InvariantCulture);
+    }
+
+    /// <summary>The shortest digits that read back as the same double, as repr() uses them, with the decimal point after <c>Point</c> digits.</summary>
+    private static (string Digits, int Point) ShortestDigits(double value)
+    {
+        var shortest = Math.Abs(value).ToString("R", CultureInfo.InvariantCulture);
+        var exponentAt = shortest.IndexOf('E', StringComparison.Ordinal);
+        var mantissa = exponentAt < 0 ? shortest : shortest[..exponentAt];
+        var exponent = exponentAt < 0 ? 0 : int.Parse(shortest[(exponentAt + 1)..], NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture);
+        var dot = mantissa.IndexOf('.', StringComparison.Ordinal);
+        var whole = dot < 0 ? mantissa : mantissa[..dot];
+        var all = whole + (dot < 0 ? string.Empty : mantissa[(dot + 1)..]);
+        var digits = all.TrimStart('0');
+        var point = whole.Length - (all.Length - digits.Length) + exponent;
+        digits = digits.TrimEnd('0');
+        return (digits, point);
     }
 }
