@@ -32,25 +32,7 @@ public sealed class FileForeignModAdopter : IForeignModAdopter
         CancellationToken cancellationToken = default)
     {
         _ = await GetInstanceAsync(instanceId).ConfigureAwait(false);
-        var modsFolder = _pathProvider.GetInstanceModsFolder(instanceId);
-        var foreignMods = new List<ForeignMod>();
-
-        if (Directory.Exists(modsFolder))
-        {
-            foreach (var directory in Directory.EnumerateDirectories(modsFolder)
-                .OrderBy(path => Path.GetFileName(path), ModIds.Comparer)
-                .ThenBy(path => Path.GetFileName(path), StringComparer.Ordinal))
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-
-                var definitionPath = Path.Combine(directory, ModFolders.DefinitionFileName);
-                if (!File.Exists(definitionPath))
-                    continue;
-
-                var folderName = Path.GetFileName(directory);
-                foreignMods.Add(await ReadForeignModAsync(folderName, definitionPath, cancellationToken).ConfigureAwait(false));
-            }
-        }
+        var foreignMods = await ReadModsFolderAsync(_pathProvider.GetInstanceModsFolder(instanceId), cancellationToken).ConfigureAwait(false);
 
         return await _instances.UpdateAsync(
             instanceId,
@@ -63,6 +45,29 @@ public sealed class FileForeignModAdopter : IForeignModAdopter
                 return instance.ForeignMods;
             },
             cancellationToken).ConfigureAwait(false);
+    }
+
+    private static async Task<List<ForeignMod>> ReadModsFolderAsync(string modsFolder, CancellationToken cancellationToken)
+    {
+        var foreignMods = new List<ForeignMod>();
+        if (!Directory.Exists(modsFolder))
+            return foreignMods;
+
+        foreach (var directory in Directory.EnumerateDirectories(modsFolder)
+            .OrderBy(path => Path.GetFileName(path), ModIds.Comparer)
+            .ThenBy(path => Path.GetFileName(path), StringComparer.Ordinal))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var definitionPath = Path.Combine(directory, ModFolders.DefinitionFileName);
+            if (!File.Exists(definitionPath))
+                continue;
+
+            var folderName = Path.GetFileName(directory);
+            foreignMods.Add(await ReadForeignModAsync(folderName, definitionPath, cancellationToken).ConfigureAwait(false));
+        }
+
+        return foreignMods;
     }
 
     public async Task<ForeignModAdoptionResult> AdoptArchiveAsync(
