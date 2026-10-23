@@ -56,16 +56,11 @@ public sealed class DotnetHostTests : IDisposable
         Assert.Equal(first, DotnetHost.Find(OsPlatform.Linux, searchPath, null, []));
     }
 
-    [Fact]
-    public void Find_RelativeDirectory_IsSkipped()
-    {
-        Assert.Null(DotnetHost.Find(OsPlatform.Linux, Path.Combine("relative", "tools"), null, []));
-    }
-
     [Theory]
     [InlineData(null)]
     [InlineData("")]
-    public void Find_NoSearchPath_ReturnsNull(string? searchPath)
+    [InlineData("relative")]
+    public void Find_NoSearchPathOrARelativeOne_ReturnsNull(string? searchPath)
     {
         Assert.Null(DotnetHost.Find(OsPlatform.Linux, searchPath, null, []));
     }
