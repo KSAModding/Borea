@@ -144,6 +144,36 @@ public sealed class VehiclePreviewViewTests
     }
 
     [Fact]
+    public async Task InputThatCannotMoveTheCamera_KeepsTheHighFrame_AndRendersNothing()
+    {
+        var result = await HeadlessApp.RunAsync(async () =>
+        {
+            var (window, view) = Show(PreviewTestScenes.StackedBoxes());
+            view.RefineDelay = TimeSpan.FromMilliseconds(20);
+            view.Focus();
+            window.MouseWheel(Center, new Avalonia.Vector(0, 200));
+            window.MouseWheel(Center, new Avalonia.Vector(0, 200), RawInputModifiers.Shift);
+            for (var i = 0; i < 20; i++)
+                window.KeyPressQwerty(PhysicalKey.ArrowUp, RawInputModifiers.None);
+
+            await HeadlessApp.FramesUntilAsync(() => view.IsIdle && view.ShownQuality == RenderQuality.High);
+            var (shown, high, pose) = (view.FramesShown, view.HighFramesShown, (view.CameraAxisOffset, view.CameraDistance));
+
+            window.MouseWheel(Center, new Avalonia.Vector(0, 1));
+            window.MouseWheel(Center, new Avalonia.Vector(2, 0));
+            window.MouseWheel(Center, new Avalonia.Vector(0, 1), RawInputModifiers.Shift);
+            window.KeyPressQwerty(PhysicalKey.Q, RawInputModifiers.None);
+            window.KeyPressQwerty(PhysicalKey.W, RawInputModifiers.None);
+            window.KeyPressQwerty(PhysicalKey.ArrowUp, RawInputModifiers.None);
+            var idle = view.IsIdle;
+            await HeadlessApp.FramesAsync(10);
+            return (Idle: idle, Standard: view.FramesShown - shown, High: view.HighFramesShown - high, view.ShownQuality, Moved: pose != (view.CameraAxisOffset, view.CameraDistance));
+        });
+
+        Assert.Equal((true, 0, 0, RenderQuality.High, false), result);
+    }
+
+    [Fact]
     public async Task TheWheelWithShift_Zooms_AndAShiftedSidewaysWheelZoomsToo()
     {
         var result = await HeadlessApp.RunAsync(async () =>

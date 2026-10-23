@@ -390,24 +390,40 @@ public sealed class VehiclePreviewView : Control
         }
     }
 
+    // An input that leaves the pose as it is, such as a step past a limit or a sideways wheel, renders nothing,
+    // so a High frame that shows stays and is not replaced by a Standard frame of the same camera.
+
     /// <summary>Moves the target up the vehicle axis by <paramref name="steps"/> of <see cref="AxisStepFraction"/>, or down for negative steps.</summary>
     private void MoveAlongAxis(float steps)
     {
-        _axisOffset += steps * _camera.ViewHeight * AxisStepFraction;
+        var offset = _axisOffset + steps * _camera.ViewHeight * AxisStepFraction;
+        offset = Math.Clamp(offset, -_camera.AxisReach, _camera.AxisReach);
+        if (offset == _axisOffset)
+            return;
+
+        _axisOffset = offset;
         RequestRender(full: _dragFrom is null);
     }
 
     private void Zoom(float steps)
     {
-        _zoomSteps = Math.Clamp(_zoomSteps + steps, MinZoomSteps, MaxZoomSteps);
+        var zoomSteps = Math.Clamp(_zoomSteps + steps, MinZoomSteps, MaxZoomSteps);
+        if (zoomSteps == _zoomSteps)
+            return;
+
+        _zoomSteps = zoomSteps;
         RequestRender(full: _dragFrom is null);
     }
 
     private void Orbit(float dx, float dy, bool full)
     {
         var turn = 2f * MathF.PI / OrbitCamera.RadiansPerPixel;
-        _orbitX = MathF.IEEERemainder(_orbitX + dx, turn);
-        _orbitY = Math.Clamp(_orbitY + dy, MinOrbitY, MaxOrbitY);
+        var orbitX = MathF.IEEERemainder(_orbitX + dx, turn);
+        var orbitY = Math.Clamp(_orbitY + dy, MinOrbitY, MaxOrbitY);
+        if (orbitX == _orbitX && orbitY == _orbitY)
+            return;
+
+        (_orbitX, _orbitY) = (orbitX, orbitY);
         RequestRender(full);
     }
 
