@@ -190,21 +190,13 @@ public sealed class FileModInstallerTests : IAsyncLifetime
         Assert.False(File.Exists(Path.Combine(ModFolder, "README.md")));
     }
 
-    [Fact]
-    public async Task InstallAsync_NoStatedRoot_WrappingDirectoryWithoutModToml_FailsAndLeavesNothing()
+    [Theory]
+    [InlineData("readme.txt")]
+    [InlineData("Mod A/readme.txt")]
+    [InlineData("Mod A/mod.toml", "Mod B/mod.toml")]
+    public async Task InstallAsync_NoStatedRootAndNoModTomlAtTheDerivedRoot_FailsAndLeavesNothing(params string[] entries)
     {
-        _downloader.Bytes = BuildZip(("Mod A/readme.txt", "no mod definition anywhere"));
-
-        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => InstallAsync(Release(install: null)));
-
-        Assert.Contains("mod.toml", ex.Message);
-        await AssertNothingInstalledAsync();
-    }
-
-    [Fact]
-    public async Task InstallAsync_NoStatedRoot_TwoTopLevelDirectories_DerivesNoRootAndFails()
-    {
-        _downloader.Bytes = BuildZip(("Mod A/mod.toml", "name"), ("Mod B/mod.toml", "name"));
+        _downloader.Bytes = BuildZip(entries.Select(entry => (Path: entry, Content: "name")).ToArray());
 
         var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => InstallAsync(Release(install: null)));
 
@@ -243,17 +235,6 @@ public sealed class FileModInstallerTests : IAsyncLifetime
         var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => InstallAsync(Release(install: Root("elsewhere"))));
 
         Assert.Contains("elsewhere", ex.Message);
-        await AssertNothingInstalledAsync();
-    }
-
-    [Fact]
-    public async Task InstallAsync_NoModToml_FailsAndLeavesNothing()
-    {
-        _downloader.Bytes = BuildZip(("readme.txt", "no mod definition here"));
-
-        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => InstallAsync());
-
-        Assert.Contains("mod.toml", ex.Message);
         await AssertNothingInstalledAsync();
     }
 
@@ -471,36 +452,22 @@ public sealed class FileModInstallerTests : IAsyncLifetime
         Assert.Empty(_downloader.ArchivePaths);
     }
 
-    [Fact]
-    public async Task InstallAsync_ModLoader_IsNotSupported()
+    public static TheoryData<ModVersionMetadata> ReleasesThatAreNotAZippedModForTheModsFolder => new()
     {
-        await Assert.ThrowsAsync<NotSupportedException>(() => InstallAsync(Release(type: ContentType.ModLoader)));
-
-        Assert.Empty(_downloader.ArchivePaths);
-    }
-
-    public static TheoryData<InstallInfo> DestinationsOutsideTheModsFolder => new()
-    {
-        new InstallInfo(null, derived: false, target: InstallAnchor.Standalone),
-        new InstallInfo(null, derived: false, target: InstallAnchor.UserData),
-        new InstallInfo(null, derived: false, target: InstallAnchor.GameRoot),
-        new InstallInfo(null, derived: false, target: InstallAnchor.Unknown),
-        new InstallInfo(null, derived: false, target: InstallAnchor.Mods, path: "nested"),
+        Release(type: ContentType.ModLoader),
+        Release(contentType: "application/x-7z-compressed"),
+        Release(install: new InstallInfo(null, derived: false, target: InstallAnchor.Standalone)),
+        Release(install: new InstallInfo(null, derived: false, target: InstallAnchor.UserData)),
+        Release(install: new InstallInfo(null, derived: false, target: InstallAnchor.GameRoot)),
+        Release(install: new InstallInfo(null, derived: false, target: InstallAnchor.Unknown)),
+        Release(install: new InstallInfo(null, derived: false, target: InstallAnchor.Mods, path: "nested")),
     };
 
     [Theory]
-    [MemberData(nameof(DestinationsOutsideTheModsFolder))]
-    public async Task InstallAsync_DestinationTheGameWouldNotScan_IsNotSupported(InstallInfo install)
+    [MemberData(nameof(ReleasesThatAreNotAZippedModForTheModsFolder))]
+    public async Task InstallAsync_NotAZippedModForTheModsFolder_IsNotSupported(ModVersionMetadata release)
     {
-        await Assert.ThrowsAsync<NotSupportedException>(() => InstallAsync(Release(install: install)));
-
-        Assert.Empty(_downloader.ArchivePaths);
-    }
-
-    [Fact]
-    public async Task InstallAsync_NotAZip_IsNotSupported()
-    {
-        await Assert.ThrowsAsync<NotSupportedException>(() => InstallAsync(Release(contentType: "application/x-7z-compressed")));
+        await Assert.ThrowsAsync<NotSupportedException>(() => InstallAsync(release));
 
         Assert.Empty(_downloader.ArchivePaths);
     }
