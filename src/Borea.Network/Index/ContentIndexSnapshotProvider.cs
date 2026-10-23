@@ -121,7 +121,16 @@ public sealed class ContentIndexSnapshotProvider : IContentIndexSnapshotProvider
 
     private void RecordFetch(string indexPath, ContentIndexFetchResult fetchResult)
     {
-        // a 304 confirms the cached file, so its age starts again too
+        RestartCacheAge(indexPath);
+
+        RecordOutcome(
+            fetchResult == ContentIndexFetchResult.Downloaded ? ContentIndexRefreshOutcome.Downloaded : ContentIndexRefreshOutcome.NotModified,
+            failureReason: null);
+    }
+
+    /// <summary>Sets the last write time of the cached file to now. A 304 confirms the cached file, so its age starts again too.</summary>
+    private void RestartCacheAge(string indexPath)
+    {
         try
         {
             if (File.Exists(indexPath))
@@ -131,10 +140,6 @@ public sealed class ContentIndexSnapshotProvider : IContentIndexSnapshotProvider
         {
             // the file keeps its older time, which only makes the cache look older
         }
-
-        RecordOutcome(
-            fetchResult == ContentIndexFetchResult.Downloaded ? ContentIndexRefreshOutcome.Downloaded : ContentIndexRefreshOutcome.NotModified,
-            failureReason: null);
     }
 
     private void RecordOutcome(ContentIndexRefreshOutcome outcome, string? failureReason)

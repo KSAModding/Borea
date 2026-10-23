@@ -173,10 +173,28 @@ public sealed class SpaceDockModRepository : IModRepository
         if (!string.IsNullOrWhiteSpace(dto.SourceCode))
             links.TryAdd("repository", dto.SourceCode);
 
-        // Oldest game version any release claims, since game_min means
-        // "oldest known to work" and only a too-high bound blocks an install.
-        // With no parseable game version the raw string stays, so
-        // compatibility evaluates to unknown.
+        return new ModMetadata(
+            specVersion: SpecVersions.Highest,
+            modId: modId,
+            source: SourceName,
+            name: string.IsNullOrWhiteSpace(dto.Name) ? $"SpaceDock mod {dto.Id}" : dto.Name,
+            authors: new[] { string.IsNullOrWhiteSpace(dto.Author) ? "Unknown" : dto.Author },
+            abstractText: dto.ShortDescription ?? string.Empty,
+            license: string.IsNullOrWhiteSpace(dto.License) ? "Unknown" : dto.License,
+            links: links,
+            gameMin: GameMinOf(dto),
+            description: string.IsNullOrWhiteSpace(dto.Description) ? null : dto.Description,
+            releases: new ReleaseSource(new[] { new ReleaseHost("spacedock", modId) }));
+    }
+
+    /// <summary>
+    /// Oldest game version any release claims, since game_min means
+    /// "oldest known to work" and only a too-high bound blocks an install.
+    /// With no parseable game version the raw string stays, so
+    /// compatibility evaluates to unknown.
+    /// </summary>
+    private static string GameMinOf(SpaceDockModDto dto)
+    {
         string? oldestRaw = null;
         var oldestRevision = int.MaxValue;
         foreach (var candidate in dto.Versions)
@@ -189,23 +207,10 @@ public sealed class SpaceDockModRepository : IModRepository
         }
 
         var defaultVersion = dto.Versions.FirstOrDefault(v => v.Id == dto.DefaultVersionId) ?? dto.Versions.FirstOrDefault();
-        var gameMin = oldestRaw
+        return oldestRaw
             ?? (defaultVersion is not null && !string.IsNullOrWhiteSpace(defaultVersion.RawGameVersion)
                 ? defaultVersion.RawGameVersion
                 : "unknown");
-
-        return new ModMetadata(
-            specVersion: SpecVersions.Highest,
-            modId: modId,
-            source: SourceName,
-            name: string.IsNullOrWhiteSpace(dto.Name) ? $"SpaceDock mod {dto.Id}" : dto.Name,
-            authors: new[] { string.IsNullOrWhiteSpace(dto.Author) ? "Unknown" : dto.Author },
-            abstractText: dto.ShortDescription ?? string.Empty,
-            license: string.IsNullOrWhiteSpace(dto.License) ? "Unknown" : dto.License,
-            links: links,
-            gameMin: gameMin,
-            description: string.IsNullOrWhiteSpace(dto.Description) ? null : dto.Description,
-            releases: new ReleaseSource(new[] { new ReleaseHost("spacedock", modId) }));
     }
 
     private static IEnumerable<(ModVersion Parsed, ModVersionMetadata Release, SpaceDockVersionDto Row)> MappableReleases(SpaceDockModDto dto)

@@ -89,14 +89,7 @@ public sealed class ListingPublisher : IListingPublisher
             return await CommitToOpenAsync(open.Pull, submission, cancellationToken).ConfigureAwait(false);
         }
 
-        // The branch starts at a commit the fork already has, because writing newer history of content-index into the fork
-        // needs the Workflows permission whenever that history changes a workflow.
-        var compare = await GetAsync<CompareDto>(
-            $"{Api}/repos/{Upstream}/compare/{_base}...{fork.FullName.Replace('/', ':')}:{Uri.EscapeDataString(fork.DefaultBranch)}?per_page=1",
-            ListingPublishStep.Branch,
-            cancellationToken).ConfigureAwait(false);
-        var main = compare.BaseCommit?.Sha ?? throw Unexpected(ListingPublishStep.Branch);
-        var start = compare.MergeBaseCommit?.Sha ?? throw Unexpected(ListingPublishStep.Branch);
+        var (main, start) = await BranchStartAsync(fork, cancellationToken).ConfigureAwait(false);
         var listed = new List<GitHubFile?>();
         foreach (var file in submission.Files)
             listed.Add(await ReadFileAsync(Upstream, file.Path, main, ListingPublishStep.Branch, cancellationToken).ConfigureAwait(false));
@@ -104,14 +97,7 @@ public sealed class ListingPublisher : IListingPublisher
             throw new ListingPublishException(ListingPublishFailure.NoChange, ListingPublishStep.Commit);
 
         if (start != main)
-        {
-            for (var index = 0; index < submission.Files.Count; index++)
-            {
-                var based = await ReadFileAsync(Upstream, submission.Files[index].Path, start, ListingPublishStep.Branch, cancellationToken).ConfigureAwait(false);
-                if (based?.Sha != listed[index]?.Sha)
-                    throw new ListingPublishException(ListingPublishFailure.ForkNeedsSync, ListingPublishStep.Branch, fork.FullName);
-            }
-        }
+            await EnsureForkInSyncAsync(fork, submission, start, listed, cancellationToken).ConfigureAwait(false);
 
         progress?.Report(ListingPublishStep.Branch);
         var branch = await CreateBranchAsync(fork, BranchName(submission), start, cancellationToken).ConfigureAwait(false);
@@ -122,14 +108,7 @@ public sealed class ListingPublisher : IListingPublisher
             await PutFileAsync(fork.FullName, branch, submission, submission.Files[index], listed[index]?.Sha, cancellationToken).ConfigureAwait(false);
 
         progress?.Report(ListingPublishStep.PullRequest);
-        var name = submission.Name.Trim().Length > 0 ? submission.Name.Trim() : submission.Id;
-        var (title, text) = submission switch
-        {
-            { PackVersion: { } version, ClaimsPack: true } => ($"List {name}", $"Lists the pack {name} with its first version {version}."),
-            { PackVersion: { } version } => ($"Add {name} {version}", $"Adds version {version} of the pack {name}."),
-            { IsEdit: true } => ($"Update {name}", $"Updates the listing of {name}."),
-            _ => ($"List {name}", $"Lists {name}."),
-        };
+        var (title, text) = PullRequestTextOf(submission);
         var body = new Dictionary<string, object>
         {
             ["title"] = title,
@@ -280,25 +259,35 @@ public sealed class ListingPublisher : IListingPublisher
     private async Task<Fork> FindForkAsync(string login, CancellationToken cancellationToken)
     {
         const ListingPublishStep step = ListingPublishStep.Fork;
-        if (await FindInstallationAsync(login, cancellationToken).ConfigureAwait(false) is { } installation)
-        {
-            var repositories = Pages(step, _api.GetPagesAsync<InstallationRepositoriesDto, RepositoryDto>($"{Api}/user/installations/{installation}/repositories", page => page.Repositories, cancellationToken), cancellationToken);
-            await foreach (var candidate in repositories.ConfigureAwait(false))
-            {
-                if (!candidate.Fork)
-                    continue;
-
-                var repository = await GetAsync<RepositoryDto>($"{Api}/repos/{candidate.FullName}", step, cancellationToken).ConfigureAwait(false);
-                if (IsForkOfUpstream(repository) && ForkOf(repository) is { } fork)
-                    return fork;
-            }
-        }
+        if (await FindInstalledForkAsync(login, cancellationToken).ConfigureAwait(false) is { } fork)
+            return fork;
 
         var reply = await SendAsync(HttpMethod.Get, $"{Api}/repos/{login}/content-index", null, step, cancellationToken, anonymous: true).ConfigureAwait(false);
         if (reply.Status != HttpStatusCode.NotFound && Parse<RepositoryDto>(Ensure(reply, step), step) is var named && IsForkOfUpstream(named))
             throw new ListingPublishException(ListingPublishFailure.AppNotOnFork, step, named.FullName, repositoryId: named.Id > 0 ? named.Id : null);
 
         throw new ListingPublishException(ListingPublishFailure.NoFork, step);
+    }
+
+    /// <summary>The fork of content-index among the repositories of the App's installation on the author's own account, or null.</summary>
+    private async Task<Fork?> FindInstalledForkAsync(string login, CancellationToken cancellationToken)
+    {
+        const ListingPublishStep step = ListingPublishStep.Fork;
+        if (await FindInstallationAsync(login, cancellationToken).ConfigureAwait(false) is not { } installation)
+            return null;
+
+        var repositories = Pages(step, _api.GetPagesAsync<InstallationRepositoriesDto, RepositoryDto>($"{Api}/user/installations/{installation}/repositories", page => page.Repositories, cancellationToken), cancellationToken);
+        await foreach (var candidate in repositories.ConfigureAwait(false))
+        {
+            if (!candidate.Fork)
+                continue;
+
+            var repository = await GetAsync<RepositoryDto>($"{Api}/repos/{candidate.FullName}", step, cancellationToken).ConfigureAwait(false);
+            if (IsForkOfUpstream(repository) && ForkOf(repository) is { } fork)
+                return fork;
+        }
+
+        return null;
     }
 
     private async Task<long?> FindInstallationAsync(string login, CancellationToken cancellationToken)
@@ -339,6 +328,32 @@ public sealed class ListingPublisher : IListingPublisher
         }
     }
 
+    /// <summary>
+    /// The head of the base branch, and the commit that the branch starts at. The branch starts at a commit the fork already has, because writing newer history
+    /// of content-index into the fork needs the Workflows permission whenever that history changes a workflow.
+    /// </summary>
+    private async Task<(string Main, string Start)> BranchStartAsync(Fork fork, CancellationToken cancellationToken)
+    {
+        var compare = await GetAsync<CompareDto>(
+            $"{Api}/repos/{Upstream}/compare/{_base}...{fork.FullName.Replace('/', ':')}:{Uri.EscapeDataString(fork.DefaultBranch)}?per_page=1",
+            ListingPublishStep.Branch,
+            cancellationToken).ConfigureAwait(false);
+        var main = compare.BaseCommit?.Sha ?? throw Unexpected(ListingPublishStep.Branch);
+        var start = compare.MergeBaseCommit?.Sha ?? throw Unexpected(ListingPublishStep.Branch);
+        return (main, start);
+    }
+
+    /// <summary>Refuses with ForkNeedsSync when a document of the submission differs between <paramref name="start"/> and the base branch, because the branch would start from the older document.</summary>
+    private async Task EnsureForkInSyncAsync(Fork fork, ListingSubmission submission, string start, IReadOnlyList<GitHubFile?> listed, CancellationToken cancellationToken)
+    {
+        for (var index = 0; index < submission.Files.Count; index++)
+        {
+            var based = await ReadFileAsync(Upstream, submission.Files[index].Path, start, ListingPublishStep.Branch, cancellationToken).ConfigureAwait(false);
+            if (based?.Sha != listed[index]?.Sha)
+                throw new ListingPublishException(ListingPublishFailure.ForkNeedsSync, ListingPublishStep.Branch, fork.FullName);
+        }
+    }
+
     private async Task PutFileAsync(string repository, string branch, ListingSubmission submission, ListingFile file, string? sha, CancellationToken cancellationToken)
     {
         var message = submission switch
@@ -358,6 +373,18 @@ public sealed class ListingPublisher : IListingPublisher
             body["sha"] = sha;
 
         Ensure(await SendAsync(HttpMethod.Put, $"{Api}/repos/{repository}/contents/{file.Path}", body, ListingPublishStep.Commit, cancellationToken).ConfigureAwait(false), ListingPublishStep.Commit);
+    }
+
+    private static (string Title, string Text) PullRequestTextOf(ListingSubmission submission)
+    {
+        var name = submission.Name.Trim().Length > 0 ? submission.Name.Trim() : submission.Id;
+        return submission switch
+        {
+            { PackVersion: { } version, ClaimsPack: true } => ($"List {name}", $"Lists the pack {name} with its first version {version}."),
+            { PackVersion: { } version } => ($"Add {name} {version}", $"Adds version {version} of the pack {name}."),
+            { IsEdit: true } => ($"Update {name}", $"Updates the listing of {name}."),
+            _ => ($"List {name}", $"Lists {name}."),
+        };
     }
 
     private Task<GitHubFile?> ReadFileAsync(string repository, string path, string reference, ListingPublishStep step, CancellationToken cancellationToken) =>
