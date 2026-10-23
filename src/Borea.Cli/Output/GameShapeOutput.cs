@@ -2,7 +2,6 @@ using Borea.Core.Game;
 
 namespace Borea.Cli.Output;
 
-/// <summary>Shapes the result of the game check for text and JSON output.</summary>
 internal static class GameShapeOutput
 {
     /// <summary>

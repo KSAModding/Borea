@@ -4,15 +4,10 @@ using Borea.Cli.Commands;
 namespace Borea.Cli;
 
 /// <summary>
-/// Builds the command tree and runs one command line against it.
 /// Every command maps onto one Borea.Core operation and adds no logic of its own.
-/// The exit codes are in <see cref="ExitCodes"/>.
 /// </summary>
 internal static class BoreaCli
 {
-    /// <summary>
-    /// Builds the command tree. The services are built by <paramref name="services"/>.
-    /// </summary>
     private static RootCommand Build(Func<CancellationToken, Task<CliServices>> services, PassThroughArguments passThrough)
     {
         if (services is null)
@@ -40,8 +35,7 @@ internal static class BoreaCli
     }
 
     /// <summary>
-    /// Parses and runs <paramref name="args"/>. A command line that does not parse
-    /// exits with <see cref="ExitCodes.Usage"/> after the parser said why.
+    /// A command line that does not parse exits with <see cref="ExitCodes.Usage"/> after the parser said why.
     /// </summary>
     public static async Task<int> RunAsync(
         string[] args,
