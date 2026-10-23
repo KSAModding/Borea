@@ -68,21 +68,7 @@ internal static class GameCommand
                 return shape.Broken.Count == 0 ? ExitCodes.Done : ExitCodes.Failed;
             }
 
-            output.WriteLine($"Installed build: {shape.BuildText}");
-            output.WriteLine($"Newest verified build: {shape.VerifiedBuilds.Newest}");
-            output.WriteLine(shape.Status switch
-            {
-                GameShapeStatus.Verified => "The game has the shape Borea expects.",
-                GameShapeStatus.Untested => "The game has the shape Borea expects, on a build nobody checked yet. Tell us if something does not work.",
-                GameShapeStatus.Broken => shape.AllowsWrites
-                    ? "The game does not have the shape Borea expects, in a place Borea only reads."
-                    : "The game does not have the shape Borea expects. Installing and enabling mods are stopped.",
-                _ => "There was no game installation to check.",
-            });
-            output.WriteLine(string.Empty);
-
-            foreach (var result in shape.Results)
-                output.WriteLine($"{result.State,-10} {result.Assumption,-16} {result.Detail}");
+            WriteHuman(output, shape);
 
             if (shape.Broken.Count > 0)
             {
@@ -94,6 +80,25 @@ internal static class GameCommand
         }));
 
         return check;
+    }
+
+    private static void WriteHuman(TextWriter output, GameShape shape)
+    {
+        output.WriteLine($"Installed build: {shape.BuildText}");
+        output.WriteLine($"Newest verified build: {shape.VerifiedBuilds.Newest}");
+        output.WriteLine(shape.Status switch
+        {
+            GameShapeStatus.Verified => "The game has the shape Borea expects.",
+            GameShapeStatus.Untested => "The game has the shape Borea expects, on a build nobody checked yet. Tell us if something does not work.",
+            GameShapeStatus.Broken => shape.AllowsWrites
+                ? "The game does not have the shape Borea expects, in a place Borea only reads."
+                : "The game does not have the shape Borea expects. Installing and enabling mods are stopped.",
+            _ => "There was no game installation to check.",
+        });
+        output.WriteLine(string.Empty);
+
+        foreach (var result in shape.Results)
+            output.WriteLine($"{result.State,-10} {result.Assumption,-16} {result.Detail}");
     }
 
     private static Command BuildVersion(Func<CancellationToken, Task<CliServices>> services)
@@ -121,30 +126,34 @@ internal static class GameCommand
                 return ExitCodes.Done;
             }
 
-            output.WriteLine(installed switch
-            {
-                null => $"Installed build: unknown ({InstalledUnknownReason(cli.Settings)})",
-                { Version: null } => $"Installed build: {installed.RawVersion} (this did not parse as a game version)",
-                _ => $"Installed build: {installed.Version}",
-            });
-
-            if (latest is not null)
-            {
-                output.WriteLine(latest.Version is null
-                    ? $"Latest public build: {latest.RawVersion} (this did not parse as a game version)"
-                    : $"Latest public build: {latest.Version}");
-
-                if (!string.IsNullOrWhiteSpace(latest.DownloadUrl))
-                    output.WriteLine($"Download: {latest.DownloadUrl}");
-            }
-
-            if (installed?.Version is { } have && latest?.Version is { } current)
-                output.WriteLine(have < current ? "A newer build is available." : "The installed build is current.");
-
+            WriteHuman(output, installed, latest, cli.Settings);
             return ExitCodes.Done;
         }));
 
         return version;
+    }
+
+    private static void WriteHuman(TextWriter output, InstalledGameVersion? installed, LatestVersionInfo? latest, BoreaSettings settings)
+    {
+        output.WriteLine(installed switch
+        {
+            null => $"Installed build: unknown ({InstalledUnknownReason(settings)})",
+            { Version: null } => $"Installed build: {installed.RawVersion} (this did not parse as a game version)",
+            _ => $"Installed build: {installed.Version}",
+        });
+
+        if (latest is not null)
+        {
+            output.WriteLine(latest.Version is null
+                ? $"Latest public build: {latest.RawVersion} (this did not parse as a game version)"
+                : $"Latest public build: {latest.Version}");
+
+            if (!string.IsNullOrWhiteSpace(latest.DownloadUrl))
+                output.WriteLine($"Download: {latest.DownloadUrl}");
+        }
+
+        if (installed?.Version is { } have && latest?.Version is { } current)
+            output.WriteLine(have < current ? "A newer build is available." : "The installed build is current.");
     }
 
     private static async Task<(LatestVersionInfo? Latest, string? Problem)> AskMasterServerAsync(ILatestVersionPing ping, CancellationToken cancellationToken)
