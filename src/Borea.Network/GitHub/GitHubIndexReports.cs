@@ -10,7 +10,6 @@ namespace Borea.Network.GitHub;
 /// </summary>
 public sealed class GitHubIndexReports : IIndexReports, IReportActions
 {
-    /// <summary>The search terms for a title that holds the tag of a takedown or a dispute.</summary>
     private const string ClosedReportsQuery = "in:title+(Takedown+OR+Dispute)";
 
     private readonly IGitHubSession _session;

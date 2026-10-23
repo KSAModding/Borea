@@ -13,12 +13,7 @@ public sealed class SpaceDockResolver
 {
     private readonly Dictionary<string, int> _map = new(ModIds.Comparer);
 
-    /// <summary>
-    /// Maps a mod's true, permanent ModId to SpaceDock's own numeric mod ID. Replaces an existing mapping for the same modId.
-    /// </summary>
-    /// <param name="modId">The true, permanent ModId of the mod.</param>
-    /// <param name="spaceDockId">The numeric mod ID used by SpaceDock.</param>
-    /// <exception cref="ArgumentException"></exception>
+    /// <summary>Registers the mapping, and replaces an existing one for the same <paramref name="modId"/>.</summary>
     public void Register(string modId, int spaceDockId)
     {
         if (string.IsNullOrWhiteSpace(modId))
@@ -27,11 +22,6 @@ public sealed class SpaceDockResolver
         _map[modId] = spaceDockId;
     }
 
-    /// <summary>
-    /// Attempts to resolve a mod's true, permanent ModId to SpaceDock's own numeric mod ID. Returns true if the mapping exists, false otherwise.
-    /// </summary>
-    /// <param name="modId">The true, permanent ModId of the mod.</param>
-    /// <param name="spaceDockId">The numeric mod ID used by SpaceDock.</param>
     public bool TryResolve(string modId, out int spaceDockId) =>
         _map.TryGetValue(modId, out spaceDockId);
 

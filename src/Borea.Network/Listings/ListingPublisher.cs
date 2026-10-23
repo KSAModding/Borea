@@ -322,7 +322,6 @@ public sealed class ListingPublisher : IListingPublisher
         return slash > 0 && repository.DefaultBranch.Length > 0 ? new Fork(repository.FullName, repository.FullName[..slash], repository.DefaultBranch) : null;
     }
 
-    /// <summary>listing-&lt;id&gt; for a listing, pack-&lt;id&gt;-&lt;version&gt; for a pack version.</summary>
     private static string BranchName(ListingSubmission submission) =>
         (submission.PackVersion is { } version ? $"pack-{submission.Id}-{version}" : "listing-" + submission.Id).ToLowerInvariant();
 
