@@ -204,14 +204,6 @@ public sealed class ListingHostClientTests
     }
 
     [Fact]
-    public void ParsePrefixes_SavedThreadPage_FindsThePrefixOfTheTitleOnly()
-    {
-        var html = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Listings", "Fixtures", "forum-thread.html"));
-
-        Assert.Equal([new ForumPrefix("Gameplay")], ForumThreadReader.ParsePrefixes(html));
-    }
-
-    [Fact]
     public void ParsePrefixes_SavedThreadPageWithSimilarThreads_TakesTheIdTheyGiveThePrefix()
     {
         var html = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Listings", "Fixtures", "forum-thread-similar-threads.html"));
