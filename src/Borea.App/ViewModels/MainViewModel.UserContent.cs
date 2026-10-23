@@ -40,6 +40,7 @@ public partial class MainViewModel
         row.Choices = null;
         row.ProgressStatus = null;
         row.IsInstalling = true;
+        StartContentInstall(release);
         try
         {
             plan = await PlanContentWithRecommendationsAsync(services, instanceId, release, name, discardChanges, choices: null);
@@ -51,6 +52,7 @@ public partial class MainViewModel
         }
         finally
         {
+            EndContentInstall(release);
             row.IsInstalling = false;
         }
 
@@ -146,6 +148,7 @@ public partial class MainViewModel
         row.InstallWarning = null;
         row.Choices = null;
         row.IsInstalling = true;
+        StartContentInstall(plan.Release);
         var run = row.Run = StartInstallRun(StartInstallTask(row, instanceId));
         var completed = false;
         string? stopped = null;
@@ -170,6 +173,7 @@ public partial class MainViewModel
         }
         finally
         {
+            EndContentInstall(plan.Release);
             EndInstallRun(run, completed, stopped is not null, error);
             row.IsInstalling = false;
             row.Run = null;

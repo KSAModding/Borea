@@ -187,8 +187,24 @@ public partial class MainViewModel
     /// </summary>
     internal IPngEncoder? VehiclePreviewEncoder { get; set; }
 
+    /// <summary>The wait before a new preview fetches a small vehicle file on its own, or null for the default. Tests set it.</summary>
+    internal TimeSpan? VehiclePreviewAutoFetchDelay { get; set; }
+
     /// <summary>The instance and its content that the open preview was made for, so a change to them makes it again.</summary>
     private string? _vehiclePreviewTarget;
+
+    /// <summary>
+    /// The releases whose fetch the player cancelled, or whose fetch failed, since Borea started. Every later preview
+    /// of one of them waits for the click, also on a page that the player opens again. The list lives in memory only,
+    /// so the next start of Borea loads a small vehicle file on its own again.
+    /// </summary>
+    private readonly List<ModVersionMetadata> _vehiclePreviewDeclined = [];
+
+    /// <summary>
+    /// The vehicles and saves whose install or update plans or runs now, one entry for each. A preview of one of them
+    /// does not fetch on its own, because the install downloads the same archive.
+    /// </summary>
+    private readonly List<ModVersionMetadata> _contentInstallReleases = [];
 
     /// <summary>Completes when the preview of the open vehicle page has prepared or built what it can without a click.</summary>
     internal Task WhenVehiclePreviewLoadedAsync() => VehiclePreview?.Loading ?? Task.CompletedTask;
@@ -201,15 +217,25 @@ public partial class MainViewModel
 
     /// <summary>
     /// Makes a new preview for the open vehicle page against the services that are current now, and disposes the
-    /// old one, which stops its work and drops a result that arrives later. Any other page gets none.
+    /// old one, which stops its work and drops a result that arrives later. Any other page gets none. A busy preview
+    /// of the same release and target stays, so a page that is read again, such as after an index refresh, does not
+    /// send a second download. Every fetch raises the public download count of the host (RFC 0052), so a new preview
+    /// waits for a click after the player cancelled the same release or its fetch failed, and while an install of it
+    /// plans, waits for the player's confirmation or runs, because that install downloads the archive itself. A preview
+    /// that still waits out its delay then makes way for one that waits for the click.
     /// </summary>
     private void RefreshVehiclePreview()
     {
         var old = VehiclePreview;
+        RememberDeclinedPreview(old);
         VehiclePreviewViewModel? next = null;
         if (_services is { } services && CurrentWindowContent && SelectedContent is { Type: ContentType.Vehicle } && LatestVersion is { } latest)
         {
             var target = VehiclePreviewTarget;
+            var installing = _contentInstallReleases.Any(release => SameRelease(release, latest.Release)) || HoldsContentPlan(latest.Release);
+            if (old is { IsBusy: true } && !(old.IsWaitingToFetch && installing) && SameRelease(old.Release, latest.Release) && TargetKey(target) == _vehiclePreviewTarget)
+                return;
+
             _vehiclePreviewTarget = TargetKey(target);
             next = new VehiclePreviewViewModel(
                 VehiclePreviewServiceOf(services),
@@ -220,7 +246,9 @@ public partial class MainViewModel
                 VehiclePreviewBuilderOf(),
                 thumbnails: services.PreviewThumbnails,
                 encoder: VehiclePreviewEncoder,
-                stillStored: ShowPreviewStill);
+                stillStored: ShowPreviewStill,
+                autoFetchDelay: VehiclePreviewAutoFetchDelay,
+                autoFetch: !installing && !_vehiclePreviewDeclined.Any(declined => SameRelease(declined, latest.Release)));
         }
 
         VehiclePreview = next;
@@ -239,6 +267,47 @@ public partial class MainViewModel
             RefreshVehiclePreview();
     }
 
+    /// <summary>
+    /// Keeps the release of a preview that the player cancelled, or whose fetch failed, so the next previews of it do
+    /// not fetch on their own. A listing with a wrong hash or size would otherwise send one more download with every
+    /// remake or new visit of the page.
+    /// </summary>
+    private void RememberDeclinedPreview(VehiclePreviewViewModel? preview)
+    {
+        if (preview is { State: VehiclePreviewState.Cancelled } or { State: VehiclePreviewState.Failed, HasFetchedVehicle: true }
+            && !_vehiclePreviewDeclined.Any(declined => SameRelease(declined, preview.Release)))
+            _vehiclePreviewDeclined.Add(preview.Release);
+    }
+
+    /// <summary>
+    /// Notes that an install or update of this vehicle or save starts to plan or run, and lets a preview of it on the
+    /// open page that still waits out its delay make way for one that waits for the click. Each call needs one call of
+    /// <see cref="EndContentInstall"/>.
+    /// </summary>
+    private void StartContentInstall(ModVersionMetadata release)
+    {
+        _contentInstallReleases.Add(release);
+        if (VehiclePreview is { IsWaitingToFetch: true } preview && SameRelease(preview.Release, release))
+            RefreshVehiclePreview();
+    }
+
+    private void EndContentInstall(ModVersionMetadata release) => _contentInstallReleases.Remove(release);
+
+    /// <summary>
+    /// True when the page row or a version row of the open page holds a plan of the release that waits for the player's
+    /// confirmation, or when the name modal asks for a new name for an install of the listing. The check reads the rows
+    /// and the modal and not a mark, because the App drops a row with its waiting plan when it makes the rows again,
+    /// and a mark of that plan would then stay for the whole session.
+    /// </summary>
+    private bool HoldsContentPlan(ModVersionMetadata release) =>
+        NamingPackContent is { IsPackMember: false } naming && ModIds.Equals(naming.ContentId, release.ModId)
+        || _contentReleases.Prepend<IContentPlanRow?>(SelectedContent)
+            .Any(row => row?.PendingContentPlan is { } plan && SameRelease(plan.Release, release));
+
+    /// <summary>True when both are the same release with the same archive, so a preview of one serves the other.</summary>
+    private static bool SameRelease(ModVersionMetadata a, ModVersionMetadata b) =>
+        a.ModId == b.ModId && a.Version == b.Version && string.Equals(a.Download.Sha256, b.Download.Sha256, StringComparison.OrdinalIgnoreCase);
+
     private static string? TargetKey(InstanceItem? instance) => instance is null
         ? null
         : string.Join('|', [
@@ -250,6 +319,7 @@ public partial class MainViewModel
     private void ClearVehiclePreview()
     {
         var old = VehiclePreview;
+        RememberDeclinedPreview(old);
         VehiclePreview = null;
         old?.Dispose();
     }

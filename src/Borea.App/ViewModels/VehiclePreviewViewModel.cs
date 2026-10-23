@@ -43,14 +43,26 @@ public enum VehiclePreviewState
 
 /// <summary>
 /// The 3D preview of one vehicle release on its page. It asks <see cref="IVehiclePreview"/> what the preview needs,
-/// builds the scene at once when every file is on this computer, and fetches the vehicle file or the missing mods
-/// only after a click. The meshes come first with flat colors, so the player can turn the vehicle early, and the
-/// textures follow. The page makes a new instance for each release and disposes the old one.
+/// builds the scene at once when every file is on this computer, and fetches a vehicle file of at most
+/// <see cref="AutoFetchVehicleBytes"/> after a short delay without a click. A larger vehicle file or the missing mods
+/// it fetches only after a click. The meshes come first with flat colors, so the player can turn the vehicle early,
+/// and the textures follow. The page makes a new instance for each release and disposes the old one.
 /// </summary>
 public sealed partial class VehiclePreviewViewModel : ObservableObject, IDisposable
 {
     /// <summary>A missing mod above this size gets a warning line, because its download takes a while.</summary>
     internal const long LargeModBytes = 100L * 1024 * 1024;
+
+    /// <summary>
+    /// A vehicle file of at most this stated size downloads when its page opens, because a player who opens a vehicle
+    /// page wants to see the vehicle. Every fetch raises the public download count of the host (RFC 0052), so a larger
+    /// or unknown size still waits for the Show click, and a player who leaves the page during the settle delay
+    /// downloads nothing. The value is decimal, as the size on the button is.
+    /// </summary>
+    internal const long AutoFetchVehicleBytes = 5_000_000;
+
+    /// <summary>The default wait between the open of a page and its automatic fetch, so a quick pass over a page does not download.</summary>
+    internal static readonly TimeSpan DefaultAutoFetchDelay = TimeSpan.FromMilliseconds(750);
 
     /// <summary>The size of the still that Discover shows, 16 by 9 like the panel of the page.</summary>
     internal const int StillWidth = 384;
@@ -70,6 +82,8 @@ public sealed partial class VehiclePreviewViewModel : ObservableObject, IDisposa
     private readonly IPreviewThumbnails? _thumbnails;
     private readonly IPngEncoder? _encoder;
     private readonly Action<string>? _stillStored;
+    private readonly TimeSpan _autoFetchDelay;
+    private readonly bool _autoFetch;
     private readonly CancellationTokenSource _lifetime = new();
     private CancellationTokenSource? _run;
     private VehiclePreviewPlan? _plan;
@@ -87,6 +101,8 @@ public sealed partial class VehiclePreviewViewModel : ObservableObject, IDisposa
     /// <param name="thumbnails">Where a complete preview stores its still for Discover, or null to store none.</param>
     /// <param name="encoder">Encodes the still as a PNG, or null to store none.</param>
     /// <param name="stillStored">Gets the vehicle hash after a new still was stored, on the thread that started the load.</param>
+    /// <param name="autoFetchDelay">The wait before a small vehicle file downloads on its own, or null for <see cref="DefaultAutoFetchDelay"/>.</param>
+    /// <param name="autoFetch">False when a small vehicle file must also wait for the click, such as after the player cancelled this release.</param>
     public VehiclePreviewViewModel(
         IVehiclePreview service,
         ModVersionMetadata release,
@@ -96,7 +112,9 @@ public sealed partial class VehiclePreviewViewModel : ObservableObject, IDisposa
         PreviewSceneBuilder builder,
         IPreviewThumbnails? thumbnails = null,
         IPngEncoder? encoder = null,
-        Action<string>? stillStored = null)
+        Action<string>? stillStored = null,
+        TimeSpan? autoFetchDelay = null,
+        bool autoFetch = true)
     {
         _service = service ?? throw new ArgumentNullException(nameof(service));
         _release = release ?? throw new ArgumentNullException(nameof(release));
@@ -108,9 +126,17 @@ public sealed partial class VehiclePreviewViewModel : ObservableObject, IDisposa
         _thumbnails = thumbnails;
         _encoder = encoder;
         _stillStored = stillStored;
+        _autoFetchDelay = autoFetchDelay ?? DefaultAutoFetchDelay;
+        _autoFetch = autoFetch;
     }
 
     internal ModVersionMetadata Release => _release;
+
+    /// <summary>True while the automatic fetch waits out its delay, so a replacement of this preview sends no request yet.</summary>
+    internal bool IsWaitingToFetch { get; private set; }
+
+    /// <summary>True once this preview asked the service to download the vehicle file, so a failure can have cost a request to the host.</summary>
+    internal bool HasFetchedVehicle { get; private set; }
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsBusy))]
@@ -301,6 +327,22 @@ public sealed partial class VehiclePreviewViewModel : ObservableObject, IDisposa
             case VehiclePreviewPlanState.CanBuildLocally:
                 await LoadAsync(fetchVehicle: false, fetchMods: false, token);
                 break;
+            case VehiclePreviewPlanState.NeedsVehicleFile when _autoFetch && plan.VehicleSizeBytes is { } size && size <= AutoFetchVehicleBytes:
+                // The Fetching step shows the Cancel button during the delay, and a cancel or a dispose ends the delay before any download.
+                Step(PreviewStep.FetchingVehicle);
+                IsWaitingToFetch = true;
+                try
+                {
+                    await Task.Delay(_autoFetchDelay, token);
+                }
+                finally
+                {
+                    IsWaitingToFetch = false;
+                }
+
+                ThrowWhenStale(token);
+                await LoadAsync(fetchVehicle: true, fetchMods: false, token);
+                break;
             case VehiclePreviewPlanState.NeedsVehicleFile:
                 SetState(VehiclePreviewState.Idle);
                 break;
@@ -320,6 +362,7 @@ public sealed partial class VehiclePreviewViewModel : ObservableObject, IDisposa
     {
         var plan = _plan ?? throw new InvalidOperationException("The preview loads only after a preparation.");
         Step(fetchVehicle ? PreviewStep.FetchingVehicle : fetchMods ? PreviewStep.FetchingMods : PreviewStep.ReadingParts);
+        HasFetchedVehicle |= fetchVehicle;
         var progress = new StageProgress(stage =>
         {
             if (!token.IsCancellationRequested && stage != VehiclePreviewStage.Done)
