@@ -30,7 +30,7 @@ internal static class SelfUpdateCommand
             var newest = releases.FirstOrDefault();
             if (newest is null || !newest.IsNewerThan(running))
             {
-                Report(output, parseResult.GetValue(json), new SelfUpdateView(running, channel.ToString(), null, "current", null));
+                Report(new SelfUpdateView(running, channel.ToString(), null, "current", null));
                 return ExitCodes.Done;
             }
 
@@ -43,15 +43,23 @@ internal static class SelfUpdateCommand
 
             if (parseResult.GetValue(check))
             {
-                Report(output, parseResult.GetValue(json), new SelfUpdateView(running, channel.ToString(), newest.Version.ToString(), "available", null));
+                Report(new SelfUpdateView(running, channel.ToString(), newest.Version.ToString(), "available", null));
                 return ExitCodes.Done;
             }
 
-            var staged = await cli.SelfUpdater.StageAsync(newest, new SelfUpdateOutput(error), ct).ConfigureAwait(false);
+            var staged = await cli.SelfUpdater.StageAsync(newest, new SelfUpdateProgressOutput(error), ct).ConfigureAwait(false);
             staged.Install();
             staged.HandOver();
-            Report(output, parseResult.GetValue(json), new SelfUpdateView(running, channel.ToString(), staged.Version.ToString(), "installed", staged.Folder));
+            Report(new SelfUpdateView(running, channel.ToString(), staged.Version.ToString(), "installed", staged.Folder));
             return ExitCodes.Done;
+
+            void Report(SelfUpdateView view)
+            {
+                if (parseResult.GetValue(json))
+                    JsonOutput.Write(output, view);
+                else
+                    WriteHuman(output, view);
+            }
         }));
 
         return command;
@@ -71,14 +79,8 @@ internal static class SelfUpdateCommand
         _ => "This build did not come from a release archive, so it cannot replace itself.",
     };
 
-    private static void Report(TextWriter output, bool json, SelfUpdateView view)
+    private static void WriteHuman(TextWriter output, SelfUpdateView view)
     {
-        if (json)
-        {
-            JsonOutput.Write(output, view);
-            return;
-        }
-
         switch (view.State)
         {
             case "current":
@@ -95,7 +97,7 @@ internal static class SelfUpdateCommand
     }
 
     /// <summary>Writes the download progress to stderr, so that a piped output holds the result alone.</summary>
-    private sealed class SelfUpdateOutput(TextWriter error) : IProgress<SelfUpdateProgress>
+    private sealed class SelfUpdateProgressOutput(TextWriter error) : IProgress<SelfUpdateProgress>
     {
         private SelfUpdatePhase? _reported;
 
