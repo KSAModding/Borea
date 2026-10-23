@@ -43,7 +43,6 @@ public abstract record InstanceSource
         /// </summary>
         protected override bool PrintMembers(System.Text.StringBuilder builder)
         {
-            ArgumentNullException.ThrowIfNull(builder);
             builder.Append("ModPackId = ").Append(ModPackId)
                 .Append(", Version = ").Append(Version.ToString())
                 .Append(", Detached = [").AppendJoin(", ", Detached.Order(ModIds.Comparer)).Append(']');
