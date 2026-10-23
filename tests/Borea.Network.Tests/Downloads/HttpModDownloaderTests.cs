@@ -85,14 +85,8 @@ public sealed class HttpModDownloaderTests : IDisposable
         }
     }
 
-    /// <summary>
-    /// A body that hands out one chunk and then cancels the caller's token, the
-    /// way a user stops a transfer part-way through.
-    /// </summary>
-    private sealed class CancelAfterFirstReadStream(byte[] firstChunk, CancellationTokenSource cancellation) : Stream
+    private abstract class ReadOnlyBodyStream : Stream
     {
-        private bool _handedOut;
-
         public override bool CanRead => true;
 
         public override bool CanSeek => false;
@@ -110,6 +104,23 @@ public sealed class HttpModDownloaderTests : IDisposable
         public override void Flush()
         {
         }
+
+        public override int Read(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+
+        public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
+
+        public override void SetLength(long value) => throw new NotSupportedException();
+
+        public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+    }
+
+    /// <summary>
+    /// A body that hands out one chunk and then cancels the caller's token, the
+    /// way a user stops a transfer part-way through.
+    /// </summary>
+    private sealed class CancelAfterFirstReadStream(byte[] firstChunk, CancellationTokenSource cancellation) : ReadOnlyBodyStream
+    {
+        private bool _handedOut;
 
         public override int Read(byte[] buffer, int offset, int count) => Read(buffer.AsSpan(offset, count));
 
@@ -131,72 +142,20 @@ public sealed class HttpModDownloaderTests : IDisposable
 
         public override Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken) =>
             Task.FromResult(Read(buffer, offset, count));
-
-        public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
-
-        public override void SetLength(long value) => throw new NotSupportedException();
-
-        public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
     }
 
-    private sealed class StalledStream : Stream
+    private sealed class StalledStream : ReadOnlyBodyStream
     {
-        public override bool CanRead => true;
-
-        public override bool CanSeek => false;
-
-        public override bool CanWrite => false;
-
-        public override long Length => throw new NotSupportedException();
-
-        public override long Position
-        {
-            get => throw new NotSupportedException();
-            set => throw new NotSupportedException();
-        }
-
-        public override void Flush()
-        {
-        }
-
-        public override int Read(byte[] buffer, int offset, int count) => throw new NotSupportedException();
-
         public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
         {
             await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
             throw new InvalidOperationException("The delay cannot end on its own.");
         }
-
-        public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
-
-        public override void SetLength(long value) => throw new NotSupportedException();
-
-        public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
     }
 
-    private sealed class ProgressingStream(byte[] body, TimeSpan delay) : Stream
+    private sealed class ProgressingStream(byte[] body, TimeSpan delay) : ReadOnlyBodyStream
     {
         private int _position;
-
-        public override bool CanRead => true;
-
-        public override bool CanSeek => false;
-
-        public override bool CanWrite => false;
-
-        public override long Length => throw new NotSupportedException();
-
-        public override long Position
-        {
-            get => throw new NotSupportedException();
-            set => throw new NotSupportedException();
-        }
-
-        public override void Flush()
-        {
-        }
-
-        public override int Read(byte[] buffer, int offset, int count) => throw new NotSupportedException();
 
         public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
         {
@@ -207,38 +166,12 @@ public sealed class HttpModDownloaderTests : IDisposable
             buffer.Span[0] = body[_position++];
             return 1;
         }
-
-        public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
-
-        public override void SetLength(long value) => throw new NotSupportedException();
-
-        public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
     }
 
     /// <summary>A body that hands out one chunk and then sends nothing until its read is canceled.</summary>
-    private sealed class FirstChunkThenStallStream(byte[] firstChunk) : Stream
+    private sealed class FirstChunkThenStallStream(byte[] firstChunk) : ReadOnlyBodyStream
     {
         private bool _handedOut;
-
-        public override bool CanRead => true;
-
-        public override bool CanSeek => false;
-
-        public override bool CanWrite => false;
-
-        public override long Length => throw new NotSupportedException();
-
-        public override long Position
-        {
-            get => throw new NotSupportedException();
-            set => throw new NotSupportedException();
-        }
-
-        public override void Flush()
-        {
-        }
-
-        public override int Read(byte[] buffer, int offset, int count) => throw new NotSupportedException();
 
         public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
         {
@@ -252,12 +185,6 @@ public sealed class HttpModDownloaderTests : IDisposable
             await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
             throw new InvalidOperationException("The delay cannot end on its own.");
         }
-
-        public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
-
-        public override void SetLength(long value) => throw new NotSupportedException();
-
-        public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
     }
 
     #region Sources

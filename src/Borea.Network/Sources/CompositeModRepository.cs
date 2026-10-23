@@ -42,6 +42,9 @@ public sealed class CompositeModRepository : IModRepository
             var listing = await repository.GetListingAsync(modId, cancellationToken).ConfigureAwait(false);
             if (listing is not null)
                 return Tag(listing, source);
+
+            if (await ClaimsAsync(repository, modId, cancellationToken).ConfigureAwait(false))
+                return null;
         }
 
         return null;
