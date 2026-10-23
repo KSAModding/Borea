@@ -65,6 +65,31 @@ public sealed class InstanceShowLoaderTests : IDisposable
     }
 
     [Fact]
+    public async Task Show_PinnedBesideTheRecordedVersion_RatesThePinnedVersion()
+    {
+        _host.Mods.Listings.Add(LoaderFixtures.Listing());
+        var versions = Path.Combine(_host.Paths.GetLoadersRoot(), "StarMap");
+        var recorded = LoaderCommandTests.CreateLoaderDirectory("0.4.8", "not a program", versions);
+        LoaderCommandTests.CreateLoaderDirectory("0.4.7", "not a program", versions);
+        await File.WriteAllTextAsync(_host.Paths.GetBoreaSettingsPath(), $"[LoaderInstallations.StarMap]\nDirectoryPath = '{recorded}'\nVersion = '0.4.8'\nIsAdopted = false\n");
+        await SaveInstanceAsync(LoaderSetting.Pinned("StarMap", ModVersion.Parse("0.4.7")), NeedsLoader("flight-tools", "StarMap", "0.4.5", max: "0.4.7"));
+
+        var human = await _host.RunAsync("instance", "show", "Flight Test");
+        var json = await _host.RunAsync("instance", "show", "Flight Test", "--json");
+
+        Assert.Contains("Mod loader: StarMap 0.4.5 to 0.4.7, 0.4.7 installed, needed by flight-tools", human.Output);
+        Assert.Contains("Mod loader setting: StarMap pinned at 0.4.7 (installed)", human.Output);
+        var loader = json.Json.GetProperty("loader");
+        Assert.Equal("pinned", loader.GetProperty("mode").GetString());
+        Assert.Equal("0.4.7", loader.GetProperty("pinnedVersion").GetString());
+        Assert.Equal("0.4.7", loader.GetProperty("version").GetString());
+        Assert.True(loader.GetProperty("installed").GetBoolean());
+        var need = Assert.Single(json.Json.GetProperty("modLoaders").EnumerateArray());
+        Assert.Equal("0.4.7", need.GetProperty("installedVersion").GetString());
+        Assert.True(need.GetProperty("accepted").GetBoolean());
+    }
+
+    [Fact]
     public async Task Show_ModsAskForVersionsThatDoNotOverlap_NamesWhatEachAsksFor()
     {
         await SaveInstanceAsync(
@@ -119,12 +144,15 @@ public sealed class InstanceShowLoaderTests : IDisposable
             "IsAdopted = false\n");
     }
 
-    private async Task SaveInstanceAsync(params ModVersionMetadata[] releases)
+    private Task SaveInstanceAsync(params ModVersionMetadata[] releases) => SaveInstanceAsync(LoaderSetting.Automatic, releases);
+
+    private async Task SaveInstanceAsync(LoaderSetting loader, params ModVersionMetadata[] releases)
     {
         var mods = releases
             .Select(release => new InstalledMod(release.ModId, release.Version, InstallReason.Manual, DateTimeOffset.UtcNow, release))
             .ToList();
         var instance = Instance.FromExisting(Guid.NewGuid(), "Flight Test", InstanceSource.Custom.Value, DateTimeOffset.UtcNow, mods, isFavorite: false);
+        instance.SetLoader(loader);
         await new FileInstanceRepository(_host.Paths).SaveAsync(instance);
     }
 

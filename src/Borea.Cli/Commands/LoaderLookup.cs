@@ -1,5 +1,7 @@
 using Borea.Core.Game;
 using Borea.Core.Instances;
+using Borea.Core.Launch;
+using Borea.Core.ModLoaders;
 using Borea.Core.Mods;
 
 namespace Borea.Cli.Commands;
@@ -15,6 +17,25 @@ internal static class LoaderLookup
         ArgumentNullException.ThrowIfNull(cli);
         ArgumentNullException.ThrowIfNull(instance);
         return (cli.InstalledVersion.GetInstalledVersion()?.Version, cli.Paths.GetGameDirectoryPath());
+    }
+
+    /// <summary>
+    /// The loader and the loader version that start <paramref name="instance"/>, from the same inputs for the launch and
+    /// for <c>instance show</c>: the held listings before the live ones, and the held releases to rate and offer.
+    /// </summary>
+    public static async Task<InstanceLoaderResolution> ResolveAsync(
+        CliServices cli,
+        Instance instance,
+        IReadOnlyList<InstalledLoaderVersion> installed,
+        GameVersion? game,
+        string? givenLoaderId,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(cli);
+        var releases = await HeldReleasesAsync(cli.OfflineContentIndex, cancellationToken).ConfigureAwait(false);
+        return await InstanceLoaderResolver
+            .ResolveAsync(instance, installed, cli.OfflineContentIndex, cli.Mods, releases, cli.Settings.ReleaseChannel, game, givenLoaderId, cancellationToken)
+            .ConfigureAwait(false);
     }
 
     /// <summary>
