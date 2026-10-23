@@ -69,14 +69,8 @@ public interface IGamePathProvider
     /// </summary>
     string GetActiveInstancePointerPath();
 
-    /// <summary>
-    /// Path to the file tracking the user's favorited/bookmarked mods.
-    /// </summary>
     string GetModFavoritesPath();
 
-    /// <summary>
-    /// Path to the file tracking the user's favorited/bookmarked mod packs.
-    /// </summary>
     string GetModPackFavoritesPath();
 
     /// <summary>
@@ -119,9 +113,6 @@ public interface IGamePathProvider
     /// </summary>
     string GetBackupsRoot();
 
-    /// <summary>
-    /// Root folder for a specific instance, e.g.
-    /// </summary>
     string GetInstanceRoot(Guid instanceId);
 
     string GetInstanceModsFolder(Guid instanceId);
@@ -161,10 +152,7 @@ public interface IGamePathProvider
     /// Root directory of the KSA game installation itself (not the Documents
     /// folder).
     /// </summary>
-    /// <returns><list type="bullet">
-    /// <item>null if path is unknown.</item>
-    /// <item>string path if known.</item>
-    /// </list></returns>
+    /// <returns>Null when the path is unknown.</returns>
     string? GetGameDirectoryPath();
 
     /// <summary>
@@ -177,9 +165,6 @@ public interface IGamePathProvider
     /// versions of the loader can be installed beside it, and an instance can start any of them. Ids compare
     /// case-insensitively, and no id at all throws.
     /// </summary>
-    /// <returns><list type="bullet">
-    /// <item>null if no path is known for that loader.</item>
-    /// <item>string path if known.</item>
-    /// </list></returns>
+    /// <returns>Null when no path is known for that loader.</returns>
     string? GetLoaderDirectoryPath(string loaderId);
 }

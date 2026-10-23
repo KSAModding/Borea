@@ -10,19 +10,11 @@ namespace Borea.Core.Mods;
 /// </summary>
 public sealed class ModMetadata
 {
-    /// <summary>
-    /// The version of the metadata specification.
-    /// </summary>
     public int SpecVersion { get; }
 
-    /// <summary>
-    /// The mod's unique identifier. Ids compare case-insensitively.
-    /// </summary>
+    /// <summary>Ids compare case-insensitively.</summary>
     public string ModId { get; }
 
-    /// <summary>
-    /// The content type of the listing.
-    /// </summary>
     public ContentType Type { get; }
 
     /// <summary>
@@ -30,14 +22,8 @@ public sealed class ModMetadata
     /// </summary>
     public string Source { get; }
 
-    /// <summary>
-    /// The display name of the mod.
-    /// </summary>
     public string Name { get; }
 
-    /// <summary>
-    /// The list of mod authors.
-    /// </summary>
     public IReadOnlyList<string> Authors { get; }
 
     /// <summary>
