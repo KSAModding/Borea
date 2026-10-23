@@ -33,7 +33,8 @@ public static class GameSaveName
             if (kept.Length == MaxLength)
                 break;
 
-            if (IsAllowed(c) && (c != ' ' || (kept.Length > 0 && kept[^1] != ' ')))
+            var isLeadingOrRepeatedSpace = c == ' ' && (kept.Length == 0 || kept[^1] == ' ');
+            if (IsAllowed(c) && !isLeadingOrRepeatedSpace)
                 kept.Append(c);
         }
 
