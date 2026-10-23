@@ -177,7 +177,8 @@ public sealed class AppElectionTests : IDisposable
     public async Task ClientThatSendsNothing_IsDropped_AndTheNextStartStillArrives()
     {
         var pipeName = AppElection.PipeName(LockPath);
-        await using (var server = HandoverServer.Start(pipeName, Take, _log.Enqueue, TimeSpan.FromMilliseconds(300)))
+        var timedOut = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        await using (var server = HandoverServer.Start(pipeName, Take, line => { if (line.Contains("timed out", StringComparison.Ordinal)) timedOut.TrySetResult(); }, TimeSpan.FromMilliseconds(300)))
         {
             await using var idle = await ConnectAsync(pipeName);
             await HandoverProtocol.ReadAsync(idle, CancellationToken.None);
@@ -185,7 +186,7 @@ public sealed class AppElectionTests : IDisposable
             var processId = await HandoverClient.HandOverAsync(pipeName, HandoverProtocol.EncodeStart(["next"]), Generous, CancellationToken.None);
 
             Assert.Equal(Environment.ProcessId, processId);
-            await WaitUntilAsync(() => _log.Any(line => line.Contains("timed out", StringComparison.Ordinal)));
+            await timedOut.Task.WaitAsync(TimeSpan.FromSeconds(5));
         }
 
         Assert.Equal(["next"], Assert.Single(_received));
@@ -285,15 +286,5 @@ public sealed class AppElectionTests : IDisposable
         var client = new NamedPipeClientStream(".", pipeName, PipeDirection.InOut, PipeOptions.Asynchronous | PipeOptions.CurrentUserOnly);
         await client.ConnectAsync(TimeSpan.FromSeconds(5), CancellationToken.None);
         return client;
-    }
-
-    private static async Task WaitUntilAsync(Func<bool> condition)
-    {
-        var elapsed = Stopwatch.StartNew();
-        while (!condition())
-        {
-            Assert.True(elapsed.Elapsed < TimeSpan.FromSeconds(5), "The condition did not become true in time.");
-            await Task.Delay(20);
-        }
     }
 }

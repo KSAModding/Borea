@@ -318,11 +318,13 @@ public sealed class InstanceTablesTests
     {
         const string archiveHost = "archives.test";
         using var download = new ManualResetEventSlim();
+        var downloading = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         using var harness = await ViewModelHarness.CreateAsync(respond: request =>
         {
             if (request.RequestUri?.Host != archiveHost)
                 return null;
 
+            downloading.TrySetResult();
             download.Wait(TimeSpan.FromSeconds(30));
             return new HttpResponseMessage(HttpStatusCode.InternalServerError);
         });
@@ -358,8 +360,7 @@ public sealed class InstanceTablesTests
         (bool Menu, bool Replace, bool Install, bool Cancel) enabled;
         try
         {
-            for (var wait = 0; wait < 300 && !harness.Requests.Any(uri => uri.Host == archiveHost); wait++)
-                await Task.Delay(100);
+            await downloading.Task.WaitAsync(TimeSpan.FromSeconds(30));
             Assert.False(viewModel.CanChangeContent);
 
             enabled = await HeadlessApp.RunAsync(() =>
