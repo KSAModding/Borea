@@ -20,6 +20,9 @@ public partial class MainViewModel
 {
     private Guid? _loaderPromptInstanceId;
 
+    /// <summary>The release the modal installs, or null for the newest release that fits the game.</summary>
+    private ModVersionMetadata? _promptedLoaderRelease;
+
     /// <summary>The update a launch skipped with "Play anyway", which no later launch asks about again.</summary>
     private string? _playedAnywayLoaderUpdate;
 
@@ -91,9 +94,10 @@ public partial class MainViewModel
         return string.Equals(PlayAnywayKey(prompt), _playedAnywayLoaderUpdate, StringComparison.Ordinal) ? null : prompt;
     }
 
-    private void OpenLoaderPrompt(Guid instanceId, ModMetadata loader, LoaderUpdate? update = null)
+    private void OpenLoaderPrompt(Guid instanceId, ModMetadata loader, LoaderUpdate? update = null, ModVersionMetadata? release = null)
     {
         _loaderPromptInstanceId = instanceId;
+        _promptedLoaderRelease = release;
         LaunchMessage = null;
         SetupMessage = null;
         SetupError = null;
@@ -114,7 +118,8 @@ public partial class MainViewModel
         }
         else
         {
-            await RunSetupAsync(services => InstallLoaderReleaseAsync(services, loader.ModId, release: null, directory: string.Empty));
+            var release = _promptedLoaderRelease;
+            await RunSetupAsync(services => InstallLoaderReleaseAsync(services, loader.ModId, release, directory: string.Empty));
             if (SetupError is not null || _services?.Settings.LoaderInstallations.Keys.Any(id => ModIds.Equals(id, loader.ModId)) != true)
                 return;
         }
