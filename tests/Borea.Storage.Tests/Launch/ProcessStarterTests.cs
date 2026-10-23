@@ -61,23 +61,15 @@ public sealed class ProcessStarterTests : IDisposable
         _tempRoot,
         new Dictionary<string, string> { [InstanceVariable] = _tempRoot });
 
-    private static void WaitForExit(IStartedProcess process)
-    {
-        var deadline = DateTime.UtcNow + Patience;
-        while (!process.HasExited && DateTime.UtcNow < deadline)
-            Thread.Sleep(50);
-    }
-
     private bool ChildWrote() => File.Exists(Path.Combine(_tempRoot, "wrote"));
 
     [Fact]
-    public void Start_RunsTheExecutableInTheWorkingDirectoryWithTheVariables()
+    public async Task Start_RunsTheExecutableInTheWorkingDirectoryWithTheVariables()
     {
         using var process = _starter.Start(ProbePlan());
 
         Assert.True(process.Id > 0);
-        WaitForExit(process);
-        Assert.True(process.HasExited);
+        Assert.True(await process.WaitForExitAsync(Patience));
 
         var written = Path.Combine(_tempRoot, "env.txt");
         Assert.True(File.Exists(written), "The script did not run in the plan's working directory.");
