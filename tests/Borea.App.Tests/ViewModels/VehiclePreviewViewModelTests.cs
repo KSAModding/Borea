@@ -316,15 +316,9 @@ public sealed class VehiclePreviewViewModelTests
     [Fact]
     public async Task Page_AnInstallDuringTheDelay_StopsTheAutoFetch_SoOnlyTheInstallDownloads()
     {
-        var service = new FakeVehiclePreview { PlanState = VehiclePreviewPlanState.NeedsVehicleFile };
-        using var harness = await VehicleHarnessAsync();
+        var (harness, service) = await OpenRoverForAnInstallAsync();
+        using var _ = harness;
         var viewModel = harness.ViewModel;
-        viewModel.VehiclePreviewServiceOf = _ => service;
-        viewModel.VehiclePreviewAutoFetchDelay = TimeSpan.FromMinutes(5);
-        var instance = (await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value)).Instance;
-        await harness.Services.Instances.SetActiveInstanceAsync(instance.InstanceId);
-        await viewModel.LoadAsync();
-        await OpenRoverPageAsync(viewModel);
         var row = viewModel.SelectedContent!;
         var waiting = viewModel.VehiclePreview!;
         Assert.True(waiting.IsWaitingToFetch);
@@ -345,6 +339,78 @@ public sealed class VehiclePreviewViewModelTests
 
         // the install changed the instance, so the page made a preview again, which waits out its delay until the test leaves the page
         viewModel.SetMainWindowDiscover();
+    }
+
+    [Fact]
+    public async Task Page_MadeAgainWhileAnInstallWaitsForItsConfirmation_FetchesNothing()
+    {
+        var (harness, service) = await OpenRoverForAnInstallAsync();
+        using var _ = harness;
+        var viewModel = harness.ViewModel;
+        var row = viewModel.SelectedContent!;
+        await row.InstallCommand.ExecuteAsync(null);
+        Assert.True(row.IsConfirmingInstall);
+
+        viewModel.VehiclePreviewAutoFetchDelay = TimeSpan.Zero;
+        viewModel.LatestVersion = new VersionItem(viewModel, viewModel.LatestVersion!.Release);
+        await viewModel.WhenVehiclePreviewLoadedAsync();
+
+        Assert.Equal(VehiclePreviewState.Idle, viewModel.VehiclePreview!.State);
+        Assert.Empty(service.Loads);
+    }
+
+    [Fact]
+    public async Task Page_MadeAgainWhileTheNameModalAsksForAnInstall_FetchesNothing()
+    {
+        var (harness, service) = await OpenRoverForAnInstallAsync();
+        using var _ = harness;
+        var viewModel = harness.ViewModel;
+        var vehicles = harness.Services.Paths.GetInstanceVehiclesFolder(viewModel.ActiveInstance!.InstanceId);
+        Directory.CreateDirectory(Path.Combine(vehicles, "Example Rover"));
+        await viewModel.SelectedContent!.InstallCommand.ExecuteAsync(null);
+        Assert.True(viewModel.IsNameModalOpen);
+
+        viewModel.VehiclePreviewAutoFetchDelay = TimeSpan.Zero;
+        viewModel.LatestVersion = new VersionItem(viewModel, viewModel.LatestVersion!.Release);
+        await viewModel.WhenVehiclePreviewLoadedAsync();
+
+        Assert.Equal(VehiclePreviewState.Idle, viewModel.VehiclePreview!.State);
+        Assert.Empty(service.Loads);
+    }
+
+    [Fact]
+    public async Task Page_MadeAgainAfterTheInstallConfirmationWasCancelled_FetchesWithoutAClick()
+    {
+        var (harness, service) = await OpenRoverForAnInstallAsync();
+        using var _ = harness;
+        var viewModel = harness.ViewModel;
+        var row = viewModel.SelectedContent!;
+        await row.InstallCommand.ExecuteAsync(null);
+        row.CancelInstallCommand.Execute(null);
+
+        viewModel.VehiclePreviewAutoFetchDelay = TimeSpan.Zero;
+        viewModel.LatestVersion = new VersionItem(viewModel, viewModel.LatestVersion!.Release);
+        await viewModel.WhenVehiclePreviewLoadedAsync();
+
+        Assert.Equal([(true, false)], service.Loads);
+    }
+
+    /// <summary>
+    /// Opens the rover page over a service that needs the small vehicle file, with an active instance to install it
+    /// into and an auto fetch delay that outlasts the test, so only the test makes the page fetch on its own.
+    /// </summary>
+    private static async Task<(ViewModelHarness Harness, FakeVehiclePreview Service)> OpenRoverForAnInstallAsync()
+    {
+        var service = new FakeVehiclePreview { PlanState = VehiclePreviewPlanState.NeedsVehicleFile };
+        var harness = await VehicleHarnessAsync();
+        var viewModel = harness.ViewModel;
+        viewModel.VehiclePreviewServiceOf = _ => service;
+        viewModel.VehiclePreviewAutoFetchDelay = TimeSpan.FromMinutes(5);
+        var instance = (await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value)).Instance;
+        await harness.Services.Instances.SetActiveInstanceAsync(instance.InstanceId);
+        await viewModel.LoadAsync();
+        await OpenRoverPageAsync(viewModel);
+        return (harness, service);
     }
 
     /// <summary>

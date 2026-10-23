@@ -221,8 +221,8 @@ public partial class MainViewModel
     /// of the same release and target stays, so a page that is read again, such as after an index refresh, does not
     /// send a second download. Every fetch raises the public download count of the host (RFC 0052), so a new preview
     /// waits for a click after the player cancelled the same release or its fetch failed, and while an install of it
-    /// plans or runs, because that install downloads the archive itself. A preview that still waits out its delay then
-    /// makes way for one that waits for the click.
+    /// plans, waits for the player's confirmation or runs, because that install downloads the archive itself. A preview
+    /// that still waits out its delay then makes way for one that waits for the click.
     /// </summary>
     private void RefreshVehiclePreview()
     {
@@ -232,7 +232,7 @@ public partial class MainViewModel
         if (_services is { } services && CurrentWindowContent && SelectedContent is { Type: ContentType.Vehicle } && LatestVersion is { } latest)
         {
             var target = VehiclePreviewTarget;
-            var installing = _contentInstallReleases.Any(release => SameRelease(release, latest.Release));
+            var installing = _contentInstallReleases.Any(release => SameRelease(release, latest.Release)) || HoldsContentPlan(latest.Release);
             if (old is { IsBusy: true } && !(old.IsWaitingToFetch && installing) && SameRelease(old.Release, latest.Release) && TargetKey(target) == _vehiclePreviewTarget)
                 return;
 
@@ -292,6 +292,17 @@ public partial class MainViewModel
     }
 
     private void EndContentInstall(ModVersionMetadata release) => _contentInstallReleases.Remove(release);
+
+    /// <summary>
+    /// True when the page row or a version row of the open page holds a plan of the release that waits for the player's
+    /// confirmation, or when the name modal asks for a new name for an install of the listing. The check reads the rows
+    /// and the modal and not a mark, because the App drops a row with its waiting plan when it makes the rows again,
+    /// and a mark of that plan would then stay for the whole session.
+    /// </summary>
+    private bool HoldsContentPlan(ModVersionMetadata release) =>
+        NamingPackContent is { IsPackMember: false } naming && ModIds.Equals(naming.ContentId, release.ModId)
+        || _contentReleases.Prepend<IContentPlanRow?>(SelectedContent)
+            .Any(row => row?.PendingContentPlan is { } plan && SameRelease(plan.Release, release));
 
     /// <summary>True when both are the same release with the same archive, so a preview of one serves the other.</summary>
     private static bool SameRelease(ModVersionMetadata a, ModVersionMetadata b) =>
