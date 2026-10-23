@@ -18,18 +18,12 @@ public sealed class ContentIndexRootValidatorTests
 
     #region byte[] + HttpResponseMessage overload
 
-    [Fact]
-    public void ValidateIndexRoot_BytesOverload_ValidIndex_ReturnsTrue()
+    [Theory]
+    [InlineData("application/json")]
+    [InlineData("text/plain")]
+    public void ValidateIndexRoot_BytesOverload_AcceptedContentType_ReturnsTrue(string mediaType)
     {
-        var result = ContentIndexRootValidator.ValidateIndexRoot(Bytes(ValidIndexJson), JsonResponse(ValidIndexJson));
-
-        Assert.True(result);
-    }
-
-    [Fact]
-    public void ValidateIndexRoot_BytesOverload_PlainTextContentType_IsAccepted()
-    {
-        var result = ContentIndexRootValidator.ValidateIndexRoot(Bytes(ValidIndexJson), JsonResponse(ValidIndexJson, "text/plain"));
+        var result = ContentIndexRootValidator.ValidateIndexRoot(Bytes(ValidIndexJson), JsonResponse(ValidIndexJson, mediaType));
 
         Assert.True(result);
     }
@@ -52,17 +46,17 @@ public sealed class ContentIndexRootValidatorTests
             ContentIndexRootValidator.ValidateIndexRoot(Bytes(badJson), JsonResponse(badJson)));
     }
 
-    [Fact]
-    public void ValidateIndexRoot_BytesOverload_InvalidShape_WrapsInHttpRequestException()
+    [Theory]
+    [InlineData("""{ "snapshot_version": 1, "listings": [], "packs": [] }""", "game_versions")] // missing game_versions
+    [InlineData("""{ "snapshot_version": 1, "listings": [], "packs": [], "game_versions": {}, "sources": [] }""", "sources")]
+    public void ValidateIndexRoot_BytesOverload_InvalidShape_WrapsInHttpRequestException(string badShape, string named)
     {
         // A shape failure raises InvalidOperationException internally; the
         // bytes overload must convert it to HttpRequestException, not let it escape.
-        var badShape = """{ "snapshot_version": 1, "listings": [], "packs": [] }"""; // missing game_versions
-
         var exception = Assert.Throws<HttpRequestException>(() =>
             ContentIndexRootValidator.ValidateIndexRoot(Bytes(badShape), JsonResponse(badShape)));
 
-        Assert.Contains("game_versions", exception.Message);
+        Assert.Contains(named, exception.Message);
     }
 
     [Fact]
@@ -82,14 +76,6 @@ public sealed class ContentIndexRootValidatorTests
     #region string + path overload
 
     [Fact]
-    public void ValidateIndexRoot_StringOverload_ValidIndex_ReturnsTrue()
-    {
-        var result = ContentIndexRootValidator.ValidateIndexRoot(ValidIndexJson, "index.json");
-
-        Assert.True(result);
-    }
-
-    [Fact]
     public void ValidateIndexRoot_StringOverload_MalformedJson_ThrowsInvalidOperationException_NamingThePath()
     {
         var exception = Assert.Throws<InvalidOperationException>(() =>
@@ -98,18 +84,13 @@ public sealed class ContentIndexRootValidatorTests
         Assert.Contains("C:/some/index.json", exception.Message);
     }
 
-    [Fact]
-    public void ValidateIndexRoot_StringOverload_RootIsArray_ThrowsInvalidOperationException()
+    [Theory]
+    [InlineData("[]")]
+    [InlineData("42")]
+    public void ValidateIndexRoot_StringOverload_RootIsNotAnObject_ThrowsInvalidOperationException(string json)
     {
         Assert.Throws<InvalidOperationException>(() =>
-            ContentIndexRootValidator.ValidateIndexRoot("[]", "index.json"));
-    }
-
-    [Fact]
-    public void ValidateIndexRoot_StringOverload_RootIsScalar_ThrowsInvalidOperationException()
-    {
-        Assert.Throws<InvalidOperationException>(() =>
-            ContentIndexRootValidator.ValidateIndexRoot("42", "index.json"));
+            ContentIndexRootValidator.ValidateIndexRoot(json, "index.json"));
     }
 
     [Theory]
@@ -149,19 +130,11 @@ public sealed class ContentIndexRootValidatorTests
         Assert.DoesNotContain("sources", ValidIndexJson);
     }
 
-    [Fact]
-    public void ValidateIndexRoot_StringOverload_SourcesIsAnObject_IsAccepted()
+    [Theory]
+    [InlineData("""{ "snapshot_version": 1, "listings": [], "packs": [], "game_versions": {}, "sources": {} }""")]
+    [InlineData("""{ "snapshot_version": 1, "listings": [], "packs": [], "game_versions": {}, "sources": { "spacedock": {} } }""")]
+    public void ValidateIndexRoot_StringOverload_SourcesIsAnObject_IsAccepted(string json)
     {
-        var json = """{ "snapshot_version": 1, "listings": [], "packs": [], "game_versions": {}, "sources": {} }""";
-
-        Assert.True(ContentIndexRootValidator.ValidateIndexRoot(json, "index.json"));
-    }
-
-    [Fact]
-    public void ValidateIndexRoot_StringOverload_SourcesWithEntries_IsAccepted()
-    {
-        var json = """{ "snapshot_version": 1, "listings": [], "packs": [], "game_versions": {}, "sources": { "spacedock": {} } }""";
-
         Assert.True(ContentIndexRootValidator.ValidateIndexRoot(json, "index.json"));
     }
 
@@ -175,30 +148,6 @@ public sealed class ContentIndexRootValidatorTests
     {
         var exception = Assert.Throws<InvalidOperationException>(() =>
             ContentIndexRootValidator.ValidateIndexRoot(json, "index.json"));
-
-        Assert.Contains("sources", exception.Message);
-    }
-
-    [Fact]
-    public void ValidateIndexRoot_StringOverload_SourcesChecked_BeforeListingsAndPacks()
-    {
-        // A malformed 'sources' should be reported on its own terms, not
-        // masked by a coincidentally-also-broken listings/packs check.
-        var json = """{ "snapshot_version": 1, "sources": [], "listings": [], "packs": [], "game_versions": {} }""";
-
-        var exception = Assert.Throws<InvalidOperationException>(() =>
-            ContentIndexRootValidator.ValidateIndexRoot(json, "index.json"));
-
-        Assert.Contains("sources", exception.Message);
-    }
-
-    [Fact]
-    public void ValidateIndexRoot_BytesOverload_SourcesWrongShape_ThrowsHttpRequestException()
-    {
-        var json = """{ "snapshot_version": 1, "listings": [], "packs": [], "game_versions": {}, "sources": [] }""";
-
-        var exception = Assert.Throws<HttpRequestException>(() =>
-            ContentIndexRootValidator.ValidateIndexRoot(Bytes(json), JsonResponse(json)));
 
         Assert.Contains("sources", exception.Message);
     }
