@@ -16,9 +16,8 @@ public sealed class GamePatchNotesFileTests
     {
         var json = Encoding.UTF8.GetPreamble().Concat(Encoding.UTF8.GetBytes("""{ "build": "2026.9.10.5438", "fromRevision": 5402, "toRevision": 5438, "commits": [ { "rev": 5403, "lines": ["Fixed the Milky Way."] } ] }""")).ToArray();
 
-        var notes = GamePatchNotesFile.Parse(json);
+        var notes = GamePatchNotesFile.Parse(json)!;
 
-        Assert.NotNull(notes);
         Assert.Equal(5402, notes.FromRevision);
         Assert.Equal(5438, notes.Revision);
         Assert.Equal(["Fixed the Milky Way."], notes.Lines);

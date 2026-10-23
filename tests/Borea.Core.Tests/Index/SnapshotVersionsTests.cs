@@ -11,19 +11,13 @@ public sealed class SnapshotVersionsTests
     }
 
     [Theory]
-    [InlineData(0)]
-    [InlineData(1)]
-    public void IsAboveHighest_IsFalseAtOrBelowTheCeiling(int snapshotVersion)
+    [InlineData(0, false)]
+    [InlineData(1, false)]
+    [InlineData(2, true)]
+    [InlineData(999, true)]
+    [InlineData(int.MaxValue, true)]
+    public void IsAboveHighest_IsTrueOnlyAboveTheCeiling(int snapshotVersion, bool expected)
     {
-        Assert.False(SnapshotVersions.IsAboveHighest(snapshotVersion));
-    }
-
-    [Theory]
-    [InlineData(2)]
-    [InlineData(999)]
-    [InlineData(int.MaxValue)]
-    public void IsAboveHighest_IsTrueAboveTheCeiling(int snapshotVersion)
-    {
-        Assert.True(SnapshotVersions.IsAboveHighest(snapshotVersion));
+        Assert.Equal(expected, SnapshotVersions.IsAboveHighest(snapshotVersion));
     }
 }
