@@ -741,6 +741,18 @@
   <data name="LoaderUpdateGameRunning" xml:space="preserve">
     <value>Drop anchor on KSA first. The Borea can't refit the mod loader while the game be sailin'.</value>
   </data>
+  <data name="LoaderPinnedMissingFormat" xml:space="preserve">
+    <value>The {2} sea be nailed down to {0} {1}, but that one ain't aboard.</value>
+  </data>
+  <data name="LoaderPinnedIncompatibleFormat" xml:space="preserve">
+    <value>The {2} sea be nailed down to {0} {1}, which won't sail with KSA {3}.</value>
+  </data>
+  <data name="LoaderInstallActionFormat" xml:space="preserve">
+    <value>Haul {0} {1} aboard</value>
+  </data>
+  <data name="LoaderChangeAction" xml:space="preserve">
+    <value>Change the mod loader</value>
+  </data>
   <data name="GameBuildDownload" xml:space="preserve">
     <value>Haul it in</value>
   </data>
@@ -1115,6 +1127,9 @@
   </data>
   <data name="ToastLaunchArgumentsFailedFormat" xml:space="preserve">
     <value>Couldn't stow the orders fer settin' sail o' {0}</value>
+  </data>
+  <data name="ToastInstanceLoaderFailedFormat" xml:space="preserve">
+    <value>Couldn't bottle up the mod loader o' {0}</value>
   </data>
   <data name="ToastEnableFailedFormat" xml:space="preserve">
     <value>Couldn't bring {0} back from the island</value>
@@ -2379,6 +2394,45 @@
   <data name="InstanceLoaderIncompatibleFormat" xml:space="preserve">
     <value>{0}, not fit fer this KSA build</value>
   </data>
+  <data name="InstanceLoaderChange" xml:space="preserve">
+    <value>Swap</value>
+  </data>
+  <data name="InstanceLoaderInfo" xml:space="preserve">
+    <value>The mod loader hoists the game with the mods o' this crew. Automatic hoists the newest stowed version that fits the game an' the mods. A nailed-down version stays put till ye change it, even when a newer one fits.</value>
+  </data>
+  <data name="InstanceLoaderAutomaticFormat" xml:space="preserve">
+    <value>Automatic: {0}</value>
+  </data>
+  <data name="InstanceLoaderPinnedFormat" xml:space="preserve">
+    <value>Nailed down at {0}</value>
+  </data>
+  <data name="InstanceLoaderInstallFormat" xml:space="preserve">
+    <value>Haul aboard {0}</value>
+  </data>
+  <data name="InstanceLoaderModalHintFormat" xml:space="preserve">
+    <value>Pick which version o' the mod loader hoists {0}. Other crews keep their own say.</value>
+  </data>
+  <data name="InstanceLoaderAutomatic" xml:space="preserve">
+    <value>Automatic (the wise choice)</value>
+  </data>
+  <data name="InstanceLoaderAutomaticTargetFormat" xml:space="preserve">
+    <value>Hoists {0} {1}, the newest stowed version that fits the game an' the mods.</value>
+  </data>
+  <data name="InstanceLoaderAutomaticNotInstalledFormat" xml:space="preserve">
+    <value>{0} {1} fits the game an' the mods, but it ain't aboard. Borea hauls it aboard when ye bottle up.</value>
+  </data>
+  <data name="InstanceLoaderAutomaticNoneFormat" xml:space="preserve">
+    <value>No release o' {0} fits this game build an' the mods.</value>
+  </data>
+  <data name="InstanceLoaderPinChoice" xml:space="preserve">
+    <value>Always sail with this version</value>
+  </data>
+  <data name="InstanceLoaderSaveAndInstall" xml:space="preserve">
+    <value>Haul aboard an' bottle up</value>
+  </data>
+  <data name="InstanceLoaderMenu" xml:space="preserve">
+    <value>Mod loader</value>
+  </data>
   <data name="SetupLoaderInstalledUnknownVersion" xml:space="preserve">
     <value>Hauled aboard, version a dead man's tale</value>
   </data>
@@ -2681,6 +2735,12 @@
   </data>
   <data name="LaunchPlayAnyway" xml:space="preserve">
     <value>Sail anyway</value>
+  </data>
+  <data name="LaunchPinnedLoaderNotInstallableFormat" xml:space="preserve">
+    <value>This sea be nailed down to {0} {1}. That one ain't aboard, and the index don't offer it no more. Let the Borea pick the newest one that fits?</value>
+  </data>
+  <data name="LaunchUseAutomaticLoader" xml:space="preserve">
+    <value>Let the Borea pick</value>
   </data>
   <data name="LaunchSetUpGameFirstFormat" xml:space="preserve">
     <value>This sea be needin' {0}. Draw up the game treasure chest first.</value>
