@@ -248,8 +248,6 @@ public sealed partial class ListingEditor : ObservableObject
 
     public bool HasNotes => Notes.Count > 0;
 
-    public bool HasNoIssues => Errors.Count == 0 && Notes.Count == 0;
-
     [ObservableProperty]
     private string? _schemaText;
 
@@ -747,7 +745,6 @@ public sealed partial class ListingEditor : ObservableObject
         };
         OnPropertyChanged(nameof(HasErrors));
         OnPropertyChanged(nameof(HasNotes));
-        OnPropertyChanged(nameof(HasNoIssues));
         OnPropertyChanged(nameof(CanOpenPullRequest));
         RefreshOverview(issues);
         foreach (var row in DeclaredDependencies)
