@@ -7,6 +7,7 @@ using Avalonia.Input;
 using Avalonia.Media;
 using Avalonia.Threading;
 using Borea.App.Views.Preview;
+using Borea.Preview.Rendering;
 using Borea.Preview.Scene;
 
 namespace Borea.App.Tests.Views;
@@ -110,6 +111,34 @@ public sealed class VehiclePreviewViewTests
         Assert.Equal(1, result.FramesShown);
         Assert.Same(blue, result.ShownScene);
         Assert.True(result.Center.B > result.Center.R);
+    }
+
+    [Fact]
+    public async Task ATexturedCopyOfTheScene_KeepsThePoseAndTheShownFrame()
+    {
+        var textured = Box(new Vector3(0f, 0f, 1f));
+        var result = await HeadlessApp.RunAsync(async () =>
+        {
+            var (window, view) = Show(Box(new Vector3(1f, 0f, 0f)));
+            await IdleAsync(view, 1);
+            view.Focus();
+            window.KeyPressQwerty(PhysicalKey.ArrowRight, RawInputModifiers.None);
+            window.MouseWheel(Center, new Avalonia.Vector(0, 2));
+            await IdleAsync(view, 2);
+            var pose = (view.CameraYaw, view.CameraDistance);
+            var shown = view.FramesShown;
+
+            // the same box with another material has the same bounds, as the textured scene after the flat one has
+            view.Scene = textured;
+            var keptFrame = view.BitmapWidth is not null;
+            await IdleAsync(view, shown + 1);
+            return (Before: pose, After: (view.CameraYaw, view.CameraDistance), KeptFrame: keptFrame, view.ShownScene);
+        });
+
+        Assert.Equal(result.Before, result.After);
+        Assert.NotEqual(OrbitCamera.DefaultYaw, result.After.CameraYaw);
+        Assert.True(result.KeptFrame);
+        Assert.Same(textured, result.ShownScene);
     }
 
     [Fact]

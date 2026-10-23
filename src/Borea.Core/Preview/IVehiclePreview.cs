@@ -10,7 +10,8 @@ namespace Borea.Core.Preview;
 /// <remarks>
 /// <see cref="PrepareAsync"/> never uses the network, so the vehicle page can call it as soon as it opens.
 /// <see cref="LoadAsync"/> fetches the vehicle file or the missing mods only when the caller asks for it, which is
-/// after the player agreed. A call after <see cref="IDisposable.Dispose"/> throws <see cref="ObjectDisposedException"/>,
+/// after the player agreed. Both calls return to the caller at once and do their file reads and the part catalog
+/// build on the thread pool, so the UI thread can call them. A call after <see cref="IDisposable.Dispose"/> throws <see cref="ObjectDisposedException"/>,
 /// and the dispose also disposes every <see cref="VehiclePreviewResult"/> that is still open.
 /// </remarks>
 public interface IVehiclePreview : IDisposable
@@ -36,7 +37,7 @@ public interface IVehiclePreview : IDisposable
         CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Cleans up the preview cache once on a background task: old archives over the size limit and files of fetches
+    /// Cleans up the preview cache once on a background task: old archives and stills over the size limits and files of fetches
     /// that stopped. Only the App calls it, after its main window opens. A second call gives the same task.
     /// </summary>
     Task StartMaintenance();

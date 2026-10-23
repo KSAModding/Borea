@@ -341,6 +341,7 @@ internal sealed class ViewModelHarness : IDisposable
             ("StewardRoleChecked", viewModel.WhenStewardRoleCheckedAsync()),
             ("LinkRegistrationDone", viewModel.WhenLinkRegistrationDoneAsync()),
             ("TasksSaved", viewModel.Tasks.WhenSavedAsync()),
+            ("VehiclePreviewLoaded", viewModel.WhenVehiclePreviewLoadedAsync()),
         ];
 
         foreach (var item in work)

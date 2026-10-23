@@ -34,6 +34,10 @@ public sealed class VehiclePreviewView : Control
     public static readonly StyledProperty<IBrush?> BackgroundProperty =
         Border.BackgroundProperty.AddOwner<VehiclePreviewView>();
 
+    /// <summary>A count that a view model raises to ask for <see cref="ResetView"/>. Each change frames the scene again.</summary>
+    public static readonly StyledProperty<int> ResetCountProperty =
+        AvaloniaProperty.Register<VehiclePreviewView, int>(nameof(ResetCount));
+
     // The renderer clears to transparent and the Background brush shows through, so the bitmap uses straight alpha.
     private static readonly PreviewRenderOptions Options = new();
 
@@ -82,7 +86,15 @@ public sealed class VehiclePreviewView : Control
         set => SetValue(BackgroundProperty, value);
     }
 
+    public int ResetCount
+    {
+        get => GetValue(ResetCountProperty);
+        set => SetValue(ResetCountProperty, value);
+    }
+
     internal float CameraDistance => _camera.Distance;
+
+    internal float CameraYaw => _camera.Yaw;
 
     internal int FramesShown { get; private set; }
 
@@ -120,14 +132,31 @@ public sealed class VehiclePreviewView : Control
         base.OnPropertyChanged(change);
         if (change.Property == SceneProperty)
         {
+            var old = change.GetOldValue<PreviewScene?>();
+            var scene = change.GetNewValue<PreviewScene?>();
+
+            // The wheel zooms only a scene, so without one a page that scrolls around the view gets the wheel.
+            SmoothScroll.SetOwnsWheel(this, scene is not null);
             StartGeneration();
-            ReleaseBitmap();
             ReleaseRenderState();
-            _dragScales.Reset();
-            _orbitX = 0;
-            _orbitY = 0;
-            _zoomSteps = 0;
-            RequestRender(full: true);
+
+            // A scene with the same bounds is the same vehicle with other materials, such as the textured scene
+            // that follows the flat one. It keeps the pose of the player and the frame that shows until its own
+            // frame is ready, so the view does not jump back or flash.
+            if (old is null || scene is null || old.Bounds != scene.Bounds)
+            {
+                ReleaseBitmap();
+                _dragScales.Reset();
+                _orbitX = 0;
+                _orbitY = 0;
+                _zoomSteps = 0;
+            }
+
+            RequestRender(full: _dragFrom is null);
+        }
+        else if (change.Property == ResetCountProperty)
+        {
+            ResetView();
         }
     }
 
@@ -211,6 +240,9 @@ public sealed class VehiclePreviewView : Control
     protected override void OnPointerWheelChanged(PointerWheelEventArgs e)
     {
         base.OnPointerWheelChanged(e);
+        if (Scene is null)
+            return;
+
         _zoomSteps = Math.Clamp(_zoomSteps + (float)e.Delta.Y, MinZoomSteps, MaxZoomSteps);
         e.Handled = true;
         RequestRender(full: _dragFrom is null);

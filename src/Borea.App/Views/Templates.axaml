@@ -329,9 +329,12 @@
             <Border Classes="card" Padding="12">
                 <Grid ColumnDefinitions="100,16,*" MinHeight="100">
                     <Border Classes="thumbnail" Width="100" Height="100">
-                        <views:ListingImageView Image="{Binding Icon}" Background="{StaticResource Brush.Surface}">
-                            <Path Classes="icon size-32" Data="{StaticResource Icon.PuzzlePiece}" />
-                        </views:ListingImageView>
+                        <!-- a vehicle shows the still of its last complete preview, and every other row shows its icon -->
+                        <views:PreviewStillView StillPath="{Binding PreviewStillPath}" Background="{StaticResource Brush.Surface}">
+                            <views:ListingImageView Image="{Binding Icon}" Background="{StaticResource Brush.Surface}">
+                                <Path Classes="icon size-32" Data="{StaticResource Icon.PuzzlePiece}" />
+                            </views:ListingImageView>
+                        </views:PreviewStillView>
                     </Border>
                     <Grid Grid.Column="2" RowDefinitions="Auto,*,Auto,Auto">
                         <Grid ColumnDefinitions="*,16,Auto">

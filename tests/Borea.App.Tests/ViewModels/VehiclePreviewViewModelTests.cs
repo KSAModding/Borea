@@ -1,0 +1,545 @@
+using System.Collections.Concurrent;
+using System.Globalization;
+using System.Numerics;
+using System.Text.Json.Nodes;
+using Borea.App.Localization;
+using Borea.App.ViewModels;
+using Borea.Core.Instances;
+using Borea.Core.Mods;
+using Borea.Core.Preview;
+using Borea.Preview.Loading;
+using Borea.Preview.Rendering;
+using Borea.Preview.Scene;
+using Borea.Preview.Tests.Gltf;
+using Borea.Preview.Textures;
+using static Borea.App.Tests.ViewModels.UserContentViewModelTests;
+
+namespace Borea.App.Tests.ViewModels;
+
+/// <summary>The 3D preview of a vehicle page, over a fake preview service.</summary>
+public sealed class VehiclePreviewViewModelTests
+{
+    private static readonly LocalizationService Localization = new(CultureInfo.GetCultureInfo("en"));
+
+    private static readonly ModVersionMetadata Rover = new(
+        specVersion: 1,
+        modId: "ExampleRover",
+        version: ModVersion.Parse("1.1.0"),
+        releaseStatus: ReleaseStatus.Stable,
+        releaseDate: new DateTimeOffset(2026, 10, 1, 12, 0, 0, TimeSpan.Zero),
+        gameMin: "2026.10.19.5638",
+        gameMinRevision: 5638,
+        download: new DownloadInfo("https://example.invalid/rover.zip", new string('a', 64), 2_500_000, "application/zip"),
+        installSizeBytes: null,
+        dependencies: []);
+
+    [Fact]
+    public async Task CanBuildLocally_BuildsWithoutAClick_AndFetchesNothing()
+    {
+        var service = new FakeVehiclePreview();
+        using var preview = Start(service);
+        await preview.Loading;
+
+        Assert.Equal(VehiclePreviewState.Ready, preview.State);
+        Assert.NotNull(preview.Scene);
+        Assert.Equal([(false, false)], service.Loads);
+        Assert.False(preview.HasMissingMods);
+    }
+
+    [Fact]
+    public async Task NeedsVehicleFile_LoadsNothingBeforeTheClick_AndTheClickFetchesOnlyTheVehicle()
+    {
+        var service = new FakeVehiclePreview { PlanState = VehiclePreviewPlanState.NeedsVehicleFile };
+        using var preview = Start(service);
+        await preview.Loading;
+
+        Assert.Equal(VehiclePreviewState.Idle, preview.State);
+        Assert.Empty(service.Loads);
+        Assert.True(preview.ShowCommand.CanExecute(null));
+        Assert.Equal(Localization.FormatPreviewShowSize(MainViewModel.SizeText(2_500_000)), preview.ShowText);
+
+        await preview.ShowCommand.ExecuteAsync(null);
+
+        Assert.Equal([(true, false)], service.Loads);
+        Assert.Equal(VehiclePreviewState.Ready, preview.State);
+    }
+
+    [Fact]
+    public async Task AStageThatArrivesAfterTheLoad_DoesNotTakeThePanelBackFromReady()
+    {
+        // without a context the stage reports run at once, so the late report below reaches the view model now
+        SynchronizationContext.SetSynchronizationContext(null);
+        var service = new FakeVehiclePreview();
+        using var preview = Start(service);
+        await preview.Loading;
+        Assert.Equal(VehiclePreviewState.Ready, preview.State);
+
+        service.LastProgress!.Report(VehiclePreviewStage.ReadingParts);
+
+        Assert.Equal(VehiclePreviewState.Ready, preview.State);
+    }
+
+    [Fact]
+    public async Task NeedsMods_NamesEachModAndTheSummedSize_AndOnlyTheModClickFetchesMods()
+    {
+        var service = new FakeVehiclePreview
+        {
+            Missing =
+            [
+                new VehiclePreviewMissingMod("Wings", ModVersion.Parse("1.0.0"), 3, 40L * 1024 * 1024, true),
+                new VehiclePreviewMissingMod("Engines", ModVersion.Parse("2.0.0"), null, 150L * 1024 * 1024, true),
+            ],
+        };
+        using var preview = Start(service);
+        await preview.Loading;
+
+        Assert.Equal(VehiclePreviewState.NeedsMods, preview.State);
+        Assert.Equal([(false, false)], service.Loads);
+        Assert.Equal(Localization.FormatPreviewLoadPartsSize(MainViewModel.SizeText(190L * 1024 * 1024)), preview.FetchModsText);
+        Assert.Equal(
+            [Localization.FormatPreviewMissingModParts(3, "Wings 1.0.0"), Localization.FormatPreviewMissingMod("Engines 2.0.0")],
+            preview.MissingModLines.Select(line => line.Text));
+        Assert.Equal([null, Localization.FormatPreviewLargeMod("Engines 2.0.0", MainViewModel.SizeText(150L * 1024 * 1024))], preview.MissingModLines.Select(line => line.Warning));
+
+        await preview.FetchModsCommand.ExecuteAsync(null);
+
+        Assert.Equal([(false, false), (false, true)], service.Loads);
+    }
+
+    [Fact]
+    public async Task NeedsMods_WithAFetchableModOfUnknownSize_ShowsNoSizeOnLoadParts()
+    {
+        var service = new FakeVehiclePreview
+        {
+            Missing =
+            [
+                new VehiclePreviewMissingMod("Wings", null, null, 12_000_000, true),
+                new VehiclePreviewMissingMod("Engines", null, null, null, true),
+            ],
+        };
+        using var preview = Start(service);
+        await preview.Loading;
+
+        Assert.Equal(Localization.PreviewLoadParts, preview.FetchModsText);
+    }
+
+    [Fact]
+    public async Task NoGameFolder_OffersTheSettings()
+    {
+        var opened = 0;
+        var service = new FakeVehiclePreview { PlanState = VehiclePreviewPlanState.NoGameFolder };
+        using var preview = Start(service, () => opened++);
+        await preview.Loading;
+
+        Assert.Equal(VehiclePreviewState.NoGameFolder, preview.State);
+        Assert.True(preview.IsNoGameFolder);
+        Assert.Equal(Localization.PreviewNoGameFolder, preview.StatusText);
+        Assert.Empty(service.Loads);
+
+        preview.OpenSettingsCommand.Execute(null);
+        Assert.Equal(1, opened);
+    }
+
+    [Fact]
+    public async Task AServiceException_GivesFailed()
+    {
+        var service = new FakeVehiclePreview { PrepareFailure = new InvalidOperationException("The index is gone.") };
+        using var preview = Start(service);
+        await preview.Loading;
+
+        Assert.Equal(VehiclePreviewState.Failed, preview.State);
+        Assert.Equal(Localization.FormatPreviewFailed("The index is gone."), preview.StatusText);
+    }
+
+    [Fact]
+    public async Task Page_FollowsLatestVersion_CancelsTheOldPreview_AndDropsItsLateResult()
+    {
+        var held = new TaskCompletionSource<VehiclePreviewResult>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var service = new FakeVehiclePreview { HoldLoad = release => release.Version == ModVersion.Parse("1.1.0") ? held.Task : null };
+        using var harness = await VehicleHarnessAsync();
+        var viewModel = harness.ViewModel;
+        viewModel.VehiclePreviewServiceOf = _ => service;
+        await viewModel.EnsureDiscoverLoadedAsync();
+        viewModel.ShowDiscoverVehiclesCommand.Execute(null);
+        var rover = Assert.Single(viewModel.DiscoverItems);
+
+        // the page sets the item before its release is known, which prepares nothing
+        viewModel.SelectedContent = rover;
+        Assert.Null(viewModel.VehiclePreview);
+        Assert.Empty(service.Prepares);
+
+        await rover.OpenCommand.ExecuteAsync(null);
+        var first = viewModel.VehiclePreview!;
+        Assert.Equal(VehiclePreviewState.Building, first.State);
+
+        var older = (await harness.Services.UserContent.GetReleaseAsync("ExampleRover", ModVersion.Parse("1.0.0")))!;
+        viewModel.LatestVersion = new VersionItem(viewModel, older);
+        await viewModel.WhenVehiclePreviewLoadedAsync();
+
+        var late = new FakeAssets();
+        held.SetResult(service.Ready(late));
+        await first.Loading;
+
+        Assert.True(Assert.Single(service.LoadTokens, token => token.Release == Rover.Version).Token.IsCancellationRequested);
+        Assert.True(late.Disposed);
+        Assert.Null(first.Scene);
+        Assert.NotSame(first, viewModel.VehiclePreview);
+        Assert.Equal(["1.1.0", "1.0.0"], service.Prepares.Select(release => release.Version.ToString()));
+        Assert.Equal(VehiclePreviewState.Ready, viewModel.VehiclePreview!.State);
+
+        viewModel.SetMainWindowDiscover();
+        Assert.Null(viewModel.VehiclePreview);
+    }
+
+    [Fact]
+    public async Task NoGameFolder_ThenARebuildWithAGameFolder_BuildsOnTheNewService()
+    {
+        var noGame = new FakeVehiclePreview { PlanState = VehiclePreviewPlanState.NoGameFolder };
+        var withGame = new FakeVehiclePreview();
+        using var harness = await VehicleHarnessAsync();
+        var viewModel = harness.ViewModel;
+        var firstServices = harness.Services;
+        viewModel.VehiclePreviewServiceOf = services => ReferenceEquals(services, firstServices) ? noGame : withGame;
+        await OpenRoverAsync(viewModel);
+        Assert.Equal(VehiclePreviewState.NoGameFolder, viewModel.VehiclePreview!.State);
+
+        viewModel.SelectedReleaseChannel = viewModel.OptionFor(ReleaseChannel.Testing);
+        await viewModel.WhenReleaseChannelSavedAsync();
+        await viewModel.WhenVehiclePreviewLoadedAsync();
+
+        Assert.NotSame(firstServices, harness.Services);
+        Assert.Equal(VehiclePreviewState.Ready, viewModel.VehiclePreview!.State);
+        Assert.NotEmpty(withGame.Prepares);
+        Assert.Contains((false, false), withGame.Loads);
+        Assert.Empty(noGame.Loads);
+    }
+
+    [Fact]
+    public async Task AnInstallIntoTheTargetInstance_MakesThePreviewAgain_AndAReloadWithoutAChangeKeepsIt()
+    {
+        var service = new FakeVehiclePreview();
+        using var harness = await VehicleHarnessAsync();
+        var viewModel = harness.ViewModel;
+        viewModel.VehiclePreviewServiceOf = _ => service;
+        var instance = (await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value)).Instance;
+        await harness.Services.Instances.SetActiveInstanceAsync(instance.InstanceId);
+        await viewModel.LoadAsync();
+        await OpenRoverAsync(viewModel);
+        var first = viewModel.VehiclePreview!;
+
+        await viewModel.LoadAsync();
+        Assert.Same(first, viewModel.VehiclePreview);
+
+        var release = (await harness.Services.UserContent.GetReleaseAsync("ExampleRover", ModVersion.Parse("1.0.0")))!;
+        Assert.True((await harness.Services.UserContentInstaller.InstallAsync(instance.InstanceId, release, name: null)).IsDone);
+        await viewModel.LoadAsync();
+        await viewModel.WhenVehiclePreviewLoadedAsync();
+
+        Assert.NotSame(first, viewModel.VehiclePreview);
+        Assert.Null(first.Scene);
+        Assert.Equal([instance.InstanceId, instance.InstanceId], service.Targets);
+    }
+
+    [Fact]
+    public async Task AServiceException_LeavesThePageUsable()
+    {
+        var service = new FakeVehiclePreview { PrepareFailure = new IOException("The disk is gone.") };
+        using var harness = await VehicleHarnessAsync();
+        var viewModel = harness.ViewModel;
+        viewModel.VehiclePreviewServiceOf = _ => service;
+        await OpenRoverAsync(viewModel);
+
+        Assert.Equal(VehiclePreviewState.Failed, viewModel.VehiclePreview!.State);
+        await viewModel.ShowContentVersionsCommand.ExecuteAsync(null);
+        Assert.Equal(["1.1.0", "1.0.0"], viewModel.ContentVersions.Select(version => version.Version));
+    }
+
+    [Fact]
+    public async Task OnlyACompleteScene_StoresAStill_OncePerSceneKey()
+    {
+        var thumbnails = new FakeThumbnails();
+        var stored = new List<string>();
+        var box = new ResolvedPlaceholder(Matrix4x4.Identity, Vector3.One, "Wing", PlaceholderReason.UnknownPart, null);
+        var missing = new VehiclePreviewMissingMod("Wings", null, null, null, CanFetch: false);
+
+        foreach (var service in new[]
+        {
+            new FakeVehiclePreview { Vehicle = TriangleVehicle(box), Files = TriangleFiles },
+            new FakeVehiclePreview { Vehicle = TriangleVehicle(), Files = TriangleFiles, Missing = [missing] },
+            new FakeVehiclePreview(),
+        })
+        {
+            using var incomplete = Start(service, thumbnails: thumbnails, stillStored: stored.Add);
+            await incomplete.Loading;
+            Assert.NotNull(incomplete.Scene);
+        }
+
+        Assert.Empty(thumbnails.Stores);
+
+        for (var i = 0; i < 2; i++)
+        {
+            using var complete = Start(new FakeVehiclePreview { Vehicle = TriangleVehicle(), Files = TriangleFiles }, thumbnails: thumbnails, stillStored: stored.Add);
+            await complete.Loading;
+            Assert.Equal(VehiclePreviewState.Ready, complete.State);
+        }
+
+        var still = Assert.Single(thumbnails.Stores);
+        Assert.Equal((new string('a', 64), "2026.10.19.5638", "scene"), (still.Sha256, still.GameBuild, still.SceneKey));
+        Assert.Equal((VehiclePreviewViewModel.StillWidth, VehiclePreviewViewModel.StillHeight), (still.Width, still.Height));
+        Assert.True(still.CoveredPixels > 0);
+        Assert.Equal([new string('a', 64)], stored);
+    }
+
+    [Fact]
+    public async Task AStillWithAFailedTexture_IsPartial_UntilATexturedLoadReplacesIt()
+    {
+        var thumbnails = new FakeThumbnails();
+        var hull = new PreviewAssetRef("Core", "Hull.png");
+        var vehicle = TriangleVehicle() with
+        {
+            Materials = [new PreviewMaterialRef("Hull", hull, null, false)],
+            Draws = [new ResolvedDraw(0, 0, Matrix4x4.Identity, "Body", PreviewModelKind.Model)],
+        };
+        var withoutHull = new Dictionary<string, byte[]> { [TriangleFile.Path] = TriangleGlb(uvs: true) };
+        var withHull = new Dictionary<string, byte[]>(withoutHull) { [hull.Path] = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A] };
+
+        // The texture fails, then it loads, then it fails again, which must not replace the complete still.
+        foreach (var files in new[] { withoutHull, withHull, withoutHull })
+        {
+            using var preview = Start(new FakeVehiclePreview { Vehicle = vehicle, Files = files }, thumbnails: thumbnails, decoder: new FlatDecoder());
+            await preview.Loading;
+            Assert.Equal(VehiclePreviewState.Ready, preview.State);
+        }
+
+        Assert.Equal(["scene" + VehiclePreviewViewModel.PartialKeySuffix, "scene"], thumbnails.Stores.Select(still => still.SceneKey));
+    }
+
+    internal static async Task OpenRoverAsync(MainViewModel viewModel)
+    {
+        await viewModel.EnsureDiscoverLoadedAsync();
+        viewModel.ShowDiscoverVehiclesCommand.Execute(null);
+        await Assert.Single(viewModel.DiscoverItems).OpenCommand.ExecuteAsync(null);
+        await viewModel.WhenVehiclePreviewLoadedAsync();
+    }
+
+    private static VehiclePreviewViewModel Start(
+        FakeVehiclePreview service,
+        Action? openSettings = null,
+        FakeThumbnails? thumbnails = null,
+        Action<string>? stillStored = null,
+        IRgbaImageDecoder? decoder = null)
+    {
+        var preview = new VehiclePreviewViewModel(
+            service,
+            Rover,
+            null,
+            Localization,
+            openSettings ?? (() => { }),
+            new PreviewSceneBuilder(new PreviewTextureLoader(decoder)),
+            thumbnails: thumbnails,
+            encoder: thumbnails,
+            stillStored: stillStored);
+        preview.Start();
+        return preview;
+    }
+
+    private static readonly PreviewAssetRef TriangleFile = new("Core", "Triangle.glb");
+
+    private static readonly IReadOnlyDictionary<string, byte[]> TriangleFiles = new Dictionary<string, byte[]> { [TriangleFile.Path] = TriangleGlb() };
+
+    /// <summary>A vehicle of one triangle part, and the given boxes where parts did not resolve.</summary>
+    private static ResolvedVehicle TriangleVehicle(params ResolvedPlaceholder[] boxes) => new(
+        [new PreviewMeshRef(TriangleFile, 0, "Triangle")],
+        [],
+        [new ResolvedDraw(0, -1, Matrix4x4.Identity, "Body", PreviewModelKind.Model)],
+        boxes,
+        [],
+        1 + boxes.Length,
+        0);
+
+    /// <summary>
+    /// A GLB with one triangle and 16-bit indices, the smallest mesh that gives a scene a draw, and with UVs when
+    /// <paramref name="uvs"/> is true, so its material can load a texture.
+    /// </summary>
+    private static byte[] TriangleGlb(bool uvs = false)
+    {
+        byte[] bin =
+        [
+            .. GlbTestWriter.Floats(0, 0, 0, 1, 0, 0, 0, 1, 0),
+            .. GlbTestWriter.Indices(GlbTestWriter.UnsignedShortComponent, 0, 1, 2, 0),
+            .. uvs ? GlbTestWriter.Floats(0, 0, 1, 0, 0, 1) : [],
+        ];
+        var attributes = new JsonObject { ["POSITION"] = 0 };
+        var views = new JsonArray
+        {
+            new JsonObject { ["buffer"] = 0, ["byteOffset"] = 0, ["byteLength"] = 36 },
+            new JsonObject { ["buffer"] = 0, ["byteOffset"] = 36, ["byteLength"] = 6 },
+        };
+        var accessors = new JsonArray
+        {
+            new JsonObject
+            {
+                ["bufferView"] = 0, ["componentType"] = GlbTestWriter.FloatComponent, ["count"] = 3, ["type"] = "VEC3",
+                ["min"] = new JsonArray(0, 0, 0), ["max"] = new JsonArray(1, 1, 0),
+            },
+            new JsonObject { ["bufferView"] = 1, ["componentType"] = GlbTestWriter.UnsignedShortComponent, ["count"] = 3, ["type"] = "SCALAR" },
+        };
+        if (uvs)
+        {
+            // The UVs start after a padding index, because a float accessor must start on 4 bytes.
+            views.Add(new JsonObject { ["buffer"] = 0, ["byteOffset"] = 44, ["byteLength"] = 24 });
+            accessors.Add(new JsonObject { ["bufferView"] = 2, ["componentType"] = GlbTestWriter.FloatComponent, ["count"] = 3, ["type"] = "VEC2" });
+            attributes["TEXCOORD_0"] = 2;
+        }
+
+        var json = new JsonObject
+        {
+            ["asset"] = new JsonObject { ["version"] = "2.0" },
+            ["buffers"] = new JsonArray { new JsonObject { ["byteLength"] = bin.Length } },
+            ["bufferViews"] = views,
+            ["accessors"] = accessors,
+            ["meshes"] = new JsonArray
+            {
+                new JsonObject { ["primitives"] = new JsonArray { new JsonObject { ["attributes"] = attributes, ["indices"] = 1 } } },
+            },
+        };
+        return GlbTestWriter.Pack(json, bin);
+    }
+
+    /// <summary>Decodes any image to one gray pixel, so a texture loads without a real PNG decoder.</summary>
+    private sealed class FlatDecoder : IRgbaImageDecoder
+    {
+        public bool TryReadSize(Stream stream, out int width, out int height)
+        {
+            (width, height) = (1, 1);
+            return true;
+        }
+
+        public PreviewImage Decode(Stream stream, int width) => new(1, 1, [128, 128, 128, 255]);
+    }
+}
+
+/// <summary>
+/// Stills in memory, with the scene key of each, and an encoder that records the size and the covered pixels of the
+/// frame instead of a PNG.
+/// </summary>
+internal sealed class FakeThumbnails : IPreviewThumbnails, IPngEncoder
+{
+    private readonly ConcurrentDictionary<(string, string), string> _keys = new();
+    private readonly ConcurrentQueue<Still> _stores = new();
+    private (int Width, int Height, int Covered) _lastFrame;
+
+    public IReadOnlyList<Still> Stores => [.. _stores];
+
+    public string? TryGetPath(string? vehicleSha256, string? gameBuild) => null;
+
+    public bool NeedsUpdate(string? vehicleSha256, string? gameBuild, string? sceneKey) =>
+        vehicleSha256 is not null && gameBuild is not null && (!_keys.TryGetValue((vehicleSha256, gameBuild), out var key) || key != sceneKey);
+
+    public void Store(string vehicleSha256, string gameBuild, string sceneKey, byte[] pngBytes)
+    {
+        _keys[(vehicleSha256, gameBuild)] = sceneKey;
+        _stores.Enqueue(new Still(vehicleSha256, gameBuild, sceneKey, _lastFrame.Width, _lastFrame.Height, _lastFrame.Covered));
+    }
+
+    public byte[] Encode(FrameBuffer frame)
+    {
+        var covered = 0;
+        for (var i = 3; i < frame.Rgba.Length; i += 4)
+        {
+            if (frame.Rgba[i] != 0)
+                covered++;
+        }
+
+        _lastFrame = (frame.Width, frame.Height, covered);
+        return [1];
+    }
+
+    public sealed record Still(string Sha256, string GameBuild, string SceneKey, int Width, int Height, int CoveredPixels);
+}
+
+/// <summary>
+/// A preview service that answers from its settings and records each call. A load gives a ready result with an empty
+/// vehicle, so the scene builder runs for real without any file.
+/// </summary>
+internal sealed class FakeVehiclePreview : IVehiclePreview
+{
+    private readonly ConcurrentQueue<ModVersionMetadata> _prepares = new();
+    private readonly ConcurrentQueue<Guid?> _targets = new();
+    private readonly ConcurrentQueue<(bool FetchVehicle, bool FetchMods)> _loads = new();
+    private readonly ConcurrentQueue<(ModVersion Release, CancellationToken Token)> _loadTokens = new();
+
+    public VehiclePreviewPlanState PlanState { get; init; } = VehiclePreviewPlanState.CanBuildLocally;
+
+    public Exception? PrepareFailure { get; init; }
+
+    public IReadOnlyList<VehiclePreviewMissingMod> Missing { get; init; } = [];
+
+    /// <summary>The vehicle of a ready result, which has no part unless a test gives one.</summary>
+    public ResolvedVehicle Vehicle { get; init; } = new([], [], [], [], [], 0, 0);
+
+    /// <summary>The asset files of a ready result, by path.</summary>
+    public IReadOnlyDictionary<string, byte[]>? Files { get; init; }
+
+    /// <summary>Gives a task for a load of the release that the test completes itself, or null to answer at once.</summary>
+    public Func<ModVersionMetadata, Task<VehiclePreviewResult>?>? HoldLoad { get; init; }
+
+    public IReadOnlyList<ModVersionMetadata> Prepares => [.. _prepares];
+
+    public IReadOnlyList<Guid?> Targets => [.. _targets];
+
+    public IReadOnlyList<(bool FetchVehicle, bool FetchMods)> Loads => [.. _loads];
+
+    public IReadOnlyList<(ModVersion Release, CancellationToken Token)> LoadTokens => [.. _loadTokens];
+
+    /// <summary>The progress of the last load, so a test can report a stage after the load ended.</summary>
+    public IProgress<VehiclePreviewStage>? LastProgress { get; private set; }
+
+    public Task<VehiclePreviewPlan> PrepareAsync(ModVersionMetadata release, Guid? targetInstanceId, CancellationToken cancellationToken = default)
+    {
+        _prepares.Enqueue(release);
+        _targets.Enqueue(targetInstanceId);
+        return PrepareFailure is { } failure
+            ? Task.FromException<VehiclePreviewPlan>(failure)
+            : Task.FromResult(new VehiclePreviewPlan(PlanState, release, targetInstanceId, release.Download.SizeBytes, Missing, "2026.10.19.5638"));
+    }
+
+    public Task<VehiclePreviewResult> LoadAsync(VehiclePreviewPlan plan, bool fetchVehicle, bool fetchMods, IProgress<VehiclePreviewStage>? progress = null, CancellationToken cancellationToken = default)
+    {
+        _loads.Enqueue((fetchVehicle, fetchMods));
+        _loadTokens.Enqueue((plan.Release.Version, cancellationToken));
+        LastProgress = progress;
+        progress?.Report(VehiclePreviewStage.ReadingParts);
+        return HoldLoad?.Invoke(plan.Release) ?? Task.FromResult(Ready(new FakeAssets(Files), fetchMods ? [] : Missing));
+    }
+
+    public VehiclePreviewResult Ready(IPreviewAssetSource assets, IReadOnlyList<VehiclePreviewMissingMod>? missing = null) => new(
+        VehiclePreviewLoadState.Ready,
+        Vehicle,
+        assets,
+        missing ?? Missing,
+        [],
+        "scene",
+        new string('a', 64),
+        "2026.10.19.5638");
+
+    public Task StartMaintenance() => Task.CompletedTask;
+
+    public void Dispose()
+    {
+    }
+}
+
+/// <summary>An asset source over files in memory, or without files, that records its dispose.</summary>
+internal sealed class FakeAssets(IReadOnlyDictionary<string, byte[]>? files = null) : IPreviewAssetSource
+{
+    public bool Disposed { get; private set; }
+
+    public Stream? TryOpenRead(PreviewAssetRef asset) => files?.GetValueOrDefault(asset.Path) is { } bytes ? new MemoryStream(bytes, writable: false) : null;
+
+    public Stream? TryOpenHead(PreviewAssetRef asset) => TryOpenRead(asset);
+
+    public string GetCacheKey(PreviewAssetRef asset) => asset.ToString();
+
+    public void Dispose() => Disposed = true;
+}

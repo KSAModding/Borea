@@ -46,6 +46,7 @@ public sealed class VehiclePreview : IVehiclePreview
 
     private readonly PreviewSources _sources;
     private readonly PreviewArchiveCache _archives;
+    private readonly PreviewThumbnailCache? _thumbnails;
     private readonly IGamePathProvider _paths;
     private readonly IInstanceRepository _instances;
     private readonly IInstalledGameVersionProvider _gameVersion;
@@ -61,6 +62,7 @@ public sealed class VehiclePreview : IVehiclePreview
 
     /// <param name="offlineMods">The repository over the index snapshots on disk, which never fetches. The composition passes its OfflineMods.</param>
     /// <param name="downloader">Fetches an archive into the preview cache, only when a load is allowed to.</param>
+    /// <param name="thumbnails">The stills that <see cref="StartMaintenance"/> cleans up too, or null when there are none.</param>
     public VehiclePreview(
         IGamePathProvider paths,
         IInstallPlanner planner,
@@ -74,8 +76,10 @@ public sealed class VehiclePreview : IVehiclePreview
         IGamePlatform platform,
         IModDownloader downloader,
         IFreeSpaceProbe freeSpace,
-        IBoreaLog log)
+        IBoreaLog log,
+        PreviewThumbnailCache? thumbnails = null)
     {
+        _thumbnails = thumbnails;
         _paths = paths ?? throw new ArgumentNullException(nameof(paths));
         _instances = instances ?? throw new ArgumentNullException(nameof(instances));
         _archives = archives ?? throw new ArgumentNullException(nameof(archives));
@@ -93,6 +97,10 @@ public sealed class VehiclePreview : IVehiclePreview
     {
         CheckVehicle(release);
         ThrowIfDisposed();
+
+        // The awaits below often complete at once, so without this yield the file reads, the catalog build and the
+        // resolve would run on the thread of the caller, which is the UI thread of the vehicle page.
+        await Task.CompletedTask.ConfigureAwait(ConfigureAwaitOptions.ForceYielding);
 
         var gameBuild = GameBuild();
         VehiclePreviewPlan Plan(VehiclePreviewPlanState state, IReadOnlyList<VehiclePreviewMissingMod>? missing = null, string? message = null) =>
@@ -143,6 +151,9 @@ public sealed class VehiclePreview : IVehiclePreview
         var release = plan.Release;
         CheckVehicle(release);
         ThrowIfDisposed();
+
+        // The same yield as in PrepareAsync, because a load of a local vehicle can also complete every await at once.
+        await Task.CompletedTask.ConfigureAwait(ConfigureAwaitOptions.ForceYielding);
 
         var gameBuild = GameBuild();
         var sha256 = release.Download.Sha256?.Trim().ToLowerInvariant();
@@ -249,8 +260,12 @@ public sealed class VehiclePreview : IVehiclePreview
         {
             ObjectDisposedException.ThrowIf(_disposed, this);
 
-            // The sweep logs and never throws, so the task needs no error handling.
-            return _maintenance ??= Task.Run(_archives.Sweep);
+            // Both sweeps log and never throw, so the task needs no error handling.
+            return _maintenance ??= Task.Run(() =>
+            {
+                _archives.Sweep();
+                _thumbnails?.Sweep();
+            });
         }
     }
 
@@ -285,7 +300,7 @@ public sealed class VehiclePreview : IVehiclePreview
             ObjectDisposedException.ThrowIf(_disposed, this);
     }
 
-    private string? GameBuild() => _gameVersion.GetInstalledVersion() is { } installed ? installed.Version?.ToString() ?? installed.RawVersion : null;
+    private string? GameBuild() => PreviewGameBuild.Of(_gameVersion.GetInstalledVersion());
 
     private async Task<Instance?> TargetAsync(Guid? instanceId) =>
         instanceId is { } id ? await _instances.GetByIdAsync(id).ConfigureAwait(false) : null;
