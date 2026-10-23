@@ -10,7 +10,8 @@ namespace Borea.Preview.Loading;
 /// Turns a <see cref="ResolvedVehicle"/> into a <see cref="PreviewScene"/> in two stages. The geometry stage decodes
 /// the meshes and gives each material a flat color, so the player can turn the vehicle early, and the texture stage
 /// then adds the Diffuse and AoRoughMetal levels. Each mesh and each texture fails by itself: a mesh that cannot be
-/// read becomes a box, and a texture that cannot be read keeps the flat color. Each failure gives a notice.
+/// read becomes a box, and a texture that cannot be read keeps the flat color. Each failure gives a notice. An
+/// optional third stage, <see cref="AddNormalsAsync"/>, adds the Normal levels and gives no notice.
 /// </summary>
 /// <remarks>
 /// The notices of each stage are only those of the stage, so a caller shows them together with
@@ -62,7 +63,8 @@ public sealed class PreviewSceneBuilder
     /// must come from <see cref="BuildGeometryAsync"/> for the same <paramref name="vehicle"/>. When the textures at
     /// <see cref="PreviewLoadOptions.TextureTarget"/> could need more than <see cref="PreviewLoadOptions.MaxRgbaBytes"/>,
     /// the target drops to <see cref="PreviewLoadOptions.ReducedTextureTarget"/>, and the textures that still do not
-    /// fit keep the flat color. Diffuse textures come first, because they change the look most.
+    /// fit keep the flat color. Diffuse textures come first, because they change the look most. The Normal textures
+    /// do not load here, see <see cref="AddNormalsAsync"/>.
     /// </summary>
     /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was cancelled.</exception>
     /// <exception cref="ObjectDisposedException">The source was disposed, which the caller treats as a cancellation.</exception>
@@ -79,35 +81,7 @@ public sealed class PreviewSceneBuilder
         ArgumentNullException.ThrowIfNull(options);
         cancellationToken.ThrowIfCancellationRequested();
 
-        // A mesh without UVs cannot show a texture, so only the materials of textured meshes load one.
-        var used = new List<PreviewMaterial>();
-        var seen = new HashSet<PreviewMaterial>(ReferenceEqualityComparer.Instance);
-        foreach (var draw in scene.Draws)
-        {
-            if (draw.Mesh.Uvs is not null && (uint)draw.Material.SourceMaterial < (uint)vehicle.Materials.Count && seen.Add(draw.Material))
-            {
-                used.Add(draw.Material);
-            }
-        }
-
-        var textures = new List<PreviewAssetRef>();
-        var distinct = new HashSet<PreviewAssetRef>();
-        foreach (var material in used)
-        {
-            if (vehicle.Materials[material.SourceMaterial].Diffuse is { } diffuse && distinct.Add(diffuse))
-            {
-                textures.Add(diffuse);
-            }
-        }
-
-        foreach (var material in used)
-        {
-            if (vehicle.Materials[material.SourceMaterial].AoRoughMetal is { } aoRoughMetal && distinct.Add(aoRoughMetal))
-            {
-                textures.Add(aoRoughMetal);
-            }
-        }
-
+        var (used, textures) = ColorTextures(scene, vehicle);
         var notices = new List<PreviewNotice>();
         var (target, allowed) = FitTextureBudget(textures.Count, options, notices);
 
@@ -150,6 +124,135 @@ public sealed class PreviewSceneBuilder
             .Select(draw => textured.TryGetValue(draw.Material, out var material) ? draw with { Material = material } : draw)
             .ToArray();
         return (new PreviewScene(draws, scene.Placeholders), notices);
+    }
+
+    /// <summary>
+    /// Gives a copy of <paramref name="scene"/> whose materials also have their Normal levels, or the same scene when
+    /// no Normal texture loads. The scene must come from <see cref="AddTexturesAsync"/> with the same
+    /// <paramref name="vehicle"/> and <paramref name="options"/>, because the normals load at the target of that stage
+    /// and only into the room that its Diffuse and AoRoughMetal textures left in <see cref="PreviewLoadOptions.MaxRgbaBytes"/>.
+    /// A Normal path that is also a Diffuse or AoRoughMetal path is not loaded a second time.
+    /// </summary>
+    /// <remarks>
+    /// This is a stage of its own, because the Standard quality does not read a normal map. A caller runs it only for
+    /// a quality that reads one, after the textured scene shows and its still is stored, so the Standard quality keeps
+    /// the timing and the cancel window that it has without normal maps. A normal map only adds detail, so it never takes room from a Diffuse or
+    /// AoRoughMetal texture and never lowers the target. A Normal texture that fails keeps no image and gives no
+    /// notice, so the notices and the partial state that the caller derives from the texture stage stay those of the
+    /// Diffuse and AoRoughMetal textures. The texture loads as data, because the gamma curve belongs to the sampler of
+    /// the Diffuse texture and not to the loader. Most Normal textures of the game are BC5, but T_LightPack_2_Normal is
+    /// BC1 with an sRGB format. The preview decodes its bytes as they are stored, and how the game reads it through an
+    /// sRGB view is not verified in the decompiled source.
+    /// </remarks>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> was cancelled.</exception>
+    /// <exception cref="ObjectDisposedException">The source was disposed, which the caller treats as a cancellation.</exception>
+    public async Task<PreviewScene> AddNormalsAsync(
+        PreviewScene scene,
+        ResolvedVehicle vehicle,
+        IPreviewAssetSource source,
+        PreviewLoadOptions options,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(scene);
+        ArgumentNullException.ThrowIfNull(vehicle);
+        ArgumentNullException.ThrowIfNull(source);
+        ArgumentNullException.ThrowIfNull(options);
+        cancellationToken.ThrowIfCancellationRequested();
+
+        // The target and the color textures are computed again as the texture stage computed them. That stage already
+        // gave the budget notice, so the copy here is dropped.
+        var (used, colorTextures) = ColorTextures(scene, vehicle);
+        var (target, _) = FitTextureBudget(colorTextures.Count, options, []);
+        var color = new HashSet<PreviewAssetRef>(colorTextures);
+        var room = Math.Max(0L, (options.MaxRgbaBytes / LevelBytes(target)) - colorTextures.Count);
+        var normals = new List<PreviewAssetRef>();
+        foreach (var material in used)
+        {
+            if (normals.Count >= room)
+            {
+                break;
+            }
+
+            if (vehicle.Materials[material.SourceMaterial].Normal is { } normal && !color.Contains(normal) && !normals.Contains(normal))
+            {
+                normals.Add(normal);
+            }
+        }
+
+        var loads = new Task<(PreviewImage? Image, PreviewNotice? Notice)>[normals.Count];
+        for (var i = 0; i < loads.Length; i++)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            loads[i] = _textures.LoadAsync(source, normals[i], target, cancellationToken);
+        }
+
+        var results = await Task.WhenAll(loads).ConfigureAwait(false);
+        cancellationToken.ThrowIfCancellationRequested();
+        var images = new Dictionary<PreviewAssetRef, PreviewImage>();
+        for (var i = 0; i < results.Length; i++)
+        {
+            if (results[i].Image is { } image)
+            {
+                images[normals[i]] = image;
+            }
+        }
+
+        if (images.Count == 0)
+        {
+            return scene;
+        }
+
+        var mapped = new Dictionary<PreviewMaterial, PreviewMaterial>(ReferenceEqualityComparer.Instance);
+        foreach (var material in used)
+        {
+            if (vehicle.Materials[material.SourceMaterial].Normal is { } normal && images.TryGetValue(normal, out var image))
+            {
+                mapped[material] = material with { Normal = image };
+            }
+        }
+
+        var draws = scene.Draws
+            .Select(draw => mapped.TryGetValue(draw.Material, out var material) ? draw with { Material = material } : draw)
+            .ToArray();
+        return new PreviewScene(draws, scene.Placeholders);
+    }
+
+    /// <summary>
+    /// The materials of <paramref name="scene"/> that can show a texture, in draw order, and their distinct Diffuse
+    /// paths followed by their distinct AoRoughMetal paths.
+    /// </summary>
+    private static (List<PreviewMaterial> Used, List<PreviewAssetRef> Textures) ColorTextures(PreviewScene scene, ResolvedVehicle vehicle)
+    {
+        // A mesh without UVs cannot show a texture, so only the materials of textured meshes load one.
+        var used = new List<PreviewMaterial>();
+        var seen = new HashSet<PreviewMaterial>(ReferenceEqualityComparer.Instance);
+        foreach (var draw in scene.Draws)
+        {
+            if (draw.Mesh.Uvs is not null && (uint)draw.Material.SourceMaterial < (uint)vehicle.Materials.Count && seen.Add(draw.Material))
+            {
+                used.Add(draw.Material);
+            }
+        }
+
+        var textures = new List<PreviewAssetRef>();
+        var distinct = new HashSet<PreviewAssetRef>();
+        foreach (var material in used)
+        {
+            if (vehicle.Materials[material.SourceMaterial].Diffuse is { } diffuse && distinct.Add(diffuse))
+            {
+                textures.Add(diffuse);
+            }
+        }
+
+        foreach (var material in used)
+        {
+            if (vehicle.Materials[material.SourceMaterial].AoRoughMetal is { } aoRoughMetal && distinct.Add(aoRoughMetal))
+            {
+                textures.Add(aoRoughMetal);
+            }
+        }
+
+        return (used, textures);
     }
 
     /// <summary>
@@ -486,12 +589,14 @@ public sealed class PreviewSceneBuilder
             $"The models need {sceneTotal} bytes of mesh data and the budget is {maxBytes}, so the {dropped.Count} largest meshes show as boxes."));
     }
 
+    /// <summary>
+    /// The bytes that the budget counts for one texture, those of the largest level that the target allows, a square
+    /// one, so the decoded bytes can only be smaller than this estimate.
+    /// </summary>
+    private static long LevelBytes(int target) => 4L * target * target;
+
     private static (int Target, int Allowed) FitTextureBudget(int count, PreviewLoadOptions options, List<PreviewNotice> notices)
     {
-        // The budget counts the largest level that the target allows, a square one, so the decoded bytes can only be
-        // smaller than this estimate.
-        static long LevelBytes(int target) => 4L * target * target;
-
         var target = options.TextureTarget;
         if (count * LevelBytes(target) <= options.MaxRgbaBytes)
         {

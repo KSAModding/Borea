@@ -5,12 +5,13 @@ using Borea.Preview.Scene;
 namespace Borea.Preview.Rendering;
 
 /// <summary>
-/// Draws a <see cref="PreviewScene"/> into a <see cref="FrameBuffer"/> on the CPU. The shading is a simple
-/// form of the game shader ThumbnailMesh.frag: a linear diffuse from the texture or the base color, a
-/// Lambert sun with a Blinn-Phong highlight from roughness and metalness, an ambient that the ambient
-/// occlusion scales, a Reinhard tone map and an sRGB output. There are no normal maps and no emissive.
-/// The frame is the same byte for byte for any worker count, because each pixel row belongs to exactly one
-/// band and every band fills its triangles in scene order with math that does not depend on the band.
+/// Draws a <see cref="PreviewScene"/> into a <see cref="FrameBuffer"/> on the CPU. The shading is the PBR model
+/// of the game shaders (see <see cref="Light"/>): a linear diffuse from the texture or the base color, a GGX sun
+/// from roughness and metalness, a sky and ground ambient that the ambient occlusion scales, a Reinhard tone map
+/// and an sRGB output. There is no emissive. Both qualities use this light, and <see cref="RenderQuality.High"/>
+/// only adds the normal maps, so a frame at rest gets the fine relief but keeps the brightness and the highlights
+/// of a drag frame. The frame is the same byte for byte for any worker count, because each pixel row belongs to
+/// exactly one band and every band fills its triangles in scene order with math that does not depend on the band.
 /// One instance keeps the vertices of each draw in the vehicle frame while the scene stays the same, and it
 /// keeps its triangle, band and scratch buffers from frame to frame up to <see cref="RenderOptions.WorkBufferBytes"/>,
 /// so a frame that only moves the camera transforms no cached vertex again and, below that cap, allocates
@@ -53,10 +54,13 @@ public sealed class SoftwareRenderer
     /// </summary>
     private const float MinAlpha = 0.045f;
 
-    private const float MaxSpecularPower = 1024f;
-
     /// <summary>The steps of the linear to sRGB table, fine enough that a step is below 0.25 of one byte also near black.</summary>
     private const int SrgbTableSteps = 16384;
+
+    // The linear ambient light from vehicle +X, which is up, and from vehicle -X, which is down. The game takes its
+    // ambient from runtime data, so these two colors are Borea's choice.
+    private static readonly Vector3 SkyColor = new(0.27f, 0.28f, 0.31f);
+    private static readonly Vector3 GroundColor = new(0.15f, 0.14f, 0.13f);
 
     /// <summary>The linear color of every placeholder, an orange that no stock part has.</summary>
     private static readonly Vector3 PlaceholderColor = new(1f, 0.42f, 0f);
@@ -150,7 +154,8 @@ public sealed class SoftwareRenderer
 
         var view = camera.View;
         var projection = camera.Projection((float)target.Width / target.Height);
-        var frame = new FrameSetup(view, view * projection, target.Width, target.Height, options);
+        var frame = new FrameSetup(view, view * projection, projection, target.Width, target.Height, options);
+        var normalMaps = frame.Quality == RenderQuality.High;
         FrustumPlanes(frame.ViewProjection, _planes);
 
         // The pixels that one meter covers at a depth of one meter, for the test of draws below one pixel.
@@ -165,7 +170,7 @@ public sealed class SoftwareRenderer
             var draw = scene.Draws[i];
             if (IsVisible(draw.Mesh, draw.Transform, _planes, view, pixelsPerMeter))
             {
-                _jobs[jobCount++] = new DrawJob(draw.Mesh, draw.Transform, Surface.From(draw.Material, draw.Mesh.Uvs is not null), 255, _states[i]);
+                _jobs[jobCount++] = new DrawJob(draw.Mesh, draw.Transform, Surface.From(draw.Material, draw.Mesh.Uvs is not null, normalMaps), 255, _states[i]);
                 drawsVisited++;
             }
         }
@@ -178,7 +183,7 @@ public sealed class SoftwareRenderer
             var model = Matrix4x4.CreateScale(size) * placeholder.Transform;
             if (IsVisible(UnitBox, model, _planes, view, 0f))
             {
-                var surface = new Surface(PlaceholderColor, Vector3.One, null, null);
+                var surface = new Surface(PlaceholderColor, Vector3.One, null, null, null);
                 _jobs[jobCount++] = new DrawJob(UnitBox, model, surface, PlaceholderAlpha, _states[scene.Draws.Count + i]);
                 placeholdersVisited++;
             }
@@ -817,46 +822,121 @@ public sealed class SoftwareRenderer
         return true;
     }
 
-    /// <summary>The one color of a translucent placeholder triangle, lit with the mean normal of its corners.</summary>
+    /// <summary>
+    /// The one color of a translucent placeholder triangle, lit as a rough paint with the mean normal of its
+    /// corners and the view direction toward their mean point.
+    /// </summary>
     private static Rgba8 ShadeFlat(ReadOnlySpan<Corner> corners, DrawJob job, FrameSetup frame)
     {
-        var sum = Vector3.Zero;
+        var normal = Vector3.Zero;
+        var center = Vector3.Zero;
         foreach (var corner in corners)
         {
-            sum += corner.Normal;
+            normal += corner.Normal;
+            center += CameraPoint(in corner, frame);
         }
 
-        var linear = Light(job.Surface.BaseColor, 1f, 1f, 0f, Normalized(sum), frame);
+        var toEye = Normalized(-center) is var eye && eye != Vector3.Zero ? eye : Vector3.UnitZ;
+        var linear = Light(job.Surface.BaseColor, 1f, 1f, 0f, Normalized(normal), toEye, frame);
         return Encode(linear, frame, job.Alpha);
     }
 
     /// <summary>
-    /// The linear color of a surface point. It follows ThumbnailMesh.frag in a simple form: F0 is 0.04 mixed
-    /// toward the albedo by the metalness, the sun gives a Lambert term on the part of the albedo that is not
-    /// metal plus a normalized Blinn-Phong highlight, and the ambient is the albedo times the ambient
-    /// occlusion. The viewer is taken to be along +Z in camera space, so the half vector is one value for
-    /// the whole frame.
+    /// A projected corner back in camera space, where the camera looks along -Z, so w is the depth -z and the clip
+    /// x and y are the camera x and y times the projection scales.
     /// </summary>
-    private static Vector3 Light(Vector3 albedo, float ambientOcclusion, float roughness, float metalness, Vector3 normal, FrameSetup frame)
+    private static Vector3 CameraPoint(in Corner corner, FrameSetup frame)
     {
-        var color = frame.Ambient * ambientOcclusion * albedo;
-        var nDotL = Vector3.Dot(normal, frame.Sun);
+        var w = 1f / corner.InverseW;
+        var ndcX = 2f * corner.X / (frame.Width * SubPixel) - 1f;
+        var ndcY = 1f - 2f * corner.Y / (frame.Height * SubPixel);
+        return new Vector3(ndcX * w / frame.ProjectionX, ndcY * w / frame.ProjectionY, -w);
+    }
+
+    /// <summary>
+    /// The linear color of a surface point, with <paramref name="toEye"/> the unit vector from the point toward
+    /// the eye. The sun is getPBRLightingDirect of the game shader Common/Lighting.glsl, a Cook-Torrance term
+    /// with D_GGX, G_SchlicksmithGGX and F_Schlick, and the ambient has the form of getPBRLightingAmbient there,
+    /// with F_SchlickR at the view angle, a diffuse ambient along the normal and a reflection along
+    /// reflect(-V, N) that the roughness mixes toward the diffuse ambient. The ambient occlusion scales all of
+    /// the ambient and none of the sun, as in that function and in ThumbnailMesh.frag.
+    /// </summary>
+    /// <remarks>
+    /// The light that the game puts into that form is runtime and GPU data, because GetAmbient and
+    /// GetSkyColorFromLuts read the atmosphere LUTs of the current planet, the stars come from a prefiltered
+    /// cubemap, and the split sum comes from the Brdf.dds texture (GlobalShaderBindings sets BrdfHandle from the
+    /// "Brdf" texture). So the sky and ground colors of the hemisphere are Borea's choice, and the Karis
+    /// EnvBRDFApprox fit takes the place of Brdf.dds. The hemisphere mixes <see cref="GroundColor"/> into <see cref="SkyColor"/>
+    /// by 0.5 + 0.5 * dot(dir, up), where getPBRLightingAmbient only darkens the ambient by 0.5 + 0.5 *
+    /// saturate(dot(N, up)), so the bottom of a vehicle gets the ground color. The constants of the thumbnail
+    /// pass are not copied either. Its flat ambient of 0.03 in ThumbnailMesh.frag and the sun that
+    /// Program.UpdateShaderData sets from Universe.SunlightColor go with the tone map and the exposure of the
+    /// game, and with the Reinhard tone map and the exposure here they clip lit paint. D_GGX uses roughness
+    /// squared as its alpha, and the floor <see cref="MinAlpha"/> is Borea's, because a fully smooth surface
+    /// would otherwise divide by zero.
+    /// </remarks>
+    private static Vector3 Light(Vector3 albedo, float ambientOcclusion, float roughness, float metalness, Vector3 normal, Vector3 toEye, FrameSetup frame)
+    {
+        var f0 = Vector3.Lerp(new Vector3(DielectricF0), albedo, metalness);
+        var nDotV = Math.Clamp(Vector3.Dot(normal, toEye), 0f, 1f);
+
+        // F_SchlickR and the ambient of getPBRLightingAmbient.
+        var grazing = Pow5(1f - nDotV);
+        var fresnelAmbient = f0 + (Vector3.Max(new Vector3(1f - roughness), f0) - f0) * grazing;
+        var diffuseAmbient = Hemisphere(normal, frame);
+        var reflected = 2f * Vector3.Dot(normal, toEye) * normal - toEye;
+        var prefiltered = Vector3.Lerp(Hemisphere(reflected, frame), diffuseAmbient, roughness);
+        var (scale, bias) = EnvBrdfApprox(nDotV, roughness);
+        var color = ((Vector3.One - fresnelAmbient) * (1f - metalness) * diffuseAmbient * albedo + prefiltered * (fresnelAmbient * scale + new Vector3(bias))) * ambientOcclusion;
+
+        var nDotL = Math.Clamp(Vector3.Dot(normal, frame.Sun), 0f, 1f);
         if (nDotL > 0f)
         {
-            var f0 = Vector3.Lerp(new Vector3(DielectricF0), albedo, metalness);
+            // getPBRLightingDirect.
+            var half = Normalized(toEye + frame.Sun);
+            var nDotH = Math.Clamp(Vector3.Dot(normal, half), 0f, 1f);
+            var hDotV = Math.Clamp(Vector3.Dot(half, toEye), 0f, 1f);
 
-            // The Blinn-Phong power that matches a GGX alpha of roughness squared. The factor is the
-            // normalized Blinn-Phong distribution (n + 2) / (2 pi) over the microfacet 4, times the pi that
-            // the Lambert term also leaves out, so the highlight keeps about the same energy for every roughness.
             var alpha = MathF.Max(roughness * roughness, MinAlpha);
-            var power = Math.Clamp(2f / (alpha * alpha) - 2f, 1f, MaxSpecularPower);
-            var nDotH = MathF.Max(0f, Vector3.Dot(normal, frame.Half));
-            var specular = (power + 2f) / 8f * MathF.Pow(nDotH, power);
+            var alpha2 = alpha * alpha;
+            var denominator = nDotH * nDotH * (alpha2 - 1f) + 1f;
+            var distribution = alpha2 / (MathF.PI * denominator * denominator);
 
-            color += frame.SunIntensity * nDotL * (albedo * (1f - metalness) + f0 * specular);
+            var r = roughness + 1f;
+            var k = r * r / 8f;
+            var geometry = nDotL / (nDotL * (1f - k) + k) * (nDotV / (nDotV * (1f - k) + k));
+
+            var fresnel = f0 + (Vector3.One - f0) * Pow5(1f - hDotV);
+            var specular = fresnel * (distribution * geometry / (4f * nDotL * nDotV + 0.001f));
+            var diffuse = (Vector3.One - fresnel) * (1f - metalness) * albedo / MathF.PI;
+            color += (diffuse + specular) * (nDotL * frame.SunLight);
         }
 
         return color;
+    }
+
+    /// <summary>The ambient light from <paramref name="direction"/>, the ground color below and the sky color above.</summary>
+    private static Vector3 Hemisphere(Vector3 direction, FrameSetup frame) =>
+        Vector3.Lerp(GroundColor, SkyColor, Math.Clamp(0.5f + 0.5f * Vector3.Dot(direction, frame.Up), 0f, 1f));
+
+    /// <summary>
+    /// The split sum scale and bias of the Karis EnvBRDFApprox fit, which stands in for the Brdf.dds lookup of
+    /// getPBRLightingAmbient at the same coordinates, the view angle and the roughness.
+    /// </summary>
+    private static (float Scale, float Bias) EnvBrdfApprox(float nDotV, float roughness)
+    {
+        var r0 = roughness * -1f + 1f;
+        var r1 = roughness * -0.0275f + 0.0425f;
+        var r2 = roughness * -0.572f + 1.04f;
+        var r3 = roughness * 0.022f - 0.04f;
+        var a004 = MathF.Min(r0 * r0, float.Exp2(-9.28f * nDotV)) * r0 + r1;
+        return (-1.04f * a004 + r2, 1.04f * a004 + r3);
+    }
+
+    private static float Pow5(float value)
+    {
+        var square = value * value;
+        return square * square * value;
     }
 
     /// <summary>
@@ -1115,8 +1195,18 @@ public sealed class SoftwareRenderer
         }
     }
 
+    /// <summary>
+    /// Shades the visible pixels of one band. The quality is chosen once for the band, so the Standard loop
+    /// has no normal map work in it.
+    /// </summary>
     private static void ShadeBand(int top, int bottom, Span<int> nearest, TriangleRef[] items, DrawJob[] jobs, FrameSetup frame, FrameBuffer target)
     {
+        if (frame.Quality == RenderQuality.High)
+        {
+            ShadeBandHigh(top, bottom, nearest, items, jobs, frame, target);
+            return;
+        }
+
         var width = target.Width;
         for (var y = top; y <= bottom; y++)
         {
@@ -1127,18 +1217,90 @@ public sealed class SoftwareRenderer
                 if (item >= 0)
                 {
                     ref readonly var t = ref Triangle(items, jobs, item);
-                    Write(target.Rgba, y * width + x, ShadePixel(in t, jobs[t.Job], x, y, frame));
+                    ref readonly var job = ref jobs[t.Job];
+                    Write(target.Rgba, y * width + x, ShadePixel(in t, in job, x, y, frame));
                 }
             }
         }
     }
 
     /// <summary>
-    /// The color of one pixel of an opaque triangle. The edge values at the pixel center are the screen
-    /// weights of the corners, and dividing each by its w gives the weights in the plane of the triangle,
-    /// which makes the UV and the normal correct under perspective.
+    /// The High form of <see cref="ShadeBand"/>. Neighboring pixels mostly belong to the same triangle, so
+    /// the surface axes of the last triangle are kept and only built again when the triangle changes.
     /// </summary>
-    private static Rgba8 ShadePixel(in ScreenTriangle t, DrawJob job, int x, int y, FrameSetup frame)
+    private static void ShadeBandHigh(int top, int bottom, Span<int> nearest, TriangleRef[] items, DrawJob[] jobs, FrameSetup frame, FrameBuffer target)
+    {
+        var width = target.Width;
+        var lastItem = -1;
+        var axes = default(SurfaceAxes);
+        for (var y = top; y <= bottom; y++)
+        {
+            var local = (y - top) * width;
+            for (var x = 0; x < width; x++, local++)
+            {
+                var item = nearest[local];
+                if (item >= 0)
+                {
+                    ref readonly var t = ref Triangle(items, jobs, item);
+                    ref readonly var job = ref jobs[t.Job];
+                    if (item != lastItem)
+                    {
+                        lastItem = item;
+                        axes = job.Surface.Normal is null ? default : SurfaceAxes.Of(in t, frame);
+                    }
+
+                    Write(target.Rgba, y * width + x, ShadePixelHigh(in t, in job, in axes, x, y, frame));
+                }
+            }
+        }
+    }
+
+    /// <summary>The color of one pixel of an opaque triangle, without a normal map.</summary>
+    private static Rgba8 ShadePixel(in ScreenTriangle t, in DrawJob job, int x, int y, FrameSetup frame)
+    {
+        var (uv, normal) = Interpolate(in t, x, y);
+        return ShadeSurface(job.Surface, uv, normal, x, y, frame);
+    }
+
+    /// <summary>
+    /// The color of one pixel of an opaque triangle at the High quality. A normal map bends the normal as
+    /// getNormalFromMap_ShaderX in the game shader Common/SharedFrag.glsl does: it takes x and y from the red and
+    /// green channels, rebuilds z, and turns them with the frame of cotangent_frame, whose tangent and bitangent are
+    /// the in-plane axes of the triangle crossed with the interpolated normal of the pixel. The net mapping is red
+    /// along +grad(u) and green along -grad(v), which is image up, for the reason that <see cref="SurfaceAxes"/>
+    /// gives. The plain normal stays when the surface has no normal map or the UVs of the triangle give no
+    /// direction, and the pixel is then the same as in <see cref="ShadePixel"/>.
+    /// </summary>
+    private static Rgba8 ShadePixelHigh(in ScreenTriangle t, in DrawJob job, in SurfaceAxes axes, int x, int y, FrameSetup frame)
+    {
+        var (uv, normal) = Interpolate(in t, x, y);
+        if (job.Surface.Normal is { } normalMap)
+        {
+            // The scale-invariant frame of cotangent_frame, which divides both axes by the longer one.
+            var tangent = Vector3.Cross(normal, axes.U);
+            var bitangent = Vector3.Cross(normal, axes.V);
+            var scale = 1f / MathF.Sqrt(MathF.Max(tangent.LengthSquared(), bitangent.LengthSquared()));
+            if (float.IsFinite(scale))
+            {
+                var map = TextureSampler.SampleNormal(normalMap, uv.X, uv.Y);
+                var mapped = Normalized(map.X * scale * tangent - map.Y * scale * bitangent + map.Z * normal);
+                if (mapped != Vector3.Zero)
+                {
+                    normal = mapped;
+                }
+            }
+        }
+
+        return ShadeSurface(job.Surface, uv, normal, x, y, frame);
+    }
+
+    /// <summary>
+    /// The UV and the unit normal of a triangle at the center of pixel x, y. The edge values at the pixel center
+    /// are the screen weights of the corners, and dividing each by its w gives the weights in the plane of the
+    /// triangle, which makes the UV and the normal correct under perspective.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static (Vector2 Uv, Vector3 Normal) Interpolate(in ScreenTriangle t, int x, int y)
     {
         var px = (long)x * SubPixel + HalfSubPixel;
         var py = (long)y * SubPixel + HalfSubPixel;
@@ -1156,12 +1318,16 @@ public sealed class SoftwareRenderer
         var l2 = w2 / sum;
         var uv = t.C0.Uv * l0 + t.C1.Uv * l1 + t.C2.Uv * l2;
         var normal = Normalized(t.C0.Normal * l0 + t.C1.Normal * l1 + t.C2.Normal * l2);
-        if (normal == Vector3.Zero)
-        {
-            normal = Vector3.UnitZ;
-        }
+        return (uv, normal == Vector3.Zero ? Vector3.UnitZ : normal);
+    }
 
-        var surface = job.Surface;
+    /// <summary>
+    /// Samples the material of <paramref name="surface"/> at <paramref name="uv"/> and lights it with
+    /// <see cref="Light"/>, with the view direction of the ray through the center of pixel x, y.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static Rgba8 ShadeSurface(in Surface surface, Vector2 uv, Vector3 normal, int x, int y, FrameSetup frame)
+    {
         var albedo = surface.Diffuse is null ? surface.BaseColor : TextureSampler.SampleDiffuse(surface.Diffuse, uv.X, uv.Y) * surface.Tint;
         var (ambientOcclusion, roughness, metalness) = (1f, 1f, 0f);
         if (surface.AoRoughMetal is not null)
@@ -1170,7 +1336,10 @@ public sealed class SoftwareRenderer
             (ambientOcclusion, roughness, metalness) = (data.X, data.Y, data.Z);
         }
 
-        return Encode(Light(albedo, ambientOcclusion, roughness, metalness, normal, frame), frame, 255);
+        // The unit vector from the surface point toward the eye is the pixel ray turned around, which goes
+        // through the pixel center at a depth of one meter in front of the camera.
+        var toEye = Normalized(new Vector3((1f - 2f * (x + 0.5f) / frame.Width) / frame.ProjectionX, (2f * (y + 0.5f) / frame.Height - 1f) / frame.ProjectionY, 1f));
+        return Encode(Light(albedo, ambientOcclusion, roughness, metalness, normal, toEye, frame), frame, 255);
     }
 
     private static void Write(byte[] rgba, int pixel, Rgba8 color)
@@ -1198,18 +1367,58 @@ public sealed class SoftwareRenderer
     /// <summary>
     /// What a draw is shaded with. <see cref="BaseColor"/> already holds the glass tint, and
     /// <see cref="Tint"/> is the factor for the diffuse texture. The textures are null when the mesh has no
-    /// UVs, because there is nothing to sample them with.
+    /// UVs, because there is nothing to sample them with. <see cref="Normal"/> is set only for a frame that
+    /// applies normal maps, and never for glass, so glass looks the same in both qualities.
     /// </summary>
-    private readonly record struct Surface(Vector3 BaseColor, Vector3 Tint, PreviewImage? Diffuse, PreviewImage? AoRoughMetal)
+    private readonly record struct Surface(Vector3 BaseColor, Vector3 Tint, PreviewImage? Diffuse, PreviewImage? AoRoughMetal, PreviewImage? Normal)
     {
-        public static Surface From(PreviewMaterial material, bool hasUvs)
+        public static Surface From(PreviewMaterial material, bool hasUvs, bool normalMaps)
         {
             var tint = material.Glass ? GlassTint : Vector3.One;
-            return new Surface(material.BaseColor * tint, tint, hasUvs ? material.Diffuse : null, hasUvs ? material.AoRoughMetal : null);
+            var normal = hasUvs && normalMaps && !material.Glass ? material.Normal : null;
+            return new Surface(material.BaseColor * tint, tint, hasUvs ? material.Diffuse : null, hasUvs ? material.AoRoughMetal : null, normal);
         }
     }
 
     private readonly record struct DrawJob(PreviewMesh Mesh, Matrix4x4 Model, Surface Surface, byte Alpha, DrawState State);
+
+    /// <summary>
+    /// The two in-plane vectors of one screen triangle in camera space that the normal of a pixel is crossed
+    /// with to give the tangent and the bitangent of cotangent_frame in Common/SharedFrag.glsl. That function
+    /// solves the screen derivatives of the position and the UV, and its tangent cross(dp2, N) * du1 +
+    /// cross(N, dp1) * du2 is the same as cross(N, dp1 * du2 - dp2 * du1). With the edges e1 and e2 of the
+    /// triangle in place of the derivatives, this is grad(u) times det = dot(N, cross(e1, e2)) when N is the
+    /// face normal, and the bitangent is the same for v.
+    /// </summary>
+    /// <remarks>
+    /// The sign of det decides whether the relief shows raised or pushed in. The corners are read in their
+    /// stored order, which always has a positive screen area because SetupTriangles walks a negative polygon
+    /// the other way round, and their normals are the ones after the back face flip. So cross(e1, e2) points
+    /// away from the viewer and N toward it, and det is negative for every drawn pixel, also on a mirrored draw
+    /// and on a back face that is drawn. The mesh index order would not give this, because a mirrored draw
+    /// turns it around. The game has the same fixed sign, because the derivatives follow the screen and
+    /// ThumbnailRenderer culls back faces. The axes here are the negated sums, so cross(N, U) points along
+    /// +grad(u) and cross(N, V) along +grad(v). getNormalFromMap_ShaderX sets normalMap.x = -normalMap.x, and
+    /// that flip is not copied, because it cancels against the negative det of a visible face. The net mapping
+    /// of the game is red = +grad(u) and green = -grad(v), which ShadePixelHigh applies directly. The game
+    /// ignores the GLB TANGENT of a part mesh, because MeshReference.Load imports only
+    /// VertexImportFlags.Normals | UVs, so this renderer does not read it either. The import axes of
+    /// RenderCore.Gltf.GltfUtils.LoadMeshAssetForPrim (Planet.Render.Core.dll) and the view handedness of the
+    /// game camera are not in the decompiled source, so it is not verified that the game maps a part to the
+    /// screen with the same orientation as this renderer.
+    /// </remarks>
+    private readonly record struct SurfaceAxes(Vector3 U, Vector3 V)
+    {
+        public static SurfaceAxes Of(in ScreenTriangle t, FrameSetup frame)
+        {
+            var p0 = CameraPoint(in t.C0, frame);
+            var e1 = CameraPoint(in t.C1, frame) - p0;
+            var e2 = CameraPoint(in t.C2, frame) - p0;
+            var step1 = t.C1.Uv - t.C0.Uv;
+            var step2 = t.C2.Uv - t.C0.Uv;
+            return new SurfaceAxes(e2 * step1.X - e1 * step2.X, e2 * step1.Y - e1 * step2.Y);
+        }
+    }
 
     /// <summary>A triangle in the list of a band, by its job and its place in the buffer of the state of that job.</summary>
     private readonly record struct TriangleRef(int Job, int Index);
@@ -1299,23 +1508,33 @@ public sealed class SoftwareRenderer
 
     private sealed class FrameSetup
     {
-        public FrameSetup(Matrix4x4 view, Matrix4x4 viewProjection, int width, int height, RenderOptions options)
+        public FrameSetup(Matrix4x4 view, Matrix4x4 viewProjection, Matrix4x4 projection, int width, int height, RenderOptions options)
         {
             View = view;
             ViewProjection = viewProjection;
+            ProjectionX = projection.M11;
+            ProjectionY = projection.M22;
             Width = width;
             Height = height;
             CullBackFaces = options.CullBackFaces;
+            Quality = options.Quality;
             Sun = Normalized(options.SunDirection) is var sun && sun != Vector3.Zero ? sun : Vector3.UnitZ;
-            Half = Normalized(Sun + Vector3.UnitZ) is var half && half != Vector3.Zero ? half : Vector3.UnitZ;
-            SunIntensity = options.SunIntensity;
-            Ambient = options.Ambient;
             Exposure = float.IsFinite(options.Exposure) && options.Exposure > 0f ? options.Exposure : 1f;
+            Up = Normalized(Vector3.TransformNormal(Vector3.UnitX, view)) is var up && up != Vector3.Zero ? up : Vector3.UnitY;
+            SunLight = options.SunIntensity * MathF.PI;
         }
 
         public Matrix4x4 View { get; }
 
         public Matrix4x4 ViewProjection { get; }
+
+        /// <summary>
+        /// The M11 and M22 of the perspective projection, which take camera space x and y to clip space. With
+        /// them and w a screen corner goes back to camera space.
+        /// </summary>
+        public float ProjectionX { get; }
+
+        public float ProjectionY { get; }
 
         public int Width { get; }
 
@@ -1323,17 +1542,21 @@ public sealed class SoftwareRenderer
 
         public bool CullBackFaces { get; }
 
+        public RenderQuality Quality { get; }
+
         /// <summary>The unit vector toward the sun in camera space.</summary>
         public Vector3 Sun { get; }
 
-        /// <summary>The half vector between the sun and a viewer along +Z in camera space.</summary>
-        public Vector3 Half { get; }
-
-        public float SunIntensity { get; }
-
-        public float Ambient { get; }
-
         public float Exposure { get; }
+
+        /// <summary>The unit vector of vehicle +X in camera space, which is up for the hemisphere ambient.</summary>
+        public Vector3 Up { get; }
+
+        /// <summary>
+        /// The sun term of <see cref="Light"/>, <see cref="RenderOptions.SunIntensity"/> times pi, because the PBR
+        /// model divides the diffuse by pi.
+        /// </summary>
+        public float SunLight { get; }
     }
 
     /// <summary>

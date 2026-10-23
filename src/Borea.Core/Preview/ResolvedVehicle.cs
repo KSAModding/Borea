@@ -32,8 +32,9 @@ public sealed record PreviewMeshRef(PreviewAssetRef File, int MeshIndex, string 
 /// <summary>
 /// One PBR material. <paramref name="Key"/> is the material Id, or a generated key for a material that is written
 /// inline. A texture that the material does not name is null, and the renderer then uses a flat color.
+/// <paramref name="Normal"/> is the Normal texture, which the preview loads only when the texture budget has room.
 /// </summary>
-public sealed record PreviewMaterialRef(string Key, PreviewAssetRef? Diffuse, PreviewAssetRef? AoRoughMetal, bool Glass);
+public sealed record PreviewMaterialRef(string Key, PreviewAssetRef? Diffuse, PreviewAssetRef? AoRoughMetal, bool Glass, PreviewAssetRef? Normal = null);
 
 /// <summary>
 /// One mesh drawn with one material. <paramref name="Mesh"/> indexes <see cref="ResolvedVehicle.Meshes"/>, and

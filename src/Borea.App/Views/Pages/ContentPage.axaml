@@ -5,6 +5,7 @@
              xmlns:stewardship="using:Borea.Core.Stewardship"
              xmlns:views="using:Borea.App.Views"
              xmlns:preview="using:Borea.App.Views.Preview"
+             xmlns:loc="using:Borea.App.Localization"
              x:Class="Borea.App.Views.Pages.ContentPage"
              x:DataType="vm:MainViewModel">
     <UserControl.Styles>
@@ -301,6 +302,47 @@
                                                 </WrapPanel>
                                             </StackPanel>
                                             <Button Classes="text" Margin="8" HorizontalAlignment="Right" VerticalAlignment="Top" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.PreviewResetView}" Command="{Binding ResetViewCommand}" IsVisible="{Binding HasScene}" />
+                                            <!-- the camera controls, in a flyout so that they never cover the scene until the player asks for them -->
+                                            <Button Classes="info" Margin="12" HorizontalAlignment="Left" VerticalAlignment="Top" IsVisible="{Binding HasScene}" ToolTip.Tip="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.PreviewControlsTitle}" AutomationProperties.Name="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.PreviewControlsTitle}">
+                                                <Button.Flyout>
+                                                    <Flyout Placement="BottomEdgeAlignedLeft">
+                                                        <!-- one column with a fixed largest width, so the chips wrap inside the scroll viewer of the flyout instead of making it scroll sideways -->
+                                                        <StackPanel Spacing="10" MaxWidth="260" DataContext="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization}" x:DataType="loc:LocalizationService">
+                                                            <TextBlock Classes="heading-sm" Text="{Binding PreviewControlsTitle}" />
+                                                            <StackPanel Spacing="4">
+                                                                <TextBlock Classes="body-sm" Text="{Binding PreviewControlTurn}" />
+                                                                <WrapPanel ItemSpacing="4" LineSpacing="4">
+                                                                    <Border Classes="chip"><TextBlock Text="{Binding PreviewInputLeftRightDrag}" /></Border>
+                                                                    <Border Classes="chip"><TextBlock Text="{Binding PreviewInputArrowKeys}" /></Border>
+                                                                </WrapPanel>
+                                                            </StackPanel>
+                                                            <StackPanel Spacing="4">
+                                                                <TextBlock Classes="body-sm" Text="{Binding PreviewControlZoom}" />
+                                                                <WrapPanel ItemSpacing="4" LineSpacing="4">
+                                                                    <Border Classes="chip"><TextBlock Text="{Binding PreviewInputMiddleDrag}" /></Border>
+                                                                    <Border Classes="chip"><TextBlock Text="{Binding PreviewInputShiftWheel}" /></Border>
+                                                                    <Border Classes="chip"><TextBlock Text="{Binding PreviewInputZoomKeys}" /></Border>
+                                                                </WrapPanel>
+                                                            </StackPanel>
+                                                            <StackPanel Spacing="4">
+                                                                <TextBlock Classes="body-sm" Text="{Binding PreviewControlMove}" />
+                                                                <WrapPanel ItemSpacing="4" LineSpacing="4">
+                                                                    <Border Classes="chip"><TextBlock Text="{Binding PreviewInputWheel}" /></Border>
+                                                                    <Border Classes="chip"><TextBlock Text="{Binding PreviewInputMoveKeys}" /></Border>
+                                                                </WrapPanel>
+                                                            </StackPanel>
+                                                            <StackPanel Spacing="4">
+                                                                <TextBlock Classes="body-sm" Text="{Binding PreviewControlFrame}" />
+                                                                <WrapPanel ItemSpacing="4" LineSpacing="4">
+                                                                    <Border Classes="chip"><TextBlock Text="{Binding PreviewInputFrameKey}" /></Border>
+                                                                    <Border Classes="chip"><TextBlock Text="{Binding PreviewInputHome}" /></Border>
+                                                                    <Border Classes="chip"><TextBlock Text="{Binding PreviewInputDoubleClick}" /></Border>
+                                                                </WrapPanel>
+                                                            </StackPanel>
+                                                        </StackPanel>
+                                                    </Flyout>
+                                                </Button.Flyout>
+                                            </Button>
                                             <!-- over a shown scene: the stage while the textures or the mods load, or why a later step stopped -->
                                             <Border Background="{StaticResource Brush.SurfaceHeader}" CornerRadius="100" Padding="12,4" Margin="12" HorizontalAlignment="Left" VerticalAlignment="Bottom">
                                                 <Border.IsVisible>

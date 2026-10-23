@@ -4683,6 +4683,51 @@
   <data name="PreviewStageLoadingTextures" xml:space="preserve">
     <value>Texturen werden geladen</value>
   </data>
+  <data name="PreviewControlsTitle" xml:space="preserve">
+    <value>Steuerung</value>
+  </data>
+  <data name="PreviewControlTurn" xml:space="preserve">
+    <value>Ansicht drehen</value>
+  </data>
+  <data name="PreviewControlZoom" xml:space="preserve">
+    <value>Zoomen</value>
+  </data>
+  <data name="PreviewControlMove" xml:space="preserve">
+    <value>Am Fahrzeug hoch und runter</value>
+  </data>
+  <data name="PreviewControlFrame" xml:space="preserve">
+    <value>Ganzes Fahrzeug zeigen</value>
+  </data>
+  <data name="PreviewInputLeftRightDrag" xml:space="preserve">
+    <value>Links oder rechts ziehen</value>
+  </data>
+  <data name="PreviewInputArrowKeys" xml:space="preserve">
+    <value>Pfeiltasten</value>
+  </data>
+  <data name="PreviewInputMiddleDrag" xml:space="preserve">
+    <value>Mitte ziehen</value>
+  </data>
+  <data name="PreviewInputShiftWheel" xml:space="preserve">
+    <value>Umschalt + Mausrad</value>
+  </data>
+  <data name="PreviewInputZoomKeys" xml:space="preserve">
+    <value>W / S</value>
+  </data>
+  <data name="PreviewInputWheel" xml:space="preserve">
+    <value>Mausrad</value>
+  </data>
+  <data name="PreviewInputMoveKeys" xml:space="preserve">
+    <value>Q / E</value>
+  </data>
+  <data name="PreviewInputFrameKey" xml:space="preserve">
+    <value>F</value>
+  </data>
+  <data name="PreviewInputHome" xml:space="preserve">
+    <value>Pos1</value>
+  </data>
+  <data name="PreviewInputDoubleClick" xml:space="preserve">
+    <value>Doppelklick</value>
+  </data>
   <data name="PreviewResetView" xml:space="preserve">
     <value>Ansicht zurücksetzen</value>
   </data>
