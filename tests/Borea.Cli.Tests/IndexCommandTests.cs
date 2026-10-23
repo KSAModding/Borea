@@ -160,23 +160,8 @@ public sealed class IndexCommandTests : IDisposable
         Assert.Contains("unsupported-version tags (spec version 2)", run.Output);
     }
 
-    [Fact]
-    public async Task Validate_MalformedDownloads_ReportsScopeAndFails()
-    {
-        _host.IndexReader.Snapshot = Snapshot(new ContentIndexDiagnostic(
-            ContentIndexDiagnosticKind.Malformed,
-            ContentIndexDiagnosticScope.Downloads,
-            "The downloads value is unreadable. The downloads total 1000 is not the sum 1200 of its host values.",
-            "active-mod"));
-
-        var run = await _host.RunAsync("index", "validate");
-
-        Assert.Equal(1, run.ExitCode);
-        Assert.Contains("  Download counts: 0 listings with counts, 1 malformed.", run.Output);
-        Assert.Contains("malformed downloads active-mod: The downloads value is unreadable.", run.Output);
-    }
-
     [Theory]
+    [InlineData(ContentIndexDiagnosticScope.Downloads, "The downloads value is unreadable. The downloads total 1000 is not the sum 1200 of its host values.", "  Download counts: 0 listings with counts, 1 malformed.", "malformed downloads active-mod: The downloads value is unreadable.")]
     [InlineData(ContentIndexDiagnosticScope.Images, "The images icon is unreadable.", "  Images: 1 malformed.", "malformed images active-mod: The images icon is unreadable.")]
     [InlineData(ContentIndexDiagnosticScope.Dates, "The updated_at value is unreadable.", "  Dates: 1 malformed.", "malformed dates active-mod: The updated_at value is unreadable.")]
     [InlineData(ContentIndexDiagnosticScope.ChangelogText, "The changelog_text value must be a string.", "  Changelog text: 1 malformed.", "malformed changelog-text active-mod: The changelog_text value must be a string.")]

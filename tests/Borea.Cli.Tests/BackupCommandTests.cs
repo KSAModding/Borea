@@ -123,12 +123,14 @@ public sealed class BackupCommandTests : IDisposable
         Assert.True(File.Exists(Path.Combine(orbit.Path, "universe.xml")));
     }
 
-    [Fact]
-    public async Task RestoreBackup_UnknownBackup_Fails()
+    [Theory]
+    [InlineData("restore-backup")]
+    [InlineData("delete-backup")]
+    public async Task BackupVerbs_UnknownBackup_Fail(string verb)
     {
         await CreateInstanceAsync();
 
-        var result = await _host.RunAsync("instance", "restore-backup", "Alpha", "saves/Nothing");
+        var result = await _host.RunAsync("instance", verb, "Alpha", "saves/Nothing");
 
         Assert.Equal(1, result.ExitCode);
         Assert.Contains("has no backup 'saves/Nothing'", result.Error);
@@ -160,17 +162,6 @@ public sealed class BackupCommandTests : IDisposable
         Assert.Equal("Orbit", deleted.Json.GetProperty("folder").GetString());
         Assert.False(File.Exists(zip));
         Assert.Empty((await _host.RunAsync("instance", "backups", "Alpha", "--json")).Json.EnumerateArray());
-    }
-
-    [Fact]
-    public async Task DeleteBackup_UnknownBackup_Fails()
-    {
-        await CreateInstanceAsync();
-
-        var result = await _host.RunAsync("instance", "delete-backup", "Alpha", "saves/Nothing");
-
-        Assert.Equal(1, result.ExitCode);
-        Assert.Contains("has no backup 'saves/Nothing'", result.Error);
     }
 
     private async Task<Guid> CreateInstanceAsync()
