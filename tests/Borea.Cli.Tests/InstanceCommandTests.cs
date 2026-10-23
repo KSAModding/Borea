@@ -436,6 +436,8 @@ public sealed class InstanceCommandTests : IDisposable
     [Theory]
     [InlineData("activate")]
     [InlineData("delete")]
+    [InlineData("mods")]
+    [InlineData("scan")]
     public async Task UnknownInstance_Fails(string command)
     {
         await _host.RunAsync("instance", "create", "Alpha");
@@ -525,15 +527,6 @@ public sealed class InstanceCommandTests : IDisposable
 
         Assert.Equal(0, run.ExitCode);
         Assert.Contains("No mods in 'Alpha'.", run.Output);
-    }
-
-    [Fact]
-    public async Task Mods_UnknownInstance_Fails()
-    {
-        var run = await _host.RunAsync("instance", "mods", "Nope");
-
-        Assert.Equal(1, run.ExitCode);
-        Assert.Contains("No instance is named 'Nope'.", run.Error);
     }
 
     [Fact]
@@ -650,15 +643,6 @@ public sealed class InstanceCommandTests : IDisposable
         Assert.Equal(0, run.ExitCode);
         Assert.Empty(run.Json.GetProperty("missingMods").EnumerateArray());
         Assert.Empty(run.Json.GetProperty("foreignFolders").EnumerateArray());
-    }
-
-    [Fact]
-    public async Task Scan_UnknownInstance_Fails()
-    {
-        var run = await _host.RunAsync("instance", "scan", "Nope");
-
-        Assert.Equal(1, run.ExitCode);
-        Assert.Contains("No instance is named 'Nope'.", run.Error);
     }
 
     [Fact]
