@@ -1403,9 +1403,9 @@ public sealed class SoftwareRenderer
     /// of the game is red = +grad(u) and green = -grad(v), which ShadePixelHigh applies directly. The game
     /// ignores the GLB TANGENT of a part mesh, because MeshReference.Load imports only
     /// VertexImportFlags.Normals | UVs, so this renderer does not read it either. The import axes of
-    /// GltfUtils.LoadMeshAssetForPrim (Brutal.Gltf) and the view handedness of the game camera are not in the
-    /// decompiled source, so it is not verified that the game maps a part to the screen with the same
-    /// orientation as this renderer.
+    /// RenderCore.Gltf.GltfUtils.LoadMeshAssetForPrim (Planet.Render.Core.dll) and the view handedness of the
+    /// game camera are not in the decompiled source, so it is not verified that the game maps a part to the
+    /// screen with the same orientation as this renderer.
     /// </remarks>
     private readonly record struct SurfaceAxes(Vector3 U, Vector3 V)
     {
