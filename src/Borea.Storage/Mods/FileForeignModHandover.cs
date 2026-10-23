@@ -103,7 +103,7 @@ public sealed class FileForeignModHandover : IForeignModHandover
                 current =>
                 {
                     var recorded = RequireForeign(current, foreign.ModId);
-                    if (!Matches(recorded, foreign))
+                    if (!InstalledModRecord.Matches(recorded, foreign))
                         throw new InvalidOperationException($"Mod '{foreign.ModId}' changed after the handover was requested.");
 
                     folder = ModFolders.Find(modsFolder, foreign.ModId)
@@ -165,7 +165,7 @@ public sealed class FileForeignModHandover : IForeignModHandover
             {
                 var recorded = current.Mods.FirstOrDefault(mod => ModIds.Equals(mod.ModId, foreign.ModId))
                     ?? throw new InvalidOperationException($"The installed record for '{foreign.ModId}' is missing.");
-                if (!Matches(recorded, foreign) && !Matches(recorded, owned))
+                if (!InstalledModRecord.Matches(recorded, foreign) && !InstalledModRecord.Matches(recorded, owned))
                     throw new InvalidOperationException($"Mod '{foreign.ModId}' changed while Borea tried to restore it.");
 
                 if (ownedMoved && Directory.Exists(folder))
@@ -181,7 +181,7 @@ public sealed class FileForeignModHandover : IForeignModHandover
                     throw new InvalidOperationException($"The recovery folder for '{foreign.ModId}' is missing.");
 
                 Directory.Move(backupFolder, folder);
-                if (!Matches(recorded, foreign))
+                if (!InstalledModRecord.Matches(recorded, foreign))
                     current.ReplaceMod(foreign);
 
                 return true;
@@ -198,13 +198,4 @@ public sealed class FileForeignModHandover : IForeignModHandover
 
         return installed;
     }
-
-    private static bool Matches(InstalledMod current, InstalledMod expected) =>
-        current.Version == expected.Version &&
-        current.Reason == expected.Reason &&
-        current.InstalledAt == expected.InstalledAt &&
-        string.Equals(current.Checksum, expected.Checksum, StringComparison.OrdinalIgnoreCase) &&
-        current.Ownership == expected.Ownership &&
-        current.Storage == expected.Storage &&
-        string.Equals(current.OwnershipToken, expected.OwnershipToken, StringComparison.Ordinal);
 }

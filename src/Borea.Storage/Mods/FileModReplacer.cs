@@ -188,7 +188,7 @@ public sealed class FileModReplacer : IModReplacer
             {
                 var currentMod = current.Mods.FirstOrDefault(mod => ModIds.Equals(mod.ModId, previous.ModId))
                     ?? throw new InvalidOperationException($"The installed record for '{previous.ModId}' is missing.");
-                if (!Matches(currentMod, previous) && !Matches(currentMod, replacement))
+                if (!InstalledModRecord.Matches(currentMod, previous) && !InstalledModRecord.Matches(currentMod, replacement))
                     throw new InvalidOperationException($"Mod '{previous.ModId}' changed while Borea tried to restore it.");
 
                 if (replacementMoved && Directory.Exists(installedFolder))
@@ -202,7 +202,7 @@ public sealed class FileModReplacer : IModReplacer
                     throw new InvalidOperationException($"The recovery folder for '{previous.ModId}' is missing.");
                 Directory.Move(backupFolder, installedFolder);
 
-                if (!Matches(currentMod, previous))
+                if (!InstalledModRecord.Matches(currentMod, previous))
                     current.ReplaceMod(previous);
                 return true;
             }).ConfigureAwait(false);
@@ -213,18 +213,9 @@ public sealed class FileModReplacer : IModReplacer
         var current = instance.Mods.FirstOrDefault(mod => ModIds.Equals(mod.ModId, expected.ModId))
             ?? throw new InvalidOperationException($"Mod '{expected.ModId}' is no longer installed.");
         RequireOwned(current);
-        if (!Matches(current, expected))
+        if (!InstalledModRecord.Matches(current, expected))
             throw new InvalidOperationException($"Mod '{expected.ModId}' changed after the replacement was requested.");
     }
-
-    private static bool Matches(InstalledMod current, InstalledMod expected) =>
-        current.Version == expected.Version &&
-        current.Reason == expected.Reason &&
-        current.InstalledAt == expected.InstalledAt &&
-        string.Equals(current.Checksum, expected.Checksum, StringComparison.OrdinalIgnoreCase) &&
-        current.Ownership == expected.Ownership &&
-        current.Storage == expected.Storage &&
-        string.Equals(current.OwnershipToken, expected.OwnershipToken, StringComparison.Ordinal);
 
     private static void RequireOwned(InstalledMod installed)
     {
