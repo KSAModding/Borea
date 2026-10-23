@@ -100,7 +100,6 @@ public partial class MainViewModel
         _gameBuildCheck = CheckGameBuildAsync(services);
     }
 
-    /// <summary>Completes when the master server check has finished.</summary>
     internal Task WhenGameBuildCheckedAsync() => _gameBuildCheck ?? Task.CompletedTask;
 
     private async Task CheckGameBuildAsync(BoreaServices services)
