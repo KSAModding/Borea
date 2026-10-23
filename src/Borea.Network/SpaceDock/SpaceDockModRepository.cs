@@ -220,11 +220,6 @@ public sealed class SpaceDockModRepository : IModRepository
         }
     }
 
-    /// <summary>
-    /// Maps one SpaceDock version onto a release. An unusable version string,
-    /// game version, release date, or download path yields no release; the
-    /// listing itself stays visible either way.
-    /// </summary>
     private static bool TryMapRelease(SpaceDockModDto dto, SpaceDockVersionDto version, [NotNullWhen(true)] out ModVersionMetadata? release)
     {
         release = null;

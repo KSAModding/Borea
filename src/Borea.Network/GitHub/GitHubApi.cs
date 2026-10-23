@@ -610,7 +610,6 @@ internal sealed record GitHubIssue(int Number, Uri Url, string Title, string? Bo
 
     public DateTimeOffset? Closed { get; init; }
 
-    /// <summary>How many comments the issue has.</summary>
     public int Comments { get; init; }
 }
 

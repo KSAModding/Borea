@@ -11,7 +11,6 @@ public static class BoreaUserAgent
 {
     public const string ContactUrl = "https://github.com/KSAModding/Borea";
 
-    /// <summary>Adds the User-Agent to the default headers of <paramref name="client"/>, so every request of it carries it.</summary>
     public static void Apply(HttpClient client) => Apply(client, BoreaBuild.Version);
 
     /// <summary>Adds the User-Agent with <paramref name="version"/> in place of the version of this build.</summary>

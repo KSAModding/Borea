@@ -4,9 +4,8 @@ namespace Borea.Network.Sources;
 
 /// <summary>
 /// Queries every registered source and merges results, tagging each listing
-/// and release with its originating source via the Source property. Which
-/// sources are active is entirely determined by what's registered at
-/// construction. The first registered source wins when sources share an id.
+/// and release with its originating source via the Source property. The first
+/// registered source wins when sources share an id.
 /// </summary>
 public sealed class CompositeModRepository : IModRepository
 {
