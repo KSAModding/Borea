@@ -21,18 +21,18 @@ public static class PackVersionParser
         var id = IndexJsonHelpers.TryExtractNestedString(element, "authored", "id");
         var version = IndexJsonHelpers.TryExtractNestedString(element, "authored", "version");
 
-        var specVersion = IndexJsonHelpers.TryExtractNestedInt(element, "authored", "spec_version");
-        if (specVersion is { } sv)
+        var authoredSpecVersion = IndexJsonHelpers.TryExtractNestedInt(element, "authored", "spec_version");
+        if (authoredSpecVersion is { } rawSpecVersion)
         {
-            if (SpecVersions.IsAboveHighest(sv))
+            if (SpecVersions.IsAboveHighest(rawSpecVersion))
                 return ParseOutcome<ParsedPackVersion>.NewUnknown(new UnknownIndexVersionEntry(
                     id,
                     version,
-                    sv,
-                    $"Pack '{id}' version '{version}' uses unsupported spec_version {sv}."));
+                    rawSpecVersion,
+                    $"Pack '{id}' version '{version}' uses unsupported spec_version {rawSpecVersion}."));
 
-            if (sv < 1)
-                return ParseOutcome<ParsedPackVersion>.NewMalformed(new RejectedIndexEntry(id, version, $"The pack version declares spec_version {sv}, which is not valid."));
+            if (rawSpecVersion < 1)
+                return ParseOutcome<ParsedPackVersion>.NewMalformed(new RejectedIndexEntry(id, version, $"The pack version declares spec_version {rawSpecVersion}, which is not valid."));
         }
 
         try
