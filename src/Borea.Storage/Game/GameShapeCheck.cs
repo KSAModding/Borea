@@ -16,7 +16,6 @@ namespace Borea.Storage.Game;
 /// </summary>
 public sealed class GameShapeCheck : IGameShapeCheck
 {
-    /// <summary>The names the game gives the folders of a profile.</summary>
     private static readonly string[] ProfileFolderNames = ["mods", "saves", "Vehicles", "logs"];
 
     private readonly IGamePathProvider _paths;
@@ -195,13 +194,13 @@ public sealed class GameShapeCheck : IGameShapeCheck
         return Broken(GameAssumption.PatchNotes, $"No file in {folder} is in the format Borea reads.");
     }
 
+    private static string Entries(int count) => count == 1 ? "1 entry" : $"{count} entries";
+
     /// <summary>
     /// The Content folder of the installation, or null when there is none. Its
     /// absence means the directory is not an installation, not that the game
     /// stopped keeping its content there.
     /// </summary>
-    private static string Entries(int count) => count == 1 ? "1 entry" : $"{count} entries";
-
     private static string? Content(string? gameDirectory)
     {
         if (string.IsNullOrWhiteSpace(gameDirectory))
@@ -240,7 +239,6 @@ public sealed class GameShapeCheck : IGameShapeCheck
             : Broken(GameAssumption.ProfileLayout, $"{profile.Root} holds none of the names the game uses: {string.Join(", ", ProfileFolderNames)}.");
     }
 
-    /// <param name="ListedMods">The ids the manifest names, which is what the profile is supposed to hold.</param>
     private static async Task<(GameAssumptionResult Result, IReadOnlyList<string> ListedMods)> CheckProfileManifestAsync(ProfilePaths profile, CancellationToken cancellationToken)
     {
         if (!File.Exists(profile.Manifest))

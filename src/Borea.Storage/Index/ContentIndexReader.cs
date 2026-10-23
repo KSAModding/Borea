@@ -1,6 +1,5 @@
 using Borea.Core.Index;
 using Borea.Core.Paths;
-using Borea.Core.Tags;
 
 namespace Borea.Storage.Index;
 
