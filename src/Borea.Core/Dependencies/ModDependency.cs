@@ -91,7 +91,7 @@ public sealed class ModDependency
 
     public override string ToString()
     {
-        if (AnyOf is not null)
+        if (IsAnyOf)
             return $"{Kind} dependency on any of [{string.Join(", ", AnyOf.Select(a => a.ModId))}]";
 
         string versionRange = (MinVersion, MaxVersion) switch
