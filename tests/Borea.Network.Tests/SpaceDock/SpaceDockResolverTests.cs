@@ -14,22 +14,25 @@ public sealed class SpaceDockResolverTests
         Assert.False(success);
     }
 
-    [Fact]
-    public void RegisterThenResolve_ReturnsCorrectSpaceDockId()
+    [Theory]
+    [InlineData("some-mod", "some-mod", 12345)]
+    // Ids compare case-insensitively everywhere (ModIds.Comparer), so a lookup must not miss over casing.
+    [InlineData("MyMod", "mymod", 42)]
+    public void TryResolve_RegisteredModId_ReturnsItsSpaceDockId(string registered, string lookedUp, int spaceDockId)
     {
         var resolver = new SpaceDockResolver();
 
-        resolver.Register("some-mod", 12345);
-        var success = resolver.TryResolve("some-mod", out var spaceDockId);
+        resolver.Register(registered, spaceDockId);
+        var success = resolver.TryResolve(lookedUp, out var resolved);
 
         Assert.True(success);
-        Assert.Equal(12345, spaceDockId);
+        Assert.Equal(spaceDockId, resolved);
     }
 
     [Fact]
     public void Register_SameModIdTwice_OverwritesRatherThanThrowing()
     {
-        // Models re-registering the same mod for a later version — per
+        // Models re-registering the same mod for a later version. Per
         // design, a mod's ModId never changes between its own versions,
         // so this should be a safe, silent no-op-in-effect, not an error.
         var resolver = new SpaceDockResolver();
@@ -50,20 +53,6 @@ public sealed class SpaceDockResolverTests
         var resolver = new SpaceDockResolver();
 
         Assert.Throws<ArgumentException>(() => resolver.Register(modId!, 123));
-    }
-
-    [Fact]
-    public void TryResolve_ComparesIdsCaseInsensitively()
-    {
-        // Ids compare case-insensitively everywhere (ModIds.Comparer), so a
-        // lookup must not miss over casing.
-        var resolver = new SpaceDockResolver();
-
-        resolver.Register("MyMod", 42);
-        var success = resolver.TryResolve("mymod", out var spaceDockId);
-
-        Assert.True(success);
-        Assert.Equal(42, spaceDockId);
     }
 
     [Fact]
