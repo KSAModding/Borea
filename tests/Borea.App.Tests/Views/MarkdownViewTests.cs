@@ -620,12 +620,7 @@ public sealed partial class MarkdownViewTests
     [InlineData("A\n\nA", "A\n\nA\n\nA")]
     public async Task Edit_WhereTheEqualStartAndEndOverlap_DrawsWhatAFreshViewDraws(string before, string after)
     {
-        var (drawn, fresh) = await HeadlessApp.RunAsync(() =>
-        {
-            var view = new MarkdownView { Markdown = before };
-            view.Markdown = after;
-            return Task.FromResult((Drawn(view), Drawn(new MarkdownView { Markdown = after })));
-        });
+        var (drawn, fresh) = await EditAsync(before, after);
 
         Assert.Equal(fresh, drawn);
     }
@@ -643,12 +638,7 @@ public sealed partial class MarkdownViewTests
     [InlineData("x\n\n```\ncode", "x\n\n```\ncode\n\n\n")]
     public async Task Edit_OfTheIndentOrTheTrailingBlankLines_DrawsWhatAFreshViewDraws(string before, string after)
     {
-        var (drawn, fresh) = await HeadlessApp.RunAsync(() =>
-        {
-            var view = new MarkdownView { Markdown = before };
-            view.Markdown = after;
-            return Task.FromResult((Drawn(view), Drawn(new MarkdownView { Markdown = after })));
-        });
+        var (drawn, fresh) = await EditAsync(before, after);
 
         Assert.Equal(fresh, drawn);
     }
@@ -660,12 +650,7 @@ public sealed partial class MarkdownViewTests
     [InlineData("[x][r] and more\n\n[r]: https://example.com/r", "[x][r] and more\n\n[r]: javascript:alert(1)")]
     public async Task Edit_OfALinkReferenceDefinition_DrawsWhatAFreshViewDraws(string before, string after)
     {
-        var (drawn, fresh) = await HeadlessApp.RunAsync(() =>
-        {
-            var view = new MarkdownView { Markdown = before };
-            view.Markdown = after;
-            return Task.FromResult((Drawn(view), Drawn(new MarkdownView { Markdown = after })));
-        });
+        var (drawn, fresh) = await EditAsync(before, after);
 
         Assert.Equal(fresh, drawn);
     }
@@ -676,12 +661,7 @@ public sealed partial class MarkdownViewTests
     {
         var deep = string.Concat(Enumerable.Repeat("> ", 40));
 
-        var (drawn, fresh) = await HeadlessApp.RunAsync(() =>
-        {
-            var view = new MarkdownView { Markdown = deep + "first" };
-            view.Markdown = deep + "second";
-            return Task.FromResult((Drawn(view), Drawn(new MarkdownView { Markdown = deep + "second" })));
-        });
+        var (drawn, fresh) = await EditAsync(deep + "first", deep + "second");
 
         Assert.Equal(fresh, drawn);
         Assert.EndsWith("second]", drawn.Last(), StringComparison.Ordinal);
@@ -702,6 +682,15 @@ public sealed partial class MarkdownViewTests
         Assert.DoesNotContain(after, before.Contains);
         Assert.EndsWith("https://images.example/shot-v2.png", url, StringComparison.Ordinal);
     }
+
+    /// <summary>What a view draws after its text changed from <paramref name="before"/> to <paramref name="after"/>, and what a fresh view of <paramref name="after"/> draws.</summary>
+    private static Task<(List<string> Drawn, List<string> Fresh)> EditAsync(string before, string after) =>
+        HeadlessApp.RunAsync(() =>
+        {
+            var view = new MarkdownView { Markdown = before };
+            view.Markdown = after;
+            return Task.FromResult((Drawn(view), Drawn(new MarkdownView { Markdown = after })));
+        });
 
     /// <summary>The text of a block outside code, where Markdown characters are part of the text.</summary>
     private static string Prose(TextBlock text) =>

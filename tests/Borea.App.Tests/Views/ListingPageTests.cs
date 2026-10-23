@@ -42,13 +42,8 @@ public sealed class ListingPageTests
         var editor = harness.ViewModel.ListingEditor;
         await harness.ViewModel.OpenListingAsync();
 
-        var chosen = await HeadlessApp.RunAsync(harness, async () =>
+        var chosen = await OnPageAsync(harness, async (window, page) =>
         {
-            var page = new ListingPage { DataContext = harness.ViewModel };
-            var window = new Window { Width = 1280, Height = 832, Content = page, DataContext = harness.ViewModel };
-            window.Show();
-            window.UpdateLayout();
-
             page.FindControl<TextBox>("ListedSearch")!.Focus();
             window.KeyTextInput("s");
             foreach (var key in new[] { PhysicalKey.ArrowDown, PhysicalKey.ArrowDown, PhysicalKey.ArrowUp, PhysicalKey.ArrowDown })
@@ -56,7 +51,6 @@ public sealed class ListingPageTests
             var chosen = editor.SelectedListed?.Id;
             Press(window, PhysicalKey.Enter);
             await (editor.LoadListedCommand.ExecutionTask ?? Task.CompletedTask);
-            window.Close();
             return chosen;
         });
 
@@ -73,19 +67,13 @@ public sealed class ListingPageTests
         var editor = harness.ViewModel.ListingEditor;
         await harness.ViewModel.OpenListingAsync();
 
-        await HeadlessApp.RunAsync(harness, async () =>
+        await OnPageAsync(harness, async (window, page) =>
         {
-            var page = new ListingPage { DataContext = harness.ViewModel };
-            var window = new Window { Width = 1280, Height = 832, Content = page, DataContext = harness.ViewModel };
-            window.Show();
-            window.UpdateLayout();
-
             page.FindControl<ListBox>("ListedResults")!.GetVisualDescendants().OfType<ListBoxItem>().Last().Focus();
             Press(window, PhysicalKey.ArrowUp);
             Press(window, PhysicalKey.ArrowDown);
             Press(window, PhysicalKey.Enter);
             await (editor.LoadListedCommand.ExecutionTask ?? Task.CompletedTask);
-            window.Close();
             return 0;
         });
 
@@ -100,13 +88,8 @@ public sealed class ListingPageTests
         var editor = harness.ViewModel.ListingEditor;
         await harness.ViewModel.OpenListingAsync();
 
-        await HeadlessApp.RunAsync(harness, async () =>
+        await OnPageAsync(harness, async (window, page) =>
         {
-            var page = new ListingPage { DataContext = harness.ViewModel };
-            var window = new Window { Width = 1280, Height = 832, Content = page, DataContext = harness.ViewModel };
-            window.Show();
-            window.UpdateLayout();
-
             var item = page.FindControl<ListBox>("ListedResults")!.GetVisualDescendants().OfType<ListBoxItem>().Last();
             var center = item.TranslatePoint(new Point(item.Bounds.Width / 2, item.Bounds.Height / 2), window)!.Value;
             for (var click = 0; click < 2; click++)
@@ -116,7 +99,6 @@ public sealed class ListingPageTests
             }
 
             await (editor.LoadListedCommand.ExecutionTask ?? Task.CompletedTask);
-            window.Close();
             return 0;
         });
 
@@ -210,15 +192,10 @@ public sealed class ListingPageTests
         var row = editor.Dependencies.Single();
         row.Min = "0.5";
 
-        var (texts, versionTexts) = await HeadlessApp.RunAsync(harness, () =>
+        var (texts, versionTexts) = await OnPageAsync(harness, (_, page) =>
         {
-            var page = new ListingPage { DataContext = harness.ViewModel };
-            var window = new Window { Width = 1280, Height = 832, Content = page, DataContext = harness.ViewModel };
-            window.Show();
-            window.UpdateLayout();
             var texts = page.GetVisualDescendants().OfType<TextBlock>().Where(text => text.IsEffectivelyVisible).Select(text => text.Text).ToList();
             var versionTexts = page.GetVisualDescendants().OfType<ComboBox>().Where(box => box.IsEditable).Select(box => box.Text).ToList();
-            window.Close();
             return Task.FromResult((texts, versionTexts));
         });
 
@@ -274,12 +251,8 @@ public sealed class ListingPageTests
         editor.StartEmptyCommand.Execute(null);
         editor.Description = "Typed";
 
-        var (before, shown, sideBySide, typed, after, restored, kept) = await HeadlessApp.RunAsync(harness, () =>
+        var (before, shown, sideBySide, typed, after, restored, kept) = await OnPageAsync(harness, (window, page) =>
         {
-            var page = new ListingPage { DataContext = harness.ViewModel };
-            var window = new Window { Width = 1280, Height = 832, Content = page, DataContext = harness.ViewModel };
-            window.Show();
-            window.UpdateLayout();
             // the scroll area of a hidden preview has no visual children yet, so the view is found in the logical tree
             var preview = page.GetLogicalDescendants().OfType<MarkdownView>().Single(view => view.Images is not null);
             var toggle = page.GetVisualDescendants().OfType<ToggleSwitch>().Single(toggle => AutomationProperties.GetName(toggle) == harness.Localization.ListingDescriptionPreview);
@@ -307,7 +280,6 @@ public sealed class ListingPageTests
             var after = preview.IsEffectivelyVisible;
             var restored = Math.Abs(field.Bounds.Width - fullWidth) < 1;
             var kept = shownChildren > 0 && preview.Children.Count == shownChildren;
-            window.Close();
             return Task.FromResult((before, shown, sideBySide, typed, after, restored, kept));
         });
 
@@ -604,18 +576,27 @@ public sealed class ListingPageTests
 
     private sealed record SearchLayout(int Rows, int OwnChips, List<string> Outside, bool Trimmed);
 
-    /// <summary>The visible texts, with the Markdown of every visible Markdown view.</summary>
-    private static Task<List<string?>> RenderAsync(ViewModelHarness harness) =>
-        HeadlessApp.RunAsync(harness, () =>
+    /// <summary>Shows the listing page of the harness in a window and runs <paramref name="body"/> while the window is open.</summary>
+    private static Task<T> OnPageAsync<T>(ViewModelHarness harness, Func<Window, ListingPage, Task<T>> body) =>
+        HeadlessApp.RunAsync(harness, async () =>
         {
             var page = new ListingPage { DataContext = harness.ViewModel };
             var window = new Window { Width = 1280, Height = 832, Content = page, DataContext = harness.ViewModel };
             window.Show();
-            window.UpdateLayout();
-            var texts = page.GetVisualDescendants().OfType<TextBlock>().Where(text => text.IsEffectivelyVisible).Select(text => text.Text)
-                .Concat(page.GetVisualDescendants().OfType<MarkdownView>().Where(view => view.IsEffectivelyVisible).Select(view => view.Markdown))
-                .ToList();
-            window.Close();
-            return Task.FromResult(texts);
+            try
+            {
+                window.UpdateLayout();
+                return await body(window, page);
+            }
+            finally
+            {
+                window.Close();
+            }
         });
+
+    /// <summary>The visible texts, with the Markdown of every visible Markdown view.</summary>
+    private static Task<List<string?>> RenderAsync(ViewModelHarness harness) =>
+        OnPageAsync(harness, (_, page) => Task.FromResult(page.GetVisualDescendants().OfType<TextBlock>().Where(text => text.IsEffectivelyVisible).Select(text => text.Text)
+            .Concat(page.GetVisualDescendants().OfType<MarkdownView>().Where(view => view.IsEffectivelyVisible).Select(view => view.Markdown))
+            .ToList()));
 }
