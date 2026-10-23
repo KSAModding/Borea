@@ -142,7 +142,6 @@ internal sealed class GitHubApi
     /// <exception cref="GitHubApiException">The request failed, or GitHub answered with an error or without data.</exception>
     public async Task<T> QueryAsync<T>(string query, IReadOnlyDictionary<string, object> variables, CancellationToken cancellationToken)
     {
-        ArgumentNullException.ThrowIfNull(query);
         if (!query.TrimStart().StartsWith("query", StringComparison.Ordinal))
             throw new ArgumentException("Borea sends only a GraphQL query.", nameof(query));
 
@@ -237,7 +236,6 @@ internal sealed class GitHubApi
     /// <exception cref="GitHubApiException">A request failed, or GitHub answered without a sha.</exception>
     public async Task<string> CommitAsync(string repository, string parent, IReadOnlyCollection<(string Path, string Text)> files, string message, CancellationToken cancellationToken)
     {
-        ArgumentNullException.ThrowIfNull(files);
         var git = $"{Root}/repos/{repository}/git";
         var parentTree = (await GetAsync<CommitDto>($"{git}/commits/{parent}", cancellationToken).ConfigureAwait(false)).Tree?.Sha;
         var entries = new List<Dictionary<string, object>>();
@@ -271,7 +269,6 @@ internal sealed class GitHubApi
     /// <summary>The same for an endpoint that wraps the array in an object, which <paramref name="items"/> opens.</summary>
     public async IAsyncEnumerable<TItem> GetPagesAsync<TPage, TItem>(string url, Func<TPage, IReadOnlyCollection<TItem>> items, [EnumeratorCancellation] CancellationToken cancellationToken, bool anonymous = false)
     {
-        ArgumentNullException.ThrowIfNull(items);
         var separator = url.Contains('?', StringComparison.Ordinal) ? '&' : '?';
         for (var page = 1; page <= MaxPages; page++)
         {
@@ -351,7 +348,6 @@ internal sealed class GitHubApi
     /// <exception cref="GitHubApiException">Any other answer, with GitHub's message and the rate-limit time.</exception>
     public static string Ensure(GitHubReply reply)
     {
-        ArgumentNullException.ThrowIfNull(reply);
         if ((int)reply.Status is >= 200 and < 300)
             return reply.Body;
 
