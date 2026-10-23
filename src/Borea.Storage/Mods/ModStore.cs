@@ -122,7 +122,7 @@ public sealed class ModStore
         }
         finally
         {
-            TryDeleteFile(archivePath);
+            LeftoverCleanup.TryDeleteFile(archivePath);
         }
     }
 
@@ -230,7 +230,7 @@ public sealed class ModStore
         if (Directory.Exists(root))
         {
             foreach (var trash in Directory.EnumerateDirectories(root, TrashPrefix + "*"))
-                TryDeleteDirectory(trash);
+                LeftoverCleanup.TryDeleteTree(trash);
         }
 
         var staging = Path.Combine(root, $".borea-staging-{Guid.NewGuid():N}");
@@ -243,12 +243,12 @@ public sealed class ModStore
         }
         catch
         {
-            TryDeleteFile(SnapshotPath(entry));
+            LeftoverCleanup.TryDeleteFile(SnapshotPath(entry));
             throw;
         }
         finally
         {
-            TryDeleteDirectory(staging);
+            LeftoverCleanup.TryDeleteTree(staging);
         }
     }
 
@@ -321,27 +321,6 @@ public sealed class ModStore
 
     private static bool SamePath(string left, string right)
         => PathComparer.Equals(Path.TrimEndingDirectorySeparator(left), Path.TrimEndingDirectorySeparator(right));
-
-    private static void TryDeleteDirectory(string path)
-    {
-        try
-        {
-            DirectoryLinks.DeleteTreeWithoutFollowingLinks(path);
-        }
-        catch (IOException) { }
-        catch (UnauthorizedAccessException) { }
-    }
-
-    private static void TryDeleteFile(string path)
-    {
-        try
-        {
-            if (File.Exists(path))
-                File.Delete(path);
-        }
-        catch (IOException) { }
-        catch (UnauthorizedAccessException) { }
-    }
 }
 
 /// <summary>A release made ready beside the mods folder, with the facts its record needs.</summary>

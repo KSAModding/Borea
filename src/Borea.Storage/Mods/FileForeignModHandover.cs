@@ -33,7 +33,7 @@ public sealed class FileForeignModHandover : IForeignModHandover
         IModStateRepository modState,
         TimeProvider? timeProvider = null,
         ModStore? store = null)
-        : this(paths, downloader, instances, modState, timeProvider, TryDeleteDirectory, store)
+        : this(paths, downloader, instances, modState, timeProvider, LeftoverCleanup.TryDeleteTree, store)
     {
     }
 
@@ -139,7 +139,7 @@ public sealed class FileForeignModHandover : IForeignModHandover
                 }
             }
 
-            TryDeleteDirectory(stagingFolder);
+            LeftoverCleanup.TryDeleteTree(stagingFolder);
             if (owned is not null)
                 await _store.ReleaseAsync(owned).ConfigureAwait(false);
 
@@ -147,7 +147,7 @@ public sealed class FileForeignModHandover : IForeignModHandover
         }
         finally
         {
-            TryDeleteDirectory(stagingFolder);
+            LeftoverCleanup.TryDeleteTree(stagingFolder);
         }
     }
 
@@ -207,15 +207,4 @@ public sealed class FileForeignModHandover : IForeignModHandover
         current.Ownership == expected.Ownership &&
         current.Storage == expected.Storage &&
         string.Equals(current.OwnershipToken, expected.OwnershipToken, StringComparison.Ordinal);
-
-    private static bool TryDeleteDirectory(string path)
-    {
-        try
-        {
-            DirectoryLinks.DeleteTreeWithoutFollowingLinks(path);
-            return true;
-        }
-        catch (IOException) { return false; }
-        catch (UnauthorizedAccessException) { return false; }
-    }
 }

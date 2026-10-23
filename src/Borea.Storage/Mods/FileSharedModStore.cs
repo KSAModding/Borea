@@ -222,20 +222,9 @@ public sealed class FileSharedModStore : ISharedModStore
         }
         finally
         {
-            TryDeleteDirectory(stagingFolder);
+            LeftoverCleanup.TryDeleteTree(stagingFolder);
             if (!keepRecoveryLink)
-                TryDeleteDirectory(recoveryLink);
+                LeftoverCleanup.TryDeleteTree(recoveryLink);
         }
-    }
-
-    /// <summary>Cleanup that must not replace the outcome. A link is removed as a link.</summary>
-    private static void TryDeleteDirectory(string path)
-    {
-        try
-        {
-            DirectoryLinks.DeleteTreeWithoutFollowingLinks(path);
-        }
-        catch (IOException) { }
-        catch (UnauthorizedAccessException) { }
     }
 }
