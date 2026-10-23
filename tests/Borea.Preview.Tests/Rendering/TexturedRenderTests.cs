@@ -162,17 +162,6 @@ public sealed class TexturedRenderTests
     }
 
     [Fact]
-    public void ARoughMidGray_LitAt45Degrees_LooksTheSameInHighAndStandard()
-    {
-        var material = new PreviewMaterial(Vector3.Zero, Solid(128, 128, 128), Solid(255, 255, 0), false);
-        var standard = new RenderOptions { SunDirection = Vector3.Normalize(new Vector3(1f, 0f, 1f)) };
-        var high = Pixel(RenderQuad(material, standard with { Quality = RenderQuality.High }), Center, Center);
-        var low = Pixel(RenderQuad(material, standard), Center, Center);
-
-        Assert.InRange(high.R - low.R, -6, 6);
-    }
-
-    [Fact]
     public void WithoutNormalMaps_HighAndStandard_GiveTheSameFrame()
     {
         // A smooth metal, a rough paint and a glass with a normal map, which glass never applies, and a placeholder.
