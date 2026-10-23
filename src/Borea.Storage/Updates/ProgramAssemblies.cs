@@ -13,8 +13,6 @@ internal static class ProgramAssemblies
     /// <returns>The names of the assemblies that are loaded now, <paramref name="root"/> included.</returns>
     public static IReadOnlySet<string> LoadAll(Assembly root)
     {
-        ArgumentNullException.ThrowIfNull(root);
-
         var loaded = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { root.GetName().Name! };
         var tried = new HashSet<string>(loaded, StringComparer.OrdinalIgnoreCase);
         var pending = new Stack<Assembly>([root]);
