@@ -89,6 +89,7 @@ public sealed class ModPackMetadataMapperTests : IDisposable
         Assert.Equal(original.Os, reloaded.Os);
         Assert.Equal(original.Version, reloaded.Version);
         Assert.Equal(original.ReleasedAt, reloaded.ReleasedAt);
+        Assert.Equal(original.ReleasedAt.Ticks, reloaded.ReleasedAt.Ticks);
         Assert.Equal(original.Changelog, reloaded.Changelog);
 
         Assert.Equal(2, reloaded.Mods.Count);
@@ -161,14 +162,6 @@ public sealed class ModPackMetadataMapperTests : IDisposable
     }
 
     [Fact]
-    public async Task RoundTrip_TimestampKeepsSubSecondPrecision()
-    {
-        var (reloaded, _, _) = await RoundTripAsync(MinimalPack());
-
-        Assert.Equal(SampleTimestamp().Ticks, reloaded.ReleasedAt.Ticks);
-    }
-
-    [Fact]
     public async Task RoundTrip_MonthFormGameMin_StaysAsAuthored()
     {
         var (reloaded, _, _) = await RoundTripAsync(MinimalPack());
@@ -176,42 +169,27 @@ public sealed class ModPackMetadataMapperTests : IDisposable
         Assert.Equal("2026.7", reloaded.GameMin);
     }
 
-    [Fact]
-    public void FromDto_AbsentStatus_IsActive()
+    [Theory]
+    [InlineData(null, ModStatus.Active)]
+    [InlineData("frozen", ModStatus.Unknown)]
+    public void FromDto_AbsentOrUnknownStatus_ParsesToActiveOrUnknown(string? status, ModStatus expected)
     {
         var dto = ModPackMetadataMapper.ToDto(MinimalPack());
-        dto.Status = null;
+        dto.Status = status;
 
-        Assert.Equal(ModStatus.Active, ModPackMetadataMapper.FromDto(dto).Status);
+        Assert.Equal(expected, ModPackMetadataMapper.FromDto(dto).Status);
     }
 
-    [Fact]
-    public void FromDto_UnknownStatus_ParsesToUnknown()
+    [Theory]
+    [InlineData(0, "no spec version")]
+    [InlineData(-3, "invalid spec version (-3)")]
+    public void FromDto_SpecVersionBelowOne_IsRefused(int specVersion, string reason)
     {
         var dto = ModPackMetadataMapper.ToDto(MinimalPack());
-        dto.Status = "frozen";
-
-        Assert.Equal(ModStatus.Unknown, ModPackMetadataMapper.FromDto(dto).Status);
-    }
-
-    [Fact]
-    public void FromDto_MissingSpecVersion_NamesThePreModelShape()
-    {
-        var dto = ModPackMetadataMapper.ToDto(MinimalPack());
-        dto.SpecVersion = 0;
+        dto.SpecVersion = specVersion;
 
         var exception = Assert.Throws<FormatException>(() => ModPackMetadataMapper.FromDto(dto));
-        Assert.Contains("spec version", exception.Message);
-    }
-
-    [Fact]
-    public void FromDto_NegativeSpecVersion_IsAMalformedFile()
-    {
-        var dto = ModPackMetadataMapper.ToDto(MinimalPack());
-        dto.SpecVersion = -3;
-
-        var exception = Assert.Throws<FormatException>(() => ModPackMetadataMapper.FromDto(dto));
-        Assert.Contains("spec version", exception.Message);
+        Assert.Contains(reason, exception.Message);
     }
 
     [Fact]

@@ -50,20 +50,12 @@ public sealed class ContentImagesParserTests : IDisposable
         Assert.Null(listing.Images.FindDescriptionImage("map-view")!.License);
     }
 
-    [Fact]
-    public void Parse_NoImages_LeavesImagesNull()
+    [Theory]
+    [InlineData(null)]
+    [InlineData("{}")]
+    public void Parse_NoOrEmptyImages_LeavesImagesNull(string? images)
     {
-        var result = SnapshotParser.Parse(Snapshot(Listing("test-mod", null)));
-
-        var listing = Assert.Single(result.ValidListings);
-        Assert.Null(listing.Images);
-        Assert.Empty(listing.ImagesErrors);
-    }
-
-    [Fact]
-    public void Parse_EmptyImages_LeavesImagesNull()
-    {
-        var result = SnapshotParser.Parse(Snapshot(Listing("test-mod", "{}")));
+        var result = SnapshotParser.Parse(Snapshot(Listing("test-mod", images)));
 
         var listing = Assert.Single(result.ValidListings);
         Assert.Null(listing.Images);
