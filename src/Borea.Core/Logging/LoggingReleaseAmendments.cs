@@ -29,7 +29,6 @@ public sealed class LoggingReleaseAmendments : IReleaseAmendments
 
     public async Task<ReleaseAmendmentPullRequest> OpenAsync(ReleaseAmendmentPreview preview, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(preview);
         try
         {
             var pullRequest = await Inner.OpenAsync(preview, cancellationToken).ConfigureAwait(false);
