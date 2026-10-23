@@ -2,9 +2,6 @@ using Borea.Core.Instances;
 
 namespace Borea.Cli.Commands;
 
-/// <summary>
-/// Finds the instance a command line names.
-/// </summary>
 internal static class InstanceLookup
 {
     /// <summary>

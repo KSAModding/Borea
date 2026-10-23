@@ -200,7 +200,6 @@ internal static class ModInstallCommands
             output.WriteLine("Nothing to do.");
     }
 
-    /// <summary>The install steps of every listing the plan installs.</summary>
     private static async Task PrintInstallStepsAsync(TextWriter output, CliServices cli, InstallPlan plan, CancellationToken cancellationToken)
     {
         foreach (var operation in plan.Operations)

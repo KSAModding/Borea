@@ -596,9 +596,6 @@ internal static class PackCommand
         return warnings;
     }
 
-    /// <summary>
-    /// Throws when the authored bounds of the pack do not admit the installed game, and names the bound that does not.
-    /// </summary>
     /// <returns>The state the authored bounds put the installed game in.</returns>
     private static GameCompatibility ThrowIfIncompatible(ModPackMetadata metadata, GameVersion? installed, GameReleaseList releases)
     {
