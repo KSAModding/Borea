@@ -38,7 +38,7 @@ public sealed class ListingPublisher : IListingPublisher
     /// <param name="baseBranch">The branch of content-index that the pull requests go to. Null takes <see cref="ListingPullRequestLinks.Branch"/>.</param>
     public ListingPublisher(IGitHubSession session, HttpClient http, IListingFormat format, TimeProvider? time = null, string? baseBranch = null)
     {
-        _session = session ?? throw new ArgumentNullException(nameof(session));
+        _session = session;
         _base = baseBranch ?? ListingPullRequestLinks.Branch;
         _api = new GitHubApi(session, http, time, _base);
         _ownership = new ListingOwnershipCheck(_api, http, format);

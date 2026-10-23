@@ -18,7 +18,7 @@ public sealed class GitHubIndexReports : IIndexReports, IReportActions
 
     public GitHubIndexReports(IGitHubSession session, HttpClient http, TimeProvider? time = null)
     {
-        _session = session ?? throw new ArgumentNullException(nameof(session));
+        _session = session;
         _api = new GitHubApi(session, http, time);
     }
 
