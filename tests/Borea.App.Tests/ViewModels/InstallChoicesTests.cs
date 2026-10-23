@@ -65,7 +65,7 @@ public sealed class InstallChoicesTests
         await row.InstallCommand.ExecuteAsync(null);
 
         Assert.True(row.IsConfirmingInstall);
-        Assert.Equal($"{harness.Localization.ContentAdd} ({MainViewModel.SizeText(38_000_000)})", shown);
+        Assert.Equal(SizedText(harness, 38_000_000), shown);
     }
 
     [Fact]
@@ -370,7 +370,7 @@ public sealed class InstallChoicesTests
         Assert.Null(row.Choices);
         Assert.Null(row.InstallWarning);
         Assert.Equal(harness.Localization.FormatInstallAlsoAdds("library 1.3.2"), row.AddedModsText);
-        Assert.Equal($"{harness.Localization.ContentAdd} ({MainViewModel.SizeText(38_000_000)})", row.ConfirmInstallText);
+        Assert.Equal(SizedText(harness, 38_000_000), row.ConfirmInstallText);
         Assert.Empty(await ModIdsAsync(harness, instance));
         Assert.DoesNotContain(harness.Requests, uri => uri.Host == ArchiveHost);
     }
@@ -537,7 +537,7 @@ public sealed class InstallChoicesTests
         Assert.True(item.IsConfirmingInstall);
         Assert.Null(item.InstallWarning);
         Assert.Equal(harness.Localization.FormatInstallAlsoAdds("KSArmory 0.8.44"), item.AddedModsText);
-        Assert.Equal($"{harness.Localization.ContentAdd} ({MainViewModel.SizeText(41_782 + 985_743)})", item.ConfirmInstallText);
+        Assert.Equal(SizedText(harness, MeasureToolsSize + ArmorySize), item.ConfirmInstallText);
         Assert.DoesNotContain(harness.Requests, uri => uri.Host is "github.com" or "spacedock.info");
 
         var raised = false;

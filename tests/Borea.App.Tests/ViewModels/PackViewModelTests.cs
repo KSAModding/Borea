@@ -560,11 +560,7 @@ public sealed class PackViewModelTests
     public async Task NewInstance_CreatesTheActiveInstanceWithThePackSourceAndThePinnedMods()
     {
         var archive = Archive(("MeasureTools/mod.toml", "name = \"MeasureTools\""));
-        using var harness = await ViewModelHarness.CreateAsync(
-            respond: request => request.RequestUri?.AbsoluteUri == MeasureToolsUrl ? ArchiveResponse(archive) : null,
-            editSnapshot: snapshot => WithPacks(Pack("tools-pack", "Tools Pack", Version("1.0.0", Pin("MeasureTools", "1.1.10"))))(
-                snapshot.Replace(MeasureToolsSha256, Convert.ToHexString(SHA256.HashData(archive)), StringComparison.Ordinal)
-                    .Replace("\"size\": 41782", $"\"size\": {archive.Length}", StringComparison.Ordinal)));
+        using var harness = await CreateWithMeasureToolsArchiveAsync(archive, MeasureToolsPack());
         var viewModel = harness.ViewModel;
         await viewModel.LoadAsync();
         await viewModel.EnsureDiscoverLoadedAsync();
@@ -607,11 +603,7 @@ public sealed class PackViewModelTests
     public async Task NewInstance_AnotherInstanceIsActive_KeepsItActive()
     {
         var archive = Archive(("MeasureTools/mod.toml", "name = \"MeasureTools\""));
-        using var harness = await ViewModelHarness.CreateAsync(
-            respond: request => request.RequestUri?.AbsoluteUri == MeasureToolsUrl ? ArchiveResponse(archive) : null,
-            editSnapshot: snapshot => WithPacks(Pack("tools-pack", "Tools Pack", Version("1.0.0", Pin("MeasureTools", "1.1.10"))))(
-                snapshot.Replace(MeasureToolsSha256, Convert.ToHexString(SHA256.HashData(archive)), StringComparison.Ordinal)
-                    .Replace("\"size\": 41782", $"\"size\": {archive.Length}", StringComparison.Ordinal)));
+        using var harness = await CreateWithMeasureToolsArchiveAsync(archive, MeasureToolsPack());
         var viewModel = harness.ViewModel;
         var career = await harness.Services.Instances.CreateAsync("Career", InstanceSource.Custom.Value);
         await viewModel.LoadAsync();
@@ -1021,11 +1013,7 @@ public sealed class PackViewModelTests
     public async Task PackUpdate_NewerVersion_ListsTheChangesAndUpdatesAfterTheConfirmation()
     {
         var archive = Archive(("MeasureTools/mod.toml", "name = \"MeasureTools\""));
-        using var harness = await ViewModelHarness.CreateAsync(
-            respond: request => request.RequestUri?.AbsoluteUri == MeasureToolsUrl ? ArchiveResponse(archive) : null,
-            editSnapshot: snapshot => WithPacks(ToolsPackVersions())(
-                snapshot.Replace(MeasureToolsSha256, Convert.ToHexString(SHA256.HashData(archive)), StringComparison.Ordinal)
-                    .Replace("\"size\": 41782", $"\"size\": {archive.Length}", StringComparison.Ordinal)));
+        using var harness = await CreateWithMeasureToolsArchiveAsync(archive, ToolsPackVersions());
         var viewModel = harness.ViewModel;
         var instance = await OpenToolsPackInstanceAsync(harness);
         var update = viewModel.PackUpdate!;
@@ -1911,11 +1899,7 @@ public sealed class PackViewModelTests
 
     /// <summary>A pack whose 1.0.0 pins MeasureTools 1.1.9 and whose 1.1.0 pins 1.1.10, with the 1.1.9 archive served.</summary>
     private static Task<ViewModelHarness> CreateWithToolsVersionsAsync(byte[] archive) =>
-        ViewModelHarness.CreateAsync(
-            respond: request => request.RequestUri?.AbsoluteUri == MeasureTools119Url ? ArchiveResponse(archive) : null,
-            editSnapshot: snapshot => WithPacks(Pack("tools-pack", "Tools Pack", Version("1.0.0", Pin("MeasureTools", "1.1.9")), Version("1.1.0", Pin("MeasureTools", "1.1.10"))))(
-                snapshot.Replace(MeasureTools119Sha256, Convert.ToHexString(SHA256.HashData(archive)), StringComparison.Ordinal)
-                    .Replace("\"size\": 41783", $"\"size\": {archive.Length}", StringComparison.Ordinal)));
+        CreateWithMeasureTools119ArchiveAsync(archive, Pack("tools-pack", "Tools Pack", Version("1.0.0", Pin("MeasureTools", "1.1.9")), Version("1.1.0", Pin("MeasureTools", "1.1.10"))));
 
     /// <summary>Tools Pack 1.0.0 pinning MeasureTools 1.1.9, whose newer release 1.1.10 the snapshot has.</summary>
     private static string MeasureToolsPinPack()

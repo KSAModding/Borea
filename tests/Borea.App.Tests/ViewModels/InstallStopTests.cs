@@ -22,9 +22,7 @@ public sealed class InstallStopTests
     [Fact]
     public void StopText_AfterTheDownload_SaysThatTheModFinishesFirst()
     {
-        var localization = new LocalizationService(CultureInfo.GetCultureInfo("en"));
-        var task = new TaskRegistry(localization, () => null, () => null, _ => Task.CompletedTask).Start(TaskKind.ModInstall, null, null, null, null, null, TaskState.Running);
-        var run = new InstallRun(localization, task);
+        var (localization, run) = NewRun();
         Assert.Equal(localization.InstallStop, run.StopText);
 
         run.StopCommand.Execute(null);
@@ -39,7 +37,7 @@ public sealed class InstallStopTests
     [Fact]
     public void ShowReport_AfterTheRunEnded_DoesNothing()
     {
-        var run = NewRun();
+        var (_, run) = NewRun();
         run.End();
 
         var shown = false;
@@ -51,7 +49,7 @@ public sealed class InstallStopTests
     [Fact]
     public async Task End_WhileAReportRuns_WaitsUntilTheReportIsDone()
     {
-        var run = NewRun();
+        var (_, run) = NewRun();
         using var reporting = new ManualResetEventSlim();
         using var release = new ManualResetEventSlim();
         var status = "Downloading";
@@ -76,19 +74,17 @@ public sealed class InstallStopTests
         Assert.Equal("Install stopped.", status);
     }
 
-    private static InstallRun NewRun()
+    private static (LocalizationService Localization, InstallRun Run) NewRun()
     {
         var localization = new LocalizationService(CultureInfo.GetCultureInfo("en"));
         var task = new TaskRegistry(localization, () => null, () => null, _ => Task.CompletedTask).Start(TaskKind.ModInstall, null, null, null, null, null, TaskState.Running);
-        return new InstallRun(localization, task);
+        return (localization, new InstallRun(localization, task));
     }
 
     [Fact]
     public void PauseButton_WorksOnlyWhileTheModDownloads()
     {
-        var localization = new LocalizationService(CultureInfo.GetCultureInfo("en"));
-        var task = new TaskRegistry(localization, () => null, () => null, _ => Task.CompletedTask).Start(TaskKind.ModInstall, null, null, null, null, null, TaskState.Running);
-        var run = new InstallRun(localization, task);
+        var (localization, run) = NewRun();
         Assert.False(run.TogglePauseCommand.CanExecute(null));
 
         run.Report(InstallPhase.Downloading);
@@ -225,17 +221,7 @@ public sealed class InstallStopTests
     [Fact]
     public async Task StopPack_DuringTheSecondMember_KeepsTheFirstAndSaysHowFarItGot()
     {
-        var archive = Archive("AdvancedFlightComputer");
-        using var harness = await ViewModelHarness.CreateAsync(
-            respond: request => request.RequestUri?.AbsolutePath.EndsWith("/AdvancedFlightComputer.zip", StringComparison.Ordinal) == true
-                ? new HttpResponseMessage(HttpStatusCode.OK) { Content = new ByteArrayContent(archive) { Headers = { ContentType = new MediaTypeHeaderValue("application/zip") } } }
-                : request.RequestUri?.AbsolutePath.EndsWith("/MeasureTools.zip", StringComparison.Ordinal) == true
-                    ? new HttpResponseMessage(HttpStatusCode.OK) { Content = new StreamContent(new StalledBody(_downloading)) }
-                    : null,
-            editSnapshot: snapshot => snapshot
-                .Replace("AD14E4FE8111F4DAE8406D50459B7E5C42D58F1E01F549636946922CF72AE9E6", Convert.ToHexString(SHA256.HashData(archive)), StringComparison.Ordinal)
-                .Replace("\"size\": 129696", $"\"size\": {archive.Length}", StringComparison.Ordinal)
-                .Replace("\"packs\": []", StarterPack, StringComparison.Ordinal));
+        using var harness = await CreateWithStarterPackAsync();
         var viewModel = harness.ViewModel;
         var instance = (await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value)).Instance;
         await harness.Services.Instances.SetActiveInstanceAsync(instance.InstanceId);
@@ -263,17 +249,7 @@ public sealed class InstallStopTests
     [Fact]
     public async Task StopPackNewInstance_DuringTheSecondMember_KeepsTheInstanceWithTheFirst()
     {
-        var archive = Archive("AdvancedFlightComputer");
-        using var harness = await ViewModelHarness.CreateAsync(
-            respond: request => request.RequestUri?.AbsolutePath.EndsWith("/AdvancedFlightComputer.zip", StringComparison.Ordinal) == true
-                ? new HttpResponseMessage(HttpStatusCode.OK) { Content = new ByteArrayContent(archive) { Headers = { ContentType = new MediaTypeHeaderValue("application/zip") } } }
-                : request.RequestUri?.AbsolutePath.EndsWith("/MeasureTools.zip", StringComparison.Ordinal) == true
-                    ? new HttpResponseMessage(HttpStatusCode.OK) { Content = new StreamContent(new StalledBody(_downloading)) }
-                    : null,
-            editSnapshot: snapshot => snapshot
-                .Replace("AD14E4FE8111F4DAE8406D50459B7E5C42D58F1E01F549636946922CF72AE9E6", Convert.ToHexString(SHA256.HashData(archive)), StringComparison.Ordinal)
-                .Replace("\"size\": 129696", $"\"size\": {archive.Length}", StringComparison.Ordinal)
-                .Replace("\"packs\": []", StarterPack, StringComparison.Ordinal));
+        using var harness = await CreateWithStarterPackAsync();
         var viewModel = harness.ViewModel;
         await viewModel.LoadAsync();
         await viewModel.EnsureDiscoverLoadedAsync();
@@ -460,6 +436,22 @@ public sealed class InstallStopTests
         await item.InstallCommand.ExecuteAsync(null);
         Assert.True(item.IsConfirmingInstall);
         return (instance, item);
+    }
+
+    /// <summary>A harness with the Starter Pack, whose AdvancedFlightComputer download is served and whose MeasureTools download stalls.</summary>
+    private Task<ViewModelHarness> CreateWithStarterPackAsync()
+    {
+        var archive = Archive("AdvancedFlightComputer");
+        return ViewModelHarness.CreateAsync(
+            respond: request => request.RequestUri?.AbsolutePath.EndsWith("/AdvancedFlightComputer.zip", StringComparison.Ordinal) == true
+                ? new HttpResponseMessage(HttpStatusCode.OK) { Content = new ByteArrayContent(archive) { Headers = { ContentType = new MediaTypeHeaderValue("application/zip") } } }
+                : request.RequestUri?.AbsolutePath.EndsWith("/MeasureTools.zip", StringComparison.Ordinal) == true
+                    ? new HttpResponseMessage(HttpStatusCode.OK) { Content = new StreamContent(new StalledBody(_downloading)) }
+                    : null,
+            editSnapshot: snapshot => snapshot
+                .Replace("AD14E4FE8111F4DAE8406D50459B7E5C42D58F1E01F549636946922CF72AE9E6", Convert.ToHexString(SHA256.HashData(archive)), StringComparison.Ordinal)
+                .Replace("\"size\": 129696", $"\"size\": {archive.Length}", StringComparison.Ordinal)
+                .Replace("\"packs\": []", StarterPack, StringComparison.Ordinal));
     }
 
     private const string StarterPack = """ "packs": [{ "id": "starter-pack", "versions": [{ "authored": { "spec_version": 1, "id": "starter-pack", "type": "modpack", "name": "Starter Pack", "authors": ["Maxi"], "abstract": "Starter Pack abstract.", "description": "## Starter Pack", "license": "MIT", "tags": ["starter"], "version": "1.0.0", "released_at": "2026-09-01T12:00:00Z", "links": { "forums": "https://forums.example.com/starter-pack" }, "compatibility": { "game_min": "2026.8.19.5261" }, "mods": [{ "id": "AdvancedFlightComputer", "version": "0.7.5" }, { "id": "MeasureTools", "version": "1.1.10" }] } }] }] """;
