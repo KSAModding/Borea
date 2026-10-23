@@ -7,11 +7,10 @@ using Borea.Storage.Toml;
 namespace Borea.Storage.Instances;
 
 /// <summary>
-/// File-backed implementation of IInstanceRepository. Each instance's
-/// metadata (and its full InstalledMods list, per the earlier one-file
-/// decision) lives at IGamePathProvider.GetInstanceMetadataPath(instanceId).
-/// Instance existence is derived by enumerating directories under
-/// GetInstancesRoot(), since InstanceId is also the folder name.
+/// Each instance's metadata, with its full InstalledMods list, lives at
+/// IGamePathProvider.GetInstanceMetadataPath(instanceId). Instance existence
+/// is derived by enumerating directories under GetInstancesRoot(), since
+/// InstanceId is also the folder name.
 /// </summary>
 public sealed class FileInstanceRepository : IInstanceRepository, IInstanceLocks
 {
@@ -66,9 +65,6 @@ public sealed class FileInstanceRepository : IInstanceRepository, IInstanceLocks
         return instances;
     }
 
-    /// <summary>
-    /// Returns the instance with the given ID, or null if it does not exist.
-    /// </summary>
     public async Task<Instance?> GetByIdAsync(Guid instanceId)
     {
         var file = GetFileLock(instanceId);
@@ -91,9 +87,6 @@ public sealed class FileInstanceRepository : IInstanceRepository, IInstanceLocks
     }
 
 
-    /// <summary>
-    /// Returns true if the given name is not already in use by another instance (excluding the one with excludingInstanceId, if provided).
-    /// </summary>
     public async Task<bool> IsNameAvailableAsync(string name, Guid? excludingInstanceId = null)
     {
         var all = await GetAllAsync().ConfigureAwait(false);
@@ -103,13 +96,13 @@ public sealed class FileInstanceRepository : IInstanceRepository, IInstanceLocks
     }
 
     /// <summary>
-    /// Creates a new instance with the given name and source, and saves it to disk. Throws if the name is already in use.
+    /// Throws if the name is already in use.
     /// </summary>
     public async Task<InstanceCreateResult> CreateAsync(string name, InstanceSource source)
         => await CreateAsync(new Instance(name, source)).ConfigureAwait(false);
 
     /// <summary>
-    /// Saves the given instance to disk as a new instance. Throws if its name is already in use or an instance with its ID exists.
+    /// Throws if its name is already in use or an instance with its ID exists.
     /// </summary>
     public async Task<InstanceCreateResult> CreateAsync(Instance instance)
     {
@@ -149,7 +142,7 @@ public sealed class FileInstanceRepository : IInstanceRepository, IInstanceLocks
     public Task<InstanceCreateResult> CreateAsync(Instance instance, InstanceOrigin origin) => CreateAsync(instance);
 
     /// <summary>
-    /// Renames the instance with the given ID to the new name, and saves it to disk. Throws if the instance does not exist or if the new name is already in use.
+    /// Throws if the instance does not exist or if the new name is already in use.
     /// </summary>
     public async Task RenameAsync(Guid instanceId, string newName)
     {
@@ -361,7 +354,7 @@ public sealed class FileInstanceRepository : IInstanceRepository, IInstanceLocks
     }
 
     /// <summary>
-    /// Sets the currently active instance to the one with the given ID. Throws if no such instance exists.
+    /// Throws if no instance with the given ID exists.
     /// </summary>
     public async Task SetActiveInstanceAsync(Guid instanceId)
     {
@@ -379,9 +372,6 @@ public sealed class FileInstanceRepository : IInstanceRepository, IInstanceLocks
         }
     }
 
-    /// <summary>
-    /// Removes the pointer file, so no instance is active. Does nothing when the file does not exist.
-    /// </summary>
     public Task ClearActiveInstanceAsync()
     {
         TomlFileStore.DeleteIfExists(_pathProvider.GetActiveInstancePointerPath());

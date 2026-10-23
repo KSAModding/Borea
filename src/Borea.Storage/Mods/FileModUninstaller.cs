@@ -5,8 +5,8 @@ using Borea.Storage.Files;
 namespace Borea.Storage.Mods;
 
 /// <summary>
-/// File-backed implementation of IModUninstaller. A linked mod loses only its
-/// link, and its stored release goes when no other instance links to it.
+/// A linked mod loses only its link, and its stored release goes when no
+/// other instance links to it.
 /// </summary>
 public sealed class FileModUninstaller : IModUninstaller
 {

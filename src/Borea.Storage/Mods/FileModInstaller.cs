@@ -8,10 +8,10 @@ using Borea.Storage.Files;
 namespace Borea.Storage.Mods;
 
 /// <summary>
-/// File-backed <see cref="IModInstaller"/>. The archive goes to a temporary
-/// file first, so nothing reaches the instance until the bytes are verified,
-/// and a failed install removes the folder and the record it created. A release
-/// the <see cref="ModStore"/> holds already is only linked.
+/// The archive goes to a temporary file first, so nothing reaches the
+/// instance until the bytes are verified, and a failed install removes the
+/// folder and the record it created. A release the <see cref="ModStore"/>
+/// holds already is only linked.
 /// </summary>
 public sealed class FileModInstaller : IModInstaller
 {
