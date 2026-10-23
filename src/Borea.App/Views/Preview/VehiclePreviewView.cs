@@ -13,15 +13,16 @@ using Avalonia.Threading;
 using Borea.Preview.Rendering;
 using Borea.Preview.Scene;
 using PreviewRenderOptions = Borea.Preview.Rendering.RenderOptions;
-using Vector3 = System.Numerics.Vector3;
 
 namespace Borea.App.Views.Preview;
 
 /// <summary>
-/// Shows a <see cref="PreviewScene"/> that the player can turn with a left drag or the arrow keys and zoom
-/// with the wheel. A right or a middle drag, or a left drag with Shift for a touchpad, moves the target in the
-/// screen plane. The keys of the free camera of the game editor work too: W and S zoom, A and D move the target to
-/// the side, and Q and E move it up and down the vehicle axis. F, Home and a double click frame the whole vehicle
+/// Shows a <see cref="PreviewScene"/> with the controls of the orbit camera of the game editor. A left or a
+/// right drag turns the view, with or without Shift, and so do the arrow keys. A middle drag zooms, away from
+/// the vehicle for a drag down and closer for a drag up. The wheel moves the target up and down the vehicle
+/// axis, and the wheel with Shift zooms. Q and E move the target up and down the axis too, and W and S zoom.
+/// A move of the target scales with the height that the view shows at the target, so it feels the same for a
+/// small capsule and a tall rocket. F, Home and a double click with the left button frame the whole vehicle
 /// again. The software renderer draws each frame on a background task into a bitmap that this control stretches
 /// over its bounds, and it draws only when the scene, the size or the camera changes.
 /// While a drag holds the pointer, the frames render at <see cref="PreviewRenderOptions.DragScale"/> of the
@@ -35,8 +36,15 @@ public sealed class VehiclePreviewView : Control
     /// <summary>How far one arrow key press turns the camera, 10 degrees.</summary>
     internal const float KeyStepPixels = 10f * MathF.PI / 180f / OrbitCamera.RadiansPerPixel;
 
-    /// <summary>How far one press of A, D, Q or E moves the target, as a fraction of the height that the view shows at the target.</summary>
-    internal const float KeyMoveFraction = 0.1f;
+    /// <summary>How far one wheel notch or one press of Q or E moves the target, as a fraction of the height that the view shows at the target.</summary>
+    internal const float AxisStepFraction = 0.1f;
+
+    /// <summary>
+    /// The zoom steps for each pixel that a middle drag moves down. The game multiplies the distance by 1.1 to the
+    /// power of 0.1 for each pixel, and these steps give the same factor, so the value is negative and a drag down
+    /// moves away.
+    /// </summary>
+    internal static readonly float ZoomStepsPerDragPixel = 0.1f * MathF.Log(1.1f) / MathF.Log(OrbitCamera.ZoomStepFactor);
 
     public static readonly StyledProperty<PreviewScene?> SceneProperty =
         AvaloniaProperty.Register<VehiclePreviewView, PreviewScene?>(nameof(Scene));
@@ -75,10 +83,10 @@ public sealed class VehiclePreviewView : Control
     private float _orbitY;
     private float _zoomSteps;
 
-    // The target offset from the center of the framed sphere in the vehicle frame. RequestRender keeps it inside the sphere.
-    private Vector3 _shift;
+    // The target offset along +X from the framed center. RequestRender keeps it inside the reach of the camera.
+    private float _axisOffset;
     private Point? _dragFrom;
-    private bool _dragPans;
+    private bool _dragZooms;
     private int _leftClicks;
     private WriteableBitmap? _bitmap;
     private RenderRequest? _queued;
@@ -116,7 +124,9 @@ public sealed class VehiclePreviewView : Control
 
     internal float CameraYaw => _camera.Yaw;
 
-    internal Vector3 CameraShift => _camera.Shift;
+    internal float CameraAxisOffset => _camera.AxisOffset;
+
+    internal float CameraAxisReach => _camera.AxisReach;
 
     /// <summary>
     /// The number of Standard frames that showed. A High frame only refines the frame that shows, so it counts in
@@ -150,7 +160,7 @@ public sealed class VehiclePreviewView : Control
         _orbitX = 0;
         _orbitY = 0;
         _zoomSteps = 0;
-        _shift = Vector3.Zero;
+        _axisOffset = 0;
         RequestRender(full: true);
     }
 
@@ -172,7 +182,7 @@ public sealed class VehiclePreviewView : Control
             var old = change.GetOldValue<PreviewScene?>();
             var scene = change.GetNewValue<PreviewScene?>();
 
-            // The wheel zooms only a scene, so without one a page that scrolls around the view gets the wheel.
+            // The wheel moves the camera only for a scene, so without one a page that scrolls around the view gets the wheel.
             SmoothScroll.SetOwnsWheel(this, scene is not null);
             StartGeneration();
             ReleaseRenderState();
@@ -187,7 +197,7 @@ public sealed class VehiclePreviewView : Control
                 _orbitX = 0;
                 _orbitY = 0;
                 _zoomSteps = 0;
-                _shift = Vector3.Zero;
+                _axisOffset = 0;
             }
 
             // When a High frame of the same vehicle shows, the new scene renders at High at once. The old High frame
@@ -249,7 +259,7 @@ public sealed class VehiclePreviewView : Control
         }
 
         _dragFrom = point.Position;
-        _dragPans = !left || e.KeyModifiers.HasFlag(KeyModifiers.Shift);
+        _dragZooms = !left && !properties.IsRightButtonPressed;
         _dragScales.Reset();
         e.Pointer.Capture(this);
 
@@ -267,8 +277,8 @@ public sealed class VehiclePreviewView : Control
         var position = e.GetPosition(this);
         _dragFrom = position;
         var (dx, dy) = ((float)(position.X - from.X), (float)(position.Y - from.Y));
-        if (_dragPans)
-            Move(_camera.PanOffset(dx, dy, (float)Bounds.Height), full: false);
+        if (_dragZooms)
+            Zoom(dy * ZoomStepsPerDragPixel);
         else
             Orbit(dx, dy, full: false);
 
@@ -311,7 +321,15 @@ public sealed class VehiclePreviewView : Control
             return;
 
         e.Handled = true;
-        Zoom((float)e.Delta.Y);
+        if (e.KeyModifiers.HasFlag(KeyModifiers.Shift))
+        {
+            // Some systems turn the wheel with Shift into a sideways wheel, so a delta only on X counts too.
+            Zoom((float)(e.Delta.Y != 0 ? e.Delta.Y : e.Delta.X));
+        }
+        else
+        {
+            MoveAlongAxis((float)e.Delta.Y);
+        }
     }
 
     protected override void OnKeyDown(KeyEventArgs e)
@@ -339,9 +357,8 @@ public sealed class VehiclePreviewView : Control
     }
 
     /// <summary>
-    /// Applies the free camera keys of the game editor and Home. The letters are physical keys, as in the game, so
-    /// they keep their place on any keyboard layout. A step scales with the distance, so it looks the same at any
-    /// zoom. Returns false for any other key.
+    /// Applies Home and the letter keys of the camera. The letters are physical keys, as in the game, so they keep
+    /// their place on any keyboard layout. Returns false for any other key.
     /// </summary>
     private bool MoveByKey(KeyEventArgs e)
     {
@@ -351,7 +368,6 @@ public sealed class VehiclePreviewView : Control
             return true;
         }
 
-        var step = _camera.ViewHeight * KeyMoveFraction;
         switch (e.PhysicalKey)
         {
             case PhysicalKey.W:
@@ -360,17 +376,11 @@ public sealed class VehiclePreviewView : Control
             case PhysicalKey.S:
                 Zoom(-1f);
                 return true;
-            case PhysicalKey.A:
-                Move(-_camera.ScreenRight * step, full: true);
-                return true;
-            case PhysicalKey.D:
-                Move(_camera.ScreenRight * step, full: true);
-                return true;
             case PhysicalKey.Q:
-                Move(Vector3.UnitX * step, full: true);
+                MoveAlongAxis(1f);
                 return true;
             case PhysicalKey.E:
-                Move(-Vector3.UnitX * step, full: true);
+                MoveAlongAxis(-1f);
                 return true;
             case PhysicalKey.F:
                 ResetView();
@@ -380,10 +390,11 @@ public sealed class VehiclePreviewView : Control
         }
     }
 
-    private void Move(Vector3 offset, bool full)
+    /// <summary>Moves the target up the vehicle axis by <paramref name="steps"/> of <see cref="AxisStepFraction"/>, or down for negative steps.</summary>
+    private void MoveAlongAxis(float steps)
     {
-        _shift += offset;
-        RequestRender(full);
+        _axisOffset += steps * _camera.ViewHeight * AxisStepFraction;
+        RequestRender(full: _dragFrom is null);
     }
 
     private void Zoom(float steps)
@@ -416,10 +427,10 @@ public sealed class VehiclePreviewView : Control
         camera.Frame(scene?.Bounds ?? PreviewBounds.Empty, aspect);
         camera.Orbit(_orbitX, _orbitY);
         camera.Zoom(_zoomSteps);
-        camera.SetShift(_shift);
+        camera.SetAxisOffset(_axisOffset);
 
-        // A shift past the sphere was shortened, so a move back responds at once.
-        _shift = camera.Shift;
+        // An offset past an end of the vehicle stopped at that end, so a move back responds at once.
+        _axisOffset = camera.AxisOffset;
         _camera = camera;
 
         if (VisualRoot is null || scene is null || size.Width <= 0 || size.Height <= 0)

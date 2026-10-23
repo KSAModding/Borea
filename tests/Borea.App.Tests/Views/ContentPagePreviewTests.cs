@@ -70,7 +70,7 @@ public sealed class ContentPagePreviewTests
     }
 
     [Fact]
-    public async Task TheWheel_ZoomsOverThePanel_AndScrollsThePageOverTheDescription()
+    public async Task TheWheel_MovesTheTargetOverThePanel_AndScrollsThePageOverTheDescription()
     {
         using var harness = await RoverPageAsync();
         var seen = await HeadlessApp.RunAsync(harness, async () =>
@@ -81,11 +81,10 @@ public sealed class ContentPagePreviewTests
             // the panel comes into the window first, so the wheel is over it
             scroller.Offset = new Vector(0, Math.Max(0, BoundsIn(window, view).Y - 40));
             await HeadlessApp.FramesAsync(2);
-            var distance = view.CameraDistance;
             var offset = scroller.Offset;
             window.MouseWheel(BoundsIn(window, view).Center, new Vector(0, 2));
             await HeadlessApp.FramesAsync(20);
-            var overPanel = (Zoomed: view.CameraDistance < distance, Offset: scroller.Offset == offset);
+            var overPanel = (Moved: view.CameraAxisOffset > 0f, Offset: scroller.Offset == offset);
 
             // then the description, with the page scrolled down so that a wheel up can move it
             var description = page.GetVisualDescendants().OfType<TextBlock>().First(block => block.IsEffectivelyVisible && block.Text == harness.Localization.ContentNoDescription);
@@ -96,10 +95,10 @@ public sealed class ContentPagePreviewTests
             await HeadlessApp.FramesAsync(40);
             var after = scroller.Offset.Y;
             window.Close();
-            return (overPanel.Zoomed, overPanel.Offset, Before: before, After: after);
+            return (overPanel.Moved, overPanel.Offset, Before: before, After: after);
         });
 
-        Assert.True(seen.Zoomed, "The wheel over the panel must zoom the view.");
+        Assert.True(seen.Moved, "The wheel over the panel must move the target of the view.");
         Assert.True(seen.Offset, "The wheel over the panel must leave the page where it is.");
         Assert.True(seen.Before > 0);
         Assert.True(seen.After < seen.Before, $"The wheel over the description must scroll the page, but the offset stayed at {seen.After}.");
