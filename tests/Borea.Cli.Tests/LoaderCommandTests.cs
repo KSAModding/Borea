@@ -516,6 +516,7 @@ public sealed class LoaderCommandTests : IDisposable
             ModMetadata loader,
             ModVersionMetadata release,
             string? directory = null,
+            bool replacesUnfitRecord = false,
             IProgress<InstallProgress>? progress = null,
             CancellationToken cancellationToken = default)
         {

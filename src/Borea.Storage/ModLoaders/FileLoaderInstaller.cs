@@ -58,6 +58,7 @@ public sealed class FileLoaderInstaller : ILoaderInstaller
         ModMetadata loader,
         ModVersionMetadata release,
         string? directory = null,
+        bool replacesUnfitRecord = false,
         IProgress<InstallProgress>? progress = null,
         CancellationToken cancellationToken = default)
     {
@@ -76,7 +77,7 @@ public sealed class FileLoaderInstaller : ILoaderInstaller
             directory = OutsideLoadersRoot(loader, directory, recorded);
 
         if (target == InstallAnchor.Standalone && directory is null)
-            return await InstallVersionAsync(loader, release, path, root, settings, progress, cancellationToken).ConfigureAwait(false);
+            return await InstallVersionAsync(loader, release, path, root, settings, replacesUnfitRecord, progress, cancellationToken).ConfigureAwait(false);
 
         var destination = Resolve(loader, target, path, directory, settings.GameDirectoryPath);
 
@@ -144,6 +145,7 @@ public sealed class FileLoaderInstaller : ILoaderInstaller
         string? path,
         string? root,
         BoreaSettings settings,
+        bool replacesUnfitRecord,
         IProgress<InstallProgress>? progress,
         CancellationToken cancellationToken)
     {
@@ -157,7 +159,7 @@ public sealed class FileLoaderInstaller : ILoaderInstaller
         {
             RequireGameStopped(loader);
             var folder = Path.GetFullPath(same.DirectoryPath);
-            return await ReplaceVersionAsync(loader, release, root, folder, same.IsRecorded ? folder : Below(folder, path), loaderFolder, settings, progress, cancellationToken).ConfigureAwait(false);
+            return await ReplaceVersionAsync(loader, release, root, folder, same.IsRecorded ? folder : Below(folder, path), loaderFolder, settings, replacesUnfitRecord, progress, cancellationToken).ConfigureAwait(false);
         }
 
         var recordedInstallation = settings.LoaderInstallations.TryGetValue(loader.ModId, out var known) ? known : null;
@@ -178,7 +180,7 @@ public sealed class FileLoaderInstaller : ILoaderInstaller
 
             RequireGameStopped(loader);
             if (flatVersion == release.Version)
-                return await ReplaceVersionAsync(loader, release, root, loaderFolder, loaderFolder, loaderFolder, settings, progress, cancellationToken).ConfigureAwait(false);
+                return await ReplaceVersionAsync(loader, release, root, loaderFolder, loaderFolder, loaderFolder, settings, replacesUnfitRecord, progress, cancellationToken).ConfigureAwait(false);
 
             await _layout.MoveLegacyAsync(loader.ModId, flatVersion, cancellationToken).ConfigureAwait(false);
             settings = await _settings.GetAsync(cancellationToken).ConfigureAwait(false) ?? new BoreaSettings(null);
@@ -209,7 +211,7 @@ public sealed class FileLoaderInstaller : ILoaderInstaller
                 destination,
                 Mode.Beside,
                 seed,
-                current => Repoint(current, loader.ModId, release.Version, destination, loaderFolder),
+                current => Repoint(current, loader.ModId, release.Version, destination, loaderFolder, replacesUnfitRecord),
                 settings,
                 progress,
                 cancellationToken).ConfigureAwait(false);
@@ -235,6 +237,7 @@ public sealed class FileLoaderInstaller : ILoaderInstaller
         string destination,
         string loaderFolder,
         BoreaSettings settings,
+        bool replacesUnfitRecord,
         IProgress<InstallProgress>? progress,
         CancellationToken cancellationToken) =>
         InstallIntoAsync(
@@ -248,7 +251,7 @@ public sealed class FileLoaderInstaller : ILoaderInstaller
             current =>
             {
                 if (!current.LoaderInstallations.TryGetValue(loader.ModId, out var record) || !SamePath(record.DirectoryPath, destination))
-                    return Repoint(current, loader.ModId, release.Version, destination, loaderFolder);
+                    return Repoint(current, loader.ModId, release.Version, destination, loaderFolder, replacesUnfitRecord);
 
                 var isAdopted = !IsBelowLoadersRoot(destination) && record.IsAdopted;
                 return current.WithLoaderInstallation(loader.ModId, new LoaderInstallation(destination, release.Version, rawVersion: null, isAdopted));
@@ -258,14 +261,16 @@ public sealed class FileLoaderInstaller : ILoaderInstaller
             cancellationToken);
 
     /// <summary>
-    /// The record names the version that an older Borea starts, so it follows each install of a release, also of an older
-    /// one, because the player chose it. It moves to a prerelease only when the record is a prerelease too or the channel of
-    /// the player takes prereleases, so that a prerelease installed for one instance does not start every instance. A record
-    /// outside the Loaders root belongs to the player and never moves. A record at the flat folder of a moved loader always
-    /// moves, because an uninstall of that folder would delete every version.
+    /// The record names the version that an older Borea starts for every instance, so it stays on the newest version that
+    /// Borea installed and an install of a lower version for one pinned instance does not move it. It moves to a lower
+    /// version only when the recorded folder is gone or the recorded version does not fit the game, and from a prerelease to
+    /// a release. It moves to a prerelease only when the record is a prerelease too or the channel of the player takes
+    /// prereleases, so that a prerelease installed for one instance does not start every instance. A record outside the
+    /// Loaders root belongs to the player and never moves. A record at the flat folder of a moved loader always moves,
+    /// because an uninstall of that folder would delete every version.
     /// </summary>
     /// <returns>The settings to save, or null when the record stays.</returns>
-    private BoreaSettings? Repoint(BoreaSettings current, string loaderId, ModVersion version, string destination, string loaderFolder)
+    private BoreaSettings? Repoint(BoreaSettings current, string loaderId, ModVersion version, string destination, string loaderFolder, bool replacesUnfitRecord)
     {
         var installation = new LoaderInstallation(destination, version, rawVersion: null, isAdopted: false);
         if (!current.LoaderInstallations.TryGetValue(loaderId, out var record))
@@ -277,7 +282,13 @@ public sealed class FileLoaderInstaller : ILoaderInstaller
         if (SamePath(record.DirectoryPath, loaderFolder) || record.Version is not { } recordedVersion)
             return current.WithLoaderInstallation(loaderId, installation);
 
-        var moves = version.PreRelease is null || recordedVersion.PreRelease is not null || current.ReleaseChannel != ReleaseChannel.Stable;
+        if (version.PreRelease is not null && recordedVersion.PreRelease is null && current.ReleaseChannel == ReleaseChannel.Stable)
+            return null;
+
+        var moves = version.CompareTo(recordedVersion) >= 0
+            || (recordedVersion.PreRelease is not null && version.PreRelease is null)
+            || !Directory.Exists(record.DirectoryPath)
+            || replacesUnfitRecord;
         return moves ? current.WithLoaderInstallation(loaderId, installation) : null;
     }
 

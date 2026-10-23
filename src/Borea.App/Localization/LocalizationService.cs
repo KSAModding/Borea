@@ -2681,7 +2681,17 @@ public sealed class LocalizationService : INotifyPropertyChanged
 
     public string SetupNoLoaderSelected => Resources.SetupNoLoaderSelected;
 
-    public string SetupReinstallLoader => Resources.SetupReinstallLoader;
+    public string SettingsLoadersTitle => Resources.SettingsLoadersTitle;
+
+    public string SettingsLoadersHint => Resources.SettingsLoadersHint;
+
+    public string SettingsLoaderUnused => Resources.SettingsLoaderUnused;
+
+    public string SettingsLoaderForget => Resources.SettingsLoaderForget;
+
+    public string SettingsLoaderInstallAnother => Resources.SettingsLoaderInstallAnother;
+
+    public string SettingsLoaderRemoveConfirm => Resources.SettingsLoaderRemoveConfirm;
 
     public string SetupLoaderInstalledUnknownVersion => Resources.SetupLoaderInstalledUnknownVersion;
 
@@ -2818,11 +2828,17 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string FormatSetupLoaderInstalled(string loaderName, string version, string directory)
         => string.Format(CultureInfo.CurrentCulture, Resources.SetupLoaderInstalledFormat, loaderName, version, directory);
 
-    public string FormatSetupLoaderInstalledVersion(string version)
-        => string.Format(CultureInfo.CurrentCulture, Resources.SetupLoaderInstalledVersionFormat, version);
+    public string FormatSettingsLoaderUsedBy(string instances)
+        => string.Format(CultureInfo.CurrentCulture, Resources.SettingsLoaderUsedByFormat, instances);
 
-    public string FormatSetupLoaderIncompatible(string version, string game)
-        => string.Format(CultureInfo.CurrentCulture, Resources.SetupLoaderIncompatibleFormat, version, game);
+    public string FormatSettingsLoaderInUse(string instances)
+        => string.Format(CultureInfo.CurrentCulture, Resources.SettingsLoaderInUseFormat, instances);
+
+    public string FormatSettingsLoaderYourFolder(string loader)
+        => string.Format(CultureInfo.CurrentCulture, Resources.SettingsLoaderYourFolderFormat, loader);
+
+    public string FormatSettingsLoaderRemoved(string loader, string version)
+        => string.Format(CultureInfo.CurrentCulture, Resources.SettingsLoaderRemovedFormat, loader, version);
 
     public string FormatSetupUpdateLoader(string version)
         => string.Format(CultureInfo.CurrentCulture, Resources.SetupUpdateLoaderFormat, version);

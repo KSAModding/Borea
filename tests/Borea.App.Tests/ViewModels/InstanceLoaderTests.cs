@@ -196,6 +196,27 @@ public sealed class InstanceLoaderTests
     }
 
     [Fact]
+    public async Task SaveLoaderSetting_PinnedToAnOlderMissingVersion_InstallsItAndKeepsTheRecord()
+    {
+        using var harness = await CreateWithReleasesAsync(starMap: "0.4.8");
+        await OpenEmptyAsync(harness);
+        var viewModel = harness.ViewModel;
+        await viewModel.SelectedInstance!.BeginEditLoaderSettingCommand.ExecuteAsync(null);
+        viewModel.IsLoaderSettingPinned = true;
+        viewModel.SelectedLoaderSettingRelease = viewModel.LoaderSettingReleases.Single(choice => choice.VersionText == "0.4.7");
+
+        await viewModel.SaveLoaderSettingCommand.ExecuteAsync(null);
+
+        Assert.Null(viewModel.SetupError);
+        Assert.NotNull(InstalledLoaderVersion.Find(await harness.Services.LoaderVersions.ListAsync(), "StarMap", ModVersion.Parse("0.4.7")));
+
+        // the record is what an older Borea starts for every instance, so a pin of one instance leaves it on 0.4.8
+        var record = (await harness.Services.SettingsRepository.GetAsync())!.LoaderInstallations["StarMap"];
+        Assert.Equal(ModVersion.Parse("0.4.8"), record.Version);
+        Assert.Equal(harness.Services.Paths.GetLoaderVersionDirectoryPath("StarMap", ModVersion.Parse("0.4.8")), record.DirectoryPath);
+    }
+
+    [Fact]
     public async Task OpenLoaderSetting_PinnedToAMissingVersionOutsideTheChannel_SelectsThatPinAndSaveKeepsIt()
     {
         using var harness = await CreateWithReleasesAsync(starMap: null, testing: "0.4.7");
