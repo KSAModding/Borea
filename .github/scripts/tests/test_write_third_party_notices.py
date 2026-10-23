@@ -156,6 +156,7 @@ class WriteThirdPartyNoticesTests(unittest.TestCase):
         self.fixture.add_package("Avalonia.Angle.Windows.Natives", "2.1.27548.20260419", license="LICENSE", license_type="file", files={"LICENSE": "// Copyright 2018 The ANGLE Project Authors.\n"})
         self.fixture.add_package("System.CommandLine", "2.0.11")
         self.fixture.add_package("Tomlyn", "2.10.1", license="BSD-2-Clause", copyright="Alexandre Mutel")
+        self.fixture.add_package("ZstdSharp.Port", "0.8.8", copyright="Copyright Oleg Stepanischev 2026")
         self.fixture.add_runtime(programs=("Borea.App", "borea"))
 
     def test_cli_file_names_system_commandline_tomlyn_and_the_runtime(self) -> None:
@@ -181,7 +182,7 @@ class WriteThirdPartyNoticesTests(unittest.TestCase):
         code, text, errors = self.fixture.run("App")
 
         self.assertEqual(0, code, errors)
-        for title in ("Avalonia 12.1.2", "Tomlyn 2.10.1", "System.CommandLine 2.0.11", "IBM Plex", "Phosphor Icons", ".NET runtime 10.0.12"):
+        for title in ("Avalonia 12.1.2", "Tomlyn 2.10.1", "System.CommandLine 2.0.11", "ZstdSharp.Port 0.8.8", "IBM Plex", "Phosphor Icons", ".NET runtime 10.0.12"):
             self.assertIn(f"\n{title}\n", text)
         self.assertIn("Copyright: Copyright (c) 2017 IBM Corp. with Reserved Font Name \"Plex\"", text)
         self.assertIn("SIL OPEN FONT LICENSE Version 1.1", text)
