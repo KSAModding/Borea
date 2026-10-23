@@ -567,8 +567,7 @@ public sealed class ContentUpdateTests
 
         await updateAll.UpdateCommand.ExecuteAsync(null);
 
-        var plan = updateAll.PendingPlan;
-        Assert.NotNull(plan);
+        var plan = updateAll.PendingPlan!;
         Assert.NotNull(updateAll.InstallWarning);
         Assert.Equal(
             ["AdvancedFlightComputer 0.7.5", "MeasureTools 1.1.10"],
