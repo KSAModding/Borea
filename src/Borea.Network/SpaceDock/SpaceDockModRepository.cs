@@ -308,10 +308,3 @@ internal sealed class SpaceDockVersionDto
     [JsonPropertyName("game_version")]
     public string RawGameVersion { get; set; } = string.Empty;
 }
-
-internal sealed class SpaceDockGameDto
-{
-    public int Id { get; set; }
-    public string Name { get; set; } = string.Empty;
-    public string? Short { get; set; }
-}
