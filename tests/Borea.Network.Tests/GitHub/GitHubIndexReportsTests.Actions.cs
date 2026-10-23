@@ -28,7 +28,7 @@ public sealed partial class GitHubIndexReportsTests
                 ClosedIssue(9, "[Takedown] An old one", TakedownBody, "duplicate", closed),
             },
         }));
-        var reports = new GitHubIndexReports(await SignInAsync(), Http());
+        var reports = await SignedInAsync();
 
         var listed = await reports.ListAsync(IndexReportFilter.RecentlyClosed);
 
@@ -44,7 +44,7 @@ public sealed partial class GitHubIndexReportsTests
     public async Task ListAsync_Open_SaysTheReportsAreOpen()
     {
         Issue(10, "[Takedown] Harmful installer", TakedownBody, "alice");
-        var reports = new GitHubIndexReports(await SignInAsync(), Http());
+        var reports = await SignedInAsync();
 
         var report = Assert.Single(await reports.ListAsync());
 
@@ -56,7 +56,7 @@ public sealed partial class GitHubIndexReportsTests
     {
         Report("open");
         _routes[$"POST {CommentsUrl}"] = () => Json("""{"id":1}""", HttpStatusCode.Created);
-        var reports = new GitHubIndexReports(await SignInAsync(), Http());
+        var reports = await SignedInAsync();
 
         await reports.CommentAsync(Shown(), "  Please answer here, @alice.  ");
 
@@ -73,7 +73,7 @@ public sealed partial class GitHubIndexReportsTests
         Report("open");
         _routes[$"POST {CommentsUrl}"] = () => Json("""{"id":1}""", HttpStatusCode.Created);
         _routes[$"PATCH {IssueUrl}"] = () => Json("""{"number":10,"state":"closed"}""");
-        var reports = new GitHubIndexReports(await SignInAsync(), Http());
+        var reports = await SignedInAsync();
 
         await reports.CloseAsync(Shown(), reason, "The takedown does not hold.");
 
@@ -88,7 +88,7 @@ public sealed partial class GitHubIndexReportsTests
         Report("closed");
         _routes[$"POST {CommentsUrl}"] = () => Json("""{"id":1}""", HttpStatusCode.Created);
         _routes[$"PATCH {IssueUrl}"] = () => Json("""{"number":10,"state":"open"}""");
-        var reports = new GitHubIndexReports(await SignInAsync(), Http());
+        var reports = await SignedInAsync();
 
         await reports.ReopenAsync(Shown(), "The author posted the original thread.");
 
@@ -102,7 +102,7 @@ public sealed partial class GitHubIndexReportsTests
         Report("open", comments: 101);
         _routes[$"GET {CommentsUrl}?per_page=100&page=2"] = () => Json("""[{"body":"The takedown does not hold.\r\n","user":{"login":"OctoCat"}}]""");
         _routes[$"PATCH {IssueUrl}"] = () => Json("""{"number":10,"state":"closed"}""");
-        var reports = new GitHubIndexReports(await SignInAsync(), Http());
+        var reports = await SignedInAsync();
 
         await reports.CloseAsync(Shown(), IndexReportCloseReason.NotPlanned, "The takedown does not hold.");
 
@@ -116,7 +116,7 @@ public sealed partial class GitHubIndexReportsTests
         _routes[$"GET {CommentsUrl}?per_page=100&page=1"] = () => Json("""[{"body":"The takedown does not hold.","user":{"login":"alice"}}]""");
         _routes[$"POST {CommentsUrl}"] = () => Json("""{"id":1}""", HttpStatusCode.Created);
         _routes[$"PATCH {IssueUrl}"] = () => Json("""{"number":10,"state":"closed"}""");
-        var reports = new GitHubIndexReports(await SignInAsync(), Http());
+        var reports = await SignedInAsync();
 
         await reports.CloseAsync(Shown(), IndexReportCloseReason.Completed, "The takedown does not hold.");
 
@@ -129,7 +129,7 @@ public sealed partial class GitHubIndexReportsTests
     public async Task StateChange_ReportChangedSinceTheRead_RefusesAndWritesNothing(string state, bool reopen)
     {
         Report(state);
-        var reports = new GitHubIndexReports(await SignInAsync(), Http());
+        var reports = await SignedInAsync();
 
         var refused = await Assert.ThrowsAsync<ReportRefusedException>(() => reopen
             ? reports.ReopenAsync(Shown(), "New evidence.")
@@ -147,7 +147,7 @@ public sealed partial class GitHubIndexReportsTests
     public async Task CanActAsync_AsksTheInstallationOnKSAModdingForTheIssuesPermission(string installations, bool canAct)
     {
         _routes[$"GET {InstallationsUrl}"] = () => Json(installations);
-        var reports = new GitHubIndexReports(await SignInAsync(), Http());
+        var reports = await SignedInAsync();
 
         Assert.Equal(canAct, await reports.CanActAsync());
         var sent = Assert.Single(_sent);
@@ -158,7 +158,7 @@ public sealed partial class GitHubIndexReportsTests
     public async Task CanActAsync_CheckFails_OrSignedOut_IsNo()
     {
         _routes[$"GET {InstallationsUrl}"] = () => Json("""{"message":"Failed"}""", HttpStatusCode.InternalServerError);
-        var failing = new GitHubIndexReports(await SignInAsync(), Http());
+        var failing = await SignedInAsync();
         var signedOut = new GitHubIndexReports(new GitHubSession(Http(), "Iv1.testclient", "borea-test"), Http());
 
         Assert.False(await failing.CanActAsync());
@@ -171,7 +171,7 @@ public sealed partial class GitHubIndexReportsTests
     {
         Report("open");
         _routes[$"POST {CommentsUrl}"] = () => Json("""{"message":"Resource not accessible by integration"}""", HttpStatusCode.Forbidden);
-        var reports = new GitHubIndexReports(await SignInAsync(), Http());
+        var reports = await SignedInAsync();
 
         var comment = await Assert.ThrowsAsync<StewardException>(() => reports.CommentAsync(Shown(), "Please answer."));
         var close = await Assert.ThrowsAsync<StewardException>(() => reports.CloseAsync(Shown(), IndexReportCloseReason.Completed, "Done."));
@@ -189,7 +189,7 @@ public sealed partial class GitHubIndexReportsTests
         _routes[$"GET {IssueUrl}"] = () => Json("""{"message":"Resource not accessible by integration"}""", HttpStatusCode.Forbidden);
         _routes[$"GET {IssueUrl} anonymous"] = () => Json(IssueJson("open", 0, $"https://github.com/{Index}/issues/10"));
         _routes[$"POST {CommentsUrl}"] = () => Json("""{"id":1}""", HttpStatusCode.Created);
-        var reports = new GitHubIndexReports(await SignInAsync(), Http());
+        var reports = await SignedInAsync();
 
         await reports.CommentAsync(Shown(), "Please answer.");
 
@@ -203,7 +203,7 @@ public sealed partial class GitHubIndexReportsTests
     public async Task EveryAction_ReportMovedOrGone_IsNotFound_AndWritesNothing(HttpStatusCode status, string? movedTo)
     {
         _routes[$"GET {IssueUrl}"] = () => status == HttpStatusCode.OK ? Json(IssueJson("open", 0, movedTo!)) : Json("""{"message":"Gone"}""", status);
-        var reports = new GitHubIndexReports(await SignInAsync(), Http());
+        var reports = await SignedInAsync();
 
         var comment = await Assert.ThrowsAsync<StewardException>(() => reports.CommentAsync(Shown(), "Please answer."));
         var reopen = await Assert.ThrowsAsync<StewardException>(() => reports.ReopenAsync(Shown(), "New evidence."));
@@ -215,7 +215,7 @@ public sealed partial class GitHubIndexReportsTests
     [Fact]
     public async Task EveryAction_WithoutAComment_OrOnAnotherRepository_SendsNothing()
     {
-        var reports = new GitHubIndexReports(await SignInAsync(), Http());
+        var reports = await SignedInAsync();
         var elsewhere = Shown() with { Url = new Uri("https://github.com/KSAModding/Borea/issues/10") };
 
         await Assert.ThrowsAsync<ArgumentException>(() => reports.CommentAsync(Shown(), " "));

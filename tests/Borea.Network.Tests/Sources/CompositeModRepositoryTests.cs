@@ -6,6 +6,9 @@ namespace Borea.Network.Tests;
 
 public sealed class CompositeModRepositoryTests
 {
+    private static CompositeModRepository Composite(params (string Source, IModRepository Repository)[] sources) =>
+        new(sources.ToDictionary(entry => entry.Source, entry => entry.Repository));
+
     [Fact]
     public void Constructor_NullSources_ThrowsArgumentNullException()
     {
@@ -17,11 +20,7 @@ public sealed class CompositeModRepositoryTests
     {
         var spaceDock = new FakeModRepository(TestFixtures.SampleModMetadata("mod-a", "spacedock"));
         var borea = new FakeModRepository(TestFixtures.SampleModMetadata("mod-b", "borea"));
-        var composite = new CompositeModRepository(new Dictionary<string, IModRepository>
-        {
-            ["spacedock"] = spaceDock,
-            ["borea"] = borea,
-        });
+        var composite = Composite(("spacedock", spaceDock), ("borea", borea));
 
         var results = await composite.GetAvailableModsAsync();
 
@@ -31,11 +30,9 @@ public sealed class CompositeModRepositoryTests
     [Fact]
     public async Task GetAvailableModsAsync_DuplicateIdUsesFirstRegisteredSource()
     {
-        var composite = new CompositeModRepository(new Dictionary<string, IModRepository>
-        {
-            ["index"] = new FakeModRepository(TestFixtures.SampleModMetadata("shared-mod", "ignored", "Index Name")),
-            ["spacedock"] = new FakeModRepository(TestFixtures.SampleModMetadata("SHARED-MOD", "ignored", "SpaceDock Name")),
-        });
+        var composite = Composite(
+            ("index", new FakeModRepository(TestFixtures.SampleModMetadata("shared-mod", "ignored", "Index Name"))),
+            ("spacedock", new FakeModRepository(TestFixtures.SampleModMetadata("SHARED-MOD", "ignored", "SpaceDock Name"))));
 
         var result = Assert.Single(await composite.GetAvailableModsAsync());
 
@@ -44,31 +41,12 @@ public sealed class CompositeModRepositoryTests
     }
 
     [Fact]
-    public async Task GetAvailableModsAsync_TagsEachResultWithItsOwnSource()
-    {
-        var spaceDock = new FakeModRepository(TestFixtures.SampleModMetadata("mod-a", "original-source-ignored"));
-        var composite = new CompositeModRepository(new Dictionary<string, IModRepository>
-        {
-            ["spacedock"] = spaceDock,
-        });
-
-        var results = await composite.GetAvailableModsAsync();
-
-        // Confirms Tag() overwrites Source with the registry key, not
-        // whatever the underlying repository happened to set.
-        Assert.Equal("spacedock", results[0].Source);
-    }
-
-    [Fact]
     public async Task Tag_PreservesEveryListingFact()
     {
         // The fixture populates every optional field, so dropping any
         // argument from the Tag copy makes an assertion below fail.
         var original = TestFixtures.FullModMetadata();
-        var composite = new CompositeModRepository(new Dictionary<string, IModRepository>
-        {
-            ["spacedock"] = new FakeModRepository(original),
-        });
+        var composite = Composite(("spacedock", new FakeModRepository(original)));
 
         var tagged = (await composite.GetAvailableModsAsync())[0];
 
@@ -87,13 +65,11 @@ public sealed class CompositeModRepositoryTests
         Assert.Equal(original.Links.Count, tagged.Links.Count);
         Assert.Equal(original.ForumUrl, tagged.ForumUrl);
         Assert.Equal(original.Links["repository"], tagged.Links["repository"]);
-        Assert.NotNull(tagged.Releases);
         Assert.Equal(original.Releases!.Authority, tagged.Releases!.Authority);
         Assert.Equal(original.Releases.Hosts.Count, tagged.Releases.Hosts.Count);
         Assert.Equal(original.GameMin, tagged.GameMin);
         Assert.Equal(original.GameMax, tagged.GameMax);
         Assert.Equal(original.Os, tagged.Os);
-        Assert.NotNull(tagged.Loader);
         Assert.Equal(original.Loader!.LoaderId, tagged.Loader!.LoaderId);
         Assert.Equal(original.Loader.MinVersion, tagged.Loader.MinVersion);
         Assert.Equal(original.Loader.MaxVersion, tagged.Loader.MaxVersion);
@@ -109,14 +85,10 @@ public sealed class CompositeModRepositoryTests
         // FullRelease is yanked, so GetReleaseAsync is the accessor under
         // test here, which returns yanked releases as-is by contract.
         var original = TestFixtures.FullRelease();
-        var composite = new CompositeModRepository(new Dictionary<string, IModRepository>
-        {
-            ["spacedock"] = new FakeModRepository(Array.Empty<ModMetadata>(), new[] { original }),
-        });
+        var composite = Composite(("spacedock", new FakeModRepository(Array.Empty<ModMetadata>(), new[] { original })));
 
         var tagged = await composite.GetReleaseAsync(original.ModId, original.Version);
 
-        Assert.NotNull(tagged);
         Assert.Equal("spacedock", tagged!.Source);
         Assert.Equal(original.SpecVersion, tagged.SpecVersion);
         Assert.Equal(original.ModId, tagged.ModId);
@@ -136,17 +108,14 @@ public sealed class CompositeModRepositoryTests
         Assert.Equal(original.Download.ContentType, tagged.Download.ContentType);
         Assert.Equal(original.Download.Mirrors, tagged.Download.Mirrors);
         Assert.Equal(original.InstallSizeBytes, tagged.InstallSizeBytes);
-        Assert.NotNull(tagged.Install);
         Assert.Equal(original.Install!.Root, tagged.Install!.Root);
         Assert.Equal(original.Install.Derived, tagged.Install.Derived);
-        Assert.NotNull(tagged.Loader);
         Assert.Equal(original.Loader!.LoaderId, tagged.Loader!.LoaderId);
         Assert.Equal(original.Loader.Source, tagged.Loader.Source);
         Assert.Equal(original.Dependencies.Count, tagged.Dependencies.Count);
         Assert.Equal(original.Dependencies[0].Source, tagged.Dependencies[0].Source);
         Assert.Equal(original.Changelog, tagged.Changelog);
         Assert.Equal(original.ChangelogText, tagged.ChangelogText);
-        Assert.NotNull(tagged.Listing);
         Assert.Equal(original.Listing!.Name, tagged.Listing!.Name);
         Assert.Equal(original.Listing.Description, tagged.Listing.Description);
         Assert.True(tagged.Yanked);
@@ -160,15 +129,10 @@ public sealed class CompositeModRepositoryTests
             new[] { TestFixtures.SampleModMetadata("mod-a", "irrelevant") },
             new[] { TestFixtures.SampleRelease("mod-a") });
         var borea = new FakeModRepository();
-        var composite = new CompositeModRepository(new Dictionary<string, IModRepository>
-        {
-            ["spacedock"] = spaceDock,
-            ["borea"] = borea,
-        });
+        var composite = Composite(("spacedock", spaceDock), ("borea", borea));
 
         var release = await composite.GetLatestReleaseAsync("mod-a");
 
-        Assert.NotNull(release);
         Assert.Equal("spacedock", release!.Source);
         Assert.Equal(ModVersion.Parse("1.0.0"), release.Version);
     }
@@ -176,10 +140,7 @@ public sealed class CompositeModRepositoryTests
     [Fact]
     public async Task GetLatestReleaseAsync_NoSourceHasIt_ReturnsNull()
     {
-        var composite = new CompositeModRepository(new Dictionary<string, IModRepository>
-        {
-            ["spacedock"] = new FakeModRepository(),
-        });
+        var composite = Composite(("spacedock", new FakeModRepository()));
 
         var release = await composite.GetLatestReleaseAsync("never-exists");
 
@@ -192,31 +153,23 @@ public sealed class CompositeModRepositoryTests
         var spaceDock = new FakeModRepository(
             Array.Empty<ModMetadata>(),
             new[] { TestFixtures.SampleRelease("mod-a", "1.0.0") });
-        var composite = new CompositeModRepository(new Dictionary<string, IModRepository>
-        {
-            ["spacedock"] = spaceDock,
-        });
+        var composite = Composite(("spacedock", spaceDock));
 
         var wrongVersion = await composite.GetReleaseAsync("mod-a", ModVersion.Parse("2.0.0"));
         var rightVersion = await composite.GetReleaseAsync("mod-a", ModVersion.Parse("1.0.0"));
 
         Assert.Null(wrongVersion);
-        Assert.NotNull(rightVersion);
         Assert.Equal("spacedock", rightVersion!.Source);
     }
 
     [Fact]
     public async Task GetAvailableVersionsAsync_ReturnsFirstNonEmptySourceResult()
     {
-        var spaceDock = new FakeModRepository(); // No releases for "mod-a".
+        var spaceDock = new FakeModRepository();
         var borea = new FakeModRepository(
             Array.Empty<ModMetadata>(),
             new[] { TestFixtures.SampleRelease("mod-a") });
-        var composite = new CompositeModRepository(new Dictionary<string, IModRepository>
-        {
-            ["spacedock"] = spaceDock,
-            ["borea"] = borea,
-        });
+        var composite = Composite(("spacedock", spaceDock), ("borea", borea));
 
         var versions = await composite.GetAvailableVersionsAsync("mod-a");
 
@@ -228,11 +181,7 @@ public sealed class CompositeModRepositoryTests
     {
         var spaceDock = new FakeModRepository(TestFixtures.SampleModMetadata("mod-a", "spacedock", name: "Flight Manager"));
         var borea = new FakeModRepository(TestFixtures.SampleModMetadata("mod-b", "borea", name: "Flight Assist"));
-        var composite = new CompositeModRepository(new Dictionary<string, IModRepository>
-        {
-            ["spacedock"] = spaceDock,
-            ["borea"] = borea,
-        });
+        var composite = Composite(("spacedock", spaceDock), ("borea", borea));
 
         var results = await composite.SearchAsync("Flight");
 
@@ -242,11 +191,9 @@ public sealed class CompositeModRepositoryTests
     [Fact]
     public async Task SearchAsync_DuplicateIdUsesFirstRegisteredSource()
     {
-        var composite = new CompositeModRepository(new Dictionary<string, IModRepository>
-        {
-            ["index"] = new FakeModRepository(TestFixtures.SampleModMetadata("shared-mod", "ignored", "Shared Index")),
-            ["spacedock"] = new FakeModRepository(TestFixtures.SampleModMetadata("SHARED-MOD", "ignored", "Shared SpaceDock")),
-        });
+        var composite = Composite(
+            ("index", new FakeModRepository(TestFixtures.SampleModMetadata("shared-mod", "ignored", "Shared Index"))),
+            ("spacedock", new FakeModRepository(TestFixtures.SampleModMetadata("SHARED-MOD", "ignored", "Shared SpaceDock"))));
 
         var result = Assert.Single(await composite.SearchAsync("Shared"));
 
@@ -262,11 +209,7 @@ public sealed class CompositeModRepositoryTests
             Array.Empty<ModVersionMetadata>(),
             new[] { "blocked-mod" });
         var later = new FakeModRepository(TestFixtures.SampleModMetadata("BLOCKED-MOD", "ignored", "Blocked Mod"));
-        var composite = new CompositeModRepository(new Dictionary<string, IModRepository>
-        {
-            ["index"] = index,
-            ["spacedock"] = later,
-        });
+        var composite = Composite(("index", index), ("spacedock", later));
 
         Assert.Empty(await composite.GetAvailableModsAsync());
         Assert.Empty(await composite.SearchAsync("Blocked"));
@@ -280,30 +223,9 @@ public sealed class CompositeModRepositoryTests
             Array.Empty<ModVersionMetadata>(),
             new[] { "blocked-mod" });
         var later = new FakeModRepository(TestFixtures.SampleModMetadata("BLOCKED-MOD", "ignored", "Blocked Mod"));
-        var composite = new CompositeModRepository(new Dictionary<string, IModRepository>
-        {
-            ["index"] = index,
-            ["spacedock"] = later,
-        });
+        var composite = Composite(("index", index), ("spacedock", later));
 
         Assert.Null(await composite.GetListingAsync("blocked-mod"));
-    }
-
-    [Fact]
-    public async Task AvailableMods_UnsupportedIndexClaimBlocksLaterSource()
-    {
-        var index = new FakeModRepository(
-            Array.Empty<ModMetadata>(),
-            Array.Empty<ModVersionMetadata>(),
-            new[] { "future-mod" });
-        var later = new FakeModRepository(TestFixtures.SampleModMetadata("future-mod", "ignored"));
-        var composite = new CompositeModRepository(new Dictionary<string, IModRepository>
-        {
-            ["index"] = index,
-            ["spacedock"] = later,
-        });
-
-        Assert.Empty(await composite.GetAvailableModsAsync());
     }
 
     [Fact]
@@ -314,11 +236,7 @@ public sealed class CompositeModRepositoryTests
         var later = new FakeModRepository(
             new[] { TestFixtures.SampleModMetadata("reserved-mod", "ignored") },
             new[] { laterRelease });
-        var composite = new CompositeModRepository(new Dictionary<string, IModRepository>
-        {
-            ["index"] = index,
-            ["spacedock"] = later,
-        });
+        var composite = Composite(("index", index), ("spacedock", later));
 
         Assert.Null(await composite.GetLatestReleaseAsync("reserved-mod"));
         Assert.Null(await composite.GetReleaseAsync("reserved-mod", laterRelease.Version));
@@ -326,39 +244,16 @@ public sealed class CompositeModRepositoryTests
     }
 
     [Fact]
-    public async Task DroppingASource_MakesItsResultsUnreachable()
-    {
-        // Confirms the "retiring SpaceDock later" story from the design
-        // discussion: a source not present in the registry is simply never
-        // queried, no special retirement handling needed.
-        var composite = new CompositeModRepository(new Dictionary<string, IModRepository>
-        {
-            ["borea"] = new FakeModRepository(
-                new[] { TestFixtures.SampleModMetadata("mod-a", "borea") },
-                new[] { TestFixtures.SampleRelease("mod-a") }),
-            // "spacedock" deliberately absent.
-        });
-
-        var release = await composite.GetLatestReleaseAsync("mod-a");
-
-        Assert.NotNull(release);
-        Assert.Equal("borea", release!.Source);
-    }
-
-    [Fact]
     public async Task GetListingAsync_FirstSourceThatKnowsTheMod_TagsItsSource()
     {
-        var composite = new CompositeModRepository(new Dictionary<string, IModRepository>
-        {
-            ["index"] = new FakeModRepository(TestFixtures.SampleModMetadata("mod-a", "ignored", "Index Name")),
-            ["spacedock"] = new FakeModRepository(TestFixtures.SampleModMetadata("mod-b", "ignored", "SpaceDock Name")),
-        });
+        var composite = Composite(
+            ("index", new FakeModRepository(TestFixtures.SampleModMetadata("mod-a", "ignored", "Index Name"))),
+            ("spacedock", new FakeModRepository(TestFixtures.SampleModMetadata("mod-b", "ignored", "SpaceDock Name"))));
 
         var fromSecond = await composite.GetListingAsync("MOD-B");
         var unknown = await composite.GetListingAsync("mod-c");
 
-        Assert.NotNull(fromSecond);
-        Assert.Equal("SpaceDock Name", fromSecond.Name);
+        Assert.Equal("SpaceDock Name", fromSecond!.Name);
         Assert.Equal("spacedock", fromSecond.Source);
         Assert.Null(unknown);
     }
@@ -370,8 +265,7 @@ public sealed class CompositeModRepositoryTests
 
         var listing = await repository.GetListingAsync("Mod-A");
 
-        Assert.NotNull(listing);
-        Assert.Equal("Catalog Name", listing.Name);
+        Assert.Equal("Catalog Name", listing!.Name);
         Assert.Null(await repository.GetListingAsync("missing"));
     }
 }
