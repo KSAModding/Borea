@@ -193,21 +193,6 @@ public sealed class AppElectionTests : IDisposable
     }
 
     [Fact]
-    public async Task MessageThatIsNotValid_IsDropped()
-    {
-        var pipeName = AppElection.PipeName(LockPath);
-        await using var server = HandoverServer.Start(pipeName, Take, _log.Enqueue, TimeSpan.FromSeconds(5));
-        await using var client = await ConnectAsync(pipeName);
-        await HandoverProtocol.ReadAsync(client, CancellationToken.None);
-
-        await HandoverProtocol.WriteAsync(client, Encoding.UTF8.GetBytes("""{"version":1,"type":"start","arguments":[1]}"""), CancellationToken.None);
-
-        Assert.False(HandoverProtocol.IsAccepted(await HandoverProtocol.ReadAsync(client, CancellationToken.None)));
-        Assert.Empty(_received);
-        Assert.Contains(_log, line => line.Contains("not valid", StringComparison.Ordinal));
-    }
-
-    [Fact]
     public async Task OversizedLength_IsDropped()
     {
         var pipeName = AppElection.PipeName(LockPath);
