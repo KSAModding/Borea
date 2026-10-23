@@ -127,6 +127,26 @@ public sealed class InstanceGameBuildTests
     }
 
     [Fact]
+    public async Task Play_OnAKeptBuildThatIsGone_SaysSoAndRatesNoLoader()
+    {
+        using var harness = await CreateWithKeptBuildAsync();
+        var gone = await CreateInstanceAsync(harness, "Gone", GameVersion.Parse("2026.10.13.5602"));
+        // a pin that is not installed would open the loader prompt
+        await harness.Services.Instances.UpdateAsync(gone.InstanceId, record =>
+        {
+            record.SetLoader(LoaderSetting.Pinned("StarMap", ModVersion.Parse("0.4.9")));
+            return true;
+        });
+        await harness.ViewModel.LoadAsync();
+        await harness.ViewModel.ActivateInstanceAsync(gone.InstanceId);
+
+        await harness.ViewModel.LaunchActiveInstanceAsync();
+
+        Assert.False(harness.ViewModel.IsLoaderPromptOpen);
+        Assert.Equal(harness.Localization.LaunchGameBuildMissing, harness.ViewModel.LaunchMessage);
+    }
+
+    [Fact]
     public async Task InstancePage_OfAKeptBuild_NotesTheUpdatePopup()
     {
         using var harness = await CreateWithKeptBuildAsync();

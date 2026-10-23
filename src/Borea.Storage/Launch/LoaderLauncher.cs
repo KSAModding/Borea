@@ -600,7 +600,8 @@ public sealed class LoaderLauncher : ILauncher, IDisposable
         }
 
         var modsFolder = _pathProvider.GetInstanceModsFolder(instance.InstanceId);
-        var gameDirectory = _games.Resolve(instance).GameDirectory;
+        var game = _games.Resolve(instance);
+        var gameDirectory = game.GameDirectory;
         // only a missing game assembly shows a mod or a loader made for another KSA build
         var missing = LoaderCrashReport.MissingAssemblyNames(output).Where(LoaderCrashReport.IsGameAssembly).ToHashSet(StringComparer.OrdinalIgnoreCase);
         IReadOnlyList<LoadOrderMod>? loadOrder = null;
@@ -645,6 +646,8 @@ public sealed class LoaderLauncher : ILauncher, IDisposable
         var build = cause == LoaderCrashCause.GameAssembly ? InstalledGameVersionProvider.Read(gameDirectory)?.RawVersion : null;
         var message = (blamed, cause) switch
         {
+            // a KSA update does not change a kept build, so that build gets no advice to update KSA
+            (null, LoaderCrashCause.GameAssembly) when build is not null && game.KeptBuild is not null => $"{start.LoaderName} was made for another KSA build than {build}, which instance '{instance.Name}' keeps, and cannot load the game. Install a {start.LoaderName} release for {build}. A KSA update does not change a kept build. {start.LoaderName} releases: {start.LoaderReleases}",
             (null, LoaderCrashCause.GameAssembly) when build is not null => $"{start.LoaderName} was made for another KSA build than the installed {build} and cannot load the game. When a {start.LoaderName} release for {build} is out, install that release. If {build} is older than the build that {start.LoaderName} was made for, update KSA instead. {start.LoaderName} releases: {start.LoaderReleases}",
             (null, _) => $"{start.LoaderName} stopped right after starting (exit code {exitCode}). The details show what it wrote.",
             (_, LoaderCrashCause.ModLoading) => $"{start.LoaderName} stopped while it loaded {blamed.Metadata.Listing?.Name ?? blamed.ModId} {blamed.Version}, so that mod is the likely cause. Disable it and try again, or look for an update.",

@@ -4578,6 +4578,9 @@
   <data name="LaunchLoaderTooOldFormat" xml:space="preserve">
     <value>{0} was made for another KSA build than the installed {1} and cannot load the game. When a {0} release for {1} is out, install it in the Mod loader row of the instance page. If {1} is older than the build that {0} was made for, update KSA instead.</value>
   </data>
+  <data name="LaunchLoaderTooOldForKeptBuildFormat" xml:space="preserve">
+    <value>{0} was made for another KSA build than {1}, which this instance keeps, and cannot load the game. Install a {0} release for {1} in the Mod loader row of the instance page. A KSA update does not change a kept build.</value>
+  </data>
   <data name="LaunchLoaderReleasesFormat" xml:space="preserve">
     <value>{0} releases</value>
   </data>

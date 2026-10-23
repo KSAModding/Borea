@@ -183,6 +183,48 @@ public sealed class LaunchCommandTests : IDisposable
     }
 
     [Fact]
+    public async Task Launch_KeptBuildIsGoneAndNoLoaderIsInstalled_NamesTheBuildAndNoLoader()
+    {
+        _host.IndexReader.Snapshot = StarMapIndex();
+        await _host.RunAsync("instance", "create", "Flight Test");
+        await _host.KeepGameBuildAsync("Flight Test", withFolder: false);
+
+        var run = await _host.RunAsync("launch", "Flight Test");
+
+        Assert.Equal(1, run.ExitCode);
+        Assert.Contains($"runs on KSA {CliHost.KeptBuild}", run.Error);
+        Assert.DoesNotContain("borea loader install", run.Error);
+    }
+
+    [Fact]
+    public async Task Launch_KeptBuildWithOnlyANewerLoader_WarnsWithTheVersionThatFitsIt()
+    {
+        var versions = Path.Combine(_host.Paths.GetLoadersRoot(), "StarMap");
+        var recorded = LoaderCommandTests.CreateLoaderDirectory("0.4.8", "not a program", versions);
+        await File.WriteAllTextAsync(_host.Paths.GetBoreaSettingsPath(), $"""
+            [LoaderInstallations.StarMap]
+            DirectoryPath = '{recorded}'
+            Version = '0.4.8'
+            IsAdopted = false
+            """);
+        await _host.RunAsync("instance", "create", "Flight Test");
+        await _host.KeepGameBuildAsync("Flight Test");
+        _host.InstalledVersion = new FakeInstalledGameVersionProvider { Installed = new InstalledGameVersion(GameVersion.Parse("2026.10.19.5638"), "2026.10.19.5638") };
+        _host.IndexReader.Snapshot = new ContentIndexSnapshot(
+            1,
+            [new ContentIndexListing("StarMap", LoaderFixtures.Listing(), [LoaderFixtures.Release(version: "0.4.6", gameMin: CliHost.KeptBuild.ToString(), gameMax: "2026.10.13.5602"), LoaderFixtures.Release(version: "0.4.8", gameMin: "2026.10.19.5638")], null)],
+            [],
+            null,
+            []);
+
+        var run = await _host.RunAsync("launch", "Flight Test");
+
+        Assert.Equal(0, run.ExitCode);
+        Assert.Contains($"warning: StarMap 0.4.8 does not support KSA {CliHost.KeptBuild}. Run 'borea loader install StarMap --version 0.4.6' to install 0.4.6.", run.Error);
+        Assert.Single(_host.ProcessStarter.Plans);
+    }
+
+    [Fact]
     public async Task Launch_LoaderStopsRightAway_FailsWithWhatItWrote()
     {
         _host.Mods.Listings.Add(LoaderFixtures.Listing());

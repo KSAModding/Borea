@@ -1447,6 +1447,7 @@ public sealed class LoaderLauncherTests : IDisposable
         Assert.Equal(LoaderCrashCause.GameAssembly, result.CrashCause);
         Assert.Contains(KeptVersion.ToString(), result.Message);
         Assert.DoesNotContain("0.4.6.0", result.Message);
+        Assert.DoesNotContain("update KSA", result.Message);
     }
 
     private static readonly string[] ClrCrash =
