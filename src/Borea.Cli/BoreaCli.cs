@@ -44,15 +44,6 @@ internal static class BoreaCli
         TextWriter error,
         CancellationToken cancellationToken = default)
     {
-        if (args is null)
-            throw new ArgumentNullException(nameof(args));
-
-        if (output is null)
-            throw new ArgumentNullException(nameof(output));
-
-        if (error is null)
-            throw new ArgumentNullException(nameof(error));
-
         var passThrough = new PassThroughArguments();
         var parseResult = passThrough.Parse(Build(services, passThrough), args);
         // after Ctrl+C an install finishes the mod it extracts, which can take longer than the default of two seconds
