@@ -453,6 +453,38 @@ public sealed class ListingHostClientTests
         Assert.Equal([BranchApi, CommitImage, BranchApi, newCommitImage], sent.Select(request => request.Url));
     }
 
+    [Fact]
+    public async Task CheckAsync_TheCallerThatStartedTheBranchReadCancels_AnotherCallerStillGetsTheAnswer()
+    {
+        var bytes = Png(1280, 720);
+        var held = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var branchReads = 0;
+        var api = FakeHttpMessageHandler.BuildClient(async (request, token) =>
+        {
+            if (request.RequestUri!.AbsoluteUri != BranchApi)
+                return new HttpResponseMessage(HttpStatusCode.NotFound);
+
+            if (Interlocked.Increment(ref branchReads) == 1)
+                await held.Task.WaitAsync(token);
+
+            return FakeHttpMessageHandler.JsonResponse($$$"""{"name":"main","commit":{"sha":"{{{Commit}}}"}}""");
+        }, out _);
+        var images = new FakeHttpMessageHandler(request => Task.FromResult(request.RequestUri!.AbsoluteUri == CommitImage
+            ? FakeHttpMessageHandler.ByteResponse(bytes)
+            : new HttpResponseMessage(HttpStatusCode.NotFound)));
+        using var measurer = new ListingImageMeasurer(images, TimeSpan.FromSeconds(30), new GitHubSession(api, "client", "slug"), api);
+        using var first = new CancellationTokenSource();
+
+        var firstCheck = measurer.CheckAsync(BranchImage, ListingImageRole.Description, first.Token);
+        var secondCheck = measurer.CheckAsync(BranchImage, ListingImageRole.Description);
+        first.Cancel();
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => firstCheck);
+        var second = await secondCheck.WaitAsync(TimeSpan.FromSeconds(10));
+        Assert.True(second.Measurement.IsMeasured, second.Measurement.Problem);
+        Assert.Equal(new ListingImageBranch("main", CommitImage), second.Branch);
+    }
+
     [Theory]
     [InlineData("https://raw.githubusercontent.com/alice/KSA-Mod/refs/heads/main/images/hero.png")]
     [InlineData("https://raw.githubusercontent.com/alice/KSA-Mod/main/images/hero.png")]
