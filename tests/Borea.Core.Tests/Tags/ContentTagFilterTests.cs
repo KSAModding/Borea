@@ -51,6 +51,16 @@ public sealed class ContentTagFilterTests
         Assert.True(ContentTagFilter.MatchesSearch(other, "custom"));
     }
 
+    [Fact]
+    public void Filter_NoSelectedTagForPacks_ReturnsEveryPackLikeForListings()
+    {
+        var curated = CreatePack("curated", "parts");
+        var other = CreatePack("other", "custom-tag");
+
+        Assert.Equal(["curated", "other"], ContentTagFilter.Filter([curated, other], Vocabulary).Select(pack => pack.ModPackId));
+        Assert.Equal(4, ContentTagFilter.Filter(Listings(), Vocabulary, ContentType.Mod).Count);
+    }
+
     private static ModMetadata[] Listings() =>
     [
         Create("parts-mod", "parts"),
