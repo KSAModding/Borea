@@ -14,8 +14,6 @@ internal static class LineDiff
     /// <returns>The hunks, each with its @@ line, or an empty text when both texts are the same.</returns>
     public static string Unified(string before, string after)
     {
-        ArgumentNullException.ThrowIfNull(before);
-        ArgumentNullException.ThrowIfNull(after);
         var lines = Script(Lines(before), Lines(after));
         var patch = new StringBuilder();
         var index = 0;
