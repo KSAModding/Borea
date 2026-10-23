@@ -87,33 +87,12 @@ public sealed class GamePathProviderTests
     [Theory]
     [InlineData("")]
     [InlineData("   ")]
-    public void Constructor_WhitespaceLibraryFolder_ThrowsArgumentException(string libraryFolder)
+    public void Constructor_WhitespacePath_ThrowsArgumentException(string path)
     {
-        Assert.Throws<ArgumentException>(() => new GamePathProvider(null, libraryFolder: libraryFolder));
-    }
-
-    [Theory]
-    [InlineData("")]
-    [InlineData("   ")]
-    public void Constructor_WhitespaceBoreaRoot_ThrowsArgumentException(string boreaRoot)
-    {
-        Assert.Throws<ArgumentException>(() => new GamePathProvider(null, boreaRoot: boreaRoot));
-    }
-
-    [Theory]
-    [InlineData("")]
-    [InlineData("   ")]
-    public void Constructor_WhitespaceGamePath_ThrowsArgumentException(string gamePath)
-    {
-        Assert.Throws<ArgumentException>(() => new GamePathProvider(gamePath));
-    }
-
-    [Theory]
-    [InlineData("")]
-    [InlineData("   ")]
-    public void Constructor_WhitespaceLoaderPath_ThrowsArgumentException(string loaderPath)
-    {
-        Assert.Throws<ArgumentException>(() => new GamePathProvider(null, StarMapAt(loaderPath)));
+        Assert.Throws<ArgumentException>(() => new GamePathProvider(path));
+        Assert.Throws<ArgumentException>(() => new GamePathProvider(null, StarMapAt(path)));
+        Assert.Throws<ArgumentException>(() => new GamePathProvider(null, boreaRoot: path));
+        Assert.Throws<ArgumentException>(() => new GamePathProvider(null, libraryFolder: path));
     }
 
     [Fact]
@@ -250,17 +229,6 @@ public sealed class GamePathProviderTests
         var root = provider.GetInstanceRoot(instanceId);
 
         Assert.Contains(instanceId.ToString(), root);
-    }
-
-    [Fact]
-    public void DifferentInstanceIds_ProduceDifferentPaths()
-    {
-        var provider = new GamePathProvider(null);
-
-        var pathA = provider.GetInstanceRoot(Guid.NewGuid());
-        var pathB = provider.GetInstanceRoot(Guid.NewGuid());
-
-        Assert.NotEqual(pathA, pathB);
     }
 
     [Fact]

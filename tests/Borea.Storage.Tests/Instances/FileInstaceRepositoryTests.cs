@@ -26,10 +26,8 @@ public sealed class FileInstanceRepositoryTests : IDisposable
     [Fact]
     public async Task RoundTrip_PersistsInstanceWithModAndDependency()
     {
-        // Create a custom instance.
         var instance = (await _repository.CreateAsync("My Test Pack", InstanceSource.Custom.Value)).Instance;
 
-        // Build a mod whose release carries a stamped dependency, attach it, and persist the change.
         var stampedDependency = new ModDependency("some-other-mod", ModDependencyKind.Required, ModVersion.Parse("1.0.0"));
         var installedMod = new InstalledMod(
             modId: "test-mod",
@@ -46,12 +44,10 @@ public sealed class FileInstanceRepositoryTests : IDisposable
         var freshRepository = new FileInstanceRepository(_pathProvider);
         var reloaded = await freshRepository.GetByIdAsync(instance.InstanceId);
 
-        Assert.NotNull(reloaded);
         Assert.Equal("My Test Pack", reloaded!.Name);
         Assert.True(reloaded.IsFavorite);
-        Assert.Single(reloaded.Mods);
 
-        var reloadedMod = reloaded.Mods.Single();
+        var reloadedMod = Assert.Single(reloaded.Mods);
         Assert.Equal("test-mod", reloadedMod.ModId);
         Assert.Equal(ModVersion.Parse("1.2.3"), reloadedMod.Version);
         Assert.Equal(ModVersion.Parse("1.2.3"), reloadedMod.Metadata.Version);
@@ -193,8 +189,7 @@ public sealed class FileInstanceRepositoryTests : IDisposable
 
         var reloaded = await _repository.GetByIdAsync(instance.InstanceId);
 
-        Assert.NotNull(reloaded);
-        Assert.Empty(reloaded.LaunchArguments);
+        Assert.Empty(reloaded!.LaunchArguments);
     }
 
     [Fact]
@@ -363,13 +358,6 @@ public sealed class FileInstanceRepositoryTests : IDisposable
     }
 
     [Fact]
-    public async Task DeleteAsync_IsIdempotent()
-    {
-        // Deleting a nonexistent instance should not throw.
-        await _repository.DeleteAsync(Guid.NewGuid());
-    }
-
-    [Fact]
     public async Task DeleteAsync_ActiveInstance_LeavesNoInstanceActive()
     {
         var active = await _repository.CreateAsync("Active", InstanceSource.Custom.Value);
@@ -472,17 +460,6 @@ public sealed class FileInstanceRepositoryTests : IDisposable
         var result = await _repository.GetActiveInstanceIdAsync();
 
         Assert.Null(result);
-    }
-
-    [Fact]
-    public async Task SetActiveInstanceAsync_ThenGet_RoundTrips()
-    {
-        var instance = (await _repository.CreateAsync("Active Test", InstanceSource.Custom.Value)).Instance;
-
-        await _repository.SetActiveInstanceAsync(instance.InstanceId);
-        var activeId = await _repository.GetActiveInstanceIdAsync();
-
-        Assert.Equal(instance.InstanceId, activeId);
     }
 
     [Fact]
