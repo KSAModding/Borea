@@ -106,7 +106,7 @@ public sealed class LoaderUpdateTests
     }
 
     [Fact]
-    public async Task UpdateLoader_InstallsTheOfferedReleaseInPlace_AndTheBannerGoes()
+    public async Task UpdateLoader_InstallsTheOfferedReleaseBesideTheOldOne_AndTheBannerGoes()
     {
         using var harness = await CreateAsync();
         var viewModel = harness.ViewModel;
@@ -115,9 +115,11 @@ public sealed class LoaderUpdateTests
         await viewModel.UpdateLoaderCommand.ExecuteAsync(null);
         await viewModel.WhenLoaderUpdatesCheckedAsync();
 
+        // The flat folder of the old version moves into its own version folder.
         var installation = harness.Services.Settings.LoaderInstallations["StarMap"];
         Assert.Equal(ModVersion.Parse("0.4.7"), installation.Version);
-        Assert.Equal(directory, installation.DirectoryPath);
+        Assert.Equal(Path.Combine(directory, "0.4.7"), installation.DirectoryPath);
+        Assert.True(File.Exists(Path.Combine(directory, "0.4.6", "StarMap.exe")));
         Assert.Null(viewModel.SetupError);
         Assert.False(viewModel.ShowUrgentLoaderUpdateBanner);
         Assert.Single(harness.Requests, uri => uri.AbsoluteUri == DownloadUrl("0.4.7"));
