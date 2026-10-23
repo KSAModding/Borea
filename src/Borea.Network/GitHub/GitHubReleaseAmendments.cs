@@ -177,7 +177,6 @@ public sealed class GitHubReleaseAmendments : IReleaseAmendments
         }
     }
 
-    /// <summary>The text of a release file at the commit.</summary>
     private async Task<string> ReadReleaseAsync(string path, string head, CancellationToken cancellationToken)
     {
         var file = await _api.ReadFileAsync(Repository, path, head, cancellationToken).ConfigureAwait(false)
@@ -198,7 +197,6 @@ public sealed class GitHubReleaseAmendments : IReleaseAmendments
         return reference.Object?.Sha is { Length: > 0 } sha ? sha : throw new GitHubApiException(GitHubApiFailure.UnexpectedResponse);
     }
 
-    /// <summary>The versions of game-versions.json at the commit.</summary>
     private async Task<IReadOnlyList<string>> GameVersionsAsync(string head, CancellationToken cancellationToken)
     {
         var file = await _api.ReadFileAsync(Repository, GameVersionsPath, head, cancellationToken).ConfigureAwait(false)

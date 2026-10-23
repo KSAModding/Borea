@@ -20,7 +20,6 @@ public sealed partial class GitHubPullRequestReviews : IPullRequestReviews
     private readonly IListingOwnershipCheck _ownership;
 
     /// <param name="format">Reads the listing and pack documents.</param>
-    /// <param name="ownership">Checks the author of a listing pull request.</param>
     public GitHubPullRequestReviews(IGitHubSession session, HttpClient http, IListingFormat format, IListingOwnershipCheck ownership, TimeProvider? time = null)
     {
         _format = format ?? throw new ArgumentNullException(nameof(format));
@@ -83,7 +82,6 @@ public sealed partial class GitHubPullRequestReviews : IPullRequestReviews
         }
     }
 
-    /// <exception cref="ArgumentException">The repository is no index repository.</exception>
     private static string PullsUrlOf(string repository, int number)
     {
         if (!StewardQueue.Repositories.Contains(repository, StringComparer.OrdinalIgnoreCase))

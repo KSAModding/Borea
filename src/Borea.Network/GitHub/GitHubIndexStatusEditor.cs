@@ -28,7 +28,6 @@ public sealed class GitHubIndexStatusEditor : IIndexStatusEditor
     private readonly string _base;
 
     /// <param name="http">Reads the release hosts that name the owner of a listing.</param>
-    /// <param name="format">Reads the listing documents.</param>
     /// <param name="baseBranch">The branch of content-index that the changes start from and go to. Null takes <see cref="ListingPullRequestLinks.Branch"/>.</param>
     public GitHubIndexStatusEditor(IGitHubSession session, IStewardRole role, HttpClient http, IListingFormat format, TimeProvider? time = null, string? baseBranch = null)
     {
