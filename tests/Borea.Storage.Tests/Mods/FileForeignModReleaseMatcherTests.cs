@@ -43,8 +43,7 @@ public sealed class FileForeignModReleaseMatcherTests : IAsyncLifetime
 
         var result = await _matcher.AdoptMatchingReleaseAsync(_instanceId, "LocalMod");
 
-        Assert.NotNull(result);
-        Assert.True(result.Matched);
+        Assert.True(result!.Matched);
         Assert.Equal(ModVersion.Parse("1.0.0"), result.InstalledMod!.Version);
         Assert.Equal(ModInstallOwnership.Foreign, result.InstalledMod.Ownership);
         Assert.Equal(2, _downloader.ArchivePaths.Count);
