@@ -275,6 +275,27 @@ public sealed class VehiclePreviewViewModelTests
     }
 
     [Fact]
+    public async Task Page_OpenedAgainAfterACancel_StillWaitsForTheClick()
+    {
+        var (harness, service, held) = await OpenRoverWithHeldAutoFetchAsync();
+        using var _ = harness;
+        var viewModel = harness.ViewModel;
+        var first = viewModel.VehiclePreview!;
+        first.CancelCommand.Execute(null);
+        held.SetResult(service.Ready(new FakeAssets()));
+        await first.Loading;
+
+        // the cancel holds for the whole session, so the player leaving the page and opening it again sends no download
+        viewModel.SetMainWindowDiscover();
+        await Assert.Single(viewModel.DiscoverItems).OpenCommand.ExecuteAsync(null);
+        await viewModel.WhenVehiclePreviewLoadedAsync();
+
+        Assert.NotSame(first, viewModel.VehiclePreview);
+        Assert.Equal(VehiclePreviewState.Idle, viewModel.VehiclePreview!.State);
+        Assert.Single(service.Loads);
+    }
+
+    [Fact]
     public async Task Page_MadeAgainAfterAFailedFetch_WaitsForTheClick()
     {
         var (harness, service, held) = await OpenRoverWithHeldAutoFetchAsync();

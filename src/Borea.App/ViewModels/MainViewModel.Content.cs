@@ -194,10 +194,11 @@ public partial class MainViewModel
     private string? _vehiclePreviewTarget;
 
     /// <summary>
-    /// The release whose fetch the player cancelled, or whose fetch failed, on the open page, or null. Every preview of
-    /// this release that the page makes again waits for the click, until the player opens a page again.
+    /// The releases whose fetch the player cancelled, or whose fetch failed, since Borea started. Every later preview
+    /// of one of them waits for the click, also on a page that the player opens again. The list lives in memory only,
+    /// so the next start of Borea loads a small vehicle file on its own again.
     /// </summary>
-    private ModVersionMetadata? _vehiclePreviewDeclined;
+    private readonly List<ModVersionMetadata> _vehiclePreviewDeclined = [];
 
     /// <summary>
     /// The vehicles and saves whose install or update plans or runs now, one entry for each. A preview of one of them
@@ -247,7 +248,7 @@ public partial class MainViewModel
                 encoder: VehiclePreviewEncoder,
                 stillStored: ShowPreviewStill,
                 autoFetchDelay: VehiclePreviewAutoFetchDelay,
-                autoFetch: !installing && !(_vehiclePreviewDeclined is { } declined && SameRelease(declined, latest.Release)));
+                autoFetch: !installing && !_vehiclePreviewDeclined.Any(declined => SameRelease(declined, latest.Release)));
         }
 
         VehiclePreview = next;
@@ -269,12 +270,13 @@ public partial class MainViewModel
     /// <summary>
     /// Keeps the release of a preview that the player cancelled, or whose fetch failed, so the next previews of it do
     /// not fetch on their own. A listing with a wrong hash or size would otherwise send one more download with every
-    /// remake of the page.
+    /// remake or new visit of the page.
     /// </summary>
     private void RememberDeclinedPreview(VehiclePreviewViewModel? preview)
     {
-        if (preview is { State: VehiclePreviewState.Cancelled } or { State: VehiclePreviewState.Failed, HasFetchedVehicle: true })
-            _vehiclePreviewDeclined = preview.Release;
+        if (preview is { State: VehiclePreviewState.Cancelled } or { State: VehiclePreviewState.Failed, HasFetchedVehicle: true }
+            && !_vehiclePreviewDeclined.Any(declined => SameRelease(declined, preview.Release)))
+            _vehiclePreviewDeclined.Add(preview.Release);
     }
 
     /// <summary>
@@ -410,9 +412,6 @@ public partial class MainViewModel
         ContentTab = ContentPageTab.Description;
         ContentDetailError = null;
         LatestVersion = null;
-
-        // a page that the player opens again loads a small vehicle file on its own again, also after an earlier cancel
-        _vehiclePreviewDeclined = null;
         _contentReleases.Clear();
         ApplyVersionFilter();
         VersionFilter = OptionFor(SavedReleaseChannel);
