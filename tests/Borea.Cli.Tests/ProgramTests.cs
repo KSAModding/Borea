@@ -8,22 +8,13 @@ public sealed class ProgramTests
         Assert.True(Program.ShowsStartHint([], consoleOwnedAlone: true, inputRedirected: false, outputRedirected: false));
     }
 
-    [Fact]
-    public void ShowsStartHint_NoArguments_SharedConsole_RunsTheParser()
+    [Theory]
+    [InlineData(false, false, false)]
+    [InlineData(true, true, false)]
+    [InlineData(true, false, true)]
+    public void ShowsStartHint_NoArguments_SharedConsoleOrRedirected_RunsTheParser(bool consoleOwnedAlone, bool inputRedirected, bool outputRedirected)
     {
-        Assert.False(Program.ShowsStartHint([], consoleOwnedAlone: false, inputRedirected: false, outputRedirected: false));
-    }
-
-    [Fact]
-    public void ShowsStartHint_NoArguments_InputRedirected_RunsTheParser()
-    {
-        Assert.False(Program.ShowsStartHint([], consoleOwnedAlone: true, inputRedirected: true, outputRedirected: false));
-    }
-
-    [Fact]
-    public void ShowsStartHint_NoArguments_OutputRedirected_RunsTheParser()
-    {
-        Assert.False(Program.ShowsStartHint([], consoleOwnedAlone: true, inputRedirected: false, outputRedirected: true));
+        Assert.False(Program.ShowsStartHint([], consoleOwnedAlone, inputRedirected, outputRedirected));
     }
 
     [Theory]
