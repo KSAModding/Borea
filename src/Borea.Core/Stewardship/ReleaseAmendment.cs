@@ -411,20 +411,12 @@ public sealed partial class ReleaseAmendment
     private static bool SetDependencyBounds(JsonObject document, ReleaseDependencyBounds bounds)
     {
         var dependencies = DependenciesOf(document);
-        var index = IndexOf(dependencies, bounds.Id);
-        if (index < 0)
-            throw new ReleaseAmendmentRefusedException(ReleaseAmendmentRefusal.NoDependency,
-                $"the release states no dependency on '{bounds.Id}'. An entry that was missing is added as a new dependency, and an any_of entry is edited by hand");
+        var index = StatedIndexOf(dependencies, bounds.Id);
 
         if (WithBounds((JsonObject)dependencies[index]!, bounds.Min, bounds.Max) is not { } updated)
             return false;
 
-        // Once the author adds the matching authored entry, the next stamp writes exactly this, so it stops being derived now.
-        if (StringOf(updated["source"]) == "derived")
-            updated["source"] = "authored";
-
-        dependencies[index] = Reorder(updated, EntryOrder);
-        document["dependencies"] = dependencies;
+        StoreAsAuthored(document, dependencies, index, updated);
         return true;
     }
 
@@ -432,20 +424,13 @@ public sealed partial class ReleaseAmendment
     private static bool RemoveDependencyBounds(JsonObject document, ReleaseDependencyBoundRemoval removal)
     {
         var dependencies = DependenciesOf(document);
-        var index = IndexOf(dependencies, removal.Id);
-        if (index < 0)
-            throw new ReleaseAmendmentRefusedException(ReleaseAmendmentRefusal.NoDependency,
-                $"the release states no dependency on '{removal.Id}'. An entry that was missing is added as a new dependency, and an any_of entry is edited by hand");
+        var index = StatedIndexOf(dependencies, removal.Id);
 
         var entry = (JsonObject)dependencies[index]!.DeepClone();
         if (!RemoveKeys(entry, [.. Removed(removal.Min, removal.Max)]))
             return false;
 
-        if (StringOf(entry["source"]) == "derived")
-            entry["source"] = "authored";
-
-        dependencies[index] = Reorder(entry, EntryOrder);
-        document["dependencies"] = dependencies;
+        StoreAsAuthored(document, dependencies, index, entry);
         return true;
     }
 
@@ -456,21 +441,14 @@ public sealed partial class ReleaseAmendment
     private static bool SetDependencyKind(JsonObject document, ReleaseDependencyKind change)
     {
         var dependencies = DependenciesOf(document);
-        var index = IndexOf(dependencies, change.Id);
-        if (index < 0)
-            throw new ReleaseAmendmentRefusedException(ReleaseAmendmentRefusal.NoDependency,
-                $"the release states no dependency on '{change.Id}'. An entry that was missing is added as a new dependency, and an any_of entry is edited by hand");
+        var index = StatedIndexOf(dependencies, change.Id);
 
         var entry = (JsonObject)dependencies[index]!.DeepClone();
         if (StringOf(entry["kind"]) == change.Kind)
             return false;
 
         entry["kind"] = change.Kind;
-        if (StringOf(entry["source"]) == "derived")
-            entry["source"] = "authored";
-
-        dependencies[index] = Reorder(entry, EntryOrder);
-        document["dependencies"] = dependencies;
+        StoreAsAuthored(document, dependencies, index, entry);
         return true;
     }
 
@@ -525,6 +503,28 @@ public sealed partial class ReleaseAmendment
         }
 
         return -1;
+    }
+
+    /// <summary>The index of the entry that a change of bounds or kind edits, which the release has to state.</summary>
+    private static int StatedIndexOf(JsonArray dependencies, string id)
+    {
+        var index = IndexOf(dependencies, id);
+        if (index < 0)
+            throw new ReleaseAmendmentRefusedException(ReleaseAmendmentRefusal.NoDependency,
+                $"the release states no dependency on '{id}'. An entry that was missing is added as a new dependency, and an any_of entry is edited by hand");
+
+        return index;
+    }
+
+    /// <summary>Writes a changed entry back in the key order of the stamper. A derived entry becomes authored.</summary>
+    private static void StoreAsAuthored(JsonObject document, JsonArray dependencies, int index, JsonObject entry)
+    {
+        // Once the author adds the matching authored entry, the next stamp writes exactly this, so it stops being derived now.
+        if (StringOf(entry["source"]) == "derived")
+            entry["source"] = "authored";
+
+        dependencies[index] = Reorder(entry, EntryOrder);
+        document["dependencies"] = dependencies;
     }
 
     /// <summary>The keys of the entry in the order that the stamper writes them, and any other key after them.</summary>
