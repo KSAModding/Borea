@@ -79,6 +79,7 @@ public sealed class VehiclePreviewView : Control
     private Vector3 _shift;
     private Point? _dragFrom;
     private bool _dragPans;
+    private int _leftClicks;
     private WriteableBitmap? _bitmap;
     private RenderRequest? _queued;
     private bool _rendering;
@@ -228,6 +229,10 @@ public sealed class VehiclePreviewView : Control
         var properties = point.Properties;
         var left = properties.IsLeftButtonPressed;
 
+        // Avalonia counts the presses of all buttons in one click count, so a left press right after a right click
+        // has a count of 2. The view counts the left presses in a run itself, and a press of another button ends the run.
+        _leftClicks = !left ? 0 : e.ClickCount > 1 && _leftClicks > 0 ? _leftClicks + 1 : 1;
+
         // A right or a middle press without a scene goes on to the page, which scrolls with a middle press.
         if (!left && (Scene is null || (!properties.IsRightButtonPressed && !properties.IsMiddleButtonPressed)))
             return;
@@ -236,7 +241,7 @@ public sealed class VehiclePreviewView : Control
         CancelRefine();
         Focus(NavigationMethod.Pointer);
         e.Handled = true;
-        if (e.ClickCount == 2 && left)
+        if (_leftClicks == 2)
         {
             _dragFrom = null;
             ResetView();

@@ -380,6 +380,37 @@ public sealed class VehiclePreviewViewTests
     }
 
     [Fact]
+    public async Task ALeftClickAfterARightClick_IsNoDoubleClick_ButASecondLeftClickIs()
+    {
+        var result = await HeadlessApp.RunAsync(async () =>
+        {
+            var (window, view) = Show(PreviewTestScenes.StackedBoxes());
+            await IdleAsync(view, 1);
+            var framed = view.CameraDistance;
+            view.Focus();
+            window.KeyPressQwerty(PhysicalKey.Q, RawInputModifiers.None);
+            window.KeyPressQwerty(PhysicalKey.W, RawInputModifiers.None);
+            var (shift, distance) = (view.CameraShift, view.CameraDistance);
+
+            // Avalonia counts the presses of all buttons in one click count, so the left press has a count of 2.
+            window.MouseDown(Center, MouseButton.Right);
+            window.MouseUp(Center, MouseButton.Right);
+            window.MouseDown(Center, MouseButton.Left);
+            window.MouseUp(Center, MouseButton.Left);
+            var kept = view.CameraShift == shift && view.CameraDistance == distance;
+
+            window.MouseDown(Center, MouseButton.Left);
+            window.MouseUp(Center, MouseButton.Left);
+            await HeadlessApp.FramesUntilAsync(() => view.IsIdle);
+            return (Kept: kept, Moved: shift != Vector3.Zero && distance < framed, view.CameraShift, Framed: view.CameraDistance == framed);
+        });
+
+        Assert.True(result.Moved);
+        Assert.True(result.Kept);
+        Assert.Equal((Vector3.Zero, true), (result.CameraShift, result.Framed));
+    }
+
+    [Fact]
     public async Task TheWheel_ZoomsToTheNearLimit_AndAStepBackRespondsAtOnce()
     {
         var result = await HeadlessApp.RunAsync(async () =>
