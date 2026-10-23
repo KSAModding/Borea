@@ -2,6 +2,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Borea.Core.Paths;
 using Borea.Core.Preferences;
+using Borea.Storage.Files;
 
 namespace Borea.Storage.Preferences;
 
@@ -113,7 +114,7 @@ public sealed class FileAppPreferencesRepository : IAppPreferencesRepository
         }
         finally
         {
-            TryDeleteLeftover(tempPath);
+            LeftoverCleanup.TryDeleteFile(tempPath);
         }
     }
 
@@ -163,19 +164,4 @@ public sealed class FileAppPreferencesRepository : IAppPreferencesRepository
 
     private static AppPreferencesLoadResult Unavailable(string path, string error)
         => new(AppPreferencesLoadStatus.Unavailable, AppPreferences.Empty, $"{path} could not be read. {error}");
-
-    private static void TryDeleteLeftover(string tempPath)
-    {
-        try
-        {
-            if (File.Exists(tempPath))
-                File.Delete(tempPath);
-        }
-        catch (IOException)
-        {
-        }
-        catch (UnauthorizedAccessException)
-        {
-        }
-    }
 }

@@ -208,7 +208,8 @@ public sealed class FileForeignModAdopter : IForeignModAdopter
             throw;
         }
 
-        TryDeleteDirectory(recoveryFolder);
+        // A foreign folder can be a link of the player's own, and then only the link goes.
+        LeftoverCleanup.TryDeleteTree(recoveryFolder);
     }
 
     private async Task RestoreFolderAsync(Guid instanceId, string folder, string recoveryFolder, ForeignMod? record)
@@ -270,17 +271,6 @@ public sealed class FileForeignModAdopter : IForeignModAdopter
     {
         if (!Directory.Exists(folder) || !File.Exists(Path.Combine(folder, ModFolders.DefinitionFileName)))
             throw new InvalidOperationException($"The instance no longer has the foreign mod folder '{folderName}'.");
-    }
-
-    /// <summary>A foreign folder can be a link of the player's own, and then only the link goes.</summary>
-    private static void TryDeleteDirectory(string path)
-    {
-        try
-        {
-            DirectoryLinks.DeleteTreeWithoutFollowingLinks(path);
-        }
-        catch (IOException) { }
-        catch (UnauthorizedAccessException) { }
     }
 
     private static async Task<ForeignMod> ReadForeignModAsync(

@@ -25,7 +25,7 @@ public sealed class FileModReplacer : IModReplacer
         IModStateRepository modState,
         TimeProvider? timeProvider = null,
         ModStore? store = null)
-        : this(paths, downloader, instances, modState, timeProvider, TryDeleteDirectory, store)
+        : this(paths, downloader, instances, modState, timeProvider, LeftoverCleanup.TryDeleteTree, store)
     {
     }
 
@@ -168,7 +168,7 @@ public sealed class FileModReplacer : IModReplacer
                 }
             }
 
-            TryDeleteDirectory(stagingFolder);
+            LeftoverCleanup.TryDeleteTree(stagingFolder);
             if (installed is not null)
                 await _store.ReleaseAsync(installed).ConfigureAwait(false);
 
@@ -176,7 +176,7 @@ public sealed class FileModReplacer : IModReplacer
         }
         finally
         {
-            TryDeleteDirectory(stagingFolder);
+            LeftoverCleanup.TryDeleteTree(stagingFolder);
         }
     }
 
@@ -230,16 +230,5 @@ public sealed class FileModReplacer : IModReplacer
     {
         if (!installed.CanDeleteFiles)
             throw new InvalidOperationException($"Borea cannot replace '{installed.ModId}' because it does not own the installed folder.");
-    }
-
-    private static bool TryDeleteDirectory(string path)
-    {
-        try
-        {
-            DirectoryLinks.DeleteTreeWithoutFollowingLinks(path);
-            return true;
-        }
-        catch (IOException) { return false; }
-        catch (UnauthorizedAccessException) { return false; }
     }
 }
