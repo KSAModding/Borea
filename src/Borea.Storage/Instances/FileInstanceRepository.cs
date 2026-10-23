@@ -361,7 +361,7 @@ public sealed class FileInstanceRepository : IInstanceRepository, IInstanceLocks
         await _activeInstanceLock.WaitAsync().ConfigureAwait(false);
         try
         {
-            var exists = await GetByIdAsync(instanceId).ConfigureAwait(false)
+            _ = await GetByIdAsync(instanceId).ConfigureAwait(false)
                 ?? throw new InvalidOperationException($"No instance with ID '{instanceId}' exists.");
 
             await WriteActiveInstanceAsync(instanceId).ConfigureAwait(false);

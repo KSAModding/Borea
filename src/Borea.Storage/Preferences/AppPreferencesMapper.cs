@@ -1,5 +1,4 @@
 using System.Globalization;
-using Borea.Core.Mods;
 using Borea.Core.Preferences;
 using Borea.Core.Updates;
 
