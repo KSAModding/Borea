@@ -21,7 +21,7 @@ public sealed class ModPackUpdaterTests
         var instances = new MemoryInstanceRepository(instance);
         var uninstaller = new FakeUninstaller(instances);
 
-        var result = await Updater(instances, new FakeInstaller(instances), uninstaller).UpdateAsync(Request(instance.InstanceId, Pack("2.0.0", same, repinned, added), [same, repinned, added]));
+        var result = await Updater(instances, uninstaller: uninstaller).UpdateAsync(Request(instance.InstanceId, Pack("2.0.0", same, repinned, added), [same, repinned, added]));
 
         Assert.True(result.IsComplete);
         Assert.Equal(
@@ -49,7 +49,7 @@ public sealed class ModPackUpdaterTests
         var instances = new MemoryInstanceRepository(instance);
         var installer = new FakeInstaller(instances);
 
-        var result = await Updater(instances, installer, new FakeUninstaller(instances)).UpdateAsync(Request(instance.InstanceId, Pack("2.0.0", newerPin, repinned), [newerPin, repinned]));
+        var result = await Updater(instances, installer).UpdateAsync(Request(instance.InstanceId, Pack("2.0.0", newerPin, repinned), [newerPin, repinned]));
 
         Assert.True(result.IsComplete);
         Assert.Contains(new ModPackChange("Pinned", ModPackChangeKind.Pinned, ModVersion.Parse("1.0.0"), ModVersion.Parse("1.0.0")), result.Changes);
@@ -70,7 +70,7 @@ public sealed class ModPackUpdaterTests
         instance.DetachFromModPack("Detached");
         var instances = new MemoryInstanceRepository(instance);
 
-        var result = await Updater(instances, new FakeInstaller(instances), new FakeUninstaller(instances)).UpdateAsync(Request(instance.InstanceId, Pack("2.0.0", newerDetached, newerMember), [newerDetached, newerMember]));
+        var result = await Updater(instances).UpdateAsync(Request(instance.InstanceId, Pack("2.0.0", newerDetached, newerMember), [newerDetached, newerMember]));
 
         Assert.True(result.IsComplete);
         Assert.Equal(
@@ -91,7 +91,7 @@ public sealed class ModPackUpdaterTests
         instance.DetachFromModPack("Removed");
         instance.RemoveMod("Removed");
         var instances = new MemoryInstanceRepository(instance);
-        var updater = Updater(instances, new FakeInstaller(instances), new FakeUninstaller(instances));
+        var updater = Updater(instances);
 
         foreach (var version in new[] { "2.0.0", "3.0.0" })
         {
@@ -114,7 +114,7 @@ public sealed class ModPackUpdaterTests
         instance.DetachFromModPack("Removed");
         instance.RemoveMod("Removed");
         var instances = new MemoryInstanceRepository(instance);
-        var updater = Updater(instances, new FakeInstaller(instances), new FakeUninstaller(instances));
+        var updater = Updater(instances);
         var dropped = new[] { Release("Member", "2.0.0") };
         Assert.True((await updater.UpdateAsync(Request(instance.InstanceId, Pack("2.0.0", dropped), dropped))).IsComplete);
         var again = new[] { Release("Kept", "3.0.0"), Release("Removed", "3.0.0"), Release("Member", "3.0.0") };
@@ -142,7 +142,7 @@ public sealed class ModPackUpdaterTests
         var instance = PackInstance(Installed(Release("Detached"), InstallReason.ModPack));
         instance.DetachFromModPack("Detached");
         var instances = new MemoryInstanceRepository(instance);
-        var updater = Updater(instances, new FakeInstaller(instances), new FakeUninstaller(instances));
+        var updater = Updater(instances);
         var pack = Pack("2.0.0", newerDetached, yanked);
         var retracted = new ModPackResult(pack.Id, pack.Version, pack.Metadata, null, new IndexStatus(IndexStatusState.Retracted, "retracted", reason: "Broken pack."), []);
 
@@ -164,7 +164,7 @@ public sealed class ModPackUpdaterTests
         instance.DetachFromModPack("Detached");
         var instances = new MemoryInstanceRepository(instance);
 
-        var result = await Updater(instances, new FakeInstaller(instances), new FakeUninstaller(instances)).PlanAsync(Request(instance.InstanceId, Pack("2.0.0", Release("Detached", "1.2.0"), added), [newerDetached, added]));
+        var result = await Updater(instances).PlanAsync(Request(instance.InstanceId, Pack("2.0.0", Release("Detached", "1.2.0"), added), [newerDetached, added]));
 
         Assert.Equal(
             [new ModPackChange("Added", ModPackChangeKind.Add, null, ModVersion.Parse("1.0.0")), new ModPackChange("Detached", ModPackChangeKind.Change, ModVersion.Parse("1.0.0"), ModVersion.Parse("1.1.0"))],
@@ -203,7 +203,7 @@ public sealed class ModPackUpdaterTests
         var newer = Release("Needed", "2.0.0");
         var instance = PackInstance(Installed(Release("Needed"), InstallReason.ModPack));
         var instances = new MemoryInstanceRepository(instance);
-        var updater = Updater(instances, new FakeInstaller(instances), new FakeUninstaller(instances));
+        var updater = Updater(instances);
         var request = Request(instance.InstanceId, Pack("2.0.0", other), [other, Release("Needed"), newer]);
 
         var planned = await updater.PlanAsync(request);
@@ -256,7 +256,7 @@ public sealed class ModPackUpdaterTests
         var instances = new MemoryInstanceRepository(instance);
         var uninstaller = new FakeUninstaller(instances);
         var stop = new InstallStop();
-        var updater = Updater(instances, new FakeInstaller(instances), uninstaller);
+        var updater = Updater(instances, uninstaller: uninstaller);
         var request = Request(instance.InstanceId, Pack("2.0.0", added), [added]);
         // the last report of the install comes after it wrote the mod, so the stop arrives between the install and the removals
         var progress = new SynchronousProgress<InstallProgress>(report =>
@@ -288,7 +288,7 @@ public sealed class ModPackUpdaterTests
             Installed(Release("Kept"), InstallReason.ModPack),
             Installed(Release("Player", dependencies: [new ModDependency("Kept", ModDependencyKind.Required)]), InstallReason.Manual));
         var instances = new MemoryInstanceRepository(instance);
-        var updater = Updater(instances, new FakeInstaller(instances) { FailOnceFor = "Added" }, new FakeUninstaller(instances));
+        var updater = Updater(instances, new FakeInstaller(instances) { FailOnceFor = "Added" });
         var request = Request(instance.InstanceId, Pack("2.0.0", added), [added]);
 
         var failed = await updater.UpdateAsync(request);
@@ -341,7 +341,7 @@ public sealed class ModPackUpdaterTests
         var yanked = Release("Added", yanked: true);
         var instance = PackInstance();
         var instances = new MemoryInstanceRepository(instance);
-        var updater = Updater(instances, new FakeInstaller(instances), new FakeUninstaller(instances));
+        var updater = Updater(instances);
 
         var refused = await updater.PlanAsync(Request(instance.InstanceId, Pack("2.0.0", yanked), [yanked]));
         var accepted = await updater.PlanAsync(Request(instance.InstanceId, Pack("2.0.0", yanked), [yanked]) with { ProceedWithYankedMembers = new HashSet<string> { "added" } });
@@ -359,15 +359,15 @@ public sealed class ModPackUpdaterTests
         var instances = new MemoryInstanceRepository(instance);
         var uninstaller = new FakeUninstaller(instances);
 
-        var result = await Updater(instances, new FakeInstaller(instances), uninstaller).UpdateAsync(Request(instance.InstanceId, Pack("2.0.0", yanked), [yanked]));
+        var result = await Updater(instances, uninstaller: uninstaller).UpdateAsync(Request(instance.InstanceId, Pack("2.0.0", yanked), [yanked]));
 
         Assert.False(result.CanRun);
         Assert.Empty(result.StillInstalled);
         Assert.Empty(uninstaller.Removed);
     }
 
-    private static ModPackUpdater Updater(MemoryInstanceRepository instances, FakeInstaller installer, FakeUninstaller uninstaller)
-        => new(instances, new FakePlanner(), new InstallPlanExecutor(instances, installer, new FakeReplacer(instances)), uninstaller);
+    private static ModPackUpdater Updater(MemoryInstanceRepository instances, FakeInstaller? installer = null, FakeUninstaller? uninstaller = null)
+        => new(instances, new FakePlanner(), new InstallPlanExecutor(instances, installer ?? new FakeInstaller(instances), new FakeReplacer(instances)), uninstaller ?? new FakeUninstaller(instances));
 
     private static Instance PackInstance(params InstalledMod[] mods)
         => Instance.FromExisting(Guid.NewGuid(), "Target", new InstanceSource.FromModPack("Pack", ModVersion.Parse("1.0.0")), DateTimeOffset.UnixEpoch, mods, false);
