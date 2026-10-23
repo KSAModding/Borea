@@ -148,8 +148,10 @@ public sealed class OrbitCamera
 
     /// <summary>
     /// Puts the target at <paramref name="shift"/> from the center of the framed sphere, in the vehicle frame. A
-    /// shift longer than <see cref="Radius"/> is shortened to the radius, so the view always shows the vehicle and
-    /// <see cref="NearPlane"/> and <see cref="FarPlane"/> hold it. A shift that is not finite leaves the target.
+    /// shift longer than <see cref="Radius"/> is shortened to the radius, so <see cref="NearPlane"/> and
+    /// <see cref="FarPlane"/> hold the vehicle for every target. The sphere is much wider than a tall, thin vehicle,
+    /// so a close view can still move past the hull and show only the background until <see cref="Reset"/>.
+    /// A shift that is not finite leaves the target.
     /// </summary>
     public void SetShift(Vector3 shift)
     {
