@@ -273,6 +273,23 @@ public sealed class CompositeModRepositoryTests
     }
 
     [Fact]
+    public async Task Listing_DelistedIndexClaimBlocksLaterSource()
+    {
+        var index = new FakeModRepository(
+            Array.Empty<ModMetadata>(),
+            Array.Empty<ModVersionMetadata>(),
+            new[] { "blocked-mod" });
+        var later = new FakeModRepository(TestFixtures.SampleModMetadata("BLOCKED-MOD", "ignored", "Blocked Mod"));
+        var composite = new CompositeModRepository(new Dictionary<string, IModRepository>
+        {
+            ["index"] = index,
+            ["spacedock"] = later,
+        });
+
+        Assert.Null(await composite.GetListingAsync("blocked-mod"));
+    }
+
+    [Fact]
     public async Task AvailableMods_UnsupportedIndexClaimBlocksLaterSource()
     {
         var index = new FakeModRepository(
