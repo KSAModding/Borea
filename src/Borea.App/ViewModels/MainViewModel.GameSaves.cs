@@ -130,7 +130,6 @@ public partial class MainViewModel
         }
     }
 
-    /// <summary>Opens the name modal to rename <paramref name="item"/>.</summary>
     internal void BeginRenameGameSave(GameSaveItem item)
     {
         item.CloseEdits();

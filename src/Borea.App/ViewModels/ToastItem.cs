@@ -52,7 +52,7 @@ public sealed partial class ToastItem : ObservableObject
         _messageState = kind == ToastKind.Error ? TaskState.Failed : TaskState.Finished;
     }
 
-    /// <summary>The task the toast is about. Null for a toast about a short result.</summary>
+    /// <summary>Null for a toast about a short result.</summary>
     internal TaskItem? TaskItem { get; }
 
     private LocalizationService Localization => _owner.Localization;

@@ -346,7 +346,6 @@ public partial class MainViewModel
         _ => char.ToUpperInvariant(key[0]) + key[1..],
     };
 
-    /// <summary>Fills the links of a detail panel in the order of #8.</summary>
     private void FillLinks(ObservableCollection<ContentLink> links, IReadOnlyDictionary<string, string> source)
     {
         links.Clear();

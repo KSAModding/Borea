@@ -266,7 +266,6 @@ public sealed partial class ListingEditor : ObservableObject
     [ObservableProperty]
     private string? _outputMessage;
 
-    /// <summary>The page the last pull request action opened.</summary>
     internal ListingPullRequestPage? LastPullRequestPage { get; private set; }
 
     public string PullRequestText => IsPack
