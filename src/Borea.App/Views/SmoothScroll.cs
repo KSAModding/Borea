@@ -55,9 +55,6 @@ public static class SmoothScroll
 
     public static void SetIsEnabled(ScrollViewer viewer, bool value) => viewer.SetValue(IsEnabledProperty, value);
 
-    public static void ScrollTo(ScrollViewer viewer, Vector offset) =>
-        RunOf(viewer).GoTo(Clamp(viewer, offset));
-
     private static void Follow(ScrollViewer viewer, bool enabled)
     {
         viewer.RemoveHandler(InputElement.PointerWheelChangedEvent, OnWheel);
@@ -153,8 +150,6 @@ public static class SmoothScroll
         private Vector _velocity;
 
         private bool _running;
-
-        public Vector Target => _target;
 
         public bool Nudge(Vector step)
         {
