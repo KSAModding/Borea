@@ -42,105 +42,27 @@ public sealed class SnapshotDtoTests
         }
     }
 
-    [Fact]
-    public void Deserialize_MalformedJson_ThrowsJsonException()
+    [Theory]
+    [InlineData("{")]
+    [InlineData("[]")]
+    [InlineData("""{ "snapshot_version": 1, "listings": [], "game_versions": { "spec_version": 1, "source": "https://example.test/versions", "versions": [] } }""")]
+    [InlineData("""{ "snapshot_version": 1, "listings": null, "packs": [], "game_versions": { "spec_version": 1, "source": "https://example.test/versions", "versions": [] } }""")]
+    [InlineData("""{ "snapshot_version": 1, "listings": [], "packs": [] }""")]
+    public void Deserialize_UnusableEnvelope_ThrowsJsonException(string json)
     {
-        Assert.Throws<JsonException>(() => IndexJson.Deserialize<SnapshotDto>("{"));
-    }
-
-    [Fact]
-    public void Deserialize_ArrayRoot_ThrowsJsonException()
-    {
-        Assert.Throws<JsonException>(() => IndexJson.Deserialize<SnapshotDto>("[]"));
-    }
-
-    [Fact]
-    public void Deserialize_MissingRequiredEnvelopeMember_ThrowsJsonException()
-    {
-        const string json = """
-            {
-              "snapshot_version": 1,
-              "listings": [],
-              "game_versions": {
-                "spec_version": 1,
-                "source": "https://example.test/versions",
-                "versions": []
-              }
-            }
-            """;
-
         Assert.Throws<JsonException>(() => IndexJson.Deserialize<SnapshotDto>(json));
     }
 
-    [Fact]
-    public void Deserialize_NullRequiredEnvelopeMember_ThrowsJsonException()
+    [Theory]
+    [InlineData("null", JsonValueKind.Null)]
+    [InlineData("""{ "spec_version": 1, "source": "https://example.test/versions", "versions": [1] }""", JsonValueKind.Object)]
+    public void Deserialize_UnusableGameVersions_KeepsRawValue(string gameVersions, JsonValueKind kind)
     {
-        const string json = """
-            {
-              "snapshot_version": 1,
-              "listings": null,
-              "packs": [],
-              "game_versions": {
-                "spec_version": 1,
-                "source": "https://example.test/versions",
-                "versions": []
-              }
-            }
-            """;
-
-        Assert.Throws<JsonException>(() => IndexJson.Deserialize<SnapshotDto>(json));
-    }
-
-    [Fact]
-    public void Deserialize_MissingGameVersions_ThrowsJsonException()
-    {
-        const string json = """
-            {
-              "snapshot_version": 1,
-              "listings": [],
-              "packs": []
-            }
-            """;
-
-        Assert.Throws<JsonException>(() => IndexJson.Deserialize<SnapshotDto>(json));
-    }
-
-    [Fact]
-    public void Deserialize_NullGameVersions_KeepsRawValue()
-    {
-        const string json = """
-            {
-              "snapshot_version": 1,
-              "listings": [],
-              "packs": [],
-              "game_versions": null
-            }
-            """;
+        var json = $$"""{ "snapshot_version": 1, "listings": [], "packs": [], "game_versions": {{gameVersions}} }""";
 
         var result = IndexJson.Deserialize<SnapshotDto>(json);
 
-        Assert.Equal(JsonValueKind.Null, result.GameVersions.ValueKind);
-    }
-
-    [Fact]
-    public void Deserialize_InvalidGameVersions_KeepsRawValue()
-    {
-        const string json = """
-            {
-              "snapshot_version": 1,
-              "listings": [],
-              "packs": [],
-              "game_versions": {
-                "spec_version": 1,
-                "source": "https://example.test/versions",
-                "versions": [1]
-              }
-            }
-            """;
-
-        var result = IndexJson.Deserialize<SnapshotDto>(json);
-
-        Assert.Equal(JsonValueKind.Object, result.GameVersions.ValueKind);
+        Assert.Equal(kind, result.GameVersions.ValueKind);
     }
 
     private static string LoadCurrentSnapshot()
