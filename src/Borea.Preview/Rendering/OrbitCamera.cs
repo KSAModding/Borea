@@ -6,9 +6,10 @@ namespace Borea.Preview.Rendering;
 /// <summary>
 /// A camera that circles a target at a fixed field of view. The vehicle axis +X is screen up, so the yaw
 /// turns the camera around +X and the pitch lifts it toward +X. The target starts at the center of the framed
-/// bounds and moves only along +X, between the lowest and the highest extent of the bounds, as the camera of
-/// the game editor does. The player can thus look closely at one stage of a tall vehicle, and the view always
-/// aims at a point on the vehicle axis inside the bounds. The matrices are right-handed with the row-vector
+/// bounds and moves only along +X, as the camera of the game editor does. The game editor lets the target go
+/// about 50 m each way whatever the size of the vehicle, but this camera stops it at the lowest and the highest extent
+/// of the bounds, so the view always aims at a point on the vehicle axis inside the bounds and the vehicle never
+/// leaves the view. The player can thus look closely at one stage of a tall vehicle. The matrices are right-handed with the row-vector
 /// order of System.Numerics, and the projection maps depth to 0 at the near plane and 1 at the far plane.
 /// </summary>
 public sealed class OrbitCamera
