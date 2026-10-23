@@ -17,6 +17,7 @@ public sealed class VehiclePreviewViewTests
 {
     private const int Width = 160;
     private const int Height = 90;
+    private const int PanZoomSteps = 15;
     private static readonly Point Center = new(Width / 2, Height / 2);
 
     [Fact]
@@ -254,6 +255,207 @@ public sealed class VehiclePreviewViewTests
         Assert.True(result.During > 1, $"The drag showed {result.During} frames.");
         Assert.Equal(result.During, result.Recorded);
         Assert.Equal(RenderQuality.Standard, result.ShownQuality);
+    }
+
+    [Theory]
+    [InlineData(MouseButton.Right, RawInputModifiers.None)]
+    [InlineData(MouseButton.Middle, RawInputModifiers.None)]
+    [InlineData(MouseButton.Left, RawInputModifiers.Shift)]
+    public async Task APanDrag_MovesTheTargetWithThePointer_AtDragResolution_AndOpensNoContextMenu(MouseButton button, RawInputModifiers modifiers)
+    {
+        var scene = PreviewTestScenes.StackedBoxes();
+        var result = await HeadlessApp.RunAsync(async () =>
+        {
+            var (window, view) = Show(scene);
+            var requests = 0;
+            window.ContextRequested += (_, _) => requests++;
+            await IdleAsync(view, 1);
+
+            // The zoom keeps the shift inside the sphere. The move goes past the right edge of the window, which only
+            // a captured pointer still sends to the view.
+            window.MouseWheel(Center, new Avalonia.Vector(0, PanZoomSteps));
+            window.MouseDown(Center, button, modifiers);
+            window.MouseMove(Center + new Point(100, -10), modifiers);
+            await IdleAsync(view, 2);
+            var dragWidth = view.BitmapWidth;
+            window.MouseUp(Center + new Point(100, -10), button, modifiers);
+            await IdleAsync(view, 3);
+            return (Shift: view.CameraShift, view.CameraYaw, DragWidth: dragWidth, FullWidth: view.BitmapWidth, Requests: requests);
+        });
+
+        var camera = Framed(scene);
+        camera.Zoom(PanZoomSteps);
+        var expected = camera.PanOffset(100f, -10f, Height);
+        Assert.True(Vector3.Distance(expected, result.Shift) < expected.Length() * 1e-3f, $"The shift is {result.Shift}, expected {expected}.");
+        Assert.Equal(OrbitCamera.DefaultYaw, result.CameraYaw);
+        Assert.Equal(Width / 2, result.DragWidth);
+        Assert.Equal(Width, result.FullWidth);
+        Assert.Equal(0, result.Requests);
+    }
+
+    [Theory]
+    [InlineData(PhysicalKey.Q, 1f, 0f)]
+    [InlineData(PhysicalKey.E, -1f, 0f)]
+    [InlineData(PhysicalKey.A, 0f, -1f)]
+    [InlineData(PhysicalKey.D, 0f, 1f)]
+    public async Task AMoveKey_MovesTheTargetByATenthOfTheViewHeight(PhysicalKey key, float up, float right)
+    {
+        var scene = PreviewTestScenes.StackedBoxes();
+        var result = await HeadlessApp.RunAsync(async () =>
+        {
+            var (window, view) = Show(scene);
+            await IdleAsync(view, 1);
+            view.Focus();
+            window.KeyPressQwerty(key, RawInputModifiers.None);
+            await IdleAsync(view, 2);
+            return (view.CameraShift, view.CameraDistance);
+        });
+
+        var framed = Framed(scene);
+        var step = framed.ViewHeight * VehiclePreviewView.KeyMoveFraction;
+        var expected = (Vector3.UnitX * up + framed.ScreenRight * right) * step;
+        Assert.True(Vector3.Distance(expected, result.CameraShift) < step * 1e-3f, $"The shift is {result.CameraShift}, expected {expected}.");
+        Assert.Equal(framed.Distance, result.CameraDistance);
+    }
+
+    [Fact]
+    public async Task WAndS_ZoomOneStep_AndAKeyWithAModifierDoesNothing()
+    {
+        var result = await HeadlessApp.RunAsync(async () =>
+        {
+            var (window, view) = Show(PreviewTestScenes.StackedBoxes());
+            await IdleAsync(view, 1);
+            var framed = view.CameraDistance;
+            view.Focus();
+            window.KeyPressQwerty(PhysicalKey.W, RawInputModifiers.None);
+            var closer = view.CameraDistance;
+            window.KeyPressQwerty(PhysicalKey.S, RawInputModifiers.None);
+            window.KeyPressQwerty(PhysicalKey.S, RawInputModifiers.None);
+            var farther = view.CameraDistance;
+            window.KeyPressQwerty(PhysicalKey.Q, RawInputModifiers.Control);
+            return (Framed: framed, Closer: closer, Farther: farther, view.CameraShift);
+        });
+
+        Assert.Equal(result.Framed * OrbitCamera.ZoomStepFactor, result.Closer, result.Framed * 1e-5f);
+        Assert.Equal(result.Framed / OrbitCamera.ZoomStepFactor, result.Farther, result.Framed * 1e-5f);
+        Assert.Equal(Vector3.Zero, result.CameraShift);
+    }
+
+    [Theory]
+    [InlineData(PhysicalKey.F)]
+    [InlineData(PhysicalKey.Home)]
+    [InlineData(PhysicalKey.None)]
+    public async Task FHomeAndADoubleClick_FrameTheVehicleAgain(PhysicalKey key)
+    {
+        var result = await HeadlessApp.RunAsync(async () =>
+        {
+            var (window, view) = Show(PreviewTestScenes.StackedBoxes());
+            await IdleAsync(view, 1);
+            var framed = view.CameraDistance;
+            view.Focus();
+            window.KeyPressQwerty(PhysicalKey.Q, RawInputModifiers.None);
+            window.KeyPressQwerty(PhysicalKey.W, RawInputModifiers.None);
+            window.KeyPressQwerty(PhysicalKey.ArrowLeft, RawInputModifiers.None);
+            var moved = view.CameraShift != Vector3.Zero && view.CameraDistance < framed && view.CameraYaw != OrbitCamera.DefaultYaw;
+
+            // PhysicalKey.None stands for the double click with the left button.
+            if (key == PhysicalKey.None)
+            {
+                window.MouseDown(Center, MouseButton.Left);
+                window.MouseUp(Center, MouseButton.Left);
+                window.MouseDown(Center, MouseButton.Left);
+                window.MouseUp(Center, MouseButton.Left);
+            }
+            else
+            {
+                window.KeyPressQwerty(key, RawInputModifiers.None);
+            }
+
+            await HeadlessApp.FramesUntilAsync(() => view.IsIdle);
+            return (Moved: moved, view.CameraShift, Framed: view.CameraDistance == framed, view.CameraYaw);
+        });
+
+        Assert.True(result.Moved);
+        Assert.Equal((Vector3.Zero, true, OrbitCamera.DefaultYaw), (result.CameraShift, result.Framed, result.CameraYaw));
+    }
+
+    [Fact]
+    public async Task TheWheel_ZoomsToTheNearLimit_AndAStepBackRespondsAtOnce()
+    {
+        var result = await HeadlessApp.RunAsync(async () =>
+        {
+            var (window, view) = Show(PreviewTestScenes.StackedBoxes());
+            await IdleAsync(view, 1);
+            var framed = view.CameraDistance;
+            window.MouseWheel(Center, new Avalonia.Vector(0, 200));
+            var nearest = view.CameraDistance;
+            window.MouseWheel(Center, new Avalonia.Vector(0, -1));
+            return (Framed: framed, Nearest: nearest, Back: view.CameraDistance);
+        });
+
+        Assert.Equal(result.Framed * OrbitCamera.MinZoomFactor, result.Nearest, result.Framed * 1e-5f);
+        Assert.Equal(result.Nearest / OrbitCamera.ZoomStepFactor, result.Back, result.Framed * 1e-5f);
+    }
+
+    [Fact]
+    public async Task AMoveKeyAfterAHighFrame_ShowsAStandardFrame_AndRefinesAgain()
+    {
+        var result = await HeadlessApp.RunAsync(async () =>
+        {
+            var (window, view) = Show(PreviewTestScenes.StackedBoxes());
+            view.RefineDelay = TimeSpan.FromMilliseconds(20);
+            await HeadlessApp.FramesUntilAsync(() => view.IsIdle && view.ShownQuality == RenderQuality.High);
+            var (shown, high) = (view.FramesShown, view.HighFramesShown);
+
+            view.Focus();
+            window.KeyPressQwerty(PhysicalKey.E, RawInputModifiers.None);
+            await IdleAsync(view, shown + 1);
+            var afterKey = view.ShownQuality;
+            await HeadlessApp.FramesUntilAsync(() => view.IsIdle && view.ShownQuality == RenderQuality.High);
+            return (AfterKey: afterKey, Standard: view.FramesShown - shown, High: view.HighFramesShown - high, view.ShownQuality);
+        });
+
+        Assert.Equal((RenderQuality.Standard, 1, 1, RenderQuality.High), result);
+    }
+
+    [Fact]
+    public async Task AMovedTarget_StaysForTheSameVehicle_AndResetsForAResetCountOrAnotherVehicle()
+    {
+        var textured = Box(new Vector3(0f, 0f, 1f));
+        var other = PreviewTestScenes.StackedBoxes();
+        var result = await HeadlessApp.RunAsync(async () =>
+        {
+            var (window, view) = Show(Box(new Vector3(1f, 0f, 0f)));
+            await IdleAsync(view, 1);
+            view.Focus();
+            window.KeyPressQwerty(PhysicalKey.Q, RawInputModifiers.None);
+            var moved = view.CameraShift;
+
+            // the same box with another material has the same bounds, as the textured scene after the flat one has
+            view.Scene = textured;
+            var kept = view.CameraShift;
+            view.ResetCount++;
+            var afterReset = view.CameraShift;
+
+            window.KeyPressQwerty(PhysicalKey.Q, RawInputModifiers.None);
+            view.Scene = other;
+            var afterOther = view.CameraShift;
+            await HeadlessApp.FramesUntilAsync(() => view.IsIdle);
+            return (Moved: moved, Kept: kept, AfterReset: afterReset, AfterOther: afterOther);
+        });
+
+        Assert.NotEqual(Vector3.Zero, result.Moved);
+        Assert.Equal(result.Moved, result.Kept);
+        Assert.Equal(Vector3.Zero, result.AfterReset);
+        Assert.Equal(Vector3.Zero, result.AfterOther);
+    }
+
+    /// <summary>The camera that the view builds for <paramref name="scene"/> before any input.</summary>
+    private static OrbitCamera Framed(PreviewScene scene)
+    {
+        var camera = new OrbitCamera();
+        camera.Frame(scene.Bounds, (float)Width / Height);
+        return camera;
     }
 
     private static (Window Window, VehiclePreviewView View) Show(PreviewScene scene)
