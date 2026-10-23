@@ -32,9 +32,8 @@ public sealed class WinePrefixProbeTests : IDisposable
         var prefix = LinkedPrefix(Path.Combine(_tempRoot, "prefix"));
         var game = Game(prefix);
 
-        var install = _probe.Find(game);
+        var install = _probe.Find(game)!;
 
-        Assert.NotNull(install);
         Assert.Equal("prefix", Path.GetFileName(install.PrefixRoot));
         Assert.Equal(new[] { 'c', 'z' }, install.Drives.Drives.Keys.Order());
         Assert.Equal("/", install.Drives.Drives['z']);
@@ -52,9 +51,8 @@ public sealed class WinePrefixProbeTests : IDisposable
         _links.Add(Directory.CreateSymbolicLink(Path.Combine(contents, "drive_c"), Path.Combine("SharedSupport", "prefix", "drive_c")).FullName);
         var linkedGame = Path.Combine(contents, "drive_c", "Program Files", "Kitten Space Agency");
 
-        var install = _probe.Find(linkedGame);
+        var install = _probe.Find(linkedGame)!;
 
-        Assert.NotNull(install);
         Assert.EndsWith(Path.Combine("SharedSupport", "prefix"), install.PrefixRoot);
         Assert.Equal(@"C:\Program Files\Kitten Space Agency", _probe.ToWindowsPath(install, linkedGame));
     }
@@ -66,9 +64,8 @@ public sealed class WinePrefixProbeTests : IDisposable
         _links.Add(WineFixtures.LinkDrive(prefix, 'c', "../drive_c"));
         var outside = Directory.CreateDirectory(Path.Combine(prefix, "games", "KSA")).FullName;
 
-        var install = _probe.Find(outside);
+        var install = _probe.Find(outside)!;
 
-        Assert.NotNull(install);
         Assert.Equal(new[] { 'c' }, install.Drives.Drives.Keys);
         Assert.Null(_probe.ToWindowsPath(install, outside));
     }
@@ -88,9 +85,8 @@ public sealed class WinePrefixProbeTests : IDisposable
     {
         var prefix = WineFixtures.Prefix(Path.Combine(_tempRoot, "prefix"));
 
-        var install = _probe.Find(Game(prefix));
+        var install = _probe.Find(Game(prefix))!;
 
-        Assert.NotNull(install);
         Assert.Empty(install.Drives.Drives);
     }
 
@@ -112,9 +108,8 @@ public sealed class WinePrefixProbeTests : IDisposable
         var prefix = WineFixtures.Prefix(WineFixtures.WrapperPrefix(Path.Combine(Applications, toolFolder)));
         var bundle = WineFixtures.Wrapper(prefix);
 
-        var wrapper = _probe.Find(Game(prefix))?.Wrapper;
+        var wrapper = _probe.Find(Game(prefix))!.Wrapper!;
 
-        Assert.NotNull(wrapper);
         Assert.Equal(Path.GetFileName(bundle), Path.GetFileName(wrapper.BundlePath));
         Assert.Equal(Path.Combine(wrapper.BundlePath, "Contents", "MacOS", "launcher"), wrapper.LauncherPath);
     }
@@ -136,9 +131,8 @@ public sealed class WinePrefixProbeTests : IDisposable
         var prefix = WineFixtures.Prefix(WineFixtures.WrapperPrefix(Applications));
         WineFixtures.Wrapper(prefix, infoPlist, launcher);
 
-        var install = _probe.Find(Game(prefix));
+        var install = _probe.Find(Game(prefix))!;
 
-        Assert.NotNull(install);
         Assert.Null(install.Wrapper);
     }
 

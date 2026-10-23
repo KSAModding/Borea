@@ -13,9 +13,8 @@ public sealed class MacOsBundleTests
     [Fact]
     public void ForProgram_AProgramUnderContentsMacOS_NamesItsBundle()
     {
-        var bundle = MacOsBundle.ForProgram(Program);
+        var bundle = MacOsBundle.ForProgram(Program)!;
 
-        Assert.NotNull(bundle);
         Assert.Equal(Program, bundle.ProgramPath);
         Assert.Equal(Bundle, bundle.BundlePath);
         Assert.Equal(Applications, bundle.Folder);
@@ -26,9 +25,8 @@ public sealed class MacOsBundleTests
     [Fact]
     public void ForProgram_TheBundleEnding_IsReadInAnyCase()
     {
-        var bundle = MacOsBundle.ForProgram(Path.Combine(Applications, "Borea.APP", "Contents", "MacOS", "borea"));
+        var bundle = MacOsBundle.ForProgram(Path.Combine(Applications, "Borea.APP", "Contents", "MacOS", "borea"))!;
 
-        Assert.NotNull(bundle);
         Assert.Equal(Path.Combine(Applications, "Borea.APP"), bundle.BundlePath);
     }
 
