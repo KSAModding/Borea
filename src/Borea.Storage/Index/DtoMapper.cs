@@ -212,7 +212,7 @@ public static class DtoMapper
                 // rather than failing the whole listing over an unrelated field.
                 if (value.ValueKind == JsonValueKind.String)
                 {
-                    links[key] = value.GetString()!;
+                    links[key] = IndexJsonHelpers.ReadText(value);
                 }
             }
         }
@@ -236,18 +236,18 @@ public static class DtoMapper
     // "owner/repo" on GitHub and the numeric mod id on SpaceDock.
     private static string? MapHostReference(JsonElement value) => value.ValueKind switch
     {
-        JsonValueKind.String when value.GetString()!.Contains('/', StringComparison.Ordinal) => value.GetString(),
+        JsonValueKind.String when IndexJsonHelpers.TryReadText(value) is { } reference && reference.Contains('/', StringComparison.Ordinal) => reference,
         JsonValueKind.Number when value.TryGetInt64(out var id) && id > 0 => value.GetRawText(),
         _ => null,
     };
 
     // The watcher stamps as if since were absent when it is not a version, so Borea reads it the same way.
     private static ModVersion? MapSince(JsonElement? value) =>
-        value is { ValueKind: JsonValueKind.String } text && ModVersion.TryParseAuthored(text.GetString(), out var since) ? since : null;
+        value is { ValueKind: JsonValueKind.String } text && ModVersion.TryParseAuthored(IndexJsonHelpers.TryReadText(text), out var since) ? since : null;
 
     // The schema takes a non-empty ASCII string without whitespace, and Borea reads nothing else as a prefix.
     private static string? MapTagPrefix(JsonElement? value) =>
-        value is { ValueKind: JsonValueKind.String } text && text.GetString() is { Length: > 0 } prefix && prefix.All(c => c is > ' ' and <= '~') ? prefix : null;
+        value is { ValueKind: JsonValueKind.String } text && IndexJsonHelpers.TryReadText(text) is { Length: > 0 } prefix && prefix.All(c => c is > ' ' and <= '~') ? prefix : null;
 
     // A release file carries its bounds in full, while an authored listing reaches Borea verbatim and may write them shorter.
     private static ModDependency MapDependency(DependencyEntryDto dto, Func<string, ModVersion> parseBound)
