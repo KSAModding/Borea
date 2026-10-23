@@ -80,8 +80,7 @@ public sealed class ListingHostClientTests
               { "name": "notes.txt", "state": "uploaded", "size": 1, "browser_download_url": "https://example.com/notes.txt" }
             ] } ]
             """;
-        var client = new ListingHostClient(FakeHttpMessageHandler.BuildClient(request =>
-            FakeHttpMessageHandler.JsonResponse(request.RequestUri!.AbsolutePath.EndsWith("/releases", StringComparison.Ordinal) ? releases : Repository), out _));
+        var client = ClientWithReleases(releases);
 
         var latest = (await client.ReadAsync(new ListingSourceReference.GitHub("Owner", "KSA-MyMod"))).Latest!;
 
@@ -98,8 +97,7 @@ public sealed class ListingHostClientTests
               { "name": "MyMod.zip", "state": "uploaded", "size": 1, "browser_download_url": "https://example.com/MyMod.zip" }
             ] } ]
             """;
-        var client = new ListingHostClient(FakeHttpMessageHandler.BuildClient(request =>
-            FakeHttpMessageHandler.JsonResponse(request.RequestUri!.AbsolutePath.EndsWith("/releases", StringComparison.Ordinal) ? releases : Repository), out _));
+        var client = ClientWithReleases(releases);
         var reference = new ListingSourceReference.GitHub("Owner", "KSA-MyMod");
 
         Assert.Null((await client.ReadAsync(reference)).Latest!.DownloadUrl);
@@ -115,8 +113,7 @@ public sealed class ListingHostClientTests
             [ { "tag_name": "{{tag}}", "draft": false, "published_at": "2026-09-08T00:00:00Z", "assets": [] },
               { "tag_name": "0.4.0.1", "draft": false, "published_at": "2026-09-09T00:00:00Z", "assets": [] } ]
             """;
-        var client = new ListingHostClient(FakeHttpMessageHandler.BuildClient(request =>
-            FakeHttpMessageHandler.JsonResponse(request.RequestUri!.AbsolutePath.EndsWith("/releases", StringComparison.Ordinal) ? releases : Repository), out _));
+        var client = ClientWithReleases(releases);
 
         var latest = (await client.ReadAsync(new ListingSourceReference.GitHub("Owner", "KSA-MyMod"))).Latest!;
 
@@ -589,6 +586,9 @@ public sealed class ListingHostClientTests
     private const string BranchApi = "https://api.github.com/repos/alice/KSA-Mod/branches/main";
 
     private const string CommitImage = $"https://raw.githubusercontent.com/alice/KSA-Mod/{Commit}/images/hero.png";
+
+    private static ListingHostClient ClientWithReleases(string releases) => new(FakeHttpMessageHandler.BuildClient(request =>
+        FakeHttpMessageHandler.JsonResponse(request.RequestUri!.AbsolutePath.EndsWith("/releases", StringComparison.Ordinal) ? releases : Repository), out _));
 
     /// <summary>A measurer whose image fetches and GitHub requests both go to <paramref name="respond"/>, which records them.</summary>
     private static ListingImageMeasurer Measurer(Func<HttpRequestMessage, HttpResponseMessage> respond, out List<(string Url, string? Authorization)> sent, TimeProvider? time = null)

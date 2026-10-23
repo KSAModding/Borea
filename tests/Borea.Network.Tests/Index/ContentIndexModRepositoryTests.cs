@@ -83,11 +83,7 @@ public sealed class ContentIndexModRepositoryTests : IDisposable
     {
         var time = new FakeTimeProvider();
         var fetcher = new FakeFetcher(ContentIndexFetchResult.Downloaded, ContentIndexFetchResult.NotModified);
-        var reader = new FakeReader(Snapshot(new ContentIndexListing(
-            "test-mod",
-            TestFixtures.SampleModMetadata("test-mod", "index"),
-            Array.Empty<ModVersionMetadata>(),
-            null)));
+        var reader = OneModReader();
         var repository = new ContentIndexModRepository(fetcher, reader, new TestPathProvider(), time);
 
         await repository.GetAvailableModsAsync();
@@ -104,11 +100,7 @@ public sealed class ContentIndexModRepositoryTests : IDisposable
     {
         var fetchCompletion = new TaskCompletionSource<ContentIndexFetchResult>(TaskCreationOptions.RunContinuationsAsynchronously);
         var fetcher = new FakeFetcher(_ => fetchCompletion.Task);
-        var reader = new FakeReader(Snapshot(new ContentIndexListing(
-            "test-mod",
-            TestFixtures.SampleModMetadata("test-mod", "index"),
-            Array.Empty<ModVersionMetadata>(),
-            null)));
+        var reader = OneModReader();
         var repository = new ContentIndexModRepository(fetcher, reader, new TestPathProvider());
 
         var first = repository.GetAvailableModsAsync();
@@ -125,11 +117,7 @@ public sealed class ContentIndexModRepositoryTests : IDisposable
     {
         var fetchCompletion = new TaskCompletionSource<ContentIndexFetchResult>(TaskCreationOptions.RunContinuationsAsynchronously);
         var fetcher = new FakeFetcher(_ => fetchCompletion.Task);
-        var reader = new FakeReader(Snapshot(new ContentIndexListing(
-            "test-mod",
-            TestFixtures.SampleModMetadata("test-mod", "index"),
-            Array.Empty<ModVersionMetadata>(),
-            null)));
+        var reader = OneModReader();
         var repository = new ContentIndexModRepository(fetcher, reader, new TestPathProvider());
         using var cancellation = new CancellationTokenSource();
 
@@ -148,11 +136,7 @@ public sealed class ContentIndexModRepositoryTests : IDisposable
     public async Task GetAvailableModsAsync_FetchFailureUsesDiskSnapshot()
     {
         var fetcher = new FakeFetcher(_ => Task.FromException<ContentIndexFetchResult>(new HttpRequestException("offline")));
-        var reader = new FakeReader(Snapshot(new ContentIndexListing(
-            "test-mod",
-            TestFixtures.SampleModMetadata("test-mod", "index"),
-            Array.Empty<ModVersionMetadata>(),
-            null)));
+        var reader = OneModReader();
         var repository = new ContentIndexModRepository(fetcher, reader, new TestPathProvider());
 
         var available = await repository.GetAvailableModsAsync();
@@ -169,11 +153,7 @@ public sealed class ContentIndexModRepositoryTests : IDisposable
         var fetcher = new FakeFetcher(
             _ => Task.FromResult(ContentIndexFetchResult.Downloaded),
             _ => Task.FromException<ContentIndexFetchResult>(new HttpRequestException("offline")));
-        var reader = new FakeReader(Snapshot(new ContentIndexListing(
-            "test-mod",
-            TestFixtures.SampleModMetadata("test-mod", "index"),
-            Array.Empty<ModVersionMetadata>(),
-            null)));
+        var reader = OneModReader();
         var repository = new ContentIndexModRepository(fetcher, reader, new TestPathProvider(), time);
 
         await repository.GetAvailableModsAsync();
@@ -351,6 +331,12 @@ public sealed class ContentIndexModRepositoryTests : IDisposable
         File.SetLastWriteTimeUtc(indexPath, writtenAt.UtcDateTime);
         return indexPath;
     }
+
+    private static FakeReader OneModReader() => new(Snapshot(new ContentIndexListing(
+        "test-mod",
+        TestFixtures.SampleModMetadata("test-mod", "index"),
+        Array.Empty<ModVersionMetadata>(),
+        null)));
 
     private static ContentIndexSnapshot Snapshot(params ContentIndexListing[] listings) => new(
         1,

@@ -45,10 +45,10 @@ public sealed class RepositoryInstallPlannerTests
     public async Task PlanAsync_SatisfyingInstalledDependency_DoesNotPlanWrite()
     {
         var installed = Installed("B", "1.0.0");
-        var instance = Instance.FromExisting(Guid.NewGuid(), "Test", InstanceSource.Custom.Value, DateTimeOffset.UtcNow, [installed], false);
+        var instance = InstanceWith([installed]);
         var a = Release("A", dependencies: [Required("B")]);
         var repository = new FakeRepository([a]);
-        var plan = await new RepositoryInstallPlanner(new ModDependencyResolver()).PlanAsync(new InstallPlanningRequest(instance, [new RequestedMod(a, InstallReason.Manual)], repository));
+        var plan = await PlanAsync(new InstallPlanningRequest(instance, [new RequestedMod(a, InstallReason.Manual)], repository));
         Assert.True(plan.IsReady);
         Assert.DoesNotContain(plan.Operations, value => value.Release.ModId == "B");
         Assert.Equal(0, repository.ReleaseReads);
@@ -57,10 +57,10 @@ public sealed class RepositoryInstallPlannerTests
     [Fact]
     public async Task PlanAsync_UnboundedForeignDependency_IsSatisfiedWithoutRepositoryRead()
     {
-        var instance = Instance.FromExisting(Guid.NewGuid(), "Test", InstanceSource.Custom.Value, DateTimeOffset.UtcNow, [], [new ForeignMod("B")], false);
+        var instance = InstanceWith([], [new ForeignMod("B")]);
         var a = Release("A", dependencies: [Required("B")]);
         var repository = new FakeRepository([a]);
-        var plan = await new RepositoryInstallPlanner(new ModDependencyResolver()).PlanAsync(new InstallPlanningRequest(instance, [new RequestedMod(a, InstallReason.Manual)], repository));
+        var plan = await PlanAsync(new InstallPlanningRequest(instance, [new RequestedMod(a, InstallReason.Manual)], repository));
         Assert.True(plan.IsReady);
         Assert.Equal(0, repository.VersionReads);
     }
@@ -71,8 +71,8 @@ public sealed class RepositoryInstallPlannerTests
         var a = Release("A", dependencies: [Required("B")]);
         var b = Release("B", dependencies: [Required("A")]);
         var repository = new FakeRepository([a, b]);
-        var instance = new Instance("Test", InstanceSource.Custom.Value);
-        var plan = await new RepositoryInstallPlanner(new ModDependencyResolver()).PlanAsync(new InstallPlanningRequest(instance, [new RequestedMod(a, InstallReason.Manual)], repository));
+        var instance = EmptyInstance();
+        var plan = await PlanAsync(new InstallPlanningRequest(instance, [new RequestedMod(a, InstallReason.Manual)], repository));
         Assert.True(plan.IsReady);
         Assert.Empty(instance.Mods);
         Assert.Equal(2, plan.Operations.Count);
@@ -84,8 +84,8 @@ public sealed class RepositoryInstallPlannerTests
         var x = Installed("X", dependencies: [Required("B", max: "1.0.0")]);
         var b1 = Release("B");
         var b2 = Release("B", "2.0.0");
-        var instance = Instance.FromExisting(Guid.NewGuid(), "Test", InstanceSource.Custom.Value, DateTimeOffset.UtcNow, [x, Installed("B")], false);
-        var plan = await new RepositoryInstallPlanner(new ModDependencyResolver()).PlanAsync(new InstallPlanningRequest(instance, [new RequestedMod(b2, InstallReason.Manual)], new FakeRepository([b1, b2])));
+        var instance = InstanceWith([x, Installed("B")]);
+        var plan = await PlanAsync(new InstallPlanningRequest(instance, [new RequestedMod(b2, InstallReason.Manual)], new FakeRepository([b1, b2])));
         Assert.False(plan.IsReady);
         Assert.Contains(plan.Conflicts, value => value.Code == "retained-dependent");
     }
@@ -96,8 +96,8 @@ public sealed class RepositoryInstallPlannerTests
         var b1 = Release("B");
         var b2 = Release("B", "2.0.0");
         var a = Release("A", dependencies: [Required("B", max: "1.0.0")]);
-        var request = new InstallPlanningRequest(new Instance("Test", InstanceSource.Custom.Value), [new RequestedMod(a, InstallReason.Manual), new RequestedMod(b2, InstallReason.Manual, Exact: false)], new FakeRepository([a, b1, b2]));
-        var plan = await new RepositoryInstallPlanner(new ModDependencyResolver()).PlanAsync(request);
+        var request = new InstallPlanningRequest(EmptyInstance(), [new RequestedMod(a, InstallReason.Manual), new RequestedMod(b2, InstallReason.Manual, Exact: false)], new FakeRepository([a, b1, b2]));
+        var plan = await PlanAsync(request);
         Assert.True(plan.IsReady);
         Assert.Contains(plan.Selections, value => value.Release.ModId == "B" && value.Release.Version == ModVersion.Parse("1.0.0"));
     }
@@ -118,8 +118,8 @@ public sealed class RepositoryInstallPlannerTests
     public async Task PlanAsync_DirectForeignIdRequest_IsBlocking()
     {
         var b = Release("B");
-        var instance = Instance.FromExisting(Guid.NewGuid(), "Test", InstanceSource.Custom.Value, DateTimeOffset.UtcNow, [], [new ForeignMod("B")], false);
-        var plan = await new RepositoryInstallPlanner(new ModDependencyResolver()).PlanAsync(new InstallPlanningRequest(instance, [new RequestedMod(b, InstallReason.Manual)], new FakeRepository([b])));
+        var instance = InstanceWith([], [new ForeignMod("B")]);
+        var plan = await PlanAsync(new InstallPlanningRequest(instance, [new RequestedMod(b, InstallReason.Manual)], new FakeRepository([b])));
         Assert.False(plan.IsReady);
         Assert.Contains(plan.Conflicts, value => value.Code == "foreign-owned");
     }
@@ -129,8 +129,8 @@ public sealed class RepositoryInstallPlannerTests
     {
         var dependency = ModDependency.OfAlternatives(ModDependencyKind.Required, [new ModDependencyAlternative("B"), new ModDependencyAlternative("C")]);
         var a = Release("A", dependencies: [dependency]);
-        var instance = Instance.FromExisting(Guid.NewGuid(), "Test", InstanceSource.Custom.Value, DateTimeOffset.UtcNow, [Installed("C")], false);
-        var plan = await new RepositoryInstallPlanner(new ModDependencyResolver()).PlanAsync(new InstallPlanningRequest(instance, [new RequestedMod(a, InstallReason.Manual)], new FakeRepository([a])));
+        var instance = InstanceWith([Installed("C")]);
+        var plan = await PlanAsync(new InstallPlanningRequest(instance, [new RequestedMod(a, InstallReason.Manual)], new FakeRepository([a])));
         Assert.True(plan.IsReady);
         Assert.Equal("C", Assert.Single(plan.Choices).Selected);
     }
@@ -142,8 +142,8 @@ public sealed class RepositoryInstallPlannerTests
         var a = Release("A", dependencies: [dependency]);
         var b = Release("B");
         var choices = new Dictionary<string, string> { ["A:dependency:0:alternative"] = "B" };
-        var request = new InstallPlanningRequest(new Instance("Test", InstanceSource.Custom.Value), [new RequestedMod(a, InstallReason.Manual)], new FakeRepository([a, b]), Alternatives: choices);
-        var plan = await new RepositoryInstallPlanner(new ModDependencyResolver()).PlanAsync(request);
+        var request = new InstallPlanningRequest(EmptyInstance(), [new RequestedMod(a, InstallReason.Manual)], new FakeRepository([a, b]), Alternatives: choices);
+        var plan = await PlanAsync(request);
         Assert.Equal(["B", "A"], plan.Operations.Select(value => value.Release.ModId));
     }
 
@@ -151,8 +151,8 @@ public sealed class RepositoryInstallPlannerTests
     public async Task PlanAsync_BoundedConflictWithForeignMod_IsUnknown()
     {
         var a = Release("A", dependencies: [new ModDependency("B", ModDependencyKind.Conflict, ModVersion.Parse("2.0.0"))]);
-        var instance = Instance.FromExisting(Guid.NewGuid(), "Test", InstanceSource.Custom.Value, DateTimeOffset.UtcNow, [], [new ForeignMod("B")], false);
-        var plan = await new RepositoryInstallPlanner(new ModDependencyResolver()).PlanAsync(new InstallPlanningRequest(instance, [new RequestedMod(a, InstallReason.Manual)], new FakeRepository([a])));
+        var instance = InstanceWith([], [new ForeignMod("B")]);
+        var plan = await PlanAsync(new InstallPlanningRequest(instance, [new RequestedMod(a, InstallReason.Manual)], new FakeRepository([a])));
         Assert.False(plan.IsReady);
         Assert.Empty(plan.Conflicts);
         Assert.Contains(plan.UnresolvedChoices, value => value.Code == "foreign-conflict-unknown");
@@ -173,8 +173,8 @@ public sealed class RepositoryInstallPlannerTests
     public async Task PlanAsync_InstalledRecommendationNeedsNoChoice()
     {
         var a = Release("A", dependencies: [new ModDependency("B", ModDependencyKind.Recommends)]);
-        var instance = Instance.FromExisting(Guid.NewGuid(), "Test", InstanceSource.Custom.Value, DateTimeOffset.UtcNow, [Installed("B")], false);
-        var plan = await new RepositoryInstallPlanner(new ModDependencyResolver()).PlanAsync(new InstallPlanningRequest(instance, [new RequestedMod(a, InstallReason.Manual)], new FakeRepository([a, Release("B")])));
+        var instance = InstanceWith([Installed("B")]);
+        var plan = await PlanAsync(new InstallPlanningRequest(instance, [new RequestedMod(a, InstallReason.Manual)], new FakeRepository([a, Release("B")])));
         Assert.True(plan.IsReady);
         Assert.Empty(plan.Choices);
     }
@@ -184,9 +184,9 @@ public sealed class RepositoryInstallPlannerTests
     {
         var dependencies = new[] { new ModDependency("B", ModDependencyKind.Recommends), new ModDependency("C", ModDependencyKind.Suggests) };
         var installed = Installed("A", dependencies: dependencies);
-        var instance = Instance.FromExisting(Guid.NewGuid(), "Test", InstanceSource.Custom.Value, DateTimeOffset.UtcNow, [installed], false);
+        var instance = InstanceWith([installed]);
         var request = new InstallPlanningRequest(instance, [new RequestedMod(installed.Metadata, InstallReason.Manual, Exact: false)], new FakeRepository([installed.Metadata, Release("B"), Release("C")]));
-        var plan = await new RepositoryInstallPlanner(new ModDependencyResolver()).PlanAsync(request);
+        var plan = await PlanAsync(request);
         Assert.True(plan.IsReady);
         Assert.Empty(plan.Operations);
         Assert.Empty(plan.Choices);
@@ -196,10 +196,10 @@ public sealed class RepositoryInstallPlannerTests
     public async Task PlanAsync_ReplacingReleaseAsksOnlyAboutItsNewRecommendation()
     {
         var installed = Installed("A", dependencies: [new ModDependency("B", ModDependencyKind.Recommends)]);
-        var instance = Instance.FromExisting(Guid.NewGuid(), "Test", InstanceSource.Custom.Value, DateTimeOffset.UtcNow, [installed], false);
+        var instance = InstanceWith([installed]);
         var update = Release("A", "1.1.0", dependencies: [new ModDependency("B", ModDependencyKind.Recommends), new ModDependency("C", ModDependencyKind.Recommends)]);
         var request = new InstallPlanningRequest(instance, [new RequestedMod(installed.Metadata, InstallReason.Manual, Exact: false)], new FakeRepository([installed.Metadata, update, Release("B"), Release("C")]));
-        var plan = await new RepositoryInstallPlanner(new ModDependencyResolver()).PlanAsync(request);
+        var plan = await PlanAsync(request);
         Assert.Equal("1.1.0", Assert.Single(plan.Operations).Release.Version.ToString());
         Assert.Equal("A:dependency:1:recommendation", Assert.Single(plan.Choices).Key);
     }
@@ -210,7 +210,7 @@ public sealed class RepositoryInstallPlannerTests
         var recommendation = new ModDependency("B", ModDependencyKind.Recommends);
         var a = Release("A", dependencies: [recommendation]);
         var request = new InstallPlanningRequest(EmptyInstance(), [new RequestedMod(a, InstallReason.Manual)], new FakeRepository([a, Release("B")]), Recommended: new HashSet<string> { "A:dependency:0:recommendation" });
-        var plan = await new RepositoryInstallPlanner(new ModDependencyResolver()).PlanAsync(request);
+        var plan = await PlanAsync(request);
         Assert.True(plan.IsReady);
         Assert.Equal(["B", "A"], plan.Operations.Select(value => value.Release.ModId));
         var choice = Assert.Single(plan.Choices);
@@ -223,7 +223,7 @@ public sealed class RepositoryInstallPlannerTests
     {
         var newest = Release("A", "2.0.0", dependencies: [Required("B")]);
         var request = new InstallPlanningRequest(EmptyInstance(), [new RequestedMod(newest, InstallReason.Manual, Exact: false)], new FakeRepository([Release("A"), newest, Release("B")]));
-        var plan = await new RepositoryInstallPlanner(new ModDependencyResolver()).PlanAsync(request);
+        var plan = await PlanAsync(request);
         Assert.True(plan.IsReady);
         Assert.Equal(["B 1.0.0", "A 2.0.0"], plan.Operations.Select(value => $"{value.Release.ModId} {value.Release.Version}"));
     }
@@ -248,8 +248,8 @@ public sealed class RepositoryInstallPlannerTests
     {
         var a = Release("A", dependencies: [new ModDependency("B", ModDependencyKind.Conflict, maxVersion: ModVersion.Parse("1.0.0"))]);
         var b2 = Release("B", "2.0.0");
-        var instance = Instance.FromExisting(Guid.NewGuid(), "Test", InstanceSource.Custom.Value, DateTimeOffset.UtcNow, [Installed("B")], false);
-        var plan = await new RepositoryInstallPlanner(new ModDependencyResolver()).PlanAsync(new InstallPlanningRequest(instance, [new RequestedMod(a, InstallReason.Manual), new RequestedMod(b2, InstallReason.Manual)], new FakeRepository([a, b2])));
+        var instance = InstanceWith([Installed("B")]);
+        var plan = await PlanAsync(new InstallPlanningRequest(instance, [new RequestedMod(a, InstallReason.Manual), new RequestedMod(b2, InstallReason.Manual)], new FakeRepository([a, b2])));
         Assert.True(plan.IsReady);
     }
 
@@ -258,8 +258,8 @@ public sealed class RepositoryInstallPlannerTests
     {
         var a = Release("A", dependencies: [Required("B", "2.0.0")]);
         var b2 = Release("B", "2.0.0");
-        var instance = Instance.FromExisting(Guid.NewGuid(), "Test", InstanceSource.Custom.Value, DateTimeOffset.UtcNow, [Installed("B")], false);
-        var plan = await new RepositoryInstallPlanner(new ModDependencyResolver()).PlanAsync(new InstallPlanningRequest(instance, [new RequestedMod(a, InstallReason.Manual)], new FakeRepository([a, b2])));
+        var instance = InstanceWith([Installed("B")]);
+        var plan = await PlanAsync(new InstallPlanningRequest(instance, [new RequestedMod(a, InstallReason.Manual)], new FakeRepository([a, b2])));
         Assert.True(plan.IsReady);
         Assert.Contains(plan.Operations, value => value.Release.ModId == "B" && value.Release.Version == ModVersion.Parse("2.0.0"));
     }
@@ -285,7 +285,7 @@ public sealed class RepositoryInstallPlannerTests
             for (var version = 0; version < 10; version++) available.Add(Release($"M{id}", $"1.0.{version}"));
             requested.Add(new RequestedMod(available[^1], InstallReason.Manual, Exact: false));
         }
-        var plan = await new RepositoryInstallPlanner(new ModDependencyResolver()).PlanAsync(new InstallPlanningRequest(new Instance("Test", InstanceSource.Custom.Value), requested, new FakeRepository(available)));
+        var plan = await PlanAsync(new InstallPlanningRequest(EmptyInstance(), requested, new FakeRepository(available)));
         Assert.False(plan.IsReady);
         Assert.Contains(plan.Conflicts, value => value.Code == "search-limit");
     }
@@ -296,8 +296,8 @@ public sealed class RepositoryInstallPlannerTests
         var dependency = ModDependency.OfAlternatives(ModDependencyKind.Required, [new ModDependencyAlternative("B", maxVersion: ModVersion.Parse("1.0.0")), new ModDependencyAlternative("C")]);
         var x = Installed("X", dependencies: [dependency]);
         var b2 = Release("B", "2.0.0");
-        var instance = Instance.FromExisting(Guid.NewGuid(), "Test", InstanceSource.Custom.Value, DateTimeOffset.UtcNow, [x, Installed("B")], false);
-        var plan = await new RepositoryInstallPlanner(new ModDependencyResolver()).PlanAsync(new InstallPlanningRequest(instance, [new RequestedMod(b2, InstallReason.Manual)], new FakeRepository([b2])));
+        var instance = InstanceWith([x, Installed("B")]);
+        var plan = await PlanAsync(new InstallPlanningRequest(instance, [new RequestedMod(b2, InstallReason.Manual)], new FakeRepository([b2])));
         Assert.False(plan.IsReady);
         Assert.Contains(plan.Conflicts, value => value.Code == "retained-alternative");
     }
@@ -307,8 +307,8 @@ public sealed class RepositoryInstallPlannerTests
     {
         var b1 = Release("B");
         var b2 = Release("B", "2.0.0", yanked: true);
-        var request = new InstallPlanningRequest(new Instance("Test", InstanceSource.Custom.Value), [new RequestedMod(b2, InstallReason.Manual, Exact: false)], new FakeRepository([b1, b2]));
-        var plan = await new RepositoryInstallPlanner(new ModDependencyResolver()).PlanAsync(request);
+        var request = new InstallPlanningRequest(EmptyInstance(), [new RequestedMod(b2, InstallReason.Manual, Exact: false)], new FakeRepository([b1, b2]));
+        var plan = await PlanAsync(request);
         Assert.True(plan.IsReady);
         Assert.Equal(ModVersion.Parse("1.0.0"), Assert.Single(plan.Selections).Release.Version);
     }
@@ -318,9 +318,9 @@ public sealed class RepositoryInstallPlannerTests
     {
         var dependency = ModDependency.OfAlternatives(ModDependencyKind.Required, [new ModDependencyAlternative("B", minVersion: ModVersion.Parse("2.0.0")), new ModDependencyAlternative("C")]);
         var a = Release("A", dependencies: [dependency]);
-        var instance = Instance.FromExisting(Guid.NewGuid(), "Test", InstanceSource.Custom.Value, DateTimeOffset.UtcNow, [], [new ForeignMod("B")], false);
+        var instance = InstanceWith([], [new ForeignMod("B")]);
         var alternatives = new Dictionary<string, string> { ["A:dependency:0:alternative"] = "B" };
-        var plan = await new RepositoryInstallPlanner(new ModDependencyResolver()).PlanAsync(new InstallPlanningRequest(instance, [new RequestedMod(a, InstallReason.Manual)], new FakeRepository([a]), Alternatives: alternatives));
+        var plan = await PlanAsync(new InstallPlanningRequest(instance, [new RequestedMod(a, InstallReason.Manual)], new FakeRepository([a]), Alternatives: alternatives));
         Assert.False(plan.IsReady);
         Assert.Empty(plan.Conflicts);
         Assert.Contains(plan.UnresolvedChoices, value => value.Code == "foreign-alternative-unknown");
@@ -332,8 +332,8 @@ public sealed class RepositoryInstallPlannerTests
         var b = Installed("B", dependencies: [Required("C")]);
         var a = Release("A", dependencies: [Required("B")]);
         var c = Release("C");
-        var instance = Instance.FromExisting(Guid.NewGuid(), "Test", InstanceSource.Custom.Value, DateTimeOffset.UtcNow, [b], false);
-        var plan = await new RepositoryInstallPlanner(new ModDependencyResolver()).PlanAsync(new InstallPlanningRequest(instance, [new RequestedMod(a, InstallReason.Manual)], new FakeRepository([a, c])));
+        var instance = InstanceWith([b]);
+        var plan = await PlanAsync(new InstallPlanningRequest(instance, [new RequestedMod(a, InstallReason.Manual)], new FakeRepository([a, c])));
         Assert.True(plan.IsReady);
         Assert.Contains(plan.Selections, value => value.Release.ModId == "B" && value.IsAlreadyInstalled);
         Assert.Contains(plan.Operations, value => value.Release.ModId == "C");
@@ -345,8 +345,8 @@ public sealed class RepositoryInstallPlannerTests
         var dependency = ModDependency.OfAlternatives(ModDependencyKind.Required, [new ModDependencyAlternative("B", maxVersion: ModVersion.Parse("1.0.0")), new ModDependencyAlternative("C")]);
         var a = Release("A", dependencies: [dependency]);
         var b2 = Release("B", "2.0.0");
-        var instance = Instance.FromExisting(Guid.NewGuid(), "Test", InstanceSource.Custom.Value, DateTimeOffset.UtcNow, [Installed("B")], false);
-        var plan = await new RepositoryInstallPlanner(new ModDependencyResolver()).PlanAsync(new InstallPlanningRequest(instance, [new RequestedMod(a, InstallReason.Manual), new RequestedMod(b2, InstallReason.Manual)], new FakeRepository([a, b2])));
+        var instance = InstanceWith([Installed("B")]);
+        var plan = await PlanAsync(new InstallPlanningRequest(instance, [new RequestedMod(a, InstallReason.Manual), new RequestedMod(b2, InstallReason.Manual)], new FakeRepository([a, b2])));
         Assert.False(plan.IsReady);
         Assert.Contains(plan.UnresolvedChoices, value => value.Code == "alternative-choice");
     }
@@ -367,9 +367,9 @@ public sealed class RepositoryInstallPlannerTests
     {
         var dependency = ModDependency.OfAlternatives(ModDependencyKind.Required, [new ModDependencyAlternative("B", minVersion: ModVersion.Parse("2.0.0")), new ModDependencyAlternative("C")]);
         var x = Installed("X", dependencies: [dependency]);
-        var instance = Instance.FromExisting(Guid.NewGuid(), "Test", InstanceSource.Custom.Value, DateTimeOffset.UtcNow, [x], [new ForeignMod("B")], false);
+        var instance = InstanceWith([x], [new ForeignMod("B")]);
         var a = Release("A");
-        var plan = await new RepositoryInstallPlanner(new ModDependencyResolver()).PlanAsync(new InstallPlanningRequest(instance, [new RequestedMod(a, InstallReason.Manual)], new FakeRepository([a])));
+        var plan = await PlanAsync(new InstallPlanningRequest(instance, [new RequestedMod(a, InstallReason.Manual)], new FakeRepository([a])));
         Assert.False(plan.IsReady);
         Assert.Empty(plan.Conflicts);
         Assert.Contains(plan.UnresolvedChoices, value => value.Code == "foreign-alternative-unknown");
@@ -381,8 +381,8 @@ public sealed class RepositoryInstallPlannerTests
         var dependency = ModDependency.OfAlternatives(ModDependencyKind.Recommends, [new ModDependencyAlternative("B"), new ModDependencyAlternative("C")]);
         var a = Release("A", dependencies: [dependency]);
         var recommended = new HashSet<string> { "A:dependency:0:recommendation" };
-        var request = new InstallPlanningRequest(new Instance("Test", InstanceSource.Custom.Value), [new RequestedMod(a, InstallReason.Manual)], new FakeRepository([a, Release("B"), Release("C")]), Recommended: recommended);
-        var plan = await new RepositoryInstallPlanner(new ModDependencyResolver()).PlanAsync(request);
+        var request = new InstallPlanningRequest(EmptyInstance(), [new RequestedMod(a, InstallReason.Manual)], new FakeRepository([a, Release("B"), Release("C")]), Recommended: recommended);
+        var plan = await PlanAsync(request);
         Assert.Equal(2, plan.Choices.Select(value => value.Key).Distinct().Count());
         Assert.Contains(plan.Choices, value => value.Key == "A:dependency:0:recommendation");
         Assert.Contains(plan.Choices, value => value.Key == "A:dependency:0:alternative");
@@ -403,9 +403,9 @@ public sealed class RepositoryInstallPlannerTests
     public async Task PlanAsync_RetainedBoundedForeignDependencyIsUnknown()
     {
         var x = Installed("X", dependencies: [Required("B", "2.0.0")]);
-        var instance = Instance.FromExisting(Guid.NewGuid(), "Test", InstanceSource.Custom.Value, DateTimeOffset.UtcNow, [x], [new ForeignMod("B")], false);
+        var instance = InstanceWith([x], [new ForeignMod("B")]);
         var a = Release("A");
-        var plan = await new RepositoryInstallPlanner(new ModDependencyResolver()).PlanAsync(new InstallPlanningRequest(instance, [new RequestedMod(a, InstallReason.Manual)], new FakeRepository([a])));
+        var plan = await PlanAsync(new InstallPlanningRequest(instance, [new RequestedMod(a, InstallReason.Manual)], new FakeRepository([a])));
         Assert.False(plan.IsReady);
         Assert.Empty(plan.Conflicts);
         Assert.Contains(plan.UnresolvedChoices, value => value.Code == "foreign-version-unknown");
@@ -416,8 +416,8 @@ public sealed class RepositoryInstallPlannerTests
     {
         var a = Release("A", dependencies: [Required("B")]);
         var b = Release("B", gameMinRevision: 5000);
-        var request = new InstallPlanningRequest(new Instance("Test", InstanceSource.Custom.Value), [new RequestedMod(a, InstallReason.Manual)], new FakeRepository([a, b]), new Borea.Core.Game.GameVersion(2026, 7, 4, 2131));
-        var plan = await new RepositoryInstallPlanner(new ModDependencyResolver()).PlanAsync(request);
+        var request = new InstallPlanningRequest(EmptyInstance(), [new RequestedMod(a, InstallReason.Manual)], new FakeRepository([a, b]), new Borea.Core.Game.GameVersion(2026, 7, 4, 2131));
+        var plan = await PlanAsync(request);
         Assert.Contains(plan.Conflicts, value => value.Code == "incompatible" && value.ModId == "B");
         Assert.DoesNotContain(plan.Conflicts, value => value.Code == "unsatisfied-dependency");
     }
@@ -426,7 +426,7 @@ public sealed class RepositoryInstallPlannerTests
     public async Task PlanAsync_RequestAboveItsGameMax_IsAConflictThatNamesTheBound()
     {
         var a = Release("A", gameMaxRevision: 5000);
-        var plan = await new RepositoryInstallPlanner(new ModDependencyResolver()).PlanAsync(new InstallPlanningRequest(new Instance("Test", InstanceSource.Custom.Value), [new RequestedMod(a, InstallReason.Manual)], new FakeRepository([a]), Game));
+        var plan = await PlanAsync(new InstallPlanningRequest(EmptyInstance(), [new RequestedMod(a, InstallReason.Manual)], new FakeRepository([a]), Game));
         Assert.False(plan.IsReady);
         var conflict = Assert.Single(plan.Conflicts);
         Assert.Equal(("A", "above-game-max", "2026.8.0.5000"), (conflict.ModId, conflict.Code, conflict.Value));
@@ -439,7 +439,7 @@ public sealed class RepositoryInstallPlannerTests
         var a = Release("A", dependencies: [Required("B")]);
         var b1 = Release("B");
         var b2 = Release("B", "2.0.0", gameMaxRevision: 5000);
-        var plan = await new RepositoryInstallPlanner(new ModDependencyResolver()).PlanAsync(new InstallPlanningRequest(new Instance("Test", InstanceSource.Custom.Value), [new RequestedMod(a, InstallReason.Manual)], new FakeRepository([a, b1, b2]), Game));
+        var plan = await PlanAsync(new InstallPlanningRequest(EmptyInstance(), [new RequestedMod(a, InstallReason.Manual)], new FakeRepository([a, b1, b2]), Game));
         Assert.True(plan.IsReady);
         Assert.Equal(ModVersion.Parse("1.0.0"), Assert.Single(plan.Selections, value => value.Release.ModId == "B").Release.Version);
         Assert.Empty(plan.Warnings);
@@ -450,7 +450,7 @@ public sealed class RepositoryInstallPlannerTests
     {
         var bounded = Release("B", gameMaxRevision: 5000);
         var held = new InstalledMod("B", bounded.Version, InstallReason.Manual, DateTimeOffset.UtcNow, bounded);
-        var instance = Instance.FromExisting(Guid.NewGuid(), "Test", InstanceSource.Custom.Value, DateTimeOffset.UtcNow, [held], false);
+        var instance = InstanceWith([held]);
         var a = Release("A", dependencies: [Required("B")]);
         var planner = new RepositoryInstallPlanner(new ModDependencyResolver());
 
@@ -473,9 +473,9 @@ public sealed class RepositoryInstallPlannerTests
         var b2 = Release("B", "2.0.0", unavailableSince: gone ? GoneSince : null);
         var planner = new RepositoryInstallPlanner(new ModDependencyResolver());
         var older = Installed("B", "0.9.0");
-        var instance = Instance.FromExisting(Guid.NewGuid(), "Test", InstanceSource.Custom.Value, DateTimeOffset.UtcNow, [older], false);
+        var instance = InstanceWith([older]);
 
-        var install = await planner.PlanAsync(new InstallPlanningRequest(new Instance("Test", InstanceSource.Custom.Value), [new RequestedMod(b1, InstallReason.Manual, Exact: false)], new FakeRepository([b1, b2])));
+        var install = await planner.PlanAsync(new InstallPlanningRequest(EmptyInstance(), [new RequestedMod(b1, InstallReason.Manual, Exact: false)], new FakeRepository([b1, b2])));
         var update = await planner.PlanAsync(new InstallPlanningRequest(instance, [new RequestedMod(older.Metadata, InstallReason.Manual, Exact: false)], new FakeRepository([b1, b2])));
 
         Assert.Equal(ModVersion.Parse(expected), Assert.Single(install.Operations).Release.Version);
@@ -502,7 +502,7 @@ public sealed class RepositoryInstallPlannerTests
     {
         var b = Release("B", "2.0.0", unavailableSince: GoneSince);
         var installed = new InstalledMod("B", b.Version, InstallReason.Manual, DateTimeOffset.UtcNow, b);
-        var instance = Instance.FromExisting(Guid.NewGuid(), "Test", InstanceSource.Custom.Value, DateTimeOffset.UtcNow, [installed], false);
+        var instance = InstanceWith([installed]);
         var planner = new RepositoryInstallPlanner(new ModDependencyResolver());
         var repository = new FakeRepository([Release("B"), b]);
 
@@ -537,9 +537,9 @@ public sealed class RepositoryInstallPlannerTests
     {
         var b1 = Release("B");
         var b2 = Release("B", "2.0.0", unavailableSince: GoneSince);
-        var request = new InstallPlanningRequest(new Instance("Test", InstanceSource.Custom.Value), [new RequestedMod(b2, InstallReason.Manual, Exact: false)], new FakeRepository([b1, b2]));
+        var request = new InstallPlanningRequest(EmptyInstance(), [new RequestedMod(b2, InstallReason.Manual, Exact: false)], new FakeRepository([b1, b2]));
 
-        var plan = await new RepositoryInstallPlanner(new ModDependencyResolver()).PlanAsync(request);
+        var plan = await PlanAsync(request);
 
         Assert.True(plan.IsReady);
         Assert.Equal(b1.Version, Assert.Single(plan.Operations).Release.Version);
@@ -549,8 +549,8 @@ public sealed class RepositoryInstallPlannerTests
     public async Task PlanAsync_YankedNonExactRootWithoutReplacementKeepsWarning()
     {
         var b = Release("B", "2.0.0", yanked: true);
-        var request = new InstallPlanningRequest(new Instance("Test", InstanceSource.Custom.Value), [new RequestedMod(b, InstallReason.Manual, Exact: false)], new FakeRepository([]));
-        var plan = await new RepositoryInstallPlanner(new ModDependencyResolver()).PlanAsync(request);
+        var request = new InstallPlanningRequest(EmptyInstance(), [new RequestedMod(b, InstallReason.Manual, Exact: false)], new FakeRepository([]));
+        var plan = await PlanAsync(request);
         Assert.Contains(plan.Selections, value => value.Release.Version == b.Version);
         Assert.Contains(plan.Warnings, value => value.Code == "yanked");
     }
@@ -560,9 +560,9 @@ public sealed class RepositoryInstallPlannerTests
     {
         var a = Release("A", dependencies: [Required("B", max: "1.0.0")]);
         var b2 = Release("B", "2.0.0");
-        var instance = Instance.FromExisting(Guid.NewGuid(), "Test", InstanceSource.Custom.Value, DateTimeOffset.UtcNow, [Installed("B")], false);
+        var instance = InstanceWith([Installed("B")]);
         var requested = new[] { new RequestedMod(a, InstallReason.Manual), new RequestedMod(b2, InstallReason.ModPack, Exact: false) };
-        var plan = await new RepositoryInstallPlanner(new ModDependencyResolver()).PlanAsync(new InstallPlanningRequest(instance, requested, new FakeRepository([a, b2])));
+        var plan = await PlanAsync(new InstallPlanningRequest(instance, requested, new FakeRepository([a, b2])));
         Assert.Equal(InstallReason.ModPack, Assert.Single(plan.Selections, value => value.Release.ModId == "B").Reason);
     }
 
@@ -570,8 +570,8 @@ public sealed class RepositoryInstallPlannerTests
     public async Task PlanAsync_UnsupportedPlatformIsExposed()
     {
         var a = Release("A", os: ["windows"]);
-        var request = new InstallPlanningRequest(new Instance("Test", InstanceSource.Custom.Value), [new RequestedMod(a, InstallReason.Manual)], new FakeRepository([a]), TargetPlatform: Borea.Core.Game.OsPlatform.Linux);
-        var plan = await new RepositoryInstallPlanner(new ModDependencyResolver()).PlanAsync(request);
+        var request = new InstallPlanningRequest(EmptyInstance(), [new RequestedMod(a, InstallReason.Manual)], new FakeRepository([a]), TargetPlatform: Borea.Core.Game.OsPlatform.Linux);
+        var plan = await PlanAsync(request);
         Assert.True(plan.IsReady);
         Assert.Contains(plan.Warnings, value => value.Code == "platform");
         Assert.False(Assert.Single(plan.Operations).PlatformSupport!.IsSupported);
@@ -663,10 +663,10 @@ public sealed class RepositoryInstallPlannerTests
     {
         var pinned = Owned("A", pinned: true);
         var free = Owned("B");
-        var instance = Instance.FromExisting(Guid.NewGuid(), "Test", InstanceSource.Custom.Value, DateTimeOffset.UtcNow, [pinned, free], false);
+        var instance = InstanceWith([pinned, free]);
         var repository = new FakeRepository([pinned.Metadata, Release("A", "2.0.0"), free.Metadata, Release("B", "2.0.0")]);
 
-        var plan = await new RepositoryInstallPlanner(new ModDependencyResolver()).PlanAsync(new InstallPlanningRequest(instance, [Update(pinned), Update(free)], repository));
+        var plan = await PlanAsync(new InstallPlanningRequest(instance, [Update(pinned), Update(free)], repository));
 
         Assert.True(plan.IsReady);
         Assert.Equal(["B 2.0.0"], plan.Operations.Select(value => $"{value.Release.ModId} {value.Release.Version}"));
@@ -677,9 +677,9 @@ public sealed class RepositoryInstallPlannerTests
     public async Task PlanAsync_UpdateOfAPinnedMod_PlansNothing()
     {
         var pinned = Owned("A", pinned: true);
-        var instance = Instance.FromExisting(Guid.NewGuid(), "Test", InstanceSource.Custom.Value, DateTimeOffset.UtcNow, [pinned], false);
+        var instance = InstanceWith([pinned]);
 
-        var plan = await new RepositoryInstallPlanner(new ModDependencyResolver()).PlanAsync(new InstallPlanningRequest(instance, [Update(pinned)], new FakeRepository([pinned.Metadata, Release("A", "2.0.0")])));
+        var plan = await PlanAsync(new InstallPlanningRequest(instance, [Update(pinned)], new FakeRepository([pinned.Metadata, Release("A", "2.0.0")])));
 
         Assert.True(plan.IsReady);
         Assert.Empty(plan.Operations);
@@ -692,9 +692,9 @@ public sealed class RepositoryInstallPlannerTests
     {
         var pinned = Owned("A", pinned: true);
         var newer = Release("A", "2.0.0");
-        var instance = Instance.FromExisting(Guid.NewGuid(), "Test", InstanceSource.Custom.Value, DateTimeOffset.UtcNow, [pinned], false);
+        var instance = InstanceWith([pinned]);
 
-        var plan = await new RepositoryInstallPlanner(new ModDependencyResolver()).PlanAsync(new InstallPlanningRequest(instance, [new RequestedMod(newer, InstallReason.Manual, exact)], new FakeRepository([pinned.Metadata, newer])));
+        var plan = await PlanAsync(new InstallPlanningRequest(instance, [new RequestedMod(newer, InstallReason.Manual, exact)], new FakeRepository([pinned.Metadata, newer])));
 
         Assert.False(plan.IsReady);
         Assert.Empty(plan.Operations);
@@ -708,9 +708,9 @@ public sealed class RepositoryInstallPlannerTests
         var pinned = Owned("B", pinned: true);
         var needsNewer = Required("B", "2.0.0");
         var a = Release("A", dependencies: [needsNewer]);
-        var instance = Instance.FromExisting(Guid.NewGuid(), "Test", InstanceSource.Custom.Value, DateTimeOffset.UtcNow, [pinned], false);
+        var instance = InstanceWith([pinned]);
 
-        var plan = await new RepositoryInstallPlanner(new ModDependencyResolver()).PlanAsync(new InstallPlanningRequest(instance, [new RequestedMod(a, InstallReason.Manual)], new FakeRepository([a, pinned.Metadata, Release("B", "2.0.0")])));
+        var plan = await PlanAsync(new InstallPlanningRequest(instance, [new RequestedMod(a, InstallReason.Manual)], new FakeRepository([a, pinned.Metadata, Release("B", "2.0.0")])));
 
         Assert.False(plan.IsReady);
         Assert.DoesNotContain(plan.Operations, value => value.Release.ModId == "B");
@@ -724,10 +724,10 @@ public sealed class RepositoryInstallPlannerTests
         var pinned = Owned("B", pinned: true);
         var dependency = ModDependency.OfAlternatives(ModDependencyKind.Required, [new ModDependencyAlternative("B", minVersion: ModVersion.Parse("2.0.0")), new ModDependencyAlternative("C")]);
         var a = Release("A", dependencies: [dependency]);
-        var instance = Instance.FromExisting(Guid.NewGuid(), "Test", InstanceSource.Custom.Value, DateTimeOffset.UtcNow, [pinned], false);
+        var instance = InstanceWith([pinned]);
         var alternatives = new Dictionary<string, string> { ["A:dependency:0:alternative"] = "B" };
 
-        var plan = await new RepositoryInstallPlanner(new ModDependencyResolver()).PlanAsync(new InstallPlanningRequest(instance, [new RequestedMod(a, InstallReason.Manual)], new FakeRepository([a, pinned.Metadata, Release("B", "2.0.0"), Release("C")]), Alternatives: alternatives));
+        var plan = await PlanAsync(new InstallPlanningRequest(instance, [new RequestedMod(a, InstallReason.Manual)], new FakeRepository([a, pinned.Metadata, Release("B", "2.0.0"), Release("C")]), Alternatives: alternatives));
 
         Assert.False(plan.IsReady);
         Assert.DoesNotContain(plan.Operations, value => value.Release.ModId == "B");
@@ -744,9 +744,9 @@ public sealed class RepositoryInstallPlannerTests
     {
         var pinned = Owned("B", pinned: true);
         var a = Release("A", dependencies: [Required("B")]);
-        var instance = Instance.FromExisting(Guid.NewGuid(), "Test", InstanceSource.Custom.Value, DateTimeOffset.UtcNow, [pinned], false);
+        var instance = InstanceWith([pinned]);
 
-        var plan = await new RepositoryInstallPlanner(new ModDependencyResolver()).PlanAsync(new InstallPlanningRequest(instance, [new RequestedMod(a, InstallReason.Manual)], new FakeRepository([a, pinned.Metadata, Release("B", "2.0.0")])));
+        var plan = await PlanAsync(new InstallPlanningRequest(instance, [new RequestedMod(a, InstallReason.Manual)], new FakeRepository([a, pinned.Metadata, Release("B", "2.0.0")])));
 
         Assert.True(plan.IsReady);
         Assert.Equal(["A"], plan.Operations.Select(value => value.Release.ModId));
@@ -767,7 +767,7 @@ public sealed class RepositoryInstallPlannerTests
     public async Task PlanAsync_StableChannel_UpdatesToANewerStableReleaseAndNotToANewerDevRelease()
     {
         var installed = Installed("A", "1.0.0");
-        var instance = Instance.FromExisting(Guid.NewGuid(), "Test", InstanceSource.Custom.Value, DateTimeOffset.UtcNow, [installed], false);
+        var instance = InstanceWith([installed]);
         var available = new[] { Release("A", "1.0.0"), Release("A", "1.1.0"), Release("A", "2.0.0-dev.1", status: ReleaseStatus.Dev) };
         var plan = await PlanInChannelAsync(null, instance, [new RequestedMod(installed.Metadata, InstallReason.Manual, Exact: false)], available);
         Assert.True(plan.IsReady);
@@ -851,7 +851,7 @@ public sealed class RepositoryInstallPlannerTests
     public async Task PlanAsync_InstalledDevReleaseOnStable_StaysWithoutAWarning()
     {
         var installed = Installed("A", "2.0.0-dev.1", status: ReleaseStatus.Dev);
-        var instance = Instance.FromExisting(Guid.NewGuid(), "Test", InstanceSource.Custom.Value, DateTimeOffset.UtcNow, [installed], false);
+        var instance = InstanceWith([installed]);
         var plan = await PlanInChannelAsync(null, instance, [new RequestedMod(installed.Metadata, InstallReason.Manual, Exact: false)], [Release("A"), installed.Metadata]);
         Assert.True(plan.IsReady);
         Assert.Empty(plan.Operations);
@@ -862,7 +862,7 @@ public sealed class RepositoryInstallPlannerTests
     public async Task PlanAsync_InstalledDevDependencyOnStable_IsKeptWithoutAWarning()
     {
         var installed = Installed("B", "2.0.0-dev.1", status: ReleaseStatus.Dev);
-        var instance = Instance.FromExisting(Guid.NewGuid(), "Test", InstanceSource.Custom.Value, DateTimeOffset.UtcNow, [installed], false);
+        var instance = InstanceWith([installed]);
         var a = Release("A", dependencies: [Required("B", "2.0.0-dev.1")]);
         var plan = await PlanInChannelAsync(null, instance, [new RequestedMod(a, InstallReason.Manual)], [a, Release("B"), installed.Metadata]);
         Assert.True(plan.IsReady);
@@ -885,7 +885,7 @@ public sealed class RepositoryInstallPlannerTests
     public async Task PlanAsync_InstallOnStable_KeepsAnInstalledDevReleaseOfTheRequestedMod()
     {
         var installed = Installed("A", "2.0.0-dev.1", status: ReleaseStatus.Dev);
-        var instance = Instance.FromExisting(Guid.NewGuid(), "Test", InstanceSource.Custom.Value, DateTimeOffset.UtcNow, [installed], false);
+        var instance = InstanceWith([installed]);
         var stable = Release("A", "1.0.0");
         var plan = await PlanInChannelAsync(null, instance, [new RequestedMod(stable, InstallReason.Manual, Exact: false)], [stable, installed.Metadata]);
         Assert.True(plan.IsReady);
@@ -898,7 +898,7 @@ public sealed class RepositoryInstallPlannerTests
     public async Task CheckHandover_MissingRequiredDependency_PlansOnlyTheDependency()
     {
         var owner = Foreign("A", [Required("B"), new ModDependency("C", ModDependencyKind.Optional), new ModDependency("D", ModDependencyKind.Recommends)]);
-        var instance = Instance.FromExisting(Guid.NewGuid(), "Test", InstanceSource.Custom.Value, DateTimeOffset.UtcNow, [owner], false);
+        var instance = InstanceWith([owner]);
 
         var check = await CheckHandoverAsync(instance, owner, [owner.Metadata, Release("B"), Release("C"), Release("D")]);
 
@@ -913,7 +913,7 @@ public sealed class RepositoryInstallPlannerTests
     public async Task CheckHandover_DependenciesPresent_PlansNothing()
     {
         var owner = Foreign("A", [Required("B")]);
-        var instance = Instance.FromExisting(Guid.NewGuid(), "Test", InstanceSource.Custom.Value, DateTimeOffset.UtcNow, [owner, Installed("B")], false);
+        var instance = InstanceWith([owner, Installed("B")]);
         var repository = new FakeRepository([owner.Metadata, Release("B")]);
 
         var check = await HandoverDependencies.Check(instance, owner).PlanAsync(new RepositoryInstallPlanner(new ModDependencyResolver()), instance, owner, repository, null, null);
@@ -927,7 +927,7 @@ public sealed class RepositoryInstallPlannerTests
     public async Task CheckHandover_UnavailableRequiredDependency_CannotInstallIt()
     {
         var owner = Foreign("A", [Required("B")]);
-        var instance = Instance.FromExisting(Guid.NewGuid(), "Test", InstanceSource.Custom.Value, DateTimeOffset.UtcNow, [owner], false);
+        var instance = InstanceWith([owner]);
 
         var check = await CheckHandoverAsync(instance, owner, [owner.Metadata]);
 
@@ -940,7 +940,7 @@ public sealed class RepositoryInstallPlannerTests
     public async Task CheckHandover_DependencyRecordedAsForeignBelowTheBound_CannotInstallIt()
     {
         var owner = Foreign("A", [Required("B", min: "2.0.0")]);
-        var instance = Instance.FromExisting(Guid.NewGuid(), "Test", InstanceSource.Custom.Value, DateTimeOffset.UtcNow, [owner, Foreign("B", [])], false);
+        var instance = InstanceWith([owner, Foreign("B", [])]);
 
         var check = await CheckHandoverAsync(instance, owner, [owner.Metadata, Release("B"), Release("B", "2.0.0")]);
 
@@ -956,10 +956,13 @@ public sealed class RepositoryInstallPlannerTests
     }
 
     private static Instance EmptyInstance() => new("Test", InstanceSource.Custom.Value);
+    private static Instance InstanceWith(IReadOnlyList<InstalledMod> mods) => Instance.FromExisting(Guid.NewGuid(), "Test", InstanceSource.Custom.Value, DateTimeOffset.UtcNow, mods, false);
+    private static Instance InstanceWith(IReadOnlyList<InstalledMod> mods, IReadOnlyList<ForeignMod> foreignMods) => Instance.FromExisting(Guid.NewGuid(), "Test", InstanceSource.Custom.Value, DateTimeOffset.UtcNow, mods, foreignMods, false);
+    private static Task<InstallPlan> PlanAsync(InstallPlanningRequest request) => new RepositoryInstallPlanner(new ModDependencyResolver()).PlanAsync(request);
     private static Task<HandoverDependencies> CheckHandoverAsync(Instance instance, InstalledMod owner, IReadOnlyList<ModVersionMetadata> available) => HandoverDependencies.Check(instance, owner).PlanAsync(new RepositoryInstallPlanner(new ModDependencyResolver()), instance, owner, new FakeRepository(available), null, null);
     private static InstalledMod Foreign(string id, IReadOnlyList<ModDependency> dependencies) => new(id, ModVersion.Parse("1.0.0"), InstallReason.Manual, DateTimeOffset.UtcNow, Release(id, dependencies: dependencies), ownership: ModInstallOwnership.Foreign);
     private static Task<InstallPlan> PlanInChannelAsync(ReleaseChannel? plannerChannel, Instance instance, IReadOnlyList<RequestedMod> requested, IReadOnlyList<ModVersionMetadata> available) => (plannerChannel is { } channel ? new RepositoryInstallPlanner(new ModDependencyResolver(), channel) : new RepositoryInstallPlanner(new ModDependencyResolver())).PlanAsync(new InstallPlanningRequest(instance, requested, new FakeRepository(available)));
-    private static Task<InstallPlan> PlanAsync(IReadOnlyList<ModVersionMetadata> requested, IReadOnlyList<ModVersionMetadata> available) => new RepositoryInstallPlanner(new ModDependencyResolver()).PlanAsync(new InstallPlanningRequest(new Instance("Test", InstanceSource.Custom.Value), requested.Select(value => new RequestedMod(value, InstallReason.Manual)).ToList(), new FakeRepository(available)));
+    private static Task<InstallPlan> PlanAsync(IReadOnlyList<ModVersionMetadata> requested, IReadOnlyList<ModVersionMetadata> available) => PlanAsync(new InstallPlanningRequest(EmptyInstance(), requested.Select(value => new RequestedMod(value, InstallReason.Manual)).ToList(), new FakeRepository(available)));
     private static ModDependency Required(string id, string? min = null, string? max = null) => new(id, ModDependencyKind.Required, min is null ? null : ModVersion.Parse(min), max is null ? null : ModVersion.Parse(max));
     private static InstalledMod Installed(string id, string version = "1.0.0", IReadOnlyList<ModDependency>? dependencies = null, ReleaseStatus status = ReleaseStatus.Stable) => new(id, ModVersion.Parse(version), InstallReason.Manual, DateTimeOffset.UtcNow, Release(id, version, dependencies, status: status));
     private static InstalledMod Owned(string id, string version = "1.0.0", bool pinned = false) => new(id, ModVersion.Parse(version), InstallReason.Manual, DateTimeOffset.UtcNow, Release(id, version), ownership: ModInstallOwnership.Borea, ownershipToken: "token", isPinned: pinned);
