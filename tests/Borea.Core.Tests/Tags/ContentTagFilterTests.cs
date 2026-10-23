@@ -12,18 +12,13 @@ public sealed class ContentTagFilterTests
         new CuratedTag("tools", "Tools", "Tools for players and modders."),
     ]);
 
-    [Fact]
-    public void Filter_OneSelectedTag_ReturnsMatchingListings()
+    [Theory]
+    [InlineData(new[] { "parts" }, new[] { "parts-mod" })]
+    [InlineData(new[] { "parts", "tools" }, new[] { "parts-mod", "tools-mod" })]
+    public void Filter_SelectedTags_ReturnsListingsThatMatchAnyOfThem(string[] selectedTags, string[] expected)
     {
-        var result = ContentTagFilter.Filter(Listings(), Vocabulary, ContentType.Mod, ["parts"]);
-        Assert.Equal("parts-mod", Assert.Single(result).ModId);
-    }
-
-    [Fact]
-    public void Filter_TwoSelectedTags_ReturnsListingsThatMatchEitherTag()
-    {
-        var result = ContentTagFilter.Filter(Listings(), Vocabulary, ContentType.Mod, ["parts", "tools"]);
-        Assert.Equal(["parts-mod", "tools-mod"], result.Select(item => item.ModId));
+        var result = ContentTagFilter.Filter(Listings(), Vocabulary, ContentType.Mod, selectedTags);
+        Assert.Equal(expected, result.Select(item => item.ModId));
     }
 
     [Fact]
