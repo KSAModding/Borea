@@ -339,6 +339,7 @@ public sealed class ContentImageSourceTests
     {
         var running = 0;
         var most = 0;
+        var limitReached = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var images = Enumerable.Range(0, ContentImageSource.MaxParallelFetches + 2)
             .Select(index => Png(variant: (byte)index))
@@ -349,6 +350,9 @@ public sealed class ContentImageSourceTests
             lock (images)
                 most = Math.Max(most, now);
 
+            if (now == ContentImageSource.MaxParallelFetches)
+                limitReached.TrySetResult();
+
             await release.Task.WaitAsync(cancellationToken);
             Interlocked.Decrement(ref running);
             return Image(images[int.Parse(request.RequestUri!.Segments[^1])]);
@@ -357,7 +361,9 @@ public sealed class ContentImageSourceTests
         var loads = images
             .Select((bytes, index) => source.GetAsync(Icon(bytes, $"https://images.example/{index}"), loadFromAuthorHosts: true))
             .ToArray();
-        await WaitUntilAsync(() => Volatile.Read(ref running) == ContentImageSource.MaxParallelFetches);
+        await limitReached.Task.WaitAsync(TimeSpan.FromSeconds(5));
+
+        // A fetch above the limit would start in this time, and a fetch that does not start gives no signal to await.
         await Task.Delay(100);
         release.SetResult();
         var results = await Task.WhenAll(loads);
@@ -450,18 +456,6 @@ public sealed class ContentImageSourceTests
         }
 
         return [.. bytes];
-    }
-
-    private static async Task WaitUntilAsync(Func<bool> condition)
-    {
-        var deadline = DateTime.UtcNow + TimeSpan.FromSeconds(5);
-        while (!condition())
-        {
-            if (DateTime.UtcNow > deadline)
-                throw new TimeoutException("The condition did not become true in time.");
-
-            await Task.Delay(10);
-        }
     }
 
     private sealed class MemoryImageCache : IContentImageCache
