@@ -132,6 +132,9 @@ public sealed partial class VehiclePreviewViewModel : ObservableObject, IDisposa
 
     internal ModVersionMetadata Release => _release;
 
+    /// <summary>True once this preview asked the service to download the vehicle file, so a failure can have cost a request to the host.</summary>
+    internal bool HasFetchedVehicle { get; private set; }
+
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsBusy))]
     [NotifyPropertyChangedFor(nameof(IsNoGameFolder))]
@@ -347,6 +350,7 @@ public sealed partial class VehiclePreviewViewModel : ObservableObject, IDisposa
     {
         var plan = _plan ?? throw new InvalidOperationException("The preview loads only after a preparation.");
         Step(fetchVehicle ? PreviewStep.FetchingVehicle : fetchMods ? PreviewStep.FetchingMods : PreviewStep.ReadingParts);
+        HasFetchedVehicle |= fetchVehicle;
         var progress = new StageProgress(stage =>
         {
             if (!token.IsCancellationRequested && stage != VehiclePreviewStage.Done)

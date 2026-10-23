@@ -274,6 +274,24 @@ public sealed class VehiclePreviewViewModelTests
         Assert.Single(service.Loads);
     }
 
+    [Fact]
+    public async Task Page_MadeAgainAfterAFailedFetch_WaitsForTheClick()
+    {
+        var (harness, service, held) = await OpenRoverWithHeldAutoFetchAsync();
+        using var _ = harness;
+        var viewModel = harness.ViewModel;
+        var first = viewModel.VehiclePreview!;
+        held.SetException(new IOException("The archive has another SHA-256."));
+        await first.Loading;
+        Assert.Equal(VehiclePreviewState.Failed, first.State);
+
+        viewModel.LatestVersion = new VersionItem(viewModel, viewModel.LatestVersion!.Release);
+        await viewModel.WhenVehiclePreviewLoadedAsync();
+
+        Assert.Equal(VehiclePreviewState.Idle, viewModel.VehiclePreview!.State);
+        Assert.Single(service.Loads);
+    }
+
     /// <summary>
     /// Opens the rover page over a service that needs the small vehicle file, and waits until the fetch that the page
     /// starts on its own is held by the test.

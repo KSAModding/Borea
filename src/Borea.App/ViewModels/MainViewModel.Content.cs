@@ -191,8 +191,8 @@ public partial class MainViewModel
     private string? _vehiclePreviewTarget;
 
     /// <summary>
-    /// The release whose fetch the player cancelled on the open page, or null. Every preview of this release that the
-    /// page makes again waits for the click, until the player opens a page again.
+    /// The release whose fetch the player cancelled, or whose fetch failed, on the open page, or null. Every preview of
+    /// this release that the page makes again waits for the click, until the player opens a page again.
     /// </summary>
     private ModVersionMetadata? _vehiclePreviewDeclined;
 
@@ -209,8 +209,8 @@ public partial class MainViewModel
     /// Makes a new preview for the open vehicle page against the services that are current now, and disposes the
     /// old one, which stops its work and drops a result that arrives later. Any other page gets none. A busy preview
     /// of the same release and target stays, so a page that is read again, such as after an index refresh, does not
-    /// send a second download. After the player cancelled the same release, every new preview of it waits for a click,
-    /// because every fetch raises the public download count of the host (RFC 0052).
+    /// send a second download. Every fetch raises the public download count of the host (RFC 0052), so a new preview
+    /// waits for a click after the player cancelled the same release or after its fetch failed.
     /// </summary>
     private void RefreshVehiclePreview()
     {
@@ -253,10 +253,14 @@ public partial class MainViewModel
             RefreshVehiclePreview();
     }
 
-    /// <summary>Keeps the release of a preview that the player cancelled, so the next previews of it do not fetch on their own.</summary>
+    /// <summary>
+    /// Keeps the release of a preview that the player cancelled, or whose fetch failed, so the next previews of it do
+    /// not fetch on their own. A listing with a wrong hash or size would otherwise send one more download with every
+    /// remake of the page.
+    /// </summary>
     private void RememberDeclinedPreview(VehiclePreviewViewModel? preview)
     {
-        if (preview is { State: VehiclePreviewState.Cancelled })
+        if (preview is { State: VehiclePreviewState.Cancelled } or { State: VehiclePreviewState.Failed, HasFetchedVehicle: true })
             _vehiclePreviewDeclined = preview.Release;
     }
 
