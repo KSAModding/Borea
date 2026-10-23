@@ -5,10 +5,13 @@ namespace Borea.Preview.Rendering;
 /// <summary>An sRGB color with straight alpha, one byte per channel.</summary>
 public readonly record struct Rgba8(byte R, byte G, byte B, byte A);
 
-/// <summary>How much work <see cref="SoftwareRenderer"/> spends on each visible pixel.</summary>
+/// <summary>
+/// How much work <see cref="SoftwareRenderer"/> spends on each visible pixel. Both qualities use the same light, so
+/// the step from one to the other changes only the fine relief and not the brightness or the highlights.
+/// </summary>
 public enum RenderQuality
 {
-    /// <summary>The fast shading that every frame uses unless it asks for more, also the frames of a drag.</summary>
+    /// <summary>The shading of every frame that does not ask for more, also the frames of a drag and the stills.</summary>
     Standard,
 
     /// <summary>
@@ -43,16 +46,14 @@ public sealed record RenderOptions
     /// </summary>
     public Vector3 SunDirection { get; init; } = Vector3.Normalize(new Vector3(-0.4f, 0.6f, 0.7f));
 
+    /// <summary>
+    /// The light of the sun. The PBR model of the game divides the diffuse by pi, and the renderer multiplies this
+    /// value by pi, so a white rough face that points at the sun gets about this much diffuse light.
+    /// </summary>
     public float SunIntensity { get; init; } = 0.85f;
 
     /// <summary>The shading level of the frame. The default is <see cref="RenderQuality.Standard"/>.</summary>
     public RenderQuality Quality { get; init; } = RenderQuality.Standard;
-
-    /// <summary>
-    /// The light that reaches every face, also a face that turns away from the sun. The ambient occlusion
-    /// of the material scales it, and only it, as the simple ambient of ThumbnailMesh.frag does.
-    /// </summary>
-    public float Ambient { get; init; } = 0.2f;
 
     /// <summary>
     /// The exposure of the Reinhard tone map, in the form of tonemapReinhardSimple in the game shader
@@ -60,13 +61,6 @@ public sealed record RenderOptions
     /// Values that are not positive and finite count as 1.
     /// </summary>
     public float Exposure { get; init; } = 1.15f;
-
-    /// <summary>
-    /// The factor on <see cref="SunIntensity"/> for a <see cref="RenderQuality.High"/> frame. The PBR model of the
-    /// game divides the diffuse by pi and the Standard quality does not, so a factor of about pi makes the sun of
-    /// both qualities equally bright on a rough face.
-    /// </summary>
-    public float HighSunScale { get; init; } = MathF.PI;
 
     /// <summary>
     /// The most bytes of vehicle frame positions and normals that one <see cref="SoftwareRenderer"/> keeps

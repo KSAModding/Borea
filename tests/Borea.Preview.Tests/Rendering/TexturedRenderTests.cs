@@ -35,9 +35,10 @@ public sealed class TexturedRenderTests
     {
         var pixel = Pixel(RenderQuad(new PreviewMaterial(Vector3.Zero, Solid(128, 128, 128), null, false), FullLight), Center, Center);
 
+        // The sky and ground colors of the ambient are not quite gray, so the channels may differ a little.
         Assert.InRange(pixel.R, 118, 138);
-        Assert.Equal(pixel.R, pixel.G);
-        Assert.Equal(pixel.R, pixel.B);
+        Assert.InRange(pixel.G - pixel.R, -3, 3);
+        Assert.InRange(pixel.B - pixel.R, -3, 3);
     }
 
     [Fact]
@@ -172,15 +173,28 @@ public sealed class TexturedRenderTests
     }
 
     [Fact]
-    public void ASmoothMetal_LitAt45Degrees_IsBrighterInHighThanInStandard()
+    public void WithoutNormalMaps_HighAndStandard_GiveTheSameFrame()
     {
-        // At 45 degrees the sun highlight of a smooth face misses the viewer, so only the ambient lights it.
-        var material = new PreviewMaterial(Vector3.Zero, Solid(200, 200, 200), Solid(255, 0, 255), false);
-        var standard = new RenderOptions { SunDirection = Vector3.Normalize(new Vector3(1f, 0f, 1f)) };
-        var high = Pixel(RenderQuad(material, standard with { Quality = RenderQuality.High }), Center, Center);
-        var low = Pixel(RenderQuad(material, standard), Center, Center);
+        // A smooth metal, a rough paint and a glass with a normal map, which glass never applies, and a placeholder.
+        var checker = new PreviewImage(2, 2, [230, 40, 30, 255, 20, 20, 20, 255, 20, 20, 20, 255, 240, 240, 240, 255]);
+        var bumps = new PreviewImage(2, 2, [200, 90, 0, 255, 60, 170, 0, 255, 128, 220, 0, 255, 30, 128, 0, 255]);
+        PreviewMaterial[] materials =
+        [
+            new(Vector3.Zero, Solid(200, 200, 200), Solid(255, 20, 255), false),
+            new(Vector3.Zero, checker, Solid(160, 230, 0), false),
+            new(new Vector3(0.9f, 0.8f, 0.7f), null, null, true) { Normal = bumps },
+        ];
+        var boxes = PreviewTestScenes.StackedBoxes();
+        var scene = new PreviewScene([.. boxes.Draws.Select((draw, i) => draw with { Material = materials[i] })], boxes.Placeholders);
+        var camera = new OrbitCamera();
+        camera.Frame(scene.Bounds, 160f / 100f);
+        camera.Orbit(40f, 25f);
 
-        Assert.True(high.R > low.R + 4, $"High gives {high.R} and Standard gives {low.R}");
+        var standard = Render(scene, camera, 160, 100, new RenderOptions());
+        var high = Render(scene, camera, 160, 100, new RenderOptions { Quality = RenderQuality.High });
+
+        Assert.Contains(standard.Depth, depth => depth < 1f);
+        Assert.Equal(standard.Rgba, high.Rgba);
     }
 
     /// <summary>

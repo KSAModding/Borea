@@ -440,7 +440,7 @@ public sealed partial class VehiclePreviewViewModel : ObservableObject, IDisposa
         }
         catch (Exception exception) when (exception is not OutOfMemoryException)
         {
-            // A Standard frame does not read a normal map, and a High frame without one still shows the PBR light.
+            // A Standard frame does not read a normal map, and a High frame without one shows the same pixels.
         }
     }
 
