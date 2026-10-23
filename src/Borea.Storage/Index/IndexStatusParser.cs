@@ -36,7 +36,14 @@ internal static class IndexStatusParser
                     TimestampError(id, version, $"The since value must be a string, but was {sinceElement.ValueKind}."));
             }
 
-            dto.Since = sinceElement.GetString();
+            try
+            {
+                dto.Since = IndexJsonHelpers.ReadText(sinceElement);
+            }
+            catch (FormatException ex)
+            {
+                return (statusWithoutTimestamp, TimestampError(id, version, ex.Message));
+            }
 
             try
             {
@@ -74,7 +81,7 @@ internal static class IndexStatusParser
         if (property.ValueKind != JsonValueKind.String)
             throw new FormatException($"The index_status {propertyName} value must be a string, but was {property.ValueKind}.");
 
-        return property.GetString()!;
+        return IndexJsonHelpers.ReadText(property);
     }
 
     private static RejectedIndexEntry TimestampError(string id, string? version, string reason) =>

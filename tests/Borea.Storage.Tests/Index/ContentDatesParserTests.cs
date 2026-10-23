@@ -116,6 +116,7 @@ public sealed class ContentDatesParserTests : IDisposable
     [InlineData("\"yesterday\"", "is not an ISO 8601 UTC timestamp")]
     [InlineData("12", "must be a string, but was Number")]
     [InlineData("null", "must be a string, but was Null")]
+    [InlineData("\"\\ud800\"", "is not valid Unicode text")]
     public void Parse_InvalidUpdatedAt_DropsOnlyThatDate(string rawValue, string reason)
     {
         var dates = $"\"published_at\": \"2026-08-02T13:18:41Z\", \"updated_at\": {rawValue}";
