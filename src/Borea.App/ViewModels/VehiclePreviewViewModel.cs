@@ -132,6 +132,9 @@ public sealed partial class VehiclePreviewViewModel : ObservableObject, IDisposa
 
     internal ModVersionMetadata Release => _release;
 
+    /// <summary>True while the automatic fetch waits out its delay, so a replacement of this preview sends no request yet.</summary>
+    internal bool IsWaitingToFetch { get; private set; }
+
     /// <summary>True once this preview asked the service to download the vehicle file, so a failure can have cost a request to the host.</summary>
     internal bool HasFetchedVehicle { get; private set; }
 
@@ -327,7 +330,16 @@ public sealed partial class VehiclePreviewViewModel : ObservableObject, IDisposa
             case VehiclePreviewPlanState.NeedsVehicleFile when _autoFetch && plan.VehicleSizeBytes is { } size && size <= AutoFetchVehicleBytes:
                 // The Fetching step shows the Cancel button during the delay, and a cancel or a dispose ends the delay before any download.
                 Step(PreviewStep.FetchingVehicle);
-                await Task.Delay(_autoFetchDelay, token);
+                IsWaitingToFetch = true;
+                try
+                {
+                    await Task.Delay(_autoFetchDelay, token);
+                }
+                finally
+                {
+                    IsWaitingToFetch = false;
+                }
+
                 ThrowWhenStale(token);
                 await LoadAsync(fetchVehicle: true, fetchMods: false, token);
                 break;

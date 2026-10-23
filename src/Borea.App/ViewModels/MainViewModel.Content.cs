@@ -187,6 +187,9 @@ public partial class MainViewModel
     /// </summary>
     internal IPngEncoder? VehiclePreviewEncoder { get; set; }
 
+    /// <summary>The wait before a new preview fetches a small vehicle file on its own, or null for the default. Tests set it.</summary>
+    internal TimeSpan? VehiclePreviewAutoFetchDelay { get; set; }
+
     /// <summary>The instance and its content that the open preview was made for, so a change to them makes it again.</summary>
     private string? _vehiclePreviewTarget;
 
@@ -195,6 +198,12 @@ public partial class MainViewModel
     /// this release that the page makes again waits for the click, until the player opens a page again.
     /// </summary>
     private ModVersionMetadata? _vehiclePreviewDeclined;
+
+    /// <summary>
+    /// The vehicles and saves whose install or update plans or runs now, one entry for each. A preview of one of them
+    /// does not fetch on its own, because the install downloads the same archive.
+    /// </summary>
+    private readonly List<ModVersionMetadata> _contentInstallReleases = [];
 
     /// <summary>Completes when the preview of the open vehicle page has prepared or built what it can without a click.</summary>
     internal Task WhenVehiclePreviewLoadedAsync() => VehiclePreview?.Loading ?? Task.CompletedTask;
@@ -210,7 +219,9 @@ public partial class MainViewModel
     /// old one, which stops its work and drops a result that arrives later. Any other page gets none. A busy preview
     /// of the same release and target stays, so a page that is read again, such as after an index refresh, does not
     /// send a second download. Every fetch raises the public download count of the host (RFC 0052), so a new preview
-    /// waits for a click after the player cancelled the same release or after its fetch failed.
+    /// waits for a click after the player cancelled the same release or its fetch failed, and while an install of it
+    /// plans or runs, because that install downloads the archive itself. A preview that still waits out its delay then
+    /// makes way for one that waits for the click.
     /// </summary>
     private void RefreshVehiclePreview()
     {
@@ -220,7 +231,8 @@ public partial class MainViewModel
         if (_services is { } services && CurrentWindowContent && SelectedContent is { Type: ContentType.Vehicle } && LatestVersion is { } latest)
         {
             var target = VehiclePreviewTarget;
-            if (old is { IsBusy: true } && SameRelease(old.Release, latest.Release) && TargetKey(target) == _vehiclePreviewTarget)
+            var installing = _contentInstallReleases.Any(release => SameRelease(release, latest.Release));
+            if (old is { IsBusy: true } && !(old.IsWaitingToFetch && installing) && SameRelease(old.Release, latest.Release) && TargetKey(target) == _vehiclePreviewTarget)
                 return;
 
             _vehiclePreviewTarget = TargetKey(target);
@@ -234,7 +246,8 @@ public partial class MainViewModel
                 thumbnails: services.PreviewThumbnails,
                 encoder: VehiclePreviewEncoder,
                 stillStored: ShowPreviewStill,
-                autoFetch: !(_vehiclePreviewDeclined is { } declined && SameRelease(declined, latest.Release)));
+                autoFetchDelay: VehiclePreviewAutoFetchDelay,
+                autoFetch: !installing && !(_vehiclePreviewDeclined is { } declined && SameRelease(declined, latest.Release)));
         }
 
         VehiclePreview = next;
@@ -263,6 +276,20 @@ public partial class MainViewModel
         if (preview is { State: VehiclePreviewState.Cancelled } or { State: VehiclePreviewState.Failed, HasFetchedVehicle: true })
             _vehiclePreviewDeclined = preview.Release;
     }
+
+    /// <summary>
+    /// Notes that an install or update of this vehicle or save starts to plan or run, and lets a preview of it on the
+    /// open page that still waits out its delay make way for one that waits for the click. Each call needs one call of
+    /// <see cref="EndContentInstall"/>.
+    /// </summary>
+    private void StartContentInstall(ModVersionMetadata release)
+    {
+        _contentInstallReleases.Add(release);
+        if (VehiclePreview is { IsWaitingToFetch: true } preview && SameRelease(preview.Release, release))
+            RefreshVehiclePreview();
+    }
+
+    private void EndContentInstall(ModVersionMetadata release) => _contentInstallReleases.Remove(release);
 
     /// <summary>True when both are the same release with the same archive, so a preview of one serves the other.</summary>
     private static bool SameRelease(ModVersionMetadata a, ModVersionMetadata b) =>

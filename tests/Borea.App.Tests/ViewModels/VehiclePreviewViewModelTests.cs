@@ -292,6 +292,40 @@ public sealed class VehiclePreviewViewModelTests
         Assert.Single(service.Loads);
     }
 
+    [Fact]
+    public async Task Page_AnInstallDuringTheDelay_StopsTheAutoFetch_SoOnlyTheInstallDownloads()
+    {
+        var service = new FakeVehiclePreview { PlanState = VehiclePreviewPlanState.NeedsVehicleFile };
+        using var harness = await VehicleHarnessAsync();
+        var viewModel = harness.ViewModel;
+        viewModel.VehiclePreviewServiceOf = _ => service;
+        viewModel.VehiclePreviewAutoFetchDelay = TimeSpan.FromMinutes(5);
+        var instance = (await harness.Services.Instances.CreateAsync("Main", InstanceSource.Custom.Value)).Instance;
+        await harness.Services.Instances.SetActiveInstanceAsync(instance.InstanceId);
+        await viewModel.LoadAsync();
+        await OpenRoverPageAsync(viewModel);
+        var row = viewModel.SelectedContent!;
+        var waiting = viewModel.VehiclePreview!;
+        Assert.True(waiting.IsWaitingToFetch);
+
+        await row.InstallCommand.ExecuteAsync(null);
+        await waiting.Loading;
+        await viewModel.WhenVehiclePreviewLoadedAsync();
+        Assert.NotSame(waiting, viewModel.VehiclePreview);
+        Assert.Equal(VehiclePreviewState.Idle, viewModel.VehiclePreview!.State);
+
+        // without a game the install waits for a go, as in the tests of the content install
+        Assert.True(row.IsConfirmingInstall);
+        await row.ConfirmInstallCommand.ExecuteAsync(null);
+
+        Assert.Null(row.InstallError);
+        Assert.Empty(service.Loads);
+        Assert.Single(harness.Requests, uri => uri.AbsoluteUri == UserContentFixtures.RoverUrl);
+
+        // the install changed the instance, so the page made a preview again, which waits out its delay until the test leaves the page
+        viewModel.SetMainWindowDiscover();
+    }
+
     /// <summary>
     /// Opens the rover page over a service that needs the small vehicle file, and waits until the fetch that the page
     /// starts on its own is held by the test.
@@ -311,9 +345,7 @@ public sealed class VehiclePreviewViewModelTests
         };
         var harness = await VehicleHarnessAsync();
         harness.ViewModel.VehiclePreviewServiceOf = _ => service;
-        await harness.ViewModel.EnsureDiscoverLoadedAsync();
-        harness.ViewModel.ShowDiscoverVehiclesCommand.Execute(null);
-        await Assert.Single(harness.ViewModel.DiscoverItems).OpenCommand.ExecuteAsync(null);
+        await OpenRoverPageAsync(harness.ViewModel);
         await started.Task.WaitAsync(TimeSpan.FromSeconds(10));
         return (harness, service, held);
     }
@@ -443,10 +475,16 @@ public sealed class VehiclePreviewViewModelTests
 
     internal static async Task OpenRoverAsync(MainViewModel viewModel)
     {
+        await OpenRoverPageAsync(viewModel);
+        await viewModel.WhenVehiclePreviewLoadedAsync();
+    }
+
+    /// <summary>Opens the rover page and returns before its preview has loaded.</summary>
+    private static async Task OpenRoverPageAsync(MainViewModel viewModel)
+    {
         await viewModel.EnsureDiscoverLoadedAsync();
         viewModel.ShowDiscoverVehiclesCommand.Execute(null);
         await Assert.Single(viewModel.DiscoverItems).OpenCommand.ExecuteAsync(null);
-        await viewModel.WhenVehiclePreviewLoadedAsync();
     }
 
     private static VehiclePreviewViewModel Start(
