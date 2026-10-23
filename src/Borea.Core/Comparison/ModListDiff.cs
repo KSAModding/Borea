@@ -19,7 +19,7 @@ public sealed class ModListDiff
     /// <summary>Mods present in both, but at a different version.</summary>
     public IReadOnlyList<ModVersionChange> ToUpdate { get; }
 
-    /// <summary>Mods present in both at the same version — no action needed.</summary>
+    /// <summary>Mods present in both at the same version.</summary>
     public IReadOnlyList<string> Unchanged { get; }
 
     public bool IsEmpty => ToAdd.Count == 0 && ToRemove.Count == 0 && ToUpdate.Count == 0;

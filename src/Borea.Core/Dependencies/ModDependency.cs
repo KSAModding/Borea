@@ -14,9 +14,6 @@ public sealed class ModDependency
     /// </summary>
     public string? ModId { get; }
 
-    /// <summary>
-    /// The kind of dependency.
-    /// </summary>
     public ModDependencyKind Kind { get; }
 
     /// <summary>
@@ -34,9 +31,6 @@ public sealed class ModDependency
     /// </summary>
     public IReadOnlyList<ModDependencyAlternative>? AnyOf { get; }
 
-    /// <summary>
-    /// True for an any_of entry.
-    /// </summary>
     [MemberNotNullWhen(true, nameof(AnyOf))]
     [MemberNotNullWhen(false, nameof(ModId))]
     public bool IsAnyOf => AnyOf is not null;
@@ -67,9 +61,6 @@ public sealed class ModDependency
         Source = source;
     }
 
-    /// <summary>
-    /// Creates an any_of entry, satisfied by any one of the given alternatives.
-    /// </summary>
     public static ModDependency OfAlternatives(ModDependencyKind kind, IReadOnlyList<ModDependencyAlternative> alternatives, MetadataSource? source = null)
     {
         if (kind is not (ModDependencyKind.Required or ModDependencyKind.Recommends))
