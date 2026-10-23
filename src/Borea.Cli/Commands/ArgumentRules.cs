@@ -1,5 +1,4 @@
 using System.CommandLine;
-using System.CommandLine.Parsing;
 using Borea.Core.Mods;
 
 namespace Borea.Cli.Commands;
@@ -23,7 +22,6 @@ internal static class ArgumentRules
         return argument;
     }
 
-    /// <summary>A content id, checked against the id rules in <see cref="ModIds"/>.</summary>
     public static Argument<string> ContentId(string name, string description)
     {
         var argument = new Argument<string>(name) { Description = description };
@@ -36,7 +34,6 @@ internal static class ArgumentRules
         return argument;
     }
 
-    /// <summary>A content id that can be left out, checked like <see cref="ContentId"/> when given.</summary>
     public static Argument<string?> OptionalContentId(string name, string description)
     {
         var argument = new Argument<string?>(name) { Description = description, Arity = ArgumentArity.ZeroOrOne };
@@ -53,8 +50,7 @@ internal static class ArgumentRules
     }
 
     /// <summary>
-    /// The instance a command acts on. Absent means the active instance, present
-    /// and blank is a usage error, like a blank instance argument.
+    /// Absent means the active instance, present and blank is a usage error, like a blank instance argument.
     /// </summary>
     public static Option<string?> Instance()
     {
@@ -85,7 +81,6 @@ internal static class ArgumentRules
         return argument;
     }
 
-    /// <summary>The release channel for one command. Absent means the saved channel.</summary>
     public static Option<string?> Channel()
     {
         var option = new Option<string?>("--channel")
