@@ -169,7 +169,7 @@ public static class SmoothScroll
 
         public void GoTo(Vector target)
         {
-            if (_viewer.IsEffectivelyVisible == false || TopLevel.GetTopLevel(_viewer) is not { } topLevel)
+            if (!_viewer.IsEffectivelyVisible || TopLevel.GetTopLevel(_viewer) is not { } topLevel)
                 return;
 
             _target = target;
