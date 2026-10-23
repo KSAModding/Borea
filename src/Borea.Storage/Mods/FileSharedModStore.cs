@@ -9,10 +9,9 @@ using Borea.Storage.Launch;
 namespace Borea.Storage.Mods;
 
 /// <summary>
-/// File-backed <see cref="ISharedModStore"/>. A break-out copies the stored
-/// release into each instance that links to it and swaps the link and the
-/// record together, so a folder and its record never disagree. The entry goes
-/// once no link leads to it.
+/// A break-out copies the stored release into each instance that links to it
+/// and swaps the link and the record together, so a folder and its record
+/// never disagree. The entry goes once no link leads to it.
 /// </summary>
 public sealed class FileSharedModStore : ISharedModStore
 {

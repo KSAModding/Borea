@@ -63,11 +63,12 @@ public sealed class FileModStateRepository : IModStateRepository
         if (Matches(manifest, modId).Any())
             return ModEntryAddResult.AlreadyListed;
 
-        // the game builds paths from the id
-        // (ModEntry.Exists) and compares ids ordinally (ModLibrary.AddMods), so a
-        // case mismatch is a duplicate entry on Windows and a deleted one
-        // elsewhere. Valid by construction, since it equals a validated id apart
-        // from case and every ModIds rule ignores case.
+        // The entry takes the folder's own spelling, because the game builds
+        // paths from the id (ModEntry.Exists) and compares ids ordinally
+        // (ModLibrary.AddMods), so a case mismatch is a duplicate entry on
+        // Windows and a deleted one elsewhere. The folder name is a valid id,
+        // since it equals a validated id apart from case and every ModIds rule
+        // ignores case.
         var folderName = Path.GetFileName(modFolder);
 
         manifest.Mods.Add(new ModManifestEntryDto { Id = folderName, Enabled = enabled });

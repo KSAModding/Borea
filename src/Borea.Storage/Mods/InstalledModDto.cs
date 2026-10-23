@@ -1,8 +1,5 @@
 namespace Borea.Storage.Mods;
 
-/// <summary>
-/// TOML-serializable representation of an InstalledMod.
-/// </summary>
 public sealed class InstalledModDto
 {
     public string ModId { get; set; } = string.Empty;
