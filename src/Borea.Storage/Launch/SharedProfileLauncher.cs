@@ -85,54 +85,57 @@ public sealed class SharedProfileLauncher : ISharedProfileLauncher
         }
 
         if (hostStart.Wrapped is { } wrapped)
-        {
-            if (plan.Arguments.Count > 0)
-            {
-                return SharedProfileLaunchResult.Failed(
-                    SharedProfileLaunchOutcome.WrapperArguments,
-                    $"The Wine wrapper '{wrapped.Wrapper!.BundlePath}' passes no launch arguments to the game, so Borea starts nothing. Start it without launch arguments.",
-                    wine: wrapped);
-            }
-
-            if (_wine.ToWindowsPath(wrapped, plan.Executable) is null)
-            {
-                return SharedProfileLaunchResult.Failed(
-                    SharedProfileLaunchOutcome.PathOutsidePrefix,
-                    WindowsBuildOnHost.OutsidePrefix(wrapped, plan.Executable),
-                    plan,
-                    wine: wrapped,
-                    unmappedPath: plan.Executable);
-            }
-
-            plan = plan.ThroughWrapper(wrapped.Wrapper!.LauncherPath, new Dictionary<string, string>());
-            lock (_launches.Gate)
-            {
-                // a second start of a running wrapper goes to the first one, so it would not start this game
-                _launches.Forget(ended: true);
-                if (_launches.RunsThrough(wrapped.Wrapper.BundlePath))
-                {
-                    return SharedProfileLaunchResult.Failed(
-                        SharedProfileLaunchOutcome.WrapperBusy,
-                        $"A game that Borea started through the Wine wrapper '{wrapped.Wrapper.BundlePath}' is still running. The wrapper runs one game at a time, so close that game first.",
-                        plan,
-                        wine: wrapped);
-                }
-
-                var started = Start(plan);
-                if (started.Process is { } running)
-                {
-                    var key = Guid.NewGuid();
-                    _launches.Processes[key] = running;
-                    _launches.Wrappers[key] = wrapped;
-                }
-
-                return started.Result;
-            }
-        }
+            return LaunchThroughWrapper(plan, wrapped);
 
         var (result, process) = Start(plan);
         process?.Dispose();
         return result;
+    }
+
+    private SharedProfileLaunchResult LaunchThroughWrapper(LaunchPlan plan, WineInstall wrapped)
+    {
+        if (plan.Arguments.Count > 0)
+        {
+            return SharedProfileLaunchResult.Failed(
+                SharedProfileLaunchOutcome.WrapperArguments,
+                $"The Wine wrapper '{wrapped.Wrapper!.BundlePath}' passes no launch arguments to the game, so Borea starts nothing. Start it without launch arguments.",
+                wine: wrapped);
+        }
+
+        if (_wine.ToWindowsPath(wrapped, plan.Executable) is null)
+        {
+            return SharedProfileLaunchResult.Failed(
+                SharedProfileLaunchOutcome.PathOutsidePrefix,
+                WindowsBuildOnHost.OutsidePrefix(wrapped, plan.Executable),
+                plan,
+                wine: wrapped,
+                unmappedPath: plan.Executable);
+        }
+
+        plan = plan.ThroughWrapper(wrapped.Wrapper!.LauncherPath, new Dictionary<string, string>());
+        lock (_launches.Gate)
+        {
+            // a second start of a running wrapper goes to the first one, so it would not start this game
+            _launches.Forget(ended: true);
+            if (_launches.RunsThrough(wrapped.Wrapper.BundlePath))
+            {
+                return SharedProfileLaunchResult.Failed(
+                    SharedProfileLaunchOutcome.WrapperBusy,
+                    $"A game that Borea started through the Wine wrapper '{wrapped.Wrapper.BundlePath}' is still running. The wrapper runs one game at a time, so close that game first.",
+                    plan,
+                    wine: wrapped);
+            }
+
+            var started = Start(plan);
+            if (started.Process is { } running)
+            {
+                var key = Guid.NewGuid();
+                _launches.Processes[key] = running;
+                _launches.Wrappers[key] = wrapped;
+            }
+
+            return started.Result;
+        }
     }
 
     private (SharedProfileLaunchResult Result, IStartedProcess? Process) Start(LaunchPlan plan)
