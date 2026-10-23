@@ -1,5 +1,6 @@
 using Borea.Core.Instances;
 using Borea.Core.Mods;
+using Borea.Storage.Mods;
 
 namespace Borea.Storage.Launch;
 
@@ -19,10 +20,10 @@ internal static class ModBlame
 
             foreach (var mod in instance.Mods)
             {
-                var folder = Path.Combine(modsFolder, mod.ModId);
                 try
                 {
-                    if (Directory.Exists(folder) && Directory.EnumerateFiles(folder, assembly + ".dll", new EnumerationOptions { RecurseSubdirectories = true, MatchCasing = MatchCasing.CaseInsensitive, IgnoreInaccessible = true }).Any())
+                    // the folder can differ from the id in case, which a case-sensitive file system does not match by path
+                    if (ModFolders.Find(modsFolder, mod.ModId) is { } folder && Directory.EnumerateFiles(folder, assembly + ".dll", new EnumerationOptions { RecurseSubdirectories = true, MatchCasing = MatchCasing.CaseInsensitive, IgnoreInaccessible = true }).Any())
                         return mod;
                 }
                 catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException)
