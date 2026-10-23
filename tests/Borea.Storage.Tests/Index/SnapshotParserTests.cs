@@ -225,6 +225,35 @@ public sealed class SnapshotParserTests
     }
 
     [Fact]
+    public void Parse_AuthoredReleasesValuesThatAreNotUnicodeText_AreNotRead()
+    {
+        var authored = ValidAuthoredJson.Replace("\"links\":", "\"releases\": { \"github\": \"owner/repo\", \"spacedock\": \"\\ud800/x\", \"since\": \"\\ud800\", \"tag_prefix\": \"\\ud800\" }, \"links\":");
+        var listing = $$"""{ "id": "test-mod", "authored": {{authored}}, "releases": [] }""";
+
+        var result = SnapshotParser.Parse(Snapshot(listing, ""));
+
+        var releases = Assert.Single(result.ValidListings).Authored!.Releases!;
+        Assert.Equal("owner/repo", Assert.Single(releases.Hosts).Reference);
+        Assert.Null(releases.Since);
+        Assert.Null(releases.TagPrefix);
+    }
+
+    [Fact]
+    public void Parse_OtherLinkThatIsNotUnicodeTextBesideValidListing_KeepsValidSibling()
+    {
+        var invalidAuthored = ValidAuthoredJson.Replace(
+            "\"forums\": \"https://forums.example/thread/1\"",
+            "\"forums\": \"https://forums.example/thread/1\", \"wiki\": \"\\ud800\"");
+        var invalid = $$"""{ "id": "bad-links", "authored": {{invalidAuthored.Replace("test-mod", "bad-links")}} }""";
+        var valid = $$"""{ "id": "test-mod", "authored": {{ValidAuthoredJson}} }""";
+
+        var result = SnapshotParser.Parse(Snapshot($"{invalid}, {valid}", ""));
+
+        Assert.Single(result.ValidListings);
+        Assert.Contains("not valid Unicode text", Assert.Single(result.MalformedListings).Reason);
+    }
+
+    [Fact]
     public void Parse_TombstoneListing_IsValidWithNoAuthoredData()
     {
         var listing = """{ "id": "removed-mod", "index_status": { "state": "delisted" } }""";
@@ -880,6 +909,33 @@ public sealed class SnapshotParserTests
         Assert.Equal(IndexStatusState.Delisted, parsed.IndexStatus!.State);
         Assert.Null(parsed.IndexStatus.Since);
         Assert.Contains("must be a string", parsed.IndexStatusError!.Reason);
+    }
+
+    [Fact]
+    public void Parse_ModerationReasonThatIsNotUnicodeText_DropsOnlyTheStatusAndKeepsTheSibling()
+    {
+        var invalid = $$"""{ "id": "bad-status", "authored": {{ValidAuthoredJson.Replace("test-mod", "bad-status")}}, "index_status": { "state": "disputed", "reason": "\ud800" } }""";
+        var valid = $$"""{ "id": "test-mod", "authored": {{ValidAuthoredJson}} }""";
+
+        var result = SnapshotParser.Parse(Snapshot($"{invalid}, {valid}", ""));
+
+        Assert.Equal(2, result.ValidListings.Count);
+        var listing = result.ValidListings.Single(item => item.Id == "bad-status");
+        Assert.Null(listing.IndexStatus);
+        Assert.Contains("not valid Unicode text", listing.IndexStatusError!.Reason);
+    }
+
+    [Fact]
+    public void Parse_ModerationTimestampThatIsNotUnicodeText_KeepsStateAndReportsTimestamp()
+    {
+        var listing = $$"""{ "id": "test-mod", "authored": {{ValidAuthoredJson}}, "index_status": { "state": "delisted", "since": "\ud800" } }""";
+
+        var result = SnapshotParser.Parse(Snapshot(listing, ""));
+
+        var parsed = Assert.Single(result.ValidListings);
+        Assert.Equal(IndexStatusState.Delisted, parsed.IndexStatus!.State);
+        Assert.Null(parsed.IndexStatus.Since);
+        Assert.Contains("not valid Unicode text", parsed.IndexStatusError!.Reason);
     }
 
     [Fact]
