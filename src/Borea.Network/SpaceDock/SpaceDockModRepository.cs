@@ -170,9 +170,11 @@ public sealed class SpaceDockModRepository : IModRepository
             && string.Equals(uri.Host, host.Host, StringComparison.OrdinalIgnoreCase);
     }
 
+    private static string ModIdOf(SpaceDockModDto dto) => dto.Id.ToString(CultureInfo.InvariantCulture);
+
     private static ModMetadata MapToListing(SpaceDockModDto dto)
     {
-        var modId = dto.Id.ToString(CultureInfo.InvariantCulture);
+        var modId = ModIdOf(dto);
         var pageUrl = IsSpaceDockPath(dto.Url) ? $"{BaseUrl}{dto.Url}" : $"{BaseUrl}/mod/{dto.Id}";
         var website = string.IsNullOrWhiteSpace(dto.Website) ? null : dto.Website;
 
@@ -266,7 +268,7 @@ public sealed class SpaceDockModRepository : IModRepository
 
         release = new ModVersionMetadata(
             specVersion: SpecVersions.Highest,
-            modId: dto.Id.ToString(CultureInfo.InvariantCulture),
+            modId: ModIdOf(dto),
             version: modVersion,
             releaseStatus: modVersion.PreRelease is null ? ReleaseStatus.Stable : ReleaseStatus.Testing,
             releaseDate: releaseDate,
