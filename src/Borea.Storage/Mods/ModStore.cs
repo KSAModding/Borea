@@ -156,7 +156,6 @@ public sealed class ModStore
             .ToList();
     }
 
-    /// <summary>Every entry in the store.</summary>
     internal IReadOnlyList<string> Entries()
         => Children(_paths.GetStaticModFilesRoot())
             .Where(modFolder => !Path.GetFileName(modFolder).StartsWith(".borea-", StringComparison.Ordinal))

@@ -5,10 +5,6 @@ using Borea.Core.Settings;
 
 namespace Borea.Cli.Commands;
 
-/// <summary>
-/// <c>borea game</c>: facts about the game installation, and the game started
-/// on its own.
-/// </summary>
 internal static class GameCommand
 {
     public static Command Build(Func<CancellationToken, Task<CliServices>> services, PassThroughArguments passThrough)
@@ -20,10 +16,6 @@ internal static class GameCommand
         return game;
     }
 
-    /// <summary>
-    /// The game alone, on the shared profile. An instance is started with
-    /// <c>borea launch</c> instead, which always needs a mod loader.
-    /// </summary>
     private static Command BuildLaunch(Func<CancellationToken, Task<CliServices>> services, PassThroughArguments passThrough)
     {
         var json = ArgumentRules.Json();
@@ -60,10 +52,6 @@ internal static class GameCommand
         return launch;
     }
 
-    /// <summary>
-    /// What Borea assumes about the game, and whether the installation still
-    /// has that shape.
-    /// </summary>
     private static Command BuildCheck(Func<CancellationToken, Task<CliServices>> services)
     {
         var json = ArgumentRules.Json();
@@ -108,9 +96,6 @@ internal static class GameCommand
         return check;
     }
 
-    /// <summary>
-    /// the installed build comes from disk, the latest from the master server.
-    /// </summary>
     private static Command BuildVersion(Func<CancellationToken, Task<CliServices>> services)
     {
         var json = ArgumentRules.Json();
@@ -162,9 +147,6 @@ internal static class GameCommand
         return version;
     }
 
-    /// <summary>
-    /// The master server's answer.
-    /// </summary>
     private static async Task<(LatestVersionInfo? Latest, string? Problem)> AskMasterServerAsync(ILatestVersionPing ping, CancellationToken cancellationToken)
     {
         LatestVersionInfo answer;
@@ -204,8 +186,7 @@ internal static class GameCommand
     }
 
     /// <summary>
-    /// The master server's answer. An answer without a download page carries
-    /// null, not the empty string the ping keeps.
+    /// A master server answer without a download page carries null, not the empty string the ping keeps.
     /// </summary>
     private sealed record LatestVersionView(string? Version, int? Revision, string Raw, string? DownloadUrl)
     {

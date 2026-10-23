@@ -134,9 +134,6 @@ public static class Compatibility
         return (max is not { } last || min <= last) && SupportsAnyBuild(min, max, fromRevision, toRevision);
     }
 
-    /// <summary>
-    /// What the os list says about the target platform.
-    /// </summary>
     public static OsSupport EvaluateOs(IReadOnlyList<string>? os, OsPlatform target)
     {
         if (os is null || os.Count == 0)

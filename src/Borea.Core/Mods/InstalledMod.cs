@@ -1,4 +1,3 @@
-using Borea.Core.Dependencies;
 using System.Collections.ObjectModel;
 
 namespace Borea.Core.Mods;
@@ -15,10 +14,6 @@ public sealed class InstalledMod
     public InstallReason Reason { get; private set; }
     public DateTimeOffset InstalledAt { get; }
 
-    /// <summary>
-    /// The live versioned listing. Its dependencies can be found
-    /// using <see cref="Metadata.Dependencies"/>.
-    /// </summary>
     public ModVersionMetadata Metadata { get; }
 
     /// <summary>

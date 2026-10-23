@@ -1,8 +1,5 @@
 namespace Borea.Storage.Mods;
 
-/// <summary>
-/// TOML-serializable representation of the authored LoaderProvides.
-/// </summary>
 public sealed class LoaderProvidesDto
 {
     public string? Launch { get; set; }

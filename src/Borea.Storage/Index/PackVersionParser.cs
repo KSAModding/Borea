@@ -1,5 +1,4 @@
 using Borea.Core.Mods;
-using Borea.Core.ModPacks;
 using Borea.Storage.Index.Dtos;
 using System.Text.Json;
 

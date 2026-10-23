@@ -7,13 +7,13 @@ using Borea.Storage.Files;
 namespace Borea.Storage.Mods;
 
 /// <summary>
-/// File-backed <see cref="IForeignModHandover"/>. The release is downloaded and
-/// unpacked into a staging folder first, or linked there from the
-/// <see cref="ModStore"/>, so the folder and the record change together at the
-/// end, and the ownership marker or link reaches the instance only with the
-/// files Borea itself wrote. The previous files go into a recovery folder
-/// that the handover deletes when it is finished, and a delete that fails names
-/// that folder in the result instead of dropping it silently.
+/// The release is downloaded and unpacked into a staging folder first, or
+/// linked there from the <see cref="ModStore"/>, so the folder and the record
+/// change together at the end, and the ownership marker or link reaches the
+/// instance only with the files Borea itself wrote. The previous files go into
+/// a recovery folder that the handover deletes when it is finished, and a
+/// delete that fails names that folder in the result instead of dropping it
+/// silently.
 /// </summary>
 public sealed class FileForeignModHandover : IForeignModHandover
 {
