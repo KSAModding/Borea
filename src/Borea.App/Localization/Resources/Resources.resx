@@ -4107,6 +4107,15 @@
   <data name="AboutCredits" xml:space="preserve">
     <value>Built with</value>
   </data>
+  <data name="AboutTranslators" xml:space="preserve">
+    <value>Translators</value>
+  </data>
+  <data name="AboutTranslatorNotListed" xml:space="preserve">
+    <value>Not credited yet</value>
+  </data>
+  <data name="AboutOriginalRepository" xml:space="preserve">
+    <value>Borea repository</value>
+  </data>
   <data name="AboutCommunity" xml:space="preserve">
     <value>KSA modding on GitHub</value>
   </data>
