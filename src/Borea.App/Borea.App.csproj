@@ -35,6 +35,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <EmbeddedResource Include="Localization\Resources\Translators.json" LogicalName="Borea.App.Localization.Translators.json" />
     <EmbeddedResource Update="Localization\Resources\Resources.resx">
       <Generator>MSBuild:Compile</Generator>
       <Link>Localization\Resources.resx</Link>
