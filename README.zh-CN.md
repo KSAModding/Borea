@@ -2,6 +2,8 @@
 
 [English](README.md) | 简体中文
 
+> 本文是英文 README 的翻译，可能落后于英文版本；如有出入，以英文版为准。
+
 ![下载量](https://img.shields.io/github/downloads/KSAModding/Borea/total)
 ![许可证](https://img.shields.io/badge/License-MIT-green.svg)
 ![最近提交](https://img.shields.io/github/last-commit/KSAModding/Borea/main.svg)
