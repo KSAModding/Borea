@@ -1,0 +1,4536 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="NavigationBack" xml:space="preserve">
+    <value>返回</value>
+  </data>
+  <data name="NavigationDiscover" xml:space="preserve">
+    <value>发现</value>
+  </data>
+  <data name="NavigationHome" xml:space="preserve">
+    <value>首页</value>
+  </data>
+  <data name="NavigationLibrary" xml:space="preserve">
+    <value>内容库</value>
+  </data>
+  <data name="NavigationSettings" xml:space="preserve">
+    <value>设置</value>
+  </data>
+  <data name="PageDiscoverHeading" xml:space="preserve">
+    <value>发现</value>
+  </data>
+  <data name="PageHomeHeading" xml:space="preserve">
+    <value>首页</value>
+  </data>
+  <data name="PageLibraryHeading" xml:space="preserve">
+    <value>内容库</value>
+  </data>
+  <data name="PreferenceSaveErrorFormat" xml:space="preserve">
+    <value>无法保存偏好设置：{0}</value>
+  </data>
+  <data name="UnexpectedErrorHint" xml:space="preserve">
+    <value>发生了错误。Borea 会继续运行，详细信息已记录到日志中。</value>
+  </data>
+  <data name="UnexpectedErrorCopyDetails" xml:space="preserve">
+    <value>复制详细信息</value>
+  </data>
+  <data name="UnexpectedErrorReport" xml:space="preserve">
+    <value>报告此问题</value>
+  </data>
+  <data name="UnexpectedErrorCopied" xml:space="preserve">
+    <value>错误详细信息已复制到剪贴板。</value>
+  </data>
+  <data name="UnexpectedErrorCopyFailed" xml:space="preserve">
+    <value>无法复制错误详细信息</value>
+  </data>
+  <data name="SettingsLanguageLabel" xml:space="preserve">
+    <value>语言</value>
+  </data>
+  <data name="SettingsMarkUntranslatedTexts" xml:space="preserve">
+    <value>标记未翻译文字</value>
+  </data>
+  <data name="SettingsMarkUntranslatedTextsHint" xml:space="preserve">
+    <value>将本语言尚未翻译的文字显示为两颗星号之间的英文，例如 ** Home **。</value>
+  </data>
+  <data name="SettingsRegionalFormatLabel" xml:space="preserve">
+    <value>区域格式</value>
+  </data>
+  <data name="SettingsThemeLabel" xml:space="preserve">
+    <value>主题</value>
+  </data>
+  <data name="SettingsUpdatesLabel" xml:space="preserve">
+    <value>更新</value>
+  </data>
+  <data name="SettingsCheckForUpdatesAtStart" xml:space="preserve">
+    <value>启动时检查更新</value>
+  </data>
+  <data name="SettingsUpdateChannelLabel" xml:space="preserve">
+    <value>Borea 更新通道</value>
+  </data>
+  <data name="SettingsUpdateChannelHint" xml:space="preserve">
+    <value>选择更新检查会提示哪些 Borea 版本。预发布版本经过的测试较少。此设置不影响 Borea 安装哪些模组版本。</value>
+  </data>
+  <data name="UpdateChannelStable" xml:space="preserve">
+    <value>稳定版</value>
+  </data>
+  <data name="UpdateChannelTesting" xml:space="preserve">
+    <value>稳定版和测试版</value>
+  </data>
+  <data name="UpdateChannelDev" xml:space="preserve">
+    <value>所有版本，包括开发构建</value>
+  </data>
+  <data name="SettingsNewsLabel" xml:space="preserve">
+    <value>消息</value>
+  </data>
+  <data name="SettingsFetchAnnouncements" xml:space="preserve">
+    <value>显示 KSAModding 团队的消息</value>
+  </data>
+  <data name="SettingsLinksLabel" xml:space="preserve">
+    <value>链接</value>
+  </data>
+  <data name="SettingsOpenBoreaLinks" xml:space="preserve">
+    <value>使用此 Borea 打开 borea:// 链接</value>
+  </data>
+  <data name="SettingsOpenBoreaLinksHint" xml:space="preserve">
+    <value>模组页面可通过链接直接在 Borea 中打开。未经你点击确认，链接不会安装任何内容。</value>
+  </data>
+  <data name="SettingsReleaseChannelLabel" xml:space="preserve">
+    <value>模组发布通道</value>
+  </data>
+  <data name="SettingsReleaseChannelHint" xml:space="preserve">
+    <value>选择未指定版本时 Borea 会安装哪些发布版本。</value>
+  </data>
+  <data name="SettingsImagesLabel" xml:space="preserve">
+    <value>图片</value>
+  </data>
+  <data name="SettingsLoadImagesFromAuthorHosts" xml:space="preserve">
+    <value>从作者的服务器加载图片</value>
+  </data>
+  <data name="SettingsLoadImagesFromAuthorHostsHint" xml:space="preserve">
+    <value>每次请求图片时，作者的服务器都会获知你的 IP 地址。</value>
+  </data>
+  <data name="SettingsLibraryFolderLabel" xml:space="preserve">
+    <value>内容库文件夹</value>
+  </data>
+  <data name="SettingsLibraryFolderHint" xml:space="preserve">
+    <value>Borea 在此保存实例和备份。移动内容库会一并移动它们。设置、缓存、日志和模组加载器仍保留在 Borea 自身的文件夹中。</value>
+  </data>
+  <data name="SettingsLibraryFolderUseDefault" xml:space="preserve">
+    <value>移回默认文件夹</value>
+  </data>
+  <data name="SettingsLibraryFolderMove" xml:space="preserve">
+    <value>移动内容库...</value>
+  </data>
+  <data name="SettingsLibraryFolderMoveToolTip" xml:space="preserve">
+    <value>为实例和备份选择新文件夹。Borea 会将它们移到那里。</value>
+  </data>
+  <data name="SettingsLibraryFolderOpenToolTip" xml:space="preserve">
+    <value>在文件管理器中显示此文件夹，不移动任何内容。</value>
+  </data>
+  <data name="SettingsLibraryFolderPickerTitle" xml:space="preserve">
+    <value>选择新的内容库文件夹</value>
+  </data>
+  <data name="SettingsBackupRetentionLabel" xml:space="preserve">
+    <value>删除早于以下天数的备份</value>
+  </data>
+  <data name="SettingsBackupRetentionHint" xml:space="preserve">
+    <value>适用于所有实例的存档和载具备份。Borea 每次启动时都会检查。</value>
+  </data>
+  <data name="BackupRetentionOff" xml:space="preserve">
+    <value>关闭</value>
+  </data>
+  <data name="BackupRetentionDaysFormat" xml:space="preserve">
+    <value>{0} 天</value>
+  </data>
+  <data name="SettingsSharedModStore" xml:space="preserve">
+    <value>在实例之间共享模组文件</value>
+  </data>
+  <data name="SettingsSharedModStoreHint" xml:space="preserve">
+    <value>Borea 将每个模组发布版本只存储一份，使用该版本的所有实例都链接到它。关闭后，每个实例会拥有独立副本。</value>
+  </data>
+  <data name="SharedModStoreTurningOff" xml:space="preserve">
+    <value>Borea 正在为每个实例创建模组的独立副本。</value>
+  </data>
+  <data name="SharedModStoreWaitForTask" xml:space="preserve">
+    <value>请等 Borea 完成当前任务后再更改此设置。</value>
+  </data>
+  <data name="SharedModStoreGameRunning" xml:space="preserve">
+    <value>游戏正在运行。请先关闭游戏，再关闭此设置。</value>
+  </data>
+  <data name="SharedModStoreBoreaRunning" xml:space="preserve">
+    <value>另一个 Borea 窗口或命令正在运行。请先将其关闭，再关闭此设置。</value>
+  </data>
+  <data name="SharedModStoreFailedFormat" xml:space="preserve">
+    <value>设置未更改：{0}</value>
+  </data>
+  <data name="SharedModStoreBreakOutFailedFormat" xml:space="preserve">
+    <value>设置已关闭，但 Borea 无法为所有实例创建独立副本：{0} 请重新开启并关闭此设置以完成操作。</value>
+  </data>
+  <data name="SharedModStoreBrokenOutFormat" xml:space="preserve">
+    <value>{0} 修改了自身文件，因此所有实例现在各自拥有它的独立副本。</value>
+  </data>
+  <data name="SettingsGitHubLabel" xml:space="preserve">
+    <value>GitHub 账户</value>
+  </data>
+  <data name="SettingsGitHubHint" xml:space="preserve">
+    <value>登录后，可在 Borea 中以你的身份提交内容条目 PR。</value>
+  </data>
+  <data name="SettingsGitHubSignIn" xml:space="preserve">
+    <value>登录</value>
+  </data>
+  <data name="SettingsGitHubSignedInAsFormat" xml:space="preserve">
+    <value>已登录为 {0}</value>
+  </data>
+  <data name="SettingsGitHubSteward" xml:space="preserve">
+    <value>内容索引管理员</value>
+  </data>
+  <data name="SettingsGitHubStewardTools" xml:space="preserve">
+    <value>打开管理员工具</value>
+  </data>
+  <data name="StewardHeading" xml:space="preserve">
+    <value>管理员工具</value>
+  </data>
+  <data name="StewardTabQueue" xml:space="preserve">
+    <value>队列</value>
+  </data>
+  <data name="StewardTabQueueCountFormat" xml:space="preserve">
+    <value>队列（{0}）</value>
+  </data>
+  <data name="StewardQueueHint" xml:space="preserve">
+    <value>KSAModding/content-index 和 KSAModding/content-index-releases 中等待管理员处理的未关闭 PR，按时间从早到晚排列。管理员在 GitHub 上审阅并合并它们。</value>
+  </data>
+  <data name="StewardQueueAllOpen" xml:space="preserve">
+    <value>显示所有未关闭的 PR</value>
+  </data>
+  <data name="StewardQueueScope" xml:space="preserve">
+    <value>显示</value>
+  </data>
+  <data name="StewardQueueScopeContent" xml:space="preserve">
+    <value>内容变更</value>
+  </data>
+  <data name="StewardQueueScopeOther" xml:space="preserve">
+    <value>代码及其他变更</value>
+  </data>
+  <data name="StewardQueueScopeAll" xml:space="preserve">
+    <value>全部</value>
+  </data>
+  <data name="StewardQueueLoading" xml:space="preserve">
+    <value>正在从 GitHub 读取 PR...</value>
+  </data>
+  <data name="StewardQueueEmpty" xml:space="preserve">
+    <value>没有等待管理员处理的 PR。</value>
+  </data>
+  <data name="StewardQueueEmptyAllOpen" xml:space="preserve">
+    <value>没有未关闭的 PR。</value>
+  </data>
+  <data name="StewardQueueByFormat" xml:space="preserve">
+    <value>由 {0} 提交，创建于 {1}</value>
+  </data>
+  <data name="StewardQueueWaiting" xml:space="preserve">
+    <value>等待管理员处理</value>
+  </data>
+  <data name="StewardQueueDraft" xml:space="preserve">
+    <value>草稿，无法合并</value>
+  </data>
+  <data name="StewardQueueKindListing" xml:space="preserve">
+    <value>条目</value>
+  </data>
+  <data name="StewardQueueKindPack" xml:space="preserve">
+    <value>整合包</value>
+  </data>
+  <data name="StewardQueueKindRelease" xml:space="preserve">
+    <value>发布版本</value>
+  </data>
+  <data name="StewardQueueKindAmendment" xml:space="preserve">
+    <value>修订</value>
+  </data>
+  <data name="StewardQueueKindOwnerRecord" xml:space="preserve">
+    <value>所有者记录</value>
+  </data>
+  <data name="StewardQueueKindIndexStatus" xml:space="preserve">
+    <value>索引状态</value>
+  </data>
+  <data name="StewardQueueKindTagVocabulary" xml:space="preserve">
+    <value>标签词表</value>
+  </data>
+  <data name="StewardQueueOtherFiles" xml:space="preserve">
+    <value>涉及其他文件，请在 GitHub 上审阅</value>
+  </data>
+  <data name="StewardQueueNoVerdict" xml:space="preserve">
+    <value>检查尚未给出结论。</value>
+  </data>
+  <data name="StewardQueueFailedFormat" xml:space="preserve">
+    <value>无法读取 {0} 的 PR。{1}</value>
+  </data>
+  <data name="StewardQueueForbidden" xml:space="preserve">
+    <value>GitHub 拒绝了访问，可能是因为此仓库尚未安装 Borea GitHub 应用。</value>
+  </data>
+  <data name="StewardQueueNotFound" xml:space="preserve">
+    <value>GitHub 未找到该仓库。</value>
+  </data>
+  <data name="StewardReviewLoading" xml:space="preserve">
+    <value>正在从 GitHub 读取 PR...</value>
+  </data>
+  <data name="StewardReviewNotFound" xml:space="preserve">
+    <value>GitHub 未找到此 PR。</value>
+  </data>
+  <data name="StewardReviewFromFormat" xml:space="preserve">
+    <value>来自 {0}</value>
+  </data>
+  <data name="StewardReviewFromGone" xml:space="preserve">
+    <value>来自已不存在的仓库</value>
+  </data>
+  <data name="StewardReviewClosed" xml:space="preserve">
+    <value>已关闭</value>
+  </data>
+  <data name="StewardReviewMerged" xml:space="preserve">
+    <value>已合并</value>
+  </data>
+  <data name="StewardReviewOpenOnGitHub" xml:space="preserve">
+    <value>在 GitHub 上打开</value>
+  </data>
+  <data name="StewardReviewCommitFormat" xml:space="preserve">
+    <value>最新提交 {0}</value>
+  </data>
+  <data name="StewardReviewValidateFormat" xml:space="preserve">
+    <value>validate：{0}</value>
+  </data>
+  <data name="StewardReviewValidateSuccess" xml:space="preserve">
+    <value>已通过</value>
+  </data>
+  <data name="StewardReviewValidateFailure" xml:space="preserve">
+    <value>未通过</value>
+  </data>
+  <data name="StewardReviewValidateError" xml:space="preserve">
+    <value>检查无法得出结论</value>
+  </data>
+  <data name="StewardReviewValidatePending" xml:space="preserve">
+    <value>正在运行</value>
+  </data>
+  <data name="StewardReviewValidateMissing" xml:space="preserve">
+    <value>此提交尚未设置</value>
+  </data>
+  <data name="StewardReviewValidateUnknown" xml:space="preserve">
+    <value>Borea 无法识别的状态</value>
+  </data>
+  <data name="StewardReviewValidateUnreadableFormat" xml:space="preserve">
+    <value>无法读取此提交的 validate 状态。{0}</value>
+  </data>
+  <data name="StewardReviewCommitNotFound" xml:space="preserve">
+    <value>GitHub 未找到此提交。</value>
+  </data>
+  <data name="StewardReviewValidateDetails" xml:space="preserve">
+    <value>详细信息</value>
+  </data>
+  <data name="StewardReviewRunChecks" xml:space="preserve">
+    <value>在 GitHub 上运行检查</value>
+  </data>
+  <data name="StewardReviewRunChecksHint" xml:space="preserve">
+    <value>例如，作者添加了主题但没有推送提交时。Borea 不会自行启动检查。</value>
+  </data>
+  <data name="StewardReviewVerdict" xml:space="preserve">
+    <value>检查结论</value>
+  </data>
+  <data name="StewardReviewDocuments" xml:space="preserve">
+    <value>最新提交中的文档</value>
+  </data>
+  <data name="StewardReviewNotText" xml:space="preserve">
+    <value>文件不是 UTF-8 文本。</value>
+  </data>
+  <data name="StewardReviewParseErrorFormat" xml:space="preserve">
+    <value>无法解析文档：{0}</value>
+  </data>
+  <data name="StewardReviewOwnership" xml:space="preserve">
+    <value>所有权证明</value>
+  </data>
+  <data name="StewardReviewOwnershipVerifiedFormat" xml:space="preserve">
+    <value>{0} 有所有权证明。</value>
+  </data>
+  <data name="StewardReviewOwnershipMissingFormat" xml:space="preserve">
+    <value>{0} 没有所有权证明，需由管理员判断。</value>
+  </data>
+  <data name="StewardReviewOwnershipUnknownFormat" xml:space="preserve">
+    <value>Borea 无法检查 {0} 的所有权证明。</value>
+  </data>
+  <data name="StewardReviewOwnershipNoAuthor" xml:space="preserve">
+    <value>创建此 PR 的账户已不存在，因此 Borea 无法检查其证明。</value>
+  </data>
+  <data name="StewardReviewProofOwnerFormat" xml:space="preserve">
+    <value>{0} 拥有 {1}。</value>
+  </data>
+  <data name="StewardReviewProofMarkerFormat" xml:space="preserve">
+    <value>{1} 的 .github/ksa-content-index.toml 中指定了 {0}。</value>
+  </data>
+  <data name="StewardReviewProofNoneFormat" xml:space="preserve">
+    <value>{0} 不拥有 {1}，且 {1} 既没有主题 {2}，也没有指定 {0} 的标记文件。</value>
+  </data>
+  <data name="StewardReviewProofNoHost" xml:space="preserve">
+    <value>条目的 releases 中未指定 GitHub 仓库或 SpaceDock 模组。</value>
+  </data>
+  <data name="StewardReviewProofForkFormat" xml:space="preserve">
+    <value>{0} 不拥有分支仓库 {1}，且 {1} 没有主题 {2}。分支仓库会继承标记文件，因此其中的标记文件不能作为证明。</value>
+  </data>
+  <data name="StewardReviewProofRenamedFormat" xml:space="preserve">
+    <value>{0} 现已更名为 {1}。</value>
+  </data>
+  <data name="StewardReviewProofSpaceDockLinkFormat" xml:space="preserve">
+    <value>SpaceDock 模组 {0} 的源代码链接未指向 GitHub 仓库。</value>
+  </data>
+  <data name="StewardReviewFilesFormat" xml:space="preserve">
+    <value>变更文件（{0}）</value>
+  </data>
+  <data name="StewardReviewFileAdded" xml:space="preserve">
+    <value>已新增</value>
+  </data>
+  <data name="StewardReviewFileModified" xml:space="preserve">
+    <value>已修改</value>
+  </data>
+  <data name="StewardReviewFileRemoved" xml:space="preserve">
+    <value>已移除</value>
+  </data>
+  <data name="StewardReviewFileRenamedFormat" xml:space="preserve">
+    <value>原名为 {0}</value>
+  </data>
+  <data name="StewardReviewNoPatch" xml:space="preserve">
+    <value>GitHub 未提供此文件的差异，例如该文件为二进制文件或过大。</value>
+  </data>
+  <data name="StewardActionApprove" xml:space="preserve">
+    <value>批准</value>
+  </data>
+  <data name="StewardActionRequestChanges" xml:space="preserve">
+    <value>请求修改</value>
+  </data>
+  <data name="StewardActionComment" xml:space="preserve">
+    <value>评论</value>
+  </data>
+  <data name="StewardActionMerge" xml:space="preserve">
+    <value>合并</value>
+  </data>
+  <data name="StewardActionClose" xml:space="preserve">
+    <value>关闭</value>
+  </data>
+  <data name="StewardActionApproveTitleFormat" xml:space="preserve">
+    <value>批准 {0}</value>
+  </data>
+  <data name="StewardActionRequestChangesTitleFormat" xml:space="preserve">
+    <value>请求修改 {0}</value>
+  </data>
+  <data name="StewardActionCommentTitleFormat" xml:space="preserve">
+    <value>评论 {0}</value>
+  </data>
+  <data name="StewardActionMergeTitleFormat" xml:space="preserve">
+    <value>合并 {0}</value>
+  </data>
+  <data name="StewardActionCloseTitleFormat" xml:space="preserve">
+    <value>关闭 {0}</value>
+  </data>
+  <data name="StewardActionApproveEffectFormat" xml:space="preserve">
+    <value>Borea 会提交一份批准提交 {0} 的审阅。</value>
+  </data>
+  <data name="StewardActionRequestChangesEffectFormat" xml:space="preserve">
+    <value>Borea 会针对提交 {0} 提交审阅，要求作者修改。</value>
+  </data>
+  <data name="StewardActionCommentEffectFormat" xml:space="preserve">
+    <value>Borea 会将你的文字提交为对提交 {0} 的审阅。</value>
+  </data>
+  <data name="StewardActionMergeEffectFormat" xml:space="preserve">
+    <value>Borea 会将提交 {0} 压缩合并到 {1}。如果此后 PR 又增加了提交，GitHub 会拒绝合并。</value>
+  </data>
+  <data name="StewardActionCloseEffect" xml:space="preserve">
+    <value>Borea 会发布你的评论并关闭 PR，不执行合并。</value>
+  </data>
+  <data name="StewardActionText" xml:space="preserve">
+    <value>文字</value>
+  </data>
+  <data name="StewardActionTextRequired" xml:space="preserve">
+    <value>作者会在 GitHub 上看到这段文字。</value>
+  </data>
+  <data name="StewardActionTextOptional" xml:space="preserve">
+    <value>选填。作者会在 GitHub 上看到这段文字。</value>
+  </data>
+  <data name="StewardActionSending" xml:space="preserve">
+    <value>正在发送到 GitHub...</value>
+  </data>
+  <data name="StewardActionReviewed" xml:space="preserve">
+    <value>审阅已提交至 GitHub。</value>
+  </data>
+  <data name="StewardActionMerged" xml:space="preserve">
+    <value>PR 已合并。</value>
+  </data>
+  <data name="StewardActionClosed" xml:space="preserve">
+    <value>PR 已关闭。</value>
+  </data>
+  <data name="StewardActionSkipReview" xml:space="preserve">
+    <value>GitHub 仍要求对此 PR 进行审阅，例如代码所有者的审阅。以管理员身份绕过会跳过此要求。</value>
+  </data>
+  <data name="StewardActionMergeWithoutReview" xml:space="preserve">
+    <value>跳过审阅直接合并</value>
+  </data>
+  <data name="StewardActionOwnWarning" xml:space="preserve">
+    <value>此 PR 由你创建。POLICY.md 要求与事项存在利益关联的管理员交由其他管理员处理。</value>
+  </data>
+  <data name="StewardActionChanged" xml:space="preserve">
+    <value>PR 的最新提交或目标分支已与 Borea 显示的不同。Borea 正在重新读取，请查看最新内容后再操作。</value>
+  </data>
+  <data name="StewardActionNotOpen" xml:space="preserve">
+    <value>此 PR 现已关闭或合并。Borea 正在重新读取。</value>
+  </data>
+  <data name="StewardMergeNeedsValidate" xml:space="preserve">
+    <value>最新提交的 validate 检查通过前无法合并。</value>
+  </data>
+  <data name="StewardMergeNeedsVerdict" xml:space="preserve">
+    <value>检查给出结论前无法合并。</value>
+  </data>
+  <data name="StewardMergeDraft" xml:space="preserve">
+    <value>草稿无法合并。</value>
+  </data>
+  <data name="StewardTabReports" xml:space="preserve">
+    <value>报告</value>
+  </data>
+  <data name="StewardReportsHint" xml:space="preserve">
+    <value>通过 KSAModding/content-index 表单提交的下架请求和 ID 争议。Borea 无需你登录即可读取。</value>
+  </data>
+  <data name="StewardReportsWriteHint" xml:space="preserve">
+    <value>作为 content-index 管理员，你可以在此回复、关闭和重新打开这些报告。</value>
+  </data>
+  <data name="StewardReportsGitHubHint" xml:space="preserve">
+    <value>请在 GitHub 上回复、关闭或重新打开报告。</value>
+  </data>
+  <data name="StewardReportsLoading" xml:space="preserve">
+    <value>正在从 GitHub 读取报告...</value>
+  </data>
+  <data name="StewardReportsEmpty" xml:space="preserve">
+    <value>没有未关闭的下架请求或 ID 争议。</value>
+  </data>
+  <data name="StewardReportTakedown" xml:space="preserve">
+    <value>下架</value>
+  </data>
+  <data name="StewardReportDispute" xml:space="preserve">
+    <value>ID 争议</value>
+  </data>
+  <data name="StewardReportByFormat" xml:space="preserve">
+    <value>由 {0} 提交，{1}</value>
+  </data>
+  <data name="StewardReportUnreadableIdFormat" xml:space="preserve">
+    <value>Borea 无法从“{0}”中读取 ID，因此状态操作不可用。</value>
+  </data>
+  <data name="StewardReportMissingFormat" xml:space="preserve">
+    <value>报告缺少“{0}”一节，有人手动修改过其内容。</value>
+  </data>
+  <data name="StewardReportGround" xml:space="preserve">
+    <value>依据</value>
+  </data>
+  <data name="StewardReportWhatIsWrong" xml:space="preserve">
+    <value>问题所在</value>
+  </data>
+  <data name="StewardReportReporter" xml:space="preserve">
+    <value>报告者身份</value>
+  </data>
+  <data name="StewardReportDisputed" xml:space="preserve">
+    <value>争议事项</value>
+  </data>
+  <data name="StewardReportForums" xml:space="preserve">
+    <value>报告者的论坛帖子</value>
+  </data>
+  <data name="StewardReportClaim" xml:space="preserve">
+    <value>主张</value>
+  </data>
+  <data name="StewardReportOtherParty" xml:space="preserve">
+    <value>另一方</value>
+  </data>
+  <data name="StewardReportOpenForums" xml:space="preserve">
+    <value>打开论坛帖子</value>
+  </data>
+  <data name="StewardReportAnswer" xml:space="preserve">
+    <value>在 GitHub 上回复</value>
+  </data>
+  <data name="StewardReporterWarning" xml:space="preserve">
+    <value>此报告由你提交。POLICY.md 要求与事项存在利益关联的管理员交由其他管理员处理。</value>
+  </data>
+  <data name="StewardReportClosesFormat" xml:space="preserve">
+    <value>PR 中写有 Closes #{0}，因此合并后会关闭报告 #{0}。</value>
+  </data>
+  <data name="StewardReportStaysOpenFormat" xml:space="preserve">
+    <value>PR 提到了报告 #{0}，该报告在管理员作出决定前会保持打开。</value>
+  </data>
+  <data name="StewardReportsShowClosed" xml:space="preserve">
+    <value>显示最近关闭的报告</value>
+  </data>
+  <data name="StewardReportsClosedEmpty" xml:space="preserve">
+    <value>最近没有关闭的报告。</value>
+  </data>
+  <data name="StewardReportClosedCompletedFormat" xml:space="preserve">
+    <value>已作为完成关闭，{0}</value>
+  </data>
+  <data name="StewardReportClosedNotPlannedFormat" xml:space="preserve">
+    <value>已作为不计划处理关闭，{0}</value>
+  </data>
+  <data name="StewardReportClosedFormat" xml:space="preserve">
+    <value>已关闭，{0}</value>
+  </data>
+  <data name="StewardReportCloseCompleted" xml:space="preserve">
+    <value>作为完成关闭</value>
+  </data>
+  <data name="StewardReportCloseNotPlanned" xml:space="preserve">
+    <value>作为不计划处理关闭</value>
+  </data>
+  <data name="StewardReportReopen" xml:space="preserve">
+    <value>重新打开</value>
+  </data>
+  <data name="StewardReportCloseCompletedTitleFormat" xml:space="preserve">
+    <value>将 {0} 作为完成关闭</value>
+  </data>
+  <data name="StewardReportCloseNotPlannedTitleFormat" xml:space="preserve">
+    <value>将 {0} 作为不计划处理关闭</value>
+  </data>
+  <data name="StewardReportReopenTitleFormat" xml:space="preserve">
+    <value>重新打开 {0}</value>
+  </data>
+  <data name="StewardReportCommentEffect" xml:space="preserve">
+    <value>Borea 会将你的文字发布为报告评论。</value>
+  </data>
+  <data name="StewardReportCloseCompletedEffect" xml:space="preserve">
+    <value>Borea 会发布你的评论，并将报告作为完成关闭。</value>
+  </data>
+  <data name="StewardReportCloseNotPlannedEffect" xml:space="preserve">
+    <value>Borea 会发布你的评论，并将报告作为不计划处理关闭。</value>
+  </data>
+  <data name="StewardReportReopenEffect" xml:space="preserve">
+    <value>Borea 会发布你的评论并重新打开报告。POLICY.md 允许管理员基于新证据重新打开报告，请说明新证据。</value>
+  </data>
+  <data name="StewardReportTextHint" xml:space="preserve">
+    <value>报告者和所有关注此报告的人都会在 GitHub 上看到这段文字。</value>
+  </data>
+  <data name="StewardReportCommented" xml:space="preserve">
+    <value>评论已提交至 GitHub。</value>
+  </data>
+  <data name="StewardReportClosed" xml:space="preserve">
+    <value>报告已关闭。</value>
+  </data>
+  <data name="StewardReportReopened" xml:space="preserve">
+    <value>报告已重新打开。</value>
+  </data>
+  <data name="StewardReportRefusedClosed" xml:space="preserve">
+    <value>Borea 读取报告后，有人将其关闭了。Borea 正在重新读取报告。</value>
+  </data>
+  <data name="StewardReportRefusedOpen" xml:space="preserve">
+    <value>Borea 读取报告后，有人将其重新打开了。Borea 正在重新读取报告。</value>
+  </data>
+  <data name="StewardReportNotFound" xml:space="preserve">
+    <value>GitHub 未在 KSAModding/content-index 中找到此报告。它已被移动或删除。</value>
+  </data>
+  <data name="StewardReportNoIssuesPermission" xml:space="preserve">
+    <value>GitHub 拒绝了更改，可能是因为 Borea GitHub 应用尚无 Issues 权限。请改为在 GitHub 上回复。你的文字会保留在此，可供复制。</value>
+  </data>
+  <data name="StewardTabWatcher" xml:space="preserve">
+    <value>监测器</value>
+  </data>
+  <data name="StewardWatcherHint" xml:space="preserve">
+    <value>KSAModding/content-index-releases 的监测器及其看门狗保持打开的问题。监测器每 10 分钟及索引每次变更后运行一次。问题解决后，对应问题会自动关闭。</value>
+  </data>
+  <data name="StewardWatcherBackfill" xml:space="preserve">
+    <value>较早发布版本的回填由 GitHub 上的监测器工作流执行。</value>
+  </data>
+  <data name="StewardWatcherWorkflow" xml:space="preserve">
+    <value>打开监测器工作流</value>
+  </data>
+  <data name="StewardWatcherLoading" xml:space="preserve">
+    <value>正在从 GitHub 读取问题...</value>
+  </data>
+  <data name="StewardWatcherTicking" xml:space="preserve">
+    <value>监测器正在正常运行，看门狗没有未关闭的问题。</value>
+  </data>
+  <data name="StewardWatcherNotTicking" xml:space="preserve">
+    <value>看门狗报告监测器未运行，因此不会为新版本生成发布记录。</value>
+  </data>
+  <data name="StewardWatcherListings" xml:space="preserve">
+    <value>监测器报告的条目</value>
+  </data>
+  <data name="StewardWatcherListingsEmpty" xml:space="preserve">
+    <value>监测器未报告任何条目。</value>
+  </data>
+  <data name="StewardWatcherNoListing" xml:space="preserve">
+    <value>问题中未指定条目。</value>
+  </data>
+  <data name="StewardWatcherUnknownListing" xml:space="preserve">
+    <value>不在 Borea 已读取的内容索引中。</value>
+  </data>
+  <data name="StewardWatcherUpdatedFormat" xml:space="preserve">
+    <value>更新于 {0}</value>
+  </data>
+  <data name="StewardWatcherFailedFormat" xml:space="preserve">
+    <value>无法读取 {0} 的问题。{1}</value>
+  </data>
+  <data name="StewardWatcherForbidden" xml:space="preserve">
+    <value>GitHub 拒绝了访问。</value>
+  </data>
+  <data name="StewardWatcherGone" xml:space="preserve">
+    <value>下载服务器上已不存在的发布版本</value>
+  </data>
+  <data name="StewardWatcherGoneHint" xml:space="preserve">
+    <value>监测器发现压缩包已从下载服务器消失，因此带有 download.unavailable_since 标记的发布版本。Borea 不再提供这些版本的新安装，已安装的副本会保留。只有监测器能设置和移除此标记，修订不会改变它。此列表来自 Borea 已读取的内容索引。</value>
+  </data>
+  <data name="StewardWatcherGoneEmpty" xml:space="preserve">
+    <value>没有从下载服务器消失的发布版本。</value>
+  </data>
+  <data name="StewardWatcherGoneFailedFormat" xml:space="preserve">
+    <value>无法读取内容索引。{0}</value>
+  </data>
+  <data name="StewardTabStatus" xml:space="preserve">
+    <value>状态</value>
+  </data>
+  <data name="StewardStatusHint" xml:space="preserve">
+    <value>内容索引的 index-status.toml 中记录的状态。每次更改都会在 KSAModding/content-index 中创建 PR，管理员合并后才会生效。</value>
+  </data>
+  <data name="StewardStatusLoading" xml:space="preserve">
+    <value>正在从 GitHub 读取 index-status.toml...</value>
+  </data>
+  <data name="StewardStatusEmpty" xml:space="preserve">
+    <value>没有已设置状态的条目或整合包。</value>
+  </data>
+  <data name="StewardStatusPullRequests" xml:space="preserve">
+    <value>修改 index-status.toml 的未关闭 PR</value>
+  </data>
+  <data name="StewardStatusConflict" xml:space="preserve">
+    <value>存在冲突，GitHub 无法合并</value>
+  </data>
+  <data name="StewardPullRequestByFormat" xml:space="preserve">
+    <value>#{0} {1}，由 {2} 提交</value>
+  </data>
+  <data name="StewardStateDelisted" xml:space="preserve">
+    <value>已下架</value>
+  </data>
+  <data name="StewardStateDisputed" xml:space="preserve">
+    <value>存在争议</value>
+  </data>
+  <data name="StewardStateRetracted" xml:space="preserve">
+    <value>已撤回</value>
+  </data>
+  <data name="StewardVersionFormat" xml:space="preserve">
+    <value>版本 {0}</value>
+  </data>
+  <data name="StewardSinceFormat" xml:space="preserve">
+    <value>自 {0} 起</value>
+  </data>
+  <data name="StewardLift" xml:space="preserve">
+    <value>解除</value>
+  </data>
+  <data name="StewardDispute" xml:space="preserve">
+    <value>设为有争议</value>
+  </data>
+  <data name="StewardDelist" xml:space="preserve">
+    <value>下架</value>
+  </data>
+  <data name="StewardRetract" xml:space="preserve">
+    <value>撤回此版本</value>
+  </data>
+  <data name="StewardDisputeTitleFormat" xml:space="preserve">
+    <value>将 {0} 设为有争议</value>
+  </data>
+  <data name="StewardDelistTitleFormat" xml:space="preserve">
+    <value>下架 {0}</value>
+  </data>
+  <data name="StewardRetractTitleFormat" xml:space="preserve">
+    <value>撤回 {0} {1}</value>
+  </data>
+  <data name="StewardLiftTitleFormat" xml:space="preserve">
+    <value>解除 {0} 的状态</value>
+  </data>
+  <data name="StewardDisputeEffect" xml:space="preserve">
+    <value>条目仍保留在索引中，Borea 会显示警告及原因。</value>
+  </data>
+  <data name="StewardDelistEffect" xml:space="preserve">
+    <value>条目及其发布版本将移出索引，不再提供安装。玩家计算机上的内容不会被删除。</value>
+  </data>
+  <data name="StewardRetractEffect" xml:space="preserve">
+    <value>不再提供此整合包版本，其他版本会保留。</value>
+  </data>
+  <data name="StewardLiftEffectFormat" xml:space="preserve">
+    <value>状态“{0}”将在下一份索引快照中移除。</value>
+  </data>
+  <data name="StewardPullRequestExplanation" xml:space="preserve">
+    <value>Borea 会在 KSAModding/content-index 中创建修改 index-status.toml 的 PR。管理员合并前不会生效。</value>
+  </data>
+  <data name="StewardReason" xml:space="preserve">
+    <value>原因</value>
+  </data>
+  <data name="StewardReasonHint" xml:space="preserve">
+    <value>请写一句话。Borea 显示此状态时，玩家会看到该原因。</value>
+  </data>
+  <data name="StewardLiftReasonHint" xml:space="preserve">
+    <value>请为 PR 写一句说明。</value>
+  </data>
+  <data name="StewardChecking" xml:space="preserve">
+    <value>正在检查 GitHub 上的 index-status.toml...</value>
+  </data>
+  <data name="StewardOpenPullRequestsFormat" xml:space="preserve">
+    <value>PR {0} 也修改了 index-status.toml。后合并的 PR 会发生冲突。</value>
+  </data>
+  <data name="StewardOpenPullRequestsUnknown" xml:space="preserve">
+    <value>Borea 无法检查是否有其他未关闭 PR 正在修改 index-status.toml。</value>
+  </data>
+  <data name="StewardOwnerWarning" xml:space="preserve">
+    <value>你是所有者。POLICY.md 要求涉及下架或争议事项的管理员交由其他管理员处理。</value>
+  </data>
+  <data name="StewardOwnerOwnRequest" xml:space="preserve">
+    <value>你是所有者，因此这属于你本人的请求，POLICY.md 允许管理员执行。</value>
+  </data>
+  <data name="StewardMentionFormat" xml:space="preserve">
+    <value>PR 会提及 {0}，从而通知所有者。</value>
+  </data>
+  <data name="StewardOpening" xml:space="preserve">
+    <value>正在创建 PR...</value>
+  </data>
+  <data name="StewardOpenedFormat" xml:space="preserve">
+    <value>PR #{0} 已创建，等待管理员合并。</value>
+  </data>
+  <data name="StewardRefusedInvalidReason" xml:space="preserve">
+    <value>请将原因写成一行中的一句话。</value>
+  </data>
+  <data name="StewardRefusedMissingVersion" xml:space="preserve">
+    <value>撤回时需指定整合包版本。</value>
+  </data>
+  <data name="StewardRefusedDuplicateFormat" xml:space="preserve">
+    <value>{0} 在 index-status.toml 中已有此状态或其他状态，请先解除。</value>
+  </data>
+  <data name="StewardRefusedUnknownIdFormat" xml:space="preserve">
+    <value>{0} 不是内容索引中的条目或整合包。</value>
+  </data>
+  <data name="StewardRefusedNotAPackFormat" xml:space="preserve">
+    <value>{0} 不是整合包。只有整合包版本可以撤回。条目的发布版本需在 content-index-releases 中标记为停止提供。</value>
+  </data>
+  <data name="StewardRefusedUnknownVersionFormat" xml:space="preserve">
+    <value>内容索引中的 {0} 没有版本 {1}。</value>
+  </data>
+  <data name="StewardRefusedNotInFile" xml:space="preserve">
+    <value>index-status.toml 中已无此状态。请刷新列表。</value>
+  </data>
+  <data name="StewardErrorSignedOut" xml:space="preserve">
+    <value>GitHub 登录已失效，请在设置中重新登录。</value>
+  </data>
+  <data name="StewardErrorNotSteward" xml:space="preserve">
+    <value>GitHub 不允许此账户绕过 content-index 的规则，因此无法执行此操作。</value>
+  </data>
+  <data name="StewardErrorNotFound" xml:space="preserve">
+    <value>GitHub 未找到 KSAModding/content-index 或其中的 index-status.toml。</value>
+  </data>
+  <data name="StewardErrorRefusedFormat" xml:space="preserve">
+    <value>GitHub 拒绝了更改。{0}</value>
+  </data>
+  <data name="StewardErrorForbidden" xml:space="preserve">
+    <value>GitHub 拒绝访问 KSAModding/content-index。</value>
+  </data>
+  <data name="StewardErrorNetwork" xml:space="preserve">
+    <value>无法连接 GitHub，请重试。</value>
+  </data>
+  <data name="StewardErrorUnreadableFormat" xml:space="preserve">
+    <value>index-status.toml 的格式无法由 Borea 编辑，请在 GitHub 上修改。{0}</value>
+  </data>
+  <data name="StewardErrorUnexpected" xml:space="preserve">
+    <value>GitHub 返回了 Borea 无法识别的响应。</value>
+  </data>
+  <data name="StewardAmend" xml:space="preserve">
+    <value>修订发布信息</value>
+  </data>
+  <data name="StewardAmendTitleFormat" xml:space="preserve">
+    <value>修订 {0} 的发布信息</value>
+  </data>
+  <data name="StewardAmendExplanation" xml:space="preserve">
+    <value>Borea 只修改所选发布版本声明的信息，并在 KSAModding/content-index-releases 中创建一个 PR。该 PR 会在队列中等待 validate 通过，再由管理员合并。</value>
+  </data>
+  <data name="StewardAmendLoading" xml:space="preserve">
+    <value>正在从 GitHub 读取发布版本...</value>
+  </data>
+  <data name="StewardAmendReleases" xml:space="preserve">
+    <value>发布版本</value>
+  </data>
+  <data name="StewardAmendChecked" xml:space="preserve">
+    <value>已勾选的发布版本</value>
+  </data>
+  <data name="StewardAmendUpTo" xml:space="preserve">
+    <value>截至以下版本（含）的所有发布版本</value>
+  </data>
+  <data name="StewardAmendAll" xml:space="preserve">
+    <value>所有发布版本</value>
+  </data>
+  <data name="StewardAmendChange" xml:space="preserve">
+    <value>更改</value>
+  </data>
+  <data name="StewardAmendOnBehalf" xml:space="preserve">
+    <value>代表作者</value>
+  </data>
+  <data name="StewardAmendOnBehalfHint" xml:space="preserve">
+    <value>管理员自行修订时只能收紧发布版本的适用范围。根据作者请求修订时，也可以像作者本人一样放宽范围。PR 会注明该请求，管理员只有确认请求来自作者后才会合并。</value>
+  </data>
+  <data name="StewardAmendAuthorRequest" xml:space="preserve">
+    <value>作者请求的链接</value>
+  </data>
+  <data name="StewardAmendInvalidAuthorRequest" xml:space="preserve">
+    <value>请提供指向作者请求的一个 https 链接，例如问题或论坛帖子。</value>
+  </data>
+  <data name="StewardAmendGameMin" xml:space="preserve">
+    <value>提高最低游戏版本（game_min）</value>
+  </data>
+  <data name="StewardAmendGameMinAuthor" xml:space="preserve">
+    <value>提高或降低最低游戏版本（game_min）</value>
+  </data>
+  <data name="StewardAmendGameMax" xml:space="preserve">
+    <value>添加或降低最高游戏版本（game_max）</value>
+  </data>
+  <data name="StewardAmendGameMaxAuthor" xml:space="preserve">
+    <value>添加、提高或降低最高游戏版本（game_max）</value>
+  </data>
+  <data name="StewardAmendRemoveGameMax" xml:space="preserve">
+    <value>移除 game_max</value>
+  </data>
+  <data name="StewardAmendGameHint" xml:space="preserve">
+    <value>游戏构建版本，例如 2026.8.22.5348；也可使用月份，例如 2026.8，其首个构建作为 game_min，最后一个构建作为 game_max。</value>
+  </data>
+  <data name="StewardAmendNowFormat" xml:space="preserve">
+    <value>当前：{0}</value>
+  </data>
+  <data name="StewardAmendNowDiffersFormat" xml:space="preserve">
+    <value>当前各发布版本不同：{0}</value>
+  </data>
+  <data name="StewardAmendNotSet" xml:space="preserve">
+    <value>未设置</value>
+  </data>
+  <data name="StewardAmendNarrows" xml:space="preserve">
+    <value>这会收紧发布版本的适用范围。</value>
+  </data>
+  <data name="StewardAmendWidens" xml:space="preserve">
+    <value>这会放宽发布版本的适用范围，需要勾选“代表作者”。</value>
+  </data>
+  <data name="StewardAmendWidensOnBehalf" xml:space="preserve">
+    <value>这会代表作者放宽发布版本的适用范围。</value>
+  </data>
+  <data name="StewardAmendSame" xml:space="preserve">
+    <value>发布版本已声明此信息。</value>
+  </data>
+  <data name="StewardAmendStatedFormat" xml:space="preserve">
+    <value>发布信息中：{0}</value>
+  </data>
+  <data name="StewardAmendReadingFiles" xml:space="preserve">
+    <value>正在从 GitHub 读取发布信息的值...</value>
+  </data>
+  <data name="StewardAmendNowMark" xml:space="preserve">
+    <value>当前</value>
+  </data>
+  <data name="StewardAmendNotStated" xml:space="preserve">
+    <value>这些发布版本未声明此依赖，请使用“添加缺失依赖”添加。</value>
+  </data>
+  <data name="StewardAmendSelectForValues" xml:space="preserve">
+    <value>勾选发布版本后，可查看其当前声明，以及更改某个值的影响。</value>
+  </data>
+  <data name="StewardAmendLoaderMin" xml:space="preserve">
+    <value>提高加载器最低版本</value>
+  </data>
+  <data name="StewardAmendLoaderMinAuthor" xml:space="preserve">
+    <value>提高或降低加载器最低版本</value>
+  </data>
+  <data name="StewardAmendRemoveLoaderMin" xml:space="preserve">
+    <value>移除加载器最低版本</value>
+  </data>
+  <data name="StewardAmendLoaderMax" xml:space="preserve">
+    <value>添加或降低加载器最高版本</value>
+  </data>
+  <data name="StewardAmendLoaderMaxAuthor" xml:space="preserve">
+    <value>添加、提高或降低加载器最高版本</value>
+  </data>
+  <data name="StewardAmendRemoveLoaderMax" xml:space="preserve">
+    <value>移除加载器最高版本</value>
+  </data>
+  <data name="StewardAmendYank" xml:space="preserve">
+    <value>停止提供这些发布版本</value>
+  </data>
+  <data name="StewardAmendUnyank" xml:space="preserve">
+    <value>恢复提供</value>
+  </data>
+  <data name="StewardAmendChangeOs" xml:space="preserve">
+    <value>更改平台（os）</value>
+  </data>
+  <data name="StewardAmendOsHint" xml:space="preserve">
+    <value>勾选这些发布版本可运行的所有平台。全部不选表示发布信息未限定平台。</value>
+  </data>
+  <data name="StewardAmendDependencies" xml:space="preserve">
+    <value>依赖</value>
+  </data>
+  <data name="StewardAmendDependenciesHint" xml:space="preserve">
+    <value>添加缺失依赖时需指定其类型。对已声明的依赖，可收紧其最低或最高版本限制。</value>
+  </data>
+  <data name="StewardAmendDependenciesHintAuthor" xml:space="preserve">
+    <value>添加缺失依赖时需指定其类型。对已声明的依赖，可更改类型、最低或最高版本，或移除最低、最高版本限制。对于条目中声明的依赖，若发布压缩包的 mod.toml 未声明它，则可以移除；Borea 会先读取该文件。</value>
+  </data>
+  <data name="StewardAmendAddDependency" xml:space="preserve">
+    <value>添加缺失依赖</value>
+  </data>
+  <data name="StewardAmendBoundDependency" xml:space="preserve">
+    <value>收紧依赖限制</value>
+  </data>
+  <data name="StewardAmendBoundDependencyAuthor" xml:space="preserve">
+    <value>修改依赖</value>
+  </data>
+  <data name="StewardAmendKindUnchanged" xml:space="preserve">
+    <value>类型不变</value>
+  </data>
+  <data name="StewardAmendRemoveMin" xml:space="preserve">
+    <value>移除最低版本</value>
+  </data>
+  <data name="StewardAmendRemoveMax" xml:space="preserve">
+    <value>移除最高版本</value>
+  </data>
+  <data name="StewardAmendRemoveDependency" xml:space="preserve">
+    <value>移除此依赖</value>
+  </data>
+  <data name="StewardAmendReadingArchive" xml:space="preserve">
+    <value>正在读取发布压缩包，检查其 mod.toml 是否声明了此依赖。</value>
+  </data>
+  <data name="StewardAmendDeclaredByArchive" xml:space="preserve">
+    <value>发布压缩包的 mod.toml 声明了此依赖，因此不能移除。</value>
+  </data>
+  <data name="StewardAmendArchiveUnreadable" xml:space="preserve">
+    <value>无法读取发布压缩包，因此不能移除此依赖。</value>
+  </data>
+  <data name="StewardAmendReasonHint" xml:space="preserve">
+    <value>请为 PR 写一句说明。停止提供版本时，玩家也会看到该说明。</value>
+  </data>
+  <data name="StewardAmendPreview" xml:space="preserve">
+    <value>预览</value>
+  </data>
+  <data name="StewardAmendPreviewing" xml:space="preserve">
+    <value>正在从 GitHub 读取发布文件...</value>
+  </data>
+  <data name="StewardAmendPreviewHeading" xml:space="preserve">
+    <value>变更内容</value>
+  </data>
+  <data name="StewardAmendUnchanged" xml:space="preserve">
+    <value>已声明此信息。</value>
+  </data>
+  <data name="StewardAmendNothing" xml:space="preserve">
+    <value>所有所选发布版本都已声明此信息，无需提交。</value>
+  </data>
+  <data name="StewardAmendChanged" xml:space="preserve">
+    <value>自预览后，GitHub 上的发布文件已更改。请查看新的预览，再创建 PR。</value>
+  </data>
+  <data name="StewardAmendRefusedInvalidChange" xml:space="preserve">
+    <value>Borea 无法解析此更改，请检查版本和 ID。</value>
+  </data>
+  <data name="StewardAmendRefusedMonthNotOver" xml:space="preserve">
+    <value>game_max 使用的月份必须已经结束，才能确定该月的最后一个构建。请指定构建版本。</value>
+  </data>
+  <data name="StewardAmendRefusedUnknownMonth" xml:space="preserve">
+    <value>游戏发布列表在该月没有构建版本。</value>
+  </data>
+  <data name="StewardAmendRefusedUnknownRelease" xml:space="preserve">
+    <value>某个所选发布版本在 GitHub 上没有发布文件。</value>
+  </data>
+  <data name="StewardAmendNoReleases" xml:space="preserve">
+    <value>content-index-releases 尚未为此条目生成发布记录。</value>
+  </data>
+  <data name="StewardAmendRefusedNotStamperFile" xml:space="preserve">
+    <value>某个发布文件并非由发布记录生成器写入，请在 GitHub 上手动修改。</value>
+  </data>
+  <data name="StewardAmendRefusedNoLoader" xml:space="preserve">
+    <value>某个发布版本未声明加载器，因此没有可更改的加载器版本限制。</value>
+  </data>
+  <data name="StewardAmendRefusedNoDependency" xml:space="preserve">
+    <value>某个发布版本未声明此依赖，请作为缺失依赖添加。</value>
+  </data>
+  <data name="StewardAmendRefusedWidens" xml:space="preserve">
+    <value>这会放宽发布版本的适用范围。管理员自行修订时只能收紧范围。如需代表作者放宽，请勾选“代表作者”，并提供作者请求的链接。</value>
+  </data>
+  <data name="StewardAmendRefusedOutsideClass" xml:space="preserve">
+    <value>content-index-releases 的检查会拒绝此更改。</value>
+  </data>
+  <data name="StewardAmendRefusedUnreadableArchive" xml:space="preserve">
+    <value>无法读取发布压缩包，因此无法证明其 mod.toml 未声明被移除的依赖。</value>
+  </data>
+  <data name="StewardAmendErrorNotSteward" xml:space="preserve">
+    <value>GitHub 不允许此账户绕过 content-index-releases 的规则，因此无法执行此操作。</value>
+  </data>
+  <data name="StewardAmendErrorNotFound" xml:space="preserve">
+    <value>GitHub 未找到 KSAModding/content-index-releases 或其中的发布文件。</value>
+  </data>
+  <data name="StewardAmendErrorUnreadableFormat" xml:space="preserve">
+    <value>content-index-releases 中某个文件的格式无法由 Borea 读取。{0}</value>
+  </data>
+  <data name="SettingsGitHubSignOutHint" xml:space="preserve">
+    <value>退出登录后，Borea 会忘记访问凭据。如需撤销授权，请前往 GitHub。</value>
+  </data>
+  <data name="SettingsGitHubSignOut" xml:space="preserve">
+    <value>退出登录</value>
+  </data>
+  <data name="SettingsGitHubManageAccess" xml:space="preserve">
+    <value>在 GitHub 上管理访问权限</value>
+  </data>
+  <data name="SettingsGitHubStaySignedIn" xml:space="preserve">
+    <value>在此计算机上保持登录</value>
+  </data>
+  <data name="SettingsGitHubStaySignedInHint" xml:space="preserve">
+    <value>Borea 会将登录信息保存在系统凭据存储中，并在下次启动时重新登录。关闭此设置后，Borea 退出时即结束登录。</value>
+  </data>
+  <data name="SettingsGitHubResuming" xml:space="preserve">
+    <value>正在重新登录 GitHub...</value>
+  </data>
+  <data name="SettingsGitHubKeepUnsupported" xml:space="preserve">
+    <value>Borea 不支持此系统的凭据存储，因此退出 Borea 时即结束登录。</value>
+  </data>
+  <data name="SettingsGitHubKeepMissing" xml:space="preserve">
+    <value>未找到凭据存储（例如 Linux 上支持 Secret Service 的密钥环），因此退出 Borea 时即结束登录。</value>
+  </data>
+  <data name="SettingsGitHubKeepRefused" xml:space="preserve">
+    <value>系统凭据存储拒绝保存登录信息（例如已锁定），因此退出 Borea 时即结束登录。</value>
+  </data>
+  <data name="GitHubSignInTitle" xml:space="preserve">
+    <value>登录 GitHub</value>
+  </data>
+  <data name="GitHubSignInHint" xml:space="preserve">
+    <value>请在 GitHub 上输入此代码。随后 Borea 可以写入你的内容索引分支仓库，并向内容索引创建 PR。对于管理员，Borea 还可以审阅、合并和关闭内容索引的 PR，并写入其管理员分支。除此之外没有其他权限。访问授权会在 8 小时后过期。在设置中登录且开启“在此计算机上保持登录”时，Borea 会在每次启动时续期，直到你退出登录或在 GitHub 上撤销授权。</value>
+  </data>
+  <data name="GitHubSignInCodeWarning" xml:space="preserve">
+    <value>Borea 仅在此窗口中请求此代码，不会在其他地方请求。</value>
+  </data>
+  <data name="GitHubSignInGettingCode" xml:space="preserve">
+    <value>正在从 GitHub 获取代码...</value>
+  </data>
+  <data name="GitHubSignInCopyAndOpen" xml:space="preserve">
+    <value>复制代码并打开 GitHub</value>
+  </data>
+  <data name="GitHubSignInWaiting" xml:space="preserve">
+    <value>等待你在 GitHub 上确认...</value>
+  </data>
+  <data name="GitHubSignInExpired" xml:space="preserve">
+    <value>代码已过期，请重试以获取新代码。</value>
+  </data>
+  <data name="GitHubSignInDenied" xml:space="preserve">
+    <value>GitHub 上的登录请求被拒绝。</value>
+  </data>
+  <data name="GitHubSignInClientRejected" xml:space="preserve">
+    <value>GitHub 不接受此 Borea 构建。请更新 Borea 或报告此问题。</value>
+  </data>
+  <data name="GitHubSignInCodeRejected" xml:space="preserve">
+    <value>GitHub 无法识别此代码，请重试以获取新代码。</value>
+  </data>
+  <data name="GitHubSignInRequestRejected" xml:space="preserve">
+    <value>GitHub 拒绝了登录请求，请报告此问题。</value>
+  </data>
+  <data name="GitHubSignInDeviceFlowDisabled" xml:space="preserve">
+    <value>GitHub 上已为 Borea 关闭代码登录，请报告此问题。</value>
+  </data>
+  <data name="GitHubSignInNetworkError" xml:space="preserve">
+    <value>无法连接 GitHub，请检查网络后重试。</value>
+  </data>
+  <data name="GitHubSignInUnexpected" xml:space="preserve">
+    <value>GitHub 返回了 Borea 无法识别的响应，请稍后重试。</value>
+  </data>
+  <data name="LibraryFolderMoving" xml:space="preserve">
+    <value>正在更改内容库文件夹...</value>
+  </data>
+  <data name="LibraryFolderCopyingFormat" xml:space="preserve">
+    <value>正在复制文件 {0}/{1}（{2}/{3} MB）</value>
+  </data>
+  <data name="LibraryFolderRemovingOldFiles" xml:space="preserve">
+    <value>正在删除旧文件...</value>
+  </data>
+  <data name="LibraryFolderMovedFormat" xml:space="preserve">
+    <value>已将实例和备份移至 {0}。</value>
+  </data>
+  <data name="LibraryFolderMovedOldFilesRemainFormat" xml:space="preserve">
+    <value>已将实例和备份移至 {0}。Borea 未能删除 {1} 中的所有旧文件。</value>
+  </data>
+  <data name="LibraryFolderAdoptedFormat" xml:space="preserve">
+    <value>{0} 中已有内容库，Borea 现在使用该内容库。</value>
+  </data>
+  <data name="LibraryFolderCancelled" xml:space="preserve">
+    <value>移动已取消，内容库仍位于原处。</value>
+  </data>
+  <data name="LibraryFolderFailedFormat" xml:space="preserve">
+    <value>内容库文件夹未更改：{0}</value>
+  </data>
+  <data name="LibraryFolderReloadFailedFormat" xml:space="preserve">
+    <value>内容库现已位于 {0}，但 Borea 无法重新加载：{1} 请重启 Borea。</value>
+  </data>
+  <data name="LibraryFolderNotAbsoluteFormat" xml:space="preserve">
+    <value>{0} 不是绝对路径。</value>
+  </data>
+  <data name="LibraryFolderIsFileFormat" xml:space="preserve">
+    <value>{0} 是文件，不是文件夹。</value>
+  </data>
+  <data name="LibraryFolderCurrent" xml:space="preserve">
+    <value>内容库已位于此文件夹中。</value>
+  </data>
+  <data name="LibraryFolderInsideCurrentFormat" xml:space="preserve">
+    <value>请选择当前内容库文件夹 {0} 之外的文件夹。</value>
+  </data>
+  <data name="LibraryFolderContainsCurrentFormat" xml:space="preserve">
+    <value>请选择不包含当前内容库文件夹 {0} 的文件夹。</value>
+  </data>
+  <data name="LibraryFolderInsideBoreaFolderFormat" xml:space="preserve">
+    <value>请选择 Borea 自身的文件夹 {0}，或其外部的文件夹。</value>
+  </data>
+  <data name="LibraryFolderContainsBoreaFolderFormat" xml:space="preserve">
+    <value>请选择不包含 Borea 自身文件夹 {0} 的文件夹。</value>
+  </data>
+  <data name="LibraryFolderInsideGame" xml:space="preserve">
+    <value>请选择游戏文件夹之外的文件夹。</value>
+  </data>
+  <data name="LibraryFolderInsideProfile" xml:space="preserve">
+    <value>请选择 My Games/Kitten Space Agency 之外的文件夹。</value>
+  </data>
+  <data name="LibraryFolderNotWritableFormat" xml:space="preserve">
+    <value>Borea 无法创建或写入 {0}。</value>
+  </data>
+  <data name="LibraryFolderTargetNotEmptyFormat" xml:space="preserve">
+    <value>{0} 中已有 Instances、Backups 或 Static Mod Files 文件夹，却没有 Borea 可读取的实例。请选择其他文件夹。</value>
+  </data>
+  <data name="LibraryFolderBothHaveInstancesFormat" xml:space="preserve">
+    <value>{0} 和 {1} 都包含实例，Borea 不会合并内容库。</value>
+  </data>
+  <data name="LibraryFolderGameRunning" xml:space="preserve">
+    <value>游戏正在运行。请先关闭游戏，再更改内容库文件夹。</value>
+  </data>
+  <data name="LibraryFolderBoreaRunning" xml:space="preserve">
+    <value>另一个 Borea 窗口或命令正在运行。请先将其关闭，再更改内容库文件夹。</value>
+  </data>
+  <data name="LibraryFolderInstanceBusy" xml:space="preserve">
+    <value>正在更改某个实例，请等待操作完成后重试。</value>
+  </data>
+  <data name="LibraryFolderWaitForTask" xml:space="preserve">
+    <value>请等 Borea 完成当前任务后再更改内容库文件夹。</value>
+  </data>
+  <data name="LibraryFolderBusy" xml:space="preserve">
+    <value>Borea 正在移动内容库文件夹，请等待完成后重试。</value>
+  </data>
+  <data name="UpdateAvailable" xml:space="preserve">
+    <value>有新的 Borea 版本可用：</value>
+  </data>
+  <data name="UpdatePreRelease" xml:space="preserve">
+    <value>预发布版</value>
+  </data>
+  <data name="UpdateViewRelease" xml:space="preserve">
+    <value>查看发布版本</value>
+  </data>
+  <data name="UpdateSeeMore" xml:space="preserve">
+    <value>查看更多</value>
+  </data>
+  <data name="UpdateDismiss" xml:space="preserve">
+    <value>忽略</value>
+  </data>
+  <data name="UpdateNotesTitle" xml:space="preserve">
+    <value>Borea 新版本</value>
+  </data>
+  <data name="UpdateInstalled" xml:space="preserve">
+    <value>已安装</value>
+  </data>
+  <data name="UpdateNoNotes" xml:space="preserve">
+    <value>此发布版本没有说明。</value>
+  </data>
+  <data name="SelfUpdateNow" xml:space="preserve">
+    <value>立即更新</value>
+  </data>
+  <data name="SelfUpdateDownloadingFormat" xml:space="preserve">
+    <value>正在下载 Borea {0}（{1}%）</value>
+  </data>
+  <data name="SelfUpdateVerifyingFormat" xml:space="preserve">
+    <value>正在校验 Borea {0} 的下载文件</value>
+  </data>
+  <data name="SelfUpdateUnpackingFormat" xml:space="preserve">
+    <value>正在解压 Borea {0}</value>
+  </data>
+  <data name="SelfUpdateInstallingFormat" xml:space="preserve">
+    <value>正在安装 Borea {0}</value>
+  </data>
+  <data name="SelfUpdateReadyFormat" xml:space="preserve">
+    <value>Borea {0} 已就绪，正在启动新构建。</value>
+  </data>
+  <data name="SelfUpdatePackageManagedFormat" xml:space="preserve">
+    <value>Borea 由 {0} 安装，请通过 {0} 更新。</value>
+  </data>
+  <data name="SelfUpdatePackageManaged" xml:space="preserve">
+    <value>Borea 由软件包管理器安装，请使用该管理器更新。</value>
+  </data>
+  <data name="SelfUpdateReadOnly" xml:space="preserve">
+    <value>Borea 无法写入自身文件夹，因此无法替换自身。</value>
+  </data>
+  <data name="SelfUpdateNotAReleaseBuild" xml:space="preserve">
+    <value>此构建并非来自发布压缩包，因此无法替换自身。</value>
+  </data>
+  <data name="SelfUpdateUnsupportedPlatform" xml:space="preserve">
+    <value>Borea 未提供适用于此系统的发布版本。</value>
+  </data>
+  <data name="SelfUpdateDownloadFailed" xml:space="preserve">
+    <value>下载失败，Borea 未发生更改。</value>
+  </data>
+  <data name="SelfUpdateChecksumFailed" xml:space="preserve">
+    <value>下载文件与发布版本的校验和不符，Borea 未发生更改。</value>
+  </data>
+  <data name="SelfUpdateUnpackFailed" xml:space="preserve">
+    <value>无法解压新构建，Borea 未发生更改。</value>
+  </data>
+  <data name="SelfUpdateInstallFailed" xml:space="preserve">
+    <value>新构建无法替换当前构建，Borea 未发生更改。</value>
+  </data>
+  <data name="SelfUpdateRestoreFailedFormat" xml:space="preserve">
+    <value>Borea 无法恢复程序文件。请在 Borea 的运行文件夹中将 {0} 重命名为 {1}，以便再次启动。</value>
+  </data>
+  <data name="SelfUpdateStartAgainFormat" xml:space="preserve">
+    <value>Borea {0} 已安装到位，请关闭并重新启动 Borea 以使用新版本。</value>
+  </data>
+  <data name="GameBuildAvailable" xml:space="preserve">
+    <value>有新的 KSA 构建可用：</value>
+  </data>
+  <data name="LoaderUpdateUrgentFormat" xml:space="preserve">
+    <value>{0} {1} 不支持 KSA {2}，但 {0} {3} 支持。</value>
+  </data>
+  <data name="LoaderUpdateNoneFormat" xml:space="preserve">
+    <value>{0} {1} 不支持 KSA {2}，且 {0} 尚无支持它的新版本。</value>
+  </data>
+  <data name="LoaderNeedsNewerGameFormat" xml:space="preserve">
+    <value>{0} {1} 需要比 {2} 更新的 KSA 构建，请先更新 KSA 再游玩。</value>
+  </data>
+  <data name="LoaderUpdateAvailableFormat" xml:space="preserve">
+    <value>{0} {1} 已可用。</value>
+  </data>
+  <data name="LoaderUpdateActionFormat" xml:space="preserve">
+    <value>将 {0} 更新至 {1}</value>
+  </data>
+  <data name="LoaderUpdateGameRunning" xml:space="preserve">
+    <value>请先关闭 KSA，Borea 无法在游戏运行时更新模组加载器。</value>
+  </data>
+  <data name="GameBuildDownload" xml:space="preserve">
+    <value>下载</value>
+  </data>
+  <data name="GamePatchNotesTitle" xml:space="preserve">
+    <value>KSA 更新说明</value>
+  </data>
+  <data name="GamePatchNotesEmpty" xml:space="preserve">
+    <value>游戏文件夹中没有更新说明。</value>
+  </data>
+  <data name="GamePatchNotesNotInstalled" xml:space="preserve">
+    <value>未安装</value>
+  </data>
+  <data name="GamePatchNotesLoading" xml:space="preserve">
+    <value>正在加载较新构建的说明...</value>
+  </data>
+  <data name="GamePatchNotesLoadFailed" xml:space="preserve">
+    <value>无法加载较新构建的说明。</value>
+  </data>
+  <data name="GamePatchNotesCappedFormat" xml:space="preserve">
+    <value>仅显示最新的 {0} 个构建。</value>
+  </data>
+  <data name="GameShapeBrokenTitle" xml:space="preserve">
+    <value>KSA 的结构与 Borea 预期不同</value>
+  </data>
+  <data name="GameShapeBrokenFormat" xml:space="preserve">
+    <value>KSA {0} 的结构与 Borea 预期不同，更新 Borea 前可能无法安装或启动。未通过的检查：{1}</value>
+  </data>
+  <data name="GameShapeBrokenUnknownBuildFormat" xml:space="preserve">
+    <value>此 KSA 安装的结构与 Borea 预期不同，更新 Borea 前可能无法安装或启动。未通过的检查：{0}</value>
+  </data>
+  <data name="GameShapeUntestedTitle" xml:space="preserve">
+    <value>未经测试的 KSA 构建</value>
+  </data>
+  <data name="GameShapeUntestedFormat" xml:space="preserve">
+    <value>Borea 尚未针对 KSA {0} 进行测试，该版本比 {1} 更新。如有问题，请告知我们。</value>
+  </data>
+  <data name="GameShapeReport" xml:space="preserve">
+    <value>报告问题</value>
+  </data>
+  <data name="GameAssumptionGameAssembly" xml:space="preserve">
+    <value>KSA.dll 中的构建版本</value>
+  </data>
+  <data name="GameAssumptionContentManifest" xml:space="preserve">
+    <value>游戏的内容清单</value>
+  </data>
+  <data name="GameAssumptionPatchNotes" xml:space="preserve">
+    <value>游戏文件夹中的更新说明</value>
+  </data>
+  <data name="GameAssumptionProfileLayout" xml:space="preserve">
+    <value>用户配置目录的文件夹结构</value>
+  </data>
+  <data name="GameAssumptionProfileManifest" xml:space="preserve">
+    <value>指定加载哪些模组的清单</value>
+  </data>
+  <data name="GameAssumptionModFolder" xml:space="preserve">
+    <value>模组文件夹</value>
+  </data>
+  <data name="GameAssumptionSessionLog" xml:space="preserve">
+    <value>游戏日志</value>
+  </data>
+  <data name="AnnouncementOpenLink" xml:space="preserve">
+    <value>打开链接</value>
+  </data>
+  <data name="SystemDefaultRegionalFormat" xml:space="preserve">
+    <value>系统默认</value>
+  </data>
+  <data name="ViewNotFoundFormat" xml:space="preserve">
+    <value>未找到视图：{0}</value>
+  </data>
+  <data name="HandoverFailed" xml:space="preserve">
+    <value>Borea 已打开，但现有窗口未接收此次启动请求。两者中只有一方以管理员身份启动时可能出现此问题。请关闭并重新启动 Borea。</value>
+  </data>
+  <data name="HomeCurrentInstall" xml:space="preserve">
+    <value>当前安装</value>
+  </data>
+  <data name="HomeRecentlyUpdated" xml:space="preserve">
+    <value>最近更新</value>
+  </data>
+  <data name="HomeDiscoverMods" xml:space="preserve">
+    <value>发现模组</value>
+  </data>
+  <data name="HomeNoGameVersion" xml:space="preserve">
+    <value>尚未设置游戏</value>
+  </data>
+  <data name="HomeSetupNotSaved" xml:space="preserve">
+    <value>Borea 尚不知道游戏位置。</value>
+  </data>
+  <data name="HomeSetupFolderMissing" xml:space="preserve">
+    <value>游戏文件夹已不存在。</value>
+  </data>
+  <data name="HomeNoInstance" xml:space="preserve">
+    <value>尚无实例</value>
+  </data>
+  <data name="HomeNoActiveInstance" xml:space="preserve">
+    <value>无活动实例</value>
+  </data>
+  <data name="HomeInstanceSourceCustom" xml:space="preserve">
+    <value>自定义</value>
+  </data>
+  <data name="HomeUpdate" xml:space="preserve">
+    <value>1 项更新</value>
+  </data>
+  <data name="HomeUpdatesFormat" xml:space="preserve">
+    <value>{0} 项更新</value>
+  </data>
+  <data name="ContentTypeMod" xml:space="preserve">
+    <value>模组</value>
+  </data>
+  <data name="LibraryNewInstancePlaceholder" xml:space="preserve">
+    <value>新实例名称</value>
+  </data>
+  <data name="LibraryCreate" xml:space="preserve">
+    <value>创建</value>
+  </data>
+  <data name="LibraryActivate" xml:space="preserve">
+    <value>激活</value>
+  </data>
+  <data name="LibraryRename" xml:space="preserve">
+    <value>重命名</value>
+  </data>
+  <data name="LibraryLaunchArguments" xml:space="preserve">
+    <value>启动参数</value>
+  </data>
+  <data name="LibraryOpenFolder" xml:space="preserve">
+    <value>打开文件夹</value>
+  </data>
+  <data name="LibraryDelete" xml:space="preserve">
+    <value>删除</value>
+  </data>
+  <data name="LibrarySave" xml:space="preserve">
+    <value>保存</value>
+  </data>
+  <data name="LibraryCancel" xml:space="preserve">
+    <value>取消</value>
+  </data>
+  <data name="LibraryEmpty" xml:space="preserve">
+    <value>尚无实例，请创建一个以开始使用。</value>
+  </data>
+  <data name="LibraryNewInstance" xml:space="preserve">
+    <value>新建实例</value>
+  </data>
+  <data name="LibraryImportFromProfile" xml:space="preserve">
+    <value>从游戏用户配置目录导入</value>
+  </data>
+  <data name="LibraryImportFromProfileToolTip" xml:space="preserve">
+    <value>将游戏用户配置目录中的模组复制到新实例中。</value>
+  </data>
+  <data name="LibraryNeverPlayed" xml:space="preserve">
+    <value>从未游玩</value>
+  </data>
+  <data name="LibraryLastPlayedFormat" xml:space="preserve">
+    <value>上次游玩于 {0}</value>
+  </data>
+  <data name="LibraryModCountFormat" xml:space="preserve">
+    <value>已安装模组：{0}</value>
+  </data>
+  <data name="LibraryNowActiveFormat" xml:space="preserve">
+    <value>{0} 现为活动实例。</value>
+  </data>
+  <data name="LibrarySortName" xml:space="preserve">
+    <value>名称</value>
+  </data>
+  <data name="LibrarySortLastPlayed" xml:space="preserve">
+    <value>上次游玩</value>
+  </data>
+  <data name="LibraryActiveHeading" xml:space="preserve">
+    <value>活动实例</value>
+  </data>
+  <data name="LibraryOtherInstancesHeading" xml:space="preserve">
+    <value>实例</value>
+  </data>
+  <data name="LibraryImportModList" xml:space="preserve">
+    <value>导入模组列表</value>
+  </data>
+  <data name="LibraryMoreActions" xml:space="preserve">
+    <value>更多操作</value>
+  </data>
+  <data name="LibraryDuplicate" xml:space="preserve">
+    <value>复制实例</value>
+  </data>
+  <data name="LibraryExportModList" xml:space="preserve">
+    <value>导出模组列表</value>
+  </data>
+  <data name="LibraryCopyModList" xml:space="preserve">
+    <value>复制模组列表</value>
+  </data>
+  <data name="LibraryMakePack" xml:space="preserve">
+    <value>从此实例制作整合包</value>
+  </data>
+  <data name="ModListDuplicateTitle" xml:space="preserve">
+    <value>复制实例</value>
+  </data>
+  <data name="ModListFileType" xml:space="preserve">
+    <value>Borea 模组列表</value>
+  </data>
+  <data name="ModListCopyNameFormat" xml:space="preserve">
+    <value>{0}（副本）</value>
+  </data>
+  <data name="ModListInstallCountFormat" xml:space="preserve">
+    <value>待安装模组：{0}</value>
+  </data>
+  <data name="ModListNotCopiedFormat" xml:space="preserve">
+    <value>{0} 不会被复制，因为此文件夹不是由 Borea 安装的。</value>
+  </data>
+  <data name="ModListNotCopiedManyFormat" xml:space="preserve">
+    <value>这些模组不会被复制，因为其文件夹不是由 Borea 安装的：{0}</value>
+  </data>
+  <data name="ModListUnknownFormat" xml:space="preserve">
+    <value>所有来源中均无 {0} {1}，因此 Borea 不会安装它。</value>
+  </data>
+  <data name="ModListUnreadableFormat" xml:space="preserve">
+    <value>{0} 不是 Borea 可读取的模组列表。{1}</value>
+  </data>
+  <data name="ModListNewerFormatFormat" xml:space="preserve">
+    <value>{0} 使用模组列表格式 {1}，请更新 Borea 后再导入。</value>
+  </data>
+  <data name="ModListExportedFormat" xml:space="preserve">
+    <value>已将 {0} 的模组列表保存为 {1}。</value>
+  </data>
+  <data name="ModListCopiedFormat" xml:space="preserve">
+    <value>已将 {0} 的模组列表复制到剪贴板。</value>
+  </data>
+  <data name="ModListNotExportedFormat" xml:space="preserve">
+    <value>模组列表不包含以下文件夹，因为它们不是由 Borea 安装的：{0}</value>
+  </data>
+  <data name="NavigationTasks" xml:space="preserve">
+    <value>任务</value>
+  </data>
+  <data name="NavigationSteward" xml:space="preserve">
+    <value>管理员工具</value>
+  </data>
+  <data name="TasksEmpty" xml:space="preserve">
+    <value>尚无任务。</value>
+  </data>
+  <data name="TaskIndexRefresh" xml:space="preserve">
+    <value>刷新内容索引</value>
+  </data>
+  <data name="TaskInstallFormat" xml:space="preserve">
+    <value>安装 {0}</value>
+  </data>
+  <data name="TaskUpdateFormat" xml:space="preserve">
+    <value>更新 {0}</value>
+  </data>
+  <data name="TaskUpdateAll" xml:space="preserve">
+    <value>更新所有模组</value>
+  </data>
+  <data name="TaskSelfUpdateFormat" xml:space="preserve">
+    <value>将 Borea 更新至 {0}</value>
+  </data>
+  <data name="TaskRemoveFormat" xml:space="preserve">
+    <value>移除 {0}</value>
+  </data>
+  <data name="TaskCreateInstanceFormat" xml:space="preserve">
+    <value>创建实例 {0}</value>
+  </data>
+  <data name="TaskReplaceFormat" xml:space="preserve">
+    <value>替换 {0}</value>
+  </data>
+  <data name="TaskManageFormat" xml:space="preserve">
+    <value>接管 {0}</value>
+  </data>
+  <data name="TaskLibraryFolderFormat" xml:space="preserve">
+    <value>将内容库移至 {0}</value>
+  </data>
+  <data name="TaskBackupRestoreFormat" xml:space="preserve">
+    <value>恢复 {0}</value>
+  </data>
+  <data name="TaskBackupDeleteFormat" xml:space="preserve">
+    <value>删除备份 {0}</value>
+  </data>
+  <data name="TaskWaiting" xml:space="preserve">
+    <value>等待中</value>
+  </data>
+  <data name="TaskRunning" xml:space="preserve">
+    <value>运行中</value>
+  </data>
+  <data name="TaskPaused" xml:space="preserve">
+    <value>已暂停</value>
+  </data>
+  <data name="TaskFinished" xml:space="preserve">
+    <value>已完成</value>
+  </data>
+  <data name="TaskStopped" xml:space="preserve">
+    <value>已停止</value>
+  </data>
+  <data name="TaskFailed" xml:space="preserve">
+    <value>失败</value>
+  </data>
+  <data name="TaskRetryModMissing" xml:space="preserve">
+    <value>此模组已不在实例中。</value>
+  </data>
+  <data name="ToastOpenInstance" xml:space="preserve">
+    <value>打开实例</value>
+  </data>
+  <data name="ToastAddedFormat" xml:space="preserve">
+    <value>已将 {0} 添加到 {1}</value>
+  </data>
+  <data name="ToastUpdatedFormat" xml:space="preserve">
+    <value>已在 {2} 中将 {0} 更新至 {1}</value>
+  </data>
+  <data name="ToastChangedFormat" xml:space="preserve">
+    <value>已在 {2} 中将 {0} 改为 {1}</value>
+  </data>
+  <data name="ToastUpdatedAllOneFormat" xml:space="preserve">
+    <value>已在 {0} 中更新 1 个模组</value>
+  </data>
+  <data name="ToastUpdatedAllFormat" xml:space="preserve">
+    <value>已在 {1} 中更新 {0} 个模组</value>
+  </data>
+  <data name="ToastRemovedFormat" xml:space="preserve">
+    <value>已从 {1} 中移除 {0}</value>
+  </data>
+  <data name="ToastLoaderInstalledFormat" xml:space="preserve">
+    <value>已安装 {0} {1}</value>
+  </data>
+  <data name="ToastInstanceCreatedFormat" xml:space="preserve">
+    <value>已创建实例 {0}</value>
+  </data>
+  <data name="ToastReplacedFormat" xml:space="preserve">
+    <value>已在 {1} 中替换 {0}</value>
+  </data>
+  <data name="ToastManagedFormat" xml:space="preserve">
+    <value>Borea 现在管理 {1} 中的 {0}</value>
+  </data>
+  <data name="ToastLibraryFolderChangedFormat" xml:space="preserve">
+    <value>内容库文件夹现为 {0}</value>
+  </data>
+  <data name="ToastBackupRestoredFormat" xml:space="preserve">
+    <value>已在 {1} 中恢复 {0}</value>
+  </data>
+  <data name="ToastBackupDeletedFormat" xml:space="preserve">
+    <value>已删除备份 {0}</value>
+  </data>
+  <data name="ToastInstallStoppedFormat" xml:space="preserve">
+    <value>已停止安装 {0}</value>
+  </data>
+  <data name="ToastLibraryFolderStopped" xml:space="preserve">
+    <value>已停止移动内容库</value>
+  </data>
+  <data name="ToastUpdateStoppedFormat" xml:space="preserve">
+    <value>已停止更新 {0}</value>
+  </data>
+  <data name="ToastUpdateAllStoppedFormat" xml:space="preserve">
+    <value>已停止更新 {0} 中的模组</value>
+  </data>
+  <data name="ToastStoppedInstalledFormat" xml:space="preserve">
+    <value>已安装 {0}/{1} 个模组</value>
+  </data>
+  <data name="ToastStoppedUpdatedFormat" xml:space="preserve">
+    <value>已更新 {0}/{1} 个模组</value>
+  </data>
+  <data name="ToastIndexRefreshed" xml:space="preserve">
+    <value>内容索引已刷新</value>
+  </data>
+  <data name="ToastIndexUpToDate" xml:space="preserve">
+    <value>内容索引已是最新</value>
+  </data>
+  <data name="ToastIndexRefreshFailed" xml:space="preserve">
+    <value>无法刷新内容索引</value>
+  </data>
+  <data name="ToastInstallFailedFormat" xml:space="preserve">
+    <value>无法安装 {0}</value>
+  </data>
+  <data name="ToastUpdateFailedFormat" xml:space="preserve">
+    <value>无法更新 {0}</value>
+  </data>
+  <data name="ToastSelfUpdateFailedFormat" xml:space="preserve">
+    <value>无法将 Borea 更新至 {0}</value>
+  </data>
+  <data name="ToastUpdateAllFailedFormat" xml:space="preserve">
+    <value>无法更新 {0} 中的模组</value>
+  </data>
+  <data name="ToastRemoveFailedFormat" xml:space="preserve">
+    <value>无法移除 {0}</value>
+  </data>
+  <data name="ToastCreateInstanceFailedFormat" xml:space="preserve">
+    <value>无法创建实例 {0}</value>
+  </data>
+  <data name="ToastReplaceFailedFormat" xml:space="preserve">
+    <value>无法替换 {0}</value>
+  </data>
+  <data name="ToastManageFailedFormat" xml:space="preserve">
+    <value>Borea 无法接管 {0} 的文件</value>
+  </data>
+  <data name="ToastLibraryFolderFailedFormat" xml:space="preserve">
+    <value>无法将内容库移至 {0}</value>
+  </data>
+  <data name="ToastBackupRestoreFailedFormat" xml:space="preserve">
+    <value>无法恢复 {0}</value>
+  </data>
+  <data name="ToastBackupDeleteFailedFormat" xml:space="preserve">
+    <value>无法删除备份 {0}</value>
+  </data>
+  <data name="ToastActivateFailedFormat" xml:space="preserve">
+    <value>无法激活 {0}</value>
+  </data>
+  <data name="ToastDeactivateFailedFormat" xml:space="preserve">
+    <value>无法停用 {0}</value>
+  </data>
+  <data name="ToastDeleteFailedFormat" xml:space="preserve">
+    <value>无法删除 {0}</value>
+  </data>
+  <data name="ToastDuplicateFailedFormat" xml:space="preserve">
+    <value>无法复制 {0}</value>
+  </data>
+  <data name="ToastCreateFailedFormat" xml:space="preserve">
+    <value>无法创建 {0}</value>
+  </data>
+  <data name="ToastRenameFailedFormat" xml:space="preserve">
+    <value>无法重命名 {0}</value>
+  </data>
+  <data name="ToastLaunchArgumentsFailedFormat" xml:space="preserve">
+    <value>无法保存 {0} 的启动参数</value>
+  </data>
+  <data name="ToastEnableFailedFormat" xml:space="preserve">
+    <value>无法启用 {0}</value>
+  </data>
+  <data name="ToastDisableFailedFormat" xml:space="preserve">
+    <value>无法禁用 {0}</value>
+  </data>
+  <data name="ToastCheckFailedFormat" xml:space="preserve">
+    <value>无法检查 {0}</value>
+  </data>
+  <data name="ToastOpenFailedFormat" xml:space="preserve">
+    <value>无法打开 {0}</value>
+  </data>
+  <data name="ToastImportModListFailed" xml:space="preserve">
+    <value>无法导入模组列表</value>
+  </data>
+  <data name="ToastExportModListFailedFormat" xml:space="preserve">
+    <value>无法保存 {0} 的模组列表</value>
+  </data>
+  <data name="ToastCopyModListFailedFormat" xml:space="preserve">
+    <value>无法复制 {0} 的模组列表</value>
+  </data>
+  <data name="ToastMakePackFailedFormat" xml:space="preserve">
+    <value>无法从 {0} 制作整合包</value>
+  </data>
+  <data name="ToastMakePackNoIndex" xml:space="preserve">
+    <value>Borea 无法读取内容索引，因此无法判断整合包能够固定哪些模组版本。</value>
+  </data>
+  <data name="ToastBackUpFailedFormat" xml:space="preserve">
+    <value>无法备份 {0}</value>
+  </data>
+  <data name="ToastBackUpAllFailed" xml:space="preserve">
+    <value>无法备份存档</value>
+  </data>
+  <data name="ToastCopyFailedFormat" xml:space="preserve">
+    <value>无法复制 {0}</value>
+  </data>
+  <data name="ToastCopyFromProfileFailed" xml:space="preserve">
+    <value>无法从游戏用户配置目录复制</value>
+  </data>
+  <data name="ToastFavoriteFailedFormat" xml:space="preserve">
+    <value>无法保存 {0} 的收藏状态</value>
+  </data>
+  <data name="ToastFavoritesReadFailed" xml:space="preserve">
+    <value>无法读取收藏</value>
+  </data>
+  <data name="InstanceTabContent" xml:space="preserve">
+    <value>内容</value>
+  </data>
+  <data name="InstanceTabGameData" xml:space="preserve">
+    <value>游戏数据</value>
+  </data>
+  <data name="InstanceTabLog" xml:space="preserve">
+    <value>日志</value>
+  </data>
+  <data name="InstanceGroupModpacks" xml:space="preserve">
+    <value>整合包</value>
+  </data>
+  <data name="InstanceGroupModpackFormat" xml:space="preserve">
+    <value>整合包：{0} {1}</value>
+  </data>
+  <data name="InstanceGroupMods" xml:space="preserve">
+    <value>模组</value>
+  </data>
+  <data name="InstanceGroupModLoaders" xml:space="preserve">
+    <value>模组加载器</value>
+  </data>
+  <data name="InstanceGroupOther" xml:space="preserve">
+    <value>其他</value>
+  </data>
+  <data name="InstanceGroupVehicles" xml:space="preserve">
+    <value>载具</value>
+  </data>
+  <data name="InstanceGroupSaves" xml:space="preserve">
+    <value>存档</value>
+  </data>
+  <data name="InstanceGroupDependencies" xml:space="preserve">
+    <value>依赖</value>
+  </data>
+  <data name="InstanceGroupNotManaged" xml:space="preserve">
+    <value>不由 Borea 管理</value>
+  </data>
+  <data name="InstanceEmptyContent" xml:space="preserve">
+    <value>Borea 尚未在此实例中安装内容。请从“发现”页面添加。</value>
+  </data>
+  <data name="ManualInstallsInfo" xml:space="preserve">
+    <value>此列表中的模组并非由 Borea 安装，但属于此实例。通过 Borea 启动此实例时，游戏会加载其中已启用的模组。游戏发现新模组后，会先要求你启用它。Borea 不会更新这些模组。</value>
+  </data>
+  <data name="ManualInstallsInIndex" xml:space="preserve">
+    <value>已收录于内容索引</value>
+  </data>
+  <data name="ManualInstallsNotInIndex" xml:space="preserve">
+    <value>未收录于内容索引</value>
+  </data>
+  <data name="ManualInstallsNoUpdates" xml:space="preserve">
+    <value>Borea 无法更新此模组</value>
+  </data>
+  <data name="ManualInstallsEmptyHint" xml:space="preserve">
+    <value>如需使用未收录于内容索引的模组，请将其文件夹放入此实例的 mods 文件夹。</value>
+  </data>
+  <data name="ManualInstallsNoMatch" xml:space="preserve">
+    <value>已收录于内容索引，但文件不匹配任何发布版本</value>
+  </data>
+  <data name="ManualInstallsNotRecorded" xml:space="preserve">
+    <value>已收录于内容索引，但 Borea 无法登记文件所匹配的发布版本</value>
+  </data>
+  <data name="ManualInstallsChecking" xml:space="preserve">
+    <value>正在与各发布版本比较文件</value>
+  </data>
+  <data name="ManualInstallsManage" xml:space="preserve">
+    <value>交由 Borea 管理</value>
+  </data>
+  <data name="ManualInstallsReplace" xml:space="preserve">
+    <value>替换为最新发布版本</value>
+  </data>
+  <data name="ManualInstallsDeleteAndReplace" xml:space="preserve">
+    <value>删除并替换</value>
+  </data>
+  <data name="ManualInstallsReplaceWarningFormat" xml:space="preserve">
+    <value>{0} 并非由 Borea 安装。替换时，Borea 会删除此文件夹及其中的所有文件。此操作只会询问一次。</value>
+  </data>
+  <data name="ManualInstallsInstanceChanged" xml:space="preserve">
+    <value>实例已更改，请重试。</value>
+  </data>
+  <data name="GameDataOpenFolder" xml:space="preserve">
+    <value>打开文件夹</value>
+  </data>
+  <data name="GameDataEmpty" xml:space="preserve">
+    <value>空</value>
+  </data>
+  <data name="GameSaveNoVehicles" xml:space="preserve">
+    <value>此实例中尚无载具</value>
+  </data>
+  <data name="GameSaveNoSaves" xml:space="preserve">
+    <value>此实例中尚无存档</value>
+  </data>
+  <data name="GameSaveUpdatedFormat" xml:space="preserve">
+    <value>更新于 {0}</value>
+  </data>
+  <data name="GameSaveOlderBuild" xml:space="preserve">
+    <value>较早构建</value>
+  </data>
+  <data name="GameSaveBuildFormat" xml:space="preserve">
+    <value>由游戏构建 {0} 创建</value>
+  </data>
+  <data name="GameSaveOlderBuildFormat" xml:space="preserve">
+    <value>由 {0} 创建，已安装的构建为 {1}。</value>
+  </data>
+  <data name="GameSaveBackUp" xml:space="preserve">
+    <value>备份</value>
+  </data>
+  <data name="GameSaveBackedUpFormat" xml:space="preserve">
+    <value>已将 {0} 备份至 {1}。</value>
+  </data>
+  <data name="GameSaveCopyToInstance" xml:space="preserve">
+    <value>复制到实例</value>
+  </data>
+  <data name="GameSaveCopy" xml:space="preserve">
+    <value>复制</value>
+  </data>
+  <data name="GameSaveCopyModsNote" xml:space="preserve">
+    <value>另一实例需要相同的模组，Borea 无法检查这一点。</value>
+  </data>
+  <data name="GameSaveNoOtherInstance" xml:space="preserve">
+    <value>没有可复制到的其他实例。</value>
+  </data>
+  <data name="GameSaveReplaceFormat" xml:space="preserve">
+    <value>{1} 中已有 {0}，是否替换？Borea 会将旧内容移至 Backups 文件夹。</value>
+  </data>
+  <data name="GameSaveReplace" xml:space="preserve">
+    <value>替换</value>
+  </data>
+  <data name="GameSaveCopiedFormat" xml:space="preserve">
+    <value>已将 {0} 复制到 {1}。</value>
+  </data>
+  <data name="GameSaveDeleteConfirm" xml:space="preserve">
+    <value>是否删除？Borea 会将文件夹移至 Backups 文件夹，可通过“恢复”找回。</value>
+  </data>
+  <data name="GameSaveDeletedFormat" xml:space="preserve">
+    <value>已将 {0} 移至 Backups 文件夹，可在“备份”中恢复。</value>
+  </data>
+  <data name="GameSaveRenameSaveTitle" xml:space="preserve">
+    <value>重命名存档</value>
+  </data>
+  <data name="GameSaveRenameVehicleTitle" xml:space="preserve">
+    <value>重命名载具</value>
+  </data>
+  <data name="GameSaveNameRules" xml:space="preserve">
+    <value>游戏会按此名称显示。名称可包含字母、数字、单个空格、- 和 _，最长 64 个字符。</value>
+  </data>
+  <data name="GameSaveNameInvalidFormat" xml:space="preserve">
+    <value>游戏不接受此名称，请尝试 {0}。</value>
+  </data>
+  <data name="GameSaveNameNeedsLetter" xml:space="preserve">
+    <value>名称至少需要一个字母或数字。</value>
+  </data>
+  <data name="GameSaveSaveNameTaken" xml:space="preserve">
+    <value>此实例中另有同名存档。</value>
+  </data>
+  <data name="GameSaveVehicleNameTaken" xml:space="preserve">
+    <value>此实例中另有同名载具。</value>
+  </data>
+  <data name="GameSaveRenamedFormat" xml:space="preserve">
+    <value>已将 {0} 重命名为 {1}。</value>
+  </data>
+  <data name="GameSaveCloseGame" xml:space="preserve">
+    <value>请先关闭游戏。</value>
+  </data>
+  <data name="GameSaveCopyFromProfile" xml:space="preserve">
+    <value>从游戏用户配置目录复制</value>
+  </data>
+  <data name="MoreInformation" xml:space="preserve">
+    <value>更多信息</value>
+  </data>
+  <data name="GameSaveProfileInfoFormat" xml:space="preserve">
+    <value>游戏用户配置目录为 {0}，不通过 Borea 游玩时 KSA 会使用它。复制会将副本放入此实例，原始内容保留在原处。</value>
+  </data>
+  <data name="GameSaveInstanceStartsEmpty" xml:space="preserve">
+    <value>此实例初始为空。不通过 Borea 游玩时的存档和载具位于游戏用户配置目录中。</value>
+  </data>
+  <data name="GameSaveProfileEmpty" xml:space="preserve">
+    <value>游戏用户配置目录中没有可复制的内容。</value>
+  </data>
+  <data name="GameSaveProfileSelectedFormat" xml:space="preserve">
+    <value>已选择 {0}/{1} 项</value>
+  </data>
+  <data name="GameSaveExistsInInstance" xml:space="preserve">
+    <value>已在此实例中</value>
+  </data>
+  <data name="GameSaveProfileReplace" xml:space="preserve">
+    <value>所选内容中有些已存在于此实例中，是否替换？Borea 会将旧内容移至 Backups 文件夹。</value>
+  </data>
+  <data name="GameSavesCopiedFromProfileFormat" xml:space="preserve">
+    <value>已从游戏用户配置目录复制 {0} 项。</value>
+  </data>
+  <data name="GameSavesBackedUpFormat" xml:space="preserve">
+    <value>已将 {0} 个存档备份至 {1}。</value>
+  </data>
+  <data name="GameSavesNothingToBackUp" xml:space="preserve">
+    <value>此实例中没有可备份的存档。</value>
+  </data>
+  <data name="InstanceBackUpAllSaves" xml:space="preserve">
+    <value>备份所有存档</value>
+  </data>
+  <data name="BackupsTitle" xml:space="preserve">
+    <value>备份</value>
+  </data>
+  <data name="BackupsEmpty" xml:space="preserve">
+    <value>此实例尚无备份</value>
+  </data>
+  <data name="BackupRestore" xml:space="preserve">
+    <value>恢复</value>
+  </data>
+  <data name="BackupBackedUpFormat" xml:space="preserve">
+    <value>备份于 {0}</value>
+  </data>
+  <data name="BackupDeletedFormat" xml:space="preserve">
+    <value>删除于 {0}</value>
+  </data>
+  <data name="BackupReplacedFormat" xml:space="preserve">
+    <value>替换于 {0}</value>
+  </data>
+  <data name="BackupMovedFormat" xml:space="preserve">
+    <value>移入备份于 {0}</value>
+  </data>
+  <data name="BackupUnknownOrigin" xml:space="preserve">
+    <value>Borea 无法确定此内容的原位置，因此只能删除。</value>
+  </data>
+  <data name="BackupDeleteConfirm" xml:space="preserve">
+    <value>是否永久删除此备份？</value>
+  </data>
+  <data name="GameLogOpen" xml:space="preserve">
+    <value>打开日志</value>
+  </data>
+  <data name="GameLogMissing" xml:space="preserve">
+    <value>游戏尚未为此实例写入日志。</value>
+  </data>
+  <data name="GameLogReload" xml:space="preserve">
+    <value>重新加载</value>
+  </data>
+  <data name="GameLogCopy" xml:space="preserve">
+    <value>复制到剪贴板</value>
+  </data>
+  <data name="InstancePlay" xml:space="preserve">
+    <value>游玩</value>
+  </data>
+  <data name="InstanceUpdateAll" xml:space="preserve">
+    <value>全部更新</value>
+  </data>
+  <data name="InstancePlayedFormat" xml:space="preserve">
+    <value>已游玩 {0}</value>
+  </data>
+  <data name="InstancePlayedRunningFormat" xml:space="preserve">
+    <value>已游玩 {0}，包括当前会话</value>
+  </data>
+  <data name="InstanceSessionOne" xml:space="preserve">
+    <value>1 次会话</value>
+  </data>
+  <data name="InstanceSessionsFormat" xml:space="preserve">
+    <value>{0} 次会话</value>
+  </data>
+  <data name="InstanceNoPlaytime" xml:space="preserve">
+    <value>尚无游玩时长</value>
+  </data>
+  <data name="InstancePlaytimeUnknown" xml:space="preserve">
+    <value>游玩时长未知</value>
+  </data>
+  <data name="InstancePlaytimeToolTip" xml:space="preserve">
+    <value>Borea 根据此实例的游戏日志统计游玩时长。启动后不足一分钟便结束的会话不计入统计。</value>
+  </data>
+  <data name="InstancePlaytimeUnknownToolTip" xml:space="preserve">
+    <value>Borea 无法读取此实例最新的游戏日志，因此无法统计游玩时长。</value>
+  </data>
+  <data name="DurationHoursMinutesFormat" xml:space="preserve">
+    <value>{0} 小时 {1} 分钟</value>
+  </data>
+  <data name="DurationMinutesFormat" xml:space="preserve">
+    <value>{0} 分钟</value>
+  </data>
+  <data name="ContentChangeVersion" xml:space="preserve">
+    <value>更改版本</value>
+  </data>
+  <data name="ContentPinVersion" xml:space="preserve">
+    <value>固定版本</value>
+  </data>
+  <data name="ContentUnpin" xml:space="preserve">
+    <value>取消固定</value>
+  </data>
+  <data name="ContentPinnedFormat" xml:space="preserve">
+    <value>已固定为 {0}，更新时此模组会保持该版本。</value>
+  </data>
+  <data name="ContentHeldByPinFormat" xml:space="preserve">
+    <value>{0} 需要 {1}，但后者已固定为 {2}。</value>
+  </data>
+  <data name="ToastPinFailedFormat" xml:space="preserve">
+    <value>无法固定 {0}</value>
+  </data>
+  <data name="ToastUnpinFailedFormat" xml:space="preserve">
+    <value>无法取消固定 {0}</value>
+  </data>
+  <data name="PackUpdatePinnedFormat" xml:space="preserve">
+    <value>因版本已固定，{0} 保持为 {1}</value>
+  </data>
+  <data name="InstallMessagePinnedFormat" xml:space="preserve">
+    <value>此模组在此实例中已固定为 {0}。如需改为 {1}，请先取消固定。</value>
+  </data>
+  <data name="InstallMessagePinnedDependencyFormat" xml:space="preserve">
+    <value>此发布版本需要 {0}，但 {1} 在此实例中已固定为 {2}。</value>
+  </data>
+  <data name="ContentDetachFromPack" xml:space="preserve">
+    <value>脱离整合包</value>
+  </data>
+  <data name="ContentAttachToPack" xml:space="preserve">
+    <value>重新关联整合包</value>
+  </data>
+  <data name="ContentDetached" xml:space="preserve">
+    <value>已脱离</value>
+  </data>
+  <data name="ContentDetachedFromFormat" xml:space="preserve">
+    <value>已脱离 {0}，其固定版本为 {1}。可从行菜单重新关联。</value>
+  </data>
+  <data name="ContentDetachedFromPackFormat" xml:space="preserve">
+    <value>已脱离整合包 {0}。可从行菜单重新关联。</value>
+  </data>
+  <data name="ContentAttachVersionFormat" xml:space="preserve">
+    <value>改为 {0}，即 {1} {2} 固定的版本</value>
+  </data>
+  <data name="ToastDetachFailedFormat" xml:space="preserve">
+    <value>无法将 {0} 脱离整合包</value>
+  </data>
+  <data name="ToastAttachFailedFormat" xml:space="preserve">
+    <value>无法将 {0} 重新关联整合包</value>
+  </data>
+  <data name="PackUpdateDetachedFormat" xml:space="preserve">
+    <value>因 {0} 已脱离整合包，不作更改</value>
+  </data>
+  <data name="InstancePackDifferenceOne" xml:space="preserve">
+    <value>有 1 个模组与 {1} {2} 不同</value>
+  </data>
+  <data name="InstancePackDifferenceFormat" xml:space="preserve">
+    <value>有 {0} 个模组与 {1} {2} 不同</value>
+  </data>
+  <data name="ContentRemove" xml:space="preserve">
+    <value>移除</value>
+  </data>
+  <data name="ContentRemoveConfirm" xml:space="preserve">
+    <value>是否从实例中移除此内容？</value>
+  </data>
+  <data name="ContentRemoveSteps" xml:space="preserve">
+    <value>Borea 会移除由它安装的文件。作者还要求执行以下步骤：</value>
+  </data>
+  <data name="ContentRemoveNotOwnedFormat" xml:space="preserve">
+    <value>{0} 并非由 Borea 安装，因此不会删除其文件。</value>
+  </data>
+  <data name="ContentRemoveRequiredFormat" xml:space="preserve">
+    <value>{1} 需要 {0}，因此将其保留。</value>
+  </data>
+  <data name="ContentNotOnDisk" xml:space="preserve">
+    <value>磁盘上不存在</value>
+  </data>
+  <data name="ContentNotOnDiskDetail" xml:space="preserve">
+    <value>此模组的文件夹已不存在。请重新安装，或从列表中移除。</value>
+  </data>
+  <data name="ContentGoneFormat" xml:space="preserve">
+    <value>此版本的下载自 {0} 起已不存在，Borea 会保留已安装的副本。</value>
+  </data>
+  <data name="ContentNotOnDiskEnable" xml:space="preserve">
+    <value>模组文件夹已不存在，Borea 无法启用它。</value>
+  </data>
+  <data name="ContentInstallAgain" xml:space="preserve">
+    <value>重新安装</value>
+  </data>
+  <data name="ContentRemoveFromList" xml:space="preserve">
+    <value>从列表中移除</value>
+  </data>
+  <data name="ContentRemoveFromListConfirm" xml:space="preserve">
+    <value>是否从列表中移除？文件已不存在。</value>
+  </data>
+  <data name="ContentFolderInTheWayFormat" xml:space="preserve">
+    <value>文件夹 '{0}' 中没有 mod.toml，Borea 无法覆盖安装。请先移除该文件夹，再重新安装。</value>
+  </data>
+  <data name="ContentBackOnDiskFormat" xml:space="preserve">
+    <value>{0} 已重新出现在磁盘上，Borea 未作更改。请重新打开实例。</value>
+  </data>
+  <data name="ToastMissingScanFailed" xml:space="preserve">
+    <value>Borea 无法读取此实例的 mods 文件夹。</value>
+  </data>
+  <data name="InstanceModsMissingOne" xml:space="preserve">
+    <value>此实例有 1 个模组的文件在磁盘上不存在。</value>
+  </data>
+  <data name="InstanceModsMissingFormat" xml:space="preserve">
+    <value>此实例有 {0} 个模组的文件在磁盘上不存在。</value>
+  </data>
+  <data name="ContentEnabled" xml:space="preserve">
+    <value>已启用</value>
+  </data>
+  <data name="ContentOpenPage" xml:space="preserve">
+    <value>打开页面</value>
+  </data>
+  <data name="ContentAddFavorite" xml:space="preserve">
+    <value>添加到收藏</value>
+  </data>
+  <data name="ContentRemoveFavorite" xml:space="preserve">
+    <value>取消收藏</value>
+  </data>
+  <data name="ContentManage" xml:space="preserve">
+    <value>交由 Borea 管理</value>
+  </data>
+  <data name="ContentManageConfirmFormat" xml:space="preserve">
+    <value>Borea 会用 {0} {1} 覆盖安装此文件夹。文件夹中不属于该发布版本的文件会丢失。</value>
+  </data>
+  <data name="ContentManageConfirmAction" xml:space="preserve">
+    <value>替换并管理</value>
+  </data>
+  <data name="ContentManageMissingFormat" xml:space="preserve">
+    <value>需要 {0}，但此实例中没有。</value>
+  </data>
+  <data name="ContentManageCannotInstallFormat" xml:space="preserve">
+    <value>Borea 无法安装：{0}</value>
+  </data>
+  <data name="ContentManageNotOwnedFormat" xml:space="preserve">
+    <value>Borea 尚未管理 {0}，因此无法更新。请先将 {0} 交由 Borea 管理。</value>
+  </data>
+  <data name="ContentManageInstallMissingFormat" xml:space="preserve">
+    <value>同时安装 {0}</value>
+  </data>
+  <data name="ContentManageNotInstalledFormat" xml:space="preserve">
+    <value>也可使用 {0}，Borea 不会安装它。</value>
+  </data>
+  <data name="ContentUpdate" xml:space="preserve">
+    <value>更新</value>
+  </data>
+  <data name="ContentUpdateToFormat" xml:space="preserve">
+    <value>更新至 {0}</value>
+  </data>
+  <data name="ContentByAuthorFormat" xml:space="preserve">
+    <value>作者：{0}</value>
+  </data>
+  <data name="DiscoverTabMods" xml:space="preserve">
+    <value>模组</value>
+  </data>
+  <data name="DiscoverTabModpacks" xml:space="preserve">
+    <value>整合包</value>
+  </data>
+  <data name="DiscoverTabVehicles" xml:space="preserve">
+    <value>载具</value>
+  </data>
+  <data name="DiscoverTabSaves" xml:space="preserve">
+    <value>存档</value>
+  </data>
+  <data name="DiscoverTabLoaders" xml:space="preserve">
+    <value>模组加载器</value>
+  </data>
+  <data name="DiscoverSearchPlaceholder" xml:space="preserve">
+    <value>搜索模组...</value>
+  </data>
+  <data name="DiscoverSearchCountFormat" xml:space="preserve">
+    <value>搜索 {0}</value>
+  </data>
+  <data name="DiscoverHideInstalled" xml:space="preserve">
+    <value>隐藏已安装内容</value>
+  </data>
+  <data name="DiscoverHideIncompatible" xml:space="preserve">
+    <value>隐藏不兼容内容</value>
+  </data>
+  <data name="DiscoverFavoritesOnly" xml:space="preserve">
+    <value>仅显示收藏</value>
+  </data>
+  <data name="DiscoverFavorite" xml:space="preserve">
+    <value>已收藏</value>
+  </data>
+  <data name="DiscoverInstalledInOtherInstances" xml:space="preserve">
+    <value>已安装在其他实例中</value>
+  </data>
+  <data name="DiscoverCategory" xml:space="preserve">
+    <value>分类</value>
+  </data>
+  <data name="DiscoverCategoryParts" xml:space="preserve">
+    <value>部件</value>
+  </data>
+  <data name="DiscoverCategoryCelestial" xml:space="preserve">
+    <value>天体</value>
+  </data>
+  <data name="DiscoverCategoryGameplay" xml:space="preserve">
+    <value>玩法</value>
+  </data>
+  <data name="DiscoverCategoryUserInterface" xml:space="preserve">
+    <value>用户界面</value>
+  </data>
+  <data name="DiscoverCategoryVisual" xml:space="preserve">
+    <value>视觉</value>
+  </data>
+  <data name="DiscoverCategoryAudio" xml:space="preserve">
+    <value>音频</value>
+  </data>
+  <data name="DiscoverCategoryTools" xml:space="preserve">
+    <value>工具</value>
+  </data>
+  <data name="DiscoverCategoryLibrary" xml:space="preserve">
+    <value>程序库</value>
+  </data>
+  <data name="DiscoverCategoryOther" xml:space="preserve">
+    <value>其他</value>
+  </data>
+  <data name="DiscoverGameVersionMin" xml:space="preserve">
+    <value>最低</value>
+  </data>
+  <data name="DiscoverGameVersionMax" xml:space="preserve">
+    <value>最高</value>
+  </data>
+  <data name="DiscoverGameVersionClearMin" xml:space="preserve">
+    <value>清除最低版本</value>
+  </data>
+  <data name="DiscoverGameVersionClearMax" xml:space="preserve">
+    <value>清除最高版本</value>
+  </data>
+  <data name="DiscoverOperatingSystem" xml:space="preserve">
+    <value>操作系统</value>
+  </data>
+  <data name="DiscoverLicense" xml:space="preserve">
+    <value>许可证</value>
+  </data>
+  <data name="DiscoverAuthorFilterFormat" xml:space="preserve">
+    <value>作者：{0}</value>
+  </data>
+  <data name="DiscoverAuthorLinkFormat" xml:space="preserve">
+    <value>显示 {0} 的全部内容</value>
+  </data>
+  <data name="DiscoverClearAll" xml:space="preserve">
+    <value>全部清除</value>
+  </data>
+  <data name="DiscoverSortBy" xml:space="preserve">
+    <value>排序方式</value>
+  </data>
+  <data name="DiscoverSortPopularity" xml:space="preserve">
+    <value>热度</value>
+  </data>
+  <data name="DiscoverSortRecentlyUpdated" xml:space="preserve">
+    <value>最近更新</value>
+  </data>
+  <data name="DiscoverSortRecentlyListed" xml:space="preserve">
+    <value>最近收录</value>
+  </data>
+  <data name="DiscoverSortName" xml:space="preserve">
+    <value>名称</value>
+  </data>
+  <data name="DiscoverAll" xml:space="preserve">
+    <value>全部</value>
+  </data>
+  <data name="DiscoverEmpty" xml:space="preserve">
+    <value>没有匹配的内容。</value>
+  </data>
+  <data name="DiscoverCountModOne" xml:space="preserve">
+    <value>1 个模组</value>
+  </data>
+  <data name="DiscoverCountModsFormat" xml:space="preserve">
+    <value>{0} 个模组</value>
+  </data>
+  <data name="DiscoverCountLoaderOne" xml:space="preserve">
+    <value>1 个模组加载器</value>
+  </data>
+  <data name="DiscoverCountLoadersFormat" xml:space="preserve">
+    <value>{0} 个模组加载器</value>
+  </data>
+  <data name="DiscoverCountPackOne" xml:space="preserve">
+    <value>1 个整合包</value>
+  </data>
+  <data name="DiscoverCountPacksFormat" xml:space="preserve">
+    <value>{0} 个整合包</value>
+  </data>
+  <data name="DiscoverCountShownFormat" xml:space="preserve">
+    <value>{0} / {1}</value>
+  </data>
+  <data name="DiscoverLoading" xml:space="preserve">
+    <value>正在加载内容...</value>
+  </data>
+  <data name="DiscoverIndexStaleFormat" xml:space="preserve">
+    <value>无法连接内容索引，正在显示 {0} 的列表。</value>
+  </data>
+  <data name="IndexUnreachableFormat" xml:space="preserve">
+    <value>无法连接内容索引：{0}</value>
+  </data>
+  <data name="DiscoverIndexRetry" xml:space="preserve">
+    <value>重试</value>
+  </data>
+  <data name="DiscoverRefresh" xml:space="preserve">
+    <value>刷新</value>
+  </data>
+  <data name="DiscoverBackToTop" xml:space="preserve">
+    <value>返回顶部</value>
+  </data>
+  <data name="TimeJustNow" xml:space="preserve">
+    <value>刚刚</value>
+  </data>
+  <data name="TimeMinuteAgo" xml:space="preserve">
+    <value>1 分钟前</value>
+  </data>
+  <data name="TimeMinutesAgoFormat" xml:space="preserve">
+    <value>{0} 分钟前</value>
+  </data>
+  <data name="TimeHourAgo" xml:space="preserve">
+    <value>1 小时前</value>
+  </data>
+  <data name="TimeHoursAgoFormat" xml:space="preserve">
+    <value>{0} 小时前</value>
+  </data>
+  <data name="TimeDayAgo" xml:space="preserve">
+    <value>1 天前</value>
+  </data>
+  <data name="TimeDaysAgoFormat" xml:space="preserve">
+    <value>{0} 天前</value>
+  </data>
+  <data name="TimeMonthAgo" xml:space="preserve">
+    <value>1 个月前</value>
+  </data>
+  <data name="TimeMonthsAgoFormat" xml:space="preserve">
+    <value>{0} 个月前</value>
+  </data>
+  <data name="TimeYearAgo" xml:space="preserve">
+    <value>1 年前</value>
+  </data>
+  <data name="TimeYearsAgoFormat" xml:space="preserve">
+    <value>{0} 年前</value>
+  </data>
+  <data name="TimeMinutesAgoShortFormat" xml:space="preserve">
+    <value>{0} 分钟前</value>
+  </data>
+  <data name="TimeHoursAgoShortFormat" xml:space="preserve">
+    <value>{0} 小时前</value>
+  </data>
+  <data name="TimeDaysAgoShortFormat" xml:space="preserve">
+    <value>{0} 天前</value>
+  </data>
+  <data name="TimeWeeksAgoShortFormat" xml:space="preserve">
+    <value>{0} 周前</value>
+  </data>
+  <data name="TimeMonthsAgoShortFormat" xml:space="preserve">
+    <value>{0} 个月前</value>
+  </data>
+  <data name="TimeYearsAgoShortFormat" xml:space="preserve">
+    <value>{0} 年前</value>
+  </data>
+  <data name="DiscoverAdd" xml:space="preserve">
+    <value>添加到活动实例</value>
+  </data>
+  <data name="DiscoverAddToFormat" xml:space="preserve">
+    <value>添加到 {0}</value>
+  </data>
+  <data name="DiscoverAddingToFormat" xml:space="preserve">
+    <value>添加目标：{0}</value>
+  </data>
+  <data name="DiscoverInstalled" xml:space="preserve">
+    <value>已安装</value>
+  </data>
+  <data name="DiscoverNoInstance" xml:space="preserve">
+    <value>请先创建实例，再添加内容。</value>
+  </data>
+  <data name="DiscoverNoActiveInstance" xml:space="preserve">
+    <value>请激活一个实例以添加内容。</value>
+  </data>
+  <data name="DiscoverCreateInstance" xml:space="preserve">
+    <value>创建实例</value>
+  </data>
+  <data name="DiscoverOpenLibrary" xml:space="preserve">
+    <value>打开内容库</value>
+  </data>
+  <data name="DiscoverNoRelease" xml:space="preserve">
+    <value>此条目没有可安装的发布版本。</value>
+  </data>
+  <data name="LinkRefused" xml:space="preserve">
+    <value>Borea 无法打开此链接。</value>
+  </data>
+  <data name="LinkNotInIndexFormat" xml:space="preserve">
+    <value>{0} 未收录于内容索引。</value>
+  </data>
+  <data name="LinkAlreadyInstalledFormat" xml:space="preserve">
+    <value>{1} 中已安装 {0}。</value>
+  </data>
+  <data name="LinkInstallFormat" xml:space="preserve">
+    <value>该链接请求将 {0} 添加到 {1}。</value>
+  </data>
+  <data name="LinkVersionMissingFormat" xml:space="preserve">
+    <value>版本 {0} 不在内容索引中，Borea 改为提供最新发布版本。</value>
+  </data>
+  <data name="LinkVersionYankedFormat" xml:space="preserve">
+    <value>版本 {0} 已停止提供，Borea 改为提供最新发布版本。</value>
+  </data>
+  <data name="LinkVersionGoneFormat" xml:space="preserve">
+    <value>版本 {0} 已无法下载，Borea 改为提供最新发布版本。</value>
+  </data>
+  <data name="DiscoverListYourMod" xml:space="preserve">
+    <value>收录或修改你的模组</value>
+  </data>
+  <data name="DiscoverForModAuthors" xml:space="preserve">
+    <value>面向模组作者</value>
+  </data>
+  <data name="DiscoverForModAuthorsText" xml:space="preserve">
+    <value>无论是新条目还是修改已收录模组，Borea 都能编写并检查用于将模组收录于内容索引的文件。</value>
+  </data>
+  <data name="ListingIntro" xml:space="preserve">
+    <value>Borea 会编写将模组收录于内容索引的文件，并在创建 PR 前进行检查。</value>
+  </data>
+  <data name="ListingNewTitle" xml:space="preserve">
+    <value>新建条目</value>
+  </data>
+  <data name="ListingNewHint" xml:space="preserve">
+    <value>指定发布版本所在的 GitHub 仓库或 SpaceDock 模组。</value>
+  </data>
+  <data name="ListingSourcePlaceholder" xml:space="preserve">
+    <value>owner/repository，或 SpaceDock 模组 ID 或链接</value>
+  </data>
+  <data name="ListingReadSource" xml:space="preserve">
+    <value>读取最新发布版本</value>
+  </data>
+  <data name="ListingStartEmpty" xml:space="preserve">
+    <value>不指定来源开始</value>
+  </data>
+  <data name="ListingPackTitle" xml:space="preserve">
+    <value>新建整合包</value>
+  </data>
+  <data name="ListingPackHint" xml:space="preserve">
+    <value>整合包会将已收录模组固定到具体发布版本，让玩家安装你测试过的组合。Borea 会编写整合包的一个版本。</value>
+  </data>
+  <data name="ListingStartPack" xml:space="preserve">
+    <value>开始制作整合包</value>
+  </data>
+  <data name="ListingChangeTitle" xml:space="preserve">
+    <value>修改已收录的模组或整合包</value>
+  </data>
+  <data name="ListingChangeHint" xml:space="preserve">
+    <value>加载内容索引中的条目（例如添加图标），或加载整合包以制作其下一版本。</value>
+  </data>
+  <data name="ListingSearchListed" xml:space="preserve">
+    <value>按名称、ID 或作者搜索</value>
+  </data>
+  <data name="ListingYourMod" xml:space="preserve">
+    <value>你的模组</value>
+  </data>
+  <data name="ListingNoListedMatch" xml:space="preserve">
+    <value>没有匹配的已收录模组。</value>
+  </data>
+  <data name="ListingNoListedOrPackMatch" xml:space="preserve">
+    <value>没有匹配的已收录模组或整合包。</value>
+  </data>
+  <data name="ListingLoad" xml:space="preserve">
+    <value>加载</value>
+  </data>
+  <data name="ListingSourceInvalid" xml:space="preserve">
+    <value>这不是 GitHub 仓库或 SpaceDock 模组。</value>
+  </data>
+  <data name="ListingReading" xml:space="preserve">
+    <value>正在读取最新发布版本</value>
+  </data>
+  <data name="ListingDownloadingFormat" xml:space="preserve">
+    <value>正在下载最新发布版本：{0}</value>
+  </data>
+  <data name="ListingReadFailedFormat" xml:space="preserve">
+    <value>Borea 无法读取发布平台：{0}</value>
+  </data>
+  <data name="ListingLoadFailedFormat" xml:space="preserve">
+    <value>Borea 无法加载条目：{0}</value>
+  </data>
+  <data name="ListingStartOver" xml:space="preserve">
+    <value>重新开始</value>
+  </data>
+  <data name="ListingArchiveRootFormat" xml:space="preserve">
+    <value>最新发布版本 {0}：文件夹 {1}。</value>
+  </data>
+  <data name="ListingArchiveCodeModFormat" xml:space="preserve">
+    <value>其中含有 {0}.dll，因此通过 StarMap 运行。</value>
+  </data>
+  <data name="ListingArchiveNoRootFormat" xml:space="preserve">
+    <value>最新发布版本 {0}：Borea 未在压缩包顶层找到唯一文件夹。</value>
+  </data>
+  <data name="ListingArchiveProblemFormat" xml:space="preserve">
+    <value>Borea 无法读取最新发布版本：{0}</value>
+  </data>
+  <data name="ListingArchiveNotCheckedFormat" xml:space="preserve">
+    <value>Borea 无法检查最新版本的压缩包，而内容索引也会读取它：{0}。请修复该发布版本，然后在“依赖”下选择“从我的压缩包读取”。</value>
+  </data>
+  <data name="ListingNoRelease" xml:space="preserve">
+    <value>发布平台上尚无发布版本。</value>
+  </data>
+  <data name="ListingAbout" xml:space="preserve">
+    <value>关于</value>
+  </data>
+  <data name="ListingLinks" xml:space="preserve">
+    <value>链接</value>
+  </data>
+  <data name="ListingReleases" xml:space="preserve">
+    <value>发布版本</value>
+  </data>
+  <data name="ListingCompatibility" xml:space="preserve">
+    <value>兼容性</value>
+  </data>
+  <data name="ListingDependencies" xml:space="preserve">
+    <value>依赖</value>
+  </data>
+  <data name="ListingTags" xml:space="preserve">
+    <value>标签</value>
+  </data>
+  <data name="ListingImages" xml:space="preserve">
+    <value>图片</value>
+  </data>
+  <data name="ListingStatus" xml:space="preserve">
+    <value>状态</value>
+  </data>
+  <data name="ListingId" xml:space="preserve">
+    <value>ID</value>
+  </data>
+  <data name="ListingIdHint" xml:space="preserve">
+    <value>模组安装后的文件夹名称，之后不能更改。</value>
+  </data>
+  <data name="ListingPackIdHint" xml:space="preserve">
+    <value>整合包的 ID，之后不能更改。</value>
+  </data>
+  <data name="ListingName" xml:space="preserve">
+    <value>名称</value>
+  </data>
+  <data name="ListingAuthors" xml:space="preserve">
+    <value>作者</value>
+  </data>
+  <data name="ListingAuthorsHint" xml:space="preserve">
+    <value>多个名称请用逗号分隔。</value>
+  </data>
+  <data name="ListingAbstract" xml:space="preserve">
+    <value>简短描述</value>
+  </data>
+  <data name="ListingAbstractHint" xml:space="preserve">
+    <value>用于列表的一两句话。</value>
+  </data>
+  <data name="ListingDescription" xml:space="preserve">
+    <value>描述</value>
+  </data>
+  <data name="ListingDescriptionHint" xml:space="preserve">
+    <value>使用 Markdown，可通过 ![text](ksa-image:id) 显示描述图片。</value>
+  </data>
+  <data name="ListingDescriptionPreview" xml:space="preserve">
+    <value>预览描述</value>
+  </data>
+  <data name="ListingLicense" xml:space="preserve">
+    <value>许可证</value>
+  </data>
+  <data name="ListingLicenseHint" xml:space="preserve">
+    <value>SPDX 许可证表达式，例如 MIT 或 GPL-2.0-only AND CC-BY-SA-4.0。</value>
+  </data>
+  <data name="ListingForumsHint" xml:space="preserve">
+    <value>必填：模组在 forums.ahwoo.com 上的帖子。</value>
+  </data>
+  <data name="ListingReleasesGitHub" xml:space="preserve">
+    <value>GitHub 仓库</value>
+  </data>
+  <data name="ListingReleasesSpaceDock" xml:space="preserve">
+    <value>SpaceDock 模组 ID</value>
+  </data>
+  <data name="ListingReleasesAuthority" xml:space="preserve">
+    <value>决定有哪些发布版本</value>
+  </data>
+  <data name="ListingReleasesSince" xml:space="preserve">
+    <value>从指定版本开始补录较早版本</value>
+  </data>
+  <data name="ListingReleasesSinceHint" xml:space="preserve">
+    <value>留空时仅收录新发布版本。指定版本后，索引也会为从该版本起的所有较早发布版本生成记录。这些版本会采用条目当前的信息，例如游戏版本范围和依赖。</value>
+  </data>
+  <data name="ListingReleasesTagPrefix" xml:space="preserve">
+    <value>模组发布标签前缀</value>
+  </data>
+  <data name="ListingReleasesTagPrefixHint" xml:space="preserve">
+    <value>如果仓库的每次发布都属于此模组，请留空。指定前缀后，索引仅采用标签以此前缀开头的 GitHub 发布（区分大小写），并从标签剩余部分读取版本。例如前缀为 mymod- 时，标签 mymod-v1.2.0 表示版本 1.2.0。</value>
+  </data>
+  <data name="ListingReleasesHint" xml:space="preserve">
+    <value>新发布版本会自动从此处收录。</value>
+  </data>
+  <data name="ListingGameMin" xml:space="preserve">
+    <value>最低游戏版本</value>
+  </data>
+  <data name="ListingGameMax" xml:space="preserve">
+    <value>最高可用游戏版本</value>
+  </data>
+  <data name="ListingGameMaxHint" xml:space="preserve">
+    <value>除非模组无法在更高版本的游戏构建上运行，否则请留空。设置后，使用较新构建的玩家将无法安装，因此不要填写你测试过的最新构建。设置生效期间生成的所有发布记录都会保留此限制，因为发布版本之后只能收紧限制。</value>
+  </data>
+  <data name="ListingGameHint" xml:space="preserve">
+    <value>与游戏显示的版本一致，例如 2026.9.10.5438；也可使用月份，例如 2026.9。</value>
+  </data>
+  <data name="ListingGameMinProposalFormat" xml:space="preserve">
+    <value>已固定的发布版本需要游戏 {0} 或更新版本，因此 Borea 建议将 {0} 作为最低游戏版本。</value>
+  </data>
+  <data name="ListingUseGameMin" xml:space="preserve">
+    <value>使用此版本</value>
+  </data>
+  <data name="ListingUsesLoader" xml:space="preserve">
+    <value>需要模组加载器</value>
+  </data>
+  <data name="ListingLoaderId" xml:space="preserve">
+    <value>加载器</value>
+  </data>
+  <data name="ListingLoaderMin" xml:space="preserve">
+    <value>最低加载器版本</value>
+  </data>
+  <data name="ListingLoaderMax" xml:space="preserve">
+    <value>最高可用加载器版本</value>
+  </data>
+  <data name="ListingLoaderMaxHint" xml:space="preserve">
+    <value>除非模组无法在更高版本的加载器上运行，否则请留空。设置生效期间生成的所有发布记录都会保留此限制，因为发布版本之后只能收紧限制。</value>
+  </data>
+  <data name="ListingPack" xml:space="preserve">
+    <value>整合包版本</value>
+  </data>
+  <data name="ListingPackVersion" xml:space="preserve">
+    <value>版本</value>
+  </data>
+  <data name="ListingPackVersionHint" xml:space="preserve">
+    <value>每个版本都是一个新文件，收录后不再更改，例如 1.0.0。</value>
+  </data>
+  <data name="ListingReleasedAt" xml:space="preserve">
+    <value>发布时间</value>
+  </data>
+  <data name="ListingReleasedAtHint" xml:space="preserve">
+    <value>使用 UTC，例如 2026-09-25T12:00:00Z。</value>
+  </data>
+  <data name="ListingChangelog" xml:space="preserve">
+    <value>更新日志</value>
+  </data>
+  <data name="ListingChangelogHint" xml:space="preserve">
+    <value>关于此版本的链接或简短文字，选填。</value>
+  </data>
+  <data name="ListingMembers" xml:space="preserve">
+    <value>成员</value>
+  </data>
+  <data name="ListingMembersHint" xml:space="preserve">
+    <value>选择已收录的模组。每个模组均固定到一个发布版本，最新版本排在最前。</value>
+  </data>
+  <data name="ListingLeftOutFormat" xml:space="preserve">
+    <value>Borea 已排除实例 {0} 中的以下模组：</value>
+  </data>
+  <data name="ListingLeftOutNotInstalledByBoreaFormat" xml:space="preserve">
+    <value>{0} 并非通过 Borea 安装，因此 Borea 不知道其发布版本。</value>
+  </data>
+  <data name="ListingLeftOutModLoaderFormat" xml:space="preserve">
+    <value>{0} {1} 是模组加载器，而整合包只能固定模组。</value>
+  </data>
+  <data name="ListingLeftOutModLoaderUnknownVersionFormat" xml:space="preserve">
+    <value>{0} 是模组加载器，而整合包只能固定模组。</value>
+  </data>
+  <data name="ListingLeftOutDisabledFormat" xml:space="preserve">
+    <value>{0} {1} 在此实例中已禁用。</value>
+  </data>
+  <data name="ListingLeftOutNotListedFormat" xml:space="preserve">
+    <value>{0} {1} 不是索引中收录的模组。</value>
+  </data>
+  <data name="ListingLeftOutYankedFormat" xml:space="preserve">
+    <value>{0} {1} 已在索引中停止提供。</value>
+  </data>
+  <data name="ListingLeftOutDownloadGoneFormat" xml:space="preserve">
+    <value>自 {2} 起已无法从下载服务器下载 {0} {1}，其他玩家将无法安装。</value>
+  </data>
+  <data name="ListingLeftOutReleaseNotListedFormat" xml:space="preserve">
+    <value>索引中没有 {0} 的发布版本 {1}。</value>
+  </data>
+  <data name="ListingSearchMembers" xml:space="preserve">
+    <value>按名称、ID 或作者搜索已收录模组</value>
+  </data>
+  <data name="ListingAddMember" xml:space="preserve">
+    <value>添加</value>
+  </data>
+  <data name="ListingMemberRelease" xml:space="preserve">
+    <value>发布版本</value>
+  </data>
+  <data name="ListingMemberCannotBePinnedFormat" xml:space="preserve">
+    <value>无法固定，因为它需要 {0}</value>
+  </data>
+  <data name="ListingMemberNeedsOneOfFormat" xml:space="preserve">
+    <value>{0} 中的一个</value>
+  </data>
+  <data name="ListingMemberNeedsAnd" xml:space="preserve">
+    <value> 和 </value>
+  </data>
+  <data name="ListingMemberDisputedFormat" xml:space="preserve">
+    <value>索引将 {0} 标记为有争议，因此客户端安装此固定版本前会发出警告。</value>
+  </data>
+  <data name="ListingMemberRulesHint" xml:space="preserve">
+    <value>整合包必须将成员的所有必需依赖固定在允许的版本范围内，且成员之间不能冲突。需要未收录模组的发布版本会被标记，因为整合包无法固定该模组。</value>
+  </data>
+  <data name="ListingAddMissingDependencies" xml:space="preserve">
+    <value>添加缺失依赖</value>
+  </data>
+  <data name="ListingAddMissingDependenciesHint" xml:space="preserve">
+    <value>将尚未被成员固定的每项必需依赖固定到允许范围内的最新稳定版。如果某个成员需要多个模组之一，则由你选择。</value>
+  </data>
+  <data name="ListingMissingDependenciesTitle" xml:space="preserve">
+    <value>Borea 无法添加以下依赖：</value>
+  </data>
+  <data name="ListingMissingChooseFormat" xml:space="preserve">
+    <value>{0}，请固定你想使用的那个。</value>
+  </data>
+  <data name="ListingMissingNotListedFormat" xml:space="preserve">
+    <value>{0}，但没有已收录模组满足要求，因此整合包无法固定此发布版本。</value>
+  </data>
+  <data name="ListingMissingNoReleaseFormat" xml:space="preserve">
+    <value>{0}，但其没有稳定版能同时满足所有需要它的成员的版本限制。</value>
+  </data>
+  <data name="ListingMemberGoneFormat" xml:space="preserve">
+    <value>自 {2} 起已无法下载 {0} {1}，客户端只能使用镜像或已有副本安装此固定版本。</value>
+  </data>
+  <data name="ListingMemberNamedInRetractionFormat" xml:space="preserve">
+    <value>版本 {0} 的撤回说明中提及了 {1}：{2}</value>
+  </data>
+  <data name="ListingMemberUseNewerFormat" xml:space="preserve">
+    <value>使用 {0}</value>
+  </data>
+  <data name="ListingCopyForumList" xml:space="preserve">
+    <value>复制用于论坛帖子的成员列表</value>
+  </data>
+  <data name="ListingNextVersionFormat" xml:space="preserve">
+    <value>整合包 {0} 继版本 {1} 之后的新版本。它是一个新文件，且 ID 不能更改。</value>
+  </data>
+  <data name="ListingPackNotListedFormat" xml:space="preserve">
+    <value>内容索引中没有整合包 {0} 的任何版本。</value>
+  </data>
+  <data name="ListingPackVersionTakenFormat" xml:space="preserve">
+    <value>content-index 中已有此整合包的版本 {0}，因此当前版本已改为 {1}。</value>
+  </data>
+  <data name="ListingPackNoFreeVersionFormat" xml:space="preserve">
+    <value>content-index 中已有版本 {0}，且 Borea 检查过的所有后续版本也已存在。请输入更高版本。</value>
+  </data>
+  <data name="ListingPackCheckFailedFormat" xml:space="preserve">
+    <value>Borea 无法检查 content-index 中是否已有版本 {0}：{1}</value>
+  </data>
+  <data name="ListingPackVersionNotHigherFormat" xml:space="preserve">
+    <value>{0} 不高于此整合包的最高版本 {1}，最高版本统计包括已撤回版本。</value>
+  </data>
+  <data name="ListingPackReleasedAtNotLaterFormat" xml:space="preserve">
+    <value>{0} 不晚于版本 {2} 的发布时间 {1}。</value>
+  </data>
+  <data name="ListingPackRetractedFormat" xml:space="preserve">
+    <value>此整合包的版本 {0} 已撤回：{1}</value>
+  </data>
+  <data name="ListingPackRetractedNoReasonFormat" xml:space="preserve">
+    <value>此整合包的版本 {0} 已撤回。</value>
+  </data>
+  <data name="ListingDependenciesHint" xml:space="preserve">
+    <value>仅填写压缩包中 mod.toml 无法表达的信息，例如版本限制或冲突。</value>
+  </data>
+  <data name="ListingAddDependency" xml:space="preserve">
+    <value>添加依赖</value>
+  </data>
+  <data name="ListingDependencyKind" xml:space="preserve">
+    <value>类型</value>
+  </data>
+  <data name="ListingDependencyMin" xml:space="preserve">
+    <value>最低版本</value>
+  </data>
+  <data name="ListingDependencyMax" xml:space="preserve">
+    <value>最高版本</value>
+  </data>
+  <data name="ListingDependencyPreservedFormat" xml:space="preserve">
+    <value>原样保留：{0}</value>
+  </data>
+  <data name="ListingDependencyKindRequired" xml:space="preserve">
+    <value>缺少它时模组无法运行，因此客户端总会一并安装它。</value>
+  </data>
+  <data name="ListingDependencyKindOptional" xml:space="preserve">
+    <value>已安装它时，模组会使用它；客户端不会自动安装。</value>
+  </data>
+  <data name="ListingDependencyKindRecommends" xml:space="preserve">
+    <value>客户端会默认勾选安装它，玩家可以取消勾选。</value>
+  </data>
+  <data name="ListingDependencyKindSuggests" xml:space="preserve">
+    <value>客户端会列出它，由玩家决定是否安装。</value>
+  </data>
+  <data name="ListingDependencyKindConflict" xml:space="preserve">
+    <value>模组不能与它一同安装。请在最低和最高版本中填写冲突范围；若所有版本均冲突，则两者都留空。</value>
+  </data>
+  <data name="ListingNeedsNewest" xml:space="preserve">
+    <value>需要最新版</value>
+  </data>
+  <data name="ListingNeedsNewestHint" xml:space="preserve">
+    <value>将最低版本设为该模组的最新稳定发布版本。</value>
+  </data>
+  <data name="ListingDependencyNotListedFormat" xml:space="preserve">
+    <value>{0} 未收录于索引，玩家无法安装。</value>
+  </data>
+  <data name="ListingSearchDependencies" xml:space="preserve">
+    <value>按名称、ID 或作者搜索</value>
+  </data>
+  <data name="ListingDeclaredFormat" xml:space="preserve">
+    <value>发布版本 {0} 的 mod.toml 声明了这些依赖。索引会自动将它们加入每份发布记录，因此仅需为版本限制或冲突添加条目。</value>
+  </data>
+  <data name="ListingDeclaredNoneFormat" xml:space="preserve">
+    <value>发布版本 {0} 的 mod.toml 未声明依赖。</value>
+  </data>
+  <data name="ListingDeclaredNoRootFormat" xml:space="preserve">
+    <value>Borea 无法在发布版本 {0} 的压缩包中找到安装根目录，索引也不会从中读取 mod.toml。通常应有一个以 ID 命名的顶层文件夹，其中包含 mod.toml。</value>
+  </data>
+  <data name="ListingDeclaredNoModTomlFormat" xml:space="preserve">
+    <value>发布版本 {0} 的压缩包安装根目录中没有 mod.toml，因此索引不会从中推导依赖。</value>
+  </data>
+  <data name="ListingDeclaredRequiredFormat" xml:space="preserve">
+    <value>mod.toml 中的必需依赖：{0}</value>
+  </data>
+  <data name="ListingDeclaredOptionalFormat" xml:space="preserve">
+    <value>mod.toml 中的可选依赖：{0}</value>
+  </data>
+  <data name="ListingAddBounds" xml:space="preserve">
+    <value>添加版本限制</value>
+  </data>
+  <data name="ListingReadArchive" xml:space="preserve">
+    <value>从我的压缩包读取</value>
+  </data>
+  <data name="ListingReadArchiveHint" xml:space="preserve">
+    <value>下载最新发布版本的压缩包，并显示其中 mod.toml 声明的依赖。</value>
+  </data>
+  <data name="ListingDeclaredNeedsHost" xml:space="preserve">
+    <value>请先在“发布版本”中指定 GitHub 仓库或 SpaceDock 模组。如果同时指定两者，还需选择由哪一方决定有哪些发布版本。</value>
+  </data>
+  <data name="ListingLoaderSetFormat" xml:space="preserve">
+    <value>{0} 是模组加载器，已将其设为“兼容性”下的加载器。请在该处设置其版本。</value>
+  </data>
+  <data name="ListingRemove" xml:space="preserve">
+    <value>移除</value>
+  </data>
+  <data name="ListingMoreTags" xml:space="preserve">
+    <value>更多标签</value>
+  </data>
+  <data name="ListingMoreTagsHint" xml:space="preserve">
+    <value>用逗号分隔标签。Borea 会将每个标签保存为小写，并用 - 连接词语。</value>
+  </data>
+  <data name="ListingMoreTagsStoredFormat" xml:space="preserve">
+    <value>保存为：{0}</value>
+  </data>
+  <data name="ListingTagInvalidFormat" xml:space="preserve">
+    <value>'{0}' 不能作为标签。标签由小写字母和数字组成，各词以 - 连接，例如 space-station。</value>
+  </data>
+  <data name="ListingIcon" xml:space="preserve">
+    <value>图标</value>
+  </data>
+  <data name="ListingIconHint" xml:space="preserve">
+    <value>正方形，至少 512 × 512 像素，且不超过 256 KB。</value>
+  </data>
+  <data name="ListingAddIcon" xml:space="preserve">
+    <value>添加图标</value>
+  </data>
+  <data name="ListingDescriptionImages" xml:space="preserve">
+    <value>描述图片</value>
+  </data>
+  <data name="ListingAddImage" xml:space="preserve">
+    <value>添加图片</value>
+  </data>
+  <data name="ListingImageUrl" xml:space="preserve">
+    <value>HTTPS 地址</value>
+  </data>
+  <data name="ListingImageUrlHint" xml:space="preserve">
+    <value>对于本地文件，请填写其当前或将来托管位置的 HTTPS 地址。</value>
+  </data>
+  <data name="ListingChooseFile" xml:space="preserve">
+    <value>选择文件</value>
+  </data>
+  <data name="ListingMeasure" xml:space="preserve">
+    <value>读取地址中的图片并更新其信息</value>
+  </data>
+  <data name="ListingMeasureHint" xml:space="preserve">
+    <value>根据地址中的图片填写尺寸、大小和 SHA-256。替换图片后，请再次执行。</value>
+  </data>
+  <data name="ListingImageChangedFormat" xml:space="preserve">
+    <value>地址中的图片已更改：{0}。</value>
+  </data>
+  <data name="ListingImageChangedPixelsFormat" xml:space="preserve">
+    <value>{0} x {1} px 现为 {2} x {3} px</value>
+  </data>
+  <data name="ListingImageChangedBytesFormat" xml:space="preserve">
+    <value>{0} 字节现为 {1} 字节</value>
+  </data>
+  <data name="ListingImageChangedOnlySha" xml:space="preserve">
+    <value>尺寸和大小相同，但文件字节及其 SHA-256 不同</value>
+  </data>
+  <data name="ListingImageUseNew" xml:space="preserve">
+    <value>使用新图片</value>
+  </data>
+  <data name="ListingImageUseNewHint" xml:space="preserve">
+    <value>将地址中图片的尺寸、大小和 SHA-256 写入条目。</value>
+  </data>
+  <data name="ListingImageCheckFailedFormat" xml:space="preserve">
+    <value>Borea 无法检查地址中的图片：{0}。条目保留现有信息。</value>
+  </data>
+  <data name="ListingImageNoLongerFitsFormat" xml:space="preserve">
+    <value>地址中的图片已无法通过检查：{0}。请替换图片或地址。</value>
+  </data>
+  <data name="ListingImageBranchFormat" xml:space="preserve">
+    <value>此地址指向分支 {0}，因此条目合并后文件仍可能变化。指向提交的地址能保留条目描述的文件。</value>
+  </data>
+  <data name="ListingImageBranchUnnamed" xml:space="preserve">
+    <value>此地址指向分支，因此条目合并后文件仍可能变化。指向提交的地址能保留条目描述的文件。</value>
+  </data>
+  <data name="ListingImageCommitAddressFormat" xml:space="preserve">
+    <value>当前文件的提交地址：{0}</value>
+  </data>
+  <data name="ListingImageUseCommit" xml:space="preserve">
+    <value>使用提交地址</value>
+  </data>
+  <data name="ListingImageFileType" xml:space="preserve">
+    <value>图片</value>
+  </data>
+  <data name="ListingImageLicense" xml:space="preserve">
+    <value>许可证（与模组不同时填写）</value>
+  </data>
+  <data name="ListingImageAttribution" xml:space="preserve">
+    <value>署名</value>
+  </data>
+  <data name="ListingImageSource" xml:space="preserve">
+    <value>原始来源</value>
+  </data>
+  <data name="ListingImageFactsFormat" xml:space="preserve">
+    <value>{0} x {1} px，{2} 字节</value>
+  </data>
+  <data name="ListingImageNotMeasured" xml:space="preserve">
+    <value>尚未测定。</value>
+  </data>
+  <data name="ListingDeprecated" xml:space="preserve">
+    <value>不再维护</value>
+  </data>
+  <data name="ListingSupersededBy" xml:space="preserve">
+    <value>后继项目的 ID</value>
+  </data>
+  <data name="ListingPreview" xml:space="preserve">
+    <value>预览</value>
+  </data>
+  <data name="ListingPreviewName" xml:space="preserve">
+    <value>你的模组</value>
+  </data>
+  <data name="ListingPreviewAbstract" xml:space="preserve">
+    <value>简短描述会显示在此处、列表和搜索结果中。</value>
+  </data>
+  <data name="ListingSteps" xml:space="preserve">
+    <value>步骤</value>
+  </data>
+  <data name="ListingStepDone" xml:space="preserve">
+    <value>已完成</value>
+  </data>
+  <data name="ListingStepToDo" xml:space="preserve">
+    <value>待完成</value>
+  </data>
+  <data name="ListingStepFixFormat" xml:space="preserve">
+    <value>{0} 项待修正</value>
+  </data>
+  <data name="ListingStepOptional" xml:space="preserve">
+    <value>可选</value>
+  </data>
+  <data name="ListingStepRecommended" xml:space="preserve">
+    <value>推荐</value>
+  </data>
+  <data name="ListingStillMissingFormat" xml:space="preserve">
+    <value>仍缺少：{0}。</value>
+  </data>
+  <data name="ListingDependencyNumberFormat" xml:space="preserve">
+    <value>依赖 {0}</value>
+  </data>
+  <data name="ListingDescriptionImageNumberFormat" xml:space="preserve">
+    <value>描述图片 {0}</value>
+  </data>
+  <data name="ListingErrorsHeading" xml:space="preserve">
+    <value>必须修正</value>
+  </data>
+  <data name="ListingNotesHeading" xml:space="preserve">
+    <value>说明</value>
+  </data>
+  <data name="ListingNoIssues" xml:space="preserve">
+    <value>未发现问题。</value>
+  </data>
+  <data name="ListingSchemaDownloaded" xml:space="preserve">
+    <value>已使用内容索引的当前规则检查。</value>
+  </data>
+  <data name="ListingSchemaCached" xml:space="preserve">
+    <value>已使用此前下载的内容索引规则检查。</value>
+  </data>
+  <data name="ListingSchemaEmbedded" xml:space="preserve">
+    <value>已使用 Borea 随附的规则检查。</value>
+  </data>
+  <data name="ListingSpaceDockNotNumberFormat" xml:space="preserve">
+    <value>'{0}' 不是数字。</value>
+  </data>
+  <data name="ListingFile" xml:space="preserve">
+    <value>条目文件</value>
+  </data>
+  <data name="ListingCopy" xml:space="preserve">
+    <value>复制</value>
+  </data>
+  <data name="ListingSaveAs" xml:space="preserve">
+    <value>另存为</value>
+  </data>
+  <data name="ListingFileType" xml:space="preserve">
+    <value>TOML 文件</value>
+  </data>
+  <data name="ListingCopyOwnerFile" xml:space="preserve">
+    <value>复制 owner.json</value>
+  </data>
+  <data name="ListingSaveOwnerFile" xml:space="preserve">
+    <value>保存 owner.json</value>
+  </data>
+  <data name="ListingOwnerFileType" xml:space="preserve">
+    <value>JSON 文件</value>
+  </data>
+  <data name="ListingOpenPullRequest" xml:space="preserve">
+    <value>在 GitHub 上创建 PR</value>
+  </data>
+  <data name="ListingNewPullRequestText" xml:space="preserve">
+    <value>GitHub 会在你的 content-index 分支仓库中打开新文件，然后打开 PR 表单。文字能放入链接时，GitHub 会自动填入；过长时，Borea 会将其复制，由你粘贴到页面中。若你控制发布平台，此 PR 会自动合并：仓库属于你、带有主题 ksa-index-&lt;your GitHub name&gt;，或并非分支仓库且包含 .github/ksa-content-index.toml。SpaceDock 模组通过其源代码链接指向的 GitHub 仓库证明这一点。</value>
+  </data>
+  <data name="ListingPackPullRequestTextFormat" xml:space="preserve">
+    <value>GitHub 会在你的 content-index 分支仓库中打开新文件 {0}。整合包文件通常过长，无法放入链接，因此 Borea 会复制内容，由你粘贴到页面并创建 PR。由整合包所有者账户提交的版本会自动合并。</value>
+  </data>
+  <data name="ListingNewPackPullRequestTextFormat" xml:space="preserve">
+    <value>GitHub 会在你的 content-index 分支仓库中打开新文件 {0}。整合包文件通常过长，无法放入链接，因此 Borea 会复制内容，由你粘贴到页面中。新整合包的首个版本还需在同一 PR 中添加 {1}。检查通过后，首次所有权声明由管理员接受；新 GitHub 账户的检查可能需要等待管理员启动。</value>
+  </data>
+  <data name="ListingOwnerFileTextFormat" xml:space="preserve">
+    <value>新整合包的首个版本还需添加 {0}，其中指定你的 GitHub 账户为整合包所有者。通过你的账户创建 PR 时，Borea 会自动写入此文件。使用浏览器时，请通过 Add file 将其添加到同一 PR 的分支中，填入 GitHub 登录名，以及 https://api.github.com/users/&lt;your GitHub name&gt; 显示的数字 ID。</value>
+  </data>
+  <data name="ListingEditPullRequestText" xml:space="preserve">
+    <value>GitHub 会打开已收录文件供编辑，Borea 会复制新的文字。请粘贴覆盖旧文字并创建 PR。检查会验证你是否控制条目当前指定的发布平台。</value>
+  </data>
+  <data name="ListingFixErrors" xml:space="preserve">
+    <value>请先修正错误。</value>
+  </data>
+  <data name="ListingCopied" xml:space="preserve">
+    <value>已复制条目文件。</value>
+  </data>
+  <data name="ListingOwnerFileCopied" xml:space="preserve">
+    <value>已复制 owner.json。</value>
+  </data>
+  <data name="ListingSavedFormat" xml:space="preserve">
+    <value>已保存 {0}。</value>
+  </data>
+  <data name="ListingSaveFailed" xml:space="preserve">
+    <value>无法保存条目文件。</value>
+  </data>
+  <data name="ListingOpenedWithText" xml:space="preserve">
+    <value>已打开 GitHub 并填入文件内容。</value>
+  </data>
+  <data name="ListingOpenedPaste" xml:space="preserve">
+    <value>Borea 已复制文件，请将其粘贴到 GitHub 打开的页面中。</value>
+  </data>
+  <data name="ListingOpenedAddOwnerFormat" xml:space="preserve">
+    <value>然后在 GitHub 上通过 Add file 将 {0} 添加到同一 PR 的分支中，并粘贴 Borea 提供的所有者文件内容。</value>
+  </data>
+  <data name="ListingOpenFailedFormat" xml:space="preserve">
+    <value>无法打开 GitHub：{0}</value>
+  </data>
+  <data name="ListingPublish" xml:space="preserve">
+    <value>创建 PR</value>
+  </data>
+  <data name="ListingUpdatePullRequest" xml:space="preserve">
+    <value>更新 PR</value>
+  </data>
+  <data name="ListingPublishTextFormat" xml:space="preserve">
+    <value>Borea 会通过你的 GitHub 账户 {0} 创建 PR。</value>
+  </data>
+  <data name="ListingSignInText" xml:space="preserve">
+    <value>Borea 会让你登录 GitHub，并通过你的账户创建 PR。</value>
+  </data>
+  <data name="ListingSignIn" xml:space="preserve">
+    <value>登录 GitHub</value>
+  </data>
+  <data name="ListingOpenInBrowser" xml:space="preserve">
+    <value>改为在浏览器中操作</value>
+  </data>
+  <data name="ListingOwnershipChecking" xml:space="preserve">
+    <value>正在检查你的条目是否可自动合并...</value>
+  </data>
+  <data name="ListingOwnershipVerified" xml:space="preserve">
+    <value>你的条目可自动合并。</value>
+  </data>
+  <data name="ListingOwnershipSteward" xml:space="preserve">
+    <value>需要管理员接受。</value>
+  </data>
+  <data name="ListingOwnershipUnknown" xml:space="preserve">
+    <value>Borea 无法检查谁控制发布平台。创建 PR 后将由检查作出判断。</value>
+  </data>
+  <data name="ListingOwnershipPackUnknown" xml:space="preserve">
+    <value>Borea 无法读取整合包 ID 的所有者。创建 PR 后将由检查作出判断。</value>
+  </data>
+  <data name="ListingOwnershipFirstClaim" xml:space="preserve">
+    <value>此整合包 ID 尚未被占用。PR 会以你的账户声明所有权；检查通过后，首次声明由管理员接受。</value>
+  </data>
+  <data name="ListingProofOwnerFormat" xml:space="preserve">
+    <value>你拥有 {0}。</value>
+  </data>
+  <data name="ListingProofTopicFormat" xml:space="preserve">
+    <value>{0} 带有主题 {1}。</value>
+  </data>
+  <data name="ListingProofMarkerFormat" xml:space="preserve">
+    <value>{0} 的 .github/ksa-content-index.toml 中指定了你。</value>
+  </data>
+  <data name="ListingProofSpaceDockLinkFormat" xml:space="preserve">
+    <value>SpaceDock 模组 {0} 的源代码链接指向 {1}。</value>
+  </data>
+  <data name="ListingProofPackOwnerFormat" xml:space="preserve">
+    <value>main 上的 {0} 指定了你的账户。</value>
+  </data>
+  <data name="ListingFixTopicFormat" xml:space="preserve">
+    <value>如需让条目自动合并，请为 {0} 添加主题 {1}。</value>
+  </data>
+  <data name="ListingFixNoHost" xml:space="preserve">
+    <value>请在“发布版本”中指定 GitHub 仓库或 SpaceDock 模组。</value>
+  </data>
+  <data name="ListingFixMissingFormat" xml:space="preserve">
+    <value>GitHub 上没有公共仓库 {0}。</value>
+  </data>
+  <data name="ListingFixForkFormat" xml:space="preserve">
+    <value>{0} 是分支仓库，其中的标记文件不能作为证明。如需自动合并，请为 {0} 添加主题 {1}。</value>
+  </data>
+  <data name="ListingFixRenamedFormat" xml:space="preserve">
+    <value>{0} 现已更名为 {1}，请在“发布版本”中使用新名称。</value>
+  </data>
+  <data name="ListingFixSpaceDockModFormat" xml:space="preserve">
+    <value>SpaceDock 模组 {0} 不是已发布的 Kitten Space Agency 模组。</value>
+  </data>
+  <data name="ListingFixSpaceDockLinkFormat" xml:space="preserve">
+    <value>请将你的 GitHub 仓库设为 SpaceDock 模组 {0} 的源代码链接。</value>
+  </data>
+  <data name="ListingFixOtherFilesFormat" xml:space="preserve">
+    <value>Borea 会更新你未关闭的 PR #{0}，但其中也修改了其他文件。移除其他修改后才能自动合并。</value>
+  </data>
+  <data name="ListingFirstClaimDetailFormat" xml:space="preserve">
+    <value>Borea 会在 PR 中添加包含你的账户信息的 {0}。新 GitHub 账户的检查可能需要等待管理员启动。</value>
+  </data>
+  <data name="ListingFixPackOwnedByOtherFormat" xml:space="preserve">
+    <value>main 上的 {0} 指定了账户 {1}，是否为整合包更换所有者由管理员决定。</value>
+  </data>
+  <data name="ListingFixPackIdTakenFormat" xml:space="preserve">
+    <value>索引中已有 {0}，仅大小写不同的 ID 视为相同 ID。请选择其他 ID。</value>
+  </data>
+  <data name="ListingOpenRepository" xml:space="preserve">
+    <value>打开仓库</value>
+  </data>
+  <data name="ListingOpenSpaceDock" xml:space="preserve">
+    <value>在 SpaceDock 上打开模组</value>
+  </data>
+  <data name="ListingOpenYourPullRequest" xml:space="preserve">
+    <value>打开 PR</value>
+  </data>
+  <data name="ListingCheckAgain" xml:space="preserve">
+    <value>重新检查</value>
+  </data>
+  <data name="ListingForkMissing" xml:space="preserve">
+    <value>Borea 会通过你的 content-index 分支仓库创建 PR，请先在 GitHub 上创建分支仓库。</value>
+  </data>
+  <data name="ListingMakeFork" xml:space="preserve">
+    <value>创建索引的分支仓库</value>
+  </data>
+  <data name="ListingAppNotOnForkFormat" xml:space="preserve">
+    <value>请允许 Borea 访问 {0}。在 GitHub 上选择 Only select repositories，并选中 {0}。这样 Borea 只能写入该分支仓库。</value>
+  </data>
+  <data name="ListingAllowOnFork" xml:space="preserve">
+    <value>授权 Borea 访问你的分支仓库</value>
+  </data>
+  <data name="ListingForkNeedsSyncFormat" xml:space="preserve">
+    <value>你的分支仓库 {0} 落后于 content-index。请在 GitHub 上选择 Sync fork，再重新检查。</value>
+  </data>
+  <data name="ListingSyncFork" xml:space="preserve">
+    <value>同步分支仓库</value>
+  </data>
+  <data name="ListingStepFindPullRequest" xml:space="preserve">
+    <value>正在查找你未关闭的 PR...</value>
+  </data>
+  <data name="ListingStepFork" xml:space="preserve">
+    <value>正在查找你的 content-index 分支仓库...</value>
+  </data>
+  <data name="ListingStepBranch" xml:space="preserve">
+    <value>正在创建分支...</value>
+  </data>
+  <data name="ListingStepCommit" xml:space="preserve">
+    <value>正在保存文件...</value>
+  </data>
+  <data name="ListingStepPullRequest" xml:space="preserve">
+    <value>正在创建 PR...</value>
+  </data>
+  <data name="ListingOpenedFormat" xml:space="preserve">
+    <value>已创建 PR #{0}。</value>
+  </data>
+  <data name="ListingUpdatedFormat" xml:space="preserve">
+    <value>Borea 已将新文件添加到你未关闭的 PR #{0}。</value>
+  </data>
+  <data name="ListingUnchangedFormat" xml:space="preserve">
+    <value>你未关闭的 PR #{0} 中已有此文件。</value>
+  </data>
+  <data name="ListingErrorSignedOut" xml:space="preserve">
+    <value>GitHub 登录已失效，请重新登录后重试。你的条目会保留在此。</value>
+  </data>
+  <data name="ListingErrorRateLimitFormat" xml:space="preserve">
+    <value>GitHub 限制了 Borea 的请求频率，请在 {0} 后重试。</value>
+  </data>
+  <data name="ListingErrorNotFoundFormat" xml:space="preserve">
+    <value>GitHub 未找到 {0}。</value>
+  </data>
+  <data name="ListingErrorRefusedFormat" xml:space="preserve">
+    <value>GitHub 拒绝了 {0}。{1}</value>
+  </data>
+  <data name="ListingErrorForbiddenFormat" xml:space="preserve">
+    <value>GitHub 拒绝访问 {0}。</value>
+  </data>
+  <data name="ListingErrorNetwork" xml:space="preserve">
+    <value>无法连接 GitHub。你的条目会保留在此，请重试。</value>
+  </data>
+  <data name="ListingErrorNoChange" xml:space="preserve">
+    <value>文件与已收录文件相同，请先作出修改。</value>
+  </data>
+  <data name="ListingErrorPullRequestNotOnForkFormat" xml:space="preserve">
+    <value>你的 PR #{0} 已修改此文件，但并非来自你的索引分支仓库。请在 GitHub 上修改，或关闭后重试。</value>
+  </data>
+  <data name="ListingErrorUnexpectedFormat" xml:space="preserve">
+    <value>GitHub 针对 {0} 返回了 Borea 无法识别的响应。</value>
+  </data>
+  <data name="ListingWhatPullRequests" xml:space="preserve">
+    <value>你未关闭的 PR</value>
+  </data>
+  <data name="ListingWhatFork" xml:space="preserve">
+    <value>你的 content-index 分支仓库</value>
+  </data>
+  <data name="ListingWhatBranch" xml:space="preserve">
+    <value>该分支</value>
+  </data>
+  <data name="ListingWhatFile" xml:space="preserve">
+    <value>条目文件</value>
+  </data>
+  <data name="ListingWhatPackOwner" xml:space="preserve">
+    <value>整合包的所有者文件</value>
+  </data>
+  <data name="ListingWhatPullRequest" xml:space="preserve">
+    <value>该 PR</value>
+  </data>
+  <data name="ListingWhatStatus" xml:space="preserve">
+    <value>PR 状态</value>
+  </data>
+  <data name="ListingPullRequestFormat" xml:space="preserve">
+    <value>PR #{0}</value>
+  </data>
+  <data name="ListingRefresh" xml:space="preserve">
+    <value>刷新</value>
+  </data>
+  <data name="ListingStateRunning" xml:space="preserve">
+    <value>检查正在运行。</value>
+  </data>
+  <data name="ListingStateMerging" xml:space="preserve">
+    <value>验证已通过，将自动合并。</value>
+  </data>
+  <data name="ListingStateSteward" xml:space="preserve">
+    <value>验证已通过，需要管理员接受。</value>
+  </data>
+  <data name="ListingStateRejected" xml:space="preserve">
+    <value>检查未通过。请按说明修正后更新 PR。</value>
+  </data>
+  <data name="ListingStateNoVerdict" xml:space="preserve">
+    <value>检查无法得出结论。下次更改时会重新运行，或由管理员决定。</value>
+  </data>
+  <data name="ListingStateMerged" xml:space="preserve">
+    <value>已合并。下次索引更新后，你的条目会显示在 Borea 中。</value>
+  </data>
+  <data name="ListingStateClosed" xml:space="preserve">
+    <value>已关闭，未合并。</value>
+  </data>
+  <data name="ListingFollowSignedOut" xml:space="preserve">
+    <value>请登录 GitHub 以跟踪 PR 状态。</value>
+  </data>
+  <data name="InstallAnyway" xml:space="preserve">
+    <value>仍要安装</value>
+  </data>
+  <data name="InstallAlsoAddsFormat" xml:space="preserve">
+    <value>同时添加 {0}</value>
+  </data>
+  <data name="InstallAlsoAddsMoreFormat" xml:space="preserve">
+    <value>同时添加 {0} 及其他 {1} 项</value>
+  </data>
+  <data name="InstallStepsForFormat" xml:space="preserve">
+    <value>使用 {0} 游玩前</value>
+  </data>
+  <data name="InstallStepsDismiss" xml:space="preserve">
+    <value>关闭提示</value>
+  </data>
+  <data name="InstallReleaseChannelFormat" xml:space="preserve">
+    <value>发布版本 {0} 的状态为 {1}，不在你所选发布通道提供的范围内。</value>
+  </data>
+  <data name="InstallMessageForeignOwned" xml:space="preserve">
+    <value>此模组并非由 Borea 安装，因此无法替换。</value>
+  </data>
+  <data name="InstallMessageExactPinConflictFormat" xml:space="preserve">
+    <value>同时请求了版本 {0} 和 {1}。</value>
+  </data>
+  <data name="InstallMessageOutsideChannel" xml:space="preserve">
+    <value>所选发布通道未提供此模组的任何版本。</value>
+  </data>
+  <data name="InstallMessageMissingRequest" xml:space="preserve">
+    <value>Borea 未找到符合此请求的发布版本。</value>
+  </data>
+  <data name="InstallMessageExactPinFormat" xml:space="preserve">
+    <value>Borea 无法将版本 {0} 与其他内容一同使用。</value>
+  </data>
+  <data name="InstallMessageProposedConflictFormat" xml:space="preserve">
+    <value>{0} 的冲突条目阻止了此次更改。</value>
+  </data>
+  <data name="InstallMessageYanked" xml:space="preserve">
+    <value>此发布版本已停止提供。</value>
+  </data>
+  <data name="InstallMessageYankedPin" xml:space="preserve">
+    <value>整合包固定了已停止提供的发布版本。</value>
+  </data>
+  <data name="InstallMessageUnavailableFormat" xml:space="preserve">
+    <value>自 {1} 起已无法从下载服务器下载版本 {0}，Borea 只能通过镜像或已有副本安装。</value>
+  </data>
+  <data name="InstallMessageIncompatibleFormat" xml:space="preserve">
+    <value>此发布版本需要游戏 {0} 或更新版本。</value>
+  </data>
+  <data name="InstallMessageAboveGameMaxFormat" xml:space="preserve">
+    <value>此发布版本支持游戏 {0} 或更早版本。</value>
+  </data>
+  <data name="InstallMessageCompatibilityUnknown" xml:space="preserve">
+    <value>此发布版本与已安装游戏的兼容性未知。</value>
+  </data>
+  <data name="InstallMessagePlatformFormat" xml:space="preserve">
+    <value>此发布版本未将 {0} 列为受支持平台。</value>
+  </data>
+  <data name="InstallMessagePlatformUnknownFormat" xml:space="preserve">
+    <value>此发布版本指定了 Borea 无法识别的平台“{0}”。</value>
+  </data>
+  <data name="InstallMessageUnknownDependencyFormat" xml:space="preserve">
+    <value>此发布版本对 {0} 存在依赖，但 Borea 无法识别其依赖类型。</value>
+  </data>
+  <data name="InstallMessageDependencyConflictFormat" xml:space="preserve">
+    <value>此发布版本与 {0} 冲突。</value>
+  </data>
+  <data name="InstallMessageForeignConflictUnknownFormat" xml:space="preserve">
+    <value>此发布版本与 {0} 冲突，Borea 无法读取已安装的版本。</value>
+  </data>
+  <data name="InstallMessageForeignConflictFormat" xml:space="preserve">
+    <value>此发布版本与 {0} 冲突，且 {0} 并非由 Borea 安装。</value>
+  </data>
+  <data name="InstallMessageForeignVersionUnknownFormat" xml:space="preserve">
+    <value>此模组需要 {0}，但 Borea 无法读取已安装的版本。</value>
+  </data>
+  <data name="InstallMessageUnsatisfiedDependencyFormat" xml:space="preserve">
+    <value>此发布版本需要 {0}，但没有可用的发布版本。</value>
+  </data>
+  <data name="InstallMessageAlternativeChoiceFormat" xml:space="preserve">
+    <value>请选择以下模组之一：{0}。</value>
+  </data>
+  <data name="InstallMessageInvalidAlternativeFormat" xml:space="preserve">
+    <value>{0} 不在备选项中。</value>
+  </data>
+  <data name="InstallMessageRetainedAlternativeFormat" xml:space="preserve">
+    <value>此已安装模组需要 {0}，但更改后它们均未安装。</value>
+  </data>
+  <data name="InstallMessageRetainedDependentFormat" xml:space="preserve">
+    <value>此已安装模组需要 {0}，但此次更改将安装该范围之外的版本。</value>
+  </data>
+  <data name="InstallMessageRetainedConflictFormat" xml:space="preserve">
+    <value>此已安装模组与 {0} 冲突。</value>
+  </data>
+  <data name="InstallMessageRetainedUnsatisfiedFormat" xml:space="preserve">
+    <value>此已安装模组需要 {0}，但尚未安装。</value>
+  </data>
+  <data name="InstallMessageSearchLimitFormat" xml:space="preserve">
+    <value>Borea 检查了 {0:N0} 种组合后停止，未找到可行计划。</value>
+  </data>
+  <data name="InstallMessageRetractedPack" xml:space="preserve">
+    <value>此整合包版本已撤回。</value>
+  </data>
+  <data name="InstallMessageUnlistedPin" xml:space="preserve">
+    <value>固定的发布版本未收录，Borea 无法安装。</value>
+  </data>
+  <data name="InstallDependencyAlternativesFormat" xml:space="preserve">
+    <value>{0} 或 {1}</value>
+  </data>
+  <data name="InstallChoicesRecommended" xml:space="preserve">
+    <value>推荐</value>
+  </data>
+  <data name="InstallChoicesSuggested" xml:space="preserve">
+    <value>建议</value>
+  </data>
+  <data name="InstallChoiceForFormat" xml:space="preserve">
+    <value>{0}，用于 {1}</value>
+  </data>
+  <data name="InstallChoiceAlternativesFormat" xml:space="preserve">
+    <value>{0} 需要以下模组之一：</value>
+  </data>
+  <data name="UpdateAnyway" xml:space="preserve">
+    <value>仍要更新</value>
+  </data>
+  <data name="InstallInstanceMissing" xml:space="preserve">
+    <value>活动实例已不存在。</value>
+  </data>
+  <data name="ModalCreateInstanceTitle" xml:space="preserve">
+    <value>创建实例</value>
+  </data>
+  <data name="ModalRenameInstanceTitle" xml:space="preserve">
+    <value>重命名实例</value>
+  </data>
+  <data name="ModalDeleteInstanceTitle" xml:space="preserve">
+    <value>删除实例</value>
+  </data>
+  <data name="ModalDeleteInstanceTextFormat" xml:space="preserve">
+    <value>是否删除 {0}、其文件夹及备份？此操作无法撤销。</value>
+  </data>
+  <data name="ModalInstanceExplanation" xml:space="preserve">
+    <value>实例是在现有游戏安装之上，由 Borea 管理的一套模组和游戏内容。你可以创建多个实例，每次激活一个，以获得不同的游玩体验。</value>
+  </data>
+  <data name="ModalNameRequired" xml:space="preserve">
+    <value>请输入实例名称。</value>
+  </data>
+  <data name="ModalNameTaken" xml:space="preserve">
+    <value>已存在同名实例。</value>
+  </data>
+  <data name="ModalNameLabel" xml:space="preserve">
+    <value>名称</value>
+  </data>
+  <data name="ModalLaunchArgumentsLabel" xml:space="preserve">
+    <value>参数</value>
+  </data>
+  <data name="ModalLaunchArgumentsHint" xml:space="preserve">
+    <value>每次启动此实例时，这些参数都会传给模组加载器和游戏。含空格的参数请用双引号括起。</value>
+  </data>
+  <data name="ModalLaunchArgumentsNone" xml:space="preserve">
+    <value>无参数</value>
+  </data>
+  <data name="LaunchArgumentsHandoverFlagFormat" xml:space="preserve">
+    <value>Borea 已将 {1} 连同实例文件夹传给 {0}。请移除此参数，否则 {0} 可能使用其他文件夹。</value>
+  </data>
+  <data name="ModalClose" xml:space="preserve">
+    <value>关闭</value>
+  </data>
+  <data name="SettingsGeneral" xml:space="preserve">
+    <value>常规</value>
+  </data>
+  <data name="ContentTabDescription" xml:space="preserve">
+    <value>描述</value>
+  </data>
+  <data name="ContentTabDependencies" xml:space="preserve">
+    <value>依赖</value>
+  </data>
+  <data name="ContentTabVersions" xml:space="preserve">
+    <value>版本</value>
+  </data>
+  <data name="ContentDependenciesOfFormat" xml:space="preserve">
+    <value>{0} 的依赖</value>
+  </data>
+  <data name="ContentDependenciesNoRelease" xml:space="preserve">
+    <value>没有可显示的发布版本。</value>
+  </data>
+  <data name="ContentNoDependencies" xml:space="preserve">
+    <value>此发布版本不需要其他模组。</value>
+  </data>
+  <data name="ContentDependencyLoaderFormat" xml:space="preserve">
+    <value>需要 {0} {1}</value>
+  </data>
+  <data name="ContentDependencyRequired" xml:space="preserve">
+    <value>必需</value>
+  </data>
+  <data name="ContentDependencyRequiredHint" xml:space="preserve">
+    <value>与此模组一同安装</value>
+  </data>
+  <data name="ContentDependencyAnyOf" xml:space="preserve">
+    <value>任选其一</value>
+  </data>
+  <data name="ContentDependencyAnyOfHint" xml:space="preserve">
+    <value>每组选择一个与此模组一同安装</value>
+  </data>
+  <data name="ContentDependencyConflicts" xml:space="preserve">
+    <value>冲突</value>
+  </data>
+  <data name="ContentDependencyConflictsHint" xml:space="preserve">
+    <value>不能一同安装</value>
+  </data>
+  <data name="ContentDependencyRecommended" xml:space="preserve">
+    <value>推荐</value>
+  </data>
+  <data name="ContentDependencyRecommendedHint" xml:space="preserve">
+    <value>添加此模组时默认选中</value>
+  </data>
+  <data name="ContentDependencySuggested" xml:space="preserve">
+    <value>建议</value>
+  </data>
+  <data name="ContentDependencySuggestedHint" xml:space="preserve">
+    <value>值得一看，不默认选中</value>
+  </data>
+  <data name="ContentDependencyOptional" xml:space="preserve">
+    <value>可选</value>
+  </data>
+  <data name="ContentDependencyOptionalHint" xml:space="preserve">
+    <value>已安装时会使用，不随此模组一同添加</value>
+  </data>
+  <data name="ContentDependencyOther" xml:space="preserve">
+    <value>其他</value>
+  </data>
+  <data name="ContentDependencyOtherHint" xml:space="preserve">
+    <value>此版本 Borea 无法识别的类型</value>
+  </data>
+  <data name="ContentDependencyOneOf" xml:space="preserve">
+    <value>以下之一：</value>
+  </data>
+  <data name="ContentDependencyMinFormat" xml:space="preserve">
+    <value>{0} 或更新版本</value>
+  </data>
+  <data name="ContentDependencyMaxFormat" xml:space="preserve">
+    <value>不高于 {0}</value>
+  </data>
+  <data name="ContentDependencyRangeFormat" xml:space="preserve">
+    <value>{0} 至 {1}</value>
+  </data>
+  <data name="ContentDependencyInstalledFormat" xml:space="preserve">
+    <value>已安装 {0}</value>
+  </data>
+  <data name="ContentDependencyNotInstalled" xml:space="preserve">
+    <value>未安装</value>
+  </data>
+  <data name="ContentDependencyNotInIndex" xml:space="preserve">
+    <value>未收录于索引</value>
+  </data>
+  <data name="CompatibilityCompatible" xml:space="preserve">
+    <value>兼容</value>
+  </data>
+  <data name="CompatibilityIncompatible" xml:space="preserve">
+    <value>不兼容</value>
+  </data>
+  <data name="CompatibilityUnknown" xml:space="preserve">
+    <value>兼容性未知</value>
+  </data>
+  <data name="ContentCompatibility" xml:space="preserve">
+    <value>兼容性</value>
+  </data>
+  <data name="ContentLinks" xml:space="preserve">
+    <value>链接</value>
+  </data>
+  <data name="ContentCopyLink" xml:space="preserve">
+    <value>复制链接</value>
+  </data>
+  <data name="ContentCopyShareLink" xml:space="preserve">
+    <value>复制分享链接</value>
+  </data>
+  <data name="ContentLinkCopied" xml:space="preserve">
+    <value>链接已复制到剪贴板。</value>
+  </data>
+  <data name="ContentReport" xml:space="preserve">
+    <value>报告</value>
+  </data>
+  <data name="ContentReportTakedown" xml:space="preserve">
+    <value>下架请求</value>
+  </data>
+  <data name="ContentReportTakedownHint" xml:space="preserve">
+    <value>请求管理员停止提供某个条目或整合包版本。</value>
+  </data>
+  <data name="ContentReportDispute" xml:space="preserve">
+    <value>ID 争议</value>
+  </data>
+  <data name="ContentReportDisputeHint" xml:space="preserve">
+    <value>对条目 ID 的所有权提出异议。</value>
+  </data>
+  <data name="ContentTags" xml:space="preserve">
+    <value>标签</value>
+  </data>
+  <data name="ContentAuthor" xml:space="preserve">
+    <value>作者</value>
+  </data>
+  <data name="ContentDetails" xml:space="preserve">
+    <value>详细信息</value>
+  </data>
+  <data name="ContentIconCredit" xml:space="preserve">
+    <value>图标署名</value>
+  </data>
+  <data name="ContentIconSource" xml:space="preserve">
+    <value>图标来源</value>
+  </data>
+  <data name="ContentAdd" xml:space="preserve">
+    <value>添加</value>
+  </data>
+  <data name="ContentReplaceVersionFormat" xml:space="preserve">
+    <value>替换 {0}</value>
+  </data>
+  <data name="ContentReplaceVersionInFormat" xml:space="preserve">
+    <value>替换 {1} 中的 {0}</value>
+  </data>
+  <data name="ContentReplaceVersionAnywayFormat" xml:space="preserve">
+    <value>仍要替换 {0}</value>
+  </data>
+  <data name="ContentVersionHeader" xml:space="preserve">
+    <value>版本</value>
+  </data>
+  <data name="ContentChannelHeader" xml:space="preserve">
+    <value>通道</value>
+  </data>
+  <data name="ContentGameVersionHeader" xml:space="preserve">
+    <value>游戏版本</value>
+  </data>
+  <data name="ContentPublishedHeader" xml:space="preserve">
+    <value>发布时间</value>
+  </data>
+  <data name="ContentPublishedFormat" xml:space="preserve">
+    <value>发布于 {0}</value>
+  </data>
+  <data name="ContentUpdatedOnFormat" xml:space="preserve">
+    <value>更新于 {0}</value>
+  </data>
+  <data name="ContentDownloads" xml:space="preserve">
+    <value>下载量</value>
+  </data>
+  <data name="ContentDownloadsExactFormat" xml:space="preserve">
+    <value>{0} 次下载</value>
+  </data>
+  <data name="ContentDownloadSize" xml:space="preserve">
+    <value>下载大小</value>
+  </data>
+  <data name="ContentSizeHeader" xml:space="preserve">
+    <value>大小</value>
+  </data>
+  <data name="ContentDownloadsHeader" xml:space="preserve">
+    <value>下载量</value>
+  </data>
+  <data name="ContentSizeOnDisk" xml:space="preserve">
+    <value>磁盘占用</value>
+  </data>
+  <data name="InstanceSizeToolTip" xml:space="preserve">
+    <value>实例文件夹的磁盘占用大小</value>
+  </data>
+  <data name="InstanceLoaderTitle" xml:space="preserve">
+    <value>模组加载器</value>
+  </data>
+  <data name="InstanceLoaderNone" xml:space="preserve">
+    <value>没有模组需要加载器。Borea 仍会通过加载器启动此实例，因为只有加载器能让游戏使用指定实例。</value>
+  </data>
+  <data name="InstanceLoaderNotInstalled" xml:space="preserve">
+    <value>未安装</value>
+  </data>
+  <data name="InstanceLoaderVersionUnknown" xml:space="preserve">
+    <value>已安装，版本未知</value>
+  </data>
+  <data name="InstanceLoaderConflict" xml:space="preserve">
+    <value>模组所需的版本范围没有交集</value>
+  </data>
+  <data name="InstanceLoaderOpenSettings" xml:space="preserve">
+    <value>游戏设置</value>
+  </data>
+  <data name="InstanceLoaderConflictShort" xml:space="preserve">
+    <value>没有适用版本</value>
+  </data>
+  <data name="InstanceLoaderNotInIndex" xml:space="preserve">
+    <value>此模组加载器未收录于内容索引，因此没有对应页面。</value>
+  </data>
+  <data name="InstanceLoaderModNeedsFormat" xml:space="preserve">
+    <value>{0} 需要 {1}</value>
+  </data>
+  <data name="InstanceLoaderBoundsRangeFormat" xml:space="preserve">
+    <value>{0} 至 {1}</value>
+  </data>
+  <data name="InstanceLoaderBoundsMinimumFormat" xml:space="preserve">
+    <value>{0} 或更新版本</value>
+  </data>
+  <data name="InstanceLoaderDifferentFormat" xml:space="preserve">
+    <value>模组需要不同的加载器：{0}。一次启动只能使用其中一个。</value>
+  </data>
+  <data name="InstanceLoaderRangeFormat" xml:space="preserve">
+    <value>需要 {0} 至 {1}</value>
+  </data>
+  <data name="InstanceLoaderMinimumFormat" xml:space="preserve">
+    <value>需要 {0} 或更新版本</value>
+  </data>
+  <data name="InstanceLoaderNeededByFormat" xml:space="preserve">
+    <value>{0} 需要它</value>
+  </data>
+  <data name="InstanceLoaderInstalledFormat" xml:space="preserve">
+    <value>已安装 {0}</value>
+  </data>
+  <data name="InstanceLoaderWrongVersionFormat" xml:space="preserve">
+    <value>已安装 {0}</value>
+  </data>
+  <data name="InstanceLoaderIncompatibleFormat" xml:space="preserve">
+    <value>{0}，不适用于此 KSA 构建</value>
+  </data>
+  <data name="ContentShowVersions" xml:space="preserve">
+    <value>显示</value>
+  </data>
+  <data name="ContentNoDescription" xml:space="preserve">
+    <value>未提供描述。</value>
+  </data>
+  <data name="ContentInstallSteps" xml:space="preserve">
+    <value>游玩前</value>
+  </data>
+  <data name="ContentUninstallSteps" xml:space="preserve">
+    <value>移除时</value>
+  </data>
+  <data name="ContentLoadingVersions" xml:space="preserve">
+    <value>正在加载版本...</value>
+  </data>
+  <data name="ContentChangelog" xml:space="preserve">
+    <value>更新日志</value>
+  </data>
+  <data name="ContentNoVersions" xml:space="preserve">
+    <value>尚无发布版本。</value>
+  </data>
+  <data name="ContentNoVersionsInChannel" xml:space="preserve">
+    <value>此通道中没有发布版本。</value>
+  </data>
+  <data name="ContentVersionGoneFormat" xml:space="preserve">
+    <value>自 {0} 起已无法下载。</value>
+  </data>
+  <data name="ContentTypeModLoader" xml:space="preserve">
+    <value>模组加载器</value>
+  </data>
+  <data name="ContentTypeModPack" xml:space="preserve">
+    <value>整合包</value>
+  </data>
+  <data name="PackMods" xml:space="preserve">
+    <value>模组</value>
+  </data>
+  <data name="PackNewInstance" xml:space="preserve">
+    <value>从此整合包创建实例</value>
+  </data>
+  <data name="PackCreatesInstanceFormat" xml:space="preserve">
+    <value>将创建实例 {0}。</value>
+  </data>
+  <data name="PackUpdate" xml:space="preserve">
+    <value>更新整合包</value>
+  </data>
+  <data name="PackUpdateAvailableFormat" xml:space="preserve">
+    <value>{0} 有新版本可用：{1}。</value>
+  </data>
+  <data name="PackUpdateNotNewer" xml:space="preserve">
+    <value>此实例已使用整合包的最新版本。</value>
+  </data>
+  <data name="PackUpdateAddFormat" xml:space="preserve">
+    <value>添加 {0} {1}</value>
+  </data>
+  <data name="PackUpdateChangeFormat" xml:space="preserve">
+    <value>将 {0} 从 {1} 改为 {2}</value>
+  </data>
+  <data name="PackUpdateRemoveFormat" xml:space="preserve">
+    <value>移除 {0} {1}</value>
+  </data>
+  <data name="PackUpdateKeepFormat" xml:space="preserve">
+    <value>将 {0} {1} 保留为实例中的模组</value>
+  </data>
+  <data name="PackUpdateKeepChangeFormat" xml:space="preserve">
+    <value>将 {0} 保留为实例中的模组，并从 {1} 改为 {2}</value>
+  </data>
+  <data name="PackUpdateNoModChanges" xml:space="preserve">
+    <value>模组无变更</value>
+  </data>
+  <data name="PackUpdateStillInstalledFormat" xml:space="preserve">
+    <value>实例中仍保留 {0}。</value>
+  </data>
+  <data name="PackModHeader" xml:space="preserve">
+    <value>模组</value>
+  </data>
+  <data name="PackMemberInstanceHeaderFormat" xml:space="preserve">
+    <value>在 {0} 中</value>
+  </data>
+  <data name="PackMemberYanked" xml:space="preserve">
+    <value>已停止提供</value>
+  </data>
+  <data name="PackMemberGone" xml:space="preserve">
+    <value>下载已不存在</value>
+  </data>
+  <data name="PackMemberUnlisted" xml:space="preserve">
+    <value>未收录</value>
+  </data>
+  <data name="PackMemberNewerFormat" xml:space="preserve">
+    <value>{0} 已可用</value>
+  </data>
+  <data name="PackMemberUseNewerFormat" xml:space="preserve">
+    <value>在 {1} 中使用 {0}</value>
+  </data>
+  <data name="PackMemberUseNewerChipFormat" xml:space="preserve">
+    <value>使用 {0}</value>
+  </data>
+  <data name="PackMemberUseNewerConfirmFormat" xml:space="preserve">
+    <value>将实例 {1} 中的 {0} 脱离整合包，并改为 {2}。之后整合包更新将不再更改它。</value>
+  </data>
+  <data name="PackMemberPinned" xml:space="preserve">
+    <value>已固定</value>
+  </data>
+  <data name="PackMemberPinnedInFormat" xml:space="preserve">
+    <value>已在 {0} 中固定，更新时此模组会保持为 {1}。</value>
+  </data>
+  <data name="PackMemberUseNewerUnpinConfirmFormat" xml:space="preserve">
+    <value>取消实例 {1} 中 {0} 的版本固定，将其脱离整合包，并改为 {2}。之后整合包更新将不再更改它。</value>
+  </data>
+  <data name="PackMemberUseNewerUnpinOnlyConfirmFormat" xml:space="preserve">
+    <value>取消实例 {1} 中 {0} 的版本固定，并改为 {2}。</value>
+  </data>
+  <data name="PackMemberBackToFormat" xml:space="preserve">
+    <value>将 {1} 中的版本恢复为 {0}</value>
+  </data>
+  <data name="PackMemberBackToChipFormat" xml:space="preserve">
+    <value>恢复为 {0}</value>
+  </data>
+  <data name="PackMemberBackToConfirmFormat" xml:space="preserve">
+    <value>将实例 {1} 中的 {0} 重新关联整合包，并恢复为 {2}。</value>
+  </data>
+  <data name="PackMemberBackToUnpinConfirmFormat" xml:space="preserve">
+    <value>取消实例 {1} 中 {0} 的版本固定，将其重新关联整合包，并恢复为 {2}。</value>
+  </data>
+  <data name="PackMemberInUseFormat" xml:space="preserve">
+    <value>已安装 {0}</value>
+  </data>
+  <data name="PackMemberInUseDetachedFormat" xml:space="preserve">
+    <value>{0} 使用 {1} {2}，已脱离整合包。可在“内容”选项卡中重新关联。</value>
+  </data>
+  <data name="PackMemberInUseDetachedBackFormat" xml:space="preserve">
+    <value>{0} 使用 {1} {2}，已脱离整合包。选择“恢复为 {3}”可重新关联。</value>
+  </data>
+  <data name="PackMemberInUseNextUpdateFormat" xml:space="preserve">
+    <value>{0} 使用 {1} {2}，下次整合包更新会将其恢复为 {3}。</value>
+  </data>
+  <data name="PackMemberInUsePlainFormat" xml:space="preserve">
+    <value>{0} 使用 {1} {2}。</value>
+  </data>
+  <data name="PackCopyForumList" xml:space="preserve">
+    <value>复制论坛列表</value>
+  </data>
+  <data name="PackMakeNextVersion" xml:space="preserve">
+    <value>制作下一版本</value>
+  </data>
+  <data name="PackForumListCopied" xml:space="preserve">
+    <value>论坛列表已复制到剪贴板。</value>
+  </data>
+  <data name="PackForumListName" xml:space="preserve">
+    <value>论坛列表</value>
+  </data>
+  <data name="PackResultInstalled" xml:space="preserve">
+    <value>已安装</value>
+  </data>
+  <data name="PackResultReplaced" xml:space="preserve">
+    <value>已替换</value>
+  </data>
+  <data name="PackResultAlreadyInstalled" xml:space="preserve">
+    <value>已安装</value>
+  </data>
+  <data name="PackDeprecated" xml:space="preserve">
+    <value>作者不再维护此整合包。</value>
+  </data>
+  <data name="PackStatusUnknown" xml:space="preserve">
+    <value>此整合包具有 Borea 无法识别的作者维护状态。</value>
+  </data>
+  <data name="PackCompatibilityUnknown" xml:space="preserve">
+    <value>此整合包与已安装游戏的兼容性未知。</value>
+  </data>
+  <data name="PackDisputed" xml:space="preserve">
+    <value>内容索引将此整合包标记为有争议。</value>
+  </data>
+  <data name="PackIndexStatusUnknown" xml:space="preserve">
+    <value>内容索引为此整合包设置了 Borea 无法识别的状态。</value>
+  </data>
+  <data name="PackResultUnresolved" xml:space="preserve">
+    <value>未能解析</value>
+  </data>
+  <data name="PackResultFailed" xml:space="preserve">
+    <value>失败</value>
+  </data>
+  <data name="PackResultNotAttempted" xml:space="preserve">
+    <value>未尝试</value>
+  </data>
+  <data name="ReleaseStable" xml:space="preserve">
+    <value>稳定版</value>
+  </data>
+  <data name="ReleaseTesting" xml:space="preserve">
+    <value>测试版</value>
+  </data>
+  <data name="ReleaseDev" xml:space="preserve">
+    <value>开发版</value>
+  </data>
+  <data name="ReleaseUnknown" xml:space="preserve">
+    <value>未知</value>
+  </data>
+  <data name="ReleaseChannelStable" xml:space="preserve">
+    <value>稳定版</value>
+  </data>
+  <data name="ReleaseChannelTesting" xml:space="preserve">
+    <value>稳定版和测试版</value>
+  </data>
+  <data name="ReleaseChannelDev" xml:space="preserve">
+    <value>所有版本</value>
+  </data>
+  <data name="SettingsGame" xml:space="preserve">
+    <value>游戏</value>
+  </data>
+  <data name="SetupGameDirectory" xml:space="preserve">
+    <value>游戏目录</value>
+  </data>
+  <data name="SetupGameDirectoryHint" xml:space="preserve">
+    <value>包含游戏可执行文件的文件夹。</value>
+  </data>
+  <data name="SetupBrowse" xml:space="preserve">
+    <value>浏览...</value>
+  </data>
+  <data name="SetupSave" xml:space="preserve">
+    <value>保存</value>
+  </data>
+  <data name="SetupUseThisFolder" xml:space="preserve">
+    <value>使用此文件夹</value>
+  </data>
+  <data name="SetupFoundGame" xml:space="preserve">
+    <value>Borea 在此文件夹中找到了 KSA。请检查文件夹，再选择使用。</value>
+  </data>
+  <data name="SetupFoundGames" xml:space="preserve">
+    <value>Borea 在多个文件夹中找到了 KSA，请选择你游玩时使用的文件夹。</value>
+  </data>
+  <data name="SetupFoundGameFormat" xml:space="preserve">
+    <value>Borea 在 {1} 中找到了 KSA {0}，是否使用？</value>
+  </data>
+  <data name="SetupUseFoundGame" xml:space="preserve">
+    <value>使用</value>
+  </data>
+  <data name="SetupUseSelectedGame" xml:space="preserve">
+    <value>使用所选项</value>
+  </data>
+  <data name="SetupLater" xml:space="preserve">
+    <value>稍后</value>
+  </data>
+  <data name="SetupLoader" xml:space="preserve">
+    <value>模组加载器</value>
+  </data>
+  <data name="SetupLoaderDirectory" xml:space="preserve">
+    <value>加载器目录</value>
+  </data>
+  <data name="SetupLoaderDirectoryHint" xml:space="preserve">
+    <value>留空时，Borea 会在安装时选择文件夹。</value>
+  </data>
+  <data name="SetupInstallLoader" xml:space="preserve">
+    <value>安装</value>
+  </data>
+  <data name="SetupUseExisting" xml:space="preserve">
+    <value>使用现有加载器</value>
+  </data>
+  <data name="SetupFoundLoader" xml:space="preserve">
+    <value>Borea 在磁盘上找到了此加载器。请检查文件夹，再选择使用。</value>
+  </data>
+  <data name="SetupSaved" xml:space="preserve">
+    <value>已保存。</value>
+  </data>
+  <data name="SetupDirectoryMissing" xml:space="preserve">
+    <value>已保存，但此文件夹尚不存在。</value>
+  </data>
+  <data name="SetupNoLoaderSelected" xml:space="preserve">
+    <value>请先选择模组加载器。</value>
+  </data>
+  <data name="SetupLoaderInstalledFormat" xml:space="preserve">
+    <value>已将 {0} {1} 安装到 {2}。</value>
+  </data>
+  <data name="SetupLoaderInstalledVersionFormat" xml:space="preserve">
+    <value>已安装 {0}</value>
+  </data>
+  <data name="SetupLoaderIncompatibleFormat" xml:space="preserve">
+    <value>已安装 {0}，不支持 KSA {1}</value>
+  </data>
+  <data name="SetupLoaderInstalledUnknownVersion" xml:space="preserve">
+    <value>已安装，版本未知</value>
+  </data>
+  <data name="SetupUpdateLoaderFormat" xml:space="preserve">
+    <value>更新至 {0}</value>
+  </data>
+  <data name="SetupReinstallLoader" xml:space="preserve">
+    <value>重新安装</value>
+  </data>
+  <data name="ContentLoaderHint" xml:space="preserve">
+    <value>模组加载器在“游戏”设置中配置。</value>
+  </data>
+  <data name="LinkForum" xml:space="preserve">
+    <value>论坛</value>
+  </data>
+  <data name="LinkRepository" xml:space="preserve">
+    <value>仓库</value>
+  </data>
+  <data name="LinkBugTracker" xml:space="preserve">
+    <value>问题跟踪器</value>
+  </data>
+  <data name="LinkHomepage" xml:space="preserve">
+    <value>主页</value>
+  </data>
+  <data name="LinkDiscussions" xml:space="preserve">
+    <value>讨论区</value>
+  </data>
+  <data name="SettingsAbout" xml:space="preserve">
+    <value>关于</value>
+  </data>
+  <data name="SettingsHelp" xml:space="preserve">
+    <value>帮助</value>
+  </data>
+  <data name="AboutVersion" xml:space="preserve">
+    <value>版本</value>
+  </data>
+  <data name="AboutRuntime" xml:space="preserve">
+    <value>运行时</value>
+  </data>
+  <data name="AboutSystem" xml:space="preserve">
+    <value>系统</value>
+  </data>
+  <data name="AboutGame" xml:space="preserve">
+    <value>已安装游戏</value>
+  </data>
+  <data name="AboutContentIndex" xml:space="preserve">
+    <value>内容索引</value>
+  </data>
+  <data name="AboutTranslationFiles" xml:space="preserve">
+    <value>翻译文件</value>
+  </data>
+  <data name="AboutIndexUpdatedFormat" xml:space="preserve">
+    <value>更新于 {0}</value>
+  </data>
+  <data name="AboutIndexNotDownloaded" xml:space="preserve">
+    <value>尚未下载</value>
+  </data>
+  <data name="AboutFolders" xml:space="preserve">
+    <value>文件夹</value>
+  </data>
+  <data name="AboutOpenBoreaFolder" xml:space="preserve">
+    <value>打开 Borea 文件夹</value>
+  </data>
+  <data name="AboutOpenInstancesFolder" xml:space="preserve">
+    <value>打开实例文件夹</value>
+  </data>
+  <data name="AboutOpenBoreaLog" xml:space="preserve">
+    <value>打开 Borea 日志</value>
+  </data>
+  <data name="AboutOpenLogFolder" xml:space="preserve">
+    <value>打开日志文件夹</value>
+  </data>
+  <data name="AboutCopyDiagnostics" xml:space="preserve">
+    <value>复制诊断信息</value>
+  </data>
+  <data name="AboutCopied" xml:space="preserve">
+    <value>已复制到剪贴板。</value>
+  </data>
+  <data name="AboutFolderMissingFormat" xml:space="preserve">
+    <value>{0} 尚不存在。</value>
+  </data>
+  <data name="AboutLinks" xml:space="preserve">
+    <value>链接</value>
+  </data>
+  <data name="AboutSourceCode" xml:space="preserve">
+    <value>源代码</value>
+  </data>
+  <data name="AboutReportBug" xml:space="preserve">
+    <value>报告缺陷</value>
+  </data>
+  <data name="AboutReleases" xml:space="preserve">
+    <value>发布版本</value>
+  </data>
+  <data name="AboutCredits" xml:space="preserve">
+    <value>采用的技术</value>
+  </data>
+  <data name="AboutCommunity" xml:space="preserve">
+    <value>GitHub 上的 KSA 模组社区</value>
+  </data>
+  <data name="AboutDiscord" xml:space="preserve">
+    <value>KSA 模组 Discord</value>
+  </data>
+  <data name="AboutCreditsHint" xml:space="preserve">
+    <value>每个发布压缩包中均包含 THIRD-PARTY-NOTICES.txt，列出随附软件的许可证。</value>
+  </data>
+  <data name="AboutOpenNotices" xml:space="preserve">
+    <value>打开第三方声明</value>
+  </data>
+  <data name="AboutNoticesMissing" xml:space="preserve">
+    <value>此构建中没有 THIRD-PARTY-NOTICES.txt，发布压缩包中包含此文件。</value>
+  </data>
+  <data name="HelpAsk" xml:space="preserve">
+    <value>寻求帮助</value>
+  </data>
+  <data name="HelpReportHint" xml:space="preserve">
+    <value>请提供 Borea 版本、游戏版本和加载器版本，并附上 Borea 日志。</value>
+  </data>
+  <data name="HelpForums" xml:space="preserve">
+    <value>KSA 论坛</value>
+  </data>
+  <data name="HelpFacts" xml:space="preserve">
+    <value>获取求助时需要的信息</value>
+  </data>
+  <data name="AboutCannotOpenFormat" xml:space="preserve">
+    <value>无法打开 {0}。</value>
+  </data>
+  <data name="AboutCopyPath" xml:space="preserve">
+    <value>复制路径</value>
+  </data>
+  <data name="SetupBannerNotSaved" xml:space="preserve">
+    <value>Borea 需要先知道 Kitten Space Agency 的安装位置，才能安装模组或启动游戏。</value>
+  </data>
+  <data name="SetupBannerFolderMissing" xml:space="preserve">
+    <value>保存的游戏文件夹已不存在，请重新为 Borea 指定 Kitten Space Agency 的位置。</value>
+  </data>
+  <data name="SetupBannerAction" xml:space="preserve">
+    <value>设置游戏</value>
+  </data>
+  <data name="SharedProfileBannerOne" xml:space="preserve">
+    <value>游戏用户配置目录中有 1 个模组，可据此创建实例。原用户配置目录保持不变。</value>
+  </data>
+  <data name="SharedProfileBannerFormat" xml:space="preserve">
+    <value>游戏用户配置目录中有 {0} 个模组，可据此创建实例。原用户配置目录保持不变。</value>
+  </data>
+  <data name="SharedProfileCreateInstance" xml:space="preserve">
+    <value>创建实例</value>
+  </data>
+  <data name="SharedProfileDismiss" xml:space="preserve">
+    <value>忽略</value>
+  </data>
+  <data name="SharedProfileModalTitle" xml:space="preserve">
+    <value>从游戏用户配置目录创建实例</value>
+  </data>
+  <data name="SharedProfileModalCopies" xml:space="preserve">
+    <value>Borea 会将 My Games/Kitten Space Agency 中的模组复制到新实例，保留其加载顺序及启用状态。</value>
+  </data>
+  <data name="SharedProfileModalUnchanged" xml:space="preserve">
+    <value>该文件夹中的所有内容均保持不变。</value>
+  </data>
+  <data name="SharedProfileImporting" xml:space="preserve">
+    <value>Borea 正在复制模组并与内容索引比较。关闭此窗口可停止操作。</value>
+  </data>
+  <data name="SharedProfileImportDisabledFormat" xml:space="preserve">
+    <value>Borea 无法启用以下模组，因为其文件夹名称不是有效的内容 ID：{0}</value>
+  </data>
+  <data name="SharedProfileImportNotCheckedFormat" xml:space="preserve">
+    <value>Borea 无法将以下模组与内容索引比较，因此它们仍作为手动安装内容保留：{0}</value>
+  </data>
+  <data name="SharedProfileInstanceName" xml:space="preserve">
+    <value>游戏用户配置</value>
+  </data>
+  <data name="DiscoverInstalledInFormat" xml:space="preserve">
+    <value>已安装在 {0} 中</value>
+  </data>
+  <data name="DiscoverInstalledModFormat" xml:space="preserve">
+    <value>已安装 {0}</value>
+  </data>
+  <data name="PackModCountFormat" xml:space="preserve">
+    <value>模组：{0}</value>
+  </data>
+  <data name="PackReleasedOnFormat" xml:space="preserve">
+    <value>发布于 {0}</value>
+  </data>
+  <data name="PackNewerReleasesOneFormat" xml:space="preserve">
+    <value>{0} 个模组中有 1 个有更新版本</value>
+  </data>
+  <data name="PackNewerReleasesFormat" xml:space="preserve">
+    <value>{1} 个模组中有 {0} 个有更新版本</value>
+  </data>
+  <data name="PackIncompatibleFormat" xml:space="preserve">
+    <value>此整合包需要游戏 {0} 或更新版本。</value>
+  </data>
+  <data name="PackAboveGameMaxFormat" xml:space="preserve">
+    <value>此整合包支持游戏 {0} 或更早版本。</value>
+  </data>
+  <data name="PackMemberYankedFormat" xml:space="preserve">
+    <value>{0} {1} 已停止提供。</value>
+  </data>
+  <data name="PackMemberIncompatibleFormat" xml:space="preserve">
+    <value>{0} {1} 需要 KSA {2} 或更新版本。</value>
+  </data>
+  <data name="PackMemberAboveGameMaxFormat" xml:space="preserve">
+    <value>{0} {1} 支持的 KSA 版本最高为 {2}。</value>
+  </data>
+  <data name="PackIncompleteFormat" xml:space="preserve">
+    <value>{1} 个模组中有 {0} 个未能安装。</value>
+  </data>
+  <data name="PackMemberUnlistedFormat" xml:space="preserve">
+    <value>{0} {1} 未收录于内容索引。</value>
+  </data>
+  <data name="PackMemberNotConfirmedFormat" xml:space="preserve">
+    <value>{0} {1} 已停止提供，且尚未确认安装该版本。</value>
+  </data>
+  <data name="PackMemberUnresolvedFormat" xml:space="preserve">
+    <value>Borea 无法解析 {0} {1}。</value>
+  </data>
+  <data name="PackMemberFailedFormat" xml:space="preserve">
+    <value>{0} {1} 未能安装。</value>
+  </data>
+  <data name="PackInstanceChanged" xml:space="preserve">
+    <value>安装整合包期间，实例发生了更改。</value>
+  </data>
+  <data name="PackNothingInstalled" xml:space="preserve">
+    <value>未安装任何内容。</value>
+  </data>
+  <data name="PackSupersededFormat" xml:space="preserve">
+    <value>作者不再维护此整合包，并推荐使用 {0}。</value>
+  </data>
+  <data name="InstallDownloadingFormat" xml:space="preserve">
+    <value>正在下载 {0}</value>
+  </data>
+  <data name="InstallPausedFormat" xml:space="preserve">
+    <value>{0} 已暂停</value>
+  </data>
+  <data name="InstallExtractingFormat" xml:space="preserve">
+    <value>正在解压 {0}</value>
+  </data>
+  <data name="InstallConfiguringFormat" xml:space="preserve">
+    <value>正在配置 {0}</value>
+  </data>
+  <data name="InstallFinishingFormat" xml:space="preserve">
+    <value>正在完成 {0}</value>
+  </data>
+  <data name="InstallStepFormat" xml:space="preserve">
+    <value>{0}（{1}/{2}）</value>
+  </data>
+  <data name="InstallSizeFormat" xml:space="preserve">
+    <value>{0} / {1}</value>
+  </data>
+  <data name="InstallSecondsLeftFormat" xml:space="preserve">
+    <value>约剩 {0} 秒</value>
+  </data>
+  <data name="InstallMinutesLeftFormat" xml:space="preserve">
+    <value>约剩 {0} 分钟</value>
+  </data>
+  <data name="InstallStop" xml:space="preserve">
+    <value>停止</value>
+  </data>
+  <data name="InstallPause" xml:space="preserve">
+    <value>暂停</value>
+  </data>
+  <data name="InstallResume" xml:space="preserve">
+    <value>继续</value>
+  </data>
+  <data name="InstallStopping" xml:space="preserve">
+    <value>正在停止</value>
+  </data>
+  <data name="InstallStoppingAfterMod" xml:space="preserve">
+    <value>完成此模组后停止</value>
+  </data>
+  <data name="InstallRecoveryFolderFormat" xml:space="preserve">
+    <value>原有文件保留在 {0}。</value>
+  </data>
+  <data name="InstallStopped" xml:space="preserve">
+    <value>安装已停止。</value>
+  </data>
+  <data name="InstallStoppedAfterFormat" xml:space="preserve">
+    <value>已停止，已安装 {0}/{1} 个模组。</value>
+  </data>
+  <data name="UpdateStopped" xml:space="preserve">
+    <value>更新已停止。</value>
+  </data>
+  <data name="UpdateStoppedAfterFormat" xml:space="preserve">
+    <value>已停止，已更新 {0}/{1} 个模组。</value>
+  </data>
+  <data name="InstallClosing" xml:space="preserve">
+    <value>Borea 正在停止仍运行的任务，完成后会退出。</value>
+  </data>
+  <data name="CloseNowTitle" xml:space="preserve">
+    <value>Borea 仍在完成收尾操作</value>
+  </data>
+  <data name="CloseNowText" xml:space="preserve">
+    <value>Borea 将在以下任务完成后退出：</value>
+  </data>
+  <data name="CloseNowSavingHistory" xml:space="preserve">
+    <value>正在保存任务历史</value>
+  </data>
+  <data name="CloseNowInstallWarning" xml:space="preserve">
+    <value>如果现在退出，正在安装的模组可能不完整，之后可重新安装。</value>
+  </data>
+  <data name="CloseNowKeepWaiting" xml:space="preserve">
+    <value>继续等待</value>
+  </data>
+  <data name="CloseNowConfirm" xml:space="preserve">
+    <value>立即退出</value>
+  </data>
+  <data name="LaunchWithoutModLoader" xml:space="preserve">
+    <value>不使用模组加载器启动 KSA</value>
+  </data>
+  <data name="LaunchActiveInstance" xml:space="preserve">
+    <value>启动活动实例</value>
+  </data>
+  <data name="LaunchInstanceMissing" xml:space="preserve">
+    <value>此实例已不存在。</value>
+  </data>
+  <data name="LaunchLoaderNotInstalledFormat" xml:space="preserve">
+    <value>未安装模组加载器 {0}，请在“游戏”设置中配置。</value>
+  </data>
+  <data name="LaunchNeededLoaderNotInstalledFormat" xml:space="preserve">
+    <value>此实例中的模组需要加载器 {0}，但尚未安装。请在“游戏”设置中配置。</value>
+  </data>
+  <data name="LaunchInstallLoaderFormat" xml:space="preserve">
+    <value>此实例需要 {0}，是否立即安装？</value>
+  </data>
+  <data name="LaunchLoaderUpdateFormat" xml:space="preserve">
+    <value>{0} {1} 不支持 KSA {2}，是否在游玩前更新至 {3}？</value>
+  </data>
+  <data name="LaunchLoaderIncompatibleFormat" xml:space="preserve">
+    <value>{0} {1} 不支持 KSA {2}，游戏可能无法启动。是否仍要游玩？</value>
+  </data>
+  <data name="LaunchUpdateAndPlay" xml:space="preserve">
+    <value>更新并游玩</value>
+  </data>
+  <data name="LaunchPlayAnyway" xml:space="preserve">
+    <value>仍要游玩</value>
+  </data>
+  <data name="LaunchSetUpGameFirstFormat" xml:space="preserve">
+    <value>此实例需要 {0}，请先设置游戏文件夹。</value>
+  </data>
+  <data name="LaunchDifferentLoadersNeededFormat" xml:space="preserve">
+    <value>此实例中的模组需要不同的加载器：{0}。每个实例只能通过一个加载器启动，请移除部分模组，直到它们需要相同的加载器。</value>
+  </data>
+  <data name="LaunchLoaderNotListedFormat" xml:space="preserve">
+    <value>所有来源中均无 {0} 的条目。Borea 需要已安装模组加载器的条目，才能确定如何启动它。</value>
+  </data>
+  <data name="LaunchListingsFailedFormat" xml:space="preserve">
+    <value>Borea 无法加载模组加载器条目，KSA 未启动：{0}</value>
+  </data>
+  <data name="LaunchNoLoaderTakesInstanceFormat" xml:space="preserve">
+    <value>此实例中没有模组需要加载器，且已安装的加载器均无法启动实例。如需不使用加载器启动 KSA，请使用首页上的“{0}”。它使用共享用户配置目录，而非此实例。</value>
+  </data>
+  <data name="LaunchWithoutModLoaderToolTip" xml:space="preserve">
+    <value>以直接运行 KSA.exe 的方式启动 KSA，使用 KSA 创建的共享用户配置目录，而非 Borea 实例。</value>
+  </data>
+  <data name="InstanceContentNotInIndex" xml:space="preserve">
+    <value>此模组未收录于内容索引，因此没有对应页面。</value>
+  </data>
+  <data name="ContentInsideInstance" xml:space="preserve">
+    <value>你正在查看实例中的内容。</value>
+  </data>
+  <data name="ContentViewInstance" xml:space="preserve">
+    <value>查看实例</value>
+  </data>
+  <data name="ContentInactiveInstance" xml:space="preserve">
+    <value>此实例未激活。请先激活，才能在此添加或移除内容。</value>
+  </data>
+  <data name="LaunchStartingFormat" xml:space="preserve">
+    <value>正在启动 {0}…</value>
+  </data>
+  <data name="LaunchModBrokeFormat" xml:space="preserve">
+    <value>{0} {1} 导致 {2} 无法启动。它可能与此 KSA 版本不兼容。请禁用后重试，或查找更新。</value>
+  </data>
+  <data name="LaunchModLikelyBrokeFormat" xml:space="preserve">
+    <value>{2} 在加载 {0} {1} 时停止，该模组可能是原因。请禁用后重试，或查找更新。</value>
+  </data>
+  <data name="LaunchOtherModsNeedMissingFormat" xml:space="preserve">
+    <value>以下模组需要此版本 KSA 不包含的组件，因此很可能也会失败：{0}。</value>
+  </data>
+  <data name="LaunchExitedEarlyFormat" xml:space="preserve">
+    <value>{0} 启动后立即停止（退出码 {1}），输出内容见详细信息。</value>
+  </data>
+  <data name="LaunchStoppedLoadingModsFormat" xml:space="preserve">
+    <value>{0} 在加载模组时停止（退出码 {1}），此实例中的某个模组可能是原因。输出内容见详细信息。</value>
+  </data>
+  <data name="LaunchLoaderTooOldFormat" xml:space="preserve">
+    <value>{0} 面向的 KSA 构建与已安装的 {1} 不同，无法加载游戏。适用于 {1} 的 {0} 版本发布后，请在“设置 &gt; 游戏 &gt; 模组加载器”中安装。如果 {1} 比 {0} 面向的构建更早，请改为更新 KSA。</value>
+  </data>
+  <data name="LaunchLoaderReleasesFormat" xml:space="preserve">
+    <value>{0} 发布版本</value>
+  </data>
+  <data name="LaunchExitCodeFormat" xml:space="preserve">
+    <value>退出码 {0}</value>
+  </data>
+  <data name="LaunchStoppedTitleFormat" xml:space="preserve">
+    <value>{0} 已停止</value>
+  </data>
+  <data name="LaunchUnknownPlatformKeyFormat" xml:space="preserve">
+    <value>{0} 在此系统上的启动条目含有 Borea 无法识别的键 '{1}'，请检查 Borea 更新。</value>
+  </data>
+  <data name="LaunchUnknownRuntimeFormat" xml:space="preserve">
+    <value>{0} 在此系统上通过 '{1}' 运行，Borea 无法识别该方式，请检查 Borea 更新。</value>
+  </data>
+  <data name="LaunchDotnetMissingFormat" xml:space="preserve">
+    <value>{0} 在此系统上通过 dotnet 运行，但 Borea 未找到 dotnet。请安装 {0} 所需的 .NET 运行时。</value>
+  </data>
+  <data name="LaunchTargetMissingFormat" xml:space="preserve">
+    <value>'{0}' 不存在。请重新安装 {1}，或在设置中更正其目录。</value>
+  </data>
+  <data name="LaunchWindowsBuildWithoutWine" xml:space="preserve">
+    <value>游戏文件夹包含 Windows 版 KSA，此系统只能通过 Wine 运行它，但 Borea 未在其外围找到 Wine 前缀。不会启动任何程序。</value>
+  </data>
+  <data name="LaunchWindowsBuildInPrefixFormat" xml:space="preserve">
+    <value>游戏文件夹包含 Wine 前缀 '{0}' 中的 Windows 版 KSA。Borea 尚不能通过 Wine 启动游戏，因此不会启动任何程序。请通过 Wine 启动游戏以游玩。</value>
+  </data>
+  <data name="LaunchPathOutsidePrefixFormat" xml:space="preserve">
+    <value>Wine 前缀 '{1}' 的所有驱动器均未包含 '{0}'，前缀中的程序无法打开它。Borea 不会启动任何程序。请在该前缀的 Wine 配置中为此文件夹添加驱动器。</value>
+  </data>
+  <data name="LaunchWrapperBusyFormat" xml:space="preserve">
+    <value>Borea 通过 Wine 封装程序 '{0}' 启动的游戏仍在运行。该封装程序一次只能运行一个游戏，请先关闭该游戏。</value>
+  </data>
+  <data name="LaunchWrapperNeedsVariableFormat" xml:space="preserve">
+    <value>{0} 只能通过 '{1}' 后的参数接收实例文件夹，而 Wine 封装程序 '{2}' 不会向它传递参数。Borea 不会启动任何程序。加载器作者可在条目的 [provides.instance] 表中添加一个变量。</value>
+  </data>
+  <data name="LaunchWrapperArgumentsFormat" xml:space="preserve">
+    <value>Wine 封装程序 '{0}' 不会向 {1} 传递启动参数，因此 Borea 不会启动任何程序。请移除此实例的启动参数后再通过封装程序启动。</value>
+  </data>
+  <data name="LaunchWrapperRuntimeFormat" xml:space="preserve">
+    <value>{0} 条目中的 Windows 启动项需要运行时，但 Wine 封装程序 '{1}' 只能直接启动文件。Borea 不会启动任何程序。</value>
+  </data>
+  <data name="LaunchRuntimeTitleFormat" xml:space="preserve">
+    <value>安装 .NET {0} 运行时</value>
+  </data>
+  <data name="LaunchRuntimeMissingFormat" xml:space="preserve">
+    <value>{0} 需要适用于 Windows x64 的 .NET {1} 运行时，但 Wine 封装程序 '{2}' 中没有。在安装运行时前，Borea 无法启动此实例。</value>
+  </data>
+  <data name="LaunchRuntimeStillMissingFormat" xml:space="preserve">
+    <value>Borea 仍未在封装程序中找到 .NET 运行时 {0}。</value>
+  </data>
+  <data name="LaunchRuntimeDownloadFormat" xml:space="preserve">
+    <value>下载适用于 Windows x64 的 .NET {0} 安装程序</value>
+  </data>
+  <data name="LaunchRuntimeInstallStep" xml:space="preserve">
+    <value>在封装程序的 Configure 窗口中选择 Install Software，再选择安装程序。</value>
+  </data>
+  <data name="LaunchRuntimeCheckStep" xml:space="preserve">
+    <value>点击“重新检查”。</value>
+  </data>
+  <data name="LaunchRuntimeCheckAgain" xml:space="preserve">
+    <value>重新检查</value>
+  </data>
+  <data name="LaunchWrapperStoppedFormat" xml:space="preserve">
+    <value>Wine 封装程序 '{0}' 在 {1} 启动游戏前停止，输出内容见详细信息。</value>
+  </data>
+  <data name="LaunchDisableModFormat" xml:space="preserve">
+    <value>禁用 {0}</value>
+  </data>
+  <data name="LaunchDisableModsFormat" xml:space="preserve">
+    <value>禁用 {0} 个模组</value>
+  </data>
+  <data name="LaunchModDisabledFormat" xml:space="preserve">
+    <value>{0} 已禁用，请重新启动实例。</value>
+  </data>
+  <data name="LaunchModsDisabledFormat" xml:space="preserve">
+    <value>已禁用 {0} 个模组，请重新启动实例。</value>
+  </data>
+  <data name="LaunchShowDetails" xml:space="preserve">
+    <value>显示详细信息</value>
+  </data>
+  <data name="LaunchOpenLog" xml:space="preserve">
+    <value>打开启动日志</value>
+  </data>
+  <data name="LaunchNoOutput" xml:space="preserve">
+    <value>加载器停止前未输出任何内容。</value>
+  </data>
+  <data name="LaunchGameCrashed" xml:space="preserve">
+    <value>游戏意外退出</value>
+  </data>
+  <data name="LaunchGameCrashedByFormat" xml:space="preserve">
+    <value>游戏因 {0} 中的错误而意外退出</value>
+  </data>
+  <data name="ChooseGameSettingsPreset" xml:space="preserve">
+    <value>游戏设置预设</value>
+  </data>
+  <data name="SelectAPreset" xml:space="preserve">
+    <value>选择预设</value>
+  </data>
+  <data name="ModalSettingsPresetNoGameVersion" xml:space="preserve">
+    <value>未检测到 KSA 版本</value>
+  </data>
+  <data name="NoPreset" xml:space="preserve">
+    <value>不使用预设</value>
+  </data>
+  <data name="PresetModalTitle" xml:space="preserve">
+    <value>将游戏设置保存为预设</value>
+  </data>
+  <data name="PresetModalHint" xml:space="preserve">
+    <value>Borea 会复制此实例的 settings.toml。新实例可以使用该预设启动，而不使用游戏新生成的设置。</value>
+  </data>
+  <data name="PresetModalNoSettings" xml:space="preserve">
+    <value>此实例尚无 settings.toml。请先启动一次游戏，再保存预设。</value>
+  </data>
+  <data name="InstanceSaveSettingsPreset" xml:space="preserve">
+    <value>将设置保存为预设</value>
+  </data>
+  <data name="SettingsPresetsTitle" xml:space="preserve">
+    <value>游戏设置预设</value>
+  </data>
+  <data name="SettingsPresetsHint" xml:space="preserve">
+    <value>从实例保存，创建实例时可选用。版本表示保存预设时使用的游戏构建。</value>
+  </data>
+  <data name="SettingsPresetsEmpty" xml:space="preserve">
+    <value>尚无预设，请从实例菜单中保存。</value>
+  </data>
+  <data name="SettingsPresetsDeleteConfirm" xml:space="preserve">
+    <value>是否删除此预设？</value>
+  </data>
+  <data name="ToastPresetSavedFormat" xml:space="preserve">
+    <value>已保存预设 {0}</value>
+  </data>
+  <data name="ToastPresetNotAppliedFormat" xml:space="preserve">
+    <value>已创建 {0}，未应用预设</value>
+  </data>
+</root>
