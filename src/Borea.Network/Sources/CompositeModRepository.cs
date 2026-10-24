@@ -16,23 +16,8 @@ public sealed class CompositeModRepository : IModRepository
         _sources = sources ?? throw new ArgumentNullException(nameof(sources));
     }
 
-    public async Task<IReadOnlyList<ModMetadata>> GetAvailableModsAsync(CancellationToken cancellationToken = default)
-    {
-        var results = new List<ModMetadata>();
-        var seenIds = new HashSet<string>(ModIds.Comparer);
-        foreach (var (source, repository) in _sources)
-        {
-            var mods = await repository.GetAvailableModsAsync(cancellationToken).ConfigureAwait(false);
-            foreach (var mod in mods)
-            {
-                if (seenIds.Add(mod.ModId))
-                    results.Add(Tag(mod, source));
-            }
-
-            await AddClaimsAsync(repository, seenIds, cancellationToken).ConfigureAwait(false);
-        }
-        return results;
-    }
+    public Task<IReadOnlyList<ModMetadata>> GetAvailableModsAsync(CancellationToken cancellationToken = default) =>
+        MergeListingsAsync(repository => repository.GetAvailableModsAsync(cancellationToken), cancellationToken);
 
     public async Task<ModMetadata?> GetListingAsync(string modId, CancellationToken cancellationToken = default)
     {
@@ -46,33 +31,11 @@ public sealed class CompositeModRepository : IModRepository
         return null;
     }
 
-    public async Task<ModVersionMetadata?> GetLatestReleaseAsync(string modId, CancellationToken cancellationToken = default)
-    {
-        foreach (var (source, repository) in _sources)
-        {
-            var release = await repository.GetLatestReleaseAsync(modId, cancellationToken).ConfigureAwait(false);
-            if (release is not null)
-                return Tag(release, source);
+    public Task<ModVersionMetadata?> GetLatestReleaseAsync(string modId, CancellationToken cancellationToken = default) =>
+        FirstReleaseAsync(modId, repository => repository.GetLatestReleaseAsync(modId, cancellationToken), cancellationToken);
 
-            if (await ClaimsAsync(repository, modId, cancellationToken).ConfigureAwait(false))
-                return null;
-        }
-        return null;
-    }
-
-    public async Task<ModVersionMetadata?> GetReleaseAsync(string modId, ModVersion version, CancellationToken cancellationToken = default)
-    {
-        foreach (var (source, repository) in _sources)
-        {
-            var release = await repository.GetReleaseAsync(modId, version, cancellationToken).ConfigureAwait(false);
-            if (release is not null)
-                return Tag(release, source);
-
-            if (await ClaimsAsync(repository, modId, cancellationToken).ConfigureAwait(false))
-                return null;
-        }
-        return null;
-    }
+    public Task<ModVersionMetadata?> GetReleaseAsync(string modId, ModVersion version, CancellationToken cancellationToken = default) =>
+        FirstReleaseAsync(modId, repository => repository.GetReleaseAsync(modId, version, cancellationToken), cancellationToken);
 
     public async Task<IReadOnlyList<ModVersion>> GetAvailableVersionsAsync(string modId, CancellationToken cancellationToken = default)
     {
@@ -102,13 +65,18 @@ public sealed class CompositeModRepository : IModRepository
         return Array.Empty<ModVersionMetadata>();
     }
 
-    public async Task<IReadOnlyList<ModMetadata>> SearchAsync(string query, CancellationToken cancellationToken = default)
+    public Task<IReadOnlyList<ModMetadata>> SearchAsync(string query, CancellationToken cancellationToken = default) =>
+        MergeListingsAsync(repository => repository.SearchAsync(query, cancellationToken), cancellationToken);
+
+    private async Task<IReadOnlyList<ModMetadata>> MergeListingsAsync(
+        Func<IModRepository, Task<IReadOnlyList<ModMetadata>>> listMods,
+        CancellationToken cancellationToken)
     {
         var results = new List<ModMetadata>();
         var seenIds = new HashSet<string>(ModIds.Comparer);
         foreach (var (source, repository) in _sources)
         {
-            var mods = await repository.SearchAsync(query, cancellationToken).ConfigureAwait(false);
+            var mods = await listMods(repository).ConfigureAwait(false);
             foreach (var mod in mods)
             {
                 if (seenIds.Add(mod.ModId))
@@ -118,6 +86,23 @@ public sealed class CompositeModRepository : IModRepository
             await AddClaimsAsync(repository, seenIds, cancellationToken).ConfigureAwait(false);
         }
         return results;
+    }
+
+    private async Task<ModVersionMetadata?> FirstReleaseAsync(
+        string modId,
+        Func<IModRepository, Task<ModVersionMetadata?>> getRelease,
+        CancellationToken cancellationToken)
+    {
+        foreach (var (source, repository) in _sources)
+        {
+            var release = await getRelease(repository).ConfigureAwait(false);
+            if (release is not null)
+                return Tag(release, source);
+
+            if (await ClaimsAsync(repository, modId, cancellationToken).ConfigureAwait(false))
+                return null;
+        }
+        return null;
     }
 
     private static async Task AddClaimsAsync(
