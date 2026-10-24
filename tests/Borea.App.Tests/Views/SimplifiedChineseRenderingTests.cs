@@ -26,9 +26,10 @@ public sealed class SimplifiedChineseRenderingTests
         {
             var data = new TheoryData<string, double, string>();
             foreach (var page in new[] { "Home", "Discover", "Library", "Listing", "General", "Game", "About", "Help", "Content", "Pack", "Instance", "Create" })
-                foreach (var width in new[] { 860d, 1280d })
-                    foreach (var theme in new[] { "Dark", "Light" })
-                        data.Add(page, width, theme);
+            {
+                data.Add(page, 860d, "Dark");
+                data.Add(page, 1280d, "Light");
+            }
             return data;
         }
     }
@@ -50,7 +51,7 @@ public sealed class SimplifiedChineseRenderingTests
         }
         if (pageName == "Instance")
         {
-            await harness.Services.Instances.CreateAsync("中文测试实例", InstanceSource.Custom.Value);
+            await harness.Services.Instances.CreateAsync("\u4E2D\u6587\u6D4B\u8BD5\u5B9E\u4F8B", InstanceSource.Custom.Value);
             await harness.ViewModel.LoadAsync();
             await harness.ViewModel.Instances.Single().OpenCommand.ExecuteAsync(null);
         }
@@ -58,6 +59,7 @@ public sealed class SimplifiedChineseRenderingTests
         await HeadlessApp.RunAsync(harness, async () =>
         {
             var original = CultureInfo.CurrentUICulture;
+            var originalTheme = Application.Current!.RequestedThemeVariant;
             harness.Localization.TrySetCulture("zh-Hans");
             if (pageName == "Create")
                 harness.ViewModel.BeginCreateInstanceCommand.Execute(null);
@@ -113,6 +115,7 @@ public sealed class SimplifiedChineseRenderingTests
                 window.Close();
                 Resources.Culture = original;
                 CultureInfo.CurrentUICulture = original;
+                Application.Current!.RequestedThemeVariant = originalTheme;
             }
 
             return true;

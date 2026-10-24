@@ -127,6 +127,8 @@ Continuous integration checks every pull request. A text-only contributor can wa
 
 If you already have the .NET SDK, you can run the focused tests locally:
 
+On Linux, the Simplified Chinese rendering checks also need the system font documented in the [Linux installation instructions](../README.md#linux), for example `fonts-noto-cjk` on Debian and Ubuntu. The checks keep asserting that every Chinese glyph renders; a minimal system without a Chinese font will fail them.
+
 ```text
 dotnet test tests/Borea.App.Tests/Borea.App.Tests.csproj --no-restore
 ```

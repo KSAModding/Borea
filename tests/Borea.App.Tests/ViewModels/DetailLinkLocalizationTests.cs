@@ -20,9 +20,9 @@ public sealed class DetailLinkLocalizationTests
         {
             Assert.True(harness.Localization.TrySetCulture(culture));
 
-            Assert.Equal(culture == "zh-Hans" ? "论坛" : "Forum",
+            Assert.Equal(culture == "zh-Hans" ? "\u8BBA\u575B" : "Forum",
                 viewModel.ContentLinks.Single(link => link.Key == "forums").Label);
-            Assert.Equal(culture == "zh-Hans" ? "论坛" : "Forum",
+            Assert.Equal(culture == "zh-Hans" ? "\u8BBA\u575B" : "Forum",
                 viewModel.PackLinks.Single(link => link.Key == "forums").Label);
             Assert.Equal(contentTargets, viewModel.ContentLinks.Select(link => (link.Key, link.Url)));
             Assert.Equal(packTargets, viewModel.PackLinks.Select(link => (link.Key, link.Url)));

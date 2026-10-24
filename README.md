@@ -101,6 +101,8 @@ Common desktop installations usually have all of them. A minimal one needs these
 
 For the CLI alone, install only `libssl3` and the `libicu` package on Debian and Ubuntu, or `libicu openssl-libs` on Fedora.
 
+For the Simplified Chinese App interface, the system also needs a font with Chinese glyphs, such as Noto Sans CJK SC. On Debian and Ubuntu, install it with `sudo apt install fonts-noto-cjk`. The bundled IBM Plex fonts do not contain Chinese glyphs; Borea relies on system font fallback. Without a suitable font, Chinese text can appear as empty boxes. This font is not needed for the CLI.
+
 The build needs glibc, so musl-based distributions such as Alpine are not supported.
 
 ### macOS
