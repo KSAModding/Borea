@@ -12,7 +12,7 @@ public sealed class LocalizationService : INotifyPropertyChanged
     private static readonly SupportedCulture English = new("en", "English");
     private static readonly SupportedCulture German = new("de", "Deutsch");
     private static readonly SupportedCulture Pirate = new("en-QP", "Pirate speak");
-    private static readonly SupportedCulture SimplifiedChinese = new("zh-Hans", "简体中文");
+    private static readonly SupportedCulture SimplifiedChinese = new("zh-Hans", "\u7B80\u4F53\u4E2D\u6587");
     private static readonly IReadOnlyList<SupportedCulture> BuiltCultures = [English, German, Pirate, SimplifiedChinese];
 
     private readonly IReadOnlyList<SupportedCulture> _cultures;
