@@ -37,15 +37,6 @@ jobs:
       # stopped, because a run that only hangs is cancelled by a person later and
       # a cancelled check does not read as a failure.
       - run: dotnet test Borea.slnx --configuration Release --no-build --collect:"XPlat Code Coverage" --results-directory coverage --blame-hang --blame-hang-timeout 5m --blame-hang-dump-type mini
-        env:
-          BOREA_LOCALIZATION_SCREENSHOTS: ${{ runner.temp }}/localization-screenshots
-      - name: Keep Simplified Chinese rendering screenshots
-        if: always()
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
-        with:
-          name: zh-Hans-rendering-${{ matrix.os }}
-          path: ${{ runner.temp }}/localization-screenshots/*.png
-          if-no-files-found: ignore
       - name: Keep the hang dump
         if: failure()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
