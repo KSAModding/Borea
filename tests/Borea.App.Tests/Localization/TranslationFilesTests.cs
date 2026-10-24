@@ -39,7 +39,7 @@ public sealed class TranslationFilesTests : IDisposable
         var changed = service.TrySetCulture("fr");
 
         Assert.True(changed);
-        Assert.Equal(["en", "de", "en-QP", "fr"], service.SupportedCultures.Select(culture => culture.Name));
+        Assert.Equal(["en", "de", "en-QP", "zh-Hans", "fr"], service.SupportedCultures.Select(culture => culture.Name));
         Assert.Equal("Fran" + (char)0xE7 + "ais", service.SupportedCultures[^1].DisplayName);
         Assert.Equal("Accueil", service.NavigationHome);
         Assert.Equal("Language", service.SettingsLanguageLabel);

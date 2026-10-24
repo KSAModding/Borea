@@ -61,6 +61,20 @@ public sealed class ResourceParityTests : IDisposable
             Resources.ResourceManager.GetString(key, CultureInfo.CurrentUICulture)));
     }
 
+    [Fact]
+    public void SimplifiedChinese_LoadsItsOwnSatelliteText()
+    {
+        var chinese = ReadValues("Resources.zh-Hans.resx");
+        Assert.NotEmpty(chinese);
+        _ = new LocalizationService(CultureInfo.GetCultureInfo("zh-Hans"));
+
+        foreach (var (key, value) in chinese)
+        {
+            Assert.False(string.IsNullOrWhiteSpace(value), key);
+            Assert.Equal(value, Resources.ResourceManager.GetString(key, CultureInfo.CurrentUICulture));
+        }
+    }
+
     public void Dispose()
     {
         CultureInfo.CurrentUICulture = _originalUiCulture;

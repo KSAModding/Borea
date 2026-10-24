@@ -8,7 +8,7 @@ public sealed class LocalizationSurfaceTests : IDisposable
     private readonly CultureInfo _originalCulture = CultureInfo.CurrentCulture;
     private readonly CultureInfo _originalUiCulture = CultureInfo.CurrentUICulture;
 
-    public static TheoryData<string> Cultures => new() { "en", "de", "en-QP" };
+    public static TheoryData<string> Cultures => new() { "en", "de", "en-QP", "zh-Hans" };
 
     [Theory]
     [MemberData(nameof(Cultures))]

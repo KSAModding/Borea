@@ -16,6 +16,7 @@ Borea keeps user-interface text in [`src/Borea.App/Localization/Resources`](../s
 
 - [`Resources.resx`](../src/Borea.App/Localization/Resources/Resources.resx) is the neutral English source.
 - [`Resources.de.resx`](../src/Borea.App/Localization/Resources/Resources.de.resx) is the German translation.
+- [`Resources.zh-Hans.resx`](../src/Borea.App/Localization/Resources/Resources.zh-Hans.resx) is the Simplified Chinese translation, listed as `简体中文`.
 - [`Resources.en-QP.resx`](../src/Borea.App/Localization/Resources/Resources.en-QP.resx) is pirate speak. `QP` is a private-use region code, because .NET has no culture for pirate speak.
 - A translated file uses the name `Resources.<language>.resx`. For example, French uses `Resources.fr.resx`.
 
