@@ -379,7 +379,7 @@
     <value>条目的 releases 中未指定 GitHub 仓库或 SpaceDock 模组。</value>
   </data>
   <data name="StewardReviewProofForkFormat" xml:space="preserve">
-    <value>{0} 不拥有分支仓库 {1}，且 {1} 没有主题 {2}。分支仓库会继承标记文件，因此其中的标记文件不能作为证明。</value>
+    <value>{0} 不拥有派生(fork) {1}，且 {1} 没有主题 {2}。派生(fork)会继承标记文件，因此其中的标记文件不能作为证明。</value>
   </data>
   <data name="StewardReviewProofRenamedFormat" xml:space="preserve">
     <value>{0} 现已更名为 {1}。</value>
@@ -1096,7 +1096,7 @@
     <value>登录 GitHub</value>
   </data>
   <data name="GitHubSignInHint" xml:space="preserve">
-    <value>请在 GitHub 上输入此代码。随后 Borea 可以写入你的内容索引分支仓库，并向内容索引创建 PR。对于管理员，Borea 还可以审阅、合并和关闭内容索引的 PR，并写入其管理员分支。除此之外没有其他权限。访问授权会在 8 小时后过期。在设置中登录且开启“在此计算机上保持登录”时，Borea 会在每次启动时续期，直到你退出登录或在 GitHub 上撤销授权。</value>
+    <value>请在 GitHub 上输入此代码。随后 Borea 可以写入你的内容索引派生(fork)，并向内容索引创建 PR。对于管理员，Borea 还可以审阅、合并和关闭内容索引的 PR，并写入其管理员分支。除此之外没有其他权限。访问授权会在 8 小时后过期。在设置中登录且开启“在此计算机上保持登录”时，Borea 会在每次启动时续期，直到你退出登录或在 GitHub 上撤销授权。</value>
   </data>
   <data name="GitHubSignInCodeWarning" xml:space="preserve">
     <value>Borea 仅在此窗口中请求此代码，不会在其他地方请求。</value>
@@ -3067,13 +3067,13 @@
     <value>在 GitHub 上创建 PR</value>
   </data>
   <data name="ListingNewPullRequestText" xml:space="preserve">
-    <value>GitHub 会在你的 content-index 分支仓库中打开新文件，然后打开 PR 表单。文字能放入链接时，GitHub 会自动填入；过长时，Borea 会将其复制，由你粘贴到页面中。若你控制发布平台，此 PR 会自动合并：仓库属于你、带有主题 ksa-index-&lt;your GitHub name&gt;，或并非分支仓库且包含 .github/ksa-content-index.toml。SpaceDock 模组通过其源代码链接指向的 GitHub 仓库证明这一点。</value>
+    <value>GitHub 会在你的 content-index 派生(fork)中打开新文件，然后打开 PR 表单。文字能放入链接时，GitHub 会自动填入；过长时，Borea 会将其复制，由你粘贴到页面中。若你控制发布平台，此 PR 会自动合并：仓库属于你、带有主题 ksa-index-&lt;your GitHub name&gt;，或并非派生(fork)且包含 .github/ksa-content-index.toml。SpaceDock 模组通过其源代码链接指向的 GitHub 仓库证明这一点。</value>
   </data>
   <data name="ListingPackPullRequestTextFormat" xml:space="preserve">
-    <value>GitHub 会在你的 content-index 分支仓库中打开新文件 {0}。整合包文件通常过长，无法放入链接，因此 Borea 会复制内容，由你粘贴到页面并创建 PR。由整合包所有者账户提交的版本会自动合并。</value>
+    <value>GitHub 会在你的 content-index 派生(fork)中打开新文件 {0}。整合包文件通常过长，无法放入链接，因此 Borea 会复制内容，由你粘贴到页面并创建 PR。由整合包所有者账户提交的版本会自动合并。</value>
   </data>
   <data name="ListingNewPackPullRequestTextFormat" xml:space="preserve">
-    <value>GitHub 会在你的 content-index 分支仓库中打开新文件 {0}。整合包文件通常过长，无法放入链接，因此 Borea 会复制内容，由你粘贴到页面中。新整合包的首个版本还需在同一 PR 中添加 {1}。检查通过后，首次所有权声明由管理员接受；新 GitHub 账户的检查可能需要等待管理员启动。</value>
+    <value>GitHub 会在你的 content-index 派生(fork)中打开新文件 {0}。整合包文件通常过长，无法放入链接，因此 Borea 会复制内容，由你粘贴到页面中。新整合包的首个版本还需在同一 PR 中添加 {1}。检查通过后，首次所有权声明由管理员接受；新 GitHub 账户的检查可能需要等待管理员启动。</value>
   </data>
   <data name="ListingOwnerFileTextFormat" xml:space="preserve">
     <value>新整合包的首个版本还需添加 {0}，其中指定你的 GitHub 账户为整合包所有者。通过你的账户创建 PR 时，Borea 会自动写入此文件。使用浏览器时，请通过 Add file 将其添加到同一 PR 的分支中，填入 GitHub 登录名，以及 https://api.github.com/users/&lt;your GitHub name&gt; 显示的数字 ID。</value>
@@ -3169,7 +3169,7 @@
     <value>GitHub 上没有公共仓库 {0}。</value>
   </data>
   <data name="ListingFixForkFormat" xml:space="preserve">
-    <value>{0} 是分支仓库，其中的标记文件不能作为证明。如需自动合并，请为 {0} 添加主题 {1}。</value>
+    <value>{0} 是派生(fork)，其中的标记文件不能作为证明。如需自动合并，请为 {0} 添加主题 {1}。</value>
   </data>
   <data name="ListingFixRenamedFormat" xml:space="preserve">
     <value>{0} 现已更名为 {1}，请在“发布版本”中使用新名称。</value>
@@ -3205,28 +3205,28 @@
     <value>重新检查</value>
   </data>
   <data name="ListingForkMissing" xml:space="preserve">
-    <value>Borea 会通过你的 content-index 分支仓库创建 PR，请先在 GitHub 上创建分支仓库。</value>
+    <value>Borea 会通过你的 content-index 派生(fork)创建 PR，请先在 GitHub 上创建派生(fork)。</value>
   </data>
   <data name="ListingMakeFork" xml:space="preserve">
-    <value>创建索引的分支仓库</value>
+    <value>创建索引的派生(fork)</value>
   </data>
   <data name="ListingAppNotOnForkFormat" xml:space="preserve">
-    <value>请允许 Borea 访问 {0}。在 GitHub 上选择 Only select repositories，并选中 {0}。这样 Borea 只能写入该分支仓库。</value>
+    <value>请允许 Borea 访问 {0}。在 GitHub 上选择 Only select repositories，并选中 {0}。这样 Borea 只能写入该派生(fork)。</value>
   </data>
   <data name="ListingAllowOnFork" xml:space="preserve">
-    <value>授权 Borea 访问你的分支仓库</value>
+    <value>授权 Borea 访问你的派生(fork)</value>
   </data>
   <data name="ListingForkNeedsSyncFormat" xml:space="preserve">
-    <value>你的分支仓库 {0} 落后于 content-index。请在 GitHub 上选择 Sync fork，再重新检查。</value>
+    <value>你的派生(fork) {0} 落后于 content-index。请在 GitHub 上选择 Sync fork，再重新检查。</value>
   </data>
   <data name="ListingSyncFork" xml:space="preserve">
-    <value>同步分支仓库</value>
+    <value>同步派生(fork)</value>
   </data>
   <data name="ListingStepFindPullRequest" xml:space="preserve">
     <value>正在查找你未关闭的 PR...</value>
   </data>
   <data name="ListingStepFork" xml:space="preserve">
-    <value>正在查找你的 content-index 分支仓库...</value>
+    <value>正在查找你的 content-index 派生(fork)...</value>
   </data>
   <data name="ListingStepBranch" xml:space="preserve">
     <value>正在创建分支...</value>
@@ -3268,7 +3268,7 @@
     <value>文件与已收录文件相同，请先作出修改。</value>
   </data>
   <data name="ListingErrorPullRequestNotOnForkFormat" xml:space="preserve">
-    <value>你的 PR #{0} 已修改此文件，但并非来自你的索引分支仓库。请在 GitHub 上修改，或关闭后重试。</value>
+    <value>你的 PR #{0} 已修改此文件，但并非来自你的索引派生(fork)。请在 GitHub 上修改，或关闭后重试。</value>
   </data>
   <data name="ListingErrorUnexpectedFormat" xml:space="preserve">
     <value>GitHub 针对 {0} 返回了 Borea 无法识别的响应。</value>
@@ -3277,7 +3277,7 @@
     <value>你未关闭的 PR</value>
   </data>
   <data name="ListingWhatFork" xml:space="preserve">
-    <value>你的 content-index 分支仓库</value>
+    <value>你的 content-index 派生(fork)</value>
   </data>
   <data name="ListingWhatBranch" xml:space="preserve">
     <value>该分支</value>

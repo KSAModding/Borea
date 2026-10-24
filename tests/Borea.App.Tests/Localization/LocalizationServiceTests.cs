@@ -91,7 +91,7 @@ public sealed class LocalizationServiceTests : IDisposable
             culture => Assert.Equal("en", culture.Name),
             culture => Assert.Equal("de", culture.Name),
             culture => Assert.Equal(("en-QP", "Pirate speak"), (culture.Name, culture.DisplayName)),
-            culture => Assert.Equal(("zh-Hans", "简体中文"), (culture.Name, culture.DisplayName)));
+            culture => Assert.Equal(("zh-Hans", "\u7B80\u4F53\u4E2D\u6587"), (culture.Name, culture.DisplayName)));
     }
 
     [Theory]
@@ -103,9 +103,9 @@ public sealed class LocalizationServiceTests : IDisposable
         var service = new LocalizationService(CultureInfo.GetCultureInfo(cultureName));
 
         Assert.Equal("zh-Hans", service.SelectedCultureName);
-        Assert.Equal("首页", service.NavigationHome);
-        Assert.Equal("语言", service.SettingsLanguageLabel);
-        Assert.Equal("有 2 个模组与 Alpha 1.0 不同", service.FormatInstancePackDifference(2, "Alpha", "1.0"));
+        Assert.Equal("\u9996\u9875", service.NavigationHome);
+        Assert.Equal("\u8BED\u8A00", service.SettingsLanguageLabel);
+        Assert.Equal("\u6709 2 \u4E2A\u6A21\u7EC4\u4E0E Alpha 1.0 \u4E0D\u540C", service.FormatInstancePackDifference(2, "Alpha", "1.0"));
     }
 
     [Fact]
@@ -115,7 +115,7 @@ public sealed class LocalizationServiceTests : IDisposable
         var service = new LocalizationService(CultureInfo.GetCultureInfo("en"));
 
         Assert.True(service.TrySetCulture("zh-Hans"));
-        Assert.Equal("已在 Main 中将 Alpha 更新至 1.2", service.FormatToastUpdated("Alpha", "1.2", "Main"));
+        Assert.Equal("\u5DF2\u5728 Main \u4E2D\u5C06 Alpha \u66F4\u65B0\u81F3 1.2", service.FormatToastUpdated("Alpha", "1.2", "Main"));
         Assert.Equal("de-DE", CultureInfo.CurrentCulture.Name);
         Assert.True(service.TrySetCulture("en"));
         Assert.Equal("Home", service.NavigationHome);
