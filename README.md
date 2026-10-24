@@ -1,4 +1,7 @@
 # Borea
+
+[简体中文](README.zh-CN.md)
+
 ![Downloads](https://img.shields.io/github/downloads/KSAModding/Borea/total)
 ![License](https://img.shields.io/badge/License-MIT-green.svg)
 ![Last commit](https://img.shields.io/github/last-commit/KSAModding/Borea/main.svg)
