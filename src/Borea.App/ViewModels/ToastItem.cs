@@ -80,7 +80,7 @@ public sealed partial class ToastItem : ObservableObject
     public string? Detail => TaskItem is not { } task ? _detail : task.State switch
     {
         TaskState.Failed => task.FailureReason,
-        TaskState.Stopped when task.StoppedAfter is { Completed: > 0 } after => task.Kind is TaskKind.Update or TaskKind.UpdateAll or TaskKind.PackUpdate
+        TaskState.Stopped when task.StoppedAfter is { Completed: > 0 } after => TaskItem.IsUpdate(task.Kind)
             ? Localization.FormatToastStoppedUpdated(after.Completed, after.Total)
             : Localization.FormatToastStoppedInstalled(after.Completed, after.Total),
         _ => null,
