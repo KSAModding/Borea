@@ -29,7 +29,7 @@ internal static class ArgumentRules
         {
             var value = result.GetValueOrDefault<string>();
             if (!ModIds.IsValid(value))
-                result.AddError($"'{value}' is not a valid content id.");
+                result.AddError(ContentIdError(value));
         });
         return argument;
     }
@@ -44,29 +44,46 @@ internal static class ArgumentRules
 
             var value = result.GetValueOrDefault<string?>();
             if (!ModIds.IsValid(value))
-                result.AddError($"'{value}' is not a valid content id.");
+                result.AddError(ContentIdError(value));
         });
         return argument;
+    }
+
+    /// <summary>An option that may be absent but never blank, the option counterpart of <see cref="Text"/>.</summary>
+    public static Option<string?> TextOption(string name, string description)
+    {
+        var option = new Option<string?>(name) { Description = description };
+        option.Validators.Add(result =>
+        {
+            if (string.IsNullOrWhiteSpace(result.GetValueOrDefault<string?>()))
+                result.AddError($"The {name} value cannot be empty.");
+        });
+        return option;
     }
 
     /// <summary>
     /// Absent means the active instance, present and blank is a usage error, like a blank instance argument.
     /// </summary>
     public static Option<string?> Instance()
-    {
-        var option = new Option<string?>("--instance")
-        {
-            Description = "The instance to act on, by name or id. The active instance when absent.",
-        };
-        option.Validators.Add(result =>
-        {
-            if (string.IsNullOrWhiteSpace(result.GetValueOrDefault<string?>()))
-                result.AddError("The --instance value cannot be empty.");
-        });
-        return option;
-    }
+        => TextOption("--instance", "The instance to act on, by name or id. The active instance when absent.");
 
     public static Option<bool> Json() => new("--json") { Description = "Print the result as JSON, for scripts." };
+
+    public static Option<string?> Version(string description)
+    {
+        var version = new Option<string?>("--version") { Description = description };
+        version.Validators.Add(result =>
+        {
+            var value = result.GetValueOrDefault<string?>();
+            if (string.IsNullOrWhiteSpace(value) || !ModVersion.TryParse(value, out _))
+                result.AddError($"'{value}' is not a valid semantic version.");
+        });
+        return version;
+    }
+
+    public static Option<bool> WithRecommended() => new("--with-recommended") { Description = "Install recommended dependencies." };
+
+    public static Option<string[]> Alternatives() => new("--alternative") { Description = "Select a required alternative as choice-key=mod-id." };
 
     /// <summary>A release channel name: stable, testing or dev.</summary>
     public static Argument<string> Channel(string name, string description)
@@ -102,4 +119,6 @@ internal static class ArgumentRules
 
     private static string ChannelError(string? value)
         => $"'{value}' is not a release channel. Use {string.Join(", ", ReleaseChannels.Names)}.";
+
+    public static string ContentIdError(string? value) => $"'{value}' is not a valid content id.";
 }

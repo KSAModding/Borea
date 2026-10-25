@@ -12,7 +12,7 @@ internal static class ShowCommand
     public static Command Build(Func<CancellationToken, Task<CliServices>> services)
     {
         var id = ArgumentRules.ContentId("id", "The listing id.");
-        var version = VersionOption();
+        var version = ArgumentRules.Version("Show only this release.");
         var json = ArgumentRules.Json();
         var show = new Command("show", "Show one listing or one of its releases.");
         show.Arguments.Add(id);
@@ -82,7 +82,7 @@ internal static class ShowCommand
                         diagnostic,
                         DownloadCountOutput.From(FindReleaseDownloads(downloads, diagnostic.Version)))))
                 .ToList();
-            releaseViews.Sort(CompareReleasesNewestFirst);
+            releaseViews.Sort((left, right) => ContentOutput.CompareVersionsNewestFirst(left.Version, right.Version));
             var state = metadata is not null
                 ? "known"
                 : indexListing?.IndexStatus?.State == IndexStatusState.Delisted
@@ -110,18 +110,6 @@ internal static class ShowCommand
         }));
 
         return show;
-    }
-
-    private static Option<string?> VersionOption()
-    {
-        var version = new Option<string?>("--version") { Description = "Show only this release." };
-        version.Validators.Add(result =>
-        {
-            var value = result.GetValueOrDefault<string?>();
-            if (string.IsNullOrWhiteSpace(value) || !ModVersion.TryParse(value, out _))
-                result.AddError($"'{value}' is not a valid semantic version.");
-        });
-        return version;
     }
 
     private static IReadOnlyList<DiagnosticView> MatchingDiagnostics(
@@ -173,12 +161,7 @@ internal static class ShowCommand
         }
 
         if (view.IndexStatus is { } status)
-        {
-            var since = status.Since is null ? string.Empty : $" since {status.Since:O}";
-            output.WriteLine($"Index status: {status.State}{since}");
-            if (status.Reason is not null)
-                output.WriteLine($"Index reason: {status.Reason}");
-        }
+            ContentOutput.WriteIndexStatus(output, status);
 
         if (view.Downloads is { } downloads)
             output.WriteLine($"Downloads: {DownloadCountOutput.Describe(downloads)}");
@@ -269,24 +252,6 @@ internal static class ShowCommand
         (null, not null) => $" <= {max}",
         _ => $" >= {min} <= {max}",
     };
-
-    private static int CompareReleasesNewestFirst(ReleaseView left, ReleaseView right)
-    {
-        var leftParsed = ModVersion.TryParse(left.Version, out var leftVersion);
-        var rightParsed = ModVersion.TryParse(right.Version, out var rightVersion);
-        if (leftParsed && rightParsed)
-        {
-            var precedence = rightVersion.CompareTo(leftVersion);
-            if (precedence != 0)
-                return precedence;
-        }
-        else if (leftParsed != rightParsed)
-        {
-            return leftParsed ? -1 : 1;
-        }
-
-        return StringComparer.Ordinal.Compare(left.Version, right.Version);
-    }
 
     private sealed record ShowView(
         string Id,
