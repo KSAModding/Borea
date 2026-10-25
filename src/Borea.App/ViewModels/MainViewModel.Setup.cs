@@ -33,8 +33,8 @@ public enum GameSetupState
 }
 
 /// <summary>
-/// The Game section of the settings modal: where KSA is, and which mod
-/// loader starts it. Saving rebuilds the services, because their paths are
+/// The Game section of the settings modal: where KSA is, and the installed
+/// versions of each mod loader. Saving rebuilds the services, because their paths are
 /// fixed when the graph is built (see <see cref="BoreaServices"/>).
 /// </summary>
 public partial class MainViewModel
@@ -166,35 +166,26 @@ public partial class MainViewModel
     [ObservableProperty]
     private InstallRun? _loaderInstallRun;
 
-    /// <summary>
-    /// What the settings record for the selected loader, as the chip under the
-    /// picker shows it. Null when the selected loader is not installed.
-    /// </summary>
+    /// <summary>The installed loader versions, one row each, with the instances that start them.</summary>
+    public ObservableCollection<LoaderVersionItem> LoaderVersionItems { get; } = [];
+
+    public bool HasNoLoaderVersions => LoaderVersionItems.Count == 0;
+
+    /// <summary>The loader is a choice only once the index lists more than one.</summary>
+    public bool ShowLoaderChoice => Loaders.Count > 1;
+
+    /// <summary>The releases of the selected loader that the channel offers and that are not installed, newest first.</summary>
     [ObservableProperty]
-    private string? _installedLoaderText;
+    private IReadOnlyList<LoaderReleaseChoice> _loaderInstallReleases = [];
 
-    /// <summary>True when the index says the installed release of the selected loader does not support the game.</summary>
     [ObservableProperty]
-    private bool _isInstalledLoaderIncompatible;
+    [NotifyPropertyChangedFor(nameof(CanInstallLoader))]
+    private LoaderReleaseChoice? _selectedLoaderInstallRelease;
 
-    /// <summary>
-    /// The label of the install button. It installs a loader Borea does not
-    /// know, updates one to the offered release, or reinstalls one whose
-    /// version is unknown.
-    /// </summary>
-    [ObservableProperty]
-    private string _loaderInstallActionText = string.Empty;
+    public bool CanInstallLoader => SelectedLoaderInstallRelease is { CanInstall: true };
 
-    /// <summary>
-    /// False when no release is offered above the recorded one, because the
-    /// button would then only download the same files again.
-    /// </summary>
-    [ObservableProperty]
-    private bool _canInstallLoader = true;
-
-    private LoaderInstallation? _selectedLoaderInstallation;
-
-    private LoaderUpdate? _selectedLoaderUpdate;
+    /// <summary>The versions the last refresh listed, for the diagnostics. Null before the first refresh.</summary>
+    private IReadOnlyList<InstalledLoaderVersion>? _listedLoaderVersions;
 
     [RelayCommand]
     private void ShowGeneralSettings() => SettingsTab = SettingsTab.General;
@@ -213,12 +204,19 @@ public partial class MainViewModel
         _detectedLoaders = [];
         GameDirectoryInput = _services.Settings.GameDirectoryPath ?? string.Empty;
         var loaderId = _services.Settings.LoaderInstallations.Keys.FirstOrDefault();
-        LoaderDirectoryInput = loaderId is null ? string.Empty : _services.Settings.LoaderInstallations[loaderId].DirectoryPath;
+
+        // the field only points Borea at a folder of the player, so it shows the one that is used and never a folder of Borea
+        LoaderDirectoryInput = loaderId is not null
+            && _services.Settings.LoaderInstallations[loaderId] is { } recorded
+            && LoaderLayoutMigration.IsPlayerFolder(_services.Paths.GetLoadersRoot(), recorded.DirectoryPath, recorded.IsAdopted)
+            ? recorded.DirectoryPath
+            : string.Empty;
 
         await EnsureDiscoverLoadedAsync();
         Loaders.Clear();
         foreach (var loader in _listings.Where(item => item.Type == ContentType.ModLoader))
             Loaders.Add(loader);
+        OnPropertyChanged(nameof(ShowLoaderChoice));
         SelectedLoader = Loaders.FirstOrDefault(loader => loaderId is not null && ModIds.Equals(loader.ModId, loaderId)) ?? Loaders.FirstOrDefault();
         await DetectInstallsAsync(_services);
         await RefreshLoaderStateAsync();
@@ -232,7 +230,7 @@ public partial class MainViewModel
     {
         var savedGame = services.Settings.GameDirectoryPath;
         var needsGame = savedGame is null || !Directory.Exists(savedGame);
-        var needsLoader = services.Settings.LoaderInstallations.Count == 0;
+        var needsLoader = (await services.LoaderVersions.ListAsync()).Count == 0;
         if (needsGame || needsLoader)
         {
             var gameInput = GameDirectoryInput;
@@ -291,7 +289,7 @@ public partial class MainViewModel
         var loaderInput = LoaderDirectoryInput.Trim();
         IsLoaderDirectorySuggested = loaderInput.Length > 0
             && SelectedLoader is { } selected
-            && _services?.Settings.LoaderInstallations.Keys.Any(id => ModIds.Equals(id, selected.ModId)) != true
+            && !LoaderVersionItems.Any(item => ModIds.Equals(item.LoaderId, selected.ModId))
             && _detectedLoaders.Any(found => ModIds.Equals(found.LoaderId, selected.ModId) && SameDirectory(found.Directory, loaderInput));
     }
 
@@ -320,68 +318,173 @@ public partial class MainViewModel
             LoaderDirectoryInput = FoundLoaderDirectory(newValue) ?? string.Empty;
 
         RefreshSuggestions();
-        _ = RefreshLoaderStateAsync();
+        _ = RefreshLoaderReleasesAsync();
     }
 
     /// <summary>
-    /// Reads what the settings record for the selected loader and which release
-    /// Borea offers for the installed game, then updates the chip and the install button.
+    /// Lists the installed versions with the instances that start them, and the releases of the selected loader that
+    /// Borea can install beside them.
     /// </summary>
     internal async Task RefreshLoaderStateAsync()
     {
+        if (_services is not { } services)
+            return;
+
+        var versions = await ReadLoaderVersionsAsync(services);
+        if (!ReferenceEquals(services, _services))
+            return;
+
+        _listedLoaderVersions = versions.Select(item => item.Version).ToList();
+        LoaderVersionItems.Clear();
+        foreach (var item in versions)
+            LoaderVersionItems.Add(item);
+        OnPropertyChanged(nameof(HasNoLoaderVersions));
+        RefreshSuggestions();
+        await RefreshLoaderReleasesAsync();
+    }
+
+    /// <summary>
+    /// The releases of the selected loader that the channel offers and that are not installed. The release that the
+    /// update check offers for the recorded version is chosen first, so the choice never moves a player to an older one.
+    /// </summary>
+    private async Task RefreshLoaderReleasesAsync()
+    {
+        if (_services is not { } services)
+            return;
+
         var loader = SelectedLoader;
-        LoaderInstallation? installation = null;
         LoaderUpdate? update = null;
-        if (_services is { } services && loader is not null)
+        IReadOnlyList<ModVersionMetadata> history = [];
+        if (loader is not null)
         {
-            installation = services.Settings.LoaderInstallations
-                .FirstOrDefault(pair => ModIds.Equals(pair.Key, loader.ModId)).Value;
+            var installation = services.Settings.LoaderInstallations.FirstOrDefault(pair => ModIds.Equals(pair.Key, loader.ModId)).Value;
             try
             {
                 update = await FindLoaderUpdateAsync(services, loader.ModId, installation);
+                history = await services.Mods.GetReleaseHistoryAsync(loader.ModId);
             }
             catch (Exception exception) when (exception is HttpRequestException or IOException or InvalidOperationException or TaskCanceledException)
             {
-                // without a known release there is nothing newer to offer
+                // without a known release there is nothing to install
             }
         }
 
-        // a selection that changed while the release was read refreshes itself
-        if (!ReferenceEquals(loader, SelectedLoader))
+        // a refresh that started later shows the newer state
+        if (!ReferenceEquals(loader, SelectedLoader) || !ReferenceEquals(services, _services))
             return;
 
-        _selectedLoaderInstallation = installation;
-        _selectedLoaderUpdate = update;
-        RefreshLoaderText();
+        var game = services.InstalledVersion.GetInstalledVersion()?.Version;
+        var choices = history
+            .Where(release => release.IsOffered
+                && services.Settings.ReleaseChannel.Includes(release.ReleaseStatus)
+                && !LoaderVersionItems.Any(item => ModIds.Equals(item.LoaderId, release.ModId) && item.Version.Version == release.Version))
+            .DistinctBy(release => release.Version)
+            .OrderByDescending(release => release.Version)
+            .Select(release => new LoaderReleaseChoice(this, release.Version, release, isInstalled: false, Compatibility.Evaluate(release, game), [], _ => string.Empty))
+            .ToList();
+        LoaderInstallReleases = choices;
+        SelectedLoaderInstallRelease = choices.FirstOrDefault(choice => choice.Version == update?.Offer?.Version);
     }
+
+    /// <summary>
+    /// The installed versions with their rating for the game in the settings and the instances that start them. The
+    /// instances are resolved with the inputs of the launch, so a version that a launch starts is never shown as unused.
+    /// When the instances cannot be resolved, no version can be removed.
+    /// </summary>
+    private async Task<IReadOnlyList<LoaderVersionItem>> ReadLoaderVersionsAsync(BoreaServices services)
+    {
+        var installed = await services.LoaderVersions.ListAsync();
+        var releases = await HeldLoaderReleasesAsync(services);
+        IReadOnlyList<LoaderVersionUse>? uses = null;
+        try
+        {
+            uses = await LoaderVersionUsesAsync(services, installed);
+        }
+        catch (Exception exception) when (exception is HttpRequestException or IOException or InvalidOperationException or TaskCanceledException)
+        {
+            services.Log.Write("Could not tell which instances start each mod loader version.", exception);
+        }
+
+        var game = services.InstalledVersion.GetInstalledVersion()?.Version;
+        var items = new List<LoaderVersionItem>();
+        foreach (var version in installed)
+        {
+            var compatibility = GameCompatibility.Unknown;
+            if (releases is not null && version.Version is { } known)
+            {
+                try
+                {
+                    if (await releases.GetReleaseAsync(version.LoaderId, known) is { } release)
+                        compatibility = Compatibility.Evaluate(release, game);
+                }
+                catch (Exception exception) when (exception is IOException or InvalidOperationException)
+                {
+                    // the version stays unrated, as when Borea is offline
+                }
+            }
+
+            var name = Loaders.FirstOrDefault(loader => ModIds.Equals(loader.ModId, version.LoaderId))?.Name ?? version.LoaderId;
+            var users = uses?.First(use => ReferenceEquals(use.Version, version)).Users.Select(user => user.Instance.Name).ToList();
+            items.Add(new LoaderVersionItem(this, version, name, compatibility, users));
+        }
+
+        return items;
+    }
+
+    private static async Task<IReadOnlyList<LoaderVersionUse>> LoaderVersionUsesAsync(BoreaServices services, IReadOnlyList<InstalledLoaderVersion> installed) =>
+        await LoaderVersionUse.UsedByAsync(
+            await services.Instances.GetAllAsync(),
+            installed,
+            services.OfflineContentIndex,
+            services.ContentIndex,
+            await HeldLoaderReleasesAsync(services),
+            services.Settings.ReleaseChannel,
+            instance => services.InstanceGames.Resolve(instance).Version?.Version);
 
     private void RefreshLoaderText()
     {
-        var installation = _selectedLoaderInstallation;
-        var update = _selectedLoaderUpdate;
-        IsInstalledLoaderIncompatible = installation is not null && update?.InstalledCompatibility == GameCompatibility.Incompatible;
+        foreach (var item in LoaderVersionItems)
+            item.RefreshText();
+        foreach (var choice in LoaderInstallReleases)
+            choice.RefreshText();
+    }
 
-        if (installation is null)
+    /// <summary>
+    /// Removes one installed version, or forgets a folder of the player. Which instances start it is read again here,
+    /// because an instance may have changed since the list was read.
+    /// </summary>
+    internal async Task RemoveLoaderVersionAsync(LoaderVersionItem item)
+    {
+        if (_services is not { } services || IsSetupBusy)
+            return;
+
+        item.IsConfirmingRemove = false;
+        if (IsGameRunning(services))
         {
-            InstalledLoaderText = null;
-            LoaderInstallActionText = Localization.SetupInstallLoader;
-            CanInstallLoader = true;
+            SetupMessage = null;
+            SetupError = Localization.LoaderUpdateGameRunning;
+            return;
         }
-        else if ((installation.Version ?? update?.InstalledVersion) is not { } installed)
+
+        await RunSetupAsync(async current =>
         {
-            InstalledLoaderText = Localization.SetupLoaderInstalledUnknownVersion;
-            LoaderInstallActionText = Localization.SetupReinstallLoader;
-            CanInstallLoader = update?.Offer is not null;
-        }
-        else
-        {
-            InstalledLoaderText = IsInstalledLoaderIncompatible
-                ? Localization.FormatSetupLoaderIncompatible(installed.ToString(), InstalledVersionText ?? string.Empty)
-                : Localization.FormatSetupLoaderInstalledVersion(installed.ToString());
-            // with no offer the disabled button names the installed release, which reads as up to date
-            LoaderInstallActionText = Localization.FormatSetupUpdateLoader((update?.Offer?.Version ?? installed).ToString());
-            CanInstallLoader = update?.Offer is not null;
-        }
+            var installed = await current.LoaderVersions.ListAsync();
+            if (installed.FirstOrDefault(v => ModIds.Equals(v.LoaderId, item.LoaderId) && SameDirectory(v.DirectoryPath, item.Version.DirectoryPath)) is not { } version)
+                return Localization.FormatSettingsLoaderRemoved(item.Name, item.VersionText);
+
+            var users = (await LoaderVersionUsesAsync(current, installed)).First(use => ReferenceEquals(use.Version, version)).Users;
+            if (users.Count > 0)
+                throw new InvalidOperationException(Localization.FormatSettingsLoaderInUse(string.Join(", ", users.Select(user => user.Instance.Name))));
+
+            var result = version.Version is { } known
+                ? await current.LoaderUninstaller.UninstallVersionAsync(version.LoaderId, known)
+                : await current.LoaderUninstaller.UninstallAsync(version.LoaderId);
+            if (result.Failure == LoaderUninstallFailure.GameRunning)
+                throw new InvalidOperationException(Localization.LoaderUpdateGameRunning);
+
+            current.Log.Write($"Settings > Game removed {version.LoaderId} {version.Version?.ToString() ?? "of an unknown version"} at '{version.DirectoryPath}'.");
+            return version.IsAdopted ? Localization.SetupSaved : Localization.FormatSettingsLoaderRemoved(item.Name, item.VersionText);
+        });
     }
 
     [RelayCommand]
@@ -423,8 +526,7 @@ public partial class MainViewModel
     });
 
     /// <summary>
-    /// Downloads the release Borea offers for the installed game and installs
-    /// it. An empty directory lets the installer pick its default.
+    /// Downloads the chosen release and installs it beside the installed versions, in the folder that Borea chooses.
     /// </summary>
     [RelayCommand]
     private Task InstallLoaderAsync() => RunSetupAsync(async services =>
@@ -432,24 +534,35 @@ public partial class MainViewModel
         if (SelectedLoader is not { } loader)
             return Localization.SetupNoLoaderSelected;
 
-        // read at the click, so a changed loader pick or game build never installs the answer of an earlier one
-        var recorded = services.Settings.LoaderInstallations.FirstOrDefault(pair => ModIds.Equals(pair.Key, loader.ModId)).Value;
-        var offer = (await FindLoaderUpdateAsync(services, loader.ModId, recorded)).Offer
-            ?? throw new InvalidOperationException(Localization.DiscoverNoRelease);
-        return await InstallLoaderReleaseAsync(services, loader.ModId, offer, LoaderDirectoryInput.Trim());
+        // the choices of an earlier loader pick never install for this one
+        if (SelectedLoaderInstallRelease?.Release is not { } release || !ModIds.Equals(release.ModId, loader.ModId))
+            throw new InvalidOperationException(Localization.DiscoverNoRelease);
+        return await InstallLoaderReleaseAsync(services, loader.ModId, release);
     });
 
-    /// <param name="release">The release to install. Null installs the newest release of the channel that the index does not rate incompatible with the game.</param>
-    private async Task<string> InstallLoaderReleaseAsync(BoreaServices services, string loaderId, ModVersionMetadata? release, string directory)
+    private async Task<string> InstallLoaderReleaseAsync(BoreaServices services, string loaderId, ModVersionMetadata release)
     {
-        // a recorded loader is replaced in place, which fails halfway while its files are in use
-        if (services.Settings.LoaderInstallations.Keys.Any(id => ModIds.Equals(id, loaderId)) && IsGameRunning(services))
-            throw new InvalidOperationException(Localization.LoaderUpdateGameRunning);
+        // A new version goes into a new folder. The same version is replaced in place and the flat folder of an older Borea
+        // is moved first, and both fail halfway while their files are in use.
+        if (IsGameRunning(services))
+        {
+            var flatFolder = Path.Combine(services.Paths.GetLoadersRoot(), loaderId);
+            if (InstalledLoaderVersion.Of(await services.LoaderVersions.ListAsync(), loaderId)
+                .Any(installed => installed.Version == release.Version || SameDirectory(installed.DirectoryPath, flatFolder)))
+            {
+                throw new InvalidOperationException(Localization.LoaderUpdateGameRunning);
+            }
+        }
 
         var listing = await services.Mods.GetListingAsync(loaderId)
             ?? throw new InvalidOperationException(Localization.DiscoverNoRelease);
-        release ??= (await FindLoaderUpdateAsync(services, loaderId, installation: null)).Offer
-            ?? throw new InvalidOperationException(Localization.DiscoverNoRelease);
+
+        // the record is what an older Borea starts with the game in the settings, so it is rated with that game
+        var replacesUnfitRecord = await LoaderUpdate.ReplacesUnfitRecordAsync(
+            services.Mods,
+            services.Settings.LoaderInstallations.GetValueOrDefault(loaderId),
+            release,
+            services.InstalledVersion.GetInstalledVersion()?.Version);
         var version = release.Version.ToString();
         var run = LoaderInstallRun = StartInstallRun(StartTask(TaskKind.LoaderInstall, listing.Name, version: version));
         run.TaskItem.NewVersion = version;
@@ -477,11 +590,10 @@ public partial class MainViewModel
         try
         {
             var result = await run.InstallStop.RunAsync(
-                (reports, token) => services.LoaderInstaller.InstallAsync(listing, release, directory.Length == 0 ? null : Path.GetFullPath(directory), reports, token),
+                (reports, token) => services.LoaderInstaller.InstallAsync(listing, release, directory: null, replacesUnfitRecord, reports, token),
                 progress);
             completed = true;
             ForgetLoaderUpdate(loaderId);
-            LoaderDirectoryInput = result.Directory;
             return Localization.FormatSetupLoaderInstalled(listing.Name, result.Version.ToString(), result.Directory);
         }
         catch (InstallStoppedException)
@@ -521,10 +633,10 @@ public partial class MainViewModel
             await RebuildServicesAsync();
             if (_services.Settings.GameDirectoryPath is { } game && Directory.Exists(game))
                 ClearDetectedGames();
-            if (_services.Settings.LoaderInstallations.Count > 0)
-                _detectedLoaders = [];
 
             await RefreshLoaderStateAsync();
+            if (LoaderVersionItems.Count > 0)
+                _detectedLoaders = [];
             RefreshSuggestions();
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or InvalidOperationException or ArgumentException or NotSupportedException or HttpRequestException or DownloadFailedException or TaskCanceledException or AggregateException)
@@ -559,4 +671,103 @@ public partial class MainViewModel
         await LoadAsync();
         await RefreshCompatibilityAsync();
     }
+}
+
+/// <summary>One installed loader version in Settings > Game, with the instances that start it.</summary>
+public sealed partial class LoaderVersionItem : ObservableObject
+{
+    /// <summary>How many instance names the row shows before it cuts the list.</summary>
+    internal const int UsersShown = 3;
+
+    private readonly MainViewModel _owner;
+
+    /// <param name="users">The names of the instances that start this version, or null when Borea could not tell.</param>
+    public LoaderVersionItem(MainViewModel owner, InstalledLoaderVersion version, string name, GameCompatibility compatibility, IReadOnlyList<string>? users)
+    {
+        _owner = owner;
+        Version = version;
+        Name = name;
+        Compatibility = compatibility;
+        Users = users;
+    }
+
+    public InstalledLoaderVersion Version { get; }
+
+    public string LoaderId => Version.LoaderId;
+
+    public string Name { get; }
+
+    public GameCompatibility Compatibility { get; }
+
+    public IReadOnlyList<string>? Users { get; }
+
+    /// <summary>A folder of the player, which Borea only forgets and never deletes.</summary>
+    public bool IsAdopted => Version.IsAdopted;
+
+    public string VersionText => Version.Version?.ToString() ?? Version.RawVersion ?? string.Empty;
+
+    /// <summary>"StarMap 0.4.8", or "StarMap 0.4.6, your folder" for a folder of the player.</summary>
+    public string Title
+    {
+        get
+        {
+            var title = Version.Version is null ? Name : $"{Name} {VersionText}";
+            return IsAdopted ? _owner.Localization.FormatSettingsLoaderYourFolder(title) : title;
+        }
+    }
+
+    /// <summary>A version Borea does not know cannot be rated, so its chip says that instead.</summary>
+    public string CompatibilityText => Version.Version is null
+        ? _owner.Localization.SetupLoaderInstalledUnknownVersion
+        : _owner.CompatibilityText(Compatibility);
+
+    public bool IsCompatible => Compatibility == GameCompatibility.Compatible;
+
+    public bool IsIncompatible => Compatibility == GameCompatibility.Incompatible;
+
+    /// <summary>"Used by A, B, C, ..." with at most <see cref="UsersShown"/> names, "Not used", or null when Borea could not tell.</summary>
+    public string? UsedByText => Users switch
+    {
+        null => null,
+        { Count: 0 } => _owner.Localization.SettingsLoaderUnused,
+        { Count: <= UsersShown } => _owner.Localization.FormatSettingsLoaderUsedBy(string.Join(", ", Users)),
+        _ => _owner.Localization.FormatSettingsLoaderUsedBy(string.Join(", ", Users.Take(UsersShown)) + ", ..."),
+    };
+
+    /// <summary>Every name, only when <see cref="UsedByText"/> cut the list.</summary>
+    public string? UsedByToolTip => Users is { Count: > UsersShown }
+        ? _owner.Localization.FormatSettingsLoaderUsedBy(string.Join(", ", Users))
+        : null;
+
+    /// <summary>Only a version that no instance starts can go, so no launch ever finds its loader gone.</summary>
+    public bool CanRemove => Users is { Count: 0 };
+
+    /// <summary>Why Remove is disabled, with every instance that starts the version.</summary>
+    public string? RemoveToolTip => Users is { Count: > 0 }
+        ? _owner.Localization.FormatSettingsLoaderInUse(string.Join(", ", Users))
+        : null;
+
+    public string RemoveText => IsAdopted ? _owner.Localization.SettingsLoaderForget : _owner.Localization.ContentRemove;
+
+    /// <summary>Remove deletes files, so it asks once, the way the presets delete does. Forget deletes nothing and does not ask.</summary>
+    [ObservableProperty]
+    private bool _isConfirmingRemove;
+
+    [RelayCommand]
+    private Task RemoveAsync()
+    {
+        if (!IsAdopted && !IsConfirmingRemove)
+        {
+            IsConfirmingRemove = true;
+            return Task.CompletedTask;
+        }
+
+        return _owner.RemoveLoaderVersionAsync(this);
+    }
+
+    [RelayCommand]
+    private void CancelRemove() => IsConfirmingRemove = false;
+
+    /// <summary>Every text in the new language.</summary>
+    internal void RefreshText() => OnPropertyChanged(string.Empty);
 }

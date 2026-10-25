@@ -302,22 +302,24 @@ public sealed class LoaderUpdateTests
     }
 
     [Fact]
-    public async Task GameSettings_LoaderDoesNotSupportTheGame_MarksTheChipAndOffersTheReleaseThatDoes()
+    public async Task GameSettings_LoaderDoesNotSupportTheGame_MarksTheRowAndOffersTheReleaseThatDoes()
     {
         using var harness = await CreateAsync();
         var viewModel = harness.ViewModel;
 
         await viewModel.ShowGameSettingsCommand.ExecuteAsync(null);
 
-        Assert.True(viewModel.IsInstalledLoaderIncompatible);
-        Assert.Equal(harness.Localization.FormatSetupLoaderIncompatible("0.4.6", GameBuild), viewModel.InstalledLoaderText);
-        Assert.Equal(harness.Localization.FormatSetupUpdateLoader("0.4.7"), viewModel.LoaderInstallActionText);
+        var row = Assert.Single(viewModel.LoaderVersionItems);
+        Assert.Equal("StarMap 0.4.6", row.Title);
+        Assert.True(row.IsIncompatible);
+        Assert.Equal("0.4.7", viewModel.SelectedLoaderInstallRelease?.VersionText);
         Assert.True(viewModel.CanInstallLoader);
 
         await viewModel.InstallLoaderCommand.ExecuteAsync(null);
 
         Assert.Equal(ModVersion.Parse("0.4.7"), harness.Services.Settings.LoaderInstallations["StarMap"].Version);
-        Assert.False(viewModel.IsInstalledLoaderIncompatible);
+        Assert.Equal(["StarMap 0.4.7", "StarMap 0.4.6"], viewModel.LoaderVersionItems.Select(item => item.Title));
+        Assert.True(viewModel.LoaderVersionItems[0].IsCompatible);
     }
 
     [Fact]
@@ -457,6 +459,82 @@ public sealed class LoaderUpdateTests
         Assert.Equal(harness.Localization.LoaderUpdateGameRunning, viewModel.SetupError);
         Assert.Equal(ModVersion.Parse("0.4.6"), harness.Services.Settings.LoaderInstallations["StarMap"].Version);
         Assert.DoesNotContain(harness.Requests, uri => uri.AbsoluteUri == DownloadUrl("0.4.7"));
+    }
+
+    [Fact]
+    public async Task GameSettings_RemoveAVersion_OnlyWhenNoInstanceStartsItAndOnlyThatFolder()
+    {
+        var (harness, viewModel, pinned) = await CreateWithTwoVersionsAsync();
+        using var _ = harness;
+        var unused = viewModel.LoaderVersionItems.Single(item => item.Title == "StarMap 0.4.7");
+        var used = viewModel.LoaderVersionItems.Single(item => item.Title == "StarMap 0.4.6");
+        var loaders = Path.Combine(harness.Services.Paths.GetLoadersRoot(), "StarMap");
+
+        Assert.False(used.CanRemove);
+        Assert.Equal(harness.Localization.FormatSettingsLoaderInUse(pinned.Name), used.RemoveToolTip);
+        Assert.Equal(harness.Localization.FormatSettingsLoaderUsedBy(pinned.Name), used.UsedByText);
+        Assert.True(unused.CanRemove);
+        Assert.Equal(harness.Localization.SettingsLoaderUnused, unused.UsedByText);
+
+        await unused.RemoveCommand.ExecuteAsync(null);
+        Assert.True(unused.IsConfirmingRemove);
+        await unused.RemoveCommand.ExecuteAsync(null);
+
+        Assert.Null(viewModel.SetupError);
+        Assert.Equal(harness.Localization.FormatSettingsLoaderRemoved("StarMap", "0.4.7"), viewModel.SetupMessage);
+        Assert.False(Directory.Exists(Path.Combine(loaders, "0.4.7")));
+        Assert.True(File.Exists(Path.Combine(loaders, "0.4.6", "StarMap.exe")));
+        Assert.Equal("StarMap 0.4.6", Assert.Single(viewModel.LoaderVersionItems).Title);
+        Assert.Equal(ModVersion.Parse("0.4.6"), harness.Services.Settings.LoaderInstallations["StarMap"].Version);
+    }
+
+    [Fact]
+    public async Task GameSettings_BoreaFolderRecordedAsAdopted_OffersRemoveWithAConfirmNotForget()
+    {
+        // Borea 0.5.1 recorded its own Loaders/StarMap as adopted after "Use existing", and the uninstaller deletes that folder
+        using var harness = await CreateAsync(knownVersion: false);
+        var viewModel = harness.ViewModel;
+        await viewModel.ShowGameSettingsCommand.ExecuteAsync(null);
+        var row = Assert.Single(viewModel.LoaderVersionItems);
+
+        Assert.False(row.IsAdopted);
+        Assert.Equal(harness.Localization.ContentRemove, row.RemoveText);
+        Assert.Equal(string.Empty, viewModel.LoaderDirectoryInput);
+
+        await row.RemoveCommand.ExecuteAsync(null);
+
+        Assert.True(row.IsConfirmingRemove);
+        Assert.True(Directory.Exists(row.Version.DirectoryPath));
+    }
+
+    [Fact]
+    public async Task GameSettings_RemoveWhileTheGameRuns_SaysSoAndKeepsTheFolder()
+    {
+        var (harness, viewModel, _) = await CreateWithTwoVersionsAsync();
+        using var _ = harness;
+        var unused = viewModel.LoaderVersionItems.Single(item => item.Title == "StarMap 0.4.7");
+        harness.IsGameProcessRunning = () => true;
+
+        await unused.RemoveCommand.ExecuteAsync(null);
+        await unused.RemoveCommand.ExecuteAsync(null);
+
+        Assert.Equal(harness.Localization.LoaderUpdateGameRunning, viewModel.SetupError);
+        Assert.True(Directory.Exists(unused.Version.DirectoryPath));
+        Assert.Equal(2, (await harness.Services.LoaderVersions.ListAsync()).Count);
+    }
+
+    /// <summary>StarMap 0.4.6, which an instance pins, and 0.4.7 beside it from Settings, which no instance starts.</summary>
+    private static async Task<(ViewModelHarness Harness, MainViewModel ViewModel, Instance Pinned)> CreateWithTwoVersionsAsync()
+    {
+        var harness = await CreateAsync();
+        var pinned = (await harness.Services.Instances.CreateAsync("Pinned", InstanceSource.Custom.Value)).Instance;
+        await PinAsync(harness, pinned, "0.4.6");
+        var viewModel = harness.ViewModel;
+        await viewModel.ShowGameSettingsCommand.ExecuteAsync(null);
+        await viewModel.InstallLoaderCommand.ExecuteAsync(null);
+        Assert.Null(viewModel.SetupError);
+        Assert.Equal(2, viewModel.LoaderVersionItems.Count);
+        return (harness, viewModel, pinned);
     }
 
     [Fact]

@@ -92,7 +92,7 @@ public static class LoaderVersionChoice
         }
 
         // A version outside the channel serves only the instances that pin it. The recorded one still starts when nothing
-        // else is installed, because an older Borea and the single install of today start it in every channel.
+        // else is installed, because an older Borea starts it in every channel.
         if (inChannel.Count == 0 && versions.FirstOrDefault(version => version.IsRecorded) is { } recorded)
             inChannel.Add(recorded);
 

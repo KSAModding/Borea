@@ -27,11 +27,14 @@ public sealed class FileLoaderVersionStore : ILoaderVersionStore
         var settings = await _settings.GetAsync(cancellationToken).ConfigureAwait(false);
         var records = settings?.LoaderInstallations ?? new Dictionary<string, LoaderInstallation>();
 
+        var root = _paths.GetLoadersRoot();
         var byPath = new Dictionary<string, InstalledLoaderVersion>(PathComparer);
         foreach (var (loaderId, record) in records)
         {
+            // The list says adopted only for a folder that the uninstaller keeps, so no caller offers to forget a folder it deletes.
+            var isAdopted = LoaderLayoutMigration.IsPlayerFolder(root, record.DirectoryPath, record.IsAdopted);
             byPath[Key(record.DirectoryPath)] = new InstalledLoaderVersion(
-                loaderId, record.Version, record.RawVersion, record.DirectoryPath, record.IsAdopted, IsRecorded: true);
+                loaderId, record.Version, record.RawVersion, record.DirectoryPath, isAdopted, IsRecorded: true);
         }
 
         // A recorded id keeps the casing of its record, so the folder of a recorded loader does not show up as a second loader.
@@ -39,7 +42,6 @@ public sealed class FileLoaderVersionStore : ILoaderVersionStore
         foreach (var loaderId in records.Keys)
             loaderIds.TryAdd(loaderId, loaderId);
 
-        var root = _paths.GetLoadersRoot();
         foreach (var name in FolderNames(root))
         {
             if (ModIds.IsValid(name))

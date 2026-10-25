@@ -135,7 +135,7 @@ public partial class MainViewModel
                 resolution.Listings,
                 await HeldLoaderReleasesAsync(services),
                 services.Settings.ReleaseChannel,
-                LoaderGameOf(services, instance).Version,
+                services.InstanceGames.Resolve(instance).Version?.Version,
                 resolution.Version?.LoaderId);
             LoaderSettingLoaders = loaders;
             PinsLoaderVersion = instance.Loader.IsPinned;

@@ -120,13 +120,13 @@ public sealed partial class ListingEditor
     /// Opens a new pack of the enabled mods that Borea installed from the index in an instance, at their installed versions,
     /// named after the instance. Returns false, and opens nothing, when there is no snapshot to tell which mods a pack can pin.
     /// </summary>
-    internal bool StartPackFromInstance(Instance instance, IReadOnlyList<ModManifestEntry> manifest, IReadOnlyDictionary<string, LoaderInstallation> loaderInstallations)
+    internal bool StartPackFromInstance(Instance instance, IReadOnlyList<ModManifestEntry> manifest, InstalledLoaderVersion? loaderStart)
     {
         StartOver();
         if (_snapshot is not { } snapshot)
             return false;
 
-        var pack = ListingPackFromInstance.Of(snapshot, instance, manifest, loaderInstallations);
+        var pack = ListingPackFromInstance.Of(snapshot, instance, manifest, loaderStart);
         StartNewPack(
             NewPack() with
             {

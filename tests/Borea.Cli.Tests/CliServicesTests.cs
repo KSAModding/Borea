@@ -88,6 +88,7 @@ public sealed class CliServicesTests : IDisposable
             ModListFormat = graph.ModListFormat,
             LatestVersion = new FakeLatestVersionPing(),
             InstalledVersion = new FakeInstalledGameVersionProvider(),
+            InstanceGames = graph.InstanceGames,
             GamePlatform = graph.GamePlatform,
             GameShape = graph.GameShape,
             IndexFetcher = new FakeContentIndexFetcher(),
