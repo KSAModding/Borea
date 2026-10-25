@@ -29,10 +29,7 @@ internal static class LaunchCommand
             var givenLoaderId = parseResult.GetValue(loaderId);
             var game = LoaderLookup.LoaderGameOf(cli, target);
             var installed = await cli.LoaderVersions.ListAsync(ct).ConfigureAwait(false);
-            var releases = await LoaderLookup.HeldReleasesAsync(cli.OfflineContentIndex, ct).ConfigureAwait(false);
-            var resolution = await InstanceLoaderResolver
-                .ResolveAsync(target, installed, cli.OfflineContentIndex, cli.Mods, releases, cli.Settings.ReleaseChannel, game.Version, givenLoaderId, ct)
-                .ConfigureAwait(false);
+            var resolution = await LoaderLookup.ResolveAsync(cli, target, installed, game.Version, givenLoaderId, ct).ConfigureAwait(false);
             var choice = resolution.Choice;
             if (resolution.Start is not { } start)
             {

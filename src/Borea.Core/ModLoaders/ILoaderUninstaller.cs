@@ -10,8 +10,9 @@ namespace Borea.Core.ModLoaders;
 public interface ILoaderUninstaller
 {
     /// <summary>
-    /// Removes the loader record and the folder that it names. The directory is removed only when Borea created it, and the
-    /// loader folder Loaders/&lt;id&gt; is never removed while it holds version folders.
+    /// Removes the folder that the loader record names. The directory is removed only when Borea created it, and the
+    /// loader folder Loaders/&lt;id&gt; is never removed while it holds version folders. When other versions stay, the record
+    /// moves to one of them by the rule of <see cref="UninstallVersionAsync"/>, and else it is removed.
     /// </summary>
     Task<LoaderUninstallResult> UninstallAsync(
         string loaderId,

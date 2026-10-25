@@ -51,18 +51,24 @@ public sealed class FileLoaderUninstaller : ILoaderUninstaller
         if (settings is null || !settings.LoaderInstallations.TryGetValue(loaderId, out var installation))
             return new LoaderUninstallResult(loaderId, null, RecordRemoved: false, DirectoryRemoved: false, LoaderUninstallFailure.NotInstalled);
 
+        // the other versions stay, so the record moves to one of them and an older Borea still finds a loader
+        var remaining = InstalledLoaderVersion.Of(await _versions.ListAsync(cancellationToken).ConfigureAwait(false), loaderId)
+            .Where(v => !v.IsRecorded && !SamePath(v.DirectoryPath, installation.DirectoryPath) && v.Version is not null)
+            .ToList();
         var removal = await RemoveAsync(
             loaderId,
             installation.DirectoryPath,
             installation.IsAdopted,
             settings,
-            current => current.WithoutLoaderInstallation(loaderId),
+            current => Successor(remaining) is { } next
+                ? current.WithLoaderInstallation(loaderId, next)
+                : current.WithoutLoaderInstallation(loaderId),
             cancellationToken).ConfigureAwait(false);
 
         return new LoaderUninstallResult(
             loaderId,
             installation.DirectoryPath,
-            RecordRemoved: true,
+            RecordRemoved: removal.Saved is { } saved && !saved.LoaderInstallations.ContainsKey(loaderId),
             removal.DirectoryRemoved,
             Version: installation.Version,
             FolderDeleted: removal.FolderDeleted);
@@ -114,10 +120,17 @@ public sealed class FileLoaderUninstaller : ILoaderUninstaller
         if (!current.LoaderInstallations.TryGetValue(removed.LoaderId, out var record) || !SamePath(record.DirectoryPath, removed.DirectoryPath))
             return null;
 
+        return Successor(remaining) is { } next
+            ? current.WithLoaderInstallation(removed.LoaderId, next)
+            : current.WithoutLoaderInstallation(removed.LoaderId);
+    }
+
+    /// <summary>The newest remaining release that Borea installed, else the newest remaining version, or null when none remains.</summary>
+    /// <param name="remaining">The versions that stay, newest first, each with a known version.</param>
+    private static LoaderInstallation? Successor(IReadOnlyList<InstalledLoaderVersion> remaining)
+    {
         var next = remaining.FirstOrDefault(v => !v.IsAdopted && v.Version!.Value.PreRelease is null) ?? remaining.FirstOrDefault();
-        return next is null
-            ? current.WithoutLoaderInstallation(removed.LoaderId)
-            : current.WithLoaderInstallation(removed.LoaderId, new LoaderInstallation(next.DirectoryPath, next.Version, next.RawVersion, next.IsAdopted));
+        return next is null ? null : new LoaderInstallation(next.DirectoryPath, next.Version, next.RawVersion, next.IsAdopted);
     }
 
     /// <summary>Renames the folder away, saves the record, and deletes the folder. A failed save renames the folder back.</summary>
