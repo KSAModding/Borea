@@ -200,15 +200,16 @@ public sealed class ModListCommandTests : IDisposable
     }
 
     [Fact]
-    public async Task Duplicate_KeepsTheGameBuild()
+    public async Task Duplicate_KeptBuildIsGone_RefusesAndNamesTheBuild()
     {
         await SeedAlphaAsync();
         await KeepGameBuildAsync("Alpha", "2026.10.13.5602");
 
         var run = await _host.RunAsync("instance", "duplicate", "Alpha");
 
-        Assert.Equal(0, run.ExitCode);
-        Assert.Equal(GameVersion.Parse("2026.10.13.5602"), (await InstanceNamedAsync("Alpha (copy)")).GameBuild);
+        Assert.Equal(1, run.ExitCode);
+        Assert.Contains("keeps game build 2026.10.13.5602", run.Error);
+        Assert.DoesNotContain(await new FileInstanceRepository(_host.Paths).GetAllAsync(), instance => instance.Name == "Alpha (copy)");
     }
 
     [Fact]

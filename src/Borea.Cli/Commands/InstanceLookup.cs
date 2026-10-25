@@ -1,3 +1,4 @@
+using Borea.Core.Game;
 using Borea.Core.Instances;
 
 namespace Borea.Cli.Commands;
@@ -51,5 +52,31 @@ internal static class InstanceLookup
 
         return await instances.GetByIdAsync(activeId).ConfigureAwait(false)
             ?? throw new InvalidOperationException($"The active instance {activeId} does not exist anymore. Activate another one.");
+    }
+
+    /// <summary>
+    /// The game version a command checks releases for the instance against: its kept build, or the game folder of
+    /// the settings when it keeps none. A kept build that cannot be used stops the command, because an unknown game
+    /// only warns in the planner, which would then pick the newest release.
+    /// </summary>
+    public static GameVersion? GameVersionOf(CliServices cli, Instance instance)
+    {
+        var game = cli.InstanceGames.Resolve(instance);
+        if (game.Problem == KeptBuildProblem.None)
+            return game.Version?.Version;
+
+        throw new InvalidOperationException(
+            $"Instance '{instance.Name}' keeps game build {game.KeptBuild}, but {DescribeKeptBuildProblem(cli, game)}. " +
+            "Copy that build back into the folder, or remove GameBuild from the instance.toml of the instance to use the game folder of the settings.");
+    }
+
+    /// <summary>Why the kept build of <paramref name="game"/> cannot be used, for a game that has a problem.</summary>
+    public static string DescribeKeptBuildProblem(CliServices cli, InstanceGame game)
+    {
+        var build = game.KeptBuild ?? throw new ArgumentException("Only a kept build can have a problem.", nameof(game));
+        var folder = cli.Paths.GetGameBuildFolder(build);
+        return game.Problem == KeptBuildProblem.Missing
+            ? $"its folder {folder} is gone"
+            : $"the KSA.dll in {folder} is missing or reads another version";
     }
 }

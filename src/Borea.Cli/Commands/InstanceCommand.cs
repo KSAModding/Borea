@@ -1,6 +1,7 @@
 using System.CommandLine;
 using System.Globalization;
 using Borea.Cli.Output;
+using Borea.Core.Game;
 using Borea.Core.Index;
 using Borea.Core.Instances;
 using Borea.Core.Launch;
@@ -93,7 +94,7 @@ internal static class InstanceCommand
     {
         var instance = ArgumentRules.Text("instance", InstanceArgumentDescription);
         var json = ArgumentRules.Json();
-        var show = new Command("show", "Print one instance, when it was last played, and how long it was played.");
+        var show = new Command("show", "Print one instance, the game build it runs on, when it was last played, and how long it was played.");
         show.Arguments.Add(instance);
         show.Options.Add(json);
 
@@ -104,7 +105,8 @@ internal static class InstanceCommand
             var lastPlayedAt = await LastPlayedAsync(cli, target, ct).ConfigureAwait(false);
             var playtime = await cli.Playtime.GetPlaytimeAsync(target.InstanceId, ct).ConfigureAwait(false);
             var loaderNeed = LoaderNeed.For(target);
-            var view = InstanceDetailsView.From(target, target.InstanceId == activeId, lastPlayedAt, playtime, loaderNeed, cli.Settings.LoaderInstallations);
+            var game = cli.InstanceGames.Resolve(target);
+            var view = InstanceDetailsView.From(target, target.InstanceId == activeId, lastPlayedAt, playtime, loaderNeed, cli.Settings.LoaderInstallations, game);
 
             if (parseResult.GetValue(json))
             {
@@ -116,6 +118,7 @@ internal static class InstanceCommand
             output.WriteLine($"Active: {(view.Active ? "yes" : "no")}");
             output.WriteLine($"Source: {Describe(target.Source)}");
             output.WriteLine($"Created: {Timestamp(view.CreatedAt)}");
+            output.WriteLine($"Game build: {DescribeGameBuild(cli, game)}");
             output.WriteLine($"Mods: {view.ModCount}");
             output.WriteLine($"Mod loader: {DescribeLoaderNeed(view.ModLoaders)}");
             output.WriteLine($"Launch arguments: {DescribeLaunchArguments(target)}");
@@ -158,6 +161,20 @@ internal static class InstanceCommand
         return loaders.Count > 1 ? $"{text} (one launch can only start one of them)" : text;
 
         static string Bounds(string min, string? max) => max is null ? $"{min} or newer" : $"{min} to {max}";
+    }
+
+    private static string DescribeGameBuild(CliServices cli, InstanceGame game)
+    {
+        if (game.KeptBuild is not { } build)
+        {
+            return game.Version is { } installed
+                ? $"from the game folder of the settings ({installed.Version?.ToString() ?? installed.RawVersion})"
+                : "from the game folder of the settings, version unknown";
+        }
+
+        return game.Problem == KeptBuildProblem.None
+            ? $"{build}, kept for this instance"
+            : $"{build}, kept for this instance, but {InstanceLookup.DescribeKeptBuildProblem(cli, game)}";
     }
 
     private static string DescribePlaytime(InstancePlaytime playtime)
@@ -586,7 +603,7 @@ internal static class InstanceCommand
                             target,
                             recorded,
                             cli.Mods,
-                            cli.InstalledVersion.GetInstalledVersion()?.Version,
+                            InstanceLookup.GameVersionOf(cli, target),
                             cli.GamePlatform.Current,
                             ct).ConfigureAwait(false);
                         ModInstallCommands.PrintPlan(output, dependencies.Plan!);
@@ -743,9 +760,9 @@ internal static class InstanceCommand
     }
 
     /// <summary><c>instance show --json</c>.</summary>
-    private sealed record InstanceDetailsView(Guid Id, string Name, bool Active, InstanceSourceView Source, DateTimeOffset CreatedAt, int ModCount, IReadOnlyList<ModLoaderNeedView> ModLoaders, IReadOnlyList<string> LaunchArguments, DateTimeOffset? LastPlayedAt, PlaytimeView Playtime)
+    private sealed record InstanceDetailsView(Guid Id, string Name, bool Active, InstanceSourceView Source, DateTimeOffset CreatedAt, int ModCount, IReadOnlyList<ModLoaderNeedView> ModLoaders, IReadOnlyList<string> LaunchArguments, DateTimeOffset? LastPlayedAt, PlaytimeView Playtime, GameBuildView GameBuild)
     {
-        public static InstanceDetailsView From(Instance instance, bool active, DateTimeOffset? lastPlayedAt, InstancePlaytime playtime, LoaderNeed need, IReadOnlyDictionary<string, LoaderInstallation> installations)
+        public static InstanceDetailsView From(Instance instance, bool active, DateTimeOffset? lastPlayedAt, InstancePlaytime playtime, LoaderNeed need, IReadOnlyDictionary<string, LoaderInstallation> installations, InstanceGame game)
             => new(
                 instance.InstanceId,
                 instance.Name,
@@ -756,7 +773,8 @@ internal static class InstanceCommand
                 need.Loaders.Select(loader => ModLoaderNeedView.From(loader, installations)).ToList(),
                 instance.LaunchArguments,
                 lastPlayedAt,
-                PlaytimeView.From(playtime));
+                PlaytimeView.From(playtime),
+                GameBuildView.From(game));
     }
 
     /// <summary>One loader the mods of an instance need, for <c>instance show</c>.</summary>
@@ -789,6 +807,25 @@ internal static class InstanceCommand
     {
         public static PlaytimeView From(InstancePlaytime playtime)
             => new((long)playtime.Total.TotalSeconds, playtime.Sessions, playtime.IncludesRunningSession, playtime.UnreadableLogs, playtime.IsKnown);
+    }
+
+    /// <summary>
+    /// The build an instance runs. <see cref="Kept"/> is null when it runs on the game folder of the settings, and
+    /// <see cref="Version"/> is null when that version is unknown or the kept build has a problem.
+    /// </summary>
+    private sealed record GameBuildView(string? Kept, string? Version, string Problem)
+    {
+        public static GameBuildView From(InstanceGame game)
+            => new(
+                game.KeptBuild?.ToString(),
+                game.Version?.Version?.ToString(),
+                game.Problem switch
+                {
+                    KeptBuildProblem.None => "none",
+                    KeptBuildProblem.Missing => "missing",
+                    KeptBuildProblem.WrongVersion => "wrong-version",
+                    _ => "unknown",
+                });
     }
 
     /// <summary>What one mod asks of the loader, so a script sees which mod asks for which end of a conflict.</summary>
