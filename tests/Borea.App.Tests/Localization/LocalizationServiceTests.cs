@@ -54,6 +54,7 @@ public sealed class LocalizationServiceTests : IDisposable
     [Theory]
     [InlineData("not-a-culture")]
     [InlineData("fr-FR")]
+    [InlineData("zh-TW")]
     [InlineData("")]
     public void TrySetCulture_UnsupportedCulture_FallsBackToEnglish(string cultureName)
     {
@@ -79,7 +80,7 @@ public sealed class LocalizationServiceTests : IDisposable
     }
 
     [Fact]
-    public void SupportedCultures_ListsEnglishGermanAndPirate()
+    public void SupportedCultures_ListsBuiltInLanguagesByTheirOwnNames()
     {
         var service = new LocalizationService(CultureInfo.GetCultureInfo("en"));
 
@@ -87,7 +88,36 @@ public sealed class LocalizationServiceTests : IDisposable
             service.SupportedCultures,
             culture => Assert.Equal("en", culture.Name),
             culture => Assert.Equal("de", culture.Name),
-            culture => Assert.Equal(("en-QP", "Pirate speak"), (culture.Name, culture.DisplayName)));
+            culture => Assert.Equal(("en-QP", "Pirate speak"), (culture.Name, culture.DisplayName)),
+            culture => Assert.Equal(("zh-Hans", "\u7B80\u4F53\u4E2D\u6587"), (culture.Name, culture.DisplayName)));
+    }
+
+    [Theory]
+    [InlineData("zh-Hans")]
+    [InlineData("zh-CN")]
+    [InlineData("zh-SG")]
+    public void Constructor_SimplifiedChineseCulture_UsesChineseResources(string cultureName)
+    {
+        var service = new LocalizationService(CultureInfo.GetCultureInfo(cultureName));
+
+        Assert.Equal("zh-Hans", service.SelectedCultureName);
+        Assert.Equal("\u9996\u9875", service.NavigationHome);
+        Assert.Equal("\u8BED\u8A00", service.SettingsLanguageLabel);
+        Assert.Equal("\u6709 2 \u4E2A\u6A21\u7EC4\u4E0E Alpha 1.0 \u4E0D\u540C", service.FormatInstancePackDifference(2, "Alpha", "1.0"));
+    }
+
+    [Fact]
+    public void SimplifiedChinese_SwitchesBackToEnglishAndKeepsTheRegionalFormat()
+    {
+        CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo("de-DE");
+        var service = new LocalizationService(CultureInfo.GetCultureInfo("en"));
+
+        Assert.True(service.TrySetCulture("zh-Hans"));
+        Assert.Equal("\u5DF2\u5728 Main \u4E2D\u5C06 Alpha \u66F4\u65B0\u81F3 1.2", service.FormatToastUpdated("Alpha", "1.2", "Main"));
+        Assert.Equal("de-DE", CultureInfo.CurrentCulture.Name);
+        Assert.True(service.TrySetCulture("en"));
+        Assert.Equal("Home", service.NavigationHome);
+        Assert.Equal("de-DE", CultureInfo.CurrentCulture.Name);
     }
 
     [Fact]

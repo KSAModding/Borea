@@ -7,6 +7,7 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
+using Borea.App.Localization;
 using Borea.Core.Paths;
 using Borea.Core.Updates;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -59,6 +60,9 @@ public partial class MainViewModel
         new("IBM Plex", "https://github.com/IBM/plex"),
         new("Phosphor Icons", "https://phosphoricons.com"),
     ];
+
+    public IReadOnlyList<LanguageTranslatorCredits> TranslatorCredits { get; } =
+        TranslatorCreditsCatalog.ForLanguages(LocalizationService.BuiltInCultures);
 
     [ObservableProperty]
     private string? _aboutMessage;

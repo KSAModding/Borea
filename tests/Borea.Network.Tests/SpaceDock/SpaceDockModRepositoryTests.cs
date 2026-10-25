@@ -207,6 +207,42 @@ public sealed class SpaceDockModRepositoryTests
     }
 
     [Fact]
+    public async Task GetLatestReleaseAsync_DownloadPathThatLeavesSpaceDock_SkipsThatRelease()
+    {
+        var json = """
+            {"name":"Mod","id":1,"game_id":22409,"author":"a","default_version_id":2,
+             "versions":[
+               {"friendly_version":"1.1.0","game_version":"2026.1.1.1","id":2,
+                "created":"2026-01-02T00:00:00+00:00","download_path":"@example.com/a.zip"},
+               {"friendly_version":"1.0.0","game_version":"2026.1.1.1","id":1,
+                "created":"2026-01-01T00:00:00+00:00","download_path":"/d/1"}
+             ]}
+            """;
+        var client = FakeHttpMessageHandler.BuildClient(_ => FakeHttpMessageHandler.JsonResponse(json), out _);
+        var repository = new SpaceDockModRepository(client, new SpaceDockResolver());
+
+        var release = await repository.GetLatestReleaseAsync("1");
+
+        Assert.Equal(ModVersion.Parse("1.0.0"), release!.Version);
+        Assert.Equal("https://spacedock.info/d/1", release.Download.Url);
+    }
+
+    [Fact]
+    public async Task SearchAsync_PageUrlThatLeavesSpaceDock_UsesTheModPage()
+    {
+        var json = """
+            [{"name":"Mod","id":7,"game_id":22409,"author":"a","default_version_id":1,"url":"@example.com/x",
+              "versions":[{"friendly_version":"1.0.0","game_version":"2026.1.1.1","id":1}]}]
+            """;
+        var client = FakeHttpMessageHandler.BuildClient(_ => FakeHttpMessageHandler.JsonResponse(json), out _);
+        var repository = new SpaceDockModRepository(client, new SpaceDockResolver());
+
+        var results = await repository.SearchAsync("Mod");
+
+        Assert.Equal("https://spacedock.info/mod/7", results[0].Links["spacedock"]);
+    }
+
+    [Fact]
     public async Task GetLatestReleaseAsync_DefaultOlderThanNewest_ReturnsNewest()
     {
         // default_version_id is author-selectable; the contract says newest.
