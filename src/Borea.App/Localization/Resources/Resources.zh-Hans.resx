@@ -3696,9 +3696,6 @@
   <data name="InstanceLoaderConflict" xml:space="preserve">
     <value>模组所需的版本范围没有交集</value>
   </data>
-  <data name="InstanceLoaderOpenSettings" xml:space="preserve">
-    <value>游戏设置</value>
-  </data>
   <data name="InstanceLoaderConflictShort" xml:space="preserve">
     <value>没有适用版本</value>
   </data>
@@ -4005,20 +4002,11 @@
   <data name="SetupLoaderInstalledFormat" xml:space="preserve">
     <value>已将 {0} {1} 安装到 {2}。</value>
   </data>
-  <data name="SetupLoaderInstalledVersionFormat" xml:space="preserve">
-    <value>已安装 {0}</value>
-  </data>
-  <data name="SetupLoaderIncompatibleFormat" xml:space="preserve">
-    <value>已安装 {0}，不支持 KSA {1}</value>
-  </data>
   <data name="SetupLoaderInstalledUnknownVersion" xml:space="preserve">
     <value>已安装，版本未知</value>
   </data>
   <data name="SetupUpdateLoaderFormat" xml:space="preserve">
     <value>更新至 {0}</value>
-  </data>
-  <data name="SetupReinstallLoader" xml:space="preserve">
-    <value>重新安装</value>
   </data>
   <data name="ContentLoaderHint" xml:space="preserve">
     <value>模组加载器在“游戏”设置中配置。</value>
