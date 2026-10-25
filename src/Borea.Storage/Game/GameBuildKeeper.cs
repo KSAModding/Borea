@@ -1,5 +1,6 @@
 using Borea.Core.Game;
 using Borea.Core.Instances;
+using Borea.Core.Launch;
 using Borea.Core.Mods;
 using Borea.Core.Paths;
 using Borea.Core.Settings;
@@ -10,8 +11,9 @@ using Borea.Storage.ModLoaders;
 namespace Borea.Storage.Game;
 
 /// <summary>
-/// Copies the game folder of the settings to the Game Builds folder of the library, once per build. The copy goes
-/// to a temporary folder that is renamed only after it matched, so a folder of a kept build is never a partial copy.
+/// Copies the game folder of the settings, or a game folder the player chose, to the Game Builds folder of the
+/// library, once per build. The copy goes to a temporary folder that is renamed only after it matched, so a folder
+/// of a kept build is never a partial copy.
 /// </summary>
 public sealed class GameBuildKeeper : IGameBuildKeeper
 {
@@ -36,16 +38,19 @@ public sealed class GameBuildKeeper : IGameBuildKeeper
     private readonly Func<Guid, bool> _isLaunched;
     private readonly IWinePrefixProbe _wine;
     private readonly IFreeSpaceProbe _freeSpace;
+    private readonly OsPlatform _host;
 
     /// <param name="listings">The listings of the installed loaders, which name the file that holds the game path.</param>
     /// <param name="isLaunched">Whether a launch by Borea still runs for the instance. The process probe does not see every one of them.</param>
     public GameBuildKeeper(IGamePathProvider paths, IInstanceRepository instances, IModRepository listings, Func<bool> isGameProcessRunning, Func<Guid, bool> isLaunched)
-        : this(paths, instances, listings, isGameProcessRunning, isLaunched, new WinePrefixProbe(), new DriveFreeSpaceProbe())
+        : this(paths, instances, listings, isGameProcessRunning, isLaunched, new WinePrefixProbe(), new DriveFreeSpaceProbe(), SharedProfileLauncher.CurrentPlatform() ?? OsPlatform.MacOs)
     {
     }
 
-    internal GameBuildKeeper(IGamePathProvider paths, IInstanceRepository instances, IModRepository listings, Func<bool> isGameProcessRunning, Func<Guid, bool> isLaunched, IWinePrefixProbe wine, IFreeSpaceProbe freeSpace)
+    /// <param name="host">The system Borea runs on. A folder the player chose must hold the executable this system starts.</param>
+    internal GameBuildKeeper(IGamePathProvider paths, IInstanceRepository instances, IModRepository listings, Func<bool> isGameProcessRunning, Func<Guid, bool> isLaunched, IWinePrefixProbe wine, IFreeSpaceProbe freeSpace, OsPlatform host)
     {
+        _host = host;
         _paths = paths ?? throw new ArgumentNullException(nameof(paths));
         _instances = instances ?? throw new ArgumentNullException(nameof(instances));
         _listings = listings ?? throw new ArgumentNullException(nameof(listings));
@@ -57,16 +62,30 @@ public sealed class GameBuildKeeper : IGameBuildKeeper
 
     public GameBuildKeepCheck Check(Instance instance) => Plan(instance).Check;
 
-    public async Task<GameBuildKeepCheck> KeepAsync(Guid instanceId, GameVersion expected, IProgress<LibraryMoveProgress>? progress, CancellationToken cancellationToken)
+    public GameBuildKeepCheck CheckFolder(string folder) => PlanFolder(folder).Check;
+
+    public Task<GameBuildKeepCheck> KeepAsync(Guid instanceId, GameVersion expected, IProgress<LibraryMoveProgress>? progress, CancellationToken cancellationToken)
+        => KeepAsync(
+            async () => Plan(await _instances.GetByIdAsync(instanceId).ConfigureAwait(false)
+                ?? throw new InvalidOperationException($"The instance {instanceId} does not exist.")),
+            expected,
+            instanceId,
+            progress,
+            cancellationToken);
+
+    public Task<GameBuildKeepCheck> KeepFolderAsync(string folder, GameVersion expected, IProgress<LibraryMoveProgress>? progress, CancellationToken cancellationToken)
+        => KeepAsync(() => Task.FromResult(PlanFolder(folder)), expected, instanceId: null, progress, cancellationToken);
+
+    public IReadOnlyList<GameVersion> ListKept() => KeptVersions();
+
+    private async Task<GameBuildKeepCheck> KeepAsync(Func<Task<KeepPlan>> makePlan, GameVersion expected, Guid? instanceId, IProgress<LibraryMoveProgress>? progress, CancellationToken cancellationToken)
     {
         // a second keep of the same build waits here and then finds the copy of the first one
         await Keeping.WaitAsync(cancellationToken).ConfigureAwait(false);
         try
         {
             DeleteUnfinishedCopies();
-            var instance = await _instances.GetByIdAsync(instanceId).ConfigureAwait(false)
-                ?? throw new InvalidOperationException($"The instance {instanceId} does not exist.");
-            var plan = Plan(instance);
+            var plan = await makePlan().ConfigureAwait(false);
             if (plan.Check is not { Refusal: GameBuildKeepRefusal.None, Version: { } version, Folder: { } folder })
                 return plan.Check;
 
@@ -77,14 +96,18 @@ public sealed class GameBuildKeeper : IGameBuildKeeper
             if (plan.Files.Count > 0)
                 Copy(plan, version, folder, progress, cancellationToken);
 
-            await _instances.UpdateAsync(
-                instanceId,
-                saved =>
-                {
-                    saved.SetGameBuild(version);
-                    return true;
-                },
-                CancellationToken.None).ConfigureAwait(false);
+            if (instanceId is { } id)
+            {
+                await _instances.UpdateAsync(
+                    id,
+                    saved =>
+                    {
+                        saved.SetGameBuild(version);
+                        return true;
+                    },
+                    CancellationToken.None).ConfigureAwait(false);
+            }
+
             return plan.Check;
         }
         finally
@@ -105,7 +128,25 @@ public sealed class GameBuildKeeper : IGameBuildKeeper
             || InstalledGameVersionProvider.Read(configured)?.Version is not { } version)
             return Refused(GameBuildKeepRefusal.NoGame, null, null);
 
-        var gameDirectory = Path.TrimEndingDirectorySeparator(Path.GetFullPath(configured));
+        return Plan(configured, version);
+    }
+
+    // an instance must be able to start the copy, so the folder needs the executable of this system, and macOS, which
+    // starts the game only through a wrapper app, has none
+    private KeepPlan PlanFolder(string folder)
+    {
+        if (string.IsNullOrWhiteSpace(folder) || !Path.IsPathFullyQualified(folder)
+            || GameExecutable.FileName(_host) is not { } executable
+            || !File.Exists(Path.Combine(folder, executable))
+            || InstalledGameVersionProvider.Read(folder)?.Version is not { } version)
+            return Refused(GameBuildKeepRefusal.NotAGame, null, null);
+
+        return Plan(folder, version);
+    }
+
+    private KeepPlan Plan(string source, GameVersion version)
+    {
+        var gameDirectory = Path.TrimEndingDirectorySeparator(Path.GetFullPath(source));
         var folder = _paths.GetGameBuildFolder(version);
         if (_wine.Find(gameDirectory)?.Wrapper is not null)
             return Refused(GameBuildKeepRefusal.WineWrapper, version, folder);
