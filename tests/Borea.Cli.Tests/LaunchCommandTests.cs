@@ -142,6 +142,8 @@ public sealed class LaunchCommandTests : IDisposable
 
         Assert.Equal(1, run.ExitCode);
         Assert.Contains(CliHost.KeptBuild.ToString(), run.Error);
+        Assert.Contains("\"Use the current game build\"", run.Error);
+        Assert.Contains("remove GameBuild from the instance.toml", run.Error);
         Assert.Empty(configurator.Refreshes);
         Assert.Empty(_host.ProcessStarter.Plans);
         var entries = await new FileModStateRepository(_host.Paths).GetEntriesAsync(instance.InstanceId);

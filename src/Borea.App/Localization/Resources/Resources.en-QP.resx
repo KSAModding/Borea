@@ -1912,7 +1912,7 @@
     <value>The active sea ain't exist any longer.</value>
   </data>
   <data name="InstallKeptBuildUnavailableFormat" xml:space="preserve">
-    <value>This sea sails on the stowed KSA build {0}, and the hold {1} be gone or ain't holdin' that build. Borea brings nothin' aboard this sea till the hold carries that build again.</value>
+    <value>This sea sails on the stowed KSA build {0}, and the hold {1} be gone or ain't holdin' that build. Borea brings nothin' aboard this sea till the hold carries that build again. To sail from the game hold in yer Rigging instead, pick "Use the current game build" in the sea's menu.</value>
   </data>
   <data name="ModalCreateInstanceTitle" xml:space="preserve">
     <value>Piece togett'er a sea</value>

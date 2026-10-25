@@ -109,6 +109,9 @@
     <!-- modal: keep the game build for an instance -->
     <views:KeepGameBuildModal IsVisible="{Binding IsKeepGameBuildModalOpen}" />
 
+    <!-- modal: move an instance back to the game build of the settings -->
+    <views:UseCurrentGameBuildModal IsVisible="{Binding IsUseCurrentGameBuildModalOpen}" />
+
     <!-- modal: launch arguments of an instance -->
     <views:LaunchArgumentsModal IsVisible="{Binding IsLaunchArgumentsModalOpen}" />
 

@@ -101,6 +101,27 @@ public sealed class InstanceGameBuildTests
         Assert.Null(harness.ViewModel.SelectedInstance!.GameBuildToolTip);
     }
 
+    [Fact]
+    public async Task SaveGameFolder_OnTheGameTab_LoadsTheKeptBuildsAgain()
+    {
+        using var harness = await CreateWithKeptBuildAsync();
+        var viewModel = harness.ViewModel;
+        var folder = harness.Services.Paths.GetGameBuildFolder(KeptBuild);
+        viewModel.SetMainWindowSettings();
+        await viewModel.ShowGameSettingsCommand.ExecuteAsync(null);
+        await viewModel.WhenKeptGameBuildsLoadedAsync();
+        Assert.True(Assert.Single(viewModel.KeptGameBuilds).CanRemove);
+
+        viewModel.GameDirectoryInput = folder;
+        await viewModel.SaveGameDirectoryCommand.ExecuteAsync(null);
+        await viewModel.WhenKeptGameBuildsLoadedAsync();
+
+        Assert.Null(viewModel.SetupError);
+        var row = Assert.Single(viewModel.KeptGameBuilds);
+        Assert.False(row.CanRemove);
+        Assert.Equal(harness.Localization.SettingsGameBuildIsGameFolder, row.GameFolderText);
+    }
+
     private static async Task<Instance> CreateInstanceAsync(ViewModelHarness harness, string name, GameVersion? build)
     {
         var instance = (await harness.Services.Instances.CreateAsync(name, InstanceSource.Custom.Value)).Instance;

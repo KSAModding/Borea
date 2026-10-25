@@ -3463,7 +3463,7 @@
     <value>The active instance no longer exists.</value>
   </data>
   <data name="InstallKeptBuildUnavailableFormat" xml:space="preserve">
-    <value>This instance runs on the kept KSA build {0}, and the folder {1} is gone or does not hold that build. Borea installs and updates nothing in this instance until the folder holds that build again.</value>
+    <value>This instance runs on the kept KSA build {0}, and the folder {1} is gone or does not hold that build. Borea installs and updates nothing in this instance until the folder holds that build again. To use the game folder of the settings instead, select "Use the current game build" in the instance menu.</value>
   </data>
   <data name="ModalCreateInstanceTitle" xml:space="preserve">
     <value>Create instance</value>
@@ -3515,6 +3515,30 @@
   </data>
   <data name="KeepGameBuildBuildChangedFormat" xml:space="preserve">
     <value>The game folder changed to KSA {0} before the copy started, so Borea copied nothing. To keep KSA {0}, select "Keep this game build" again.</value>
+  </data>
+  <data name="ModalUseCurrentGameBuildTitle" xml:space="preserve">
+    <value>Use the current game build</value>
+  </data>
+  <data name="ModalUseCurrentGameBuildTextFormat" xml:space="preserve">
+    <value>{0} then starts on KSA {1} from the game folder in the settings, and no longer on the kept build {2}. The saves stay in the instance, and the kept build stays in the Game Builds folder.</value>
+  </data>
+  <data name="ModalUseCurrentGameBuildFitFormat" xml:space="preserve">
+    <value>{0} of {1} mods fit KSA {2}.</value>
+  </data>
+  <data name="ModalUseCurrentGameBuildIncompatibleFormat" xml:space="preserve">
+    <value>Do not fit: {0}</value>
+  </data>
+  <data name="ModalUseCurrentGameBuildUnknownFormat" xml:space="preserve">
+    <value>Compatibility unknown: {0}</value>
+  </data>
+  <data name="ModalUseCurrentGameBuildOlderFormat" xml:space="preserve">
+    <value>KSA {0} in the settings is older than the kept build {1}. An older build may not load saves that a newer build wrote, and the game does not warn about this.</value>
+  </data>
+  <data name="ModalUseCurrentGameBuildConfirm" xml:space="preserve">
+    <value>Use current build</value>
+  </data>
+  <data name="ToastUsesCurrentGameBuildFormat" xml:space="preserve">
+    <value>{0} now starts on KSA {1}</value>
   </data>
   <data name="ModalInstanceExplanation" xml:space="preserve">
     <value>Instances are packages of mods and game content that Borea manages on top of your existing game install. You can create multiple instances and activate one at a time for different play experiences.</value>
@@ -4486,7 +4510,7 @@
     <value>A game that Borea started through the Wine wrapper '{0}' is still running. The wrapper runs one game at a time, so close that game first.</value>
   </data>
   <data name="LaunchGameBuildMissing" xml:space="preserve">
-    <value>This instance runs on a kept KSA build, and the folder of that build is gone or holds another build. Borea starts nothing, so the instance does not start on another build.</value>
+    <value>This instance runs on a kept KSA build, and the folder of that build is gone or holds another build. Borea starts nothing, so the instance does not start on another build. To use the game folder of the settings instead, select "Use the current game build" in the instance menu.</value>
   </data>
   <data name="LaunchOtherBuildRunningFormat" xml:space="preserve">
     <value>A game is running, and {0} reads another game folder for it. If Borea changed that folder now, a restart of the running game would load the wrong build. Borea starts nothing. Close the game first.</value>
@@ -4584,11 +4608,41 @@
   <data name="InstanceKeepGameBuild" xml:space="preserve">
     <value>Keep this game build</value>
   </data>
+  <data name="InstanceUseCurrentGameBuild" xml:space="preserve">
+    <value>Use the current game build</value>
+  </data>
   <data name="InstanceGameBuildFormat" xml:space="preserve">
     <value>KSA {0}</value>
   </data>
   <data name="InstanceGameBuildToolTipFormat" xml:space="preserve">
     <value>This instance keeps KSA {0} and always starts on that copy.</value>
+  </data>
+  <data name="SettingsGameBuildsTitle" xml:space="preserve">
+    <value>Kept game builds</value>
+  </data>
+  <data name="SettingsGameBuildsHint" xml:space="preserve">
+    <value>Copies of KSA that instances start on. Borea deletes a build only when no instance uses it.</value>
+  </data>
+  <data name="SettingsGameBuildUsedByFormat" xml:space="preserve">
+    <value>Used by {0}</value>
+  </data>
+  <data name="SettingsGameBuildUnused" xml:space="preserve">
+    <value>No instance uses this build.</value>
+  </data>
+  <data name="SettingsGameBuildRemoveConfirm" xml:space="preserve">
+    <value>Delete this build from the disk?</value>
+  </data>
+  <data name="SettingsGameBuildInUse" xml:space="preserve">
+    <value>An instance uses this build, so Borea keeps it.</value>
+  </data>
+  <data name="SettingsGameBuildInstanceUnreadable" xml:space="preserve">
+    <value>Borea cannot read every instance, so it cannot tell whether one uses this build.</value>
+  </data>
+  <data name="SettingsGameBuildIsGameFolder" xml:space="preserve">
+    <value>The game folder in the settings is this build, so Borea keeps it.</value>
+  </data>
+  <data name="KeptGameBuildBusy" xml:space="preserve">
+    <value>Borea is copying or deleting a game build. Try again when that is done.</value>
   </data>
   <data name="SettingsPresetsTitle" xml:space="preserve">
     <value>Game settings presets</value>

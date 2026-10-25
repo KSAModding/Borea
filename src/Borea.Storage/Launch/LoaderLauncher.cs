@@ -136,7 +136,7 @@ public sealed class LoaderLauncher : ILauncher, IDisposable
             {
                 return LaunchResult.Failed(
                     LaunchOutcome.GameBuildMissing,
-                    $"Instance '{instance.Name}' runs on KSA {missing}, and '{_pathProvider.GetGameBuildFolder(missing)}' is gone or holds another build. Borea starts nothing, so the instance does not start on another build.");
+                    $"Instance '{instance.Name}' runs on KSA {missing}, and '{_pathProvider.GetGameBuildFolder(missing)}' is gone or holds another build. Borea starts nothing, so the instance does not start on another build. To use the game folder of the settings instead, select \"Use the current game build\" in the instance menu of the desktop App, or remove GameBuild from the instance.toml of the instance.");
             }
 
             var gameDirectory = game.GameDirectory;
@@ -421,7 +421,7 @@ public sealed class LoaderLauncher : ILauncher, IDisposable
         }
     }
 
-    private static bool SameGamePath(string? held, string wanted) =>
+    internal static bool SameGamePath(string? held, string wanted) =>
         held is not null && string.Equals(GameFolderOf(held), GameFolderOf(wanted), PathComparison);
 
     // StarMap accepts the path of KSA.dll as well as the game folder, and a
