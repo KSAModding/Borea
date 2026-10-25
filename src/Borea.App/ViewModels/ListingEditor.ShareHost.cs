@@ -36,6 +36,10 @@ public sealed partial class ListingEditor
     private CancellationTokenSource? _shareHostRun;
     private (ShareHost Host, ShareUpload Upload, string? ListingId)? _shareUpload;
     private (string Page, string Code)? _shareHostCode;
+    private (bool IndexOnly, bool Listing) _shownCards = (true, true);
+
+    /// <summary>The sections whose values a share host does not take.</summary>
+    private static readonly string[] IndexOnlySections = ["links", "releases", "compatibility", "images"];
 
     /// <summary>The last reading of hosts.toml, which tests wait for.</summary>
     internal Task ShareHostsLoad { get; private set; } = Task.CompletedTask;
@@ -60,7 +64,7 @@ public sealed partial class ListingEditor
     }
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(CanPublishToShareHost), nameof(CanUploadToShareHost), nameof(IsSharing), nameof(ShowsIndexOnlyCards))]
+    [NotifyPropertyChangedFor(nameof(CanPublishToShareHost), nameof(CanUploadToShareHost), nameof(IsSharing))]
     private string? _shareHostProgress;
 
     [ObservableProperty]
@@ -78,7 +82,6 @@ public sealed partial class ListingEditor
     private string _shareHostStatus = "stable";
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(ShowsIndexOnlyCards))]
     private string? _shareHostOutcome;
 
     [ObservableProperty]
@@ -88,6 +91,7 @@ public sealed partial class ListingEditor
 
     public string? ShareHostUserCode => _shareHostCode?.Code;
 
+    /// <summary>An upload that the host can publish. One with a failed check is not kept, so the player shares again after a fix.</summary>
     public bool HasShareUpload => _shareUpload is not null;
 
     /// <summary>A share on a host runs.</summary>
@@ -101,8 +105,10 @@ public sealed partial class ListingEditor
     /// </summary>
     public bool ShowsIndexOnlyCards => !IsSharing && !HasShareUpload && ShareHostOutcome is null;
 
-    /// <summary>A check that failed means the host refuses to publish, so the player shares again after a fix.</summary>
-    public bool CanPublishToShareHost => _shareUpload is { } upload && upload.Upload.Checks.All(check => check.Passed) && ShareHostVersion.Trim().Length > 0 && !IsSharing;
+    /// <summary>False while an upload for a new version waits, because that publish sends no listing, so the about and tags cards hide too.</summary>
+    public bool ShowsListingCards => _shareUpload?.ListingId is null;
+
+    public bool CanPublishToShareHost => _shareUpload is not null && ShareHostVersion.Trim().Length > 0 && !IsSharing;
 
     private void StartShareHosts()
     {
@@ -149,15 +155,32 @@ public sealed partial class ListingEditor
         SharePullRequest = null;
         ShareHostChecks.Clear();
         OnPropertyChanged(nameof(HasShareUpload));
-        OnPropertyChanged(nameof(ShowsIndexOnlyCards));
         OnPropertyChanged(nameof(CanPublishToShareHost));
         OnPropertyChanged(nameof(ShareHostCodeText));
         OnPropertyChanged(nameof(ShareHostUserCode));
+        RefreshShownCards();
     }
+
+    /// <summary>Shows or hides the cards and their steps when the share host path starts or ends.</summary>
+    private void RefreshShownCards()
+    {
+        if (_shownCards == (ShowsIndexOnlyCards, ShowsListingCards))
+            return;
+
+        _shownCards = (ShowsIndexOnlyCards, ShowsListingCards);
+        OnPropertyChanged(nameof(ShowsIndexOnlyCards));
+        OnPropertyChanged(nameof(ShowsListingCards));
+        Refresh();
+    }
+
+    partial void OnShareHostProgressChanged(string? value) => RefreshShownCards();
+
+    partial void OnShareHostOutcomeChanged(string? value) => RefreshShownCards();
 
     /// <summary>
     /// Writes the archive and refuses one above the limit of the host before any request. Then it signs in when needed and
-    /// uploads, and shows what the host checked with the version it proposes.
+    /// uploads, and shows what the host checked with the version it proposes. An error in a card that hides from the upload on
+    /// stops it first, while the player can still see the field.
     /// </summary>
     [RelayCommand]
     private async Task UploadToShareHostAsync(ShareHostRow? row)
@@ -167,6 +190,12 @@ public sealed partial class ListingEditor
 
         var host = row.Host;
         ForgetShareHostRun();
+        if (ListingOnHost(host) is null && Errors.Any(issue => IndexOnlySections.Contains(SectionOf(issue))))
+        {
+            ShareHostError = Localization.ListingFixErrors;
+            return;
+        }
+
         using var cancel = new CancellationTokenSource();
         _shareHostRun = cancel;
         ShareHostProgress = Localization.ListingShareHostWriting;
@@ -213,14 +242,20 @@ public sealed partial class ListingEditor
             if (_shareHostRun != cancel)
                 return;
 
-            _shareUpload = (host, upload, listingId);
             MainViewModel.Arrange(ShareHostChecks, upload.Checks.Select(CheckRow).ToList());
             ShareHostListingText = upload.ListingText;
-            ShareHostVersion = upload.ProposedVersion ?? string.Empty;
-            if (upload.Checks.Any(check => !check.Passed))
+            if (upload.Checks.All(check => check.Passed))
+            {
+                _shareUpload = (host, upload, listingId);
+                ShareHostVersion = upload.ProposedVersion ?? string.Empty;
+            }
+            else
+            {
                 ShareHostError = Localization.ListingShareHostChecksFailed;
+            }
+
             OnPropertyChanged(nameof(HasShareUpload));
-            OnPropertyChanged(nameof(ShowsIndexOnlyCards));
+            RefreshShownCards();
         }
         catch (OperationCanceledException) when (cancel.IsCancellationRequested)
         {
@@ -274,7 +309,6 @@ public sealed partial class ListingEditor
 
             _shareUpload = null;
             OnPropertyChanged(nameof(HasShareUpload));
-            OnPropertyChanged(nameof(ShowsIndexOnlyCards));
             SharePullRequest = published.PullRequest;
             ShareHostOutcome = published.PullRequest is null
                 ? Localization.FormatListingShareHostReleased(published.Id, published.Version)
@@ -297,10 +331,17 @@ public sealed partial class ListingEditor
         }
     }
 
+    /// <summary>Stops the running step, or drops a waiting upload, which shows every card again.</summary>
     [RelayCommand]
     private void CancelShareHost()
     {
-        _shareHostRun?.Cancel();
+        if (_shareHostRun is null)
+        {
+            ForgetShareHostRun();
+            return;
+        }
+
+        _shareHostRun.Cancel();
         _shareHostRun = null;
         _shareHostCode = null;
         ShareHostProgress = null;

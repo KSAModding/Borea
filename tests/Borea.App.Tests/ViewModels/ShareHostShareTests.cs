@@ -74,17 +74,51 @@ public sealed class ShareHostShareTests
         editor.License = "CC-BY-4.0";
         editor.Abstract = "A six-wheel rover for the Moon.";
         Assert.True(editor.ShowsIndexOnlyCards);
+        Assert.Equal(["about", "links", "releases", "compatibility", "dependencies", "tags", "images"], editor.Steps.Select(step => step.Key));
         var changed = new List<string?>();
         editor.PropertyChanged += (_, args) => changed.Add(args.PropertyName);
 
         await editor.UploadToShareHostCommand.ExecuteAsync(Assert.Single(editor.ShareHostRows));
 
         Assert.False(editor.ShowsIndexOnlyCards);
+        Assert.True(editor.ShowsListingCards);
         Assert.Contains(nameof(ListingEditor.ShowsIndexOnlyCards), changed);
+        Assert.Equal(["about", "dependencies", "tags"], editor.Steps.Select(step => step.Key));
 
         await editor.PublishToShareHostCommand.ExecuteAsync(null);
 
         Assert.False(editor.ShowsIndexOnlyCards);
+    }
+
+    [Fact]
+    public async Task ErrorInACardThatHides_StopsTheUploadWhileTheCardShows()
+    {
+        var host = new FakeHost();
+        using var harness = await ViewModelHarness.CreateAsync(respond: Serve(Hosts), shareHostClient: host);
+        var editor = await ShareAsync(harness);
+        editor.Homepage = "not a link";
+
+        await editor.UploadToShareHostCommand.ExecuteAsync(Assert.Single(editor.ShareHostRows));
+
+        Assert.Equal(harness.Localization.ListingFixErrors, editor.ShareHostError);
+        Assert.Equal((0, 0), (host.SignIns, host.Uploads.Count));
+        Assert.True(editor.ShowsIndexOnlyCards);
+    }
+
+    [Fact]
+    public async Task CancelAfterTheUpload_DropsItAndShowsEveryCard()
+    {
+        using var harness = await ViewModelHarness.CreateAsync(respond: Serve(Hosts), shareHostClient: new FakeHost());
+        var editor = await ShareAsync(harness);
+        await editor.UploadToShareHostCommand.ExecuteAsync(Assert.Single(editor.ShareHostRows));
+        Assert.False(editor.ShowsIndexOnlyCards);
+
+        editor.CancelShareHostCommand.Execute(null);
+
+        Assert.False(editor.HasShareUpload);
+        Assert.Empty(editor.ShareHostChecks);
+        Assert.True(editor.ShowsIndexOnlyCards);
+        Assert.Contains(editor.Steps, step => step.Key == "links");
     }
 
     [Fact]
@@ -133,6 +167,8 @@ public sealed class ShareHostShareTests
         Assert.False(editor.ShareHostChecks[0].Failed);
         Assert.False(editor.CanPublishToShareHost);
         Assert.Equal(harness.Localization.ListingShareHostChecksFailed, editor.ShareHostError);
+        Assert.False(editor.HasShareUpload);
+        Assert.True(editor.ShowsIndexOnlyCards);
     }
 
     [Fact]
@@ -144,6 +180,8 @@ public sealed class ShareHostShareTests
         var editor = await ShareAsync(harness);
 
         await editor.UploadToShareHostCommand.ExecuteAsync(Assert.Single(editor.ShareHostRows));
+        Assert.False(editor.ShowsListingCards);
+        Assert.Equal(["dependencies"], editor.Steps.Select(step => step.Key));
         await editor.PublishToShareHostCommand.ExecuteAsync(null);
 
         Assert.Equal("ExampleRover", Assert.Single(host.Uploads).ListingId);

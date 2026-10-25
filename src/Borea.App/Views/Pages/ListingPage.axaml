@@ -302,6 +302,7 @@
                                         <Button Classes="cta" Command="{Binding ListingEditor.PublishToShareHostCommand}" IsEnabled="{Binding ListingEditor.CanPublishToShareHost}" VerticalAlignment="Bottom">
                                             <TextBlock Classes="action-lg" Text="{Binding Localization.ListingShareHostPublish}" VerticalAlignment="Center" />
                                         </Button>
+                                        <Button Classes="text" Content="{Binding Localization.LibraryCancel}" Command="{Binding ListingEditor.CancelShareHostCommand}" IsVisible="{Binding !ListingEditor.IsSharing}" VerticalAlignment="Bottom" />
                                     </WrapPanel>
                                     <TextBlock Classes="body-sm danger" Text="{Binding ListingEditor.ShareHostError}" TextWrapping="Wrap" IsVisible="{Binding ListingEditor.ShareHostError, Converter={x:Static ObjectConverters.IsNotNull}}" />
                                     <TextBlock Classes="body-sm" Text="{Binding ListingEditor.ShareHostOutcome}" TextWrapping="Wrap" IsVisible="{Binding ListingEditor.ShareHostOutcome, Converter={x:Static ObjectConverters.IsNotNull}}" />
@@ -312,7 +313,7 @@
                             </StackPanel>
                         </Border>
 
-                        <Border Classes="card" Padding="24" Tag="about">
+                        <Border Classes="card" Padding="24" Tag="about" IsVisible="{Binding ListingEditor.ShowsListingCards}">
                             <StackPanel Spacing="6">
                                 <TextBlock Classes="heading-md" Text="{Binding Localization.ListingAbout}" Margin="0,0,0,6" />
                                 <TextBlock Classes="heading-sm" Text="{Binding Localization.ListingId}" />
@@ -737,7 +738,7 @@
                             </StackPanel>
                         </Border>
 
-                        <Border Classes="card" Padding="24" Tag="tags">
+                        <Border Classes="card" Padding="24" Tag="tags" IsVisible="{Binding ListingEditor.ShowsListingCards}">
                             <StackPanel Spacing="8">
                                 <TextBlock Classes="heading-md" Text="{Binding Localization.ListingTags}" />
                                 <ItemsControl ItemsSource="{Binding ListingEditor.CuratedTags}">
