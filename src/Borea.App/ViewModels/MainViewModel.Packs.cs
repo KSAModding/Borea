@@ -606,7 +606,7 @@ public partial class MainViewModel
         finally
         {
             EndInstallRun(run, completed, stopped is not null, pack.InstallError);
-            pack.EndInstall(stopped);
+            EndRowInstall(pack, stopped);
         }
 
         if (executed)
@@ -774,7 +774,7 @@ public partial class MainViewModel
         finally
         {
             EndInstallRun(run, completed, stopped is not null, error);
-            pack.EndInstall(stopped);
+            EndRowInstall(pack, stopped);
             if (error is null)
                 ReplanIfChanged(pack, revision);
         }
@@ -1077,16 +1077,6 @@ public sealed partial class PackItem : ObservableObject, IPlanRow
         ProgressStatus = null;
         CancelInstall();
         ShowResults([]);
-    }
-
-    /// <param name="stopped">What the row shows after a stop, or null.</param>
-    internal void EndInstall(string? stopped = null)
-    {
-        IsInstalling = false;
-        Run = null;
-        Progress = 0;
-        ProgressStatus = stopped;
-        ProgressDetail = null;
     }
 
     internal void RefreshText()

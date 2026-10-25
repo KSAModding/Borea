@@ -1297,11 +1297,7 @@ public partial class MainViewModel
         finally
         {
             EndInstallRun(run, completed, stopped is not null, error);
-            item.IsInstalling = false;
-            item.Run = null;
-            item.Progress = 0;
-            item.ProgressStatus = stopped;
-            item.ProgressDetail = null;
+            EndRowInstall(item, stopped);
         }
 
         return true;
@@ -1474,7 +1470,7 @@ public sealed partial class ContentItem : ObservableObject, IUpdateRow
     [NotifyPropertyChangedFor(nameof(RemoveSteps))]
     private bool _isMissing;
 
-    private bool _isOpening;
+    private readonly OpeningGate _opening = new();
 
     /// <summary>What the mod's folder takes on disk, or null until it is measured or when the folder is gone.</summary>
     [ObservableProperty]
@@ -1597,24 +1593,10 @@ public sealed partial class ContentItem : ObservableObject, IUpdateRow
     /// <summary>
     /// The whole row is this command, so it stays executable while the page
     /// loads, because a command that cannot execute greys out every control on
-    /// the row. The flag takes over the job of dropping a second click.
+    /// the row. The gate takes over the job of dropping a second click.
     /// </summary>
     [RelayCommand(AllowConcurrentExecutions = true)]
-    private async Task OpenAsync()
-    {
-        if (_page is null || _isOpening)
-            return;
-
-        _isOpening = true;
-        try
-        {
-            await _owner.OpenContentFromInstanceAsync(_page);
-        }
-        finally
-        {
-            _isOpening = false;
-        }
-    }
+    private Task OpenAsync() => _page is not { } page ? Task.CompletedTask : _opening.RunAsync(() => _owner.OpenContentFromInstanceAsync(page));
 
     internal void RefreshText()
     {
