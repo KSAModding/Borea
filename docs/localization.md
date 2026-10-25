@@ -42,6 +42,27 @@ To improve a translation, edit the text between `<value>` and `</value>`. Keep t
 
 GitHub creates a personal fork automatically when you do not have direct write access. You do not need to install Borea or a development environment for a text-only correction.
 
+## Add your translator credit
+
+Settings, About lists the translators of each language that Borea ships. The names are kept in [`Translators.json`](../src/Borea.App/Localization/Resources/Translators.json), next to the language files, and are embedded in the App. Do not put a name into a translated interface text.
+
+In the pull request for your language, add your name under the same culture name as its resource file. Each language has a list, so later contributors can add their own name without replacing earlier translators:
+
+```json
+{
+  "zh-Hans": [
+    {
+      "name": "kuxiaowo",
+      "url": "https://github.com/kuxiaowo"
+    }
+  ]
+}
+```
+
+The `url` is optional. With an absolute HTTPS URL, the name opens that page when clicked; without one, it is plain text. Keep existing names, and only add a name with that person's agreement. Names are shown as written, in the same format for every language. The original English row links to the Borea repository, and translations without a recorded name show "Not credited yet".
+
+Only built-in languages appear in this list. A credit for a language being added appears when that language is registered in Borea; local preview files in the `Languages` folder do not add credits.
+
 ## Preserve placeholders
 
 Some text can contain placeholders such as `{0}`. A placeholder is replaced with a value while Borea runs.

@@ -14,6 +14,9 @@ public sealed class LocalizationService : INotifyPropertyChanged
     private static readonly SupportedCulture Pirate = new("en-QP", "Pirate speak");
     private static readonly IReadOnlyList<SupportedCulture> BuiltCultures = [English, German, Pirate];
 
+    /// <summary>The languages packaged with the App, without local translation previews.</summary>
+    internal static IReadOnlyList<SupportedCulture> BuiltInCultures => BuiltCultures;
+
     private readonly IReadOnlyList<SupportedCulture> _cultures;
 
     private SupportedCulture _selectedCulture = English;
@@ -2220,6 +2223,12 @@ public sealed class LocalizationService : INotifyPropertyChanged
     public string AboutDiscord => Resources.AboutDiscord;
 
     public string AboutCredits => Resources.AboutCredits;
+
+    public string AboutTranslators => Resources.AboutTranslators;
+
+    public string AboutTranslatorNotListed => Resources.AboutTranslatorNotListed;
+
+    public string AboutOriginalRepository => Resources.AboutOriginalRepository;
 
     public string AboutCreditsHint => Resources.AboutCreditsHint;
 
