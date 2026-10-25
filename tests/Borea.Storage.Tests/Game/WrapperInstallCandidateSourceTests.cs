@@ -171,7 +171,7 @@ public sealed class WrapperInstallCandidateSourceTests : IDisposable
     {
         var paths = new TestGamePathProvider(_tempRoot);
         var adopter = new FileLoaderAdopter(new FileBoreaSettingsRepository(paths), new LoaderConfigurator(probe));
-        return new InstallDetector(source, adopter, paths.GetLoadersRoot());
+        return new InstallDetector(source, adopter, paths.GetLoadersRoot(), paths.GetGameBuildsRoot());
     }
 
     private static void PlaceGame(string directory)
