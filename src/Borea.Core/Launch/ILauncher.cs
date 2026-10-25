@@ -21,6 +21,17 @@ public interface ILauncher
     LaunchResult Launch(Instance instance, ModMetadata? loader, IReadOnlyList<string>? arguments = null);
 
     /// <summary>
+    /// Starts the loader from <paramref name="loaderDirectory"/>, the folder of
+    /// the loader version that the instance uses, and otherwise does what
+    /// <see cref="Launch(Instance, ModMetadata?, IReadOnlyList{string}?)"/> does.
+    /// Null starts the folder that the settings record for the loader. This
+    /// default ignores the folder, so every launcher that starts a process or
+    /// passes a launch on must implement it.
+    /// </summary>
+    LaunchResult Launch(Instance instance, ModMetadata? loader, string? loaderDirectory, IReadOnlyList<string>? arguments) =>
+        Launch(instance, loader, arguments);
+
+    /// <summary>
     /// Watches a launch that <see cref="Launch"/> just started until the game
     /// comes up, the loader stops, or the startup window ends. A loader that
     /// stops with a non-zero exit code in that time turns the result into

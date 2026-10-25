@@ -40,6 +40,9 @@ public sealed class Instance
     /// <summary>The arguments every launch of this instance passes after the instance handover, in order.</summary>
     public IReadOnlyList<string> LaunchArguments => new ReadOnlyCollection<string>(_launchArguments);
 
+    /// <summary>The mod loader, and its version, that a start of this instance uses.</summary>
+    public LoaderSetting Loader { get; private set; } = LoaderSetting.Automatic;
+
     public Instance(string name, InstanceSource source) : this(Guid.NewGuid(), name, source, DateTimeOffset.UtcNow, Array.Empty<InstalledMod>(), Array.Empty<ForeignMod>())
     {
     }
@@ -263,6 +266,8 @@ public sealed class Instance
     public void RecordPlayed(DateTimeOffset playedAt) => LastPlayedAt = playedAt;
 
     public void SetLaunchArguments(IReadOnlyList<string> arguments) => _launchArguments = CheckedArguments(arguments);
+
+    public void SetLoader(LoaderSetting loader) => Loader = loader ?? throw new ArgumentNullException(nameof(loader));
 
     // a null character would cut the argument short on its way to the process
     private static List<string> CheckedArguments(IReadOnlyList<string> arguments)

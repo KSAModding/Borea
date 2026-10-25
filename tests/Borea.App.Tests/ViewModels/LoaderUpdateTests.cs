@@ -235,6 +235,29 @@ public sealed class LoaderUpdateTests
     }
 
     [Fact]
+    public async Task Play_PinnedToTheRecordedVersionThatDoesNotSupportTheGame_StartsItWithoutTheUpdatePrompt()
+    {
+        var starter = new RunningStarter();
+        using var harness = await CreateAsync(starter: starter);
+        var instance = await InstalledContent.AddAsync(harness, "KSArmory", activate: true);
+        await harness.Services.Instances.UpdateAsync(instance.InstanceId, saved =>
+        {
+            saved.SetLoader(LoaderSetting.Pinned("StarMap", ModVersion.Parse("0.4.6")));
+            return true;
+        });
+        starter.GameLog = harness.Services.Paths.GetInstanceGameLogPath(instance.InstanceId);
+        var viewModel = harness.ViewModel;
+        await viewModel.LoadAsync();
+        await viewModel.WhenLoaderUpdatesCheckedAsync();
+
+        await viewModel.PlayActiveInstanceCommand.ExecuteAsync(null);
+
+        Assert.False(viewModel.IsLoaderPromptOpen);
+        Assert.True(harness.Services.Launcher.IsRunning(instance.InstanceId));
+        Assert.Equal(ModVersion.Parse("0.4.6"), harness.Services.Settings.LoaderInstallations["StarMap"].Version);
+    }
+
+    [Fact]
     public async Task InstancePage_LoaderDoesNotSupportTheGame_ShowsItAndUpdatesInPlace()
     {
         using var harness = await CreateAsync();

@@ -7,6 +7,7 @@ using Borea.Core.State;
 namespace Borea.Core.Planning;
 
 /// <param name="Reasons">A mod without a reason is a dependency when another listed release requires it, and manual otherwise.</param>
+/// <param name="Loader">The mod loader setting of the new instance, or null for the automatic one.</param>
 public sealed record ModListRequest(
     ModList ModList,
     InstanceSource Source,
@@ -14,7 +15,8 @@ public sealed record ModListRequest(
     GameVersion? GameVersion = null,
     OsPlatform? TargetPlatform = null,
     IReadOnlyDictionary<string, InstallReason>? Reasons = null,
-    InstanceOrigin Origin = InstanceOrigin.ModListImport);
+    InstanceOrigin Origin = InstanceOrigin.ModListImport,
+    LoaderSetting? Loader = null);
 
 public sealed record ModListItem(ModListEntry Entry, ModVersionMetadata? Release)
 {
@@ -83,7 +85,9 @@ public sealed class ModListInstaller
         if (await _instances.GetByIdAsync(plan.InstanceId).ConfigureAwait(false) is not null)
             throw new InvalidOperationException("The instance of this plan exists already.");
 
-        var created = await _instances.CreateAsync(Instance.FromExisting(plan.InstanceId, name, plan.Request.Source, DateTimeOffset.UtcNow, [], [], isFavorite: false), plan.Request.Origin).ConfigureAwait(false);
+        var record = Instance.FromExisting(plan.InstanceId, name, plan.Request.Source, DateTimeOffset.UtcNow, [], [], isFavorite: false);
+        record.SetLoader(plan.Request.Loader ?? LoaderSetting.Automatic);
+        var created = await _instances.CreateAsync(record, plan.Request.Origin).ConfigureAwait(false);
         var instance = created.Instance;
         try
         {
