@@ -113,6 +113,8 @@
                                 <MenuFlyout Placement="BottomEdgeAlignedRight">
                                     <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.GameDataOpenFolder}" Command="{Binding OpenFolderCommand}" />
                                     <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.GameSaveBackUp}" Command="{Binding BackUpCommand}" />
+                                    <!-- only once the index accepts the type, see GameSaveSection.CanShare -->
+                                    <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.GameSaveShare}" Command="{Binding ShareCommand}" IsVisible="{Binding CanShare}" />
                                     <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.GameSaveCopyToInstance}" Command="{Binding BeginCopyCommand}" />
                                     <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryRename}" Command="{Binding BeginRenameCommand}" />
                                     <MenuItem Header="{Binding $parent[Window].((vm:MainViewModel)DataContext).Localization.LibraryDelete}" Command="{Binding BeginDeleteCommand}" />

@@ -1,3 +1,5 @@
+using System;
+using System.IO;
 using System.Threading.Tasks;
 
 namespace Borea.App.ViewModels;
@@ -9,6 +11,9 @@ public interface IWindowServices
 {
     /// <summary>Returns the name of the saved file, or null when the user cancelled.</summary>
     Task<string?> SaveTextFileAsync(string title, string suggestedFileName, string fileTypeName, string text);
+
+    /// <summary>Lets <paramref name="write"/> fill the picked file. Returns its name, or null when the user cancelled.</summary>
+    Task<string?> SaveFileAsync(string title, string suggestedFileName, string extension, string fileTypeName, Func<Stream, Task> write);
 
     /// <summary>Null when the user cancelled.</summary>
     Task<PickedTextFile?> OpenTextFileAsync(string title, string fileTypeName);

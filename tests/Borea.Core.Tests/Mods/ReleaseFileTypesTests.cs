@@ -83,6 +83,19 @@ public sealed class ReleaseSourceTests
 
         Assert.Throws<ArgumentException>(() => new ReleaseSource(hosts, "github"));
     }
+
+    [Theory]
+    [InlineData("github", "owner/repo", ReleaseHostKind.GitHub)]
+    [InlineData("GitHub", "owner/repo", ReleaseHostKind.GitHub)]
+    [InlineData("spacedock", "4253", ReleaseHostKind.SpaceDock)]
+    [InlineData("ksamods", "ExampleRover", ReleaseHostKind.Share)]
+    [InlineData("ksamods", "publisher/project", ReleaseHostKind.Other)]
+    [InlineData("KSAmods", "ExampleRover", ReleaseHostKind.Other)]
+    [InlineData("tag_prefix", "ExampleRover", ReleaseHostKind.Other)]
+    public void Kind_FollowsFromTheKeyAndTheReference(string key, string reference, ReleaseHostKind expected)
+    {
+        Assert.Equal(expected, new ReleaseHost(key, reference).Kind);
+    }
 }
 
 public sealed class InstallInfoTests

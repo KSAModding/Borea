@@ -15,6 +15,8 @@ public static partial class StewardQueueKinds
     {
         ["listing"] = StewardQueueKind.Listing,
         ["pack"] = StewardQueueKind.Pack,
+        ["vehicle"] = StewardQueueKind.Vehicle,
+        ["save"] = StewardQueueKind.Save,
     };
 
     private static readonly Dictionary<string, StewardQueueKind> ReleasesLabels = new(StringComparer.Ordinal)
@@ -54,7 +56,7 @@ public static partial class StewardQueueKinds
         return (kinds.Order().ToList(), hasOtherFiles);
     }
 
-    /// <summary>Listing or Pack for a document of content-index that the pull request adds or changes, and null for any other file.</summary>
+    /// <summary>Listing, Pack, Vehicle or Save for a document of content-index that the pull request adds or changes, and null for any other file.</summary>
     /// <param name="status">The status that GitHub gives the file.</param>
     public static StewardQueueKind? DocumentOf(string repository, string path, string status)
     {
@@ -62,10 +64,15 @@ public static partial class StewardQueueKinds
         if (!string.Equals(repository, ListingPullRequestLinks.Repository, StringComparison.OrdinalIgnoreCase) || status is not ("added" or "modified"))
             return null;
 
-        return ListingDocument().IsMatch(path) ? StewardQueueKind.Listing
-            : PackDocument().IsMatch(path) ? StewardQueueKind.Pack
-            : null;
+        return Document(path);
     }
+
+    private static StewardQueueKind? Document(string path) =>
+        ListingDocument().IsMatch(path) ? StewardQueueKind.Listing
+            : PackDocument().IsMatch(path) ? StewardQueueKind.Pack
+            : VehicleDocument().IsMatch(path) ? StewardQueueKind.Vehicle
+            : SaveDocument().IsMatch(path) ? StewardQueueKind.Save
+            : null;
 
     /// <summary>
     /// Whether the path is a steward file or a written document of the repository. The kind is null for a document, whose kind
@@ -80,11 +87,17 @@ public static partial class StewardQueueKinds
             _ when OwnerRecord().IsMatch(path) => StewardQueueKind.OwnerRecord,
             _ => null,
         };
-        return kind is not null || (writes && (isContentIndex ? ListingDocument().IsMatch(path) || PackDocument().IsMatch(path) : ReleaseFile().IsMatch(path)));
+        return kind is not null || (writes && (isContentIndex ? Document(path) is not null : ReleaseFile().IsMatch(path)));
     }
 
     [GeneratedRegex(@"\Alistings/[^/]+\.[Tt][Oo][Mm][Ll]\z")]
     private static partial Regex ListingDocument();
+
+    [GeneratedRegex(@"\Avehicles/[^/]+\.[Tt][Oo][Mm][Ll]\z")]
+    private static partial Regex VehicleDocument();
+
+    [GeneratedRegex(@"\Asaves/[^/]+\.[Tt][Oo][Mm][Ll]\z")]
+    private static partial Regex SaveDocument();
 
     [GeneratedRegex(@"\Apacks/[^/]+/[^/]+\.[Tt][Oo][Mm][Ll]\z")]
     private static partial Regex PackDocument();

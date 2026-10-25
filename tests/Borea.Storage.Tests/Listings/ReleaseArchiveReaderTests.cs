@@ -51,10 +51,27 @@ public sealed class ReleaseArchiveReaderTests : IDisposable
     public async Task AReleaseThatIsNoMod_OrAnArchiveWithoutAModTomlThere_DeclaresNothing()
     {
         var bytes = TestArchives.Build(("ShaderExtensions/mod.toml", "[[StarMap.ModDependencies]]\nModId = \"Lib\"\n"));
-        var reader = new ReleaseArchiveReader(new FakeModDownloader { Bytes = bytes }, _folder, 1000);
+        var downloader = new FakeModDownloader { Bytes = bytes };
+        var reader = new ReleaseArchiveReader(downloader, _folder, 1000);
 
         Assert.Empty(await reader.DeclaredDependenciesAsync(Stamped(bytes, "ShaderExtensions", type: "tool")));
         Assert.Empty(await reader.DeclaredDependenciesAsync(Stamped(bytes, "Other")));
+        Assert.Single(downloader.ArchivePaths);
+    }
+
+    [Theory]
+    [InlineData("vehicle")]
+    [InlineData("save")]
+    [InlineData("mod-loader")]
+    public async Task AReleaseThatIsNoMod_IsNotDownloaded_EvenWhenItsArchiveIsGone(string type)
+    {
+        var failing = new FakeModDownloader { Failure = new DownloadFailedException("No source served the archive.") };
+        var withoutDownload = JsonNode.Parse(Stamped([1, 2, 3], "Example Rover", type))!;
+        withoutDownload.AsObject().Remove("download");
+
+        Assert.Empty(await new ReleaseArchiveReader(failing, _folder, 1000).DeclaredDependenciesAsync(Stamped([1, 2, 3], "Example Rover", type)));
+        Assert.Empty(await new ReleaseArchiveReader(failing, _folder, 1000).DeclaredDependenciesAsync(withoutDownload.ToJsonString()));
+        Assert.Empty(failing.ArchivePaths);
     }
 
     [Fact]

@@ -118,6 +118,8 @@ public sealed partial class ListingEditor : ObservableObject
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CanUseLoader), nameof(IsPack), nameof(IsNewPack), nameof(NewTitle), nameof(PullRequestText), nameof(HasDeclaredHelp))]
+    [NotifyPropertyChangedFor(nameof(IsVehicleOrSave), nameof(ForumsHint), nameof(GameHint), nameof(IsVehicle), nameof(IsSave))]
+    [NotifyPropertyChangedFor(nameof(IntroText), nameof(IdHint), nameof(GameMaxHint), nameof(DependenciesHint))]
     private string _type = ListingDraft.ModType;
 
     /// <summary>A mod-loader carries no [loader].</summary>
@@ -126,7 +128,13 @@ public sealed partial class ListingEditor : ObservableObject
     /// <summary>A pack version has no release host, loader, dependencies or install, and pins members instead.</summary>
     public bool IsPack => Type == ListingDraft.ModPackType;
 
-    public string NewTitle => IsPack ? Localization.ListingPackTitle : Localization.ListingNewTitle;
+    public string NewTitle => Type switch
+    {
+        ListingDraft.ModPackType => Localization.ListingPackTitle,
+        ListingFolders.VehicleType => Localization.ListingShareVehicleTitle,
+        ListingFolders.SaveType => Localization.ListingShareSaveTitle,
+        _ => Localization.ListingNewTitle,
+    };
 
     [ObservableProperty]
     private string _id = string.Empty;
@@ -182,10 +190,18 @@ public sealed partial class ListingEditor : ObservableObject
     [NotifyPropertyChangedFor(nameof(ShowsTagPrefix))]
     private string _releasesTagPrefix = string.Empty;
 
-    public bool NeedsAuthority => ReleasesGitHub.Trim().Length > 0 && ReleasesSpaceDock.Trim().Length > 0;
+    public bool NeedsAuthority => (ReleasesGitHub.Trim().Length > 0 ? 1 : 0) + (ReleasesSpaceDock.Trim().Length > 0 ? 1 : 0) + (ShareHost is null ? 0 : 1) > 1;
 
     /// <summary>Whether [releases] is written, which since needs.</summary>
-    public bool HasReleasesHost => ReleasesGitHub.Trim().Length > 0 || ReleasesSpaceDock.Trim().Length > 0;
+    public bool HasReleasesHost => ReleasesGitHub.Trim().Length > 0 || ReleasesSpaceDock.Trim().Length > 0 || ShareHost is not null;
+
+    /// <summary>The share host of the listed document (RFC 0094). Only the host writes it, so the page shows it and keeps it.</summary>
+    private ListingShareHost? ShareHost => _base.Releases?.Share;
+
+    public string? ShareHostText => ShareHost is { } share ? Localization.FormatListingReleasesShareHost(share.Key, share.Id) : null;
+
+    /// <summary>The hosts that [releases].authority can name.</summary>
+    public IReadOnlyList<string> AuthorityChoices => ShareHost is { } share ? [.. Authorities, share.Key] : Authorities;
 
     /// <summary>
     /// Whether the tag prefix field shows. It needs a GitHub repository, and it stays in view while [releases] keeps a
@@ -392,10 +408,11 @@ public sealed partial class ListingEditor : ObservableObject
     }
 
     [RelayCommand(CanExecute = nameof(CanLoadListed))]
-    private Task LoadListedAsync() => SelectedListed is { } listed ? LoadListedCoreAsync(listed.Id, listed.IsPack) : Task.CompletedTask;
+    private Task LoadListedAsync() => SelectedListed is { } listed ? LoadListedCoreAsync(listed.Id, listed.IsPack, listed.Type) : Task.CompletedTask;
 
-    /// <summary>Loads a listed mod to change it, or the newest version of a listed pack as its next version.</summary>
-    private async Task LoadListedCoreAsync(string id, bool isPack)
+    /// <summary>Loads a listed mod, vehicle or save to change it, or the newest version of a listed pack as its next version.</summary>
+    /// <param name="type">The type of the listing, which decides the folder its file is read from.</param>
+    private async Task LoadListedCoreAsync(string id, bool isPack, string type = ListingDraft.ModType)
     {
         if (_owner.Services is not { } services || IsBusy)
             return;
@@ -415,7 +432,7 @@ public sealed partial class ListingEditor : ObservableObject
         {
             var (draft, text, message) = pack is not null
                 ? await ReadNextVersionAsync(services, pack, cancel.Token)
-                : await ReadListingAsync(services, id, cancel.Token);
+                : await ReadListingAsync(services, id, type, cancel.Token);
             cancel.Token.ThrowIfCancellationRequested();
             _source = null;
             _archive = null;
@@ -440,9 +457,9 @@ public sealed partial class ListingEditor : ObservableObject
 
     private bool CanLoadListed() => SelectedListed is not null;
 
-    private static async Task<(ListingDraft Draft, string Text, string? Message)> ReadListingAsync(BoreaServices services, string id, CancellationToken cancellationToken)
+    private static async Task<(ListingDraft Draft, string Text, string? Message)> ReadListingAsync(BoreaServices services, string id, string type, CancellationToken cancellationToken)
     {
-        var text = await services.ListedDocuments.GetListingAsync(id, cancellationToken);
+        var text = await services.ListedDocuments.GetListingAsync(id, type, cancellationToken);
         return (ListingDraft.FromDocument(services.ListingFormat.Read(text)), text, null);
     }
 
@@ -462,6 +479,7 @@ public sealed partial class ListingEditor : ObservableObject
         Cancel();
         DropImageCheck();
         ForgetPullRequest();
+        ForgetShare();
         OutputMessage = null;
         SourceError = null;
         ListedError = null;
@@ -609,6 +627,7 @@ public sealed partial class ListingEditor : ObservableObject
         _tagProposal?.Cancel();
         StopImageCheck();
         ForgetDeclared();
+        ForgetShare();
         _releasesHostChanged = false;
         _loading = true;
         try
@@ -637,6 +656,8 @@ public sealed partial class ListingEditor : ObservableObject
             ReleasesAuthority = draft.Releases?.Authority;
             ReleasesSince = draft.Releases?.Since ?? string.Empty;
             ReleasesTagPrefix = draft.Releases?.TagPrefix ?? string.Empty;
+            OnPropertyChanged(nameof(ShareHostText));
+            OnPropertyChanged(nameof(AuthorityChoices));
             GameMin = draft.GameMin;
             GameMax = draft.GameMax ?? string.Empty;
             UsesLoader = draft.Loader is not null;
@@ -678,9 +699,10 @@ public sealed partial class ListingEditor : ObservableObject
         Refresh();
     }
 
+    /// <summary>The tags of a vehicle or a save are free (spec/tags.md), so they get no chips.</summary>
     private void FillCuratedTags(IReadOnlyList<string> selected)
     {
-        var vocabulary = _snapshot?.Tags.GetTags(ContentType.Mod) ?? [];
+        var vocabulary = IsVehicleOrSave ? [] : _snapshot?.Tags.GetTags(ContentType.Mod) ?? [];
         var chosen = CuratedTags.Where(chip => chip.IsSelected).Select(chip => chip.Tag).Concat(selected).ToHashSet(StringComparer.Ordinal);
         CuratedTags.Clear();
         foreach (var tag in vocabulary)
@@ -732,7 +754,7 @@ public sealed partial class ListingEditor : ObservableObject
 
         var document = draft.ToDocument();
         DocumentText = services.ListingFormat.Write(document, _listedText);
-        var result = services.ListingValidator.Validate(document, new ListingCheckContext(_snapshot, HasFixedId ? _base.Id : null, CheckedArchive));
+        var result = services.ListingValidator.Validate(document, new ListingCheckContext(_snapshot, HasFixedId ? _base.Id : null, CheckedArchive, _share?.Content.Name));
         if (UncheckedArchiveIssue() is { } archiveIssue)
             pageIssues.Add(archiveIssue);
         var issues = InPinOrder(pageIssues.Concat(result.Issues).Distinct());
@@ -780,6 +802,14 @@ public sealed partial class ListingEditor : ObservableObject
         OnPropertyChanged(nameof(PullRequestText));
         OnPropertyChanged(nameof(NewTitle));
         OnPropertyChanged(nameof(NextVersionText));
+        OnPropertyChanged(nameof(ForumsHint));
+        OnPropertyChanged(nameof(GameHint));
+        OnPropertyChanged(nameof(IntroText));
+        OnPropertyChanged(nameof(IdHint));
+        OnPropertyChanged(nameof(GameMaxHint));
+        OnPropertyChanged(nameof(DependenciesHint));
+        OnPropertyChanged(nameof(ShareHostText));
+        RefreshShare();
         // the proposal keeps its value, so its setter does not raise the text again
         OnPropertyChanged(nameof(GameMinProposalText));
         OnPropertyChanged(nameof(MemberSearchText));
@@ -814,8 +844,8 @@ public sealed partial class ListingEditor : ObservableObject
                 pageIssues.Add(new ListingIssue(ListingIssueSeverity.Error, "releases.spacedock", Localization.FormatListingSpaceDockNotNumber(ReleasesSpaceDock.Trim())));
         }
 
-        var releases = !IsPack && (ReleasesGitHub.Trim().Length > 0 || spaceDock is not null)
-            ? new ListingReleases(Empty(ReleasesGitHub), spaceDock, NeedsAuthority ? ReleasesAuthority : null, Empty(ReleasesSince), Empty(ReleasesTagPrefix))
+        var releases = !IsPack && (ReleasesGitHub.Trim().Length > 0 || spaceDock is not null || ShareHost is not null)
+            ? new ListingReleases(Empty(ReleasesGitHub), spaceDock, NeedsAuthority ? ReleasesAuthority : null, Empty(ReleasesSince), Empty(ReleasesTagPrefix), ShareHost)
             : null;
 
         // a curated tag comes from its chip only, so a deselected chip is not stored again through the free field
@@ -916,7 +946,7 @@ public sealed partial class ListingEditor : ObservableObject
 
         _tagProposal?.Cancel();
         _tagProposal = null;
-        if (ForumsThreadLink.ThreadOf(value.Trim()) is not null && !CuratedTags.Any(chip => chip.IsSelected))
+        if (!IsVehicleOrSave && ForumsThreadLink.ThreadOf(value.Trim()) is not null && !CuratedTags.Any(chip => chip.IsSelected))
         {
             _tagProposal = new CancellationTokenSource();
             TagProposal = ProposeTagsAsync(value.Trim(), _tagProposal.Token);

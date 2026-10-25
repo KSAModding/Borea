@@ -14,7 +14,12 @@ namespace Borea.App.ViewModels;
 /// A listed mod that the start step can load to change it or that a pack can pin, or a listed pack to make its next version.
 /// The dependency search also offers a listed loader, which it marks.
 /// </summary>
-public sealed record ListedListing(string Id, string Name, string AuthorsText, bool IsOwn, bool IsPack = false, bool IsLoader = false);
+public sealed record ListedListing(string Id, string Name, string AuthorsText, bool IsOwn, bool IsPack = false, bool IsLoader = false, string Type = ListingDraft.ModType)
+{
+    public bool IsVehicle => Type == ListingFolders.VehicleType;
+
+    public bool IsSave => Type == ListingFolders.SaveType;
+}
 
 /// <summary>
 /// The search for a listed mod or pack on the start step. The listings of the signed-in GitHub account come first.
@@ -50,9 +55,13 @@ public sealed partial class ListingEditor
 
     private void SetListedMods(ContentIndexSnapshot? snapshot)
     {
-        _listedMods = snapshot?.Listings
-            .Where(listing => listing.Authored?.Type is ContentType.Mod or ContentType.ModLoader)
-            .ToList() ?? [];
+        // A vehicle or a save is changed the same way, for example to correct its dependencies (RFC 0085).
+        _listedMods = snapshot is null
+            ? []
+            : snapshot.Listings
+                .Where(listing => listing.Authored?.Type is ContentType.Mod or ContentType.ModLoader)
+                .Concat(snapshot.Vehicles.Concat(snapshot.Saves).Where(listing => listing.Authored is not null))
+                .ToList();
         _listedPacks = snapshot?.Packs
             .Select(pack => ListingPackVersions.Highest(pack)?.Metadata)
             .OfType<ModPackMetadata>()
@@ -69,7 +78,7 @@ public sealed partial class ListingEditor
             .Select(pack => new ListedListing(pack.ModPackId, pack.Name, AuthorsText(pack.Authors), IsOwn: false, IsPack: true));
         var matches = _listedMods
             .Where(listing => Matches(listing, query))
-            .Select(listing => new ListedListing(listing.Id, listing.Authored!.Name, AuthorsText(listing.Authored.Authors), login is not null && IsOwnedBy(listing.Authored, login)))
+            .Select(listing => new ListedListing(listing.Id, listing.Authored!.Name, AuthorsText(listing.Authored.Authors), login is not null && IsOwnedBy(listing.Authored, login), Type: TypeOf(listing.Authored.Type)))
             .Concat(packs)
             .OrderByDescending(listing => listing.IsOwn)
             .ThenBy(listing => listing.Id, StringComparer.OrdinalIgnoreCase)
@@ -100,6 +109,13 @@ public sealed partial class ListingEditor
         listing.Releases?.Hosts.Any(host =>
             string.Equals(host.Host, ListingAuthority.GitHub, StringComparison.OrdinalIgnoreCase)
             && string.Equals(host.Reference.Split('/')[0], login, StringComparison.OrdinalIgnoreCase)) == true;
+
+    private static string TypeOf(ContentType type) => type switch
+    {
+        ContentType.Vehicle => ListingFolders.VehicleType,
+        ContentType.Save => ListingFolders.SaveType,
+        _ => ListingDraft.ModType,
+    };
 
     partial void OnListedQueryChanged(string value) => FindListed();
 }

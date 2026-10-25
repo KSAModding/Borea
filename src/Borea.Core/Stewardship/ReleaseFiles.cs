@@ -29,8 +29,11 @@ public enum ReleaseChangeEffect
     Refused,
 }
 
-/// <summary>The values of a release file that an amendment can change, as the file states them.</summary>
-public sealed record ReleaseFileValues(string? GameMin, string? GameMax, ReleaseFileLoader? Loader, IReadOnlyList<ReleaseFileDependency> Dependencies)
+/// <summary>The values of a release file that an amendment can change, as the file states them, and the type and install folder that it keeps.</summary>
+/// <param name="Type">The type of the listing, which the stamper copies into each release, such as "mod" or "vehicle".</param>
+/// <param name="Folder">install.folder, the game folder that a vehicle or save release installs as (RFC 0085), or null.</param>
+public sealed record ReleaseFileValues(string? GameMin, string? GameMax, ReleaseFileLoader? Loader, IReadOnlyList<ReleaseFileDependency> Dependencies, string? Type = null,
+    string? Folder = null)
 {
     /// <summary>The values of the text, or null when it is no JSON object.</summary>
     public static ReleaseFileValues? Read(string text)
@@ -59,7 +62,8 @@ public sealed record ReleaseFileValues(string? GameMin, string? GameMax, Release
                     StringOf(dependency["source"])))
                 .ToList()
             : [];
-        return new ReleaseFileValues(StringOf(document["game_min"]), StringOf(document["game_max"]), loader, dependencies);
+        var folder = document["install"] is JsonObject install ? StringOf(install["folder"]) : null;
+        return new ReleaseFileValues(StringOf(document["game_min"]), StringOf(document["game_max"]), loader, dependencies, StringOf(document["type"]), folder);
     }
 
     /// <summary>The entry of the dependency on <paramref name="id"/>, which matches without regard to case, or null.</summary>

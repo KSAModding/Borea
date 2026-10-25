@@ -72,6 +72,13 @@ public enum StewardQueueKind
 {
     Listing,
     Pack,
+
+    /// <summary>vehicles/&lt;id&gt;.toml (RFC 0085).</summary>
+    Vehicle,
+
+    /// <summary>saves/&lt;id&gt;.toml (RFC 0085).</summary>
+    Save,
+
     Release,
     Amendment,
 

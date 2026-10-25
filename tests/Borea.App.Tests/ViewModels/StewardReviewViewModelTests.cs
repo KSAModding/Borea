@@ -411,6 +411,66 @@ public sealed class StewardReviewViewModelTests
         Assert.Equal(["repository"], document.OwnershipLinks.Select(link => link.Key));
     }
 
+    [Fact]
+    public async Task Vehicle_ShowsItsTagsAsWritten_ItsDependencies_AndTheFolderOfItsNewestRelease()
+    {
+        const string Text = """
+            spec_version = 1
+            id = "ExampleRover"
+            type = "vehicle"
+            name = "Example Rover"
+            tags = ["moon-rover", "weapons"]
+
+            [[dependencies]]
+            id = "ExampleParts"
+            kind = "required"
+            min = "1.0.0"
+
+            [[dependencies]]
+            kind = "recommends"
+            any_of = [{ id = "LightA", max = "2.0.0" }, { id = "LightB", min = "1.1.0", max = "1.9.0" }]
+            """;
+
+        // a curated mod tag would show with its curated name, which the free tags of a vehicle do not have
+        using var harness = await CreateAsync(ViewModelHarness.CuratedTags(("weapons", "Hardware")));
+        var viewModel = harness.ViewModel;
+        await viewModel.EnsureDiscoverLoadedAsync();
+        var review = new StewardReview(viewModel, FakeStewardQueue.Item(30));
+        var ownership = new ListingOwnership(ListingOwnershipState.Verified, ListingOwnershipProof.Owner, Repository: "alice/ExampleRover");
+        StewardReviewDocument Shown(PullRequestRelease? release, StewardException? failure = null) => new(
+            viewModel, review, new PullRequestDocument("vehicles/ExampleRover.toml", StewardQueueKind.Vehicle, Text, harness.Services.ListingFormat.Read(Text), null, ownership, release, failure), "alice");
+
+        var stamped = Shown(new PullRequestRelease("1.2.0", "Example Rover"));
+        var noFolder = Shown(new PullRequestRelease("1.2.0", null));
+        var none = Shown(null);
+        var unreadable = Shown(null, new StewardException(StewardFailure.Forbidden));
+
+        Assert.True(stamped.IsVehicleOrSave);
+        Assert.Equal("Vehicle", stamped.KindText);
+        Assert.Equal(["Moon Rover", "Weapons"], stamped.Tags);
+        Assert.Equal(["required: ExampleParts >= 1.0.0", "recommends: LightA <= 2.0.0 or LightB 1.1.0 - 1.9.0"], stamped.Dependencies);
+        Assert.Equal("The newest release 1.2.0 installs into the folder \"Example Rover\".", stamped.ReleaseText);
+        Assert.Equal("The newest release 1.2.0 names no install folder.", noFolder.ReleaseText);
+        Assert.Equal(viewModel.Localization.StewardReviewNoRelease, none.ReleaseText);
+        Assert.Equal(
+            "The newest release could not be read from KSAModding/content-index-releases: " + viewModel.Localization.StewardQueueForbidden,
+            unreadable.ReleaseText);
+        Assert.Equal((false, false, false, true), (stamped.IsReleaseUnreadable, noFolder.IsReleaseUnreadable, none.IsReleaseUnreadable, unreadable.IsReleaseUnreadable));
+        Assert.True(stamped.HasOwnership);
+    }
+
+    [Fact]
+    public async Task ListingAndPack_ShowNoDependenciesOrRelease()
+    {
+        using var harness = await CreateAsync();
+        var review = new StewardReview(harness.ViewModel, FakeStewardQueue.Item(5));
+
+        var listing = new StewardReviewDocument(harness.ViewModel, review, Listing(harness, ListingOwnership.Unknown), "alice");
+        var pack = new StewardReviewDocument(harness.ViewModel, review, new PullRequestDocument("packs/my-pack/1.2.0.toml", StewardQueueKind.Pack, PackText, harness.Services.ListingFormat.Read(PackText), null, null), "alice");
+
+        Assert.All([listing, pack], document => Assert.Equal((false, 0, null), (document.IsVehicleOrSave, document.Dependencies.Count, document.ReleaseText)));
+    }
+
     private static PullRequestDocument Listing(ViewModelHarness harness, ListingOwnership ownership) =>
         new("listings/MyMod.toml", StewardQueueKind.Listing, ListingText, harness.Services.ListingFormat.Read(ListingText), null, ownership);
 
@@ -422,10 +482,10 @@ public sealed class StewardReviewViewModelTests
         return viewModel.StewardPage.Review!;
     }
 
-    private async Task<ViewModelHarness> CreateAsync()
+    private async Task<ViewModelHarness> CreateAsync(Func<string, string>? editSnapshot = null)
     {
         _session.SignInDirectly();
-        var harness = await ViewModelHarness.CreateAsync(gitHub: _session, indexStatusEditor: new FakeIndexStatusEditor(), stewardQueue: _queue, pullRequestReviews: _reviews);
+        var harness = await ViewModelHarness.CreateAsync(gitHub: _session, indexStatusEditor: new FakeIndexStatusEditor(), stewardQueue: _queue, pullRequestReviews: _reviews, editSnapshot: editSnapshot);
         await harness.ViewModel.WhenStewardRoleCheckedAsync();
         return harness;
     }

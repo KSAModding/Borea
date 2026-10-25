@@ -77,6 +77,32 @@ public sealed partial class GitHubReleaseAmendmentsTests
     }
 
     [Fact]
+    public async Task OpenAsync_GameMaxOfAVehicleRelease_CommitsTheBytesOfToolsAmend_KeepsTheInstallFolder_AndAsksTheVehicleListingForTheOwner()
+    {
+        const string path = "releases/ExampleRover/1.0.0.json";
+        _releases.Main[path] = VehicleFixture("ExampleRover-1.0.0.json");
+        _hosts[Api + "/repos/KSAModding/content-index/contents/vehicles/ExampleRover.toml?ref=main"] = () => Json(JsonSerializer.Serialize(new
+        {
+            sha = "abc",
+            encoding = "base64",
+            content = Convert.ToBase64String(Encoding.UTF8.GetBytes("id = \"ExampleRover\"\ntype = \"vehicle\"\nname = \"Example Rover\"\n[releases]\ngithub = \"alice/ExampleRover\"\n")),
+        }));
+        _hosts[Api + "/repos/alice/ExampleRover"] = () => Json("""{"full_name":"alice/ExampleRover","fork":false,"owner":{"id":5,"login":"alice","type":"User"}}""");
+        var amendments = await SignedInAsync();
+
+        var preview = await amendments.PreviewAsync(new ReleaseAmendmentRequest("ExampleRover", ReleaseSelection.Of("1.0.0"), new ReleaseChange { GameMax = "2026.8.19.5261" }, "It breaks on 2026.8.22."));
+        await amendments.OpenAsync(preview);
+
+        var written = VehicleFixture("ExampleRover-1.0.0-game-max.json");
+        Assert.Equal(written, Assert.Single(preview.Files).After);
+        Assert.Equal(Encoding.UTF8.GetBytes(written), Encoding.UTF8.GetBytes(_releases.Branches["steward/amend-examplerover"].Files[path]));
+        Assert.Equal("Example Rover", ReleaseFileValues.Read(written)!.Folder);
+        Assert.Equal(["alice"], preview.Owners);
+        Assert.EndsWith("\n\n@alice owns `ExampleRover`.", _releases.Pulls.Single().Body, StringComparison.Ordinal);
+        Assert.DoesNotContain(_sent, sent => sent.Url.Contains("/contents/listings/", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public async Task OpenAsync_UpToAVersion_AmendsEachReleaseAtOrBelowItInOneCommit()
     {
         var vector = Vector("a game_max is added after game_min_revision");
@@ -342,6 +368,10 @@ public sealed partial class GitHubReleaseAmendmentsTests
         Assert.Empty(preview.Owners);
         Assert.DoesNotContain("@", _releases.Pulls.Single().Body, StringComparison.Ordinal);
     }
+
+    /// <summary>A vehicle release that the stamper of content-index-releases wrote, as the fixture of Borea.Core.Tests keeps it.</summary>
+    private static string VehicleFixture(string name) =>
+        File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "GitHub", "Fixtures", "vehicle", name)).ReplaceLineEndings("\n");
 
     private static JsonObject Vector(string name) =>
         Vectors["vectors"]!.AsArray().Single(vector => (string)vector!["name"]! == name)!.AsObject();
