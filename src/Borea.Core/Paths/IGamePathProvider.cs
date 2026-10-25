@@ -1,3 +1,5 @@
+using Borea.Core.Mods;
+
 namespace Borea.Core.Paths;
 
 /// <summary>
@@ -42,9 +44,14 @@ public interface IGamePathProvider
     string GetStaticModFilesRoot();
 
     /// <summary>
-    /// Root for loaders installed standalone (RFC 0035), one folder per loader id.
+    /// Root for loaders installed standalone (RFC 0035), one folder per loader id, holding one folder per version.
     /// </summary>
     string GetLoadersRoot();
+
+    /// <summary>
+    /// The folder of one version of a loader, Loaders/&lt;id&gt;/&lt;version&gt;. It does not say whether that version is installed.
+    /// </summary>
+    string GetLoaderVersionDirectoryPath(string loaderId, ModVersion version);
 
     /// <summary>
     /// Root for all presets in Borea.

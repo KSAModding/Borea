@@ -583,6 +583,9 @@ public sealed class LaunchCommandTests : IDisposable
             return failure is null ? Task.FromResult<string?>(null) : Task.FromException<string?>(failure);
         }
 
+        public Task<string?> PrepareForLaunchAsync(ModMetadata loader, string loaderDirectory, string gameDirectory, bool isAdopted, CancellationToken cancellationToken = default) =>
+            RefreshForWineAsync(loader, loaderDirectory, gameDirectory, cancellationToken);
+
         public string GamePathValue(string gameDirectory) => gameDirectory;
     }
 

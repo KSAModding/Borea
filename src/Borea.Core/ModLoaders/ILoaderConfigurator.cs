@@ -49,6 +49,34 @@ public interface ILoaderConfigurator
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Makes the loader in <paramref name="loaderDirectory"/> start the game in
+    /// <paramref name="gameDirectory"/> before a launch. The configured value is
+    /// resolved the way StarMap does it, so a folder means KSA.dll in that folder
+    /// and any other value names the file. A folder Borea made is configured
+    /// again when its file is missing or its value does not name KSA.dll in the
+    /// game folder, because each version folder keeps its own game path and
+    /// Borea owns that value. An adopted folder is configured again only when
+    /// its file is missing, its value is empty, or its value names no KSA.dll
+    /// that exists, because the loader would refuse that value anyway. In every
+    /// other case it does what <see cref="RefreshForWineAsync"/> does. Returns
+    /// the file it wrote, or null when it wrote nothing, which is always so for
+    /// a listing without a game path key, a format it cannot write and a
+    /// directory that is not absolute.
+    /// </summary>
+    /// <exception cref="ArgumentException">The listing is not a mod loader.</exception>
+    /// <exception cref="InvalidOperationException">
+    /// The file cannot be read as its stated format or cannot be written, or
+    /// no drive of the Wine prefix around the game holds it. Nothing is
+    /// written then.
+    /// </exception>
+    Task<string?> PrepareForLaunchAsync(
+        ModMetadata loader,
+        string loaderDirectory,
+        string gameDirectory,
+        bool isAdopted,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// The value <see cref="ConfigureAsync"/> writes for
     /// <paramref name="gameDirectory"/>: the absolute host path, or the Windows
     /// path through the drives of the Wine prefix that holds the game, because
