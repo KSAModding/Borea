@@ -1,6 +1,6 @@
 # Borea
 
-[English](README.md) | 简体中文
+[English](README.md) | 简体中文 | [Deutsch](README.de.md)
 
 > 本文是英文 README 的翻译，可能落后于英文版本；如有出入，以英文版为准。
 
