@@ -82,7 +82,10 @@ internal static class UserContentFolder
         }
     }
 
-    // The game looks the file up by its exact name, which a file system that ignores case would hide.
-    private static bool HasFile(string folder, string name) =>
-        new DirectoryInfo(folder).EnumerateFiles().Any(file => string.Equals(file.Name, name, StringComparison.Ordinal));
+    /// <summary>
+    /// Whether the folder has a file of exactly this name. The game looks the file up by its exact name, which a file system
+    /// that ignores case would hide, and the release checks compare the names in the archive exactly.
+    /// </summary>
+    public static bool HasFile(string folder, string name) =>
+        Directory.Exists(folder) && new DirectoryInfo(folder).EnumerateFiles().Any(file => string.Equals(file.Name, name, StringComparison.Ordinal));
 }

@@ -41,13 +41,13 @@ public sealed class XmlContentIdReader : IContentIdReader
     private static async Task<GameFolderContent> ReadCoreAsync(string folder, GameSaveKind kind, CancellationToken cancellationToken)
     {
         var metadata = Path.Combine(folder, FileGameSaveStore.MetadataFileName);
-        if (!HasFile(folder, FileGameSaveStore.MetadataFileName))
+        if (!UserContentFolder.HasFile(folder, FileGameSaveStore.MetadataFileName))
             throw new GameFolderException(GameFolderProblem.MetadataMissing, metadata);
 
         var (name, build) = await ReadMetadataAsync(metadata, cancellationToken).ConfigureAwait(false);
 
         var gameFile = Path.Combine(folder, GameFileName(kind));
-        if (!HasFile(folder, GameFileName(kind)))
+        if (!UserContentFolder.HasFile(folder, GameFileName(kind)))
             throw new GameFolderException(GameFolderProblem.GameFileMissing, gameFile);
 
         var ids = new ContentIds();
@@ -165,8 +165,4 @@ public sealed class XmlContentIdReader : IContentIdReader
             .Where(path => path != FileGameSaveStore.MetadataFileName && path != gameFile)
             .Order(StringComparer.Ordinal)
             .ToList();
-
-    /// <summary>The exact name, because the release checks compare the names in the archive exactly.</summary>
-    private static bool HasFile(string folder, string name) =>
-        Directory.Exists(folder) && new DirectoryInfo(folder).EnumerateFiles().Any(file => string.Equals(file.Name, name, StringComparison.Ordinal));
 }
