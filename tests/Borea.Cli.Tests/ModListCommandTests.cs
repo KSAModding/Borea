@@ -1,5 +1,6 @@
 using Borea.Composition;
 using Borea.Core.Dependencies;
+using Borea.Core.Game;
 using Borea.Core.Instances;
 using Borea.Core.Mods;
 using Borea.Core.Planning;
@@ -66,6 +67,21 @@ public sealed class ModListCommandTests : IDisposable
         Assert.Equal(["flight-tools 2.0.0 Manual", "helper-lib 1.0.0 Dependency"], Describe(imported));
         Assert.Equal(await EntriesAsync("Alpha"), await EntriesAsync("Alpha (2)"));
         Assert.Contains($"[cli] Instance \"Alpha (2)\" ({imported.InstanceId}) created from a modlist.", LogText());
+    }
+
+    [Fact]
+    public async Task ExportThenImport_DoesNotTakeTheGameBuildOver()
+    {
+        _host.InstalledVersion = new FakeInstalledGameVersionProvider { Installed = new InstalledGameVersion(GameVersion.Parse("2026.10.19.5638"), "2026.10.19.5638") };
+        await SeedAlphaAsync();
+        await KeepGameBuildAsync("Alpha", "2026.10.13.5602");
+        var file = ModListPath("alpha.toml");
+        await _host.RunAsync("instance", "export", "Alpha", file);
+
+        var run = await _host.RunAsync("instance", "import", file);
+
+        Assert.Equal(0, run.ExitCode);
+        Assert.Null((await InstanceNamedAsync("Alpha (2)")).GameBuild);
     }
 
     [Fact]
@@ -184,6 +200,36 @@ public sealed class ModListCommandTests : IDisposable
     }
 
     [Fact]
+    public async Task Duplicate_KeepsTheGameBuild()
+    {
+        await SeedAlphaAsync();
+        await KeepGameBuildAsync("Alpha", "2026.10.13.5602");
+
+        var run = await _host.RunAsync("instance", "duplicate", "Alpha");
+
+        Assert.Equal(0, run.ExitCode);
+        Assert.Equal(GameVersion.Parse("2026.10.13.5602"), (await InstanceNamedAsync("Alpha (copy)")).GameBuild);
+    }
+
+    [Fact]
+    public async Task Duplicate_KeptBuild_IsCheckedAgainstTheBuildOfTheSource()
+    {
+        _host.Mods.Releases.Add(ContentCommandFixtures.Release(id: "old-tools", version: "1.0.0", gameMinRevision: 5000, gameMaxRevision: 5200));
+        await _host.RunAsync("instance", "create", "Beta");
+        Assert.Equal(0, (await _host.RunAsync("install", "old-tools", "--version", "1.0.0", "--instance", "Beta")).ExitCode);
+        var kept = new GameVersion(2026, 8, 3, 5117);
+        var folder = Directory.CreateDirectory(_host.Paths.GetGameBuildFolder(kept)).FullName;
+        File.Copy(Path.Combine(AppContext.BaseDirectory, "GameVersionFixture.dll"), Path.Combine(folder, "KSA.dll"));
+        await KeepGameBuildAsync("Beta", kept.ToString());
+        _host.InstalledVersion = new FakeInstalledGameVersionProvider { Installed = new InstalledGameVersion(new GameVersion(2026, 9, 7, 5402), "2026.9.7.5402") };
+
+        var run = await _host.RunAsync("instance", "duplicate", "Beta");
+
+        Assert.Equal(0, run.ExitCode);
+        Assert.Equal(kept, (await InstanceNamedAsync("Beta (copy)")).GameBuild);
+    }
+
+    [Fact]
     public async Task Duplicate_InstallFails_RemovesTheNewInstance()
     {
         await SeedAlphaAsync();
@@ -215,6 +261,13 @@ public sealed class ModListCommandTests : IDisposable
         await _host.RunAsync("instance", "create", "Alpha");
         Assert.Equal(0, (await _host.RunAsync("install", "flight-tools", "--version", "2.0.0", "--instance", "Alpha")).ExitCode);
         Assert.Equal(0, (await _host.RunAsync("disable", "flight-tools", "--instance", "Alpha")).ExitCode);
+    }
+
+    private async Task KeepGameBuildAsync(string name, string build)
+    {
+        var instance = await InstanceNamedAsync(name);
+        instance.SetGameBuild(GameVersion.Parse(build));
+        await new FileInstanceRepository(_host.Paths).SaveAsync(instance);
     }
 
     private async Task<Instance> InstanceNamedAsync(string name) =>
