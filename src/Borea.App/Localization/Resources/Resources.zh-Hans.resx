@@ -1308,6 +1308,18 @@
   <data name="LoaderUpdateGameRunning" xml:space="preserve">
     <value>请先关闭 KSA，Borea 无法在游戏运行时更新模组加载器。</value>
   </data>
+  <data name="LoaderPinnedMissingFormat" xml:space="preserve">
+    <value>实例 {2} 已固定使用 {0} {1}，但尚未安装该版本。</value>
+  </data>
+  <data name="LoaderPinnedIncompatibleFormat" xml:space="preserve">
+    <value>实例 {2} 已固定使用 {0} {1}，但该版本不支持 KSA {3}。</value>
+  </data>
+  <data name="LoaderInstallActionFormat" xml:space="preserve">
+    <value>安装 {0} {1}</value>
+  </data>
+  <data name="LoaderChangeAction" xml:space="preserve">
+    <value>更改模组加载器</value>
+  </data>
   <data name="GameBuildDownload" xml:space="preserve">
     <value>下载</value>
   </data>
@@ -1721,6 +1733,9 @@
   </data>
   <data name="ToastLaunchArgumentsFailedFormat" xml:space="preserve">
     <value>无法保存 {0} 的启动参数</value>
+  </data>
+  <data name="ToastInstanceLoaderFailedFormat" xml:space="preserve">
+    <value>无法保存 {0} 的模组加载器设置</value>
   </data>
   <data name="ToastEnableFailedFormat" xml:space="preserve">
     <value>无法启用 {0}</value>
@@ -3732,6 +3747,45 @@
   <data name="InstanceLoaderIncompatibleFormat" xml:space="preserve">
     <value>{0}，不适用于此 KSA 构建</value>
   </data>
+  <data name="InstanceLoaderChange" xml:space="preserve">
+    <value>更改</value>
+  </data>
+  <data name="InstanceLoaderInfo" xml:space="preserve">
+    <value>模组加载器会加载此实例中的模组并启动游戏。“自动”会使用已安装且兼容游戏及模组的最新版本。固定版本后，即使有兼容的更新版本，也会一直使用该版本，直到你手动更改。</value>
+  </data>
+  <data name="InstanceLoaderAutomaticFormat" xml:space="preserve">
+    <value>自动：{0}</value>
+  </data>
+  <data name="InstanceLoaderPinnedFormat" xml:space="preserve">
+    <value>固定使用 {0}</value>
+  </data>
+  <data name="InstanceLoaderInstallFormat" xml:space="preserve">
+    <value>安装 {0}</value>
+  </data>
+  <data name="InstanceLoaderModalHintFormat" xml:space="preserve">
+    <value>选择用于启动 {0} 的模组加载器版本。其他实例各自的设置保持不变。</value>
+  </data>
+  <data name="InstanceLoaderAutomatic" xml:space="preserve">
+    <value>自动（推荐）</value>
+  </data>
+  <data name="InstanceLoaderAutomaticTargetFormat" xml:space="preserve">
+    <value>使用 {0} {1} 启动，这是已安装且兼容游戏及模组的最新版本。</value>
+  </data>
+  <data name="InstanceLoaderAutomaticNotInstalledFormat" xml:space="preserve">
+    <value>{0} {1} 兼容游戏及模组，但尚未安装。Borea 会在保存时安装该版本。</value>
+  </data>
+  <data name="InstanceLoaderAutomaticNoneFormat" xml:space="preserve">
+    <value>{0} 没有兼容此游戏构建及模组的发布版本。</value>
+  </data>
+  <data name="InstanceLoaderPinChoice" xml:space="preserve">
+    <value>始终使用此版本</value>
+  </data>
+  <data name="InstanceLoaderSaveAndInstall" xml:space="preserve">
+    <value>安装并保存</value>
+  </data>
+  <data name="InstanceLoaderMenu" xml:space="preserve">
+    <value>模组加载器</value>
+  </data>
   <data name="ContentShowVersions" xml:space="preserve">
     <value>显示</value>
   </data>
@@ -3979,7 +4033,7 @@
     <value>加载器目录</value>
   </data>
   <data name="SetupLoaderDirectoryHint" xml:space="preserve">
-    <value>留空时，Borea 会在安装时选择文件夹。</value>
+    <value>已包含模组加载器的文件夹。选择“使用现有加载器”后，Borea 将从该文件夹启动加载器。</value>
   </data>
   <data name="SetupInstallLoader" xml:space="preserve">
     <value>安装</value>
@@ -4008,8 +4062,38 @@
   <data name="SetupUpdateLoaderFormat" xml:space="preserve">
     <value>更新至 {0}</value>
   </data>
+  <data name="SettingsLoadersTitle" xml:space="preserve">
+    <value>模组加载器</value>
+  </data>
+  <data name="SettingsLoadersHint" xml:space="preserve">
+    <value>Borea 将每个已安装版本保存在各自的文件夹中。每个实例都使用其页面“模组加载器”一栏指定的版本启动，因此可以让某个实例继续使用旧版本。</value>
+  </data>
+  <data name="SettingsLoaderUsedByFormat" xml:space="preserve">
+    <value>正在使用的实例：{0}</value>
+  </data>
+  <data name="SettingsLoaderUnused" xml:space="preserve">
+    <value>未使用</value>
+  </data>
+  <data name="SettingsLoaderInUseFormat" xml:space="preserve">
+    <value>正在使用的实例：{0}。请先将这些实例改为使用其他版本。</value>
+  </data>
+  <data name="SettingsLoaderYourFolderFormat" xml:space="preserve">
+    <value>{0}（你的文件夹）</value>
+  </data>
+  <data name="SettingsLoaderForget" xml:space="preserve">
+    <value>移除记录</value>
+  </data>
+  <data name="SettingsLoaderInstallAnother" xml:space="preserve">
+    <value>安装其他版本</value>
+  </data>
+  <data name="SettingsLoaderRemoveConfirm" xml:space="preserve">
+    <value>是否从磁盘中删除此版本？</value>
+  </data>
+  <data name="SettingsLoaderRemovedFormat" xml:space="preserve">
+    <value>已移除 {0} {1}。</value>
+  </data>
   <data name="ContentLoaderHint" xml:space="preserve">
-    <value>模组加载器在“游戏”设置中配置。</value>
+    <value>每个实例都可以在其页面的“模组加载器”一栏选择加载器版本。设置中会列出已安装的版本。</value>
   </data>
   <data name="LinkForum" xml:space="preserve">
     <value>论坛</value>
@@ -4094,6 +4178,15 @@
   </data>
   <data name="AboutCredits" xml:space="preserve">
     <value>采用的技术</value>
+  </data>
+  <data name="AboutTranslators" xml:space="preserve">
+    <value>译者</value>
+  </data>
+  <data name="AboutTranslatorNotListed" xml:space="preserve">
+    <value>尚未署名</value>
+  </data>
+  <data name="AboutOriginalRepository" xml:space="preserve">
+    <value>Borea 仓库</value>
   </data>
   <data name="AboutCommunity" xml:space="preserve">
     <value>GitHub 上的 KSA 模组社区</value>
@@ -4315,10 +4408,10 @@
     <value>此实例已不存在。</value>
   </data>
   <data name="LaunchLoaderNotInstalledFormat" xml:space="preserve">
-    <value>未安装模组加载器 {0}，请在“游戏”设置中配置。</value>
+    <value>未安装模组加载器 {0}，请在实例页面的“模组加载器”一栏安装。</value>
   </data>
   <data name="LaunchNeededLoaderNotInstalledFormat" xml:space="preserve">
-    <value>此实例中的模组需要加载器 {0}，但尚未安装。请在“游戏”设置中配置。</value>
+    <value>此实例中的模组需要加载器 {0}，但尚未安装。请在实例页面的“模组加载器”一栏安装。</value>
   </data>
   <data name="LaunchInstallLoaderFormat" xml:space="preserve">
     <value>此实例需要 {0}，是否立即安装？</value>
@@ -4334,6 +4427,12 @@
   </data>
   <data name="LaunchPlayAnyway" xml:space="preserve">
     <value>仍要游玩</value>
+  </data>
+  <data name="LaunchPinnedLoaderNotInstallableFormat" xml:space="preserve">
+    <value>此实例已固定使用 {0} {1}，但尚未安装该版本，且内容索引已不再提供。是否改用“自动”，启动兼容的最新版本？</value>
+  </data>
+  <data name="LaunchUseAutomaticLoader" xml:space="preserve">
+    <value>使用自动模式</value>
   </data>
   <data name="LaunchSetUpGameFirstFormat" xml:space="preserve">
     <value>此实例需要 {0}，请先设置游戏文件夹。</value>
@@ -4384,7 +4483,7 @@
     <value>{0} 在加载模组时停止（退出码 {1}），此实例中的某个模组可能是原因。输出内容见详细信息。</value>
   </data>
   <data name="LaunchLoaderTooOldFormat" xml:space="preserve">
-    <value>{0} 面向的 KSA 构建与已安装的 {1} 不同，无法加载游戏。适用于 {1} 的 {0} 版本发布后，请在“设置 &gt; 游戏 &gt; 模组加载器”中安装。如果 {1} 比 {0} 面向的构建更早，请改为更新 KSA。</value>
+    <value>{0} 面向的 KSA 构建与已安装的 {1} 不同，无法加载游戏。适用于 {1} 的 {0} 版本发布后，请在实例页面的“模组加载器”一栏安装。如果 {1} 比 {0} 面向的构建更早，请改为更新 KSA。</value>
   </data>
   <data name="LaunchLoaderReleasesFormat" xml:space="preserve">
     <value>{0} 发布版本</value>
