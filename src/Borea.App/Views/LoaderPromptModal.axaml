@@ -36,6 +36,13 @@
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
                         <Button Classes="text tall" Content="{Binding Localization.LibraryCancel}" Command="{Binding CancelLoaderPromptCommand}" IsEnabled="{Binding !IsSetupBusy}" VerticalAlignment="Center" />
                         <Button Classes="text tall" Content="{Binding Localization.LaunchPlayAnyway}" Command="{Binding PlayAnywayCommand}" IsEnabled="{Binding !IsSetupBusy}" IsVisible="{Binding IsLoaderUpdatePrompt}" VerticalAlignment="Center" />
+                        <!-- a pinned version changes only when the player changes the setting of the instance -->
+                        <Button Classes="cta" Command="{Binding ChangeLoaderFromPromptCommand}" IsEnabled="{Binding !IsSetupBusy}" IsVisible="{Binding ShowChangeLoaderPromptAction}">
+                            <TextBlock Classes="action-lg" Text="{Binding Localization.LoaderChangeAction}" VerticalAlignment="Center" />
+                        </Button>
+                        <Button Classes="cta" Command="{Binding UseAutomaticLoaderCommand}" IsVisible="{Binding ShowUseAutomaticLoaderAction}">
+                            <TextBlock Classes="action-lg" Text="{Binding Localization.LaunchUseAutomaticLoader}" VerticalAlignment="Center" />
+                        </Button>
                         <Button Classes="cta" Command="{Binding InstallPromptedLoaderCommand}" IsVisible="{Binding ShowLoaderPromptAction}">
                             <TextBlock Classes="action-lg" Text="{Binding LoaderPromptActionText}" VerticalAlignment="Center" />
                         </Button>
