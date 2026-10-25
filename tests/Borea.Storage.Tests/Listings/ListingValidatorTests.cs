@@ -111,7 +111,7 @@ public sealed class ListingValidatorTests
 
         var errors = _validator.Validate(document, new ListingCheckContext(null)).Issues;
 
-        Assert.Contains(new ListingIssue(ListingIssueSeverity.Error, "releases", "needs one of 'github' or 'spacedock'"), errors);
+        Assert.Contains(new ListingIssue(ListingIssueSeverity.Error, "releases", "needs one of 'github' or 'spacedock' or a share host"), errors);
     }
 
     [Theory]

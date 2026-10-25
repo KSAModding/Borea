@@ -155,8 +155,16 @@ internal sealed class ListingSchemaCheck
     private static string Alternatives(JsonNode? value, JsonNode? instance, string keysFormat, string otherwise)
     {
         var keys = new List<string>();
+        var otherKey = false;
         foreach (var branch in value as JsonArray ?? [])
         {
+            // a branch that holds when the table has a key besides the named ones is the share host key of RFC 0094
+            if (branch is JsonObject { } other && other["not"] is JsonObject { Count: 1 } not && not["propertyNames"] is not null)
+            {
+                otherKey = true;
+                continue;
+            }
+
             if (branch is not JsonObject { Count: 1 } only || only["required"] is not JsonArray { Count: 1 } required)
                 return otherwise;
             keys.Add($"'{required[0]!.GetValue<string>()}'");
@@ -165,7 +173,8 @@ internal sealed class ListingSchemaCheck
         if (instance is JsonObject target && keys.Count(key => target.ContainsKey(key.Trim('\''))) > 1)
             return $"can have only one of {string.Join(" or ", keys)}";
 
-        return string.Format(CultureInfo.InvariantCulture, keysFormat, string.Join(" or ", keys));
+        var choices = otherKey ? keys.Append("a share host") : keys;
+        return string.Format(CultureInfo.InvariantCulture, keysFormat, string.Join(" or ", choices));
     }
 
     /// <summary>The schema node an evaluation path reaches, following local references. A segment the node does not have is passed over.</summary>
